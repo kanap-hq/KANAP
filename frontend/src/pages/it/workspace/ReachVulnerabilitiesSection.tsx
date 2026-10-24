@@ -1,6 +1,7 @@
 import { Box, Link, Typography, useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
+import ViaAssetNames from '../../../components/workspace/ViaAssetNames';
 import { RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import { versionText } from '../vulnerabilities/vulnerabilityTypes';
 import { numberSx, openSeverityColumns, type VulnerabilityOpenCounts } from './vulnerabilityOpenColumns';
@@ -64,7 +65,10 @@ type Props = {
 /** Wraps on the spaces only: a word is never cut in two. */
 const wordWrapSx = { overflowWrap: 'normal', wordBreak: 'normal' } as const;
 
-const rowKey = (row: ReachVulnerabilityRow) => `${row.technology.id}:${row.version_id ?? 'none'}:${row.via?.id ?? ''}`;
+/** The assets that carry an indirect line: `via_assets`, else the single `via`. */
+const viaOf = (row: ReachVulnerabilityRow) => (row.via_assets && row.via_assets.length > 0 ? row.via_assets : row.via ? [row.via] : []);
+
+const rowKey = (row: ReachVulnerabilityRow) => `${row.technology.id}:${row.version_id ?? 'none'}:${viaOf(row).map((asset) => asset.id).join('+')}`;
 
 /**
  * The vulnerabilities of an asset or an application: one line per technology and version in a
@@ -135,9 +139,8 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
     key: 'via',
     header: t('pages.vulnerabilities.reach.via'),
     width: 150,
-    minWidth: 80,
-    wrap: true,
-    render: (row) => (row.via ? t('pages.vulnerabilities.detail.via', { name: row.via.name }) : null),
+    minWidth: 64,
+    render: (row) => <ViaAssetNames assets={viaOf(row)} />,
   };
 
   const counts = (see: (row: ReachVulnerabilityRow) => string): Array<RelationsColumn<ReachVulnerabilityRow>> => [
@@ -172,10 +175,17 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
   ];
 
   const directColumns = [...leading, ...(kind === 'application' ? [serversColumn] : []), ...counts(pageOf)];
-  const indirectColumns = [...leading, viaColumn, ...counts(indirectPageOf)];
+  // Beside the "Through" column the table is tight: a long name is cut by the ellipsis, whole on hover,
+  // and the counts keep their fixed room.
+  const indirectLeading = leading.map((column) => (column.key === 'technology'
+    ? { ...column, wrap: false, render: (row: ReachVulnerabilityRow) => <span title={row.technology.name}>{row.technology.name}</span> }
+    : column));
+  const indirectColumns = [...indirectLeading, viaColumn, ...counts(indirectPageOf)];
   const indirect = kind === 'asset' ? data.indirect ?? [] : [];
   const title = t('pages.vulnerabilities.section.title');
-  const open = data.totals && data.totals.open > 0 ? data.totals.open : null;
+  // A cluster counts its members' vulnerabilities too (`member_totals`), as its column in the list does.
+  const shownTotals = data.member_totals ?? data.totals;
+  const open = shownTotals && shownTotals.open > 0 ? shownTotals.open : null;
   // The count after the title opens the Vulnerabilities page filtered on the record.
   const count = open == null ? undefined : (
     <Link

@@ -694,6 +694,8 @@
         "label_other": "{{count}} graves",
         "hint_one": "{{count}} vulnerabilidad crítica o alta por revisar",
         "hint_other": "{{count}} vulnerabilidades críticas o altas por revisar",
+        "hintMembers_one": "{{count}} vulnerabilidad crítica o alta por revisar, miembros incluidos",
+        "hintMembers_other": "{{count}} vulnerabilidades críticas o altas por revisar, miembros incluidos",
         "exploited_one": "{{count}} conocida como explotada",
         "exploited_other": "{{count}} conocidas como explotadas"
       },
@@ -2111,7 +2113,7 @@
           "family": "Familia",
           "version": "Versión",
           "via": "Vía",
-          "viaHint": "Servidor en el que está instalada la tecnología, en una fila deducida"
+          "viaHint": "Activo en el que está instalada la tecnología, en una fila deducida"
         }
       },
       "assignments": {
@@ -2190,9 +2192,9 @@
         "notesPlaceholder": "p. ej., fuente de alimentación sustituida en garantía"
       },
       "impact": {
-        "title": "Si este servidor cae",
-        "empty": "Ningún otro elemento depende de este servidor.",
-        "emptyInfrastructure": "Ninguna otra infraestructura depende de este servidor.",
+        "title": "Si este activo cae",
+        "empty": "Ningún otro elemento depende de este activo.",
+        "emptyInfrastructure": "Ninguna otra infraestructura depende de este activo.",
         "loadFailed": "No se pudo cargar el impacto.",
         "more_one": "y {{count}} más",
         "more_other": "y {{count}} más",
@@ -2225,19 +2227,23 @@
         },
         "via": {
           "contains": "En {{name}}",
-          "containsThisServer": "En este servidor",
+          "containsThisServer": "En este activo",
           "dependsOn": "Depende de {{name}}",
-          "dependsOnThisServer": "Depende de este servidor",
+          "dependsOnThisServer": "Depende de este activo",
+          "member": "Miembro de {{name}}",
+          "memberThisServer": "Miembro de este clúster",
           "on": "En {{name}}",
-          "onThisServer": "En este servidor",
-          "onThisServerAnd": "En este servidor, {{name}}",
-          "thisServer": "Este servidor",
-          "thisServerAnd": "Este servidor, {{name}}"
+          "onThisServer": "En este activo",
+          "onThisServerAnd": "En este activo, {{name}}",
+          "thisServer": "Este activo",
+          "thisServerAnd": "Este activo, {{name}}"
         },
         "state": {
           "down": "Caído",
           "degraded_one": "Degradado, {{count}} miembro caído de {{members}}",
-          "degraded_other": "Degradado, {{count}} miembros caídos de {{members}}"
+          "degraded_other": "Degradado, {{count}} miembros caídos de {{members}}",
+          "degradedHint_one": "{{count}} miembro de {{members}} sigue en pie",
+          "degradedHint_other": "{{count}} miembros de {{members}} siguen en pie"
         }
       },
       "support": {

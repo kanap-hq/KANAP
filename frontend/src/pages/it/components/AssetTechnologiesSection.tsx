@@ -8,6 +8,7 @@ import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { useLocale } from '../../../i18n/useLocale';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { formatSupportDate, supportStateColor, supportStateOf } from '../../../utils/supportState';
+import ViaAssetNames from '../../../components/workspace/ViaAssetNames';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
 import { invalidateTechnologyLinks } from './technologyLinkQueries';
@@ -26,6 +27,8 @@ export type AssetTechnologyRow = {
   version_label: string | null;
   via_asset_id: string | null;
   via_asset_name: string | null;
+  /** Every asset that carries the line (a host, the members of a cluster), by name: one line per technology and version. */
+  via_assets?: Array<{ id: string; name: string; reference: string | null }>;
   /** The server's operating system. The list already puts that link first. */
   is_operating_system?: boolean;
   standard_support_end?: string | null;
@@ -193,7 +196,10 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
     },
     {
       key: 'via', header: <span title={t('workspace.asset.technologies.columns.viaHint')}>{t('workspace.asset.technologies.columns.via')}</span>, width: 140, hideOrder: 1,
-      render: (row) => (row.via_asset_name ? <span title={row.via_asset_name}>{row.via_asset_name}</span> : null),
+      render: (row) => {
+        if (row.via_assets && row.via_assets.length > 0) return <ViaAssetNames assets={row.via_assets} />;
+        return row.via_asset_name ? <span title={row.via_asset_name}>{row.via_asset_name}</span> : null;
+      },
     },
   ];
   const title = t('workspace.asset.technologies.title');

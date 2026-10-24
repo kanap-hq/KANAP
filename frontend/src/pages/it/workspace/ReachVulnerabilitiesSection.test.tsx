@@ -109,10 +109,41 @@ describe('ReachVulnerabilitiesSection', () => {
     expect(part.textContent).toContain('Not counted');
     const indirect = within(part).getByRole('table', { name: 'Through another asset' });
     const line = within(indirect).getAllByRole('row')[1];
-    expect(line.textContent).toContain('through PAR-ESX-01');
+    expect(line.textContent).toContain('PAR-ESX-01');
+    expect(line.textContent).not.toContain('through');
     expect(within(line).getByRole('link', { name: 'See' }).getAttribute('href')).toBe('/it/vulnerabilities?asset=AST-9&technology=TEC-2');
     // No count next to the title: nothing counts.
     expect(screen.getByRole('region', { name: 'Vulnerabilities' }).querySelector('h2')?.nextSibling).toBeNull();
+  });
+
+  it('names every asset that carries an indirect line, once, each a link to its page', () => {
+    renderSection({
+      data: {
+        rows: [],
+        indirect: [row({
+          technology: { id: 'tech-3', name: 'Microsoft SQL Server Enterprise Edition with a very long name', reference: 'TEC-2' },
+          via: { id: 'a-1', name: 'PAR-SQL-01', reference: 'AST-1' },
+          via_assets: [{ id: 'a-1', name: 'PAR-SQL-01', reference: 'AST-1' }, { id: 'a-2', name: 'PAR-SQL-02', reference: 'AST-2' }],
+        })],
+        totals: { open: 0, severe: 0, exploited_severe: 0 },
+      },
+    });
+    const indirect = within(screen.getByTestId('reach-indirect')).getByRole('table', { name: 'Through another asset' });
+    const lines = within(indirect).getAllByRole('row').slice(1);
+    expect(lines).toHaveLength(1);
+    expect(within(lines[0]).getByRole('link', { name: 'PAR-SQL-01' }).getAttribute('href')).toBe('/it/assets/a-1/overview');
+    expect(within(lines[0]).getByRole('link', { name: 'PAR-SQL-02' }).getAttribute('href')).toBe('/it/assets/a-2/overview');
+    expect(within(lines[0]).getByTitle('PAR-SQL-01, PAR-SQL-02')).toBeTruthy();
+    // A long technology name is cut by the ellipsis, whole on hover; the counts keep their fixed room.
+    expect(within(lines[0]).getByTitle('Microsoft SQL Server Enterprise Edition with a very long name')).toBeTruthy();
+    expect(lines[0].querySelector('td.w')?.textContent).toBe('9.0.80');
+  });
+
+  it('counts a cluster on its members too: the count after the title follows member_totals', () => {
+    renderSection({
+      data: { rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, member_totals: { open: 9, severe: 4, exploited_severe: 1 } },
+    });
+    expect(screen.getByTestId('reach-vulnerabilities-count').textContent).toBe('9');
   });
 
   it('fits a record page with its properties panel open: no horizontal scroll, long cells wrap', () => {

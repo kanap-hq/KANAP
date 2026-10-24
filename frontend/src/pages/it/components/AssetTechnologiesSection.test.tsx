@@ -106,6 +106,20 @@ describe('AssetTechnologiesSection', () => {
     expect(within(table).getByText(`${K}.columns.via`).getAttribute('title')).toBe(`${K}.columns.viaHint`);
   });
 
+  it('names every asset that carries a version on one line, each a link to its page', async () => {
+    const cluster: AssetTechnologyRow = {
+      ...ROWS[2], technology_version_id: 'v16', version_label: '16', via_asset_id: 'm1', via_asset_name: 'PAR-SQL-01',
+      via_assets: [{ id: 'm1', name: 'PAR-SQL-01', reference: 'AST-1' }, { id: 'm2', name: 'PAR-SQL-02', reference: 'AST-2' }],
+    };
+    renderSection([ROWS[0], cluster]);
+    const table = await screen.findByRole('table', { name: `${K}.title` });
+    const rows = [...table.querySelectorAll('tbody tr')] as HTMLElement[];
+    expect(rows).toHaveLength(2);
+    expect(within(rows[1]).getByRole('link', { name: 'PAR-SQL-01' }).getAttribute('href')).toBe('/it/assets/m1/overview');
+    expect(within(rows[1]).getByRole('link', { name: 'PAR-SQL-02' }).getAttribute('href')).toBe('/it/assets/m2/overview');
+    expect(within(rows[1]).getByTitle('PAR-SQL-01, PAR-SQL-02')).toBeTruthy();
+  });
+
   it('leaves the Via column out when every technology is installed', async () => {
     renderSection([ROWS[0]]);
     const table = await screen.findByRole('table', { name: `${K}.title` });

@@ -1166,6 +1166,8 @@ export default function AssetWorkspacePage() {
   const reachVulnerabilities = vulnerabilityFeed && !isCreate && assetVulnerabilitiesQuery.data?.totals
     ? assetVulnerabilitiesQuery.data
     : null;
+  // A cluster's badge counts its members' vulnerabilities too (`member_totals`), as its column in the list does.
+  const badgeTotals = reachVulnerabilities ? reachVulnerabilities.member_totals ?? reachVulnerabilities.totals : null;
   // The metadata bar appears in one go: hidden on its line until the asset and its vulnerabilities
   // have arrived, so the severe badge does not push the header down afterwards. A failed read shows
   // the bar without the badge.
@@ -1832,11 +1834,12 @@ export default function AssetWorkspacePage() {
               onClose={() => setGoLiveAnchorEl(null)}
               allowClear
             />
-            {reachVulnerabilities?.totals && (
+            {reachVulnerabilities && badgeTotals && (
               <VulnerabilitySevereBadge
-                severe={reachVulnerabilities.totals.severe}
-                exploitedSevere={reachVulnerabilities.totals.exploited_severe}
-                highestSeverity={highestSevereOf(reachVulnerabilities.rows)}
+                severe={badgeTotals.severe}
+                exploitedSevere={badgeTotals.exploited_severe}
+                includesMembers={!!reachVulnerabilities.member_totals}
+                highestSeverity={highestSevereOf(reachVulnerabilities.member_totals ? [...reachVulnerabilities.rows, ...(reachVulnerabilities.indirect ?? [])] : reachVulnerabilities.rows)}
                 to={`/it/vulnerabilities?asset=${encodeURIComponent(data?.asset_reference || id)}`}
               />
             )}

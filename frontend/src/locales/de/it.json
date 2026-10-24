@@ -694,6 +694,8 @@
         "label_other": "{{count}} schwerwiegend",
         "hint_one": "{{count}} kritische oder hohe Schwachstelle zu prüfen",
         "hint_other": "{{count}} kritische oder hohe Schwachstellen zu prüfen",
+        "hintMembers_one": "{{count}} kritische oder hohe Schwachstelle zu prüfen, Mitglieder eingeschlossen",
+        "hintMembers_other": "{{count}} kritische oder hohe Schwachstellen zu prüfen, Mitglieder eingeschlossen",
         "exploited_one": "{{count}} als ausgenutzt bekannt",
         "exploited_other": "{{count}} als ausgenutzt bekannt"
       },
@@ -2111,7 +2113,7 @@
           "family": "Familie",
           "version": "Version",
           "via": "Über",
-          "viaHint": "Server, auf dem die Technologie installiert ist, bei einer abgeleiteten Zeile"
+          "viaHint": "Asset, auf dem die Technologie installiert ist, bei einer abgeleiteten Zeile"
         }
       },
       "assignments": {
@@ -2190,9 +2192,9 @@
         "notesPlaceholder": "z. B. Netzteil im Rahmen der Garantie ersetzt"
       },
       "impact": {
-        "title": "Wenn dieser Server ausfällt",
-        "empty": "Nichts anderes hängt von diesem Server ab.",
-        "emptyInfrastructure": "Keine andere Infrastruktur hängt von diesem Server ab.",
+        "title": "Wenn dieses Asset ausfällt",
+        "empty": "Nichts anderes hängt von diesem Asset ab.",
+        "emptyInfrastructure": "Keine andere Infrastruktur hängt von diesem Asset ab.",
         "loadFailed": "Die Auswirkungen konnten nicht geladen werden.",
         "more_one": "und {{count}} weiteres",
         "more_other": "und {{count}} weitere",
@@ -2225,19 +2227,23 @@
         },
         "via": {
           "contains": "In {{name}}",
-          "containsThisServer": "In diesem Server",
+          "containsThisServer": "In diesem Asset",
           "dependsOn": "Hängt ab von {{name}}",
-          "dependsOnThisServer": "Hängt von diesem Server ab",
+          "dependsOnThisServer": "Hängt von diesem Asset ab",
+          "member": "Mitglied von {{name}}",
+          "memberThisServer": "Mitglied dieses Clusters",
           "on": "Auf {{name}}",
-          "onThisServer": "Auf diesem Server",
-          "onThisServerAnd": "Auf diesem Server, {{name}}",
-          "thisServer": "Dieser Server",
-          "thisServerAnd": "Dieser Server, {{name}}"
+          "onThisServer": "Auf diesem Asset",
+          "onThisServerAnd": "Auf diesem Asset, {{name}}",
+          "thisServer": "Dieses Asset",
+          "thisServerAnd": "Dieses Asset, {{name}}"
         },
         "state": {
           "down": "Ausgefallen",
           "degraded_one": "Beeinträchtigt, {{count}} von {{members}} Mitgliedern ausgefallen",
-          "degraded_other": "Beeinträchtigt, {{count}} von {{members}} Mitgliedern ausgefallen"
+          "degraded_other": "Beeinträchtigt, {{count}} von {{members}} Mitgliedern ausgefallen",
+          "degradedHint_one": "{{count}} von {{members}} Mitgliedern ist weiterhin in Betrieb",
+          "degradedHint_other": "{{count}} von {{members}} Mitgliedern sind weiterhin in Betrieb"
         }
       },
       "support": {

@@ -850,6 +850,21 @@ describe('Asset workspace: section placement', () => {
       expect(vulnerabilityCalls()).toBe(1);
     });
 
+    it('counts a cluster on its members: the badge and the section follow member_totals, and say so', async () => {
+      renderAt('/it/assets/asset-1/operations', {
+        ...REACH,
+        // Its own links count nothing: only the members' CVE raise the badge.
+        totals: { open: 0, severe: 0, exploited_severe: 0 },
+        member_totals: { open: 11, severe: 7, exploited_severe: 2 },
+      });
+      const badge = await screen.findByTestId('vulnerability-severe-badge');
+      expect(badge.textContent).toContain('pages.vulnerabilities.severeBadge.label');
+      expect(screen.getByRole('link', { name: 'pages.vulnerabilities.severeBadge.hintMembers' }).getAttribute('href'))
+        .toBe('/it/vulnerabilities?asset=AST-1');
+      expect(screen.queryByRole('link', { name: 'pages.vulnerabilities.severeBadge.hint' })).toBeNull();
+      expect((await screen.findByTestId('reach-vulnerabilities-count')).textContent).toBe('11');
+    });
+
     it('links the section count to the Vulnerabilities page filtered on the asset', async () => {
       renderAt('/it/assets/asset-1/operations');
       const count = await screen.findByTestId('reach-vulnerabilities-count');

@@ -85,12 +85,17 @@ export default function AssetImpactSection({ assetId }: Props) {
   }
 
   const assets = data.assets.filter((row) => row.depth > 0);
+  // A member's own cluster is already on its page (Membership): the row stays for a cluster that
+  // falls, or that other fallen assets degrade; it leaves when this asset is the only member lost.
+  const clusters = data.clusters.filter((row) => !(row.state === 'degraded' && row.via_total === 1 && row.via[0]?.id === assetId));
+  const leftOut = data.clusters.length - clusters.length;
   const applications = data.applications ?? [];
   const processes = data.processes ?? [];
   const { totals } = data;
   // Clusters past the server's cap (over 200) count as degraded: the split is read from the list.
-  const down = data.clusters.filter((row) => row.state === 'down').length;
-  const degraded = totals.clusters - down;
+  const clusterTotal = totals.clusters - leftOut;
+  const down = clusters.filter((row) => row.state === 'down').length;
+  const degraded = clusterTotal - down;
   const summary = [
     totals.applications > 0 && t(k('summary.applications'), { count: totals.applications }),
     totals.assets > 0 && t(k('summary.assets'), { count: totals.assets }),
@@ -104,8 +109,9 @@ export default function AssetImpactSection({ assetId }: Props) {
   const assetVia = (row: ImpactAsset) => {
     const parent = row.via[row.via.length - 1];
     if (!parent) return '';
-    if (parent.id === assetId) return t(k(row.relation === 'depends_on' ? 'via.dependsOnThisServer' : 'via.containsThisServer'));
-    return t(k(row.relation === 'depends_on' ? 'via.dependsOn' : 'via.contains'), { name: parent.name });
+    const relation = row.relation === 'depends_on' ? 'dependsOn' : row.relation === 'member' ? 'member' : 'contains';
+    if (parent.id === assetId) return t(k(`via.${relation}ThisServer`));
+    return t(k(`via.${relation}`), { name: parent.name });
   };
   const path = (row: ImpactAsset) => [...row.via.map((ref) => ref.name), row.name].join(' › ');
 
@@ -128,7 +134,12 @@ export default function AssetImpactSection({ assetId }: Props) {
     {
       key: 'state', header: t(k('columns.state')), width: 280,
       render: (row) => (
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+        <Box
+          component="span"
+          // What stands: the names of the fallen members are in "Via", the others are not in the answer.
+          title={row.state === 'degraded' ? t(k('state.degradedHint'), { count: row.members - row.fallen_members, members: row.members }) : undefined}
+          sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+        >
           <StatusDot color={getDotColor(ASSET_IMPACT_CLUSTER_COLORS[row.state], theme.palette.mode)} />
           {row.state === 'down' ? t(k('state.down')) : t(k('state.degraded'), { count: row.fallen_members, members: row.members })}
         </Box>
@@ -173,16 +184,16 @@ export default function AssetImpactSection({ assetId }: Props) {
               {more(totals.assets)}
             </RelationsSection>
           )}
-          {data.clusters.length > 0 && (
-            <RelationsSection title={t(k('sections.clusters'))} count={totals.clusters}>
+          {clusters.length > 0 && (
+            <RelationsSection title={t(k('sections.clusters'))} count={clusterTotal}>
               <RelationsTable
                 ariaLabel={t(k('sections.clusters'))}
                 columns={clusterColumns}
-                rows={shown(data.clusters)}
+                rows={shown(clusters)}
                 rowKey={(row) => row.id}
                 rowHref={(row) => `/it/assets/${row.id}/overview`}
               />
-              {more(totals.clusters)}
+              {more(clusterTotal)}
             </RelationsSection>
           )}
           {processes.length > 0 && (
