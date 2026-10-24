@@ -124,6 +124,9 @@ export default function ShareDialog({
   const [message, setMessage] = React.useState('');
   const [sending, setSending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // After a send: the chosen people who cannot open the item (budget lines, tasks, contracts). The
+  // link went to them anyway; the dialog stays open so the sender reads it.
+  const [cannotOpen, setCannotOpen] = React.useState<string[]>([]);
   const [copied, setCopied] = React.useState(false);
   const tooManyRecipients = recipients.length > MAX_RECIPIENTS;
 
@@ -149,6 +152,7 @@ export default function ShareDialog({
       setInputValue('');
       setMessage('');
       setError(null);
+      setCannotOpen([]);
       setSending(false);
       setCopied(false);
     }
@@ -158,15 +162,26 @@ export default function ShareDialog({
     if (recipients.length === 0 || tooManyRecipients) return;
     setSending(true);
     setError(null);
+    setCannotOpen([]);
     try {
       const userIds = recipients.filter((r): r is User => typeof r !== 'string').map((u) => u.id);
       const emails = recipients.filter((r): r is string => typeof r === 'string');
-      await api.post(buildApiEndpoint(itemType, itemId), {
+      const res = await api.post(buildApiEndpoint(itemType, itemId), {
         recipient_user_ids: userIds.length > 0 ? userIds : undefined,
         recipient_emails: emails.length > 0 ? emails : undefined,
         message: message.trim() || undefined,
       });
-      onClose();
+      const names: string[] = (res?.data?.cannot_open ?? [])
+        .map((person: { name?: string }) => person?.name)
+        .filter((name: unknown): name is string => typeof name === 'string' && name.length > 0);
+      if (names.length === 0) {
+        onClose();
+        return;
+      }
+      setRecipients([]);
+      setInputValue('');
+      setMessage('');
+      setCannotOpen(names);
     } catch (e: any) {
       // The "Send link" budget is counted over one hour: say so rather than "a few minutes".
       setError(
@@ -224,6 +239,13 @@ export default function ShareDialog({
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>
           {error && <Alert severity="error">{error}</Alert>}
+          {cannotOpen.length > 0 && (
+            <Alert severity="warning">
+              {cannotOpen.map((name, index) => (
+                <Box key={`${name}-${index}`}>{t('share.cannotOpen', { name })}</Box>
+              ))}
+            </Alert>
+          )}
 
           <Box
             sx={{
