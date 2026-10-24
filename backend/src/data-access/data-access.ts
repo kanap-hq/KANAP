@@ -13,6 +13,12 @@ import { EntityManager, QueryRunner } from 'typeorm';
 export type DataAccessMode = 'all' | 'limited';
 
 /**
+ * Response header of a file built on a limited person's access (`limited`), for the dialogs that
+ * say "Calculated on your access" (spec §4.2, §7.7). Exposed to the browser by the CORS setup.
+ */
+export const DATA_ACCESS_HEADER = 'X-Data-Access';
+
+/**
  * A person whose access is limited cannot run without a transaction: outside one, the access would
  * last one statement, or stay on the pooled connection. A programming error (answered 500).
  */

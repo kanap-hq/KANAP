@@ -7,6 +7,7 @@ import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { attachmentMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
+import { DATA_ACCESS_HEADER } from '../data-access/data-access';
 import { PermissionGuard } from '../auth/permission.guard';
 import { ReadOnlyRoute, RequireLevel } from '../auth/require-level.decorator';
 import { StorageService } from '../common/storage/storage.service';
@@ -153,7 +154,7 @@ export class CapexItemsController {
   ): Promise<void> {
     const listQuery = exportListQuery(query, query.all === 'true' || query.all === '1');
     const { ids } = await this.svc.summaryIds(listQuery, { manager: ctx.manager, access: budgetListAccess(ctx) });
-    const { filename, content } = await this.budgetFile.exportFile('capex', ids, {
+    const { filename, content, dataAccessLimited } = await this.budgetFile.exportFile('capex', ids, {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
@@ -165,6 +166,8 @@ export class CapexItemsController {
     });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
+    // A limited person's file holds the lines of their access: the dialog says "Calculated on your access".
+    if (dataAccessLimited) res.setHeader(DATA_ACCESS_HEADER, 'limited');
     res.send(content);
   }
 

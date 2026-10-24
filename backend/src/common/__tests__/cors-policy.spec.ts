@@ -71,7 +71,7 @@ async function testMultiTenantPatternIsLimitedToTheTargetTenant() {
       assert.equal(own.status, 200, `${label}: origin of the tenant the request targets`);
       assert.equal(own.headers['access-control-allow-origin'], 'https://acme.kanap.net');
       assert.equal(own.headers['access-control-allow-credentials'], 'true');
-      assert.equal(own.headers['access-control-expose-headers'], 'Retry-After', `${label}: the wait of a 429 is readable`);
+      assert.equal(own.headers['access-control-expose-headers'], 'Retry-After,X-Data-Access', `${label}: the wait of a 429 and the data access of a file are readable`);
 
       const otherOrigins = ['https://other.kanap.net', 'https://www.kanap.net', 'https://kanap.net', 'https://acme.qa.kanap.net'];
       // Another port of the same host: refused in production mode (outside it, a Host header

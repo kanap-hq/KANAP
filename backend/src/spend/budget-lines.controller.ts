@@ -15,6 +15,7 @@ import {
 } from './budget-line-relations';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { contentDisposition } from '../common/content-disposition';
+import { DATA_ACCESS_HEADER } from '../data-access/data-access';
 import { BudgetFileService } from './budget-file/budget-file.service';
 import { exportListQuery } from './budget-file/export-file';
 import { budgetListAccess } from './budget-list/budget-list.runtime';
@@ -115,7 +116,7 @@ export class BudgetLinesController {
   ): Promise<void> {
     const listQuery = exportListQuery(query, query.all === 'true' || query.all === '1');
     const { ids } = await this.svc.summaryIds(listQuery, { manager: ctx.manager as EntityManager, access: budgetListAccess(ctx) });
-    const { filename, content } = await this.budgetFile.exportFile('all', ids, {
+    const { filename, content, dataAccessLimited } = await this.budgetFile.exportFile('all', ids, {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
@@ -127,6 +128,8 @@ export class BudgetLinesController {
     });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
+    // A limited person's file holds the lines of their access: the dialog says "Calculated on your access".
+    if (dataAccessLimited) res.setHeader(DATA_ACCESS_HEADER, 'limited');
     res.send(content);
   }
 
