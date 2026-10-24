@@ -261,6 +261,7 @@
       "include": "supplier,owners,residency,hosting,counts,structure,instances,vulnerabilities"
     },
     "filters": {
+      "sequential_id": "text",
       "name": "text",
       "vulnerabilities_to_review": "set",
       "category": "set",
