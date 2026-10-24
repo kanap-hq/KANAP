@@ -128,6 +128,12 @@ export class TaskActivitiesService {
   ): Promise<TaskActivityItem[]> {
     const mg = opts?.manager ?? this.activityRepo.manager;
 
+    // The history of a task the person can read only (spec §5.6): the task first, under the
+    // person's access (the tasks policy hides a task of a line or contract out of access), the same
+    // 404 for a hidden task and an unknown id. `portfolio_activities` itself carries no policy.
+    const visible = await mg.query(`SELECT 1 FROM tasks WHERE id = $1 AND tenant_id = app_current_tenant()`, [taskId]);
+    if (visible.length === 0) throw new NotFoundException('Task not found');
+
     const rows = await mg.query<Array<{
       id: string;
       type: ActivityType;

@@ -96,6 +96,7 @@ import {
 } from '../common/csv-sheet';
 import { Decimal } from '../common/decimal';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
+import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -1595,6 +1596,7 @@ export class ContractsService {
         // No request manager: the send outlives the request (a contract link needs no lookup).
       });
     }
-    return { ok: true };
+    // The chosen persons who cannot open the contract: the screen warns the sender (spec §5.6).
+    return { ok: true, cannot_open: await shareRecipientsWhoCannotOpen(mg, 'contract', contract.id, recipients) };
   }
 }

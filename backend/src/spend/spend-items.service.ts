@@ -61,6 +61,7 @@ import { auditLine, findBudgetLine, presentChild, presentChildren, presentLine, 
 import type { CopyColumnOperation } from './budget-column-operations';
 import type { CopyAllocationsOperation } from './budget-allocation-operations';
 import { sqlStateOf } from '../common/filters/database-error.mapping';
+import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
 
 /**
  * What differs between the lines of the two natures, the one service apart (plan
@@ -411,7 +412,8 @@ export class SpendItemsService {
         ...(this.nature === 'capex' ? { manager: mg } : {}),
       });
     }
-    return { success: true };
+    // The chosen persons who cannot open the line: the screen warns the sender (spec §5.6).
+    return { success: true, cannot_open: await shareRecipientsWhoCannotOpen(mg, 'spend_item', item.id, recipientRows) };
   }
 
   /** Applications linked to the line; see `item-applications.ts`. */

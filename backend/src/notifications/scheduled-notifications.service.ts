@@ -19,6 +19,7 @@ import { resolveEmailLocale } from '../i18n/email-i18n';
 import { calendarDaysUntil, isExpiryReminderDay, utcDateYmd } from './expiry-reminder-schedule';
 import { assertScopeNatures, natureAnd, type BudgetNature } from '../spend/budget-nature';
 import { contractTermsSql } from '../contracts/contract-terms';
+import { SCOPED_TASK_OBJECT_TYPES } from '../data-access/can-read';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -31,6 +32,15 @@ const BUDGET_ITEM_TABLES: Record<'opex' | 'capex', { table: string; name: string
   capex: { table: 'spend_items', name: 'product_name', nature: 'capex' },
 };
 assertScopeNatures('scheduled-notifications', BUDGET_ITEM_TABLES, (t) => t.table);
+
+/**
+ * The weekly review lists the tasks a person is assignee, owner or creator of. The creator is not
+ * named on the task (spec §2.5): a task of a budget line or a contract is listed to a creator only
+ * when they can read it (`data_access_can_read`, spec §5.6). `user`: the SQL parameter of the person.
+ */
+export const CREATOR_CAN_READ = (user: string) => `(t.related_object_type IS NULL
+             OR t.related_object_type NOT IN (${SCOPED_TASK_OBJECT_TYPES.map((type) => `'${type}'`).join(', ')})
+             OR data_access_can_read(${user}::uuid, 'task', t.id) IS TRUE)`;
 
 @Injectable()
 export class ScheduledNotificationsService implements OnModuleInit {
@@ -632,7 +642,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
          AND t.updated_at < $3
          AND (
            t.assignee_user_id = $4
-           OR t.creator_id = $4
+           OR (t.creator_id = $4 AND ${CREATOR_CAN_READ('$4')})
            OR t.owner_ids @> to_jsonb($4::text)
          )
        ORDER BY t.updated_at DESC
@@ -704,7 +714,7 @@ export class ScheduledNotificationsService implements OnModuleInit {
          AND t.status = ANY($3)
          AND (
            t.assignee_user_id = $2
-           OR t.creator_id = $2
+           OR (t.creator_id = $2 AND ${CREATOR_CAN_READ('$2')})
            OR t.owner_ids @> to_jsonb($2::text)
          )
        ORDER BY
