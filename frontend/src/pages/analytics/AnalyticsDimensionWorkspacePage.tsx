@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Button, Stack, Switch, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
+import { isDataAccessLimited } from '../../auth/dataAccess';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { KanapDialog, PropertyGroup, PropertyRow } from '../../components/design';
 import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
@@ -52,7 +53,7 @@ const DRAWER_KEY = 'kanap.analyticsDimensions.drawerOpen';
 
 export default function AnalyticsDimensionWorkspacePage() {
   const { t } = useTranslation(['master-data', 'common']);
-  const { hasLevel } = useAuth();
+  const { hasLevel, dataAccess } = useAuth();
   const navigate = useNavigate();
   const params = useParams();
   const queryClient = useQueryClient();
@@ -62,6 +63,9 @@ export default function AnalyticsDimensionWorkspacePage() {
   const isCreate = id === 'new';
   const canEdit = hasLevel('analytics', 'member');
   const canDelete = hasLevel('analytics', 'admin');
+  // Who may create values from a line is set by people who administer dimensions with access to all
+  // data (spec §3.5, §7.9): a limited person never sees the switch.
+  const canSetOpenValues = canEdit && !isDataAccessLimited(dataAccess);
 
   const detailKey = React.useMemo(() => [...ANALYTICS_AXIS_DETAIL_KEY, id], [id]);
   const { data, error: loadError } = useQuery({
@@ -225,6 +229,8 @@ export default function AnalyticsDimensionWorkspacePage() {
             onCodeCommit={(code) => void patch({ code }, 'code')}
             onAppliesToChange={(appliesTo) => void patch({ applies_to: appliesTo }, 'applies_to')}
             onRequiredChange={(required) => void patch({ required }, 'required')}
+            canSetOpenValues={canSetOpenValues}
+            onOpenValuesChange={(openValues) => void patch({ open_values: openValues }, 'open_values')}
             onDisabledAtChange={(disabledAt) => {
               if (disabledAt === data.disabled_at) return;
               void patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at');
@@ -295,6 +301,8 @@ function DimensionProperties({
   onCodeCommit,
   onAppliesToChange,
   onRequiredChange,
+  canSetOpenValues,
+  onOpenValuesChange,
   onDisabledAtChange,
   onDisableNow,
   onFieldError,
@@ -307,6 +315,9 @@ function DimensionProperties({
   onCodeCommit: (code: string) => void;
   onAppliesToChange: (appliesTo: LineType | null) => void;
   onRequiredChange: (required: boolean) => void;
+  /** The open values switch shows (people who administer dimensions with access to all data). */
+  canSetOpenValues: boolean;
+  onOpenValuesChange: (openValues: boolean) => void;
   onDisabledAtChange: (disabledAt: string | null) => void;
   /** Switched off: disable now, on the server's clock (the status alone). */
   onDisableNow: () => void;
@@ -421,7 +432,8 @@ function DimensionProperties({
           )}
         </PropertyRow>
         <PropertyRow label={t('analytics.fields.required')}>
-          <RequiredSwitch
+          <SettingSwitch
+            label={t('analytics.fields.required')}
             checked={!!axis.required}
             disabled={disabled}
             error={errors.required}
@@ -431,6 +443,19 @@ function DimensionProperties({
           />
           {axis.required && <RequiredNotes axis={axis} />}
         </PropertyRow>
+        {canSetOpenValues && (
+          <PropertyRow label={t('analytics.fields.openValues')} helperText={t('analytics.hints.openValues')}>
+            <SettingSwitch
+              label={t('analytics.fields.openValues')}
+              checked={!!axis.open_values}
+              disabled={disabled}
+              error={errors.open_values}
+              onChange={(next) => {
+                if (next !== !!axis.open_values) onOpenValuesChange(next);
+              }}
+            />
+          </PropertyRow>
+        )}
       </PropertyGroup>
 
       <PropertyGroup>
@@ -460,18 +485,19 @@ function DimensionProperties({
   );
 }
 
-function RequiredSwitch({
+function SettingSwitch({
+  label,
   checked,
   disabled,
   error,
   onChange,
 }: {
+  label: string;
   checked: boolean;
   disabled?: boolean;
   error?: string;
   onChange: (next: boolean) => void;
 }) {
-  const { t } = useTranslation(['master-data']);
   return (
     <Box>
       <Switch
@@ -479,7 +505,7 @@ function RequiredSwitch({
         checked={checked}
         disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
-        inputProps={{ 'aria-label': t('analytics.fields.required') }}
+        inputProps={{ 'aria-label': label }}
       />
       {error && (
         <Typography role="alert" sx={{ mt: '3px', fontSize: 12, lineHeight: 1.35, color: 'error.main' }}>{error}</Typography>
@@ -656,7 +682,8 @@ function DimensionCreate({
             />
           </PropertyRow>
           <PropertyRow label={t('analytics.fields.required')} valueSx={{ maxWidth: 520 }}>
-            <RequiredSwitch
+            <SettingSwitch
+              label={t('analytics.fields.required')}
               checked={form.required}
               error={errors.required}
               onChange={(next) => update({ required: next })}

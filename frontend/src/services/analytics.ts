@@ -26,6 +26,11 @@ export type AnalyticsAxis = {
    * is enabled, on the lines it applies to (`axisRequiredFor`). Lines without a value stay editable.
    */
   required: boolean;
+  /**
+   * Open values: anyone who may modify a budget line adds a value, from the line's picker or the
+   * budget file. Closed (false, the default): values come from the dimension page.
+   */
+  open_values?: boolean;
   status: AnalyticsStatus;
   disabled_at: string | null;
   created_at?: string;
@@ -53,6 +58,8 @@ export type AnalyticsAxisWrite = {
   applies_to?: LineType | null;
   /** Absent on a patch leaves it unchanged. */
   required?: boolean;
+  /** Absent on a patch leaves it unchanged. Reserved to people with access to all data. */
+  open_values?: boolean;
   status?: AnalyticsStatus;
   disabled_at?: string | null;
 };

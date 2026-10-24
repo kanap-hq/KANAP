@@ -810,7 +810,8 @@
       "description": "Beschreibung",
       "dimension": "Dimension",
       "lifecycle": "Lebenszyklus",
-      "required": "Erforderlich"
+      "required": "Erforderlich",
+      "openValues": "Offene Werte"
     },
     "hints": {
       "nameDefault": "Leer lassen, um „{{label}}“ in der Sprache jeder Person anzuzeigen.",
@@ -822,7 +823,8 @@
       "valueDimensionAppliesTo": {
         "opex": "Die Dimension {{dimension}} gilt nur für OPEX-Zeilen.",
         "capex": "Die Dimension {{dimension}} gilt nur für CAPEX-Zeilen."
-      }
+      },
+      "openValues": "Jede Person, die eine Zeile bearbeiten kann, kann einen Wert hinzufügen, über die Zeile oder die Budgetdatei."
     },
     "placeholders": {
       "dimensionName": "z. B. Kostenart",

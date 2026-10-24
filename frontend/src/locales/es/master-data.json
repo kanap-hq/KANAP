@@ -810,7 +810,8 @@
       "description": "Descripción",
       "dimension": "Dimensión",
       "lifecycle": "Ciclo de vida",
-      "required": "Obligatoria"
+      "required": "Obligatoria",
+      "openValues": "Valores abiertos"
     },
     "hints": {
       "nameDefault": "Déjelo vacío para mostrar «{{label}}» en el idioma de cada persona.",
@@ -822,7 +823,8 @@
       "valueDimensionAppliesTo": {
         "opex": "La dimensión {{dimension}} es solo para líneas OPEX.",
         "capex": "La dimensión {{dimension}} es solo para líneas CAPEX."
-      }
+      },
+      "openValues": "Cualquier persona que pueda editar una línea puede añadir un valor, desde la línea o el archivo de presupuesto."
     },
     "placeholders": {
       "dimensionName": "p. ej., Naturaleza",
