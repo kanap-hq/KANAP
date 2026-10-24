@@ -5,6 +5,7 @@ import {
   projectParticipantCondition,
   taskParticipantCondition,
 } from '../auth/business-contributor-scope';
+import { TASK_HIDDEN_LINE_REFERENCE_SQL } from '../spend/tasks.service';
 
 interface ServiceOptions {
   manager?: EntityManager;
@@ -515,6 +516,7 @@ export class DashboardDataService {
           WHEN t.related_object_type = 'incident' THEN CASE WHEN inc.confidential THEN 'INC-' || inc.item_number::text ELSE 'INC-' || inc.item_number::text || ' · ' || inc.title END
           ELSE NULL
         END AS related_object_name,
+        ${TASK_HIDDEN_LINE_REFERENCE_SQL} AS related_object_reference,
         GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (NOW() - t.updated_at)) / 86400))::int AS stale_days
       FROM tasks t
       LEFT JOIN users u ON u.id = t.assignee_user_id AND u.tenant_id = t.tenant_id
@@ -541,8 +543,9 @@ export class DashboardDataService {
       staleDays: Number(row.stale_days || 0),
       assigneeName: row.assignee_name || null,
       relatedObjectType: row.related_object_type || null,
-      relatedObjectId: row.related_object_id || null,
-      relatedObjectName: row.related_object_name || null,
+      // A line the person cannot read (data-scoped access): its reference alone, without its id.
+      relatedObjectId: row.related_object_reference ? null : row.related_object_id || null,
+      relatedObjectName: row.related_object_reference || row.related_object_name || null,
     }));
   }
 

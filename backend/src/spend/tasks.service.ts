@@ -734,7 +734,7 @@ const TASK_TEXT_SORTS = new Set([
  * access, a line the person cannot read (`data_access_reference`, SECURITY DEFINER, checks that the
  * task is visible). NULL for every other task, and for an unscoped person's task whose line exists.
  */
-const TASK_HIDDEN_LINE_REFERENCE_SQL = `CASE
+export const TASK_HIDDEN_LINE_REFERENCE_SQL = `CASE
           WHEN t.related_object_type IN ('spend_item', 'capex_item') AND t.related_object_id IS NOT NULL
                AND si.id IS NULL AND ci.id IS NULL
           THEN data_access_reference('task', t.id)

@@ -6,6 +6,7 @@ import { DataSource, EntityManager, QueryRunner } from 'typeorm';
 import appDataSource from '../../data-source';
 import { applyDataAccess } from '../data-access';
 import { TasksService } from '../../spend/tasks.service';
+import { DashboardDataService } from '../../dashboard/dashboard-data.service';
 import { readLineLineage } from '../../spend/budget-line-lineage';
 import { LIMITED_ROLE, PgClient, roleExists, sqlStateIn } from './data-access-test-helpers';
 import { nextItemNumber, Seed, seed } from './data-access-line-seed';
@@ -22,6 +23,8 @@ import { nextItemNumber, Seed, seed } from './data-access-line-seed';
  *   L2's successor as `{ id: null, reference: BL-n, nature: null, hidden: true }`; Ulla as before.
  * - `data_access_reference`: `BL-n` whatever the nature; a lineage asked from a line the person
  *   cannot read is NULL; an unknown type raises 22023.
+ * - Dashboard "dormant tasks" tile: Marta's task on L1 names `BL-n` without the line's id; Ulla
+ *   reads the name and the id.
  *
  * Needs the role kanap_data_limited (CI installs it); skipped without it, failed in CI.
  */
@@ -131,6 +134,24 @@ async function testLineage(runner: QueryRunner, s: Seed, x: Extra): Promise<void
   console.log('  lineage: a hidden predecessor or successor shows as BL-n without id; data_access_reference gives BL-n: OK');
 }
 
+async function testStaleTasks(runner: QueryRunner, s: Seed, x: Extra): Promise<void> {
+  const svc = new DashboardDataService();
+  // A threshold of -1 day takes every open task, the seed's included (updated just now).
+  const read = (person: string) => as(runner, person, async (m) => new Map(
+    (await svc.getStaleTasks(person, 'all', -1, 100, { manager: m })).map((row) => [row.id, row] as const),
+  ));
+  const pick = (row: any) => ({ id: row?.relatedObjectId, name: row?.relatedObjectName });
+
+  const marta = await read(s.persons.marta);
+  assert.deepEqual(pick(marta.get(x.tasks.onL1)), { id: null, name: `BL-${x.numbers[s.lines.L1]}` }, 'Marta: the dormant task on L1 names BL-n, no id');
+  assert.deepEqual(pick(marta.get(x.tasks.onCapex)), { id: null, name: `BL-${x.capexNumber}` }, 'a CAPEX line too');
+  assert.deepEqual(pick(marta.get(x.tasks.onL4)), { id: s.lines.L4, name: `DA line L4 ${s.tenantId.slice(0, 8)}` }, 'a line she reads: its name and id');
+
+  const ulla = await read(s.persons.ulla);
+  assert.deepEqual(pick(ulla.get(x.tasks.onL1)), { id: s.lines.L1, name: `DA line L1 ${s.tenantId.slice(0, 8)}` }, 'Ulla: the name and the id');
+  console.log('  dashboard dormant tasks: a hidden line shows as BL-n without id; unscoped unchanged: OK');
+}
+
 async function run() {
   await dataSource.initialize();
   const runner = dataSource.createQueryRunner();
@@ -148,6 +169,7 @@ async function run() {
       const x = await seedExtra(runner, s);
       await testLineage(runner, s, x);
       await testTasks(runner, s, x);
+      await testStaleTasks(runner, s, x);
     } finally {
       await runner.rollbackTransaction();
     }
