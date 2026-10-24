@@ -1,5 +1,5 @@
 import { TechnologyCpeEvents } from '../../technologies/technology-cpe-events';
-import { BadRequestException, Injectable, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
@@ -516,9 +516,12 @@ export class AssetsCrudService extends AssetsBaseService {
 
     await mg.transaction(async (trx) => {
       // The cluster row first: a concurrent switch or operating-system write waits for this one.
+      // The row read before the transaction may have changed meanwhile: decide on the locked one.
       const locked = await lockClusterForMembers(trx, tenant, clusterId);
+      if (!locked) throw new NotFoundException('Asset not found');
+      if (!locked.isCluster) throw new BadRequestException('Asset is not a cluster');
       if (normalizedIds.length > 0) {
-        const os = locked?.os ?? null;
+        const os = locked.os;
         if (os && !removeOperatingSystem) throw clusterOsWithMembersRefusal(os);
         if (os) {
           await this.operatingSystems.setOperatingSystem(trx, tenant, clusterId, null, this.osSource(opts), userId);

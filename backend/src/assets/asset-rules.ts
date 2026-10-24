@@ -137,20 +137,28 @@ export async function assertClusterMemberCandidates(
 /**
  * Locks the cluster row (`FOR UPDATE`: a concurrent switch or operating-system write waits) and
  * returns whether it is a cluster and its operating system. `null` when the asset does not exist.
+ * The operating system is read in a second statement, after the lock: under READ COMMITTED a
+ * statement that waited on the lock re-reads the locked row only, never its subqueries, so a
+ * single statement could miss an operating system committed meanwhile.
  */
 export async function lockClusterForMembers(
   mg: EntityManager,
   tenantId: string,
   clusterId: string,
 ): Promise<{ isCluster: boolean; os: string | null } | null> {
-  const [row]: Array<{ is_cluster: boolean; os: string | null }> = await mg.query(
-    `SELECT COALESCE(a.is_cluster, false) AS is_cluster, ${operatingSystemLabelSql('a')} AS os
+  const [row]: Array<{ is_cluster: boolean }> = await mg.query(
+    `SELECT COALESCE(a.is_cluster, false) AS is_cluster
        FROM assets a
       WHERE a.tenant_id = $1 AND a.id = $2
       FOR UPDATE OF a`,
     [tenantId, clusterId],
   );
-  return row ? { isCluster: row.is_cluster, os: row.os ?? null } : null;
+  if (!row) return null;
+  const [osRow]: Array<{ os: string | null }> = await mg.query(
+    `SELECT ${operatingSystemLabelSql('a')} AS os FROM assets a WHERE a.tenant_id = $1 AND a.id = $2`,
+    [tenantId, clusterId],
+  );
+  return { isCluster: row.is_cluster, os: osRow?.os ?? null };
 }
 
 /** A cluster that carries an operating system gets no member (`cluster_os_with_members`, `os`). */
