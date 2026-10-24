@@ -146,8 +146,9 @@ vi.mock('./components/TaskDetailHeader', () => ({
 }));
 
 vi.mock('./components/TaskPropertiesDrawer', () => ({
-  default: ({ onRelationChange }: { onRelationChange?: (params: any) => void }) => (
+  default: ({ onRelationChange, onPatch }: { onRelationChange?: (params: any) => void; onPatch?: (patch: any) => void }) => (
     <div data-testid="task-properties-drawer">
+      <button type="button" onClick={() => onPatch?.({ assignee_user_id: 'user-2' })}>Hand over</button>
       <button
         type="button"
         onClick={() => onRelationChange?.({ type: 'project', id: 'project-b', name: 'Project B' })}
@@ -387,6 +388,21 @@ describe('TaskWorkspacePage relation changes', () => {
       });
     });
     expect(api.patch).not.toHaveBeenCalledWith('/portfolio/projects/project-b/tasks/task-1', expect.anything());
+  });
+
+  it('says the person still follows a task they handed over without reading its line', async () => {
+    vi.mocked(api.patch).mockResolvedValue({ data: { id: 'task-1', stillFollowing: true } } as any);
+    renderEditPage();
+    fireEvent.click(await screen.findByText('Hand over'));
+    expect(await screen.findByTestId('task-still-following')).toHaveTextContent('portfolio:workspace.task.messages.stillFollowing');
+  });
+
+  it('says nothing more after an ordinary hand over', async () => {
+    renderEditPage();
+    fireEvent.click(await screen.findByText('Hand over'));
+    await waitFor(() => expect(api.patch).toHaveBeenCalled());
+    await new Promise((resolve) => { setTimeout(resolve, 20); });
+    expect(screen.queryByTestId('task-still-following')).toBeNull();
   });
 
   it('uses the global move endpoint when making a project task standalone', async () => {
