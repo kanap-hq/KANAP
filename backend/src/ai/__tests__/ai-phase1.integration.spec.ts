@@ -1460,6 +1460,7 @@ function createPermissivePolicyStub() {
     assertSurfaceAccess: async () => undefined,
     listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
     canReadKnowledge: async () => true,
+    canReadEntityType: async () => true,
     assertKnowledgeReadAccess: async () => undefined,
     assertEntityTypeReadAccess: async () => undefined,
   } as any;
@@ -2299,6 +2300,7 @@ async function testAiEntityServicePhase1TenantDefenseInDepth() {
       {
         listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
         canReadKnowledge: async () => true,
+        canReadEntityType: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
       } as any,
     );
@@ -2315,6 +2317,7 @@ async function testAiEntityServicePhase1TenantDefenseInDepth() {
       {
         listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
         canReadKnowledge: async () => false,
+        canReadEntityType: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
       } as any,
     );
@@ -2675,6 +2678,7 @@ async function testAiEntityCommentsReturnsPaginatedCommentFeedsAndStaysTenantSco
       {} as any,
       {
         canReadKnowledge: async () => true,
+        canReadEntityType: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
       } as any,
     );
@@ -2784,6 +2788,7 @@ async function testAiEntityContextMarksRecentActivityAsTruncatedWhenCapped() {
       {
         listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
         canReadKnowledge: async () => true,
+        canReadEntityType: async () => true,
         assertEntityTypeReadAccess: async () => undefined,
       } as any,
     );
