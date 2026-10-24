@@ -21,10 +21,14 @@ import { useAuth } from '../../auth/AuthContext';
 import api from '../../api';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
+import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { useLocale } from '../../i18n/useLocale';
+import { useLookupHydration } from '../../hooks/useLookupPicker';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { getWithListContext, withListContext } from '../../lib/listContext';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
+import { formatUserName } from '../../utils/userDisplay';
+import { USERS_LOOKUP_ENDPOINT, type UserOption } from '../../components/fields/userLookup';
 import {
   AUTH_EVENT_TABLE,
   EXPORT_EVENT_TABLE,
@@ -33,7 +37,18 @@ import {
   auditTableFilterLabel,
   auditTableLabel,
   auditUserLabel,
+  type Translate,
 } from './auditLogLabels';
+import {
+  auditFields as buildAuditFields,
+  auditHasNonObjectPayload,
+  auditRecordLabel,
+  auditSnapshot,
+  auditUserIds,
+  formatAuditValue,
+  type AuditFields,
+  type AuditValueContext,
+} from './auditLogValues';
 
 type AuditLogItem = {
   id: string;
@@ -55,6 +70,7 @@ type AuditLogItem = {
 const EXPORT_TRUNCATED_HEADER = 'x-export-truncated';
 /** Plain text in the secondary colour, like the other text columns of the grid. */
 const SECONDARY_CELL_STYLE: Record<string, string> = { color: 'var(--kanap-text-secondary)' };
+const KNOWN_USERS: ReadonlyMap<string, UserOption> = new Map();
 
 function formatJson(value: any): string {
   if (value == null) return 'null';
@@ -65,14 +81,140 @@ function formatJson(value: any): string {
   }
 }
 
-function getChangedKeys(beforeValue: any, afterValue: any): string[] {
-  if (!beforeValue && !afterValue) return [];
-  const beforeObj = beforeValue && typeof beforeValue === 'object' ? beforeValue : {};
-  const afterObj = afterValue && typeof afterValue === 'object' ? afterValue : {};
-  const keys = new Set([...Object.keys(beforeObj), ...Object.keys(afterObj)]);
-  return Array.from(keys).filter((key) => {
-    return JSON.stringify(beforeObj[key]) !== JSON.stringify(afterObj[key]);
-  });
+const auditFieldsTableSx = {
+  width: '100%',
+  minWidth: 520,
+  borderCollapse: 'collapse',
+  tableLayout: 'fixed',
+  '& th': {
+    fontSize: 11,
+    fontWeight: 500,
+    color: 'kanap.text.tertiary',
+    textAlign: 'left',
+    py: '6px',
+    pr: '12px',
+    borderBottom: '1px solid',
+    borderColor: 'kanap.border.default',
+    whiteSpace: 'nowrap',
+  },
+  '& td': {
+    fontSize: 13,
+    color: 'kanap.text.primary',
+    py: '6px',
+    pr: '12px',
+    borderBottom: '1px solid',
+    borderColor: 'kanap.border.soft',
+    verticalAlign: 'top',
+    overflowWrap: 'anywhere',
+  },
+  '& tr:last-of-type td': { borderBottom: 0 },
+} as const;
+
+const unknownFieldSx = {
+  fontFamily: MONO_FONT_FAMILY,
+  fontSize: 12,
+  color: 'kanap.text.secondary',
+} as const;
+
+function AuditValueCell({ value, field, context }: { value: unknown; field: string; context: AuditValueContext }) {
+  const display = formatAuditValue(value, field, context);
+  return (
+    <Box component="td" sx={{ color: display.secondary ? 'kanap.text.secondary' : 'kanap.text.primary' }} title={display.title}>
+      {display.text}
+    </Box>
+  );
+}
+
+function AuditFieldsTable({ fields, t, context }: { fields: AuditFields; t: Translate; context: AuditValueContext }) {
+  const twoSided = fields.mode === 'change';
+  return (
+    <Box sx={{ overflowX: 'auto' }}>
+      <Box component="table" sx={auditFieldsTableSx}>
+        <Box component="thead">
+          <Box component="tr">
+            <Box component="th" sx={{ width: twoSided ? '30%' : '34%' }}>{t('auditLogs.details.field')}</Box>
+            {twoSided ? (
+              <>
+                <Box component="th">{t('auditLogs.details.before')}</Box>
+                <Box component="th">{t('auditLogs.details.after')}</Box>
+              </>
+            ) : (
+              <Box component="th">{t('auditLogs.details.value')}</Box>
+            )}
+          </Box>
+        </Box>
+        <Box component="tbody">
+          {fields.rows.map((row) => {
+            const label = t(`auditLogs.fields.${row.key}`, { defaultValue: row.key });
+            return (
+              <Box component="tr" key={row.key}>
+                <Box component="td">
+                  <Box component="span" sx={label === row.key ? unknownFieldSx : undefined}>{label}</Box>
+                </Box>
+                {twoSided ? (
+                  <>
+                    <AuditValueCell value={row.before} field={row.key} context={context} />
+                    <AuditValueCell value={row.after} field={row.key} context={context} />
+                  </>
+                ) : (
+                  <AuditValueCell value={row.value} field={row.key} context={context} />
+                )}
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+function RawJsonBlocks({ before, after, t }: { before: unknown; after: unknown; t: Translate }) {
+  return (
+    <Box
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+        gap: 2,
+      }}
+    >
+      <Box>
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('auditLogs.details.before')}</Typography>
+        <Box
+          component="pre"
+          sx={{
+            m: 0,
+            p: 2,
+            borderRadius: 1,
+            border: (theme) => `1px solid ${theme.palette.divider}`,
+            backgroundColor: 'background.default',
+            overflow: 'auto',
+            maxHeight: 420,
+            fontSize: 12,
+          }}
+        >
+          {formatJson(before)}
+        </Box>
+      </Box>
+      <Box>
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('auditLogs.details.after')}</Typography>
+        <Box
+          component="pre"
+          sx={{
+            m: 0,
+            p: 2,
+            borderRadius: 1,
+            border: (theme) => `1px solid ${theme.palette.divider}`,
+            backgroundColor: 'background.default',
+            overflow: 'auto',
+            maxHeight: 420,
+            fontSize: 12,
+          }}
+        >
+          {formatJson(after)}
+        </Box>
+      </Box>
+    </Box>
+  );
 }
 
 export default function AuditLogsPage() {
@@ -82,6 +224,7 @@ export default function AuditLogsPage() {
   const [open, setOpen] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [selectedRow, setSelectedRow] = React.useState<AuditLogItem | null>(null);
+  const [showRaw, setShowRaw] = React.useState(false);
   const lastQueryRef = React.useRef<{ sort: string; filterModel: any; q: string } | null>(null);
   const [exporting, setExporting] = React.useState(false);
   const [exportNotice, setExportNotice] = React.useState<{ severity: 'info' | 'error'; text: string } | null>(null);
@@ -128,10 +271,32 @@ export default function AuditLogsPage() {
   });
 
   const detail = detailQuery.data ?? selectedRow;
-  const changedKeys = React.useMemo(() => {
-    if (!detail) return [];
-    return getChangedKeys(detail.before_json, detail.after_json);
-  }, [detail]);
+  const fields = React.useMemo<AuditFields>(() => buildAuditFields(detail), [detail]);
+  const rawPayload = React.useMemo(() => auditHasNonObjectPayload(detail), [detail]);
+  const rawVisible = rawPayload || showRaw;
+  const recordLabel = detail ? auditRecordLabel(detail, t) : null;
+
+  // Every person the detail names, read in one lookup: no id ever reaches the cells.
+  const userIds = React.useMemo(() => auditUserIds(fields), [fields]);
+  const userLookup = useLookupHydration<UserOption>({
+    endpoint: USERS_LOOKUP_ENDPOINT,
+    ids: userIds,
+    known: KNOWN_USERS,
+    enabled: open && userIds.length > 0,
+  });
+  const userNames = React.useMemo(() => {
+    const names = new Map<string, string>();
+    for (const user of userLookup.items) {
+      const name = formatUserName(user);
+      if (name) names.set(user.id, name);
+    }
+    return names;
+  }, [userLookup.items]);
+  const snapshot = React.useMemo(() => auditSnapshot(detail), [detail]);
+  const valueContext = React.useMemo<AuditValueContext>(
+    () => ({ locale, t, snapshot, users: userNames }),
+    [locale, t, snapshot, userNames],
+  );
 
   const getFilterValues = React.useCallback((field: 'table_name' | 'action' | 'source') => {
     return async ({ context }: any) => {
@@ -303,6 +468,7 @@ export default function AuditLogsPage() {
           if (!e?.data?.id) return;
           setSelectedRow(e.data as AuditLogItem);
           setSelectedId(String(e.data.id));
+          setShowRaw(false);
           setOpen(true);
         }}
       />
@@ -338,65 +504,36 @@ export default function AuditLogsPage() {
                 {detail.source_ref && detail.table_name === AUTH_EVENT_TABLE && <Typography variant="body2" color="text.secondary">{t('auditLogs.details.reason', { value: auditReasonLabel(detail, t) })}</Typography>}
                 {detail.source_ref && detail.table_name !== AUTH_EVENT_TABLE && <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.sourceRef', { value: detail.source_ref })}</Typography>}
                 <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.tenant', { value: detail.tenant_id })}</Typography>
-                {detail.record_id && <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.recordId', { value: detail.record_id })}</Typography>}
+                {recordLabel && <Typography component="span" variant="body2" title={recordLabel.title} sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.record', { value: recordLabel.text })}</Typography>}
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.user', { value: auditUserLabel(detail, t) })}</Typography>
               </Stack>
 
-              <Box>
-                <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('auditLogs.details.changedFields')}</Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
-                  {changedKeys.length === 0 && <Typography variant="body2" color="text.secondary">{t('auditLogs.details.noFieldChanges')}</Typography>}
-                  {changedKeys.map((key) => (
-                    <Typography key={key} component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{key}</Typography>
-                  ))}
-                </Stack>
-              </Box>
-
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-                  gap: 2,
-                }}
-              >
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('auditLogs.details.before')}</Typography>
-                  <Box
-                    component="pre"
-                    sx={{
-                      m: 0,
-                      p: 2,
-                      borderRadius: 1,
-                      border: (theme) => `1px solid ${theme.palette.divider}`,
-                      backgroundColor: 'background.default',
-                      overflow: 'auto',
-                      maxHeight: 420,
-                      fontSize: 12,
-                    }}
-                  >
-                    {formatJson(detail.before_json)}
+              {rawPayload ? (
+                <RawJsonBlocks before={detail.before_json} after={detail.after_json} t={t} />
+              ) : (
+                <>
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('auditLogs.details.fields')}</Typography>
+                    {fields.rows.length === 0 ? (
+                      <Typography variant="body2" color="text.secondary">{t('auditLogs.details.noFieldChanges')}</Typography>
+                    ) : (
+                      <AuditFieldsTable fields={fields} t={t} context={valueContext} />
+                    )}
+                    <Box sx={{ mt: 1 }}>
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={() => setShowRaw((value) => !value)}
+                        aria-expanded={rawVisible}
+                      >
+                        {rawVisible ? t('auditLogs.details.hideRawData') : t('auditLogs.details.rawData')}
+                      </Button>
+                    </Box>
                   </Box>
-                </Box>
 
-                <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('auditLogs.details.after')}</Typography>
-                  <Box
-                    component="pre"
-                    sx={{
-                      m: 0,
-                      p: 2,
-                      borderRadius: 1,
-                      border: (theme) => `1px solid ${theme.palette.divider}`,
-                      backgroundColor: 'background.default',
-                      overflow: 'auto',
-                      maxHeight: 420,
-                      fontSize: 12,
-                    }}
-                  >
-                    {formatJson(detail.after_json)}
-                  </Box>
-                </Box>
-              </Box>
+                  {rawVisible && <RawJsonBlocks before={detail.before_json} after={detail.after_json} t={t} />}
+                </>
+              )}
             </Stack>
           )}
         </DialogContent>
