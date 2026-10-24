@@ -1454,6 +1454,7 @@
         "save_failed": "This object could not be saved. The details are in the server log.",
         "validation_failed": "This object was refused:",
         "os_ambiguous": "The operating system \"{{value}}\" matches more than one entry in your catalogue, so it was left unchanged.",
+        "os_cluster_with_members": "This asset is a cluster with members, so the operating system \"{{value}}\" was left out.",
         "status_not_mapped": "The Netbox status \"{{value}}\" has no equivalent in KANAP, so the lifecycle was left unchanged.",
         "lifecycle_not_in_catalog": "The lifecycle \"{{value}}\" is not in your catalogue, so it was left unchanged.",
         "no_ip_address_type": "No IP address type is set up in the IT settings, so the address was not imported.",

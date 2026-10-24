@@ -1454,6 +1454,7 @@
         "save_failed": "No se ha podido guardar este objeto. Los detalles están en el registro del servidor.",
         "validation_failed": "Este objeto se ha rechazado:",
         "os_ambiguous": "El sistema operativo «{{value}}» coincide con varias entradas de su catálogo, así que el valor no se ha cambiado.",
+        "os_cluster_with_members": "Este activo es un clúster con miembros, así que el sistema operativo «{{value}}» se ha dejado fuera.",
         "status_not_mapped": "El estado de Netbox «{{value}}» no tiene equivalente en KANAP, así que el ciclo de vida no se ha cambiado.",
         "lifecycle_not_in_catalog": "El ciclo de vida «{{value}}» no está en su catálogo, así que el valor no se ha cambiado.",
         "no_ip_address_type": "No hay ningún tipo de dirección IP definido en los ajustes de TI, así que la dirección no se ha importado.",

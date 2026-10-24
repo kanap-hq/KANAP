@@ -1454,6 +1454,7 @@
         "save_failed": "Dieses Objekt konnte nicht gespeichert werden. Die Details stehen im Serverprotokoll.",
         "validation_failed": "Dieses Objekt wurde abgelehnt:",
         "os_ambiguous": "Das Betriebssystem „{{value}}“ passt zu mehreren Einträgen in Ihrem Katalog, der Wert blieb unverändert.",
+        "os_cluster_with_members": "Dieses Asset ist ein Cluster mit Mitgliedern, daher wurde das Betriebssystem „{{value}}“ ausgelassen.",
         "status_not_mapped": "Der Netbox-Status „{{value}}“ hat keine Entsprechung in KANAP, der Lebenszyklus blieb unverändert.",
         "lifecycle_not_in_catalog": "Der Lebenszyklus „{{value}}“ steht nicht in Ihrem Katalog, der Wert blieb unverändert.",
         "no_ip_address_type": "In den IT-Einstellungen ist kein IP-Adresstyp eingerichtet, die Adresse wurde nicht importiert.",

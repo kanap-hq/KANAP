@@ -366,6 +366,32 @@ async function main() {
       );
     });
 
+    // --- a platform on a cluster that has members ---------------------------
+    // The cluster carries no operating system: the platform is left out with a notice and the
+    // rest of the patch goes on. A cluster without member keeps it.
+    {
+      await withTenantExecution(dataSource, a.tenantId, async (manager) => {
+        await manager.query(
+          `INSERT INTO asset_cluster_members (tenant_id, cluster_id, asset_id) VALUES ($1, $2, $3)`,
+          [a.tenantId, a.clusters.paris, a.server],
+        );
+        const skip = (clusterId: string) => {
+          const patch: Record<string, unknown> = { operating_system: 'VMware ESXi 8', hostname: 'par-vc' };
+          const warnings: any[] = [];
+          return (sync as any).skipOperatingSystemOfCluster(manager, a.tenantId, clusterId, patch, warnings)
+            .then(() => ({ patch, warnings: warnings.map((notice) => [notice.code, notice.params.value]) }));
+        };
+        assert.deepEqual(await skip(a.clusters.paris), {
+          patch: { hostname: 'par-vc' },
+          warnings: [['os_cluster_with_members', 'VMware ESXi 8']],
+        });
+        assert.deepEqual(await skip(a.clusters.gouda), {
+          patch: { operating_system: 'VMware ESXi 8', hostname: 'par-vc' },
+          warnings: [],
+        });
+      });
+    }
+
     console.log('netbox-clusters.integration.spec.ts OK');
   } finally {
     for (const tenantId of made) {

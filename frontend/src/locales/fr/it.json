@@ -1454,6 +1454,7 @@
         "save_failed": "Cet objet n'a pas pu être enregistré. Les détails figurent dans le journal du serveur.",
         "validation_failed": "Cet objet a été refusé :",
         "os_ambiguous": "Le système d'exploitation « {{value}} » correspond à plusieurs entrées de votre catalogue, la valeur n'a pas été modifiée.",
+        "os_cluster_with_members": "Cet actif est un cluster avec des membres, le système d'exploitation « {{value}} » n'a donc pas été repris.",
         "status_not_mapped": "Le statut Netbox « {{value}} » n'a pas d'équivalent dans KANAP, le cycle de vie n'a pas été modifié.",
         "lifecycle_not_in_catalog": "Le cycle de vie « {{value}} » ne figure pas dans votre catalogue, la valeur n'a pas été modifiée.",
         "no_ip_address_type": "Aucun type d'adresse IP n'est défini dans les paramètres IT, l'adresse n'a pas été importée.",
