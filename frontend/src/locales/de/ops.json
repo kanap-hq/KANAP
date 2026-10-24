@@ -1209,6 +1209,8 @@
       "follows": "Folgt auf <link>{{reference}}</link> ({{type}})",
       "replacedBy": "Ersetzt durch <link>{{reference}}</link> ({{type}}) ab {{year}}",
       "replacedByNoYear": "Ersetzt durch <link>{{reference}}</link> ({{type}})",
+      "followsHidden": "Folgt auf {{reference}}",
+      "replacedByHidden": "Ersetzt durch {{reference}}",
       "type": {
         "opex": "OPEX-Zeile",
         "capex": "CAPEX-Zeile"
@@ -1387,6 +1389,7 @@
       "itCostsPerItUser": "IT-Kosten pro IT-Benutzer",
       "item": "Zeile",
       "allocationMethod": "Zuordnungsmethode",
+      "allocationPct": "Zuordnung",
       "receivables": "Forderungen",
       "payables": "Verbindlichkeiten",
       "net": "Netto",
@@ -1450,7 +1453,8 @@
       "chargebackKpis": "KPIs der Leistungsverrechnung",
       "chartTitle": "Leistungsverrechnung nach Abteilung: {{name}}",
       "chartSubtitle": "{{metric}}-Totale",
-      "chartFootnote": "Gesamt {{metric}}: {{total}}"
+      "chartFootnote": "Gesamt {{metric}}: {{total}}",
+      "noCompanyInAccess": "Kein Unternehmen gehört zu Ihrem Datenzugriff."
     },
     "topOpex": {
       "title": "Top-Zeilen",

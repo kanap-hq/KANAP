@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 // `Trans` stands in: its key, then its link element holding the reference.
-const i18n = vi.hoisted(() => ({ t: (key: string) => key }));
+const i18n = vi.hoisted(() => ({ t: (key: string, options?: Record<string, unknown>) => (options ? `${key} ${String(options.reference)}` : key) }));
 vi.mock('react-i18next', async () => {
   const React = await import('react');
   return {
@@ -36,6 +36,22 @@ describe('LineLineage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'BL-12' }));
     fireEvent.click(screen.getByRole('button', { name: 'BL-40' }));
     expect(onOpen.mock.calls.map(([line]) => line.id)).toEqual(['l1', 'l3']);
+  });
+
+  it('names a line the person cannot read by its reference alone, without a link', () => {
+    const onOpen = vi.fn();
+    render(
+      <LineLineage
+        lineage={{
+          predecessor: { id: null, reference: 'BL-12', nature: null, hidden: true },
+          successor: { id: null, reference: 'BL-40', nature: null, hidden: true, from_year: null },
+        }}
+        onOpen={onOpen}
+      />,
+    );
+    expect(screen.getByText('shared.lineage.followsHidden BL-12')).toBeInTheDocument();
+    expect(screen.getByText('shared.lineage.replacedByHidden BL-40')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 
   it('shows nothing for a line without either', () => {

@@ -105,6 +105,8 @@ interface TaskData {
   related_object_type: string | null;
   related_object_id: string | null;
   related_object_name: string | null;
+  /** A budget line the person cannot read: its reference alone, without a link. */
+  related_object_hidden?: boolean;
   phase_id: string | null;
   phase_name: string | null;
   // Classification fields
@@ -318,6 +320,11 @@ export default function TaskSidebar({
                       : relatedTypeLabels.unknown}
                   </Typography>
                   <Typography component="span"> : </Typography>
+                  {task.related_object_hidden ? (
+                    <Typography component="span" sx={{ color: 'text.primary' }}>
+                      {task.related_object_name}
+                    </Typography>
+                  ) : (
                   <Typography
                     component={Link}
                     to={isProjectTask ? (projectWorkspaceLink || `/portfolio/projects/${task.related_object_id}`) :
@@ -330,6 +337,7 @@ export default function TaskSidebar({
                   >
                     {task.related_object_name || t('workspace.task.sidebar.values.unknown')}
                   </Typography>
+                  )}
                 </Box>
               </PropertyRow>
             )}

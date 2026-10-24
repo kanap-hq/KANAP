@@ -247,6 +247,7 @@
   "DATA_ACCESS_UNAVAILABLE": "Der Datenzugriff ist vorübergehend nicht verfügbar. Wenden Sie sich an die Person, die KANAP betreibt.",
   "dataAccess": {
     "outside": "Dieses Element liegt außerhalb Ihres Datenzugriffs.",
+    "chargebackCompany": "Die Leistungsverrechnung dieses Unternehmens liegt außerhalb Ihres Datenzugriffs.",
     "readOnlyLine": "Diese Zeile ist in Ihrem Zugriff schreibgeschützt.",
     "placement": "Dieses Unternehmen oder diese Kostenstelle gehört nicht zu Ihrem Zugriff.",
     "reserved": "Diese Aktion ist Personen mit Zugriff auf alle Daten vorbehalten.",

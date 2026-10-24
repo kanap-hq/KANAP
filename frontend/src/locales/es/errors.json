@@ -247,6 +247,7 @@
   "DATA_ACCESS_UNAVAILABLE": "El acceso a los datos no está disponible temporalmente. Contacte con la persona que administra KANAP.",
   "dataAccess": {
     "outside": "Este elemento está fuera de su acceso a los datos.",
+    "chargebackCompany": "El contracargo de esta empresa está fuera de su acceso a los datos.",
     "readOnlyLine": "Esta línea es de solo lectura en su acceso.",
     "placement": "Esta empresa o este centro de coste no forma parte de su acceso.",
     "reserved": "Esta acción está reservada a las personas con acceso a todos los datos.",

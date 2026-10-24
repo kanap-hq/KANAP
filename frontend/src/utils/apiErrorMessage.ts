@@ -61,6 +61,7 @@ const DATA_ACCESS_MESSAGE_KEYS: Record<string, string> = {
   'This line is read only in your access.': 'readOnlyLine',
   'This company or cost center is not part of your access.': 'placement',
   'This action is reserved to people with access to all data.': 'reserved',
+  'The chargeback of this company is outside your data access.': 'chargebackCompany',
   'This task is read only in your access.': 'readOnlyTask',
   'Only someone who can modify the line or contract of this task can delete it.': 'taskDelete',
   'This change would take the line out of your access. Keep yourself as an owner, or ask someone with access to its company.': 'leavesAccess',

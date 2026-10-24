@@ -1209,6 +1209,8 @@
       "follows": "Sucede a <link>{{reference}}</link> ({{type}})",
       "replacedBy": "Sustituida por <link>{{reference}}</link> ({{type}}) a partir de {{year}}",
       "replacedByNoYear": "Sustituida por <link>{{reference}}</link> ({{type}})",
+      "followsHidden": "Sucede a {{reference}}",
+      "replacedByHidden": "Sustituida por {{reference}}",
       "type": {
         "opex": "línea OPEX",
         "capex": "línea CAPEX"
@@ -1387,6 +1389,7 @@
       "itCostsPerItUser": "Costes IT por usuario IT",
       "item": "Línea",
       "allocationMethod": "Método de asignación",
+      "allocationPct": "Asignación",
       "receivables": "Cuentas por cobrar",
       "payables": "Cuentas por pagar",
       "net": "Neto",
@@ -1450,7 +1453,8 @@
       "chargebackKpis": "KPI de contracargo",
       "chartTitle": "Contracargo por departamento: {{name}}",
       "chartSubtitle": "Totales {{metric}}",
-      "chartFootnote": "{{metric}} global: {{total}}"
+      "chartFootnote": "{{metric}} global: {{total}}",
+      "noCompanyInAccess": "Ninguna empresa forma parte de su acceso a los datos."
     },
     "topOpex": {
       "title": "Top líneas",
