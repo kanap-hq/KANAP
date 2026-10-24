@@ -106,6 +106,8 @@ Plaid streamt seine Antwort Zeichen für Zeichen. Während des Streamings:
 
 Wenn der Stream endet, springt der Fokus zurück zum Eingabefeld, sodass Sie die Konversation fortsetzen können, ohne zur Maus zu greifen.
 
+In KANAP gespeicherte Bilder, etwa Anhänge, werden wie gewohnt angezeigt. Ein Bild, das auf einer anderen Website liegt, wird nicht von selbst geladen, weder in einer Antwort noch in Ihren eigenen Nachrichten oder in der Vorschau einer vorgeschlagenen Änderung. Es erscheint als Link mit einem Bildsymbol: Klicken Sie darauf, um das Bild in einem neuen Tab zu öffnen. Bis zu Ihrem Klick wird nichts von dieser Website abgerufen.
+
 ### Tool-Aufrufe { #tool-calls }
 
 Plaid verwendet eine kleine Auswahl interner Tools, um Fragen zu beantworten: `Search all`, `Search knowledge`, `Get document`, `Get entity context` und einige weitere. Jeder Tool-Aufruf erscheint als kompakte Zeile unter der Nachricht („Alles durchsuchen verwendet · 8 Ergebnisse“). In der Regel müssen Sie die Tool-Details nicht lesen, aber sie sind vorhanden, falls Sie genau sehen möchten, auf welchen Datensätzen die Antwort beruht.
