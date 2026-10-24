@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { textSortKey, type TextSortKey } from '../../common/list-sort';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { parsePagination, Sort } from '../../common/pagination';
 import { operatingSystemLabelSql } from '../../technologies/operating-system-codes';
@@ -220,6 +220,10 @@ export class AssetsListService extends AssetsBaseService {
 
     // Enrich with cluster names and assignment counts
     await this.enrichListItems(items, ids, mg, tenantId, joinedCounts);
+    // `include=member_names`: the server picker shows who a cluster's assignment reaches.
+    if (String(query?.include ?? '').split(',').map((part) => part.trim()).includes('member_names')) {
+      await this.attachMemberNames(items, mg, tenantId);
+    }
 
     return { items, total, page, limit };
   }
@@ -284,6 +288,25 @@ export class AssetsListService extends AssetsBaseService {
     const ids = rows.map((r) => r.id);
     const refs = rows.map((r) => r.ref || r.id);
     return { ids, refs, total };
+  }
+
+  /** `member_names` on each cluster of `items`: its members by name, in one read. */
+  private async attachMemberNames(items: any[], mg: EntityManager, tenantId: string): Promise<void> {
+    const clusterIds = items.filter((item) => item.is_cluster).map((item) => item.id);
+    if (clusterIds.length === 0) return;
+    const rows: Array<{ cluster_id: string; name: string }> = await mg.query(
+      `SELECT m.cluster_id, a.name
+         FROM asset_cluster_members m
+         JOIN assets a ON a.tenant_id = m.tenant_id AND a.id = m.asset_id
+        WHERE m.tenant_id = $1 AND m.cluster_id = ANY($2::uuid[])
+        ORDER BY m.cluster_id, a.name, a.id`,
+      [tenantId, clusterIds],
+    );
+    const byCluster = new Map<string, string[]>();
+    for (const row of rows) byCluster.set(row.cluster_id, [...(byCluster.get(row.cluster_id) ?? []), row.name]);
+    for (const item of items) {
+      if (item.is_cluster) item.member_names = byCluster.get(item.id) ?? [];
+    }
   }
 
   /**

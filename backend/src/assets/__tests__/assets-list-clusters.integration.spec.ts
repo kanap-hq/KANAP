@@ -90,6 +90,15 @@ async function testList() {
     // The search reaches a cluster's name and keeps one row per asset.
     const searched = await list({ q: 'cl', sort: 'cluster:ASC' });
     assert.equal(searched.items.length, searched.total);
+
+    // `include=member_names`: each cluster with its members by name, in one read; others untouched.
+    const named = await list({ sort: 'name:ASC', include: 'member_names' });
+    const memberNames = Object.fromEntries(named.items.map((item: any) => [item.name, item.member_names]));
+    assert.deepEqual(memberNames['Alpha-cl'], ['node-twice']);
+    assert.deepEqual(memberNames['beta-cl'], ['node-once', 'node-twice']);
+    assert.deepEqual(memberNames['empty-cl'], []);
+    assert.equal(memberNames['node-once'], undefined);
+    assert.equal((all.items[0] as any).member_names, undefined, 'not asked: not sent');
   });
 }
 
