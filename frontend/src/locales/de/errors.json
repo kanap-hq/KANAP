@@ -198,7 +198,7 @@
   "ROLE_BUILT_IN": "Diese Rolle ist in KANAP enthalten und kann nicht gelöscht werden. Duplizieren Sie sie, um eine änderbare Rolle zu erhalten.",
   "ROLE_IN_USE_one": "Diese Rolle ist {{usages}} zugewiesen. Weisen Sie ihm zuerst eine andere Rolle zu.",
   "ROLE_IN_USE_other": "Diese Rolle ist {{usages}} zugewiesen. Weisen Sie ihnen zuerst eine andere Rolle zu.",
-  "DEPLOYMENT_IN_USE_one": "Diese Bereitstellung hat noch {{usages}}. Entfernen Sie sie zuerst.",
+  "DEPLOYMENT_IN_USE_one": "Diese Bereitstellung hat noch {{usages}}. Entfernen Sie ihn zuerst.",
   "DEPLOYMENT_IN_USE_other": "Diese Bereitstellung hat noch {{usages}}. Entfernen Sie sie zuerst.",
   "INTERFACE_HAS_BINDINGS_one": "Diese Schnittstelle hat {{usages}}. Löschen Sie ihre Bindung mit, oder entfernen Sie sie zuerst.",
   "INTERFACE_HAS_BINDINGS_other": "Diese Schnittstelle hat {{usages}}. Löschen Sie ihre Bindungen mit, oder entfernen Sie sie zuerst.",
