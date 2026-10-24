@@ -23,7 +23,7 @@ import { getProvisioningSecret } from './token-secret.util';
 import { PROVISIONING_TOKEN_ALGORITHMS } from './jwt-algorithms';
 import { TenantsService } from '../tenants/tenants.service';
 import { UserRole } from '../users/user-role.entity';
-import { RateLimitGuard } from '../common/rate-limit.guard';
+import { RateLimitGuard, TenantRateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { SecurityEventsService } from '../audit/security-events.service';
 import { AuthEvent, AuthEventReason } from '../audit/security-events';
@@ -413,8 +413,9 @@ export class AuthController {
   }
 
   @Post('refresh')
-  // Per client address, then per refresh token (auth/refresh-session-limit.ts).
-  @UseGuards(RateLimitGuard, RefreshSessionRateLimitGuard)
+  // Per client address and tenant (two organisations behind one NAT or VPN do not share a
+  // budget), then per refresh token (auth/refresh-session-limit.ts).
+  @UseGuards(TenantRateLimitGuard, RefreshSessionRateLimitGuard)
   @Throttle({ default: RATE_LIMITS.authRefresh })
   async refreshToken(@Body() body: RefreshTokenDto, @Req() req: any, @Res({ passthrough: true }) res: Response) {
     // Same origin rule as CORS, before the cookie is read (common/cors-policy.ts).
