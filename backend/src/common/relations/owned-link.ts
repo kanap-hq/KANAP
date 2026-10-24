@@ -3,6 +3,7 @@ import type { EntityManager } from 'typeorm';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
 import { assertLinesEditable } from '../../data-access/line-write-checks';
+import { auditedLinkSet, hiddenLineCount, type HiddenLineOwner } from '../../data-access/hidden-links';
 import { binder } from './related-objects';
 import { parseTargetId } from './relation-target';
 
@@ -14,6 +15,15 @@ import { parseTargetId } from './relation-target';
 export type OwnedRelationKind = 'budget_lines' | 'contracts' | 'projects' | 'applications' | 'assets' | 'technologies' | 'processes';
 
 /** Existence of an application, an asset, a technology or a business process. The table names come only from here. */
+/** The owners whose hidden lines `data_access_hidden_count` counts, by their table. */
+const HIDDEN_LINE_OWNERS: Record<string, HiddenLineOwner> = {
+  applications: 'application',
+  assets: 'asset',
+  technologies: 'technology',
+  portfolio_projects: 'project',
+  portfolio_requests: 'request',
+};
+
 const ROW_TARGETS = {
   applications: 'applications',
   assets: 'assets',
@@ -39,7 +49,7 @@ export type OwnedRelationLink = {
 
 export type OwnedLinkAudit = {
   log: (
-    entry: { table: string; recordId: string; action: 'update'; before: string[]; after: string[]; userId: string | null },
+    entry: { table: string; recordId: string; action: 'update'; before: unknown; after: unknown; userId: string | null },
     opts: { manager: EntityManager },
   ) => Promise<unknown>;
 };
@@ -158,8 +168,11 @@ export async function setOwnedLink(args: {
   const auditTable = typeof args.link.auditTable === 'function'
     ? args.link.auditTable(nature as BudgetNature)
     : (args.link.auditTable ?? args.link.table);
+  // The lines a limited person cannot read stay linked: the audit row says how many (spec §6.6).
+  const hiddenOwner = args.kind === 'budget_lines' ? HIDDEN_LINE_OWNERS[args.owner.table] : undefined;
+  const hidden = hiddenOwner ? await hiddenLineCount(args.manager, hiddenOwner, loaded.id) : 0;
   await args.audit.log(
-    { table: auditTable, recordId: loaded.id, action: 'update', before, after, userId: args.userId },
+    { table: auditTable, recordId: loaded.id, action: 'update', before: auditedLinkSet(before, hidden), after: auditedLinkSet(after, hidden), userId: args.userId },
     { manager: args.manager },
   );
   return { ok: true, changed: true };
