@@ -106,6 +106,8 @@ Plaid streams its answer character by character. While streaming:
 
 When the stream finishes, focus jumps back to the composer so you can keep the conversation moving without reaching for the mouse.
 
+Images stored in KANAP, such as attachments, display as usual. An image hosted on another website does not load by itself, in an answer, in your own messages or in the preview of a proposed change. It shows as a link with an image icon: click it to open the image in a new tab. Nothing is requested from that website until you click.
+
 ### Tool calls { #tool-calls }
 
 Plaid uses a small set of internal tools to answer questions: `Search all`, `Search knowledge`, `Get document`, `Get entity context`, and a handful of others. Each tool call shows up as a compact line under the message ("used Search all · 8 results"). You usually do not need to read the tool details, but they are there if you want to see exactly which records the answer was based on.

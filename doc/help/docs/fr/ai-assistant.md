@@ -106,6 +106,8 @@ Plaid diffuse sa réponse caractère par caractère. Pendant la diffusion :
 
 Lorsque la diffusion se termine, le focus revient automatiquement sur le composeur afin que vous puissiez poursuivre la conversation sans avoir à utiliser la souris.
 
+Les images stockées dans KANAP, comme les pièces jointes, s'affichent normalement. Une image hébergée sur un autre site web ne se charge pas d'elle-même, dans une réponse, dans vos propres messages ou dans l'aperçu d'une modification proposée. Elle apparaît comme un lien avec une icône d'image : cliquez dessus pour ouvrir l'image dans un nouvel onglet. Aucune demande ne part vers ce site avant votre clic.
+
 ### Appels d'outils { #tool-calls }
 
 Plaid utilise un petit ensemble d'outils internes pour répondre aux questions : `Search all`, `Search knowledge`, `Get document`, `Get entity context` et quelques autres. Chaque appel d'outil apparaît sous forme de ligne compacte sous le message (« a utilisé Search all · 8 résultats »). Vous n'avez généralement pas besoin de lire les détails de l'outil, mais ils sont là si vous voulez voir exactement sur quels enregistrements la réponse s'est appuyée.

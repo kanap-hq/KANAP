@@ -66,7 +66,7 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 
 **Exporte** (Tabelle **Export**): CSV-Exporte, Dokumente und Berichte, die der Server erzeugt. Die Zeile zeigt, was exportiert wurde und von wem. Auch der Export des Audit-Protokolls wird aufgezeichnet.
 
-Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **IP-Adresse** fest, von der die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides im Bereich **Nachher** zu lesen. Hinter einem Reverse Proxy ist es die IP-Adresse der Person selbst, sofern der Proxy sie weitergibt (On-Premise: siehe das [Reverse-Proxy-Beispiel](on-premise/installation.md#reverse-proxy-example-nginx)).
+Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **IP-Adresse** fest, von der die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides in den Zeilen **IP-Adresse** und **Browser** ihrer Tabelle zu lesen. Hinter einem Reverse Proxy ist es die IP-Adresse der Person selbst, sofern der Proxy sie weitergibt (On-Premise: siehe das [Reverse-Proxy-Beispiel](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Passwörter, Anmelde-Links und Tokens werden nie ins Protokoll geschrieben. Versucht sich jemand mit einer E-Mail-Adresse anzumelden, zu der es kein Konto gibt, zeigt die Zeile **Unbekanntes Konto** und speichert die eingegebene Adresse nicht.
 
@@ -84,8 +84,9 @@ Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Datenänder
   - Quelle (`user`, `system`, `webhook`)
 - Beliebige Zeile öffnen, um vollständige Details anzuzeigen:
   - Metadaten-Chips (Datum, Tabelle, Aktion, Quelle, Grund oder Quellreferenz, Mandant, Datensatz-ID, Benutzer)
-  - Zusammenfassung der geänderten Felder
-  - Nebeneinander dargestellte **Vorher**- und **Nachher**-JSON-Daten
+  - Die Geschäftsreferenz des Datensatzes in der Kopfzeile (zum Beispiel `PRJ-3`), sofern er eine hat
+  - Eine Tabelle der Felder: **Feld**, **Vorher** und **Nachher** bei einer Änderung, **Feld** und **Wert** bei jedem anderen Eintrag. Feldnamen erscheinen in Ihrer Sprache, sofern bekannt. Datumsangaben, Ja/Nein-Werte und Personen werden lesbar dargestellt; andere Kennungen erscheinen als **Kennung**, mit dem Wert in einem Tooltip. Technische Felder wie `id`, `tenant_id` und `updated_at` werden ausgelassen
+  - **Rohdaten anzeigen** zeigt das vollständige JSON vorher und nachher
 - Das Protokoll als CSV exportieren (siehe unten)
 
 ### Spalten

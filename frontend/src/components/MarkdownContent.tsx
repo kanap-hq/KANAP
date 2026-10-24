@@ -4,6 +4,7 @@ import { useTheme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import ContentCopyIcon from '@mui/icons-material/ContentCopyOutlined';
 import CheckIcon from '@mui/icons-material/Check';
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -20,10 +21,20 @@ import { normalizeMarkdownForRichTextEditor } from '../lib/markdownEditorNormali
 interface MarkdownContentProps {
   content: string;
   variant?: 'default' | 'compact';
+  /**
+   * 'show' renders every image inline, as Markdown content always has.
+   * 'link' keeps KANAP-served images inline and turns any other image into a link,
+   * so model-produced content cannot trigger a third-party request without a click.
+   */
+  externalImages?: 'show' | 'link';
 }
 
 const sanitizeSchema = {
   ...defaultSchema,
+  protocols: {
+    ...defaultSchema.protocols,
+    src: [...(defaultSchema.protocols?.src || []), 'data', 'blob'],
+  },
   attributes: {
     ...defaultSchema.attributes,
     a: [...(defaultSchema.attributes?.a || []), 'target', 'rel'],
@@ -130,15 +141,43 @@ function sanitizeUrl(url: string, key?: string): string {
   }
 
   if (key === 'src') {
-    if (/^https?:/i.test(value)) return value;
-    if (value.startsWith('/')) return value;
-    return '';
+    if (/^(https?:|blob:)/i.test(value) || /^data:image\//i.test(value)) return value;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(value)) return '';
+    return value;
   }
 
   return value;
 }
 
-export function MarkdownContent({ content, variant = 'default' }: MarkdownContentProps) {
+/**
+ * True when the image is served by KANAP itself: a relative URL, the app origin,
+ * a blob URL, or an inline `data:image/` payload. Those load no third-party request.
+ */
+export function isKanapImageSource(src: string | null | undefined): boolean {
+  const value = String(src ?? '').trim();
+  if (!value) return false;
+  if (/^data:image\//i.test(value)) return true;
+  if (/^blob:/i.test(value)) return true;
+  try {
+    const url = new URL(value, window.location.href);
+    return url.origin === window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+/** True when an external image source can become a clickable http(s) link. */
+function isHttpImageSource(src: string): boolean {
+  if (/^https?:/i.test(src) || src.startsWith('//')) return true;
+  try {
+    const { protocol } = new URL(src, window.location.href);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+export function MarkdownContent({ content, variant = 'default', externalImages = 'show' }: MarkdownContentProps) {
   const isCompact = variant === 'compact';
   const value = normalizeMarkdownForRichTextEditor(content || '');
   const isDark = useTheme().palette.mode === 'dark';
@@ -274,6 +313,23 @@ export function MarkdownContent({ content, variant = 'default' }: MarkdownConten
           a: ({ node: _node, ...props }: any) => (
             <a {...props} target="_blank" rel="noopener noreferrer" />
           ),
+          img: ({ node: _node, src, alt, ...props }: any) => {
+            const source = typeof src === 'string' ? src : '';
+            const label = typeof alt === 'string' && alt.trim() ? alt : source;
+            if (!source) return <>{label}</>;
+            if (externalImages === 'show' || isKanapImageSource(source)) {
+              return <img {...props} src={source} alt={typeof alt === 'string' ? alt : ''} />;
+            }
+            if (!isHttpImageSource(source)) return <>{label}</>;
+            return (
+              <a href={source} target="_blank" rel="noopener noreferrer nofollow">
+                <ImageOutlinedIcon
+                  sx={{ fontSize: 14, mr: 0.5, color: 'text.secondary', verticalAlign: 'text-bottom' }}
+                />
+                {label}
+              </a>
+            );
+          },
           pre: ({ children, ...props }: any) => (
             <CodeBlock {...props}>{children}</CodeBlock>
           ),

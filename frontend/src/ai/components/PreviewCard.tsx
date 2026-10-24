@@ -55,7 +55,7 @@ function renderValue(
     const content = preview.status === 'pending' && TICKET_IMPORT_TOOL_NAMES.has(preview.tool_name)
       ? replacePendingImportImages(value, pendingImagePlaceholder)
       : value;
-    return <MarkdownContent content={content} variant="compact" />;
+    return <MarkdownContent content={content} variant="compact" externalImages="link" />;
   }
 
   return (
