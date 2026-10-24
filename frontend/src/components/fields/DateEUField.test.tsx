@@ -127,6 +127,75 @@ describe('DateEUField keeps the rest of the date while editing the middle', () =
   });
 });
 
+describe('DateEUField reports an invalid date on blur', () => {
+  it('keeps the typed text visible, marks the field invalid and leaves the saved date alone', () => {
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '21/10/26' } });
+    expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
+    expect(onChangeYmd).not.toHaveBeenCalled();
+
+    fireEvent.blur(input);
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText('Invalid date')).toBeInTheDocument();
+    expect(input.value).toBe('21/10/26');
+    expect(onChangeYmd).not.toHaveBeenCalled();
+  });
+
+  it('clears the error when the text becomes valid', () => {
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '21/10/26' } });
+    fireEvent.blur(input);
+    expect(screen.getByText('Invalid date')).toBeInTheDocument();
+
+    fireEvent.focus(input);
+    expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
+    fireEvent.change(input, { target: { value: '21/10/2026' } });
+    expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-invalid', 'true');
+    expect(onChangeYmd).toHaveBeenLastCalledWith('2026-10-21');
+  });
+
+  it('clears an emptied field on blur', () => {
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.blur(input);
+    expect(onChangeYmd).toHaveBeenLastCalledWith('');
+    expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
+  });
+
+  it('restores the saved date on Escape', () => {
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '21/10/26' } });
+    fireEvent.blur(input);
+    expect(screen.getByText('Invalid date')).toBeInTheDocument();
+
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(input.value).toBe('15/03/2022');
+    expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
+    expect(onChangeYmd).not.toHaveBeenCalled();
+  });
+
+  it('keeps the error and helper text given by the caller', () => {
+    renderField({ valueYmd: '2022-03-15', error: true, helperText: 'The contract starts later.' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '21/10/26' } });
+    fireEvent.blur(input);
+    expect(screen.getByText('The contract starts later.')).toBeInTheDocument();
+    expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+  });
+});
+
 describe('DateEUField typing follows the language', () => {
   afterEach(async () => {
     await i18n.changeLanguage('en');

@@ -39,6 +39,7 @@ function toYmdOnly(value: string): string {
 export default function DateEUField({ label, valueYmd = '', onChangeYmd, disabled, required, name, error, helperText, size, sx, hideLabel = false, textFieldSx, popoverClassName, autoFocus }: Props) {
   const [text, setText] = React.useState<string>('');
   const [focused, setFocused] = React.useState(false);
+  const [invalid, setInvalid] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const mouseDownRef = React.useRef(false);
@@ -54,10 +55,10 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
   // Normalize the input value to YYYY-MM-DD format
   const normalizedYmd = toYmdOnly(valueYmd);
 
-  // sync from value (skip while the user is editing)
+  // sync from value (skip while the user is editing, and keep an invalid typed text on screen)
   React.useEffect(() => {
-    if (!focused) setText(ymdToEu(normalizedYmd, sep));
-  }, [normalizedYmd, focused, sep]);
+    if (!focused && !invalid) setText(ymdToEu(normalizedYmd, sep));
+  }, [normalizedYmd, focused, sep, invalid]);
 
   // At rest the field shows the charter display format; numeric dd/mm/yyyy (dd.mm.yyyy) only while editing.
   const restText = normalizedYmd ? formatShortDate(normalizedYmd, locale, { year: 'always' }) : '';
@@ -68,6 +69,7 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
     const deleting = inputType === 'deleteContentBackward' || inputType === 'deleteContentForward';
     const { text: formatted, caret } = formatEuPartialAt(raw, e.target.selectionStart ?? raw.length, sep, !deleting);
     setText(formatted);
+    setInvalid(false);
     pendingCaretRef.current = caret;
     const ymd = euToYmd(formatted);
     if (ymd) onChangeYmd(ymd);
@@ -75,7 +77,9 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
 
   const onFocus = () => {
     pendingCaretRef.current = null;
-    setText(ymdToEu(normalizedYmd, sep));
+    // A blurred invalid text stays in place so it can be corrected; Escape restores the saved date.
+    if (!invalid) setText(ymdToEu(normalizedYmd, sep));
+    setInvalid(false);
     setFocused(true);
     justFocusedRef.current = true;
     // A click must select the new edit text after the render; the browser would otherwise collapse
@@ -93,9 +97,16 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
     if (!ymd && text.trim() === '') {
       onChangeYmd('');
       setText('');
+      setInvalid(false);
       return;
     }
-    if (ymd) setText(ymdToEu(ymd, sep));
+    if (ymd) {
+      setText(ymdToEu(ymd, sep));
+      setInvalid(false);
+      return;
+    }
+    // A non-empty text that is not a full valid date stays in place and shows the error.
+    setInvalid(true);
   };
 
   // Select the whole edit text on entering the field, so the first keystroke replaces the date.
@@ -133,17 +144,29 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
 
   const onCalendarSelect = (ymd: string) => {
     pendingCaretRef.current = null;
+    setInvalid(false);
     onChangeYmd(ymd);
     setText(ymdToEu(ymd, sep));
   };
 
   // Alt+Down opens the calendar from the keyboard: the button itself stays out of the tab order.
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape') {
+      pendingCaretRef.current = null;
+      setText(ymdToEu(normalizedYmd, sep));
+      setInvalid(false);
+      return;
+    }
     if (e.altKey && e.key === 'ArrowDown') {
       e.preventDefault();
       openPicker();
     }
   };
+
+  // The caller's error and helper text win; otherwise an invalid blurred text shows its message.
+  const ownError = invalid && !focused;
+  const shownError = error || ownError;
+  const shownHelperText = helperText ?? (ownError ? t('labels.dateInvalid') : undefined);
 
   const naked = hideLabel || !label;
 
@@ -152,7 +175,7 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
       {!naked && <FieldLabel required={required} sx={{ mb: '2px' }}>{label}</FieldLabel>}
       <TextField
         placeholder={t('labels.datePlaceholder')}
-        value={focused ? text : restText}
+        value={focused || invalid ? text : restText}
         onChange={onTextChange}
         onFocus={onFocus}
         onBlur={onBlur}
@@ -163,8 +186,8 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
         required={required}
         variant="standard"
         name={name}
-        error={error}
-        helperText={helperText}
+        error={shownError}
+        helperText={shownHelperText}
         size={size}
         fullWidth
         sx={textFieldSx}
