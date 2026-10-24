@@ -2,8 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Box, Checkbox, MenuItem, Radio, Select, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import KanapDialog from '../design/KanapDialog';
-import CalculatedOnYourAccess from '../dataAccess/CalculatedOnYourAccess';
-import { useDataAccessLimited } from '../../auth/dataAccess';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import {
   BudgetFileExportScope,
@@ -61,7 +59,6 @@ export default function BudgetFileExportDialog({
   const { t, i18n } = useTranslation('ops');
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
   // A limited person exports the lines of their access (the file has no header to say so).
-  const dataAccessLimited = useDataAccessLimited();
   const currentYear = new Date().getFullYear();
   const years = offerableYears(currentYear);
   const [range, setRange] = useState(() => defaultYearRange(currentYear));
@@ -164,7 +161,6 @@ export default function BudgetFileExportDialog({
             label={t('operations.budgetFile.allLines')}
             hint={t('operations.budgetFile.allLinesHint')}
           />
-          <CalculatedOnYourAccess show={dataAccessLimited} sx={{ display: 'block' }} />
         </Group>
 
         <Group label={t('operations.budgetFile.years')}>

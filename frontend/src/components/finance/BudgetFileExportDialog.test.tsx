@@ -13,11 +13,6 @@ vi.mock('react-i18next', () => {
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 
-const auth = vi.hoisted(() => ({ limited: false }));
-vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ dataAccess: auth.limited ? { available: true, mode: 'limited', nodes: [], modules: ['budget'] } : null }),
-}));
-
 import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
 import BudgetFileExportDialog, { BudgetFileColumnChoice } from './BudgetFileExportDialog';
@@ -51,7 +46,6 @@ function renderDialog(list = { sort: 'item_number:asc', q: 'cloud', filters: '',
 
 describe('BudgetFileExportDialog', () => {
   beforeEach(() => {
-    auth.limited = false;
     get.mockReset();
     get.mockResolvedValue({ data: new Blob(['x']), headers: { 'content-disposition': 'attachment; filename="budget.csv"' } });
     window.URL.createObjectURL = vi.fn(() => 'blob:x');
@@ -135,16 +129,5 @@ describe('BudgetFileExportDialog', () => {
     await waitFor(() => expect(get).toHaveBeenCalledTimes(1));
     expect(get.mock.calls[0][0]).toBe('/budget-lines/budget-file/export');
     expect(get.mock.calls[0][1].params).toMatchObject({ filters, sort: 'product_name:ASC', includeDisabled: '1' });
-  });
-
-  it('says the export is calculated on the access of a limited person, and only then', () => {
-    const { unmount } = renderDialog();
-    expect(screen.queryByTestId('calculated-on-access')).toBeNull();
-    unmount();
-    auth.limited = true;
-    renderDialog();
-    expect(screen.getByTestId('calculated-on-access')).toHaveTextContent('dataAccess.calculatedOnYourAccess');
-    // The export itself is the same request: the server reads the person's access.
-    expect(screen.getByRole('button', { name: 'operations.budgetFile.exportFiltered:{"count":120}' })).toBeEnabled();
   });
 });

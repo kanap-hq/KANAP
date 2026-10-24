@@ -27,7 +27,6 @@ import {
   type ValueOrderRank,
 } from '../../pages/reports/reportAggregates';
 import { compareNames, useBudgetAggregate, useBudgetAggregates } from '../../pages/reports/useBudgetAggregate';
-import CalculatedOnYourAccess, { isCalculatedOnAccess } from '../dataAccess/CalculatedOnYourAccess';
 
 /** `none` keeps the lines that say neither run nor build. */
 export type RunBuildFilter = RunBuildPick;
@@ -65,8 +64,6 @@ function formatAnalyticsParam(picks: ReadonlyMap<string, string>): string | null
 export type BudgetReportFilterOptions = {
   /** False until the lines' run or build values and dimension values are known. */
   ready: boolean;
-  /** The server answered on a limited data access: the report says it is calculated on it. */
-  calculatedOnAccess?: boolean;
   /** Lines in the report's window (filters aside). */
   lineCount: number;
   /** A line of the window says run or build. */
@@ -238,7 +235,6 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
     ids.forEach((axisId, i) => byAxis.set(axisId, readAxisValues(axisValues.data?.[i], unnamed, compareNames, ranks.get(axisId))));
     return {
       ready: presence.data != null && ftePresence.data != null && (ids.length === 0 || axisValues.data != null),
-      calculatedOnAccess: isCalculatedOnAccess(presence.data),
       lineCount,
       hasRunBuild,
       hasFte: readFtePresence(ftePresence.data),
@@ -461,7 +457,6 @@ export function BudgetReportFilters({ filters }: { filters: BudgetReportFilterSt
           onChange={(value) => filters.setAnalyticsValue(filter.axisId, value)}
         />
       ))}
-      <CalculatedOnYourAccess show={!!filters.options.calculatedOnAccess} sx={{ alignSelf: 'center' }} />
     </>
   );
 }

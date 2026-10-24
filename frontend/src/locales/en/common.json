@@ -1304,8 +1304,5 @@
     "linksTitle": "Web links",
     "linksEmpty": "No web link.",
     "removeFileNamed": "Delete file {{name}}"
-  },
-  "dataAccess": {
-    "calculatedOnYourAccess": "Calculated on your access"
   }
 }

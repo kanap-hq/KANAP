@@ -341,29 +341,6 @@ describe('DashboardPage budget tiles', () => {
     mockBudgetEndpoints();
   });
 
-  it('says the top lines, increases, my budget and cost center tiles are calculated on a limited access', async () => {
-    // Every answer of a limited person carries the flag (the list page, its totals and the aggregates).
-    const flagged = (impl: (...args: any[]) => Promise<any>) => async (...args: any[]) => {
-      const res = await impl(...args);
-      return res?.data && typeof res.data === 'object' && !Array.isArray(res.data) ? { ...res, data: { ...res.data, dataAccessLimited: true } } : res;
-    };
-    get.mockImplementation(flagged(get.getMockImplementation() as (...args: any[]) => Promise<any>));
-    post.mockImplementation(flagged(post.getMockImplementation() as (...args: any[]) => Promise<any>));
-    renderPage();
-    for (const name of [TOP_ITEMS, TOP_INCREASES, MY_BUDGET, BY_COST_CENTER]) {
-      const tile = await screen.findByRole('region', { name });
-      expect(await within(tile).findByTestId('calculated-on-access'), name).toHaveTextContent('dataAccess.calculatedOnYourAccess');
-    }
-  });
-
-  it('says nothing about the access on the tiles of a person with access to all data', async () => {
-    renderPage();
-    const top = await screen.findByRole('region', { name: TOP_ITEMS });
-    expect(await within(top).findByText('Opex top')).toBeInTheDocument();
-    expect(await within(await screen.findByRole('region', { name: TOP_INCREASES })).findByText('Opex grows')).toBeInTheDocument();
-    expect(screen.queryAllByTestId('calculated-on-access')).toHaveLength(0);
-  });
-
   it('defaults all four tile tabs to All and remembers each choice independently', async () => {
     const titles = [TOP_ITEMS, TOP_INCREASES, MY_BUDGET, BY_COST_CENTER];
     const keys = ['topItems', 'topIncreases', 'myBudget', 'byCostCenter'];

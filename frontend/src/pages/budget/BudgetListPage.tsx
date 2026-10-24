@@ -14,7 +14,6 @@ import { isDataAccessLimited } from '../../auth/dataAccess';
 import BudgetFileExportDialog from '../../components/finance/BudgetFileExportDialog';
 import BudgetFileImportDialog from '../../components/finance/BudgetFileImportDialog';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
-import CalculatedOnYourAccess, { isCalculatedOnAccess } from '../../components/dataAccess/CalculatedOnYourAccess';
 import { recordsInUseCheck } from '../../utils/deleteCheck';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { formatItemRef } from '../../utils/item-ref';
@@ -328,8 +327,6 @@ function BudgetListPageView() {
   const reportingCurrency = lastCurrencyRef.current ?? 'EUR';
   // The amounts the footer totals leave out for lack of an exchange rate, named under the grid.
   const fxMissing = totals.isError ? undefined : totals.data?.fxMissing;
-  // The footer totals cover the person's access only.
-  const totalsOnAccess = !totals.isError && isCalculatedOnAccess(totals.data);
 
   const openNew = (nature: 'opex' | 'capex') => {
     const sp = buildGridSearch();
@@ -1049,12 +1046,7 @@ function BudgetListPageView() {
         }}
         enableRowSelection={canDelete}
         onSelectionChanged={setSelectedRows}
-        footer={fxMissing?.length || totalsOnAccess ? (
-          <>
-            <CalculatedOnYourAccess show={totalsOnAccess} sx={{ display: 'block' }} />
-            {!!fxMissing?.length && <FxMissingNotice items={fxMissing} />}
-          </>
-        ) : undefined}
+        footer={fxMissing?.length ? <FxMissingNotice items={fxMissing} /> : undefined}
       />}
       <BudgetFileExportDialog
         open={exportOpen}

@@ -1799,7 +1799,6 @@
       "hint": "Schreibgeschützt. Ein Administrator hebt das Einfrieren unter Administration › Daten einfrieren / auftauen auf."
     },
     "readOnlyHint": "Schreibgeschützt. Ihre Rolle gewährt Lesezugriff auf das Budget.",
-    "readOnlyInAccessHint": "Schreibgeschützt. Diese Zeile liegt außerhalb Ihres Bearbeitungszugriffs.",
     "atADate": "An einem Datum",
     "date": "Datum",
     "atDate": "Am {{date}}",

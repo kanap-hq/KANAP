@@ -1799,7 +1799,6 @@
       "hint": "Read only. An administrator can unfreeze it in Administration › Freeze / unfreeze data."
     },
     "readOnlyHint": "Read only. Your role gives read access to the budget.",
-    "readOnlyInAccessHint": "Read only. This line is outside your edit access.",
     "atADate": "At a date",
     "date": "Date",
     "atDate": "On {{date}}",

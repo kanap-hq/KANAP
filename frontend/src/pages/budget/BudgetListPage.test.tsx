@@ -910,7 +910,7 @@ describe('BudgetListPage', () => {
     expect(dialogs.import.scope).toBe('opex');
   });
 
-  it('a limited person: no bulk delete or selection, file actions kept, totals calculated on the access', async () => {
+  it('a limited person: no bulk delete or selection, file actions kept', async () => {
     auth.limited = true;
     get.mockImplementation(async (url: string) => {
       if (url === '/users') return { data: { items: [] } };
@@ -922,12 +922,9 @@ describe('BudgetListPage', () => {
     expect(lastProps().enableRowSelection).toBe(false);
     expect(screen.getByRole('button', { name: 'opex.importCsv' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'opex.exportCsv' })).toBeInTheDocument();
-    await waitFor(() => expect(lastProps().footer).toBeTruthy());
-    render(<>{lastProps().footer}</>);
-    expect(screen.getByTestId('calculated-on-access')).toHaveTextContent('dataAccess.calculatedOnYourAccess');
   });
 
-  it('an unscoped administrator keeps bulk delete and a footer without the mention', async () => {
+  it('an unscoped administrator keeps bulk delete', async () => {
     await renderPage();
     expect(dialogs.bulk).not.toBeNull();
     expect(lastProps().enableRowSelection).toBe(true);
