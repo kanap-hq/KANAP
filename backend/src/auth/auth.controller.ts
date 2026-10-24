@@ -30,14 +30,14 @@ import { AuthEvent, AuthEventReason } from '../audit/security-events';
 import { NeverRejects } from '../common/never-rejects';
 import { authRefusalOf } from './auth-refused.exception';
 import { LoginAttemptLimit } from './login-attempt-limit';
+import { RefreshSessionRateLimitGuard } from './refresh-session-limit';
 import { Response } from 'express';
 import { dataAccessAvailability } from '../data-access/data-access-availability';
 import { readDataAccessProfile } from '../data-access/data-access-profile';
 import {
-  REFRESH_TOKEN_COOKIE_NAME,
   clearRefreshTokenCookie,
   isSecureRequest,
-  parseCookieValue,
+  refreshTokenOf,
   setRefreshTokenCookie,
 } from './auth-cookie.util';
 
@@ -413,7 +413,8 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @UseGuards(RateLimitGuard)
+  // Per client address, then per refresh token (auth/refresh-session-limit.ts).
+  @UseGuards(RateLimitGuard, RefreshSessionRateLimitGuard)
   @Throttle({ default: RATE_LIMITS.authRefresh })
   async refreshToken(@Body() body: RefreshTokenDto, @Req() req: any, @Res({ passthrough: true }) res: Response) {
     // Same origin rule as CORS, before the cookie is read (common/cors-policy.ts).
@@ -446,11 +447,7 @@ export class AuthController {
   }
 
   private resolveRefreshToken(req: any, body?: { refresh_token?: string }): string | undefined {
-    const cookieToken = parseCookieValue(req?.headers?.cookie as string | undefined, REFRESH_TOKEN_COOKIE_NAME);
-    const bodyToken = body?.refresh_token?.trim();
-    if (cookieToken && cookieToken.trim() !== '') return cookieToken;
-    if (bodyToken && bodyToken !== '') return bodyToken;
-    return undefined;
+    return refreshTokenOf(req, body);
   }
 
   private toTokenResponse(tokens: TokenResponse & { refresh_token?: string }): TokenResponse {
