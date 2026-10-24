@@ -685,8 +685,7 @@
           "application": "Ninguna vulnerabilidad por revisar en esta aplicación."
         },
         "indirect": {
-          "title": "A través de otro activo",
-          "hint": "No contabilizadas: estas tecnologías están instaladas en otro activo (un host, un clúster)."
+          "title": "En sus miembros"
         },
         "platform": "Plataforma subyacente ({{count}})",
         "countLink_one": "Ver la vulnerabilidad por revisar en la página Vulnerabilidades",

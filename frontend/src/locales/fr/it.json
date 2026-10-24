@@ -685,8 +685,7 @@
           "application": "Aucune vulnérabilité à traiter sur cette application."
         },
         "indirect": {
-          "title": "Par un autre actif",
-          "hint": "Non comptées : ces technologies sont installées sur un autre actif (un hôte, un cluster)."
+          "title": "Sur ses membres"
         },
         "platform": "Plateforme sous-jacente ({{count}})",
         "countLink_one": "Voir la vulnérabilité à traiter dans la page Vulnérabilités",

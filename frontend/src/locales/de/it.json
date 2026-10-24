@@ -685,8 +685,7 @@
           "application": "Keine zu prüfende Schwachstelle in dieser Anwendung."
         },
         "indirect": {
-          "title": "Über ein anderes Asset",
-          "hint": "Nicht gezählt: Diese Technologien sind auf einem anderen Asset installiert (einem Host, einem Cluster)."
+          "title": "Auf seinen Mitgliedern"
         },
         "platform": "Zugrunde liegende Plattform ({{count}})",
         "countLink_one": "Die zu prüfende Schwachstelle auf der Seite Schwachstellen ansehen",

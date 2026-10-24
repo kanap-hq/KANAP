@@ -685,8 +685,7 @@
           "application": "No vulnerability to review on this application."
         },
         "indirect": {
-          "title": "Through another asset",
-          "hint": "Not counted: these technologies are installed on another asset (a host, a cluster)."
+          "title": "On its members"
         },
         "platform": "Underlying platform ({{count}})",
         "countLink_one": "See the vulnerability to review on the Vulnerabilities page",

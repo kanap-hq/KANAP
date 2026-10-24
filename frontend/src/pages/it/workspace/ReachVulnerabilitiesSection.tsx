@@ -214,18 +214,16 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
   return (
     <Box id={REACH_VULNERABILITIES_ANCHOR} sx={{ scrollMarginTop: 16 }}>
       <RelationsSection title={title} heading={heading} count={count}>
-        {data.rows.length === 0 ? (
+        {data.rows.length === 0 ? (indirect.length === 0 && (
           <RelationsEmpty>{t(`pages.vulnerabilities.reach.empty.${kind}`)}</RelationsEmpty>
-        ) : (
+        )) : (
           <RelationsTable columns={directColumns} rows={data.rows} rowKey={rowKey} ariaLabel={title} />
         )}
+        {/* What a cluster's members carry: counted with the cluster (`member_totals`). What a host carries folds as the platform. */}
         {indirect.length > 0 && (
           <Box data-testid="reach-indirect" sx={{ mt: 2 }}>
-            <Typography component="h3" sx={{ m: 0, fontSize: 13, fontWeight: 500, color: 'kanap.text.secondary' }}>
+            <Typography component="h3" sx={{ m: 0, mb: 0.5, fontSize: 13, fontWeight: 500, color: 'kanap.text.secondary' }}>
               {t('pages.vulnerabilities.reach.indirect.title')}
-            </Typography>
-            <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 0.5 }}>
-              {t('pages.vulnerabilities.reach.indirect.hint')}
             </Typography>
             <RelationsTable
               columns={indirectColumns}

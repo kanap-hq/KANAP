@@ -95,7 +95,7 @@ describe('ReachVulnerabilitiesSection', () => {
     expect(screen.queryByRole('button', { name: 'Record on a server' })).toBeNull();
   });
 
-  it('lists apart, without counting them, the technologies another asset carries', () => {
+  it('lists apart, under its own title, what a cluster\'s members carry', () => {
     renderSection({
       data: {
         rows: [],
@@ -103,11 +103,10 @@ describe('ReachVulnerabilitiesSection', () => {
         totals: { open: 0, severe: 0, exploited_severe: 0 },
       },
     });
-    expect(screen.getByText('No vulnerability to review on this asset.')).toBeTruthy();
+    expect(screen.queryByText('No vulnerability to review on this asset.')).toBeNull();
     const part = screen.getByTestId('reach-indirect');
-    expect(part.textContent).toContain('Through another asset');
-    expect(part.textContent).toContain('Not counted');
-    const indirect = within(part).getByRole('table', { name: 'Through another asset' });
+    expect(part.textContent).toContain('On its members');
+    const indirect = within(part).getByRole('table', { name: 'On its members' });
     const line = within(indirect).getAllByRole('row')[1];
     expect(line.textContent).toContain('PAR-ESX-01');
     expect(line.textContent).not.toContain('through');
@@ -128,7 +127,7 @@ describe('ReachVulnerabilitiesSection', () => {
         totals: { open: 0, severe: 0, exploited_severe: 0 },
       },
     });
-    const indirect = within(screen.getByTestId('reach-indirect')).getByRole('table', { name: 'Through another asset' });
+    const indirect = within(screen.getByTestId('reach-indirect')).getByRole('table', { name: 'On its members' });
     const lines = within(indirect).getAllByRole('row').slice(1);
     expect(lines).toHaveLength(1);
     expect(within(lines[0]).getByRole('link', { name: 'PAR-SQL-01' }).getAttribute('href')).toBe('/it/assets/a-1/overview');
@@ -148,7 +147,7 @@ describe('ReachVulnerabilitiesSection', () => {
       },
     });
     expect(screen.getByText('No vulnerability to review on this asset.')).toBeTruthy();
-    // No "Through another asset" part, no other text: the folded line only.
+    // No "On its members" part, no other text: the folded line only.
     expect(screen.queryByTestId('reach-indirect')).toBeNull();
     const part = screen.getByTestId('reach-platform');
     const fold = within(part).getByRole('button', { name: 'Underlying platform (1)' });
@@ -175,7 +174,7 @@ describe('ReachVulnerabilitiesSection', () => {
         member_totals: { open: 6, severe: 3, exploited_severe: 1 },
       },
     });
-    const indirect = within(screen.getByTestId('reach-indirect')).getByRole('table', { name: 'Through another asset' });
+    const indirect = within(screen.getByTestId('reach-indirect')).getByRole('table', { name: 'On its members' });
     const before = within(indirect).getAllByRole('row').slice(1);
     expect(before.map((tr) => tr.textContent?.includes('Tomcat'))).toEqual([true, false]);
     expect(before[1].textContent).toBe('Underlying platform (1)');
