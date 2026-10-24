@@ -161,3 +161,50 @@ export function clusterOsWithMembersRefusal(os: string): BadRequestException {
     { os },
   );
 }
+
+/**
+ * The SQL test that the asset `alias` is a member of a real cluster (`is_cluster`) of its tenant,
+ * restricted by `extra` on the cluster `c` when given. A cluster is never a member: the test is
+ * false for it. Shared by the list's filter, its sort and the assistant.
+ */
+export function realClusterMembershipSql(alias: string, extra = ''): string {
+  if (!/^[a-z_][a-z0-9_]*$/i.test(alias)) throw new Error(`Unsafe asset alias: ${alias}`);
+  return `(NOT COALESCE(${alias}.is_cluster, false) AND EXISTS (
+    SELECT 1 FROM asset_cluster_members m
+      JOIN assets c ON c.tenant_id = m.tenant_id AND c.id = m.cluster_id AND c.is_cluster
+     WHERE m.tenant_id = ${alias}.tenant_id AND m.asset_id = ${alias}.id${extra ? ` AND ${extra}` : ''}))`;
+}
+
+/**
+ * The real clusters each of `assetIds` belongs to, in one query, ordered by name without case then
+ * id. A cluster is never a member (it has no entry), nor is a membership to an asset that is no
+ * longer a cluster.
+ */
+export async function clusterMembershipsOf(
+  mg: EntityManager,
+  tenantId: string,
+  assetIds: readonly string[],
+): Promise<Map<string, Array<{ id: string; name: string }>>> {
+  const memberships = new Map<string, Array<{ id: string; name: string }>>();
+  if (assetIds.length === 0) return memberships;
+  const rows: Array<{ asset_id: string; cluster_id: string; name: string }> = await mg.query(
+    `SELECT m.asset_id, c.id AS cluster_id, c.name
+       FROM asset_cluster_members m
+       JOIN assets c ON c.tenant_id = m.tenant_id AND c.id = m.cluster_id AND c.is_cluster
+       JOIN assets a ON a.tenant_id = m.tenant_id AND a.id = m.asset_id AND NOT COALESCE(a.is_cluster, false)
+      WHERE m.tenant_id = $1 AND m.asset_id = ANY($2::uuid[])
+      ORDER BY m.asset_id, lower(c.name), c.id`,
+    [tenantId, Array.from(new Set(assetIds))],
+  );
+  for (const row of rows) {
+    const list = memberships.get(row.asset_id) ?? [];
+    list.push({ id: row.cluster_id, name: row.name });
+    memberships.set(row.asset_id, list);
+  }
+  return memberships;
+}
+
+/** The names of the clusters, joined as the list and the CSV show them. */
+export function clusterNamesText(clusters: ReadonlyArray<{ name: string }> | undefined): string | null {
+  return clusters && clusters.length > 0 ? clusters.map((c) => c.name).join(', ') : null;
+}

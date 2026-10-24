@@ -245,7 +245,7 @@ export const assetsRegistry: AiEntityFilterRegistry = {
         expression: 'cluster_asset.name',
         joins: [
           `LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id`,
-          `LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id`,
+          `LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id AND cluster_asset.is_cluster`,
         ],
       },
       is_cluster: { expression: `CASE WHEN COALESCE(a.is_cluster, false) THEN 'true' ELSE 'false' END` },

@@ -113,6 +113,7 @@ describe('getApiErrorMessage', () => {
     const codes = [
       'cluster_has_members', 'cluster_switch_member', 'cluster_member_self', 'cluster_member_is_cluster',
       'cluster_member_not_found', 'cluster_os_with_members', 'os_cluster_with_members',
+      'CSV_CLUSTER_NOT_FOUND', 'CSV_CLUSTER_AMBIGUOUS', 'CSV_CLUSTER_NOT_A_CLUSTER',
     ];
     for (const code of codes) {
       for (const language of ['en', 'fr', 'de', 'es']) {
