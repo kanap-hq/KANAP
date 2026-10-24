@@ -667,12 +667,16 @@ export default function ApplicationsPage() {
                     fontWeight: 500,
                     color: obsolete ? 'kanap.text.tertiary' : 'text.primary',
                     lineHeight: 1,
-                    textDecoration: 'none',
+                    // An obsolete deployment is struck through with a hollow dot, so it never reads as the grey sandbox.
+                    textDecoration: obsolete ? 'line-through' : 'none',
                     cursor: 'pointer',
-                    '&:hover': { textDecoration: 'none' },
+                    '&:hover': { textDecoration: obsolete ? 'line-through' : 'none' },
                   }}
                 >
-                  <StatusDot color={obsolete ? getDotColor('default', mode) : getEnvDotColor(env.value, mode)} />
+                  <StatusDot
+                    color={obsolete ? 'transparent' : getEnvDotColor(env.value, mode)}
+                    sx={obsolete ? { border: '1px solid', borderColor: getDotColor('default', mode), boxSizing: 'border-box' } : undefined}
+                  />
                   {t(`pages.applications.environments.${env.value}.short`)}
                 </Box>
               </Tooltip>

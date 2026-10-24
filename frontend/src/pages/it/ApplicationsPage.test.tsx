@@ -163,7 +163,7 @@ describe('ApplicationsPage', () => {
     expect(style.height).toBe('100%');
   });
 
-  it('keeps an obsolete deployment in the environment pills, greyed, and hides a retired one', () => {
+  it('keeps an obsolete deployment in the environment pills, greyed and struck through, and hides a retired one', () => {
     renderPage();
     const Cell = lastProps().columns.find((column) => (column as { colId?: string }).colId === 'environments')!.cellRenderer!;
     render(
@@ -186,6 +186,9 @@ describe('ApplicationsPage', () => {
     const qa = screen.getByText('pages.applications.environments.qa.short').closest('a')!;
     expect(qa.getAttribute('aria-label')).toContain('pages.applications.environments.qa.name');
     expect(window.getComputedStyle(qa).color).not.toBe(window.getComputedStyle(screen.getByText('pages.applications.environments.prod.short').closest('a')!).color);
+    // Colour alone would match the grey sandbox pill: the obsolete one is also struck through.
+    expect(window.getComputedStyle(qa).textDecoration).toContain('line-through');
+    expect(window.getComputedStyle(screen.getByText('pages.applications.environments.prod.short').closest('a')!).textDecoration).not.toContain('line-through');
   });
 
   it('shows the vulnerabilities to review after the name while the feed is on, linked to the filtered page', async () => {
