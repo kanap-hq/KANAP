@@ -63,7 +63,7 @@ const RUN_WITH_CONTEXT = 'every route runs through runWithContext with the perso
 
 export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   // The tenant interceptor: a reserved route without the request transaction reads the person's mode.
-  { file: 'common/tenant.interceptor.ts', member: 'intercept', site: 'with_tenant_execution', class: 'no_scoped_table', reason: 'a @SkipTenantTransaction() route reserved to unscoped persons: reads the person\'s mode (users, roles) before the handler, refuses a limited person (reserved-operations.ts)' },
+  { file: 'common/tenant.interceptor.ts', member: 'intercept', site: 'with_tenant_execution', class: 'no_scoped_table', reason: 'a route reserved to unscoped persons that skips the request transaction: reads the person\'s mode (users, roles) before the handler, refuses a limited person (reserved-operations.ts)' },
 
   // Plaid and MCP: runWithContext applies the person's access.
   { file: 'ai/ai-chat.controller.ts', member: 'AiChatController', site: 'skip_tenant_transaction', class: 'applies', reason: `${RUN_WITH_CONTEXT} (the orchestrator too)` , routes: ['stream'] },
