@@ -197,10 +197,10 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
 
   const alsoParts: React.ReactNode[] = [];
   if (also?.assets) {
-    alsoParts.push(<Box key="assets" component={RouterLink} to={`/it/applications/${id}/deployments`}>{t('workspace.application.relations.also.assets', { count: also.assets })}</Box>);
+    alsoParts.push(<Box key="assets" component={RouterLink} to="../deployments" relative="path">{t('workspace.application.relations.also.assets', { count: also.assets })}</Box>);
   }
   if (also?.interfaces) {
-    alsoParts.push(<Box key="interfaces" component={RouterLink} to={`/it/applications/${id}/interfaces`}>{t('workspace.application.relations.also.interfaces', { count: also.interfaces })}</Box>);
+    alsoParts.push(<Box key="interfaces" component={RouterLink} to="../interfaces" relative="path">{t('workspace.application.relations.also.interfaces', { count: also.interfaces })}</Box>);
   }
   if (also?.documents) {
     alsoParts.push(onOpenKnowledge

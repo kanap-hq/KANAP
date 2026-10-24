@@ -665,19 +665,24 @@ export default function ApplicationsPage() {
                     gap: '5px',
                     fontSize: '0.75rem',
                     fontWeight: 500,
-                    color: obsolete ? 'kanap.text.tertiary' : 'text.primary',
+                    color: 'text.primary',
                     lineHeight: 1,
-                    // An obsolete deployment is struck through with a hollow dot, so it never reads as the grey sandbox.
-                    textDecoration: obsolete ? 'line-through' : 'none',
+                    textDecoration: 'none',
                     cursor: 'pointer',
-                    '&:hover': { textDecoration: obsolete ? 'line-through' : 'none' },
                   }}
                 >
                   <StatusDot
                     color={obsolete ? 'transparent' : getEnvDotColor(env.value, mode)}
                     sx={obsolete ? { border: '1px solid', borderColor: getDotColor('default', mode), boxSizing: 'border-box' } : undefined}
                   />
-                  {t(`pages.applications.environments.${env.value}.short`)}
+                  {/* On a span: the grid styles every link in a cell (`color: inherit`, no decoration). An obsolete
+                      deployment is struck through with a hollow dot, so it never reads as the grey sandbox. */}
+                  <Box
+                    component="span"
+                    sx={obsolete ? { color: 'kanap.text.tertiary', textDecoration: 'line-through' } : undefined}
+                  >
+                    {t(`pages.applications.environments.${env.value}.short`)}
+                  </Box>
                 </Box>
               </Tooltip>
             );

@@ -185,10 +185,12 @@ describe('ApplicationsPage', () => {
     expect(pills).toEqual(['pages.applications.environments.prod.short', 'pages.applications.environments.qa.short']);
     const qa = screen.getByText('pages.applications.environments.qa.short').closest('a')!;
     expect(qa.getAttribute('aria-label')).toContain('pages.applications.environments.qa.name');
-    expect(window.getComputedStyle(qa).color).not.toBe(window.getComputedStyle(screen.getByText('pages.applications.environments.prod.short').closest('a')!).color);
-    // Colour alone would match the grey sandbox pill: the obsolete one is also struck through.
-    expect(window.getComputedStyle(qa).textDecoration).toContain('line-through');
-    expect(window.getComputedStyle(screen.getByText('pages.applications.environments.prod.short').closest('a')!).textDecoration).not.toContain('line-through');
+    // The label is a span inside the link: the grid resets the colour and decoration of every link in a cell.
+    const qaLabel = screen.getByText('pages.applications.environments.qa.short');
+    const prodLabel = screen.getByText('pages.applications.environments.prod.short');
+    // The test theme has no `kanap` palette, so the grey is not checked here; the strike-through is.
+    expect(window.getComputedStyle(qaLabel).textDecoration).toContain('line-through');
+    expect(window.getComputedStyle(prodLabel).textDecoration).not.toContain('line-through');
   });
 
   it('shows the vulnerabilities to review after the name while the feed is on, linked to the filtered page', async () => {
