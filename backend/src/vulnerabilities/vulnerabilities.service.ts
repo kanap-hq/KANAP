@@ -1243,7 +1243,7 @@ export class VulnerabilitiesService {
     const products = await this.productStates(mg, tech.cpe_products);
     // One statement: the direct links ($1 tenant, $2 this technology) and the rows ($3). A technology
     // with no version and no link still returns `cves` through the left join (the pad row has a null
-    // `installed`). The servers are the assets in service whose direct link names the version
+    // `installed`). The servers are the assets in service, clusters excluded, whose direct link names the version
     // (`assetLinksSql`, nothing carried through the asset graph); a version is installed when a
     // direct link of an asset or an application names it (`assetLinksSql`, `applicationLinksSql`).
     // The rows are grouped by version first (`agg`), the links once per version (`servers`,
@@ -1266,6 +1266,7 @@ export class VulnerabilitiesService {
       `WITH servers AS MATERIALIZED (
          SELECT l.technology_version_id, count(DISTINCT l.subject_id)::int AS servers
            FROM (${assetLinksSql({ tenant: '$1', technologies: '$2' })}) l
+           JOIN assets sa ON sa.tenant_id = l.tenant_id AND sa.id = l.subject_id AND sa.is_cluster IS NOT TRUE
           GROUP BY l.technology_version_id
        ),
        in_use AS MATERIALIZED (
