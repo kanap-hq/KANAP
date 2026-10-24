@@ -5,10 +5,15 @@ import { DataSource, QueryRunner } from 'typeorm';
  * §6.2). The availability is informative (screens, logs): `data_access_apply` alone decides, per
  * transaction, and refuses a limited person when something is missing (fail closed).
  *
+ * - Before the migrations (scripts/migrate-and-start.js, app.module.ts): when the application role
+ *   inherits the limited role and policies on that role exist, `data_access_sync_policies()` drops
+ *   them, so no migration runs under them (they would refuse everything to everyone without
+ *   context, spec §10.6).
  * - The lead process (the single process, or worker 1), once per start, after the migrations: when
- *   the limited role exists and a grant or an expected policy is missing, it runs
- *   `data_access_sync_policies()` under a 5 s lock timeout; a failure is logged and retried at the
- *   next start. It then checks the availability, keeps it and logs one line.
+ *   the limited role exists and a grant or an expected policy is missing, or the application role
+ *   inherits it, it runs `data_access_sync_policies()` under a 5 s lock timeout (under inheritance
+ *   the sync drops every policy on the role and creates none); a failure is logged and retried at
+ *   the next start. It then checks the availability, keeps it and logs one line.
  * - Every process reads the availability through `dataAccessAvailability()`: kept in memory for a
  *   minute, then checked again (read-only, no sync). A cluster worker therefore never depends on
  *   the order in which the processes start: a check made before the lead's sync is replaced within
@@ -37,6 +42,13 @@ const LOG_PREFIX = '[DATA-ACCESS]';
 const AVAILABILITY_TTL_MS = 60_000;
 const SYNC_LOCK_TIMEOUT = '5s';
 
+/**
+ * The SECURITY DEFINER functions the application calls as the limited role outside any policy
+ * (disclosure, spec §6.6): EXECUTE is revoked from PUBLIC and granted by the sync, so the check
+ * tests them by name. A function not created yet is not a missing grant.
+ */
+const DIRECT_CALL_FUNCTIONS = ['data_access_hidden_count(text, uuid)', 'data_access_reference(text, uuid)'];
+
 type CatalogState = {
   roleExists: boolean;
   inherits: boolean;
@@ -50,8 +62,11 @@ type CatalogState = {
  * table, view and foreign table of `public` the application role owns, USAGE and SELECT on every
  * sequence it owns: the relations of `data_access_grant_targets()`, the same list the sync grants
  * on (a relation of another owner is outside the rule "every KANAP table belongs to the application
- * role"). Policies: every expected policy exists, restrictive, on its command and targeting the
- * role (same test as `data_access_apply`).
+ * role"). EXECUTE on every function a policy of the role calls (its dependencies in `pg_depend`:
+ * the access functions, revoked from PUBLIC when SECURITY DEFINER); without it, every statement of
+ * a limited person on that table fails. EXECUTE also on the disclosure functions the application
+ * calls directly (DIRECT_CALL_FUNCTIONS). Policies: every expected policy exists, restrictive, on
+ * its command and targeting the role (same test as `data_access_apply`).
  */
 async function readCatalogState(session: DataAccessSession): Promise<CatalogState> {
   const [base] = await session.query(
@@ -85,6 +100,20 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
              AND has_table_privilege((SELECT oid FROM lim), format('public.%I', t.relname), 'DELETE')
            )
          END
+       )
+       OR EXISTS (
+         SELECT 1
+         FROM pg_policy p
+         JOIN pg_depend d
+           ON d.classid = 'pg_policy'::regclass AND d.objid = p.oid AND d.refclassid = 'pg_proc'::regclass
+         WHERE (SELECT oid FROM lim) = ANY (p.polroles)
+           AND NOT has_function_privilege((SELECT oid FROM lim), d.refobjid, 'EXECUTE')
+       )
+       OR EXISTS (
+         SELECT 1
+         FROM unnest($2::text[]) f(signature)
+         WHERE to_regprocedure(f.signature) IS NOT NULL
+           AND NOT has_function_privilege((SELECT oid FROM lim), to_regprocedure(f.signature)::oid, 'EXECUTE')
        ) AS grants_missing,
        EXISTS (
          SELECT 1
@@ -104,7 +133,7 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
                WHEN 'DELETE' THEN 'd' WHEN 'ALL' THEN '*' END
          )
        ) AS policies_missing`,
-    [DATA_ACCESS_LIMITED_ROLE],
+    [DATA_ACCESS_LIMITED_ROLE, DIRECT_CALL_FUNCTIONS],
   );
   return {
     roleExists,
@@ -148,9 +177,62 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/** `data_access_sync_policies()` in a transaction of its own, under the 5 s lock timeout. */
+async function runSync(session: DataAccessSession): Promise<void> {
+  await session.inTransaction(async () => {
+    await session.query(`SET LOCAL lock_timeout = '${SYNC_LOCK_TIMEOUT}'`);
+    await session.query(`SELECT data_access_sync_policies()`);
+  });
+}
+
+/**
+ * Before the migrations: when the application role inherits the limited role and policies on that
+ * role exist, the sync drops them (its inheritance rule), so the migrations never run under them.
+ * Nothing to do on a database without the role, the sync function (before lot 1) or such policies.
+ * Never throws: a failure is logged, and the sync after the migrations tries again.
+ */
+export async function releaseInheritedDataAccessPolicies(
+  session: DataAccessSession,
+  logger: DataAccessLogger = console,
+): Promise<'not_needed' | 'done' | 'failed'> {
+  try {
+    const [state] = await session.query(
+      `WITH lim AS (SELECT to_regrole($1) AS oid)
+       SELECT to_regprocedure('data_access_sync_policies()') IS NOT NULL
+              AND (SELECT oid FROM lim) IS NOT NULL
+              AND current_user <> $1
+              AND pg_has_role(current_user, (SELECT oid FROM lim), 'USAGE')
+              AND EXISTS (SELECT 1 FROM pg_policy p WHERE (SELECT oid FROM lim) = ANY (p.polroles)) AS needed`,
+      [DATA_ACCESS_LIMITED_ROLE],
+    );
+    if (state?.needed !== true) return 'not_needed';
+    await runSync(session);
+    logger.warn(
+      `${LOG_PREFIX} the application role inherits ${DATA_ACCESS_LIMITED_ROLE}: its policies were removed before the `
+      + 'migrations. Limited persons are refused until it is fixed (infra/scripts/data-access-role.sql, then a restart)',
+    );
+    return 'done';
+  } catch (error) {
+    logger.warn(`${LOG_PREFIX} policies of an inherited ${DATA_ACCESS_LIMITED_ROLE} not removed before the migrations (${errorMessage(error)})`);
+    return 'failed';
+  }
+}
+
+/** Before the migrations, on a dedicated connection of `dataSource`. Never throws. */
+export async function runDataAccessBeforeMigrations(
+  dataSource: DataSource,
+  logger: DataAccessLogger = console,
+): Promise<void> {
+  try {
+    await withDedicatedSession(dataSource, (session) => releaseInheritedDataAccessPolicies(session, logger));
+  } catch (error) {
+    logger.warn(`${LOG_PREFIX} policies of an inherited ${DATA_ACCESS_LIMITED_ROLE} not removed before the migrations (${errorMessage(error)})`);
+  }
+}
+
 /**
  * The startup routine of the lead process: sync when the role exists and a grant or a policy is
- * missing, then check. Never throws: a failed sync or check is logged, and the function stays
+ * missing, or the application role inherits it, then check. Never throws: a failed sync or check is logged, and the function stays
  * unavailable until the next start.
  */
 export async function synchroniseDataAccess(
@@ -162,14 +244,13 @@ export async function synchroniseDataAccess(
     const state = await readCatalogState(session);
     if (state.roleExists) {
       sync = 'not_needed';
-      if (state.grantsMissing || state.policiesMissing) {
+      if (state.grantsMissing || state.policiesMissing || state.inherits) {
         try {
-          await session.inTransaction(async () => {
-            await session.query(`SET LOCAL lock_timeout = '${SYNC_LOCK_TIMEOUT}'`);
-            await session.query(`SELECT data_access_sync_policies()`);
-          });
+          await runSync(session);
           sync = 'done';
-          logger.log(`${LOG_PREFIX} grants and policies of ${DATA_ACCESS_LIMITED_ROLE} synchronised`);
+          logger.log(state.inherits
+            ? `${LOG_PREFIX} policies of ${DATA_ACCESS_LIMITED_ROLE} removed: the application role inherits it`
+            : `${LOG_PREFIX} grants and policies of ${DATA_ACCESS_LIMITED_ROLE} synchronised`);
         } catch (error) {
           sync = 'failed';
           logger.warn(

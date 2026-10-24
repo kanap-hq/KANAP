@@ -7,6 +7,7 @@ import {
   DataAccessSession,
   checkDataAccessAvailability,
   dataAccessAvailability,
+  releaseInheritedDataAccessPolicies,
   runDataAccessStartup,
   synchroniseDataAccess,
 } from '../data-access-availability';
@@ -24,7 +25,8 @@ import {
  * Startup synchronisation and availability (planning/data-scoped-access/spec.md §6.2, §10.6):
  * - grants revoked on a table: the startup routine grants them again, then the function is available;
  * - role missing: no synchronisation, unavailable with `role`;
- * - role inherited by the application role: unavailable with `inheritance`;
+ * - role inherited by the application role: unavailable with `inheritance`; the step before the
+ *   migrations and the startup sync drop every policy on the role;
  * - the synchronisation waits on a lock: after 5 s it gives up, logs one line, never throws, and the
  *   function stays unavailable;
  * - everything in place: available, nothing to synchronise;
@@ -152,8 +154,49 @@ async function testRoleInherited(admin: PgClient): Promise<void> {
     const availability = await checkDataAccessAvailability(savepointSession(admin));
     assert.equal(availability.available, false);
     assert.ok(availability.missing.includes('inheritance'), `inheritance reported: ${availability.missing.join(', ')}`);
+
+    // Before the migrations: the policies on the inherited role go, so no migration runs under them.
+    assert.ok(await policiesOnRole(admin) > 0, 'the policies of the limited role exist');
+    const { lines, logger } = captureLogger();
+    assert.equal(await releaseInheritedDataAccessPolicies(savepointSession(admin), logger), 'done');
+    assert.equal(await policiesOnRole(admin), 0, 'before the migrations: every policy on the inherited role dropped');
+    assert.equal(lines.length, 1, 'one warning line');
+    assert.match(lines[0], /inherits kanap_data_limited: its policies were removed before the migrations/);
+    assert.equal(await releaseInheritedDataAccessPolicies(savepointSession(admin), logger), 'not_needed', 'nothing left to remove');
   });
-  console.log('  role inherited: unavailable (inheritance): OK');
+  await inRolledBack(admin, async () => {
+    // After the migrations: the startup sync also runs when every policy is in place.
+    await setInheritance(admin, rows[0].pg16);
+    await admin.query(`SET LOCAL ROLE "${APP_ROLE}"`);
+    assert.ok(await policiesOnRole(admin) > 0, 'the policies of the limited role exist');
+    const { lines, logger } = captureLogger();
+    const result = await synchroniseDataAccess(savepointSession(admin), logger);
+    assert.equal(result.sync, 'done', 'the startup sync runs under inheritance');
+    assert.equal(await policiesOnRole(admin), 0, 'startup: every policy on the inherited role dropped');
+    assert.ok(result.availability.missing.includes('inheritance'));
+    assert.ok(lines.some((line) => line.includes('removed: the application role inherits it')), lines.join(' | '));
+  });
+  await inRolledBack(admin, async () => {
+    // Without inheritance, the step before the migrations does nothing.
+    await admin.query(`SET LOCAL ROLE "${APP_ROLE}"`);
+    const before = await policiesOnRole(admin);
+    assert.equal(await releaseInheritedDataAccessPolicies(savepointSession(admin), captureLogger().logger), 'not_needed');
+    assert.equal(await policiesOnRole(admin), before, 'no inheritance: the policies stay');
+  });
+  console.log('  role inherited: unavailable (inheritance), policies dropped before the migrations and at startup: OK');
+}
+
+async function setInheritance(admin: PgClient, pg16: boolean): Promise<void> {
+  if (pg16) {
+    await admin.query(`GRANT ${LIMITED_ROLE} TO "${APP_ROLE}" WITH INHERIT TRUE`);
+  } else {
+    await admin.query(`ALTER ROLE "${APP_ROLE}" INHERIT`);
+  }
+}
+
+async function policiesOnRole(admin: PgClient): Promise<number> {
+  const { rows } = await admin.query(`SELECT count(*)::int AS n FROM pg_policy WHERE to_regrole($1) = ANY (polroles)`, [LIMITED_ROLE]);
+  return rows[0].n;
 }
 
 /**

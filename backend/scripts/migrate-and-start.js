@@ -271,6 +271,10 @@ async function closeQuietly(ds, warn) {
 async function runMigrationsIfNeeded({
   env = process.env,
   loadDataSource = () => require(path.resolve(__dirname, '../dist/data-source.js')).default,
+  // Data-scoped access: removes the policies of a limited role the application role inherits, so
+  // no migration runs under them (src/data-access/data-access-availability.ts). Never throws.
+  beforeMigrations = (ds) => require(path.resolve(__dirname, '../dist/data-access/data-access-availability.js'))
+    .runDataAccessBeforeMigrations(ds),
   exit = (code) => process.exit(code),
   sleepFn = sleep,
   log = console.log,
@@ -290,6 +294,7 @@ async function runMigrationsIfNeeded({
     try {
       log(`[entrypoint] Initializing DB (attempt ${attempt}/${maxAttempts}) ...`);
       await ds.initialize();
+      await beforeMigrations(ds);
       log('[entrypoint] DB initialized. Running migrations...');
       step = 'migrate';
       const migrations = await ds.runMigrations();

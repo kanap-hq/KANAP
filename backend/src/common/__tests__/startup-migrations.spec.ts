@@ -20,6 +20,7 @@ type FakeDataSource = {
 type RunOptions = {
   env?: Record<string, string | undefined>;
   loadDataSource?: () => FakeDataSource;
+  beforeMigrations?: (ds: FakeDataSource) => Promise<void>;
   exit?: (code: number) => void;
   sleepFn?: (ms: number) => Promise<void>;
   log?: (...args: unknown[]) => void;
@@ -56,13 +57,18 @@ function fakeDataSource(connectFailures: number, migrate: (run: number) => Promi
 }
 
 /** Runs the entrypoint's migration step with fakes; `exit` is recorded, never called for real. */
-async function run(ds: FakeDataSource, env: Record<string, string | undefined> = {}) {
+async function run(
+  ds: FakeDataSource,
+  env: Record<string, string | undefined> = {},
+  beforeMigrations: (ds: FakeDataSource) => Promise<void> = async () => undefined,
+) {
   const lines = { log: [] as string[], warn: [] as string[], error: [] as string[] };
   const exits: number[] = [];
   const sleeps: number[] = [];
   await entrypoint.runMigrationsIfNeeded({
     env: { MIGRATION_MAX_ATTEMPTS: '5', MIGRATION_RETRY_DELAY_MS: '7', ...env },
     loadDataSource: () => ds,
+    beforeMigrations,
     exit: (code) => { exits.push(code); },
     sleepFn: async (ms) => { sleeps.push(ms); },
     log: (...args) => lines.log.push(args.map(String).join(' ')),
@@ -149,6 +155,18 @@ async function main(): Promise<void> {
     assert.equal(connection(code), false, `${code} is a migration's own failure`);
   }
   assert.equal(entrypoint.isConnectionError(new Error('Tenant acme: 3 CAPEX lines have no equivalent')), false, 'a migration\'s own error');
+
+  // 8. The data-access guard runs on the connected data source, before the migrations (an
+  // application role that inherits the limited role must not migrate under its policies).
+  {
+    const order: string[] = [];
+    const { ds } = fakeDataSource(0, async () => { order.push('migrate'); return []; });
+    const { exits } = await run(ds, {}, async (connected) => {
+      order.push(connected === ds && connected.isInitialized ? 'guard on the connected source' : 'guard too early');
+    });
+    assert.deepEqual(order, ['guard on the connected source', 'migrate']);
+    assert.deepEqual(exits, []);
+  }
 
   // 7. SKIP_MIGRATIONS=true: the data source is not even loaded.
   {

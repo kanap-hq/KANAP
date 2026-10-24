@@ -109,7 +109,8 @@ async function testSchemaIsTenantIsolated() {
     assert.equal(state.relrowsecurity, true, `${table}: RLS is not enabled`);
     assert.equal(state.relforcerowsecurity, true, `${table}: FORCE RLS is not enabled`);
     const policies = await dataSource.query(
-      `SELECT policyname, cmd, qual, with_check FROM pg_policies WHERE schemaname = 'public' AND tablename = $1`,
+      // Tenant policies (TO PUBLIC); the data-access policies target kanap_data_limited only.
+      `SELECT policyname, cmd, qual, with_check FROM pg_policies WHERE schemaname = 'public' AND tablename = $1 AND roles = '{public}'::name[]`,
       [table],
     );
     assert.equal(policies.length, 1, `${table}: exactly one policy`);

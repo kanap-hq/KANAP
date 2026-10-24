@@ -636,14 +636,56 @@ describe('BudgetTab amount', () => {
     expect(mocked.patch).not.toHaveBeenCalled();
   });
 
-  it('a blank or zero amount writes nothing; Enter writes the amount shown', async () => {
+  it('clearing the amount writes zero over the period; a column already at zero writes nothing', async () => {
+    const state = setupApi();
+    renderTab();
+    await waitForAmounts();
+    // Leaving the field unchanged writes nothing.
+    fireEvent.blur(amountField());
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+    // What the server holds once the zero is spread (the mock replays monthly writes only).
+    state.items = state.items.map((m) => ({ ...m, planned: '0' }));
+    typeAmount('');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(written(bulkCalls()[0][1])).toEqual({
+      kind: 'annual', year: YEAR, totals: { planned: '0.00' }, spread_profile_name: 'flat', period_start: '2026-01-01', period_end: '2026-12-31',
+    });
+    await waitFor(() => expect(cellValue('planned', 1)).toBe('0'));
+    expect(amountField()).toHaveValue('');
+    // The column is at zero now: a zero, typed or on Enter, writes nothing more.
+    typeAmount('0');
+    fireEvent.keyDown(amountField(), { key: 'Enter' });
+    await settle();
+    expect(bulkCalls()).toHaveLength(1);
+  });
+
+  it('a zero typed over a total writes zero; on an empty column a blank or zero writes nothing', async () => {
+    const state = setupApi();
+    renderTab();
+    await waitForAmounts();
+    pick('committed');
+    state.items = state.items.map((m) => ({ ...m, committed: '0' }));
+    typeAmount('0');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    expect(written(bulkCalls()[0][1])).toMatchObject({ kind: 'annual', totals: { committed: '0.00' } });
+    await waitFor(() => expect(cellValue('committed', 1)).toBe('0'));
+    cleanup();
+    mocked.post.mockClear();
+    setupApi({ empty: true });
+    renderTab();
+    await waitForAmounts();
+    typeAmount('0');
+    typeAmount('');
+    fireEvent.keyDown(amountField(), { key: 'Enter' });
+    await settle();
+    expect(bulkCalls()).toHaveLength(0);
+  });
+
+  it('Enter writes the amount shown', async () => {
     setupApi();
     renderTab();
     await waitForAmounts();
-    typeAmount('');
-    typeAmount('0');
-    await settle();
-    expect(bulkCalls()).toHaveLength(0);
     fireEvent.change(amountField(), { target: { value: '12000' } });
     fireEvent.keyDown(amountField(), { key: 'Enter' });
     await waitFor(() => expect(bulkCalls()).toHaveLength(1));

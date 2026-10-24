@@ -257,6 +257,21 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
   `backend/src/data-access/data-access-paths.inventory.ts`.
 - Every table belongs to the application role: the grants of `kanap_data_limited` and the default
   privileges cover only the tables it owns.
+- A table that references a budget line (or, from lot 5 of data-scoped access, a contract) gets
+  its data-access policies in the policy rows of the migration that defines
+  `data_access_expected_policies()` and `data_access_sync_policies()`, or an exclusion with a
+  reason in `backend/src/data-access/data-access-tables.inventory.ts`. The inventory spec fails
+  otherwise.
+- A function that maintains data derived from a scoped table (totals, search index) is
+  `SECURITY DEFINER`, with `search_path` pinned. A later `CREATE OR REPLACE` of it resets it to
+  `SECURITY INVOKER`: repeat `SECURITY DEFINER` in the new definition. The inventory spec catches
+  the reset.
+- A migration file exports nothing but its migration class: TypeORM instantiates every export.
+- A data-access policy reads the mode through a subquery tested `IS NOT NULL`
+  (`(SELECT 1 WHERE current_setting('app.da_mode', true) = 'limited') IS NOT NULL`): an equality
+  is estimated at 0.5 % of the rows on every scoped table and turns the plans into nested loops.
+- Checks on tenant policies filter on the policies `TO PUBLIC` (`polroles = '{0}'`): the
+  data-access policies target `kanap_data_limited` and sit on the same tables.
 
 ## Cloud and on-premise modes
 

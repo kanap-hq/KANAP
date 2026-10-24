@@ -66,7 +66,8 @@ import { NetboxModule } from './netbox/netbox.module';
 import { ListContextsModule } from './common/list-context/list-contexts.module';
 import { apiProcessCount, clusterWorkerId } from './common/cluster/process-role';
 import { DatabaseThrottlerStorage } from './common/rate-limit-store';
-import { DataSource } from 'typeorm';
+import { DataSource, DataSourceOptions } from 'typeorm';
+import { runDataAccessBeforeMigrations } from './data-access/data-access-availability';
 import { readPoolMax } from './common/db-pool-budget';
 
 @Module({
@@ -107,6 +108,23 @@ import { readPoolMax } from './common/db-pool-budget';
             application_name: process.env.DB_APP_NAME || 'cio-api',
           },
         } as any;
+      },
+      // The migrations run here rather than inside DataSource.initialize(): the data-access guard
+      // first removes the policies of a limited role the application role inherits, so no
+      // migration runs under them (data-access/data-access-availability.ts). Same run otherwise.
+      dataSourceFactory: async (options) => {
+        const runMigrations = Boolean(options?.migrationsRun);
+        const dataSource = new DataSource({ ...options, migrationsRun: false } as DataSourceOptions);
+        await dataSource.initialize();
+        if (!runMigrations) return dataSource;
+        try {
+          await runDataAccessBeforeMigrations(dataSource);
+          await dataSource.runMigrations({ transaction: dataSource.options.migrationsTransactionMode });
+        } catch (error) {
+          await dataSource.destroy().catch(() => undefined);
+          throw error;
+        }
+        return dataSource;
       },
     }),
     UsersModule,

@@ -31,7 +31,8 @@ async function shape(runner: QueryRunner) {
     `SELECT c.relname AS table, p.polname, pg_get_expr(p.polqual, p.polrelid) AS using,
             pg_get_expr(p.polwithcheck, p.polrelid) AS check, p.polcmd AS cmd
        FROM pg_policy p JOIN pg_class c ON c.oid = p.polrelid
-      WHERE c.relname = ANY($1::text[]) ORDER BY c.relname, p.polname`,
+      -- Tenant policies (TO PUBLIC); the data-access policies target kanap_data_limited only.
+      WHERE c.relname = ANY($1::text[]) AND p.polroles = '{0}'::oid[] ORDER BY c.relname, p.polname`,
     [NEW_TABLES],
   );
   const constraints: Array<{ table: string; conname: string; def: string }> = await runner.query(

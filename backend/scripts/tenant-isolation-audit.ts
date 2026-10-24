@@ -95,6 +95,9 @@ async function loadPolicies(ds: DataSource): Promise<Map<string, PolicyRow[]>> {
             with_check IS NOT NULL AS has_with_check
      FROM pg_policies
      WHERE schemaname = 'public'
+       -- Tenant policies target PUBLIC; the data-access policies (kanap_data_limited only, spec
+       -- §6.4) are checked by data-access/__tests__/data-access-tables-inventory.spec.ts.
+       AND roles = '{public}'::name[]
      ORDER BY tablename, policyname`,
   ) as PolicyRow[];
 
