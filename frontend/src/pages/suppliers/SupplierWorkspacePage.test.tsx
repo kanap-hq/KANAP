@@ -9,7 +9,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 
 const navigateMock = vi.hoisted(() => vi.fn());
-const auth = vi.hoisted(() => ({ canEdit: true, canAdmin: true }));
+const auth = vi.hoisted(() => ({ canEdit: true, canAdmin: true, limited: false }));
 // A stable `t`: a new one on each render would loop the effects.
 const t = vi.hoisted(() => (key: string, options?: Record<string, unknown>) => (
   options?.role ? `${key}:${String(options.role)}` : key
@@ -27,6 +27,7 @@ vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
     hasLevel: (_resource: string, level: string) => (level === 'admin' ? auth.canAdmin : auth.canEdit),
     profile: { id: 'user-1' },
+    dataAccess: auth.limited ? { available: true, mode: 'limited', nodes: [], modules: ['budget'] } : null,
   }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
@@ -284,6 +285,17 @@ describe('SupplierWorkspacePage', () => {
     expect(url).toBe('/suppliers/s-1');
     expect(body.status).toBe('enabled');
     expect(String(body.disabled_at)).toMatch(/^2099-12-31T|^2100-01-01T/);
+  });
+
+  it('shows the page read-only to a manager whose data access is limited (shared supplier)', async () => {
+    auth.limited = true;
+    try {
+      renderAt('/master-data/suppliers/s-1/overview');
+      expect(await screen.findByLabelText('suppliers.fields.erpSupplierId')).toBeDisabled();
+      expect(screen.getByLabelText('suppliers.fields.notes')).toBeDisabled();
+    } finally {
+      auth.limited = false;
+    }
   });
 
   it('shows the page read-only without manager access', async () => {
