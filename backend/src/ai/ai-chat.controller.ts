@@ -8,6 +8,7 @@ import { AiTenantExecutionService } from './execution/ai-tenant-execution.servic
 import { AiBuiltinRateLimiter } from './platform/ai-builtin-rate-limiter';
 import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
 import { isAbortError } from './providers/streaming.util';
+import { dataAccessRefusalMessage } from '../common/filters/database-error.mapping';
 
 const AI_STREAM_KEEPALIVE_INTERVAL_MS = 15_000;
 
@@ -111,7 +112,7 @@ export class AiChatController {
       this.logger.error(`Chat stream error: ${err.message}`, err.stack);
       if (!clientDisconnected) {
         try {
-          res.write(JSON.stringify({ type: 'error', message: err.message || 'Stream failed.' }) + '\n');
+          res.write(JSON.stringify({ type: 'error', message: dataAccessRefusalMessage(err) ?? (err.message || 'Stream failed.') }) + '\n');
         } catch {
           // Response may already be closed
         }

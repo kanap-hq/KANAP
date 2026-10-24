@@ -23,7 +23,7 @@ import { AiPolicyService } from './ai-policy.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
 import { AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
-import { mapDatabaseError } from '../common/filters/database-error.mapping';
+import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
 const MAX_CONVERSATION_PREVIEWS = 50;
@@ -609,7 +609,7 @@ export class AiMutationPreviewService {
         }
       } catch (error: any) {
         step.status = 'failed';
-        step.error_message = error?.message || 'Preview creation failed.';
+        step.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview creation failed.');
         step.updated_at = new Date();
         await stepRepo.save(step);
         errors.push({
@@ -895,7 +895,7 @@ export class AiMutationPreviewService {
           progressed = true;
         } catch (error: any) {
           step.status = 'failed';
-          step.error_message = error?.message || 'Preview creation failed.';
+          step.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview creation failed.');
           step.updated_at = new Date();
           await stepRepo.save(step);
           progressed = true;
@@ -967,7 +967,7 @@ export class AiMutationPreviewService {
       }
       preview.status = 'failed';
       preview.approved_at = new Date();
-      preview.error_message = error?.message || 'Preview execution failed.';
+      preview.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview execution failed.');
       const saved = await repo.save(preview);
       const dto = this.toPreviewDto(saved);
       const followUps = await this.advanceMutationPlanAfterPreview(context, saved);

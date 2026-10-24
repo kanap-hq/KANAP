@@ -25,6 +25,10 @@ import { QueryRunnerAlreadyReleasedError, QueryRunnerProviderAlreadyReleasedErro
  * - KDA02 (data_access_apply)    → 401 `INVALID_TOKEN`: the session names a
  *   person who is not in the tenant (an invalid session; the client's refresh
  *   then signs out)
+ * - 42501 insufficient_privilege  → 403 `DATA_ACCESS_LIMITED`: a data-access
+ *   policy refused the write (or the read) of a person whose access is limited
+ *   (spec §6.7). Never PostgreSQL's text, which names the table; the log line
+ *   keeps the table
  * - DatabaseConnectionError: the request could not get a connection (pool
  *   exhausted, database unreachable), or its connection ended while it still
  *   held its transaction (the server ended it, see 25P03 above; nothing it
@@ -45,7 +49,11 @@ export type DatabaseErrorCode =
   | 'retry'
   | 'busy'
   | 'DATA_ACCESS_UNAVAILABLE'
+  | 'DATA_ACCESS_LIMITED'
   | 'INVALID_TOKEN';
+
+/** The answer to a write (or a read) a data-access policy refused (SQLSTATE 42501). */
+export const DATA_ACCESS_LIMITED_MESSAGE = 'This item is outside your data access.';
 
 /** Seconds a client waits before retrying a `busy` answer. */
 export const BUSY_RETRY_AFTER_SECONDS = 2;
@@ -57,6 +65,7 @@ const MESSAGES: Record<DatabaseErrorCode, string> = {
   retry: 'Another change to the same data was saved at the same moment, so this one did not go through. Please try again.',
   busy: 'This data is busy with another operation. Please try again in a few seconds.',
   DATA_ACCESS_UNAVAILABLE: 'Data access is temporarily unavailable. Contact the person who runs KANAP.',
+  DATA_ACCESS_LIMITED: DATA_ACCESS_LIMITED_MESSAGE,
   INVALID_TOKEN: 'Invalid token',
 };
 
@@ -67,6 +76,7 @@ const STATUS: Record<DatabaseErrorCode, { status: HttpStatus; error: string }> =
   retry: { status: HttpStatus.CONFLICT, error: 'Conflict' },
   busy: { status: HttpStatus.SERVICE_UNAVAILABLE, error: 'Service Unavailable' },
   DATA_ACCESS_UNAVAILABLE: { status: HttpStatus.SERVICE_UNAVAILABLE, error: 'Service Unavailable' },
+  DATA_ACCESS_LIMITED: { status: HttpStatus.FORBIDDEN, error: 'Forbidden' },
   INVALID_TOKEN: { status: HttpStatus.UNAUTHORIZED, error: 'Unauthorized' },
 };
 
@@ -138,6 +148,8 @@ function codeFor(sqlState: string, error: unknown): DatabaseErrorCode | null {
       return 'DATA_ACCESS_UNAVAILABLE';
     case 'KDA02':
       return 'INVALID_TOKEN';
+    case '42501':
+      return 'DATA_ACCESS_LIMITED';
     default:
       return null;
   }
@@ -152,6 +164,15 @@ function busyException(message: string, cause: unknown): HttpException {
 }
 
 const nameOf = (value: unknown) => (typeof value === 'string' && value ? value : undefined);
+
+/**
+ * The message a person may read for a refusal of their data access (SQLSTATE 42501), in place of
+ * PostgreSQL's (which names the table); null for any other error. For the paths that hand an
+ * error's message to the person or to Plaid instead of throwing it to the exception filter.
+ */
+export function dataAccessRefusalMessage(error: unknown): string | null {
+  return sqlStateOf(error) === '42501' ? DATA_ACCESS_LIMITED_MESSAGE : null;
+}
 
 /** The HTTP answer for a database error a race can cause, or null for any other error. */
 export function mapDatabaseError(error: unknown): MappedDatabaseError | null {

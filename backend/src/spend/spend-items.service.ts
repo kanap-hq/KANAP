@@ -59,6 +59,7 @@ import { auditTableOf, LEGACY_PREFIX, lineNumberSql, type BudgetNature } from '.
 import { auditLine, findBudgetLine, presentChild, presentChildren, presentLine, presentNativeLine, selectLineColumns } from './budget-line-presentation';
 import type { CopyColumnOperation } from './budget-column-operations';
 import type { CopyAllocationsOperation } from './budget-allocation-operations';
+import { sqlStateOf } from '../common/filters/database-error.mapping';
 
 /**
  * What differs between the lines of the two natures, the one service apart (plan
@@ -636,7 +637,8 @@ export class SpendItemsService {
     try {
       return await this.budgetOps.copyAllocations(operation, userId, { manager });
     } catch (err) {
-      if (err instanceof Error) {
+      // A refusal of the person's data access stays a 403 (the exception filter maps it).
+      if (err instanceof Error && sqlStateOf(err) !== '42501') {
         throw new BadRequestException(err.message);
       }
       throw err;

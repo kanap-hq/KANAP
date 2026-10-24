@@ -11,6 +11,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UserRole } from '../users/user-role.entity';
 import { AuditService } from '../audit/audit.service';
 import { RecordInUseException } from '../common/record-in-use';
+import { sqlStateOf } from '../common/filters/database-error.mapping';
 
 /** What the audit log keeps of a role: its name and description, and its permissions when given. */
 function roleSnapshot(role: Pick<Role, 'role_name' | 'role_description'>, permissions?: Record<string, unknown>) {
@@ -108,6 +109,8 @@ export class RolesController {
       saved = await this.rolesService.updateRole(id, { role_name: body.role_name, role_description: body.role_description }, { manager: mg });
       if (!saved) throw new BadRequestException('Role not found');
     } catch (e: any) {
+      // A refusal of the person's data access stays a 403 (the exception filter maps it).
+      if (sqlStateOf(e) === '42501') throw e;
       if (String(e?.message || '').includes('unique')) throw new BadRequestException('Role name must be unique');
       throw new BadRequestException(e?.message || 'Failed to update role');
     }
