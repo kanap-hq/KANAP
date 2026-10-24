@@ -29,8 +29,11 @@
  *   a replacement reads and deletes only the links to readable lines, so the hidden links stay;
  * - `reserved`: reachable only from a route reserved to unscoped persons (spec §2.7,
  *   `data-access-reserved.inventory.ts`) or from a delete of an object that is not scoped;
- * - `not_scoped`: writes a table without data-access policies (the reason says which);
- * - `run_3c`: the budget file import, scoped by run 3C of lot 3.
+ * - `not_scoped`: writes a table without data-access policies (the reason says which).
+ *
+ * The budget file load (`spend/budget-file/import-file.ts`) plans every row with the line rules
+ * first (`budget-file/access.ts`, spec §4.2) and rolls the whole load back with the stale
+ * preflight's 409 when a write is refused anyway.
  */
 
 export type DataAccessWriteHandling =
@@ -40,8 +43,7 @@ export type DataAccessWriteHandling =
   | 'delegates'
   | 'visible_links'
   | 'reserved'
-  | 'not_scoped'
-  | 'run_3c';
+  | 'not_scoped';
 
 export type DataAccessWriteEntry = {
   /** Relative to `backend/src`. */
@@ -60,7 +62,7 @@ const LINE_LOCK = 'under the line lock (lockBudgetLine): 403 when the line is re
 const VERSION_LOCK = 'under the version lock (lockBudgetVersions, through lockVersion or lockVersionWithLine): 403 when the line is read only';
 const OWN_LINE_LOCK = 'the line locked FOR NO KEY UPDATE first; no row: assertLinesEditable gives the 403 of a read-only line, else 404';
 const LINE_DELETE = 'delete of a line: reserved (spec §2.7)';
-const BUDGET_FILE = 'budget file import: run 3C';
+const BUDGET_FILE = 'budget file load: rows planned with the line rules (budget-file/access.ts); a refused write rolls the load back (409)';
 const ACTIVITIES = 'portfolio_activities has no data-access policy (data-access-tables.inventory.ts); the task is read first under the policies (404 when hidden)';
 const TASK_ELEMENT = 'assertTaskModifiable (data_access_task_modifiable, the policy of the task elements) before the write';
 
@@ -72,12 +74,12 @@ export const DATA_ACCESS_WRITES: DataAccessWriteEntry[] = [
   { file: 'spend/amounts-write.util.ts', member: 'createMissingMonths', count: 1, handling: 'lock', reason: VERSION_LOCK },
   { file: 'spend/amounts-write.util.ts', member: 'upsertColumns', count: 1, handling: 'lock', reason: VERSION_LOCK },
   { file: 'spend/budget-allocation-operations.ts', member: 'runAllocationCopy', count: 3, handling: 'reserved', reason: 'allocation copy over a set of lines (copyAllocations, reserved)' },
-  { file: 'spend/budget-file/import-file.ts', member: 'applyLine', count: 1, handling: 'run_3c', reason: BUDGET_FILE },
-  { file: 'spend/budget-file/import-file.ts', member: 'createDimensionValues', count: 1, handling: 'run_3c', reason: BUDGET_FILE },
-  { file: 'spend/budget-file/import-file.ts', member: 'createSuppliers', count: 1, handling: 'run_3c', reason: BUDGET_FILE },
-  { file: 'spend/budget-file/import-file.ts', member: 'insertAmountRows', count: 1, handling: 'run_3c', reason: BUDGET_FILE },
-  { file: 'spend/budget-file/import-file.ts', member: 'insertAudits', count: 1, handling: 'run_3c', reason: BUDGET_FILE },
-  { file: 'spend/budget-file/import-file.ts', member: 'insertRoundRows', count: 1, handling: 'run_3c', reason: BUDGET_FILE },
+  { file: 'spend/budget-file/import-file.ts', member: 'applyLine', count: 1, handling: 'delegates', reason: `${BUDGET_FILE}; the item services (resolveItemWrite) and lockBudgetLine` },
+  { file: 'spend/budget-file/import-file.ts', member: 'createDimensionValues', count: 1, handling: 'not_scoped', reason: `analytics_categories; ${BUDGET_FILE}: a limited person's plan creates values of open dimensions only` },
+  { file: 'spend/budget-file/import-file.ts', member: 'createSuppliers', count: 1, handling: 'not_scoped', reason: 'suppliers, created as before (canCreateSuppliers)' },
+  { file: 'spend/budget-file/import-file.ts', member: 'insertAmountRows', count: 1, handling: 'lock', reason: `writeFlatSpreads: ${VERSION_LOCK}; ${BUDGET_FILE}` },
+  { file: 'spend/budget-file/import-file.ts', member: 'insertAudits', count: 1, handling: 'not_scoped', reason: 'audit_log' },
+  { file: 'spend/budget-file/import-file.ts', member: 'insertRoundRows', count: 1, handling: 'lock', reason: `writeFlatSpreads: ${VERSION_LOCK}; ${BUDGET_FILE}` },
   { file: 'spend/budget-line-relations.ts', member: 'setAssetLink', count: 2, handling: 'lock', reason: OWN_LINE_LOCK },
   { file: 'spend/budget-line-type-change.service.ts', member: 'changeFromYear', count: 4, handling: 'lock', reason: `${LINE_LOCK}; the versions, links and tasks of a line the person may modify are all visible and modifiable` },
   { file: 'spend/budget-line-type-change.service.ts', member: 'changeInPlace', count: 2, handling: 'lock', reason: `${LINE_LOCK}; the tasks of a line the person may modify are modifiable` },
