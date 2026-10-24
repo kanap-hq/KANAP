@@ -164,6 +164,7 @@ async function testHostingType(runner: QueryRunner, s: Seed) {
     [s.m1, true, [s.cluster]],
     [s.m2, true, [s.cluster]],
   ].sort(), 'the interface map: the cluster and its members, the inherited ones marked');
+  assert.deepEqual(map.assigned_servers.filter((server: any) => server.is_cluster).map((server: any) => server.id), [s.cluster], 'only the cluster is marked as one');
 }
 
 async function testAdministration(runner: QueryRunner, s: Seed) {
