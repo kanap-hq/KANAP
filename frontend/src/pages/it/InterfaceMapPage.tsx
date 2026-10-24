@@ -861,7 +861,15 @@ export default function InterfaceMapPage() {
                                       <Stack spacing={0.25} sx={{ mt: 0.25 }}>
                                         {(() => {
                                           // The clusters first, each followed by the members that inherit it, then the other servers.
-                                          const list = grouped[env].slice().sort((a, b) => a.name.localeCompare(b.name));
+                                          // A server comes once per role: shown once, with the clusters of all its rows.
+                                          const byId = new Map<string, (typeof grouped)[string][number]>();
+                                          for (const srv of grouped[env]) {
+                                            const seen = byId.get(srv.id);
+                                            byId.set(srv.id, seen
+                                              ? { ...seen, via_clusters: [...(seen.via_clusters ?? []), ...(srv.via_clusters ?? []).filter((via) => !(seen.via_clusters ?? []).some((known) => known.id === via.id))] }
+                                              : srv);
+                                          }
+                                          const list = Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
                                           const clusters = list.filter((srv) => srv.is_cluster);
                                           const clusterIds = new Set(clusters.map((srv) => srv.id));
                                           const throughCluster = (srv: (typeof list)[number]) => (srv.via_clusters ?? []).some((via) => clusterIds.has(via.id));

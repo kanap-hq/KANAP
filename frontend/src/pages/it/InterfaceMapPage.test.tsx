@@ -46,6 +46,8 @@ const SERVERS = [
   { id: 'web-1', name: 'PAR-WEB-01', environment: 'prod', is_cluster: false, inherited: false, via_clusters: [] },
 ];
 
+let servers: typeof SERVERS = SERVERS;
+
 function Where() {
   return <div data-testid="where">{useLocation().pathname}</div>;
 }
@@ -57,7 +59,7 @@ function renderPage() {
       return {
         data: {
           id: 'app-1', name: 'CheeseTrack', description: null, editor: null, criticality: 'high',
-          assigned_servers: SERVERS, business_owners: [], it_owners: [], support_contacts: [],
+          assigned_servers: servers, business_owners: [], it_owners: [], support_contacts: [],
         },
       };
     }
@@ -91,6 +93,23 @@ describe('InterfaceMapPage application panel', () => {
     const member = screen.getByRole('button', { name: 'PAR-SQL-01' }).parentElement as HTMLElement;
     expect(member.querySelector('svg')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'PAR-WEB-01' }).parentElement?.querySelector('svg')).toBeNull();
+  });
+
+  it('shows a server once when it comes with several roles', async () => {
+    // The cluster carries two roles: it and each member come twice in the summary.
+    servers = [...SERVERS, SERVERS[0], SERVERS[1], SERVERS[2]];
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      renderPage();
+      fireEvent.click(await screen.findByRole('button', { name: 'node CheeseTrack' }));
+      await screen.findByRole('button', { name: 'PAR-SQL-CL01' });
+      const names = screen.getAllByRole('button').map((button) => button.textContent).filter((text) => /^PAR-/.test(text ?? ''));
+      expect(names).toEqual(['PAR-SQL-CL01', 'PAR-SQL-01', 'PAR-SQL-02', 'PAR-WEB-01']);
+      expect(errors.mock.calls.some((call) => String(call[0]).includes('same key'))).toBe(false);
+    } finally {
+      servers = SERVERS;
+      errors.mockRestore();
+    }
   });
 
   it('opens the page of a member from its line', async () => {
