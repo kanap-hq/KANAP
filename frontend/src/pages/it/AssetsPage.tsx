@@ -11,7 +11,7 @@ import { useAuth } from '../../auth/AuthContext';
 import ForbiddenPage from '../ForbiddenPage';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
-import { recordsInUseCheck } from '../../utils/deleteCheck';
+import { assetsDeleteCheck } from '../../utils/deleteCheck';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
@@ -496,7 +496,7 @@ export default function AssetsPage() {
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
           // Asked on click: those still in use are kept, with what uses them.
-          checkDelete={(ids) => recordsInUseCheck('/assets', ids)}
+          checkDelete={(ids) => assetsDeleteCheck(ids, t, locale)}
           itemLabels={{
             toDelete: (count) => t('pages.assets.delete.toDelete', { count }),
             kept: (count) => t('pages.assets.delete.kept', { count }),

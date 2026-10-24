@@ -134,6 +134,14 @@ describe('AssetDependenciesTab', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/it/assets/AST-3/overview');
   });
 
+  it('explains Contains in a tooltip on its title, and no other direction', async () => {
+    renderTab();
+    await screen.findByText('vm-app-01');
+    const contains = screen.getByRole('region', { name: A('contains') });
+    expect(within(contains).getByLabelText('workspace.asset.relations.containsHint')).toBeTruthy();
+    expect(screen.getAllByLabelText('workspace.asset.relations.containsHint')).toHaveLength(1);
+  });
+
   it('renders without a cluster slot by default', async () => {
     renderTab();
     await screen.findByText('vm-app-01');

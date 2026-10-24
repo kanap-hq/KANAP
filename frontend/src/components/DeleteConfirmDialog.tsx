@@ -23,7 +23,7 @@ export interface DeleteConfirmDialogProps {
   /** The main action's label; "Delete" by default ("Delete anyway" when the delete removes dependants). */
   confirmLabel?: string;
   itemCount: number;
-  items?: Array<{ id: string; name: string }>;
+  items?: Array<{ id: string; name: string; note?: string }>;
   loading?: boolean;
   maxDisplayItems?: number;
   /** The line above the items, in the record's words ("2 contracts will be deleted:"). */
@@ -118,7 +118,9 @@ export default function DeleteConfirmDialog({
               <ListItem key={item.id} divider>
                 <ListItemText
                   primary={item.name}
+                  secondary={item.note}
                   primaryTypographyProps={{ variant: 'body2' }}
+                  secondaryTypographyProps={{ variant: 'caption', sx: { whiteSpace: 'pre-line' } }}
                 />
               </ListItem>
             ))}

@@ -53,3 +53,46 @@ export function deleteFailureReason(failure: DeleteFailure, t: TFunction, langua
     defaultValue: reason,
   }) as string;
 }
+
+/**
+ * What the delete of an asset would take with it, as the delete check answers it
+ * (`POST /assets/delete-check`): the clusters it belongs to, the members it holds as a cluster, and
+ * its relations (the first ones named, `relations_total` counts them all). A warning never refuses.
+ */
+export type AssetDeleteWarning = {
+  id: string;
+  name: string;
+  member_of: Array<{ id: string; name: string }>;
+  member_count: number;
+  relations: Array<{ id: string; name: string; relation_type: string; direction: string }>;
+  relations_total: number;
+};
+
+/** The names a warning line lists before "and n more". */
+const WARNED_NAMES = 3;
+
+/** One short line per case of an asset's warning: its clusters, its members, its links. */
+export function assetDeleteWarningLines(warning: AssetDeleteWarning, t: TFunction, language: string): string[] {
+  const lines: string[] = [];
+  if (warning.member_of.length > 0) {
+    lines.push(t('common:delete.assetWarning.memberOf', {
+      count: warning.member_of.length,
+      names: joinNames(warning.member_of.map((cluster) => cluster.name), language),
+    }) as string);
+  }
+  if (warning.member_count > 0) {
+    lines.push(t('common:delete.assetWarning.hasMembers', { count: warning.member_count }) as string);
+  }
+  if (warning.relations_total > 0) {
+    const distinct = Array.from(new Set(warning.relations.map((relation) => relation.name)));
+    const shown = distinct.slice(0, WARNED_NAMES);
+    // The links to the names shown; the others (more names, or links past the ones listed) are counted.
+    const shownLinks = warning.relations.filter((relation) => shown.includes(relation.name)).length;
+    const left = warning.relations_total - shownLinks;
+    const names = left > 0
+      ? `${shown.join(', ')} ${t('common:delete.assetWarning.more', { count: left }) as string}`
+      : joinNames(shown, language);
+    lines.push(t('common:delete.assetWarning.links', { count: warning.relations_total, names }) as string);
+  }
+  return lines;
+}

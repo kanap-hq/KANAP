@@ -2032,7 +2032,6 @@
         "assetType": "Tipo de activo",
         "startTyping": "Comience a escribir para buscar",
         "isCluster": "Este servidor representa un clúster",
-        "clusterInfo": "Los activos de clúster pueden ser endpoints en conexiones. Asigne las instancias de aplicación a los hosts miembros.",
         "location": "Ubicación",
         "subLocation": "Sub-ubicación",
         "selectSubLocation": "Seleccione sub-ubicación",
@@ -2058,8 +2057,8 @@
         "environment": "Entorno",
         "members": "Miembros",
         "editMembers": "Editar miembros",
+        "addMembers": "Añadir miembros",
         "loadingMembers": "Cargando miembros…",
-        "noMembers": "Aún no se han añadido miembros.",
         "clusterMembership": "Pertenencia al clúster",
         "loadingClusters": "Cargando clústeres…",
         "notInCluster": "No pertenece a ningún clúster.",
@@ -2152,11 +2151,12 @@
       },
       "editMembersDialog": {
         "title": "Editar miembros",
-        "memberServers": "Servidores miembros",
-        "searchServers": "Buscar servidores",
-        "membersHint": "Los miembros deben ser servidores que no sean clúster.",
-        "clusterOption": "Clúster: {{name}}",
-        "clusterTag": "clúster"
+        "memberServers": "Miembros",
+        "searchServers": "Buscar miembros",
+        "narrowSearch": "Afine la búsqueda",
+        "removeOsTitle": "¿Quitar el sistema operativo?",
+        "removeOsMessage": "Un clúster con miembros no tiene sistema operativo: se quitará {{os}}.",
+        "removeOsConfirm": "Quitar y guardar"
       },
       "newAsset": "Nuevo activo",
       "untitled": "Activo sin nombre",
@@ -2170,6 +2170,11 @@
         "goLive": "Puesta en marcha",
         "editGoLive": "Editar la puesta en marcha"
       },
+      "clusterSwitch": {
+        "hint": "Un clúster agrupa servidores miembros.",
+        "membersHint": "Servidores que forman este clúster."
+      },
+      "readOnlyRole": "Su rol no permite modificar.",
       "hardware": {
         "serialNumber": "Número de serie",
         "serialNumberPlaceholder": "p. ej., SN-000123",
@@ -2262,7 +2267,8 @@
           "containedBy": "No está contenido en ningún activo.",
           "dependsOn": "No depende de ningún activo.",
           "dependedOnBy": "Ningún activo depende de este."
-        }
+        },
+        "containsHint": "Activos alojados en este, por ejemplo VM."
       }
     },
     "technology": {

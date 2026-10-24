@@ -114,4 +114,26 @@ describe('AssetsPage delete', () => {
     expect(String(props.itemLabels.kept(1))).toBe('pages.assets.delete.kept');
     expect(String(props.itemLabels.deleted(2))).toBe('pages.assets.delete.deleted');
   });
+
+  it('notes, under each asset the delete takes something with, what it takes, and asks "Delete anyway"', async () => {
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter><AssetsPage /></MemoryRouter>
+      </ThemeProvider>,
+    );
+    post.mockResolvedValueOnce({
+      data: {
+        refused: [],
+        warnings: [
+          { id: 'a', name: 'srv-01', member_of: [{ id: 'c', name: 'CL-1' }], member_count: 0, relations: [], relations_total: 0 },
+          { id: 'b', name: 'srv-02', member_of: [], member_count: 2, relations: [{ id: 'x', name: 'esx-01', relation_type: 'depends_on', direction: 'outgoing' }], relations_total: 1 },
+        ],
+      },
+    });
+    const check = await deleteButton.props!.checkDelete(['a', 'b', 'c']);
+    expect(check.confirmLabel).toBe('common:delete.anyway');
+    expect(Object.keys(check.notes)).toEqual(['a', 'b']);
+    expect(check.notes.a).toBe('common:delete.assetWarning.memberOf');
+    expect(check.notes.b.split('\n')).toEqual(['common:delete.assetWarning.hasMembers', 'common:delete.assetWarning.links']);
+  });
 });

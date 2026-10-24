@@ -25,6 +25,8 @@ export type DeleteCheck = {
    * listed as kept, and checking the option moves them to the items deleted.
    */
   cascadeLifts?: string[];
+  /** A short note under an item that goes (by id): what its delete takes with it, one line per case. */
+  notes?: Record<string, string>;
 };
 
 export interface DeleteSelectedButtonProps<T> {
@@ -305,7 +307,7 @@ export default function DeleteSelectedButton<T>({
           warning={check ? (check.warning ?? warning ?? t('delete.cannotUndo')) : (forceOption?.message ?? warning)}
           confirmLabel={check ? check.confirmLabel : forceOption?.confirmLabel}
           itemCount={toDelete.length}
-          items={toDelete}
+          items={toDelete.map((item) => ({ ...item, note: check?.notes?.[item.id] }))}
           itemsLabel={itemLabels?.toDelete(toDelete.length)}
           kept={shownKept.length > 0 ? { label: keptLabel(shownKept.length), items: shownKept } : undefined}
           loading={loading}

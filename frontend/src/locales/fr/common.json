@@ -253,6 +253,17 @@
       "incidents_other": "{{count}} incidents",
       "subnets_one": "{{count}} sous-réseau",
       "subnets_other": "{{count}} sous-réseaux"
+    },
+    "anyway": "Supprimer quand même",
+    "assetWarning": {
+      "memberOf_one": "Membre de {{names}} : il quittera ce cluster.",
+      "memberOf_other": "Membre de {{names}} : il quittera ces clusters.",
+      "hasMembers_one": "Cluster de {{count}} membre : il perdra son cluster.",
+      "hasMembers_other": "Cluster de {{count}} membres : ils perdront leur cluster.",
+      "links_one": "{{count}} lien sera supprimé : {{names}}.",
+      "links_other": "{{count}} liens seront supprimés : {{names}}.",
+      "more_one": "et {{count}} autre",
+      "more_other": "et {{count}} autres"
     }
   },
   "messages": {

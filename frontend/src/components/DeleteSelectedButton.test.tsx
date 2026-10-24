@@ -247,6 +247,18 @@ describe('DeleteSelectedButton', () => {
       return checkDelete;
     }
 
+    it('writes the note of an asset that goes under its name, and gives the main action the label of the check', async () => {
+      renderChecked(rows, async () => ({
+        refused: [],
+        notes: { a: 'Member of CL-1: it will leave this cluster.\n2 links will be removed: esx-01 and esx-02.' },
+        confirmLabel: 'Delete anyway',
+      }));
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText(/Member of CL-1/)).toBeInTheDocument();
+      expect(within(dialog).getByText(/2 links will be removed/)).toBeInTheDocument();
+      expect(within(dialog).getByRole('button', { name: 'Delete anyway' })).toBeInTheDocument();
+    });
+
     it('titles the window by the items really deleted, and gives the reason of a kept one as a sentence, when the list asks', async () => {
       renderChecked(rows, async () => ({ refused: [REFUSAL] }), {
         ...itemLabels,

@@ -2032,7 +2032,6 @@
         "assetType": "Asset-Typ",
         "startTyping": "Tippen Sie, um zu suchen",
         "isCluster": "Dieser Server stellt einen Cluster dar",
-        "clusterInfo": "Cluster-Assets können Endpunkte in Verbindungen sein. Weisen Sie Anwendungsinstanzen den Mitglieds-Hosts zu.",
         "location": "Standort",
         "subLocation": "Unterstandort",
         "selectSubLocation": "Unterstandort auswählen",
@@ -2058,8 +2057,8 @@
         "environment": "Umgebung",
         "members": "Mitglieder",
         "editMembers": "Mitglieder bearbeiten",
+        "addMembers": "Mitglieder hinzufügen",
         "loadingMembers": "Mitglieder werden geladen…",
-        "noMembers": "Noch keine Mitglieder hinzugefügt.",
         "clusterMembership": "Cluster-Mitgliedschaft",
         "loadingClusters": "Cluster werden geladen…",
         "notInCluster": "Gehört keinem Cluster an.",
@@ -2152,11 +2151,12 @@
       },
       "editMembersDialog": {
         "title": "Mitglieder bearbeiten",
-        "memberServers": "Mitgliedsserver",
-        "searchServers": "Server suchen",
-        "membersHint": "Mitglieder müssen Nicht-Cluster-Server sein.",
-        "clusterOption": "Cluster: {{name}}",
-        "clusterTag": "Cluster"
+        "memberServers": "Mitglieder",
+        "searchServers": "Mitglieder suchen",
+        "narrowSearch": "Suche eingrenzen",
+        "removeOsTitle": "Betriebssystem entfernen?",
+        "removeOsMessage": "Ein Cluster mit Mitgliedern hat kein Betriebssystem: {{os}} wird entfernt.",
+        "removeOsConfirm": "Entfernen und speichern"
       },
       "newAsset": "Neues Asset",
       "untitled": "Unbenanntes Asset",
@@ -2170,6 +2170,11 @@
         "goLive": "Inbetriebnahme",
         "editGoLive": "Inbetriebnahme bearbeiten"
       },
+      "clusterSwitch": {
+        "hint": "Ein Cluster fasst Mitglieder-Server zusammen.",
+        "membersHint": "Server, die diesen Cluster bilden."
+      },
+      "readOnlyRole": "Ihre Rolle erlaubt keine Änderungen.",
       "hardware": {
         "serialNumber": "Seriennummer",
         "serialNumberPlaceholder": "z. B. SN-000123",
@@ -2262,7 +2267,8 @@
           "containedBy": "In keinem Asset enthalten.",
           "dependsOn": "Hängt von keinem Asset ab.",
           "dependedOnBy": "Kein Asset hängt von diesem ab."
-        }
+        },
+        "containsHint": "Von diesem Asset gehostete Assets, zum Beispiel VMs."
       }
     },
     "technology": {

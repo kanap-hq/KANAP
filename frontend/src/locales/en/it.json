@@ -2032,7 +2032,6 @@
         "assetType": "Asset type",
         "startTyping": "Start typing to search",
         "isCluster": "This server represents a cluster",
-        "clusterInfo": "Cluster assets can be endpoints in connections. Assign application instances to the member hosts.",
         "location": "Location",
         "subLocation": "Sub-location",
         "selectSubLocation": "Select sub-location",
@@ -2058,8 +2057,8 @@
         "environment": "Environment",
         "members": "Members",
         "editMembers": "Edit members",
+        "addMembers": "Add members",
         "loadingMembers": "Loading members…",
-        "noMembers": "No members added yet.",
         "clusterMembership": "Cluster membership",
         "loadingClusters": "Loading clusters…",
         "notInCluster": "Not part of any cluster.",
@@ -2152,11 +2151,12 @@
       },
       "editMembersDialog": {
         "title": "Edit members",
-        "memberServers": "Member servers",
-        "searchServers": "Search servers",
-        "membersHint": "Members must be non-cluster servers.",
-        "clusterOption": "Cluster: {{name}}",
-        "clusterTag": "cluster"
+        "memberServers": "Members",
+        "searchServers": "Search members",
+        "narrowSearch": "Narrow your search",
+        "removeOsTitle": "Remove the operating system?",
+        "removeOsMessage": "A cluster with members has no operating system: {{os}} will be removed.",
+        "removeOsConfirm": "Remove and save"
       },
       "newAsset": "New asset",
       "untitled": "Untitled asset",
@@ -2170,6 +2170,11 @@
         "goLive": "Go live",
         "editGoLive": "Edit go live"
       },
+      "clusterSwitch": {
+        "hint": "A cluster groups member servers.",
+        "membersHint": "Servers that form this cluster."
+      },
+      "readOnlyRole": "Your role does not allow editing.",
       "hardware": {
         "serialNumber": "Serial number",
         "serialNumberPlaceholder": "e.g., SN-000123",
@@ -2262,7 +2267,8 @@
           "containedBy": "Contained in no asset.",
           "dependsOn": "Depends on no asset.",
           "dependedOnBy": "No asset depends on this one."
-        }
+        },
+        "containsHint": "Assets hosted by this one, such as VMs."
       }
     },
     "technology": {

@@ -3,6 +3,7 @@ import { Box, Button, IconButton, Typography, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
+import InfoHint from './InfoHint';
 
 /** One column of a relations table. */
 export type RelationsColumn<T> = {
@@ -328,13 +329,15 @@ type SectionProps = {
   addLabel?: string;
   /** The page's own section title, in place of the default one (the section keeps `title` as its name). */
   heading?: React.ReactNode;
+  /** One sentence in a tooltip, on an information icon after the title. */
+  hint?: string;
   /** Other actions on the right of the title, before "Add" (a refresh, its result line). */
   actions?: React.ReactNode;
   children: React.ReactNode;
 };
 
 /** A Relations section: title and count, an "Add" text action on the right, then its content. */
-export function RelationsSection({ title, count, onAdd, adding, addLabel, heading, actions, children }: SectionProps) {
+export function RelationsSection({ title, count, onAdd, adding, addLabel, heading, hint, actions, children }: SectionProps) {
   return (
     <Box component="section" aria-label={title}>
       <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 0.75, minHeight: 28 }}>
@@ -344,6 +347,7 @@ export function RelationsSection({ title, count, onAdd, adding, addLabel, headin
               {title}
             </Typography>
           )}
+          {hint && <InfoHint text={hint} />}
           {count != null && <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{count}</Typography>}
         </Box>
         {actions}
