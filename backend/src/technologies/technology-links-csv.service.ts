@@ -15,6 +15,7 @@ import {
 } from '../common/csv-sheet';
 import { linkProvenance, SOURCE_REF_MAX, type LinkProvenance, type LinkSource } from '../common/link-provenance';
 import { fixMulterFilename, uploadedBytes } from '../common/upload';
+import { clustersWithMembers } from '../assets/asset-rules';
 import { OperatingSystemService } from './operating-system.service';
 import { TechnologyLinksService, type LinkOpts } from './technology-links.service';
 
@@ -316,6 +317,10 @@ export class TechnologyLinksCsvService {
     const versions = await this.versionsByLabel(ctx, [...techs.byItem.values()].map((tech) => tech.id));
     const subjects = new Map(usable.map((row) => [row, subjectOf(row)] as const));
     const stored = await this.storedLinks(ctx, spec.side, [...subjects.values()].flatMap((s) => ('row' in s ? [] : [s.id])));
+    // A cluster with members has no operating system (a cluster without member may have one).
+    const clustersWithMembersIds = spec.side === 'asset'
+      ? await clustersWithMembers(ctx.manager, ctx.tenantId, [...subjects.values()].flatMap((s) => ('row' in s || !s.is_cluster ? [] : [s.id])))
+      : new Set<string>();
 
     const seen = new Map<string, number>();
     const osClaim = new Map<string, string>();
@@ -372,7 +377,7 @@ export class TechnologyLinksCsvService {
           continue;
         }
         if (os === true && !link?.is_operating_system) {
-          const refused = refuseOperatingSystem(line, subject, tech, markedSubjects, osClaim, linkKey);
+          const refused = refuseOperatingSystem(line, subject, tech, clustersWithMembersIds, markedSubjects, osClaim, linkKey);
           if (refused.length > 0) {
             errors.push(...refused);
             continue;
@@ -587,13 +592,14 @@ function resolveTechnology(
 
 /**
  * `yes` on a server link: refused when the technology is not an operating system, the asset is a
- * cluster, or the server has another mark (stored, or asked by an earlier row of the file). The
+ * cluster with members, or the server has another mark (stored, or asked by an earlier row of the file). The
  * import never deletes a link, so it cannot move a mark the way the server screen does.
  */
 function refuseOperatingSystem(
   line: number,
   subject: Subject,
   tech: TechRow,
+  clustersWithMembersIds: Set<string>,
   markedSubjects: Set<string>,
   osClaim: Map<string, string>,
   linkKey: string,
@@ -602,8 +608,8 @@ function refuseOperatingSystem(
   if (tech.family !== OS_FAMILY) {
     problems.push(rowError(line, 'operating_system', 'CSV_OPERATING_SYSTEM_FAMILY', 'Only a technology of the Operating system family can be marked as the server\'s operating system.'));
   }
-  if (subject.is_cluster) {
-    problems.push(rowError(line, 'operating_system', 'CSV_OPERATING_SYSTEM_CLUSTER', 'A cluster has no operating system.'));
+  if (clustersWithMembersIds.has(subject.id)) {
+    problems.push(rowError(line, 'operating_system', 'CSV_OPERATING_SYSTEM_CLUSTER', 'A cluster with members has no operating system.'));
   }
   if (problems.length > 0) return problems;
   // The row's own link is not marked (the caller checks), so a stored mark is another link's.

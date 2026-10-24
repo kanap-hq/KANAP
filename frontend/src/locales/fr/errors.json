@@ -116,7 +116,7 @@
   "CSV_ASSET_REFERENCE_MISMATCH": "« {{value}} » est le serveur « {{name}} ». Corrigez la référence ou le nom, ou laissez l'un des deux vide.",
   "CSV_OPERATING_SYSTEM_VALUE": "« {{value}} » n'est pas valide. Utilisez oui ou non.",
   "CSV_OPERATING_SYSTEM_FAMILY": "Seule une technologie de la famille Système d'exploitation peut être marquée comme système d'exploitation du serveur.",
-  "CSV_OPERATING_SYSTEM_CLUSTER": "Un cluster n'a pas de système d'exploitation.",
+  "CSV_OPERATING_SYSTEM_CLUSTER": "Un cluster avec des membres n'a pas de système d'exploitation.",
   "CSV_OPERATING_SYSTEM_TAKEN": "Ce serveur a déjà un autre système d'exploitation. Retirez-le ou démarquez-le dans la section Technologies de la fiche du serveur, ou laissez la cellule vide.",
   "CSV_OPERATING_SYSTEM_MARKED": "Marqué comme système d'exploitation du serveur : le serveur n'en a pas encore.",
   "CSV_TECHNOLOGY_VERSION_CREATED": "La version « {{value}} » est créée.",

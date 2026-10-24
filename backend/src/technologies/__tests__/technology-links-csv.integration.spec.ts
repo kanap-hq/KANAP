@@ -13,7 +13,7 @@ import { TechnologiesController } from '../technologies.controller';
 import { TechnologyLinksCsvService, type TechnologyLinksCsvContext, type TechnologyLinksImportResult } from '../technology-links-csv.service';
 import { TechnologyLinksService } from '../technology-links.service';
 import { TechnologyReachService } from '../technology-reach.service';
-import { application, asset, installed, one, technology, version, type AuditEntry } from './technologies.fixtures';
+import { application, asset, installed, member, one, technology, version, type AuditEntry } from './technologies.fixtures';
 
 // The two link files of the technologies list: servers and technologies (asset_technologies),
 // applications and technologies (application_technologies, declared links).
@@ -448,7 +448,10 @@ async function testOperatingSystem() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'links-os');
     const srv = await asset(runner, tenantId, 'Srv');
-    await asset(runner, tenantId, 'Cluster', true);
+    // A cluster with members has no operating system; a cluster without member may have one.
+    const cluster = await asset(runner, tenantId, 'Cluster', true);
+    await member(runner, tenantId, cluster, await asset(runner, tenantId, 'Node'));
+    await asset(runner, tenantId, 'Lone cluster', true);
     const win = await technology(runner, tenantId, 3, 'Windows Server', 'operating_system');
     await technology(runner, tenantId, 4, 'Ubuntu', 'operating_system');
     await technology(runner, tenantId, 2, 'SQL Server', 'database');
@@ -466,6 +469,13 @@ async function testOperatingSystem() {
     assert.deepEqual(codes(clusterRefused), [
       { row: 2, code: 'CSV_OPERATING_SYSTEM_CLUSTER', params: null },
     ]);
+    const loneCluster = await csv.importAssetLinks({
+      file: fileOf(['Lone cluster,,Ubuntu,,yes,']),
+      dryRun: true,
+      language: 'en',
+    }, ctx);
+    assert.equal(loneCluster.ok, true, JSON.stringify(loneCluster.errors));
+    assert.equal(loneCluster.inserted, 1);
 
     const familyRefused = await csv.importAssetLinks({
       file: fileOf(['Srv,,SQL Server,,yes,']),

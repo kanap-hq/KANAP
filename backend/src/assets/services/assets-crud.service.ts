@@ -5,7 +5,12 @@ import { EntityManager, Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { AssetClusterMember } from '../asset-cluster-member.entity';
 import { AuditService } from '../../audit/audit.service';
-import { assetBadRequest, clusterSwitchRefusals } from '../asset-rules';
+import {
+  assertClusterMemberCandidates,
+  clusterOsWithMembersRefusal,
+  clusterSwitchRefusals,
+  lockClusterForMembers,
+} from '../asset-rules';
 import { LinkSource } from '../../common/link-provenance';
 import { operatingSystemLabelSql } from '../../technologies/operating-system-codes';
 import { OperatingSystemService } from '../../technologies/operating-system.service';
@@ -14,8 +19,6 @@ import { AssetsValidationService } from './assets-validation.service';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { NotificationsService } from '../../notifications/notifications.service';
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 /**
  * Service for core CRUD operations on assets.
@@ -509,45 +512,14 @@ export class AssetsCrudService extends AssetsBaseService {
       ),
     );
 
-    if (normalizedIds.includes(String(cluster.id).toLowerCase())) {
-      throw assetBadRequest('cluster_member_self', 'A cluster cannot be a member of itself.');
-    }
-
-    const wellFormed = normalizedIds.filter((sid) => UUID_PATTERN.test(sid));
-    // FOR SHARE: a member cannot turn into a cluster while it is being added (the switch locks its row).
-    const candidates: Array<{ id: string; name: string; is_cluster: boolean }> =
-      wellFormed.length > 0
-        ? await mg.query(
-            `SELECT id, name, COALESCE(is_cluster, false) AS is_cluster
-               FROM assets
-              WHERE tenant_id = $1 AND id = ANY($2::uuid[])
-              ORDER BY name, id
-              FOR SHARE`,
-            [tenant, wellFormed],
-          )
-        : [];
-
-    if (candidates.length !== normalizedIds.length) {
-      throw assetBadRequest('cluster_member_not_found', 'One or more assets were not found.');
-    }
-
-    const clusterCandidate = candidates.find((c) => c.is_cluster);
-    if (clusterCandidate) {
-      throw assetBadRequest('cluster_member_is_cluster', `${clusterCandidate.name} is a cluster: a cluster cannot be a member.`, { name: clusterCandidate.name });
-    }
+    await assertClusterMemberCandidates(mg, tenant, cluster.id, normalizedIds);
 
     await mg.transaction(async (trx) => {
       // The cluster row first: a concurrent switch or operating-system write waits for this one.
-      await trx.query(`SELECT id FROM assets WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, [tenant, clusterId]);
+      const locked = await lockClusterForMembers(trx, tenant, clusterId);
       if (normalizedIds.length > 0) {
-        const os = await this.operatingSystems.labelOf(trx, tenant, clusterId);
-        if (os && !removeOperatingSystem) {
-          throw assetBadRequest(
-            'cluster_os_with_members',
-            `This cluster has an operating system (${os}): a cluster with members has none.`,
-            { os },
-          );
-        }
+        const os = locked?.os ?? null;
+        if (os && !removeOperatingSystem) throw clusterOsWithMembersRefusal(os);
         if (os) {
           await this.operatingSystems.setOperatingSystem(trx, tenant, clusterId, null, this.osSource(opts), userId);
         }

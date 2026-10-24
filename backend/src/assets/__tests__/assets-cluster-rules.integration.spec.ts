@@ -8,6 +8,8 @@ import { assetCsvConfig } from '../asset-csv.config';
 import { Location } from '../../locations/location.entity';
 import { Tenant } from '../../tenants/tenant.entity';
 import { AiBusinessRecordMutationSupportService } from '../../ai/mutation/ai-business-record-mutation-support.service';
+import { AiRelationMutationSupportService } from '../../ai/mutation/ai-relation-mutation-support.service';
+import { AiTaskMutationSupportService } from '../../ai/mutation/ai-task-mutation-support.service';
 import { CsvImportService } from '../../common/csv/csv-import.service';
 import { CsvResolverService } from '../../common/csv/csv-resolver.service';
 import { CsvJsonValidators } from '../../common/csv/csv-json-validators';
@@ -234,6 +236,67 @@ async function testOperatingSystem() {
   });
 }
 
+async function testAssistantMembers() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'cl-ai');
+    const { os, entries } = services(runner);
+    const cluster = await asset(runner, tenantId, 'ai-cluster', true);
+    const otherCluster = await asset(runner, tenantId, 'ai-other', true);
+    const plain = await asset(runner, tenantId, 'ai-plain');
+    const node1 = await asset(runner, tenantId, 'ai-node-1');
+    const node2 = await asset(runner, tenantId, 'ai-node-2');
+    await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+    const audit = { log: async (entry: AuditEntry) => { entries.push(entry); } };
+    const rel = new AiRelationMutationSupportService(audit as any, undefined as any, new AiTaskMutationSupportService());
+    const context: any = { manager: runner.manager, tenantId, userId: null };
+    const prepare = (ref: string, change: { add?: string[]; remove?: string[] }) =>
+      rel.prepareUpdatePreview(context, { entity_type: 'assets', ref, relation: 'cluster_members', ...change });
+    const execute = async (prepared: Awaited<ReturnType<typeof prepare>>) =>
+      rel.executePreview(context, {
+        id: randomUUID(), target_entity_type: 'assets', target_entity_id: prepared.targetEntityId,
+        mutation_input: prepared.mutationInput, current_values: prepared.currentValues,
+      } as any);
+
+    // The same refusals as the members endpoint.
+    assert.equal((await refusal(runner, () => prepare(cluster, { add: [cluster] }))).code, 'cluster_member_self');
+    assert.deepEqual(await refusal(runner, () => prepare(cluster, { add: [otherCluster] })), {
+      code: 'cluster_member_is_cluster', params: { name: 'ai-other' }, status: 400,
+    });
+    assert.equal((await refusal(runner, () => prepare(plain, { add: [node1] }))).status, 400);
+    assert.deepEqual(await members(runner, tenantId, plain), []);
+
+    // A cluster with an operating system gets no member: the assistant has no removal flag.
+    await giveOs(runner, os, tenantId, cluster);
+    assert.deepEqual(await refusal(runner, () => prepare(cluster, { add: [node1] })), {
+      code: 'cluster_os_with_members', params: { os: 'Ubuntu 22.04' }, status: 400,
+    });
+    // Checked again at execution: the operating system came after the preview.
+    await os.setOperatingSystem(runner.manager, tenantId, cluster, null, 'manual');
+    const preview = await prepare(cluster, { add: [node1, node2] });
+    await giveOs(runner, os, tenantId, cluster);
+    assert.equal((await refusal(runner, () => execute(preview))).code, 'cluster_os_with_members');
+    assert.deepEqual(await members(runner, tenantId, cluster), []);
+    assert.equal(await os.labelOf(runner.manager, tenantId, cluster), 'Ubuntu 22.04');
+
+    // Without an operating system the members are written, with the assistant's audit.
+    await os.setOperatingSystem(runner.manager, tenantId, cluster, null, 'manual');
+    entries.length = 0;
+    await execute(await prepare(cluster, { add: [node1, node2] }));
+    assert.deepEqual(await members(runner, tenantId, cluster), [node1, node2].sort());
+    assert.deepEqual(entries.map((entry) => `${entry.table}:${entry.action}`), ['asset_cluster_members:update']);
+
+    // Removing a member stays allowed, also on a cluster that carries an operating system (old data).
+    const ubuntu = await os.resolve(runner.manager, tenantId, 'Ubuntu 22.04', { create: true });
+    await runner.query(
+      `INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id, is_operating_system, source)
+       VALUES ($1, $2, $3, $4, true, 'manual')`,
+      [tenantId, cluster, ubuntu!.technology_id, ubuntu!.technology_version_id],
+    );
+    await execute(await prepare(cluster, { remove: [node2] }));
+    assert.deepEqual(await members(runner, tenantId, cluster), [node1]);
+  });
+}
+
 const csvSettings: any = {
   serverKinds: [{ code: 'vm', label: 'Virtual machine' }],
   lifecycleStates: [{ code: 'active', label: 'Active' }],
@@ -296,5 +359,6 @@ runSpecs('assets-cluster-rules.integration.spec.ts', [
   ['the Cluster switch: service, assistant, operating system kept', testSwitch],
   ['the members: coded refusals and the operating-system rule', testMembers],
   ['the operating system of a cluster', testOperatingSystem],
+  ['the assistant adds cluster members under the same rules', testAssistantMembers],
   ['the CSV import: row errors at the check and at the load', testCsv],
 ]);

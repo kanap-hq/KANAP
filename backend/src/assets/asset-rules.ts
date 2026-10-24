@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { operatingSystemLabelSql } from '../technologies/operating-system-codes';
 
 type Params = Record<string, string | number>;
 
@@ -90,4 +91,73 @@ export async function clustersWithMembers(mg: EntityManager, tenantId: string, i
 /** A cluster that has members carries no operating system (`os_cluster_with_members`). */
 export function osClusterWithMembersRefusal(): BadRequestException {
   return assetBadRequest('os_cluster_with_members', 'This cluster has members: it has no operating system.');
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The refusals for assets added as members of a cluster, shared by every writer of
+ * `asset_cluster_members` (service, assistant), inside the transaction of its write:
+ * - the cluster itself (`cluster_member_self`);
+ * - an id that is no asset of the tenant (`cluster_member_not_found`);
+ * - a cluster (`cluster_member_is_cluster`, `name`).
+ * The members are read `FOR SHARE`: a member cannot turn into a cluster while it is being added
+ * (the switch locks its row). `memberIds` are lowercase and distinct.
+ */
+export async function assertClusterMemberCandidates(
+  mg: EntityManager,
+  tenantId: string,
+  clusterId: string,
+  memberIds: readonly string[],
+): Promise<void> {
+  if (memberIds.includes(String(clusterId).toLowerCase())) {
+    throw assetBadRequest('cluster_member_self', 'A cluster cannot be a member of itself.');
+  }
+  const wellFormed = memberIds.filter((id) => UUID_PATTERN.test(id));
+  const candidates: Array<{ id: string; name: string; is_cluster: boolean }> =
+    wellFormed.length > 0
+      ? await mg.query(
+          `SELECT id, name, COALESCE(is_cluster, false) AS is_cluster
+             FROM assets
+            WHERE tenant_id = $1 AND id = ANY($2::uuid[])
+            ORDER BY name, id
+            FOR SHARE`,
+          [tenantId, wellFormed],
+        )
+      : [];
+  if (candidates.length !== memberIds.length) {
+    throw assetBadRequest('cluster_member_not_found', 'One or more assets were not found.');
+  }
+  const clusterCandidate = candidates.find((c) => c.is_cluster);
+  if (clusterCandidate) {
+    throw assetBadRequest('cluster_member_is_cluster', `${clusterCandidate.name} is a cluster: a cluster cannot be a member.`, { name: clusterCandidate.name });
+  }
+}
+
+/**
+ * Locks the cluster row (`FOR UPDATE`: a concurrent switch or operating-system write waits) and
+ * returns whether it is a cluster and its operating system. `null` when the asset does not exist.
+ */
+export async function lockClusterForMembers(
+  mg: EntityManager,
+  tenantId: string,
+  clusterId: string,
+): Promise<{ isCluster: boolean; os: string | null } | null> {
+  const [row]: Array<{ is_cluster: boolean; os: string | null }> = await mg.query(
+    `SELECT COALESCE(a.is_cluster, false) AS is_cluster, ${operatingSystemLabelSql('a')} AS os
+       FROM assets a
+      WHERE a.tenant_id = $1 AND a.id = $2
+      FOR UPDATE OF a`,
+    [tenantId, clusterId],
+  );
+  return row ? { isCluster: row.is_cluster, os: row.os ?? null } : null;
+}
+
+/** A cluster that carries an operating system gets no member (`cluster_os_with_members`, `os`). */
+export function clusterOsWithMembersRefusal(os: string): BadRequestException {
+  return assetBadRequest(
+    'cluster_os_with_members',
+    `This cluster has an operating system (${os}): a cluster with members has none.`,
+    { os },
+  );
 }
