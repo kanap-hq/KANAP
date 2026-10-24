@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
@@ -61,6 +62,32 @@ describe('DateEUField calendar', () => {
     expect(screen.getByRole('button', { name: 'Open calendar' })).toBeDisabled();
     fireEvent.keyDown(screen.getByRole('textbox'), { key: 'ArrowDown', altKey: true });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('DateEUField replaces the saved date on the first keystroke', () => {
+  it('selects the whole date when the field is clicked', async () => {
+    const user = userEvent.setup();
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    expect(input.value).toBe('15/03/2022');
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(input.value.length);
+    await user.type(input, '21102026', { skipClick: true });
+    expect(input.value).toBe('21/10/2026');
+    expect(onChangeYmd).toHaveBeenLastCalledWith('2026-10-21');
+  });
+
+  it('selects the whole date when the field is autoFocused', async () => {
+    const user = userEvent.setup();
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15', autoFocus: true });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(input.value.length);
+    await user.type(input, '21102026', { skipClick: true });
+    expect(input.value).toBe('21/10/2026');
+    expect(onChangeYmd).toHaveBeenLastCalledWith('2026-10-21');
   });
 });
 

@@ -40,6 +40,10 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
   const [text, setText] = React.useState<string>('');
   const [focused, setFocused] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const mouseDownRef = React.useRef(false);
+  const selectOnMouseUpRef = React.useRef(false);
+  const justFocusedRef = React.useRef(false);
   const [calendarAnchor, setCalendarAnchor] = React.useState<HTMLElement | null>(null);
   const locale = useLocale();
   // Typed dates follow the language: 15/10/2026, or 15.10.2026 in German.
@@ -68,10 +72,17 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
   const onFocus = () => {
     setText(ymdToEu(normalizedYmd, sep));
     setFocused(true);
+    justFocusedRef.current = true;
+    // A click must select the new edit text after the render; the browser would otherwise collapse
+    // that selection on mouse up. Keyboard focus and autoFocus need no second selection.
+    selectOnMouseUpRef.current = mouseDownRef.current;
+    mouseDownRef.current = false;
   };
 
   const onBlur = () => {
     setFocused(false);
+    selectOnMouseUpRef.current = false;
+    mouseDownRef.current = false;
     const ymd = euToYmd(text);
     if (!ymd && text.trim() === '') {
       onChangeYmd('');
@@ -79,6 +90,21 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
       return;
     }
     if (ymd) setText(ymdToEu(ymd, sep));
+  };
+
+  // Select the whole edit text on entering the field, so the first keystroke replaces the date.
+  // The selection waits for the render that swaps the display format for dd/mm/yyyy.
+  React.useLayoutEffect(() => {
+    if (!focused || !justFocusedRef.current) return;
+    justFocusedRef.current = false;
+    inputRef.current?.select();
+  }, [focused]);
+
+  const onInputMouseUp = (event: React.MouseEvent<HTMLInputElement>) => {
+    if (!selectOnMouseUpRef.current) return;
+    selectOnMouseUpRef.current = false;
+    event.preventDefault();
+    event.currentTarget.select();
   };
 
   // The calendar hangs from the input box (not the button), so it lines up with the field.
@@ -114,6 +140,7 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
         onKeyDown={onInputKeyDown}
         disabled={disabled}
         autoFocus={autoFocus}
+        inputRef={inputRef}
         required={required}
         variant="standard"
         name={name}
@@ -122,7 +149,11 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
         size={size}
         fullWidth
         sx={textFieldSx}
-        inputProps={{ inputMode: 'numeric' }}
+        inputProps={{
+          inputMode: 'numeric',
+          onMouseDown: () => { mouseDownRef.current = true; },
+          onMouseUp: onInputMouseUp,
+        }}
         InputProps={{
           endAdornment: (
             <InputAdornment position="end">
