@@ -76,7 +76,7 @@ type CompanyChargebackDepartmentRow = {
 };
 
 type CompanyChargebackItemRow = {
-  versionId: string;
+  versionId: string | null;
   itemId: string | null;
   /** The line's number (its BL-n reference) and nature; null when the line is not read. */
   itemNumber?: number | null;

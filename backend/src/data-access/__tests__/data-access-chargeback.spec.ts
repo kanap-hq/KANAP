@@ -189,15 +189,15 @@ async function testChargeback(runner: QueryRunner, s: Seed, shares: Shares): Pro
   assert.deepEqual([...rows.keys()].sort(), ['L1', 'L4']);
   const l1 = rows.get('L1')!;
   assert.deepEqual(
-    { itemId: l1.itemId, readable: l1.readable, amount: l1.amount, pct: l1.allocationPct, payer: l1.payingCompanyId, departments: l1.departments, number: l1.itemNumber != null },
-    { itemId: null, readable: false, amount: 40, pct: 40, payer: s.fr, departments: ['Finance ES'], number: true },
-    'L1: reference, label, payer, percentage, amount and department; no id (no link)',
+    { itemId: l1.itemId, versionId: l1.versionId, readable: l1.readable, amount: l1.amount, pct: l1.allocationPct, payer: l1.payingCompanyId, departments: l1.departments, number: l1.itemNumber != null },
+    { itemId: null, versionId: null, readable: false, amount: 40, pct: 40, payer: s.fr, departments: ['Finance ES'], number: true },
+    'L1: reference, label, payer, percentage, amount and department; no id (no link), no version id',
   );
   assert.ok(l1.payingCompanyName?.startsWith('Alpha France'));
   const l4 = rows.get('L4')!;
   assert.deepEqual(
-    { itemId: l4.itemId, readable: l4.readable, amount: l4.amount, pct: l4.allocationPct, payer: l4.payingCompanyId, departments: l4.departments },
-    { itemId: s.lines.L4, readable: true, amount: 50, pct: 50, payer: s.es, departments: [] },
+    { itemId: l4.itemId, versionId: l4.versionId, readable: l4.readable, amount: l4.amount, pct: l4.allocationPct, payer: l4.payingCompanyId, departments: l4.departments },
+    { itemId: s.lines.L4, versionId: s.versions.L4, readable: true, amount: 50, pct: 50, payer: s.es, departments: [] },
   );
   assert.deepEqual(marta.departments.map((d) => [d.departmentId, d.amount]).sort(), [[null, 50], [shares.departmentEs, 40]].sort());
   assert.deepEqual(marta.intercompany?.payables.map((r) => [r.payerId, r.amount]), [[s.fr, 40]], 'FR pays 40 charged to ES');

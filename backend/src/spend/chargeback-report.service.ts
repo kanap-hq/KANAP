@@ -152,7 +152,8 @@ export type CompanyChargebackDepartmentRow = {
 };
 
 export type CompanyChargebackItemRow = {
-  versionId: string;
+  /** Null for a line the person cannot read (data-scoped access). */
+  versionId: string | null;
   /** The line's id; null when the line is not read, or not readable by a limited person (no link). */
   itemId: string | null;
   /** The line's number, its BL-n reference; null when the line is not read. */
@@ -551,7 +552,9 @@ export class ChargebackReportService {
         const payerId = item?.paying_company_id ?? null;
         const pct = ctx.versionCompanyPct.get(versionId)?.get(companyId);
         const departmentIds = ctx.versionCompanyDepartments.get(versionId)?.get(companyId) ?? new Set<string>();
+        // A line the person cannot read leaves no id behind: neither its own nor its version's.
         row.itemId = readable ? row.itemId : null;
+        row.versionId = readable ? row.versionId : null;
         row.readable = readable;
         row.payingCompanyId = payerId;
         row.payingCompanyName = payerId ? (ctx.companyById.get(payerId)?.name ?? null) : null;
