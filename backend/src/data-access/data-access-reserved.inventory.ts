@@ -215,6 +215,8 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     controller: 'AnalyticsCategoriesController',
     reserved: ['bulkDelete', 'create', 'delete', 'deleteCheck', 'import', 'reorder', 'update'],
     allowed: {
+      // POST from-line
+      createFromLine: 'the line picker: values of an open dimension only, for a person who may modify the line (spec §3.5); a closed list answers 403',
       export: EXPORT, // GET export
       get: READ, // GET :id
       list: READ, // GET (root)

@@ -6,8 +6,8 @@ import { isReservedDimensionValueWrite } from '../../data-access/reserved-operat
  * (`data-access/data-access-reserved.inventory.ts`).
  * - organisation data (companies and their metrics, departments and their metrics, accounts,
  *   charts of accounts, business processes): create and update;
- * - values of a closed-list dimension (analytics categories): create and update
- *   (`isReservedDimensionValueWrite`);
+ * - dimension values (analytics categories): create and update, as on the dimension page
+ *   (`isReservedDimensionValueWrite` without a dimension: open values come from a line only);
  * - suppliers and shared contacts: update, and a supplier's contacts; creating one stays allowed.
  * Lines, contracts, tasks, documents, locations and the other records follow the person's access.
  */

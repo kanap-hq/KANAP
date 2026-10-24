@@ -33,6 +33,7 @@ import { lookupAnalyticsValues } from '../common/lookup/reference-lookups';
 import {
   AnalyticsCategoryBulkDeleteDto,
   AnalyticsCategoryCreateDto,
+  AnalyticsCategoryFromLineDto,
   AnalyticsCategoryReorderDto,
   AnalyticsCategoryUpdateDto,
 } from './dto/analytics.dto';
@@ -104,6 +105,19 @@ export class AnalyticsCategoriesController {
   reorder(@Body() body: AnalyticsCategoryReorderDto, @Tenant() ctx: TenantRequest) {
     const context = analyticsContext(ctx);
     return this.svc.reorder(body?.axis_id, body?.value_ids, context.userId, context);
+  }
+
+  /**
+   * The line's picker (planning/data-scoped-access spec §3.5, §7.7): finds the value of `name` in a
+   * dimension with open values, or creates it, for a person who may modify the line (`line_id`) or
+   * place a new one (`paying_company_id`, `cost_center_id`). Not reserved: the open values are the
+   * exception to the dimension values reserved to unscoped persons (`isReservedDimensionValueWrite`).
+   */
+  @RequireLevel('budget', 'member')
+  @Post('from-line')
+  createFromLine(@Body() body: AnalyticsCategoryFromLineDto, @Tenant() ctx: TenantRequest) {
+    const context = analyticsContext(ctx);
+    return this.svc.createFromLine(body, context.userId, context);
   }
 
   @RequireAnyLevel(ANALYTICS_READERS)

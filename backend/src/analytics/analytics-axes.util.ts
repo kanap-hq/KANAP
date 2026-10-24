@@ -21,6 +21,8 @@ export interface AnalyticsAxisInfo {
   applies_to: AxisAppliesTo | null;
   /** The setting; it applies only while the dimension is enabled, to the types it applies to (`axisRequiredFor`). */
   required: boolean;
+  /** Anyone who may modify a line adds a value from the line or the budget file (spec §3.5 of planning/data-scoped-access). */
+  open_values: boolean;
   /** The effective state: disabled once the end of validity has passed. */
   status: 'enabled' | 'disabled';
   disabled_at: string | null;
@@ -99,11 +101,12 @@ export async function loadAnalyticsAxes(manager: EntityManager, tenantId: string
     is_default: boolean;
     applies_to: string | null;
     required: boolean;
+    open_values: boolean;
     status: string;
     disabled_at: Date | string | null;
     sort_order: number | string;
   }> = await manager.query(
-    `SELECT id, code, name, is_default, applies_to, required, status, disabled_at, sort_order
+    `SELECT id, code, name, is_default, applies_to, required, open_values, status, disabled_at, sort_order
        FROM analytics_axes
       WHERE tenant_id = $1
       ORDER BY sort_order ASC, lower(coalesce(name, '')) ASC, code ASC, id ASC`,
@@ -117,6 +120,7 @@ export async function loadAnalyticsAxes(manager: EntityManager, tenantId: string
     is_default: row.is_default === true,
     applies_to: row.applies_to === 'opex' || row.applies_to === 'capex' ? row.applies_to : null,
     required: row.required === true,
+    open_values: row.open_values === true,
     status: isAxisActive(row, now) ? 'enabled' : 'disabled',
     disabled_at: toIso(row.disabled_at),
     sort_order: Number(row.sort_order ?? 0),

@@ -69,10 +69,12 @@ export async function assertUnscopedDataAccess(context: UnscopedDataAccessContex
 }
 
 /**
- * Whether writing a value of this dimension (create, update, delete) is reserved to unscoped
- * persons (spec §2.7, §3.5): the values of a closed-list dimension are organisation data. A
- * dimension with open values (`open_values`) lets anyone who may change the line create one. Every
- * dimension is a closed list until that setting exists.
+ * Whether creating a value of this dimension from a line (the line's picker, the budget file) is
+ * reserved to unscoped persons (spec §2.7, §3.5): the values of a closed-list dimension are
+ * organisation data. A dimension with open values (`analytics_axes.open_values`) lets anyone who
+ * may modify the line create one. The dimension page's writes (`analytics-categories` routes) stay
+ * reserved by their decorator whatever the dimension; a caller that names no dimension gets the
+ * closed answer.
  */
 export function isReservedDimensionValueWrite(dimension?: { open_values?: boolean | null } | null): boolean {
   return dimension?.open_values !== true;
