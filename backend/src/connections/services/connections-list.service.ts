@@ -8,6 +8,7 @@ import { ConnectionProtocol } from '../connection-protocol.entity';
 import { ConnectionLeg } from '../connection-leg.entity';
 import { Asset } from '../../assets/asset.entity';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
 import { parsePagination } from '../../common/pagination';
 import { compileAgFilterCondition, createParamNameGenerator, FilterTargetConfig } from '../../common/ag-grid-filtering';
 import {
@@ -757,12 +758,11 @@ export class ConnectionsListService extends ConnectionsBaseService {
     const assetRoleRows: Array<{ asset_id: string; role: string }> =
       assetIds.size > 0
         ? await mg.query(
+            // Effective (`effectiveAssignmentsSql`): a member takes the roles of its clusters.
             `SELECT DISTINCT aaa.asset_id, aaa.role
-             FROM app_asset_assignments aaa
-             JOIN app_instances ai ON ai.id = aaa.app_instance_id
-             WHERE aaa.tenant_id = $1
-               AND aaa.asset_id = ANY($2::uuid[])
-               AND ai.environment = $3`,
+             FROM (${effectiveAssignmentsSql({ tenant: '$1', assets: '$2' })}) aaa
+             JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = aaa.tenant_id
+             WHERE ai.environment = $3`,
             [tenant, Array.from(assetIds), environment],
           )
         : [];
@@ -785,8 +785,9 @@ export class ConnectionsListService extends ConnectionsBaseService {
       clusterMembersMap.set(row.cluster_id, members);
     }
 
-    // Clusters cannot be assigned roles directly, so inherit the highest tier from members.
+    // A cluster's own roles give its tier; without any, the highest tier of its members.
     for (const [clusterId, memberIds] of clusterMembersMap) {
+      if (assetTierMap.has(clusterId)) continue;
       let bestTier = 'center';
       for (const memberId of memberIds) {
         const memberTier = assetTierMap.get(memberId);

@@ -28,6 +28,7 @@ import {
   type RelatedProject,
 } from '../../common/relations/related-objects';
 import { FxRateService } from '../../currency/fx-rate.service';
+import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
 import { InterfacesService } from '../../interfaces/services/interfaces.service';
 import { KnowledgeService } from '../../knowledge/knowledge.service';
 import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
@@ -429,13 +430,11 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     return out;
   }
 
-  /** Assets through the deployments, interfaces as the Interfaces tab lists them, documents the caller can read. */
+  /** Assets through the deployments (effective: a cluster's members count), interfaces as the Interfaces tab lists them, documents the caller can read. */
   private async countAlso(mg: EntityManager, tenantId: string, appId: string, ctx: RelationsContext) {
     const assetRows: Array<{ n: number }> = await mg.query(
         `SELECT count(DISTINCT aa.asset_id)::int AS n
-         FROM app_instances ai
-         JOIN app_asset_assignments aa ON aa.app_instance_id = ai.id AND aa.tenant_id = ai.tenant_id
-         WHERE ai.tenant_id = $1 AND ai.application_id = $2`,
+         FROM (${effectiveAssignmentsSql({ tenant: '$1', applications: 'ARRAY[$2::uuid]' })}) aa`,
         [tenantId, appId],
     );
     // Interfaces are closed to a Business Contributor (`InterfacesController`). The tab lists an

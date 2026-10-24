@@ -1,5 +1,6 @@
 import { classificationSqlExpressions } from '../../../it-ops-settings/classification-sql';
 import { linkedLineOf } from '../../../spend/budget-nature';
+import { effectiveAssignmentsSql } from '../../../app-asset-assignments/effective-assignments';
 const classificationSql = classificationSqlExpressions('a');
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 import { VULNERABILITIES_LIST_FIELD } from '../../../vulnerabilities/vulnerability-list-column';
@@ -471,7 +472,8 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
         expression: 'l.hosting_type',
         joins: [
           `LEFT JOIN app_instances ai_host ON ai_host.application_id = a.id AND ai_host.tenant_id = a.tenant_id`,
-          `LEFT JOIN app_asset_assignments aaa_host ON aaa_host.app_instance_id = ai_host.id AND aaa_host.tenant_id = a.tenant_id`,
+          // Effective: the members of a cluster the deployment is on count (`effectiveAssignmentsSql`).
+          `LEFT JOIN LATERAL (${effectiveAssignmentsSql({ tenant: 'ai_host.tenant_id', instances: 'ARRAY[ai_host.id]' })}) aaa_host ON true`,
           `LEFT JOIN assets ast_host ON ast_host.id = aaa_host.asset_id AND ast_host.tenant_id = a.tenant_id`,
           `LEFT JOIN locations l ON l.id = ast_host.location_id AND l.tenant_id = a.tenant_id`,
         ],

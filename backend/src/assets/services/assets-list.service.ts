@@ -9,6 +9,7 @@ import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 import { clusterMembershipsOf, clusterNamesText, realClusterMembershipSql } from '../asset-rules';
 import { assertSetFilterModes, bindPositional, compileAgFilterCondition, createParamNameGenerator } from '../../common/ag-grid-filtering';
 import { assetCountsForTenantSql, assetVulnerabilityCounts, vulnerabilityCountsEnabled } from '../../vulnerabilities/vulnerability-reach-counts';
+import { effectiveAssignmentsSql, ViaCluster } from '../../app-asset-assignments/effective-assignments';
 import {
   VULNERABILITIES_LIST_FIELD,
   vulnerabilityFilterPredicateSql,
@@ -295,9 +296,9 @@ export class AssetsListService extends AssetsBaseService {
     tenantId: string,
     joinedCounts: Map<string, { open: number | null; severe: number | null }> | null,
   ): Promise<void> {
-    // Get assignment counts
+    // Get assignment counts: effective, a member counting what its clusters carry.
     const assignmentRows: Array<{ asset_id: string; c: string }> = await mg.query(
-      `SELECT asset_id, COUNT(*)::text as c FROM app_asset_assignments WHERE asset_id = ANY($1) AND tenant_id = $2 GROUP BY asset_id`,
+      `SELECT e.asset_id, COUNT(*)::text as c FROM (${effectiveAssignmentsSql({ tenant: '$2', assets: '$1' })}) e GROUP BY e.asset_id`,
       [ids, tenantId],
     );
     const assignmentMap = Object.fromEntries(assignmentRows.map((r) => [r.asset_id, Number(r.c)]));
@@ -466,9 +467,9 @@ export class AssetsListService extends AssetsBaseService {
     };
     const nextDateParam = createParamNameGenerator('asset_date_');
 
-    // Number filters: the assignment count the list shows (`enrichListItems`).
+    // Number filters: the assignment count the list shows (`enrichListItems`), effective.
     const numberExpressions: Record<string, string> = {
-      assignments_count: '(SELECT COUNT(*) FROM app_asset_assignments aaa WHERE aaa.asset_id = a.id AND aaa.tenant_id = a.tenant_id)',
+      assignments_count: `(SELECT COUNT(*) FROM (${effectiveAssignmentsSql({ tenant: 'a.tenant_id', assets: 'ARRAY[a.id]' })}) aaa)`,
     };
     const numberOperators: Record<string, string> = {
       equals: '=', notEqual: '<>', greaterThan: '>', greaterThanOrEqual: '>=', lessThan: '<', lessThanOrEqual: '<=',
@@ -599,14 +600,13 @@ export class AssetsListService extends AssetsBaseService {
       location_name = locRows[0]?.name || null;
     }
 
-    const assignedRows: Array<{ app_id: string; app_name: string; environment: string }> = await mg.query(
-      `SELECT a.id AS app_id, a.name AS app_name, ai.environment
-       FROM app_asset_assignments aaa
-       JOIN app_instances ai ON ai.id = aaa.app_instance_id
-       JOIN applications a ON a.id = ai.application_id
-       WHERE aaa.asset_id = $1
-         AND a.tenant_id = $2
-       ORDER BY array_position(ARRAY['prod','pre_prod','qa','test','dev','sandbox'], ai.environment), a.name ASC`,
+    // Effective: a member lists what its clusters carry too (`inherited`, `via_clusters`).
+    const assignedRows: Array<{ app_id: string; app_name: string; environment: string; inherited: boolean; via_clusters: ViaCluster[] }> = await mg.query(
+      `SELECT a.id AS app_id, a.name AS app_name, ai.environment, e.inherited, e.via_clusters
+       FROM (${effectiveAssignmentsSql({ tenant: '$2', assets: 'ARRAY[$1::uuid]' })}) e
+       JOIN app_instances ai ON ai.id = e.app_instance_id AND ai.tenant_id = e.tenant_id
+       JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
+       ORDER BY array_position(ARRAY['prod','pre_prod','qa','test','dev','sandbox'], ai.environment), a.name ASC, e.inherited`,
       [id, asset.tenant_id],
     );
 
@@ -614,6 +614,8 @@ export class AssetsListService extends AssetsBaseService {
       id: row.app_id,
       name: row.app_name,
       environment: row.environment,
+      inherited: !!row.inherited,
+      via_clusters: row.via_clusters ?? [],
     }));
 
     return {

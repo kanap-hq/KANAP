@@ -11,6 +11,7 @@ import {
   ParticipationAccessScope,
 } from '../auth/business-contributor-scope';
 import { applicationBadRequest, applicationConflict } from '../applications/application-rules';
+import { effectiveAssignmentsSql, groupableAssignmentsSql, ViaCluster } from './effective-assignments';
 
 type AssignmentRow = {
   id: string;
@@ -29,15 +30,40 @@ type AssignmentRow = {
   asset_region: string | null;
   asset_zone: string | null;
   asset_status: string;
+  asset_is_cluster: boolean | null;
   location_hosting_type: string | null;
+  inherited: boolean;
+  via_clusters: ViaCluster[];
 };
 
-const ASSIGNMENT_COLUMNS = `aaa.*, a.name AS asset_name, a.asset_reference AS asset_reference, a.kind AS asset_kind, a.provider AS asset_provider,
-              a.environment AS asset_environment, a.region AS asset_region, a.zone AS asset_zone, a.status AS asset_status,
-              l.hosting_type AS location_hosting_type`;
+/** A member in service of a cluster, inheriting the cluster's row (Deployments tab). */
+type InheritingMember = {
+  asset_id: string;
+  name: string;
+  asset_reference: string | null;
+  kind: string;
+  environment: string;
+  status: string;
+};
 
-const ASSIGNMENT_JOINS = `JOIN assets a ON a.id = aaa.asset_id AND a.tenant_id = aaa.tenant_id
-       LEFT JOIN locations l ON l.id = a.location_id AND l.tenant_id = a.tenant_id`;
+/** A deployment and role assigned directly to every member in service of a cluster (A7). */
+type GroupableAssignment = {
+  cluster_id: string;
+  cluster_name: string;
+  app_instance_id: string;
+  role: string;
+  member_ids: string[];
+};
+
+/** The effective rows (`effectiveAssignmentsSql` as `e`) with their server (`a`) and its location (`l`). */
+const EFFECTIVE_SERVER_COLUMNS = `e.assignment_id AS id, e.app_instance_id, e.asset_id, e.role, e.since_date, e.notes, e.created_at, e.updated_at,
+              e.inherited, e.via_clusters,
+              a.name AS asset_name, a.asset_reference AS asset_reference, a.kind AS asset_kind, a.provider AS asset_provider,
+              a.environment AS asset_environment, a.region AS asset_region, a.zone AS asset_zone, a.status AS asset_status,
+              a.is_cluster AS asset_is_cluster, l.hosting_type AS location_hosting_type`;
+
+const EFFECTIVE_SERVER_JOINS = `JOIN assets a ON a.tenant_id = e.tenant_id AND a.id = e.asset_id
+       LEFT JOIN locations l ON l.tenant_id = a.tenant_id AND l.id = a.location_id`;
 
 type ServiceOpts = { manager?: EntityManager; tenantId?: string | null };
 
@@ -185,6 +211,9 @@ export class AppAssetAssignmentsService {
       notes: row.notes,
       created_at: row.created_at,
       updated_at: row.updated_at,
+      inherited: !!row.inherited,
+      via_clusters: row.via_clusters ?? [],
+      members: [] as InheritingMember[],
       hosting: this.deriveHosting(
         { location_hosting_type: row.location_hosting_type, asset_provider: row.asset_provider },
         settings.hostingTypes || [],
@@ -199,6 +228,7 @@ export class AppAssetAssignmentsService {
         region: row.asset_region,
         zone: row.asset_zone,
         status: row.asset_status,
+        is_cluster: !!row.asset_is_cluster,
       },
       // Backwards compatibility: include server alias
       server: {
@@ -221,15 +251,53 @@ export class AppAssetAssignmentsService {
     const tenantId = await this.tenantOf(mg, opts?.tenantId);
     const instance = await this.ensureInstance(instanceId, tenantId, mg);
     await this.assertApplicationVisible(instance.application_id, tenantId, opts?.accessScope, mg);
+    return this.deploymentServers(mg, tenantId, { instances: '$2' }, [instanceId]);
+  }
+
+  /**
+   * The servers of deployments as the Deployments tab lists them (`effectiveAssignmentsSql`), and
+   * the direct rows that could move to their cluster. `scope` names `$2`, an array of deployment
+   * or application ids.
+   *
+   * - `items`: the rows stored on the deployments, `inherited` false. A member never comes as a
+   *   row of its own for what it inherits: a cluster's row carries the members in service that
+   *   inherit it (`members`, by name; `[]` on any other row). `via_clusters` names the clusters
+   *   that also give a direct row (older data); that member then also shows in their `members`.
+   * - `groupable`: a deployment and role assigned directly to every member in service of a cluster
+   *   that has at least two (`groupableAssignmentsSql`).
+   */
+  private async deploymentServers(
+    mg: EntityManager,
+    tenantId: string,
+    scope: { instances: string } | { applications: string },
+    ids: string[],
+  ) {
     const rows: AssignmentRow[] = await mg.query(
-      `SELECT ${ASSIGNMENT_COLUMNS}
-       FROM app_asset_assignments aaa
-       ${ASSIGNMENT_JOINS}
-       WHERE aaa.tenant_id = $1 AND aaa.app_instance_id = $2
-       ORDER BY a.name ASC`,
-      [tenantId, instanceId],
+      `SELECT ${EFFECTIVE_SERVER_COLUMNS}
+       FROM (${effectiveAssignmentsSql({ tenant: '$1', ...scope })}) e
+       ${EFFECTIVE_SERVER_JOINS}
+       ORDER BY a.name ASC, a.id, e.role`,
+      [tenantId, ids],
     );
-    return { items: await this.mapRows(rows, tenantId, mg) };
+    const items = await this.mapRows(rows.filter((row) => !row.inherited), tenantId, mg);
+    const byKey = new Map(items.map((item) => [`${item.app_instance_id}|${item.asset_id}|${item.role}`, item]));
+    for (const row of rows) {
+      for (const via of row.via_clusters ?? []) {
+        byKey.get(`${row.app_instance_id}|${via.id}|${row.role}`)?.members.push({
+          asset_id: row.asset_id,
+          name: row.asset_name,
+          asset_reference: row.asset_reference,
+          kind: row.asset_kind,
+          environment: row.asset_environment,
+          status: row.asset_status,
+        });
+      }
+    }
+    const instances = 'instances' in scope
+      ? scope.instances
+      : `ARRAY(SELECT gi.id FROM app_instances gi WHERE gi.tenant_id = $1 AND gi.application_id = ANY(${scope.applications}::uuid[]))`;
+    const groupable: GroupableAssignment[] = await mg.query(groupableAssignmentsSql({ tenant: '$1', instances }), [tenantId, ids]);
+    return { items, groupable };
   }
 
   /**
@@ -253,16 +321,7 @@ export class AppAssetAssignmentsService {
     );
     if (!apps[0]) throw new NotFoundException('Application not found');
     await this.assertApplicationVisible(apps[0].id, tenantId, opts?.accessScope, mg);
-    const rows: AssignmentRow[] = await mg.query(
-      `SELECT ${ASSIGNMENT_COLUMNS}
-       FROM app_asset_assignments aaa
-       JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = aaa.tenant_id
-       ${ASSIGNMENT_JOINS}
-       WHERE aaa.tenant_id = $1 AND ai.application_id = $2
-       ORDER BY a.name ASC`,
-      [tenantId, apps[0].id],
-    );
-    return { items: await this.mapRows(rows, tenantId, mg) };
+    return this.deploymentServers(mg, tenantId, { applications: '$2' }, [apps[0].id]);
   }
 
   async create(instanceId: string, payload: any, userId: string | null, opts?: ServiceOpts) {
@@ -355,6 +414,13 @@ export class AppAssetAssignmentsService {
     return saved;
   }
 
+  /**
+   * The Operations tab of a server: its effective rows (`effectiveAssignmentsSql`), its own and,
+   * for a member, those of its clusters (`inherited`, `via_clusters`; `id` is then the cluster's
+   * row, which only the cluster edits). A Business Contributor sees the rows of the applications
+   * they take part in, inherited or not. `groupable`, on a direct row of a member: the set that
+   * could move to its cluster (`groupableAssignmentsSql`), else null.
+   */
   async listByAsset(assetId: string, opts?: ServiceOpts & { accessScope?: ParticipationAccessScope }) {
     const mg = opts?.manager ?? this.repo.manager;
     const tenantId = await this.tenantOf(mg, opts?.tenantId);
@@ -375,19 +441,36 @@ export class AppAssetAssignmentsService {
       notes: string | null;
       created_at: Date;
       updated_at: Date;
+      inherited: boolean;
+      via_clusters: ViaCluster[];
       app_id: string;
       app_name: string;
       environment: string;
     }> = await mg.query(
-      `SELECT aaa.*, ai.application_id AS app_id, ai.environment, a.name AS app_name
-       FROM app_asset_assignments aaa
-       JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = aaa.tenant_id
+      `SELECT e.assignment_id AS id, e.app_instance_id, e.asset_id, e.role, e.since_date, e.notes, e.created_at, e.updated_at,
+              e.inherited, e.via_clusters, ai.application_id AS app_id, ai.environment, a.name AS app_name
+       FROM (${effectiveAssignmentsSql({ tenant: '$2', assets: 'ARRAY[$1::uuid]' })}) e
+       JOIN app_instances ai ON ai.id = e.app_instance_id AND ai.tenant_id = e.tenant_id
        JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
-       WHERE aaa.asset_id = $1 AND aaa.tenant_id = $2
+       WHERE ai.tenant_id = $2
         ${accessScopeSql}
-       ORDER BY ai.environment ASC, a.name ASC`,
+       ORDER BY ai.environment ASC, a.name ASC, e.inherited, e.role`,
       params,
     );
+    const groupable: GroupableAssignment[] = rows.some((row) => !row.inherited)
+      ? await mg.query(
+        groupableAssignmentsSql({
+          tenant: '$1',
+          clusters: 'ARRAY(SELECT gm.cluster_id FROM asset_cluster_members gm WHERE gm.tenant_id = $1 AND gm.asset_id = $2)',
+        }),
+        [tenantId, assetId],
+      )
+      : [];
+    const groupableOf = (row: { inherited: boolean; app_instance_id: string; role: string }) => {
+      if (row.inherited) return null;
+      const set = groupable.find((g) => g.app_instance_id === row.app_instance_id && g.role === row.role && g.member_ids.includes(assetId));
+      return set ? { cluster_id: set.cluster_id, cluster_name: set.cluster_name, member_ids: set.member_ids } : null;
+    };
     return rows.map((row) => ({
       id: row.id,
       app_instance_id: row.app_instance_id,
@@ -400,6 +483,9 @@ export class AppAssetAssignmentsService {
       updated_at: row.updated_at,
       application: { id: row.app_id, name: row.app_name },
       environment: row.environment,
+      inherited: !!row.inherited,
+      via_clusters: row.via_clusters ?? [],
+      groupable: groupableOf(row),
     }));
   }
 
@@ -425,7 +511,8 @@ export class AppAssetAssignmentsService {
   }
 
   /**
-   * Returns unique assets assigned to app instances for the given applications and environments.
+   * Returns unique assets assigned to app instances for the given applications and environments,
+   * as effective (`effectiveAssignmentsSql`): a cluster and its members in service.
    * Used by the Connection Map to pre-select assets based on application selection.
    */
   async listAssetsByApps(
@@ -463,9 +550,9 @@ export class AppAssetAssignmentsService {
         a.kind,
         a.provider,
         a.is_cluster
-      FROM assets a
-      INNER JOIN app_asset_assignments aaa ON aaa.asset_id = a.id AND aaa.tenant_id = a.tenant_id
-      INNER JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = aaa.tenant_id
+      FROM (${effectiveAssignmentsSql({ tenant: '$3', applications: '$1' })}) e
+      INNER JOIN assets a ON a.id = e.asset_id AND a.tenant_id = e.tenant_id
+      INNER JOIN app_instances ai ON ai.id = e.app_instance_id AND ai.tenant_id = e.tenant_id
       INNER JOIN applications app_scope ON app_scope.id = ai.application_id AND app_scope.tenant_id = ai.tenant_id
       WHERE a.tenant_id = $3
         AND ai.application_id = ANY($1)
