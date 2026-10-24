@@ -508,10 +508,16 @@ describe('ContractWorkspacePage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('ops:shared.fxMissing.excluding:1');
   });
 
-  it('shows the lines without amounts to a user who cannot read the budget', async () => {
+  it('shows a user who cannot read the budget the number of lines only, without names or amounts', async () => {
     auth.canEdit = false;
+    // The server lists no line to that user and counts them (data-scoped access, spec §5.4).
+    const served = mocked.get.getMockImplementation()!;
+    mocked.get.mockImplementation(async (url: string, ...rest: unknown[]) => (
+      url === '/contracts/c-1/budget-lines' ? { data: { items: [], hidden: 2 } } : (served as any)(url, ...rest)
+    ));
     renderAt('/ops/contracts/c-1/budget');
-    expect(await screen.findByText('BL-2')).toBeInTheDocument();
+    expect(await screen.findByText('it:workspace.application.relations.outside.count:2')).toBeInTheDocument();
+    expect(screen.queryByText('BL-2')).toBeNull();
     expect(screen.queryByText(/contracts\.budget\.total/)).toBeNull();
     expect(screen.queryByText('contracts.budget.coverage.title')).toBeNull();
     expect(mocked.get.mock.calls.some(([url]) => url === '/contracts/c-1/budget')).toBe(false);
