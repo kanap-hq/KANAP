@@ -4,13 +4,15 @@ import * as path from 'node:path';
 import { backendPath } from '../../common/__tests__/backend-root';
 import { ASSIGNMENT_READERS } from '../assignment-readers.inventory';
 
-// Every source file that reads the assignments (names the table, or reads through
-// `effectiveAssignmentsSql`) is in the readers inventory, with its status (effective, direct with a
+// Every source file that reads the assignments (names the table, reads through
+// `effectiveAssignmentsSql`, or uses the entity `AppAssetAssignment` other than to register it in
+// a Nest module) is in the readers inventory, with its status (effective, direct with a
 // reason), and every entry still reads them. Tests, migrations and fixtures
 // aside.
 
 const TABLE = 'app_asset_assignments';
 const EFFECTIVE = 'effectiveAssignmentsSql';
+const ENTITY = /\bAppAssetAssignment\b/;
 const ROOT = backendPath();
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
@@ -31,7 +33,7 @@ const relative = (file: string) => path.relative(ROOT, file).split(path.sep).joi
 const naming = sourceFiles(backendPath('src'))
   .filter((file) => {
     const text = fs.readFileSync(file, 'utf8');
-    return text.includes(TABLE) || text.includes(EFFECTIVE);
+    return text.includes(TABLE) || text.includes(EFFECTIVE) || (ENTITY.test(text) && !file.endsWith('.module.ts'));
   })
   .map(relative)
   .sort();

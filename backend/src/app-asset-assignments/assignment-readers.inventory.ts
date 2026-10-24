@@ -1,6 +1,7 @@
 /**
- * Every source file that reads the assignments, naming the `app_asset_assignments` table or
- * reading through `effectiveAssignmentsSql` (tests, migrations and fixtures aside), and how it reads
+ * Every source file that reads the assignments, naming the `app_asset_assignments` table, reading
+ * through `effectiveAssignmentsSql` or using the entity `AppAssetAssignment` (Nest modules that only
+ * register it, tests, migrations and fixtures aside), and how it reads
  * them (clusters pass, PR B: an application assigned to a cluster counts for its members). The spec
  * `__tests__/assignment-readers.inventory.spec.ts` fails on such a file without an entry here, and on
  * an entry that no longer reads them.
@@ -67,6 +68,10 @@ export const ASSIGNMENT_READERS: Readonly<Record<string, AssignmentReader>> = {
   'src/assets/assets-delete.service.ts': {
     status: 'direct',
     reason: 'Deletion guard: a server carrying rows stays; a member that only inherits can be deleted.',
+  },
+  'src/app-instances/app-instances.service.ts': {
+    status: 'direct',
+    reason: 'Deletion guard of a deployment: the stored rows it holds, which an inherited row never adds.',
   },
   'src/it-ops-settings/catalog-usage.ts': { status: 'direct', reason: 'Usage of a server role: the stored rows name it.' },
   'src/common/tenant-isolation.inventory.ts': { status: 'direct', reason: 'Tenant isolation inventory.' },
