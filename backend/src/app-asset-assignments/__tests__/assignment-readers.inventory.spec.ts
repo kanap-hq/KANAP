@@ -6,7 +6,7 @@ import { ASSIGNMENT_READERS } from '../assignment-readers.inventory';
 
 // Every source file that reads the assignments (names the table, or reads through
 // `effectiveAssignmentsSql`) is in the readers inventory, with its status (effective, direct with a
-// reason, or pending for lot B2), and every entry still reads them. Tests, migrations and fixtures
+// reason), and every entry still reads them. Tests, migrations and fixtures
 // aside.
 
 const TABLE = 'app_asset_assignments';
@@ -45,7 +45,7 @@ const stale = Object.keys(ASSIGNMENT_READERS).filter((file) => !naming.includes(
 assert.deepEqual(stale, [], 'inventory entries that no longer read the assignments (or no longer exist)');
 
 for (const [file, entry] of Object.entries(ASSIGNMENT_READERS)) {
-  assert.ok(['effective', 'direct', 'pending_b2'].includes(entry.status), `${file}: a known status`);
+  assert.ok(['effective', 'direct'].includes(entry.status), `${file}: a known status`);
   assert.ok(entry.reason.trim().length > 0, `${file}: a reason`);
   if (entry.status === 'effective') {
     const text = fs.readFileSync(path.join(ROOT, file), 'utf8');

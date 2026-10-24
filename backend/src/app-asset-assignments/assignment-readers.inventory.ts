@@ -8,12 +8,11 @@
  * - `effective`: reads through `effectiveAssignmentsSql` (`effective-assignments.ts`), a member
  *   seeing what its clusters carry.
  * - `direct`: reads or writes the stored rows on purpose; the reason says why.
- * - `pending_b2`: a report read that lot B2 moves to the effective definition.
  *
  * A new reader of the table goes through `effectiveAssignmentsSql` unless it has a reason to see
  * the stored rows only.
  */
-export type AssignmentReaderStatus = 'effective' | 'direct' | 'pending_b2';
+export type AssignmentReaderStatus = 'effective' | 'direct';
 
 export type AssignmentReader = { status: AssignmentReaderStatus; reason: string };
 
@@ -29,6 +28,29 @@ export const ASSIGNMENT_READERS: Readonly<Record<string, AssignmentReader>> = {
   'src/ai/query/registries/applications.registry.ts': { status: 'effective', reason: 'The assistant\'s hosting types of an application.' },
   'src/applications/services/applications-relations.service.ts': { status: 'effective', reason: 'The asset count of the application relations badge.' },
   'src/connections/services/connections-list.service.ts': { status: 'effective', reason: 'The tier of a server on the connection map.' },
+  'src/vulnerabilities/vulnerability-reach-counts.ts': {
+    status: 'effective',
+    reason: 'The vulnerabilities of an application: the links of the servers it runs on (badge, list, record, vulnerabilities page, home tile, assistant).',
+  },
+  'src/technologies/reports/end-of-support.service.ts': {
+    status: 'effective',
+    reason: 'The servers of an application deadline, the applications on a touched server, the database servers without a DBMS; "without a server" reads the stored rows, which an instance has exactly when it has an effective one.',
+  },
+  'src/technologies/technology-reach.service.ts': { status: 'effective', reason: 'The applications of a technology and the technologies of an application (hosted).' },
+  'src/technologies/technology-links.service.ts': { status: 'effective', reason: 'The deployment servers offered when an application declares a technology.' },
+  'src/applications/services/applications-list.service.ts': {
+    status: 'effective',
+    reason: 'The hosting types (column, filter, values, page) and the servers of the interface map; the connection map list names no server and reads the stored rows, which a deployment has exactly when it has an effective one.',
+  },
+  'src/technologies/reports/administration-view.service.ts': {
+    status: 'effective',
+    reason: 'Domain controllers by role, applications on the most sensitive zone, the zone summary and the applications of an asset row.',
+  },
+  'src/contracts/contract-compliance.ts': { status: 'effective', reason: 'The applications a contract on an asset covers, and the cloud hosting of an application.' },
+  'src/locations/location-relations.ts': { status: 'effective', reason: 'The applications of a location\'s Relations tab and its badge.' },
+  'src/locations/locations.service.ts': { status: 'effective', reason: 'The applications of a location.' },
+  'src/knowledge/knowledge.service.ts': { status: 'effective', reason: 'The context sources of an application (its servers) and of an asset (its applications).' },
+  'src/ai/ai-entity.service.ts': { status: 'effective', reason: 'The assistant\'s context: the servers of an application, the applications of an asset.' },
 
   'src/app-asset-assignments/assignment-readers.inventory.ts': { status: 'direct', reason: 'This inventory.' },
   'src/app-asset-assignments/app-asset-assignment.entity.ts': { status: 'direct', reason: 'The entity of the stored rows.' },
@@ -42,20 +64,11 @@ export const ASSIGNMENT_READERS: Readonly<Record<string, AssignmentReader>> = {
     status: 'direct',
     reason: 'Deletion guard: a server carrying rows stays; a member that only inherits can be deleted.',
   },
+  'src/technologies/application-conversion.service.ts': {
+    status: 'direct',
+    reason: 'Converting an application installs the technology on its stored servers; the preview counts and the hosting type follow the same rows.',
+  },
   'src/it-ops-settings/catalog-usage.ts': { status: 'direct', reason: 'Usage of a server role: the stored rows name it.' },
   'src/common/tenant-isolation.inventory.ts': { status: 'direct', reason: 'Tenant isolation inventory.' },
   'src/admin/tenants/tenant-purge.inventory.ts': { status: 'direct', reason: 'Tenant purge inventory.' },
-
-  'src/ai/ai-entity.service.ts': { status: 'pending_b2', reason: 'B2.' },
-  'src/applications/services/applications-list.service.ts': { status: 'pending_b2', reason: 'B2.' },
-  'src/contracts/contract-compliance.ts': { status: 'pending_b2', reason: 'B2.' },
-  'src/knowledge/knowledge.service.ts': { status: 'pending_b2', reason: 'B2.' },
-  'src/locations/location-relations.ts': { status: 'pending_b2', reason: 'B2.' },
-  'src/locations/locations.service.ts': { status: 'pending_b2', reason: 'B2.' },
-  'src/technologies/application-conversion.service.ts': { status: 'pending_b2', reason: 'B2.' },
-  'src/technologies/reports/administration-view.service.ts': { status: 'pending_b2', reason: 'B2.' },
-  'src/technologies/reports/end-of-support.service.ts': { status: 'pending_b2', reason: 'B2.' },
-  'src/technologies/technology-links.service.ts': { status: 'pending_b2', reason: 'B2.' },
-  'src/technologies/technology-reach.service.ts': { status: 'pending_b2', reason: 'B2.' },
-  'src/vulnerabilities/vulnerability-reach-counts.ts': { status: 'pending_b2', reason: 'B2.' },
 };
