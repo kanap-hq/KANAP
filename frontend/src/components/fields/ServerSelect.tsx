@@ -104,10 +104,17 @@ const ServerSelect: React.FC<ServerSelectProps> = ({
     return () => { isMounted = false; };
   }, [value, selectedOption]);
 
+  // The chosen server stays among the options, even when the current search no longer returns it.
+  const shownOptions = React.useMemo(
+    () => (selectedOption && !options.some((opt) => opt.id === selectedOption.id) ? [selectedOption, ...options] : options),
+    [options, selectedOption],
+  );
+
   const control = (
     <Autocomplete
-      options={options}
+      options={shownOptions}
       value={selectedOption}
+      isOptionEqualToValue={(option, current) => option.id === current.id}
       disabled={disabled}
       onChange={(_, newValue) => onChange(newValue?.id || null)}
       onInputChange={(_, v) => setInputValue(v)}

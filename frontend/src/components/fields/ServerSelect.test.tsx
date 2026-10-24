@@ -29,6 +29,20 @@ describe('ServerSelect', () => {
     expect(apiGet.mock.calls[0][1].params.filters).toBeUndefined();
   });
 
+  it('keeps the chosen server among the options when the search does not return it', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    apiGet.mockImplementation(async (url: string) => (url === '/assets/srv-1'
+      ? { data: { id: 'srv-1', name: 'PAR-ESX-01', environment: 'prod', kind: 'vm', provider: 'vmware' } }
+      : { data: { items: [{ id: 'srv-2', name: 'PAR-ESX-02', environment: 'prod', kind: 'vm', provider: 'vmware' }] } }));
+    const { findByDisplayValue } = render(<ServerSelect value="srv-1" onChange={vi.fn()} hideLabel />);
+    expect(await findByDisplayValue('PAR-ESX-01')).toBeTruthy();
+    const messages = [...warn.mock.calls, ...error.mock.calls].map((call) => String(call[0]));
+    expect(messages.filter((message) => message.includes('None of the options match'))).toEqual([]);
+    warn.mockRestore();
+    error.mockRestore();
+  });
+
   it('invites to choose a server in an empty field', async () => {
     const { findByPlaceholderText } = render(<ServerSelect value={null} onChange={vi.fn()} hideLabel />);
     expect(await findByPlaceholderText('Choose a server')).toBeTruthy();
