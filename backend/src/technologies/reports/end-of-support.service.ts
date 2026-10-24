@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import { languageOf, writeCsv } from '../../common/csv-sheet';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
@@ -16,8 +17,10 @@ import { versionInUseSql, versionSupportSql } from './version-support';
  * report from answering. Servers and applications touched by a technology version come from the
  * deductions of `TechnologyReachService`, its servers are those it is installed on
  * (`serversOfTechnologies`); an operating system or a piece of hardware touches its
- * assets and what they carry (`assetsCarriedBy`), then the applications assigned to them; an
- * application touches the servers it is assigned to. Retired assets take no part.
+ * assets and what they carry (`assetsCarriedBy`), then the applications that run on them; an
+ * application touches the servers it runs on. Where an application runs is its effective
+ * assignments (`effectiveAssignmentsSql`): on a cluster, the cluster and its members in service.
+ * Retired assets take no part.
  *
  * Every statement is static SQL, carries `tenant_id` on every table and join besides RLS, and
  * reads a batch (`= ANY($n)`), never a query per row. Applications show only to a caller who reads
@@ -220,6 +223,8 @@ export class EndOfSupportService {
       const rows: Array<{ id: string; name: string; sequential_id: string | null }> = await mg.query(
         `SELECT ap.id, ap.name, ap.sequential_id FROM applications ap
           WHERE ap.tenant_id = $1 AND ${inServiceSql('ap')} AND ap.hosting_model IN ('on_premise', 'private_cloud') ${scope}
+            -- The stored rows: an instance has an effective server exactly when it has a stored
+            -- row (a member inherits only what its cluster carries), so this reads them directly.
             AND NOT EXISTS (
               SELECT 1 FROM app_instances i
                 JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.app_instance_id = i.id
@@ -260,16 +265,15 @@ export class EndOfSupportService {
     );
     items.push(...untyped.map((r) => subject('technology_without_hosting_type', 'technology', r.id, r.name, technologyReference(r.item_number))));
 
-    // Servers with a database role: a technology of the database family installed on them or carried to them.
+    // Servers with a database role (effective: the members of a cluster that holds it too): a
+    // technology of the database family installed on them or carried to them.
     const dbServers: Array<{ id: string; name: string }> = await mg.query(
-      `SELECT a.id, a.name FROM assets a
-        WHERE a.tenant_id = $1 AND ${assetInServiceSql('a')}
-          AND EXISTS (
-            SELECT 1 FROM app_asset_assignments x
-              JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
-              JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
-             WHERE x.tenant_id = $1 AND x.asset_id = a.id AND x.role = 'db'
-          )`,
+      `SELECT DISTINCT a.id, a.name
+         FROM (${effectiveAssignmentsSql({ tenant: '$1' })}) x
+         JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
+         JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
+         JOIN assets a ON a.tenant_id = $1 AND a.id = x.asset_id AND ${assetInServiceSql('a')}
+        WHERE x.role = 'db'`,
       [tenantId],
     );
     if (dbServers.length) {
@@ -453,7 +457,7 @@ export class EndOfSupportService {
     const servers: Array<{ application_id: string; asset_id: string }> = await mg.query(
       `SELECT DISTINCT i.application_id, x.asset_id
          FROM app_instances i
-         JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.app_instance_id = i.id
+         JOIN (${effectiveAssignmentsSql({ tenant: '$1', applications: '$2' })}) x ON x.tenant_id = $1 AND x.app_instance_id = i.id
         WHERE i.tenant_id = $1 AND i.application_id = ANY($2::uuid[]) AND ${inServiceSql('i')}`,
       [tenantId, rows.map((r) => r.id)],
     );
@@ -512,17 +516,19 @@ export class EndOfSupportService {
     }));
   }
 
-  /** The applications in service assigned to each asset of `assetIds` (direct assignments). */
+  /**
+   * The applications in service that run on each asset of `assetIds` (effective assignments: a
+   * member runs what its clusters carry).
+   */
   private async applicationsOnAssets(mg: EntityManager, tenantId: string, assetIds: string[]): Promise<Map<string, string[]>> {
     const out = new Map<string, string[]>();
     const wanted = Array.from(new Set(assetIds));
     if (wanted.length === 0) return out;
     const rows: Array<{ asset_id: string; application_id: string }> = await mg.query(
       `SELECT DISTINCT x.asset_id, i.application_id
-         FROM app_asset_assignments x
+         FROM (${effectiveAssignmentsSql({ tenant: '$1', assets: '$2' })}) x
          JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
-         JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
-        WHERE x.tenant_id = $1 AND x.asset_id = ANY($2::uuid[])`,
+         JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}`,
       [tenantId, wanted],
     );
     for (const row of rows) {

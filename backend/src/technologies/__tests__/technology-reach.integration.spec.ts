@@ -62,6 +62,9 @@ async function testApplications() {
       // The ERP on the SQL cluster: both versions, through each node (over-approximation shown).
       `${g.apps.erp}|hosted|${g.ids.sqlCluster}|${g.ids.sqlNode1}|${g.versions.sql2019}`,
       `${g.apps.erp}|hosted|${g.ids.sqlCluster}|${g.ids.sqlNode2}|${g.versions.sql2016}`,
+      // And on each node, which runs it too (clusters pass, lot B2: effective assignments).
+      `${g.apps.erp}|hosted|${g.ids.sqlNode1}|-|${g.versions.sql2019}`,
+      `${g.apps.erp}|hosted|${g.ids.sqlNode2}|-|${g.versions.sql2016}`,
       // The portal declares SQL Server without a version.
       `${g.apps.portal}|declared|-|-|-`,
     ].sort());
@@ -78,9 +81,10 @@ async function testApplications() {
     // The tab of the technology names the server, the environment and the version, unknown included.
     const tab = await links.applicationsOfTechnology(g.tech.sql, { manager: runner.manager, tenantId: g.tenantId }, {});
     const items = tab.items!;
-    assert.equal(items.length, 3);
+    assert.equal(items.length, 5);
     assert.ok(items.some((item) => item.kind === 'declared' && item.version_label === null));
-    assert.ok(items.filter((item) => item.kind === 'hosted').every((item) => item.environment === 'prod' && item.asset_id === g.ids.sqlCluster));
+    const servers = [g.ids.sqlCluster, g.ids.sqlNode1, g.ids.sqlNode2];
+    assert.ok(items.filter((item) => item.kind === 'hosted').every((item) => item.environment === 'prod' && servers.includes(item.asset_id!)));
     // Without the applications read right, no row; a Business Contributor sees its applications only.
     assert.equal((await links.applicationsOfTechnology(g.tech.sql, { manager: runner.manager, tenantId: g.tenantId }, null)).items, null);
     const outsider = await runner.query(`SELECT id FROM users WHERE tenant_id = $1 LIMIT 1`, [g.tenantId]);

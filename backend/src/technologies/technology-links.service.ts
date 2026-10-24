@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { TechnologyCpeEvents } from './technology-cpe-events';
 import type { EntityManager } from 'typeorm';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { AuditService } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { languageOf, writeCsv, type CsvLanguage } from '../common/csv-sheet';
@@ -38,8 +39,9 @@ export type LinkInput = {
 type LinkSide = 'asset' | 'application';
 
 /**
- * A server an application is deployed on (`app_asset_assignments` of its instances), in service, with
- * the environments of those instances and the roles it holds there.
+ * A server an application is deployed on (the effective assignments of its instances,
+ * `effectiveAssignmentsSql`: a cluster and its members in service), in service, with the
+ * environments of those instances and the roles it holds there.
  */
 export type DeploymentServer = {
   asset_id: string;
@@ -511,7 +513,7 @@ export class TechnologyLinksService {
               COALESCE(array_agg(DISTINCT x.role) FILTER (WHERE x.role IS NOT NULL), '{}') AS roles
          FROM app_instances i
          JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
-         JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.app_instance_id = i.id
+         JOIN (${effectiveAssignmentsSql({ tenant: '$1', applications: 'ARRAY[$2::uuid]' })}) x ON x.tenant_id = $1 AND x.app_instance_id = i.id
          JOIN assets a ON a.tenant_id = $1 AND a.id = x.asset_id AND ${assetInServiceSql('a')}
         WHERE i.tenant_id = $1 AND i.application_id = $2${only ? ' AND x.asset_id = ANY($3::uuid[])' : ''}
         GROUP BY a.id, a.name, a.asset_reference

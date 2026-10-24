@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import type { LinkSource } from '../common/link-provenance';
 
 /**
@@ -15,7 +16,10 @@ import type { LinkSource } from '../common/link-provenance';
  * at most `MAX_DEPTH` edges away, never twice on one path (a `contains` cycle A <-> B stops). Every
  * reached asset keeps the asset the technology is installed on (`via`, null on that asset itself)
  * and the version of that link (null when unknown). The applications of a technology are those
- * assigned to a reached asset (hosted), plus those that declare it (`application_technologies`).
+ * that run on a reached asset (hosted), plus those that declare it (`application_technologies`).
+ * The servers an application runs on are its effective assignments (`effectiveAssignmentsSql`): an
+ * instance assigned to a cluster runs on the cluster and on its members in service. The fragment
+ * is only called inside the methods, never at load (it imports `assetInServiceSql` from here).
  *
  * Retired assets (`assetInServiceSql`) take no part: their links count for nothing, and no edge
  * leads to or from them, so the traversal stops there.
@@ -305,8 +309,8 @@ export class TechnologyReachService {
   }
 
   /**
-   * The applications of each technology of `technologyIds`: hosted (an instance assigned to a
-   * reached asset, per environment, server and version) and declared.
+   * The applications of each technology of `technologyIds`: hosted (an instance running on a
+   * reached asset, effective assignments, per environment, server and version) and declared.
    */
   async applicationsOfTechnologies(mg: EntityManager, tenantId: string, technologyIds: string[]): Promise<ReachedApplication[]> {
     if (technologyIds.length === 0) return [];
@@ -318,7 +322,7 @@ export class TechnologyReachService {
          FROM reached r
          -- One row per instance and server, whatever the roles (no DISTINCT over the whole result:
          -- the recursive estimate is far too high and its hash table alone costs more than the query).
-         JOIN (SELECT DISTINCT a.app_instance_id, a.asset_id FROM app_asset_assignments a WHERE a.tenant_id = $1) x ON x.asset_id = r.asset_id
+         JOIN (SELECT DISTINCT a.app_instance_id, a.asset_id FROM (${effectiveAssignmentsSql({ tenant: '$1' })}) a) x ON x.asset_id = r.asset_id
          JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
          ${HOSTING_IN_SERVICE}
        UNION ALL
@@ -372,7 +376,7 @@ export class TechnologyReachService {
 
   /**
    * The technologies of each application of `applicationIds`: declared, and hosted (installed on
-   * or carried to a server an instance is assigned to, per environment and server).
+   * or carried to a server an instance runs on, effective assignments, per environment and server).
    */
   async technologiesOfApplications(mg: EntityManager, tenantId: string, applicationIds: string[]): Promise<ReachingTechnology[]> {
     if (applicationIds.length === 0) return [];
@@ -380,7 +384,7 @@ export class TechnologyReachService {
       `WITH RECURSIVE servers AS (
          SELECT DISTINCT i.application_id, i.environment, x.asset_id
            FROM app_instances i
-           JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.app_instance_id = i.id
+           JOIN (${effectiveAssignmentsSql({ tenant: '$1', applications: '$2' })}) x ON x.tenant_id = $1 AND x.app_instance_id = i.id
            ${ASSET_IN_SERVICE_JOIN('sa', 'x.asset_id')}
            ${HOSTING_IN_SERVICE}
           WHERE i.tenant_id = $1 AND i.application_id = ANY($2::uuid[])
@@ -447,7 +451,7 @@ export class TechnologyReachService {
            FROM (
              SELECT r.technology_id, i.application_id
                FROM reach r
-               JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.asset_id = r.asset_id
+               JOIN (${effectiveAssignmentsSql({ tenant: '$1' })}) x ON x.tenant_id = $1 AND x.asset_id = r.asset_id
                JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
                ${HOSTING_IN_SERVICE}
              UNION ALL
