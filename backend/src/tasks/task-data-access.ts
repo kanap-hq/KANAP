@@ -1,5 +1,5 @@
 import { EntityManager } from 'typeorm';
-import { DataAccessLimitedException, isLimitedTransaction } from '../data-access/line-write-checks';
+import { DataAccessLimitedException, isLimitedTransaction, lineEditableSql } from '../data-access/line-write-checks';
 
 /**
  * Data-scoped access, lot 3: the writes of a task whose object is a budget line or a contract
@@ -17,6 +17,8 @@ import { DataAccessLimitedException, isLimitedTransaction } from '../data-access
  */
 
 export const DATA_ACCESS_READ_ONLY_TASK_MESSAGE = 'This task is read only in your access.';
+/** The delete of a task needs its object modifiable; being responsible for the task is not enough (spec §4.4). */
+export const DATA_ACCESS_TASK_DELETE_MESSAGE = 'Only someone who can modify the line or contract of this task can delete it.';
 
 const SCOPED_TYPES = new Set(['spend_item', 'capex_item', 'contract']);
 
@@ -71,4 +73,36 @@ export async function assertTaskWritten(manager: EntityManager, affected: number
   // A driver that reports no count (never PostgreSQL) leaves nothing to check.
   if (affected == null || affected > 0) return;
   if (await isLimitedTransaction(manager)) throw new DataAccessLimitedException(DATA_ACCESS_READ_ONLY_TASK_MESSAGE);
+}
+
+/**
+ * A write on an element of a task (time entry, attachment, linked application or asset): the task
+ * must be modifiable (`data_access_task_modifiable`, the policy of the task elements). Refused with
+ * the clear 403 before anything is written or stored; the database would refuse the INSERT (42501)
+ * and let the UPDATE or DELETE touch no row. An unscoped person costs no query.
+ */
+export async function assertTaskModifiable(manager: EntityManager, taskId: string | null | undefined): Promise<void> {
+  if (!taskId || !(await isLimitedTransaction(manager))) return;
+  const [row] = await manager.query(`SELECT data_access_task_modifiable($1::uuid) AS modifiable`, [taskId]);
+  if (row?.modifiable !== true) throw new DataAccessLimitedException(DATA_ACCESS_READ_ONLY_TASK_MESSAGE);
+}
+
+/**
+ * The delete of a task of a line or a contract: the DELETE policy of `tasks` asks for the object
+ * modifiable (the line by `data_access_line_editable`, the contract by
+ * `data_access_contract_modifiable`); a responsible person who cannot modify the object would see a
+ * delete that touches no row. Refused with the clear 403 before anything is deleted.
+ */
+export async function assertTaskDeletable(
+  manager: EntityManager,
+  task: Pick<TaskParticipants, 'related_object_type' | 'related_object_id'>,
+): Promise<void> {
+  if (!SCOPED_TYPES.has(task.related_object_type ?? '') || !(await isLimitedTransaction(manager))) return;
+  const [row] = await manager.query(
+    `SELECT CASE WHEN $1::text = 'contract' THEN data_access_contract_modifiable($2::uuid)
+                 ELSE EXISTS (SELECT 1 FROM spend_items i WHERE i.id = $2::uuid AND ${lineEditableSql('i.')})
+            END AS deletable`,
+    [task.related_object_type, task.related_object_id],
+  );
+  if (row?.deletable !== true) throw new DataAccessLimitedException(DATA_ACCESS_TASK_DELETE_MESSAGE);
 }

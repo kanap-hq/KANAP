@@ -16,7 +16,8 @@ import { TaskActivitiesService } from './task-activities.service';
 import { TaskAttachmentsService } from './task-attachments.service';
 import { detectChanges, resolveDisplayNames, TASK_TRACKED_FIELDS, FieldConfig } from '../common/change-detection';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
-import { prepareTaskWrite } from './task-data-access';
+import { assertTaskModifiable, prepareTaskWrite } from './task-data-access';
+import { assertLinesEditable } from '../data-access/line-write-checks';
 import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 
@@ -162,6 +163,8 @@ export class TasksUnifiedService {
   }): Promise<void> {
     const tenantId = params.tenantId || await this.getTaskTenant(params.taskId, params.manager);
     const ids = this.normalizeLinkIds(params.ids, params.fieldName);
+    // Elements of a task: the task modifiable (policy of task_applications and task_assets).
+    await assertTaskModifiable(params.manager, params.taskId);
     await this.validateLinkedIds(params.targetTable, ids, tenantId, params.manager, params.fieldName);
 
     const existingRows: Array<{ id: string }> = await params.manager.query(
@@ -728,7 +731,11 @@ export class TasksUnifiedService {
     // A task of a budget line: the line of the type's nature, read FOR SHARE until the task is saved,
     // so a change of the line's type (lot M) never leaves it with the type of before (see
     // `resolveTargetContext`).
-    if (target.type === 'spend_item' || target.type === 'capex_item') await this.resolveTargetContext(target, manager);
+    if (target.type === 'spend_item' || target.type === 'capex_item') {
+      await this.resolveTargetContext(target, manager);
+      // A task names only a line the person may modify (the placement trigger of the tasks): the clear 403 first.
+      await assertLinesEditable(manager, [target.id]);
+    }
 
     const isStandalone = target.type === null;
 
@@ -982,6 +989,14 @@ export class TasksUnifiedService {
           },
       manager,
     );
+    // A new object that is a line: one the person may modify (placement trigger of the tasks).
+    if (
+      hasRelatedType
+      && (resolvedTarget.type === 'spend_item' || resolvedTarget.type === 'capex_item')
+      && resolvedTarget.id !== existing.related_object_id
+    ) {
+      await assertLinesEditable(manager, [resolvedTarget.id]);
+    }
 
     if (this.hasOwn(nextPayload, 'description')) {
       nextPayload.description = await normalizeMarkdownRichText(nextPayload.description, { fieldName: 'description' }) as any;

@@ -1,0 +1,147 @@
+/**
+ * Data-scoped access, lot 3: the writes on budget lines, their children, their tasks and the links
+ * to them (planning/data-scoped-access/spec.md §6.7 "succès silencieux", §6.8). A limited person's
+ * write the policies refuse either fails (INSERT, 42501) or touches no row (UPDATE, DELETE), which
+ * would look saved. Every write site is classified here with how a refusal surfaces, so it is a
+ * clear 403 `DATA_ACCESS_LIMITED` (or the 404 of a row the person cannot read), never a 200 that
+ * wrote nothing.
+ *
+ * A site is a TypeORM `save()`, `update()`, `delete()`, `remove()`, `insert()`, `upsert()`,
+ * `softDelete()` call, or a raw `INSERT INTO`, `UPDATE ... SET` or `DELETE FROM`, counted per member
+ * (method or function around it). `data-access/__tests__/data-access-writes-inventory.spec.ts`
+ * scans the files:
+ * - under `spend/` and `tasks/` (`DATA_ACCESS_WRITE_ROOTS`), every site is listed: a new site, a
+ *   new member or a count that changed fails until it is looked at;
+ * - elsewhere, the members that write a link to a line from the other object's side are listed
+ *   (`DATA_ACCESS_LINK_WRITES`): their count is checked; other members of those files write
+ *   objects that are not scoped.
+ *
+ * Handling:
+ * - `pre_check`: a lot 3 check runs before the write (`data-access/line-write-checks.ts`,
+ *   `tasks/task-data-access.ts`), with the SQL functions of lots 2 and 3;
+ * - `lock`: the write runs after `lockBudgetLine`, `lockBudgetLines`, `lockBudgetVersions` or a
+ *   line lock of its own (FOR NO KEY UPDATE passes the UPDATE policy only): a readable line the
+ *   person may not modify gets the clear 403, an unreadable one the 404 of a missing line;
+ * - `row_count`: the write counts its rows, and none touched in a limited transaction is a 403;
+ * - `delegates`: the member calls a member listed here, which checks;
+ * - `visible_links`: a link to a line written from the other object's side (spec §5.4): the line
+ *   ids named are read under the policies first (an unreadable line is refused as missing), and
+ *   a replacement reads and deletes only the links to readable lines, so the hidden links stay;
+ * - `reserved`: reachable only from a route reserved to unscoped persons (spec §2.7,
+ *   `data-access-reserved.inventory.ts`) or from a delete of an object that is not scoped;
+ * - `not_scoped`: writes a table without data-access policies (the reason says which);
+ * - `run_3c`: the budget file import, scoped by run 3C of lot 3.
+ */
+
+export type DataAccessWriteHandling =
+  | 'pre_check'
+  | 'lock'
+  | 'row_count'
+  | 'delegates'
+  | 'visible_links'
+  | 'reserved'
+  | 'not_scoped'
+  | 'run_3c';
+
+export type DataAccessWriteEntry = {
+  /** Relative to `backend/src`. */
+  file: string;
+  member: string;
+  /** Write sites in the member. */
+  count: number;
+  handling: DataAccessWriteHandling;
+  reason: string;
+};
+
+/** The folders whose every write site is listed. */
+export const DATA_ACCESS_WRITE_ROOTS = ['spend', 'tasks'];
+
+const LINE_LOCK = 'under the line lock (lockBudgetLine): 403 when the line is read only';
+const VERSION_LOCK = 'under the version lock (lockBudgetVersions, through lockVersion or lockVersionWithLine): 403 when the line is read only';
+const OWN_LINE_LOCK = 'the line locked FOR NO KEY UPDATE first; no row: assertLinesEditable gives the 403 of a read-only line, else 404';
+const LINE_DELETE = 'delete of a line: reserved (spec §2.7)';
+const BUDGET_FILE = 'budget file import: run 3C';
+const ACTIVITIES = 'portfolio_activities has no data-access policy (data-access-tables.inventory.ts); the task is read first under the policies (404 when hidden)';
+const TASK_ELEMENT = 'assertTaskModifiable (data_access_task_modifiable, the policy of the task elements) before the write';
+
+export const DATA_ACCESS_WRITES: DataAccessWriteEntry[] = [
+  // spend/
+  { file: 'spend/allocation-rules.service.ts', member: 'clearTenantMethod', count: 1, handling: 'reserved', reason: 'default allocation rule of the tenant (allocation-rules.controller, reserved)' },
+  { file: 'spend/allocation-rules.service.ts', member: 'setTenantMethod', count: 1, handling: 'reserved', reason: 'default allocation rule of the tenant (allocation-rules.controller, reserved)' },
+  { file: 'spend/allocation-save.ts', member: 'storeRows', count: 3, handling: 'lock', reason: VERSION_LOCK },
+  { file: 'spend/amounts-write.util.ts', member: 'createMissingMonths', count: 1, handling: 'lock', reason: VERSION_LOCK },
+  { file: 'spend/amounts-write.util.ts', member: 'upsertColumns', count: 1, handling: 'lock', reason: VERSION_LOCK },
+  { file: 'spend/budget-allocation-operations.ts', member: 'runAllocationCopy', count: 3, handling: 'reserved', reason: 'allocation copy over a set of lines (copyAllocations, reserved)' },
+  { file: 'spend/budget-file/import-file.ts', member: 'applyLine', count: 1, handling: 'run_3c', reason: BUDGET_FILE },
+  { file: 'spend/budget-file/import-file.ts', member: 'createDimensionValues', count: 1, handling: 'run_3c', reason: BUDGET_FILE },
+  { file: 'spend/budget-file/import-file.ts', member: 'createSuppliers', count: 1, handling: 'run_3c', reason: BUDGET_FILE },
+  { file: 'spend/budget-file/import-file.ts', member: 'insertAmountRows', count: 1, handling: 'run_3c', reason: BUDGET_FILE },
+  { file: 'spend/budget-file/import-file.ts', member: 'insertAudits', count: 1, handling: 'run_3c', reason: BUDGET_FILE },
+  { file: 'spend/budget-file/import-file.ts', member: 'insertRoundRows', count: 1, handling: 'run_3c', reason: BUDGET_FILE },
+  { file: 'spend/budget-line-relations.ts', member: 'setAssetLink', count: 2, handling: 'lock', reason: OWN_LINE_LOCK },
+  { file: 'spend/budget-line-type-change.service.ts', member: 'changeFromYear', count: 4, handling: 'lock', reason: `${LINE_LOCK}; the versions, links and tasks of a line the person may modify are all visible and modifiable` },
+  { file: 'spend/budget-line-type-change.service.ts', member: 'changeInPlace', count: 2, handling: 'lock', reason: `${LINE_LOCK}; the tasks of a line the person may modify are modifiable` },
+  { file: 'spend/budget-lines.controller.ts', member: 'update', count: 1, handling: 'delegates', reason: 'BudgetLinesService.update' },
+  { file: 'spend/budget-lines.service.ts', member: 'update', count: 1, handling: 'delegates', reason: 'SpendItemsService.update: resolveItemWrite (editable, placement, contract) and the line lock' },
+  { file: 'spend/budget-version-ensure.ts', member: 'ensureBudgetVersion', count: 1, handling: 'lock', reason: LINE_LOCK },
+  { file: 'spend/capex-items.controller.ts', member: 'delete', count: 1, handling: 'reserved', reason: LINE_DELETE },
+  { file: 'spend/capex-items.controller.ts', member: 'update', count: 1, handling: 'delegates', reason: 'SpendItemsService.update' },
+  { file: 'spend/item-analytics.util.ts', member: 'writeItemAnalyticsValues', count: 2, handling: 'pre_check', reason: 'after resolveItemWrite (create: placement) or under the line lock (update, type change)' },
+  { file: 'spend/item-applications.ts', member: 'replaceItemApplications', count: 2, handling: 'lock', reason: OWN_LINE_LOCK },
+  { file: 'spend/item-delete-cleanup.ts', member: 'deleteItemDependents', count: 3, handling: 'reserved', reason: LINE_DELETE },
+  { file: 'spend/item-delete-cleanup.ts', member: 'deleteItemTasks', count: 3, handling: 'reserved', reason: 'delete of a line or a contract: reserved (spec §2.7); the tasks of an incident are not scoped' },
+  { file: 'spend/item-technologies.ts', member: 'replaceItemTechnologies', count: 2, handling: 'lock', reason: OWN_LINE_LOCK },
+  // The scan names the member by the last function head above the site.
+  { file: 'spend/round-inputs.util.ts', member: 'assertPeriodInVersionYear', count: 1, handling: 'lock', reason: `saveRoundInput: ${VERSION_LOCK}` },
+  { file: 'spend/round-inputs.util.ts', member: 'assertTenant', count: 1, handling: 'lock', reason: `deleteRoundInput: ${VERSION_LOCK}` },
+  { file: 'spend/round-inputs.util.ts', member: 'replaceLines', count: 2, handling: 'lock', reason: VERSION_LOCK },
+  { file: 'spend/spend-item-contacts.service.ts', member: 'detach', count: 1, handling: 'lock', reason: LINE_LOCK },
+  { file: 'spend/spend-item-contacts.service.ts', member: 'syncFromSupplier', count: 2, handling: 'lock', reason: LINE_LOCK },
+  { file: 'spend/spend-items-delete.service.ts', member: 'deleteRows', count: 4, handling: 'reserved', reason: LINE_DELETE },
+  { file: 'spend/spend-items.controller.ts', member: 'delete', count: 1, handling: 'reserved', reason: LINE_DELETE },
+  { file: 'spend/spend-items.controller.ts', member: 'update', count: 1, handling: 'delegates', reason: 'SpendItemsService.update' },
+  { file: 'spend/spend-items.service.ts', member: 'bulkReplaceProjects', count: 1, handling: 'lock', reason: LINE_LOCK },
+  { file: 'spend/spend-items.service.ts', member: 'create', count: 1, handling: 'pre_check', reason: 'resolveItemWrite: placement and contract readable' },
+  { file: 'spend/spend-items.service.ts', member: 'createLink', count: 1, handling: 'pre_check', reason: 'assertLinesEditable' },
+  { file: 'spend/spend-items.service.ts', member: 'deleteAttachment', count: 1, handling: 'pre_check', reason: 'assertLinesEditable, before the stored file is deleted' },
+  { file: 'spend/spend-items.service.ts', member: 'deleteLink', count: 1, handling: 'pre_check', reason: 'assertLinesEditable' },
+  { file: 'spend/spend-items.service.ts', member: 'updateLink', count: 1, handling: 'lock', reason: LINE_LOCK },
+  { file: 'spend/spend-items.service.ts', member: 'uploadAttachment', count: 1, handling: 'pre_check', reason: 'assertLinesEditable, before the file is stored' },
+  { file: 'spend/tasks.controller.ts', member: 'deleteTimeEntry', count: 1, handling: 'delegates', reason: 'TaskTimeEntriesService.delete' },
+  { file: 'spend/tasks.controller.ts', member: 'updateTimeEntry', count: 1, handling: 'delegates', reason: 'TaskTimeEntriesService.update' },
+
+  // tasks/
+  { file: 'tasks/task-activities.service.ts', member: 'create', count: 1, handling: 'not_scoped', reason: ACTIVITIES },
+  { file: 'tasks/task-activities.service.ts', member: 'createImportedComment', count: 1, handling: 'not_scoped', reason: ACTIVITIES },
+  { file: 'tasks/task-activities.service.ts', member: 'createUnified', count: 3, handling: 'not_scoped', reason: `${ACTIVITIES}; the status goes through writeTaskColumns (row count) and the time entry through TaskTimeEntriesService.create (pre-check), both before the activities` },
+  { file: 'tasks/task-activities.service.ts', member: 'updateComment', count: 1, handling: 'not_scoped', reason: ACTIVITIES },
+  { file: 'tasks/task-attachments.service.ts', member: 'cleanupOrphanedImages', count: 1, handling: 'pre_check', reason: `${TASK_ELEMENT}, before a stored file is deleted` },
+  { file: 'tasks/task-attachments.service.ts', member: 'deleteAttachment', count: 1, handling: 'pre_check', reason: `${TASK_ELEMENT}, before the stored file is deleted` },
+  { file: 'tasks/task-attachments.service.ts', member: 'uploadAttachment', count: 1, handling: 'pre_check', reason: `${TASK_ELEMENT}, before the file is stored` },
+  { file: 'tasks/task-column-write.ts', member: 'writeTaskColumns', count: 1, handling: 'row_count', reason: 'assertTaskWritten; the services check with prepareTaskWrite first (read only, handover)' },
+  { file: 'tasks/task-delete-cleanup.ts', member: 'deleteTaskActivities', count: 1, handling: 'pre_check', reason: 'TasksDeleteService.delete checks assertTaskDeletable first; deleteItemTasks is reserved' },
+  { file: 'tasks/task-time-entries.service.ts', member: 'create', count: 1, handling: 'pre_check', reason: TASK_ELEMENT },
+  { file: 'tasks/task-time-entries.service.ts', member: 'delete', count: 1, handling: 'pre_check', reason: TASK_ELEMENT },
+  { file: 'tasks/task-time-entries.service.ts', member: 'update', count: 1, handling: 'pre_check', reason: TASK_ELEMENT },
+  { file: 'tasks/tasks-csv.service.ts', member: 'handleViewerOwnerImport', count: 1, handling: 'row_count', reason: 'assertTaskWritten on the rows the UPDATE returns' },
+  { file: 'tasks/tasks-delete.service.ts', member: 'bulkDelete', count: 1, handling: 'delegates', reason: 'TasksDeleteService.delete, per task (a refusal is reported as failed)' },
+  { file: 'tasks/tasks-delete.service.ts', member: 'delete', count: 1, handling: 'pre_check', reason: 'assertTaskDeletable: the DELETE policy asks for the line or contract modifiable' },
+  { file: 'tasks/tasks-delete.service.ts', member: 'deleteTask', count: 1, handling: 'delegates', reason: 'TasksDeleteService.delete' },
+  { file: 'tasks/tasks-unified.service.ts', member: 'createForTarget', count: 2, handling: 'pre_check', reason: 'a task of a line: assertLinesEditable (placement trigger of the tasks); the project activity is not scoped' },
+  { file: 'tasks/tasks-unified.service.ts', member: 'syncTaskLinks', count: 2, handling: 'pre_check', reason: TASK_ELEMENT },
+];
+
+/** Links to a line written from the other object's side, outside `spend/` and `tasks/`. */
+export const DATA_ACCESS_LINK_WRITES: DataAccessWriteEntry[] = [
+  { file: 'applications/services/applications-instances.service.ts', member: 'replaceLinkedItems', count: 2, handling: 'visible_links', reason: 'application to lines: ids read under the policies (400 when one is missing), DELETE of the visible links only' },
+  { file: 'assets/services/assets-relations.service.ts', member: 'bulkReplaceLinkedCapexItems', count: 2, handling: 'visible_links', reason: 'asset to CAPEX lines: ids read under the policies, DELETE of the visible links only' },
+  { file: 'assets/services/assets-relations.service.ts', member: 'bulkReplaceLinkedSpendItems', count: 2, handling: 'visible_links', reason: 'asset to OPEX lines: ids read under the policies, DELETE of the visible links only' },
+  { file: 'portfolio/portfolio-requests.service.ts', member: 'bulkReplaceCapex', count: 2, handling: 'visible_links', reason: 'request to CAPEX lines: budgetLineIdsOfKind under the policies, removes only the links it read' },
+  { file: 'portfolio/portfolio-requests.service.ts', member: 'bulkReplaceOpex', count: 2, handling: 'visible_links', reason: 'request to OPEX lines: budgetLineIdsOfKind under the policies, removes only the links it read' },
+  { file: 'portfolio/project-budget-links.util.ts', member: 'insertProjectBudgetLinks', count: 1, handling: 'visible_links', reason: 'inserts the ids its callers read under the policies' },
+  { file: 'portfolio/services/portfolio-projects-crud.service.ts', member: 'bulkReplaceCapex', count: 1, handling: 'visible_links', reason: 'project to CAPEX lines: budgetLineIdsOfKind under the policies, removes only the links it read' },
+  { file: 'portfolio/services/portfolio-projects-crud.service.ts', member: 'bulkReplaceOpex', count: 1, handling: 'visible_links', reason: 'project to OPEX lines: budgetLineIdsOfKind under the policies, removes only the links it read' },
+  { file: 'portfolio/services/portfolio-projects-crud.service.ts', member: 'copyCapexFromRequest', count: 1, handling: 'visible_links', reason: 'copies the request links the person reads' },
+  { file: 'portfolio/services/portfolio-projects-crud.service.ts', member: 'copyOpexFromRequest', count: 1, handling: 'visible_links', reason: 'copies the request links the person reads' },
+  { file: 'technologies/application-conversion.service.ts', member: 'convert', count: 9, handling: 'pre_check', reason: 'the application is deleted after its links are copied: refused (403) when it has links to lines the person cannot read (data_access_hidden_count)' },
+];

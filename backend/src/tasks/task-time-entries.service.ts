@@ -6,6 +6,7 @@ import { Task } from './task.entity';
 import { AuditService } from '../audit/audit.service';
 import { PortfolioProjectsService } from '../portfolio/services';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
+import { assertTaskModifiable } from './task-data-access';
 
 export interface CreateTimeEntryDto {
   user_id?: string | null;
@@ -169,6 +170,7 @@ export class TaskTimeEntriesService {
     if (!isAdmin && (!userId || targetUserId !== userId)) {
       throw new ForbiddenException('You can only create time entries for yourself');
     }
+    await assertTaskModifiable(manager, taskId);
 
     const entity = repo.create({
       task_id: taskId,
@@ -226,6 +228,7 @@ export class TaskTimeEntriesService {
     if (dto.category !== undefined && !['it', 'business'].includes(dto.category)) {
       throw new BadRequestException('category must be "it" or "business"');
     }
+    await assertTaskModifiable(manager, existing.task_id);
 
     const next = {
       ...existing,
@@ -267,6 +270,7 @@ export class TaskTimeEntriesService {
     if (!isAdmin && (!userId || existing.user_id !== userId)) {
       throw new ForbiddenException('You can only delete your own time entries');
     }
+    await assertTaskModifiable(manager, existing.task_id);
 
     // Get project ID before deleting
     const projectId = await this.getProjectIdForTask(existing.task_id, { manager });

@@ -8,6 +8,7 @@ import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
 import { UserTimeAggregateService } from '../portfolio/services/user-time-aggregate.service';
 import { deleteTaskActivities } from './task-delete-cleanup';
+import { assertTaskDeletable } from './task-data-access';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 
 /**
@@ -61,6 +62,8 @@ export class TasksDeleteService extends BaseDeleteService<Task> {
     const repo = this.getRepo(manager);
     const existing = await repo.findOne({ where: { id: taskId } as any });
     if (!existing) return; // idempotent - no error if not found
+    // Before its history goes: the DELETE of a task whose object the person cannot modify touches no row.
+    await assertTaskDeletable(manager, existing);
 
     const refusal = (await originRefusals(manager, [existing]))[0] ?? null;
     if (refusal) throw refusal;

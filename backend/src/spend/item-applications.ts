@@ -3,6 +3,7 @@ import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { AmountScope } from './amounts-write.util';
 import { assertScopeNatures, auditTableOf, natureAnd, type BudgetNature } from './budget-nature';
+import { assertLinesEditable } from '../data-access/line-write-checks';
 
 /**
  * Applications linked to an OPEX or CAPEX line, from the line's side: list and
@@ -70,7 +71,11 @@ export async function replaceItemApplications(
     `SELECT 1 FROM ${t.items} WHERE tenant_id = $1 AND id = $2${natureAnd(null, t.nature)} FOR NO KEY UPDATE`,
     [item.tenant_id, item.id],
   );
-  if (locked.length === 0) throw new NotFoundException(t.itemNotFound);
+  if (locked.length === 0) {
+    // A readable line the person may not modify takes no lock: the clear 403, else absent.
+    await assertLinesEditable(manager, [item.id]);
+    throw new NotFoundException(t.itemNotFound);
+  }
   if (nextIds.length) {
     const found: Array<{ id: string }> = await manager.query(
       `SELECT id FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
