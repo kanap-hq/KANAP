@@ -33,6 +33,14 @@ export type AssetRelationsData = {
   } & Record<string, number>;
 };
 
+/**
+ * The Relations badge: `counts.total` (the rows the tab lists) plus the budget lines the tab counts
+ * without listing them (`budget_lines_hidden`). Undefined until the read is in.
+ */
+export function assetRelationsBadge(data: AssetRelationsData | undefined): number | undefined {
+  return data ? (data.counts?.total ?? 0) + (data.budget_lines_hidden ?? 0) : undefined;
+}
+
 /** The one query key of the read, shared by both tabs and the page (tab badges). */
 export const assetRelationsKey = (id: string) => ['asset-relations-tab', id] as const;
 

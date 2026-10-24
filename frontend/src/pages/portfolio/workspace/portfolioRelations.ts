@@ -74,7 +74,8 @@ function sectionLength(data: object, key: string): number {
  * The Relations badge. Counts the rows the caller can see on `GET …/relations`
  * (budget lines, applications, assets, technologies or business processes, and the
  * conversion links), plus the dependencies the page already holds, plus the web links
- * and the files. A section left out (`null`) adds nothing. Undefined until the relations
+ * and the files, plus the budget lines counted without being listed (`budget_lines_hidden`).
+ * A section left out (`null`) adds nothing else. Undefined until the relations
  * payload is in. Links and files add nothing until their own read succeeds.
  */
 export function portfolioRelationsCount(
@@ -85,7 +86,8 @@ export function portfolioRelationsCount(
 ): number | undefined {
   if (!relations) return undefined;
   const keys = entity === 'project' ? PROJECT_SECTIONS : REQUEST_SECTIONS;
-  const sections = keys.reduce((sum, key) => sum + sectionLength(relations, key), 0);
+  // The budget lines section also counts the linked lines it does not list (`budget_lines_hidden`).
+  const sections = keys.reduce((sum, key) => sum + sectionLength(relations, key), 0) + (relations.budget_lines_hidden ?? 0);
   const extras = links ? (links.urls?.length || 0) + (links.attachments?.length || 0) : 0;
   return sections + dependencies + extras;
 }

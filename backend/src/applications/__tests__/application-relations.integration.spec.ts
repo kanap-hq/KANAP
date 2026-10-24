@@ -122,7 +122,7 @@ async function testBadgeCountsRequestsNotTasks() {
     const seed = await seedRelations(runner, 'badge');
     const crud = new ApplicationsCrudService(undefined as any, undefined as any, undefined as any, undefined as any, undefined as any);
     const sum = (c: Awaited<ReturnType<ApplicationsCrudService['relationCounts']>>) =>
-      c.opex + c.capex + c.contracts + c.projects + c.requests + c.links + c.attachments;
+      c.opex + c.capex + c.budget_lines_hidden + c.contracts + c.projects + c.requests + c.links + c.attachments;
 
     const all = await crud.relationCounts(seed.appId, { manager: runner.manager, requestsAccess: {} });
     assert.equal(all.requests, 2, 'both linked requests');
@@ -163,7 +163,9 @@ async function testBadgeFollowsModuleRights() {
       [0, 0, 0, 0, 0],
       'no budget, contract, project or request counted',
     );
-    assert.equal(reader.total, reader.links + reader.attachments);
+    // Without the budget right, the tab shows "N budget lines": the badge counts them too.
+    assert.equal(reader.budget_lines_hidden, all.opex + all.capex, 'every linked line counted, none named');
+    assert.equal(reader.total, reader.links + reader.attachments + reader.budget_lines_hidden);
 
     const withRights = await controller.relationCounts(seed.appId, {
       ...ctx,
@@ -174,6 +176,7 @@ async function testBadgeFollowsModuleRights() {
       [all.opex, all.capex, all.contracts, all.projects],
       'counted with the read rights',
     );
+    assert.equal(withRights.budget_lines_hidden, 0, 'nothing hidden with the budget right and no data access limit');
   });
 }
 

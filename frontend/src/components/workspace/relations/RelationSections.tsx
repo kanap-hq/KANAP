@@ -22,7 +22,8 @@ type Props = {
 /**
  * The linked sections of a Relations tab: one dense table per kind, Add anchored to its button,
  * unlink on hover. A section whose rows are null (the caller cannot read the module) is left out,
- * unless it counts linked rows (`outside`): then it shows that count alone, without names.
+ * unless it counts linked rows (`outside`): then it shows that count alone, without names. The
+ * section's count is what it shows: the listed rows plus the counted ones.
  */
 export default function RelationSections({ sections, loaded, canEdit, searchKeyPrefix, onLink, onUnlink }: Props) {
   const { t } = useTranslation('it');
@@ -31,10 +32,11 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
   return (
     <>
       {sections.filter((section) => section.rows !== null || (section.outside?.count ?? 0) > 0).map((section) => {
-        const outside = (section.outside?.count ?? 0) > 0 ? section.outside!.text : null;
+        const outsideCount = section.outside?.count ?? 0;
+        const outside = outsideCount > 0 ? section.outside!.text : null;
         if (section.rows === null) {
           return (
-            <RelationsSection key={section.kind} title={section.title}>
+            <RelationsSection key={section.kind} title={section.title} count={loaded ? outsideCount : undefined}>
               <RelationsEmpty>{outside}</RelationsEmpty>
             </RelationsSection>
           );
@@ -46,7 +48,7 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
           <RelationsSection
             key={section.kind}
             title={section.title}
-            count={loaded ? rows.length : undefined}
+            count={loaded ? rows.length + outsideCount : undefined}
             onAdd={editable && loaded ? (anchor) => setAdding({ kind: section.kind, anchor }) : undefined}
             adding={adding?.kind === section.kind}
             addLabel={t('workspace.application.relations.add')}

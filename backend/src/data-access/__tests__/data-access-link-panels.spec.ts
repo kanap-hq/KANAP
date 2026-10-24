@@ -19,6 +19,7 @@ import { AuditLog } from '../../audit/audit.entity';
 import { Application } from '../../applications/application.entity';
 import { ApplicationsDeleteService } from '../../applications/applications-delete.service';
 import { ApplicationsInstancesService } from '../../applications/services/applications-instances.service';
+import { ApplicationsCrudService } from '../../applications/services/applications-crud.service';
 import { Asset } from '../../assets/asset.entity';
 import { AssetRelation } from '../../assets/asset-relation.entity';
 import { AssetSpendItemLink } from '../../assets/asset-spend-item.entity';
@@ -188,6 +189,21 @@ async function testPanels(runner: QueryRunner, s: Seed, o: Objects): Promise<voi
   console.log('  panels: visible lines then the hidden count (limited), all lines (unscoped), count only without the budget right: OK');
 }
 
+/** The Relations badge of an application counts the budget lines its tab shows: listed and counted. */
+async function testApplicationBadge(runner: QueryRunner, s: Seed, o: Objects): Promise<void> {
+  const crud = new ApplicationsCrudService(undefined as any, undefined as any, undefined as any, undefined as any, undefined as any);
+  const budget = (m: EntityManager, readsBudget: boolean) => crud.relationCounts(o.application.both, { manager: m, tenantId: s.tenantId, readsBudget })
+    .then((c) => ({ listed: c.opex + c.capex, hidden: c.budget_lines_hidden, rest: c.total - c.opex - c.capex - c.budget_lines_hidden }));
+  await as(runner, s.persons.rita, async (m) => {
+    assert.deepEqual(await budget(m, true), { listed: 1, hidden: 1, rest: 0 }, 'rita: L1 listed, L5 counted, both in the badge');
+    assert.deepEqual(await budget(m, false), { listed: 0, hidden: 2, rest: 0 }, 'rita without the budget right: the two lines counted');
+  });
+  await as(runner, s.persons.ulla, async (m) => {
+    assert.deepEqual(await budget(m, true), { listed: 2, hidden: 0, rest: 0 }, 'ulla: both listed');
+  });
+  console.log('  application badge: the listed lines plus the counted ones: OK');
+}
+
 function refusedForHiddenLines(owner: string, count: number) {
   return (err: any) => {
     assert.ok(err instanceof DataAccessHiddenLinesException, `${owner}: ${err?.message}`);
@@ -353,6 +369,7 @@ async function run() {
       const s = await seed(clientOf(runner));
       const objects = await seedObjects(runner, s);
       await testPanels(runner, s, objects);
+      await testApplicationBadge(runner, s, objects);
       await testDeletes(runner, s, objects);
       await testReplacements(runner, s, objects);
     } finally {

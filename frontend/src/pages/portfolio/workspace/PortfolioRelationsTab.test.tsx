@@ -461,6 +461,9 @@ describe('PortfolioRelationsTab', () => {
     // Budget lines 2, one application, one asset, two processes, one resulting project.
     expect(portfolioRelationsCount('request', requestRelations(), links, 1)).toBe(7 + 1 + 2);
     expect(portfolioRelationsCount('request', requestRelations({ processes: null }), undefined, 0)).toBe(5);
+    // The budget lines the section counts without listing them: outside the data access, or all without the budget right.
+    expect(portfolioRelationsCount('project', projectRelations({ budget_lines_hidden: 3 }), undefined, 0)).toBe(6 + 3);
+    expect(portfolioRelationsCount('request', requestRelations({ budget_lines: null, budget_lines_hidden: 4 }), undefined, 0)).toBe(5 + 4);
   });
 
   it('reads /relations once when the badge and the tab are mounted together', async () => {

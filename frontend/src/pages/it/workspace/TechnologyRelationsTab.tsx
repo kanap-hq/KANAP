@@ -52,8 +52,9 @@ export async function fetchTechnologyRelations(id: string): Promise<TechnologyRe
 /** The tab badge: the rows of every section the caller can see. */
 export function technologyRelationsCount(data: TechnologyRelationsData | undefined): number | undefined {
   if (!data) return undefined;
+  // The budget lines section also counts the linked lines it does not list (`budget_lines_hidden`).
   return [data.budget_lines, data.contracts, data.projects, data.incidents, data.documents, data.links]
-    .reduce((sum, rows) => sum + (rows ? rows.length : 0), 0);
+    .reduce((sum, rows) => sum + (rows ? rows.length : 0), data.budget_lines_hidden ?? 0);
 }
 
 /**

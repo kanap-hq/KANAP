@@ -122,6 +122,16 @@ describe('RelationSections', () => {
     expect(screen.queryByText('workspace.application.relations.add')).toBeNull();
   });
 
+  it('counts in the section title what the section shows: listed rows plus counted ones', () => {
+    renderSections({ sections: [{ ...section([{ id: 'p-1', name: 'Migration' }]), outside: { count: 3, text: 'and 3 lines outside your access' } }] });
+    expect(within(screen.getByRole('region', { name: 'Projects' })).getByText('4')).toBeTruthy();
+  });
+
+  it('counts the linked rows in the title for a caller who cannot read the module', () => {
+    renderSections({ sections: [{ ...section(null), outside: { count: 3, text: '3 budget lines' } }] });
+    expect(within(screen.getByRole('region', { name: 'Projects' })).getByText('3')).toBeTruthy();
+  });
+
   it('shows no mention when nothing is outside', () => {
     renderSections({ sections: [{ ...section(null), outside: { count: 0, text: '0 budget lines' } }] });
     expect(screen.queryByRole('region', { name: 'Projects' })).toBeNull();

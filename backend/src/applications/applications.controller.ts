@@ -871,7 +871,7 @@ export class ApplicationsController {
   async relationCounts(
     @Param('id') id: string,
     @Tenant() ctx: TenantRequest,
-  ): Promise<{ opex: number; capex: number; contracts: number; projects: number; requests: number; technologies: number; processes: number; links: number; attachments: number; total: number }> {
+  ): Promise<{ opex: number; capex: number; budget_lines_hidden: number; contracts: number; projects: number; requests: number; technologies: number; processes: number; links: number; attachments: number; total: number }> {
     // The same rule as the Relations tab for budget lines, contracts, projects and requests: a module
     // the caller cannot read adds nothing to the badge, and a Business Contributor counts only the
     // projects and requests it takes part in.
