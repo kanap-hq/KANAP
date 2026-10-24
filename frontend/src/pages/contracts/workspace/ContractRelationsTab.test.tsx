@@ -259,7 +259,7 @@ describe('ContractRelationsTab', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(onChanged).toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(name=contract.pdf)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeFileNamed(name=contract.pdf)' }));
     expect(mocked.patch).not.toHaveBeenCalled();
     expect(await screen.findByText('ops:confirmations.deleteAttachment(name=contract.pdf)')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));

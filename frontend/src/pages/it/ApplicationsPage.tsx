@@ -3,17 +3,19 @@ import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react'
 import { Alert, Box, Button, Snackbar, Stack, Chip, Tooltip, Typography, RadioGroup, FormControlLabel, Radio, Link, useTheme } from '@mui/material';
 import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, type ListRequest } from '../../components/ServerDataGrid';
-import { ICellRendererParams } from 'ag-grid-community';
+import type { CellStyle, ICellRendererParams } from 'ag-grid-community';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LinkCellRenderer, wholeCellLinkSx, aboveCellLinkSx } from '../../components/grid/renderers';
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
+import { getDotColor } from '../../utils/statusColors';
+import { APPLICATION_ENVIRONMENTS } from '../../utils/applicationEnvironments';
 import { StatusDot } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import ForbiddenPage from '../ForbiddenPage';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
-import { refusalCounts } from '../../utils/deleteRefusal';
+import { removedWithLinks } from '../../utils/deleteRefusal';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { APPLICATION_NAME_MAX } from './applicationLimits';
 import { applicationDeleteCheck } from './applicationDeleteCheck';
@@ -37,15 +39,8 @@ import {
   vulnerabilityFilterFromSearch,
   vulnerabilityFilterOptions,
 } from '../../components/vulnerabilities/vulnerabilityListColumn';
-/** The environments of the pills, in display order; their abbreviation and full name come from `pages.applications.environments.<value>`. */
-const ENV_SUMMARY = [
-  { value: 'prod' },
-  { value: 'pre_prod' },
-  { value: 'qa' },
-  { value: 'test' },
-  { value: 'dev' },
-  { value: 'sandbox' },
-] as const;
+/** The environments of the pills, in the one display order; their abbreviation and full name come from `pages.applications.environments.<value>`. */
+const ENV_SUMMARY = APPLICATION_ENVIRONMENTS;
 
 /** An empty value, in every column. */
 const EMPTY_CELL = '—';
@@ -626,11 +621,13 @@ export default function ApplicationsPage() {
     const mode = theme.palette.mode;
     const Cell: React.FC<ICellRendererParams<AppRow, any>> = (params) => {
       const instances = (params.data?.instances || []) as AppInstanceSummary[];
+      // An obsolete deployment stays listed, greyed; a retired or not yet active one is left out.
       const activeEnvs = ENV_SUMMARY.map((env) => {
         const match = instances.find((inst) => inst.environment === env.value);
-        if (!isInstanceActive(match)) return null;
-        return { env, match: match as AppInstanceSummary };
-      }).filter(Boolean) as Array<{ env: typeof ENV_SUMMARY[number]; match: AppInstanceSummary }>;
+        const obsolete = match?.lifecycle === 'deprecated';
+        if (!isInstanceActive(match) && !obsolete) return null;
+        return { env, match: match as AppInstanceSummary, obsolete };
+      }).filter(Boolean) as Array<{ env: typeof ENV_SUMMARY[number]; match: AppInstanceSummary; obsolete: boolean }>;
       if (activeEnvs.length === 0) {
         return (
           <Box component="span" sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
@@ -651,7 +648,7 @@ export default function ApplicationsPage() {
             height: '100%',
           }}
         >
-          {activeEnvs.map(({ env, match }) => {
+          {activeEnvs.map(({ env, match, obsolete }) => {
             const lifecycleText = match.lifecycle ? ` · ${lifecycleLabel(match.lifecycle)}` : '';
             const tooltip = `${t(`pages.applications.environments.${env.value}.name`)}${match.base_url ? ` · ${match.base_url}` : ''}${lifecycleText}`;
             return (
@@ -672,11 +669,20 @@ export default function ApplicationsPage() {
                     lineHeight: 1,
                     textDecoration: 'none',
                     cursor: 'pointer',
-                    '&:hover': { textDecoration: 'none' },
                   }}
                 >
-                  <StatusDot color={getEnvDotColor(env.value, mode)} />
-                  {t(`pages.applications.environments.${env.value}.short`)}
+                  <StatusDot
+                    color={obsolete ? 'transparent' : getEnvDotColor(env.value, mode)}
+                    sx={obsolete ? { border: '1px solid', borderColor: getDotColor('default', mode), boxSizing: 'border-box' } : undefined}
+                  />
+                  {/* On a span: the grid styles every link in a cell (`color: inherit`, no decoration). An obsolete
+                      deployment is struck through with a hollow dot, so it never reads as the grey sandbox. */}
+                  <Box
+                    component="span"
+                    sx={obsolete ? { color: 'kanap.text.tertiary', textDecoration: 'line-through' } : undefined}
+                  >
+                    {t(`pages.applications.environments.${env.value}.short`)}
+                  </Box>
                 </Box>
               </Tooltip>
             );
@@ -693,6 +699,19 @@ export default function ApplicationsPage() {
 
   const currentYear = new Date().getFullYear();
   const columns: EnhancedColDef<AppRow>[] = useMemo(() => [
+    {
+      // The business reference (APP-n), as the assets list shows AST-n. Sorted by its number on the server.
+      field: 'sequential_id',
+      headerName: '#',
+      width: 90,
+      valueGetter: (p) => p.data?.sequential_id || '',
+      cellStyle: {
+        fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
+        fontSize: '12px',
+        color: 'var(--kanap-text-secondary)',
+        fontVariantNumeric: 'tabular-nums',
+      } as CellStyle,
+    },
     {
       headerName: t('common.name'), field: 'name', minWidth: 200,
       cellRenderer: NameWithSuiteCell,
@@ -1083,7 +1102,7 @@ export default function ApplicationsPage() {
             return {
               refused,
               warning: removes.length > 0
-                ? t('pages.applications.delete.warningCounted', { count, removed: refusalCounts({ usages: removes }, t, locale) })
+                ? t('pages.applications.delete.warningCounted', { count, removed: removedWithLinks(removes, t('pages.applications.delete.links', { count }), t, locale) })
                 : t('pages.applications.delete.warningLinks', { count }),
             };
           }}

@@ -77,7 +77,7 @@ describe('RelationSections', () => {
     expect(await screen.findByRole('option', { name: /New project/ })).toBeTruthy();
     expect(screen.queryByRole('option', { name: /Migration/ })).toBeNull();
     fireEvent.click(screen.getByRole('option', { name: /New project/ }));
-    expect(onLink).toHaveBeenCalledWith('projects', 'p-2');
+    expect(onLink).toHaveBeenCalledWith('projects', 'p-2', 'New project');
     expect(screen.queryByRole('option')).toBeNull();
   });
 

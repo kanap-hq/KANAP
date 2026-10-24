@@ -198,8 +198,8 @@
   "ROLE_BUILT_IN": "This role comes with KANAP and cannot be deleted. Duplicate it to make a role you can change.",
   "ROLE_IN_USE_one": "This role is given to {{usages}}. Give them another role first.",
   "ROLE_IN_USE_other": "This role is given to {{usages}}. Give them another role first.",
-  "APP_INSTANCE_IN_USE_one": "This instance still has {{usages}}. Remove it first.",
-  "APP_INSTANCE_IN_USE_other": "This instance still has {{usages}}. Remove them first.",
+  "DEPLOYMENT_IN_USE_one": "This deployment still has {{usages}}. Remove it first.",
+  "DEPLOYMENT_IN_USE_other": "This deployment still has {{usages}}. Remove them first.",
   "INTERFACE_HAS_BINDINGS_one": "This interface has {{usages}}. Delete its binding with it, or remove it first.",
   "INTERFACE_HAS_BINDINGS_other": "This interface has {{usages}}. Delete its bindings with it, or remove them first.",
   "MAPPING_SET_DEFAULT": "The default mapping set cannot be deleted. Make another set the default first.",
@@ -229,9 +229,19 @@
   "suite_cycle": "This application already contains {{name}}: it cannot belong to it.",
   "forbidden": "You do not have the rights for this action.",
   "NO_ACCESS": "This account has not been granted access yet. Ask an administrator.",
+  "assignment_duplicate": "This server already has this role on this deployment.",
+  "assignment_cluster": "A cluster cannot be assigned: choose a specific server.",
+  "assignment_role_invalid": "Unknown role. Choose a role from the list.",
+  "deployment_environment_taken": "This application already has a {{environment}} deployment.",
+  "deployment_lifecycle_invalid": "Unknown lifecycle: {{value}}. Choose a lifecycle from the list.",
+  "date_invalid": "{{field}} is not a valid date.",
+  "deployment_environment_invalid": "Unknown environment: {{value}}. Choose an environment from the list.",
+  "body_required": "The request is empty.",
+  "asset_required": "Choose a server.",
   "fields": {
     "rto_minutes": "The recovery time objective (RTO)",
     "rpo_minutes": "The recovery point objective (RPO)",
-    "maxMtdMinutes": "The maximum tolerable downtime"
+    "maxMtdMinutes": "The maximum tolerable downtime",
+    "since_date": "The \"Since\" date"
   }
 }

@@ -206,8 +206,8 @@ async function testAppInstances() {
          VALUES ($1, $2, 'physical_server', 'on_premise', 'prod', 'active', now(), now()) RETURNING id`, [t, name]);
       await runner.query(`INSERT INTO app_asset_assignments (tenant_id, asset_id, app_instance_id, role) VALUES ($1, $2, $3, 'app')`, [t, asset, instance]);
     }
-    await expectRefusal(runner, () => svc.delete(instance, null, { manager: m }), 'APP_INSTANCE_IN_USE',
-      [{ type: 'server_assignments', total: 2 }], /^Cannot delete instance with server assignments/);
+    await expectRefusal(runner, () => svc.delete(instance, null, { manager: m }), 'DEPLOYMENT_IN_USE',
+      [{ type: 'server_assignments', total: 2 }], /^Cannot delete deployment with server assignments/);
   });
 }
 

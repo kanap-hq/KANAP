@@ -463,7 +463,7 @@ describe.each(['opex', 'capex'] as const)('BudgetLineRelationsTab %s', (nature) 
     fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(name=Vendor portal)' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith(`${itemsApi}/line-1/links/l-1`));
 
-    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(name=contract.pdf)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeFileNamed(name=contract.pdf)' }));
     expect(mocked.patch).not.toHaveBeenCalledWith(`${itemsApi}/attachments/a-1/delete`, {});
     expect(await screen.findByText('ops:confirmations.deleteAttachment(name=contract.pdf)')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));

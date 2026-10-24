@@ -165,3 +165,30 @@ describe('RelationsTable at narrow width', () => {
     expect(cell).not.toHaveAttribute('title');
   });
 });
+
+describe('RelationsTable rows as links', () => {
+  it('makes the name cell a real link to the row page, and the row no longer a tab stop', () => {
+    render(
+      <MemoryRouter>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <RelationsTable columns={COLUMNS.slice(0, 2)} rows={ROWS} rowKey={(row) => row.id} rowHref={(row) => `/it/technologies/${row.id}`} linkRows />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    const link = screen.getByRole('link', { name: 'PostgreSQL' });
+    expect(link.getAttribute('href')).toBe('/it/technologies/TEC-1');
+    expect(link.closest('tr')).not.toHaveAttribute('tabindex');
+  });
+
+  it('keeps a plain row that opens on click and Enter when the table does not ask for links', () => {
+    render(
+      <MemoryRouter>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <RelationsTable columns={COLUMNS.slice(0, 2)} rows={ROWS} rowKey={(row) => row.id} rowHref={(row) => `/it/technologies/${row.id}`} />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByText('PostgreSQL').closest('tr')).toHaveAttribute('tabindex', '0');
+  });
+});

@@ -163,12 +163,42 @@ describe('ApplicationsPage', () => {
     expect(style.height).toBe('100%');
   });
 
+  it('keeps an obsolete deployment in the environment pills, greyed and struck through, and hides a retired one', () => {
+    renderPage();
+    const Cell = lastProps().columns.find((column) => (column as { colId?: string }).colId === 'environments')!.cellRenderer!;
+    render(
+      <MemoryRouter>
+        <Cell
+          data={{
+            id: 'a-1',
+            name: 'Payroll',
+            instances: [
+              { environment: 'qa', lifecycle: 'deprecated' },
+              { environment: 'prod', lifecycle: 'active' },
+              { environment: 'dev', lifecycle: 'retired' },
+            ],
+          }}
+        />
+      </MemoryRouter>,
+    );
+    const pills = screen.getAllByText(/^pages\.applications\.environments\..*\.short$/).map((node) => node.textContent);
+    expect(pills).toEqual(['pages.applications.environments.prod.short', 'pages.applications.environments.qa.short']);
+    const qa = screen.getByText('pages.applications.environments.qa.short').closest('a')!;
+    expect(qa.getAttribute('aria-label')).toContain('pages.applications.environments.qa.name');
+    // The label is a span inside the link: the grid resets the colour and decoration of every link in a cell.
+    const qaLabel = screen.getByText('pages.applications.environments.qa.short');
+    const prodLabel = screen.getByText('pages.applications.environments.prod.short');
+    // The test theme has no `kanap` palette, so the grey is not checked here; the strike-through is.
+    expect(window.getComputedStyle(qaLabel).textDecoration).toContain('line-through');
+    expect(window.getComputedStyle(prodLabel).textDecoration).not.toContain('line-through');
+  });
+
   it('shows the vulnerabilities to review after the name while the feed is on, linked to the filtered page', async () => {
     features.vulnerabilityFeed = true;
     renderPage();
     const fields = lastProps().columns.map((column) => column.field);
-    expect(fields.slice(0, 2)).toEqual(['name', 'vulnerabilities_to_review']);
-    const column = lastProps().columns[1];
+    expect(fields.slice(0, 3)).toEqual(['sequential_id', 'name', 'vulnerabilities_to_review']);
+    const column = lastProps().columns[2];
     expect(column.sortable).not.toBe(false);
     expect(await column.filterParams.getValues()).toEqual([
       { value: 'severe', label: 'pages.technologies.vulnerabilityFilter.severe' },

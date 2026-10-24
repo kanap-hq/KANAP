@@ -44,15 +44,31 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     return new RecordInUseException('APPLICATION_HAS_INTERFACES', 'application', app.name, [{ type: 'interfaces', total: app.interfaces }]);
   }
 
-  /** The asked applications of the tenant, with their interface and deployment counts. */
-  private async readCounts(ids: string[], manager: EntityManager): Promise<Array<{ id: string; name: string; interfaces: number; deployments: number; documents: number }>> {
+  /**
+   * The asked applications of the tenant, with their interface, deployment and managed document
+   * counts. The description (the overview slot, created when the page first opens) is no document of
+   * its own: `description` is 1 when it holds text, in its document or, before that, in the column.
+   */
+  private async readCounts(ids: string[], manager: EntityManager): Promise<Array<{ id: string; name: string; interfaces: number; deployments: number; documents: number; description: number }>> {
     return manager.query(
       `SELECT a.id, a.name,
               (SELECT count(*)::int FROM interfaces i
                 WHERE i.tenant_id = a.tenant_id AND (i.source_application_id = a.id OR i.target_application_id = a.id)) AS interfaces,
               (SELECT count(*)::int FROM app_instances d WHERE d.tenant_id = a.tenant_id AND d.application_id = a.id) AS deployments,
               (SELECT count(*)::int FROM integrated_document_bindings b
-                WHERE b.tenant_id = a.tenant_id AND b.source_entity_type = 'applications' AND b.source_entity_id = a.id) AS documents
+                WHERE b.tenant_id = a.tenant_id AND b.source_entity_type = 'applications' AND b.source_entity_id = a.id
+                  AND b.slot_key <> 'overview') AS documents,
+              CASE WHEN EXISTS (
+                     SELECT 1 FROM integrated_document_bindings b
+                       JOIN documents d ON d.id = b.document_id AND d.tenant_id = b.tenant_id
+                      WHERE b.tenant_id = a.tenant_id AND b.source_entity_type = 'applications' AND b.source_entity_id = a.id
+                        AND b.slot_key = 'overview' AND coalesce(d.content_markdown, '') ~ '\\S')
+                     OR (NOT EXISTS (
+                           SELECT 1 FROM integrated_document_bindings b
+                            WHERE b.tenant_id = a.tenant_id AND b.source_entity_type = 'applications' AND b.source_entity_id = a.id
+                              AND b.slot_key = 'overview')
+                         AND coalesce(a.description, '') ~ '\\S')
+                   THEN 1 ELSE 0 END AS description
          FROM applications a
         WHERE a.tenant_id = app_current_tenant() AND a.id = ANY($1::uuid[])`,
       [ids],
@@ -61,8 +77,8 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
 
   /**
    * The check before a delete (`POST /applications/delete-check`): the applications of `ids` with
-   * interfaces, which the delete refuses, and what the others take with them (`removes`, their
-   * deployments and managed documents counted). Nothing is written.
+   * interfaces, which the delete refuses, and what the others take with them (`removes`: their
+   * descriptions when written, their deployments and other managed documents counted). Nothing is written.
    */
   async deleteCheck(ids: string[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[]; removes: UsageCount[] }> {
     const manager = opts?.manager ?? this.repository.manager;
@@ -73,7 +89,9 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     const deleted = rows.filter((row) => row.interfaces === 0);
     const deployments = deleted.reduce((total, row) => total + row.deployments, 0);
     const documents = deleted.reduce((total, row) => total + row.documents, 0);
+    const descriptions = deleted.reduce((total, row) => total + row.description, 0);
     const removes: UsageCount[] = [];
+    if (descriptions > 0) removes.push({ type: 'descriptions', total: descriptions });
     if (deployments > 0) removes.push({ type: 'app_instances', total: deployments });
     if (documents > 0) removes.push({ type: 'documents', total: documents });
     return { refused, removes };

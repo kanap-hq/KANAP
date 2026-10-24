@@ -237,12 +237,14 @@
       "contributors_other": "{{count}} colaboradores",
       "interface_bindings_one": "{{count}} enlace de interfaz",
       "interface_bindings_other": "{{count}} enlaces de interfaz",
-      "server_assignments_one": "{{count}} asignación de servidor",
-      "server_assignments_other": "{{count}} asignaciones de servidor",
+      "server_assignments_one": "{{count}} servidor",
+      "server_assignments_other": "{{count}} servidores",
       "business_processes_one": "{{count}} proceso de negocio",
       "business_processes_other": "{{count}} procesos de negocio",
       "documents_one": "{{count}} documento",
       "documents_other": "{{count}} documentos",
+      "descriptions_one": "su descripción",
+      "descriptions_other": "{{count}} descripciones",
       "sub_folders_one": "{{count}} subcarpeta",
       "sub_folders_other": "{{count}} subcarpetas",
       "app_instances_one": "{{count}} despliegue",
@@ -767,7 +769,8 @@
     "departments": "Departamentos",
     "allDepartments": "Todos los departamentos",
     "newCategoryName": "Nombre de la nueva categoría",
-    "removeNamed": "Quitar {{name}}"
+    "removeNamed": "Quitar {{name}}",
+    "chooseServer": "Elegir un servidor"
   },
   "documentEditor": {
     "expandDocument": "Expandir documento",
@@ -1292,12 +1295,13 @@
     "newLink": "Nuevo enlace",
     "editLink": "Editar enlace",
     "editLinkNamed": "Editar {{name}}",
-    "removeNamed": "Quitar {{name}}",
+    "removeNamed": "Eliminar {{name}}",
     "placeholders": {
       "name": "p. ej., Portal del proveedor",
       "url": "p. ej., https://status.example.com"
     },
     "linksTitle": "Enlaces web",
-    "linksEmpty": "Ningún enlace web."
+    "linksEmpty": "Ningún enlace web.",
+    "removeFileNamed": "Eliminar el archivo {{name}}"
   }
 }

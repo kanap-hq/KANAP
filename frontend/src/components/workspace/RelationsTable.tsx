@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Button, IconButton, Typography, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 
 /** One column of a relations table. */
@@ -38,6 +38,11 @@ type TableProps<T> = {
   rowKey: (row: T) => string;
   /** The page a row opens: the whole row is a link. */
   rowHref?: (row: T) => string | null;
+  /**
+   * Makes the name cell a real link to `rowHref` (middle click, Tab then Enter, copy the address),
+   * the row keeping its click. Only for tables whose cells hold no link of their own.
+   */
+  linkRows?: boolean;
   /** What a click on a row does when it is not a page of the app (open a web link, download a file). */
   onRowOpen?: (row: T) => void;
   /** Shown faded (a disabled object stays listed). */
@@ -155,7 +160,7 @@ function titleCutCell(event: React.MouseEvent) {
  * headers, 13px cells, horizontal borders only, row hover, the whole row opens the object, and an
  * unlink icon revealed on hover. Shared by every object that shows its relations.
  */
-export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, onRowOpen, rowMuted, onRemove, removeLabel, canRemove, action, totals, ariaLabel }: TableProps<T>) {
+export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, linkRows, onRowOpen, rowMuted, onRemove, removeLabel, canRemove, action, totals, ariaLabel }: TableProps<T>) {
   const theme = useTheme();
   const navigate = useNavigate();
   const open = (row: T) => {
@@ -208,6 +213,14 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
           '& tbody tr:hover td': { backgroundColor: theme.palette.kanap.bg.hover },
           '& tbody tr[data-href]': { cursor: 'pointer' },
           '& tbody tr:focus-visible': { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: -2 },
+          '& a.relations-row-link': {
+            display: 'block',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            color: 'inherit',
+            textDecoration: 'none',
+            '&:focus-visible': { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2, borderRadius: '2px' },
+          },
           '& .relations-remove': { opacity: 0, transition: 'opacity 120ms' },
           '& tbody tr:hover .relations-remove, & .relations-remove:focus-visible': { opacity: 1 },
         }}
@@ -233,6 +246,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
             const opens = !!href || !!onRowOpen;
             const muted = rowMuted?.(row) ?? false;
             const nameIndex = columns.findIndex((column) => !column.width);
+            const linkIndex = linkRows && href ? Math.max(nameIndex, 0) : -1;
             const cells: React.ReactNode[] = [];
             for (let index = 0; index < columns.length;) {
               const column = columns[index];
@@ -245,7 +259,9 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
                   className={[column.align === 'right' && span === 1 ? 'r' : null, column.wrap ? 'w' : null].filter(Boolean).join(' ') || undefined}
                   sx={muted && index === nameIndex ? { '&&': { color: 'kanap.text.tertiary' } } : undefined}
                 >
-                  {column.render(row)}
+                  {index === linkIndex ? (
+                    <RouterLink to={href!} className="relations-row-link">{column.render(row)}</RouterLink>
+                  ) : column.render(row)}
                 </Box>,
               );
               index += span;
@@ -254,9 +270,9 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
               <tr
                 key={rowKey(row)}
                 data-href={href ?? (onRowOpen ? '' : undefined)}
-                tabIndex={opens ? 0 : undefined}
-                onClick={opens ? () => open(row) : undefined}
-                onKeyDown={opens ? (event) => { if (event.key === 'Enter') open(row); } : undefined}
+                tabIndex={opens && linkIndex < 0 ? 0 : undefined}
+                onClick={opens ? (event) => { if (!(event.target as HTMLElement).closest('a')) open(row); } : undefined}
+                onKeyDown={opens && linkIndex < 0 ? (event) => { if (event.key === 'Enter') open(row); } : undefined}
               >
                 {cells}
                 {action ? (

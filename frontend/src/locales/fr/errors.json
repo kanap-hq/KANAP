@@ -198,8 +198,8 @@
   "ROLE_BUILT_IN": "Ce rôle est fourni avec KANAP et ne peut pas être supprimé. Dupliquez-le pour obtenir un rôle modifiable.",
   "ROLE_IN_USE_one": "Ce rôle est attribué à {{usages}}. Attribuez-lui d’abord un autre rôle.",
   "ROLE_IN_USE_other": "Ce rôle est attribué à {{usages}}. Attribuez-leur d’abord un autre rôle.",
-  "APP_INSTANCE_IN_USE_one": "Cette instance a encore {{usages}}. Retirez-la d’abord.",
-  "APP_INSTANCE_IN_USE_other": "Cette instance a encore {{usages}}. Retirez-les d’abord.",
+  "DEPLOYMENT_IN_USE_one": "Ce déploiement a encore {{usages}}. Retirez-le d'abord.",
+  "DEPLOYMENT_IN_USE_other": "Ce déploiement a encore {{usages}}. Retirez-les d'abord.",
   "INTERFACE_HAS_BINDINGS_one": "Cette interface a {{usages}}. Supprimez sa liaison avec elle, ou retirez-la d’abord.",
   "INTERFACE_HAS_BINDINGS_other": "Cette interface a {{usages}}. Supprimez ses liaisons avec elle, ou retirez-les d’abord.",
   "MAPPING_SET_DEFAULT": "Le jeu de correspondances par défaut ne peut pas être supprimé. Définissez d’abord un autre jeu par défaut.",
@@ -229,9 +229,19 @@
   "suite_cycle": "Cette application contient déjà {{name}} : elle ne peut pas en faire partie.",
   "forbidden": "Vous n'avez pas les droits pour cette action.",
   "NO_ACCESS": "Ce compte n'a pas encore reçu d'accès. Demandez-le à un administrateur.",
+  "assignment_duplicate": "Ce serveur a déjà ce rôle sur ce déploiement.",
+  "assignment_cluster": "Un cluster ne peut pas être affecté : choisissez un serveur précis.",
+  "assignment_role_invalid": "Rôle inconnu. Choisissez un rôle de la liste.",
+  "deployment_environment_taken": "Cette application a déjà un déploiement {{environment}}.",
+  "deployment_lifecycle_invalid": "Cycle de vie inconnu : {{value}}. Choisissez un cycle de vie de la liste.",
+  "date_invalid": "{{field}} n’est pas une date valide.",
+  "deployment_environment_invalid": "Environnement inconnu : {{value}}. Choisissez un environnement de la liste.",
+  "body_required": "La requête est vide.",
+  "asset_required": "Choisissez un serveur.",
   "fields": {
     "rto_minutes": "L'objectif de temps de reprise (RTO)",
     "rpo_minutes": "L'objectif de point de reprise (RPO)",
-    "maxMtdMinutes": "La durée maximale d'interruption admissible"
+    "maxMtdMinutes": "La durée maximale d'interruption admissible",
+    "since_date": "La date « Depuis »"
   }
 }

@@ -42,7 +42,10 @@ function useServerOptions(search: string, opts?: { allowClusters?: boolean }) {
             q: search || undefined,
             limit: 50,
             sort: 'name:ASC',
-            is_cluster: opts?.allowClusters === false ? false : undefined,
+            // The assets list reads this from its filter model (the grid's format), not from a plain parameter.
+            filters: opts?.allowClusters === false
+              ? JSON.stringify({ is_cluster: { filterType: 'set', values: ['false'] } })
+              : undefined,
           },
         });
         if (isMounted) setOptions(res.data.items || []);
@@ -101,10 +104,17 @@ const ServerSelect: React.FC<ServerSelectProps> = ({
     return () => { isMounted = false; };
   }, [value, selectedOption]);
 
+  // The chosen server stays among the options, even when the current search no longer returns it.
+  const shownOptions = React.useMemo(
+    () => (selectedOption && !options.some((opt) => opt.id === selectedOption.id) ? [selectedOption, ...options] : options),
+    [options, selectedOption],
+  );
+
   const control = (
     <Autocomplete
-      options={options}
+      options={shownOptions}
       value={selectedOption}
+      isOptionEqualToValue={(option, current) => option.id === current.id}
       disabled={disabled}
       onChange={(_, newValue) => onChange(newValue?.id || null)}
       onInputChange={(_, v) => setInputValue(v)}
@@ -122,7 +132,7 @@ const ServerSelect: React.FC<ServerSelectProps> = ({
         <TextField
           {...params}
           required={required}
-          placeholder={placeholder ?? (naked ? t('selects.notSet') : undefined)}
+          placeholder={placeholder ?? (naked ? t('selects.chooseServer') : undefined)}
           helperText={helperText}
           variant="standard"
           sx={textFieldSx}

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
 import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
 import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
 import PendingAccessPage from '../pages/PendingAccessPage';
@@ -21,6 +21,8 @@ export default function ProtectedRoute() {
     token,
     isAuthenticating,
     serverUnavailable,
+    refreshRateLimited,
+    retryRefresh,
     sessionExpired,
     profile,
     claims,
@@ -43,7 +45,18 @@ export default function ProtectedRoute() {
         minHeight="100vh"
         px={2}
       >
-        {serverUnavailable ? (
+        {refreshRateLimited ? (
+          // Too many attempts: the refresh tries again by itself after the wait the server asks for;
+          // Retry starts the next attempt now, in the page.
+          <Stack spacing={1.5} alignItems="center">
+            <Typography role="status" sx={{ fontSize: 13, color: 'kanap.text.secondary', textAlign: 'center' }}>
+              {t('session.rateLimited')}
+            </Typography>
+            <Button variant="action" onClick={retryRefresh}>
+              {t('session.retry')}
+            </Button>
+          </Stack>
+        ) : serverUnavailable ? (
           <Typography role="status" sx={{ fontSize: 13, color: 'kanap.text.secondary', textAlign: 'center' }}>
             {t('session.serverUnavailable')}
           </Typography>

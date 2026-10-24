@@ -237,12 +237,14 @@
       "contributors_other": "{{count}} contributeurs",
       "interface_bindings_one": "{{count}} liaison d'interface",
       "interface_bindings_other": "{{count}} liaisons d'interface",
-      "server_assignments_one": "{{count}} affectation de serveur",
-      "server_assignments_other": "{{count}} affectations de serveur",
+      "server_assignments_one": "{{count}} serveur",
+      "server_assignments_other": "{{count}} serveurs",
       "business_processes_one": "{{count}} processus métier",
       "business_processes_other": "{{count}} processus métier",
       "documents_one": "{{count}} document",
       "documents_other": "{{count}} documents",
+      "descriptions_one": "sa description",
+      "descriptions_other": "{{count}} descriptions",
       "sub_folders_one": "{{count}} sous-dossier",
       "sub_folders_other": "{{count}} sous-dossiers",
       "app_instances_one": "{{count}} déploiement",
@@ -767,7 +769,8 @@
     "departments": "Départements",
     "allDepartments": "Tous les départements",
     "newCategoryName": "Nom de la nouvelle catégorie",
-    "removeNamed": "Retirer {{name}}"
+    "removeNamed": "Retirer {{name}}",
+    "chooseServer": "Choisir un serveur"
   },
   "documentEditor": {
     "expandDocument": "Agrandir le document",
@@ -1292,12 +1295,13 @@
     "newLink": "Nouveau lien",
     "editLink": "Modifier le lien",
     "editLinkNamed": "Modifier {{name}}",
-    "removeNamed": "Retirer {{name}}",
+    "removeNamed": "Supprimer {{name}}",
     "placeholders": {
       "name": "ex. : Portail de l’éditeur",
       "url": "ex. : https://status.example.com"
     },
     "linksTitle": "Liens web",
-    "linksEmpty": "Aucun lien web."
+    "linksEmpty": "Aucun lien web.",
+    "removeFileNamed": "Supprimer le fichier {{name}}"
   }
 }

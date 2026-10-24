@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AppInstance } from './app-instance.entity';
@@ -13,6 +13,9 @@ import {
   applicationParticipantCondition,
   ParticipationAccessScope,
 } from '../auth/business-contributor-scope';
+import { applicationBadRequest, applicationConflict } from '../applications/application-rules';
+
+type ServiceOpts = { manager?: EntityManager; tenantId?: string | null };
 
 const ENVIRONMENTS = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'] as const;
 type EnvironmentValue = (typeof ENVIRONMENTS)[number];
@@ -43,10 +46,18 @@ export class AppInstancesService {
     return manager ? manager.getRepository(AppAssetAssignment) : this.assignments;
   }
 
+  /** The request's tenant: the one the controller names, else the transaction's (`app.current_tenant`). */
+  private async tenantOf(manager: EntityManager, tenantId?: string | null): Promise<string> {
+    if (tenantId) return tenantId;
+    const [row] = await manager.query(`SELECT app_current_tenant() AS id`);
+    if (!row?.id) throw new InternalServerErrorException('Deployments need the request transaction.');
+    return String(row.id);
+  }
+
   private normalizeEnvironment(value: unknown): EnvironmentValue {
     const normalized = String(value || '').trim().toLowerCase();
     if (!ENVIRONMENTS.includes(normalized as EnvironmentValue)) {
-      throw new BadRequestException(`Invalid environment "${value}"`);
+      throw applicationBadRequest('deployment_environment_invalid', `Invalid environment "${value}"`, { value: String(value ?? '') });
     }
     return normalized as EnvironmentValue;
   }
@@ -91,6 +102,7 @@ export class AppInstancesService {
 
   private async ensureApplication(
     applicationId: string,
+    tenantId: string,
     manager?: EntityManager,
     accessScope?: ParticipationAccessScope,
   ): Promise<Application> {
@@ -106,6 +118,7 @@ export class AppInstancesService {
     } else {
       throw new NotFoundException('Application not found');
     }
+    qb.andWhere('app.tenant_id = :tenantId', { tenantId });
     if (accessScope) {
       qb.andWhere(applicationParticipantCondition('app', ':accessScopeUserId'), {
         accessScopeUserId: accessScope.userId,
@@ -118,11 +131,13 @@ export class AppInstancesService {
     return app;
   }
 
-  async list(applicationId: string, opts?: { manager?: EntityManager; accessScope?: ParticipationAccessScope }) {
-    const app = await this.ensureApplication(applicationId, opts?.manager, opts?.accessScope);
-    const repo = this.getRepo(opts?.manager);
+  async list(applicationId: string, opts?: ServiceOpts & { accessScope?: ParticipationAccessScope }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const tenantId = await this.tenantOf(mg, opts?.tenantId);
+    const app = await this.ensureApplication(applicationId, tenantId, mg, opts?.accessScope);
+    const repo = this.getRepo(mg);
     return repo.find({
-      where: { application_id: app.id } as any,
+      where: { tenant_id: tenantId, application_id: app.id } as any,
       order: { environment: 'ASC', created_at: 'ASC' } as any,
     });
   }
@@ -130,17 +145,23 @@ export class AppInstancesService {
   private async assertEnvironmentAvailable(
     applicationId: string,
     environment: EnvironmentValue,
+    tenantId: string,
     opts: { manager?: EntityManager; ignoreId?: string | null } = {},
   ) {
     const repo = this.getRepo(opts.manager);
     const existing = await repo.findOne({
       where: {
+        tenant_id: tenantId,
         application_id: applicationId,
         environment,
       } as any,
     });
     if (existing && existing.id !== opts.ignoreId) {
-      throw new BadRequestException(`Environment "${environment}" already exists for this application`);
+      throw applicationConflict(
+        'deployment_environment_taken',
+        `Environment "${environment}" already exists for this application`,
+        { environment },
+      );
     }
   }
 
@@ -148,16 +169,17 @@ export class AppInstancesService {
     applicationId: string,
     payload: any,
     userId: string | null,
-    opts?: { manager?: EntityManager },
+    opts?: ServiceOpts,
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = this.getRepo(mg);
-    const app = await this.ensureApplication(applicationId, mg);
-    if (!payload) {
-      throw new BadRequestException('Body is required');
+    const tenantId = await this.tenantOf(mg, opts?.tenantId);
+    const app = await this.ensureApplication(applicationId, tenantId, mg);
+    if (!payload || typeof payload !== 'object') {
+      throw applicationBadRequest('body_required', 'Body is required');
     }
     const environment = this.normalizeEnvironment(payload.environment ?? payload.env ?? payload.environment_id);
-    await this.assertEnvironmentAvailable(app.id, environment, { manager: mg });
+    await this.assertEnvironmentAvailable(app.id, environment, tenantId, { manager: mg });
 
     const ssoEnabled = this.normalizeBoolean(payload.sso_enabled, app.sso_enabled);
     const mfaSupported = this.normalizeBoolean(payload.mfa_supported, app.mfa_supported);
@@ -169,6 +191,7 @@ export class AppInstancesService {
     });
 
     const instance = repo.create({
+      tenant_id: tenantId,
       application_id: app.id,
       environment,
       lifecycle,
@@ -189,28 +212,29 @@ export class AppInstancesService {
     return saved;
   }
 
-  private async findOrFail(instanceId: string, manager?: EntityManager) {
+  private async findOrFail(instanceId: string, tenantId: string, manager?: EntityManager) {
     const repo = this.getRepo(manager);
-    const instance = await repo.findOne({ where: { id: instanceId } as any });
+    const instance = await repo.findOne({ where: { id: instanceId, tenant_id: tenantId } as any });
     if (!instance) {
       throw new NotFoundException('App instance not found');
     }
     return instance;
   }
 
-  async update(instanceId: string, payload: any, userId: string | null, opts?: { manager?: EntityManager }) {
+  async update(instanceId: string, payload: any, userId: string | null, opts?: ServiceOpts) {
     const mg = opts?.manager ?? this.repo.manager;
     if (!payload || typeof payload !== 'object') {
-      throw new BadRequestException('Body is required');
+      throw applicationBadRequest('body_required', 'Body is required');
     }
     const repo = this.getRepo(mg);
-    const existing = await this.findOrFail(instanceId, mg);
+    const tenantId = await this.tenantOf(mg, opts?.tenantId);
+    const existing = await this.findOrFail(instanceId, tenantId, mg);
     const before = { ...existing };
     let lifecycle: string | undefined;
 
     if (payload.environment && payload.environment !== existing.environment) {
       const env = this.normalizeEnvironment(payload.environment);
-      await this.assertEnvironmentAvailable(existing.application_id, env, { manager: mg, ignoreId: instanceId });
+      await this.assertEnvironmentAvailable(existing.application_id, env, tenantId, { manager: mg, ignoreId: instanceId });
       existing.environment = env;
     }
 
@@ -268,28 +292,30 @@ export class AppInstancesService {
     return saved;
   }
 
-  async delete(instanceId: string, userId: string | null, opts?: { manager?: EntityManager }) {
+  async delete(instanceId: string, userId: string | null, opts?: ServiceOpts) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = this.getRepo(mg);
-    const instance = await this.findOrFail(instanceId, mg);
+    const tenantId = await this.tenantOf(mg, opts?.tenantId);
+    const instance = await this.findOrFail(instanceId, tenantId, mg);
 
     const bindingsRepo = this.getBindingsRepo(mg);
     const bindingCount = await bindingsRepo
       .createQueryBuilder('b')
-      .where('b.source_instance_id = :id OR b.target_instance_id = :id', { id: instanceId })
+      .where('b.tenant_id = :tenantId', { tenantId })
+      .andWhere('(b.source_instance_id = :id OR b.target_instance_id = :id)', { id: instanceId })
       .getCount();
     const assignmentsRepo = this.getAssignmentsRepo(mg);
-    const assignmentCount = await assignmentsRepo.count({ where: { app_instance_id: instanceId } as any });
-    // Both counted, for one refusal the interface words (APP_INSTANCE_IN_USE): remove them first.
+    const assignmentCount = await assignmentsRepo.count({ where: { tenant_id: tenantId, app_instance_id: instanceId } as any });
+    // Both counted, for one refusal the interface words (DEPLOYMENT_IN_USE): remove them first.
     const usages: UsageCount[] = [];
     if (bindingCount > 0) usages.push({ type: 'interface_bindings', total: bindingCount });
     if (assignmentCount > 0) usages.push({ type: 'server_assignments', total: assignmentCount });
     if (usages.length > 0) {
-      throw new RecordInUseException('APP_INSTANCE_IN_USE', 'instance', instance.environment, usages,
-        `Cannot delete instance with ${bindingCount > 0 ? 'active interface bindings' : 'server assignments'}. Remove them first.`);
+      throw new RecordInUseException('DEPLOYMENT_IN_USE', 'deployment', instance.environment, usages,
+        `Cannot delete deployment with ${bindingCount > 0 ? 'active interface bindings' : 'server assignments'}. Remove them first.`);
     }
 
-    await repo.delete({ id: instanceId } as any);
+    await repo.delete({ id: instanceId, tenant_id: tenantId } as any);
     await this.audit.log(
       { table: 'app_instances', recordId: instanceId, action: 'delete', before: instance, after: null, userId },
       { manager: mg },
@@ -311,7 +337,7 @@ export class AppInstancesService {
     }
     const normalized = String(value).trim().toLowerCase();
     if (!allowed.includes(normalized)) {
-      throw new BadRequestException(`Invalid lifecycle "${value}"`);
+      throw applicationBadRequest('deployment_lifecycle_invalid', `Invalid lifecycle "${value}"`, { value: String(value) });
     }
     return normalized;
   }
