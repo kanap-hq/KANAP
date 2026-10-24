@@ -23,6 +23,12 @@ export interface TaskListItem {
   related_object_type: string | null;
   related_object_id: string | null;
   related_object_name: string | null;
+  /**
+   * Set (true) when the task names a budget line the person cannot read (data-scoped access, spec
+   * §5.4 "Champ simple"): `related_object_name` is then the line's reference alone (`BL-12`), shown
+   * without a link. Absent otherwise.
+   */
+  related_object_hidden?: true;
   // Task type (FK to portfolio_task_types)
   task_type_id: string | null;
   task_type_name: string | null;
@@ -723,6 +729,24 @@ const TASK_TEXT_SORTS = new Set([
 ]);
 
 /** The ORDER BY key of a task list field: text alphabetically, the creation date by default. */
+/**
+ * The reference of the budget line a task names when the line join found nothing: under a limited
+ * access, a line the person cannot read (`data_access_reference`, SECURITY DEFINER, checks that the
+ * task is visible). NULL for every other task, and for an unscoped person's task whose line exists.
+ */
+const TASK_HIDDEN_LINE_REFERENCE_SQL = `CASE
+          WHEN t.related_object_type IN ('spend_item', 'capex_item') AND t.related_object_id IS NOT NULL
+               AND si.id IS NULL AND ci.id IS NULL
+          THEN data_access_reference('task', t.id)
+        END`;
+
+/** A row of the list or the detail: a hidden line shows as its reference (`related_object_hidden`). */
+function withHiddenLineReference(row: TaskListItem & { related_object_reference?: string | null }): TaskListItem {
+  const { related_object_reference: reference, ...task } = row;
+  if (!reference) return task;
+  return { ...task, related_object_name: reference, related_object_hidden: true };
+}
+
 async function taskSortKey(manager: EntityManager, field: string): Promise<string> {
   const expr = TASK_SORT_EXPRESSIONS[field] ?? 't.created_at';
   return TASK_TEXT_SORTS.has(field) ? (await textSortKey(manager))(expr) : expr;
@@ -807,6 +831,7 @@ export class TasksService {
           WHEN t.related_object_type = 'project' THEN pp.name
           ELSE ''
         END as related_object_name,
+        ${TASK_HIDDEN_LINE_REFERENCE_SQL} AS related_object_reference,
         t.task_type_id,
         tt.name as task_type_name,
         tt.code as task_type_code,
@@ -860,7 +885,7 @@ export class TasksService {
       LIMIT ${limit} OFFSET ${skip}
     `;
 
-    const items = await manager.query(dataQuery, params);
+    const items: TaskListItem[] = (await manager.query(dataQuery, params)).map(withHiddenLineReference);
 
     return { items, total, page, limit };
   }
@@ -1082,6 +1107,7 @@ export class TasksService {
           WHEN t.related_object_type = 'project' THEN pp.name
           ELSE ''
         END as related_object_name,
+        ${TASK_HIDDEN_LINE_REFERENCE_SQL} AS related_object_reference,
         t.task_type_id,
         tt.name as task_type_name,
         tt.code as task_type_code,
@@ -1130,7 +1156,7 @@ export class TasksService {
         ${accessWhere}
       LIMIT 1
     `;
-    const rows: TaskListItem[] = await manager.query(dataQuery, params);
+    const rows: TaskListItem[] = (await manager.query(dataQuery, params)).map(withHiddenLineReference);
     const task = rows[0];
     if (!task) return null;
 
