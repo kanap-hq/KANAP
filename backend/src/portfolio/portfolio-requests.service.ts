@@ -18,8 +18,9 @@ import { PortfolioRequestUrl } from './portfolio-request-url.entity';
 import { PortfolioRequestAttachment } from './portfolio-request-attachment.entity';
 import { PortfolioRequestOpex } from './portfolio-request-opex.entity';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, OPEX_ITEMS_NOT_FOUND } from './project-budget-links.util';
-import { assertNoHiddenLines } from '../data-access/hidden-links';
+import { assertNoHiddenLines, hiddenLineCount } from '../data-access/hidden-links';
 import { activityBudgetLines, budgetLineActivitiesForReader } from './budget-line-activity';
+import { countRelatedBudgetLines, type RelationLinkTable } from '../common/relations/related-objects';
 import { PortfolioRequestBusinessProcess } from './portfolio-request-business-process.entity';
 import { PortfolioRequestDependency } from './portfolio-request-dependency.entity';
 import { PortfolioProjectDependency } from './portfolio-project-dependency.entity';
@@ -264,6 +265,9 @@ export async function convertedRequestPurpose(
     ? await normalizeMarkdownRichText(purposeOverride)
     : await normalizeMarkdownRichText(taskDescription, { fieldName: 'purpose', enforceSizeLimit: false });
 }
+
+/** The request's links to budget lines, both natures (lot Z1). */
+const REQUEST_BUDGET_LINES: RelationLinkTable = { links: 'portfolio_request_opex', owner: 'request_id', target: 'opex_id' };
 
 /**
  * The request lists' column filters (the list, its ids and its filter values): one map, so the
@@ -1017,30 +1021,38 @@ export class PortfolioRequestsService {
       }));
     }
 
-    // Load CAPEX items
-    if (include.has('financials') || include.has('capex')) {
-      result.capex_items = await mg.query(
-        `SELECT c.id, c.product_name AS description, c.item_number, c.currency, c.status,
-                sup.name as supplier_name
-         FROM portfolio_request_opex rc
-         JOIN spend_items c ON c.id = rc.opex_id AND c.nature = 'capex'
-         LEFT JOIN suppliers sup ON sup.id = c.supplier_id
-         WHERE rc.request_id = $1`,
-        [id]
-      );
-    }
-
-    // Load OPEX items
-    if (include.has('financials') || include.has('opex')) {
-      result.opex_items = await mg.query(
-        `SELECT s.id, s.product_name, s.item_number, s.description, s.currency, s.status,
-                sup.name as supplier_name
-         FROM portfolio_request_opex ro
-         JOIN spend_items s ON s.id = ro.opex_id AND s.nature = 'opex'
-         LEFT JOIN suppliers sup ON sup.id = s.supplier_id
-         WHERE ro.request_id = $1`,
-        [id]
-      );
+    // Budget lines: listed for a reader with the budget right (the lines they can read, the others
+    // counted), counted only without it, as the Relations tab (spec §5.4).
+    const wantsCapex = include.has('capex') || include.has('financials');
+    const wantsOpex = include.has('opex') || include.has('financials');
+    if ((wantsCapex || wantsOpex) && opts?.readsBudget !== true) {
+      if (wantsCapex) result.capex_items = null;
+      if (wantsOpex) result.opex_items = null;
+      result.budget_lines_hidden = await countRelatedBudgetLines(mg, REQUEST_BUDGET_LINES, 'request', request.tenant_id, id);
+    } else if (wantsCapex || wantsOpex) {
+      result.budget_lines_hidden = await hiddenLineCount(mg, 'request', id);
+      if (wantsCapex) {
+        result.capex_items = await mg.query(
+          `SELECT c.id, c.product_name AS description, c.item_number, c.currency, c.status,
+                  sup.name as supplier_name
+           FROM portfolio_request_opex rc
+           JOIN spend_items c ON c.id = rc.opex_id AND c.nature = 'capex'
+           LEFT JOIN suppliers sup ON sup.id = c.supplier_id
+           WHERE rc.request_id = $1`,
+          [id]
+        );
+      }
+      if (wantsOpex) {
+        result.opex_items = await mg.query(
+          `SELECT s.id, s.product_name, s.item_number, s.description, s.currency, s.status,
+                  sup.name as supplier_name
+           FROM portfolio_request_opex ro
+           JOIN spend_items s ON s.id = ro.opex_id AND s.nature = 'opex'
+           LEFT JOIN suppliers sup ON sup.id = s.supplier_id
+           WHERE ro.request_id = $1`,
+          [id]
+        );
+      }
     }
 
     // Load business processes

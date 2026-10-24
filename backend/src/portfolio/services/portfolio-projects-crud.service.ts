@@ -25,7 +25,12 @@ import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { activityBudgetLines, budgetLineActivitiesForReader } from '../budget-line-activity';
+import { hiddenLineCount } from '../../data-access/hidden-links';
+import { countRelatedBudgetLines, type RelationLinkTable } from '../../common/relations/related-objects';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
+
+/** The project's links to budget lines, both natures (lot Z1). */
+const PROJECT_BUDGET_LINES: RelationLinkTable = { links: 'portfolio_project_opex', owner: 'project_id', target: 'opex_id' };
 
 /**
  * Service for core CRUD operations on portfolio projects.
@@ -261,30 +266,38 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       );
     }
 
-    // Load CAPEX items
-    if (include.has('capex') || include.has('financials')) {
-      result.capex_items = await mg.query(
-        `SELECT c.id, c.product_name AS description, c.item_number, c.currency, c.status,
-                sup.name as supplier_name
-         FROM portfolio_project_opex pc
-         JOIN spend_items c ON c.id = pc.opex_id AND c.nature = 'capex'
-         LEFT JOIN suppliers sup ON sup.id = c.supplier_id
-         WHERE pc.project_id = $1`,
-        [id]
-      );
-    }
-
-    // Load OPEX items
-    if (include.has('opex') || include.has('financials')) {
-      result.opex_items = await mg.query(
-        `SELECT s.id, s.product_name, s.item_number, s.description, s.currency, s.status,
-                sup.name as supplier_name
-         FROM portfolio_project_opex po
-         JOIN spend_items s ON s.id = po.opex_id AND s.nature = 'opex'
-         LEFT JOIN suppliers sup ON sup.id = s.supplier_id
-         WHERE po.project_id = $1`,
-        [id]
-      );
+    // Budget lines: listed for a reader with the budget right (the lines they can read, the others
+    // counted), counted only without it, as the Relations tab (spec §5.4).
+    const wantsCapex = include.has('capex') || include.has('financials');
+    const wantsOpex = include.has('opex') || include.has('financials');
+    if ((wantsCapex || wantsOpex) && opts?.readsBudget !== true) {
+      if (wantsCapex) result.capex_items = null;
+      if (wantsOpex) result.opex_items = null;
+      result.budget_lines_hidden = await countRelatedBudgetLines(mg, PROJECT_BUDGET_LINES, 'project', project.tenant_id, id);
+    } else if (wantsCapex || wantsOpex) {
+      result.budget_lines_hidden = await hiddenLineCount(mg, 'project', id);
+      if (wantsCapex) {
+        result.capex_items = await mg.query(
+          `SELECT c.id, c.product_name AS description, c.item_number, c.currency, c.status,
+                  sup.name as supplier_name
+           FROM portfolio_project_opex pc
+           JOIN spend_items c ON c.id = pc.opex_id AND c.nature = 'capex'
+           LEFT JOIN suppliers sup ON sup.id = c.supplier_id
+           WHERE pc.project_id = $1`,
+          [id]
+        );
+      }
+      if (wantsOpex) {
+        result.opex_items = await mg.query(
+          `SELECT s.id, s.product_name, s.item_number, s.description, s.currency, s.status,
+                  sup.name as supplier_name
+           FROM portfolio_project_opex po
+           JOIN spend_items s ON s.id = po.opex_id AND s.nature = 'opex'
+           LEFT JOIN suppliers sup ON sup.id = s.supplier_id
+           WHERE po.project_id = $1`,
+          [id]
+        );
+      }
     }
 
     return result;

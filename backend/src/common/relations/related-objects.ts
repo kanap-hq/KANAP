@@ -198,10 +198,25 @@ export async function readRelatedBudgetLines(
   measure: string,
   readsBudget: boolean,
 ): Promise<RelatedBudgetLinesSection> {
-  const hidden = await hiddenLineCount(mg, owner, ownerId);
   if (readsBudget) {
+    const hidden = await hiddenLineCount(mg, owner, ownerId);
     return { budget_lines: await listRelatedBudgetLines(mg, fxRates, t, tenantId, ownerId, year, measure), budget_lines_hidden: hidden };
   }
+  return { budget_lines: null, budget_lines_hidden: await countRelatedBudgetLines(mg, t, owner, tenantId, ownerId) };
+}
+
+/**
+ * Every budget line linked through `t.links`, those the person reads and those they cannot: what a
+ * person without the budget right sees instead of the lines ("3 budget lines").
+ */
+export async function countRelatedBudgetLines(
+  mg: EntityManager,
+  t: RelationLinkTable,
+  owner: HiddenLineOwner,
+  tenantId: string,
+  ownerId: string,
+): Promise<number> {
+  const hidden = await hiddenLineCount(mg, owner, ownerId);
   const line = t.target ?? 'spend_item_id';
   const [row]: Array<{ n: number }> = await mg.query(
     `SELECT count(DISTINCT i.id)::int AS n
@@ -210,7 +225,7 @@ export async function readRelatedBudgetLines(
      WHERE l.tenant_id = $1 AND l.${t.owner} = $2`,
     [tenantId, ownerId],
   );
-  return { budget_lines: null, budget_lines_hidden: Number(row?.n ?? 0) + hidden };
+  return Number(row?.n ?? 0) + hidden;
 }
 
 /** The contracts linked through `t.links` (column `contract_id`), with their current end and renewal window. */

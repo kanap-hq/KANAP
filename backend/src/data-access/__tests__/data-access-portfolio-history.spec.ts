@@ -27,6 +27,10 @@ import { Seed, seed } from './data-access-line-seed';
  * - Without the budget right (Rita or Ulla): the number of lines only, for every row.
  * No reader ever gets a line id, and Rita never gets L5's name.
  *
+ * The lines themselves (`include=financials`, `capex`, `opex`) follow the Relations tab: the lines
+ * the person reads and `budget_lines_hidden` with the budget right, `null` lists and the number of
+ * every linked line without it.
+ *
  * Needs the role kanap_data_limited (CI installs it); skipped without it, failed in CI.
  */
 
@@ -159,6 +163,40 @@ async function run() {
         });
       }
       console.log('  history: labels per reader, hidden lines counted, counts only without the budget right, no ids: OK');
+
+      // The lines themselves (`include=financials`, or `capex,opex`): the same rule as the Relations
+      // tab. Both objects are linked to L1 and L5 by now.
+      for (const owner of ['project', 'request'] as const) {
+        const read = async (m: EntityManager, include: string, readsBudget: boolean) => {
+          const result: any = owner === 'project'
+            ? await services.projects.get(ids[owner], { include }, { manager: m, readsBudget })
+            : await services.requests.get(ids[owner], { include }, { manager: m, readsBudget });
+          return {
+            opex: result.opex_items === null ? null : (result.opex_items as any[]).map((line) => line.id).sort(),
+            capex: result.capex_items === null ? null : (result.capex_items as any[]).map((line) => line.id),
+            hidden: result.budget_lines_hidden,
+            raw: JSON.stringify(result),
+          };
+        };
+        await as(runner, s.persons.rita, async (m) => {
+          for (const include of ['financials', 'capex,opex']) {
+            const limited = await read(m, include, true);
+            assert.deepEqual({ opex: limited.opex, capex: limited.capex, hidden: limited.hidden }, { opex: [s.lines.L1], capex: [], hidden: 1 }, `rita, ${owner} ${include}: L1 listed, L5 counted`);
+            assert.ok(!limited.raw.includes(L5) && !limited.raw.includes(s.lines.L5), `rita, ${owner}: nothing of L5`);
+            const counted = await read(m, include, false);
+            assert.deepEqual({ opex: counted.opex, capex: counted.capex, hidden: counted.hidden }, { opex: null, capex: null, hidden: 2 }, `rita without the budget right, ${owner} ${include}: count only`);
+            assert.ok(!counted.raw.includes(L1), `rita without the budget right, ${owner}: no name`);
+          }
+        });
+        await as(runner, s.persons.ulla, async (m) => {
+          const all = await read(m, 'financials', true);
+          assert.deepEqual({ opex: all.opex, hidden: all.hidden }, { opex: [s.lines.L1, s.lines.L5].sort(), hidden: 0 }, `ulla, ${owner}: both lines`);
+          const counted = await read(m, 'financials', false);
+          assert.deepEqual({ opex: counted.opex, capex: counted.capex, hidden: counted.hidden }, { opex: null, capex: null, hidden: 2 }, `ulla without the budget right, ${owner}: count only`);
+          assert.ok(!counted.raw.includes(L1) && !counted.raw.includes(L5), `ulla without the budget right, ${owner}: no name`);
+        });
+      }
+      console.log('  financials: readable lines and the hidden count with the budget right, count only without it: OK');
     } finally {
       await runner.rollbackTransaction();
     }

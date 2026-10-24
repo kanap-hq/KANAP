@@ -1907,6 +1907,11 @@ export class AiQueryExecutor {
     throw entityNotFound(entityType, value);
   }
 
+  /** The person reads the budget: a project's or request's budget lines are named, else counted. */
+  private async readsBudget(context: AiExecutionContextWithManager): Promise<boolean> {
+    return (await this.policy?.canReadEntityType(context, 'spend_items', context.manager)) === true;
+  }
+
   private toDetailResult(
     entity: AiEntitySummaryDto,
     row: unknown,
@@ -2316,7 +2321,7 @@ export class AiQueryExecutor {
       const row = await this.projects.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,source_requests,urls,dependencies,attachments,phases,milestones,financials' },
-        { manager: context.manager, tenantId: context.tenantId, accessScope },
+        { manager: context.manager, tenantId: context.tenantId, accessScope, readsBudget: await this.readsBudget(context) },
       );
       return this.toDetailResult(this.mapProject(row), row);
     }
@@ -2325,7 +2330,7 @@ export class AiQueryExecutor {
       const row = await this.requests.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,origin_task,urls,attachments,projects,dependencies,financials,business_processes' },
-        { manager: context.manager, accessScope },
+        { manager: context.manager, accessScope, readsBudget: await this.readsBudget(context) },
       );
       return this.toDetailResult(this.mapRequest(row), row);
     }
