@@ -103,6 +103,19 @@ describe('DateEUField keeps the rest of the date while editing the middle', () =
     expect(onChangeYmd).toHaveBeenLastCalledWith('2022-03-21');
   });
 
+  it('deletes a month digit with backspace instead of padding it back', async () => {
+    const user = userEvent.setup();
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    input.setSelectionRange(5, 5);
+    await user.keyboard('{Backspace}');
+    expect(input.value).toBe('15/0/2022');
+    await user.keyboard('{Backspace}');
+    expect(input.value).toBe('15//2022');
+    expect(onChangeYmd).not.toHaveBeenCalled();
+  });
+
   it('keeps an extra digit visible instead of swallowing it', () => {
     const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
     const input = screen.getByRole('textbox') as HTMLInputElement;

@@ -143,7 +143,7 @@ export type EuPartialFormat = { text: string; caret: number };
  * zero is dropped again when the second digit arrives. Extra digits stay in the text (and make it
  * invalid) instead of being silently swallowed.
  */
-export function formatEuPartialAt(raw: string, caret: number | null, sep: DateInputSeparator = '/'): EuPartialFormat {
+export function formatEuPartialAt(raw: string, caret: number | null, sep: DateInputSeparator = '/', padShortParts = true): EuPartialFormat {
   const value = String(raw ?? '');
   const position = Math.max(0, Math.min(caret ?? value.length, value.length));
 
@@ -179,7 +179,7 @@ export function formatEuPartialAt(raw: string, caret: number | null, sep: DateIn
     }
     const hasLater = i < parsed.length - 1;
     let pad = 0;
-    if (i < 2 && combined.length > 0 && combined.length < widths[i] && hasLater) {
+    if (padShortParts && i < 2 && combined.length > 0 && combined.length < widths[i] && hasLater) {
       pad = widths[i] - combined.length;
     }
     let kept = combined;

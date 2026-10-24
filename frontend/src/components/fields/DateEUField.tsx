@@ -64,7 +64,9 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
 
   const onTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
-    const { text: formatted, caret } = formatEuPartialAt(raw, e.target.selectionStart ?? raw.length, sep);
+    const inputType = (e.nativeEvent as InputEvent).inputType;
+    const deleting = inputType === 'deleteContentBackward' || inputType === 'deleteContentForward';
+    const { text: formatted, caret } = formatEuPartialAt(raw, e.target.selectionStart ?? raw.length, sep, !deleting);
     setText(formatted);
     pendingCaretRef.current = caret;
     const ymd = euToYmd(formatted);
