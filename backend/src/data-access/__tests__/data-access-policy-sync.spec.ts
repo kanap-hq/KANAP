@@ -200,7 +200,7 @@ async function testExecuteMissing(admin: PgClient): Promise<void> {
     assert.equal(await hasExecute(admin, invoker), true, 'EXECUTE granted to the role');
 
     // A disclosure function the application calls directly, outside any policy.
-    for (const direct of ['data_access_hidden_count(text, uuid)', 'data_access_reference(text, uuid)']) {
+    for (const direct of ['data_access_hidden_count(text, uuid)', 'data_access_reference(text, uuid)', 'data_access_can_read(uuid, text, uuid)']) {
       await admin.query(`REVOKE EXECUTE ON FUNCTION ${direct} FROM ${LIMITED_ROLE}`);
       assert.equal(await hasExecute(admin, direct), false, `the scenario revokes EXECUTE on ${direct}`);
       assert.deepEqual(await checkDataAccessAvailability(session), { available: false, missing: ['grants'] }, `${direct}: grants missing`);

@@ -176,6 +176,7 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
   { name: 'data_access_tasks_placement', cls: 'access', reason: 'placement trigger of the tasks (SECURITY INVOKER): a new line or contract object must be modifiable in mode limited' },
   { name: 'data_access_hidden_count', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): lines linked to a visible object that the person cannot read' },
   { name: 'data_access_reference', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): the reference of the line a visible task names, or of a visible line\'s predecessor and successor' },
+  { name: 'data_access_can_read', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §5.6, §6.6): whether another person could read a line, a task or a contract, for the notifications and the warning of "Send the link"' },
 
   // Stays SECURITY INVOKER.
   { name: 'search_index_line_analytics', cls: 'excluded', reason: 'returns the axis values of a line: called by the definer refresh functions (it then runs as their owner); a direct call keeps the caller\'s policies; must stay inlinable (1853960000000)' },
