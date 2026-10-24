@@ -12,7 +12,8 @@
  * copy, bulk delete); delete of a line or a contract;
  * persons (users, roles, audit log); organisation data (companies, departments, cost centres,
  * accounts and charts of accounts, business processes, dimensions and the values of closed-list
- * dimensions); updates and deletes of suppliers and shared contacts; agent screens; the AI
+ * dimensions); updates and deletes of suppliers and shared contacts; the generic tasks CSV import
+ * (it updates existing tasks); agent screens; the AI
  * administration sites classified `reserved` in `data-access-paths.inventory.ts`. A delete check
  * or an impact preview asked before a reserved operation is reserved with it.
  *
@@ -40,6 +41,8 @@ const LINE_WRITE = 'a write on one line or its children: the line policies apply
 const CONTRACT_WRITE = 'a write on one contract or its links: follows the person\'s access (lots 3 and 5)';
 const BUDGET_FILE = 'budget file: not reserved (spec §2.7, amended); line by line, scoped by the line rules';
 const SHARE = 'sends a link to a visible record (notifications, lot 4)';
+const TASK_WRITE = 'a write on one task or its elements: the task policies apply, and the pre-checks of lot 3 (tasks/task-data-access.ts)';
+const TASK_DELETE = 'task delete: allowed to who may modify the task\'s line or contract (assertTaskDeletable)';
 const CREATE_SHARED = 'creating a supplier or a contact stays allowed (spec §2.7)';
 const OWN_PROFILE = 'the person\'s own profile';
 const OWN_MCP_KEY = 'the person\'s own MCP key';
@@ -48,6 +51,42 @@ const AI_SETTINGS = 'AI settings screen: reserved to unscoped persons (data-acce
 const AGENT_SCREENS = 'agent screens (control, observations, work items): reserved to unscoped persons (spec §2.7)';
 
 export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
+  {
+    file: 'spend/tasks.controller.ts',
+    controller: 'TasksController',
+    reserved: ['importCsv'],
+    allowed: {
+      bulkDelete: TASK_DELETE, // DELETE bulk
+      createActivity: TASK_WRITE, // POST :id/activities
+      createStandalone: TASK_WRITE, // POST standalone
+      createTimeEntry: TASK_WRITE, // POST :id/time-entries
+      deleteAttachmentStatic: TASK_WRITE, // PATCH attachments/:attachmentId/delete
+      deleteCheck: TASK_DELETE, // POST delete-check
+      deleteTimeEntry: TASK_WRITE, // DELETE :id/time-entries/:entryId
+      downloadAttachment: READ, // GET attachments/:attachmentId
+      exportCsv: EXPORT, // GET export
+      getCsvFields: 'the column list of the tasks CSV (no data)', // GET csv-fields
+      getKnowledgeContext: READ, // GET :id/knowledge-context
+      getOne: READ, // GET :id
+      getTimeSum: READ, // GET :id/time-entries/sum
+      importDocument: TASK_WRITE, // POST :id/import
+      importInlineAttachment: TASK_WRITE, // POST :id/attachments/inline/import
+      list: READ, // GET (root)
+      listActivities: READ, // GET :id/activities
+      listAttachments: READ, // GET :id/attachments
+      listDocuments: READ, // GET :id/knowledge
+      listFilterValues: READ, // GET filter-values
+      listIds: READ, // GET ids
+      listTimeEntries: READ, // GET :id/time-entries
+      move: TASK_WRITE, // PATCH :id/move
+      share: SHARE, // POST :id/share
+      updateActivity: TASK_WRITE, // PATCH :id/activities/:activityId
+      updateTask: TASK_WRITE, // PATCH :id
+      updateTimeEntry: TASK_WRITE, // PATCH :id/time-entries/:entryId
+      uploadAttachment: TASK_WRITE, // POST :id/attachments
+      viewAttachmentInline: READ, // GET attachments/:tenantSlug/:attachmentId/inline
+    },
+  },
   {
     file: 'freeze/freeze.controller.ts',
     controller: 'FreezeController',

@@ -100,7 +100,7 @@ export const DATA_ACCESS_TABLES: DataAccessTableEntry[] = [
   // Excluded, with the reason.
   { table: 'contract_spend_items', cls: 'excluded', policies: null, reason: 'cited by the contract policy; its writes are checked by the service (spec §6.4, lot 5)' },
   { table: 'asset_support_info', cls: 'excluded', policies: null, reason: 'support_contract_id is an attribute of an asset (assets are not scoped); an invisible contract shows as a mention (§5.4), lot 5 confirms' },
-  { table: 'portfolio_activities', cls: 'excluded', policies: null, reason: 'activity feed of portfolio requests and projects (not scoped); task_id names a task of that project or request' },
+  { table: 'portfolio_activities', cls: 'excluded', policies: null, reason: 'activity feed of every task (task_id, whatever its object, a budget line included) and of portfolio requests and projects (not scoped); a task\'s activities are read and written through the task, whose row is read first under the task policies (404 when hidden)' },
   { table: 'portfolio_requests', cls: 'excluded', policies: null, reason: 'origin_task_id points to the task a request came from; requests are not scoped' },
   { table: 'ai_action_requests', cls: 'excluded', policies: null, reason: 'polymorphic target; agent screens are reserved to unscoped persons (spec §10.3)' },
   { table: 'ai_agent_target_states', cls: 'excluded', policies: null, reason: 'polymorphic target_type/target_ref name objects of external providers; agent screens reserved' },
