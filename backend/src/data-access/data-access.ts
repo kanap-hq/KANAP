@@ -58,6 +58,7 @@ export async function applyDataAccess(target: EntityManager | QueryRunner, userI
     throw new Error(`data_access_apply returned an unexpected value: ${String(mode)}`);
   }
   appliedModes.set(runner, mode);
+  forgetModeAtTransactionEnd(runner);
   return mode;
 }
 
@@ -65,18 +66,48 @@ export async function applyDataAccess(target: EntityManager | QueryRunner, userI
  * The mode `applyDataAccess` set on a query runner, so the write checks of lot 3 cost no query for
  * an unscoped person. Only `applyDataAccess` takes the limited role, so a runner it never saw runs
  * in mode `all`, unless the access was applied by SQL directly (a spec): `transactionDataAccessMode`
- * then reads the setting. A runner reused for a later transaction keeps its last entry: a stale
- * `all` cannot hide a limited transaction, since that one went through `applyDataAccess` again; a
- * stale `limited` costs a query and refuses nothing, since the SQL functions the checks call test
- * the mode themselves and answer as mode `all`.
+ * then reads the setting.
+ *
+ * The entry lives as long as the settings it stands for, which die at COMMIT or ROLLBACK: it is
+ * dropped when the runner's transaction ends, and read only while a transaction is active. A runner
+ * reused for a later transaction would otherwise carry a stale `limited`, and the checks would
+ * refuse unscoped work: not every SQL function they call tests the mode
+ * (`data_access_placable_line` does not).
  */
 const appliedModes = new WeakMap<QueryRunner, DataAccessMode>();
+const watchedRunners = new WeakSet<QueryRunner>();
+
+/** Wraps the runner's commit and rollback once, so they drop its entry in `appliedModes`. */
+function forgetModeAtTransactionEnd(runner: QueryRunner): void {
+  if (watchedRunners.has(runner) || typeof runner.commitTransaction !== 'function' || typeof runner.rollbackTransaction !== 'function') return;
+  watchedRunners.add(runner);
+  // A savepoint released or rolled back leaves the transaction active: the entry stays.
+  const forget = () => {
+    if (!runner.isTransactionActive) appliedModes.delete(runner);
+  };
+  const commit = runner.commitTransaction.bind(runner);
+  const rollback = runner.rollbackTransaction.bind(runner);
+  runner.commitTransaction = async () => {
+    try {
+      await commit();
+    } finally {
+      forget();
+    }
+  };
+  runner.rollbackTransaction = async () => {
+    try {
+      await rollback();
+    } finally {
+      forget();
+    }
+  };
+}
 
 /** The data-access mode of the transaction `manager` runs in (see `appliedModes`). */
 export async function transactionDataAccessMode(manager: EntityManager): Promise<DataAccessMode> {
   const runner = manager.queryRunner;
   const known = runner ? appliedModes.get(runner) : undefined;
-  if (known) return known;
+  if (known && runner?.isTransactionActive) return known;
   const rows = await manager.query(`SELECT current_setting('app.da_mode', true) = 'limited' AS limited`);
   return rows?.[0]?.limited === true ? 'limited' : 'all';
 }
