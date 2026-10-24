@@ -347,8 +347,8 @@ describe('DashboardPage budget tiles', () => {
       const res = await impl(...args);
       return res?.data && typeof res.data === 'object' && !Array.isArray(res.data) ? { ...res, data: { ...res.data, dataAccessLimited: true } } : res;
     };
-    get.mockImplementation(flagged(get.getMockImplementation()!));
-    post.mockImplementation(flagged(post.getMockImplementation()!));
+    get.mockImplementation(flagged(get.getMockImplementation() as (...args: any[]) => Promise<any>));
+    post.mockImplementation(flagged(post.getMockImplementation() as (...args: any[]) => Promise<any>));
     renderPage();
     for (const name of [TOP_ITEMS, TOP_INCREASES, MY_BUDGET, BY_COST_CENTER]) {
       const tile = await screen.findByRole('region', { name });
