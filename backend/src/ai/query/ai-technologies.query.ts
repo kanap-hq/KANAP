@@ -4,7 +4,7 @@ import { applicationParticipantCondition, type ParticipationAccessScope } from '
 import { gridTextClause } from '../../technologies/technologies.service';
 import { versionInUseSql, versionSupportSql } from '../../technologies/reports/version-support';
 import { countingRowSql, rowJoinsSql, vulnerabilityCountsEnabled } from '../../vulnerabilities/vulnerability-reach-counts';
-import { inServiceSql, technologyServerFiguresSql, withoutJit } from '../../technologies/technology-reach.service';
+import { inServiceSql, technologyServerFiguresSql } from '../../technologies/technology-reach.service';
 import type { AiContextEntityType, AiExecutionContextWithManager, AiSearchEntityType } from '../ai.types';
 import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
 
@@ -14,8 +14,9 @@ import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
  * read time, each one statement shared by the list, its filters, its sort and the aggregates.
  *
  * - `server_count`: the servers of the technology as the technology list counts them
- *   (`technologyServerFiguresSql`): assets in service that carry it, installed or carried through
- *   the asset graph, clusters excluded. The servers of each version follow the same definition.
+ *   (`technologyServerFiguresSql`): assets in service it is installed on (a direct link), clusters
+ *   excluded; what the asset graph carries does not count. The servers of each version follow the
+ *   same definition.
  * - `application_count`: the applications that declare it, in service (`inServiceSql`), within the
  *   caller's read scope (a Business Contributor's own); null for a caller who cannot read
  *   applications, never a count of applications the caller cannot see.
@@ -328,8 +329,7 @@ export async function listAiTechnologies(
     : Math.min(Math.max(Number(query.limit) || 25, 1), 500);
   const page = Math.max(Number(query.page) || 1, 1);
   const offset = opts.idsOnly ? 0 : (page - 1) * limit;
-  // JIT off: the planner overestimates the traversal of `technologyServerFiguresSql` (`withoutJit`).
-  const rows: Array<Omit<AiTechnologyRow, 'versions_in_use'> & { versions_in_use: VersionInUse[] | null; total: string }> = await withoutJit(mg,
+  const rows: Array<Omit<AiTechnologyRow, 'versions_in_use'> & { versions_in_use: VersionInUse[] | null; total: string }> = await mg.query(
     `WITH r AS (
        SELECT t.id, t.item_number, ('TEC-' || t.item_number) AS reference, t.name, t.editor, t.family, t.hosting_type,
               t.lifecycle, t.admin_zone, t.description, t.created_at, t.updated_at,
@@ -366,8 +366,8 @@ export async function listAiTechnologies(
 }
 
 /**
- * Each version of the technology: its servers (`technologyServerFiguresSql`: in service, installed
- * or carried, clusters excluded), whether it is in use, and its
+ * Each version of the technology: its servers (`technologyServerFiguresSql`: in service, the
+ * version installed on them, clusters excluded), whether it is in use, and its
  * support state (unknown without a date) and that state's date, by the End of support report rule.
  */
 export async function technologyVersionFigures(

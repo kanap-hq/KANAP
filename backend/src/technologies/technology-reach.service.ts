@@ -20,6 +20,11 @@ import type { LinkSource } from '../common/link-provenance';
  * Retired assets (`assetInServiceSql`) take no part: their links count for nothing, and no edge
  * leads to or from them, so the traversal stops there.
  *
+ * A path through at least one `contains` edge brings the platform underneath (`through_host`: the
+ * ESXi of the host a VM runs on), not a technology of the asset itself; the member edges keep the
+ * same layer of machine (the Windows of a cluster's members). A technology and version reached by
+ * two paths, one of them without `contains`, is not through a host.
+ *
  * Over-approximation is assumed and shown: an application on a server carrying SQL Server 2016 and
  * 2019 is listed with both. Each statement is static SQL, carries `tenant_id` on every table and
  * join besides RLS, and works on a batch of ids (`= ANY($n)`), never a query per row.
@@ -39,15 +44,18 @@ export function assetInServiceSql(alias: string): string {
 const ASSET_IN_SERVICE_JOIN = (alias: string, idExpr: string, tenant = '$1') =>
   `JOIN assets ${alias} ON ${alias}.tenant_id = ${tenant} AND ${alias}.id = ${idExpr} AND ${assetInServiceSql(alias)}`;
 
-/** The "carries" edges of the tenant `tenant` between assets in service: `carrier` carries `carried`. */
+/**
+ * The "carries" edges of the tenant `tenant` between assets in service: `carrier` carries `carried`,
+ * `kind` the link (`contains`: a host and its VM; `member`: a member and its cluster).
+ */
 const edgesSql = (tenant: string) => `(
-  SELECT r.asset_id AS carrier, r.related_asset_id AS carried
+  SELECT r.asset_id AS carrier, r.related_asset_id AS carried, 'contains' AS kind
     FROM asset_relations r
     ${ASSET_IN_SERVICE_JOIN('ec', 'r.asset_id', tenant)}
     ${ASSET_IN_SERVICE_JOIN('ed', 'r.related_asset_id', tenant)}
    WHERE r.tenant_id = ${tenant} AND r.relation_type = 'contains'
   UNION ALL
-  SELECT m.asset_id, m.cluster_id
+  SELECT m.asset_id, m.cluster_id, 'member'
     FROM asset_cluster_members m
     ${ASSET_IN_SERVICE_JOIN('ec', 'm.asset_id', tenant)}
     ${ASSET_IN_SERVICE_JOIN('ed', 'm.cluster_id', tenant)}
@@ -57,17 +65,19 @@ const EDGES = edgesSql('$1');
 
 /**
  * Down the edges from the installed links of the technologies `technology` names (a condition on
- * `at.technology_id`) in the tenant `tenant`: one row per reached asset and link.
+ * `at.technology_id`) in the tenant `tenant`: one row per reached asset and path, `through_host`
+ * true when the path crosses a `contains` edge.
  */
 const reachFromTechnologiesSql = (tenant: string, technology: string) => `
   reach AS (
     SELECT at.technology_id, at.id AS link_id, at.asset_id, at.asset_id AS installed_on, at.technology_version_id,
-           at.source, 0 AS depth, ARRAY[at.asset_id] AS path
+           at.source, 0 AS depth, ARRAY[at.asset_id] AS path, false AS through_host
       FROM asset_technologies at
       ${ASSET_IN_SERVICE_JOIN('a0', 'at.asset_id', tenant)}
      WHERE at.tenant_id = ${tenant} AND at.technology_id ${technology}
     UNION ALL
-    SELECT r.technology_id, r.link_id, e.carried, r.installed_on, r.technology_version_id, r.source, r.depth + 1, r.path || e.carried
+    SELECT r.technology_id, r.link_id, e.carried, r.installed_on, r.technology_version_id, r.source, r.depth + 1, r.path || e.carried,
+           r.through_host OR e.kind = 'contains'
       FROM reach r
       JOIN ${edgesSql(tenant)} e ON e.carrier = r.asset_id
      WHERE r.depth < ${MAX_DEPTH} AND NOT e.carried = ANY(r.path)
@@ -77,30 +87,32 @@ const reachFromTechnologiesSql = (tenant: string, technology: string) => `
 export const REACH_FROM_TECHNOLOGIES = reachFromTechnologiesSql('$1', '= ANY($2::uuid[])');
 
 /**
- * The servers of the technologies of `reach` (decision Q3 of the clusters pass): the assets in
- * service that carry one, installed or carried (`reach` keeps those in service only), clusters
- * excluded. One row per technology, version and server. The list, the versions, the end of support
- * report and the assistant count these; the Servers tab of a technology still lists the clusters.
+ * The servers of the technologies `technology` names (a condition on `at.technology_id`) in the
+ * tenant `tenant` (decision of 2026-10-24, amending Q3 of the clusters pass): the assets in service
+ * the technology is installed on (a direct link), clusters excluded. What the graph carries (the VMs
+ * of a host, a cluster) does not count. One row per technology, version and server. The list, the
+ * record, the versions, the end of support report and the assistant count these; the Servers tab of
+ * a technology still lists the clusters and the carried assets.
  */
-const serversOfTechnologiesSql = (tenant: string) => `
+const serversOfTechnologiesSql = (tenant: string, technology: string) => `
   servers_of AS (
-    SELECT DISTINCT r.technology_id, r.technology_version_id, r.asset_id
-      FROM reach r
-      JOIN assets sa ON sa.tenant_id = ${tenant} AND sa.id = r.asset_id AND sa.is_cluster IS NOT TRUE
+    SELECT DISTINCT at.technology_id, at.technology_version_id, at.asset_id
+      FROM asset_technologies at
+      JOIN assets sa ON sa.tenant_id = ${tenant} AND sa.id = at.asset_id AND ${assetInServiceSql('sa')} AND sa.is_cluster IS NOT TRUE
+     WHERE at.tenant_id = ${tenant} AND at.technology_id ${technology}
   )`;
-const SERVERS_OF_TECHNOLOGIES = serversOfTechnologiesSql('$1');
+const SERVERS_OF_TECHNOLOGIES = serversOfTechnologiesSql('$1', '= ANY($2::uuid[])');
 
 /**
- * The servers (`SERVERS_OF_TECHNOLOGIES`) of the technologies of the tenant `tenant` that
+ * The servers (`serversOfTechnologiesSql`) of the technologies of the tenant `tenant` that
  * `technology` names (a condition on `at.technology_id`, every technology by default), as a
  * derived table to join on `technology_id`, one row per technology that has a server: `servers`,
  * and `version_servers`, the servers of each version (version id to count, a version with no
- * server absent). One traversal for the whole statement: the assistant's list, its sort, its
- * filters and its aggregates join it, where a count per technology row repeated the traversal.
+ * server absent). One statement: the assistant's list, its sort, its filters and its aggregates
+ * join it.
  */
 export function technologyServerFiguresSql(tenant: string, technology = 'IS NOT NULL'): string {
-  return `(WITH RECURSIVE ${reachFromTechnologiesSql(tenant, technology)},
-           ${serversOfTechnologiesSql(tenant)},
+  return `(WITH ${serversOfTechnologiesSql(tenant, technology)},
            per_technology AS (
              SELECT technology_id, count(DISTINCT asset_id)::int AS servers FROM servers_of GROUP BY technology_id
            ),
@@ -118,13 +130,16 @@ export function technologyServerFiguresSql(tenant: string, technology = 'IS NOT 
              LEFT JOIN version_servers vs ON vs.technology_id = pt.technology_id)`;
 }
 
-/** Up the edges from the assets `$2`: one row per asset and carrier (the asset itself at depth 0). */
+/**
+ * Up the edges from the assets `$2`: one row per asset, carrier and path (the asset itself at depth
+ * 0), `through_host` true when the path crosses a `contains` edge.
+ */
 const CARRIERS_OF_ASSETS = `
   up AS (
-    SELECT a.id AS asset_id, a.id AS carrier_id, 0 AS depth, ARRAY[a.id] AS path
+    SELECT a.id AS asset_id, a.id AS carrier_id, 0 AS depth, ARRAY[a.id] AS path, false AS through_host
       FROM assets a WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[]) AND ${assetInServiceSql('a')}
     UNION ALL
-    SELECT u.asset_id, e.carrier, u.depth + 1, u.path || e.carrier
+    SELECT u.asset_id, e.carrier, u.depth + 1, u.path || e.carrier, u.through_host OR e.kind = 'contains'
       FROM up u
       JOIN ${EDGES} e ON e.carried = u.carrier_id
      WHERE u.depth < ${MAX_DEPTH} AND NOT e.carrier = ANY(u.path)
@@ -141,6 +156,8 @@ export type ReachedAsset = {
   link_id: string | null;
   source: LinkSource;
   depth: number;
+  /** Carried through at least one `contains` edge on every path (the platform underneath); false when installed. */
+  through_host: boolean;
 };
 
 /** An application of the technology, hosted on a reached asset or declaring it. */
@@ -181,11 +198,16 @@ export type ReachingTechnology = {
   source: LinkSource;
   /** True when this installed link is the server's operating system. */
   is_operating_system?: boolean;
+  /**
+   * Carried to an asset: true when every path that brings this technology and version crosses a
+   * `contains` edge (the platform underneath: the hypervisor of the host). False otherwise.
+   */
+  through_host?: boolean;
 };
 
 export type TechnologyCounts = {
   technology_id: string;
-  /** Assets in service that carry it, installed or carried, clusters excluded (`SERVERS_OF_TECHNOLOGIES`). */
+  /** Assets in service it is installed on, clusters excluded (`serversOfTechnologiesSql`). */
   servers: number;
   applications: number;
   versions_in_use: number;
@@ -212,16 +234,19 @@ const DECLARED_IN_SERVICE = `EXISTS (SELECT 1 FROM applications ap WHERE ap.tena
 
 const DAY = (expr: string) => `to_char(${expr}, 'YYYY-MM-DD')`;
 
-/** Distinct reached assets, keeping for each one the shortest path (direct links first). */
+/**
+ * Distinct reached assets, keeping for each one a path without `contains` when there is one, then
+ * the shortest (direct links first).
+ */
 const REACHED_ASSETS_SELECT = `
   SELECT DISTINCT ON (r.technology_id, r.asset_id, r.technology_version_id, r.installed_on)
          r.technology_id, r.asset_id,
          CASE WHEN r.depth = 0 THEN NULL ELSE r.installed_on END AS via_asset_id,
          r.technology_version_id,
          CASE WHEN r.depth = 0 THEN r.link_id ELSE NULL END AS link_id,
-         r.source, r.depth
+         r.source, r.depth, r.through_host
     FROM reach r
-   ORDER BY r.technology_id, r.asset_id, r.technology_version_id, r.installed_on, r.depth`;
+   ORDER BY r.technology_id, r.asset_id, r.technology_version_id, r.installed_on, r.through_host, r.depth`;
 
 /**
  * Runs a deduction with JIT compilation off for this statement. The planner cannot estimate a
@@ -315,25 +340,27 @@ export class TechnologyReachService {
     return withoutJit(mg, 
       `WITH RECURSIVE ${CARRIERS_OF_ASSETS},
        found AS (
-         SELECT DISTINCT ON (u.asset_id, at.id) u.asset_id, u.carrier_id, u.depth, at.id AS link_id, at.technology_id,
+         SELECT DISTINCT ON (u.asset_id, at.id) u.asset_id, u.carrier_id, u.depth, u.through_host, at.id AS link_id, at.technology_id,
                 at.technology_version_id, at.source, at.is_operating_system
            FROM up u
            JOIN asset_technologies at ON at.tenant_id = $1 AND at.asset_id = u.carrier_id
-          ORDER BY u.asset_id, at.id, u.depth
+          ORDER BY u.asset_id, at.id, u.through_host, u.depth
        )
        SELECT f.asset_id AS subject_id, f.technology_id, 'installed' AS kind, f.technology_version_id,
               NULL::text AS environment, NULL::uuid AS asset_id, NULL::uuid AS via_asset_id, NULL::uuid[] AS via_asset_ids,
-              f.link_id, f.source, f.is_operating_system
+              f.link_id, f.source, f.is_operating_system, false AS through_host
          FROM found f
         WHERE f.depth = 0
        UNION ALL
        SELECT c.asset_id, c.technology_id, 'carried', c.technology_version_id, NULL, NULL,
-              c.via_asset_ids[1], c.via_asset_ids, c.link_ids[1], c.sources[1], false
+              c.via_asset_ids[1], c.via_asset_ids, c.link_ids[1], c.sources[1], false, c.through_host
          FROM (
+           -- One line per technology and version: through a host only when every carrier is.
            SELECT f.asset_id, f.technology_id, f.technology_version_id,
                   array_agg(f.carrier_id ORDER BY lower(ca.name), ca.id) AS via_asset_ids,
                   array_agg(f.link_id ORDER BY lower(ca.name), ca.id) AS link_ids,
-                  array_agg(f.source ORDER BY lower(ca.name), ca.id) AS sources
+                  array_agg(f.source ORDER BY lower(ca.name), ca.id) AS sources,
+                  bool_and(f.through_host) AS through_host
              FROM found f
              JOIN assets ca ON ca.tenant_id = $1 AND ca.id = f.carrier_id
             WHERE f.depth > 0
@@ -389,21 +416,20 @@ export class TechnologyReachService {
   }
 
   /**
-   * The servers of each technology of `technologyIds` (`SERVERS_OF_TECHNOLOGIES`): one row per
-   * technology, version and server in service that carries it, clusters excluded.
+   * The servers of each technology of `technologyIds` (`serversOfTechnologiesSql`): one row per
+   * technology, version and server in service it is installed on, clusters excluded.
    */
   async serversOfTechnologies(mg: EntityManager, tenantId: string, technologyIds: string[]): Promise<Array<{ technology_id: string; technology_version_id: string | null; asset_id: string }>> {
     if (technologyIds.length === 0) return [];
-    return withoutJit(mg,
-      `WITH RECURSIVE ${REACH_FROM_TECHNOLOGIES},
-       ${SERVERS_OF_TECHNOLOGIES}
+    return mg.query(
+      `WITH ${SERVERS_OF_TECHNOLOGIES}
        SELECT technology_id, technology_version_id, asset_id FROM servers_of`,
       [tenantId, technologyIds],
     );
   }
 
   /**
-   * The counters of the technology list for a page of ids, in one statement: servers (`SERVERS_OF_TECHNOLOGIES`),
+   * The counters of the technology list for a page of ids, in one statement: servers (`serversOfTechnologiesSql`),
    * applications (hosted or declared), versions in use (on an asset or declared), the next
    * standard end of support among them and how many have ended.
    */

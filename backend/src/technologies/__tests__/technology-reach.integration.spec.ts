@@ -103,8 +103,8 @@ async function testCounts() {
     const { reach } = services();
     const counts = await reach.countsOfTechnologies(runner.manager, g.tenantId, [g.tech.vsphere, g.tech.sql]);
     assert.deepEqual(counts.get(g.tech.vsphere), {
-      // The hosts and the VMs, not the cluster (decision Q3 of the clusters pass).
-      technology_id: g.tech.vsphere, servers: 4, applications: 1, versions_in_use: 1, next_support_end: '2027-10-11', ended_versions: 0,
+      // The two hosts it is installed on, not their VMs nor the cluster (decision of 2026-10-24).
+      technology_id: g.tech.vsphere, servers: 2, applications: 1, versions_in_use: 1, next_support_end: '2027-10-11', ended_versions: 0,
     });
     const sql = counts.get(g.tech.sql)!;
     assert.equal(sql.servers, 2, 'the two nodes, not the SQL cluster');
@@ -131,7 +131,7 @@ async function testRetiredAsset() {
     await assign(runner, g.tenantId, onVm, oldVm);
 
     const before = (await reach.countsOfTechnologies(runner.manager, g.tenantId, [g.tech.sql])).get(g.tech.sql)!;
-    assert.equal(before.servers, 4, 'in service: the server and its VM are reached');
+    assert.equal(before.servers, 3, 'in service: the server it is installed on counts, not its VM');
     assert.equal(before.ended_versions, 3);
 
     await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [g.tenantId, old]);
@@ -166,10 +166,11 @@ async function testRetiredAsset() {
 }
 
 /**
- * The servers of a technology (clusters pass, K2-1 and Q3): installed on two hosts of a cluster at
- * the same version and carried to a VM that cluster contains. Three servers everywhere (list,
- * version); the Servers tab lists four rows (the two hosts, the VM, the cluster once), and the
- * cluster's technologies one line with both hosts. A retired member counts nowhere.
+ * The servers of a technology (clusters pass, K2-1, Q3 amended 2026-10-24): installed on two hosts
+ * of a cluster at the same version and carried to a VM that cluster contains. Two servers
+ * everywhere (list, version: the hosts it is installed on); the Servers tab lists four rows (the
+ * two hosts, the VM through the cluster's `contains`, the cluster once), and the cluster's
+ * technologies one line with both hosts. A retired member counts nowhere.
  */
 async function testClusterServers() {
   await inRolledBackTransaction(async (runner) => {
@@ -190,15 +191,15 @@ async function testClusterServers() {
     await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [g.tenantId, h3]);
 
     // The list.
-    assert.equal((await reach.countsOfTechnologies(runner.manager, g.tenantId, [agent])).get(agent)?.servers, 3);
-    // The versions: three servers as the list counts them; the direct links unchanged (retired included).
+    assert.equal((await reach.countsOfTechnologies(runner.manager, g.tenantId, [agent])).get(agent)?.servers, 2);
+    // The versions: two servers as the list counts them; the direct links unchanged (retired included).
     const record = await technologies.get(agent, opts);
     const version1 = record.versions.find((v: any) => v.id === v1) as any;
-    assert.equal(version1.server_count, 3);
+    assert.equal(version1.server_count, 2);
     assert.equal(version1.servers, 3, 'the direct count still names every link, the retired host included');
     assert.deepEqual(
       (await reach.serversOfTechnologies(runner.manager, g.tenantId, [agent])).map((r) => r.asset_id).sort(),
-      [h1, h2, vm].sort(),
+      [h1, h2].sort(),
     );
 
     // The Servers tab: one row per host, the VM once, the cluster once with both hosts, the retired link.
@@ -214,6 +215,10 @@ async function testClusterServers() {
     assert.equal(clusterRow.via_asset_name, `AGT-H1 reach-cluster`);
     assert.deepEqual(inService.find((item) => item.asset_id === vm)!.via_assets.map((v) => v.id), [h1, h2]);
     assert.deepEqual(inService.find((item) => item.asset_id === h1)!.via_assets, []);
+    // The VM gets it through the cluster's `contains`: the platform underneath; the cluster from its members.
+    assert.deepEqual(inService.map((item) => `${item.asset_id}|${item.through_host}`).sort(), [
+      `${h1}|false`, `${h2}|false`, `${vm}|true`, `${cluster}|false`,
+    ].sort());
     assert.equal(tab.filter((item) => item.asset_status === 'retired').map((item) => item.asset_id).join(), h3);
 
     // The cluster's technologies: one carried line for Agent 1.0, with both hosts.
@@ -222,6 +227,7 @@ async function testClusterServers() {
     assert.equal(up[0].kind, 'carried');
     assert.deepEqual(up[0].via_asset_ids, [h1, h2]);
     assert.equal(up[0].via_asset_id, h1);
+    assert.equal(up[0].through_host, false, 'what the members carry stays plain');
     const shown = (await links.technologiesOfAsset(cluster, opts)).items.filter((item) => item.technology_id === agent);
     assert.equal(shown.length, 1);
     assert.deepEqual(shown[0].via_assets.map((v) => [v.id, v.name]), [[h1, `AGT-H1 reach-cluster`], [h2, `AGT-H2 reach-cluster`]]);
@@ -231,6 +237,86 @@ async function testClusterServers() {
     assert.deepEqual(vsphere.map((r) => `${r.technology_version_id ?? '-'}|${(r.via_asset_ids ?? []).join(',')}`).sort(), [
       `${g.versions.v8}|${g.ids.host1}`, `-|${g.ids.host2}`,
     ].sort());
+  });
+}
+
+/**
+ * The platform underneath (decision of 2026-10-24): a cluster of two VMs, each contained in an ESXi
+ * host. Windows on the VMs reaches the cluster plain; ESXi reaches it, and each VM, through a host.
+ * The servers of ESXi are the hosts it is installed on, not the VMs they contain.
+ */
+async function testThroughHost() {
+  await inRolledBackTransaction(async (runner) => {
+    const g = await seedGraph(runner, 'reach-host');
+    const { reach, links, technologies } = services();
+    const opts = { manager: runner.manager, tenantId: g.tenantId };
+    const a = (name: string, cluster = false) => asset(runner, g.tenantId, `${name} reach-host`, cluster);
+    const hostA = await a('ESX-A');
+    const hostB = await a('ESX-B');
+    const vmA = await a('VM-A');
+    const vmB = await a('VM-B');
+    const vmC = await a('VM-C');
+    const cluster = await a('WIN-CL', true);
+    await contains(runner, g.tenantId, hostA, vmA);
+    await contains(runner, g.tenantId, hostA, vmC);
+    await contains(runner, g.tenantId, hostB, vmB);
+    await member(runner, g.tenantId, cluster, vmA);
+    await member(runner, g.tenantId, cluster, vmB);
+    const esxi = await technology(runner, g.tenantId, 6, 'ESXi', 'other');
+    const esxi8 = await version(runner, g.tenantId, esxi, '8.0', '2030-01-01');
+    const windows = await technology(runner, g.tenantId, 7, 'Windows Server', 'operating_system');
+    const w2022 = await version(runner, g.tenantId, windows, '2022', '2031-10-14');
+    await installed(runner, g.tenantId, hostA, esxi, esxi8);
+    await installed(runner, g.tenantId, hostB, esxi, esxi8);
+    await installed(runner, g.tenantId, vmA, windows, w2022);
+    await installed(runner, g.tenantId, vmB, windows, w2022);
+
+    // The cluster: Windows plain (its members), ESXi through a host.
+    const ofCluster = await reach.technologiesOfAssets(runner.manager, g.tenantId, [cluster]);
+    assert.deepEqual(ofCluster.map((r) => `${r.technology_id}|${r.kind}|${r.through_host}`).sort(), [
+      `${windows}|carried|false`, `${esxi}|carried|true`,
+    ].sort());
+    const shown = (await links.technologiesOfAsset(cluster, opts)).items;
+    assert.deepEqual(shown.map((item) => `${item.technology_id}|${item.through_host}`).sort(), [`${windows}|false`, `${esxi}|true`].sort());
+    // A VM alone: its Windows installed, ESXi through its host.
+    const ofVm = (await links.technologiesOfAsset(vmA, opts)).items;
+    assert.deepEqual(ofVm.map((item) => `${item.technology_id}|${item.kind}|${item.through_host}`).sort(), [
+      `${windows}|installed|false`, `${esxi}|carried|true`,
+    ].sort());
+
+    // The Servers tab of ESXi: the hosts plain, the VMs and the cluster through a host.
+    const tab = (await links.assetsOfTechnology(esxi, opts)).items;
+    assert.deepEqual(tab.map((item) => `${item.asset_id}|${item.kind}|${item.through_host}`).sort(), [
+      `${hostA}|installed|false`, `${hostB}|installed|false`,
+      `${vmA}|carried|true`, `${vmB}|carried|true`, `${vmC}|carried|true`, `${cluster}|carried|true`,
+    ].sort());
+    // That of Windows: the VMs installed, the cluster plain.
+    const winTab = (await links.assetsOfTechnology(windows, opts)).items;
+    assert.deepEqual(winTab.map((item) => `${item.asset_id}|${item.kind}|${item.through_host}`).sort(), [
+      `${vmA}|installed|false`, `${vmB}|installed|false`, `${cluster}|carried|false`,
+    ].sort());
+
+    // A path without `contains` wins: Windows also on host A (same version) reaches the cluster
+    // through VM-A's host too, and the line stays plain.
+    await installed(runner, g.tenantId, hostA, windows, w2022);
+    const mixed = (await reach.technologiesOfAssets(runner.manager, g.tenantId, [cluster])).filter((r) => r.technology_id === windows);
+    assert.equal(mixed.length, 1);
+    assert.equal(mixed[0].through_host, false);
+    assert.ok(mixed[0].via_asset_ids?.includes(hostA), 'every carrier is named');
+
+    // Servers: ESXi on two hosts that contain three VMs counts two, everywhere.
+    assert.equal((await reach.countsOfTechnologies(runner.manager, g.tenantId, [esxi])).get(esxi)?.servers, 2);
+    const record = await technologies.get(esxi, opts);
+    assert.equal((record.versions.find((v: any) => v.id === esxi8) as any).server_count, 2);
+    assert.deepEqual((await reach.serversOfTechnologies(runner.manager, g.tenantId, [esxi])).map((r) => r.asset_id).sort(), [hostA, hostB].sort());
+    // A technology installed on a cluster only has no server.
+    const clusterOnly = await technology(runner, g.tenantId, 8, 'Cluster agent', 'other');
+    await installed(runner, g.tenantId, cluster, clusterOnly);
+    assert.equal((await reach.countsOfTechnologies(runner.manager, g.tenantId, [clusterOnly])).get(clusterOnly)?.servers, 0);
+    assert.deepEqual(await reach.serversOfTechnologies(runner.manager, g.tenantId, [clusterOnly]), []);
+    // A retired host does not count.
+    await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [g.tenantId, hostB]);
+    assert.equal((await reach.countsOfTechnologies(runner.manager, g.tenantId, [esxi])).get(esxi)?.servers, 1);
   });
 }
 
@@ -265,6 +351,7 @@ runSpecs('technology-reach.integration.spec', [
   ['list counters', testCounts],
   ['retired asset', testRetiredAsset],
   ['servers of a technology on a cluster', testClusterServers],
+  ['platform underneath', testThroughHost],
   ['tenant isolation', testTenantIsolation],
 ]).catch((err) => {
   console.error(err);

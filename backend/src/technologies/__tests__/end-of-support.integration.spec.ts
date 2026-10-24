@@ -199,9 +199,10 @@ async function testDeadlines() {
     assert.equal(sql16.date, g.lastMonth);
     assert.equal(sql16.item_reference, 'TEC-1');
     assert.equal(sql16.version, '2016');
-    // The server it is installed on, the VM that server contains (deduction), the application hosted there.
-    assert.deepEqual(sql16.servers.map((s) => s.id).sort(), [g.assets.s1, g.assets.vmHosted].sort());
-    assert.equal(sql16.server_count, 2);
+    // The server it is installed on, not the VM that server contains (decision of 2026-10-24); the
+    // applications still come through the graph.
+    assert.deepEqual(sql16.servers.map((s) => s.id).sort(), [g.assets.s1]);
+    assert.equal(sql16.server_count, 1);
     assert.deepEqual(sql16.applications!.map((a) => a.id).sort(), [g.apps.dbApp, g.apps.erp].sort());
     assert.equal(sql16.application_count, 2);
 
@@ -215,7 +216,9 @@ async function testDeadlines() {
     assert.equal(os.item_name, 'Old OS');
     assert.equal(os.item_reference, 'TEC-9');
     assert.equal(os.version, '1');
-    assert.deepEqual(os.servers.map((s) => s.id).sort(), [g.assets.s3, g.assets.vmOnOs].sort(), 'the server and the VM it contains');
+    assert.deepEqual(os.servers.map((s) => s.id), [g.assets.s3], 'the server it is installed on, not the VM it contains');
+    assert.equal(os.server_count, 1);
+    // The applications of the VM it contains are still touched.
     assert.deepEqual(os.applications!.map((a) => a.id).sort(), [g.apps.portal, g.apps.osVmApp].sort());
 
     const crm = byKey.get(`application:${g.apps.crm}`)!;
@@ -239,9 +242,10 @@ async function testDeadlines() {
 }
 
 /**
- * The servers of a deadline as the list counts them (clusters pass, Q3): a version installed on two
- * hosts of a cluster and carried to a VM the cluster contains has three servers, not the cluster;
- * a retired member counts nowhere. A host at its end of life touches the VM, not the cluster.
+ * The servers of a deadline as the list counts them (clusters pass, Q3 amended 2026-10-24): a
+ * version installed on two hosts of a cluster and carried to a VM the cluster contains has two
+ * servers, the hosts; neither the VM nor the cluster; a retired member counts nowhere. A host at its
+ * end of life touches the VM, not the cluster.
  */
 async function testClusterServers() {
   await inRolledBackTransaction(async (runner) => {
@@ -263,8 +267,8 @@ async function testClusterServers() {
     const report = await service().deadlines({}, { manager: runner.manager, tenantId: g.tenantId }, ALL);
     const byKey = new Map(report.items.map((r) => [r.key, r]));
     const row = byKey.get(`technology:${v1}`)!;
-    assert.deepEqual(row.servers.map((s) => s.id).sort(), [h1, h2, vm].sort());
-    assert.equal(row.server_count, 3);
+    assert.deepEqual(row.servers.map((s) => s.id).sort(), [h1, h2].sort());
+    assert.equal(row.server_count, 2);
     const hardware = byKey.get(`hardware:end_of_life:${h1}`)!;
     assert.deepEqual(hardware.servers.map((s) => s.id), [vm], 'the VM of its cluster, neither the cluster nor itself');
     assert.equal(hardware.server_count, 1);
@@ -367,7 +371,7 @@ async function testBusinessContributorScope() {
     assert.deepEqual(byKey.get(`operating_system:${g.versions.oldOs}`)!.applications!.map((a) => a.id), [g.apps.portal], 'only its own application in the columns');
     assert.deepEqual(byKey.get(`technology:${g.versions.sql2016}`)!.applications, []);
     assert.equal(byKey.get(`technology:${g.versions.sql2016}`)!.application_count, 0);
-    assert.equal(byKey.get(`technology:${g.versions.sql2016}`)!.server_count, 2, 'servers stay');
+    assert.equal(byKey.get(`technology:${g.versions.sql2016}`)!.server_count, 1, 'servers stay');
     const gaps = await service().gaps(opts, scope);
     assert.ok(!gaps.items.some((r) => r.subject_type === 'application'), 'no gap on an application outside the scope');
     assert.ok(gaps.items.some((r) => r.gap === 'vm_without_host'));

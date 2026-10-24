@@ -14,7 +14,8 @@ import { versionInUseSql, versionSupportSql } from './version-support';
  * The "End of support" report (lot T4 of planning/cartographie-technologies): what reaches or has
  * reached its end of support within a horizon, what it touches, and the missing data that keeps the
  * report from answering. Servers and applications touched by a technology version come from the
- * deductions of `TechnologyReachService`; an operating system or a piece of hardware touches its
+ * deductions of `TechnologyReachService`, its servers are those it is installed on
+ * (`serversOfTechnologies`); an operating system or a piece of hardware touches its
  * assets and what they carry (`assetsCarriedBy`), then the applications assigned to them; an
  * application touches the servers it is assigned to. Retired assets take no part.
  *
@@ -88,6 +89,8 @@ export type GapRow = {
 type Candidate = Omit<DeadlineRow, 'server_count' | 'servers' | 'application_count' | 'applications'> & {
   serverIds: string[];
   applicationIds: string[];
+  /** An operating system: the assets it reaches (installed or carried), whose applications it touches. */
+  touchedIds?: string[];
 };
 
 export type ReportWindow = { today: string; until: string };
@@ -155,26 +158,32 @@ export class EndOfSupportService {
     // a host), then the applications assigned to all of them.
     const named = candidates.filter((c) => c.type === 'operating_system' || c.type === 'hardware');
     if (named.length) {
+      const touched = (c: Candidate) => c.touchedIds ?? c.serverIds;
       const carried = new Map<string, string[]>();
-      for (const row of await this.reach.assetsCarriedBy(mg, tenantId, named.flatMap((c) => c.serverIds))) {
+      for (const row of await this.reach.assetsCarriedBy(mg, tenantId, named.flatMap(touched))) {
         if (!carried.has(row.asset_id)) carried.set(row.asset_id, []);
         carried.get(row.asset_id)!.push(row.carried_id);
       }
-      for (const c of named) c.serverIds = Array.from(new Set([...c.serverIds, ...c.serverIds.flatMap((id) => carried.get(id) ?? [])]));
+      for (const c of named) {
+        c.touchedIds = Array.from(new Set([...touched(c), ...touched(c).flatMap((id) => carried.get(id) ?? [])]));
+        // A piece of hardware has no installation: its servers are the assets it carries.
+        if (c.type === 'hardware') c.serverIds = c.touchedIds;
+      }
       if (applications) {
-        const hosted = await this.applicationsOnAssets(mg, tenantId, named.flatMap((c) => c.serverIds));
-        for (const c of named) c.applicationIds = Array.from(new Set(c.serverIds.flatMap((id) => hosted.get(id) ?? [])));
+        const hosted = await this.applicationsOnAssets(mg, tenantId, named.flatMap(touched));
+        for (const c of named) c.applicationIds = Array.from(new Set(touched(c).flatMap((id) => hosted.get(id) ?? [])));
       }
     }
 
-    // The servers of a version, an operating system or a piece of hardware are those of the list
-    // and the record (decision Q3 of the clusters pass): in service, clusters excluded; the
-    // applications above still went through the clusters. A piece of hardware is not one of its own
-    // servers (K2-7). An application keeps the servers it is assigned to.
+    // The servers of a version or an operating system are those of the list and the record
+    // (`TechnologyReachService.serversOfTechnologies`, decision of 2026-10-24): in service, the
+    // version installed on them, clusters excluded; the applications above still went through the
+    // graph. Those of a piece of hardware: the assets it carries, clusters excluded, never itself
+    // (K2-7). An application keeps the servers it is assigned to.
     const servers = await this.assetNames(mg, tenantId, candidates.flatMap((c) => c.serverIds));
     const apps = applications ? await this.visibleApplications(mg, tenantId, candidates.flatMap((c) => c.applicationIds), applications) : null;
     const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' });
-    const items: DeadlineRow[] = candidates.map(({ serverIds, applicationIds, ...row }) => {
+    const items: DeadlineRow[] = candidates.map(({ serverIds, applicationIds, touchedIds: _touched, ...row }) => {
       const counts = (id: string) => row.type === 'application' || (!servers.get(id)!.is_cluster && id !== row.item_id);
       const serverRefs = Array.from(new Set(serverIds)).flatMap((id) => (servers.has(id) && counts(id) ? [{ id, name: servers.get(id)!.name }] : [])).sort(byName);
       const appRefs = apps ? Array.from(new Set(applicationIds)).flatMap((id) => (apps.has(id) ? [apps.get(id)!] : [])).sort(byName) : null;
@@ -391,7 +400,10 @@ export class EndOfSupportService {
     }));
     if (kept.length === 0) return [];
     const techIds = Array.from(new Set(kept.map((k) => k.row.technology_id)));
-    const assets = await this.reach.assetsOfTechnologies(mg, tenantId, techIds);
+    const servers = await this.reach.serversOfTechnologies(mg, tenantId, techIds);
+    // The assets an operating system reaches, whose applications it touches.
+    const osIds = Array.from(new Set(kept.filter((k) => k.row.family === 'operating_system').map((k) => k.row.technology_id)));
+    const assets = await this.reach.assetsOfTechnologies(mg, tenantId, osIds);
     const apps = await this.reach.applicationsOfTechnologies(mg, tenantId, techIds);
     const group = (pairs: Array<[string | null, string]>) => {
       const out = new Map<string, Set<string>>();
@@ -402,7 +414,8 @@ export class EndOfSupportService {
       }
       return out;
     };
-    const serversByVersion = group(assets.map((a) => [a.technology_version_id, a.asset_id]));
+    const serversByVersion = group(servers.map((a) => [a.technology_version_id, a.asset_id]));
+    const touchedByVersion = group(assets.map((a) => [a.technology_version_id, a.asset_id]));
     const appsByVersion = group(apps.map((a) => [a.technology_version_id, a.application_id]));
     return kept.map(({ row, support }) => {
       const type = row.family === 'operating_system' ? 'operating_system' as const : 'technology' as const;
@@ -421,6 +434,7 @@ export class EndOfSupportService {
       state: support.state,
       serverIds: Array.from(serversByVersion.get(row.version_id) ?? []),
       applicationIds: Array.from(appsByVersion.get(row.version_id) ?? []),
+      ...(type === 'operating_system' ? { touchedIds: Array.from(touchedByVersion.get(row.version_id) ?? []) } : {}),
       };
     });
   }

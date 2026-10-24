@@ -144,14 +144,17 @@ export class TechnologyLinksService {
    * the graph, one row per asset and version with every asset that carries it (`via_assets`, by
    * name; `via_asset_id` and `via_asset_name` the first): a cluster is one row per version, whatever
    * the number of its members that carry it (K2-1). Clusters stay listed here, with `is_cluster`;
-   * the counters leave them out. A link to a retired asset stays listed, to be seen and removed,
-   * with `asset_status`; it takes no part in the deductions.
+   * the counters leave them out. `through_host`: a carried row every path of which crosses a
+   * `contains` edge (the VMs of a host the technology is installed on), shown apart. A link to a
+   * retired asset stays listed, to be seen and removed, with `asset_status`; it takes no part in the
+   * deductions.
    */
   async assetsOfTechnology(idOrRef: string, opts: LinkOpts) {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef);
     const retired: ReachedAsset[] = await mg.query(
-      `SELECT at.technology_id, at.asset_id, NULL::uuid AS via_asset_id, at.technology_version_id, at.id AS link_id, at.source, 0 AS depth
+      `SELECT at.technology_id, at.asset_id, NULL::uuid AS via_asset_id, at.technology_version_id, at.id AS link_id, at.source, 0 AS depth,
+              false AS through_host
          FROM asset_technologies at
          JOIN assets a ON a.tenant_id = $1 AND a.id = at.asset_id AND NOT (${assetInServiceSql('a')})
         WHERE at.tenant_id = $1 AND at.technology_id = $2`,
@@ -171,6 +174,8 @@ export class TechnologyLinksService {
       else {
         entry.via.push(r);
         entry.depth = Math.min(entry.depth, r.depth);
+        // A path without `contains` from any carrier makes the row plain.
+        entry.through_host = entry.through_host && r.through_host;
       }
     }
     const viaRef = (id: string) => ({ id, name: assets.get(id)?.name ?? null, reference: assets.get(id)?.asset_reference ?? null });
@@ -204,6 +209,7 @@ export class TechnologyLinksService {
         notes: r.link_id ? notes.get(r.link_id) ?? null : null,
         source: r.source,
         depth: r.depth,
+        through_host: !!r.via_asset_id && r.through_host === true,
       };
     });
     items.sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'installed' ? -1 : 1)
@@ -803,6 +809,8 @@ export class TechnologyLinksService {
         notes: removable && r.link_id ? notes.get(r.link_id) ?? null : null,
         source: r.source,
         is_operating_system: subject === 'asset' && r.kind === 'installed' && r.is_operating_system === true,
+        // Carried through a host only (its hypervisor): the platform underneath, shown apart.
+        through_host: r.kind === 'carried' && r.through_host === true,
       };
     });
     const order: Record<string, number> = { installed: 0, declared: 0, carried: 1, hosted: 1 };

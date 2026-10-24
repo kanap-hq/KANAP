@@ -15,8 +15,8 @@ import { DataSource, QueryRunner } from 'typeorm';
 // - Every field filters and sorts: reference, name, family, publisher, hosting_type, lifecycle,
 //   admin_zone, server_count, application_count, support_status, end_of_standard_support,
 //   end_of_support, open_vulnerabilities.
-// - server_count counts the servers as the technology list does (assets in service that carry the
-//   technology, installed or carried through `contains` and member to cluster, clusters excluded);
+// - server_count counts the servers as the technology list does (assets in service the technology
+//   is installed on, clusters excluded; what the graph carries does not count);
 //   the support fields read the versions in use only, by
 //   the End of support report's rule: a version in extended support is not out of support, and
 //   the assistant's out of support and extended support versions are the report's.
@@ -251,8 +251,8 @@ async function testListAndFigures(harness: Harness, runner: QueryRunner, s: Seed
   assert.equal(entra.metadata.versions_in_use, null);
   const vsphere = all.items.find((item: any) => item.label === 'VMware vSphere');
   assert.equal(vsphere.metadata.support_status, 'unknown', 'a version in use without a date');
-  assert.equal(vsphere.metadata.versions_in_use, '8: no end of support date, 2 servers', 'the servers of a version: installed or carried');
-  assert.equal(vsphere.metadata.server_count, 2, 'the host and the server it contains, which carries it');
+  assert.equal(vsphere.metadata.versions_in_use, '8: no end of support date, 1 server', 'the servers of a version: installed on them');
+  assert.equal(vsphere.metadata.server_count, 1, 'the host, not the server it contains');
   const metadataText = JSON.stringify(all.items.map((item: any) => ({ ...item, id: undefined })));
   assert.doesNotMatch(metadataText, UUID_IN_TEXT, 'no id besides the item\'s own');
 }
@@ -268,7 +268,8 @@ async function testEveryFilter(harness: Harness, runner: QueryRunner, s: Seed) {
     [{ admin_zone: ['Tier 0'] }, ['Entra ID']],
     [{ admin_zone: [null] }, ['PostgreSQL', 'VMware vSphere', 'Windows Server']],
     [{ server_count: { op: 'gte', value: 1 } }, ['PostgreSQL', 'VMware vSphere', 'Windows Server']],
-    [{ server_count: { op: 'eq', value: 2 } }, ['VMware vSphere', 'Windows Server']],
+    [{ server_count: { op: 'eq', value: 2 } }, ['Windows Server']],
+    [{ server_count: { op: 'eq', value: 1 } }, ['PostgreSQL', 'VMware vSphere']],
     [{ server_count: { op: 'between', value: 0, valueTo: 0 } }, ['Entra ID']],
     [{ application_count: { op: 'gt', value: 0 } }, ['Entra ID', 'PostgreSQL']],
     [{ application_count: { op: 'lt', value: 1 } }, ['VMware vSphere', 'Windows Server']],
@@ -305,7 +306,7 @@ async function testEverySort(harness: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual((await order('hosting_type', 'desc'))[0], 'Entra ID', 'saas after on_prem');
   assert.deepEqual((await order('lifecycle', 'desc'))[0], 'Entra ID', 'phase_out after active');
   assert.deepEqual((await order('admin_zone', 'asc'))[0], 'Entra ID', 'the only zone first, blanks last');
-  assert.deepEqual((await order('server_count', 'desc')).slice(0, 2).sort(), ['VMware vSphere', 'Windows Server']);
+  assert.deepEqual((await order('server_count', 'desc'))[0], 'Windows Server');
   assert.deepEqual((await order('server_count', 'asc'))[0], 'Entra ID');
   assert.deepEqual((await order('application_count', 'desc'))[0], 'PostgreSQL');
   assert.deepEqual((await order('end_of_support', 'asc')).slice(0, 2), ['PostgreSQL', 'Windows Server'], 'dates first, blanks last');
@@ -648,17 +649,17 @@ async function testServersAsTheTechnologyList(harness: Harness, runner: QueryRun
     assert.equal(item.metadata.server_count, counts.get(item.id)!.servers, `${item.label}: the technology list's count`);
   }
 
-  // The servers of each version follow the same definition: the host, the server it contains, not
-  // the cluster.
+  // The servers of each version follow the same definition: the host it is installed on, neither
+  // the server it contains nor the cluster.
   const [{ id: vs8 }] = await runner.query(
     `SELECT id FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND label = '8'`, [t, s.tech.vsphere]);
   const [{ id: clusterLink }] = await runner.query(
     `INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id) VALUES ($1, $2, $3, $4) RETURNING id`,
     [t, cluster, s.tech.vsphere, vs8]);
   const vsphere = (await list(harness, runner, s, { limit: 100 })).items.find((item: any) => item.label === 'VMware vSphere');
-  assert.equal(vsphere.metadata.versions_in_use, '8: no end of support date, 2 servers');
+  assert.equal(vsphere.metadata.versions_in_use, '8: no end of support date, 1 server');
   const detail = await harness.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'technologies', entity_id: 'TEC-4' });
-  assert.deepEqual(detail.data.versions.map((v: any) => [v.label, v.server_count]), [['8', 2]], 'the detail counts the same');
+  assert.deepEqual(detail.data.versions.map((v: any) => [v.label, v.server_count]), [['8', 1]], 'the detail counts the same');
   await runner.query(`DELETE FROM asset_technologies WHERE tenant_id = $1 AND id = $2`, [t, clusterLink]);
 }
 

@@ -593,8 +593,8 @@ export class TechnologiesService {
    * The versions, newest first (`version-order.ts`), with how many servers and applications name
    * each one directly (`servers`, `applications`: every link, retired assets included, what the
    * deletion of a version touches), and `server_count`, the servers of the version as the list
-   * and the record count them (`TechnologyReachService.serversOfTechnologies`: in service,
-   * installed or carried, clusters excluded).
+   * and the record count them (`TechnologyReachService.serversOfTechnologies`: in service, the
+   * version installed on them, clusters excluded).
    */
   private async listVersionsOf(mg: EntityManager, tenantId: string, technologyId: string) {
     const rows: Array<TechnologyVersionRow & { servers: number; applications: number }> = await mg.query(
