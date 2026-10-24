@@ -357,7 +357,9 @@ function ReportView({
   const costCenterCompanies = report.warnings.costCenterCompanies ?? [];
   const hasWarnings = report.warnings.duplicates.length > 0 || report.warnings.ignoredColumns.length > 0
     || report.warnings.supplierNames.length > 0 || ignoredCells.length > 0 || costCenterCompanies.length > 0;
-  const hasCreates = report.creates.suppliers.length > 0 || report.creates.dimensionValues.length > 0;
+  // A limited person's check names the unknown values of a closed list it refuses (their rows are among the errors).
+  const refusedValues = report.creates.refusedDimensionValues ?? [];
+  const hasCreates = report.creates.suppliers.length > 0 || report.creates.dimensionValues.length > 0 || refusedValues.length > 0;
 
   return (
     <Box
@@ -397,8 +399,8 @@ function ReportView({
               key={`e-${error.line}-${error.column ?? ''}-${error.message}`}
               danger
               text={error.column
-                ? t(`${K}rowColumn`, { line: error.line, column: error.column, message: error.message })
-                : t(`${K}row`, { line: error.line, message: error.message })}
+                ? t(`${K}rowColumn`, { line: error.line, column: error.column, message: serverSentence(error.message, t) })
+                : t(`${K}row`, { line: error.line, message: serverSentence(error.message, t) })}
             />
           ))}
           {more(report.errorCount, report.errors.length) && <Line text={more(report.errorCount, report.errors.length)!} />}
@@ -471,7 +473,13 @@ function ReportView({
             />
           )}
           {report.creates.dimensionValues.map((dimension) => (
-            <Line key={`v-${dimension.dimension}`} text={t(`${K}dimensionValues`, { dimension: dimension.dimension, names: dimension.names.join(', ') })} />
+            <Line
+              key={`v-${dimension.dimension}`}
+              text={t(refusedValues.length > 0 ? `${K}dimensionValuesCreated` : `${K}dimensionValues`, { dimension: dimension.dimension, names: dimension.names.join(', ') })}
+            />
+          ))}
+          {refusedValues.map((dimension) => (
+            <Line key={`r-${dimension.dimension}`} danger text={t(`${K}dimensionValuesRefused`, { dimension: dimension.dimension, names: dimension.names.join(', ') })} />
           ))}
         </Section>
       )}

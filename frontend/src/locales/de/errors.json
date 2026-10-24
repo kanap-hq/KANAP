@@ -253,6 +253,7 @@
     "readOnlyTask": "Diese Aufgabe ist in Ihrem Zugriff schreibgeschützt.",
     "taskDelete": "Nur wer die Zeile oder den Vertrag dieser Aufgabe ändern kann, darf sie löschen.",
     "leavesAccess": "Diese Änderung würde die Zeile aus Ihrem Zugriff nehmen. Bleiben Sie einer ihrer Verantwortlichen, oder fragen Sie jemanden mit Zugriff auf ihr Unternehmen.",
-    "readOnlyRef": "{{ref}} ist in Ihrem Zugriff schreibgeschützt."
+    "readOnlyRef": "{{ref}} ist in Ihrem Zugriff schreibgeschützt.",
+    "noLongerAvailable": "{{ref}} ist seit dem Export nicht mehr verfügbar."
   }
 }

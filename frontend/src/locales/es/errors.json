@@ -253,6 +253,7 @@
     "readOnlyTask": "Esta tarea es de solo lectura en su acceso.",
     "taskDelete": "Solo quien puede modificar la línea o el contrato de esta tarea puede eliminarla.",
     "leavesAccess": "Este cambio sacaría la línea de su acceso. Siga siendo uno de sus responsables, o pídaselo a alguien con acceso a su empresa.",
-    "readOnlyRef": "{{ref}} es de solo lectura en su acceso."
+    "readOnlyRef": "{{ref}} es de solo lectura en su acceso.",
+    "noLongerAvailable": "{{ref}} ya no está disponible desde la exportación."
   }
 }

@@ -293,4 +293,81 @@ describe('BudgetFileImportDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.readMonthFirst' }));
     expect(await screen.findByText('operations.budgetFile.tooLarge')).toBeInTheDocument();
   });
+
+  it('lists the lines refused for the access among the other errors, in the screen language', async () => {
+    post.mockResolvedValueOnce({ data: report({
+      ok: false,
+      dataAccessLimited: true,
+      errors: [
+        { line: 2, column: 'item_number', message: 'BL-4 is read only in your access.' },
+        { line: 3, column: 'cost_center_code', message: 'This company or cost center is not part of your access.' },
+        { line: 4, column: 'item_number', message: 'OPX-12 is no longer available since the export.' },
+        { line: 5, column: 'supplier_name', message: "Supplier 'Initech' does not exist." },
+      ],
+      errorCount: 4,
+    }) });
+    renderDialog();
+    expect(await screen.findByText('operations.budgetFile.notReady')).toBeInTheDocument();
+    const rows = screen.getAllByText(/^operations\.budgetFile\.rowColumn:/).map((node) => node.textContent);
+    expect(rows).toHaveLength(4);
+    expect(rows[0]).toContain('errors:dataAccess.readOnlyRef');
+    expect(rows[0]).toContain('\\"ref\\":\\"BL-4\\"');
+    expect(rows[1]).toContain('errors:dataAccess.placement');
+    expect(rows[2]).toContain('errors:dataAccess.noLongerAvailable');
+    expect(rows[3]).toContain("Supplier 'Initech' does not exist.");
+    // One table of errors: no section of its own for the access.
+    expect(screen.getAllByText('operations.budgetFile.errorsTitle')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'operations.budgetFile.load' })).toBeDisabled();
+  });
+
+  it('tells the dimension values the load will create from those it refuses', async () => {
+    post.mockResolvedValueOnce({ data: report({
+      ok: false,
+      dataAccessLimited: true,
+      errors: [{ line: 3, column: 'analytics_nature', message: "Value 'Gifts' is not in the list of nature. Pick an existing value." }],
+      errorCount: 1,
+      creates: {
+        dimensionValues: [{ dimension: 'Project code', names: ['P-77'] }],
+        refusedDimensionValues: [{ dimension: 'Nature', names: ['Gifts'] }],
+        suppliers: [],
+      },
+    }) });
+    renderDialog();
+    expect(await screen.findByText('operations.budgetFile.createsTitle')).toBeInTheDocument();
+    expect(screen.getByText('operations.budgetFile.dimensionValuesCreated:{"dimension":"Project code","names":"P-77"}')).toBeInTheDocument();
+    expect(screen.getByText('operations.budgetFile.dimensionValuesRefused:{"dimension":"Nature","names":"Gifts"}')).toBeInTheDocument();
+  });
+
+  it('keeps the plain list of values to create for a person with access to all data', async () => {
+    post.mockResolvedValueOnce({ data: report({ creates: { dimensionValues: [{ dimension: 'Nature', names: ['Gifts'] }], suppliers: [] } }) });
+    renderDialog();
+    expect(await screen.findByText('operations.budgetFile.dimensionValues:{"dimension":"Nature","names":"Gifts"}')).toBeInTheDocument();
+    expect(screen.queryByText(/dimensionValuesRefused/)).toBeNull();
+    expect(screen.queryByText(/dimensionValuesCreated/)).toBeNull();
+  });
+
+  it('goes back to the check after a 409, and loads again once the new check is ready', async () => {
+    post.mockResolvedValueOnce({ data: report({ dataAccessLimited: true }) });
+    renderDialog();
+    await screen.findByText('operations.budgetFile.ready');
+    post.mockRejectedValueOnce({ response: { status: 409, data: { message: STALE_SENTENCE }, headers: {} } });
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.load' }));
+    expect(await screen.findByText('operations.budgetFile.stale')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'operations.budgetFile.load' })).toBeDisabled();
+    post.mockResolvedValueOnce({ data: report({ dataAccessLimited: true, snapshot: { lines: [{ id: 'line-1', v: 2 }] } }) });
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.checkAgain' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'operations.budgetFile.load' })).toBeEnabled());
+    expect(lastCall()?.[0]).toBe('/spend-items/budget-file/preflight');
+    post.mockResolvedValueOnce({ data: { ok: true, dryRun: false, inserted: 0, updated: 1 } });
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.load' }));
+    expect(await screen.findByText(/operations.budgetFile.loaded/)).toBeInTheDocument();
+    expect((lastCall()?.[1] as FormData).get('snapshot')).toBe(JSON.stringify({ lines: [{ id: 'line-1', v: 2 }] }));
+  });
+
+  it('shows a refusal for the access in its own words, not as missing rights', async () => {
+    post.mockRejectedValueOnce({ response: { status: 403, data: { code: 'DATA_ACCESS_LIMITED', message: 'This action is reserved to people with access to all data.' }, headers: {} } });
+    renderDialog();
+    expect(await screen.findByText(/^errors:dataAccess\.reserved/)).toBeInTheDocument();
+    expect(screen.queryByText('operations.budgetFile.forbidden')).toBeNull();
+  });
 });

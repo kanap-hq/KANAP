@@ -1058,7 +1058,7 @@
       "suppliersMissing_one": "{{count}} proveedor no existe. Créelo en Datos maestros > Proveedores o marque Crear los proveedores que faltan.",
       "suppliersMissingNoCreate": "{{count}} proveedores no existen. Primero deben crearse en Datos maestros > Proveedores.",
       "suppliersMissingNoCreate_one": "{{count}} proveedor no existe. Primero debe crearse en Datos maestros > Proveedores.",
-      "deletedLine": "Fila {{line}}: {{ref}} se eliminó después de exportar el archivo.",
+      "deletedLine": "Fila {{line}}: {{ref}} ya no está disponible desde la exportación.",
       "changesTitle": "Cambios",
       "toCreate": "{{count}} por crear",
       "toUpdate": "{{count}} por actualizar",
@@ -1088,7 +1088,9 @@
       "oldLayout": "Este archivo procede de una versión anterior de KANAP. Exporte un archivo nuevo desde esta lista, copie en él sus cambios y vuelva a importarlo.",
       "exportFailed": "No se pudo exportar el archivo. Vuelva a intentarlo.",
       "checkFailed": "No se pudo comprobar el archivo. Vuelva a intentarlo.",
-      "loadFailed": "No se pudo cargar el archivo. Vuelva a intentarlo."
+      "loadFailed": "No se pudo cargar el archivo. Vuelva a intentarlo.",
+      "dimensionValuesCreated": "{{dimension}}, se crearán: {{names}}",
+      "dimensionValuesRefused": "{{dimension}}, rechazados: {{names}}"
     },
     "budgetAdminOnly": "Necesita derechos de administrador de presupuesto para usar esta página.",
     "budgetColumnsSettings": {

@@ -253,6 +253,7 @@
     "readOnlyTask": "This task is read only in your access.",
     "taskDelete": "Only someone who can modify the line or contract of this task can delete it.",
     "leavesAccess": "This change would take the line out of your access. Keep yourself as an owner, or ask someone with access to its company.",
-    "readOnlyRef": "{{ref}} is read only in your access."
+    "readOnlyRef": "{{ref}} is read only in your access.",
+    "noLongerAvailable": "{{ref}} is no longer available since the export."
   }
 }

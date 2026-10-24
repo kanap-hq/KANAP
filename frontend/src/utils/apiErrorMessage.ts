@@ -67,13 +67,29 @@ const DATA_ACCESS_MESSAGE_KEYS: Record<string, string> = {
 };
 /** `BL-12 is read only in your access.` (budget file). */
 const DATA_ACCESS_READ_ONLY_REF = /^(\S+) is read only in your access\.$/;
+/** `OPX-12 is no longer available since the export.` (budget file: deleted, or out of the person's access). */
+const DATA_ACCESS_NO_LONGER_AVAILABLE = /^(\S+) is no longer available since the export\.$/;
 
-function dataAccessRefusalMessage(message: string, t: TFunction): string {
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * A data access sentence of the server in the screen language: a refusal (`DATA_ACCESS_LIMITED`)
+ * or a budget file row error of the same words. Null when the sentence is none of them.
+ */
+export function dataAccessSentence(message: string, t: Translate): string | null {
   const key = DATA_ACCESS_MESSAGE_KEYS[message];
   if (key) return t(`errors:dataAccess.${key}`, { defaultValue: message });
-  const ref = DATA_ACCESS_READ_ONLY_REF.exec(message);
-  if (ref) return t('errors:dataAccess.readOnlyRef', { ref: ref[1], defaultValue: message });
-  return message || t('errors:dataAccess.outside', { defaultValue: 'This item is outside your data access.' });
+  const readOnly = DATA_ACCESS_READ_ONLY_REF.exec(message);
+  if (readOnly) return t('errors:dataAccess.readOnlyRef', { ref: readOnly[1], defaultValue: message });
+  const gone = DATA_ACCESS_NO_LONGER_AVAILABLE.exec(message);
+  if (gone) return t('errors:dataAccess.noLongerAvailable', { ref: gone[1], defaultValue: message });
+  return null;
+}
+
+function dataAccessRefusalMessage(message: string, t: TFunction): string {
+  return dataAccessSentence(message, t)
+    || message
+    || t('errors:dataAccess.outside', { defaultValue: 'This item is outside your data access.' });
 }
 
 /** A refusal for data outside the person's access (403 `DATA_ACCESS_LIMITED`). */
