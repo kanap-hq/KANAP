@@ -343,7 +343,7 @@ describe('AdministrationViewPage', () => {
     expect(cell('control', ROW).textContent).toBe('Less sensitive host');
     expect(cell('control', ROW_BARE).textContent).toBe('Without a zone');
     fireEvent.mouseOver(within(cell('control', ROW)).getByText('Less sensitive host'));
-    expect((await screen.findByRole('tooltip')).textContent).toBe('Runs AST-7 (Niveau 0)Member of cluster AST-5 (Niveau 0)');
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Runs AST-7 dc1 (Niveau 0)Member of cluster AST-5 vsphere (Niveau 0)');
   });
 
   it('opens the asset on a click in its row, and leaves a link in a cell to open its own page', async () => {

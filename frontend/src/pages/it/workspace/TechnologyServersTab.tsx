@@ -8,6 +8,8 @@ import { tableCellTextFieldSx } from '../../../theme/formSx';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
 import { invalidateTechnologyLinks } from '../components/technologyLinkQueries';
+import ClusterMark from '../../../components/workspace/ClusterMark';
+import ViaAssetNames from '../../../components/workspace/ViaAssetNames';
 import TechnologyVersionPicker, { type VersionChoice, type VersionOption } from '../components/TechnologyVersionPicker';
 
 /** One row of `GET /technologies/:id/assets` (doc/api-reference.md, "Servers"). */
@@ -170,6 +172,7 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
       key: 'name', header: t('workspace.technology.servers.columns.server'),
       render: (row) => (
         <span title={isRetiredServer(row) ? t('workspace.technology.servers.retired') : row.asset_name ?? undefined}>
+          {row.is_cluster && <><ClusterMark />{' '}</>}
           {row.asset_name ?? dash}
           {isRetiredServer(row) && ` (${t('workspace.technology.servers.retiredShort')})`}
         </span>
@@ -200,7 +203,12 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
     },
     {
       key: 'via', header: <span title={t('workspace.technology.servers.columns.viaHint')}>{t('workspace.technology.servers.columns.via')}</span>, width: 140, hideOrder: 2,
-      render: (row) => (row.via_asset_name ? <span title={row.via_asset_name}>{row.via_asset_name}</span> : null),
+      render: (row) => {
+        // Every asset that carries the line (a cluster's members), not only the first.
+        const via = (row.via_assets ?? []).map((asset) => ({ id: asset.id, name: asset.name ?? dash, reference: asset.reference }));
+        if (via.length > 0) return <ViaAssetNames assets={via} />;
+        return row.via_asset_name ? <span title={row.via_asset_name}>{row.via_asset_name}</span> : null;
+      },
     },
     {
       key: 'notes', header: t('workspace.technology.servers.columns.notes'), width: 180, hideOrder: 1,

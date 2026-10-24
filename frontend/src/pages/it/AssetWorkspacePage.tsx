@@ -445,7 +445,8 @@ export default function AssetWorkspacePage() {
   const [environment, setEnvironment] = React.useState('prod');
   const [hostname, setHostname] = React.useState('');
   const [ipAddresses, setIpAddresses] = React.useState<IpAddressEntry[]>([]);
-  const [isCluster, setIsCluster] = React.useState(false);
+  // A new cluster (`?cluster=1` from the assets list) opens the creation with the switch on.
+  const [isCluster, setIsCluster] = React.useState(() => isCreate && searchParams.get('cluster') === '1');
   // True while the Cluster switch is saved: the cluster lists wait for the server to agree.
   const [clusterSwitchSaving, setClusterSwitchSaving] = React.useState(false);
   const [status, setStatus] = React.useState<string>('active');

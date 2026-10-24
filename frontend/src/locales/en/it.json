@@ -166,6 +166,7 @@
     "assets": {
       "title": "Assets",
       "addAsset": "Add asset",
+      "addCluster": "Add cluster",
       "importCsv": "Import CSV",
       "exportCsv": "Export CSV",
       "exportTitle": "Export assets",
@@ -190,6 +191,7 @@
       },
       "filters": {
         "noCluster": "(No cluster)",
+        "isCluster": "(Is a cluster)",
         "noLocation": "(No location)",
         "noSubLocation": "(No sub-location)",
         "blank": "(Blank)"
@@ -456,6 +458,7 @@
         "summary": "Summary",
         "technology": "Technology",
         "servers": "Servers",
+        "serversHint": "Installed directly",
         "applications": "Applications",
         "state": "State",
         "published": "Published",
@@ -790,7 +793,6 @@
       "noApplications": "No applications assigned.",
       "viewCluster": "View cluster",
       "editServer": "Edit server",
-      "clusterHint": "Cluster node: manage members in the Servers workspace.",
       "purpose": "Purpose:",
       "typicalPorts": "Typical ports:",
       "topology": "Topology:",

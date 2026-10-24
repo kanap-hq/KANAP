@@ -230,6 +230,26 @@ describe('TechnologyServersTab', () => {
     expect(within(table).getByText(`${S}.columns.via`).getAttribute('title')).toBe(`${S}.columns.viaHint`);
   });
 
+  it('marks a cluster row with the cluster icon, and lists every asset that carries its line in Via', async () => {
+    renderTab([
+      row({ link_id: 'l-1', asset_id: 'h1', asset_name: 'ESX-01', asset_reference: 'AST-1' }),
+      row({
+        kind: 'carried', asset_id: 'cl', asset_name: 'VSPHERE-CL', asset_reference: 'AST-9', is_cluster: true,
+        via_asset_id: 'h1', via_asset_name: 'ESX-01',
+        via_assets: [{ id: 'h1', name: 'ESX-01', reference: 'AST-1' }, { id: 'h2', name: 'ESX-02', reference: 'AST-2' }],
+      }),
+    ]);
+    const table = await screen.findByRole('table', { name: `${S}.title` });
+    const rows = within(table).getAllByRole('row');
+    const clusterRow = rows.find((tr) => tr.textContent?.includes('VSPHERE-CL'))!;
+    expect(within(clusterRow).getByRole('img', { name: 'pages.assets.columns.cluster' })).toBeTruthy();
+    const hosts = within(clusterRow).getAllByRole('link');
+    expect(hosts.map((link) => link.textContent)).toEqual(['ESX-01', 'ESX-02']);
+    expect(hosts.map((link) => link.getAttribute('href'))).toEqual(['/it/assets/h1/overview', '/it/assets/h2/overview']);
+    const hostRow = rows.find((tr) => tr.textContent?.includes('AST-1') && !tr.textContent?.includes('VSPHERE-CL'))!;
+    expect(within(hostRow).queryByRole('img')).toBeNull();
+  });
+
   it('leaves the Via column out when every link is direct', async () => {
     renderTab(ROWS.filter((item) => item.kind === 'installed'));
     const table = await screen.findByRole('table', { name: `${S}.title` });

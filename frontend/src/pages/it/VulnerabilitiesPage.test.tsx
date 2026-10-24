@@ -911,6 +911,11 @@ describe('VulnerabilitiesPage', () => {
     expect((await screen.findByRole('tooltip')).textContent).toBe(`${TIP} ${RANSOM}`);
   });
 
+  it('explains the Servers column on its header: the counts are installations', async () => {
+    renderPage();
+    expect(column('asset').headerTooltip).toBe('Installed directly');
+  });
+
   it('formats the EPSS cell as a percentage, and keeps the percentile for the detail', async () => {
     renderPage();
     const epss = column('epss');

@@ -166,6 +166,7 @@
     "assets": {
       "title": "Activos",
       "addAsset": "Añadir activo",
+      "addCluster": "Añadir clúster",
       "importCsv": "Importar CSV",
       "exportCsv": "Exportar CSV",
       "exportTitle": "Exportar activos",
@@ -190,6 +191,7 @@
       },
       "filters": {
         "noCluster": "(Sin clúster)",
+        "isCluster": "(Es un clúster)",
         "noLocation": "(Sin ubicación)",
         "noSubLocation": "(Sin sub-ubicación)",
         "blank": "(Vacío)"
@@ -456,6 +458,7 @@
         "summary": "Resumen",
         "technology": "Tecnología",
         "servers": "Servidores",
+        "serversHint": "Instalada directamente",
         "applications": "Aplicaciones",
         "state": "Estado",
         "published": "Publicación",
@@ -790,7 +793,6 @@
       "noApplications": "No hay aplicaciones asignadas.",
       "viewCluster": "Ver clúster",
       "editServer": "Editar servidor",
-      "clusterHint": "Nodo de clúster: gestione los miembros en el espacio Servidores.",
       "purpose": "Propósito:",
       "typicalPorts": "Puertos habituales:",
       "topology": "Topología:",
