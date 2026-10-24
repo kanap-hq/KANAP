@@ -94,4 +94,25 @@ describe('IncidentDateTimeField', () => {
     fireEvent.blur(date);
     expect(onChange).toHaveBeenLastCalledWith(null);
   });
+
+  it('replaces the saved date when a full date is typed over it', async () => {
+    const user = userEvent.setup();
+    const { onChange, date } = renderField(iso(2022, 3, 15, 14, 5));
+    await user.click(date);
+    expect(date.value).toBe('15/03/2022');
+    await user.type(date, '21102026', { skipClick: true });
+    expect(date.value).toBe('21/10/2026');
+    expect(onChange).toHaveBeenLastCalledWith(iso(2026, 10, 21, 14, 5));
+  });
+
+  it('shows an invalid date and leaves the saved timestamp alone', () => {
+    const { onChange, date } = renderField(iso(2022, 3, 15, 14, 5));
+    fireEvent.focus(date);
+    fireEvent.change(date, { target: { value: '21/10/26' } });
+    fireEvent.blur(date);
+    expect(date).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText('Invalid date')).toBeInTheDocument();
+    expect(date.value).toBe('21/10/26');
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

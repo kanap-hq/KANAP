@@ -132,6 +132,7 @@
     "recommended": "Recomendado",
     "openCalendar": "Abrir calendario",
     "datePlaceholder": "dd/mm/aaaa",
+    "dateInvalid": "Fecha no válida",
     "time": "Hora",
     "timePlaceholder": "hh:mm",
     "requiredTag": "(obligatorio)",
