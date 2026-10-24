@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { Task } from './task.entity';
+import { assertTaskWritten } from './task-data-access';
 
 /** Columns a task write never sets: its identity, its tenant, its number, its creation time. */
 const FIXED_COLUMNS: ReadonlySet<string> = new Set(['id', 'tenant_id', 'item_number', 'created_at']);
@@ -26,7 +27,9 @@ export async function writeTaskColumns(
     set[key] = value;
   }
   if (Object.keys(set).length > 0) {
-    await repo.update({ id: task.id, tenant_id: task.tenant_id } as any, set as any);
+    const result = await repo.update({ id: task.id, tenant_id: task.tenant_id } as any, set as any);
+    // A limited person's write the policies hid (task read through its object or as an observer).
+    await assertTaskWritten(repo.manager, result.affected);
   }
   const saved = await repo.findOne({ where: { id: task.id, tenant_id: task.tenant_id } as any });
   if (!saved) throw new NotFoundException('Task not found');

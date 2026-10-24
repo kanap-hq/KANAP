@@ -9,6 +9,7 @@ import { ItemAnalyticsValue, loadItemAnalyticsValues, writeItemAnalyticsValues }
 import { assertNoItemEditConflicts } from './item-edit-conflicts';
 import { ItemWriteFields, ItemWriteScope, resolveItemWrite } from './item-write.util';
 import { SpendItem } from './spend-item.entity';
+import { assertDataAccessWritten } from '../data-access/line-write-checks';
 
 /**
  * The update of one OPEX or CAPEX line, under its row lock (plan
@@ -106,12 +107,14 @@ export async function updateItemUnderLock(
   const time = (value: Date | string | null | undefined) => (value == null ? null : new Date(value).getTime());
   if (time(lifecycle.disabled_at) !== time(before.disabled_at)) set.disabled_at = lifecycle.disabled_at;
   if (lifecycle.status !== before.status) set.status = lifecycle.status;
-  await manager
+  const updated = await manager
     .createQueryBuilder()
     .update(SpendItem)
     .set(set as any)
     .where(`tenant_id = :tenantId AND id = :itemId${natureAnd(null, nature)}`, { tenantId, itemId })
     .execute();
+  // The line is locked: a limited person's UPDATE that touched nothing was hidden by a policy.
+  await assertDataAccessWritten(manager, updated.affected);
   // A change of analytics values alone is an edit too (updated_at above, the audit row of the caller).
   await writeItemAnalyticsValues(manager, scope, tenantId, itemId, analytics);
 

@@ -16,6 +16,7 @@ import { TaskActivitiesService } from './task-activities.service';
 import { TaskAttachmentsService } from './task-attachments.service';
 import { detectChanges, resolveDisplayNames, TASK_TRACKED_FIELDS, FieldConfig } from '../common/change-detection';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
+import { prepareTaskWrite } from './task-data-access';
 import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 
@@ -882,7 +883,9 @@ export class TasksUnifiedService {
     const { id: _id, related_object_type: _type, related_object_id: _relatedId, ...fields } = payload as Record<string, unknown>;
     void _id; void _type; void _relatedId;
     if (this.hasOwn(payload, 'description')) fields.description = normalizedDescription;
-    const saved = await writeTaskColumns(repo, existing, fields);
+    // Data-scoped access (`task-data-access.ts`): a read-only task refused, a handover keeps the person as observer.
+    const write = await prepareTaskWrite(manager, existing, fields);
+    const saved = await writeTaskColumns(repo, existing, write.changes);
     await this.audit.log({
       table: 'tasks',
       recordId: saved.id,
@@ -936,7 +939,7 @@ export class TasksUnifiedService {
       await this.setAssetLinks(saved.id, assetIds, { manager, tenantId, userId });
     }
 
-    return saved;
+    return write.stillFollowing ? Object.assign(saved, { stillFollowing: true as const }) : saved;
   }
 
   /**
@@ -1061,10 +1064,12 @@ export class TasksUnifiedService {
 
     // The fields the body changes, and the relation only when it moves, checked above under the
     // target's lock (`task-column-write.ts`): never the rest of the task read above.
-    const saved = await writeTaskColumns(repo, existing, {
+    // Data-scoped access (`task-data-access.ts`): a read-only task refused, a handover keeps the person as observer.
+    const write = await prepareTaskWrite(manager, existing, {
       ...nextPayload,
       ...(relationChanged ? { related_object_type: resolvedTarget.type, related_object_id: resolvedTarget.id } : {}),
     } as Record<string, unknown>);
+    const saved = await writeTaskColumns(repo, existing, write.changes);
     await this.audit.log({
       table: 'tasks',
       recordId: saved.id,
@@ -1132,7 +1137,7 @@ export class TasksUnifiedService {
       await this.setAssetLinks(saved.id, assetIds, { manager, tenantId, userId });
     }
 
-    return saved;
+    return write.stillFollowing ? Object.assign(saved, { stillFollowing: true as const }) : saved;
   }
 
   async moveTask(

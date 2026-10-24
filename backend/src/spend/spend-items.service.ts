@@ -40,6 +40,7 @@ import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
 import type { BudgetColumn } from './amounts-write.util';
 import { ItemWriteFields, resolveItemWrite } from './item-write.util';
+import { assertLinesEditable } from '../data-access/line-write-checks';
 import { updateItemUnderLock } from './item-locked-update';
 import {
   itemAnalyticsAuditFields,
@@ -665,6 +666,8 @@ export class SpendItemsService {
     // The OPEX route requires the url; the CAPEX one stored it trimmed, empty when missing (as before).
     if (this.nature === 'opex' && !body?.url) throw new BadRequestException('url is required');
     const line = await this.findItem(itemId, mg);
+    // A line the person reads only: a clear 403 before the policy refuses the insert.
+    await assertLinesEditable(mg, [line.id]);
     const url = this.nature === 'opex' ? body.url : String(body?.url || '').trim();
     const entity = repo.create({ tenant_id: line.tenant_id, spend_item_id: line.id, url, description: (body?.description ?? null) as any } as any);
     const saved = await repo.save(entity as any);
@@ -714,6 +717,8 @@ export class SpendItemsService {
     await budgetLineOfChild(mg, this.nature, 'link', tenantId, linkId, 'Link not found');
     const existing = await repo.findOne({ where: { id: linkId, spend_item_id: itemId, tenant_id: tenantId } as any });
     if (!existing) return { ok: true };
+    // A read-only line: the policy would delete nothing and the answer would say it did.
+    await assertLinesEditable(mg, [existing.spend_item_id]);
     await repo.delete({ id: linkId, spend_item_id: itemId, tenant_id: tenantId } as any);
     await this.audit.log({
       table: auditTableOf(this.nature, 'spend_links'), recordId: linkId, action: 'delete',
@@ -736,6 +741,8 @@ export class SpendItemsService {
     const repo = mg.getRepository(SpendAttachment);
     if (!file) throw new BadRequestException('No file uploaded');
     const line = await this.findItem(itemId, mg);
+    // Before the file is stored: a read-only line keeps no orphan object.
+    await assertLinesEditable(mg, [line.id]);
     const tenant_id = line.tenant_id;
     const id = randomUUID();
     const now = new Date();
@@ -790,6 +797,8 @@ export class SpendItemsService {
     await budgetLineOfChild(mg, this.nature, 'attachment', tenantId, attachmentId, 'Attachment not found');
     const found = await repo.findOne({ where: { id: attachmentId, tenant_id: tenantId } as any });
     if (!found) return { ok: true };
+    // A read-only line: the policy would delete nothing and the file would go anyway.
+    await assertLinesEditable(mg, [(found as any).spend_item_id]);
     await repo.delete({ id: attachmentId, tenant_id: tenantId } as any);
     try { await this.storage.deleteObject((found as any).storage_path); } catch {}
     await this.audit.log({

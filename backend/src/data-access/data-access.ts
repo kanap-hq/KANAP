@@ -51,7 +51,28 @@ export async function applyDataAccess(target: EntityManager | QueryRunner, userI
   if (mode !== 'all' && mode !== 'limited') {
     throw new Error(`data_access_apply returned an unexpected value: ${String(mode)}`);
   }
+  appliedModes.set(runner, mode);
   return mode;
+}
+
+/**
+ * The mode `applyDataAccess` set on a query runner, so the write checks of lot 3 cost no query for
+ * an unscoped person. Only `applyDataAccess` takes the limited role, so a runner it never saw runs
+ * in mode `all`, unless the access was applied by SQL directly (a spec): `transactionDataAccessMode`
+ * then reads the setting. A runner reused for a later transaction keeps its last entry: a stale
+ * `all` cannot hide a limited transaction, since that one went through `applyDataAccess` again; a
+ * stale `limited` costs a query and refuses nothing, since the SQL functions the checks call test
+ * the mode themselves and answer as mode `all`.
+ */
+const appliedModes = new WeakMap<QueryRunner, DataAccessMode>();
+
+/** The data-access mode of the transaction `manager` runs in (see `appliedModes`). */
+export async function transactionDataAccessMode(manager: EntityManager): Promise<DataAccessMode> {
+  const runner = manager.queryRunner;
+  const known = runner ? appliedModes.get(runner) : undefined;
+  if (known) return known;
+  const rows = await manager.query(`SELECT current_setting('app.da_mode', true) = 'limited' AS limited`);
+  return rows?.[0]?.limited === true ? 'limited' : 'all';
 }
 
 /**
