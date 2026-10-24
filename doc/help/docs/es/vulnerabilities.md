@@ -69,7 +69,7 @@ Los recuentos por servidor y por aplicación, en las listas, en las fichas, en e
 
 Una máquina virtual o un invitado no cuenta las vulnerabilidades de su host. Una vulnerabilidad de VMware ESXi solo cuenta en los hosts ESXi. Contar a través de los hosts pondría una sola vulnerabilidad de un hipervisor en casi todos los servidores y aplicaciones de un parque virtualizado.
 
-El alcance a través de otro activo sigue visible, sin contarse: en el panel lateral de una vulnerabilidad, bajo **A través de otro activo**, y en la ficha de un activo, en la parte **A través de otro activo** de su sección **Vulnerabilidades**. Consulte [Activos](assets.md#operations).
+El alcance a través de otro activo sigue visible, sin contarse: en el panel lateral de una vulnerabilidad, bajo **A través de otro activo**, y en la ficha de un activo, bajo una línea cerrada **Plataforma subyacente (n)** de su sección **Vulnerabilidades**. Esa línea agrupa lo que solo viene de un host, como el ESXi del host en el que se ejecuta una máquina virtual. Consulte [Activos](assets.md#operations).
 
 ## La lista
 
@@ -92,7 +92,7 @@ Una línea encima de la cuadrícula indica cuándo leyó KANAP cada fuente por �
 | **Tecnología** | La tecnología afectada |
 | **Versión** | La versión afectada. **Sin registrar** cuando un servidor o una aplicación usa la tecnología sin indicar su versión: la fila está entonces potencialmente afectada |
 | **Editor** | El editor de la tecnología. Oculta por defecto |
-| **Servidores** | Cuántos servidores tienen esta versión registrada en sí mismos ("Instalada directamente" en la información emergente del encabezado). Un servidor que se ejecuta dentro de otro no se cuenta. Consulte [Lo que KANAP cuenta](#what-kanap-counts) |
+| **Servidores** | Cuántos servidores en servicio tienen esta versión registrada en sí mismos, como los cuenta la [lista de tecnologías](technologies.md). Los clústeres y los servidores que se ejecutan dentro de otro no se cuentan. Consulte [Lo que KANAP cuenta](#what-kanap-counts) |
 | **Aplicaciones** | Cuántas aplicaciones declaran esta versión o se ejecutan en un servidor que la tiene registrada |
 | **Fuente** | Las fuentes que cotejaron la fila: **NVD**, **Editor** (la ficha que el editor publicó en CVE.org), o ambas |
 | **Estado** | **Por revisar**, **Tratada** o **No afectada** |

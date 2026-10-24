@@ -86,7 +86,7 @@ Cada fila es una tecnología. Haga clic en una fila para abrirla.
 | **Nombre** | El nombre de la tecnología |
 | **Familia** | El tipo de tecnología |
 | **Editor** | Quién la edita |
-| **Servidores** | Los activos en servicio que la llevan, instalada en ellos o alcanzada a través de otro activo. Los clústeres no se cuentan. La insignia **Servidores** de la ficha y el informe [Fin de soporte](end-of-support.md) dan el mismo número |
+| **Servidores** | Los activos en servicio en los que está instalada. Los clústeres no se cuentan, ni las máquinas virtuales de un host que la lleva. La insignia **Servidores** de la ficha y el informe [Fin de soporte](end-of-support.md) dan el mismo número |
 | **Aplicaciones** | Las aplicaciones que la declaran o se alojan en un servidor que la lleva |
 | **Próximo fin de soporte** | El fin de soporte estándar más cercano por venir entre las versiones en uso. En naranja cuando cae dentro de los próximos 12 meses |
 | **Vulnerabilidades por revisar** | Las vulnerabilidades conocidas que quedan por revisar en las versiones en uso que están en las alertas. En naranja con el número de críticas o altas (`3 · 1 críticas o altas`). Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) sobre esta tecnología. Presente cuando se siguen las vulnerabilidades |
@@ -217,11 +217,13 @@ Los servidores que llevan la tecnología, una fila por servidor y versión:
 Una tecnología llega a un servidor de dos maneras:
 
 - **Instalada**: alguien vinculó la tecnología a este servidor. Puede cambiar la versión y las notas en el sitio, o quitar la fila.
-- **A través de otro servidor**: la tecnología está instalada en el host en el que se ejecuta este servidor o, para un clúster, en sus miembros. Por ejemplo, SQL Server instalado en los nodos de un clúster aparece en el clúster en una fila por versión, con los nodos que lo llevan en **Vía**. Sigue a la instalación: cámbiela o quítela en esos servidores.
+- **A través de otro servidor**: para un clúster, la tecnología está instalada en sus miembros. Por ejemplo, SQL Server instalado en los nodos de un clúster aparece en el clúster en una fila por versión, con los nodos que lo llevan en **Vía**. Sigue a la instalación: cámbiela o quítela en esos servidores.
+
+Los servidores que se ejecutan dentro de un host que lleva la tecnología, como las máquinas virtuales de un host ESXi, se agrupan bajo una línea cerrada al final de la tabla, **Activos alojados (n)**. Haga clic en ella para mostrarlos, con su host en **Vía**.
 
 **Añadir** (`infrastructure:member`) abre una búsqueda de servidor y luego el selector de versión: elija una versión, **Versión desconocida**, o escriba una etiqueta nueva y elija **Añadir la versión «…»** para crearla. Cada cambio se guarda de inmediato.
 
-Un servidor retirado sigue en la lista, en gris y marcado como «retirado», para que pueda quitar su vínculo. No cuenta en ninguna parte: ni en la insignia, ni en el total, ni en los contadores de la lista, ni en los informes. La fila **Total** cuenta los servidores en servicio, cada uno una vez. Un clúster aparece en la lista sin contarse: sus miembros sí se cuentan.
+Un servidor retirado sigue en la lista, en gris y marcado como «retirado», para que pueda quitar su vínculo. No cuenta en ninguna parte: ni en la insignia, ni en el total, ni en los contadores de la lista, ni en los informes. La insignia y la fila **Total** cuentan los servidores en servicio en los que la tecnología está instalada, cada uno una vez. Un clúster y un activo alojado aparecen en la lista sin contarse.
 
 ### Aplicaciones
 
@@ -273,7 +275,7 @@ Un resumen de las vulnerabilidades, una fila por versión instalada de la tecnol
 | Columna | Qué muestra |
 |---|---|
 | **Versión** | La versión. Una versión fuera de las alertas aparece atenuada e indica **Excluida de las alertas**. **Versión no registrada (potencialmente afectada)** agrupa los servidores y aplicaciones que no indican ninguna versión; esta fila solo aparece si los hay |
-| **Servidores** | Cuántos servidores en servicio tienen esta versión registrada en sí mismos. Un servidor que se ejecuta dentro de otro no se cuenta. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts) |
+| **Servidores** | Cuántos servidores en servicio tienen esta versión registrada en sí mismos. Los clústeres y los servidores que se ejecutan dentro de otro no se cuentan. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts) |
 | **Crítica**, **Alta**, **Media**, **Baja**, **Sin evaluar** | Una columna por gravedad: las vulnerabilidades aún por revisar. Una vulnerabilidad de gravedad **Ninguna** cuenta con **Baja**. Un punto indica que no queda ninguna. Pase el cursor por un encabezado para un recordatorio |
 | **Total** | Las vulnerabilidades distintas de esta versión, en todos los estados |
 

@@ -86,7 +86,7 @@ Each row is one technology. Click a row to open it.
 | **Name** | The technology's name |
 | **Family** | Kind of technology |
 | **Publisher** | Who publishes it |
-| **Servers** | Assets in service that carry it, installed on them or reached through another asset. Clusters are not counted. The **Servers** badge of the record and the [End of support](end-of-support.md) report give the same number |
+| **Servers** | Assets in service it is installed on. Clusters are not counted, nor the virtual machines of a host that carries it. The **Servers** badge of the record and the [End of support](end-of-support.md) report give the same number |
 | **Applications** | Applications that declare it or are hosted on a server that carries it |
 | **Next end of support** | The earliest end of standard support to come among the versions in use. Shown in orange when it falls within the next 12 months |
 | **Vulnerabilities to review** | The known vulnerabilities still to review on the versions in use that are in the alerts. Shown in orange with the count of critical or high ones (`3 · 1 critical or high`). Click it to open the [Vulnerabilities](vulnerabilities.md) page on this technology. Present when vulnerabilities are followed |
@@ -217,11 +217,13 @@ The servers that carry the technology, one row per server and version:
 A technology reaches a server in two ways:
 
 - **Installed**: someone linked the technology to this server. You can change the version and the notes in place, or remove the row.
-- **Through another server**: the technology is installed on the host this server runs in, or, for a cluster, on its members. For example, SQL Server installed on the nodes of a cluster shows on the cluster in one row per version, with the nodes that carry it under **Via**. It follows the installation: change or remove it on those servers.
+- **Through another server**: for a cluster, the technology is installed on its members. For example, SQL Server installed on the nodes of a cluster shows on the cluster in one row per version, with the nodes that carry it under **Via**. It follows the installation: change or remove it on those servers.
+
+The servers that run inside a host carrying the technology, such as the virtual machines of an ESXi host, sit under a closed line at the end of the table, **Hosted assets (n)**. Click it to show them, with their host under **Via**.
 
 **Add** (`infrastructure:member`) opens a search for a server, then the version picker: choose a version, **Version unknown**, or type a new label and pick **Add version "…"** to create it. Each change saves at once.
 
-A retired server stays listed, greyed out and marked "retired", so you can remove its link. It counts nowhere: not in the badge, the total, the list counters or the reports. The **Total** row counts the servers in service, each once. A cluster is listed and not counted: its members are.
+A retired server stays listed, greyed out and marked "retired", so you can remove its link. It counts nowhere: not in the badge, the total, the list counters or the reports. The badge and the **Total** row count the servers in service the technology is installed on, each once. A cluster and a hosted asset are listed and not counted.
 
 ### Applications
 
@@ -273,7 +275,7 @@ A summary of the vulnerabilities, one line per installed version of the technolo
 | Column | What it shows |
 |---|---|
 | **Version** | The version. A version out of the alerts is greyed and says **Excluded from alerts**. **Version not recorded (potentially concerned)** groups the servers and applications that name no version; this line shows only when there are some |
-| **Servers** | How many servers in service have this version recorded on themselves. A server that runs inside another one is not counted. See [What KANAP counts](vulnerabilities.md#what-kanap-counts) |
+| **Servers** | How many servers in service have this version recorded on themselves. Clusters and the servers that run inside another one are not counted. See [What KANAP counts](vulnerabilities.md#what-kanap-counts) |
 | **Critical**, **High**, **Medium**, **Low**, **Not rated** | One column per severity: the vulnerabilities still to review. A vulnerability rated **None** counts with **Low**. A dot stands for none left. Hover a header for a reminder |
 | **Total** | The distinct vulnerabilities of this version, every state |
 

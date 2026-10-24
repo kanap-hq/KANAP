@@ -34,12 +34,12 @@ Quedan fuera los activos retirados, las aplicaciones desactivadas y las versione
 
 **Lo que afecta un elemento**: haga clic en una fila para desplegar los servidores y las aplicaciones que hay detrás de sus contadores. Cada nombre abre su ficha.
 
-- Una versión de tecnología afecta a los servidores que la llevan (incluidas las máquinas virtuales de un host que la lleva) y a las aplicaciones alojadas en ellos o que la declaran.
-- Un sistema operativo afecta a los servidores que usan esa versión, a lo que contienen y a las aplicaciones desplegadas en todos ellos. Su fila abre la tecnología.
+- Una versión de tecnología afecta a los servidores en los que está instalada, y a las aplicaciones que la declaran o están alojadas en un servidor que la lleva (incluidas las máquinas virtuales de dicho servidor).
+- Un sistema operativo afecta a los servidores que usan esa versión, y a las aplicaciones desplegadas en ellos y en lo que contienen. Su fila abre la tecnología.
 - Un hardware afecta a sus servidores, a lo que contienen y a las aplicaciones desplegadas en todos ellos. El propio hardware no es uno de sus servidores.
 - Una aplicación afecta a los servidores en los que está desplegada.
 
-Los servidores de una tecnología, de un sistema operativo o de un hardware se cuentan como en la columna **Servidores** de la [lista de tecnologías](technologies.md): los servidores en servicio, sin los clústeres. Las aplicaciones de un clúster siguen contando.
+Los servidores de una tecnología o de un sistema operativo se cuentan como en la columna **Servidores** de la [lista de tecnologías](technologies.md): los servidores en servicio en los que está instalada la versión, sin los clústeres. Los servidores de un hardware son los activos que lleva, sin los clústeres. Las aplicaciones de un clúster siguen contando.
 
 ## Datos que faltan
 

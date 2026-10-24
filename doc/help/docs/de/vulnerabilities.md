@@ -69,7 +69,7 @@ Die Zählungen pro Server und pro Anwendung, in den Listen, auf den Datensätzen
 
 Eine virtuelle Maschine oder ein Gast zählt die Schwachstellen seines Hosts nicht. Eine Schwachstelle von VMware ESXi zählt nur auf den ESXi-Hosts. Über die Hosts zu zählen, würde eine einzige Schwachstelle eines Hypervisors auf fast alle Server und Anwendungen eines virtualisierten Bestands legen.
 
-Die Reichweite über ein anderes Asset bleibt sichtbar, ohne gezählt zu werden: im Seitenbereich einer Schwachstelle, unter **Über ein anderes Asset**, und auf dem Datensatz eines Assets, im Teil **Über ein anderes Asset** seines Abschnitts **Schwachstellen**. Siehe [Assets](assets.md#operations).
+Die Reichweite über ein anderes Asset bleibt sichtbar, ohne gezählt zu werden: im Seitenbereich einer Schwachstelle, unter **Über ein anderes Asset**, und auf dem Datensatz eines Assets, unter einer geschlossenen Zeile **Zugrunde liegende Plattform (n)** seines Abschnitts **Schwachstellen**. Diese Zeile enthält, was nur von einem Host kommt, etwa das ESXi des Hosts, auf dem eine virtuelle Maschine läuft. Siehe [Assets](assets.md#operations).
 
 ## Die Liste
 
@@ -92,7 +92,7 @@ Eine Zeile über dem Raster zeigt, wann KANAP jede Quelle zuletzt gelesen hat: *
 | **Technologie** | Die betroffene Technologie |
 | **Version** | Die betroffene Version. **Nicht erfasst**, wenn ein Server oder eine Anwendung die Technologie ohne Angabe der Version nutzt: Die Zeile ist dann möglicherweise betroffen |
 | **Hersteller** | Der Hersteller der Technologie. Standardmäßig ausgeblendet |
-| **Server** | Wie viele Server diese Version selbst erfasst haben („Direkt installiert“ im Tooltip der Kopfzeile). Ein Server, der in einem anderen läuft, wird nicht gezählt. Siehe [Was KANAP zählt](#what-kanap-counts) |
+| **Server** | Wie viele Server in Betrieb diese Version selbst erfasst haben, so wie die [Technologieliste](technologies.md) sie zählt. Cluster und Server, die in einem anderen laufen, werden nicht gezählt. Siehe [Was KANAP zählt](#what-kanap-counts) |
 | **Anwendungen** | Wie viele Anwendungen diese Version deklarieren oder auf einem Server laufen, der sie erfasst hat |
 | **Quelle** | Die Quellen, die die Zeile abgeglichen haben: **NVD**, **Hersteller** (der Eintrag, den der Hersteller auf CVE.org veröffentlicht hat) oder beide |
 | **Status** | **Zu prüfen**, **Behandelt** oder **Nicht betroffen** |

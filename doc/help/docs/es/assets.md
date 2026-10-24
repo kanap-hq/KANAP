@@ -193,7 +193,8 @@ En un clúster, un aviso encima de la tabla le pide que asigne en su lugar los h
 - **Sistema operativo**: el sistema operativo del servidor es una de sus tecnologías, de la familia **Sistema operativo**. Aparece primero en la lista, con la mención «Sistema operativo» tras su nombre. Consulte [Sistema operativo](#sistema-operativo) más abajo.
 - **Versión**: en naranja cuando el soporte termina en los próximos 12 meses o solo queda el soporte extendido, y en rojo cuando todas las fechas de fin han pasado. Pase el ratón por encima para ver el fin del soporte estándar y del extendido.
 - Una tecnología instalada en este servidor se quita con la cruz al final de su fila.
-- Una tecnología instalada en el host en el que se ejecuta este servidor muestra ese host en **Vía**. En un clúster, una tecnología instalada en sus miembros aparece una vez por versión, con los miembros que la llevan en **Vía**. Una línea así sigue a la instalación y se quita allí.
+- En un clúster, una tecnología instalada en sus miembros aparece una vez por versión, con los miembros que la llevan en **Vía**. Una línea así sigue a la instalación y se quita allí.
+- Una tecnología que solo viene del host en el que se ejecuta este servidor, como el ESXi de su host, es la plataforma subyacente. Se agrupa bajo una línea cerrada al final de la tabla, **Plataforma subyacente (n)**, con el host en **Vía**. Haga clic en la línea para mostrarla. Estas filas no se cuentan en la sección.
 - **Añadir** (`infrastructure:member`) abre una búsqueda de tecnología y luego el selector de versión: elija una versión, **Versión desconocida**, o escriba una etiqueta nueva y elija **Añadir la versión «…»** para crearla. Cada cambio se guarda de inmediato.
 - **Cambiar una versión** (`infrastructure:member`): haga clic en la versión de una tecnología instalada, o en el lápiz al final de su fila. Se abre el mismo selector de versión.
 
@@ -225,9 +226,9 @@ Cuando se siguen las vulnerabilidades, la última sección de la pestaña lista 
 
 **Ver** abre la página [Vulnerabilidades](vulnerabilities.md) filtrada por el activo y la tecnología. Cuando no queda nada por revisar, la sección lo dice en una línea. Un activo retirado no tiene sección.
 
-**A través de otro activo** lista aparte las tecnologías que el activo recibe de otro, como el host en el que se ejecuta, con ese activo en la columna **Activo**. Estas líneas no se cuentan, ni en la insignia ni en otro lugar: una vulnerabilidad cuenta en el activo donde la tecnología está registrada. Su **Ver** abre la página en ese otro activo. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts).
+En un **clúster**, **En sus miembros** lista aparte las tecnologías de sus miembros, una línea por tecnología y versión, con los miembros que la llevan en la columna **Activo**. Un clúster cuenta las vulnerabilidades de sus miembros en servicio con las suyas: el número de la sección, la insignia del encabezado (su información emergente dice "miembros incluidos") y la columna de la lista. El **Ver** de una línea abre la página en el miembro que la lleva.
 
-En un **clúster**, esta parte lista las tecnologías de sus miembros, una línea por tecnología y versión, con los miembros que la llevan. Un clúster cuenta las vulnerabilidades de sus miembros en servicio junto con las suyas: el recuento de la sección, la insignia del encabezado (su información emergente dice "miembros incluidos") y la columna de la lista.
+Lo que solo viene del host en el que se ejecutan el activo o sus miembros, como el ESXi del host de una máquina virtual, es la plataforma subyacente. Se agrupa bajo una línea cerrada **Plataforma subyacente (n)**, que se abre con un clic. No se cuenta ni en la sección, ni en la insignia, ni en la columna de la lista: una vulnerabilidad cuenta en el activo donde la tecnología está registrada. Su **Ver** abre la página en ese host. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts).
 
 ---
 

@@ -69,7 +69,7 @@ The counts per server and per application, in the lists, on the records, on the 
 
 A virtual machine or a guest does not count the vulnerabilities of its host. A vulnerability of VMware ESXi counts on the ESXi hosts only. Counting through the hosts would put one vulnerability of a hypervisor on almost every server and application of a virtualised estate.
 
-The reach through another asset stays visible, without being counted: in the side panel of a vulnerability, under **Through another asset**, and on the record of an asset, in the **Through another asset** part of its **Vulnerabilities** section. See [Assets](assets.md#operations).
+The reach through another asset stays visible, without being counted: in the side panel of a vulnerability, under **Through another asset**, and on the record of an asset, under a closed line **Underlying platform (n)** of its **Vulnerabilities** section. That line holds what only comes from a host, such as the ESXi of the host a virtual machine runs on. See [Assets](assets.md#operations).
 
 ## The list
 
@@ -92,7 +92,7 @@ A line above the grid says when KANAP last read each source: **Data read**, then
 | **Technology** | The concerned technology |
 | **Version** | The concerned version. **Not recorded** when a server or an application uses the technology without naming its version: the row is then potentially concerned |
 | **Publisher** | The technology's publisher. Hidden by default |
-| **Servers** | How many servers have this version recorded on themselves ("Installed directly" in the tooltip of the header). A server that runs inside another one is not counted. See [What KANAP counts](#what-kanap-counts) |
+| **Servers** | How many servers in service have this version recorded on themselves, as the [technologies list](technologies.md) counts them. Clusters and the servers that run inside another one are not counted. See [What KANAP counts](#what-kanap-counts) |
 | **Applications** | How many applications declare this version, or run on a server that has it recorded |
 | **Source** | The sources that matched the row: **NVD**, **Publisher** (the record the publisher released on CVE.org), or both |
 | **State** | **To review**, **Handled** or **Not affected** |

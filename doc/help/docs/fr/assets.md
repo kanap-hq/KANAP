@@ -193,7 +193,8 @@ Sur un cluster, un message au-dessus du tableau vous demande d'affecter plutôt 
 - **Système d'exploitation** : le système d'exploitation du serveur est l'une de ses technologies, de la famille **Système d'exploitation**. Il vient en tête de liste, avec la mention « Système d'exploitation » après son nom. Voir [Système d'exploitation](#systeme-dexploitation) ci-dessous.
 - **Version** : affichée en orange quand le support finit dans les 12 mois ou qu'il ne reste que le support étendu, et en rouge une fois toutes les dates de fin passées. Survolez-la pour voir la fin du support standard et du support étendu.
 - Une technologie installée sur ce serveur se retire avec la croix au bout de sa ligne.
-- Une technologie installée sur l'hôte dans lequel ce serveur tourne affiche cet hôte sous **Via**. Sur un cluster, une technologie installée sur ses membres s'affiche une fois par version, avec sous **Via** les membres qui la portent. Une telle ligne suit l'installation et se retire là-bas.
+- Sur un cluster, une technologie installée sur ses membres s'affiche une fois par version, avec sous **Via** les membres qui la portent. Une telle ligne suit l'installation et se retire là-bas.
+- Une technologie qui vient seulement de l'hôte dans lequel ce serveur tourne, comme l'ESXi de son hôte, est la plateforme sous-jacente. Elle se range sous une ligne fermée en fin de tableau, **Plateforme sous-jacente (n)**, avec l'hôte sous **Via**. Cliquez sur la ligne pour l'afficher. Ces lignes ne sont pas comptées dans la section.
 - **Ajouter** (`infrastructure:member`) ouvre une recherche de technologie, puis le choix de la version : choisissez une version, **Version inconnue**, ou tapez un nouveau libellé et choisissez **Ajouter la version « … »** pour la créer. Chaque modification s'enregistre aussitôt.
 - **Changer une version** (`infrastructure:member`) : cliquez sur la version d'une technologie installée, ou sur le crayon au bout de sa ligne. Le même choix de version s'ouvre.
 
@@ -225,9 +226,9 @@ Quand les vulnérabilités sont suivies, la dernière section de l'onglet liste 
 
 **Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif et la technologie. Quand il ne reste rien à traiter, la section le dit en une ligne. Un actif retiré n'a pas de section.
 
-**Par un autre actif** liste à part les technologies que l'actif reçoit d'un autre, comme l'hôte sur lequel il tourne, avec cet actif dans la colonne **Actif**. Ces lignes ne sont pas comptées, ni dans le badge ni ailleurs : une vulnérabilité compte sur l'actif où la technologie est renseignée. Leur **Voir** ouvre la page sur cet autre actif. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts).
+Sur un **cluster**, **Sur ses membres** liste à part les technologies de ses membres, une ligne par technologie et version, avec dans la colonne **Actif** les membres qui la portent. Un cluster compte les vulnérabilités de ses membres en service avec les siennes : le nombre de la section, le badge de l'en-tête (son infobulle dit « membres compris ») et la colonne de la liste. Le **Voir** d'une ligne ouvre la page sur le membre qui la porte.
 
-Sur un **cluster**, cette partie liste les technologies de ses membres, une ligne par technologie et version, avec les membres qui la portent. Un cluster compte les vulnérabilités de ses membres en service avec les siennes : le compte de la section, le badge de l'en-tête (son infobulle dit « membres compris ») et la colonne de la liste.
+Ce qui vient seulement de l'hôte dans lequel tournent l'actif ou ses membres, comme l'ESXi de l'hôte d'une machine virtuelle, est la plateforme sous-jacente. Il se range sous une ligne fermée **Plateforme sous-jacente (n)**, qui s'ouvre d'un clic. Il n'est compté ni dans la section, ni dans le badge, ni dans la colonne de la liste : une vulnérabilité compte sur l'actif où la technologie est renseignée. Son **Voir** ouvre la page sur cet hôte. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts).
 
 ---
 

@@ -69,7 +69,7 @@ Les comptes par serveur et par application, dans les listes, sur les fiches, au 
 
 Une machine virtuelle ou un invité ne compte pas les vulnérabilités de son hôte. Une vulnérabilité de VMware ESXi ne compte que sur les hôtes ESXi. Compter par les hôtes mettrait une seule vulnérabilité d'un hyperviseur sur presque tous les serveurs et applications d'un parc virtualisé.
 
-La portée par un autre actif reste visible, sans être comptée : dans le panneau latéral d'une vulnérabilité, sous **Par un autre actif**, et sur la fiche d'un actif, dans la partie **Par un autre actif** de sa section **Vulnérabilités**. Voir [Actifs](assets.md#operations).
+La portée par un autre actif reste visible, sans être comptée : dans le panneau latéral d'une vulnérabilité, sous **Par un autre actif**, et sur la fiche d'un actif, sous une ligne fermée **Plateforme sous-jacente (n)** de sa section **Vulnérabilités**. Cette ligne regroupe ce qui vient seulement d'un hôte, comme l'ESXi de l'hôte sur lequel tourne une machine virtuelle. Voir [Actifs](assets.md#operations).
 
 ## La liste
 
@@ -92,7 +92,7 @@ Une ligne au-dessus de la grille indique quand KANAP a lu chaque source pour la 
 | **Technologie** | La technologie concernée |
 | **Version** | La version concernée. **Non renseignée** quand un serveur ou une application utilise la technologie sans nommer sa version : la ligne est alors potentiellement concernée |
 | **Éditeur** | L'éditeur de la technologie. Masquée par défaut |
-| **Serveurs** | Le nombre de serveurs qui ont cette version renseignée sur eux-mêmes (« Installée directement » dans l'infobulle de l'en-tête). Un serveur qui tourne dans un autre n'est pas compté. Voir [Ce que KANAP compte](#what-kanap-counts) |
+| **Serveurs** | Le nombre de serveurs en service qui ont cette version renseignée sur eux-mêmes, comme les compte la [liste des technologies](technologies.md). Les clusters et les serveurs qui tournent dans un autre ne sont pas comptés. Voir [Ce que KANAP compte](#what-kanap-counts) |
 | **Applications** | Le nombre d'applications qui déclarent cette version, ou qui tournent sur un serveur qui l'a renseignée |
 | **Source** | Les sources qui ont rapproché la ligne : **NVD**, **Éditeur** (la fiche que l'éditeur a publiée sur CVE.org), ou les deux |
 | **État** | **À traiter**, **Traitée** ou **Non concernée** |

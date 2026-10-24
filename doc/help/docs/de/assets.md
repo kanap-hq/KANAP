@@ -193,7 +193,8 @@ Bei einem Cluster fordert ein Hinweis über der Tabelle Sie auf, stattdessen die
 - **Betriebssystem**: Das Betriebssystem des Servers ist eine seiner Technologien, aus der Familie **Betriebssystem**. Es steht an erster Stelle der Liste, mit dem Vermerk „Betriebssystem“ nach seinem Namen. Siehe [Betriebssystem](#betriebssystem) weiter unten.
 - **Version**: orange, wenn der Support innerhalb von 12 Monaten endet oder nur noch der erweiterte Support läuft, und rot, sobald alle Enddaten verstrichen sind. Fahren Sie mit der Maus darüber, um das Ende des Standardsupports und des erweiterten Supports zu sehen.
 - Eine auf diesem Server installierte Technologie entfernen Sie mit dem Kreuz am Ende ihrer Zeile.
-- Eine Technologie, die auf dem Host installiert ist, in dem dieser Server läuft, zeigt diesen Host unter **Über**. Bei einem Cluster erscheint eine auf seinen Mitgliedern installierte Technologie einmal pro Version, mit den Mitgliedern, die sie tragen, unter **Über**. Eine solche Zeile folgt der Installation und wird dort entfernt.
+- Bei einem Cluster erscheint eine auf seinen Mitgliedern installierte Technologie einmal pro Version, mit den Mitgliedern, die sie tragen, unter **Über**. Eine solche Zeile folgt der Installation und wird dort entfernt.
+- Eine Technologie, die nur vom Host kommt, in dem dieser Server läuft, etwa das ESXi seines Hosts, ist die zugrunde liegende Plattform. Sie steht unter einer geschlossenen Zeile am Ende der Tabelle, **Zugrunde liegende Plattform (n)**, mit dem Host unter **Über**. Klicken Sie auf die Zeile, um sie anzuzeigen. Diese Zeilen werden im Abschnitt nicht gezählt.
 - **Hinzufügen** (`infrastructure:member`) öffnet eine Technologiesuche, dann die Versionsauswahl: Wählen Sie eine Version, **Version unbekannt**, oder geben Sie eine neue Bezeichnung ein und wählen Sie **Version „…“ hinzufügen**, um sie anzulegen. Jede Änderung wird sofort gespeichert.
 - **Version ändern** (`infrastructure:member`): Klicken Sie auf die Version einer installierten Technologie oder auf den Stift am Ende ihrer Zeile. Dieselbe Versionsauswahl öffnet sich.
 
@@ -225,9 +226,9 @@ Wenn Schwachstellen verfolgt werden, listet der letzte Abschnitt des Reiters die
 
 **Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf das Asset und die Technologie. Wenn nichts mehr zu prüfen ist, sagt der Abschnitt es in einer Zeile. Ein außer Betrieb genommenes Asset hat keinen Abschnitt.
 
-**Über ein anderes Asset** listet getrennt die Technologien, die das Asset von einem anderen erhält, etwa vom Host, auf dem es läuft, mit diesem Asset in der Spalte **Asset**. Diese Zeilen werden nicht gezählt, weder im Badge noch anderswo: Eine Schwachstelle zählt auf dem Asset, auf dem die Technologie erfasst ist. Ihr **Ansehen** öffnet die Seite auf diesem anderen Asset. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts).
+Bei einem **Cluster** listet **Auf seinen Mitgliedern** getrennt die Technologien seiner Mitglieder, eine Zeile pro Technologie und Version, mit den Mitgliedern, die sie tragen, in der Spalte **Asset**. Ein Cluster zählt die Schwachstellen seiner Mitglieder in Betrieb mit seinen eigenen: die Zahl des Abschnitts, das Badge der Kopfzeile (sein Tooltip sagt „Mitglieder eingeschlossen“) und die Spalte der Liste. **Ansehen** einer Zeile öffnet die Seite auf dem Mitglied, das sie trägt.
 
-Bei einem **Cluster** listet dieser Teil die Technologien seiner Mitglieder, eine Zeile pro Technologie und Version, mit den Mitgliedern, die sie tragen. Ein Cluster zählt die Schwachstellen seiner Mitglieder in Betrieb zu seinen eigenen: die Zahl des Abschnitts, das Badge im Kopfbereich (sein Tooltip sagt „Mitglieder eingeschlossen“) und die Spalte der Liste.
+Was nur vom Host kommt, in dem das Asset oder seine Mitglieder laufen, etwa das ESXi des Hosts einer virtuellen Maschine, ist die zugrunde liegende Plattform. Es steht unter einer geschlossenen Zeile **Zugrunde liegende Plattform (n)**, die sich per Klick öffnet. Es wird weder im Abschnitt noch im Badge noch in der Spalte der Liste gezählt: Eine Schwachstelle zählt auf dem Asset, auf dem die Technologie erfasst ist. Sein **Ansehen** öffnet die Seite auf diesem Host. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts).
 
 ---
 

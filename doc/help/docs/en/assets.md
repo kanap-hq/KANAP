@@ -193,7 +193,8 @@ On a cluster, a notice above the table asks you to assign the member hosts inste
 - **Operating system**: the server's operating system is one of its technologies, of the **Operating system** family. It comes first in the list, with "Operating system" after its name. See [Operating system](#operating-system) below.
 - **Version**: shown in orange when support ends within 12 months or only extended support remains, and in red once every end date has passed. Hover it to see the end of standard and extended support.
 - A technology installed on this server can be removed with the cross at the end of its row.
-- A technology installed on the host this server runs in shows that host under **Via**. On a cluster, a technology installed on its members shows once per version, with the members that carry it under **Via**. Such a row follows the installation and is removed there.
+- On a cluster, a technology installed on its members shows once per version, with the members that carry it under **Via**. Such a row follows the installation and is removed there.
+- A technology that only comes from the host this server runs in, such as the ESXi of its host, is the underlying platform. It sits under a closed line at the end of the table, **Underlying platform (n)**, with the host under **Via**. Click the line to show it. These rows are not counted in the section.
 - **Add** (`infrastructure:member`) opens a search for a technology, then the version picker: choose a version, **Version unknown**, or type a new label and pick **Add version "…"** to create it. Each change saves at once.
 - **Change a version** (`infrastructure:member`): click the version of an installed technology, or the pencil at the end of its row. The same version picker opens.
 
@@ -225,9 +226,9 @@ When vulnerabilities are followed, the last section of the tab lists the vulnera
 
 **See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the asset and the technology. When nothing is left to review, the section says so in one line. A retired asset has no section.
 
-**Through another asset** lists apart the technologies the asset gets from another one, such as the host it runs on, with that asset in the **Asset** column. These lines are not counted, in the badge or anywhere else: a vulnerability counts on the asset where the technology is recorded. Their **See** opens the page on that other asset. See [What KANAP counts](vulnerabilities.md#what-kanap-counts).
+On a **cluster**, **On its members** lists apart the technologies of its members, one line per technology and version, with the members that carry it in the **Asset** column. A cluster counts the vulnerabilities of its members in service with its own: the count of the section, the header badge (its tooltip says "members included") and the column of the list. The **See** of a line opens the page on the member that carries it.
 
-On a **cluster**, this part lists the technologies of its members, one line per technology and version, with the members that carry it. A cluster counts the vulnerabilities of its members in service with its own: the count of the section, the header badge (its tooltip says "members included") and the column of the list.
+What only comes from the host the asset or its members run in, such as the ESXi of the host of a virtual machine, is the underlying platform. It sits under a closed line **Underlying platform (n)**, which a click opens. It is not counted in the section, the badge or the list column: a vulnerability counts on the asset where the technology is recorded. Its **See** opens the page on that host. See [What KANAP counts](vulnerabilities.md#what-kanap-counts).
 
 ---
 

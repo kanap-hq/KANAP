@@ -86,7 +86,7 @@ Chaque ligne est une technologie. Cliquez sur une ligne pour l'ouvrir.
 | **Nom** | Le nom de la technologie |
 | **Famille** | Le genre de technologie |
 | **Éditeur** | Qui l'édite |
-| **Serveurs** | Les actifs en service qui la portent, installée sur eux ou atteinte par un autre actif. Les clusters ne sont pas comptés. La pastille **Serveurs** de la fiche et le rapport [Fins de support](end-of-support.md) donnent le même nombre |
+| **Serveurs** | Les actifs en service sur lesquels elle est installée. Les clusters ne sont pas comptés, ni les machines virtuelles d'un hôte qui la porte. La pastille **Serveurs** de la fiche et le rapport [Fins de support](end-of-support.md) donnent le même nombre |
 | **Applications** | Les applications qui la déclarent ou sont hébergées sur un serveur qui la porte |
 | **Prochaine fin de support** | La plus proche fin de support standard à venir parmi les versions en service. En orange quand elle tombe dans les 12 prochains mois |
 | **Vulnérabilités à traiter** | Les vulnérabilités connues encore à traiter sur les versions en service qui sont dans les alertes. En orange avec le nombre de critiques ou élevées (`3 · 1 critiques ou élevées`). Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) sur cette technologie. Présente quand les vulnérabilités sont suivies |
@@ -217,11 +217,13 @@ Les serveurs qui portent la technologie, une ligne par serveur et par version :
 Une technologie atteint un serveur de deux façons :
 
 - **Installée** : quelqu'un a lié la technologie à ce serveur. Vous pouvez changer la version et les notes sur place, ou retirer la ligne.
-- **Par un autre serveur** : la technologie est installée sur l'hôte dans lequel ce serveur tourne ou, pour un cluster, sur ses membres. Par exemple, SQL Server installé sur les nœuds d'un cluster s'affiche sur le cluster en une ligne par version, avec sous **Via** les nœuds qui le portent. Elle suit l'installation : changez-la ou retirez-la sur ces serveurs.
+- **Par un autre serveur** : pour un cluster, la technologie est installée sur ses membres. Par exemple, SQL Server installé sur les nœuds d'un cluster s'affiche sur le cluster en une ligne par version, avec sous **Via** les nœuds qui le portent. Elle suit l'installation : changez-la ou retirez-la sur ces serveurs.
+
+Les serveurs qui tournent dans un hôte portant la technologie, comme les machines virtuelles d'un hôte ESXi, se rangent sous une ligne fermée en fin de tableau, **Actifs hébergés (n)**. Cliquez dessus pour les afficher, avec leur hôte sous **Via**.
 
 **Ajouter** (`infrastructure:member`) ouvre une recherche de serveur, puis le choix de la version : choisissez une version, **Version inconnue**, ou tapez un nouveau libellé et choisissez **Ajouter la version « … »** pour la créer. Chaque modification s'enregistre aussitôt.
 
-Un serveur retiré reste listé, grisé et marqué « retiré », pour que vous puissiez retirer son lien. Il ne compte nulle part : ni dans la pastille, ni dans le total, ni dans les compteurs de la liste, ni dans les rapports. La ligne **Total** compte les serveurs en service, chacun une fois. Un cluster est listé sans être compté : ses membres le sont.
+Un serveur retiré reste listé, grisé et marqué « retiré », pour que vous puissiez retirer son lien. Il ne compte nulle part : ni dans la pastille, ni dans le total, ni dans les compteurs de la liste, ni dans les rapports. La pastille et la ligne **Total** comptent les serveurs en service sur lesquels la technologie est installée, chacun une fois. Un cluster et un actif hébergé sont listés sans être comptés.
 
 ### Applications
 
@@ -273,7 +275,7 @@ Un résumé des vulnérabilités, une ligne par version installée de la technol
 | Colonne | Ce qu'elle montre |
 |---|---|
 | **Version** | La version. Une version hors des alertes est grisée et indique **Exclue des alertes**. **Version non renseignée (potentiellement concernée)** regroupe les serveurs et applications qui n'indiquent aucune version ; cette ligne n'apparaît que s'il y en a |
-| **Serveurs** | Le nombre de serveurs en service qui ont cette version renseignée sur eux-mêmes. Un serveur qui tourne dans un autre n'est pas compté. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts) |
+| **Serveurs** | Le nombre de serveurs en service qui ont cette version renseignée sur eux-mêmes. Les clusters et les serveurs qui tournent dans un autre ne sont pas comptés. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts) |
 | **Critique**, **Élevée**, **Moyenne**, **Faible**, **Non évaluée** | Une colonne par sévérité : les vulnérabilités encore à traiter. Une vulnérabilité de sévérité **Aucune** compte avec **Faible**. Un point signifie qu'il n'en reste aucune. Survolez un en-tête pour un rappel |
 | **Total** | Les vulnérabilités distinctes de cette version, tous états confondus |
 
