@@ -355,6 +355,17 @@ async function testPlaidWrites(): Promise<void> {
     await rejection(() => tool(rita, 'update_entity_relations', { entity_type: 'spend_items', ref: s.lines.L3, relation: 'applications', add: [applicationId] })),
     'update_entity_relations from read-only L3',
   );
+  // A task written on the read-only line: refused when the preview is asked too, whether created
+  // there or moved there (the write's trigger would refuse it at the approval).
+  assertReadOnlyRefusal(
+    await rejection(() => tool(rita, 'create_task', { title: 'Never created', relation_type: 'spend_item', relation_ref: s.lines.L3 })),
+    'create_task on read-only L3',
+  );
+  assertReadOnlyRefusal(
+    await rejection(() => tool(rita, 'update_task_fields', { ref: hiddenTaskId, fields: { relation_type: 'spend_item', relation_ref: s.lines.L3 } })),
+    'update_task_fields moving a task to read-only L3',
+  );
+  await preview(rita, 'create_task', { title: `Task on L1 ${tag}`, relation_type: 'spend_item', relation_ref: s.lines.L1 });
   // A hidden line answers as a missing one.
   const missingId = randomUUID();
   sameRefusal(
@@ -390,7 +401,7 @@ async function testPlaidWrites(): Promise<void> {
       [s.tenantId, rita, s.infFr],
     ));
   }
-  console.log('  Plaid line writes: read-only refused at the preview (lot 3 message), hidden as missing, approval in the approver\'s access: OK');
+  console.log('  Plaid line writes: read-only refused at the preview (lot 3 message), tasks written on it too, hidden as missing, approval in the approver\'s access: OK');
 }
 
 async function testPlaidRelationWrites(): Promise<void> {

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { validate as isUuid } from 'uuid';
 import { RelatedType } from '../../tasks/tasks-unified.service';
 import { AiExecutionContextWithManager } from '../ai.types';
@@ -638,7 +639,22 @@ export class AiTaskMutationSupportService {
     throw new BadRequestException(this.buildUserAmbiguityMessage(normalized, candidates));
   }
 
+  /**
+   * The object a task is written on (create, GLPI import, relation change). A budget line the person
+   * reads but may not modify is refused when the preview is asked, with the 403 the routes give
+   * (lot 3), as the write's trigger would refuse it at the approval.
+   */
   async resolveCreateTarget(
+    context: AiExecutionContextWithManager,
+    relationType?: AiTaskCreateTargetMode | null,
+    relationRef?: string | null,
+  ): Promise<AiTaskCreateTarget> {
+    const target = await this.findCreateTarget(context, relationType, relationRef);
+    if (target.mode === 'spend_item' || target.mode === 'capex_item') await assertLinesEditable(context.manager, [target.id]);
+    return target;
+  }
+
+  private async findCreateTarget(
     context: AiExecutionContextWithManager,
     relationType?: AiTaskCreateTargetMode | null,
     relationRef?: string | null,
