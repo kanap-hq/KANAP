@@ -2,6 +2,7 @@ import { Body, Controller, Get, Patch, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { ContractSettingsService } from './contract-settings.service';
 
 function requireTenantId(req: any): string {
@@ -25,6 +26,7 @@ export class ContractSettingsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
+  @ReservedToUnscopedDataAccess()
   @Patch()
   update(@Body() body: unknown, @Req() req: any) {
     return this.svc.update(requireTenantId(req), body ?? {}, req.user?.sub ?? null, req?.queryRunner?.manager);

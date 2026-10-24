@@ -7,8 +7,9 @@
  * controller that uses the decorator without being listed here, fails until it is classified.
  *
  * Reserved families (spec §2.7): tenant settings (freeze, budget columns, currencies, default
- * allocation rule, master-data year copy, company and department metrics); operations on a set of
- * lines (column copy and reset, allocation copy, bulk delete); delete of a line or a contract;
+ * allocation rule, master-data year copy, company and department metrics, contract settings,
+ * branding, scheduled tasks); operations on a set of lines (column copy and reset, allocation
+ * copy, bulk delete); delete of a line or a contract;
  * persons (users, roles, audit log); organisation data (companies, departments, cost centres,
  * accounts and charts of accounts, business processes, dimensions and the values of closed-list
  * dimensions); updates and deletes of suppliers and shared contacts; agent screens; the AI
@@ -522,6 +523,33 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     reservedClass: 'sample data and workspace reset (Administrator only): writes the whole tenant',
     reserved: [
         'dismiss', 'load', 'overview', 'reset',
+    ],
+    allowed: {},
+  },
+  // Tenant settings added by the maintainer to spec §2.7 (lot 3, run 3B).
+  {
+    file: 'contracts/contract-settings.controller.ts',
+    controller: 'ContractSettingsController',
+    reserved: ['update'],
+    allowed: {
+      get: 'the contract settings, read by every contract reader (no contract data)', // GET (root)
+    },
+  },
+  {
+    file: 'admin/branding/admin-branding.controller.ts',
+    controller: 'AdminBrandingController',
+    reservedClass: 'tenant branding (users:admin): a tenant setting (spec §2.7)',
+    reserved: [
+        'deleteLogo', 'getSettings', 'reset', 'updateSettings', 'uploadLogo',
+    ],
+    allowed: {},
+  },
+  {
+    file: 'admin/scheduled-tasks/scheduled-tasks.controller.ts',
+    controller: 'ScheduledTasksController',
+    reservedClass: 'scheduled tasks of the tenant: a tenant setting (spec §2.7)',
+    reserved: [
+        'list', 'runs', 'trigger', 'update',
     ],
     allowed: {},
   },
