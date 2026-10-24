@@ -58,6 +58,7 @@ Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgegli
 Eine Schwachstelle erreicht einen Server oder eine Anwendung nur über direkte Verknüpfungen, überall: auf dieser Seite, in den Listen, auf den Datensätzen, im Dashboard und in Plaid.
 
 - **Server**: Technologie und Version sind auf dem Server selbst erfasst. Ein außer Betrieb genommener Server wird nicht gezählt.
+- **Cluster**: was auf dem Cluster selbst erfasst ist, plus was auf seinen Mitgliedern in Betrieb erfasst ist. Ein Cluster zählt die Schwachstellen seiner Mitglieder, in seiner Listenspalte, seinem Badge und seinem Datensatz. Wenn Sie diese Seite auf einen Cluster filtern, erscheinen auch die Zeilen seiner Mitglieder.
 - **Anwendung**: Die Anwendung deklariert Technologie und Version, oder einer ihrer Bereitstellungsserver hat sie selbst erfasst. Eine Technologie, die zugleich deklariert und gehostet ist, zählt einmal. Eine deaktivierte Anwendung, oder eine, deren Deaktivierungsdatum vergangen ist, wird nicht gezählt.
 
 Die Zählungen pro Server und pro Anwendung, in den Listen, auf den Datensätzen, im Dashboard und in Plaid, folgen denselben Regeln:
@@ -91,7 +92,7 @@ Eine Zeile über dem Raster zeigt, wann KANAP jede Quelle zuletzt gelesen hat: *
 | **Technologie** | Die betroffene Technologie |
 | **Version** | Die betroffene Version. **Nicht erfasst**, wenn ein Server oder eine Anwendung die Technologie ohne Angabe der Version nutzt: Die Zeile ist dann möglicherweise betroffen |
 | **Hersteller** | Der Hersteller der Technologie. Standardmäßig ausgeblendet |
-| **Server** | Wie viele Server diese Version selbst erfasst haben. Ein Server, der in einem anderen läuft, wird nicht gezählt. Siehe [Was KANAP zählt](#what-kanap-counts) |
+| **Server** | Wie viele Server diese Version selbst erfasst haben („Direkt installiert“ im Tooltip der Kopfzeile). Ein Server, der in einem anderen läuft, wird nicht gezählt. Siehe [Was KANAP zählt](#what-kanap-counts) |
 | **Anwendungen** | Wie viele Anwendungen diese Version deklarieren oder auf einem Server laufen, der sie erfasst hat |
 | **Quelle** | Die Quellen, die die Zeile abgeglichen haben: **NVD**, **Hersteller** (der Eintrag, den der Hersteller auf CVE.org veröffentlicht hat) oder beide |
 | **Status** | **Zu prüfen**, **Behandelt** oder **Nicht betroffen** |
@@ -131,7 +132,7 @@ Ein Klick auf eine Zeile öffnet ihre Schwachstelle in einem Seitenbereich. Sein
 - Die Beschreibung, auf drei Zeilen gekürzt (**Mehr anzeigen** zeigt den Rest), den CVSS-Vektor und die Referenzlinks (Herstellerhinweise, Patches).
 - **Quellen**: der Stand der Schwachstelle bei der NVD (**analysiert**, **Analyse ausstehend**, **nicht analysiert**, **abgelehnt** oder **noch nicht diesem Produkt zugeordnet**), mit einem Link zu ihrer NVD-Seite. Hat KANAP den Eintrag des Herstellers gelesen, nennt eine zweite Zeile, wer ihn wann veröffentlicht hat, seine letzte Aktualisierung und **Auf CVE.org ansehen**.
 - **Ausnutzung**, wenn ein Katalog, ein EPSS-Wert oder eine europäische Kennung bekannt ist. Siehe [Ausnutzung](#exploitation).
-- **Server**: jeder Server, der eine betroffene Version selbst erfasst hat, mit Technologie und Version. Die über ein anderes Asset erreichten Server, etwa eine virtuelle Maschine auf einem Host oder die Mitglieder eines Clusters, verbirgt eine Schaltfläche, zum Beispiel **Auch die 4 über ein anderes Asset erreichten Server anzeigen**. Sie erscheinen unter einer eigenen Überschrift, **Über ein anderes Asset**, mit dem Asset, über das sie erreicht werden. Sie werden nicht gezählt.
+- **Server**: jeder Server, der eine betroffene Version selbst erfasst hat, mit Technologie und Version. Die über ein anderes Asset erreichten Server, etwa eine virtuelle Maschine auf einem Host oder ein Cluster über seine Mitglieder, verbirgt eine Schaltfläche, zum Beispiel **Auch die 4 über ein anderes Asset erreichten Server anzeigen**. Sie erscheinen unter einer eigenen Überschrift, **Über ein anderes Asset**, mit dem Asset, über das sie erreicht werden. Sie werden nicht gezählt.
 - **Anwendungen**: jede Anwendung, die eine betroffene Version nutzt, einmal pro Version aufgeführt, mit ihren Servern (höchstens drei, dann „und 2 weitere“). Eine Anwendung, die die Technologie deklariert oder auf einem Server läuft, der sie erfasst hat, steht zuerst. Die anderen liegen hinter der gleichen Art von Schaltfläche und werden nicht gezählt.
 
 Ist kein Server oder keine Anwendung direkt betroffen, sagt der Bereich das, und die Schaltfläche zeigt weiterhin die anderen.

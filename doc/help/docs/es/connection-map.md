@@ -119,7 +119,7 @@ Haga clic en un nodo de servidor o clúster para resaltar sus conexiones y abrir
 
 - **Tipo de servidor**, **Ubicación del servidor**, **Sistema operativo**, **Segmento de red**, **Dirección IP**
 - **Aplicaciones asignadas**: Apps que se ejecutan en este servidor, agrupadas por entorno. Haga clic en el nombre de una app para abrirla.
-- Botón **Editar servidor** o **Ver clúster** para abrir el espacio de trabajo
+- Botón **Editar servidor** o **Ver clúster** para abrir el espacio de trabajo. **Ver clúster** abre el clúster en su pestaña **Dependencias**, donde se gestionan sus miembros
 
 Haga clic en un nodo de entidad para ver su tipo y entorno.
 

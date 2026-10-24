@@ -36,7 +36,7 @@ La liste des actifs vous donne une vue filtrable et triable de chaque actif de v
 | **Nom** | Nom de l'actif (cliquez pour ouvrir l'espace de travail) |
 | **Vulnérabilités à traiter** | Les vulnérabilités encore à traiter sur les technologies renseignées sur l'actif, puis, en orange, le nombre de critiques ou élevées (`5 · 2`). Vide pour un actif retiré ou quand il n'en reste aucune. Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif. Présente quand les vulnérabilités sont suivies |
 | **Type d'actif** | Le type de l'actif (ex. : Machine virtuelle, Serveur physique) |
-| **Cluster** | Appartenance à un cluster, ou un badge « Cluster » si cet actif est lui-même un cluster |
+| **Cluster** | Les clusters dont l'actif est membre. Un cluster affiche une icône à la place (« Cluster » dans son infobulle). Vide pour un actif qui n'est dans aucun cluster |
 | **Environnement** | Prod, Pré-prod, QA, Test, Dev, Sandbox, avec un point coloré |
 | **Site** | Où l'actif est hébergé |
 | **Hébergement** | Type d'hébergement (dérivé du site) |
@@ -61,7 +61,7 @@ La plupart des colonnes prennent en charge des filtres par jeu de cases à coche
 | Colonne | Notes |
 |---------|-------|
 | Type d'actif | Filtrer par un ou plusieurs types d'actif |
-| Cluster | Inclut « (Sans cluster) » pour les actifs autonomes |
+| Cluster | Les noms des clusters, puis **(Est un cluster)** pour les clusters eux-mêmes et **(Aucun cluster)** pour les actifs qui ne sont dans aucun cluster |
 | Environnement | Prod, Pré-prod, QA, Test, Dev, Sandbox |
 | Site | Inclut « (Sans site) » pour les actifs non assignés |
 | Sous-site | Inclut « (Sans sous-site) » pour les actifs sans sous-site |
@@ -77,9 +77,9 @@ Le tri sur **Vulnérabilités à traiter** classe les actifs par leurs vulnérab
 **Conseil** : Combinez les filtres entre colonnes pour affiner les résultats. Par exemple, filtrez par Environnement = « Prod » et Cycle de vie = « Actif » pour voir uniquement les actifs de production actifs.
 
 **Actions** :
-- **Ajouter un actif** : Créer un nouvel actif (`infrastructure:member`)
+- **Ajouter un actif** : ouvre un menu (`infrastructure:member`). **Ajouter un actif** crée un actif ; **Ajouter un cluster** en crée un avec l'interrupteur **Cluster** déjà activé
 - **Import CSV** / **Export CSV** : Opérations en masse (`infrastructure:admin`)
-- **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé : retirez-le d'abord de ces éléments. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison
+- **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé : retirez-le d'abord de ces éléments. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison, et ce que les autres emportent avec eux (voir [Supprimer un cluster ou un membre](#deleting-a-cluster-or-a-member))
 
 ---
 
@@ -90,9 +90,20 @@ Les actifs peuvent être organisés en clusters :
 - **Actif standard** : Une instance d'infrastructure individuelle
 - **Cluster** : Un groupe d'actifs agissant comme une seule unité logique
 
-Pour marquer un actif comme cluster, activez l'interrupteur **Cluster** dans son tiroir des propriétés. Les actifs cluster peuvent être des points de terminaison dans les connexions. Les applications s'affectent aux hôtes membres.
+Pour créer un cluster, choisissez **Ajouter un cluster** dans le menu **Ajouter un actif**, ou activez l'interrupteur **Cluster** dans le tiroir des propriétés d'un actif. Un cluster peut être un point de terminaison dans les connexions. Les applications s'affectent aux hôtes membres.
 
-Les membres du cluster sont gérés depuis l'onglet **Dépendances** de l'espace de travail du cluster via **Modifier les membres**. Voir [Dépendances](#dependencies).
+Les membres se gèrent depuis l'onglet **Dépendances** du cluster. Voir [Dépendances](#dependencies). Les règles :
+
+- Un membre est un actif simple. Un cluster ne peut pas être membre, et un actif ne peut pas être membre de lui-même.
+- Un cluster qui a des membres ne peut pas redevenir un actif simple : retirez d'abord ses membres.
+- Un membre d'un cluster ne peut pas devenir un cluster : sortez-le d'abord de ses clusters.
+- Un cluster qui a des membres n'a pas de système d'exploitation : chaque membre a le sien. Un cluster sans membre peut en garder un, par exemple un groupe d'instances cloud dont vous ne renseignez pas les serveurs. Voir [Système d'exploitation](#systeme-dexploitation).
+
+Les installations mises à jour depuis une version antérieure gardent leurs clusters. Les appartenances contraires à ces règles ont été retirées pendant la mise à jour. Un nom de cluster saisi dans l'ancien champ texte est devenu une vraie appartenance quand il désignait un seul cluster.
+
+### Supprimer un cluster ou un membre { #deleting-a-cluster-or-a-member }
+
+Avant la suppression d'un actif, la confirmation dit ce qui part avec lui : les clusters qu'il quitte, les membres qui perdent leur cluster et les relations avec d'autres actifs qui sont retirées. Confirmez avec **Supprimer quand même**. Ces pertes sont inscrites au [Journal d'audit](admin.md#journal-daudit), sur chaque actif concerné.
 
 ---
 
@@ -119,7 +130,7 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 
 **Type et zone** :
 - **Type d'actif** (obligatoire)
-- **Cluster** : activez-le pour marquer l'actif comme cluster. Le changement s'enregistre aussitôt. Un cluster n'a pas de système d'exploitation propre : activer l'interrupteur retire donc le système d'exploitation de l'actif. Voir [Clusters](#clusters)
+- **Cluster** : activez-le pour marquer l'actif comme cluster. Le changement s'enregistre aussitôt et ne retire rien. Il est refusé pour un cluster qui a des membres et pour un membre d'un cluster. Voir [Clusters](#clusters)
 - **Environnement** : Prod, Pré-prod, QA, Test, Dev, Sandbox
 - **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**. L'actif apparaît alors dans cette zone sur la page [Zones d'administration](administration-view.md)
 
@@ -182,7 +193,7 @@ Sur un cluster, un message au-dessus du tableau vous demande d'affecter plutôt 
 - **Système d'exploitation** : le système d'exploitation du serveur est l'une de ses technologies, de la famille **Système d'exploitation**. Il vient en tête de liste, avec la mention « Système d'exploitation » après son nom. Voir [Système d'exploitation](#systeme-dexploitation) ci-dessous.
 - **Version** : affichée en orange quand le support finit dans les 12 mois ou qu'il ne reste que le support étendu, et en rouge une fois toutes les dates de fin passées. Survolez-la pour voir la fin du support standard et du support étendu.
 - Une technologie installée sur ce serveur se retire avec la croix au bout de sa ligne.
-- Une technologie installée sur le serveur ou le cluster dans lequel celui-ci tourne affiche ce serveur sous **Via**. Elle suit l'installation et se retire là-bas.
+- Une technologie installée sur l'hôte dans lequel ce serveur tourne affiche cet hôte sous **Via**. Sur un cluster, une technologie installée sur ses membres s'affiche une fois par version, avec sous **Via** les membres qui la portent. Une telle ligne suit l'installation et se retire là-bas.
 - **Ajouter** (`infrastructure:member`) ouvre une recherche de technologie, puis le choix de la version : choisissez une version, **Version inconnue**, ou tapez un nouveau libellé et choisissez **Ajouter la version « … »** pour la créer. Chaque modification s'enregistre aussitôt.
 - **Changer une version** (`infrastructure:member`) : cliquez sur la version d'une technologie installée, ou sur le crayon au bout de sa ligne. Le même choix de version s'ouvre.
 
@@ -195,7 +206,8 @@ Un serveur a un système d'exploitation : une technologie de la famille **Systè
 - **Ajoutez-le** comme n'importe quelle technologie. Quand le serveur n'a pas encore de système d'exploitation, la première technologie de cette famille que vous ajoutez le devient.
 - **Retirez-le** avec sa croix. Si une autre technologie de la famille reste sur le serveur, c'est elle qui devient le système d'exploitation.
 - **Changez la version** en cliquant dessus, comme pour toute technologie.
-- Un **cluster** n'a pas de système d'exploitation propre : chaque membre a le sien. Activer l'interrupteur **Cluster** d'un actif retire son système d'exploitation.
+- Un **cluster** qui a des membres n'a pas de système d'exploitation : chaque membre a le sien. Un cluster sans membre peut en porter un, posé par un import ou par l'assistant. À l'écran, une technologie de cette famille ajoutée à un cluster reste une technologie ordinaire.
+- Ajouter les premiers membres à un cluster qui a un système d'exploitation pose la question **Retirer le système d'exploitation ?**. **Retirer et enregistrer** le retire et enregistre les membres. Si vous annulez, rien n'est enregistré.
 
 Pour que VMware ESXi ou FortiOS soit le système d'exploitation d'un hôte, placez cette technologie dans la famille **Système d'exploitation** (son champ **Famille**, sur la technologie).
 
@@ -213,7 +225,9 @@ Quand les vulnérabilités sont suivies, la dernière section de l'onglet liste 
 
 **Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif et la technologie. Quand il ne reste rien à traiter, la section le dit en une ligne. Un actif retiré n'a pas de section.
 
-**Par un autre actif** liste à part les technologies que l'actif reçoit d'un autre, comme l'hôte sur lequel il tourne ou son cluster, avec cet actif dans la colonne **Actif**. Ces lignes ne sont pas comptées, ni dans le badge ni ailleurs : une vulnérabilité compte sur l'actif où la technologie est renseignée. Leur **Voir** ouvre la page sur cet autre actif. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts).
+**Par un autre actif** liste à part les technologies que l'actif reçoit d'un autre, comme l'hôte sur lequel il tourne, avec cet actif dans la colonne **Actif**. Ces lignes ne sont pas comptées, ni dans le badge ni ailleurs : une vulnérabilité compte sur l'actif où la technologie est renseignée. Leur **Voir** ouvre la page sur cet autre actif. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts).
+
+Sur un **cluster**, cette partie liste les technologies de ses membres, une ligne par technologie et version, avec les membres qui la portent. Un cluster compte les vulnérabilités de ses membres en service avec les siennes : le compte de la section, le badge de l'en-tête (son infobulle dit « membres compris ») et la colonne de la liste.
 
 ---
 
@@ -269,15 +283,15 @@ L'onglet Dépendances montre la place de l'actif parmi les autres actifs : ce qu
 **Si ce serveur tombe** : l'onglet s'ouvre sur ce qui s'arrête avec cet actif. Une ligne de synthèse compte les applications, actifs, clusters et processus métier touchés, puis un tableau par type :
 
 - **Applications** : celles qui ont un déploiement en service sur un actif tombé, avec leurs environnements, leur criticité et les actifs sur lesquels elles tournent (**Via**).
-- **Actifs** : les actifs qu'il contient, jusqu'à trois niveaux, et les actifs qui dépendent de lui. **Via** montre le chemin.
-- **Clusters** : les clusters dont un membre tombe. **Tombé** quand plus aucun membre ne tient, sinon **Dégradé** avec le nombre de membres tombés. Les applications d'un cluster tombé tombent avec lui.
+- **Actifs** : les actifs qu'il contient, jusqu'à trois niveaux, et les actifs qui dépendent de lui. Un cluster qui tombe entraîne tous ses membres en service, et ce qui dépend d'eux. **Via** montre le chemin.
+- **Clusters** : les clusters dont un membre tombe. **Dégradé** tant qu'un membre tient, avec le nombre de membres tombés : ses applications continuent de tourner. **Tombé** quand plus aucun membre ne tient : ses applications et les actifs qu'il contient, comme ses machines virtuelles, tombent avec lui.
 - **Processus métier** : les processus des applications touchées.
 
 Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque tableau montre ses 50 premières lignes et compte le reste. Les applications et les processus demandent le droit de les lire. La section se met à jour dès que vous ajoutez ou retirez une relation entre actifs, changez les membres d'un cluster ou activez ou désactivez l'interrupteur **Cluster**.
 
 **Cluster** :
 
-- Sur un **cluster**, une note rappelle qu'un cluster peut être un point de terminaison dans les connexions et que les applications s'affectent à ses hôtes membres. La section **Membres** liste les actifs membres (Nom, Environnement, Statut, Système d'exploitation). Cliquez sur un nom pour ouvrir cet actif. Cliquez sur **Modifier les membres** pour ajouter ou supprimer des membres via une boîte de dialogue de recherche.
+- Sur un **cluster**, la section **Membres** liste les actifs membres (Nom, Environnement, Statut, Système d'exploitation). Cliquez sur un nom pour ouvrir cet actif. **Ajouter des membres** (sur un cluster sans membre) ou **Modifier les membres** ouvre une boîte de dialogue de recherche. Elle ne propose que des actifs simples, jamais un cluster ni le cluster lui-même.
 - Sur **tout autre actif**, la section **Appartenance au cluster** affiche les clusters auxquels cet actif appartient, avec leur environnement et leur statut. Cliquez sur un nom pour ouvrir le cluster.
 
 **Relations entre actifs**, un tableau par sens :
@@ -383,7 +397,7 @@ Depuis la liste des Actifs :
 | `admin_zone` | Zone d'administration | Non | Accepte un code ou un libellé depuis les Paramètres |
 | `aliases` | Alias DNS | Non | Liste séparée par virgules |
 | `operating_system` | Système d'exploitation | Non | Le nom de la technologie, suivi de sa version (`Windows Server 2019`). Voir ci-dessous |
-| `cluster` | Appartenance à un cluster | Non | Nom du cluster parent |
+| `cluster` | Appartenance aux clusters | Non | Les noms des clusters dont l'actif est membre, séparés par des virgules. Voir ci-dessous |
 | `notes` | Notes en texte libre | Non | |
 
 **Champs Adresse IP** (jusqu'à 4 adresses par actif) :
@@ -413,6 +427,14 @@ Le système normalise automatiquement les valeurs lors de l'import, donc `Virtua
 
 **Système d'exploitation** : la colonne `operating_system` contient le nom de la technologie suivi de sa version, comme l'écrit l'export (`Windows Server 2019`, `Ubuntu 24.04 LTS`). À l'import, KANAP cherche la technologie parmi les vôtres, puis dans le catalogue, et enregistre la version. Une technologie ou une version introuvable est créée : vérifiez donc l'orthographe avant. La valeur devient le système d'exploitation du serveur.
 
+**Appartenance aux clusters** : la colonne `cluster` nomme les clusters de l'actif, séparés par des virgules (`ESX-PROD, SQL-CLUSTER`). La casse ne compte pas. L'export écrit les clusters dont l'actif est membre. À l'import :
+
+- En mode `Enrichir`, l'actif rejoint les clusters nommés dans la cellule et reste dans ses autres clusters.
+- En mode `Remplacer`, l'actif quitte aussi les clusters que sa cellule ne nomme pas.
+- Une cellule vide ne change rien, dans les deux modes.
+
+**Vérification préalable** signale une erreur sur la ligne quand un nom ne correspond à aucun actif, correspond à plusieurs clusters ou désigne un actif qui n'est pas un cluster. Elle refuse aussi une ligne qui se nomme elle-même, une ligne qui est ou devient un cluster, et un cluster qui a un système d'exploitation : l'import n'en retire jamais. Les colonnes `is_cluster` et `operating_system` suivent les règles de [Clusters](#clusters).
+
 ### Correspondance et mises à jour
 
 Les actifs sont identifiés par **nom** (insensible à la casse). Lorsqu'une correspondance est trouvée :
@@ -431,7 +453,6 @@ Certains champs sont calculés et ne peuvent pas être importés :
 ### Limitations
 
 - **Maximum 4 adresses IP** : Les actifs prennent en charge jusqu'à 4 entrées d'adresse IP via CSV
-- **Assignation de cluster par nom** : Utilisez le nom du cluster, pas l'ID, dans la colonne `cluster`
 - **Site obligatoire** : Chaque actif doit avoir un code de site valide
 - **Relations non incluses** : Les assignations d'applications, connexions, liens financiers, projets, tâches et pièces jointes doivent être gérés dans l'espace de travail
 

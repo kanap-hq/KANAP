@@ -36,8 +36,10 @@ Les actifs retirés, les applications désactivées et les versions que personne
 
 - Une version de technologie touche les serveurs qui la portent (y compris les machines virtuelles d'un hôte qui la porte) et les applications hébergées sur eux ou qui la déclarent.
 - Un système d'exploitation touche les serveurs qui utilisent cette version, ce qu'ils contiennent, et les applications déployées sur l'ensemble. Sa ligne ouvre la technologie.
-- Un matériel touche ses serveurs, ce qu'ils contiennent, et les applications déployées sur l'ensemble.
+- Un matériel touche ses serveurs, ce qu'ils contiennent, et les applications déployées sur l'ensemble. Le matériel lui-même n'est pas l'un de ses serveurs.
 - Une application touche les serveurs sur lesquels elle est déployée.
+
+Les serveurs d'une technologie, d'un système d'exploitation ou d'un matériel se comptent comme dans la colonne **Serveurs** de la [liste des technologies](technologies.md) : les serveurs en service, clusters exclus. Les applications d'un cluster comptent toujours.
 
 ## Données manquantes
 

@@ -86,7 +86,7 @@ Chaque ligne est une technologie. Cliquez sur une ligne pour l'ouvrir.
 | **Nom** | Le nom de la technologie |
 | **Famille** | Le genre de technologie |
 | **Éditeur** | Qui l'édite |
-| **Serveurs** | Les actifs qui la portent, directement ou parce qu'ils sont dans un actif qui la porte |
+| **Serveurs** | Les actifs en service qui la portent, installée sur eux ou atteinte par un autre actif. Les clusters ne sont pas comptés. La pastille **Serveurs** de la fiche et le rapport [Fins de support](end-of-support.md) donnent le même nombre |
 | **Applications** | Les applications qui la déclarent ou sont hébergées sur un serveur qui la porte |
 | **Prochaine fin de support** | La plus proche fin de support standard à venir parmi les versions en service. En orange quand elle tombe dans les 12 prochains mois |
 | **Vulnérabilités à traiter** | Les vulnérabilités connues encore à traiter sur les versions en service qui sont dans les alertes. En orange avec le nombre de critiques ou élevées (`3 · 1 critiques ou élevées`). Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) sur cette technologie. Présente quand les vulnérabilités sont suivies |
@@ -149,7 +149,7 @@ Un type marqué **Ne plus proposer** reste sur les technologies qui l'ont. Un ty
 | **Hors support** | Toutes les dates de fin sont passées |
 | **Date inconnue** | Aucune date de fin saisie |
 
-Le support court encore le jour de sa date de fin. Avec une seule date, cette date est la fin. **Ajouter une version** ajoute une ligne ; survolez une ligne pour la modifier ou la supprimer. Supprimer une version utilisée par des serveurs ou des applications demande confirmation : ces liens affichent alors une version inconnue.
+Le support court encore le jour de sa date de fin. Avec une seule date, cette date est la fin. **Ajouter une version** ajoute une ligne ; survolez une ligne pour la modifier ou la supprimer. Supprimer une version utilisée par des serveurs ou des applications demande confirmation, avec le nombre de serveurs sur lesquels elle est installée et d'applications : ces liens affichent alors une version inconnue.
 
 **Notes** : en bas de l'onglet, texte libre, comme les conditions de licence ou les dates de renouvellement.
 
@@ -208,20 +208,20 @@ Les serveurs qui portent la technologie, une ligne par serveur et par version :
 
 | Colonne | Ce qu'elle montre |
 |---|---|
-| **Réf.**, **Serveur** | Le serveur. Cliquez sur la ligne pour l'ouvrir |
+| **Réf.**, **Serveur** | Le serveur. Un cluster affiche une icône devant son nom. Cliquez sur la ligne pour l'ouvrir |
 | **Environnement**, **Système d'exploitation** | Repris du serveur |
 | **Version** | La version installée. Un tiret signifie que la version est inconnue |
-| **Via** | Pour un serveur qui porte la technologie par un autre : le serveur ou le cluster sur lequel elle est installée. La colonne n'apparaît que si l'onglet a une telle ligne |
+| **Via** | Pour un serveur qui porte la technologie par un autre : les actifs sur lesquels elle est installée. La colonne n'apparaît que si l'onglet a une telle ligne |
 | **Notes** | Texte libre sur cette installation, par exemple « nœud du cluster » |
 
 Une technologie atteint un serveur de deux façons :
 
 - **Installée** : quelqu'un a lié la technologie à ce serveur. Vous pouvez changer la version et les notes sur place, ou retirer la ligne.
-- **Par un autre serveur** : la technologie est installée sur le serveur ou le cluster dans lequel celui-ci tourne, par exemple SQL Server installé sur un cluster et affiché sur chacun de ses membres. La ligne nomme ce serveur sous **Via**. Elle suit l'installation : changez-la ou retirez-la sur ce serveur.
+- **Par un autre serveur** : la technologie est installée sur l'hôte dans lequel ce serveur tourne ou, pour un cluster, sur ses membres. Par exemple, SQL Server installé sur les nœuds d'un cluster s'affiche sur le cluster en une ligne par version, avec sous **Via** les nœuds qui le portent. Elle suit l'installation : changez-la ou retirez-la sur ces serveurs.
 
 **Ajouter** (`infrastructure:member`) ouvre une recherche de serveur, puis le choix de la version : choisissez une version, **Version inconnue**, ou tapez un nouveau libellé et choisissez **Ajouter la version « … »** pour la créer. Chaque modification s'enregistre aussitôt.
 
-Un serveur retiré reste listé, grisé et marqué « retiré », pour que vous puissiez retirer son lien. Il ne compte nulle part : ni dans la pastille, ni dans le total, ni dans les compteurs de la liste, ni dans les rapports. La ligne **Total** compte les serveurs en service, chacun une fois.
+Un serveur retiré reste listé, grisé et marqué « retiré », pour que vous puissiez retirer son lien. Il ne compte nulle part : ni dans la pastille, ni dans le total, ni dans les compteurs de la liste, ni dans les rapports. La ligne **Total** compte les serveurs en service, chacun une fois. Un cluster est listé sans être compté : ses membres le sont.
 
 ### Applications
 
@@ -306,7 +306,7 @@ Vous pouvez indiquer qu'un serveur porte une technologie depuis l'un ou l'autre 
 - Depuis la technologie : onglet **Serveurs**, **Ajouter**, puis choisissez le serveur et la version.
 - Depuis le serveur : onglet **Exploitation** de l'actif, section **Technologies**, **Ajouter**, puis choisissez la technologie et la version. Voir [Actifs](assets.md#operations).
 
-Saisissez la technologie sur le serveur où elle est installée : l'hôte pour un hyperviseur, chaque contrôleur de domaine pour Active Directory, le serveur de base de données pour SQL Server. Les serveurs qui tournent dedans, ou les membres de son cluster, l'affichent alors sans autre saisie. Une technologie dans le cloud, comme Entra ID, ne tourne sur aucun de vos serveurs : déclarez-la plutôt sur les applications.
+Saisissez la technologie sur le serveur où elle est installée : l'hôte pour un hyperviseur, chaque contrôleur de domaine pour Active Directory, le serveur de base de données pour SQL Server. Les serveurs qui tournent dedans, et le cluster de ces serveurs, l'affichent alors sans autre saisie. Une technologie dans le cloud, comme Entra ID, ne tourne sur aucun de vos serveurs : déclarez-la plutôt sur les applications.
 
 ---
 
@@ -339,7 +339,7 @@ Cliquez sur **Importer les liens** ou **Exporter les liens** dans la barre d'out
 
 La colonne `operating_system` prend trois valeurs :
 
-- **oui** : le lien devient le système d'exploitation du serveur. L'import refuse la ligne quand la technologie n'est pas de la famille **Système d'exploitation**, quand le serveur est un cluster, ou quand le serveur a déjà un autre système d'exploitation.
+- **oui** : le lien devient le système d'exploitation du serveur. L'import refuse la ligne quand la technologie n'est pas de la famille **Système d'exploitation**, quand le serveur est un cluster qui a des membres, ou quand le serveur a déjà un autre système d'exploitation.
 - **non** : le lien n'est jamais marqué.
 - **Vide** : un nouveau lien suit la règle de la fiche du serveur. Une technologie de la famille **Système d'exploitation** devient le système d'exploitation du serveur quand celui-ci n'en a pas encore et n'est pas un cluster. L'aperçu l'indique sur la ligne.
 

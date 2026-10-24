@@ -58,6 +58,7 @@ A version out of the alerts is still matched with the vulnerabilities. It stays 
 A vulnerability reaches a server or an application through direct links only, everywhere: on this page, in the lists, on the records, on the dashboard and in Plaid.
 
 - **Server**: the technology and the version are recorded on the server itself. A retired server is not counted.
+- **Cluster**: what is recorded on the cluster itself, plus what is recorded on its members in service. A cluster counts the vulnerabilities of its members, in its list column, its badge and its record. Filtering this page on a cluster shows the rows of its members too.
 - **Application**: the application declares the technology and the version, or one of its deployment servers has them recorded on itself. A technology both declared and hosted counts once. A disabled application, or one whose disable date has passed, is not counted.
 
 The counts per server and per application, in the lists, on the records, on the dashboard and in Plaid, follow the same rules:
@@ -91,7 +92,7 @@ A line above the grid says when KANAP last read each source: **Data read**, then
 | **Technology** | The concerned technology |
 | **Version** | The concerned version. **Not recorded** when a server or an application uses the technology without naming its version: the row is then potentially concerned |
 | **Publisher** | The technology's publisher. Hidden by default |
-| **Servers** | How many servers have this version recorded on themselves. A server that runs inside another one is not counted. See [What KANAP counts](#what-kanap-counts) |
+| **Servers** | How many servers have this version recorded on themselves ("Installed directly" in the tooltip of the header). A server that runs inside another one is not counted. See [What KANAP counts](#what-kanap-counts) |
 | **Applications** | How many applications declare this version, or run on a server that has it recorded |
 | **Source** | The sources that matched the row: **NVD**, **Publisher** (the record the publisher released on CVE.org), or both |
 | **State** | **To review**, **Handled** or **Not affected** |
@@ -131,7 +132,7 @@ Click a row to open its vulnerability in a side panel. Its header stays in view 
 - The description, cut at three lines (**See more** shows the rest), the CVSS vector and the reference links (publisher advisories, patches).
 - **Sources**: the state of the vulnerability at the NVD (**analyzed**, **awaiting analysis**, **not analyzed**, **rejected**, or **not linked to this product yet**), with a link to its NVD page. When KANAP has read the publisher's record, a second line gives who released it and when, its last update, and **See on CVE.org**.
 - **Exploitation**, when a catalog, an EPSS score or a European identifier is known. See [Exploitation](#exploitation).
-- **Servers**: each server that has a concerned version recorded on itself, with the technology and the version. The servers reached through another asset, such as a virtual machine on a host or the members of a cluster, are hidden behind a button, for example **Also show the 4 servers reached through another asset**. They show under their own heading, **Through another asset**, with the asset they are reached through. They are not counted.
+- **Servers**: each server that has a concerned version recorded on itself, with the technology and the version. The servers reached through another asset, such as a virtual machine on a host or a cluster through its members, are hidden behind a button, for example **Also show the 4 servers reached through another asset**. They show under their own heading, **Through another asset**, with the asset they are reached through. They are not counted.
 - **Applications**: each application that uses a concerned version, listed once per version with its servers (three at most, then "and 2 more"). An application that declares the technology, or runs on a server that has it recorded, comes first. The others sit behind the same kind of button and are not counted.
 
 When no server or application is directly concerned, the panel says so, and the button still shows the others.
