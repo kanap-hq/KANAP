@@ -111,6 +111,7 @@ export async function assertLineContractReadable(manager: EntityManager, contrac
  * and is readable, so the line is read only for the person. Unscoped persons: no query, no change.
  */
 export async function assertDataAccessWritten(manager: EntityManager, affected: number | null | undefined): Promise<void> {
-  if ((affected ?? 0) > 0) return;
+  // A driver that reports no count (never PostgreSQL) leaves nothing to check.
+  if (affected == null || affected > 0) return;
   if (await isLimitedTransaction(manager)) throw new DataAccessLimitedException(DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
 }

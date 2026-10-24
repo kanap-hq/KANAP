@@ -68,6 +68,7 @@ export async function prepareTaskWrite(
 
 /** A refused task write that touched no row (`writeTaskColumns`): the clear 403, never a silent success. */
 export async function assertTaskWritten(manager: EntityManager, affected: number | null | undefined): Promise<void> {
-  if ((affected ?? 0) > 0) return;
+  // A driver that reports no count (never PostgreSQL) leaves nothing to check.
+  if (affected == null || affected > 0) return;
   if (await isLimitedTransaction(manager)) throw new DataAccessLimitedException(DATA_ACCESS_READ_ONLY_TASK_MESSAGE);
 }
