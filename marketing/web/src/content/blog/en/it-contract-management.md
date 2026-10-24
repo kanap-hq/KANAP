@@ -3,6 +3,7 @@ title: "IT contract management in KANAP"
 description: "Computed deadlines, recorded renewal decisions, commitments compared with the budget: IT contracts under control in KANAP."
 date: 2026-10-17
 topic: cost
+features: [budget, contracts]
 author: Friedrich
 authorRole: Founder, CIO
 draft: false
