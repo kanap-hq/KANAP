@@ -236,5 +236,7 @@ export function formatEuPartialAt(raw: string, caret: number | null, sep: DateIn
 
 /** Best-effort partial formatter that inserts the separator (slashes by default) as digits are typed. */
 export function formatEuPartial(raw: string, sep: DateInputSeparator = '/'): string {
-  return formatEuPartialAt(raw, null, sep).text;
+  // Callers that do not restore the caret keep the digits in their old grouping; DateEUField uses
+  // formatEuPartialAt to keep the edited part in place and its caret at the right digit.
+  return formatEuPartialAt(raw, null, sep, false).text;
 }
