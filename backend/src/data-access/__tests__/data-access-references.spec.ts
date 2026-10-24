@@ -23,6 +23,7 @@ import { nextItemNumber, Seed, seed } from './data-access-line-seed';
  *   L2's successor as `{ id: null, reference: BL-n, nature: null, hidden: true }`; Ulla as before.
  * - `data_access_reference`: `BL-n` whatever the nature; a lineage asked from a line the person
  *   cannot read is NULL; an unknown type raises 22023.
+ * - Tasks list sorted or filtered on the object: a hidden line's task by its `BL-n`.
  * - Dashboard "dormant tasks" tile: Marta's task on L1 names `BL-n` without the line's id; Ulla
  *   reads the name and the id.
  *
@@ -134,6 +135,22 @@ async function testLineage(runner: QueryRunner, s: Seed, x: Extra): Promise<void
   console.log('  lineage: a hidden predecessor or successor shows as BL-n without id; data_access_reference gives BL-n: OK');
 }
 
+async function testTaskSortAndFilter(runner: QueryRunner, s: Seed, x: Extra): Promise<void> {
+  const svc = new TasksService(undefined as any);
+  const ours = new Set(Object.values(x.tasks));
+  const ids = async (m: EntityManager, query: Record<string, unknown>) => (await svc.listAllTasks({ page: 1, limit: 100, ...query }, { manager: m, tenantId: s.tenantId }))
+    .items.map((row) => row.id).filter((id) => ours.has(id));
+  const marta = await as(runner, s.persons.marta, async (m) => ({
+    sorted: await ids(m, { sort: 'related_object_name:ASC' }),
+    filtered: await ids(m, { filters: JSON.stringify({ related_object_name: { filter: `BL-${x.numbers[s.lines.L1]}` } }) }),
+  }));
+  // BL-n sorts before "DA line L4 …"; without the reference the hidden lines' tasks came last (NULL).
+  assert.equal(marta.sorted[2], x.tasks.onL4, `Marta: the hidden lines' tasks sort by BL-n, before L4's: ${marta.sorted.join(', ')}`);
+  assert.ok(marta.filtered.includes(x.tasks.onL1), 'Marta: the filter finds the task by BL-n');
+  assert.ok(!marta.filtered.includes(x.tasks.onL4), 'and not a task on another line');
+  console.log('  tasks list: a hidden line sorts and filters by its BL-n: OK');
+}
+
 async function testStaleTasks(runner: QueryRunner, s: Seed, x: Extra): Promise<void> {
   const svc = new DashboardDataService();
   // A threshold of -1 day takes every open task, the seed's included (updated just now).
@@ -170,6 +187,7 @@ async function run() {
       await testLineage(runner, s, x);
       await testTasks(runner, s, x);
       await testStaleTasks(runner, s, x);
+      await testTaskSortAndFilter(runner, s, x);
     } finally {
       await runner.rollbackTransaction();
     }
