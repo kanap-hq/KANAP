@@ -32,6 +32,8 @@ export type TechnologyServerRow = {
   technology_version_id: string | null;
   version_label: string | null;
   notes: string | null;
+  /** Carried through a host that contains it (the VMs of a host it is installed on): folded under "Hosted assets". */
+  through_host?: boolean;
 };
 
 export const technologyServersKey = (id: string) => ['technology-servers', id] as const;
@@ -40,11 +42,11 @@ export const technologyServersKey = (id: string) => ['technology-servers', id] a
 export const isRetiredServer = (row: Pick<TechnologyServerRow, 'asset_status'>) => row.asset_status === 'retired';
 
 /**
- * The tab badge and the total: distinct servers in service, directly or through another server,
- * clusters excluded (the count of the technology list, its versions and the end of support report).
+ * The tab badge and the total: distinct servers in service the technology is installed on, clusters
+ * excluded (the count of the technology list, its versions and the end of support report).
  */
 export const countServers = (rows: TechnologyServerRow[]) =>
-  new Set(rows.filter((row) => !isRetiredServer(row) && !row.is_cluster).map((row) => row.asset_id)).size;
+  new Set(rows.filter((row) => row.kind === 'installed' && !isRetiredServer(row) && !row.is_cluster).map((row) => row.asset_id)).size;
 
 /** Totals appear from this many rows on, as in the Relations tabs. */
 const TOTALS_FROM = 2;
@@ -62,9 +64,9 @@ type Adding = { anchor: HTMLElement; asset: RelationOption | null };
 
 /**
  * The servers of a technology (lot T1b): installed on them (a direct link, with its version and
- * notes, removable) or carried to them through `contains` or a cluster (with the server it is
- * installed on, not removable). Managers add a server then its version, change the version and
- * the notes in place; each change is saved at once.
+ * notes, removable) or carried to a cluster by its members (with them, not removable). The assets a
+ * host it is installed on contains (`through_host`) wait under one folded line. Managers add a
+ * server then its version, change the version and the notes in place; each change is saved at once.
  */
 export default function TechnologyServersTab({ technologyId, versions, canManage }: Props) {
   const { t } = useTranslation(['it', 'common']);
@@ -154,7 +156,9 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
     }));
   }, [t]);
 
-  const rows = data?.items ?? [];
+  const items = data?.items ?? [];
+  const rows = items.filter((row) => !row.through_host);
+  const hosted = items.filter((row) => row.through_host);
   const dash = '—';
   const editable = (row: TechnologyServerRow) => canManage && row.kind === 'installed' && !!row.link_id;
   const muted = (row: TechnologyServerRow, node: React.ReactNode) => (
@@ -234,8 +238,8 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
     },
   ];
 
-  const totals = rows.length >= TOTALS_FROM
-    ? [{ key: 'total', label: t('workspace.technology.servers.total'), cells: { name: t('workspace.technology.servers.serverCount', { count: countServers(rows) }) } }]
+  const totals = items.length >= TOTALS_FROM
+    ? [{ key: 'total', label: t('workspace.technology.servers.total'), cells: { name: t('workspace.technology.servers.serverCount', { count: countServers(items) }) } }]
     : undefined;
   const title = t('workspace.technology.servers.title');
   const searchLabel = t('workspace.technology.servers.search');
@@ -278,14 +282,15 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
             onClose={() => setEditingVersion(null)}
           />
         )}
-        {data && rows.length === 0 ? (
+        {data && items.length === 0 ? (
           <RelationsEmpty>{t('workspace.technology.servers.empty')}</RelationsEmpty>
-        ) : rows.length > 0 ? (
+        ) : items.length > 0 ? (
           <RelationsTable
             ariaLabel={title}
             // "Via" only when a row is deduced: a direct link has nothing there.
-            columns={rows.some((row) => row.kind === 'carried') ? columns : columns.filter((column) => column.key !== 'via')}
+            columns={items.some((row) => row.kind === 'carried') ? columns : columns.filter((column) => column.key !== 'via')}
             rows={rows}
+            folded={hosted.length > 0 ? { label: t('workspace.technology.servers.hosted', { count: hosted.length }), rows: hosted } : undefined}
             rowKey={(row) => `${row.kind}:${row.link_id ?? ''}:${row.asset_id}:${row.via_asset_id ?? ''}:${row.technology_version_id ?? ''}`}
             rowHref={(row) => `/it/assets/${row.asset_reference ?? row.asset_id}/overview`}
             rowMuted={isRetiredServer}

@@ -458,7 +458,6 @@
         "summary": "Resumen",
         "technology": "Tecnología",
         "servers": "Servidores",
-        "serversHint": "Instalada directamente",
         "applications": "Aplicaciones",
         "state": "Estado",
         "published": "Publicación",
@@ -689,6 +688,7 @@
           "title": "A través de otro activo",
           "hint": "No contabilizadas: estas tecnologías están instaladas en otro activo (un host, un clúster)."
         },
+        "platform": "Plataforma subyacente ({{count}})",
         "countLink_one": "Ver la vulnerabilidad por revisar en la página Vulnerabilidades",
         "countLink_other": "Ver las {{count}} vulnerabilidades por revisar en la página Vulnerabilidades"
       },
@@ -2103,6 +2103,7 @@
         "add": "Añadir",
         "search": "Buscar tecnologías",
         "empty": "Ninguna tecnología en este servidor.",
+        "platform": "Plataforma subyacente ({{count}})",
         "operatingSystem": "Sistema operativo",
         "edit": "Editar",
         "editNamed": "Editar {{name}}",
@@ -2439,6 +2440,7 @@
         "add": "Añadir",
         "search": "Buscar servidores",
         "empty": "Ningún servidor lleva esta tecnología.",
+        "hosted": "Activos alojados ({{count}})",
         "total": "Total",
         "serverCount_one": "{{count}} servidor",
         "serverCount_other": "{{count}} servidores",

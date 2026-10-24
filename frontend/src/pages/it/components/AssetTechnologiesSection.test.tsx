@@ -171,6 +171,35 @@ describe('AssetTechnologiesSection', () => {
     expect(screen.queryByRole('heading', { name: `${K}.title` })).toBeNull();
   });
 
+  it('folds the platform underneath under one closed line, out of the count, and opens it in the table', async () => {
+    const platform: AssetTechnologyRow = {
+      ...ROWS[2], technology_id: 'esxi-host', technology_name: 'ESXi host', technology_reference: 'TEC-9',
+      via_asset_id: 'h1', via_asset_name: 'ESX-HOST', through_host: true,
+    };
+    renderSection([...ROWS, platform]);
+    const table = await screen.findByRole('table', { name: `${K}.title` });
+    const fold = within(table).getByRole('button', { name: `${K}.platform(count=1)` });
+    expect(fold.getAttribute('aria-expanded')).toBe('false');
+    expect(within(table).queryByText('TEC-9')).toBeNull();
+    expect(within(screen.getByRole('region', { name: `${K}.title` })).getByText('3')).toBeTruthy();
+    fireEvent.click(fold);
+    expect(fold.getAttribute('aria-expanded')).toBe('true');
+    const rows = [...table.querySelectorAll('tbody tr')] as HTMLElement[];
+    expect(rows.map((tr) => tr.querySelector('td')?.textContent)).toEqual(['TEC-3', 'TEC-4', 'TEC-1', `${K}.platform(count=1)`, 'TEC-9']);
+    expect(within(rows[4]).getByText('ESX-HOST')).toBeTruthy();
+  });
+
+  it('keeps the empty line and adds the folded line when only the platform underneath reaches the asset', async () => {
+    renderSection([{ ...ROWS[2], through_host: true }]);
+    expect(await screen.findByText(`${K}.empty`)).toBeTruthy();
+    const table = screen.getByRole('table', { name: `${K}.title` });
+    expect(table.querySelector('thead')).toBeNull();
+    expect(within(table).queryByText('TEC-1')).toBeNull();
+    fireEvent.click(within(table).getByRole('button', { name: `${K}.platform(count=1)` }));
+    expect(table.querySelector('thead')).toBeTruthy();
+    expect(within(table).getByText('TEC-1')).toBeTruthy();
+  });
+
   it('is one line when the server carries nothing, with no add for a reader', async () => {
     renderSection([], false);
     expect(await screen.findByText(`${K}.empty`)).toBeTruthy();

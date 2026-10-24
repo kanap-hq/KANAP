@@ -458,7 +458,6 @@
         "summary": "Résumé",
         "technology": "Technologie",
         "servers": "Serveurs",
-        "serversHint": "Installée directement",
         "applications": "Applications",
         "state": "État",
         "published": "Publication",
@@ -689,6 +688,7 @@
           "title": "Par un autre actif",
           "hint": "Non comptées : ces technologies sont installées sur un autre actif (un hôte, un cluster)."
         },
+        "platform": "Plateforme sous-jacente ({{count}})",
         "countLink_one": "Voir la vulnérabilité à traiter dans la page Vulnérabilités",
         "countLink_other": "Voir les {{count}} vulnérabilités à traiter dans la page Vulnérabilités"
       },
@@ -2103,6 +2103,7 @@
         "add": "Ajouter",
         "search": "Rechercher des technologies",
         "empty": "Aucune technologie sur ce serveur.",
+        "platform": "Plateforme sous-jacente ({{count}})",
         "operatingSystem": "Système d'exploitation",
         "edit": "Modifier",
         "editNamed": "Modifier {{name}}",
@@ -2439,6 +2440,7 @@
         "add": "Ajouter",
         "search": "Rechercher des serveurs",
         "empty": "Aucun serveur ne porte cette technologie.",
+        "hosted": "Actifs hébergés ({{count}})",
         "total": "Total",
         "serverCount_one": "{{count}} serveur",
         "serverCount_other": "{{count}} serveurs",

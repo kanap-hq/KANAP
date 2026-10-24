@@ -139,6 +139,52 @@ describe('ReachVulnerabilitiesSection', () => {
     expect(lines[0].querySelector('td.w')?.textContent).toBe('9.0.80');
   });
 
+  it('folds the platform underneath of a VM under one closed line, with the usual empty line', () => {
+    renderSection({
+      data: {
+        rows: [],
+        indirect: [row({ technology: { id: 'tech-3', name: 'VMware ESXi', reference: 'TEC-2' }, via: { id: 'a-9', name: 'PAR-ESX-01', reference: 'AST-9' }, through_host: true })],
+        totals: { open: 0, severe: 0, exploited_severe: 0 },
+      },
+    });
+    expect(screen.getByText('No vulnerability to review on this asset.')).toBeTruthy();
+    // No "Through another asset" part, no other text: the folded line only.
+    expect(screen.queryByTestId('reach-indirect')).toBeNull();
+    const part = screen.getByTestId('reach-platform');
+    const fold = within(part).getByRole('button', { name: 'Underlying platform (1)' });
+    expect(fold.getAttribute('aria-expanded')).toBe('false');
+    expect(part.textContent).toBe('Underlying platform (1)');
+    fireEvent.click(fold);
+    expect(fold.getAttribute('aria-expanded')).toBe('true');
+    const table = within(part).getByRole('table');
+    expect(within(table).getAllByRole('columnheader').length).toBeGreaterThan(0);
+    const line = within(table).getAllByRole('row').find((tr) => tr.textContent?.includes('VMware ESXi'))!;
+    expect(line.textContent).toContain('PAR-ESX-01');
+    expect(screen.getByRole('region', { name: 'Vulnerabilities' }).querySelector('h2')?.nextSibling).toBeNull();
+  });
+
+  it('folds the platform underneath of a cluster under the lines its members carry', () => {
+    renderSection({
+      data: {
+        rows: [],
+        indirect: [
+          row({ via: { id: 'm-1', name: 'NODE-A', reference: 'AST-1' }, through_host: false }),
+          row({ technology: { id: 'tech-3', name: 'VMware ESXi', reference: 'TEC-2' }, via: { id: 'a-9', name: 'PAR-ESX-01', reference: 'AST-9' }, through_host: true }),
+        ],
+        totals: { open: 0, severe: 0, exploited_severe: 0 },
+        member_totals: { open: 6, severe: 3, exploited_severe: 1 },
+      },
+    });
+    const indirect = within(screen.getByTestId('reach-indirect')).getByRole('table', { name: 'Through another asset' });
+    const before = within(indirect).getAllByRole('row').slice(1);
+    expect(before.map((tr) => tr.textContent?.includes('Tomcat'))).toEqual([true, false]);
+    expect(before[1].textContent).toBe('Underlying platform (1)');
+    fireEvent.click(within(indirect).getByRole('button', { name: 'Underlying platform (1)' }));
+    expect(within(indirect).getAllByRole('row').slice(1).map((tr) => tr.textContent?.includes('VMware ESXi'))).toEqual([false, false, true]);
+    expect(screen.queryByTestId('reach-platform')).toBeNull();
+    expect(screen.getByTestId('reach-vulnerabilities-count').textContent).toBe('6');
+  });
+
   it('counts a cluster on its members too: the count after the title follows member_totals', () => {
     renderSection({
       data: { rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, member_totals: { open: 9, severe: 4, exploited_severe: 1 } },

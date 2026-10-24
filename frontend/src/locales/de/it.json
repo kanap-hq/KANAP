@@ -458,7 +458,6 @@
         "summary": "Zusammenfassung",
         "technology": "Technologie",
         "servers": "Server",
-        "serversHint": "Direkt installiert",
         "applications": "Anwendungen",
         "state": "Status",
         "published": "Veröffentlicht",
@@ -689,6 +688,7 @@
           "title": "Über ein anderes Asset",
           "hint": "Nicht gezählt: Diese Technologien sind auf einem anderen Asset installiert (einem Host, einem Cluster)."
         },
+        "platform": "Zugrunde liegende Plattform ({{count}})",
         "countLink_one": "Die zu prüfende Schwachstelle auf der Seite Schwachstellen ansehen",
         "countLink_other": "Die {{count}} zu prüfenden Schwachstellen auf der Seite Schwachstellen ansehen"
       },
@@ -2103,6 +2103,7 @@
         "add": "Hinzufügen",
         "search": "Technologien suchen",
         "empty": "Keine Technologie auf diesem Server.",
+        "platform": "Zugrunde liegende Plattform ({{count}})",
         "operatingSystem": "Betriebssystem",
         "edit": "Bearbeiten",
         "editNamed": "{{name}} bearbeiten",
@@ -2439,6 +2440,7 @@
         "add": "Hinzufügen",
         "search": "Server suchen",
         "empty": "Kein Server trägt diese Technologie.",
+        "hosted": "Gehostete Assets ({{count}})",
         "total": "Gesamt",
         "serverCount_one": "{{count}} Server",
         "serverCount_other": "{{count}} Server",

@@ -458,7 +458,6 @@
         "summary": "Summary",
         "technology": "Technology",
         "servers": "Servers",
-        "serversHint": "Installed directly",
         "applications": "Applications",
         "state": "State",
         "published": "Published",
@@ -689,6 +688,7 @@
           "title": "Through another asset",
           "hint": "Not counted: these technologies are installed on another asset (a host, a cluster)."
         },
+        "platform": "Underlying platform ({{count}})",
         "countLink_one": "See the vulnerability to review on the Vulnerabilities page",
         "countLink_other": "See the {{count}} vulnerabilities to review on the Vulnerabilities page"
       },
@@ -2103,6 +2103,7 @@
         "add": "Add",
         "search": "Search technologies",
         "empty": "No technology on this server.",
+        "platform": "Underlying platform ({{count}})",
         "operatingSystem": "Operating system",
         "edit": "Edit",
         "editNamed": "Edit {{name}}",
@@ -2439,6 +2440,7 @@
         "add": "Add",
         "search": "Search servers",
         "empty": "No server carries this technology.",
+        "hosted": "Hosted assets ({{count}})",
         "total": "Total",
         "serverCount_one": "{{count}} server",
         "serverCount_other": "{{count}} servers",

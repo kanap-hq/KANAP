@@ -1403,8 +1403,6 @@ export default function VulnerabilitiesPage() {
       colId: 'asset',
       valueGetter: (p: { data?: VulnerabilityRow }) => p.data?.servers,
       width: 105,
-      // The column counts the servers the technology is installed on, not those it reaches through another asset.
-      headerTooltip: t('pages.vulnerabilities.columns.serversHint'),
       type: 'rightAligned',
       sortable: false,
       filter: CheckboxSetFilter,

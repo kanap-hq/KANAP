@@ -28,6 +28,8 @@ export type ReachVulnerabilityRow = {
   via?: { id: string; name: string; reference: string | null };
   /** Asset, indirect lines only: every asset that carries the technology and version (a host, a cluster's members), by name. */
   via_assets?: Array<{ id: string; name: string; reference: string | null }>;
+  /** Asset, indirect lines only: carried through the host that contains it only (its hypervisor), folded. */
+  through_host?: boolean;
 };
 
 /** The answer of the vulnerabilities route of an asset or an application. */
@@ -78,7 +80,8 @@ const rowKey = (row: ReachVulnerabilityRow) => `${row.technology.id}:${row.versi
  * direct link, with the CVE to review in one column per severity (None counted with Low), the total,
  * and "See", which opens the Vulnerabilities page on the subject and the technology. An application
  * names the servers that carry each line, or says it is only declared. An asset may list apart the
- * technologies another asset carries (a host, a cluster): they are not counted.
+ * technologies its cluster's members carry: they are not counted. What only the host it runs on
+ * carries (the platform underneath) waits under one folded line, not counted either.
  * Pure: the caller fetches the data, and hides the section while the vulnerability feed is off.
  */
 export default function ReachVulnerabilitiesSection({ data, kind, subjectReference, heading, onRecordOnServer }: Props) {
@@ -184,7 +187,12 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
     ? { ...column, wrap: false, render: (row: ReachVulnerabilityRow) => <span title={row.technology.name}>{row.technology.name}</span> }
     : column));
   const indirectColumns = [...indirectLeading, viaColumn, ...counts(indirectPageOf)];
-  const indirect = kind === 'asset' ? data.indirect ?? [] : [];
+  const carried = kind === 'asset' ? data.indirect ?? [] : [];
+  const indirect = carried.filter((row) => !row.through_host);
+  const platform = carried.filter((row) => row.through_host);
+  const platformFold = platform.length > 0
+    ? { label: t('pages.vulnerabilities.reach.platform', { count: platform.length }), rows: platform }
+    : undefined;
   const title = t('pages.vulnerabilities.section.title');
   // A cluster counts its members' vulnerabilities too (`member_totals`), as its column in the list does.
   const shownTotals = data.member_totals ?? data.totals;
@@ -223,8 +231,14 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
               columns={indirectColumns}
               rows={indirect}
               rowKey={rowKey}
+              folded={platformFold}
               ariaLabel={t('pages.vulnerabilities.reach.indirect.title')}
             />
+          </Box>
+        )}
+        {indirect.length === 0 && platformFold && (
+          <Box data-testid="reach-platform" sx={{ mt: 1 }}>
+            <RelationsTable columns={indirectColumns} rows={[]} rowKey={rowKey} folded={platformFold} ariaLabel={platformFold.label} />
           </Box>
         )}
       </RelationsSection>

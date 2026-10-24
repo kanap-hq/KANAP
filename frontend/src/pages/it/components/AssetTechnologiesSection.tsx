@@ -31,6 +31,8 @@ export type AssetTechnologyRow = {
   via_assets?: Array<{ id: string; name: string; reference: string | null }>;
   /** The server's operating system. The list already puts that link first. */
   is_operating_system?: boolean;
+  /** Carried through the host that contains the asset only (its hypervisor): the platform underneath, folded. */
+  through_host?: boolean;
   standard_support_end?: string | null;
   extended_support_end?: string | null;
 };
@@ -47,10 +49,11 @@ type Props = {
 };
 
 /**
- * What a server carries: technologies installed on it (removable) and carried to it through the
- * server it runs on or its cluster (with that server, not removable). The marked operating system
- * leads the list. Managers add a technology then its version, and change a version from the
- * version or from Edit. Each change is saved at once. One line when empty.
+ * What a server carries: technologies installed on it (removable) and carried to it by a cluster's
+ * members (with them, not removable). What only the host it runs on carries (`through_host`, the
+ * platform underneath) waits under one folded line, left out of the count. The marked operating
+ * system leads the list. Managers add a technology then its version, and change a version from
+ * the version or from Edit. Each change is saved at once. One line when empty.
  */
 export default function AssetTechnologiesSection({ assetId, canManage, heading }: Props) {
   const { t } = useTranslation(['it', 'common']);
@@ -128,7 +131,9 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
     return (res.data?.items || []).map((row) => ({ id: row.id, label: row.name, ref: row.reference, hint: row.editor }));
   }, []);
 
-  const rows = data?.items ?? [];
+  const items = data?.items ?? [];
+  const rows = items.filter((row) => !row.through_host);
+  const platform = items.filter((row) => row.through_host);
   const dash = '—';
   const columns: Array<RelationsColumn<AssetTechnologyRow>> = [
     { key: 'ref', header: t('workspace.asset.technologies.columns.ref'), width: 64, render: (row) => <RelationRef>{row.technology_reference ?? dash}</RelationRef> },
@@ -245,14 +250,14 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
             onClose={() => setVersionEdit(null)}
           />
         )}
-        {data && rows.length === 0 ? (
-          <RelationsEmpty>{t('workspace.asset.technologies.empty')}</RelationsEmpty>
-        ) : rows.length > 0 ? (
+        {data && rows.length === 0 && <RelationsEmpty>{t('workspace.asset.technologies.empty')}</RelationsEmpty>}
+        {items.length > 0 && (
           <RelationsTable
             ariaLabel={title}
             // "Via" only when a row is deduced: a direct link has nothing there.
-            columns={rows.some((row) => row.kind === 'carried') ? columns : columns.filter((column) => column.key !== 'via')}
+            columns={items.some((row) => row.kind === 'carried') ? columns : columns.filter((column) => column.key !== 'via')}
             rows={rows}
+            folded={platform.length > 0 ? { label: t('workspace.asset.technologies.platform', { count: platform.length }), rows: platform } : undefined}
             rowKey={(row) => `${row.kind}:${row.link_id ?? ''}:${row.technology_id}:${row.via_asset_id ?? ''}:${row.technology_version_id ?? ''}`}
             rowHref={(row) => `/it/technologies/${row.technology_reference ?? row.technology_id}`}
             onRemove={canManage ? (row) => { void remove(row); } : undefined}
@@ -274,7 +279,7 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
               ) : null),
             } : undefined}
           />
-        ) : null}
+        )}
       </RelationsSection>
     </Stack>
   );
