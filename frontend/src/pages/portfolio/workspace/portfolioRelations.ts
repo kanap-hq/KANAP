@@ -15,6 +15,8 @@ export type ProjectRelationsData = {
   year: number;
   budget_column: { key: string; label: string };
   budget_lines: BudgetLineRow[] | null;
+  /** The linked lines `budget_lines` leaves out, counted: outside the caller's data access, or all without the budget right. */
+  budget_lines_hidden?: number;
   applications: ApplicationRelationRow[] | null;
   assets: AssetRelationRow[] | null;
   technologies: TechnologyRelationRow[] | null;
@@ -25,6 +27,8 @@ export type RequestRelationsData = {
   year: number;
   budget_column: { key: string; label: string };
   budget_lines: BudgetLineRow[] | null;
+  /** The linked lines `budget_lines` leaves out, counted: outside the caller's data access, or all without the budget right. */
+  budget_lines_hidden?: number;
   applications: ApplicationRelationRow[] | null;
   assets: AssetRelationRow[] | null;
   processes: BusinessProcessRow[] | null;

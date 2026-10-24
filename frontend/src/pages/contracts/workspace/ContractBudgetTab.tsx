@@ -79,7 +79,9 @@ function LineAmount({ line, year }: { line: ContractBudgetLineAmount | undefined
  * (both natures), linked and removed with the budget lines picker; each change saves at once.
  * For a reader of the budget, a year and a budget column (kept per user, shared with the list):
  * each line's amount there with their total, and the contract's commitment against its lines for
- * every year (`GET /contracts/:id/budget`).
+ * every year (`GET /contracts/:id/budget`). The lines outside a limited person's data access are
+ * counted under the list, never named; without the budget right, the tab gives the number of
+ * linked lines only, with no picker.
  */
 export default function ContractBudgetTab({ contractId, readOnly, onChanged, terms }: {
   contractId: string;
@@ -87,7 +89,7 @@ export default function ContractBudgetTab({ contractId, readOnly, onChanged, ter
   onChanged: () => void;
   terms?: ContractBudgetTerms | null;
 }) {
-  const { t } = useTranslation(['ops', 'common']);
+  const { t } = useTranslation(['ops', 'common', 'it']);
   const navigate = useNavigate();
   const locale = useLocale();
   const queryClient = useQueryClient();
@@ -96,7 +98,8 @@ export default function ContractBudgetTab({ contractId, readOnly, onChanged, ter
   const choice = useContractBudgetChoice();
   const query = useQuery({
     queryKey: contractBudgetLinesKey(contractId),
-    queryFn: async ({ signal }) => (await api.get<{ items: ContractBudgetLine[] }>(`/contracts/${contractId}/budget-lines`, { signal })).data.items,
+    // `hidden`: the linked lines the list leaves out, counted (outside the data access, or all without the budget right).
+    queryFn: async ({ signal }) => (await api.get<{ items: ContractBudgetLine[]; hidden?: number }>(`/contracts/${contractId}/budget-lines`, { signal })).data,
     staleTime: 0,
   });
   const coverage = useQuery({
@@ -114,10 +117,13 @@ export default function ContractBudgetTab({ contractId, readOnly, onChanged, ter
   const pendingRef = React.useRef(0);
 
   React.useEffect(() => {
-    if (query.data && pendingRef.current === 0) setLines(query.data);
+    if (query.data && pendingRef.current === 0) setLines(query.data.items);
   }, [query.data]);
 
-  const shown = lines ?? query.data ?? [];
+  const shown = lines ?? query.data?.items ?? [];
+  const hidden = query.data?.hidden ?? 0;
+  // Without the budget right: the number of linked lines only, never their names.
+  const outside = !hidden ? null : t(`it:workspace.application.relations.outside.${!canReadBudget ? 'count' : shown.length === 0 ? 'only' : 'and'}`, { count: hidden });
 
   const save = (next: LinkedBudgetLine[]) => {
     const known = new Map(shown.map((line) => [line.id, line]));
@@ -196,10 +202,10 @@ export default function ContractBudgetTab({ contractId, readOnly, onChanged, ter
       )}
       <Stack spacing={1.25}>
         <RelationsSectionTitle>{t('contracts.budget.title')}</RelationsSectionTitle>
-        {query.isFetched && shown.length === 0 && (
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{t('contracts.budget.empty')}</Typography>
+        {query.isFetched && (shown.length === 0 || !canReadBudget) && (
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{outside ?? t('contracts.budget.empty')}</Typography>
         )}
-        {shown.length > 0 && (
+        {canReadBudget && shown.length > 0 && (
           <Box sx={denseTableFrameSx}>
             <Box component="table" sx={[denseTableSx, totalsRowSx]}>
               <thead>
@@ -237,17 +243,22 @@ export default function ContractBudgetTab({ contractId, readOnly, onChanged, ter
             </Box>
           </Box>
         )}
+        {canReadBudget && shown.length > 0 && outside && (
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{outside}</Typography>
+        )}
       </Stack>
-      <Stack spacing={1}>
-        <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t('contracts.budget.pickerLabel')}</Typography>
-        <Box sx={{ maxWidth: 640 }}>
-          <BudgetLinesRelationField
-            value={shown}
-            onChange={(next) => save(next)}
-            disabled={readOnly || !query.isFetched}
-          />
-        </Box>
-      </Stack>
+      {canReadBudget && (
+        <Stack spacing={1}>
+          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t('contracts.budget.pickerLabel')}</Typography>
+          <Box sx={{ maxWidth: 640 }}>
+            <BudgetLinesRelationField
+              value={shown}
+              onChange={(next) => save(next)}
+              disabled={readOnly || !query.isFetched}
+            />
+          </Box>
+        </Stack>
+      )}
       {canReadBudget && figures && sameColumn && (
         <Stack spacing={1.25}>
           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, flexWrap: 'wrap' }}>

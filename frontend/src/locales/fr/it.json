@@ -1919,6 +1919,14 @@
           "fileAttached_one": "Fichier joint.",
           "fileAttached_other": "{{count}} fichiers joints.",
           "fileDeleted": "Fichier supprimé."
+        },
+        "outside": {
+          "and_one": "et {{count}} ligne hors de votre accès",
+          "and_other": "et {{count}} lignes hors de votre accès",
+          "only_one": "{{count}} ligne hors de votre accès",
+          "only_other": "{{count}} lignes hors de votre accès",
+          "count_one": "{{count}} ligne budgétaire",
+          "count_other": "{{count}} lignes budgétaires"
         }
       },
       "untitled": "Application sans nom",

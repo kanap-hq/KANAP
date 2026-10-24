@@ -19,6 +19,15 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(refusal('This task is read only in your access.'), i18n.getFixedT('es'), 'fallback'))
       .toBe('Esta tarea es de solo lectura en su acceso.');
     expect(getApiErrorMessage(refusal('BL-12 is read only in your access.'), fr, 'fallback')).toBe('BL-12 est en lecture seule dans votre accès.');
+    // A refused delete of an object linked to lines outside the access, per object type.
+    expect(getApiErrorMessage(refusal('This application is linked to 3 lines outside your access.'), fr, 'fallback'))
+      .toBe('Cette application est liée à 3 lignes hors de votre accès.');
+    expect(getApiErrorMessage(refusal('This asset is linked to 1 line outside your access.'), t, 'fallback'))
+      .toBe('This asset is linked to 1 line outside your access.');
+    expect(getApiErrorMessage(refusal('This request is linked to 2 lines outside your access.'), i18n.getFixedT('de'), 'fallback'))
+      .toBe('Diese Anfrage ist mit 2 Zeilen außerhalb Ihres Zugriffs verknüpft.');
+    expect(getApiErrorMessage(refusal('This technology is linked to 2 lines outside your access.'), i18n.getFixedT('es'), 'fallback'))
+      .toBe('Esta tecnología está vinculada a 2 líneas fuera de su acceso.');
     // A sentence the screen does not know shows as the server wrote it, never the generic refusal.
     expect(getApiErrorMessage(refusal('Some new refusal.'), fr, 'fallback')).toBe('Some new refusal.');
     expect(getApiErrorMessage(refusal(''), t, 'fallback')).toBe('This item is outside your data access.');

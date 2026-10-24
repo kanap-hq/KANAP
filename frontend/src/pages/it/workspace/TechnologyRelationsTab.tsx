@@ -31,6 +31,8 @@ export type TechnologyRelationsData = {
   year: number;
   budget_column: { key: string; label: string };
   budget_lines: BudgetLineRow[] | null;
+  /** The linked lines `budget_lines` leaves out, counted: outside the caller's data access, or all without the budget right. */
+  budget_lines_hidden?: number;
   contracts: ContractRow[] | null;
   projects: ProjectRow[] | null;
   incidents: IncidentLinkRow[] | null;
@@ -189,7 +191,7 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
   const lineCurrency = data?.budget_lines?.find((line) => line.currency)?.currency ?? null;
 
   const sections: Array<SectionSpec<any>> = [
-    budgetLinesSection({ t, rows: data ? data.budget_lines : [], year, columnLabel, currency: lineCurrency }),
+    budgetLinesSection({ t, rows: data ? data.budget_lines : [], year, columnLabel, currency: lineCurrency, hidden: data?.budget_lines_hidden }),
     contractsSection({ t, rows: data ? data.contracts : [], lang }),
     projectsSection({ t, rows: data ? data.projects : [], lang }),
     incidentsSection({

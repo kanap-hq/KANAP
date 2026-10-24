@@ -76,14 +76,22 @@ export function budgetLinesSection({
   year,
   columnLabel,
   currency,
+  hidden = 0,
 }: {
   t: TFunction;
   rows: BudgetLineRow[] | null;
   year: number;
   columnLabel: string;
   currency: string | null;
+  /**
+   * The linked lines `rows` leaves out (`budget_lines_hidden`): outside the caller's data access,
+   * or all of them when the caller cannot read the budget (`rows` null). Counted, never named.
+   */
+  hidden?: number;
 }): SectionSpec<BudgetLineRow> {
+  const outsideKey = rows === null ? 'count' : rows.length === 0 ? 'only' : 'and';
   return {
+    outside: { count: hidden, text: t(`workspace.application.relations.outside.${outsideKey}`, { count: hidden }) },
     kind: 'budget_lines',
     title: t('workspace.application.relations.sections.budgetLines'),
     empty: t('workspace.application.relations.empty.budgetLines'),

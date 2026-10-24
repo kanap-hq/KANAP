@@ -1919,6 +1919,14 @@
           "fileAttached_one": "Archivo adjuntado.",
           "fileAttached_other": "{{count}} archivos adjuntados.",
           "fileDeleted": "Archivo eliminado."
+        },
+        "outside": {
+          "and_one": "y {{count}} línea fuera de su acceso",
+          "and_other": "y {{count}} líneas fuera de su acceso",
+          "only_one": "{{count}} línea fuera de su acceso",
+          "only_other": "{{count}} líneas fuera de su acceso",
+          "count_one": "{{count}} línea presupuestaria",
+          "count_other": "{{count}} líneas presupuestarias"
         }
       },
       "untitled": "Aplicación sin nombre",

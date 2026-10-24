@@ -68,3 +68,16 @@ describe('relation picker search', () => {
     expect(options.map((option) => option.ref)).toEqual(['PRJ-3', 'PRJ-9', 'PRJ-14', null]);
   });
 });
+
+describe('budget lines outside the data access', () => {
+  const args = { t, year: 2026, columnLabel: 'Budget', currency: 'EUR' };
+  it('says "and N lines" under visible lines, "N lines" alone, and "N budget lines" without the budget right', () => {
+    expect(budgetLinesSection({ ...args, rows: [line('a', 1)], hidden: 3 }).outside)
+      .toEqual({ count: 3, text: 'workspace.application.relations.outside.and(count=3)' });
+    expect(budgetLinesSection({ ...args, rows: [], hidden: 1 }).outside)
+      .toEqual({ count: 1, text: 'workspace.application.relations.outside.only(count=1)' });
+    expect(budgetLinesSection({ ...args, rows: null, hidden: 2 }).outside)
+      .toEqual({ count: 2, text: 'workspace.application.relations.outside.count(count=2)' });
+    expect(budgetLinesSection({ ...args, rows: [line('a', 1)] }).outside?.count).toBe(0);
+  });
+});

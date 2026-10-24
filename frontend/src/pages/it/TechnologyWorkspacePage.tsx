@@ -11,7 +11,8 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useTechnologyItemNav } from '../../hooks/useModuleItemNav';
 import { useLocale } from '../../i18n/useLocale';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
-import { refusalCounts } from '../../utils/deleteRefusal';
+import { deleteFailureReason, refusalCounts } from '../../utils/deleteRefusal';
+import type { DeleteCheck } from '../../components/DeleteSelectedButton';
 import { getDotColor, LIFECYCLE_COLORS } from '../../utils/statusColors';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
@@ -43,7 +44,7 @@ function TechnologyDeleteButton({ technology, onDeleted, onError }: {
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = React.useState(false);
   const handleClick = async () => {
-    const check = await api.post<{ removes: Array<{ type: string; total: number }> }>('/technologies/delete-check', { ids: [technology.id] })
+    const check = await api.post<{ refused?: DeleteCheck['refused']; removes: Array<{ type: string; total: number }> }>('/technologies/delete-check', { ids: [technology.id] })
       .then((res) => res.data)
       .catch((err) => {
         // Without the count of what goes with it, the delete is not offered.
@@ -51,6 +52,12 @@ function TechnologyDeleteButton({ technology, onDeleted, onError }: {
         return null;
       });
     if (!check) return;
+    // Refused (lines outside the person's data access): the reason, Close only.
+    const refusal = check.refused?.find((item) => item.id === technology.id);
+    if (refusal) {
+      await dialogs.alert({ title: t('common:delete.recordTitle', { name: technology.name }), message: deleteFailureReason(refusal, t, locale) });
+      return;
+    }
     const removes = check.removes || [];
     const confirmed = await dialogs.confirm({
       title: t('common:delete.recordTitle', { name: technology.name }),

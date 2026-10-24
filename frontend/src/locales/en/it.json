@@ -1919,6 +1919,14 @@
           "fileAttached_one": "File attached.",
           "fileAttached_other": "{{count}} files attached.",
           "fileDeleted": "File deleted."
+        },
+        "outside": {
+          "and_one": "and {{count}} line outside your access",
+          "and_other": "and {{count}} lines outside your access",
+          "only_one": "{{count}} line outside your access",
+          "only_other": "{{count}} lines outside your access",
+          "count_one": "{{count}} budget line",
+          "count_other": "{{count}} budget lines"
         }
       },
       "untitled": "Untitled application",

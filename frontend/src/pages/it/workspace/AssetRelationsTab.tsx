@@ -192,7 +192,7 @@ export default function AssetRelationsTab({ assetId }: { assetId: string }) {
   });
 
   const sections: Array<SectionSpec<any>> = [
-    readable(budgetLinesSection({ t, rows: rowsOf('budget_lines') as BudgetLineRow[] | null, year, columnLabel, currency: lineCurrency })),
+    readable(budgetLinesSection({ t, rows: rowsOf('budget_lines') as BudgetLineRow[] | null, year, columnLabel, currency: lineCurrency, hidden: relations?.budget_lines_hidden })),
     readable(contractsSection({ t, rows: rowsOf('contracts') as ContractRow[] | null, lang })),
     readable(projectsSection({ t, rows: rowsOf('projects') as ProjectRow[] | null, lang })),
     readable({

@@ -8,7 +8,7 @@ import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid'
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
-import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import DeleteSelectedButton, { type DeleteCheck } from '../../components/DeleteSelectedButton';
 import CsvExportDialog from '../../components/csv/CsvExportDialog';
 import CsvImportDialog from '../../components/csv/CsvImportDialog';
 import { useAuth } from '../../auth/AuthContext';
@@ -285,13 +285,16 @@ export default function TechnologiesPage() {
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
           checkDelete={async (ids) => {
-            const res = await api.post<{ refused: []; removes: Array<{ type: string; total: number }> }>('/technologies/delete-check', { ids });
+            const res = await api.post<{ refused?: DeleteCheck['refused']; removes: Array<{ type: string; total: number }> }>('/technologies/delete-check', { ids });
             const removes = res.data?.removes || [];
+            // Kept: the technologies linked to lines outside the person's data access.
+            const refused = Array.isArray(res.data?.refused) ? res.data.refused : [];
+            const count = ids.length - refused.length;
             return {
-              refused: [],
+              refused,
               warning: removes.length > 0
-                ? t('pages.technologies.delete.warningCounted', { count: ids.length, usages: refusalCounts({ usages: removes }, t, locale) })
-                : t('pages.technologies.delete.warning', { count: ids.length }),
+                ? t('pages.technologies.delete.warningCounted', { count, usages: refusalCounts({ usages: removes }, t, locale) })
+                : t('pages.technologies.delete.warning', { count }),
             };
           }}
           warning={t('pages.technologies.delete.warning', { count: selectedRows.length })}

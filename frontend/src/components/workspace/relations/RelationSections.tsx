@@ -21,7 +21,8 @@ type Props = {
 
 /**
  * The linked sections of a Relations tab: one dense table per kind, Add anchored to its button,
- * unlink on hover. A section whose rows are null (the caller cannot read the module) is left out.
+ * unlink on hover. A section whose rows are null (the caller cannot read the module) is left out,
+ * unless it counts linked rows (`outside`): then it shows that count alone, without names.
  */
 export default function RelationSections({ sections, loaded, canEdit, searchKeyPrefix, onLink, onUnlink }: Props) {
   const { t } = useTranslation('it');
@@ -29,7 +30,15 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
 
   return (
     <>
-      {sections.filter((section) => section.rows !== null).map((section) => {
+      {sections.filter((section) => section.rows !== null || (section.outside?.count ?? 0) > 0).map((section) => {
+        const outside = (section.outside?.count ?? 0) > 0 ? section.outside!.text : null;
+        if (section.rows === null) {
+          return (
+            <RelationsSection key={section.kind} title={section.title}>
+              <RelationsEmpty>{outside}</RelationsEmpty>
+            </RelationsSection>
+          );
+        }
         const rows = section.rows as AnyRow[];
         const linkedIds = section.linkedIds ? section.linkedIds(rows) : new Set(rows.map((row) => row.id));
         const editable = canEdit && (section.editable ?? true);
@@ -55,7 +64,7 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
               />
             )}
             {rows.length === 0 ? (
-              <RelationsEmpty>{section.empty}</RelationsEmpty>
+              <RelationsEmpty>{outside ?? section.empty}</RelationsEmpty>
             ) : (
               <RelationsTable
                 ariaLabel={section.title}
@@ -72,6 +81,7 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
               />
             )}
             {rows.length > 0 && section.notice?.(rows)}
+            {rows.length > 0 && outside && <RelationsEmpty>{outside}</RelationsEmpty>}
           </RelationsSection>
         );
       })}

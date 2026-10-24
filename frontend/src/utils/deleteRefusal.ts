@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import { joinNames } from '../pages/working-day-calendars/workingDayCalendarFields';
+import { dataAccessSentence } from './apiErrorMessage';
 
 /**
  * A failed item of a bulk delete. `code`: a refusal the interface translates (`errors:<code>`),
@@ -7,6 +8,8 @@ import { joinNames } from '../pages/working-day-calendars/workingDayCalendarFiel
  */
 export type DeleteFailure = {
   reason?: string;
+  /** The server's sentence, on a refusal answered as an error (403 `DATA_ACCESS_LIMITED`). */
+  message?: string;
   code?: string;
   usages?: Array<{ type: string; total: number }>;
   /** Values the sentence names besides the counts: a frozen column and its year. */
@@ -46,6 +49,11 @@ export function removedWithLinks(usages: NonNullable<DeleteFailure['usages']>, l
 export function deleteFailureReason(failure: DeleteFailure, t: TFunction, language: string): string {
   const reason = failure.reason ?? '';
   if (!failure.code) return reason;
+  // A data access refusal carries its sentence, translated as every refusal of that code is.
+  if (failure.code === 'DATA_ACCESS_LIMITED') {
+    const sentence = failure.message ?? reason;
+    return dataAccessSentence(sentence, t as never) ?? sentence;
+  }
   return t(`errors:${failure.code}`, {
     ...(failure.params ?? {}),
     ...usageTotal(failure.usages),

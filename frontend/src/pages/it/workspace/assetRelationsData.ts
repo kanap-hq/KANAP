@@ -19,6 +19,8 @@ export type AssetRelationsData = {
   budget_column: { key: string; label: string };
   assets: Record<AssetDirection, AssetRelationRow[]>;
   budget_lines: BudgetLineRow[] | null;
+  /** The linked lines `budget_lines` leaves out, counted: outside the caller's data access, or all without the budget right. */
+  budget_lines_hidden?: number;
   contracts: ContractRow[] | null;
   projects: ProjectRow[] | null;
   tasks: AssetTaskRow[] | null;
