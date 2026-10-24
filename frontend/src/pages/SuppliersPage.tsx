@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
+import { isDataAccessLimited } from '../auth/dataAccess';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { recordsInUseCheck } from '../utils/deleteCheck';
 import { LinkCellRenderer } from '../components/grid/renderers';
@@ -19,7 +20,7 @@ export default function SuppliersPage() {
   const { t } = useTranslation(['master-data', 'common']);
   const locale = useLocale();
   const navigate = useNavigate();
-  const { hasLevel } = useAuth();
+  const { hasLevel, dataAccess } = useAuth();
 
   if (!hasLevel('suppliers', 'reader')) {
     return <ForbiddenPage />;
@@ -106,6 +107,8 @@ export default function SuppliersPage() {
 
   const canCreate = hasLevel('suppliers','manager');
   const canAdmin = hasLevel('suppliers','admin');
+  // Importing over or deleting shared suppliers is reserved to people with access to all data (spec §2.7).
+  const canChangeShared = canAdmin && !isDataAccessLimited(dataAccess);
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
@@ -119,9 +122,9 @@ export default function SuppliersPage() {
           {t('shared.labels.new')}
         </Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
+      {canChangeShared && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('shared.labels.exportCsv')}</Button>}
-      {canAdmin && (
+      {canChangeShared && (
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/suppliers/bulk"
@@ -158,7 +161,7 @@ export default function SuppliersPage() {
         statusScopeConfig={{ defaultScope: 'enabled' }}
         requiredColumns={['name']}
         defaultHiddenColumns={['notes', 'created_at']}
-        enableRowSelection={canAdmin}
+        enableRowSelection={canChangeShared}
         onSelectionChanged={setSelectedRows}
         onGridApiReady={(api) => { gridApiRef.current = api; }}
         onQueryStateChange={(state) => {

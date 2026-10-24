@@ -8,6 +8,7 @@ import { Button, Stack } from '@mui/material';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import { useAuth } from '../auth/AuthContext';
+import { isDataAccessLimited } from '../auth/dataAccess';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { useNavigate } from 'react-router-dom';
 import { LinkCellRenderer } from '../components/grid/renderers';
@@ -16,7 +17,7 @@ import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 
 export default function ContactsPage() {
-  const { hasLevel } = useAuth();
+  const { hasLevel, dataAccess } = useAuth();
   const { t } = useTranslation(['master-data', 'common']);
   const locale = useLocale();
   const navigate = useNavigate();
@@ -147,6 +148,8 @@ export default function ContactsPage() {
 
   const canCreate = hasLevel('contacts','manager');
   const canAdmin = hasLevel('contacts','admin');
+  // Importing over or deleting shared contacts is reserved to people with access to all data (spec §2.7).
+  const canChangeShared = canAdmin && !isDataAccessLimited(dataAccess);
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
@@ -155,9 +158,9 @@ export default function ContactsPage() {
           navigate(`/master-data/contacts/new/overview?${sp.toString()}`);
         }}>{t('shared.labels.new')}</Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
+      {canChangeShared && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('shared.labels.exportCsv')}</Button>}
-      {canAdmin && (
+      {canChangeShared && (
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/contacts/bulk"
@@ -193,7 +196,7 @@ export default function ContactsPage() {
         enableColumnChooser={true}
         requiredColumns={['email']}
         defaultHiddenColumns={['job_title','phone','mobile','country','created_at']}
-        enableRowSelection={canAdmin}
+        enableRowSelection={canChangeShared}
         onSelectionChanged={setSelectedRows}
         onGridApiReady={(api) => { gridApiRef.current = api; }}
         onQueryStateChange={(state) => {

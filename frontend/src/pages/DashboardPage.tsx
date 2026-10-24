@@ -290,7 +290,8 @@ function useMyBudget(scope: BudgetScope, profile: ProfileName, metric: AmountCol
     }
     return [...byId.values()].sort((a, b) => b.value - a.value).slice(0, MY_TOP_LINES);
   }, [query.data]);
-  return { rows, topLines, fxMissing: query.fxMissing, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch };
+  const calculatedOnAccess = (query.data ?? []).some((result) => isCalculatedOnAccess(result));
+  return { rows, topLines, fxMissing: query.fxMissing, calculatedOnAccess, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch };
 }
 
 /** This year's default column by cost center, the five largest (lines without one in the ranking too). */
@@ -366,7 +367,7 @@ function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: Am
         yMissingRate: missingRateOfRow(row, column, Y),
       }));
       const fxMissing = (totals.data?.fxMissing ?? []).filter((item) => item?.currency && item.year === Y);
-      return { items, fxMissing };
+      return { items, fxMissing, calculatedOnAccess: isCalculatedOnAccess(res.data) || isCalculatedOnAccess(totals.data) };
     },
     staleTime: 60 * 1000,
   });
@@ -387,7 +388,7 @@ function useTopIncreases(scope: BudgetScope, enabled: boolean, column: AmountCol
     // The line's reference; its id only when it has none (the page opens either).
     path: buildItemPath('budget', row.itemNumber != null ? formatItemRef('budget', row.itemNumber) : row.id),
   })), [query.data]);
-  return { items, fxMissing: query.data?.fxMissing, isLoading: enabled && (query.isLoading || !columnReady) };
+  return { items, fxMissing: query.data?.fxMissing, calculatedOnAccess: isCalculatedOnAccess(query.data), isLoading: enabled && (query.isLoading || !columnReady) };
 }
 
 /** All / OPEX / CAPEX choice of a dashboard tile, remembered per tile; a type the user cannot read falls back to the default. */
@@ -465,9 +466,10 @@ export default function DashboardPage() {
   );
   const topItems = topItemsResult?.items;
   const topFxMissing = topItemsResult?.fxMissing;
+  const topCalculatedOnAccess = !!topItemsResult?.calculatedOnAccess;
   const topLoading = topQueryLoading || (readableScopes.length > 0 && !budgetColumns.ready);
   const [increaseScope, setIncreaseScope] = useTileScope('topIncreases');
-  const { items: topIncreases, fxMissing: increasesFxMissing, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0 && tileEnabled('top-increases'), defaultColumn.key, budgetColumns.ready, 5);
+  const { items: topIncreases, fxMissing: increasesFxMissing, calculatedOnAccess: increasesCalculatedOnAccess, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0 && tileEnabled('top-increases'), defaultColumn.key, budgetColumns.ready, 5);
 
   const [myBudgetScope, setMyBudgetScope] = useTileScope('myBudget');
   const myBudget = useMyBudget(myBudgetScope, profile, defaultColumn.key, readableScopes.length > 0 && tileEnabled('my-budget') && budgetColumns.ready);
@@ -657,6 +659,7 @@ export default function DashboardPage() {
                   <FxMissingNotice items={myBudget.fxMissing} sx={{ pt: 0.5 }} />
                 </Stack>
               )}
+              <CalculatedOnYourAccess show={myBudget.calculatedOnAccess} sx={{ display: 'block', mt: 1 }} />
             </DashboardTile>
           </Box>
     ) : null,
@@ -743,6 +746,7 @@ export default function DashboardPage() {
                   <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
                 )}
                 <FxMissingNotice items={topFxMissing} sx={{ pt: 0.5 }} />
+                <CalculatedOnYourAccess show={topCalculatedOnAccess} />
               </Stack>
             </DashboardTile>
           </Box>
@@ -772,6 +776,7 @@ export default function DashboardPage() {
                   <Typography variant="body1" color="text.secondary">{t('dashboard.noIncreases')}</Typography>
                 )}
                 <FxMissingNotice items={increasesFxMissing} sx={{ pt: 0.5 }} />
+                <CalculatedOnYourAccess show={increasesCalculatedOnAccess} />
               </Stack>
             </DashboardTile>
           </Box>
