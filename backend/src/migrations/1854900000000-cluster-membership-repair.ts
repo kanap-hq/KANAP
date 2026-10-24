@@ -38,8 +38,8 @@ export class ClusterMembershipRepair1854900000000 implements MigrationInterface 
         WITH removed AS (
           DELETE FROM asset_cluster_members m
            USING assets c, assets a
-           WHERE c.id = m.cluster_id
-             AND a.id = m.asset_id
+           WHERE c.tenant_id = m.tenant_id AND c.id = m.cluster_id
+             AND a.tenant_id = m.tenant_id AND a.id = m.asset_id
              AND (COALESCE(c.is_cluster, false) = false OR COALESCE(a.is_cluster, false) = true OR m.cluster_id = m.asset_id)
           RETURNING m.tenant_id,
                     CASE
