@@ -251,7 +251,7 @@ async function testListAndFigures(harness: Harness, runner: QueryRunner, s: Seed
   assert.equal(entra.metadata.versions_in_use, null);
   const vsphere = all.items.find((item: any) => item.label === 'VMware vSphere');
   assert.equal(vsphere.metadata.support_status, 'unknown', 'a version in use without a date');
-  assert.equal(vsphere.metadata.versions_in_use, '8: no end of support date, 1 server');
+  assert.equal(vsphere.metadata.versions_in_use, '8: no end of support date, 2 servers', 'the servers of a version: installed or carried');
   assert.equal(vsphere.metadata.server_count, 2, 'the host and the server it contains, which carries it');
   const metadataText = JSON.stringify(all.items.map((item: any) => ({ ...item, id: undefined })));
   assert.doesNotMatch(metadataText, UUID_IN_TEXT, 'no id besides the item\'s own');
@@ -647,6 +647,19 @@ async function testServersAsTheTechnologyList(harness: Harness, runner: QueryRun
   for (const item of seeded) {
     assert.equal(item.metadata.server_count, counts.get(item.id)!.servers, `${item.label}: the technology list's count`);
   }
+
+  // The servers of each version follow the same definition: the host, the server it contains, not
+  // the cluster.
+  const [{ id: vs8 }] = await runner.query(
+    `SELECT id FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND label = '8'`, [t, s.tech.vsphere]);
+  const [{ id: clusterLink }] = await runner.query(
+    `INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id) VALUES ($1, $2, $3, $4) RETURNING id`,
+    [t, cluster, s.tech.vsphere, vs8]);
+  const vsphere = (await list(harness, runner, s, { limit: 100 })).items.find((item: any) => item.label === 'VMware vSphere');
+  assert.equal(vsphere.metadata.versions_in_use, '8: no end of support date, 2 servers');
+  const detail = await harness.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'technologies', entity_id: 'TEC-4' });
+  assert.deepEqual(detail.data.versions.map((v: any) => [v.label, v.server_count]), [['8', 2]], 'the detail counts the same');
+  await runner.query(`DELETE FROM asset_technologies WHERE tenant_id = $1 AND id = $2`, [t, clusterLink]);
 }
 
 async function testSupportStatus(harness: Harness, runner: QueryRunner, s: Seed) {

@@ -4,7 +4,8 @@ import {
   technologyEndOfStandardSupportSql,
   technologyEndOfSupportSql,
   technologyOpenVulnerabilitiesSql,
-  technologyServerCountSql,
+  TECHNOLOGY_SERVER_COUNT,
+  technologyServerFiguresJoin,
   technologySupportStatusSql,
 } from '../ai-technologies.query';
 
@@ -182,7 +183,7 @@ export const technologiesRegistry: AiEntityFilterRegistry = {
       support_status: { expression: technologySupportStatusSql('t') },
     },
     metricFields: {
-      server_count: { expression: technologyServerCountSql('t'), type: 'number' },
+      server_count: { expression: TECHNOLOGY_SERVER_COUNT, joins: [technologyServerFiguresJoin('t')], type: 'number' },
       // As text, so a minimum or maximum reads as YYYY-MM-DD (same order as the dates).
       end_of_standard_support: { expression: `to_char(${technologyEndOfStandardSupportSql('t')}, 'YYYY-MM-DD')`, type: 'date' },
       end_of_support: { expression: `to_char(${technologyEndOfSupportSql('t')}, 'YYYY-MM-DD')`, type: 'date' },

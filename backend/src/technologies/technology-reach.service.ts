@@ -91,13 +91,31 @@ const serversOfTechnologiesSql = (tenant: string) => `
 const SERVERS_OF_TECHNOLOGIES = serversOfTechnologiesSql('$1');
 
 /**
- * The number of servers (`SERVERS_OF_TECHNOLOGIES`) of the technology row `t` of an outer query,
- * as one correlated expression with no placeholder: for a statement that filters or sorts on it.
+ * The servers (`SERVERS_OF_TECHNOLOGIES`) of the technologies of the tenant `tenant` that
+ * `technology` names (a condition on `at.technology_id`, every technology by default), as a
+ * derived table to join on `technology_id`, one row per technology that has a server: `servers`,
+ * and `version_servers`, the servers of each version (version id to count, a version with no
+ * server absent). One traversal for the whole statement: the assistant's list, its sort, its
+ * filters and its aggregates join it, where a count per technology row repeated the traversal.
  */
-export function technologyServersCountSql(t: string): string {
-  return `(WITH RECURSIVE ${reachFromTechnologiesSql(`${t}.tenant_id`, `= ${t}.id`)},
-           ${serversOfTechnologiesSql(`${t}.tenant_id`)}
-           SELECT count(DISTINCT servers_of.asset_id)::int FROM servers_of)`;
+export function technologyServerFiguresSql(tenant: string, technology = 'IS NOT NULL'): string {
+  return `(WITH RECURSIVE ${reachFromTechnologiesSql(tenant, technology)},
+           ${serversOfTechnologiesSql(tenant)},
+           per_technology AS (
+             SELECT technology_id, count(DISTINCT asset_id)::int AS servers FROM servers_of GROUP BY technology_id
+           ),
+           per_version AS (
+             SELECT technology_id, technology_version_id, count(DISTINCT asset_id)::int AS servers
+               FROM servers_of WHERE technology_version_id IS NOT NULL
+              GROUP BY technology_id, technology_version_id
+           ),
+           version_servers AS (
+             SELECT technology_id, jsonb_object_agg(technology_version_id, servers) AS version_servers
+               FROM per_version GROUP BY technology_id
+           )
+           SELECT pt.technology_id, pt.servers, COALESCE(vs.version_servers, '{}'::jsonb) AS version_servers
+             FROM per_technology pt
+             LEFT JOIN version_servers vs ON vs.technology_id = pt.technology_id)`;
 }
 
 /** Up the edges from the assets `$2`: one row per asset and carrier (the asset itself at depth 0). */

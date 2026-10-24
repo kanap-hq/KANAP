@@ -4,7 +4,7 @@ import { applicationParticipantCondition, type ParticipationAccessScope } from '
 import { gridTextClause } from '../../technologies/technologies.service';
 import { versionInUseSql, versionSupportSql } from '../../technologies/reports/version-support';
 import { countingRowSql, rowJoinsSql, vulnerabilityCountsEnabled } from '../../vulnerabilities/vulnerability-reach-counts';
-import { assetInServiceSql, inServiceSql, technologyServersCountSql } from '../../technologies/technology-reach.service';
+import { inServiceSql, technologyServerFiguresSql, withoutJit } from '../../technologies/technology-reach.service';
 import type { AiContextEntityType, AiExecutionContextWithManager, AiSearchEntityType } from '../ai.types';
 import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
 
@@ -14,8 +14,8 @@ import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
  * read time, each one statement shared by the list, its filters, its sort and the aggregates.
  *
  * - `server_count`: the servers of the technology as the technology list counts them
- *   (`technologyServersCountSql`): assets in service that carry it, installed or carried through
- *   the asset graph, clusters excluded.
+ *   (`technologyServerFiguresSql`): assets in service that carry it, installed or carried through
+ *   the asset graph, clusters excluded. The servers of each version follow the same definition.
  * - `application_count`: the applications that declare it, in service (`inServiceSql`), within the
  *   caller's read scope (a Business Contributor's own); null for a caller who cannot read
  *   applications, never a count of applications the caller cannot see.
@@ -36,10 +36,16 @@ import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
 /** What the caller may see of the applications: none (null), all, or a Business Contributor's own. */
 export type AiApplicationsReach = { scope?: ParticipationAccessScope } | null;
 
-/** The servers of the technology `t`, one definition with the technology list (`technologyServersCountSql`). */
-export function technologyServerCountSql(t: string): string {
-  return technologyServersCountSql(t);
+/**
+ * The servers of every technology, one definition with the technology list
+ * (`technologyServerFiguresSql`), joined as `tsf` on the technology row `t`; `$1` is the tenant.
+ */
+export function technologyServerFiguresJoin(t: string): string {
+  return `LEFT JOIN ${technologyServerFiguresSql('$1')} tsf ON tsf.technology_id = ${t}.id`;
 }
+
+/** The servers of the technology row, over `technologyServerFiguresJoin`. */
+export const TECHNOLOGY_SERVER_COUNT = 'COALESCE(tsf.servers, 0)';
 
 /** `userRef`: the bound user id of a Business Contributor, or null for every application. */
 export function technologyApplicationCountSql(t: string, userRef: string | null): string {
@@ -82,18 +88,16 @@ const VERSIONS_IN_USE_LIMIT = 10;
 
 /**
  * The versions in use of `t` as JSON: the first `VERSIONS_IN_USE_LIMIT`, the most severe first,
- * then by date, each with its state, date, servers in service, and the number of versions in use.
+ * then by date, each with its state, date, servers (`versionServers`, the `version_servers` of
+ * `technologyServerFiguresSql`), and the number of versions in use.
  */
-function technologyVersionsInUseSql(t: string): string {
+function technologyVersionsInUseSql(t: string, versionServers: string): string {
   const support = versionSupportSql('ev');
   return `(SELECT json_agg(json_build_object('label', x.label, 'state', x.state, 'date', x.day, 'standard_end', x.standard_end,
                                               'servers', x.servers, 'total', x.total) ORDER BY x.n)
              FROM (SELECT ev.label, COALESCE(${support.state}, 'unknown') AS state, to_char(${support.date}, 'YYYY-MM-DD') AS day,
                           (ev.standard_support_end IS NOT NULL AND ev.extended_support_end > ev.standard_support_end) AS standard_end,
-                          (SELECT count(DISTINCT vat.asset_id)::int
-                             FROM asset_technologies vat
-                             JOIN assets va ON va.tenant_id = vat.tenant_id AND va.id = vat.asset_id AND ${assetInServiceSql('va')}
-                            WHERE vat.tenant_id = ev.tenant_id AND vat.technology_id = ev.technology_id AND vat.technology_version_id = ev.id) AS servers,
+                          COALESCE((${versionServers} ->> ev.id::text)::int, 0) AS servers,
                           count(*) OVER () AS total,
                           row_number() OVER (ORDER BY ${STATE_RANK(support.state)} DESC, ${support.date} ASC NULLS LAST, ev.label, ev.id) AS n
                      FROM technology_versions ev
@@ -324,18 +328,20 @@ export async function listAiTechnologies(
     : Math.min(Math.max(Number(query.limit) || 25, 1), 500);
   const page = Math.max(Number(query.page) || 1, 1);
   const offset = opts.idsOnly ? 0 : (page - 1) * limit;
-  const rows: Array<Omit<AiTechnologyRow, 'versions_in_use'> & { versions_in_use: VersionInUse[] | null; total: string }> = await mg.query(
+  // JIT off: the planner overestimates the traversal of `technologyServerFiguresSql` (`withoutJit`).
+  const rows: Array<Omit<AiTechnologyRow, 'versions_in_use'> & { versions_in_use: VersionInUse[] | null; total: string }> = await withoutJit(mg,
     `WITH r AS (
        SELECT t.id, t.item_number, ('TEC-' || t.item_number) AS reference, t.name, t.editor, t.family, t.hosting_type,
               t.lifecycle, t.admin_zone, t.description, t.created_at, t.updated_at,
-              ${technologyServerCountSql('t')} AS server_count,
+              ${TECHNOLOGY_SERVER_COUNT} AS server_count,
               ${applicationCount} AS application_count,
               ${technologySupportStatusSql('t')} AS support_status,
               ${technologyEndOfStandardSupportSql('t')} AS end_of_standard_support,
               ${technologyEndOfSupportSql('t')} AS end_of_support,
               ${technologyOpenVulnerabilitiesSql('t')} AS open_vulnerabilities
-              ${opts.idsOnly ? '' : `, ${technologyVersionsInUseSql('t')} AS versions_in_use`}
+              ${opts.idsOnly ? '' : `, ${technologyVersionsInUseSql('t', 'tsf.version_servers')} AS versions_in_use`}
          FROM technologies t
+         ${technologyServerFiguresJoin('t')}
         WHERE t.tenant_id = $1 ${idFilter}
      )
      SELECT ${opts.idsOnly ? 'r.id' : `r.id, r.item_number, r.reference, r.name, r.editor, r.family, r.hosting_type, r.lifecycle,
@@ -360,7 +366,8 @@ export async function listAiTechnologies(
 }
 
 /**
- * Each version of the technology: the servers in service it runs on, whether it is in use, and its
+ * Each version of the technology: its servers (`technologyServerFiguresSql`: in service, installed
+ * or carried, clusters excluded), whether it is in use, and its
  * support state (unknown without a date) and that state's date, by the End of support report rule.
  */
 export async function technologyVersionFigures(
@@ -370,14 +377,12 @@ export async function technologyVersionFigures(
 ): Promise<Map<string, { servers: number; in_use: boolean; support_status: string; support_date: string | null }>> {
   const support = versionSupportSql('v');
   const rows: Array<{ id: string; servers: number; in_use: boolean; support_status: string; support_date: string | null }> = await mg.query(
-    `SELECT v.id, (SELECT count(DISTINCT at.asset_id)::int
-                     FROM asset_technologies at
-                     JOIN assets a ON a.tenant_id = at.tenant_id AND a.id = at.asset_id AND ${assetInServiceSql('a')}
-                    WHERE at.tenant_id = v.tenant_id AND at.technology_id = v.technology_id AND at.technology_version_id = v.id) AS servers,
+    `SELECT v.id, COALESCE((sf.version_servers ->> v.id::text)::int, 0) AS servers,
             ${versionInUseSql('v')} AS in_use,
             COALESCE(${support.state}, 'unknown') AS support_status,
             to_char(${support.date}, 'YYYY-MM-DD') AS support_date
        FROM technology_versions v
+       LEFT JOIN ${technologyServerFiguresSql('$1', '= $2::uuid')} sf ON sf.technology_id = v.technology_id
       WHERE v.tenant_id = $1 AND v.technology_id = $2`,
     [tenantId, technologyId],
   );
