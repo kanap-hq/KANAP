@@ -277,8 +277,10 @@ export class InterfacesListService extends InterfacesBaseService {
       integration_route_type: string;
       source_application_id: string | null;
       source_application_name: string | null;
+      source_application_reference: string | null;
       target_application_id: string | null;
       target_application_name: string | null;
+      target_application_reference: string | null;
       middleware_application_ids: string[] | null;
       middleware_application_names: string[] | null;
       via_middleware: boolean;
@@ -294,8 +296,10 @@ export class InterfacesListService extends InterfacesBaseService {
          i.integration_route_type,
          sa.id AS source_application_id,
          sa.name AS source_application_name,
+         sa.sequential_id AS source_application_reference,
          ta.id AS target_application_id,
          ta.name AS target_application_name,
+         ta.sequential_id AS target_application_reference,
          ARRAY(
            SELECT mw.application_id::text
            FROM interface_middleware_applications mw
@@ -366,8 +370,10 @@ export class InterfacesListService extends InterfacesBaseService {
       environment: row.environment,
       source_application_id: row.source_application_id,
       source_application_name: row.source_application_name,
+      source_application_reference: row.source_application_reference,
       target_application_id: row.target_application_id,
       target_application_name: row.target_application_name,
+      target_application_reference: row.target_application_reference,
       middleware_application_ids: row.middleware_application_ids || [],
       middleware_application_names: row.middleware_application_names || [],
       via_middleware: !!(row.via_middleware || row.is_middleware || row.is_integration_tool),

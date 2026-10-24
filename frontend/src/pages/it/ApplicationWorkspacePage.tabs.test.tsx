@@ -320,12 +320,13 @@ describe('Application workspace vulnerabilities', () => {
       target_application_id: 'app-2', target_application_name: 'ERP', via_middleware: true,
     };
     renderPage('/it/applications/app-1/interfaces', reach, null, [
-      { ...base, id: 'int-1', name: 'Orders', interface_reference: 'INT-1', middleware_application_ids: ['app-1'], middleware_application_names: ['Billing'] },
+      { ...base, id: 'int-1', name: 'Orders', interface_reference: 'INT-1', target_application_reference: 'APP-2', middleware_application_ids: ['app-1'], middleware_application_names: ['Billing'] },
       { ...base, id: 'int-2', name: 'Invoices', interface_reference: 'INT-2', middleware_application_ids: ['app-1', 'mw-1'], middleware_application_names: ['Billing', 'Hub'] },
     ]);
     const orders = await screen.findByRole('link', { name: /Orders/ });
     expect(orders.getAttribute('href')).toBe('/it/interfaces/INT-1/overview');
-    expect(screen.getAllByRole('link', { name: 'ERP' })[0].getAttribute('href')).toBe('/it/applications/app-2/overview');
+    // The counterpart opens by its reference, by its id only when it has none.
+    expect(screen.getAllByRole('link', { name: 'ERP' }).map((link) => link.getAttribute('href'))).toEqual(['/it/applications/APP-2/overview', '/it/applications/app-2/overview']);
     expect(screen.getByText('workspace.application.interfaces.viaNames(names=Hub)')).toBeInTheDocument();
     expect(screen.queryByText(/names=Billing/)).toBeNull();
     expect(screen.getByText('enums.environment.prod')).toBeInTheDocument();

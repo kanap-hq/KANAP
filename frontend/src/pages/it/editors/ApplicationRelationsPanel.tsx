@@ -63,7 +63,7 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
   // Components (children): only a suite has them.
   const componentsQuery = useQuery({
     queryKey: ['application-components', id],
-    queryFn: async () => ((await api.get<{ items: Array<{ id: string; name: string; lifecycle: string; criticality: string }> }>(`/applications/${id}/components`)).data?.items || []),
+    queryFn: async () => ((await api.get<{ items: Array<{ id: string; reference?: string | null; name: string; lifecycle: string; criticality: string }> }>(`/applications/${id}/components`)).data?.items || []),
     enabled: isSuite,
   });
   const components = isSuite ? componentsQuery.data ?? [] : [];
@@ -182,12 +182,12 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
                       key={c.id}
                       hover
                       sx={{ cursor: 'pointer' }}
-                      onClick={(event) => { if (!(event.target as HTMLElement).closest('a')) navigate(`/it/applications/${c.id}/overview`); }}
+                      onClick={(event) => { if (!(event.target as HTMLElement).closest('a')) navigate(`/it/applications/${c.reference || c.id}/overview`); }}
                     >
                       <TableCell>
                         <Box
                           component={RouterLink}
-                          to={`/it/applications/${c.id}/overview`}
+                          to={`/it/applications/${c.reference || c.id}/overview`}
                           sx={{ color: 'inherit', textDecoration: 'none', '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2, borderRadius: '2px' } }}
                         >
                           {c.name}

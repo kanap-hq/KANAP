@@ -31,8 +31,8 @@ export class ApplicationsStructureService extends ApplicationsBaseService {
         return `AND ${applicationParticipantCondition('a', `$${params.length}`)}`;
       })()
       : '';
-    const rows: Array<{ id: string; name: string; lifecycle: string; criticality: string }> = await mg.query(
-      `SELECT a.id, a.name, a.lifecycle, a.criticality
+    const rows: Array<{ id: string; reference: string | null; name: string; lifecycle: string; criticality: string }> = await mg.query(
+      `SELECT a.id, a.sequential_id AS reference, a.name, a.lifecycle, a.criticality
        FROM application_suites l
        JOIN applications a ON a.id = l.suite_id
        WHERE l.application_id = $1
@@ -98,8 +98,8 @@ export class ApplicationsStructureService extends ApplicationsBaseService {
         return `AND ${applicationParticipantCondition('a', `$${params.length}`)}`;
       })()
       : '';
-    const rows: Array<{ id: string; name: string; lifecycle: string; criticality: string }> = await mg.query(
-      `SELECT a.id, a.name, a.lifecycle, a.criticality
+    const rows: Array<{ id: string; reference: string | null; name: string; lifecycle: string; criticality: string }> = await mg.query(
+      `SELECT a.id, a.sequential_id AS reference, a.name, a.lifecycle, a.criticality
        FROM application_suites l
        JOIN applications a ON a.id = l.application_id
        WHERE l.suite_id = $1

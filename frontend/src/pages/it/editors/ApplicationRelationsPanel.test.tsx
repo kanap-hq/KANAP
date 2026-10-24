@@ -27,7 +27,7 @@ function renderPanel() {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/applications/app-1/links') return { data: [] } as never;
     if (url === '/applications/app-1/attachments') return { data: [] } as never;
-    if (url === '/applications/app-1/components') return { data: { items: [{ id: 'app-2', name: 'Billing module', lifecycle: 'active', criticality: 'high' }] } } as never;
+    if (url === '/applications/app-1/components') return { data: { items: [{ id: 'app-2', reference: 'APP-2', name: 'Billing module', lifecycle: 'active', criticality: 'high' }] } } as never;
     throw new Error(`unexpected GET ${url}`);
   });
   render(
@@ -55,9 +55,9 @@ describe('ApplicationRelationsPanel', () => {
   it('opens a component of a suite through a router link, without reloading the page', async () => {
     renderPanel();
     const link = await screen.findByRole('link', { name: 'Billing module' });
-    expect(link.getAttribute('href')).toBe('/it/applications/app-2/overview');
+    expect(link.getAttribute('href')).toBe('/it/applications/APP-2/overview');
     fireEvent.click(link);
-    expect(screen.getByTestId('location').textContent).toBe('/it/applications/app-2/overview');
+    expect(screen.getByTestId('location').textContent).toBe('/it/applications/APP-2/overview');
   });
 
   it('says a web link was added', async () => {

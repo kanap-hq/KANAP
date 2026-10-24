@@ -74,6 +74,9 @@ async function run() {
     const unboundRow = rows.find((row) => row.id === unbound)!;
     assert.equal(unboundRow.source_application_name, 'ERP');
     assert.equal(unboundRow.target_application_name, 'CRM');
+    // The counterpart links use the business reference of each application.
+    assert.match(String(unboundRow.source_application_reference), /^APP-\d+$/);
+    assert.match(String(unboundRow.target_application_reference), /^APP-\d+$/);
 
     const forTarget = (await svc.listByApplication(erp, t, { manager: runner.manager })).items;
     assert.deepEqual(forTarget.map((row) => `${row.name}:${row.environment}`).sort(), ['Invoices:null', 'Orders:prod', 'Orders:test']);

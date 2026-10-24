@@ -157,8 +157,10 @@ type InterfaceMiniRow = {
   environment: string | null;
   source_application_id?: string | null;
   source_application_name?: string | null;
+  source_application_reference?: string | null;
   target_application_id?: string | null;
   target_application_name?: string | null;
+  target_application_reference?: string | null;
   middleware_application_ids?: string[];
   middleware_application_names?: string[];
   via_middleware: boolean;
@@ -1070,6 +1072,8 @@ function InterfaceRowsTable({
         )}
         {rows.map((row) => {
           const counterpartId = direction === 'inbound' ? row.source_application_id : direction === 'outbound' ? row.target_application_id : null;
+          // The link names the counterpart by its reference (APP-n), its id only when it has none.
+          const counterpartRef = direction === 'inbound' ? row.source_application_reference : direction === 'outbound' ? row.target_application_reference : null;
           const counterpartName = direction === 'inbound'
             ? row.source_application_name
             : direction === 'outbound'
@@ -1099,7 +1103,7 @@ function InterfaceRowsTable({
                 {counterpartId && counterpartId !== app.id && counterpartName ? (
                   <Box
                     component={RouterLink}
-                    to={applicationHref(counterpartId)}
+                    to={applicationHref(counterpartRef || counterpartId)}
                     sx={{ ...interfaceLinkSx, display: 'inline-flex', '&:hover': { textDecoration: 'underline' } }}
                   >
                     {counterpartName}
