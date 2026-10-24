@@ -39,11 +39,14 @@ export const RATE_LIMITS = {
    */
   authRefresh: { limit: 120, ttl: 60_000 },
   /**
-   * Session renewals per refresh token (auth/refresh-session-limit.ts), on top of the address
-   * limit: stops one client that loops without taking the budget of its neighbours behind the
-   * same outbound address. Then the token is refused for the rest of the minute.
+   * Session renewals per refresh token (auth/refresh-session-limit.ts), checked before the
+   * address limit. Every open tab renews with the same cookie, since the access token lives in
+   * memory, so opening many records within a minute renews one token many times. A renewal
+   * refused here does not count against the address: a client that loops does not take the
+   * budget of its neighbours behind the same outbound address. The token is then refused for the
+   * next 60 seconds.
    */
-  authRefreshSession: { limit: 10, ttl: 60_000 },
+  authRefreshSession: { limit: 30, ttl: 60_000 },
   /**
    * MCP OAuth (ai/oauth): the authorization routes, opened in the user's browser, and the token
    * and revocation routes, called by the MCP client's servers. Claude's servers share a small range

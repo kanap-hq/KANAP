@@ -9,17 +9,19 @@ import { DatabaseHitCounter, HitCounter, HitRule, MemoryHitCounter } from '../co
 import { refreshTokenOf } from './auth-cookie.util';
 
 /**
- * Session renewals per refresh token (`RATE_LIMITS.authRefreshSession`), on top of the limit per
- * client address of `POST /auth/refresh`: 10 renewals of one token within a minute, then that
- * token gets the 429 of the address limit, with `Retry-After`, for the rest of the minute. A
- * client that loops is stopped without taking the budget of its neighbours behind the same
- * outbound address. The window is fixed: it opens at the first renewal.
+ * Session renewals per refresh token (`RATE_LIMITS.authRefreshSession`), checked before the limit
+ * per client address and tenant of `POST /auth/refresh`: 30 renewals of one token within a
+ * minute, then that token gets a 429 with `Retry-After` for the next 60 seconds. A renewal refused
+ * here does not count against the address limit, so a client that loops does not take the budget
+ * of its neighbours behind the same outbound address. The window is fixed: it opens at the first
+ * renewal.
  *
  * The token is the one the route renews (the cookie, else `refresh_token` in the body). The key is
  * a SHA-256 of the tenant and the token: the token is never kept in clear, in memory or in
  * `rate_limit_hits`, and never logged. One hash per renewal, of a short string: no notable cost.
- * A request without a token is not counted here: the address limit counted it, and the route
- * answers 400. The origin rule of the route applies first, so a refused origin counts nothing.
+ * A request without a token is not counted here: the address limit counts it, and the route
+ * answers 400. The origin rule of the route applies first, so a refused origin counts nothing,
+ * here or against the address.
  *
  * One API process counts in its memory; several (API_WORKERS > 1) count in `rate_limit_hits`, as
  * the address limits and the sign-in attempts do (auth/login-attempt-limit.ts).
