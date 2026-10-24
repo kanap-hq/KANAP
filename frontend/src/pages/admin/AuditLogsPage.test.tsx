@@ -200,6 +200,30 @@ describe('AuditLogsPage', () => {
     expect(screen.getByText(`Date : ${listDate}`)).toBeTruthy();
   });
 
+  it('closes the detail with Escape and with the close button', async () => {
+    await i18n.changeLanguage('en');
+    const row = {
+      id: 'a-3', tenant_id: 't-1', table_name: 'suppliers', record_id: 'r-1', action: 'update',
+      before_json: null, after_json: { id: 'r-1' }, user_id: null, user_email: null, user_name: null,
+      source: 'user', source_ref: null, created_at: '2026-10-16T07:19:02Z',
+    };
+    getMock.mockResolvedValue({ data: row } as any);
+    renderPage();
+    const open = async () => {
+      act(() => {
+        grid.props?.onCellClicked({ data: row });
+      });
+      return screen.findByRole('dialog');
+    };
+
+    fireEvent.keyDown(await open(), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    await open();
+    fireEvent.click(screen.getByRole('button', { name: 'Close dialog' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
   it('searches the table labels of the reader language: the list, the filter values and the export send their codes', async () => {
     await i18n.changeLanguage('fr');
     getMock.mockResolvedValue(csvResponse() as any);
