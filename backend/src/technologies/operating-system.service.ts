@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { clustersWithMembers, osClusterWithMembersRefusal } from '../assets/asset-rules';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { linkProvenance, provenanceParams, type LinkSource } from '../common/link-provenance';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
@@ -21,7 +22,9 @@ import { readTechnology, resolveVersionLabel, UUID_RE } from './technology-rows'
  * (lot T3). One mark per server: the partial unique index `uq_asset_technologies_one_os`.
  * A technology of family `operating_system` takes the mark when the server has none
  * (`onAssetLinkAdded`). When that marked link is removed, the oldest remaining link of
- * the same family takes it (`onInstalledLinkRemoved`). A cluster is never marked.
+ * the same family takes it (`onInstalledLinkRemoved`). A cluster is never marked automatically;
+ * `setOperatingSystem` marks a cluster with no member and refuses one that has members
+ * (`os_cluster_with_members`). Clearing is always accepted.
  *
  * `resolve` turns a label, or one of the 19 old shipped codes, into a technology and an
  * optional version. `setOperatingSystem` writes the mark from that label. The CSV, the
@@ -212,7 +215,11 @@ export class OperatingSystemService {
     source: LinkSource,
     userId?: string | null,
   ): Promise<{ ok: true; link_id: string | null; changed: boolean }> {
-    const { id } = await this.lockAsset(mg, tenantId, assetId);
+    const { id, is_cluster } = await this.lockAsset(mg, tenantId, assetId);
+    // A cluster with no declared member keeps its operating system; one with members has none.
+    if (resolved && is_cluster && (await clustersWithMembers(mg, tenantId, [id])).size > 0) {
+      throw osClusterWithMembersRefusal();
+    }
     const provenance = linkProvenance(source);
     const [marked]: Array<LinkRow> = await mg.query(
       `SELECT id, technology_id, technology_version_id, source, source_ref, notes

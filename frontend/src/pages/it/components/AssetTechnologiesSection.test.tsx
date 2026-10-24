@@ -106,6 +106,20 @@ describe('AssetTechnologiesSection', () => {
     expect(within(table).getByText(`${K}.columns.via`).getAttribute('title')).toBe(`${K}.columns.viaHint`);
   });
 
+  it('names every asset that carries a version on one line, each a link to its page', async () => {
+    const cluster: AssetTechnologyRow = {
+      ...ROWS[2], technology_version_id: 'v16', version_label: '16', via_asset_id: 'm1', via_asset_name: 'PAR-SQL-01',
+      via_assets: [{ id: 'm1', name: 'PAR-SQL-01', reference: 'AST-1' }, { id: 'm2', name: 'PAR-SQL-02', reference: 'AST-2' }],
+    };
+    renderSection([ROWS[0], cluster]);
+    const table = await screen.findByRole('table', { name: `${K}.title` });
+    const rows = [...table.querySelectorAll('tbody tr')] as HTMLElement[];
+    expect(rows).toHaveLength(2);
+    expect(within(rows[1]).getByRole('link', { name: 'PAR-SQL-01' }).getAttribute('href')).toBe('/it/assets/m1/overview');
+    expect(within(rows[1]).getByRole('link', { name: 'PAR-SQL-02' }).getAttribute('href')).toBe('/it/assets/m2/overview');
+    expect(within(rows[1]).getByTitle('PAR-SQL-01, PAR-SQL-02')).toBeTruthy();
+  });
+
   it('leaves the Via column out when every technology is installed', async () => {
     renderSection([ROWS[0]]);
     const table = await screen.findByRole('table', { name: `${K}.title` });
@@ -155,6 +169,35 @@ describe('AssetTechnologiesSection', () => {
     expect((await screen.findByTestId('page-title')).textContent).toBe(`${K}.title`);
     expect(screen.getByRole('region', { name: `${K}.title` })).toBeTruthy();
     expect(screen.queryByRole('heading', { name: `${K}.title` })).toBeNull();
+  });
+
+  it('folds the platform underneath under one closed line, out of the count, and opens it in the table', async () => {
+    const platform: AssetTechnologyRow = {
+      ...ROWS[2], technology_id: 'esxi-host', technology_name: 'ESXi host', technology_reference: 'TEC-9',
+      via_asset_id: 'h1', via_asset_name: 'ESX-HOST', through_host: true,
+    };
+    renderSection([...ROWS, platform]);
+    const table = await screen.findByRole('table', { name: `${K}.title` });
+    const fold = within(table).getByRole('button', { name: `${K}.platform(count=1)` });
+    expect(fold.getAttribute('aria-expanded')).toBe('false');
+    expect(within(table).queryByText('TEC-9')).toBeNull();
+    expect(within(screen.getByRole('region', { name: `${K}.title` })).getByText('3')).toBeTruthy();
+    fireEvent.click(fold);
+    expect(fold.getAttribute('aria-expanded')).toBe('true');
+    const rows = [...table.querySelectorAll('tbody tr')] as HTMLElement[];
+    expect(rows.map((tr) => tr.querySelector('td')?.textContent)).toEqual(['TEC-3', 'TEC-4', 'TEC-1', `${K}.platform(count=1)`, 'TEC-9']);
+    expect(within(rows[4]).getByText('ESX-HOST')).toBeTruthy();
+  });
+
+  it('keeps the empty line and adds the folded line when only the platform underneath reaches the asset', async () => {
+    renderSection([{ ...ROWS[2], through_host: true }]);
+    expect(await screen.findByText(`${K}.empty`)).toBeTruthy();
+    const table = screen.getByRole('table', { name: `${K}.title` });
+    expect(table.querySelector('thead')).toBeNull();
+    expect(within(table).queryByText('TEC-1')).toBeNull();
+    fireEvent.click(within(table).getByRole('button', { name: `${K}.platform(count=1)` }));
+    expect(table.querySelector('thead')).toBeTruthy();
+    expect(within(table).getByText('TEC-1')).toBeTruthy();
   });
 
   it('is one line when the server carries nothing, with no add for a reader', async () => {

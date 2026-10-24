@@ -254,6 +254,17 @@
       "incidents_other": "{{count}} incidentes",
       "subnets_one": "{{count}} subred",
       "subnets_other": "{{count}} subredes"
+    },
+    "anyway": "Eliminar de todos modos",
+    "assetWarning": {
+      "memberOf_one": "Miembro de {{names}}: saldrá de este clúster.",
+      "memberOf_other": "Miembro de {{names}}: saldrá de estos clústeres.",
+      "hasMembers_one": "Clúster de {{count}} miembro: perderá su clúster.",
+      "hasMembers_other": "Clúster de {{count}} miembros: perderán su clúster.",
+      "links_one": "Se eliminará {{count}} vínculo: {{names}}.",
+      "links_other": "Se eliminarán {{count}} vínculos: {{names}}.",
+      "more_one": "y {{count}} más",
+      "more_other": "y {{count}} más"
     }
   },
   "messages": {

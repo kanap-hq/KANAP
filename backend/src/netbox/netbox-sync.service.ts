@@ -1361,6 +1361,7 @@ export class NetboxSyncService {
         } else if (row.action === 'update') {
           const patch = this.updateBody(write.asset, row);
           if (subLocationId) patch.sub_location_id = subLocationId;
+          await this.skipOperatingSystemOfCluster(manager, tenantId, assetId, patch, warnings);
           if (Object.keys(patch).length > 0) {
             try {
               await this.assets.update(assetId, patch, tenantId, null, opts);
@@ -1613,6 +1614,30 @@ export class NetboxSyncService {
     if (mapped.operating_system) body.operating_system = mapped.operating_system;
     if (mapped.ip_addresses) body.ip_addresses = mapped.ip_addresses;
     return body;
+  }
+
+  /**
+   * A cluster that has members carries no operating system (`asset-rules.ts`): the platform of
+   * its Netbox object is left out with a notice, and the rest of the row is written. Without
+   * this, the asset service would refuse the whole row at every run.
+   */
+  private async skipOperatingSystemOfCluster(
+    manager: EntityManager,
+    tenantId: string,
+    assetId: string,
+    patch: Record<string, unknown>,
+    warnings: NetboxNotice[],
+  ): Promise<void> {
+    if (!patch.operating_system) return;
+    const [row]: Array<{ id: string }> = await manager.query(
+      `SELECT a.id FROM assets a
+        WHERE a.tenant_id = $1 AND a.id = $2 AND a.is_cluster
+          AND EXISTS (SELECT 1 FROM asset_cluster_members m WHERE m.tenant_id = a.tenant_id AND m.cluster_id = a.id)`,
+      [tenantId, assetId],
+    );
+    if (!row) return;
+    warnings.push(netboxNotice('os_cluster_with_members', { value: String(patch.operating_system) }));
+    delete patch.operating_system;
   }
 
   /** Patch for an existing asset: only the fields the plan reported as different. */

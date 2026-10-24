@@ -68,7 +68,7 @@ Die Tabelle listet alle Assets, die nicht ausgemustert sind, und lädt beim Scro
 | **Zone** | Seine Administrationszone, oder **Keine Zone** |
 | **Technologien** | Die auf dem Asset installierten Technologien. Die ersten zwei Namen werden angezeigt, dann die Anzahl der übrigen; fahren Sie mit der Maus über die Zelle für die vollständige Liste |
 | **Anwendungen** | Die auf dem Asset gehosteten Anwendungen in Betrieb, ebenso angezeigt. Klicken Sie auf einen Namen, um die Anwendung zu öffnen |
-| **Kontrollen** | Die Kontrollpunkte, die das Asset betreffen. Fahren Sie mit der Maus über **Weniger sensibler Host**, um den Grund zu sehen: **Betreibt** nennt das sensiblere Asset, das es betreibt, **Mitglied des Clusters** den sensibleren Cluster, jeweils mit seiner Zone |
+| **Kontrollen** | Die Kontrollpunkte, die das Asset betreffen. Fahren Sie mit der Maus über **Weniger sensibler Host**, um den Grund zu sehen: **Betreibt** nennt das sensiblere Asset, das es betreibt, **Mitglied des Clusters** den sensibleren Cluster, jeweils mit Referenz und Name und mit seiner Zone |
 
 Suchen Sie nach Name oder Referenz. Filtern Sie nach **Typ**, **Zone** (auch **Keine Zone**) und **Kontrollen**, und sortieren Sie nach **Ref.**, **Name**, **Typ** oder **Zone**. Die Sortierung nach Zone folgt der Reihenfolge der Einstellungen, die Assets ohne Zone stehen am Ende. Das Band und die Schaltflächen der Kontrollpunkte setzen dieselben Filter wie die Spalten **Zone** und **Kontrollen**.
 

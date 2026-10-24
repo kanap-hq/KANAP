@@ -18,6 +18,7 @@ import {
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
+import { assertClusterMemberCandidates, clusterOsWithMembersRefusal, lockClusterForMembers } from '../../assets/asset-rules';
 
 export const AI_RELATION_ENTITY_TYPES = [
   'applications',
@@ -266,6 +267,7 @@ export class AiRelationMutationSupportService {
     if (relationItemSignature(currentItems) === relationItemSignature(nextItems)) {
       throw new BadRequestException(`${config.label} already has the requested links.`);
     }
+    await this.assertClusterMemberAdds(context, config, target.id, currentItems, nextItems);
     return {
       targetEntityType: config.sourceEntity,
       targetEntityId: target.id,
@@ -372,6 +374,8 @@ export class AiRelationMutationSupportService {
         throw new NotFoundException(`${config.label}: the line was not found.`);
       }
     }
+    // A cluster's members follow the rules of the members endpoint; the cluster row is locked first.
+    await this.assertClusterMemberAdds(context, config, preview.target_entity_id, expectedItems, nextItems);
     const liveItems = await this.loadRelationItems(context, config, preview.target_entity_id);
     if (relationItemSignature(liveItems) !== relationItemSignature(expectedItems)) {
       throw new ConflictException(`${config.label} changed after the preview was created.`);
@@ -391,6 +395,30 @@ export class AiRelationMutationSupportService {
       },
       { manager: context.manager },
     );
+  }
+
+  /**
+   * The members added to a cluster obey the rules of `AssetsCrudService.replaceClusterMembers`
+   * (`assets/asset-rules.ts`): the asset is a cluster, each member exists, is no cluster and is not
+   * the cluster itself, and a cluster that carries an operating system gets no member
+   * (`cluster_os_with_members`: the assistant has no removal flag). Removing members is always allowed.
+   */
+  private async assertClusterMemberAdds(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    clusterId: string,
+    currentItems: RelationItem[],
+    nextItems: RelationItem[],
+  ): Promise<void> {
+    if (config.sourceEntity !== 'assets' || config.relation !== 'cluster_members') return;
+    const current = new Set(currentItems.map((item) => item.key.toLowerCase()));
+    const added = Array.from(new Set(nextItems.map((item) => item.key.toLowerCase()))).filter((id) => !current.has(id));
+    if (added.length === 0) return;
+    const cluster = await lockClusterForMembers(context.manager, context.tenantId, clusterId);
+    if (!cluster) throw new NotFoundException('Asset not found');
+    if (!cluster.isCluster) throw new BadRequestException('Asset is not a cluster');
+    await assertClusterMemberCandidates(context.manager, context.tenantId, clusterId, added);
+    if (cluster.os) throw clusterOsWithMembersRefusal(cluster.os);
   }
 
   private coerceRelationItems(value: unknown, fieldName: string): RelationItem[] {

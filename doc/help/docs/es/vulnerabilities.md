@@ -58,6 +58,7 @@ Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades. S
 Una vulnerabilidad alcanza un servidor o una aplicación solo por vínculos directos, en todas partes: en esta página, en las listas, en las fichas, en el panel de control y en Plaid.
 
 - **Servidor**: la tecnología y la versión están registradas en el propio servidor. Un servidor retirado no se cuenta.
+- **Clúster**: lo registrado en el propio clúster, más lo registrado en sus miembros en servicio. Un clúster cuenta las vulnerabilidades de sus miembros, en su columna de la lista, su insignia y su ficha. Filtrar esta página por un clúster muestra también las filas de sus miembros.
 - **Aplicación**: la aplicación declara la tecnología y la versión, o uno de sus servidores de despliegue las tiene registradas en sí mismo. Una tecnología a la vez declarada y alojada cuenta una vez. Una aplicación desactivada, o cuya fecha de desactivación ya pasó, no se cuenta.
 
 Los recuentos por servidor y por aplicación, en las listas, en las fichas, en el panel de control y en Plaid, siguen las mismas reglas:
@@ -68,7 +69,7 @@ Los recuentos por servidor y por aplicación, en las listas, en las fichas, en e
 
 Una máquina virtual o un invitado no cuenta las vulnerabilidades de su host. Una vulnerabilidad de VMware ESXi solo cuenta en los hosts ESXi. Contar a través de los hosts pondría una sola vulnerabilidad de un hipervisor en casi todos los servidores y aplicaciones de un parque virtualizado.
 
-El alcance a través de otro activo sigue visible, sin contarse: en el panel lateral de una vulnerabilidad, bajo **A través de otro activo**, y en la ficha de un activo, en la parte **A través de otro activo** de su sección **Vulnerabilidades**. Consulte [Activos](assets.md#operations).
+El alcance a través de otro activo sigue visible, sin contarse: en el panel lateral de una vulnerabilidad, bajo **A través de otro activo**, y en la ficha de un activo, bajo una línea cerrada **Plataforma subyacente (n)** de su sección **Vulnerabilidades**. Esa línea agrupa lo que solo viene de un host, como el ESXi del host en el que se ejecuta una máquina virtual. Consulte [Activos](assets.md#operations).
 
 ## La lista
 
@@ -91,7 +92,7 @@ Una línea encima de la cuadrícula indica cuándo leyó KANAP cada fuente por �
 | **Tecnología** | La tecnología afectada |
 | **Versión** | La versión afectada. **Sin registrar** cuando un servidor o una aplicación usa la tecnología sin indicar su versión: la fila está entonces potencialmente afectada |
 | **Editor** | El editor de la tecnología. Oculta por defecto |
-| **Servidores** | Cuántos servidores tienen esta versión registrada en sí mismos. Un servidor que se ejecuta dentro de otro no se cuenta. Consulte [Lo que KANAP cuenta](#what-kanap-counts) |
+| **Servidores** | Cuántos servidores en servicio tienen esta versión registrada en sí mismos, como los cuenta la [lista de tecnologías](technologies.md). Los clústeres y los servidores que se ejecutan dentro de otro no se cuentan. Consulte [Lo que KANAP cuenta](#what-kanap-counts) |
 | **Aplicaciones** | Cuántas aplicaciones declaran esta versión o se ejecutan en un servidor que la tiene registrada |
 | **Fuente** | Las fuentes que cotejaron la fila: **NVD**, **Editor** (la ficha que el editor publicó en CVE.org), o ambas |
 | **Estado** | **Por revisar**, **Tratada** o **No afectada** |
@@ -131,7 +132,7 @@ Haga clic en una fila para abrir su vulnerabilidad en un panel lateral. Su encab
 - La descripción, cortada a tres líneas (**Ver más** muestra el resto), el vector CVSS y los enlaces de referencia (avisos del editor, parches).
 - **Fuentes**: el estado de la vulnerabilidad en la NVD (**analizada**, **pendiente de análisis**, **no analizada**, **rechazada** o **aún no vinculada a este producto**), con un enlace a su ficha de la NVD. Cuando KANAP ha leído la ficha del editor, una segunda línea indica quién la publicó y cuándo, su última actualización, y **Ver en CVE.org**.
 - **Explotación**, cuando se conoce un catálogo, una puntuación EPSS o un identificador europeo. Consulte [Explotación](#exploitation).
-- **Servidores**: cada servidor que tiene una versión afectada registrada en sí mismo, con la tecnología y la versión. Los servidores alcanzados a través de otro activo, como una máquina virtual en un host o los miembros de un clúster, quedan ocultos tras un botón, por ejemplo **Mostrar también los 4 servidores alcanzados a través de otro activo**. Aparecen bajo su propio título, **A través de otro activo**, con el activo por el que se alcanzan. No se cuentan.
+- **Servidores**: cada servidor que tiene una versión afectada registrada en sí mismo, con la tecnología y la versión. Los servidores alcanzados a través de otro activo, como una máquina virtual en un host o un clúster a través de sus miembros, quedan ocultos tras un botón, por ejemplo **Mostrar también los 4 servidores alcanzados a través de otro activo**. Aparecen bajo su propio título, **A través de otro activo**, con el activo por el que se alcanzan. No se cuentan.
 - **Aplicaciones**: cada aplicación que usa una versión afectada, listada una vez por versión con sus servidores (tres como máximo, y después «y 2 más»). Una aplicación que declara la tecnología, o que se ejecuta en un servidor que la tiene registrada, va primero. Las demás quedan tras el mismo tipo de botón y no se cuentan.
 
 Cuando ningún servidor o ninguna aplicación está afectado directamente, el panel lo indica, y el botón sigue mostrando los demás.

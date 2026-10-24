@@ -552,7 +552,8 @@ export async function vulnerabilitySubjectIds(
  * CVE of the platform cache, and the servers and applications they reach. A row with a version
  * reaches the servers and applications whose link names that version; a row without version,
  * those whose link names none. Every count of servers and applications is of direct links
- * (`vulnerability-reach-counts.ts`); the panel also lists what the deductions of the technology
+ * (`vulnerability-reach-counts.ts`), the servers as the technology list counts them (clusters
+ * excluded, `TechnologyReachService.serversOfTechnologies`); the panel also lists what the deductions of the technology
  * layer reach through another asset (`TechnologyReachService`), marked and not counted.
  */
 @Injectable()
@@ -873,9 +874,11 @@ export class VulnerabilitiesService {
 
   /**
    * The direct reach of the rows (`vulnerability-reach-counts.ts`), what every count reads: per
-   * (technology, version) key, the servers whose direct links name it, and the visible
-   * applications that declare it or whose server has it in a direct link. Applications are null
-   * without the read right.
+   * (technology, version) key, the servers it is installed on as the technology list counts them
+   * (`TechnologyReachService.serversOfTechnologies`: in service, clusters excluded), the assets in
+   * service whose direct links name it (`installed`, clusters included: the panel's direct marks),
+   * and the visible applications that declare it or whose server has it in a direct link.
+   * Applications are null without the read right.
    */
   private async reachOf(mg: EntityManager, tenantId: string, rows: Row[], applications: ApplicationsAccess) {
     const techIds = Array.from(new Set(rows.map((r) => r.technology_id)));
@@ -886,14 +889,16 @@ export class VulnerabilitiesService {
       else map.set(key, new Set([id]));
     };
     const servers = new Map<string, Set<string>>();
-    for (const a of direct.assets) add(servers, rowKey(a.technology_id, a.technology_version_id), a.asset_id);
-    if (!applications) return { servers, apps: null };
+    for (const a of await this.reach.serversOfTechnologies(mg, tenantId, techIds)) add(servers, rowKey(a.technology_id, a.technology_version_id), a.asset_id);
+    const installed = new Map<string, Set<string>>();
+    for (const a of direct.assets) add(installed, rowKey(a.technology_id, a.technology_version_id), a.asset_id);
+    if (!applications) return { servers, installed, apps: null };
     const visible = await this.visibleApplicationIds(mg, tenantId, direct.applications.map((a) => a.application_id), applications.scope);
     const apps = new Map<string, Set<string>>();
     for (const a of direct.applications) {
       if (visible.has(a.application_id)) add(apps, rowKey(a.technology_id, a.technology_version_id), a.application_id);
     }
-    return { servers, apps };
+    return { servers, installed, apps };
   }
 
   /** Counts of distinct servers and applications a set of rows reaches by direct links. */
@@ -1142,7 +1147,7 @@ export class VulnerabilitiesService {
         version_label: row.version_label,
         via_asset_name: a.via_asset_id ? assetsById.get(a.via_asset_id)?.name ?? null : null,
         /** Installed on this server (counted), or reached through another asset (listed only). */
-        direct: a.via_asset_id == null && direct.servers.get(rowKey(a.technology_id, a.technology_version_id))?.has(a.asset_id) === true,
+        direct: a.via_asset_id == null && direct.installed.get(rowKey(a.technology_id, a.technology_version_id))?.has(a.asset_id) === true,
         alerts: row.alerts,
       };
     }).sort((x, y) => String(x.name ?? '').localeCompare(String(y.name ?? ''), 'en', { sensitivity: 'base' }));
@@ -1173,7 +1178,7 @@ export class VulnerabilitiesService {
           /** Declared, or hosted on a server with a direct link (counted); else listed only. */
           direct: a.kind === 'declared'
             ? direct.apps?.get(rowKey(a.technology_id, a.technology_version_id))?.has(a.application_id) === true
-            : a.via_asset_id == null && !!a.asset_id && direct.servers.get(rowKey(a.technology_id, a.technology_version_id))?.has(a.asset_id) === true,
+            : a.via_asset_id == null && !!a.asset_id && direct.installed.get(rowKey(a.technology_id, a.technology_version_id))?.has(a.asset_id) === true,
           alerts: row.alerts,
         };
       }).sort((x, y) => String(x.name ?? '').localeCompare(String(y.name ?? ''), 'en', { sensitivity: 'base' }));
@@ -1238,7 +1243,7 @@ export class VulnerabilitiesService {
     const products = await this.productStates(mg, tech.cpe_products);
     // One statement: the direct links ($1 tenant, $2 this technology) and the rows ($3). A technology
     // with no version and no link still returns `cves` through the left join (the pad row has a null
-    // `installed`). The servers are the assets in service whose direct link names the version
+    // `installed`). The servers are the assets in service, clusters excluded, whose direct link names the version
     // (`assetLinksSql`, nothing carried through the asset graph); a version is installed when a
     // direct link of an asset or an application names it (`assetLinksSql`, `applicationLinksSql`).
     // The rows are grouped by version first (`agg`), the links once per version (`servers`,
@@ -1261,6 +1266,7 @@ export class VulnerabilitiesService {
       `WITH servers AS MATERIALIZED (
          SELECT l.technology_version_id, count(DISTINCT l.subject_id)::int AS servers
            FROM (${assetLinksSql({ tenant: '$1', technologies: '$2' })}) l
+           JOIN assets sa ON sa.tenant_id = l.tenant_id AND sa.id = l.subject_id AND sa.is_cluster IS NOT TRUE
           GROUP BY l.technology_version_id
        ),
        in_use AS MATERIALIZED (

@@ -119,7 +119,7 @@ Klicken Sie auf einen Server- oder Cluster-Knoten, um seine Verbindungen hervorz
 
 - **Server-Typ**, **Server-Standort**, **Betriebssystem**, **Netzwerksegment**, **IP-Adresse**
 - **Zugewiesene Anwendungen**: Apps, die auf diesem Server laufen, gruppiert nach Umgebung. Klicken Sie auf einen App-Namen, um sie zu öffnen.
-- Schaltfläche **Server bearbeiten** oder **Cluster anzeigen**, um den Arbeitsbereich zu öffnen
+- Schaltfläche **Server bearbeiten** oder **Cluster anzeigen**, um den Arbeitsbereich zu öffnen. **Cluster anzeigen** öffnet den Cluster auf seinem Reiter **Abhängigkeiten**, wo seine Mitglieder verwaltet werden
 
 Klicken Sie auf einen Entitätsknoten, um seinen Typ und seine Umgebung zu sehen.
 

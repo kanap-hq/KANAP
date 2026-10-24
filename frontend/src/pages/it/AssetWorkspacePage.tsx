@@ -57,7 +57,7 @@ import { useLocale } from '../../i18n/useLocale';
 
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { recordRefusal } from '../../utils/deleteCheck';
+import { assetDeleteCheck } from '../../utils/deleteCheck';
 import { deleteFailureReason } from '../../utils/deleteRefusal';
 import { isValidHostname, sanitizeHostname } from '../../utils/hostname';
 import { KanapDialog, PropertyGroup, PropertyRow, useKanapDialogs } from '../../components/design';
@@ -74,6 +74,7 @@ import { isNetboxAttentionStatus } from '../../api/endpoints/netbox';
 import { NETBOX_LOCKABLE_ASSET_FIELDS, NetboxLockableField, netboxFieldLock } from './netboxManagedFields';
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
+import InfoHint from '../../components/workspace/InfoHint';
 const MarkdownEditor = React.lazy(() => import('../../components/MarkdownEditor'));
 type IpAddressEntry = { type: string; ip: string; subnet_cidr: string | null };
 
@@ -186,6 +187,10 @@ const legacyTabTarget = (key: string | undefined): TabKey | null => (
 const PHYSICAL_ONLY_TABS: ReadonlySet<string> = new Set<TabKey>(['hardware']);
 /** Tabs that need a saved asset: a creation falls back to the overview. */
 const CREATE_DISABLED_TABS: ReadonlySet<string> = new Set<TabKey>(['operations', 'hardware', 'dependencies', 'relations']);
+
+const MEMBER_OPTIONS_LIMIT = 50;
+/** The last row of a full candidate list: not a choice, it asks to narrow the search. */
+const MORE_MEMBERS_ROW: ServerOption = { id: '__more__', name: '', environment: '', kind: '', provider: '' };
 
 const ENV_OPTION_KEYS = [
   { value: 'prod', labelKey: 'enums.environment.prod' },
@@ -326,6 +331,9 @@ export default function AssetWorkspacePage() {
   const [clusterMembers, setClusterMembers] = React.useState<ClusterMember[]>([]);
   const [clusterError, setClusterError] = React.useState<string | null>(null);
   const [clusterLoading, setClusterLoading] = React.useState(false);
+  // The asset whose members (or clusters) were last read: until then the section is loading, not empty.
+  const [membersLoadedFor, setMembersLoadedFor] = React.useState<string | null>(null);
+  const [clustersLoadedFor, setClustersLoadedFor] = React.useState<string | null>(null);
   const [clustersForServer, setClustersForServer] = React.useState<ClusterSummary[]>([]);
   const [clustersError, setClustersError] = React.useState<string | null>(null);
   const [clustersLoading, setClustersLoading] = React.useState(false);
@@ -335,6 +343,8 @@ export default function AssetWorkspacePage() {
   const [memberOptions, setMemberOptions] = React.useState<ServerOption[]>([]);
   const [memberSearch, setMemberSearch] = React.useState('');
   const [memberOptionsLoading, setMemberOptionsLoading] = React.useState(false);
+  // The search returned as many candidates as it may: the list invites to narrow it.
+  const [memberOptionsFull, setMemberOptionsFull] = React.useState(false);
   const [memberSaving, setMemberSaving] = React.useState(false);
   const [memberSaveError, setMemberSaveError] = React.useState<string | null>(null);
   const [connections, setConnections] = React.useState<ServerConnectionRow[]>([]);
@@ -435,7 +445,8 @@ export default function AssetWorkspacePage() {
   const [environment, setEnvironment] = React.useState('prod');
   const [hostname, setHostname] = React.useState('');
   const [ipAddresses, setIpAddresses] = React.useState<IpAddressEntry[]>([]);
-  const [isCluster, setIsCluster] = React.useState(false);
+  // A new cluster (`?cluster=1` from the assets list) opens the creation with the switch on.
+  const [isCluster, setIsCluster] = React.useState(() => isCreate && searchParams.get('cluster') === '1');
   // True while the Cluster switch is saved: the cluster lists wait for the server to agree.
   const [clusterSwitchSaving, setClusterSwitchSaving] = React.useState(false);
   const [status, setStatus] = React.useState<string>('active');
@@ -479,6 +490,7 @@ export default function AssetWorkspacePage() {
       setClusterMembers([]);
       setClusterError(null);
       setClusterLoading(false);
+      setMembersLoadedFor(null);
       return;
     }
     setClusterLoading(true);
@@ -491,6 +503,7 @@ export default function AssetWorkspacePage() {
       setClusterMembers([]);
     } finally {
       setClusterLoading(false);
+      setMembersLoadedFor(id);
     }
   }, [clusterSwitchSaving, id, isCreate, loadedAssetId, loadedIsCluster]);
 
@@ -501,6 +514,7 @@ export default function AssetWorkspacePage() {
       setClustersForServer([]);
       setClustersError(null);
       setClustersLoading(false);
+      setClustersLoadedFor(null);
       return;
     }
     setClustersLoading(true);
@@ -513,6 +527,7 @@ export default function AssetWorkspacePage() {
       setClustersForServer([]);
     } finally {
       setClustersLoading(false);
+      setClustersLoadedFor(id);
     }
   }, [clusterSwitchSaving, id, isCreate, loadedAssetId, loadedIsCluster]);
 
@@ -526,10 +541,18 @@ export default function AssetWorkspacePage() {
     const loadOptions = async () => {
       try {
         const res = await api.get<{ items: ServerOption[] }>('/assets', {
-          params: { q: memberSearch || undefined, limit: 50, sort: 'name:ASC', is_cluster: false },
+          params: {
+            q: memberSearch || undefined,
+            limit: MEMBER_OPTIONS_LIMIT,
+            sort: 'name:ASC',
+            // The assets list reads this from its filter model (the grid's format): a cluster is never a member.
+            filters: JSON.stringify({ is_cluster: { filterType: 'set', values: ['false'] } }),
+          },
         });
         if (cancelled) return;
-        setMemberOptions(res.data.items || []);
+        const items = res.data.items || [];
+        setMemberOptionsFull(items.length >= MEMBER_OPTIONS_LIMIT);
+        setMemberOptions(items.filter((item) => item.id !== id));
       } catch {
         if (!cancelled) setMemberOptions([]);
       } finally {
@@ -538,7 +561,7 @@ export default function AssetWorkspacePage() {
     };
     void loadOptions();
     return () => { cancelled = true; };
-  }, [memberDialogOpen, memberSearch]);
+  }, [id, memberDialogOpen, memberSearch]);
   const lifecycleOptions = React.useMemo(() => {
     const list = byField.lifecycleStatus || [];
     const current = status;
@@ -1002,8 +1025,13 @@ export default function AssetWorkspacePage() {
     memberSelection.forEach((sel) => {
       if (!map.has(sel.id)) map.set(sel.id, sel);
     });
-    return Array.from(map.values());
-  }, [memberOptions, memberSelection]);
+    const list = Array.from(map.values());
+    return memberOptionsFull ? [...list, MORE_MEMBERS_ROW] : list;
+  }, [memberOptions, memberOptionsFull, memberSelection]);
+  /** The provider code of an asset: a server provider, else a hosting type. */
+  const providerName = (code: string) => (
+    (byField.serverProvider || []).some((o) => o.code === code) ? labelFor('serverProvider', code) : labelFor('hostingType', code)
+  );
 
   const openMemberDialog = () => {
     setMemberDialogOpen(true);
@@ -1021,21 +1049,54 @@ export default function AssetWorkspacePage() {
     );
   };
 
+  /** A cluster with members has no operating system: asked once, in one sentence, before it is removed. */
+  const confirmOperatingSystemRemoval = (os: string) => dialogs.confirm({
+    title: t('workspace.asset.editMembersDialog.removeOsTitle'),
+    message: t('workspace.asset.editMembersDialog.removeOsMessage', { os }),
+    confirmLabel: t('workspace.asset.editMembersDialog.removeOsConfirm'),
+  });
+
   const handleSaveMembers = async () => {
     if (isCreate || !id) return;
-    setMemberSaving(true);
+    const ids = memberSelection.map((m) => m.id);
+    let removeOperatingSystem = false;
+    // The first members of a cluster that carries an operating system take it away.
+    if (ids.length > 0 && data?.operating_system) {
+      if (!(await confirmOperatingSystemRemoval(data.operating_system))) return;
+      removeOperatingSystem = true;
+    }
     setMemberSaveError(null);
-    try {
-      const ids = memberSelection.map((m) => m.id);
-      await api.post(`/assets/${id}/members`, { server_ids: ids });
-      setMemberDialogOpen(false);
-      await loadClusterMembers();
-      // The impact reads the members of a cluster.
-      void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
-    } catch (e: any) {
-      setMemberSaveError(getApiErrorMessage(e, t, t('messages.saveMembersFailed')));
-    } finally {
-      setMemberSaving(false);
+    for (;;) {
+      setMemberSaving(true);
+      try {
+        await api.post(`/assets/${id}/members`, {
+          server_ids: ids,
+          ...(removeOperatingSystem ? { remove_operating_system: true } : {}),
+        });
+        setMemberDialogOpen(false);
+        await loadClusterMembers();
+        if (removeOperatingSystem) {
+          // The asset and its technologies no longer carry the system.
+          void load();
+          void invalidateTechnologyLinks(queryClient);
+        }
+        // The impact reads the members of a cluster.
+        void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
+        return;
+      } catch (e: any) {
+        // A system set since the dialog opened: the same question.
+        const refused = e?.response?.data;
+        if (!removeOperatingSystem && refused?.code === 'cluster_os_with_members') {
+          setMemberSaving(false);
+          if (!(await confirmOperatingSystemRemoval(String(refused?.params?.os ?? '')))) return;
+          removeOperatingSystem = true;
+          continue;
+        }
+        setMemberSaveError(getApiErrorMessage(e, t, t('messages.saveMembersFailed')));
+        return;
+      } finally {
+        setMemberSaving(false);
+      }
     }
   };
 
@@ -1106,6 +1167,8 @@ export default function AssetWorkspacePage() {
   const reachVulnerabilities = vulnerabilityFeed && !isCreate && assetVulnerabilitiesQuery.data?.totals
     ? assetVulnerabilitiesQuery.data
     : null;
+  // A cluster's badge counts its members' vulnerabilities too (`member_totals`), as its column in the list does.
+  const badgeTotals = reachVulnerabilities ? reachVulnerabilities.member_totals ?? reachVulnerabilities.totals : null;
   // The metadata bar appears in one go: hidden on its line until the asset and its vulnerabilities
   // have arrived, so the severe badge does not push the header down afterwards. A failed read shows
   // the bar without the badge.
@@ -1140,6 +1203,11 @@ export default function AssetWorkspacePage() {
     load();
   };
 
+  // Autosaves run one at a time, in the order they were made: a field changed while another saves
+  // waits for it, and keeps its new value while that first answer arrives (`pendingPatches`).
+  const saveTail = React.useRef<Promise<unknown> | null>(null);
+  const pendingPatches = React.useRef<Array<{ patch: Record<string, unknown> }>>([]);
+
   const patchAsset = React.useCallback(async (patch: Partial<AssetRecord> & { sub_location_id?: string | null }) => {
     if (isCreate) {
       setDirty(true);
@@ -1159,19 +1227,39 @@ export default function AssetWorkspacePage() {
     setSaving(true);
     setError(null);
     setData((prev) => (prev ? ({ ...prev, ...safePatch } as AssetRecord) : prev));
-    try {
-      const res = await api.patch(`/assets/${id}`, safePatch);
-      setData(res.data as AssetRecord);
-      setDirty(false);
-      // Retiring an asset, or bringing it back, changes what it counts.
-      if ('status' in safePatch) void queryClient.invalidateQueries({ queryKey: assetVulnerabilitiesKey });
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.saveAssetFailed')));
-      await load();
-      throw e;
-    } finally {
-      setSaving(false);
-    }
+    const entry = { patch: safePatch as Record<string, unknown> };
+    pendingPatches.current.push(entry);
+    const settle = () => {
+      pendingPatches.current = pendingPatches.current.filter((pending) => pending !== entry);
+      if (pendingPatches.current.length === 0) setSaving(false);
+    };
+    const run = async () => {
+      try {
+        const res = await api.patch(`/assets/${id}`, safePatch);
+        settle();
+        // The changes still waiting for their own save stay shown over this answer.
+        const waiting = Object.assign({}, ...pendingPatches.current.map((pending) => pending.patch));
+        setData({ ...(res.data as AssetRecord), ...waiting } as AssetRecord);
+        if (pendingPatches.current.length === 0) setDirty(false);
+        // Retiring an asset, or bringing it back, changes what it counts.
+        if ('status' in safePatch) void queryClient.invalidateQueries({ queryKey: assetVulnerabilitiesKey });
+      } catch (e: any) {
+        settle();
+        const message = getApiErrorMessage(e, t, t('messages.saveAssetFailed'));
+        // The read clears the error: the refusal shows once the asset is back to what the server holds.
+        await load();
+        setError(message);
+        throw e;
+      }
+    };
+    const previous = saveTail.current;
+    const result = previous ? previous.then(run, run) : run();
+    const tail = result.catch(() => undefined);
+    saveTail.current = tail;
+    void tail.then(() => {
+      if (saveTail.current === tail) saveTail.current = null;
+    });
+    return result;
   }, [assetVulnerabilitiesKey, id, isCreate, load, netboxManaged, netboxOwns, queryClient, t]);
 
   const handleNotesChange = React.useCallback((value: string) => {
@@ -1317,7 +1405,7 @@ export default function AssetWorkspacePage() {
           onClick={async () => {
             if (!id) return;
             // Asked first: an asset still in use gets the refusal and why, with Close only.
-            const refusal = await recordRefusal('/assets', id);
+            const { refusal, lines } = await assetDeleteCheck(id, t, locale);
             if (refusal) {
               await dialogs.alert({
                 title: t('common:delete.recordTitle', { name: data?.name || name }),
@@ -1325,9 +1413,11 @@ export default function AssetWorkspacePage() {
               });
               return;
             }
+            const question = t('workspace.asset.deleteConfirm', { name: data?.name || name });
             if (!(await dialogs.confirm({
-              message: t('workspace.asset.deleteConfirm', { name: data?.name || name }),
-              confirmLabel: t('common:buttons.delete'),
+              // What the delete takes with it, one line per case; the asset itself is always deleted.
+              message: lines.length > 0 ? [question, ...lines].join('\n') : question,
+              confirmLabel: lines.length > 0 ? t('common:delete.anyway') : t('common:buttons.delete'),
               intent: 'danger',
             }))) return;
             try {
@@ -1364,7 +1454,7 @@ export default function AssetWorkspacePage() {
             onChange={(_, val) => updateAssetType(val?.value || '')}
             getOptionLabel={(opt) => opt.label}
             isOptionEqualToValue={(opt, val) => opt.value === val.value}
-            disabled={!canEditNetboxField('kind') || saving}
+            disabled={!canEditNetboxField('kind')}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -1378,40 +1468,41 @@ export default function AssetWorkspacePage() {
           />
         </PropertyRow>
         <PropertyRow label={t('workspace.asset.meta.cluster')}>
-          <Switch
-            checked={isCluster}
-            onChange={(e) => {
-              const next = e.target.checked;
-              setIsCluster(next);
-              if (isCreate) {
-                setDirty(true);
-                return;
-              }
-              setClusterSwitchSaving(true);
-              void (async () => {
-                try {
-                  await patchAsset({ is_cluster: next });
-                } catch {
-                  return;
-                } finally {
-                  setClusterSwitchSaving(false);
-                }
-                // The impact reads the members of a cluster.
-                void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
-                if (!(next && id && canEditNetboxField('operating_system'))) return;
-                try {
-                  await api.delete(`/assets/${id}/operating-system`);
-                  await invalidateTechnologyLinks(queryClient);
-                } catch (e) {
-                  setError(getApiErrorMessage(e, t, t('workspace.asset.technologies.saveFailed')));
-                }
-              })();
-            }}
-            disabled={!canManage || saving}
-            color="primary"
-            size="small"
-            inputProps={{ 'aria-label': t('workspace.asset.meta.cluster') }}
-          />
+          {/* A span carries the tooltip: it also shows on a disabled switch. */}
+          <Tooltip title={canManage ? t('workspace.asset.clusterSwitch.hint') : t('workspace.asset.readOnlyRole')}>
+            <Box component="span" sx={{ display: 'inline-flex' }}>
+              <Switch
+                checked={isCluster}
+                onChange={(e) => {
+                  // The switch stays enabled while it saves, so that the focus stays on it: a second click waits.
+                  if (clusterSwitchSaving) return;
+                  const next = e.target.checked;
+                  setIsCluster(next);
+                  if (isCreate) {
+                    setDirty(true);
+                    return;
+                  }
+                  setClusterSwitchSaving(true);
+                  void (async () => {
+                    try {
+                      // A refusal (members left, a membership) shows as the page's error, and the switch goes back.
+                      await patchAsset({ is_cluster: next });
+                    } catch {
+                      return;
+                    } finally {
+                      setClusterSwitchSaving(false);
+                    }
+                    // The impact reads the members of a cluster.
+                    void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
+                  })();
+                }}
+                disabled={!canManage}
+                color="primary"
+                size="small"
+                inputProps={{ 'aria-label': t('workspace.asset.meta.cluster') }}
+              />
+            </Box>
+          </Tooltip>
         </PropertyRow>
         <PropertyRow label={t('workspace.asset.technical.environment')}>
           <Select
@@ -1422,7 +1513,7 @@ export default function AssetWorkspacePage() {
               updateScalar('environment', next as AssetRecord['environment']);
             }}
             variant="standard"
-            disabled={!canManage || saving}
+            disabled={!canManage}
             sx={drawerSelectSx}
           >
             {ENV_OPTIONS.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
@@ -1437,7 +1528,7 @@ export default function AssetWorkspacePage() {
               updateScalar('admin_zone', (next || null) as AssetRecord['admin_zone']);
             }}
             variant="standard"
-            disabled={!canManage || saving}
+            disabled={!canManage}
             displayEmpty
             SelectDisplayProps={{ 'aria-label': t('workspace.asset.technical.adminZone') } as React.HTMLAttributes<HTMLDivElement>}
             sx={drawerSelectSx}
@@ -1462,7 +1553,7 @@ export default function AssetWorkspacePage() {
               size="small"
               hideLabel
               textFieldSx={drawerFieldValueSx}
-              disabled={!canEditNetboxField('location_id') || saving}
+              disabled={!canEditNetboxField('location_id')}
             />
           </Box>
         </PropertyRow>
@@ -1479,7 +1570,7 @@ export default function AssetWorkspacePage() {
                 else void patchAsset({ sub_location_id: next });
               }}
               loading={subLocationLoading}
-              disabled={!canManage || saving || !locationId}
+              disabled={!canManage || !locationId}
               renderInput={(params) => (
                 <TextField
                   {...params}
@@ -1524,48 +1615,54 @@ export default function AssetWorkspacePage() {
               updateScalar('status', next as AssetRecord['status']);
             }}
             variant="standard"
-            disabled={!canEditNetboxField('status') || saving}
+            disabled={!canEditNetboxField('status')}
             sx={drawerSelectSx}
           >
             {lifecycleOptions.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
           </Select>
         </PropertyRow>
         <PropertyRow label={t('workspace.asset.overview.goLiveDate')}>
-          <DateEUField label="" valueYmd={goLiveDate} onChangeYmd={(val) => { setGoLiveDate(val); updateScalar('go_live_date', (val || null) as AssetRecord['go_live_date']); }} disabled={!canManage || saving} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
+          <DateEUField label="" valueYmd={goLiveDate} onChangeYmd={(val) => { setGoLiveDate(val); updateScalar('go_live_date', (val || null) as AssetRecord['go_live_date']); }} disabled={!canManage} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
         </PropertyRow>
         <PropertyRow label={t('workspace.asset.overview.endOfLifeDate')}>
-          <DateEUField label="" valueYmd={endOfLifeDate} onChangeYmd={(val) => { setEndOfLifeDate(val); updateScalar('end_of_life_date', (val || null) as AssetRecord['end_of_life_date']); }} disabled={!canManage || saving} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
+          <DateEUField label="" valueYmd={endOfLifeDate} onChangeYmd={(val) => { setEndOfLifeDate(val); updateScalar('end_of_life_date', (val || null) as AssetRecord['end_of_life_date']); }} disabled={!canManage} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
         </PropertyRow>
       </PropertyGroup>
     </>
   );
 
   // The cluster sections of the Dependencies tab, which is off in creation.
+  const membersPending = isCluster && !isCreate && (clusterLoading || membersLoadedFor !== id);
+  const clustersPending = !isCluster && !isCreate && (clustersLoading || clustersLoadedFor !== id);
   const clusterSection = (
     <>
       {isCluster && (
-        <Alert severity="info">
-          {t('workspace.asset.overview.clusterInfo')}
-        </Alert>
-      )}
-      {isCluster && (
         <Box>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-            <SectionLabel>{t('workspace.asset.technical.members')}</SectionLabel>
-            <Button
-              variant="action"
-              size="small"
-              onClick={openMemberDialog}
-              disabled={!canManage}
-            >
-              {t('workspace.asset.technical.editMembers')}
-            </Button>
+            <Stack direction="row" spacing={0.75} alignItems="center">
+              <SectionLabel>{t('workspace.asset.technical.members')}</SectionLabel>
+              <InfoHint text={t('workspace.asset.clusterSwitch.membersHint')} />
+            </Stack>
+            {!membersPending && (
+              <Tooltip title={canManage ? '' : t('workspace.asset.readOnlyRole')}>
+                <Box component="span">
+                  <Button
+                    variant="action"
+                    size="small"
+                    onClick={openMemberDialog}
+                    disabled={!canManage}
+                  >
+                    {clusterMembers.length === 0 ? t('workspace.asset.technical.addMembers') : t('workspace.asset.technical.editMembers')}
+                  </Button>
+                </Box>
+              </Tooltip>
+            )}
           </Stack>
           {clusterError && <Alert severity="error" sx={{ mb: 1 }}>{clusterError}</Alert>}
-          {!clusterLoading && clusterMembers.length === 0 && (
-            <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.noMembers')}</Typography>
+          {membersPending && (
+            <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.loadingMembers')}</Typography>
           )}
-          {!clusterLoading && clusterMembers.length > 0 && (
+          {!membersPending && clusterMembers.length > 0 && (
             <Table size="small" sx={denseTableSx}>
               <TableHead>
                 <TableRow>
@@ -1585,7 +1682,7 @@ export default function AssetWorkspacePage() {
                     </TableCell>
                     <TableCell>{environmentLabel(member.environment)}</TableCell>
                     <TableCell>{labelFor('lifecycleStatus', member.status) || member.status}</TableCell>
-                    <TableCell>{member.operating_system || '-'}</TableCell>
+                    <TableCell>{member.operating_system || '—'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -1599,7 +1696,10 @@ export default function AssetWorkspacePage() {
             <SectionLabel>{t('workspace.asset.technical.clusterMembership')}</SectionLabel>
           </Box>
           {clustersError && <Alert severity="error" sx={{ mb: 1 }}>{clustersError}</Alert>}
-          {!clustersLoading && (
+          {clustersPending && (
+            <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.loadingClusters')}</Typography>
+          )}
+          {!clustersPending && (
             clustersForServer.length === 0 ? (
               <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.notInCluster')}</Typography>
             ) : (
@@ -1758,11 +1858,14 @@ export default function AssetWorkspacePage() {
               onClose={() => setGoLiveAnchorEl(null)}
               allowClear
             />
-            {reachVulnerabilities?.totals && (
+            {reachVulnerabilities && badgeTotals && (
               <VulnerabilitySevereBadge
-                severe={reachVulnerabilities.totals.severe}
-                exploitedSevere={reachVulnerabilities.totals.exploited_severe}
-                highestSeverity={highestSevereOf(reachVulnerabilities.rows)}
+                severe={badgeTotals.severe}
+                exploitedSevere={badgeTotals.exploited_severe}
+                includesMembers={!!reachVulnerabilities.member_totals}
+                highestSeverity={reachVulnerabilities.member_totals
+                  ? ((reachVulnerabilities.member_totals.critical ?? 0) > 0 ? 'critical' : 'high')
+                  : highestSevereOf(reachVulnerabilities.rows)}
                 to={`/it/vulnerabilities?asset=${encodeURIComponent(data?.asset_reference || id)}`}
               />
             )}
@@ -2360,29 +2463,37 @@ export default function AssetWorkspacePage() {
               value={memberSelection}
               inputValue={memberSearch}
               onInputChange={(_, v) => setMemberSearch(v)}
-              onChange={(_, vals) => setMemberSelection(vals as ServerOption[])}
+              onChange={(_, vals) => {
+                setMemberSelection((vals as ServerOption[]).filter((val) => val.id !== MORE_MEMBERS_ROW.id));
+                setMemberSaveError(null);
+              }}
+              // The server filters on the search: its answer is shown whole.
+              filterOptions={(list) => list}
               filterSelectedOptions
               isOptionEqualToValue={(opt, val) => opt.id === val.id}
-              getOptionLabel={(opt) => (opt.is_cluster ? t('workspace.asset.editMembersDialog.clusterOption', { name: opt.name }) : opt.name)}
+              getOptionDisabled={(opt) => opt.id === MORE_MEMBERS_ROW.id || opt.id === id || !!opt.is_cluster}
+              getOptionLabel={(opt) => opt.name}
               renderOption={(props, option) => (
-                <li {...props} key={option.id}>
-                  <div>
-                    <div style={{ fontWeight: 500 }}>{option.name}</div>
-                    <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
-                      {environmentLabel(option.environment)} / {option.kind}
-                      {option.is_cluster ? ` / ${t('workspace.asset.editMembersDialog.clusterTag')}` : ''}
-                      {' / '}
-                      {option.provider}
+                option.id === MORE_MEMBERS_ROW.id ? (
+                  <li {...props} key={option.id}>
+                    <Typography variant="body2" color="text.secondary">{t('workspace.asset.editMembersDialog.narrowSearch')}</Typography>
+                  </li>
+                ) : (
+                  <li {...props} key={option.id}>
+                    <div>
+                      <div style={{ fontWeight: 500 }}>{option.name}</div>
+                      <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>
+                        {[environmentLabel(option.environment), labelFor('serverKind', option.kind) || option.kind, providerName(option.provider) || option.provider].join(' / ')}
+                      </div>
                     </div>
-                  </div>
-                </li>
+                  </li>
+                )
               )}
               renderInput={(params) => (
                 <PropertyRow label={t('workspace.asset.editMembersDialog.memberServers')} valueSx={{ width: '100%' }}>
                   <TextField
                     {...params}
                     placeholder={t('workspace.asset.editMembersDialog.searchServers')}
-                    helperText={t('workspace.asset.editMembersDialog.membersHint')}
                     variant="standard"
                     sx={drawerFieldValueSx}
                     InputProps={{

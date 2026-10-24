@@ -15,6 +15,7 @@ import {
   CsvFieldInfo,
 } from '../common/csv';
 import { assetCsvConfig } from './asset-csv.config';
+import { clusterMembershipsOf, clusterNamesText } from './asset-rules';
 import { assetVulnerabilityCounts } from '../vulnerabilities/vulnerability-reach-counts';
 import {
   csvConfigForVulnerabilityFeed,
@@ -75,12 +76,15 @@ export class AssetsCsvService {
     const assets = scope === 'template' ? [] : await queryBuilder.getMany();
     if (assets.length) {
       // Users never see codes: catalog-backed columns are exported as names (import accepts either).
-      // The operating system is already the readable label of the marked link.
+      // The operating system is already the readable label of the marked link. Cluster Membership
+      // is the names of the asset's real clusters, never the legacy text (empty for a cluster).
       const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
       const labels = await this.operatingSystems.labelsOf(manager, tenantId, assets.map((asset) => asset.id));
+      const memberships = await clusterMembershipsOf(manager, tenantId, assets.map((asset) => asset.id));
       const ipTypeLabel = (code: string) => settings.ipAddressTypes.find((option) => option.code === code)?.label || code;
       for (const asset of assets) {
         asset.operating_system = labels.get(asset.id) ?? null;
+        asset.cluster = clusterNamesText(memberships.get(asset.id));
         exportCatalogLabels(asset, { kind: settings.serverKinds, status: settings.lifecycleStates, domain: settings.domains });
         if (Array.isArray(asset.ip_addresses)) asset.ip_addresses = asset.ip_addresses.map((ip) => ({ ...ip, type: ipTypeLabel(ip.type) }));
       }

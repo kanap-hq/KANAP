@@ -166,6 +166,7 @@
     "assets": {
       "title": "Assets",
       "addAsset": "Add asset",
+      "addCluster": "Add cluster",
       "importCsv": "Import CSV",
       "exportCsv": "Export CSV",
       "exportTitle": "Export assets",
@@ -190,6 +191,7 @@
       },
       "filters": {
         "noCluster": "(No cluster)",
+        "isCluster": "(Is a cluster)",
         "noLocation": "(No location)",
         "noSubLocation": "(No sub-location)",
         "blank": "(Blank)"
@@ -683,9 +685,9 @@
           "application": "No vulnerability to review on this application."
         },
         "indirect": {
-          "title": "Through another asset",
-          "hint": "Not counted: these technologies are installed on another asset (a host, a cluster)."
+          "title": "On its members"
         },
+        "platform": "Underlying platform ({{count}})",
         "countLink_one": "See the vulnerability to review on the Vulnerabilities page",
         "countLink_other": "See the {{count}} vulnerabilities to review on the Vulnerabilities page"
       },
@@ -694,6 +696,8 @@
         "label_other": "{{count}} severe",
         "hint_one": "{{count}} critical or high vulnerability to review",
         "hint_other": "{{count}} critical or high vulnerabilities to review",
+        "hintMembers_one": "{{count}} critical or high vulnerability to review, members included",
+        "hintMembers_other": "{{count}} critical or high vulnerabilities to review, members included",
         "exploited_one": "{{count}} known as exploited",
         "exploited_other": "{{count}} known as exploited"
       },
@@ -788,7 +792,6 @@
       "noApplications": "No applications assigned.",
       "viewCluster": "View cluster",
       "editServer": "Edit server",
-      "clusterHint": "Cluster node: manage members in the Servers workspace.",
       "purpose": "Purpose:",
       "typicalPorts": "Typical ports:",
       "topology": "Topology:",
@@ -1450,6 +1453,7 @@
         "save_failed": "This object could not be saved. The details are in the server log.",
         "validation_failed": "This object was refused:",
         "os_ambiguous": "The operating system \"{{value}}\" matches more than one entry in your catalogue, so it was left unchanged.",
+        "os_cluster_with_members": "This asset is a cluster with members, so the operating system \"{{value}}\" was left out.",
         "status_not_mapped": "The Netbox status \"{{value}}\" has no equivalent in KANAP, so the lifecycle was left unchanged.",
         "lifecycle_not_in_catalog": "The lifecycle \"{{value}}\" is not in your catalogue, so it was left unchanged.",
         "no_ip_address_type": "No IP address type is set up in the IT settings, so the address was not imported.",
@@ -2032,7 +2036,6 @@
         "assetType": "Asset type",
         "startTyping": "Start typing to search",
         "isCluster": "This server represents a cluster",
-        "clusterInfo": "Cluster assets can be endpoints in connections. Assign application instances to the member hosts.",
         "location": "Location",
         "subLocation": "Sub-location",
         "selectSubLocation": "Select sub-location",
@@ -2058,8 +2061,8 @@
         "environment": "Environment",
         "members": "Members",
         "editMembers": "Edit members",
+        "addMembers": "Add members",
         "loadingMembers": "Loading members…",
-        "noMembers": "No members added yet.",
         "clusterMembership": "Cluster membership",
         "loadingClusters": "Loading clusters…",
         "notInCluster": "Not part of any cluster.",
@@ -2099,6 +2102,7 @@
         "add": "Add",
         "search": "Search technologies",
         "empty": "No technology on this server.",
+        "platform": "Underlying platform ({{count}})",
         "operatingSystem": "Operating system",
         "edit": "Edit",
         "editNamed": "Edit {{name}}",
@@ -2112,7 +2116,7 @@
           "family": "Family",
           "version": "Version",
           "via": "Via",
-          "viaHint": "Server the technology is installed on, for a deduced row"
+          "viaHint": "Asset the technology is installed on, for a deduced row"
         }
       },
       "assignments": {
@@ -2152,11 +2156,12 @@
       },
       "editMembersDialog": {
         "title": "Edit members",
-        "memberServers": "Member servers",
-        "searchServers": "Search servers",
-        "membersHint": "Members must be non-cluster servers.",
-        "clusterOption": "Cluster: {{name}}",
-        "clusterTag": "cluster"
+        "memberServers": "Members",
+        "searchServers": "Search members",
+        "narrowSearch": "Narrow your search",
+        "removeOsTitle": "Remove the operating system?",
+        "removeOsMessage": "A cluster with members has no operating system: {{os}} will be removed.",
+        "removeOsConfirm": "Remove and save"
       },
       "newAsset": "New asset",
       "untitled": "Untitled asset",
@@ -2170,6 +2175,11 @@
         "goLive": "Go live",
         "editGoLive": "Edit go live"
       },
+      "clusterSwitch": {
+        "hint": "A cluster groups member servers.",
+        "membersHint": "Servers that form this cluster."
+      },
+      "readOnlyRole": "Your role does not allow editing.",
       "hardware": {
         "serialNumber": "Serial number",
         "serialNumberPlaceholder": "e.g., SN-000123",
@@ -2185,9 +2195,9 @@
         "notesPlaceholder": "e.g., Power supply replaced under warranty"
       },
       "impact": {
-        "title": "If this server goes down",
-        "empty": "Nothing else depends on this server.",
-        "emptyInfrastructure": "No other infrastructure depends on this server.",
+        "title": "If this asset goes down",
+        "empty": "Nothing else depends on this asset.",
+        "emptyInfrastructure": "No other infrastructure depends on this asset.",
         "loadFailed": "The impact could not be loaded.",
         "more_one": "and {{count}} more",
         "more_other": "and {{count}} more",
@@ -2220,19 +2230,23 @@
         },
         "via": {
           "contains": "In {{name}}",
-          "containsThisServer": "In this server",
+          "containsThisServer": "In this asset",
           "dependsOn": "Depends on {{name}}",
-          "dependsOnThisServer": "Depends on this server",
+          "dependsOnThisServer": "Depends on this asset",
+          "member": "Member of {{name}}",
+          "memberThisServer": "Member of this cluster",
           "on": "On {{name}}",
-          "onThisServer": "On this server",
-          "onThisServerAnd": "On this server, {{name}}",
-          "thisServer": "This server",
-          "thisServerAnd": "This server, {{name}}"
+          "onThisServer": "On this asset",
+          "onThisServerAnd": "On this asset, {{name}}",
+          "thisServer": "This asset",
+          "thisServerAnd": "This asset, {{name}}"
         },
         "state": {
           "down": "Down",
           "degraded_one": "Degraded, {{count}} of {{members}} members down",
-          "degraded_other": "Degraded, {{count}} of {{members}} members down"
+          "degraded_other": "Degraded, {{count}} of {{members}} members down",
+          "degradedHint_one": "{{count}} of {{members}} members still up",
+          "degradedHint_other": "{{count}} of {{members}} members still up"
         }
       },
       "support": {
@@ -2262,7 +2276,8 @@
           "containedBy": "Contained in no asset.",
           "dependsOn": "Depends on no asset.",
           "dependedOnBy": "No asset depends on this one."
-        }
+        },
+        "containsHint": "Assets hosted by this one, such as VMs."
       }
     },
     "technology": {
@@ -2424,6 +2439,7 @@
         "add": "Add",
         "search": "Search servers",
         "empty": "No server carries this technology.",
+        "hosted": "Hosted assets ({{count}})",
         "total": "Total",
         "serverCount_one": "{{count}} server",
         "serverCount_other": "{{count}} servers",

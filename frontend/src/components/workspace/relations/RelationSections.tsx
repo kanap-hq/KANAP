@@ -37,6 +37,7 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
           <RelationsSection
             key={section.kind}
             title={section.title}
+            hint={section.hint}
             count={loaded ? rows.length : undefined}
             onAdd={editable && loaded ? (anchor) => setAdding({ kind: section.kind, anchor }) : undefined}
             adding={adding?.kind === section.kind}

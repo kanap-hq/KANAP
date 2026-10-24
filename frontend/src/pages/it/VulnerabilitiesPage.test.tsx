@@ -911,6 +911,12 @@ describe('VulnerabilitiesPage', () => {
     expect((await screen.findByRole('tooltip')).textContent).toBe(`${TIP} ${RANSOM}`);
   });
 
+  it('shows the Servers column without a header tooltip', async () => {
+    renderPage();
+    expect(column('asset').headerName).toBe('Servers');
+    expect(column('asset').headerTooltip).toBeUndefined();
+  });
+
   it('formats the EPSS cell as a percentage, and keeps the percentile for the detail', async () => {
     renderPage();
     const epss = column('epss');

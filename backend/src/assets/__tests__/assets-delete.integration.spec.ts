@@ -13,6 +13,8 @@ import { AssetsDeleteService } from '../assets-delete.service';
 // using the asset is raw SQL over the connection tables, so a column renamed by
 // a migration only shows up here: it broke every asset deletion with a 500
 // once connection legs moved to a single equipment column.
+// The cascade of a delete (cluster memberships, relations) is audited on the other side, and the
+// check before a delete warns about it without refusing (`warnings`).
 
 async function setCurrentTenant(runner: QueryRunner, tenantId: string) {
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
@@ -52,6 +54,83 @@ async function seedConnectionThrough(runner: QueryRunner, tenantId: string, hopA
   );
 }
 
+async function seedClusterAndRelations(runner: QueryRunner, tenantId: string) {
+  const cluster = await seedAsset(runner, tenantId, 'esx-cluster');
+  await runner.query(`UPDATE assets SET is_cluster = true WHERE tenant_id = $1 AND id = $2`, [tenantId, cluster]);
+  const node1 = await seedAsset(runner, tenantId, 'esx-01');
+  const node2 = await seedAsset(runner, tenantId, 'esx-02');
+  const app = await seedAsset(runner, tenantId, 'app-server');
+  const vm = await seedAsset(runner, tenantId, 'vm-01');
+  await runner.query(
+    `INSERT INTO asset_cluster_members (tenant_id, cluster_id, asset_id) VALUES ($1, $2, $3), ($1, $2, $4)`,
+    [tenantId, cluster, node1, node2],
+  );
+  // app-server depends on esx-01; esx-01 contains vm-01.
+  await runner.query(
+    `INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type)
+     VALUES ($1, $2, $3, 'depends_on'), ($1, $3, $4, 'contains')`,
+    [tenantId, app, node1, vm],
+  );
+  return { cluster, node1, node2, app, vm };
+}
+
+type AuditEntry = { table: string; recordId: string; action: string; before: any; after: any };
+
+async function testCascade(runner: QueryRunner, tenantId: string, hop: string) {
+  const entries: AuditEntry[] = [];
+  const service = new AssetsDeleteService(
+    runner.manager.getRepository(Asset),
+    { log: async (entry: AuditEntry) => void entries.push(entry) } as any,
+  );
+  const opts = { manager: runner.manager };
+  const { cluster, node1, node2, app, vm } = await seedClusterAndRelations(runner, tenantId);
+
+  // The check warns, refuses only what it refused before.
+  const check = await service.deleteCheck([node1, cluster, vm, hop], tenantId, opts);
+  assert.deepEqual(check.refused.map((r) => [r.id, r.code]), [[hop, 'ASSET_IN_USE']]);
+  assert.deepEqual(check.warnings, [
+    {
+      id: node1, name: 'esx-01',
+      member_of: [{ id: cluster, name: 'esx-cluster' }],
+      member_count: 0,
+      relations: [
+        { id: app, name: 'app-server', relation_type: 'depends_on', direction: 'incoming' },
+        { id: vm, name: 'vm-01', relation_type: 'contains', direction: 'outgoing' },
+      ],
+      relations_total: 2,
+    },
+    { id: cluster, name: 'esx-cluster', member_of: [], member_count: 2, relations: [], relations_total: 0 },
+    {
+      id: vm, name: 'vm-01', member_of: [], member_count: 0,
+      relations: [{ id: node1, name: 'esx-01', relation_type: 'contains', direction: 'incoming' }],
+      relations_total: 1,
+    },
+  ]);
+
+  // Deleting a member: its cluster and the asset that held a relation to it are audited.
+  await service.deleteAsset(node1, tenantId, null, opts);
+  assert.deepEqual(entries.map((e) => `${e.table}:${e.action}:${e.recordId}`), [
+    `asset_cluster_members:update:${cluster}`,
+    `asset_relations:update:${app}`,
+    `assets:delete:${node1}`,
+  ]);
+  assert.deepEqual(entries[0].before.members.sort(), [node1, node2].sort());
+  assert.deepEqual(entries[0].after, { members: [node2] });
+  assert.deepEqual(entries[1].before, { relations: [{ related_asset_id: node1, relation_type: 'depends_on' }] });
+  assert.deepEqual(entries[1].after, { relations: [] });
+  assert.deepEqual(entries[2].before.relations, [{ related_asset_id: vm, relation_type: 'contains' }]);
+  assert.equal(entries[2].before.members, undefined);
+
+  // Deleting a cluster, in bulk: its delete entry carries the members it had.
+  entries.length = 0;
+  const bulk = await service.bulkDelete([cluster], null, tenantId, opts);
+  assert.deepEqual(bulk.deleted, [cluster]);
+  assert.deepEqual(entries.map((e) => `${e.table}:${e.action}:${e.recordId}`), [`assets:delete:${cluster}`]);
+  assert.deepEqual(entries[0].before.members, [node2]);
+  const left = await runner.query(`SELECT count(*)::int AS count FROM asset_cluster_members WHERE tenant_id = $1`, [tenantId]);
+  assert.equal(left[0].count, 0);
+}
+
 async function run() {
   await dataSource.initialize();
   const runner = dataSource.createQueryRunner();
@@ -83,6 +162,8 @@ async function run() {
     await runner.query('ROLLBACK TO SAVEPOINT hop_delete');
     const kept = await runner.query(`SELECT id FROM assets WHERE tenant_id = $1 AND id = $2`, [tenantId, hop]);
     assert.equal(kept.length, 1);
+
+    await testCascade(runner, tenantId, hop);
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

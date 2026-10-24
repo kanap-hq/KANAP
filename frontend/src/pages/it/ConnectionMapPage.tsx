@@ -1276,16 +1276,12 @@ export default function ConnectionMapPage() {
                             variant="contained"
                             size="small"
                             onClick={() => {
-                              navigate(`/it/assets/${selectedNode.id}/overview`);
+                              // The members of a cluster are managed on the Dependencies tab.
+                              navigate(`/it/assets/${selectedNode.id}/${selectedNode.kind === 'cluster' ? 'dependencies' : 'overview'}`);
                             }}
                           >
                             {selectedNode.kind === 'cluster' ? t('pages.connectionMap.viewCluster') : t('pages.connectionMap.editServer')}
                           </Button>
-                          {selectedNode.kind === 'cluster' && (
-                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                              {t('pages.connectionMap.clusterHint')}
-                            </Typography>
-                          )}
                         </Box>
                       </Stack>
                     );

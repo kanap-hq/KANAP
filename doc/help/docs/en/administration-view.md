@@ -68,7 +68,7 @@ The table lists every asset that is not retired, and loads more as you scroll. C
 | **Zone** | Its administration zone, or **No zone** |
 | **Technologies** | The technologies installed on it. The first two names show, then the number of the others; hover the cell for the full list |
 | **Applications** | The applications in service hosted on it, shown the same way. Click a name to open the application |
-| **Controls** | The control points that concern it. Hover **Less sensitive host** to see why: **Runs** names the more sensitive asset it runs, **Member of cluster** names the more sensitive cluster, each with its zone |
+| **Controls** | The control points that concern it. Hover **Less sensitive host** to see why: **Runs** names the more sensitive asset it runs, **Member of cluster** names the more sensitive cluster, each by its reference and name, with its zone |
 
 Search on the name or the reference. Filter on **Type**, **Zone** (including **No zone**) and **Controls**, and sort on **Ref**, **Name**, **Type** or **Zone**. Sorting on the zone follows the order of the settings, with the assets without a zone last. The band and the control point buttons set the same filters as the **Zone** and **Controls** columns.
 

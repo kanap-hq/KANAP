@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -25,8 +25,13 @@ vi.mock('react-i18next', () => ({
 const features = vi.hoisted(() => ({ vulnerabilityFeed: false }));
 vi.mock('../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features } }) }));
 vi.mock('../../api', () => ({ default: { get, patch, post, delete: del } }));
+// What the person may do on infrastructure: nothing (a reader), 'member' (edits) or 'admin' (also deletes).
+const auth = vi.hoisted(() => ({ level: 'member' as 'reader' | 'member' | 'admin' }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: (resource: string, level: string) => resource === 'infrastructure' && level === 'member' }),
+  useAuth: () => ({
+    hasLevel: (resource: string, level: string) => resource === 'infrastructure'
+      && ((level === 'member' && auth.level !== 'reader') || (level === 'admin' && auth.level === 'admin')),
+  }),
 }));
 // One object for every render, as the real hook memoises it: a fresh one would re-run the location effects forever.
 const enumOptions = vi.hoisted(() => ({
@@ -99,7 +104,7 @@ const REACH = {
 };
 
 // What the relations read and the cluster lists answer; each test sets them.
-const wire = vi.hoisted(() => ({ counts: { assets: 0, total: 0 } as Record<string, number>, members: [] as unknown[], clusters: [] as unknown[] }));
+const wire = vi.hoisted(() => ({ counts: { assets: 0, total: 0 } as Record<string, number>, members: [] as unknown[], clusters: [] as unknown[], candidates: [] as unknown[] }));
 
 function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | (() => Promise<unknown>) = ASSET) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -112,6 +117,7 @@ function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | ((
     if (url.endsWith('/sub-items')) return { data: [] };
     if (url.endsWith('/assignments')) return { data: [] };
     if (url === '/assets/asset-1/relations-tab') return { data: { counts: wire.counts } };
+    if (url === '/assets') return { data: { items: wire.candidates } };
     if (url.endsWith('/members')) return { data: { items: wire.members } };
     if (url.endsWith('/clusters')) return { data: { items: wire.clusters } };
     return { data: { items: [], outgoing: [], incoming: [] } };
@@ -138,9 +144,14 @@ function LocationProbe() {
     <>
       <div data-testid="location">{useLocation().pathname}</div>
       <button type="button" data-testid="go-asset-2" onClick={() => navigate('/it/assets/asset-2/dependencies')}>go</button>
+      <button type="button" data-testid="go-asset-1" onClick={() => navigate('/it/assets/asset-1/dependencies')}>back</button>
     </>
   );
 }
+
+/** A dialog of the page, found by its title (the dialogs carry no accessible name). */
+const dialogTitled = async (title: string) => (await screen.findByText(title)).closest('[role="dialog"]') as HTMLElement;
+const gone = (title: string) => waitFor(() => expect(screen.queryByText(title)).toBeNull());
 
 const currentPath = () => screen.getByTestId('location').textContent;
 
@@ -158,6 +169,8 @@ describe('Asset workspace: section placement', () => {
     wire.counts = { assets: 0, total: 0 };
     wire.members = [];
     wire.clusters = [];
+    wire.candidates = [];
+    auth.level = 'member';
     features.vulnerabilityFeed = false;
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: false,
@@ -194,6 +207,14 @@ describe('Asset workspace: section placement', () => {
     await screen.findByText('workspace.asset.overview.basics');
     expect(screen.queryByText('support-panel')).toBeNull();
     expect(screen.queryByText('knowledge-panel')).toBeNull();
+  });
+
+  it('opens the creation with the Cluster switch on when the list asks for a new cluster, off otherwise', async () => {
+    renderAt('/it/assets/new/overview?cluster=1');
+    expect(await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' })).toBeChecked();
+    cleanup();
+    renderAt('/it/assets/new/overview');
+    expect(await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' })).not.toBeChecked();
   });
 
   it('lists hosted applications, technologies, then vulnerabilities in the operations tab', async () => {
@@ -304,22 +325,73 @@ describe('Asset workspace: section placement', () => {
       expect(del).not.toHaveBeenCalled();
     });
 
-    it('saves at once, and removes the operating system, when an asset becomes a cluster', async () => {
+    it('saves at once, and removes nothing, when an asset becomes a cluster', async () => {
       patch.mockResolvedValue({ data: { ...ASSET, is_cluster: true } });
-      del.mockResolvedValue({ data: {} });
       renderAt('/it/assets/asset-1/overview');
       const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
       await waitFor(() => expect(toggle).toBeEnabled());
       fireEvent.click(toggle);
       await waitFor(() => expect(patch).toHaveBeenCalledWith('/assets/asset-1', { is_cluster: true }));
-      await waitFor(() => expect(del).toHaveBeenCalledWith('/assets/asset-1/operating-system'));
       await waitFor(() => expect(toggle).toBeChecked());
+      expect(del).not.toHaveBeenCalled();
+    });
+
+    it('keeps the switch enabled, with its focus, while it saves, and ignores a second click', async () => {
+      let resolvePatch: (value: unknown) => void = () => {};
+      patch.mockImplementation(() => new Promise((resolve) => { resolvePatch = resolve; }));
+      renderAt('/it/assets/asset-1/overview');
+      const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
+      await waitFor(() => expect(toggle).toBeEnabled());
+      toggle.focus();
+      fireEvent.click(toggle);
+      await waitFor(() => expect(patch).toHaveBeenCalledTimes(1));
+      expect(toggle).toBeEnabled();
+      expect(document.activeElement).toBe(toggle);
+      fireEvent.click(toggle);
+      expect(patch).toHaveBeenCalledTimes(1);
+      resolvePatch({ data: { ...ASSET, is_cluster: true } });
+      await waitFor(() => expect(toggle).toBeChecked());
+      expect(document.activeElement).toBe(toggle);
+    });
+
+    it('keeps the other fields of the panel enabled while one saves', async () => {
+      patch.mockImplementation(() => new Promise(() => undefined));
+      renderAt('/it/assets/asset-1/overview');
+      const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
+      await waitFor(() => expect(toggle).toBeEnabled());
+      fireEvent.click(toggle);
+      await waitFor(() => expect(patch).toHaveBeenCalledTimes(1));
+      expect(screen.getByLabelText('workspace.asset.technical.adminZone')).not.toHaveAttribute('aria-disabled', 'true');
+      expect(screen.getByPlaceholderText('workspace.asset.overview.searchAssetTypes')).toBeEnabled();
+    });
+
+    it('shows the server refusal and puts the switch back when a cluster still has members', async () => {
+      patch.mockRejectedValue({ response: { status: 400, data: { code: 'cluster_has_members', params: { count: 2 } } } });
+      renderAt('/it/assets/asset-1/overview', REACH, { ...ASSET, is_cluster: true });
+      const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
+      await waitFor(() => expect(toggle).toBeChecked());
+      fireEvent.click(toggle);
+      expect(await screen.findByText('errors:cluster_has_members')).toBeInTheDocument();
+      await waitFor(() => expect(toggle).toBeChecked());
+      expect(del).not.toHaveBeenCalled();
+    });
+
+    it('explains the switch in a tooltip, and a reader why it is off', async () => {
+      renderAt('/it/assets/asset-1/overview');
+      expect(await screen.findByLabelText('workspace.asset.clusterSwitch.hint')).toBeInTheDocument();
+    });
+
+    it('tells a reader, on the greyed switch, that the role does not allow editing', async () => {
+      auth.level = 'reader';
+      renderAt('/it/assets/asset-1/overview');
+      const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
+      expect(toggle).toBeDisabled();
+      expect(screen.getByLabelText('workspace.asset.readOnlyRole')).toBeInTheDocument();
     });
 
     it('reads the members only once the server has made the asset a cluster', async () => {
       let resolvePatch: (value: unknown) => void = () => {};
       patch.mockImplementation(() => new Promise((resolve) => { resolvePatch = resolve; }));
-      del.mockResolvedValue({ data: {} });
       renderAt('/it/assets/asset-1/overview');
       const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
       await waitFor(() => expect(toggle).toBeEnabled());
@@ -363,24 +435,233 @@ describe('Asset workspace: section placement', () => {
   });
 
   describe('cluster sections of the Dependencies tab', () => {
-    it('hands a cluster its info, its members and the edit button', async () => {
-      wire.members = [{ id: 'm1', name: 'node-1', environment: 'prod', status: 'active', operating_system: 'Linux' }];
+    it('hands a cluster its members and the edit button, with a hint on the title and no info alert', async () => {
+      wire.members = [{ id: 'm1', name: 'node-1', environment: 'prod', status: 'active', operating_system: null }];
       renderAt('/it/assets/asset-1/dependencies', REACH, { ...ASSET, is_cluster: true });
-      expect(await screen.findByText('workspace.asset.overview.clusterInfo')).toBeInTheDocument();
       expect(await screen.findByText('node-1')).toBeInTheDocument();
       expect(screen.getByText('workspace.asset.technical.members')).toBeInTheDocument();
+      expect(screen.getByLabelText('workspace.asset.clusterSwitch.membersHint')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'workspace.asset.technical.editMembers' })).toBeEnabled();
+      expect(screen.queryByText('workspace.asset.overview.clusterInfo')).toBeNull();
       expect(screen.queryByText('workspace.asset.technical.clusterMembership')).toBeNull();
       expect(screen.queryByText('workspace.asset.technical.saveClusterFirst')).toBeNull();
+      // An empty value is the em dash, as elsewhere in the app.
+      expect(screen.getByText('—')).toBeInTheDocument();
     });
 
-    it('hands a server its cluster membership, without the cluster info', async () => {
+    it('offers to add members to a cluster that has none, without an empty state', async () => {
+      renderAt('/it/assets/asset-1/dependencies', REACH, { ...ASSET, is_cluster: true });
+      expect(await screen.findByRole('button', { name: 'workspace.asset.technical.addMembers' })).toBeEnabled();
+      expect(screen.queryByRole('button', { name: 'workspace.asset.technical.editMembers' })).toBeNull();
+      expect(screen.queryByText('workspace.asset.technical.noMembers')).toBeNull();
+    });
+
+    it('says a cluster is loading its members before it offers to add some', async () => {
+      let answer: (value: unknown) => void = () => undefined;
+      renderAt('/it/assets/asset-1/dependencies', REACH, { ...ASSET, is_cluster: true });
+      const read = get.getMockImplementation()!;
+      get.mockImplementation(async (url: string, config?: unknown) => (
+        url.endsWith('/members') ? new Promise((resolve) => { answer = resolve; }) : read(url, config)
+      ));
+      // A render of the same asset reads the members again: the answer is held back.
+      fireEvent.click(await screen.findByTestId('go-asset-2'));
+      fireEvent.click(await screen.findByTestId('go-asset-1'));
+      expect(await screen.findByText('workspace.asset.technical.loadingMembers')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'workspace.asset.technical.addMembers' })).toBeNull();
+      answer({ data: { items: [] } });
+      expect(await screen.findByRole('button', { name: 'workspace.asset.technical.addMembers' })).toBeInTheDocument();
+      expect(screen.queryByText('workspace.asset.technical.loadingMembers')).toBeNull();
+    });
+
+    it('says a server is loading its clusters before it says it is in none', async () => {
+      let answer: (value: unknown) => void = () => undefined;
+      renderAt('/it/assets/asset-1/dependencies');
+      const read = get.getMockImplementation()!;
+      get.mockImplementation(async (url: string, config?: unknown) => (
+        url.endsWith('/clusters') ? new Promise((resolve) => { answer = resolve; }) : read(url, config)
+      ));
+      fireEvent.click(await screen.findByTestId('go-asset-2'));
+      expect(await screen.findByText('workspace.asset.technical.loadingClusters')).toBeInTheDocument();
+      expect(screen.queryByText('workspace.asset.technical.notInCluster')).toBeNull();
+      answer({ data: { items: [] } });
+      expect(await screen.findByText('workspace.asset.technical.notInCluster')).toBeInTheDocument();
+      expect(screen.queryByText('workspace.asset.technical.loadingClusters')).toBeNull();
+    });
+
+    it('hands a server its cluster membership, without the cluster members', async () => {
       wire.clusters = [{ id: 'c1', name: 'cluster-1', environment: 'prod', status: 'active' }];
       renderAt('/it/assets/asset-1/dependencies');
       expect(await screen.findByText('workspace.asset.technical.clusterMembership')).toBeInTheDocument();
       expect(await screen.findByText('cluster-1')).toBeInTheDocument();
-      expect(screen.queryByText('workspace.asset.overview.clusterInfo')).toBeNull();
       expect(screen.queryByText('workspace.asset.technical.members')).toBeNull();
+    });
+
+    it('greys the members button for a reader, with the reason in a tooltip', async () => {
+      auth.level = 'reader';
+      renderAt('/it/assets/asset-1/dependencies', REACH, { ...ASSET, is_cluster: true });
+      const button = await screen.findByRole('button', { name: 'workspace.asset.technical.addMembers' });
+      expect(button).toBeDisabled();
+      expect(button.parentElement).toHaveAttribute('aria-label', 'workspace.asset.readOnlyRole');
+    });
+  });
+
+  describe('members dialog', () => {
+    const CANDIDATES = [
+      { id: 'asset-1', name: 'dc1', environment: 'prod', kind: 'virtual_machine', provider: 'on_prem', is_cluster: true },
+      { id: 'srv-2', name: 'srv-2', environment: 'prod', kind: 'physical_server', provider: 'on_prem', is_cluster: false },
+      { id: 'srv-3', name: 'srv-3', environment: 'qa', kind: 'virtual_machine', provider: 'on_prem', is_cluster: false },
+    ];
+    const CLUSTER = { ...ASSET, is_cluster: true };
+
+    async function openDialog(asset: typeof ASSET & { operating_system?: string | null } = CLUSTER) {
+      renderAt('/it/assets/asset-1/dependencies', REACH, asset);
+      fireEvent.click(await screen.findByRole('button', { name: /workspace.asset.technical.(add|edit)Members/ }));
+      const dialog = await dialogTitled('workspace.asset.editMembersDialog.title');
+      const input = within(dialog).getByRole('combobox');
+      return { dialog, input };
+    }
+
+    const open = (input: HTMLElement) => {
+      fireEvent.mouseDown(input);
+      fireEvent.keyDown(input, { key: 'ArrowDown' });
+    };
+
+    it('searches the servers that are not clusters, with the grid filter, and lists them in plain words without the asset itself', async () => {
+      wire.candidates = CANDIDATES;
+      const original = enumOptions.labelFor;
+      enumOptions.labelFor = (field: string, code: string) => `${field}:${code}`;
+      try {
+        const { dialog, input } = await openDialog();
+        await waitFor(() => expect(get).toHaveBeenCalledWith('/assets', {
+          params: {
+            q: undefined,
+            limit: 50,
+            sort: 'name:ASC',
+            filters: JSON.stringify({ is_cluster: { filterType: 'set', values: ['false'] } }),
+          },
+        }));
+        await waitFor(() => expect(within(dialog).queryByRole('progressbar')).toBeNull());
+        open(input);
+        const option = await screen.findByRole('option', { name: /srv-2/ });
+        expect(option.textContent).toContain('enums.environment.prod / serverKind:physical_server / serverProvider:on_prem');
+        expect(screen.getByRole('option', { name: /srv-3/ })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: /dc1/ })).toBeNull();
+        expect(within(dialog).queryByText('workspace.asset.editMembersDialog.membersHint')).toBeNull();
+      } finally {
+        enumOptions.labelFor = original;
+      }
+    });
+
+    it('sends the typed search to the server and invites to narrow a full list of results', async () => {
+      wire.candidates = Array.from({ length: 50 }, (_, i) => ({ id: `s${i}`, name: `server-${i}`, environment: 'prod', kind: 'virtual_machine', provider: 'on_prem', is_cluster: false }));
+      const { input } = await openDialog();
+      open(input);
+      const more = await screen.findByText('workspace.asset.editMembersDialog.narrowSearch');
+      expect(more.closest('[role="option"]')).toHaveAttribute('aria-disabled', 'true');
+      fireEvent.change(input, { target: { value: 'sql' } });
+      await waitFor(() => expect(get).toHaveBeenCalledWith('/assets', expect.objectContaining({ params: expect.objectContaining({ q: 'sql' }) })));
+    });
+
+    it('starts from the current members and clears the error when the selection changes', async () => {
+      wire.members = [{ id: 'm1', name: 'node-1', environment: 'prod', status: 'active', kind: 'virtual_machine', provider: 'on_prem', operating_system: null }];
+      wire.candidates = CANDIDATES;
+      post.mockRejectedValue({ response: { status: 400, data: { code: 'cluster_member_not_found' } } });
+      const { dialog, input } = await openDialog();
+      expect(within(dialog).getByText('node-1')).toBeInTheDocument();
+      fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.save' }));
+      expect(await within(dialog).findByText('errors:cluster_member_not_found')).toBeInTheDocument();
+      open(input);
+      fireEvent.click(await screen.findByRole('option', { name: /srv-2/ }));
+      await waitFor(() => expect(within(dialog).queryByText('errors:cluster_member_not_found')).toBeNull());
+    });
+
+    it('asks before removing the operating system of a cluster that gets its first members, then sends the flag', async () => {
+      wire.candidates = CANDIDATES;
+      post.mockResolvedValue({ data: { items: [] } });
+      const { dialog, input } = await openDialog({ ...CLUSTER, operating_system: 'Windows Server 2022' } as never);
+      open(input);
+      fireEvent.click(await screen.findByRole('option', { name: /srv-2/ }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.save' }));
+      const ask = await dialogTitled('workspace.asset.editMembersDialog.removeOsTitle');
+      expect(post).not.toHaveBeenCalled();
+      fireEvent.click(within(ask).getByRole('button', { name: 'workspace.asset.editMembersDialog.removeOsConfirm' }));
+      await waitFor(() => expect(post).toHaveBeenCalledWith('/assets/asset-1/members', { server_ids: ['srv-2'], remove_operating_system: true }));
+    });
+
+    it('writes nothing, and keeps the dialog open, when the removal of the operating system is cancelled', async () => {
+      wire.candidates = CANDIDATES;
+      const { dialog, input } = await openDialog({ ...CLUSTER, operating_system: 'Windows Server 2022' } as never);
+      open(input);
+      fireEvent.click(await screen.findByRole('option', { name: /srv-2/ }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.save' }));
+      const ask = await dialogTitled('workspace.asset.editMembersDialog.removeOsTitle');
+      fireEvent.click(within(ask).getByRole('button', { name: 'buttons.cancel' }));
+      await gone('workspace.asset.editMembersDialog.removeOsTitle');
+      expect(post).not.toHaveBeenCalled();
+      expect(screen.getByText('workspace.asset.editMembersDialog.title')).toBeInTheDocument();
+    });
+
+    it('sends no flag, and asks nothing, when the cluster carries no operating system', async () => {
+      wire.candidates = CANDIDATES;
+      post.mockResolvedValue({ data: { items: [] } });
+      const { dialog, input } = await openDialog();
+      open(input);
+      fireEvent.click(await screen.findByRole('option', { name: /srv-2/ }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.save' }));
+      await waitFor(() => expect(post).toHaveBeenCalledWith('/assets/asset-1/members', { server_ids: ['srv-2'] }));
+    });
+
+    it('asks the same question when the server finds an operating system set since the page loaded', async () => {
+      wire.candidates = CANDIDATES;
+      post.mockRejectedValueOnce({ response: { status: 400, data: { code: 'cluster_os_with_members', params: { os: 'Debian' } } } });
+      post.mockResolvedValueOnce({ data: { items: [] } });
+      const { dialog, input } = await openDialog();
+      open(input);
+      fireEvent.click(await screen.findByRole('option', { name: /srv-2/ }));
+      fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.save' }));
+      const ask = await dialogTitled('workspace.asset.editMembersDialog.removeOsTitle');
+      fireEvent.click(within(ask).getByRole('button', { name: 'workspace.asset.editMembersDialog.removeOsConfirm' }));
+      await waitFor(() => expect(post).toHaveBeenLastCalledWith('/assets/asset-1/members', { server_ids: ['srv-2'], remove_operating_system: true }));
+      expect(post).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('deleting an asset', () => {
+    async function clickDelete() {
+      auth.level = 'admin';
+      renderAt('/it/assets/asset-1/overview');
+      fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    }
+
+    it('adds the warnings of the delete check to the confirmation and reads "Delete anyway"', async () => {
+      post.mockResolvedValue({
+        data: {
+          refused: [],
+          warnings: [{
+            id: 'asset-1', name: 'dc1',
+            member_of: [{ id: 'c1', name: 'PAR-SQL-CL01' }],
+            member_count: 0,
+            relations: [{ id: 'a2', name: 'PAR-ESX-01', relation_type: 'depends_on', direction: 'outgoing' }],
+            relations_total: 1,
+          }],
+        },
+      });
+      del.mockResolvedValue({ data: {} });
+      await clickDelete();
+      const dialog = await dialogTitled('systemDialogs.confirmTitle');
+      expect(post).toHaveBeenCalledWith('/assets/delete-check', { ids: ['asset-1'] });
+      expect(dialog.textContent).toContain('workspace.asset.deleteConfirm');
+      expect(dialog.textContent).toContain('common:delete.assetWarning.memberOf');
+      expect(dialog.textContent).toContain('common:delete.assetWarning.links');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'common:delete.anyway' }));
+      await waitFor(() => expect(del).toHaveBeenCalledWith('/assets/asset-1'));
+    });
+
+    it('keeps the plain confirmation when the check has no warning', async () => {
+      post.mockResolvedValue({ data: { refused: [], warnings: [] } });
+      await clickDelete();
+      const dialog = await dialogTitled('systemDialogs.confirmTitle');
+      expect(dialog.textContent).toBe('systemDialogs.confirmTitle' + 'workspace.asset.deleteConfirm' + 'buttons.cancel' + 'common:buttons.delete');
     });
   });
 
@@ -575,6 +856,47 @@ describe('Asset workspace: section placement', () => {
       expect(screen.getByRole('link', { name: 'pages.vulnerabilities.severeBadge.hint' }).getAttribute('href'))
         .toBe('/it/vulnerabilities?asset=AST-1');
       expect(vulnerabilityCalls()).toBe(1);
+    });
+
+    it('counts a cluster on its members: the badge and the section follow member_totals, and say so', async () => {
+      renderAt('/it/assets/asset-1/operations', {
+        ...REACH,
+        // Its own links count nothing: only the members' CVE raise the badge.
+        totals: { open: 0, severe: 0, exploited_severe: 0 },
+        member_totals: { open: 11, severe: 7, exploited_severe: 2 },
+      });
+      const badge = await screen.findByTestId('vulnerability-severe-badge');
+      expect(badge.textContent).toContain('pages.vulnerabilities.severeBadge.label');
+      expect(screen.getByRole('link', { name: 'pages.vulnerabilities.severeBadge.hintMembers' }).getAttribute('href'))
+        .toBe('/it/vulnerabilities?asset=AST-1');
+      expect(screen.queryByRole('link', { name: 'pages.vulnerabilities.severeBadge.hint' })).toBeNull();
+      expect((await screen.findByTestId('reach-vulnerabilities-count')).textContent).toBe('11');
+    });
+
+    it('colours a cluster badge by the critical CVE its count holds, not by the carried lines', async () => {
+      // A critical CVE carried by a host of a member VM is listed, not counted: the badge stays high.
+      renderAt('/it/assets/asset-1/operations', {
+        ...REACH,
+        rows: [],
+        indirect: [{ ...REACH.rows[0], open: { ...OPEN, critical: 1 } }],
+        totals: { open: 0, severe: 0, exploited_severe: 0 },
+        member_totals: { open: 4, severe: 2, exploited_severe: 0, critical: 0 },
+      });
+      const badge = await screen.findByTestId('vulnerability-severe-badge');
+      expect(badge.querySelector('[data-severity="high"]')).not.toBeNull();
+      expect(badge.querySelector('[data-severity="critical"]')).toBeNull();
+    });
+
+    it('colours a cluster badge critical when its count holds a critical CVE', async () => {
+      renderAt('/it/assets/asset-1/operations', {
+        ...REACH,
+        rows: [],
+        indirect: [],
+        totals: { open: 0, severe: 0, exploited_severe: 0 },
+        member_totals: { open: 4, severe: 2, exploited_severe: 0, critical: 1 },
+      });
+      const badge = await screen.findByTestId('vulnerability-severe-badge');
+      expect(badge.querySelector('[data-severity="critical"]')).not.toBeNull();
     });
 
     it('links the section count to the Vulnerabilities page filtered on the asset', async () => {

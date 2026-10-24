@@ -119,7 +119,7 @@ Cliquez sur un nœud serveur ou cluster pour mettre en évidence ses connexions 
 
 - **Type de serveur**, **Site du serveur**, **Système d'exploitation**, **Segment réseau**, **Adresse IP**
 - **Applications assignées** : Apps s'exécutant sur ce serveur, regroupées par environnement. Cliquez sur un nom d'app pour l'ouvrir.
-- Bouton **Modifier le serveur** ou **Voir le cluster** pour ouvrir l'espace de travail
+- Bouton **Modifier le serveur** ou **Voir le cluster** pour ouvrir l'espace de travail. **Voir le cluster** ouvre le cluster sur son onglet **Dépendances**, où se gèrent ses membres
 
 Cliquez sur un nœud entité pour voir son type et son environnement.
 

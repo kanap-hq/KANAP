@@ -1,10 +1,16 @@
 import { TechnologyCpeEvents } from '../../technologies/technology-cpe-events';
-import { BadRequestException, Injectable, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { AssetClusterMember } from '../asset-cluster-member.entity';
 import { AuditService } from '../../audit/audit.service';
+import {
+  assertClusterMemberCandidates,
+  clusterOsWithMembersRefusal,
+  clusterSwitchRefusals,
+  lockClusterForMembers,
+} from '../asset-rules';
 import { LinkSource } from '../../common/link-provenance';
 import { operatingSystemLabelSql } from '../../technologies/operating-system-codes';
 import { OperatingSystemService } from '../../technologies/operating-system.service';
@@ -336,7 +342,11 @@ export class AssetsCrudService extends AssetsBaseService {
       existing.cluster = this.normalizeNullable((body as any).cluster);
     }
     if (has('is_cluster')) {
-      existing.is_cluster = this.normalizeBooleanFlag((body as any).is_cluster, 'is_cluster');
+      const isCluster = this.normalizeBooleanFlag((body as any).is_cluster, 'is_cluster');
+      if (isCluster !== Boolean(existing.is_cluster)) {
+        await this.assertClusterSwitch(tenant, existing.id, isCluster, opts);
+      }
+      existing.is_cluster = isCluster;
     }
     if (has('status')) {
       existing.status = await this.validation.normalizeLifecycleStatus(
@@ -385,6 +395,22 @@ export class AssetsCrudService extends AssetsBaseService {
       await this.applyOperatingSystem(tenant, saved.id, (body as any).operating_system, userId, opts);
     }
     return this.attachOperatingSystem(saved, tenant, opts);
+  }
+
+  /**
+   * The Cluster switch of an existing asset, under the lock of its row: a cluster with members
+   * stays a cluster, a member of a cluster stays a plain asset (`asset-rules.ts`). The operating
+   * system is left as it is. A new asset is a member of nothing, so `create` needs no check.
+   */
+  private async assertClusterSwitch(tenantId: string, assetId: string, to: boolean, opts?: ServiceOpts) {
+    const mg = this.getManager(opts);
+    const [locked]: Array<{ is_cluster: boolean }> = await mg.query(
+      `SELECT COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+      [tenantId, assetId],
+    );
+    const from = locked?.is_cluster === true;
+    const refusal = (await clusterSwitchRefusals(mg, tenantId, [{ id: assetId, from, to }])).get(assetId);
+    if (refusal) throw refusal;
   }
 
   // =========================================================================
@@ -451,91 +477,87 @@ export class AssetsCrudService extends AssetsBaseService {
     return { items: rows };
   }
 
+  /**
+   * Replace the members of a cluster. Refusals are coded (`errors:<code>`):
+   * `cluster_member_self`, `cluster_member_not_found`, `cluster_member_is_cluster` (`name`), and
+   * `cluster_os_with_members` (`os`) when a cluster that carries an operating system gets members.
+   * With `removeOperatingSystem`, that operating system is removed instead, in the same
+   * transaction as the members (`OperatingSystemService.setOperatingSystem`, its own audit).
+   */
   async replaceClusterMembers(
     clusterId: string,
     assetIds: unknown,
     tenantId: string,
     userId: string | null,
     opts?: ServiceOpts,
+    options?: { removeOperatingSystem?: unknown },
   ) {
     const tenant = this.ensureTenantId(tenantId);
     const mg = this.getManager(opts);
-    const cluster = await this.ensureAssetIsCluster(clusterId, mg, tenant);
-
-    if (cluster.tenant_id && cluster.tenant_id !== tenant) {
-      throw new BadRequestException('Cluster does not belong to this tenant');
+    const removeFlag = options?.removeOperatingSystem;
+    if (removeFlag !== undefined && removeFlag !== null && typeof removeFlag !== 'boolean') {
+      throw new BadRequestException('remove_operating_system must be a boolean');
     }
+    const removeOperatingSystem = removeFlag === true;
+    const cluster = await this.ensureAssetIsCluster(clusterId, mg, tenant);
     if (!Array.isArray(assetIds)) {
       throw new BadRequestException('asset_ids must be an array');
     }
 
-    const assetIdList = assetIds as any[];
     const normalizedIds = Array.from(
       new Set(
-        assetIdList
-          .map((sid) => String(sid || '').trim())
+        (assetIds as unknown[])
+          .map((sid) => String(sid || '').trim().toLowerCase())
           .filter((sid) => sid.length > 0),
       ),
     );
 
-    if (normalizedIds.includes(clusterId)) {
-      throw new BadRequestException('Cluster cannot include itself as a member');
-    }
-
-    const candidates: Array<{ id: string; tenant_id: string; is_cluster: boolean }> =
-      normalizedIds.length > 0
-        ? await mg.query(
-            `SELECT id, tenant_id, is_cluster FROM assets WHERE id = ANY($1::uuid[])`,
-            [normalizedIds],
-          )
-        : [];
-
-    if (candidates.length !== normalizedIds.length) {
-      throw new BadRequestException('One or more assets were not found');
-    }
-
-    const otherTenant = candidates.find((c) => String(c.tenant_id || '') !== String(cluster.tenant_id || tenant));
-    if (otherTenant) {
-      throw new BadRequestException('All members must belong to the same tenant as the cluster');
-    }
-
-    const clusterCandidates = candidates.filter((c) => c.is_cluster);
-    if (clusterCandidates.length > 0) {
-      throw new BadRequestException('Cluster members must be individual assets (not clusters)');
-    }
-
-    const existing = await this.getClusterMemberRepo(mg).find({ where: { cluster_id: clusterId } as any });
-    const existingMembers = existing.map((row) => row.asset_id);
+    await assertClusterMemberCandidates(mg, tenant, cluster.id, normalizedIds);
 
     await mg.transaction(async (trx) => {
+      // The cluster row first: a concurrent switch or operating-system write waits for this one.
+      // The row read before the transaction may have changed meanwhile: decide on the locked one.
+      const locked = await lockClusterForMembers(trx, tenant, clusterId);
+      if (!locked) throw new NotFoundException('Asset not found');
+      if (!locked.isCluster) throw new BadRequestException('Asset is not a cluster');
+      if (normalizedIds.length > 0) {
+        const os = locked.os;
+        if (os && !removeOperatingSystem) throw clusterOsWithMembersRefusal(os);
+        if (os) {
+          await this.operatingSystems.setOperatingSystem(trx, tenant, clusterId, null, this.osSource(opts), userId);
+        }
+      }
+
       const repo = this.getClusterMemberRepo(trx);
-      await repo.delete({ cluster_id: clusterId } as any);
+      const existing = await repo.find({ where: { tenant_id: tenant, cluster_id: clusterId } as any });
+      const existingMembers = existing.map((row) => row.asset_id);
+      await repo.delete({ tenant_id: tenant, cluster_id: clusterId } as any);
       if (normalizedIds.length > 0) {
         const payload = normalizedIds.map((sid) =>
           repo.create({
             cluster_id: clusterId,
             asset_id: sid,
-            tenant_id: cluster.tenant_id,
+            tenant_id: tenant,
             created_at: new Date(),
             updated_at: new Date(),
           }),
         );
         await repo.save(payload);
       }
-      await this.getRepo(trx).update({ id: clusterId } as any, { updated_at: new Date() } as any);
-    });
+      await this.getRepo(trx).update({ id: clusterId, tenant_id: tenant } as any, { updated_at: new Date() } as any);
 
-    await this.audit.log(
-      {
-        table: 'asset_cluster_members',
-        recordId: clusterId,
-        action: 'update',
-        before: { members: existingMembers },
-        after: { members: normalizedIds },
-        userId,
-      },
-      { manager: mg },
-    );
+      await this.audit.log(
+        {
+          table: 'asset_cluster_members',
+          recordId: clusterId,
+          action: 'update',
+          before: { members: existingMembers },
+          after: { members: normalizedIds },
+          userId,
+        },
+        { manager: trx },
+      );
+    });
 
     return this.listClusterMembers(clusterId, { manager: mg, tenantId: tenant });
   }

@@ -119,7 +119,7 @@ Click a server or cluster node to highlight its connections and open a detail pa
 
 - **Server type**, **Server location**, **Operating system**, **Network segment**, **IP address**
 - **Assigned applications**: Apps running on this server, grouped by environment. Click an app name to open it.
-- **Edit server** or **View cluster** button to open the workspace
+- **Edit server** or **View cluster** button to open the workspace. **View cluster** opens the cluster on its **Dependencies** tab, where its members are managed
 
 Click an entity node to see its type and environment.
 

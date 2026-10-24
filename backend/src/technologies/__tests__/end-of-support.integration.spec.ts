@@ -6,7 +6,7 @@ import { DEFAULT_HOSTING_TYPES } from '../../it-ops-settings/it-ops-settings.ser
 import { EndOfSupportService } from '../reports/end-of-support.service';
 import { versionSupportSql } from '../reports/version-support';
 import { TechnologyReachService } from '../technology-reach.service';
-import { application, asset, assign, contains, installed, one, technology, version } from './technologies.fixtures';
+import { application, asset, assign, contains, installed, member, one, technology, version } from './technologies.fixtures';
 
 // The "End of support" report (lot T4) against a real database, in transactions rolled back at the
 // end: each kind of deadline and its state, what it touches, the horizon, the seven gaps, the
@@ -199,9 +199,10 @@ async function testDeadlines() {
     assert.equal(sql16.date, g.lastMonth);
     assert.equal(sql16.item_reference, 'TEC-1');
     assert.equal(sql16.version, '2016');
-    // The server it is installed on, the VM that server contains (deduction), the application hosted there.
-    assert.deepEqual(sql16.servers.map((s) => s.id).sort(), [g.assets.s1, g.assets.vmHosted].sort());
-    assert.equal(sql16.server_count, 2);
+    // The server it is installed on, not the VM that server contains (decision of 2026-10-24); the
+    // applications still come through the graph.
+    assert.deepEqual(sql16.servers.map((s) => s.id).sort(), [g.assets.s1]);
+    assert.equal(sql16.server_count, 1);
     assert.deepEqual(sql16.applications!.map((a) => a.id).sort(), [g.apps.dbApp, g.apps.erp].sort());
     assert.equal(sql16.application_count, 2);
 
@@ -215,7 +216,9 @@ async function testDeadlines() {
     assert.equal(os.item_name, 'Old OS');
     assert.equal(os.item_reference, 'TEC-9');
     assert.equal(os.version, '1');
-    assert.deepEqual(os.servers.map((s) => s.id).sort(), [g.assets.s3, g.assets.vmOnOs].sort(), 'the server and the VM it contains');
+    assert.deepEqual(os.servers.map((s) => s.id), [g.assets.s3], 'the server it is installed on, not the VM it contains');
+    assert.equal(os.server_count, 1);
+    // The applications of the VM it contains are still touched.
     assert.deepEqual(os.applications!.map((a) => a.id).sort(), [g.apps.portal, g.apps.osVmApp].sort());
 
     const crm = byKey.get(`application:${g.apps.crm}`)!;
@@ -226,13 +229,49 @@ async function testDeadlines() {
     assert.equal(byKey.get(`hardware:end_of_life:${g.assets.s4}`)!.state, 'upcoming');
     assert.equal(byKey.get(`hardware:support_contract:${g.assets.s4}`)!.state, 'out_of_support');
     const hardware = byKey.get(`hardware:end_of_life:${g.assets.s4}`)!;
-    assert.deepEqual(hardware.servers.map((s) => s.id).sort(), [g.assets.s4, g.assets.vmOnHw].sort());
+    // What it carries; the piece of hardware is not one of its own servers (K2-7).
+    assert.deepEqual(hardware.servers.map((s) => s.id), [g.assets.vmOnHw]);
+    assert.equal(hardware.server_count, 1);
     assert.deepEqual(hardware.applications!.map((a) => a.id), [g.apps.hwVmApp]);
     assert.equal(hardware.item_name, `SRV-HW eos-deadlines`);
 
     // Sorted by date: the oldest end first.
     const dates = report.items.map((r) => r.date);
     assert.deepEqual(dates, [...dates].sort());
+  });
+}
+
+/**
+ * The servers of a deadline as the list counts them (clusters pass, Q3 amended 2026-10-24): a
+ * version installed on two hosts of a cluster and carried to a VM the cluster contains has two
+ * servers, the hosts; neither the VM nor the cluster; a retired member counts nowhere. A host at its
+ * end of life touches the VM, not the cluster.
+ */
+async function testClusterServers() {
+  await inRolledBackTransaction(async (runner) => {
+    const g: Ctx = await seed(runner, 'eos-cluster');
+    const a = (name: string, cluster = false) => asset(runner, g.tenantId, `${name} eos-cluster`, cluster);
+    const h1 = await a('AGT-H1');
+    const h2 = await a('AGT-H2');
+    const h3 = await a('AGT-H3');
+    const cluster = await a('AGT-CL', true);
+    const vm = await a('AGT-VM');
+    for (const host of [h1, h2, h3]) await member(runner, g.tenantId, cluster, host);
+    await contains(runner, g.tenantId, cluster, vm);
+    const agent = await technology(runner, g.tenantId, 11, 'Agent', 'other');
+    const v1 = await version(runner, g.tenantId, agent, '1.0', g.lastMonth);
+    for (const host of [h1, h2, h3]) await installed(runner, g.tenantId, host, agent, v1);
+    await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [g.tenantId, h3]);
+    await runner.query(`UPDATE assets SET kind = 'physical_server', end_of_life_date = $3 WHERE tenant_id = $1 AND id = $2`, [g.tenantId, h1, g.soon]);
+
+    const report = await service().deadlines({}, { manager: runner.manager, tenantId: g.tenantId }, ALL);
+    const byKey = new Map(report.items.map((r) => [r.key, r]));
+    const row = byKey.get(`technology:${v1}`)!;
+    assert.deepEqual(row.servers.map((s) => s.id).sort(), [h1, h2].sort());
+    assert.equal(row.server_count, 2);
+    const hardware = byKey.get(`hardware:end_of_life:${h1}`)!;
+    assert.deepEqual(hardware.servers.map((s) => s.id), [vm], 'the VM of its cluster, neither the cluster nor itself');
+    assert.equal(hardware.server_count, 1);
   });
 }
 
@@ -332,7 +371,7 @@ async function testBusinessContributorScope() {
     assert.deepEqual(byKey.get(`operating_system:${g.versions.oldOs}`)!.applications!.map((a) => a.id), [g.apps.portal], 'only its own application in the columns');
     assert.deepEqual(byKey.get(`technology:${g.versions.sql2016}`)!.applications, []);
     assert.equal(byKey.get(`technology:${g.versions.sql2016}`)!.application_count, 0);
-    assert.equal(byKey.get(`technology:${g.versions.sql2016}`)!.server_count, 2, 'servers stay');
+    assert.equal(byKey.get(`technology:${g.versions.sql2016}`)!.server_count, 1, 'servers stay');
     const gaps = await service().gaps(opts, scope);
     assert.ok(!gaps.items.some((r) => r.subject_type === 'application'), 'no gap on an application outside the scope');
     assert.ok(gaps.items.some((r) => r.gap === 'vm_without_host'));
@@ -356,6 +395,7 @@ async function testTenantIsolation() {
 runSpecs('end-of-support.integration.spec', [
   ['support state', testSupportState],
   ['deadlines', testDeadlines],
+  ['servers on a cluster', testClusterServers],
   ['horizon and type', testHorizonAndType],
   ['gaps', testGaps],
   ['without the applications right', testWithoutApplications],

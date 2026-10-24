@@ -92,8 +92,9 @@ export class AssetsService {
     tenantId: string,
     userId: string | null,
     opts?: ServiceOpts,
+    options?: { removeOperatingSystem?: unknown },
   ) {
-    return this.crudService.replaceClusterMembers(clusterId, assetIds, tenantId, userId, opts);
+    return this.crudService.replaceClusterMembers(clusterId, assetIds, tenantId, userId, opts, options);
   }
 
   // =========================================================================

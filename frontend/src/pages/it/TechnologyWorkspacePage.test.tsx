@@ -173,7 +173,7 @@ describe('TechnologyWorkspacePage', () => {
     expect(screen.queryByText(/Grace Hopper/)).toBeNull();
   });
 
-  it('counts the distinct servers in service and the distinct applications in the tab badges', async () => {
+  it('counts the distinct servers in service it is installed on and the distinct applications in the tab badges', async () => {
     get.mockImplementation(async (url: string) => {
       if (url === '/technologies/TEC-3') return { data: DETAIL };
       if (url === '/technologies/tech-1/assets') {
@@ -192,7 +192,8 @@ describe('TechnologyWorkspacePage', () => {
     });
     renderPage();
     await screen.findByRole('heading', { name: 'Microsoft SQL Server' });
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'workspace.technology.tabs.servers' }).getAttribute('data-badge')).toBe('2'));
+    // a1 once; neither the retired a2 nor the carried a3.
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'workspace.technology.tabs.servers' }).getAttribute('data-badge')).toBe('1'));
     await waitFor(() => expect(screen.getByRole('tab', { name: 'workspace.technology.tabs.applications' }).getAttribute('data-badge')).toBe('2'));
     // One read per tab.
     expect(get.mock.calls.filter(([url]) => url === '/technologies/tech-1/assets')).toHaveLength(1);

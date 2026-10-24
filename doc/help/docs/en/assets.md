@@ -36,7 +36,7 @@ The asset list gives you a filterable, sortable overview of every asset in your 
 | **Name** | Asset name (click to open workspace) |
 | **Vulnerabilities to review** | The vulnerabilities still to review on the technologies recorded on the asset, then, in orange, how many are critical or high (`5 · 2`). Empty for a retired asset or when none is left. Click it to open the [Vulnerabilities](vulnerabilities.md) page filtered on the asset. Present when vulnerabilities are followed |
 | **Asset Type** | The asset's type (e.g., Virtual Machine, Physical Server) |
-| **Cluster** | Cluster membership, or a "Cluster" badge if this asset is itself a cluster |
+| **Cluster** | The clusters the asset is a member of. A cluster shows an icon instead ("Cluster" in its tooltip). Empty for an asset in no cluster |
 | **Environment** | Prod, Pre-prod, QA, Test, Dev, Sandbox, with a coloured dot |
 | **Location** | Where the asset is hosted |
 | **Hosting** | Hosting type (derived from location) |
@@ -61,7 +61,7 @@ Most columns support checkbox set filters for quick multi-select filtering. Filt
 | Column | Notes |
 |--------|-------|
 | Asset Type | Filter by one or more asset types |
-| Cluster | Includes "(No cluster)" for standalone assets |
+| Cluster | The cluster names, then **(Is a cluster)** for the clusters themselves and **(No cluster)** for the assets in no cluster |
 | Environment | Prod, Pre-prod, QA, Test, Dev, Sandbox |
 | Location | Includes "(No location)" for unassigned assets |
 | Sub-location | Includes "(No sub-location)" for assets without one |
@@ -77,9 +77,9 @@ Sorting on **Vulnerabilities to review** orders the assets by their critical or 
 **Tip**: Combine filters across columns to narrow results. For example, filter by Environment = "Prod" and Lifecycle = "Active" to see only active production assets.
 
 **Actions**:
-- **Add asset**: Create a new asset (`infrastructure:member`)
+- **Add asset**: opens a menu (`infrastructure:member`). **Add asset** creates an asset; **Add cluster** creates one with the **Cluster** switch already on
 - **Import CSV** / **Export CSV**: Bulk operations (`infrastructure:admin`)
-- **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`). An asset still assigned to applications or linked to connections cannot be deleted: remove it from them first. Before anything is deleted, the confirmation lists the assets kept, with the reason
+- **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`). An asset still assigned to applications or linked to connections cannot be deleted: remove it from them first. Before anything is deleted, the confirmation lists the assets kept, with the reason, and what the others take with them (see [Deleting a cluster or a member](#deleting-a-cluster-or-a-member))
 
 ---
 
@@ -90,9 +90,20 @@ Assets can be organized into clusters:
 - **Regular asset**: An individual infrastructure instance
 - **Cluster**: A group of assets acting as a single logical unit
 
-To mark an asset as a cluster, turn on the **Cluster** switch in its properties drawer. Cluster assets can be endpoints in connections. Applications are assigned to the member hosts.
+To create a cluster, choose **Add cluster** in the **Add asset** menu, or turn on the **Cluster** switch in the properties drawer of an asset. A cluster can be an endpoint in connections. Applications are assigned to the member hosts.
 
-Cluster members are managed from the **Dependencies** tab of the cluster's workspace via **Edit members**. See [Dependencies](#dependencies).
+Members are managed from the **Dependencies** tab of the cluster. See [Dependencies](#dependencies). The rules:
+
+- A member is a plain asset. A cluster cannot be a member, and an asset cannot be a member of itself.
+- A cluster that has members cannot be turned back into a plain asset: remove its members first.
+- A member of a cluster cannot become a cluster: take it out of its clusters first.
+- A cluster that has members has no operating system: each member has its own. A cluster without members can keep one, for example a group of cloud instances whose servers you do not record. See [Operating system](#operating-system).
+
+Installations upgraded from an earlier version keep their clusters. Memberships that break these rules were removed during the upgrade. A cluster name typed in the former text field became a real membership when it named exactly one cluster.
+
+### Deleting a cluster or a member { #deleting-a-cluster-or-a-member }
+
+Before you delete an asset, the confirmation says what goes with it: the clusters it leaves, the members that lose their cluster, and the relations with other assets that are removed. Confirm with **Delete anyway**. The [Audit log](admin.md#audit-log) records these losses: on each cluster it leaves and each asset that held a relation to it, and, for its own members and relations, in the entry of its deletion.
 
 ---
 
@@ -119,7 +130,7 @@ The drawer shows the asset's identity card on every tab. Edits save automaticall
 
 **Type and zone**:
 - **Asset type** (required)
-- **Cluster**: turn it on to mark the asset as a cluster. The change saves at once. A cluster has no operating system of its own, so turning the switch on removes the asset's operating system. See [Clusters](#clusters)
+- **Cluster**: turn it on to mark the asset as a cluster. The change saves at once and removes nothing. It is refused for a cluster that has members, and for a member of a cluster. See [Clusters](#clusters)
 - **Environment**: Prod, Pre-prod, QA, Test, Dev, Sandbox
 - **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller and the hypervisor that runs it. Choose from the zones configured in **IT Landscape > Settings**. The asset then appears in that zone on the [Administration zones](administration-view.md) page
 
@@ -182,7 +193,8 @@ On a cluster, a notice above the table asks you to assign the member hosts inste
 - **Operating system**: the server's operating system is one of its technologies, of the **Operating system** family. It comes first in the list, with "Operating system" after its name. See [Operating system](#operating-system) below.
 - **Version**: shown in orange when support ends within 12 months or only extended support remains, and in red once every end date has passed. Hover it to see the end of standard and extended support.
 - A technology installed on this server can be removed with the cross at the end of its row.
-- A technology installed on the server or cluster this one runs in shows that server under **Via**. It follows the installation and is removed there.
+- On a cluster, a technology installed on its members shows once per version, with the members that carry it under **Via**. Such a row follows the installation and is removed there.
+- A technology that only comes from the host this server runs in, such as the ESXi of its host, is the underlying platform. It sits under a closed line at the end of the table, **Underlying platform (n)**, with the host under **Via**. Click the line to show it. These rows are not counted in the section.
 - **Add** (`infrastructure:member`) opens a search for a technology, then the version picker: choose a version, **Version unknown**, or type a new label and pick **Add version "…"** to create it. Each change saves at once.
 - **Change a version** (`infrastructure:member`): click the version of an installed technology, or the pencil at the end of its row. The same version picker opens.
 
@@ -195,7 +207,8 @@ A server has one operating system: a technology of the **Operating system** fami
 - **Add** it like any technology. When the server has no operating system yet, the first technology of that family you add becomes it.
 - **Remove** it with its cross. If another technology of the family stays on the server, that one becomes the operating system.
 - **Change the version** by clicking it, as for any technology.
-- A **cluster** has no operating system of its own: each member has its own. Turning on the **Cluster** switch of an asset removes its operating system.
+- A **cluster** that has members has no operating system: each member has its own. A cluster without members can carry one, set by an import or the assistant. On the screen, a technology of that family added to a cluster stays a plain technology.
+- Adding the first members to a cluster that has an operating system asks **Remove the operating system?**. **Remove and save** removes it and saves the members. Cancel and nothing is saved.
 
 To make VMware ESXi or FortiOS the operating system of a host, put that technology in the **Operating system** family (its **Family** field, on the technology).
 
@@ -213,7 +226,9 @@ When vulnerabilities are followed, the last section of the tab lists the vulnera
 
 **See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the asset and the technology. When nothing is left to review, the section says so in one line. A retired asset has no section.
 
-**Through another asset** lists apart the technologies the asset gets from another one, such as the host it runs on or its cluster, with that asset in the **Asset** column. These lines are not counted, in the badge or anywhere else: a vulnerability counts on the asset where the technology is recorded. Their **See** opens the page on that other asset. See [What KANAP counts](vulnerabilities.md#what-kanap-counts).
+On a **cluster**, **On its members** lists apart the technologies of its members, one line per technology and version, with the members that carry it in the **Asset** column. A cluster counts the vulnerabilities of its members in service with its own: the count of the section, the header badge (its tooltip says "members included") and the column of the list. The **See** of a line opens the page on the member that carries it.
+
+What only comes from the host the asset or its members run in, such as the ESXi of the host of a virtual machine, is the underlying platform. It sits under a closed line **Underlying platform (n)**, which a click opens. It is not counted in the section, the badge or the list column: a vulnerability counts on the asset where the technology is recorded. Its **See** opens the page on that host. See [What KANAP counts](vulnerabilities.md#what-kanap-counts).
 
 ---
 
@@ -269,15 +284,15 @@ The Dependencies tab shows how the asset stands among the other assets: what sto
 **If this server goes down**: the tab opens on what stops with this asset. A summary line counts the applications, assets, clusters and business processes affected, then one table per kind:
 
 - **Applications**: those with a deployment in service on a fallen asset, with their environments, criticality and the assets they run on (**Via**).
-- **Assets**: the assets it contains, down to three levels, and the assets that depend on it. **Via** shows the path.
-- **Clusters**: clusters with a fallen member. **Down** when no member stands, otherwise **Degraded** with the number of members down. The applications of a cluster that is down fall with it.
+- **Assets**: the assets it contains, down to three levels, and the assets that depend on it. A cluster that goes down takes all its members in service, and what depends on them. **Via** shows the path.
+- **Clusters**: clusters with a fallen member. **Degraded** while a member stands, with the number of members down: its applications keep running. **Down** when no member stands: its applications and the assets it contains, such as its virtual machines, fall with it.
 - **Business processes**: the processes of the affected applications.
 
 Retired assets stop the chain: nothing falls through them. Each table shows its first 50 rows and counts the rest. The applications and the processes need the right to read them. The section updates as soon as you add or remove a relation between assets, change the members of a cluster or turn the **Cluster** switch on or off.
 
 **Cluster**:
 
-- On a **cluster**, a note recalls that a cluster can be an endpoint in connections and that applications are assigned to its member hosts. The **Members** section lists the member assets (Name, Environment, Status, Operating system). Click a name to open that asset. Click **Edit members** to add or remove members through a search dialog.
+- On a **cluster**, the **Members** section lists the member assets (Name, Environment, Status, Operating system). Click a name to open that asset. **Add members** (on a cluster without members) or **Edit members** opens a search dialog. It offers plain assets only, never a cluster or the cluster itself.
 - On **any other asset**, the **Cluster membership** section shows the clusters this asset belongs to, with their environment and status. Click a name to open the cluster.
 
 **Relations between assets**, one table per direction:
@@ -383,7 +398,7 @@ From the Assets list:
 | `admin_zone` | Administration zone | No | Accepts code or label from Settings |
 | `aliases` | DNS aliases | No | Comma-separated list |
 | `operating_system` | Operating system | No | The technology name, with its version (`Windows Server 2019`). See below |
-| `cluster` | Cluster membership | No | Name of parent cluster |
+| `cluster` | Cluster Membership | No | The names of the clusters the asset is a member of, separated by commas. See below |
 | `notes` | Free-form notes | No | |
 
 **IP Address fields** (up to 4 addresses per asset):
@@ -413,6 +428,14 @@ The system automatically normalizes values during import, so `Virtual Machine`, 
 
 **Operating system**: the `operating_system` column holds the technology name followed by its version, as the export writes it (`Windows Server 2019`, `Ubuntu 24.04 LTS`). On import, KANAP looks for the technology among yours, then in the catalog, and records the version. A technology or a version it does not find is created, so check the spelling first. The value becomes the server's operating system.
 
+**Cluster Membership**: the `cluster` column names the clusters of the asset, separated by commas (`ESX-PROD, SQL-CLUSTER`). Case does not matter. The export writes the clusters the asset is a member of. On import:
+
+- With `Enrich`, the asset joins the clusters named in the cell and stays in its other clusters.
+- With `Replace`, the asset also leaves the clusters its cell does not name.
+- An empty cell changes nothing, in both modes.
+
+**Preflight** reports an error on the row when a name matches no asset, matches several clusters, or names an asset that is not a cluster. It also refuses a row that names itself, a row that is or becomes a cluster, and a cluster that has an operating system: the import never removes one. The `is_cluster` and `operating_system` columns follow the rules of [Clusters](#clusters).
+
 ### Matching and updates
 
 Assets are matched by **name** (case-insensitive). When a match is found:
@@ -431,7 +454,6 @@ Some fields are computed and cannot be imported:
 ### Limitations
 
 - **Maximum 4 IP addresses**: Assets support up to 4 IP address entries via CSV
-- **Cluster assignment by name**: Use the cluster name, not ID, in the `cluster` column
 - **Location required**: Every asset must have a valid location code
 - **Relations not included**: Application assignments, connections, financial links, projects, tasks, and attachments must be managed in the workspace
 

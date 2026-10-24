@@ -23,6 +23,7 @@ export type NetboxNoticeCode =
   | 'reevaluate_next_sync'
   | 'os_not_in_catalog'
   | 'os_ambiguous'
+  | 'os_cluster_with_members'
   | 'domain_not_in_catalog'
   | 'hostname_invalid'
   | 'status_not_mapped'

@@ -166,6 +166,7 @@
     "assets": {
       "title": "Activos",
       "addAsset": "Añadir activo",
+      "addCluster": "Añadir clúster",
       "importCsv": "Importar CSV",
       "exportCsv": "Exportar CSV",
       "exportTitle": "Exportar activos",
@@ -190,6 +191,7 @@
       },
       "filters": {
         "noCluster": "(Sin clúster)",
+        "isCluster": "(Es un clúster)",
         "noLocation": "(Sin ubicación)",
         "noSubLocation": "(Sin sub-ubicación)",
         "blank": "(Vacío)"
@@ -683,9 +685,9 @@
           "application": "Ninguna vulnerabilidad por revisar en esta aplicación."
         },
         "indirect": {
-          "title": "A través de otro activo",
-          "hint": "No contabilizadas: estas tecnologías están instaladas en otro activo (un host, un clúster)."
+          "title": "En sus miembros"
         },
+        "platform": "Plataforma subyacente ({{count}})",
         "countLink_one": "Ver la vulnerabilidad por revisar en la página Vulnerabilidades",
         "countLink_other": "Ver las {{count}} vulnerabilidades por revisar en la página Vulnerabilidades"
       },
@@ -694,6 +696,8 @@
         "label_other": "{{count}} graves",
         "hint_one": "{{count}} vulnerabilidad crítica o alta por revisar",
         "hint_other": "{{count}} vulnerabilidades críticas o altas por revisar",
+        "hintMembers_one": "{{count}} vulnerabilidad crítica o alta por revisar, miembros incluidos",
+        "hintMembers_other": "{{count}} vulnerabilidades críticas o altas por revisar, miembros incluidos",
         "exploited_one": "{{count}} conocida como explotada",
         "exploited_other": "{{count}} conocidas como explotadas"
       },
@@ -788,7 +792,6 @@
       "noApplications": "No hay aplicaciones asignadas.",
       "viewCluster": "Ver clúster",
       "editServer": "Editar servidor",
-      "clusterHint": "Nodo de clúster: gestione los miembros en el espacio Servidores.",
       "purpose": "Propósito:",
       "typicalPorts": "Puertos habituales:",
       "topology": "Topología:",
@@ -1450,6 +1453,7 @@
         "save_failed": "No se ha podido guardar este objeto. Los detalles están en el registro del servidor.",
         "validation_failed": "Este objeto se ha rechazado:",
         "os_ambiguous": "El sistema operativo «{{value}}» coincide con varias entradas de su catálogo, así que el valor no se ha cambiado.",
+        "os_cluster_with_members": "Este activo es un clúster con miembros, así que el sistema operativo «{{value}}» se ha dejado fuera.",
         "status_not_mapped": "El estado de Netbox «{{value}}» no tiene equivalente en KANAP, así que el ciclo de vida no se ha cambiado.",
         "lifecycle_not_in_catalog": "El ciclo de vida «{{value}}» no está en su catálogo, así que el valor no se ha cambiado.",
         "no_ip_address_type": "No hay ningún tipo de dirección IP definido en los ajustes de TI, así que la dirección no se ha importado.",
@@ -2032,7 +2036,6 @@
         "assetType": "Tipo de activo",
         "startTyping": "Comience a escribir para buscar",
         "isCluster": "Este servidor representa un clúster",
-        "clusterInfo": "Los activos de clúster pueden ser endpoints en conexiones. Asigne las instancias de aplicación a los hosts miembros.",
         "location": "Ubicación",
         "subLocation": "Sub-ubicación",
         "selectSubLocation": "Seleccione sub-ubicación",
@@ -2058,8 +2061,8 @@
         "environment": "Entorno",
         "members": "Miembros",
         "editMembers": "Editar miembros",
+        "addMembers": "Añadir miembros",
         "loadingMembers": "Cargando miembros…",
-        "noMembers": "Aún no se han añadido miembros.",
         "clusterMembership": "Pertenencia al clúster",
         "loadingClusters": "Cargando clústeres…",
         "notInCluster": "No pertenece a ningún clúster.",
@@ -2099,6 +2102,7 @@
         "add": "Añadir",
         "search": "Buscar tecnologías",
         "empty": "Ninguna tecnología en este servidor.",
+        "platform": "Plataforma subyacente ({{count}})",
         "operatingSystem": "Sistema operativo",
         "edit": "Editar",
         "editNamed": "Editar {{name}}",
@@ -2112,7 +2116,7 @@
           "family": "Familia",
           "version": "Versión",
           "via": "Vía",
-          "viaHint": "Servidor en el que está instalada la tecnología, en una fila deducida"
+          "viaHint": "Activo en el que está instalada la tecnología, en una fila deducida"
         }
       },
       "assignments": {
@@ -2152,11 +2156,12 @@
       },
       "editMembersDialog": {
         "title": "Editar miembros",
-        "memberServers": "Servidores miembros",
-        "searchServers": "Buscar servidores",
-        "membersHint": "Los miembros deben ser servidores que no sean clúster.",
-        "clusterOption": "Clúster: {{name}}",
-        "clusterTag": "clúster"
+        "memberServers": "Miembros",
+        "searchServers": "Buscar miembros",
+        "narrowSearch": "Afine la búsqueda",
+        "removeOsTitle": "¿Quitar el sistema operativo?",
+        "removeOsMessage": "Un clúster con miembros no tiene sistema operativo: se quitará {{os}}.",
+        "removeOsConfirm": "Quitar y guardar"
       },
       "newAsset": "Nuevo activo",
       "untitled": "Activo sin nombre",
@@ -2170,6 +2175,11 @@
         "goLive": "Puesta en marcha",
         "editGoLive": "Editar la puesta en marcha"
       },
+      "clusterSwitch": {
+        "hint": "Un clúster agrupa servidores miembros.",
+        "membersHint": "Servidores que forman este clúster."
+      },
+      "readOnlyRole": "Su rol no permite modificar.",
       "hardware": {
         "serialNumber": "Número de serie",
         "serialNumberPlaceholder": "p. ej., SN-000123",
@@ -2185,9 +2195,9 @@
         "notesPlaceholder": "p. ej., fuente de alimentación sustituida en garantía"
       },
       "impact": {
-        "title": "Si este servidor cae",
-        "empty": "Ningún otro elemento depende de este servidor.",
-        "emptyInfrastructure": "Ninguna otra infraestructura depende de este servidor.",
+        "title": "Si este activo cae",
+        "empty": "Ningún otro elemento depende de este activo.",
+        "emptyInfrastructure": "Ninguna otra infraestructura depende de este activo.",
         "loadFailed": "No se pudo cargar el impacto.",
         "more_one": "y {{count}} más",
         "more_other": "y {{count}} más",
@@ -2220,19 +2230,23 @@
         },
         "via": {
           "contains": "En {{name}}",
-          "containsThisServer": "En este servidor",
+          "containsThisServer": "En este activo",
           "dependsOn": "Depende de {{name}}",
-          "dependsOnThisServer": "Depende de este servidor",
+          "dependsOnThisServer": "Depende de este activo",
+          "member": "Miembro de {{name}}",
+          "memberThisServer": "Miembro de este clúster",
           "on": "En {{name}}",
-          "onThisServer": "En este servidor",
-          "onThisServerAnd": "En este servidor, {{name}}",
-          "thisServer": "Este servidor",
-          "thisServerAnd": "Este servidor, {{name}}"
+          "onThisServer": "En este activo",
+          "onThisServerAnd": "En este activo, {{name}}",
+          "thisServer": "Este activo",
+          "thisServerAnd": "Este activo, {{name}}"
         },
         "state": {
           "down": "Caído",
           "degraded_one": "Degradado, {{count}} miembro caído de {{members}}",
-          "degraded_other": "Degradado, {{count}} miembros caídos de {{members}}"
+          "degraded_other": "Degradado, {{count}} miembros caídos de {{members}}",
+          "degradedHint_one": "{{count}} miembro de {{members}} sigue en pie",
+          "degradedHint_other": "{{count}} miembros de {{members}} siguen en pie"
         }
       },
       "support": {
@@ -2262,7 +2276,8 @@
           "containedBy": "No está contenido en ningún activo.",
           "dependsOn": "No depende de ningún activo.",
           "dependedOnBy": "Ningún activo depende de este."
-        }
+        },
+        "containsHint": "Activos alojados en este, por ejemplo VM."
       }
     },
     "technology": {
@@ -2424,6 +2439,7 @@
         "add": "Añadir",
         "search": "Buscar servidores",
         "empty": "Ningún servidor lleva esta tecnología.",
+        "hosted": "Activos alojados ({{count}})",
         "total": "Total",
         "serverCount_one": "{{count}} servidor",
         "serverCount_other": "{{count}} servidores",

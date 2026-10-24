@@ -319,7 +319,7 @@ function ControlsCell({ data }: ICellRendererParams<AdministrationAssetRow>) {
             <>
               {peers.items.map((peer, index) => (
                 <Box key={index}>
-                  {t(`pages.administrationView.trustPeer.${peer.relation}`, { asset: peer.reference ?? peer.name, name: peer.name, zone: zoneName(peer.zone) })}
+                  {t(`pages.administrationView.trustPeer.${peer.relation}`, { asset: peer.reference ? `${peer.reference} ${peer.name}` : peer.name, zone: zoneName(peer.zone) })}
                 </Box>
               ))}
               {peers.total > peers.items.length && <Box>{t('pages.administrationView.moreItems', { count: peers.total - peers.items.length })}</Box>}
