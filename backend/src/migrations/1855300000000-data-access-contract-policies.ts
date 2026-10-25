@@ -498,6 +498,7 @@ export class DataAccessContractPolicies1855300000000 implements MigrationInterfa
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await createPolicyFunctions(queryRunner);
+    await createContractPlacementTrigger(queryRunner);
 
     await queryRunner.query(`SET LOCAL lock_timeout = '5s'`);
     await queryRunner.query(`SELECT data_access_sync_policies()`);
@@ -519,6 +520,9 @@ export class DataAccessContractPolicies1855300000000 implements MigrationInterfa
     // the lot 2 ones.
     await queryRunner.query(`SELECT data_access_sync_policies()`);
     await queryRunner.query(`SET LOCAL lock_timeout = DEFAULT`);
+
+    await queryRunner.query(`DROP TRIGGER IF EXISTS contracts_data_access_placement ON contracts`);
+    await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_contracts_placement()`);
   }
 }
 
@@ -656,6 +660,45 @@ ${[...LINE_HELPER_SIGNATURES, ...ACCESS_DEFINER_SIGNATURES].map((sig) => `      
     $fn$
   `);
   await queryRunner.query(`REVOKE EXECUTE ON FUNCTION data_access_sync_policies() FROM PUBLIC`);
+}
+
+/**
+ * Placement of a contract (spec §6.4, "Placement par participation"): a limited person may modify a
+ * contract it owns, but not move it to a company or a place outside its edit access. The UPDATE
+ * policy does not see the old row, so without this trigger an owner would set any company on the
+ * contract while keeping the participation. SECURITY INVOKER: it reads the settings of the
+ * transaction. Outside mode limited it does nothing.
+ */
+async function createContractPlacementTrigger(queryRunner: QueryRunner): Promise<void> {
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_contracts_placement()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    SECURITY INVOKER
+    SET search_path = public, pg_temp
+    AS $fn$
+    BEGIN
+      IF NULLIF(current_setting('app.da_mode', true), '') IS DISTINCT FROM 'limited' THEN
+        RETURN NEW;
+      END IF;
+      IF NEW.company_id IS NOT DISTINCT FROM OLD.company_id
+         AND NEW.cost_center_id IS NOT DISTINCT FROM OLD.cost_center_id THEN
+        RETURN NEW;
+      END IF;
+      IF NOT data_access_placable_contract(NEW.company_id, NEW.cost_center_id) THEN
+        RAISE EXCEPTION 'permission denied: this place is outside your data access'
+          USING ERRCODE = '42501';
+      END IF;
+      RETURN NEW;
+    END
+    $fn$
+  `);
+  await queryRunner.query(`DROP TRIGGER IF EXISTS contracts_data_access_placement ON contracts`);
+  await queryRunner.query(`
+    CREATE TRIGGER contracts_data_access_placement
+    BEFORE UPDATE OF company_id, cost_center_id ON contracts
+    FOR EACH ROW EXECUTE FUNCTION data_access_contracts_placement()
+  `);
 }
 
 /**
