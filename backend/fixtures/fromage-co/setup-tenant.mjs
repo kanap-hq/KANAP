@@ -2024,7 +2024,8 @@ const ASSET_CLUSTERS = {
 /**
  * Each content sits in one container. A container visited here loses its `contains` relations to an
  * asset the map puts in another container: PAR-ESX-01 and PAR-ESX-02 held the VMs of the vSphere
- * cluster in older fixtures, and now contain nothing.
+ * cluster in older fixtures, and now contain nothing; PAR-ESX-05 joins the cluster with no VM of its
+ * own. The cluster contains the VMs, and the two aging hosts keep their isolated server.
  */
 const ASSET_CONTAINS = {
   'PAR-VSPHERE-CL01': [
@@ -2034,9 +2035,20 @@ const ASSET_CONTAINS = {
   ],
   'PAR-ESX-01': [],
   'PAR-ESX-02': [],
+  'PAR-ESX-05': [],
   // The aging hosts, scheduled for the DC refresh.
   'PAR-ESX-03': ['PAR-ETL-01'],
   'PAR-ESX-04': ['PAR-ERP-QA-01'],
+};
+
+/**
+ * The storage each host depends on (`asset_id` the host, `related_asset_id` the array). The two
+ * aging hosts keep local storage: they depend on no array.
+ */
+const ASSET_DEPENDS_ON = {
+  'PAR-ESX-01': ['PAR-SAN-01'],
+  'PAR-ESX-02': ['PAR-SAN-01'],
+  'PAR-ESX-05': ['PAR-SAN-01'],
 };
 
 /** [application, environment, server, role]: the instances of 20-app-instances.csv on their servers. */
@@ -2115,40 +2127,50 @@ const PROCESS_APPLICATIONS = {
 };
 
 async function ensureAssetGraph() {
-  info('Linking assets: clusters and contained VMs');
+  info('Linking assets: clusters, contained VMs and storage dependencies');
   const assets = await getAll('/assets?limit=1000');
   const idOf = (name) => assets.find((item) => item.name === name)?.id ?? '';
   for (const [cluster, members] of Object.entries(ASSET_CLUSTERS)) {
     const clusterId = idOf(cluster);
-    const memberIds = members.map(idOf).filter(Boolean);
-    if (!clusterId || memberIds.length !== members.length) {
+    const memberIds = members.map(idOf);
+    if (!clusterId || memberIds.some((id) => !id)) {
       warn(`Cluster '${cluster}' or one of its members is missing`);
       continue;
     }
-    await apiPost(`/assets/${clusterId}/members`, { asset_ids: memberIds });
+    // The route replaces every membership row and writes an audit entry on each pass: write only
+    // when the set of members differs.
+    const current = new Set(items(await apiGet(`/assets/${clusterId}/members`)).map((item) => item.id));
+    const wanted = new Set(memberIds);
+    if (current.size === wanted.size && [...wanted].every((id) => current.has(id))) continue;
+    await apiPost(`/assets/${clusterId}/members`, { asset_ids: [...wanted] });
   }
   const containerOf = new Map();
   for (const [container, contents] of Object.entries(ASSET_CONTAINS)) {
     for (const name of contents) containerOf.set(idOf(name), container);
   }
   containerOf.delete('');
-  for (const [container, contents] of Object.entries(ASSET_CONTAINS)) {
+  // The cluster comes before its hosts (`ASSET_CONTAINS` order): a host's `contains` is refused once
+  // the cluster holds the VM, and the cluster's write absorbs the host links of older fixtures.
+  const containers = [...new Set([...Object.keys(ASSET_CONTAINS), ...Object.keys(ASSET_DEPENDS_ON)])];
+  for (const container of containers) {
     const containerId = idOf(container);
     if (!containerId) {
       warn(`Asset '${container}' not found`);
       continue;
     }
-    // The relations already there (`outgoing`) are kept, except a `contains` of an asset placed in
-    // another container: the route replaces the whole set.
+    // The relations already there stay, except a `contains` of an asset placed in another container:
+    // the route replaces the whole set.
     const current = (await apiGet(`/assets/${containerId}/relations`))?.outgoing ?? [];
+    const currentKeys = new Set();
     const relations = new Map();
     for (const relation of current) {
       if (!relation?.related_asset_id || !relation?.relation_type) continue;
+      currentKeys.add(`${relation.relation_type}:${relation.related_asset_id}`);
       const placedIn = containerOf.get(relation.related_asset_id);
       if (relation.relation_type === 'contains' && placedIn && placedIn !== container) continue;
       relations.set(`${relation.relation_type}:${relation.related_asset_id}`, relation);
     }
-    for (const name of contents) {
+    for (const name of ASSET_CONTAINS[container] ?? []) {
       const id = idOf(name);
       if (!id) {
         warn(`Asset '${name}' not found`);
@@ -2156,6 +2178,17 @@ async function ensureAssetGraph() {
       }
       relations.set(`contains:${id}`, { related_asset_id: id, relation_type: 'contains' });
     }
+    for (const name of ASSET_DEPENDS_ON[container] ?? []) {
+      const id = idOf(name);
+      if (!id) {
+        warn(`Asset '${name}' not found`);
+        continue;
+      }
+      relations.set(`depends_on:${id}`, { related_asset_id: id, relation_type: 'depends_on' });
+    }
+    // The route replaces every relation and writes an audit entry on each pass: write only when
+    // the set of `type:id` keys differs.
+    if (relations.size === currentKeys.size && [...relations.keys()].every((key) => currentKeys.has(key))) continue;
     await apiPost(`/assets/${containerId}/relations`, {
       relations: [...relations.values()].map((r) => ({ related_asset_id: r.related_asset_id, relation_type: r.relation_type, notes: r.notes ?? undefined })),
     });
