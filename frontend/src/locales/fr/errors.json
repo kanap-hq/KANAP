@@ -161,6 +161,7 @@
   "CONTRACT_HAS_COMPLIANCE_RECORDS": "Ce contrat a {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "INCIDENT_NOT_FOUND": "Cet incident n'existe pas ou vous ne pouvez pas le voir.",
   "INCIDENT_HAS_REGULATORY_RECORDS": "Cet incident a {{usages}} (données personnelles, notification à l'autorité ou parties notifiées). Il est conservé comme preuve d'audit : annulez-le ou clôturez-le plutôt que de le supprimer.",
+  "INCIDENT_CLOSED_OR_CANCELLED": "Cet incident est clôturé ou annulé : il reste au registre.",
   "not_found": "Cet élément n'existe plus. Rechargez la page pour voir la liste à jour.",
   "ASSET_IN_USE_one": "Cet actif est utilisé par {{usages}}. Retirez-le de cet élément avant de le supprimer.",
   "ASSET_IN_USE_other": "Cet actif est utilisé par {{usages}}. Retirez-le de ces éléments avant de le supprimer.",

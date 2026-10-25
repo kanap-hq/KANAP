@@ -161,6 +161,7 @@
   "CONTRACT_HAS_COMPLIANCE_RECORDS": "Dieser Vertrag hat {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
   "INCIDENT_NOT_FOUND": "Dieser Vorfall existiert nicht oder Sie können ihn nicht sehen.",
   "INCIDENT_HAS_REGULATORY_RECORDS": "Dieser Vorfall hat {{usages}} (personenbezogene Daten, Meldung an die Behörde oder benachrichtigte Parteien). Er bleibt als Prüfnachweis erhalten: Brechen Sie ihn ab oder schließen Sie ihn, statt ihn zu löschen.",
+  "INCIDENT_CLOSED_OR_CANCELLED": "Dieser Vorfall ist geschlossen oder abgebrochen: Er bleibt im Register.",
   "not_found": "Dieses Element existiert nicht mehr. Laden Sie die Seite neu, um die aktuelle Liste zu sehen.",
   "ASSET_IN_USE_one": "Dieses Asset wird noch verwendet: {{usages}}. Entfernen Sie es dort, bevor Sie es löschen.",
   "ASSET_IN_USE_other": "Dieses Asset wird noch verwendet: {{usages}}. Entfernen Sie es dort, bevor Sie es löschen.",

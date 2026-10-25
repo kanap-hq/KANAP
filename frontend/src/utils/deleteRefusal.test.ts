@@ -97,6 +97,17 @@ describe('deleteFailureReason', () => {
     }
   });
 
+  it('keeps a closed or cancelled incident in the register, in each language', () => {
+    const refusal = { code: 'INCIDENT_CLOSED_OR_CANCELLED', usages: [] };
+    expect(deleteFailureReason(refusal, i18n.en.t, 'en')).toBe('This incident is closed or cancelled: it stays in the register.');
+    expect(deleteFailureReason(refusal, i18n.fr.t, 'fr')).toBe('Cet incident est clôturé ou annulé : il reste au registre.');
+    expect(deleteFailureReason(refusal, i18n.de.t, 'de')).toBe('Dieser Vorfall ist geschlossen oder abgebrochen: Er bleibt im Register.');
+    expect(deleteFailureReason(refusal, i18n.es.t, 'es')).toBe('Este incidente está cerrado o cancelado: permanece en el registro.');
+    for (const language of LANGUAGES) {
+      expect(i18n[language].exists('errors:INCIDENT_CLOSED_OR_CANCELLED'), language).toBe(true);
+    }
+  });
+
   it('counts the new kinds of a company refusal', () => {
     const refusal = {
       code: 'COMPANY_IN_USE',
