@@ -2046,7 +2046,7 @@
       "newTitle": "Nuevo servidor",
       "tabs": {
         "overview": "Vista general",
-        "operations": "Operación",
+        "operations": "Operaciones",
         "network": "Red",
         "hardware": "Hardware",
         "dependencies": "Dependencias",
@@ -2325,7 +2325,7 @@
         "overview": "Resumen",
         "servers": "Servidores",
         "applications": "Aplicaciones",
-        "operations": "Operación",
+        "operations": "Operaciones",
         "compliance": "Cumplimiento",
         "relations": "Relaciones"
       },
