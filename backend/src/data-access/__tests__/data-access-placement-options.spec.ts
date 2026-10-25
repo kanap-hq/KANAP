@@ -6,7 +6,7 @@ import { DataSource, EntityManager, QueryRunner } from 'typeorm';
 import appDataSource from '../../data-source';
 import { applyDataAccess } from '../data-access';
 import { PlacementOptions, readPlacementOptions } from '../placement-options';
-import { LIMITED_ROLE, PgClient, roleExists } from './data-access-test-helpers';
+import { LIMITED_ROLE, NodeSpec, PgClient, roleExists, seedNodes, seedPerson, seedRole } from './data-access-test-helpers';
 import { Seed, seed } from './data-access-line-seed';
 
 /**
@@ -16,6 +16,8 @@ import { Seed, seed } from './data-access-line-seed';
  *
  * - a limited person gets the companies and cost centers of their edit access, and each one is a
  *   placement `data_access_placable_line` accepts; a read-only access proposes nothing;
+ * - `editNodes` carries the edit nodes unfolded, groups and sub-groups included (the contract place
+ *   picker); `costCenters` keeps the cost centers only (a line takes no group);
  * - Edit on everything answers `all: true`;
  * - an unscoped person (mode all, or Administrator) gets `{ limited: false }`, with no query beyond
  *   the mode.
@@ -44,9 +46,19 @@ async function placable(m: EntityManager, companyId: string, costCenterId: strin
   return row?.ok === true;
 }
 
+async function placableContract(m: EntityManager, companyId: string, placeId: string | null): Promise<boolean> {
+  const [row] = await m.query(`SELECT data_access_placable_contract($1::uuid, $2::uuid) AS ok`, [companyId, placeId]);
+  return row?.ok === true;
+}
+
 function limited(options: PlacementOptions) {
   assert.equal(options.limited, true);
   return options as Extract<PlacementOptions, { limited: true }>;
+}
+
+/** The endpoint aggregates the nodes by id: assert them in that order. */
+function byId<T extends { id: string }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => a.id.localeCompare(b.id));
 }
 
 async function testOptions(runner: QueryRunner, s: Seed) {
@@ -58,6 +70,7 @@ async function testOptions(runner: QueryRunner, s: Seed) {
     assert.equal(o.all, false);
     assert.deepEqual(o.companies, [s.es]);
     assert.deepEqual(o.costCenters, [{ id: s.infEs, companyId: s.es }]);
+    assert.deepEqual(o.editNodes, [{ id: s.infEs, companyId: s.es }], 'the unfolded edit nodes');
     assert.deepEqual(o.editNodeCompanies, [s.es], 'the edit centres of the company carry its company');
     assert.equal(await placable(m, s.es, null), true);
     assert.equal(await placable(m, s.fr, null), false);
@@ -69,9 +82,42 @@ async function testOptions(runner: QueryRunner, s: Seed) {
     assert.equal(o.all, false);
     assert.deepEqual(o.companies, []);
     assert.deepEqual(o.costCenters, [{ id: s.infFr, companyId: s.fr }]);
+    assert.deepEqual(o.editNodes, [{ id: s.infFr, companyId: s.fr }]);
     assert.deepEqual(o.editNodeCompanies, [s.fr], 'the contract rule: the edit node company');
     assert.equal(await placable(m, s.fr, s.infFr), true);
     assert.equal(await placable(m, s.es, s.infEs), false);
+  });
+
+  // A group in edit: the endpoint unfolds it, as `data_access_apply` does, so a contract may take
+  // the group, its sub-groups and its centres; a line still takes the centres alone.
+  const groupRole = await seedRole(clientOf(runner), s.tenantId, 'Data access group editor');
+  const groupEditor = await seedPerson(clientOf(runner), s.tenantId, 'limited', groupRole);
+  const groupNodes: NodeSpec[] = [{ type: 'cost_center', id: s.inf, access: 'edit' }];
+  await seedNodes(clientOf(runner), s.tenantId, groupEditor, groupNodes);
+  await as(runner, groupEditor, async (m) => {
+    const o = limited(await readPlacementOptions(m));
+    assert.deepEqual(
+      o.editNodes,
+      byId([
+        { id: s.inf, companyId: null },
+        { id: s.infEs, companyId: s.es },
+        { id: s.infFr, companyId: s.fr },
+      ]),
+      'the group and its centres, unfolded',
+    );
+    assert.deepEqual(
+      o.costCenters,
+      byId([
+        { id: s.infEs, companyId: s.es },
+        { id: s.infFr, companyId: s.fr },
+      ]),
+      'the line picker keeps cost centers only: a group is no place for a line',
+    );
+    assert.deepEqual([...o.editNodeCompanies].sort(), [s.es, s.fr].sort());
+    assert.equal(await placableContract(m, s.fr, s.inf), true, 'the contract may sit on the group');
+    assert.equal(await placableContract(m, s.es, s.infEs), true);
+    assert.equal(await placable(m, s.es, s.inf), false, 'a line may not sit on the group');
+    assert.equal(await placable(m, s.es, s.infEs), true);
   });
 
   // Read only, and no node: nothing to place on.
@@ -79,8 +125,8 @@ async function testOptions(runner: QueryRunner, s: Seed) {
     await as(runner, person, async (m) => {
       const o = limited(await readPlacementOptions(m));
       assert.deepEqual(
-        { all: o.all, companies: o.companies, costCenters: o.costCenters, editNodeCompanies: o.editNodeCompanies },
-        { all: false, companies: [], costCenters: [], editNodeCompanies: [] },
+        { all: o.all, companies: o.companies, costCenters: o.costCenters, editNodes: o.editNodes, editNodeCompanies: o.editNodeCompanies },
+        { all: false, companies: [], costCenters: [], editNodes: [], editNodeCompanies: [] },
       );
     });
   }
@@ -89,9 +135,10 @@ async function testOptions(runner: QueryRunner, s: Seed) {
   await as(runner, p.claire, async (m) => {
     const o = limited(await readPlacementOptions(m));
     assert.equal(o.all, true);
+    assert.deepEqual(o.editNodes, []);
     assert.equal(await placable(m, s.fr, null), true);
   });
-  console.log('  limited persons: edit companies and cost centers, each accepted by data_access_placable_line: OK');
+  console.log('  limited persons: edit companies, cost centers and unfolded edit nodes, each accepted by the placement functions: OK');
 
   // Unscoped: no query beyond the mode (applyDataAccess remembered it on the runner).
   for (const person of [p.ulla, p.admin]) {
