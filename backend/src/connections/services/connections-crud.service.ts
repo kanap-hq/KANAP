@@ -20,6 +20,7 @@ import {
   AbsorbedServer,
   absorbClusterMembers,
   connectionSameEndpointRefusal,
+  connectionServersMinRefusal,
 } from '../connection-cluster-rules';
 
 /**
@@ -192,7 +193,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
       }
       const { kept, absorbed: listAbsorbed } = await absorbClusterMembers(mg, tenant, normalizedIds);
       if (kept.length < 2) {
-        throw new BadRequestException('Select at least two assets for a multi-server connection');
+        throw connectionServersMinRefusal();
       }
       multiAssetIds = kept;
       absorbed = listAbsorbed;
@@ -392,7 +393,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         }
         const { kept, absorbed: listAbsorbed } = await absorbClusterMembers(mg, tenant, normalizedIds);
         if (kept.length < 2) {
-          throw new BadRequestException('Select at least two assets for a multi-server connection');
+          throw connectionServersMinRefusal();
         }
         multiAssetIds = kept;
         absorbed = listAbsorbed;
@@ -401,7 +402,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         const existingServers = await this.getConnServerRepo(mg).find({ where: { connection_id: id } });
         multiAssetIds = existingServers.map((cs) => cs.asset_id);
         if (multiAssetIds.length < 2) {
-          throw new BadRequestException('Select at least two assets for a multi-server connection');
+          throw connectionServersMinRefusal();
         }
       }
       // Clear S2S fields

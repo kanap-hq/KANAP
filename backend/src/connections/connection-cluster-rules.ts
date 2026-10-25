@@ -11,6 +11,11 @@ export function connectionSameEndpointRefusal(): BadRequestException {
   return applicationBadRequest('connection_same_endpoint', 'The source and the destination are the same asset.');
 }
 
+/** Refus 400 codé `connection_min_servers`: une liste multi-serveurs garde au moins deux actifs, absorption faite. */
+export function connectionServersMinRefusal(): BadRequestException {
+  return applicationBadRequest('connection_min_servers', 'Select at least two assets for a multi-server connection');
+}
+
 /**
  * Retire de `assetIds` les membres en service des clusters en service de la même liste. Ordre
  * d'entrée gardé. Un membre de deux clusters de la liste est absorbé une fois, au nom du premier

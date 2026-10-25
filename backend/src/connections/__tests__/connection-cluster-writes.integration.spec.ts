@@ -169,9 +169,10 @@ async function run() {
       { asset_id: member, name: 'Member one', cluster_id: cluster, cluster_name: 'Cluster Alpha' },
     ]);
 
-    // The list left with one asset is refused with the existing message.
+    // The list left with one asset is refused with the existing message, now coded.
     const tooSmall = await refusal(() => multi('Too small', [cluster, member]));
     assert.equal(tooSmall.status, 400);
+    assert.equal(tooSmall.code, 'connection_min_servers');
     assert.match(tooSmall.message, /Select at least two assets for a multi-server connection/);
 
     // A retired member is not absorbed; a retired cluster absorbs nothing.
