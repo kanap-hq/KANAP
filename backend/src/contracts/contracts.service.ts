@@ -102,6 +102,7 @@ import {
   assertContractReadable,
   assertContractsEditable,
   contractEditableField,
+  contractEditableFields,
 } from '../data-access/contract-write-checks';
 import { assertLinesEditable } from '../data-access/line-write-checks';
 
@@ -163,6 +164,8 @@ type ListItem = Contract & ContractTermFields & {
   budget_state?: ContractBudgetState | null;
   /** What the compliance register expects of the contract and what is missing (`contract-compliance.ts`). */
   compliance?: ComplianceSummary;
+  /** A limited person: whether they may modify the contract (absent when unscoped). */
+  editable?: boolean;
 };
 
 /** Who reads a list: the budget figures need the right to read the budget too. */
@@ -485,10 +488,14 @@ export class ContractsService {
     // The decisions recorded for the page's contracts: a contract renewed, or left to end, is not to decide.
     const decisions = await readRenewalDecisions(mg, contractIds);
 
+    // `editable` for a limited person, by the same SQL function as the UPDATE policy; nothing for
+    // an unscoped one (the key stays absent).
+    const editableById = await contractEditableFields(mg, contractIds);
     const enriched: ListItem[] = items.map((i) => {
       const figures = budgetById.get(i.id);
       return {
         ...i,
+        ...(editableById.has(i.id) ? { editable: editableById.get(i.id) === true } : {}),
         ...contractTermFields(i, today, { decisionWindowDays: windowDays, renewalDecision: renewalDecisionOf(decisions, i.id) }),
         // From the end of validity, like the filter: the stored status stays enabled once the date passes.
         status: deriveStatusFromDisabledAt(i.disabled_at),
@@ -672,6 +679,7 @@ export class ContractsService {
     );
     return {
       ...found,
+      ...(await contractEditableField(mg, found.id)),
       ...terms,
       // The tenant's decision window: the page draws it on the timeline (`contract-settings.service.ts`).
       decision_window_days: windowDays,
@@ -761,7 +769,7 @@ export class ContractsService {
     const entity = repo.create(toCreate);
     const saved = await repo.save(entity);
     await this.audit.log({ table: 'contracts', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
-    return saved;
+    return { ...saved, ...(await contractEditableField(mg, saved.id)) };
   }
 
   async update(id: string, rawBody: ContractUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
@@ -830,7 +838,7 @@ export class ContractsService {
       }
     }
 
-    return saved;
+    return { ...saved, ...(await contractEditableField(mg, saved.id)) };
   }
 
   /** The contract of the session tenant, or a 404. */
