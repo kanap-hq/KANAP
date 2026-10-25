@@ -457,10 +457,30 @@ async function testRoleWithoutContext(s: ContractSeed): Promise<void> {
     }
     assert.equal((await q(`SELECT data_access_can_read($1, 'contract', $2) AS r`, [s.persons.ulla, s.contracts.CF]))[0].r, null, 'no context: can_read');
     assert.equal((await q(`SELECT data_access_contract_visible($1) AS v`, [s.contracts.CF]))[0].v, false, 'no context: depth function');
+
+    // The links to a contract (no policy on contract_spend_items): the link triggers refuse every write.
+    const linkInsert = await attempt(
+      `INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES (app_current_tenant(), $1, $2)`,
+      [s.contracts.CH, s.lines.L5],
+    );
+    assert.equal(linkInsert.code, '42501', 'no context: creating a link refused');
+    assert.equal((await attempt(`DELETE FROM contract_spend_items WHERE contract_id = $1`, [s.contracts.CE])).code, '42501', 'no context: deleting the links of a contract refused');
+    assert.equal((await attempt(`DELETE FROM contract_spend_items`)).code, '42501', 'no context: deleting every link refused');
+    // A line's contract: its row is out of reach (0 rows), or the trigger refuses it; never changed.
+    await client.query('SAVEPOINT data_access_no_context_line');
+    let lineUpdate: string | number;
+    try {
+      lineUpdate = ((await client.query(`UPDATE spend_items SET contract_id = $2 WHERE id = $1`, [s.lines.L1, s.contracts.CH])) as unknown as { rowCount: number }).rowCount;
+    } catch (error: any) {
+      lineUpdate = String(error?.code ?? error);
+    } finally {
+      await client.query('ROLLBACK TO SAVEPOINT data_access_no_context_line');
+    }
+    assert.ok(lineUpdate === 0 || lineUpdate === '42501', `no context: a line's contract unchanged (got ${lineUpdate})`);
   } finally {
     await client.query('ROLLBACK TO SAVEPOINT data_access_no_context');
   }
-  console.log('  role taken without context: nothing visible, nothing writable, disclosures NULL: OK');
+  console.log('  role taken without context: nothing visible, nothing writable (links to a contract included), disclosures NULL: OK');
 }
 
 async function testUnscoped(s: ContractSeed): Promise<void> {

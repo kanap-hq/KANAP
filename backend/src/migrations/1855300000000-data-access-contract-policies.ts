@@ -851,7 +851,8 @@ async function createLineVisibleFunction(queryRunner: QueryRunner): Promise<void
  * same message for an invisible and for a nonexistent object, so the foreign key never answers for
  * the limited person (it would be an existence oracle); a visible but read-only line gets 42501.
  * The checks run BEFORE INSERT OR UPDATE OF contract_id on spend_items, and on every write of
- * contract_spend_items. Outside mode limited both triggers return immediately.
+ * contract_spend_items. Outside mode limited both triggers return immediately, except under the
+ * limited role taken without context, where they raise 42501.
  */
 async function createContractLinkTriggers(queryRunner: QueryRunner): Promise<void> {
   // The contract first, then the line: with a hidden contract the answer never depends on the line.
@@ -860,6 +861,9 @@ async function createContractLinkTriggers(queryRunner: QueryRunner): Promise<voi
   const lineMissingError = `RAISE EXCEPTION 'data access: this budget line is outside your access or does not exist'
           USING ERRCODE = '23503';`;
   const lineReadOnlyError = `RAISE EXCEPTION 'permission denied: this budget line is outside your data access'
+          USING ERRCODE = '42501';`;
+  // The limited role taken without context (spec §6.4): everything is refused.
+  const noContextError = `RAISE EXCEPTION 'permission denied: no data access context'
           USING ERRCODE = '42501';`;
 
   await queryRunner.query(`
@@ -871,6 +875,9 @@ async function createContractLinkTriggers(queryRunner: QueryRunner): Promise<voi
     AS $fn$
     BEGIN
       IF NULLIF(current_setting('app.da_mode', true), '') IS DISTINCT FROM 'limited' THEN
+        IF ${ROLE_TAKEN} THEN
+          ${noContextError}
+        END IF;
         RETURN NEW;
       END IF;
       IF NEW.contract_id IS NULL THEN
@@ -908,6 +915,9 @@ async function createContractLinkTriggers(queryRunner: QueryRunner): Promise<voi
       v_editable boolean;
     BEGIN
       IF NULLIF(current_setting('app.da_mode', true), '') IS DISTINCT FROM 'limited' THEN
+        IF ${ROLE_TAKEN} THEN
+          ${noContextError}
+        END IF;
         RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
       END IF;
 
