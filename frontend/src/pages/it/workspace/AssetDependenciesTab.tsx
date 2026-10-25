@@ -1,12 +1,30 @@
 import React from 'react';
-import { Alert, Stack } from '@mui/material';
+import { Alert, Snackbar, Stack, Tooltip } from '@mui/material';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import { useTheme } from '@mui/material/styles';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import { RelationSections, assetsSection, useRelations, type AssetRelationRow, type SectionSpec } from '../../../components/workspace/relations';
 import { useRelationLabels } from '../../../components/workspace/relations/labels';
+import { useLocale } from '../../../i18n/useLocale';
+import { joinNames } from '../../working-day-calendars/workingDayCalendarFields';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { getDotColor } from '../../../utils/statusColors';
 import AssetImpactSection from '../editors/AssetImpactSection';
+import usePlacementQuestion from '../components/usePlacementQuestion';
 import { ASSET_DIRECTIONS, assetRelationsKey, type AssetDirection, type AssetRelationsData } from './assetRelationsData';
+
+/** One host link a cluster replaces when it takes the placement (R1), as the write reports it. */
+type ReplacedHostLink = {
+  host_id: string;
+  host_name: string;
+  asset_id: string;
+  asset_name: string;
+  cluster_id: string;
+  cluster_name: string;
+};
 
 const DIRECTION_SET = new Set<string>(ASSET_DIRECTIONS);
 
@@ -19,29 +37,25 @@ const DIRECTION_KEY: Record<AssetDirection, string> = {
 };
 
 /**
- * The Dependencies tab of an asset: what falls with it first, then, when given, the cluster
- * sections (`clusterSection`), then the relations between assets in their four directions. It reads
- * and writes through the same query as the Relations tab (`GET /assets/:id/relations-tab`), so both
- * tabs and their badges share one set of data. An infrastructure member adds from a server search
- * and unlinks on hover, each saved at once; the relations and the impact of every asset are read
- * again after each change.
+ * The Dependencies tab of an asset: what falls with it first, then the relations between assets in
+ * their four directions. It reads and writes through the same query as the Relations tab
+ * (`GET /assets/:id/relations-tab`), so both tabs and their badges share one set of data. An
+ * infrastructure member adds from a server search and unlinks on hover, each saved at once; the
+ * relations and the impact of every asset are read again after each change.
  */
-export default function AssetDependenciesTab({
-  assetId,
-  clusterSection,
-}: {
-  assetId: string;
-  /** Rendered as is between the impact and the four directions. */
-  clusterSection?: React.ReactNode;
-}) {
+export default function AssetDependenciesTab({ assetId }: { assetId: string }) {
   const { t } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
   const queryClient = useQueryClient();
   const labels = useRelationLabels();
+  const locale = useLocale();
+  const theme = useTheme();
+  const placement = usePlacementQuestion();
+  const [placementReplaced, setPlacementReplaced] = React.useState<string | null>(null);
   const canEdit = hasLevel('infrastructure', 'member');
   const relationsKey = assetRelationsKey(assetId);
   const groupOf = React.useCallback((kind: string) => (DIRECTION_SET.has(kind) ? 'assets' : undefined), []);
-  const { data, error, link, unlink, setError } = useRelations<AssetRelationsData>({
+  const { data, error, link, unlink, setError, refresh } = useRelations<AssetRelationsData>({
     path: `/assets/${assetId}/relations`,
     queryKey: relationsKey,
     groupOf,
@@ -54,7 +68,49 @@ export default function AssetDependenciesTab({
     void queryClient.invalidateQueries({ queryKey: ['asset-relations-tab'] });
     void queryClient.invalidateQueries({ queryKey: ['asset-impact'] });
   };
+  // A cluster can carry the link in place of its host: the question is asked before writing.
+  const placeLink = async (kind: 'contains' | 'contained_by', targetId: string) => {
+    const hostId = kind === 'contains' ? assetId : targetId;
+    // A contained-by link reads the containers already loaded with the page; a contains link
+    // lets the question read the target's own containers.
+    const containers = kind === 'contained_by' ? (data?.assets.contained_by ?? []).map((row) => row.id) : [];
+    const answer = await placement.resolvePlacement({
+      hostId,
+      excludeClusterIds: containers,
+      placedAssetId: kind === 'contains' ? targetId : undefined,
+    });
+    if (answer.status === 'cancelled') return;
+    // A chosen cluster carries the link, whichever side of the page it sits on.
+    const request = answer.clusterId
+      ? (kind === 'contains'
+        ? { owner: answer.clusterId, direction: 'contains', id: targetId }
+        : { owner: assetId, direction: 'contained_by', id: answer.clusterId })
+      : { owner: assetId, direction: kind, id: targetId };
+    setError(null);
+    try {
+      const res = await api.post<{ replaced_host_links?: ReplacedHostLink[] }>(
+        `/assets/${request.owner}/relations/${request.direction}`,
+        { id: request.id },
+      );
+      const replaced = res.data?.replaced_host_links ?? [];
+      if (replaced.length > 0) {
+        setPlacementReplaced(t('workspace.asset.relations.placementReplaced', {
+          cluster: replaced[0].cluster_name,
+          hosts: joinNames(Array.from(new Set(replaced.map((row) => row.host_name))), locale),
+          asset: replaced[0].asset_name,
+        }));
+      }
+    } catch (e) {
+      setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
+    }
+    await refresh();
+    refreshAssets();
+  };
   const onLink = async (kind: string, targetId: string) => {
+    if (kind === 'contains' || kind === 'contained_by') {
+      await placeLink(kind, targetId);
+      return;
+    }
     await link(kind, targetId);
     refreshAssets();
   };
@@ -65,20 +121,57 @@ export default function AssetDependenciesTab({
 
   const sections = ASSET_DIRECTIONS.map((direction): SectionSpec<AssetRelationRow> => {
     const key = DIRECTION_KEY[direction];
+    const base = assetsSection({
+      t,
+      rows: data ? data.assets[direction] : [],
+      kindLabel: labels.assetKind,
+      environmentLabel: labels.environment,
+      statusLabel: labels.status,
+    });
+    // A contained asset held by another container in service is flagged next to its name (R3).
+    const columns = direction === 'contains' || direction === 'contained_by'
+      ? base.columns.map((column) => (column.key !== 'name' ? column : {
+        ...column,
+        render: (row: AssetRelationRow) => {
+          const others = direction === 'contains'
+            ? row.also_contained_by ?? []
+            : row.status === 'retired'
+              ? []
+              : (data?.assets.contained_by ?? []).filter((other) => other.id !== row.id && other.status !== 'retired');
+          if (others.length === 0) return row.name;
+          const label = t('workspace.asset.relations.alsoContainedBy', {
+            names: joinNames(others.map((other) => other.name), locale),
+          });
+          return (
+            <>
+              {row.name}
+              <Tooltip title={label}>
+                <WarningAmberOutlinedIcon
+                  role="img"
+                  aria-hidden={false}
+                  aria-label={label}
+                  sx={{
+                    fontSize: 14,
+                    ml: 0.5,
+                    verticalAlign: 'text-bottom',
+                    color: getDotColor('warning', theme.palette.mode),
+                  }}
+                />
+              </Tooltip>
+            </>
+          );
+        },
+      }))
+      : base.columns;
     return {
-      ...assetsSection({
-        t,
-        rows: data ? data.assets[direction] : [],
-        kindLabel: labels.assetKind,
-        environmentLabel: labels.environment,
-        statusLabel: labels.status,
-      }),
+      ...base,
       kind: direction,
       title: t(`workspace.asset.relations.${key}`),
       hint: direction === 'contains' ? t('workspace.asset.relations.containsHint') : undefined,
       empty: t(`workspace.asset.relations.empty.${key}`),
       // An asset never relates to itself: the picker leaves it out.
       linkedIds: (rows) => new Set([assetId, ...rows.map((row) => row.id)]),
+      columns,
     };
   });
 
@@ -88,8 +181,6 @@ export default function AssetDependenciesTab({
 
       <AssetImpactSection assetId={assetId} />
 
-      {clusterSection}
-
       <RelationSections
         sections={sections}
         loaded={!!data}
@@ -98,6 +189,17 @@ export default function AssetDependenciesTab({
         onLink={(kind, targetId) => { void onLink(kind, targetId); }}
         onUnlink={(kind, targetId) => { void onUnlink(kind, targetId); }}
       />
+
+      {placement.placementDialog}
+
+      <Snackbar
+        open={!!placementReplaced}
+        autoHideDuration={5000}
+        onClose={() => setPlacementReplaced(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      >
+        <Alert severity="success" variant="filled">{placementReplaced}</Alert>
+      </Snackbar>
     </Stack>
   );
 }

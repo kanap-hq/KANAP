@@ -805,7 +805,9 @@
         "entity": "Entitäten",
         "cluster": "Cluster",
         "server": "Server"
-      }
+      },
+      "hiddenMembers_one": "{{count}} weiteres Mitglied",
+      "hiddenMembers_other": "{{count}} weitere Mitglieder"
     },
     "administrationView": {
       "tabs": {
@@ -1359,7 +1361,8 @@
         "model": "Modell",
         "rack_location": "Rack-Position",
         "rack_unit": "Höheneinheit",
-        "cluster": "Cluster"
+        "cluster": "Cluster",
+        "placement": "Platzierung"
       },
       "mappings": {
         "intro": "Nur zugeordnete Rollen und Standorte werden importiert. Alles, was auf „Nicht importieren“ steht, bleibt außen vor.",
@@ -2072,8 +2075,6 @@
         "addMembers": "Mitglieder hinzufügen",
         "loadingMembers": "Mitglieder werden geladen…",
         "clusterMembership": "Cluster-Mitgliedschaft",
-        "loadingClusters": "Cluster werden geladen…",
-        "notInCluster": "Gehört keinem Cluster an.",
         "identity": "Identität",
         "hostname": "Hostname",
         "hostnameRequired": "Hostname ist erforderlich, wenn eine Domäne ausgewählt ist",
@@ -2290,7 +2291,9 @@
           "dependsOn": "Hängt von keinem Asset ab.",
           "dependedOnBy": "Kein Asset hängt von diesem ab."
         },
-        "containsHint": "Von diesem Asset gehostete Assets, zum Beispiel VMs."
+        "containsHint": "Von diesem Asset gehostete Assets, zum Beispiel VMs.",
+        "alsoContainedBy": "Auch enthalten in {{names}}",
+        "placementReplaced": "{{cluster}} ersetzt die Verknüpfung zwischen {{hosts}} und {{asset}}."
       }
     },
     "technology": {
@@ -2518,6 +2521,8 @@
     "connection": {
       "title": "Verbindung",
       "newTitle": "Neue Verbindung",
+      "absorbed_one": "{{names}} wurde aus der Liste entfernt und ist durch {{clusters}} abgedeckt.",
+      "absorbed_other": "{{names}} wurden aus der Liste entfernt und sind durch {{clusters}} abgedeckt.",
       "tabs": {
         "overview": "Übersicht",
         "layers": "Schichten",
@@ -2533,12 +2538,9 @@
         "connectionType": "Verbindungstyp",
         "selectSource": "Quellentität oder -server auswählen",
         "selectDestination": "Zielentität oder -server auswählen",
-        "sourceClusterHint": "Der Quellendpunkt ist ein Cluster. Mitglieds-Hosts sind im Server-Bereich aufgelistet.",
-        "destinationClusterHint": "Der Zielendpunkt ist ein Cluster. Mitglieds-Hosts sind im Server-Bereich aufgelistet.",
         "connectedServers": "Verbundene Server",
         "searchSelectServers": "Server suchen und auswählen",
         "selectTwoServers": "Wählen Sie mindestens zwei Server aus.",
-        "multiClusterHint": "Einer oder mehrere der ausgewählten Endpunkte sind Cluster. Ihre Mitglieds-Hosts werden im Server-Bereich verwaltet.",
         "protocols": "Protokolle",
         "protocolsPlaceholder": "Protokolle auswählen (aus Verbindungstypen)",
         "typicalPorts": "Typische Ports",
@@ -3230,6 +3232,20 @@
       "groupAssignTo": "{{cluster}} zuordnen",
       "groupConfirm": "{{application}} bleibt verfügbar, solange ein Mitglied läuft.",
       "thisApplication": "Die Anwendung"
+    },
+    "clusterConnection": {
+      "title": "Mit dem Cluster verbinden?",
+      "inCluster_one": "{{server}} gehört zu {{cluster}}. Die Verbindung gilt für sein einziges Mitglied.",
+      "inCluster_other": "{{server}} gehört zu {{cluster}}. Die Verbindung gilt für seine {{count}} Mitglieder.",
+      "connectToCluster": "Mit dem Cluster verbinden"
+    },
+    "clusterPlacement": {
+      "title": "Im Cluster platzieren?",
+      "inCluster_one": "{{host}} ist der einzige Host von {{cluster}}.",
+      "inCluster_other": "{{host}} gehört zu {{cluster}}. Im Cluster kann das Asset auf jedem seiner {{count}} Hosts laufen.",
+      "inClusters": "{{host}} gehört zu mehreren Clustern.",
+      "placeInCluster": "Im Cluster platzieren",
+      "hostOnly": "Nur dieser Host"
     }
   },
   "enums": {

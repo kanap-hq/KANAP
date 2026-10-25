@@ -27,7 +27,7 @@ El mapa utiliza un diseño de grafo dirigido por fuerzas donde:
 | **Clústeres** | Rectángulo redondeado, borde discontinuo | Cian | Grupos de servidores que actúan como una única unidad lógica |
 | **Entidades** | Forma de píldora / estadio | Naranja | Puntos finales lógicos (sistemas externos, servicios SaaS) |
 
-Los miembros de clúster aparecen como nodos de servidor separados, con líneas indicadoras discontinuas que los conectan a su nodo de clúster padre.
+Un clúster trae sus miembros en servicio: cada uno es un nodo de servidor, unido al clúster por una línea discontinua. Consulte [Visualización de clústeres](#cluster-visualization).
 
 ---
 
@@ -119,7 +119,7 @@ Haga clic en un nodo de servidor o clúster para resaltar sus conexiones y abrir
 
 - **Tipo de servidor**, **Ubicación del servidor**, **Sistema operativo**, **Segmento de red**, **Dirección IP**
 - **Aplicaciones asignadas**: Apps que se ejecutan en este servidor, agrupadas por entorno. En un miembro, una app asignada a su clúster se muestra «vía» el nombre del clúster. Haga clic en el nombre de una app para abrirla.
-- Botón **Editar servidor** o **Ver clúster** para abrir el espacio de trabajo. **Ver clúster** abre el clúster en su pestaña **Dependencias**, donde se gestionan sus miembros
+- Botón **Editar servidor** o **Ver clúster** para abrir el espacio de trabajo. **Ver clúster** abre el clúster en su pestaña **Operación**, donde se gestionan sus miembros
 
 Haga clic en un nodo de entidad para ver su tipo y entorno.
 
@@ -155,13 +155,14 @@ El mapa admite parámetros de URL para compartir vistas específicas:
 
 ---
 
-## Visualización de clústeres
+## Visualización de clústeres { #cluster-visualization }
 
 Los clústeres aparecen como nodos distintos con un borde cian discontinuo:
 
-- Los miembros del clúster aparecen como nodos separados conectados a su clúster padre mediante líneas indicadoras discontinuas
-- Cuando filtra con profundidad=0, se muestran tanto los servidores miembros seleccionados como sus clústeres padre
-- Los servidores miembros mantienen sus conexiones individuales servidor-a-servidor además de las conexiones propias del clúster
+- Un clúster en el mapa muestra sus miembros en servicio, unidos a él por líneas discontinuas, aunque ninguna conexión los nombre. Una conexión en el clúster vale para cada uno de ellos. Consulte [Conexiones en un clúster](connections.md#connections-on-a-cluster)
+- Por encima de diez miembros, los miembros que ninguna conexión nombra se pliegan. El clúster muestra **+N** después de su entorno, y su información emergente da el número de miembros ocultos. Un miembro elegido en **Servidores** siempre se muestra
+- Un miembro elegido en **Servidores** trae las conexiones de sus clústeres: sus clústeres también cuentan como elegidos
+- Los miembros conservan sus propias conexiones además de las del clúster
 
 ---
 

@@ -95,7 +95,8 @@ Re-run the fixture against the dev tenant to apply them.
 | Same IP address, nothing else in common | Device `PAR-APP-09`, 10.10.10.95 | Asset `SRV-COMPTA-OLD` holds that address. Never linked on its own and never created blindly: filed under "To decide" with that asset as the suggestion. |
 | Renamed, nothing in common | Device `PAR-APP-10` | Planned as a new asset. In the preview, choose "Link to an existing asset" and pick `SRV-PAIE-OLD`: the row moves to the updates with its field changes, and nothing is created. |
 | Ambiguous | Device `NYC-SW-01` | Two KANAP assets are named `NYC-SW-01`. Reported as ambiguous, never merged. |
-| New devices | `PAR-ESX-05`, `PAR-SW-01`, `PAR-DUP-A`, `PAR-DUP-B` | Created as new assets. |
+| Host created by the fixture | Device `PAR-ESX-05`, PowerEdge R750, serial `DELL-PAR-ESX05`, rack PAR-R01 U32, IP 10.10.10.15 | Linked to asset `PAR-ESX-05` by name. Serial, manufacturer, model, rack, unit and IP filled in. Its cluster membership is not touched. |
+| New devices | `PAR-SW-01`, `PAR-DUP-A`, `PAR-DUP-B` | Created as new assets. |
 | New virtual machines | `PAR-LOG-01`, `PAR-CI-01` | Created as new assets. |
 | Unmapped site | `LYO-FW-01`, `LYO-SW-01`, `LYO-NAS-01` in Lyon Warehouse | Ignored while the site has no mapping. Imported once Lyon Warehouse is mapped to a location. |
 | Ignored roles | `PAR-PDU-01` (PDU), `PAR-PP-01` (patch panel) | Ignored. The roles stay unmapped. |
@@ -118,7 +119,7 @@ machine, and never removes one.
 | Unmatched cluster | `Gouda vSphere`, `Parma vSphere` | One warning per cluster in the preview, and nothing written for their machines. |
 | Machine moved in Netbox | VM `PAR-BKP-01`, on Gouda vSphere in Netbox, contained by `PAR-VSPHERE-CL01` in KANAP | With Gouda unmatched: nothing. Match Gouda with another cluster asset and the row adds it, keeps `PAR-VSPHERE-CL01` and warns that the machine is also there. |
 | New machines | `PAR-LOG-01`, `PAR-CI-01` | Created, then attached to `PAR-VSPHERE-CL01` in the same run: each row shows `Cluster: — → PAR-VSPHERE-CL01` among its changes. |
-| Hosts | Devices `PAR-ESX-01`, `PAR-ESX-02` | Never touched: host membership of a cluster stays manual. |
+| Hosts | Devices `PAR-ESX-01`, `PAR-ESX-02` and `PAR-ESX-05` | Never touched: host membership of a cluster stays manual. |
 
 ## Sub-location case table
 

@@ -20,14 +20,22 @@ import { seedApps, seedInterface, seedTenant } from './interface-seed-helpers';
 // dropped by a migration only shows up here: it answered 500 for every interface
 // linked to a connection once connection legs moved to a single equipment column.
 
-async function seedAsset(runner: QueryRunner, tenantId: string, name: string): Promise<string> {
+async function seedAsset(
+  runner: QueryRunner,
+  tenantId: string,
+  name: string,
+  opts: { cluster?: boolean; retired?: boolean } = {},
+): Promise<string> {
   const [row] = await runner.query(
-    `INSERT INTO assets (tenant_id, name, kind, provider, environment, status, created_at, updated_at)
-     VALUES ($1, $2, 'physical_server', 'on_premise', 'prod', 'active', now(), now()) RETURNING id`,
-    [tenantId, name],
+    `INSERT INTO assets (tenant_id, name, kind, provider, environment, status, is_cluster, created_at, updated_at)
+     VALUES ($1, $2, 'physical_server', 'on_premise', 'prod', $3, $4, now(), now()) RETURNING id`,
+    [tenantId, name, opts.retired ? 'retired' : 'active', !!opts.cluster],
   );
   return row.id;
 }
+
+const addMember = (runner: QueryRunner, tenantId: string, clusterId: string, assetId: string) =>
+  runner.query(`INSERT INTO asset_cluster_members (tenant_id, cluster_id, asset_id) VALUES ($1, $2, $3)`, [tenantId, clusterId, assetId]);
 
 async function run() {
   await dataSource.initialize();
@@ -83,6 +91,48 @@ async function run() {
     assert.deepEqual(
       [...items[0].connection.server_ids].sort(),
       [source, destination, firewall, extra].sort(),
+    );
+
+    // A destination cluster and a hop cluster reach the servers through their members in service;
+    // the retired members stay out.
+    const destCluster = await seedAsset(runner, tenantId, 'gou-cluster', { cluster: true });
+    const destMemberOne = await seedAsset(runner, tenantId, 'gou-wms-02');
+    const destMemberTwo = await seedAsset(runner, tenantId, 'gou-wms-03');
+    const destRetired = await seedAsset(runner, tenantId, 'gou-wms-retired', { retired: true });
+    await addMember(runner, tenantId, destCluster, destMemberOne);
+    await addMember(runner, tenantId, destCluster, destMemberTwo);
+    await addMember(runner, tenantId, destCluster, destRetired);
+    const hopCluster = await seedAsset(runner, tenantId, 'par-cluster', { cluster: true });
+    const hopMemberOne = await seedAsset(runner, tenantId, 'par-srv-02');
+    const hopMemberTwo = await seedAsset(runner, tenantId, 'par-srv-03');
+    const hopRetired = await seedAsset(runner, tenantId, 'par-srv-retired', { retired: true });
+    await addMember(runner, tenantId, hopCluster, hopMemberOne);
+    await addMember(runner, tenantId, hopCluster, hopMemberTwo);
+    await addMember(runner, tenantId, hopCluster, hopRetired);
+
+    const clusterConnectionId = randomUUID();
+    await runner.query(
+      `INSERT INTO connections (id, tenant_id, connection_reference, name, topology, source_asset_id, destination_asset_id)
+       VALUES ($1, $2, $3, 'Paris to the Gouda cluster', 'server_to_server', $4, $5)`,
+      [clusterConnectionId, tenantId, `CON-${clusterConnectionId.slice(0, 6)}`, source, destCluster],
+    );
+    await runner.query(
+      `INSERT INTO connection_legs (tenant_id, connection_id, order_index, equipment_asset_id)
+       VALUES ($1, $2, 1, $3)`,
+      [tenantId, clusterConnectionId, hopCluster],
+    );
+    await runner.query(
+      `INSERT INTO interface_connection_links (tenant_id, interface_binding_id, connection_id) VALUES ($1, $2, $3)`,
+      [tenantId, iface.bindingId, clusterConnectionId],
+    );
+
+    const clustered = await service.listConnectionLinksForInterface(iface.id, tenantId, { environment: 'prod' }, { manager });
+    assert.equal(clustered.items.length, 2);
+    const clusterItem = clustered.items.find((item) => item.connection.id === clusterConnectionId)!;
+    assert.deepEqual(
+      [...clusterItem.connection.server_ids].sort(),
+      [source, destCluster, destMemberOne, destMemberTwo, hopCluster, hopMemberOne, hopMemberTwo].sort(),
+      'the clusters and their members in service, not the retired members',
     );
 
     // No link in another environment.

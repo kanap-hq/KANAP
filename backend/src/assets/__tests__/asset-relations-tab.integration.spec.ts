@@ -1,7 +1,7 @@
 // @database-spec
 import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
 import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
@@ -370,9 +370,21 @@ async function testAssetRelations() {
     const free = seed.peers.free.id;
     const start = await relationRows(runner, seed);
 
-    // Host contains Free, then Free contains Host (written on Free): no cycle check today.
+    // Host contains Free, then Free contains Host (written on Free): no cycle check today. The
+    // host now has two containers, which the write reports (R3).
     assert.deepEqual(await http.linkRelation(host, 'contains', { id: free }, writer), { ok: true, changed: true });
-    assert.deepEqual(await http.linkRelation(host, 'contained_by', { id: free }, writer), { ok: true, changed: true });
+    assert.deepEqual(await http.linkRelation(host, 'contained_by', { id: free }, writer), {
+      ok: true,
+      changed: true,
+      double_containers: [{
+        asset_id: host,
+        asset_name: 'Host asset',
+        containers: [
+          { id: free, name: 'Free asset' },
+          { id: seed.peers.rack.id, name: 'Rack asset' },
+        ],
+      }],
+    });
     // The same pair in the other type is another relation.
     assert.deepEqual(await http.linkRelation(host, 'depended_on_by', { id: free }, writer), { ok: true, changed: true });
     assert.deepEqual(await http.linkRelation(host, 'contains', { id: free }, writer), { ok: true, changed: false });
@@ -545,6 +557,105 @@ function testPermissionMetadata() {
   return Promise.resolve();
 }
 
+/**
+ * The placement of a virtual machine carried by a cluster (lot C1b): the writes answer with the
+ * host links the cluster replaced and the double containers, a member's duplicate is refused, and
+ * the tab marks the contained assets that have another container in service.
+ */
+async function testPlacement() {
+  await inRolledBackTransaction(async (runner) => {
+    const seed = await seedTab(runner, 'astrel-placement');
+    const { http } = httpOf();
+    const writer = ctx(runner, seed, WRITE);
+    const one = async (sql: string, params: unknown[]) => (await runner.query(sql, params))[0];
+    const makeAsset = async (name: string, cluster = false) => {
+      const row = await one(
+        `INSERT INTO assets (tenant_id, name, kind, environment, status, is_cluster, created_at, updated_at)
+         VALUES ($1, $2, 'physical_server', 'prod', 'active', $3, now(), now()) RETURNING id, asset_reference AS reference`,
+        [seed.tenantId, name, cluster],
+      );
+      return { id: row.id as string, reference: row.reference as string };
+    };
+    const insertContains = (container: string, content: string) => runner.query(
+      `INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type) VALUES ($1, $2, $3, 'contains')`,
+      [seed.tenantId, container, content],
+    );
+
+    const cluster = await makeAsset('PAR-VSPHERE-CL01', true);
+    const member = await makeAsset('par-esx-01');
+    const outsider = await makeAsset('par-esx-02');
+    const vm1 = await makeAsset('par-app-01');
+    const vm2 = await makeAsset('par-app-02');
+    const vm3 = await makeAsset('par-app-03');
+    const vm4 = await makeAsset('par-app-04');
+    await runner.query(
+      `INSERT INTO asset_cluster_members (tenant_id, cluster_id, asset_id) VALUES ($1, $2, $3)`,
+      [seed.tenantId, cluster.id, member.id],
+    );
+    await insertContains(member.id, vm1.id);
+    await insertContains(member.id, vm2.id);
+    await insertContains(cluster.id, vm3.id);
+    await insertContains(outsider.id, vm4.id);
+
+    // Cluster side: the member's link is replaced, exact contract.
+    const absorbed = await http.linkRelation(cluster.id, 'contains', { id: vm1.id }, writer);
+    assert.deepEqual(absorbed, {
+      ok: true,
+      changed: true,
+      replaced_host_links: [{
+        host_id: member.id, host_name: 'par-esx-01', asset_id: vm1.id, asset_name: 'par-app-01',
+        cluster_id: cluster.id, cluster_name: 'PAR-VSPHERE-CL01',
+      }],
+    });
+
+    // VM side: `contained_by` gives the same absorption and the same field.
+    const fromVm = await http.linkRelation(vm2.id, 'contained_by', { id: cluster.id }, writer);
+    assert.deepEqual(fromVm.replaced_host_links?.map((link) => [link.host_id, link.asset_id]), [[member.id, vm2.id]]);
+    assert.equal(fromVm.changed, true);
+    assert.equal(fromVm.double_containers, undefined);
+
+    // R2: the member cannot add a container the cluster already carries.
+    const before = await relationRows(runner, seed);
+    const refused = await rejection(() => http.linkRelation(vm3.id, 'contained_by', { id: member.id }, writer));
+    assert.ok(refused instanceof ConflictException);
+    assert.deepEqual(refused.getResponse(), {
+      code: 'placement_inherited',
+      message: 'This asset is already contained by the cluster PAR-VSPHERE-CL01, which one of its hosts belongs to.',
+      params: { cluster: 'PAR-VSPHERE-CL01' },
+    });
+    assert.deepEqual(await relationRows(runner, seed), before, 'the refusal writes nothing');
+
+    // R3: a cluster and a host outside it are only reported.
+    const doubled = await http.linkRelation(cluster.id, 'contains', { id: vm4.id }, writer);
+    assert.deepEqual(doubled.double_containers, [{
+      asset_id: vm4.id,
+      asset_name: 'par-app-04',
+      containers: [
+        { id: outsider.id, name: 'par-esx-02' },
+        { id: cluster.id, name: 'PAR-VSPHERE-CL01' },
+      ],
+    }]);
+    assert.equal(doubled.replaced_host_links, undefined, 'the non-member keeps its link');
+    assert.deepEqual(
+      await ids(runner, `SELECT related_asset_id AS id FROM asset_relations WHERE asset_id = $1 AND relation_type = 'contains'`, [outsider.id]),
+      [vm4.id],
+    );
+
+    // The tab marks the contained asset with another container, and only it.
+    const tab = await http.relationsTabRead(cluster.reference, ctx(runner, seed, ALL));
+    const byName = (name: string) => tab.assets.contains.find((row) => row.name === name)!;
+    assert.deepEqual(byName('par-app-04').also_contained_by, [{ id: outsider.id, name: 'par-esx-02' }]);
+    for (const name of ['par-app-01', 'par-app-02', 'par-app-03']) {
+      assert.equal('also_contained_by' in byName(name), false, name);
+    }
+    // An asset whose contained assets have one container each keeps the shorter shape.
+    const rackTab = await http.relationsTabRead(seed.peers.rack.reference, ctx(runner, seed, ALL));
+    assert.equal(rackTab.assets.contains.length, 1);
+    assert.equal('also_contained_by' in rackTab.assets.contains[0], false);
+    assert.deepEqual(rackTab.assets.contains[0], related(seed.asset, 'Host asset', 'physical_server', 'prod'));
+  });
+}
+
 void runSpecs('asset-relations-tab.integration.spec', [
   ['testPermissionMetadata', testPermissionMetadata],
   ['testPayload', testPayload],
@@ -555,4 +666,5 @@ void runSpecs('asset-relations-tab.integration.spec', [
   ['testIncidents', testIncidents],
   ['testRefusals', testRefusals],
   ['testTenantIsolation', testTenantIsolation],
+  ['testPlacement', testPlacement],
 ]);

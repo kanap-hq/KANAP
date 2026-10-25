@@ -805,7 +805,9 @@
         "entity": "Entités",
         "cluster": "Clusters",
         "server": "Serveurs"
-      }
+      },
+      "hiddenMembers_one": "{{count}} membre de plus",
+      "hiddenMembers_other": "{{count}} membres de plus"
     },
     "administrationView": {
       "tabs": {
@@ -1359,7 +1361,8 @@
         "model": "Modèle",
         "rack_location": "Emplacement en baie",
         "rack_unit": "Unité de baie",
-        "cluster": "Cluster"
+        "cluster": "Cluster",
+        "placement": "Placement"
       },
       "mappings": {
         "intro": "Seuls les rôles et les sites mis en correspondance sont importés. Tout ce qui reste sur « Ne pas importer » est laissé de côté.",
@@ -2072,8 +2075,6 @@
         "addMembers": "Ajouter des membres",
         "loadingMembers": "Chargement des membres…",
         "clusterMembership": "Appartenance au cluster",
-        "loadingClusters": "Chargement des clusters…",
-        "notInCluster": "Ne fait partie d'aucun cluster.",
         "identity": "Identité",
         "hostname": "Nom d'hôte",
         "hostnameRequired": "Le nom d'hôte est requis lorsqu'un domaine est sélectionné",
@@ -2290,7 +2291,9 @@
           "dependsOn": "Ne dépend d'aucun actif.",
           "dependedOnBy": "Aucun actif ne dépend de celui-ci."
         },
-        "containsHint": "Actifs hébergés par celui-ci, par exemple des VM."
+        "containsHint": "Actifs hébergés par celui-ci, par exemple des VM.",
+        "alsoContainedBy": "Aussi contenu dans {{names}}",
+        "placementReplaced": "{{cluster}} remplace le lien entre {{hosts}} et {{asset}}."
       }
     },
     "technology": {
@@ -2518,6 +2521,8 @@
     "connection": {
       "title": "Connexion",
       "newTitle": "Nouvelle connexion",
+      "absorbed_one": "{{names}} a été retiré de la liste : il est couvert par {{clusters}}.",
+      "absorbed_other": "{{names}} ont été retirés de la liste : ils sont couverts par {{clusters}}.",
       "tabs": {
         "overview": "Vue d'ensemble",
         "layers": "Couches",
@@ -2533,12 +2538,9 @@
         "connectionType": "Type de connexion",
         "selectSource": "Sélectionnez une entité ou un serveur source",
         "selectDestination": "Sélectionnez une entité ou un serveur de destination",
-        "sourceClusterHint": "L'endpoint source est un cluster. Les hôtes membres sont listés dans l'espace serveurs.",
-        "destinationClusterHint": "L'endpoint de destination est un cluster. Les hôtes membres sont listés dans l'espace serveurs.",
         "connectedServers": "Serveurs connectés",
         "searchSelectServers": "Rechercher et sélectionner des serveurs",
         "selectTwoServers": "Sélectionnez au moins deux serveurs.",
-        "multiClusterHint": "Un ou plusieurs endpoints sélectionnés sont des clusters. Leurs hôtes membres sont gérés dans l'espace serveurs.",
         "protocols": "Protocoles",
         "protocolsPlaceholder": "Sélectionnez les protocoles (à partir des types de connexion)",
         "typicalPorts": "Ports courants",
@@ -3230,6 +3232,20 @@
       "groupAssignTo": "Affecter à {{cluster}}",
       "groupConfirm": "{{application}} restera disponible tant qu'un membre tient.",
       "thisApplication": "L'application"
+    },
+    "clusterConnection": {
+      "title": "Raccorder au cluster ?",
+      "inCluster_one": "{{server}} fait partie de {{cluster}}. La connexion vaudra pour son seul membre.",
+      "inCluster_other": "{{server}} fait partie de {{cluster}}. La connexion vaudra pour ses {{count}} membres.",
+      "connectToCluster": "Raccorder au cluster"
+    },
+    "clusterPlacement": {
+      "title": "Placer dans le cluster ?",
+      "inCluster_one": "{{host}} est le seul hôte de {{cluster}}.",
+      "inCluster_other": "{{host}} fait partie de {{cluster}}. Dans le cluster, l'actif peut tourner sur n'importe lequel de ses {{count}} hôtes.",
+      "inClusters": "{{host}} fait partie de plusieurs clusters.",
+      "placeInCluster": "Placer dans le cluster",
+      "hostOnly": "Cet hôte seulement"
     }
   },
   "enums": {

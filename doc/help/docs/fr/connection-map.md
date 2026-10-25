@@ -27,7 +27,7 @@ La carte utilise une disposition de graphe à forces dirigées où :
 | **Clusters** | Rectangle arrondi, bordure pointillée | Cyan | Groupes de serveurs agissant comme une seule unité logique |
 | **Entités** | Pastille / forme stade | Orange | Points de terminaison logiques (systèmes externes, services SaaS) |
 
-Les membres de cluster apparaissent comme des nœuds serveur séparés, avec des lignes indicatrices pointillées les reliant à leur nœud cluster parent.
+Un cluster amène ses membres en service : chacun est un nœud serveur, relié au cluster par une ligne pointillée. Voir [Visualisation des clusters](#cluster-visualization).
 
 ---
 
@@ -119,7 +119,7 @@ Cliquez sur un nœud serveur ou cluster pour mettre en évidence ses connexions 
 
 - **Type de serveur**, **Site du serveur**, **Système d'exploitation**, **Segment réseau**, **Adresse IP**
 - **Applications assignées** : Apps s'exécutant sur ce serveur, regroupées par environnement. Sur un membre, une app affectée à son cluster s'affiche « via » le nom du cluster. Cliquez sur un nom d'app pour l'ouvrir.
-- Bouton **Modifier le serveur** ou **Voir le cluster** pour ouvrir l'espace de travail. **Voir le cluster** ouvre le cluster sur son onglet **Dépendances**, où se gèrent ses membres
+- Bouton **Modifier le serveur** ou **Voir le cluster** pour ouvrir l'espace de travail. **Voir le cluster** ouvre le cluster sur son onglet **Exploitation**, où se gèrent ses membres
 
 Cliquez sur un nœud entité pour voir son type et son environnement.
 
@@ -155,13 +155,14 @@ La carte prend en charge les paramètres URL pour partager des vues spécifiques
 
 ---
 
-## Visualisation des clusters
+## Visualisation des clusters { #cluster-visualization }
 
 Les clusters apparaissent comme des nœuds distincts avec une bordure cyan pointillée :
 
-- Les membres du cluster apparaissent comme des nœuds séparés connectés à leur cluster parent par des lignes indicatrices pointillées
-- Lors du filtrage avec depth=0, à la fois les serveurs membres sélectionnés et leurs clusters parents sont affichés
-- Les serveurs membres conservent leurs propres connexions serveur-à-serveur en plus des connexions du cluster
+- Un cluster sur la carte montre ses membres en service, reliés à lui par des lignes pointillées, même quand aucune connexion ne les nomme. Une connexion sur le cluster vaut pour chacun d'eux. Voir [Connexions sur un cluster](connections.md#connections-on-a-cluster)
+- Au-delà de dix membres, les membres qu'aucune connexion ne nomme sont repliés. Le cluster affiche **+N** après son environnement, et son infobulle donne le nombre de membres masqués. Un membre choisi dans **Serveurs** reste toujours affiché
+- Un membre choisi dans **Serveurs** amène les connexions de ses clusters : ses clusters comptent aussi comme choisis
+- Les membres gardent leurs propres connexions en plus de celles du cluster
 
 ---
 

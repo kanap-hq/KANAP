@@ -67,6 +67,7 @@ function buildService(): { sync: NetboxSyncService; config: NetboxConfigService 
   // is not expected in these scenarios and fails loudly.
   const assets: any = {
     addRelation: relations.addRelation.bind(relations),
+    addRelationWithPlacement: relations.addRelationWithPlacement.bind(relations),
     createLink: async () => undefined,
     upsertHardwareInfo: async () => undefined,
     update: async () => {
@@ -304,6 +305,80 @@ async function main() {
       const state = await withTenantExecution(dataSource, a.tenantId, async (manager) => config.readSyncState(await config.getConfig(manager, a.tenantId)));
       assert.ok(state.warnings.some((notice) => notice.code === 'cluster_match_invalid'));
       assert.ok(!(await relations(a.tenantId)).some((entry) => entry.endsWith('pma-app-01')));
+    }
+
+    // --- a member host is replaced by its cluster (R1) ---------------------
+    // par-app-01 is carried by the member host par-esx-01 in KANAP while Netbox runs it in the
+    // Paris cluster: the import replaces the host link, and the preview says `placement`.
+    {
+      const c = await seedTenant('placement', (seed) => ({ [PARIS.id]: seed.clusters.paris }));
+      made.push(c.tenantId);
+      await withTenantExecution(dataSource, c.tenantId, (manager) => manager.query(
+        `INSERT INTO asset_cluster_members (tenant_id, cluster_id, asset_id) VALUES ($1, $2, $3)`,
+        [c.tenantId, c.clusters.paris, c.server],
+      ));
+      await addContains(c.tenantId, c.server, c.vms['par-app-01']);
+      await addContains(c.tenantId, c.clusters.paris, c.vms['par-app-02']);
+      inventories.set(c.tenantId, [vm(50, 'par-app-01', PARIS), vm(51, 'par-app-02', PARIS)]);
+
+      const shown = await preview(sync, c.tenantId);
+      const row = shown.rows.find((entry) => entry.external_name === 'par-app-01');
+      assert.equal(row?.action, 'update');
+      assert.deepEqual(row?.diffs, [{ field: 'placement', before: 'par-esx-01', after: 'PAR-VSPHERE-CL01' }]);
+      assert.equal(row?.warnings.length, 0);
+      // Already in the cluster: nothing to show.
+      assert.equal(shown.rows.find((entry) => entry.external_name === 'par-app-02'), undefined);
+      assert.equal(shown.counts.update, 1);
+
+      const run = await manualRun(sync, c.tenantId);
+      assert.equal(run.counts.update, 1, JSON.stringify(run.counts));
+      assert.equal(run.counts.error, 0);
+      assert.deepEqual(await relations(c.tenantId), [
+        'PAR-VSPHERE-CL01 > par-app-01',
+        'PAR-VSPHERE-CL01 > par-app-02',
+      ]);
+      // The cluster link and the removed host link are both audited as the Netbox import.
+      const audit = await withTenantExecution(dataSource, c.tenantId, (manager) => manager.query(
+        `SELECT record_id, action, source, source_ref, before_json, after_json FROM audit_log
+         WHERE tenant_id = $1 AND table_name = 'asset_relations' ORDER BY created_at, table_name`,
+        [c.tenantId],
+      ));
+      assert.equal(audit.length, 2);
+      assert.ok(audit.every((entry: any) => entry.source === 'system' && entry.source_ref === 'netbox'));
+      const hostEntry = audit.find((entry: any) => String(entry.record_id) === c.server);
+      assert.deepEqual(hostEntry.before_json, { relations: [{ related_asset_id: c.vms['par-app-01'], relation_type: 'contains' }] });
+      assert.deepEqual(hostEntry.after_json, { relations: [] });
+      const clusterEntry = audit.find((entry: any) => String(entry.record_id) === c.clusters.paris);
+      assert.deepEqual(clusterEntry.before_json, { relations: [{ related_asset_id: c.vms['par-app-02'], relation_type: 'contains' }] });
+
+      // A second preview and run have nothing left to do.
+      const again = await preview(sync, c.tenantId);
+      assert.equal(again.counts.update, 0);
+      assert.equal(again.rows.find((entry) => entry.external_name === 'par-app-01'), undefined);
+      const second = await manualRun(sync, c.tenantId);
+      assert.equal(second.counts.update, 0);
+      assert.deepEqual(await relations(c.tenantId), [
+        'PAR-VSPHERE-CL01 > par-app-01',
+        'PAR-VSPHERE-CL01 > par-app-02',
+      ]);
+
+      // The mapped cluster is retired: nothing is removed, the host link stays and the notice says
+      // why the machine is not attached.
+      await withTenantExecution(dataSource, c.tenantId, (manager) => manager.query(
+        `UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`,
+        [c.tenantId, c.clusters.paris],
+      ));
+      await addContains(c.tenantId, c.server, c.vms['par-app-03']);
+      inventories.set(c.tenantId, [
+        vm(50, 'par-app-01', PARIS),
+        vm(51, 'par-app-02', PARIS),
+        vm(52, 'par-app-03', PARIS),
+      ]);
+      const retiredPreview = await preview(sync, c.tenantId);
+      assert.deepEqual(retiredPreview.notices.map((notice) => notice.code), ['cluster_match_invalid']);
+      const scheduled = await sync.runInBackground(c.tenantId, 'scheduled');
+      assert.equal(scheduled.status, 'success');
+      assert.ok((await relations(c.tenantId)).includes('par-esx-01 > par-app-03'), 'the retired cluster removes nothing');
     }
 
     // --- isolation: one tenant's match never reads another tenant's assets --

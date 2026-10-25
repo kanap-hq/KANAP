@@ -7,15 +7,12 @@ Connections document the infrastructure-level network paths between servers and 
 Navigate to **IT Landscape > Connections** to see your connection registry. Click **Add connection** to create your first entry.
 
 **Required fields**:
-  - **Connection ID**: A unique identifier (e.g., `CONN-WEB-DB-001`)
   - **Name**: A descriptive name
-  - **Connection type**: Server to Server or Multi-server
-  - **Source** / **Destination**: An entity, cluster, or server at each end (for Server to Server)
+  - **Topology**: Server to server or Multi-server
+  - **Endpoints**: A source and a destination (Server to server), or at least two servers (Multi-server)
   - **Protocols**: At least one network protocol
 
-**Strongly recommended**:
-  - **Purpose**: Why this connection exists
-  - **Lifecycle**: Current status
+KANAP gives each connection a reference, such as `CONN-12`.
 
 **Tip**: Connections can be linked to interface bindings to show which infrastructure supports each application integration.
 
@@ -26,9 +23,9 @@ Navigate to **IT Landscape > Connections** to see your connection registry. Clic
 The list gives you a filterable overview of every connection in your registry.
 
 **Default columns**:
-  - **Connection ID**: Unique identifier (click to open workspace)
+  - **Reference**: The connection reference, such as `CONN-12` (click to open workspace)
   - **Name**: Connection name (click to open workspace)
-  - **Topology**: Server to Server or Multi-server
+  - **Topology**: Server to server or Multi-server
   - **Source** / **Destination**: The connected endpoints
   - **Protocols**: Network protocols shown as chips
   - **Criticality**: Business importance, which may be derived from linked interfaces
@@ -36,7 +33,7 @@ The list gives you a filterable overview of every connection in your registry.
   - **PII**: Whether personal data traverses this connection
   - **Risk**: Manual or Derived (shows the number of linked interfaces)
   - **Lifecycle**: Current status
-  - **Created**: When the record was created
+  - **Created on**: When the record was created
 
 **Additional columns** (via column chooser):
   - **Servers**: Count of servers in a multi-server connection
@@ -55,99 +52,70 @@ The list gives you a filterable overview of every connection in your registry.
 
 ---
 
-## Connection types
+## Connection types { #connection-types }
 
-### Server to Server
+### Server to server
 
-A direct connection between two specific endpoints. Each side can be a server, a cluster, or a named entity:
+A direct connection between two endpoints. Each side is a server, a cluster or an entity:
 
-- **Source**: Where traffic originates: pick a server, cluster, or entity
-- **Destination**: Where traffic terminates: same options
-- You cannot select both a server and an entity for the same side; choose one or the other
-
-If an endpoint is a cluster, a note will remind you that member hosts are managed in the Servers workspace.
+- **Source**: Where traffic originates
+- **Destination**: Where traffic terminates
+- A side holds one server, cluster or entity
+- The source and the destination cannot be the same asset
 
 ### Multi-server
 
-A connection involving multiple servers (e.g., load-balanced clusters or mesh topologies):
+A connection between several servers, such as a replication between nodes or a mesh. Select at least two servers or clusters.
 
-- Select at least two servers from the **Connected servers** picker
-- Use **Layers** to define the routing path between them
+### Connections on a cluster { #connections-on-a-cluster }
+
+A source, a destination, a server of a multi-server connection or the equipment of a hop can be a cluster. The connection then applies to the members in service of the cluster. A member added later gets it too. A member taken out of the cluster loses it. A retired member gets nothing, and a retired cluster passes nothing on.
+
+The pickers mark a cluster with an icon and list its members under its name.
+
+When you pick a server that belongs to a cluster, KANAP asks **Connect to the cluster?**. **Connect to the cluster** puts the cluster on the connection, for all its members. **This server only** keeps the server. KANAP does not ask when the other side is already that cluster or one of its members: the connection stays on the server.
+
+A multi-server list that holds a cluster and one of its members keeps the cluster only. A message names the members removed from the list. A list must keep at least two servers.
+
+The [Network](assets.md#network) tab of each member lists the connections of its clusters, and the [Connection Map](connection-map.md) draws the members of a cluster.
 
 ---
 
 ## The Connections workspace
 
-Click any row to open the workspace. It has four tabs: **Overview**, **Layers**, **Criticality & Compliance**, and **Related Interfaces**.
+Click any row to open the workspace. It has two tabs: **Overview** and **Path**. The properties panel on the right holds **Lifecycle**, **Topology**, **Risk mode**, **Criticality**, **Data class**, **Contains PII** and **Created on**. Edits save automatically.
 
 **Delete**, a trash icon in the header, deletes the connection after a confirmation (`infrastructure:member`). The confirmation counts the interface bindings it is unlinked from. The interfaces themselves stay.
 
 ### Overview
 
-The Overview tab captures the connection's identity and topology.
+- **Description**: Why this connection exists and what it carries
+- **Endpoints**: The source and the destination, or the servers of a multi-server connection. See [Connection types](#connection-types)
+- **Protocols**: One or more network protocols, from your Connection Types settings, with their typical ports
+- **Risk derivation**: In derived risk mode, the interfaces the risk comes from, with their criticality, data class and PII
+- **Linked interfaces**: The interface bindings linked to this connection. **Link existing** links another one
 
-**What you can edit**:
-  - **Connection ID**: Unique identifier
-  - **Name**: Display name
-  - **Purpose**: Why this connection exists (free text)
-  - **Connection type**: Server to Server or Multi-server
-  - **Source** / **Destination**: For Server to Server, pick a server, cluster, or entity from a grouped dropdown
-  - **Connected servers**: For Multi-server, search and select two or more servers
-  - **Protocols**: One or more network protocols (drawn from your Connection Types settings)
-  - **Lifecycle**: Current status
-  - **Notes**: Additional context
+### Path
 
-When you select protocols, the system shows their typical ports for reference.
+The Path tab documents the network path of the connection, hop by hop: reverse proxies, firewalls, load balancers. Create the connection first to add hops.
 
----
+Each hop has:
 
-### Layers
+  - A function, such as Firewall, Reverse proxy or Load balancer
+  - **Equipment**: A server, a cluster or an entity, or nothing when the equipment is not documented. A server that belongs to a cluster raises the same question as an endpoint. See [Connections on a cluster](#connections-on-a-cluster)
+  - **Protocols (override)** and **Port**: When they differ from the connection
+  - **Notes**
 
-The Layers tab lets you define an ordered network path of up to three hops, useful for documenting reverse proxies, firewalls, or intermediate routing.
+**Add hop** adds a hop at the end. The arrows reorder the hops and the bin removes one. Each change saves at once.
 
-**What each layer captures**:
-  - **Order**: Sequence number (1 to 3)
-  - **Name**: A label for the layer (e.g., `direct`, `reverse_proxy`, `firewall`)
-  - **Source** / **Destination**: An entity, cluster, or server at each end of the hop
-  - **Protocols**: Which protocols are used at this layer
-  - **Port override**: Custom port if different from the protocol default (auto-populated when you pick a protocol)
-  - **Notes**: Layer-specific notes
+### Risk
 
-Layers are saved independently from the Overview tab. Use the **Save layers** button to persist your changes.
+**Risk mode**, in the properties panel:
 
-**Tip**: You must save the connection itself before you can add layers.
+  - **Manual**: You set criticality, data class and PII directly
+  - **Derived**: The values come from the linked interface bindings. The fields are read-only and show the highest values across the linked interfaces
 
----
-
-### Criticality & Compliance
-
-This tab controls risk classification and data protection settings.
-
-**Risk mode**:
-  - **Manual**: You set criticality, data class, and PII directly
-  - **Derived**: Values are aggregated from linked interface bindings. The tab shows the effective values and lists each contributing interface once, with the environments it is bound in
-
-**Fields**:
-  - **Criticality**: a business criticality level from your organization's catalog in [Classifications and continuity](it-ops-settings.md#classifications-and-continuity). The default levels are Critical, High, Moderate and Low
-  - **Data class**: Drawn from your organization's data classification settings
-  - **Contains PII**: Whether personal data traverses the connection
-
-When risk mode is Derived, the criticality, data class, and PII fields become read-only and reflect the highest values across all linked interfaces.
-
----
-
-### Related Interfaces
-
-This tab shows which interface bindings are linked to this connection.
-
-**What you will see**:
-  - **Interface**: Name and code, with criticality / data class / PII chips
-  - **Environment**: Binding environment and leg type
-  - **Source endpoint** / **Target endpoint**: The binding's endpoints
-  - **Lifecycle**: Interface lifecycle status
-  - **Actions**: A button to navigate to the interface workspace
-
-This tab is read-only. To link an interface binding to a connection, use the Interface workspace or the Connection Map.
+**Criticality** uses the levels of [Classifications and continuity](it-ops-settings.md#classifications-and-continuity). The default levels are Critical, High, Moderate and Low. **Data class** comes from your data classification settings.
 
 ---
 

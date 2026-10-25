@@ -1,7 +1,7 @@
 import useApplicationClassificationCatalog from '../../hooks/useApplicationClassificationCatalog';
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, Autocomplete, Box, Button, Chip, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material';
+import { Alert, Autocomplete, Box, Button, Chip, MenuItem, Snackbar, Stack, Switch, TextField, Typography } from '@mui/material';
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -18,11 +18,14 @@ import ConnectionPropertiesDrawer from './workspace/ConnectionPropertiesDrawer';
 import ConnectionOverviewTab, { type ConnectionProtocol } from './workspace/ConnectionOverviewTab';
 import ConnectionPathTab from './workspace/ConnectionPathTab';
 import ConnectionEndpointPicker, { type EndpointValue } from './workspace/ConnectionEndpointPicker';
+import ConnectionServersPicker from './workspace/ConnectionServersPicker';
+import useClusterConnectionQuestion from './components/useClusterConnectionQuestion';
 import { useConnectionItemNav } from '../../hooks/useModuleItemNav';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { drawerSelectSx, drawerMenuItemSx, drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import type { ConnectionPathHop } from './workspace/ConnectionPathSection';
+import type { ServerOption } from '../../components/fields/serverOptionRender';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
@@ -48,9 +51,9 @@ type LinkedInterfaceRow = {
   interface_contains_pii?: boolean;
 };
 
-type AssetSummary = { id: string; name: string; asset_reference?: string | null };
-
 type ConnectionTypeOption = { code: string; label: string };
+
+type AbsorbedAsset = { asset_id: string; name: string; cluster_id: string; cluster_name: string };
 
 type CreateConnectionForm = {
   name: string;
@@ -58,7 +61,7 @@ type CreateConnectionForm = {
   topology: 'server_to_server' | 'multi_server';
   source: EndpointValue;
   destination: EndpointValue;
-  servers: AssetSummary[];
+  servers: ServerOption[];
   protocolCodes: string[];
   lifecycle: string;
   criticality: string;
@@ -76,9 +79,9 @@ type ConnectionDetail = {
   source_entity_code: string | null;
   destination_asset_id: string | null;
   destination_entity_code: string | null;
-  source_server: AssetSummary | null;
-  destination_server: AssetSummary | null;
-  servers: AssetSummary[];
+  source_server: ServerOption | null;
+  destination_server: ServerOption | null;
+  servers: ServerOption[];
   protocol_codes: string[];
   protocols: ConnectionProtocol[];
   lifecycle: string;
@@ -178,11 +181,10 @@ export default function ConnectionWorkspacePage() {
   const [pendingTopology, setPendingTopology] = React.useState<'server_to_server' | 'multi_server' | null>(null);
 
   const [createForm, setCreateForm] = React.useState<CreateConnectionForm>(() => createInitialForm());
-  const [createMultiSearch, setCreateMultiSearch] = React.useState('');
-  const [createMultiOptions, setCreateMultiOptions] = React.useState<AssetSummary[]>([]);
-  const [createMultiLoading, setCreateMultiLoading] = React.useState(false);
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
+  const [absorbed, setAbsorbed] = React.useState<AbsorbedAsset[] | null>(null);
+  const { choose, questionDialog } = useClusterConnectionQuestion();
 
   const lifecycleOptions = byField.lifecycleStatus || [];
   const dataClassOptions = byField.dataClass || [];
@@ -226,28 +228,6 @@ export default function ConnectionWorkspacePage() {
       };
     });
   }, [connectionTypes, dataClassOptions, lifecycleOptions]);
-
-  React.useEffect(() => {
-    if (!isCreate || createForm.topology !== 'multi_server') return;
-    let cancelled = false;
-    const handle = setTimeout(async () => {
-      setCreateMultiLoading(true);
-      try {
-        const res = await api.get<{ items: AssetSummary[] }>('/assets', {
-          params: { q: createMultiSearch || undefined, limit: 50, sort: 'name:ASC' },
-        });
-        if (!cancelled) setCreateMultiOptions(res.data.items || []);
-      } catch {
-        if (!cancelled) setCreateMultiOptions([]);
-      } finally {
-        if (!cancelled) setCreateMultiLoading(false);
-      }
-    }, 200);
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
-    };
-  }, [createForm.topology, createMultiSearch, isCreate]);
 
   const patchCreateForm = React.useCallback((patch: Partial<CreateConnectionForm>) => {
     setCreateForm((prev) => ({ ...prev, ...patch }));
@@ -326,17 +306,25 @@ export default function ConnectionWorkspacePage() {
   }, [reloadLinkedInterfaces, load]);
 
   const patchConnection = React.useCallback(
-    async (patch: Partial<ConnectionDetail> | Record<string, any>) => {
+    async (
+      patch: Partial<ConnectionDetail> | Record<string, any>,
+      localPatch?: Partial<ConnectionDetail> | Record<string, any>,
+    ) => {
       if (!connectionId) return;
+      const local = localPatch ?? patch;
       setSaving(true);
-      setData((prev) => (prev ? { ...prev, ...(patch as any) } as ConnectionDetail : prev));
+      setData((prev) => (prev ? { ...prev, ...(local as any) } as ConnectionDetail : prev));
       try {
-        const res = await api.patch<ConnectionDetail>(`/connections/${connectionId}`, patch);
-        setData((prev) => (prev ? { ...prev, ...res.data } : res.data));
+        const res = await api.patch<ConnectionDetail & { absorbed?: AbsorbedAsset[] }>(`/connections/${connectionId}`, patch);
+        const { absorbed: absorbedItems, ...saved } = res.data;
+        setData((prev) => (prev ? { ...prev, ...saved } : saved as ConnectionDetail));
+        if (absorbedItems && absorbedItems.length > 0) setAbsorbed(absorbedItems);
         setError(null);
       } catch (e: any) {
-        setError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed')));
+        const message = getApiErrorMessage(e, t, t('messages.saveConnectionFailed'));
+        // The reload clears the page error: say why the write was refused once it is done.
         await load();
+        setError(message);
       } finally {
         setSaving(false);
       }
@@ -417,27 +405,85 @@ export default function ConnectionWorkspacePage() {
   }, [data, patchConnection, pendingTopology]);
 
   const handleEndpointChange = React.useCallback(
-    (side: 'source' | 'destination', next: { asset_id: string | null; entity_code: string | null }) => {
+    async (
+      side: 'source' | 'destination',
+      next: { asset_id: string | null; entity_code: string | null },
+      asset?: ServerOption,
+    ) => {
+      let endpoint = { asset_id: next.asset_id, entity_code: next.entity_code };
+      if (asset) {
+        const opposite = side === 'source'
+          ? (isCreate ? createForm.destination.asset_id : data?.destination_asset_id)
+          : (isCreate ? createForm.source.asset_id : data?.source_asset_id);
+        const target = await choose(asset, opposite ? [opposite] : []);
+        if (!target) return;
+        endpoint = { asset_id: target.id, entity_code: null };
+      }
+      if (isCreate) {
+        patchCreateForm(side === 'source' ? { source: endpoint } : { destination: endpoint });
+        return;
+      }
       if (side === 'source') {
         void patchConnection({
-          source_asset_id: next.asset_id,
-          source_entity_code: next.entity_code,
+          source_asset_id: endpoint.asset_id,
+          source_entity_code: endpoint.entity_code,
         });
       } else {
         void patchConnection({
-          destination_asset_id: next.asset_id,
-          destination_entity_code: next.entity_code,
+          destination_asset_id: endpoint.asset_id,
+          destination_entity_code: endpoint.entity_code,
         });
       }
     },
-    [patchConnection],
+    [
+      choose,
+      createForm.destination.asset_id,
+      createForm.source.asset_id,
+      data?.destination_asset_id,
+      data?.source_asset_id,
+      isCreate,
+      patchConnection,
+      patchCreateForm,
+    ],
+  );
+
+  // A cluster absorbs the member it covers: the added id becomes the cluster's, once, before the write.
+  const resolveServerList = React.useCallback(
+    async (next: ServerOption[], current: ServerOption[]) => {
+      const currentIds = new Set(current.map((server) => server.id));
+      let resolved = [...next];
+      for (const added of next.filter((server) => !currentIds.has(server.id))) {
+        const others = resolved.filter((server) => server.id !== added.id).map((server) => server.id);
+        const target = await choose(added, others);
+        if (!target) {
+          resolved = resolved.filter((server) => server.id !== added.id);
+          continue;
+        }
+        if (target.id !== added.id) {
+          resolved = resolved.filter((server) => server.id !== added.id);
+          if (!resolved.some((server) => server.id === target.id)) resolved.push(target);
+        }
+      }
+      return resolved;
+    },
+    [choose],
   );
 
   const handleMultiServerChange = React.useCallback(
-    (nextIds: string[]) => {
-      void patchConnection({ servers: nextIds });
+    async (next: ServerOption[]) => {
+      const current = data?.servers ?? [];
+      const resolved = await resolveServerList(next, current);
+      void patchConnection({ servers: resolved.map((server) => server.id) }, { servers: resolved });
     },
-    [patchConnection],
+    [data?.servers, patchConnection, resolveServerList],
+  );
+
+  const handleCreateServersChange = React.useCallback(
+    async (next: ServerOption[]) => {
+      const resolved = await resolveServerList(next, createForm.servers);
+      patchCreateForm({ servers: resolved });
+    },
+    [createForm.servers, patchCreateForm, resolveServerList],
   );
 
   const handleProtocolsChange = React.useCallback(
@@ -506,7 +552,7 @@ export default function ConnectionWorkspacePage() {
     setCreateSubmitting(true);
     setCreateError(null);
     try {
-      const res = await api.post('/connections', {
+      const res = await api.post<ConnectionDetail & { absorbed?: AbsorbedAsset[] }>('/connections', {
         name: createForm.name.trim(),
         description: createForm.description.trim() || null,
         topology: createForm.topology,
@@ -527,7 +573,8 @@ export default function ConnectionWorkspacePage() {
               servers: createForm.servers.map((server) => server.id),
             }),
       });
-      const saved = res.data as ConnectionDetail;
+      const { absorbed: absorbedItems, ...saved } = res.data;
+      if (absorbedItems && absorbedItems.length > 0) setAbsorbed(absorbedItems);
       const targetTab = validTab === 'path' ? 'path' : 'overview';
       navigate(`/it/connections/${saved.connection_reference || saved.id}/${targetTab}`, { replace: true });
     } catch (e: any) {
@@ -581,7 +628,7 @@ export default function ConnectionWorkspacePage() {
   const title = isCreate ? createForm.name : data?.name || '';
 
   const assetMap = React.useMemo(() => {
-    const map: Record<string, AssetSummary> = {};
+    const map: Record<string, ServerOption> = {};
     if (!data) return map;
     if (data.source_server) map[data.source_server.id] = data.source_server;
     if (data.destination_server) map[data.destination_server.id] = data.destination_server;
@@ -592,7 +639,7 @@ export default function ConnectionWorkspacePage() {
   const endpointsLabel = (() => {
     if (!data) return t('workspace.connection.endpointsMissing');
     if (data.topology === 'server_to_server') {
-      const fmt = (assetId: string | null, entityCode: string | null, asset: AssetSummary | null) => {
+      const fmt = (assetId: string | null, entityCode: string | null, asset: ServerOption | null) => {
         if (assetId && asset) return asset.asset_reference || asset.name;
         if (assetId) return t('workspace.connection.server');
         if (entityCode) return labelFor('entity', entityCode);
@@ -876,13 +923,13 @@ export default function ConnectionWorkspacePage() {
                     label={t('workspace.connection.layers.source')}
                     value={createForm.source}
                     disabled={!canManage || createSubmitting}
-                    onChange={(next) => patchCreateForm({ source: next })}
+                    onChange={(next, asset) => void handleEndpointChange('source', next, asset)}
                   />
                   <ConnectionEndpointPicker
                     label={t('workspace.connection.layers.destination')}
                     value={createForm.destination}
                     disabled={!canManage || createSubmitting}
-                    onChange={(next) => patchCreateForm({ destination: next })}
+                    onChange={(next, asset) => void handleEndpointChange('destination', next, asset)}
                   />
                 </Box>
               ) : (
@@ -893,37 +940,11 @@ export default function ConnectionWorkspacePage() {
                     helperText={createForm.servers.length < 2 ? t('workspace.connection.overview.selectTwoServers') : undefined}
                     valueSx={{ maxWidth: 640 }}
                   >
-                    <Autocomplete
-                      size="small"
-                      multiple
-                      disabled={!canManage || createSubmitting}
-                      options={createMultiOptions}
-                      loading={createMultiLoading}
-                      getOptionLabel={(opt) => `${opt.asset_reference ? `${opt.asset_reference} · ` : ''}${opt.name}`}
-                      isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                    <ConnectionServersPicker
                       value={createForm.servers}
-                      onChange={(_, val) => patchCreateForm({ servers: val })}
-                      onInputChange={(_, val, reason) => {
-                        if (reason !== 'reset') setCreateMultiSearch(val);
-                      }}
-                      renderTags={(value, getTagProps) =>
-                        value.map((opt, index) => (
-                          <Chip
-                            {...getTagProps({ index })}
-                            key={opt.id}
-                            label={`${opt.asset_reference ? `${opt.asset_reference} · ` : ''}${opt.name}`}
-                            size="small"
-                          />
-                        ))
-                      }
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          variant="standard"
-                          placeholder={t('workspace.connection.create.serversPlaceholder')}
-                          sx={drawerFieldValueSx}
-                        />
-                      )}
+                      onChange={(next) => void handleCreateServersChange(next)}
+                      disabled={!canManage || createSubmitting}
+                      placeholder={t('workspace.connection.create.serversPlaceholder')}
                     />
                   </PropertyRow>
                 </Box>
@@ -985,9 +1006,8 @@ export default function ConnectionWorkspacePage() {
             protocols={
               data.protocols ?? (data.protocol_codes || []).map((code) => ({ code, port_override: null }))
             }
-            assetMap={Object.fromEntries(
-              Object.entries(assetMap).map(([id, a]) => [id, { name: a.name, reference: a.asset_reference || null }]),
-            )}
+            sourceIsCluster={!!data.source_server?.is_cluster}
+            destinationIsCluster={!!data.destination_server?.is_cluster}
             sourceLabel={(() => {
               if (data.source_asset_id && data.source_server) return data.source_server.asset_reference ? `${data.source_server.asset_reference} · ${data.source_server.name}` : data.source_server.name;
               if (data.source_entity_code) return labelFor('entity', data.source_entity_code);
@@ -1028,6 +1048,23 @@ export default function ConnectionWorkspacePage() {
           />
         )}
       </PortfolioDetailWorkspaceShell>
+
+      {questionDialog}
+
+      <Snackbar
+        open={!!absorbed && absorbed.length > 0}
+        autoHideDuration={6000}
+        onClose={() => setAbsorbed(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setAbsorbed(null)} severity="info" variant="filled">
+          {t('workspace.connection.absorbed', {
+            count: absorbed?.length ?? 0,
+            names: Array.from(new Set((absorbed ?? []).map((item) => item.name))).join(', '),
+            clusters: Array.from(new Set((absorbed ?? []).map((item) => item.cluster_name))).join(', '),
+          })}
+        </Alert>
+      </Snackbar>
 
       <KanapDialog
         open={deleteDialogOpen}

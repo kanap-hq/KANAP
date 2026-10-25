@@ -90,7 +90,7 @@ Assets können in Cluster organisiert werden:
 - **Reguläres Asset**: Eine einzelne Infrastruktur-Instanz
 - **Cluster**: Eine Gruppe von Assets, die als eine einzige logische Einheit fungiert
 
-Um einen Cluster anzulegen, wählen Sie **Cluster hinzufügen** im Menü **Asset hinzufügen**, oder schalten Sie den Schalter **Cluster** in der Eigenschaftsleiste eines Assets ein. Ein Cluster kann Endpunkt von Verbindungen sein.
+Um einen Cluster anzulegen, wählen Sie **Cluster hinzufügen** im Menü **Asset hinzufügen**, oder schalten Sie den Schalter **Cluster** in der Eigenschaftsleiste eines Assets ein. Eine Verbindung auf einem Cluster gilt für seine Mitglieder: siehe [Verbindungen auf einem Cluster](connections.md#connections-on-a-cluster).
 
 ### Anwendungen auf einem Cluster { #applications-on-a-cluster }
 
@@ -107,7 +107,7 @@ Wenn Sie eine Anwendung einem Mitglied eines Clusters zuordnen, fragt KANAP **De
 
 Überall, wo KANAP liest, wo eine Anwendung läuft, zählt es die Mitglieder des Clusters: die Schwachstellen und das Support-Ende der Anwendung, ihren Hosting-Typ (ein Cluster ohne Standort übernimmt den Hosting-Typ seiner Mitglieder), die Administrationszonen, die Anwendungen eines Standorts oder eines Vertrags auf einem Server, den Assistenten und die Wissensdatenbank. In der Auswirkung eines ausgefallenen Mitglieds ist der Cluster beeinträchtigt, und seine Anwendungen laufen weiter. Siehe [Abhängigkeiten](#dependencies).
 
-Die Mitglieder werden im Reiter **Abhängigkeiten** des Clusters verwaltet. Siehe [Abhängigkeiten](#dependencies). Die Regeln:
+Die Mitglieder werden oben im Reiter **Betrieb** des Clusters verwaltet. Siehe [Betrieb](#operations). Die Regeln:
 
 - Ein Mitglied ist ein einfaches Asset. Ein Cluster kann kein Mitglied sein, und ein Asset kann nicht Mitglied seiner selbst sein.
 - Ein Cluster mit Mitgliedern kann nicht wieder zu einem einfachen Asset werden: Entfernen Sie zuerst seine Mitglieder.
@@ -115,6 +115,18 @@ Die Mitglieder werden im Reiter **Abhängigkeiten** des Clusters verwaltet. Sieh
 - Ein Cluster mit Mitgliedern hat kein Betriebssystem: Jedes Mitglied hat sein eigenes. Ein Cluster ohne Mitglieder kann eines behalten, etwa eine Gruppe von Cloud-Instanzen, deren Server Sie nicht erfassen. Siehe [Betriebssystem](#betriebssystem).
 
 Installationen, die von einer früheren Version aktualisiert wurden, behalten ihre Cluster. Mitgliedschaften, die gegen diese Regeln verstoßen, wurden bei der Aktualisierung entfernt. Ein Clustername im früheren Textfeld wurde zu einer echten Mitgliedschaft, wenn er genau einen Cluster bezeichnete.
+
+### Virtuelle Maschinen auf einem Cluster { #virtual-machines-on-a-cluster }
+
+Ein Virtualisierungscluster enthält seine virtuellen Maschinen: Fügen Sie sie im Abschnitt **Enthält** des Clusters hinzu, im Reiter **Abhängigkeiten**. Eine Maschine im Cluster kann auf jedem seiner Hosts laufen.
+
+Wenn Sie eine Beziehung **Enthält** von einem Host aus hinzufügen, der zu einem Cluster gehört, fragt KANAP **Im Cluster platzieren?**. **Im Cluster platzieren** legt die Beziehung auf den Cluster. **Nur dieser Host** behält sie auf dem Host. Dieselbe Frage kommt, wenn Sie einen solchen Host unter **Enthalten in** hinzufügen. Ein ausgemusterter Host oder Cluster löst keine Frage aus.
+
+- Ein Asset im Cluster zu platzieren ersetzt die Verknüpfungen, die die Mitglieds-Hosts zu ihm hatten. Eine Meldung nennt die Hosts.
+- Ein Host kann kein Asset enthalten, das sein Cluster bereits enthält. Die Meldung nennt den Cluster.
+- Ein Asset mit zwei Containern in Betrieb, etwa einem Host und einem Cluster, trägt ein Warnsymbol neben seinem Namen in **Enthält** und **Enthalten in**. Der Tooltip nennt die anderen Container. Entfernen Sie die Verknüpfung, die nicht mehr stimmt.
+
+Der Assistent und die [Netbox-Synchronisation](netbox.md#clusters) folgen denselben Regeln, ohne die Frage.
 
 ### Einen Cluster oder ein Mitglied löschen { #deleting-a-cluster-or-a-member }
 
@@ -187,7 +199,12 @@ Der Reiter Übersicht ist die Startseite des Assets.
 
 ### Betrieb { #operations }
 
-Der Reiter Betrieb zeigt, was auf dem Asset läuft: die Anwendungen, die es hostet, die Technologien, die es trägt, und ihre Schwachstellen. Er öffnet sich, sobald das Asset erstellt ist.
+Der Reiter Betrieb zeigt den Cluster des Assets und was darauf läuft: die Anwendungen, die es hostet, die Technologien, die es trägt, und ihre Schwachstellen. Er öffnet sich, sobald das Asset erstellt ist.
+
+**Cluster**, oben im Reiter:
+
+- Bei einem **Cluster** listet der Abschnitt **Mitglieder** die Mitglieds-Assets auf (Name, Umgebung, Status, Betriebssystem). Klicken Sie auf einen Namen, um dieses Asset zu öffnen. **Mitglieder hinzufügen** (bei einem Cluster ohne Mitglieder) oder **Mitglieder bearbeiten** öffnet einen Suchdialog. Er bietet nur einfache Assets an, nie einen Cluster oder den Cluster selbst. Ein Warnsymbol kennzeichnet ein Mitglied, dessen Umgebung von der des Clusters abweicht. Wenn Sie Mitglieder eines Clusters entfernen, der Anwendungen trägt, nennt **Mitglieder entfernen?** die Anwendungen, die jedes nicht mehr hosten wird. **Trotzdem entfernen** speichert.
+- Bei einem Server, der zu einem Cluster gehört, zeigt der Abschnitt **Cluster-Mitgliedschaft** seine Cluster mit ihrer Umgebung und ihrem Status. Klicken Sie auf einen Namen, um den Cluster zu öffnen. Ein Server ohne Cluster hat diesen Abschnitt nicht.
 
 **Gehostete Anwendungen**: die Anwendungen, die auf diesem Asset laufen. Jede Zeile zeigt:
 
@@ -274,7 +291,7 @@ Assets unterstützen mehrere IP-Adressen, jede mit ihrer eigenen Netzwerkkonfigu
 
 So können Sie mehrere Netzwerkschnittstellen pro Asset dokumentieren, zum Beispiel einen physischen Server mit sowohl einer Host-IP als auch einer IPMI-Management-Adresse in verschiedenen Subnetzen.
 
-**Verbindungen**: Eine schreibgeschützte Ansicht aller Verbindungen, die dieses Asset betreffen, sobald es erstellt ist. Jede Zeile zeigt die Verbindungs-ID und den Namen (anklickbar: öffnet den Verbindungs-Arbeitsbereich), die Topologie (Server zu Server oder Multi-Server), Protokolle, Quell- und Zielendpunkt-Bezeichnungen sowie den Lebenszyklus-Status. Um eine Verbindung zu erstellen oder zu bearbeiten, navigieren Sie zu **IT-Landschaft > Verbindungen**.
+**Verbindungen**: Eine schreibgeschützte Ansicht der Verbindungen dieses Assets, sobald es erstellt ist: jene, in denen es Endpunkt, Server oder Gerät eines Hops ist, und jene seiner Cluster. Jede Zeile zeigt die Referenz und den Namen (klicken, um die Verbindung zu öffnen), die Topologie, die Protokolle, Quelle und Ziel sowie den Lebenszyklus-Status. Unter dem Namen bedeutet **Hop 2**, dass das Asset das Gerät dieses Hops ist, und **über** nennt den Cluster, wenn die Verbindung das Asset über ihn erreicht. Eine Multi-Server-Verbindung nennt ihre Server anstelle von Quelle und Ziel. Um eine Verbindung zu erstellen oder zu bearbeiten, navigieren Sie zu **IT-Landschaft > Verbindungen**.
 
 ---
 
@@ -296,7 +313,7 @@ Verfolgt physische Hardware-Details. Speichert automatisch beim Tippen.
 
 ### Abhängigkeiten { #dependencies }
 
-Der Reiter Abhängigkeiten zeigt, wie das Asset zu den anderen Assets steht: was mit ihm ausfällt, sein Cluster und seine Beziehungen zu anderen Assets. Er öffnet sich, sobald das Asset erstellt ist. Das Reiter-Badge zählt die Beziehungen zwischen Assets sowie die Mitglieder eines Clusters oder die Cluster, zu denen das Asset gehört.
+Der Reiter Abhängigkeiten zeigt, wie das Asset zu den anderen Assets steht: was mit ihm ausfällt und seine Beziehungen zu anderen Assets. Er öffnet sich, sobald das Asset erstellt ist. Das Reiter-Badge zählt die Beziehungen zwischen Assets. Die Mitglieder eines Clusters stehen im Reiter [Betrieb](#operations).
 
 **Wenn dieser Server ausfällt**: Der Reiter beginnt mit dem, was mit diesem Asset ausfällt. Eine Übersichtszeile zählt die betroffenen Anwendungen, Assets, Cluster und Geschäftsprozesse, danach folgt eine Tabelle pro Art:
 
@@ -306,11 +323,6 @@ Der Reiter Abhängigkeiten zeigt, wie das Asset zu den anderen Assets steht: was
 - **Geschäftsprozesse**: die Prozesse der betroffenen Anwendungen.
 
 Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede Tabelle zeigt ihre ersten 50 Zeilen und zählt den Rest. Anwendungen und Prozesse erfordern das Recht, sie zu lesen. Der Abschnitt aktualisiert sich, sobald Sie eine Beziehung zwischen Assets hinzufügen oder entfernen, die Mitglieder eines Clusters ändern oder den Schalter **Cluster** ein- oder ausschalten.
-
-**Cluster**:
-
-- Bei einem **Cluster** listet der Abschnitt **Mitglieder** die Mitglieds-Assets auf (Name, Umgebung, Status, Betriebssystem). Klicken Sie auf einen Namen, um dieses Asset zu öffnen. **Mitglieder hinzufügen** (bei einem Cluster ohne Mitglieder) oder **Mitglieder bearbeiten** öffnet einen Suchdialog. Er bietet nur einfache Assets an, nie einen Cluster oder den Cluster selbst. Ein Warnsymbol kennzeichnet ein Mitglied, dessen Umgebung von der des Clusters abweicht. Wenn Sie Mitglieder eines Clusters entfernen, der Anwendungen trägt, nennt **Mitglieder entfernen?** die Anwendungen, die jedes nicht mehr hosten wird. **Trotzdem entfernen** speichert.
-- Bei **jedem anderen Asset** zeigt der Abschnitt **Cluster-Mitgliedschaft** die Cluster, zu denen dieses Asset gehört, mit ihrer Umgebung und ihrem Status. Klicken Sie auf einen Namen, um den Cluster zu öffnen.
 
 **Beziehungen zwischen Assets**, eine Tabelle pro Richtung:
 
@@ -323,7 +335,7 @@ Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede T
 
 Jede Tabelle zeigt Referenz (`AST-12`), Name, Typ, Umgebung und Status. Ein ausgemustertes oder deaktiviertes Asset bleibt mit ausgegrautem Namen aufgeführt. Klicken Sie auf eine Zeile, um das Asset zu öffnen.
 
-Mit `infrastructure:member` öffnet **Hinzufügen** rechts neben einem Abschnitt eine Suche nach einem Asset. Wählen Sie ein Ergebnis: Die Beziehung wird sofort gespeichert. Um eine Beziehung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Leser sehen die Tabellen schreibgeschützt.
+Mit `infrastructure:member` öffnet **Hinzufügen** rechts neben einem Abschnitt eine Suche nach einem Asset. Wählen Sie ein Ergebnis: Die Beziehung wird sofort gespeichert. Um eine Beziehung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Leser sehen die Tabellen schreibgeschützt. Eine Beziehung **Enthält** von einem Mitglied eines Clusters fragt zuerst, wo das Asset platziert wird: siehe [Virtuelle Maschinen auf einem Cluster](#virtual-machines-on-a-cluster).
 
 ---
 
