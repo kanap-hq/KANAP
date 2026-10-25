@@ -153,6 +153,105 @@ export function taskIncidentVisibilityQueryBuilderClause(
   };
 }
 
+/**
+ * Audit-log rows that describe an incident the viewer may not see, in one
+ * predicate over the log alias (`a` in `AuditLogsService`).
+ *
+ * A row is tied to its incident by what its table means: `incidents` and the
+ * three link tables store the incident id in `record_id` (the relations service
+ * audits a link change under the incident), an entry or an attachment is joined
+ * through its `incident_id`, the review through its integrated binding, and a
+ * task through its `related_object_id`. The incident is read on its current
+ * row, so a line about a deleted incident stays visible, as today.
+ *
+ * Empty for a registry admin: no branch, no parameter, no cost.
+ */
+export function auditLogIncidentVisibilitySql(
+  auditAlias: string,
+  viewer: IncidentViewer | null | undefined,
+  params: unknown[],
+): string {
+  const confidentiality = incidentConfidentialityPredicate('i_audit', viewer, params);
+  if (confidentiality.unrestricted) return '';
+
+  const tenant = `${auditAlias}.tenant_id`;
+  const recordId = `${auditAlias}.record_id`;
+  const hidden = confidentiality.hidden;
+
+  const directIncident = `EXISTS (
+        SELECT 1
+        FROM incidents i_audit
+        WHERE i_audit.id = ${recordId}
+          AND i_audit.tenant_id = ${tenant}
+          AND (${hidden})
+      )`;
+  const entry = `EXISTS (
+        SELECT 1
+        FROM incident_entries e_audit
+        JOIN incidents i_audit
+          ON i_audit.id = e_audit.incident_id
+         AND i_audit.tenant_id = e_audit.tenant_id
+        WHERE e_audit.id = ${recordId}
+          AND e_audit.tenant_id = ${tenant}
+          AND (${hidden})
+      )`;
+  const attachment = `EXISTS (
+        SELECT 1
+        FROM incident_attachments at_audit
+        JOIN incidents i_audit
+          ON i_audit.id = at_audit.incident_id
+         AND i_audit.tenant_id = at_audit.tenant_id
+        WHERE at_audit.id = ${recordId}
+          AND at_audit.tenant_id = ${tenant}
+          AND (${hidden})
+      )`;
+  const review = `EXISTS (
+        SELECT 1
+        FROM integrated_document_bindings b_audit
+        JOIN incidents i_audit
+          ON i_audit.id = b_audit.source_entity_id
+         AND i_audit.tenant_id = b_audit.tenant_id
+        WHERE b_audit.document_id = ${recordId}
+          AND b_audit.tenant_id = ${tenant}
+          AND b_audit.source_entity_type = 'incidents'
+          AND (${hidden})
+      )`;
+  const task = `EXISTS (
+        SELECT 1
+        FROM tasks t_audit
+        JOIN incidents i_audit
+          ON i_audit.id = t_audit.related_object_id
+         AND i_audit.tenant_id = t_audit.tenant_id
+        WHERE t_audit.id = ${recordId}
+          AND t_audit.tenant_id = ${tenant}
+          AND t_audit.related_object_type = 'incident'
+          AND (${hidden})
+      )`;
+
+  return ` AND NOT (
+      (${auditAlias}.table_name IN ('incidents', 'incident_assets', 'incident_applications', 'incident_technologies') AND ${directIncident})
+      OR (${auditAlias}.table_name = 'incident_entries' AND ${entry})
+      OR (${auditAlias}.table_name = 'incident_attachments' AND ${attachment})
+      OR (${auditAlias}.table_name = 'documents' AND ${review})
+      OR (${auditAlias}.table_name = 'tasks' AND ${task})
+  )`;
+}
+
+/** The same audit predicate as named parameters, for a TypeORM QueryBuilder. */
+export function auditLogIncidentVisibilityQueryBuilderClause(
+  auditAlias: string,
+  viewer: IncidentViewer | null | undefined,
+  paramName = 'auditIncidentViewerId',
+): { clause: string; params: Record<string, unknown> } {
+  const params: unknown[] = [];
+  const sql = auditLogIncidentVisibilitySql(auditAlias, viewer, params);
+  if (!sql) return { clause: '', params: {} };
+  return {
+    clause: sql.replace(/^\s*AND\s+/, '').replace(/\$1\b/g, `:${paramName}`),
+    params: params.length > 0 ? { [paramName]: params[0] } : {},
+  };
+}
+
 /** Related-object label on tasks: INC-N only when the incident is confidential. */
 export function incidentRelatedLabelSql(alias: string): string {
   return `CASE WHEN ${alias}.id IS NULL THEN NULL WHEN ${alias}.confidential THEN 'INC-' || ${alias}.item_number::text ELSE 'INC-' || ${alias}.item_number::text || ' · ' || ${alias}.title END`;

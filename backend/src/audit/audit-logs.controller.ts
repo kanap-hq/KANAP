@@ -11,6 +11,7 @@ import { RateLimitGuard } from '../common/rate-limit.guard';
 import { ClientAbortedError } from '../common/request-finalizer.middleware';
 import { AUDIT_LOG_EXPORT_TRUNCATED_HEADER, AuditLogsService } from './audit-logs.service';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
+import { incidentViewerFromContext } from '../incidents/incident-visibility';
 
 /**
  * Writes one part of a streamed answer and waits until the client has taken it when the socket's
@@ -44,14 +45,14 @@ export class AuditLogsController {
   @RequireLevel('users', 'admin')
   @Get()
   list(@Query() query: any, @Tenant() ctx: TenantRequest) {
-    return this.svc.list(query, { manager: ctx.manager });
+    return this.svc.list(query, { manager: ctx.manager, viewer: incidentViewerFromContext(ctx) });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
   @Get('filter-values')
   listFilterValues(@Query() query: any, @Tenant() ctx: TenantRequest) {
-    return this.svc.listFilterValues(query, { manager: ctx.manager });
+    return this.svc.listFilterValues(query, { manager: ctx.manager, viewer: incidentViewerFromContext(ctx) });
   }
 
   // The list's rows as a CSV file, same query as `GET /audit-logs`. Declared before ':id'.
@@ -68,7 +69,11 @@ export class AuditLogsController {
     @Res() res: Response,
   ): Promise<void> {
     if (!ctx.manager) throw new BadRequestException('The audit log export needs a tenant.');
-    const result = await this.svc.exportCsv(query, { manager: ctx.manager, tenantId: ctx.tenantId });
+    const result = await this.svc.exportCsv(query, {
+      manager: ctx.manager,
+      tenantId: ctx.tenantId,
+      viewer: incidentViewerFromContext(ctx),
+    });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(result.filename));
     if (result.truncated) res.setHeader(AUDIT_LOG_EXPORT_TRUNCATED_HEADER, String(result.limit));
@@ -88,6 +93,6 @@ export class AuditLogsController {
   @RequireLevel('users', 'admin')
   @Get(':id')
   getById(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
-    return this.svc.getById(id, { manager: ctx.manager });
+    return this.svc.getById(id, { manager: ctx.manager, viewer: incidentViewerFromContext(ctx) });
   }
 }

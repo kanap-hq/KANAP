@@ -8,6 +8,10 @@ import { assertSetFilterModes, compileAgFilterCondition, createParamNameGenerato
 import { neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { writeCsvHeader, writeCsvRows } from '../common/csv-sheet/write';
 import { AUTH_EVENT_TABLE, EXPORT_EVENT_TABLE } from './security-events';
+import {
+  IncidentViewer,
+  auditLogIncidentVisibilityQueryBuilderClause,
+} from '../incidents/incident-visibility';
 
 type AuditListItem = {
   id: string;
@@ -385,8 +389,10 @@ export class AuditLogsService {
     filters?: any;
     manager?: EntityManager;
     excludeField?: 'table_name' | 'action' | 'source' | 'user_id';
+    /** Rows about an incident this reader cannot see are absent (empty for incidents:admin). */
+    viewer?: IncidentViewer | null;
   }) {
-    const { query, q, filters, manager, excludeField } = params;
+    const { query, q, filters, manager, excludeField, viewer } = params;
     assertSetFilterModes(filters);
     const repo = this.getAuditRepo(manager);
     const qb = repo
@@ -436,6 +442,11 @@ export class AuditLogsService {
 
     const toExclusive = this.resolveBoundary(query?.to, 'to');
     if (toExclusive) qb.andWhere('a.created_at < :to', { to: toExclusive });
+
+    const incidentVisibility = auditLogIncidentVisibilityQueryBuilderClause('a', viewer);
+    if (incidentVisibility.clause) {
+      qb.andWhere(incidentVisibility.clause, incidentVisibility.params);
+    }
 
     if (q) {
       const like = `%${q}%`;
@@ -490,7 +501,7 @@ export class AuditLogsService {
     return new Map(users.map((u) => [u.id, u]));
   }
 
-  async list(query: any, opts?: { manager?: EntityManager }) {
+  async list(query: any, opts?: { manager?: EntityManager; viewer?: IncidentViewer | null }) {
     const { page, limit, skip, sort, q, filters } = parsePagination(query, {
       field: 'created_at',
       direction: 'DESC',
@@ -503,6 +514,7 @@ export class AuditLogsService {
       q,
       filters,
       manager: opts?.manager,
+      viewer: opts?.viewer,
     });
 
     const total = await qb.clone().getCount();
@@ -538,7 +550,7 @@ export class AuditLogsService {
    */
   async exportCsv(
     query: any,
-    opts: { manager: EntityManager; tenantId: string },
+    opts: { manager: EntityManager; tenantId: string; viewer?: IncidentViewer | null },
   ): Promise<AuditLogExport> {
     const { sort, q, filters } = parsePagination(query, {
       field: 'created_at',
@@ -548,9 +560,9 @@ export class AuditLogsService {
     const direction = sort.direction === 'ASC' ? 'ASC' : 'DESC';
     const limit = Math.max(0, Math.floor(this.exportRowLimit));
     const batchSize = Math.max(1, Math.floor(this.exportBatchSize));
-    const { manager, tenantId } = opts;
+    const { manager, tenantId, viewer } = opts;
 
-    const filtered = () => this.createFilteredQuery({ query, q, filters, manager })
+    const filtered = () => this.createFilteredQuery({ query, q, filters, manager, viewer })
       .andWhere('a.tenant_id = :exportTenantId', { exportTenantId: tenantId });
 
     const [cappedSql, cappedParams] = filtered().select('a.id', 'id').limit(limit + 1).getQueryAndParameters();
@@ -610,7 +622,7 @@ export class AuditLogsService {
     return { filename: `audit-log-${day}.csv`, truncated, limit, chunks: chunks() };
   }
 
-  async listFilterValues(query: any, opts?: { manager?: EntityManager }): Promise<Record<string, Array<string | null>>> {
+  async listFilterValues(query: any, opts?: { manager?: EntityManager; viewer?: IncidentViewer | null }): Promise<Record<string, Array<string | null>>> {
     const { q, filters } = parsePagination(query, {
       field: 'created_at',
       direction: 'DESC',
@@ -633,6 +645,7 @@ export class AuditLogsService {
         filters,
         manager: opts?.manager,
         excludeField: field,
+        viewer: opts?.viewer,
       });
       const rows = await qb
         .select(`a.${field}`, 'value')
@@ -645,9 +658,17 @@ export class AuditLogsService {
     return results;
   }
 
-  async getById(id: string, opts?: { manager?: EntityManager }) {
-    const repo = this.getAuditRepo(opts?.manager);
-    const found = await repo.findOne({ where: { id } });
+  async getById(id: string, opts?: { manager?: EntityManager; viewer?: IncidentViewer | null }) {
+    // The detail goes through the list's filters, so a row about an invisible incident
+    // answers as missing, like a task detail.
+    const found = await this.createFilteredQuery({
+      query: {},
+      filters: {},
+      manager: opts?.manager,
+      viewer: opts?.viewer,
+    })
+      .andWhere('a.id = :auditEntryId', { auditEntryId: id })
+      .getOne();
     if (!found) throw new NotFoundException('Audit entry not found');
 
     const usersById = await this.loadUsersById(found.user_id ? [found.user_id] : [], opts?.manager);
