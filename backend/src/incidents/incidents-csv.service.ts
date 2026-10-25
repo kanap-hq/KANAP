@@ -26,7 +26,8 @@ import {
 } from './incident-csv.config';
 import { isReservedIncidentStatusMove } from './incident.entity';
 import { IncidentEntryKind } from './incident-entry.entity';
-import { INCIDENT_FROZEN_STATUSES, IncidentViewer, incidentVisibilitySql } from './incident-visibility';
+import { INCIDENT_FROZEN_STATUSES, IncidentViewer } from './incident-visibility';
+import { INCIDENT_LIST_FROM, IncidentsService } from './services/incidents.service';
 
 /** Timestamps are read as UTC ISO; the config writes them in the exporting user's zone. */
 const isoUtc = (column: string) => `to_char(i.${column} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS ${column}`;
@@ -64,8 +65,10 @@ const CLOSURE_CHANGE_NOTES: Record<string, string> = {
 /**
  * CSV import/export for the incident register.
  *
- * Export writes the register in reference order (INC-1, INC-2, …); import
- * upserts on that reference (see incident-csv.config.ts).
+ * Export follows the list when it is given the list's query (filters, search,
+ * sort): the same `buildWhere` and visibility predicate, so the file holds what
+ * the list shows and nothing it hides. Import upserts on the reference (see
+ * incident-csv.config.ts).
  *
  * The `review` column is virtual: it lives in the `incidents:review` integrated
  * document. Export hydrates it in one batched query under the visibility SQL
@@ -80,6 +83,7 @@ export class IncidentsCsvService {
     private readonly importSvc: CsvImportService,
     private readonly integratedDocs: IntegratedDocumentsService,
     private readonly itOpsSettings: ItOpsSettingsService,
+    private readonly incidents: IncidentsService,
   ) {}
 
   async export(opts: {
@@ -92,17 +96,22 @@ export class IncidentsCsvService {
     viewer?: IncidentViewer;
     scope?: 'template' | 'data';
     fields?: string[];
+    /**
+     * The list's query (`filters`, `q`, `sort`, `asset_id`, `application_id`): the file then holds
+     * what the list shows, through the list's own WHERE builder and visibility predicate. Absent,
+     * the whole register the viewer may see.
+     */
+    query?: Record<string, unknown>;
   }): Promise<CsvExportResult> {
     const { manager, tenantId, viewer, scope, fields } = opts;
-    const params: unknown[] = [tenantId];
-    const visibility = incidentVisibilitySql('i', viewer, params);
-
-    const rows: Array<Record<string, any>> = scope === 'template'
-      ? []
-      : await manager.query(
-        `SELECT ${EXPORT_COLUMNS} FROM incidents i WHERE i.tenant_id = $1${visibility} ORDER BY i.item_number ASC`,
-        params,
+    let rows: Array<Record<string, any>> = [];
+    if (scope !== 'template') {
+      const listQuery = await this.incidents.exportQuery(opts.query ?? {}, { manager, tenantId, viewer });
+      rows = await manager.query(
+        `SELECT ${EXPORT_COLUMNS} ${INCIDENT_LIST_FROM} WHERE ${listQuery.where} ORDER BY ${listQuery.orderBy}`,
+        listQuery.params,
       );
+    }
 
     if (rows.length > 0 && (!fields || fields.includes(REVIEW_COLUMN))) {
       await this.hydrateReviews(rows, manager, tenantId);

@@ -12,6 +12,7 @@ import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.serv
 import { Tenant } from '../../tenants/tenant.entity';
 import { Location } from '../../locations/location.entity';
 import * as assert from 'node:assert/strict';
+import { parse as parseCsvSync } from 'csv-parse/sync';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
@@ -120,17 +121,18 @@ function createServices(manager: any) {
     importService,
   );
   const resolver = new CsvResolverService();
-  const csv = new IncidentsCsvService(
-    new CsvExportService(resolver),
-    new CsvImportService(resolver, new CsvJsonValidators()),
-    integrated,
-    new ItOpsSettingsService(manager.getRepository(Tenant), manager.getRepository(Location), { log: async () => undefined } as any),
-  );
   const incidents = new IncidentsService(
     manager.getRepository(Incident),
     { log: async () => undefined } as any,
     new ItemNumberService(),
     integrated,
+  );
+  const csv = new IncidentsCsvService(
+    new CsvExportService(resolver),
+    new CsvImportService(resolver, new CsvJsonValidators()),
+    integrated,
+    new ItOpsSettingsService(manager.getRepository(Tenant), manager.getRepository(Location), { log: async () => undefined } as any),
+    incidents,
   );
   return { knowledge, integrated, csv, incidents };
 }
@@ -232,6 +234,17 @@ function cell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
+/** The titles of the data lines of an incident export, in file order (the title is the second column). */
+function exportTitles(content: string): string[] {
+  const rows = parseCsvSync(content.replace(/^\uFEFF/, ''), {
+    delimiter: ';',
+    bom: true,
+    skip_empty_lines: true,
+    relax_column_count: true,
+  }) as string[][];
+  return rows.slice(1).map((row) => row[1] ?? '');
+}
+
 async function createIncident(
   runner: QueryRunner,
   f: Fixture,
@@ -319,7 +332,7 @@ async function testExportImportRoundTrip() {
       language: 'fr',
       viewer: { userId: f.users.admin, isAdmin: true },
     });
-    assert.ok(exported.content.includes('review'), 'the review column is exported by default');
+    assert.ok(exported.content.includes("Revue d'incident"), 'the review column is exported by default, in the file\'s language');
     assert.ok(exported.content.includes('- 300 mailboxes'), 'the multiline body is exported');
     // Date-times in the export language's form (UTC), the way the other exports write days.
     const detected = new Date(incident.detected_at);
@@ -364,6 +377,132 @@ async function testExportImportRoundTrip() {
 }
 
 /**
+ * The export follows the list: its column filters, quick search and sort, through the list's own
+ * WHERE builder. A restricted incident stays out for a viewer who may not see it, even when the
+ * filter would match it. The template keeps its meaning and ignores the list query.
+ */
+async function testExportFollowsTheList() {
+  await withFixture(async (runner, f) => {
+    const services = createServices(runner.manager);
+    const adminViewer = { userId: f.users.admin, isAdmin: true };
+    const viewer = { userId: f.users.contributor, isAdmin: false };
+    const opts = { manager: runner.manager, tenantId: f.tenantId, language: 'fr' as const };
+    const lyon = await createIncident(runner, f, services, {
+      title: 'Mail outage Lyon', severity: 'major', status: 'open', detected_at: '2026-10-05T08:00:00Z',
+      owner_user_id: f.users.admin,
+      personal_data_affected: true, authority_notification_required: true,
+      authority_notified_at: '2026-10-06T09:00:00Z',
+    });
+    const paris = await createIncident(runner, f, services, {
+      title: 'VPN outage Paris', severity: 'critical', status: 'closed', detected_at: '2026-10-20T08:00:00Z',
+      owner_user_id: f.users.contributor,
+    });
+    const hidden = await createIncident(runner, f, services, {
+      title: 'Mail outage secret', severity: 'major', status: 'open', detected_at: '2026-10-10T08:00:00Z',
+      confidential: true, reporter_user_id: f.users.other, owner_user_id: f.users.other,
+    });
+
+    // A severity filter and the list's sort: the file holds the matching rows in that order.
+    const major = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ severity: { filterType: 'set', values: ['major'] } }),
+        sort: 'detected_at:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(major.content), [lyon.title, hidden.title], 'severity filter and sort follow the list');
+
+    // The same filter for a viewer who is neither administrator, reporter nor owner: the
+    // restricted row is not widened into view by the filter.
+    const visible = await services.csv.export({
+      ...opts,
+      viewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ severity: { filterType: 'set', values: ['major'] } }),
+        sort: 'detected_at:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(visible.content), [lyon.title], 'a restricted incident stays invisible');
+
+    // Quick search and sort.
+    const searched = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: { q: 'outage', sort: 'detected_at:DESC' },
+    });
+    assert.deepEqual(exportTitles(searched.content), [paris.title, hidden.title, lyon.title], 'search and sort follow the list');
+
+    // Owner: a column the list filters and sorts through its users join.
+    const owner = await runner.manager.query(
+      `SELECT first_name || ' ' || last_name AS name FROM users WHERE id = $1`, [f.users.admin],
+    );
+    const byOwner = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ owner_name: { filterType: 'set', values: [owner[0].name] } }),
+        sort: 'owner_name:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(byOwner.content), [lyon.title], 'the owner filter and sort use the list joins');
+    const byOwnerSort = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: { q: 'outage', sort: 'owner_name:ASC' },
+    });
+    assert.deepEqual(exportTitles(byOwnerSort.content), [lyon.title, paris.title, hidden.title], 'sorting on owner name follows the list');
+
+    // The compliance columns the list now reads, and their yes or no filter.
+    const listed = await services.incidents.list(
+      { sort: 'detected_at:ASC' },
+      { manager: runner.manager, tenantId: f.tenantId, viewer: adminViewer },
+    );
+    const listedLyon = listed.items.find((item: any) => String(item.id) === String(lyon.id));
+    assert.equal(listedLyon?.personal_data_affected, true);
+    assert.equal(listedLyon?.authority_notification_required, true);
+    assert.ok(listedLyon?.authority_notified_at);
+    const compliance = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ personal_data_affected: { filterType: 'set', values: ['true'] } }),
+        sort: 'detected_at:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(compliance.content), [lyon.title], 'a yes or no filter follows the list');
+
+    // A period filter (AG Grid date model), as the list sends it.
+    const period = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ detected_at: { filterType: 'date', type: 'inRange', dateFrom: '2026-10-01', dateTo: '2026-10-15' } }),
+        sort: 'detected_at:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(period.content), [lyon.title, hidden.title], 'period filter follows the list');
+
+    // The template is headers only, whatever the list query says.
+    const template = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'template',
+      query: { filters: JSON.stringify({ severity: { filterType: 'set', values: ['major'] } }) },
+    });
+    assert.equal(template.rowCount, 0);
+    assert.equal(template.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/).length, 1, 'the template has no data line');
+  });
+}
+
+/**
  * Date-times are written in the local time of the user who exports, and the
  * header of each date-time column names that zone (`detected_at (Europe/Paris)`).
  * The import reads each cell in the zone its header names, UTC when it names none.
@@ -397,12 +536,17 @@ async function testDateTimesInTheExportersZone() {
     });
     const file = exported.content.replace(/^\uFEFF/, '');
     const header = file.split('\n')[0].split(';');
-    for (const column of ['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at']) {
-      assert.ok(header.includes(`${column} (Europe/Paris)`), `${column} names its zone: ${header.join(';')}`);
+    // The headers are the screen's words in the file's language, and a date-time names its zone
+    // after its translated header.
+    for (const [column, label] of Object.entries({
+      started_at: 'Début', detected_at: 'Détecté', resolved_at: 'Résolu', closed_at: 'Clôturé', authority_notified_at: 'Notifié le',
+    })) {
+      assert.ok(header.includes(`${label} (Europe/Paris)`), `${column} names its zone: ${header.join(';')}`);
     }
-    for (const column of ['ref', 'title', 'severity', 'status', 'review']) {
-      assert.ok(header.includes(column), `${column} keeps its plain header`);
+    for (const label of ['Réf.', 'Titre', 'Gravité', 'Statut', "Revue d'incident"]) {
+      assert.ok(header.includes(label), `${label} keeps its translated header`);
     }
+    assert.ok(file.includes(';Majeure;Ouvert;'), 'the severity and the status are the screen words, not their codes');
     assert.ok(file.includes('16/10/2026 10:38'), 'the local time of Paris, not 08:38 UTC');
     assert.ok(file.includes('29/03/2026 12:00'), 'summer time after the March change');
     assert.ok(file.includes('25/10/2026 11:00'), 'winter time after the October change');
@@ -440,8 +584,7 @@ async function testDateTimesInTheExportersZone() {
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(utc.errors, []);
-    const columns = header.filter((h) => h.endsWith(' (Europe/Paris)')).map((h) => h.replace(' (Europe/Paris)', ''));
-    assert.ok(columns.includes('started_at') && columns.includes('detected_at'));
+    const columns = ['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at'];
     assert.deepEqual(
       utc.warnings.map((w) => [w.row, w.code, w.params]),
       [[0, 'CSV_HEADER_ZONELESS_DATE_TIMES', { columns: columns.join(', '), example: columns[0] }]],
@@ -451,7 +594,7 @@ async function testDateTimesInTheExportersZone() {
 
     // A zone nobody knows is refused, with the coded error the screen translates.
     const unknown = await services.csv.import(
-      csvFile(file.replace('detected_at (Europe/Paris)', 'detected_at (Mars/Olympus)')),
+      csvFile(file.replace('Détecté (Europe/Paris)', 'Détecté (Mars/Olympus)')),
       { dryRun: true, mode: 'enrich', operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
@@ -1229,6 +1372,7 @@ async function run() {
   await dataSource.initialize();
   try {
     await testExportImportRoundTrip();
+    await testExportFollowsTheList();
     await testDateTimesInTheExportersZone();
     await testExportTimeZoneSource();
     await testEmptyCellAndDryRun();

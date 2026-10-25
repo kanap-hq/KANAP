@@ -7,6 +7,8 @@
       "exportCsv": "Exporter CSV",
       "importTitle": "Importer les incidents",
       "exportTitle": "Exporter les incidents",
+      "exportScope_one": "Export filtré : {{count}} incident",
+      "exportScope_other": "Export filtré : {{count}} incidents",
       "columns": {
         "reference": "Réf.",
         "title": "Titre",
@@ -21,7 +23,10 @@
         "applications": "Applications",
         "tasks": "Tâches",
         "created": "Créé le",
-        "access": "Accès"
+        "access": "Accès",
+        "personalData": "Données personnelles",
+        "authorityRequired": "Notification requise",
+        "authorityNotified": "Notifié le"
       },
       "filters": {
         "noCategory": "(Aucune catégorie)",

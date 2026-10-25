@@ -673,7 +673,11 @@
       "status": "Status",
       "owners": "Owners",
       "timestamps": "Dates",
-      "vulnerabilities": "Vulnerabilities"
+      "vulnerabilities": "Vulnerabilities",
+      "timeline": "Timeline",
+      "people": "People",
+      "record": "Record",
+      "source": "Source"
     },
     "presets": {
       "applications": {
@@ -729,6 +733,27 @@
         "it_owner_email_3": "IT owner 3 email",
         "business_owner_email_4": "Business owner 4 email",
         "it_owner_email_4": "IT owner 4 email"
+      },
+      "incidents": {
+        "ref": "Ref",
+        "title": "Title",
+        "category": "Category",
+        "severity": "Severity",
+        "status": "Status",
+        "confidential": "Restricted to register administrators",
+        "started_at": "Started",
+        "detected_at": "Detected",
+        "resolved_at": "Resolved",
+        "closed_at": "Closed",
+        "reporter": "Reporter",
+        "owner": "Owner",
+        "description": "Description",
+        "review": "Incident review",
+        "source_ref": "External reference",
+        "personal_data_affected": "Personal data affected",
+        "authority_notification_required": "Authority notification required",
+        "authority_notified_at": "Notified on",
+        "notified_parties": "Parties informed"
       }
     }
   },

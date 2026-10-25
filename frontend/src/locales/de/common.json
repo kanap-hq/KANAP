@@ -673,7 +673,11 @@
       "status": "Status",
       "owners": "Verantwortliche",
       "timestamps": "Zeitstempel",
-      "vulnerabilities": "Schwachstellen"
+      "vulnerabilities": "Schwachstellen",
+      "timeline": "Verlauf",
+      "people": "Personen",
+      "record": "Eintrag",
+      "source": "Quelle"
     },
     "presets": {
       "applications": {
@@ -729,6 +733,27 @@
         "it_owner_email_3": "E-Mail IT-Verantwortliche/r 3",
         "business_owner_email_4": "E-Mail Fachverantwortliche/r 4",
         "it_owner_email_4": "E-Mail IT-Verantwortliche/r 4"
+      },
+      "incidents": {
+        "ref": "Ref.",
+        "title": "Titel",
+        "category": "Kategorie",
+        "severity": "Schweregrad",
+        "status": "Status",
+        "confidential": "Auf Registeradministratoren beschränkt",
+        "started_at": "Beginn",
+        "detected_at": "Erkannt",
+        "resolved_at": "Behoben",
+        "closed_at": "Geschlossen",
+        "reporter": "Melder",
+        "owner": "Verantwortlicher",
+        "description": "Beschreibung",
+        "review": "Vorfallsanalyse",
+        "source_ref": "Externe Referenz",
+        "personal_data_affected": "Personenbezogene Daten betroffen",
+        "authority_notification_required": "Meldung an Behörde erforderlich",
+        "authority_notified_at": "Gemeldet am",
+        "notified_parties": "Informierte Parteien"
       }
     }
   },

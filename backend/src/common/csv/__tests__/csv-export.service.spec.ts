@@ -281,7 +281,8 @@ function testDenormalizeReversesNeutralize() {
 
 /**
  * The file follows the screen language, as every file of the shared layer: the separator, the
- * day, the decimal mark and yes or no. The headers stay the same in every language.
+ * day, the decimal mark and yes or no. The headers stay technical unless the config translates
+ * them (`headerLabels`).
  */
 async function testExportFollowsTheLanguage() {
   const service = new CsvExportService(new CsvResolverService());
@@ -322,6 +323,34 @@ async function testExportFollowsTheLanguage() {
   assert.equal((await file('fr', 'template'))[0], 'name;end_of_support;cost;is_cluster;tags');
 }
 
+/** A config that names its headers per language writes them so, in the template too. */
+async function testHeaderLabelsFollowTheLanguage() {
+  const service = new CsvExportService(new CsvResolverService());
+  const config: CsvEntityConfig = {
+    entityName: 'incident',
+    tableName: 'incidents',
+    displayName: 'Incidents',
+    upsertKey: ['ref'],
+    headerLabels: {
+      ref: { en: 'Ref', fr: 'Réf.', de: 'Ref.', es: 'Ref.' },
+      title: { en: 'Title', fr: 'Titre', de: 'Titel', es: 'Título' },
+    },
+    fields: [
+      { csvColumn: 'ref', entityProperty: 'ref', type: CsvFieldType.STRING },
+      { csvColumn: 'title', entityProperty: 'title', type: CsvFieldType.STRING },
+    ],
+  };
+  const rows = [{ ref: 'INC-1', title: 'Mail' }];
+  const header = async (language: 'en' | 'fr' | 'de' | 'es', scope: 'data' | 'template' = 'data') =>
+    (await service.export(config, rows, { manager: createMockManager({}), tenantId: 't1', scope, language }))
+      .content.replace(/^\uFEFF/, '').split('\n')[0];
+  assert.equal(await header('fr'), 'Réf.;Titre');
+  assert.equal(await header('de'), 'Ref.;Titel');
+  assert.equal(await header('es'), 'Ref.;Título');
+  assert.equal(await header('en'), 'Ref,Title');
+  assert.equal(await header('fr', 'template'), 'Réf.;Titre', 'the template names its columns in the file language too');
+}
+
 // ===== Run tests =====
 
 (async () => {
@@ -336,6 +365,7 @@ async function testExportFollowsTheLanguage() {
   await testNullValuesExportAsEmpty();
   await testBOMIsPresent();
   await testFormulaLikeValuesAreNeutralized();
+  await testHeaderLabelsFollowTheLanguage();
   testDenormalizeReversesNeutralize();
 
   console.log('CSV export service tests passed.');

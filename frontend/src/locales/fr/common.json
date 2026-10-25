@@ -673,7 +673,11 @@
       "status": "Statut",
       "owners": "Responsables",
       "timestamps": "Dates",
-      "vulnerabilities": "Vulnérabilités"
+      "vulnerabilities": "Vulnérabilités",
+      "timeline": "Chronologie",
+      "people": "Personnes",
+      "record": "Enregistrement",
+      "source": "Source"
     },
     "presets": {
       "applications": {
@@ -729,6 +733,27 @@
         "it_owner_email_3": "E-mail du responsable IT 3",
         "business_owner_email_4": "E-mail du responsable métier 4",
         "it_owner_email_4": "E-mail du responsable IT 4"
+      },
+      "incidents": {
+        "ref": "Réf.",
+        "title": "Titre",
+        "category": "Catégorie",
+        "severity": "Gravité",
+        "status": "Statut",
+        "confidential": "Restreint aux administrateurs du registre",
+        "started_at": "Début",
+        "detected_at": "Détecté",
+        "resolved_at": "Résolu",
+        "closed_at": "Clôturé",
+        "reporter": "Déclarant",
+        "owner": "Responsable",
+        "description": "Description",
+        "review": "Revue d'incident",
+        "source_ref": "Référence externe",
+        "personal_data_affected": "Données personnelles concernées",
+        "authority_notification_required": "Notification aux autorités requise",
+        "authority_notified_at": "Notifié le",
+        "notified_parties": "Parties informées"
       }
     }
   },
