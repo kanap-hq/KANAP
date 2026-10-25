@@ -989,6 +989,7 @@ export default function AssetWorkspacePage() {
         const outcome = await resolveTargets({
           assetIds: [id],
           subject: `${appNames[selectedAppId] || t('components.clusterAssignment.thisApplication')} (${environment}, ${labelFor('serverRole', assignRole) || assignRole})`,
+          applicationName: appNames[selectedAppId] || t('components.clusterAssignment.thisApplication'),
           role: assignRole,
           rows: deployment.filter((row) => row.app_instance_id === instanceId).map((row) => ({ asset_id: row.server_id, role: row.role })),
         });
