@@ -1,5 +1,5 @@
 ---
-title: "Incident register: the facts, the dates, the evidence"
+title: "The incident register"
 description: "A year after an outage, the auditor or the insurer asks for details. When it started, who decided what, who did what, whether the right parties were notified. An incident register must be able to answer these questions, and it gets you ready for NIS2 at the same time."
 date: 2026-10-26
 topic: compliance
@@ -12,7 +12,7 @@ translationKey: incident-register-facts-dates-evidence
 
 In March, invoicing stops for three hours. A first restore fails, the day ends late, then life goes on.
 
-In October, the auditor asks for the file. When did the incident start, when was it noticed, who took charge of it? What was the cause, what was fixed, did it have to be notified? But the ticket has been closed, the exchanges are lost in mailboxes, and the person who handled the incident has moved to another role.
+In October, the auditor asks for the file. When did the incident start, when was it noticed, who took charge of it? But the ticket has been closed, the exchanges are lost in mailboxes, and the person who handled the incident has moved to another role.
 
 Here is how KANAP meets the need.
 

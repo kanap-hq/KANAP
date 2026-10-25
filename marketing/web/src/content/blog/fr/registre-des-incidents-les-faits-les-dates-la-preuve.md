@@ -1,5 +1,5 @@
 ---
-title: "Registre des incidents : les faits, les dates, la preuve"
+title: "Le registre des incidents"
 description: "Un an après une panne, l'auditeur ou l'assureur demande des détails. Quand elle a commencé, qui a décidé quoi, qui a fait quoi, si les bons interlocuteurs ont été notifiés. Un registre des incidents doit pouvoir répondre à ces questions, et vous prépare en même temps pour NIS2."
 date: 2026-10-26
 topic: compliance
@@ -12,7 +12,7 @@ translationKey: incident-register-facts-dates-evidence
 
 En mars, la facturation s'arrête pendant trois heures. Une première restauration échoue, la journée se termine tard, puis la vie reprend.
 
-En octobre, l'auditeur demande le dossier. Quand l'incident a-t-il commencé, quand a-t-il été remarqué, qui l'a pris en charge ? Quelle était la cause, qu'a-t-on corrigé, fallait-il notifier ? Mais le ticket a été fermé, les échanges sont perdus dans les boîtes mail, et la personne qui a traité l'incident a changé de poste.
+En octobre, l'auditeur demande le dossier. Quand l'incident a-t-il commencé, quand a-t-il été remarqué, qui l'a pris en charge ? Mais le ticket a été fermé, les échanges sont perdus dans les boîtes mail, et la personne qui a traité l'incident a changé de poste.
 
 Voici comment KANAP répond au besoin.
 

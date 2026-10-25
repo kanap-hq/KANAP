@@ -1,5 +1,5 @@
 ---
-title: "Registro de incidentes: los hechos, las fechas, las pruebas"
+title: "El registro de incidentes"
 description: "Un año después de una caída del servicio, el auditor o la aseguradora piden detalles. Cuándo empezó, quién decidió qué, quién hizo qué, si se notificó a los interlocutores adecuados. Un registro de incidentes debe poder responder a estas preguntas, y al mismo tiempo le prepara para NIS2."
 date: 2026-10-26
 topic: compliance
@@ -12,7 +12,7 @@ translationKey: incident-register-facts-dates-evidence
 
 En marzo, la facturación se detiene durante tres horas. Una primera restauración falla, la jornada termina tarde y luego la vida sigue.
 
-En octubre, el auditor pide el expediente. ¿Cuándo empezó el incidente, cuándo se advirtió, quién se hizo cargo? ¿Cuál fue la causa, qué se corrigió, había que notificarlo? Pero el ticket se cerró, los intercambios se perdieron en los buzones de correo y la persona que gestionó el incidente ha cambiado de puesto.
+En octubre, el auditor pide el expediente. ¿Cuándo empezó el incidente, cuándo se advirtió, quién se hizo cargo? Pero el ticket se cerró, los intercambios se perdieron en los buzones de correo y la persona que gestionó el incidente ha cambiado de puesto.
 
 Así responde KANAP a esta necesidad.
 

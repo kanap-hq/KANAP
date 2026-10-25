@@ -1,5 +1,5 @@
 ---
-title: "Vorfallsregister: die Fakten, die Daten, der Nachweis"
+title: "Das Vorfallsregister"
 description: "Ein Jahr nach einem Ausfall fragt der Auditor oder der Versicherer nach Details. Wann er begann, wer was entschieden hat, wer was getan hat, ob die richtigen Stellen benachrichtigt wurden. Ein Vorfallsregister muss diese Fragen beantworten können, und es bereitet Sie zugleich auf NIS2 vor."
 date: 2026-10-26
 topic: compliance
@@ -12,7 +12,7 @@ translationKey: incident-register-facts-dates-evidence
 
 Im März steht die Rechnungsstellung drei Stunden lang still. Eine erste Wiederherstellung schlägt fehl, der Tag endet spät, dann geht das Leben weiter.
 
-Im Oktober verlangt der Auditor die Unterlagen. Wann hat der Vorfall begonnen, wann wurde er bemerkt, wer hat ihn übernommen? Was war die Ursache, was wurde behoben, musste er gemeldet werden? Doch das Ticket ist geschlossen, der Austausch ist in den Postfächern verloren, und die Person, die den Vorfall bearbeitet hat, hat die Stelle gewechselt.
+Im Oktober verlangt der Auditor die Unterlagen. Wann hat der Vorfall begonnen, wann wurde er bemerkt, wer hat ihn übernommen? Doch das Ticket ist geschlossen, der Austausch ist in den Postfächern verloren, und die Person, die den Vorfall bearbeitet hat, hat die Stelle gewechselt.
 
 So deckt KANAP diesen Bedarf.
 
