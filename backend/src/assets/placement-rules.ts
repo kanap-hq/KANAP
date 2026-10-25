@@ -126,6 +126,10 @@ export async function replaceHostLinks(
   const first = await hostLinksToReplace(mg, tenantId, cluster, containedIds);
   if (first.length === 0) return [];
   const hostIds = Array.from(new Set(first.map((link) => link.host_id))).sort();
+  // The hosts are locked after the cluster. The bulk writers that lock batches of assets by id
+  // (the asset CSV import, `asset-csv.config.ts`, and the bulk administration view,
+  // `administration-view.service.ts`) can lock a host before this cluster: PostgreSQL then
+  // detects the deadlock and aborts one of the two transactions (40P01), with no damage to the data.
   await mg.query(
     `SELECT id FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR NO KEY UPDATE`,
     [tenantId, hostIds],
