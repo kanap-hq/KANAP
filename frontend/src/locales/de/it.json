@@ -2283,6 +2283,7 @@
           "dependedOnBy": "Kein Asset hängt von diesem ab."
         },
         "containsHint": "Von diesem Asset gehostete Assets, zum Beispiel VMs.",
+        "alsoContainedBy": "Auch enthalten in {{names}}",
         "placementReplaced": "{{cluster}} ersetzt die Verknüpfung zwischen {{hosts}} und {{asset}}."
       }
     },

@@ -1,5 +1,7 @@
 import React from 'react';
-import { Alert, Snackbar, Stack } from '@mui/material';
+import { Alert, Snackbar, Stack, Tooltip } from '@mui/material';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import { useTheme } from '@mui/material/styles';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
@@ -9,6 +11,7 @@ import { useRelationLabels } from '../../../components/workspace/relations/label
 import { useLocale } from '../../../i18n/useLocale';
 import { joinNames } from '../../working-day-calendars/workingDayCalendarFields';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { getDotColor } from '../../../utils/statusColors';
 import AssetImpactSection from '../editors/AssetImpactSection';
 import usePlacementQuestion from '../components/usePlacementQuestion';
 import { ASSET_DIRECTIONS, assetRelationsKey, type AssetDirection, type AssetRelationsData } from './assetRelationsData';
@@ -54,6 +57,7 @@ export default function AssetDependenciesTab({
   const queryClient = useQueryClient();
   const labels = useRelationLabels();
   const locale = useLocale();
+  const theme = useTheme();
   const placement = usePlacementQuestion();
   const [placementReplaced, setPlacementReplaced] = React.useState<string | null>(null);
   const canEdit = hasLevel('infrastructure', 'member');
@@ -119,20 +123,57 @@ export default function AssetDependenciesTab({
 
   const sections = ASSET_DIRECTIONS.map((direction): SectionSpec<AssetRelationRow> => {
     const key = DIRECTION_KEY[direction];
+    const base = assetsSection({
+      t,
+      rows: data ? data.assets[direction] : [],
+      kindLabel: labels.assetKind,
+      environmentLabel: labels.environment,
+      statusLabel: labels.status,
+    });
+    // A contained asset held by another container in service is flagged next to its name (R3).
+    const columns = direction === 'contains' || direction === 'contained_by'
+      ? base.columns.map((column) => (column.key !== 'name' ? column : {
+        ...column,
+        render: (row: AssetRelationRow) => {
+          const others = direction === 'contains'
+            ? row.also_contained_by ?? []
+            : row.status === 'retired'
+              ? []
+              : (data?.assets.contained_by ?? []).filter((other) => other.id !== row.id && other.status !== 'retired');
+          if (others.length === 0) return row.name;
+          const label = t('workspace.asset.relations.alsoContainedBy', {
+            names: joinNames(others.map((other) => other.name), locale),
+          });
+          return (
+            <>
+              {row.name}
+              <Tooltip title={label}>
+                <WarningAmberOutlinedIcon
+                  role="img"
+                  aria-hidden={false}
+                  aria-label={label}
+                  sx={{
+                    fontSize: 14,
+                    ml: 0.5,
+                    verticalAlign: 'text-bottom',
+                    color: getDotColor('warning', theme.palette.mode),
+                  }}
+                />
+              </Tooltip>
+            </>
+          );
+        },
+      }))
+      : base.columns;
     return {
-      ...assetsSection({
-        t,
-        rows: data ? data.assets[direction] : [],
-        kindLabel: labels.assetKind,
-        environmentLabel: labels.environment,
-        statusLabel: labels.status,
-      }),
+      ...base,
       kind: direction,
       title: t(`workspace.asset.relations.${key}`),
       hint: direction === 'contains' ? t('workspace.asset.relations.containsHint') : undefined,
       empty: t(`workspace.asset.relations.empty.${key}`),
       // An asset never relates to itself: the picker leaves it out.
       linkedIds: (rows) => new Set([assetId, ...rows.map((row) => row.id)]),
+      columns,
     };
   });
 

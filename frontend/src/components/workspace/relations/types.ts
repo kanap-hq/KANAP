@@ -71,6 +71,8 @@ export type AssetRelationRow = {
   kind: string;
   environment: string;
   status: string;
+  /** The other containers in service holding it (`contains` only, R3). */
+  also_contained_by?: Array<{ id: string; name: string }>;
 };
 
 /** A technology linked to the owner. `reference` is already `TEC-n`. */

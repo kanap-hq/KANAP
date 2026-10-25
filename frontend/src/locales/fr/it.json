@@ -2283,6 +2283,7 @@
           "dependedOnBy": "Aucun actif ne dépend de celui-ci."
         },
         "containsHint": "Actifs hébergés par celui-ci, par exemple des VM.",
+        "alsoContainedBy": "Aussi contenu dans {{names}}",
         "placementReplaced": "{{cluster}} remplace le lien entre {{hosts}} et {{asset}}."
       }
     },

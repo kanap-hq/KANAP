@@ -389,6 +389,57 @@ describe('AssetDependenciesTab', () => {
     expect(await screen.findByText('errors:placement_inherited(cluster=PAR-VSPHERE-CL01)')).toBeTruthy();
   });
 
+  it('flags a contained asset held by another container, and leaves a row without one plain', async () => {
+    const data = relations();
+    data.assets.contains = [
+      { ...asset('as-2', 'AST-2', 'vm-app-01'), also_contained_by: [{ id: 'cl-1', name: 'PAR-VSPHERE-CL01' }] },
+      asset('as-6', 'AST-6', 'vm-db-01'),
+    ];
+    renderTab({ relations: data });
+    await screen.findByText('vm-app-01');
+    expect(screen.getByRole('img', { name: 'workspace.asset.relations.alsoContainedBy(names=PAR-VSPHERE-CL01)' })).toBeTruthy();
+    expect(within(screen.getByRole('region', { name: A('contains') })).getByText('vm-db-01')).toBeTruthy();
+    expect(screen.getAllByRole('img', { name: /alsoContainedBy/ })).toHaveLength(1);
+  });
+
+  it('names the other containers in service on each contained-by row', async () => {
+    const data = relations();
+    data.assets.contained_by = [
+      asset('as-3', 'AST-3', 'esx-host-01'),
+      asset('as-7', 'AST-7', 'esx-host-02'),
+    ];
+    renderTab({ relations: data });
+    await screen.findByText('esx-host-01');
+    expect(screen.getByRole('img', { name: 'workspace.asset.relations.alsoContainedBy(names=esx-host-02)' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'workspace.asset.relations.alsoContainedBy(names=esx-host-01)' })).toBeTruthy();
+  });
+
+  it('leaves a retired container out, and flags no row with it', async () => {
+    const data = relations();
+    data.assets.contained_by = [
+      asset('as-3', 'AST-3', 'esx-host-01'),
+      asset('as-7', 'AST-7', 'esx-host-02'),
+      asset('as-8', 'AST-8', 'esx-old', 'retired'),
+    ];
+    renderTab({ relations: data });
+    await screen.findByText('esx-old');
+    expect(screen.getByRole('img', { name: 'workspace.asset.relations.alsoContainedBy(names=esx-host-02)' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'workspace.asset.relations.alsoContainedBy(names=esx-host-01)' })).toBeTruthy();
+    expect(screen.getAllByRole('img', { name: /alsoContainedBy/ })).toHaveLength(2);
+    expect(screen.queryByRole('img', { name: /esx-old/ })).toBeNull();
+  });
+
+  it('shows the double container to a reader', async () => {
+    rights.infrastructure = 'reader';
+    const data = relations();
+    data.assets.contains = [
+      { ...asset('as-2', 'AST-2', 'vm-app-01'), also_contained_by: [{ id: 'cl-1', name: 'PAR-VSPHERE-CL01' }] },
+    ];
+    renderTab({ relations: data });
+    expect(await screen.findByRole('img', { name: 'workspace.asset.relations.alsoContainedBy(names=PAR-VSPHERE-CL01)' })).toBeTruthy();
+    expect(screen.queryByText('workspace.application.relations.add')).toBeNull();
+  });
+
   it('unlinks at once, reads the relations and the impact of every asset again, and restores the row when the server refuses', async () => {
     const { invalidated } = renderTab();
     let reject: (error: unknown) => void = () => undefined;
