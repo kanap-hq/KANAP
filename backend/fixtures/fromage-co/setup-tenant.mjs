@@ -2345,16 +2345,26 @@ async function ensureIncidents() {
  * Imports the human timeline of 32-incident-journal.csv. The server route takes the author and
  * the event time from each row, so the entries are signed by the incident people and backdated
  * to the facts; `created_at` stays the load time. A row already there is skipped, so a re-run
- * adds nothing.
+ * adds nothing. The route only accepts the file while the tenant's sample data is loading: a
+ * manual run on the dev stack gets a 409 `SAMPLE_DATA_LOAD_ONLY` and continues without the
+ * journal, which the lead then completes by hand.
  */
 async function importIncidentJournal() {
   const name = '32-incident-journal.csv';
   info(`Importing ${name}`);
-  const result = await uploadCsv('/incidents/import-journal', name);
-  if (result?.ok === false) throw new Error(`${name} import returned ok=false:\n${JSON.stringify(result, null, 2)}`);
-  const imported = Number(result?.imported ?? 0);
-  const skipped = Number(result?.skipped ?? 0);
-  ok(`Imported ${imported} journal entr${imported === 1 ? 'y' : 'ies'} (${skipped} already there)`);
+  try {
+    const result = await uploadCsv('/incidents/import-journal', name);
+    if (result?.ok === false) throw new Error(`${name} import returned ok=false:\n${JSON.stringify(result, null, 2)}`);
+    const imported = Number(result?.imported ?? 0);
+    const skipped = Number(result?.skipped ?? 0);
+    ok(`Imported ${imported} journal entr${imported === 1 ? 'y' : 'ies'} (${skipped} already there)`);
+  } catch (error) {
+    if (error?.status === 409 && error?.payload?.code === 'SAMPLE_DATA_LOAD_ONLY') {
+      info(`Skipped ${name}: the journal is imported only while the sample data of the tenant loads.`);
+      return;
+    }
+    throw error;
+  }
 }
 
 async function linkProcessesToApplications() {
