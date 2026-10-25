@@ -41,9 +41,7 @@ vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () =
 vi.mock('./editors/HardwareInfoPanel', () => ({ default: () => null }));
 vi.mock('./editors/SupportInfoPanel', () => ({ default: () => null }));
 vi.mock('./workspace/AssetRelationsTab', () => ({ default: () => null }));
-vi.mock('./workspace/AssetDependenciesTab', () => ({
-  default: ({ clusterSection }: { clusterSection?: React.ReactNode }) => <div>{clusterSection}</div>,
-}));
+vi.mock('./workspace/AssetDependenciesTab', () => ({ default: () => null }));
 vi.mock('./components/AssetTechnologiesSection', async (importOriginal) => ({ ...(await importOriginal<any>()), default: () => null }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
 vi.mock('../../components/fields/LocationSelect', () => ({ default: () => null }));
@@ -274,7 +272,7 @@ describe('Asset workspace: assignments and clusters', () => {
     async function openMembers(clusterOs: string | null = null) {
       wire.asset = { ...ASSET, is_cluster: true, operating_system: clusterOs } as never;
       wire.members = [member('sql-1', 'PAR-SQL-01'), member('sql-2', 'PAR-SQL-02', 'qa')];
-      renderOperations('dependencies');
+      renderOperations();
       fireEvent.click(await screen.findByRole('button', { name: 'Edit members' }));
       return screen.findByRole('dialog');
     }

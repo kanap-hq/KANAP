@@ -37,21 +37,13 @@ const DIRECTION_KEY: Record<AssetDirection, string> = {
 };
 
 /**
- * The Dependencies tab of an asset: what falls with it first, then, when given, the cluster
- * sections (`clusterSection`), then the relations between assets in their four directions. It reads
- * and writes through the same query as the Relations tab (`GET /assets/:id/relations-tab`), so both
- * tabs and their badges share one set of data. An infrastructure member adds from a server search
- * and unlinks on hover, each saved at once; the relations and the impact of every asset are read
- * again after each change.
+ * The Dependencies tab of an asset: what falls with it first, then the relations between assets in
+ * their four directions. It reads and writes through the same query as the Relations tab
+ * (`GET /assets/:id/relations-tab`), so both tabs and their badges share one set of data. An
+ * infrastructure member adds from a server search and unlinks on hover, each saved at once; the
+ * relations and the impact of every asset are read again after each change.
  */
-export default function AssetDependenciesTab({
-  assetId,
-  clusterSection,
-}: {
-  assetId: string;
-  /** Rendered as is between the impact and the four directions. */
-  clusterSection?: React.ReactNode;
-}) {
+export default function AssetDependenciesTab({ assetId }: { assetId: string }) {
   const { t } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
   const queryClient = useQueryClient();
@@ -182,8 +174,6 @@ export default function AssetDependenciesTab({
       {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
       <AssetImpactSection assetId={assetId} />
-
-      {clusterSection}
 
       <RelationSections
         sections={sections}

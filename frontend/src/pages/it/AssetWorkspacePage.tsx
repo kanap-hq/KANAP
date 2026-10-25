@@ -1401,8 +1401,8 @@ export default function AssetWorkspacePage() {
     {
       key: 'dependencies',
       label: t('workspace.asset.tabs.dependencies'),
-      // Relations between assets, plus the saved members of a cluster or the clusters of a server.
-      badge: (relationCounts?.assets ?? 0) + (isCluster ? clusterMembers.length : clustersForServer.length),
+      // Relations between assets: the one thing the tab shows.
+      badge: relationCounts?.assets ?? 0,
       disabled: isCreate,
     },
     { key: 'relations', label: t('workspace.asset.tabs.relations'), badge: relationCounts?.total ?? 0, disabled: isCreate },
@@ -1715,7 +1715,7 @@ export default function AssetWorkspacePage() {
     </>
   );
 
-  // The cluster sections of the Dependencies tab, which is off in creation.
+  // The cluster sections at the top of the Operations tab, which is off in creation.
   const membersPending = isCluster && !isCreate && (clusterLoading || membersLoadedFor !== id);
   const clustersPending = !isCluster && !isCreate && (clustersLoading || clustersLoadedFor !== id);
   const clusterSection = (
@@ -2112,6 +2112,7 @@ export default function AssetWorkspacePage() {
           )}
           {validTab === 'operations' && (
             <Stack spacing={3.5}>
+              {!isCreate && clusterSection}
               {!isCreate && (
                 <Box>
                   {assignmentsError && <Alert severity="error" sx={{ mb: 2 }}>{assignmentsError}</Alert>}
@@ -2500,7 +2501,7 @@ export default function AssetWorkspacePage() {
               netboxOwns={netboxOwns}
             />
           )}
-          {validTab === 'dependencies' && !isCreate && !!id && <AssetDependenciesTab assetId={id} clusterSection={clusterSection} />}
+          {validTab === 'dependencies' && !isCreate && !!id && <AssetDependenciesTab assetId={id} />}
           {validTab === 'relations' && !isCreate && !!id && <AssetRelationsTab assetId={id} />}
       </PortfolioDetailWorkspaceShell>
       <KanapDialog

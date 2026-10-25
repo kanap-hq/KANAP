@@ -63,7 +63,7 @@ vi.mock('./editors/HardwareInfoPanel', () => ({ default: () => null }));
 vi.mock('./editors/SupportInfoPanel', () => ({ default: () => <div>support-panel</div> }));
 vi.mock('./workspace/AssetRelationsTab', () => ({ default: () => null }));
 vi.mock('./workspace/AssetDependenciesTab', () => ({
-  default: ({ clusterSection }: { clusterSection?: React.ReactNode }) => <div>dependencies-tab{clusterSection}</div>,
+  default: () => <div>dependencies-tab</div>,
 }));
 vi.mock('./components/AssetTechnologiesSection', async (importOriginal) => ({ ...(await importOriginal<any>()), default: () => <div>technologies-section</div> }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => <div>knowledge-panel</div> }));
@@ -143,8 +143,8 @@ function LocationProbe() {
   return (
     <>
       <div data-testid="location">{useLocation().pathname}</div>
-      <button type="button" data-testid="go-asset-2" onClick={() => navigate('/it/assets/asset-2/dependencies')}>go</button>
-      <button type="button" data-testid="go-asset-1" onClick={() => navigate('/it/assets/asset-1/dependencies')}>back</button>
+      <button type="button" data-testid="go-asset-2" onClick={() => navigate('/it/assets/asset-2/operations')}>go</button>
+      <button type="button" data-testid="go-asset-1" onClick={() => navigate('/it/assets/asset-1/operations')}>back</button>
     </>
   );
 }
@@ -404,7 +404,7 @@ describe('Asset workspace: section placement', () => {
     });
 
     it('reads the clusters of the next asset, never its members, after a move from a cluster', async () => {
-      renderAt('/it/assets/asset-1/dependencies', REACH, { ...ASSET, is_cluster: true });
+      renderAt('/it/assets/asset-1/operations', REACH, { ...ASSET, is_cluster: true });
       await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-1/members'));
       fireEvent.click(screen.getByTestId('go-asset-2'));
       await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-2/clusters'));
@@ -421,23 +421,43 @@ describe('Asset workspace: section placement', () => {
       expect(del).not.toHaveBeenCalled();
     });
 
-    it('loads the cluster list that the Dependencies badge counts after the switch', async () => {
+    it('keeps the Dependencies badge on its relations after a server becomes a cluster, and still reads the lists', async () => {
       wire.counts = { assets: 0, total: 0 };
       wire.members = [{ id: 'm1' }, { id: 'm2' }];
       wire.clusters = [{ id: 'c1' }];
       patch.mockResolvedValue({ data: { ...ASSET, is_cluster: true } });
-      del.mockResolvedValue({ data: {} });
       renderAt('/it/assets/asset-1/overview');
-      await waitFor(() => expect(screen.getByRole('tab', { name: /workspace.asset.tabs.dependencies/ }).textContent).toBe('workspace.asset.tabs.dependencies1'));
+      await waitFor(() => expect(screen.getByRole('tab', { name: /workspace.asset.tabs.dependencies/ }).textContent).toBe('workspace.asset.tabs.dependencies0'));
       fireEvent.click(await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' }));
-      await waitFor(() => expect(screen.getByRole('tab', { name: /workspace.asset.tabs.dependencies/ }).textContent).toBe('workspace.asset.tabs.dependencies2'));
+      await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-1/members'));
+      expect(screen.getByRole('tab', { name: /workspace.asset.tabs.dependencies/ }).textContent).toBe('workspace.asset.tabs.dependencies0');
     });
   });
 
-  describe('cluster sections of the Dependencies tab', () => {
+  describe('cluster sections at the top of the Operations tab', () => {
+    it('puts the cluster sections before the hosted applications, and none in the Dependencies tab', async () => {
+      wire.members = [{ id: 'm1', name: 'node-1', environment: 'prod', status: 'active', operating_system: null }];
+      renderAt('/it/assets/asset-1/operations', REACH, { ...ASSET, is_cluster: true });
+      const hosted = await screen.findByText('workspace.asset.operations.hostedApplications');
+      const members = screen.getByText('workspace.asset.technical.members');
+      expect(follows(members, hosted)).toBe(true);
+
+      cleanup();
+      wire.members = [];
+      wire.clusters = [{ id: 'c1', name: 'cluster-1', environment: 'prod', status: 'active' }];
+      renderAt('/it/assets/asset-1/operations');
+      const membership = await screen.findByText('workspace.asset.technical.clusterMembership');
+      expect(follows(membership, screen.getByText('workspace.asset.operations.hostedApplications'))).toBe(true);
+
+      cleanup();
+      renderAt('/it/assets/asset-1/dependencies', REACH, { ...ASSET, is_cluster: true });
+      expect(await screen.findByText('dependencies-tab')).toBeInTheDocument();
+      expect(screen.queryByText('workspace.asset.technical.members')).toBeNull();
+      expect(screen.queryByText('workspace.asset.technical.clusterMembership')).toBeNull();
+    });
     it('hands a cluster its members and the edit button, with a hint on the title and no info alert', async () => {
       wire.members = [{ id: 'm1', name: 'node-1', environment: 'prod', status: 'active', operating_system: null }];
-      renderAt('/it/assets/asset-1/dependencies', REACH, { ...ASSET, is_cluster: true });
+      renderAt('/it/assets/asset-1/operations', REACH, { ...ASSET, is_cluster: true });
       expect(await screen.findByText('node-1')).toBeInTheDocument();
       expect(screen.getByText('workspace.asset.technical.members')).toBeInTheDocument();
       expect(screen.getByLabelText('workspace.asset.clusterSwitch.membersHint')).toBeInTheDocument();
@@ -450,7 +470,7 @@ describe('Asset workspace: section placement', () => {
     });
 
     it('offers to add members to a cluster that has none, without an empty state', async () => {
-      renderAt('/it/assets/asset-1/dependencies', REACH, { ...ASSET, is_cluster: true });
+      renderAt('/it/assets/asset-1/operations', REACH, { ...ASSET, is_cluster: true });
       expect(await screen.findByRole('button', { name: 'workspace.asset.technical.addMembers' })).toBeEnabled();
       expect(screen.queryByRole('button', { name: 'workspace.asset.technical.editMembers' })).toBeNull();
       expect(screen.queryByText('workspace.asset.technical.noMembers')).toBeNull();
@@ -458,7 +478,7 @@ describe('Asset workspace: section placement', () => {
 
     it('says a cluster is loading its members before it offers to add some', async () => {
       let answer: (value: unknown) => void = () => undefined;
-      renderAt('/it/assets/asset-1/dependencies', REACH, { ...ASSET, is_cluster: true });
+      renderAt('/it/assets/asset-1/operations', REACH, { ...ASSET, is_cluster: true });
       const read = get.getMockImplementation()!;
       get.mockImplementation(async (url: string, config?: unknown) => (
         url.endsWith('/members') ? new Promise((resolve) => { answer = resolve; }) : read(url, config)
@@ -475,7 +495,7 @@ describe('Asset workspace: section placement', () => {
 
     it('says a server is loading its clusters before it says it is in none', async () => {
       let answer: (value: unknown) => void = () => undefined;
-      renderAt('/it/assets/asset-1/dependencies');
+      renderAt('/it/assets/asset-1/operations');
       const read = get.getMockImplementation()!;
       get.mockImplementation(async (url: string, config?: unknown) => (
         url.endsWith('/clusters') ? new Promise((resolve) => { answer = resolve; }) : read(url, config)
@@ -490,7 +510,7 @@ describe('Asset workspace: section placement', () => {
 
     it('hands a server its cluster membership, without the cluster members', async () => {
       wire.clusters = [{ id: 'c1', name: 'cluster-1', environment: 'prod', status: 'active' }];
-      renderAt('/it/assets/asset-1/dependencies');
+      renderAt('/it/assets/asset-1/operations');
       expect(await screen.findByText('workspace.asset.technical.clusterMembership')).toBeInTheDocument();
       expect(await screen.findByText('cluster-1')).toBeInTheDocument();
       expect(screen.queryByText('workspace.asset.technical.members')).toBeNull();
@@ -498,7 +518,7 @@ describe('Asset workspace: section placement', () => {
 
     it('greys the members button for a reader, with the reason in a tooltip', async () => {
       auth.level = 'reader';
-      renderAt('/it/assets/asset-1/dependencies', REACH, { ...ASSET, is_cluster: true });
+      renderAt('/it/assets/asset-1/operations', REACH, { ...ASSET, is_cluster: true });
       const button = await screen.findByRole('button', { name: 'workspace.asset.technical.addMembers' });
       expect(button).toBeDisabled();
       expect(button.parentElement).toHaveAttribute('aria-label', 'workspace.asset.readOnlyRole');
@@ -514,7 +534,7 @@ describe('Asset workspace: section placement', () => {
     const CLUSTER = { ...ASSET, is_cluster: true };
 
     async function openDialog(asset: typeof ASSET & { operating_system?: string | null } = CLUSTER) {
-      renderAt('/it/assets/asset-1/dependencies', REACH, asset);
+      renderAt('/it/assets/asset-1/operations', REACH, asset);
       fireEvent.click(await screen.findByRole('button', { name: /workspace.asset.technical.(add|edit)Members/ }));
       const dialog = await dialogTitled('workspace.asset.editMembersDialog.title');
       const input = within(dialog).getByRole('combobox');
@@ -672,19 +692,19 @@ describe('Asset workspace: section placement', () => {
       wire.counts = { assets: 3, total: 12 };
       wire.clusters = [{ id: 'c1', name: 'cluster-1' }, { id: 'c2', name: 'cluster-2' }];
       renderAt('/it/assets/asset-1/overview');
-      await waitFor(() => expect(tabText('dependencies')).toBe('workspace.asset.tabs.dependencies5'));
+      await waitFor(() => expect(tabText('dependencies')).toBe('workspace.asset.tabs.dependencies3'));
       expect(tabText('relations')).toBe('workspace.asset.tabs.relations12');
       const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent);
-      expect(tabs.indexOf('workspace.asset.tabs.dependencies5')).toBe(tabs.indexOf('workspace.asset.tabs.relations12') - 1);
+      expect(tabs.indexOf('workspace.asset.tabs.dependencies3')).toBe(tabs.indexOf('workspace.asset.tabs.relations12') - 1);
       expect(get.mock.calls.filter(([url]) => url === '/assets/asset-1/relations-tab')).toHaveLength(1);
     });
 
-    it('counts the members of a cluster instead of its clusters', async () => {
+    it('counts only the relations between assets', async () => {
       wire.counts = { assets: 1, total: 0 };
       wire.members = [{ id: 'm1' }, { id: 'm2' }, { id: 'm3' }];
       wire.clusters = [{ id: 'c1' }];
       renderAt('/it/assets/asset-1/overview', REACH, { ...ASSET, is_cluster: true });
-      await waitFor(() => expect(tabText('dependencies')).toBe('workspace.asset.tabs.dependencies4'));
+      await waitFor(() => expect(tabText('dependencies')).toBe('workspace.asset.tabs.dependencies1'));
       expect(tabText('relations')).toBe('workspace.asset.tabs.relations0');
     });
 
