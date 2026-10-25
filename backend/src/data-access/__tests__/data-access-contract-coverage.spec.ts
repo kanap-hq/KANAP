@@ -136,11 +136,33 @@ async function testCoverageFigures(runner: QueryRunner, s: ContractSeed): Promis
     assert.equal(totals.budget?.linked, 300, 'the footer counts the visible contracts only (CE)');
     assert.equal(JSON.stringify(pageList).includes(s.lines.L1), false, 'no hidden line id in the list');
     assert.equal(JSON.stringify(pageList).includes(s.lines.L6), false, 'no hidden line id in the list');
+
+    // The contracts CSV export follows the list (spec §5.6): the visible rows alone.
+    const csv = await svc.exportCsv('data', { manager: m, budgetAccess: true, language: 'en', listQuery: {} });
+    assert.ok(csv.content.includes('DA contract CE'), 'the export has CE');
+    assert.ok(csv.content.includes('DA contract CX'), 'the export has CX');
+    for (const hidden of ['CF', 'CL', 'CN', 'CH']) {
+      assert.equal(csv.content.includes(`DA contract ${hidden} `), false, `the export leaves ${hidden} out`);
+    }
+
+    // The dashboard renewals tile calls this list (sort next_due_date, a date filter): the same
+    // visible contracts, never a hidden one.
+    const renewalTile = await svc.list({
+      limit: '5',
+      sort: 'next_due_date:ASC',
+      filters: JSON.stringify({ next_due_date: { filterType: 'date', type: 'greaterThanOrEqual', dateFrom: '2020-01-01' } }),
+    }, { manager: m, budgetAccess: true });
+    assert.deepEqual((renewalTile.items as any[]).map((row) => row.id).sort(), [s.contracts.CE, s.contracts.CX].sort(), 'the renewals tile sees the visible contracts');
   });
 
+  await applyDataAccess(runner, s.persons.ulla);
   // The unscoped footer totals every contract: CE 300 plus CF 100 and CL 100, on L1.
   const unscopedTotals = await svc.totals(listQuery, { manager: runner.manager, tenantId: s.tenantId, budgetAccess: true });
   assert.equal(unscopedTotals.budget?.linked, 500, 'the unscoped footer counts every contract');
+  const unscopedCsv = await svc.exportCsv('data', { manager: runner.manager, budgetAccess: true, language: 'en', listQuery: {} });
+  for (const contract of ['CF', 'CE', 'CL', 'CN', 'CH', 'CX']) {
+    assert.ok(unscopedCsv.content.includes(`DA contract ${contract} `), `the unscoped export has ${contract}`);
+  }
   console.log('  coverage of a contract with hidden lines: page and list equal the unscoped figure, linked lines visible only: OK');
 }
 
