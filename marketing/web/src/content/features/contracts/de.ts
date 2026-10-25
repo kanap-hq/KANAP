@@ -9,12 +9,12 @@ const content: FeatureContent = {
   header: {
     eyebrow: 'Verträge',
     title: 'Verpassen Sie nie wieder einen Kündigungstermin.',
-    lead: 'Erfassen Sie Beginndatum, Laufzeit und Kündigungsfrist: KANAP berechnet jede Periode und den letzten Tag für die Kündigung. Der Verantwortliche bekommt vor diesem Tag eine Entscheidung vorgelegt, und der Vertrag bleibt mit seinen Budgetzeilen, Anwendungen und Assets verknüpft.',
+    lead: 'Erfassen Sie Beginndatum, Laufzeit und Kündigungsfrist eines Vertrags: KANAP berechnet jede Periode und den letzten Tag für die Kündigung. Der Verantwortliche bekommt vor diesem Tag eine Entscheidung vorgelegt. Der Vertrag ist mit seinen Budgetzeilen, Anwendungen und Assets verknüpft.',
   },
   sections: [
     {
-      title: 'Zuerst die Verträge, über die zu entscheiden ist',
-      body: 'Die Liste öffnet mit der nächsten Frist. Ein Schnellfilter zeigt die Verträge, deren Kündigungsfenster sich innerhalb des Entscheidungszeitraums schließt, standardmäßig neunzig Tage. Jede Zeile zeigt, wo der Vertrag steht: zu entscheiden, bis zu einem Datum verlängert, endet ohne Verlängerung oder abgelaufen.',
+      title: 'Die Vertragsliste',
+      body: 'Sie öffnet mit der nächsten Frist. Ein Schnellfilter zeigt die Verträge, deren Kündigungsfenster sich innerhalb des Entscheidungszeitraums schließt, standardmäßig neunzig Tage. Jede Zeile zeigt, wo der Vertrag steht: zu entscheiden, bis zu einem Datum verlängert, endet ohne Verlängerung oder abgelaufen.',
       bullets: [
         'Nach nächster Frist sortiert, mit der Zahl der verbleibenden Tage',
         'Schnellfilter: zu entscheiden, ohne Budgetzeile, unterbudgetiert',
@@ -25,7 +25,7 @@ const content: FeatureContent = {
       shotAlt: "Vertragsliste nach nächster Fälligkeit sortiert, mit Status, Verpflichtung, Budget und Abweichung",
     },
     {
-      title: 'Fristen, für Sie berechnet',
+      title: 'Die Berechnung der Fristen',
       body: 'Nichts wird doppelt erfasst. Aus Beginndatum, Laufzeit und Kündigungsfrist zeichnet die Vertragsseite alle vergangenen Perioden, die laufende und die nächste, mit dem heutigen Tag und dem Kündigungstermin auf derselben Linie.',
       bullets: [
         'Perioden, Verlängerungen und Kündigungstermin berechnet, nie gespeichert',
@@ -49,7 +49,7 @@ const content: FeatureContent = {
       shotAlt: 'Kündigung eines Vertrags mit ihren Folgen für die Verpflichtung und die Anwendungen',
     },
     {
-      title: 'Verpflichtung gegen Budget',
+      title: 'Vertragliche Verpflichtung gegen Budget',
       body: 'Ein Vertrag verpflichtet Geld, das Budget plant es ein. Der Reiter Budget listet die mit dem Vertrag verknüpften OPEX- und CAPEX-Zeilen und vergleicht sie Jahr für Jahr mit dem, wozu der Vertrag verpflichtet. Sie sehen sofort, ob der Vertrag gedeckt, unterbudgetiert oder gar nicht budgetiert ist.',
       bullets: [
         'Verknüpfte Budgetzeilen, Beträge nach Jahr und Spalte',
@@ -62,12 +62,12 @@ const content: FeatureContent = {
     },
   ],
   more: {
-    title: 'Mehr zu Verträgen',
+    title: 'Und außerdem',
     items: [
-      { title: 'Konformitätsregister', body: 'Fünf Klauseln zum Nachverfolgen (Auftragsverarbeitungsvertrag nach DSGVO, Speicherort der Daten, Reversibilität, Exit-Plan, Auditrecht), erwartet je nach den Anwendungen, die der Vertrag abdeckt. Ein Register, das Sie führen, keine Zertifizierung.' },
+      { title: 'Konformitätsregister', body: 'Fünf Klauseln zum Nachverfolgen (Auftragsverarbeitungsvertrag nach DSGVO, Speicherort der Daten, Reversibilität, Exit-Plan, Auditrecht), je nach den Anwendungen, die der Vertrag abdeckt. Eine Compliance-Hilfe, die in den nächsten Versionen ausgebaut wird.' },
       { title: 'Verknüpfungen und Kontakte', body: 'Anwendungen, Assets und Technologien, die der Vertrag abdeckt, Kontakte des Lieferanten mit ihrer Rolle, Links und angehängte Dateien.' },
       { title: 'Plaid und MCP', body: 'Fragen Sie Plaid, über welche Verträge in den nächsten 90 Tagen zu entscheiden ist. Dieselben Daten stehen Ihren eigenen KI-Clients über den schreibgeschützten MCP-Server offen.' },
-      { title: 'Rechte', body: 'Leser sehen, Mitglieder legen an und entscheiden, Administratoren importieren, exportieren und löschen. Die Budgetbeträge folgen den Budgetrechten.' },
+      { title: 'Feingranulare Rechte', body: 'Leser sehen, Mitglieder legen an und entscheiden, Administratoren importieren, exportieren und löschen. Die Budgetbeträge folgen den Budgetrechten.' },
     ],
   },
   crossLinks: {

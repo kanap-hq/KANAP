@@ -8,17 +8,17 @@ const content: FeatureContent = {
   },
   header: {
     eyebrow: 'Incidents',
-    title: 'Keep the record of your major incidents.',
-    lead: 'Your helpdesk handles the tickets. KANAP keeps the incidents that matter: what happened, what it hit, why, and what you changed. Each one gets a number, a review and a journal, and stays linked to the applications and servers it touched.',
+    title: 'Keep a detailed record of your major incidents.',
+    lead: 'KANAP keeps the memory of the incidents that matter: what happened, what it hit, why, and what you changed. Each one gets a number, a review and a journal, and stays linked to the applications and servers it touched.',
   },
   sections: [
     {
-      title: 'A register, not a helpdesk',
+      title: 'The incident register',
       body: 'Every incident gets a permanent reference, INC-12, and the numbers never have gaps: a cancelled incident keeps its number. Severity, category, owner and dates are all you need to start; the rest comes when you know more. Past incidents can be entered with their real dates.',
       bullets: [
-        'Four severities, configurable categories',
+        'Four severity levels, configurable categories',
         'Open, in progress, resolved, closed: the status only moves forward',
-        'Reopen or cancel with a mandatory reason, register administrators only',
+        'Reopen or cancel an incident with a mandatory reason, register administrators only',
         'Search across titles, descriptions and the linked applications and servers',
         'Duration computed once the incident is resolved',
       ],
@@ -38,7 +38,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Evidence for the auditor',
-      body: 'Was personal data affected? Did the authority need to be notified, and when was it? Who was informed? The incident records these facts with their dates, and keeps them: an incident with regulatory facts cannot be deleted. KANAP records; deciding whether to notify stays with you.',
+      body: 'Was personal data affected? Did the authority need to be notified, and when was it? Who was informed? The incident records these facts with their dates, and keeps them: an incident with regulatory facts cannot be deleted.',
       bullets: [
         'Personal data affected, authority notification required, notified on, parties informed',
         'PDF report of an incident, in the language of the screen',
@@ -62,7 +62,7 @@ const content: FeatureContent = {
     },
   ],
   more: {
-    title: 'More in Incidents',
+    title: 'And more',
     items: [
       { title: 'CSV import and export', body: 'Bring your past incidents in from a spreadsheet, reviews included, and export the whole register.' },
       { title: 'Plaid and MCP', body: 'Ask Plaid how many major incidents were opened this year, or for the full record of one, journal and review included. Confidential incidents stay out. The same data is open to your AI clients through the read-only MCP server.' },
@@ -81,7 +81,7 @@ const content: FeatureContent = {
     ],
   },
   cta: {
-    title: 'Ready to keep your incident record in one place?',
+    title: 'Ready to deploy a rich, auditable incident register?',
     body: 'Self-host for free, or try hosted cloud. All features on every plan.',
     primary: 'Deploy free',
     secondary: 'Try hosted cloud',

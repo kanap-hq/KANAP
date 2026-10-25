@@ -8,17 +8,17 @@ const content: FeatureContent = {
   },
   header: {
     eyebrow: 'Incidents',
-    title: 'Gardez la trace de vos incidents majeurs.',
-    lead: "Votre helpdesk traite les tickets. KANAP garde les incidents qui comptent : ce qui s'est passé, ce que ça a touché, pourquoi, et ce que vous avez changé. Chacun a un numéro, une revue et un journal, et reste relié aux applications et aux serveurs concernés.",
+    title: 'Gardez une trace détaillée de vos incidents majeurs.',
+    lead: "KANAP garde la mémoire des incidents qui comptent : ce qui s'est passé, ce que ça a touché, pourquoi, et ce que vous avez changé. Chacun a un numéro, une revue et un journal, et reste relié aux applications et aux serveurs concernés.",
   },
   sections: [
     {
-      title: 'Un registre, pas un helpdesk',
+      title: 'Le registre des incidents',
       body: "Chaque incident reçoit une référence permanente, INC-12, et la numérotation n'a jamais de trou : un incident annulé garde son numéro. Gravité, catégorie, responsable et dates suffisent pour commencer ; le reste vient quand vous en savez plus. Un incident passé se saisit avec ses vraies dates.",
       bullets: [
-        'Quatre gravités, catégories paramétrables',
+        'Quatre niveaux de gravité, catégories paramétrables',
         "Ouvert, en cours, résolu, clôturé : le statut n'avance que vers l'avant",
-        'Rouvrir ou annuler avec une raison obligatoire, réservé aux administrateurs du registre',
+        'Rouvrir ou annuler un incident avec une raison obligatoire, réservé aux administrateurs du registre',
         'Recherche dans les titres, les descriptions, les applications et les serveurs liés',
         "Durée calculée une fois l'incident résolu",
       ],
@@ -38,7 +38,7 @@ const content: FeatureContent = {
     },
     {
       title: "Des preuves pour l'auditeur",
-      body: "Des données personnelles ont-elles été touchées ? Fallait-il notifier l'autorité, et quand l'a-t-on fait ? Qui a été informé ? L'incident enregistre ces faits avec leurs dates, et les garde : un incident qui porte des faits réglementaires ne peut pas être supprimé. KANAP enregistre ; décider de notifier reste votre affaire.",
+      body: "Des données personnelles ont-elles été touchées ? Fallait-il notifier l'autorité, et quand l'a-t-on fait ? Qui a été informé ? L'incident enregistre ces faits avec leurs dates, et les garde : un incident qui porte des faits réglementaires ne peut pas être supprimé.",
       bullets: [
         'Données personnelles concernées, notification aux autorités requise, notifié le, parties informées',
         "Rapport PDF d'un incident, dans la langue de l'écran",
@@ -62,7 +62,7 @@ const content: FeatureContent = {
     },
   ],
   more: {
-    title: 'Plus dans Incidents',
+    title: 'Et encore',
     items: [
       { title: 'Import et export CSV', body: "Reprenez vos incidents passés depuis un tableur, revues comprises, et exportez tout le registre." },
       { title: 'Plaid et MCP', body: "Demandez à Plaid combien d'incidents majeurs ont été ouverts cette année, ou la fiche complète de l'un d'eux, journal et revue compris. Les incidents confidentiels restent exclus. Les mêmes données sont ouvertes à vos clients IA par le serveur MCP en lecture seule." },
@@ -81,7 +81,7 @@ const content: FeatureContent = {
     ],
   },
   cta: {
-    title: 'Prêt à tenir votre registre des incidents au même endroit ?',
+    title: 'Prêt à déployer un registre des incidents riche et auditable ?',
     body: 'Auto-hébergez gratuitement, ou essayez le cloud hébergé.',
     primary: 'Déployer gratuitement',
     secondary: 'Essayer le cloud hébergé',

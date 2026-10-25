@@ -8,17 +8,17 @@ const content: FeatureContent = {
   },
   header: {
     eyebrow: 'Incidentes',
-    title: 'Lleve el registro de sus incidentes graves.',
-    lead: 'Su helpdesk gestiona los tickets. KANAP guarda los incidentes que importan: qué pasó, a qué afectó, por qué y qué cambió usted. Cada uno recibe un número, una revisión y un diario, y sigue vinculado a las aplicaciones y los servidores afectados.',
+    title: 'Guarde un registro detallado de sus incidentes graves.',
+    lead: 'KANAP guarda la memoria de los incidentes que importan: qué pasó, a qué afectó, por qué y qué cambió usted. Cada uno recibe un número, una revisión y un diario, y sigue vinculado a las aplicaciones y los servidores afectados.',
   },
   sections: [
     {
-      title: 'Un registro, no un helpdesk',
+      title: 'El registro de incidentes',
       body: 'Cada incidente recibe una referencia permanente, INC-12, y la numeración nunca tiene huecos: un incidente cancelado conserva su número. Gravedad, categoría, responsable y fechas bastan para empezar, el resto llega cuando sepa más. Los incidentes pasados pueden introducirse con sus fechas reales.',
       bullets: [
-        'Cuatro gravedades, categorías configurables',
+        'Cuatro niveles de gravedad, categorías configurables',
         'Abierto, En curso, Resuelto, Cerrado: el estado solo avanza',
-        'Reabrir o cancelar con un motivo obligatorio, solo los administradores del registro',
+        'Reabrir o cancelar un incidente con un motivo obligatorio, solo los administradores del registro',
         'Búsqueda en títulos, descripciones y las aplicaciones y servidores vinculados',
         'Duración calculada una vez resuelto el incidente',
       ],
@@ -38,7 +38,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Pruebas para el auditor',
-      body: '¿Se vieron afectados datos personales? ¿Había que notificar a la autoridad, y cuándo se hizo? ¿Quién fue informado? El incidente registra estos hechos con sus fechas, y los conserva: un incidente con hechos regulatorios no puede eliminarse. KANAP registra, decidir si notificar sigue siendo cosa suya.',
+      body: '¿Se vieron afectados datos personales? ¿Había que notificar a la autoridad, y cuándo se hizo? ¿Quién fue informado? El incidente registra estos hechos con sus fechas, y los conserva: un incidente con hechos regulatorios no puede eliminarse.',
       bullets: [
         'Datos personales afectados, Requiere notificación a la autoridad, Notificado el, Partes informadas',
         'Informe PDF de un incidente, en el idioma de la pantalla',
@@ -62,7 +62,7 @@ const content: FeatureContent = {
     },
   ],
   more: {
-    title: 'Más en Incidentes',
+    title: 'Y además',
     items: [
       { title: 'Importación y exportación CSV', body: 'Traiga sus incidentes pasados desde una hoja de cálculo, revisiones incluidas, y exporte todo el registro.' },
       { title: 'Plaid y MCP', body: 'Pregúntele a Plaid cuántos incidentes graves se abrieron este año, o la ficha completa de uno, diario y revisión incluidos. Los incidentes confidenciales quedan fuera. Los mismos datos están abiertos a sus clientes de IA a través del servidor MCP de solo lectura.' },
@@ -81,7 +81,7 @@ const content: FeatureContent = {
     ],
   },
   cta: {
-    title: '¿Listo para llevar su registro de incidentes en un solo lugar?',
+    title: '¿Listo para desplegar un registro de incidentes completo y auditable?',
     body: 'Autoaloje gratis o pruebe la nube alojada. Todas las funcionalidades en cada plan.',
     primary: 'Desplegar gratis',
     secondary: 'Probar nube alojada',

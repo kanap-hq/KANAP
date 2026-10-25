@@ -8,17 +8,17 @@ const content: FeatureContent = {
   },
   header: {
     eyebrow: 'Vorfälle',
-    title: 'Führen Sie das Register Ihrer schweren Vorfälle.',
-    lead: 'Ihr Helpdesk bearbeitet die Tickets. KANAP hält die Vorfälle fest, die zählen: was passiert ist, was betroffen war, warum, und was Sie geändert haben. Jeder bekommt eine Nummer, eine Analyse und einen Verlauf und bleibt mit den betroffenen Anwendungen und Servern verknüpft.',
+    title: 'Dokumentieren Sie Ihre schweren Vorfälle im Detail.',
+    lead: 'KANAP bewahrt das Gedächtnis der Vorfälle, die zählen: was passiert ist, was betroffen war, warum, und was Sie geändert haben. Jeder bekommt eine Nummer, eine Analyse und einen Verlauf und bleibt mit den betroffenen Anwendungen und Servern verknüpft.',
   },
   sections: [
     {
-      title: 'Ein Register, kein Helpdesk',
+      title: 'Das Vorfallsregister',
       body: 'Jeder Vorfall erhält eine dauerhafte Referenz, INC-12, und die Nummerierung hat nie Lücken: Ein abgebrochener Vorfall behält seine Nummer. Schweregrad, Kategorie, Verantwortlicher und Datumsangaben genügen für den Anfang, der Rest kommt, wenn Sie mehr wissen. Vergangene Vorfälle lassen sich mit ihren tatsächlichen Daten erfassen.',
       bullets: [
-        'Vier Schweregrade, konfigurierbare Kategorien',
+        'Vier Schweregradstufen, konfigurierbare Kategorien',
         'Offen, In Bearbeitung, Behoben, Geschlossen: Der Status bewegt sich nur vorwärts',
-        'Wieder öffnen oder abbrechen mit Pflichtbegründung, nur durch Registeradministratoren',
+        'Einen Vorfall wieder öffnen oder abbrechen, mit Pflichtbegründung, nur durch Registeradministratoren',
         'Suche in Titeln, Beschreibungen und den verknüpften Anwendungen und Servern',
         'Dauer berechnet, sobald der Vorfall behoben ist',
       ],
@@ -38,7 +38,7 @@ const content: FeatureContent = {
     },
     {
       title: 'Nachweise für den Prüfer',
-      body: 'Waren personenbezogene Daten betroffen? Musste die Behörde benachrichtigt werden, und wann geschah das? Wer wurde informiert? Der Vorfall hält diese Fakten mit ihren Daten fest und bewahrt sie: Ein Vorfall mit regulatorischen Fakten lässt sich nicht löschen. KANAP dokumentiert, die Entscheidung über eine Meldung bleibt bei Ihnen.',
+      body: 'Waren personenbezogene Daten betroffen? Musste die Behörde benachrichtigt werden, und wann geschah das? Wer wurde informiert? Der Vorfall hält diese Fakten mit ihren Daten fest und bewahrt sie: Ein Vorfall mit regulatorischen Fakten lässt sich nicht löschen.',
       bullets: [
         'Personenbezogene Daten betroffen, Meldung an Behörde erforderlich, Gemeldet am, Informierte Parteien',
         'PDF-Bericht eines Vorfalls, in der Sprache der Oberfläche',
@@ -62,7 +62,7 @@ const content: FeatureContent = {
     },
   ],
   more: {
-    title: 'Mehr zu Vorfällen',
+    title: 'Und außerdem',
     items: [
       { title: 'CSV-Import und -Export', body: 'Übernehmen Sie Ihre vergangenen Vorfälle aus einer Tabelle, Analysen inklusive, und exportieren Sie das ganze Register.' },
       { title: 'Plaid und MCP', body: 'Fragen Sie Plaid, wie viele schwere Vorfälle dieses Jahr eröffnet wurden, oder nach dem vollständigen Datensatz eines Vorfalls, Verlauf und Analyse inklusive. Vertrauliche Vorfälle bleiben außen vor. Dieselben Daten stehen Ihren KI-Clients über den schreibgeschützten MCP-Server offen.' },
@@ -81,7 +81,7 @@ const content: FeatureContent = {
     ],
   },
   cta: {
-    title: 'Bereit, Ihr Vorfallsregister an einem Ort zu führen?',
+    title: 'Bereit für ein umfassendes, prüfbares Vorfallsregister?',
     body: 'Hosten Sie kostenlos selbst oder testen Sie Hosted Cloud. Alle Funktionen in jedem Plan.',
     primary: 'Kostenlos bereitstellen',
     secondary: 'Hosted Cloud testen',

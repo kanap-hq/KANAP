@@ -9,12 +9,12 @@ const content: FeatureContent = {
   header: {
     eyebrow: 'Contratos',
     title: 'No vuelva a perder una fecha límite de rescisión.',
-    lead: 'Introduzca la fecha de inicio, la duración y el preaviso: KANAP calcula cada periodo y el último día para rescindir. El responsable tiene una decisión que tomar antes de ese día, y el contrato sigue vinculado a sus líneas presupuestarias, aplicaciones y activos.',
+    lead: 'Introduzca la fecha de inicio, la duración y el preaviso de un contrato: KANAP calcula cada periodo y el último día para rescindir. El responsable tiene una decisión que tomar antes de ese día. El contrato está vinculado a sus líneas presupuestarias, aplicaciones y activos.',
   },
   sections: [
     {
-      title: 'Primero, los contratos por decidir',
-      body: 'La lista se abre en el próximo vencimiento. Un filtro rápido muestra los contratos cuya ventana de rescisión se cierra dentro del plazo de decisión, noventa días por defecto. Cada fila indica en qué punto está el contrato: por decidir, renovado hasta una fecha, termina sin renovación o vencido.',
+      title: 'La lista de contratos',
+      body: 'Se abre en el próximo vencimiento. Un filtro rápido muestra los contratos cuya ventana de rescisión se cierra dentro del plazo de decisión, noventa días por defecto. Cada fila indica en qué punto está el contrato: por decidir, renovado hasta una fecha, termina sin renovación o vencido.',
       bullets: [
         'Ordenada por próximo vencimiento, con los días restantes',
         'Filtros rápidos: por decidir, sin línea presupuestaria, infrapresupuestados',
@@ -25,7 +25,7 @@ const content: FeatureContent = {
       shotAlt: "Lista de contratos ordenada por próximo vencimiento, con el estado, el compromiso, el presupuesto y la diferencia",
     },
     {
-      title: 'Vencimientos calculados para usted',
+      title: 'El cálculo de los vencimientos',
       body: 'Nada se introduce dos veces. A partir de la fecha de inicio, la duración y el preaviso, la ficha del contrato dibuja todos los periodos pasados, el actual y el siguiente, con el día de hoy y la fecha límite de rescisión en la misma línea.',
       bullets: [
         'Periodos, renovaciones y fecha límite de rescisión calculados, nunca almacenados',
@@ -49,7 +49,7 @@ const content: FeatureContent = {
       shotAlt: 'Rescisión de un contrato con sus consecuencias en el compromiso y las aplicaciones',
     },
     {
-      title: 'Compromiso frente a presupuesto',
+      title: 'Compromiso contractual frente a presupuesto',
       body: 'Un contrato compromete dinero, el presupuesto lo prevé. La pestaña Presupuesto lista las líneas OPEX y CAPEX vinculadas al contrato y las compara, año por año, con lo que el contrato compromete. Ve de inmediato si el contrato está cubierto, infrapresupuestado o sin presupuesto alguno.',
       bullets: [
         'Líneas presupuestarias vinculadas, importes por año y columna',
@@ -62,12 +62,12 @@ const content: FeatureContent = {
     },
   ],
   more: {
-    title: 'Más en Contratos',
+    title: 'Y además',
     items: [
-      { title: 'Registro de conformidad', body: 'Cinco cláusulas que seguir (contrato de encargado del tratamiento RGPD, ubicación de los datos, reversibilidad, plan de salida, derecho de auditoría), esperadas según las aplicaciones que cubre el contrato. Un registro que usted lleva, no una certificación.' },
+      { title: 'Registro de conformidad', body: 'Cinco cláusulas que seguir (contrato de encargado del tratamiento RGPD, ubicación de los datos, reversibilidad, plan de salida, derecho de auditoría), según las aplicaciones que cubre el contrato. Una ayuda a la conformidad que se ampliará en las próximas versiones.' },
       { title: 'Relaciones y contactos', body: 'Aplicaciones, activos y tecnologías cubiertos por el contrato, contactos del proveedor con su función, enlaces y archivos adjuntos.' },
       { title: 'Plaid y MCP', body: 'Pregúntele a Plaid qué contratos hay que decidir en los próximos 90 días. Los mismos datos están abiertos a sus propios clientes de IA a través del servidor MCP de solo lectura.' },
-      { title: 'Permisos', body: 'Los lectores consultan, los miembros crean y deciden, los administradores importan, exportan y eliminan. Los importes del presupuesto siguen los permisos del presupuesto.' },
+      { title: 'Permisos detallados', body: 'Los lectores consultan, los miembros crean y deciden, los administradores importan, exportan y eliminan. Los importes del presupuesto siguen los permisos del presupuesto.' },
     ],
   },
   crossLinks: {
