@@ -653,7 +653,7 @@ type SectionProps = {
   heading?: React.ReactNode;
   /** One sentence in a tooltip, on an information icon after the title. */
   hint?: string;
-  /** Other actions on the right of the title, before "Add" (a refresh, its result line). */
+  /** Other actions after the title and count, before "Add" (a refresh, its result line). */
   actions?: React.ReactNode;
   children: React.ReactNode;
 };
@@ -709,6 +709,7 @@ export function RelationsSection({ title, count, onAdd, adding, addLabel, headin
             )}
             {hint && <InfoHint text={hint} />}
             {count != null && <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{count}</Typography>}
+            {actions}
             {onAdd && (
               <Button
                 variant="text"
@@ -722,7 +723,6 @@ export function RelationsSection({ title, count, onAdd, adding, addLabel, headin
               </Button>
             )}
           </Box>
-          {actions}
         </Box>
         {children}
       </Box>
