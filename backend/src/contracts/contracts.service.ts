@@ -104,7 +104,7 @@ import {
   contractEditableField,
   contractEditableFields,
 } from '../data-access/contract-write-checks';
-import { assertLinesEditable } from '../data-access/line-write-checks';
+import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-write-checks';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -904,24 +904,55 @@ export class ContractsService {
     return { items };
   }
 
+  /**
+   * The target lines of a contract link: the ids the person reads, of the expected nature; a
+   * limited person gets the 404 of a missing line for a hidden one, and 403 for a read-only line.
+   */
+  private async assertLinableItems(mg: EntityManager, nature: 'opex' | 'capex', tenantId: string, ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const rows: Array<{ id: string }> = await mg.query(
+      `SELECT id FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND nature = $3`,
+      [tenantId, ids, nature],
+    );
+    if (rows.length !== ids.length) {
+      if (await isLimitedTransaction(mg)) {
+        throw new NotFoundException(nature === 'opex' ? 'Spend item not found.' : 'CAPEX item not found.');
+      }
+      throw new BadRequestException(nature === 'opex' ? 'One or more spend items not found.' : 'One or more CAPEX items not found.');
+    }
+    await assertLinesEditable(mg, ids);
+  }
+
   async bulkReplaceLinkedSpendItems(contractId: string, spendItemIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(ContractSpendItem);
     const contract = await this.findContract(contractId, mg);
+    await assertContractsEditable(mg, [contract.id]);
     const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((spendItemIds || []).filter(Boolean)));
-    await this.assertIdsInTenant(mg, 'opex', tenantId, uniqueIds, 'One or more spend items not found.');
+    await this.assertLinableItems(mg, 'opex', tenantId, uniqueIds);
     // The contract's links to OPEX lines only: a link to a line of another nature is kept as it is.
     const existing: Array<{ id: string; spend_item_id: string }> = await mg.query(
       `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2${OPEX_LINK}`,
       [tenantId, contract.id],
     );
-    const toDelete = existing.filter(e => !uniqueIds.includes(e.spend_item_id));
     const existingSet = new Set(existing.map(e => e.spend_item_id));
     const toInsert = uniqueIds.filter(id => !existingSet.has(id)).map(id => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
-    if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
+    // Only the links to the lines the person reads are deleted: the join on spend_items is
+    // filtered by the line policy (spec §6.4); the naive DELETE would remove the hidden links too.
+    const [removed]: Array<{ n: number }> = await mg.query(
+      `WITH removed AS (
+         DELETE FROM contract_spend_items l
+          USING spend_items i
+          WHERE l.tenant_id = $1 AND l.contract_id = $2
+            AND i.tenant_id = l.tenant_id AND i.id = l.spend_item_id AND i.nature = 'opex'
+            AND NOT (l.spend_item_id = ANY($3::uuid[]))
+          RETURNING 1
+       ) SELECT count(*)::int AS n FROM removed`,
+      [tenantId, contract.id, uniqueIds],
+    );
     if (toInsert.length > 0) await repo.save(toInsert);
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added: toInsert.length, removed: Number(removed?.n ?? 0) };
   }
 
   // Tasks (latest update pattern)
@@ -1405,16 +1436,35 @@ export class ContractsService {
       [spendItemId],
     );
     if (!spend) throw new NotFoundException('Spend item not found.');
+    await assertLinesEditable(mg, [spend.id]);
     const tenantId = spend.tenant_id;
     const uniqueIds = Array.from(new Set((contractIds || []).filter(Boolean)));
+    // A hidden contract gets the same 404 as a missing one; an unscoped person keeps the 400.
+    for (const id of uniqueIds) await assertContractReadable(mg, id);
     await this.assertIdsInTenant(mg, 'contracts', tenantId, uniqueIds, 'One or more contracts not found.');
-    const existing = await repo.find({ where: { tenant_id: tenantId, spend_item_id: spend.id } });
-    const toDelete = existing.filter(e => !uniqueIds.includes(e.contract_id));
+    // The links to contracts the person reads only: the join is filtered by the contract policy,
+    // so a link to a hidden contract stays (spec §5.4).
+    const existing: Array<{ id: string; contract_id: string }> = await mg.query(
+      `SELECT l.id, l.contract_id FROM contract_spend_items l
+         JOIN contracts c ON c.tenant_id = l.tenant_id AND c.id = l.contract_id
+        WHERE l.tenant_id = $1 AND l.spend_item_id = $2`,
+      [tenantId, spend.id],
+    );
     const existingSet = new Set(existing.map(e => e.contract_id));
     const toInsert = uniqueIds.filter(id => !existingSet.has(id)).map(id => repo.create({ tenant_id: tenantId, contract_id: id, spend_item_id: spend.id }));
-    if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
+    const [removed]: Array<{ n: number }> = await mg.query(
+      `WITH removed AS (
+         DELETE FROM contract_spend_items l
+          USING contracts c
+          WHERE l.tenant_id = $1 AND l.spend_item_id = $2
+            AND c.tenant_id = l.tenant_id AND c.id = l.contract_id
+            AND NOT (l.contract_id = ANY($3::uuid[]))
+          RETURNING 1
+       ) SELECT count(*)::int AS n FROM removed`,
+      [tenantId, spend.id, uniqueIds],
+    );
     if (toInsert.length > 0) await repo.save(toInsert);
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added: toInsert.length, removed: Number(removed?.n ?? 0) };
   }
 
   // Symmetric linking from CAPEX side: the CAPEX lines share `contract_spend_items` since lot Z1.
@@ -1442,18 +1492,36 @@ export class ContractsService {
       [capexItemId],
     );
     if (!capex) throw new NotFoundException('CAPEX item not found.');
+    await assertLinesEditable(mg, [capex.id]);
     const tenantId = capex.tenant_id;
     const uniqueIds = Array.from(new Set((contractIds || []).filter(Boolean)));
+    // A hidden contract gets the same 404 as a missing one; an unscoped person keeps the 400.
+    for (const id of uniqueIds) await assertContractReadable(mg, id);
     await this.assertIdsInTenant(mg, 'contracts', tenantId, uniqueIds, 'One or more contracts not found.');
-    const existing = await linksRepo.find({ where: { tenant_id: tenantId, spend_item_id: capex.id } });
-    const toDelete = existing.filter((e) => !uniqueIds.includes(e.contract_id));
+    // The links to contracts the person reads only (the join is filtered by the contract policy).
+    const existing: Array<{ id: string; contract_id: string }> = await mg.query(
+      `SELECT l.id, l.contract_id FROM contract_spend_items l
+         JOIN contracts c ON c.tenant_id = l.tenant_id AND c.id = l.contract_id
+        WHERE l.tenant_id = $1 AND l.spend_item_id = $2`,
+      [tenantId, capex.id],
+    );
     const existingSet = new Set(existing.map((e) => e.contract_id));
     const toInsert = uniqueIds
       .filter((id) => !existingSet.has(id))
       .map((id) => linksRepo.create({ tenant_id: tenantId, contract_id: id, spend_item_id: capex.id }));
-    if (toDelete.length > 0) await linksRepo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
+    const [removed]: Array<{ n: number }> = await mg.query(
+      `WITH removed AS (
+         DELETE FROM contract_spend_items l
+          USING contracts c
+          WHERE l.tenant_id = $1 AND l.spend_item_id = $2
+            AND c.tenant_id = l.tenant_id AND c.id = l.contract_id
+            AND NOT (l.contract_id = ANY($3::uuid[]))
+          RETURNING 1
+       ) SELECT count(*)::int AS n FROM removed`,
+      [tenantId, capex.id, uniqueIds],
+    );
     if (toInsert.length > 0) await linksRepo.save(toInsert);
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added: toInsert.length, removed: Number(removed?.n ?? 0) };
   }
 
   // Inverse links from Contract side: the contract's CAPEX lines, their title as `description`.
@@ -1473,20 +1541,31 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(ContractSpendItem);
     const contract = await this.findContract(contractId, mg);
+    await assertContractsEditable(mg, [contract.id]);
     const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((capexItemIds || []).filter(Boolean)));
-    await this.assertIdsInTenant(mg, 'capex', tenantId, uniqueIds, 'One or more CAPEX items not found.');
+    await this.assertLinableItems(mg, 'capex', tenantId, uniqueIds);
     // The contract's links to CAPEX lines only: a link to an OPEX line is kept as it is.
     const existing: Array<{ id: string; spend_item_id: string }> = await mg.query(
       `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2${CAPEX_LINK}`,
       [tenantId, contract.id],
     );
-    const toDelete = existing.filter((e) => !uniqueIds.includes(e.spend_item_id));
     const existingSet = new Set(existing.map((e) => e.spend_item_id));
     const toInsert = uniqueIds.filter((id) => !existingSet.has(id)).map((id) => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
-    if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
+    // Only the links to the lines the person reads are deleted (the join is filtered by the line policy).
+    const [removed]: Array<{ n: number }> = await mg.query(
+      `WITH removed AS (
+         DELETE FROM contract_spend_items l
+          USING spend_items i
+          WHERE l.tenant_id = $1 AND l.contract_id = $2
+            AND i.tenant_id = l.tenant_id AND i.id = l.spend_item_id AND i.nature = 'capex'
+            AND NOT (l.spend_item_id = ANY($3::uuid[]))
+          RETURNING 1
+       ) SELECT count(*)::int AS n FROM removed`,
+      [tenantId, contract.id, uniqueIds],
+    );
     if (toInsert.length > 0) await repo.save(toInsert);
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added: toInsert.length, removed: Number(removed?.n ?? 0) };
   }
 
   // Relations from the contract's side (`contract-relations.ts`): budget lines of both natures,

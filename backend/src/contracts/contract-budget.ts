@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import type { FxRateService } from '../currency/fx-rate.service';
 import { centsNumber, jsRound } from '../common/list-engine/sql-fragments';
@@ -50,6 +50,15 @@ const LEVEL_RANK: Record<string, number> = { reader: 1, contributor: 2, member: 
  */
 export function canReadContractBudget(req: { isAdmin?: boolean; permissions?: Record<string, string> } | null | undefined): boolean {
   return req?.isAdmin === true || (LEVEL_RANK[req?.permissions?.budget ?? ''] ?? 0) >= LEVEL_RANK.reader;
+}
+
+/**
+ * The contract-side routes that change a contract's budget lines need the budget reader level in
+ * addition to the contracts member level, for everyone (spec §4.3, lot 5): before lot 5 only the
+ * picker was hidden. 403 with the permission guard's own refusal.
+ */
+export function assertContractBudgetRead(req: { isAdmin?: boolean; permissions?: Record<string, string> } | null | undefined): void {
+  if (!canReadContractBudget(req)) throw new ForbiddenException('Forbidden resource');
 }
 
 /** The current year of the budget figures (UTC, as the contract terms). */

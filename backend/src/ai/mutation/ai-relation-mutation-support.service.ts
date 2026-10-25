@@ -1,8 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AuditService } from '../../audit/audit.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
+import { assertLinesEditable } from '../../data-access/line-write-checks';
+import { assertContractReadable, assertContractsEditable } from '../../data-access/contract-write-checks';
+import { AiPolicyService } from '../ai-policy.service';
 import { auditTableOf } from '../../spend/budget-nature';
 import {
   applicationParticipantCondition,
@@ -254,7 +257,18 @@ export class AiRelationMutationSupportService {
     private readonly supplierContacts: SupplierContactsService,
     private readonly taskSupport: AiTaskMutationSupportService,
     private readonly itOpsSettings: ItOpsSettingsService,
+    @Optional() private readonly policy?: AiPolicyService,
   ) {}
+
+  /**
+   * A Plaid write of a contract's budget lines needs the budget reader level besides the
+   * contracts member level, for everyone (spec §4.3, lot 5).
+   */
+  private async assertContractLineBudgetRead(context: AiExecutionContextWithManager, config: RelationConfig): Promise<void> {
+    if (config.kind !== 'simple' || config.sourceEntity !== 'contracts') return;
+    if (config.relation !== 'spend_items' && config.relation !== 'capex_items') return;
+    await this.policy?.assertBusinessPermission(context, 'budget', 'reader', context.manager);
+  }
 
   getSupportedRelationDescriptions(): string[] {
     const byEntity = new Map<string, string[]>();
@@ -272,6 +286,7 @@ export class AiRelationMutationSupportService {
   ): Promise<AiPreparedMutationPreview> {
     const config = getRelationConfig(input.entity_type, input.relation);
     const target = await this.resolveSource(context, config.sourceEntity, input.ref);
+    await this.assertContractLineBudgetRead(context, config);
     const currentItems = await this.loadRelationItems(context, config, target.id);
     const askedItems = await this.computeNextItems(context, config, target.id, currentItems, input);
     if (relationItemSignature(currentItems) === relationItemSignature(askedItems)) {
@@ -305,6 +320,7 @@ export class AiRelationMutationSupportService {
     const config = getRelationConfig(preview.target_entity_type || preview.mutation_input?.entity_type, preview.mutation_input?.relation);
     if (!preview.target_entity_id) throw new BadRequestException('Original preview is missing the target record.');
     const target = await this.resolveSource(context, config.sourceEntity, preview.target_entity_id);
+    await this.assertContractLineBudgetRead(context, config);
     const currentItems = await this.loadRelationItems(context, config, target.id);
     const originalItems = this.coerceRelationItems(preview.current_values?.items, 'current_values.items');
     if (relationItemSignature(currentItems) === relationItemSignature(originalItems)) {
@@ -376,6 +392,7 @@ export class AiRelationMutationSupportService {
   async executePreview(context: AiExecutionContextWithManager, preview: AiMutationPreview): Promise<void> {
     const config = getRelationConfig(preview.target_entity_type || preview.mutation_input?.entity_type, preview.mutation_input?.relation);
     if (!preview.target_entity_id) throw new BadRequestException('Preview is missing the target record.');
+    await this.assertContractLineBudgetRead(context, config);
     const expectedItems = this.coerceRelationItems(preview.current_values?.items, 'current_values.items');
     const nextItems = this.coerceRelationItems(preview.mutation_input?.next_items, 'mutation_input.next_items');
     // An OPEX or CAPEX line is locked before its relations are compared and replaced (lock
@@ -1107,6 +1124,50 @@ export class AiRelationMutationSupportService {
   }
 
   private async replaceSimpleRelation(context: AiExecutionContextWithManager, config: SimpleRelationConfig, sourceId: string, nextItems: RelationItem[]): Promise<void> {
+    const targetIds = nextItems
+      .map((item) => item.payload[config.targetColumn])
+      .filter((value): value is string => typeof value === 'string' && value !== '');
+    // `contract_spend_items` has no data-access policy (spec §6.4): its writes are checked here,
+    // and a replacement deletes only the links to the rows the person reads, through a JOIN on
+    // the scoped table (a naive DELETE would remove the hidden links too).
+    if (config.table === 'contract_spend_items') {
+      if (config.sourceEntity === 'contracts') {
+        await assertContractsEditable(context.manager, [sourceId]);
+        const nature = config.relation === 'capex_items' ? 'capex' : 'opex';
+        const lines: Array<{ id: string }> = await context.manager.query(
+          `SELECT id FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND nature = $3`,
+          [context.tenantId, targetIds, nature],
+        );
+        if (lines.length !== targetIds.length) {
+          throw new NotFoundException(nature === 'opex' ? 'Spend item not found.' : 'CAPEX item not found.');
+        }
+        await assertLinesEditable(context.manager, targetIds);
+        await context.manager.query(
+          `DELETE FROM contract_spend_items l USING spend_items i
+            WHERE l.tenant_id = $1 AND l.contract_id = $2
+              AND i.tenant_id = l.tenant_id AND i.id = l.spend_item_id AND i.nature = $3
+              AND NOT (l.spend_item_id = ANY($4::uuid[]))`,
+          [context.tenantId, sourceId, nature, targetIds],
+        );
+      } else {
+        await assertLinesEditable(context.manager, [sourceId]);
+        for (const targetId of targetIds) await assertContractReadable(context.manager, targetId);
+        await context.manager.query(
+          `DELETE FROM contract_spend_items l USING contracts c
+            WHERE l.tenant_id = $1 AND l.spend_item_id = $2
+              AND c.tenant_id = l.tenant_id AND c.id = l.contract_id
+              AND NOT (l.contract_id = ANY($3::uuid[]))`,
+          [context.tenantId, sourceId, targetIds],
+        );
+      }
+      for (const targetId of targetIds) {
+        await context.manager.query(
+          `INSERT INTO contract_spend_items (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+          [context.tenantId, sourceId, targetId],
+        );
+      }
+      return;
+    }
     // A target with a predicate (OPEX or CAPEX lines): only the links to such targets are replaced,
     // a link to a line of the other nature stays.
     const target = this.targetSql(config.target);
