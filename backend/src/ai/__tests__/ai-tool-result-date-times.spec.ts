@@ -29,6 +29,11 @@ async function run() {
     '2026-06-02T07:50:00+02:00',
     'an instant that already carries the user offset is not shifted twice',
   );
+  assert.equal(
+    formatToolResultDateTimes('2026-06-02T05:50:00Z', 'Mars/Olympus'),
+    '2026-06-02T05:50:00+00:00',
+    'a zone nobody knows reads as UTC, never as the server zone',
+  );
 
   assert.equal(formatToolResultDateTimes('2026-06-02', paris), '2026-06-02', 'a date-only field keeps its day');
   assert.equal(formatToolResultDateTimes('2 June 2026 05:50', paris), '2 June 2026 05:50', 'free text is untouched');

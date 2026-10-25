@@ -1,4 +1,4 @@
-import { isoDateTimeInTimeZone } from '../common/csv-sheet';
+import { isoDateTimeInTimeZone, knownTimeZone } from '../common/csv-sheet';
 
 /** A full ISO instant, with its zone: what tool results carry for a date-time value. */
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -14,6 +14,10 @@ const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+
  * values (`...Z`): an external client gets an unambiguous instant, not a zone.
  */
 export function formatToolResultDateTimes(value: unknown, timeZone: string): unknown {
+  return formatValue(value, knownTimeZone(timeZone) ?? 'UTC');
+}
+
+function formatValue(value: unknown, timeZone: string): unknown {
   if (value instanceof Date) {
     return isoDateTimeInTimeZone(value, timeZone) ?? value;
   }
@@ -22,7 +26,7 @@ export function formatToolResultDateTimes(value: unknown, timeZone: string): unk
     return isoDateTimeInTimeZone(value, timeZone) ?? value;
   }
   if (Array.isArray(value)) {
-    return value.map((entry) => formatToolResultDateTimes(entry, timeZone));
+    return value.map((entry) => formatValue(entry, timeZone));
   }
   if (value === null || typeof value !== 'object') {
     return value;
@@ -33,7 +37,7 @@ export function formatToolResultDateTimes(value: unknown, timeZone: string): unk
   }
   const output: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
-    output[key] = formatToolResultDateTimes(entry, timeZone);
+    output[key] = formatValue(entry, timeZone);
   }
   return output;
 }
