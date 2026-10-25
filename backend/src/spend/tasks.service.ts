@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Repository, EntityManager, DataSource } from 'typeorm';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
-import { incidentRelatedLabelSql } from '../incidents/incident-visibility';
+import { IncidentViewer, incidentRelatedLabelSql, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { textSortKey } from '../common/list-sort';
 import { resolveRecordCreators } from '../audit/record-creator.util';
 import { assertSetFilterModes, bindPositional, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type CompiledCondition } from '../common/ag-grid-filtering';
@@ -110,11 +110,14 @@ function buildWhereConditions(
   skipField: string | undefined,
   tenantId: string,
   accessScope?: ParticipationAccessScope,
+  viewer?: IncidentViewer | null,
 ) {
   const params: any[] = [requireListTenant(tenantId)];
   const tenantParamRef = '$1';
   // Every condition below is appended as ` AND <atom>` or ` AND (<...>)`, so none widens this one.
   let whereConditions = `t.tenant_id = ${tenantParamRef}`;
+  // A task of an incident the reader cannot see does not exist for them (empty for incidents:admin).
+  whereConditions += taskIncidentVisibilitySql('t', viewer, params);
   const filters: AgFilterModel = rawFilters && typeof rawFilters === 'object' ? rawFilters : {};
   assertSetFilterModes(filters);
 
@@ -771,15 +774,15 @@ export class TasksService {
     return sessionTenant;
   }
 
-  async list(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope }) {
+  async list(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }) {
     return this.listAllTasks(query, opts);
   }
 
-  async listAllTasks(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope }): Promise<{ items: TaskListItem[]; total: number; page: number; limit: number }> {
+  async listAllTasks(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<{ items: TaskListItem[]; total: number; page: number; limit: number }> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const { page, limit, skip, sort, q, filters } = parsePagination(query);
-    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope);
+    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer);
 
     // Count total
     const countQuery = `
@@ -895,11 +898,11 @@ export class TasksService {
     return { items, total, page, limit };
   }
 
-  async listIds(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope }): Promise<{ ids: string[]; refs: string[]; total: number }> {
+  async listIds(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<{ ids: string[]; refs: string[]; total: number }> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const { sort, q, filters } = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
-    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope);
+    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer);
 
     const sortField = await taskSortKey(manager, sort.field);
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
@@ -958,7 +961,7 @@ export class TasksService {
     return { ids, refs, total };
   }
 
-  async listFilterValues(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope }): Promise<Record<string, Array<string | null>>> {
+  async listFilterValues(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<Record<string, Array<string | null>>> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const q = (query.q as string) || '';
@@ -982,7 +985,7 @@ export class TasksService {
     const results: Record<string, Array<string | null>> = {};
 
     for (const field of fields) {
-      const { whereConditions, params } = buildWhereConditions(query, filters, q, field, tenantId, opts?.accessScope);
+      const { whereConditions, params } = buildWhereConditions(query, filters, q, field, tenantId, opts?.accessScope, opts?.viewer);
       if (field === 'application_name' || field === 'asset_name') {
         const relation = field === 'application_name'
           ? { table: 'task_applications', column: 'application_id', target: 'applications' }
@@ -1078,7 +1081,7 @@ export class TasksService {
   }
 
   /** `tenantId`: the request's tenant; without it, the session tenant of the manager. */
-  async getOne(id: string, opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope }): Promise<TaskListItem | null> {
+  async getOne(id: string, opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<TaskListItem | null> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = await this.resolveTenantId(manager, opts?.tenantId);
     const params: any[] = [id, tenantId];
@@ -1087,6 +1090,8 @@ export class TasksService {
       params.push(opts.accessScope.userId);
       accessWhere = ` AND ${taskParticipantCondition('t', `$${params.length}`)}`;
     }
+    // The detail answers like a missing task for a task of an incident the reader cannot see.
+    accessWhere += taskIncidentVisibilitySql('t', opts?.viewer, params);
     const dataQuery = `
       SELECT
         t.id,
@@ -1177,20 +1182,29 @@ export class TasksService {
   async assertVisible(
     id: string,
     accessScope: ParticipationAccessScope | undefined,
-    opts?: { manager?: EntityManager; tenantId?: string },
+    opts?: { manager?: EntityManager; tenantId?: string; viewer?: IncidentViewer | null },
   ): Promise<void> {
-    if (!accessScope) return;
+    // An unscoped registry admin reads every task: nothing to look up.
+    if (!accessScope && opts?.viewer?.isAdmin) return;
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = await this.resolveTenantId(manager, opts?.tenantId);
+    const params: any[] = [id, tenantId];
+    let accessWhere = '';
+    if (accessScope) {
+      params.push(accessScope.userId);
+      accessWhere = `AND ${taskParticipantCondition('t', `$${params.length}`)}`;
+    }
     const rows = await manager.query(
       `SELECT 1
        FROM tasks t
        WHERE t.id = $1
-         AND t.tenant_id = $3
-         AND ${taskParticipantCondition('t', '$2')}
+         AND t.tenant_id = $2
+         ${accessWhere}
+         ${taskIncidentVisibilitySql('t', opts?.viewer, params)}
        LIMIT 1`,
-      [id, accessScope.userId, tenantId],
+      params,
     );
-    if (rows.length === 0) throw new NotFoundException('Task not found');
+    // The same message a missing T-N gets from `resolveToUuid`: a hidden task is missing.
+    if (rows.length === 0) throw new NotFoundException('Item not found');
   }
 }

@@ -82,6 +82,7 @@ export class IncidentsController {
       viewer: incidentViewerFromContext(ctx),
       technologies: canReadResource(ctx, 'infrastructure'),
       applications: canReadResource(ctx, 'applications'),
+      tasks: canReadResource(ctx, 'tasks'),
     };
   }
 
@@ -251,11 +252,10 @@ export class IncidentsController {
   ): Promise<void> {
     const id = await this.visibleId(idOrRef, ctx);
     const resolveInlineImage = this.inlineImages.exporter(ctx);
+    const recordOpts = await this.viewOpts(ctx);
     const result = await this.report.exportPdf(id, lang, {
-      manager: ctx.manager,
-      tenantId: ctx.tenantId,
+      ...recordOpts,
       userId: ctx.userId || null,
-      viewer: incidentViewerFromContext(ctx),
       // Inline images of the review: resolved internally with the caller's
       // identity; the cookie stays as a fallback for unrecognized internal targets.
       imageFetchCookie: req?.headers?.cookie ?? null,

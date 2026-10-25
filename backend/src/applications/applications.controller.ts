@@ -364,6 +364,7 @@ export class ApplicationsController {
       manager: ctx.manager,
       tenantId: ctx.tenantId,
       accessScope: await this.readTaskScope(ctx),
+      viewer: incidentViewerFromContext(ctx),
     });
   }
 

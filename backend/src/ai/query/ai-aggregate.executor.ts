@@ -43,6 +43,7 @@ import {
 import {
   applyScopeToAiQuery,
   resolveAiDocumentIncidentViewer,
+  resolveAiIncidentViewer,
   resolveAiParticipationAccessScope,
   ResolvedAiScope,
 } from './ai-query-scope.util';
@@ -575,6 +576,7 @@ export class AiAggregateExecutor {
         manager: context.manager,
         tenantId: context.tenantId,
         accessScope,
+        viewer: await resolveAiIncidentViewer(context),
       });
       const ids = result.ids || [];
       return {

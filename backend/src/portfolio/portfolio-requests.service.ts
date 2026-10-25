@@ -28,6 +28,7 @@ import { PortfolioProject } from './portfolio-project.entity';
 import { PortfolioActivity } from './portfolio-activity.entity';
 import { AuditService } from '../audit/audit.service';
 import { resolveRecordCreators } from '../audit/record-creator.util';
+import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { ItemNumberService } from '../common/item-number.service';
 import { StorageService } from '../common/storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -880,7 +881,7 @@ export class PortfolioRequestsService {
    * `readsBudget`: the reader holds the budget right; without it the budget lines are counted, never
    * named (data-scoped access, spec §5.4).
    */
-  async get(id: string, query: any, opts?: { manager?: EntityManager; accessScope?: ParticipationAccessScope; readsBudget?: boolean }) {
+  async get(id: string, query: any, opts?: { manager?: EntityManager; accessScope?: ParticipationAccessScope; readsBudget?: boolean; viewer?: IncidentViewer | null }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioRequest);
 
@@ -954,6 +955,8 @@ export class PortfolioRequestsService {
     }
 
     if (include.has('origin_task') && request.origin_task_id) {
+      const originTaskParams: unknown[] = [request.origin_task_id];
+      const originTaskVisibility = taskIncidentVisibilitySql('t', opts?.viewer, originTaskParams);
       const originTasks = await mg.query<Array<{
         id: string;
         item_number: number | null;
@@ -965,8 +968,9 @@ export class PortfolioRequestsService {
          FROM tasks t
          LEFT JOIN portfolio_task_types tt ON tt.id = t.task_type_id
          WHERE t.id = $1
+           ${originTaskVisibility}
          LIMIT 1`,
-        [request.origin_task_id],
+        originTaskParams,
       );
       result.origin_task = originTasks[0] || null;
     }
@@ -1193,7 +1197,7 @@ export class PortfolioRequestsService {
     overrides: ConvertFromTaskOverrides,
     tenantId: string,
     userId: string | null,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; viewer?: IncidentViewer | null },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const requestRepo = mg.getRepository(PortfolioRequest);
@@ -1203,8 +1207,19 @@ export class PortfolioRequestsService {
 
     if (!tenantId) throw new BadRequestException('Tenant context is required');
 
-    const task = await taskRepo.findOne({ where: { id: taskId } });
-    if (!task || task.tenant_id !== tenantId) {
+    const taskParams: unknown[] = [taskId, tenantId];
+    const taskVisibility = taskIncidentVisibilitySql('t', opts?.viewer, taskParams);
+    const taskRows = await mg.query(
+      `SELECT t.*
+       FROM tasks t
+       WHERE t.id = $1
+         AND t.tenant_id = $2
+         ${taskVisibility}
+       LIMIT 1`,
+      taskParams,
+    );
+    const task = taskRows[0] ? taskRepo.create(taskRows[0] as Partial<Task>) : null;
+    if (!task) {
       throw new NotFoundException('Task not found');
     }
 

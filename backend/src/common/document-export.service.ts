@@ -33,6 +33,30 @@ const ODT_MAX_IMAGE_WIDTH_CM = 16;
 const ODT_SIZE_RE = /^([0-9]+(?:\.[0-9]+)?|\.[0-9]+)\s*(cm|mm|in|pt|px)$/i;
 const EXPORT_ATTRIBUTE_ENTITIES = { amp: '&', quot: '"', '#39': '\'', lt: '<', gt: '>' };
 
+/**
+ * Règles d'impression des PDF, écrites en Typst et confiées à Pandoc par
+ * `--include-in-header` (son gabarit Typst les insère avant le corps). Elles reprennent les
+ * règles CSS d'un document imprimé :
+ * - `sticky` garde un titre avec le bloc qui le suit (`break-after: avoid`) ;
+ * - la figure qui porte une table redevient sécable (Pandoc l'enveloppe dans une figure
+ *   insécable par défaut), pour que les lignes continuent sur la page suivante ;
+ * - une cellule de tableau insécable garde sa ligne sur une page (`break-inside: avoid`) ;
+ * - les cellules ne sont pas coupées par césure, ce qui laisse les mots entiers dans une
+ *   colonne de contenu élargie.
+ */
+const TYPST_PRINT_RULES = [
+  '// Keep a heading with the block that follows it.',
+  '#show heading: set block(sticky: true)',
+  '// Pandoc wraps a table in a figure, unbreakable by default: let the table continue',
+  '// on the next page, between rows. Each row then stays whole (see table.cell below).',
+  '#show figure.where(kind: table): set block(breakable: true)',
+  '// A table row stays on one page: no cell is split across two pages.',
+  '#set table.cell(breakable: false)',
+  '// No hyphenation in table cells: a wide content column gets whole words.',
+  '#show table.cell: set text(hyphenate: false)',
+].join('\n');
+const TYPST_PRINT_RULES_FILE = 'print-rules.typ';
+
 type ExportConfig = {
   extension: 'pdf' | 'docx' | 'odt';
   mimeType: string;
@@ -99,6 +123,12 @@ export class DocumentExportService {
 
     try {
       await fs.writeFile(inputFile, normalized, 'utf8');
+      // The PDF header is written once per export. Inside the --sandbox, Pandoc may read the
+      // files named on its command line, so this path is passed explicitly below.
+      const printRulesFile = path.join(tempDir, TYPST_PRINT_RULES_FILE);
+      if (config.pandocTarget === 'pdf') {
+        await fs.writeFile(printRulesFile, TYPST_PRINT_RULES, 'utf8');
+      }
 
       // Passe 1 — lecture seule. Le lecteur Pandoc résout lui-même les images par
       // référence et certaines balises HTML : c'est son arbre, et non une
@@ -109,6 +139,7 @@ export class DocumentExportService {
         tempDir,
       );
       const parsedAst = await this.readAstFile(parsedAstFile, MAX_PARSED_AST_JSON_BYTES);
+      this.applyDeclaredTableWidths(parsedAst);
 
       // Toutes les ressources sont validées puis incorporées ici : la passe 2 ne
       // verra plus que des data: URI produites par nos soins. Les métadonnées du
@@ -146,6 +177,7 @@ export class DocumentExportService {
           '--variable=mainfont:Noto Sans',
           '--variable=sansfont:Noto Sans',
           '--variable=monofont:DejaVu Sans Mono',
+          `--include-in-header=${printRulesFile}`,
         );
       }
       args.push(rewrittenAstFile);
@@ -232,6 +264,67 @@ export class DocumentExportService {
       default:
         throw new BadRequestException('Unsupported export format');
     }
+  }
+
+  /**
+   * Pandoc's GFM reader drops the pipe-table separator widths when it writes its JSON AST
+   * (`ColWidthDefault` for every column), so a Markdown table cannot widen one column through
+   * its dashes. A table declared with `<!-- kanap:table-widths=3,3,3,3,10 -->` on the line
+   * before it gets the relative widths here, before the Typst pass. The marker is removed.
+   */
+  private applyDeclaredTableWidths(ast: any): void {
+    if (!ast || typeof ast !== 'object') return;
+    ast.blocks = this.rewriteTableWidths(ast.blocks);
+  }
+
+  private rewriteTableWidths(node: any): any {
+    if (Array.isArray(node)) {
+      const rewritten: any[] = [];
+      for (let index = 0; index < node.length; index += 1) {
+        const child = node[index];
+        const weights = this.tableWidthMarker(child);
+        const table = node[index + 1];
+        if (weights && table?.t === 'Table') {
+          this.setTableColumnWidths(table, weights);
+          rewritten.push(this.rewriteTableWidths(table));
+          index += 1;
+          continue;
+        }
+        rewritten.push(this.rewriteTableWidths(child));
+      }
+      return rewritten;
+    }
+    if (!node || typeof node !== 'object') return node;
+    for (const key of Object.keys(node)) {
+      node[key] = this.rewriteTableWidths(node[key]);
+    }
+    return node;
+  }
+
+  private tableWidthMarker(block: any): number[] | null {
+    if (!block || block.t !== 'RawBlock' || !Array.isArray(block.c) || block.c[0] !== 'html') return null;
+    const match = String(block.c[1] ?? '').trim().match(/^<!--\s*kanap:table-widths=([0-9]+(?:\s*,\s*[0-9]+)*)\s*-->$/);
+    if (!match) return null;
+    const weights = match[1]
+      .split(',')
+      .map((value) => Number(value.trim()))
+      .filter((value) => Number.isFinite(value) && value > 0);
+    return weights.length > 0 ? weights : null;
+  }
+
+  private setTableColumnWidths(table: any, weights: number[]): void {
+    // Pandoc 3's Table node is [attr, caption, colspecs, head, bodies, foot]; older ASTs
+    // started at the caption. Take the first array of column specs in either shape.
+    const node = table?.c;
+    const colspecIndex = Array.isArray(node?.[2]) && node.length >= 6 ? 2 : 1;
+    const colspecs = node?.[colspecIndex];
+    if (!Array.isArray(colspecs) || colspecs.length !== weights.length) return;
+    const total = weights.reduce((sum, weight) => sum + weight, 0);
+    if (!total) return;
+    node[colspecIndex] = colspecs.map((spec, index) => [
+      Array.isArray(spec) ? spec[0] : { t: 'AlignDefault' },
+      { t: 'ColWidth', c: weights[index] / total },
+    ]);
   }
 
   private async inlineAstImages(ast: any, ctx: AstImageContext): Promise<void> {

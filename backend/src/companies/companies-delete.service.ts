@@ -7,7 +7,8 @@ import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
 import { assertNotInUse, RecordInUseException, refusalDetails, refusalsOf, type DeleteRefusal } from '../common/record-in-use';
-import { COMPANY_USAGE_QUERIES } from './company-usages';
+import { COMPANY_USAGE_QUERIES, companyUsageQueries } from './company-usages';
+import type { IncidentViewer } from '../incidents/incident-visibility';
 
 /** Tables whose foreign key can block a company delete, in plain words. */
 const COMPANY_REFERENCING_TABLES: Record<string, string> = {
@@ -43,8 +44,15 @@ export class CompaniesDeleteService extends BaseDeleteService<Company> {
   }
 
   /** The check before a delete (`POST /companies/delete-check`): which of `ids` would be refused, and why. */
-  async deleteCheck(ids: string[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
-    return refusalsOf(opts?.manager ?? this.repository.manager, 'companies', ids, COMPANY_USAGE_QUERIES, 'COMPANY_IN_USE');
+  async deleteCheck(ids: string[], opts?: { manager?: EntityManager; viewer?: IncidentViewer | null }): Promise<{ refused: DeleteRefusal[] }> {
+    return refusalsOf(
+      opts?.manager ?? this.repository.manager,
+      'companies',
+      ids,
+      companyUsageQueries(opts?.viewer),
+      'COMPANY_IN_USE',
+      { isAdmin: true, userId: opts?.viewer?.userId ?? null },
+    );
   }
 
   /**
