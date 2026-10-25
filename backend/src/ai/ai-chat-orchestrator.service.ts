@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { resolveBudgetLine } from '../common/resolve-item-id';
+import { timeZoneOf } from '../common/csv-sheet';
 import { assertPublicHttpTarget } from '../common/ssrf-guard';
 import { getEnvMode, isDevelopmentEnv } from '../common/env';
 import { AiAttachmentService } from './ai-attachment.service';
@@ -48,6 +49,7 @@ import {
   ChatStreamEvent,
 } from './ai.types';
 import { buildStructuredToolResultValidation } from './ai-tool-result-validation.util';
+import { formatToolResultDateTimes } from './ai-tool-result-date-times.util';
 import { BUILTIN_REASONING_EFFORT } from './platform/platform-ai-config.service';
 import { AiBuiltinUsageService } from './platform/ai-builtin-usage.service';
 import { AiApprovalService } from './control-plane/approval/ai-approval.service';
@@ -193,6 +195,8 @@ type ChatStreamParams = {
    *   that history.
    */
   truncateFromMessageId?: string | null;
+  /** The browser's IANA zone; the user's stored zone is the fallback, then UTC. */
+  timeZone?: string | null;
   signal?: AbortSignal | null;
 };
 
@@ -227,6 +231,8 @@ type PreparedChatRequest = {
   // Per-model timeout from the registry; null falls back to AI_CHAT_PROVIDER_TIMEOUT_MS.
   modelTimeoutMs: number | null;
   tenantName: string;
+  /** The zone the assistant reads and writes date-times in (validated, never empty). */
+  timeZone: string;
   builtinRateLimits?: {
     tenantPerMinute: number;
     userPerHour: number;
@@ -1703,6 +1709,8 @@ export class AiChatOrchestratorService {
         [ctx.tenantId],
       );
       const tenantName = tenant?.[0]?.name || 'KANAP';
+      // The browser's zone, else the user's own, else UTC (the CSV exports share this rule).
+      const timeZone = await timeZoneOf(ctx.manager, ctx.tenantId, ctx.userId ?? null, params.timeZone);
       let resolved: ResolvedModel;
       try {
         resolved = await this.modelResolver.resolve(ctx.tenantId, { type: 'chat' }, ctx.manager);
@@ -1736,6 +1744,7 @@ export class AiChatOrchestratorService {
           endpointUrl: resolved.endpointUrl,
           modelTimeoutMs: null,
           tenantName,
+          timeZone,
           builtinRateLimits: resolved.builtinRateLimits ?? undefined,
         };
       }
@@ -1763,6 +1772,7 @@ export class AiChatOrchestratorService {
         endpointUrl: resolved.endpointUrl,
         modelTimeoutMs: resolved.timeoutMs,
         tenantName,
+        timeZone,
       };
     });
   }
@@ -1856,7 +1866,7 @@ export class AiChatOrchestratorService {
     prepared: PreparedChatRequest,
     opts?: { signal?: AbortSignal | null; requestStartedAt?: number },
   ): AsyncGenerator<ChatStreamEvent> {
-    const { context, userMessage, provider, model, apiKey, endpointUrl, modelTimeoutMs, tenantName, providerSource } = prepared;
+    const { context, userMessage, provider, model, apiKey, endpointUrl, modelTimeoutMs, tenantName, providerSource, timeZone } = prepared;
     const replayDeepSeekReasoning = isOfficialDeepSeekEndpoint(endpointUrl);
     const abortSignal = opts?.signal ?? null;
     const requestStartedAt = opts?.requestStartedAt ?? Date.now();
@@ -2175,6 +2185,7 @@ export class AiChatOrchestratorService {
               contextProfile,
               budgetColumns,
               analyticsDimensions,
+              timeZone,
             });
             const latestUserMessageRow = [...historyAfterApproval]
               .reverse()
@@ -2376,6 +2387,7 @@ export class AiChatOrchestratorService {
           contextProfile,
           budgetColumns,
           analyticsDimensions,
+          timeZone,
         });
         const sysPrompt = builtSystemPrompt.text;
 
@@ -2932,6 +2944,9 @@ export class AiChatOrchestratorService {
               });
               if (trace) yield trace;
             }
+            // The result is what the model reads and the user sees in the tool card: write its
+            // date-times in the user's zone, with an explicit offset, so neither reads UTC.
+            result = formatToolResultDateTimes(result, timeZone);
             toolCallCountThisTurn++;
 
             yield {
