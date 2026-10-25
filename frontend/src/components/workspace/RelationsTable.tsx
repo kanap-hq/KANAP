@@ -285,10 +285,63 @@ function titleCutCell(event: React.MouseEvent) {
 }
 
 /**
- * Width a table publishes when the frame is wider than its columns. The section caps itself at
- * the largest one, so "Add" lines up with the table. A tighter frame publishes nothing.
+ * Width a table publishes when the frame is wider than its columns. `'fill'` is a table in a
+ * tighter regime: it takes the whole frame, and so does every sibling section.
  */
-const RelationsWidthContext = React.createContext<((id: string, width: number | null) => void) | null>(null);
+type GroupWidth = number | 'fill';
+
+type RelationsWidthApi = {
+  report: (id: string, width: GroupWidth | null) => void;
+  /** Shared width of the sibling sections. Absent when one of their tables fills its frame. */
+  groupWidth: number | undefined;
+};
+
+const RelationsWidthContext = React.createContext<RelationsWidthApi | null>(null);
+
+type SectionGroup = {
+  tables: Map<string, { sectionId: string; width: GroupWidth }>;
+  listeners: Map<string, (width: number | undefined) => void>;
+};
+
+/** Sections that share a parent, so their right edges line up. The parent is the key. */
+const sectionGroups = new WeakMap<Element, SectionGroup>();
+
+function ensureGroup(parent: Element): SectionGroup {
+  let group = sectionGroups.get(parent);
+  if (!group) {
+    group = { tables: new Map(), listeners: new Map() };
+    sectionGroups.set(parent, group);
+  }
+  return group;
+}
+
+/** The widest published width, or none when a table fills its frame. */
+function groupMaxWidth(group: SectionGroup): number | undefined {
+  let max = 0;
+  let seen = false;
+  for (const table of group.tables.values()) {
+    if (table.width === 'fill') return undefined;
+    seen = true;
+    if (table.width > max) max = table.width;
+  }
+  return seen ? max : undefined;
+}
+
+function notifyGroup(group: SectionGroup) {
+  const width = groupMaxWidth(group);
+  for (const listener of group.listeners.values()) listener(width);
+}
+
+function leaveGroup(parent: Element, sectionId: string) {
+  const group = sectionGroups.get(parent);
+  if (!group) return;
+  group.listeners.delete(sectionId);
+  for (const [id, table] of group.tables) {
+    if (table.sectionId === sectionId) group.tables.delete(id);
+  }
+  if (group.listeners.size === 0 && group.tables.size === 0) sectionGroups.delete(parent);
+  else notifyGroup(group);
+}
 
 /**
  * The dense table of a Relations section (charter "Dense workspace tables"): 12/500 tertiary
@@ -302,7 +355,9 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
   const [measured, setMeasured] = React.useState<Readonly<Record<string, number>>>({});
   const tableRef = React.useRef<HTMLTableElement | null>(null);
   const shownKeysRef = React.useRef<string[]>([]);
-  const reportWidth = React.useContext(RelationsWidthContext);
+  const widthApi = React.useContext(RelationsWidthContext);
+  const reportWidth = widthApi?.report;
+  const groupWidth = widthApi?.groupWidth;
   const tableId = React.useId();
   const foldedRows = folded?.rows ?? [];
   const hasAction = action != null;
@@ -321,6 +376,9 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
   const { columns } = fitted;
   /** The table's own width when the frame is wider than the columns; the frame keeps the rest. */
   const naturalWidth = fitted.tableWidth != null ? fitted.tableWidth + actionWidth + removeWidth : null;
+  // A sibling section is wider: fill this one. The column without a width takes the surplus,
+  // past its usual cap. When every column has a width, the fixed layout leaves that surplus.
+  const stretch = naturalWidth != null && groupWidth != null && groupWidth > naturalWidth;
   shownKeysRef.current = columns.map((column) => column.key);
   const shownKey = shownKeysRef.current.join('\0');
   // The content does not depend on the frame, so a resize does not measure again. A column that
@@ -363,9 +421,14 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
   }, [allColumns, rows, folded, totals, unfolded, shownKey, hasAction]);
   React.useLayoutEffect(() => {
     if (!reportWidth) return undefined;
-    reportWidth(tableId, naturalWidth);
+    // Not laid out yet: drop any width, and do not mark the group as filling the frame.
+    if (frameWidth <= 0) {
+      reportWidth(tableId, null);
+      return () => reportWidth(tableId, null);
+    }
+    reportWidth(tableId, naturalWidth ?? 'fill');
     return () => reportWidth(tableId, null);
-  }, [reportWidth, tableId, naturalWidth]);
+  }, [reportWidth, tableId, naturalWidth, frameWidth]);
   const open = (row: T) => {
     const href = rowHref?.(row);
     if (href) navigate(href);
@@ -434,7 +497,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
         ref={tableRef}
         aria-label={ariaLabel}
         onMouseOver={titleCutCell}
-        style={naturalWidth != null ? { width: naturalWidth } : undefined}
+        style={naturalWidth != null && !stretch ? { width: naturalWidth } : undefined}
         sx={{
           width: '100%',
           minWidth: fitted.minWidth != null ? fitted.minWidth + actionWidth + removeWidth : undefined,
@@ -499,6 +562,8 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
         <colgroup>
           {columns.map((column, index) => {
             const width = fitted.widths[index];
+            // Filling a wider section: the column without a width takes the surplus, past its cap.
+            if (stretch && column.width == null) return <col key={column.key} />;
             return <col key={column.key} style={width ? { width } : undefined} />;
           })}
           {hasAction && <col style={{ width: actionWidth }} />}
@@ -585,24 +650,45 @@ type SectionProps = {
 
 /** A Relations section: title and count, an "Add" text action on the right, then its content. */
 export function RelationsSection({ title, count, onAdd, adding, addLabel, heading, hint, actions, children }: SectionProps) {
-  const widths = React.useRef(new Map<string, number>());
+  const sectionId = React.useId();
+  const parentRef = React.useRef<Element | null>(null);
   const [maxWidth, setMaxWidth] = React.useState<number | undefined>(undefined);
-  // The widest table in regime 1. maxWidth, so a narrower frame still gets the whole section.
-  const report = React.useCallback((id: string, width: number | null) => {
-    const map = widths.current;
-    if (width == null) {
-      if (!map.delete(id)) return;
-    } else if (map.get(id) === width) {
-      return;
-    } else {
-      map.set(id, width);
-    }
-    const next = map.size === 0 ? undefined : Math.max(...map.values());
-    setMaxWidth((current) => (current === next ? current : next));
+  const onGroup = React.useCallback((width: number | undefined) => {
+    setMaxWidth((current) => (current === width ? current : width));
   }, []);
+  const report = React.useCallback((id: string, width: GroupWidth | null) => {
+    const parent = parentRef.current;
+    if (!parent) return;
+    const group = sectionGroups.get(parent);
+    if (!group) return;
+    if (width == null) {
+      if (!group.tables.delete(id)) return;
+    } else {
+      const current = group.tables.get(id);
+      if (current && current.width === width && current.sectionId === sectionId) return;
+      group.tables.set(id, { sectionId, width });
+    }
+    notifyGroup(group);
+  }, [sectionId]);
+  // The group's key is this section's parent. An empty section subscribes too, so its Add lines up.
+  const setSectionNode = React.useCallback((node: HTMLElement | null) => {
+    const nextParent = node?.parentElement ?? null;
+    if (parentRef.current !== nextParent) {
+      if (parentRef.current) leaveGroup(parentRef.current, sectionId);
+      parentRef.current = nextParent;
+      if (nextParent) {
+        const group = ensureGroup(nextParent);
+        group.listeners.set(sectionId, onGroup);
+        onGroup(groupMaxWidth(group));
+      }
+    } else if (nextParent) {
+      ensureGroup(nextParent).listeners.set(sectionId, onGroup);
+    }
+  }, [sectionId, onGroup]);
+  const value = React.useMemo(() => ({ report, groupWidth: maxWidth }), [report, maxWidth]);
   return (
-    <RelationsWidthContext.Provider value={report}>
-      <Box component="section" aria-label={title} sx={maxWidth != null ? { maxWidth } : undefined}>
+    <RelationsWidthContext.Provider value={value}>
+      <Box component="section" ref={setSectionNode} aria-label={title} sx={maxWidth != null ? { maxWidth } : undefined}>
         <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 0.75, minHeight: 28 }}>
           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
             {heading ?? (

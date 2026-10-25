@@ -283,7 +283,8 @@ describe('RelationsTable action column', () => {
     mockActionMeasure(75);
     frameWidth = 1600;
     const { container } = renderTable({ action });
-    expect(colWidths(container).at(-1)).toBe(75);
+    const widths = colWidths(container);
+    expect(widths[widths.length - 1]).toBe(75);
     expect(screen.getByRole('table').style.width).toBe(`${fixed + NAME_MIN_WIDE + 75}px`);
   });
 
@@ -291,7 +292,8 @@ describe('RelationsTable action column', () => {
     mockActionMeasure(75);
     frameWidth = 405;
     const { container } = renderTable({ action });
-    expect(colWidths(container).at(-1)).toBe(56);
+    const widths = colWidths(container);
+    expect(widths[widths.length - 1]).toBe(56);
     expect(screen.getByRole('table').style.width).toBe('');
     expect(screen.getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Ref', 'Name', 'Version', 'Support end']);
   });
@@ -330,11 +332,72 @@ describe('RelationsTable on a wide frame', () => {
         </MemoryRouter>
       </ThemeProvider>,
     );
-    const short = 72 + NAME_MIN_WIDE;
     const wide = fixed + NAME_MIN_WIDE + 40;
-    expect(screen.getByRole('table', { name: 'Short' }).style.width).toBe(`${short}px`);
+    // The shorter table fills the section. Its name column keeps no width of its own, so it takes the surplus.
+    expect(screen.getByRole('table', { name: 'Short' }).style.width).toBe('');
+    expect(colWidths(screen.getByRole('table', { name: 'Short' }))).toEqual([72, undefined]);
     expect(screen.getByRole('table', { name: 'Technologies' }).style.width).toBe(`${wide}px`);
     expect(getComputedStyle(screen.getByRole('region', { name: 'Relations' })).maxWidth).toBe(`${wide}px`);
+  });
+});
+
+describe('sibling relation sections', () => {
+  function renderSections(children: React.ReactNode) {
+    return render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter>{children}</MemoryRouter>
+      </ThemeProvider>,
+    );
+  }
+
+  it('shares one max width, and the narrower table fills its section', () => {
+    frameWidth = 1600;
+    const fixed = COLUMNS.reduce((sum, column) => sum + (column.width ?? 0), 0);
+    const wide = fixed + NAME_MIN_WIDE + 40;
+    renderSections(
+      <>
+        <RelationsSection title="Short" onAdd={() => {}} addLabel="Add">
+          <RelationsTable columns={COLUMNS.slice(0, 2)} rows={ROWS} rowKey={(row) => row.id} ariaLabel="Short" />
+        </RelationsSection>
+        <RelationsSection title="Empty" onAdd={() => {}} addLabel="Add">
+          <span>None</span>
+        </RelationsSection>
+        <RelationsSection title="Wide" onAdd={() => {}} addLabel="Add">
+          <RelationsTable columns={COLUMNS} rows={ROWS} rowKey={(row) => row.id} onRemove={() => {}} ariaLabel="Wide" />
+        </RelationsSection>
+      </>,
+    );
+    for (const name of ['Short', 'Empty', 'Wide']) {
+      expect(getComputedStyle(screen.getByRole('region', { name })).maxWidth).toBe(`${wide}px`);
+    }
+    expect(screen.getByRole('table', { name: 'Short' }).style.width).toBe('');
+    expect(colWidths(screen.getByRole('table', { name: 'Short' }))).toEqual([72, undefined]);
+    expect(screen.getByRole('table', { name: 'Wide' }).style.width).toBe(`${wide}px`);
+  });
+
+  it('drops the cap when a sibling table is between its base and its natural width', () => {
+    // 530px holds the short table (natural 312) and sits in the middle regime of the other
+    // (base 520, natural 640).
+    frameWidth = 530;
+    const mid: Array<RelationsColumn<Row>> = [
+      { key: 'name', header: 'Name', render: (row) => row.name },
+      { key: 'a', header: 'A', width: 200, render: () => 'a' },
+      { key: 'b', header: 'B', width: 200, render: () => 'b' },
+    ];
+    renderSections(
+      <>
+        <RelationsSection title="Short" onAdd={() => {}} addLabel="Add">
+          <RelationsTable columns={COLUMNS.slice(0, 2)} rows={ROWS} rowKey={(row) => row.id} ariaLabel="Short" />
+        </RelationsSection>
+        <RelationsSection title="Mid" onAdd={() => {}} addLabel="Add">
+          <RelationsTable columns={mid} rows={ROWS} rowKey={(row) => row.id} ariaLabel="Mid" />
+        </RelationsSection>
+      </>,
+    );
+    expect(getComputedStyle(screen.getByRole('region', { name: 'Short' })).maxWidth).toBe('none');
+    expect(getComputedStyle(screen.getByRole('region', { name: 'Mid' })).maxWidth).toBe('none');
+    expect(screen.getByRole('table', { name: 'Short' }).style.width).toBe(`${72 + NAME_MIN_WIDE}px`);
+    expect(screen.getByRole('table', { name: 'Mid' }).style.width).toBe('');
   });
 });
 
