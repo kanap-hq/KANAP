@@ -84,11 +84,11 @@ function renderPage() {
 describe('ConnectionMapPage node panel', () => {
   beforeEach(() => { get.mockReset(); });
 
-  it('opens a cluster on the tab where its members are managed, with no help line', async () => {
+  it('opens a cluster at the top of the Operations tab, with no help line', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'node QA-CL-A' }));
     fireEvent.click(await screen.findByRole('button', { name: 'pages.connectionMap.viewCluster' }));
-    expect(screen.getByTestId('where').textContent).toBe('/it/assets/cl-1/dependencies');
+    expect(screen.getByTestId('where').textContent).toBe('/it/assets/cl-1/operations');
   });
 
   it('shows no line about managing the members of a cluster', async () => {

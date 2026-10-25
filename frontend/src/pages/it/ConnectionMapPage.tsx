@@ -1284,8 +1284,8 @@ export default function ConnectionMapPage() {
                             variant="contained"
                             size="small"
                             onClick={() => {
-                              // The members of a cluster are managed on the Dependencies tab.
-                              navigate(`/it/assets/${selectedNode.id}/${selectedNode.kind === 'cluster' ? 'dependencies' : 'overview'}`);
+                              // The cluster sections stand at the top of the Operations tab.
+                              navigate(`/it/assets/${selectedNode.id}/${selectedNode.kind === 'cluster' ? 'operations' : 'overview'}`);
                             }}
                           >
                             {selectedNode.kind === 'cluster' ? t('pages.connectionMap.viewCluster') : t('pages.connectionMap.editServer')}
