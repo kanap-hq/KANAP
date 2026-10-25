@@ -57,16 +57,6 @@ export const contractsRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: true,
     },
-    cost_center_id: {
-      ai: 'cost_center_id',
-      grid: 'cost_center_id',
-      type: 'set',
-      description: 'Identifier of the group or cost center of the contract; null when it has none.',
-      dynamic: true,
-      discoverable: false,
-      sortable: false,
-      groupable: false,
-    },
     billing_frequency: {
       ai: 'billing_frequency',
       grid: 'billing_frequency',

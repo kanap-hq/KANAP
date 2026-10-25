@@ -168,11 +168,6 @@ function testContractRegistry() {
     ['cost_center_name', 'set', true, true],
     'contracts: cost_center',
   );
-  assert.deepEqual(
-    [registry.fields.cost_center_id?.grid, registry.fields.cost_center_id?.type],
-    ['cost_center_id', 'set'],
-    'contracts: cost_center_id',
-  );
   assert.equal(registry.sortFields.cost_center, 'cost_center_name');
   const join = registry.aggregate!.groupFields.cost_center.joins!.join(' ');
   assert.ok(join.includes('cc.tenant_id = c.tenant_id'), 'the cost center join names the tenant');
