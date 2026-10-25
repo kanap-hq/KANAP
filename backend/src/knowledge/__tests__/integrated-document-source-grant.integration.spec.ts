@@ -25,6 +25,7 @@ import { DocumentTask } from '../document-task.entity';
 import { DocumentType } from '../document-type.entity';
 import { DocumentVersion } from '../document-version.entity';
 import { IntegratedDocumentBinding } from '../integrated-document-binding.entity';
+import { ApplicationsController } from '../../applications/applications.controller';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { RolePermission } from '../../permissions/role-permission.entity';
 import { UserPageRole } from '../../permissions/user-page-role.entity';
@@ -195,6 +196,111 @@ async function testNewVersionCopiesTheDescription() {
   });
 }
 
+// Issue 816: the page-hide beacon calls the same DELETE the editor uses
+// (`X-Lock-Token` on `.../integrated-documents/:slot/locks`). Once it lands,
+// another member can lock the description at once, inside the five-minute TTL.
+async function testReleaseRouteFreesTheLockAtOnce() {
+  await inFixture(async (runner, { member }) => {
+    const { integrated } = createServices(runner.manager, []);
+    const manager = runner.manager;
+    const [{ tenant_id: tenantId }] = await runner.query(
+      `SELECT tenant_id::text AS tenant_id FROM users WHERE id = $1`,
+      [member],
+    );
+    const tag = randomUUID().slice(0, 8);
+    const roleId = randomUUID();
+    await runner.query(
+      `INSERT INTO roles (id, tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
+       VALUES ($1, $2, $3, $3, false, false, now(), now())`,
+      [roleId, tenantId, `Other member ${tag}`],
+    );
+    await runner.query(
+      `INSERT INTO role_permissions (id, tenant_id, role_id, resource, level, created_at, updated_at)
+       VALUES ($1, $2, $3, 'applications', 'member', now(), now())`,
+      [randomUUID(), tenantId, roleId],
+    );
+    const other = randomUUID();
+    await runner.query(
+      `INSERT INTO users (id, tenant_id, first_name, last_name, email, password_hash, role_id, mfa_enabled, status, created_at, updated_at)
+       VALUES ($1, $2, 'Other', 'Member', $3, null, $4, false, 'enabled', now(), now())`,
+      [other, tenantId, `other-${tag}@example.com`, roleId],
+    );
+
+    const [{ id: appId }] = await runner.query(
+      `INSERT INTO applications (tenant_id, name) VALUES (app_current_tenant(), 'Locked application') RETURNING id::text AS id`,
+    );
+    const opened: any = await integrated.getBySource('applications', appId, 'overview', member, { manager });
+    const lock: any = await integrated.acquireLockBySource('applications', appId, 'overview', member, { manager });
+    const heldUntil = new Date(lock.expires_at).getTime() - Date.now();
+    assert.ok(heldUntil > 4.5 * 60 * 1000 && heldUntil < 5.5 * 60 * 1000, 'the lock still expires after five minutes');
+
+    const heartbeat: any = await integrated.heartbeatLockBySource('applications', appId, 'overview', member, lock.lock_token, { manager });
+    const extended = new Date(heartbeat.expires_at).getTime() - Date.now();
+    assert.ok(extended > 4.5 * 60 * 1000 && extended < 5.5 * 60 * 1000, 'a heartbeat still renews the five minutes');
+
+    await assert.rejects(
+      () => integrated.acquireLockBySource('applications', appId, 'overview', other, { manager }),
+      (error: any) => error?.getStatus?.() === 423,
+      'the other member is refused while the lock is held',
+    );
+
+    const controller = new ApplicationsController(
+      { assertVisible: async () => undefined } as any,
+      null as any,
+      null as any,
+      null as any,
+      null as any,
+      integrated,
+      null as any,
+      null as any,
+      null as any,
+    );
+    (controller as any).readApplicationOpts = async () => ({ manager, tenantId });
+    const release = (userId: string, token: string | undefined) => controller.releaseIntegratedDocumentLock(
+      appId,
+      'overview',
+      { headers: { 'x-lock-token': token } } as any,
+      { manager, userId, tenantId } as any,
+    );
+
+    await assert.rejects(
+      () => release(member, 'not-the-token'),
+      (error: any) => error?.getStatus?.() === 423,
+      'a wrong token does not release',
+    );
+    await assert.rejects(
+      () => release(other, lock.lock_token),
+      (error: any) => error?.getStatus?.() === 423,
+      'another member cannot release with the holder token',
+    );
+    const [{ n: stillHeld }] = await runner.query(
+      `SELECT count(*)::int AS n FROM document_edit_locks WHERE document_id = $1`,
+      [opened.id],
+    );
+    assert.equal(stillHeld, 1, 'the lock is still held');
+
+    const released: any = await release(member, lock.lock_token);
+    assert.deepEqual(released, { ok: true });
+    const [{ n: freed }] = await runner.query(
+      `SELECT count(*)::int AS n FROM document_edit_locks WHERE document_id = $1`,
+      [opened.id],
+    );
+    assert.equal(freed, 0, 'the release route deletes the lock at once');
+
+    const fresh: any = await integrated.acquireLockBySource('applications', appId, 'overview', member, { manager });
+    assert.ok(fresh.lock_token && fresh.lock_token !== lock.lock_token, 'the same user takes a fresh lock');
+    await release(member, fresh.lock_token);
+
+    const taken: any = await integrated.acquireLockBySource('applications', appId, 'overview', other, { manager });
+    assert.ok(taken.lock_token, 'the other member locks it without waiting for the expiry');
+    const [{ holder_user_id: holder }] = await runner.query(
+      `SELECT holder_user_id::text AS holder_user_id FROM document_edit_locks WHERE document_id = $1`,
+      [opened.id],
+    );
+    assert.equal(holder, other);
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   try {
@@ -202,6 +308,8 @@ async function main() {
     console.log('  ok testMemberWritesTheDescriptionOfItsRecord');
     await testNewVersionCopiesTheDescription();
     console.log('  ok testNewVersionCopiesTheDescription');
+    await testReleaseRouteFreesTheLockAtOnce();
+    console.log('  ok testReleaseRouteFreesTheLockAtOnce');
   } finally {
     await dataSource.destroy();
     await closeMarkdownWorkers();
