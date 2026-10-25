@@ -1527,8 +1527,7 @@
         "overview": "Overview",
         "journal": "Journal",
         "relations": "Relations",
-        "documents": "Documents",
-        "attachments": "Attachments"
+        "documents": "Documents"
       },
       "actions": {
         "changeStatus": "Change status",

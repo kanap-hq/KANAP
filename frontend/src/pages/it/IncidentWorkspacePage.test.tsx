@@ -5,7 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../api';
-import { incidentsApi, type Incident } from '../../api/endpoints/incidents';
+import { incidentsApi, type Incident, type IncidentAttachment } from '../../api/endpoints/incidents';
 import { createAppTheme } from '../../config/ThemeContext';
 import IncidentWorkspacePage from './IncidentWorkspacePage';
 
@@ -31,6 +31,9 @@ vi.mock('../../api/endpoints/incidents', async (importOriginal) => {
       reopen: vi.fn(),
       setConfidentiality: vi.fn(),
       exportReport: vi.fn(),
+      listAttachments: vi.fn(async () => []),
+      uploadAttachment: vi.fn(),
+      deleteAttachment: vi.fn(),
     },
   };
 });
@@ -100,7 +103,6 @@ vi.mock('../../components/EntityKnowledgePanel', () => ({
 vi.mock('./workspace/IncidentMetadataBar', () => ({ default: () => null }));
 vi.mock('./workspace/IncidentPropertiesDrawer', () => ({ default: () => null }));
 vi.mock('./workspace/IncidentRelationsTab', () => ({ default: () => null }));
-vi.mock('./workspace/IncidentAttachmentsTab', () => ({ default: () => null }));
 vi.mock('./workspace/IncidentJournalTab', () => ({
   default: () => null,
   incidentEntriesQueryKey: (id: string) => ['incident-entries', id],
@@ -533,5 +535,77 @@ describe('IncidentWorkspacePage — Documents badge', () => {
     fireEvent.click(screen.getByText('knowledge-link-saved'));
     await waitFor(() => expect(screen.getByTestId('tab-documents')).toHaveTextContent(/^$/));
     expect(incidentsApi.get).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('IncidentWorkspacePage — attachments in the overview', () => {
+  const attachment: IncidentAttachment = {
+    id: 'att-1',
+    incident_id: 'inc-1',
+    original_filename: 'shot.png',
+    mime_type: 'image/png',
+    size: 2048,
+    uploaded_at: '2026-09-01T08:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authLevel.incidents = 'admin';
+    vi.mocked(incidentsApi.get).mockResolvedValue(incident);
+    vi.mocked(incidentsApi.listAttachments).mockResolvedValue([]);
+    vi.mocked(api.get).mockResolvedValue({
+      data: { id: 'doc-1', item_number: 12, item_ref: 'DOC-12', content_markdown: '## Description', revision: 1, edit_lock: null },
+    } as any);
+    vi.mocked(api.post).mockResolvedValue({ data: { lock_token: 'lock-1', expires_at: null } } as any);
+  });
+
+  it('no longer offers an attachments tab', async () => {
+    renderPage();
+
+    await screen.findByLabelText('workspace.incident.overview.review');
+    expect(screen.queryByTestId('tab-attachments')).toBeNull();
+    expect(screen.getByTestId('tab-overview')).toBeInTheDocument();
+  });
+
+  it('opens the overview from a former /attachments address', async () => {
+    renderPage('attachments');
+
+    expect(await screen.findByLabelText('workspace.incident.overview.review')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Short summary')).toBeInTheDocument();
+    expect(screen.queryByTestId('tab-attachments')).toBeNull();
+  });
+
+  it('shows the section to a contributor', async () => {
+    authLevel.incidents = 'contributor';
+    renderPage();
+
+    expect(await screen.findByText('workspace.task.attachments.title')).toBeInTheDocument();
+    expect(screen.getByText('workspace.task.actions.attachFiles')).toBeInTheDocument();
+  });
+
+  it('hides the empty section from a reader', async () => {
+    authLevel.incidents = 'reader';
+    renderPage();
+
+    await waitFor(() => expect(incidentsApi.listAttachments).toHaveBeenCalledWith('inc-1'));
+    expect(screen.queryByText('workspace.task.attachments.title')).toBeNull();
+  });
+
+  it('shows an existing attachment read-only to a reader', async () => {
+    authLevel.incidents = 'reader';
+    vi.mocked(incidentsApi.listAttachments).mockResolvedValue([attachment]);
+    renderPage();
+
+    expect(await screen.findByText('shot.png (2.0 KB)')).toBeInTheDocument();
+    expect(screen.queryByText('workspace.task.actions.attachFiles')).toBeNull();
+  });
+
+  it('keeps existing attachments read-only on a closed incident', async () => {
+    vi.mocked(incidentsApi.get).mockResolvedValue({ ...incident, status: 'closed', closed_at: '2026-09-02T00:00:00.000Z' });
+    vi.mocked(incidentsApi.listAttachments).mockResolvedValue([attachment]);
+    renderPage();
+
+    expect(await screen.findByText('shot.png (2.0 KB)')).toBeInTheDocument();
+    expect(screen.queryByText('workspace.task.actions.attachFiles')).toBeNull();
   });
 });

@@ -1527,8 +1527,7 @@
         "overview": "Vue d'ensemble",
         "journal": "Journal",
         "relations": "Relations",
-        "documents": "Documents",
-        "attachments": "Pièces jointes"
+        "documents": "Documents"
       },
       "actions": {
         "changeStatus": "Changer le statut",

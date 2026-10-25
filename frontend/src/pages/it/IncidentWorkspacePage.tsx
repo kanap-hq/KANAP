@@ -34,7 +34,6 @@ import ForbiddenPage from '../ForbiddenPage';
 import PortfolioDetailWorkspaceShell, {
   type PortfolioDetailWorkspaceTab,
 } from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
-import IncidentAttachmentsTab from './workspace/IncidentAttachmentsTab';
 import IncidentJournalTab from './workspace/IncidentJournalTab';
 import IncidentMetadataBar from './workspace/IncidentMetadataBar';
 import IncidentOverviewTab from './workspace/IncidentOverviewTab';
@@ -54,7 +53,7 @@ import {
 } from './workspace/incidentWorkspace';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 
-const TAB_KEYS = ['overview', 'journal', 'relations', 'documents', 'attachments'] as const;
+const TAB_KEYS = ['overview', 'journal', 'relations', 'documents'] as const;
 type TabKey = (typeof TAB_KEYS)[number];
 
 type CreateForm = IncidentDrawerValues & { title: string; description: string };
@@ -155,6 +154,14 @@ export function IncidentWorkspacePage() {
   const setIncidentCache = React.useCallback((updater: (previous: Incident) => Incident) => {
     queryClient.setQueryData<Incident>(queryKey, (previous) => (previous ? updater(previous) : previous));
   }, [queryClient, queryKey]);
+
+  // Kept on the incident even without its tab: the PDF report and other screens read it.
+  const handleAttachmentsCountChange = React.useCallback((count: number) => {
+    setIncidentCache((current) => ({
+      ...current,
+      counts: { ...current.counts, attachments: count },
+    }));
+  }, [setIncidentCache]);
 
   const invalidateEntries = React.useCallback((incidentId: string) => {
     void queryClient.invalidateQueries({ queryKey: incidentEntriesQueryKey(incidentId) });
@@ -554,7 +561,6 @@ export function IncidentWorkspacePage() {
       disabled: isCreate,
     },
     { key: 'documents', label: t('workspace.incident.tabs.documents'), badge: counts?.documents || undefined, disabled: isCreate },
-    { key: 'attachments', label: t('workspace.incident.tabs.attachments'), badge: counts?.attachments || undefined, disabled: isCreate },
   ];
 
   const saveHint = (status: IntegratedDocumentSaveStatus) => (
@@ -774,6 +780,8 @@ export function IncidentWorkspacePage() {
                 reviewEditorRef={reviewEditorRef}
                 onReviewSaveStateChange={handleReviewSaveStateChange}
                 onPatchDebounced={patchDebounced}
+                canManageAttachments={editable}
+                onAttachmentsCountChange={handleAttachmentsCountChange}
                 descriptionResync={descriptionResync}
               />
             )}
@@ -806,17 +814,6 @@ export function IncidentWorkspacePage() {
                 entityId={data.id}
                 canCreate={editable}
                 onLinksChange={() => { void queryClient.invalidateQueries({ queryKey }); }}
-              />
-            )}
-            {validTab === 'attachments' && (
-              <IncidentAttachmentsTab
-                key={data.id}
-                incidentId={data.id}
-                canManage={editable}
-                onCountChange={(count) => setIncidentCache((current) => ({
-                  ...current,
-                  counts: { ...current.counts, attachments: count },
-                }))}
               />
             )}
           </>

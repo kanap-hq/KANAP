@@ -1527,8 +1527,7 @@
         "overview": "Vista general",
         "journal": "Registro",
         "relations": "Relaciones",
-        "documents": "Documentos",
-        "attachments": "Adjuntos"
+        "documents": "Documentos"
       },
       "actions": {
         "changeStatus": "Cambiar estado",

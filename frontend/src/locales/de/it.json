@@ -1527,8 +1527,7 @@
         "overview": "Übersicht",
         "journal": "Verlauf",
         "relations": "Beziehungen",
-        "documents": "Dokumente",
-        "attachments": "Anhänge"
+        "documents": "Dokumente"
       },
       "actions": {
         "changeStatus": "Status ändern",
