@@ -627,11 +627,6 @@ function ControlPills({ summary, selected, onSelect }: {
     </Box>
   );
 }
-/** The unsized column takes the spare width, so the sized ones stay next to each other. */
-function filler<T>(): RelationsColumn<T> {
-  return { key: 'room', header: '\u00a0', render: () => null };
-}
-
 /**
  * The directory services (technologies of the directory family) with their zone and servers, then
  * the domains of the catalog grouped by forest. Nothing links a directory service to a forest.
@@ -658,7 +653,6 @@ function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => s
     { key: 'name', header: t('common.name'), width: 240, render: (row) => row.name },
     { key: 'zone', header: t('pages.administrationView.columns.zone'), width: 180, render: (row) => (row.zone ? zoneName(row.zone) : <Box component="span" sx={quietSx}>{zoneName(null)}</Box>) },
     { key: 'servers', header: t('pages.administrationView.columns.servers'), width: 80, align: 'right', render: (row) => row.servers.toLocaleString() },
-    filler(),
   ];
   const domainColumns: Array<RelationsColumn<AdministrationDomain>> = [
     { key: 'name', header: t('pages.administrationView.columns.domain'), width: 200, render: (row) => `${domainName(row.code, row.label)}${row.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}` },
@@ -702,9 +696,6 @@ function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => s
         )
         : <Box component="span" sx={quietSx}>{t('pages.administrationView.noController')}</Box>),
     },
-    // The spare width goes to an empty column: in a narrow table the name and the controllers keep
-    // most of theirs while the secondary columns hide (trusts, then computers, accounts, DNS suffix).
-    filler(),
   ];
   if (!directories.data) {
     return <ReportDataStatus loading={directories.isLoading} error={directories.isError} onRetry={() => void directories.refetch()} />;
