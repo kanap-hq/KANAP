@@ -106,9 +106,21 @@ async function addPickedServer(role = 'db') {
   fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
 }
 
+/** Edits the cluster's row, picks the server the search proposes, then saves. */
+async function moveClusterRowToPickedServer() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Edit PAR-SQL-CL01' }));
+  const dialog = await screen.findByRole('dialog');
+  fireEvent.mouseDown(within(dialog).getAllByRole('combobox')[0]);
+  fireEvent.click(await screen.findByRole('option', { name: new RegExp(wire.picked.name) }));
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+}
+
 const CL01 = { id: 'cl-1', name: 'PAR-SQL-CL01', status: 'active' };
 const SQL1 = { id: 'sql-1', name: 'PAR-SQL-01', status: 'active' };
 const SQL2 = { id: 'sql-2', name: 'PAR-SQL-02', status: 'active' };
+const SQL3 = { id: 'sql-3', name: 'PAR-SQL-03', status: 'active' };
+const SQL4 = { id: 'sql-4', name: 'PAR-SQL-04', status: 'active' };
+const SQL5 = { id: 'sql-5', name: 'PAR-SQL-05', status: 'active' };
 
 describe('DeploymentsEditor: clusters', () => {
   beforeEach(() => {
@@ -268,19 +280,73 @@ describe('DeploymentsEditor: clusters', () => {
     expect(screen.queryByText('Server added')).toBeNull();
   });
 
-  it('saves a cluster\'s row moved onto one of its members without a question', async () => {
+  it('warns which members stop hosting when a cluster row moves onto one of them', async () => {
     wire.rows = [row('a-cl', 'cl-1', 'PAR-SQL-CL01', 'db', { asset: { is_cluster: true } })];
     wire.clusters['sql-1'] = [CL01];
-    wire.members['cl-1'] = [SQL1, SQL2];
+    wire.members['cl-1'] = [SQL1, SQL2, SQL3];
     apiPatch.mockResolvedValue({ data: {} });
     renderEditor();
-    fireEvent.click(await screen.findByRole('button', { name: 'Edit PAR-SQL-CL01' }));
-    const dialog = await screen.findByRole('dialog');
-    fireEvent.mouseDown(within(dialog).getAllByRole('combobox')[0]);
-    fireEvent.click(await screen.findByRole('option', { name: new RegExp(wire.picked.name) }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+    await moveClusterRowToPickedServer();
+    expect(await screen.findByText('PAR-SQL-02 and PAR-SQL-03 will no longer host CheeseTrack.')).toBeTruthy();
+    expect(screen.getByText('Move the assignment?')).toBeTruthy();
+    expect(apiPatch).not.toHaveBeenCalled();
+  });
+
+  it('writes nothing when the move is cancelled', async () => {
+    wire.rows = [row('a-cl', 'cl-1', 'PAR-SQL-CL01', 'db', { asset: { is_cluster: true } })];
+    wire.clusters['sql-1'] = [CL01];
+    wire.members['cl-1'] = [SQL1, SQL2, SQL3];
+    apiPatch.mockResolvedValue({ data: {} });
+    renderEditor();
+    await moveClusterRowToPickedServer();
+    const line = await screen.findByText('PAR-SQL-02 and PAR-SQL-03 will no longer host CheeseTrack.');
+    fireEvent.click(within(line.closest('[role="dialog"]') as HTMLElement).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByText('PAR-SQL-02 and PAR-SQL-03 will no longer host CheeseTrack.')).toBeNull());
+    expect(apiPatch).not.toHaveBeenCalled();
+    expect(apiPost).not.toHaveBeenCalled();
+  });
+
+  it('writes the row when the move is confirmed', async () => {
+    wire.rows = [row('a-cl', 'cl-1', 'PAR-SQL-CL01', 'db', { asset: { is_cluster: true } })];
+    wire.clusters['sql-1'] = [CL01];
+    wire.members['cl-1'] = [SQL1, SQL2, SQL3];
+    apiPatch.mockResolvedValue({ data: {} });
+    renderEditor();
+    await moveClusterRowToPickedServer();
+    const line = await screen.findByText('PAR-SQL-02 and PAR-SQL-03 will no longer host CheeseTrack.');
+    fireEvent.click(within(line.closest('[role="dialog"]') as HTMLElement).getByRole('button', { name: 'Move anyway' }));
     await waitFor(() => expect(apiPatch).toHaveBeenCalledWith('/app-deployments/dep-1/servers/a-cl', expect.objectContaining({ server_id: 'sql-1', role: 'db' })));
-    expect(screen.queryByText('Assign to the cluster?')).toBeNull();
+  });
+
+  it('asks nothing when the chosen server is the only member in service', async () => {
+    wire.rows = [row('a-cl', 'cl-1', 'PAR-SQL-CL01', 'db', { asset: { is_cluster: true } })];
+    wire.clusters['sql-1'] = [CL01];
+    wire.members['cl-1'] = [SQL1, { id: 'sql-2', name: 'PAR-SQL-02', status: 'retired' }];
+    apiPatch.mockResolvedValue({ data: {} });
+    renderEditor();
+    await moveClusterRowToPickedServer();
+    await waitFor(() => expect(apiPatch).toHaveBeenCalledWith('/app-deployments/dep-1/servers/a-cl', expect.objectContaining({ server_id: 'sql-1', role: 'db' })));
+    expect(screen.queryByText('Move the assignment?')).toBeNull();
+  });
+
+  it('asks nothing when the chosen server is not a member of the cluster', async () => {
+    wire.rows = [row('a-cl', 'cl-1', 'PAR-SQL-CL01', 'db', { asset: { is_cluster: true } })];
+    wire.picked = { id: 'sql-9', name: 'PAR-SQL-09' };
+    apiPatch.mockResolvedValue({ data: {} });
+    renderEditor();
+    await moveClusterRowToPickedServer();
+    await waitFor(() => expect(apiPatch).toHaveBeenCalledWith('/app-deployments/dep-1/servers/a-cl', expect.objectContaining({ server_id: 'sql-9', role: 'db' })));
+    expect(screen.queryByText('Move the assignment?')).toBeNull();
+  });
+
+  it('names three other members then counts the rest', async () => {
+    wire.rows = [row('a-cl', 'cl-1', 'PAR-SQL-CL01', 'db', { asset: { is_cluster: true } })];
+    wire.clusters['sql-1'] = [CL01];
+    wire.members['cl-1'] = [SQL1, SQL2, SQL3, SQL4, SQL5];
+    apiPatch.mockResolvedValue({ data: {} });
+    renderEditor();
+    await moveClusterRowToPickedServer();
+    expect(await screen.findByText('PAR-SQL-02, PAR-SQL-03, PAR-SQL-04, and 1 other will no longer host CheeseTrack.')).toBeTruthy();
   });
 
   it('shows a reader the inherited rows and no group line or button', async () => {

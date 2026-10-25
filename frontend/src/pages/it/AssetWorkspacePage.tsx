@@ -40,6 +40,7 @@ import DateEUField from '../../components/fields/DateEUField';
 import DateCalendarPopover from '../../components/fields/DateCalendarPopover';
 import { ServerOption } from '../../components/fields/ServerSelect';
 import ViaAssetNames from '../../components/workspace/ViaAssetNames';
+import { DASH } from '../../components/workspace/relations';
 import ClusterGroupLine from './components/ClusterGroupLine';
 import useClusterAssignmentQuestion from './components/useClusterAssignmentQuestion';
 import HardwareInfoPanel from './editors/HardwareInfoPanel';
@@ -988,6 +989,7 @@ export default function AssetWorkspacePage() {
         const outcome = await resolveTargets({
           assetIds: [id],
           subject: `${appNames[selectedAppId] || t('components.clusterAssignment.thisApplication')} (${environment}, ${labelFor('serverRole', assignRole) || assignRole})`,
+          applicationName: appNames[selectedAppId] || t('components.clusterAssignment.thisApplication'),
           role: assignRole,
           rows: deployment.filter((row) => row.app_instance_id === instanceId).map((row) => ({ asset_id: row.server_id, role: row.role })),
         });
@@ -1151,10 +1153,13 @@ export default function AssetWorkspacePage() {
         });
         setMemberDialogOpen(false);
         await loadClusterMembers();
+        // A cluster's technologies, vulnerabilities and severe badge follow its members: every save
+        // that changes them reads those again, and so do the applications it inherits from them.
+        void invalidateTechnologyLinks(queryClient);
+        void refreshAssignments();
         if (removeOperatingSystem) {
           // The asset and its technologies no longer carry the system.
           void load();
-          void invalidateTechnologyLinks(queryClient);
         }
         // The impact reads the members of a cluster.
         void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
@@ -2148,8 +2153,8 @@ export default function AssetWorkspacePage() {
                           </TableCell>
                           <TableCell>{environmentLabel(assignment.environment)}</TableCell>
                           <TableCell>{labelFor('serverRole', assignment.role) || assignment.role}</TableCell>
-                          <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : '-'}</TableCell>
-                          <TableCell>{assignment.notes || '-'}</TableCell>
+                          <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : DASH}</TableCell>
+                          <TableCell>{assignment.notes || DASH}</TableCell>
                           {canAssign && (
                           <TableCell align="right">
                             {!assignment.inherited && (

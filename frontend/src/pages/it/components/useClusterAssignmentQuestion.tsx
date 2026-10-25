@@ -2,7 +2,9 @@ import React from 'react';
 import { Box, Button, FormControlLabel, Radio, RadioGroup, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
-import { KanapDialog } from '../../../components/design';
+import { KanapDialog, useKanapDialogs } from '../../../components/design';
+import { useLocale } from '../../../i18n/useLocale';
+import { joinNames } from '../../working-day-calendars/workingDayCalendarFields';
 
 /** A row already stored on the deployment (a cluster's or a server's), by server and role. */
 export type DeploymentRow = { asset_id: string; role: string };
@@ -12,6 +14,8 @@ export type ClusterQuestionInput = {
   assetIds: string[];
   /** What they will host, as the dialog says it: "CheeseTrack (prod, db)". */
   subject: string;
+  /** The application's name alone, as the move warning says it: "PAR-SQL-02 will no longer host CheeseTrack." */
+  applicationName: string;
   /** Role code of the assignment. */
   role: string;
   /** The rows stored on the deployment: a cluster that carries the role refuses its members (A3), a member's own row is replaced (A4). */
@@ -96,9 +100,14 @@ function QuestionDialog({ pending }: { pending: Pending }) {
  * `resolveTargets` reads the clusters of each chosen server (`GET /assets/:id/clusters`) and their
  * members, then asks one question per server (the cluster to choose when it belongs to several).
  * A server of no cluster needs no question. A cluster chosen directly asks only when it would
- * replace direct rows of its members (A4), in one sentence. Render `questionDialog` once.
+ * replace direct rows of its members (A4), in one sentence. A cluster's row moved onto one of its
+ * members warns which other members in service stop hosting the application. Render
+ * `questionDialog` once.
  */
 export default function useClusterAssignmentQuestion() {
+  const { t } = useTranslation('it');
+  const locale = useLocale();
+  const dialogs = useKanapDialogs();
   const [pending, setPending] = React.useState<Pending | null>(null);
 
   const resolveTargets = React.useCallback(async (input: ClusterQuestionInput): Promise<ClusterQuestionOutcome> => {
@@ -127,6 +136,26 @@ export default function useClusterAssignmentQuestion() {
         continue;
       }
       if (input.movingFrom && clusters.some((cluster) => cluster.id === input.movingFrom)) {
+        // A cluster's row moved onto one of its members: the other members in service stop
+        // hosting the application, said before the row leaves the cluster.
+        const others = (await membersInService(input.movingFrom))
+          .filter((member) => member.id !== assetId)
+          .map((member) => member.name);
+        if (others.length > 0) {
+          const names = others.length > 3
+            ? [...others.slice(0, 3), t('workspace.asset.editMembersDialog.andOthers', { count: others.length - 3 })]
+            : others;
+          const confirmed = await dialogs.confirm({
+            title: t('components.clusterAssignment.moveTitle'),
+            message: t('components.clusterAssignment.moveLine', {
+              count: others.length,
+              members: joinNames(names, locale),
+              application: input.applicationName,
+            }),
+            confirmLabel: t('components.clusterAssignment.moveAnyway'),
+          });
+          if (!confirmed) return { status: 'cancelled' };
+        }
         targets.push(assetId);
         continue;
       }
@@ -159,7 +188,7 @@ export default function useClusterAssignmentQuestion() {
       targets.push(answer === SERVER_ONLY ? assetId : answer);
     }
     return { status: 'ok', targets: Array.from(new Set(targets)) };
-  }, []);
+  }, [dialogs, locale, t]);
 
   const questionDialog = pending ? <QuestionDialog key={`${pending.server}|${pending.clusters.map((c) => c.id).join(',')}`} pending={pending} /> : null;
   return { resolveTargets, questionDialog };

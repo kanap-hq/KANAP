@@ -1,5 +1,5 @@
 import i18next, { type TFunction } from 'i18next';
-import { refusalCounts, usageTotal, type DeleteFailure } from './deleteRefusal';
+import { refusalUsages, usageTotal, type DeleteFailure } from './deleteRefusal';
 
 type ApiErrorPayload = {
   message?: unknown;
@@ -11,6 +11,8 @@ type ApiErrorPayload = {
   usages?: unknown;
   /** Values the refusal's sentence names besides the counts (a frozen column and its year). */
   params?: unknown;
+  /** The applications an asset delete refusal names. */
+  applications?: unknown;
 };
 
 type ApiErrorLike = {
@@ -151,6 +153,9 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
   if (code) {
     const variant = stringifyErrorValue(payload?.variant);
     const usages = Array.isArray(payload?.usages) ? (payload.usages as DeleteFailure['usages']) : null;
+    const applications = Array.isArray(payload?.applications)
+      ? payload.applications.map((name) => String(name ?? '')).filter(Boolean)
+      : undefined;
     // The language of `t` (a fixed one), else the interface's.
     const language = (t as { lng?: string }).lng || i18next.resolvedLanguage || i18next.language || 'en';
     const params = payload?.params && typeof payload.params === 'object' ? { ...(payload.params as Record<string, unknown>) } : {};
@@ -166,7 +171,7 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
       ...params,
       defaultValue: message || fallback,
       ...(variant ? { context: variant } : {}),
-      ...(usages ? { ...usageTotal(usages), usages: refusalCounts({ usages }, t, language) } : {}),
+      ...(usages ? { ...usageTotal(usages), usages: refusalUsages(usages, applications, t, language) } : {}),
     });
     if (typeof translated === 'string' && translated.trim()) {
       return translated;

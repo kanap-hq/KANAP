@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import ServerSelect from './ServerSelect';
@@ -41,6 +41,32 @@ describe('ServerSelect', () => {
     expect(messages.filter((message) => message.includes('None of the options match'))).toEqual([]);
     warn.mockRestore();
     error.mockRestore();
+  });
+
+  it('keeps the typed search when another server replaces the chosen one', async () => {
+    apiGet.mockImplementation(async (url: string, config?: { params?: { q?: string } }) => {
+      if (url === '/assets/srv-1') {
+        return { data: { id: 'srv-1', name: 'PAR-ESX-01', environment: 'prod', kind: 'vm', provider: 'vmware' } };
+      }
+      if (config?.params?.q === 'PAR-ESX-02') {
+        return { data: { items: [
+          { id: 'srv-1', name: 'PAR-ESX-01', environment: 'prod', kind: 'vm', provider: 'vmware' },
+          { id: 'srv-2', name: 'PAR-ESX-02', environment: 'prod', kind: 'vm', provider: 'vmware' },
+        ] } };
+      }
+      return { data: { items: [] } };
+    });
+    const onChange = vi.fn();
+    render(<ServerSelect value="srv-1" onChange={onChange} hideLabel />);
+    const input = await screen.findByDisplayValue('PAR-ESX-01') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'PAR-ESX-02' } });
+
+    await screen.findByRole('option', { name: /PAR-ESX-02/ });
+    // The chosen server coming back among the results must not wipe what the person is typing.
+    expect(input.value).toBe('PAR-ESX-02');
+    fireEvent.click(screen.getByRole('option', { name: /PAR-ESX-02/ }));
+    expect(onChange).toHaveBeenCalledWith('srv-2');
   });
 
   it('invites to choose a server in an empty field', async () => {

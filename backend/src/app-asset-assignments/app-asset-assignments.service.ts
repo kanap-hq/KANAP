@@ -6,6 +6,7 @@ import { AppInstance } from '../app-instances/app-instance.entity';
 import { Asset } from '../assets/asset.entity';
 import { AuditService } from '../audit/audit.service';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
+import { assetInServiceSql } from '../technologies/technology-reach.service';
 import {
   applicationParticipantCondition,
   ParticipationAccessScope,
@@ -105,7 +106,8 @@ export class AppAssetAssignmentsService {
   private deriveHosting(
     row: { location_hosting_type?: string | null; asset_provider?: string | null },
     hostingTypes: Array<{ code: string; label: string; category?: string; deprecated?: boolean }>,
-  ): { code: string | null; label: string | null; source: 'location' | 'provider' | null } {
+    memberHostingTypes: string[] = [],
+  ): { code: string | null; label: string | null; source: 'location' | 'member' | 'provider' | null } {
     const map = new Map(hostingTypes.map((h) => [h.code, h]));
     const pick = (code?: string | null) => {
       if (!code) return null;
@@ -118,6 +120,11 @@ export class AppAssetAssignmentsService {
     const fromLocation = pick(row.location_hosting_type);
     if (fromLocation) {
       return { ...fromLocation, source: 'location' };
+    }
+    // A cluster without a site takes the hosting type of its members in service (PR B's rule).
+    const fromMember = pick(memberHostingTypes[0]);
+    if (fromMember) {
+      return { ...fromMember, source: 'member' };
     }
     const cloudDefault =
       map.get('public_cloud') ||
@@ -271,9 +278,37 @@ export class AppAssetAssignmentsService {
     return text.length === 0 ? null : text;
   }
 
+  /**
+   * The hosting types of the members in service of each cluster without a site, in one read.
+   * A cluster's row then shows what its members give, as the application's hosting types do.
+   */
+  private async memberHostingTypes(rows: AssignmentRow[], tenantId: string, mg: EntityManager): Promise<Map<string, string[]>> {
+    const clusterIds = Array.from(new Set(
+      rows.filter((row) => row.asset_is_cluster && !row.location_hosting_type).map((row) => row.asset_id),
+    ));
+    if (clusterIds.length === 0) return new Map();
+    const memberRows: Array<{ cluster_id: string; hosting_type: string }> = await mg.query(
+      `SELECT m.cluster_id, l.hosting_type
+         FROM asset_cluster_members m
+         JOIN assets a ON a.tenant_id = m.tenant_id AND a.id = m.asset_id AND ${assetInServiceSql('a')}
+         JOIN locations l ON l.tenant_id = a.tenant_id AND l.id = a.location_id
+        WHERE m.tenant_id = $1 AND m.cluster_id = ANY($2::uuid[]) AND l.hosting_type IS NOT NULL
+        ORDER BY l.hosting_type ASC`,
+      [tenantId, clusterIds],
+    );
+    const byCluster = new Map<string, string[]>();
+    for (const row of memberRows) {
+      const types = byCluster.get(row.cluster_id) ?? [];
+      if (!types.includes(row.hosting_type)) types.push(row.hosting_type);
+      byCluster.set(row.cluster_id, types);
+    }
+    return byCluster;
+  }
+
   private async mapRows(rows: AssignmentRow[], tenantId: string, mg: EntityManager) {
     // A read: the plain settings, without the share lock a write takes on the tenant row.
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager: mg });
+    const memberHosting = await this.memberHostingTypes(rows, tenantId, mg);
     return rows.map((row) => ({
       id: row.id,
       app_instance_id: row.app_instance_id,
@@ -289,6 +324,7 @@ export class AppAssetAssignmentsService {
       hosting: this.deriveHosting(
         { location_hosting_type: row.location_hosting_type, asset_provider: row.asset_provider },
         settings.hostingTypes || [],
+        memberHosting.get(row.asset_id) ?? [],
       ),
       asset: {
         id: row.asset_id,

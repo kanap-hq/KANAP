@@ -66,8 +66,8 @@ export const ASSIGNMENT_READERS: Readonly<Record<string, AssignmentReader>> = {
   'src/ai/mutation/ai-relation-mutation-support.service.ts': { status: 'direct', reason: 'The assistant\'s writes, and the stored rows they edit.' },
   'src/assets/services/asset-impact.service.ts': { status: 'direct', reason: 'The impact already reads the applications of a fallen cluster.' },
   'src/assets/assets-delete.service.ts': {
-    status: 'direct',
-    reason: 'Deletion guard: a server carrying rows stays; a member that only inherits can be deleted.',
+    status: 'effective',
+    reason: 'Deletion guard: a server carrying stored rows stays, a member that only inherits can be deleted; its warning names the applications a member hosts through its clusters (effective rows, inherited only).',
   },
   'src/app-instances/app-instances.service.ts': {
     status: 'direct',
