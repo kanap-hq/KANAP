@@ -25,7 +25,7 @@ const content: FeatureContent = {
       shotAlt: 'Incident register with severity, status, detection and resolution dates',
     },
     {
-      title: 'The review, written where the incident lives',
+      title: 'The formal incident review',
       body: 'Each incident has a review: a rich document started from a five-part template (detailed description, impact, root cause, corrective actions, lessons learned) in the language of the person who writes it. Every save creates a version, and the review is frozen when the incident closes.',
       bullets: [
         'Template editable by your documentation administrators',

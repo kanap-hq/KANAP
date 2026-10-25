@@ -25,7 +25,7 @@ const content: FeatureContent = {
       shotAlt: 'Vorfallsregister mit Schweregrad, Status, Erkennungs- und Behebungsdatum',
     },
     {
-      title: 'Die Analyse, geschrieben, wo der Vorfall liegt',
+      title: 'Die formale Analyse des Vorfalls',
       body: 'Jeder Vorfall hat eine Analyse: ein formatiertes Dokument aus einer fünfteiligen Vorlage (detaillierte Beschreibung, Auswirkung, Ursache, Korrekturmaßnahmen, Erkenntnisse), in der Sprache der Person, die sie schreibt. Jedes Speichern erzeugt eine Version, und die Analyse wird beim Schließen des Vorfalls eingefroren.',
       bullets: [
         'Vorlage durch Ihre Dokumentationsadministratoren anpassbar',
