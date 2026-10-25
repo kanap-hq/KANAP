@@ -2336,7 +2336,12 @@ export class AiQueryExecutor {
       const row = await this.requests.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,origin_task,urls,attachments,projects,dependencies,financials,business_processes' },
-        { manager: context.manager, accessScope, readsBudget: await this.readsBudget(context) },
+        {
+          manager: context.manager,
+          accessScope,
+          readsBudget: await this.readsBudget(context),
+          viewer: await resolveAiIncidentViewer(context),
+        },
       );
       return this.toDetailResult(this.mapRequest(row), row);
     }
