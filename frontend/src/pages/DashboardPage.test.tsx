@@ -18,7 +18,8 @@ vi.mock('../hooks/useBudgetColumns', async (importOriginal) => {
   return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
 });
 vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }));
-vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+let interfaceLocale = 'en';
+vi.mock('../i18n/useLocale', () => ({ useLocale: () => interfaceLocale }));
 const readable: Record<string, boolean> = { budget: true };
 let budgetWriter = true;
 let contractsWriter = true;
@@ -40,6 +41,7 @@ vi.mock('./workspace/tiles/DashboardTile', () => ({
 }));
 
 import api from '../api';
+import { formatCompactAmount, formatThousandsAmount } from '../i18n/formatters';
 import DashboardPage from './DashboardPage';
 import { DEFAULT_BUDGET_TILES } from './workspace/hooks/useBudgetDashboardConfig';
 let savedDashboard = { tiles: DEFAULT_BUDGET_TILES };
@@ -85,6 +87,7 @@ describe('DashboardPage budget snapshot', () => {
     readable.budget = true;
     budgetWriter = true;
     contractsWriter = true;
+    interfaceLocale = 'en';
     storage.clear();
     post.mockReset();
     post.mockResolvedValue({ data: fakeAggregate([], { query: {}, spec: { groupBy: [], measures: [] } }) });
@@ -248,7 +251,7 @@ describe('DashboardPage budget snapshot', () => {
   });
 });
 
-const compact = (n: number) => new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+const compact = (n: number) => formatCompactAmount(n, 'en');
 /** Y-1 and Y slots; column 3 holds the same amounts the other way round, so a tile reading the wrong column shows. */
 const budgetSlots = (previous: number, current: number) => ({
   yMinus1: { totals: { budget: previous, forecast: current } },
@@ -331,6 +334,7 @@ const subtitleOf = (tile: HTMLElement) => within(tile).getByTestId('tile-subtitl
 
 describe('DashboardPage budget tiles', () => {
   beforeEach(() => {
+    interfaceLocale = 'en';
     setBudgetColumns();
     get.mockReset();
     post.mockReset();
@@ -438,10 +442,12 @@ describe('DashboardPage budget tiles', () => {
     renderPage();
     const tile = await screen.findByRole('region', { name: TOP_INCREASES });
     expect(await within(tile).findByText('Opex grows')).toBeInTheDocument();
+    expect(compact(2000)).toBe('2k');
+    expect(compact(300)).toBe('300');
     expect(within(tile).getByText(`+${compact(2000)}`)).toBeInTheDocument();
     expect(within(tile).queryByText('Opex shrinks')).not.toBeInTheDocument();
     expect(within(tile).getByText('Capex grows')).toBeInTheDocument();
-    // A rise under a thousand keeps its value instead of reading "+0k".
+    // A rise under a thousand keeps its value (300).
     expect(within(tile).getByText(`+${compact(300)}`)).toBeInTheDocument();
     // One aggregate over the list's window (no years): Y minus Y-1 per line, the increases, the five largest.
     expect(aggregateCalls('/budget-lines/summary/aggregate')).toContainEqual({
@@ -459,6 +465,25 @@ describe('DashboardPage budget tiles', () => {
 
     fireEvent.click(within(tile).getByRole('tab', { name: 'operations.scope.capex' }));
     expect(await within(tile).findByText('Capex grows')).toBeInTheDocument();
+  });
+
+  it('formats the amounts in the interface language', async () => {
+    interfaceLocale = 'fr';
+    renderPage();
+    const increases = await screen.findByRole('region', { name: TOP_INCREASES });
+    expect(await within(increases).findByText('Opex grows')).toBeInTheDocument();
+    const increaseText = increases.textContent ?? '';
+    // French compact: a no-break space before k. The English forms stay absent.
+    expect(increaseText).toContain(`+${formatCompactAmount(2000, 'fr')}`);
+    expect(increaseText).toContain(`+${formatCompactAmount(300, 'fr')}`);
+    expect(increaseText).not.toContain('+2K');
+    expect(increaseText).not.toContain('+2k');
+    const mine = await screen.findByRole('region', { name: MY_BUDGET });
+    const itOwner = await within(mine).findByRole('link', { name: /roles\.itOwner/ });
+    // 3 400 rounds to 3 thousand. French writes a space before k.
+    const ownerText = itOwner.textContent ?? '';
+    expect(ownerText).toContain(formatThousandsAmount(3400, 'fr'));
+    expect(ownerText).not.toContain('3k');
   });
 
   it('opens each top increase on its line, by its reference', async () => {

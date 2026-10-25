@@ -27,7 +27,7 @@ Die Kacheln sind unten in ihrer Standardreihenfolge aufgeführt.
 
 ### Budget
 
-Eine Tabelle, die drei Geschäftsjahre abdeckt: Vorjahr (J-1), aktuelles Jahr (J) und nächstes Jahr (J+1). Jedes Jahr hat drei Zeilen: **OPEX**, **CAPEX** und **Gesamt**. Die Wertspalten sind die Budgetspalten, die Ihre Organisation anzeigt, unter ihren Namen (**Budget**, **Revision**, **Ist-Werte** und **Erwarteter Endwert** mit den Standardeinstellungen, dazu **Prognose**, wenn sie angezeigt wird). Unter [Anpassen](#die-ubersicht-anpassen) können Sie weniger davon behalten. Eine Spalte erscheint, sobald sie für mindestens eine Zeile einen Betrag enthält. Ausgeblendete Spalten erscheinen nie. Alle Beträge sind auf den nächsten Tausender gerundet und mit dem Suffix „k“ angezeigt (z. B. `7 846k`).
+Eine Tabelle, die drei Geschäftsjahre abdeckt: Vorjahr (J-1), aktuelles Jahr (J) und nächstes Jahr (J+1). Jedes Jahr hat drei Zeilen: **OPEX**, **CAPEX** und **Gesamt**. Die Wertspalten sind die Budgetspalten, die Ihre Organisation anzeigt, unter ihren Namen (**Budget**, **Revision**, **Ist-Werte** und **Erwarteter Endwert** mit den Standardeinstellungen, dazu **Prognose**, wenn sie angezeigt wird). Unter [Anpassen](#die-ubersicht-anpassen) können Sie weniger davon behalten. Eine Spalte erscheint, sobald sie für mindestens eine Zeile einen Betrag enthält. Ausgeblendete Spalten erscheinen nie. Alle Beträge sind auf den nächsten Tausender gerundet und mit dem Suffix „k“ angezeigt (z. B. `7.846 k`). Die Trennzeichen folgen der Sprache der Oberfläche.
 
 Klicken Sie auf einen Betrag, um die [Liste der Budgetzeilen](budget-lines.md) auf diesem Typ zu öffnen. Ein Betrag in **Gesamt** öffnet die Liste auf beiden Typen. Klicken Sie auf **Ansehen**, um die Liste zu öffnen.
 
@@ -67,13 +67,13 @@ Klicken Sie auf **Alle anzeigen**, um die Verträge-Seite zu öffnen.
 
 ### Top-Zeilen
 
-Die fünf größten Zeilen für das aktuelle Jahr, nach der Standardspalte sortiert. Der Untertitel nennt die Spalte, zum Beispiel **Budget, J**. Beträge sind auf Tausender gerundet mit dem Suffix „k“.
+Die fünf größten Zeilen für das aktuelle Jahr, nach der Standardspalte sortiert. Der Untertitel nennt die Spalte, zum Beispiel **Budget, J**. Beträge sind auf Tausender gerundet mit dem Suffix „k“, mit den Trennzeichen der Sprache der Oberfläche.
 
 Wählen Sie den Typ mit den Tabs **Alle** / **OPEX** / **CAPEX**. Klicken Sie auf **Öffnen**, um den vollständigen Bericht **Top-Zeilen** für denselben Typ anzuzeigen.
 
 ### Stärkste Zuwächse
 
-Die fünf Zeilen mit dem größten Anstieg in der Standardspalte im Vergleich zum Vorjahr. Der Untertitel nennt die Spalte, zum Beispiel **Budget, J vs J-1**. Zeilen, deren Betrag gleich geblieben oder gesunken ist, erscheinen nicht.
+Die fünf Zeilen mit dem größten Anstieg in der Standardspalte im Vergleich zum Vorjahr. Der Untertitel nennt die Spalte, zum Beispiel **Budget, J vs J-1**. Zeilen, deren Betrag gleich geblieben oder gesunken ist, erscheinen nicht. Ein kleiner Anstieg erscheint in voller Höhe. Ein größerer wird verkürzt, zum Beispiel `340,1 k`.
 
 Wählen Sie den Typ mit den Tabs **Alle** / **OPEX** / **CAPEX**. Klicken Sie auf **Öffnen**, um den vollständigen Bericht **Top Anstieg / Rückgang** für denselben Typ anzuzeigen.
 
@@ -103,6 +103,6 @@ Klicken Sie auf **Anpassen**, um **Einstellungen des Budget-Dashboards** zu öff
 ## Tipps
 
 - **Welche Spalte die Kacheln verwenden**: Ein Budgetadministrator wählt die Standardspalte und die Spaltennamen unter [Budgetspalten](budget-operations.md#budgetspalten). Die Kacheln und die Berichte, die sie öffnen, folgen dieser Wahl.
-- **Gerundete Zahlen**: Jeder Betrag in der Übersicht ist zur kompakten Darstellung auf Tausender gerundet. Öffnen Sie die Liste der Budgetzeilen oder die Berichte, wenn Sie genaue Zahlen benötigen.
+- **Gerundete Zahlen**: Budget, Top-Zeilen, Mein Budget und Nach Kostenstelle runden Beträge auf Tausender mit einem k, zum Beispiel `7.846 k`. Die Kachel Stärkste Zuwächse zeigt eine kleine Änderung in voller Höhe und verkürzt eine größere, zum Beispiel `340,1 k`. Öffnen Sie die Liste der Budgetzeilen oder die Berichte, wenn Sie genaue Zahlen benötigen.
 - **Fehlende Schaltflächen**: Wenn Sie die Schaltflächen **Neue OPEX-Zeile** oder **Neue CAPEX-Zeile** nicht sehen, hat Ihre aktuelle Rolle nicht die Stufe Mitglied auf Budget. Bitten Sie Ihren Administrator, Ihren Zugriff zu prüfen.
 - **Leere Kacheln**: Eine Kachel, die „Keine Daten“ zeigt, bedeutet einfach, dass noch keine Datensätze dieses Typs vorhanden sind. Sobald Sie oder Ihr Team mit der Dateneingabe beginnen, wird die Kachel automatisch befüllt.
