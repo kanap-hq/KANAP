@@ -333,6 +333,7 @@ export default function DeploymentsEditor({
         const outcome = await resolveTargets({
           assetIds: [serverId],
           subject: `${applicationName || t('components.clusterAssignment.thisApplication')} (${envLabel(deployment?.environment || '')}, ${labelFor('serverRole', assignmentDraft.role) || assignmentDraft.role})`,
+          applicationName: applicationName || t('components.clusterAssignment.thisApplication'),
           role: assignmentDraft.role,
           rows: stored.filter((row) => row.id !== assignmentDraft.assignmentId).map((row) => ({ asset_id: row.server_id, role: row.role })),
           movingFrom: original?.server_id,

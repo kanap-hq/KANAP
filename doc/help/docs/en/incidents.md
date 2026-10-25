@@ -124,7 +124,7 @@ The drawer stays visible on every tab and saves as you edit.
 
 ### Overview
 
-The Overview tells the story of the incident in two parts: a short description, then the incident review. Both save automatically as you type.
+The Overview tells the story of the incident in two parts: a short description, then the incident review. Both save automatically as you type. Attachments close the page.
 
 **Description** is one or two sentences on what happened, as observed. It is the summary that appears in the list, in search results and at the top of the PDF report.
 
@@ -147,6 +147,8 @@ The template is an ordinary Knowledge document, stored in the **Templates** libr
 Every save that changes the review keeps a version, so the text can be read back as it stood at any moment, including at the closure of the incident. See [Journal](#journal).
 
 The review is itself a Knowledge document, with its own `DOC-N` reference, filed in the **Incidents** folder of the **Managed Docs** library. Writing it from the incident and exporting the PDF use the incident permissions alone. Opening the same document directly in Knowledge also requires the Knowledge permissions for that library. Either way it stays tied to the incident: it is frozen when the incident is closed or cancelled, and hidden from anyone who cannot see a restricted incident.
+
+**Attachments** hold the files that back the record: screenshots, log extracts, mail exports, the supplier's incident report. With `incidents:contributor`, drag and drop files or click to select them. Click an attachment to download it. The section appears once the incident has a file, or when you can edit it. On a closed or cancelled incident the files stay readable, and adding or deleting them is possible again after reopening.
 
 ---
 
@@ -196,7 +198,7 @@ You only see the sections of the modules you can read. Assets and technologies n
 
 **Tasks**: the follow-up work. Create a task directly from the incident, and it stays attached to it. The task shows "Incident · INC-14" in its own sidebar, and the incident's Tasks column counts it.
 
-A linked asset, application or technology shows the incident in an **Incidents** section on its own Relations tab, so anyone looking at a server sees its history of trouble. With `incidents:contributor`, you can also link an incident from there. Documents and attachments have their own tabs.
+A linked asset, application or technology shows the incident in an **Incidents** section on its own Relations tab, so anyone looking at a server sees its history of trouble. With `incidents:contributor`, you can also link an incident from there. Documents have their own tab.
 
 ---
 
@@ -205,12 +207,6 @@ A linked asset, application or technology shows the incident in an **Incidents**
 Knowledge documents linked to this incident: the supplier's report, the procedure that was followed, the note the network team wrote. With `knowledge:member` you can create a document straight from this tab.
 
 The incident review is not listed here. It belongs to the incident itself and is edited on the Overview tab.
-
----
-
-### Attachments
-
-Drag and drop files or click to select them: screenshots, log extracts, mail exports, the supplier's incident report. Click an attachment to download it. Uploads and deletions stop once the incident is closed.
 
 ---
 

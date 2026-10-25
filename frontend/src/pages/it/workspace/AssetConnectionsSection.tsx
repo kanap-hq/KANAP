@@ -40,6 +40,7 @@ export type ServerConnectionRow = {
   name: string;
   topology: 'server_to_server' | 'multi_server';
   lifecycle: string;
+  protocols?: string[];
   protocol_labels?: string[];
   source_label?: string | null;
   destination_label?: string | null;
@@ -92,7 +93,7 @@ const denseTableSx = {
  */
 export default function AssetConnectionsSection({ assetId }: { assetId: string }) {
   const { t } = useTranslation(['it', 'common']);
-  const { labelFor } = useItOpsEnumOptions();
+  const { labelFor, settings } = useItOpsEnumOptions();
   const navigate = useNavigate();
   const [connections, setConnections] = React.useState<ServerConnectionRow[]>([]);
   const [error, setError] = React.useState<string | null>(null);
@@ -131,19 +132,58 @@ export default function AssetConnectionsSection({ assetId }: { assetId: string }
     return value || '';
   }, [t]);
 
+  // The protocol's type by its code, in the reader's language: the server's stored labels stay English.
+  const protocolLabel = React.useCallback((code: string) => {
+    const type = (settings?.connectionTypes || []).find((candidate: any) => candidate.code === code);
+    return type?.label || code;
+  }, [settings?.connectionTypes]);
+
+  const protocolLabels = (connection: ServerConnectionRow) => {
+    const codes = connection.protocols ?? [];
+    // Keep the stored label until the catalog is in, rather than a bare code for a moment.
+    if (codes.length > 0 && (settings?.connectionTypes?.length ?? 0) > 0) return codes.map(protocolLabel);
+    return connection.protocol_labels ?? codes;
+  };
+
   const lineUnderName = (connection: ServerConnectionRow) => {
-    const hops = (connection.asset_roles ?? [])
+    const roles = connection.asset_roles ?? [];
+    const hops = roles
       .filter((role) => role.part === 'hop')
-      .map((role) => t('workspace.connection.path.hop', { index: role.hop_order }));
-    const via = !!connection.inherited && (connection.via_clusters?.length ?? 0) > 0;
-    if (hops.length === 0 && !via) return null;
+      .map((role) => ({
+        label: t('workspace.connection.path.hop', { index: role.hop_order }),
+        via: role.inherited ? role.via_clusters ?? [] : [],
+      }));
+    // A hop inherited from a cluster says it itself; the other roles of the connection carry the
+    // cluster that gives them, when their own role does not.
+    const hopVia = hops.some((hop) => hop.via.length > 0);
+    const otherVia = Array.from(new Map(
+      roles
+        .filter((role) => role.part !== 'hop' && role.inherited)
+        .flatMap((role) => role.via_clusters ?? [])
+        .map((cluster) => [cluster.id, cluster]),
+    ).values());
+    const trailingVia = !hopVia && connection.inherited && (connection.via_clusters?.length ?? 0) > 0
+      ? connection.via_clusters ?? []
+      : otherVia;
+    if (hops.length === 0 && trailingVia.length === 0) return null;
     return (
       <Box component="div" sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>
-        {hops.join(', ')}
-        {hops.length > 0 && via ? ' · ' : null}
-        {via && (
+        {hops.map((hop, index) => (
+          <React.Fragment key={`${hop.label}-${index}`}>
+            {index > 0 ? ', ' : null}
+            {hop.label}
+            {hop.via.length > 0 ? (
+              <>
+                {' · '}
+                {t('components.clusterAssignment.via')} <ViaAssetNames assets={hop.via} />
+              </>
+            ) : null}
+          </React.Fragment>
+        ))}
+        {hops.length > 0 && trailingVia.length > 0 ? ' · ' : null}
+        {trailingVia.length > 0 && (
           <>
-            {t('components.clusterAssignment.via')} <ViaAssetNames assets={connection.via_clusters ?? []} />
+            {t('components.clusterAssignment.via')} <ViaAssetNames assets={trailingVia} />
           </>
         )}
       </Box>
@@ -157,7 +197,7 @@ export default function AssetConnectionsSection({ assetId }: { assetId: string }
       <React.Fragment key={server.id}>
         {index > 0 && ', '}
         {server.name}
-        {server.is_cluster ? <> <ClusterMark /></> : null}
+        {server.is_cluster ? <Box component="span" sx={{ ml: 0.5 }}><ClusterMark /></Box> : null}
       </React.Fragment>
     ));
   };
@@ -202,8 +242,8 @@ export default function AssetConnectionsSection({ assetId }: { assetId: string }
             <TableCell>{topologyLabel(connection.topology)}</TableCell>
             <TableCell>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 0.5 }}>
-                {(connection.protocol_labels || []).map((protocol) => (
-                  <Box key={protocol} component="span" sx={{ color: 'text.secondary', fontSize: '0.8125rem' }}>{protocol}</Box>
+                {protocolLabels(connection).map((protocol, index) => (
+                  <Box key={`${protocol}-${index}`} component="span" sx={{ color: 'text.secondary', fontSize: '0.8125rem' }}>{protocol}</Box>
                 ))}
               </Box>
             </TableCell>

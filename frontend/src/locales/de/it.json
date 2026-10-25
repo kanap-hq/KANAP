@@ -1527,8 +1527,7 @@
         "overview": "Übersicht",
         "journal": "Verlauf",
         "relations": "Beziehungen",
-        "documents": "Dokumente",
-        "attachments": "Anhänge"
+        "documents": "Dokumente"
       },
       "actions": {
         "changeStatus": "Status ändern",
@@ -2309,7 +2308,8 @@
         "containsHint": "Von diesem Asset gehostete Assets, zum Beispiel VMs.",
         "alsoContainedBy": "Auch enthalten in {{names}}",
         "via": "Über",
-        "placementReplaced": "{{cluster}} ersetzt die Verknüpfung zwischen {{hosts}} und {{asset}}."
+        "placementReplaced": "{{cluster}} ersetzt die Verknüpfung zwischen {{hosts}} und {{asset}}.",
+        "placementLinked": "Verknüpfung auf {{cluster}} gelegt."
       }
     },
     "technology": {
@@ -3240,6 +3240,10 @@
       "assignToCluster": "Dem Cluster zuordnen",
       "assignedToCluster": "Dem Cluster zugeordnet",
       "serverOnly": "Nur diesem Server",
+      "moveTitle": "Zuordnung verschieben?",
+      "moveLine_one": "{{members}} hostet {{application}} nicht mehr.",
+      "moveLine_other": "{{members}} hosten {{application}} nicht mehr.",
+      "moveAnyway": "Trotzdem verschieben",
       "absorbed_one": "Die direkte Zuordnung von {{names}} wird ersetzt.",
       "absorbed_other": "Die direkten Zuordnungen von {{names}} werden ersetzt.",
       "via": "über",

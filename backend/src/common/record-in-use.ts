@@ -104,6 +104,8 @@ export class RecordInUseException extends ConflictException {
     readonly usages: UsageCount[],
     message = `Cannot delete ${entity} "${name}": it is used by ${englishList(usages)}. Disable it instead.`,
     readonly params?: RefusalParams,
+    /** The records the sentence names besides the counts (an asset's applications), for the screen. */
+    readonly applications?: string[],
   ) {
     super({
       statusCode: HttpStatus.CONFLICT,
@@ -112,6 +114,7 @@ export class RecordInUseException extends ConflictException {
       message,
       usages,
       ...(params ? { params } : {}),
+      ...(applications && applications.length > 0 ? { applications } : {}),
     });
   }
 }
@@ -138,7 +141,14 @@ export async function assertNotInUse(
 }
 
 /** A record a delete would refuse, as a check before the delete lists it (`refusalsOf`). */
-export type DeleteRefusal = { id: string; name: string; code: string; usages: UsageCount[]; params?: RefusalParams };
+export type DeleteRefusal = {
+  id: string;
+  name: string;
+  code: string;
+  usages: UsageCount[];
+  params?: RefusalParams;
+  applications?: string[];
+};
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -166,7 +176,14 @@ export async function refusalsFrom<R extends { id: string }>(
     if (!row) continue;
     const refusal = await refusalOf(row);
     if (refusal) {
-      refused.push({ id: row.id, name: nameOf(row), code: refusal.code, usages: refusal.usages, ...(refusal.params ? { params: refusal.params } : {}) });
+      refused.push({
+        id: row.id,
+        name: nameOf(row),
+        code: refusal.code,
+        usages: refusal.usages,
+        ...(refusal.params ? { params: refusal.params } : {}),
+        ...(refusal instanceof RecordInUseException && refusal.applications ? { applications: refusal.applications } : {}),
+      });
     }
   }
   return { refused };
@@ -207,9 +224,14 @@ export async function refusalsOf(
  * record gone meanwhile (`not_found`); a database refusal's mapped code (`in_use`, `retry`, ...)
  * with its English sentence as `reason`, in place of the driver's. Spread after `reason`.
  */
-export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[]; params?: RefusalParams; reason?: string } {
+export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[]; params?: RefusalParams; applications?: string[]; reason?: string } {
   if (error instanceof RecordInUseException || error instanceof DataAccessHiddenLinesException) {
-    return { code: error.code, usages: error.usages, ...(error.params ? { params: error.params } : {}) };
+    return {
+      code: error.code,
+      usages: error.usages,
+      ...(error.params ? { params: error.params } : {}),
+      ...(error instanceof RecordInUseException && error.applications ? { applications: error.applications } : {}),
+    };
   }
   if (error instanceof NotFoundException) return { code: 'not_found' };
   const mapped = mapDatabaseError(error);

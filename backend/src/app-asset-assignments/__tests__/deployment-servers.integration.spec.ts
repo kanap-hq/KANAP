@@ -176,10 +176,36 @@ async function testServersOfAllDeployments() {
   });
 }
 
+async function testClusterWithoutSiteTakesItsMembersHosting() {
+  await withRollback(async (runner, t) => {
+    const m = runner.manager;
+    const { assignments, instances } = services(m);
+    const app = await one(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, 'ERP') RETURNING id`, [t]);
+    const prod = (await instances.create(app, { environment: 'prod' }, null, { manager: m, tenantId: t })).id;
+    const site = await one(runner,
+      `INSERT INTO locations (tenant_id, name, hosting_type, location_reference) VALUES ($1, 'Paris', 'on_prem', 'LOC-PAR') RETURNING id`,
+      [t]);
+    const cluster = await seedAsset(runner, t, 'cluster-1', true);
+    const member = await seedAsset(runner, t, 'member-1');
+    const retired = await seedAsset(runner, t, 'member-retired');
+    await runner.query(`UPDATE assets SET location_id = $3 WHERE tenant_id = $1 AND id = $2`, [t, member, site]);
+    await runner.query(`UPDATE assets SET location_id = $3, status = 'retired' WHERE tenant_id = $1 AND id = $2`, [t, retired, site]);
+    await runner.query(
+      `INSERT INTO asset_cluster_members (tenant_id, cluster_id, asset_id) VALUES ($1, $2, $3), ($1, $2, $4)`,
+      [t, cluster, member, retired],
+    );
+    await assignments.create(prod, { server_id: cluster, role: 'app' }, null, { manager: m, tenantId: t });
+
+    const row = (await assignments.list(prod, { manager: m, tenantId: t })).items.find((item: any) => item.asset_id === cluster) as any;
+    // The cluster has no site: its member in service gives the hosting type, not the generic cloud default.
+    assert.deepEqual(row.hosting, { code: 'on_prem', label: 'On-prem', source: 'member' });
+  });
+}
+
 async function run() {
   await dataSource.initialize();
   try {
-    for (const test of [testCodedRefusals, testServersOfAllDeployments]) {
+    for (const test of [testCodedRefusals, testServersOfAllDeployments, testClusterWithoutSiteTakesItsMembersHosting]) {
       await test();
       console.log(`  ok ${test.name}`);
     }

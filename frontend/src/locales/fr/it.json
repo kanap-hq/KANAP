@@ -1527,8 +1527,7 @@
         "overview": "Vue d'ensemble",
         "journal": "Journal",
         "relations": "Relations",
-        "documents": "Documents",
-        "attachments": "Pièces jointes"
+        "documents": "Documents"
       },
       "actions": {
         "changeStatus": "Changer le statut",
@@ -2309,7 +2308,8 @@
         "containsHint": "Actifs hébergés par celui-ci, par exemple des VM.",
         "alsoContainedBy": "Aussi contenu dans {{names}}",
         "via": "Via",
-        "placementReplaced": "{{cluster}} remplace le lien entre {{hosts}} et {{asset}}."
+        "placementReplaced": "{{cluster}} remplace le lien entre {{hosts}} et {{asset}}.",
+        "placementLinked": "Lien posé sur {{cluster}}."
       }
     },
     "technology": {
@@ -3240,6 +3240,10 @@
       "assignToCluster": "Affecter au cluster",
       "assignedToCluster": "Affecté au cluster",
       "serverOnly": "Ce serveur seulement",
+      "moveTitle": "Déplacer l'affectation ?",
+      "moveLine_one": "{{members}} n'hébergera plus {{application}}.",
+      "moveLine_other": "{{members}} n'hébergeront plus {{application}}.",
+      "moveAnyway": "Déplacer quand même",
       "absorbed_one": "L'affectation directe de {{names}} sera remplacée.",
       "absorbed_other": "Les affectations directes de {{names}} seront remplacées.",
       "via": "via",

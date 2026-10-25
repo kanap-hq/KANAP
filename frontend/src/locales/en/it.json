@@ -1527,8 +1527,7 @@
         "overview": "Overview",
         "journal": "Journal",
         "relations": "Relations",
-        "documents": "Documents",
-        "attachments": "Attachments"
+        "documents": "Documents"
       },
       "actions": {
         "changeStatus": "Change status",
@@ -2309,7 +2308,8 @@
         "containsHint": "Assets hosted by this one, such as VMs.",
         "alsoContainedBy": "Also contained by {{names}}",
         "via": "Via",
-        "placementReplaced": "{{cluster}} replaces the link between {{hosts}} and {{asset}}."
+        "placementReplaced": "{{cluster}} replaces the link between {{hosts}} and {{asset}}.",
+        "placementLinked": "Link placed on {{cluster}}."
       }
     },
     "technology": {
@@ -3240,6 +3240,10 @@
       "assignToCluster": "Assign to the cluster",
       "assignedToCluster": "Assigned to the cluster",
       "serverOnly": "This server only",
+      "moveTitle": "Move the assignment?",
+      "moveLine_one": "{{members}} will no longer host {{application}}.",
+      "moveLine_other": "{{members}} will no longer host {{application}}.",
+      "moveAnyway": "Move anyway",
       "absorbed_one": "The direct assignment of {{names}} will be replaced.",
       "absorbed_other": "The direct assignments of {{names}} will be replaced.",
       "via": "via",

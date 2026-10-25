@@ -1,5 +1,5 @@
 import { exportListQuery } from '../common/pagination';
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req, Res, UseGuards, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post, Put, Query, Req, Res, UseGuards, UploadedFile, UseInterceptors, BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UsersDeleteService } from './users-delete.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -28,6 +28,17 @@ import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations
 
 function canViewUserAdministration(req: any): boolean {
   return req?.isAdmin === true || req?.permissionLevel === 'admin';
+}
+
+const USER_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The `:id` of a user route. `/users/me` is not a route (the current user is `/auth/me`): a name
+ * that is not an id answers 404 instead of a database cast error.
+ */
+function userIdParam(id: string): string {
+  if (!USER_ID_RE.test(String(id || ''))) throw new NotFoundException('User not found');
+  return id;
 }
 
 function toUserLookup(user: User | null | undefined) {
@@ -117,7 +128,7 @@ export class UsersController {
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'reader')
   async getById(@Param('id') id: string, @Req() req: any) {
-    const user = await this.svc.findById(id, { manager: req?.queryRunner?.manager });
+    const user = await this.svc.findById(userIdParam(id), { manager: req?.queryRunner?.manager });
     if (!user) return null;
     if (!canViewUserAdministration(req)) return toUserLookup(user);
     return { ...user, password_hash: undefined };
@@ -146,7 +157,7 @@ export class UsersController {
   @RequireLevel('users', 'member')
   update(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     return this.svc.updateUser(
-      id,
+      userIdParam(id),
       body,
       {
         actorUserId: req.user?.sub ?? null,
@@ -217,7 +228,7 @@ export class UsersController {
   @RequireLevel('users', 'admin')
   @Delete(':id')
   async delete(@Param('id') id: string, @Req() req: any) {
-    return this.deleteSvc.deleteUser(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.deleteSvc.deleteUser(userIdParam(id), req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
   // Per-user page permissions removed: permissions are now role-based
@@ -227,10 +238,11 @@ export class UsersController {
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
   async getUserRoles(@Param('id') id: string, @Req() req: any) {
+    const userId = userIdParam(id);
     const manager = req?.queryRunner?.manager;
     const repo = manager ? manager.getRepository(UserRole) : this.userRoleRepo;
     const userRoles = await repo.find({
-      where: { user_id: id },
+      where: { user_id: userId },
       relations: ['role'],
       order: { is_primary: 'DESC', created_at: 'ASC' },
     });
@@ -252,6 +264,7 @@ export class UsersController {
     @Body() body: { role_ids: string[] },
     @Req() req: any,
   ) {
+    const userId = userIdParam(id);
     const manager = req?.queryRunner?.manager;
     const userRoleRepo = manager ? manager.getRepository(UserRole) : this.userRoleRepo;
     const roleRepo = manager ? manager.getRepository(Role) : this.roleRepo;
@@ -260,7 +273,7 @@ export class UsersController {
     // Empty list is allowed: the user keeps no app access and falls back to
     // the Contact system role (same state as a freshly provisioned SSO user).
     const roleIds: string[] = Array.isArray(body?.role_ids) ? body.role_ids : [];
-    if (roleIds.length === 0 && req.user?.sub === id) {
+    if (roleIds.length === 0 && req.user?.sub === userId) {
       throw new BadRequestException('You cannot remove your own last role.');
     }
 
@@ -271,20 +284,20 @@ export class UsersController {
     }
 
     // Get user
-    const user = await userRepo.findOne({ where: { id } });
+    const user = await userRepo.findOne({ where: { id: userId } });
     if (!user) throw new BadRequestException('User not found');
 
     // Snapshot current roles for the audit trail before replacing them
-    const previousRoles = await userRoleRepo.find({ where: { user_id: id }, relations: ['role'] });
+    const previousRoles = await userRoleRepo.find({ where: { user_id: userId }, relations: ['role'] });
 
     // Delete existing user roles
-    await userRoleRepo.delete({ user_id: id });
+    await userRoleRepo.delete({ user_id: userId });
 
     // Create new user roles (first role is considered primary for backwards compat)
     for (let i = 0; i < roleIds.length; i++) {
       await userRoleRepo.save(userRoleRepo.create({
         tenant_id: user.tenant_id,
-        user_id: id,
+        user_id: userId,
         role_id: roleIds[i],
         is_primary: i === 0,
       }));
@@ -305,7 +318,7 @@ export class UsersController {
     await this.audit.log(
       {
         table: 'user_roles',
-        recordId: id,
+        recordId: userId,
         action: 'update',
         before: { roles: previousRoles.map((ur: UserRole) => ({ id: ur.role_id, name: ur.role?.role_name ?? null })) },
         after: { roles: roleIds.map((rid) => ({ id: rid, name: roles.find((r: Role) => r.id === rid)?.role_name ?? null })) },
@@ -314,6 +327,6 @@ export class UsersController {
       manager ? { manager } : undefined,
     );
 
-    return this.getUserRoles(id, req);
+    return this.getUserRoles(userId, req);
   }
 }

@@ -1527,8 +1527,7 @@
         "overview": "Vista general",
         "journal": "Registro",
         "relations": "Relaciones",
-        "documents": "Documentos",
-        "attachments": "Adjuntos"
+        "documents": "Documentos"
       },
       "actions": {
         "changeStatus": "Cambiar estado",
@@ -2309,7 +2308,8 @@
         "containsHint": "Activos alojados en este, por ejemplo VM.",
         "alsoContainedBy": "También contenido en {{names}}",
         "via": "Vía",
-        "placementReplaced": "{{cluster}} sustituye el vínculo entre {{hosts}} y {{asset}}."
+        "placementReplaced": "{{cluster}} sustituye el vínculo entre {{hosts}} y {{asset}}.",
+        "placementLinked": "Vínculo colocado en {{cluster}}."
       }
     },
     "technology": {
@@ -3240,6 +3240,10 @@
       "assignToCluster": "Asignar al clúster",
       "assignedToCluster": "Asignado al clúster",
       "serverOnly": "Solo este servidor",
+      "moveTitle": "¿Mover la asignación?",
+      "moveLine_one": "{{members}} ya no alojará {{application}}.",
+      "moveLine_other": "{{members}} ya no alojarán {{application}}.",
+      "moveAnyway": "Mover de todos modos",
       "absorbed_one": "Se sustituirá la asignación directa de {{names}}.",
       "absorbed_other": "Se sustituirán las asignaciones directas de {{names}}.",
       "via": "vía",

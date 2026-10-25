@@ -840,7 +840,15 @@ export default function ConnectionWorkspacePage() {
 
   return (
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-      {error && <Alert severity="error" sx={{ mx: 2, mt: 1 }} onClose={() => setError(null)}>{error}</Alert>}
+      {(error || createError) && (
+        <Alert
+          severity="error"
+          sx={{ mx: 2, mt: 1 }}
+          onClose={() => { setError(null); setCreateError(null); }}
+        >
+          {error || createError}
+        </Alert>
+      )}
       <PortfolioDetailWorkspaceShell
         activeTab={validTab}
         tabs={workspaceTabs}
@@ -879,7 +887,6 @@ export default function ConnectionWorkspacePage() {
             <Alert severity="info" sx={{ fontSize: 13 }}>
               {t('workspace.connection.create.pathAfterCreate')}
             </Alert>
-            {createError && <Alert severity="error" sx={{ mt: 1.5, fontSize: 13 }}>{createError}</Alert>}
           </Box>
         ) : isCreate ? (
           <Box sx={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -994,8 +1001,6 @@ export default function ConnectionWorkspacePage() {
                 disabled={!canManage || createSubmitting}
               />
             </Box>
-
-            {createError && <Alert severity="error" sx={{ maxWidth: 640 }}>{createError}</Alert>}
           </Box>
         ) : !data ? null : validTab === 'path' ? (
           <ConnectionPathTab

@@ -76,7 +76,8 @@ const ServerSelect: React.FC<ServerSelectProps> = ({
 
   React.useEffect(() => {
     const match = options.find((opt) => opt.id === value) || null;
-    if (match) setSelectedOption(match);
+    // Keep the same object: a new one makes MUI reset the text to the chosen server while typing.
+    if (match) setSelectedOption((previous) => (previous && previous.id === match.id ? previous : match));
   }, [options, value]);
 
   React.useEffect(() => {

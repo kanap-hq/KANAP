@@ -255,12 +255,15 @@
       "incidents_one": "{{count}} incident",
       "incidents_other": "{{count}} incidents",
       "subnets_one": "{{count}} sous-réseau",
-      "subnets_other": "{{count}} sous-réseaux"
+      "subnets_other": "{{count}} sous-réseaux",
+      "others_one": "{{count}} autre",
+      "others_other": "{{count}} autres"
     },
     "anyway": "Supprimer quand même",
     "assetWarning": {
       "memberOf_one": "Membre de {{names}} : il quittera ce cluster.",
       "memberOf_other": "Membre de {{names}} : il quittera ces clusters.",
+      "stopsHosting": "Il n'hébergera plus {{names}}.",
       "hasMembers_one": "Cluster de {{count}} membre : il perdra son cluster.",
       "hasMembers_other": "Cluster de {{count}} membres : ils perdront leur cluster.",
       "links_one": "{{count}} lien sera supprimé : {{names}}.",

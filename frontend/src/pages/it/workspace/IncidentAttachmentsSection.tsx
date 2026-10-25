@@ -12,7 +12,7 @@ type Props = {
   onCountChange: (count: number) => void;
 };
 
-export default function IncidentAttachmentsTab({ incidentId, canManage, onCountChange }: Props) {
+export default function IncidentAttachmentsSection({ incidentId, canManage, onCountChange }: Props) {
   const { t } = useTranslation('it');
   const [error, setError] = React.useState<string | null>(null);
 
@@ -52,8 +52,11 @@ export default function IncidentAttachmentsTab({ incidentId, canManage, onCountC
     }
   };
 
+  // A reader sees only what exists: no empty section and no permanent drop zone.
+  if (!canManage && attachments.length === 0) return null;
+
   return (
-    <Box sx={{ pt: 1, maxWidth: 900 }}>
+    <Box>
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>{error}</Alert>}
       <TaskAttachments
         taskId={incidentId}
