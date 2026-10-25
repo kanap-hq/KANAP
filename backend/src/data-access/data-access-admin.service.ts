@@ -367,6 +367,12 @@ export class DataAccessAdminService {
   ): Promise<DataAccessOverview> {
     const availability = await this.availability();
     const tenantId: string = (await manager.query(`SELECT app_current_tenant()::text AS tenant_id`))[0].tenant_id;
+    // A repeated parameter arrives as an array and used to be ignored: answer a clear 400 instead.
+    for (const parameter of ['node_type', 'node_id', 'q'] as const) {
+      if (Array.isArray(query?.[parameter])) {
+        throw badRequest('DATA_ACCESS_QUERY_REPEATED', `${parameter} must be given once.`, { parameter });
+      }
+    }
     const nodeType = typeof query?.node_type === 'string' && query.node_type.trim() ? query.node_type.trim() : null;
     const nodeId = typeof query?.node_id === 'string' && query.node_id.trim() ? query.node_id.trim() : null;
     if (nodeType && !NODE_TYPES.has(nodeType)) {

@@ -840,7 +840,17 @@ async function testOverview(app: INestApplication) {
   assert.deepEqual(byName.body.persons.map((person: any) => person.id), [s.persons.marta]);
   const byEmail = await call(app, 'GET', `data-access?q=${encodeURIComponent(await emailOf(s.persons.paul))}`, extra.manager);
   assert.deepEqual(byEmail.body.persons.map((person: any) => person.id), [s.persons.paul]);
-  console.log('  overview: limited persons only, counts, node and name/email filters: OK');
+  // M7: a repeated parameter is refused, not silently ignored.
+  for (const path of [
+    'data-access?node_type=company&node_type=all',
+    `data-access?node_id=${s.es}&node_id=${s.fr}`,
+    'data-access?q=Marta&q=Paul',
+  ]) {
+    const repeated = await call(app, 'GET', path, extra.manager);
+    assert.equal(repeated.status, 400, `${path}: ${repeated.text}`);
+    assert.equal(repeated.body.code, 'DATA_ACCESS_QUERY_REPEATED', `${path}: ${repeated.text}`);
+  }
+  console.log('  overview: limited persons only, counts, node and name/email filters, repeated parameters 400: OK');
 }
 
 async function emailOf(id: string): Promise<string> {
