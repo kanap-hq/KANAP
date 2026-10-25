@@ -12,6 +12,7 @@ import { AiAggregateExecutor } from '../../ai/query/ai-aggregate.executor';
 import { AiTaskMutationSupportService } from '../../ai/mutation/ai-task-mutation-support.service';
 import { UpdateTaskFieldsAiMutationOperation } from '../../ai/mutation/operations/update-task-fields.ai-mutation-operation';
 import { AiQueryExecutor } from '../../ai/query/ai-query.executor';
+import { TasksController } from '../../spend/tasks.controller';
 import { TasksService } from '../../spend/tasks.service';
 import { Task } from '../../tasks/task.entity';
 import { TasksCsvService } from '../../tasks/tasks-csv.service';
@@ -38,6 +39,7 @@ type Seed = {
   adminId: string;
   readerId: string;
   reporterId: string;
+  ownerId: string;
   restrictedIncidentId: string;
   publicIncidentId: string;
   restrictedTaskId: string;
@@ -116,11 +118,18 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
     { incidents: 'reader', tasks: 'reader', users: 'admin' },
     { first: 'Remy', last: 'Reporter' },
   );
+  const ownerId = await seedPerson(
+    runner,
+    tenantId,
+    'Owner',
+    { incidents: 'reader', tasks: 'reader', users: 'admin' },
+    { first: 'Olga', last: 'Owner' },
+  );
 
   const restrictedIncident = await one(
-    `INSERT INTO incidents (tenant_id, item_number, title, severity, confidential, reporter_user_id)
-     VALUES ($1, 1, 'Compromised account', 'major', true, $2) RETURNING id`,
-    [tenantId, reporterId],
+    `INSERT INTO incidents (tenant_id, item_number, title, severity, confidential, reporter_user_id, owner_user_id)
+     VALUES ($1, 1, 'Compromised account', 'major', true, $2, $3) RETURNING id`,
+    [tenantId, reporterId, ownerId],
   );
   const publicIncident = await one(
     `INSERT INTO incidents (tenant_id, item_number, title, severity, confidential, reporter_user_id)
@@ -222,6 +231,7 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
     adminId,
     readerId,
     reporterId,
+    ownerId,
     restrictedIncidentId: restrictedIncident.id,
     publicIncidentId: publicIncident.id,
     restrictedTaskId: restrictedTask.id,
@@ -259,15 +269,39 @@ async function testTaskReads(): Promise<void> {
 
     const adminPage = await svc.listAllTasks({}, opts(viewer(s.adminId, true)));
     const reporterPage = await svc.listAllTasks({}, opts(viewer(s.reporterId, false)));
+    const ownerPage = await svc.listAllTasks({}, opts(viewer(s.ownerId, false)));
     const readerPage = await svc.listAllTasks({}, opts(viewer(s.readerId, false)));
     assert.equal(adminPage.total, 2, 'incidents:admin sees every task');
     assert.equal(reporterPage.total, 2, 'the reporter sees their incident task');
+    assert.equal(ownerPage.total, 2, 'the owner sees their incident task');
     assert.equal(readerPage.total, 1, 'the reader sees the public task only');
     assert.deepEqual(readerPage.items.map((row) => row.id), [s.publicTaskId]);
 
     assert.equal(await svc.getOne(s.restrictedTaskId, opts(viewer(s.readerId, false))), null);
     assert.ok(await svc.getOne(s.restrictedTaskId, opts(viewer(s.reporterId, false))));
+    assert.ok(await svc.getOne(s.restrictedTaskId, opts(viewer(s.ownerId, false))));
     assert.ok(await svc.getOne(s.restrictedTaskId, opts(viewer(s.adminId, true))));
+
+    // Over HTTP the id lives in `req.user.sub`: the controller path must find the
+    // reporter and the owner, and answer a third person like a missing task.
+    const controller = new (TasksController as any)(svc);
+    const reqFor = (userId: string) => ({
+      user: { sub: userId },
+      isAdmin: false,
+      permissions: { tasks: 'reader', incidents: 'reader' },
+      queryRunner: { manager: runner.manager },
+      tenant: { id: s.tenantId },
+    });
+    for (const [label, userId] of [['reporter', s.reporterId], ['owner', s.ownerId]] as const) {
+      const page = await controller.list({}, reqFor(userId));
+      assert.equal(page.total, 2, `the ${label} sees their task in the list over HTTP`);
+      assert.ok(page.items.some((row: any) => row.id === s.restrictedTaskId));
+      const detail = await controller.getOne(s.restrictedTaskId, reqFor(userId));
+      assert.equal(detail.id, s.restrictedTaskId, `the ${label} opens their task over HTTP`);
+    }
+    await assertNotFound(controller.getOne(s.restrictedTaskId, reqFor(s.readerId)));
+    const thirdPage = await controller.list({}, reqFor(s.readerId));
+    assert.equal(thirdPage.total, 1, 'a third person does not see the task in the list over HTTP');
 
     const readerLabels = await svc.listFilterValues({ fields: 'labels' }, opts(viewer(s.readerId, false)));
     assert.deepEqual(readerLabels.labels, ['public-label']);

@@ -7,6 +7,7 @@ import {
   incidentVisibilitySql,
   incidentVisibleToViewer,
   incidentViewerFromContext,
+  incidentViewerFromRequest,
   resolveIncidentViewer,
   taskIncidentVisibilityQueryBuilderClause,
   taskIncidentVisibilitySql,
@@ -65,6 +66,13 @@ function testViewerFromContext(): void {
     incidentViewerFromContext({ userId: 'u1', isAdmin: false, permissions: { incidents: 'contributor' } }),
     { userId: 'u1', isAdmin: false },
   );
+  // An Express request carries the id in user.sub, not userId.
+  assert.deepEqual(
+    incidentViewerFromRequest({ user: { sub: 'u2' }, isAdmin: false, permissions: { incidents: 'admin' } }),
+    { userId: 'u2', isAdmin: true },
+  );
+  assert.deepEqual(incidentViewerFromRequest({ user: { sub: 'u2' }, isAdmin: false }), { userId: 'u2', isAdmin: false });
+  assert.deepEqual(incidentViewerFromRequest(null), { userId: null, isAdmin: false });
 }
 
 async function testResolveViewerRequiresTenant(): Promise<void> {

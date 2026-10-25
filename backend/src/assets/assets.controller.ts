@@ -23,7 +23,7 @@ import { requireManager } from '../technologies/technology-rows';
 import { AssetImpactService } from './services/asset-impact.service';
 import { buildRelationsAccess } from '../common/relations/relations-access';
 import { canReadResource } from '../common/record-usages';
-import { incidentViewerFromContext } from '../incidents/incident-visibility';
+import { incidentViewerFromRequest } from '../incidents/incident-visibility';
 import {
   ASSET_RELATION_READS,
   AssetRelationsTabService,
@@ -208,7 +208,7 @@ export class AssetsController {
     return this.tasks.listRelatedTasksForAsset(asset.id, query, {
       manager: req?.queryRunner?.manager,
       tenantId: req?.tenant?.id,
-      viewer: incidentViewerFromContext(req),
+      viewer: incidentViewerFromRequest(req),
     });
   }
 

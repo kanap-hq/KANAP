@@ -47,6 +47,23 @@ export function incidentViewerFromContext(ctx: {
 }
 
 /**
+ * The same viewer from an Express request: JwtAuthGuard puts the user id in
+ * `req.user.sub` (never `req.userId`), PermissionGuard puts `isAdmin` and
+ * `permissions` on the request itself.
+ */
+export function incidentViewerFromRequest(req: {
+  user?: { sub?: string | null } | null;
+  isAdmin?: boolean;
+  permissions?: Record<string, string | undefined> | null;
+} | null | undefined): IncidentViewer {
+  return incidentViewerFromContext({
+    userId: req?.user?.sub ?? null,
+    isAdmin: req?.isAdmin,
+    permissions: req?.permissions,
+  });
+}
+
+/**
  * A1: confidential rows are visible to incidents:admin, the reporter and the owner.
  * Missing viewer fails closed.
  */

@@ -50,7 +50,7 @@ import { projectParticipantCondition, resolveBusinessContributorScope } from '..
 import { PermissionLevel } from '../permissions/permissions.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
-import { incidentViewerFromContext } from '../incidents/incident-visibility';
+import { incidentViewerFromRequest } from '../incidents/incident-visibility';
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -82,7 +82,7 @@ export class TasksController {
     await this.svc.assertVisible(id, accessScope, {
       manager: req?.queryRunner?.manager,
       tenantId: req?.tenant?.id,
-      viewer: incidentViewerFromContext(req),
+      viewer: incidentViewerFromRequest(req),
     });
     return accessScope;
   }
@@ -164,7 +164,7 @@ export class TasksController {
       manager: req?.queryRunner?.manager,
       tenantId: req?.tenant?.id,
       accessScope,
-      viewer: incidentViewerFromContext(req),
+      viewer: incidentViewerFromRequest(req),
     });
   }
 
@@ -177,7 +177,7 @@ export class TasksController {
       manager: req?.queryRunner?.manager,
       tenantId: req?.tenant?.id,
       accessScope,
-      viewer: incidentViewerFromContext(req),
+      viewer: incidentViewerFromRequest(req),
     });
   }
 
@@ -190,7 +190,7 @@ export class TasksController {
       manager: req?.queryRunner?.manager,
       tenantId: req?.tenant?.id,
       accessScope,
-      viewer: incidentViewerFromContext(req),
+      viewer: incidentViewerFromRequest(req),
     });
   }
 
@@ -234,7 +234,7 @@ export class TasksController {
       preset,
       relatedObjectType,
       relatedObjectId,
-      viewer: incidentViewerFromContext(req),
+      viewer: incidentViewerFromRequest(req),
     });
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -305,7 +305,7 @@ export class TasksController {
       manager: req?.queryRunner?.manager,
       tenantId: req?.tenant?.id,
       accessScope,
-      viewer: incidentViewerFromContext(req),
+      viewer: incidentViewerFromRequest(req),
     });
     if (!res) {
       const { NotFoundException } = await import('@nestjs/common');
