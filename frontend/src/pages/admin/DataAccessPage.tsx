@@ -49,6 +49,9 @@ const LINES_WITHOUT_COMPANY_URL = `/ops/budget?filters=${encodeURIComponent(JSON
 
 type NodeFilter = { type: 'company' | 'cost_center'; id: string; label: string };
 
+const headerCellSx = { whiteSpace: 'nowrap' } as const;
+const personColumnSx = { minWidth: 180 } as const;
+
 export default function DataAccessPage() {
   const canAdmin = useDataAccessAdmin();
   if (!canAdmin) return <ForbiddenPage />;
@@ -180,22 +183,26 @@ function DataAccessAdminContent() {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell>{t('admin:dataAccess.columns.person')}</TableCell>
-                  <TableCell>{t('admin:dataAccess.columns.roles')}</TableCell>
-                  <TableCell>{t('admin:dataAccess.columns.nodes')}</TableCell>
-                  <TableCell>{t('admin:dataAccess.columns.lastChange')}</TableCell>
+                  <TableCell sx={{ ...headerCellSx, ...personColumnSx }}>
+                    {t('admin:dataAccess.columns.person')}
+                  </TableCell>
+                  <TableCell sx={headerCellSx}>{t('admin:dataAccess.columns.roles')}</TableCell>
+                  <TableCell sx={headerCellSx}>{t('admin:dataAccess.columns.nodes')}</TableCell>
+                  <TableCell sx={headerCellSx}>{t('admin:dataAccess.columns.lastChange')}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {data.persons.map((person) => (
                   <TableRow key={person.id} hover>
-                    <TableCell>
+                    <TableCell sx={personColumnSx}>
                       <Button
                         variant="text"
                         onClick={() => setSelectedPerson({ id: person.id, name: person.name })}
                         sx={{
                           p: 0,
                           minWidth: 0,
+                          justifyContent: 'flex-start',
+                          textAlign: 'left',
                           textTransform: 'none',
                           fontSize: 13,
                           color: 'kanap.text.primary',

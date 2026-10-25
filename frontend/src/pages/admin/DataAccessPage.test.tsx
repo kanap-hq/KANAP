@@ -124,6 +124,22 @@ describe('DataAccessPage', () => {
     expect(screen.queryByText('admin:dataAccess.limited')).toBeNull();
   });
 
+  it('keeps the headers on one line and left-aligns the person name', async () => {
+    renderPage();
+    await screen.findByText('Marta Ruiz');
+    for (const label of [
+      'admin:dataAccess.columns.person',
+      'admin:dataAccess.columns.roles',
+      'admin:dataAccess.columns.nodes',
+      'admin:dataAccess.columns.lastChange',
+    ]) {
+      expect(getComputedStyle(screen.getByRole('columnheader', { name: label })).whiteSpace).toBe('nowrap');
+    }
+    expect(getComputedStyle(screen.getByRole('columnheader', { name: 'admin:dataAccess.columns.person' })).minWidth)
+      .toBe('180px');
+    expect(getComputedStyle(screen.getByRole('button', { name: 'Marta Ruiz' })).justifyContent).toBe('flex-start');
+  });
+
   it('opens the data access dialog from a row', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Marta Ruiz' }));
