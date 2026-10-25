@@ -87,6 +87,21 @@ describe('AssetConnectionsSection', () => {
     expect(nameCell.textContent).toContain('PAR-SQL-CL01');
   });
 
+  it('names the cluster of an inherited hop next to the hops the asset carries itself', async () => {
+    renderSection([row({
+      asset_roles: [
+        { part: 'hop', hop_order: 1, inherited: true, via_clusters: [CLUSTER] },
+        { part: 'hop', hop_order: 2, inherited: false, via_clusters: [] },
+      ],
+      inherited: false,
+      via_clusters: [CLUSTER],
+    })]);
+    const nameCell = (await screen.findByText('App to DB')).closest('td')!;
+    expect(nameCell.textContent).toBe(
+      'App to DBworkspace.connection.path.hop · components.clusterAssignment.via PAR-SQL-CL01, workspace.connection.path.hop',
+    );
+  });
+
   it('lists the servers of a multi-server connection and marks a cluster, without an empty dash', async () => {
     renderSection([row({
       topology: 'multi_server',

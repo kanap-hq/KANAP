@@ -132,18 +132,44 @@ export default function AssetConnectionsSection({ assetId }: { assetId: string }
   }, [t]);
 
   const lineUnderName = (connection: ServerConnectionRow) => {
-    const hops = (connection.asset_roles ?? [])
+    const roles = connection.asset_roles ?? [];
+    const hops = roles
       .filter((role) => role.part === 'hop')
-      .map((role) => t('workspace.connection.path.hop', { index: role.hop_order }));
-    const via = !!connection.inherited && (connection.via_clusters?.length ?? 0) > 0;
-    if (hops.length === 0 && !via) return null;
+      .map((role) => ({
+        label: t('workspace.connection.path.hop', { index: role.hop_order }),
+        via: role.inherited ? role.via_clusters ?? [] : [],
+      }));
+    // A hop inherited from a cluster says it itself; the other roles of the connection carry the
+    // cluster that gives them, when their own role does not.
+    const hopVia = hops.some((hop) => hop.via.length > 0);
+    const otherVia = Array.from(new Map(
+      roles
+        .filter((role) => role.part !== 'hop' && role.inherited)
+        .flatMap((role) => role.via_clusters ?? [])
+        .map((cluster) => [cluster.id, cluster]),
+    ).values());
+    const trailingVia = !hopVia && connection.inherited && (connection.via_clusters?.length ?? 0) > 0
+      ? connection.via_clusters ?? []
+      : otherVia;
+    if (hops.length === 0 && trailingVia.length === 0) return null;
     return (
       <Box component="div" sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>
-        {hops.join(', ')}
-        {hops.length > 0 && via ? ' · ' : null}
-        {via && (
+        {hops.map((hop, index) => (
+          <React.Fragment key={`${hop.label}-${index}`}>
+            {index > 0 ? ', ' : null}
+            {hop.label}
+            {hop.via.length > 0 ? (
+              <>
+                {' · '}
+                {t('components.clusterAssignment.via')} <ViaAssetNames assets={hop.via} />
+              </>
+            ) : null}
+          </React.Fragment>
+        ))}
+        {hops.length > 0 && trailingVia.length > 0 ? ' · ' : null}
+        {trailingVia.length > 0 && (
           <>
-            {t('components.clusterAssignment.via')} <ViaAssetNames assets={connection.via_clusters ?? []} />
+            {t('components.clusterAssignment.via')} <ViaAssetNames assets={trailingVia} />
           </>
         )}
       </Box>
