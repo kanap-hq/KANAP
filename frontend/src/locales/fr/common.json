@@ -680,10 +680,20 @@
       "timeline": "Chronologie",
       "people": "Personnes",
       "record": "Enregistrement",
-      "source": "Source"
+      "source": "Source",
+      "basic": "Informations de base",
+      "context": "Contexte",
+      "dates": "Dates",
+      "ip_addresses": "Adresses IP"
     },
     "presets": {
       "applications": {
+        "enrichment": "Enrichissement des données"
+      },
+      "assets": {
+        "enrichment": "Enrichissement des données"
+      },
+      "tasks": {
         "enrichment": "Enrichissement des données"
       }
     },
@@ -757,6 +767,67 @@
         "authority_notification_required": "Notification aux autorités requise",
         "authority_notified_at": "Notifié le",
         "notified_parties": "Parties informées"
+      },
+      "assets": {
+        "id": "ID",
+        "name": "Nom",
+        "location_reference": "Site",
+        "kind": "Type d’actif",
+        "is_cluster": "Est un cluster",
+        "status": "Cycle de vie",
+        "go_live_date": "Date de mise en service",
+        "end_of_life_date": "Date de fin de vie",
+        "notes": "Notes",
+        "environment": "Environnement",
+        "hostname": "Nom d’hôte",
+        "domain": "Domaine",
+        "admin_zone": "Zone d’administration",
+        "aliases": "Alias",
+        "operating_system": "Système d’exploitation",
+        "cluster": "Appartenance au cluster",
+        "ip_1_type": "Type d’adresse IP 1",
+        "ip_1_address": "Adresse IP 1",
+        "ip_1_subnet_cidr": "Sous-réseau IP 1 (CIDR)",
+        "ip_2_type": "Type d’adresse IP 2",
+        "ip_2_address": "Adresse IP 2",
+        "ip_2_subnet_cidr": "Sous-réseau IP 2 (CIDR)",
+        "ip_3_type": "Type d’adresse IP 3",
+        "ip_3_address": "Adresse IP 3",
+        "ip_3_subnet_cidr": "Sous-réseau IP 3 (CIDR)",
+        "ip_4_type": "Type d’adresse IP 4",
+        "ip_4_address": "Adresse IP 4",
+        "ip_4_subnet_cidr": "Sous-réseau IP 4 (CIDR)",
+        "vulnerabilities_to_review": "Vulnérabilités à examiner",
+        "severe_vulnerabilities": "Vulnérabilités graves"
+      },
+      "tasks": {
+        "id": "ID",
+        "title": "Titre",
+        "description": "Description",
+        "task_type_name": "Type de tâche",
+        "related_object_type": "Type d’objet lié",
+        "related_object_id": "ID de l’objet lié",
+        "related_object_name": "Nom de l’objet lié",
+        "phase_name": "Phase",
+        "priority_level": "Priorité",
+        "category_name": "Catégorie",
+        "stream_name": "Filière",
+        "source_name": "Source",
+        "company_name": "Société",
+        "status": "Statut",
+        "start_date": "Date de début",
+        "due_date": "Échéance",
+        "assignee_email": "E-mail de l’assigné",
+        "creator_email": "E-mail du demandeur",
+        "viewer_email_1": "E-mail de l’observateur 1",
+        "viewer_email_2": "E-mail de l’observateur 2",
+        "viewer_email_3": "E-mail de l’observateur 3",
+        "viewer_email_4": "E-mail de l’observateur 4",
+        "owner_email_1": "E-mail du responsable 1",
+        "owner_email_2": "E-mail du responsable 2",
+        "owner_email_3": "E-mail du responsable 3",
+        "owner_email_4": "E-mail du responsable 4",
+        "labels": "Étiquettes"
       }
     }
   },

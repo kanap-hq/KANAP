@@ -680,10 +680,20 @@
       "timeline": "Timeline",
       "people": "People",
       "record": "Record",
-      "source": "Source"
+      "source": "Source",
+      "basic": "Basics",
+      "context": "Context",
+      "dates": "Dates",
+      "ip_addresses": "IP addresses"
     },
     "presets": {
       "applications": {
+        "enrichment": "Data enrichment"
+      },
+      "assets": {
+        "enrichment": "Data enrichment"
+      },
+      "tasks": {
         "enrichment": "Data enrichment"
       }
     },
@@ -757,6 +767,67 @@
         "authority_notification_required": "Authority notification required",
         "authority_notified_at": "Notified on",
         "notified_parties": "Parties informed"
+      },
+      "assets": {
+        "id": "ID",
+        "name": "Name",
+        "location_reference": "Location",
+        "kind": "Asset type",
+        "is_cluster": "Is a cluster",
+        "status": "Lifecycle",
+        "go_live_date": "Go-live date",
+        "end_of_life_date": "End-of-life date",
+        "notes": "Notes",
+        "environment": "Environment",
+        "hostname": "Hostname",
+        "domain": "Domain",
+        "admin_zone": "Administration zone",
+        "aliases": "Aliases",
+        "operating_system": "Operating system",
+        "cluster": "Cluster membership",
+        "ip_1_type": "IP 1 type",
+        "ip_1_address": "IP 1 address",
+        "ip_1_subnet_cidr": "IP 1 subnet (CIDR)",
+        "ip_2_type": "IP 2 type",
+        "ip_2_address": "IP 2 address",
+        "ip_2_subnet_cidr": "IP 2 subnet (CIDR)",
+        "ip_3_type": "IP 3 type",
+        "ip_3_address": "IP 3 address",
+        "ip_3_subnet_cidr": "IP 3 subnet (CIDR)",
+        "ip_4_type": "IP 4 type",
+        "ip_4_address": "IP 4 address",
+        "ip_4_subnet_cidr": "IP 4 subnet (CIDR)",
+        "vulnerabilities_to_review": "Vulnerabilities to review",
+        "severe_vulnerabilities": "Severe vulnerabilities"
+      },
+      "tasks": {
+        "id": "ID",
+        "title": "Title",
+        "description": "Description",
+        "task_type_name": "Task type",
+        "related_object_type": "Related object type",
+        "related_object_id": "Related object ID",
+        "related_object_name": "Related object name",
+        "phase_name": "Phase",
+        "priority_level": "Priority",
+        "category_name": "Category",
+        "stream_name": "Stream",
+        "source_name": "Source",
+        "company_name": "Company",
+        "status": "Status",
+        "start_date": "Start date",
+        "due_date": "Due date",
+        "assignee_email": "Assignee email",
+        "creator_email": "Requestor email",
+        "viewer_email_1": "Viewer 1 email",
+        "viewer_email_2": "Viewer 2 email",
+        "viewer_email_3": "Viewer 3 email",
+        "viewer_email_4": "Viewer 4 email",
+        "owner_email_1": "Owner 1 email",
+        "owner_email_2": "Owner 2 email",
+        "owner_email_3": "Owner 3 email",
+        "owner_email_4": "Owner 4 email",
+        "labels": "Labels"
       }
     }
   },
