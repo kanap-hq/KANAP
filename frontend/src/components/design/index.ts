@@ -5,5 +5,7 @@ export { default as KanapDialog } from './KanapDialog';
 export type { KanapDialogProps } from './KanapDialog';
 export { KanapDialogProvider, useKanapDialogs } from './KanapDialogProvider';
 export type { KanapAlertOptions, KanapConfirmOptions, KanapPromptOptions } from './KanapDialogProvider';
+export { unsavedConfirm } from './unsavedConfirm';
+export type { UnsavedConfirmKind } from './unsavedConfirm';
 export { default as RelevantWebsitesList } from './RelevantWebsitesList';
 export type { RelevantWebsiteItem } from './RelevantWebsitesList';

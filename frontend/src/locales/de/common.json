@@ -1166,6 +1166,28 @@
     "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben.",
     "activeUntil": "Aktiv bis {{date}}"
   },
+  "unsaved": {
+    "saveAndLeave": {
+      "message": "Sie haben ungespeicherte Änderungen. Vor dem Verlassen speichern?",
+      "confirm": "Speichern und verlassen",
+      "cancel": "Ohne Speichern verlassen"
+    },
+    "leaveWithoutSaving": {
+      "message": "Sie haben ungespeicherte Änderungen. Ohne Speichern verlassen?",
+      "confirm": "Ohne Speichern verlassen",
+      "cancel": "Bleiben"
+    },
+    "saveAndSwitch": {
+      "message": "Sie haben ungespeicherte Änderungen. Vor dem Tab-Wechsel speichern?",
+      "confirm": "Speichern und Tab wechseln",
+      "cancel": "Tab wechseln ohne zu speichern"
+    },
+    "saveAndContinue": {
+      "message": "Sie haben ungespeicherte Änderungen. Vor dem Fortfahren speichern?",
+      "confirm": "Speichern und fortfahren",
+      "cancel": "Bleiben"
+    }
+  },
   "autosave": {
     "leaveTitle": "Änderungen nicht gespeichert",
     "leaveMessage": "Einige Ihrer Änderungen konnten nicht gespeichert werden. Verlassen Sie die Seite trotzdem und verwerfen Sie sie, oder bleiben Sie auf dieser Seite und versuchen Sie es erneut.",

@@ -44,7 +44,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { getScoreColor } from '../tasks/theme/taskDetailTokens';
 import { fetchProjectTasksCount } from '../../utils/workspaceTabCounts';
 import { portfolioLinksKey, usePortfolioRelationsBadge } from './workspace/portfolioRelations';
-import { useKanapDialogs } from '../../components/design';
+import { unsavedConfirm, useKanapDialogs } from '../../components/design';
 import { carryListFilters } from '../../lib/listContext';
 
 type TabKey = 'summary' | 'tasks' | 'timeline' | 'effort' | 'scoring' | 'relations' | 'knowledge';
@@ -702,7 +702,7 @@ export default function ProjectWorkspacePage() {
   const onTabChange = async (_: React.SyntheticEvent, nextValue: TabKey) => {
     if (isCreate && nextValue !== 'summary') return;
     if (hasUnsavedChanges) {
-      const proceed = await dialogs.confirm(t('portfolio:workspace.project.confirmations.unsavedSwitchTabs'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndSwitch'));
       if (proceed) {
         void handleSave().then((ok) => {
           if (ok) navigate(`/portfolio/projects/${id}/${nextValue}?${searchParams.toString()}`);
@@ -790,7 +790,7 @@ export default function ProjectWorkspacePage() {
   const confirmAndNavigate = React.useCallback(async (targetId: string | null) => {
     if (!targetId) return;
     if (hasUnsavedChanges) {
-      const proceed = await dialogs.confirm(t('portfolio:workspace.project.confirmations.unsavedNavigate'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndLeave'));
       if (proceed) {
         const ok = await handleSave();
         if (!ok) return;
@@ -804,7 +804,7 @@ export default function ProjectWorkspacePage() {
 
   const closeWorkspace = React.useCallback(async () => {
     if (hasUnsavedChanges) {
-      const proceed = await dialogs.confirm(t('portfolio:workspace.project.confirmations.unsavedNavigate'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndLeave'));
       if (proceed) {
         const ok = await handleSave();
         if (!ok) return;

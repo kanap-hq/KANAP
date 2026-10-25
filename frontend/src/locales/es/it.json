@@ -3327,7 +3327,6 @@
     }
   },
   "confirmations": {
-    "unsavedSaveBeforeNav": "Tiene cambios no guardados. ¿Desea guardar antes de navegar?",
     "unsavedSave": "Tiene cambios no guardados. ¿Desea guardarlos?",
     "unsavedLeave": "Tiene cambios no guardados. ¿Desea salir sin guardar?",
     "unsavedLeaveTab": "Tiene cambios no guardados. ¿Salir de esta pestaña?",

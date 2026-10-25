@@ -57,8 +57,6 @@
       "enabled": "Activé"
     },
     "workspace": {
-      "unsavedNavigate": "Vous avez des modifications non enregistrées. Enregistrer avant de naviguer ?",
-      "unsavedSwitchTab": "Vous avez des modifications non enregistrées. Enregistrer avant de changer d'onglet ?",
       "itemCountOf": "{{entity}} {{current}} sur {{total}}"
     },
     "messages": {

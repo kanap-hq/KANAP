@@ -252,10 +252,6 @@
       "actions": {
         "copyReference": "Copier la référence"
       },
-      "confirmations": {
-        "unsavedNavigate": "Vous avez des modifications non enregistrées. Enregistrer avant de quitter ?",
-        "unsavedSwitchTabs": "Vous avez des modifications non enregistrées. Enregistrer avant de changer d'onglet ?"
-      },
       "loadingTabs": {
         "activity": "Activité",
         "knowledge": "Connaissances",
@@ -583,11 +579,6 @@
         "submitNewRecommendation": "Soumettre une nouvelle recommandation",
         "submitRecommendation": "Soumettre une recommandation"
       },
-      "confirmations": {
-        "unsavedNavigate": "Vous avez des modifications non enregistrées. Enregistrer avant de quitter ?",
-        "unsavedRecommendation": "Vous avez une recommandation non enregistrée. L'abandonner ?",
-        "unsavedSwitchTabs": "Vous avez des modifications non enregistrées. Enregistrer avant de changer d'onglet ?"
-      },
       "deleteDialog": {
         "message": "Supprimer cette demande ? Cette action est irréversible.",
         "title": "Supprimer la demande"
@@ -744,8 +735,7 @@
         "relatedItem": "Élément lié"
       },
       "confirmations": {
-        "deleteTask": "Êtes-vous sûr de vouloir supprimer cette tâche ? Cette action est irréversible.",
-        "unsavedNavigate": "Vous avez des modifications non enregistrées. Enregistrer avant de quitter ?"
+        "deleteTask": "Êtes-vous sûr de vouloir supprimer cette tâche ? Cette action est irréversible."
       },
       "description": {
         "label": "Description",

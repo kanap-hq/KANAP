@@ -6,7 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import AccountOverviewEditor, { AccountOverviewEditorHandle } from '../accounts/editors/AccountOverviewEditor';
 import AccountCreateEditor, { AccountCreateEditorHandle } from '../accounts/editors/AccountCreateEditor';
 import { useTemplateAccountNav } from '../../hooks/useTemplateAccountNav';
-import { useKanapDialogs } from '../../components/design';
+import { unsavedConfirm, useKanapDialogs } from '../../components/design';
 
 type TabKey = 'overview';
 
@@ -69,7 +69,7 @@ export default function AdminStandardAccountWorkspacePage() {
   const confirmAndNavigate = async (targetId: string | null) => {
     if (!targetId) return;
     if (dirty) {
-      const proceed = await dialogs.confirm(t('confirmations.unsavedNavigate'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndLeave'));
       if (proceed) {
         try { await handleSave(); } catch { return; }
       } else {
@@ -85,7 +85,7 @@ export default function AdminStandardAccountWorkspacePage() {
   const onTabChange = async (_: React.SyntheticEvent, nextValue: TabKey) => {
     if (isCreate && nextValue !== 'overview') return;
     if (dirty) {
-      const proceed = await dialogs.confirm(t('confirmations.unsavedSwitchTab'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndSwitch'));
       if (proceed) {
         void handleSave().then(() => navigate(`/admin/standard-accounts/${templateId}/${id}/${nextValue}?${searchParams.toString()}`));
         return;

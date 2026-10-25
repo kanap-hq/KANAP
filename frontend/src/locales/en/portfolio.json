@@ -252,10 +252,6 @@
       "actions": {
         "copyReference": "Copy reference"
       },
-      "confirmations": {
-        "unsavedNavigate": "You have unsaved changes. Save before leaving?",
-        "unsavedSwitchTabs": "You have unsaved changes. Save before switching tabs?"
-      },
       "loadingTabs": {
         "activity": "Activity",
         "knowledge": "Knowledge",
@@ -583,11 +579,6 @@
         "submitNewRecommendation": "Submit new recommendation",
         "submitRecommendation": "Submit recommendation"
       },
-      "confirmations": {
-        "unsavedNavigate": "You have unsaved changes. Save before leaving?",
-        "unsavedRecommendation": "You have an unsaved recommendation. Discard it?",
-        "unsavedSwitchTabs": "You have unsaved changes. Save before switching tabs?"
-      },
       "deleteDialog": {
         "message": "Delete this request? This cannot be undone.",
         "title": "Delete request"
@@ -744,8 +735,7 @@
         "relatedItem": "Related item"
       },
       "confirmations": {
-        "deleteTask": "Are you sure you want to delete this task? This cannot be undone.",
-        "unsavedNavigate": "You have unsaved changes. Save before leaving?"
+        "deleteTask": "Are you sure you want to delete this task? This cannot be undone."
       },
       "description": {
         "label": "Description",

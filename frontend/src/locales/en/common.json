@@ -1166,6 +1166,28 @@
     "endOfValidityHint": "Leave blank to keep active indefinitely.",
     "activeUntil": "Active until {{date}}"
   },
+  "unsaved": {
+    "saveAndLeave": {
+      "message": "You have unsaved changes. Save before leaving?",
+      "confirm": "Save and leave",
+      "cancel": "Leave without saving"
+    },
+    "leaveWithoutSaving": {
+      "message": "You have unsaved changes. Leave without saving?",
+      "confirm": "Leave without saving",
+      "cancel": "Stay"
+    },
+    "saveAndSwitch": {
+      "message": "You have unsaved changes. Save before switching tabs?",
+      "confirm": "Save and switch",
+      "cancel": "Switch without saving"
+    },
+    "saveAndContinue": {
+      "message": "You have unsaved changes. Save before continuing?",
+      "confirm": "Save and continue",
+      "cancel": "Stay"
+    }
+  },
   "autosave": {
     "leaveTitle": "Changes not saved",
     "leaveMessage": "Some of your changes could not be saved. Leave anyway and lose them, or stay on this page and try again.",

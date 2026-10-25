@@ -57,8 +57,6 @@
       "enabled": "Enabled"
     },
     "workspace": {
-      "unsavedNavigate": "You have unsaved changes. Save before navigating?",
-      "unsavedSwitchTab": "You have unsaved changes. Save before switching tabs?",
       "itemCountOf": "{{entity}} {{current}} of {{total}}"
     },
     "messages": {

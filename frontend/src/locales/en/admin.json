@@ -874,10 +874,6 @@
     },
     "title": "CoA templates (platform admin)"
   },
-  "confirmations": {
-    "unsavedNavigate": "You have unsaved changes. Save before navigating?",
-    "unsavedSwitchTab": "You have unsaved changes. Save before switching tabs?"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",
