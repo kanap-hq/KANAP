@@ -110,8 +110,8 @@ export default function UserDialog({
         if (createdId) {
           try {
             await api.put(`/users/${createdId}/roles`, { role_ids });
-          } catch {
-            setIdentityError(new Error(t('users.messages.rolesSaveFailed')));
+          } catch (roleErr: any) {
+            setIdentityError(new Error(roleErr?.response?.data?.message || t('users.messages.rolesSaveFailed')));
             return false;
           }
           if (intent === 'save-invite') {
@@ -130,8 +130,8 @@ export default function UserDialog({
       await api.patch(`/users/${userId}`, userPayload);
       try {
         await api.put(`/users/${userId}/roles`, { role_ids });
-      } catch {
-        setIdentityError(new Error(t('users.messages.rolesSaveFailed')));
+      } catch (roleErr: any) {
+        setIdentityError(new Error(roleErr?.response?.data?.message || t('users.messages.rolesSaveFailed')));
         return false;
       }
       void queryClient.invalidateQueries({ queryKey: ['users'] });

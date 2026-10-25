@@ -1479,8 +1479,7 @@
       "newUser": "New user",
       "editUser": "Edit user",
       "identity": "Identity",
-      "saveAndInvite": "Save and invite",
-      "saving": "Saving…"
+      "saveAndInvite": "Save and invite"
     },
     "messages": {
       "loadFailed": "The user could not be loaded.",
@@ -1780,7 +1779,6 @@
   },
   "dataAccess": {
     "title": "Data access",
-    "dialogTitle": "Data access: {{name}}",
     "allData": "All data",
     "limitedTo": "Limited to",
     "none": "None",

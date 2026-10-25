@@ -1479,8 +1479,7 @@
       "newUser": "Nouvel utilisateur",
       "editUser": "Modifier l'utilisateur",
       "identity": "Identité",
-      "saveAndInvite": "Enregistrer et inviter",
-      "saving": "Enregistrement…"
+      "saveAndInvite": "Enregistrer et inviter"
     },
     "messages": {
       "loadFailed": "L'utilisateur n'a pas pu être chargé.",
@@ -1780,7 +1779,6 @@
   },
   "dataAccess": {
     "title": "Accès aux données",
-    "dialogTitle": "Accès aux données : {{name}}",
     "allData": "Toutes les données",
     "limitedTo": "Limité à",
     "none": "Aucun",
