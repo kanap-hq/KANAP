@@ -14,13 +14,13 @@ KANAP describe su panorama en tres bloques:
 
 Un servidor lleva tecnologías. Una aplicación se aloja en servidores y depende de tecnologías.
 
-Cree una tecnología cuando nadie trabaja en el producto en sí, pero otras aplicaciones caen o quedan expuestas cuando él cae. Mantenga una ficha como aplicación cuando los usuarios de negocio inician sesión en ella y la usan para su trabajo.
+Registre como aplicación lo que gestiona como un servicio, con sus responsables, su criticidad, sus contratos y sus costes. Registre como tecnología un producto instalado en sus servidores, seguido por sus versiones, sus fechas de fin de soporte y sus vulnerabilidades. Rara vez alguien trabaja en una tecnología en sí, y sin embargo otras aplicaciones caen o quedan expuestas cuando ella cae. Un mismo producto puede ser ambas cosas: consulte VMware vSphere más abajo.
 
 Algunos ejemplos:
 
 - **Entra ID**: una tecnología **SaaS** de la familia **Directorio e identidad**, editada por Microsoft. No se ejecuta en ninguno de sus servidores. Las aplicaciones cuyos usuarios inician sesión con ella la declaran.
 - **Active Directory**: una tecnología **Local** de la misma familia, llevada por sus controladores de dominio. Las aplicaciones que la usan la declaran.
-- **vSphere**: una tecnología **Local**, llevada por la máquina virtual de vCenter y por los hosts.
+- **VMware vSphere**: una tecnología **Local** instalada en el servidor vCenter, mientras que los hosts llevan ESXi y el servicio de virtualización se registra como aplicación.
 - **SQL Server**: una tecnología con una línea por versión en uso (2016, 2019, 2022). Cada servidor lleva su propia versión, de modo que el informe de fin de soporte puede nombrar los servidores que siguen en una antigua.
 - **Windows Server**: una tecnología de la familia **Sistema operativo**. Cada servidor registra su versión, y esa tecnología es el sistema operativo del servidor. Consulte [Sistemas operativos](#sistemas-operativos).
 - **Una aplicación SaaS**: ninguna tecnología que registrar. El proveedor mantiene aquello sobre lo que funciona.

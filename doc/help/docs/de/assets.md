@@ -335,6 +335,8 @@ Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede T
 
 Jede Tabelle zeigt Referenz (`AST-12`), Name, Typ, Umgebung und Status. Ein ausgemustertes oder deaktiviertes Asset bleibt mit ausgegrautem Namen aufgeführt. Klicken Sie auf eine Zeile, um das Asset zu öffnen.
 
+Bei einem Cluster endet **Hängt ab von** mit einer eingeklappten Zeile, **Durch Mitglieder (n)**. Sie listet die Assets auf, von denen die Mitglieder des Clusters in Betrieb abhängen, mit diesen Mitgliedern in der Spalte **Über**. Diese Zeilen sind schreibgeschützt und zählen nicht im Badge des Reiters.
+
 Mit `infrastructure:member` öffnet **Hinzufügen** rechts neben einem Abschnitt eine Suche nach einem Asset. Wählen Sie ein Ergebnis: Die Beziehung wird sofort gespeichert. Um eine Beziehung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Leser sehen die Tabellen schreibgeschützt. Eine Beziehung **Enthält** von einem Mitglied eines Clusters fragt zuerst, wo das Asset platziert wird: siehe [Virtuelle Maschinen auf einem Cluster](#virtual-machines-on-a-cluster).
 
 ---
