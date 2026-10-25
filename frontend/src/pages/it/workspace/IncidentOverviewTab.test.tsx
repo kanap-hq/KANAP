@@ -4,7 +4,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../../api';
-import type { Incident } from '../../../api/endpoints/incidents';
+import { incidentsApi, type Incident } from '../../../api/endpoints/incidents';
 import type { IntegratedDocumentEditorHandle } from '../../../components/IntegratedDocumentEditor';
 import { createAppTheme } from '../../../config/ThemeContext';
 import IncidentOverviewTab from './IncidentOverviewTab';
@@ -12,6 +12,14 @@ import IncidentOverviewTab from './IncidentOverviewTab';
 vi.mock('../../../api', () => ({
   default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }));
+
+vi.mock('../../../api/endpoints/incidents', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../api/endpoints/incidents')>();
+  return {
+    ...actual,
+    incidentsApi: { ...actual.incidentsApi, listAttachments: vi.fn(async () => []) },
+  };
+});
 
 vi.mock('../../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: () => false, profile: { id: 'user-1' } }),
@@ -64,6 +72,8 @@ function Harness({ incident, readOnly }: { incident: Incident; readOnly: boolean
       reviewEditorRef={reviewEditorRef}
       onReviewSaveStateChange={() => undefined}
       onPatchDebounced={() => undefined}
+      canManageAttachments={!readOnly}
+      onAttachmentsCountChange={() => undefined}
     />
   );
 }
@@ -82,6 +92,7 @@ function renderTab(incident: Incident, readOnly = false) {
 describe('IncidentOverviewTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(incidentsApi.listAttachments).mockResolvedValue([]);
     vi.mocked(api.get).mockImplementation(async (url: string) => ({
       data: {
         id: `doc-${url}`,
@@ -128,5 +139,40 @@ describe('IncidentOverviewTab', () => {
 
     const description = screen.getByDisplayValue('First incident') as HTMLTextAreaElement;
     expect(description).toHaveAttribute('readonly');
+  });
+
+  it('shows the attachments section to a contributor, after the review', async () => {
+    renderTab(makeIncident('inc-1', 'First incident'));
+
+    expect(await screen.findByText('Review of INC-1')).toBeInTheDocument();
+    const review = screen.getByLabelText('workspace.incident.overview.review');
+    const section = await screen.findByText('workspace.task.attachments.title');
+    expect(review.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText('workspace.task.actions.attachFiles')).toBeInTheDocument();
+  });
+
+  it('renders nothing to a reader when the incident has no attachment', async () => {
+    renderTab(makeIncident('inc-1', 'First incident'), true);
+
+    expect(await screen.findByText('Review of INC-1')).toBeInTheDocument();
+    await waitFor(() => expect(incidentsApi.listAttachments).toHaveBeenCalledWith('inc-1'));
+    expect(screen.queryByText('workspace.task.attachments.title')).toBeNull();
+  });
+
+  it('shows an existing attachment read-only to a reader', async () => {
+    vi.mocked(incidentsApi.listAttachments).mockResolvedValue([
+      {
+        id: 'att-1',
+        incident_id: 'inc-1',
+        original_filename: 'shot.png',
+        mime_type: 'image/png',
+        size: 2048,
+        uploaded_at: '2026-09-01T08:00:00.000Z',
+      },
+    ]);
+    renderTab(makeIncident('inc-1', 'First incident'), true);
+
+    expect(await screen.findByText('shot.png (2.0 KB)')).toBeInTheDocument();
+    expect(screen.queryByText('workspace.task.actions.attachFiles')).toBeNull();
   });
 });
