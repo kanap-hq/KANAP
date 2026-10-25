@@ -6,22 +6,22 @@ import { inheritingMembersOf } from '../app-asset-assignments/cluster-assignment
 /** A member taken out of a multi-server list because one of its clusters is in it. */
 export type AbsorbedServer = { asset_id: string; name: string; cluster_id: string; cluster_name: string };
 
-/** Refus 400 codé `connection_same_endpoint` (message anglais pour l'API; l'écran traduit `errors:<code>`). */
+/** A 400 refusal coded `connection_same_endpoint` (the message is English for the API; the screen translates `errors:<code>`). */
 export function connectionSameEndpointRefusal(): BadRequestException {
   return applicationBadRequest('connection_same_endpoint', 'The source and the destination are the same asset.');
 }
 
-/** Refus 400 codé `connection_min_servers`: une liste multi-serveurs garde au moins deux actifs, absorption faite. */
+/** A 400 refusal coded `connection_min_servers`: a multi-server list keeps at least two assets once absorption is done. */
 export function connectionServersMinRefusal(): BadRequestException {
   return applicationBadRequest('connection_min_servers', 'Select at least two assets for a multi-server connection');
 }
 
 /**
- * Retire de `assetIds` les membres en service des clusters en service de la même liste. Ordre
- * d'entrée gardé. Un membre de deux clusters de la liste est absorbé une fois, au nom du premier
- * cluster par nom. Un cluster retiré ou un membre retiré n'absorbe rien et reste dans la liste.
- * Aucun verrou: une appartenance qui change ensuite ne laisse qu'une ligne de trop, que la
- * lecture dédoublonne (la ligne directe gagne).
+ * Removes from `assetIds` the in-service members of the in-service clusters of the same list. The
+ * input order is kept. A member of two clusters in the list is absorbed once, under the first
+ * cluster by name. A retired cluster or a retired member absorbs nothing and stays in the list.
+ * No lock: a membership that changes afterwards leaves one extra row at most, which the read
+ * deduplicates (the direct row wins).
  */
 export async function absorbClusterMembers(
   mg: EntityManager,

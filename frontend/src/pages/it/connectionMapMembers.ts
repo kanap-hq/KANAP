@@ -1,6 +1,6 @@
 import type { ClusterMembership, ConnectionMapLink, ConnectionMapNode } from './components/ConnectionMapGraph';
 
-/** Les nœuds des liens, plus les membres implicites des clusters qui en font partie. */
+/** The link nodes, plus the implicit members of the clusters they belong to. */
 export function withImplicitMembers(
   allNodes: ConnectionMapNode[],
   linkNodeIds: ReadonlySet<string>,
@@ -18,7 +18,7 @@ export function withImplicitMembers(
 
 export const MEMBER_FOLD_LIMIT = 10;
 
-/** Replie, par cluster dessiné, les membres implicites au-delà de `limit`. */
+/** Folds, per drawn cluster, the implicit members beyond `limit`. */
 export function foldMembers(
   graph: { nodes: ConnectionMapNode[]; links: ConnectionMapLink[] },
   memberships: ClusterMembership[],
