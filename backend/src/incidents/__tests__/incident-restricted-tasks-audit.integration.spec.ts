@@ -32,7 +32,7 @@ import {
   seedTenant,
   setTenant,
 } from '../../spend/__tests__/round-inputs.fixtures';
-import type { IncidentViewer } from '../incident-visibility';
+import { taskIncidentVisibilitySql, type IncidentViewer } from '../incident-visibility';
 
 // A restricted incident, its review and its tasks do not exist for a reader who
 // is neither incidents:admin, its reporter nor its owner: the task is absent from
@@ -424,6 +424,35 @@ async function testTaskReads(): Promise<void> {
       viewer: viewer(s.readerId, false),
     });
     assert.equal(readerAppTasks.total, 0);
+
+    // The inline image route reads the same join and predicate.
+    const [inlineAttachment] = await runner.query(
+      `INSERT INTO task_attachments (tenant_id, task_id, original_filename, stored_filename, storage_path, source_field)
+       VALUES ($1, $2, 'inline.png', 'inline.png', 'files/inline.png', 'description') RETURNING id`,
+      [s.tenantId, s.restrictedTaskId],
+    );
+    const inlineParams: unknown[] = [s.tenantId, inlineAttachment.id];
+    const inlineVisibility = taskIncidentVisibilitySql('t', viewer(s.readerId, false), inlineParams);
+    const readerInline = await runner.query(
+      `SELECT ta.id
+       FROM task_attachments ta
+       JOIN tasks t ON t.id = ta.task_id AND t.tenant_id = ta.tenant_id
+       WHERE ta.tenant_id = $1 AND ta.id = $2 AND ta.source_field IS NOT NULL
+         ${inlineVisibility}`,
+      inlineParams,
+    );
+    assert.equal(readerInline.length, 0, 'the inline route finds no image of the hidden task');
+    const reporterInlineParams: unknown[] = [s.tenantId, inlineAttachment.id];
+    const reporterInlineVisibility = taskIncidentVisibilitySql('t', viewer(s.reporterId, false), reporterInlineParams);
+    const reporterInline = await runner.query(
+      `SELECT ta.id
+       FROM task_attachments ta
+       JOIN tasks t ON t.id = ta.task_id AND t.tenant_id = ta.tenant_id
+       WHERE ta.tenant_id = $1 AND ta.id = $2 AND ta.source_field IS NOT NULL
+         ${reporterInlineVisibility}`,
+      reporterInlineParams,
+    );
+    assert.equal(reporterInline.length, 1, 'the reporter keeps the inline image');
 
     // The incident's own task list keeps the same rule.
     const readerIncidentTasks = await unified.listForTarget(
