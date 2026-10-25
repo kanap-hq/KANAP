@@ -1284,12 +1284,26 @@ async function ensureConnections() {
   info('Ensuring connections');
   const refToId = new Map();
   for (const row of readCsv('23-connections.csv')) {
+    // A connection between two assets names them (the Veeam backup of the vSphere cluster); the four
+    // site-to-site links keep their entity codes.
+    const sourceAssetId = row.source_asset_name ? await assetIdByName(row.source_asset_name) : '';
+    const destinationAssetId = row.destination_asset_name ? await assetIdByName(row.destination_asset_name) : '';
+    if (row.source_asset_name && !sourceAssetId) {
+      warn(`Asset '${row.source_asset_name}' not found for connection '${row.name}'`);
+      continue;
+    }
+    if (row.destination_asset_name && !destinationAssetId) {
+      warn(`Asset '${row.destination_asset_name}' not found for connection '${row.name}'`);
+      continue;
+    }
     const body = {
       name: row.name,
       description: row.description || null,
       topology: lower(row.topology) || 'server_to_server',
-      source_entity_code: lower(row.source_entity_code),
-      destination_entity_code: lower(row.destination_entity_code),
+      source_entity_code: sourceAssetId ? null : lower(row.source_entity_code),
+      destination_entity_code: destinationAssetId ? null : lower(row.destination_entity_code),
+      ...(sourceAssetId ? { source_asset_id: sourceAssetId } : {}),
+      ...(destinationAssetId ? { destination_asset_id: destinationAssetId } : {}),
       protocol_codes: splitList(row.protocol_codes).map(lower),
       lifecycle: lower(row.lifecycle) || 'active',
       criticality: lower(row.criticality) || 'medium',
