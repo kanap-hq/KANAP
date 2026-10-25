@@ -14,6 +14,8 @@ export type DeleteFailure = {
   usages?: Array<{ type: string; total: number }>;
   /** Values the sentence names besides the counts: a frozen column and its year. */
   params?: Record<string, string | number>;
+  /** The applications an asset delete refusal names, in the server's order. */
+  applications?: string[];
 };
 
 /** "2 contracts and 1 application", in the interface language. */
@@ -24,6 +26,35 @@ function usageLabels(usages: NonNullable<DeleteFailure['usages']>, t: TFunction)
 
 function usageList(usages: NonNullable<DeleteFailure['usages']>, t: TFunction, language: string): string {
   return joinNames(usageLabels(usages, t), language);
+}
+
+/** The names a refusal carries in `params`, at most three then "and 2 others". */
+const NAMED_USAGES = 3;
+
+function applicationNames(applications: string[] | undefined, t: TFunction, language: string): string | null {
+  const names = (applications ?? []).map((name) => String(name ?? '')).filter(Boolean);
+  if (names.length === 0) return null;
+  const shown = names.slice(0, NAMED_USAGES);
+  const left = names.length - shown.length;
+  return joinNames(
+    left > 0 ? [...shown, t('common:delete.usages.others', { count: left }) as string] : shown,
+    language,
+  );
+}
+
+/**
+ * What uses a record, counted per kind, with the applications named when the server sends them
+ * (`ASSET_IN_USE`: "1 application assignment (CheeseTrack)").
+ */
+export function refusalUsages(
+  usages: DeleteFailure['usages'] | null | undefined,
+  applications: string[] | undefined,
+  t: TFunction,
+  language: string,
+): string {
+  const counts = usageList(usages ?? [], t, language);
+  const names = applicationNames(applications, t, language);
+  return names ? `${counts} (${names})` : counts;
 }
 
 /**
@@ -57,7 +88,7 @@ export function deleteFailureReason(failure: DeleteFailure, t: TFunction, langua
   return t(`errors:${failure.code}`, {
     ...(failure.params ?? {}),
     ...usageTotal(failure.usages),
-    usages: usageList(failure.usages ?? [], t, language),
+    usages: refusalUsages(failure.usages, failure.applications, t, language),
     defaultValue: reason,
   }) as string;
 }

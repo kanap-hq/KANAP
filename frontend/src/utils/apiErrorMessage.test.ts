@@ -214,6 +214,26 @@ describe('getApiErrorMessage', () => {
       .toBe('Sie können Ihr eigenes Konto nicht löschen. Deaktivieren Sie es bei Bedarf.');
   });
 
+  it('names the applications an asset delete refusal carries', () => {
+    const refused = {
+      response: {
+        status: 409,
+        data: {
+          code: 'ASSET_IN_USE',
+          message: 'Cannot delete asset "srv-01": has 1 application assignment(s): CheeseTrack (PROD)',
+          usages: [{ type: 'app_assignments', total: 1 }],
+          applications: ['CheeseTrack'],
+        },
+      },
+    };
+    expect(getApiErrorMessage(refused, t, 'fallback')).toBe(
+      'This asset is used by 1 application assignment (CheeseTrack). Remove it from there before deleting it.',
+    );
+    expect(getApiErrorMessage(refused, i18n.getFixedT('fr'), 'fallback')).toBe(
+      'Cet actif est utilisé par 1 affectation à une application (CheeseTrack). Retirez-le de cet élément avant de le supprimer.',
+    );
+  });
+
   it('names the values a refusal carries (a frozen column and its year)', () => {
     const frozen = { response: { status: 409, data: { code: 'BUDGET_LINE_FROZEN', message: 'English', usages: [], params: { column: 'Budget', year: 2026 } } } };
     expect(getApiErrorMessage(frozen, i18n.getFixedT('fr'), 'fallback')).toMatch(/^Cette ligne a des montants dans Budget 2026/);

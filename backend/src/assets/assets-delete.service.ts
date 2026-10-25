@@ -72,7 +72,21 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
        WHERE aaa.asset_id = $1 AND aaa.tenant_id = $2`,
       [assetId, tenantId],
     );
-    return { count: Number(count || 0), samples: rows };
+    // The screen names the applications after its counts: the server sends their names once.
+    const applications: Array<{ name: string }> = await manager.query(
+      `SELECT DISTINCT a.name
+       FROM app_asset_assignments aaa
+       JOIN app_instances ai ON ai.id = aaa.app_instance_id
+       JOIN applications a ON a.id = ai.application_id
+       WHERE aaa.asset_id = $1 AND aaa.tenant_id = $2
+       ORDER BY a.name ASC`,
+      [assetId, tenantId],
+    );
+    return {
+      count: Number(count || 0),
+      samples: rows,
+      applications: applications.map((application) => application.name),
+    };
   }
 
   private async findConnections(assetId: string, tenantId: string, manager: EntityManager) {
@@ -101,8 +115,7 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
     assetName: string,
     assignments: { count: number; samples: Array<{ name: string; environment: string }> },
     connections: { count: number; samples: Array<{ name: string }> },
-  ): string {
-    const parts: string[] = [];
+  ): string {    const parts: string[] = [];
     if (assignments.count > 0) {
       const list = assignments.samples.map((a) => `${a.name} (${a.environment?.toUpperCase?.() || a.environment || ''})`);
       const extra = assignments.count > list.length ? ` +${assignments.count - list.length} more` : '';
@@ -127,7 +140,15 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
     const usages: UsageCount[] = [];
     if (assignments.count > 0) usages.push({ type: 'app_assignments', total: assignments.count });
     if (connections.count > 0) usages.push({ type: 'connections', total: connections.count });
-    return new RecordInUseException('ASSET_IN_USE', 'asset', asset.name, usages, this.buildConflictMessage(asset.name, assignments, connections));
+    return new RecordInUseException(
+      'ASSET_IN_USE',
+      'asset',
+      asset.name,
+      usages,
+      this.buildConflictMessage(asset.name, assignments, connections),
+      undefined,
+      assignments.applications,
+    );
   }
 
   /**

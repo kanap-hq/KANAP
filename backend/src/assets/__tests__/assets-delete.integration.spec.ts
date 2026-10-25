@@ -54,6 +54,20 @@ async function seedConnectionThrough(runner: QueryRunner, tenantId: string, hopA
   );
 }
 
+async function seedAssignment(runner: QueryRunner, tenantId: string, assetId: string, applicationName: string) {
+  const applicationId = randomUUID();
+  const instanceId = randomUUID();
+  await runner.query(`INSERT INTO applications (id, tenant_id, name) VALUES ($1, $2, $3)`, [applicationId, tenantId, applicationName]);
+  await runner.query(
+    `INSERT INTO app_instances (id, tenant_id, application_id, environment) VALUES ($1, $2, $3, 'prod')`,
+    [instanceId, tenantId, applicationId],
+  );
+  await runner.query(
+    `INSERT INTO app_asset_assignments (tenant_id, app_instance_id, asset_id, role) VALUES ($1, $2, $3, 'app')`,
+    [tenantId, instanceId, assetId],
+  );
+}
+
 async function seedClusterAndRelations(runner: QueryRunner, tenantId: string) {
   const cluster = await seedAsset(runner, tenantId, 'esx-cluster');
   await runner.query(`UPDATE assets SET is_cluster = true WHERE tenant_id = $1 AND id = $2`, [tenantId, cluster]);
@@ -147,21 +161,31 @@ async function run() {
     const plain = await seedAsset(runner, tenantId, 'par-spare-01');
     const hop = await seedAsset(runner, tenantId, 'par-fw-01');
     await seedConnectionThrough(runner, tenantId, hop);
+    await seedAssignment(runner, tenantId, hop, 'Sage X3');
+    await seedAssignment(runner, tenantId, hop, 'CheeseTrack');
 
     // An asset nothing depends on goes away.
     assert.deepEqual(await service.deleteAsset(plain, tenantId, null, { manager: runner.manager }), { deleted: true });
     const left = await runner.query(`SELECT id FROM assets WHERE tenant_id = $1 AND id = $2`, [tenantId, plain]);
     assert.equal(left.length, 0);
 
-    // An asset a connection passes through is refused, with the connection named.
+    // An asset a connection passes through is refused, with the connection and the applications named.
     await runner.query('SAVEPOINT hop_delete');
     await assert.rejects(
       () => service.deleteAsset(hop, tenantId, null, { manager: runner.manager }),
-      (error: unknown) => error instanceof ConflictException && /Paris to Gouda/.test(String((error as Error).message)),
+      (error: unknown) => error instanceof ConflictException
+        && /Paris to Gouda/.test(String((error as Error).message))
+        && /CheeseTrack/.test(String((error as Error).message)),
     );
     await runner.query('ROLLBACK TO SAVEPOINT hop_delete');
     const kept = await runner.query(`SELECT id FROM assets WHERE tenant_id = $1 AND id = $2`, [tenantId, hop]);
     assert.equal(kept.length, 1);
+
+    // The check hands the screen the names it words in the interface language.
+    const refusal = (await service.deleteCheck([hop], tenantId, { manager: runner.manager })).refused[0];
+    assert.deepEqual(refusal.usages, [{ type: 'app_assignments', total: 2 }, { type: 'connections', total: 1 }]);
+    assert.deepEqual(refusal.params, undefined);
+    assert.deepEqual(refusal.applications, ['CheeseTrack', 'Sage X3']);
 
     await testCascade(runner, tenantId, hop);
   } finally {

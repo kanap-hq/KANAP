@@ -253,7 +253,9 @@
       "incidents_one": "{{count}} incident",
       "incidents_other": "{{count}} incidents",
       "subnets_one": "{{count}} sous-réseau",
-      "subnets_other": "{{count}} sous-réseaux"
+      "subnets_other": "{{count}} sous-réseaux",
+      "others_one": "{{count}} autre",
+      "others_other": "{{count}} autres"
     },
     "anyway": "Supprimer quand même",
     "assetWarning": {

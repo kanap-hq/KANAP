@@ -253,7 +253,9 @@
       "incidents_one": "{{count}} Vorfall",
       "incidents_other": "{{count}} Vorfälle",
       "subnets_one": "{{count}} Subnetz",
-      "subnets_other": "{{count}} Subnetze"
+      "subnets_other": "{{count}} Subnetze",
+      "others_one": "{{count}} weiteres",
+      "others_other": "{{count}} weitere"
     },
     "anyway": "Trotzdem löschen",
     "assetWarning": {

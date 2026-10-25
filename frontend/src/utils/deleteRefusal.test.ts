@@ -145,6 +145,25 @@ describe('deleteFailureReason', () => {
     }
   });
 
+  it('names the applications that still use an asset, then the others', () => {
+    const refusal = {
+      code: 'ASSET_IN_USE',
+      usages: [{ type: 'app_assignments', total: 2 }],
+      applications: ['CheeseTrack', 'Sage X3'],
+    };
+    expect(deleteFailureReason(refusal, i18n.en.t, 'en'))
+      .toBe('This asset is used by 2 application assignments (CheeseTrack and Sage X3). Remove it from them before deleting it.');
+    expect(deleteFailureReason(refusal, i18n.fr.t, 'fr'))
+      .toBe('Cet actif est utilisé par 2 affectations à des applications (CheeseTrack et Sage X3). Retirez-le de ces éléments avant de le supprimer.');
+    const many = {
+      code: 'ASSET_IN_USE',
+      usages: [{ type: 'app_assignments', total: 5 }],
+      applications: ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo'],
+    };
+    expect(deleteFailureReason(many, i18n.en.t, 'en')).toContain('(Alpha, Bravo, Charlie, and 2 others)');
+    expect(deleteFailureReason(many, i18n.fr.t, 'fr')).toContain('(Alpha, Bravo, Charlie et 2 autres)');
+  });
+
   it('keeps the reason of a failure without a code', () => {
     expect(deleteFailureReason({ reason: 'This line has amounts in a frozen budget column.' }, i18n.fr.t, 'fr'))
       .toBe('This line has amounts in a frozen budget column.');
