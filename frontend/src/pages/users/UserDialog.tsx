@@ -262,30 +262,40 @@ export default function UserDialog({
           />
         </Tabs>
       )}
+      {/* The body scrolls, the title and the footer stay in view; with tabs, one height for both so
+          the dialog does not jump when the tab changes. */}
       <Box
-        role={showAccessTab ? 'tabpanel' : undefined}
-        id={showAccessTab ? 'user-tabpanel-identity' : undefined}
-        aria-labelledby={showAccessTab ? 'user-tab-identity' : undefined}
-        hidden={showAccessTab && resolvedTab !== 'identity'}
+        sx={{
+          height: showAccessTab ? 'min(600px, calc(100vh - 260px))' : undefined,
+          maxHeight: 'calc(100vh - 220px)',
+          overflowY: 'auto',
+        }}
       >
-        {identityPanel}
-      </Box>
-      {showAccessTab && accessMounted && (
         <Box
-          role="tabpanel"
-          id="user-tabpanel-access"
-          aria-labelledby="user-tab-access"
-          hidden={resolvedTab !== 'access'}
+          role={showAccessTab ? 'tabpanel' : undefined}
+          id={showAccessTab ? 'user-tabpanel-identity' : undefined}
+          aria-labelledby={showAccessTab ? 'user-tab-identity' : undefined}
+          hidden={showAccessTab && resolvedTab !== 'identity'}
         >
-          <DataAccessPanel
-            ref={accessRef}
-            open={open}
-            userId={String(userId)}
-            personName={accessName}
-            onStateChange={setAccessState}
-          />
+          {identityPanel}
         </Box>
-      )}
+        {showAccessTab && accessMounted && (
+          <Box
+            role="tabpanel"
+            id="user-tabpanel-access"
+            aria-labelledby="user-tab-access"
+            hidden={resolvedTab !== 'access'}
+          >
+            <DataAccessPanel
+              ref={accessRef}
+              open={open}
+              userId={String(userId)}
+              personName={accessName}
+              onStateChange={setAccessState}
+            />
+          </Box>
+        )}
+      </Box>
     </KanapDialog>
   );
 }
