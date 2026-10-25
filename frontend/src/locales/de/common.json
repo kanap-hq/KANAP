@@ -680,10 +680,20 @@
       "timeline": "Verlauf",
       "people": "Personen",
       "record": "Eintrag",
-      "source": "Quelle"
+      "source": "Quelle",
+      "basic": "Grunddaten",
+      "context": "Kontext",
+      "dates": "Daten",
+      "ip_addresses": "IP-Adressen"
     },
     "presets": {
       "applications": {
+        "enrichment": "Datenanreicherung"
+      },
+      "assets": {
+        "enrichment": "Datenanreicherung"
+      },
+      "tasks": {
         "enrichment": "Datenanreicherung"
       }
     },
@@ -757,6 +767,67 @@
         "authority_notification_required": "Meldung an Behörde erforderlich",
         "authority_notified_at": "Gemeldet am",
         "notified_parties": "Informierte Parteien"
+      },
+      "assets": {
+        "id": "ID",
+        "name": "Name",
+        "location_reference": "Standort",
+        "kind": "Asset-Typ",
+        "is_cluster": "Ist ein Cluster",
+        "status": "Lebenszyklus",
+        "go_live_date": "Inbetriebnahmedatum",
+        "end_of_life_date": "Datum Lebensende",
+        "notes": "Notizen",
+        "environment": "Umgebung",
+        "hostname": "Hostname",
+        "domain": "Domäne",
+        "admin_zone": "Administrationszone",
+        "aliases": "Aliase",
+        "operating_system": "Betriebssystem",
+        "cluster": "Cluster-Mitgliedschaft",
+        "ip_1_type": "IP-Typ 1",
+        "ip_1_address": "IP-Adresse 1",
+        "ip_1_subnet_cidr": "IP-Subnetz 1 (CIDR)",
+        "ip_2_type": "IP-Typ 2",
+        "ip_2_address": "IP-Adresse 2",
+        "ip_2_subnet_cidr": "IP-Subnetz 2 (CIDR)",
+        "ip_3_type": "IP-Typ 3",
+        "ip_3_address": "IP-Adresse 3",
+        "ip_3_subnet_cidr": "IP-Subnetz 3 (CIDR)",
+        "ip_4_type": "IP-Typ 4",
+        "ip_4_address": "IP-Adresse 4",
+        "ip_4_subnet_cidr": "IP-Subnetz 4 (CIDR)",
+        "vulnerabilities_to_review": "Zu prüfende Schwachstellen",
+        "severe_vulnerabilities": "Schwerwiegende Schwachstellen"
+      },
+      "tasks": {
+        "id": "ID",
+        "title": "Titel",
+        "description": "Beschreibung",
+        "task_type_name": "Aufgabentyp",
+        "related_object_type": "Typ des verknüpften Objekts",
+        "related_object_id": "ID des verknüpften Objekts",
+        "related_object_name": "Name des verknüpften Objekts",
+        "phase_name": "Phase",
+        "priority_level": "Priorität",
+        "category_name": "Kategorie",
+        "stream_name": "Stream",
+        "source_name": "Quelle",
+        "company_name": "Unternehmen",
+        "status": "Status",
+        "start_date": "Startdatum",
+        "due_date": "Fälligkeitsdatum",
+        "assignee_email": "E-Mail Zuständige/r",
+        "creator_email": "E-Mail Antragsteller/in",
+        "viewer_email_1": "E-Mail Beobachter/in 1",
+        "viewer_email_2": "E-Mail Beobachter/in 2",
+        "viewer_email_3": "E-Mail Beobachter/in 3",
+        "viewer_email_4": "E-Mail Beobachter/in 4",
+        "owner_email_1": "E-Mail Verantwortliche/r 1",
+        "owner_email_2": "E-Mail Verantwortliche/r 2",
+        "owner_email_3": "E-Mail Verantwortliche/r 3",
+        "owner_email_4": "E-Mail Verantwortliche/r 4",
+        "labels": "Labels"
       }
     }
   },
