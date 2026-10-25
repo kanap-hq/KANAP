@@ -22,6 +22,13 @@ export type ContractDetail = {
   supplier_name?: string | null;
   company_name?: string | null;
   owner_name?: string | null;
+  /** The contract's place in the cost centre tree (a group or a centre), when it has one. */
+  cost_center_id?: string | null;
+  cost_center_name?: string | null;
+  /** False for a limited person whose access does not let them modify it; absent without a data access. */
+  editable?: boolean;
+  /** A limited person opened it through one of its lines: its documents stay closed, counted here. */
+  closed_documents_count?: number;
   term_index?: number;
   current_term_end?: string;
   next_cancellation_deadline?: string | null;
@@ -41,6 +48,7 @@ export type ContractPatch = Partial<{
   name: string;
   supplier_id: string;
   company_id: string;
+  cost_center_id: string | null;
   owner_user_id: string | null;
   start_date: string;
   duration_months: number;
