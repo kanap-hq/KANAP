@@ -50,7 +50,8 @@ import { projectParticipantCondition, resolveBusinessContributorScope } from '..
 import { PermissionLevel } from '../permissions/permissions.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
-import { incidentViewerFromRequest } from '../incidents/incident-visibility';
+import { incidentViewerFromRequest, resolveIncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
+import { applyDataAccess } from '../data-access/data-access';
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -612,14 +613,26 @@ export class TasksController {
       await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
       // Require the caller to be an authenticated tenant user with >= reader on tasks; the
       // attachment is then read under the person's data access (spec §6.3).
-      const allowed = await this.knowledge.canAccessInlineAttachment(
-        runner.manager, tenantId, refreshToken, 'tasks', { applyDataAccess: true },
+      const userId = await this.knowledge.resolveInlineAttachmentViewer(
+        runner.manager, tenantId, refreshToken, 'tasks',
       );
-      // Only embedded images (source_field set) are served on this inline route.
-      const rows = allowed
+      if (userId) await applyDataAccess(runner.manager, userId);
+      // Only embedded images (source_field set) are served on this inline route, and
+      // only when the image's task is not one of a restricted incident this person cannot see.
+      const params: unknown[] = [tenantId, attachmentId];
+      const incidentViewer = userId ? await resolveIncidentViewer(runner.manager, userId, tenantId) : null;
+      const taskVisibility = userId ? taskIncidentVisibilitySql('t', incidentViewer, params) : '';
+      const rows = userId
         ? await runner.query(
-          `SELECT storage_path, mime_type, size FROM task_attachments WHERE tenant_id = $1 AND id = $2 AND source_field IS NOT NULL LIMIT 1`,
-          [tenantId, attachmentId],
+          `SELECT ta.storage_path, ta.mime_type, ta.size
+           FROM task_attachments ta
+           JOIN tasks t ON t.id = ta.task_id AND t.tenant_id = ta.tenant_id
+           WHERE ta.tenant_id = $1
+             AND ta.id = $2
+             AND ta.source_field IS NOT NULL
+             ${taskVisibility}
+           LIMIT 1`,
+          params,
         )
         : [];
       if (!rows.length) {
