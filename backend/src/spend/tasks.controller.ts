@@ -310,7 +310,7 @@ export class TasksController {
     });
     if (!res) {
       const { NotFoundException } = await import('@nestjs/common');
-      throw new NotFoundException('Task not found');
+      throw new NotFoundException('Item not found');
     }
     return res;
   }

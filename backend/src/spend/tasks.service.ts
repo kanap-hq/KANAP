@@ -1204,6 +1204,7 @@ export class TasksService {
        LIMIT 1`,
       params,
     );
-    if (rows.length === 0) throw new NotFoundException('Task not found');
+    // The same message a missing T-N gets from `resolveToUuid`: a hidden task is missing.
+    if (rows.length === 0) throw new NotFoundException('Item not found');
   }
 }

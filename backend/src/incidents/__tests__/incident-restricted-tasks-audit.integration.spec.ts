@@ -325,6 +325,16 @@ async function assertNotFound(promise: Promise<unknown>): Promise<void> {
   await assert.rejects(promise, (err: unknown) => err instanceof NotFoundException);
 }
 
+async function notFoundMessage(promise: Promise<unknown>): Promise<string> {
+  try {
+    await promise;
+  } catch (err) {
+    assert.ok(err instanceof NotFoundException);
+    return (err as Error).message;
+  }
+  throw new Error('expected a not found');
+}
+
 async function testTaskReads(): Promise<void> {
   await inRolledBackTransaction(async (runner) => {
     const s = await seed(runner, 'restricted-tasks');
@@ -364,6 +374,16 @@ async function testTaskReads(): Promise<void> {
       assert.equal(detail.id, s.restrictedTaskId, `the ${label} opens their task over HTTP`);
     }
     await assertNotFound(controller.getOne(s.restrictedTaskId, reqFor(s.readerId)));
+    const hiddenMessage = await notFoundMessage(controller.getOne('T-1', reqFor(s.readerId)));
+    const missingMessage = await notFoundMessage(controller.getOne('T-999', reqFor(s.readerId)));
+    assert.equal(hiddenMessage, missingMessage, 'a hidden T-N answers like a missing one');
+    assert.equal(hiddenMessage, 'Item not found');
+    const hiddenSubRoute = await notFoundMessage(svc.assertVisible(s.restrictedTaskId, undefined, {
+      manager: runner.manager,
+      tenantId: s.tenantId,
+      viewer: viewer(s.readerId, false),
+    }));
+    assert.equal(hiddenSubRoute, 'Item not found', 'a sub-route answers like a missing task');
     const thirdPage = await controller.list({}, reqFor(s.readerId));
     assert.equal(thirdPage.total, 1, 'a third person does not see the task in the list over HTTP');
 
