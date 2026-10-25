@@ -155,6 +155,19 @@ describe('DataAccessDialog', () => {
     }));
   });
 
+  it('shows Everything in the name only, with an empty type cell', async () => {
+    renderDialog();
+    await screen.findByText('Alpha Spain');
+    fireEvent.click(screen.getByRole('button', { name: 'admin:dataAccess.add' }));
+    fireEvent.click(screen.getByRole('button', { name: 'admin:dataAccess.types.everything' }));
+    const remove = await screen.findByRole('button', {
+      name: 'admin:dataAccess.remove|{"name":"admin:dataAccess.types.everything"}',
+    });
+    const row = remove.closest('li');
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getAllByText('admin:dataAccess.types.everything')).toHaveLength(1);
+  });
+
   it('asks before going back to all data, and keeps the limited access when refused', async () => {
     renderDialog();
     await screen.findByText('Alpha Spain');

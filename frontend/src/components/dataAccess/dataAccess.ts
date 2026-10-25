@@ -108,9 +108,9 @@ export function accessNodeName(node: AccessNode, t: TFunction): string {
   return node.name || node.code || '';
 }
 
-/** The type column of the dialog: company, cost center group or cost center, everything. */
+/** The type column of the dialog: company, cost center group or cost center; empty for everything. */
 export function accessNodeTypeLabel(node: AccessNode, t: TFunction): string {
-  if (node.type === 'all') return t('admin:dataAccess.types.everything');
+  if (node.type === 'all') return '';
   if (node.type === 'company') return t('admin:dataAccess.types.company');
   return node.kind === 'group'
     ? t('admin:dataAccess.types.costCenterGroup')
