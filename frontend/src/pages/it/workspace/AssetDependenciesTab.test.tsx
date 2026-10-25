@@ -442,7 +442,7 @@ describe('AssetDependenciesTab', () => {
   });
 
   it('offers each cluster of a host of several and writes the chosen one', async () => {
-    renderTab({
+    const { invalidated } = renderTab({
       clusters: { 'as-1': [
         { id: 'cl-1', name: 'FIRST-CL', status: 'active' },
         { id: 'cl-2', name: 'SECOND-CL', status: 'active' },
@@ -459,6 +459,12 @@ describe('AssetDependenciesTab', () => {
     fireEvent.click(screen.getByRole('radio', { name: /SECOND-CL/ }));
     fireEvent.click(screen.getByRole('button', { name: 'components.clusterPlacement.placeInCluster' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/cl-2/relations/contains', { id: 'as-9' }));
+
+    // The host's own list stays empty: the message says where the link went, and the page reads again.
+    expect(await screen.findByText('workspace.asset.relations.placementLinked(cluster=SECOND-CL)')).toBeTruthy();
+    await waitFor(() => expect(invalidated(assetRelationsKey('as-1'))).toBe(true));
+    expect(invalidated(['asset-relations-tab'])).toBe(true);
+    expect(invalidated(['asset-impact'])).toBe(true);
   });
 
   it('shows the refusal of the server when the host is already covered by its cluster', async () => {

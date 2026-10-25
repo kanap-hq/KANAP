@@ -2301,7 +2301,8 @@
         "containsHint": "Activos alojados en este, por ejemplo VM.",
         "alsoContainedBy": "También contenido en {{names}}",
         "via": "Vía",
-        "placementReplaced": "{{cluster}} sustituye el vínculo entre {{hosts}} y {{asset}}."
+        "placementReplaced": "{{cluster}} sustituye el vínculo entre {{hosts}} y {{asset}}.",
+        "placementLinked": "Vínculo colocado en {{cluster}}."
       }
     },
     "technology": {

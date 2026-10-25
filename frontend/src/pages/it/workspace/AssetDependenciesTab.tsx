@@ -53,7 +53,7 @@ export default function AssetDependenciesTab({ assetId }: { assetId: string }) {
   const locale = useLocale();
   const theme = useTheme();
   const placement = usePlacementQuestion();
-  const [placementReplaced, setPlacementReplaced] = React.useState<string | null>(null);
+  const [placementNotice, setPlacementNotice] = React.useState<string | null>(null);
   const canEdit = hasLevel('infrastructure', 'member');
   const relationsKey = assetRelationsKey(assetId);
   const groupOf = React.useCallback((kind: string) => (DIRECTION_SET.has(kind) ? 'assets' : undefined), []);
@@ -96,10 +96,15 @@ export default function AssetDependenciesTab({ assetId }: { assetId: string }) {
       );
       const replaced = res.data?.replaced_host_links ?? [];
       if (replaced.length > 0) {
-        setPlacementReplaced(t('workspace.asset.relations.placementReplaced', {
+        setPlacementNotice(t('workspace.asset.relations.placementReplaced', {
           cluster: replaced[0].cluster_name,
           hosts: joinNames(Array.from(new Set(replaced.map((row) => row.host_name))), locale),
           asset: replaced[0].asset_name,
+        }));
+      } else if (answer.clusterId) {
+        // The cluster carries the link: say where it went, the host's own list does not change.
+        setPlacementNotice(t('workspace.asset.relations.placementLinked', {
+          cluster: answer.clusterName ?? '',
         }));
       }
     } catch (e) {
@@ -213,12 +218,12 @@ export default function AssetDependenciesTab({ assetId }: { assetId: string }) {
       {placement.placementDialog}
 
       <Snackbar
-        open={!!placementReplaced}
+        open={!!placementNotice}
         autoHideDuration={5000}
-        onClose={() => setPlacementReplaced(null)}
+        onClose={() => setPlacementNotice(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
       >
-        <Alert severity="success" variant="filled">{placementReplaced}</Alert>
+        <Alert severity="success" variant="filled">{placementNotice}</Alert>
       </Snackbar>
     </Stack>
   );

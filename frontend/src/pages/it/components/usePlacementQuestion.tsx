@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { KanapDialog } from '../../../components/design';
 
-export type PlacementOutcome = { status: 'cancelled' } | { status: 'ok'; clusterId: string | null };
+export type PlacementOutcome =
+  | { status: 'cancelled' }
+  | { status: 'ok'; clusterId: string | null; clusterName?: string | null };
 
 export type PlacementInput = {
   /** The host the link comes from: the page in `contains`, the chosen container in `contained_by`. */
@@ -120,7 +122,8 @@ export default function usePlacementQuestion() {
         setPending({ host, clusters: choices, resolve });
       }).finally(() => setPending(null));
       if (answer === null) return { status: 'cancelled' };
-      return { status: 'ok', clusterId: answer === HOST_ONLY ? null : answer };
+      const chosen = answer === HOST_ONLY ? null : choices.find((choice) => choice.id === answer) ?? null;
+      return { status: 'ok', clusterId: chosen?.id ?? null, clusterName: chosen?.name ?? null };
     } catch {
       return { status: 'ok', clusterId: null };
     }

@@ -2301,7 +2301,8 @@
         "containsHint": "Von diesem Asset gehostete Assets, zum Beispiel VMs.",
         "alsoContainedBy": "Auch enthalten in {{names}}",
         "via": "Über",
-        "placementReplaced": "{{cluster}} ersetzt die Verknüpfung zwischen {{hosts}} und {{asset}}."
+        "placementReplaced": "{{cluster}} ersetzt die Verknüpfung zwischen {{hosts}} und {{asset}}.",
+        "placementLinked": "Verknüpfung auf {{cluster}} gelegt."
       }
     },
     "technology": {

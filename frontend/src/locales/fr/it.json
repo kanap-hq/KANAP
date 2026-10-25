@@ -2301,7 +2301,8 @@
         "containsHint": "Actifs hébergés par celui-ci, par exemple des VM.",
         "alsoContainedBy": "Aussi contenu dans {{names}}",
         "via": "Via",
-        "placementReplaced": "{{cluster}} remplace le lien entre {{hosts}} et {{asset}}."
+        "placementReplaced": "{{cluster}} remplace le lien entre {{hosts}} et {{asset}}.",
+        "placementLinked": "Lien posé sur {{cluster}}."
       }
     },
     "technology": {
