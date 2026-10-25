@@ -1,6 +1,7 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
@@ -9,8 +10,9 @@ import ConnectionWorkspacePage from './ConnectionWorkspacePage';
 
 const apiGet = vi.hoisted(() => vi.fn());
 const apiPatch = vi.hoisted(() => vi.fn());
+const apiPost = vi.hoisted(() => vi.fn());
 
-vi.mock('../../api', () => ({ default: { get: apiGet, patch: apiPatch, post: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: apiGet, patch: apiPatch, post: apiPost, delete: vi.fn() } }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({ default: () => ({ data: undefined }) }));
 vi.mock('../../hooks/useItOpsEnumOptions', () => {
@@ -43,6 +45,7 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
     <div>
       <nav>{props.tabs.map((tab: any) => <span key={tab.key}>{tab.label}</span>)}</nav>
       <h1>{props.title || props.titleFallback}</h1>
+      <header>{props.actions}</header>
       <main>{props.children}</main>
     </div>
   ),
@@ -85,14 +88,16 @@ const CONNECTION = {
   updated_at: '2026-10-25T08:00:00.000Z',
 };
 
-function renderPage() {
+function renderPage(route = '/it/connections/c-1/overview') {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
-      <MemoryRouter initialEntries={['/it/connections/c-1/overview']}>
-        <Routes>
-          <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
-        </Routes>
-      </MemoryRouter>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={[route]}>
+          <Routes>
+            <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     </ThemeProvider>,
   );
 }
@@ -106,6 +111,7 @@ describe('ConnectionWorkspacePage: connection refusals and absorbed members', ()
   beforeEach(() => {
     apiGet.mockReset();
     apiPatch.mockReset();
+    apiPost.mockReset();
     apiGet.mockImplementation(async (url: string) => {
       if (url === '/connections/c-1') return { data: CONNECTION };
       if (url === '/connections/c-1/interface-links') return { data: { items: [] } };
@@ -126,6 +132,20 @@ describe('ConnectionWorkspacePage: connection refusals and absorbed members', ()
     apiPatch.mockRejectedValue({ response: { status: 400, data: { code: 'connection_same_endpoint' } } });
     await chooseDestination();
     expect(await screen.findByText(text)).toBeInTheDocument();
+  });
+
+  it('shows the create refusal above the form, where the Create button is', async () => {
+    apiPost.mockRejectedValue({ response: { status: 400, data: { code: 'connection_same_endpoint' } } });
+    renderPage('/it/connections/new/overview');
+    fireEvent.change(await screen.findByPlaceholderText('e.g., App tier to DB tier'), { target: { value: 'Same endpoint' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Source' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Destination' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('The source and the destination are the same asset.');
+    // The page alert sits above the workspace, not at the bottom of the form.
+    expect(alert.closest('main')).toBeNull();
   });
 
   it('names the members the server left out of the list', async () => {
