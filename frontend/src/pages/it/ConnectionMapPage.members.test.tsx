@@ -10,7 +10,8 @@ import ConnectionMapPage from './ConnectionMapPage';
 const get = vi.hoisted(() => vi.fn());
 
 const translation = vi.hoisted(() => ({
-  t: (key: string) => key,
+  t: (key: string, options?: { count?: number }) =>
+    (key === 'pages.connectionMap.hiddenMembers' && options?.count !== undefined ? `hidden:${options.count}` : key),
   i18n: { language: 'en', resolvedLanguage: 'en' },
 }));
 vi.mock('react-i18next', () => ({ initReactI18next: { type: '3rdParty', init: () => undefined }, useTranslation: () => translation }));
@@ -21,8 +22,9 @@ const enums = vi.hoisted(() => ({ settings: null, byField: {}, labelFor: () => '
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({ default: () => enums }));
 vi.mock('../../components/LightModeIsland', () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 type RecordedLink = { id: string; source: string | { id: string }; target: string | { id: string } };
+type RecordedNode = { id: string; hiddenMembers?: number; hiddenMembersLabel?: string };
 type RecordedProps = {
-  nodes: Array<{ id: string }>;
+  nodes: RecordedNode[];
   links: RecordedLink[];
   clusterMemberships: Array<{ cluster_id: string; server_id: string }>;
 };
@@ -41,6 +43,15 @@ const CLUSTER = {
 const MEMBER_1 = { id: 'm-1', name: 'M1', kind: 'server', environment: 'prod', network_segment: null, hosting_category: null, implicit_member: true };
 const MEMBER_2 = { id: 'm-2', name: 'M2', kind: 'server', environment: 'prod', network_segment: null, hosting_category: null, implicit_member: true };
 const ENTITY = { id: 'entity:dmz', name: 'DMZ', kind: 'entity', environment: null, network_segment: null, hosting_category: null };
+const TWELVE_MEMBERS = Array.from({ length: 12 }, (_, index) => ({
+  id: `m-${index + 1}`,
+  name: `M${index + 1}`,
+  kind: 'server',
+  environment: 'prod',
+  network_segment: null,
+  hosting_category: null,
+  implicit_member: true,
+}));
 
 const FIREWALL = { id: 'fw-1', name: 'FW', kind: 'server', environment: 'prod', network_segment: null, hosting_category: null };
 
@@ -107,6 +118,18 @@ const MAP_WITH_FIREWALL = {
   nodes: [CLUSTER, MEMBER_1, MEMBER_2, ENTITY, FIREWALL],
   connections: [connection('c-1', 'cl-1', 'dmz'), serverConnection('c-2', 'cl-1', 'fw-1')],
   clusterMemberships: MAP.clusterMemberships,
+};
+
+const MAP_WITH_TWELVE_MEMBERS = {
+  environment: 'prod',
+  lifecycles: ['active'],
+  nodes: [
+    { ...CLUSTER, member_server_ids: TWELVE_MEMBERS.map((member) => member.id) },
+    ...TWELVE_MEMBERS,
+    ENTITY,
+  ],
+  connections: [connection('c-1', 'cl-1', 'dmz')],
+  clusterMemberships: TWELVE_MEMBERS.map((member) => ({ cluster_id: 'cl-1', server_id: member.id })),
 };
 
 function renderPage(map: unknown, entry = '/it/connection-map') {
@@ -200,5 +223,25 @@ describe('ConnectionMapPage cluster members', () => {
     renderPage(MAP_WITH_FIREWALL, '/it/connection-map?rootIds=fw-1');
     await waitFor(() => expect(graphNodeIds()).toEqual(['cl-1', 'm-1', 'm-2', 'entity:dmz', 'fw-1']));
     expect(graph.props?.links.map((link) => link.id)).toEqual(['c-1', 'c-2']);
+  });
+
+  it('folds the twelve members of a cluster to ten and counts two', async () => {
+    renderPage(MAP_WITH_TWELVE_MEMBERS);
+    await waitFor(() => expect(graph.props?.nodes).toHaveLength(12));
+    const clusterAndMembers = (graph.props?.nodes ?? []).filter((node) => node.id !== 'entity:dmz');
+    expect(clusterAndMembers).toHaveLength(11);
+    expect(graph.props?.nodes[0]).toMatchObject({ id: 'cl-1', hiddenMembers: 2, hiddenMembersLabel: 'hidden:2' });
+    expect(graphNodeIds()).toContain('m-10');
+    expect(graphNodeIds()).not.toContain('m-11');
+    expect(graphNodeIds()).not.toContain('m-12');
+    expect(graph.props?.clusterMemberships).toHaveLength(10);
+  });
+
+  it('shows a folded member taken as a start', async () => {
+    renderPage(MAP_WITH_TWELVE_MEMBERS, '/it/connection-map?rootIds=m-12');
+    await waitFor(() => expect(graphNodeIds()).toContain('m-12'));
+    expect(graphNodeIds()).not.toContain('m-10');
+    expect(graphNodeIds()).not.toContain('m-11');
+    expect(graph.props?.nodes[0].hiddenMembers).toBe(2);
   });
 });

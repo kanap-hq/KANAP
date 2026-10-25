@@ -38,7 +38,7 @@ import ViaAssetNames from '../../components/workspace/ViaAssetNames';
 import api from '../../api';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import ConnectionMapGraph, { ClusterMembership, ConnectionMapLink, ConnectionMapNode, GraphControlsApi } from './components/ConnectionMapGraph';
-import { withImplicitMembers } from './connectionMapMembers';
+import { foldMembers, withImplicitMembers } from './connectionMapMembers';
 
 import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../utils/applicationClassification';
@@ -659,6 +659,14 @@ export default function ConnectionMapPage() {
     );
   }, [filteredGraph.nodes, clusterMembershipsRaw]);
 
+  // The options and the panel keep the unfolded graph: a folded member stays selectable as a start.
+  const foldedGraph = React.useMemo(() => foldMembers(
+    filteredGraph,
+    clusterMemberships,
+    rootNodeIds,
+    (count) => t('pages.connectionMap.hiddenMembers', { count }),
+  ), [filteredGraph, clusterMemberships, rootNodeIds, t]);
+
   React.useEffect(() => {
     if (selectedNodeId && !filteredGraph.nodes.some((n) => n.id === selectedNodeId)) {
       setSelectedNodeId(null);
@@ -1142,9 +1150,9 @@ export default function ConnectionMapPage() {
 
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <ConnectionMapGraph
-              nodes={filteredGraph.nodes}
+              nodes={foldedGraph.nodes}
               links={filteredGraph.links}
-              clusterMemberships={clusterMemberships}
+              clusterMemberships={foldedGraph.memberships}
               selectedNodeId={selectedNodeId}
               selectedLinkId={selectedLinkId}
               frozen={isFrozen}

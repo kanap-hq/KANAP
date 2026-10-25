@@ -805,7 +805,9 @@
         "entity": "Entitäten",
         "cluster": "Cluster",
         "server": "Server"
-      }
+      },
+      "hiddenMembers_one": "{{count}} weiteres Mitglied",
+      "hiddenMembers_other": "{{count}} weitere Mitglieder"
     },
     "administrationView": {
       "tabs": {
