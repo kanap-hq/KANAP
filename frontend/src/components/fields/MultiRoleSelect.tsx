@@ -34,6 +34,8 @@ export default function MultiRoleSelect({
   const { t } = useTranslation('common');
   const label = labelProp ?? t('selects.roles');
   const naked = hideLabel || label === '';
+  // A hidden label still names the field for assistive technology; the placeholder must not.
+  const ariaLabel = naked && label ? label : undefined;
   const { data, isLoading } = useQuery({
     queryKey: ['roles'],
     queryFn: async () => {
@@ -73,6 +75,7 @@ export default function MultiRoleSelect({
           variant="standard"
           sx={textFieldSx}
           placeholder={naked && selectedRoles.length === 0 ? t('selects.notSet') : undefined}
+          inputProps={ariaLabel ? { ...params.inputProps, 'aria-label': ariaLabel } : params.inputProps}
           error={error}
           helperText={helperText}
           InputProps={{
