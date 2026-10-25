@@ -2284,6 +2284,7 @@
         "contains": "Contient",
         "containedBy": "Contenu dans",
         "dependedOnBy": "Requis par",
+        "throughMembers": "Par les membres ({{count}})",
         "deleteAttachmentConfirm": "Supprimer la pièce jointe « {{name}} » ?",
         "empty": {
           "contains": "Ne contient aucun actif.",
@@ -2293,6 +2294,7 @@
         },
         "containsHint": "Actifs hébergés par celui-ci, par exemple des VM.",
         "alsoContainedBy": "Aussi contenu dans {{names}}",
+        "via": "Via",
         "placementReplaced": "{{cluster}} remplace le lien entre {{hosts}} et {{asset}}."
       }
     },

@@ -65,6 +65,30 @@ function relations(): AssetRelationsData {
   };
 }
 
+/** A cluster: one dependency of its own, and two carried by its members (folded). */
+function clusterRelations(): AssetRelationsData {
+  const data = relations();
+  data.assets.contains = [];
+  data.assets.contained_by = [];
+  data.assets.depends_on = [asset('as-6', 'AST-6', 'backup-01')];
+  data.assets.depended_on_by = [];
+  data.assets.depends_on_through_members = [
+    {
+      ...asset('as-4', 'AST-4', 'san-01'),
+      via: [
+        { id: 'as-3', name: 'esx-host-01' },
+        { id: 'as-7', name: 'esx-host-02' },
+      ],
+    },
+    {
+      ...asset('as-8', 'AST-8', 'nas-02'),
+      via: [{ id: 'as-7', name: 'esx-host-02' }],
+    },
+  ];
+  data.counts = { assets: 1, total: 0 };
+  return data;
+}
+
 function Location() {
   const location = useLocation();
   return <div data-testid="location">{location.pathname}</div>;
@@ -146,6 +170,52 @@ describe('AssetDependenciesTab', () => {
 
     fireEvent.click(within(screen.getByRole('region', { name: A('containedBy') })).getByText('esx-host-01'));
     expect(screen.getByTestId('location')).toHaveTextContent('/it/assets/AST-3/overview');
+  });
+
+  it('folds what the members of a cluster depend on, closed first and opened on click', async () => {
+    renderTab({ relations: clusterRelations() });
+    await screen.findByText('backup-01');
+    const region = screen.getByRole('region', { name: A('dependsOn') });
+    const toggle = within(region).getByRole('button', { name: 'workspace.asset.relations.throughMembers(count=2)' });
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(within(region).queryByText('san-01')).toBeNull();
+    // The section count and the Dependencies badge count the direct rows only.
+    expect(within(region).getByText('1')).toBeTruthy();
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(within(region).getByText('san-01')).toBeTruthy();
+    expect(within(region).getByText('nas-02')).toBeTruthy();
+    expect(within(region).getByText('esx-host-01')).toBeTruthy();
+    expect(within(region).getAllByText('esx-host-02')).toHaveLength(2);
+    expect(within(region).getByText('workspace.asset.relations.via')).toBeTruthy();
+    // A carried dependency has no action of its own.
+    expect(within(region).queryByRole('button', { name: /relations\.remove/ })).toBeTruthy();
+    expect(within(region).queryByRole('button', { name: /san-01|nas-02/ })).toBeNull();
+
+    fireEvent.click(within(region).getByText('san-01'));
+    expect(screen.getByTestId('location')).toHaveTextContent('/it/assets/AST-4/overview');
+  });
+
+  it('shows the folded line of a cluster whose only dependencies come from its members', async () => {
+    const data = clusterRelations();
+    data.assets.depends_on = [];
+    data.counts.assets = 0;
+    renderTab({ relations: data });
+    const region = screen.getByRole('region', { name: A('dependsOn') });
+    const toggle = await within(region).findByRole('button', { name: 'workspace.asset.relations.throughMembers(count=2)' });
+    expect(within(region).queryByText('workspace.asset.relations.empty.dependsOn')).toBeNull();
+    expect(within(region).queryByText('workspace.asset.relations.via')).toBeNull();
+    fireEvent.click(toggle);
+    expect(within(region).getByText('workspace.asset.relations.via')).toBeTruthy();
+    expect(within(region).getByText('san-01')).toBeTruthy();
+  });
+
+  it('adds no folded line or Via column on a server', async () => {
+    renderTab();
+    await screen.findByText('san-01');
+    expect(screen.queryByRole('button', { name: /throughMembers/ })).toBeNull();
+    expect(screen.queryByText('workspace.asset.relations.via')).toBeNull();
   });
 
   it('explains Contains in a tooltip on its title, and no other direction', async () => {

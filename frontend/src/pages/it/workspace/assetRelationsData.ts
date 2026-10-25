@@ -13,11 +13,17 @@ export type AssetDirection = (typeof ASSET_DIRECTIONS)[number];
 
 export type AssetTaskRow = { id: string; item_number: number | null; title: string; status: string | null; assignee_name: string | null; due_date: string | null };
 
+/** A dependency a cluster carries through its members, with those members in `via`. */
+export type AssetMemberDependencyRow = AssetRelationRow & { via: Array<{ id: string; name: string }> };
+
 /** `GET /assets/:id/relations-tab`: the data of the Dependencies and Relations tabs and of their badges. */
 export type AssetRelationsData = {
   year: number;
   budget_column: { key: string; label: string };
-  assets: Record<AssetDirection, AssetRelationRow[]>;
+  assets: Record<AssetDirection, AssetRelationRow[]> & {
+    /** A cluster only, absent on any other asset: what its members in service depend on. */
+    depends_on_through_members?: AssetMemberDependencyRow[];
+  };
   budget_lines: BudgetLineRow[] | null;
   /** The linked lines `budget_lines` leaves out, counted: outside the caller's data access, or all without the budget right. */
   budget_lines_hidden?: number;

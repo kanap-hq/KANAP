@@ -2284,6 +2284,7 @@
         "contains": "Enthält",
         "containedBy": "Enthalten in",
         "dependedOnBy": "Benötigt von",
+        "throughMembers": "Durch Mitglieder ({{count}})",
         "deleteAttachmentConfirm": "Anhang „{{name}}“ löschen?",
         "empty": {
           "contains": "Enthält kein Asset.",
@@ -2293,6 +2294,7 @@
         },
         "containsHint": "Von diesem Asset gehostete Assets, zum Beispiel VMs.",
         "alsoContainedBy": "Auch enthalten in {{names}}",
+        "via": "Über",
         "placementReplaced": "{{cluster}} ersetzt die Verknüpfung zwischen {{hosts}} und {{asset}}."
       }
     },

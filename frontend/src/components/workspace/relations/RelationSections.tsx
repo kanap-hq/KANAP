@@ -42,6 +42,8 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
           );
         }
         const rows = section.rows as AnyRow[];
+        const foldedRows = (section.folded?.rows ?? []) as AnyRow[];
+        const hasRows = rows.length > 0 || foldedRows.length > 0;
         const linkedIds = section.linkedIds ? section.linkedIds(rows) : new Set(rows.map((row) => row.id));
         const editable = canEdit && (section.editable ?? true);
         return (
@@ -66,13 +68,14 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
                 onClose={() => setAdding(null)}
               />
             )}
-            {rows.length === 0 ? (
+            {!hasRows ? (
               <RelationsEmpty>{outside ?? section.empty}</RelationsEmpty>
             ) : (
               <RelationsTable
                 ariaLabel={section.title}
                 columns={section.columns}
                 rows={rows}
+                folded={section.folded}
                 rowKey={(row) => row.id}
                 rowHref={section.href}
                 linkRows
