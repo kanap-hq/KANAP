@@ -941,10 +941,11 @@ export class ConnectionsListService extends ConnectionsBaseService {
       implicit_member: !namedIds.has(row.id),
     }));
 
-    // Build flat array of cluster memberships for frontend graph force
-    const clusterMemberships = clusterMemberRows
-      .filter((r) => assetIds.has(r.cluster_id) && assetIds.has(r.asset_id))
-      .map((r) => ({ cluster_id: r.cluster_id, server_id: r.asset_id }));
+    // Build flat array of cluster memberships for frontend graph force, from the members in
+    // service of each drawn cluster (a retired cluster passes no member).
+    const clusterMemberships = Array.from(membersByCluster.entries()).flatMap(([clusterId, members]) =>
+      members.map((member) => ({ cluster_id: clusterId, server_id: member.id })),
+    );
 
     const entityNodes = Array.from(entityCodes).map((code) => ({
       id: `entity:${code}`,

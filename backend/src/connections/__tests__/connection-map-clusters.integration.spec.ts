@@ -74,10 +74,13 @@ async function run() {
     const memberB = await seedAsset(runner, tenantA, 'Member B');
     const retired = await seedAsset(runner, tenantA, 'Retired member', { retired: true });
     const emptyCluster = await seedAsset(runner, tenantA, 'Empty cluster', { cluster: true });
+    const retiredCluster = await seedAsset(runner, tenantA, 'Retired cluster', { cluster: true, retired: true });
+    const retiredClusterMember = await seedAsset(runner, tenantA, 'Member of a retired cluster');
     const other = await seedAsset(runner, tenantA, 'Other server');
     await addMember(runner, tenantA, cluster, memberA);
     await addMember(runner, tenantA, cluster, memberB);
     await addMember(runner, tenantA, cluster, retired);
+    await addMember(runner, tenantA, retiredCluster, retiredClusterMember);
 
     // The cluster is an endpoint, one member is also named by another connection.
     await runner.query(
@@ -94,6 +97,12 @@ async function run() {
       `INSERT INTO connections (tenant_id, name, topology, source_entity_code, destination_asset_id, lifecycle)
        VALUES ($1, 'Empty cluster flow', 'server_to_server', 'dmz', $2, 'active')`,
       [tenantA, emptyCluster],
+    );
+    // A retired cluster named by a connection is drawn, but passes none of its members.
+    await runner.query(
+      `INSERT INTO connections (tenant_id, name, topology, source_entity_code, destination_asset_id, lifecycle)
+       VALUES ($1, 'Retired cluster flow', 'server_to_server', 'dmz', $2, 'active')`,
+      [tenantA, retiredCluster],
     );
     // A multi-server connection names the cluster and another server, never its members.
     const [multi] = await runner.query(
@@ -135,13 +144,19 @@ async function run() {
     assert.deepEqual(nodes.get(emptyCluster).member_server_ids, []);
     assert.equal(nodes.get(memberB).graph_tier, 'top', 'the member takes the cluster role tier');
 
+    const memberships = map.clusterMemberships ?? [];
     assert.deepEqual(
-      (map.clusterMemberships ?? [])
+      memberships
         .filter((row: any) => row.cluster_id === cluster)
         .map((row: any) => row.server_id)
         .sort(),
       [memberA, memberB].sort(),
     );
+    assert.deepEqual(memberships.filter((row: any) => row.server_id === retired), [], 'a retired member of a drawn cluster');
+    assert.equal(nodes.has(retiredClusterMember), false, 'a retired cluster passes no member');
+    assert.deepEqual(nodes.get(retiredCluster).member_server_ids, []);
+    assert.deepEqual(memberships.filter((row: any) => row.cluster_id === retiredCluster), []);
+    assert.equal(memberships.some((row: any) => row.server_id === retiredClusterMember), false);
 
     const multiDto = map.connections.find((row: any) => row.name === 'Multi list')!;
     assert.deepEqual([...multiDto.server_ids].sort(), [cluster, other].sort());
