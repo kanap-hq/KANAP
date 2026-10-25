@@ -47,9 +47,9 @@ El **Declarante** es usted por defecto. Ambas fechas admiten valores pasados: un
 
 Estos permisos cubren también la revisión del incidente y la exportación PDF: quien trabaja con incidentes no necesita ningún permiso sobre la base de conocimiento para redactar la revisión. Consulte [Vista general](#vista-general).
 
-Un incidente restringido queda oculto para todos excepto los administradores del registro, el declarante y el responsable. En un espacio de trabajo de fábrica eso equivale a Administrador y Administrador de panorama IT, más quien lo registró o es responsable de la ficha. Un lector o colaborador que no sea el declarante ni el responsable no lo ve en la lista, en la búsqueda, en el chat ni en la exportación CSV: abrirlo por su referencia devuelve el mismo «no encontrado» que un número inexistente. Las tareas vinculadas conservan la referencia `INC-N` pero sin el título. La revisión del incidente está sujeta a la misma restricción, se llegue a ella por donde se llegue: base de conocimiento, búsqueda, asistente, exportaciones e imágenes pegadas en el texto.
+Un incidente restringido queda oculto para todos excepto los administradores del registro, el declarante y el responsable. En un espacio de trabajo de fábrica eso equivale a Administrador y Administrador de panorama IT, más quien lo registró o es responsable de la ficha. Un lector o colaborador que no sea el declarante ni el responsable no lo ve en la lista, en la búsqueda, en el chat ni en la exportación CSV: abrirlo por su referencia devuelve el mismo «no encontrado» que un número inexistente. Sus tareas vinculadas también les quedan ocultas: en la lista de tareas, en la búsqueda, en el panel de control, en Plaid y entre los objetos vinculados. La revisión del incidente está sujeta a la misma restricción, se llegue a ella por donde se llegue: base de conocimiento, búsqueda, asistente, exportaciones e imágenes pegadas en el texto.
 
-**Restringir a los administradores del registro** está en el cajón de propiedades, bajo Clasificación. Un colaborador puede activarlo mientras aún vea la ficha; solo un administrador puede desactivarlo, también después del cierre. El cambio se escribe en el diario. El registro de auditoría, las pastillas de relación documental y «vistos recientemente» siguen mostrando el título a quienes ya tienen esas pantallas.
+**Restringir a los administradores del registro** está en el cajón de propiedades, bajo Clasificación. Un colaborador puede activarlo mientras aún vea la ficha; solo un administrador puede desactivarlo, también después del cierre. El cambio se escribe en el diario. El registro de auditoría solo muestra las líneas de un incidente restringido, de su revisión y de sus tareas a las personas que ven el incidente, y las pastillas de relación documental omiten su título. Solo la lista «vistos recientemente», guardada en el navegador de cada persona, puede seguir mostrando el título a quien abrió el incidente antes de la restricción.
 
 ---
 
@@ -74,9 +74,9 @@ La lista es el registro en sí: todos los incidentes, con la detección más rec
 
 **Orden por defecto**: **Detectado** descendente (el más reciente primero).
 
-**Columnas adicionales** (ocultas por defecto, disponibles en el selector de columnas): **Cerrado**, **Aplicaciones**, **Creado**.
+**Columnas adicionales** (ocultas por defecto, disponibles en el selector de columnas): **Cerrado**, **Aplicaciones**, **Creado**, **Datos personales**, **Requiere notificación** y **Notificado el**. **Datos personales** y **Requiere notificación** ofrecen un filtro sí/no.
 
-**Filtrado**: Categoría, Gravedad, Estado y Responsable ofrecen filtros de casillas cuyas opciones se calculan a partir de los incidentes visibles, por lo que solo verá valores presentes en el conjunto de resultados. Las columnas de fecha ofrecen filtros de fecha, incluido un rango: filtre **Detectado** entre dos fechas para obtener un extracto trimestral o anual. La búsqueda cubre el título, la descripción, la referencia (`INC-14`) y los nombres y referencias de los activos y aplicaciones vinculados, de modo que una búsqueda por un nombre de host como `PAR-ESX-01` lista los incidentes de ese activo. Las palabras que solo aparecen en la revisión del incidente se encuentran mediante la búsqueda global y el asistente, no mediante este cuadro.
+**Filtrado**: Categoría, Gravedad, Estado y Responsable ofrecen filtros de casillas cuyas opciones se calculan a partir de los incidentes visibles, por lo que solo verá valores presentes en el conjunto de resultados. Las columnas de fecha ofrecen filtros de fecha, incluido un rango: filtre **Detectado** entre dos fechas para obtener un extracto trimestral o anual. La búsqueda cubre el título, la descripción, la referencia (`INC-14`) y los nombres y referencias de los activos y aplicaciones vinculados, de modo que una búsqueda por un nombre de host como `PAR-ESX-01` lista los incidentes de ese activo. Las palabras que solo aparecen en la revisión del incidente se encuentran mediante la búsqueda global y el asistente, no mediante este cuadro. La búsqueda global, el selector `@` de Plaid y el servidor MCP también encuentran un incidente por el nombre, la referencia `AST-N`, el nombre de host o el FQDN de sus activos vinculados.
 
 **Consejo**: combine Gravedad = Crítica, Mayor con un rango de **Detectado** para construir la lista corta que piden la mayoría de los comités de dirección y las auditorías.
 
@@ -142,7 +142,7 @@ Reescríbalas, elimine las que no necesite, añada las suyas. Para un incidente 
 
 Los títulos aparecen en el idioma de la persona que registra el incidente (inglés, francés, alemán o español). Una plantilla que sus administradores hayan reescrito conserva sus propios términos.
 
-La plantilla es un documento ordinario de la base de conocimiento, almacenado en la biblioteca **Plantillas** bajo el tipo de documento **Revisión del incidente**, de modo que un administrador de la base de conocimiento puede reescribirla para adaptarla a su propio formato de post-mortem. Una plantilla nueva se aplica a los incidentes registrados después y nunca reescribe una revisión que ya existe.
+La plantilla es un documento ordinario de la base de conocimiento, almacenado en la biblioteca **Plantillas** bajo el tipo de documento **Revisión del incidente**. Quien tenga `knowledge:admin` la edita como cualquier otro documento de esa biblioteca, para adaptarla a su propio formato de post-mortem. Una plantilla nueva se aplica a los incidentes registrados después y nunca reescribe una revisión que ya existe.
 
 Cada guardado que modifica la revisión conserva una versión, así que el texto puede releerse tal como estaba en cualquier momento, incluido el cierre del incidente. Consulte [Diario](#diario).
 
@@ -154,7 +154,7 @@ La revisión es en sí misma un documento de la base de conocimiento, con su pro
 
 El diario es lo que convierte esto en un registro y no en un formulario. Enumera todo lo que le ha ocurrido al incidente, de lo más reciente a lo más antiguo, y **nada de lo que contiene puede editarse ni eliminarse**, por nadie, en ningún momento.
 
-**Añadir una nota**: escríbala en el redactor de la parte superior y haga clic en **Añadir** (o pulse Ctrl+Intro). La fecha y la hora junto al botón fijan el momento al que se refiere la nota. La hora se escribe en formato de 24 horas (23:40). Por defecto es ahora, y puede situarla en el pasado: una nota añadida el martes puede registrarse como ocurrida a las 23:40 del sábado, y se ordenará en ese punto de la cronología. KANAP guarda por separado el momento en que la nota se grabó realmente, y esa marca de tiempo nunca es editable: así el registro retroactivo sigue siendo honesto.
+**Añadir una nota**: escríbala en el redactor de la parte superior y haga clic en **Añadir** (o pulse Ctrl+Intro). La fecha y la hora junto al botón fijan el momento al que se refiere la nota. La hora se escribe en formato de 24 horas (23:40). Por defecto es ahora, y puede situarla en el pasado: una nota añadida el martes puede registrarse como ocurrida a las 23:40 del sábado, y se ordenará en ese punto de la cronología. KANAP guarda por separado el momento en que la nota se grabó realmente, y nadie puede cambiarlo: así el registro retroactivo sigue siendo honesto. Cuando una nota se refiere a un momento anterior a su grabación, su fila muestra también la hora de registro, por ejemplo «registrada el 27 oct., 10:12». El informe PDF da las dos horas en dos columnas.
 
 **Las entradas automáticas** aparecen junto a sus notas:
 
@@ -196,7 +196,7 @@ Solo ve las secciones de los módulos que puede leer. Los activos y las tecnolog
 
 **Tareas**: el trabajo de seguimiento. Cree una tarea directamente desde el incidente y quedará vinculada a él. La tarea muestra «Incidente · INC-14» en su propia barra lateral, y la columna Tareas del incidente la cuenta.
 
-El enlace se hace únicamente desde el lado del incidente. Un activo, una aplicación o una tecnología vinculados muestran el incidente en una sección **Incidentes** de solo lectura en su propia pestaña Relaciones: quien mire un servidor verá su historial de incidencias. Los documentos y los adjuntos tienen sus propias pestañas.
+Un activo, una aplicación o una tecnología vinculados muestran el incidente en una sección **Incidentes** de su propia pestaña Relaciones: quien mire un servidor verá su historial de incidencias. Con `incidents:contributor`, también puede vincular un incidente desde allí. Los documentos y los adjuntos tienen sus propias pestañas.
 
 ---
 
@@ -226,11 +226,11 @@ Cerrar bloquea el incidente. Campos, revisión del incidente, notas del diario, 
 
 ### Eliminar un incidente
 
-**Eliminar** (`incidents:admin`) es un icono de papelera en la página del incidente y en la lista una vez seleccionadas las filas. Retira un registro que no tiene cabida en el registro de incidentes, como una entrada de prueba. Los demás usuarios no ven ni el botón ni la selección.
+**Eliminar** (`incidents:admin`) es un icono de papelera en la página del incidente y en la lista una vez seleccionadas las filas. Retira un incidente registrado por error, como un duplicado o una entrada de prueba. Solo se puede eliminar un incidente abierto, en curso o resuelto. Un incidente cerrado o cancelado permanece en el registro y conserva su número `INC-N`. Los demás usuarios no ven ni el botón ni la selección.
 
 Antes de retirar nada, una confirmación indica lo que se va con el incidente: su revisión de incidente, sus tareas, sus entradas del diario y sus adjuntos (también los archivos). También indica los vínculos que se quitan: las aplicaciones, los activos y los documentos de Knowledge se mantienen, solo desaparece su vínculo con el incidente. La eliminación queda registrada en la pista de auditoría.
 
-Un incidente con datos de notificación regulatoria no se puede eliminar: **Datos personales afectados** o **Requiere notificación a la autoridad** marcada, **Notificado el** o **Partes informadas** completados. Ese registro es evidencia de auditoría (notificación a la autoridad según NIS2, y artículo 33(5) del RGPD, que exige documentar toda violación de datos personales). La confirmación lo indica antes de hacer nada: cancele o cierre el incidente en su lugar. En una selección, esos incidentes se conservan y los demás se eliminan.
+Un incidente con datos de notificación regulatoria no se puede eliminar: **Datos personales afectados** o **Requiere notificación a la autoridad** marcada, **Notificado el** o **Partes informadas** completados. Ese registro es evidencia de auditoría (notificación a la autoridad según NIS2, y artículo 33(5) del RGPD, que exige documentar toda violación de datos personales). La confirmación lo indica antes de hacer nada: cancele o cierre el incidente en su lugar. En una selección, los incidentes que no se pueden eliminar se conservan y los demás se eliminan.
 
 ---
 
@@ -245,16 +245,20 @@ Los plazos y umbrales dependen de su jurisdicción y de su sector. KANAP registr
 
 **Lo que el registro aporta a un auditor**:
 
-- Una secuencia numerada continua, sin eliminaciones ni huecos
+- Una secuencia numerada en la que los incidentes cerrados y cancelados nunca se eliminan
 - Para cada incidente: cuándo empezó, cuándo se advirtió, cuándo se resolvió y se cerró, y quién era el responsable
 - Un diario imposible de reescribir, con cada cambio de estado y de gravedad fechado y atribuido
 - La evidencia en sí, como archivos adjuntos y documentos enlazados
 - La revisión del incidente, con la causa raíz, las acciones correctivas y las lecciones aprendidas, conservada versión a versión, y las tareas de seguimiento que demuestran que las acciones se llevaron a cabo
 - Vistas filtradas por periodo, gravedad, categoría o indicador de conformidad, directamente desde la lista
-- Una exportación CSV del registro (**Exportar CSV** en la lista), para los auditores y para su propio archivo. Los incidentes restringidos se omiten salvo que tenga derecho a verlos; el archivo incluye una columna importable **Restringir a los administradores del registro**
+- Una exportación CSV del registro (**Exportar CSV** en la lista), para los auditores y para su propio archivo. Sigue los filtros, la búsqueda y el orden de la lista, y cuando hay un filtro activo el diálogo indica cuántos incidentes se exportan. Los incidentes restringidos se omiten salvo que tenga derecho a verlos; el archivo incluye una columna importable **Restringir a los administradores del registro**
 - Un informe PDF de un solo incidente (**Exportar PDF** en el espacio de trabajo), para el auditor que quiere una ficha en lugar de todo el registro
 
-**Importar un registro existente**: **Importar CSV** en la lista acepta un archivo CSV. Deje la columna de referencia vacía para crear incidentes (KANAP asigna los siguientes números INC), o conserve la referencia INC-N para actualizar los registros correspondientes. Cada incidente importado recibe una entrada de diario que indica que procede de un archivo. Exporte primero si quiere la disposición exacta de las columnas.
+**Importar un registro existente**: **Importar CSV** en la lista acepta un archivo CSV. Deje la columna de referencia vacía para crear incidentes (KANAP asigna los siguientes números INC), o conserve la referencia INC-N para actualizar los registros correspondientes. Cada incidente importado recibe una entrada de diario que indica que procede de un archivo. Exporte primero, o descargue la plantilla vacía, si quiere la disposición exacta de las columnas. La plantilla no tiene en cuenta los filtros de la lista.
+
+Los encabezados, la gravedad y el estado se escriben en el idioma de la exportación. La importación acepta encabezados y valores en cualquiera de los cuatro idiomas, así como los códigos técnicos (`major`, `in_progress`).
+
+Un estado puede avanzar mediante un archivo. Hacerlo retroceder, o cancelar un incidente, requiere `incidents:admin`: el diario recibe entonces una reapertura o una cancelación con el motivo «Imported from CSV». Para un colaborador, esa línea se rechaza con un mensaje.
 
 El archivo lleva la **Descripción** breve en una columna y toda la **Revisión del incidente** en otra, como texto con formato. Esa única columna de revisión sustituye a las antiguas columnas Impacto, Causa raíz, Acciones correctivas y Lecciones aprendidas. Los títulos, las listas y los enlaces sobreviven al viaje de ida y vuelta; las imágenes pegadas no, porque viven en el documento. Una celda de revisión vacía deja intacto el texto existente.
 
@@ -274,11 +278,11 @@ El informe sigue el idioma de la interfaz (inglés, francés, alemán o español
 2. La descripción breve
 3. La revisión del incidente tal como está redactada en ese momento, con su formato y sus imágenes
 4. El diario en orden cronológico, incluidas las versiones de la revisión a las que remiten las entradas
-5. Los activos, aplicaciones, tareas y documentos vinculados
+5. Los activos, aplicaciones, tecnologías, tareas (con su asignado y su fecha límite) y documentos vinculados
 6. Los campos de conformidad
 7. Los archivos adjuntos (nombre de archivo, tamaño y fecha)
 
-Las secciones vacías se omiten, y una revisión que solo contenga los títulos intactos de la plantilla cuenta como vacía.
+Las secciones vacías se omiten, y una revisión que solo contenga los títulos intactos de la plantilla cuenta como vacía. Cada sección vinculada sigue los permisos del lector: los activos y las tecnologías requieren poder leer la infraestructura, las aplicaciones poder leer las aplicaciones (un Colaborador de negocio ve aquellas en las que participa) y las tareas poder leer las tareas. Una sección que usted no puede leer no aparece.
 
 La exportación es una lectura. Funciona en un incidente cerrado o cancelado; el registro permanece bloqueado. El botón no aparece en **Nuevo incidente**.
 
@@ -294,7 +298,7 @@ Mantenga la lista corta. Las categorías son aquello por lo que agrupará un añ
 
 ## Preguntar al asistente
 
-Plaid puede consultar el registro en el chat, con los mismos permisos que en el resto de la aplicación. Pídale un recuento (« ¿Cuántos incidentes críticos este trimestre? »), una lista filtrada (« Lista de incidentes abiertos en PAR-ESX-01 ») o una ficha completa (« Resumen de INC-2 »). Esta última incluye el diario y la revisión del incidente, de modo que una pregunta puede responderse a partir de la causa raíz o de las lecciones aprendidas. Un incidente restringido queda fuera de las respuestas, de los recuentos y de las fuentes, incluida su revisión.
+Plaid puede consultar el registro en el chat, con los mismos permisos que en el resto de la aplicación. Pídale un recuento (« ¿Cuántos incidentes críticos este trimestre? »), una lista filtrada (« Lista de incidentes abiertos en PAR-ESX-01 ») o una ficha completa (« Resumen de INC-2 »). Esta última incluye el diario y la revisión del incidente, de modo que una pregunta puede responderse a partir de la causa raíz o de las lecciones aprendidas. Las horas se dan en su propia zona horaria. Cuando Plaid lee un incidente, los objetos vinculados siguen los mismos permisos que el informe PDF. Un incidente restringido queda fuera de las respuestas, de los recuentos y de las fuentes, incluida su revisión.
 
 ---
 
