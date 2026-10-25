@@ -53,15 +53,14 @@ import {
 } from './contract-relations';
 import {
   contractBudgetCurrentYear,
-  contractBudgetParams,
-  contractBudgetSql,
+  contractBudgetRowsParams,
+  contractBudgetRowsSql,
   contractBudgetYears,
   contractFxRates,
   contractLinesFxMissing,
-  loadContractBudgetInputs,
   parseContractBudgetSelection,
-  readContractBudgetRows,
-  type ContractBudgetInputs,
+  readContractBudgetCoverage,
+  type ContractBudgetCoverage,
   type ContractBudgetRow,
   type ContractBudgetState,
 } from './contract-budget';
@@ -301,7 +300,7 @@ export class ContractsService {
   private listQuery(
     mg: EntityManager,
     query: any,
-    opts: { windowDays: number; exportAll?: boolean; omitFilters?: string[]; budget?: ContractBudgetInputs | null; compliance?: ContractComplianceInputs | null },
+    opts: { windowDays: number; exportAll?: boolean; omitFilters?: string[]; budget?: ContractBudgetCoverage | null; compliance?: ContractComplianceInputs | null },
   ) {
     const repo = mg.getRepository(Contract);
     const parsed = opts.exportAll
@@ -342,10 +341,11 @@ export class ContractsService {
       .leftJoin('cost_centers', 'ccn', 'ccn.id = c.cost_center_id AND ccn.tenant_id = c.tenant_id')
       .where('c.tenant_id = app_current_tenant()');
     if (budget) {
-      // One row per contract of the tenant for the one year asked for, computed once.
-      qb.addCommonTableExpression(contractBudgetSql({ contractIds: null }), 'cb', { materialized: true })
+      // One row per contract read, for the one year asked: the aggregates `readContractBudgetCoverage`
+      // computed outside the window when the person is limited, never a linked line.
+      qb.addCommonTableExpression(contractBudgetRowsSql(budget.rows), 'cb', { materialized: true })
         .leftJoin('cb', 'cb', 'cb.contract_id = c.id')
-        .setParameters(contractBudgetParams(budget));
+        .setParameters(contractBudgetRowsParams(budget.rows));
     }
     if (compliance) {
       // One row per contract of the tenant, computed once.
@@ -423,15 +423,32 @@ export class ContractsService {
 
   /**
    * The budget figures a list request asks for: its `budget_year` and `budget_column`, when the
-   * caller may read the budget (otherwise they are ignored). Their inputs cover every contract of
-   * the tenant, so the list can sort and filter on them.
+   * caller may read the budget (otherwise they are ignored). The contracts the list can show are
+   * read first, under the person's access (spec §5.4): a limited person's coverage comes from the
+   * window of `readContractBudgetCoverage`, which returns the per-contract aggregates only. An
+   * unscoped person reads every contract, as before.
    */
-  private async listBudgetInputs(mg: EntityManager, query: any, opts?: ListReadOptions): Promise<ContractBudgetInputs | null> {
+  private async listBudgetInputs(
+    mg: EntityManager,
+    query: any,
+    opts?: ListReadOptions & { offerYears?: boolean },
+  ): Promise<ContractBudgetCoverage | null> {
     if (!opts?.budgetAccess) return null;
     const selection = parseContractBudgetSelection(query, contractBudgetCurrentYear());
     if (!selection) return null;
     const tenantId = await this.sessionTenantId(mg);
-    return loadContractBudgetInputs({ fxRates: this.fxRates }, mg, tenantId, [selection.year], selection.column);
+    const contractIds: string[] | null = (await isLimitedTransaction(mg))
+      ? (await mg.query(`SELECT id FROM contracts WHERE tenant_id = app_current_tenant()`)).map((row: { id: string }) => row.id)
+      : null;
+    return readContractBudgetCoverage(
+      { fxRates: this.fxRates },
+      mg,
+      tenantId,
+      [selection.year],
+      selection.column,
+      contractIds,
+      opts?.offerYears ? { offerYears: { currentYear: contractBudgetCurrentYear() } } : undefined,
+    );
   }
 
   private async sessionTenantId(mg: EntityManager): Promise<string> {
@@ -487,10 +504,12 @@ export class ContractsService {
       : [];
     const latestById = new Map(latestTasks.map(t => [t.related_object_id, t]));
 
-    // The page's budget figures, from the same statement the list sorted and filtered on.
+    // The page's budget figures, from the aggregates the coverage computed (spec §5.4: the same
+    // figures the list sorted and filtered on, over every linked line of each visible contract).
+    const pageIds = new Set(contractIds);
     const budgetById = new Map<string, ContractBudgetRow>(
       budget && contractIds.length
-        ? (await readContractBudgetRows(mg, { ...budget, contractIds })).map((row) => [row.contract_id, row])
+        ? budget.rows.filter((row) => pageIds.has(row.contract_id)).map((row) => [row.contract_id, row])
         : [],
     );
     // The page's compliance summaries, by batch of ids (`contract-compliance.ts`).
@@ -553,7 +572,9 @@ export class ContractsService {
    */
   async totals(query: any, opts?: ListReadOptions & { tenantId?: string }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const budget = await this.listBudgetInputs(mg, query, opts);
+    // The selector's years are read in the coverage window too: the previous year may hold only a
+    // hidden line's budget (spec §5.4).
+    const budget = await this.listBudgetInputs(mg, query, { ...opts, offerYears: true });
     const compliance = await loadContractComplianceInputs(mg);
     const windowDays = await readDecisionWindowDays(mg, opts?.tenantId);
     const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
@@ -602,7 +623,7 @@ export class ContractsService {
   }
 
   /** The `budget` part of the totals (see `totals`). */
-  private async budgetTotals(mg: EntityManager, query: any, budget: ContractBudgetInputs, compliance: ContractComplianceInputs, windowDays: number) {
+  private async budgetTotals(mg: EntityManager, query: any, budget: ContractBudgetCoverage, compliance: ContractComplianceInputs, windowDays: number) {
     const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
     const sums: { committed: string | null; linked: string | null; gap: string | null } = await qb
       .clone()
@@ -625,18 +646,23 @@ export class ContractsService {
       .getRawOne() ?? { no_line: '0', under: '0' };
     const units = (cents: string | null) => (cents == null ? 0 : Math.round(Number(cents)) / 100);
     const [year] = budget.years;
-    // The linked lines without a rate of the contracts in scope (the list's request), each line once.
-    let linkedFxMissing: ReturnType<typeof contractLinesFxMissing> = [];
-    if (budget.lineFxMissing.size > 0) {
-      const incomplete: Array<{ id: string }> = await qb.clone().select('c.id', 'id').andWhere('cb.linked_fx_missing').getRawMany();
-      if (incomplete.length > 0) {
-        const links: Array<{ id: string }> = await mg.query(
-          `SELECT DISTINCT l.spend_item_id AS id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = ANY($2::uuid[])`,
-          [budget.tenantId, incomplete.map((row) => row.id)],
-        );
-        linkedFxMissing = contractLinesFxMissing(budget, links.map((row) => row.id), [year]);
+    // The linked lines without a rate of the contracts in scope (the list's request), counted by
+    // currency and year. The counts are the per-contract aggregates the window returned: a limited
+    // person never gets the id or the amount of a line they cannot read.
+    const missing = new Map<string, { currency: string; year: number; lines: number }>();
+    const incomplete: Array<{ id: string }> = budget.fxMissingByContract.size > 0
+      ? await qb.clone().select('c.id', 'id').andWhere('cb.linked_fx_missing').getRawMany()
+      : [];
+    for (const row of incomplete) {
+      for (const pair of budget.fxMissingByContract.get(row.id) ?? []) {
+        if (pair.year !== year) continue;
+        const key = `${pair.currency}:${pair.year}`;
+        const entry = missing.get(key) ?? { currency: pair.currency, year: pair.year, lines: 0 };
+        entry.lines += pair.lines;
+        missing.set(key, entry);
       }
     }
+    const linkedFxMissing = Array.from(missing.values()).sort((a, b) => a.currency.localeCompare(b.currency) || a.year - b.year);
     return {
       year,
       column: budget.column,
@@ -648,7 +674,7 @@ export class ContractsService {
       excluded: excluded.map((entry) => ({ currency: entry.currency, count: Number(entry.count) })),
       no_line_count: Number(counts.no_line),
       under_count: Number(counts.under),
-      years: await contractBudgetYears(mg, budget.tenantId, contractBudgetCurrentYear(), year),
+      years: budget.offerYears ?? await contractBudgetYears(mg, budget.tenantId, contractBudgetCurrentYear(), year),
     };
   }
 
@@ -1602,25 +1628,36 @@ export class ContractsService {
     const currentYear = contractBudgetCurrentYear();
     const selection = parseContractBudgetSelection(query, currentYear, { year: 'year', column: 'column' });
     if (!selection) throw new BadRequestException('year and column are required.');
-    const years = await contractBudgetYears(mg, contract.tenant_id, currentYear, selection.year);
-    const inputs = await loadContractBudgetInputs({ fxRates: this.fxRates }, mg, contract.tenant_id, years, selection.column, [contract.id]);
-    const rows = await readContractBudgetRows(mg, inputs);
+    // The lines the person reads, then the coverage of the contract on every one of its lines:
+    // the coverage inputs run in the window (`readContractBudgetCoverage`), which returns the
+    // per-contract aggregates and the amounts of these lines alone (spec §5.4, §6.6).
     const { items } = await listContractBudgetLines(mg, contract);
+    const coverage = await readContractBudgetCoverage(
+      { fxRates: this.fxRates },
+      mg,
+      contract.tenant_id,
+      [selection.year],
+      selection.column,
+      [contract.id],
+      { visibleLineIds: items.map((line) => line.id), offerYears: { currentYear, extra: selection.year }, coverOfferedYears: true },
+    );
+    const lineAmounts = coverage.lineAmounts ?? new Map();
+    const lineFxMissing = coverage.lineFxMissing ?? new Map();
     return {
       year: selection.year,
       column: selection.column,
-      reporting_currency: inputs.reportingCurrency,
+      reporting_currency: coverage.reportingCurrency,
       currency: String(contract.currency || 'EUR').trim().toUpperCase() || 'EUR',
       lines: items.map((line) => {
-        const cents = inputs.lineAmounts.get(line.id)?.get(selection.year);
+        const cents = lineAmounts.get(line.id)?.get(selection.year);
         if (cents === null) {
-          const missing = inputs.lineFxMissing.get(line.id)!;
+          const missing = lineFxMissing.get(line.id)!;
           return { id: line.id, amount: null, fx_missing: { currency: missing.currency, amount: centsToNumber(missing.local.get(selection.year)!) } };
         }
         return { id: line.id, amount: centsToNumber(cents ?? 0n) };
       }),
-      lines_fx_missing: contractLinesFxMissing(inputs, items.map((line) => line.id)),
-      years: rows.map(({ contract_id: _contract, ...row }) => row),
+      lines_fx_missing: contractLinesFxMissing({ lineFxMissing }, items.map((line) => line.id)),
+      years: coverage.rows.map(({ contract_id: _contract, ...row }) => row),
     };
   }
 
