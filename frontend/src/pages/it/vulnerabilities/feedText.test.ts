@@ -1,7 +1,7 @@
 import '../../../i18n';
 import { describe, expect, it } from 'vitest';
 import i18n from '../../../i18n';
-import { describeCveOrgMatch, describeMatch, describeNvdMatch, feedAges, nvdState, type CveOrgMatch, type CveOrgVersion } from './feedText';
+import { describeCveOrgMatch, describeMatch, describeNvdMatch, feedAges, groupMatchesByCpe, nvdState, type CveOrgMatch, type CveOrgVersion } from './feedText';
 
 const en = i18n.getFixedT('en', 'it');
 const fr = i18n.getFixedT('fr', 'it');
@@ -39,6 +39,61 @@ describe('describeNvdMatch', () => {
     expect(one({ start: '*', start_including: true, end: '2.0', end_including: false })).toBe('versions before 2.0');
     // No bound at all: the CPE alone.
     expect(describeNvdMatch({ source: 'nvd', cpe: 'a:x:y', versions: [] }, en)).toBe('CPE identifier a:x:y');
+  });
+
+  it('lists each bound once and keeps distinct ranges that overlap', () => {
+    const match = {
+      source: 'nvd' as const,
+      cpe: 'a:apache:tomcat',
+      versions: [
+        { end: '9.0.99', end_including: false },
+        { exact: '10.1.0' },
+        { exact: '10.1.0' },
+        { exact: '11.0.0' },
+        { start: '8.1.0', start_including: true, end: '8.3.8', end_including: false },
+        { start: '8.1.0', start_including: true, end: '8.1.29', end_including: false },
+        { start: '8.1.0', start_including: true, end: '8.1.29', end_including: false },
+        { exact: '11.0.0' },
+        { exact: '*' },
+        {},
+      ],
+    };
+    expect(describeNvdMatch(match, en)).toBe(
+      'CPE identifier a:apache:tomcat: versions before 9.0.99; version 10.1.0; version 11.0.0; versions from 8.1.0 to 8.3.8 excluded; versions from 8.1.0 to 8.1.29 excluded; all versions',
+    );
+    // An open end is the same bound with or without its flag, and an exact version hides the range beside it.
+    const same = (versions: Array<Record<string, unknown>>) => describeNvdMatch({ source: 'nvd', cpe: 'a:x:y', versions }, en);
+    expect(same([
+      { end: '2.0', end_including: false },
+      { start: '*', start_including: true, end: '2.0', end_including: false },
+      { exact: '1.0', end: '9.0', end_including: false },
+      { exact: '1.0' },
+    ])).toBe('CPE identifier a:x:y: versions before 2.0; version 1.0');
+  });
+
+  it('groups the NVD matches of one CPE and leaves the publisher blocks', () => {
+    const org = block({ vendor: 'PHP Group', product: 'PHP', versions: [version({ version: '8.1.0', status: 'affected', lessThan: '8.1.29' })], versions_total: 1 });
+    const grouped = groupMatchesByCpe([
+      org,
+      { source: 'nvd', cpe: 'a:php:php', versions: [
+        { start: '8.1.0', start_including: true, end: '8.1.29', end_including: false },
+        { start: '8.1.0', start_including: true, end: '8.3.8', end_including: false },
+      ] },
+      { source: 'nvd', cpe: 'A:PHP:PHP', versions: [
+        { start: '8.1.0', start_including: true, end: '8.1.29', end_including: false },
+        { start: '8.2.0', start_including: true, end: '8.2.20', end_including: false },
+      ] },
+      { source: 'nvd', cpe: 'a:apache:tomcat', versions: [{ exact: '9.0.0' }, { exact: '9.0.0' }] },
+    ]);
+    expect(grouped.map((match) => match.source === 'nvd' ? match.cpe : match.product)).toEqual(['PHP', 'a:php:php', 'a:apache:tomcat']);
+    const php = grouped[1];
+    const tomcat = grouped[2];
+    if (php.source !== 'nvd' || tomcat.source !== 'nvd') throw new Error('expected the NVD rows');
+    expect(describeNvdMatch(php, en)).toBe(
+      'CPE identifier a:php:php: versions from 8.1.0 to 8.1.29 excluded; versions from 8.1.0 to 8.3.8 excluded; versions from 8.2.0 to 8.2.20 excluded',
+    );
+    expect(describeMatch(grouped[0], en)).toBe('PHP Group · PHP: versions 8.1.0 to 8.1.29 (excluded) affected');
+    expect(describeNvdMatch(tomcat, en)).toBe('CPE identifier a:apache:tomcat: version 9.0.0');
   });
 });
 

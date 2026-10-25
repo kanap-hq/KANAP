@@ -71,9 +71,60 @@ function nvdBound(bound: NvdBound, t: Translate): string {
   return t(`${K}.why.every`);
 }
 
-/** "CPE identifier a:apache:tomcat, versions before 9.0.99; versions from 10.1.1 to 10.1.35 excluded". */
+/**
+ * Identity of one displayed bound. An exact version is the whole text, so the range beside it
+ * does not count. An open end (`*`, `-` or nothing) does not count, and neither does its flag.
+ */
+function nvdBoundKey(bound: NvdBound): string {
+  const text = (value: string | null | undefined) => (open(value) ? '' : (value?.trim() ?? ''));
+  const exact = text(bound.exact);
+  if (exact) return `e\0${exact}`;
+  const start = text(bound.start);
+  const end = text(bound.end);
+  return ['r', start, start && bound.start_including === true ? '1' : '0', end, end && bound.end_including === true ? '1' : '0'].join('\0');
+}
+
+/** First occurrence of each bound, in the order the matches named them. */
+function dedupeNvdBounds(versions: NvdBound[] | null | undefined): NvdBound[] {
+  const seen = new Set<string>();
+  const out: NvdBound[] = [];
+  for (const bound of versions ?? []) {
+    const key = nvdBoundKey(bound);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(bound);
+  }
+  return out;
+}
+
+/**
+ * NVD matches that name the same CPE become one line, with each distinct bound once.
+ * A publisher block stays on its own: two blocks can share a CPE and still say different things.
+ */
+export function groupMatchesByCpe(matches: FeedMatch[]): FeedMatch[] {
+  const grouped = new Map<string, NvdMatch>();
+  const out: FeedMatch[] = [];
+  for (const match of matches) {
+    if (match.source !== 'nvd') {
+      out.push(match);
+      continue;
+    }
+    const key = match.cpe.trim().toLowerCase();
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.versions = dedupeNvdBounds([...(existing.versions ?? []), ...(match.versions ?? [])]);
+      continue;
+    }
+    const copy: NvdMatch = { source: 'nvd', cpe: match.cpe, versions: dedupeNvdBounds(match.versions) };
+    grouped.set(key, copy);
+    out.push(copy);
+  }
+  return out;
+}
+
+/** "CPE identifier a:apache:tomcat: versions before 9.0.99; versions from 10.1.1 to 10.1.35 excluded". */
 export function describeNvdMatch(match: NvdMatch, t: Translate): string {
-  const bounds = (match.versions ?? []).map((bound) => nvdBound(bound, t));
+  const bounds = dedupeNvdBounds(match.versions).map((bound) => nvdBound(bound, t));
   const cpe = t(`${K}.why.cpe`, { cpe: match.cpe });
   if (bounds.length === 0) return cpe;
   return t(`${K}.why.withVersions`, { subject: cpe, versions: bounds.join(t(`${K}.why.separator`)) });
