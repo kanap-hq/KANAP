@@ -1,5 +1,6 @@
 // url.ts imports this module as well: only functions cross between the two, called after load.
 import { resolveConfiguredAppBaseUrl } from './url';
+import { parseDeploymentMode } from './deployment-mode';
 
 export function requireEnv(name: string, env: NodeJS.ProcessEnv = process.env): string {
   const value = env[name];
@@ -25,6 +26,8 @@ export function parseBoolean(raw: string | undefined): boolean {
   const value = (raw || '').trim().toLowerCase();
   return value === 'true' || value === '1' || value === 'yes' || value === 'y' || value === 'on';
 }
+
+export { parseDeploymentMode } from './deployment-mode';
 
 /**
  * CORS pattern entry. Can be:
@@ -203,14 +206,18 @@ export type StartupEnvReport = {
 };
 
 /**
- * Start-up checks of the environment. Throws only where the API always refused to start:
- * `DATABASE_URL` or `JWT_SECRET` missing, and in production mode `APP_BASE_URL` or
- * `CORS_ORIGINS` missing. Everything else is returned as a warning.
+ * Start-up checks of the environment. Throws only where the API refuses to start:
+ * `DEPLOYMENT_MODE` outside `single-tenant`, `multi-tenant` or unset, `DATABASE_URL` or
+ * `JWT_SECRET` missing, and in production mode `APP_BASE_URL` or `CORS_ORIGINS` missing.
+ * Everything else is returned as a warning.
  */
 export function validateStartupEnv(
   env: NodeJS.ProcessEnv = process.env,
   options: { singleTenant: boolean },
 ): StartupEnvReport {
+  // Same check as config/features.ts, which reads the variable once at load. Repeated here so a
+  // caller that validates an env object (and the start-up path) refuses a typo with this message.
+  parseDeploymentMode(env.DEPLOYMENT_MODE);
   requireEnv('DATABASE_URL', env);
   requireEnv('JWT_SECRET', env);
   const mode = getRuntimeMode(env);

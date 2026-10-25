@@ -1,3 +1,4 @@
+import { parseDeploymentMode } from '../common/deployment-mode';
 import { parseBoolean } from '../common/env';
 
 const DEFAULT_RESEND_FROM = 'KANAP <no-reply@kanap.net>';
@@ -29,7 +30,7 @@ export interface SmtpConfig {
 }
 
 export function isSingleTenantEmailDeployment(): boolean {
-  return (process.env.DEPLOYMENT_MODE || '').trim().toLowerCase() === 'single-tenant';
+  return parseDeploymentMode(process.env.DEPLOYMENT_MODE) === 'single-tenant';
 }
 
 export function hasConfiguredResendTransport(): boolean {
