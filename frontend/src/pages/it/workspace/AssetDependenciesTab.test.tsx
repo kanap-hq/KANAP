@@ -1,4 +1,3 @@
-import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -74,13 +73,12 @@ function Location() {
 type AssetRef = { id: string; name: string; status?: string };
 
 type TabOptions = {
-  clusterSection?: React.ReactNode;
   relations?: AssetRelationsData;
   clusters?: Record<string, AssetRef[]>;
   members?: Record<string, AssetRef[]>;
 };
 
-function renderTab({ clusterSection, relations: data = relations(), clusters = {}, members = {} }: TabOptions = {}) {
+function renderTab({ relations: data = relations(), clusters = {}, members = {} }: TabOptions = {}) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/assets/as-1/relations-tab') return { data } as never;
     if (url === '/assets') {
@@ -102,7 +100,7 @@ function renderTab({ clusterSection, relations: data = relations(), clusters = {
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter>
-          <AssetDependenciesTab assetId="as-1" clusterSection={clusterSection} />
+          <AssetDependenciesTab assetId="as-1" />
           <Location />
         </MemoryRouter>
       </ThemeProvider>
@@ -126,12 +124,12 @@ describe('AssetDependenciesTab', () => {
     mocked.delete.mockResolvedValue({ data: { ok: true, changed: true } } as never);
   });
 
-  it('shows the impact, the cluster slot, then the four directions in order', async () => {
-    renderTab({ clusterSection: <section aria-label="cluster-slot" /> });
+  it('shows the impact, then the four directions in order', async () => {
+    renderTab();
     await screen.findByText('vm-app-01');
 
     expect(screen.getAllByRole('region').map((region) => region.getAttribute('aria-label'))).toEqual([
-      'impact', 'cluster-slot', A('contains'), A('containedBy'), A('dependsOn'), A('dependedOnBy'),
+      'impact', A('contains'), A('containedBy'), A('dependsOn'), A('dependedOnBy'),
     ]);
     expect(mocked.get).toHaveBeenCalledWith('/assets/as-1/relations-tab');
 
@@ -153,14 +151,6 @@ describe('AssetDependenciesTab', () => {
     const contains = screen.getByRole('region', { name: A('contains') });
     expect(within(contains).getByLabelText('workspace.asset.relations.containsHint')).toBeTruthy();
     expect(screen.getAllByLabelText('workspace.asset.relations.containsHint')).toHaveLength(1);
-  });
-
-  it('renders without a cluster slot by default', async () => {
-    renderTab();
-    await screen.findByText('vm-app-01');
-    expect(screen.getAllByRole('region').map((region) => region.getAttribute('aria-label'))).toEqual([
-      'impact', A('contains'), A('containedBy'), A('dependsOn'), A('dependedOnBy'),
-    ]);
   });
 
   it('links in each direction without offering the asset itself or a row already linked, and reads the relations and the impact of every asset again', async () => {
