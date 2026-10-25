@@ -15,6 +15,8 @@ export type IncidentVisibilityRow = {
   owner_user_id?: string | null;
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Statuses that freeze the record: the incident itself, its journal, its
  * attachments and its review document all refuse writes until it is reopened.
@@ -114,6 +116,20 @@ export function incidentVisibilitySql(
 }
 
 /**
+ * The viewer as SQL can compare it: `users.id` is a uuid, so a non-uuid actor
+ * label (headless agent runs, tool harnesses, AI specs) owns no incident. It
+ * still fails closed for a restricted one.
+ */
+function incidentViewerForSql(
+  viewer: IncidentViewer | null | undefined,
+): IncidentViewer | null | undefined {
+  if (!viewer || viewer.isAdmin) return viewer;
+  const userId = String(viewer.userId || '').trim();
+  if (!userId) return viewer;
+  return UUID_RE.test(userId) ? viewer : { userId: null, isAdmin: false };
+}
+
+/**
  * Task rows naming an incident the viewer may not see.
  *
  * The single predicate every task read applies. It is empty for a registry admin
@@ -127,7 +143,7 @@ export function taskIncidentVisibilitySql(
   viewer: IncidentViewer | null | undefined,
   params: unknown[],
 ): string {
-  const confidentiality = incidentConfidentialityPredicate('i_task_visibility', viewer, params);
+  const confidentiality = incidentConfidentialityPredicate('i_task_visibility', incidentViewerForSql(viewer), params);
   if (confidentiality.unrestricted) return '';
   return ` AND (${taskAlias}.related_object_type IS DISTINCT FROM 'incident' OR NOT EXISTS (
     SELECT 1
@@ -171,7 +187,7 @@ export function auditLogIncidentVisibilitySql(
   viewer: IncidentViewer | null | undefined,
   params: unknown[],
 ): string {
-  const confidentiality = incidentConfidentialityPredicate('i_audit', viewer, params);
+  const confidentiality = incidentConfidentialityPredicate('i_audit', incidentViewerForSql(viewer), params);
   if (confidentiality.unrestricted) return '';
 
   const tenant = `${auditAlias}.tenant_id`;
@@ -266,8 +282,6 @@ export function incidentRelatedTitleSql(alias: string): string {
 export const INCIDENT_LEVEL_RANK: Record<string, number> = {
   reader: 1, contributor: 2, member: 3, admin: 4,
 };
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The raw role facts every incident viewer is derived from. */
 export type IncidentRoleFacts = {

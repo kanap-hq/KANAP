@@ -82,21 +82,23 @@ async function testResolveViewerRequiresTenant(): Promise<void> {
 }
 
 function testTaskIncidentVisibilitySql(): void {
+  const uuidReader: IncidentViewer = { userId: '11111111-1111-4111-8111-111111111111', isAdmin: false };
+  const uuidReporter: IncidentViewer = { userId: '22222222-2222-4222-8222-222222222222', isAdmin: false };
   // The admin predicate is empty: the query text does not change, no parameter is added.
   const adminParams: unknown[] = ['tenant'];
   assert.equal(taskIncidentVisibilitySql('t', admin, adminParams), '');
   assert.deepEqual(adminParams, ['tenant']);
 
   const readerParams: unknown[] = ['tenant'];
-  const sql = taskIncidentVisibilitySql('t', reader, readerParams);
+  const sql = taskIncidentVisibilitySql('t', uuidReader, readerParams);
   assert.match(sql, /t\.related_object_type IS DISTINCT FROM 'incident'/);
   assert.match(sql, /FROM incidents i_task_visibility/);
   assert.match(sql, /i_task_visibility\.tenant_id = t\.tenant_id/);
   assert.match(sql, /i_task_visibility\.confidential = true/);
-  assert.deepEqual(readerParams, ['tenant', 'reader-1']);
+  assert.deepEqual(readerParams, ['tenant', uuidReader.userId]);
 
   const reporterParams: unknown[] = ['tenant'];
-  const reporterSql = taskIncidentVisibilitySql('t', reporter, reporterParams);
+  const reporterSql = taskIncidentVisibilitySql('t', uuidReporter, reporterParams);
   assert.match(reporterSql, /i_task_visibility\.reporter_user_id = \$2/);
   assert.match(reporterSql, /i_task_visibility\.owner_user_id = \$2/);
 
@@ -107,21 +109,30 @@ function testTaskIncidentVisibilitySql(): void {
   );
   assert.deepEqual(noUserParams, ['tenant'], 'no identity: no parameter');
 
+  // Internal surfaces carry a non-uuid actor label: it cannot own a users.id,
+  // and the predicate must not bind it where PostgreSQL expects a uuid.
+  const labelParams: unknown[] = ['tenant'];
+  const labelSql = taskIncidentVisibilitySql('t', { userId: 'ai-comments-admin', isAdmin: false }, labelParams);
+  assert.match(labelSql, /i_task_visibility\.confidential = true/);
+  assert.doesNotMatch(labelSql, /\$2/);
+  assert.deepEqual(labelParams, ['tenant']);
+
   // A QueryBuilder gets the same predicate, with its parameter named.
   assert.deepEqual(taskIncidentVisibilityQueryBuilderClause('task', admin), { clause: '', params: {} });
-  const named = taskIncidentVisibilityQueryBuilderClause('task', reader);
+  const named = taskIncidentVisibilityQueryBuilderClause('task', uuidReader);
   assert.match(named.clause, /:taskIncidentViewerId/);
   assert.doesNotMatch(named.clause, /\$1/);
-  assert.deepEqual(named.params, { taskIncidentViewerId: 'reader-1' });
+  assert.deepEqual(named.params, { taskIncidentViewerId: uuidReader.userId });
 }
 
 function testAuditLogIncidentVisibilitySql(): void {
+  const uuidReader: IncidentViewer = { userId: '11111111-1111-4111-8111-111111111111', isAdmin: false };
   const adminParams: unknown[] = ['tenant'];
   assert.equal(auditLogIncidentVisibilitySql('a', admin, adminParams), '');
   assert.deepEqual(adminParams, ['tenant']);
 
   const readerParams: unknown[] = ['tenant'];
-  const sql = auditLogIncidentVisibilitySql('a', reader, readerParams);
+  const sql = auditLogIncidentVisibilitySql('a', uuidReader, readerParams);
   assert.match(sql, /NOT \(/);
   assert.match(sql, /a\.table_name IN \('incidents', 'incident_assets', 'incident_applications', 'incident_technologies'\)/);
   assert.match(sql, /a\.table_name = 'incident_entries'/);
@@ -131,12 +142,18 @@ function testAuditLogIncidentVisibilitySql(): void {
   assert.match(sql, /a\.table_name = 'tasks'/);
   assert.match(sql, /tasks t_audit/);
   assert.match(sql, /i_audit\.tenant_id = a\.tenant_id/);
-  assert.deepEqual(readerParams, ['tenant', 'reader-1']);
+  assert.deepEqual(readerParams, ['tenant', uuidReader.userId]);
 
-  const named = auditLogIncidentVisibilityQueryBuilderClause('a', reader);
+  const labelParams: unknown[] = ['tenant'];
+  const labelSql = auditLogIncidentVisibilitySql('a', { userId: 'ai-comments-admin', isAdmin: false }, labelParams);
+  assert.match(labelSql, /i_audit\.confidential = true/);
+  assert.doesNotMatch(labelSql, /\$2/);
+  assert.deepEqual(labelParams, ['tenant']);
+
+  const named = auditLogIncidentVisibilityQueryBuilderClause('a', uuidReader);
   assert.match(named.clause, /:auditIncidentViewerId/);
   assert.doesNotMatch(named.clause, /\$1/);
-  assert.deepEqual(named.params, { auditIncidentViewerId: 'reader-1' });
+  assert.deepEqual(named.params, { auditIncidentViewerId: uuidReader.userId });
 }
 
 function testRelatedLabelSql(): void {
