@@ -1014,6 +1014,46 @@ const PAGES = {
       await sleep(1000);
     },
   },
+  // Incidents article (2026-10-25): journal tab of INC-28 (critical, resolved), dated notes plus severity and status changes. Read-only.
+  'incidents-journal-2026-10-25': {
+    path: '/it/incidents/INC-28/journal',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /severity|Severity/.test(document.querySelector('main')?.innerText || '') && /database/i.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
+  // Incidents article (2026-10-25): relations tab of INC-28, linked assets, applications, technologies and suggestions. Read-only.
+  'incidents-relations-2026-10-25': {
+    path: '/it/incidents/INC-28/relations',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /QualityLab LIMS/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
+  // Incidents article (2026-10-25): overview tab of INC-28, description and incident review. Read-only.
+  'incidents-review-2026-10-25': {
+    path: '/it/incidents/INC-28/overview',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /Root cause/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1500);
+    },
+  },
+  // Incidents article (2026-10-25): register filtered on Critical and Major. Read-only; set filters separately (they persist).
+  'incidents-register-2026-10-25': {
+    path: '/it/incidents?filters=%7B%22severity%22%3A%7B%22filterType%22%3A%22set%22%2C%22values%22%3A%5B%22critical%22%2C%22major%22%5D%7D%7D',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await page.waitForFunction(() => /Total \(\d+\)/.test(document.body.innerText), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
 };
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
