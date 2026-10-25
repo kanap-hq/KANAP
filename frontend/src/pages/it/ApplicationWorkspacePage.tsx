@@ -58,7 +58,7 @@ import SendLinkButton from '../../components/workspace/SendLinkButton';
 import DeploymentsEditor from './components/DeploymentsEditor';
 import ApplicationRelationsPanel from './editors/ApplicationRelationsPanel';
 import ApplicationTechnologiesSection from './workspace/ApplicationTechnologiesSection';
-import ReachVulnerabilitiesSection, { type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
+import ReachVulnerabilitiesSection, { reachVulnerabilitiesRefetchMs, type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
 import VulnerabilitySevereBadge, { highestSevereOf } from './workspace/VulnerabilitySevereBadge';
 import PendingMetadata from './workspace/PendingMetadata';
 import { useFeatures } from '../../config/FeaturesContext';
@@ -1485,11 +1485,13 @@ export default function ApplicationWorkspacePage() {
     enabled: !isCreate && !!app?.id,
   });
   // One read for the Operations section and the badge of the metadata bar. Technology link writes
-  // and CVE state changes invalidate every `vulnerabilities` query.
+  // and CVE state changes invalidate every `vulnerabilities` query. While a match is still queued,
+  // it reads again every second, and stops once the answer is no longer pending.
   const vulnerabilitiesQuery = useQuery({
     queryKey: ['vulnerabilities', 'application', app?.id],
     queryFn: async () => (await api.get<ReachVulnerabilities>(`/applications/${app!.id}/vulnerabilities`)).data,
     enabled: vulnerabilityFeed && !isCreate && !!app?.id,
+    refetchInterval: (query) => reachVulnerabilitiesRefetchMs(query.state.data),
   });
   // Out of service (`totals: null`): nothing counts, the section and the badge disappear.
   const vulnerabilities = vulnerabilityFeed && !isCreate && vulnerabilitiesQuery.data?.totals ? vulnerabilitiesQuery.data : null;

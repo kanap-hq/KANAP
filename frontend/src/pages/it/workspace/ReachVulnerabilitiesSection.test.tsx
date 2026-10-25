@@ -7,6 +7,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 import ReachVulnerabilitiesSection, {
   REACH_VULNERABILITIES_ANCHOR,
+  REACH_VULNERABILITIES_POLL_MS,
+  reachVulnerabilitiesRefetchMs,
   type ReachVulnerabilities,
   type ReachVulnerabilityRow,
 } from './ReachVulnerabilitiesSection';
@@ -307,5 +309,31 @@ describe('ReachVulnerabilitiesSection', () => {
     renderSection({ kind: 'application', subjectReference: 'APP-3', data: { rows: [], totals: null } });
     expect(screen.getByText('No vulnerability to review on this application.')).toBeTruthy();
     expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.queryByTestId('reach-vulnerabilities-pending')).toBeNull();
+  });
+
+  it('says the search is in progress while a match is pending, and keeps the rows once they are there', () => {
+    const { unmount } = renderSection({ data: { rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, pending: true } });
+    expect(screen.getByTestId('reach-vulnerabilities-pending').textContent).toBe('Searching for vulnerabilities…');
+    expect(screen.queryByText('No vulnerability to review on this asset.')).toBeNull();
+    expect(screen.queryByRole('table')).toBeNull();
+    unmount();
+
+    renderSection({ data: { rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, pending: false } });
+    expect(screen.getByText('No vulnerability to review on this asset.')).toBeTruthy();
+    expect(screen.queryByTestId('reach-vulnerabilities-pending')).toBeNull();
+  });
+
+  it('keeps the lines it already has while a match is still pending', () => {
+    renderSection({ data: { rows: [row({})], totals: { open: 6, severe: 3, exploited_severe: 1 }, pending: true } });
+    expect(screen.getByRole('table', { name: 'Vulnerabilities' }).textContent).toContain('Tomcat');
+    expect(screen.queryByTestId('reach-vulnerabilities-pending')).toBeNull();
+  });
+
+  it('refetches only while the answer is pending', () => {
+    expect(reachVulnerabilitiesRefetchMs(undefined)).toBe(false);
+    expect(reachVulnerabilitiesRefetchMs({ rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 } })).toBe(false);
+    expect(reachVulnerabilitiesRefetchMs({ rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, pending: false })).toBe(false);
+    expect(reachVulnerabilitiesRefetchMs({ rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, pending: true })).toBe(REACH_VULNERABILITIES_POLL_MS);
   });
 });
