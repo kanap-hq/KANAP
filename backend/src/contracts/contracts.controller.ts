@@ -399,6 +399,9 @@ export class ContractsController {
   @Delete(':id/links/:linkId')
   deleteUrl(@Param('id') id: string, @Param('linkId') linkId: string, @Req() req: any) { return this.svc.deleteUrl(id, linkId, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
 
+  // Updates existing contracts by a non-unique key (name and supplier): a hidden homonym would
+  // become a duplicate (spec §2.7). The export stays open: it follows the list.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)

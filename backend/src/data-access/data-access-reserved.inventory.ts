@@ -12,8 +12,9 @@
  * copy, bulk delete); delete of a line or a contract;
  * persons (users, roles, audit log); organisation data (companies, departments, cost centres,
  * accounts and charts of accounts, business processes, dimensions and the values of closed-list
- * dimensions); updates and deletes of suppliers and shared contacts; the generic tasks CSV import
- * (it updates existing tasks); agent screens; the AI
+ * dimensions); updates and deletes of suppliers and shared contacts; the supplier, contact,
+ * contract and generic task CSV imports (they update existing records by a non-unique key); agent
+ * screens; the AI
  * administration sites classified `reserved` in `data-access-paths.inventory.ts`. A delete check
  * or an impact preview asked before a reserved operation is reserved with it.
  *
@@ -436,7 +437,7 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
     file: 'contracts/contracts.controller.ts',
     controller: 'ContractsController',
-    reserved: ['bulkDelete', 'delete', 'deleteImpact'],
+    reserved: ['bulkDelete', 'delete', 'deleteImpact', 'import'],
     allowed: {
       attachContact: CONTRACT_WRITE, // POST :id/contacts
       budgetCoverage: READ, // GET :id/budget
@@ -457,7 +458,6 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
       export: EXPORT, // GET export
       exportComplianceRegister: EXPORT, // GET compliance-register/export
       get: READ, // GET :id
-      import: CONTRACT_WRITE, // POST import
       linkRelation: CONTRACT_WRITE, // POST :id/relations/:kind
       list: READ, // GET (root)
       listApplications: READ, // GET :id/applications
