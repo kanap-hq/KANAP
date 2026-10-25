@@ -19,6 +19,19 @@ export function environmentLabelKey(value: string | null | undefined): string | 
   return APPLICATION_ENVIRONMENTS.find((env) => env.value === value)?.labelKey ?? null;
 }
 
+/**
+ * The translated name of an environment, the same label as the deployments editor and the
+ * application's Interfaces tab. `PROD` and `pre-prod` resolve like `prod` and `pre_prod`.
+ * `t` resolves keys in the `it` namespace. An unknown code is returned as stored; a blank is empty.
+ */
+export function environmentLabel(t: (key: string) => string, value: string | null | undefined): string {
+  const raw = value == null ? '' : String(value);
+  const code = raw.trim().toLowerCase().replace(/-/g, '_');
+  if (!code) return '';
+  const key = environmentLabelKey(code);
+  return key ? t(key) : raw;
+}
+
 /** Orders two environment codes; a code outside the list goes last, alphabetically. */
 export function compareEnvironments(a: string, b: string): number {
   const ra = RANK.get(a) ?? RANK.size;
