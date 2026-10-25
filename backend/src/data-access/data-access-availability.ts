@@ -75,7 +75,8 @@ type CatalogState = {
  * its command and targeting the role (same test as `data_access_apply`), and its body is the
  * expected one: the comment carries `kda:<source fingerprint>:<md5 of the deparsed expressions>`,
  * compared with the fingerprint of `data_access_expected_policies()` and the expressions read now
- * (spec §6.2, lot 5).
+ * (spec §6.2, lot 5), deparsed by `data_access_policy_deparsed_md5()` under the search path the sync
+ * uses. The functions are qualified: the check reads the same whatever the connection's search path.
  */
 async function readCatalogState(session: DataAccessSession): Promise<CatalogState> {
   const [base] = await session.query(
@@ -103,7 +104,7 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
        NOT has_schema_privilege((SELECT oid FROM lim), 'public', 'USAGE')
        OR EXISTS (
          SELECT 1
-         FROM data_access_grant_targets() t
+         FROM public.data_access_grant_targets() t
          WHERE CASE
            WHEN t.is_sequence THEN NOT (
              has_sequence_privilege((SELECT oid FROM lim), format('public.%I', t.relname), 'USAGE')
@@ -128,12 +129,12 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
        OR EXISTS (
          SELECT 1
          FROM unnest($2::text[]) f(signature)
-         WHERE to_regprocedure(f.signature) IS NOT NULL
-           AND NOT has_function_privilege((SELECT oid FROM lim), to_regprocedure(f.signature)::oid, 'EXECUTE')
+         WHERE to_regprocedure('public.' || f.signature) IS NOT NULL
+           AND NOT has_function_privilege((SELECT oid FROM lim), to_regprocedure('public.' || f.signature)::oid, 'EXECUTE')
        ) AS grants_missing,
        EXISTS (
          SELECT 1
-         FROM data_access_expected_policies() e
+         FROM public.data_access_expected_policies() e
          WHERE NOT EXISTS (
            SELECT 1
            FROM pg_policy p
@@ -151,7 +152,7 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
        ) AS policies_missing,
        EXISTS (
          SELECT 1
-         FROM data_access_expected_policies() e
+         FROM public.data_access_expected_policies() e
          JOIN pg_policy p ON p.polname = e.policy_name
          JOIN pg_class c ON c.oid = p.polrelid AND c.relname = e.table_name
          JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
@@ -162,8 +163,7 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
              WHEN 'DELETE' THEN 'd' WHEN 'ALL' THEN '*' END
            AND coalesce(obj_description(p.oid, 'pg_policy'), '') IS DISTINCT FROM
                'kda:' || e.fingerprint || ':' ||
-               md5(coalesce(pg_get_expr(p.polqual, p.polrelid), '') || '|' ||
-                   coalesce(pg_get_expr(p.polwithcheck, p.polrelid), ''))
+               public.data_access_policy_deparsed_md5(p.oid)
        ) AS policies_different`,
     [DATA_ACCESS_LIMITED_ROLE, DIRECT_CALL_FUNCTIONS],
   );
@@ -219,14 +219,14 @@ function errorMessage(error: unknown): string {
 async function runSync(session: DataAccessSession): Promise<void> {
   await session.inTransaction(async () => {
     await session.query(`SET LOCAL lock_timeout = '${SYNC_LOCK_TIMEOUT}'`);
-    await session.query(`SELECT data_access_sync_policies()`);
+    await session.query(`SELECT public.data_access_sync_policies()`);
     await session.query(`
       DO $$
       DECLARE v_signature text;
       BEGIN
         FOREACH v_signature IN ARRAY ARRAY[${DIRECT_CALL_FUNCTIONS.map((f) => `'${f}'`).join(', ')}]::text[] LOOP
-          IF to_regprocedure(v_signature) IS NOT NULL THEN
-            EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO ${DATA_ACCESS_LIMITED_ROLE}', v_signature);
+          IF to_regprocedure('public.' || v_signature) IS NOT NULL THEN
+            EXECUTE format('GRANT EXECUTE ON FUNCTION public.%s TO ${DATA_ACCESS_LIMITED_ROLE}', v_signature);
           END IF;
         END LOOP;
       END
@@ -247,7 +247,7 @@ export async function releaseInheritedDataAccessPolicies(
   try {
     const [state] = await session.query(
       `WITH lim AS (SELECT to_regrole($1) AS oid)
-       SELECT to_regprocedure('data_access_sync_policies()') IS NOT NULL
+       SELECT to_regprocedure('public.data_access_sync_policies()') IS NOT NULL
               AND (SELECT oid FROM lim) IS NOT NULL
               AND current_user <> $1
               AND pg_has_role(current_user, (SELECT oid FROM lim), 'USAGE')

@@ -593,6 +593,7 @@ export class DataAccessContractPolicies1855300000000 implements MigrationInterfa
   name = 'DataAccessContractPolicies1855300000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await createPolicyDeparsedFunction(queryRunner);
     await createLineVisibleFunction(queryRunner);
     await createPolicyFunctions(queryRunner);
     await createContractPlacementTrigger(queryRunner);
@@ -630,7 +631,32 @@ export class DataAccessContractPolicies1855300000000 implements MigrationInterfa
     await queryRunner.query(`DROP TRIGGER IF EXISTS spend_items_data_access_contract_link ON spend_items`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_spend_items_contract_link()`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_line_visible(uuid)`);
+    await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_policy_deparsed_md5(oid)`);
   }
+}
+
+/**
+ * The md5 of a policy's deparsed expressions (USING, then WITH CHECK). `pg_get_expr` qualifies the
+ * names outside the `search_path`: the search path is pinned so the sync and the availability check
+ * read the same text whatever the connection's own (review note M3). Called by the application role
+ * only (EXECUTE revoked from PUBLIC).
+ */
+async function createPolicyDeparsedFunction(queryRunner: QueryRunner): Promise<void> {
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_policy_deparsed_md5(p_policy oid)
+    RETURNS text
+    LANGUAGE sql
+    STABLE
+    SET search_path = public, pg_temp
+    AS $fn$
+      SELECT md5(coalesce(pg_get_expr(p.polqual, p.polrelid), '') || '|' ||
+                 coalesce(pg_get_expr(p.polwithcheck, p.polrelid), ''))
+      FROM pg_catalog.pg_policy p
+      WHERE p.oid = p_policy
+    $fn$
+  `);
+  await queryRunner.query(`REVOKE EXECUTE ON FUNCTION data_access_policy_deparsed_md5(oid) FROM PUBLIC`);
+  await queryRunner.query(`GRANT EXECUTE ON FUNCTION data_access_policy_deparsed_md5(oid) TO CURRENT_USER`);
 }
 
 async function createPolicyFunctions(queryRunner: QueryRunner): Promise<void> {
@@ -770,7 +796,7 @@ ${[...LINE_HELPER_SIGNATURES, ...ACCESS_DEFINER_SIGNATURES, ...CONTRACT_HELPER_S
           WHEN 'DELETE' THEN 'd' WHEN 'ALL' THEN '*' END;
         SELECT p.polpermissive, v_role = ANY (p.polroles), p.polcmd::text,
                obj_description(p.oid, 'pg_policy'),
-               md5(coalesce(pg_get_expr(p.polqual, p.polrelid), '') || '|' || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), ''))
+               data_access_policy_deparsed_md5(p.oid)
         INTO v_permissive, v_role_ok, v_polcmd, v_comment, v_deparsed
         FROM pg_policy p
         JOIN pg_class c ON c.oid = p.polrelid
@@ -789,7 +815,7 @@ ${[...LINE_HELPER_SIGNATURES, ...ACCESS_DEFINER_SIGNATURES, ...CONTRACT_HELPER_S
                        v_name, r.table_name, r.command,
                        CASE WHEN r.using_expr IS NULL THEN '' ELSE ' USING (' || r.using_expr || ')' END,
                        CASE WHEN r.check_expr IS NULL THEN '' ELSE ' WITH CHECK (' || r.check_expr || ')' END);
-        SELECT md5(coalesce(pg_get_expr(p.polqual, p.polrelid), '') || '|' || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), ''))
+        SELECT data_access_policy_deparsed_md5(p.oid)
         INTO v_deparsed
         FROM pg_policy p
         JOIN pg_class c ON c.oid = p.polrelid

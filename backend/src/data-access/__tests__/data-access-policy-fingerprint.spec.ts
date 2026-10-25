@@ -22,6 +22,8 @@ import {
  *   are reported different by the availability check; the sync recreates that policy alone, the
  *   other policies keep their oid.
  * - An unexpected policy on the role is dropped; a second sync changes nothing.
+ * - Under `search_path = pg_catalog`, the check reports no difference after a sync and the sync
+ *   recreates nothing (the deparsed md5 comes from a function with a pinned search path).
  *
  * One transaction, rolled back. Needs the role kanap_data_limited (CI installs it); skipped
  * without it.
@@ -147,6 +149,22 @@ async function testFingerprint(): Promise<void> {
   console.log('  changed body, missing comment and dropped policy recreated alone; stray dropped; second sync inert: OK');
 }
 
+/** The connection's search path changes neither the check nor the sync (review note M3). */
+async function testSearchPath(): Promise<void> {
+  await sync();
+  const before = await oids();
+  await client.query(`SET search_path = pg_catalog`);
+  try {
+    assert.deepEqual(await checkDataAccessAvailability(session()), { available: true, missing: [] },
+      'search_path = pg_catalog: no difference after a sync');
+    await client.query(`SELECT public.data_access_sync_policies()`);
+  } finally {
+    await client.query(`RESET search_path`);
+  }
+  assert.deepEqual(await oids(), before, 'search_path = pg_catalog: the sync recreates nothing');
+  console.log('  search_path = pg_catalog: available after a sync, the sync recreates nothing: OK');
+}
+
 async function run(): Promise<void> {
   client = await connect(APP_URL);
   try {
@@ -159,6 +177,7 @@ async function run(): Promise<void> {
     await client.query('BEGIN');
     try {
       await testFingerprint();
+      await testSearchPath();
     } finally {
       await client.query('ROLLBACK');
     }
