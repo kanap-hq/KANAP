@@ -368,7 +368,9 @@
       "lifecycle": "Lebenszyklus",
       "method": "Methode",
       "mfa_supported": "MFA unterstützt",
+      "mode": "Modus",
       "name": "Name",
+      "nodes": "Knoten",
       "notes": "Notizen",
       "operation": "Vorgang",
       "owner_user_id": "Verantwortlicher",
@@ -636,6 +638,15 @@
       "unknownAccount": "Unbekanntes Konto",
       "unknownUser": "Unbekannt ({{id}}…)",
       "yes": "Ja"
+    },
+    "dataAccess": {
+      "allData": "Alle Daten",
+      "limitedTo": "Begrenzt auf",
+      "everything": "Alles",
+      "read": "Lesen",
+      "edit": "Bearbeiten",
+      "node": "{{name}} ({{access}})",
+      "noNodes": "Kein Knoten"
     }
   },
   "auth": {
@@ -1439,7 +1450,8 @@
       "sendInvite": "Einladung senden",
       "sendReset": "Passwort-Zurücksetzung senden",
       "delete": "Löschen",
-      "disableSelected": "Deaktivieren ({{count}})"
+      "disableSelected": "Deaktivieren ({{count}})",
+      "dataAccess": "Datenzugriff"
     },
     "columns": {
       "lastName": "Nachname",
@@ -1456,7 +1468,8 @@
       "status": "Status",
       "accountType": "Kontotyp",
       "roles": "Rollen",
-      "lastLogin": "Letzte Anmeldung"
+      "lastLogin": "Letzte Anmeldung",
+      "dataAccess": "Zugriff"
     },
     "mfaValues": {
       "yes": "Ja",
@@ -1762,5 +1775,89 @@
       "resetFailed": "Der Inhalt des Arbeitsbereichs konnte nicht gelöscht werden. Es wurde nichts geändert.",
       "dismissFailed": "Diese Meldung konnte nicht ausgeblendet werden."
     }
+  },
+  "dataAccess": {
+    "title": "Datenzugriff",
+    "dialogTitle": "Datenzugriff: {{name}}",
+    "allData": "Alle Daten",
+    "limitedTo": "Begrenzt auf",
+    "limited": "Begrenzt",
+    "access": {
+      "read": "Lesen",
+      "edit": "Bearbeiten"
+    },
+    "accessLabel": "Zugriff auf {{name}}",
+    "types": {
+      "everything": "Alles",
+      "company": "Unternehmen",
+      "costCenterGroup": "Kostenstellengruppe",
+      "costCenter": "Kostenstelle"
+    },
+    "add": "Hinzufügen",
+    "sections": {
+      "companies": "Unternehmen",
+      "costCenters": "Kostenstellen",
+      "everything": "Alles"
+    },
+    "placeholders": {
+      "company": "Unternehmen suchen",
+      "costCenter": "Kostenstelle suchen",
+      "person": "Person suchen"
+    },
+    "remove": "{{name}} entfernen",
+    "addTheirCenters": "Eigene Kostenstellen hinzufügen ({{count}})",
+    "alwaysSees": "Diese Person sieht außerdem immer, wo sie benannt ist.",
+    "appliesTo": "Gilt für Budget und Verträge.",
+    "preview": "Mit diesem Zugriff: {{lines}} Budgetzeilen, davon {{editable}} bearbeitbar; {{contracts}} Verträge.",
+    "modified": "Geändert von {{name}} am {{date}}.",
+    "confirmAll": "{{name}} sieht alle Budget- und Vertragsdaten.",
+    "administratorsSeeAll": "Administratoren sehen alle Daten.",
+    "unavailable": "Die Begrenzung des Datenzugriffs erfordert einen einmaligen Schritt auf der Datenbank, den die Person ausführt, die KANAP betreibt.",
+    "guide": "Leitfaden öffnen",
+    "missing": "Fehlt: {{items}}.",
+    "missingParts": {
+      "role": "die begrenzte Rolle",
+      "membership": "die Berechtigung, sie zu verwenden",
+      "inheritance": "die Rollentrennung",
+      "schemaCreate": "eine Datenbankberechtigung",
+      "policies": "die Zugriffsregeln",
+      "grants": "die Rechte an den Tabellen"
+    },
+    "saveFailed": "Der Datenzugriff konnte nicht gespeichert werden.",
+    "loadFailed": "Der Datenzugriff konnte nicht geladen werden.",
+    "counters": {
+      "limited": "Begrenzte Personen: {{value}}",
+      "withoutCompany": "Budgetzeilen ohne Unternehmen: {{value}}"
+    },
+    "filters": {
+      "name": "Namen suchen",
+      "node": "Wer hat Zugriff auf…",
+      "clearNode": "Knotenfilter löschen"
+    },
+    "columns": {
+      "person": "Person",
+      "roles": "Rollen",
+      "nodes": "Knoten",
+      "lastChange": "Letzte Änderung",
+      "access": "Zugriff",
+      "via": "Über",
+      "actions": "Aktionen"
+    },
+    "person": "Person",
+    "empty": "Keine begrenzte Person.",
+    "exportTitle": "Datenzugriff exportieren",
+    "importTitle": "Datenzugriff importieren",
+    "accessTab": {
+      "full": "Sehen das ganze Unternehmen",
+      "partial": "Sehen einen Teil davon",
+      "direct": "Direkter Zugriff",
+      "inherited": "Geerbter Zugriff",
+      "addButton": "Hinzufügen",
+      "remove": "Zugriff von {{name}} entfernen",
+      "saveFailed": "Der Zugriff konnte nicht aktualisiert werden.",
+      "loadFailed": "Der Zugriff konnte nicht geladen werden."
+    },
+    "importCsv": "CSV importieren",
+    "exportCsv": "CSV exportieren"
   }
 }

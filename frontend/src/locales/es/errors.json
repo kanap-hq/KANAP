@@ -297,5 +297,12 @@
     "leavesAccess": "Este cambio sacaría la línea de su acceso. Siga siendo uno de sus responsables, o pídaselo a alguien con acceso a su empresa.",
     "readOnlyRef": "{{ref}} es de solo lectura en su acceso.",
     "noLongerAvailable": "{{ref}} ya no está disponible desde la exportación."
-  }
+  },
+  "DATA_ACCESS_ADMINISTRATOR": "Los administradores ven todos los datos.",
+  "DATA_ACCESS_SELF": "No puede cambiar su propio acceso a los datos.",
+  "DATA_ACCESS_NODE_UNKNOWN": "Un nodo de la lista no existe en este espacio de trabajo.",
+  "DATA_ACCESS_NODE_ID_FORBIDDEN": "El nodo Todo no lleva nodo.",
+  "DATA_ACCESS_NODE_ID_REQUIRED": "Se requiere una empresa o un centro de coste.",
+  "DATA_ACCESS_NODE_TYPE_INVALID": "Use empresa, centro de coste o todo.",
+  "DATA_ACCESS_ACCESS_INVALID": "Use lectura o edición."
 }

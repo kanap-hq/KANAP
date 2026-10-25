@@ -297,5 +297,12 @@
     "leavesAccess": "Diese Änderung würde die Zeile aus Ihrem Zugriff nehmen. Bleiben Sie einer ihrer Verantwortlichen, oder fragen Sie jemanden mit Zugriff auf ihr Unternehmen.",
     "readOnlyRef": "{{ref}} ist in Ihrem Zugriff schreibgeschützt.",
     "noLongerAvailable": "{{ref}} ist seit dem Export nicht mehr verfügbar."
-  }
+  },
+  "DATA_ACCESS_ADMINISTRATOR": "Administratoren sehen alle Daten.",
+  "DATA_ACCESS_SELF": "Sie können Ihren eigenen Datenzugriff nicht ändern.",
+  "DATA_ACCESS_NODE_UNKNOWN": "Ein Knoten der Liste existiert in diesem Arbeitsbereich nicht.",
+  "DATA_ACCESS_NODE_ID_FORBIDDEN": "Der Knoten Alles hat keinen Knoten.",
+  "DATA_ACCESS_NODE_ID_REQUIRED": "Ein Unternehmen oder eine Kostenstelle ist erforderlich.",
+  "DATA_ACCESS_NODE_TYPE_INVALID": "Verwenden Sie Unternehmen, Kostenstelle oder alles.",
+  "DATA_ACCESS_ACCESS_INVALID": "Verwenden Sie Lesen oder Bearbeiten."
 }

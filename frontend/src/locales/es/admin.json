@@ -368,7 +368,9 @@
       "lifecycle": "Ciclo de vida",
       "method": "Método",
       "mfa_supported": "MFA compatible",
+      "mode": "Modo",
       "name": "Nombre",
+      "nodes": "Nodos",
       "notes": "Notas",
       "operation": "Operación",
       "owner_user_id": "Responsable",
@@ -636,6 +638,15 @@
       "unknownAccount": "Cuenta desconocida",
       "unknownUser": "Desconocido ({{id}}…)",
       "yes": "Sí"
+    },
+    "dataAccess": {
+      "allData": "Todos los datos",
+      "limitedTo": "Limitado a",
+      "everything": "Todo",
+      "read": "Lectura",
+      "edit": "Edición",
+      "node": "{{name}} ({{access}})",
+      "noNodes": "Ningún nodo"
     }
   },
   "auth": {
@@ -1439,7 +1450,8 @@
       "sendInvite": "Enviar invitación",
       "sendReset": "Enviar restablecimiento de contraseña",
       "delete": "Eliminar",
-      "disableSelected": "Desactivar ({{count}})"
+      "disableSelected": "Desactivar ({{count}})",
+      "dataAccess": "Acceso a los datos"
     },
     "columns": {
       "lastName": "Apellido",
@@ -1456,7 +1468,8 @@
       "status": "Estado",
       "accountType": "Tipo de cuenta",
       "roles": "Roles",
-      "lastLogin": "Último inicio de sesión"
+      "lastLogin": "Último inicio de sesión",
+      "dataAccess": "Acceso"
     },
     "mfaValues": {
       "yes": "Sí",
@@ -1762,5 +1775,89 @@
       "resetFailed": "No se pudo borrar el contenido del espacio de trabajo. No se ha modificado nada.",
       "dismissFailed": "No se pudo ocultar este mensaje."
     }
+  },
+  "dataAccess": {
+    "title": "Acceso a los datos",
+    "dialogTitle": "Acceso a los datos: {{name}}",
+    "allData": "Todos los datos",
+    "limitedTo": "Limitado a",
+    "limited": "Limitado",
+    "access": {
+      "read": "Lectura",
+      "edit": "Edición"
+    },
+    "accessLabel": "Acceso a {{name}}",
+    "types": {
+      "everything": "Todo",
+      "company": "Empresa",
+      "costCenterGroup": "Grupo de centros",
+      "costCenter": "Centro de coste"
+    },
+    "add": "Añadir",
+    "sections": {
+      "companies": "Empresas",
+      "costCenters": "Centros de coste",
+      "everything": "Todo"
+    },
+    "placeholders": {
+      "company": "Buscar una empresa",
+      "costCenter": "Buscar un centro de coste",
+      "person": "Buscar una persona"
+    },
+    "remove": "Quitar {{name}}",
+    "addTheirCenters": "Añadir sus centros ({{count}})",
+    "alwaysSees": "Esta persona también ve siempre aquello en lo que está nombrada.",
+    "appliesTo": "Se aplica al presupuesto y a los contratos.",
+    "preview": "Con este acceso: {{lines}} líneas presupuestarias, de las cuales {{editable}} editables; {{contracts}} contratos.",
+    "modified": "Modificado por {{name}} el {{date}}.",
+    "confirmAll": "{{name}} verá todos los datos del presupuesto y de los contratos.",
+    "administratorsSeeAll": "Los administradores ven todos los datos.",
+    "unavailable": "Limitar el acceso a los datos requiere un paso único en la base de datos, realizado por la persona que gestiona KANAP.",
+    "guide": "Abrir la guía",
+    "missing": "Falta: {{items}}.",
+    "missingParts": {
+      "role": "el rol limitado",
+      "membership": "el permiso para usarlo",
+      "inheritance": "la separación de roles",
+      "schemaCreate": "un permiso de base de datos",
+      "policies": "las reglas de acceso",
+      "grants": "los permisos sobre las tablas"
+    },
+    "saveFailed": "No se ha podido guardar el acceso a los datos.",
+    "loadFailed": "No se ha podido cargar el acceso a los datos.",
+    "counters": {
+      "limited": "Personas limitadas: {{value}}",
+      "withoutCompany": "Líneas presupuestarias sin empresa: {{value}}"
+    },
+    "filters": {
+      "name": "Buscar un nombre",
+      "node": "Quién tiene acceso a…",
+      "clearNode": "Borrar el filtro de nodo"
+    },
+    "columns": {
+      "person": "Persona",
+      "roles": "Roles",
+      "nodes": "Nodos",
+      "lastChange": "Última modificación",
+      "access": "Acceso",
+      "via": "Mediante",
+      "actions": "Acciones"
+    },
+    "person": "Persona",
+    "empty": "Ninguna persona limitada.",
+    "exportTitle": "Exportar los accesos a los datos",
+    "importTitle": "Importar los accesos a los datos",
+    "accessTab": {
+      "full": "Ven toda la empresa",
+      "partial": "Ven una parte",
+      "direct": "Acceso directo",
+      "inherited": "Acceso heredado",
+      "addButton": "Añadir",
+      "remove": "Quitar el acceso de {{name}}",
+      "saveFailed": "No se ha podido actualizar el acceso.",
+      "loadFailed": "No se ha podido cargar el acceso."
+    },
+    "importCsv": "Importar CSV",
+    "exportCsv": "Exportar CSV"
   }
 }

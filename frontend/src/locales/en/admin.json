@@ -368,7 +368,9 @@
       "lifecycle": "Lifecycle",
       "method": "Method",
       "mfa_supported": "MFA supported",
+      "mode": "Mode",
       "name": "Name",
+      "nodes": "Nodes",
       "notes": "Notes",
       "operation": "Operation",
       "owner_user_id": "Owner",
@@ -636,6 +638,15 @@
       "unknownAccount": "Unknown account",
       "unknownUser": "Unknown ({{id}}…)",
       "yes": "Yes"
+    },
+    "dataAccess": {
+      "allData": "All data",
+      "limitedTo": "Limited to",
+      "everything": "Everything",
+      "read": "Read",
+      "edit": "Edit",
+      "node": "{{name}} ({{access}})",
+      "noNodes": "No node"
     }
   },
   "auth": {
@@ -1439,7 +1450,8 @@
       "sendInvite": "Send invite",
       "sendReset": "Send password reset",
       "delete": "Delete",
-      "disableSelected": "Disable ({{count}})"
+      "disableSelected": "Disable ({{count}})",
+      "dataAccess": "Data access"
     },
     "columns": {
       "lastName": "Last name",
@@ -1456,7 +1468,8 @@
       "status": "Status",
       "accountType": "Account type",
       "roles": "Roles",
-      "lastLogin": "Last sign-in"
+      "lastLogin": "Last sign-in",
+      "dataAccess": "Access"
     },
     "mfaValues": {
       "yes": "Yes",
@@ -1762,5 +1775,89 @@
       "resetFailed": "The content of the workspace could not be erased. Nothing was changed.",
       "dismissFailed": "This could not be hidden."
     }
+  },
+  "dataAccess": {
+    "title": "Data access",
+    "dialogTitle": "Data access: {{name}}",
+    "allData": "All data",
+    "limitedTo": "Limited to",
+    "limited": "Limited",
+    "access": {
+      "read": "Read",
+      "edit": "Edit"
+    },
+    "accessLabel": "Access to {{name}}",
+    "types": {
+      "everything": "Everything",
+      "company": "Company",
+      "costCenterGroup": "Cost center group",
+      "costCenter": "Cost center"
+    },
+    "add": "Add",
+    "sections": {
+      "companies": "Companies",
+      "costCenters": "Cost centers",
+      "everything": "Everything"
+    },
+    "placeholders": {
+      "company": "Search a company",
+      "costCenter": "Search a cost center",
+      "person": "Search a person"
+    },
+    "remove": "Remove {{name}}",
+    "addTheirCenters": "Add their cost centers ({{count}})",
+    "alwaysSees": "This person also always sees what they are named on.",
+    "appliesTo": "Applies to the budget and contracts.",
+    "preview": "With this access: {{lines}} budget lines, {{editable}} editable; {{contracts}} contracts.",
+    "modified": "Modified by {{name}} on {{date}}.",
+    "confirmAll": "{{name}} will see all budget and contract data.",
+    "administratorsSeeAll": "Administrators see all data.",
+    "unavailable": "Limiting data access needs a one-time step on the database, done by the person who runs KANAP.",
+    "guide": "Open the guide",
+    "missing": "Missing: {{items}}.",
+    "missingParts": {
+      "role": "the limited role",
+      "membership": "the permission to use it",
+      "inheritance": "the role separation",
+      "schemaCreate": "a database permission",
+      "policies": "the access rules",
+      "grants": "the permissions on the tables"
+    },
+    "saveFailed": "The data access could not be saved.",
+    "loadFailed": "The data access could not be loaded.",
+    "counters": {
+      "limited": "Limited people: {{value}}",
+      "withoutCompany": "Budget lines without a company: {{value}}"
+    },
+    "filters": {
+      "name": "Search a name",
+      "node": "Who has access to…",
+      "clearNode": "Clear the node filter"
+    },
+    "columns": {
+      "person": "Person",
+      "roles": "Roles",
+      "nodes": "Nodes",
+      "lastChange": "Last change",
+      "access": "Access",
+      "via": "Via",
+      "actions": "Actions"
+    },
+    "person": "Person",
+    "empty": "No limited person.",
+    "exportTitle": "Export data access",
+    "importTitle": "Import data access",
+    "accessTab": {
+      "full": "See the whole company",
+      "partial": "See part of it",
+      "direct": "Direct access",
+      "inherited": "Inherited access",
+      "addButton": "Add",
+      "remove": "Remove the access of {{name}}",
+      "saveFailed": "The access could not be updated.",
+      "loadFailed": "The access could not be loaded."
+    },
+    "importCsv": "Import CSV",
+    "exportCsv": "Export CSV"
   }
 }

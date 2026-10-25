@@ -297,5 +297,12 @@
     "leavesAccess": "This change would take the line out of your access. Keep yourself as an owner, or ask someone with access to its company.",
     "readOnlyRef": "{{ref}} is read only in your access.",
     "noLongerAvailable": "{{ref}} is no longer available since the export."
-  }
+  },
+  "DATA_ACCESS_ADMINISTRATOR": "Administrators see all data.",
+  "DATA_ACCESS_SELF": "You cannot change your own data access.",
+  "DATA_ACCESS_NODE_UNKNOWN": "A node of the list does not exist in this workspace.",
+  "DATA_ACCESS_NODE_ID_FORBIDDEN": "The Everything node takes no node.",
+  "DATA_ACCESS_NODE_ID_REQUIRED": "A company or cost center is required.",
+  "DATA_ACCESS_NODE_TYPE_INVALID": "Use company, cost center or all.",
+  "DATA_ACCESS_ACCESS_INVALID": "Use read or edit."
 }

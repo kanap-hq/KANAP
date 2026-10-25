@@ -54,7 +54,8 @@
       "contacts": "Contacts",
       "prev": "Préc.",
       "next": "Suiv.",
-      "enabled": "Activé"
+      "enabled": "Activé",
+      "access": "Accès"
     },
     "workspace": {
       "unsavedNavigate": "Vous avez des modifications non enregistrées. Enregistrer avant de naviguer ?",
