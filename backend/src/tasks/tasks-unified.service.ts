@@ -18,6 +18,7 @@ import { detectChanges, resolveDisplayNames, TASK_TRACKED_FIELDS, FieldConfig } 
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { assertTaskModifiable, prepareTaskWrite } from './task-data-access';
 import { assertLinesEditable } from '../data-access/line-write-checks';
+import { assertContractsEditable } from '../data-access/contract-write-checks';
 import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
@@ -742,6 +743,12 @@ export class TasksUnifiedService {
     // hidden one 404, as the lock alone would answer both.
     if (target.type === 'spend_item' || target.type === 'capex_item') {
       await assertLinesEditable(manager, [target.id]);
+      await this.resolveTargetContext(target, manager);
+    }
+    // A task of a contract: the contract must be modifiable (the task's INSERT policy asks it);
+    // a hidden contract is 404 as a missing one, a read-only one the clear 403.
+    if (target.type === 'contract') {
+      await assertContractsEditable(manager, [target.id]);
       await this.resolveTargetContext(target, manager);
     }
 

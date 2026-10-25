@@ -6,6 +6,7 @@ import { setOwnedLink, type OwnedLinkAudit } from '../common/relations/owned-lin
 import { binder } from '../common/relations/related-objects';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
+import { assertContractsEditable } from '../data-access/contract-write-checks';
 import { auditedLinkSet } from '../data-access/hidden-links';
 
 /**
@@ -177,6 +178,9 @@ export async function replaceContractRelations(
   // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
   const nextIds = Array.from(new Set((ids || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean))).sort();
   if (nextIds.some((id) => !UUID_RE.test(id))) throw new BadRequestException(t.notFound);
+  // A contract read but not modifiable: the clear 403 before the row lock (which the UPDATE policy
+  // would hide, answering as a missing contract) and before the link writes.
+  await assertContractsEditable(manager, [contract.id]);
   const locked = await manager.query(
     `SELECT 1 FROM contracts WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
     [contract.tenant_id, contract.id],

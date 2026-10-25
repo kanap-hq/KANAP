@@ -486,6 +486,21 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     },
   },
   {
+    file: 'contracts/contract-renewal.controller.ts',
+    controller: 'ContractRenewalController',
+    reserved: [],
+    allowed: {
+      end: CONTRACT_WRITE,
+      get: READ, // GET :id/renewal
+      renegotiate: CONTRACT_WRITE,
+      renew: CONTRACT_WRITE,
+      resume: CONTRACT_WRITE,
+      stop: CONTRACT_WRITE,
+      terminate: CONTRACT_WRITE,
+      undo: CONTRACT_WRITE,
+    },
+  },
+  {
     file: 'ai/ai-settings.controller.ts',
     controller: 'AiSettingsController',
     reservedClass: AI_SETTINGS,

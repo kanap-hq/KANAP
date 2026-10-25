@@ -97,6 +97,13 @@ import {
 import { Decimal } from '../common/decimal';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
+import {
+  assertContractPlacement,
+  assertContractReadable,
+  assertContractsEditable,
+  contractEditableField,
+} from '../data-access/contract-write-checks';
+import { assertLinesEditable } from '../data-access/line-write-checks';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -730,6 +737,9 @@ export class ContractsService {
     if (!rawBody?.name) throw new BadRequestException('name is required');
     this.validateInput(rawBody);
     const body = await this.writableBody(mg, rawBody);
+    // A new contract goes where the person may place it (spec §2.3): the clear refusal comes
+    // before the INSERT policy, which would answer 42501.
+    await assertContractPlacement(mg, body.company_id ?? null, body.cost_center_id ?? null);
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     const lifecycle = resolveLifecycleState({ nextStatus: statusInput, nextDisabledAt: disabled_at });
     const toCreate: DeepPartial<Contract> = {
@@ -759,8 +769,17 @@ export class ContractsService {
     const repo = mg.getRepository(Contract);
     const existing = await repo.findOne({ where: { id, tenant_id: sessionTenant() } });
     if (!existing) throw new NotFoundException('Contract not found');
+    // A contract read but not modifiable (an owner out of the edit nodes, a contract opened
+    // through a visible line): the clear 403 before the UPDATE policy would touch no row.
+    await assertContractsEditable(mg, [id]);
     this.validateInput({ ...existing, ...rawBody });
     const body = await this.writableBody(mg, rawBody);
+    // An owner edits a field, never the place: a change of company or place must be placable.
+    const nextCompany = body.company_id !== undefined ? body.company_id : existing.company_id;
+    const nextPlace = body.cost_center_id !== undefined ? body.cost_center_id : existing.cost_center_id;
+    const movesCompany = body.company_id !== undefined && (body.company_id ?? null) !== (existing.company_id ?? null);
+    const movesPlace = body.cost_center_id !== undefined && (body.cost_center_id ?? null) !== (existing.cost_center_id ?? null);
+    if (movesCompany || movesPlace) await assertContractPlacement(mg, nextCompany ?? null, nextPlace ?? null);
     const before = { ...existing };
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     Object.assign(existing, rest);
@@ -896,6 +915,7 @@ export class ContractsService {
     const urlsRepo = mg.getRepository(ContractLink);
     if (!body.url) throw new BadRequestException('url is required');
     const contract = await this.findContract(contractId, mg);
+    await assertContractsEditable(mg, [contract.id]);
     const entity = urlsRepo.create({ tenant_id: contract.tenant_id, contract_id: contract.id, url: body.url, description: body.description ?? null });
     const saved = await urlsRepo.save(entity);
     await this.audit.log({ table: 'contract_links', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
@@ -906,6 +926,7 @@ export class ContractsService {
     const urlsRepo = mg.getRepository(ContractLink);
     const existing = await urlsRepo.findOne({ where: { id: linkId, contract_id: contractId, tenant_id: sessionTenant() } });
     if (!existing) throw new NotFoundException('Link not found');
+    await assertContractsEditable(mg, [existing.contract_id]);
     // Only the link's own fields: the contract and the tenant it belongs to stay as resolved above.
     const next = { ...existing } as ContractLink;
     if (body?.url !== undefined) next.url = body.url;
@@ -919,6 +940,7 @@ export class ContractsService {
     const urlsRepo = mg.getRepository(ContractLink);
     const existing = await urlsRepo.findOne({ where: { id: linkId, contract_id: contractId, tenant_id: sessionTenant() } });
     if (!existing) throw new NotFoundException('Link not found');
+    await assertContractsEditable(mg, [existing.contract_id]);
     await urlsRepo.delete({ id: existing.id, contract_id: existing.contract_id, tenant_id: existing.tenant_id });
     await this.audit.log({ table: 'contract_links', recordId: existing.id, action: 'update', before: existing, after: null, userId }, { manager: mg });
     return { ok: true };
@@ -1002,6 +1024,7 @@ export class ContractsService {
     const attachRepo = mg.getRepository(ContractAttachment);
     if (!file) throw new BadRequestException('No file uploaded');
     const contract = await this.findContract(contractId, mg);
+    await assertContractsEditable(mg, [contract.id]);
     const tenant_id = contract.tenant_id;
     const id = randomUUID();
     const now = new Date();
@@ -1047,6 +1070,7 @@ export class ContractsService {
     const attachRepo = mg.getRepository(ContractAttachment);
     const found = await attachRepo.findOne({ where: { id: attachmentId, tenant_id: sessionTenant() } });
     if (!found) throw new NotFoundException('Attachment not found');
+    await assertContractsEditable(mg, [found.contract_id]);
     try { await this.storage.deleteObject(found.storage_path); } catch {}
     await attachRepo.delete({ id: found.id, tenant_id: found.tenant_id });
     await this.audit.log({ table: 'contract_attachments', recordId: found.id, action: 'update', before: found, after: null, userId }, { manager: mg });
@@ -1501,6 +1525,7 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     return setContractRelation({ manager: mg, audit: this.audit }, kind, targetId, add, userId ?? null, async () => {
       const contract = await this.findContract(contractId, mg);
+      await assertContractsEditable(mg, [contract.id]);
       return { id: contract.id, tenantId: contract.tenant_id };
     });
   }
@@ -1522,6 +1547,7 @@ export class ContractsService {
   async updateCompliance(contractId: string, requirement: string, body: ComplianceItemPatch, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const contract = await this.findContract(contractId, mg);
+    await assertContractsEditable(mg, [contract.id]);
     await updateContractComplianceItem({ manager: mg, audit: this.audit }, contract, requirement, body, userId ?? null);
     return contractComplianceView(mg, await loadContractComplianceInputs(mg), contract);
   }
