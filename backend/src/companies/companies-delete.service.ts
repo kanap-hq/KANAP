@@ -26,6 +26,7 @@ const COMPANY_REFERENCING_TABLES: Record<string, string> = {
   portfolio_projects: 'projects',
   portfolio_requests: 'requests',
   portfolio_team_member_configs: 'team members',
+  user_data_access_nodes: 'data access',
 };
 
 @Injectable()

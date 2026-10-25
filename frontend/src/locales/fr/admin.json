@@ -300,6 +300,7 @@
       "contracts": "Contrats",
       "contractComplianceRegister": "Registre de conformité des contrats",
       "costCenters": "Centres de coûts",
+      "dataAccess": "Accès aux données",
       "departments": "Départements",
       "document": "Document",
       "endOfSupportReport": "Rapport des fins de support",
@@ -437,6 +438,8 @@
     "sources": {
       "ai_chat": "Chat IA",
       "budget_file": "Import du fichier budgétaire",
+      "import": "Import",
+      "screen": "Écran",
       "system": "Système",
       "user": "Utilisateur",
       "webhook": "Webhook"
@@ -620,6 +623,7 @@
       "tenants": "Espaces de travail",
       "tenants_admin": "Administration des espaces de travail",
       "tenants_plan": "Offres des espaces de travail",
+      "user_data_access": "Accès aux données",
       "user_roles": "Rôles des utilisateurs",
       "users": "Utilisateurs",
       "vulnerability_notifications": "E-mails de vulnérabilités envoyés",

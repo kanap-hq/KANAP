@@ -53,6 +53,24 @@ const AGENT_SCREENS = 'agent screens (control, observations, work items): reserv
 
 export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
+    // Lot 6: the administration of data access itself (spec §2.7, §7, §8).
+    file: 'data-access/data-access-admin.controller.ts',
+    controller: 'DataAccessAdminController',
+    reservedClass: 'data-scoped access administration (users:admin, unscoped): the person\'s access, preview and the who-sees tabs (spec §2.7, §8)',
+    reserved: ['companyAccess', 'costCenterAccess', 'personAccess', 'preview', 'updatePerson'],
+    allowed: {},
+  },
+  {
+    // Lot 6: the overview, export and import of data access (spec §7.3, §7.5, §8).
+    file: 'data-access/data-access.controller.ts',
+    controller: 'DataAccessController',
+    reserved: ['export', 'import', 'overview'],
+    allowed: {
+      // The person's own placement options (spec §8): the read does not go beyond their access.
+      placementOptions: 'the person\'s own placement options (lot 3, spec §8)',
+    },
+  },
+  {
     file: 'spend/tasks.controller.ts',
     controller: 'TasksController',
     reserved: ['importCsv'],

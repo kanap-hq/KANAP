@@ -300,6 +300,7 @@
       "contracts": "Verträge",
       "contractComplianceRegister": "Konformitätsregister der Verträge",
       "costCenters": "Kostenstellen",
+      "dataAccess": "Datenzugriff",
       "departments": "Abteilungen",
       "document": "Dokument",
       "endOfSupportReport": "Bericht zum Supportende",
@@ -437,6 +438,8 @@
     "sources": {
       "ai_chat": "KI-Chat",
       "budget_file": "Import der Budgetdatei",
+      "import": "Import",
+      "screen": "Bildschirm",
       "system": "System",
       "user": "Benutzer",
       "webhook": "Webhook"
@@ -620,6 +623,7 @@
       "tenants": "Arbeitsbereiche",
       "tenants_admin": "Verwaltung der Arbeitsbereiche",
       "tenants_plan": "Tarife der Arbeitsbereiche",
+      "user_data_access": "Datenzugriff",
       "user_roles": "Benutzerrollen",
       "users": "Benutzer",
       "vulnerability_notifications": "Gesendete Schwachstellen-E-Mails",

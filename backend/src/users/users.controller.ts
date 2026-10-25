@@ -63,6 +63,8 @@ export class UsersController {
     return this.svc.list(query, {
       manager: req?.queryRunner?.manager,
       adminView: canViewUserAdministration(req),
+      // The data-access column (spec §7.4) is for unscoped users administrators only.
+      dataAccessView: canViewUserAdministration(req) && req?.dataAccessMode === 'all',
     });
   }
 

@@ -52,6 +52,7 @@ const ENGLISH: Record<RefusalKind, [string, string]> = {
   requests: ['request', 'requests'],
   team_members: ['team member', 'team members'],
   suppliers: ['supplier', 'suppliers'],
+  data_access: ['data access', 'data access'],
   compliance_requirements: ['recorded compliance requirement', 'recorded compliance requirements'],
   regulatory_records: ['regulatory reporting record', 'regulatory reporting records'],
   opex_lines: ['OPEX line', 'OPEX lines'],
@@ -84,7 +85,9 @@ export function lineUsages(usage: { opex: number; capex: number } | undefined): 
 }
 
 export function englishList(usages: readonly UsageCount[]): string {
-  const parts = usages.map(({ type, total }) => `${total} ${ENGLISH[type][total === 1 ? 0 : 1]}`);
+  const parts = usages.map(({ type, total }) => type === 'data_access'
+    ? `the data access of ${total} ${total === 1 ? 'person' : 'people'}`
+    : `${total} ${ENGLISH[type][total === 1 ? 0 : 1]}`);
   return parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
