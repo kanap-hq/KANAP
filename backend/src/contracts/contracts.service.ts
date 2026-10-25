@@ -180,6 +180,13 @@ const CAPEX_LINK = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex');
 /** A contract link `l` to a budget line of either nature: the list counts both. */
 const ANY_LINE_LINK = ` AND EXISTS (SELECT 1 FROM ${BUDGET_LINE_TABLE} nl WHERE nl.tenant_id = l.tenant_id AND nl.id = l.spend_item_id${naturesAnd('nl', BUDGET_NATURES)})`;
 
+/** UUIDs name the same row whatever their case: an upper-case id is not a move. */
+function sameUuid(a: string | null | undefined, b: string | null | undefined): boolean {
+  const left = a == null || a === '' ? null : String(a).toLowerCase();
+  const right = b == null || b === '' ? null : String(b).toLowerCase();
+  return left === right;
+}
+
 /** The list's order without a valid `sort`: the next due date first (`contract-terms.ts`). */
 const DEFAULT_LIST_SORT: Sort = { field: 'next_due_date', direction: 'ASC' };
 /**
@@ -846,8 +853,8 @@ export class ContractsService {
     // An owner edits a field, never the place: a change of company or place must be placable.
     const nextCompany = body.company_id !== undefined ? body.company_id : existing.company_id;
     const nextPlace = body.cost_center_id !== undefined ? body.cost_center_id : existing.cost_center_id;
-    const movesCompany = body.company_id !== undefined && (body.company_id ?? null) !== (existing.company_id ?? null);
-    const movesPlace = body.cost_center_id !== undefined && (body.cost_center_id ?? null) !== (existing.cost_center_id ?? null);
+    const movesCompany = body.company_id !== undefined && !sameUuid(body.company_id, existing.company_id);
+    const movesPlace = body.cost_center_id !== undefined && !sameUuid(body.cost_center_id, existing.cost_center_id);
     if (movesCompany || movesPlace) await assertContractPlacement(mg, nextCompany ?? null, nextPlace ?? null);
     const before = { ...existing };
     const { status: statusInput, disabled_at, ...rest } = body ?? {};

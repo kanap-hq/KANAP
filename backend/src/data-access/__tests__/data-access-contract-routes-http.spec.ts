@@ -361,6 +361,11 @@ async function testCreateAndUpdate(app: INestApplication): Promise<void> {
   const ownerMove = await call(app, 'PATCH', `contracts/${c.CN}`, p.nina, { company_id: s.es });
   expectLimited(ownerMove, DATA_ACCESS_PLACEMENT_MESSAGE, 'Nina, owner, moves the contract outside');
   assert.equal((await scalar<{ company_id: string }>(`SELECT company_id FROM contracts WHERE id = $1`, [c.CN])).company_id, s.fr, 'the company is kept');
+  // The same company in upper case names the same row: not a move, and an owner may edit it.
+  const ownerSameCompany = await call(app, 'PATCH', `contracts/${c.CN}`, p.nina, { company_id: s.fr.toUpperCase() });
+  assert.equal(ownerSameCompany.status, 200, `Nina, owner, sends the same company in upper case: ${ownerSameCompany.text}`);
+  assert.equal(String(ownerSameCompany.body.company_id).toLowerCase(), s.fr, 'the contract keeps its company');
+  assert.equal((await scalar<{ company_id: string }>(`SELECT company_id FROM contracts WHERE id = $1`, [c.CN])).company_id, s.fr, 'the stored company is unchanged');
 
   // A hidden contract answers as a missing one.
   const hidden = await call(app, 'PATCH', `contracts/${c.CH}`, p.rita, { notes: 'hidden' });
