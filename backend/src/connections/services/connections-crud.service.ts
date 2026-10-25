@@ -10,6 +10,11 @@ import { AuditService } from '../../audit/audit.service';
 import { BulkDeleteResult } from '../../common/delete.types';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { ConnectionsBaseService, ServiceOpts, Topology } from './connections-base.service';
+import {
+  AbsorbedServer,
+  absorbClusterMembers,
+  connectionSameEndpointRefusal,
+} from '../connection-cluster-rules';
 
 /**
  * Service for core CRUD operations on connections.
@@ -170,6 +175,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     let destination_asset_id: string | null = null;
     let destination_entity_code: string | null = null;
     let multiAssetIds: string[] = [];
+    let absorbed: AbsorbedServer[] = [];
 
     if (topology === 'server_to_server') {
       const normalizeSide = async (
@@ -192,6 +198,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
       // Accept both asset_id and server_id for backwards compatibility
       const src = await normalizeSide(body.source_asset_id ?? body.source_server_id, body.source_entity_code, 'source');
       const dst = await normalizeSide(body.destination_asset_id ?? body.destination_server_id, body.destination_entity_code, 'destination');
+      if (src.asset && src.asset === dst.asset) throw connectionSameEndpointRefusal();
       source_asset_id = src.asset;
       source_entity_code = src.entity;
       destination_asset_id = dst.asset;
@@ -205,13 +212,15 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
             .filter((v): v is string => !!v),
         ),
       );
-      if (normalizedIds.length < 2) {
-        throw new BadRequestException('Select at least two assets for a multi-server connection');
-      }
       for (const aid of normalizedIds) {
         await this.ensureAsset(aid, tenant, mg);
       }
-      multiAssetIds = normalizedIds;
+      const { kept, absorbed: listAbsorbed } = await absorbClusterMembers(mg, tenant, normalizedIds);
+      if (kept.length < 2) {
+        throw new BadRequestException('Select at least two assets for a multi-server connection');
+      }
+      multiAssetIds = kept;
+      absorbed = listAbsorbed;
     }
 
     const repo = this.getRepo(mg);
@@ -260,7 +269,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
       { manager: mg },
     );
 
-    return saved;
+    return { ...saved, absorbed };
   }
 
   /**
@@ -343,6 +352,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     let destination_asset_id = existing.destination_asset_id;
     let destination_entity_code = existing.destination_entity_code;
     let multiAssetIds: string[] | null = null;
+    let absorbed: AbsorbedServer[] = [];
 
     if (topology === 'server_to_server') {
       const normalizeSide = async (
@@ -380,6 +390,11 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         destination_entity_code,
         'destination',
       );
+      // An existing loop can still be renamed, but touching a side may not keep it looped.
+      const sameEndpoint = !!src.asset && src.asset === dst.asset;
+      const unchanged =
+        existing.source_asset_id === src.asset && existing.destination_asset_id === dst.asset;
+      if (sameEndpoint && !unchanged) throw connectionSameEndpointRefusal();
       source_asset_id = src.asset;
       source_entity_code = src.entity;
       destination_asset_id = dst.asset;
@@ -397,13 +412,15 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
             ),
           );
       if (normalizedIds !== null) {
-        if (normalizedIds.length < 2) {
-          throw new BadRequestException('Select at least two assets for a multi-server connection');
-        }
         for (const aid of normalizedIds) {
           await this.ensureAsset(aid, tenant, mg);
         }
-        multiAssetIds = normalizedIds;
+        const { kept, absorbed: listAbsorbed } = await absorbClusterMembers(mg, tenant, normalizedIds);
+        if (kept.length < 2) {
+          throw new BadRequestException('Select at least two assets for a multi-server connection');
+        }
+        multiAssetIds = kept;
+        absorbed = listAbsorbed;
       } else {
         // Keep current multi-server list; load it
         const existingServers = await this.getConnServerRepo(mg).find({ where: { connection_id: id } });
@@ -471,7 +488,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
 
     // Return the enriched response so the frontend keeps protocol_codes, source_server,
     // effective_*, etc. without an extra round-trip.
-    return this.get(id, tenant, { manager: mg });
+    return { ...(await this.get(id, tenant, { manager: mg })), absorbed };
   }
 
   /**
