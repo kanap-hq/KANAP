@@ -24,6 +24,7 @@ import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import SecurityIcon from '@mui/icons-material/Security';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import LanIcon from '@mui/icons-material/Lan';
 import InsightsIcon from '@mui/icons-material/Insights';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -250,6 +251,7 @@ export default function Layout() {
   const tenantAdminNav: NavEntry[] = [
     { to: '/admin/users', label: t('nav:sidebar.admin.users'), icon: <PeopleIcon />, resource: 'users', level: 'admin' },
     { to: '/admin/roles', label: t('nav:sidebar.admin.roles'), icon: <SecurityIcon />, resource: 'users', level: 'admin' },
+    { to: '/admin/data-access', label: t('nav:sidebar.admin.dataAccess'), icon: <LockOutlinedIcon />, resource: 'users', level: 'admin' },
     { to: '/admin/audit-logs', label: t('nav:sidebar.admin.auditLog'), icon: <HistoryIcon />, resource: 'users', level: 'admin' },
     { to: '/admin/billing', label: t('nav:sidebar.admin.billing'), icon: <CreditCardIcon />, resource: 'billing' },
     { to: '/admin/auth', label: t('nav:sidebar.admin.authentication'), icon: <AdminPanelSettingsIcon />, resource: 'users', level: 'admin' },
@@ -612,6 +614,8 @@ export default function Layout() {
               if (['/admin/ai', '/admin/ai-models', '/admin/ai-usage'].includes(entry.to)) {
                 return aiCapabilities.data?.surfaces.settings.available === true;
               }
+              // A limited person sees none of the data-access administration, even a global admin.
+              if (entry.to === '/admin/data-access' && dataAccessLimited) return false;
               const grants = itemGrants(entry);
               return grants.length === 0 || grants.some((grant) => hasLevel(grant.resource, grant.level ?? 'reader'));
             });

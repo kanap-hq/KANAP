@@ -300,6 +300,7 @@
       "contracts": "Contracts",
       "contractComplianceRegister": "Contract compliance register",
       "costCenters": "Cost centers",
+      "dataAccess": "Data access",
       "departments": "Departments",
       "document": "Document",
       "endOfSupportReport": "End of support report",
@@ -367,7 +368,9 @@
       "lifecycle": "Lifecycle",
       "method": "Method",
       "mfa_supported": "MFA supported",
+      "mode": "Mode",
       "name": "Name",
+      "nodes": "Nodes",
       "notes": "Notes",
       "operation": "Operation",
       "owner_user_id": "Owner",
@@ -437,6 +440,8 @@
     "sources": {
       "ai_chat": "AI chat",
       "budget_file": "Budget file import",
+      "import": "Import",
+      "screen": "Screen",
       "system": "System",
       "user": "User",
       "webhook": "Webhook"
@@ -620,6 +625,7 @@
       "tenants": "Workspaces",
       "tenants_admin": "Workspace administration",
       "tenants_plan": "Workspace plans",
+      "user_data_access": "Data access",
       "user_roles": "User roles",
       "users": "Users",
       "vulnerability_notifications": "Vulnerability emails sent",
@@ -632,6 +638,15 @@
       "unknownAccount": "Unknown account",
       "unknownUser": "Unknown ({{id}}…)",
       "yes": "Yes"
+    },
+    "dataAccess": {
+      "allData": "All data",
+      "limitedTo": "Limited to",
+      "everything": "Everything",
+      "read": "Read",
+      "edit": "Edit",
+      "node": "{{name}} ({{access}})",
+      "noNodes": "No node"
     }
   },
   "auth": {
@@ -1431,7 +1446,8 @@
       "sendInvite": "Send invite",
       "sendReset": "Send password reset",
       "delete": "Delete",
-      "disableSelected": "Disable ({{count}})"
+      "disableSelected": "Disable ({{count}})",
+      "dataAccess": "Data access"
     },
     "columns": {
       "lastName": "Last name",
@@ -1448,7 +1464,8 @@
       "status": "Status",
       "accountType": "Account type",
       "roles": "Roles",
-      "lastLogin": "Last sign-in"
+      "lastLogin": "Last sign-in",
+      "dataAccess": "Access"
     },
     "mfaValues": {
       "yes": "Yes",
@@ -1457,10 +1474,11 @@
     "dialogs": {
       "newUser": "New user",
       "editUser": "Edit user",
-      "saveAndInvite": "Save and invite",
-      "saving": "Saving…"
+      "identity": "Identity",
+      "saveAndInvite": "Save and invite"
     },
     "messages": {
+      "loadFailed": "The user could not be loaded.",
       "emailUnique": "Email must be unique.",
       "inviteSuccess_one": "Invited {{count}} user",
       "inviteSuccess_other": "Invited {{count}} users",
@@ -1754,5 +1772,97 @@
       "resetFailed": "The content of the workspace could not be erased. Nothing was changed.",
       "dismissFailed": "This could not be hidden."
     }
+  },
+  "dataAccess": {
+    "title": "Data access",
+    "allData": "All data",
+    "limitedTo": "Limited to",
+    "none": "None",
+    "access": {
+      "read": "Read",
+      "edit": "Edit"
+    },
+    "accessLabel": "Access to {{name}}",
+    "types": {
+      "everything": "Everything",
+      "company": "Company",
+      "costCenterGroup": "Cost center group",
+      "costCenter": "Cost center"
+    },
+    "add": "Add",
+    "sections": {
+      "companies": "Companies",
+      "costCenters": "Cost centers",
+      "everything": "Everything"
+    },
+    "placeholders": {
+      "company": "Search a company",
+      "costCenter": "Search a cost center",
+      "person": "Search a person"
+    },
+    "remove": "Remove {{name}}",
+    "addTheirCenters_one": "Add their cost center ({{count}})",
+    "addTheirCenters_other": "Add their cost centers ({{count}})",
+    "alwaysSees": "This person also always sees what they are named on.",
+    "appliesTo": "Applies to the budget and contracts.",
+    "preview": "With this access: {{lines}}{{editable}}; {{contracts}}.",
+    "previewLines_one": "{{value}} budget line",
+    "previewLines_other": "{{value}} budget lines",
+    "previewEditable_one": ", {{value}} editable",
+    "previewEditable_other": ", {{value}} editable",
+    "previewContracts_one": "{{value}} contract",
+    "previewContracts_other": "{{value}} contracts",
+    "modified": "Modified by {{name}} on {{date}}.",
+    "confirmAll": "{{name}} will see all budget and contract data.",
+    "administratorsSeeAll": "Administrators see all data.",
+    "unavailable": "Limiting data access needs a one-time step on the database, done by the person who runs KANAP.",
+    "guide": "Open the guide",
+    "missing": "Missing: {{items}}.",
+    "missingParts": {
+      "role": "the limited role",
+      "membership": "the permission to use it",
+      "inheritance": "the role separation",
+      "schemaCreate": "a database permission",
+      "policies": "the access rules",
+      "grants": "the permissions on the tables"
+    },
+    "saveFailed": "The data access could not be saved.",
+    "loadFailed": "The data access could not be loaded.",
+    "counters": {
+      "limited_one": "Limited person: {{value}}",
+      "limited_other": "Limited people: {{value}}",
+      "withoutCompany_one": "Budget line without a company: {{value}}",
+      "withoutCompany_other": "Budget lines without a company: {{value}}"
+    },
+    "filters": {
+      "name": "Search a name",
+      "node": "Who has access to…",
+      "clearNode": "Clear the node filter"
+    },
+    "columns": {
+      "person": "Person",
+      "roles": "Roles",
+      "nodes": "Nodes",
+      "lastChange": "Last change",
+      "access": "Access",
+      "via": "Via",
+      "actions": "Actions"
+    },
+    "person": "Person",
+    "empty": "No limited person.",
+    "exportTitle": "Export data access",
+    "importTitle": "Import data access",
+    "accessTab": {
+      "full": "See the whole company",
+      "partial": "See part of it",
+      "direct": "Direct access",
+      "inherited": "Inherited access",
+      "addButton": "Add",
+      "remove": "Remove the access of {{name}}",
+      "saveFailed": "The access could not be updated.",
+      "loadFailed": "The access could not be loaded."
+    },
+    "importCsv": "Import CSV",
+    "exportCsv": "Export CSV"
   }
 }

@@ -8,7 +8,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 
 const navigateMock = vi.hoisted(() => vi.fn());
-const auth = vi.hoisted(() => ({ canEdit: true, canAdmin: true }));
+const auth = vi.hoisted(() => ({ canEdit: true, canAdmin: true, limited: false }));
 const addToRecent = vi.hoisted(() => vi.fn());
 const i18nLanguage = vi.hoisted(() => ({ current: 'en' }));
 
@@ -30,6 +30,7 @@ vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
     hasLevel: (_resource: string, level: string) => (level === 'admin' ? auth.canAdmin : auth.canEdit),
     profile: { id: 'user-1' },
+    dataAccess: { mode: auth.limited ? 'limited' : 'all', nodes: [] },
   }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
@@ -119,6 +120,7 @@ describe('CompanyWorkspacePage', () => {
     i18nLanguage.current = 'en';
     auth.canEdit = true;
     auth.canAdmin = true;
+    auth.limited = false;
     mocked.get.mockImplementation(async (url: string, config?: { params?: { year?: number } }) => {
       if (url === '/companies/co-1') return { data: COMPANY };
       if (url === '/companies/co-2') return { data: { ...COMPANY, id: 'co-2', name: 'Acme Germany', address1: 'Hauptstrasse 1' } };
@@ -138,6 +140,30 @@ describe('CompanyWorkspacePage', () => {
     expect(screen.queryByRole('button', { name: 'common:buttons.reset' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'shared.labels.overview' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'shared.labels.details' })).toBeInTheDocument();
+  });
+
+  it('opens the Access tab for an unscoped user administrator', async () => {
+    renderAt('/master-data/companies/co-1/access');
+    expect(await screen.findByText('admin:dataAccess.accessTab.full')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'shared.labels.access' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('hides the Access tab from a limited person', async () => {
+    auth.limited = true;
+    renderAt('/master-data/companies/co-1/access');
+    await screen.findByText('Acme France');
+    expect(screen.queryByRole('tab', { name: 'shared.labels.access' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'shared.labels.overview' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('replaces a hidden Access route with the overview', async () => {
+    auth.limited = true;
+    renderAt('/master-data/companies/co-1/access');
+    await screen.findByText('Acme France');
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(
+      '/master-data/companies/co-1/overview',
+      { replace: true },
+    ));
   });
 
   it('shows the status in the header and saves it from the metadata menu, as a supplier', async () => {

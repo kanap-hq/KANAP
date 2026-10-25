@@ -10,6 +10,7 @@ import type { CostCenterDetail } from '../../services/costCenters';
 
 const navigateMock = vi.hoisted(() => vi.fn());
 const treeState = vi.hoisted(() => ({ nodes: [] as unknown[] }));
+const auth = vi.hoisted(() => ({ limited: false }));
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -23,7 +24,11 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   useNavigate: () => navigateMock,
 }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: () => true, profile: { id: 'user-1' } }),
+  useAuth: () => ({
+    hasLevel: () => true,
+    profile: { id: 'user-1' },
+    dataAccess: { mode: auth.limited ? 'limited' : 'all', nodes: [] },
+  }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(async () => ({ data: { items: [] } })) } }));
 vi.mock('../../services/costCenters', async (importOriginal) => ({
@@ -108,11 +113,25 @@ function renderAt(path: string) {
 describe('CostCenterWorkspacePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    auth.limited = false;
     treeState.nodes = [];
     mocked.getCostCenter.mockImplementation(async (id: string) => (
       id === 'cc-2' ? { ...NODE, id: 'cc-2', code: 'IT-400', name: 'Workplace' } : NODE
     ));
     mocked.updateCostCenter.mockImplementation(async (_id: string, patch: Partial<CostCenterDetail>) => ({ ...NODE, ...patch }));
+  });
+
+  it('opens the Access tab of a cost center from its route', async () => {
+    renderAt('/master-data/cost-centers/cc-1/access');
+    expect(await screen.findByText('admin:dataAccess.accessTab.direct')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'shared.labels.access' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('hides the Access tab from a limited person and falls back to the overview', async () => {
+    auth.limited = true;
+    renderAt('/master-data/cost-centers/cc-1/access');
+    expect(await screen.findByTestId('cost-center-usage')).toBeInTheDocument();
+    expect(screen.queryByRole('tab')).toBeNull();
   });
 
   it('creates with an explicit button and opens the new node', async () => {

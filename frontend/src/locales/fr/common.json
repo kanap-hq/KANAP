@@ -200,6 +200,8 @@
       "cost_centers_other": "{{count}} centres de coûts",
       "departments_one": "{{count}} département",
       "departments_other": "{{count}} départements",
+      "data_access_one": "l'accès aux données de {{count}} personne",
+      "data_access_other": "l'accès aux données de {{count}} personnes",
       "users_one": "{{count}} utilisateur",
       "users_other": "{{count}} utilisateurs",
       "locations_one": "{{count}} site",

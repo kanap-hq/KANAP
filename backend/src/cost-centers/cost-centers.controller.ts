@@ -43,6 +43,9 @@ export const TREE_READERS: RequireAnyLevelMeta = [
   { resource: 'cost_centers', level: 'reader' },
   { resource: 'budget', level: 'reader' },
   { resource: 'reporting', level: 'reader' },
+  // The data-access screens pick a company or a cost center to name on a person: a users
+  // administrator without any budget permission needs the tree and the company source.
+  { resource: 'users', level: 'admin' },
 ];
 
 @UseGuards(JwtAuthGuard, PermissionGuard)

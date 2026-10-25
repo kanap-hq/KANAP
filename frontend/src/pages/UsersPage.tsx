@@ -6,9 +6,6 @@ import { Button, Stack, Box, IconButton, Menu, MenuItem, useTheme } from '@mui/m
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
-import FormModal from '../components/forms/FormModal';
-import UserForm, { UserInput, UserFormValues } from './forms/UserForm';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { useAuth } from '../auth/AuthContext';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
@@ -23,19 +20,21 @@ import { StatusDot, useKanapDialogs } from '../components/design';
 import { getDotColor, USER_ACCOUNT_STATUS_COLORS } from '../utils/statusColors';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
+import { useDataAccessLimited } from '../auth/dataAccess';
+import { userAccessColumnText } from '../components/dataAccess/dataAccess';
+import UserDialog, { type UserDialogTab } from './users/UserDialog';
 
 export default function UsersPage() {
   const { t } = useTranslation(['admin', 'common']);
   const dialogs = useKanapDialogs();
   const locale = useLocale();
-  const { hasLevel, tenantAuth } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<'create'|'edit'>('create');
-  const [currentId, setCurrentId] = useState<string|number|undefined>();
-  const [defaultValues, setDefaultValues] = useState<Partial<UserInput> | Partial<UserFormValues> | undefined>();
-  const [serverError, setServerError] = useState<unknown>();
-  const [canSave, setCanSave] = useState<{ isDirty: boolean; isValid: boolean; isSubmitting: boolean }>({ isDirty: false, isValid: false, isSubmitting: false });
-  const [submitIntent, setSubmitIntent] = useState<'save' | 'save-invite'>('save');
+  const { hasLevel, profile } = useAuth();
+  const [userDialog, setUserDialog] = useState<{
+    mode: 'create' | 'edit';
+    id?: string | number;
+    name?: string;
+    tab?: UserDialogTab;
+  } | null>(null);
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
   const [inviting, setInviting] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
@@ -46,7 +45,6 @@ export default function UsersPage() {
   const [menuRow, setMenuRow] = useState<any>(null);
   const theme = useTheme();
 
-  const queryClient = useQueryClient();
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
   // The list on screen: the CSV export follows it.
@@ -54,24 +52,9 @@ export default function UsersPage() {
   const [importOpen, setImportOpen] = useState(false);
   const gridApiRef = useRef<any>(null);
   const canManageUsers = hasLevel('users', 'admin');
-  const { mutateAsync: createItem, isPending: creating } = useMutation({
-    mutationFn: async (payload: UserInput) => {
-      const res = await api.post('/users', payload);
-      return res.data;
-    },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['users'] }); setRefreshKey((k)=>k+1); },
-  });
-  const { mutateAsync: updateItem, isPending: updating } = useMutation({
-    mutationFn: async ({ id, payload }: { id: string|number; payload: Partial<UserInput> }) => {
-      const res = await api.patch(`/users/${id}`, payload);
-      return res.data;
-    },
-    onSuccess: (_d: any, vars: any) => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      queryClient.invalidateQueries({ queryKey: ['users', vars.id] });
-      setRefreshKey((k)=>k+1);
-    },
-  });
+  const dataAccessLimited = useDataAccessLimited();
+  const canAdminDataAccess = canManageUsers && !dataAccessLimited;
+  const [dataAccessAnyLimited, setDataAccessAnyLimited] = useState(false);
 
   // Seat-controlled status actions
   const enableUser = async (id: string) => { await api.post(`/users/${id}/enable`); setRefreshKey((k)=>k+1); };
@@ -156,95 +139,12 @@ export default function UsersPage() {
   // Per-user permissions removed: managed by role assignments
 
   const handleNew = () => {
-    setMode('create');
-    setDefaultValues({
-      email: '',
-      first_name: '',
-      last_name: '',
-      job_title: '',
-      business_phone: '',
-      mobile_phone: '',
-      role_ids: [],
-      company_id: null,
-      department_id: null,
-      status: true,
-    });
-    setServerError(undefined);
-    setSubmitIntent('save');
-    setOpen(true);
+    setUserDialog({ mode: 'create', tab: 'identity' });
   };
-  const handleEdit = async (row: any) => {
+  const handleEdit = (row: any) => {
     if (!canManageUsers) return;
-    setMode('edit');
-    setServerError(undefined);
-    setCurrentId(row.id);
-    setSubmitIntent('save');
-    try {
-      const [userRes, rolesRes] = await Promise.all([
-        api.get(`/users/${row.id}`),
-        api.get(`/users/${row.id}/roles`),
-      ]);
-      const roles = rolesRes.data?.items ?? [];
-      setDefaultValues({
-        ...userRes.data,
-        roles, // Pass roles array for form to parse
-      });
-    } catch (e) {
-      // Fallback to legacy single role
-      setDefaultValues({
-        ...row,
-        role_ids: row?.role?.id ? [row.role.id] : [],
-      });
-    }
-    setOpen(true);
+    setUserDialog({ mode: 'edit', id: row.id, name: userDisplayName(row), tab: 'identity' });
   };
-  const onSubmit = async (values: UserInput) => {
-    try {
-      setServerError(undefined);
-      const { role_ids, ...userPayload } = values;
-      if (mode === 'create') {
-        // Create user with first role as role_id for backwards compat
-        const createPayload = { ...userPayload, role_id: role_ids[0] ?? null };
-        const created = await createItem(createPayload as any);
-        // Set roles via dedicated endpoint
-        if (created?.id) {
-          try {
-            await api.put(`/users/${created.id}/roles`, { role_ids });
-          } catch (roleErr: any) {
-            setServerError(new Error(roleErr?.response?.data?.message || t('users.messages.rolesSaveFailed')));
-            return;
-          }
-        }
-        if (submitIntent === 'save-invite' && created?.id) {
-          try {
-            await inviteUser(created.id);
-          } catch (inviteErr) {
-            setServerError(inviteErr);
-            return;
-          }
-        }
-      } else if (mode === 'edit' && currentId != null) {
-        // Update user basic info
-        await updateItem({ id: currentId, payload: userPayload as any });
-        // Update roles via dedicated endpoint (an empty list is allowed: no access)
-        try {
-          await api.put(`/users/${currentId}/roles`, { role_ids });
-        } catch (roleErr: any) {
-          setServerError(new Error(roleErr?.response?.data?.message || t('users.messages.rolesSaveFailed')));
-          return;
-        }
-      }
-      setOpen(false);
-      setSubmitIntent('save');
-    } catch (e: any) {
-      if (e?.response?.status === 409) setServerError(new Error(t('users.messages.emailUnique')));
-      else setServerError(e);
-    }
-  };
-  const onClose = useCallback(() => {
-    setOpen(false);
-    setSubmitIntent('save');
-  }, []);
 
   const ClickableCell: React.FC<ICellRendererParams<any, any>> = (params) => (
     <Box
@@ -357,6 +257,17 @@ export default function UsersPage() {
       },
       cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,
     },
+    ...(canAdminDataAccess && dataAccessAnyLimited
+      ? [{
+          colId: 'data_access',
+          headerName: t('users.columns.dataAccess'),
+          width: 220,
+          sortable: false,
+          filter: false,
+          valueGetter: (params: any) => userAccessColumnText(params.data?.data_access, t),
+          cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,
+        } as EnhancedColDef<any>]
+      : []),
     {
       colId: 'account_type',
       headerName: t('users.columns.accountType'),
@@ -408,7 +319,7 @@ export default function UsersPage() {
     ...(canManageUsers
       ? [{ colId: 'row_actions', headerName: '', width: 56, sortable: false, filter: false, resizable: false, pinned: 'right', cellRenderer: RowActionsCell } as EnhancedColDef<any>]
       : []),
-  ], [ClickableCell, ClickableCellGeneric, UserStatusCell, RowActionsCell, canManageUsers, dateFilterParams, getRoleFilterValues, locale, t]);
+  ], [ClickableCell, ClickableCellGeneric, UserStatusCell, RowActionsCell, canAdminDataAccess, canManageUsers, dataAccessAnyLimited, dateFilterParams, getRoleFilterValues, locale, t]);
 
   if (!hasLevel('users', 'reader')) {
     return <ForbiddenPage />;
@@ -485,6 +396,7 @@ export default function UsersPage() {
       <PageHeader title={t('users.title')} actions={actions} />
       <ServerDataGrid<any>
         onListRequestChange={setListRequest}
+        onListAnswer={(answer) => setDataAccessAnyLimited(answer?.data_access_any_limited === true)}
         columns={columns}
         endpoint="/users"
         queryKey="users"
@@ -507,7 +419,14 @@ export default function UsersPage() {
         statusScopeConfig={{ defaultScope: 'enabled', scopes: ['all', 'enabled', 'invited', 'disabled'] }}
       />
       <Menu anchorReference="anchorPosition" anchorPosition={menuPos ?? undefined} open={!!menuPos} onClose={closeRowMenu}>
-        <MenuItem sx={{ fontSize: 13 }} onClick={() => { closeRowMenu(); if (menuRow) void handleEdit(menuRow); }}>{t('users.actions.edit')}</MenuItem>
+        <MenuItem sx={{ fontSize: 13 }} onClick={() => { closeRowMenu(); if (menuRow) handleEdit(menuRow); }}>{t('users.actions.edit')}</MenuItem>
+        {canAdminDataAccess && menuRow && String(menuRow.id) !== String(profile?.id) && (
+          <MenuItem sx={{ fontSize: 13 }} onClick={() => {
+            const row = menuRow;
+            closeRowMenu();
+            if (row) setUserDialog({ mode: 'edit', id: row.id, name: userDisplayName(row), tab: 'access' });
+          }}>{t('users.actions.dataAccess')}</MenuItem>
+        )}
         {menuRow?.status === 'enabled' ? (
           <MenuItem sx={{ fontSize: 13 }} onClick={() => menuRow && handleRowDisable(menuRow)}>{t('users.actions.disable')}</MenuItem>
         ) : (
@@ -521,56 +440,18 @@ export default function UsersPage() {
         )}
         <MenuItem sx={{ fontSize: 13, color: 'error.main' }} onClick={() => menuRow && handleRowDelete(menuRow)}>{t('users.actions.delete')}</MenuItem>
       </Menu>
-      <FormModal
-        title={mode === 'create' ? t('users.dialogs.newUser') : t('users.dialogs.editUser')}
-        open={open}
-        onClose={onClose}
-        formId="user-form"
-        actions={(
-          <Stack direction="row" spacing={1.5}>
-            <Button onClick={onClose} color="inherit">{t('common:buttons.cancel')}</Button>
-            {mode === 'create' && (
-            <Button
-              variant="contained"
-              color="secondary"
-              disabled={!(canSave.isDirty && canSave.isValid) || canSave.isSubmitting || creating}
-              onClick={() => {
-                setSubmitIntent('save-invite');
-                window.setTimeout(() => {
-                  const form = document.getElementById('user-form') as HTMLFormElement | null;
-                  form?.requestSubmit();
-                  }, 0);
-                }}
-              >
-                {creating && submitIntent === 'save-invite' ? t('users.dialogs.saving') : t('users.dialogs.saveAndInvite')}
-              </Button>
-            )}
-            <Button
-              variant="contained"
-              color={canSave.isDirty ? 'primary' : 'inherit'}
-              disabled={!(canSave.isDirty && canSave.isValid) || canSave.isSubmitting || (mode === 'create' ? creating : updating)}
-              onClick={() => {
-                setSubmitIntent('save');
-                window.setTimeout(() => {
-                  const form = document.getElementById('user-form') as HTMLFormElement | null;
-                  form?.requestSubmit();
-                }, 0);
-              }}
-            >
-              {(mode === 'create' ? creating : updating) && submitIntent === 'save' ? t('users.dialogs.saving') : t('common:buttons.save')}
-            </Button>
-          </Stack>
-        )}
-      >
-        <UserForm
-          formId="user-form"
-          defaultValues={defaultValues}
-          onSubmit={onSubmit}
-          serverError={serverError}
-          onStateChange={setCanSave}
-          managedByEntra={tenantAuth?.sso_provider === 'entra' && tenantAuth?.sso_enabled && (defaultValues as any)?.external_auth_provider === 'entra'}
+      {userDialog && (
+        <UserDialog
+          key={`${userDialog.mode}-${userDialog.id ?? 'new'}-${userDialog.tab ?? 'identity'}`}
+          open
+          mode={userDialog.mode}
+          userId={userDialog.id}
+          personName={userDialog.name}
+          initialTab={userDialog.tab}
+          onClose={() => setUserDialog(null)}
+          onSaved={() => setRefreshKey((k) => k + 1)}
         />
-      </FormModal>
+      )}
       <CsvExportDialog listRequest={listRequest} entity="users" open={exportOpen} onClose={() => setExportOpen(false)} endpoint="/users" title={t('users.exportTitle')} flexibleFormat />
       <CsvImportDialog
         open={importOpen}

@@ -27,7 +27,8 @@ export type UsageType =
   | 'projects'
   | 'requests'
   | 'team_members'
-  | 'suppliers';
+  | 'suppliers'
+  | 'data_access';
 
 export type UsageItem = {
   id: string;

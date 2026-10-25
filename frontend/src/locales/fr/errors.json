@@ -297,5 +297,12 @@
     "leavesAccess": "Ce changement sortirait la ligne de votre accès. Restez l'un de ses responsables, ou demandez à une personne qui a accès à sa société.",
     "readOnlyRef": "{{ref}} est en lecture seule dans votre accès.",
     "noLongerAvailable": "{{ref}} n'est plus disponible depuis l'export."
-  }
+  },
+  "DATA_ACCESS_ADMINISTRATOR": "Les administrateurs voient toutes les données.",
+  "DATA_ACCESS_SELF": "Vous ne pouvez pas modifier votre propre accès aux données.",
+  "DATA_ACCESS_NODE_UNKNOWN": "Un nœud de la liste n'existe pas dans cet espace de travail.",
+  "DATA_ACCESS_NODE_ID_FORBIDDEN": "Le nœud Tout ne prend pas de nœud.",
+  "DATA_ACCESS_NODE_ID_REQUIRED": "Une société ou un centre de coûts est requis.",
+  "DATA_ACCESS_NODE_TYPE_INVALID": "Utilisez société, centre de coûts ou tout.",
+  "DATA_ACCESS_ACCESS_INVALID": "Utilisez lecture ou saisie."
 }

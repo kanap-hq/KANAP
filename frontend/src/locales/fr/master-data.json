@@ -54,7 +54,8 @@
       "contacts": "Contacts",
       "prev": "Préc.",
       "next": "Suiv.",
-      "enabled": "Activé"
+      "enabled": "Activé",
+      "access": "Accès"
     },
     "workspace": {
       "itemCountOf": "{{entity}} {{current}} sur {{total}}"

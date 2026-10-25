@@ -104,7 +104,8 @@
       "sections": {
         "ai": "Inteligencia artificial",
         "integrations": "Integraciones"
-      }
+      },
+      "dataAccess": "Acceso a los datos"
     },
     "platform": {
       "tenants": "Espacios de trabajo",

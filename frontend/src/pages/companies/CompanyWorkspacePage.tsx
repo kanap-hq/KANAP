@@ -6,6 +6,7 @@ import { Alert, Box, Button, FormHelperText, Stack, TextField, Typography } from
 import { useTheme } from '@mui/material/styles';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import { useDataAccessAdmin } from '../../auth/dataAccess';
 import { useCompanyNav } from '../../hooks/useCompanyNav';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
@@ -28,9 +29,10 @@ import { useCoaList } from '../coa/useCoaList';
 import { CoaField, CountryField, CurrencyField, defaultCoaFor } from './CompanyFields';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import CompanyMetricsTab from './CompanyMetricsTab';
+import CompanyAccessTab from './CompanyAccessTab';
 
-type TabKey = 'overview' | 'details';
-const TAB_KEYS: TabKey[] = ['overview', 'details'];
+type TabKey = 'overview' | 'details' | 'access';
+const TAB_KEYS: TabKey[] = ['overview', 'details', 'access'];
 const LIST_PATH = '/master-data/companies';
 /** How long Saved stays after a field is saved. */
 const SAVED_LINGER_MS = 1500;
@@ -103,6 +105,7 @@ export default function CompanyWorkspacePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
+  const canAdminDataAccess = useDataAccessAdmin();
   const { addToRecent } = useRecentlyViewed();
   const { coas } = useCoaList();
   const sections = useOptionalSections();
@@ -110,7 +113,11 @@ export default function CompanyWorkspacePage() {
   const id = String(params.id || '');
   const isCreate = id === 'new';
   const rawTab = (params.tab as TabKey) || 'overview';
-  const tab: TabKey = TAB_KEYS.includes(rawTab) && !(isCreate && rawTab !== 'overview') ? rawTab : 'overview';
+  const tab: TabKey = TAB_KEYS.includes(rawTab)
+    && !(isCreate && rawTab !== 'overview')
+    && (rawTab !== 'access' || canAdminDataAccess)
+    ? rawTab
+    : 'overview';
   const canEdit = hasLevel('companies', 'manager');
   const canDelete = hasLevel('companies', 'admin');
 
@@ -161,6 +168,13 @@ export default function CompanyWorkspacePage() {
     }
     return sp.toString();
   }, [searchParams]);
+
+  // A hidden Access tab falls back to the overview: the URL follows, as on the cost center page.
+  React.useEffect(() => {
+    if (isCreate || rawTab !== 'access' || canAdminDataAccess) return;
+    navigate(`${LIST_PATH}/${id}/overview${listContext ? `?${listContext}` : ''}`, { replace: true });
+  }, [canAdminDataAccess, id, isCreate, listContext, navigate, rawTab]);
+
   const withContext = (path: string) => `${path}${listContext ? `?${listContext}` : ''}`;
 
   const handleClose = () => navigate(withContext(LIST_PATH));
@@ -273,6 +287,7 @@ export default function CompanyWorkspacePage() {
   const tabs = [
     { key: 'overview', label: t('shared.labels.overview') },
     { key: 'details', label: t('shared.labels.details') },
+    ...(canAdminDataAccess ? [{ key: 'access', label: t('shared.labels.access') }] : []),
   ];
 
   // The header shows the status as the supplier's does: the menu disables at once (end of
@@ -456,6 +471,9 @@ export default function CompanyWorkspacePage() {
             baseCurrency={data.base_currency ?? ''}
             onSave={trackSave}
           />
+        )}
+        {data && tab === 'access' && canAdminDataAccess && (
+          <CompanyAccessTab companyId={data.id} />
         )}
       </PortfolioDetailWorkspaceShell>
     </Box>
