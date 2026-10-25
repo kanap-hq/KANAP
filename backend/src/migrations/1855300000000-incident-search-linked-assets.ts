@@ -266,9 +266,48 @@ const ASSET_TRIGGER = `
 
 /**
  * Every tenant's incidents reindexed with its `app.current_tenant` (every table read or
- * written here is FORCE RLS). Returns the counts to log; the setting is restored to what
- * it was before the loop, as all pending migrations share one transaction.
+ * written here is FORCE RLS), in one DO block. `set_config(..., true)` is
+ * transaction-local: splitting the loop into separate statements would lose the setting
+ * when the migration runs outside a transaction, and a global statement would touch zero
+ * rows. The counts are left in a temporary table for the caller to log.
  */
+const COUNTS_TEMP_TABLE = 'pg_temp._incident_search_linked_assets_counts';
+
+const REINDEX_ALL_TENANTS = `
+  DO $do$
+  DECLARE
+    t RECORD;
+    k_before text := current_setting('app.current_tenant', true);
+    k_tenants int := 0;
+    k_incidents int := 0;
+    k_links int := 0;
+    k_entries int := 0;
+    k_count int;
+  BEGIN
+    FOR t IN SELECT id FROM tenants ORDER BY created_at ASC, id ASC LOOP
+      k_tenants := k_tenants + 1;
+      PERFORM set_config('app.current_tenant', t.id::text, true);
+
+      SELECT count(*) INTO k_count FROM incidents WHERE tenant_id = t.id;
+      k_incidents := k_incidents + k_count;
+
+      SELECT count(*) INTO k_count FROM incident_assets WHERE tenant_id = t.id;
+      k_links := k_links + k_count;
+
+      PERFORM search_index_refresh_incidents(t.id);
+
+      SELECT count(*) INTO k_count FROM search_index
+       WHERE tenant_id = t.id AND entity_type = 'incidents';
+      k_entries := k_entries + k_count;
+    END LOOP;
+
+    PERFORM set_config('app.current_tenant', coalesce(k_before, ''), true);
+    INSERT INTO ${COUNTS_TEMP_TABLE} (tenants, incidents, links, entries)
+    VALUES (k_tenants, k_incidents, k_links, k_entries);
+  END
+  $do$;
+`;
+
 async function reindexTenants(queryRunner: QueryRunner): Promise<{
   tenants: number;
   incidents: number;
@@ -277,35 +316,30 @@ async function reindexTenants(queryRunner: QueryRunner): Promise<{
   ms: number;
 }> {
   const started = Date.now();
-  const [before] = await queryRunner.query(
-    `SELECT current_setting('app.current_tenant', true) AS tenant`,
-  );
-  const tenants: Array<{ id: string }> = await queryRunner.query(
-    `SELECT id FROM tenants ORDER BY created_at ASC, id ASC`,
-  );
-  let incidents = 0;
-  let links = 0;
-  let entries = 0;
-  for (const tenant of tenants) {
-    await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenant.id]);
+  await queryRunner.query(`DROP TABLE IF EXISTS ${COUNTS_TEMP_TABLE}`);
+  await queryRunner.query(`
+    CREATE TEMP TABLE ${COUNTS_TEMP_TABLE} (
+      tenants int NOT NULL,
+      incidents int NOT NULL,
+      links int NOT NULL,
+      entries int NOT NULL
+    )
+  `);
+  try {
+    await queryRunner.query(REINDEX_ALL_TENANTS);
     const [counts] = await queryRunner.query(
-      `SELECT
-         (SELECT count(*)::int FROM incidents WHERE tenant_id = $1) AS incidents,
-         (SELECT count(*)::int FROM incident_assets WHERE tenant_id = $1) AS links`,
-      [tenant.id],
+      `SELECT tenants, incidents, links, entries FROM ${COUNTS_TEMP_TABLE}`,
     );
-    incidents += Number(counts?.incidents ?? 0);
-    links += Number(counts?.links ?? 0);
-    await queryRunner.query(`SELECT search_index_refresh_incidents($1)`, [tenant.id]);
-    const [indexed] = await queryRunner.query(
-      `SELECT count(*)::int AS entries FROM search_index
-        WHERE tenant_id = $1 AND entity_type = 'incidents'`,
-      [tenant.id],
-    );
-    entries += Number(indexed?.entries ?? 0);
+    return {
+      tenants: Number(counts?.tenants ?? 0),
+      incidents: Number(counts?.incidents ?? 0),
+      links: Number(counts?.links ?? 0),
+      entries: Number(counts?.entries ?? 0),
+      ms: Date.now() - started,
+    };
+  } finally {
+    await queryRunner.query(`DROP TABLE IF EXISTS ${COUNTS_TEMP_TABLE}`);
   }
-  await queryRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [before?.tenant ?? '']);
-  return { tenants: tenants.length, incidents, links, entries, ms: Date.now() - started };
 }
 
 export class IncidentSearchLinkedAssets1855300000000 implements MigrationInterface {
