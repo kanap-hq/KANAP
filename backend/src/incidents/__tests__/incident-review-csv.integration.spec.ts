@@ -332,7 +332,7 @@ async function testExportImportRoundTrip() {
       language: 'fr',
       viewer: { userId: f.users.admin, isAdmin: true },
     });
-    assert.ok(exported.content.includes('review'), 'the review column is exported by default');
+    assert.ok(exported.content.includes("Revue d'incident"), 'the review column is exported by default, in the file\'s language');
     assert.ok(exported.content.includes('- 300 mailboxes'), 'the multiline body is exported');
     // Date-times in the export language's form (UTC), the way the other exports write days.
     const detected = new Date(incident.detected_at);
@@ -536,12 +536,17 @@ async function testDateTimesInTheExportersZone() {
     });
     const file = exported.content.replace(/^\uFEFF/, '');
     const header = file.split('\n')[0].split(';');
-    for (const column of ['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at']) {
-      assert.ok(header.includes(`${column} (Europe/Paris)`), `${column} names its zone: ${header.join(';')}`);
+    // The headers are the screen's words in the file's language, and a date-time names its zone
+    // after its translated header.
+    for (const [column, label] of Object.entries({
+      started_at: 'Début', detected_at: 'Détecté', resolved_at: 'Résolu', closed_at: 'Clôturé', authority_notified_at: 'Notifié le',
+    })) {
+      assert.ok(header.includes(`${label} (Europe/Paris)`), `${column} names its zone: ${header.join(';')}`);
     }
-    for (const column of ['ref', 'title', 'severity', 'status', 'review']) {
-      assert.ok(header.includes(column), `${column} keeps its plain header`);
+    for (const label of ['Réf.', 'Titre', 'Gravité', 'Statut', "Revue d'incident"]) {
+      assert.ok(header.includes(label), `${label} keeps its translated header`);
     }
+    assert.ok(file.includes(';Majeure;Ouvert;'), 'the severity and the status are the screen words, not their codes');
     assert.ok(file.includes('16/10/2026 10:38'), 'the local time of Paris, not 08:38 UTC');
     assert.ok(file.includes('29/03/2026 12:00'), 'summer time after the March change');
     assert.ok(file.includes('25/10/2026 11:00'), 'winter time after the October change');
@@ -579,8 +584,7 @@ async function testDateTimesInTheExportersZone() {
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(utc.errors, []);
-    const columns = header.filter((h) => h.endsWith(' (Europe/Paris)')).map((h) => h.replace(' (Europe/Paris)', ''));
-    assert.ok(columns.includes('started_at') && columns.includes('detected_at'));
+    const columns = ['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at'];
     assert.deepEqual(
       utc.warnings.map((w) => [w.row, w.code, w.params]),
       [[0, 'CSV_HEADER_ZONELESS_DATE_TIMES', { columns: columns.join(', '), example: columns[0] }]],
@@ -590,7 +594,7 @@ async function testDateTimesInTheExportersZone() {
 
     // A zone nobody knows is refused, with the coded error the screen translates.
     const unknown = await services.csv.import(
-      csvFile(file.replace('detected_at (Europe/Paris)', 'detected_at (Mars/Olympus)')),
+      csvFile(file.replace('Détecté (Europe/Paris)', 'Détecté (Mars/Olympus)')),
       { dryRun: true, mode: 'enrich', operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );

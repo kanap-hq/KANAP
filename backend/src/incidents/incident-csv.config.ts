@@ -4,13 +4,85 @@ import {
   CsvFieldType,
   CsvImportContext,
 } from '../common/csv';
-import { formatCsvDateTime, instantInTimeZone } from '../common/csv-sheet';
+import { formatCsvDateTime, instantInTimeZone, type CsvLanguage } from '../common/csv-sheet';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { findCatalogOption, requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
 import { sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES } from './incident.entity';
 import { incidentVisibleToViewer, type IncidentViewer } from './incident-visibility';
+
+/**
+ * The headers of the register's file in each language. The export writes them, and the import
+ * accepts them as well as the technical columns (`ref`, `title`, ...), so a file exported in
+ * French reads back in French or in any other language.
+ */
+const INCIDENT_CSV_HEADERS: Record<string, Record<CsvLanguage, string>> = {
+  ref: { en: 'Ref', fr: 'Réf.', de: 'Ref.', es: 'Ref.' },
+  title: { en: 'Title', fr: 'Titre', de: 'Titel', es: 'Título' },
+  category: { en: 'Category', fr: 'Catégorie', de: 'Kategorie', es: 'Categoría' },
+  severity: { en: 'Severity', fr: 'Gravité', de: 'Schweregrad', es: 'Gravedad' },
+  status: { en: 'Status', fr: 'Statut', de: 'Status', es: 'Estado' },
+  confidential: {
+    en: 'Restricted to register administrators',
+    fr: 'Restreint aux administrateurs du registre',
+    de: 'Auf Registeradministratoren beschränkt',
+    es: 'Restringido a administradores del registro',
+  },
+  started_at: { en: 'Started', fr: 'Début', de: 'Beginn', es: 'Inicio' },
+  detected_at: { en: 'Detected', fr: 'Détecté', de: 'Erkannt', es: 'Detectado' },
+  resolved_at: { en: 'Resolved', fr: 'Résolu', de: 'Behoben', es: 'Resuelto' },
+  closed_at: { en: 'Closed', fr: 'Clôturé', de: 'Geschlossen', es: 'Cerrado' },
+  reporter: { en: 'Reporter', fr: 'Déclarant', de: 'Melder', es: 'Notificante' },
+  owner: { en: 'Owner', fr: 'Responsable', de: 'Verantwortlicher', es: 'Responsable' },
+  description: { en: 'Description', fr: 'Description', de: 'Beschreibung', es: 'Descripción' },
+  review: { en: 'Incident review', fr: "Revue d'incident", de: 'Vorfallsanalyse', es: 'Revisión de incidente' },
+  source_ref: { en: 'External reference', fr: 'Référence externe', de: 'Externe Referenz', es: 'Referencia externa' },
+  personal_data_affected: {
+    en: 'Personal data affected',
+    fr: 'Données personnelles concernées',
+    de: 'Personenbezogene Daten betroffen',
+    es: 'Datos personales afectados',
+  },
+  authority_notification_required: {
+    en: 'Authority notification required',
+    fr: 'Notification aux autorités requise',
+    de: 'Meldung an Behörde erforderlich',
+    es: 'Requiere notificación a la autoridad',
+  },
+  authority_notified_at: { en: 'Notified on', fr: 'Notifié le', de: 'Gemeldet am', es: 'Notificado el' },
+  notified_parties: { en: 'Parties informed', fr: 'Parties informées', de: 'Informierte Parteien', es: 'Partes informadas' },
+};
+
+/** The severity as the screen names it, in the language of the file. */
+const INCIDENT_SEVERITY_LABELS: Record<CsvLanguage, Record<string, string>> = {
+  en: { critical: 'Critical', major: 'Major', minor: 'Minor', low: 'Low' },
+  fr: { critical: 'Critique', major: 'Majeure', minor: 'Mineure', low: 'Faible' },
+  de: { critical: 'Kritisch', major: 'Hoch', minor: 'Mittel', low: 'Niedrig' },
+  es: { critical: 'Crítica', major: 'Alta', minor: 'Media', low: 'Baja' },
+};
+
+/** The status as the screen names it, in the language of the file. */
+const INCIDENT_STATUS_LABELS: Record<CsvLanguage, Record<string, string>> = {
+  en: { open: 'Open', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed', cancelled: 'Cancelled' },
+  fr: { open: 'Ouvert', in_progress: 'En cours', resolved: 'Résolu', closed: 'Clôturé', cancelled: 'Annulé' },
+  de: { open: 'Offen', in_progress: 'In Bearbeitung', resolved: 'Behoben', closed: 'Geschlossen', cancelled: 'Abgebrochen' },
+  es: { open: 'Abierto', in_progress: 'En curso', resolved: 'Resuelto', closed: 'Cerrado', cancelled: 'Cancelado' },
+};
+
+/** The code of a value written in any of the four languages, or null when no label matches. */
+function codeFromLabels(
+  value: string,
+  labels: Record<CsvLanguage, Record<string, string>>,
+): string | null {
+  const text = value.trim().toLowerCase().normalize('NFC');
+  for (const byCode of Object.values(labels)) {
+    for (const [code, label] of Object.entries(byCode)) {
+      if (label.toLowerCase().normalize('NFC') === text) return code;
+    }
+  }
+  return null;
+}
 
 /**
  * CSV configuration for the incident register.
@@ -138,8 +210,15 @@ function parseDateTime(value: string, column: string, timeZone = 'UTC'): Date | 
   return parsed;
 }
 
-/** Codes and labels both accepted: "In progress", "in progress" and "in_progress" all mean in_progress. */
-function parseCode(value: string, valid: readonly string[], column: string): string {
+/** Codes and labels both accepted: "In progress", "in progress", "in_progress" and "En cours" all mean in_progress. */
+function parseCode(
+  value: string,
+  valid: readonly string[],
+  column: string,
+  labels?: Record<CsvLanguage, Record<string, string>>,
+): string {
+  const fromLabel = labels ? codeFromLabels(value, labels) : null;
+  if (fromLabel) return fromLabel;
   const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, '_');
   if (!valid.includes(normalized)) {
     throw new Error(`Invalid ${column}: "${value}". Valid values: ${valid.join(', ')}`);
@@ -222,6 +301,8 @@ export const incidentCsvConfig: CsvEntityConfig = {
   displayName: 'Incidents',
   // INC-N is the register's identity; the export writes it, the import matches on it.
   upsertKey: ['item_number'],
+  // Column headers in the file's language; the import accepts them as well as the technical names.
+  headerLabels: INCIDENT_CSV_HEADERS,
   fields: [
     // === IDENTITY ===
     {
@@ -265,7 +346,9 @@ export const incidentCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'Severity',
       group: 'Overview',
-      importTransformFn: (value: string) => parseCode(value, INCIDENT_SEVERITIES, 'severity'),
+      exportFn: (entity: any, context: CsvExportContext) =>
+        INCIDENT_SEVERITY_LABELS[context.language]?.[String(entity.severity)] ?? String(entity.severity ?? ''),
+      importTransformFn: (value: string) => parseCode(value, INCIDENT_SEVERITIES, 'severity', INCIDENT_SEVERITY_LABELS),
     },
     {
       csvColumn: 'status',
@@ -276,7 +359,9 @@ export const incidentCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'Status',
       group: 'Overview',
-      importTransformFn: (value: string) => parseCode(value, INCIDENT_STATUSES, 'status'),
+      exportFn: (entity: any, context: CsvExportContext) =>
+        INCIDENT_STATUS_LABELS[context.language]?.[String(entity.status)] ?? String(entity.status ?? ''),
+      importTransformFn: (value: string) => parseCode(value, INCIDENT_STATUSES, 'status', INCIDENT_STATUS_LABELS),
     },
     {
       csvColumn: 'confidential',

@@ -5,6 +5,7 @@ import { parseCsvBoolean } from '../csv-sheet/boolean';
 import { knownTimeZone, readTimeZoneHeader } from '../csv-sheet/date';
 import { CsvDecodeError, decodeCsv } from '../csv-sheet/decode';
 import { csvSeparatorOf } from '../csv-sheet/read';
+import { looseKey } from '../csv-sheet/text';
 import { sameStoredValues } from '../csv-sheet/unchanged';
 import { AuditLog } from '../../audit/audit.entity';
 import { omitAuditSecrets } from '../../audit/audit.service';
@@ -307,25 +308,50 @@ export class CsvImportService {
     );
     const timeZones: Record<string, string> = {};
     const zoneless: string[] = [];
+
+    // A header names its column in the file's language when the config translates it
+    // (`headerLabels`): the export writes that text, and the import reads it back as the column.
+    // The technical `csvColumn` stays accepted, so an older or hand-made file still reads.
+    const headerKey = (value: string) => looseKey(value).normalize('NFC');
+    const headerAliases = new Map<string, string>();
+    for (const field of config.fields) {
+      if (field.importable === false) continue;
+      headerAliases.set(headerKey(field.csvColumn), field.csvColumn);
+      for (const label of Object.values(config.headerLabels?.[field.csvColumn] ?? {})) {
+        if (label) headerAliases.set(headerKey(label), field.csvColumn);
+      }
+    }
+
     const readHeader = (header: string | null | undefined) => {
-      const named = header == null ? null : readTimeZoneHeader(header);
-      if (!named || !zonedColumns.has(named.column)) {
-        if (header != null && zonedColumns.has(header)) zoneless.push(header);
+      if (header == null) return header;
+      const named = readTimeZoneHeader(header);
+      const column = headerAliases.get(headerKey(named ? named.column : header));
+      if (!column) {
+        // Not a column of this config: keep it as it came, so the ignored-column warning names it.
+        if (zonedColumns.has(header)) zoneless.push(header);
         return header;
+      }
+      if (!zonedColumns.has(column)) {
+        // A zone on a column that has none is not ours to read: keep the cell as it came.
+        return named ? header : column;
+      }
+      if (!named) {
+        zoneless.push(column);
+        return column;
       }
       const zone = knownTimeZone(named.zone);
       if (zone) {
-        timeZones[named.column] = zone;
+        timeZones[column] = zone;
       } else {
         headerErrors.push({
           row: 0,
-          column: named.column,
-          message: `Unknown time zone in the ${named.column} column: "${named.zone}". Use a zone such as Europe/Paris or UTC.`,
+          column,
+          message: `Unknown time zone in the ${column} column: "${named.zone}". Use a zone such as Europe/Paris or UTC.`,
           code: 'CSV_HEADER_UNKNOWN_TIME_ZONE',
-          params: { column: named.column, zone: named.zone },
+          params: { column, zone: named.zone },
         });
       }
-      return named.column;
+      return column;
     };
 
     await new Promise<void>((resolve, reject) => {
