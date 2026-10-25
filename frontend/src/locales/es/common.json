@@ -684,7 +684,11 @@
       "basic": "Datos básicos",
       "context": "Contexto",
       "dates": "Fechas",
-      "ip_addresses": "Direcciones IP"
+      "ip_addresses": "Direcciones IP",
+      "effort": "Esfuerzo",
+      "team": "Equipo",
+      "scoring": "Evaluación",
+      "analysis": "Análisis"
     },
     "presets": {
       "applications": {
@@ -694,6 +698,12 @@
         "enrichment": "Enriquecimiento de datos"
       },
       "tasks": {
+        "enrichment": "Enriquecimiento de datos"
+      },
+      "portfolio_projects": {
+        "enrichment": "Enriquecimiento de datos"
+      },
+      "portfolio_requests": {
         "enrichment": "Enriquecimiento de datos"
       }
     },
@@ -828,6 +838,65 @@
         "owner_email_3": "Correo del responsable 3",
         "owner_email_4": "Correo del responsable 4",
         "labels": "Etiquetas"
+      },
+      "portfolio_projects": {
+        "id": "ID",
+        "name": "Nombre",
+        "status": "Estado",
+        "purpose": "Objetivo",
+        "origin": "Procedencia",
+        "source_name": "Origen",
+        "category_name": "Categoría",
+        "stream_name": "Línea",
+        "company_name": "Empresa",
+        "department_name": "Departamento",
+        "planned_start": "Inicio planificado",
+        "planned_end": "Fin planificado",
+        "actual_start": "Inicio real",
+        "actual_end": "Fin real",
+        "baseline_start_date": "Inicio de línea base",
+        "baseline_end_date": "Fin de línea base",
+        "execution_progress": "Progreso (%)",
+        "estimated_effort_it": "Esfuerzo IT estimado (DP)",
+        "estimated_effort_business": "Esfuerzo de negocio estimado (DP)",
+        "actual_effort_it": "Esfuerzo IT real (DP)",
+        "actual_effort_business": "Esfuerzo de negocio real (DP)",
+        "baseline_effort_it": "Esfuerzo IT de línea base (DP)",
+        "baseline_effort_business": "Esfuerzo de negocio de línea base (DP)",
+        "business_sponsor_email": "Correo del patrocinador de negocio",
+        "business_lead_email": "Correo del responsable de negocio",
+        "it_sponsor_email": "Correo del patrocinador IT",
+        "it_lead_email": "Correo del responsable IT",
+        "criteria_values": "Criterios de evaluación (JSON)",
+        "priority_score": "Puntuación de prioridad",
+        "priority_override": "Sobrescritura de prioridad",
+        "override_value": "Valor de sobrescritura",
+        "override_justification": "Justificación de la sobrescritura"
+      },
+      "portfolio_requests": {
+        "id": "ID",
+        "name": "Nombre",
+        "status": "Estado",
+        "purpose": "Objetivo",
+        "source_name": "Origen",
+        "category_name": "Categoría",
+        "stream_name": "Línea",
+        "requestor_email": "Correo del solicitante",
+        "company_name": "Empresa",
+        "department_name": "Departamento",
+        "target_delivery_date": "Fecha de entrega objetivo",
+        "current_situation": "Situación actual",
+        "expected_benefits": "Beneficios esperados",
+        "risks": "Riesgos",
+        "business_sponsor_email": "Correo del patrocinador de negocio",
+        "business_lead_email": "Correo del responsable de negocio",
+        "it_sponsor_email": "Correo del patrocinador IT",
+        "it_lead_email": "Correo del responsable IT",
+        "criteria_values": "Criterios de evaluación (JSON)",
+        "priority_score": "Puntuación de prioridad",
+        "priority_override": "Sobrescritura de prioridad",
+        "override_value": "Valor de sobrescritura",
+        "override_justification": "Justificación de la sobrescritura"
       }
     }
   },

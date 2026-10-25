@@ -67,7 +67,7 @@ type CsvLocale = {
 };
 
 /** A `t` that reads one common locale the way i18next does, and falls back like a missing key. */
-function tOf(locale: CsvLocale) {
+function tOf(locale: object) {
   return ((key: string, options?: { defaultValue?: string }) => {
     const value = key.split('.').reduce<unknown>((node, part) => (
       node && typeof node === 'object' && part in (node as Record<string, unknown>)
@@ -115,5 +115,85 @@ describe('assets and tasks export labels', () => {
     expect(csvFieldLabel(english, 'tasks', { csvColumn: 'related_object_type', label: 'Related Object Type' })).toBe('Related object type');
     expect(csvGroupLabel(english, 'IP Addresses')).toBe('IP addresses');
     expect(csvPresetLabel(english, 'tasks', { name: 'enrichment', label: 'Data Enrichment' })).toBe('Data enrichment');
+  });
+});
+
+// Columns of the portfolio project and request export field lists
+// (portfolio-project-csv.config.ts, portfolio-request-csv.config.ts).
+const PROJECT_COLUMNS = [
+  'id', 'name', 'status', 'purpose', 'origin',
+  'source_name', 'category_name', 'stream_name', 'company_name', 'department_name',
+  'planned_start', 'planned_end', 'actual_start', 'actual_end', 'baseline_start_date', 'baseline_end_date',
+  'execution_progress',
+  'estimated_effort_it', 'estimated_effort_business',
+  'actual_effort_it', 'actual_effort_business',
+  'baseline_effort_it', 'baseline_effort_business',
+  'business_sponsor_email', 'business_lead_email', 'it_sponsor_email', 'it_lead_email',
+  'criteria_values', 'priority_score', 'priority_override', 'override_value', 'override_justification',
+];
+const REQUEST_COLUMNS = [
+  'id', 'name', 'status', 'purpose',
+  'source_name', 'category_name', 'stream_name', 'requestor_email', 'company_name', 'department_name',
+  'target_delivery_date', 'current_situation', 'expected_benefits', 'risks',
+  'business_sponsor_email', 'business_lead_email', 'it_sponsor_email', 'it_lead_email',
+  'criteria_values', 'priority_score', 'priority_override', 'override_value', 'override_justification',
+];
+const PORTFOLIO_GROUPS = ['effort', 'team', 'scoring', 'analysis'];
+
+type PortfolioCsvLocale = {
+  csv: {
+    fields: { portfolio_projects: Record<string, string>; portfolio_requests: Record<string, string> };
+    groups: Record<string, string>;
+    presets: { portfolio_projects: { enrichment: string }; portfolio_requests: { enrichment: string } };
+  };
+};
+
+describe('project and request export labels', () => {
+  const locales = {
+    en: en as PortfolioCsvLocale,
+    fr: fr as PortfolioCsvLocale,
+    de: de as PortfolioCsvLocale,
+    es: es as PortfolioCsvLocale,
+  };
+
+  it('names every field, group and preset in the four languages', () => {
+    const englishProjects = Object.keys(locales.en.csv.fields.portfolio_projects).sort();
+    const englishRequests = Object.keys(locales.en.csv.fields.portfolio_requests).sort();
+    expect(englishProjects).toEqual([...PROJECT_COLUMNS].sort());
+    expect(englishRequests).toEqual([...REQUEST_COLUMNS].sort());
+    for (const locale of Object.values(locales)) {
+      expect(Object.keys(locale.csv.fields.portfolio_projects).sort()).toEqual(englishProjects);
+      expect(Object.keys(locale.csv.fields.portfolio_requests).sort()).toEqual(englishRequests);
+      for (const column of PROJECT_COLUMNS) expect(locale.csv.fields.portfolio_projects[column]).not.toBe('');
+      for (const column of REQUEST_COLUMNS) expect(locale.csv.fields.portfolio_requests[column]).not.toBe('');
+      for (const group of PORTFOLIO_GROUPS) expect(locale.csv.groups[group]).not.toBe('');
+      expect(locale.csv.presets.portfolio_projects.enrichment).not.toBe('');
+      expect(locale.csv.presets.portfolio_requests.enrichment).not.toBe('');
+    }
+  });
+
+  it('shows the screen language instead of the server labels', () => {
+    expect(csvEntityOf('/portfolio/projects')).toBe('portfolio_projects');
+    expect(csvEntityOf('/portfolio/requests')).toBe('portfolio_requests');
+
+    const french = tOf(locales.fr);
+    expect(csvFieldLabel(french, 'portfolio_projects', { csvColumn: 'execution_progress', label: 'Execution Effort (%)' })).toBe('Progression (%)');
+    expect(csvFieldLabel(french, 'portfolio_projects', { csvColumn: 'business_sponsor_email', label: 'Business Sponsor Email' })).toBe('E-mail du sponsor métier');
+    expect(csvFieldLabel(french, 'portfolio_projects', { csvColumn: 'estimated_effort_it', label: 'Estimated Effort IT (MD)' })).toBe('Charge IT estimée (JH)');
+    expect(csvGroupLabel(french, 'Effort')).toBe('Charge');
+    expect(csvGroupLabel(french, 'Scoring')).toBe('Évaluation');
+    expect(csvPresetLabel(french, 'portfolio_projects', { name: 'enrichment', label: 'Data Enrichment' })).toBe('Enrichissement des données');
+    expect(csvFieldLabel(french, 'portfolio_requests', { csvColumn: 'requestor_email', label: 'Requestor Email' })).toBe('E-mail du demandeur');
+    expect(csvFieldLabel(french, 'portfolio_requests', { csvColumn: 'target_delivery_date', label: 'Target Delivery Date' })).toBe('Date de livraison cible');
+    expect(csvGroupLabel(french, 'Analysis')).toBe('Analyse');
+    expect(csvGroupLabel(french, 'Team')).toBe('Équipe');
+    expect(csvPresetLabel(french, 'portfolio_requests', { name: 'enrichment', label: 'Data Enrichment' })).toBe('Enrichissement des données');
+
+    const english = tOf(locales.en);
+    expect(csvFieldLabel(english, 'portfolio_projects', { csvColumn: 'planned_start', label: 'Planned Start' })).toBe('Planned start');
+    expect(csvFieldLabel(english, 'portfolio_projects', { csvColumn: 'criteria_values', label: 'Criteria Values (JSON)' })).toBe('Evaluation criteria (JSON)');
+    expect(csvFieldLabel(english, 'portfolio_requests', { csvColumn: 'current_situation', label: 'Current Situation' })).toBe('Current situation');
+    expect(csvGroupLabel(english, 'Effort')).toBe('Effort');
+    expect(csvPresetLabel(english, 'portfolio_requests', { name: 'enrichment', label: 'Data Enrichment' })).toBe('Data enrichment');
   });
 });

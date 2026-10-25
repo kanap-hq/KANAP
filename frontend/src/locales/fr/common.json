@@ -684,7 +684,11 @@
       "basic": "Informations de base",
       "context": "Contexte",
       "dates": "Dates",
-      "ip_addresses": "Adresses IP"
+      "ip_addresses": "Adresses IP",
+      "effort": "Charge",
+      "team": "Équipe",
+      "scoring": "Évaluation",
+      "analysis": "Analyse"
     },
     "presets": {
       "applications": {
@@ -694,6 +698,12 @@
         "enrichment": "Enrichissement des données"
       },
       "tasks": {
+        "enrichment": "Enrichissement des données"
+      },
+      "portfolio_projects": {
+        "enrichment": "Enrichissement des données"
+      },
+      "portfolio_requests": {
         "enrichment": "Enrichissement des données"
       }
     },
@@ -828,6 +838,65 @@
         "owner_email_3": "E-mail du responsable 3",
         "owner_email_4": "E-mail du responsable 4",
         "labels": "Étiquettes"
+      },
+      "portfolio_projects": {
+        "id": "ID",
+        "name": "Nom",
+        "status": "Statut",
+        "purpose": "Objectif",
+        "origin": "Origine",
+        "source_name": "Source",
+        "category_name": "Catégorie",
+        "stream_name": "Filière",
+        "company_name": "Société",
+        "department_name": "Département",
+        "planned_start": "Début prévu",
+        "planned_end": "Fin prévue",
+        "actual_start": "Début réel",
+        "actual_end": "Fin réelle",
+        "baseline_start_date": "Début de référence",
+        "baseline_end_date": "Fin de référence",
+        "execution_progress": "Progression (%)",
+        "estimated_effort_it": "Charge IT estimée (JH)",
+        "estimated_effort_business": "Charge métier estimée (JH)",
+        "actual_effort_it": "Charge IT réelle (JH)",
+        "actual_effort_business": "Charge métier réelle (JH)",
+        "baseline_effort_it": "Charge IT de référence (JH)",
+        "baseline_effort_business": "Charge métier de référence (JH)",
+        "business_sponsor_email": "E-mail du sponsor métier",
+        "business_lead_email": "E-mail du responsable métier",
+        "it_sponsor_email": "E-mail du sponsor IT",
+        "it_lead_email": "E-mail du responsable IT",
+        "criteria_values": "Critères d’évaluation (JSON)",
+        "priority_score": "Score de priorité",
+        "priority_override": "Surcharge de priorité",
+        "override_value": "Valeur de surcharge",
+        "override_justification": "Justification de la surcharge"
+      },
+      "portfolio_requests": {
+        "id": "ID",
+        "name": "Nom",
+        "status": "Statut",
+        "purpose": "Objectif",
+        "source_name": "Source",
+        "category_name": "Catégorie",
+        "stream_name": "Filière",
+        "requestor_email": "E-mail du demandeur",
+        "company_name": "Société",
+        "department_name": "Département",
+        "target_delivery_date": "Date de livraison cible",
+        "current_situation": "Situation actuelle",
+        "expected_benefits": "Bénéfices attendus",
+        "risks": "Risques",
+        "business_sponsor_email": "E-mail du sponsor métier",
+        "business_lead_email": "E-mail du responsable métier",
+        "it_sponsor_email": "E-mail du sponsor IT",
+        "it_lead_email": "E-mail du responsable IT",
+        "criteria_values": "Critères d’évaluation (JSON)",
+        "priority_score": "Score de priorité",
+        "priority_override": "Surcharge de priorité",
+        "override_value": "Valeur de surcharge",
+        "override_justification": "Justification de la surcharge"
       }
     }
   },
