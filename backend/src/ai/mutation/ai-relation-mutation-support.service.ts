@@ -418,7 +418,7 @@ export class AiRelationMutationSupportService {
     const checkedItems = await this.applyAssignmentRules(context, config, expectedItems, nextItems);
     // Placement: the same locks and the same read as the preview. A member that joined a cluster,
     // or a host link that appeared or disappeared, makes the replacement differ from what the
-    // person saw: nothing is written.
+    // person saw: nothing is written. The relations of an asset are read below, after its locks.
     const placement = await this.applyPlacementRules(context, config, preview.target_entity_id, expectedItems, nextItems);
     if (replacedHostLinkSignature(placement)
       !== replacedHostLinkSignature(this.coerceReplacedHostLinks(preview.mutation_input?.replaced_host_links))) {
@@ -554,8 +554,13 @@ export class AiRelationMutationSupportService {
   /**
    * The placement rules of `assets/placement-rules.ts` for the `contains` items the assistant adds
    * to an asset (the items whose key is not in `currentItems`):
-   * - the clusters the source decides on are locked first (`lockAssignmentClusters`), then the
-   *   source is read in its own statement;
+   * - the locks of `AssetsRelationsService.bulkReplaceRelations`, in its order: the clusters the
+   *   source decides on (`lockAssignmentClusters`) when `nextItems` carries a `contains`, kept or
+   *   added, then the source asset, always. The execution reads the relations again after them: a
+   *   cluster absorbing one of the source's links at the same time either committed before that
+   *   read, which then differs from the preview, or waits for this replacement to commit and
+   *   absorbs what it wrote;
+   * - the source is read in its own statement, after the locks;
    * - a host member of a cluster in service that already contains an added asset is refused
    *   (`placement_inherited`), at the preview as at execution;
    * - a cluster absorbs the links its members hold towards the added assets, returned so that the
@@ -570,6 +575,14 @@ export class AiRelationMutationSupportService {
     nextItems: RelationItem[],
   ): Promise<ReplacedHostLink[]> {
     if (config.kind !== 'asset_relations') return [];
+    if (nextItems.some((item) => item.payload.relation_type === 'contains')) {
+      await lockAssignmentClusters(context.manager, context.tenantId, [assetId]);
+    }
+    const locked = await context.manager.query(
+      `SELECT id FROM assets WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+      [context.tenantId, assetId],
+    );
+    if (locked.length === 0) throw new NotFoundException(`${config.label}: the asset was not found.`);
     const currentKeys = new Set(currentItems.map((item) => item.key));
     const addedIds = Array.from(new Set(
       nextItems
@@ -577,7 +590,6 @@ export class AiRelationMutationSupportService {
         .map((item) => String(item.payload.related_asset_id || '')),
     )).filter((id) => id);
     if (addedIds.length === 0) return [];
-    await lockAssignmentClusters(context.manager, context.tenantId, [assetId]);
     const rows: Array<{ is_cluster: boolean; name: string }> = await context.manager.query(
       `SELECT is_cluster, name FROM assets WHERE tenant_id = $1 AND id = $2`,
       [context.tenantId, assetId],
@@ -1311,6 +1323,7 @@ export class AiRelationMutationSupportService {
     }
   }
 
+  /** The source asset is already locked (`applyPlacementRules`), as the relations were read again. */
   private async replaceAssetRelations(context: AiExecutionContextWithManager, assetId: string, nextItems: RelationItem[]): Promise<void> {
     await context.manager.query(`DELETE FROM asset_relations WHERE tenant_id = $1 AND asset_id = $2`, [context.tenantId, assetId]);
     for (const item of nextItems) {
