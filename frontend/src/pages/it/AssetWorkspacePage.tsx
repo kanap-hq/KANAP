@@ -44,6 +44,7 @@ import ClusterGroupLine from './components/ClusterGroupLine';
 import useClusterAssignmentQuestion from './components/useClusterAssignmentQuestion';
 import HardwareInfoPanel from './editors/HardwareInfoPanel';
 import SupportInfoPanel from './editors/SupportInfoPanel';
+import AssetConnectionsSection from './workspace/AssetConnectionsSection';
 import AssetDependenciesTab from './workspace/AssetDependenciesTab';
 import AssetRelationsTab from './workspace/AssetRelationsTab';
 import { assetRelationsKey, fetchAssetRelationsTab } from './workspace/assetRelationsData';
@@ -176,17 +177,6 @@ type ClusterSummary = {
   name: string;
   environment: string;
   status: string;
-};
-
-type ServerConnectionRow = {
-  id: string;
-  connection_reference: string;
-  name: string;
-  topology: 'server_to_server' | 'multi_server';
-  lifecycle: string;
-  protocol_labels?: string[];
-  source_label?: string | null;
-  destination_label?: string | null;
 };
 
 type TabKey = 'overview' | 'operations' | 'network' | 'hardware' | 'dependencies' | 'relations';
@@ -370,9 +360,6 @@ export default function AssetWorkspacePage() {
   const [memberOptionsFull, setMemberOptionsFull] = React.useState(false);
   const [memberSaving, setMemberSaving] = React.useState(false);
   const [memberSaveError, setMemberSaveError] = React.useState<string | null>(null);
-  const [connections, setConnections] = React.useState<ServerConnectionRow[]>([]);
-  const [connectionsError, setConnectionsError] = React.useState<string | null>(null);
-  const [connectionsLoading, setConnectionsLoading] = React.useState(false);
   const [assetTypeAnchorEl, setAssetTypeAnchorEl] = React.useState<HTMLElement | null>(null);
   const [locationAnchorEl, setLocationAnchorEl] = React.useState<HTMLElement | null>(null);
   const [goLiveAnchorEl, setGoLiveAnchorEl] = React.useState<HTMLElement | null>(null);
@@ -391,11 +378,6 @@ export default function AssetWorkspacePage() {
   }, [data, isCreate, routeId]);
   const queryClient = useQueryClient();
   const { byField, labelFor, settings } = useItOpsEnumOptions();
-  const topologyLabel = React.useCallback((v?: string) => {
-    if (v === 'server_to_server') return t('enums.topology.serverToServer');
-    if (v === 'multi_server') return t('enums.topology.multiServer');
-    return v || '';
-  }, [t]);
   const serverRoleOptions = React.useMemo(
     () => (byField.serverRole || []).map((o) => ({
       value: o.code,
@@ -764,33 +746,6 @@ export default function AssetWorkspacePage() {
     setNotes(data.notes || '');
     setDirty(false);
   }, [data]);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    if (isCreate || !id) {
-      setConnections([]);
-      setConnectionsError(null);
-      setConnectionsLoading(false);
-      return () => { cancelled = true; };
-    }
-    const loadConnections = async () => {
-      setConnectionsLoading(true);
-      setConnectionsError(null);
-      try {
-        const res = await api.get<{ items: ServerConnectionRow[] }>(`/connections/by-server/${id}`);
-        if (cancelled) return;
-        setConnections(res.data?.items || []);
-      } catch (e: any) {
-        if (cancelled) return;
-        setConnectionsError(getApiErrorMessage(e, t, t('messages.loadConnectionsFailed')));
-        setConnections([]);
-      } finally {
-        if (!cancelled) setConnectionsLoading(false);
-      }
-    };
-    void loadConnections();
-    return () => { cancelled = true; };
-  }, [id, isCreate, t]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -2532,53 +2487,7 @@ export default function AssetWorkspacePage() {
                   <Box sx={{ mb: 1 }}>
                     <SectionLabel>{t('workspace.asset.connections.title')}</SectionLabel>
                   </Box>
-                  {connectionsError && <Alert severity="error" sx={{ mb: 2 }}>{connectionsError}</Alert>}
-                  {!connectionsLoading && (
-                    connections.length === 0 ? (
-                      <Typography variant="body2" color="text.secondary">{t('workspace.asset.connections.noConnections')}</Typography>
-                    ) : (
-                      <Table size="small" sx={denseTableSx}>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>{t('workspace.asset.connections.connectionId')}</TableCell>
-                            <TableCell>{t('workspace.asset.connections.name')}</TableCell>
-                            <TableCell>{t('workspace.asset.connections.topology')}</TableCell>
-                            <TableCell>{t('workspace.asset.connections.protocols')}</TableCell>
-                            <TableCell>{t('workspace.asset.connections.source')}</TableCell>
-                            <TableCell>{t('workspace.asset.connections.destination')}</TableCell>
-                            <TableCell>{t('workspace.asset.connections.lifecycle')}</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {connections.map((conn) => (
-                            <TableRow key={conn.id} hover>
-                              <TableCell>
-                                <Button size="small" onClick={() => navigate(`/it/connections/${conn.connection_reference || conn.id}/overview`)} sx={{ fontFamily: "'JetBrains Mono Variable', monospace", textTransform: 'none' }}>
-                                  {conn.connection_reference}
-                                </Button>
-                              </TableCell>
-                              <TableCell>
-                                <Button size="small" onClick={() => navigate(`/it/connections/${conn.connection_reference || conn.id}/overview`)}>
-                                  {conn.name}
-                                </Button>
-                              </TableCell>
-                              <TableCell>{topologyLabel(conn.topology)}</TableCell>
-                              <TableCell>
-                                <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                                  {(conn.protocol_labels || []).map((p) => (
-                                    <Box key={p} component="span" sx={{ color: 'text.secondary', fontSize: '0.8125rem' }}>{p}</Box>
-                                  ))}
-                                </Stack>
-                              </TableCell>
-                              <TableCell>{conn.source_label || '-'}</TableCell>
-                              <TableCell>{conn.destination_label || '-'}</TableCell>
-                              <TableCell>{labelFor('lifecycleStatus', conn.lifecycle) || conn.lifecycle}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )
-                  )}
+                  <AssetConnectionsSection assetId={id} />
                 </Box>
               )}
             </Stack>
