@@ -28,7 +28,7 @@ function usageList(usages: NonNullable<DeleteFailure['usages']>, t: TFunction, l
   return joinNames(usageLabels(usages, t), language);
 }
 
-/** The names a refusal carries in `params`, at most three then "and 2 others". */
+/** The names a refusal carries (`applications`), at most three then "and 2 others". */
 const NAMED_USAGES = 3;
 
 function applicationNames(applications: string[] | undefined, t: TFunction, language: string): string | null {
