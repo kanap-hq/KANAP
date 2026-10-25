@@ -20,6 +20,8 @@ import { UpdateTaskFieldsAiMutationOperation } from '../../ai/mutation/operation
 import { AiQueryExecutor } from '../../ai/query/ai-query.executor';
 import { TasksController } from '../../spend/tasks.controller';
 import { TasksService } from '../../spend/tasks.service';
+import { TasksDeleteService } from '../../tasks/tasks-delete.service';
+import { taskCsvConfig } from '../../tasks/task-csv.config';
 import { Task } from '../../tasks/task.entity';
 import { TasksCsvService } from '../../tasks/tasks-csv.service';
 import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
@@ -466,6 +468,73 @@ async function testPlaidAndSearch(): Promise<void> {
   });
 }
 
+async function testWritesById(): Promise<void> {
+  await inRolledBackTransaction(async (runner) => {
+    const s = await seed(runner, 'restricted-writes');
+    const reader = viewer(s.readerId, false);
+    const reporter = viewer(s.reporterId, false);
+
+    const deletes = new (TasksDeleteService as any)(
+      runner.manager.getRepository(Task),
+      undefined,
+      undefined,
+    );
+    assert.deepEqual(
+      await deletes.deleteCheck([s.restrictedTaskId], { manager: runner.manager, viewer: reader }),
+      { refused: [] },
+      'the delete check does not name the hidden task',
+    );
+    const readerBulk = await deletes.bulkDelete([s.restrictedTaskId], s.readerId, {
+      manager: runner.manager,
+      viewer: reader,
+    });
+    assert.equal(readerBulk.deleted.length, 0);
+    assert.equal(readerBulk.failed[0]?.code, 'not_found');
+    const [{ count: stillThere }] = await runner.query(
+      `SELECT count(*)::int AS count FROM tasks WHERE tenant_id = $1 AND id = $2`,
+      [s.tenantId, s.restrictedTaskId],
+    );
+    assert.equal(stillThere, 1, 'the hidden task was not deleted');
+
+    // Converting a task copies its title, description and attachments: refuse it first.
+    const requests = new (PortfolioRequestsService as any)(runner.manager.getRepository(PortfolioRequest));
+    await assertNotFound(requests.convertFromTask(s.restrictedTaskId, {}, s.tenantId, s.readerId, {
+      manager: runner.manager,
+      viewer: reader,
+    }));
+    const [{ count: requestsFromTask }] = await runner.query(
+      `SELECT count(*)::int AS count FROM portfolio_requests WHERE tenant_id = $1 AND origin_task_id = $2`,
+      [s.tenantId, s.restrictedTaskId],
+    );
+    assert.equal(requestsFromTask, 1, 'no request was copied from the hidden task');
+
+    // A CSV row that names the hidden task by id reads as not found.
+    const csvRows: any[] = [{
+      rowNumber: 2,
+      raw: { id: s.restrictedTaskId, title: 'Overwritten title' },
+      parsed: {},
+      isInsert: true,
+      errors: [],
+      warnings: [],
+    }];
+    const csvContext: any = {
+      manager: runner.manager,
+      tenantId: s.tenantId,
+      params: { dryRun: true, mode: 'enrich', operation: 'upsert' },
+      resolverCache: new Map(),
+      viewer: reader,
+    };
+    await (taskCsvConfig as any).beforeValidate(csvRows, csvContext);
+    assert.equal(csvRows[0].errors.length, 1);
+    assert.equal(csvRows[0].errors[0].column, 'id');
+    assert.equal(csvRows[0].errors[0].message, 'Task not found');
+
+    const reporterRows: any[] = [{ ...csvRows[0], errors: [], warnings: [] }];
+    await (taskCsvConfig as any).beforeValidate(reporterRows, { ...csvContext, viewer: reporter });
+    assert.equal(reporterRows[0].errors.length, 0, 'the reporter may import their task');
+  });
+}
+
 async function testOtherReadSurfaces(): Promise<void> {
   await inRolledBackTransaction(async (runner) => {
     const s = await seed(runner, 'restricted-other-reads');
@@ -641,6 +710,7 @@ async function testDeletedIncidentStaysVisible(): Promise<void> {
 void runSpecs('incident-restricted-tasks-audit', [
   ['task reads follow the incident visibility', testTaskReads],
   ['Plaid and search follow the incident visibility', testPlaidAndSearch],
+  ['writes by id treat a hidden task as missing', testWritesById],
   ['the other read surfaces follow the incident visibility', testOtherReadSurfaces],
   ['audit log follows the incident visibility', testAuditLog],
   ['a deleted incident leaves its task and audit row visible', testDeletedIncidentStaysVisible],

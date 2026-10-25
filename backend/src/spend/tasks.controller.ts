@@ -272,6 +272,7 @@ export class TasksController {
         manager: req?.queryRunner?.manager,
         tenantId,
         userId: req.user?.sub,
+        viewer: incidentViewerFromRequest(req),
       },
     );
   }
@@ -343,7 +344,10 @@ export class TasksController {
   @RequireLevel('tasks', 'admin')
   @Post('delete-check')
   deleteCheck(@Body() body: { ids?: unknown }, @Req() req: any) {
-    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: req?.queryRunner?.manager });
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], {
+      manager: req?.queryRunner?.manager,
+      viewer: incidentViewerFromRequest(req),
+    });
   }
 
   @UseGuards(PermissionGuard)
@@ -351,7 +355,10 @@ export class TasksController {
   @Delete('bulk')
   async bulkDelete(@Body() body: { ids: string[] }, @Req() req: any) {
     const ids = Array.isArray(body?.ids) ? body.ids : [];
-    return this.deleteSvc.bulkDelete(ids, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.deleteSvc.bulkDelete(ids, req.user?.sub ?? null, {
+      manager: req?.queryRunner?.manager,
+      viewer: incidentViewerFromRequest(req),
+    });
   }
 
   @UseGuards(PermissionGuard)

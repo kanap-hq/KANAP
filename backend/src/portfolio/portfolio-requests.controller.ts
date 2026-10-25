@@ -1039,6 +1039,7 @@ export class PortfolioRequestsController {
     const tenantId = req?.tenant?.id ?? '';
     return this.svc.convertFromTask(taskId, body ?? {}, tenantId, req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
+      viewer: incidentViewerFromRequest(req),
     });
   }
 }

@@ -1197,7 +1197,7 @@ export class PortfolioRequestsService {
     overrides: ConvertFromTaskOverrides,
     tenantId: string,
     userId: string | null,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; viewer?: IncidentViewer | null },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const requestRepo = mg.getRepository(PortfolioRequest);
@@ -1207,8 +1207,19 @@ export class PortfolioRequestsService {
 
     if (!tenantId) throw new BadRequestException('Tenant context is required');
 
-    const task = await taskRepo.findOne({ where: { id: taskId } });
-    if (!task || task.tenant_id !== tenantId) {
+    const taskParams: unknown[] = [taskId, tenantId];
+    const taskVisibility = taskIncidentVisibilitySql('t', opts?.viewer, taskParams);
+    const taskRows = await mg.query(
+      `SELECT t.*
+       FROM tasks t
+       WHERE t.id = $1
+         AND t.tenant_id = $2
+         ${taskVisibility}
+       LIMIT 1`,
+      taskParams,
+    );
+    const task = taskRows[0] ? taskRepo.create(taskRows[0] as Partial<Task>) : null;
+    if (!task) {
       throw new NotFoundException('Task not found');
     }
 
