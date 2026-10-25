@@ -1,5 +1,5 @@
 import React from 'react';
-import { Avatar, Box, MenuItem, Select, Typography, useMediaQuery } from '@mui/material';
+import { Box, MenuItem, Select, Typography, useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -8,7 +8,6 @@ import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import { PropertyGroup, PropertyRow } from '../../../components/design';
 import DateEUField from '../../../components/fields/DateEUField';
-import UserSelect from '../../../components/fields/UserSelect';
 import UserMultiSelect from '../../../components/fields/UserMultiSelect';
 import MetadataUserPicker from '../../../components/workspace/MetadataUserPicker';
 import ApplicationMultiSelect from '../../../components/fields/ApplicationMultiSelect';
@@ -19,7 +18,6 @@ import { drawerMenuItemSx, drawerSelectSx, selectPlaceholderSx, tealLinkSx } fro
 import DrawerKnowledgeSection from './DrawerKnowledgeSection';
 import TaskLogTimeDialog from './TaskLogTimeDialog';
 import { taskDetailTokens, taskDetailTypography } from '../theme/taskDetailTokens';
-import { getInitials } from '../../../utils/userDisplay';
 import { useLocalizedTaskTypes, useTaskTypeLabel } from '../../../hooks/useLocalizedTaskTypes';
 
 /* ------------------------------------------------------------------ */
@@ -304,14 +302,16 @@ export default function TaskPropertiesDrawer({
       {/* ══ Group 3: People ══ */}
       <PropertyGroup>
         <PropertyRow label={t('workspace.task.sidebar.fields.requestor')}>
-          {readOnly ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Avatar sx={{ width: 16, height: 16, fontSize: 8, fontWeight: 500, bgcolor: 'primary.main' }}>{getInitials(task.creator_name)}</Avatar>
-              <Typography sx={{ fontSize: 13 }}>{task.creator_name || '-'}</Typography>
-            </Box>
-          ) : (
-            <UserSelect label="" value={task.creator_id} onChange={(v) => onPatch({ creator_id: v })} size="small" />
-          )}
+          <MetadataUserPicker
+            value={task.creator_id}
+            displayName={task.creator_name}
+            placeholder={t('workspace.task.sidebar.values.requestorMissing')}
+            searchPlaceholder={t('workspace.task.sidebar.fields.requestor')}
+            disabled={readOnly}
+            showAvatar={false}
+            onChange={(v) => onPatch({ creator_id: v })}
+            sx={{ maxWidth: '100%' }}
+          />
         </PropertyRow>
         <PropertyRow label={t('workspace.task.sidebar.fields.assignee')}>
           <MetadataUserPicker
