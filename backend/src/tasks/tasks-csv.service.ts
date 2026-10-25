@@ -17,6 +17,10 @@ import {
 import { taskCsvConfig } from './task-csv.config';
 import { assertTaskWritten } from './task-data-access';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
+import {
+  IncidentViewer,
+  taskIncidentVisibilityQueryBuilderClause,
+} from '../incidents/incident-visibility';
 
 /** The task types of a budget line, which a limited person may see tasks of without the line. */
 const LINE_TYPES = new Set(['spend_item', 'capex_item']);
@@ -48,8 +52,10 @@ export class TasksCsvService {
     preset?: string;
     relatedObjectType?: string;
     relatedObjectId?: string;
+    /** A task of an incident the reader cannot see stays out of the file (empty for incidents:admin). */
+    viewer?: IncidentViewer | null;
   }): Promise<CsvExportResult> {
-    const { manager, tenantId, scope, fields, preset, relatedObjectType, relatedObjectId } = opts;
+    const { manager, tenantId, scope, fields, preset, relatedObjectType, relatedObjectId, viewer } = opts;
 
     // Build query for tasks
     let queryBuilder = manager
@@ -63,6 +69,12 @@ export class TasksCsvService {
     }
     if (relatedObjectId) {
       queryBuilder = queryBuilder.andWhere('task.related_object_id = :relatedObjectId', { relatedObjectId });
+    }
+
+    // Export follows the list: a task of an incident the reader cannot see is absent.
+    const incidentVisibility = taskIncidentVisibilityQueryBuilderClause('task', viewer);
+    if (incidentVisibility.clause) {
+      queryBuilder = queryBuilder.andWhere(incidentVisibility.clause, incidentVisibility.params);
     }
 
     queryBuilder = queryBuilder.orderBy('task.created_at', 'DESC');

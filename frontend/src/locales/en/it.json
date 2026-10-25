@@ -7,6 +7,8 @@
       "exportCsv": "Export CSV",
       "importTitle": "Import incidents",
       "exportTitle": "Export incidents",
+      "exportScope_one": "Filtered export: {{count}} incident",
+      "exportScope_other": "Filtered export: {{count}} incidents",
       "columns": {
         "reference": "Ref",
         "title": "Title",
@@ -21,7 +23,10 @@
         "applications": "Applications",
         "tasks": "Tasks",
         "created": "Created on",
-        "access": "Access"
+        "access": "Access",
+        "personalData": "Personal data",
+        "authorityRequired": "Notification required",
+        "authorityNotified": "Notified on"
       },
       "filters": {
         "noCategory": "(No category)",
@@ -1582,6 +1587,7 @@
         "placeholder": "Add a note to the journal",
         "add": "Add",
         "empty": "No entries yet.",
+        "recordedAt": "recorded {{date}}",
         "systemAuthor": "System",
         "unknownAuthor": "Unknown",
         "kinds": {

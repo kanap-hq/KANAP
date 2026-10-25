@@ -673,7 +673,11 @@
       "status": "Estado",
       "owners": "Responsables",
       "timestamps": "Fechas",
-      "vulnerabilities": "Vulnerabilidades"
+      "vulnerabilities": "Vulnerabilidades",
+      "timeline": "Cronología",
+      "people": "Personas",
+      "record": "Registro",
+      "source": "Origen"
     },
     "presets": {
       "applications": {
@@ -729,6 +733,27 @@
         "it_owner_email_3": "Correo del responsable de TI 3",
         "business_owner_email_4": "Correo del responsable de negocio 4",
         "it_owner_email_4": "Correo del responsable de TI 4"
+      },
+      "incidents": {
+        "ref": "Ref.",
+        "title": "Título",
+        "category": "Categoría",
+        "severity": "Gravedad",
+        "status": "Estado",
+        "confidential": "Restringido a administradores del registro",
+        "started_at": "Inicio",
+        "detected_at": "Detectado",
+        "resolved_at": "Resuelto",
+        "closed_at": "Cerrado",
+        "reporter": "Notificante",
+        "owner": "Responsable",
+        "description": "Descripción",
+        "review": "Revisión de incidente",
+        "source_ref": "Referencia externa",
+        "personal_data_affected": "Datos personales afectados",
+        "authority_notification_required": "Requiere notificación a la autoridad",
+        "authority_notified_at": "Notificado el",
+        "notified_parties": "Partes informadas"
       }
     }
   },

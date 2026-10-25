@@ -32,6 +32,7 @@ import { KnowledgeService } from '../knowledge/knowledge.service';
 import { InlineImageResolverService } from '../knowledge/inline-image-resolver.service';
 import {
   IncidentEntriesService,
+  IncidentJournalImportService,
   IncidentRelationsService,
   incidentRelationKindOrThrow,
   IncidentReportService,
@@ -69,6 +70,7 @@ export class IncidentsController {
     private readonly dataSource: DataSource,
     private readonly inlineImages: InlineImageResolverService,
     private readonly deleteSvc: IncidentsDeleteService,
+    private readonly journalImport: IncidentJournalImportService,
   ) {}
 
   private resolveId(id: string, manager: EntityManager): Promise<string> {
@@ -82,6 +84,7 @@ export class IncidentsController {
       viewer: incidentViewerFromContext(ctx),
       technologies: canReadResource(ctx, 'infrastructure'),
       applications: canReadResource(ctx, 'applications'),
+      tasks: canReadResource(ctx, 'tasks'),
     };
   }
 
@@ -169,6 +172,7 @@ export class IncidentsController {
   @RequireLevel('incidents', 'reader')
   @Get('export')
   async exportCsv(
+    @Query() query: Record<string, unknown>,
     @Query('language') languageRaw: string | undefined,
     @Query('timeZone') timeZoneRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
@@ -188,6 +192,7 @@ export class IncidentsController {
       viewer: incidentViewerFromContext(ctx),
       scope,
       fields: fields ? fields.split(',').map((f) => f.trim()) : undefined,
+      query,
     });
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -231,6 +236,25 @@ export class IncidentsController {
     return this.csvSvc.getFieldInfo();
   }
 
+  /**
+   * Journal import for the sample data: one row per entry, with its author and
+   * event time (see IncidentJournalImportService). Restricted to register
+   * administrators, because the file chooses who signed an entry.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('incidents', 'admin')
+  @Post('import-journal')
+  @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
+  importJournal(
+    @UploadedFile() file: Express.Multer.File,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.journalImport.import(file, {
+      manager: ctx.manager as EntityManager,
+      tenantId: ctx.tenantId,
+    });
+  }
+
   // PDF fiche (read — works on closed/cancelled records)
 
   @UseGuards(PermissionGuard, RateLimitGuard)
@@ -249,11 +273,10 @@ export class IncidentsController {
   ): Promise<void> {
     const id = await this.visibleId(idOrRef, ctx);
     const resolveInlineImage = this.inlineImages.exporter(ctx);
+    const recordOpts = await this.viewOpts(ctx);
     const result = await this.report.exportPdf(id, lang, {
-      manager: ctx.manager,
-      tenantId: ctx.tenantId,
+      ...recordOpts,
       userId: ctx.userId || null,
-      viewer: incidentViewerFromContext(ctx),
       // Inline images of the review: resolved internally with the caller's
       // identity; the cookie stays as a fallback for unrecognized internal targets.
       imageFetchCookie: req?.headers?.cookie ?? null,

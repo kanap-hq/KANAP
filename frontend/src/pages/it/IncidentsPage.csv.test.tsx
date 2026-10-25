@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -7,7 +7,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import IncidentsPage from './IncidentsPage';
 
-const dialogs = vi.hoisted(() => ({ export: null as null | Record<string, any>, import: null as null | Record<string, any> }));
+const dialogs = vi.hoisted(() => ({
+  export: null as null | Record<string, any>,
+  import: null as null | Record<string, any>,
+  grid: null as null | Record<string, any>,
+}));
 
 vi.mock('react-i18next', () => {
   const t = (key: string) => key;
@@ -19,7 +23,7 @@ vi.mock('react-i18next', () => {
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true, profile: { id: 'me' } }) }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(async () => ({ data: { items: [] } })), post: vi.fn() } }));
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({ default: () => ({ settings: null, byField: {}, labelFor: (_field: string, code: string) => code }) }));
-vi.mock('../../components/ServerDataGrid', () => ({ default: () => null }));
+vi.mock('../../components/ServerDataGrid', () => ({ default: (props: Record<string, any>) => { dialogs.grid = props; return null; } }));
 vi.mock('../../components/DeleteSelectedButton', () => ({ default: () => null }));
 vi.mock('../../components/csv', () => ({
   CsvExportDialogV2: (props: Record<string, any>) => {
@@ -53,6 +57,45 @@ describe('IncidentsPage CSV', () => {
     expect(dialogs.import?.params).toEqual({ timeZone: 'Europe/Paris' });
   });
 
+  it('sends the current list filters, search and sort with the export, and says when it is filtered', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter><IncidentsPage /></MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    const filters = JSON.stringify({ severity: { filterType: 'set', values: ['major'] } });
+    act(() => {
+      dialogs.grid?.onListRequestChange({ params: { sort: 'detected_at:ASC', filters, q: 'mail' }, total: 12 });
+    });
+    fireEvent.click(screen.getByText('pages.incidents.exportCsv'));
+    expect(dialogs.export?.params).toEqual({ sort: 'detected_at:ASC', filters, q: 'mail', timeZone: expect.any(String) });
+    expect(dialogs.export?.scopeSummary).toBe('pages.incidents.exportScope');
+  });
+
+  it('keeps the compliance columns hidden by default and filters them yes or no', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter><IncidentsPage /></MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    const column = (field: string) => (dialogs.grid?.columns ?? []).find((col: any) => col.field === field);
+    expect(column('personal_data_affected')?.defaultHidden).toBe(true);
+    expect(column('personal_data_affected')?.filterParams?.values).toEqual([
+      { value: 'true', label: 'enums.yesNo.yes' },
+      { value: 'false', label: 'enums.yesNo.no' },
+    ]);
+    expect(column('authority_notification_required')?.defaultHidden).toBe(true);
+    expect(column('authority_notification_required')?.filterParams?.values).toEqual([
+      { value: 'true', label: 'enums.yesNo.yes' },
+      { value: 'false', label: 'enums.yesNo.no' },
+    ]);
+    expect(column('authority_notified_at')?.defaultHidden).toBe(true);
+  });
+
   it('words the zone messages of the date-time headers in each language', async () => {
     for (const lang of ['en', 'fr', 'de', 'es']) {
       const errors = (await import(`../../locales/${lang}/errors.json`)).default as Record<string, string>;
@@ -60,6 +103,15 @@ describe('IncidentsPage CSV', () => {
       expect(errors.CSV_HEADER_UNKNOWN_TIME_ZONE, lang).toContain('{{zone}}');
       expect(errors.CSV_HEADER_ZONELESS_DATE_TIMES, lang).toContain('{{columns}}');
       expect(errors.CSV_HEADER_ZONELESS_DATE_TIMES, lang).toContain('{{example}}');
+    }
+  });
+
+  it('words the import lifecycle refusal in each language', async () => {
+    for (const lang of ['en', 'fr', 'de', 'es']) {
+      const errors = (await import(`../../locales/${lang}/errors.json`)).default as Record<string, string>;
+      for (const placeholder of ['{{reference}}', '{{from}}', '{{to}}']) {
+        expect(errors.CSV_INCIDENT_STATUS_RESERVED, `${lang} ${placeholder}`).toContain(placeholder);
+      }
     }
   });
 });

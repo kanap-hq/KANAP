@@ -23,7 +23,11 @@ export class IncidentsTasksController {
   async list(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
     const id = await resolveToUuid(idOrRef, 'incident', ctx.manager as EntityManager);
     await this.incidents.ensureIncident(id, ctx.manager as EntityManager, ctx.tenantId, incidentViewerFromContext(ctx));
-    return this.unified.listForTarget({ type: 'incident', id }, { manager: ctx.manager, tenantId: ctx.tenantId });
+    return this.unified.listForTarget({ type: 'incident', id }, {
+      manager: ctx.manager,
+      tenantId: ctx.tenantId,
+      viewer: incidentViewerFromContext(ctx),
+    });
   }
 
   @UseGuards(PermissionGuard)

@@ -1702,6 +1702,8 @@
       "tasks": "tareas",
       "application-links": "vínculos de las aplicaciones",
       "landscape": "instancias, interfaces y conexiones",
+      "incident-tasks": "tareas correctivas",
+      "incident-journal": "diario de incidentes",
       "budget-links": "vínculos presupuestarios",
       "portfolio-teams": "equipos y fases de los proyectos",
       "allocations": "asignaciones entre empresas",

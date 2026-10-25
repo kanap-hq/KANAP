@@ -102,7 +102,7 @@ export interface CsvExportOptions {
   preset?: string;
   /**
    * The screen language, as for every file of the shared layer: the separator, the days, the
-   * decimal mark and yes or no follow it. The headers are the same in every language.
+   * decimal mark, yes or no and the headers a config translates (`headerLabels`) follow it.
    */
   language: CsvLanguage;
   /**
@@ -148,15 +148,13 @@ export class CsvExportService {
     const exportFields = this.selectExportFields(config, opts);
 
     // Build CSV headers from field definitions
-    const headers = this.buildHeaders(exportFields);
-    // A date-time column names the zone of its cells after its stable name; the template
-    // names it too, so a filled template is read in the zone its user typed.
+    const columns = this.buildHeaders(config, exportFields, opts.language);
+    // A date-time column names the zone of its cells after its header; the template names it too,
+    // so a filled template is read in the zone its user typed.
     const timeZone = opts.timeZone ?? 'UTC';
     const zoned = new Set(exportFields.filter((f) => f.zonedDateTime).map((f) => f.csvColumn));
-    const headerLine = writeCsvHeader(
-      opts.language,
-      headers.map((header) => (zoned.has(header) ? timeZoneHeader(header, timeZone) : header)),
-    );
+    const headerTexts = columns.map(({ column, header }) => (zoned.has(column) ? timeZoneHeader(header, timeZone) : header));
+    const headerLine = writeCsvHeader(opts.language, headerTexts);
 
     // Template export: return headers only
     if (opts.scope === 'template') {
@@ -203,12 +201,12 @@ export class CsvExportService {
     // Generate CSV content: the shared layer quotes, guards formulas and picks the separator.
     const rows = entities.map((entity) => {
       const row = this.buildRow(entity, exportFields, reverseLookups, relationData, context, warnings);
-      return headers.map((header) => row[header] ?? '');
+      return columns.map(({ column }) => row[column] ?? '');
     });
 
     return {
       filename: `${config.entityName}_export.csv`,
-      content: headerLine + writeCsvRows({ language: opts.language, headers, rows }),
+      content: headerLine + writeCsvRows({ language: opts.language, headers: headerTexts, rows }),
       rowCount: entities.length,
       warnings,
     };
@@ -256,11 +254,15 @@ export class CsvExportService {
   }
 
   /**
-   * Build CSV headers from field definitions.
-   * Expands array fields with numbered columns.
+   * Build the columns of the file from field definitions, with their header in the file's
+   * language when the config translates it. Expands array fields with numbered columns.
    */
-  private buildHeaders(fields: CsvFieldDefinition[]): string[] {
-    const headers: string[] = [];
+  private buildHeaders(
+    config: CsvEntityConfig,
+    fields: CsvFieldDefinition[],
+    language: CsvLanguage,
+  ): Array<{ column: string; header: string }> {
+    const columns: Array<{ column: string; header: string }> = [];
     const processedArrays = new Set<string>();
 
     for (const field of fields) {
@@ -275,18 +277,25 @@ export class CsvExportService {
         }
         processedArrays.add(baseName);
 
-        // Generate numbered columns
+        // Generate numbered columns. Their headers stay technical: the import reads them by the
+        // column name, and no translated alias is generated for a numbered column.
         const maxItems = field.maxItems ?? this.DEFAULT_MAX_ITEMS;
         for (let i = 1; i <= maxItems; i++) {
-          headers.push(`${baseName}_${i}`);
+          const column = `${baseName}_${i}`;
+          columns.push({ column, header: column });
         }
       } else if (!field.arrayIndex) {
         // Regular field (skip array index fields, they're generated above)
-        headers.push(field.csvColumn);
+        columns.push({ column: field.csvColumn, header: this.headerOf(config, field, language) });
       }
     }
 
-    return headers;
+    return columns;
+  }
+
+  /** The header of a field in `language`, or its technical column when the config translates none. */
+  private headerOf(config: CsvEntityConfig, field: CsvFieldDefinition, language: CsvLanguage): string {
+    return config.headerLabels?.[field.csvColumn]?.[language] ?? field.csvColumn;
   }
 
   /**

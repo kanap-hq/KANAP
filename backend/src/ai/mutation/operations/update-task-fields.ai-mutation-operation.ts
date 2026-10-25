@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { z } from 'zod';
 import { validate as isUuid } from 'uuid';
-import { incidentVisibilitySql, resolveIncidentViewer } from '../../../incidents/incident-visibility';
+import { incidentVisibilitySql, resolveIncidentViewer, taskIncidentVisibilitySql } from '../../../incidents/incident-visibility';
 import { Task, TASK_STATUSES, TaskStatus } from '../../../tasks/task.entity';
 import { RelatedType, TasksUnifiedService } from '../../../tasks/tasks-unified.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
@@ -14,6 +14,7 @@ import {
 } from '../ai-mutation-operation.types';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiTaskMutationSupportService, toDisplayStatus } from '../ai-task-mutation-support.service';
+import { resolveAiIncidentViewer } from '../../query/ai-query-scope.util';
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const PRIORITIES = ['blocker', 'high', 'normal', 'low', 'optional'] as const;
@@ -475,6 +476,9 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
   private async resolveTask(context: AiExecutionContextWithManager, ref: string): Promise<TaskSnapshot> {
     const normalized = String(ref || '').trim();
     const match = normalized.match(/^T-(\d+)$/i);
+    const params: unknown[] = [context.tenantId, isUuid(normalized) ? normalized : match ? Number(match[1]) : -1];
+    // A task of an incident the caller cannot see reads as missing, mutations included.
+    const incidentSql = taskIncidentVisibilitySql('t', await resolveAiIncidentViewer(context), params);
     const rows = await context.manager.query(
       `
       SELECT t.*,
@@ -521,9 +525,10 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
       LEFT JOIN portfolio_streams pst ON pst.id = t.stream_id AND pst.tenant_id = t.tenant_id
       WHERE t.tenant_id = $1
         AND (${isUuid(normalized) ? 't.id = $2' : 't.item_number = $2'})
+        ${incidentSql}
       LIMIT 1
       `,
-      [context.tenantId, isUuid(normalized) ? normalized : match ? Number(match[1]) : -1],
+      params,
     );
     if (!rows[0]) throw new NotFoundException('Task not found.');
     const task = rows[0];

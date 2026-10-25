@@ -7,6 +7,8 @@
       "exportCsv": "CSV exportieren",
       "importTitle": "Vorfälle importieren",
       "exportTitle": "Vorfälle exportieren",
+      "exportScope_one": "Gefilterter Export: {{count}} Vorfall",
+      "exportScope_other": "Gefilterter Export: {{count}} Vorfälle",
       "columns": {
         "reference": "Ref.",
         "title": "Titel",
@@ -21,7 +23,10 @@
         "applications": "Anwendungen",
         "tasks": "Aufgaben",
         "created": "Erstellt am",
-        "access": "Zugriff"
+        "access": "Zugriff",
+        "personalData": "Personenbezogene Daten",
+        "authorityRequired": "Meldung erforderlich",
+        "authorityNotified": "Gemeldet am"
       },
       "filters": {
         "noCategory": "(Keine Kategorie)",
@@ -1582,6 +1587,7 @@
         "placeholder": "Notiz zum Verlauf hinzufügen",
         "add": "Hinzufügen",
         "empty": "Noch keine Einträge.",
+        "recordedAt": "erfasst am {{date}}",
         "systemAuthor": "System",
         "unknownAuthor": "Unbekannt",
         "kinds": {

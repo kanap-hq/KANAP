@@ -27,6 +27,9 @@ export interface IncidentRow {
   reporter_user_id: string | null;
   reporter_name: string | null;
   confidential?: boolean;
+  personal_data_affected: boolean;
+  authority_notification_required: boolean;
+  authority_notified_at: string | null;
   asset_count: number;
   application_count: number;
   task_count: number;

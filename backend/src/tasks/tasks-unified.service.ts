@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Task, TaskPriorityLevel } from './task.entity';
 import { TaskTimeEntry } from './task-time-entry.entity';
 import { AuditService } from '../audit/audit.service';
@@ -21,6 +21,11 @@ import { assertLinesEditable } from '../data-access/line-write-checks';
 import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
+import {
+  IncidentViewer,
+  taskIncidentVisibilityQueryBuilderClause,
+  taskIncidentVisibilitySql,
+} from '../incidents/incident-visibility';
 
 export type RelatedType = 'spend_item' | 'contract' | 'capex_item' | 'project' | 'incident' | null;
 type ProjectDefaults = {
@@ -283,7 +288,7 @@ export class TasksUnifiedService {
   async listRelatedTasksForApplication(
     applicationId: string,
     query?: any,
-    opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope },
+    opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null },
   ) {
     return this.listRelatedTasksByLink({
       linkTable: 'task_applications',
@@ -297,7 +302,7 @@ export class TasksUnifiedService {
   async listRelatedTasksForAsset(
     assetId: string,
     query?: any,
-    opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope },
+    opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null },
   ) {
     return this.listRelatedTasksByLink({
       linkTable: 'task_assets',
@@ -464,7 +469,7 @@ export class TasksUnifiedService {
     targetColumn: 'application_id' | 'asset_id';
     targetId: string;
     query?: any;
-    opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope };
+    opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null };
   }) {
     const manager = params.opts?.manager ?? this.repo.manager;
     const tenantId = params.opts?.tenantId || await this.getTaskTenantContext(manager);
@@ -491,6 +496,8 @@ export class TasksUnifiedService {
         return `AND ${taskParticipantCondition('t', `$${baseParams.length}`)}`;
       })()
       : '';
+    // A task of an incident the reader cannot see is absent from the other record's tab too.
+    const incidentVisibilitySql = taskIncidentVisibilitySql('t', params.opts?.viewer, baseParams);
 
     const countRows: Array<{ count: number }> = await manager.query(
       `SELECT COUNT(*)::int AS count
@@ -498,7 +505,8 @@ export class TasksUnifiedService {
        JOIN tasks t ON t.id = rel.task_id AND t.tenant_id = rel.tenant_id
        WHERE rel.tenant_id = $1
          AND rel.${params.targetColumn} = $2
-         ${accessScopeSql}`,
+         ${accessScopeSql}
+         ${incidentVisibilitySql}`,
       baseParams,
     );
 
@@ -524,6 +532,7 @@ export class TasksUnifiedService {
        WHERE rel.tenant_id = $1
          AND rel.${params.targetColumn} = $2
          ${accessScopeSql}
+         ${incidentVisibilitySql}
        ORDER BY ${sortField} ${direction}, t.id ASC
        LIMIT $${baseParams.length + 1} OFFSET $${baseParams.length + 2}`,
       itemParams,
@@ -706,23 +715,31 @@ export class TasksUnifiedService {
     return { type: target.type, id: target.id };
   }
 
-  listForTarget(target: { type: RelatedType; id: string | null }, opts?: { manager?: EntityManager; tenantId?: string | null }) {
+  listForTarget(
+    target: { type: RelatedType; id: string | null },
+    opts?: { manager?: EntityManager; tenantId?: string | null; viewer?: IncidentViewer | null },
+  ) {
     const repo = (opts?.manager ?? this.repo.manager).getRepository(Task);
     // RLS already scopes the manager; the explicit tenant predicate is the
     // project-wide rule for every query (callers pass it when they have it).
-    const tenantScope = opts?.tenantId ? { tenant_id: opts.tenantId } : {};
+    const qb = repo.createQueryBuilder('t');
+    if (opts?.tenantId) qb.andWhere('t.tenant_id = :tenantId', { tenantId: opts.tenantId });
     if (target.type === null) {
-      // List standalone tasks
-      return repo.find({
-        // IsNull(): TypeORM drops a plain `null` from find options, which listed every task.
-        where: { ...tenantScope, related_object_type: IsNull() } as any,
-        order: { created_at: 'DESC' as any },
-      });
+      // List standalone tasks (IsNull: a plain null would match every task).
+      qb.andWhere('t.related_object_type IS NULL');
+    } else {
+      qb.andWhere('t.related_object_type = :relatedType', { relatedType: target.type })
+        .andWhere('t.related_object_id = :relatedId', { relatedId: target.id });
     }
-    return repo.find({
-      where: { ...tenantScope, related_object_type: target.type, related_object_id: target.id } as any,
-      order: { created_at: 'DESC' as any },
-    });
+    // Only an incident's own task list can hold a task of that incident: another
+    // target (contract, project, budget line) never needs the predicate.
+    if (target.type === 'incident') {
+      const incidentVisibility = taskIncidentVisibilityQueryBuilderClause('t', opts?.viewer);
+      if (incidentVisibility.clause) {
+        qb.andWhere(incidentVisibility.clause, incidentVisibility.params);
+      }
+    }
+    return qb.orderBy('t.created_at', 'DESC').getMany();
   }
 
   async createForTarget(target: { type: RelatedType; id: string | null; payload: TaskRelationPayload }, userId?: string, opts?: TaskMutationOptions) {

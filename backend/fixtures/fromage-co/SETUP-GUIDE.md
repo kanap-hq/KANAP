@@ -118,6 +118,12 @@ its own: load the current dataset on a new tenant instead.
    backs up the cluster from `PAR-BKP-01`. The runner also sets the
    applications on their servers (on a cluster, the row is on the cluster and
    its members inherit it), technologies, business processes and incidents.
+   The incidents come from `31-incidents.csv`, with their reviews. After them,
+   `19b-incident-tasks.csv` links the three corrective tasks and
+   `32-incident-journal.csv` writes the human timeline of the B2B portal, the
+   SAP close and the LIMS, signed by the incident people and dated at the
+   facts. Both files are idempotent: a re-run updates the tasks and skips the
+   journal rows already there.
    On a tenant built by an earlier version of the fixture, the runner adds
    `PAR-ESX-05`, replaces the old notes of the cluster and the array, brings
    the VM links back to the cluster, removes double containers, replaces the

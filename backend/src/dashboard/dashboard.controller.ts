@@ -8,6 +8,7 @@ import { DashboardDataService } from './dashboard-data.service';
 import { UpdateDashboardConfigDto } from './dto/update-dashboard-config.dto';
 import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
 import { existingRecentItems, type RecentItemRef } from './recent-items';
+import { incidentViewerFromContext } from '../incidents/incident-visibility';
 
 /** Query numbers come in as strings; keep them inside the bounds the tiles offer (a negative LIMIT is a 500). */
 function clampInt(raw: string | undefined, fallback: number, min: number, max: number): number {
@@ -190,7 +191,11 @@ export class DashboardController {
       safeScope,
       clampInt(thresholdDays, 90, 1, 365),
       clampInt(limit, 5, 1, 10),
-      { manager: ctx.manager, accessScope: await this.participantScope(ctx, 'tasks') },
+      {
+        manager: ctx.manager,
+        accessScope: await this.participantScope(ctx, 'tasks'),
+        incidentViewer: incidentViewerFromContext(ctx),
+      },
     );
   }
 

@@ -161,6 +161,8 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
     'link_contract_spend_items', 'link_location_sub_items', 'link_portfolio_project_team',
     'link_portfolio_request_team', 'link_portfolio_team_member_configs',
   ].map((name) => ({ name: `search_index_sync_${name}`, cls: 'definer' as const, reason: 'search index family: trigger' })),
+  { name: 'search_index_sync_link_incident_assets', cls: 'definer', reason: 'search index family: statement trigger, the incidents of a link change refreshed by batch of ids' },
+  { name: 'search_index_sync_incident_assets_on_asset', cls: 'definer', reason: 'search index family: trigger, the incidents linked to a renamed asset refreshed by batch of ids' },
 
   // Access functions (lots 1 and 2).
   { name: 'data_access_expected_policies', cls: 'access', reason: 'the expected policies (names the scoped tables)' },

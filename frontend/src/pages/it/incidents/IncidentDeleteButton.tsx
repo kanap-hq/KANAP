@@ -22,7 +22,8 @@ type Props = {
 /**
  * Delete action of the incident page (incident administrators). It always asks first, with what
  * goes too and what loses its link ("Delete anyway" when something does). An incident holding
- * regulatory reporting data is refused up front: the dialog says to cancel or close it instead.
+ * regulatory reporting data, or closed/cancelled, is refused up front: the dialog says why it
+ * stays in the register.
  */
 export default function IncidentDeleteButton({ incidentId, incidentName, disabled, beforeDelete, onDeleted, onError }: Props) {
   const { t } = useTranslation(['it', 'common', 'errors']);

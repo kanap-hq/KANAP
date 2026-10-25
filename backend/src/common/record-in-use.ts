@@ -2,7 +2,7 @@ import { ConflictException, HttpStatus, NotFoundException } from '@nestjs/common
 import type { EntityManager } from 'typeorm';
 import { DataAccessHiddenLinesException } from '../data-access/hidden-links';
 import { mapDatabaseError } from './filters/database-error.mapping';
-import { readUsages, type UsageQuery, type UsageType } from './record-usages';
+import { readUsages, type UsageCaller, type UsageQuery, type UsageType } from './record-usages';
 
 /**
  * What still uses or holds a record, counted per kind: the groups of its usages, or what a record
@@ -180,6 +180,7 @@ export async function refusalsOf(
   ids: readonly string[],
   queries: readonly UsageQuery[],
   code: string,
+  caller: UsageCaller = { isAdmin: true },
 ): Promise<{ refused: DeleteRefusal[] }> {
   const wanted = checkIds(ids);
   if (wanted.length === 0) return { refused: [] };
@@ -192,7 +193,7 @@ export async function refusalsOf(
   for (const id of wanted) {
     const row = byId.get(id);
     if (!row) continue;
-    const { groups } = await readUsages(manager, row.tenant_id, row.id, { isAdmin: true }, queries);
+    const { groups } = await readUsages(manager, row.tenant_id, row.id, caller, queries);
     if (groups.length > 0) refused.push({ id: row.id, name: row.name, code, usages: groups.map((g) => ({ type: g.type, total: g.total })) });
   }
   return { refused };

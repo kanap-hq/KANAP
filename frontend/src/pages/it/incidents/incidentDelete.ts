@@ -6,7 +6,8 @@ import { namesInSentence } from '../../../components/finance/heldChoices';
 /**
  * `POST /incidents/delete-check`: what deleting the given incidents removes
  * (`backend/src/incidents/services/incidents-delete.service.ts`), for the `incidents` that can go.
- * `refused`: the incidents holding regulatory reporting data, as the bulk delete reports them.
+ * `refused`: the incidents holding regulatory reporting data or closed/cancelled, as the bulk
+ * delete reports them.
  */
 export type IncidentDeleteImpact = {
   incidents: number;

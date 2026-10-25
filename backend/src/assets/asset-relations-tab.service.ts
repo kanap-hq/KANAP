@@ -19,7 +19,7 @@ import {
 } from '../common/relations/related-objects';
 import { parseTargetId, UUID_RE } from '../common/relations/relation-target';
 import { FxRateService } from '../currency/fx-rate.service';
-import type { IncidentViewer } from '../incidents/incident-visibility';
+import { taskIncidentVisibilitySql, type IncidentViewer } from '../incidents/incident-visibility';
 import { IncidentRelationsService } from '../incidents/services/incident-relations.service';
 import { auditTableOf, type BudgetNature } from '../spend/budget-nature';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
@@ -227,7 +227,7 @@ export class AssetRelationsTabService {
     );
     const contracts = ctx.access.contracts ? await listRelatedContracts(mg, CONTRACTS, tenantId, asset.id) : null;
     const projects = ctx.access.projects ? await listRelatedProjects(mg, PROJECTS, tenantId, asset.id, ctx.scopes.project) : null;
-    const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, asset.id, ctx.scopes.task) : null;
+    const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, asset.id, ctx.scopes.task, ctx.incidentViewer) : null;
     const incidents = ctx.access.incidents
       ? await listRelatedIncidents(mg, tenantId, INCIDENTS, asset.id, ctx.incidentViewer)
       : null;
@@ -441,10 +441,18 @@ export class AssetRelationsTabService {
   }
 
   /** Tasks linked to the asset, open ones first, then by due date. */
-  private async listTasks(mg: EntityManager, tenantId: string, assetId: string, scope?: ParticipationAccessScope): Promise<AssetRelatedTask[]> {
+  private async listTasks(
+    mg: EntityManager,
+    tenantId: string,
+    assetId: string,
+    scope?: ParticipationAccessScope,
+    viewer?: IncidentViewer | null,
+  ): Promise<AssetRelatedTask[]> {
     const params: unknown[] = [tenantId, assetId];
     const bind = binder(params);
     const scopeSql = scope ? `AND ${taskParticipantCondition('t', bind(scope.userId))}` : '';
+    // A task of an incident the reader cannot see is absent from the asset's Relations tab.
+    const incidentVisibilitySql = taskIncidentVisibilitySql('t', viewer, params);
     return mg.query(
       `SELECT t.id, t.item_number, t.title, t.status,
               NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') AS assignee_name,
@@ -453,6 +461,7 @@ export class AssetRelationsTabService {
          JOIN tasks t ON t.id = l.task_id AND t.tenant_id = l.tenant_id
          LEFT JOIN users u ON u.id = t.assignee_user_id AND u.tenant_id = t.tenant_id
         WHERE l.tenant_id = $1 AND l.asset_id = $2 ${scopeSql}
+        ${incidentVisibilitySql}
         ORDER BY (COALESCE(t.status, '') IN ('done', 'cancelled')) ASC, t.due_date ASC NULLS LAST, t.item_number ASC NULLS LAST, t.id`,
       params,
     );

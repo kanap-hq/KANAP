@@ -8,6 +8,9 @@ import {
 import { allocateItemNumbers } from '../common/item-number.service';
 import { assertMarkdownSize } from '../common/markdown-limits';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
+import { taskIncidentVisibilitySql } from '../incidents/incident-visibility';
+
+const TASK_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Status label to code mapping
 const statusLookup = new Map<string, string>([
@@ -528,6 +531,39 @@ export const taskCsvConfig: CsvEntityConfig = {
       ],
     },
   ],
+
+  /**
+   * A row that names a task by id must not reach a task of a restricted incident the
+   * importer cannot see: the id reads as nonexistent, so update-only refuses the row
+   * and upsert never overwrites the hidden record.
+   */
+  beforeValidate: async (rows, context) => {
+    const viewer = context.viewer;
+    if (!viewer || viewer.isAdmin) return;
+    const ids = Array.from(new Set(rows
+      .map((row) => String(row.raw.id ?? '').trim())
+      .filter((id) => TASK_UUID_RE.test(id))));
+    if (ids.length === 0) return;
+    const params: unknown[] = [context.tenantId, ids];
+    const visible = taskIncidentVisibilitySql('t', viewer, params).replace(/^\s*AND\s+/, '');
+    if (!visible) return;
+    const hiddenRows: Array<{ id: string }> = await context.manager.query(
+      `SELECT t.id::text AS id
+       FROM tasks t
+       WHERE t.tenant_id = $1
+         AND t.id = ANY($2::uuid[])
+         AND NOT (${visible})`,
+      params,
+    );
+    if (hiddenRows.length === 0) return;
+    const hidden = new Set(hiddenRows.map((row) => row.id.toLowerCase()));
+    for (const row of rows) {
+      const id = String(row.raw.id ?? '').trim().toLowerCase();
+      if (hidden.has(id)) {
+        row.errors.push({ row: row.rowNumber, column: 'id', message: 'Task not found' });
+      }
+    }
+  },
 
   /**
    * The row as the commit stores it: codes normalized, the related object named by its id, the

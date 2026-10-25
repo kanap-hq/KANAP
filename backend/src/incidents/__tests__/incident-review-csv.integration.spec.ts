@@ -12,6 +12,7 @@ import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.serv
 import { Tenant } from '../../tenants/tenant.entity';
 import { Location } from '../../locations/location.entity';
 import * as assert from 'node:assert/strict';
+import { parse as parseCsvSync } from 'csv-parse/sync';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
@@ -120,17 +121,18 @@ function createServices(manager: any) {
     importService,
   );
   const resolver = new CsvResolverService();
-  const csv = new IncidentsCsvService(
-    new CsvExportService(resolver),
-    new CsvImportService(resolver, new CsvJsonValidators()),
-    integrated,
-    new ItOpsSettingsService(manager.getRepository(Tenant), manager.getRepository(Location), { log: async () => undefined } as any),
-  );
   const incidents = new IncidentsService(
     manager.getRepository(Incident),
     { log: async () => undefined } as any,
     new ItemNumberService(),
     integrated,
+  );
+  const csv = new IncidentsCsvService(
+    new CsvExportService(resolver),
+    new CsvImportService(resolver, new CsvJsonValidators()),
+    integrated,
+    new ItOpsSettingsService(manager.getRepository(Tenant), manager.getRepository(Location), { log: async () => undefined } as any),
+    incidents,
   );
   return { knowledge, integrated, csv, incidents };
 }
@@ -232,6 +234,17 @@ function cell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
+/** The titles of the data lines of an incident export, in file order (the title is the second column). */
+function exportTitles(content: string): string[] {
+  const rows = parseCsvSync(content.replace(/^\uFEFF/, ''), {
+    delimiter: ';',
+    bom: true,
+    skip_empty_lines: true,
+    relax_column_count: true,
+  }) as string[][];
+  return rows.slice(1).map((row) => row[1] ?? '');
+}
+
 async function createIncident(
   runner: QueryRunner,
   f: Fixture,
@@ -319,7 +332,7 @@ async function testExportImportRoundTrip() {
       language: 'fr',
       viewer: { userId: f.users.admin, isAdmin: true },
     });
-    assert.ok(exported.content.includes('review'), 'the review column is exported by default');
+    assert.ok(exported.content.includes("Revue d'incident"), 'the review column is exported by default, in the file\'s language');
     assert.ok(exported.content.includes('- 300 mailboxes'), 'the multiline body is exported');
     // Date-times in the export language's form (UTC), the way the other exports write days.
     const detected = new Date(incident.detected_at);
@@ -364,6 +377,132 @@ async function testExportImportRoundTrip() {
 }
 
 /**
+ * The export follows the list: its column filters, quick search and sort, through the list's own
+ * WHERE builder. A restricted incident stays out for a viewer who may not see it, even when the
+ * filter would match it. The template keeps its meaning and ignores the list query.
+ */
+async function testExportFollowsTheList() {
+  await withFixture(async (runner, f) => {
+    const services = createServices(runner.manager);
+    const adminViewer = { userId: f.users.admin, isAdmin: true };
+    const viewer = { userId: f.users.contributor, isAdmin: false };
+    const opts = { manager: runner.manager, tenantId: f.tenantId, language: 'fr' as const };
+    const lyon = await createIncident(runner, f, services, {
+      title: 'Mail outage Lyon', severity: 'major', status: 'open', detected_at: '2026-10-05T08:00:00Z',
+      owner_user_id: f.users.admin,
+      personal_data_affected: true, authority_notification_required: true,
+      authority_notified_at: '2026-10-06T09:00:00Z',
+    });
+    const paris = await createIncident(runner, f, services, {
+      title: 'VPN outage Paris', severity: 'critical', status: 'closed', detected_at: '2026-10-20T08:00:00Z',
+      owner_user_id: f.users.contributor,
+    });
+    const hidden = await createIncident(runner, f, services, {
+      title: 'Mail outage secret', severity: 'major', status: 'open', detected_at: '2026-10-10T08:00:00Z',
+      confidential: true, reporter_user_id: f.users.other, owner_user_id: f.users.other,
+    });
+
+    // A severity filter and the list's sort: the file holds the matching rows in that order.
+    const major = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ severity: { filterType: 'set', values: ['major'] } }),
+        sort: 'detected_at:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(major.content), [lyon.title, hidden.title], 'severity filter and sort follow the list');
+
+    // The same filter for a viewer who is neither administrator, reporter nor owner: the
+    // restricted row is not widened into view by the filter.
+    const visible = await services.csv.export({
+      ...opts,
+      viewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ severity: { filterType: 'set', values: ['major'] } }),
+        sort: 'detected_at:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(visible.content), [lyon.title], 'a restricted incident stays invisible');
+
+    // Quick search and sort.
+    const searched = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: { q: 'outage', sort: 'detected_at:DESC' },
+    });
+    assert.deepEqual(exportTitles(searched.content), [paris.title, hidden.title, lyon.title], 'search and sort follow the list');
+
+    // Owner: a column the list filters and sorts through its users join.
+    const owner = await runner.manager.query(
+      `SELECT first_name || ' ' || last_name AS name FROM users WHERE id = $1`, [f.users.admin],
+    );
+    const byOwner = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ owner_name: { filterType: 'set', values: [owner[0].name] } }),
+        sort: 'owner_name:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(byOwner.content), [lyon.title], 'the owner filter and sort use the list joins');
+    const byOwnerSort = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: { q: 'outage', sort: 'owner_name:ASC' },
+    });
+    assert.deepEqual(exportTitles(byOwnerSort.content), [lyon.title, paris.title, hidden.title], 'sorting on owner name follows the list');
+
+    // The compliance columns the list now reads, and their yes or no filter.
+    const listed = await services.incidents.list(
+      { sort: 'detected_at:ASC' },
+      { manager: runner.manager, tenantId: f.tenantId, viewer: adminViewer },
+    );
+    const listedLyon = listed.items.find((item: any) => String(item.id) === String(lyon.id));
+    assert.equal(listedLyon?.personal_data_affected, true);
+    assert.equal(listedLyon?.authority_notification_required, true);
+    assert.ok(listedLyon?.authority_notified_at);
+    const compliance = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ personal_data_affected: { filterType: 'set', values: ['true'] } }),
+        sort: 'detected_at:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(compliance.content), [lyon.title], 'a yes or no filter follows the list');
+
+    // A period filter (AG Grid date model), as the list sends it.
+    const period = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ detected_at: { filterType: 'date', type: 'inRange', dateFrom: '2026-10-01', dateTo: '2026-10-15' } }),
+        sort: 'detected_at:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(period.content), [lyon.title, hidden.title], 'period filter follows the list');
+
+    // The template is headers only, whatever the list query says.
+    const template = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'template',
+      query: { filters: JSON.stringify({ severity: { filterType: 'set', values: ['major'] } }) },
+    });
+    assert.equal(template.rowCount, 0);
+    assert.equal(template.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/).length, 1, 'the template has no data line');
+  });
+}
+
+/**
  * Date-times are written in the local time of the user who exports, and the
  * header of each date-time column names that zone (`detected_at (Europe/Paris)`).
  * The import reads each cell in the zone its header names, UTC when it names none.
@@ -397,12 +536,17 @@ async function testDateTimesInTheExportersZone() {
     });
     const file = exported.content.replace(/^\uFEFF/, '');
     const header = file.split('\n')[0].split(';');
-    for (const column of ['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at']) {
-      assert.ok(header.includes(`${column} (Europe/Paris)`), `${column} names its zone: ${header.join(';')}`);
+    // The headers are the screen's words in the file's language, and a date-time names its zone
+    // after its translated header.
+    for (const [column, label] of Object.entries({
+      started_at: 'Début', detected_at: 'Détecté', resolved_at: 'Résolu', closed_at: 'Clôturé', authority_notified_at: 'Notifié le',
+    })) {
+      assert.ok(header.includes(`${label} (Europe/Paris)`), `${column} names its zone: ${header.join(';')}`);
     }
-    for (const column of ['ref', 'title', 'severity', 'status', 'review']) {
-      assert.ok(header.includes(column), `${column} keeps its plain header`);
+    for (const label of ['Réf.', 'Titre', 'Gravité', 'Statut', "Revue d'incident"]) {
+      assert.ok(header.includes(label), `${label} keeps its translated header`);
     }
+    assert.ok(file.includes(';Majeure;Ouvert;'), 'the severity and the status are the screen words, not their codes');
     assert.ok(file.includes('16/10/2026 10:38'), 'the local time of Paris, not 08:38 UTC');
     assert.ok(file.includes('29/03/2026 12:00'), 'summer time after the March change');
     assert.ok(file.includes('25/10/2026 11:00'), 'winter time after the October change');
@@ -440,8 +584,7 @@ async function testDateTimesInTheExportersZone() {
       importOpts(runner, f, f.users.admin),
     );
     assert.deepEqual(utc.errors, []);
-    const columns = header.filter((h) => h.endsWith(' (Europe/Paris)')).map((h) => h.replace(' (Europe/Paris)', ''));
-    assert.ok(columns.includes('started_at') && columns.includes('detected_at'));
+    const columns = ['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at'];
     assert.deepEqual(
       utc.warnings.map((w) => [w.row, w.code, w.params]),
       [[0, 'CSV_HEADER_ZONELESS_DATE_TIMES', { columns: columns.join(', '), example: columns[0] }]],
@@ -451,7 +594,7 @@ async function testDateTimesInTheExportersZone() {
 
     // A zone nobody knows is refused, with the coded error the screen translates.
     const unknown = await services.csv.import(
-      csvFile(file.replace('detected_at (Europe/Paris)', 'detected_at (Mars/Olympus)')),
+      csvFile(file.replace('Détecté (Europe/Paris)', 'Détecté (Mars/Olympus)')),
       { dryRun: true, mode: 'enrich', operation: 'upsert' },
       importOpts(runner, f, f.users.admin),
     );
@@ -681,6 +824,145 @@ async function testClosedIncidentImportIsAllowedAndVersioned() {
     assert.ok(importEntry, 'an effective CSV change journals a system entry');
     assert.equal(importEntry.changed_fields.review_version.to.document_id, after.document_id);
     assert.notEqual(importEntry.changed_fields.review_version.to.version_number, closureVersionNumber);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 4b. The forward-only lifecycle also holds on import; an admin move is journalled
+// ---------------------------------------------------------------------------
+
+async function readStatus(runner: QueryRunner, incidentId: string): Promise<string> {
+  const rows = await runner.manager.query('SELECT status FROM incidents WHERE id = $1', [incidentId]);
+  return String(rows[0]?.status ?? '');
+}
+
+/** One update row on an existing incident, with the given status and no review change. */
+function statusImportRow(incident: { item_number: number; title: string }, status: string): string {
+  return `${REVIEW_HEADERS}\nINC-${incident.item_number};${incident.title};major;${status};2026-03-10T08:00:00Z;false;short;`;
+}
+
+async function testImportLifecycleGuardAndAdminJournal() {
+  await withFixture(async (runner, f) => {
+    const services = createServices(runner.manager);
+    const adminOpts = { manager: runner.manager, tenantId: f.tenantId, viewer: { userId: f.users.admin, isAdmin: true } };
+    const contributor = importOpts(runner, f, f.users.contributor, false);
+    const admin = importOpts(runner, f, f.users.admin, true);
+
+    const closed = await createIncident(runner, f, services, { title: 'Closed before import' });
+    await services.incidents.update(closed.id, { status: 'closed' }, f.users.admin, adminOpts);
+
+    // A contributor cannot reopen or cancel it by file, and nothing changes.
+    const entriesBefore = await readEntries(runner, f, closed.id);
+    const rowBefore = (await runner.manager.query(
+      'SELECT title, severity, status, detected_at, description FROM incidents WHERE id = $1',
+      [closed.id],
+    ))[0];
+    for (const target of ['open', 'cancelled']) {
+      const result = await services.csv.import(
+        csvFile(statusImportRow(closed, target)),
+        { dryRun: false, mode: 'enrich', operation: 'upsert' },
+        contributor,
+      );
+      assert.equal(result.ok, false, `${target}: a contributor import is refused`);
+      assert.equal(result.errors.length, 1, `${target}: one row error`);
+      assert.equal(result.errors[0].row, 2);
+      assert.equal(result.errors[0].column, 'status');
+      assert.equal(result.errors[0].code, 'CSV_INCIDENT_STATUS_RESERVED');
+      assert.deepEqual(result.errors[0].params, {
+        reference: `INC-${closed.item_number}`,
+        from: 'closed',
+        to: target,
+      });
+      assert.deepEqual(
+        (await runner.manager.query(
+          'SELECT title, severity, status, detected_at, description FROM incidents WHERE id = $1',
+          [closed.id],
+        ))[0],
+        rowBefore,
+        `${target}: the row is unchanged`,
+      );
+      assert.deepEqual(await readEntries(runner, f, closed.id), entriesBefore, `${target}: no journal entry`);
+    }
+
+    // The §3.8 exception is unchanged: a contributor may still correct the review of the closed
+    // incident as long as the row keeps its stored status.
+    const reviewCsv = `${REVIEW_HEADERS}\nINC-${closed.item_number};${closed.title};major;closed;2026-03-10T08:00:00Z;false;short;${cell('## Impact\n\ncorrected by contributor')}`;
+    const reviewResult = await services.csv.import(
+      csvFile(reviewCsv),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      contributor,
+    );
+    assert.deepEqual(reviewResult.errors, []);
+    assert.match((await readReview(runner, f, closed.id)).content_markdown, /corrected by contributor/);
+    assert.equal(await readStatus(runner, closed.id), 'closed');
+
+    // An administrator reopens it: a Reopen-shaped entry, with the import reason.
+    const reopened = await services.csv.import(
+      csvFile(statusImportRow(closed, 'open')),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      admin,
+    );
+    assert.deepEqual(reopened.errors, []);
+    assert.equal(await readStatus(runner, closed.id), 'open');
+    const reopenEntry = (await readEntries(runner, f, closed.id))
+      .find((e: any) => e.kind === 'reopen' && e.content === 'Imported from CSV');
+    assert.ok(reopenEntry, 'the import journals a Reopen-shaped entry');
+    assert.equal(reopenEntry.content, 'Imported from CSV');
+    assert.deepEqual(reopenEntry.changed_fields, { status: { from: 'closed', to: 'open' } });
+
+    // Cancelling a closed incident: a Cancel-shaped entry, with the frozen review version.
+    const toCancel = await createIncident(runner, f, services, { title: 'Closed then cancelled' });
+    await services.incidents.update(toCancel.id, { status: 'closed' }, f.users.admin, adminOpts);
+    const cancelled = await services.csv.import(
+      csvFile(statusImportRow(toCancel, 'cancelled')),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      admin,
+    );
+    assert.deepEqual(cancelled.errors, []);
+    assert.equal(await readStatus(runner, toCancel.id), 'cancelled');
+    const cancelEntry = (await readEntries(runner, f, toCancel.id))
+      .find((e: any) => e.changed_fields?.status?.to === 'cancelled' && e.content === 'Imported from CSV');
+    assert.ok(cancelEntry, 'the import journals a Cancel-shaped entry');
+    assert.equal(cancelEntry.content, 'Imported from CSV');
+    assert.deepEqual(cancelEntry.changed_fields.status, { from: 'closed', to: 'cancelled' });
+    assert.ok(cancelEntry.changed_fields.review_version, 'a cancellation freezes the review');
+
+    // A cancellation from an open incident is reserved too, and journalled the same way.
+    const open = await createIncident(runner, f, services, { title: 'Open then cancelled' });
+    const refused = await services.csv.import(
+      csvFile(statusImportRow(open, 'cancelled')),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      contributor,
+    );
+    assert.equal(refused.ok, false, 'a contributor cannot cancel an open incident by file');
+    assert.equal(await readStatus(runner, open.id), 'open');
+    const cancelledOpen = await services.csv.import(
+      csvFile(statusImportRow(open, 'cancelled')),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      admin,
+    );
+    assert.deepEqual(cancelledOpen.errors, []);
+    const openCancelEntry = (await readEntries(runner, f, open.id))
+      .find((e: any) => e.changed_fields?.status?.to === 'cancelled' && e.content === 'Imported from CSV');
+    assert.ok(openCancelEntry, 'the cancellation is journalled');
+    assert.equal(openCancelEntry.content, 'Imported from CSV');
+    assert.deepEqual(openCancelEntry.changed_fields.status, { from: 'open', to: 'cancelled' });
+
+    // A forward move keeps the existing closure snapshot, with no Reopen or Cancel entry.
+    const forward = await createIncident(runner, f, services, { title: 'Forward to closed' });
+    const closedForward = await services.csv.import(
+      csvFile(statusImportRow(forward, 'closed')),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      contributor,
+    );
+    assert.deepEqual(closedForward.errors, [], 'a contributor may still close an incident by file');
+    assert.equal(await readStatus(runner, forward.id), 'closed');
+    const forwardEntries = await readEntries(runner, f, forward.id);
+    assert.equal(forwardEntries.some((e: any) => e.kind === 'reopen'), false);
+    assert.equal(forwardEntries.some((e: any) => e.content === 'Imported from CSV' && e.kind !== 'system'), false);
+    const closure = forwardEntries.find((e: any) => e.changed_fields?.review_version);
+    assert.ok(closure, 'the closure snapshot is taken as before');
+    assert.deepEqual(closure.changed_fields.status, { from: 'open', to: 'closed' });
   });
 }
 
@@ -1090,12 +1372,14 @@ async function run() {
   await dataSource.initialize();
   try {
     await testExportImportRoundTrip();
+    await testExportFollowsTheList();
     await testDateTimesInTheExportersZone();
     await testExportTimeZoneSource();
     await testEmptyCellAndDryRun();
     await testReviewTemplateFollowsTheCreatorLanguage();
   await testInsertedRowsAreProvisioned();
     await testClosedIncidentImportIsAllowedAndVersioned();
+    await testImportLifecycleGuardAndAdminJournal();
     await testInvisibleIncidentRefused();
     await testLockConflictRollsBackTheUpsert();
     await testClosureSnapshotAndReopen();

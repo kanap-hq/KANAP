@@ -475,6 +475,19 @@ describe('IncidentWorkspacePage — delete', () => {
     expect(api.delete).not.toHaveBeenCalled();
   });
 
+  it('refuses a closed or cancelled incident before any confirmation', async () => {
+    vi.mocked(api.post).mockImplementation(async (url: string) => (url === '/incidents/delete-check'
+      ? { data: { ...impact, incidents: 0, blocked: 1, refused: [{ id: incident.id, name: 'INC-1', code: 'INCIDENT_CLOSED_OR_CANCELLED', usages: [] }] } }
+      : { data: {} }) as any);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+
+    await waitFor(() => expect(dialogsMock.alert).toHaveBeenCalled());
+    expect((dialogsMock.alert.mock.calls[0] as any[])[0].message).toBe('errors:INCIDENT_CLOSED_OR_CANCELLED');
+    expect(dialogsMock.confirm).not.toHaveBeenCalled();
+    expect(api.delete).not.toHaveBeenCalled();
+  });
+
   it.each(['reader', 'contributor', 'member'])('offers no delete to an incident %s', async (level) => {
     authLevel.incidents = level;
     renderPage();

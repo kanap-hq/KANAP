@@ -16,6 +16,7 @@ const OWNER = '55555555-5555-5555-5555-555555555555';
 type ExistingIncidentRow = {
   id: string;
   item_number: number;
+  status: string;
   confidential: boolean;
   reporter_user_id: string;
   owner_user_id: string | null;
@@ -24,6 +25,7 @@ type ExistingIncidentRow = {
 const hiddenRow: ExistingIncidentRow = {
   id: HIDDEN_ID,
   item_number: 12,
+  status: 'open',
   confidential: true,
   reporter_user_id: OWNER,
   owner_user_id: OWNER,
@@ -32,6 +34,7 @@ const hiddenRow: ExistingIncidentRow = {
 const visibleRestrictedRow: ExistingIncidentRow = {
   id: VISIBLE_ID,
   item_number: 13,
+  status: 'open',
   confidential: true,
   reporter_user_id: READER,
   owner_user_id: null,
@@ -62,7 +65,7 @@ function mockContext(
     params: { dryRun: true, mode: 'replace', operation: 'upsert' },
     resolverCache: new Map(),
     userId: READER,
-    isAdmin: false,
+    isAdmin: viewer?.isAdmin ?? false,
     viewer: viewer ?? { userId: READER, isAdmin: false },
     itOpsSettings: { incidentCategories: [] } as any,
   };
@@ -74,6 +77,19 @@ function importRow(ref: string): CsvImportRow {
     raw: { ref },
     parsed: {},
     isInsert: true,
+    errors: [],
+    warnings: [],
+  };
+}
+
+/** A matched row that carries a status cell (the config reads the pre-image on `existingEntity`). */
+function updateStatusRow(itemNumber: number, from: string, to: string): CsvImportRow {
+  return {
+    rowNumber: 2,
+    raw: { ref: `INC-${itemNumber}`, status: to },
+    parsed: { status: to },
+    existingEntity: { ...visibleRestrictedRow, item_number: itemNumber, status: from },
+    isInsert: false,
     errors: [],
     warnings: [],
   };
@@ -136,7 +152,7 @@ async function testUpdateRowsAreLockedAndPreImageKept(): Promise<void> {
   };
   await incidentCsvConfig.beforeCommit!(
     [entity],
-    mockContext([{ ...visibleRestrictedRow, status: 'in_progress' } as any], undefined, sqlLog),
+    mockContext([{ ...visibleRestrictedRow, status: 'in_progress' } as any], { userId: READER, isAdmin: true }, sqlLog),
   );
   const lockQuery = sqlLog.find((sql) => sql.includes('id = ANY'));
   assert.ok(lockQuery, 'the existing rows must be loaded');
@@ -161,15 +177,72 @@ async function testBlankReviewCellIsRecordedAsEmpty(): Promise<void> {
   assert.equal(takePendingIncidentReview(entity), null);
 }
 
+/** A contributor cannot import a status only Reopen or Cancel may reach (§ lifecycle guard). */
+async function testContributorCannotImportStatusBackwardsOrCancelled(): Promise<void> {
+  for (const to of ['open', 'cancelled']) {
+    const row = updateStatusRow(13, 'closed', to);
+    await incidentCsvConfig.afterValidate!([row], mockContext([row.existingEntity]));
+    assert.equal(row.errors.length, 1, `${to}: one row error`);
+    assert.equal(row.errors[0].row, 2);
+    assert.equal(row.errors[0].column, 'status');
+    assert.equal(row.errors[0].code, 'CSV_INCIDENT_STATUS_RESERVED');
+    assert.deepEqual(row.errors[0].params, { reference: 'INC-13', from: 'closed', to });
+    assert.match(row.errors[0].message, /INC-13: status cannot change from "closed" to/);
+  }
+}
+
+/** An administrator may import the same moves; a forward move remains open to contributors. */
+async function testAdministratorAndForwardStatusImportsAreAllowed(): Promise<void> {
+  const admin = { userId: READER, isAdmin: true };
+  for (const to of ['open', 'cancelled']) {
+    const row = updateStatusRow(13, 'closed', to);
+    await incidentCsvConfig.afterValidate!([row], mockContext([row.existingEntity], admin));
+    assert.equal(row.errors.length, 0, `${to}: an administrator may import it`);
+  }
+
+  const forward = updateStatusRow(13, 'in_progress', 'closed');
+  await incidentCsvConfig.afterValidate!([forward], mockContext([forward.existingEntity]));
+  assert.equal(forward.errors.length, 0, 'a forward move keeps the current behaviour');
+}
+
+/** insert_only skips a matched row: its status cell is never written. */
+async function testInsertOnlySkipsTheStatusGuard(): Promise<void> {
+  const row = updateStatusRow(13, 'closed', 'open');
+  const context = mockContext([row.existingEntity]);
+  context.params.operation = 'insert_only';
+  await incidentCsvConfig.afterValidate!([row], context);
+  assert.equal(row.errors.length, 0);
+}
+
+/** The commit re-checks on the locked pre-image, in case the row changed after validation. */
+async function testReservedStatusMoveIsRefusedUnderTheCommitLock(): Promise<void> {
+  const entity: any = {
+    id: VISIBLE_ID,
+    item_number: 13,
+    title: 'Mail outage',
+    status: 'open',
+    detected_at: new Date(),
+  };
+  await assert.rejects(
+    () => incidentCsvConfig.beforeCommit!([entity], mockContext([{ ...visibleRestrictedRow, status: 'closed' }])),
+    /INC-13: status cannot change from "closed" to "open" through import/,
+  );
+}
+
 async function run(): Promise<void> {
   assert.ok(incidentCsvConfig.beforeValidate);
   assert.ok(incidentCsvConfig.beforeCommit);
+  assert.ok(incidentCsvConfig.afterValidate);
   await testHiddenRefIsUnknownOnValidate();
   await testVisibleRestrictedRefIsAllowed();
   await testEmptyConfidentialCellIsUnchangedOnUpdate();
   await testHiddenUpdateIsRefusedOnCommit();
   await testUpdateRowsAreLockedAndPreImageKept();
   await testBlankReviewCellIsRecordedAsEmpty();
+  await testContributorCannotImportStatusBackwardsOrCancelled();
+  await testAdministratorAndForwardStatusImportsAreAllowed();
+  await testInsertOnlySkipsTheStatusGuard();
+  await testReservedStatusMoveIsRefusedUnderTheCommitLock();
   console.log('incident-csv.config.spec.ts: ok');
 }
 
