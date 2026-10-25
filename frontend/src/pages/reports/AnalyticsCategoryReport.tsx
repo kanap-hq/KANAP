@@ -17,6 +17,8 @@ import type { AnalyticsAxes } from '../../hooks/useAnalyticsAxes';
 import type { AnalyticsAxis } from '../../services/analytics';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import { useTranslation } from 'react-i18next';
+import { formatPercentPoints } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
 import { NO_ANALYTICS_VALUE, analyticsRequest, readAnalytics, requestFirstYear } from './reportAggregates';
 import { useBudgetAggregate } from './useBudgetAggregate';
 import { useAxisValueOptions } from './useReportOptions';
@@ -47,6 +49,7 @@ function useReportAxis(axes: AnalyticsAxes): [AnalyticsAxis | null, (id: string)
 
 export default function AnalyticsCategoryReport() {
   const { t } = useTranslation(["ops"]);
+  const locale = useLocale();
   const budgetColumns = useBudgetColumns();
   const now = new Date();
   const Y = now.getFullYear();
@@ -205,7 +208,7 @@ export default function AnalyticsCategoryReport() {
                     title: escapeTooltipText(datum.label),
                     data: [
                       { label: metricLabel, value: formatNumber(value) },
-                      { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
+                      { label: t('reports.shared.share'), value: formatPercentPoints(pct, locale, 1) },
                     ],
                   };
                 },
@@ -268,7 +271,7 @@ export default function AnalyticsCategoryReport() {
       ],
       legend: { enabled: true },
     };
-  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, dimensionInSentence, measureText, formatNumber, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, dimensionInSentence, measureText, formatNumber, locale, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <ReportLayout

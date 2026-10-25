@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import AgGridBox from '../../../components/AgGridBox';
+import { formatPercentPoints } from '../../../i18n/formatters';
 import { useLocale } from '../../../i18n/useLocale';
 import { getProjectStatusLabel } from '../../../utils/portfolioI18n';
 
@@ -28,9 +29,9 @@ const formatNumber = (value: number | null | undefined, locale: string, notAvail
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value);
 };
 
-const formatPercent = (value: number | null | undefined, notAvailable: string): string => {
+const formatPercent = (value: number | null | undefined, locale: string, notAvailable: string): string => {
   if (value == null || !Number.isFinite(value)) return notAvailable;
-  return `${value.toFixed(1)}%`;
+  return formatPercentPoints(value, locale, 1);
 };
 
 type ContributorDrilldownDialogProps = {
@@ -109,7 +110,7 @@ export default function ContributorDrilldownDialog({
       headerName: t('dialogs.contributorDrilldown.columns.progress'),
       width: 120,
       type: 'rightAligned',
-      valueFormatter: (p) => formatPercent(p.value, notAvailable),
+      valueFormatter: (p) => formatPercent(p.value, locale, notAvailable),
     },
     {
       field: 'remainingEffort',
@@ -123,7 +124,7 @@ export default function ContributorDrilldownDialog({
       headerName: t('dialogs.contributorDrilldown.columns.allocationPct'),
       width: 130,
       type: 'rightAligned',
-      valueFormatter: (p) => formatPercent(p.value, notAvailable),
+      valueFormatter: (p) => formatPercent(p.value, locale, notAvailable),
     },
     {
       field: 'contributorDays',
