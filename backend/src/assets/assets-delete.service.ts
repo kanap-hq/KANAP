@@ -9,6 +9,7 @@ import { BulkDeleteResult } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 import { assertNoHiddenLines, hiddenLinesRefusals } from '../data-access/hidden-links';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 
 /** The relations a delete takes with it, in the shape of the relations audit (`assets-relations.service.ts`). */
 type RelationRef = { related_asset_id: string; relation_type: string };
@@ -16,14 +17,17 @@ type RelationRef = { related_asset_id: string; relation_type: string };
 /**
  * What a delete would take away besides the asset, shown before the confirmation. It never refuses
  * the delete: `member_of` the clusters the asset is a member of, `member_count` its own members when
- * it is a cluster, `relations` the assets it is related to (the first ten by name, `direction`
- * `incoming` when the other asset holds the relation) and `relations_total`. Words are the screen's.
+ * it is a cluster, `stops_hosting` the applications it hosts through its clusters (the inherited
+ * assignments: a member in service of a cluster in service that carries them), `relations` the
+ * assets it is related to (the first ten by name, `direction` `incoming` when the other asset holds
+ * the relation) and `relations_total`. Words are the screen's.
  */
 export type AssetDeleteWarning = {
   id: string;
   name: string;
   member_of: Array<{ id: string; name: string }>;
   member_count: number;
+  stops_hosting: string[];
   relations: Array<{ id: string; name: string; relation_type: string; direction: 'incoming' | 'outgoing' }>;
   relations_total: number;
 };
@@ -174,7 +178,7 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
     return { refused, warnings: await this.warningsOf(wanted, rows, tenantId, manager) };
   }
 
-  /** The warnings of `rows` (asked order kept), in three grouped queries. */
+  /** The warnings of `rows` (asked order kept), in grouped queries. */
   private async warningsOf(wanted: string[], rows: Asset[], tenantId: string, manager: EntityManager): Promise<AssetDeleteWarning[]> {
     const ids = rows.map((row) => row.id);
     if (ids.length === 0) return [];
@@ -191,6 +195,17 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
          FROM asset_cluster_members
         WHERE tenant_id = $1 AND cluster_id = ANY($2::uuid[])
         GROUP BY cluster_id`,
+      [tenantId, ids],
+    );
+    // What each asset hosts through its clusters: the inherited rows only, so a member keeps what
+    // it holds directly. One read of the effective assignments for every asset asked.
+    const hosting: Array<{ asset_id: string; name: string }> = await manager.query(
+      `SELECT DISTINCT e.asset_id, app.name
+         FROM (${effectiveAssignmentsSql({ tenant: '$1', assets: '$2' })}) e
+         JOIN app_instances ai ON ai.tenant_id = e.tenant_id AND ai.id = e.app_instance_id
+         JOIN applications app ON app.tenant_id = ai.tenant_id AND app.id = ai.application_id
+        WHERE e.inherited
+        ORDER BY e.asset_id, app.name`,
       [tenantId, ids],
     );
     const relations: Array<{ asset_id: string; id: string; name: string; relation_type: string; direction: 'incoming' | 'outgoing'; total: number }> = await manager.query(
@@ -227,10 +242,11 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
         name: row.name,
         member_of: memberOf.filter((m) => m.asset_id === row.id).map((m) => ({ id: m.id, name: m.name })),
         member_count: Number(memberCounts.find((c) => c.cluster_id === row.id)?.count ?? 0),
+        stops_hosting: hosting.filter((h) => h.asset_id === row.id).map((h) => h.name),
         relations: own.map((r) => ({ id: r.id, name: r.name, relation_type: r.relation_type, direction: r.direction })),
         relations_total: Number(own[0]?.total ?? 0),
       };
-      if (warning.member_of.length > 0 || warning.member_count > 0 || warning.relations_total > 0) warnings.push(warning);
+      if (warning.member_of.length > 0 || warning.member_count > 0 || warning.stops_hosting.length > 0 || warning.relations_total > 0) warnings.push(warning);
     }
     return warnings;
   }
