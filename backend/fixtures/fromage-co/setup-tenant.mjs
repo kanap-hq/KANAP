@@ -1006,9 +1006,13 @@ async function ensureLocations() {
 }
 
 // Notes this fixture wrote before lot C3, replaced on a tenant loaded by an older fixture. A note
-// someone edited by hand is never overwritten.
+// someone edited by hand is never overwritten. The cluster note was written with two hosts before
+// lot C3 and with the third host after the upgrade; both values are the fixture's own.
 const REPLACED_ASSET_NOTES = {
-  'PAR-VSPHERE-CL01': ['vSphere cluster of PAR-ESX-01 and PAR-ESX-02 — HA and DRS'],
+  'PAR-VSPHERE-CL01': [
+    'vSphere cluster of PAR-ESX-01 and PAR-ESX-02 — HA and DRS',
+    'vSphere cluster of PAR-ESX-01, PAR-ESX-02 and PAR-ESX-05 — HA and DRS',
+  ],
   'PAR-SAN-01': ['NetApp FAS2750 — 50TB usable, primary SAN for all VMs'],
 };
 
@@ -2116,7 +2120,7 @@ const TECHNOLOGIES = [
   },
   {
     catalog: 'vsphere',
-    installed: [['PAR-ESX-01', '8.0', null], ['PAR-ESX-02', '8.0', null], ['PAR-ESX-05', '8.0', null], ['PAR-VCENTER-01', '8.0', 'vCenter Server']],
+    installed: [['PAR-VCENTER-01', '8.0', 'vCenter Server']],
     contracts: ['Broadcom VMware ELA'],
     owners: [['marc.petit@fromage-co.example', 'it']],
   },
@@ -2132,6 +2136,12 @@ const TECHNOLOGIES = [
   { catalog: 'postgresql', installed: [['AWS-RDS-BOUTIQUE', '16', 'Amazon RDS, Multi-AZ'], ['PAR-DB-01', '13', null]] },
   { catalog: 'veeam-backup-and-replication', installed: [['PAR-BKP-01', '12', null]] },
 ];
+
+// Installations an older fixture wrote and the list above no longer declares, removed when the
+// setup runs again: an installation someone added by hand stays.
+const REMOVED_INSTALLATIONS = {
+  vsphere: ['PAR-ESX-01', 'PAR-ESX-02', 'PAR-ESX-05'],
+};
 
 const PROCESS_APPLICATIONS = {
   'Order-to-Cash': ['SAP S/4HANA', 'La Boutique du Fromage', 'Salesforce Sales Cloud', 'Fromage B2B Portal'],
@@ -2238,13 +2248,21 @@ async function ensureTechnologies() {
       warn(`Catalog entry '${spec.catalog}' could not be adopted`);
       continue;
     }
-    for (const [server, version, notes] of spec.installed ?? []) {
+    const installed = spec.installed ?? [];
+    for (const [server, version, notes] of installed) {
       const id = assetId(server);
       if (!id) {
         warn(`Asset '${server}' not found for '${spec.catalog}'`);
         continue;
       }
       await apiPost(`/technologies/${technologyId}/assets`, { asset_id: id, version_label: version ?? undefined, notes: notes ?? undefined });
+    }
+    // A technology carried from another server is another row (`kind: carried`).
+    const removed = new Set(REMOVED_INSTALLATIONS[spec.catalog] ?? []);
+    for (const row of removed.size ? items(await apiGet(`/technologies/${technologyId}/assets`)) : []) {
+      if (row.kind !== 'installed' || !row.link_id || !removed.has(row.asset_name)) continue;
+      await apiDelete(`/technologies/${technologyId}/assets/${row.link_id}`);
+      ok(`Removed the installation of '${spec.catalog}' on '${row.asset_name}'`);
     }
     if (spec.declaredBy?.length) {
       const ids = await appIdsFromNames(spec.declaredBy);

@@ -14,13 +14,13 @@ KANAP beschreibt Ihre Landschaft in drei Bereichen:
 
 Ein Server trägt Technologien. Eine Anwendung wird auf Servern gehostet und hängt von Technologien ab.
 
-Legen Sie eine Technologie an, wenn niemand im Produkt selbst arbeitet, andere Anwendungen aber ausfallen oder angreifbar werden, wenn es ausfällt. Führen Sie einen Eintrag als Anwendung, wenn sich Fachanwender dort anmelden und damit arbeiten.
+Erfassen Sie als Anwendung, was Sie als Service verwalten, mit Verantwortlichen, Kritikalität, Verträgen und Kosten. Erfassen Sie als Technologie ein Produkt, das auf Ihren Servern installiert ist und über seine Versionen, Supportende-Daten und Schwachstellen verfolgt wird. In einer Technologie selbst arbeitet selten jemand, doch andere Anwendungen fallen aus oder werden angreifbar, wenn sie ausfällt. Ein Produkt kann beides sein: siehe VMware vSphere unten.
 
 Einige Beispiele:
 
 - **Entra ID**: eine **SaaS**-Technologie der Familie **Verzeichnis und Identität**, Hersteller Microsoft. Sie läuft auf keinem Ihrer Server. Die Anwendungen, deren Benutzer sich darüber anmelden, deklarieren sie.
 - **Active Directory**: eine **On-Premise**-Technologie derselben Familie, getragen von Ihren Domänencontrollern. Die Anwendungen, die sie nutzen, deklarieren sie.
-- **vSphere**: eine **On-Premise**-Technologie, getragen von der vCenter-VM und von den Hosts.
+- **VMware vSphere**: eine **On-Premise**-Technologie, installiert auf dem vCenter-Server, während die Hosts ESXi tragen und der Virtualisierungsdienst als Anwendung geführt wird.
 - **SQL Server**: eine Technologie mit einer Zeile pro Version im Einsatz (2016, 2019, 2022). Jeder Server trägt seine eigene Version, sodass der Supportende-Bericht die Server nennen kann, die noch auf einer alten laufen.
 - **Windows Server**: eine Technologie der Familie **Betriebssystem**. Jeder Server erfasst seine Version, und diese Technologie ist das Betriebssystem des Servers. Siehe [Betriebssysteme](#betriebssysteme).
 - **Eine SaaS-Anwendung**: keine Technologie zu erfassen. Der Anbieter pflegt, worauf sie läuft.

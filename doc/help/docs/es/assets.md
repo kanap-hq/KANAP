@@ -335,6 +335,8 @@ Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla 
 
 Cada tabla muestra la referencia (`AST-12`), el nombre, el tipo, el entorno y el estado. Un activo retirado o desactivado sigue en la lista con el nombre atenuado. Haga clic en una fila para abrir el activo.
 
+En un clúster, **Depende de** termina con una línea plegada, **A través de los miembros (n)**. Enumera los activos de los que dependen los miembros en servicio del clúster, con esos miembros en la columna **Vía**. Estas filas son de solo lectura y no cuentan en la insignia de la pestaña.
+
 Con `infrastructure:member`, **Añadir**, a la derecha de una sección, abre una búsqueda de activo. Elija un resultado: la relación se guarda al instante. Para quitar una relación, pase el cursor sobre la fila y haga clic en la cruz al final. Los lectores ven las tablas en solo lectura. Una relación **Contiene** desde un miembro de un clúster pregunta primero dónde colocar el activo: consulte [Máquinas virtuales en un clúster](#virtual-machines-on-a-cluster).
 
 ---

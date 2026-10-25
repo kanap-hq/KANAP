@@ -335,6 +335,8 @@ Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque 
 
 Chaque tableau affiche la référence (`AST-12`), le nom, le type, l'environnement et le statut. Un actif retiré ou désactivé reste affiché, son nom grisé. Cliquez sur une ligne pour ouvrir l'actif.
 
+Sur un cluster, **Dépend de** se termine par une ligne repliée, **Par les membres (n)**. Elle liste les actifs dont dépendent les membres en service du cluster, avec ces membres dans la colonne **Via**. Ces lignes sont en lecture seule et ne comptent pas dans la pastille de l'onglet.
+
 Avec `infrastructure:member`, **Ajouter**, à droite d'une section, ouvre une recherche d'actif. Choisissez un résultat : la relation est enregistrée aussitôt. Pour retirer une relation, survolez la ligne et cliquez sur la croix en fin de ligne. Les lecteurs voient les tableaux en lecture seule. Une relation **Contient** depuis un membre d'un cluster demande d'abord où placer l'actif : voir [Machines virtuelles sur un cluster](#virtual-machines-on-a-cluster).
 
 ---

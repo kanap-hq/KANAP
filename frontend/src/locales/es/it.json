@@ -2284,6 +2284,7 @@
         "contains": "Contiene",
         "containedBy": "Contenido en",
         "dependedOnBy": "Requerido por",
+        "throughMembers": "A través de los miembros ({{count}})",
         "deleteAttachmentConfirm": "¿Eliminar el adjunto «{{name}}»?",
         "empty": {
           "contains": "No contiene ningún activo.",
@@ -2293,6 +2294,7 @@
         },
         "containsHint": "Activos alojados en este, por ejemplo VM.",
         "alsoContainedBy": "También contenido en {{names}}",
+        "via": "Vía",
         "placementReplaced": "{{cluster}} sustituye el vínculo entre {{hosts}} y {{asset}}."
       }
     },

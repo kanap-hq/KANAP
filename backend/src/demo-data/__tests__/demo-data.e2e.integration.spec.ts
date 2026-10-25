@@ -246,6 +246,28 @@ async function checkVmwareLandscape(port: number, tenantId: string, host: string
     'VMware vSphere runs on the cluster, the vCenter appliance and the two aging hosts, never on the cluster hosts',
   );
 
+  const technologyRows: Array<{ asset: string; technology: string; version: string | null; operating_system: boolean }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT a.name AS asset, t.name AS technology, v.label AS version, x.is_operating_system AS operating_system
+       FROM asset_technologies x
+       JOIN assets a ON a.tenant_id = x.tenant_id AND a.id = x.asset_id
+       JOIN technologies t ON t.tenant_id = x.tenant_id AND t.id = x.technology_id
+       LEFT JOIN technology_versions v ON v.tenant_id = x.tenant_id AND v.id = x.technology_version_id
+      WHERE x.tenant_id = $1 AND a.name = ANY($2::text[])
+      ORDER BY a.name, t.name, version`, [tenantId, [...VMWARE_HOSTS, 'PAR-VCENTER-01']]));
+  const installations = (name: string) => technologyRows
+    .filter((row) => row.technology === name)
+    .map((row) => `${row.asset}|${row.version ?? ''}|${row.operating_system}`);
+  assert.deepEqual(
+    installations('VMware vSphere'),
+    ['PAR-VCENTER-01|8.0|false'],
+    'VMware vSphere is a technology installed on the vCenter appliance only',
+  );
+  assert.deepEqual(
+    installations('VMware ESXi'),
+    VMWARE_HOSTS.map((name) => `${name}|8.0|true`),
+    'the cluster hosts carry ESXi as their operating system',
+  );
+
   const connectionRows: Array<{ source: string; destination: string }> = await inTenant(tenantId, (m) => m.query(
     `SELECT sa.name AS source, da.name AS destination
        FROM connections c
@@ -276,6 +298,18 @@ async function checkVmwareLandscape(port: number, tenantId: string, host: string
     san.applications.map((row: any) => row.name).sort(),
     [...VMWARE_APPLICATIONS].sort(),
     'the applications of the 12 VMs and of the two clusters',
+  );
+  // The hosts carry ESXi, not vSphere: the array's fall now takes the vSphere installation with
+  // the vCenter, which the cluster contains, and no longer with the three hosts.
+  const esxiImpact = san.technologies.find((row: any) => row.name === 'VMware ESXi');
+  assert.ok(esxiImpact, 'the fallen hosts still carry ESXi');
+  assert.deepEqual(esxiImpact.via.map((row: any) => row.name).sort(), [...VMWARE_HOSTS].sort());
+  const vsphereImpact = san.technologies.find((row: any) => row.name === 'VMware vSphere');
+  assert.ok(vsphereImpact, 'the vCenter falls with the cluster and still carries vSphere');
+  assert.deepEqual(
+    vsphereImpact.via.map((row: any) => row.name),
+    ['PAR-VCENTER-01'],
+    'the vSphere installation falls with the vCenter only',
   );
   assert.deepEqual(
     san.assets.filter((row: any) => row.depth > 0).map((row: any) => row.name).sort(),
@@ -338,7 +372,7 @@ async function checkVmwareNotes(tenantId: string) {
   }, 'the notes of the cluster and the array are the new ones');
 }
 
-/** The state of a tenant built before this lot: no third host, old notes, a host link to a VM of the cluster, no dependency. */
+/** The state of a tenant built before this lot: no third host, old notes, a host link to a VM of the cluster, vSphere on the hosts, no dependency. */
 async function simulateOlderVmwareState(tenantId: string) {
   await inTenant(tenantId, async (m) => {
     await m.query(`DELETE FROM assets WHERE tenant_id = $1 AND name = 'PAR-ESX-05'`, [tenantId]);
@@ -350,6 +384,17 @@ async function simulateOlderVmwareState(tenantId: string) {
        SELECT $1, h.id, v.id, 'contains'
          FROM assets h, assets v
         WHERE h.tenant_id = $1 AND h.name = 'PAR-ESX-01' AND v.tenant_id = $1 AND v.name = 'PAR-ERP-01'`,
+      [tenantId],
+    );
+    // The fixture used to install vSphere on the cluster hosts; the loader removes those links.
+    await m.query(
+      `INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id, source)
+       SELECT $1, h.id, link.technology_id, link.technology_version_id, 'manual'
+         FROM assets h
+         JOIN assets vc ON vc.tenant_id = $1 AND vc.name = 'PAR-VCENTER-01'
+         JOIN asset_technologies link ON link.tenant_id = $1 AND link.asset_id = vc.id
+         JOIN technologies t ON t.tenant_id = $1 AND t.id = link.technology_id AND t.catalog_key = 'vsphere'
+        WHERE h.tenant_id = $1 AND h.name IN ('PAR-ESX-01', 'PAR-ESX-02')`,
       [tenantId],
     );
     await m.query(`DELETE FROM asset_relations WHERE tenant_id = $1 AND relation_type = 'depends_on'`, [tenantId]);

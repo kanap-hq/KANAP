@@ -73,6 +73,8 @@ export type AssetRelationRow = {
   status: string;
   /** The other containers in service holding it (`contains` only, R3). */
   also_contained_by?: Array<{ id: string; name: string }>;
+  /** The members a cluster depends through (folded rows of `depends_on` only). */
+  via?: Array<{ id: string; name: string }>;
 };
 
 /** A technology linked to the owner. `reference` is already `TEC-n`. */
@@ -131,6 +133,11 @@ export type SectionSpec<T extends AnyRow> = {
    * Shown when `count` is above 0; a section with null rows shows only then.
    */
   outside?: { count: number; text: string };
+  /**
+   * Rows kept under one folded line at the end of the body, closed at first (the members behind
+   * a cluster's dependencies). They have no action of their own.
+   */
+  folded?: { label: React.ReactNode; rows: T[] };
 };
 
 /** An interface linked to the owner (upstream or downstream). `reference` is already `INT-n`. */

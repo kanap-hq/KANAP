@@ -512,8 +512,106 @@ async function testRefusals() {
   });
 }
 
-async function testTenantIsolation() {
+/**
+ * What the members of a cluster depend on: one row per target under the cluster's own
+ * dependencies, its members in service as the `via` list, and nothing for a plain asset.
+ */
+async function testMemberDependencies() {
   await inRolledBackTransaction(async (runner) => {
+    const seed = await seedTab(runner, 'astrel-members');
+    const { http } = httpOf();
+    const one = async (sql: string, params: unknown[]) => (await runner.query(sql, params))[0];
+    const makeAsset = async (tenantId: string, name: string, cluster = false, status = 'active') => {
+      const row = await one(
+        `INSERT INTO assets (tenant_id, name, kind, environment, status, is_cluster, created_at, updated_at)
+         VALUES ($1, $2, 'physical_server', 'prod', $3, $4, now(), now()) RETURNING id, asset_reference AS reference`,
+        [tenantId, name, status, cluster],
+      );
+      return { id: row.id as string, reference: row.reference as string };
+    };
+    const member = (tenantId: string, clusterId: string, assetId: string) => runner.query(
+      `INSERT INTO asset_cluster_members (tenant_id, cluster_id, asset_id) VALUES ($1, $2, $3)`,
+      [tenantId, clusterId, assetId],
+    );
+    const depend = (tenantId: string, source: string, target: string) => runner.query(
+      `INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type) VALUES ($1, $2, $3, 'depends_on')`,
+      [tenantId, source, target],
+    );
+
+    const cluster = await makeAsset(seed.tenantId, 'PAR-VSPHERE-CL01', true);
+    const host1 = await makeAsset(seed.tenantId, 'PAR-ESX-02');
+    const host2 = await makeAsset(seed.tenantId, 'PAR-ESX-01');
+    const retiredHost = await makeAsset(seed.tenantId, 'PAR-ESX-OLD', false, 'retired');
+    const san = await makeAsset(seed.tenantId, 'PAR-SAN-01');
+    const retiredTarget = await makeAsset(seed.tenantId, 'Retired array', false, 'retired');
+    const directTarget = await makeAsset(seed.tenantId, 'Backup service');
+    const ignoredByRetired = await makeAsset(seed.tenantId, 'Ignored target');
+    for (const host of [host1, host2, retiredHost]) await member(seed.tenantId, cluster.id, host.id);
+    // Two members depend on the same array, one member depends on another (a relation between
+    // nodes), and a retired member depends on a target of its own.
+    await depend(seed.tenantId, host1.id, san.id);
+    await depend(seed.tenantId, host2.id, san.id);
+    await depend(seed.tenantId, host2.id, host1.id);
+    await depend(seed.tenantId, host2.id, retiredTarget.id);
+    await depend(seed.tenantId, retiredHost.id, ignoredByRetired.id);
+    // The cluster already depends on the backup service, which one member also depends on.
+    await depend(seed.tenantId, cluster.id, directTarget.id);
+    await depend(seed.tenantId, host1.id, directTarget.id);
+
+    const res = await http.relationsTabRead(cluster.reference, ctx(runner, seed, ALL));
+    assert.deepEqual(res.assets.depends_on.map((row) => row.name), ['Backup service']);
+    assert.deepEqual(res.assets.depends_on_through_members, [
+      {
+        ...related(san, 'PAR-SAN-01', 'physical_server', 'prod'),
+        via: [
+          { id: host2.id, name: 'PAR-ESX-01' },
+          { id: host1.id, name: 'PAR-ESX-02' },
+        ],
+      },
+      {
+        ...related(retiredTarget, 'Retired array', 'physical_server', 'prod'),
+        status: 'retired',
+        via: [{ id: host2.id, name: 'PAR-ESX-01' }],
+      },
+    ], 'the array under two members, a retired target under one; nodes and direct targets stay out');
+    assert.equal(res.counts.assets, 1, 'the badge counts the direct relations only');
+
+    // A plain asset has no such key, an empty cluster an empty list.
+    const hostTab = await http.relationsTabRead(host1.reference, ctx(runner, seed, ALL));
+    assert.equal('depends_on_through_members' in hostTab.assets, false);
+    const idleCluster = await makeAsset(seed.tenantId, 'IDLE-CL', true);
+    const idleHost = await makeAsset(seed.tenantId, 'IDLE-01');
+    await member(seed.tenantId, idleCluster.id, idleHost.id);
+    const idle = await http.relationsTabRead(idleCluster.reference, ctx(runner, seed, ALL));
+    assert.deepEqual(idle.assets.depends_on_through_members, []);
+
+    // Another tenant's assets with the same names stay out of both answers.
+    const otherTenant = await seedTenant(runner, 'astrel-members-b');
+    const otherCluster = await makeAsset(otherTenant, 'PAR-VSPHERE-CL01', true);
+    const otherHost = await makeAsset(otherTenant, 'PAR-ESX-01');
+    const otherSan = await makeAsset(otherTenant, 'PAR-SAN-B');
+    await member(otherTenant, otherCluster.id, otherHost.id);
+    await depend(otherTenant, otherHost.id, otherSan.id);
+    await setTenant(runner, seed.tenantId);
+    const again = await http.relationsTabRead(cluster.reference, ctx(runner, seed, ALL));
+    assert.deepEqual(again.assets.depends_on_through_members?.map((row) => row.name), ['PAR-SAN-01', 'Retired array']);
+    assert.deepEqual(again.assets.depends_on.map((row) => row.name), ['Backup service']);
+    await setTenant(runner, otherTenant);
+    const other = await http.relationsTabRead(otherCluster.reference, ctx(runner, { ...seed, tenantId: otherTenant }, ALL));
+    assert.deepEqual(other.assets.depends_on_through_members, [{
+      ...related(otherSan, 'PAR-SAN-B', 'physical_server', 'prod'),
+      via: [{ id: otherHost.id, name: 'PAR-ESX-01' }],
+    }]);
+
+    // A retired cluster passes nothing to its members' dependencies.
+    await setTenant(runner, seed.tenantId);
+    await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, cluster.id]);
+    const retired = await http.relationsTabRead(cluster.reference, ctx(runner, seed, ALL));
+    assert.deepEqual(retired.assets.depends_on_through_members, []);
+  });
+}
+
+async function testTenantIsolation() {  await inRolledBackTransaction(async (runner) => {
     const a = await seedTab(runner, 'astrel-a');
     const b = await seedTab(runner, 'astrel-b');
     await setTenant(runner, b.tenantId);
@@ -666,5 +764,6 @@ void runSpecs('asset-relations-tab.integration.spec', [
   ['testIncidents', testIncidents],
   ['testRefusals', testRefusals],
   ['testTenantIsolation', testTenantIsolation],
+  ['testMemberDependencies', testMemberDependencies],
   ['testPlacement', testPlacement],
 ]);

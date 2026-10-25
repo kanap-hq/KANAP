@@ -6,6 +6,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
+import type { RelationsColumn } from '../../../components/workspace/RelationsTable';
+import ViaAssetNames from '../../../components/workspace/ViaAssetNames';
 import { RelationSections, assetsSection, useRelations, type AssetRelationRow, type SectionSpec } from '../../../components/workspace/relations';
 import { useRelationLabels } from '../../../components/workspace/relations/labels';
 import { useLocale } from '../../../i18n/useLocale';
@@ -128,6 +130,17 @@ export default function AssetDependenciesTab({ assetId }: { assetId: string }) {
       environmentLabel: labels.environment,
       statusLabel: labels.status,
     });
+    // A cluster often has no dependency of its own, but its members have: those rows sit under
+    // one folded line of the same table, with the members that carry each one.
+    const throughMembers = direction === 'depends_on' ? data?.assets.depends_on_through_members ?? [] : [];
+    const viaColumn: RelationsColumn<AssetRelationRow> = {
+      key: 'via',
+      header: t('workspace.asset.relations.via'),
+      width: 160,
+      wrap: true,
+      hideOrder: 2,
+      render: (row) => (row.via && row.via.length > 0 ? <ViaAssetNames assets={row.via} /> : null),
+    };
     // A contained asset held by another container in service is flagged next to its name (R3).
     const columns = direction === 'contains' || direction === 'contained_by'
       ? base.columns.map((column) => (column.key !== 'name' ? column : {
@@ -171,7 +184,14 @@ export default function AssetDependenciesTab({ assetId }: { assetId: string }) {
       empty: t(`workspace.asset.relations.empty.${key}`),
       // An asset never relates to itself: the picker leaves it out.
       linkedIds: (rows) => new Set([assetId, ...rows.map((row) => row.id)]),
-      columns,
+      columns: throughMembers.length > 0
+        ? columns.flatMap((column) => (column.key === 'name' ? [column, viaColumn] : [column]))
+        : columns,
+      // Folded rows show what the members carry, and cannot be unlinked from the cluster.
+      folded: throughMembers.length > 0
+        ? { label: t('workspace.asset.relations.throughMembers', { count: throughMembers.length }), rows: throughMembers }
+        : undefined,
+      removable: direction === 'depends_on' ? (row) => !row.via?.length : undefined,
     };
   });
 
