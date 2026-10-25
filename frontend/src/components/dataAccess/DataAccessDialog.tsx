@@ -1,0 +1,366 @@
+import React from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Divider,
+  FormControlLabel,
+  IconButton,
+  Link,
+  MenuItem,
+  Radio,
+  RadioGroup,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import api from '../../api';
+import { KanapDialog, useKanapDialogs } from '../design';
+import useDebouncedValue from '../../hooks/useDebouncedValue';
+import { useLocale } from '../../i18n/useLocale';
+import { formatShortDate } from '../../lib/dateFormat';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { getDocPageUrl } from '../../utils/docUrls';
+import DataAccessNodePicker from './DataAccessNodePicker';
+import {
+  accessBody,
+  accessLevelLabel,
+  accessNodeName,
+  accessNodeTypeLabel,
+  sortAccessNodes,
+  type AccessNode,
+  type DataAccessLevel,
+  type DataAccessPreview,
+  type PersonAccess,
+} from './dataAccess';
+
+type Props = {
+  open: boolean;
+  userId: string;
+  personName: string;
+  onClose: () => void;
+  onSaved?: () => void;
+};
+
+const sectionLabelSx = {
+  fontSize: 11,
+  fontWeight: 500,
+  color: 'kanap.text.tertiary',
+  mb: 0.5,
+} as const;
+
+const nodeKey = (node: Pick<AccessNode, 'type' | 'id'>) => `${node.type}:${node.id ?? ''}`;
+
+/**
+ * "Data access" of a person (spec §7.1): all data or a set of company and cost-center nodes, each
+ * read or edit. The counts of the access are previewed through the server route on every change
+ * (debounced), and saved with `PUT /users/:id/data-access`.
+ */
+export default function DataAccessDialog({ open, userId, personName, onClose, onSaved }: Props) {
+  const { t } = useTranslation(['admin', 'common']);
+  const dialogs = useKanapDialogs();
+  const queryClient = useQueryClient();
+  const locale = useLocale();
+
+  const [mode, setMode] = React.useState<'all' | 'limited'>('all');
+  const [nodes, setNodes] = React.useState<AccessNode[]>([]);
+  const [addOpen, setAddOpen] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
+  const [ready, setReady] = React.useState(false);
+
+  const accessKey = React.useMemo(() => ['user-data-access', userId] as const, [userId]);
+  const accessQuery = useQuery({
+    queryKey: accessKey,
+    queryFn: async () => (await api.get<PersonAccess>(`/users/${userId}/data-access`)).data,
+    enabled: open && !!userId,
+    refetchOnWindowFocus: false,
+  });
+  const data = accessQuery.data;
+
+  // The stored access is the starting point of every opening; a failed load keeps the dialog empty.
+  React.useEffect(() => {
+    if (!open || !data) return;
+    setMode(data.mode);
+    setNodes(sortAccessNodes(data.nodes));
+    setAddOpen(false);
+    setError(null);
+    setReady(true);
+  }, [open, data]);
+
+  const body = React.useMemo(() => accessBody(mode, nodes), [mode, nodes]);
+  const serialized = JSON.stringify(body);
+  const debouncedBody = useDebouncedValue(serialized, 250);
+  const previewQuery = useQuery({
+    queryKey: ['user-data-access-preview', userId, debouncedBody],
+    queryFn: async () => (await api.post<DataAccessPreview>(
+      `/users/${userId}/data-access/preview`,
+      JSON.parse(debouncedBody) as unknown,
+    )).data,
+    enabled: open && ready && !!data && !data.is_administrator,
+    placeholderData: (previous: DataAccessPreview | undefined) => previous,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const addNode = (node: AccessNode) => {
+    setNodes((prev) => (prev.some((current) => nodeKey(current) === nodeKey(node))
+      ? prev
+      : sortAccessNodes([...prev, node])));
+    setAddOpen(false);
+  };
+
+  const addOwnerCenters = () => {
+    if (!data) return;
+    setNodes((prev) => {
+      const next = new Map(prev.map((node) => [nodeKey(node), node]));
+      for (const center of data.budget_owner_centers) {
+        const node: AccessNode = {
+          type: 'cost_center',
+          id: center.id,
+          name: center.name,
+          code: center.code,
+          kind: 'cost_center',
+          access: 'edit',
+        };
+        if (!next.has(nodeKey(node))) next.set(nodeKey(node), node);
+      }
+      return sortAccessNodes(Array.from(next.values()));
+    });
+    setAddOpen(false);
+  };
+
+  const removeNode = (node: AccessNode) => {
+    setNodes((prev) => prev.filter((current) => nodeKey(current) !== nodeKey(node)));
+  };
+
+  const changeNodeAccess = (node: AccessNode, access: DataAccessLevel) => {
+    setNodes((prev) => prev.map((current) => (nodeKey(current) === nodeKey(node) ? { ...current, access } : current)));
+  };
+
+  const changeMode = async (next: 'all' | 'limited') => {
+    if (next === mode) return;
+    if (next === 'all') {
+      const confirmed = await dialogs.confirm({
+        title: t('admin:dataAccess.allData'),
+        message: t('admin:dataAccess.confirmAll', { name: personName }),
+        confirmLabel: t('admin:dataAccess.allData'),
+      });
+      if (!confirmed) return;
+    }
+    setMode(next);
+  };
+
+  const save = async () => {
+    if (!data) return;
+    if (data.is_administrator) {
+      onClose();
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await api.put<PersonAccess>(`/users/${userId}/data-access`, body);
+      queryClient.setQueryData(accessKey, res.data);
+      void queryClient.invalidateQueries({ queryKey: ['users'] });
+      void queryClient.invalidateQueries({ queryKey: ['data-access'] });
+      onSaved?.();
+      onClose();
+    } catch (e) {
+      setError(getApiErrorMessage(e, t, t('admin:dataAccess.saveFailed')));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const administrator = !!data?.is_administrator;
+  const saveDisabled = administrator
+    ? false
+    : (!data || accessQuery.isLoading || saving || (!data.available && mode === 'limited'));
+  const preview = previewQuery.data;
+  const localeNumber = (value: number) => value.toLocaleString(locale);
+
+  return (
+    <KanapDialog
+      open={open}
+      title={t('admin:dataAccess.dialogTitle', { name: personName })}
+      onClose={onClose}
+      onSave={administrator ? onClose : save}
+      saveLabel={administrator ? t('common:buttons.close') : t('common:buttons.save')}
+      saveVariant={administrator ? 'action' : 'action-primary'}
+      saveDisabled={saveDisabled}
+      saveLoading={saving}
+      showCancel={!administrator}
+      cancelLabel={t('common:buttons.cancel')}
+      sx={{ maxWidth: 560 }}
+    >
+      {accessQuery.isLoading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+          <CircularProgress size={20} />
+        </Box>
+      )}
+      {accessQuery.isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {getApiErrorMessage(accessQuery.error, t, t('admin:dataAccess.loadFailed'))}
+        </Alert>
+      )}
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      {administrator ? (
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+          {t('admin:dataAccess.administratorsSeeAll')}
+        </Typography>
+      ) : data && (
+        <Stack spacing={2}>
+          <RadioGroup
+            value={mode}
+            onChange={(_event, value) => { void changeMode(value === 'all' ? 'all' : 'limited'); }}
+          >
+            <FormControlLabel
+              value="all"
+              control={<Radio size="small" />}
+              label={<Typography sx={{ fontSize: 13 }}>{t('admin:dataAccess.allData')}</Typography>}
+            />
+            <FormControlLabel
+              value="limited"
+              disabled={!data.available}
+              control={<Radio size="small" />}
+              label={<Typography sx={{ fontSize: 13 }}>{t('admin:dataAccess.limitedTo')}</Typography>}
+            />
+          </RadioGroup>
+
+          {!data.available && (
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+              {t('admin:dataAccess.unavailable')}{' '}
+              <Link href={getDocPageUrl('data-access', locale)} target="_blank" rel="noopener" underline="hover">
+                {t('admin:dataAccess.guide')}
+              </Link>
+            </Typography>
+          )}
+
+          {mode === 'limited' && (
+            <>
+              {nodes.length > 0 && (
+                <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+                  {nodes.map((node) => {
+                    const name = accessNodeName(node, t);
+                    return (
+                      <Box
+                        component="li"
+                        key={nodeKey(node)}
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: 'minmax(0, 1fr) 130px 96px 32px',
+                          alignItems: 'center',
+                          gap: 1,
+                          py: 0.75,
+                          borderBottom: '1px solid',
+                          borderColor: 'kanap.border.soft',
+                          '&:last-of-type': { borderBottom: 0 },
+                        }}
+                      >
+                        <Typography sx={{ fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {name}
+                        </Typography>
+                        <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>
+                          {accessNodeTypeLabel(node, t)}
+                        </Typography>
+                        <TextField
+                          select
+                          variant="standard"
+                          size="small"
+                          value={node.access}
+                          onChange={(event) => changeNodeAccess(node, event.target.value as DataAccessLevel)}
+                          inputProps={{ 'aria-label': t('admin:dataAccess.accessLabel', { name }) }}
+                          SelectProps={{ SelectDisplayProps: { 'aria-label': t('admin:dataAccess.accessLabel', { name }) } }}
+                        >
+                          <MenuItem value="read">{accessLevelLabel('read', t)}</MenuItem>
+                          <MenuItem value="edit">{accessLevelLabel('edit', t)}</MenuItem>
+                        </TextField>
+                        <IconButton
+                          size="small"
+                          aria-label={t('admin:dataAccess.remove', { name })}
+                          onClick={() => removeNode(node)}
+                        >
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
+              {!addOpen ? (
+                <Box>
+                  <Button size="small" variant="text" startIcon={<AddIcon />} onClick={() => setAddOpen(true)}>
+                    {t('admin:dataAccess.add')}
+                  </Button>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'kanap.border.default',
+                    borderRadius: '6px',
+                    p: 1.5,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 0.5 }}>
+                    <IconButton
+                      size="small"
+                      aria-label={t('common:buttons.cancel')}
+                      onClick={() => setAddOpen(false)}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                  <DataAccessNodePicker
+                    allowEverything
+                    ownerCenters={data.budget_owner_centers}
+                    onPick={addNode}
+                    onPickOwnerCenters={addOwnerCenters}
+                  />
+                </Box>
+              )}
+              <Box>
+                <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
+                  {t('admin:dataAccess.alwaysSees')}
+                </Typography>
+                <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
+                  {t('admin:dataAccess.appliesTo')}
+                </Typography>
+              </Box>
+            </>
+          )}
+
+          {preview && (
+            <>
+              <Divider sx={{ borderColor: 'kanap.border.soft' }} />
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+                {t('admin:dataAccess.preview', {
+                  lines: localeNumber(preview.lines),
+                  editable: localeNumber(preview.editable_lines),
+                  contracts: localeNumber(preview.contracts),
+                })}
+              </Typography>
+            </>
+          )}
+
+          {data.updated_at && data.updated_by_name && (
+            <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
+              {t('admin:dataAccess.modified', {
+                name: data.updated_by_name,
+                date: formatShortDate(data.updated_at, locale, { year: 'always' }),
+              })}
+            </Typography>
+          )}
+        </Stack>
+      )}
+    </KanapDialog>
+  );
+}

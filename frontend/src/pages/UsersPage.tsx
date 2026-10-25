@@ -23,12 +23,15 @@ import { StatusDot, useKanapDialogs } from '../components/design';
 import { getDotColor, USER_ACCOUNT_STATUS_COLORS } from '../utils/statusColors';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
+import { useDataAccessLimited } from '../auth/dataAccess';
+import DataAccessDialog from '../components/dataAccess/DataAccessDialog';
+import { userAccessColumnText } from '../components/dataAccess/dataAccess';
 
 export default function UsersPage() {
   const { t } = useTranslation(['admin', 'common']);
   const dialogs = useKanapDialogs();
   const locale = useLocale();
-  const { hasLevel, tenantAuth } = useAuth();
+  const { hasLevel, tenantAuth, profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<'create'|'edit'>('create');
   const [currentId, setCurrentId] = useState<string|number|undefined>();
@@ -54,6 +57,10 @@ export default function UsersPage() {
   const [importOpen, setImportOpen] = useState(false);
   const gridApiRef = useRef<any>(null);
   const canManageUsers = hasLevel('users', 'admin');
+  const dataAccessLimited = useDataAccessLimited();
+  const canAdminDataAccess = canManageUsers && !dataAccessLimited;
+  const [dataAccessAnyLimited, setDataAccessAnyLimited] = useState(false);
+  const [dataAccessUser, setDataAccessUser] = useState<{ id: string; name: string } | null>(null);
   const { mutateAsync: createItem, isPending: creating } = useMutation({
     mutationFn: async (payload: UserInput) => {
       const res = await api.post('/users', payload);
@@ -357,6 +364,17 @@ export default function UsersPage() {
       },
       cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,
     },
+    ...(canAdminDataAccess && dataAccessAnyLimited
+      ? [{
+          colId: 'data_access',
+          headerName: t('users.columns.dataAccess'),
+          width: 220,
+          sortable: false,
+          filter: false,
+          valueGetter: (params: any) => userAccessColumnText(params.data?.data_access, t),
+          cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,
+        } as EnhancedColDef<any>]
+      : []),
     {
       colId: 'account_type',
       headerName: t('users.columns.accountType'),
@@ -408,7 +426,7 @@ export default function UsersPage() {
     ...(canManageUsers
       ? [{ colId: 'row_actions', headerName: '', width: 56, sortable: false, filter: false, resizable: false, pinned: 'right', cellRenderer: RowActionsCell } as EnhancedColDef<any>]
       : []),
-  ], [ClickableCell, ClickableCellGeneric, UserStatusCell, RowActionsCell, canManageUsers, dateFilterParams, getRoleFilterValues, locale, t]);
+  ], [ClickableCell, ClickableCellGeneric, UserStatusCell, RowActionsCell, canAdminDataAccess, canManageUsers, dataAccessAnyLimited, dateFilterParams, getRoleFilterValues, locale, t]);
 
   if (!hasLevel('users', 'reader')) {
     return <ForbiddenPage />;
@@ -485,6 +503,7 @@ export default function UsersPage() {
       <PageHeader title={t('users.title')} actions={actions} />
       <ServerDataGrid<any>
         onListRequestChange={setListRequest}
+        onListAnswer={(answer) => setDataAccessAnyLimited(answer?.data_access_any_limited === true)}
         columns={columns}
         endpoint="/users"
         queryKey="users"
@@ -508,6 +527,13 @@ export default function UsersPage() {
       />
       <Menu anchorReference="anchorPosition" anchorPosition={menuPos ?? undefined} open={!!menuPos} onClose={closeRowMenu}>
         <MenuItem sx={{ fontSize: 13 }} onClick={() => { closeRowMenu(); if (menuRow) void handleEdit(menuRow); }}>{t('users.actions.edit')}</MenuItem>
+        {canAdminDataAccess && menuRow && String(menuRow.id) !== String(profile?.id) && (
+          <MenuItem sx={{ fontSize: 13 }} onClick={() => {
+            const row = menuRow;
+            closeRowMenu();
+            if (row) setDataAccessUser({ id: row.id, name: userDisplayName(row) });
+          }}>{t('users.actions.dataAccess')}</MenuItem>
+        )}
         {menuRow?.status === 'enabled' ? (
           <MenuItem sx={{ fontSize: 13 }} onClick={() => menuRow && handleRowDisable(menuRow)}>{t('users.actions.disable')}</MenuItem>
         ) : (
@@ -528,6 +554,14 @@ export default function UsersPage() {
         formId="user-form"
         actions={(
           <Stack direction="row" spacing={1.5}>
+            {canAdminDataAccess && mode === 'edit' && currentId != null && String(currentId) !== String(profile?.id) && (
+              <Button
+                variant="action"
+                onClick={() => setDataAccessUser({ id: String(currentId), name: userDisplayName(defaultValues as any) })}
+              >
+                {t('users.actions.dataAccess')}
+              </Button>
+            )}
             <Button onClick={onClose} color="inherit">{t('common:buttons.cancel')}</Button>
             {mode === 'create' && (
             <Button
@@ -580,6 +614,19 @@ export default function UsersPage() {
         onImported={() => setRefreshKey((k) => k + 1)}
         flexibleFormat
       />
+      {dataAccessUser && (
+        <DataAccessDialog
+          key={dataAccessUser.id}
+          open
+          userId={dataAccessUser.id}
+          personName={dataAccessUser.name}
+          onClose={() => setDataAccessUser(null)}
+          onSaved={() => {
+            setRefreshKey((k) => k + 1);
+            void queryClient.invalidateQueries({ queryKey: ['users'] });
+          }}
+        />
+      )}
 
       {/* Per-user permissions modal removed */}
     </>

@@ -28,7 +28,7 @@ export default function CompanySelect({
 }: {
   label?: string;
   value: string | null | undefined;
-  onChange: (v: string | null) => void;
+  onChange: (v: string | null, company?: CompanyOption | null) => void;
   disabled?: boolean;
   error?: boolean;
   helperText?: React.ReactNode;
@@ -70,7 +70,7 @@ export default function CompanySelect({
         value={selected}
         onChange={(_, v) => {
           picker.remember([v]);
-          onChange(v?.id || null);
+          onChange(v?.id || null, v ?? null);
         }}
         getOptionLabel={(o) => picker.label(o, (c) => c.name ?? '')}
         disableClearable={disableClearable}

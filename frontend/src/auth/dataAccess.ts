@@ -62,3 +62,12 @@ export function isReservedInLimitedAccess(resource: string, level: string): bool
 export function useDataAccessLimited(): boolean {
   return isDataAccessLimited(useAuth().dataAccess);
 }
+
+/**
+ * The administration of other people's data access (spec §7.1 to §7.3): unscoped persons who
+ * administer users. A limited person sees none of these screens, whatever their roles.
+ */
+export function useDataAccessAdmin(): boolean {
+  const { hasLevel } = useAuth();
+  return hasLevel('users', 'admin') && !useDataAccessLimited();
+}
