@@ -13,6 +13,8 @@ import { MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useTranslation } from 'react-i18next';
+import { formatPercentPoints } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
 import { NO_CONSOLIDATION_LINE, consolidationAccountsRequest, consolidationRequest, readConsolidation, readConsolidationAccounts, requestFirstYear } from './reportAggregates';
 import { reportListLink, reportListPicks } from './reportListLink';
 import ReportGroupLinkCell from './ReportGroupLinkCell';
@@ -22,6 +24,7 @@ import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure 
 
 export default function ConsolidationReport() {
   const { t } = useTranslation(["ops"]);
+  const locale = useLocale();
   const budgetColumns = useBudgetColumns();
   const now = new Date();
   const Y = now.getFullYear();
@@ -178,7 +181,7 @@ export default function ConsolidationReport() {
                     title: escapeTooltipText(datum.label),
                     data: [
                       { label: metricLabel, value: formatNumber(value) },
-                      { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
+                      { label: t('reports.shared.share'), value: formatPercentPoints(pct, locale, 1) },
                     ],
                   };
                 },
@@ -242,7 +245,7 @@ export default function ConsolidationReport() {
       ],
       legend: { enabled: true },
     };
-  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, measureText, formatNumber, t]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [groups, singleYear, years, metricsCaption, chartType, metricLabel, scopeLabel, measureText, formatNumber, locale, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <ReportLayout
