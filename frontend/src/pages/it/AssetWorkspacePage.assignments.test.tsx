@@ -166,6 +166,9 @@ describe('Asset workspace: assignments and clusters', () => {
     expect(within(inheritedRow).getByText(/^via/)).toBeTruthy();
     const ownRow = screen.getByText('Intranet').closest('tr') as HTMLElement;
     expect(within(ownRow).getAllByRole('button').length).toBe(3);
+    // An empty date and empty notes show the dash of every other table of the page.
+    expect(within(ownRow).getAllByText('—')).toHaveLength(2);
+    expect(within(ownRow).queryByText('-')).toBeNull();
   });
 
   it('keeps the assignment button of a cluster active and shows no alert', async () => {

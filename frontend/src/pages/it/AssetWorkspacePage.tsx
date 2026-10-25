@@ -40,6 +40,7 @@ import DateEUField from '../../components/fields/DateEUField';
 import DateCalendarPopover from '../../components/fields/DateCalendarPopover';
 import { ServerOption } from '../../components/fields/ServerSelect';
 import ViaAssetNames from '../../components/workspace/ViaAssetNames';
+import { DASH } from '../../components/workspace/relations';
 import ClusterGroupLine from './components/ClusterGroupLine';
 import useClusterAssignmentQuestion from './components/useClusterAssignmentQuestion';
 import HardwareInfoPanel from './editors/HardwareInfoPanel';
@@ -2151,8 +2152,8 @@ export default function AssetWorkspacePage() {
                           </TableCell>
                           <TableCell>{environmentLabel(assignment.environment)}</TableCell>
                           <TableCell>{labelFor('serverRole', assignment.role) || assignment.role}</TableCell>
-                          <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : '-'}</TableCell>
-                          <TableCell>{assignment.notes || '-'}</TableCell>
+                          <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : DASH}</TableCell>
+                          <TableCell>{assignment.notes || DASH}</TableCell>
                           {canAssign && (
                           <TableCell align="right">
                             {!assignment.inherited && (
