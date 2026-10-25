@@ -375,7 +375,7 @@ describe('sibling relation sections', () => {
     expect(screen.getByRole('table', { name: 'Wide' }).style.width).toBe(`${wide}px`);
   });
 
-  it('drops the cap when a sibling table is between its base and its natural width', () => {
+  it('drops the cap and fills every table when a sibling table is between its base and its natural width', () => {
     // 530px holds the short table (natural 312) and sits in the middle regime of the other
     // (base 520, natural 640).
     frameWidth = 530;
@@ -396,8 +396,36 @@ describe('sibling relation sections', () => {
     );
     expect(getComputedStyle(screen.getByRole('region', { name: 'Short' })).maxWidth).toBe('none');
     expect(getComputedStyle(screen.getByRole('region', { name: 'Mid' })).maxWidth).toBe('none');
-    expect(screen.getByRole('table', { name: 'Short' }).style.width).toBe(`${72 + NAME_MIN_WIDE}px`);
+    // The short table fills its section too, so its Add stays on the table's right edge.
+    expect(screen.getByRole('table', { name: 'Short' }).style.width).toBe('');
+    expect(colWidths(screen.getByRole('table', { name: 'Short' }))).toEqual([72, undefined]);
     expect(screen.getByRole('table', { name: 'Mid' }).style.width).toBe('');
+  });
+
+  it('gives the surplus to an empty spacer column when the stretched table has no name column', () => {
+    frameWidth = 1600;
+    const sized = (prefix: string, count: number): Array<RelationsColumn<Row>> => Array.from({ length: count }, (_, index) => (
+      { key: `${prefix}${index}`, header: `${prefix}${index}`, width: 100, render: () => 'x' }
+    ));
+    renderSections(
+      <>
+        <RelationsSection title="Narrow">
+          <RelationsTable columns={sized('n', 2)} rows={ROWS} rowKey={(row) => row.id} action={{ width: 56, render: () => 'Link' }} ariaLabel="Narrow" />
+        </RelationsSection>
+        <RelationsSection title="Broad">
+          <RelationsTable columns={sized('b', 5)} rows={ROWS} rowKey={(row) => row.id} ariaLabel="Broad" />
+        </RelationsSection>
+      </>,
+    );
+    const narrow = screen.getByRole('table', { name: 'Narrow' });
+    expect(narrow.style.width).toBe('');
+    // Two sized columns keep their widths, the spacer has none, the action column stays last.
+    expect(colWidths(narrow)).toEqual([100, 100, undefined, 56]);
+    expect(narrow.querySelectorAll('thead th')).toHaveLength(4);
+    expect(narrow.querySelectorAll('tbody tr')[0].children).toHaveLength(4);
+    expect(narrow.querySelectorAll('tbody tr')[0].children[3].textContent).toBe('Link');
+    const broad = screen.getByRole('table', { name: 'Broad' });
+    expect(colWidths(broad)).toEqual([100, 100, 100, 100, 100]);
   });
 });
 

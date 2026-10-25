@@ -292,15 +292,15 @@ type GroupWidth = number | 'fill';
 
 type RelationsWidthApi = {
   report: (id: string, width: GroupWidth | null) => void;
-  /** Shared width of the sibling sections. Absent when one of their tables fills its frame. */
-  groupWidth: number | undefined;
+  /** Shared width of the sibling sections, `'fill'` when one of their tables fills its frame. */
+  groupWidth: GroupWidth | undefined;
 };
 
 const RelationsWidthContext = React.createContext<RelationsWidthApi | null>(null);
 
 type SectionGroup = {
   tables: Map<string, { sectionId: string; width: GroupWidth }>;
-  listeners: Map<string, (width: number | undefined) => void>;
+  listeners: Map<string, (width: GroupWidth | undefined) => void>;
 };
 
 /** Sections that share a parent, so their right edges line up. The parent is the key. */
@@ -315,12 +315,12 @@ function ensureGroup(parent: Element): SectionGroup {
   return group;
 }
 
-/** The widest published width, or none when a table fills its frame. */
-function groupMaxWidth(group: SectionGroup): number | undefined {
+/** The widest published width, or `'fill'` when a table fills its frame. */
+function groupMaxWidth(group: SectionGroup): GroupWidth | undefined {
   let max = 0;
   let seen = false;
   for (const table of group.tables.values()) {
-    if (table.width === 'fill') return undefined;
+    if (table.width === 'fill') return 'fill';
     seen = true;
     if (table.width > max) max = table.width;
   }
@@ -376,9 +376,13 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
   const { columns } = fitted;
   /** The table's own width when the frame is wider than the columns; the frame keeps the rest. */
   const naturalWidth = fitted.tableWidth != null ? fitted.tableWidth + actionWidth + removeWidth : null;
-  // A sibling section is wider: fill this one. The column without a width takes the surplus,
-  // past its usual cap. When every column has a width, the fixed layout leaves that surplus.
-  const stretch = naturalWidth != null && groupWidth != null && groupWidth > naturalWidth;
+  // A sibling section is wider, or fills its frame: fill this one too. The column without a width
+  // takes the surplus, past its usual cap; without one, an empty spacer column takes it.
+  const stretch = naturalWidth != null
+    && (groupWidth === 'fill' || (groupWidth != null && groupWidth > naturalWidth));
+  const spacer = stretch && columns.every((column) => column.width != null);
+  const spacerRef = React.useRef(false);
+  spacerRef.current = spacer;
   shownKeysRef.current = columns.map((column) => column.key);
   const shownKey = shownKeysRef.current.join('\0');
   // The content does not depend on the frame, so a resize does not measure again. A column that
@@ -390,8 +394,10 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
     const measure = () => {
       if (cancelled || !table.isConnected) return;
       const keys = shownKeysRef.current;
-      // The action column follows the data columns. The unlink icon keeps its fixed width.
-      const widths = readMeasuredWidths(table, keys.length + (hasAction ? 1 : 0));
+      // The action column follows the data columns (and the spacer, if any). The unlink icon keeps its fixed width.
+      const offset = spacerRef.current ? 1 : 0;
+      const measuredWidths = readMeasuredWidths(table, keys.length + offset + (hasAction ? 1 : 0));
+      const widths = offset ? [...measuredWidths.slice(0, keys.length), ...measuredWidths.slice(keys.length + offset)] : measuredWidths;
       setMeasured((prev) => {
         let changed = false;
         const next: Record<string, number> = { ...prev };
@@ -469,6 +475,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
         onKeyDown={opens && linkIndex < 0 ? (event) => { if (event.key === 'Enter') open(row); } : undefined}
       >
         {cells}
+        {spacer && <td />}
         {action ? (
           <td className="r" onClick={(event) => event.stopPropagation()}>{action.render(row)}</td>
         ) : null}
@@ -566,6 +573,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
             if (stretch && column.width == null) return <col key={column.key} />;
             return <col key={column.key} style={width ? { width } : undefined} />;
           })}
+          {spacer && <col />}
           {hasAction && <col style={{ width: actionWidth }} />}
           {removeWidth > 0 && <col style={{ width: removeWidth }} />}
         </colgroup>
@@ -573,6 +581,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
           <thead>
             <tr>
               {columns.map((column) => <th key={column.key} className={column.align === 'right' ? 'r' : undefined}>{column.header}</th>)}
+              {spacer && <th aria-hidden />}
               {hasAction && <th aria-hidden />}
               {removeWidth > 0 && <th aria-hidden />}
             </tr>
@@ -582,7 +591,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
           {rows.map(renderRow)}
           {foldedRows.length > 0 && (
             <tr data-folded="">
-              <td colSpan={columns.length + (hasAction ? 1 : 0) + (removeWidth > 0 ? 1 : 0)}>
+              <td colSpan={columns.length + (spacer ? 1 : 0) + (hasAction ? 1 : 0) + (removeWidth > 0 ? 1 : 0)}>
                 <Box
                   component="button"
                   type="button"
@@ -619,6 +628,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
                     {index === 0 ? total.label : total.cells[column.key] ?? null}
                   </td>
                 ))}
+                {spacer && <td />}
                 {hasAction && <td />}
                 {removeWidth > 0 && <td />}
               </tr>
@@ -648,14 +658,15 @@ type SectionProps = {
   children: React.ReactNode;
 };
 
-/** A Relations section: title and count, an "Add" text action on the right, then its content. */
+/** A Relations section: title and count, an "Add" text action next to them, then its content. */
 export function RelationsSection({ title, count, onAdd, adding, addLabel, heading, hint, actions, children }: SectionProps) {
   const sectionId = React.useId();
   const parentRef = React.useRef<Element | null>(null);
-  const [maxWidth, setMaxWidth] = React.useState<number | undefined>(undefined);
-  const onGroup = React.useCallback((width: number | undefined) => {
-    setMaxWidth((current) => (current === width ? current : width));
+  const [groupWidth, setGroupWidth] = React.useState<GroupWidth | undefined>(undefined);
+  const onGroup = React.useCallback((width: GroupWidth | undefined) => {
+    setGroupWidth((current) => (current === width ? current : width));
   }, []);
+  const maxWidth = typeof groupWidth === 'number' ? groupWidth : undefined;
   const report = React.useCallback((id: string, width: GroupWidth | null) => {
     const parent = parentRef.current;
     if (!parent) return;
@@ -685,7 +696,7 @@ export function RelationsSection({ title, count, onAdd, adding, addLabel, headin
       ensureGroup(nextParent).listeners.set(sectionId, onGroup);
     }
   }, [sectionId, onGroup]);
-  const value = React.useMemo(() => ({ report, groupWidth: maxWidth }), [report, maxWidth]);
+  const value = React.useMemo(() => ({ report, groupWidth }), [report, groupWidth]);
   return (
     <RelationsWidthContext.Provider value={value}>
       <Box component="section" ref={setSectionNode} aria-label={title} sx={maxWidth != null ? { maxWidth } : undefined}>
@@ -698,20 +709,20 @@ export function RelationsSection({ title, count, onAdd, adding, addLabel, headin
             )}
             {hint && <InfoHint text={hint} />}
             {count != null && <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{count}</Typography>}
+            {onAdd && (
+              <Button
+                variant="text"
+                size="small"
+                aria-haspopup="listbox"
+                aria-expanded={adding ? true : undefined}
+                onClick={(event) => onAdd(event.currentTarget)}
+                sx={(theme) => ({ fontSize: 12, minWidth: 0, px: 1, ...(adding ? { backgroundColor: theme.palette.kanap.bg.hover } : {}) })}
+              >
+                {addLabel}
+              </Button>
+            )}
           </Box>
           {actions}
-          {onAdd && (
-            <Button
-              variant="text"
-              size="small"
-              aria-haspopup="listbox"
-              aria-expanded={adding ? true : undefined}
-              onClick={(event) => onAdd(event.currentTarget)}
-              sx={(theme) => ({ fontSize: 12, minWidth: 0, px: 1, ...(adding ? { backgroundColor: theme.palette.kanap.bg.hover } : {}) })}
-            >
-              {addLabel}
-            </Button>
-          )}
         </Box>
         {children}
       </Box>
