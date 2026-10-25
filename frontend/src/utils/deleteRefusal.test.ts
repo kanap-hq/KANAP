@@ -172,7 +172,7 @@ describe('deleteFailureReason', () => {
   describe('assetDeleteWarningLines', () => {
     const relation = (name: string, type = 'depends_on') => ({ id: name, name, relation_type: type, direction: 'outgoing' });
     const warning = (patch: Partial<AssetDeleteWarning>): AssetDeleteWarning => ({
-      id: 'a', name: 'srv', member_of: [], member_count: 0, relations: [], relations_total: 0, ...patch,
+      id: 'a', name: 'srv', member_of: [], member_count: 0, stops_hosting: [], relations: [], relations_total: 0, ...patch,
     });
 
     it('names the cluster a server leaves, in the interface language', () => {
@@ -181,6 +181,19 @@ describe('deleteFailureReason', () => {
       expect(assetDeleteWarningLines(one, i18n.fr.t, 'fr')).toEqual(['Membre de PAR-SQL-CL01 : il quittera ce cluster.']);
       const two = warning({ member_of: [{ id: 'c', name: 'CL-1' }, { id: 'd', name: 'CL-2' }] });
       expect(assetDeleteWarningLines(two, i18n.en.t, 'en')).toEqual(['Member of CL-1 and CL-2: it will leave these clusters.']);
+    });
+
+    it('names the applications a server stops hosting through its clusters', () => {
+      const two = warning({ stops_hosting: ['CheeseTrack', 'Sage X3'] });
+      expect(assetDeleteWarningLines(two, i18n.en.t, 'en')).toEqual(['It will no longer host CheeseTrack and Sage X3.']);
+      expect(assetDeleteWarningLines(two, i18n.fr.t, 'fr')).toEqual(["Il n'hébergera plus CheeseTrack et Sage X3."]);
+      expect(assetDeleteWarningLines(warning({ stops_hosting: ['CheeseTrack'] }), i18n.de.t, 'de'))
+        .toEqual(['Es hostet CheeseTrack nicht mehr.']);
+      expect(assetDeleteWarningLines(warning({ stops_hosting: ['CheeseTrack'] }), i18n.es.t, 'es'))
+        .toEqual(['Ya no alojará CheeseTrack.']);
+      const many = warning({ stops_hosting: ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo'] });
+      expect(assetDeleteWarningLines(many, i18n.en.t, 'en')).toEqual(['It will no longer host Alpha, Bravo, Charlie and 2 more.']);
+      expect(assetDeleteWarningLines(many, i18n.fr.t, 'fr')).toEqual(["Il n'hébergera plus Alpha, Bravo, Charlie et 2 autres."]);
     });
 
     it('counts the members a cluster lets go', () => {
@@ -200,8 +213,16 @@ describe('deleteFailureReason', () => {
     });
 
     it('gives one line per case and none for an asset without any', () => {
-      const all = warning({ member_of: [{ id: 'c', name: 'CL' }], member_count: 3, relations: [relation('X')], relations_total: 1 });
-      expect(assetDeleteWarningLines(all, i18n.en.t, 'en')).toHaveLength(3);
+      const all = warning({
+        member_of: [{ id: 'c', name: 'CL' }], member_count: 3, stops_hosting: ['CheeseTrack'],
+        relations: [relation('X')], relations_total: 1,
+      });
+      expect(assetDeleteWarningLines(all, i18n.en.t, 'en')).toEqual([
+        'Member of CL: it will leave this cluster.',
+        'It will no longer host CheeseTrack.',
+        'Cluster of 3 members: they will lose their cluster.',
+        '1 link will be removed: X.',
+      ]);
       expect(assetDeleteWarningLines(warning({}), i18n.en.t, 'en')).toEqual([]);
     });
 
@@ -212,6 +233,7 @@ describe('deleteFailureReason', () => {
             expect(i18n[language].exists(`common:delete.assetWarning.${key}_${form}`), `${language} ${key}_${form}`).toBe(true);
           }
         }
+        expect(i18n[language].exists('common:delete.assetWarning.stopsHosting'), `${language} stopsHosting`).toBe(true);
         expect(i18n[language].exists('common:delete.anyway'), `${language} anyway`).toBe(true);
       }
     });

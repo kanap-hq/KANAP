@@ -261,6 +261,7 @@
     "assetWarning": {
       "memberOf_one": "Mitglied von {{names}}: Es verlässt diesen Cluster.",
       "memberOf_other": "Mitglied von {{names}}: Es verlässt diese Cluster.",
+      "stopsHosting": "Es hostet {{names}} nicht mehr.",
       "hasMembers_one": "Cluster mit {{count}} Mitglied: Es verliert seinen Cluster.",
       "hasMembers_other": "Cluster mit {{count}} Mitgliedern: Sie verlieren ihren Cluster.",
       "links_one": "{{count}} Verknüpfung wird entfernt: {{names}}.",

@@ -261,6 +261,7 @@
     "assetWarning": {
       "memberOf_one": "Miembro de {{names}}: saldrá de este clúster.",
       "memberOf_other": "Miembro de {{names}}: saldrá de estos clústeres.",
+      "stopsHosting": "Ya no alojará {{names}}.",
       "hasMembers_one": "Clúster de {{count}} miembro: perderá su clúster.",
       "hasMembers_other": "Clúster de {{count}} miembros: perderán su clúster.",
       "links_one": "Se eliminará {{count}} vínculo: {{names}}.",
