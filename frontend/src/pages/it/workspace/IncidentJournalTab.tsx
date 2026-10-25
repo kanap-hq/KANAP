@@ -50,6 +50,20 @@ const SYSTEM_ENTRY_KEYS: Record<string, string> = {
   'Incident review imported': 'workspace.incident.journal.systemEntries.reviewImported',
 };
 
+/** A minute of slack covers the latency between the client's clock and the server write. */
+const RECORDED_AT_TOLERANCE_MS = 60 * 1000;
+
+/**
+ * A note can be recorded later than the facts it describes: the server keeps both times and the
+ * journal shows the recording time only when the two differ.
+ */
+function recordedAtDiffers(entry: IncidentEntry): boolean {
+  const occurred = Date.parse(entry.occurred_at);
+  const created = Date.parse(entry.created_at);
+  if (!Number.isFinite(occurred) || !Number.isFinite(created)) return false;
+  return Math.abs(created - occurred) > RECORDED_AT_TOLERANCE_MS;
+}
+
 export default function IncidentJournalTab({ incidentId, canAdd, onEntryAdded }: Props) {
   const { t } = useTranslation('it');
   const { t: tPortfolio } = useTranslation('portfolio');
@@ -231,6 +245,13 @@ export default function IncidentJournalTab({ incidentId, canAdd, onEntryAdded }:
                       {formatShortDateTime(entry.occurred_at, locale)}
                     </Typography>
                   </Tooltip>
+                  {recordedAtDiffers(entry) && (
+                    <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>
+                      {t('workspace.incident.journal.recordedAt', {
+                        date: formatShortDateTime(entry.created_at, locale),
+                      })}
+                    </Typography>
+                  )}
                   {entry.kind !== 'note' && (
                     <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary' }}>
                       {t(`workspace.incident.journal.kinds.${entry.kind}`, { defaultValue: entry.kind })}

@@ -1579,6 +1579,7 @@
         "placeholder": "Add a note to the journal",
         "add": "Add",
         "empty": "No entries yet.",
+        "recordedAt": "recorded {{date}}",
         "systemAuthor": "System",
         "unknownAuthor": "Unknown",
         "kinds": {

@@ -1579,6 +1579,7 @@
         "placeholder": "Notiz zum Verlauf hinzufügen",
         "add": "Hinzufügen",
         "empty": "Noch keine Einträge.",
+        "recordedAt": "erfasst am {{date}}",
         "systemAuthor": "System",
         "unknownAuthor": "Unbekannt",
         "kinds": {
