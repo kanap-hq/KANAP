@@ -1359,7 +1359,8 @@
         "model": "Modèle",
         "rack_location": "Emplacement en baie",
         "rack_unit": "Unité de baie",
-        "cluster": "Cluster"
+        "cluster": "Cluster",
+        "placement": "Placement"
       },
       "mappings": {
         "intro": "Seuls les rôles et les sites mis en correspondance sont importés. Tout ce qui reste sur « Ne pas importer » est laissé de côté.",

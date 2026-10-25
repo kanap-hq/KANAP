@@ -1359,7 +1359,8 @@
         "model": "Model",
         "rack_location": "Rack location",
         "rack_unit": "Rack unit",
-        "cluster": "Cluster"
+        "cluster": "Cluster",
+        "placement": "Placement"
       },
       "mappings": {
         "intro": "Only mapped roles and sites are imported. Anything left on \"Do not import\" is skipped.",

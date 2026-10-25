@@ -1359,7 +1359,8 @@
         "model": "Modell",
         "rack_location": "Rack-Position",
         "rack_unit": "Höheneinheit",
-        "cluster": "Cluster"
+        "cluster": "Cluster",
+        "placement": "Platzierung"
       },
       "mappings": {
         "intro": "Nur zugeordnete Rollen und Standorte werden importiert. Alles, was auf „Nicht importieren“ steht, bleibt außen vor.",

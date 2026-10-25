@@ -56,6 +56,7 @@ const PAGE_SIZE = 50;
 const DIFF_FIELD_KEYS: string[] = [
   'name', 'kind', 'location', 'sub_location', 'status', 'hostname', 'domain', 'operating_system',
   'primary_ip', 'serial_number', 'manufacturer', 'model', 'rack_location', 'rack_unit', 'cluster',
+  'placement',
 ];
 
 function stateDotColor(state: NetboxRecordState, mode: 'light' | 'dark'): string {
