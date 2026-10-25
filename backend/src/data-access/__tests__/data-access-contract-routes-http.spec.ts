@@ -76,7 +76,7 @@ const dataSource = new DataSource({ ...(appDataSource.options as any), poolSize:
 let client: PgClient;
 let s: ContractSeed;
 let hasRole = false;
-type Extra = { disabled: string; cxAttachment: string; companyName: string; supplierName: string; ritaContract: string };
+type Extra = { disabled: string; cxAttachment: string; companyName: string; supplierName: string; ritaContract: string; relationContract: string };
 let extra: Extra;
 
 // ---------------------------------------------------------------------------------------------
@@ -284,12 +284,23 @@ async function seedAll(): Promise<void> {
     for (const line of [s.lines.L1, s.lines.L5]) {
       await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES (app_current_tenant(), $1, $2)`, [ritaContract.id, line]);
     }
+    // A contract Rita edits, linked to a modifiable line (L1), a read-only one (L3) and a hidden
+    // one (L5): replacing the set checks only the lines added and removed.
+    const [relationContract] = await q(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, cost_center_id)
+       VALUES (app_current_tenant(), 'DA HTTP Rita relations', $1, $2, '2026-01-01', $3) RETURNING id`,
+      [s.fr, s.supplier, s.infFr],
+    );
+    for (const line of [s.lines.L1, s.lines.L3, s.lines.L5]) {
+      await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES (app_current_tenant(), $1, $2)`, [relationContract.id, line]);
+    }
     extra = {
       disabled: disabled.id,
       cxAttachment: attachment.id,
       companyName: company.name,
       supplierName: supplier.name,
       ritaContract: ritaContract.id,
+      relationContract: relationContract.id,
     };
     await client.query('COMMIT');
   } catch (error) {
@@ -503,6 +514,46 @@ async function testLineLinks(app: INestApplication): Promise<void> {
   const readOnlyLine = await call(app, 'POST', `contracts/${extra.ritaContract}/spend-items/bulk-replace`, p.rita, { spend_item_ids: [lines.L2] });
   expectLimited(readOnlyLine, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Rita links a read-only line');
 
+  // A contract linked to a modifiable line (L1), a read-only one (L3) and a hidden one (L5): a
+  // replacement checks only the lines added and removed, never one that stays linked. Both the
+  // OPEX route and the Budget route replace the same set through their own service.
+  const relationLinks = () => contractLines(extra.relationContract);
+  assert.deepEqual(await relationLinks(), [lines.L1, lines.L3, lines.L5].sort(), 'the fixture links L1, L3 and L5');
+  const unchanged = await call(app, 'POST', `contracts/${extra.relationContract}/spend-items/bulk-replace`, p.rita, { spend_item_ids: [lines.L1, lines.L3] });
+  assert.equal(unchanged.status, 201, `keeping the read-only line linked: ${unchanged.text}`);
+  assert.deepEqual({ added: unchanged.body.added, removed: unchanged.body.removed }, { added: 0, removed: 0 }, 'nothing changes');
+  const unchangedBudget = await call(app, 'POST', `contracts/${extra.relationContract}/budget-lines/bulk-replace`, p.rita, { budget_line_ids: [lines.L1, lines.L3] });
+  assert.equal(unchangedBudget.status, 201, `budget route, keeping the read-only line linked: ${unchangedBudget.text}`);
+  assert.deepEqual({ added: unchangedBudget.body.added, removed: unchangedBudget.body.removed }, { added: 0, removed: 0 }, 'nothing changes');
+  assert.deepEqual(await relationLinks(), [lines.L1, lines.L3, lines.L5].sort(), 'the hidden link and the read-only one stay');
+
+  // Removing the modifiable line while the read-only one stays linked.
+  const removeEditable = await call(app, 'POST', `contracts/${extra.relationContract}/spend-items/bulk-replace`, p.rita, { spend_item_ids: [lines.L3] });
+  assert.equal(removeEditable.status, 201, `removing L1 while L3 stays: ${removeEditable.text}`);
+  assert.equal(removeEditable.body.removed, 1, removeEditable.text);
+  assert.deepEqual(await relationLinks(), [lines.L3, lines.L5].sort(), 'L1 unlinked, L3 and the hidden L5 kept');
+  const addEditableBack = await call(app, 'POST', `contracts/${extra.relationContract}/budget-lines/bulk-replace`, p.rita, { budget_line_ids: [lines.L1, lines.L3] });
+  assert.equal(addEditableBack.status, 201, `budget route, adding L1 back beside L3: ${addEditableBack.text}`);
+  assert.equal(addEditableBack.body.added, 1, addEditableBack.text);
+  assert.deepEqual(await relationLinks(), [lines.L1, lines.L3, lines.L5].sort(), 'L1 linked again, L3 and the hidden L5 kept');
+
+  // Adding, or removing, a read-only line is a write on it: refused, and nothing changes.
+  for (const [path, body] of [
+    [`contracts/${extra.relationContract}/spend-items/bulk-replace`, { spend_item_ids: [lines.L1, lines.L2, lines.L3] }],
+    [`contracts/${extra.relationContract}/budget-lines/bulk-replace`, { budget_line_ids: [lines.L1, lines.L2, lines.L3] }],
+  ] as const) {
+    const refused = await call(app, 'POST', path, p.rita, body);
+    expectLimited(refused, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, `${path} adding the read-only L2`);
+  }
+  for (const [path, body] of [
+    [`contracts/${extra.relationContract}/spend-items/bulk-replace`, { spend_item_ids: [lines.L1] }],
+    [`contracts/${extra.relationContract}/budget-lines/bulk-replace`, { budget_line_ids: [lines.L1] }],
+  ] as const) {
+    const refused = await call(app, 'POST', path, p.rita, body);
+    expectLimited(refused, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, `${path} removing the read-only L3`);
+  }
+  assert.deepEqual(await relationLinks(), [lines.L1, lines.L3, lines.L5].sort(), 'every refusal left the links untouched');
+
   const readOnlyContract = await call(app, 'POST', `contracts/${c.CE}/spend-items/bulk-replace`, p.rita, { spend_item_ids: [] });
   expectLimited(readOnlyContract, DATA_ACCESS_READ_ONLY_CONTRACT_MESSAGE, 'Rita changes the lines of a read-only contract');
   const hiddenContract = await call(app, 'POST', `contracts/${c.CH}/spend-items/bulk-replace`, p.rita, { spend_item_ids: [] });
@@ -511,12 +562,13 @@ async function testLineLinks(app: INestApplication): Promise<void> {
   assert.equal(missingContract.status, 404, missingContract.text);
   assert.equal(hiddenContract.body?.message, missingContract.body?.message, 'a hidden contract answers as a missing one');
 
-  // Line side: L1 links to CE, CL and CF. Rita replaces with CF: the visible CE and CL links go.
+  // Line side: L1 links to CE, CL, CF and the rows contract. Rita replaces with CF: the visible
+  // CE, CL and rows links go.
   // A link to a hidden contract cannot exist on a visible line: the contract read rule makes it
   // visible through the line, so the DELETE ... USING contracts form is defensive here.
   const lineReplaced = await call(app, 'POST', `spend-items/${lines.L1}/contracts/bulk-replace`, p.rita, { contract_ids: [c.CF] });
   assert.equal(lineReplaced.status, 201, lineReplaced.text);
-  assert.equal(lineReplaced.body.removed, 2, lineReplaced.text);
+  assert.equal(lineReplaced.body.removed, 3, lineReplaced.text);
   assert.deepEqual(await lineContracts(lines.L1), [c.CF], 'the visible links are replaced');
 
   const hiddenTarget = await call(app, 'POST', `spend-items/${lines.L1}/contracts/bulk-replace`, p.rita, { contract_ids: [c.CH] });

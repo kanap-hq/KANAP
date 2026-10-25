@@ -940,8 +940,9 @@ export class ContractsService {
   }
 
   /**
-   * The target lines of a contract link: the ids the person reads, of the expected nature; a
+   * The lines *added* to a contract link: the ids the person reads, of the expected nature; a
    * limited person gets the 404 of a missing line for a hidden one, and 403 for a read-only line.
+   * A line that stays linked is not checked again: replacing the set never rewrites it.
    */
   private async assertLinableItems(mg: EntityManager, nature: 'opex' | 'capex', tenantId: string, ids: string[]): Promise<void> {
     if (ids.length === 0) return;
@@ -965,16 +966,19 @@ export class ContractsService {
     await assertContractsEditable(mg, [contract.id]);
     const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((spendItemIds || []).filter(Boolean)));
-    await this.assertLinableItems(mg, 'opex', tenantId, uniqueIds);
     // The contract's links to OPEX lines only: a link to a line of another nature is kept as it is.
     const existing: Array<{ id: string; spend_item_id: string }> = await mg.query(
       `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2${OPEX_LINK}`,
       [tenantId, contract.id],
     );
     const existingSet = new Set(existing.map(e => e.spend_item_id));
+    const added = uniqueIds.filter(id => !existingSet.has(id));
+    const removedLinks = existing.filter((e) => !uniqueIds.includes(e.spend_item_id)).map((e) => e.spend_item_id);
+    // Only the lines added need a readable, modifiable line: one that stays linked is not rewritten.
+    await this.assertLinableItems(mg, 'opex', tenantId, added);
     // Deleting a link is a write on its line too: a read-only line refuses it (the link trigger).
-    await assertLinesEditable(mg, existing.filter((e) => !uniqueIds.includes(e.spend_item_id)).map((e) => e.spend_item_id));
-    const toInsert = uniqueIds.filter(id => !existingSet.has(id)).map(id => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
+    await assertLinesEditable(mg, removedLinks);
+    const toInsert = added.map(id => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
     // Only the links to the lines the person reads are deleted: the join on spend_items is
     // filtered by the line policy (spec §6.4); the naive DELETE would remove the hidden links too.
     const [removed]: Array<{ n: number }> = await mg.query(
@@ -1588,16 +1592,19 @@ export class ContractsService {
     await assertContractsEditable(mg, [contract.id]);
     const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((capexItemIds || []).filter(Boolean)));
-    await this.assertLinableItems(mg, 'capex', tenantId, uniqueIds);
     // The contract's links to CAPEX lines only: a link to an OPEX line is kept as it is.
     const existing: Array<{ id: string; spend_item_id: string }> = await mg.query(
       `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2${CAPEX_LINK}`,
       [tenantId, contract.id],
     );
     const existingSet = new Set(existing.map((e) => e.spend_item_id));
+    const added = uniqueIds.filter((id) => !existingSet.has(id));
+    const removedLinks = existing.filter((e) => !uniqueIds.includes(e.spend_item_id)).map((e) => e.spend_item_id);
+    // Only the lines added need a readable, modifiable line: one that stays linked is not rewritten.
+    await this.assertLinableItems(mg, 'capex', tenantId, added);
     // Deleting a link is a write on its line too: a read-only line refuses it (the link trigger).
-    await assertLinesEditable(mg, existing.filter((e) => !uniqueIds.includes(e.spend_item_id)).map((e) => e.spend_item_id));
-    const toInsert = uniqueIds.filter((id) => !existingSet.has(id)).map((id) => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
+    await assertLinesEditable(mg, removedLinks);
+    const toInsert = added.map((id) => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
     // Only the links to the lines the person reads are deleted (the join is filtered by the line policy).
     const [removed]: Array<{ n: number }> = await mg.query(
       `WITH removed AS (

@@ -1124,13 +1124,17 @@ export class AiRelationMutationSupportService {
   }
 
   private async replaceSimpleRelation(context: AiExecutionContextWithManager, config: SimpleRelationConfig, sourceId: string, nextItems: RelationItem[]): Promise<void> {
-    const targetIds = nextItems
+    const targetIds = Array.from(new Set(nextItems
       .map((item) => item.payload[config.targetColumn])
-      .filter((value): value is string => typeof value === 'string' && value !== '');
+      .filter((value): value is string => typeof value === 'string' && value !== '')
+      .map((value) => value.toLowerCase())));
     // `contract_spend_items` has no data-access policy (spec §6.4): its writes are checked here,
     // and a replacement deletes only the links to the rows the person reads, through a JOIN on
-    // the scoped table (a naive DELETE would remove the hidden links too).
+    // the scoped table (a naive DELETE would remove the hidden links too). Only the targets added
+    // are checked and inserted: a link that stays linked is never rewritten, so the link trigger
+    // never sees it.
     if (config.table === 'contract_spend_items') {
+      let added: string[] = [];
       if (config.sourceEntity === 'contracts') {
         await assertContractsEditable(context.manager, [sourceId]);
         const nature = config.relation === 'capex_items' ? 'capex' : 'opex';
@@ -1141,13 +1145,15 @@ export class AiRelationMutationSupportService {
         if (lines.length !== targetIds.length) {
           throw new NotFoundException(nature === 'opex' ? 'Spend item not found.' : 'CAPEX item not found.');
         }
-        await assertLinesEditable(context.manager, targetIds);
         const existing: Array<{ id: string }> = await context.manager.query(
           `SELECT l.spend_item_id AS id FROM contract_spend_items l
              JOIN spend_items i ON i.tenant_id = l.tenant_id AND i.id = l.spend_item_id AND i.nature = $3
             WHERE l.tenant_id = $1 AND l.contract_id = $2`,
           [context.tenantId, sourceId, nature],
         );
+        const existingSet = new Set(existing.map((row) => row.id));
+        added = targetIds.filter((id) => !existingSet.has(id));
+        await assertLinesEditable(context.manager, added);
         await assertLinesEditable(
           context.manager,
           existing.map((row) => row.id).filter((id) => !targetIds.includes(id)),
@@ -1161,7 +1167,15 @@ export class AiRelationMutationSupportService {
         );
       } else {
         await assertLinesEditable(context.manager, [sourceId]);
-        for (const targetId of targetIds) await assertContractReadable(context.manager, targetId);
+        const existing: Array<{ id: string }> = await context.manager.query(
+          `SELECT l.contract_id AS id FROM contract_spend_items l
+             JOIN contracts c ON c.tenant_id = l.tenant_id AND c.id = l.contract_id
+            WHERE l.tenant_id = $1 AND l.spend_item_id = $2`,
+          [context.tenantId, sourceId],
+        );
+        const existingSet = new Set(existing.map((row) => row.id));
+        added = targetIds.filter((id) => !existingSet.has(id));
+        for (const targetId of added) await assertContractReadable(context.manager, targetId);
         await context.manager.query(
           `DELETE FROM contract_spend_items l USING contracts c
             WHERE l.tenant_id = $1 AND l.spend_item_id = $2
@@ -1170,7 +1184,7 @@ export class AiRelationMutationSupportService {
           [context.tenantId, sourceId, targetIds],
         );
       }
-      for (const targetId of targetIds) {
+      for (const targetId of added) {
         await context.manager.query(
           `INSERT INTO contract_spend_items (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
           [context.tenantId, sourceId, targetId],

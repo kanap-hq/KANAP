@@ -186,17 +186,6 @@ export async function replaceContractRelations(
     [contract.tenant_id, contract.id],
   );
   if (locked.length === 0) throw new NotFoundException('Contract not found.');
-  if (nextIds.length) {
-    const found: Array<{ id: string }> = await manager.query(t.exists, [contract.tenant_id, nextIds]);
-    if (found.length !== nextIds.length) {
-      // A hidden line answers as a missing one for a limited person; unscoped persons keep the 400.
-      if (set === 'budget_lines' && await isLimitedTransaction(manager)) throw new NotFoundException('Budget line not found.');
-      throw new BadRequestException(t.notFound);
-    }
-    // A line read but not modifiable: the clear 403 before the link INSERT policy refuses it.
-    if (set === 'budget_lines') await assertLinesEditable(manager, nextIds);
-  }
-
   const current: Array<{ other_id: string }> = await manager.query(
     `SELECT DISTINCT l.${t.otherFk} AS other_id FROM ${t.links} l WHERE l.tenant_id = $1 AND l.contract_id = $2${t.linkScope}`,
     [contract.tenant_id, contract.id],
@@ -204,6 +193,18 @@ export async function replaceContractRelations(
   const beforeIds = current.map((row) => row.other_id).sort();
   const removed = beforeIds.filter((id) => !nextIds.includes(id));
   const added = nextIds.filter((id) => !beforeIds.includes(id));
+
+  if (nextIds.length) {
+    const found: Array<{ id: string }> = await manager.query(t.exists, [contract.tenant_id, nextIds]);
+    if (found.length !== nextIds.length) {
+      // A hidden line answers as a missing one for a limited person; unscoped persons keep the 400.
+      if (set === 'budget_lines' && await isLimitedTransaction(manager)) throw new NotFoundException('Budget line not found.');
+      throw new BadRequestException(t.notFound);
+    }
+    // A line read but not modifiable: the clear 403 before the link INSERT policy refuses it. A
+    // line that stays linked is not checked again: the replacement never rewrites its link.
+    if (set === 'budget_lines') await assertLinesEditable(manager, added);
+  }
 
   let removedCount = removed.length;
   if (removed.length) {

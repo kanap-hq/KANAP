@@ -141,6 +141,8 @@ async function seedPlaid(): Promise<void> {
     contractVisible = await contract('visible', s.infFr);
     contractHidden = await contract('hidden', null);
     await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [s.tenantId, contractVisible, s.lines.L1]);
+    // L3 is read by Rita but read-only: a link that stays is not checked again by a replacement.
+    await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [s.tenantId, contractVisible, s.lines.L3]);
     contractTaskId = (await q(
       `INSERT INTO tasks (tenant_id, title, item_number, related_object_type, related_object_id, creator_id, assignee_user_id)
        VALUES ($1, $2, 7002, 'contract', $3, $4, $5) RETURNING id`,
@@ -454,6 +456,14 @@ async function linkedLines(): Promise<Label[]> {
   return rows.rows.map((row: any) => (Object.keys(s.lines) as Label[]).find((l) => s.lines[l] === row.spend_item_id)!).sort();
 }
 
+/** The lines linked to the visible contract, by label. */
+async function linkedContractLines(): Promise<Label[]> {
+  const rows = await inTenant(() => client.query(
+    `SELECT spend_item_id FROM contract_spend_items WHERE tenant_id = $1 AND contract_id = $2`, [s.tenantId, contractVisible],
+  ));
+  return rows.rows.map((row: any) => (Object.keys(s.lines) as Label[]).find((l) => s.lines[l] === row.spend_item_id)!).sort();
+}
+
 async function testPlaidWrites(): Promise<void> {
   const { rita } = s.persons;
   // A read-only line (L3): refused when the preview is asked, its fields and its relations.
@@ -544,7 +554,33 @@ async function testPlaidRelationWrites(): Promise<void> {
   assertShows(ullaPreview, 'L5', 'relation preview (Ulla)');
   assert.equal((await approve(ulla, ullaPreview.preview_id)).status, 'executed', 'Ulla links L1 back');
   assert.deepEqual(await linkedLines(), ['L1', 'L3', 'L5'], 'Ulla: L1 linked, the rest kept');
-  console.log('  Plaid relation writes: hidden line refused as missing, visible links replaced, hidden link kept: OK');
+
+  // A contract carries L1 (modifiable) and L3 (read-only): a replacement checks only the targets
+  // added and removes only the links asked, so the read-only link that stays is never rewritten.
+  const contractRelation = (extra: Record<string, unknown>) => ({
+    entity_type: 'contracts', ref: contractVisible, relation: 'spend_items', ...extra,
+  });
+  assert.deepEqual(await linkedContractLines(), ['L1', 'L3'], 'the contract links L1 and the read-only L3');
+  const keepReadOnly = await preview(rita, 'update_entity_relations', contractRelation({ remove: [s.lines.L1] }));
+  assert.equal((await approve(rita, keepReadOnly.preview_id)).status, 'executed', 'removing L1 while L3 stays executed');
+  assert.deepEqual(await linkedContractLines(), ['L3'], 'L1 unlinked, the read-only L3 kept');
+  // Adding a new line read-only (L2) is a write on it: refused, and nothing changes.
+  const addReadOnly = await preview(rita, 'update_entity_relations', contractRelation({ add: [s.lines.L2] }));
+  const addedReadOnly = await approve(rita, addReadOnly.preview_id);
+  assert.equal(addedReadOnly.status, 'failed', 'Plaid adds read-only L2 to the contract');
+  assert.equal(addedReadOnly.error_message, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Plaid adds read-only L2 to the contract');
+  assert.deepEqual(await linkedContractLines(), ['L3'], 'the refusal left the links untouched');
+  // Adding an editable line back beside L3: only L1 is inserted.
+  const addEditable = await preview(rita, 'update_entity_relations', contractRelation({ add: [s.lines.L1] }));
+  assert.equal((await approve(rita, addEditable.preview_id)).status, 'executed', 'adding L1 back beside L3 executed');
+  assert.deepEqual(await linkedContractLines(), ['L1', 'L3'], 'L1 linked again, L3 kept');
+  // Removing the read-only link is a write on L3: refused.
+  const removeReadOnly = await preview(rita, 'update_entity_relations', contractRelation({ remove: [s.lines.L3] }));
+  const removedReadOnly = await approve(rita, removeReadOnly.preview_id);
+  assert.equal(removedReadOnly.status, 'failed', 'Plaid removes read-only L3 from the contract');
+  assert.equal(removedReadOnly.error_message, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Plaid removes read-only L3 from the contract');
+  assert.deepEqual(await linkedContractLines(), ['L1', 'L3'], 'the refusal left the links untouched');
+  console.log('  Plaid relation writes: hidden line refused as missing, visible links replaced, hidden link kept, contract links only re-check new targets: OK');
 }
 
 // ---------------------------------------------------------------------------------------------
