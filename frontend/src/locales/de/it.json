@@ -3222,6 +3222,12 @@
       "groupAssignTo": "{{cluster}} zuordnen",
       "groupConfirm": "{{application}} bleibt verfügbar, solange ein Mitglied läuft.",
       "thisApplication": "Die Anwendung"
+    },
+    "clusterConnection": {
+      "title": "Mit dem Cluster verbinden?",
+      "inCluster_one": "{{server}} gehört zu {{cluster}}. Die Verbindung gilt für sein einziges Mitglied.",
+      "inCluster_other": "{{server}} gehört zu {{cluster}}. Die Verbindung gilt für seine {{count}} Mitglieder.",
+      "connectToCluster": "Mit dem Cluster verbinden"
     }
   },
   "enums": {

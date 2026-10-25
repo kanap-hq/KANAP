@@ -18,6 +18,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import api from '../../../api';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import ConnectionHopEquipmentPicker from './ConnectionHopEquipmentPicker';
+import useClusterConnectionQuestion from '../components/useClusterConnectionQuestion';
 import ConnectionProtocolsTable, { type ConnectionProtocol } from './ConnectionProtocolsTable';
 import ClusterMark from '../../../components/workspace/ClusterMark';
 import type { ServerOption } from '../../../components/fields/serverOptionRender';
@@ -69,6 +70,7 @@ export default function ConnectionPathSection({
 }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { settings } = useItOpsEnumOptions();
+  const { choose, questionDialog } = useClusterConnectionQuestion();
   const connectionTypes = settings?.connectionTypes || [];
   const pathHopFunctions = (settings as any)?.pathHopFunctions || [];
 
@@ -384,15 +386,22 @@ export default function ConnectionPathSection({
                   value={{ asset_id: hop.equipment_asset_id, entity_code: hop.equipment_entity_code }}
                   initialAsset={hop.equipment_asset}
                   disabled={!canManage}
-                  onChange={(next, asset) => {
-                    updateLocal(hop.id, {
-                      equipment_asset_id: next.asset_id,
+                  onChange={async (next, asset) => {
+                    let target = asset ?? null;
+                    if (asset) {
+                      const chosen = await choose(asset, []);
+                      if (!chosen) return;
+                      target = chosen;
+                    }
+                    const patch = {
+                      equipment_asset_id: target?.id ?? next.asset_id,
                       equipment_entity_code: next.entity_code,
-                      equipment_asset: asset ?? null,
-                    });
+                      equipment_asset: target,
+                    };
+                    updateLocal(hop.id, patch);
                     void callPatch(hop.id, {
-                      equipment_asset_id: next.asset_id,
-                      equipment_entity_code: next.entity_code,
+                      equipment_asset_id: patch.equipment_asset_id,
+                      equipment_entity_code: patch.equipment_entity_code,
                     });
                   }}
                 />
@@ -536,6 +545,8 @@ export default function ConnectionPathSection({
           })}
         </Box>
       </Popover>
+
+      {questionDialog}
     </Box>
   );
 }

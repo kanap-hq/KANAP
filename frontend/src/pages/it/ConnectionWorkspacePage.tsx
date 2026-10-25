@@ -19,6 +19,7 @@ import ConnectionOverviewTab, { type ConnectionProtocol } from './workspace/Conn
 import ConnectionPathTab from './workspace/ConnectionPathTab';
 import ConnectionEndpointPicker, { type EndpointValue } from './workspace/ConnectionEndpointPicker';
 import ConnectionServersPicker from './workspace/ConnectionServersPicker';
+import useClusterConnectionQuestion from './components/useClusterConnectionQuestion';
 import { useConnectionItemNav } from '../../hooks/useModuleItemNav';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { drawerSelectSx, drawerMenuItemSx, drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
@@ -180,6 +181,7 @@ export default function ConnectionWorkspacePage() {
   const [createForm, setCreateForm] = React.useState<CreateConnectionForm>(() => createInitialForm());
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
+  const { choose, questionDialog } = useClusterConnectionQuestion();
 
   const lifecycleOptions = byField.lifecycleStatus || [];
   const dataClassOptions = byField.dataClass || [];
@@ -301,10 +303,14 @@ export default function ConnectionWorkspacePage() {
   }, [reloadLinkedInterfaces, load]);
 
   const patchConnection = React.useCallback(
-    async (patch: Partial<ConnectionDetail> | Record<string, any>) => {
+    async (
+      patch: Partial<ConnectionDetail> | Record<string, any>,
+      localPatch?: Partial<ConnectionDetail> | Record<string, any>,
+    ) => {
       if (!connectionId) return;
+      const local = localPatch ?? patch;
       setSaving(true);
-      setData((prev) => (prev ? { ...prev, ...(patch as any) } as ConnectionDetail : prev));
+      setData((prev) => (prev ? { ...prev, ...(local as any) } as ConnectionDetail : prev));
       try {
         const res = await api.patch<ConnectionDetail>(`/connections/${connectionId}`, patch);
         setData((prev) => (prev ? { ...prev, ...res.data } : res.data));
@@ -392,27 +398,85 @@ export default function ConnectionWorkspacePage() {
   }, [data, patchConnection, pendingTopology]);
 
   const handleEndpointChange = React.useCallback(
-    (side: 'source' | 'destination', next: { asset_id: string | null; entity_code: string | null }) => {
+    async (
+      side: 'source' | 'destination',
+      next: { asset_id: string | null; entity_code: string | null },
+      asset?: ServerOption,
+    ) => {
+      let endpoint = { asset_id: next.asset_id, entity_code: next.entity_code };
+      if (asset) {
+        const opposite = side === 'source'
+          ? (isCreate ? createForm.destination.asset_id : data?.destination_asset_id)
+          : (isCreate ? createForm.source.asset_id : data?.source_asset_id);
+        const target = await choose(asset, opposite ? [opposite] : []);
+        if (!target) return;
+        endpoint = { asset_id: target.id, entity_code: null };
+      }
+      if (isCreate) {
+        patchCreateForm(side === 'source' ? { source: endpoint } : { destination: endpoint });
+        return;
+      }
       if (side === 'source') {
         void patchConnection({
-          source_asset_id: next.asset_id,
-          source_entity_code: next.entity_code,
+          source_asset_id: endpoint.asset_id,
+          source_entity_code: endpoint.entity_code,
         });
       } else {
         void patchConnection({
-          destination_asset_id: next.asset_id,
-          destination_entity_code: next.entity_code,
+          destination_asset_id: endpoint.asset_id,
+          destination_entity_code: endpoint.entity_code,
         });
       }
     },
-    [patchConnection],
+    [
+      choose,
+      createForm.destination.asset_id,
+      createForm.source.asset_id,
+      data?.destination_asset_id,
+      data?.source_asset_id,
+      isCreate,
+      patchConnection,
+      patchCreateForm,
+    ],
+  );
+
+  // A cluster absorbs the member it covers: the added id becomes the cluster's, once, before the write.
+  const resolveServerList = React.useCallback(
+    async (next: ServerOption[], current: ServerOption[]) => {
+      const currentIds = new Set(current.map((server) => server.id));
+      let resolved = [...next];
+      for (const added of next.filter((server) => !currentIds.has(server.id))) {
+        const others = resolved.filter((server) => server.id !== added.id).map((server) => server.id);
+        const target = await choose(added, others);
+        if (!target) {
+          resolved = resolved.filter((server) => server.id !== added.id);
+          continue;
+        }
+        if (target.id !== added.id) {
+          resolved = resolved.filter((server) => server.id !== added.id);
+          if (!resolved.some((server) => server.id === target.id)) resolved.push(target);
+        }
+      }
+      return resolved;
+    },
+    [choose],
   );
 
   const handleMultiServerChange = React.useCallback(
-    (nextIds: string[]) => {
-      void patchConnection({ servers: nextIds });
+    async (next: ServerOption[]) => {
+      const current = data?.servers ?? [];
+      const resolved = await resolveServerList(next, current);
+      void patchConnection({ servers: resolved.map((server) => server.id) }, { servers: resolved });
     },
-    [patchConnection],
+    [data?.servers, patchConnection, resolveServerList],
+  );
+
+  const handleCreateServersChange = React.useCallback(
+    async (next: ServerOption[]) => {
+      const resolved = await resolveServerList(next, createForm.servers);
+      patchCreateForm({ servers: resolved });
+    },
+    [createForm.servers, patchCreateForm, resolveServerList],
   );
 
   const handleProtocolsChange = React.useCallback(
@@ -851,13 +915,13 @@ export default function ConnectionWorkspacePage() {
                     label={t('workspace.connection.layers.source')}
                     value={createForm.source}
                     disabled={!canManage || createSubmitting}
-                    onChange={(next) => patchCreateForm({ source: next })}
+                    onChange={(next, asset) => void handleEndpointChange('source', next, asset)}
                   />
                   <ConnectionEndpointPicker
                     label={t('workspace.connection.layers.destination')}
                     value={createForm.destination}
                     disabled={!canManage || createSubmitting}
-                    onChange={(next) => patchCreateForm({ destination: next })}
+                    onChange={(next, asset) => void handleEndpointChange('destination', next, asset)}
                   />
                 </Box>
               ) : (
@@ -870,7 +934,7 @@ export default function ConnectionWorkspacePage() {
                   >
                     <ConnectionServersPicker
                       value={createForm.servers}
-                      onChange={(next) => patchCreateForm({ servers: next })}
+                      onChange={(next) => void handleCreateServersChange(next)}
                       disabled={!canManage || createSubmitting}
                       placeholder={t('workspace.connection.create.serversPlaceholder')}
                     />
@@ -976,6 +1040,8 @@ export default function ConnectionWorkspacePage() {
           />
         )}
       </PortfolioDetailWorkspaceShell>
+
+      {questionDialog}
 
       <KanapDialog
         open={deleteDialogOpen}

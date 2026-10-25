@@ -81,7 +81,7 @@ type Props = {
     next: { asset_id: string | null; entity_code: string | null },
     asset?: ServerOption,
   ) => void;
-  onMultiServerChange: (nextIds: string[]) => void;
+  onMultiServerChange: (next: ServerOption[]) => void;
   onProtocolsChange: (next: ConnectionProtocol[]) => void;
   onLinkedInterfacesChanged: () => void;
 };
@@ -316,7 +316,7 @@ export default function ConnectionOverviewTab({
             <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 0.25 }}>{t('workspace.connection.overview.serversMin')}</Typography>
             <ConnectionServersPicker
               value={multiServerOptions}
-              onChange={(next) => onMultiServerChange(next.map((server) => server.id))}
+              onChange={onMultiServerChange}
               disabled={!canManage}
               placeholder={t('workspace.connection.overview.addServer')}
             />
