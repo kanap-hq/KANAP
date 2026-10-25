@@ -279,7 +279,7 @@ Um eine deklarierte Technologie hinzuzufügen, zu ändern oder zu entfernen und 
 | **Krit.**, **Hoch**, **Mittel**, **Niedrig**, **N. bew.** | Eine Spalte pro Schweregrad (Kritisch, Hoch, Mittel, Niedrig, Nicht bewertet, der volle Name im Tooltip der Überschrift): die noch zu prüfenden Schwachstellen. Eine mit **Keine** bewertete Schwachstelle zählt bei **Niedrig** |
 | **Gesamt** | Die verschiedenen noch zu prüfenden Schwachstellen dieser Zeile |
 
-**Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung und die Technologie. Wenn nichts mehr zu prüfen ist, sagt der Abschnitt es in einer Zeile. Eine deaktivierte Anwendung hat keinen Abschnitt.
+**Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung und die Technologie. Wenn nichts mehr zu prüfen ist, sagt der Abschnitt es in einer Zeile. Solange der Abgleich einer Technologie noch läuft, die gerade auf dieser Anwendung oder auf einem ihrer Bereitstellungsserver erfasst wurde, zeigt der Abschnitt „Suche nach Schwachstellen läuft…“ und füllt sich von selbst. Eine deaktivierte Anwendung hat keinen Abschnitt.
 
 Der Abschnitt zählt nur direkte Verknüpfungen. Eine Technologie, die der Abschnitt **Technologien** über den Host einer virtuellen Maschine zeigt, zählt hier nicht: Sie zählt auf dem Host. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts).
 
