@@ -81,6 +81,9 @@ type Extra = {
   centerCompany: string;
   extraCenter: string;
   centerAccessPerson: string;
+  orderPerson: string;
+  orderCompanies: Array<{ id: string; name: string }>;
+  orderCenters: Array<{ id: string; code: string }>;
 };
 let extra: Extra;
 
@@ -357,6 +360,28 @@ async function seedExtra(): Promise<Extra> {
     await seedNodes(client, s.tenantId, centerAccessPerson, [{ type: 'cost_center', id: extraCenter, access: 'edit' }]);
     await client.query(`UPDATE users SET first_name = 'Yann', last_name = 'Center' WHERE id = $1`, [centerAccessPerson]);
 
+    // The names and codes whose order differs between PostgreSQL (collation) and JavaScript
+    // (localeCompare): the I1 no-effect scenario reads them back in another order.
+    const orderCompanies: Array<{ id: string; name: string }> = [];
+    for (const name of ['Évian SA', 'Zeta SA', 'eau vive', 'Ä-Test', 'a b', 'ab']) {
+      const [row] = await q(
+        `INSERT INTO companies (tenant_id, name, country_iso, city, status) VALUES (app_current_tenant(), $1, 'FR', 'Lyon', 'enabled') RETURNING id`,
+        [name],
+      );
+      orderCompanies.push({ id: row.id as string, name });
+    }
+    const orderCenters: Array<{ id: string; code: string }> = [];
+    for (const code of ['ITA', 'IT-OPS', 'ITSEC', 'IT-Z']) {
+      const [row] = await q(
+        `INSERT INTO cost_centers (tenant_id, code, kind, name, company_id, status)
+         VALUES (app_current_tenant(), $1, 'cost_center', $1, $2, 'enabled') RETURNING id`,
+        [code, centerCompany],
+      );
+      orderCenters.push({ id: row.id as string, code });
+    }
+    const orderPerson = await seedPerson(client, s.tenantId, 'all', budgetReaderRole);
+    await client.query(`UPDATE users SET first_name = 'Olga', last_name = 'Order' WHERE id = $1`, [orderPerson]);
+
     // Marta is the budget owner of INF-ES ("Add their cost centers", spec §7.1).
     await client.query(`UPDATE cost_centers SET owner_user_id = $2 WHERE id = $1`, [s.infEs, s.persons.marta]);
 
@@ -373,6 +398,9 @@ async function seedExtra(): Promise<Extra> {
       centerCompany,
       extraCenter,
       centerAccessPerson,
+      orderPerson,
+      orderCompanies,
+      orderCenters,
     };
   });
 }
@@ -545,6 +573,69 @@ async function testReadAndWrite(app: INestApplication) {
     assert.equal(res.body.code, code, `${what}: ${res.text}`);
   }
   console.log('  invalid bodies: 400 with a clear code: OK');
+}
+
+async function testNoEffectOrder(app: INestApplication) {
+  // I1: PostgreSQL orders names and codes with its collation, JavaScript with localeCompare. The
+  // same set must compare equal whatever the order: one write and one audit entry for two PUTs.
+  const email = await emailOf(extra.orderPerson);
+  const nodes = [
+    ...extra.orderCompanies.map((company) => ({ type: 'company', id: company.id, access: 'read' as const })),
+    ...extra.orderCenters.map((center) => ({ type: 'cost_center', id: center.id, access: 'edit' as const })),
+  ];
+  const body = { mode: 'limited', nodes };
+  const auditBefore = (await auditRows()).length;
+  const first = await call(app, 'PUT', `users/${extra.orderPerson}/data-access`, extra.manager, body);
+  assert.equal(first.status, 200, first.text);
+  assert.equal((await auditRows()).length, auditBefore + 1, 'the first PUT writes one audit entry');
+  const stamp = (await userRow(extra.orderPerson)).data_access_updated_at;
+  assert.ok(stamp, 'the first PUT stamps the access');
+  const writtenNodes = await nodeRows(extra.orderPerson);
+  assert.equal(writtenNodes.length, nodes.length);
+
+  // The audit keeps the JavaScript order (all, companies by name, centres by code), not the order
+  // PostgreSQL returned.
+  const entry = (await auditRows()).at(-1)!;
+  assert.equal(entry.before_json.mode, 'all');
+  assert.equal(entry.after_json.mode, 'limited');
+  const byName = (a: string, b: string) => a.toLowerCase().localeCompare(b.toLowerCase());
+  assert.deepEqual(
+    entry.after_json.nodes.filter((node: any) => node.type === 'company').map((node: any) => node.name),
+    [...extra.orderCompanies.map((company) => company.name)].sort(byName),
+    'companies in localeCompare order',
+  );
+  assert.deepEqual(
+    entry.after_json.nodes.filter((node: any) => node.type === 'cost_center').map((node: any) => node.code),
+    [...extra.orderCenters.map((center) => center.code)].sort(byName),
+    'cost centres in localeCompare order',
+  );
+
+  const second = await call(app, 'PUT', `users/${extra.orderPerson}/data-access`, extra.manager, body);
+  assert.equal(second.status, 200, second.text);
+  assert.equal((await auditRows()).length, auditBefore + 1, 'a second identical PUT audits nothing');
+  assert.equal(
+    (await userRow(extra.orderPerson)).data_access_updated_at?.toISOString(),
+    new Date(stamp).toISOString(),
+    'a second identical PUT does not stamp the access',
+  );
+  assert.deepEqual(await nodeRows(extra.orderPerson), writtenNodes, 'a second identical PUT writes no node');
+  console.log('  two identical PUTs of collation-sensitive names and codes: one audit entry, no new stamp: OK');
+
+  // The dry run of the exported file reports no update (the import compares the same set).
+  const exported = await call(app, 'GET', 'data-access/export?language=en', extra.manager);
+  const lines = exported.text.replace(/^\uFEFF/, '').trim().split('\n');
+  const own = lines.filter((line) => line.split(',')[0] === email);
+  assert.equal(own.length, nodes.length, 'one exported line per node');
+  const dryRun = await callForm(app, 'data-access/import?dryRun=true&language=en', extra.manager, formOf([lines[0], ...own].join('\n')));
+  assert.equal(dryRun.status, 201, dryRun.text);
+  assert.equal(dryRun.body.ok, true, dryRun.text);
+  assert.equal(dryRun.body.updated, 0, dryRun.text);
+  assert.equal(dryRun.body.unchanged, 1, dryRun.text);
+  console.log('  dry run of the exported file of these names and codes: updated 0: OK');
+
+  // Leave the tenant as the following scenarios expect it.
+  const reset = await call(app, 'PUT', `users/${extra.orderPerson}/data-access`, extra.manager, { mode: 'all', nodes: [] });
+  assert.equal(reset.status, 200, reset.text);
 }
 
 async function testAvailability(app: INestApplication, service: DataAccessAdminService) {
@@ -978,6 +1069,7 @@ async function run() {
     app = await createApp(service);
     await testRefusals(app);
     await testReadAndWrite(app);
+    await testNoEffectOrder(app);
     await testAvailability(app, service);
     await testPreview(app);
     await testOverview(app);

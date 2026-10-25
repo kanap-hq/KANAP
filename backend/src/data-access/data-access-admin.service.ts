@@ -197,11 +197,23 @@ function viewOf(node: DetailedNode): AdminNodeView {
   return { type: 'all', id: null, name: null, access: node.access };
 }
 
+/** The stable order of a proposed set: all, companies by name, centres by code. */
+function compareDetailedNodes(a: DetailedNode, b: DetailedNode): number {
+  const rank = (node: DetailedNode) => node.node_type === 'all' ? 0 : node.node_type === 'company' ? 1 : 2;
+  const type = rank(a) - rank(b);
+  if (type !== 0) return type;
+  const an = (a.node_type === 'company' ? a.company_name : a.cost_center_code) ?? '';
+  const bn = (b.node_type === 'company' ? b.company_name : b.cost_center_code) ?? '';
+  const byName = an.toLowerCase().localeCompare(bn.toLowerCase());
+  if (byName !== 0) return byName;
+  return String(a.company_id ?? a.cost_center_id ?? '').localeCompare(String(b.company_id ?? b.cost_center_id ?? ''));
+}
+
 /** The readable before/after of the audit log (spec §7.6): names or codes, stable order. */
 function snapshotOf(mode: DataAccessMode, nodes: readonly DetailedNode[]) {
   return {
     mode,
-    nodes: nodes.map((node) => {
+    nodes: [...nodes].sort(compareDetailedNodes).map((node) => {
       if (node.node_type === 'company') {
         return { type: 'company', name: node.company_name ?? null, access: node.access };
       }
@@ -218,20 +230,27 @@ function snapshotOf(mode: DataAccessMode, nodes: readonly DetailedNode[]) {
   };
 }
 
-function sameSnapshot(before: ReturnType<typeof snapshotOf>, after: ReturnType<typeof snapshotOf>): boolean {
-  return JSON.stringify(before) === JSON.stringify(after);
+/**
+ * A node set as the canonical keys `type:id:access`, ids lower case, sorted. PostgreSQL and
+ * JavaScript order names and codes differently (the database's collation, `localeCompare`), so
+ * the two sides of a comparison are reduced to this set instead of comparing ordered rows
+ * (spec §7.6: a save with no effect writes and audits nothing, whatever the collation).
+ */
+function canonicalNodeKeys(nodes: readonly DetailedNode[]): string[] {
+  return nodes
+    .map((node) => `${node.node_type}:${String(node.company_id ?? node.cost_center_id ?? '').toLowerCase()}:${node.access}`)
+    .sort();
 }
 
-/** The stable order of a proposed set: all, companies by name, centres by code. */
-function compareDetailedNodes(a: DetailedNode, b: DetailedNode): number {
-  const rank = (node: DetailedNode) => node.node_type === 'all' ? 0 : node.node_type === 'company' ? 1 : 2;
-  const type = rank(a) - rank(b);
-  if (type !== 0) return type;
-  const an = (a.node_type === 'company' ? a.company_name : a.cost_center_code) ?? '';
-  const bn = (b.node_type === 'company' ? b.company_name : b.cost_center_code) ?? '';
-  const byName = an.toLowerCase().localeCompare(bn.toLowerCase());
-  if (byName !== 0) return byName;
-  return String(a.company_id ?? a.cost_center_id ?? '').localeCompare(String(b.company_id ?? b.cost_center_id ?? ''));
+/** Whether the stored access and the proposed one are the same set, in whatever order they were read. */
+function sameSnapshot(
+  beforeMode: DataAccessMode,
+  beforeNodes: readonly DetailedNode[],
+  afterMode: DataAccessMode,
+  afterNodes: readonly DetailedNode[],
+): boolean {
+  return beforeMode === afterMode
+    && canonicalNodeKeys(beforeNodes).join('\n') === canonicalNodeKeys(afterNodes).join('\n');
 }
 
 /**
@@ -761,8 +780,7 @@ export class DataAccessAdminService {
         nodes: entry.rows.map((row) => row.node!).sort(compareDetailedNodes),
       };
       const before = await this.storedState(manager, entry.user.id);
-      const same = before.mode === 'limited'
-        && sameSnapshot(snapshotOf(before.mode, before.nodes), snapshotOf('limited', proposal.nodes));
+      const same = sameSnapshot(before.mode, before.nodes, 'limited', proposal.nodes);
       if (same) unchanged += 1;
       else {
         updated += 1;
@@ -962,7 +980,7 @@ export class DataAccessAdminService {
   ): Promise<boolean> {
     const before = await this.storedState(manager, targetId);
     const after = snapshotOf(proposal.mode, proposal.nodes);
-    if (before.mode === proposal.mode && sameSnapshot(snapshotOf(before.mode, before.nodes), after)) return false;
+    if (sameSnapshot(before.mode, before.nodes, proposal.mode, proposal.nodes)) return false;
 
     await manager.query(
       `UPDATE users
