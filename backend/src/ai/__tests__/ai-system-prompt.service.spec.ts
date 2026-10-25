@@ -187,7 +187,8 @@ async function testPromptCarriesTheUserTimeZoneAndLocalTime() {
   assert.match(prompt, /"time_zone": "Europe\/Paris"/);
   assert.match(prompt, /"local_time": "\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?\+0[12]:00"/);
   assert.match(prompt, /Date-time values in tool results are written in `time_zone` with an explicit UTC offset/);
-  assert.match(prompt, /quote them as given, without converting them to UTC or another zone/);
+  assert.match(prompt, /quote them as given/);
+  assert.match(prompt, /If a value carries another offset \(including `Z`\), convert it to `time_zone` before quoting/);
   assert.match(prompt, /Date-only fields keep their calendar day/);
 
   const fallback = service.build({ ...baseParams, availableTools: [], timeZone: 'Mars/Olympus' });

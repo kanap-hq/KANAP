@@ -280,8 +280,9 @@ export class AiSystemPromptService {
         : '') +
       '\n`time_zone` is the user time zone; `today` and `local_time` are the current date and time there. ' +
       'Date-time values in tool results are written in `time_zone` with an explicit UTC offset ' +
-      '(for example 2026-06-02T07:50:00+02:00): quote them as given, without converting them to UTC or another zone. ' +
-      'A date-time value with no offset is UTC. Date-only fields keep their calendar day.',
+      '(for example 2026-06-02T07:50:00+02:00): quote them as given. ' +
+      'If a value carries another offset (including `Z`), convert it to `time_zone` before quoting. ' +
+      'A value with no offset is UTC. Date-only fields keep their calendar day.',
     );
 
     if (profile.promptMode === 'minimal') {
