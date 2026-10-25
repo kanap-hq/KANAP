@@ -109,12 +109,18 @@ its own: load the current dataset on a new tenant instead.
    interface↔connection links, contract↔spend links, spend↔application links,
    portfolio teams and capacity, project phases and team members, company
    allocations on selected spend/CAPEX versions. Then the IT landscape: the
-   `PAR-VSPHERE-CL01` and `PAR-SQL-CL01` clusters and their members, the VMs
-   of the vSphere cluster (contained by the cluster itself), the
+   `PAR-VSPHERE-CL01` and `PAR-SQL-CL01` clusters and their members. The
+   Paris vSphere landscape has the `PAR-SAN-01` storage array, its three ESXi
+   hosts `PAR-ESX-01`, `PAR-ESX-02` and `PAR-ESX-05`, and the cluster. The
+   hosts depend on the array, and the cluster contains the VMs that move
+   between them. `PAR-ESX-03` and `PAR-ESX-04` stay isolated with
+   `PAR-ETL-01` and `PAR-ERP-QA-01` until the DC refresh. A Veeam connection
+   backs up the cluster from `PAR-BKP-01`. The runner also sets the
    applications on their servers (on a cluster, the row is on the cluster and
    its members inherit it), technologies, business processes and incidents.
-   On a tenant built by an earlier version of the fixture, the runner moves
-   the VMs from `PAR-ESX-01` and `PAR-ESX-02` to the cluster, replaces the
+   On a tenant built by an earlier version of the fixture, the runner adds
+   `PAR-ESX-05`, replaces the old notes of the cluster and the array, brings
+   the VM links back to the cluster, removes double containers, replaces the
    rows of CheeseTrack, Sage X3 and VMware vSphere on the cluster members by
    one row on the cluster, and turns `PAR-FW-01` and `PAR-FW-02` into plain
    firewalls.
