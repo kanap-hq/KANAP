@@ -457,6 +457,19 @@ async function testLoadResetAndFailure() {
     assert.equal(served.loaderEnvs.length, 1);
     const token = served.loaderEnvs[0].KANAP_DEMO_TOKEN;
     assert.equal((await request(served.port, { method: 'GET', path: '/companies', host: hostA, token })).status, 200);
+
+    // The journal import is closed outside a load: 409 with its code, and no new entry.
+    const journalTenantId = a.tenantId;
+    const journalCount = () => tenantCount(
+      journalTenantId,
+      `SELECT count(*) AS n FROM incident_entries WHERE tenant_id = $1 AND kind IN ('note', 'status_change', 'severity_change')`,
+    );
+    const beforeJournalRefusal = await journalCount();
+    const refusedJournal = await request(served.port, { method: 'POST', path: '/incidents/import-journal', host: hostA, token });
+    assert.equal(refusedJournal.status, 409, `the journal import outside a load (${JSON.stringify(refusedJournal.body)})`);
+    assert.equal(refusedJournal.body?.code, 'SAMPLE_DATA_LOAD_ONLY');
+    assert.equal(await journalCount(), beforeJournalRefusal, 'the refused import wrote nothing');
+
     const foreign = await request(served.port, { method: 'GET', path: '/companies', host: hostB, token });
     assert.equal(foreign.status, 401, 'the loader token on another tenant');
     const foreignWrite = await request(served.port, { method: 'POST', path: '/suppliers', host: hostB, token, body: { name: 'Not here' } });
