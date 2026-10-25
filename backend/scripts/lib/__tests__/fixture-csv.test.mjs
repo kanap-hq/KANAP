@@ -23,7 +23,7 @@ const DATE_IN_TEXT = /\d{4}-\d{2}-\d{2}/;
 
 test('the dataset is the one the loader expects', () => {
   assert.equal(DATASET_YEAR, 2026);
-  assert.equal(CSV_FILES.length, 31, `fixture files found in ${FIXTURE_DIR}`);
+  assert.equal(CSV_FILES.length, 33, `fixture files found in ${FIXTURE_DIR}`);
 });
 
 test('a shift of zero gives every fixture file byte for byte', () => {
@@ -87,8 +87,8 @@ test('a shift of one year moves the dates, the year values and the company metri
   }
   assert.deepEqual(datedFiles, [
     '01-companies.csv', '12-applications.csv', '13-contracts.csv', '14-spend-items.csv', '15-capex-items.csv',
-    '16-portfolio-projects.csv', '17-portfolio-requests.csv', '18-assets.csv', '19-tasks.csv',
-    '28-working-day-calendars.csv', '29-budget-rows.csv', '30-costed-lines.csv', '31-incidents.csv',
+    '16-portfolio-projects.csv', '17-portfolio-requests.csv', '18-assets.csv', '19-tasks.csv', '19b-incident-tasks.csv',
+    '28-working-day-calendars.csv', '29-budget-rows.csv', '30-costed-lines.csv', '31-incidents.csv', '32-incident-journal.csv',
   ], 'the files that carry dates');
 });
 

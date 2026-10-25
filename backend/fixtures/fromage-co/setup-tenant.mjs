@@ -2276,7 +2276,10 @@ async function ensureTechnologies() {
 // The register of 31-incidents.csv, tied to the landscape: the cave gateway, the B2B portal
 // database (PostgreSQL 13), the backup SAN near its end of life, the SQL Server cluster, the LIMS
 // on SQL Server Express. One confidential incident, one with personal data notified to the
-// authority, two with an incident review.
+// authority, six with an incident review (five closed, the LIMS still in progress).
+// 32-incident-journal.csv adds the human timeline of the B2B portal, the SAP close and the LIMS;
+// 19b-incident-tasks.csv links the corrective tasks of the B2B portal, the phishing campaign and
+// the SAP close.
 
 /** The incidents of 31-incidents.csv (by title) and what they affected. */
 const INCIDENT_LINKS = {
@@ -2300,7 +2303,6 @@ const INCIDENT_LINKS = {
   },
   'Order confirmations sent to the wrong customers': {
     applications: ['La Boutique du Fromage'],
-    assets: ['AWS-ECS-API'],
   },
   'Veeam backup jobs failing on the backup SAN': {
     applications: ['Veeam Backup & Replication'],
@@ -2402,6 +2404,32 @@ async function ensureIncidents() {
   ok(`Imported and linked ${rows.length} incident(s)`);
 }
 
+/**
+ * Imports the human timeline of 32-incident-journal.csv. The server route takes the author and
+ * the event time from each row, so the entries are signed by the incident people and backdated
+ * to the facts; `created_at` stays the load time. A row already there is skipped, so a re-run
+ * adds nothing. The route only accepts the file while the tenant's sample data is loading: a
+ * manual run on the dev stack gets a 409 `SAMPLE_DATA_LOAD_ONLY` and continues without the
+ * journal, which the lead then completes by hand.
+ */
+async function importIncidentJournal() {
+  const name = '32-incident-journal.csv';
+  info(`Importing ${name}`);
+  try {
+    const result = await uploadCsv('/incidents/import-journal', name);
+    if (result?.ok === false) throw new Error(`${name} import returned ok=false:\n${JSON.stringify(result, null, 2)}`);
+    const imported = Number(result?.imported ?? 0);
+    const skipped = Number(result?.skipped ?? 0);
+    ok(`Imported ${imported} journal entr${imported === 1 ? 'y' : 'ies'} (${skipped} already there)`);
+  } catch (error) {
+    if (error?.status === 409 && error?.payload?.code === 'SAMPLE_DATA_LOAD_ONLY') {
+      info(`Skipped ${name}: the journal is imported only while the sample data of the tenant loads.`);
+      return;
+    }
+    throw error;
+  }
+}
+
 async function linkProcessesToApplications() {
   info('Linking business processes to applications');
   const processes = await getAll('/business-processes?limit=500');
@@ -2435,6 +2463,10 @@ async function runRelations() {
   await ensureTechnologies();
   await linkProcessesToApplications();
   await ensureIncidents();
+  step('incident-tasks');
+  await importCsv('19b-incident-tasks.csv', '/tasks/import');
+  step('incident-journal');
+  await importIncidentJournal();
   step('budget-links');
   await linkContractsToSpend();
   await linkSpendToApps();
