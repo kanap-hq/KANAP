@@ -34,6 +34,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
+import { displayName } from '../common/display-name';
 import { parsePagination } from '../common/pagination';
 import {
   compileAgFilterCondition,
@@ -2280,9 +2281,7 @@ export class PortfolioRequestsService {
         `SELECT first_name, last_name FROM users WHERE id = $1`,
         [userId]
       );
-      const authorName = authorData.length > 0
-        ? `${authorData[0].first_name || ''} ${authorData[0].last_name || ''}`.trim() || 'Unknown'
-        : 'Unknown';
+      const authorName = displayName(authorData[0], 'Unknown');
 
       const recipients = await this.notifications.getRequestRecipients(requestId, mg);
       this.notifications.notifyComment({
@@ -2837,9 +2836,7 @@ export class PortfolioRequestsService {
       'SELECT first_name, last_name FROM users WHERE id = $1',
       [userId],
     );
-    const senderName = senderRows.length > 0
-      ? `${senderRows[0].first_name} ${senderRows[0].last_name}`.trim() || 'Someone'
-      : 'Someone';
+    const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
       ? await mg.query(

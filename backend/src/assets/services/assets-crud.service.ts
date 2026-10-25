@@ -18,6 +18,7 @@ import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 import { AssetsValidationService } from './assets-validation.service';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../../notifications/share-recipients';
+import { displayName } from '../../common/display-name';
 import { NotificationsService } from '../../notifications/notifications.service';
 
 /**
@@ -143,9 +144,7 @@ export class AssetsCrudService extends AssetsBaseService {
     const mg = this.getManager(opts);
     const asset = await this.ensureAsset(assetId, opts?.manager, tenantId);
     const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
-    const senderName = senderRows.length > 0
-      ? `${senderRows[0].first_name || ''} ${senderRows[0].last_name || ''}`.trim() || 'Someone'
-      : 'Someone';
+    const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
       ? await mg.query(

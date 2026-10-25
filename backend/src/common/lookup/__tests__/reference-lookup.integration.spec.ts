@@ -5,6 +5,7 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../../data-source';
 import { KnowledgeService } from '../../../knowledge/knowledge.service';
 import { LOOKUP_MAX_IDS, parseLookupIds, parseLookupRequest, runLookup } from '../reference-lookup';
+import { displayName } from '../../display-name';
 import {
   lookupAccounts,
   lookupAnalyticsValues,
@@ -185,7 +186,7 @@ async function testUsersByNameOnly() {
     await user('Helene', 'Gone', 'gone@example.invalid', 'disabled');
     const call = { manager: runner.manager, tenantId };
     const found = await lookupReference(call, USER_LOOKUP, { q: 'helene' });
-    assert.deepEqual(found.items.map((u: any) => `${u.first_name} ${u.last_name}`), ['Hélène Dupré'], 'names only: an email is not searched, disabled people are not offered');
+    assert.deepEqual(found.items.map((u: any) => displayName(u)), ['Hélène Dupré'], 'names only: an email is not searched, disabled people are not offered');
     assert.equal((found.items[0] as any).email, null, 'no email for a person with a name');
     assert.deepEqual((await lookupReference(call, USER_LOOKUP, { q: 'dupre helene' })).items.length, 1, '"last first" is searched too');
     const all = await lookupReference(call, USER_LOOKUP, {});
