@@ -1478,10 +1478,12 @@
     "dialogs": {
       "newUser": "Nuevo usuario",
       "editUser": "Editar usuario",
+      "identity": "Identidad",
       "saveAndInvite": "Guardar e invitar",
       "saving": "Guardando…"
     },
     "messages": {
+      "loadFailed": "No se pudo cargar el usuario.",
       "emailUnique": "El correo electrónico debe ser único.",
       "inviteSuccess_one": "{{count}} usuario invitado",
       "inviteSuccess_other": "{{count}} usuarios invitados",

@@ -21,7 +21,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api';
-import { KanapDialog, useKanapDialogs } from '../design';
+import { useKanapDialogs } from '../design';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
@@ -40,20 +40,24 @@ import {
   type PersonAccess,
 } from './dataAccess';
 
+export type DataAccessPanelState = {
+  /** The proposed access differs from the stored one. */
+  dirty: boolean;
+  /** The proposed access can be saved (it can never be for an administrator or an unavailable limitation). */
+  canSave: boolean;
+};
+
+export type DataAccessPanelHandle = {
+  /** Writes the proposed access; false when the server refused it (the panel shows why). */
+  save: () => Promise<boolean>;
+};
+
 type Props = {
   open: boolean;
   userId: string;
   personName: string;
-  onClose: () => void;
-  onSaved?: () => void;
+  onStateChange?: (state: DataAccessPanelState) => void;
 };
-
-const sectionLabelSx = {
-  fontSize: 11,
-  fontWeight: 500,
-  color: 'kanap.text.tertiary',
-  mb: 0.5,
-} as const;
 
 const nodeKey = (node: Pick<AccessNode, 'type' | 'id'>) => `${node.type}:${node.id ?? ''}`;
 
@@ -61,8 +65,14 @@ const nodeKey = (node: Pick<AccessNode, 'type' | 'id'>) => `${node.type}:${node.
  * "Data access" of a person (spec §7.1): all data or a set of company and cost-center nodes, each
  * read or edit. The counts of the access are previewed through the server route on every change
  * (debounced), and saved with `PUT /users/:id/data-access`.
+ *
+ * The dialog chrome lives in the user dialog: this panel only holds the access itself and saves it
+ * when that dialog's footer asks (`DataAccessPanelHandle.save`).
  */
-export default function DataAccessDialog({ open, userId, personName, onClose, onSaved }: Props) {
+const DataAccessPanel = React.forwardRef<DataAccessPanelHandle, Props>(function DataAccessPanel(
+  { open, userId, personName, onStateChange },
+  ref,
+) {
   const { t } = useTranslation(['admin', 'common']);
   const dialogs = useKanapDialogs();
   const queryClient = useQueryClient();
@@ -84,7 +94,7 @@ export default function DataAccessDialog({ open, userId, personName, onClose, on
   });
   const data = accessQuery.data;
 
-  // The stored access is the starting point of every opening; a failed load keeps the dialog empty.
+  // The stored access is the starting point of every opening; a failed load keeps the panel empty.
   React.useEffect(() => {
     if (!open || !data) return;
     setMode(data.mode);
@@ -95,6 +105,18 @@ export default function DataAccessDialog({ open, userId, personName, onClose, on
   }, [open, data]);
 
   const body = React.useMemo(() => accessBody(mode, nodes), [mode, nodes]);
+  const storedBody = React.useMemo(
+    () => (data ? accessBody(data.mode, sortAccessNodes(data.nodes)) : null),
+    [data],
+  );
+  const administrator = !!data?.is_administrator;
+  const dirty = !!storedBody && !administrator && JSON.stringify(body) !== JSON.stringify(storedBody);
+  const canSave = !!data && !administrator && !(!data.available && mode === 'limited');
+
+  React.useEffect(() => {
+    onStateChange?.({ dirty, canSave });
+  }, [canSave, dirty, onStateChange]);
+
   const serialized = JSON.stringify(body);
   const debouncedBody = useDebouncedValue(serialized, 250);
   const previewQuery = useQuery({
@@ -103,7 +125,7 @@ export default function DataAccessDialog({ open, userId, personName, onClose, on
       `/users/${userId}/data-access/preview`,
       JSON.parse(debouncedBody) as unknown,
     )).data,
-    enabled: open && ready && !!data && !data.is_administrator,
+    enabled: open && ready && !!data && !administrator,
     placeholderData: (previous: DataAccessPreview | undefined) => previous,
     retry: false,
     refetchOnWindowFocus: false,
@@ -157,12 +179,9 @@ export default function DataAccessDialog({ open, userId, personName, onClose, on
     setMode(next);
   };
 
-  const save = async () => {
-    if (!data) return;
-    if (data.is_administrator) {
-      onClose();
-      return;
-    }
+  const save = React.useCallback(async (): Promise<boolean> => {
+    if (!data) return false;
+    if (data.is_administrator) return true;
     setSaving(true);
     setError(null);
     try {
@@ -170,36 +189,22 @@ export default function DataAccessDialog({ open, userId, personName, onClose, on
       queryClient.setQueryData(accessKey, res.data);
       void queryClient.invalidateQueries({ queryKey: ['users'] });
       void queryClient.invalidateQueries({ queryKey: ['data-access'] });
-      onSaved?.();
-      onClose();
+      return true;
     } catch (e) {
       setError(getApiErrorMessage(e, t, t('admin:dataAccess.saveFailed')));
+      return false;
     } finally {
       setSaving(false);
     }
-  };
+  }, [accessKey, body, data, queryClient, t, userId]);
 
-  const administrator = !!data?.is_administrator;
-  const saveDisabled = administrator
-    ? false
-    : (!data || accessQuery.isLoading || saving || (!data.available && mode === 'limited'));
+  React.useImperativeHandle(ref, () => ({ save }), [save]);
+
   const preview = previewQuery.data;
   const localeNumber = (value: number) => value.toLocaleString(locale);
 
   return (
-    <KanapDialog
-      open={open}
-      title={t('admin:dataAccess.dialogTitle', { name: personName })}
-      onClose={onClose}
-      onSave={administrator ? onClose : save}
-      saveLabel={administrator ? t('common:buttons.close') : t('common:buttons.save')}
-      saveVariant={administrator ? 'action' : 'action-primary'}
-      saveDisabled={saveDisabled}
-      saveLoading={saving}
-      showCancel={!administrator}
-      cancelLabel={t('common:buttons.cancel')}
-      sx={{ maxWidth: 560 }}
-    >
+    <Stack spacing={2}>
       {accessQuery.isLoading && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
           <CircularProgress size={20} />
@@ -217,7 +222,7 @@ export default function DataAccessDialog({ open, userId, personName, onClose, on
           {t('admin:dataAccess.administratorsSeeAll')}
         </Typography>
       ) : data && (
-        <Stack spacing={2}>
+        <>
           <RadioGroup
             value={mode}
             onChange={(_event, value) => { void changeMode(value === 'all' ? 'all' : 'limited'); }}
@@ -287,6 +292,7 @@ export default function DataAccessDialog({ open, userId, personName, onClose, on
                           size="small"
                           aria-label={t('admin:dataAccess.remove', { name })}
                           onClick={() => removeNode(node)}
+                          disabled={saving}
                         >
                           <DeleteOutlineIcon fontSize="small" />
                         </IconButton>
@@ -297,7 +303,13 @@ export default function DataAccessDialog({ open, userId, personName, onClose, on
               )}
               {!addOpen ? (
                 <Box>
-                  <Button size="small" variant="text" startIcon={<AddIcon />} onClick={() => setAddOpen(true)}>
+                  <Button
+                    size="small"
+                    variant="text"
+                    startIcon={<AddIcon />}
+                    onClick={() => setAddOpen(true)}
+                    disabled={saving}
+                  >
                     {t('admin:dataAccess.add')}
                   </Button>
                 </Box>
@@ -359,8 +371,10 @@ export default function DataAccessDialog({ open, userId, personName, onClose, on
               })}
             </Typography>
           )}
-        </Stack>
+        </>
       )}
-    </KanapDialog>
+    </Stack>
   );
-}
+});
+
+export default DataAccessPanel;

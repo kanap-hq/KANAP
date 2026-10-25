@@ -25,8 +25,8 @@ import PageHeader from '../../components/PageHeader';
 import ForbiddenPage from '../ForbiddenPage';
 import CsvExportDialog from '../../components/csv/CsvExportDialog';
 import CsvImportDialog from '../../components/csv/CsvImportDialog';
-import DataAccessDialog from '../../components/dataAccess/DataAccessDialog';
 import DataAccessNodeFilterDialog from '../../components/dataAccess/DataAccessNodeFilterDialog';
+import UserDialog from '../users/UserDialog';
 import {
   accessLevelLabel,
   accessNodeReference,
@@ -261,11 +261,13 @@ function DataAccessAdminContent() {
         onPick={pickNode}
       />
       {selectedPerson && (
-        <DataAccessDialog
+        <UserDialog
           key={selectedPerson.id}
           open
+          mode="edit"
           userId={selectedPerson.id}
           personName={selectedPerson.name}
+          initialTab="access"
           onClose={() => setSelectedPerson(null)}
           onSaved={refresh}
         />
