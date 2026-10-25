@@ -143,6 +143,24 @@ describe('useClusterConnectionQuestion', () => {
     expect(screen.queryByText('Connect to the cluster?')).toBeNull();
   });
 
+  it('keeps the server when its clusters cannot be read', async () => {
+    apiGet.mockRejectedValue({ response: { status: 500 } });
+    renderHarness();
+    expect(await chooseAndWait()).toBe('srv-1');
+    expect(screen.queryByText('Connect to the cluster?')).toBeNull();
+  });
+
+  it('keeps the server when the members of a cluster cannot be read', async () => {
+    apiGet.mockImplementation(async (url: string) => {
+      if (url === '/assets/srv-1/clusters') return { data: { items: [CL1] } };
+      if (url === '/assets/cl-1/members') throw { response: { status: 500 } };
+      throw new Error(`unexpected ${url}`);
+    });
+    renderHarness();
+    expect(await chooseAndWait()).toBe('srv-1');
+    expect(screen.queryByText('Connect to the cluster?')).toBeNull();
+  });
+
   it('lists the clusters and their member counts when the server belongs to several', async () => {
     apiGet.mockImplementation(async (url: string) => {
       if (url === '/assets/srv-1/clusters') return { data: { items: [CL1, CL2] } };

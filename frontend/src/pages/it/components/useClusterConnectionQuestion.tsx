@@ -77,18 +77,23 @@ export default function useClusterConnectionQuestion() {
 
   const choose = React.useCallback(async (picked: ServerOption, others: string[]): Promise<ServerOption | null> => {
     if (picked.is_cluster) return picked;
-    const clusters = ((await api.get<{ items: AssetRef[] }>(`/assets/${picked.id}/clusters`)).data?.items ?? [])
-      .filter((cluster) => cluster.status !== 'retired');
-    if (clusters.length === 0) return picked;
     const choices: ClusterChoice[] = [];
-    for (const cluster of clusters) {
-      if (others.includes(cluster.id)) return picked;
-      const members = ((await api.get<{ items: AssetRef[] }>(`/assets/${cluster.id}/members`)).data?.items ?? [])
-        .filter((member) => member.status !== 'retired');
-      // A retired server inherits nothing: its cluster is no choice for it.
-      if (!members.some((member) => member.id === picked.id)) continue;
-      if (others.some((id) => id !== picked.id && members.some((member) => member.id === id))) return picked;
-      choices.push({ id: cluster.id, name: cluster.name, count: members.length });
+    try {
+      const clusters = ((await api.get<{ items: AssetRef[] }>(`/assets/${picked.id}/clusters`)).data?.items ?? [])
+        .filter((cluster) => cluster.status !== 'retired');
+      if (clusters.length === 0) return picked;
+      for (const cluster of clusters) {
+        if (others.includes(cluster.id)) return picked;
+        const members = ((await api.get<{ items: AssetRef[] }>(`/assets/${cluster.id}/members`)).data?.items ?? [])
+          .filter((member) => member.status !== 'retired');
+        // A retired server inherits nothing: its cluster is no choice for it.
+        if (!members.some((member) => member.id === picked.id)) continue;
+        if (others.some((id) => id !== picked.id && members.some((member) => member.id === id))) return picked;
+        choices.push({ id: cluster.id, name: cluster.name, count: members.length });
+      }
+    } catch {
+      // A read that fails loses no choice: the server applies its rules, as without a cluster.
+      return picked;
     }
     if (choices.length === 0) return picked;
 
