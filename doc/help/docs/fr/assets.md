@@ -90,7 +90,7 @@ Les actifs peuvent être organisés en clusters :
 - **Actif standard** : Une instance d'infrastructure individuelle
 - **Cluster** : Un groupe d'actifs agissant comme une seule unité logique
 
-Pour créer un cluster, choisissez **Ajouter un cluster** dans le menu **Ajouter un actif**, ou activez l'interrupteur **Cluster** dans le tiroir des propriétés d'un actif. Un cluster peut être un point de terminaison dans les connexions.
+Pour créer un cluster, choisissez **Ajouter un cluster** dans le menu **Ajouter un actif**, ou activez l'interrupteur **Cluster** dans le tiroir des propriétés d'un actif. Une connexion posée sur un cluster vaut pour ses membres : voir [Connexions sur un cluster](connections.md#connections-on-a-cluster).
 
 ### Applications sur un cluster { #applications-on-a-cluster }
 
@@ -107,7 +107,7 @@ Quand vous affectez une application à un membre d'un cluster, KANAP demande **A
 
 Partout où KANAP lit où tourne une application, il compte les membres du cluster : les vulnérabilités et la fin de support de l'application, son type d'hébergement (un cluster sans site prend le type d'hébergement de ses membres), les zones d'administration, les applications d'un site ou d'un contrat sur un serveur, l'assistant et Connaissances. Dans l'impact d'un membre tombé, le cluster est dégradé et ses applications continuent de tourner. Voir [Dépendances](#dependencies).
 
-Les membres se gèrent depuis l'onglet **Dépendances** du cluster. Voir [Dépendances](#dependencies). Les règles :
+Les membres se gèrent en haut de l'onglet **Exploitation** du cluster. Voir [Exploitation](#operations). Les règles :
 
 - Un membre est un actif simple. Un cluster ne peut pas être membre, et un actif ne peut pas être membre de lui-même.
 - Un cluster qui a des membres ne peut pas redevenir un actif simple : retirez d'abord ses membres.
@@ -115,6 +115,18 @@ Les membres se gèrent depuis l'onglet **Dépendances** du cluster. Voir [Dépen
 - Un cluster qui a des membres n'a pas de système d'exploitation : chaque membre a le sien. Un cluster sans membre peut en garder un, par exemple un groupe d'instances cloud dont vous ne renseignez pas les serveurs. Voir [Système d'exploitation](#systeme-dexploitation).
 
 Les installations mises à jour depuis une version antérieure gardent leurs clusters. Les appartenances contraires à ces règles ont été retirées pendant la mise à jour. Un nom de cluster saisi dans l'ancien champ texte est devenu une vraie appartenance quand il désignait un seul cluster.
+
+### Machines virtuelles sur un cluster { #virtual-machines-on-a-cluster }
+
+Un cluster de virtualisation contient ses machines virtuelles : ajoutez-les à la section **Contient** du cluster, dans son onglet **Dépendances**. Une machine du cluster peut tourner sur n'importe lequel de ses hôtes.
+
+Quand vous ajoutez une relation **Contient** depuis un hôte membre d'un cluster, KANAP demande **Placer dans le cluster ?**. **Placer dans le cluster** pose la relation sur le cluster. **Cet hôte seulement** la garde sur l'hôte. La même question vient quand vous ajoutez un tel hôte sous **Contenu dans**. Un hôte ou un cluster retiré ne pose pas de question.
+
+- Placer un actif dans le cluster remplace les liens que les hôtes membres avaient vers lui. Un message nomme les hôtes.
+- Un hôte ne peut pas contenir un actif que son cluster contient déjà. Le message nomme le cluster.
+- Un actif qui a deux conteneurs en service, par exemple un hôte et un cluster, porte une icône d'avertissement à côté de son nom dans **Contient** et **Contenu dans**. L'infobulle nomme les autres conteneurs. Retirez le lien qui n'est plus à jour.
+
+L'assistant et la [synchronisation Netbox](netbox.md#clusters) suivent les mêmes règles, sans la question.
 
 ### Supprimer un cluster ou un membre { #deleting-a-cluster-or-a-member }
 
@@ -187,7 +199,12 @@ L'onglet Vue d'ensemble est la page d'accueil de l'actif.
 
 ### Exploitation { #operations }
 
-L'onglet Exploitation montre ce qui tourne sur l'actif : les applications qu'il héberge, les technologies qu'il porte et leurs vulnérabilités. Il s'ouvre une fois l'actif créé.
+L'onglet Exploitation montre le cluster de l'actif et ce qui tourne sur lui : les applications qu'il héberge, les technologies qu'il porte et leurs vulnérabilités. Il s'ouvre une fois l'actif créé.
+
+**Cluster**, en haut de l'onglet :
+
+- Sur un **cluster**, la section **Membres** liste les actifs membres (Nom, Environnement, Statut, Système d'exploitation). Cliquez sur un nom pour ouvrir cet actif. **Ajouter des membres** (sur un cluster sans membre) ou **Modifier les membres** ouvre une boîte de dialogue de recherche. Elle ne propose que des actifs simples, jamais un cluster ni le cluster lui-même. Une icône d'avertissement signale un membre dont l'environnement diffère de celui du cluster. Quand vous retirez des membres d'un cluster qui porte des applications, **Retirer des membres ?** nomme les applications que chacun n'hébergera plus. **Retirer quand même** enregistre.
+- Sur un serveur membre d'un cluster, la section **Appartenance au cluster** affiche ses clusters, avec leur environnement et leur statut. Cliquez sur un nom pour ouvrir le cluster. Un serveur qui n'est dans aucun cluster n'a pas cette section.
 
 **Applications hébergées** : les applications qui s'exécutent sur cet actif. Chaque ligne affiche :
 
@@ -274,7 +291,7 @@ Les actifs prennent en charge plusieurs adresses IP, chacune avec sa propre conf
 
 Cela vous permet de documenter plusieurs interfaces réseau par actif, par exemple un serveur physique avec à la fois une IP hôte et une adresse de management IPMI sur des sous-réseaux différents.
 
-**Connexions** : Une vue en lecture seule de toutes les connexions impliquant cet actif, une fois celui-ci créé. Chaque ligne affiche l'ID et le nom de la connexion (cliquable : ouvre l'espace de travail de la Connexion), la topologie (Serveur à serveur ou Multi-serveur), les protocoles, les libellés des points de terminaison source et destination, et le statut de cycle de vie. Pour créer ou modifier une connexion, rendez-vous dans **Cartographie SI > Connexions**.
+**Connexions** : Une vue en lecture seule des connexions de cet actif, une fois celui-ci créé : celles où il est une extrémité, un serveur ou l'équipement d'un saut, et celles de ses clusters. Chaque ligne affiche la référence et le nom (cliquez pour ouvrir la connexion), la topologie, les protocoles, la source et la destination, et le statut de cycle de vie. Sous le nom, **Saut 2** indique que l'actif est l'équipement de ce saut, et **via** nomme le cluster quand la connexion atteint l'actif par lui. Une connexion multi-serveur nomme ses serveurs à la place de la source et de la destination. Pour créer ou modifier une connexion, rendez-vous dans **Cartographie SI > Connexions**.
 
 ---
 
@@ -296,7 +313,7 @@ Suit les détails du matériel physique. Sauvegarde automatique au fur et à mes
 
 ### Dépendances { #dependencies }
 
-L'onglet Dépendances montre la place de l'actif parmi les autres actifs : ce qui s'arrête avec lui, son cluster et ses relations avec d'autres actifs. Il s'ouvre une fois l'actif créé. Le badge de l'onglet compte les relations entre actifs, ainsi que les membres d'un cluster ou les clusters auxquels l'actif appartient.
+L'onglet Dépendances montre la place de l'actif parmi les autres actifs : ce qui s'arrête avec lui et ses relations avec d'autres actifs. Il s'ouvre une fois l'actif créé. Le badge de l'onglet compte les relations entre actifs. Les membres d'un cluster sont dans l'onglet [Exploitation](#operations).
 
 **Si ce serveur tombe** : l'onglet s'ouvre sur ce qui s'arrête avec cet actif. Une ligne de synthèse compte les applications, actifs, clusters et processus métier touchés, puis un tableau par type :
 
@@ -306,11 +323,6 @@ L'onglet Dépendances montre la place de l'actif parmi les autres actifs : ce qu
 - **Processus métier** : les processus des applications touchées.
 
 Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque tableau montre ses 50 premières lignes et compte le reste. Les applications et les processus demandent le droit de les lire. La section se met à jour dès que vous ajoutez ou retirez une relation entre actifs, changez les membres d'un cluster ou activez ou désactivez l'interrupteur **Cluster**.
-
-**Cluster** :
-
-- Sur un **cluster**, la section **Membres** liste les actifs membres (Nom, Environnement, Statut, Système d'exploitation). Cliquez sur un nom pour ouvrir cet actif. **Ajouter des membres** (sur un cluster sans membre) ou **Modifier les membres** ouvre une boîte de dialogue de recherche. Elle ne propose que des actifs simples, jamais un cluster ni le cluster lui-même. Une icône d'avertissement signale un membre dont l'environnement diffère de celui du cluster. Quand vous retirez des membres d'un cluster qui porte des applications, **Retirer des membres ?** nomme les applications que chacun n'hébergera plus. **Retirer quand même** enregistre.
-- Sur **tout autre actif**, la section **Appartenance au cluster** affiche les clusters auxquels cet actif appartient, avec leur environnement et leur statut. Cliquez sur un nom pour ouvrir le cluster.
 
 **Relations entre actifs**, un tableau par sens :
 
@@ -323,7 +335,7 @@ Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque 
 
 Chaque tableau affiche la référence (`AST-12`), le nom, le type, l'environnement et le statut. Un actif retiré ou désactivé reste affiché, son nom grisé. Cliquez sur une ligne pour ouvrir l'actif.
 
-Avec `infrastructure:member`, **Ajouter**, à droite d'une section, ouvre une recherche d'actif. Choisissez un résultat : la relation est enregistrée aussitôt. Pour retirer une relation, survolez la ligne et cliquez sur la croix en fin de ligne. Les lecteurs voient les tableaux en lecture seule.
+Avec `infrastructure:member`, **Ajouter**, à droite d'une section, ouvre une recherche d'actif. Choisissez un résultat : la relation est enregistrée aussitôt. Pour retirer une relation, survolez la ligne et cliquez sur la croix en fin de ligne. Les lecteurs voient les tableaux en lecture seule. Une relation **Contient** depuis un membre d'un cluster demande d'abord où placer l'actif : voir [Machines virtuelles sur un cluster](#virtual-machines-on-a-cluster).
 
 ---
 

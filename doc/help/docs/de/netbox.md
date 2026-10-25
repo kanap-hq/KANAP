@@ -70,13 +70,15 @@ Diese Tabelle ist kein Filter. Eine Plattform, die auf **Keine Zuordnung** bleib
 
 Netbox vergibt Leserechte je Objekttyp. Ein Token, das Geräte, Rollen und Standorte lesen darf, kann bei den Plattformen trotzdem abgewiesen werden. Rollen und Standorte funktionieren weiter, und der Import ist davon nicht betroffen. Nur dieser Abschnitt bleibt leer, und er nennt den Grund.
 
-### Cluster
+### Cluster { #clusters }
 
 Der Abschnitt **Cluster** ordnet jedem Netbox-Cluster einen KANAP-Cluster zu: ein Asset, das als Cluster markiert und in Betrieb ist. Jede Zeile zeigt, wie viele virtuelle Maschinen der Netbox-Cluster enthält. Ein KANAP-Cluster mit demselben Namen wird vorgeschlagen, und wie überall zählt ein Vorschlag erst, wenn Sie **Zuordnungen speichern** drücken.
 
 Beim nächsten Lauf wird jede virtuelle Maschine eines zugeordneten Clusters zu den Beziehungen **Enthält** ihres KANAP-Clusters hinzugefügt. Eine auf dem Cluster installierte Technologie erreicht dann die Maschine und die darauf gehosteten Anwendungen. Eine Maschine, bei der sich nur der Cluster ändert, erscheint unter **Zu aktualisieren**, mit einer Zeile **Cluster**. Eine Maschine, die der Lauf anlegt, kommt sofort in ihren Cluster.
 
-Der Import fügt nur hinzu:
+Wenn ein Mitglieds-Host des zugeordneten Clusters die Maschine heute enthält, ersetzt ihre Zuordnung zum Cluster die Verknüpfung des Hosts. Die Vorschau zeigt das in der Zeile der Maschine, mit einer Zeile **Platzierung** vom Host zum Cluster. Siehe [Virtuelle Maschinen auf einem Cluster](assets.md#virtual-machines-on-a-cluster).
+
+Abgesehen davon fügt der Import nur hinzu:
 
 - Eine Maschine, die bereits in einem anderen KANAP-Cluster ist, bleibt dort. Die Vorschau weist in der Zeile der Maschine darauf hin, damit Sie diese Beziehung von Hand entfernen können, wenn sie veraltet ist.
 - Wenn Sie eine Zuordnung ändern, kommen die Maschinen in den neuen Cluster und bleiben im alten.
