@@ -28,6 +28,12 @@ import {
   normalizeServerRole,
 } from '../../app-asset-assignments/cluster-assignment-rules';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import {
+  assertNotPlacedByCluster,
+  hostLinksToReplace,
+  replaceHostLinks,
+  type ReplacedHostLink,
+} from '../../assets/placement-rules';
 
 export const AI_RELATION_ENTITY_TYPES = [
   'applications',
@@ -242,6 +248,11 @@ function itemListLabel(items: RelationItem[]): string | null {
   return items.map((item) => item.label).join(', ');
 }
 
+/** The host/asset pairs of a placement list, in a stable form for the execution comparison. */
+function replacedHostLinkSignature(links: ReplacedHostLink[]): string {
+  return links.map((link) => `${link.host_id}:${link.asset_id}`).sort().join('|');
+}
+
 function objectValue(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
@@ -279,6 +290,7 @@ export class AiRelationMutationSupportService {
     }
     await this.assertClusterMemberAdds(context, config, target.id, currentItems, askedItems);
     const nextItems = await this.applyAssignmentRules(context, config, currentItems, askedItems);
+    const replaced = await this.applyPlacementRules(context, config, target.id, currentItems, nextItems);
     return {
       targetEntityType: config.sourceEntity,
       targetEntityId: target.id,
@@ -289,6 +301,7 @@ export class AiRelationMutationSupportService {
         relation_label: config.label,
         next_items: nextItems,
         source_preview_id: null,
+        ...(replaced.length > 0 ? { replaced_host_links: replaced } : {}),
       },
       currentValues: {
         target_ref: target.ref,
@@ -311,6 +324,7 @@ export class AiRelationMutationSupportService {
       throw new BadRequestException(`${config.label} already matches the original values.`);
     }
     const previousItems = await this.applyAssignmentRules(context, config, currentItems, originalItems);
+    const replaced = await this.applyPlacementRules(context, config, target.id, currentItems, previousItems);
     return {
       targetEntityType: config.sourceEntity,
       targetEntityId: target.id,
@@ -321,6 +335,7 @@ export class AiRelationMutationSupportService {
         relation_label: config.label,
         next_items: previousItems,
         source_preview_id: preview.id,
+        ...(replaced.length > 0 ? { replaced_host_links: replaced } : {}),
       },
       currentValues: {
         target_ref: target.ref,
@@ -361,6 +376,16 @@ export class AiRelationMutationSupportService {
         format: 'text',
       },
     };
+    // R1: the host links the cluster's write replaces, shown as one text change.
+    const replaced = this.coerceReplacedHostLinks(preview.mutation_input?.replaced_host_links);
+    if (replaced.length > 0) {
+      changes.replaced_host_links = {
+        label: 'Host links replaced',
+        from: replaced.map((link) => `${link.host_name} contains ${link.asset_name}`).join(', '),
+        to: null,
+        format: 'text',
+      };
+    }
     return {
       target: {
         entity_type: config.sourceEntity,
@@ -391,6 +416,14 @@ export class AiRelationMutationSupportService {
     // Assignments: the clusters are locked and the cluster rules checked again before the rows are
     // compared; an absorption that would now differ from the preview is a change since the preview.
     const checkedItems = await this.applyAssignmentRules(context, config, expectedItems, nextItems);
+    // Placement: the same locks and the same read as the preview. A member that joined a cluster,
+    // or a host link that appeared or disappeared, makes the replacement differ from what the
+    // person saw: nothing is written.
+    const placement = await this.applyPlacementRules(context, config, preview.target_entity_id, expectedItems, nextItems);
+    if (replacedHostLinkSignature(placement)
+      !== replacedHostLinkSignature(this.coerceReplacedHostLinks(preview.mutation_input?.replaced_host_links))) {
+      throw new ConflictException(`${config.label} changed after the preview was created.`);
+    }
     const liveItems = await this.loadRelationItems(context, config, preview.target_entity_id);
     if (
       relationItemSignature(liveItems) !== relationItemSignature(expectedItems)
@@ -400,6 +433,19 @@ export class AiRelationMutationSupportService {
     }
     const audit = buildAiMutationAudit(preview);
     await this.replaceRelationItems(context, config, preview.target_entity_id, nextItems, audit);
+    // R1: the host links the cluster replaces, removed after the cluster's own relations are in
+    // place, with the preview's audit source.
+    if (placement.length > 0) {
+      await replaceHostLinks(
+        context.manager,
+        this.audit,
+        context.tenantId,
+        { id: preview.target_entity_id, name: placement[0].cluster_name },
+        Array.from(new Set(placement.map((link) => link.asset_id))),
+        context.userId,
+        { source: audit.source, sourceRef: audit.sourceRef },
+      );
+    }
     await this.audit.log(
       {
         table: this.auditTableName(config),
@@ -503,6 +549,62 @@ export class AiRelationMutationSupportService {
       if (carrying) throw assignmentInheritedRefusal(carrying.name);
     }
     return next;
+  }
+
+  /**
+   * The placement rules of `assets/placement-rules.ts` for the `contains` items the assistant adds
+   * to an asset (the items whose key is not in `currentItems`):
+   * - the clusters the source decides on are locked first (`lockAssignmentClusters`), then the
+   *   source is read in its own statement;
+   * - a host member of a cluster in service that already contains an added asset is refused
+   *   (`placement_inherited`), at the preview as at execution;
+   * - a cluster absorbs the links its members hold towards the added assets, returned so that the
+   *   preview can show them and the execution remove them.
+   * The other relation kinds pass unchanged.
+   */
+  private async applyPlacementRules(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    assetId: string,
+    currentItems: RelationItem[],
+    nextItems: RelationItem[],
+  ): Promise<ReplacedHostLink[]> {
+    if (config.kind !== 'asset_relations') return [];
+    const currentKeys = new Set(currentItems.map((item) => item.key));
+    const addedIds = Array.from(new Set(
+      nextItems
+        .filter((item) => !currentKeys.has(item.key) && item.payload.relation_type === 'contains')
+        .map((item) => String(item.payload.related_asset_id || '')),
+    )).filter((id) => id);
+    if (addedIds.length === 0) return [];
+    await lockAssignmentClusters(context.manager, context.tenantId, [assetId]);
+    const rows: Array<{ is_cluster: boolean; name: string }> = await context.manager.query(
+      `SELECT is_cluster, name FROM assets WHERE tenant_id = $1 AND id = $2`,
+      [context.tenantId, assetId],
+    );
+    if (rows[0]?.is_cluster === true) {
+      return hostLinksToReplace(context.manager, context.tenantId, { id: assetId, name: rows[0].name }, addedIds);
+    }
+    await assertNotPlacedByCluster(context.manager, context.tenantId, assetId, addedIds);
+    return [];
+  }
+
+  /** The `replaced_host_links` a preview stored, read defensively (a stored preview may be old). */
+  private coerceReplacedHostLinks(value: unknown): ReplacedHostLink[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((raw) => {
+        const record = objectValue(raw);
+        return {
+          host_id: String(record.host_id || ''),
+          host_name: String(record.host_name || ''),
+          asset_id: String(record.asset_id || ''),
+          asset_name: String(record.asset_name || ''),
+          cluster_id: String(record.cluster_id || ''),
+          cluster_name: String(record.cluster_name || ''),
+        };
+      })
+      .filter((link) => link.host_id && link.asset_id);
   }
 
   private coerceRelationItems(value: unknown, fieldName: string): RelationItem[] {

@@ -1,6 +1,7 @@
 // @database-spec
 import 'dotenv/config';
 import * as assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
 import { ConflictException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import {
@@ -18,6 +19,8 @@ import {
   replaceHostLinks,
   type ReplacedHostLink,
 } from '../placement-rules';
+import { AiRelationMutationSupportService } from '../../ai/mutation/ai-relation-mutation-support.service';
+import { AiTaskMutationSupportService } from '../../ai/mutation/ai-task-mutation-support.service';
 import { AssetsRelationsService } from '../services/assets-relations.service';
 
 // The placement rules of a virtual machine carried by a cluster (clusters pass, lot C1b), on the
@@ -551,6 +554,100 @@ async function testServiceOtherWrites() {
   });
 }
 
+/**
+ * The assistant and the MCP (`assets`, `relations`): the same placement rules, at the preview and
+ * again at execution. The host links to replace are stored in the preview, shown as a change, and
+ * removed at execution with the preview's audit source.
+ */
+async function testAssistantRules() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId: t, cluster, host1, host3 } = await seedPlacement(runner, 'placement-ai');
+    const audit = captureAudit();
+    const assistant = new AiRelationMutationSupportService(audit as any, undefined as any, new AiTaskMutationSupportService(), undefined as any);
+    const context: any = { manager: runner.manager, tenantId: t, userId: null };
+    const vm1 = await asset(runner, t, 'par-app-01');
+    const vm2 = await asset(runner, t, 'par-app-02');
+    const vm3 = await asset(runner, t, 'par-app-03');
+    await contains(runner, t, host1, vm1);
+    await contains(runner, t, cluster, vm2);
+    audit.entries.length = 0;
+
+    const prepare = (ref: string, add: unknown[]) => assistant.prepareUpdatePreview(context, {
+      entity_type: 'assets', ref, relation: 'relations', add,
+    });
+    const execute = (prepared: Awaited<ReturnType<typeof prepare>>, id = randomUUID()) => assistant.executePreview(context, {
+      id,
+      target_entity_type: 'assets',
+      target_entity_id: prepared.targetEntityId,
+      mutation_input: prepared.mutationInput,
+      current_values: prepared.currentValues,
+    } as any);
+
+    // The preview lists the host link the cluster replaces, and the presentation shows it.
+    const absorbing = await prepare(cluster, [{ related_asset_ref: vm1, relation_type: 'contains' }]);
+    assert.deepEqual((absorbing.mutationInput as any).replaced_host_links, [{
+      host_id: host1, host_name: 'par-esx-01', asset_id: vm1, asset_name: 'par-app-01',
+      cluster_id: cluster, cluster_name: 'PAR-VSPHERE-CL01',
+    }]);
+    assert.deepEqual(((absorbing.mutationInput as any).next_items as any[]).map((item) => item.payload.related_asset_id), [vm1, vm2]);
+    const presented = assistant.presentPreview({
+      id: randomUUID(), status: 'pending', target_entity_type: 'assets', target_entity_id: absorbing.targetEntityId,
+      mutation_input: absorbing.mutationInput, current_values: absorbing.currentValues,
+    } as any);
+    assert.deepEqual(presented.changes.replaced_host_links, {
+      label: 'Host links replaced',
+      from: 'par-esx-01 contains par-app-01',
+      to: null,
+      format: 'text',
+    });
+
+    // Executed as previewed: the cluster link is written, the host link removed and audited with
+    // the preview's source.
+    const previewId = randomUUID();
+    await execute(absorbing, previewId);
+    assert.deepEqual(await relationsOf(runner, t, host1), []);
+    assert.deepEqual(await relationsOf(runner, t, cluster), [
+      { related_asset_id: vm2, relation_type: 'contains' },
+      { related_asset_id: vm1, relation_type: 'contains' },
+    ]);
+    assert.deepEqual(audit.entries.map((entry) => `${entry.recordId}:${(entry as any).source}:${(entry as any).sourceRef}`), [
+      `${host1}:ai_chat:${previewId}`,
+      `${cluster}:ai_chat:${previewId}`,
+    ]);
+    assert.deepEqual(audit.entries[0].before, { relations: [{ related_asset_id: vm1, relation_type: 'contains' }] });
+    assert.deepEqual(audit.entries[0].after, { relations: [] });
+
+    // R2 at the preview: a member cannot add what its cluster carries.
+    assert.deepEqual(await refusal(
+      () => prepare(host1, [{ related_asset_ref: vm2, relation_type: 'contains' }]),
+      runner,
+    ), {
+      status: 409,
+      code: 'placement_inherited',
+      params: { cluster: 'PAR-VSPHERE-CL01' },
+      message: 'This asset is already contained by the cluster PAR-VSPHERE-CL01, which one of its hosts belongs to.',
+    });
+    // A host outside the cluster adds its own link: nothing to replace.
+    const outside = await prepare(host3, [{ related_asset_ref: vm3, relation_type: 'contains' }]);
+    assert.equal((outside.mutationInput as any).replaced_host_links, undefined);
+    await execute(outside);
+    assert.deepEqual(await relationsOf(runner, t, host3), [{ related_asset_id: vm3, relation_type: 'contains' }]);
+
+    // The host joined the cluster after the preview: the execution refuses and writes nothing.
+    const late = await prepare(host3, [{ related_asset_ref: vm2, relation_type: 'contains' }]);
+    await addMember(runner, t, cluster, host3);
+    const refused = await refusal(() => execute(late), runner);
+    assert.equal(refused.status, 409);
+    assert.equal(refused.code, 'placement_inherited');
+    assert.deepEqual(await relationsOf(runner, t, host3), [{ related_asset_id: vm3, relation_type: 'contains' }],
+      'nothing written for the late member, the earlier link stays');
+    assert.deepEqual(await relationsOf(runner, t, cluster), [
+      { related_asset_id: vm2, relation_type: 'contains' },
+      { related_asset_id: vm1, relation_type: 'contains' },
+    ]);
+  });
+}
+
 void runSpecs('asset-placement.integration.spec', [
   ['testAbsorption', testAbsorption],
   ['testAbsorptionScope', testAbsorptionScope],
@@ -563,4 +660,5 @@ void runSpecs('asset-placement.integration.spec', [
   ['testServiceExistingDouble', testServiceExistingDouble],
   ['testServiceRefusal', testServiceRefusal],
   ['testServiceOtherWrites', testServiceOtherWrites],
+  ['testAssistantRules', testAssistantRules],
 ]);
