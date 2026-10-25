@@ -440,8 +440,44 @@ async function testAuditLog(): Promise<void> {
   });
 }
 
+async function testDeletedIncidentStaysVisible(): Promise<void> {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'restricted-deleted');
+    await setTenant(runner, tenantId);
+    const readerId = await seedPerson(
+      runner,
+      tenantId,
+      'Reader',
+      { incidents: 'reader', tasks: 'reader', users: 'admin' },
+      { first: 'Dora', last: 'Deleted' },
+    );
+    const missingIncidentId = '11111111-1111-4111-8111-111111111111';
+    const [task] = await runner.query(
+      `INSERT INTO tasks (tenant_id, item_number, title, status, related_object_type, related_object_id)
+       VALUES ($1, 1, 'Task of a deleted incident', 'open', 'incident', $2) RETURNING id`,
+      [tenantId, missingIncidentId],
+    );
+    const [auditRow] = await runner.query(
+      `INSERT INTO audit_log (tenant_id, table_name, record_id, action, before_json, after_json, source)
+       VALUES ($1, 'incidents', $2, 'delete', '{}'::jsonb, '{}'::jsonb, 'system') RETURNING id`,
+      [tenantId, missingIncidentId],
+    );
+
+    const viewer = { userId: readerId, isAdmin: false };
+    const tasks = await tasksService().listAllTasks({}, { manager: runner.manager, tenantId, viewer });
+    assert.equal(tasks.total, 1, 'a task whose incident no longer exists stays visible');
+    assert.equal(tasks.items[0].id, task.id);
+
+    const audit = new AuditLogsService(runner.manager.getRepository(AuditLog));
+    const list = await audit.list({ limit: 100 }, { manager: runner.manager, viewer });
+    assert.equal(list.total, 1, 'a row of a deleted incident stays visible');
+    assert.equal(list.items[0].id, auditRow.id);
+  });
+}
+
 void runSpecs('incident-restricted-tasks-audit', [
   ['task reads follow the incident visibility', testTaskReads],
   ['Plaid and search follow the incident visibility', testPlaidAndSearch],
   ['audit log follows the incident visibility', testAuditLog],
+  ['a deleted incident leaves its task and audit row visible', testDeletedIncidentStaysVisible],
 ]);
