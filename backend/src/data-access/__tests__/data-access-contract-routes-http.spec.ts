@@ -594,6 +594,24 @@ async function testLineLinks(app: INestApplication): Promise<void> {
   console.log('  line links: hidden line and contract 404 as missing, read-only line 403, hidden links kept on both sides, budget read required: OK');
 }
 
+async function testShare(app: INestApplication): Promise<void> {
+  const { persons: p, contracts: c } = s;
+  // Paul reads CE through L1 only; CE also carries L5, L6 and L7, hidden from him. "Send the link"
+  // gives no cannot_open list at all: who could open it would tell where those lines sit.
+  const throughHiddenLines = await call(app, 'POST', `contracts/${c.CE}/share`, p.paul, { recipient_user_ids: [p.nina] });
+  assert.equal(throughHiddenLines.status, 201, throughHiddenLines.text);
+  assert.equal(
+    Object.prototype.hasOwnProperty.call(throughHiddenLines.body, 'cannot_open'),
+    false,
+    `a contract with lines hidden to the sender: no warning (${throughHiddenLines.text})`,
+  );
+  // CF carries no hidden line for Paul: the warning names the recipient who cannot open it, as before.
+  const noHiddenLine = await call(app, 'POST', `contracts/${c.CF}/share`, p.paul, { recipient_user_ids: [p.nina] });
+  assert.equal(noHiddenLine.status, 201, noHiddenLine.text);
+  assert.deepEqual((noHiddenLine.body?.cannot_open ?? []).map((row: any) => row.id), [p.nina], noHiddenLine.text);
+  console.log('  send the link: no warning when the contract carries lines hidden to the sender, the warning otherwise: OK');
+}
+
 async function testLineOpenedContract(app: INestApplication): Promise<void> {
   const { persons: p, contracts: c } = s;
   // CL is read through L1 only: read-only, its attachments and links closed, counted (3 documents).
@@ -672,6 +690,7 @@ async function run(): Promise<void> {
     await testChildWrites(app);
     await testCostCentre(app);
     await testLineOpenedContract(app);
+    await testShare(app);
     await testLineLinks(app);
     await testImport(app);
     console.log('data access contract routes over HTTP: all scenarios passed');

@@ -1809,7 +1809,10 @@ export class ContractsService {
         // No request manager: the send outlives the request (a contract link needs no lookup).
       });
     }
-    // The chosen persons who cannot open the contract: the screen warns the sender (spec §5.6).
-    return { ok: true, cannot_open: await shareRecipientsWhoCannotOpen(mg, 'contract', contract.id, recipients) };
+    // The chosen persons who cannot open the contract: the screen warns the sender (spec §5.6). No
+    // list at all when the contract carries lines the sender does not see: it would tell where they
+    // sit, so the answer is the same as when everyone can open it.
+    const cannotOpen = await shareRecipientsWhoCannotOpen(mg, 'contract', contract.id, recipients);
+    return cannotOpen ? { ok: true, cannot_open: cannotOpen } : { ok: true };
   }
 }

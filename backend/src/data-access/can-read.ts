@@ -64,8 +64,9 @@ export type ShareRecipientRow = { userId: string; email: string; firstName?: str
  * sent to them anyway. Budget lines, tasks and contracts only: the other objects are not scoped.
  * Read in the sender's transaction, one statement for all the persons.
  *
- * No list at all (`undefined`) for a task the sender sees while its budget line is hidden to them
- * (they take part in it): who can open it would tell where that line sits.
+ * No list at all (`undefined`) when the object carries a line the sender does not see: a task they
+ * take part in through a hidden budget line, or a contract they see through one line among lines
+ * hidden from them. Who can open it would tell where those lines sit (spec §5.6).
  */
 export async function shareRecipientsWhoCannotOpen(
   manager: Pick<EntityManager, 'query'>,
@@ -74,6 +75,7 @@ export async function shareRecipientsWhoCannotOpen(
   recipients: readonly ShareRecipientRow[],
 ): Promise<Array<{ id: string; name: string }> | undefined> {
   if (type === 'task' && recipients.length > 0 && (await taskLineHiddenToCaller(manager, id))) return undefined;
+  if (type === 'contract' && recipients.length > 0 && (await contractLinesHiddenToCaller(manager, id))) return undefined;
   const cannot = await personsByReadAccess(manager, type, id, recipients.map((r) => r.userId), false);
   return recipients
     .filter((r) => cannot.has(String(r.userId).toLowerCase()))
@@ -92,4 +94,13 @@ async function taskLineHiddenToCaller(manager: Pick<EntityManager, 'query'>, tas
     [taskId],
   );
   return row?.hidden === true;
+}
+
+/** The contract carries budget lines the caller cannot read, by either link form (`data_access_hidden_count`). */
+async function contractLinesHiddenToCaller(manager: Pick<EntityManager, 'query'>, contractId: string): Promise<boolean> {
+  const [row]: Array<{ n: number | null }> = await manager.query(
+    `SELECT data_access_hidden_count('contract', $1) AS n`,
+    [contractId],
+  );
+  return Number(row?.n ?? 0) > 0;
 }
