@@ -1,14 +1,17 @@
+import { parseDeploymentMode } from '../common/deployment-mode';
 import { parseBoolean } from '../common/env';
 import { hasConfiguredEmailTransport } from '../email/email-config';
 
-const deploymentMode = (process.env.DEPLOYMENT_MODE || '').trim().toLowerCase();
+// Throws at load on any value other than single-tenant, multi-tenant or unset (unset is
+// multi-tenant). validateStartupEnv repeats the check for an env object passed to it.
+const deploymentMode = parseDeploymentMode(process.env.DEPLOYMENT_MODE);
 const isSingleTenant = deploymentMode === 'single-tenant';
 const vulnerabilityFeedEnabled = (process.env.VULNERABILITY_FEED_ENABLED ?? '').trim()
   ? parseBoolean(process.env.VULNERABILITY_FEED_ENABLED)
   : !isSingleTenant;
 
 export const Features = {
-  DEPLOYMENT_MODE: isSingleTenant ? ('single-tenant' as const) : ('multi-tenant' as const),
+  DEPLOYMENT_MODE: deploymentMode,
   SINGLE_TENANT: isSingleTenant,
   STRIPE_BILLING: !isSingleTenant && !!process.env.STRIPE_SECRET_KEY,
   ENTRA_SSO: !!process.env.ENTRA_CLIENT_ID,

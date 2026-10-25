@@ -28,9 +28,10 @@ import { applyHttpMiddleware, applyTenancyAndPipeline } from './http-app';
 import { runDataAccessStartup } from './data-access/data-access-availability';
 
 /**
- * Environment checks (common/env.ts): throws where the API always refused to start, prints the
- * rest as warnings (run mode, application address, browser origins). Every process checks; the
- * lead process alone prints, so the lines appear once per start (`API_WORKERS` > 1).
+ * Environment checks (common/env.ts): throws where the API refuses to start (a DEPLOYMENT_MODE
+ * outside single-tenant, multi-tenant or unset, plus the checks that already stopped the start),
+ * prints the rest as warnings (run mode, application address, browser origins). Every process
+ * checks; the lead process alone prints, so the lines appear once per start (`API_WORKERS` > 1).
  */
 function checkStartupEnv() {
   const report = validateStartupEnv(process.env, { singleTenant: Features.SINGLE_TENANT });
@@ -106,7 +107,9 @@ async function bootstrap() {
         // eslint-disable-next-line no-console
         console.error('Admin seed check failed:', err instanceof Error ? err.message : err);
       }
-    } else if (isLeadProcess()) {
+    } else if (isLeadProcess() && !Features.SINGLE_TENANT) {
+      // Multi-tenant only. Single-tenant creates the administrator from ADMIN_EMAIL below, so this
+      // line would read as a missing step on an on-premise start.
       // eslint-disable-next-line no-console
       console.log('Admin seeding disabled (set SEED_ADMIN=true to enable)');
     }

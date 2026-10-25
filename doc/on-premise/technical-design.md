@@ -33,6 +33,7 @@ This document describes the technical design for on-premise deployments. User-fa
 |-------|-------------|----------|
 | `multi-tenant` (or unset) | Cloud mode: subdomain-based tenant resolution | SaaS |
 | `single-tenant` | On-prem mode: fixed tenant, no subdomain parsing | Customer self-hosted |
+| any other value | The API refuses to start. The message names the accepted values. | |
 
 **Effects:**
 - Tenant resolution (routing)
@@ -43,14 +44,14 @@ This document describes the technical design for on-premise deployments. User-fa
 
 ## Feature Flags
 
-Single source of truth: `backend/src/config/features.ts`
+Single source of truth: `backend/src/config/features.ts`. `parseDeploymentMode` (`backend/src/common/deployment-mode.ts`) accepts `single-tenant`, `multi-tenant` and unset, and throws on any other value when the module loads. `validateStartupEnv` repeats that check.
 
 ```typescript
-const deploymentMode = (process.env.DEPLOYMENT_MODE || '').trim().toLowerCase();
+const deploymentMode = parseDeploymentMode(process.env.DEPLOYMENT_MODE);
 const isSingleTenant = deploymentMode === 'single-tenant';
 
 export const Features = {
-  DEPLOYMENT_MODE: isSingleTenant ? ('single-tenant' as const) : ('multi-tenant' as const),
+  DEPLOYMENT_MODE: deploymentMode,
   SINGLE_TENANT: isSingleTenant,
   STRIPE_BILLING: !isSingleTenant && !!process.env.STRIPE_SECRET_KEY,
   ENTRA_SSO: !!process.env.ENTRA_CLIENT_ID,
