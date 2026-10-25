@@ -110,9 +110,12 @@ async function seedObjects(runner: QueryRunner, s: Seed): Promise<Objects> {
     technology: (name) => insert(`INSERT INTO technologies (tenant_id, name, item_number) VALUES (app_current_tenant(), $1, $2) RETURNING id`, name, true),
     project: (name) => insert(`INSERT INTO portfolio_projects (tenant_id, name, item_number) VALUES (app_current_tenant(), $1, $2) RETURNING id`, name, true),
     request: (name) => insert(`INSERT INTO portfolio_requests (tenant_id, name, item_number) VALUES (app_current_tenant(), $1, $2) RETURNING id`, name, true),
+    // The contract is placed at INF-FR, Rita's edit centre (lot 5 scopes contracts: a contract on
+    // FR without a place is outside her access and answers as missing).
     contract: async (name) => (await q(
-      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES (app_current_tenant(), $1, $2, $3, '2026-01-01') RETURNING id`,
-      [name, s.fr, supplier],
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, cost_center_id)
+       VALUES (app_current_tenant(), $1, $2, $3, '2026-01-01', $4) RETURNING id`,
+      [name, s.fr, supplier, s.infFr],
     ))[0].id as string,
   };
   const objects = {} as Objects;

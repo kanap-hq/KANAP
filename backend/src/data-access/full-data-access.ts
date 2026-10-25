@@ -7,9 +7,13 @@ import { EntityManager } from 'typeorm';
  * so the report reads every line of the year in one window outside the limited role, then shows
  * only what §5.2 allows.
  *
+ * It also computes the coverage of a contract on all its lines (`contracts/contract-budget.ts`,
+ * §5.4 "Chiffres d'un objet visible"): the page and the list read the linked lines' amounts there,
+ * then keep the per-contract aggregates and the amounts of the lines the person reads.
+ *
  * `withFullDataAccess` is that window, and the only code besides `data_access_apply` that changes
- * the role (inventory: `data-access-inventory.spec.ts`, which also checks that the chargeback
- * report is its only caller):
+ * the role (inventory: `data-access-inventory.spec.ts`, which also checks its two callers: the
+ * chargeback report and the contract coverage):
  * - it opens a savepoint, makes it read only (`transaction_read_only`), leaves the limited role
  *   (`RESET ROLE`), runs `read`;
  * - then rolls back to the savepoint, which restores the limited role and the read-write mode as

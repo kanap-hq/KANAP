@@ -29,6 +29,10 @@ export class Contract {
   @Column('uuid')
   supplier_id!: string;
 
+  /** The node of the tree that manages the contract (a group or a cost center), or none. */
+  @Column('uuid', { nullable: true })
+  cost_center_id!: string | null;
+
   @Column('uuid', { nullable: true })
   owner_user_id!: string | null;
 

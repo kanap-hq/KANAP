@@ -65,6 +65,8 @@ export type ApplicationRelationsData = {
   /** The linked lines `budget_lines` leaves out, counted: outside the caller's data access, or all without the budget right. */
   budget_lines_hidden?: number;
   contracts: ContractRow[] | null;
+  /** The linked contracts `contracts` leaves out: outside the caller's data access. */
+  contracts_hidden?: number;
   projects: ProjectRow[] | null;
   requests: RequestRow[] | null;
   tasks: TaskRow[] | null;
@@ -126,7 +128,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
 
   const sections: Array<SectionSpec<any>> = [
     budgetLinesSection({ t, rows: data ? data.budget_lines : [], year, columnLabel, currency: lineCurrency, hidden: data?.budget_lines_hidden }),
-    contractsSection({ t, rows: data ? data.contracts : [], lang }),
+    contractsSection({ t, rows: data ? data.contracts : [], lang, hidden: data?.contracts_hidden }),
     projectsSection({ t, rows: data ? data.projects : [], lang }),
     {
       kind: 'requests',

@@ -17,9 +17,13 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => ({ t: i18n.t, i18n: { language: 'en', resolvedLanguage: 'en' } }),
 }));
-const auth = vi.hoisted(() => ({ budget: true }));
+const auth = vi.hoisted(() => ({ budget: true, limited: false }));
 vi.mock('../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: (resource: string) => resource !== 'budget' || auth.budget, profile: { id: 'user-1' } }),
+  useAuth: () => ({
+    hasLevel: (resource: string) => resource !== 'budget' || auth.budget,
+    profile: { id: 'user-1' },
+    dataAccess: auth.limited ? { available: true, mode: 'limited', nodes: [], modules: ['contracts'] } : null,
+  }),
 }));
 vi.mock('../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'fromage' }) }));
 vi.mock('../services/budgetColumns', async (importOriginal) => {
@@ -59,6 +63,7 @@ import ContractsPage, { budgetQuickFilterOf, daysFromToday, isToDecideOnly } fro
 type Col = {
   field?: string;
   colId?: string;
+  headerName?: string;
   filter?: unknown;
   sortable?: boolean;
   defaultHidden?: boolean;
@@ -144,6 +149,7 @@ describe('ContractsPage', () => {
   beforeEach(() => {
     grid.props = null;
     auth.budget = true;
+    auth.limited = false;
     stubStorage();
     api.get.mockReset();
     api.get.mockResolvedValue({ data: TOTALS });
@@ -161,6 +167,25 @@ describe('ContractsPage', () => {
       { value: 'disabled', label: 'common:statuses.disabled' },
     ]);
     expect(status.valueFormatter?.({ value: 'disabled' })).toBe('common:statuses.disabled');
+  });
+
+  it('offers a hidden cost centre column and the without-cost-centre filter', () => {
+    renderPage();
+    const costCenter = column('cost_center_id');
+    expect(costCenter.headerName).toBe('contracts.columns.costCenter');
+    expect(costCenter.defaultHidden).toBe(true);
+    expect(costCenter.filterParams?.values).toEqual([{ value: null, label: 'contracts.list.withoutCostCenter' }]);
+    expect(costCenter.valueGetter?.({ data: { cost_center_name: 'INF-FR' } })).toBe('INF-FR');
+    expect(costCenter.valueGetter?.({ data: {} })).toBe('');
+    expect(within(screen.getByTestId('toolbar')).getByRole('button', { name: 'contracts.list.withoutCostCenter' })).toBeInTheDocument();
+  });
+
+  it('hides the import and the settings from a limited person but keeps the export', () => {
+    auth.limited = true;
+    renderPage();
+    expect(screen.queryByRole('button', { name: 'contracts.importCsv' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'contracts.renewal.settings.button' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'contracts.exportCsv' })).toBeInTheDocument();
   });
 
   it('lists active contracts by default and offers the other scopes', () => {

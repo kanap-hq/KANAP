@@ -18,6 +18,7 @@ import { analyticsFieldKey } from '../analytics/analytics-axes.util';
 import { Decimal } from '../common/decimal';
 import { naturalCompare } from '../common/list-engine/sql-fragments';
 import { assertScopeNatures, natureAnd, BUDGET_NATURES, type BudgetNature } from './budget-nature';
+import { isLimitedTransaction } from '../data-access/line-write-checks';
 
 /**
  * The summary rows of the OPEX and CAPEX lists, built once for both item types.
@@ -305,6 +306,11 @@ export type BudgetSummaryRow = Record<string, any> & {
   has_fte: 'yes' | null;
   latest_contract_id: string | null;
   latest_contract_name: string;
+  /**
+   * A limited person's line whose direct contract or latest linked contract is out of access
+   * (spec §5.4 "Champ simple"): neither id nor name is then returned, the screen shows the label.
+   */
+  contract_hidden?: boolean;
   project_name: string | null;
   project_stream_name: string | null;
   project_category_name: string | null;
@@ -880,6 +886,30 @@ export async function buildBudgetSummaryRows(
   );
   const contractByItem = new Map(contracts.map((row) => [row.item_id, row]));
 
+  // Data-scoped access (spec §5.4 "Champ simple"): the direct contract (`spend_items.contract_id`)
+  // and the latest linked contract a limited person cannot read. `contract_spend_items` has no
+  // policy, so a link whose contract the contract policy hides is a hidden contract; the direct
+  // column goes through the disclosure function. No query for an unscoped person.
+  const directContractHidden = new Set<string>();
+  const linkedContractHidden = new Set<string>();
+  if (await isLimitedTransaction(manager)) {
+    const direct: Array<{ id: string }> = await manager.query(
+      `SELECT i.id FROM spend_items i
+        WHERE i.tenant_id = $1 AND i.id = ANY($2::uuid[]) AND i.contract_id IS NOT NULL
+          AND NOT data_access_contract_visible(i.contract_id)`,
+      [tenantId, itemIds],
+    );
+    for (const row of direct) directContractHidden.add(row.id);
+    const linked: Array<{ item_id: string }> = await manager.query(
+      `SELECT DISTINCT l.${config.contractLink.itemColumn} AS item_id
+         FROM ${config.contractLink.table} l
+        WHERE l.tenant_id = $1 AND l.${config.contractLink.itemColumn} = ANY($2::uuid[])
+          AND NOT EXISTS (SELECT 1 FROM contracts c WHERE c.tenant_id = l.tenant_id AND c.id = l.contract_id)`,
+      [tenantId, itemIds],
+    );
+    for (const row of linked) linkedContractHidden.add(row.item_id);
+  }
+
   // `has_fte`: the lines with a round holding an FTE in any version (any year, any column), as the
   // list statement computes it (`budget-list.config.ts`).
   const staffRows: Array<{ item_id: string }> = await manager.query(
@@ -1013,9 +1043,13 @@ export async function buildBudgetSummaryRows(
     const accountCoa = (account as any)?.coa_id || null;
     const companyCoa = (payingCompany as any)?.coa_id || null;
     const accountWarning = accountCoa && companyCoa && accountCoa !== companyCoa ? 'coa_mismatch' : null;
+    const directContractIsHidden = directContractHidden.has(item.id);
+    const linkedContractIsHidden = linkedContractHidden.has(item.id);
 
     const row: BudgetSummaryRow = {
       ...item,
+      ...(directContractIsHidden ? { contract_id: null } : {}),
+      ...(directContractIsHidden || linkedContractIsHidden ? { contract_hidden: true } : {}),
       company_name: payingCompany?.name ?? null,
       paying_company_name: payingCompany?.name ?? null,
       supplier: supplier ? { id: supplier.id, name: supplier.name } : undefined,
@@ -1040,8 +1074,8 @@ export async function buildBudgetSummaryRows(
       budget_holder_name: costCenter?.owner_user_id ? costCenter.owner_name || null : null,
       run_build: item.run_build ?? null,
       has_fte: staffItems.has(item.id) ? 'yes' : null,
-      latest_contract_id: contract?.contract_id ?? null,
-      latest_contract_name: contract?.contract_name ?? '',
+      latest_contract_id: linkedContractIsHidden ? null : contract?.contract_id ?? null,
+      latest_contract_name: linkedContractIsHidden ? '' : contract?.contract_name ?? '',
       project_name: joinNames(projectLists.project_name),
       project_stream_name: joinNames(projectLists.project_stream_name),
       project_category_name: joinNames(projectLists.project_category_name),

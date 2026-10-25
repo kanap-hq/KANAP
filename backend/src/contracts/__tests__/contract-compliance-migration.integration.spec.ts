@@ -27,8 +27,11 @@ async function shape(runner: QueryRunner) {
       WHERE conrelid = 'contract_compliance_items'::regclass ORDER BY conname`,
   );
   const policies: Array<{ polname: string; using: string; check: string; cmd: string }> = await runner.query(
+    // Data-scoped access adds its own policies to this table from lot 5: this migration's test
+    // checks the tenant policy it created, not the data-access rows.
     `SELECT polname, pg_get_expr(polqual, polrelid) AS using, pg_get_expr(polwithcheck, polrelid) AS check, polcmd AS cmd
-       FROM pg_policy WHERE polrelid = 'contract_compliance_items'::regclass ORDER BY polname`,
+       FROM pg_policy WHERE polrelid = 'contract_compliance_items'::regclass
+        AND polname !~ '_data_access_' ORDER BY polname`,
   );
   const contractKeys: Array<{ conname: string; mark: string | null }> = await runner.query(
     `SELECT conname, obj_description(oid, 'pg_constraint') AS mark FROM pg_constraint

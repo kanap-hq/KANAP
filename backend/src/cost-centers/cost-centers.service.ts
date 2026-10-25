@@ -86,6 +86,7 @@ export interface CostCenterGraphNode {
 export interface CostCenterUsage {
   opex: number;
   capex: number;
+  contracts: number;
 }
 
 export interface CostCenterGraphIssue {
@@ -102,11 +103,14 @@ function usageText(usage: CostCenterUsage): string {
   const parts: string[] = [];
   if (usage.opex > 0) parts.push(plural(usage.opex, 'OPEX line', 'OPEX lines'));
   if (usage.capex > 0) parts.push(plural(usage.capex, 'CAPEX line', 'CAPEX lines'));
-  return parts.join(' and ');
+  if (usage.contracts > 0) parts.push(plural(usage.contracts, 'contract', 'contracts'));
+  return parts.length <= 1 ? (parts[0] ?? '') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
 const usedByLines = (usage: CostCenterUsage | undefined): usage is CostCenterUsage =>
   !!usage && usage.opex + usage.capex > 0;
+const usedByAnything = (usage: CostCenterUsage | undefined): usage is CostCenterUsage =>
+  !!usage && usage.opex + usage.capex + usage.contracts > 0;
 
 /**
  * The tree rules, checked on the tenant's resulting graph (`after`) against
@@ -136,9 +140,9 @@ export function validateCostCenterGraph(input: {
 
   for (const [id, stored] of before) {
     if (after.has(id)) continue;
-    const lines = usage.get(id);
-    if (usedByLines(lines)) {
-      issues.push({ id, field: 'delete', message: `${stored.code} is used by ${usageText(lines)}. Disable it instead.` });
+    const used = usage.get(id);
+    if (usedByAnything(used)) {
+      issues.push({ id, field: 'delete', message: `${stored.code} is used by ${usageText(used)}. Disable it instead.` });
     }
     const children = childCount.get(id) ?? 0;
     if (children > 0) {
@@ -550,15 +554,18 @@ export class CostCentersService {
   async countUsage(ctx: CostCenterContext, ids: string[]): Promise<Map<string, CostCenterUsage>> {
     const usage = new Map<string, CostCenterUsage>();
     if (ids.length === 0) return usage;
-    const rows: Array<{ id: string; opex: number; capex: number }> = await ctx.manager.query(
+    const rows: Array<{ id: string; opex: number; capex: number; contracts: number }> = await ctx.manager.query(
       `SELECT cc.id,
               (SELECT count(*)::int FROM spend_items si WHERE si.tenant_id = $1 AND si.nature = 'opex' AND si.cost_center_id = cc.id) AS opex,
-              (SELECT count(*)::int FROM spend_items ci WHERE ci.tenant_id = $1 AND ci.nature = 'capex' AND ci.cost_center_id = cc.id) AS capex
+              (SELECT count(*)::int FROM spend_items ci WHERE ci.tenant_id = $1 AND ci.nature = 'capex' AND ci.cost_center_id = cc.id) AS capex,
+              (SELECT count(*)::int FROM contracts co WHERE co.tenant_id = $1 AND co.cost_center_id = cc.id) AS contracts
          FROM cost_centers cc
         WHERE cc.tenant_id = $1 AND cc.id = ANY($2::uuid[])`,
       [ctx.tenantId, ids],
     );
-    for (const row of rows) usage.set(row.id, { opex: Number(row.opex), capex: Number(row.capex) });
+    for (const row of rows) {
+      usage.set(row.id, { opex: Number(row.opex), capex: Number(row.capex), contracts: Number(row.contracts) });
+    }
     return usage;
   }
 

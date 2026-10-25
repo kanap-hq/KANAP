@@ -63,6 +63,10 @@ let tag: string;
 let applicationId: string;
 let projectId: string;
 let hiddenTaskId: string;
+let contractVisible: string;
+let contractHidden: string;
+let contractTaskId: string;
+let technologyId: string;
 const itemNumbers = {} as Record<Label, number>;
 const conversations: Record<string, string> = {};
 const HIDDEN: Label[] = ['L5', 'L6', 'L7'];
@@ -105,7 +109,7 @@ async function seedPlaid(): Promise<void> {
     );
     // Rita and Ulla share the role of the seed: the rights are the same, only the access differs.
     const roleId = (await q(`SELECT role_id FROM users WHERE id = $1`, [s.persons.rita]))[0].role_id;
-    for (const resource of ['ai_chat', 'ai_mcp', 'budget', 'tasks', 'applications', 'portfolio_projects']) {
+    for (const resource of ['ai_chat', 'ai_mcp', 'budget', 'tasks', 'applications', 'portfolio_projects', 'contracts', 'infrastructure']) {
       await q(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, $3, 'member')`, [s.tenantId, roleId, resource]);
     }
     for (const row of await q(`SELECT id, item_number FROM spend_items WHERE tenant_id = $1`, [s.tenantId])) {
@@ -125,6 +129,32 @@ async function seedPlaid(): Promise<void> {
        VALUES ($1, $2, 7001, 'spend_item', $3, $4) RETURNING id`,
       [s.tenantId, `DA 4D task ${tag}`, s.lines.L5, s.persons.rita],
     ))[0].id;
+    // Contracts (lot 5): CF at INF-FR, read by Rita; CH on FR without a place, hidden from her. A
+    // contract task of CH is assigned to Rita (visible by participation), and a technology links
+    // both, so its contract count shows what she reads.
+    const supplier = (await q(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, $2) RETURNING id`, [s.tenantId, `DA 4D supplier ${tag}`]))[0].id;
+    const contract = async (label: string, centre: string | null) => (await q(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, cost_center_id)
+       VALUES ($1, $2, $3, $4, '2026-01-01', $5) RETURNING id`,
+      [s.tenantId, `DA 4D contract ${label} ${tag}`, s.fr, supplier, centre],
+    ))[0].id as string;
+    contractVisible = await contract('visible', s.infFr);
+    contractHidden = await contract('hidden', null);
+    await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [s.tenantId, contractVisible, s.lines.L1]);
+    // L3 is read by Rita but read-only: a link that stays is not checked again by a replacement.
+    await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [s.tenantId, contractVisible, s.lines.L3]);
+    contractTaskId = (await q(
+      `INSERT INTO tasks (tenant_id, title, item_number, related_object_type, related_object_id, creator_id, assignee_user_id)
+       VALUES ($1, $2, 7002, 'contract', $3, $4, $5) RETURNING id`,
+      [s.tenantId, `DA 4D contract task ${tag}`, contractHidden, s.persons.nina, s.persons.rita],
+    ))[0].id;
+    technologyId = (await q(
+      `INSERT INTO technologies (tenant_id, name, item_number) VALUES ($1, $2, 7003) RETURNING id`,
+      [s.tenantId, `DA 4D technology ${tag}`],
+    ))[0].id;
+    for (const contractId of [contractVisible, contractHidden]) {
+      await q(`INSERT INTO technology_contracts (tenant_id, technology_id, contract_id) VALUES ($1, $2, $3)`, [s.tenantId, technologyId, contractId]);
+    }
     for (const person of [s.persons.rita, s.persons.ulla]) {
       conversations[person] = randomUUID();
       await q(
@@ -185,6 +215,23 @@ function assertNoTrace(value: unknown, what: string, labels: Label[] = HIDDEN): 
       assert.ok(!found, `${what}: shows ${label} (${String(trace)})`);
     }
   }
+}
+
+/** The traces of a contract: its name and its id. */
+function contractTraces(label: 'visible' | 'hidden'): string[] {
+  return [`DA 4D contract ${label} ${tag}`, label === 'visible' ? contractVisible : contractHidden];
+}
+
+/** The hidden contract leaves no name and no id in the answer. */
+function assertNoContractTrace(value: unknown, what: string): void {
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  for (const trace of contractTraces('hidden')) assert.ok(!text.includes(trace), `${what}: shows the hidden contract (${trace})`);
+}
+
+/** The contract labels named in an answer. */
+function contractsIn(value: unknown): Array<'visible' | 'hidden'> {
+  const text = JSON.stringify(value);
+  return (['visible', 'hidden'] as const).filter((label) => text.includes(`DA 4D contract ${label} ${tag}`));
 }
 
 function assertShows(value: unknown, label: Label, what: string): void {
@@ -293,7 +340,63 @@ async function testPlaidReads(): Promise<void> {
     await tool(ulla, 'get_entity_detail', { entity_type: 'projects', entity_id: projectId }),
     await tool(ulla, 'get_entity_context', { entity_type: 'projects', entity_id: projectId }),
   ], 'L5', 'the project names its lines (Ulla)');
-  console.log('  Plaid reads: query, search, aggregate, detail and context show L1 to L4 only, no trace of L5 to L7: OK');
+  // Contracts (lot 5): the same rule for the list, the search, the aggregate, the detail and the
+  // context; a contract task visible by participation names none of its contract.
+  const contractQuery = { entity_type: 'contracts', q: 'DA 4D contract', limit: 50 };
+  const ritaContracts = await tool(rita, 'query_entities', contractQuery);
+  assert.deepEqual(contractsIn(ritaContracts), ['visible'], `query_entities contracts: Rita reads CF (${JSON.stringify(ritaContracts)})`);
+  assert.equal(ritaContracts.total, 1, 'query_entities contracts: one contract');
+  assertNoContractTrace(ritaContracts, 'query_entities contracts (Rita)');
+  const ullaContracts = await tool(ulla, 'query_entities', contractQuery);
+  assert.deepEqual(contractsIn(ullaContracts), ['visible', 'hidden'], 'query_entities contracts: Ulla reads both');
+  assert.equal(ullaContracts.total, 2);
+
+  const ritaContractSearch = await tool(rita, 'search_all', { query: 'DA 4D contract', limit: 100 });
+  assert.deepEqual(contractsIn(ritaContractSearch), ['visible'], 'search_all contracts: CF alone (Rita)');
+  assertNoContractTrace(ritaContractSearch, 'search_all contracts (Rita)');
+  assert.deepEqual(contractsIn(await tool(ulla, 'search_all', { query: 'DA 4D contract', limit: 100 })), ['visible', 'hidden'], 'search_all contracts: both (Ulla)');
+
+  const contractAggregate = { entity_type: 'contracts', group_by: 'status', q: 'DA 4D contract' };
+  const ritaContractCount = await tool(rita, 'aggregate_entities', contractAggregate);
+  assertNoContractTrace(ritaContractCount, 'aggregate_entities contracts (Rita)');
+  const sumOf = (result: any) => (result.groups ?? []).reduce((sum: number, g: any) => sum + Number(g.count ?? g.value ?? 0), 0);
+  assert.equal(sumOf(ritaContractCount), 1, `aggregate_entities contracts: Rita counts 1 (${JSON.stringify(ritaContractCount)})`);
+  assert.equal(sumOf(await tool(ulla, 'aggregate_entities', contractAggregate)), 2, 'aggregate_entities contracts: Ulla counts 2');
+
+  const visibleDetail = await tool(rita, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractVisible });
+  assert.ok(JSON.stringify(visibleDetail).includes(`DA 4D contract visible ${tag}`), 'get_entity_detail contract: CF shown (Rita)');
+  assertNoContractTrace(visibleDetail, 'get_entity_detail contract CF (Rita)');
+  const randomContract = randomUUID();
+  sameRefusal(
+    await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractHidden })),
+    await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'contracts', entity_id: randomContract })),
+    contractHidden, randomContract, 'get_entity_detail of CH (Rita)',
+  );
+  const contractTasks = { entity_type: 'tasks', q: `DA 4D contract task ${tag}` };
+  const ritaContractTask = (await tool(rita, 'query_entities', contractTasks)).items?.find((item: any) => item.id === contractTaskId);
+  assert.ok(ritaContractTask, 'query_entities tasks: Rita sees her contract task');
+  assert.equal(ritaContractTask.metadata?.related_object_name ?? null, null, 'the hidden contract is not named');
+  assertNoContractTrace(ritaContractTask, 'query_entities contract task (Rita)');
+  assert.ok(JSON.stringify(await tool(ulla, 'query_entities', contractTasks)).includes(`DA 4D contract hidden ${tag}`), 'Ulla names the contract');
+  const taskDetail = await tool(rita, 'get_entity_detail', { entity_type: 'tasks', entity_id: contractTaskId });
+  assertNoContractTrace(taskDetail, 'get_entity_detail contract task (Rita)');
+  assertNoContractTrace(await tool(rita, 'get_entity_context', { entity_type: 'tasks', entity_id: contractTaskId }), 'get_entity_context contract task (Rita)');
+  const byContractName = await tool(rita, 'search_all', { query: `DA 4D contract hidden ${tag}` });
+  assertNoContractTrace(byContractName, 'search_all by the hidden contract name (Rita)');
+  assert.ok(!(byContractName.items ?? []).some((item: any) => item.id === contractTaskId), 'search_all: not the task of CH');
+  assert.ok((await tool(ulla, 'search_all', { query: `DA 4D contract hidden ${tag}` })).items?.some((item: any) => item.id === contractTaskId), 'Ulla finds the task by the contract name');
+
+  // The line detail names its visible contract only.
+  const lineDetail = await tool(rita, 'get_entity_detail', { entity_type: 'spend_items', entity_id: s.lines.L1 });
+  assert.ok(JSON.stringify(lineDetail).includes(`DA 4D contract visible ${tag}`), 'the line detail names its contract (Rita)');
+  assertNoContractTrace(lineDetail, 'get_entity_detail L1 (Rita)');
+
+  // The technology detail's contract count (ai-query.executor.ts): the linked contracts it reads.
+  const { technologyContractCount } = require('../../ai/query/ai-technologies.query');
+  assert.equal(await asPerson(rita, (ctx) => technologyContractCount(ctx.manager, s.tenantId, technologyId)), 1, 'technology contract count: Rita reads one');
+  assert.equal(await asPerson(ulla, (ctx) => technologyContractCount(ctx.manager, s.tenantId, technologyId)), 2, 'technology contract count: Ulla reads two');
+
+  console.log('  Plaid reads: query, search, aggregate, detail and context show L1 to L4 only, no trace of L5 to L7; contracts and their tasks follow: OK');
 }
 
 /** The mention picker (`GET /ai/search/entities`) and the search index under the person's access. */
@@ -315,12 +418,21 @@ async function testGlobalSearch(): Promise<void> {
 
   const entries = (person: string) => asPerson<any[]>(person, (ctx) => ctx.manager.query(
     `SELECT entity_type, entity_id::text AS id FROM search_index WHERE tenant_id = $1 AND entity_id = ANY($2::uuid[]) ORDER BY 1, 2`,
-    [s.tenantId, [...HIDDEN.map((l) => s.lines[l]), hiddenTaskId]],
+    [s.tenantId, [...HIDDEN.map((l) => s.lines[l]), hiddenTaskId, contractHidden, contractTaskId]],
   ));
-  assert.deepEqual(await entries(rita), [], 'search index: no entry of L5 to L7 nor of the task of L5 for Rita');
+  assert.deepEqual(await entries(rita), [], 'search index: no entry of L5 to L7, of the task of L5, of CH or of its task for Rita');
   const ullaEntries = await entries(ulla);
-  assert.ok(ullaEntries.some((row: any) => row.id === hiddenTaskId) && ullaEntries.some((row: any) => row.id === s.lines.L5), 'search index: Ulla has them');
-  console.log('  global search: the mention picker and the search index hold no entry of a hidden line or of its task: OK');
+  assert.ok(ullaEntries.some((row: any) => row.id === hiddenTaskId) && ullaEntries.some((row: any) => row.id === s.lines.L5), 'search index: Ulla has the hidden line and its task');
+  assert.ok(ullaEntries.some((row: any) => row.id === contractHidden) && ullaEntries.some((row: any) => row.id === contractTaskId), 'search index: Ulla has the hidden contract and its task');
+
+  const ritaPickedContracts = await picker.searchEntities(req(rita), 'DA 4D contract');
+  assert.deepEqual(contractsIn(ritaPickedContracts), ['visible'], 'mention picker: CF alone (Rita)');
+  assertNoContractTrace(ritaPickedContracts, 'mention picker contracts (Rita)');
+  assert.deepEqual(contractsIn(await picker.searchEntities(req(ulla), 'DA 4D contract')), ['visible', 'hidden'], 'mention picker: both (Ulla)');
+  const pickedByContractName = await picker.searchEntities(req(rita), `DA 4D contract hidden ${tag}`);
+  assertNoContractTrace(pickedByContractName, 'mention picker by the hidden contract name (Rita)');
+  assert.ok(!pickedByContractName.items.some((item: any) => item.id === contractTaskId), 'mention picker by the hidden contract name: not its task');
+  console.log('  global search: the mention picker and the search index hold no entry of a hidden line, contract or task: OK');
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -340,6 +452,14 @@ async function approve(person: string, previewId: string): Promise<any> {
 async function linkedLines(): Promise<Label[]> {
   const rows = await inTenant(() => client.query(
     `SELECT spend_item_id FROM application_spend_items WHERE tenant_id = $1 AND application_id = $2`, [s.tenantId, applicationId],
+  ));
+  return rows.rows.map((row: any) => (Object.keys(s.lines) as Label[]).find((l) => s.lines[l] === row.spend_item_id)!).sort();
+}
+
+/** The lines linked to the visible contract, by label. */
+async function linkedContractLines(): Promise<Label[]> {
+  const rows = await inTenant(() => client.query(
+    `SELECT spend_item_id FROM contract_spend_items WHERE tenant_id = $1 AND contract_id = $2`, [s.tenantId, contractVisible],
   ));
   return rows.rows.map((row: any) => (Object.keys(s.lines) as Label[]).find((l) => s.lines[l] === row.spend_item_id)!).sort();
 }
@@ -434,7 +554,33 @@ async function testPlaidRelationWrites(): Promise<void> {
   assertShows(ullaPreview, 'L5', 'relation preview (Ulla)');
   assert.equal((await approve(ulla, ullaPreview.preview_id)).status, 'executed', 'Ulla links L1 back');
   assert.deepEqual(await linkedLines(), ['L1', 'L3', 'L5'], 'Ulla: L1 linked, the rest kept');
-  console.log('  Plaid relation writes: hidden line refused as missing, visible links replaced, hidden link kept: OK');
+
+  // A contract carries L1 (modifiable) and L3 (read-only): a replacement checks only the targets
+  // added and removes only the links asked, so the read-only link that stays is never rewritten.
+  const contractRelation = (extra: Record<string, unknown>) => ({
+    entity_type: 'contracts', ref: contractVisible, relation: 'spend_items', ...extra,
+  });
+  assert.deepEqual(await linkedContractLines(), ['L1', 'L3'], 'the contract links L1 and the read-only L3');
+  const keepReadOnly = await preview(rita, 'update_entity_relations', contractRelation({ remove: [s.lines.L1] }));
+  assert.equal((await approve(rita, keepReadOnly.preview_id)).status, 'executed', 'removing L1 while L3 stays executed');
+  assert.deepEqual(await linkedContractLines(), ['L3'], 'L1 unlinked, the read-only L3 kept');
+  // Adding a new line read-only (L2) is a write on it: refused, and nothing changes.
+  const addReadOnly = await preview(rita, 'update_entity_relations', contractRelation({ add: [s.lines.L2] }));
+  const addedReadOnly = await approve(rita, addReadOnly.preview_id);
+  assert.equal(addedReadOnly.status, 'failed', 'Plaid adds read-only L2 to the contract');
+  assert.equal(addedReadOnly.error_message, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Plaid adds read-only L2 to the contract');
+  assert.deepEqual(await linkedContractLines(), ['L3'], 'the refusal left the links untouched');
+  // Adding an editable line back beside L3: only L1 is inserted.
+  const addEditable = await preview(rita, 'update_entity_relations', contractRelation({ add: [s.lines.L1] }));
+  assert.equal((await approve(rita, addEditable.preview_id)).status, 'executed', 'adding L1 back beside L3 executed');
+  assert.deepEqual(await linkedContractLines(), ['L1', 'L3'], 'L1 linked again, L3 kept');
+  // Removing the read-only link is a write on L3: refused.
+  const removeReadOnly = await preview(rita, 'update_entity_relations', contractRelation({ remove: [s.lines.L3] }));
+  const removedReadOnly = await approve(rita, removeReadOnly.preview_id);
+  assert.equal(removedReadOnly.status, 'failed', 'Plaid removes read-only L3 from the contract');
+  assert.equal(removedReadOnly.error_message, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, 'Plaid removes read-only L3 from the contract');
+  assert.deepEqual(await linkedContractLines(), ['L1', 'L3'], 'the refusal left the links untouched');
+  console.log('  Plaid relation writes: hidden line refused as missing, visible links replaced, hidden link kept, contract links only re-check new targets: OK');
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -523,6 +669,11 @@ async function testMcp(): Promise<void> {
     ['search_all', { query: `DA line L5 ${tag}` }],
     ['get_entity_detail', { entity_type: 'spend_items', entity_id: s.lines.L1 }],
     ['get_entity_detail', { entity_type: 'tasks', entity_id: hiddenTaskId }],
+    ['query_entities', { entity_type: 'contracts', q: 'DA 4D contract', limit: 50 }],
+    ['aggregate_entities', { entity_type: 'contracts', group_by: 'status', q: 'DA 4D contract' }],
+    ['search_all', { query: 'DA 4D contract', limit: 100 }],
+    ['get_entity_detail', { entity_type: 'contracts', entity_id: contractVisible }],
+    ['get_entity_detail', { entity_type: 'tasks', entity_id: contractTaskId }],
   ];
   await withMcpServer(async (url) => {
     for (const [name, args] of calls) {
@@ -530,6 +681,7 @@ async function testMcp(): Promise<void> {
       const ritaMcp = await mcpCall(url, keys[rita], name, args);
       assert.equal(ritaMcp.error, null, `${what} (Rita): ${ritaMcp.error}`);
       assertNoTrace(ritaMcp.result, `${what} (Rita)`);
+      assertNoContractTrace(ritaMcp.result, `${what} (Rita)`);
       const ritaPlaid = await tool(rita, name, args);
       assert.deepEqual(idsIn(ritaMcp.result), idsIn(ritaPlaid), `${what}: the records Plaid gives Rita`);
       assert.deepEqual(linesIn(ritaMcp.result), linesIn(ritaPlaid), `${what}: the lines Plaid gives Rita`);
@@ -544,6 +696,12 @@ async function testMcp(): Promise<void> {
     const missing = await mcpCall(url, keys[rita], 'get_entity_detail', { entity_type: 'spend_items', entity_id: missingId });
     assert.ok(hidden.error && missing.error, 'MCP get_entity_detail of L5: refused');
     assert.equal(hidden.error!.split(s.lines.L5).join('<ref>'), missing.error!.split(missingId).join('<ref>'), 'MCP get_entity_detail of L5: as a missing line');
+    const hiddenContract = await mcpCall(url, keys[rita], 'get_entity_detail', { entity_type: 'contracts', entity_id: contractHidden });
+    const missingContract = await mcpCall(url, keys[rita], 'get_entity_detail', { entity_type: 'contracts', entity_id: randomUUID() });
+    assert.ok(hiddenContract.error && missingContract.error, 'MCP get_entity_detail of CH: refused');
+    assert.ok(!String(hiddenContract.error).includes(contractHidden), 'MCP get_entity_detail of CH: no id');
+    assert.deepEqual(contractsIn((await mcpCall(url, keys[rita], 'query_entities', { entity_type: 'contracts', q: 'DA 4D contract' })).result), ['visible'], 'MCP query_entities contracts: CF alone (Rita)');
+    assert.deepEqual(contractsIn((await mcpCall(url, keys[ulla], 'query_entities', { entity_type: 'contracts', q: 'DA 4D contract' })).result), ['visible', 'hidden'], 'MCP query_entities contracts: both (Ulla)');
   });
   console.log('  MCP: query_entities, aggregate_entities, search_all and get_entity_detail through the key guard give what Plaid gives: OK');
 }

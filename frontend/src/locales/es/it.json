@@ -1940,6 +1940,14 @@
           "only_other": "{{count}} líneas fuera de su acceso",
           "count_one": "{{count}} línea presupuestaria",
           "count_other": "{{count}} líneas presupuestarias"
+        },
+        "outside_contracts": {
+          "and_one": "y {{count}} contrato fuera de su acceso",
+          "and_other": "y {{count}} contratos fuera de su acceso",
+          "only_one": "{{count}} contrato fuera de su acceso",
+          "only_other": "{{count}} contratos fuera de su acceso",
+          "count_one": "{{count}} contrato",
+          "count_other": "{{count}} contratos"
         }
       },
       "untitled": "Aplicación sin nombre",

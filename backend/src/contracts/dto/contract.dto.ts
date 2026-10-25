@@ -17,6 +17,11 @@ export class ContractUpsertDto extends StatusLifecycleDto {
   @IsUUID()
   supplier_id?: string | null;
 
+  /** A group or a cost center of the tenant, active; null clears it. */
+  @IsOptional()
+  @IsUUID()
+  cost_center_id?: string | null;
+
   @IsOptional()
   @IsUUID()
   owner_user_id?: string | null;

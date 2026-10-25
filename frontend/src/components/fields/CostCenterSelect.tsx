@@ -17,8 +17,10 @@ import { drawerAutocompleteListboxSx } from '../../theme/formSx';
  *   A disabled cost center stays pickable when it is the current value.
  * - `all`: every node, groups and disabled nodes included (report filters).
  * - `groups`: groups only, disabled ones included (a node's parent).
+ * - `contract_places`: enabled groups and cost centers (a contract's place in the tree); a disabled
+ *   node stays pickable when it is the current value.
  */
-export type CostCenterSelectable = 'cost_centers' | 'all' | 'groups';
+export type CostCenterSelectable = 'cost_centers' | 'all' | 'groups' | 'contract_places';
 
 export type CostCenterSelectProps = {
   label?: string;
@@ -38,8 +40,9 @@ export type CostCenterSelectProps = {
   /** Nodes left out of the list (e.g. a node's own subtree when picking its parent). */
   excludeIds?: ReadonlySet<string> | string[];
   /**
-   * With `cost_centers`: only the cost centers it accepts are listed, with the groups above them (a
-   * limited data access, `usePlacementOptions`). The current value stays listed. Absent: every one.
+   * With `cost_centers` or `contract_places`: only the nodes it accepts are listed, with the groups
+   * above them (a limited data access, `usePlacementOptions`). The current value stays listed.
+   * Absent: every one.
    */
   isAllowed?: ((node: CostCenterNode) => boolean) | null;
   disabled?: boolean;
@@ -170,12 +173,13 @@ export default function CostCenterSelect({
     }
     return list.filter((node) => keep.has(node.id));
   }, [byCompany, companyId, excluded, selectable, tree.nodes, value]);
-  // A limited data access: the cost centers it accepts (and the current value), with their groups.
+  // A limited data access: the nodes it accepts (and the current value), with their groups above.
   const options = React.useMemo(() => {
-    if (!isAllowed || selectable !== 'cost_centers') return listed;
+    if (!isAllowed || (selectable !== 'cost_centers' && selectable !== 'contract_places')) return listed;
     const keep = new Set<string>();
     for (const node of listed) {
-      if (node.kind !== 'cost_center' || (!isAllowed(node) && node.id !== value)) continue;
+      if (selectable === 'cost_centers' && node.kind !== 'cost_center') continue;
+      if (!isAllowed(node) && node.id !== value) continue;
       for (const id of node.path_ids) keep.add(id);
       keep.add(node.id);
     }
@@ -186,10 +190,14 @@ export default function CostCenterSelect({
     (node: CostCenterNode) => {
       if (selectable === 'all') return true;
       if (selectable === 'groups') return node.kind === 'group';
+      if (selectable === 'contract_places') {
+        // The groups above an allowed node are shown for navigation only.
+        return node.id === value || (node.status === 'enabled' && (!isAllowed || isAllowed(node)));
+      }
       if (node.kind !== 'cost_center') return false;
       return node.status === 'enabled' || node.id === value;
     },
-    [selectable, value],
+    [isAllowed, selectable, value],
   );
 
   // The detail's node first (read with the line, fresher than a tree up to 5 minutes old), else the

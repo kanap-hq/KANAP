@@ -68,7 +68,11 @@ async function rejection(fn: () => Promise<unknown>): Promise<unknown> {
   return null;
 }
 
-type Tasks = { l1ByMarta: string; l4ByMarta: string; l1ByUlla: string; free: string };
+type Tasks = {
+  l1ByMarta: string; l4ByMarta: string; l1ByUlla: string; free: string;
+  contractByMarta: string; visibleContractTask: string;
+  visibleContract: string; hiddenContract: string;
+};
 
 async function seedTasks(runner: QueryRunner, s: Seed): Promise<Tasks> {
   const task = async (title: string, type: string | null, objectId: string | null, creator: string, extra: { assignee?: string; owners?: string[] } = {}) => (await runner.query(
@@ -76,12 +80,25 @@ async function seedTasks(runner: QueryRunner, s: Seed): Promise<Tasks> {
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb) RETURNING id`,
     [s.tenantId, title, nextItemNumber(), type, objectId, creator, extra.assignee ?? null, JSON.stringify(extra.owners ?? [])],
   ))[0].id as string;
+  const supplier = (await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Notification supplier') RETURNING id`, [s.tenantId]))[0].id;
+  const contract = async (name: string, company: string) => (await runner.query(
+    `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES ($1, $2, $3, $4, '2026-01-01') RETURNING id`,
+    [s.tenantId, name, company, supplier],
+  ))[0].id as string;
+  // CE: ES, read by Marta; CF: FR without a place, outside Marta's company node.
+  const visibleContract = await contract('Notification visible contract', s.es);
+  const hiddenContract = await contract('Notification hidden contract', s.fr);
   return {
     // Marta created it; Nina is its assignee and Paul its owner (named, whatever their access).
     l1ByMarta: await task('L1 task by Marta', 'spend_item', s.lines.L1, s.persons.marta, { assignee: s.persons.nina, owners: [s.persons.paul] }),
     l4ByMarta: await task('L4 task by Marta', 'spend_item', s.lines.L4, s.persons.marta, { assignee: s.persons.nina }),
     l1ByUlla: await task('L1 task by Ulla', 'spend_item', s.lines.L1, s.persons.ulla, { assignee: s.persons.nina }),
     free: await task('Task without object by Marta', null, null, s.persons.marta, { assignee: s.persons.nina }),
+    // The creator of a contract task is a recipient only when they can read the contract (spec §5.6).
+    contractByMarta: await task('Hidden contract task by Marta', 'contract', hiddenContract, s.persons.marta, { assignee: s.persons.nina }),
+    visibleContractTask: await task('Visible contract task by Marta', 'contract', visibleContract, s.persons.marta, { assignee: s.persons.nina }),
+    visibleContract,
+    hiddenContract,
   };
 }
 
@@ -98,6 +115,11 @@ async function testNotificationRecipients(runner: QueryRunner, s: Seed, t: Tasks
     });
   }
 
+  // A contract task: the creator hears of it only when they can read the contract (spec §5.6); read
+  // as the application role, the task being visible to the notification's own process.
+  assert.deepEqual(await ids(runner.manager, t.contractByMarta), sorted([nina]), 'hidden contract: the creator who cannot read it is out');
+  assert.deepEqual(await ids(runner.manager, t.visibleContractTask), sorted([marta, nina]), 'visible contract: the creator is a recipient');
+
   // A comment by Paul on the L1 task: the notification goes to the named persons only.
   const sent: any[] = [];
   const fake = { getTaskRecipients: notifications.getTaskRecipients.bind(notifications), notifyComment: async (p: any) => { sent.push(p); } };
@@ -113,11 +135,11 @@ async function testNotificationRecipients(runner: QueryRunner, s: Seed, t: Tasks
   const scheduled = new ScheduledNotificationsService(none, none, none, none, none, none);
   const week = { start: new Date(Date.now() - 7 * 86400000).toISOString(), end: new Date(Date.now() + 86400000).toISOString() };
   const top = await scheduled.weeklyReviewTasks(runner.manager, s.tenantId, marta, week.start, week.end);
-  assert.deepEqual(sorted(top.topTasks.map((r) => r.id)), sorted([t.l4ByMarta, t.free]), 'weekly review: the L1 task Marta created is not listed to her');
+  assert.deepEqual(sorted(top.topTasks.map((r) => r.id)), sorted([t.l4ByMarta, t.free, t.visibleContractTask]), 'weekly review: the L1 and hidden-contract tasks Marta created are not listed to her');
   await as(runner, null, async (m) => {
     await m.query(`UPDATE tasks SET status = 'done', updated_at = now() WHERE tenant_id = $1`, [s.tenantId]);
     const closed = await scheduled.weeklyReviewTasks(m, s.tenantId, marta, week.start, week.end);
-    assert.deepEqual(sorted(closed.tasksClosed.map((r) => r.id)), sorted([t.l4ByMarta, t.free]), 'weekly review, closed tasks: nor the closed one');
+    assert.deepEqual(sorted(closed.tasksClosed.map((r) => r.id)), sorted([t.l4ByMarta, t.free, t.visibleContractTask]), 'weekly review, closed tasks: nor the closed hidden one');
     // Paul is the L1 task's owner: named, it is listed to him whatever his access.
     const paulClosed = await scheduled.weeklyReviewTasks(m, s.tenantId, paul, week.start, week.end);
     assert.deepEqual(paulClosed.tasksClosed.map((r) => r.id), [t.l1ByMarta], 'weekly review: a named person is listed');
@@ -180,13 +202,24 @@ async function testShare(runner: QueryRunner, s: Seed, t: Tasks): Promise<void> 
   // A sender asking about a line out of her access learns nothing.
   const blind = await as(runner, marta, (m) => shareRecipientsWhoCannotOpen(m, 'spend_item', s.lines.L1, [row(nina)]));
   assert.deepEqual(blind, [], 'Marta cannot see L1: no answer');
-  // A contract: readable by everyone until lot 5.
+  // A contract (lot 5): a limited sender who cannot see it learns nothing; an unscoped sender is
+  // warned about a person who cannot open it.
   const supplier = (await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Share supplier') RETURNING id`, [s.tenantId]))[0].id;
   const contract = (await runner.query(
     `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES ($1, 'Share contract', $2, $3, '2026-01-01') RETURNING id`,
     [s.tenantId, s.fr, supplier],
   ))[0].id;
-  assert.deepEqual(await as(runner, marta, (m) => shareRecipientsWhoCannotOpen(m, 'contract', contract, [row(nina)])), [], 'a contract: no warning before lot 5');
+  assert.deepEqual(await as(runner, marta, (m) => shareRecipientsWhoCannotOpen(m, 'contract', contract, [row(nina)])), [], 'Marta cannot see the contract: no answer');
+  assert.deepEqual(
+    await as(runner, ulla, (m) => shareRecipientsWhoCannotOpen(m, 'contract', contract, [row(nina)])),
+    [{ id: nina, name: nameOf(nina) }],
+    'an unscoped sender: Nina cannot open the contract',
+  );
+  assert.deepEqual(
+    await as(runner, marta, (m) => shareRecipientsWhoCannotOpen(m, 'contract', t.visibleContract, [row(nina)])),
+    [{ id: nina, name: nameOf(nina) }],
+    'a limited sender who reads the contract: the warning names Nina',
+  );
   console.log('  "Send the link": cannot_open names the chosen persons who cannot open the task or line; sent to all; nothing about a hidden object: OK');
 }
 
@@ -199,15 +232,19 @@ async function testRecentItems(runner: QueryRunner, s: Seed, t: Tasks): Promise<
     { type: 'task', id: t.l1ByUlla },
     { type: 'task', id: t.l4ByMarta },
     { type: 'task', id: t.free },
+    { type: 'contract', id: t.visibleContract },
+    { type: 'contract', id: t.hiddenContract },
   ];
   const confirmed = async (person: string) => as(runner, person, async (m) =>
     sorted((await existingRecentItems(m, s.tenantId, items)).existing.map((r) => `${r.type}:${r.id}`)));
   assert.deepEqual(await confirmed(s.persons.marta), sorted([
     `spend_item:${s.lines.L4}`, `capex_item:${s.lines.L2}`, `task:${t.l4ByMarta}`, `task:${t.free}`,
-  ]), 'Marta: L1 and the task of L1 she is not named on are not confirmed');
+    `contract:${t.visibleContract}`,
+  ]), 'Marta: L1, the task of L1 she is not named on and the hidden contract are not confirmed');
   assert.deepEqual(await confirmed(s.persons.ulla), sorted([
     `spend_item:${s.lines.L1}`, `spend_item:${s.lines.L4}`, `capex_item:${s.lines.L2}`,
     `task:${t.l1ByUlla}`, `task:${t.l4ByMarta}`, `task:${t.free}`,
+    `contract:${t.visibleContract}`, `contract:${t.hiddenContract}`,
   ]), 'Ulla: every existing record');
   console.log('  recent items: only the visible records come back to a limited person; everything existing to Ulla: OK');
 }

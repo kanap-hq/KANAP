@@ -1099,6 +1099,9 @@ async function makeDefiners(queryRunner: QueryRunner): Promise<number> {
 
 /** The lot 1 bodies of the two functions this migration replaces (1854400000000). */
 async function restoreLotOneFunctions(queryRunner: QueryRunner): Promise<void> {
+  // Lot 5 adds a fourth column (fingerprint) to the return type: DROP first, a down() after it
+  // must not fail on the changed row type.
+  await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_expected_policies()`);
   await queryRunner.query(`
     CREATE OR REPLACE FUNCTION data_access_expected_policies()
     RETURNS TABLE (policy_name text, table_name text, command text)

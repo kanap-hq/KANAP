@@ -37,6 +37,7 @@ import { TechnologyLinksService, type DeploymentServer, type LinkInput } from '.
 import { technologyReference } from '../../technologies/technology-rows';
 import { type IncidentViewer, taskIncidentVisibilitySql } from '../../incidents/incident-visibility';
 import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
+import { hiddenContractCount } from '../../data-access/hidden-links';
 
 /** At most this many suggestions per rule. */
 export const SUGGESTIONS_PER_RULE = 20;
@@ -121,6 +122,8 @@ export type ApplicationRelations = {
   /** The linked lines `budget_lines` leaves out, counted (`readRelatedBudgetLines`). */
   budget_lines_hidden: number;
   contracts: RelatedContract[] | null;
+  /** The linked contracts the contracts policy hides from a limited person (spec §5.4). */
+  contracts_hidden: number;
   projects: RelatedProject[] | null;
   requests: RelatedRequest[] | null;
   tasks: RelatedTask[] | null;
@@ -206,6 +209,9 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     // pg refuses a query sent while another one runs (deprecated since pg 8, an error in pg 9).
     const budget = await readRelatedBudgetLines(mg, this.fxRates, LINE_LINKS, 'application', tenantId, app.id, year, measure, ctx.access.budget_lines);
     const contracts = ctx.access.contracts ? await listRelatedContracts(mg, CONTRACT_LINKS, tenantId, app.id) : null;
+    // The contracts the policy hides, counted (spec §5.4): a limited person sees "and N contracts
+    // outside your access"; 0 without a query for an unscoped one.
+    const contractsHidden = ctx.access.contracts ? await hiddenContractCount(mg, 'application', app.id) : 0;
     const projects = ctx.access.projects ? await listRelatedProjects(mg, PROJECT_LINKS, tenantId, app.id, ctx.scopes.project) : null;
     const requests = ctx.access.requests ? await this.listRequests(mg, tenantId, app.id, ctx.scopes.request) : null;
     const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, app.id, ctx.scopes.task, ctx.incidentViewer) : null;
@@ -227,6 +233,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       budget_column,
       ...budget,
       contracts,
+      contracts_hidden: contractsHidden,
       projects,
       requests,
       tasks,

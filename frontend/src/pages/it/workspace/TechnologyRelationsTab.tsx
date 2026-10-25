@@ -34,6 +34,8 @@ export type TechnologyRelationsData = {
   /** The linked lines `budget_lines` leaves out, counted: outside the caller's data access, or all without the budget right. */
   budget_lines_hidden?: number;
   contracts: ContractRow[] | null;
+  /** The linked contracts `contracts` leaves out: outside the caller's data access. */
+  contracts_hidden?: number;
   projects: ProjectRow[] | null;
   incidents: IncidentLinkRow[] | null;
   documents: DocumentRow[];
@@ -52,9 +54,9 @@ export async function fetchTechnologyRelations(id: string): Promise<TechnologyRe
 /** The tab badge: the rows of every section the caller can see. */
 export function technologyRelationsCount(data: TechnologyRelationsData | undefined): number | undefined {
   if (!data) return undefined;
-  // The budget lines section also counts the linked lines it does not list (`budget_lines_hidden`).
+  // The sections also count the linked rows they do not list (`budget_lines_hidden`, `contracts_hidden`).
   return [data.budget_lines, data.contracts, data.projects, data.incidents, data.documents, data.links]
-    .reduce((sum, rows) => sum + (rows ? rows.length : 0), data.budget_lines_hidden ?? 0);
+    .reduce((sum, rows) => sum + (rows ? rows.length : 0), (data.budget_lines_hidden ?? 0) + (data.contracts_hidden ?? 0));
 }
 
 /**
@@ -193,7 +195,7 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
 
   const sections: Array<SectionSpec<any>> = [
     budgetLinesSection({ t, rows: data ? data.budget_lines : [], year, columnLabel, currency: lineCurrency, hidden: data?.budget_lines_hidden }),
-    contractsSection({ t, rows: data ? data.contracts : [], lang }),
+    contractsSection({ t, rows: data ? data.contracts : [], lang, hidden: data?.contracts_hidden }),
     projectsSection({ t, rows: data ? data.projects : [], lang }),
     incidentsSection({
       t,

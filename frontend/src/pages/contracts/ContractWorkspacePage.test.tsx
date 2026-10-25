@@ -8,7 +8,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 
 const navigateMock = vi.hoisted(() => vi.fn());
-const auth = vi.hoisted(() => ({ canEdit: true, canAdmin: true }));
+const auth = vi.hoisted(() => ({ canEdit: true, canAdmin: true, dataAccess: null as null | Record<string, unknown> }));
 // A stable `t`: a new one per render would loop the effects that depend on it.
 const i18n = vi.hoisted(() => {
   const t = (key: string, options?: unknown) => {
@@ -27,7 +27,11 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   useNavigate: () => navigateMock,
 }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: (_resource: string, level?: string) => (level === 'admin' ? auth.canAdmin : auth.canEdit), profile: { id: 'user-1', first_name: 'Ada', last_name: 'Admin' } }),
+  useAuth: () => ({
+    hasLevel: (_resource: string, level?: string) => (level === 'admin' ? auth.canAdmin : auth.canEdit),
+    profile: { id: 'user-1', first_name: 'Ada', last_name: 'Admin' },
+    dataAccess: auth.dataAccess,
+  }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'fromage' }) }));
@@ -36,8 +40,8 @@ vi.mock('../../hooks/useContractNav', () => ({
 }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('../../components/MarkdownEditor', () => ({
-  default: ({ value, onChange }: { value: string; onChange: (next: string) => void }) => (
-    <textarea aria-label="markdown-editor" value={value} onChange={(event) => onChange(event.target.value)} />
+  default: ({ value, onChange, disabled }: { value: string; onChange: (next: string) => void; disabled?: boolean }) => (
+    <textarea aria-label="markdown-editor" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} />
   ),
 }));
 
@@ -138,6 +142,7 @@ describe('ContractWorkspacePage', () => {
     vi.clearAllMocks();
     auth.canEdit = true;
     auth.canAdmin = true;
+    auth.dataAccess = null;
     try { window.localStorage?.clear?.(); } catch { /* no storage in this environment */ }
     mocked.get.mockImplementation(async (url: string, options?: { params?: { year: number; column: string } }) => {
       if (url === '/contracts/c-1') return { data: CONTRACT };
@@ -443,6 +448,33 @@ describe('ContractWorkspacePage', () => {
     await screen.findByText('SAP Maintenance');
     expect(screen.getByLabelText('contracts.fields.durationMonths')).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'portfolio:shared.entityTasksSection.newTask' })).toBeNull();
+  });
+
+  it('opens a contract outside the edit scope read only, with no edit command', async () => {
+    auth.dataAccess = { available: true, mode: 'limited', nodes: [], modules: ['contracts'] };
+    const base = mocked.get.getMockImplementation() as (url: string, options?: unknown) => Promise<unknown>;
+    mocked.get.mockImplementation(async (url: string, options?: unknown) => (
+      url === '/contracts/c-1' ? { data: { ...CONTRACT, editable: false, closed_documents_count: 0 } } : base(url, options)
+    ));
+
+    const overview = renderAt('/ops/contracts/c-1/overview');
+    expect(await screen.findByTestId('contract-read-only')).toHaveTextContent('contracts.readOnlyInYourAccess');
+    expect(screen.getByLabelText('contracts.fields.durationMonths')).toBeDisabled();
+    expect(screen.getByLabelText('markdown-editor')).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'portfolio:shared.entityTasksSection.newTask' })).toBeNull();
+    // Deleting is reserved to people with access to all data.
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+    overview.unmount();
+
+    const budget = renderAt('/ops/contracts/c-1/budget');
+    expect(await screen.findByText('BL-2')).toBeInTheDocument();
+    expect(screen.getByLabelText('common:selects.budgetLines')).toBeDisabled();
+    budget.unmount();
+
+    renderAt('/ops/contracts/c-1/relations');
+    expect(await screen.findByText('SAP S/4HANA')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'linksAndFiles.attachFile' })).toBeNull();
+    expect(screen.queryByText('workspace.application.relations.add')).toBeNull();
   });
 
   it('lists the linked budget lines of both natures from the contract route', async () => {

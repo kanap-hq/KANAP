@@ -180,7 +180,7 @@ const NOT_FOUND: Record<BudgetNature, string> = { opex: 'Spend item not found', 
  * of the change says it (business references for projects and requests, names only for contacts).
  * Names come only from here.
  */
-const COPIED_LINKS: ReadonlyArray<{ table: string; key: string; owner: string; columns: string[]; target: string; name: string }> = [
+const COPIED_LINKS: ReadonlyArray<{ table: string; key: string; owner: string; columns: string[]; target: string; name: string; scope?: string }> = [
   {
     table: 'spend_item_contacts', key: 'contacts', owner: 'spend_item_id', columns: ['contact_id', 'role', 'origin'],
     target: 'contacts', name: `NULLIF(btrim(concat_ws(' ', o.first_name, o.last_name)), '')`,
@@ -188,7 +188,9 @@ const COPIED_LINKS: ReadonlyArray<{ table: string; key: string; owner: string; c
   { table: 'application_spend_items', key: 'applications', owner: 'spend_item_id', columns: ['application_id'], target: 'applications', name: 'o.name' },
   { table: 'asset_spend_items', key: 'assets', owner: 'spend_item_id', columns: ['asset_id'], target: 'assets', name: 'o.name' },
   { table: 'technology_spend_items', key: 'technologies', owner: 'spend_item_id', columns: ['technology_id'], target: 'technologies', name: `'TEC-' || o.item_number || ': ' || o.name` },
-  { table: 'contract_spend_items', key: 'contracts', owner: 'spend_item_id', columns: ['contract_id'], target: 'contracts', name: 'o.name' },
+  // A link to a contract the person cannot read stays on the old line: the INSERT trigger of
+  // `contract_spend_items` would refuse it (spec §6.4), and the hidden link is not touched.
+  { table: 'contract_spend_items', key: 'contracts', owner: 'spend_item_id', columns: ['contract_id'], target: 'contracts', name: 'o.name', scope: ` AND EXISTS (SELECT 1 FROM contracts c WHERE c.tenant_id = $1 AND c.id = contract_spend_items.contract_id)` },
   { table: 'portfolio_project_opex', key: 'projects', owner: 'opex_id', columns: ['project_id'], target: 'portfolio_projects', name: `'PRJ-' || o.item_number || ': ' || o.name` },
   { table: 'portfolio_request_opex', key: 'requests', owner: 'opex_id', columns: ['request_id'], target: 'portfolio_requests', name: `'REQ-' || o.item_number || ': ' || o.name` },
 ];
@@ -513,7 +515,7 @@ export class BudgetLineTypeChangeService {
       const rows: Array<{ id: string; name: string | null; role?: string }> = await manager.query(
         `WITH copied AS (
            INSERT INTO ${link.table} (tenant_id, ${link.owner}, ${columns})
-           SELECT tenant_id, $3, ${columns} FROM ${link.table} WHERE tenant_id = $1 AND ${link.owner} = $2
+           SELECT tenant_id, $3, ${columns} FROM ${link.table} WHERE tenant_id = $1 AND ${link.owner} = $2${link.scope ?? ''}
            ON CONFLICT DO NOTHING
            RETURNING ${link.columns[0]} AS id${contact ? ', role::text AS role' : ''}
          )

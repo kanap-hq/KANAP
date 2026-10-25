@@ -22,7 +22,8 @@ import { ALL, applyPerson, EXPECTED, LABELS, LimitedPerson, nextItemNumber, seed
  *   object that does not exist gives NULL.
  * - Tasks: on L1, which Marta cannot read, she reads the tasks she is assignee, owner or observer
  *   of, not the one she only created; a task without object, yes; a contract task follows the
- *   contract (lisible_contrat); a contract itself is readable by everyone until lot 5.
+ *   contract (lisible_contrat). From lot 5 a contract follows the same rule: its company, its
+ *   place, its owner, or one of its readable lines.
  * - Caller limited: the object must be visible to the caller, otherwise NULL; the limited role
  *   can execute the function. Role taken without context: NULL.
  *
@@ -149,8 +150,13 @@ async function testReferenceExample(client: PgClient): Promise<void> {
     ['paul', 'task', cfTask, true],
     ['nina', 'task', cfTask, false],
     ['admin', 'task', tasks.creator, true],
-    ['marta', 'contract', cf, true],
-    ['nina', 'contract', ce, true],
+    ['marta', 'contract', ce, true],
+    ['marta', 'contract', cf, false],
+    ['paul', 'contract', cf, true],
+    ['nina', 'contract', ce, false],
+    ['nina', 'contract', cf, false],
+    ['rob', 'contract', cf, true],
+    ['admin', 'contract', ce, true],
   ];
   for (const [person, type, id, expected] of expectations) {
     assert.equal(await canRead(client, s.persons[person as keyof typeof s.persons], type, id), expected, `${person} reads ${type} ${id}: ${expected}`);
@@ -169,6 +175,9 @@ async function testReferenceExample(client: PgClient): Promise<void> {
     assert.equal(await canRead(client, s.persons.paul, 'task', tasks.creator), null, 'a task Marta only created on L1: hidden from her, NULL');
     assert.equal(await canRead(client, s.persons.nina, 'task', tasks.observer), false, 'Marta observes the task; Nina cannot read it');
     assert.equal(await canRead(client, s.persons.paul, 'task', tasks.observer), true);
+    assert.equal(await canRead(client, s.persons.nina, 'contract', ce), false, 'Marta reads CE: Nina, who does not, is false');
+    assert.equal(await canRead(client, s.persons.ulla, 'contract', cf), null, 'Marta asks about CF, which she cannot read: NULL');
+    assert.equal(await canRead(client, s.persons.ulla, 'contract', ce), true, 'Marta asks about CE for Ulla');
   });
   await inSavepoint(client, async () => {
     await client.query(`SET LOCAL ROLE ${LIMITED_ROLE}`);

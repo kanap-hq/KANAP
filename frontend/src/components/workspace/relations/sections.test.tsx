@@ -4,8 +4,8 @@ import type { TFunction } from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
 import { formatAmount } from '../../../i18n/formatters';
 import api from '../../../api';
-import { assetsSection, budgetLinesSection, searchRelationItems } from './sections';
-import type { BudgetLineRow } from './types';
+import { assetsSection, budgetLinesSection, contractsSection, searchRelationItems } from './sections';
+import type { BudgetLineRow, ContractRow } from './types';
 
 vi.mock('../../../api', () => ({ default: { get: vi.fn() } }));
 
@@ -99,5 +99,29 @@ describe('budget lines outside the data access', () => {
     expect(budgetLinesSection({ ...args, rows: null, hidden: 2 }).outside)
       .toEqual({ count: 2, text: 'workspace.application.relations.outside.count(count=2)' });
     expect(budgetLinesSection({ ...args, rows: [line('a', 1)] }).outside?.count).toBe(0);
+  });
+});
+
+describe('contracts outside the data access', () => {
+  const contract = (id: string): ContractRow => ({
+    id,
+    name: id,
+    supplier_name: null,
+    end_date: null,
+    yearly_amount: null,
+    currency: null,
+    auto_renewal: false,
+    in_renewal_window: false,
+    status: 'enabled',
+  });
+
+  it('says "and N contracts" under visible contracts, "N contracts" alone, and "N contracts" without the module', () => {
+    expect(contractsSection({ t, rows: [contract('k-1')], lang: 'en', hidden: 2 }).outside)
+      .toEqual({ count: 2, text: 'workspace.application.relations.outside_contracts.and(count=2)' });
+    expect(contractsSection({ t, rows: [], lang: 'en', hidden: 1 }).outside)
+      .toEqual({ count: 1, text: 'workspace.application.relations.outside_contracts.only(count=1)' });
+    expect(contractsSection({ t, rows: null, lang: 'en', hidden: 3 }).outside)
+      .toEqual({ count: 3, text: 'workspace.application.relations.outside_contracts.count(count=3)' });
+    expect(contractsSection({ t, rows: [contract('k-1')], lang: 'en' }).outside?.count).toBe(0);
   });
 });

@@ -375,10 +375,13 @@
     "exportCsv": "CSV exportieren",
     "exportTitle": "Verträge exportieren",
     "importTitle": "Verträge importieren",
+    "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff",
+    "outsideYourAccess": "Vertrag außerhalb Ihres Zugriffs",
     "columns": {
       "contract": "Vertrag",
       "supplier": "Lieferant",
       "company": "Unternehmen",
+      "costCenter": "Kostenstelle",
       "start": "Beginn",
       "durationMonths": "Laufzeit (M)",
       "autoRenewal": "Auto-Verlängerung",
@@ -400,6 +403,7 @@
     },
     "list": {
       "toDecide": "Innerhalb von {{days}} Tagen zu entscheiden ({{count}})",
+      "withoutCostCenter": "Ohne Kostenstelle",
       "dueIn_one": "in {{count}} Tag",
       "dueIn_other": "in {{count}} Tagen",
       "dueToday": "heute",
@@ -445,6 +449,7 @@
       "name": "Vertragsname",
       "supplier": "Lieferant",
       "company": "Vertragsunternehmen",
+      "costCenter": "Kostenstelle oder Gruppe",
       "owner": "Verantwortlicher",
       "status": "Status",
       "startDate": "Beginn",
@@ -494,6 +499,10 @@
       "currencyRequired": "Wählen Sie eine Währung.",
       "invalidMonths": "Geben Sie eine ganze Zahl von Monaten ein.",
       "invalidAmount": "Geben Sie einen Betrag mit höchstens zwei Dezimalstellen ein."
+    },
+    "relations": {
+      "closedDocuments_one": "{{count}} Anhang, nur für Personen sichtbar, die diesen Vertrag sehen",
+      "closedDocuments_other": "{{count}} Anhänge, nur für Personen sichtbar, die diesen Vertrag sehen"
     },
     "deadlines": {
       "title": "Fristen",

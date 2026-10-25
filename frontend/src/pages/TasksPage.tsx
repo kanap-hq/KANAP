@@ -50,6 +50,8 @@ type TaskRow = {
   related_object_type: string | null;
   related_object_id: string | null;
   related_object_name: string | null;
+  related_object_hidden?: boolean;
+  related_object_hidden_kind?: 'contract' | null;
   phase_id: string | null;
   phase_name: string | null;
   item_number: number;
@@ -373,6 +375,10 @@ export default function TasksPage() {
   const clickableCellRenderer = useCallback((params: ICellRendererParams<TaskRow, any>) => (
     <LinkCellRenderer
       {...params}
+      // A hidden contract has no name and no reference: its label alone (spec §5.4).
+      value={params.colDef?.field === 'related_object_name' && params.data?.related_object_hidden_kind === 'contract'
+        ? t('ops:contracts.outsideYourAccess')
+        : params.value}
       linkType="internal"
       getHref={(data) => {
         const sp = buildWorkspaceSearch();
@@ -382,7 +388,7 @@ export default function TasksPage() {
       }}
       onNavigate={(href) => navigate(href)}
     />
-  ), [buildWorkspaceSearch, navigate]);
+  ), [buildWorkspaceSearch, navigate, t]);
 
   const columns: EnhancedColDef<TaskRow>[] = useMemo(() => [
     {
