@@ -27,7 +27,7 @@ Los mosaicos siguientes aparecen en su orden por defecto.
 
 ### Presupuesto
 
-Una tabla que cubre tres ejercicios fiscales: el año anterior (A-1), el año actual (A) y el año siguiente (A+1). Cada año tiene tres filas: **OPEX**, **CAPEX** y **Total**. Las columnas de valores son las columnas presupuestarias que muestra su organización, con sus nombres (**Presupuesto**, **Revisión**, **Realizado** y **Aterrizaje previsto** con la configuración estándar, más **Previsión** cuando se muestra). Puede conservar menos en [Personalizar](#personalizar-la-vista-general). Una columna se muestra cuando contiene un importe para al menos una fila. Las columnas ocultas nunca aparecen. Todos los importes se redondean al millar más cercano y se muestran con el sufijo "k" (por ejemplo, `7 846k`).
+Una tabla que cubre tres ejercicios fiscales: el año anterior (A-1), el año actual (A) y el año siguiente (A+1). Cada año tiene tres filas: **OPEX**, **CAPEX** y **Total**. Las columnas de valores son las columnas presupuestarias que muestra su organización, con sus nombres (**Presupuesto**, **Revisión**, **Realizado** y **Aterrizaje previsto** con la configuración estándar, más **Previsión** cuando se muestra). Puede conservar menos en [Personalizar](#personalizar-la-vista-general). Una columna se muestra cuando contiene un importe para al menos una fila. Las columnas ocultas nunca aparecen. Todos los importes se redondean al millar más cercano y se muestran con el sufijo "k" (por ejemplo, `7.846 k`). Los separadores siguen el idioma de la interfaz.
 
 Haga clic en un importe para abrir la [lista de líneas presupuestarias](budget-lines.md) en ese tipo. Un importe **Total** abre la lista con ambos tipos. Haga clic en **Ver** para abrir la lista.
 
@@ -67,13 +67,13 @@ Haga clic en **Ver todo** para abrir la página de Contratos.
 
 ### Top líneas
 
-Las cinco líneas más grandes para el año actual, clasificadas por la columna por defecto. El subtítulo nombra la columna, por ejemplo **Presupuesto, A**. Los importes se redondean a miles con sufijo "k".
+Las cinco líneas más grandes para el año actual, clasificadas por la columna por defecto. El subtítulo nombra la columna, por ejemplo **Presupuesto, A**. Los importes se redondean a miles con sufijo "k", con los separadores del idioma de la interfaz.
 
 Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en **Abrir** para ver el informe completo Top líneas sobre el mismo tipo.
 
 ### Mayores incrementos
 
-Las cinco líneas con el mayor incremento en la columna por defecto comparado con el año anterior. El subtítulo nombra la columna, por ejemplo **Presupuesto, A vs A-1**. Las líneas cuyo importe se mantuvo o bajó no aparecen.
+Las cinco líneas con el mayor incremento en la columna por defecto comparado con el año anterior. El subtítulo nombra la columna, por ejemplo **Presupuesto, A vs A-1**. Las líneas cuyo importe se mantuvo o bajó no aparecen. Un incremento pequeño aparece completo. Uno mayor se acorta, por ejemplo `340,1 k`.
 
 Use las pestañas **Todo** / **OPEX** / **CAPEX** para elegir el tipo. Haga clic en **Abrir** para ver el informe completo Top aumento / disminución sobre el mismo tipo.
 
@@ -103,6 +103,6 @@ Haga clic en **Personalizar** para abrir **Configuración del panel de control d
 ## Consejos
 
 - **Qué columna usan los mosaicos**: Un administrador de presupuesto elige la columna por defecto y los nombres de las columnas en [Columnas presupuestarias](budget-operations.md#columnas-presupuestarias). Los mosaicos y los informes que abren siguen esa elección.
-- **Números redondeados**: Cada importe de la vista general se redondea a miles para una vista compacta. Abra la lista de líneas presupuestarias, o los informes, cuando necesite cifras exactas.
+- **Números redondeados**: Presupuesto, Top líneas, Mi presupuesto y Por centro de coste redondean los importes a miles con una k, por ejemplo `7.846 k`. El mosaico Mayores incrementos muestra un cambio pequeño completo y acorta uno mayor, por ejemplo `340,1 k`. Abra la lista de líneas presupuestarias, o los informes, cuando necesite cifras exactas.
 - **Botones ausentes**: Si no ve los botones **Nueva línea OPEX** o **Nueva línea CAPEX**, su rol actual no tiene el nivel Miembro en Presupuesto. Solicite a su administrador que verifique su acceso.
 - **Mosaicos vacíos**: Un mosaico que muestra "Sin datos" simplemente significa que no hay registros de ese tipo todavía. Una vez que usted o su equipo empiecen a introducir datos, el mosaico se llenará automáticamente.

@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
 import api from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { formatCompactAmount, formatThousandsAmount } from '../i18n/formatters';
 import { useLocale } from '../i18n/useLocale';
 import DashboardTile from './workspace/tiles/DashboardTile';
 import { AmountColumnKey, amountFieldKey, slotYear, YearSlot, yearSlotLabel } from '../components/finance/amountColumns';
@@ -58,36 +59,6 @@ const tileLayoutSx = (wide = false) => (theme: Theme) => ({
 
 /** A tile row that opens what it names: neutral text, the hover background only. */
 const ROW_LINK_SX = { color: 'inherit', textDecoration: 'none', borderRadius: '5px', mx: -0.5, px: 0.5, '&:hover': { bgcolor: 'kanap.bg.hover' } } as const;
-
-function formatNumber(v: any) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '\u2014';
-  const i = Math.round(n);
-  return i.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
-
-function formatCompact(v: any) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '\u2014';
-  try {
-    return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n);
-  } catch {
-    const abs = Math.abs(n);
-    if (abs >= 1_000_000) return `${Math.round(n / 100_000) / 10}M`;
-    if (abs >= 1_000) return `${Math.round(n / 100) / 10}k`;
-    return String(Math.round(n));
-  }
-}
-
-function formatThousandsK(v: any) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '\u2014';
-  const thousands = Math.round(n / 1000);
-  const abs = Math.abs(thousands);
-  const formatted = formatNumber(abs);
-  const sign = thousands < 0 ? '-' : '';
-  return `${sign}${formatted}k`;
-}
 
 type SnapshotTotals = Record<string, number> & { fxMissing?: FxMissing[] };
 
@@ -534,7 +505,7 @@ export default function DashboardPage() {
                           {snapshotColumns.map((column) => (
                             <TableCell key={column.key} align="right">
                               <Box component={RouterLink} to={listHref(row.scope, {})} sx={ROW_LINK_SX}>
-                                {formatThousandsK(row.values[column.key])}
+                                {formatThousandsAmount(row.values[column.key], locale)}
                               </Box>
                             </TableCell>
                           ))}
@@ -620,7 +591,7 @@ export default function DashboardPage() {
                       <>
                         <Typography variant="body1" noWrap sx={{ flex: 1, color: 'inherit' }}>{label}</Typography>
                         <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>{lines}</Typography>
-                        <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right', color: 'inherit' }}>{formatThousandsK(r.value)}</Typography>
+                        <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right', color: 'inherit' }}>{formatThousandsAmount(r.value, locale)}</Typography>
                       </>
                     );
                     // No line in that role: plain text, nothing to open.
@@ -645,7 +616,7 @@ export default function DashboardPage() {
                             <Typography sx={{ fontFamily: 'monospace', fontSize: 11, color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>{line.ref}</Typography>
                           )}
                           <Typography variant="body1" noWrap title={line.name} sx={{ flex: 1, minWidth: 0 }}>{line.name}</Typography>
-                          <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsK(line.value)}</Typography>
+                          <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsAmount(line.value, locale)}</Typography>
                         </Stack>
                       ))}
                     </>
@@ -726,12 +697,12 @@ export default function DashboardPage() {
                       // No exchange rate this year: the amount in the line currency, marked.
                       <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 90, justifyContent: 'flex-end' }}>
                         <Typography variant="body1" sx={{ color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>
-                          {t('ops:shared.fxMissing.localAmount', { amount: formatThousandsK(r.y), currency: r.yMissingRate.currency })}
+                          {t('ops:shared.fxMissing.localAmount', { amount: formatThousandsAmount(r.y, locale), currency: r.yMissingRate.currency })}
                         </Typography>
                         <FxMissingMark currency={r.yMissingRate.currency} year={r.yMissingRate.year} />
                       </Stack>
                     ) : (
-                      <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsK(r.y)}</Typography>
+                      <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsAmount(r.y, locale)}</Typography>
                     )}
                   </Stack>
                 ))}
@@ -761,7 +732,7 @@ export default function DashboardPage() {
                 {topIncreases.map((r) => (
                   <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
                     <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                    <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>+{formatCompact(r.delta)}</Typography>
+                    <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>+{formatCompactAmount(r.delta, locale)}</Typography>
                   </Stack>
                 ))}
                 {topIncreases.length === 0 && (
@@ -800,7 +771,7 @@ export default function DashboardPage() {
                     <Box sx={{ flex: 1, minWidth: 24, height: 4, borderRadius: '2px', bgcolor: 'kanap.sliderTrack', overflow: 'hidden' }}>
                       <Box sx={{ height: '100%', borderRadius: '2px', bgcolor: 'kanap.teal', width: `${largestCostCenter > 0 ? (r.value / largestCostCenter) * 100 : 0}%` }} />
                     </Box>
-                    <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsK(r.value)}</Typography>
+                    <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsAmount(r.value, locale)}</Typography>
                   </Stack>
                 ))}
                 {costCenters.rows.length === 0 && (

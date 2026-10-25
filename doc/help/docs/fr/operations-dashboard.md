@@ -27,7 +27,7 @@ Les tuiles ci-dessous sont présentées dans leur ordre par défaut.
 
 ### Budget
 
-Un tableau couvrant trois exercices : l'année dernière (A-1), l'année en cours (A) et l'année prochaine (A+1). Chaque année a trois lignes : **OPEX**, **CAPEX** et **Total**. Les colonnes de valeurs sont les colonnes budgétaires affichées par votre organisation, sous leurs noms (**Budget**, **Révision**, **Réalisé** et **Atterrissage prévu** avec les réglages standard, plus **Prévision** quand elle est affichée). Vous pouvez en garder moins dans [Personnaliser](#personnaliser-la-vue-densemble). Une colonne s'affiche dès qu'elle contient un montant pour au moins une ligne. Les colonnes masquées n'apparaissent jamais. Tous les montants sont arrondis au millier le plus proche et affichés avec un suffixe « k » (par exemple, `7 846k`).
+Un tableau couvrant trois exercices : l'année dernière (A-1), l'année en cours (A) et l'année prochaine (A+1). Chaque année a trois lignes : **OPEX**, **CAPEX** et **Total**. Les colonnes de valeurs sont les colonnes budgétaires affichées par votre organisation, sous leurs noms (**Budget**, **Révision**, **Réalisé** et **Atterrissage prévu** avec les réglages standard, plus **Prévision** quand elle est affichée). Vous pouvez en garder moins dans [Personnaliser](#personnaliser-la-vue-densemble). Une colonne s'affiche dès qu'elle contient un montant pour au moins une ligne. Les colonnes masquées n'apparaissent jamais. Tous les montants sont arrondis au millier le plus proche et affichés avec un suffixe « k » (par exemple, `7 846 k`). Les séparateurs suivent la langue de l'interface.
 
 Cliquez sur un montant pour ouvrir la [liste des lignes budgétaires](budget-lines.md) sur ce type. Un montant **Total** ouvre la liste sur les deux types. Cliquez sur **Voir** pour ouvrir la liste.
 
@@ -67,13 +67,13 @@ Cliquez sur **Tout voir** pour ouvrir la page Contrats.
 
 ### Top lignes
 
-Les cinq plus grandes lignes de l'année en cours, classées selon la colonne par défaut. Le sous-titre nomme la colonne, par exemple **Budget, A**. Les montants sont arrondis au millier avec un suffixe « k ».
+Les cinq plus grandes lignes de l'année en cours, classées selon la colonne par défaut. Le sous-titre nomme la colonne, par exemple **Budget, A**. Les montants sont arrondis au millier avec un suffixe « k », avec les séparateurs de la langue de l'interface.
 
 Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. Cliquez sur **Ouvrir** pour voir le rapport Top lignes complet sur le même type.
 
 ### Plus fortes hausses
 
-Les cinq lignes avec la plus forte augmentation de la colonne par défaut par rapport à l'année précédente. Le sous-titre nomme la colonne, par exemple **Budget, A vs A-1**. Les lignes dont le montant est stable ou en baisse n'apparaissent pas.
+Les cinq lignes avec la plus forte augmentation de la colonne par défaut par rapport à l'année précédente. Le sous-titre nomme la colonne, par exemple **Budget, A vs A-1**. Les lignes dont le montant est stable ou en baisse n'apparaissent pas. Une faible hausse s'affiche en entier. Une hausse plus importante est raccourcie, par exemple `340,1 k`.
 
 Utilisez les onglets **Tous** / **OPEX** / **CAPEX** pour choisir le type. Cliquez sur **Ouvrir** pour voir le rapport Top hausse / baisse complet sur le même type.
 
@@ -103,6 +103,6 @@ Cliquez sur **Personnaliser** pour ouvrir **Réglages du tableau de bord du budg
 ## Conseils
 
 - **Colonne utilisée par les tuiles** : Un administrateur budgétaire choisit la colonne par défaut et les noms des colonnes dans [Colonnes budgétaires](budget-operations.md#colonnes-budgetaires). Les tuiles et les rapports qu'elles ouvrent suivent ce choix.
-- **Montants arrondis** : Tous les montants de la vue d'ensemble sont arrondis au millier pour une vue compacte. Ouvrez la liste des lignes budgétaires, ou les rapports, lorsque vous avez besoin de chiffres exacts.
+- **Montants arrondis** : Budget, Top lignes, Mon budget et Par centre de coûts arrondissent les montants au millier avec un k, par exemple `7 846 k`. La tuile Plus fortes hausses affiche une faible variation en entier et raccourcit une variation plus importante, par exemple `340,1 k`. Ouvrez la liste des lignes budgétaires, ou les rapports, lorsque vous avez besoin de chiffres exacts.
 - **Boutons manquants** : Si vous ne voyez pas les boutons **Nouvelle ligne OPEX** ou **Nouvelle ligne CAPEX**, votre rôle actuel n'a pas le niveau Membre sur Budget. Demandez à votre administrateur de vérifier votre accès.
 - **Tuiles vides** : Une tuile qui affiche « Pas de données » signifie simplement qu'il n'y a pas encore d'enregistrements de ce type. Dès que vous ou votre équipe commencez à saisir des données, la tuile se remplira automatiquement.
