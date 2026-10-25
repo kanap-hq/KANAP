@@ -598,6 +598,7 @@ export class DataAccessContractPolicies1855300000000 implements MigrationInterfa
     await createContractPlacementTrigger(queryRunner);
     await createContractLinkTriggers(queryRunner);
     await createCanReadFunction(queryRunner);
+    await createHiddenCountFunction(queryRunner);
 
     await queryRunner.query(`SET LOCAL lock_timeout = '5s'`);
     await queryRunner.query(`SELECT data_access_sync_policies()`);
@@ -615,6 +616,7 @@ export class DataAccessContractPolicies1855300000000 implements MigrationInterfa
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`SET LOCAL lock_timeout = '5s'`);
     await restoreLotFourCanRead(queryRunner);
+    await restoreLotTwoHiddenCount(queryRunner);
     await restoreLotTwoFunctions(queryRunner);
     // The expected list is the lot 2 one again: the sync drops the contract policies and recreates
     // the lot 2 ones.
@@ -1085,6 +1087,174 @@ const ACCESS_DEFINER_SIGNATURES = [
   'data_access_hidden_count(text, uuid)',
   'data_access_reference(text, uuid)',
 ];
+
+
+/*
+ * data_access_hidden_count (spec §6.6, §5.4): per type of starting object, the objects the person
+ * cannot read. Types of lot 5:
+ * - `contract_document`: the attachments and document links of a contract the person reads without
+ *   reading it directly (through one of its lines); 0 when the contract is directly readable;
+ * - `application_contract`, `asset_contract`, `technology_contract`: the contracts an application,
+ *   an asset or a technology is linked to that the person cannot read.
+ * As in lot 2, the starting object must be visible to the person (NULL otherwise, as for an
+ * unknown id); outside mode limited the answer is 0, and under the limited role taken without
+ * context it is NULL.
+ */
+const HIDDEN_COUNT_LINKS: Array<{ type: string; object: string; link: string; objectColumn: string; lineColumn: string }> = [
+  { type: 'application', object: 'applications', link: 'application_spend_items', objectColumn: 'application_id', lineColumn: 'spend_item_id' },
+  { type: 'asset', object: 'assets', link: 'asset_spend_items', objectColumn: 'asset_id', lineColumn: 'spend_item_id' },
+  { type: 'technology', object: 'technologies', link: 'technology_spend_items', objectColumn: 'technology_id', lineColumn: 'spend_item_id' },
+  { type: 'project', object: 'portfolio_projects', link: 'portfolio_project_opex', objectColumn: 'project_id', lineColumn: 'opex_id' },
+  { type: 'request', object: 'portfolio_requests', link: 'portfolio_request_opex', objectColumn: 'request_id', lineColumn: 'opex_id' },
+  { type: 'contract', object: 'contracts', link: 'contract_spend_items', objectColumn: 'contract_id', lineColumn: 'spend_item_id' },
+];
+
+/** The starting objects of lot 5 that hide contracts: an application, an asset, a technology. */
+const HIDDEN_CONTRACT_LINKS: Array<{ type: string; object: string; link: string; objectColumn: string }> = [
+  { type: 'application_contract', object: 'applications', link: 'application_contracts', objectColumn: 'application_id' },
+  { type: 'asset_contract', object: 'assets', link: 'asset_contracts', objectColumn: 'asset_id' },
+  { type: 'technology_contract', object: 'technologies', link: 'technology_contracts', objectColumn: 'technology_id' },
+];
+
+const HIDDEN_COUNT_TYPES = [
+  ...HIDDEN_COUNT_LINKS.map((h) => `'${h.type}'`),
+  ...HIDDEN_CONTRACT_LINKS.map((h) => `'${h.type}'`),
+  "'contract_document'",
+];
+
+/**
+ * The number of documents (attachments and links) closed on a contract: only for a contract the
+ * person reads without reading it directly.
+ */
+function hiddenCount(): string {
+  const lineBranches = HIDDEN_COUNT_LINKS.map((h) => `
+      IF p_type = '${h.type}' THEN
+        IF NOT EXISTS (SELECT 1 FROM public.${h.object} o WHERE o.id = p_id AND o.tenant_id = app_current_tenant())
+           ${h.type === 'contract' ? 'OR NOT data_access_contract_visible(p_id)' : ''} THEN
+          RETURN NULL;
+        END IF;
+        SELECT count(*)::int INTO v_count
+        FROM public.spend_items i
+        WHERE ${IN_TENANT('i.')}
+          AND i.id IN (
+            SELECT l.${h.lineColumn} FROM public.${h.link} l WHERE l.${h.objectColumn} = p_id AND ${IN_TENANT('l.')}${h.type === 'contract' ? `
+            UNION
+            SELECT s.id FROM public.spend_items s WHERE s.contract_id = p_id AND ${IN_TENANT('s.')}` : ''})
+          AND NOT coalesce(${readableLine('i.')}, false);
+        RETURN v_count;
+      END IF;`).join('');
+  const documentBranch = `
+      IF p_type = 'contract_document' THEN
+        IF NOT EXISTS (SELECT 1 FROM public.contracts c WHERE c.id = p_id AND ${IN_TENANT('c.')})
+           OR NOT data_access_contract_visible(p_id) THEN
+          RETURN NULL;
+        END IF;
+        IF EXISTS (
+          SELECT 1 FROM public.contracts c
+          WHERE c.id = p_id AND ${IN_TENANT('c.')} AND ${readableContractDirect('c.')}
+        ) THEN
+          RETURN 0;
+        END IF;
+        SELECT (SELECT count(*)::int FROM public.contract_attachments a
+                 WHERE a.contract_id = p_id AND ${IN_TENANT('a.')})
+             + (SELECT count(*)::int FROM public.contract_links l
+                 WHERE l.contract_id = p_id AND ${IN_TENANT('l.')})
+        INTO v_count;
+        RETURN v_count;
+      END IF;`;
+  const contractBranches = HIDDEN_CONTRACT_LINKS.map((h) => `
+      IF p_type = '${h.type}' THEN
+        IF NOT EXISTS (SELECT 1 FROM public.${h.object} o WHERE o.id = p_id AND o.tenant_id = app_current_tenant()) THEN
+          RETURN NULL;
+        END IF;
+        SELECT count(*)::int INTO v_count
+        FROM public.contracts c
+        WHERE ${IN_TENANT('c.')}
+          AND c.id IN (
+            SELECT l.contract_id FROM public.${h.link} l
+            WHERE l.${h.objectColumn} = p_id AND ${IN_TENANT('l.')})
+          AND NOT coalesce(${readableContract('c.', 'definer')}, false);
+        RETURN v_count;
+      END IF;`).join('');
+  return lineBranches + documentBranch + contractBranches;
+}
+
+async function createHiddenCountFunction(queryRunner: QueryRunner): Promise<void> {
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_hidden_count(p_type text, p_id uuid)
+    RETURNS integer
+    LANGUAGE plpgsql
+    STABLE
+    SECURITY DEFINER
+    SET search_path = public, pg_temp
+    AS $fn$
+    DECLARE
+      v_count integer;
+    BEGIN
+      IF p_type IS NULL OR p_type NOT IN (${HIDDEN_COUNT_TYPES.join(', ')}) THEN
+        RAISE EXCEPTION 'data_access_hidden_count: unknown type %', p_type USING ERRCODE = '22023';
+      END IF;
+      IF NOT (${MODE_LIMITED}) THEN
+        RETURN CASE WHEN ${ROLE_TAKEN} THEN NULL ELSE 0 END;
+      END IF;${hiddenCount()}
+      RETURN NULL;
+    END
+    $fn$
+  `);
+  await queryRunner.query(`REVOKE EXECUTE ON FUNCTION data_access_hidden_count(text, uuid) FROM PUBLIC`);
+  await queryRunner.query(`GRANT EXECUTE ON FUNCTION data_access_hidden_count(text, uuid) TO CURRENT_USER`);
+  const [role] = await queryRunner.query(`SELECT to_regrole($1) IS NOT NULL AS present`, [LIMITED_ROLE]);
+  if (role?.present) {
+    await queryRunner.query(`GRANT EXECUTE ON FUNCTION data_access_hidden_count(text, uuid) TO ${LIMITED_ROLE}`);
+  }
+  console.log(`${LOG_PREFIX} data_access_hidden_count: contract_document, application_contract, asset_contract, technology_contract`);
+}
+
+/** The lot 2 body of data_access_hidden_count (1854500000000), restored by down(): line links only. */
+async function restoreLotTwoHiddenCount(queryRunner: QueryRunner): Promise<void> {
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_hidden_count(p_type text, p_id uuid)
+    RETURNS integer
+    LANGUAGE plpgsql
+    STABLE
+    SECURITY DEFINER
+    SET search_path = public, pg_temp
+    AS $fn$
+    DECLARE
+      v_count integer;
+    BEGIN
+      IF p_type IS NULL OR p_type NOT IN (${HIDDEN_COUNT_LINKS.map((h) => `'${h.type}'`).join(', ')}) THEN
+        RAISE EXCEPTION 'data_access_hidden_count: unknown type %', p_type USING ERRCODE = '22023';
+      END IF;
+      IF NOT (${MODE_LIMITED}) THEN
+        RETURN CASE WHEN ${ROLE_TAKEN} THEN NULL ELSE 0 END;
+      END IF;${HIDDEN_COUNT_LINKS.map((h) => `
+      IF p_type = '${h.type}' THEN
+        IF NOT EXISTS (SELECT 1 FROM public.${h.object} o WHERE o.id = p_id AND o.tenant_id = app_current_tenant())
+           ${h.type === 'contract' ? 'OR NOT data_access_contract_visible(p_id)' : ''} THEN
+          RETURN NULL;
+        END IF;
+        SELECT count(*)::int INTO v_count
+        FROM public.spend_items i
+        WHERE ${IN_TENANT('i.')}
+          AND i.id IN (
+            SELECT l.${h.lineColumn} FROM public.${h.link} l WHERE l.${h.objectColumn} = p_id AND ${IN_TENANT('l.')}${h.type === 'contract' ? `
+            UNION
+            SELECT s.id FROM public.spend_items s WHERE s.contract_id = p_id AND ${IN_TENANT('s.')}` : ''})
+          AND NOT coalesce(${readableLine('i.')}, false);
+        RETURN v_count;
+      END IF;`).join('')}
+      RETURN NULL;
+    END
+    $fn$
+  `);
+  await queryRunner.query(`REVOKE EXECUTE ON FUNCTION data_access_hidden_count(text, uuid) FROM PUBLIC`);
+  await queryRunner.query(`GRANT EXECUTE ON FUNCTION data_access_hidden_count(text, uuid) TO CURRENT_USER`);
+  const [role] = await queryRunner.query(`SELECT to_regrole($1) IS NOT NULL AS present`, [LIMITED_ROLE]);
+  if (role?.present) {
+    await queryRunner.query(`GRANT EXECUTE ON FUNCTION data_access_hidden_count(text, uuid) TO ${LIMITED_ROLE}`);
+  }
+}
 
 /** The lot 2 bodies of the two functions this migration replaces (1854500000000). */
 async function restoreLotTwoFunctions(queryRunner: QueryRunner): Promise<void> {
