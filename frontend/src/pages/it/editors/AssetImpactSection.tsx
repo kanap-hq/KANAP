@@ -11,7 +11,7 @@ import { ASSET_IMPACT_CLUSTER_COLORS, getDotColor } from '../../../utils/statusC
 
 type Ref = { id: string; name: string };
 type ImpactAsset = { id: string; reference: string | null; name: string; kind: string; depth: number; relation: 'contains' | 'depends_on' | 'member' | null; via: Ref[] };
-type ImpactCluster = { id: string; reference: string | null; name: string; state: 'degraded' | 'down'; members: number; fallen_members: number; via: Ref[]; via_total: number };
+type ImpactCluster = { id: string; reference: string | null; name: string; state: 'degraded' | 'down'; members: number; fallen_members: number; applications: number | null; via: Ref[]; via_total: number };
 type ImpactApplication = { id: string; reference: string | null; name: string; criticality: string | null; environments: string[]; via: Ref[]; via_total: number };
 type ImpactTechnology = { id: string; reference: string; name: string; versions: string[]; via: Ref[]; via_total: number };
 type ImpactProcess = { id: string; name: string; via: Ref[]; via_total: number };
@@ -86,8 +86,9 @@ export default function AssetImpactSection({ assetId }: Props) {
 
   const assets = data.assets.filter((row) => row.depth > 0);
   // A member's own cluster is already on its page (Membership): the row stays for a cluster that
-  // falls, or that other fallen assets degrade; it leaves when this asset is the only member lost.
-  const clusters = data.clusters.filter((row) => !(row.state === 'degraded' && row.via_total === 1 && row.via[0]?.id === assetId));
+  // falls, that other fallen assets degrade, or that carries applications (they stay up); it leaves
+  // when this asset is the only member lost and the cluster carries nothing.
+  const clusters = data.clusters.filter((row) => !(row.state === 'degraded' && row.via_total === 1 && row.via[0]?.id === assetId && !(row.applications && row.applications > 0)));
   const leftOut = data.clusters.length - clusters.length;
   const applications = data.applications ?? [];
   const processes = data.processes ?? [];

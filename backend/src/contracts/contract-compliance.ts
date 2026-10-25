@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { writeCsv, type CsvLanguage } from '../common/csv-sheet';
@@ -188,7 +189,8 @@ export function complianceReasonsSql(scoped: boolean): string {
                 SELECT s.support_contract_id, s.asset_id FROM asset_support_info s
                  WHERE s.tenant_id = app_current_tenant() AND s.support_contract_id IS NOT NULL
               ) ca
-              JOIN app_asset_assignments aaa ON aaa.tenant_id = app_current_tenant() AND aaa.asset_id = ca.asset_id
+              -- The applications running on the asset (effective: a member runs what its clusters carry).
+              JOIN (${effectiveAssignmentsSql({ tenant: 'app_current_tenant()' })}) aaa ON aaa.tenant_id = app_current_tenant() AND aaa.asset_id = ca.asset_id
               JOIN app_instances ai ON ai.tenant_id = aaa.tenant_id AND ai.id = aaa.app_instance_id
           ) x
           ${scope}
@@ -206,7 +208,8 @@ export function complianceReasonsSql(scoped: boolean): string {
         UNION ALL
         SELECT DISTINCT 'cloud_hosting', loc.hosting_type
           FROM app_instances hi
-          JOIN app_asset_assignments ha ON ha.tenant_id = hi.tenant_id AND ha.app_instance_id = hi.id
+          -- The servers the application runs on (effective: the members of a cluster give their site).
+          JOIN (${effectiveAssignmentsSql({ tenant: 'a.tenant_id', applications: 'ARRAY[a.id]' })}) ha ON ha.tenant_id = hi.tenant_id AND ha.app_instance_id = hi.id
           JOIN assets hs ON hs.tenant_id = hi.tenant_id AND hs.id = ha.asset_id
           JOIN locations loc ON loc.tenant_id = hi.tenant_id AND loc.id = hs.location_id
          WHERE hi.tenant_id = a.tenant_id AND hi.application_id = a.id

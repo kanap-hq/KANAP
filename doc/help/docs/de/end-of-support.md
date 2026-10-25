@@ -37,7 +37,7 @@ Ausgemusterte Assets, deaktivierte Anwendungen und Versionen, die niemand nutzt,
 - Eine Technologieversion betrifft die Server, auf denen sie installiert ist, und die Anwendungen, die sie deklarieren oder auf einem Server gehostet werden, der sie trägt (einschließlich der virtuellen Maschinen in einem solchen Server).
 - Ein Betriebssystem betrifft die Server, die diese Version nutzen, und die Anwendungen, die auf ihnen und auf dem, was sie enthalten, bereitgestellt sind. Seine Zeile öffnet die Technologie.
 - Eine Hardware betrifft ihre Server, was diese enthalten, und die Anwendungen, die auf all diesen bereitgestellt sind. Die Hardware selbst ist keiner ihrer Server.
-- Eine Anwendung betrifft die Server, auf denen sie bereitgestellt ist.
+- Eine Anwendung betrifft die Server, auf denen sie bereitgestellt ist. Bei einem Cluster sind das der Cluster und seine Mitglieder in Betrieb.
 
 Die Server einer Technologie oder eines Betriebssystems werden wie in der Spalte **Server** der [Technologieliste](technologies.md) gezählt: die Server in Betrieb, auf denen die Version installiert ist, ohne Cluster. Die Server einer Hardware sind die Assets, die sie trägt, ohne Cluster. Die Anwendungen eines Clusters zählen weiterhin.
 

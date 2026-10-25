@@ -24,9 +24,11 @@ import { Link as RouterLink } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
 import api from '../../../api';
 import { KanapDialog, PropertyRow, useKanapDialogs } from '../../../components/design';
 import ServerSelect from '../../../components/fields/ServerSelect';
+import ClusterMark from '../../../components/workspace/ClusterMark';
 import DateEUField from '../../../components/fields/DateEUField';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
@@ -39,6 +41,8 @@ import { formatShortDate } from '../../../lib/dateFormat';
 import { APPLICATION_ENVIRONMENTS, compareEnvironments, environmentLabelKey } from '../../../utils/applicationEnvironments';
 import { useApplicationFeedback } from '../applicationFeedback';
 import { invalidateTechnologyLinks } from './technologyLinkQueries';
+import ClusterGroupLine from './ClusterGroupLine';
+import useClusterAssignmentQuestion from './useClusterAssignmentQuestion';
 
 const ENV_OPTIONS = APPLICATION_ENVIRONMENTS;
 
@@ -54,10 +58,28 @@ export type DeploymentRecord = {
   notes: string | null;
 };
 
+/** A member in service that inherits the row of its cluster. */
+type InheritingMember = {
+  asset_id: string;
+  name: string;
+  asset_reference?: string | null;
+};
+
+/** A deployment and role assigned directly to every member of a cluster (A7). */
+type GroupableSet = {
+  cluster_id: string;
+  cluster_name: string;
+  app_instance_id: string;
+  role: string;
+  member_ids: string[];
+};
+
 type Assignment = {
   id: string;
   app_instance_id: string;
   server_id: string;
+  /** On a cluster's row: the members that inherit it. */
+  members?: InheritingMember[];
   role: string;
   since_date: string | null;
   notes: string | null;
@@ -69,7 +91,9 @@ type Assignment = {
     asset_reference?: string | null;
     provider: string;
     environment: string;
+    is_cluster?: boolean;
   };
+  asset?: { is_cluster?: boolean };
 };
 
 type DeploymentDraft = {
@@ -96,7 +120,13 @@ type DeploymentsEditorProps = {
   deployments: DeploymentRecord[];
   onRefresh: () => Promise<void>;
   readOnly?: boolean;
+  /** The application's name, for the questions about its servers. */
+  applicationName?: string;
 };
+
+function assetHref(reference: string | null | undefined, id: string) {
+  return reference ? `/it/assets/${reference}/overview` : `/it/assets/${id}`;
+}
 
 function formatDate(value: string | null | undefined, locale: string) {
   return formatShortDate(value ? String(value).slice(0, 10) : null, locale, { year: 'always', empty: '—' });
@@ -119,6 +149,7 @@ export default function DeploymentsEditor({
   deployments,
   onRefresh,
   readOnly = false,
+  applicationName,
 }: DeploymentsEditorProps) {
   const theme = useTheme();
   const { t } = useTranslation(['it', 'common', 'errors']);
@@ -132,6 +163,8 @@ export default function DeploymentsEditor({
     return key ? t(key) : value;
   }, [t]);
   const [assignments, setAssignments] = React.useState<Record<string, Assignment[]>>({});
+  const [groupable, setGroupable] = React.useState<GroupableSet[]>([]);
+  const { resolveTargets, questionDialog } = useClusterAssignmentQuestion();
   const [deploymentDialogOpen, setDeploymentDialogOpen] = React.useState(false);
   const [deploymentDraft, setDeploymentDraft] = React.useState<DeploymentDraft>(() => createDeploymentDraft());
   const [assignmentDialogOpen, setAssignmentDialogOpen] = React.useState(false);
@@ -170,12 +203,13 @@ export default function DeploymentsEditor({
   const deploymentIds = deployments.map((deployment) => deployment.id).join(',');
   const loadAssignments = React.useCallback(async () => {
     try {
-      const res = await api.get<{ items: Assignment[] }>(`/applications/${applicationId}/deployment-servers`);
+      const res = await api.get<{ items: Assignment[]; groupable?: GroupableSet[] }>(`/applications/${applicationId}/deployment-servers`);
       const byDeployment: Record<string, Assignment[]> = {};
       for (const row of res.data.items || []) {
         (byDeployment[row.app_instance_id] ||= []).push(row);
       }
       setAssignments(byDeployment);
+      setGroupable(res.data.groupable || []);
     } catch (err: any) {
       setError(getApiErrorMessage(err, t, t('workspace.application.deployments.loadAssignmentsFailed')));
     }
@@ -184,6 +218,7 @@ export default function DeploymentsEditor({
   React.useEffect(() => {
     if (!deploymentIds) {
       setAssignments({});
+      setGroupable([]);
       return;
     }
     void loadAssignments();
@@ -288,8 +323,29 @@ export default function DeploymentsEditor({
     setSaving(true);
     setDialogError(null);
     try {
+      const stored = assignments[assignmentDraft.deploymentId] || [];
+      const original = assignmentDraft.assignmentId ? stored.find((row) => row.id === assignmentDraft.assignmentId) : undefined;
+      let serverId = assignmentDraft.server_id;
+      // A member of a cluster: assign to the cluster, or to this server only (A2, A3). A cluster:
+      // say the members' rows it replaces (A4).
+      if (serverId && (!original || original.server_id !== serverId || original.role !== assignmentDraft.role)) {
+        const deployment = deployments.find((candidate) => candidate.id === assignmentDraft.deploymentId);
+        const outcome = await resolveTargets({
+          assetIds: [serverId],
+          subject: `${applicationName || t('components.clusterAssignment.thisApplication')} (${envLabel(deployment?.environment || '')}, ${labelFor('serverRole', assignmentDraft.role) || assignmentDraft.role})`,
+          role: assignmentDraft.role,
+          rows: stored.filter((row) => row.id !== assignmentDraft.assignmentId).map((row) => ({ asset_id: row.server_id, role: row.role })),
+          movingFrom: original?.server_id,
+        });
+        if (outcome.status === 'cancelled') return;
+        if (outcome.status === 'inherited') {
+          setDialogError(t('errors:assignment_inherited', { cluster: outcome.cluster }));
+          return;
+        }
+        serverId = outcome.targets[0];
+      }
       const payload = {
-        server_id: assignmentDraft.server_id,
+        server_id: serverId,
         role: assignmentDraft.role,
         since_date: assignmentDraft.since_date || null,
         notes: assignmentDraft.notes.trim() ? assignmentDraft.notes.trim() : null,
@@ -310,7 +366,26 @@ export default function DeploymentsEditor({
     } finally {
       setSaving(false);
     }
-  }, [assignmentDraft, feedback, loadAssignments, onRefresh, queryClient, t]);
+  }, [applicationName, assignmentDraft, assignments, deployments, envLabel, feedback, labelFor, loadAssignments, onRefresh, queryClient, resolveTargets, t]);
+
+  /** A7: the cluster takes the assignment the members carry one by one (the server replaces their rows). */
+  const assignGroupToCluster = React.useCallback(async (set: GroupableSet) => {
+    if (!(await dialogs.confirm({
+      message: t('components.clusterAssignment.groupConfirm', { application: applicationName || t('components.clusterAssignment.thisApplication') }),
+      title: t('components.clusterAssignment.title'),
+      confirmLabel: t('components.clusterAssignment.assignToCluster'),
+    }))) return;
+    setError(null);
+    try {
+      await api.post(`/app-deployments/${set.app_instance_id}/servers`, { server_id: set.cluster_id, role: set.role });
+      feedback.info(t('components.clusterAssignment.assignedToCluster'));
+      await loadAssignments();
+      await onRefresh();
+      void invalidateTechnologyLinks(queryClient);
+    } catch (err: any) {
+      setError(getApiErrorMessage(err, t, t('workspace.application.deployments.saveAssignmentFailed')));
+    }
+  }, [applicationName, dialogs, feedback, loadAssignments, onRefresh, queryClient, t]);
 
   const deleteAssignment = React.useCallback(async (deploymentId: string, assignmentId: string) => {
     if (!(await dialogs.confirm({
@@ -343,7 +418,9 @@ export default function DeploymentsEditor({
       )}
 
       {sortedDeployments.map((deployment) => {
-        const rows = assignments[deployment.id] || [];
+        // The clusters' rows come first, each followed by the members that inherit it.
+        const rows = [...(assignments[deployment.id] || [])].sort((a, b) => Number(!!b.asset?.is_cluster) - Number(!!a.asset?.is_cluster));
+        const sets = readOnly ? [] : groupable.filter((set) => set.app_instance_id === deployment.id);
         const lifecycleColor = getDotColor(LIFECYCLE_COLORS[deployment.lifecycle] || 'default', theme.palette.mode);
         return (
           <Box key={deployment.id}>
@@ -435,19 +512,23 @@ export default function DeploymentsEditor({
                   </TableRow>
                 )}
                 {rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <React.Fragment key={row.id}>
+                  <TableRow>
                     <TableCell sx={(muiTheme) => ({ fontFamily: MONO_FONT_FAMILY, fontSize: '12px !important', color: `${muiTheme.palette.kanap.text.secondary} !important` })}>
                       {row.server?.name ? (
-                        <MLink
-                          component={RouterLink}
-                          to={row.server.asset_reference ? `/it/assets/${row.server.asset_reference}/overview` : `/it/assets/${row.server.id || row.server_id}`}
-                          underline="hover"
-                          color="inherit"
-                          onClick={(event: React.MouseEvent) => event.stopPropagation()}
-                          sx={{ '&:hover': { color: 'primary.main' } }}
-                        >
-                          {row.server.name}
-                        </MLink>
+                        <>
+                          <MLink
+                            component={RouterLink}
+                            to={assetHref(row.server.asset_reference, row.server.id || row.server_id)}
+                            underline="hover"
+                            color="inherit"
+                            onClick={(event: React.MouseEvent) => event.stopPropagation()}
+                            sx={{ '&:hover': { color: 'primary.main' } }}
+                          >
+                            {row.server.name}
+                          </MLink>
+                          {row.asset?.is_cluster && <Box component="span" sx={{ ml: '6px' }}><ClusterMark /></Box>}
+                        </>
                       ) : '—'}
                     </TableCell>
                     <TableCell>{labelFor('serverRole', row.role) || row.role || '—'}</TableCell>
@@ -466,9 +547,44 @@ export default function DeploymentsEditor({
                       </TableCell>
                     )}
                   </TableRow>
+                  {(row.members || []).map((member) => (
+                    <TableRow key={`${row.id}-${member.asset_id}`} data-inherited="true">
+                      <TableCell sx={(muiTheme) => ({ fontFamily: MONO_FONT_FAMILY, fontSize: '12px !important', color: `${muiTheme.palette.kanap.text.tertiary} !important`, pl: '24px !important' })}>
+                        <Tooltip title={t('components.clusterAssignment.inheritedFrom', { cluster: row.server?.name || '' })}>
+                          <SubdirectoryArrowRightIcon aria-hidden sx={{ fontSize: 13, mr: '4px', verticalAlign: 'text-bottom' }} />
+                        </Tooltip>
+                        <MLink
+                          component={RouterLink}
+                          to={assetHref(member.asset_reference, member.asset_id)}
+                          underline="hover"
+                          color="inherit"
+                          sx={{ '&:hover': { color: 'primary.main' } }}
+                        >
+                          {member.name}
+                        </MLink>
+                      </TableCell>
+                      <TableCell sx={(muiTheme) => ({ color: `${muiTheme.palette.kanap.text.tertiary} !important` })}>{labelFor('serverRole', row.role) || row.role || '—'}</TableCell>
+                      <TableCell />
+                      <TableCell />
+                      {!readOnly && <TableCell />}
+                    </TableRow>
+                  ))}
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>
+            {sets.map((set) => {
+              const names = set.member_ids.map((memberId) => rows.find((row) => row.server_id === memberId)?.server?.name).filter(Boolean).join(', ');
+              const subject = labelFor('serverRole', set.role) || set.role;
+              return (
+                <ClusterGroupLine
+                  key={`${set.cluster_id}|${set.role}`}
+                  text={t('components.clusterAssignment.groupLine', { subject, members: names })}
+                  actionLabel={t('components.clusterAssignment.groupAssignTo', { cluster: set.cluster_name })}
+                  onAssign={() => void assignGroupToCluster(set)}
+                />
+              );
+            })}
           </Box>
         );
       })}
@@ -572,6 +688,8 @@ export default function DeploymentsEditor({
         </Stack>
       </KanapDialog>
 
+      {questionDialog}
+
       <KanapDialog
         open={assignmentDialogOpen}
         title={assignmentDraft?.assignmentId ? t('workspace.application.deployments.editServerAssignment') : t('workspace.application.deployments.newServerAssignment')}
@@ -588,7 +706,6 @@ export default function DeploymentsEditor({
               <ServerSelect
                 value={assignmentDraft.server_id}
                 onChange={(value) => setAssignmentDraft((prev) => (prev ? { ...prev, server_id: value } : prev))}
-                allowClusters={false}
                 hideLabel
                 label={t('common:selects.server')}
                 textFieldSx={drawerFieldValueSx}

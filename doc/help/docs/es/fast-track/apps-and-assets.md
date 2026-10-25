@@ -209,7 +209,7 @@ Haga clic en **Crear** para desbloquear el espacio de trabajo completo. La pesta
 
 Vaya a la pestaña **Operación** para añadir las **Tecnologías** que lleva el servidor, con sus versiones. Añada Windows Server, Ubuntu u otra tecnología de la familia **Sistema operativo**: pasa a ser el sistema operativo del servidor.
 
-Si este activo es un clúster, active el conmutador **Clúster** en el panel **Propiedades** y luego añada sus servidores miembros con **Editar miembros** en la pestaña **Dependencias**.
+Si este activo es un clúster, active el conmutador **Clúster** en el panel **Propiedades** y luego añada sus servidores miembros con **Editar miembros** en la pestaña **Dependencias**. Una aplicación que se ejecuta en cada miembro se asigna al clúster: consulte [Aplicaciones en un clúster](../assets.md#applications-on-a-cluster).
 
 ---
 

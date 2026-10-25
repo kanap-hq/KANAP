@@ -247,7 +247,7 @@ async function testAssistantMembers() {
     const node2 = await asset(runner, tenantId, 'ai-node-2');
     await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
     const audit = { log: async (entry: AuditEntry) => { entries.push(entry); } };
-    const rel = new AiRelationMutationSupportService(audit as any, undefined as any, new AiTaskMutationSupportService());
+    const rel = new AiRelationMutationSupportService(audit as any, undefined as any, new AiTaskMutationSupportService(), undefined as any);
     const context: any = { manager: runner.manager, tenantId, userId: null };
     const prepare = (ref: string, change: { add?: string[]; remove?: string[] }) =>
       rel.prepareUpdatePreview(context, { entity_type: 'assets', ref, relation: 'cluster_members', ...change });

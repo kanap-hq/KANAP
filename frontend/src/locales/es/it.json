@@ -2121,7 +2121,6 @@
       },
       "assignments": {
         "addAssignment": "Añadir asignación",
-        "clusterCannotHost": "Los activos de clúster no pueden alojar asignaciones de aplicaciones. Asigne los hosts miembros.",
         "noAssignments": "Aún no hay asignaciones.",
         "assignmentAdded": "Asignación añadida",
         "application": "Aplicación",
@@ -2161,7 +2160,13 @@
         "narrowSearch": "Afine la búsqueda",
         "removeOsTitle": "¿Quitar el sistema operativo?",
         "removeOsMessage": "Un clúster con miembros no tiene sistema operativo: se quitará {{os}}.",
-        "removeOsConfirm": "Quitar y guardar"
+        "removeOsConfirm": "Quitar y guardar",
+        "removeMembersTitle": "¿Quitar miembros?",
+        "removeMemberLine": "{{member}} ya no alojará {{applications}}.",
+        "removeAnyway": "Quitar de todos modos",
+        "andOthers_one": "{{count}} más",
+        "andOthers_other": "{{count}} más",
+        "differentEnvironment": "Entorno distinto al del clúster"
       },
       "newAsset": "Nuevo activo",
       "untitled": "Activo sin nombre",
@@ -3198,6 +3203,25 @@
     },
     "versionTimeline": {
       "title": "Historial de versiones"
+    },
+    "clusterAssignment": {
+      "title": "¿Asignar al clúster?",
+      "inCluster_one": "{{server}} forma parte de {{cluster}}. Su único miembro alojará {{subject}}.",
+      "inCluster_other": "{{server}} forma parte de {{cluster}}. Sus {{count}} miembros alojarán {{subject}}.",
+      "inClusters": "{{server}} forma parte de varios clústeres.",
+      "memberCount_one": "{{count}} miembro",
+      "memberCount_other": "{{count}} miembros",
+      "assignToCluster": "Asignar al clúster",
+      "assignedToCluster": "Asignado al clúster",
+      "serverOnly": "Solo este servidor",
+      "absorbed_one": "Se sustituirá la asignación directa de {{names}}.",
+      "absorbed_other": "Se sustituirán las asignaciones directas de {{names}}.",
+      "via": "vía",
+      "inheritedFrom": "Vía {{cluster}}",
+      "groupLine": "{{subject}} en {{members}}",
+      "groupAssignTo": "Asignar a {{cluster}}",
+      "groupConfirm": "{{application}} seguirá disponible mientras un miembro siga activo.",
+      "thisApplication": "La aplicación"
     }
   },
   "enums": {

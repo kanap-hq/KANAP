@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
 import { AuditService } from '../../audit/audit.service';
 import { assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { languageOf, writeCsv } from '../../common/csv-sheet';
@@ -25,7 +26,10 @@ import { inServiceSql } from '../technology-reach.service';
  *
  * A domain controller, for the domains section, is an asset of the domain (`assets.domain`), not
  * retired, assigned the server role `domain-controller` on an instance in service, or carrying an
- * installed technology of the `directory` family that is not retired. The control point uses the
+ * installed technology of the `directory` family that is not retired. Roles and hosted
+ * applications read the effective assignments (`effectiveAssignmentsSql`): a deployment assigned
+ * to a cluster is judged on the zone of the cluster and of each member in service, as if assigned
+ * to each of them. The control point uses the
  * role only. Each control counts distinct assets: exactly the rows of the asset list filtered on it.
  * Retired assets and retired technologies are left out of every control. A deprecated or unknown
  * zone is shown only while an asset or a directory service still carries it. Every statement
@@ -247,7 +251,7 @@ function controllersSql(role: string, most: string, ids?: string): string {
   const only = ids ? `AND ax.id = ANY(${ids}::uuid[])` : '';
   return `SELECT DISTINCT ax.id AS asset_id
     FROM assets ax
-    JOIN app_asset_assignments aa ON aa.tenant_id = $1 AND aa.asset_id = ax.id AND aa.role = ${role}
+    JOIN (${effectiveAssignmentsSql({ tenant: '$1', assets: ids })}) aa ON aa.tenant_id = $1 AND aa.asset_id = ax.id AND aa.role = ${role}
     JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
     JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
     WHERE ax.tenant_id = $1 AND ax.status <> 'retired'
@@ -297,7 +301,7 @@ function trustSql(ranks: string): string {
 /** Applications in service hosted on assets of the most sensitive zone. One row per assignment. */
 function hostedFrom(most: string, ids?: string): string {
   const only = ids ? `AND ax.id = ANY(${ids}::uuid[])` : '';
-  return `FROM app_asset_assignments aa
+  return `FROM (${effectiveAssignmentsSql({ tenant: '$1', assets: ids })}) aa
     JOIN assets ax ON ax.tenant_id = $1 AND ax.id = aa.asset_id AND ax.status <> 'retired'
       AND ${zoneOf('ax')} = ${most}
     JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
@@ -325,7 +329,7 @@ export class AdministrationViewService {
     );
     const hosted: Array<{ zone: string; count: number }> = await mg.query(
       `SELECT ${zoneOf('a')} AS zone, count(DISTINCT ap.id)::int AS count
-         FROM app_asset_assignments aa
+         FROM (${effectiveAssignmentsSql({ tenant: '$1' })}) aa
          JOIN assets a ON a.tenant_id = $1 AND a.id = aa.asset_id AND a.status <> 'retired'
          JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
          JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
@@ -628,11 +632,11 @@ export class AdministrationViewService {
          FROM assets a
         WHERE a.tenant_id = $1 AND a.domain = ANY($2::text[]) AND a.status <> 'retired'
           AND (
-            EXISTS (
-              SELECT 1 FROM app_asset_assignments aa
+            a.id IN (
+              SELECT aa.asset_id FROM (${effectiveAssignmentsSql({ tenant: '$1' })}) aa
                 JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
                 JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
-               WHERE aa.tenant_id = $1 AND aa.asset_id = a.id AND aa.role = $3
+               WHERE aa.role = $3
             )
             OR EXISTS (
               SELECT 1 FROM asset_technologies at
@@ -797,10 +801,9 @@ export class AdministrationViewService {
     );
     const applications: AppLink[] = await mg.query(
       `SELECT DISTINCT aa.asset_id, ap.id AS application_id, ap.name, ap.sequential_id AS reference
-         FROM app_asset_assignments aa
+         FROM (${effectiveAssignmentsSql({ tenant: '$1', assets: '$2' })}) aa
          JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
-         JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
-        WHERE aa.tenant_id = $1 AND aa.asset_id = ANY($2::uuid[])`,
+         JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}`,
       [tenantId, ids],
     );
     const techByAsset = new Map<string, TechLink[]>();

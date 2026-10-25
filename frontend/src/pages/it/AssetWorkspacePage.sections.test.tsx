@@ -115,7 +115,7 @@ function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | ((
     if (url === '/locations') return { data: { items: [] } };
     if (url === '/locations/loc-1') return { data: { id: 'loc-1', location_reference: 'LOC-1', name: 'Paris', hosting_type: 'on_prem' } };
     if (url.endsWith('/sub-items')) return { data: [] };
-    if (url.endsWith('/assignments')) return { data: [] };
+    if (url.endsWith('/assignments')) return { data: { items: [], groupable: [] } };
     if (url === '/assets/asset-1/relations-tab') return { data: { counts: wire.counts } };
     if (url === '/assets') return { data: { items: wire.candidates } };
     if (url.endsWith('/members')) return { data: { items: wire.members } };

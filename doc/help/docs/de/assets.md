@@ -43,7 +43,7 @@ Die Asset-Liste bietet Ihnen eine filter- und sortierbare Übersicht über jedes
 | **OS** | Betriebssystem: die als Betriebssystem des Servers markierte Technologie, mit ihrer Version |
 | **Netzwerkzone** | Netzwerksegment (vom Subnetz abgeleitet) |
 | **Lebenszyklus** | Aktueller Lebenszyklus-Status |
-| **Zuweisungen** | Anzahl der Anwendungszuweisungen |
+| **Zuweisungen** | Anzahl der Anwendungszuweisungen, einschließlich der von seinen Clustern geerbten |
 | **Erstellt** | Wann der Datensatz erstellt wurde |
 
 **Standardsortierung**: **Erstellt** absteigend (neueste zuerst).
@@ -79,7 +79,7 @@ Die Sortierung nach **Zu prüfende Schwachstellen** ordnet die Assets nach ihren
 **Aktionen**:
 - **Asset hinzufügen**: öffnet ein Menü (`infrastructure:member`). **Asset hinzufügen** legt ein Asset an; **Cluster hinzufügen** legt eines mit bereits eingeschaltetem Schalter **Cluster** an
 - **CSV importieren** / **CSV exportieren**: Massenoperationen (`infrastructure:admin`)
-- **Asset löschen** (ausgewählte Zeilen): Ausgewählte Assets entfernen (`infrastructure:admin`). Ein Asset, das noch Anwendungen zugeordnet oder mit Verbindungen verknüpft ist, kann nicht gelöscht werden: Entfernen Sie es zuerst daraus. Vor dem Löschen nennt die Bestätigung die behaltenen Assets mit dem Grund, und was die anderen mitnehmen (siehe [Einen Cluster oder ein Mitglied löschen](#deleting-a-cluster-or-a-member))
+- **Asset löschen** (ausgewählte Zeilen): Ausgewählte Assets entfernen (`infrastructure:admin`). Ein Asset, das noch Anwendungen zugeordnet oder mit Verbindungen verknüpft ist, kann nicht gelöscht werden: Entfernen Sie es zuerst daraus. Eine Zuordnung, die das Asset nur von seinem Cluster erbt, hindert nicht daran. Vor dem Löschen nennt die Bestätigung die behaltenen Assets mit dem Grund, und was die anderen mitnehmen (siehe [Einen Cluster oder ein Mitglied löschen](#deleting-a-cluster-or-a-member))
 
 ---
 
@@ -90,7 +90,22 @@ Assets können in Cluster organisiert werden:
 - **Reguläres Asset**: Eine einzelne Infrastruktur-Instanz
 - **Cluster**: Eine Gruppe von Assets, die als eine einzige logische Einheit fungiert
 
-Um einen Cluster anzulegen, wählen Sie **Cluster hinzufügen** im Menü **Asset hinzufügen**, oder schalten Sie den Schalter **Cluster** in der Eigenschaftsleiste eines Assets ein. Ein Cluster kann Endpunkt von Verbindungen sein. Anwendungen werden den Mitglieds-Hosts zugeordnet.
+Um einen Cluster anzulegen, wählen Sie **Cluster hinzufügen** im Menü **Asset hinzufügen**, oder schalten Sie den Schalter **Cluster** in der Eigenschaftsleiste eines Assets ein. Ein Cluster kann Endpunkt von Verbindungen sein.
+
+### Anwendungen auf einem Cluster { #applications-on-a-cluster }
+
+Eine Anwendung kann einem Cluster zugeordnet werden, im Reiter **Bereitstellungen** der Anwendung oder im Reiter **Betrieb** des Clusters. Seine Mitglieder in Betrieb hosten die Anwendung dann mit der Rolle der Zuordnung des Clusters. Ein später hinzugefügtes Mitglied hostet sie ebenfalls. Ein aus dem Cluster entferntes Mitglied hostet sie nicht mehr. Ein ausgemustertes Mitglied erbt nichts, und ein ausgemusterter Cluster gibt nichts weiter.
+
+Wo zugeordnet wird, hängt vom Cluster ab:
+
+- **Failover-Cluster** (zum Beispiel SQL Server Always On): Die Anwendung läuft auf jedem Knoten. Ordnen Sie sie dem Cluster zu.
+- **Virtualisierungscluster** (zum Beispiel vSphere): Die Anwendungen laufen in den virtuellen Maschinen, die der Cluster enthält. Ordnen Sie jede Anwendung ihrer virtuellen Maschine zu. Nur die Plattform selbst, etwa vSphere mit der Rolle Virtualisierung, wird dem Cluster zugeordnet.
+
+Ein Mitglied führt aus, was seinem Cluster zugeordnet ist. Ein Asset, das der Cluster enthält, läuft darin und erbt nichts.
+
+Wenn Sie eine Anwendung einem Mitglied eines Clusters zuordnen, fragt KANAP **Dem Cluster zuordnen?**: **Dem Cluster zuordnen** legt die Zuordnung für alle Mitglieder auf den Cluster, **Nur diesem Server** behält sie auf diesem Server. Die Frage nennt die Mitglieder, deren eigene Zuordnung mit derselben Umgebung und Rolle durch die des Clusters ersetzt wird. Die Zuordnung des Clusters übernimmt dann das früheste Datum **Seit** und ihre Notizen. Hostet das Mitglied die Anwendung in dieser Rolle bereits über seinen Cluster, wird nichts angelegt und eine Meldung sagt es. Eine Zuordnung über den Assistenten folgt denselben Regeln, ohne die Frage.
+
+Überall, wo KANAP liest, wo eine Anwendung läuft, zählt es die Mitglieder des Clusters: die Schwachstellen und das Support-Ende der Anwendung, ihren Hosting-Typ (ein Cluster ohne Standort übernimmt den Hosting-Typ seiner Mitglieder), die Administrationszonen, die Anwendungen eines Standorts oder eines Vertrags auf einem Server, den Assistenten und die Wissensdatenbank. In der Auswirkung eines ausgefallenen Mitglieds ist der Cluster beeinträchtigt, und seine Anwendungen laufen weiter. Siehe [Abhängigkeiten](#dependencies).
 
 Die Mitglieder werden im Reiter **Abhängigkeiten** des Clusters verwaltet. Siehe [Abhängigkeiten](#dependencies). Die Regeln:
 
@@ -184,9 +199,11 @@ Der Reiter Betrieb zeigt, was auf dem Asset läuft: die Anwendungen, die es host
 | **Seit** | Datum, an dem der Server zugeordnet wurde |
 | **Notizen** | Freitext-Notizen |
 
-Klicken Sie auf **Zuordnung hinzufügen**, um dieses Asset einer Anwendungs-Bereitstellung zuzuordnen. Wählen Sie die Anwendung, dann die Umgebung (die Anwendung muss bereits eine Bereitstellung in dieser Umgebung haben), dann die Rolle und optional Datum und Notizen. Der Stift am Ende einer Zeile öffnet die Anwendung: Die Zuordnung wird in ihrem Reiter **Bereitstellungen** bearbeitet. Das Papierkorbsymbol entfernt die Zuordnung nach einer Bestätigung.
+Klicken Sie auf **Zuordnung hinzufügen**, um dieses Asset einer Anwendungs-Bereitstellung zuzuordnen (`applications:member`). Wählen Sie die Anwendung, dann die Umgebung (die Anwendung muss bereits eine Bereitstellung in dieser Umgebung haben), dann die Rolle und optional Datum und Notizen. Bei einem Mitglied eines Clusters fragt KANAP zuerst, ob dem Cluster oder nur diesem Server zugeordnet wird. Siehe [Anwendungen auf einem Cluster](#applications-on-a-cluster). Der Stift am Ende einer Zeile öffnet die Anwendung: Die Zuordnung wird in ihrem Reiter **Bereitstellungen** bearbeitet. Das Papierkorbsymbol entfernt die Zuordnung nach einer Bestätigung. **Zuordnung hinzufügen** ist nicht verfügbar, solange in **IT-Landschaft > Einstellungen** keine Serverrolle eingerichtet ist.
 
-Bei einem Cluster fordert ein Hinweis über der Tabelle Sie auf, stattdessen die Mitglieds-Hosts zuzuordnen, und **Zuordnung hinzufügen** ist nicht verfügbar. Die Schaltfläche ist auch nicht verfügbar, solange in **IT-Landschaft > Einstellungen** keine Serverrolle eingerichtet ist.
+Bei einem Mitglied zeigt eine dem Cluster zugeordnete Anwendung „über“ und den Namen des Clusters, ohne Stift und Papierkorb: Ändern Sie sie am Cluster.
+
+Ist eine Anwendung jedem Mitglied in Betrieb eines Clusters direkt zugeordnet, nennt eine Zeile unter der Tabelle des Clusters diese Mitglieder, mit **Dem Cluster zuordnen**. Nach einer Bestätigung übernimmt der Cluster die Zuordnung, und die eigenen Zuordnungen der Mitglieder werden entfernt. Die Anwendung bleibt dann verfügbar, solange ein Mitglied läuft.
 
 **Technologien**: was der Server trägt, zum Beispiel Windows Server, SQL Server, vSphere oder Active Directory. Spalten: **Ref.**, **Name**, **Familie**, **Version** und, wenn der Server eine Technologie über einen anderen trägt, **Über**.
 
@@ -292,7 +309,7 @@ Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede T
 
 **Cluster**:
 
-- Bei einem **Cluster** listet der Abschnitt **Mitglieder** die Mitglieds-Assets auf (Name, Umgebung, Status, Betriebssystem). Klicken Sie auf einen Namen, um dieses Asset zu öffnen. **Mitglieder hinzufügen** (bei einem Cluster ohne Mitglieder) oder **Mitglieder bearbeiten** öffnet einen Suchdialog. Er bietet nur einfache Assets an, nie einen Cluster oder den Cluster selbst.
+- Bei einem **Cluster** listet der Abschnitt **Mitglieder** die Mitglieds-Assets auf (Name, Umgebung, Status, Betriebssystem). Klicken Sie auf einen Namen, um dieses Asset zu öffnen. **Mitglieder hinzufügen** (bei einem Cluster ohne Mitglieder) oder **Mitglieder bearbeiten** öffnet einen Suchdialog. Er bietet nur einfache Assets an, nie einen Cluster oder den Cluster selbst. Ein Warnsymbol kennzeichnet ein Mitglied, dessen Umgebung von der des Clusters abweicht. Wenn Sie Mitglieder eines Clusters entfernen, der Anwendungen trägt, nennt **Mitglieder entfernen?** die Anwendungen, die jedes nicht mehr hosten wird. **Trotzdem entfernen** speichert.
 - Bei **jedem anderen Asset** zeigt der Abschnitt **Cluster-Mitgliedschaft** die Cluster, zu denen dieses Asset gehört, mit ihrer Umgebung und ihrem Status. Klicken Sie auf einen Namen, um den Cluster zu öffnen.
 
 **Beziehungen zwischen Assets**, eine Tabelle pro Richtung:
@@ -478,7 +495,7 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 ## Tipps
 
 - **Konsistent benennen**: Schließen Sie Umgebung, Rolle und Sequenz in Asset-Namen ein, um eine einfache Identifizierung zu ermöglichen.
-- **Cluster verwenden**: Gruppieren Sie verwandte Assets (z. B. Web-Cluster, Datenbank-Cluster), um die Verwaltung zu vereinfachen. Weisen Sie Anwendungen den Member-Hosts zu, nicht dem Cluster selbst.
+- **Cluster verwenden**: Gruppieren Sie verwandte Assets (z. B. Web-Cluster, Datenbank-Cluster), um die Verwaltung zu vereinfachen. Ordnen Sie eine Anwendung, die auf jedem Knoten läuft, dem Cluster zu, und die Anwendung einer virtuellen Maschine dieser Maschine.
 - **Lebenszyklus verfolgen**: Markieren Sie veraltete und außer Betrieb genommene Assets, um die Inventarzählung genau zu halten.
 - **Mit Standorten verknüpfen**: Weisen Sie Assets Standorten zu, sodass Hosting-Typ, Land und Stadt automatisch ausgefüllt werden.
 - **Anwendungen zuweisen**: Verwenden Sie den Abschnitt **Gehostete Anwendungen** des Reiters Betrieb, um Assets mit Anwendungs-Bereitstellungen zu verknüpfen. Die gleichen Zuweisungen erscheinen unter dem Reiter Bereitstellungen der Anwendung.

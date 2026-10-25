@@ -3,6 +3,7 @@ import { Autocomplete, Box, CircularProgress, TextField } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import OptionWithHint from './OptionWithHint';
+import ClusterMark from '../workspace/ClusterMark';
 import api from '../../api';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
@@ -14,6 +15,8 @@ export type ServerOption = {
   kind: string;
   provider: string;
   is_cluster?: boolean;
+  /** A cluster's members by name (`include=member_names`): who its assignment reaches. */
+  member_names?: string[];
 };
 
 type ServerSelectProps = {
@@ -42,6 +45,7 @@ function useServerOptions(search: string, opts?: { allowClusters?: boolean }) {
             q: search || undefined,
             limit: 50,
             sort: 'name:ASC',
+            include: 'member_names',
             // The assets list reads this from its filter model (the grid's format), not from a plain parameter.
             filters: opts?.allowClusters === false
               ? JSON.stringify({ is_cluster: { filterType: 'set', values: ['false'] } })
@@ -119,14 +123,31 @@ const ServerSelect: React.FC<ServerSelectProps> = ({
       onChange={(_, newValue) => onChange(newValue?.id || null)}
       onInputChange={(_, v) => setInputValue(v)}
       getOptionLabel={(option) => (option.is_cluster ? `${t('selects.cluster')} ${option.name}` : option.name)}
-      renderOption={(props, option) => (
-        <OptionWithHint
-          key={option.id}
-          optionProps={props}
-          label={`${option.is_cluster ? `${t('selects.cluster')} ` : ''}${option.name}`}
-          hint={[option.environment?.toUpperCase(), option.kind, option.provider].filter(Boolean).join(' · ')}
-        />
-      )}
+      renderOption={(props, option) => {
+        const hint = [option.environment?.toUpperCase(), option.kind, option.provider].filter(Boolean).join(' · ');
+        if (!option.is_cluster) return <OptionWithHint key={option.id} optionProps={props} label={option.name} hint={hint} />;
+        const members = option.member_names;
+        return (
+          <OptionWithHint
+            key={option.id}
+            optionProps={props}
+            hint={hint}
+            label={(
+              <Box component="span" sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {option.name}
+                  <ClusterMark />
+                </Box>
+                {members && (
+                  <Box component="span" sx={(theme) => ({ fontSize: 11, color: theme.palette.kanap.text.tertiary, overflow: 'hidden', textOverflow: 'ellipsis' })}>
+                    {members.length > 0 ? members.join(', ') : t('selects.noMembers')}
+                  </Box>
+                )}
+              </Box>
+            )}
+          />
+        );
+      }}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
       renderInput={(params) => (
         <TextField

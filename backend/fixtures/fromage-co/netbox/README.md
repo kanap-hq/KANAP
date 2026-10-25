@@ -114,11 +114,10 @@ machine, and never removes one.
 
 | Case | Netbox object | Expected KANAP result |
 | --- | --- | --- |
-| Machines of a matched cluster | The Paris vSphere VMs (`PAR-ERP-01`, `PAR-DB-01`, `PAR-APP-01`, ...) | Each row shows `Cluster: — → PAR-VSPHERE-CL01` among its changes. After the run, the cluster contains them, and the technologies installed on it reach their applications. |
-| Already in the cluster | VM `PAR-MON-01` | No cluster change: the fixture already put it in `PAR-VSPHERE-CL01`. |
+| Already in the cluster | The Paris vSphere VMs (`PAR-ERP-01`, `PAR-DB-01`, `PAR-APP-01`, `PAR-MON-01`, ...) | No cluster change: the fixture already put them in `PAR-VSPHERE-CL01`. |
 | Unmatched cluster | `Gouda vSphere`, `Parma vSphere` | One warning per cluster in the preview, and nothing written for their machines. |
 | Machine moved in Netbox | VM `PAR-BKP-01`, on Gouda vSphere in Netbox, contained by `PAR-VSPHERE-CL01` in KANAP | With Gouda unmatched: nothing. Match Gouda with another cluster asset and the row adds it, keeps `PAR-VSPHERE-CL01` and warns that the machine is also there. |
-| New machines | `PAR-LOG-01`, `PAR-CI-01` | Created, then attached to `PAR-VSPHERE-CL01` in the same run. |
+| New machines | `PAR-LOG-01`, `PAR-CI-01` | Created, then attached to `PAR-VSPHERE-CL01` in the same run: each row shows `Cluster: — → PAR-VSPHERE-CL01` among its changes. |
 | Hosts | Devices `PAR-ESX-01`, `PAR-ESX-02` | Never touched: host membership of a cluster stays manual. |
 
 ## Sub-location case table

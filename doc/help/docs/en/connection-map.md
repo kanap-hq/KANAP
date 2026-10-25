@@ -43,7 +43,7 @@ Find servers via the applications that run on them:
 
 1. Select one or more applications from the **Applications** dropdown
 2. Pick environments in the **App Env** dropdown (only environments where the selected apps have assigned servers appear)
-3. The matching servers are automatically added to the **Servers** filter
+3. The matching servers are automatically added to the **Servers** filter. An application assigned to a cluster brings the cluster and its members
 
 This is useful when you want to see the infrastructure connections for an application without knowing which servers it runs on.
 
@@ -87,7 +87,7 @@ When enabled (default), the map keeps its force layout but adds vertical tier gu
 - **Servers** use the role assignments configured in IT Landscape settings
 - **Entities** use their configured **Graph Tier** (default Top)
 - **Unassigned servers** fall back to Center
-- **Clusters** inherit the highest-priority tier from their members
+- **Clusters** use the roles assigned to them, or else the highest-priority tier of their members. A member also takes the roles of its cluster
 
 Use this toggle when you want a topology view that reads like architecture tiers (edge-facing components at the top, data stores at the bottom). The setting is session-only and resets when you reload the page.
 
@@ -118,7 +118,7 @@ You can also zoom with the mouse wheel and pan by clicking and dragging the back
 Click a server or cluster node to highlight its connections and open a detail panel showing:
 
 - **Server type**, **Server location**, **Operating system**, **Network segment**, **IP address**
-- **Assigned applications**: Apps running on this server, grouped by environment. Click an app name to open it.
+- **Assigned applications**: Apps running on this server, grouped by environment. On a member, an app assigned to its cluster shows "via" the cluster's name. Click an app name to open it.
 - **Edit server** or **View cluster** button to open the workspace. **View cluster** opens the cluster on its **Dependencies** tab, where its members are managed
 
 Click an entity node to see its type and environment.

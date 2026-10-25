@@ -59,7 +59,7 @@ Eine Schwachstelle erreicht einen Server oder eine Anwendung nur über direkte V
 
 - **Server**: Technologie und Version sind auf dem Server selbst erfasst. Ein außer Betrieb genommener Server wird nicht gezählt.
 - **Cluster**: was auf dem Cluster selbst erfasst ist, plus was auf seinen Mitgliedern in Betrieb erfasst ist. Ein Cluster zählt die Schwachstellen seiner Mitglieder, in seiner Listenspalte, seinem Badge und seinem Datensatz. Wenn Sie diese Seite auf einen Cluster filtern, erscheinen auch die Zeilen seiner Mitglieder.
-- **Anwendung**: Die Anwendung deklariert Technologie und Version, oder einer ihrer Bereitstellungsserver hat sie selbst erfasst. Eine Technologie, die zugleich deklariert und gehostet ist, zählt einmal. Eine deaktivierte Anwendung, oder eine, deren Deaktivierungsdatum vergangen ist, wird nicht gezählt.
+- **Anwendung**: Die Anwendung deklariert Technologie und Version, oder einer ihrer Bereitstellungsserver hat sie selbst erfasst. Eine einem Cluster zugeordnete Anwendung zählt den Cluster und seine Mitglieder in Betrieb. Eine Technologie, die zugleich deklariert und gehostet ist, zählt einmal. Eine deaktivierte Anwendung, oder eine, deren Deaktivierungsdatum vergangen ist, wird nicht gezählt.
 
 Die Zählungen pro Server und pro Anwendung, in den Listen, auf den Datensätzen, im Dashboard und in Plaid, folgen denselben Regeln:
 

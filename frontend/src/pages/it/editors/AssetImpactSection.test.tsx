@@ -36,8 +36,8 @@ function impact(overrides: Partial<AssetImpact> = {}): AssetImpact {
       { id: 'web', reference: 'AST-3', name: 'WEB-01', kind: 'vm', depth: 2, relation: 'depends_on', via: [host, vm1] },
     ],
     clusters: [
-      { id: 'cl', reference: 'AST-9', name: 'VSPHERE-CL', state: 'degraded', members: 3, fallen_members: 2, via: [host, { id: 'esx2', name: 'ESX-02' }], via_total: 2 },
-      { id: 'solo', reference: 'AST-8', name: 'SOLO-CL', state: 'down', members: 1, fallen_members: 1, via: [host], via_total: 1 },
+      { id: 'cl', reference: 'AST-9', name: 'VSPHERE-CL', state: 'degraded', members: 3, fallen_members: 2, applications: 0, via: [host, { id: 'esx2', name: 'ESX-02' }], via_total: 2 },
+      { id: 'solo', reference: 'AST-8', name: 'SOLO-CL', state: 'down', members: 1, fallen_members: 1, applications: 0, via: [host], via_total: 1 },
     ],
     applications: [
       { id: 'erp', reference: 'APP-4', name: 'ERP', criticality: 'business_critical', environments: ['prod', 'pre_prod'], via: [vm1, host], via_total: 2 },
@@ -166,7 +166,7 @@ describe('AssetImpactSection', () => {
     // The page is the member's own: it is the one fallen member of the degraded cluster.
     renderSection(impact({
       clusters: [
-        { id: 'cl', reference: 'AST-9', name: 'VSPHERE-CL', state: 'degraded', members: 2, fallen_members: 1, via: [{ id: 'host', name: 'ESX-01' }], via_total: 1 },
+        { id: 'cl', reference: 'AST-9', name: 'VSPHERE-CL', state: 'degraded', members: 2, fallen_members: 1, applications: 0, via: [{ id: 'host', name: 'ESX-01' }], via_total: 1 },
       ],
       totals: { assets: 2, applications: 1, clusters: 1, technologies: 1, processes: 1 },
     }));
@@ -175,11 +175,18 @@ describe('AssetImpactSection', () => {
     expect(screen.queryByText(new RegExp('summary.clustersDegraded'))).not.toBeInTheDocument();
   });
 
+  it('keeps the cluster of the only fallen member when the cluster carries applications', async () => {
+    const own = { id: 'cl', reference: 'AST-9', name: 'VSPHERE-CL', state: 'degraded' as const, members: 2, fallen_members: 1, via: [{ id: 'host', name: 'ESX-01' }], via_total: 1 };
+    renderSection(impact({ clusters: [{ ...own, applications: 2 }], totals: { assets: 2, applications: 1, clusters: 1, technologies: 1, processes: 1 } }));
+    const clusters = await screen.findByRole('table', { name: `${P}.sections.clusters` });
+    expect(within(clusters).getByTitle(`${P}.state.degradedHint(count=1,members=2)`)).toHaveTextContent(`${P}.state.degraded(count=1,members=2)`);
+  });
+
   it('keeps a member\'s cluster that goes down, or that other fallen assets degrade', async () => {
     renderSection(impact({
       clusters: [
-        { id: 'solo', reference: 'AST-8', name: 'SOLO-CL', state: 'down', members: 1, fallen_members: 1, via: [{ id: 'host', name: 'ESX-01' }], via_total: 1 },
-        { id: 'cl', reference: 'AST-9', name: 'VSPHERE-CL', state: 'degraded', members: 3, fallen_members: 2, via: [{ id: 'host', name: 'ESX-01' }, { id: 'esx2', name: 'ESX-02' }], via_total: 2 },
+        { id: 'solo', reference: 'AST-8', name: 'SOLO-CL', state: 'down', members: 1, fallen_members: 1, applications: 0, via: [{ id: 'host', name: 'ESX-01' }], via_total: 1 },
+        { id: 'cl', reference: 'AST-9', name: 'VSPHERE-CL', state: 'degraded', members: 3, fallen_members: 2, applications: 0, via: [{ id: 'host', name: 'ESX-01' }, { id: 'esx2', name: 'ESX-02' }], via_total: 2 },
       ],
       totals: { assets: 2, applications: 1, clusters: 2, technologies: 1, processes: 1 },
     }));

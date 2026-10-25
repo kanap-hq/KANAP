@@ -107,7 +107,7 @@ A cell with no value shows a dash.
 - **Suites**: Parent suites this application belongs to
 - **Supplier**: Linked supplier name
 - **Business Owners** / **IT Owners**: Assigned owners (truncated, hover or click to see all)
-- **Hosting**: Derived from server locations assigned to app deployments
+- **Hosting**: Derived from server locations assigned to app deployments. An application on a cluster takes the locations of its members too
 - **External Facing**: Whether the app is internet-accessible
 - **SSO Enabled** / **MFA Enabled**: Authentication features
 - **Data Integration / ETL**: Whether the app participates in data integrations
@@ -223,7 +223,9 @@ The Deployments tab documents where the application actually runs: one block per
 | **Hosting** | Derived from the asset's location |
 | **Since** | Date the server was assigned to this deployment |
 
-Click **Add server** on the deployment header to attach an asset. Cluster assets are excluded. Assign cluster member hosts instead.
+Click **Add server** on the deployment header to attach an asset. The picker lists the clusters with their members under their name. The assignment of a cluster reaches its members in service: they show under the cluster's row, without actions. Change the assignment on the cluster. When you pick a member of a cluster, KANAP asks whether to assign the cluster or this server only. See [Applications on a cluster](assets.md#applications-on-a-cluster).
+
+When the application is assigned directly to each member in service of a cluster, a line under the table names them, with a button to assign the application to the cluster (**Assign to** and its name). After a confirmation, the cluster takes the assignment and the members' own assignments are removed. The application then stays available as long as one member stands.
 
 **Tip**: Document servers in **IT Landscape > Assets** first, then link them here. The asset's Operations tab shows the same assignments in reverse, under **Hosted applications**.
 
@@ -258,7 +260,7 @@ The Operations tab holds, in this order, how users access the application (**Tec
 **Technologies** lists what the application depends on, from two sources shown in the **Link** column. Columns: reference (`TEC-4`), name, family, versions, link, servers it comes through (**Via**), end of standard support.
 
 - **Declared**: someone linked the technology to the application, for example Entra ID for an application that signs users in through it.
-- **Hosted**: a server of one of its deployments carries the technology. **Via** names the server, and the host when the technology runs on the host of a virtual machine. Disabled deployments do not count.
+- **Hosted**: a server of one of its deployments carries the technology, a member of a cluster it is assigned to included. **Via** names the server, and the host when the technology runs on the host of a virtual machine. Disabled deployments do not count.
 
 A technology can be both. A dash in the version column means the version is not known. The end of standard support turns orange once it has passed. The section needs `infrastructure:reader`.
 
@@ -378,7 +380,7 @@ You need `applications:admin` and `infrastructure:member`.
 
 The window first checks what the conversion changes. Choose a **Family**, then read the three lists:
 
-- **Moves to the technology**: owners, support contacts, contracts, budget lines, projects, web links, documents, incidents, and the servers of its active deployments. Each server becomes a server that carries the technology, with an unknown version. Links in modules you cannot read move too.
+- **Moves to the technology**: owners, support contacts, contracts, budget lines, projects, web links, documents, incidents, and the servers of its active deployments. Each server becomes a server that carries the technology, with an unknown version. A cluster gives its members in service. Links in modules you cannot read move too.
 - **Kept, without its link to the application**: managed documents stay in their library, among the unfiled documents.
 - **Lost with the application**: deployments and environments, suite membership, predecessor and successors, data residency, the companies and departments using it, knowledge links, linked tasks and requests, business processes, the technologies it depends on, and the fields only applications have (users, access methods, SSO, MFA, personal data). Its `APP` reference goes too.
 

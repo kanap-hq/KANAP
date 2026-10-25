@@ -85,7 +85,7 @@ function renderAsset(asset: typeof ASSET = ASSET) {
   get.mockImplementation(async (url: string) => {
     if (url === '/assets/asset-1') return { data: asset };
     if (url === '/locations') return { data: { items: [] } };
-    if (url.endsWith('/assignments')) return { data: [] };
+    if (url.endsWith('/assignments')) return { data: { items: [], groupable: [] } };
     if (url.endsWith('/clusters') || url.endsWith('/members')) return { data: { items: [] } };
     return { data: { items: [], outgoing: [], incoming: [] } };
   });

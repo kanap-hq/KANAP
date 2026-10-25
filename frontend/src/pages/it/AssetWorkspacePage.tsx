@@ -26,6 +26,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import CloseIcon from '@mui/icons-material/Close';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import api from '../../api';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import EditIcon from '@mui/icons-material/Edit';
@@ -38,6 +39,9 @@ import OptionWithHint from '../../components/fields/OptionWithHint';
 import DateEUField from '../../components/fields/DateEUField';
 import DateCalendarPopover from '../../components/fields/DateCalendarPopover';
 import { ServerOption } from '../../components/fields/ServerSelect';
+import ViaAssetNames from '../../components/workspace/ViaAssetNames';
+import ClusterGroupLine from './components/ClusterGroupLine';
+import useClusterAssignmentQuestion from './components/useClusterAssignmentQuestion';
 import HardwareInfoPanel from './editors/HardwareInfoPanel';
 import SupportInfoPanel from './editors/SupportInfoPanel';
 import AssetDependenciesTab from './workspace/AssetDependenciesTab';
@@ -54,6 +58,7 @@ import EntityKnowledgePanel from '../../components/EntityKnowledgePanel';
 import { useAuth } from '../../auth/AuthContext';
 import { formatShortDate } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
+import { joinNames } from '../working-day-calendars/workingDayCalendarFields';
 
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -119,6 +124,21 @@ type AssignmentRow = {
   notes: string | null;
   application: { id: string; name: string };
   environment: string;
+  /** True on a row the server gets through its cluster: `id` is then the cluster's row. */
+  inherited?: boolean;
+  via_clusters?: Array<{ id: string; name: string }>;
+};
+
+/** A deployment and role assigned directly to every member of a cluster (A7). */
+type GroupableSet = {
+  cluster_id: string;
+  cluster_name: string;
+  app_instance_id: string;
+  role: string;
+  application_id: string;
+  application_name: string;
+  environment: string;
+  member_ids: string[];
 };
 
 type ApplicationInstance = {
@@ -269,7 +289,7 @@ const denseTableSx = {
 } as const;
 
 export default function AssetWorkspacePage() {
-  const { t } = useTranslation(['it', 'common']);
+  const { t } = useTranslation(['it', 'common', 'errors']);
   const notSetLabel = t('common:selects.notSet');
   const ENV_OPTIONS = ENV_OPTION_KEYS.map((option) => ({ value: option.value, label: t(option.labelKey) }));
   const environmentLabel = (value: string | null | undefined) =>
@@ -293,6 +313,8 @@ export default function AssetWorkspacePage() {
   const id = isCreate ? routeId : (assetReferenceRoute ? canonicalAssetId || '' : routeId);
   const canManage = hasLevel('infrastructure', 'member');
   const canDelete = hasLevel('infrastructure', 'admin');
+  // Assignments belong to the applications module: a reader sees them, inherited ones included, and changes none.
+  const canAssign = hasLevel('applications', 'member');
 
   const notesSaveTimerRef = React.useRef<number | null>(null);
 
@@ -328,6 +350,7 @@ export default function AssetWorkspacePage() {
   const [saving, setSaving] = React.useState(false);
   const [assignments, setAssignments] = React.useState<AssignmentRow[]>([]);
   const [assignmentsError, setAssignmentsError] = React.useState<string | null>(null);
+  const [groupable, setGroupable] = React.useState<GroupableSet[]>([]);
   const [clusterMembers, setClusterMembers] = React.useState<ClusterMember[]>([]);
   const [clusterError, setClusterError] = React.useState<string | null>(null);
   const [clusterLoading, setClusterLoading] = React.useState(false);
@@ -430,8 +453,12 @@ export default function AssetWorkspacePage() {
     if (isCreate || !id) return;
     setAssignmentsError(null);
     try {
-      const res = await api.get<AssignmentRow[]>(`/assets/${id}/assignments`);
-      setAssignments(res.data as any);
+      const [rows, sets] = await Promise.all([
+        api.get<AssignmentRow[]>(`/assets/${id}/assignments`),
+        api.get<{ items: GroupableSet[] }>(`/assets/${id}/assignments/groupable`),
+      ]);
+      setAssignments(Array.isArray(rows.data) ? rows.data : []);
+      setGroupable(sets.data?.items ?? []);
     } catch (e: any) {
       setAssignmentsError(getApiErrorMessage(e, t, t('messages.loadAssignmentsFailed')));
     }
@@ -936,7 +963,9 @@ export default function AssetWorkspacePage() {
     }
   };
 
+  const { resolveTargets, questionDialog } = useClusterAssignmentQuestion();
   const [assignDialogOpen, setAssignDialogOpen] = React.useState(false);
+  const [appNames, setAppNames] = React.useState<Record<string, string>>({});
   const [assigning, setAssigning] = React.useState(false);
   const [selectedAppId, setSelectedAppId] = React.useState<string | null>(null);
   const [appInstances, setAppInstances] = React.useState<Record<string, ApplicationInstance[]>>({});
@@ -956,6 +985,7 @@ export default function AssetWorkspacePage() {
         environment: i.environment,
       }));
       setAppInstances((prev) => ({ ...prev, [appId]: instances }));
+      setAppNames((prev) => ({ ...prev, [appId]: String(res.data?.name || '') }));
     } catch (e: any) {
       setAssignError(getApiErrorMessage(e, t, t('messages.loadAppInstancesFailed')));
       setAppInstances((prev) => ({ ...prev, [appId]: [] }));
@@ -1002,8 +1032,27 @@ export default function AssetWorkspacePage() {
     setAssigning(true);
     setAssignError(null);
     try {
+      let serverId = id;
+      // A member of a cluster: assign to the cluster, or to this server only (A2, A3). A cluster:
+      // say the members' rows it replaces (A4).
+      {
+        const deployment = (await api.get<{ items: Array<{ app_instance_id: string; server_id: string; role: string }> }>(`/applications/${selectedAppId}/deployment-servers`)).data?.items ?? [];
+        const environment = environmentLabel(instances.find((instance) => instance.id === instanceId)?.environment);
+        const outcome = await resolveTargets({
+          assetIds: [id],
+          subject: `${appNames[selectedAppId] || t('components.clusterAssignment.thisApplication')} (${environment}, ${labelFor('serverRole', assignRole) || assignRole})`,
+          role: assignRole,
+          rows: deployment.filter((row) => row.app_instance_id === instanceId).map((row) => ({ asset_id: row.server_id, role: row.role })),
+        });
+        if (outcome.status === 'cancelled') return;
+        if (outcome.status === 'inherited') {
+          setAssignError(t('errors:assignment_inherited', { cluster: outcome.cluster }));
+          return;
+        }
+        serverId = outcome.targets[0];
+      }
       await api.post(`/app-instances/${instanceId}/assets`, {
-        server_id: id,
+        server_id: serverId,
         role: assignRole,
         since_date: assignSince || null,
         notes: assignNotes || null,
@@ -1017,6 +1066,24 @@ export default function AssetWorkspacePage() {
       setAssignError(getApiErrorMessage(e, t, t('messages.addAssignmentFailed')));
     } finally {
       setAssigning(false);
+    }
+  };
+
+  /** A7: this cluster takes the assignment its members carry one by one (the server replaces their rows). */
+  const assignGroupToCluster = async (set: GroupableSet, application: string) => {
+    if (!id) return;
+    if (!(await dialogs.confirm({
+      message: t('components.clusterAssignment.groupConfirm', { application }),
+      title: t('components.clusterAssignment.title'),
+      confirmLabel: t('components.clusterAssignment.assignToCluster'),
+    }))) return;
+    try {
+      await api.post(`/app-instances/${set.app_instance_id}/assets`, { server_id: id, role: set.role });
+      await refreshAssignments();
+      // The impact reads the applications the asset hosts.
+      void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
+    } catch (e: any) {
+      setAssignmentsError(getApiErrorMessage(e, t, t('messages.addAssignmentFailed')));
     }
   };
 
@@ -1056,14 +1123,76 @@ export default function AssetWorkspacePage() {
     confirmLabel: t('workspace.asset.editMembersDialog.removeOsConfirm'),
   });
 
+  /** The rows of a server (`GET /assets/:id/assignments`); `fallback` when the read fails. */
+  const readAssignments = async (assetId: string, fallback: AssignmentRow[]): Promise<AssignmentRow[]> => {
+    try {
+      const rows = (await api.get<AssignmentRow[]>(`/assets/${assetId}/assignments`)).data;
+      return Array.isArray(rows) ? rows : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
+  /**
+   * A8: the applications a removed member stops hosting, by name: those the cluster carries on its
+   * own rows, except those the member also holds directly or through another cluster.
+   */
+  const lostApplicationNames = async (clusterRows: AssignmentRow[], memberId: string): Promise<string[]> => {
+    const kept = new Set((await readAssignments(memberId, []))
+      .filter((row) => !row.inherited || (row.via_clusters ?? []).some((via) => via.id !== id))
+      .map((row) => row.application.id));
+    return Array.from(new Set(clusterRows
+      .filter((row) => !row.inherited && !kept.has(row.application.id))
+      .map((row) => row.application.name)))
+      .sort((a, b) => a.localeCompare(b));
+  };
+
+  /** "CheeseTrack, Sage X3 and 2 others": the first three, then a count. */
+  const applicationList = (names: string[]) => joinNames(
+    names.length > 3
+      ? [...names.slice(0, 3), t('workspace.asset.editMembersDialog.andOthers', { count: names.length - 3 })]
+      : names,
+    locale,
+  );
+
+  /**
+   * One question for what a save takes away: the applications each removed member stops hosting (A8)
+   * and, with the first members, the operating system of the cluster. One sentence per fact.
+   */
+  const confirmMemberChanges = (lines: string[], os: string | null) => {
+    if (lines.length === 0) return confirmOperatingSystemRemoval(os ?? '');
+    return dialogs.confirm({
+      title: t('workspace.asset.editMembersDialog.removeMembersTitle'),
+      message: (
+        <Box sx={{ display: 'grid', gap: 0.75 }}>
+          {[...lines, ...(os ? [t('workspace.asset.editMembersDialog.removeOsMessage', { os })] : [])].map((line) => (
+            <Typography key={line} sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.secondary })}>{line}</Typography>
+          ))}
+        </Box>
+      ),
+      confirmLabel: t('workspace.asset.editMembersDialog.removeAnyway'),
+    });
+  };
+
   const handleSaveMembers = async () => {
     if (isCreate || !id) return;
     const ids = memberSelection.map((m) => m.id);
     let removeOperatingSystem = false;
+    // A8: the members taken out stop hosting what the cluster carries.
+    const removed = clusterMembers.filter((m) => !ids.includes(m.id));
+    const clusterRows = removed.length > 0 && id ? await readAssignments(id, assignments) : [];
+    const lines: string[] = [];
+    for (const m of removed) {
+      const applications = clusterRows.length > 0 ? await lostApplicationNames(clusterRows, m.id) : [];
+      if (applications.length > 0) {
+        lines.push(t('workspace.asset.editMembersDialog.removeMemberLine', { member: m.name, applications: applicationList(applications) }));
+      }
+    }
     // The first members of a cluster that carries an operating system take it away.
-    if (ids.length > 0 && data?.operating_system) {
-      if (!(await confirmOperatingSystemRemoval(data.operating_system))) return;
-      removeOperatingSystem = true;
+    const os = ids.length > 0 && data?.operating_system ? data.operating_system : null;
+    if (lines.length > 0 || os) {
+      if (!(await confirmMemberChanges(lines, os))) return;
+      removeOperatingSystem = !!os;
     }
     setMemberSaveError(null);
     for (;;) {
@@ -2032,22 +2161,19 @@ export default function AssetWorkspacePage() {
                 <Box>
                   {assignmentsError && <Alert severity="error" sx={{ mb: 2 }}>{assignmentsError}</Alert>}
                   {assignMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setAssignMessage(null)}>{assignMessage}</Alert>}
-                  {isCluster && (
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      {t('workspace.asset.assignments.clusterCannotHost')}
-                    </Alert>
-                  )}
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                     <SectionLabel>{t('workspace.asset.operations.hostedApplications')}</SectionLabel>
-                    <Button
-                      variant="action"
-                      size="small"
-                      startIcon={<AddIcon />}
-                      onClick={openAssignDialog}
-                      disabled={serverRoleOptions.length === 0 || isCluster}
-                    >
-                      {t('workspace.asset.assignments.addAssignment')}
-                    </Button>
+                    {canAssign && (
+                      <Button
+                        variant="action"
+                        size="small"
+                        startIcon={<AddIcon />}
+                        onClick={openAssignDialog}
+                        disabled={serverRoleOptions.length === 0}
+                      >
+                        {t('workspace.asset.assignments.addAssignment')}
+                      </Button>
+                    )}
                   </Stack>
                   <Table size="small" sx={denseTableSx}>
                     <TableHead>
@@ -2057,29 +2183,37 @@ export default function AssetWorkspacePage() {
                         <TableCell>{t('workspace.asset.assignments.role')}</TableCell>
                         <TableCell>{t('workspace.asset.assignments.since')}</TableCell>
                         <TableCell>{t('workspace.asset.assignments.notes')}</TableCell>
-                        <TableCell align="right">{t('workspace.asset.assignments.actions')}</TableCell>
+                        {canAssign && <TableCell align="right">{t('workspace.asset.assignments.actions')}</TableCell>}
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {assignments.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={6}>
+                          <TableCell colSpan={canAssign ? 6 : 5}>
                             <Typography variant="body2" color="text.secondary">{t('workspace.asset.assignments.noAssignments')}</Typography>
                           </TableCell>
                         </TableRow>
                       )}
                       {assignments.map((assignment) => (
-                        <TableRow key={assignment.id}>
+                        <TableRow key={`${assignment.id}|${assignment.inherited ? 'via' : 'own'}`}>
                           <TableCell>
                             <Button size="small" onClick={() => navigate(`/it/applications/${assignment.application.id}/deployments`)}>
                               {assignment.application.name}
                             </Button>
+                            {assignment.inherited && (assignment.via_clusters?.length ?? 0) > 0 && (
+                              <Box component="span" sx={(muiTheme) => ({ ml: 0.5, fontSize: 12, color: muiTheme.palette.kanap.text.tertiary })}>
+                                {t('components.clusterAssignment.via')} <ViaAssetNames assets={assignment.via_clusters ?? []} />
+                              </Box>
+                            )}
                           </TableCell>
                           <TableCell>{environmentLabel(assignment.environment)}</TableCell>
                           <TableCell>{labelFor('serverRole', assignment.role) || assignment.role}</TableCell>
                           <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : '-'}</TableCell>
                           <TableCell>{assignment.notes || '-'}</TableCell>
+                          {canAssign && (
                           <TableCell align="right">
+                            {!assignment.inherited && (
+                            <>
                             <Tooltip title={t('workspace.asset.assignments.editAssignment')}>
                               <span>
                                 <IconButton
@@ -2101,11 +2235,26 @@ export default function AssetWorkspacePage() {
                                 </IconButton>
                               </span>
                             </Tooltip>
+                            </>
+                            )}
                           </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                  {canAssign && isCluster && groupable.map((set) => {
+                    const names = set.member_ids.map((memberId) => clusterMembers.find((member) => member.id === memberId)?.name).filter(Boolean).join(', ');
+                    const subject = `${set.application_name} (${environmentLabel(set.environment)}, ${labelFor('serverRole', set.role) || set.role})`;
+                    return (
+                      <ClusterGroupLine
+                        key={`${set.app_instance_id}|${set.role}`}
+                        text={t('components.clusterAssignment.groupLine', { subject, members: names })}
+                        actionLabel={t('components.clusterAssignment.assignToCluster')}
+                        onAssign={() => void assignGroupToCluster(set, set.application_name)}
+                      />
+                    );
+                  })}
                 </Box>
               )}
               {!isCreate && id && (
@@ -2473,6 +2622,28 @@ export default function AssetWorkspacePage() {
               isOptionEqualToValue={(opt, val) => opt.id === val.id}
               getOptionDisabled={(opt) => opt.id === MORE_MEMBERS_ROW.id || opt.id === id || !!opt.is_cluster}
               getOptionLabel={(opt) => opt.name}
+              renderTags={(chosen, getTagProps) => chosen.map((option, index) => {
+                const { key, ...tagProps } = getTagProps({ index });
+                // A8: another environment than the cluster's is allowed, and flagged on the chip.
+                const differs = !!option.environment && !!data?.environment && option.environment !== data.environment;
+                return (
+                  <Chip
+                    key={key}
+                    label={option.name}
+                    icon={differs ? (
+                      <Tooltip title={t('workspace.asset.editMembersDialog.differentEnvironment')}>
+                        <WarningAmberOutlinedIcon
+                          role="img"
+                          aria-hidden={false}
+                          aria-label={t('workspace.asset.editMembersDialog.differentEnvironment')}
+                          sx={{ color: `${getDotColor('warning', theme.palette.mode)} !important` }}
+                        />
+                      </Tooltip>
+                    ) : undefined}
+                    {...tagProps}
+                  />
+                );
+              })}
               renderOption={(props, option) => (
                 option.id === MORE_MEMBERS_ROW.id ? (
                   <li {...props} key={option.id}>
@@ -2513,6 +2684,8 @@ export default function AssetWorkspacePage() {
           </Stack>
       </KanapDialog>
 
+      {questionDialog}
+
       <KanapDialog
         open={assignDialogOpen}
         title={t('workspace.asset.assignments.addAssignmentDialog')}
@@ -2541,9 +2714,15 @@ export default function AssetWorkspacePage() {
                 onChange={(e) => setInstanceId(e.target.value)}
                 disabled={!selectedAppId}
                 required
-                helperText={!selectedAppId ? t('workspace.asset.assignments.selectAppForEnv') : undefined}
                 variant="standard"
                 sx={drawerFieldValueSx}
+                SelectProps={{
+                  displayEmpty: true,
+                  renderValue: (value) => {
+                    if (value) return environmentLabel((selectedAppId ? appInstances[selectedAppId] : undefined)?.find((inst) => inst.id === value)?.environment);
+                    return selectedAppId ? '' : <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('workspace.asset.assignments.selectAppForEnv')}</Box>;
+                  },
+                }}
               >
                 {(selectedAppId ? appInstances[selectedAppId] || [] : []).map((inst) => (
                   <MenuItem key={inst.id} value={inst.id} sx={drawerMenuItemSx}>{environmentLabel(inst.environment)}</MenuItem>

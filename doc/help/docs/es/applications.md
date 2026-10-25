@@ -107,7 +107,7 @@ Una celda sin valor muestra un guion.
 - **Suites**: Suites padre a las que pertenece esta aplicación
 - **Proveedor**: Nombre del proveedor vinculado
 - **Responsables de negocio** / **Responsables IT**: Responsables asignados (truncado, pase el ratón o haga clic para verlos todos)
-- **Alojamiento**: Derivado de las ubicaciones de servidores asignados a los despliegues de la app
+- **Alojamiento**: Derivado de las ubicaciones de servidores asignados a los despliegues de la app. Una aplicación en un clúster toma también las ubicaciones de sus miembros
 - **Acceso externo**: Si la app es accesible desde internet
 - **SSO habilitado** / **MFA habilitado**: Características de autenticación
 - **Integración de datos / ETL**: Si la app participa en integraciones de datos
@@ -223,7 +223,9 @@ La pestaña Despliegues documenta dónde se ejecuta realmente la aplicación: un
 | **Alojamiento** | Derivado de la ubicación del activo |
 | **Desde** | Fecha en que se asignó el servidor a este despliegue |
 
-Haga clic en **Añadir servidor** en el encabezado del despliegue para vincular un activo. Los activos de tipo clúster están excluidos. Asigne en su lugar los hosts miembros del clúster.
+Haga clic en **Añadir servidor** en el encabezado del despliegue para vincular un activo. El selector lista los clústeres con sus miembros bajo su nombre. La asignación de un clúster llega a sus miembros en servicio: aparecen bajo la fila del clúster, sin acciones. Modifique la asignación en el clúster. Cuando elige un miembro de un clúster, KANAP pregunta si asignar el clúster o solo este servidor. Consulte [Aplicaciones en un clúster](assets.md#applications-on-a-cluster).
+
+Cuando la aplicación está asignada directamente a cada miembro en servicio de un clúster, una línea bajo la tabla los nombra, con un botón para asignar la aplicación al clúster (**Asignar a** y su nombre). Tras una confirmación, el clúster toma la asignación y se quitan las asignaciones propias de los miembros. La aplicación sigue entonces disponible mientras un miembro siga activo.
 
 **Consejo**: Documente primero los servidores en **Panorama IT > Activos**, luego vincúlelos aquí. La pestaña Operación del activo muestra las mismas asignaciones de forma inversa, en **Aplicaciones alojadas**.
 
@@ -258,7 +260,7 @@ La pestaña Operaciones reúne, en este orden, cómo acceden los usuarios a la a
 **Tecnologías** lista aquello de lo que depende la aplicación, a partir de dos fuentes que indica la columna **Vínculo**. Columnas: referencia (`TEC-4`), nombre, familia, versiones, vínculo, servidores por los que llega (**Vía**), fin del soporte estándar.
 
 - **Declarada**: alguien vinculó la tecnología a la aplicación, por ejemplo Entra ID para una aplicación cuyos usuarios inician sesión con ella.
-- **Alojada**: un servidor de uno de sus despliegues lleva la tecnología. **Vía** nombra el servidor, y el host cuando la tecnología se ejecuta en el host de una máquina virtual. Los despliegues desactivados no cuentan.
+- **Alojada**: un servidor de uno de sus despliegues lleva la tecnología, incluido un miembro de un clúster al que está asignada. **Vía** nombra el servidor, y el host cuando la tecnología se ejecuta en el host de una máquina virtual. Los despliegues desactivados no cuentan.
 
 Una tecnología puede ser ambas cosas. Un guion en la columna de versiones indica que la versión no se conoce. El fin del soporte estándar pasa a naranja una vez superado. La sección requiere `infrastructure:reader`.
 
@@ -378,7 +380,7 @@ Necesita `applications:admin` e `infrastructure:member`.
 
 La ventana comprueba primero qué cambia la conversión. Elija una **Familia** y lea las tres listas:
 
-- **Pasa a la tecnología**: responsables, contactos de soporte, contratos, líneas presupuestarias, proyectos, enlaces web, documentos, incidentes y los servidores de sus despliegues activos. Cada servidor pasa a ser un servidor que lleva la tecnología, con versión desconocida. Los vínculos de los módulos que usted no puede leer también pasan.
+- **Pasa a la tecnología**: responsables, contactos de soporte, contratos, líneas presupuestarias, proyectos, enlaces web, documentos, incidentes y los servidores de sus despliegues activos. Cada servidor pasa a ser un servidor que lleva la tecnología, con versión desconocida. Un clúster aporta sus miembros en servicio. Los vínculos de los módulos que usted no puede leer también pasan.
 - **Se conserva, sin su vínculo con la aplicación**: los documentos gestionados permanecen en su biblioteca, entre los documentos sin clasificar.
 - **Se pierde con la aplicación**: despliegues y entornos, pertenencia a una suite, predecesor y sucesores, residencia de los datos, empresas y departamentos que la usan, vínculos de conocimiento, tareas y solicitudes vinculadas, procesos de negocio, tecnologías de las que depende, y los campos propios de las aplicaciones (usuarios, modos de acceso, SSO, MFA, datos personales). También desaparece su referencia `APP`.
 

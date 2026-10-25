@@ -2121,7 +2121,6 @@
       },
       "assignments": {
         "addAssignment": "Add assignment",
-        "clusterCannotHost": "Cluster assets cannot host application assignments. Assign the member hosts.",
         "noAssignments": "No assignments yet.",
         "assignmentAdded": "Assignment added",
         "application": "Application",
@@ -2161,7 +2160,13 @@
         "narrowSearch": "Narrow your search",
         "removeOsTitle": "Remove the operating system?",
         "removeOsMessage": "A cluster with members has no operating system: {{os}} will be removed.",
-        "removeOsConfirm": "Remove and save"
+        "removeOsConfirm": "Remove and save",
+        "removeMembersTitle": "Remove members?",
+        "removeMemberLine": "{{member}} will no longer host {{applications}}.",
+        "removeAnyway": "Remove anyway",
+        "andOthers_one": "{{count}} other",
+        "andOthers_other": "{{count}} others",
+        "differentEnvironment": "Different environment from the cluster"
       },
       "newAsset": "New asset",
       "untitled": "Untitled asset",
@@ -3198,6 +3203,25 @@
     },
     "versionTimeline": {
       "title": "Version history"
+    },
+    "clusterAssignment": {
+      "title": "Assign to the cluster?",
+      "inCluster_one": "{{server}} is part of {{cluster}}. Its only member will host {{subject}}.",
+      "inCluster_other": "{{server}} is part of {{cluster}}. Its {{count}} members will host {{subject}}.",
+      "inClusters": "{{server}} is part of several clusters.",
+      "memberCount_one": "{{count}} member",
+      "memberCount_other": "{{count}} members",
+      "assignToCluster": "Assign to the cluster",
+      "assignedToCluster": "Assigned to the cluster",
+      "serverOnly": "This server only",
+      "absorbed_one": "The direct assignment of {{names}} will be replaced.",
+      "absorbed_other": "The direct assignments of {{names}} will be replaced.",
+      "via": "via",
+      "inheritedFrom": "Via {{cluster}}",
+      "groupLine": "{{subject}} on {{members}}",
+      "groupAssignTo": "Assign to {{cluster}}",
+      "groupConfirm": "{{application}} will stay available as long as one member stands.",
+      "thisApplication": "The application"
     }
   },
   "enums": {

@@ -174,6 +174,7 @@ async function testClusterFalls() {
     assert.deepEqual(single.assets.map(line), ['NODE-A|0|-|']);
     assert.deepEqual(single.clusters.map((row) => `${row.name}|${row.state}|${row.fallen_members}/${row.members}`), ['PROD-CL|degraded|1/2']);
     assert.deepEqual(single.applications!.map((row) => row.name), ['App A']);
+    assert.deepEqual(single.clusters.map((row) => row.applications), [1], 'the cluster carries App CL itself');
   });
 }
 

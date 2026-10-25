@@ -43,7 +43,7 @@ Encuentre servidores a través de las aplicaciones que se ejecutan en ellos:
 
 1. Seleccione una o más aplicaciones del desplegable **Aplicaciones**
 2. Elija entornos en el desplegable **Entorno App** (solo aparecen los entornos donde las apps seleccionadas tienen servidores asignados)
-3. Los servidores coincidentes se añaden automáticamente al filtro **Servidores**
+3. Los servidores coincidentes se añaden automáticamente al filtro **Servidores**. Una aplicación asignada a un clúster aporta el clúster y sus miembros
 
 Esto es útil cuando desea ver las conexiones de infraestructura de una aplicación sin saber en qué servidores se ejecuta.
 
@@ -87,7 +87,7 @@ Cuando está activado (predeterminado), el mapa mantiene su diseño por fuerzas 
 - Los **Servidores** usan las asignaciones de rol configuradas en la configuración del Panorama IT
 - Las **Entidades** usan su **Nivel de grafo** configurado (predeterminado Superior)
 - Los **servidores no asignados** caen al Centro
-- Los **Clústeres** heredan el nivel de mayor prioridad de sus miembros
+- Los **Clústeres** usan los roles que tienen asignados, o si no el nivel de mayor prioridad de sus miembros. Un miembro toma también los roles de su clúster
 
 Use este conmutador cuando desee una vista de topología que se lea como niveles de arquitectura (componentes orientados al exterior arriba, almacenes de datos abajo). El ajuste es solo de sesión y se restablece al recargar la página.
 
@@ -118,7 +118,7 @@ También puede hacer zoom con la rueda del ratón y desplazarse haciendo clic y 
 Haga clic en un nodo de servidor o clúster para resaltar sus conexiones y abrir un panel de detalle que muestra:
 
 - **Tipo de servidor**, **Ubicación del servidor**, **Sistema operativo**, **Segmento de red**, **Dirección IP**
-- **Aplicaciones asignadas**: Apps que se ejecutan en este servidor, agrupadas por entorno. Haga clic en el nombre de una app para abrirla.
+- **Aplicaciones asignadas**: Apps que se ejecutan en este servidor, agrupadas por entorno. En un miembro, una app asignada a su clúster se muestra «vía» el nombre del clúster. Haga clic en el nombre de una app para abrirla.
 - Botón **Editar servidor** o **Ver clúster** para abrir el espacio de trabajo. **Ver clúster** abre el clúster en su pestaña **Dependencias**, donde se gestionan sus miembros
 
 Haga clic en un nodo de entidad para ver su tipo y entorno.

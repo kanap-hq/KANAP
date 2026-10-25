@@ -1,4 +1,5 @@
 import { operatingSystemLabelSql } from '../../../technologies/operating-system-codes';
+import { effectiveAssignmentsSql } from '../../../app-asset-assignments/effective-assignments';
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 import { VULNERABILITIES_LIST_FIELD } from '../../../vulnerabilities/vulnerability-list-column';
 import { vulnerabilitiesField, vulnerabilityCountMetric } from '../ai-vulnerability-counts.util';
@@ -254,7 +255,8 @@ export const assetsRegistry: AiEntityFilterRegistry = {
       open_vulnerabilities: vulnerabilityCountMetric('assets', 'open'),
       severe_vulnerabilities: vulnerabilityCountMetric('assets', 'severe'),
       assignments_count: {
-        expression: `(SELECT COUNT(*) FROM app_asset_assignments aaa WHERE aaa.asset_id = a.id AND aaa.tenant_id = a.tenant_id)`,
+        // Effective: a member counts what its clusters carry (`effectiveAssignmentsSql`).
+        expression: `(SELECT COUNT(*) FROM (${effectiveAssignmentsSql({ tenant: 'a.tenant_id', assets: 'ARRAY[a.id]' })}) aaa)`,
         type: 'number',
       },
     },
