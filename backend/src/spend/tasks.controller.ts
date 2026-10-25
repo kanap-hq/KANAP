@@ -50,6 +50,7 @@ import { projectParticipantCondition, resolveBusinessContributorScope } from '..
 import { PermissionLevel } from '../permissions/permissions.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { incidentViewerFromContext } from '../incidents/incident-visibility';
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -78,7 +79,11 @@ export class TasksController {
 
   private async ensureTaskAccess(id: string, req: any, level: PermissionLevel = 'reader') {
     const accessScope = await this.taskAccessScope(req, level);
-    await this.svc.assertVisible(id, accessScope, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
+    await this.svc.assertVisible(id, accessScope, {
+      manager: req?.queryRunner?.manager,
+      tenantId: req?.tenant?.id,
+      viewer: incidentViewerFromContext(req),
+    });
     return accessScope;
   }
 
@@ -155,7 +160,12 @@ export class TasksController {
   @Get()
   async list(@Query() query: any, @Req() req: any) {
     const accessScope = await this.taskAccessScope(req, 'reader');
-    return this.svc.listAllTasks(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, accessScope });
+    return this.svc.listAllTasks(query, {
+      manager: req?.queryRunner?.manager,
+      tenantId: req?.tenant?.id,
+      accessScope,
+      viewer: incidentViewerFromContext(req),
+    });
   }
 
   @UseGuards(PermissionGuard)
@@ -163,7 +173,12 @@ export class TasksController {
   @Get('ids')
   async listIds(@Query() query: any, @Req() req: any) {
     const accessScope = await this.taskAccessScope(req, 'reader');
-    return this.svc.listIds(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, accessScope });
+    return this.svc.listIds(query, {
+      manager: req?.queryRunner?.manager,
+      tenantId: req?.tenant?.id,
+      accessScope,
+      viewer: incidentViewerFromContext(req),
+    });
   }
 
   @UseGuards(PermissionGuard)
@@ -171,7 +186,12 @@ export class TasksController {
   @Get('filter-values')
   async listFilterValues(@Query() query: any, @Req() req: any) {
     const accessScope = await this.taskAccessScope(req, 'reader');
-    return this.svc.listFilterValues(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, accessScope });
+    return this.svc.listFilterValues(query, {
+      manager: req?.queryRunner?.manager,
+      tenantId: req?.tenant?.id,
+      accessScope,
+      viewer: incidentViewerFromContext(req),
+    });
   }
 
   // ==================== CSV ====================
@@ -214,6 +234,7 @@ export class TasksController {
       preset,
       relatedObjectType,
       relatedObjectId,
+      viewer: incidentViewerFromContext(req),
     });
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -280,7 +301,12 @@ export class TasksController {
   async getOne(@Param('id') idOrRef: string, @Req() req: any) {
     const id = await this.resolve(idOrRef, req);
     const accessScope = await this.taskAccessScope(req, 'reader');
-    const res = await this.svc.getOne(id, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, accessScope });
+    const res = await this.svc.getOne(id, {
+      manager: req?.queryRunner?.manager,
+      tenantId: req?.tenant?.id,
+      accessScope,
+      viewer: incidentViewerFromContext(req),
+    });
     if (!res) {
       const { NotFoundException } = await import('@nestjs/common');
       throw new NotFoundException('Task not found');

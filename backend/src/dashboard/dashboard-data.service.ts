@@ -6,11 +6,14 @@ import {
   taskParticipantCondition,
 } from '../auth/business-contributor-scope';
 import { TASK_HIDDEN_LINE_REFERENCE_SQL } from '../spend/tasks.service';
+import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 
 interface ServiceOptions {
   manager?: EntityManager;
   /** Present for business contributors: restrict to projects/tasks they take part in (same rule as the lists). */
   accessScope?: ParticipationAccessScope;
+  /** A task of an incident the reader cannot see stays out of the dashboard (empty for incidents:admin). */
+  incidentViewer?: IncidentViewer | null;
 }
 
 export interface MyLeadershipProject {
@@ -490,6 +493,8 @@ export class DashboardDataService {
       params.push(opts.accessScope.userId);
       scopeSql += ` AND ${taskParticipantCondition('t', `$${params.length}`)}`;
     }
+    // A task of an incident the reader cannot see is absent from the stale tasks tile too.
+    scopeSql += taskIncidentVisibilitySql('t', opts?.incidentViewer, params);
 
     params.push(limit);
 

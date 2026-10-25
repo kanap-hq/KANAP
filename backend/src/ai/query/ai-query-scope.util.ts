@@ -11,6 +11,7 @@ import {
   DocumentIncidentViewer,
   resolveDocumentIncidentViewer,
 } from '../../knowledge/document-entity-visibility';
+import { IncidentViewer, resolveIncidentViewer } from '../../incidents/incident-visibility';
 import { AiExecutionContextWithManager, AiQueryScope } from '../ai.types';
 
 export type ScopedAiEntityType =
@@ -82,6 +83,27 @@ export async function resolveAiParticipationAccessScope(
   }, PARTICIPATION_SCOPE_RESOURCE[entityType], 'reader');
   cacheHost.__aiParticipationAccessScopeCache[entityType] = scope;
   return scope;
+}
+
+/**
+ * The incident register viewer, memoized for the life of one AI execution
+ * context: search, list, detail, filter values, aggregates and task mutations
+ * all ask the same question for the same user, and each answer costs one role
+ * query. A registry admin then gets an empty SQL predicate (see
+ * `taskIncidentVisibilitySql`).
+ */
+export async function resolveAiIncidentViewer(
+  context: AiExecutionContextWithManager,
+): Promise<IncidentViewer> {
+  const cacheHost = context as AiExecutionContextWithManager & {
+    __aiIncidentViewer?: Promise<IncidentViewer>;
+  };
+  cacheHost.__aiIncidentViewer ??= resolveIncidentViewer(
+    context.manager,
+    context.userId ?? null,
+    context.tenantId,
+  );
+  return cacheHost.__aiIncidentViewer;
 }
 
 /**

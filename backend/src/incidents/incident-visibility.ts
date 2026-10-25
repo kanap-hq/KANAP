@@ -113,6 +113,46 @@ export function incidentVisibilitySql(
   return predicate.unrestricted ? '' : ` AND ${predicate.visible}`;
 }
 
+/**
+ * Task rows naming an incident the viewer may not see.
+ *
+ * The single predicate every task read applies. It is empty for a registry admin
+ * (the query text is unchanged, no subquery), and otherwise a keyed anti-join:
+ * a task names one incident at most, so the check is one primary-key lookup per
+ * row whatever the surface. The incident is read on its current row, so a task
+ * whose incident no longer exists stays visible, as it reads today.
+ */
+export function taskIncidentVisibilitySql(
+  taskAlias: string,
+  viewer: IncidentViewer | null | undefined,
+  params: unknown[],
+): string {
+  const confidentiality = incidentConfidentialityPredicate('i_task_visibility', viewer, params);
+  if (confidentiality.unrestricted) return '';
+  return ` AND (${taskAlias}.related_object_type IS DISTINCT FROM 'incident' OR NOT EXISTS (
+    SELECT 1
+    FROM incidents i_task_visibility
+    WHERE i_task_visibility.id = ${taskAlias}.related_object_id
+      AND i_task_visibility.tenant_id = ${taskAlias}.tenant_id
+      AND (${confidentiality.hidden})
+  ))`;
+}
+
+/** The same task predicate as named parameters, for a TypeORM QueryBuilder. */
+export function taskIncidentVisibilityQueryBuilderClause(
+  taskAlias: string,
+  viewer: IncidentViewer | null | undefined,
+  paramName = 'taskIncidentViewerId',
+): { clause: string; params: Record<string, unknown> } {
+  const params: unknown[] = [];
+  const sql = taskIncidentVisibilitySql(taskAlias, viewer, params);
+  if (!sql) return { clause: '', params: {} };
+  return {
+    clause: sql.replace(/^\s*AND\s+/, '').replace(/\$1\b/g, `:${paramName}`),
+    params: params.length > 0 ? { [paramName]: params[0] } : {},
+  };
+}
+
 /** Related-object label on tasks: INC-N only when the incident is confidential. */
 export function incidentRelatedLabelSql(alias: string): string {
   return `CASE WHEN ${alias}.id IS NULL THEN NULL WHEN ${alias}.confidential THEN 'INC-' || ${alias}.item_number::text ELSE 'INC-' || ${alias}.item_number::text || ' · ' || ${alias}.title END`;

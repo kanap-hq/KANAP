@@ -47,6 +47,7 @@ import {
   isParticipationScopedAiEntityType,
   participantConditionForAiEntity,
   resolveAiDocumentIncidentViewer,
+  resolveAiIncidentViewer,
   resolveAiParticipationAccessScope,
 } from './ai-query-scope.util';
 import {
@@ -1350,6 +1351,7 @@ export class AiQueryExecutor {
         manager: context.manager,
         tenantId: context.tenantId,
         accessScope,
+        viewer: await resolveAiIncidentViewer(context),
       });
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
@@ -2312,7 +2314,11 @@ export class AiQueryExecutor {
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 
     if (entityType === 'tasks') {
-      const row = await this.tasks.getOne(entityId, { manager: context.manager, accessScope });
+      const row = await this.tasks.getOne(entityId, {
+        manager: context.manager,
+        accessScope,
+        viewer: await resolveAiIncidentViewer(context),
+      });
       if (!row) throw new NotFoundException('Task not found.');
       return this.toDetailResult(this.mapTask(row), withoutHiddenLine(row));
     }
@@ -2835,6 +2841,7 @@ export class AiQueryExecutor {
         manager: context.manager,
         tenantId: context.tenantId,
         accessScope,
+        viewer: await resolveAiIncidentViewer(context),
       }) as any;
     } else if (input.entity_type === 'projects') {
       raw = await this.projects.listFilterValues(query, {

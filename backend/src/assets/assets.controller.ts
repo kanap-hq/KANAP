@@ -208,6 +208,7 @@ export class AssetsController {
     return this.tasks.listRelatedTasksForAsset(asset.id, query, {
       manager: req?.queryRunner?.manager,
       tenantId: req?.tenant?.id,
+      viewer: incidentViewerFromContext(req),
     });
   }
 

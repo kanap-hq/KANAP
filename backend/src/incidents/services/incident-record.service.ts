@@ -44,7 +44,11 @@ export class IncidentRecordService {
       this.entries.list(id, { ...opts, order: 'asc' }),
       this.relations.listAssets(id, opts),
       this.relations.listApplications(id, opts),
-      this.tasks.listForTarget({ type: 'incident', id }, { manager: opts.manager, tenantId: opts.tenantId }),
+      this.tasks.listForTarget({ type: 'incident', id }, {
+        manager: opts.manager,
+        tenantId: opts.tenantId,
+        viewer: opts.viewer,
+      }),
       this.knowledge.listDocumentsForEntity('incidents', id, {
         manager: opts.manager,
         userId: opts.userId ?? null,
