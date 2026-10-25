@@ -425,6 +425,18 @@ async function testTaskReads(): Promise<void> {
     });
     assert.equal(readerAppTasks.total, 0);
 
+    // The incident's own task list keeps the same rule.
+    const readerIncidentTasks = await unified.listForTarget(
+      { type: 'incident', id: s.restrictedIncidentId },
+      { manager: runner.manager, tenantId: s.tenantId, viewer: viewer(s.readerId, false) },
+    );
+    assert.equal(readerIncidentTasks.length, 0);
+    const reporterIncidentTasks = await unified.listForTarget(
+      { type: 'incident', id: s.restrictedIncidentId },
+      { manager: runner.manager, tenantId: s.tenantId, viewer: viewer(s.reporterId, false) },
+    );
+    assert.equal(reporterIncidentTasks.length, 1);
+
     // CSV export follows the list.
     const csv = new TasksCsvService(
       runner.manager.getRepository(Task),

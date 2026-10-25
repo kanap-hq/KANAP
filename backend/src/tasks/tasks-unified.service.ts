@@ -731,10 +731,13 @@ export class TasksUnifiedService {
       qb.andWhere('t.related_object_type = :relatedType', { relatedType: target.type })
         .andWhere('t.related_object_id = :relatedId', { relatedId: target.id });
     }
-    // A task of an incident the reader cannot see is absent here too (empty for incidents:admin).
-    const incidentVisibility = taskIncidentVisibilityQueryBuilderClause('t', opts?.viewer);
-    if (incidentVisibility.clause) {
-      qb.andWhere(incidentVisibility.clause, incidentVisibility.params);
+    // Only an incident's own task list can hold a task of that incident: another
+    // target (contract, project, budget line) never needs the predicate.
+    if (target.type === 'incident') {
+      const incidentVisibility = taskIncidentVisibilityQueryBuilderClause('t', opts?.viewer);
+      if (incidentVisibility.clause) {
+        qb.andWhere(incidentVisibility.clause, incidentVisibility.params);
+      }
     }
     return qb.orderBy('t.created_at', 'DESC').getMany();
   }
