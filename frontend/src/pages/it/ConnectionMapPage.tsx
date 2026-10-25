@@ -38,6 +38,7 @@ import ViaAssetNames from '../../components/workspace/ViaAssetNames';
 import api from '../../api';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import ConnectionMapGraph, { ClusterMembership, ConnectionMapLink, ConnectionMapNode, GraphControlsApi } from './components/ConnectionMapGraph';
+import { withImplicitMembers } from './connectionMapMembers';
 
 import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../utils/applicationClassification';
@@ -53,6 +54,7 @@ type ApiConnectionMapNode = {
   hosting_category: 'on_prem' | 'cloud' | null;
   graph_tier?: string | null;
   member_server_ids?: string[];
+  implicit_member?: boolean;
 };
 
 type ApiConnectionMapLeg = {
@@ -172,6 +174,7 @@ export function toGraphNodes(nodes: ApiConnectionMapNode[], entityName: (code: s
       networkSegment: n.network_segment,
       hostingCategory: n.hosting_category,
       graphTier: n.graph_tier || null,
+      implicitMember: !!n.implicit_member,
     } as ConnectionMapNode;
   });
 }
@@ -503,7 +506,7 @@ export default function ConnectionMapPage() {
       if (sid) nodeIds.add(String(sid));
       if (tid) nodeIds.add(String(tid));
     });
-    const nodes = allNodes.filter((n) => nodeIds.has(n.id));
+    const nodes = withImplicitMembers(allNodes, nodeIds, data.clusterMemberships ?? []);
     return { nodes, links };
   }, [data, showMultiServer, showLayers, settings?.connectionTypes, entityName]);
 
@@ -535,13 +538,15 @@ export default function ConnectionMapPage() {
   }, [graphData.nodes, t]);
 
   React.useEffect(() => {
+    // The map has not answered yet: its empty node list would drop the starts of the address.
+    if (!data) return;
     if (rootNodeIds.length === 0) return;
     const valid = rootNodeIds.filter((id) => graphData.nodes.some((n) => n.id === id));
     if (valid.length !== rootNodeIds.length) {
       setRootNodeIds(valid);
       if (valid.length === 0) setDepthLimit('all');
     }
-  }, [graphData.nodes, rootNodeIds]);
+  }, [data, graphData.nodes, rootNodeIds]);
 
   React.useEffect(() => {
     if (rootNodeIds.length === 0 && depthLimit !== 'all') {

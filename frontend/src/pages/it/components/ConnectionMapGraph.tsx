@@ -12,6 +12,9 @@ export type ConnectionMapNode = {
   networkSegment: string | null;
   hostingCategory: 'on_prem' | 'cloud' | null;
   graphTier?: string | null;
+  implicitMember?: boolean;
+  hiddenMembers?: number;
+  hiddenMembersLabel?: string;
   x?: number;
   y?: number;
   fx?: number | null;
