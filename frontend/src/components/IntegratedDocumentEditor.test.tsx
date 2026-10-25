@@ -4,7 +4,9 @@ import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../api';
+import { setAccessToken } from '../auth/accessTokenStore';
 import { AUTOSAVE_RETRY_DELAYS_MS } from '../hooks/useAutosave';
+import { releaseLockKeepaliveUrl } from '../lib/releaseLockKeepalive';
 import IntegratedDocumentEditor, { type IntegratedDocumentEditorHandle } from './IntegratedDocumentEditor';
 import { createAppTheme } from '../config/ThemeContext';
 
@@ -141,6 +143,92 @@ describe('IntegratedDocumentEditor — incidents:review', () => {
 
     await startEditing();
     expect(api.post).toHaveBeenCalledWith(`${REVIEW_ENDPOINT}/locks`);
+  });
+
+  it('releases the lock on pagehide so a reload does not keep it', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    setAccessToken('access-1', Date.now() + 60_000);
+    try {
+      const { view } = await renderEditor({ autosaveDelayMs: 60_000 });
+      await startEditing();
+      expect(api.delete).not.toHaveBeenCalled();
+
+      await act(async () => {
+        window.dispatchEvent(new Event('pagehide'));
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe(releaseLockKeepaliveUrl(`${REVIEW_ENDPOINT}/locks`));
+      expect(init).toMatchObject({
+        method: 'DELETE',
+        keepalive: true,
+        credentials: 'include',
+        headers: {
+          'X-Lock-Token': 'lock-1',
+          Authorization: 'Bearer access-1',
+        },
+      });
+      // The page is no longer editing, and the spent token is not released again.
+      expect(screen.queryByLabelText('markdown-editor')).toBeNull();
+      expect(api.delete).not.toHaveBeenCalled();
+
+      window.dispatchEvent(new Event('pagehide'));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // The same user comes back and takes a fresh lock. Leaving then releases that one.
+      await startEditing();
+      expect(api.post).toHaveBeenCalledTimes(2);
+      view.unmount();
+      expect(api.delete).toHaveBeenCalledTimes(1);
+    } finally {
+      setAccessToken(null);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('does not release on pagehide when the description is not being edited', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await renderEditor();
+      window.dispatchEvent(new Event('pagehide'));
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(api.delete).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('sends the keepalive release on pagehide when the axios release is still in flight', async () => {
+    vi.mocked(api.delete).mockReturnValue(new Promise(() => {}) as any);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const { rerender } = await renderEditor({ autosaveDelayMs: 60_000 });
+      await startEditing();
+      await act(async () => {
+        rerender({ autosaveDelayMs: 60_000, disabled: true });
+      });
+      await waitFor(() => expect(api.delete).toHaveBeenCalledWith(
+        `${REVIEW_ENDPOINT}/locks`,
+        { headers: { 'X-Lock-Token': 'lock-1' } },
+      ));
+
+      await act(async () => {
+        window.dispatchEvent(new Event('pagehide'));
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock.mock.calls[0][1]).toMatchObject({
+        method: 'DELETE',
+        keepalive: true,
+        headers: { 'X-Lock-Token': 'lock-1' },
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('save() waits for an autosave already in flight and does not save twice', async () => {
