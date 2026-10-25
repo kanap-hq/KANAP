@@ -11,8 +11,9 @@ export type RelationsColumn<T> = {
   key: string;
   header: React.ReactNode;
   /**
-   * Width in px; the column without one takes the rest (the name). In a narrow table the widths
-   * shrink, down to 96px (a date, an amount), so that the name keeps at least 120px.
+   * Width in px. The column without one is the name: on a wide frame it takes its content,
+   * between 240 and 400px. In a narrow table the widths shrink, down to 96px (a date, an
+   * amount), so that the name keeps at least 120px.
    */
   width?: number;
   /** The least width the column shrinks to in a narrow table, in place of the 96px floor (a label with long words). */
@@ -82,6 +83,12 @@ const FLEX_MIN_WIDTH = 120;
 const COLUMN_MIN_WIDTH = 96;
 /** The share of their width the columns may lose before the next one with a `hideOrder` hides. */
 const MAX_SHRINK = 0.2;
+/** The least width of the name when the frame has room for the columns' targets. */
+export const NAME_MIN_WIDE = 240;
+/** The most the name grows to, whatever its content. */
+export const NAME_MAX = 400;
+/** The most a column with a declared width grows to (a wider declaration keeps its own). */
+export const GROW_MAX = 360;
 
 /** The width a column with a width shrinks to: its `minWidth`, or 96px (a narrower column keeps its own). */
 function leastWidth(column: Pick<RelationsColumn<unknown>, 'width' | 'minWidth'>): number | undefined {
@@ -135,6 +142,102 @@ export function fitColumns<C extends Pick<RelationsColumn<unknown>, 'width' | 'm
   return { columns: shown, ...fitColumnWidths(shown, available) };
 }
 
+function clamp(value: number, least: number, most: number): number {
+  return Math.min(most, Math.max(least, value));
+}
+
+/** The width a column aims for when the frame has room: its content, inside its bounds. */
+function targetWidth(column: Pick<RelationsColumn<unknown>, 'width' | 'wrap'>, content: number): number {
+  if (column.width == null) return clamp(content, NAME_MIN_WIDE, NAME_MAX);
+  // A wrapping column stays at its declaration: its text already breaks inside that width.
+  if (column.wrap) return column.width;
+  return clamp(content, column.width, Math.max(column.width, GROW_MAX));
+}
+
+/** The width a column keeps at the base: its declaration, or 120px for the name. */
+function baseWidth(column: Pick<RelationsColumn<unknown>, 'width'>): number {
+  return column.width ?? FLEX_MIN_WIDTH;
+}
+
+/**
+ * Shares `extra` px above the base in proportion to what each column wants (its target minus its
+ * base). The sum is `extra`, and both ends are exact: nothing at 0, the targets when `extra`
+ * covers every want.
+ */
+function spreadWidths(bases: number[], targets: number[], extra: number): number[] {
+  const wants = targets.map((target, index) => target - bases[index]);
+  const wantSum = wants.reduce((sum, want) => sum + want, 0);
+  if (extra <= 0 || wantSum <= 0) return bases;
+  if (extra >= wantSum) return targets;
+  const shares = wants.map((want) => (extra * want) / wantSum);
+  const added = shares.map((share) => Math.floor(share));
+  let left = extra - added.reduce((sum, share) => sum + share, 0);
+  const order = shares
+    .map((share, index) => ({ index, frac: share - Math.floor(share) }))
+    .sort((a, b) => b.frac - a.frac || a.index - b.index);
+  for (let n = 0; left > 0 && order.length > 0; n += 1, left -= 1) added[order[n % order.length].index] += 1;
+  return bases.map((base, index) => base + added[index]);
+}
+
+/**
+ * Widths of the displayed columns for one frame (`available` excludes the trailing action
+ * columns). `content` is the measured width of each column, padding included, 0 when nothing
+ * was measured, aligned with `columns`.
+ *
+ * At or above the natural width (the sum of the targets) the columns take those targets and
+ * `tableWidth` is that sum. Between the base (declared widths, 120px for the name) and the
+ * natural width, the room above the base is shared in proportion to each column's want.
+ * Below the base the result is `fitColumns`, unchanged. A `hideOrder` column only drops in
+ * that last regime, so the base and the targets are the columns still shown.
+ */
+export function sizeRelationColumns<C extends Pick<RelationsColumn<unknown>, 'width' | 'minWidth' | 'hideOrder' | 'wrap'>>(
+  columns: C[],
+  content: readonly number[],
+  available: number,
+): { columns: C[]; widths: Array<number | undefined>; minWidth?: number; tableWidth?: number } {
+  const targets = columns.map((column, index) => targetWidth(column, content[index] ?? 0));
+  const bases = columns.map((column) => baseWidth(column));
+  const base = bases.reduce((sum, width) => sum + width, 0);
+  const natural = targets.reduce((sum, width) => sum + width, 0);
+  if (available >= natural) return { columns, widths: targets, tableWidth: natural };
+  if (available >= base) return { columns, widths: spreadWidths(bases, targets, available - base) };
+  return fitColumns(columns, available);
+}
+
+/**
+ * The content width of each displayed column, padding included.
+ * `data-measure` lays the table out at max-content with no `<col>` width, so a header cell is
+ * as wide as the widest cell of its column (the body and the totals). A span is dropped from
+ * the measure. The row link is block-level and would report the cell, so it is measured inline,
+ * as is any other block that clips its text.
+ */
+function readMeasuredWidths(table: HTMLTableElement, count: number): number[] {
+  table.setAttribute('data-measure', '');
+  try {
+    for (const el of table.querySelectorAll<HTMLElement>('td *, th *')) {
+      if (el.closest('[colspan]')) continue;
+      const style = getComputedStyle(el);
+      if (style.position === 'absolute' || style.position === 'fixed') continue;
+      if (style.display === 'block' && style.overflowX !== 'visible') el.setAttribute('data-shrink', '');
+    }
+    const head = table.tHead?.rows[0];
+    const row = head && head.cells.length >= count
+      ? head
+      : Array.from(table.tBodies[0]?.rows ?? []).find((candidate) => (
+        candidate.cells.length >= count
+        && Array.from(candidate.cells).slice(0, count).every((cell) => cell.colSpan === 1)
+      ));
+    if (!row) return Array.from({ length: count }, () => 0);
+    return Array.from({ length: count }, (_, index) => {
+      const cell = row.cells[index];
+      return cell ? Math.ceil(cell.getBoundingClientRect().width) : 0;
+    });
+  } finally {
+    table.querySelectorAll('[data-shrink]').forEach((el) => el.removeAttribute('data-shrink'));
+    table.removeAttribute('data-measure');
+  }
+}
+
 /** The width of an element, followed as it changes (0 until it is laid out). */
 function useElementWidth(element: HTMLElement | null) {
   const [width, setWidth] = React.useState(0);
@@ -164,6 +267,12 @@ function titleCutCell(event: React.MouseEvent) {
 }
 
 /**
+ * Width a table publishes when the frame is wider than its columns. The section caps itself at
+ * the largest one, so "Add" lines up with the table. A tighter frame publishes nothing.
+ */
+const RelationsWidthContext = React.createContext<((id: string, width: number | null) => void) | null>(null);
+
+/**
  * The dense table of a Relations section (charter "Dense workspace tables"): 12/500 tertiary
  * headers, 13px cells, horizontal borders only, row hover, the whole row opens the object, and an
  * unlink icon revealed on hover. Shared by every object that shows its relations.
@@ -172,20 +281,62 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
   const theme = useTheme();
   const navigate = useNavigate();
   const [unfolded, setUnfolded] = React.useState(false);
+  const [measured, setMeasured] = React.useState<Readonly<Record<string, number>>>({});
+  const tableRef = React.useRef<HTMLTableElement | null>(null);
+  const shownKeysRef = React.useRef<string[]>([]);
+  const reportWidth = React.useContext(RelationsWidthContext);
+  const tableId = React.useId();
   const foldedRows = folded?.rows ?? [];
+  const actionWidth = action ? action.width : 0;
+  const removeWidth = onRemove ? 40 : 0;
+  const [frame, setFrame] = React.useState<HTMLDivElement | null>(null);
+  const frameWidth = useElementWidth(frame);
+  const content = allColumns.map((column) => measured[column.key] ?? 0);
+  const fitted = frameWidth > 0
+    ? sizeRelationColumns(allColumns, content, frameWidth - actionWidth - removeWidth)
+    : { columns: allColumns, widths: allColumns.map((column) => column.width), tableWidth: undefined };
+  const { columns } = fitted;
+  /** The table's own width when the frame is wider than the columns; the frame keeps the rest. */
+  const naturalWidth = fitted.tableWidth != null ? fitted.tableWidth + actionWidth + removeWidth : null;
+  shownKeysRef.current = columns.map((column) => column.key);
+  const shownKey = shownKeysRef.current.join('\0');
+  // The content does not depend on the frame, so a resize does not measure again. A column that
+  // appears (a folded block, a column `hideOrder` brings back) does.
+  React.useLayoutEffect(() => {
+    const table = tableRef.current;
+    if (!table) return undefined;
+    let cancelled = false;
+    const measure = () => {
+      if (cancelled || !table.isConnected) return;
+      const keys = shownKeysRef.current;
+      const widths = readMeasuredWidths(table, keys.length);
+      setMeasured((prev) => {
+        let changed = false;
+        const next: Record<string, number> = { ...prev };
+        keys.forEach((key, index) => {
+          if (next[key] !== widths[index]) {
+            next[key] = widths[index];
+            changed = true;
+          }
+        });
+        return changed ? next : prev;
+      });
+    };
+    measure();
+    const ready = document.fonts?.ready;
+    if (ready) void ready.then(() => { if (!cancelled) measure(); }, () => undefined);
+    return () => { cancelled = true; };
+  }, [allColumns, rows, folded, totals, unfolded, shownKey]);
+  React.useLayoutEffect(() => {
+    if (!reportWidth) return undefined;
+    reportWidth(tableId, naturalWidth);
+    return () => reportWidth(tableId, null);
+  }, [reportWidth, tableId, naturalWidth]);
   const open = (row: T) => {
     const href = rowHref?.(row);
     if (href) navigate(href);
     else onRowOpen?.(row);
   };
-  const actionWidth = action ? action.width : 0;
-  const removeWidth = onRemove ? 40 : 0;
-  const [frame, setFrame] = React.useState<HTMLDivElement | null>(null);
-  const frameWidth = useElementWidth(frame);
-  const fitted = frameWidth > 0
-    ? fitColumns(allColumns, frameWidth - actionWidth - removeWidth)
-    : { columns: allColumns, widths: allColumns.map((column) => column.width) };
-  const { columns } = fitted;
   /** One row of the body, a main one or a folded one. */
   const renderRow = (row: T) => {
     const href = rowHref?.(row) ?? null;
@@ -246,13 +397,33 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
     <Box ref={setFrame} sx={{ width: '100%', overflowX: 'auto' }}>
       <Box
         component="table"
+        ref={tableRef}
         aria-label={ariaLabel}
         onMouseOver={titleCutCell}
+        style={naturalWidth != null ? { width: naturalWidth } : undefined}
         sx={{
           width: '100%',
           minWidth: fitted.minWidth != null ? fitted.minWidth + actionWidth + removeWidth : undefined,
           borderCollapse: 'collapse',
           tableLayout: 'fixed',
+          // One synchronous pass, before paint: columns size to their content, then the attribute goes.
+          '&[data-measure]': { tableLayout: 'auto !important', width: 'max-content !important', minWidth: '0 !important' },
+          '&[data-measure] col': { width: 'auto !important' },
+          '&[data-measure] a.relations-row-link, &[data-measure] [data-shrink]': {
+            display: 'inline !important',
+            overflow: 'visible !important',
+            textOverflow: 'clip !important',
+            width: 'auto !important',
+            maxWidth: 'none !important',
+            whiteSpace: 'nowrap !important',
+          },
+          '&[data-measure] :is(td, th)[colspan]': {
+            padding: '0 !important',
+            border: '0 !important',
+            fontSize: '0 !important',
+            lineHeight: '0 !important',
+          },
+          '&[data-measure] :is(td, th)[colspan] > *': { display: 'none !important' },
           '& th': {
             fontSize: 12,
             fontWeight: 500,
@@ -380,34 +551,51 @@ type SectionProps = {
 
 /** A Relations section: title and count, an "Add" text action on the right, then its content. */
 export function RelationsSection({ title, count, onAdd, adding, addLabel, heading, hint, actions, children }: SectionProps) {
+  const widths = React.useRef(new Map<string, number>());
+  const [maxWidth, setMaxWidth] = React.useState<number | undefined>(undefined);
+  // The widest table in regime 1. maxWidth, so a narrower frame still gets the whole section.
+  const report = React.useCallback((id: string, width: number | null) => {
+    const map = widths.current;
+    if (width == null) {
+      if (!map.delete(id)) return;
+    } else if (map.get(id) === width) {
+      return;
+    } else {
+      map.set(id, width);
+    }
+    const next = map.size === 0 ? undefined : Math.max(...map.values());
+    setMaxWidth((current) => (current === next ? current : next));
+  }, []);
   return (
-    <Box component="section" aria-label={title}>
-      <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 0.75, minHeight: 28 }}>
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
-          {heading ?? (
-            <Typography component="h2" sx={{ m: 0, fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: 'kanap.text.primary' }}>
-              {title}
-            </Typography>
+    <RelationsWidthContext.Provider value={report}>
+      <Box component="section" aria-label={title} sx={maxWidth != null ? { maxWidth } : undefined}>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 0.75, minHeight: 28 }}>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
+            {heading ?? (
+              <Typography component="h2" sx={{ m: 0, fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: 'kanap.text.primary' }}>
+                {title}
+              </Typography>
+            )}
+            {hint && <InfoHint text={hint} />}
+            {count != null && <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{count}</Typography>}
+          </Box>
+          {actions}
+          {onAdd && (
+            <Button
+              variant="text"
+              size="small"
+              aria-haspopup="listbox"
+              aria-expanded={adding ? true : undefined}
+              onClick={(event) => onAdd(event.currentTarget)}
+              sx={(theme) => ({ fontSize: 12, minWidth: 0, px: 1, ...(adding ? { backgroundColor: theme.palette.kanap.bg.hover } : {}) })}
+            >
+              {addLabel}
+            </Button>
           )}
-          {hint && <InfoHint text={hint} />}
-          {count != null && <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{count}</Typography>}
         </Box>
-        {actions}
-        {onAdd && (
-          <Button
-            variant="text"
-            size="small"
-            aria-haspopup="listbox"
-            aria-expanded={adding ? true : undefined}
-            onClick={(event) => onAdd(event.currentTarget)}
-            sx={(theme) => ({ fontSize: 12, minWidth: 0, px: 1, ...(adding ? { backgroundColor: theme.palette.kanap.bg.hover } : {}) })}
-          >
-            {addLabel}
-          </Button>
-        )}
+        {children}
       </Box>
-      {children}
-    </Box>
+    </RelationsWidthContext.Provider>
   );
 }
 

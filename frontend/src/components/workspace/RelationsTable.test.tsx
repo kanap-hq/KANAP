@@ -4,7 +4,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
-import { RelationsTable, fitColumnWidths, fitColumns, type RelationsColumn } from './RelationsTable';
+import {
+  GROW_MAX, NAME_MAX, NAME_MIN_WIDE, RelationsSection, RelationsTable,
+  fitColumnWidths, fitColumns, sizeRelationColumns, type RelationsColumn,
+} from './RelationsTable';
 
 type Row = { id: string; name: string; family: string };
 
@@ -112,6 +115,82 @@ describe('fitColumns', () => {
   });
 });
 
+describe('sizeRelationColumns', () => {
+  // Name content below its wide minimum, one column that grows to its text, one capped at
+  // GROW_MAX, and a wrapping column that must stay put.
+  const columns: Array<Pick<RelationsColumn<unknown>, 'width' | 'wrap'>> = [
+    {},
+    { width: 200 },
+    { width: 80 },
+    { width: 140, wrap: true },
+  ];
+  const content = [10, 300, 1000, 500];
+  const targets = [NAME_MIN_WIDE, 300, GROW_MAX, 140];
+  const natural = targets.reduce((sum, width) => sum + width, 0);
+  const base = [120, 200, 80, 140].reduce((sum, width) => sum + width, 0);
+  const sum = (widths: Array<number | undefined>) => widths.reduce<number>((total, width) => total + (width ?? 0), 0);
+
+  it('gives the name its content on a wide frame, bounded below and above', () => {
+    expect(sizeRelationColumns(columns, content, natural + 80)).toEqual({ columns, widths: targets, tableWidth: natural });
+    expect(sizeRelationColumns([{}], [NAME_MAX + 250], 1000)).toEqual({
+      columns: [{}], widths: [NAME_MAX], tableWidth: NAME_MAX,
+    });
+    expect(targets[0]).toBe(NAME_MIN_WIDE);
+  });
+
+  it('grows a column up to its content and no further than GROW_MAX, and never past a wider declaration', () => {
+    expect(sizeRelationColumns([{ width: 200 }], [300], 1000).widths).toEqual([300]);
+    expect(sizeRelationColumns([{ width: 200 }], [500], 1000).widths).toEqual([GROW_MAX]);
+    expect(sizeRelationColumns([{ width: 400 }], [500], 1000).widths).toEqual([400]);
+    expect(sizeRelationColumns([{ width: 400 }], [350], 1000).widths).toEqual([400]);
+  });
+
+  it('keeps a wrapping column at its declared width', () => {
+    expect(sizeRelationColumns([{ width: 140, wrap: true }], [500], 1000)).toEqual({
+      columns: [{ width: 140, wrap: true }], widths: [140], tableWidth: 140,
+    });
+  });
+
+  it('is continuous at both edges of the middle regime', () => {
+    const atNatural = sizeRelationColumns(columns, content, natural);
+    const justUnder = sizeRelationColumns(columns, content, natural - 1);
+    expect(atNatural).toEqual({ columns, widths: targets, tableWidth: natural });
+    expect(justUnder.tableWidth).toBeUndefined();
+    expect(sum(justUnder.widths)).toBe(natural - 1);
+    justUnder.widths.forEach((width, index) => {
+      expect(targets[index] - width!).toBeGreaterThanOrEqual(0);
+      expect(targets[index] - width!).toBeLessThanOrEqual(1);
+    });
+
+    expect(sizeRelationColumns(columns, content, base).widths).toEqual([120, 200, 80, 140]);
+    let previous = sizeRelationColumns(columns, content, base).widths as number[];
+    for (let available = base + 1; available < natural; available += 1) {
+      const widths = sizeRelationColumns(columns, content, available).widths as number[];
+      expect(sum(widths)).toBe(available);
+      widths.forEach((width, index) => {
+        expect(width).toBeGreaterThanOrEqual(previous[index]);
+        expect(width - previous[index]).toBeLessThanOrEqual(1);
+      });
+      previous = widths;
+    }
+
+    // One pixel under the base is the narrow fit, the same one the table uses today.
+    expect(sizeRelationColumns(columns, content, base - 1)).toEqual(fitColumns(columns, base - 1));
+  });
+
+  it('matches fitColumns below the base, including a column hidden by its order', () => {
+    const wide = COLUMNS.map(() => 400);
+    expect(sizeRelationColumns(COLUMNS, wide, 300)).toEqual(fitColumns(COLUMNS, 300));
+    expect(sizeRelationColumns(COLUMNS, wide, 365)).toEqual(fitColumns(COLUMNS, 365));
+    expect(sizeRelationColumns(COLUMNS, COLUMNS.map(() => 0), 100)).toEqual(fitColumns(COLUMNS, 100));
+    // The base of a table that already hid columns is the columns still passed in.
+    const shown = COLUMNS.filter((column) => column.key !== 'via' && column.key !== 'link' && column.key !== 'family');
+    const shownBase = 72 + 72 + 100 + 120;
+    expect(sizeRelationColumns(shown, shown.map(() => 0), shownBase).widths).toEqual([72, 120, 72, 100]);
+    expect(sizeRelationColumns(shown, shown.map(() => 0), shownBase - 1)).toEqual(fitColumns(shown, shownBase - 1));
+  });
+});
+
 describe('RelationsTable at narrow width', () => {
   it('keeps the declared widths until the frame is measured', () => {
     const { container } = renderTable();
@@ -121,10 +200,14 @@ describe('RelationsTable at narrow width', () => {
   it('fits the columns to the frame and follows its resizes', () => {
     frameWidth = 1200;
     const { container } = renderTable({ onRemove: () => {} });
-    expect(colWidths(container)).toEqual([...COLUMNS.map((column) => column.width), 40]);
+    // Nothing is measured here, so the name takes its wide minimum and the table stops at that.
+    const declared = COLUMNS.reduce((sum, column) => sum + (column.width ?? 0), 0);
+    expect(colWidths(container)).toEqual([72, NAME_MIN_WIDE, 110, 72, 120, 140, 100, 40]);
+    expect(screen.getByRole('table').style.width).toBe(`${declared + NAME_MIN_WIDE + 40}px`);
 
     frameWidth = 405;
     act(() => resize?.());
+    expect(screen.getByRole('table').style.width).toBe('');
     expect(screen.getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Ref', 'Name', 'Version', 'Support end']);
     expect(screen.queryByText('SRV-1')).toBeNull();
     const widths = colWidths(container);
@@ -163,6 +246,47 @@ describe('RelationsTable at narrow width', () => {
     vi.spyOn(cell, 'scrollWidth', 'get').mockReturnValue(200);
     fireEvent.mouseOver(screen.getByText('PostgreSQL'));
     expect(cell).not.toHaveAttribute('title');
+  });
+});
+
+describe('RelationsTable on a wide frame', () => {
+  const fixed = COLUMNS.reduce((sum, column) => sum + (column.width ?? 0), 0);
+
+  it('takes its natural width and the section caps itself there', () => {
+    frameWidth = 1600;
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter>
+          <RelationsSection title="Technologies" onAdd={() => {}} addLabel="Add">
+            <RelationsTable columns={COLUMNS} rows={ROWS} rowKey={(row) => row.id} onRemove={() => {}} ariaLabel="Technologies" />
+          </RelationsSection>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+    const natural = fixed + NAME_MIN_WIDE + 40;
+    const table = screen.getByRole('table', { name: 'Technologies' });
+    expect(table.style.width).toBe(`${natural}px`);
+    expect(colWidths(table)).toEqual([72, NAME_MIN_WIDE, 110, 72, 120, 140, 100, 40]);
+    expect(getComputedStyle(screen.getByRole('region', { name: 'Technologies' })).maxWidth).toBe(`${natural}px`);
+  });
+
+  it('caps the section at the widest of its tables', () => {
+    frameWidth = 1600;
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter>
+          <RelationsSection title="Relations">
+            <RelationsTable columns={COLUMNS.slice(0, 2)} rows={ROWS} rowKey={(row) => row.id} ariaLabel="Short" />
+            <RelationsTable columns={COLUMNS} rows={ROWS} rowKey={(row) => row.id} onRemove={() => {}} ariaLabel="Technologies" />
+          </RelationsSection>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+    const short = 72 + NAME_MIN_WIDE;
+    const wide = fixed + NAME_MIN_WIDE + 40;
+    expect(screen.getByRole('table', { name: 'Short' }).style.width).toBe(`${short}px`);
+    expect(screen.getByRole('table', { name: 'Technologies' }).style.width).toBe(`${wide}px`);
+    expect(getComputedStyle(screen.getByRole('region', { name: 'Relations' })).maxWidth).toBe(`${wide}px`);
   });
 });
 
