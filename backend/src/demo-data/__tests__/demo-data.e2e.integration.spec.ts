@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as os from 'node:os';
@@ -162,6 +163,283 @@ async function checkContactSuppliers(tenantId: string) {
   const contacts = await tenantCount(tenantId, `SELECT count(*) AS n FROM contacts WHERE tenant_id = $1`);
   const links = await tenantCount(tenantId, `SELECT count(*) AS n FROM supplier_contacts WHERE tenant_id = $1`);
   assert.deepEqual({ contacts, links }, { contacts: expected.length, links: expected.length }, 'one supplier link per contact');
+}
+
+const VMWARE_CLUSTER = 'PAR-VSPHERE-CL01';
+const VMWARE_HOSTS = ['PAR-ESX-01', 'PAR-ESX-02', 'PAR-ESX-05'];
+const VMWARE_VMS = [
+  'PAR-ERP-01', 'PAR-ERP-02', 'PAR-AD-01', 'PAR-SQL-01', 'PAR-VCENTER-01',
+  'PAR-DB-01', 'PAR-APP-01', 'PAR-WEB-01', 'PAR-AD-02', 'PAR-SQL-02',
+  'PAR-MON-01', 'PAR-BKP-01',
+];
+const VMWARE_APPLICATIONS = [
+  'SAP S/4HANA', 'SAP BW/4HANA', 'Fromage B2B Portal', 'QualityLab LIMS', 'CheeseTrack',
+  'Sage X3', 'PRTG Network Monitor', 'Veeam Backup & Replication', 'VMware vSphere',
+];
+/** The name of the connection whose fixture ref is CONN-FROMAGE-005. */
+const VMWARE_CONNECTION = 'Veeam backup of the vSphere cluster';
+
+/**
+ * The vSphere landscape the load leaves: one cluster of three hosts, the hosts on the shared
+ * storage, the VMs carried by the cluster alone, the two isolated aging hosts, the vSphere server
+ * rows and the Veeam connection. Then the impact of the array and of one host, the connection the
+ * cluster members inherit, and the placement refusal of a host's `contains`.
+ */
+async function checkVmwareLandscape(port: number, tenantId: string, host: string, token: string) {
+  const clusterId = await vmwareAssetId(tenantId, VMWARE_CLUSTER);
+  const idOf = (name: string) => vmwareAssetId(tenantId, name);
+
+  const members: Array<{ name: string }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT a.name
+       FROM asset_cluster_members m
+       JOIN assets a ON a.tenant_id = m.tenant_id AND a.id = m.asset_id
+      WHERE m.tenant_id = $1 AND m.cluster_id = $2
+      ORDER BY a.name`, [tenantId, clusterId]));
+  assert.deepEqual(members.map((row) => row.name), VMWARE_HOSTS, 'the three hosts of the vSphere cluster');
+
+  const relations: Array<{ source: string; type: string; target: string }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT s.name AS source, r.relation_type AS type, t.name AS target
+       FROM asset_relations r
+       JOIN assets s ON s.tenant_id = r.tenant_id AND s.id = r.asset_id
+       JOIN assets t ON t.tenant_id = r.tenant_id AND t.id = r.related_asset_id
+      WHERE r.tenant_id = $1
+      ORDER BY s.name, r.relation_type, t.name`, [tenantId]));
+  const contains = relations.filter((row) => row.type === 'contains');
+  const dependsOn = relations.filter((row) => row.type === 'depends_on');
+  assert.deepEqual(
+    dependsOn.map((row) => `${row.source}|${row.target}`),
+    VMWARE_HOSTS.map((name) => `${name}|PAR-SAN-01`),
+    'each cluster host depends on the shared array; the aging hosts depend on nothing',
+  );
+  assert.deepEqual(
+    contains.filter((row) => row.source === VMWARE_CLUSTER).map((row) => row.target),
+    [...VMWARE_VMS].sort(),
+    'the 12 VMs of the vSphere cluster are contained by the cluster',
+  );
+  for (const member of VMWARE_HOSTS) {
+    assert.deepEqual(contains.filter((row) => row.source === member), [], `${member} contains no VM`);
+  }
+  assert.deepEqual(contains.filter((row) => row.source === 'PAR-ESX-03').map((row) => row.target), ['PAR-ETL-01']);
+  assert.deepEqual(contains.filter((row) => row.source === 'PAR-ESX-04').map((row) => row.target), ['PAR-ERP-QA-01']);
+
+  const doubles: Array<{ asset: string; containers: string[] }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT a.name AS asset, array_agg(c.name ORDER BY c.name) AS containers
+       FROM asset_relations r
+       JOIN assets c ON c.tenant_id = r.tenant_id AND c.id = r.asset_id AND c.status <> 'retired'
+       JOIN assets a ON a.tenant_id = r.tenant_id AND a.id = r.related_asset_id
+      WHERE r.tenant_id = $1 AND r.relation_type = 'contains'
+      GROUP BY a.id, a.name
+     HAVING count(*) > 1`, [tenantId]));
+  assert.deepEqual(doubles, [], 'no asset of the tenant has two containers in service');
+
+  const vsphereRows: Array<{ asset: string }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT a.name AS asset
+       FROM app_asset_assignments x
+       JOIN assets a ON a.tenant_id = x.tenant_id AND a.id = x.asset_id
+       JOIN app_instances i ON i.tenant_id = x.tenant_id AND i.id = x.app_instance_id
+       JOIN applications ap ON ap.tenant_id = i.tenant_id AND ap.id = i.application_id
+      WHERE x.tenant_id = $1 AND ap.name = 'VMware vSphere'
+      ORDER BY a.name`, [tenantId]));
+  assert.deepEqual(
+    vsphereRows.map((row) => row.asset),
+    ['PAR-ESX-03', 'PAR-ESX-04', 'PAR-VCENTER-01', VMWARE_CLUSTER].sort(),
+    'VMware vSphere runs on the cluster, the vCenter appliance and the two aging hosts, never on the cluster hosts',
+  );
+
+  const connectionRows: Array<{ source: string; destination: string }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT sa.name AS source, da.name AS destination
+       FROM connections c
+       LEFT JOIN assets sa ON sa.tenant_id = c.tenant_id AND sa.id = c.source_asset_id
+       LEFT JOIN assets da ON da.tenant_id = c.tenant_id AND da.id = c.destination_asset_id
+      WHERE c.tenant_id = $1 AND c.name = $2`, [tenantId, VMWARE_CONNECTION]));
+  assert.deepEqual(connectionRows, [{ source: 'PAR-BKP-01', destination: VMWARE_CLUSTER }],
+    'the Veeam connection links the backup server to the cluster');
+
+  const impact = async (name: string) => {
+    const answer = await request(port, { method: 'GET', path: `/assets/${await idOf(name)}/impact`, host, token });
+    assert.equal(answer.status, 200, `impact of ${name}: ${JSON.stringify(answer.body)}`);
+    return answer.body;
+  };
+
+  const san = await impact('PAR-SAN-01');
+  assert.equal(san.totals.assets, 15, 'the three hosts and the 12 VMs fall with the array');
+  assert.equal(san.totals.clusters, 2);
+  assert.equal(san.totals.applications, VMWARE_APPLICATIONS.length);
+  assert.deepEqual(
+    san.clusters.map((row: any) => `${row.name}|${row.state}`).sort(),
+    ['PAR-SQL-CL01|down', 'PAR-VSPHERE-CL01|down'],
+    'both clusters lose every member',
+  );
+  const sanVsphere = san.clusters.find((row: any) => row.name === VMWARE_CLUSTER);
+  assert.deepEqual([sanVsphere.members, sanVsphere.fallen_members], [3, 3]);
+  assert.deepEqual(
+    san.applications.map((row: any) => row.name).sort(),
+    [...VMWARE_APPLICATIONS].sort(),
+    'the applications of the 12 VMs and of the two clusters',
+  );
+  assert.deepEqual(
+    san.assets.filter((row: any) => row.depth > 0).map((row: any) => row.name).sort(),
+    [...VMWARE_HOSTS, ...VMWARE_VMS].sort(),
+  );
+  for (const name of ['PAR-ESX-03', 'PAR-ESX-04', 'PAR-ETL-01', 'PAR-ERP-QA-01']) {
+    assert.ok(!san.assets.some((row: any) => row.name === name), `${name} stays out of the array impact`);
+  }
+
+  const esx = await impact('PAR-ESX-01');
+  assert.equal(esx.totals.assets, 0, 'one host falling takes no VM: the cluster carries them');
+  assert.equal(esx.clusters.length, 1);
+  assert.deepEqual(
+    esx.clusters.map((row: any) => `${row.name}|${row.state}|${row.members}|${row.fallen_members}`),
+    [`${VMWARE_CLUSTER}|degraded|3|1`],
+  );
+  assert.deepEqual(esx.applications, [], 'no application runs on the host itself');
+
+  const esx01 = await idOf('PAR-ESX-01');
+  const byServer = await request(port, { method: 'GET', path: `/connections/by-server/${esx01}`, host, token });
+  assert.equal(byServer.status, 200, JSON.stringify(byServer.body));
+  const connection = (byServer.body.items as any[]).find((item) => item.name === VMWARE_CONNECTION);
+  assert.ok(connection, 'the Veeam connection is on PAR-ESX-01 through its cluster');
+  assert.equal(connection.inherited, true);
+  assert.deepEqual(connection.via_clusters.map((via: any) => via.name), [VMWARE_CLUSTER]);
+
+  const erp01 = await idOf('PAR-ERP-01');
+  const refused = await request(port, {
+    method: 'POST',
+    path: `/assets/${esx01}/relations`,
+    host,
+    token,
+    body: { relations: [{ related_asset_id: erp01, relation_type: 'contains' }] },
+  });
+  assert.equal(refused.status, 409, JSON.stringify(refused.body));
+  assert.equal(refused.body.code, 'placement_inherited', 'a host cannot take a VM its cluster contains');
+}
+
+async function vmwareAssetId(tenantId: string, name: string): Promise<string> {
+  const [row] = await inTenant(tenantId, (m) => m.query(
+    `SELECT id FROM assets WHERE tenant_id = $1 AND name = $2`, [tenantId, name]));
+  assert.ok(row?.id, `asset '${name}' exists`);
+  return String(row.id);
+}
+
+const OLD_CLUSTER_NOTES = 'vSphere cluster of PAR-ESX-01 and PAR-ESX-02 — HA and DRS';
+const OLD_SAN_NOTES = 'NetApp FAS2750 — 50TB usable, primary SAN for all VMs';
+const NEW_CLUSTER_NOTES = 'Paris vSphere cluster (HA and DRS), managed by PAR-VCENTER-01 — its VMs move between the hosts';
+const NEW_SAN_NOTES = 'NetApp FAS2750 — 50TB usable, shared storage of the Paris vSphere cluster hosts';
+
+/** The two notes the fixture replaces: only the old value is overwritten. */
+async function checkVmwareNotes(tenantId: string) {
+  const rows: Array<{ name: string; notes: string | null }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT name, notes FROM assets
+      WHERE tenant_id = $1 AND name IN ('PAR-VSPHERE-CL01', 'PAR-SAN-01')
+      ORDER BY name`, [tenantId]));
+  assert.deepEqual(Object.fromEntries(rows.map((row) => [row.name, row.notes])), {
+    'PAR-SAN-01': NEW_SAN_NOTES,
+    'PAR-VSPHERE-CL01': NEW_CLUSTER_NOTES,
+  }, 'the notes of the cluster and the array are the new ones');
+}
+
+/** The state of a tenant built before this lot: no third host, old notes, a host link to a VM of the cluster, no dependency. */
+async function simulateOlderVmwareState(tenantId: string) {
+  await inTenant(tenantId, async (m) => {
+    await m.query(`DELETE FROM assets WHERE tenant_id = $1 AND name = 'PAR-ESX-05'`, [tenantId]);
+    await m.query(`DELETE FROM connections WHERE tenant_id = $1 AND name = $2`, [tenantId, VMWARE_CONNECTION]);
+    await m.query(`UPDATE assets SET notes = $2 WHERE tenant_id = $1 AND name = 'PAR-VSPHERE-CL01'`, [tenantId, OLD_CLUSTER_NOTES]);
+    await m.query(`UPDATE assets SET notes = $2 WHERE tenant_id = $1 AND name = 'PAR-SAN-01'`, [tenantId, OLD_SAN_NOTES]);
+    await m.query(
+      `INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type)
+       SELECT $1, h.id, v.id, 'contains'
+         FROM assets h, assets v
+        WHERE h.tenant_id = $1 AND h.name = 'PAR-ESX-01' AND v.tenant_id = $1 AND v.name = 'PAR-ERP-01'`,
+      [tenantId],
+    );
+    await m.query(`DELETE FROM asset_relations WHERE tenant_id = $1 AND relation_type = 'depends_on'`, [tenantId]);
+  });
+}
+
+/**
+ * The loader run as a child of this process: a synchronous spawn would block the API that serves it.
+ * The demo service's own spawn is left alone, so the captured loader environment stays the one of
+ * the first load.
+ */
+function runLoader(env: Record<string, string>): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [path.join(FIXTURES, 'setup-tenant.mjs'), '--server-mode'], {
+      env: { ...process.env, ...env },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    const timer = setTimeout(() => {
+      child.kill('SIGKILL');
+      reject(new Error(`the loader did not end in ten minutes\n${stdout}\n${stderr}`));
+    }, 600_000);
+    child.stdout!.on('data', (chunk) => { stdout += String(chunk); });
+    child.stderr!.on('data', (chunk) => { stderr += String(chunk); });
+    child.on('error', (error) => { clearTimeout(timer); reject(error); });
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      if (code === 0) resolve();
+      else reject(new Error(`the loader ended with code ${code}\n${stdout}\n${stderr}`));
+    });
+  });
+}
+
+/** What a second load must leave alone, compared by names, with the audit rows of the relations and memberships. */
+async function vmwareSnapshot(tenantId: string) {
+  return inTenant(tenantId, async (m) => {
+    const relations: Array<{ source: string; type: string; target: string }> = await m.query(
+      `SELECT s.name AS source, r.relation_type AS type, t.name AS target
+         FROM asset_relations r
+         JOIN assets s ON s.tenant_id = r.tenant_id AND s.id = r.asset_id
+         JOIN assets t ON t.tenant_id = r.tenant_id AND t.id = r.related_asset_id
+        WHERE r.tenant_id = $1
+        ORDER BY s.name, r.relation_type, t.name`, [tenantId]);
+    const members: Array<{ cluster: string; member: string }> = await m.query(
+      `SELECT c.name AS cluster, a.name AS member
+         FROM asset_cluster_members x
+         JOIN assets c ON c.tenant_id = x.tenant_id AND c.id = x.cluster_id
+         JOIN assets a ON a.tenant_id = x.tenant_id AND a.id = x.asset_id
+        WHERE x.tenant_id = $1
+        ORDER BY c.name, a.name`, [tenantId]);
+    const assignments: Array<{ asset: string; application: string; environment: string; role: string }> = await m.query(
+      `SELECT a.name AS asset, ap.name AS application, i.environment, x.role
+         FROM app_asset_assignments x
+         JOIN assets a ON a.tenant_id = x.tenant_id AND a.id = x.asset_id
+         JOIN app_instances i ON i.tenant_id = x.tenant_id AND i.id = x.app_instance_id
+         JOIN applications ap ON ap.tenant_id = i.tenant_id AND ap.id = i.application_id
+        WHERE x.tenant_id = $1
+        ORDER BY a.name, ap.name, i.environment, x.role`, [tenantId]);
+    const technologies: Array<{ asset: string; technology: string; version: string }> = await m.query(
+      `SELECT a.name AS asset, t.name AS technology, coalesce(v.label, '') AS version
+         FROM asset_technologies x
+         JOIN assets a ON a.tenant_id = x.tenant_id AND a.id = x.asset_id
+         JOIN technologies t ON t.tenant_id = x.tenant_id AND t.id = x.technology_id
+         LEFT JOIN technology_versions v ON v.tenant_id = x.tenant_id AND v.id = x.technology_version_id
+        WHERE x.tenant_id = $1
+        ORDER BY a.name, t.name, version`, [tenantId]);
+    const connections: Array<{ name: string; source: string; destination: string }> = await m.query(
+      `SELECT c.name, coalesce(sa.name, c.source_entity_code, '') AS source,
+              coalesce(da.name, c.destination_entity_code, '') AS destination
+         FROM connections c
+         LEFT JOIN assets sa ON sa.tenant_id = c.tenant_id AND sa.id = c.source_asset_id
+         LEFT JOIN assets da ON da.tenant_id = c.tenant_id AND da.id = c.destination_asset_id
+        WHERE c.tenant_id = $1
+        ORDER BY c.name, source, destination`, [tenantId]);
+    const audit: Array<{ table_name: string; n: number }> = await m.query(
+      `SELECT table_name, count(*)::int AS n
+         FROM audit_log
+        WHERE tenant_id = $1 AND table_name IN ('asset_relations', 'asset_cluster_members')
+        GROUP BY table_name
+        ORDER BY table_name`, [tenantId]);
+    return {
+      relations: relations.map((row) => `${row.source}|${row.type}|${row.target}`),
+      members: members.map((row) => `${row.cluster}|${row.member}`),
+      assignments: assignments.map((row) => `${row.asset}|${row.application}|${row.environment}|${row.role}`),
+      technologies: technologies.map((row) => `${row.asset}|${row.technology}|${row.version}`),
+      connections: connections.map((row) => `${row.name}|${row.source}|${row.destination}`),
+      audit: audit.map((row) => `${row.table_name}:${row.n}`),
+    };
+  });
 }
 
 async function serve(): Promise<Served> {
@@ -330,9 +608,27 @@ async function testLoadResetAndFailure() {
     await checkDimensions(a.tenantId);
     await checkContactSuppliers(a.tenantId);
 
+    const token = served.loaderEnvs[0].KANAP_DEMO_TOKEN;
+    await checkVmwareLandscape(served.port, a.tenantId, hostA, token);
+    await checkVmwareNotes(a.tenantId);
+    lap('VMware landscape checked');
+
+    // A tenant built before this lot: no third host, old notes, a host link to a VM of the
+    // cluster, no dependency. A full loader run brings it back in line.
+    await simulateOlderVmwareState(a.tenantId);
+    await runLoader(served.loaderEnvs[0]);
+    lap('convergence load ended');
+    await checkVmwareLandscape(served.port, a.tenantId, hostA, token);
+    await checkVmwareNotes(a.tenantId);
+
+    // A second full run changes nothing, audit rows of relations and memberships included.
+    const snapshot = await vmwareSnapshot(a.tenantId);
+    await runLoader(served.loaderEnvs[0]);
+    lap('idempotence load ended');
+    assert.deepEqual(await vmwareSnapshot(a.tenantId), snapshot, 'a second load changes nothing');
+
     // ── The loader's token: refused on another tenant's host, accepted on its own ──
     assert.equal(served.loaderEnvs.length, 1);
-    const token = served.loaderEnvs[0].KANAP_DEMO_TOKEN;
     assert.equal((await request(served.port, { method: 'GET', path: '/companies', host: hostA, token })).status, 200);
     const foreign = await request(served.port, { method: 'GET', path: '/companies', host: hostB, token });
     assert.equal(foreign.status, 401, 'the loader token on another tenant');
