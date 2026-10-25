@@ -58,16 +58,16 @@ vi.mock('../components/ServerDataGrid', () => ({
     );
   },
 }));
-vi.mock('../components/forms/FormModal', () => ({
-  default: (props: { open: boolean; actions: React.ReactNode }) => (props.open ? <div>{props.actions}</div> : null),
+vi.mock('./users/UserDialog', () => ({
+  default: (props: { open: boolean; mode: string; initialTab?: string; personName?: string }) => (
+    props.open
+      ? <div>user dialog {props.mode} {props.initialTab ?? 'identity'} {props.personName}</div>
+      : null
+  ),
 }));
-vi.mock('./forms/UserForm', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
 vi.mock('../components/DeleteSelectedButton', () => ({ default: () => null }));
-vi.mock('../components/dataAccess/DataAccessDialog', () => ({
-  default: (props: { open: boolean; personName: string }) => (props.open ? <div>dialog {props.personName}</div> : null),
-}));
 
 import UsersPage from './UsersPage';
 
@@ -90,11 +90,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   auth.limited = false;
   grid.props = null;
-  get.mockImplementation(async (url: string) => {
-    if (url === '/users/u-2') return { data: ROW };
-    if (url === '/users/u-2/roles') return { data: { items: [] } };
-    return { data: { items: [] } };
-  });
+  get.mockResolvedValue({ data: { items: [] } });
 });
 
 describe('UsersPage data access', () => {
@@ -123,22 +119,21 @@ describe('UsersPage data access', () => {
       .toBe('admin:dataAccess.none');
   });
 
-  it('opens the dialog from the row menu', async () => {
+  it('opens the user dialog on the Access tab from the row menu', async () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'users.actions.rowMenu' }));
     fireEvent.click(await screen.findByText('users.actions.dataAccess'));
-    expect(await screen.findByText('dialog Marta Ruiz')).toBeInTheDocument();
+    expect(await screen.findByText('user dialog edit access Marta Ruiz')).toBeInTheDocument();
   });
 
-  it('offers the dialog from the user edit form', async () => {
+  it('opens the identity dialog when a user is clicked, with no separate data access command', async () => {
     renderPage();
     fireEvent.click(screen.getByText('Marta'));
-    expect(await screen.findByRole('button', { name: 'users.actions.dataAccess' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'users.actions.dataAccess' }));
-    expect(await screen.findByText('dialog Marta Ruiz')).toBeInTheDocument();
+    expect(await screen.findByText('user dialog edit identity Marta Ruiz')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'users.actions.dataAccess' })).toBeNull();
   });
 
-  it('offers no command on one’s own account', async () => {
+  it('offers no data access command on one’s own account', async () => {
     const original = grid.row.id;
     grid.row.id = 'me';
     try {
@@ -146,7 +141,7 @@ describe('UsersPage data access', () => {
       fireEvent.click(screen.getByRole('button', { name: 'users.actions.rowMenu' }));
       expect(screen.queryByText('users.actions.dataAccess')).toBeNull();
       fireEvent.click(screen.getByText('Marta'));
-      expect(screen.queryByRole('button', { name: 'users.actions.dataAccess' })).toBeNull();
+      expect(await screen.findByText('user dialog edit identity Marta Ruiz')).toBeInTheDocument();
     } finally {
       grid.row.id = original;
     }
@@ -160,6 +155,6 @@ describe('UsersPage data access', () => {
     fireEvent.click(screen.getByRole('button', { name: 'users.actions.rowMenu' }));
     expect(screen.queryByText('users.actions.dataAccess')).toBeNull();
     fireEvent.click(screen.getByText('Marta'));
-    expect(screen.queryByRole('button', { name: 'users.actions.dataAccess' })).toBeNull();
+    expect(await screen.findByText('user dialog edit identity Marta Ruiz')).toBeInTheDocument();
   });
 });

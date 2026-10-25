@@ -26,8 +26,12 @@ vi.mock('../../auth/AuthContext', () => ({
 vi.mock('../../api', () => ({ default: { get, post: vi.fn(), put: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../ForbiddenPage', () => ({ default: () => <div>forbidden</div> }));
-vi.mock('../../components/dataAccess/DataAccessDialog', () => ({
-  default: (props: { open: boolean; personName: string }) => (props.open ? <div>dialog {props.personName}</div> : null),
+vi.mock('../../pages/users/UserDialog', () => ({
+  default: (props: { open: boolean; mode: string; initialTab?: string; personName?: string }) => (
+    props.open
+      ? <div>user dialog {props.mode} {props.initialTab ?? 'identity'} {props.personName}</div>
+      : null
+  ),
 }));
 vi.mock('../../components/dataAccess/DataAccessNodeFilterDialog', () => ({
   default: (props: { open: boolean; onPick: (node: unknown) => void }) => (props.open ? (
@@ -88,7 +92,7 @@ describe('DataAccessPage', () => {
     expect(screen.getByText('Alpha Spain')).toBeInTheDocument();
     expect(screen.getByText(/Infrastructure \(INF\)/)).toBeInTheDocument();
     expect(screen.getByText(/Claire Dubois/)).toBeInTheDocument();
-    expect(screen.getByText('admin:dataAccess.counters.limited|{"value":"1"}')).toBeInTheDocument();
+    expect(screen.getByText('admin:dataAccess.counters.limited|{"count":1,"value":"1"}')).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /admin:dataAccess.counters.withoutCompany/ });
     expect(link.getAttribute('href')).toContain('/ops/budget?filters=');
     expect(decodeURIComponent(link.getAttribute('href') ?? '')).toContain('"values":[null]');
@@ -161,10 +165,10 @@ describe('DataAccessPage', () => {
     expect(screen.queryByText('admin:dataAccess.empty')).toBeNull();
   });
 
-  it('opens the data access dialog from a row', async () => {
+  it('opens the user dialog on the Access tab from a row', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Marta Ruiz' }));
-    expect(await screen.findByText('dialog Marta Ruiz')).toBeInTheDocument();
+    expect(await screen.findByText('user dialog edit access Marta Ruiz')).toBeInTheDocument();
   });
 
   it('filters on a node through the server', async () => {
