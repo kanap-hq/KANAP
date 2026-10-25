@@ -234,6 +234,7 @@
   "NO_ACCESS": "Esta cuenta aún no tiene acceso. Solicítelo a un administrador.",
   "assignment_duplicate": "Este servidor ya tiene este rol en este despliegue.",
   "assignment_inherited": "Ya alojada en este servidor a través de {{cluster}}.",
+  "placement_inherited": "Ya está en {{cluster}}, al que pertenece este host.",
   "cluster_has_members_one": "Quite primero su miembro.",
   "cluster_has_members_other": "Quite primero sus {{count}} miembros.",
   "cluster_switch_member": "Miembro de {{cluster}}: no puede convertirse en clúster.",

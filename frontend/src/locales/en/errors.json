@@ -234,6 +234,7 @@
   "NO_ACCESS": "This account has not been granted access yet. Ask an administrator.",
   "assignment_duplicate": "This server already has this role on this deployment.",
   "assignment_inherited": "Already hosted by this server through {{cluster}}.",
+  "placement_inherited": "Already in {{cluster}}, which this host belongs to.",
   "cluster_has_members_one": "Remove its member first.",
   "cluster_has_members_other": "Remove its {{count}} members first.",
   "cluster_switch_member": "Member of {{cluster}}: it cannot become a cluster.",

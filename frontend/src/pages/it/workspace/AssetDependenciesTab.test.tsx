@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -71,9 +71,18 @@ function Location() {
   return <div data-testid="location">{location.pathname}</div>;
 }
 
-function renderTab(clusterSection?: React.ReactNode) {
+type AssetRef = { id: string; name: string; status?: string };
+
+type TabOptions = {
+  clusterSection?: React.ReactNode;
+  relations?: AssetRelationsData;
+  clusters?: Record<string, AssetRef[]>;
+  members?: Record<string, AssetRef[]>;
+};
+
+function renderTab({ clusterSection, relations: data = relations(), clusters = {}, members = {} }: TabOptions = {}) {
   mocked.get.mockImplementation(async (url: string) => {
-    if (url === '/assets/as-1/relations-tab') return { data: relations() } as never;
+    if (url === '/assets/as-1/relations-tab') return { data } as never;
     if (url === '/assets') {
       return { data: { items: [
         { id: 'as-1', name: 'this-server', asset_reference: 'AST-1' },
@@ -81,6 +90,10 @@ function renderTab(clusterSection?: React.ReactNode) {
         { id: 'as-9', name: 'edge-fw', asset_reference: 'AST-9' },
       ] } } as never;
     }
+    const clusterMatch = /^\/assets\/(.+)\/clusters$/.exec(url);
+    if (clusterMatch) return { data: { items: clusters[clusterMatch[1]] ?? [] } } as never;
+    const memberMatch = /^\/assets\/(.+)\/members$/.exec(url);
+    if (memberMatch) return { data: { items: members[memberMatch[1]] ?? [] } } as never;
     return { data: [] } as never;
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -114,7 +127,7 @@ describe('AssetDependenciesTab', () => {
   });
 
   it('shows the impact, the cluster slot, then the four directions in order', async () => {
-    renderTab(<section aria-label="cluster-slot" />);
+    renderTab({ clusterSection: <section aria-label="cluster-slot" /> });
     await screen.findByText('vm-app-01');
 
     expect(screen.getAllByRole('region').map((region) => region.getAttribute('aria-label'))).toEqual([
@@ -172,6 +185,208 @@ describe('AssetDependenciesTab', () => {
       fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
       await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(`/assets/as-1/relations/${kind}`, { id: 'as-9' }));
     }
+  });
+
+  it('asks where to place an asset a cluster contains, writes on the cluster and says what it replaced', async () => {
+    const { invalidated } = renderTab({
+      clusters: { 'as-1': [{ id: 'cl-1', name: 'PAR-VSPHERE-CL01', status: 'active' }] },
+      members: {
+        'cl-1': [
+          { id: 'as-1', name: 'this-server', status: 'active' },
+          { id: 'as-2', name: 'vm-app-01', status: 'active' },
+        ],
+      },
+    });
+    mocked.post.mockResolvedValue({
+      data: {
+        ok: true,
+        changed: true,
+        replaced_host_links: [{
+          host_id: 'as-7',
+          host_name: 'esx-07',
+          asset_id: 'as-9',
+          asset_name: 'edge-fw',
+          cluster_id: 'cl-1',
+          cluster_name: 'PAR-VSPHERE-CL01',
+        }],
+      },
+    } as never);
+    await screen.findByText('vm-app-01');
+    fireEvent.click(within(screen.getByRole('region', { name: A('contains') })).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+
+    expect(await screen.findByText('components.clusterPlacement.title')).toBeTruthy();
+    expect(screen.getByText('components.clusterPlacement.inCluster(host=this-server,cluster=PAR-VSPHERE-CL01,count=2)')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'components.clusterPlacement.hostOnly' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'components.clusterPlacement.placeInCluster' }));
+
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/cl-1/relations/contains', { id: 'as-9' }));
+    expect(await screen.findByText('workspace.asset.relations.placementReplaced(cluster=PAR-VSPHERE-CL01,hosts=esx-07,asset=edge-fw)')).toBeTruthy();
+    await waitFor(() => expect(invalidated(['asset-impact'])).toBe(true));
+    expect(invalidated(assetRelationsKey('as-1'))).toBe(true);
+  });
+
+  it('keeps the link on the host only, and writes nothing when the question closes', async () => {
+    renderTab({
+      clusters: { 'as-1': [{ id: 'cl-1', name: 'PAR-VSPHERE-CL01', status: 'active' }] },
+      members: {
+        'cl-1': [
+          { id: 'as-1', name: 'this-server', status: 'active' },
+          { id: 'as-2', name: 'vm-app-01', status: 'active' },
+        ],
+      },
+    });
+    await screen.findByText('vm-app-01');
+    const contains = () => screen.getByRole('region', { name: A('contains') });
+    fireEvent.click(within(contains()).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'components.clusterPlacement.hostOnly' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/contains', { id: 'as-9' }));
+
+    mocked.post.mockClear();
+    fireEvent.click(within(contains()).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByText('components.clusterPlacement.title')).toBeNull());
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('writes the chosen cluster on the page of a contained virtual machine', async () => {
+    renderTab({
+      clusters: { 'as-9': [{ id: 'cl-1', name: 'PAR-VSPHERE-CL01', status: 'active' }] },
+      members: {
+        'cl-1': [
+          { id: 'as-9', name: 'edge-fw', status: 'active' },
+          { id: 'as-2', name: 'vm-app-01', status: 'active' },
+        ],
+      },
+    });
+    await screen.findByText('vm-app-01');
+    fireEvent.click(within(screen.getByRole('region', { name: A('containedBy') })).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+    expect(await screen.findByText('components.clusterPlacement.title')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'components.clusterPlacement.placeInCluster' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/contained_by', { id: 'cl-1' }));
+  });
+
+  it('asks nothing for a host of no cluster and links it directly', async () => {
+    renderTab();
+    await screen.findByText('vm-app-01');
+    fireEvent.click(within(screen.getByRole('region', { name: A('contains') })).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/contains', { id: 'as-9' }));
+    expect(screen.queryByText('components.clusterPlacement.title')).toBeNull();
+  });
+
+  it('asks nothing for a retired cluster or a host retired in its cluster', async () => {
+    renderTab({
+      clusters: { 'as-1': [{ id: 'cl-1', name: 'PAR-VSPHERE-CL01', status: 'retired' }] },
+      members: { 'cl-1': [{ id: 'as-1', name: 'this-server', status: 'active' }] },
+    });
+    await screen.findByText('vm-app-01');
+    fireEvent.click(within(screen.getByRole('region', { name: A('contains') })).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/contains', { id: 'as-9' }));
+    expect(screen.queryByText('components.clusterPlacement.title')).toBeNull();
+
+    cleanup();
+    mocked.post.mockClear();
+    renderTab({
+      clusters: { 'as-1': [{ id: 'cl-1', name: 'PAR-VSPHERE-CL01', status: 'active' }] },
+      members: { 'cl-1': [
+        { id: 'as-1', name: 'this-server', status: 'retired' },
+        { id: 'as-2', name: 'vm-app-01', status: 'active' },
+      ] },
+    });
+    await screen.findByText('vm-app-01');
+    fireEvent.click(within(screen.getByRole('region', { name: A('contains') })).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/contains', { id: 'as-9' }));
+    expect(screen.queryByText('components.clusterPlacement.title')).toBeNull();
+  });
+
+  it('asks nothing when the page is a cluster, when the target is a cluster, or for another direction', async () => {
+    // A cluster belongs to no cluster: the page reads an empty list and is written as is.
+    renderTab();
+    await screen.findByText('vm-app-01');
+    fireEvent.click(within(screen.getByRole('region', { name: A('contains') })).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/contains', { id: 'as-9' }));
+    expect(screen.queryByText('components.clusterPlacement.title')).toBeNull();
+
+    cleanup();
+    mocked.post.mockClear();
+    mocked.get.mockClear();
+    // A cluster is a container, never a member: no question before adding it as contained by.
+    renderTab({ clusters: { 'as-9': [] } });
+    await screen.findByText('vm-app-01');
+    fireEvent.click(within(screen.getByRole('region', { name: A('containedBy') })).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/contained_by', { id: 'as-9' }));
+    expect(screen.queryByText('components.clusterPlacement.title')).toBeNull();
+
+    cleanup();
+    mocked.post.mockClear();
+    mocked.get.mockClear();
+    renderTab();
+    await screen.findByText('vm-app-01');
+    fireEvent.click(within(screen.getByRole('region', { name: A('dependsOn') })).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/depends_on', { id: 'as-9' }));
+    expect(mocked.get.mock.calls.filter(([url]) => String(url).endsWith('/clusters'))).toHaveLength(0);
+  });
+
+  it('asks nothing for a host of a cluster already holding the page', async () => {
+    const data = relations();
+    data.assets.contained_by = [
+      asset('cl-1', 'AST-20', 'PAR-VSPHERE-CL01'),
+      asset('as-3', 'AST-3', 'esx-host-01'),
+    ];
+    renderTab({
+      relations: data,
+      clusters: { 'as-9': [{ id: 'cl-1', name: 'PAR-VSPHERE-CL01', status: 'active' }] },
+      members: { 'cl-1': [{ id: 'as-9', name: 'edge-fw', status: 'active' }] },
+    });
+    await screen.findByText('esx-host-01');
+    fireEvent.click(within(screen.getByRole('region', { name: A('containedBy') })).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/contained_by', { id: 'as-9' }));
+    expect(screen.queryByText('components.clusterPlacement.title')).toBeNull();
+  });
+
+  it('offers each cluster of a host of several and writes the chosen one', async () => {
+    renderTab({
+      clusters: { 'as-1': [
+        { id: 'cl-1', name: 'FIRST-CL', status: 'active' },
+        { id: 'cl-2', name: 'SECOND-CL', status: 'active' },
+      ] },
+      members: {
+        'cl-1': [{ id: 'as-1', name: 'this-server', status: 'active' }],
+        'cl-2': [{ id: 'as-1', name: 'this-server', status: 'active' }, { id: 'as-2', name: 'vm-app-01', status: 'active' }],
+      },
+    });
+    await screen.findByText('vm-app-01');
+    fireEvent.click(within(screen.getByRole('region', { name: A('contains') })).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+    expect(await screen.findByText('components.clusterPlacement.inClusters(host=this-server)')).toBeTruthy();
+    fireEvent.click(screen.getByRole('radio', { name: /SECOND-CL/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'components.clusterPlacement.placeInCluster' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/cl-2/relations/contains', { id: 'as-9' }));
+  });
+
+  it('shows the refusal of the server when the host is already covered by its cluster', async () => {
+    renderTab({
+      clusters: { 'as-1': [{ id: 'cl-1', name: 'PAR-VSPHERE-CL01', status: 'active' }] },
+      members: { 'cl-1': [{ id: 'as-1', name: 'this-server', status: 'active' }] },
+    });
+    mocked.post.mockRejectedValue({
+      response: { status: 409, data: { code: 'placement_inherited', params: { cluster: 'PAR-VSPHERE-CL01' } } },
+    });
+    await screen.findByText('vm-app-01');
+    fireEvent.click(within(screen.getByRole('region', { name: A('contains') })).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'components.clusterPlacement.hostOnly' }));
+    expect(await screen.findByText('errors:placement_inherited(cluster=PAR-VSPHERE-CL01)')).toBeTruthy();
   });
 
   it('unlinks at once, reads the relations and the impact of every asset again, and restores the row when the server refuses', async () => {

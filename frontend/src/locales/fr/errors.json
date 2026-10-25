@@ -234,6 +234,7 @@
   "NO_ACCESS": "Ce compte n'a pas encore reçu d'accès. Demandez-le à un administrateur.",
   "assignment_duplicate": "Ce serveur a déjà ce rôle sur ce déploiement.",
   "assignment_inherited": "Déjà hébergée par ce serveur via {{cluster}}.",
+  "placement_inherited": "Déjà dans {{cluster}}, dont cet hôte fait partie.",
   "cluster_has_members_one": "Retirez d'abord son membre.",
   "cluster_has_members_other": "Retirez d'abord ses {{count}} membres.",
   "cluster_switch_member": "Membre de {{cluster}} : il ne peut pas devenir un cluster.",

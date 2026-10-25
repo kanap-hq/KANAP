@@ -2282,7 +2282,8 @@
           "dependsOn": "Depends on no asset.",
           "dependedOnBy": "No asset depends on this one."
         },
-        "containsHint": "Assets hosted by this one, such as VMs."
+        "containsHint": "Assets hosted by this one, such as VMs.",
+        "placementReplaced": "{{cluster}} replaces the link between {{hosts}} and {{asset}}."
       }
     },
     "technology": {
@@ -3227,6 +3228,14 @@
       "inCluster_one": "{{server}} is part of {{cluster}}. The connection will cover its only member.",
       "inCluster_other": "{{server}} is part of {{cluster}}. The connection will cover its {{count}} members.",
       "connectToCluster": "Connect to the cluster"
+    },
+    "clusterPlacement": {
+      "title": "Place in the cluster?",
+      "inCluster_one": "{{host}} is the only host of {{cluster}}.",
+      "inCluster_other": "{{host}} is part of {{cluster}}. In the cluster, the asset can run on any of its {{count}} hosts.",
+      "inClusters": "{{host}} is part of several clusters.",
+      "placeInCluster": "Place in the cluster",
+      "hostOnly": "This host only"
     }
   },
   "enums": {

@@ -2282,7 +2282,8 @@
           "dependsOn": "No depende de ningún activo.",
           "dependedOnBy": "Ningún activo depende de este."
         },
-        "containsHint": "Activos alojados en este, por ejemplo VM."
+        "containsHint": "Activos alojados en este, por ejemplo VM.",
+        "placementReplaced": "{{cluster}} sustituye el vínculo entre {{hosts}} y {{asset}}."
       }
     },
     "technology": {
@@ -3227,6 +3228,14 @@
       "inCluster_one": "{{server}} forma parte de {{cluster}}. La conexión cubrirá su único miembro.",
       "inCluster_other": "{{server}} forma parte de {{cluster}}. La conexión cubrirá sus {{count}} miembros.",
       "connectToCluster": "Conectar con el clúster"
+    },
+    "clusterPlacement": {
+      "title": "¿Colocar en el clúster?",
+      "inCluster_one": "{{host}} es el único host de {{cluster}}.",
+      "inCluster_other": "{{host}} pertenece a {{cluster}}. En el clúster, el activo puede ejecutarse en cualquiera de sus {{count}} hosts.",
+      "inClusters": "{{host}} pertenece a varios clústeres.",
+      "placeInCluster": "Colocar en el clúster",
+      "hostOnly": "Solo este host"
     }
   },
   "enums": {
