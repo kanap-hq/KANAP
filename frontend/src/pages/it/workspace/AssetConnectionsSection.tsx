@@ -140,8 +140,9 @@ export default function AssetConnectionsSection({ assetId }: { assetId: string }
 
   const protocolLabels = (connection: ServerConnectionRow) => {
     const codes = connection.protocols ?? [];
-    if (codes.length > 0) return codes.map(protocolLabel);
-    return connection.protocol_labels ?? [];
+    // Keep the stored label until the catalog is in, rather than a bare code for a moment.
+    if (codes.length > 0 && (settings?.connectionTypes?.length ?? 0) > 0) return codes.map(protocolLabel);
+    return connection.protocol_labels ?? codes;
   };
 
   const lineUnderName = (connection: ServerConnectionRow) => {
