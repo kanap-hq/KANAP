@@ -169,6 +169,8 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
   { name: 'data_access_line_of_round_input', cls: 'access', reason: 'SECURITY DEFINER: the line of a round input, for its lines\' policies' },
   { name: 'data_access_contract_visible', cls: 'access', reason: 'SECURITY DEFINER depth function (spec §6.4): lisible_contrat with the person\'s settings' },
   { name: 'data_access_contract_modifiable', cls: 'access', reason: 'SECURITY DEFINER depth function: modifiable_contrat with the person\'s settings, for the writes of contract tasks' },
+  { name: 'data_access_line_visible', cls: 'access', reason: 'SECURITY DEFINER helper (spec §6.4, §5.4): a budget line readable by the person, for the link triggers of a contract' },
+  { name: 'data_access_contract_spend_items_link', cls: 'access', reason: 'link trigger of contract_spend_items (SECURITY INVOKER, spec §5.4, §6.4): a visible contract and a modifiable line; the same 23503 for an invisible and a nonexistent object' },
   { name: 'data_access_task_visible', cls: 'access', reason: 'SECURITY DEFINER depth function (spec §6.4): a task visible (object readable or participant)' },
   { name: 'data_access_task_modifiable', cls: 'access', reason: 'SECURITY DEFINER depth function: a task modifiable (object modifiable or responsible), for the writes of its elements' },
   { name: 'data_access_visible_contract_ids', cls: 'access', reason: 'SECURITY DEFINER set function (spec §6.4): the visible contracts, once per statement, for the search index policy' },

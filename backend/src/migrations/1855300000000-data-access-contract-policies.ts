@@ -497,8 +497,10 @@ export class DataAccessContractPolicies1855300000000 implements MigrationInterfa
   name = 'DataAccessContractPolicies1855300000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
+    await createLineVisibleFunction(queryRunner);
     await createPolicyFunctions(queryRunner);
     await createContractPlacementTrigger(queryRunner);
+    await createContractLinkTriggers(queryRunner);
 
     await queryRunner.query(`SET LOCAL lock_timeout = '5s'`);
     await queryRunner.query(`SELECT data_access_sync_policies()`);
@@ -523,6 +525,11 @@ export class DataAccessContractPolicies1855300000000 implements MigrationInterfa
 
     await queryRunner.query(`DROP TRIGGER IF EXISTS contracts_data_access_placement ON contracts`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_contracts_placement()`);
+    await queryRunner.query(`DROP TRIGGER IF EXISTS contract_spend_items_data_access_link ON contract_spend_items`);
+    await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_contract_spend_items_link()`);
+    await queryRunner.query(`DROP TRIGGER IF EXISTS spend_items_data_access_contract_link ON spend_items`);
+    await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_spend_items_contract_link()`);
+    await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_line_visible(uuid)`);
   }
 }
 
@@ -591,8 +598,9 @@ async function createPolicyFunctions(queryRunner: QueryRunner): Promise<void> {
         GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${LIMITED_ROLE};
       ALTER DEFAULT PRIVILEGES IN SCHEMA public
         GRANT USAGE, SELECT ON SEQUENCES TO ${LIMITED_ROLE};
-      -- The SECURITY DEFINER access functions the policies call (EXECUTE revoked from PUBLIC).
-${[...LINE_HELPER_SIGNATURES, ...ACCESS_DEFINER_SIGNATURES].map((sig) => `      GRANT EXECUTE ON FUNCTION ${sig} TO ${LIMITED_ROLE};`).join('\n')}
+      -- The SECURITY DEFINER access functions the policies and the triggers call (EXECUTE revoked
+      -- from PUBLIC).
+${[...LINE_HELPER_SIGNATURES, ...ACCESS_DEFINER_SIGNATURES, ...CONTRACT_HELPER_SIGNATURES].map((sig) => `      GRANT EXECUTE ON FUNCTION ${sig} TO ${LIMITED_ROLE};`).join('\n')}
 
       -- Every policy that targets the role and is not expected goes; every one under inheritance.
       FOR r IN
@@ -663,6 +671,146 @@ ${[...LINE_HELPER_SIGNATURES, ...ACCESS_DEFINER_SIGNATURES].map((sig) => `      
 }
 
 /**
+ * A budget line readable by the person of the transaction, read without the data-access policies
+ * (SECURITY DEFINER, tenant filtered): the link triggers of a contract use it to tell a hidden line
+ * from a visible one. Outside mode limited it answers true; under the limited role taken without
+ * context it answers false, like the other access functions.
+ */
+async function createLineVisibleFunction(queryRunner: QueryRunner): Promise<void> {
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_line_visible(p_line uuid)
+    RETURNS boolean
+    LANGUAGE sql
+    STABLE
+    SECURITY DEFINER
+    SET search_path = public, pg_temp
+    AS $fn$
+      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN NOT (${ROLE_TAKEN}) ELSE coalesce((
+        SELECT ${readableLine('i.')}
+        FROM public.spend_items i WHERE i.id = p_line AND ${IN_TENANT('i.')}), false) END
+    $fn$
+  `);
+  await queryRunner.query(`REVOKE EXECUTE ON FUNCTION data_access_line_visible(uuid) FROM PUBLIC`);
+  await queryRunner.query(`GRANT EXECUTE ON FUNCTION data_access_line_visible(uuid) TO CURRENT_USER`);
+}
+
+/**
+ * Links to a contract (spec §5.4, §6.4): a link may only be created, changed or removed by a person
+ * who reads the contract and may modify the line. In mode limited the trigger raises 23503 with the
+ * same message for an invisible and for a nonexistent object, so the foreign key never answers for
+ * the limited person (it would be an existence oracle); a visible but read-only line gets 42501.
+ * The checks run BEFORE INSERT OR UPDATE OF contract_id on spend_items, and on every write of
+ * contract_spend_items. Outside mode limited both triggers return immediately.
+ */
+async function createContractLinkTriggers(queryRunner: QueryRunner): Promise<void> {
+  // The contract first, then the line: with a hidden contract the answer never depends on the line.
+  const contractError = `RAISE EXCEPTION 'data access: this contract is outside your access or does not exist'
+          USING ERRCODE = '23503';`;
+  const lineMissingError = `RAISE EXCEPTION 'data access: this budget line is outside your access or does not exist'
+          USING ERRCODE = '23503';`;
+  const lineReadOnlyError = `RAISE EXCEPTION 'permission denied: this budget line is outside your data access'
+          USING ERRCODE = '42501';`;
+
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_spend_items_contract_link()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    SECURITY INVOKER
+    SET search_path = public, pg_temp
+    AS $fn$
+    BEGIN
+      IF NULLIF(current_setting('app.da_mode', true), '') IS DISTINCT FROM 'limited' THEN
+        RETURN NEW;
+      END IF;
+      IF NEW.contract_id IS NULL THEN
+        RETURN NEW;
+      END IF;
+      IF TG_OP = 'UPDATE' AND NEW.contract_id IS NOT DISTINCT FROM OLD.contract_id THEN
+        RETURN NEW;
+      END IF;
+      IF NOT coalesce(data_access_contract_visible(NEW.contract_id), false) THEN
+        ${contractError}
+      END IF;
+      IF NOT data_access_line_editable(
+        NEW.paying_company_id, NEW.cost_center_id, NEW.owner_it_id, NEW.owner_business_id) THEN
+        ${lineReadOnlyError}
+      END IF;
+      RETURN NEW;
+    END
+    $fn$
+  `);
+  await queryRunner.query(`DROP TRIGGER IF EXISTS spend_items_data_access_contract_link ON spend_items`);
+  await queryRunner.query(`
+    CREATE TRIGGER spend_items_data_access_contract_link
+    BEFORE INSERT OR UPDATE OF contract_id ON spend_items
+    FOR EACH ROW EXECUTE FUNCTION data_access_spend_items_contract_link()
+  `);
+
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_contract_spend_items_link()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    SECURITY INVOKER
+    SET search_path = public, pg_temp
+    AS $fn$
+    DECLARE
+      v_editable boolean;
+    BEGIN
+      IF NULLIF(current_setting('app.da_mode', true), '') IS DISTINCT FROM 'limited' THEN
+        RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+      END IF;
+
+      IF TG_OP = 'DELETE' THEN
+        SELECT data_access_line_editable(
+                 i.paying_company_id, i.cost_center_id, i.owner_it_id, i.owner_business_id)
+        INTO v_editable
+        FROM public.spend_items i
+        WHERE i.id = OLD.spend_item_id AND ${IN_TENANT('i.')};
+        IF NOT FOUND OR NOT v_editable THEN
+          ${lineReadOnlyError}
+        END IF;
+        RETURN OLD;
+      END IF;
+
+      IF TG_OP = 'UPDATE' THEN
+        -- The old link stays where it is: a person who does not modify its line never rewrites it.
+        SELECT data_access_line_editable(
+                 i.paying_company_id, i.cost_center_id, i.owner_it_id, i.owner_business_id)
+        INTO v_editable
+        FROM public.spend_items i
+        WHERE i.id = OLD.spend_item_id AND ${IN_TENANT('i.')};
+        IF NOT FOUND OR NOT v_editable THEN
+          ${lineReadOnlyError}
+        END IF;
+      END IF;
+
+      IF NOT coalesce(data_access_contract_visible(NEW.contract_id), false) THEN
+        ${contractError}
+      END IF;
+      IF NOT coalesce(data_access_line_visible(NEW.spend_item_id), false) THEN
+        ${lineMissingError}
+      END IF;
+      SELECT data_access_line_editable(
+               i.paying_company_id, i.cost_center_id, i.owner_it_id, i.owner_business_id)
+      INTO v_editable
+      FROM public.spend_items i
+      WHERE i.id = NEW.spend_item_id AND ${IN_TENANT('i.')};
+      IF NOT FOUND OR NOT v_editable THEN
+        ${lineReadOnlyError}
+      END IF;
+      RETURN NEW;
+    END
+    $fn$
+  `);
+  await queryRunner.query(`DROP TRIGGER IF EXISTS contract_spend_items_data_access_link ON contract_spend_items`);
+  await queryRunner.query(`
+    CREATE TRIGGER contract_spend_items_data_access_link
+    BEFORE INSERT OR UPDATE OR DELETE ON contract_spend_items
+    FOR EACH ROW EXECUTE FUNCTION data_access_contract_spend_items_link()
+  `);
+}
+
+/**
  * Placement of a contract (spec §6.4, "Placement par participation"): a limited person may modify a
  * contract it owns, but not move it to a company or a place outside its edit access. The UPDATE
  * policy does not see the old row, so without this trigger an owner would set any company on the
@@ -706,6 +854,9 @@ async function createContractPlacementTrigger(queryRunner: QueryRunner): Promise
  * lot 2 wrote them; the sync grants EXECUTE on them to the limited role.
  */
 const LINE_HELPER_SIGNATURES = ['data_access_line_of_version(uuid)', 'data_access_line_of_round_input(uuid)'];
+
+/** The line helper of the contract link triggers (lot 5), SECURITY DEFINER. */
+const CONTRACT_HELPER_SIGNATURES = ['data_access_line_visible(uuid)'];
 
 const ACCESS_DEFINER_SIGNATURES = [
   'data_access_contract_visible(uuid)',
