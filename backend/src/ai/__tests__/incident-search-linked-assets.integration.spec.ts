@@ -8,8 +8,8 @@ import { IncidentSearchLinkedAssets1855300000000 } from '../../migrations/185530
 import { runSpecs, seedTenant, withRollback } from '../../analytics/__tests__/analytics-test-helpers';
 
 /**
- * Incidents found by the name, hostname or FQDN of their linked assets
- * (report incidents-avant-article-2026-10-25.md, B1; migration 1855300000000).
+ * Incidents found by the name, reference, hostname or FQDN of their linked assets
+ * (migration 1855300000000).
  *
  * The search goes through `AiEntityService.searchAll`, the indexed path used by Plaid,
  * the @-mention picker and the MCP server. Each scenario runs in its own transaction,
