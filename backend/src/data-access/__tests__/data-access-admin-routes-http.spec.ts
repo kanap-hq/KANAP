@@ -591,6 +591,37 @@ async function testReadAndWrite(app: INestApplication) {
     assert.equal(res.body.code, code, `${what}: ${res.text}`);
   }
   console.log('  invalid bodies: 400 with a clear code: OK');
+
+  // M2: a node id in upper case names the same node; the duplicate key is lower case too.
+  const upper = await call(app, 'PUT', `users/${marta}/data-access`, extra.manager, {
+    mode: 'limited',
+    nodes: [
+      { type: 'company', id: s.es.toUpperCase(), access: 'read' },
+      { type: 'cost_center', id: s.inf.toUpperCase(), access: 'edit' },
+    ],
+  });
+  assert.equal(upper.status, 200, upper.text);
+  assert.deepEqual(
+    (await nodeRows(marta)).map((row) => [row.node_type, row.company_id, row.cost_center_id, row.access]),
+    [['company', s.es, null, 'read'], ['cost_center', null, s.inf, 'edit']],
+  );
+  const duplicateCase = await call(app, 'PUT', `users/${marta}/data-access`, extra.manager, {
+    mode: 'limited',
+    nodes: [
+      { type: 'company', id: s.es, access: 'read' },
+      { type: 'company', id: s.es.toUpperCase(), access: 'edit' },
+    ],
+  });
+  assert.equal(duplicateCase.status, 400, duplicateCase.text);
+  assert.equal(duplicateCase.body.code, 'DATA_ACCESS_NODE_DUPLICATE');
+  console.log('  upper-case company and cost centre ids accepted, duplicate keyed lower case: OK');
+
+  // Restore Marta's reference access.
+  const restoreAfterCase = await call(app, 'PUT', `users/${marta}/data-access`, extra.manager, {
+    mode: 'limited',
+    nodes: [{ type: 'company', id: s.es, access: 'edit' }],
+  });
+  assert.equal(restoreAfterCase.status, 200, restoreAfterCase.text);
 }
 
 async function testNoEffectOrder(app: INestApplication) {

@@ -894,7 +894,7 @@ export class DataAccessAdminService {
         if (typeof node.id !== 'string' || !node.id || !isUUID(node.id)) {
           throw badRequest('DATA_ACCESS_NODE_ID_REQUIRED', `Node ${index + 1}: ${type === 'company' ? 'a company' : 'a cost center'} node needs a UUID id.`);
         }
-        id = node.id;
+        id = node.id.toLowerCase();
         if (type === 'company') companyIds.add(id);
         else centerIds.add(id);
       }
@@ -916,8 +916,9 @@ export class DataAccessAdminService {
         [[...centerIds]],
       )
       : [];
-    const companyById = new Map<string, { id: string; name: string }>(companies.map((row: any) => [row.id, row]));
-    const centerById = new Map<string, { id: string; code: string; name: string; kind: string }>(centers.map((row: any) => [row.id, row]));
+    // The ids a client sends may be upper case; PostgreSQL returns uuids in lower case.
+    const companyById = new Map<string, { id: string; name: string }>(companies.map((row: any) => [String(row.id).toLowerCase(), row]));
+    const centerById = new Map<string, { id: string; code: string; name: string; kind: string }>(centers.map((row: any) => [String(row.id).toLowerCase(), row]));
     const nodes: DetailedNode[] = inputs.map((input) => {
       if (input.type === 'all') {
         return {
