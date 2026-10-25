@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import { formatCount } from '../../i18n/formatters';
 
 /**
  * Types and display helpers of the data-access administration screens (spec §7.1 to §7.5).
@@ -34,6 +35,28 @@ export type PersonAccess = {
 };
 
 export type DataAccessPreview = { lines: number; editable_lines: number; contracts: number };
+
+/**
+ * The preview sentence, count by count: each part takes its `_one` / `_other` form in the language,
+ * so "1 budget line" and "1 contract" read in the singular.
+ */
+export function previewText(preview: DataAccessPreview, t: TFunction, locale: string): string {
+  const text = (key: string, options: Record<string, unknown>) => t(key, options) as string;
+  const value = (count: number) => formatCount(count, locale);
+  const lines = text('admin:dataAccess.previewLines', {
+    count: preview.lines,
+    value: value(preview.lines),
+  });
+  const editable = text('admin:dataAccess.previewEditable', {
+    count: preview.editable_lines,
+    value: value(preview.editable_lines),
+  });
+  const contracts = text('admin:dataAccess.previewContracts', {
+    count: preview.contracts,
+    value: value(preview.contracts),
+  });
+  return text('admin:dataAccess.preview', { lines, editable, contracts });
+}
 
 export type AccessVia = {
   type: DataAccessNodeType;

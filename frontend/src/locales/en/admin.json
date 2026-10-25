@@ -1807,10 +1807,17 @@
       "person": "Search a person"
     },
     "remove": "Remove {{name}}",
-    "addTheirCenters": "Add their cost centers ({{count}})",
+    "addTheirCenters_one": "Add their cost center ({{count}})",
+    "addTheirCenters_other": "Add their cost centers ({{count}})",
     "alwaysSees": "This person also always sees what they are named on.",
     "appliesTo": "Applies to the budget and contracts.",
-    "preview": "With this access: {{lines}} budget lines, {{editable}} editable; {{contracts}} contracts.",
+    "preview": "With this access: {{lines}}{{editable}}; {{contracts}}.",
+    "previewLines_one": "{{value}} budget line",
+    "previewLines_other": "{{value}} budget lines",
+    "previewEditable_one": ", {{value}} editable",
+    "previewEditable_other": ", {{value}} editable",
+    "previewContracts_one": "{{value}} contract",
+    "previewContracts_other": "{{value}} contracts",
     "modified": "Modified by {{name}} on {{date}}.",
     "confirmAll": "{{name}} will see all budget and contract data.",
     "administratorsSeeAll": "Administrators see all data.",
@@ -1828,8 +1835,10 @@
     "saveFailed": "The data access could not be saved.",
     "loadFailed": "The data access could not be loaded.",
     "counters": {
-      "limited": "Limited people: {{value}}",
-      "withoutCompany": "Budget lines without a company: {{value}}"
+      "limited_one": "Limited person: {{value}}",
+      "limited_other": "Limited people: {{value}}",
+      "withoutCompany_one": "Budget line without a company: {{value}}",
+      "withoutCompany_other": "Budget lines without a company: {{value}}"
     },
     "filters": {
       "name": "Search a name",

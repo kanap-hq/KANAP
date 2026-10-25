@@ -1807,10 +1807,17 @@
       "person": "Person suchen"
     },
     "remove": "{{name}} entfernen",
-    "addTheirCenters": "Eigene Kostenstellen hinzufügen ({{count}})",
+    "addTheirCenters_one": "Eigene Kostenstelle hinzufügen ({{count}})",
+    "addTheirCenters_other": "Eigene Kostenstellen hinzufügen ({{count}})",
     "alwaysSees": "Diese Person sieht außerdem immer, wo sie benannt ist.",
     "appliesTo": "Gilt für Budget und Verträge.",
-    "preview": "Mit diesem Zugriff: {{lines}} Budgetzeilen, davon {{editable}} bearbeitbar; {{contracts}} Verträge.",
+    "preview": "Mit diesem Zugriff: {{lines}}{{editable}}; {{contracts}}.",
+    "previewLines_one": "{{value}} Budgetzeile",
+    "previewLines_other": "{{value}} Budgetzeilen",
+    "previewEditable_one": ", davon {{value}} bearbeitbar",
+    "previewEditable_other": ", davon {{value}} bearbeitbar",
+    "previewContracts_one": "{{value}} Vertrag",
+    "previewContracts_other": "{{value}} Verträge",
     "modified": "Geändert von {{name}} am {{date}}.",
     "confirmAll": "{{name}} sieht alle Budget- und Vertragsdaten.",
     "administratorsSeeAll": "Administratoren sehen alle Daten.",
@@ -1828,8 +1835,10 @@
     "saveFailed": "Der Datenzugriff konnte nicht gespeichert werden.",
     "loadFailed": "Der Datenzugriff konnte nicht geladen werden.",
     "counters": {
-      "limited": "Begrenzte Personen: {{value}}",
-      "withoutCompany": "Budgetzeilen ohne Unternehmen: {{value}}"
+      "limited_one": "Begrenzte Person: {{value}}",
+      "limited_other": "Begrenzte Personen: {{value}}",
+      "withoutCompany_one": "Budgetzeile ohne Unternehmen: {{value}}",
+      "withoutCompany_other": "Budgetzeilen ohne Unternehmen: {{value}}"
     },
     "filters": {
       "name": "Namen suchen",

@@ -125,12 +125,14 @@ function DataAccessAdminContent() {
         <Stack direction="row" spacing={3} sx={{ mb: 2, flexWrap: 'wrap', rowGap: 1 }}>
           <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
             {t('admin:dataAccess.counters.limited', {
+              count: data.counts.limited_persons,
               value: data.counts.limited_persons.toLocaleString(locale),
             })}
           </Typography>
           <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
             <Link component={RouterLink} to={LINES_WITHOUT_COMPANY_URL} underline="hover">
               {t('admin:dataAccess.counters.withoutCompany', {
+                count: data.counts.lines_without_company,
                 value: data.counts.lines_without_company.toLocaleString(locale),
               })}
             </Link>

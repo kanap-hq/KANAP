@@ -1807,10 +1807,17 @@
       "person": "Buscar una persona"
     },
     "remove": "Quitar {{name}}",
-    "addTheirCenters": "Añadir sus centros ({{count}})",
+    "addTheirCenters_one": "Añadir su centro ({{count}})",
+    "addTheirCenters_other": "Añadir sus centros ({{count}})",
     "alwaysSees": "Esta persona también ve siempre aquello en lo que está nombrada.",
     "appliesTo": "Se aplica al presupuesto y a los contratos.",
-    "preview": "Con este acceso: {{lines}} líneas presupuestarias, de las cuales {{editable}} editables; {{contracts}} contratos.",
+    "preview": "Con este acceso: {{lines}}{{editable}}; {{contracts}}.",
+    "previewLines_one": "{{value}} línea presupuestaria",
+    "previewLines_other": "{{value}} líneas presupuestarias",
+    "previewEditable_one": ", {{value}} en edición",
+    "previewEditable_other": ", {{value}} en edición",
+    "previewContracts_one": "{{value}} contrato",
+    "previewContracts_other": "{{value}} contratos",
     "modified": "Modificado por {{name}} el {{date}}.",
     "confirmAll": "{{name}} verá todos los datos del presupuesto y de los contratos.",
     "administratorsSeeAll": "Los administradores ven todos los datos.",
@@ -1828,8 +1835,10 @@
     "saveFailed": "No se ha podido guardar el acceso a los datos.",
     "loadFailed": "No se ha podido cargar el acceso a los datos.",
     "counters": {
-      "limited": "Personas limitadas: {{value}}",
-      "withoutCompany": "Líneas presupuestarias sin empresa: {{value}}"
+      "limited_one": "Persona limitada: {{value}}",
+      "limited_other": "Personas limitadas: {{value}}",
+      "withoutCompany_one": "Línea presupuestaria sin empresa: {{value}}",
+      "withoutCompany_other": "Líneas presupuestarias sin empresa: {{value}}"
     },
     "filters": {
       "name": "Buscar un nombre",

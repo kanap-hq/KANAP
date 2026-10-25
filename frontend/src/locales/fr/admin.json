@@ -1807,10 +1807,17 @@
       "person": "Rechercher une personne"
     },
     "remove": "Retirer {{name}}",
-    "addTheirCenters": "Ajouter ses centres ({{count}})",
+    "addTheirCenters_one": "Ajouter son centre ({{count}})",
+    "addTheirCenters_other": "Ajouter ses centres ({{count}})",
     "alwaysSees": "Cette personne voit aussi, toujours, ce sur quoi elle est nommée.",
     "appliesTo": "S'applique au budget et aux contrats.",
-    "preview": "Avec cet accès : {{lines}} lignes budgétaires, dont {{editable}} modifiables ; {{contracts}} contrats.",
+    "preview": "Avec cet accès : {{lines}}{{editable}} ; {{contracts}}.",
+    "previewLines_one": "{{value}} ligne budgétaire",
+    "previewLines_other": "{{value}} lignes budgétaires",
+    "previewEditable_one": ", dont {{value}} en saisie",
+    "previewEditable_other": ", dont {{value}} en saisie",
+    "previewContracts_one": "{{value}} contrat",
+    "previewContracts_other": "{{value}} contrats",
     "modified": "Modifié par {{name}} le {{date}}.",
     "confirmAll": "{{name}} verra toutes les données du budget et des contrats.",
     "administratorsSeeAll": "Les administrateurs voient toutes les données.",
@@ -1828,8 +1835,10 @@
     "saveFailed": "L'accès aux données n'a pas pu être enregistré.",
     "loadFailed": "L'accès aux données n'a pas pu être chargé.",
     "counters": {
-      "limited": "Personnes limitées : {{value}}",
-      "withoutCompany": "Lignes budgétaires sans société : {{value}}"
+      "limited_one": "Personne limitée : {{value}}",
+      "limited_other": "Personnes limitées : {{value}}",
+      "withoutCompany_one": "Ligne budgétaire sans société : {{value}}",
+      "withoutCompany_other": "Lignes budgétaires sans société : {{value}}"
     },
     "filters": {
       "name": "Rechercher un nom",

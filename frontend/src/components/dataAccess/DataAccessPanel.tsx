@@ -33,6 +33,7 @@ import {
   accessLevelLabel,
   accessNodeName,
   accessNodeTypeLabel,
+  previewText,
   sortAccessNodes,
   type AccessNode,
   type DataAccessLevel,
@@ -201,7 +202,6 @@ const DataAccessPanel = React.forwardRef<DataAccessPanelHandle, Props>(function 
   React.useImperativeHandle(ref, () => ({ save }), [save]);
 
   const preview = previewQuery.data;
-  const localeNumber = (value: number) => value.toLocaleString(locale);
 
   return (
     <Stack spacing={2}>
@@ -354,11 +354,7 @@ const DataAccessPanel = React.forwardRef<DataAccessPanelHandle, Props>(function 
             <>
               <Divider sx={{ borderColor: 'kanap.border.soft' }} />
               <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-                {t('admin:dataAccess.preview', {
-                  lines: localeNumber(preview.lines),
-                  editable: localeNumber(preview.editable_lines),
-                  contracts: localeNumber(preview.contracts),
-                })}
+                {previewText(preview, t, locale)}
               </Typography>
             </>
           )}
