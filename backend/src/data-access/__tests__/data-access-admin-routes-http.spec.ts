@@ -544,15 +544,33 @@ async function testReadAndWrite(app: INestApplication) {
   assert.equal(adminRead.body.mode, 'all');
   assert.equal(adminRead.body.is_administrator, true);
   assert.deepEqual(adminRead.body.nodes, []);
+  // M1: an Administrator stored as limited can be put back to all; limiting one stays refused.
+  const adminLimited = await call(app, 'PUT', `users/${s.persons.admin}/data-access`, extra.manager, {
+    mode: 'limited',
+    nodes: [{ type: 'all', access: 'read' }],
+  });
+  assert.equal(adminLimited.status, 409, adminLimited.text);
+  assert.equal(adminLimited.body.code, 'DATA_ACCESS_ADMINISTRATOR');
+  assert.equal(adminLimited.body.message, 'Administrators see all data.');
+  const auditBeforeAdmin = (await auditRows()).length;
   const adminTarget = await call(app, 'PUT', `users/${s.persons.admin}/data-access`, extra.manager, { mode: 'all', nodes: [] });
-  assert.equal(adminTarget.status, 409, adminTarget.text);
-  assert.equal(adminTarget.body.code, 'DATA_ACCESS_ADMINISTRATOR');
-  assert.equal(adminTarget.body.message, 'Administrators see all data.');
+  assert.equal(adminTarget.status, 200, adminTarget.text);
+  assert.equal(adminTarget.body.mode, 'all');
+  assert.deepEqual(adminTarget.body.nodes, []);
+  assert.equal(adminTarget.body.is_administrator, true);
+  const adminRow = await userRow(s.persons.admin);
+  assert.equal(adminRow.data_access_mode, 'all', 'the stored mode is all');
+  assert.ok(adminRow.data_access_updated_at, 'the stored mode is stamped');
+  const adminEntries = (await auditRows()).slice(auditBeforeAdmin);
+  assert.equal(adminEntries.length, 1, 'putting an Administrator back to all is audited');
+  assert.equal(adminEntries[0].before_json.mode, 'limited');
+  assert.equal(adminEntries[0].after_json.mode, 'all');
+  assert.deepEqual(adminEntries[0].after_json.nodes, []);
   const self = await call(app, 'PUT', `users/${extra.manager}/data-access`, extra.manager, { mode: 'all', nodes: [] });
   assert.equal(self.status, 409, self.text);
   assert.equal(self.body.code, 'DATA_ACCESS_SELF');
   assert.equal(self.body.message, 'You cannot change your own data access.');
-  console.log('  Administrator target 409, self 409: OK');
+  console.log('  Administrator back to all 200 and audited, limited 409, self 409: OK');
 
   // Invalid bodies: 400 with a code.
   const invalid: Array<[string, unknown, string]> = [

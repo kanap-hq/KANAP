@@ -312,8 +312,8 @@ export class DataAccessAdminService {
     const availability = await this.availability();
     await this.lockAccess(manager);
     const target = await this.readTarget(manager, targetId, { forUpdate: true });
-    this.assertTarget(callerId, target);
     const proposal = await this.parseProposal(manager, body);
+    this.assertTarget(callerId, target, proposal.mode);
     if (proposal.mode === 'limited' && !availability.available) {
       throw conflict('DATA_ACCESS_UNAVAILABLE', 'Data-scoped access is unavailable.', { missing: availability.missing });
     }
@@ -336,8 +336,8 @@ export class DataAccessAdminService {
   async preview(manager: EntityManager, targetId: string, body: unknown, callerId: string): Promise<AccessPreview> {
     const availability = await this.availability();
     const target = await this.readTarget(manager, targetId);
-    this.assertTarget(callerId, target);
     const proposal = await this.parseProposal(manager, body);
+    this.assertTarget(callerId, target, proposal.mode);
     if (proposal.mode === 'limited' && !availability.available) {
       throw conflict('DATA_ACCESS_UNAVAILABLE', 'Data-scoped access is unavailable.', { missing: availability.missing });
     }
@@ -845,11 +845,14 @@ export class DataAccessAdminService {
     };
   }
 
-  private assertTarget(callerId: string | null, target: TargetUser): void {
+  private assertTarget(callerId: string | null, target: TargetUser, mode: DataAccessMode): void {
     if (callerId && callerId === target.id) {
       throw conflict('DATA_ACCESS_SELF', 'You cannot change your own data access.');
     }
-    if (target.is_administrator) {
+    // An Administrator stored as limited (the role was removed, or set before the role) sees all
+    // data and is listed nowhere: writing `all` puts the stored mode back in line. Limiting one is
+    // refused.
+    if (target.is_administrator && mode !== 'all') {
       throw conflict('DATA_ACCESS_ADMINISTRATOR', 'Administrators see all data.');
     }
   }
