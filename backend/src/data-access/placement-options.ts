@@ -10,7 +10,14 @@ import { transactionDataAccessMode } from './data-access';
  */
 export type PlacementOptions =
   | { limited: false }
-  | { limited: true; all: boolean; companies: string[]; costCenters: Array<{ id: string; companyId: string }> };
+  | {
+      limited: true;
+      all: boolean;
+      companies: string[];
+      costCenters: Array<{ id: string; companyId: string }>;
+      /** Companies of the edit nodes (a group included, through its centres): the contract rule needs them (spec §2.3). */
+      editNodeCompanies: string[];
+    };
 
 /** Unscoped (mode `all`): `{ limited: false }`, with no query beyond the mode. */
 export async function readPlacementOptions(manager: EntityManager): Promise<PlacementOptions> {
@@ -19,6 +26,7 @@ export async function readPlacementOptions(manager: EntityManager): Promise<Plac
     `SELECT
        coalesce(NULLIF(current_setting('app.da_edit_all', true), '')::boolean, false) AS all,
        to_jsonb(coalesce(NULLIF(current_setting('app.da_edit_companies', true), '')::uuid[], '{}'::uuid[])) AS companies,
+       to_jsonb(coalesce(NULLIF(current_setting('app.da_edit_node_companies', true), '')::uuid[], '{}'::uuid[])) AS edit_node_companies,
        coalesce((
          SELECT jsonb_agg(jsonb_build_object('id', c.id, 'companyId', c.company_id) ORDER BY c.id)
          FROM cost_centers c
@@ -32,5 +40,6 @@ export async function readPlacementOptions(manager: EntityManager): Promise<Plac
     all: row?.all === true,
     companies: Array.isArray(row?.companies) ? row.companies : [],
     costCenters: Array.isArray(row?.cost_centers) ? row.cost_centers : [],
+    editNodeCompanies: Array.isArray(row?.edit_node_companies) ? row.edit_node_companies : [],
   };
 }

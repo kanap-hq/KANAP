@@ -58,6 +58,7 @@ async function testOptions(runner: QueryRunner, s: Seed) {
     assert.equal(o.all, false);
     assert.deepEqual(o.companies, [s.es]);
     assert.deepEqual(o.costCenters, [{ id: s.infEs, companyId: s.es }]);
+    assert.deepEqual(o.editNodeCompanies, [s.es], 'the edit centres of the company carry its company');
     assert.equal(await placable(m, s.es, null), true);
     assert.equal(await placable(m, s.fr, null), false);
   });
@@ -68,6 +69,7 @@ async function testOptions(runner: QueryRunner, s: Seed) {
     assert.equal(o.all, false);
     assert.deepEqual(o.companies, []);
     assert.deepEqual(o.costCenters, [{ id: s.infFr, companyId: s.fr }]);
+    assert.deepEqual(o.editNodeCompanies, [s.fr], 'the contract rule: the edit node company');
     assert.equal(await placable(m, s.fr, s.infFr), true);
     assert.equal(await placable(m, s.es, s.infEs), false);
   });
@@ -76,7 +78,10 @@ async function testOptions(runner: QueryRunner, s: Seed) {
   for (const person of [p.paul, p.rob, p.nina]) {
     await as(runner, person, async (m) => {
       const o = limited(await readPlacementOptions(m));
-      assert.deepEqual({ all: o.all, companies: o.companies, costCenters: o.costCenters }, { all: false, companies: [], costCenters: [] });
+      assert.deepEqual(
+        { all: o.all, companies: o.companies, costCenters: o.costCenters, editNodeCompanies: o.editNodeCompanies },
+        { all: false, companies: [], costCenters: [], editNodeCompanies: [] },
+      );
     });
   }
 

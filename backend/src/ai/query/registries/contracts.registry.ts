@@ -47,6 +47,26 @@ export const contractsRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: true,
     },
+    cost_center: {
+      ai: 'cost_center',
+      grid: 'cost_center_name',
+      type: 'set',
+      description: 'Group or cost center of the contract, as "code · name".',
+      dynamic: true,
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
+    cost_center_id: {
+      ai: 'cost_center_id',
+      grid: 'cost_center_id',
+      type: 'set',
+      description: 'Identifier of the group or cost center of the contract; null when it has none.',
+      dynamic: true,
+      discoverable: false,
+      sortable: false,
+      groupable: false,
+    },
     billing_frequency: {
       ai: 'billing_frequency',
       grid: 'billing_frequency',
@@ -133,6 +153,7 @@ export const contractsRegistry: AiEntityFilterRegistry = {
     status: 'status',
     supplier: 'supplier_name',
     company: 'company_name',
+    cost_center: 'cost_center_name',
     currency: 'currency',
     billing_frequency: 'billing_frequency',
     start_date: 'start_date',
@@ -165,6 +186,12 @@ export const contractsRegistry: AiEntityFilterRegistry = {
         expression: 'comp.name',
         joins: [
           `LEFT JOIN companies comp ON comp.id = c.company_id AND comp.tenant_id = c.tenant_id`,
+        ],
+      },
+      cost_center: {
+        expression: `CASE WHEN cc.id IS NULL THEN NULL ELSE CONCAT(cc.code, ' · ', cc.name) END`,
+        joins: [
+          `LEFT JOIN cost_centers cc ON cc.id = c.cost_center_id AND cc.tenant_id = c.tenant_id`,
         ],
       },
       currency: { expression: 'c.currency' },

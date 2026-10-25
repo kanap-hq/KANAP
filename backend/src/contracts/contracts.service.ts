@@ -149,6 +149,8 @@ function importRowUnchanged(stored: Contract, next: Partial<Record<keyof Contrac
 type ListItem = Contract & ContractTermFields & {
   supplier?: { id: string; name: string } | null;
   company?: { id: string; name: string } | null;
+  /** The name of the group or cost center the contract is attached to, or null. */
+  cost_center_name?: string | null;
   /** Links to budget lines of both natures. */
   linked_lines_count?: number;
   latest_task?: { id: string; status?: string; description?: string; created_at?: Date } | null;
@@ -171,7 +173,7 @@ type ListItem = Contract & ContractTermFields & {
 /** Who reads a list: the budget figures need the right to read the budget too. */
 type ListReadOptions = { manager?: EntityManager; budgetAccess?: boolean };
 /** The list columns that sort alphabetically. */
-const CONTRACT_TEXT_SORTS = new Set(['name', 'company_name', 'supplier_name', 'currency', 'billing_frequency']);
+const CONTRACT_TEXT_SORTS = new Set(['name', 'company_name', 'supplier_name', 'cost_center_name', 'currency', 'billing_frequency']);
 
 /** A contract link `l` to an OPEX line (`spend/budget-nature.ts`): the OPEX side lists, counts and replaces those only. */
 const OPEX_LINK = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex');
@@ -185,7 +187,7 @@ const DEFAULT_LIST_SORT: Sort = { field: 'next_due_date', direction: 'ASC' };
  * The sort fields ordered through a selected alias: the ones computed from the contract terms, and
  * the joined names (the paginated query cannot order on a column of a join it does not select).
  */
-const ALIAS_SORT_FIELDS = new Set(['end_date', 'cancellation_deadline', 'next_due_date', 'company_name', 'supplier_name']);
+const ALIAS_SORT_FIELDS = new Set(['end_date', 'cancellation_deadline', 'next_due_date', 'company_name', 'supplier_name', 'cost_center_name']);
 /** The budget figures of the list (`contract-budget.ts`, joined as `cb`), in units of the reporting currency. */
 const BUDGET_FIELDS: Record<string, string> = {
   budget_committed: '(cb.committed::numeric / 100)',
@@ -269,6 +271,8 @@ export class ContractsService {
       updated_at: { expression: 'c.updated_at', textExpression: 'CAST(c.updated_at AS TEXT)', dataType: 'string' },
       company_name: { expression: 'comp.name', dataType: 'string' },
       supplier_name: { expression: 'sup.name', dataType: 'string' },
+      cost_center_id: { expression: 'c.cost_center_id', dataType: 'string' },
+      cost_center_name: { expression: 'cc.name', dataType: 'string' },
       // The budget lines linked to the contract, of both natures, as the list counts them.
       linked_lines_count: {
         expression: `(SELECT COUNT(*) FROM contract_spend_items l WHERE l.tenant_id = c.tenant_id AND l.contract_id = c.id${ANY_LINE_LINK})`,
@@ -335,6 +339,7 @@ export class ContractsService {
       .createQueryBuilder('c')
       .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
       .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
+      .leftJoin('cost_centers', 'cc', 'cc.id = c.cost_center_id AND cc.tenant_id = c.tenant_id')
       .where('c.tenant_id = app_current_tenant()');
     if (budget) {
       // One row per contract of the tenant for the one year asked for, computed once.
@@ -381,6 +386,8 @@ export class ContractsService {
       status: 'c.status',
       company_name: 'comp.name',
       supplier_name: 'sup.name',
+      cost_center_id: 'c.cost_center_id',
+      cost_center_name: 'cc.name',
       start_date: 'c.start_date',
       end_date: filterTargets.end_date.expression,
       cancellation_deadline: filterTargets.cancellation_deadline.expression,
@@ -450,12 +457,15 @@ export class ContractsService {
     // augment supplier/company names, linked count, and derived dates
     const supplierIds = Array.from(new Set(items.map(i => i.supplier_id).filter(Boolean))) as string[];
     const companyIds = Array.from(new Set(items.map(i => i.company_id).filter(Boolean))) as string[];
-    const [suppliers, companies] = await Promise.all([
+    const centreIds = Array.from(new Set(items.map(i => i.cost_center_id).filter(Boolean))) as string[];
+    const [suppliers, companies, centres] = await Promise.all([
       supplierIds.length ? mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [supplierIds]) : [],
       companyIds.length ? mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [companyIds]) : [],
+      centreIds.length ? mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [centreIds]) : [],
     ]);
     const sById = new Map<string, any>(suppliers.map((r: any) => [r.id, r]));
     const cById = new Map<string, any>(companies.map((r: any) => [r.id, r]));
+    const nById = new Map<string, any>(centres.map((r: any) => [r.id, r]));
 
     const contractIds = items.map(i => i.id);
     // The budget lines of both natures (spend/budget-nature.ts).
@@ -501,6 +511,7 @@ export class ContractsService {
         status: deriveStatusFromDisabledAt(i.disabled_at),
         supplier: i.supplier_id ? { id: i.supplier_id, name: sById.get(i.supplier_id)?.name ?? '' } : null,
         company: i.company_id ? { id: i.company_id, name: cById.get(i.company_id)?.name ?? '' } : null,
+        cost_center_name: i.cost_center_id ? nById.get(i.cost_center_id)?.name ?? '' : null,
         linked_lines_count: countById.get(i.id) ?? 0,
         latest_task: latestById.get(i.id) ? {
           id: latestById.get(i.id)!.id,
@@ -667,12 +678,13 @@ export class ContractsService {
          ORDER BY created_at DESC LIMIT 1`, [tenantId, id]);
     const latest_task = latestTaskRows?.[0] ?? null;
     // The names the page's header shows, read with the contract (no request per picker).
-    const [names]: Array<{ supplier_name: string | null; company_name: string | null; owner_name: string | null }> = await mg.query(
-      `SELECT sup.name AS supplier_name, comp.name AS company_name,
+    const [names]: Array<{ supplier_name: string | null; company_name: string | null; cost_center_name: string | null; owner_name: string | null }> = await mg.query(
+      `SELECT sup.name AS supplier_name, comp.name AS company_name, cc.name AS cost_center_name,
               NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS owner_name
          FROM contracts c
          LEFT JOIN suppliers sup ON sup.tenant_id = c.tenant_id AND sup.id = c.supplier_id
          LEFT JOIN companies comp ON comp.tenant_id = c.tenant_id AND comp.id = c.company_id
+         LEFT JOIN cost_centers cc ON cc.tenant_id = c.tenant_id AND cc.id = c.cost_center_id
          LEFT JOIN users u ON u.tenant_id = c.tenant_id AND u.id = c.owner_user_id
         WHERE c.tenant_id = $1 AND c.id = $2`,
       [tenantId, id],
@@ -685,6 +697,7 @@ export class ContractsService {
       decision_window_days: windowDays,
       supplier_name: names?.supplier_name ?? null,
       company_name: names?.company_name ?? null,
+      cost_center_name: names?.cost_center_name ?? null,
       owner_name: names?.owner_name ?? null,
       linked_spend_items: spendItems,
       links,
@@ -735,6 +748,19 @@ export class ContractsService {
       for (const w of wanted) {
         if (!found.has(`${w.table}:${w.id}`)) throw new BadRequestException(`${w.label} not found.`);
       }
+    }
+    // The contract's place in the tree (spec §3.3): a group or a cost center of the tenant, active;
+    // a node of another tenant or inactive is a 400, before the placement check.
+    const place = input['cost_center_id'];
+    if (place != null && place !== '') {
+      if (typeof place !== 'string' || !isUuid(place)) throw new BadRequestException('Cost center not found.');
+      const [node]: Array<{ id: string; status: string }> = await mg.query(
+        `SELECT id, status::text AS status FROM cost_centers WHERE tenant_id = app_current_tenant() AND id = $1::uuid`,
+        [place.toLowerCase()],
+      );
+      if (!node) throw new BadRequestException('Cost center not found.');
+      if (node.status !== 'enabled') throw new BadRequestException('This cost center is disabled.');
+      input['cost_center_id'] = place.toLowerCase();
     }
     return input as ContractUpsertDto;
   }
@@ -977,7 +1003,7 @@ export class ContractsService {
       .split(',')
       .map((field) => field.trim())
       .filter(Boolean);
-    const allowed = new Set(['currency', 'company_name', 'supplier_name']);
+    const allowed = new Set(['currency', 'company_name', 'supplier_name', 'cost_center_name']);
     const fields = rawFields.filter((field) => allowed.has(field));
     if (fields.length === 0) return {};
 
@@ -1091,6 +1117,12 @@ export class ContractsService {
       'name','company_name','supplier_name','start_date','duration_months','auto_renewal','notice_period_months','yearly_amount_at_signature','currency','billing_frequency','status','owner_email','notes'
     ];
   }
+  /** The export adds the contract's place in the tree; the import keeps its own column list. */
+  private csvExportHeaders(): string[] {
+    const headers = this.csvHeaders();
+    headers.splice(headers.indexOf('supplier_name') + 1, 0, 'cost_center');
+    return headers;
+  }
   /**
    * The contracts file in the screen's language (`common/csv-sheet`): its separator, the start
    * date written the language's way and the amount with its decimal mark.
@@ -1102,7 +1134,7 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
     const language = opts?.language ?? 'en';
-    const headers = this.csvHeaders();
+    const headers = this.csvExportHeaders();
     const rows: string[][] = [];
     const isoDate = (value: unknown): string => {
       if (value == null || value === '') return '';
@@ -1125,14 +1157,17 @@ export class ContractsService {
       if (items.length) {
         const sIds = Array.from(new Set(items.map(i => i.supplier_id)));
         const cIds = Array.from(new Set(items.map(i => i.company_id)));
+        const nIds = Array.from(new Set(items.map(i => i.cost_center_id).filter(Boolean)));
         const uIds = Array.from(new Set(items.map(i => i.owner_user_id).filter(Boolean)));
-        const [sRows, cRows, uRows] = await Promise.all([
+        const [sRows, cRows, nRows, uRows] = await Promise.all([
           mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [sIds]),
           mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [cIds]),
+          nIds.length ? mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [nIds]) : Promise.resolve([]),
           uIds.length ? mg.query(`SELECT id, email FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [uIds]) : Promise.resolve([]),
         ]);
         const sMap = new Map<string, any>(sRows.map((r: any) => [r.id, r]));
         const cMap = new Map<string, any>(cRows.map((r: any) => [r.id, r]));
+        const nMap = new Map<string, any>(nRows.map((r: any) => [r.id, r]));
         const uMap = new Map<string, any>(uRows.map((r: any) => [r.id, r]));
         for (const it of items) {
           const start = isoDate(it.start_date);
@@ -1140,6 +1175,7 @@ export class ContractsService {
             it.name,
             cMap.get(it.company_id)?.name ?? '',
             sMap.get(it.supplier_id)?.name ?? '',
+            it.cost_center_id ? (nMap.get(it.cost_center_id)?.name ?? '') : '',
             start ? formatCsvDate(start, language) : '',
             String(it.duration_months ?? ''),
             formatCsvBoolean(!!it.auto_renewal, language),
