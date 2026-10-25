@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
@@ -36,11 +36,13 @@ describe('ApplicationCreateEditor', () => {
     const ref = React.createRef<ApplicationCreateEditorHandle>();
     render(
       <ThemeProvider theme={createAppTheme('light')}>
-        <ApplicationCreateEditor ref={ref} />
+        <ApplicationCreateEditor ref={ref}>{({ properties, body }) => <><div data-testid="properties">{properties}</div><div data-testid="body">{body}</div></>}</ApplicationCreateEditor>
       </ThemeProvider>,
     );
 
-    for (const label of c.labels) expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    for (const label of c.labels.slice(1)) expect(within(screen.getByTestId('properties')).getAllByText(label).length).toBeGreaterThan(0);
+    expect(within(screen.getByTestId('body')).getAllByRole('textbox')).toHaveLength(1);
+    expect(within(screen.getByTestId('body')).queryByText(c.labels[0])).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText(c.placeholder)).toBeInTheDocument();
 
     await act(async () => { await ref.current?.save(); });

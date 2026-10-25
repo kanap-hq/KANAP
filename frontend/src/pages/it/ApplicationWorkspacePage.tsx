@@ -1443,6 +1443,7 @@ export default function ApplicationWorkspacePage() {
   const canCreateKnowledge = hasLevel('knowledge', 'member');
   const overviewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
   const createRef = React.useRef<ApplicationCreateEditorHandle>(null);
+  const [createName, setCreateName] = React.useState('');
   const [versionDialogOpen, setVersionDialogOpen] = React.useState(false);
   const [savingCreate, setSavingCreate] = React.useState(false);
   const [createDirty, setCreateDirty] = React.useState(false);
@@ -1655,7 +1656,8 @@ export default function ApplicationWorkspacePage() {
       {!!error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{error}</Alert>}
       {!!appQuery.error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{t('messages.loadApplicationFailed')}</Alert>}
 
-      <PortfolioDetailWorkspaceShell
+      <ApplicationCreateEditor ref={createRef} onDirtyChange={setCreateDirty} onNameChange={setCreateName}>
+      {({ properties: createProperties, body: createBody }) => <PortfolioDetailWorkspaceShell
         activeTab={routeTab}
         tabs={tabs}
         onTabChange={handleTabChange}
@@ -1664,13 +1666,17 @@ export default function ApplicationWorkspacePage() {
         onBack={closeWorkspace}
         itemReference={appReference}
         onCopyReference={appReference ? () => { void copyReference(appReference); } : undefined}
-        title={isCreate ? '' : app?.name || ''}
+        title={isCreate ? createName : app?.name || ''}
         titleFallback={isCreate ? t('workspace.application.newTitle') : t('workspace.application.untitled')}
-        canEditTitle={!isCreate && canManage}
+        canEditTitle={isCreate || canManage}
         readOnly={!isCreate && !canManage}
-        onTitleSave={(value) => { void patchApplication({ name: value }); }}
+        onTitleSave={(value) => {
+          if (isCreate) createRef.current?.setName(value);
+          else void patchApplication({ name: value });
+        }}
         titleRequiredMessage={t('messages.nameRequired')}
         titleMaxLength={APPLICATION_NAME_MAX}
+        isCreate={isCreate}
         nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
@@ -1758,7 +1764,8 @@ export default function ApplicationWorkspacePage() {
             </IconButton>
           </>
         )}
-        properties={app ? (
+        forceDrawerOpen={isCreate}
+        properties={isCreate ? createProperties : app ? (
           <ApplicationProperties
             app={app}
             canManage={canManage}
@@ -1767,9 +1774,7 @@ export default function ApplicationWorkspacePage() {
           />
         ) : <Box />}
       >
-        {isCreate && routeTab === 'overview' && (
-          <ApplicationCreateEditor ref={createRef} onDirtyChange={setCreateDirty} />
-        )}
+        {isCreate && routeTab === 'overview' && createBody}
 
         {!isCreate && app && routeTab === 'overview' && (
           <OverviewTab
@@ -1845,7 +1850,8 @@ export default function ApplicationWorkspacePage() {
             onOpenKnowledge={openKnowledge}
           />
         )}
-      </PortfolioDetailWorkspaceShell>
+      </PortfolioDetailWorkspaceShell>}
+      </ApplicationCreateEditor>
 
       {app && canManage && (
         <CreateVersionDialog

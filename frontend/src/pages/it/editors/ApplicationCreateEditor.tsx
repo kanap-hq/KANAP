@@ -17,11 +17,13 @@ export type ApplicationCreateEditorHandle = {
   isDirty: () => boolean;
   save: () => Promise<string | null>;
   reset: () => void;
+  setName: (name: string) => void;
 };
 
-type Props = { onDirtyChange?: (dirty: boolean) => void };
+type EditorParts = { properties: React.ReactNode; body: React.ReactNode };
+type Props = { onDirtyChange?: (dirty: boolean) => void; onNameChange?: (name: string) => void; children: (parts: EditorParts) => React.ReactNode };
 
-export default forwardRef<ApplicationCreateEditorHandle, Props>(function ApplicationCreateEditor({ onDirtyChange }, ref) {
+export default forwardRef<ApplicationCreateEditorHandle, Props>(function ApplicationCreateEditor({ onDirtyChange, onNameChange, children }, ref) {
   const { t } = useTranslation(['it', 'common']);
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -137,17 +139,23 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
     }
   }, [saving, name, supplierId, description, category, editor, retiredDate, lifecycle, criticality, cyberCriticality, recoveryWave, dataClass, version, goLiveDate, endOfSupportDate, isSuite, t]);
 
-  useImperativeHandle(ref, () => ({ isDirty: () => dirty, save, reset }), [dirty, save, reset]);
+  const updateName = React.useCallback((value: string) => {
+    setName(value);
+    onNameChange?.(value);
+    markDirty();
+  }, [markDirty, onNameChange]);
 
-  return (
-    <Stack spacing={2}>
-      {!!serverError && <Alert severity="error">{serverError}</Alert>}
-      <PropertyRow label={t('common.name')} required>
-        <TextField value={name} onChange={(e) => { setName(e.target.value); markDirty(); }} required fullWidth variant="standard" sx={drawerFieldValueSx} inputProps={{ maxLength: APPLICATION_NAME_MAX }} />
-      </PropertyRow>
+  useImperativeHandle(ref, () => ({ isDirty: () => dirty, save, reset, setName: updateName }), [dirty, save, reset, updateName]);
+
+  return children({
+    body: (
       <PropertyRow label={t('workspace.application.overview.description')}>
         <TextField value={description} onChange={(e) => { setDescription(e.target.value); markDirty(); }} fullWidth variant="standard" sx={drawerFieldValueSx} />
       </PropertyRow>
+    ),
+    properties: (
+    <Stack spacing={2}>
+      {!!serverError && <Alert severity="error">{serverError}</Alert>}
       <PropertyRow label={t('workspace.application.overview.supplier')}>
         <SupplierSelect value={supplierId} onChange={(v) => { setSupplierId(v); markDirty(); }} hideLabel label={t('workspace.application.overview.supplier')} textFieldSx={drawerFieldValueSx} />
       </PropertyRow>
@@ -218,5 +226,6 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
         <DateEUField label="" valueYmd={retiredDate} onChangeYmd={(v) => { setRetiredDate(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
       </PropertyRow>
     </Stack>
-  );
+    ),
+  });
 });
