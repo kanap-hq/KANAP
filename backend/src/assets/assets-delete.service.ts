@@ -115,7 +115,8 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
     assetName: string,
     assignments: { count: number; samples: Array<{ name: string; environment: string }> },
     connections: { count: number; samples: Array<{ name: string }> },
-  ): string {    const parts: string[] = [];
+  ): string {
+    const parts: string[] = [];
     if (assignments.count > 0) {
       const list = assignments.samples.map((a) => `${a.name} (${a.environment?.toUpperCase?.() || a.environment || ''})`);
       const extra = assignments.count > list.length ? ` +${assignments.count - list.length} more` : '';
