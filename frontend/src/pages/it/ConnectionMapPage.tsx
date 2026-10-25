@@ -506,9 +506,19 @@ export default function ConnectionMapPage() {
       if (sid) nodeIds.add(String(sid));
       if (tid) nodeIds.add(String(tid));
     });
-    const nodes = withImplicitMembers(allNodes, nodeIds, data.clusterMemberships ?? []);
+    // A start coming from the address stays on the map even when no link names it, and brings
+    // its clusters along (a member without any connection still shows its cluster).
+    const drawnNodeIds = new Set(nodeIds);
+    const rootSet = new Set(rootNodeIds);
+    allNodes.forEach((node) => {
+      if (rootSet.has(node.id)) drawnNodeIds.add(node.id);
+    });
+    (data.clusterMemberships ?? []).forEach((m) => {
+      if (rootSet.has(m.server_id)) drawnNodeIds.add(m.cluster_id);
+    });
+    const nodes = withImplicitMembers(allNodes, drawnNodeIds, data.clusterMemberships ?? []);
     return { nodes, links };
-  }, [data, showMultiServer, showLayers, settings?.connectionTypes, entityName]);
+  }, [data, showMultiServer, showLayers, settings?.connectionTypes, entityName, rootNodeIds]);
 
   // Memoize clusterMemberships to avoid triggering graph re-render on every parent render
   const clusterMembershipsRaw = React.useMemo(() => {
@@ -566,16 +576,14 @@ export default function ConnectionMapPage() {
     const nodeMap = new Map<string, ConnectionMapNode>();
     graphData.nodes.forEach((n) => nodeMap.set(n.id, n));
 
-    // When depth=0, also show parent clusters of the selected member servers so the cluster
-    // node and its implicit link render (even though clusters can't be directly selected via apps).
+    // A member taken as a start brings the connections of its clusters: the cluster becomes a
+    // start at depth 0, so its counterparts are at depth 1, as if they were neighbours of the member.
     const rootSet = new Set(rootNodeIds);
-    if (depthLimit === 0 && clusterMembershipsRaw.length > 0) {
-      clusterMembershipsRaw.forEach((m) => {
-        if (rootSet.has(m.server_id)) {
-          rootSet.add(m.cluster_id);
-        }
-      });
-    }
+    clusterMembershipsRaw.forEach((m) => {
+      if (rootSet.has(m.server_id)) {
+        rootSet.add(m.cluster_id);
+      }
+    });
 
     // Also for depth=0, include adjacent entity nodes (they can't be selected via apps but are key endpoints).
     if (depthLimit === 0) {
@@ -628,6 +636,12 @@ export default function ConnectionMapPage() {
     }
 
     const includedIds = new Set<string>(visited.keys());
+    // A drawn cluster shows its members, even outside the depth. They bring no link of their own.
+    clusterMembershipsRaw.forEach((m) => {
+      if (includedIds.has(m.cluster_id) && nodeMap.has(m.server_id)) {
+        includedIds.add(m.server_id);
+      }
+    });
     const nodes = graphData.nodes.filter((n) => includedIds.has(n.id));
     const links = graphData.links.filter((l) => {
       const sid = typeof l.source === 'object' ? l.source.id : l.source;
@@ -635,7 +649,7 @@ export default function ConnectionMapPage() {
       return includedIds.has(sid) && includedIds.has(tid);
     });
     return { nodes, links };
-  }, [graphData, rootNodeIds, depthLimit, isPrimaryNode]);
+  }, [graphData, rootNodeIds, depthLimit, isPrimaryNode, clusterMembershipsRaw]);
 
   // Filter cluster memberships to only include those where both cluster and member are in the filtered graph
   const clusterMemberships = React.useMemo(() => {

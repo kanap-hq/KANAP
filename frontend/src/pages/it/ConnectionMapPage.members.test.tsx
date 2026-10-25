@@ -20,9 +20,15 @@ vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({ default: () 
 const enums = vi.hoisted(() => ({ settings: null, byField: {}, labelFor: () => '', entityName: (_code: string, fallback?: string) => fallback ?? '' }));
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({ default: () => enums }));
 vi.mock('../../components/LightModeIsland', () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
-const graph = vi.hoisted(() => ({ props: null as null | { nodes: Array<{ id: string }>; links: Array<{ id: string }>; clusterMemberships: Array<{ cluster_id: string; server_id: string }> } }));
+type RecordedLink = { id: string; source: string | { id: string }; target: string | { id: string } };
+type RecordedProps = {
+  nodes: Array<{ id: string }>;
+  links: RecordedLink[];
+  clusterMemberships: Array<{ cluster_id: string; server_id: string }>;
+};
+const graph = vi.hoisted(() => ({ props: null as null | RecordedProps }));
 vi.mock('./components/ConnectionMapGraph', () => ({
-  default: (props: { nodes: Array<{ id: string }>; links: Array<{ id: string }>; clusterMemberships: Array<{ cluster_id: string; server_id: string }> }) => {
+  default: (props: RecordedProps) => {
     graph.props = props;
     return <div data-testid="connection-map-graph" />;
   },
@@ -36,12 +42,23 @@ const MEMBER_1 = { id: 'm-1', name: 'M1', kind: 'server', environment: 'prod', n
 const MEMBER_2 = { id: 'm-2', name: 'M2', kind: 'server', environment: 'prod', network_segment: null, hosting_category: null, implicit_member: true };
 const ENTITY = { id: 'entity:dmz', name: 'DMZ', kind: 'entity', environment: null, network_segment: null, hosting_category: null };
 
+const FIREWALL = { id: 'fw-1', name: 'FW', kind: 'server', environment: 'prod', network_segment: null, hosting_category: null };
+
 function connection(id: string, source: string, destinationEntity: string) {
   return {
     id, connection_reference: id.toUpperCase(), name: 'Flow', purpose: null, topology: 'server_to_server', lifecycle: 'active',
     criticality: 'low', data_class: 'internal', contains_pii: false, protocol_codes: [], protocol_labels: [],
     source_asset_id: source, source_entity_code: null, destination_asset_id: null, destination_entity_code: destinationEntity,
     server_ids: [source],
+  };
+}
+
+function serverConnection(id: string, source: string, destination: string) {
+  return {
+    ...connection(id, source, 'dmz'),
+    destination_asset_id: destination,
+    destination_entity_code: null,
+    server_ids: [source, destination],
   };
 }
 
@@ -66,13 +83,30 @@ const MAP_WITH_OTHER_CLUSTER = {
   ],
   connections: [
     ...MAP.connections,
-    {
-      ...connection('c-2', 'cl-2', 'dmz'),
-      destination_asset_id: 'fw-2',
-      destination_entity_code: null,
-      server_ids: ['cl-2', 'fw-2'],
-    },
+    serverConnection('c-2', 'cl-2', 'fw-2'),
   ],
+};
+
+// The cluster of the start has no connection at all; an unrelated cluster keeps links non-empty.
+const MAP_ISOLATED_START = {
+  environment: 'prod',
+  lifecycles: ['active'],
+  nodes: [
+    { id: 'cl-x', name: 'CLX', kind: 'cluster', is_cluster: true, environment: 'prod', network_segment: null, hosting_category: null, member_server_ids: ['m-9'] },
+    { id: 'm-9', name: 'M9', kind: 'server', environment: 'prod', network_segment: null, hosting_category: null, implicit_member: true },
+    { id: 'cl-2', name: 'CL2', kind: 'cluster', is_cluster: true, environment: 'prod', network_segment: null, hosting_category: null },
+    { id: 'fw-2', name: 'FW2', kind: 'server', environment: 'prod', network_segment: null, hosting_category: null },
+  ],
+  connections: [serverConnection('c-9', 'cl-2', 'fw-2')],
+  clusterMemberships: [{ cluster_id: 'cl-x', server_id: 'm-9' }],
+};
+
+const MAP_WITH_FIREWALL = {
+  environment: 'prod',
+  lifecycles: ['active'],
+  nodes: [CLUSTER, MEMBER_1, MEMBER_2, ENTITY, FIREWALL],
+  connections: [connection('c-1', 'cl-1', 'dmz'), serverConnection('c-2', 'cl-1', 'fw-1')],
+  clusterMemberships: MAP.clusterMemberships,
 };
 
 function renderPage(map: unknown, entry = '/it/connection-map') {
@@ -125,5 +159,46 @@ describe('ConnectionMapPage cluster members', () => {
     expect(graphNodeIds()).toContain('cl-1');
     expect(graphNodeIds()).not.toContain('cl-2');
     expect(graphNodeIds()).not.toContain('fw-2');
+  });
+
+  it('brings the connections of the cluster of a member start at depth 1', async () => {
+    renderPage(MAP_WITH_FIREWALL, '/it/connection-map?rootIds=m-1&depth=1');
+    await waitFor(() => expect(graphNodeIds()).toEqual(['cl-1', 'm-1', 'm-2', 'entity:dmz', 'fw-1']));
+    expect(graph.props?.links.map((link) => link.id)).toEqual(['c-1', 'c-2']);
+  });
+
+  it('keeps the entity next to a member start at depth 0, not the firewall at depth 1', async () => {
+    renderPage(MAP_WITH_FIREWALL, '/it/connection-map?rootIds=m-1&depth=0');
+    await waitFor(() => expect(graphNodeIds()).toEqual(['cl-1', 'm-1', 'm-2', 'entity:dmz']));
+    expect(graph.props?.links.map((link) => link.id)).toEqual(['c-1']);
+  });
+
+  it('shows the members of a cluster start at depth 0', async () => {
+    renderPage(MAP_WITH_FIREWALL, '/it/connection-map?rootIds=cl-1&depth=0');
+    await waitFor(() => expect(graphNodeIds()).toEqual(['cl-1', 'm-1', 'm-2', 'entity:dmz']));
+  });
+
+  it('reaches the cluster and its members from a firewall start, without a member link', async () => {
+    renderPage(MAP_WITH_FIREWALL, '/it/connection-map?rootIds=fw-1&depth=1');
+    await waitFor(() => expect(graphNodeIds()).toEqual(['cl-1', 'm-1', 'm-2', 'fw-1']));
+    const ends = (graph.props?.links ?? []).flatMap((link) => {
+      const source = typeof link.source === 'object' ? link.source.id : link.source;
+      const target = typeof link.target === 'object' ? link.target.id : link.target;
+      return [source, target];
+    });
+    expect(ends).not.toContain('m-1');
+    expect(ends).not.toContain('m-2');
+  });
+
+  it('shows an isolated start alone, with its cluster', async () => {
+    renderPage(MAP_ISOLATED_START, '/it/connection-map?rootIds=m-9&depth=0');
+    await waitFor(() => expect(graphNodeIds()).toEqual(['cl-x', 'm-9']));
+    expect(graph.props?.links).toEqual([]);
+  });
+
+  it('keeps every node of the map for a start at the whole depth', async () => {
+    renderPage(MAP_WITH_FIREWALL, '/it/connection-map?rootIds=fw-1');
+    await waitFor(() => expect(graphNodeIds()).toEqual(['cl-1', 'm-1', 'm-2', 'entity:dmz', 'fw-1']));
+    expect(graph.props?.links.map((link) => link.id)).toEqual(['c-1', 'c-2']);
   });
 });
