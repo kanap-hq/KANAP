@@ -271,6 +271,21 @@
   "PROJECT_HIDDEN_LINES_other": "Este proyecto está vinculado a {{count}} líneas fuera de su acceso.",
   "REQUEST_HIDDEN_LINES_one": "Esta solicitud está vinculada a {{count}} línea fuera de su acceso.",
   "REQUEST_HIDDEN_LINES_other": "Esta solicitud está vinculada a {{count}} líneas fuera de su acceso.",
+  "APPLICATION_HIDDEN_CONTRACTS_one": "Esta aplicación está vinculada a {{count}} contrato fuera de su acceso.",
+  "APPLICATION_HIDDEN_CONTRACTS_other": "Esta aplicación está vinculada a {{count}} contratos fuera de su acceso.",
+  "ASSET_HIDDEN_CONTRACTS_one": "Este activo está vinculado a {{count}} contrato fuera de su acceso.",
+  "ASSET_HIDDEN_CONTRACTS_other": "Este activo está vinculado a {{count}} contratos fuera de su acceso.",
+  "TECHNOLOGY_HIDDEN_CONTRACTS_one": "Esta tecnología está vinculada a {{count}} contrato fuera de su acceso.",
+  "TECHNOLOGY_HIDDEN_CONTRACTS_other": "Esta tecnología está vinculada a {{count}} contratos fuera de su acceso.",
+  "APPLICATION_HIDDEN_LINKS": "Esta aplicación está vinculada a {{lines}} y {{contracts}} fuera de su acceso.",
+  "ASSET_HIDDEN_LINKS": "Este activo está vinculado a {{lines}} y {{contracts}} fuera de su acceso.",
+  "TECHNOLOGY_HIDDEN_LINKS": "Esta tecnología está vinculada a {{lines}} y {{contracts}} fuera de su acceso.",
+  "hiddenLinks": {
+    "line_one": "{{count}} línea",
+    "line_other": "{{count}} líneas",
+    "contract_one": "{{count}} contrato",
+    "contract_other": "{{count}} contratos"
+  },
   "dataAccess": {
     "outside": "Este elemento está fuera de su acceso a los datos.",
     "chargebackCompany": "El contracargo de esta empresa está fuera de su acceso a los datos.",

@@ -36,6 +36,8 @@ export const COMPANY_USAGE_QUERIES: readonly UsageQuery[] = [
            ORDER BY r.fiscal_year, r.id
            LIMIT $3`,
   },
+  // The company delete routes are reserved to unscoped persons (`@ReservedToUnscopedDataAccess`);
+  // the count only ever runs for them, and a limited reader of the list sees visible contracts.
   {
     type: 'contracts',
     resource: 'contracts',

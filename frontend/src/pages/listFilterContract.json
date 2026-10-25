@@ -782,6 +782,7 @@
       "name": "text",
       "supplier_name": "text",
       "company_name": "text",
+      "cost_center_id": "set",
       "next_due_date": "date",
       "term_state": "set",
       "yearly_amount_at_signature": "text",

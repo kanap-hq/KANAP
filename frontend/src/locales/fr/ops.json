@@ -375,10 +375,13 @@
     "exportCsv": "Exporter CSV",
     "exportTitle": "Exporter les contrats",
     "importTitle": "Importer les contrats",
+    "readOnlyInYourAccess": "Lecture seule dans votre accès",
+    "outsideYourAccess": "Contrat hors de votre accès",
     "columns": {
       "contract": "Contrat",
       "supplier": "Fournisseur",
       "company": "Société",
+      "costCenter": "Centre de coûts",
       "start": "Début",
       "durationMonths": "Durée (m)",
       "autoRenewal": "Renouvellement auto.",
@@ -400,6 +403,7 @@
     },
     "list": {
       "toDecide": "À décider sous {{days}} jours ({{count}})",
+      "withoutCostCenter": "Sans centre de coûts",
       "dueIn_one": "dans {{count}} j",
       "dueIn_other": "dans {{count}} j",
       "dueToday": "aujourd'hui",
@@ -445,6 +449,7 @@
       "name": "Nom du contrat",
       "supplier": "Fournisseur",
       "company": "Société contractante",
+      "costCenter": "Centre de coûts ou groupe",
       "owner": "Responsable",
       "status": "Statut",
       "startDate": "Début",
@@ -494,6 +499,10 @@
       "currencyRequired": "Choisissez une devise.",
       "invalidMonths": "Saisissez un nombre entier de mois.",
       "invalidAmount": "Saisissez un montant avec deux décimales au plus."
+    },
+    "relations": {
+      "closedDocuments_one": "{{count}} pièce jointe, réservée aux personnes qui voient ce contrat",
+      "closedDocuments_other": "{{count}} pièces jointes, réservées aux personnes qui voient ce contrat"
     },
     "deadlines": {
       "title": "Échéances",

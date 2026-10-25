@@ -43,6 +43,8 @@ type BudgetLineRelationsData = {
   applications: ApplicationRelationRow[] | null;
   technologies: TechnologyRelationRow[] | null;
   contracts: ContractRow[] | null;
+  /** The linked contracts `contracts` leaves out: outside the caller's data access. */
+  contracts_hidden?: number;
   assets: AssetRelationRow[] | null;
   suggestions: Suggestion[];
 };
@@ -232,7 +234,7 @@ export default function BudgetLineRelationsTab({
       rows: data?.technologies ?? null,
       familyLabel: labels.family,
     })),
-    readable(contractsSection({ t, rows: data?.contracts ?? null, lang })),
+    readable(contractsSection({ t, rows: data?.contracts ?? null, lang, hidden: data?.contracts_hidden })),
     readable(assetsSection({
       t,
       rows: data?.assets ?? null,

@@ -104,6 +104,8 @@ interface TaskData {
   related_object_name: string | null;
   /** The task names a budget line the person cannot read: `related_object_name` is its reference alone, without a link. */
   related_object_hidden?: boolean;
+  /** A contract outside the access: it has no reference, the screen shows "Contract outside your access". */
+  related_object_hidden_kind?: 'contract' | null;
   phase_id: string | null;
   phase_name: string | null;
   // Classification fields

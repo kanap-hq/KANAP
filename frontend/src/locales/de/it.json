@@ -1940,6 +1940,14 @@
           "only_other": "{{count}} Zeilen außerhalb Ihres Zugriffs",
           "count_one": "{{count}} Budgetzeile",
           "count_other": "{{count}} Budgetzeilen"
+        },
+        "outside_contracts": {
+          "and_one": "und {{count}} Vertrag außerhalb Ihres Zugriffs",
+          "and_other": "und {{count}} Verträge außerhalb Ihres Zugriffs",
+          "only_one": "{{count}} Vertrag außerhalb Ihres Zugriffs",
+          "only_other": "{{count}} Verträge außerhalb Ihres Zugriffs",
+          "count_one": "{{count}} Vertrag",
+          "count_other": "{{count}} Verträge"
         }
       },
       "untitled": "Unbenannte Anwendung",

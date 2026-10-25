@@ -173,6 +173,20 @@ async function testDeleteAndDisable() {
     await seedLine(runner, 'capex', tenantId, used.id);
 
     await expectRefused(runner, /IT-300 is used by 3 OPEX lines and 1 CAPEX line\. Disable it instead\./, () => del.delete(used.id, ctx));
+    // A contract placed on the node counts in the refusal too (spec §3.3).
+    const supplierId = (await runner.query(
+      `INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Contract supplier') RETURNING id`, [tenantId],
+    ))[0].id;
+    await runner.query(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, cost_center_id)
+       VALUES ($1, 'Node contract', $2, $3, '2026-01-01', $4)`,
+      [tenantId, paris, supplierId, used.id],
+    );
+    await expectRefused(
+      runner,
+      /IT-300 is used by 3 OPEX lines, 1 CAPEX line and 1 contract\. Disable it instead\./,
+      () => del.delete(used.id, ctx),
+    );
     await expectRefused(runner, /IT department still contains 2 nodes\. Move or delete them first\./, () => del.delete(group.id, ctx));
 
     // Disabling is allowed, touches neither the lines nor the descendants.

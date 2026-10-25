@@ -61,7 +61,7 @@ function createService(): ContractsService {
 }
 
 const HEADER =
-  'name;company_name;supplier_name;start_date;duration_months;auto_renewal;notice_period_months;yearly_amount_at_signature;currency;billing_frequency;status;owner_email;notes';
+  'name;company_name;supplier_name;cost_center;start_date;duration_months;auto_renewal;notice_period_months;yearly_amount_at_signature;currency;billing_frequency;status;owner_email;notes';
 
 async function testTemplateContainsHeaderRow() {
   const svc = createService();
@@ -113,7 +113,7 @@ async function testImportRejectsWrongHeaders() {
 
 async function testImportReportsUnresolvedReferences() {
   const svc = createService();
-  const row = 'New Deal;Ghost Corp;Ghost Supplier;2024-01-01;12;no;1;0;EUR;annual;enabled;ghost@nowhere.io;';
+  const row = 'New Deal;Ghost Corp;Ghost Supplier;;2024-01-01;12;no;1;0;EUR;annual;enabled;ghost@nowhere.io;';
   const csv = `${HEADER}\n${row}\n`;
   const result = await svc.importCsv(
     { file: { buffer: Buffer.from('﻿' + csv, 'utf8') } as any, dryRun: true },
@@ -129,7 +129,7 @@ async function testImportReportsUnresolvedReferences() {
 // A yes/no cell that is neither: the shared coded error, worded by the interface, on its column.
 async function testImportCodesAnInvalidYesNo() {
   const svc = createService();
-  const row = 'New Deal;Fromage Co;Dell;2024-01-01;12;maybe;1;0;EUR;annual;enabled;;';
+  const row = 'New Deal;Fromage Co;Dell;;2024-01-01;12;maybe;1;0;EUR;annual;enabled;;';
   const result = await svc.importCsv(
     { file: { buffer: Buffer.from(`${HEADER}\n${row}\n`, 'utf8') } as any, dryRun: true },
     { manager: createMockManager() },
@@ -146,9 +146,9 @@ async function testImportCodesAnInvalidYesNo() {
 async function testImportCodesEveryRowProblem() {
   const svc = createService();
   const rows = [
-    ';Ghost Corp;;2024-01-01;12;no;1;0;EURO;weekly;enabled;ghost@nowhere.io;',
-    'Deal;;Ghost Supplier;;12;no;1;0;EUR;annual;enabled;;',
-    'Deal 3;Fromage Co;Dell;not a date;12;no;1;0;EUR;annual;enabled;;',
+    ';Ghost Corp;;;2024-01-01;12;no;1;0;EURO;weekly;enabled;ghost@nowhere.io;',
+    'Deal;;Ghost Supplier;;;12;no;1;0;EUR;annual;enabled;;',
+    'Deal 3;Fromage Co;Dell;;not a date;12;no;1;0;EUR;annual;enabled;;',
   ];
   const result = await svc.importCsv(
     { file: { buffer: Buffer.from(`${HEADER}\n${rows.join('\n')}\n`, 'utf8') } as any, dryRun: true },
@@ -179,7 +179,7 @@ async function testImportCodesEveryRowProblem() {
 async function testImportReadsWindows1252() {
   const svc = createService();
   // Excel "CSV (semicolon)" on Windows writes Windows-1252: latin1 matches it for "é".
-  const row = 'Refonte CRM é;Société Test;Dell;2024-01-01;12;no;1;0;EUR;annual;enabled;alice@fromage.co;';
+  const row = 'Refonte CRM é;Société Test;Dell;;2024-01-01;12;no;1;0;EUR;annual;enabled;alice@fromage.co;';
   const result = await svc.importCsv(
     { file: { buffer: Buffer.from(`${HEADER}\r\n${row}\r\n`, 'latin1') } as any, dryRun: true },
     { manager: createMockManager() },

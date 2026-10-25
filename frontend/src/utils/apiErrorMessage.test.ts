@@ -28,6 +28,15 @@ describe('getApiErrorMessage', () => {
       .toBe('Diese Anfrage ist mit 2 Zeilen außerhalb Ihres Zugriffs verknüpft.');
     expect(getApiErrorMessage(refusal('This technology is linked to 2 lines outside your access.'), i18n.getFixedT('es'), 'fallback'))
       .toBe('Esta tecnología está vinculada a 2 líneas fuera de su acceso.');
+    // Lot 5: contracts are counted too, alone or together with lines.
+    expect(getApiErrorMessage(refusal('This application is linked to 2 contracts outside your access.'), fr, 'fallback'))
+      .toBe('Cette application est liée à 2 contrats hors de votre accès.');
+    expect(getApiErrorMessage(refusal('This asset is linked to 1 contract outside your access.'), i18n.getFixedT('de'), 'fallback'))
+      .toBe('Dieses Asset ist mit 1 Vertrag außerhalb Ihres Zugriffs verknüpft.');
+    expect(getApiErrorMessage(refusal('This application is linked to 1 line and 2 contracts outside your access.'), fr, 'fallback'))
+      .toBe('Cette application est liée à 1 ligne et 2 contrats hors de votre accès.');
+    expect(getApiErrorMessage(refusal('This technology is linked to 3 lines and 1 contract outside your access.'), i18n.getFixedT('es'), 'fallback'))
+      .toBe('Esta tecnología está vinculada a 3 líneas y 1 contrato fuera de su acceso.');
     // A sentence the screen does not know shows as the server wrote it, never the generic refusal.
     expect(getApiErrorMessage(refusal('Some new refusal.'), fr, 'fallback')).toBe('Some new refusal.');
     expect(getApiErrorMessage(refusal(''), t, 'fallback')).toBe('This item is outside your data access.');

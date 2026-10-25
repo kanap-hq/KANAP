@@ -49,6 +49,9 @@ interface TaskData {
   related_object_type: string | null;
   related_object_id: string | null;
   related_object_name: string | null;
+  /** A hidden budget line (reference alone) or contract ("Contract outside your access"), without a link. */
+  related_object_hidden?: boolean;
+  related_object_hidden_kind?: 'contract' | null;
   phase_id: string | null;
   phase_name: string | null;
   source_id?: string | null;
@@ -134,6 +137,7 @@ export default function TaskPropertiesDrawer({
   const [logTimeOpen, setLogTimeOpen] = React.useState(false);
   const isProjectTask = task.related_object_type === 'project';
   const isStandalone = !task.related_object_type;
+  const hiddenContract = task.related_object_hidden === true && task.related_object_hidden_kind === 'contract';
   const canEditClassification = isStandalone || isProjectTask;
   const canLogTime = isProjectTask ? hasLevel('portfolio_projects', 'contributor') : hasLevel('tasks', 'member');
   const canCreateKnowledge = hasLevel('knowledge', 'member');
@@ -186,7 +190,7 @@ export default function TaskPropertiesDrawer({
       <PropertyGroup>
         {/* Related to */}
         <PropertyRow label={t('workspace.task.sidebar.fields.relatedTo')}>
-          {onRelationChange && !readOnly ? (
+          {onRelationChange && !readOnly && !hiddenContract ? (
             <RelatedObjectSelect
               relationType={task.related_object_type as RelatedObjectType}
               relationId={task.related_object_id || null}
@@ -198,7 +202,9 @@ export default function TaskPropertiesDrawer({
             />
           ) : (
             <Typography sx={{ fontSize: 13 }}>
-              {task.related_object_name || t('workspace.task.sidebar.values.standaloneTask')}
+              {hiddenContract
+                ? t('ops:contracts.outsideYourAccess')
+                : task.related_object_name || t('workspace.task.sidebar.values.standaloneTask')}
             </Typography>
           )}
         </PropertyRow>

@@ -24,11 +24,17 @@ export interface TaskListItem {
   related_object_id: string | null;
   related_object_name: string | null;
   /**
-   * Set (true) when the task names a budget line the person cannot read (data-scoped access, spec
-   * §5.4 "Champ simple"): `related_object_name` is then the line's reference alone (`BL-12`), shown
-   * without a link. Absent otherwise.
+   * Set (true) when the task names a budget line or a contract the person cannot read (data-scoped
+   * access, spec §5.4 "Champ simple"): `related_object_name` is then the line's reference alone
+   * (`BL-12`), or null for a contract, shown without a link. Absent otherwise.
    */
   related_object_hidden?: true;
+  /**
+   * The kind of hidden object, for the screen's label: `contract` shows "Contract outside your
+   * access" without a link (a contract has no business reference); absent for a hidden line, whose
+   * reference is its name.
+   */
+  related_object_hidden_kind?: 'contract';
   // Task type (FK to portfolio_task_types)
   task_type_id: string | null;
   task_type_name: string | null;
@@ -699,6 +705,18 @@ export const TASK_HIDDEN_LINE_REFERENCE_SQL = `CASE
         END`;
 
 /**
+ * Whether a task names a contract the person cannot read (spec §5.4 "Champ simple"): the contract
+ * join (`c`) is filtered by the contract policy, so under a limited access a null join on a
+ * contract task is a hidden contract. An unscoped person's dangling contract task (none today)
+ * keeps its old shape. The row shaping returns no id and no name, and the kind for the screen.
+ */
+export const TASK_HIDDEN_CONTRACT_SQL = `CASE
+          WHEN t.related_object_type = 'contract' AND t.related_object_id IS NOT NULL AND c.id IS NULL
+               AND (SELECT 1 WHERE current_setting('app.da_mode', true) = 'limited') IS NOT NULL
+          THEN true ELSE false
+        END`;
+
+/**
  * The sort keys of the tasks list and of its ids, spelled out as expressions over the joins both
  * queries share (an output alias cannot take a collation). `priority_score` is the computed
  * column both queries project.
@@ -746,10 +764,14 @@ const TASK_TEXT_SORTS = new Set([
 
 /**
  * A row of the list or the detail: a hidden line shows as its reference (`related_object_hidden`),
- * without its id (as Plaid, MCP and the export).
+ * without its id (as Plaid, MCP and the export); a hidden contract shows no name, no id, and its
+ * kind (`contract`), so the screen can write "Contract outside your access" without a link.
  */
-function withHiddenLineReference(row: TaskListItem & { related_object_reference?: string | null }): TaskListItem {
-  const { related_object_reference: reference, ...task } = row;
+function withHiddenReference(row: TaskListItem & { related_object_reference?: string | null; related_object_contract_hidden?: boolean }): TaskListItem {
+  const { related_object_reference: reference, related_object_contract_hidden: contractHidden, ...task } = row;
+  if (contractHidden === true) {
+    return { ...task, related_object_id: null, related_object_name: null, related_object_hidden: true, related_object_hidden_kind: 'contract' };
+  }
   if (!reference) return task;
   return { ...task, related_object_id: null, related_object_name: reference, related_object_hidden: true };
 }
@@ -840,6 +862,7 @@ export class TasksService {
           ELSE ''
         END as related_object_name,
         ${TASK_HIDDEN_LINE_REFERENCE_SQL} AS related_object_reference,
+        ${TASK_HIDDEN_CONTRACT_SQL} AS related_object_contract_hidden,
         t.task_type_id,
         tt.name as task_type_name,
         tt.code as task_type_code,
@@ -893,7 +916,7 @@ export class TasksService {
       LIMIT ${limit} OFFSET ${skip}
     `;
 
-    const items: TaskListItem[] = (await manager.query(dataQuery, params)).map(withHiddenLineReference);
+    const items: TaskListItem[] = (await manager.query(dataQuery, params)).map(withHiddenReference);
 
     return { items, total, page, limit };
   }
@@ -1118,6 +1141,7 @@ export class TasksService {
           ELSE ''
         END as related_object_name,
         ${TASK_HIDDEN_LINE_REFERENCE_SQL} AS related_object_reference,
+        ${TASK_HIDDEN_CONTRACT_SQL} AS related_object_contract_hidden,
         t.task_type_id,
         tt.name as task_type_name,
         tt.code as task_type_code,
@@ -1166,7 +1190,7 @@ export class TasksService {
         ${accessWhere}
       LIMIT 1
     `;
-    const rows: TaskListItem[] = (await manager.query(dataQuery, params)).map(withHiddenLineReference);
+    const rows: TaskListItem[] = (await manager.query(dataQuery, params)).map(withHiddenReference);
     const task = rows[0];
     if (!task) return null;
 

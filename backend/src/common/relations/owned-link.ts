@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, NotFoundException } from '@nes
 import type { EntityManager } from 'typeorm';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
-import { assertLinesEditable } from '../../data-access/line-write-checks';
+import { assertLinesEditable, DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE, isLimitedTransaction } from '../../data-access/line-write-checks';
 import { auditedLinkSet, hiddenLineCount, type HiddenLineOwner } from '../../data-access/hidden-links';
 import { binder } from './related-objects';
 import { parseTargetId } from './relation-target';
@@ -136,7 +136,11 @@ export async function setOwnedLink(args: {
     nature = lines[0].nature;
   } else if (args.kind === 'contracts') {
     const rows: unknown[] = await args.manager.query(`SELECT 1 FROM contracts WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
-    if (rows.length === 0) throw new BadRequestException(args.link.notFound);
+    if (rows.length === 0) {
+      // A hidden contract answers as a missing one for a limited person; unscoped persons keep the 400.
+      if (await isLimitedTransaction(args.manager)) throw new NotFoundException(DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE);
+      throw new BadRequestException(args.link.notFound);
+    }
   } else if (args.kind === 'projects') {
     await assertProjectVisible(args.manager, tenantId, id, args.projectScope, args.link.notFound);
   } else {

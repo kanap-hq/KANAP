@@ -123,6 +123,20 @@ describe('CostCenterSelect', () => {
     expect(onChange).toHaveBeenCalledWith('it-100', expect.objectContaining({ code: 'IT-100' }));
   });
 
+  it('offers groups and centres as a contract place, only the nodes the access allows', () => {
+    const allowed = new Set(['grp', 'grp-fr']);
+    const { input, onChange } = renderSelect({
+      selectable: 'contract_places',
+      isAllowed: (node) => allowed.has(node.id),
+    });
+    open(input);
+    // GRP-FR is allowed and GRP is its allowed parent; IT is only an ancestor elsewhere, so absent.
+    expect(shownIds()).toEqual(['grp', 'grp-fr']);
+    expect(option('grp')).toHaveAttribute('aria-disabled', 'false');
+    fireEvent.click(option('grp'));
+    expect(onChange).toHaveBeenCalledWith('grp', expect.objectContaining({ kind: 'group' }));
+  });
+
   it('lets a report pick a group or a disabled node with selectable="all"', () => {
     const { input, onChange } = renderSelect({ selectable: 'all' });
     open(input);

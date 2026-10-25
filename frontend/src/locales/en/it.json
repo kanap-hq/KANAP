@@ -1940,6 +1940,14 @@
           "only_other": "{{count}} lines outside your access",
           "count_one": "{{count}} budget line",
           "count_other": "{{count}} budget lines"
+        },
+        "outside_contracts": {
+          "and_one": "and {{count}} contract outside your access",
+          "and_other": "and {{count}} contracts outside your access",
+          "only_one": "{{count}} contract outside your access",
+          "only_other": "{{count}} contracts outside your access",
+          "count_one": "{{count}} contract",
+          "count_other": "{{count}} contracts"
         }
       },
       "untitled": "Untitled application",

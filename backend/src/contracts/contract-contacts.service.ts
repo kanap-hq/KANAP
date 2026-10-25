@@ -7,6 +7,7 @@ import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { Contract } from './contract.entity';
 import { AuditService } from '../audit/audit.service';
 import { attachManualContactLink, LINK_REMOVED } from '../contacts/contact-link-attach.util';
+import { assertContractsEditable } from '../data-access/contract-write-checks';
 
 /** The request's tenant: every statement filters on it. */
 type ItemContactsOpts = { manager?: EntityManager; tenantId: string };
@@ -55,6 +56,7 @@ export class ContractContactsService {
 
     const item = await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId } as any });
     if (!item) throw new NotFoundException('Contract not found');
+    await assertContractsEditable(itemRepo.manager, [item.id]);
 
     const contact = await contactRepo.findOne({ where: { tenant_id: opts.tenantId, id: params.contactId } });
     if (!contact) throw new NotFoundException('Contact not found');
@@ -88,6 +90,7 @@ export class ContractContactsService {
     const repo = this.getLinkRepo(opts.manager);
     const existing = await repo.findOne({ where: { tenant_id: opts.tenantId, id: linkId, contract_id: itemId } });
     if (!existing) throw new NotFoundException('Link not found');
+    await assertContractsEditable(repo.manager, [itemId]);
     await repo.delete({ tenant_id: opts.tenantId, id: linkId, contract_id: itemId });
     await this.audit.log(
       {
@@ -114,6 +117,7 @@ export class ContractContactsService {
 
     const item = await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId } as any });
     if (!item) throw new NotFoundException('Contract not found');
+    await assertContractsEditable(itemRepo.manager, [item.id]);
     const tenantId = item.tenant_id;
     const before = await repo.find({ where: { tenant_id: tenantId, contract_id: itemId, origin: ContactOrigin.SUPPLIER } });
 
@@ -157,6 +161,7 @@ export class ContractContactsService {
     const itemRepo = this.getItemRepo(opts.manager);
     const item = await itemRepo.findOne({ where: { tenant_id: opts.tenantId, id: itemId } as any });
     if (!item) throw new NotFoundException('Contract not found');
+    await assertContractsEditable(itemRepo.manager, [item.id]);
     await this.syncFromSupplier(itemId, item.supplier_id, userId, opts);
   }
 }

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { checkIds, refusalDetails, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
-import { assertNoHiddenLines, hiddenLinesRefusals } from '../data-access/hidden-links';
+import { assertNoHiddenLinks, hiddenLinksRefusals } from '../data-access/hidden-links';
 import { withSavepoint } from '../common/savepoint.util';
 import { StorageService } from '../common/storage/storage.service';
 import { readTechnology } from './technology-rows';
@@ -38,7 +38,7 @@ export class TechnologiesDeleteService {
       `SELECT id, name FROM technologies WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
       [opts.tenantId, asked],
     );
-    const hidden = await hiddenLinesRefusals(opts.manager, 'technology', names.map((row) => row.id));
+    const hidden = await hiddenLinksRefusals(opts.manager, 'technology', names.map((row) => row.id));
     const refused: DeleteRefusal[] = names.flatMap((row) => {
       const refusal = hidden.get(row.id);
       return refusal ? [{ id: row.id, name: row.name, code: refusal.code, usages: refusal.usages, params: refusal.params }] : [];
@@ -68,7 +68,7 @@ export class TechnologiesDeleteService {
   async delete(idOrRef: string, opts: DeleteOpts): Promise<void> {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
-    await assertNoHiddenLines(mg, 'technology', tech.id);
+    await assertNoHiddenLinks(mg, 'technology', tech.id);
     const attachments: Array<{ storage_path: string }> = await mg.query(
       `SELECT storage_path FROM technology_attachments WHERE tenant_id = $1 AND technology_id = $2`,
       [tenantId, tech.id],

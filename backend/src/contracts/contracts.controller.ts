@@ -18,7 +18,7 @@ import { contentDisposition } from '../common/content-disposition';
 import { ContractContactsService } from './contract-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
-import { canReadContractBudget } from './contract-budget';
+import { assertContractBudgetRead, canReadContractBudget } from './contract-budget';
 import { canReadResource } from '../common/record-usages';
 import { resolveBusinessContributorScope } from '../auth/business-contributor-scope';
 import { contractRelationKindOrThrow } from './contract-relations';
@@ -183,6 +183,7 @@ export class ContractsController {
   @RequireLevel('contracts', 'member')
   @Post(':id/spend-items/bulk-replace')
   bulkReplace(@Param('id') id: string, @Body() body: { spend_item_ids: string[] }, @Req() req: any) {
+    assertContractBudgetRead(req);
     return this.svc.bulkReplaceLinkedSpendItems(id, body?.spend_item_ids ?? [], { manager: req?.queryRunner?.manager });
   }
 
@@ -199,6 +200,7 @@ export class ContractsController {
   @RequireLevel('contracts', 'member')
   @Post(':id/capex-items/bulk-replace')
   bulkReplaceCapex(@Param('id') id: string, @Body() body: { capex_item_ids: string[] }, @Req() req: any) {
+    assertContractBudgetRead(req);
     return this.svc.bulkReplaceLinkedCapexItems(id, body?.capex_item_ids ?? [], { manager: req?.queryRunner?.manager });
   }
 
@@ -230,6 +232,7 @@ export class ContractsController {
   @RequireLevel('contracts', 'member')
   @Post(':id/budget-lines/bulk-replace')
   bulkReplaceBudgetLines(@Param('id') id: string, @Body() body: { budget_line_ids: string[] }, @Req() req: any) {
+    assertContractBudgetRead(req);
     return this.svc.replaceRelations(id, 'budget_lines', body?.budget_line_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
@@ -396,6 +399,9 @@ export class ContractsController {
   @Delete(':id/links/:linkId')
   deleteUrl(@Param('id') id: string, @Param('linkId') linkId: string, @Req() req: any) { return this.svc.deleteUrl(id, linkId, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
 
+  // Updates existing contracts by a non-unique key (name and supplier): a hidden homonym would
+  // become a duplicate (spec §2.7). The export stays open: it follows the list.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)

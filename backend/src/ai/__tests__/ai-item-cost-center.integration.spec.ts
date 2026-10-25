@@ -7,6 +7,11 @@ import { AiBusinessRecordMutationSupportService } from '../mutation/ai-business-
 import { AiExecutionContextWithManager } from '../ai.types';
 import { inRolledBackTransaction, Kind, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { disableCostCenter, itemService, seedCompany, seedCostCenter } from '../../spend/__tests__/cost-center.fixtures';
+import { ContractsService } from '../../contracts/contracts.service';
+import { Contract } from '../../contracts/contract.entity';
+import { ContractSpendItem } from '../../contracts/contract-spend-item.entity';
+import { ContractLink } from '../../contracts/contract-link.entity';
+import { ContractAttachment } from '../../contracts/contract-attachment.entity';
 
 // Cost center and run or build in the AI layer, on OPEX and CAPEX:
 // - both registries declare cost_center (set, dynamic, groupable, joined on
@@ -51,10 +56,27 @@ function testRegistries() {
   }
 }
 
-function mutationSupport(): any {
+function mutationSupport(contracts: any = {}): any {
   return new AiBusinessRecordMutationSupportService(
-    {} as any, {} as any, {} as any, itemService('capex'), {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+    {} as any, {} as any, {} as any, itemService('capex'), {} as any, contracts, {} as any, {} as any, {} as any, {} as any,
     itemService('opex'), {} as any,
+  );
+}
+
+/** The contract service the AI mutation support calls, on the spec's transaction manager. */
+function contractService(runner: QueryRunner): ContractsService {
+  const none = undefined as any;
+  return new ContractsService(
+    runner.manager.getRepository(Contract),
+    runner.manager.getRepository(ContractSpendItem),
+    runner.manager.getRepository(ContractLink),
+    runner.manager.getRepository(ContractAttachment),
+    { log: async () => undefined } as any,
+    none,
+    none,
+    { syncFromSupplier: async () => undefined, syncFromSupplierForItem: async () => undefined } as any,
+    { notifyStatusChange: () => undefined } as any,
+    none,
   );
 }
 
@@ -139,11 +161,78 @@ async function testMutations(kind: Kind) {
   });
 }
 
+function testContractRegistry() {
+  const registry = getAiEntityRegistry('contracts');
+  assert.deepEqual(
+    [registry.fields.cost_center?.grid, registry.fields.cost_center?.type, registry.fields.cost_center?.dynamic, registry.fields.cost_center?.groupable],
+    ['cost_center_name', 'set', true, true],
+    'contracts: cost_center',
+  );
+  assert.equal(registry.sortFields.cost_center, 'cost_center_name');
+  const join = registry.aggregate!.groupFields.cost_center.joins!.join(' ');
+  assert.ok(join.includes('cc.tenant_id = c.tenant_id'), 'the cost center join names the tenant');
+}
+
+async function testContractMutation() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'ai-cc-contract');
+    await setTenant(runner, tenantId);
+    await seedCompany(runner, tenantId, 'AI company');
+    const [{ id: companyId }] = await runner.query(`SELECT id FROM companies WHERE tenant_id = $1`, [tenantId]);
+    const supplierId = (await runner.query(
+      `INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'AI supplier') RETURNING id`, [tenantId],
+    ))[0].id;
+    const costCenterId = await seedCostCenter(runner, tenantId, { code: 'AI-1', name: 'AI cost center', companyId });
+    const groupId = await seedCostCenter(runner, tenantId, { code: 'AI-GRP', name: 'AI group', kind: 'group' });
+    const retired = await seedCostCenter(runner, tenantId, { code: 'AI-OLD', name: 'AI retired', companyId });
+    await disableCostCenter(runner, retired);
+
+    const support = mutationSupport(contractService(runner));
+    const ctx = context(runner, tenantId);
+    const fields = (costCenter: unknown) => ({
+      name: `AI contract ${String(costCenter ?? 'none')}`,
+      company: 'AI company',
+      supplier: 'AI supplier',
+      start_date: '2026-01-01',
+      ...(costCenter === undefined ? {} : { cost_center: costCenter }),
+    });
+
+    const prepared = await support.prepareCreatePreview(ctx, { entity_type: 'contracts', fields: fields('ai-1') });
+    assert.equal((prepared.mutationInput.fields as any).cost_center_id, costCenterId, 'a contract takes a cost center by code');
+    const created: any = await support['createRecord'](ctx, 'contracts', prepared.mutationInput.fields);
+    const [row] = await runner.query(`SELECT cost_center_id FROM contracts WHERE id = $1`, [created.id]);
+    assert.equal(row.cost_center_id, costCenterId, 'the created contract stores the cost center');
+
+    const groupPrepared = await support.prepareCreatePreview(ctx, { entity_type: 'contracts', fields: fields('AI-GRP') });
+    assert.equal((groupPrepared.mutationInput.fields as any).cost_center_id, groupId, 'a contract takes a group too');
+    const grouped: any = await support['createRecord'](ctx, 'contracts', groupPrepared.mutationInput.fields);
+    assert.equal((await runner.query(`SELECT cost_center_id FROM contracts WHERE id = $1`, [grouped.id]))[0].cost_center_id, groupId);
+
+    const update = await support.prepareUpdatePreview(ctx, { entity_type: 'contracts', ref: created.id, fields: { cost_center: null } });
+    assert.equal((update.mutationInput.fields as any).cost_center_id, null, 'the cost center can be cleared');
+    await support['updateRecord'](ctx, 'contracts', created.id, update.mutationInput.fields);
+    assert.equal((await runner.query(`SELECT cost_center_id FROM contracts WHERE id = $1`, [created.id]))[0].cost_center_id, null);
+
+    assert.equal(
+      await rejection(runner, () => support.prepareCreatePreview(ctx, { entity_type: 'contracts', fields: fields('ELSEWHERE-1') })),
+      'Cost center not found.',
+      'another tenant\'s code is not found',
+    );
+    assert.equal(
+      await rejection(runner, () => support.prepareCreatePreview(ctx, { entity_type: 'contracts', fields: fields('AI-OLD') })),
+      'This cost center is disabled.',
+    );
+    assert.equal(supplierId.length > 0, true, 'supplier fixture');
+  });
+}
+
 async function main() {
   testRegistries();
+  testContractRegistry();
   await dataSource.initialize();
   try {
     for (const kind of KINDS) await testMutations(kind);
+    await testContractMutation();
   } finally {
     await dataSource.destroy();
   }

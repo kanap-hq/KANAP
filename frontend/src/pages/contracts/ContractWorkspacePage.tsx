@@ -7,7 +7,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import { useDataAccessLimited } from '../../auth/dataAccess';
 import { useContractNav } from '../../hooks/useContractNav';
+import { useContractPlacementFilter } from '../../hooks/usePlacementOptions';
 import useAutosave, { autosaveErrorMessage, useAutosaveRegistry } from '../../hooks/useAutosave';
 import { sendPatchBuffer, usePatchBuffer } from '../../hooks/patchBuffer';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
@@ -19,6 +21,7 @@ import RelationsSectionTitle from '../portfolio/components/RelationsSectionTitle
 import { PropertyRow } from '../../components/design';
 import SupplierSelect from '../../components/fields/SupplierSelect';
 import CompanySelect from '../../components/fields/CompanySelect';
+import CostCenterSelect from '../../components/fields/CostCenterSelect';
 import DateEUField from '../../components/fields/DateEUField';
 import { STATUS_DISABLED, STATUS_ENABLED, deriveStatusFromDisabledAt, statusChoicePatch, type StatusValue } from '../../constants/status';
 import { drawerFieldValueSx } from '../../theme/formSx';
@@ -62,6 +65,7 @@ function toForm(d: ContractDetail): ContractForm {
     notes: d.notes || '',
     supplier_id: d.supplier_id || '',
     company_id: d.company_id || '',
+    cost_center_id: d.cost_center_id || '',
     owner_user_id: d.owner_user_id || null,
     start_date: d.start_date ? String(d.start_date).slice(0, 10) : '',
     duration_months: Number(d.duration_months ?? 0),
@@ -115,8 +119,10 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
+  const limited = useDataAccessLimited();
   const canEdit = hasLevel('contracts', 'member');
-  const canDelete = hasLevel('contracts', 'admin');
+  // Deleting a contract is reserved to people with access to all data (spec §2.7, §7.7).
+  const canDelete = hasLevel('contracts', 'admin') && !limited;
   const { addToRecent } = useRecentlyViewed();
   const { searchParams, withContext } = useListContext();
 
@@ -193,7 +199,9 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
     },
   ), [patchBuffer, queryClient]);
 
-  const editable = canEdit && !stale && !!data && form?.id === data.id;
+  // The role says what the person may do; the API's `editable` says where (absent without a data access).
+  const editable = canEdit && data?.editable !== false && !stale && !!data && form?.id === data.id;
+  const readOnlyInAccess = !!data && data.editable === false && canEdit;
 
   const patchNow = React.useCallback(async (patch: ContractPatch) => {
     if (!editable || !data) return;
@@ -371,6 +379,11 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
         ) : undefined}
         actions={(
           <>
+            {readOnlyInAccess && (
+              <Typography data-testid="contract-read-only" sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center', mr: 0.5 }}>
+                {t('contracts.readOnlyInYourAccess')}
+              </Typography>
+            )}
             {savingHint && (
               <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center', mr: 0.5 }}>{savingHint}</Typography>
             )}
@@ -406,7 +419,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
           <Stack key={form.id} spacing={4} sx={sectionStackSx}>
             <ContractDeadlines schedule={schedule} />
             {!stale && <ContractRenewalDecision contractId={form.id} startDate={form.start_date} canDecide={editable} onDecided={refreshAfterDecision} />}
-            <EntityTasksSection entityType="contract" entityId={form.id} disabled={!canEdit} />
+            <EntityTasksSection entityType="contract" entityId={form.id} disabled={!editable} />
             <Stack spacing={1.25}>
               <RelationsSectionTitle>{t('contracts.fields.notes')}</RelationsSectionTitle>
               <Box onFocusCapture={() => { notesTouchedRef.current = true; }} data-testid="contract-notes">
@@ -452,6 +465,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             key={form.id}
             contractId={form.id}
             readOnly={!editable}
+            closedDocumentsCount={shownData.closed_documents_count ?? 0}
             onChanged={refreshRelations}
           />
         )}
@@ -496,6 +510,7 @@ type CreateValues = {
   name: string;
   supplier_id: string;
   company_id: string;
+  cost_center_id: string;
   owner_user_id: string | null;
   start_date: string;
   duration: string;
@@ -525,9 +540,11 @@ function ContractCreate() {
   const { withContext } = useListContext();
   const defaultCurrency = useDefaultContractCurrency();
   const [values, setValues] = React.useState<CreateValues>({
-    name: '', supplier_id: '', company_id: '', owner_user_id: null, start_date: '', duration: '', notice: '',
+    name: '', supplier_id: '', company_id: '', cost_center_id: '', owner_user_id: null, start_date: '', duration: '', notice: '',
     auto_renewal: true, amount: '', currency: '', billing_frequency: 'annual',
   });
+  // A limited person sees only the companies and places the server would accept (spec §2.3).
+  const placement = useContractPlacementFilter(values.company_id || null, values.cost_center_id || null);
   const [errors, setErrors] = React.useState<Partial<Record<CreateField, string>>>({});
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -562,6 +579,7 @@ function ContractCreate() {
         name,
         supplier_id: values.supplier_id,
         company_id: values.company_id,
+        ...(values.cost_center_id ? { cost_center_id: values.cost_center_id } : {}),
         owner_user_id: values.owner_user_id,
         start_date: values.start_date,
         duration_months: duration,
@@ -628,7 +646,19 @@ function ContractCreate() {
               </PropertyRow>
               <PropertyRow label={t('contracts.fields.company')} required>
                 <Box sx={hideInnerLabelSx}>
-                  <CompanySelect hideLabel label={t('contracts.fields.company')} value={values.company_id} onChange={(v) => set('company_id', v ?? '')} error={!!errors.company_id} helperText={errors.company_id} required />
+                  <CompanySelect hideLabel label={t('contracts.fields.company')} value={values.company_id} onChange={(v) => set('company_id', v ?? '')} allowedCompanyIds={placement?.companyIds} error={!!errors.company_id} helperText={errors.company_id} required />
+                </Box>
+              </PropertyRow>
+              <PropertyRow label={t('contracts.fields.costCenter')}>
+                <Box sx={hideInnerLabelSx}>
+                  <CostCenterSelect
+                    hideLabel
+                    label={t('contracts.fields.costCenter')}
+                    selectable="contract_places"
+                    value={values.cost_center_id || null}
+                    onChange={(v) => set('cost_center_id', v ?? '')}
+                    isAllowed={placement?.isCostCenterAllowed}
+                  />
                 </Box>
               </PropertyRow>
               <PropertyRow label={t('contracts.fields.owner')}>

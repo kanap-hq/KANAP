@@ -40,7 +40,7 @@ import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
 import type { BudgetColumn } from './amounts-write.util';
 import { ItemWriteFields, resolveItemWrite } from './item-write.util';
-import { assertLinesEditable, lineEditableField } from '../data-access/line-write-checks';
+import { assertLinesEditable, isLimitedTransaction, lineEditableField } from '../data-access/line-write-checks';
 import { updateItemUnderLock } from './item-locked-update';
 import {
   itemAnalyticsAuditFields,
@@ -293,7 +293,14 @@ export class SpendItemsService {
 
   /** The line with its analytics values (see `item-analytics.util.ts`), as its nature's API shows it. */
   private async withAnalytics(mg: EntityManager, item: SpendItem, native = false) {
-    return this.present({ ...item, ...itemAnalyticsFields(await this.loadAnalytics(mg, item)) }, native);
+    const line = this.present({ ...item, ...itemAnalyticsFields(await this.loadAnalytics(mg, item)) }, native);
+    // A limited person's direct contract can be out of access (a link of another tenant, or data
+    // the rules no longer open): no id, no name, `contract_hidden` for the label (spec §5.4).
+    const contractId = (line as { contract_id?: string | null }).contract_id;
+    if (this.nature !== 'opex' || !contractId || !(await isLimitedTransaction(mg))) return line;
+    const [row] = await mg.query(`SELECT data_access_contract_visible($1::uuid) AS visible`, [contractId]);
+    if (row?.visible === true) return line;
+    return { ...line, contract_id: null, contract_hidden: true };
   }
 
   async get(id: string, opts?: { manager?: EntityManager }) {

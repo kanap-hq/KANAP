@@ -5,7 +5,8 @@ import { applicationParticipantCondition, type ParticipationAccessScope } from '
 import { setOwnedLink, type OwnedLinkAudit } from '../common/relations/owned-link';
 import { binder } from '../common/relations/related-objects';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
-import { isLimitedTransaction } from '../data-access/line-write-checks';
+import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-write-checks';
+import { assertContractsEditable } from '../data-access/contract-write-checks';
 import { auditedLinkSet } from '../data-access/hidden-links';
 
 /**
@@ -177,16 +178,14 @@ export async function replaceContractRelations(
   // Stored ids are lower case: an upper-case id must compare equal to its stored twin.
   const nextIds = Array.from(new Set((ids || []).map((id) => String(id || '').trim().toLowerCase()).filter(Boolean))).sort();
   if (nextIds.some((id) => !UUID_RE.test(id))) throw new BadRequestException(t.notFound);
+  // A contract read but not modifiable: the clear 403 before the row lock (which the UPDATE policy
+  // would hide, answering as a missing contract) and before the link writes.
+  await assertContractsEditable(manager, [contract.id]);
   const locked = await manager.query(
     `SELECT 1 FROM contracts WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
     [contract.tenant_id, contract.id],
   );
   if (locked.length === 0) throw new NotFoundException('Contract not found.');
-  if (nextIds.length) {
-    const found: Array<{ id: string }> = await manager.query(t.exists, [contract.tenant_id, nextIds]);
-    if (found.length !== nextIds.length) throw new BadRequestException(t.notFound);
-  }
-
   const current: Array<{ other_id: string }> = await manager.query(
     `SELECT DISTINCT l.${t.otherFk} AS other_id FROM ${t.links} l WHERE l.tenant_id = $1 AND l.contract_id = $2${t.linkScope}`,
     [contract.tenant_id, contract.id],
@@ -195,11 +194,43 @@ export async function replaceContractRelations(
   const removed = beforeIds.filter((id) => !nextIds.includes(id));
   const added = nextIds.filter((id) => !beforeIds.includes(id));
 
+  if (nextIds.length) {
+    const found: Array<{ id: string }> = await manager.query(t.exists, [contract.tenant_id, nextIds]);
+    if (found.length !== nextIds.length) {
+      // A hidden line answers as a missing one for a limited person; unscoped persons keep the 400.
+      if (set === 'budget_lines' && await isLimitedTransaction(manager)) throw new NotFoundException('Budget line not found.');
+      throw new BadRequestException(t.notFound);
+    }
+    // A line read but not modifiable: the clear 403 before the link INSERT policy refuses it. A
+    // line that stays linked is not checked again: the replacement never rewrites its link.
+    if (set === 'budget_lines') await assertLinesEditable(manager, added);
+  }
+
+  let removedCount = removed.length;
   if (removed.length) {
-    await manager.query(
-      `DELETE FROM ${t.links} WHERE tenant_id = $1 AND contract_id = $2 AND ${t.otherFk} = ANY($3::uuid[])`,
-      [contract.tenant_id, contract.id, removed],
-    );
+    if (set === 'budget_lines') {
+      // Deleting a link is a write on its line too: a read-only line refuses it (the link trigger).
+      await assertLinesEditable(manager, removed);
+      // Only the links to the lines the person reads: the join is filtered by the line policy.
+      const [row]: Array<{ n: number }> = await manager.query(
+        `WITH removed AS (
+           DELETE FROM contract_spend_items l
+            USING spend_items i
+            WHERE l.tenant_id = $1 AND l.contract_id = $2
+              AND i.tenant_id = l.tenant_id AND i.id = l.spend_item_id
+              AND i.nature IN (${BUDGET_NATURES.map((nature) => `'${nature}'`).join(', ')})
+              AND NOT (l.spend_item_id = ANY($3::uuid[]))
+            RETURNING 1
+         ) SELECT count(*)::int AS n FROM removed`,
+        [contract.tenant_id, contract.id, nextIds],
+      );
+      removedCount = Number(row?.n ?? 0);
+    } else {
+      await manager.query(
+        `DELETE FROM ${t.links} WHERE tenant_id = $1 AND contract_id = $2 AND ${t.otherFk} = ANY($3::uuid[])`,
+        [contract.tenant_id, contract.id, removed],
+      );
+    }
   }
   if (added.length) {
     await manager.query(
@@ -224,7 +255,7 @@ export async function replaceContractRelations(
       { manager },
     );
   }
-  return { ok: true, added: added.length, removed: removed.length };
+  return { ok: true, added: added.length, removed: removedCount };
 }
 
 /**

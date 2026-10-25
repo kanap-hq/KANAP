@@ -231,7 +231,7 @@ async function testPayload() {
     const { http } = httpOf();
     const res = await http.relationsTabRead(seed.asset.reference, ctx(runner, seed, ALL, seed.userId, true));
 
-    assert.deepEqual(Object.keys(res).sort(), ['assets', 'budget_column', 'budget_lines', 'budget_lines_hidden', 'contracts', 'counts', 'incidents', 'projects', 'tasks', 'year']);
+    assert.deepEqual(Object.keys(res).sort(), ['assets', 'budget_column', 'budget_lines', 'budget_lines_hidden', 'contracts', 'contracts_hidden', 'counts', 'incidents', 'projects', 'tasks', 'year']);
     assert.deepEqual(res.assets, {
       contains: [related(seed.peers.vm, 'Vm asset', 'virtual_machine', 'prod')],
       contained_by: [related(seed.peers.rack, 'Rack asset', 'physical_server', 'prod')],

@@ -76,7 +76,7 @@ function Location() {
   return <div data-testid="location">{location.pathname}</div>;
 }
 
-function renderTab(data: Relations, { readOnly = false, onChanged = vi.fn() }: { readOnly?: boolean; onChanged?: () => void } = {}) {
+function renderTab(data: Relations, { readOnly = false, closedDocumentsCount = 0, onChanged = vi.fn() }: { readOnly?: boolean; closedDocumentsCount?: number; onChanged?: () => void } = {}) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/contracts/c-1/relations') return { data } as never;
     if (url === '/contracts/c-1/links') return { data: LINKS } as never;
@@ -95,7 +95,7 @@ function renderTab(data: Relations, { readOnly = false, onChanged = vi.fn() }: {
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <MemoryRouter>
-            <ContractRelationsTab contractId="c-1" readOnly={readOnly} onChanged={onChanged} />
+            <ContractRelationsTab contractId="c-1" readOnly={readOnly} closedDocumentsCount={closedDocumentsCount} onChanged={onChanged} />
             <Location />
           </MemoryRouter>
         </KanapDialogProvider>
@@ -272,5 +272,16 @@ describe('ContractRelationsTab', () => {
     fireEvent.change(await screen.findByLabelText('linksAndFiles.attachFile'), { target: { files: [file] } });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/contracts/c-1/attachments', expect.any(FormData)));
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
+  });
+
+  it('replaces the attachments and links with their count when the contract is opened through a line', async () => {
+    renderTab(relations(), { closedDocumentsCount: 2 });
+    expect(await screen.findByText('ops:contracts.relations.closedDocuments(count=2)')).toBeTruthy();
+    expect(screen.queryByText('contract.pdf')).toBeNull();
+    expect(screen.queryByText('Vendor portal')).toBeNull();
+    expect(screen.queryByLabelText('linksAndFiles.attachFile')).toBeNull();
+    // The closed documents are not even asked for.
+    expect(mocked.get).not.toHaveBeenCalledWith('/contracts/c-1/attachments');
+    expect(mocked.get).not.toHaveBeenCalledWith('/contracts/c-1/links');
   });
 });

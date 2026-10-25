@@ -158,18 +158,23 @@ export function budgetLinesSection({
 
 /**
  * Contracts linked to the owner. Active contracts only (a disabled one has ended), one total per
- * currency: amounts in two currencies are never added up.
+ * currency: amounts in two currencies are never added up. `hidden` counts the linked contracts the
+ * caller does not see listed (`contracts_hidden`): outside their data access, never named.
  */
 export function contractsSection({
   t,
   rows,
   lang,
+  hidden = 0,
 }: {
   t: TFunction;
   rows: ContractRow[] | null;
   lang: string;
+  hidden?: number;
 }): SectionSpec<ContractRow> {
+  const outsideKey = rows === null ? 'count' : rows.length === 0 ? 'only' : 'and';
   return {
+    outside: { count: hidden, text: t(`workspace.application.relations.outside_contracts.${outsideKey}`, { count: hidden }) },
     kind: 'contracts',
     title: t('workspace.application.relations.sections.contracts'),
     empty: t('workspace.application.relations.empty.contracts'),
