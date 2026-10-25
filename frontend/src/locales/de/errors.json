@@ -239,6 +239,8 @@
   "cluster_switch_member": "Mitglied von {{cluster}}: Es kann kein Cluster werden.",
   "cluster_member_is_cluster": "{{name}} ist ein Cluster: Ein Cluster kann kein Mitglied sein.",
   "cluster_member_self": "Ein Asset kann nicht Mitglied seiner selbst sein.",
+  "connection_same_endpoint": "Quelle und Ziel sind derselbe Asset.",
+  "connection_min_servers": "Wählen Sie mindestens zwei Assets für eine Verbindung mit mehreren Servern.",
   "cluster_member_not_found": "Eines der Mitglieder existiert nicht mehr.",
   "cluster_os_with_members": "Entfernen Sie zuerst sein Betriebssystem ({{os}}).",
   "os_cluster_with_members": "Dieser Cluster hat Mitglieder: kein Betriebssystem.",

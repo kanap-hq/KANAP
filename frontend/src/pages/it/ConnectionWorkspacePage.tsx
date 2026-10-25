@@ -1,7 +1,7 @@
 import useApplicationClassificationCatalog from '../../hooks/useApplicationClassificationCatalog';
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, Autocomplete, Box, Button, Chip, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material';
+import { Alert, Autocomplete, Box, Button, Chip, MenuItem, Snackbar, Stack, Switch, TextField, Typography } from '@mui/material';
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -52,6 +52,8 @@ type LinkedInterfaceRow = {
 };
 
 type ConnectionTypeOption = { code: string; label: string };
+
+type AbsorbedAsset = { asset_id: string; name: string; cluster_id: string; cluster_name: string };
 
 type CreateConnectionForm = {
   name: string;
@@ -181,6 +183,7 @@ export default function ConnectionWorkspacePage() {
   const [createForm, setCreateForm] = React.useState<CreateConnectionForm>(() => createInitialForm());
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
+  const [absorbed, setAbsorbed] = React.useState<AbsorbedAsset[] | null>(null);
   const { choose, questionDialog } = useClusterConnectionQuestion();
 
   const lifecycleOptions = byField.lifecycleStatus || [];
@@ -312,12 +315,16 @@ export default function ConnectionWorkspacePage() {
       setSaving(true);
       setData((prev) => (prev ? { ...prev, ...(local as any) } as ConnectionDetail : prev));
       try {
-        const res = await api.patch<ConnectionDetail>(`/connections/${connectionId}`, patch);
-        setData((prev) => (prev ? { ...prev, ...res.data } : res.data));
+        const res = await api.patch<ConnectionDetail & { absorbed?: AbsorbedAsset[] }>(`/connections/${connectionId}`, patch);
+        const { absorbed: absorbedItems, ...saved } = res.data;
+        setData((prev) => (prev ? { ...prev, ...saved } : saved as ConnectionDetail));
+        if (absorbedItems && absorbedItems.length > 0) setAbsorbed(absorbedItems);
         setError(null);
       } catch (e: any) {
-        setError(getApiErrorMessage(e, t, t('messages.saveConnectionFailed')));
+        const message = getApiErrorMessage(e, t, t('messages.saveConnectionFailed'));
+        // The reload clears the page error: say why the write was refused once it is done.
         await load();
+        setError(message);
       } finally {
         setSaving(false);
       }
@@ -545,7 +552,7 @@ export default function ConnectionWorkspacePage() {
     setCreateSubmitting(true);
     setCreateError(null);
     try {
-      const res = await api.post('/connections', {
+      const res = await api.post<ConnectionDetail & { absorbed?: AbsorbedAsset[] }>('/connections', {
         name: createForm.name.trim(),
         description: createForm.description.trim() || null,
         topology: createForm.topology,
@@ -566,7 +573,8 @@ export default function ConnectionWorkspacePage() {
               servers: createForm.servers.map((server) => server.id),
             }),
       });
-      const saved = res.data as ConnectionDetail;
+      const { absorbed: absorbedItems, ...saved } = res.data;
+      if (absorbedItems && absorbedItems.length > 0) setAbsorbed(absorbedItems);
       const targetTab = validTab === 'path' ? 'path' : 'overview';
       navigate(`/it/connections/${saved.connection_reference || saved.id}/${targetTab}`, { replace: true });
     } catch (e: any) {
@@ -1042,6 +1050,21 @@ export default function ConnectionWorkspacePage() {
       </PortfolioDetailWorkspaceShell>
 
       {questionDialog}
+
+      <Snackbar
+        open={!!absorbed && absorbed.length > 0}
+        autoHideDuration={6000}
+        onClose={() => setAbsorbed(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setAbsorbed(null)} severity="info" variant="filled">
+          {t('workspace.connection.absorbed', {
+            count: absorbed?.length ?? 0,
+            names: Array.from(new Set((absorbed ?? []).map((item) => item.name))).join(', '),
+            clusters: Array.from(new Set((absorbed ?? []).map((item) => item.cluster_name))).join(', '),
+          })}
+        </Alert>
+      </Snackbar>
 
       <KanapDialog
         open={deleteDialogOpen}

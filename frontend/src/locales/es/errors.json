@@ -239,6 +239,8 @@
   "cluster_switch_member": "Miembro de {{cluster}}: no puede convertirse en clúster.",
   "cluster_member_is_cluster": "{{name}} es un clúster: un clúster no puede ser miembro.",
   "cluster_member_self": "Un activo no puede ser miembro de sí mismo.",
+  "connection_same_endpoint": "El origen y el destino son el mismo activo.",
+  "connection_min_servers": "Elija al menos dos activos para una conexión con varios servidores.",
   "cluster_member_not_found": "Uno de los miembros ya no existe.",
   "cluster_os_with_members": "Quite primero su sistema operativo ({{os}}).",
   "os_cluster_with_members": "Este clúster tiene miembros: sin sistema operativo.",

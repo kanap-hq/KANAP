@@ -2510,6 +2510,8 @@
     "connection": {
       "title": "Connection",
       "newTitle": "New connection",
+      "absorbed_one": "{{names}} was removed from the list: it is covered by {{clusters}}.",
+      "absorbed_other": "{{names}} were removed from the list: they are covered by {{clusters}}.",
       "tabs": {
         "overview": "Overview",
         "layers": "Layers",
