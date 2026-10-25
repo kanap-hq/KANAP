@@ -25,7 +25,7 @@ const content: FeatureContent = {
       shotAlt: 'Registro de incidentes con gravedad, estado, fechas de detección y de resolución',
     },
     {
-      title: 'La revisión, escrita donde vive el incidente',
+      title: 'La revisión formal del incidente',
       body: 'Cada incidente tiene su revisión: un documento enriquecido creado a partir de una plantilla en cinco partes (descripción detallada, impacto, causa raíz, acciones correctivas, lecciones aprendidas) en el idioma de quien la escribe. Cada guardado crea una versión, y la revisión queda congelada al cerrar el incidente.',
       bullets: [
         'Plantilla editable por sus administradores de documentación',

@@ -25,7 +25,7 @@ const content: FeatureContent = {
       shotAlt: 'Registre des incidents avec gravité, statut, dates de détection et de résolution',
     },
     {
-      title: "La revue, rédigée là où vit l'incident",
+      title: "La revue formelle de l'incident",
       body: "Chaque incident a sa revue : un document riche, créé depuis un modèle en cinq parties (description détaillée, impact, cause racine, actions correctives, enseignements) dans la langue de la personne qui l'écrit. Chaque enregistrement crée une version, et la revue est figée à la clôture de l'incident.",
       bullets: [
         'Modèle modifiable par vos administrateurs de la documentation',
