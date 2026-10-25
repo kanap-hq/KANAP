@@ -29,6 +29,11 @@ export interface ServiceOpts {
    */
   applications?: boolean;
   applicationScope?: ParticipationAccessScope;
+  /**
+   * The caller reads the tasks module. The complete record (`IncidentRecordService.load`) then
+   * lists the incident's tasks; without it, the tasks section is absent from the record.
+   */
+  tasks?: boolean;
 }
 
 /** Re-exported for the existing import sites; the text lives in `incident-visibility.ts`. */
