@@ -1618,7 +1618,7 @@
         "selectSeverity": "Schweregrad auswählen",
         "status": "Status",
         "restrictAccess": "Auf Registeradministratoren beschränken",
-        "restrictAccessHint": "Nur Registeradministratoren, der Meldende und der Verantwortliche können diesen Vorfall öffnen.",
+        "restrictAccessHint": "Nur Registeradministratoren, der Melder und der Verantwortliche können diesen Vorfall öffnen.",
         "started": "Beginn",
         "detected": "Erkannt",
         "resolved": "Behoben",
