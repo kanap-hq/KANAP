@@ -85,6 +85,8 @@ function DataAccessAdminContent() {
     void queryClient.invalidateQueries({ queryKey: ['data-access'] });
   }, [queryClient]);
 
+  const filtering = !!debouncedSearch.trim() || nodeFilter !== null;
+
   const pickNode = (node: AccessNode) => {
     if (node.type === 'all') return;
     setNodeFilter({ type: node.type, id: node.id ?? '', label: accessNodeReference(node, t) });
@@ -176,7 +178,7 @@ function DataAccessAdminContent() {
       {data && !isLoading && (
         data.persons.length === 0 ? (
           <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
-            {t('admin:dataAccess.empty')}
+            {t(filtering ? 'common:filters.noResultsFiltered' : 'admin:dataAccess.empty')}
           </Typography>
         ) : (
           <TableContainer>

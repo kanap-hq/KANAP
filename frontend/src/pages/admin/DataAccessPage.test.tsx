@@ -140,6 +140,27 @@ describe('DataAccessPage', () => {
     expect(getComputedStyle(screen.getByRole('button', { name: 'Marta Ruiz' })).justifyContent).toBe('flex-start');
   });
 
+  it('says no results when a search leaves no row, and no limited person only when there is none', async () => {
+    get.mockResolvedValue({ data: { ...OVERVIEW, persons: [] } });
+    renderPage();
+    expect(await screen.findByText('admin:dataAccess.empty')).toBeInTheDocument();
+    expect(screen.queryByText('common:filters.noResultsFiltered')).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('admin:dataAccess.filters.name'), { target: { value: 'zzz' } });
+    expect(await screen.findByText('common:filters.noResultsFiltered')).toBeInTheDocument();
+    expect(screen.queryByText('admin:dataAccess.empty')).toBeNull();
+  });
+
+  it('says no results when a node filter leaves no row', async () => {
+    get.mockResolvedValue({ data: { ...OVERVIEW, persons: [] } });
+    renderPage();
+    await screen.findByText('admin:dataAccess.empty');
+    fireEvent.click(screen.getByLabelText('admin:dataAccess.filters.node'));
+    fireEvent.click(await screen.findByRole('button', { name: 'pick node' }));
+    expect(await screen.findByText('common:filters.noResultsFiltered')).toBeInTheDocument();
+    expect(screen.queryByText('admin:dataAccess.empty')).toBeNull();
+  });
+
   it('opens the data access dialog from a row', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Marta Ruiz' }));
