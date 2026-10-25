@@ -163,6 +163,11 @@ export type NetboxClusterContext = {
   targets: Map<string, NetboxClusterAsset>;
   /** Asset id -> the clusters in service that contain it today (`contains` relations). */
   containers: Map<string, Array<{ id: string; name: string }>>;
+  /**
+   * Asset id -> the member hosts in service that contain it, with their cluster. Absent from older
+   * callers, which then see the cluster diff only.
+   */
+  hosts?: Map<string, Array<{ id: string; name: string; cluster_id: string }>>;
 };
 
 export type NetboxClusterAttachment = {
@@ -178,15 +183,16 @@ export type NetboxClusterAttachment = {
 const NO_ATTACHMENT: NetboxClusterAttachment = { target: null, diff: null, warnings: [], clusterNotice: null };
 
 /**
- * Whether a virtual machine has to be added to its KANAP cluster. Add only: a
- * `contains` relation from the matched cluster is added when it is missing,
- * and a relation from another cluster is never removed, only pointed out (a
- * machine moved in Netbox, or placed by hand). A Netbox cluster without a
- * match, or matched with an asset that is deleted, retired or no longer a
- * cluster, attaches nothing and says so once for the whole cluster.
+ * Whether a virtual machine has to be added to its KANAP cluster. Nearly add only: a `contains`
+ * relation from the matched cluster is added when it is missing, and a relation from another
+ * cluster is never removed, only pointed out (a machine moved in Netbox, or placed by hand). The
+ * exception is the placement of the machine: when a member host of the matched cluster in service
+ * carries it today, attaching it to the cluster replaces that host link (R1), and the diff says
+ * so (`placement`). A Netbox cluster without a match, or matched with an asset that is deleted,
+ * retired or no longer a cluster, attaches nothing and says so once for the whole cluster.
  *
- * `assetId` is null for an asset this run creates: the diff shows the cluster
- * it joins, and the relation is added right after the creation.
+ * `assetId` is null for an asset this run creates: the diff shows the cluster it joins, and the
+ * relation is added right after the creation.
  */
 export function planClusterAttachment(
   object: NetboxObject,
@@ -216,6 +222,25 @@ export function planClusterAttachment(
     : [];
   if (current.some((cluster) => cluster.id === target.id)) {
     return { ...NO_ATTACHMENT, warnings };
+  }
+  // A machine Netbox places in its cluster while a member host of the same cluster carries it
+  // today: the host link is replaced by the cluster's, which the preview says (R1). This only
+  // happens when the cluster's link is created now: a scheduled run never removes an old host
+  // link, it only reports the double container.
+  const replaces = assetId
+    ? (context.hosts?.get(assetId) ?? []).filter((host) => host.cluster_id === target.id)
+    : [];
+  if (replaces.length > 0) {
+    return {
+      target: { assetId: target.id, netboxName },
+      diff: {
+        field: 'placement',
+        before: replaces.map((host) => host.name).join(', '),
+        after: target.name,
+      },
+      warnings,
+      clusterNotice: null,
+    };
   }
   return {
     target: { assetId: target.id, netboxName },

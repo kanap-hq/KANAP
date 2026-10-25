@@ -790,9 +790,10 @@ export class NetboxSyncService {
   }
 
   /**
-   * The assets the saved cluster matches name, and the clusters in service
-   * that already contain each asset. Both reads carry this tenant's id: a match
-   * that names an asset of another tenant finds nothing and reads as deleted.
+   * The assets the saved cluster matches name, the clusters in service that
+   * already contain each asset, and the member hosts in service that carry it.
+   * The reads carry this tenant's id: a match that names an asset of another
+   * tenant finds nothing and reads as deleted.
    */
   private async loadClusterContext(
     manager: EntityManager,
@@ -823,10 +824,33 @@ export class NetboxSyncService {
         containers.set(row.asset_id, list);
       }
     }
+    // The member hosts that carry a virtual machine today: attaching it to the cluster replaces
+    // their link (R1). One query for every mapped cluster, everything scoped by the tenant.
+    const hosts = new Map<string, Array<{ id: string; name: string; cluster_id: string }>>();
+    if (ids.length > 0) {
+      const rows: Array<{ asset_id: string; id: string; name: string; cluster_id: string }> = await manager.query(
+        `SELECT r.related_asset_id AS asset_id, h.id, h.name, m.cluster_id
+           FROM asset_cluster_members m
+           JOIN assets c ON c.tenant_id = m.tenant_id AND c.id = m.cluster_id
+             AND c.status IS DISTINCT FROM 'retired'
+           JOIN assets h ON h.tenant_id = m.tenant_id AND h.id = m.asset_id
+             AND h.status IS DISTINCT FROM 'retired'
+           JOIN asset_relations r ON r.tenant_id = m.tenant_id AND r.asset_id = m.asset_id
+             AND r.relation_type = 'contains'
+          WHERE m.tenant_id = $1 AND m.cluster_id = ANY($2::uuid[])
+          ORDER BY m.cluster_id, lower(h.name), h.id, r.related_asset_id`,
+        [tenantId, ids],
+      );
+      for (const row of rows) {
+        const list = hosts.get(row.asset_id) ?? [];
+        list.push({ id: row.id, name: row.name, cluster_id: row.cluster_id });
+        hosts.set(row.asset_id, list);
+      }
+    }
     // Ids are matched in lower case, as the database returns them.
     const map: Record<string, string> = {};
     for (const [clusterId, assetId] of Object.entries(clusterMap)) map[clusterId] = assetId.toLowerCase();
-    return { map, targets: new Map(targets.map((target) => [String(target.id), target])), containers };
+    return { map, targets: new Map(targets.map((target) => [String(target.id), target])), containers, hosts };
   }
 
   /**
@@ -1433,16 +1457,20 @@ export class NetboxSyncService {
   /**
    * Adds the `contains` relation from the matched KANAP cluster to this
    * virtual machine, inside the row's transaction, and nothing else: the
-   * cluster's other relations are left as they are. The cluster row is read
-   * again and locked here, so an asset deleted, retired or turned into
-   * something else since the plan writes nothing and says so, and a person
-   * replacing the cluster's relations at the same moment waits for this row.
+   * cluster's other relations are left as they are. A member host that carries
+   * the machine today loses its link to it (R1, `addRelationWithPlacement`),
+   * so `changed` is true for the added relation or for a replaced host link.
+   *
+   * The cluster row is read again and locked here, so an asset deleted, retired
+   * or turned into something else since the plan writes nothing and says so,
+   * and a person replacing the cluster's relations at the same moment waits for
+   * this row.
    *
    * Lock order, no deadlock: the row has already locked the virtual machine
    * (its update), then locks the cluster (`FOR NO KEY UPDATE`, the lock
-   * `bulkReplaceRelations` takes on its asset). A replacement of the cluster's
-   * relations holds the cluster and only needs a key share lock on the
-   * virtual machine, which that update lock allows.
+   * `bulkReplaceRelations` takes on its asset). `addRelationWithPlacement` then
+   * takes the same cluster lock, the cluster's own lock, and the hosts' locks,
+   * in the order every relation writer uses.
    */
   private async attachToCluster(
     manager: EntityManager,
@@ -1461,7 +1489,8 @@ export class NetboxSyncService {
       warnings.push(netboxNotice('cluster_match_invalid', { value: cluster.netboxName }));
       return false;
     }
-    return this.assets.addRelation(cluster.assetId, assetId, 'contains', tenantId, null, opts);
+    return this.assets.addRelationWithPlacement(cluster.assetId, assetId, 'contains', tenantId, null, opts)
+      .then((result) => result.changed);
   }
 
   /**
