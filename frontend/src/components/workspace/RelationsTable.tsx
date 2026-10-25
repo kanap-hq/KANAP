@@ -55,7 +55,10 @@ type TableProps<T> = {
   removeLabel?: (row: T) => string;
   /** Rows that can be unlinked (all by default); the others keep an empty trailing cell. */
   canRemove?: (row: T) => boolean;
-  /** A trailing action column (for example "Link" on a suggestion). */
+  /**
+   * A trailing action column (for example "Link" on a suggestion). `width` is its least width:
+   * the column grows to its label, with no cap.
+   */
   action?: { width: number; render: (row: T) => React.ReactNode };
   /** Total lines under the rows: a label in the first column, then cells by column key. */
   totals?: Array<{ key: string; label: React.ReactNode; cells: Record<string, React.ReactNode> }>;
@@ -205,6 +208,21 @@ export function sizeRelationColumns<C extends Pick<RelationsColumn<unknown>, 'wi
 }
 
 /**
+ * Width of the trailing action column. `declared` is a minimum: the column grows to its measured
+ * content, with no cap. `room` is the frame minus the unlink column, and `dataBase` the columns'
+ * base. The grown width belongs to that base. Below it the declaration is kept, so a narrow table
+ * keeps the fit it has today.
+ */
+export function actionColumnWidth(declared: number, content: number, dataBase: number, room: number): number {
+  const grown = Math.max(declared, content);
+  if (room < dataBase + grown) return declared;
+  return grown;
+}
+
+/** Measured content of the action column, stored beside the column keys. */
+const ACTION_MEASURE_KEY = '\0action';
+
+/**
  * The content width of each displayed column, padding included.
  * `data-measure` lays the table out at max-content with no `<col>` width, so a header cell is
  * as wide as the widest cell of its column (the body and the totals). A span is dropped from
@@ -287,11 +305,16 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
   const reportWidth = React.useContext(RelationsWidthContext);
   const tableId = React.useId();
   const foldedRows = folded?.rows ?? [];
-  const actionWidth = action ? action.width : 0;
+  const hasAction = action != null;
   const removeWidth = onRemove ? 40 : 0;
   const [frame, setFrame] = React.useState<HTMLDivElement | null>(null);
   const frameWidth = useElementWidth(frame);
   const content = allColumns.map((column) => measured[column.key] ?? 0);
+  // The action column's content joins the base. Under that base its declaration is kept.
+  const dataBase = allColumns.reduce((sum, column) => sum + baseWidth(column), 0);
+  const actionWidth = action
+    ? actionColumnWidth(action.width, measured[ACTION_MEASURE_KEY] ?? 0, dataBase, frameWidth - removeWidth)
+    : 0;
   const fitted = frameWidth > 0
     ? sizeRelationColumns(allColumns, content, frameWidth - actionWidth - removeWidth)
     : { columns: allColumns, widths: allColumns.map((column) => column.width), tableWidth: undefined };
@@ -309,7 +332,8 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
     const measure = () => {
       if (cancelled || !table.isConnected) return;
       const keys = shownKeysRef.current;
-      const widths = readMeasuredWidths(table, keys.length);
+      // The action column follows the data columns. The unlink icon keeps its fixed width.
+      const widths = readMeasuredWidths(table, keys.length + (hasAction ? 1 : 0));
       setMeasured((prev) => {
         let changed = false;
         const next: Record<string, number> = { ...prev };
@@ -319,6 +343,16 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
             changed = true;
           }
         });
+        if (hasAction) {
+          const width = widths[keys.length] ?? 0;
+          if (next[ACTION_MEASURE_KEY] !== width) {
+            next[ACTION_MEASURE_KEY] = width;
+            changed = true;
+          }
+        } else if (ACTION_MEASURE_KEY in next) {
+          delete next[ACTION_MEASURE_KEY];
+          changed = true;
+        }
         return changed ? next : prev;
       });
     };
@@ -326,7 +360,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
     const ready = document.fonts?.ready;
     if (ready) void ready.then(() => { if (!cancelled) measure(); }, () => undefined);
     return () => { cancelled = true; };
-  }, [allColumns, rows, folded, totals, unfolded, shownKey]);
+  }, [allColumns, rows, folded, totals, unfolded, shownKey, hasAction]);
   React.useLayoutEffect(() => {
     if (!reportWidth) return undefined;
     reportWidth(tableId, naturalWidth);
@@ -467,14 +501,14 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
             const width = fitted.widths[index];
             return <col key={column.key} style={width ? { width } : undefined} />;
           })}
-          {actionWidth > 0 && <col style={{ width: actionWidth }} />}
+          {hasAction && <col style={{ width: actionWidth }} />}
           {removeWidth > 0 && <col style={{ width: removeWidth }} />}
         </colgroup>
         {(rows.length > 0 || unfolded || foldedRows.length === 0) && (
           <thead>
             <tr>
               {columns.map((column) => <th key={column.key} className={column.align === 'right' ? 'r' : undefined}>{column.header}</th>)}
-              {actionWidth > 0 && <th aria-hidden />}
+              {hasAction && <th aria-hidden />}
               {removeWidth > 0 && <th aria-hidden />}
             </tr>
           </thead>
@@ -483,7 +517,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
           {rows.map(renderRow)}
           {foldedRows.length > 0 && (
             <tr data-folded="">
-              <td colSpan={columns.length + (actionWidth > 0 ? 1 : 0) + (removeWidth > 0 ? 1 : 0)}>
+              <td colSpan={columns.length + (hasAction ? 1 : 0) + (removeWidth > 0 ? 1 : 0)}>
                 <Box
                   component="button"
                   type="button"
@@ -520,7 +554,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
                     {index === 0 ? total.label : total.cells[column.key] ?? null}
                   </td>
                 ))}
-                {actionWidth > 0 && <td />}
+                {hasAction && <td />}
                 {removeWidth > 0 && <td />}
               </tr>
             ))}

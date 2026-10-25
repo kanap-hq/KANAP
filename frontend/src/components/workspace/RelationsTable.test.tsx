@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import {
   GROW_MAX, NAME_MAX, NAME_MIN_WIDE, RelationsSection, RelationsTable,
-  fitColumnWidths, fitColumns, sizeRelationColumns, type RelationsColumn,
+  actionColumnWidth, fitColumnWidths, fitColumns, sizeRelationColumns, type RelationsColumn,
 } from './RelationsTable';
 
 type Row = { id: string; name: string; family: string };
@@ -191,6 +191,25 @@ describe('sizeRelationColumns', () => {
   });
 });
 
+describe('actionColumnWidth', () => {
+  const dataBase = 734;
+
+  it('grows to the measured label, with no cap, and never under the declaration', () => {
+    // « Verknüpfen » measures 75px against a 56px declaration.
+    expect(actionColumnWidth(56, 75, dataBase, dataBase + 75)).toBe(75);
+    expect(actionColumnWidth(56, 75, dataBase, 2000)).toBe(75);
+    // A short label has no GROW_MAX: the column takes its content.
+    expect(actionColumnWidth(56, 500, dataBase, dataBase + 500)).toBe(500);
+    expect(actionColumnWidth(56, 40, dataBase, 2000)).toBe(56);
+    expect(actionColumnWidth(56, 0, dataBase, 2000)).toBe(56);
+  });
+
+  it('keeps the declaration when the grown width does not fit the base', () => {
+    expect(actionColumnWidth(56, 75, dataBase, dataBase + 75 - 1)).toBe(56);
+    expect(actionColumnWidth(56, 75, dataBase, 405)).toBe(56);
+  });
+});
+
 describe('RelationsTable at narrow width', () => {
   it('keeps the declared widths until the frame is measured', () => {
     const { container } = renderTable();
@@ -246,6 +265,35 @@ describe('RelationsTable at narrow width', () => {
     vi.spyOn(cell, 'scrollWidth', 'get').mockReturnValue(200);
     fireEvent.mouseOver(screen.getByText('PostgreSQL'));
     expect(cell).not.toHaveAttribute('title');
+  });
+});
+
+describe('RelationsTable action column', () => {
+  const fixed = COLUMNS.reduce((sum, column) => sum + (column.width ?? 0), 0);
+  const action = { width: 56, render: () => <button type="button">Verknüpfen</button> };
+
+  function mockActionMeasure(width: number) {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const value = this.tagName === 'TH' && this.hasAttribute('aria-hidden') ? width : 0;
+      return { x: 0, y: 0, top: 0, left: 0, bottom: 0, right: value, width: value, height: 0, toJSON() { return {}; } } as DOMRect;
+    });
+  }
+
+  it('grows to the measured label on a wide frame and keeps that width in the natural width', () => {
+    mockActionMeasure(75);
+    frameWidth = 1600;
+    const { container } = renderTable({ action });
+    expect(colWidths(container).at(-1)).toBe(75);
+    expect(screen.getByRole('table').style.width).toBe(`${fixed + NAME_MIN_WIDE + 75}px`);
+  });
+
+  it('keeps the declared width when the measured label does not fit', () => {
+    mockActionMeasure(75);
+    frameWidth = 405;
+    const { container } = renderTable({ action });
+    expect(colWidths(container).at(-1)).toBe(56);
+    expect(screen.getByRole('table').style.width).toBe('');
+    expect(screen.getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Ref', 'Name', 'Version', 'Support end']);
   });
 });
 
