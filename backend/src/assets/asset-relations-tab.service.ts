@@ -23,6 +23,7 @@ import type { IncidentViewer } from '../incidents/incident-visibility';
 import { IncidentRelationsService } from '../incidents/services/incident-relations.service';
 import { auditTableOf, type BudgetNature } from '../spend/budget-nature';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
+import { assetInServiceSql } from '../technologies/technology-reach.service';
 import { doubleContainersOf, type DoubleContainer, type ReplacedHostLink } from './placement-rules';
 import { AssetsRelationsService } from './services/assets-relations.service';
 
@@ -101,6 +102,14 @@ export type AssetRelationsCounts = {
 /** A contained asset, with the other containers in service it also has (R3), when any. */
 export type AssetRelatedAsset = RelatedAsset & { also_contained_by?: Array<{ id: string; name: string }> };
 
+/** An asset a cluster's members depend on, with the members that depend on it. */
+export type AssetMemberDependency = AssetRelatedAsset & { via: Array<{ id: string; name: string }> };
+
+/** The four directions, plus a cluster's dependencies through its members (absent on any other asset). */
+export type AssetRelationsByDirection = Record<AssetDirection, AssetRelatedAsset[]> & {
+  depends_on_through_members?: AssetMemberDependency[];
+};
+
 /** The answer of a relation write: the placement fields only when the write has something to say. */
 export type AssetRelationWrite = {
   ok: true;
@@ -112,7 +121,7 @@ export type AssetRelationWrite = {
 export type AssetRelationsTab = {
   year: number;
   budget_column: { key: string; label: string };
-  assets: Record<AssetDirection, AssetRelatedAsset[]>;
+  assets: AssetRelationsByDirection;
   budget_lines: RelatedBudgetLine[] | null;
   /** The linked lines `budget_lines` leaves out, counted (`readRelatedBudgetLines`). */
   budget_lines_hidden: number;
@@ -123,7 +132,7 @@ export type AssetRelationsTab = {
   counts: AssetRelationsCounts;
 };
 
-type AssetRow = { id: string; tenant_id: string };
+type AssetRow = { id: string; tenant_id: string; is_cluster: boolean };
 
 const LINES = { links: 'asset_spend_items', owner: 'asset_id' } as const;
 const CONTRACTS = { links: 'asset_contracts', owner: 'asset_id' } as const;
@@ -174,9 +183,15 @@ async function loadAsset(mg: EntityManager, tenantId: string, ref: string): Prom
   const value = String(ref || '').trim();
   let rows: AssetRow[] = [];
   if (UUID_RE.test(value)) {
-    rows = await mg.query(`SELECT id, tenant_id FROM assets WHERE tenant_id = $1 AND id = $2`, [tenantId, value.toLowerCase()]);
+    rows = await mg.query(
+      `SELECT id, tenant_id, COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, value.toLowerCase()],
+    );
   } else if (/^AST-\d+$/i.test(value)) {
-    rows = await mg.query(`SELECT id, tenant_id FROM assets WHERE tenant_id = $1 AND asset_reference = $2`, [tenantId, value.toUpperCase()]);
+    rows = await mg.query(
+      `SELECT id, tenant_id, COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND asset_reference = $2`,
+      [tenantId, value.toUpperCase()],
+    );
   }
   if (!rows[0]) throw new NotFoundException(ASSET_NOT_FOUND);
   return rows[0];
@@ -364,7 +379,7 @@ export class AssetRelationsTabService {
   }
 
   /** The relations of the asset in both directions, with the other asset's fields, by name. */
-  private async listAssetRelations(mg: EntityManager, asset: AssetRow): Promise<Record<AssetDirection, AssetRelatedAsset[]>> {
+  private async listAssetRelations(mg: EntityManager, asset: AssetRow): Promise<AssetRelationsByDirection> {
     const rows: Array<RelatedAsset & { relation_type: 'contains' | 'depends_on'; outgoing: boolean }> = await mg.query(
       `SELECT r.relation_type, (r.asset_id = $2) AS outgoing,
               a.id, a.asset_reference AS reference, a.name, a.kind, a.environment, a.status
@@ -375,7 +390,7 @@ export class AssetRelationsTabService {
         ORDER BY lower(a.name), a.id`,
       [asset.tenant_id, asset.id],
     );
-    const out: Record<AssetDirection, AssetRelatedAsset[]> = { contains: [], contained_by: [], depends_on: [], depended_on_by: [] };
+    const out: AssetRelationsByDirection = { contains: [], contained_by: [], depends_on: [], depended_on_by: [] };
     for (const { relation_type, outgoing, ...related } of rows) {
       const direction = ASSET_DIRECTIONS.find((d) => DIRECTION_ROWS[d].type === relation_type && DIRECTION_ROWS[d].outgoing === outgoing);
       if (direction) out[direction].push(related);
@@ -389,7 +404,40 @@ export class AssetRelationsTabService {
       const others = othersById.get(row.id);
       if (others && others.length > 0) row.also_contained_by = others;
     }
+    if (asset.is_cluster) out.depends_on_through_members = await this.listMemberDependencies(mg, asset);
     return out;
+  }
+
+  /**
+   * What the members in service of a cluster depend on, in one statement: one row per target,
+   * with the members that depend on it. The cluster's own dependencies and the members themselves
+   * are left out (a relation between nodes stays in the cluster), and a retired cluster passes
+   * nothing. A retired target stays listed, as in `depends_on`.
+   */
+  private async listMemberDependencies(mg: EntityManager, asset: AssetRow): Promise<AssetMemberDependency[]> {
+    return mg.query(
+      `SELECT t.id, t.asset_reference AS reference, t.name, t.kind, t.environment, t.status,
+              json_agg(json_build_object('id', m.id, 'name', m.name) ORDER BY lower(m.name), m.id) AS via
+         FROM assets c
+         JOIN asset_cluster_members cm ON cm.tenant_id = c.tenant_id AND cm.cluster_id = c.id
+         JOIN assets m ON m.tenant_id = cm.tenant_id AND m.id = cm.asset_id AND ${assetInServiceSql('m')}
+         JOIN asset_relations r ON r.tenant_id = m.tenant_id AND r.asset_id = m.id AND r.relation_type = 'depends_on'
+         JOIN assets t ON t.tenant_id = r.tenant_id AND t.id = r.related_asset_id
+        WHERE c.tenant_id = $1 AND c.id = $2 AND COALESCE(c.is_cluster, false) AND ${assetInServiceSql('c')}
+          AND t.id <> c.id
+          AND NOT EXISTS (
+            SELECT 1 FROM asset_cluster_members own
+             WHERE own.tenant_id = c.tenant_id AND own.cluster_id = c.id AND own.asset_id = t.id
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM asset_relations direct
+             WHERE direct.tenant_id = c.tenant_id AND direct.asset_id = c.id
+               AND direct.related_asset_id = t.id AND direct.relation_type = 'depends_on'
+          )
+        GROUP BY t.id, t.asset_reference, t.name, t.kind, t.environment, t.status
+        ORDER BY lower(t.name), t.id`,
+      [asset.tenant_id, asset.id],
+    );
   }
 
   /** Tasks linked to the asset, open ones first, then by due date. */
