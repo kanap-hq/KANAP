@@ -2065,8 +2065,6 @@
         "addMembers": "Mitglieder hinzufügen",
         "loadingMembers": "Mitglieder werden geladen…",
         "clusterMembership": "Cluster-Mitgliedschaft",
-        "loadingClusters": "Cluster werden geladen…",
-        "notInCluster": "Gehört keinem Cluster an.",
         "identity": "Identität",
         "hostname": "Hostname",
         "hostnameRequired": "Hostname ist erforderlich, wenn eine Domäne ausgewählt ist",

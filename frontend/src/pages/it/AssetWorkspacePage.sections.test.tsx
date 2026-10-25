@@ -493,7 +493,7 @@ describe('Asset workspace: section placement', () => {
       expect(screen.queryByText('workspace.asset.technical.loadingMembers')).toBeNull();
     });
 
-    it('says a server is loading its clusters before it says it is in none', async () => {
+    it('renders nothing for a server of no cluster, also while loading', async () => {
       let answer: (value: unknown) => void = () => undefined;
       renderAt('/it/assets/asset-1/operations');
       const read = get.getMockImplementation()!;
@@ -501,14 +501,14 @@ describe('Asset workspace: section placement', () => {
         url.endsWith('/clusters') ? new Promise((resolve) => { answer = resolve; }) : read(url, config)
       ));
       fireEvent.click(await screen.findByTestId('go-asset-2'));
-      expect(await screen.findByText('workspace.asset.technical.loadingClusters')).toBeInTheDocument();
-      expect(screen.queryByText('workspace.asset.technical.notInCluster')).toBeNull();
+      await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-2/clusters'));
+      expect(screen.queryByText('workspace.asset.technical.clusterMembership')).toBeNull();
       answer({ data: { items: [] } });
-      expect(await screen.findByText('workspace.asset.technical.notInCluster')).toBeInTheDocument();
-      expect(screen.queryByText('workspace.asset.technical.loadingClusters')).toBeNull();
+      await waitFor(() => expect(get.mock.calls.filter(([url]) => url === '/assets/asset-2/clusters')).toHaveLength(1));
+      expect(screen.queryByText('workspace.asset.technical.clusterMembership')).toBeNull();
     });
 
-    it('hands a server its cluster membership, without the cluster members', async () => {
+    it('shows the membership of a server of a cluster', async () => {
       wire.clusters = [{ id: 'c1', name: 'cluster-1', environment: 'prod', status: 'active' }];
       renderAt('/it/assets/asset-1/operations');
       expect(await screen.findByText('workspace.asset.technical.clusterMembership')).toBeInTheDocument();

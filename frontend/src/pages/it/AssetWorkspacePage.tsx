@@ -344,12 +344,10 @@ export default function AssetWorkspacePage() {
   const [clusterMembers, setClusterMembers] = React.useState<ClusterMember[]>([]);
   const [clusterError, setClusterError] = React.useState<string | null>(null);
   const [clusterLoading, setClusterLoading] = React.useState(false);
-  // The asset whose members (or clusters) were last read: until then the section is loading, not empty.
+  // The asset whose members were last read: until then the cluster section is loading, not empty.
   const [membersLoadedFor, setMembersLoadedFor] = React.useState<string | null>(null);
-  const [clustersLoadedFor, setClustersLoadedFor] = React.useState<string | null>(null);
   const [clustersForServer, setClustersForServer] = React.useState<ClusterSummary[]>([]);
   const [clustersError, setClustersError] = React.useState<string | null>(null);
-  const [clustersLoading, setClustersLoading] = React.useState(false);
   const canCreateKnowledge = hasLevel('knowledge', 'member');
   const [memberDialogOpen, setMemberDialogOpen] = React.useState(false);
   const [memberSelection, setMemberSelection] = React.useState<ServerOption[]>([]);
@@ -522,11 +520,8 @@ export default function AssetWorkspacePage() {
     if (isCreate || !id || loadedIsCluster) {
       setClustersForServer([]);
       setClustersError(null);
-      setClustersLoading(false);
-      setClustersLoadedFor(null);
       return;
     }
-    setClustersLoading(true);
     setClustersError(null);
     try {
       const res = await api.get<{ items: ClusterSummary[] }>(`/assets/${id}/clusters`);
@@ -534,9 +529,6 @@ export default function AssetWorkspacePage() {
     } catch (e: any) {
       setClustersError(getApiErrorMessage(e, t, t('messages.loadClustersFailed')));
       setClustersForServer([]);
-    } finally {
-      setClustersLoading(false);
-      setClustersLoadedFor(id);
     }
   }, [clusterSwitchSaving, id, isCreate, loadedAssetId, loadedIsCluster]);
 
@@ -1717,7 +1709,6 @@ export default function AssetWorkspacePage() {
 
   // The cluster sections at the top of the Operations tab, which is off in creation.
   const membersPending = isCluster && !isCreate && (clusterLoading || membersLoadedFor !== id);
-  const clustersPending = !isCluster && !isCreate && (clustersLoading || clustersLoadedFor !== id);
   const clusterSection = (
     <>
       {isCluster && (
@@ -1774,33 +1765,26 @@ export default function AssetWorkspacePage() {
           )}
         </Box>
       )}
-      {!isCluster && (
+      {!isCluster && (clustersError || clustersForServer.length > 0) && (
         <Box>
           <Box sx={{ mb: 1 }}>
             <SectionLabel>{t('workspace.asset.technical.clusterMembership')}</SectionLabel>
           </Box>
           {clustersError && <Alert severity="error" sx={{ mb: 1 }}>{clustersError}</Alert>}
-          {clustersPending && (
-            <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.loadingClusters')}</Typography>
-          )}
-          {!clustersPending && (
-            clustersForServer.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.notInCluster')}</Typography>
-            ) : (
-              <Stack spacing={0.75} sx={{ mt: 0.5 }}>
-                {clustersForServer.map((c) => (
-                  <Stack key={c.id} direction="row" justifyContent="space-between" alignItems="center">
-                    <Box>
-                      <Button size="small" onClick={() => navigate(`/it/assets/${c.id}/overview`)}>{c.name}</Button>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {environmentLabel(c.environment)} / {labelFor('lifecycleStatus', c.status) || c.status}
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">{t('workspace.asset.meta.cluster')}</Typography>
-                  </Stack>
-                ))}
-              </Stack>
-            )
+          {clustersForServer.length > 0 && (
+            <Stack spacing={0.75} sx={{ mt: 0.5 }}>
+              {clustersForServer.map((c) => (
+                <Stack key={c.id} direction="row" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Button size="small" onClick={() => navigate(`/it/assets/${c.id}/overview`)}>{c.name}</Button>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {environmentLabel(c.environment)} / {labelFor('lifecycleStatus', c.status) || c.status}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">{t('workspace.asset.meta.cluster')}</Typography>
+                </Stack>
+              ))}
+            </Stack>
           )}
         </Box>
       )}

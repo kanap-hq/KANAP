@@ -2065,8 +2065,6 @@
         "addMembers": "Añadir miembros",
         "loadingMembers": "Cargando miembros…",
         "clusterMembership": "Pertenencia al clúster",
-        "loadingClusters": "Cargando clústeres…",
-        "notInCluster": "No pertenece a ningún clúster.",
         "identity": "Identidad",
         "hostname": "Nombre de host",
         "hostnameRequired": "El nombre de host es obligatorio cuando se selecciona un dominio",
