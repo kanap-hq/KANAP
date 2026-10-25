@@ -4,6 +4,12 @@ import 'reflect-metadata';
 import { NotFoundException } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 import { AuditLog } from '../../audit/audit.entity';
+import { Company } from '../../companies/company.entity';
+import { CompaniesDeleteService } from '../../companies/companies-delete.service';
+import { Document } from '../../knowledge/document.entity';
+import { KnowledgeService } from '../../knowledge/knowledge.service';
+import { PortfolioRequest } from '../../portfolio/portfolio-request.entity';
+import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { AuditLogsService } from '../../audit/audit-logs.service';
 import { CsvExportService } from '../../common/csv/csv-export.service';
 import { CsvResolverService } from '../../common/csv/csv-resolver.service';
@@ -47,8 +53,11 @@ type Seed = {
   restrictedEntryId: string;
   restrictedAttachmentId: string;
   reviewDocumentId: string;
+  sharedDocumentId: string;
   assetId: string;
   applicationId: string;
+  companyId: string;
+  requestId: string;
   auditIds: Record<string, string>;
 };
 
@@ -108,21 +117,21 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
     runner,
     tenantId,
     'Reader',
-    { incidents: 'reader', tasks: 'reader', users: 'admin' },
+    { incidents: 'reader', tasks: 'reader', users: 'admin', knowledge: 'reader' },
     { first: 'Rita', last: 'Reader' },
   );
   const reporterId = await seedPerson(
     runner,
     tenantId,
     'Reporter',
-    { incidents: 'reader', tasks: 'reader', users: 'admin' },
+    { incidents: 'reader', tasks: 'reader', users: 'admin', knowledge: 'reader' },
     { first: 'Remy', last: 'Reporter' },
   );
   const ownerId = await seedPerson(
     runner,
     tenantId,
     'Owner',
-    { incidents: 'reader', tasks: 'reader', users: 'admin' },
+    { incidents: 'reader', tasks: 'reader', users: 'admin', knowledge: 'reader' },
     { first: 'Olga', last: 'Owner' },
   );
 
@@ -195,6 +204,20 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
     [tenantId, restrictedTask.id, application.id],
   );
 
+  const company = await one(
+    `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Restricted company', 'FR', 'Paris') RETURNING id`,
+    [tenantId],
+  );
+  await runner.query(
+    `UPDATE tasks SET company_id = $3 WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+    [tenantId, [restrictedTask.id, publicTask.id], company.id],
+  );
+  const request = await one(
+    `INSERT INTO portfolio_requests (tenant_id, item_number, name, origin_task_id)
+     VALUES ($1, 1, 'Origin request', $2) RETURNING id`,
+    [tenantId, restrictedTask.id],
+  );
+
   const library = await one(
     `INSERT INTO document_libraries (tenant_id, name, slug) VALUES ($1, 'Managed', $2) RETURNING id`,
     [tenantId, `managed-${tenantId.slice(0, 8)}`],
@@ -212,6 +235,15 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
   await runner.query(
     `INSERT INTO document_incidents (tenant_id, document_id, incident_id) VALUES ($1, $2, $3)`,
     [tenantId, reviewDocument.id, restrictedIncident.id],
+  );
+  const sharedDocument = await one(
+    `INSERT INTO documents (tenant_id, item_number, title, library_id)
+     VALUES ($1, 2, 'Shared runbook', $2) RETURNING id`,
+    [tenantId, library.id],
+  );
+  await runner.query(
+    `INSERT INTO document_tasks (tenant_id, document_id, task_id) VALUES ($1, $2, $3), ($1, $2, $4)`,
+    [tenantId, sharedDocument.id, restrictedTask.id, publicTask.id],
   );
 
   const auditIds: Record<string, string> = {
@@ -239,8 +271,11 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
     restrictedEntryId: entry.id,
     restrictedAttachmentId: attachment.id,
     reviewDocumentId: reviewDocument.id,
+    sharedDocumentId: sharedDocument.id,
     assetId: asset.id,
     applicationId: application.id,
+    companyId: company.id,
+    requestId: request.id,
     auditIds,
   };
 }
@@ -375,6 +410,7 @@ async function testPlaidAndSearch(): Promise<void> {
     const policy = {
       listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
       assertEntityTypeReadAccess: async () => undefined,
+      canReadKnowledge: async () => false,
     };
     const entityService = new (AiEntityService as any)(knowledge, policy);
 
@@ -427,6 +463,99 @@ async function testPlaidAndSearch(): Promise<void> {
     await assertNotFound((updateFields as any).resolveTask(context(runner, s, s.readerId) as any, 'T-1'));
     const reporterTask = await (updateFields as any).resolveTask(context(runner, s, s.reporterId) as any, 'T-1');
     assert.equal(reporterTask.id, s.restrictedTaskId);
+  });
+}
+
+async function testOtherReadSurfaces(): Promise<void> {
+  await inRolledBackTransaction(async (runner) => {
+    const s = await seed(runner, 'restricted-other-reads');
+    const reader = viewer(s.readerId, false);
+    const reporter = viewer(s.reporterId, false);
+
+    // The Knowledge link selector and the tasks a document lists.
+    const knowledge = new (KnowledgeService as any)();
+    (knowledge as any).users = {
+      findById: async (id: string) => ({ id, status: 'enabled', role_id: null, role: null }),
+    };
+    (knowledge as any).permissions = {
+      listForRoles: async () => new Map([['knowledge', 'reader']]),
+    };
+    const readerOptions = await knowledge.listRelationOptions('tasks', { limit: 50 }, {
+      manager: runner.manager,
+      userId: s.readerId,
+      tenantId: s.tenantId,
+    });
+    const readerOptionIds = readerOptions.items.map((item: any) => item.id);
+    assert.ok(!readerOptionIds.includes(s.restrictedTaskId), 'the link selector omits the restricted task');
+    assert.ok(readerOptionIds.includes(s.publicTaskId));
+    const reporterOptions = await knowledge.listRelationOptions('tasks', { limit: 50 }, {
+      manager: runner.manager,
+      userId: s.reporterId,
+      tenantId: s.tenantId,
+    });
+    assert.ok(reporterOptions.items.some((item: any) => item.id === s.restrictedTaskId));
+
+    const readerDocument = await knowledge.get(s.sharedDocumentId, {
+      manager: runner.manager,
+      userId: s.readerId,
+      tenantId: s.tenantId,
+    });
+    assert.deepEqual(readerDocument.relations.tasks.map((task: any) => task.id), [s.publicTaskId]);
+    const reporterDocument = await knowledge.get(s.sharedDocumentId, {
+      manager: runner.manager,
+      userId: s.reporterId,
+      tenantId: s.tenantId,
+    });
+    assert.deepEqual(
+      reporterDocument.relations.tasks.map((task: any) => task.id).sort(),
+      [s.publicTaskId, s.restrictedTaskId].sort(),
+    );
+
+    // The origin task of a request.
+    const requests = new (PortfolioRequestsService as any)(runner.manager.getRepository(PortfolioRequest));
+    const readerRequest = await requests.get(s.requestId, { include: 'origin_task' }, {
+      manager: runner.manager,
+      viewer: reader,
+    });
+    assert.equal(readerRequest.origin_task, null);
+    const reporterRequest = await requests.get(s.requestId, { include: 'origin_task' }, {
+      manager: runner.manager,
+      viewer: reporter,
+    });
+    assert.equal(reporterRequest.origin_task.id, s.restrictedTaskId);
+
+    // The tasks of a company, counted by the delete check.
+    const companies = new (CompaniesDeleteService as any)(runner.manager.getRepository(Company), undefined);
+    const readerCheck = await companies.deleteCheck([s.companyId], { manager: runner.manager, viewer: reader });
+    const readerTasks = readerCheck.refused[0]?.usages.find((usage: any) => usage.type === 'tasks')?.total ?? 0;
+    assert.equal(readerTasks, 1, 'the company check counts the public task only');
+    const reporterCheck = await companies.deleteCheck([s.companyId], { manager: runner.manager, viewer: reporter });
+    const reporterTasks = reporterCheck.refused[0]?.usages.find((usage: any) => usage.type === 'tasks')?.total ?? 0;
+    assert.equal(reporterTasks, 2);
+
+    // The origin task reference in the AI request context.
+    const knowledgeStub = {
+      getKnowledgeContextForEntity: async () => ({ access: null, total: 0, groups: [] }),
+      listReadableLibraryIdsForUser: async () => null,
+    };
+    const policy = {
+      listReadableEntityTypes: async () => [],
+      assertEntityTypeReadAccess: async () => undefined,
+      canReadKnowledge: async () => false,
+    };
+    const entityService = new (AiEntityService as any)(knowledgeStub, policy);
+    const readerContext = await (entityService as any).buildRequestContext(
+      context(runner, s, s.readerId),
+      s.requestId,
+      runner.manager,
+    );
+    assert.equal(readerContext.entity.metadata.origin_task, null);
+    const reporterContext = await (entityService as any).buildRequestContext(
+      context(runner, s, s.reporterId),
+      s.requestId,
+      runner.manager,
+    );
+    assert.match(String(reporterContext.entity.metadata.origin_task), /^T-1 /);
   });
 }
 
@@ -512,6 +641,7 @@ async function testDeletedIncidentStaysVisible(): Promise<void> {
 void runSpecs('incident-restricted-tasks-audit', [
   ['task reads follow the incident visibility', testTaskReads],
   ['Plaid and search follow the incident visibility', testPlaidAndSearch],
+  ['the other read surfaces follow the incident visibility', testOtherReadSurfaces],
   ['audit log follows the incident visibility', testAuditLog],
   ['a deleted incident leaves its task and audit row visible', testDeletedIncidentStaysVisible],
 ]);

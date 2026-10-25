@@ -3241,6 +3241,8 @@ export class AiEntityService {
     const requestAccessScope = await resolveAiParticipationAccessScope(context, 'requests');
     const requestRootParams: unknown[] = [requestId, tenantId];
     const requestRootScopeSql = appendParticipationScopeSql('requests', 'r', requestRootParams, requestAccessScope);
+    // A hidden origin task is no origin task: the request stays, its reference disappears.
+    const originTaskVisibility = taskIncidentVisibilitySql('ot', await resolveAiIncidentViewer(context), requestRootParams);
     const requests = await manager.query<any[]>(
       `SELECT r.id,
               r.item_number,
@@ -3259,7 +3261,7 @@ export class AiEntityService {
               ${buildUserNameSql('u_il')} AS it_lead_name,
               CASE WHEN ot.id IS NOT NULL THEN CONCAT('T-', ot.item_number, ' ', COALESCE(ot.title, 'Untitled task')) ELSE NULL END AS origin_task_ref
        FROM portfolio_requests r
-       LEFT JOIN tasks ot ON ot.id = r.origin_task_id AND ot.tenant_id = $2
+       LEFT JOIN tasks ot ON ot.id = r.origin_task_id AND ot.tenant_id = $2 ${originTaskVisibility}
        LEFT JOIN users u_req ON u_req.id = r.requestor_id AND u_req.tenant_id = r.tenant_id
        LEFT JOIN users u_bl ON u_bl.id = r.business_lead_id AND u_bl.tenant_id = r.tenant_id
        LEFT JOIN users u_il ON u_il.id = r.it_lead_id AND u_il.tenant_id = r.tenant_id

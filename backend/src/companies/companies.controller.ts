@@ -15,6 +15,7 @@ import { ORGANISATION_LOOKUP_READERS } from '../common/lookup/lookup-requirement
 import { lookupReference, COMPANY_LOOKUP } from '../common/lookup/reference-lookups';
 import { CompanyUpsertDto } from './dto/company.dto';
 import { Tenant, TenantRequest } from '../common/decorators';
+import { incidentViewerFromContext } from '../incidents/incident-visibility';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
@@ -136,7 +137,10 @@ export class CompaniesController {
   @RequireLevel('companies', 'admin')
   @Post('delete-check')
   deleteCheck(@Body() body: { ids: string[] }, @Tenant() ctx: TenantRequest) {
-    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager });
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], {
+      manager: ctx.manager,
+      viewer: incidentViewerFromContext(ctx),
+    });
   }
 
   @ReservedToUnscopedDataAccess()
