@@ -45,14 +45,22 @@ export class AuditLogsController {
   @RequireLevel('users', 'admin')
   @Get()
   list(@Query() query: any, @Tenant() ctx: TenantRequest) {
-    return this.svc.list(query, { manager: ctx.manager, viewer: incidentViewerFromContext(ctx) });
+    return this.svc.list(query, {
+      manager: ctx.manager,
+      tenantId: ctx.tenantId,
+      viewer: incidentViewerFromContext(ctx),
+    });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
   @Get('filter-values')
   listFilterValues(@Query() query: any, @Tenant() ctx: TenantRequest) {
-    return this.svc.listFilterValues(query, { manager: ctx.manager, viewer: incidentViewerFromContext(ctx) });
+    return this.svc.listFilterValues(query, {
+      manager: ctx.manager,
+      tenantId: ctx.tenantId,
+      viewer: incidentViewerFromContext(ctx),
+    });
   }
 
   // The list's rows as a CSV file, same query as `GET /audit-logs`. Declared before ':id'.
@@ -93,6 +101,10 @@ export class AuditLogsController {
   @RequireLevel('users', 'admin')
   @Get(':id')
   getById(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
-    return this.svc.getById(id, { manager: ctx.manager, viewer: incidentViewerFromContext(ctx) });
+    return this.svc.getById(id, {
+      manager: ctx.manager,
+      tenantId: ctx.tenantId,
+      viewer: incidentViewerFromContext(ctx),
+    });
   }
 }

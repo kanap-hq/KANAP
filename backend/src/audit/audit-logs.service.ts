@@ -11,6 +11,7 @@ import { AUTH_EVENT_TABLE, EXPORT_EVENT_TABLE } from './security-events';
 import {
   IncidentViewer,
   auditLogIncidentVisibilityQueryBuilderClause,
+  hasHiddenIncidents,
 } from '../incidents/incident-visibility';
 
 type AuditListItem = {
@@ -391,8 +392,11 @@ export class AuditLogsService {
     excludeField?: 'table_name' | 'action' | 'source' | 'user_id';
     /** Rows about an incident this reader cannot see are absent (empty for incidents:admin). */
     viewer?: IncidentViewer | null;
+    tenantId?: string;
+    /** Whether any restricted incident is hidden from this viewer; skips the predicate when none is. */
+    hiddenIncidents?: boolean;
   }) {
-    const { query, q, filters, manager, excludeField, viewer } = params;
+    const { query, q, filters, manager, excludeField, viewer, tenantId, hiddenIncidents } = params;
     assertSetFilterModes(filters);
     const repo = this.getAuditRepo(manager);
     const qb = repo
@@ -443,9 +447,11 @@ export class AuditLogsService {
     const toExclusive = this.resolveBoundary(query?.to, 'to');
     if (toExclusive) qb.andWhere('a.created_at < :to', { to: toExclusive });
 
-    const incidentVisibility = auditLogIncidentVisibilityQueryBuilderClause('a', viewer);
-    if (incidentVisibility.clause) {
-      qb.andWhere(incidentVisibility.clause, incidentVisibility.params);
+    if (hiddenIncidents === true) {
+      const incidentVisibility = auditLogIncidentVisibilityQueryBuilderClause('a', viewer, tenantId);
+      if (incidentVisibility.clause) {
+        qb.andWhere(incidentVisibility.clause, incidentVisibility.params);
+      }
     }
 
     if (q) {
@@ -501,20 +507,35 @@ export class AuditLogsService {
     return new Map(users.map((u) => [u.id, u]));
   }
 
-  async list(query: any, opts?: { manager?: EntityManager; viewer?: IncidentViewer | null }) {
+  /** The request's tenant, or the session tenant bound to the manager for a direct call. */
+  private async resolveAuditTenantId(manager: EntityManager, tenantId?: string | null): Promise<string> {
+    const explicit = String(tenantId || '').trim();
+    if (explicit) return explicit;
+    const rows: Array<{ tenant_id: string | null }> = await manager.query(
+      `SELECT app_current_tenant()::text AS tenant_id`,
+    );
+    return String(rows?.[0]?.tenant_id || '');
+  }
+
+  async list(query: any, opts?: { manager?: EntityManager; viewer?: IncidentViewer | null; tenantId?: string }) {
     const { page, limit, skip, sort, q, filters } = parsePagination(query, {
       field: 'created_at',
       direction: 'DESC',
     });
 
     const sortField = AUDIT_SORT_FIELDS.includes(sort.field) ? sort.field : 'created_at';
+    const manager = opts?.manager ?? this.repo.manager;
+    const tenantId = await this.resolveAuditTenantId(manager, opts?.tenantId);
+    const hiddenIncidents = await hasHiddenIncidents(manager, opts?.viewer, tenantId);
 
     const qb = this.createFilteredQuery({
       query,
       q,
       filters,
-      manager: opts?.manager,
+      manager,
       viewer: opts?.viewer,
+      tenantId,
+      hiddenIncidents,
     });
 
     const total = await qb.clone().getCount();
@@ -561,8 +582,17 @@ export class AuditLogsService {
     const limit = Math.max(0, Math.floor(this.exportRowLimit));
     const batchSize = Math.max(1, Math.floor(this.exportBatchSize));
     const { manager, tenantId, viewer } = opts;
+    const hiddenIncidents = await hasHiddenIncidents(manager, viewer, tenantId);
 
-    const filtered = () => this.createFilteredQuery({ query, q, filters, manager, viewer })
+    const filtered = () => this.createFilteredQuery({
+      query,
+      q,
+      filters,
+      manager,
+      viewer,
+      tenantId,
+      hiddenIncidents,
+    })
       .andWhere('a.tenant_id = :exportTenantId', { exportTenantId: tenantId });
 
     const [cappedSql, cappedParams] = filtered().select('a.id', 'id').limit(limit + 1).getQueryAndParameters();
@@ -622,11 +652,14 @@ export class AuditLogsService {
     return { filename: `audit-log-${day}.csv`, truncated, limit, chunks: chunks() };
   }
 
-  async listFilterValues(query: any, opts?: { manager?: EntityManager; viewer?: IncidentViewer | null }): Promise<Record<string, Array<string | null>>> {
+  async listFilterValues(query: any, opts?: { manager?: EntityManager; viewer?: IncidentViewer | null; tenantId?: string }): Promise<Record<string, Array<string | null>>> {
     const { q, filters } = parsePagination(query, {
       field: 'created_at',
       direction: 'DESC',
     });
+    const manager = opts?.manager ?? this.repo.manager;
+    const tenantId = await this.resolveAuditTenantId(manager, opts?.tenantId);
+    const hiddenIncidents = await hasHiddenIncidents(manager, opts?.viewer, tenantId);
     const rawFields = String(query?.fields ?? query?.field ?? '')
       .split(',')
       .map((field) => field.trim())
@@ -643,9 +676,11 @@ export class AuditLogsService {
         query,
         q,
         filters,
-        manager: opts?.manager,
+        manager,
         excludeField: field,
         viewer: opts?.viewer,
+        tenantId,
+        hiddenIncidents,
       });
       const rows = await qb
         .select(`a.${field}`, 'value')
@@ -658,14 +693,19 @@ export class AuditLogsService {
     return results;
   }
 
-  async getById(id: string, opts?: { manager?: EntityManager; viewer?: IncidentViewer | null }) {
+  async getById(id: string, opts?: { manager?: EntityManager; viewer?: IncidentViewer | null; tenantId?: string }) {
     // The detail goes through the list's filters, so a row about an invisible incident
     // answers as missing, like a task detail.
+    const manager = opts?.manager ?? this.repo.manager;
+    const tenantId = await this.resolveAuditTenantId(manager, opts?.tenantId);
+    const hiddenIncidents = await hasHiddenIncidents(manager, opts?.viewer, tenantId);
     const found = await this.createFilteredQuery({
       query: {},
       filters: {},
-      manager: opts?.manager,
+      manager,
       viewer: opts?.viewer,
+      tenantId,
+      hiddenIncidents,
     })
       .andWhere('a.id = :auditEntryId', { auditEntryId: id })
       .getOne();

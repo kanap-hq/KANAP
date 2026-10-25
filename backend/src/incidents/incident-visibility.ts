@@ -187,6 +187,38 @@ export function taskIncidentVisibilityQueryBuilderClause(
 }
 
 /**
+ * Whether the viewer hides at least one restricted incident in this tenant.
+ *
+ * Read once before an audit query: with no hidden incident the predicate is
+ * omitted entirely, so a workspace without a restricted incident pays nothing
+ * on its audit log. A registry admin never pays the query.
+ */
+export async function hasHiddenIncidents(
+  manager: EntityManager,
+  viewer: IncidentViewer | null | undefined,
+  tenantId: string | null | undefined,
+): Promise<boolean> {
+  const tenant = String(tenantId || '').trim();
+  if (!tenant || viewer?.isAdmin) return false;
+  const params: unknown[] = [tenant];
+  const confidentiality = incidentConfidentialityPredicate(
+    'i_hidden',
+    incidentViewerForSql(viewer),
+    params,
+  );
+  if (confidentiality.unrestricted) return false;
+  const rows = await manager.query(
+    `SELECT 1
+     FROM incidents i_hidden
+     WHERE i_hidden.tenant_id = $1
+       AND (${confidentiality.hidden})
+     LIMIT 1`,
+    params,
+  );
+  return rows.length > 0;
+}
+
+/**
  * Audit-log rows that describe an incident the viewer may not see, in one
  * predicate over the log alias (`a` in `AuditLogsService`).
  *
@@ -197,76 +229,74 @@ export function taskIncidentVisibilityQueryBuilderClause(
  * task through its `related_object_id`. The incident is read on its current
  * row, so a line about a deleted incident stays visible, as today.
  *
+ * Every branch is an uncorrelated `record_id IN (subquery)` keyed by the
+ * tenant, so PostgreSQL evaluates each subquery once and hashes it, instead of
+ * probing the outer row. The tenant is a parameter when the caller has one;
+ * `app_current_tenant()` is only the direct-call fallback.
+ *
  * Empty for a registry admin: no branch, no parameter, no cost.
  */
 export function auditLogIncidentVisibilitySql(
   auditAlias: string,
   viewer: IncidentViewer | null | undefined,
+  tenantId: string | null | undefined,
   params: unknown[],
 ): string {
-  const confidentiality = incidentConfidentialityPredicate('i_audit', incidentViewerForSql(viewer), params);
+  const normalizedViewer = incidentViewerForSql(viewer);
+  if (normalizedViewer?.isAdmin) return '';
+  const tenant = String(tenantId || '').trim();
+  let tenantRef = 'app_current_tenant()';
+  if (tenant) {
+    params.push(tenant);
+    tenantRef = `$${params.length}`;
+  }
+  const confidentiality = incidentConfidentialityPredicate('i_audit', normalizedViewer, params);
   if (confidentiality.unrestricted) return '';
 
-  const tenant = `${auditAlias}.tenant_id`;
   const recordId = `${auditAlias}.record_id`;
   const hidden = confidentiality.hidden;
 
-  const directIncident = `EXISTS (
-        SELECT 1
+  const incidentIds = `SELECT i_audit.id
         FROM incidents i_audit
-        WHERE i_audit.id = ${recordId}
-          AND i_audit.tenant_id = ${tenant}
-          AND (${hidden})
-      )`;
-  const entry = `EXISTS (
-        SELECT 1
+        WHERE i_audit.tenant_id = ${tenantRef}
+          AND (${hidden})`;
+  const entryIds = `SELECT e_audit.id
         FROM incident_entries e_audit
         JOIN incidents i_audit
           ON i_audit.id = e_audit.incident_id
          AND i_audit.tenant_id = e_audit.tenant_id
-        WHERE e_audit.id = ${recordId}
-          AND e_audit.tenant_id = ${tenant}
-          AND (${hidden})
-      )`;
-  const attachment = `EXISTS (
-        SELECT 1
+        WHERE e_audit.tenant_id = ${tenantRef}
+          AND (${hidden})`;
+  const attachmentIds = `SELECT at_audit.id
         FROM incident_attachments at_audit
         JOIN incidents i_audit
           ON i_audit.id = at_audit.incident_id
          AND i_audit.tenant_id = at_audit.tenant_id
-        WHERE at_audit.id = ${recordId}
-          AND at_audit.tenant_id = ${tenant}
-          AND (${hidden})
-      )`;
-  const review = `EXISTS (
-        SELECT 1
+        WHERE at_audit.tenant_id = ${tenantRef}
+          AND (${hidden})`;
+  const reviewDocumentIds = `SELECT b_audit.document_id
         FROM integrated_document_bindings b_audit
         JOIN incidents i_audit
           ON i_audit.id = b_audit.source_entity_id
          AND i_audit.tenant_id = b_audit.tenant_id
-        WHERE b_audit.document_id = ${recordId}
-          AND b_audit.tenant_id = ${tenant}
+        WHERE b_audit.tenant_id = ${tenantRef}
           AND b_audit.source_entity_type = 'incidents'
-          AND (${hidden})
-      )`;
-  const task = `EXISTS (
-        SELECT 1
+          AND (${hidden})`;
+  const taskIds = `SELECT t_audit.id
         FROM tasks t_audit
         JOIN incidents i_audit
           ON i_audit.id = t_audit.related_object_id
          AND i_audit.tenant_id = t_audit.tenant_id
-        WHERE t_audit.id = ${recordId}
-          AND t_audit.tenant_id = ${tenant}
+        WHERE t_audit.tenant_id = ${tenantRef}
           AND t_audit.related_object_type = 'incident'
-          AND (${hidden})
-      )`;
+          AND (${hidden})`;
 
   return ` AND NOT (
-      (${auditAlias}.table_name IN ('incidents', 'incident_assets', 'incident_applications', 'incident_technologies') AND ${directIncident})
-      OR (${auditAlias}.table_name = 'incident_entries' AND ${entry})
-      OR (${auditAlias}.table_name = 'incident_attachments' AND ${attachment})
-      OR (${auditAlias}.table_name = 'documents' AND ${review})
-      OR (${auditAlias}.table_name = 'tasks' AND ${task})
+      (${auditAlias}.table_name IN ('incidents', 'incident_assets', 'incident_applications', 'incident_technologies') AND ${recordId} IN (${incidentIds}))
+      OR (${auditAlias}.table_name = 'incident_entries' AND ${recordId} IN (${entryIds}))
+      OR (${auditAlias}.table_name = 'incident_attachments' AND ${recordId} IN (${attachmentIds}))
+      OR (${auditAlias}.table_name = 'documents' AND ${recordId} IN (${reviewDocumentIds}))
+      OR (${auditAlias}.table_name = 'tasks' AND ${recordId} IN (${taskIds}))
   )`;
 }
 
@@ -274,15 +304,22 @@ export function auditLogIncidentVisibilitySql(
 export function auditLogIncidentVisibilityQueryBuilderClause(
   auditAlias: string,
   viewer: IncidentViewer | null | undefined,
-  paramName = 'auditIncidentViewerId',
+  tenantId: string | null | undefined,
+  paramPrefix = 'auditIncident',
 ): { clause: string; params: Record<string, unknown> } {
   const params: unknown[] = [];
-  const sql = auditLogIncidentVisibilitySql(auditAlias, viewer, params);
+  const sql = auditLogIncidentVisibilitySql(auditAlias, viewer, tenantId, params);
   if (!sql) return { clause: '', params: {} };
-  return {
-    clause: sql.replace(/^\s*AND\s+/, '').replace(/\$1\b/g, `:${paramName}`),
-    params: params.length > 0 ? { [paramName]: params[0] } : {},
-  };
+  let clause = sql.replace(/^\s*AND\s+/, '');
+  const tenantProvided = String(tenantId || '').trim().length > 0;
+  const suffixes = tenantProvided ? ['TenantId', 'ViewerId'] : ['ViewerId'];
+  const named: Record<string, unknown> = {};
+  params.forEach((value, index) => {
+    const name = `${paramPrefix}${suffixes[index] ?? `Extra${index}`}`;
+    clause = clause.replace(new RegExp(`\\$${index + 1}\\b`, 'g'), `:${name}`);
+    named[name] = value;
+  });
+  return { clause, params: named };
 }
 
 /** Related-object label on tasks: INC-N only when the incident is confidential. */
