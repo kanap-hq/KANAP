@@ -18,6 +18,7 @@ import ConnectionPropertiesDrawer from './workspace/ConnectionPropertiesDrawer';
 import ConnectionOverviewTab, { type ConnectionProtocol } from './workspace/ConnectionOverviewTab';
 import ConnectionPathTab from './workspace/ConnectionPathTab';
 import ConnectionEndpointPicker, { type EndpointValue } from './workspace/ConnectionEndpointPicker';
+import ConnectionServersPicker from './workspace/ConnectionServersPicker';
 import { useConnectionItemNav } from '../../hooks/useModuleItemNav';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { drawerSelectSx, drawerMenuItemSx, drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
@@ -177,9 +178,6 @@ export default function ConnectionWorkspacePage() {
   const [pendingTopology, setPendingTopology] = React.useState<'server_to_server' | 'multi_server' | null>(null);
 
   const [createForm, setCreateForm] = React.useState<CreateConnectionForm>(() => createInitialForm());
-  const [createMultiSearch, setCreateMultiSearch] = React.useState('');
-  const [createMultiOptions, setCreateMultiOptions] = React.useState<ServerOption[]>([]);
-  const [createMultiLoading, setCreateMultiLoading] = React.useState(false);
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
 
@@ -225,28 +223,6 @@ export default function ConnectionWorkspacePage() {
       };
     });
   }, [connectionTypes, dataClassOptions, lifecycleOptions]);
-
-  React.useEffect(() => {
-    if (!isCreate || createForm.topology !== 'multi_server') return;
-    let cancelled = false;
-    const handle = setTimeout(async () => {
-      setCreateMultiLoading(true);
-      try {
-        const res = await api.get<{ items: ServerOption[] }>('/assets', {
-          params: { q: createMultiSearch || undefined, limit: 50, sort: 'name:ASC' },
-        });
-        if (!cancelled) setCreateMultiOptions(res.data.items || []);
-      } catch {
-        if (!cancelled) setCreateMultiOptions([]);
-      } finally {
-        if (!cancelled) setCreateMultiLoading(false);
-      }
-    }, 200);
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
-    };
-  }, [createForm.topology, createMultiSearch, isCreate]);
 
   const patchCreateForm = React.useCallback((patch: Partial<CreateConnectionForm>) => {
     setCreateForm((prev) => ({ ...prev, ...patch }));
@@ -892,37 +868,11 @@ export default function ConnectionWorkspacePage() {
                     helperText={createForm.servers.length < 2 ? t('workspace.connection.overview.selectTwoServers') : undefined}
                     valueSx={{ maxWidth: 640 }}
                   >
-                    <Autocomplete
-                      size="small"
-                      multiple
-                      disabled={!canManage || createSubmitting}
-                      options={createMultiOptions}
-                      loading={createMultiLoading}
-                      getOptionLabel={(opt) => `${opt.asset_reference ? `${opt.asset_reference} · ` : ''}${opt.name}`}
-                      isOptionEqualToValue={(opt, val) => opt.id === val.id}
+                    <ConnectionServersPicker
                       value={createForm.servers}
-                      onChange={(_, val) => patchCreateForm({ servers: val })}
-                      onInputChange={(_, val, reason) => {
-                        if (reason !== 'reset') setCreateMultiSearch(val);
-                      }}
-                      renderTags={(value, getTagProps) =>
-                        value.map((opt, index) => (
-                          <Chip
-                            {...getTagProps({ index })}
-                            key={opt.id}
-                            label={`${opt.asset_reference ? `${opt.asset_reference} · ` : ''}${opt.name}`}
-                            size="small"
-                          />
-                        ))
-                      }
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          variant="standard"
-                          placeholder={t('workspace.connection.create.serversPlaceholder')}
-                          sx={drawerFieldValueSx}
-                        />
-                      )}
+                      onChange={(next) => patchCreateForm({ servers: next })}
+                      disabled={!canManage || createSubmitting}
+                      placeholder={t('workspace.connection.create.serversPlaceholder')}
                     />
                   </PropertyRow>
                 </Box>
