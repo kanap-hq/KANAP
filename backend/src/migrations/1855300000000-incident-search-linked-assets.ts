@@ -226,9 +226,19 @@ const INCIDENT_ASSETS_TRIGGERS = `
 `;
 
 /**
- * A renamed asset refreshes every incident linked to it in one call: the ids are
- * gathered in one statement, never one refresh per incident. `AFTER UPDATE OF` already
- * limits the firing to the indexed columns; the IS DISTINCT test skips a no-op write.
+ * One row trigger, not a statement trigger: PostgreSQL refuses transition tables on a
+ * trigger with a column list (`UPDATE OF`), and the column list keeps unrelated asset
+ * writes out. A renamed asset refreshes every incident linked to it in one call: the ids
+ * are gathered in one statement, never one refresh per incident; the IS DISTINCT test
+ * skips a no-op write.
+ *
+ * This is the cascade "a referenced object is renamed, the entries of the objects that
+ * link it are refreshed" that 1853940000000 removed for the budget lines because it
+ * could deadlock with an import. The same shape can in principle deadlock here: an asset
+ * write holds the asset row before it touches the incident entries, while a transaction
+ * that already holds an incident entry can then wait for the asset row. No such path is
+ * known today between an asset write and an incident link write; review both lock orders
+ * together if either changes.
  */
 const ASSET_SYNC_FUNCTION = `
   CREATE OR REPLACE FUNCTION search_index_sync_incident_assets_on_asset()
