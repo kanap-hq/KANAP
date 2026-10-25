@@ -272,7 +272,7 @@ export class ContractsService {
       company_name: { expression: 'comp.name', dataType: 'string' },
       supplier_name: { expression: 'sup.name', dataType: 'string' },
       cost_center_id: { expression: 'c.cost_center_id', dataType: 'string' },
-      cost_center_name: { expression: 'cc.name', dataType: 'string' },
+      cost_center_name: { expression: 'ccn.name', dataType: 'string' },
       // The budget lines linked to the contract, of both natures, as the list counts them.
       linked_lines_count: {
         expression: `(SELECT COUNT(*) FROM contract_spend_items l WHERE l.tenant_id = c.tenant_id AND l.contract_id = c.id${ANY_LINE_LINK})`,
@@ -339,7 +339,7 @@ export class ContractsService {
       .createQueryBuilder('c')
       .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
       .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
-      .leftJoin('cost_centers', 'cc', 'cc.id = c.cost_center_id AND cc.tenant_id = c.tenant_id')
+      .leftJoin('cost_centers', 'ccn', 'ccn.id = c.cost_center_id AND ccn.tenant_id = c.tenant_id')
       .where('c.tenant_id = app_current_tenant()');
     if (budget) {
       // One row per contract of the tenant for the one year asked for, computed once.
@@ -387,7 +387,7 @@ export class ContractsService {
       company_name: 'comp.name',
       supplier_name: 'sup.name',
       cost_center_id: 'c.cost_center_id',
-      cost_center_name: 'cc.name',
+      cost_center_name: 'ccn.name',
       start_date: 'c.start_date',
       end_date: filterTargets.end_date.expression,
       cancellation_deadline: filterTargets.cancellation_deadline.expression,
@@ -937,6 +937,8 @@ export class ContractsService {
       [tenantId, contract.id],
     );
     const existingSet = new Set(existing.map(e => e.spend_item_id));
+    // Deleting a link is a write on its line too: a read-only line refuses it (the link trigger).
+    await assertLinesEditable(mg, existing.filter((e) => !uniqueIds.includes(e.spend_item_id)).map((e) => e.spend_item_id));
     const toInsert = uniqueIds.filter(id => !existingSet.has(id)).map(id => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
     // Only the links to the lines the person reads are deleted: the join on spend_items is
     // filtered by the line policy (spec §6.4); the naive DELETE would remove the hidden links too.
@@ -1145,14 +1147,8 @@ export class ContractsService {
   // CSV
   private csvHeaders(): string[] {
     return [
-      'name','company_name','supplier_name','start_date','duration_months','auto_renewal','notice_period_months','yearly_amount_at_signature','currency','billing_frequency','status','owner_email','notes'
+      'name','company_name','supplier_name','cost_center','start_date','duration_months','auto_renewal','notice_period_months','yearly_amount_at_signature','currency','billing_frequency','status','owner_email','notes'
     ];
-  }
-  /** The export adds the contract's place in the tree; the import keeps its own column list. */
-  private csvExportHeaders(): string[] {
-    const headers = this.csvHeaders();
-    headers.splice(headers.indexOf('supplier_name') + 1, 0, 'cost_center');
-    return headers;
   }
   /**
    * The contracts file in the screen's language (`common/csv-sheet`): its separator, the start
@@ -1165,7 +1161,7 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
     const language = opts?.language ?? 'en';
-    const headers = this.csvExportHeaders();
+    const headers = this.csvHeaders();
     const rows: string[][] = [];
     const isoDate = (value: unknown): string => {
       if (value == null || value === '') return '';
@@ -1257,6 +1253,8 @@ export class ContractsService {
       file: buf as Buffer,
       fields: this.csvHeaders(),
       dateFields: ['start_date'],
+      // Older files have no place column: a row without it keeps the stored place.
+      optional: ['cost_center'],
       language: readLanguage,
       dateOrder,
       decimalMark,
@@ -1273,11 +1271,14 @@ export class ContractsService {
     const allCompanies = await mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant()`);
     const allSuppliers = await mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant()`);
     const allUsers = await mg.query(`SELECT id, email FROM users WHERE tenant_id = app_current_tenant()`);
+    const allNodes = await mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND status = 'enabled'`);
     const cByName = new Map<string, any>(allCompanies.map((r: any) => [r.name, r]));
     const sByName = new Map<string, any>(allSuppliers.map((r: any) => [r.name, r]));
     const uByEmail = new Map<string, any>(allUsers.map((r: any) => [r.email.toLowerCase(), r]));
+    const nByName = new Map<string, any>(allNodes.map((r: any) => [r.name, r]));
+    const hasPlaceColumn = read.present.includes('cost_center');
 
-    const norm: Array<ContractUpsertDto & { line: number; supplier_name: string; company_name: string; owner_email?: string | null }> = [];
+    const norm: Array<ContractUpsertDto & { line: number; supplier_name: string; company_name: string; owner_email?: string | null; cost_center_name?: string | null }> = [];
     for (const r of rows) {
       const line = r.line;
       const problems = rowProblemErrors(r);
@@ -1317,6 +1318,7 @@ export class ContractsService {
       const status = statusRaw === 'disabled' ? 'disabled' : statusRaw ? 'enabled' : null;
       const owner_email = cellOf(r, 'owner_email') || null;
       const notes = cellOf(r, 'notes') || null;
+      const cost_center_name = cellOf(r, 'cost_center') || null;
       // Coded on their column (`errors:CSV_*`): the dialog words them in the interface language.
       if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
       if (!company_name) errors.push(rowError(line, 'company_name', 'CSV_VALUE_REQUIRED', 'company_name is required'));
@@ -1324,12 +1326,13 @@ export class ContractsService {
       if (!supplier_name) errors.push(rowError(line, 'supplier_name', 'CSV_VALUE_REQUIRED', 'supplier_name is required'));
       else if (!sByName.has(supplier_name)) errors.push(rowError(line, 'supplier_name', 'CSV_REFERENCE_NOT_FOUND', `supplier '${supplier_name}' not found`, { value: supplier_name }));
       if (owner_email && !uByEmail.has(owner_email.toLowerCase())) errors.push(rowError(line, 'owner_email', 'CSV_REFERENCE_NOT_FOUND', `user '${owner_email}' not found`, { value: owner_email }));
+      if (cost_center_name && !nByName.has(cost_center_name)) errors.push(rowError(line, 'cost_center', 'CSV_REFERENCE_NOT_FOUND', `cost center '${cost_center_name}' not found`, { value: cost_center_name }));
       if (!start_date) errors.push(rowError(line, 'start_date', 'CSV_VALUE_REQUIRED', 'start_date is required'));
       if (currency && currency.length !== 3) errors.push(rowError(line, 'currency', 'CSV_CURRENCY_INVALID', 'currency must be 3 letters', { value: currency }));
       if (!BILLING_FREQUENCIES.includes(billing_frequency)) {
         errors.push(rowError(line, 'billing_frequency', 'CSV_ENUM_INVALID', 'billing_frequency invalid', { value: billing_frequency, allowed: BILLING_FREQUENCIES.join(', ') }));
       }
-      norm.push({ line, name, company_name, supplier_name, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
+      norm.push({ line, name, company_name, supplier_name, cost_center_name, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
 
@@ -1354,6 +1357,9 @@ export class ContractsService {
       if (!exists) inserted += 1;
       else if (importRowUnchanged(exists, {
         company_id: cByName.get(item.company_name)?.id,
+        ...(hasPlaceColumn && (item.cost_center_name || (exists.cost_center_id ?? null) !== null)
+          ? { cost_center_id: item.cost_center_name ? nByName.get(item.cost_center_name)?.id ?? null : null }
+          : {}),
         owner_user_id: item.owner_email ? uByEmail.get(item.owner_email.toLowerCase())?.id : null,
         start_date: item.start_date,
         duration_months: item.duration_months,
@@ -1393,6 +1399,9 @@ export class ContractsService {
         name: item.name as any,
         company_id: company.id,
         supplier_id: supplier.id,
+        ...(hasPlaceColumn && (item.cost_center_name || (exists?.cost_center_id ?? null) !== null)
+          ? { cost_center_id: item.cost_center_name ? nByName.get(item.cost_center_name)?.id ?? null : null }
+          : {}),
         owner_user_id: owner?.id ?? null,
         start_date: item.start_date as any,
         duration_months: item.duration_months as any,
@@ -1551,6 +1560,8 @@ export class ContractsService {
       [tenantId, contract.id],
     );
     const existingSet = new Set(existing.map((e) => e.spend_item_id));
+    // Deleting a link is a write on its line too: a read-only line refuses it (the link trigger).
+    await assertLinesEditable(mg, existing.filter((e) => !uniqueIds.includes(e.spend_item_id)).map((e) => e.spend_item_id));
     const toInsert = uniqueIds.filter((id) => !existingSet.has(id)).map((id) => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
     // Only the links to the lines the person reads are deleted (the join is filtered by the line policy).
     const [removed]: Array<{ n: number }> = await mg.query(

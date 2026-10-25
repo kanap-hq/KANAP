@@ -259,7 +259,7 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     fields: {
       name: { label: 'Name', kind: 'text', requiredOnCreate: true },
       company_id: { label: 'Company', kind: 'relation', requiredOnCreate: true, relationTarget: 'companies', aliases: ['company'] },
-      cost_center_id: { label: 'Cost Center', kind: 'relation', nullable: true, relationTarget: 'cost_centers', aliases: ['cost_center'] },
+      cost_center_id: { label: 'Cost center', kind: 'relation', nullable: true, relationTarget: 'cost_centers', aliases: ['cost_center'] },
       supplier_id: { label: 'Supplier', kind: 'relation', requiredOnCreate: true, relationTarget: 'suppliers', aliases: ['supplier'] },
       owner_user_id: { label: 'Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['owner'] },
       start_date: { label: 'Start Date', kind: 'date', requiredOnCreate: true },

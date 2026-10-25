@@ -1142,6 +1142,16 @@ export class AiRelationMutationSupportService {
           throw new NotFoundException(nature === 'opex' ? 'Spend item not found.' : 'CAPEX item not found.');
         }
         await assertLinesEditable(context.manager, targetIds);
+        const existing: Array<{ id: string }> = await context.manager.query(
+          `SELECT l.spend_item_id AS id FROM contract_spend_items l
+             JOIN spend_items i ON i.tenant_id = l.tenant_id AND i.id = l.spend_item_id AND i.nature = $3
+            WHERE l.tenant_id = $1 AND l.contract_id = $2`,
+          [context.tenantId, sourceId, nature],
+        );
+        await assertLinesEditable(
+          context.manager,
+          existing.map((row) => row.id).filter((id) => !targetIds.includes(id)),
+        );
         await context.manager.query(
           `DELETE FROM contract_spend_items l USING spend_items i
             WHERE l.tenant_id = $1 AND l.contract_id = $2

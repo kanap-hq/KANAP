@@ -208,6 +208,8 @@ export async function replaceContractRelations(
   let removedCount = removed.length;
   if (removed.length) {
     if (set === 'budget_lines') {
+      // Deleting a link is a write on its line too: a read-only line refuses it (the link trigger).
+      await assertLinesEditable(manager, removed);
       // Only the links to the lines the person reads: the join is filtered by the line policy.
       const [row]: Array<{ n: number }> = await manager.query(
         `WITH removed AS (

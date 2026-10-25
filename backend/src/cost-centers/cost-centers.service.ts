@@ -104,7 +104,7 @@ function usageText(usage: CostCenterUsage): string {
   if (usage.opex > 0) parts.push(plural(usage.opex, 'OPEX line', 'OPEX lines'));
   if (usage.capex > 0) parts.push(plural(usage.capex, 'CAPEX line', 'CAPEX lines'));
   if (usage.contracts > 0) parts.push(plural(usage.contracts, 'contract', 'contracts'));
-  return parts.join(' and ');
+  return parts.length <= 1 ? (parts[0] ?? '') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
 const usedByLines = (usage: CostCenterUsage | undefined): usage is CostCenterUsage =>
