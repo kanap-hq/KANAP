@@ -897,6 +897,7 @@
           "assigneeMissing": "Assigné manquant",
           "noClassification": "Aucune classification définie.",
           "projectLevel": "Niveau projet",
+          "requestorMissing": "Demandeur manquant",
           "standaloneTask": "Tâche autonome",
           "unknown": "Inconnu",
           "relatedTypes": {

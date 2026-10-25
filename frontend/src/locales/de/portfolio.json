@@ -897,6 +897,7 @@
           "assigneeMissing": "Zuständiger fehlt",
           "noClassification": "Keine Klassifizierung festgelegt.",
           "projectLevel": "Projektebene",
+          "requestorMissing": "Antragsteller fehlt",
           "standaloneTask": "Eigenständige Aufgabe",
           "unknown": "Unbekannt",
           "relatedTypes": {

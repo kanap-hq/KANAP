@@ -897,6 +897,7 @@
           "assigneeMissing": "Assignee missing",
           "noClassification": "No classification set.",
           "projectLevel": "Project-level",
+          "requestorMissing": "Requestor missing",
           "standaloneTask": "Standalone task",
           "unknown": "Unknown",
           "relatedTypes": {
