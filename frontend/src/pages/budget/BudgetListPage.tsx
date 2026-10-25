@@ -82,6 +82,8 @@ type SummaryRow = {
   latest_task?: { title?: string | null } | null;
   latest_contract_id?: string | null;
   latest_contract_name?: string | null;
+  /** A limited person cannot read the contract: no id, no name, the label alone (spec §5.4). */
+  contract_hidden?: boolean;
   allocation_method_label?: string | null;
   paying_company_name?: string | null;
   account_display?: string | null;
@@ -538,7 +540,7 @@ function BudgetListPageView() {
     {
       colId: 'contract_name',
       headerName: t('opex.columns.contract'),
-      valueGetter: (p) => p.data?.latest_contract_name || '',
+      valueGetter: (p) => (p.data?.contract_hidden ? t('contracts.outsideYourAccess') : p.data?.latest_contract_name || ''),
       width: 200,
       cellRenderer: (params: any) => (
         <LinkCellRenderer

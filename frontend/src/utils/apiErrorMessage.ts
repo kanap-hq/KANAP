@@ -76,6 +76,10 @@ const DATA_ACCESS_NO_LONGER_AVAILABLE = /^(\S+) is no longer available since the
  * project's and request's).
  */
 const DATA_ACCESS_HIDDEN_LINES = /^This (application|asset|technology|project|request) is linked to (\d+) lines? outside your access\.$/;
+/** `This application is linked to 2 contracts outside your access.` (lot 5, contracts counted too). */
+const DATA_ACCESS_HIDDEN_CONTRACTS = /^This (application|asset|technology) is linked to (\d+) contracts? outside your access\.$/;
+/** `This application is linked to 1 line and 2 contracts outside your access.` */
+const DATA_ACCESS_HIDDEN_LINKS = /^This (application|asset|technology) is linked to (\d+) lines? and (\d+) contracts? outside your access\.$/;
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -90,6 +94,17 @@ export function dataAccessSentence(message: string, t: Translate): string | null
   if (readOnly) return t('errors:dataAccess.readOnlyRef', { ref: readOnly[1], defaultValue: message });
   const gone = DATA_ACCESS_NO_LONGER_AVAILABLE.exec(message);
   if (gone) return t('errors:dataAccess.noLongerAvailable', { ref: gone[1], defaultValue: message });
+  const both = DATA_ACCESS_HIDDEN_LINKS.exec(message);
+  if (both) {
+    const owner = both[1].toUpperCase();
+    return t(`errors:${owner}_HIDDEN_LINKS`, {
+      lines: t('errors:hiddenLinks.line', { count: Number(both[2]) }),
+      contracts: t('errors:hiddenLinks.contract', { count: Number(both[3]) }),
+      defaultValue: message,
+    });
+  }
+  const contracts = DATA_ACCESS_HIDDEN_CONTRACTS.exec(message);
+  if (contracts) return t(`errors:${contracts[1].toUpperCase()}_HIDDEN_CONTRACTS`, { count: Number(contracts[2]), defaultValue: message });
   const hidden = DATA_ACCESS_HIDDEN_LINES.exec(message);
   if (hidden) return t(`errors:${hidden[1].toUpperCase()}_HIDDEN_LINES`, { count: Number(hidden[2]), defaultValue: message });
   return null;
