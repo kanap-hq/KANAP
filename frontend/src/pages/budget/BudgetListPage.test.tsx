@@ -685,6 +685,20 @@ describe('BudgetListPage', () => {
     expect(column('latest_task_text')?.defaultHidden).toBeFalsy();
   });
 
+  it('shows a contract outside the access by its label alone, without a link', async () => {
+    await renderPage();
+    const contract = column('contract_name')!;
+    expect(contract.valueGetter?.({ data: { contract_hidden: true, latest_contract_name: null, latest_contract_id: null } }))
+      .toBe('contracts.outsideYourAccess');
+    const { container } = render(
+      <MemoryRouter>
+        {contract.cellRenderer!({ data: { id: 'b-1', contract_hidden: true }, value: 'contracts.outsideYourAccess' })}
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('contracts.outsideYourAccess')).toBeInTheDocument();
+    expect(container.querySelector('a')).toBeNull();
+  });
+
   it('filters the allocation column with the values the server lists', async () => {
     await renderPage();
     const allocation = column('allocation_label');
