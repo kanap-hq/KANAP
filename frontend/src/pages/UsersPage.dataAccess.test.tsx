@@ -20,7 +20,13 @@ const grid = vi.hoisted(() => ({
     email: 'marta@example.test',
     status: 'enabled',
     roles: [{ id: 'r-1', name: 'Budget member' }],
-    data_access: { mode: 'limited', nodes: ['Alpha Spain', ''] },
+    data_access: {
+      mode: 'limited',
+      nodes: [
+        { type: 'company', name: 'Alpha Spain' },
+        { type: 'cost_center', name: 'Infrastructure' },
+      ],
+    },
   },
 }));
 const get = vi.hoisted(() => vi.fn());
@@ -99,9 +105,22 @@ describe('UsersPage data access', () => {
     const column = grid.props!.columns.find((current: any) => current.colId === 'data_access');
     expect(column).toBeTruthy();
     expect(column.headerName).toBe('users.columns.dataAccess');
-    expect(column.valueGetter({ data: ROW })).toBe('admin:dataAccess.allData');
+    expect(column.valueGetter({ data: ROW })).toBe('Alpha Spain, Infrastructure');
+  });
+
+  it('writes All data, Everything and None in the Access column', () => {
+    renderPage();
+    act(() => grid.props!.onListAnswer({ data_access_any_limited: true }));
+    const column = grid.props!.columns.find((current: any) => current.colId === 'data_access');
+    // The mode "All data" stays for the mode only.
+    expect(column.valueGetter({ data: { data_access: { mode: 'all', nodes: [] } } }))
+      .toBe('admin:dataAccess.allData');
+    // A limited person holding the all node sees "Everything".
+    expect(column.valueGetter({ data: { data_access: { mode: 'limited', nodes: [{ type: 'all', name: null }] } } }))
+      .toBe('admin:dataAccess.types.everything');
+    // A limited person with no node sees "None", with no helper text.
     expect(column.valueGetter({ data: { data_access: { mode: 'limited', nodes: [] } } }))
-      .toBe('admin:dataAccess.limited');
+      .toBe('admin:dataAccess.none');
   });
 
   it('opens the dialog from the row menu', async () => {

@@ -129,17 +129,27 @@ export function accessLevelLabel(access: DataAccessLevel, t: TFunction): string 
   return t(`admin:dataAccess.access.${access}`);
 }
 
-/** The users list column: "All data", the node names joined by commas, "Limited" for an empty set. */
-export function userAccessColumnText(
-  dataAccess: { mode: 'all' | 'limited'; nodes: string[] } | null | undefined,
-  t: TFunction,
-): string {
+/**
+ * The users list field (spec §7.4): the server sends the node type and its name, never a label;
+ * `name` is null for an `all` node.
+ */
+export type UsersListAccess = {
+  mode: 'all' | 'limited';
+  nodes: Array<{ type: DataAccessNodeType; name: string | null }>;
+};
+
+/**
+ * The users list column: "All data" for the mode, the node names ("Everything" for an `all` node)
+ * joined by commas, "None" for a limited person with no node.
+ */
+export function userAccessColumnText(dataAccess: UsersListAccess | null | undefined, t: TFunction): string {
   if (!dataAccess) return '';
   if (dataAccess.mode !== 'limited') return t('admin:dataAccess.allData');
-  // A limited person holding the "all" node sees everything: the route gives the empty string.
-  if (dataAccess.nodes.includes('')) return t('admin:dataAccess.allData');
-  if (dataAccess.nodes.length === 0) return t('admin:dataAccess.limited');
-  return dataAccess.nodes.join(', ');
+  if (dataAccess.nodes.length === 0) return t('admin:dataAccess.none');
+  return dataAccess.nodes
+    .map((node) => (node.type === 'all' ? everythingLabel(t) : node.name ?? ''))
+    .filter(Boolean)
+    .join(', ');
 }
 
 /** The plain words of what keeps the function unavailable (spec §7.3: no backend words). */

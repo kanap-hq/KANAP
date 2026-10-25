@@ -1781,7 +1781,7 @@
     "dialogTitle": "Accès aux données : {{name}}",
     "allData": "Toutes les données",
     "limitedTo": "Limité à",
-    "limited": "Limité",
+    "none": "Aucun",
     "access": {
       "read": "Lecture",
       "edit": "Saisie"

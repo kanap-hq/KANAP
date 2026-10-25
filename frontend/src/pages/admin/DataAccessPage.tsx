@@ -209,7 +209,7 @@ function DataAccessAdminContent() {
                     <TableCell>
                       {person.nodes.length === 0 ? (
                         <Typography sx={{ fontSize: 12.5, color: 'kanap.text.tertiary' }}>
-                          {t('admin:dataAccess.limited')}
+                          {t('admin:dataAccess.none')}
                         </Typography>
                       ) : (
                         <Stack spacing={0.25}>

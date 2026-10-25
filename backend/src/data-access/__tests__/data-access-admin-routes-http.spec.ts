@@ -901,10 +901,20 @@ async function testUsersList(app: INestApplication) {
   assert.equal(list.body.data_access_any_limited, true);
   const byId = new Map<string, any>(list.body.items.map((item: any) => [item.id, item]));
   const marta = byId.get(s.persons.marta);
-  assert.deepEqual(marta.data_access, { mode: 'limited', nodes: [`Alpha Espagne ${s.tenantId.slice(0, 8)}`] });
+  assert.deepEqual(marta.data_access, {
+    mode: 'limited',
+    nodes: [{ type: 'company', name: `Alpha Espagne ${s.tenantId.slice(0, 8)}` }],
+  });
   assert.deepEqual(byId.get(s.persons.ulla).data_access, { mode: 'all', nodes: [] });
   assert.deepEqual(byId.get(s.persons.admin).data_access, { mode: 'all', nodes: [] });
-  assert.deepEqual(byId.get(s.persons.rita).data_access.nodes, ['INF', 'INF-FR']);
+  assert.deepEqual(byId.get(s.persons.rita).data_access.nodes, [
+    { type: 'cost_center', name: 'INF' },
+    { type: 'cost_center', name: 'INF-FR' },
+  ]);
+  // An `all` node carries its type and a null name: the screen writes "Everything".
+  assert.deepEqual(byId.get(s.persons.claire).data_access, { mode: 'limited', nodes: [{ type: 'all', name: null }] });
+  // A limited person with no node carries an empty list: the screen writes "None".
+  assert.deepEqual(byId.get(s.persons.nina).data_access, { mode: 'limited', nodes: [] });
   const emptyPage = await call(app, 'GET', 'users?limit=100&q=zzzz-no-such-user', extra.manager);
   assert.equal(emptyPage.status, 200, emptyPage.text);
   assert.equal(emptyPage.body.items.length, 0);

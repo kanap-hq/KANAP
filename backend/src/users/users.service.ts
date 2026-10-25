@@ -429,7 +429,10 @@ export class UsersService {
     let rolesByUser: Map<string, Array<{ id: string; name: string | null }>> | undefined;
     let rolesWithPerms: Set<string> | undefined;
     let adminRoleIds: Set<string> | undefined;
-    let dataAccessByUser: Map<string, { mode: 'all' | 'limited'; nodes: string[] }> | undefined;
+    let dataAccessByUser: Map<string, {
+      mode: 'all' | 'limited';
+      nodes: Array<{ type: 'all' | 'company' | 'cost_center'; name: string | null }>;
+    }> | undefined;
     let dataAccessAnyLimited: boolean | undefined;
     if (opts?.adminView && items.length > 0) {
       const mg = opts?.manager ?? repo.manager;
@@ -477,13 +480,14 @@ export class UsersService {
                      lower(co.name), lower(cc.code), n.id`,
           [pageIds],
         );
-        const names = new Map<string, string[]>();
+        const names = new Map<string, Array<{ type: 'all' | 'company' | 'cost_center'; name: string | null }>>();
         for (const row of nodeRows) {
           const list = names.get(row.user_id) ?? [];
-          if (row.node_type === 'company') list.push(row.company_name ?? '');
-          // An `all` node has no name: the empty string, for the screen's "All data" label.
-          else if (row.node_type === 'cost_center') list.push(row.cost_center_name ?? row.cost_center_code ?? '');
-          else list.push('');
+          // The server sends the node type and its name, never a label: the screen writes
+          // "Everything" for an `all` node (spec §7.4). `name` is null for `all`.
+          if (row.node_type === 'company') list.push({ type: 'company', name: row.company_name ?? null });
+          else if (row.node_type === 'cost_center') list.push({ type: 'cost_center', name: row.cost_center_name ?? row.cost_center_code ?? null });
+          else list.push({ type: 'all', name: null });
           names.set(row.user_id, list);
         }
         dataAccessByUser = new Map();

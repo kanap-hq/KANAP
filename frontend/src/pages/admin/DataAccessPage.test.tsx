@@ -94,6 +94,36 @@ describe('DataAccessPage', () => {
     expect(decodeURIComponent(link.getAttribute('href') ?? '')).toContain('"values":[null]');
   });
 
+  it('shows Everything for an all node and None for a limited person without node', async () => {
+    get.mockResolvedValue({
+      data: {
+        ...OVERVIEW,
+        persons: [
+          {
+            id: 'u-all',
+            name: 'Claire Dubois',
+            roles: ['Budget member'],
+            nodes: [{ type: 'all', id: null, name: null, access: 'edit' }],
+            updated_at: null,
+            updated_by_name: null,
+          },
+          {
+            id: 'u-none',
+            name: 'Nina Petit',
+            roles: ['Budget member'],
+            nodes: [],
+            updated_at: null,
+            updated_by_name: null,
+          },
+        ],
+      },
+    });
+    renderPage();
+    expect(await screen.findByText('admin:dataAccess.types.everything')).toBeInTheDocument();
+    expect(screen.getByText('admin:dataAccess.none')).toBeInTheDocument();
+    expect(screen.queryByText('admin:dataAccess.limited')).toBeNull();
+  });
+
   it('opens the data access dialog from a row', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Marta Ruiz' }));

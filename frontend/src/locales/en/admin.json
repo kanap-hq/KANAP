@@ -1781,7 +1781,7 @@
     "dialogTitle": "Data access: {{name}}",
     "allData": "All data",
     "limitedTo": "Limited to",
-    "limited": "Limited",
+    "none": "None",
     "access": {
       "read": "Read",
       "edit": "Edit"
