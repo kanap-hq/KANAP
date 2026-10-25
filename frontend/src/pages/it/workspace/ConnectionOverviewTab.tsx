@@ -28,6 +28,7 @@ const MarkdownEditor = React.lazy(() => import('../../../components/MarkdownEdit
 import ConnectionEndpointPicker from './ConnectionEndpointPicker';
 import ConnectionLinkInterfacesDialog from './ConnectionLinkInterfacesDialog';
 import ConnectionProtocolsTable, { type ConnectionProtocol } from './ConnectionProtocolsTable';
+import type { ServerOption } from '../../../components/fields/serverOptionRender';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { legTypeLabel } from '../../../utils/interfaceLegType';
@@ -35,12 +36,6 @@ import { classificationText } from '../../../utils/applicationClassification';
 
 const NOTES_DEBOUNCE_MS = 900;
 
-
-type AssetSummary = {
-  id: string;
-  name: string;
-  asset_reference?: string | null;
-};
 
 type ConnectionTypeOption = { code: string; label: string; typicalPorts: string };
 
@@ -72,7 +67,7 @@ type Props = {
   source: { asset_id: string | null; entity_code: string | null };
   destination: { asset_id: string | null; entity_code: string | null };
   multiServerIds: string[];
-  assetMap: Record<string, AssetSummary>;
+  assetMap: Record<string, ServerOption>;
   protocols: ConnectionProtocol[];
   riskMode: 'manual' | 'derived';
   linkedInterfaces: LinkedInterfaceRow[];
@@ -83,6 +78,7 @@ type Props = {
   onEndpointChange: (
     side: 'source' | 'destination',
     next: { asset_id: string | null; entity_code: string | null },
+    asset?: ServerOption,
   ) => void;
   onMultiServerChange: (nextIds: string[]) => void;
   onProtocolsChange: (next: ConnectionProtocol[]) => void;
@@ -148,7 +144,7 @@ export default function ConnectionOverviewTab({
   const baselineRef = React.useRef(initialDescription);
 
   const [multiSearch, setMultiSearch] = React.useState('');
-  const [multiOptions, setMultiOptions] = React.useState<AssetSummary[]>([]);
+  const [multiOptions, setMultiOptions] = React.useState<ServerOption[]>([]);
   const [multiLoading, setMultiLoading] = React.useState(false);
 
   const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
@@ -183,7 +179,7 @@ export default function ConnectionOverviewTab({
     const handle = setTimeout(async () => {
       setMultiLoading(true);
       try {
-        const res = await api.get<{ items: AssetSummary[] }>('/assets', {
+        const res = await api.get<{ items: ServerOption[] }>('/assets', {
           params: { q: multiSearch || undefined, limit: 50, sort: 'name:ASC' },
         });
         if (!cancelled) setMultiOptions(res.data.items || []);
@@ -328,17 +324,15 @@ export default function ConnectionOverviewTab({
               label={t('workspace.connection.layers.source')}
               value={source}
               disabled={!canManage}
-              initialAssetName={source.asset_id ? assetMap[source.asset_id]?.name || null : null}
-              initialAssetReference={source.asset_id ? assetMap[source.asset_id]?.asset_reference || null : null}
-              onChange={(next) => onEndpointChange('source', next)}
+              initialAsset={source.asset_id ? assetMap[source.asset_id] : null}
+              onChange={(next, asset) => onEndpointChange('source', next, asset)}
             />
             <ConnectionEndpointPicker
               label={t('workspace.connection.layers.destination')}
               value={destination}
               disabled={!canManage}
-              initialAssetName={destination.asset_id ? assetMap[destination.asset_id]?.name || null : null}
-              initialAssetReference={destination.asset_id ? assetMap[destination.asset_id]?.asset_reference || null : null}
-              onChange={(next) => onEndpointChange('destination', next)}
+              initialAsset={destination.asset_id ? assetMap[destination.asset_id] : null}
+              onChange={(next, asset) => onEndpointChange('destination', next, asset)}
             />
           </Box>
         ) : (

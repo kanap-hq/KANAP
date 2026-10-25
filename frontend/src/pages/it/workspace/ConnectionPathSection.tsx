@@ -19,6 +19,8 @@ import api from '../../../api';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import ConnectionHopEquipmentPicker from './ConnectionHopEquipmentPicker';
 import ConnectionProtocolsTable, { type ConnectionProtocol } from './ConnectionProtocolsTable';
+import ClusterMark from '../../../components/workspace/ClusterMark';
+import type { ServerOption } from '../../../components/fields/serverOptionRender';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +31,7 @@ export type ConnectionPathHop = {
   function_code: string | null;
   equipment_asset_id: string | null;
   equipment_entity_code: string | null;
+  equipment_asset?: ServerOption | null;
   protocol_codes: string[];
   port_override: string | null;
   notes: string | null;
@@ -41,10 +44,11 @@ type Props = {
   defaultProtocolCodes?: string[];
   /** Connection-level protocols + ports (defined in Overview), shown read-only at the destination. */
   protocols?: ConnectionProtocol[];
-  assetMap?: Record<string, { name: string; reference?: string | null }>;
   /** Read-only echo of the connection's source/destination for context. */
   sourceLabel: string;
   destinationLabel: string;
+  sourceIsCluster?: boolean;
+  destinationIsCluster?: boolean;
   onChange: (next: ConnectionPathHop[]) => void;
 };
 
@@ -57,9 +61,10 @@ export default function ConnectionPathSection({
   canManage,
   defaultProtocolCodes = [],
   protocols = [],
-  assetMap = {},
   sourceLabel,
   destinationLabel,
+  sourceIsCluster = false,
+  destinationIsCluster = false,
   onChange,
 }: Props) {
   const { t } = useTranslation(['it', 'common']);
@@ -213,7 +218,7 @@ export default function ConnectionPathSection({
       .join(', ');
   };
 
-  const renderEndpointCard = (title: string, value: string) => (
+  const renderEndpointCard = (title: string, value: string, isCluster = false) => (
     <Box
       sx={(theme) => ({
         border: `1px dashed ${theme.palette.kanap.border.soft}`,
@@ -227,6 +232,7 @@ export default function ConnectionPathSection({
           {title}
         </Typography>
         <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{value}</Typography>
+        {isCluster && <ClusterMark />}
       </Stack>
     </Box>
   );
@@ -274,7 +280,7 @@ export default function ConnectionPathSection({
       )}
 
       <Box sx={{ maxWidth: 760 }}>
-        {renderEndpointCard('Source', sourceLabel)}
+        {renderEndpointCard('Source', sourceLabel, sourceIsCluster)}
         {renderConnector(connectorLineBefore(0))}
         {sortedHops.map((hop, idx) => {
           const isFirst = idx === 0;
@@ -376,13 +382,13 @@ export default function ConnectionPathSection({
 
                 <ConnectionHopEquipmentPicker
                   value={{ asset_id: hop.equipment_asset_id, entity_code: hop.equipment_entity_code }}
-                  initialAssetName={hop.equipment_asset_id ? assetMap[hop.equipment_asset_id]?.name || null : null}
-                  initialAssetReference={hop.equipment_asset_id ? assetMap[hop.equipment_asset_id]?.reference || null : null}
+                  initialAsset={hop.equipment_asset}
                   disabled={!canManage}
-                  onChange={(next) => {
+                  onChange={(next, asset) => {
                     updateLocal(hop.id, {
                       equipment_asset_id: next.asset_id,
                       equipment_entity_code: next.entity_code,
+                      equipment_asset: asset ?? null,
                     });
                     void callPatch(hop.id, {
                       equipment_asset_id: next.asset_id,
@@ -454,7 +460,7 @@ export default function ConnectionPathSection({
           );
         })}
         {sortedHops.length > 0 && renderConnector(connectorAfterDestination())}
-        {renderEndpointCard('Destination', destinationLabel)}
+        {renderEndpointCard('Destination', destinationLabel, destinationIsCluster)}
 
         {protocols.length > 0 && (
           <Box sx={{ mt: 1.25, pl: 1.5 }}>

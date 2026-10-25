@@ -23,6 +23,7 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { drawerSelectSx, drawerMenuItemSx, drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import type { ConnectionPathHop } from './workspace/ConnectionPathSection';
+import type { ServerOption } from '../../components/fields/serverOptionRender';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
@@ -48,8 +49,6 @@ type LinkedInterfaceRow = {
   interface_contains_pii?: boolean;
 };
 
-type AssetSummary = { id: string; name: string; asset_reference?: string | null };
-
 type ConnectionTypeOption = { code: string; label: string };
 
 type CreateConnectionForm = {
@@ -58,7 +57,7 @@ type CreateConnectionForm = {
   topology: 'server_to_server' | 'multi_server';
   source: EndpointValue;
   destination: EndpointValue;
-  servers: AssetSummary[];
+  servers: ServerOption[];
   protocolCodes: string[];
   lifecycle: string;
   criticality: string;
@@ -76,9 +75,9 @@ type ConnectionDetail = {
   source_entity_code: string | null;
   destination_asset_id: string | null;
   destination_entity_code: string | null;
-  source_server: AssetSummary | null;
-  destination_server: AssetSummary | null;
-  servers: AssetSummary[];
+  source_server: ServerOption | null;
+  destination_server: ServerOption | null;
+  servers: ServerOption[];
   protocol_codes: string[];
   protocols: ConnectionProtocol[];
   lifecycle: string;
@@ -179,7 +178,7 @@ export default function ConnectionWorkspacePage() {
 
   const [createForm, setCreateForm] = React.useState<CreateConnectionForm>(() => createInitialForm());
   const [createMultiSearch, setCreateMultiSearch] = React.useState('');
-  const [createMultiOptions, setCreateMultiOptions] = React.useState<AssetSummary[]>([]);
+  const [createMultiOptions, setCreateMultiOptions] = React.useState<ServerOption[]>([]);
   const [createMultiLoading, setCreateMultiLoading] = React.useState(false);
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
@@ -233,7 +232,7 @@ export default function ConnectionWorkspacePage() {
     const handle = setTimeout(async () => {
       setCreateMultiLoading(true);
       try {
-        const res = await api.get<{ items: AssetSummary[] }>('/assets', {
+        const res = await api.get<{ items: ServerOption[] }>('/assets', {
           params: { q: createMultiSearch || undefined, limit: 50, sort: 'name:ASC' },
         });
         if (!cancelled) setCreateMultiOptions(res.data.items || []);
@@ -581,7 +580,7 @@ export default function ConnectionWorkspacePage() {
   const title = isCreate ? createForm.name : data?.name || '';
 
   const assetMap = React.useMemo(() => {
-    const map: Record<string, AssetSummary> = {};
+    const map: Record<string, ServerOption> = {};
     if (!data) return map;
     if (data.source_server) map[data.source_server.id] = data.source_server;
     if (data.destination_server) map[data.destination_server.id] = data.destination_server;
@@ -592,7 +591,7 @@ export default function ConnectionWorkspacePage() {
   const endpointsLabel = (() => {
     if (!data) return t('workspace.connection.endpointsMissing');
     if (data.topology === 'server_to_server') {
-      const fmt = (assetId: string | null, entityCode: string | null, asset: AssetSummary | null) => {
+      const fmt = (assetId: string | null, entityCode: string | null, asset: ServerOption | null) => {
         if (assetId && asset) return asset.asset_reference || asset.name;
         if (assetId) return t('workspace.connection.server');
         if (entityCode) return labelFor('entity', entityCode);
@@ -985,9 +984,8 @@ export default function ConnectionWorkspacePage() {
             protocols={
               data.protocols ?? (data.protocol_codes || []).map((code) => ({ code, port_override: null }))
             }
-            assetMap={Object.fromEntries(
-              Object.entries(assetMap).map(([id, a]) => [id, { name: a.name, reference: a.asset_reference || null }]),
-            )}
+            sourceIsCluster={!!data.source_server?.is_cluster}
+            destinationIsCluster={!!data.destination_server?.is_cluster}
             sourceLabel={(() => {
               if (data.source_asset_id && data.source_server) return data.source_server.asset_reference ? `${data.source_server.asset_reference} · ${data.source_server.name}` : data.source_server.name;
               if (data.source_entity_code) return labelFor('entity', data.source_entity_code);
