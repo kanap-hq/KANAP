@@ -40,6 +40,8 @@ export const CONTACT_USAGE_QUERIES: readonly UsageQuery[] = [
            ORDER BY active DESC, si.item_number
            LIMIT $3`,
   },
+  // The contact delete routes are reserved to unscoped persons (`@ReservedToUnscopedDataAccess`);
+  // this panel only lists the contracts the contracts policy lets the caller read.
   {
     type: 'contracts',
     resource: 'contracts',

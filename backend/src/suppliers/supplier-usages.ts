@@ -18,6 +18,9 @@ export const SUPPLIER_USAGE_QUERIES: readonly UsageQuery[] = [
            ORDER BY active DESC, si.item_number
            LIMIT $3`,
   },
+  // Read by the supplier delete check and the Used-by panel. The delete routes are reserved to
+  // unscoped persons (`@ReservedToUnscopedDataAccess`), and a limited person's panel only sees the
+  // contracts the policy lets them read: the count never names a hidden contract (lot 5).
   {
     type: 'contracts',
     resource: 'contracts',
