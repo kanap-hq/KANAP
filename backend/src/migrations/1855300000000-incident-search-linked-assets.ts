@@ -29,6 +29,11 @@ const LOG_PREFIX = '[Migration] IncidentSearchLinkedAssets:';
  * reindex rewrites the same entries. down() restores the 1853490000000 body (with the
  * SECURITY DEFINER and search_path of 1854500000000), drops the triggers and functions,
  * and reindexes so the entries lose the linked assets' text.
+ *
+ * Consequence for later migrations: writing `assets.name`, `assets.hostname`,
+ * `assets.fqdn` or `incident_assets` fires these triggers, which write `search_index`.
+ * Such a migration runs per tenant with `app.current_tenant` set (as the reindex above),
+ * or disables the trigger around a global repair.
  */
 
 /** Linked assets of the incident, as one text for weight C. NULL when it has none. */
