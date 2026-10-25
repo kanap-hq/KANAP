@@ -8,10 +8,11 @@ import AssetConnectionsSection, { type ServerConnectionRow } from './AssetConnec
 
 const apiGet = vi.hoisted(() => vi.fn());
 const t = vi.hoisted(() => (key: string) => key);
+const settings = vi.hoisted(() => ({ connectionTypes: [] as Array<{ code: string; label: string }> }));
 vi.mock('../../../api', () => ({ default: { get: apiGet } }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t }) }));
 vi.mock('../../../hooks/useItOpsEnumOptions', () => ({
-  default: () => ({ labelFor: (_field: string, code: string) => code }),
+  default: () => ({ labelFor: (_field: string, code: string) => code, settings }),
 }));
 
 const CLUSTER = { id: 'cl-1', name: 'PAR-SQL-CL01' };
@@ -55,6 +56,7 @@ const clusterRole = (extra: Record<string, unknown> = {}) => ({
 describe('AssetConnectionsSection', () => {
   beforeEach(() => {
     apiGet.mockReset();
+    settings.connectionTypes = [];
   });
 
   it('names the cluster an inherited connection goes through, with a link to it', async () => {
@@ -117,6 +119,29 @@ describe('AssetConnectionsSection', () => {
     expect(line.textContent).toContain('PAR-SQL-CL01');
     expect(line.querySelector('[role="img"][aria-label="pages.assets.columns.cluster"]')).not.toBeNull();
     expect(screen.queryByText('-')).toBeNull();
+  });
+
+  it('keeps the comma tight after a cluster name in the server list', async () => {
+    renderSection([row({
+      topology: 'multi_server',
+      source_label: null,
+      destination_label: null,
+      servers: [
+        { id: 'cl-1', name: 'QA-KR3-CL', is_cluster: true },
+        { id: 'srv-1', name: 'QA-KR3-SRV', is_cluster: false },
+      ],
+    })]);
+    const line = (await screen.findByText('CONN-1')).closest('tr')!;
+    expect(line.textContent).toContain('QA-KR3-CL, QA-KR3-SRV');
+    expect(line.textContent).not.toContain('QA-KR3-CL ,');
+  });
+
+  it('shows a protocol by its type in the reader\'s language', async () => {
+    settings.connectionTypes = [{ code: 'tcp', label: 'TCP (personnalisé)' }];
+    renderSection([row({ protocols: ['tcp'], protocol_labels: ['TCP (custom)'] })]);
+    const line = (await screen.findByText('CONN-1')).closest('tr')!;
+    expect(line.textContent).toContain('TCP (personnalisé)');
+    expect(line.textContent).not.toContain('TCP (custom)');
   });
 
   it('adds no second line to a connection the asset carries directly', async () => {

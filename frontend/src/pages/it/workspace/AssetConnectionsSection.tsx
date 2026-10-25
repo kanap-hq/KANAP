@@ -40,6 +40,7 @@ export type ServerConnectionRow = {
   name: string;
   topology: 'server_to_server' | 'multi_server';
   lifecycle: string;
+  protocols?: string[];
   protocol_labels?: string[];
   source_label?: string | null;
   destination_label?: string | null;
@@ -92,7 +93,7 @@ const denseTableSx = {
  */
 export default function AssetConnectionsSection({ assetId }: { assetId: string }) {
   const { t } = useTranslation(['it', 'common']);
-  const { labelFor } = useItOpsEnumOptions();
+  const { labelFor, settings } = useItOpsEnumOptions();
   const navigate = useNavigate();
   const [connections, setConnections] = React.useState<ServerConnectionRow[]>([]);
   const [error, setError] = React.useState<string | null>(null);
@@ -130,6 +131,18 @@ export default function AssetConnectionsSection({ assetId }: { assetId: string }
     if (value === 'multi_server') return t('enums.topology.multiServer');
     return value || '';
   }, [t]);
+
+  // The protocol's type by its code, in the reader's language: the server's stored labels stay English.
+  const protocolLabel = React.useCallback((code: string) => {
+    const type = (settings?.connectionTypes || []).find((candidate: any) => candidate.code === code);
+    return type?.label || code;
+  }, [settings?.connectionTypes]);
+
+  const protocolLabels = (connection: ServerConnectionRow) => {
+    const codes = connection.protocols ?? [];
+    if (codes.length > 0) return codes.map(protocolLabel);
+    return connection.protocol_labels ?? [];
+  };
 
   const lineUnderName = (connection: ServerConnectionRow) => {
     const roles = connection.asset_roles ?? [];
@@ -183,7 +196,7 @@ export default function AssetConnectionsSection({ assetId }: { assetId: string }
       <React.Fragment key={server.id}>
         {index > 0 && ', '}
         {server.name}
-        {server.is_cluster ? <> <ClusterMark /></> : null}
+        {server.is_cluster ? <Box component="span" sx={{ ml: 0.5 }}><ClusterMark /></Box> : null}
       </React.Fragment>
     ));
   };
@@ -228,8 +241,8 @@ export default function AssetConnectionsSection({ assetId }: { assetId: string }
             <TableCell>{topologyLabel(connection.topology)}</TableCell>
             <TableCell>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 0.5 }}>
-                {(connection.protocol_labels || []).map((protocol) => (
-                  <Box key={protocol} component="span" sx={{ color: 'text.secondary', fontSize: '0.8125rem' }}>{protocol}</Box>
+                {protocolLabels(connection).map((protocol, index) => (
+                  <Box key={`${protocol}-${index}`} component="span" sx={{ color: 'text.secondary', fontSize: '0.8125rem' }}>{protocol}</Box>
                 ))}
               </Box>
             </TableCell>
