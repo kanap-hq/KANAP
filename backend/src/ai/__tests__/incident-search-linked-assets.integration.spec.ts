@@ -75,13 +75,15 @@ async function seedUser(
 async function seedAsset(
   runner: QueryRunner,
   tenantId: string,
-  values: { name: string; hostname: string | null; fqdn: string | null },
+  values: { name: string; reference?: string | null; hostname: string | null; fqdn: string | null },
 ): Promise<string> {
   const assetId = randomUUID();
   await runner.query(
-    `INSERT INTO assets (id, tenant_id, name, kind, environment, hostname, fqdn, status, created_at, updated_at)
-     VALUES ($1, $2, $3, 'server', 'qa', $4, $5, 'active', now(), now())`,
-    [assetId, tenantId, values.name, values.hostname, values.fqdn],
+    `INSERT INTO assets (
+       id, tenant_id, name, asset_reference, kind, environment, hostname, fqdn, status, created_at, updated_at
+     )
+     VALUES ($1, $2, $3, $4, 'server', 'qa', $5, $6, 'active', now(), now())`,
+    [assetId, tenantId, values.name, values.reference ?? null, values.hostname, values.fqdn],
   );
   return assetId;
 }
@@ -201,6 +203,7 @@ async function linkedAssetText() {
 
     const assetId = await seedAsset(runner, tenantId, {
       name: 'Serveur QA Alpha',
+      reference: 'AST-4711',
       hostname: 'QA-HOST-01',
       fqdn: 'qa-host-01.example.test',
     });
@@ -222,6 +225,11 @@ async function linkedAssetText() {
       true,
       'the asset name is in the incident vector',
     );
+    assert.equal(
+      await vectorMatches(runner, tenantId, incidentId, 'AST-4711'),
+      true,
+      'the asset reference is in the incident vector',
+    );
 
     assert.equal(
       (await searchIncidentIds(service, runner, tenantId, userId, 'QA-HOST-01')).includes(incidentId),
@@ -238,6 +246,32 @@ async function linkedAssetText() {
       true,
       'the global search finds the incident by linked asset name',
     );
+    assert.equal(
+      (await searchIncidentIds(service, runner, tenantId, userId, 'AST-4711')).includes(incidentId),
+      true,
+      'the global search finds the incident by linked asset reference',
+    );
+
+    // A reference-only update refreshes the entry: asset_reference is in UPDATE OF.
+    await runner.query(
+      `UPDATE assets SET asset_reference = 'AST-4712' WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, assetId],
+    );
+    assert.equal(
+      await vectorMatches(runner, tenantId, incidentId, 'AST-4711'),
+      false,
+      'the old reference is gone from the vector',
+    );
+    assert.equal(
+      await vectorMatches(runner, tenantId, incidentId, 'AST-4712'),
+      true,
+      'the new reference is in the vector',
+    );
+    assert.equal(
+      (await searchIncidentIds(service, runner, tenantId, userId, 'AST-4712')).includes(incidentId),
+      true,
+      'the global search finds the incident by the new asset reference',
+    );
 
     // Removing the link refreshes the entry and drops the asset text.
     await runner.query(`DELETE FROM incident_assets WHERE tenant_id = $1 AND incident_id = $2`, [tenantId, incidentId]);
@@ -250,6 +284,11 @@ async function linkedAssetText() {
       (await searchIncidentIds(service, runner, tenantId, userId, 'QA-HOST-01')).includes(incidentId),
       false,
       'the incident is no longer found by the removed linked asset',
+    );
+    assert.equal(
+      await vectorMatches(runner, tenantId, incidentId, 'AST-4712'),
+      false,
+      'the removed asset reference is gone from the vector',
     );
 
     // Renaming the asset refreshes the incidents linked to it.
@@ -296,6 +335,11 @@ async function linkedAssetText() {
       (await searchIncidentIds(service, runner, tenantId, userId, 'QA-HOST-02')).includes(incidentId),
       false,
       'the incident is no longer found once the asset is deleted',
+    );
+    assert.equal(
+      await vectorMatches(runner, tenantId, incidentId, 'AST-4712'),
+      false,
+      'the deleted asset reference is gone from the vector',
     );
   });
 }

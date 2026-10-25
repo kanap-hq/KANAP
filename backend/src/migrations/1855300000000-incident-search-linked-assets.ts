@@ -3,21 +3,20 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 const LOG_PREFIX = '[Migration] IncidentSearchLinkedAssets:';
 
 /**
- * Global search finds an incident by the name, hostname or FQDN of its linked assets
- * (report: incidents-avant-article-2026-10-25.md, B1; registry search parity,
- * incidents.service.ts).
+ * Global search finds an incident by the name, reference, hostname or FQDN of its
+ * linked assets (registry search parity, incidents.service.ts).
  *
  * 1. `search_index_refresh_incidents` (body of 1853490000000, with the review document)
- *    adds the linked assets' name, hostname and FQDN at weight C, next to the external
- *    reference and the review body. One correlated `string_agg` over
+ *    adds the linked assets' name, asset reference, hostname and FQDN at weight C, next
+ *    to the external reference and the review body. One correlated `string_agg` over
  *    `incident_assets`/`assets`, both tenants pinned; no row is duplicated.
  * 2. Freshness:
  *    - `incident_assets` INSERT / UPDATE / DELETE: statement triggers with transition
  *      tables (as 1853940000000), one refresh call per tenant with the distinct incident
  *      ids of the statement, never one call per link.
- *    - `assets` UPDATE OF name, hostname, fqdn: one row trigger, one refresh call with
- *      the array of every incident linked to that asset. A statement renaming several
- *      assets refreshes each asset's incidents once.
+ *    - `assets` UPDATE OF name, asset_reference, hostname, fqdn: one row trigger, one
+ *      refresh call with the array of every incident linked to that asset. A statement
+ *      renaming several assets refreshes each asset's incidents once.
  *    Both trigger functions are SECURITY DEFINER with search_path pinned: they maintain
  *    `search_index`, a table derived from data-scoped rows (AGENTS.md, "Multi-tenant
  *    safety").
@@ -30,15 +29,16 @@ const LOG_PREFIX = '[Migration] IncidentSearchLinkedAssets:';
  * SECURITY DEFINER and search_path of 1854500000000), drops the triggers and functions,
  * and reindexes so the entries lose the linked assets' text.
  *
- * Consequence for later migrations: writing `assets.name`, `assets.hostname`,
- * `assets.fqdn` or `incident_assets` fires these triggers, which write `search_index`.
+ * Consequence for later migrations: writing `assets.name`, `assets.asset_reference`,
+ * `assets.hostname`, `assets.fqdn` or `incident_assets` fires these triggers, which write
+ * `search_index`.
  * Such a migration runs per tenant with `app.current_tenant` set (as the reindex above),
  * or disables the trigger around a global repair.
  */
 
 /** Linked assets of the incident, as one text for weight C. NULL when it has none. */
 const INCIDENT_ASSET_TEXT = `(
-        SELECT string_agg(CONCAT_WS(' ', a.name, a.hostname, a.fqdn), ' ' ORDER BY a.id)
+        SELECT string_agg(CONCAT_WS(' ', a.name, a.asset_reference, a.hostname, a.fqdn), ' ' ORDER BY a.id)
         FROM incident_assets ia
         JOIN assets a
           ON a.id = ia.asset_id
@@ -237,6 +237,7 @@ const ASSET_SYNC_FUNCTION = `
     k_incidents uuid[];
   BEGIN
     IF NEW.name IS NOT DISTINCT FROM OLD.name
+       AND NEW.asset_reference IS NOT DISTINCT FROM OLD.asset_reference
        AND NEW.hostname IS NOT DISTINCT FROM OLD.hostname
        AND NEW.fqdn IS NOT DISTINCT FROM OLD.fqdn THEN
       RETURN NULL;
@@ -259,7 +260,7 @@ const ASSET_SYNC_FUNCTION = `
 const ASSET_TRIGGER = `
   DROP TRIGGER IF EXISTS trg_search_index_incident_assets_on_asset ON assets;
   CREATE TRIGGER trg_search_index_incident_assets_on_asset
-  AFTER UPDATE OF name, hostname, fqdn ON assets
+  AFTER UPDATE OF name, asset_reference, hostname, fqdn ON assets
   FOR EACH ROW
   EXECUTE FUNCTION search_index_sync_incident_assets_on_asset();
 `;
