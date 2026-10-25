@@ -1005,6 +1005,13 @@ async function ensureLocations() {
   return locationIdByFixtureCode;
 }
 
+// Notes this fixture wrote before lot C3, replaced on a tenant loaded by an older fixture. A note
+// someone edited by hand is never overwritten.
+const REPLACED_ASSET_NOTES = {
+  'PAR-VSPHERE-CL01': ['vSphere cluster of PAR-ESX-01 and PAR-ESX-02 — HA and DRS'],
+  'PAR-SAN-01': ['NetApp FAS2750 — 50TB usable, primary SAN for all VMs'],
+};
+
 // Assets are created through POST /assets (the CSV import resolves locations by
 // their server-generated reference, which a fixture cannot know upfront).
 async function ensureAssets(locationIdByFixtureCode) {
@@ -1035,10 +1042,18 @@ async function ensureAssets(locationIdByFixtureCode) {
 
   for (const row of readCsv('18-assets.csv')) {
     if (existing.has(row.name)) {
+      const asset = existingAssets.find((item) => item.name === row.name);
+      const replaced = REPLACED_ASSET_NOTES[row.name];
+      if (asset && replaced) {
+        const current = await apiGet(`/assets/${asset.id}`);
+        if (replaced.includes(current?.notes)) {
+          await apiPatch(`/assets/${asset.id}`, { notes: row.notes || null });
+          ok(`Replaced the notes of '${row.name}'`);
+        }
+      }
       // Older fixtures marked the firewalls PAR-FW-01 and PAR-FW-02 as clusters (with no member):
       // an asset the file no longer calls a cluster becomes a plain asset again, unless someone
       // gave it members since (the server refuses the switch then).
-      const asset = existingAssets.find((item) => item.name === row.name);
       if (asset?.is_cluster && !boolValue(row.is_cluster)) {
         const members = items(await apiGet(`/assets/${asset.id}/members`));
         if (members.length > 0) warn(`'${row.name}' has members; it stays a cluster`);
@@ -1988,20 +2003,21 @@ async function runImports() {
 // ── Technologies (lot S) ──────────────────────────────────────────────────────
 //
 // The examples of the technology layer: two domain controllers carry Active Directory; Entra ID is
-// subscribed and declared by several applications; two ESXi hosts in a vSphere cluster contain
-// the VMs, which belong to the cluster and can move between its hosts; a SQL Server cluster runs two
-// versions; the application server carries Tomcat and a SQL
-// Server Express; the RDS database carries PostgreSQL. With the hosting of applications on these
+// subscribed and declared by several applications; a vSphere cluster of three ESXi hosts contains the
+// VMs, which belong to the cluster and can move between its hosts; its hosts depend on the shared
+// storage array; a SQL Server cluster runs two versions; the application server carries Tomcat and a
+// SQL Server Express; the RDS database carries PostgreSQL. With the hosting of applications on these
 // servers, business processes linked to applications, an unknown version (Active Directory) and
 // versions past their end of support (PostgreSQL 13, SQL Server 2017). The demo stories on top:
 // the cave edge node and gateways carry CaveGuard and its dashboard; the IT tools (PRTG, Veeam,
-// vSphere) run on their own servers, Veeam on the backup SAN that reaches end of life; the two aging
-// hosts carry Talend and the S/4HANA QA server; S/4HANA prod and QA run on separate servers.
+// vSphere) run on their own servers, Veeam on the backup SAN that reaches end of life; a Veeam
+// connection backs up the vSphere cluster; the two aging hosts carry Talend and the S/4HANA QA
+// server; S/4HANA prod and QA run on separate servers.
 // An application on a cluster is assigned to the cluster, and its members inherit it.
 // Every step is idempotent, and brings a tenant built by an older fixture to the same state.
 
 const ASSET_CLUSTERS = {
-  'PAR-VSPHERE-CL01': ['PAR-ESX-01', 'PAR-ESX-02'],
+  'PAR-VSPHERE-CL01': ['PAR-ESX-01', 'PAR-ESX-02', 'PAR-ESX-05'],
   'PAR-SQL-CL01': ['PAR-SQL-01', 'PAR-SQL-02'],
 };
 
@@ -2074,7 +2090,7 @@ const TECHNOLOGIES = [
   },
   {
     catalog: 'vsphere',
-    installed: [['PAR-ESX-01', '8.0', null], ['PAR-ESX-02', '8.0', null], ['PAR-VCENTER-01', '8.0', 'vCenter Server']],
+    installed: [['PAR-ESX-01', '8.0', null], ['PAR-ESX-02', '8.0', null], ['PAR-ESX-05', '8.0', null], ['PAR-VCENTER-01', '8.0', 'vCenter Server']],
     contracts: ['Broadcom VMware ELA'],
     owners: [['marc.petit@fromage-co.example', 'it']],
   },
