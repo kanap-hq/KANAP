@@ -169,6 +169,7 @@ export class IncidentsController {
   @RequireLevel('incidents', 'reader')
   @Get('export')
   async exportCsv(
+    @Query() query: Record<string, unknown>,
     @Query('language') languageRaw: string | undefined,
     @Query('timeZone') timeZoneRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
@@ -188,6 +189,7 @@ export class IncidentsController {
       viewer: incidentViewerFromContext(ctx),
       scope,
       fields: fields ? fields.split(',').map((f) => f.trim()) : undefined,
+      query,
     });
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');

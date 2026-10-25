@@ -23,10 +23,13 @@ const STATUS_RANK: Record<IncidentStatus, number> = { open: 0, in_progress: 1, r
 const OWNER_NAME = userNameSql('o');
 const REPORTER_NAME = userNameSql('r');
 
-const BASE_FROM = `
+/** The list's FROM clause: the export runs the same WHERE and ORDER BY, so it needs the same joins. */
+export const INCIDENT_LIST_FROM = `
   FROM incidents i
   LEFT JOIN users o ON o.id = i.owner_user_id AND o.tenant_id = i.tenant_id
   LEFT JOIN users r ON r.id = i.reporter_user_id AND r.tenant_id = i.tenant_id`;
+
+const BASE_FROM = INCIDENT_LIST_FROM;
 
 const COUNT_EXPRESSIONS: Record<string, string> = {
   asset_count: `(SELECT COUNT(*) FROM incident_assets ia WHERE ia.incident_id = i.id AND ia.tenant_id = i.tenant_id)::int`,
@@ -192,6 +195,22 @@ export class IncidentsService extends IncidentsBaseService {
       [...params, limit],
     );
     return { ids: rows.map((r) => r.id), refs: rows.map((r) => incidentRef(r.item_number)), total };
+  }
+
+  /**
+   * The list's WHERE, bound parameters and ORDER BY for the CSV export: the same column filters,
+   * search, extra scoping and visibility predicate (`buildWhere`), and the same sort. One builder
+   * for both means no filter sent to the export can widen what the list shows.
+   */
+  async exportQuery(query: any, opts?: ServiceOpts): Promise<{ where: string; params: any[]; orderBy: string }> {
+    const mg = this.getManager(opts);
+    const tenantId = this.ensureTenantId(opts?.tenantId);
+    const { asset_id, application_id } = parseListIncidentsQuery(query);
+    const { sort, q, filters } = parsePagination(query, DEFAULT_SORT);
+    const { where, params } = this.buildWhere({
+      filters, q, tenantId, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
+    });
+    return { where, params, orderBy: this.orderBy(sort, await textSortKey(mg)) };
   }
 
   /**

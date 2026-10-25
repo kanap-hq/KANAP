@@ -12,6 +12,7 @@ import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.serv
 import { Tenant } from '../../tenants/tenant.entity';
 import { Location } from '../../locations/location.entity';
 import * as assert from 'node:assert/strict';
+import { parse as parseCsvSync } from 'csv-parse/sync';
 import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
@@ -120,17 +121,18 @@ function createServices(manager: any) {
     importService,
   );
   const resolver = new CsvResolverService();
-  const csv = new IncidentsCsvService(
-    new CsvExportService(resolver),
-    new CsvImportService(resolver, new CsvJsonValidators()),
-    integrated,
-    new ItOpsSettingsService(manager.getRepository(Tenant), manager.getRepository(Location), { log: async () => undefined } as any),
-  );
   const incidents = new IncidentsService(
     manager.getRepository(Incident),
     { log: async () => undefined } as any,
     new ItemNumberService(),
     integrated,
+  );
+  const csv = new IncidentsCsvService(
+    new CsvExportService(resolver),
+    new CsvImportService(resolver, new CsvJsonValidators()),
+    integrated,
+    new ItOpsSettingsService(manager.getRepository(Tenant), manager.getRepository(Location), { log: async () => undefined } as any),
+    incidents,
   );
   return { knowledge, integrated, csv, incidents };
 }
@@ -230,6 +232,17 @@ function csvFile(content: string): Express.Multer.File {
 /** CSV cell quoting: doubles the quotes, so a multiline Markdown body survives. */
 function cell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
+}
+
+/** The titles of the data lines of an incident export, in file order (the title is the second column). */
+function exportTitles(content: string): string[] {
+  const rows = parseCsvSync(content.replace(/^\uFEFF/, ''), {
+    delimiter: ';',
+    bom: true,
+    skip_empty_lines: true,
+    relax_column_count: true,
+  }) as string[][];
+  return rows.slice(1).map((row) => row[1] ?? '');
 }
 
 async function createIncident(
@@ -360,6 +373,132 @@ async function testExportImportRoundTrip() {
     const after = await readReview(runner, f, incident.id);
     assert.equal(after.content_markdown, MULTILINE_REVIEW, 'the Markdown round-trips unchanged');
     assert.equal(after.versions, before.versions, 'an identical body creates no version');
+  });
+}
+
+/**
+ * The export follows the list: its column filters, quick search and sort, through the list's own
+ * WHERE builder. A restricted incident stays out for a viewer who may not see it, even when the
+ * filter would match it. The template keeps its meaning and ignores the list query.
+ */
+async function testExportFollowsTheList() {
+  await withFixture(async (runner, f) => {
+    const services = createServices(runner.manager);
+    const adminViewer = { userId: f.users.admin, isAdmin: true };
+    const viewer = { userId: f.users.contributor, isAdmin: false };
+    const opts = { manager: runner.manager, tenantId: f.tenantId, language: 'fr' as const };
+    const lyon = await createIncident(runner, f, services, {
+      title: 'Mail outage Lyon', severity: 'major', status: 'open', detected_at: '2026-10-05T08:00:00Z',
+      owner_user_id: f.users.admin,
+      personal_data_affected: true, authority_notification_required: true,
+      authority_notified_at: '2026-10-06T09:00:00Z',
+    });
+    const paris = await createIncident(runner, f, services, {
+      title: 'VPN outage Paris', severity: 'critical', status: 'closed', detected_at: '2026-10-20T08:00:00Z',
+      owner_user_id: f.users.contributor,
+    });
+    const hidden = await createIncident(runner, f, services, {
+      title: 'Mail outage secret', severity: 'major', status: 'open', detected_at: '2026-10-10T08:00:00Z',
+      confidential: true, reporter_user_id: f.users.other, owner_user_id: f.users.other,
+    });
+
+    // A severity filter and the list's sort: the file holds the matching rows in that order.
+    const major = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ severity: { filterType: 'set', values: ['major'] } }),
+        sort: 'detected_at:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(major.content), [lyon.title, hidden.title], 'severity filter and sort follow the list');
+
+    // The same filter for a viewer who is neither administrator, reporter nor owner: the
+    // restricted row is not widened into view by the filter.
+    const visible = await services.csv.export({
+      ...opts,
+      viewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ severity: { filterType: 'set', values: ['major'] } }),
+        sort: 'detected_at:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(visible.content), [lyon.title], 'a restricted incident stays invisible');
+
+    // Quick search and sort.
+    const searched = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: { q: 'outage', sort: 'detected_at:DESC' },
+    });
+    assert.deepEqual(exportTitles(searched.content), [paris.title, hidden.title, lyon.title], 'search and sort follow the list');
+
+    // Owner: a column the list filters and sorts through its users join.
+    const owner = await runner.manager.query(
+      `SELECT first_name || ' ' || last_name AS name FROM users WHERE id = $1`, [f.users.admin],
+    );
+    const byOwner = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ owner_name: { filterType: 'set', values: [owner[0].name] } }),
+        sort: 'owner_name:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(byOwner.content), [lyon.title], 'the owner filter and sort use the list joins');
+    const byOwnerSort = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: { q: 'outage', sort: 'owner_name:ASC' },
+    });
+    assert.deepEqual(exportTitles(byOwnerSort.content), [lyon.title, paris.title, hidden.title], 'sorting on owner name follows the list');
+
+    // The compliance columns the list now reads, and their yes or no filter.
+    const listed = await services.incidents.list(
+      { sort: 'detected_at:ASC' },
+      { manager: runner.manager, tenantId: f.tenantId, viewer: adminViewer },
+    );
+    const listedLyon = listed.items.find((item: any) => String(item.id) === String(lyon.id));
+    assert.equal(listedLyon?.personal_data_affected, true);
+    assert.equal(listedLyon?.authority_notification_required, true);
+    assert.ok(listedLyon?.authority_notified_at);
+    const compliance = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ personal_data_affected: { filterType: 'set', values: ['true'] } }),
+        sort: 'detected_at:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(compliance.content), [lyon.title], 'a yes or no filter follows the list');
+
+    // A period filter (AG Grid date model), as the list sends it.
+    const period = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'data',
+      query: {
+        filters: JSON.stringify({ detected_at: { filterType: 'date', type: 'inRange', dateFrom: '2026-10-01', dateTo: '2026-10-15' } }),
+        sort: 'detected_at:ASC',
+      },
+    });
+    assert.deepEqual(exportTitles(period.content), [lyon.title, hidden.title], 'period filter follows the list');
+
+    // The template is headers only, whatever the list query says.
+    const template = await services.csv.export({
+      ...opts,
+      viewer: adminViewer,
+      scope: 'template',
+      query: { filters: JSON.stringify({ severity: { filterType: 'set', values: ['major'] } }) },
+    });
+    assert.equal(template.rowCount, 0);
+    assert.equal(template.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/).length, 1, 'the template has no data line');
   });
 }
 
@@ -1090,6 +1229,7 @@ async function run() {
   await dataSource.initialize();
   try {
     await testExportImportRoundTrip();
+    await testExportFollowsTheList();
     await testDateTimesInTheExportersZone();
     await testExportTimeZoneSource();
     await testEmptyCellAndDryRun();

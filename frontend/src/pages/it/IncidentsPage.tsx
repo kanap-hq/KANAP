@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ICellRendererParams, ValueGetterParams } from 'ag-grid-community';
 import PageHeader from '../../components/PageHeader';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
-import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, type ListRequest } from '../../components/ServerDataGrid';
 import { LinkCellRenderer, wholeCellLinkSx } from '../../components/grid/renderers';
 import { StatusDot } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
@@ -50,6 +50,8 @@ export default function IncidentsPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [selectedRows, setSelectedRows] = useState<IncidentRow[]>([]);
+  const [exportScope, setExportScope] = useState<{ params: Record<string, unknown>; summary: string }>({ params: {}, summary: '' });
+  const listRequestRef = useRef<ListRequest | null>(null);
   const gridApiRef = useRef<any>(null);
   // The file writes date-times in the local time the screen shows, and names the zone in their header.
   const csvParams = useMemo(() => ({ timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }), []);
@@ -389,6 +391,20 @@ export default function IncidentsPage() {
 
   // Deleting incidents is for incident administrators only (the server refuses everyone else).
   const canDelete = hasLevel('incidents', 'admin');
+  // The export holds what the list shows: its filters, quick search and sort (not its columns).
+  const openExport = useCallback(() => {
+    const request = listRequestRef.current;
+    const params = (request?.params ?? {}) as Record<string, unknown>;
+    let summary = '';
+    if (request) {
+      const filtered = !!params.q || !!params.asset_id || !!params.application_id
+        || (typeof params.filters === 'string' && params.filters !== '{}' && params.filters !== '');
+      if (filtered) summary = t('pages.incidents.exportScope', { count: request.total });
+    }
+    setExportScope({ params, summary });
+    setExportOpen(true);
+  }, [t]);
+
   const actions = (
     <Stack direction="row" spacing={1}>
       {hasLevel('incidents', 'contributor') && (
@@ -402,7 +418,7 @@ export default function IncidentsPage() {
       {hasLevel('incidents', 'contributor') && (
         <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.incidents.importCsv')}</Button>
       )}
-      <Button variant="action" onClick={() => setExportOpen(true)}>{t('pages.incidents.exportCsv')}</Button>
+      <Button variant="action" onClick={openExport}>{t('pages.incidents.exportCsv')}</Button>
       {canDelete && (
         <DeleteSelectedButton
           selectedRows={selectedRows}
@@ -444,12 +460,14 @@ export default function IncidentsPage() {
         onQueryStateChange={(state) => {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
         }}
+        onListRequestChange={(request) => { listRequestRef.current = request; }}
       />
       <CsvExportDialogV2
         open={exportOpen}
         onClose={() => setExportOpen(false)}
         endpoint="/incidents"
-        params={csvParams}
+        params={{ ...exportScope.params, ...csvParams }}
+        scopeSummary={exportScope.summary}
         title={t('pages.incidents.exportTitle')}
       />
       <CsvImportDialogV2

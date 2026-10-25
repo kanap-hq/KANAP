@@ -7,6 +7,8 @@
       "exportCsv": "Exporter CSV",
       "importTitle": "Importer les incidents",
       "exportTitle": "Exporter les incidents",
+      "exportScope_one": "Export filtré : {{count}} incident",
+      "exportScope_other": "Export filtré : {{count}} incidents",
       "columns": {
         "reference": "Réf.",
         "title": "Titre",
