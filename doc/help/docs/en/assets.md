@@ -335,6 +335,8 @@ Retired assets stop the chain: nothing falls through them. Each table shows its 
 
 Each table shows the reference (`AST-12`), name, type, environment and status. A retired or disabled asset stays listed with its name greyed out. Click a row to open the asset.
 
+On a cluster, **Depends on** ends with a folded line, **Through members (n)**, that lists the assets its members in service depend on, with those members under **Via**; those rows have no action and stay out of the tab badge.
+
 With `infrastructure:member`, **Add** at the right of a section opens a search for an asset. Pick a result: the relation is saved at once. To remove a relation, hover the row and click the cross at its end. Readers see the tables read-only. A **Contains** relation from a member of a cluster first asks where to place the asset: see [Virtual machines on a cluster](#virtual-machines-on-a-cluster).
 
 ---
