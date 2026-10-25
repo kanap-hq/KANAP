@@ -124,7 +124,7 @@ Die Leiste bleibt auf jedem Tab sichtbar und speichert während der Bearbeitung.
 
 ### Übersicht
 
-Die Übersicht erzählt den Vorfall in zwei Teilen: eine kurze Beschreibung, dann die Vorfallanalyse. Beide speichern automatisch während der Eingabe.
+Die Übersicht erzählt den Vorfall in zwei Teilen: eine kurze Beschreibung, dann die Vorfallanalyse. Beide speichern automatisch während der Eingabe. Die Anhänge schließen die Seite ab.
 
 **Beschreibung** sind ein bis zwei Sätze dazu, was passiert ist, wie beobachtet. Es ist die Zusammenfassung, die in der Liste, in den Suchergebnissen und oben im PDF-Bericht erscheint.
 
@@ -147,6 +147,8 @@ Die Vorlage ist ein gewöhnliches Dokument der Wissensdatenbank, gespeichert in 
 Jedes Speichern, das die Analyse verändert, hält eine Version fest. Der Text lässt sich damit so nachlesen, wie er zu jedem Zeitpunkt stand, auch beim Schließen des Vorfalls. Siehe [Journal](#journal).
 
 Die Analyse ist selbst ein Dokument der Wissensdatenbank, mit eigener Referenz `DOC-N`, abgelegt im Ordner **Vorfälle** der Bibliothek **Verwaltete Dokumente**. Das Schreiben aus dem Vorfall heraus und der PDF-Export nutzen allein die Berechtigungen des Registers. Wer dasselbe Dokument direkt in der Wissensdatenbank öffnet, braucht zusätzlich die Berechtigungen der Wissensdatenbank für diese Bibliothek. In beiden Fällen bleibt sie an den Vorfall gebunden: Sie wird gesperrt, sobald der Vorfall geschlossen oder abgebrochen ist, und bleibt für alle unsichtbar, die einen eingeschränkten Vorfall nicht sehen dürfen.
+
+**Anhänge** enthalten die Dateien, die den Vorgang belegen: Screenshots, Log-Auszüge, Mail-Exporte, den Vorfallsbericht des Lieferanten. Mit `incidents:contributor` ziehen Sie Dateien per Drag-and-drop hierher oder klicken, um sie auszuwählen. Klicken Sie auf einen Anhang, um ihn herunterzuladen. Der Abschnitt erscheint, sobald der Vorfall eine Datei hat oder wenn Sie ihn bearbeiten dürfen. Bei einem geschlossenen oder stornierten Vorfall bleiben die Dateien lesbar. Hinzufügen und Löschen sind nach dem Wiedereröffnen wieder möglich.
 
 ---
 
@@ -196,7 +198,7 @@ Sie sehen nur die Abschnitte der Module, die Sie lesen dürfen. Assets und Techn
 
 **Aufgaben**: die Folgearbeit. Legen Sie eine Aufgabe direkt aus dem Vorfall heraus an, sie bleibt daran gebunden. Die Aufgabe zeigt „Vorfall · INC-14“ in ihrer eigenen Seitenleiste, und die Spalte Aufgaben des Vorfalls zählt sie mit.
 
-Ein verknüpftes Asset, eine verknüpfte Anwendung oder Technologie zeigt den Vorfall in einem Abschnitt **Vorfälle** auf dem eigenen Reiter Beziehungen: Wer einen Server ansieht, sieht dessen Störungsgeschichte. Mit `incidents:contributor` können Sie dort auch einen Vorfall verknüpfen. Dokumente und Anhänge haben eigene Reiter.
+Ein verknüpftes Asset, eine verknüpfte Anwendung oder Technologie zeigt den Vorfall in einem Abschnitt **Vorfälle** auf dem eigenen Reiter Beziehungen: Wer einen Server ansieht, sieht dessen Störungsgeschichte. Mit `incidents:contributor` können Sie dort auch einen Vorfall verknüpfen. Dokumente haben einen eigenen Reiter.
 
 ---
 
@@ -205,12 +207,6 @@ Ein verknüpftes Asset, eine verknüpfte Anwendung oder Technologie zeigt den Vo
 Mit diesem Vorfall verknüpfte Dokumente der Wissensdatenbank: der Bericht des Lieferanten, die befolgte Prozedur, die Notiz des Netzwerkteams. Mit `knowledge:member` können Sie ein Dokument direkt aus diesem Tab heraus anlegen.
 
 Die Vorfallanalyse steht hier nicht. Sie gehört zum Vorfall selbst und wird auf dem Tab Übersicht bearbeitet.
-
----
-
-### Anhänge
-
-Ziehen Sie Dateien per Drag-and-drop hierher oder klicken Sie, um sie auszuwählen: Screenshots, Log-Auszüge, Mail-Exporte, der Vorfallsbericht des Lieferanten. Klicken Sie auf einen Anhang, um ihn herunterzuladen. Uploads und Löschungen enden, sobald der Vorfall geschlossen ist.
 
 ---
 

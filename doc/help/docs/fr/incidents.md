@@ -124,7 +124,7 @@ Le tiroir reste visible sur chaque onglet et enregistre au fur et à mesure.
 
 ### Vue d'ensemble
 
-La vue d'ensemble raconte l'incident en deux temps : une description courte, puis la revue d'incident. Les deux enregistrent automatiquement au fur et à mesure que vous tapez.
+La vue d'ensemble raconte l'incident en deux temps : une description courte, puis la revue d'incident. Les deux enregistrent automatiquement au fur et à mesure que vous tapez. Les pièces jointes ferment la page.
 
 La **Description** tient en une ou deux phrases : ce qui s'est passé, tel qu'observé. C'est le résumé qui apparaît dans la liste, dans les résultats de recherche et en tête du rapport PDF.
 
@@ -147,6 +147,8 @@ Le modèle est un document ordinaire de la base de connaissances, rangé dans la
 Chaque enregistrement qui modifie la revue conserve une version : le texte peut donc être relu tel qu'il était à n'importe quel moment, y compris à la clôture de l'incident. Voir [Journal](#journal).
 
 La revue est elle-même un document de la base de connaissances, avec sa propre référence `DOC-N`, rangé dans le dossier **Incidents** de la bibliothèque **Documents managés**. La rédiger depuis l'incident et exporter le PDF n'utilisent que les autorisations incidents. Ouvrir ce même document directement dans la base de connaissances demande en plus les autorisations documentaires de cette bibliothèque. Dans les deux cas, la revue reste liée à l'incident : elle est gelée dès que l'incident est clôturé ou annulé, et masquée à quiconque ne peut pas voir un incident restreint.
+
+**Pièces jointes** : les fichiers qui étayent le dossier, comme les captures d'écran, les extraits de logs, les exports de mails ou le rapport d'incident du fournisseur. Avec `incidents:contributor`, glissez-déposez des fichiers ou cliquez pour les sélectionner. Cliquez sur une pièce jointe pour la télécharger. La section apparaît dès que l'incident a un fichier, ou quand vous pouvez le modifier. Sur un incident clôturé ou annulé, les fichiers restent consultables ; l'ajout et la suppression reprennent après la réouverture.
 
 ---
 
@@ -196,7 +198,7 @@ Vous ne voyez que les sections des modules que vous pouvez lire. Les actifs et l
 
 **Tâches** : le travail de suivi. Créez une tâche directement depuis l'incident, elle y reste rattachée. La tâche affiche « Incident · INC-14 » dans sa propre barre latérale, et la colonne Tâches de l'incident la compte.
 
-Un actif, une application ou une technologie liés affichent l'incident dans une section **Incidents** de leur propre onglet Relations : celui qui consulte un serveur voit son historique d'incidents. Avec `incidents:contributor`, vous pouvez aussi y lier un incident. Les documents et les pièces jointes ont leurs propres onglets.
+Un actif, une application ou une technologie liés affichent l'incident dans une section **Incidents** de leur propre onglet Relations : celui qui consulte un serveur voit son historique d'incidents. Avec `incidents:contributor`, vous pouvez aussi y lier un incident. Les documents ont leur propre onglet.
 
 ---
 
@@ -205,12 +207,6 @@ Un actif, une application ou une technologie liés affichent l'incident dans une
 Les documents de la base de connaissances liés à cet incident : le rapport du fournisseur, la procédure suivie, la note rédigée par l'équipe réseau. Avec `knowledge:member`, vous pouvez créer un document directement depuis cet onglet.
 
 La revue d'incident n'apparaît pas ici. Elle appartient à l'incident lui-même et se rédige dans l'onglet Vue d'ensemble.
-
----
-
-### Pièces jointes
-
-Glissez-déposez des fichiers ou cliquez pour les sélectionner : captures d'écran, extraits de logs, exports de mails, rapport d'incident du fournisseur. Cliquez sur une pièce jointe pour la télécharger. Les téléversements et suppressions s'arrêtent dès que l'incident est clôturé.
 
 ---
 

@@ -124,7 +124,7 @@ El cajón permanece visible en todas las pestañas y guarda a medida que edita.
 
 ### Vista general
 
-La vista general cuenta el incidente en dos partes: una descripción breve y, después, la revisión del incidente. Ambas se guardan automáticamente mientras escribe.
+La vista general cuenta el incidente en dos partes: una descripción breve y, después, la revisión del incidente. Ambas se guardan automáticamente mientras escribe. Los archivos adjuntos cierran la página.
 
 La **Descripción** ocupa una o dos frases sobre qué ocurrió, tal como se observó. Es el resumen que aparece en la lista, en los resultados de búsqueda y al principio del informe PDF.
 
@@ -147,6 +147,8 @@ La plantilla es un documento ordinario de la base de conocimiento, almacenado en
 Cada guardado que modifica la revisión conserva una versión, así que el texto puede releerse tal como estaba en cualquier momento, incluido el cierre del incidente. Consulte [Diario](#diario).
 
 La revisión es en sí misma un documento de la base de conocimiento, con su propia referencia `DOC-N`, archivado en la carpeta **Incidentes** de la biblioteca **Documentos gestionados**. Redactarla desde el incidente y exportar el PDF solo usan los permisos de incidentes. Abrir ese mismo documento directamente en la base de conocimiento requiere además los permisos de la base de conocimiento sobre esa biblioteca. En ambos casos sigue ligada al incidente: se congela cuando el incidente se cierra o se cancela, y queda oculta para quien no pueda ver un incidente restringido.
+
+**Archivos adjuntos**: los archivos que respaldan el registro, como capturas de pantalla, extractos de registros, exportaciones de correo o el informe de incidente del proveedor. Con `incidents:contributor`, arrastre y suelte archivos o haga clic para seleccionarlos. Haga clic en un archivo adjunto para descargarlo. La sección aparece en cuanto el incidente tiene un archivo, o cuando puede modificarlo. En un incidente cerrado o cancelado, los archivos siguen siendo legibles; añadirlos y eliminarlos vuelve a ser posible tras la reapertura.
 
 ---
 
@@ -196,7 +198,7 @@ Solo ve las secciones de los módulos que puede leer. Los activos y las tecnolog
 
 **Tareas**: el trabajo de seguimiento. Cree una tarea directamente desde el incidente y quedará vinculada a él. La tarea muestra «Incidente · INC-14» en su propia barra lateral, y la columna Tareas del incidente la cuenta.
 
-Un activo, una aplicación o una tecnología vinculados muestran el incidente en una sección **Incidentes** de su propia pestaña Relaciones: quien mire un servidor verá su historial de incidencias. Con `incidents:contributor`, también puede vincular un incidente desde allí. Los documentos y los adjuntos tienen sus propias pestañas.
+Un activo, una aplicación o una tecnología vinculados muestran el incidente en una sección **Incidentes** de su propia pestaña Relaciones: quien mire un servidor verá su historial de incidencias. Con `incidents:contributor`, también puede vincular un incidente desde allí. Los documentos tienen su propia pestaña.
 
 ---
 
@@ -205,12 +207,6 @@ Un activo, una aplicación o una tecnología vinculados muestran el incidente en
 Documentos de la base de conocimiento enlazados a este incidente: el informe del proveedor, el procedimiento seguido, la nota que redactó el equipo de red. Con `knowledge:member` puede crear un documento directamente desde esta pestaña.
 
 La revisión del incidente no aparece aquí. Pertenece al incidente en sí y se edita en la pestaña Vista general.
-
----
-
-### Archivos adjuntos
-
-Arrastre y suelte archivos o haga clic para seleccionarlos: capturas de pantalla, extractos de registros, exportaciones de correo, el informe de incidente del proveedor. Haga clic en un archivo adjunto para descargarlo. Las subidas y eliminaciones se detienen en cuanto el incidente se cierra.
 
 ---
 
