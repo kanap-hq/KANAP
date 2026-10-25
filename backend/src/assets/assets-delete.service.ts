@@ -148,7 +148,7 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
       usages,
       this.buildConflictMessage(asset.name, assignments, connections),
       undefined,
-      assignments.applications,
+      assignments.applications.length > 0 ? assignments.applications : undefined,
     );
   }
 
