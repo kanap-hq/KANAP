@@ -1178,9 +1178,9 @@
       "cancel": "Bleiben"
     },
     "saveAndSwitch": {
-      "message": "Sie haben ungespeicherte Änderungen. Vor dem Tab-Wechsel speichern?",
-      "confirm": "Speichern und Tab wechseln",
-      "cancel": "Tab wechseln ohne zu speichern"
+      "message": "Sie haben ungespeicherte Änderungen. Vor dem Wechsel der Registerkarte speichern?",
+      "confirm": "Speichern und wechseln",
+      "cancel": "Ohne Speichern wechseln"
     },
     "saveAndContinue": {
       "message": "Sie haben ungespeicherte Änderungen. Vor dem Fortfahren speichern?",
