@@ -168,6 +168,13 @@ export default function CompanyWorkspacePage() {
     }
     return sp.toString();
   }, [searchParams]);
+
+  // A hidden Access tab falls back to the overview: the URL follows, as on the cost center page.
+  React.useEffect(() => {
+    if (isCreate || rawTab !== 'access' || canAdminDataAccess) return;
+    navigate(`${LIST_PATH}/${id}/overview${listContext ? `?${listContext}` : ''}`, { replace: true });
+  }, [canAdminDataAccess, id, isCreate, listContext, navigate, rawTab]);
+
   const withContext = (path: string) => `${path}${listContext ? `?${listContext}` : ''}`;
 
   const handleClose = () => navigate(withContext(LIST_PATH));

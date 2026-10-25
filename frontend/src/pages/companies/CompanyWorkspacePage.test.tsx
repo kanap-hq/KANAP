@@ -156,6 +156,16 @@ describe('CompanyWorkspacePage', () => {
     expect(screen.getByRole('tab', { name: 'shared.labels.overview' })).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('replaces a hidden Access route with the overview', async () => {
+    auth.limited = true;
+    renderAt('/master-data/companies/co-1/access');
+    await screen.findByText('Acme France');
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith(
+      '/master-data/companies/co-1/overview',
+      { replace: true },
+    ));
+  });
+
   it('shows the status in the header and saves it from the metadata menu, as a supplier', async () => {
     renderAt('/master-data/companies/co-1/overview');
     fireEvent.click(await screen.findByRole('button', { name: 'companies.status.enabled' }));
