@@ -77,23 +77,35 @@ export async function loadAccessTree(manager: Queryable, tenantId: string): Prom
   };
 }
 
-/** The centre and every node below it (groups and centres), in tree order. */
+/**
+ * The centre and every node below it (groups and centres), in tree order. A `visited` set stops on
+ * a cycle: the application refuses one (`cost-center-tree.util.ts`), but a corrupted database row
+ * must not loop the API process (spec §7.2).
+ */
 export function subtreeIds(tree: AccessTree, rootId: string): string[] {
   const out: string[] = [];
+  const visited = new Set<string>();
   const stack = [rootId];
   while (stack.length > 0) {
     const id = stack.pop()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
     out.push(id);
     stack.push(...(tree.children.get(id) ?? []));
   }
   return out;
 }
 
-/** The centre's parent groups, nearest first (the centre itself is not included). */
+/**
+ * The centre's parent groups, nearest first (the centre itself is not included). A `visited` set
+ * stops on a cycle, like `subtreeIds`.
+ */
 export function ancestorIds(tree: AccessTree, centerId: string): string[] {
   const out: string[] = [];
+  const visited = new Set<string>([centerId]);
   let current = tree.centers.get(centerId)?.parent_id ?? null;
-  while (current) {
+  while (current && !visited.has(current)) {
+    visited.add(current);
     out.push(current);
     current = tree.centers.get(current)?.parent_id ?? null;
   }
