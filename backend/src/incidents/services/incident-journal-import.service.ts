@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { parseString } from '@fast-csv/parse';
 import { EntityManager } from 'typeorm';
 import {
@@ -8,6 +8,7 @@ import {
   knownTimeZone,
   readTimeZoneHeader,
 } from '../../common/csv-sheet';
+import { DemoDataService } from '../../demo-data/demo-data.service';
 import { INCIDENT_SEVERITIES, INCIDENT_STATUSES } from '../incident.entity';
 
 /**
@@ -69,15 +70,27 @@ export type IncidentJournalImportResult = {
  * time, which is the truth for a backdated note. A row identical to an
  * existing entry is skipped, so the runner can be re-run.
  *
- * Only `incidents:admin` reaches the route: choosing the author of a journal
- * entry is a register-administrator act, never a contributor one.
+ * Only `incidents:admin` reaches the route, and only while the sample data of
+ * the workspace is loading: choosing the author of a journal entry is a
+ * register-administrator act, and the timeline is never a user import. Outside
+ * a sample-data load the route answers 409 `SAMPLE_DATA_LOAD_ONLY` and writes
+ * nothing.
  */
 @Injectable()
 export class IncidentJournalImportService {
+  constructor(private readonly demo: DemoDataService) {}
+
   async import(
     file: Express.Multer.File,
     opts: { manager: EntityManager; tenantId: string },
   ): Promise<IncidentJournalImportResult> {
+    const state = await this.demo.getStatus(opts.tenantId);
+    if (state.status !== 'loading') {
+      throw new ConflictException({
+        code: 'SAMPLE_DATA_LOAD_ONLY',
+        message: 'The incident journal can be imported only while the sample data of this workspace is loading.',
+      });
+    }
     if (!file?.buffer?.length) throw new BadRequestException('A CSV file is required.');
 
     let text: string;

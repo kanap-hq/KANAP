@@ -18,6 +18,7 @@ import { StorageModule } from '../common/storage/storage.module';
 import { KnowledgeModule } from '../knowledge/knowledge.module';
 import { ItOpsSettingsModule } from '../it-ops-settings/it-ops-settings.module';
 import { TasksModule } from '../tasks/tasks.module';
+import { DemoDataModule } from '../demo-data/demo-data.module';
 import {
   IncidentEntriesService,
   IncidentJournalImportService,
@@ -42,6 +43,7 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
     KnowledgeModule,
     ItOpsSettingsModule,
     TasksModule,
+    DemoDataModule,
   ],
   controllers: [IncidentsController, IncidentsTasksController],
   providers: [
