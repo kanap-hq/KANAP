@@ -685,6 +685,7 @@ async function createPolicyFunctions(queryRunner: QueryRunner): Promise<void> {
       v_inherits boolean;
       v_dropped int := 0;
       v_fingerprint text;
+      v_definition_fingerprint text;
       v_comment text;
       v_deparsed text;
       v_permissive boolean;
@@ -751,17 +752,22 @@ ${[...LINE_HELPER_SIGNATURES, ...ACCESS_DEFINER_SIGNATURES, ...CONTRACT_HELPER_S
         ) AS d(table_name, command, using_expr, check_expr)
       LOOP
         v_name := r.table_name || '_data_access_' || lower(r.command);
-        IF NOT EXISTS (
-          SELECT 1 FROM data_access_expected_policies() e
-          WHERE e.policy_name = v_name AND e.table_name = r.table_name AND e.command = r.command
-        ) THEN
+        -- The source fingerprint comes from data_access_expected_policies(), the single source
+        -- read by the availability check; it must be the md5 of the definition this loop creates.
+        SELECT e.fingerprint INTO v_fingerprint
+        FROM data_access_expected_policies() e
+        WHERE e.policy_name = v_name AND e.table_name = r.table_name AND e.command = r.command;
+        IF NOT FOUND THEN
           RAISE EXCEPTION 'data access: policy % is defined but not expected', v_name;
+        END IF;
+        v_definition_fingerprint := md5(r.command || '|' || coalesce(r.using_expr, '') || '|' || coalesce(r.check_expr, ''));
+        IF v_fingerprint IS DISTINCT FROM v_definition_fingerprint THEN
+          RAISE EXCEPTION 'data access: fingerprint of policy % differs between the expected list and its definition', v_name;
         END IF;
         v_defined := v_defined + 1;
         v_cmd := CASE upper(r.command)
           WHEN 'SELECT' THEN 'r' WHEN 'INSERT' THEN 'a' WHEN 'UPDATE' THEN 'w'
           WHEN 'DELETE' THEN 'd' WHEN 'ALL' THEN '*' END;
-        v_fingerprint := md5(r.command || '|' || coalesce(r.using_expr, '') || '|' || coalesce(r.check_expr, ''));
         SELECT p.polpermissive, v_role = ANY (p.polroles), p.polcmd::text,
                obj_description(p.oid, 'pg_policy'),
                md5(coalesce(pg_get_expr(p.polqual, p.polrelid), '') || '|' || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), ''))
