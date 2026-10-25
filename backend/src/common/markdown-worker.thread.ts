@@ -42,7 +42,7 @@ export const MARKDOWN_WORKER_OPERATIONS = {
   importedImages: (markdown: string) => findImportedImageReferences(markdown),
   recoveredContent: (text: string) => prepareRecoveredContent(text),
   inlineImages: (text: string) => collectInlineImageOccurrences(text),
-  interfaceSpecification: (row: InterfaceSpecificationSource) => interfaceSpecificationMarkdown(row),
+  interfaceSpecification: (row: InterfaceSpecificationSource, language?: string | null) => interfaceSpecificationMarkdown(row, language),
 };
 
 export type MarkdownWorkerOperations = typeof MARKDOWN_WORKER_OPERATIONS;
