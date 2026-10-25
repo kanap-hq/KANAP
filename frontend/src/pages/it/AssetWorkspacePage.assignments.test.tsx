@@ -108,9 +108,10 @@ function renderOperations(tab = 'operations') {
     if (url === '/assets/asset-1/relations-tab') return { data: { counts: { assets: 0, total: 0 } } };
     return { data: { items: [], outgoing: [], incoming: [] } };
   });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <ThemeProvider theme={createAppTheme('light')}>
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <QueryClientProvider client={client}>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={[`/it/assets/asset-1/${tab}`]}>
             <Routes>
@@ -121,6 +122,7 @@ function renderOperations(tab = 'operations') {
       </QueryClientProvider>
     </ThemeProvider>,
   );
+  return client;
 }
 
 /** Fills the assignment dialog (application, environment) and saves it; the role defaults to the first one. */
@@ -350,6 +352,24 @@ describe('Asset workspace: assignments and clusters', () => {
       expect(within(dialog).getByText('PAR-SQL-02').closest('.MuiChip-root')?.contains(flagged[0])).toBe(true);
       save(dialog);
       await waitFor(() => expect(post).toHaveBeenCalledWith('/assets/asset-1/members', { server_ids: ['sql-1', 'sql-2'] }));
+    });
+
+    it('reads the technologies, the vulnerabilities and the inherited assignments again after a removal', async () => {
+      const invalidate = vi.spyOn(QueryClient.prototype, 'invalidateQueries');
+      const dialog = await openMembers();
+      removeSecond(dialog);
+      save(dialog);
+      await waitFor(() => expect(post).toHaveBeenCalledWith('/assets/asset-1/members', { server_ids: ['sql-1'] }));
+
+      // What a cluster shows from its members is stale after the save: its technologies, its
+      // vulnerabilities (with the severe badge) and the applications it inherits from them.
+      const predicates = invalidate.mock.calls
+        .map(([filters]) => (filters as { predicate?: (query: { queryKey: unknown[] }) => boolean } | undefined)?.predicate)
+        .filter((predicate): predicate is (query: { queryKey: unknown[] }) => boolean => typeof predicate === 'function');
+      expect(predicates.some((predicate) => predicate({ queryKey: ['asset-technologies', 'asset-1'] }))).toBe(true);
+      expect(predicates.some((predicate) => predicate({ queryKey: ['asset-technologies', 'asset-1', 'vulnerabilities'] }))).toBe(true);
+      await waitFor(() => expect(get.mock.calls.filter(([url]) => url === '/assets/asset-1/assignments').length).toBeGreaterThanOrEqual(2));
+      invalidate.mockRestore();
     });
   });
 });

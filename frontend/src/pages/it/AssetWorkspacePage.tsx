@@ -1151,10 +1151,13 @@ export default function AssetWorkspacePage() {
         });
         setMemberDialogOpen(false);
         await loadClusterMembers();
+        // A cluster's technologies, vulnerabilities and severe badge follow its members: every save
+        // that changes them reads those again, and so do the applications it inherits from them.
+        void invalidateTechnologyLinks(queryClient);
+        void refreshAssignments();
         if (removeOperatingSystem) {
           // The asset and its technologies no longer carry the system.
           void load();
-          void invalidateTechnologyLinks(queryClient);
         }
         // The impact reads the members of a cluster.
         void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
