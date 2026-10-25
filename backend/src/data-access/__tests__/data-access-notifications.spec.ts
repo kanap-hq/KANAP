@@ -180,13 +180,19 @@ async function testShare(runner: QueryRunner, s: Seed, t: Tasks): Promise<void> 
   // A sender asking about a line out of her access learns nothing.
   const blind = await as(runner, marta, (m) => shareRecipientsWhoCannotOpen(m, 'spend_item', s.lines.L1, [row(nina)]));
   assert.deepEqual(blind, [], 'Marta cannot see L1: no answer');
-  // A contract: readable by everyone until lot 5.
+  // A contract (lot 5): a limited sender who cannot see it learns nothing; an unscoped sender is
+  // warned about a person who cannot open it.
   const supplier = (await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Share supplier') RETURNING id`, [s.tenantId]))[0].id;
   const contract = (await runner.query(
     `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES ($1, 'Share contract', $2, $3, '2026-01-01') RETURNING id`,
     [s.tenantId, s.fr, supplier],
   ))[0].id;
-  assert.deepEqual(await as(runner, marta, (m) => shareRecipientsWhoCannotOpen(m, 'contract', contract, [row(nina)])), [], 'a contract: no warning before lot 5');
+  assert.deepEqual(await as(runner, marta, (m) => shareRecipientsWhoCannotOpen(m, 'contract', contract, [row(nina)])), [], 'Marta cannot see the contract: no answer');
+  assert.deepEqual(
+    await as(runner, ulla, (m) => shareRecipientsWhoCannotOpen(m, 'contract', contract, [row(nina)])),
+    [{ id: nina, name: nameOf(nina) }],
+    'an unscoped sender: Nina cannot open the contract',
+  );
   console.log('  "Send the link": cannot_open names the chosen persons who cannot open the task or line; sent to all; nothing about a hidden object: OK');
 }
 
