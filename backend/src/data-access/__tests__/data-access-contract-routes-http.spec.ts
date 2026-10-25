@@ -542,6 +542,34 @@ async function testLineLinks(app: INestApplication): Promise<void> {
   console.log('  line links: hidden line and contract 404 as missing, read-only line 403, hidden links kept on both sides, budget read required: OK');
 }
 
+async function testLineOpenedContract(app: INestApplication): Promise<void> {
+  const { persons: p, contracts: c } = s;
+  // CL is read through L1 only: read-only, its attachments and links closed, counted (3 documents).
+  const opened = await call(app, 'GET', `contracts/${c.CL}`, p.rita);
+  assert.equal(opened.status, 200, opened.text);
+  assert.equal(opened.body.editable, false, 'opened through a visible line: read only');
+  assert.equal(opened.body.closed_documents_count, 3, 'attachments and document links the person cannot open');
+  assert.deepEqual(opened.body.attachments, [], 'no attachment');
+  assert.deepEqual(opened.body.links, [], 'no document link');
+  const attachments = await call(app, 'GET', `contracts/${c.CL}/attachments`, p.rita);
+  assert.equal(attachments.status, 200, attachments.text);
+  assert.deepEqual(attachments.body, [], 'the attachments route answers an empty list, never 500');
+  const links = await call(app, 'GET', `contracts/${c.CL}/links`, p.rita);
+  assert.equal(links.status, 200, links.text);
+  assert.deepEqual(links.body, [], 'the links route answers an empty list');
+  const attachmentId = await scalar<{ id: string }>(`SELECT id FROM contract_attachments WHERE contract_id = $1 ORDER BY id LIMIT 1`, [c.CL]);
+  const download = await call(app, 'GET', `contracts/attachments/${attachmentId.id}`, p.rita);
+  assert.equal(download.status, 404, 'a closed attachment answers 404');
+
+  // A directly readable contract keeps its documents, and no closed count.
+  const direct = await call(app, 'GET', `contracts/${c.CE}`, p.marta);
+  assert.equal(direct.status, 200, direct.text);
+  assert.equal(direct.body.closed_documents_count, 0, 'directly readable: nothing closed');
+  assert.equal(direct.body.attachments.length, 1);
+  assert.equal(direct.body.links.length, 1);
+  console.log('  contract opened through a visible line: read only, closed documents counted, lists empty, download 404: OK');
+}
+
 async function testImport(app: INestApplication): Promise<void> {
   const csv = [
     'name,company_name,supplier_name,start_date,duration_months,auto_renewal,notice_period_months,yearly_amount_at_signature,currency,billing_frequency,status,owner_email,notes',
@@ -591,6 +619,7 @@ async function run(): Promise<void> {
     await testEditable(app);
     await testChildWrites(app);
     await testCostCentre(app);
+    await testLineOpenedContract(app);
     await testLineLinks(app);
     await testImport(app);
     console.log('data access contract routes over HTTP: all scenarios passed');

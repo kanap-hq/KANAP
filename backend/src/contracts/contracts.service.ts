@@ -715,6 +715,14 @@ export class ContractsService {
         WHERE c.tenant_id = $1 AND c.id = $2`,
       [tenantId, id],
     );
+    // A contract read through one of its lines (spec §5.4 "Exception"): its attachments and
+    // document links stay closed (so `links` and `attachments` are empty above), and this count,
+    // from `data_access_hidden_count` (lot 5, run 5A), gives their number. 0 when the contract is
+    // directly readable, absent for an unscoped person.
+    const limited = await isLimitedTransaction(mg);
+    const closedDocuments = limited
+      ? Number((await mg.query(`SELECT coalesce(data_access_hidden_count('contract_document', $1), 0) AS n`, [found.id]))[0]?.n ?? 0)
+      : null;
     return {
       ...found,
       ...(await contractEditableField(mg, found.id)),
@@ -728,6 +736,7 @@ export class ContractsService {
       linked_spend_items: spendItems,
       links,
       attachments,
+      ...(closedDocuments !== null ? { closed_documents_count: closedDocuments } : {}),
       latest_task,
     };
   }
