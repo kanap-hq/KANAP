@@ -1582,6 +1582,7 @@
         "placeholder": "Añadir una nota al registro",
         "add": "Añadir",
         "empty": "Todavía no hay entradas.",
+        "recordedAt": "registrada el {{date}}",
         "systemAuthor": "Sistema",
         "unknownAuthor": "Desconocido",
         "kinds": {
