@@ -418,6 +418,40 @@ function boundSortKey(bound: Record<string, string | boolean>): string {
   return `${bound.exact ?? ''}\0${bound.start ?? ''}\0${bound.end ?? ''}`;
 }
 
+/** `*`, `-` or nothing: that side of the bound is open, as the row's text reads it. */
+function openBound(value: string | boolean | undefined): boolean {
+  if (typeof value !== 'string') return true;
+  const text = value.trim();
+  return text === '' || text === '*' || text === '-';
+}
+
+/**
+ * Identity of one displayed bound. An exact version is the whole text. An open end does not
+ * count, and neither does its flag. The same key as the page (`feedText.ts`).
+ */
+function nvdBoundKey(bound: Record<string, string | boolean>): string {
+  const text = (value: string | boolean | undefined) => (openBound(value) || typeof value !== 'string' ? '' : value.trim());
+  const exact = text(bound.exact);
+  if (exact) return `e\0${exact}`;
+  const start = text(bound.start);
+  const end = text(bound.end);
+  const flag = (side: string, value: string | boolean | undefined) => (side && value === true ? '1' : '0');
+  return ['r', start, flag(start, bound.start_including), end, flag(end, bound.end_including)].join('\0');
+}
+
+/** First occurrence of each bound. The caller sorts afterwards, so the order stays the sort order. */
+export function dedupeNvdBounds(versions: Array<Record<string, string | boolean>>): Array<Record<string, string | boolean>> {
+  const seen = new Set<string>();
+  const out: Array<Record<string, string | boolean>> = [];
+  for (const bound of versions) {
+    const key = nvdBoundKey(bound);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(bound);
+  }
+  return out;
+}
+
 function compareText(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
@@ -438,7 +472,7 @@ function nvdMatches(criteria: NvdCriterion[], products: string[]): FeedMatch[] {
     .map(([cpe, versions]) => ({
       source: 'nvd' as const,
       cpe,
-      versions: versions.sort((a, b) => compareText(boundSortKey(a), boundSortKey(b))),
+      versions: dedupeNvdBounds(versions).sort((a, b) => compareText(boundSortKey(a), boundSortKey(b))),
     }));
 }
 
