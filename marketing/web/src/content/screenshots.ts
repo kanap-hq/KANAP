@@ -42,6 +42,18 @@ export const FEATURE_SCREENSHOTS = {
     '/screenshots/knowledge-document.png',
     '/screenshots/knowledge-linked-entities.png',
   ],
+  contracts: [
+    '/screenshots/blog/contracts-budget-coverage-2026-10-17.png',
+    '/screenshots/blog/contracts-sap-overview-2026-10-17.png',
+    '/screenshots/blog/contracts-cancel-2026-10-17.png',
+    '/screenshots/feature-contracts-budget-2026-10-24.png',
+  ],
+  incidents: [
+    '/screenshots/feature-incidents-register-2026-10-24.png',
+    '/screenshots/feature-incidents-review-2026-10-24.png',
+    '/screenshots/feature-incidents-compliance-2026-10-24.png',
+    '/screenshots/feature-incidents-relations-2026-10-24.png',
+  ],
   ai: [
     '/screenshots/ai-conversation.png',
     '/screenshots/ai-preview.png',

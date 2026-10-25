@@ -148,6 +148,61 @@ const waitForReport = (page) =>
 
 const PAGES = {
   dashboard: { path: '/', waitFor: 'main', prepare: waitForWidgets },
+  // Incidents feature page (October 2026), fromage fixture on the local dev tenant (INC-20 to INC-29): INC-23 carries a filled review,
+  // INC-24 the personal data and authority notification, INC-22 the most links.
+  'feature-incidents-register': {
+    path: '/it/incidents',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => document.querySelectorAll('main .ag-row, main table tbody tr').length > 3, { timeout: 30000 }).catch(() => {});
+    },
+  },
+  'feature-incidents-review': {
+    path: '/it/incidents/INC-23/overview',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Root cause'), { timeout: 30000 }).catch(() => {});
+    },
+  },
+  'feature-incidents-compliance': {
+    path: '/it/incidents/INC-24/relations',
+    waitFor: 'main',
+    async prepare(page) {
+      await openProperties(page);
+      await sleep(1000);
+      // Scroll the Properties panel down to its compliance fields.
+      await page.evaluate(() => {
+        for (const el of document.querySelectorAll('aside, aside *')) {
+          if (el.scrollHeight > el.clientHeight + 20 && getComputedStyle(el).overflowY !== 'visible') el.scrollTop = el.scrollHeight;
+        }
+      });
+    },
+  },
+  'feature-incidents-relations': { path: '/it/incidents/INC-22/relations', waitFor: 'main' },
+  // Contracts feature page: Budget tab of SAP Maintenance & Support (contracts have no business reference).
+  'feature-contracts-budget': {
+    path: '/ops/contracts',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('SAP Maintenance & Support'), { timeout: 30000 });
+      const [cell] = await page.$$('xpath/.//main//*[normalize-space(text())="SAP Maintenance & Support"]');
+      await cell.click();
+      await page.waitForFunction(() => location.pathname.includes('/overview'), { timeout: 20000 });
+      await page.goto(page.url().replace(/\/overview.*$/, '/budget'), { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Commitment and coverage'), { timeout: 30000 }).catch(() => {});
+      // The current year: its linked lines carry amounts.
+      await clickText(page, 'main button, main [role="tab"]', String(new Date().getFullYear()));
+      await sleep(1500);
+      // Leave out floating development widgets in the bottom right corner.
+      await page.evaluate(() => {
+        for (const el of document.querySelectorAll('body *')) {
+          const cs = getComputedStyle(el);
+          const r = el.getBoundingClientRect();
+          if (cs.position === 'fixed' && r.width > 0 && r.width < 120 && r.bottom > innerHeight - 120 && r.right > innerWidth - 120) el.style.display = 'none';
+        }
+      });
+    },
+  },
   // Same dashboard, after opening a few records: "Recently viewed" is kept in
   // localStorage by each workspace page, so it is only filled within this browser
   // session. Refs (PRJ-6, T-2...) resolve in the URL; last visited shows first.
