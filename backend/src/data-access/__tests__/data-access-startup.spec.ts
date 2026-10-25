@@ -3,7 +3,7 @@ import 'dotenv/config';
 import * as assert from 'node:assert/strict';
 import { DataSource, QueryRunner } from 'typeorm';
 import { DataAccessFoundations1854400000000 } from '../../migrations/1854400000000-data-access-foundations';
-import { DataAccessContractPolicies1855300000000 } from '../../migrations/1855300000000-data-access-contract-policies';
+import { DataAccessContractPolicies1855400000000 } from '../../migrations/1855400000000-data-access-contract-policies';
 import {
   DataAccessSession,
   checkDataAccessAvailability,
@@ -224,7 +224,7 @@ async function testForeignRelations(admin: PgClient): Promise<void> {
     const migration = new DataAccessFoundations1854400000000();
     // Lot 5 policies and triggers depend on contracts.cost_center_id: the lot is reverted first,
     // as a real down chain would, then migrated again after lot 1.
-    const lotFive = new DataAccessContractPolicies1855300000000();
+    const lotFive = new DataAccessContractPolicies1855400000000();
     await lotFive.down(queryRunner);
     await migration.down(queryRunner);
     const { rows: down } = await admin.query(

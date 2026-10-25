@@ -589,8 +589,8 @@ function literal(text: string | null): string {
  * bodies of both functions and calls the sync: the contract policies are not expected any more and
  * go; the lot 2 policies are recreated.
  */
-export class DataAccessContractPolicies1855300000000 implements MigrationInterface {
-  name = 'DataAccessContractPolicies1855300000000';
+export class DataAccessContractPolicies1855400000000 implements MigrationInterface {
+  name = 'DataAccessContractPolicies1855400000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await createPolicyDeparsedFunction(queryRunner);
