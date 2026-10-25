@@ -76,8 +76,8 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
     const applications: Array<{ name: string }> = await manager.query(
       `SELECT DISTINCT a.name
        FROM app_asset_assignments aaa
-       JOIN app_instances ai ON ai.id = aaa.app_instance_id
-       JOIN applications a ON a.id = ai.application_id
+       JOIN app_instances ai ON ai.tenant_id = aaa.tenant_id AND ai.id = aaa.app_instance_id
+       JOIN applications a ON a.tenant_id = ai.tenant_id AND a.id = ai.application_id
        WHERE aaa.asset_id = $1 AND aaa.tenant_id = $2
        ORDER BY a.name ASC`,
       [assetId, tenantId],
