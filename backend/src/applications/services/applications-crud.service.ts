@@ -25,6 +25,7 @@ import { validateUploadedFile } from '../../common/upload-validation';
 import { fixMulterFilename } from '../../common/upload';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../../notifications/share-recipients';
+import { displayName } from '../../common/display-name';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { projectParticipantCondition, requestParticipantCondition } from '../../auth/business-contributor-scope';
 import { buildDerivedUsersByApp } from './derived-users';
@@ -146,9 +147,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     if (!app) throw new NotFoundException('Application not found');
 
     const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
-    const senderName = senderRows.length > 0
-      ? `${senderRows[0].first_name || ''} ${senderRows[0].last_name || ''}`.trim() || 'Someone'
-      : 'Someone';
+    const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
       ? await mg.query(

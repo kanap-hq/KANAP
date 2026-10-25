@@ -6,6 +6,7 @@ import { Task, TaskStatus, TASK_STATUSES } from './task.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { TaskTimeEntriesService } from './task-time-entries.service';
 import { AuditService } from '../audit/audit.service';
+import { displayName } from '../common/display-name';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { writeTaskColumns } from './task-column-write';
 
@@ -208,7 +209,7 @@ export class TaskActivitiesService {
     // Fire-and-forget notification for comments
     if (dto.type === 'comment' && normalizedContent && userId) {
       const author = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
-      const authorName = author.length > 0 ? `${author[0].first_name} ${author[0].last_name}`.trim() || 'Someone' : 'Someone';
+      const authorName = displayName(author[0], 'Someone');
       const recipients = await this.notifications.getTaskRecipients(taskId, mg);
       this.notifyCommentSafely({
         itemType: 'task',
@@ -380,9 +381,7 @@ export class TaskActivitiesService {
     if (tenantId && userId && (hasStatusChange || hasComment)) {
       const recipients = await this.notifications.getTaskRecipients(taskId, mg);
       const author = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
-      const authorName = author.length > 0
-        ? `${author[0].first_name} ${author[0].last_name}`.trim() || 'Someone'
-        : 'Someone';
+      const authorName = displayName(author[0], 'Someone');
 
       this.notifyUnifiedActionSafely({
         taskId,

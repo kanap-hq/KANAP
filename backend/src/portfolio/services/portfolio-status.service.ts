@@ -7,6 +7,7 @@ import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-
 import { PortfolioAttachmentsService } from './portfolio-attachments.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { AuditService } from '../../audit/audit.service';
+import { displayName } from '../../common/display-name';
 import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 
 /**
@@ -122,9 +123,7 @@ export class PortfolioStatusService extends PortfolioProjectsBaseService {
         `SELECT first_name, last_name FROM users WHERE id = $1`,
         [userId]
       );
-      const authorName = authorData.length > 0
-        ? `${authorData[0].first_name || ''} ${authorData[0].last_name || ''}`.trim() || 'Unknown'
-        : 'Unknown';
+      const authorName = displayName(authorData[0], 'Unknown');
 
       const recipients = await this.notifications.getProjectRecipients(projectId, mg);
       this.notifications.notifyComment({
