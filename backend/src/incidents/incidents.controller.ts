@@ -32,6 +32,7 @@ import { KnowledgeService } from '../knowledge/knowledge.service';
 import { InlineImageResolverService } from '../knowledge/inline-image-resolver.service';
 import {
   IncidentEntriesService,
+  IncidentJournalImportService,
   IncidentRelationsService,
   incidentRelationKindOrThrow,
   IncidentReportService,
@@ -69,6 +70,7 @@ export class IncidentsController {
     private readonly dataSource: DataSource,
     private readonly inlineImages: InlineImageResolverService,
     private readonly deleteSvc: IncidentsDeleteService,
+    private readonly journalImport: IncidentJournalImportService,
   ) {}
 
   private resolveId(id: string, manager: EntityManager): Promise<string> {
@@ -229,6 +231,25 @@ export class IncidentsController {
   @Get('csv-fields')
   getCsvFields() {
     return this.csvSvc.getFieldInfo();
+  }
+
+  /**
+   * Journal import for the sample data: one row per entry, with its author and
+   * event time (see IncidentJournalImportService). Restricted to register
+   * administrators, because the file chooses who signed an entry.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('incidents', 'admin')
+  @Post('import-journal')
+  @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
+  importJournal(
+    @UploadedFile() file: Express.Multer.File,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.journalImport.import(file, {
+      manager: ctx.manager as EntityManager,
+      tenantId: ctx.tenantId,
+    });
   }
 
   // PDF fiche (read — works on closed/cancelled records)

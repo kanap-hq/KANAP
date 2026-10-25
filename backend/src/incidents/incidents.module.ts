@@ -20,6 +20,7 @@ import { ItOpsSettingsModule } from '../it-ops-settings/it-ops-settings.module';
 import { TasksModule } from '../tasks/tasks.module';
 import {
   IncidentEntriesService,
+  IncidentJournalImportService,
   IncidentRecordService,
   IncidentReportService,
   IncidentRelationsService,
@@ -52,6 +53,7 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
     IncidentReportService,
     IncidentsCsvService,
     IncidentsDeleteService,
+    IncidentJournalImportService,
     UserTimeAggregateService,
   ],
   exports: [IncidentsService, IncidentRecordService, IncidentRelationsService],

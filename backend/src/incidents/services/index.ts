@@ -12,3 +12,5 @@ export type { ServiceOpts } from './incidents-base.service';
 export type { IncidentViewer } from '../incident-visibility';
 export { IncidentsDeleteService, INCIDENT_HAS_REGULATORY_RECORDS } from './incidents-delete.service';
 export type { IncidentDeleteImpact } from './incidents-delete.service';
+export { IncidentJournalImportService } from './incident-journal-import.service';
+export type { IncidentJournalImportResult } from './incident-journal-import.service';
