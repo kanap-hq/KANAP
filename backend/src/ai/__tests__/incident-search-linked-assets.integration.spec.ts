@@ -194,6 +194,94 @@ async function migrationReplay() {
   });
 }
 
+async function migrationDownThenUp() {
+  await withRollback(async (runner) => {
+    const tenantId = await seedTenant(runner, 'inc-linked-assets-down-up');
+    const assetId = await seedAsset(runner, tenantId, {
+      name: 'Serveur down up',
+      hostname: 'QA-DOWN-UP-01',
+      fqdn: null,
+    });
+    const incidentId = await seedIncident(runner, tenantId, 9411, 'Incident down up');
+    await linkAsset(runner, tenantId, incidentId, assetId);
+
+    const migration = new IncidentSearchLinkedAssets1855300000000();
+    await migration.down(runner);
+    const [downFunction] = await runner.query(
+      `SELECT prosrc FROM pg_proc WHERE proname = 'search_index_refresh_incidents'`,
+    );
+    assert.doesNotMatch(
+      String(downFunction?.prosrc ?? ''),
+      /incident_assets/,
+      'down removes the linked asset text from the refresh function',
+    );
+    const downTriggers = await runner.query(
+      `SELECT tgname FROM pg_trigger
+        WHERE NOT tgisinternal
+          AND tgname IN (
+            'trg_search_index_link_incident_assets_insert',
+            'trg_search_index_link_incident_assets_update',
+            'trg_search_index_link_incident_assets_delete',
+            'trg_search_index_incident_assets_on_asset'
+          )
+        ORDER BY tgname`,
+    );
+    assert.deepEqual(downTriggers, [], 'down removes the four maintenance triggers');
+    assert.equal(
+      await vectorMatches(runner, tenantId, incidentId, 'QA-DOWN-UP-01'),
+      false,
+      'down reindexes the entries without the linked asset text',
+    );
+
+    await migration.up(runner);
+    const [upFunction] = await runner.query(
+      `SELECT prosrc FROM pg_proc WHERE proname = 'search_index_refresh_incidents'`,
+    );
+    assert.match(
+      String(upFunction?.prosrc ?? ''),
+      /incident_assets/,
+      'up puts the linked asset text back in the refresh function',
+    );
+    assert.equal(
+      await vectorMatches(runner, tenantId, incidentId, 'QA-DOWN-UP-01'),
+      true,
+      'up reindexes the entries with the linked asset text',
+    );
+  });
+}
+
+async function movedLink() {
+  await withRollback(async (runner) => {
+    const tenantId = await seedTenant(runner, 'inc-linked-assets-move');
+    const assetId = await seedAsset(runner, tenantId, {
+      name: 'Serveur déplacé',
+      hostname: 'QA-MOVE-01',
+      fqdn: null,
+    });
+    const firstId = await seedIncident(runner, tenantId, 9501, 'Premier incident du lien');
+    const secondId = await seedIncident(runner, tenantId, 9502, 'Deuxième incident du lien');
+    await linkAsset(runner, tenantId, firstId, assetId);
+    assert.equal(await vectorMatches(runner, tenantId, firstId, 'QA-MOVE-01'), true);
+    assert.equal(await vectorMatches(runner, tenantId, secondId, 'QA-MOVE-01'), false);
+
+    await runner.query(
+      `UPDATE incident_assets SET incident_id = $1
+        WHERE tenant_id = $2 AND incident_id = $3 AND asset_id = $4`,
+      [secondId, tenantId, firstId, assetId],
+    );
+    assert.equal(
+      await vectorMatches(runner, tenantId, firstId, 'QA-MOVE-01'),
+      false,
+      'the old incident loses the asset text when the link moves',
+    );
+    assert.equal(
+      await vectorMatches(runner, tenantId, secondId, 'QA-MOVE-01'),
+      true,
+      'the new incident gains the asset text when the link moves',
+    );
+  });
+}
+
 async function linkedAssetText() {
   await withRollback(async (runner) => {
     const tenantId = await seedTenant(runner, 'inc-linked-assets');
@@ -351,6 +439,7 @@ async function restrictedIncidentVisibility() {
     const memberRoleId = await seedRole(runner, tenantId, 'Member');
     const adminId = await seedUser(runner, tenantId, adminRoleId, 'Ada', 'Admin');
     const readerId = await seedUser(runner, tenantId, memberRoleId, 'Rémi', 'Lecteur');
+    const ownerId = await seedUser(runner, tenantId, memberRoleId, 'Olga', 'Responsable');
     const service = createEntityService();
 
     const assetId = await seedAsset(runner, tenantId, {
@@ -364,7 +453,7 @@ async function restrictedIncidentVisibility() {
       9201,
       'Incident restreint lié à un actif',
       true,
-      adminId,
+      ownerId,
     );
     await linkAsset(runner, tenantId, restrictedId, assetId);
 
@@ -376,7 +465,12 @@ async function restrictedIncidentVisibility() {
     assert.equal(
       (await searchIncidentIds(service, runner, tenantId, adminId, 'RESTRICTED-HOST-01')).includes(restrictedId),
       true,
-      'an incidents:admin still sees the restricted incident by its linked asset',
+      'an incidents:admin sees the restricted incident by its linked asset, through the admin right',
+    );
+    assert.equal(
+      (await searchIncidentIds(service, runner, tenantId, ownerId, 'RESTRICTED-HOST-01')).includes(restrictedId),
+      true,
+      'the incident owner sees the restricted incident by its linked asset',
     );
 
     // The same asset linked to a public incident stays visible to the reader.
@@ -428,7 +522,9 @@ async function bulkLinkChange() {
 async function run() {
   await runSpecs('incident-search-linked-assets', [
     migrationReplay,
+    migrationDownThenUp,
     linkedAssetText,
+    movedLink,
     restrictedIncidentVisibility,
     bulkLinkChange,
   ]);
