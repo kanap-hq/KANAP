@@ -123,7 +123,7 @@ async function testAVersionWithoutARateIsLeftOutOfEverySum() {
     assert.equal(sum(company.departments.map((row) => row.amount)), 600);
     assert.deepEqual(company.intercompany!.receivables, []);
     assert.deepEqual(company.intercompany!.payables.map((row) => [row.payerId, row.amount]), [[seeded.paris, 600]]);
-    assert.equal(company.globalKpi.amount, 1200);
+    assert.equal(company.globalKpi!.amount, 1200);
     assert.deepEqual(company.warnings, [expected]);
   });
 }

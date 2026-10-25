@@ -61,6 +61,7 @@ const DATA_ACCESS_MESSAGE_KEYS: Record<string, string> = {
   'This line is read only in your access.': 'readOnlyLine',
   'This company or cost center is not part of your access.': 'placement',
   'This action is reserved to people with access to all data.': 'reserved',
+  'The chargeback of this company is outside your data access.': 'chargebackCompany',
   'This task is read only in your access.': 'readOnlyTask',
   'Only someone who can modify the line or contract of this task can delete it.': 'taskDelete',
   'This change would take the line out of your access. Keep yourself as an owner, or ask someone with access to its company.': 'leavesAccess',
@@ -69,6 +70,12 @@ const DATA_ACCESS_MESSAGE_KEYS: Record<string, string> = {
 const DATA_ACCESS_READ_ONLY_REF = /^(\S+) is read only in your access\.$/;
 /** `OPX-12 is no longer available since the export.` (budget file: deleted, or out of the person's access). */
 const DATA_ACCESS_NO_LONGER_AVAILABLE = /^(\S+) is no longer available since the export\.$/;
+/**
+ * `This application is linked to 3 lines outside your access.`: a refused delete. Its sentence is
+ * the delete check's refusal (`errors:APPLICATION_HIDDEN_LINES`, and the asset's, technology's,
+ * project's and request's).
+ */
+const DATA_ACCESS_HIDDEN_LINES = /^This (application|asset|technology|project|request) is linked to (\d+) lines? outside your access\.$/;
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -83,6 +90,8 @@ export function dataAccessSentence(message: string, t: Translate): string | null
   if (readOnly) return t('errors:dataAccess.readOnlyRef', { ref: readOnly[1], defaultValue: message });
   const gone = DATA_ACCESS_NO_LONGER_AVAILABLE.exec(message);
   if (gone) return t('errors:dataAccess.noLongerAvailable', { ref: gone[1], defaultValue: message });
+  const hidden = DATA_ACCESS_HIDDEN_LINES.exec(message);
+  if (hidden) return t(`errors:${hidden[1].toUpperCase()}_HIDDEN_LINES`, { count: Number(hidden[2]), defaultValue: message });
   return null;
 }
 

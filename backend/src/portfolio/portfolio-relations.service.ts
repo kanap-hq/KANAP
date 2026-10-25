@@ -9,7 +9,7 @@ import { readRelationsBudgetColumn } from '../common/relations/relations-budget-
 import {
   listRelatedApplications,
   listRelatedAssets,
-  listRelatedBudgetLines,
+  readRelatedBudgetLines,
   listRelatedBusinessProcesses,
   listRelatedPortfolioItems,
   listRelatedTechnologies,
@@ -72,6 +72,8 @@ export type ProjectRelations = {
   year: number;
   budget_column: { key: string; label: string };
   budget_lines: RelatedBudgetLine[] | null;
+  /** The linked lines `budget_lines` leaves out, counted (`readRelatedBudgetLines`). */
+  budget_lines_hidden: number;
   applications: RelatedApplication[] | null;
   assets: RelatedAsset[] | null;
   technologies: RelatedTechnology[] | null;
@@ -128,6 +130,8 @@ export type RequestRelations = {
   year: number;
   budget_column: { key: string; label: string };
   budget_lines: RelatedBudgetLine[] | null;
+  /** The linked lines `budget_lines` leaves out, counted (`readRelatedBudgetLines`). */
+  budget_lines_hidden: number;
   applications: RelatedApplication[] | null;
   assets: RelatedAsset[] | null;
   processes: RelatedBusinessProcess[] | null;
@@ -175,9 +179,7 @@ export class PortfolioRelationsService {
     const tenantId = project.tenant_id;
     const { year, measure, budget_column } = await readRelationsBudgetColumn(mg, tenantId);
     // One query after the other: the request's connection runs them in turn.
-    const budgetLines = ctx.access.budget_lines
-      ? await listRelatedBudgetLines(mg, this.fxRates, PROJECT_LINES, tenantId, project.id, year, measure)
-      : null;
+    const budget = await readRelatedBudgetLines(mg, this.fxRates, PROJECT_LINES, 'project', tenantId, project.id, year, measure, ctx.access.budget_lines);
     const applications = ctx.access.applications
       ? await listRelatedApplications(mg, PROJECT_APPLICATIONS, tenantId, project.id, ctx.applicationScope)
       : null;
@@ -191,7 +193,7 @@ export class PortfolioRelationsService {
     return {
       year,
       budget_column,
-      budget_lines: budgetLines,
+      ...budget,
       applications,
       assets,
       technologies,
@@ -342,9 +344,7 @@ export class PortfolioRelationsService {
     const request = await this.readRequest(mg, ctx.tenantId, requestId);
     const tenantId = request.tenant_id;
     const { year, measure, budget_column } = await readRelationsBudgetColumn(mg, tenantId);
-    const budgetLines = ctx.access.budget_lines
-      ? await listRelatedBudgetLines(mg, this.fxRates, REQUEST_LINES, tenantId, request.id, year, measure)
-      : null;
+    const budget = await readRelatedBudgetLines(mg, this.fxRates, REQUEST_LINES, 'request', tenantId, request.id, year, measure, ctx.access.budget_lines);
     const applications = ctx.access.applications
       ? await listRelatedApplications(mg, REQUEST_APPLICATIONS, tenantId, request.id, ctx.applicationScope)
       : null;
@@ -358,7 +358,7 @@ export class PortfolioRelationsService {
     return {
       year,
       budget_column,
-      budget_lines: budgetLines,
+      ...budget,
       applications,
       assets,
       processes,

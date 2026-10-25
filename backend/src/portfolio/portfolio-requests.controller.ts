@@ -347,7 +347,8 @@ export class PortfolioRequestsController {
   @Get(':id')
   async get(@Param('id') idOrRef: string, @Query() query: any, @Req() req: any) {
     const { id, accessScope } = await this.resolveForAccess(idOrRef, req, 'reader');
-    return this.svc.get(id, query, { manager: req?.queryRunner?.manager, accessScope });
+    const readsBudget = hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'budget', 'reader');
+    return this.svc.get(id, query, { manager: req?.queryRunner?.manager, accessScope, readsBudget });
   }
 
   @UseGuards(PermissionGuard)

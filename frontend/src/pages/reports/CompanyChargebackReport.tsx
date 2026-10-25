@@ -35,6 +35,9 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatCurrency as formatMoney } from '../../i18n/formatters';
 import { useTranslation } from 'react-i18next';
 import { allocationWarningKey, allocationWarningText, amountFxMissingOf, isAmountFxMissingWarning, type ReportWarning } from '../../utils/allocationWarnings';
+import { useAuth } from '../../auth/AuthContext';
+import { chargebackCompanyIds } from '../../auth/dataAccess';
+import { formatItemRef } from '../../utils/item-ref';
 
 function baseFormatNumber(value: number | null | undefined, locale: string): string {
   const n = Number(value ?? 0);
@@ -73,7 +76,7 @@ type CompanyChargebackDepartmentRow = {
 };
 
 type CompanyChargebackItemRow = {
-  versionId: string;
+  versionId: string | null;
   itemId: string | null;
   /** The line's number (its BL-n reference) and nature; null when the line is not read. */
   itemNumber?: number | null;
@@ -84,6 +87,15 @@ type CompanyChargebackItemRow = {
   amount: number;
   amountRaw: number;
   sharePct: number | null;
+  /**
+   * A limited person's report only (data-scoped access): `readable` false for a line charged to the
+   * company that the person cannot read (its reference and label, no link), the paying company,
+   * the allocation percentage charged to the company and the departments the shares go down to.
+   */
+  readable?: boolean;
+  payingCompanyName?: string | null;
+  allocationPct?: number | null;
+  departments?: string[];
 };
 
 type CompanyChargebackSummary = {
@@ -129,6 +141,7 @@ type CompanyChargebackReportResponse = {
     costPerItUser: number | null;
     costVsTurnoverPct: number | null;
   }>;
+  /** Null for a limited person: no group total. */
   globalKpi: {
     amount: number;
     amountRaw: number;
@@ -139,7 +152,11 @@ type CompanyChargebackReportResponse = {
     costPerUser: number | null;
     costPerItUser: number | null;
     costVsTurnoverPct: number | null;
-  };
+  } | null;
+  /** Set for a limited person: the shares charged to the company only. */
+  dataAccessLimited?: true;
+  /** A limited person's report: the numbers of the hidden lines charged to the company without a rate. */
+  fxMissingHiddenLines?: number[];
   intercompany?: {
     receivables: Array<{ consumerId: string; consumerName: string; amount: number; amountRaw: number }>;
     payables: Array<{ payerId: string; payerName: string; amount: number; amountRaw: number }>;
@@ -154,6 +171,10 @@ export default function CompanyChargebackReport() {
   const { t } = useTranslation(["ops"]);
   const budgetColumns = useBudgetColumns();
   const locale = useLocale();
+  // A limited person opens the companies of their company nodes only (null: every company).
+  const { dataAccess } = useAuth();
+  const allowedCompanyIds = useMemo(() => chargebackCompanyIds(dataAccess), [dataAccess]);
+  const noCompanyInAccess = allowedCompanyIds != null && allowedCompanyIds.size === 0;
   const now = new Date();
   const currentYear = now.getFullYear();
   const allowedYears = [currentYear - 1, currentYear, currentYear + 1];
@@ -196,13 +217,21 @@ export default function CompanyChargebackReport() {
     [locale, reportingCurrency],
   );
   const departments = data?.departments ?? [];
-  const items = data?.items ?? [];
+  const limitedReport = data?.dataAccessLimited === true;
+  // A line the person cannot read: its reference and label, without a link (no `itemId`).
+  const items = useMemo(() => (data?.items ?? []).map((row) => (
+    row.readable === false
+      ? { ...row, itemName: [row.itemNumber != null ? formatItemRef('budget', row.itemNumber) : null, row.itemName].filter(Boolean).join(' · ') }
+      : row
+  )), [data?.items]);
   const kpiRows = data?.kpis ?? [];
   const globalKpi = data?.globalKpi;
   const allWarnings = data?.warnings ?? [];
   // The lines left out for lack of a rate read as the budget reports' notice, above the report.
   const amountFxMissing = amountFxMissingOf(allWarnings);
   const warnings = allWarnings.filter((warning) => !isAmountFxMissingWarning(warning));
+  // Lines the person cannot read, charged to the company and left out for lack of a rate: by reference, no link.
+  const fxMissingHiddenLines = data?.fxMissingHiddenLines ?? [];
   const formatNumber = React.useCallback(
     (value: number | null | undefined) => baseFormatNumber(value, locale),
     [locale],
@@ -309,7 +338,23 @@ export default function CompanyChargebackReport() {
       // Each line by its BL reference, whatever its nature; common costs (no line) and the total row stay plain text.
       cellRendererParams: { newTab: true, getHref: (row: Partial<CompanyChargebackItemRow>) => itemHref(row.nature ?? scope, row.itemId, row.itemNumber) },
     },
+    ...(limitedReport ? [{ field: 'payingCompanyName', headerName: t('reports.columns.payer'), minWidth: 160 } as ColDef] : []),
     { field: 'allocationMethodLabel', headerName: t('reports.columns.allocationMethod'), minWidth: 180 },
+    ...(limitedReport ? [
+      {
+        field: 'allocationPct',
+        headerName: t('reports.columns.allocationPct'),
+        width: 130,
+        type: 'rightAligned',
+        valueFormatter: (params: any) => formatShare(params.value, 2),
+      } as ColDef,
+      {
+        colId: 'departments',
+        headerName: t('reports.columns.department'),
+        minWidth: 160,
+        valueGetter: (params: any) => (params.data?.departments ?? []).join(', '),
+      } as ColDef,
+    ] : []),
     {
       field: 'amount',
       headerName: t('reports.columns.metricAmount', { metric: metricLabel }),
@@ -324,7 +369,7 @@ export default function CompanyChargebackReport() {
       type: 'rightAligned',
       valueFormatter: (params) => formatShare(params.value, 2),
     },
-  ], [formatNumber, formatShare, metricLabel, scope]);
+  ], [formatNumber, formatShare, limitedReport, metricLabel, scope]);
 
   const chartData = useMemo(() => {
     return departments.map((row: CompanyChargebackDepartmentRow) => ({ label: row.departmentName, value: row.amount }));
@@ -425,6 +470,7 @@ export default function CompanyChargebackReport() {
               value={companyId}
               onChange={setCompanyId}
               size="small"
+              allowedCompanyIds={allowedCompanyIds}
             />
           </Box>
           <TextField
@@ -491,7 +537,7 @@ export default function CompanyChargebackReport() {
           <Paper variant="outlined" sx={{ p: 3 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>{t("reports.companyChargeback.selectCompanyTitle")}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {t('reports.companyChargeback.selectCompanyDescription')}
+              {noCompanyInAccess ? t('reports.companyChargeback.noCompanyInAccess') : t('reports.companyChargeback.selectCompanyDescription')}
             </Typography>
           </Paper>
         )}
@@ -530,7 +576,7 @@ export default function CompanyChargebackReport() {
           </Paper>
         )}
 
-        {isReady && warnings.length > 0 && (
+        {isReady && (warnings.length > 0 || fxMissingHiddenLines.length > 0) && (
           <Alert severity="warning" sx={{ whiteSpace: 'pre-wrap' }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>{t("reports.shared.warningsTitle")}</Typography>
             <Box component="ul" sx={{ pl: 3, my: 0 }}>
@@ -539,6 +585,14 @@ export default function CompanyChargebackReport() {
                   {allocationWarningText(t, warning)}
                 </Typography>
               ))}
+              {fxMissingHiddenLines.length > 0 && (
+                <Typography component="li" variant="body2">
+                  {t("reports.companyChargeback.fxMissingHiddenLines", {
+                    count: fxMissingHiddenLines.length,
+                    references: fxMissingHiddenLines.map((n) => formatItemRef('budget', n)).join(', '),
+                  })}
+                </Typography>
+              )}
             </Box>
           </Alert>
         )}

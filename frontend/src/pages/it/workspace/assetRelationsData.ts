@@ -19,6 +19,8 @@ export type AssetRelationsData = {
   budget_column: { key: string; label: string };
   assets: Record<AssetDirection, AssetRelationRow[]>;
   budget_lines: BudgetLineRow[] | null;
+  /** The linked lines `budget_lines` leaves out, counted: outside the caller's data access, or all without the budget right. */
+  budget_lines_hidden?: number;
   contracts: ContractRow[] | null;
   projects: ProjectRow[] | null;
   tasks: AssetTaskRow[] | null;
@@ -30,6 +32,14 @@ export type AssetRelationsData = {
     total: number;
   } & Record<string, number>;
 };
+
+/**
+ * The Relations badge: `counts.total` (the rows the tab lists) plus the budget lines the tab counts
+ * without listing them (`budget_lines_hidden`). Undefined until the read is in.
+ */
+export function assetRelationsBadge(data: AssetRelationsData | undefined): number | undefined {
+  return data ? (data.counts?.total ?? 0) + (data.budget_lines_hidden ?? 0) : undefined;
+}
 
 /** The one query key of the read, shared by both tabs and the page (tab badges). */
 export const assetRelationsKey = (id: string) => ['asset-relations-tab', id] as const;

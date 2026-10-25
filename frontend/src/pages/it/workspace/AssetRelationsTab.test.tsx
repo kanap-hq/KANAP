@@ -8,7 +8,7 @@ import { createAppTheme } from '../../../config/ThemeContext';
 import { KanapDialogProvider } from '../../../components/design';
 import api from '../../../api';
 import AssetRelationsTab from './AssetRelationsTab';
-import { assetRelationsKey, type AssetRelationsData } from './assetRelationsData';
+import { assetRelationsBadge, assetRelationsKey, type AssetRelationsData } from './assetRelationsData';
 
 const rights = vi.hoisted(() => ({} as Record<string, string>));
 
@@ -297,5 +297,11 @@ describe('AssetRelationsTab', () => {
     fireEvent.change(await screen.findByLabelText('linksAndFiles.attachFile'), { target: { files: [file] } });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/attachments', expect.any(FormData)));
     await waitFor(() => expect(badgeRead()).toBe(true));
+  });
+
+  it('counts in the tab badge the budget lines the section counts without listing them', () => {
+    expect(assetRelationsBadge(undefined)).toBeUndefined();
+    expect(assetRelationsBadge(relations())).toBe(7);
+    expect(assetRelationsBadge(relations({ budget_lines_hidden: 2 }))).toBe(9);
   });
 });

@@ -46,7 +46,7 @@ import HardwareInfoPanel from './editors/HardwareInfoPanel';
 import SupportInfoPanel from './editors/SupportInfoPanel';
 import AssetDependenciesTab from './workspace/AssetDependenciesTab';
 import AssetRelationsTab from './workspace/AssetRelationsTab';
-import { assetRelationsKey, fetchAssetRelationsTab } from './workspace/assetRelationsData';
+import { assetRelationsBadge, assetRelationsKey, fetchAssetRelationsTab } from './workspace/assetRelationsData';
 import AssetTechnologiesSection from './components/AssetTechnologiesSection';
 import { invalidateTechnologyLinks } from './components/technologyLinkQueries';
 import ReachVulnerabilitiesSection, { type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
@@ -1450,7 +1450,7 @@ export default function AssetWorkspacePage() {
       badge: (relationCounts?.assets ?? 0) + (isCluster ? clusterMembers.length : clustersForServer.length),
       disabled: isCreate,
     },
-    { key: 'relations', label: t('workspace.asset.tabs.relations'), badge: relationCounts?.total ?? 0, disabled: isCreate },
+    { key: 'relations', label: t('workspace.asset.tabs.relations'), badge: assetRelationsBadge(assetRelationsQuery.data) ?? 0, disabled: isCreate },
   ];
 
   const canonicalPathFor = (targetId: string, nextTab: TabKey = validTab) => {

@@ -207,6 +207,7 @@ export default function PortfolioRelationsTab({
     year,
     columnLabel,
     currency: lineCurrency,
+    hidden: data?.budget_lines_hidden,
   });
   const applications = applicationsSection({
     t,

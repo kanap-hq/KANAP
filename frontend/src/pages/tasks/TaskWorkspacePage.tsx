@@ -102,6 +102,8 @@ interface TaskData {
   related_object_type: 'spend_item' | 'contract' | 'capex_item' | 'project' | 'incident' | null;
   related_object_id: string | null;
   related_object_name: string | null;
+  /** The task names a budget line the person cannot read: `related_object_name` is its reference alone, without a link. */
+  related_object_hidden?: boolean;
   phase_id: string | null;
   phase_name: string | null;
   // Classification fields
@@ -443,6 +445,7 @@ export default function TaskWorkspacePage() {
 
   const linkedTask = liveTask || task;
   const linkedBudgetId = linkedTask && ['spend_item', 'capex_item'].includes(linkedTask.related_object_type ?? '')
+    && !linkedTask.related_object_hidden
     ? linkedTask.related_object_id : null;
   const { data: linkedBudgetLine } = useQuery({
     ...budgetLineDetailQuery(linkedBudgetId ?? ''),
@@ -476,7 +479,8 @@ export default function TaskWorkspacePage() {
     const type = relatedKindFromType(source?.related_object_type ?? null);
     const relatedId = source?.related_object_id;
     const relatedName = (source?.related_object_name ?? '').trim();
-    if (!type || !relatedId || !relatedName) return null;
+    // A line the person cannot read has no page to go back to.
+    if (!type || !relatedId || !relatedName || source?.related_object_hidden) return null;
     return { type, id: relatedId, name: relatedName };
   }, [displayedTask]);
   const originMatchesRelated = originMatchesParent(origin, breadcrumbParent);
@@ -932,11 +936,12 @@ export default function TaskWorkspacePage() {
     if (nextType === null && nextId !== null) {
       throw new Error(t('portfolio:workspace.task.messages.invalidStandaloneRelation'));
     }
-    if (nextType !== null && !nextId) {
+    const isRelationPatch = hasRelatedType || hasRelatedId;
+    // A line the person cannot read comes without its id: the task keeps it while the relation is untouched.
+    if (nextType !== null && !nextId && (isRelationPatch || !snapshot.related_object_hidden)) {
       throw new Error(t('portfolio:workspace.task.messages.relatedItemRequired'));
     }
 
-    const isRelationPatch = hasRelatedType || hasRelatedId;
     return {
       endpoint: isRelationPatch
         ? `/tasks/${snapshot.id}/move`
@@ -1136,7 +1141,8 @@ export default function TaskWorkspacePage() {
       if (nextType === null && nextId !== null) {
         throw new Error(t('portfolio:workspace.task.messages.invalidStandaloneRelation'));
       }
-      if (nextType !== null && !nextId) {
+      // A line the person cannot read comes without its id: the task keeps it while the relation is untouched.
+      if (nextType !== null && !nextId && (relationChanged || !task.related_object_hidden)) {
         throw new Error(t('portfolio:workspace.task.messages.relatedItemRequired'));
       }
 

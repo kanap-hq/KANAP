@@ -231,7 +231,7 @@ async function testPayload() {
     const { http } = httpOf();
     const res = await http.relationsTabRead(seed.asset.reference, ctx(runner, seed, ALL, seed.userId, true));
 
-    assert.deepEqual(Object.keys(res).sort(), ['assets', 'budget_column', 'budget_lines', 'contracts', 'counts', 'incidents', 'projects', 'tasks', 'year']);
+    assert.deepEqual(Object.keys(res).sort(), ['assets', 'budget_column', 'budget_lines', 'budget_lines_hidden', 'contracts', 'counts', 'incidents', 'projects', 'tasks', 'year']);
     assert.deepEqual(res.assets, {
       contains: [related(seed.peers.vm, 'Vm asset', 'virtual_machine', 'prod')],
       contained_by: [related(seed.peers.rack, 'Rack asset', 'physical_server', 'prod')],
@@ -262,6 +262,9 @@ async function testPayload() {
     // Without the read of a module, its section is null and the badge does not count it.
     const bare = await http.relationsTabRead(seed.asset.id, ctx(runner, seed, NONE));
     for (const key of ['budget_lines', 'contracts', 'projects', 'tasks', 'incidents'] as const) assert.equal(bare[key], null, key);
+    // Without the budget right, the lines are counted, never named (data-scoped access, spec §5.4).
+    assert.equal(bare.budget_lines_hidden, 2);
+    assert.equal(res.budget_lines_hidden, 0);
     assert.equal(bare.assets.contains.length, 1);
     assert.deepEqual(bare.counts, { assets: 4, budget_lines: 0, contracts: 0, projects: 0, tasks: 0, incidents: 0, links: 1, attachments: 0, total: 1 });
 

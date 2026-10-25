@@ -25,6 +25,7 @@ import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.re
 import { AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
 import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
+import { assertLinesEditable } from '../data-access/line-write-checks';
 import { isReservedAiMutation } from './mutation/ai-mutation-reserved';
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
@@ -221,6 +222,21 @@ export class AiMutationPreviewService {
   ): Promise<void> {
     if (!isReservedAiMutation(toolName, entityType)) return;
     await assertUnscopedDataAccess({ manager: context.manager, userId: context.userId });
+  }
+
+  /**
+   * A preview of a write on a budget line (its fields, its relations, its versions and amounts)
+   * that the person reads but may not modify: refused when the preview is asked, with the 403
+   * `DATA_ACCESS_LIMITED` the routes give ("This line is read only in your access.", lot 3).
+   * Approval checks again, in the approver's access at that time (`lockBudgetLine`). A line out of
+   * read access never reaches here: its reference matched nothing, as a missing line.
+   */
+  private async assertTargetLineEditable(
+    context: AiExecutionContextWithManager,
+    prepared: Pick<AiPreparedMutationPreview, 'targetEntityType' | 'targetEntityId'>,
+  ): Promise<void> {
+    if (prepared.targetEntityType !== 'spend_items' && prepared.targetEntityType !== 'capex_items') return;
+    await assertLinesEditable(context.manager, [prepared.targetEntityId]);
   }
 
   private getOperationBusinessResource<TInput>(
@@ -442,6 +458,7 @@ export class AiMutationPreviewService {
     await this.assertPendingCapacityAvailable(context, context.conversationId ?? null);
 
     const prepared = await operation.prepareCreatePreview(context, input);
+    await this.assertTargetLineEditable(context, prepared);
     const existing = await this.findEquivalentConversationPreview(context, operation.toolName, prepared);
     if (existing) {
       return this.toPreviewDto(existing);
@@ -1169,6 +1186,7 @@ export class AiMutationPreviewService {
     await this.assertPendingCapacityAvailable(context, original.conversation_id ?? null);
 
     const prepared = await operation.prepareReversePreview(context, original);
+    await this.assertTargetLineEditable(context, prepared);
     const repo = this.getRepo(context.manager);
     const now = new Date();
     const expiresAt = new Date(now.getTime() + PREVIEW_TTL_MS);

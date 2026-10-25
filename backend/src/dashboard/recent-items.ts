@@ -5,8 +5,9 @@ import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
  * The "Recently viewed" check: the entries of the list a browser keeps (`useRecentlyViewed`),
  * of which only the records that still exist in the tenant come back. A record deleted on its own
  * or with another one (a contract's tasks) then leaves the list without anyone opening it.
- * Existence only: the list holds the ids already, and an entry the user may not read is hidden by
- * the list itself.
+ * The statement runs in the person's transaction and reads each record's own table, so the
+ * data-access policies apply (spec §5.6): a budget line, or a task of a line or contract, outside
+ * the person's access is not confirmed either, and leaves the list as a deleted record does.
  */
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

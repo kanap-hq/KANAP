@@ -122,7 +122,7 @@ async function testChargebackReadsOneTenant() {
     assert.equal(company.company.total, 30);
     assert.equal(company.company.paid, 120, 'A1 pays tenant A\'s line');
     assert.deepEqual(company.items.map((row) => row.versionId), [a.versions.opex]);
-    assert.equal(company.globalKpi.headcount, 40, 'the global headcount sums tenant A\'s companies');
+    assert.equal(company.globalKpi!.headcount, 40, 'the global headcount sums tenant A\'s companies');
 
     const foreign = await svc.generateCompany(YEAR, 'budget', b.companyIds[0], a.tenantId, opts);
     assert.equal(foreign.company.name, 'Unknown company', 'a company of tenant B is not read');

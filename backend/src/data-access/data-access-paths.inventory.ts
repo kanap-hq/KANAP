@@ -228,7 +228,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'ai/platform/ai-builtin-usage.service.ts', member: 'getUsageForAllTenants', site: 'with_tenant', class: 'system', reason: 'platform administration: built-in model usage per tenant (AI usage tables)' },
 
   // Notifications: recipients, preferences and deduplication.
-  { file: 'notifications/notifications.service.ts', member: 'buildItemUrl', site: 'with_tenant', class: 'system', reason: 'notification link: reads the reference of a budget line (spend_items) for the named recipients; spec §5.6, lot 4 checks their access' },
+  { file: 'notifications/notifications.service.ts', member: 'buildItemUrl', site: 'with_tenant', class: 'system', reason: 'notification link: reads the reference of a budget line (spend_items) for the recipients of its notification: the named owners (status change, expiry reminder), or the persons the sender chose in "Send the link" (sent whatever their access, the sender is warned through data_access_can_read); spec §5.6' },
   { file: 'notifications/notifications.service.ts', member: 'notifyItLeadOfTeamChange', site: 'with_tenant', class: 'no_scoped_table', reason: 'the IT lead (users) and the reference of a project or request' },
   { file: 'notifications/notifications.service.ts', member: 'notifySsoUserProvisioned', site: 'with_tenant', class: 'no_scoped_table', reason: 'the administrators to tell (users)' },
   { file: 'notifications/notifications.service.ts', member: 'notifyWorkspaceReset', site: 'with_tenant', class: 'no_scoped_table', reason: 'the administrators to tell (users)' },
@@ -256,7 +256,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'cleanup/auth-event-retention.service.ts', member: 'run', site: 'with_tenant', class: 'system', reason: 'scheduled purge of old sign-in events, per tenant' },
   { file: 'cleanup/list-context-purge.service.ts', member: 'run', site: 'with_tenant', class: 'system', reason: 'scheduled purge of old list contexts, per tenant' },
   { file: 'cleanup/lifecycle-status-sync.service.ts', member: 'syncTenant', site: 'with_tenant', class: 'system', reason: 'hourly status sync from end dates (contracts, spend_items, cost_centers, ...), per tenant; sends nothing' },
-  { file: 'contracts/contract-renewal.service.ts', member: 'run', site: 'with_tenant', class: 'system', reason: 'scheduled contract renewal tasks (contracts), assigned to the named contract owners; spec §5.6' },
+  { file: 'contracts/contract-renewal.service.ts', member: 'run', site: 'with_tenant', class: 'system', reason: 'scheduled contract renewal tasks (contracts), assigned to the named contract owners; their notifications go to the persons named on the task (getTaskRecipients checks the others with data_access_can_read); spec §5.6' },
   { file: 'technologies/catalog/technology-catalog-sync.service.ts', member: 'adoptedKeys', site: 'with_tenant', class: 'system', reason: 'scheduled technology catalog sync, per tenant (technologies)' },
   { file: 'technologies/catalog/technology-catalog-sync.service.ts', member: 'run', site: 'with_tenant', class: 'system', reason: 'scheduled technology catalog sync, per tenant (technologies)' },
   { file: 'vulnerabilities/nvd-feed.service.ts', member: 'followedProducts', site: 'with_tenant', class: 'system', reason: 'vulnerability feed: followed products (technologies)' },

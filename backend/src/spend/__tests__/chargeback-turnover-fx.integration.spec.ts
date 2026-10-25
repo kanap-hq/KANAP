@@ -100,8 +100,8 @@ async function testTurnoverIndicatorsAreInTheReportingCurrency() {
     assert.equal(company.company.costVsTurnoverPct, 1.9);
     assert.equal(company.kpis[0].costVsTurnoverPct, 1.9);
     // The global turnover adds EUR to EUR: 70,000 + 31,500, not 70,000 + 35,000.
-    assert.equal(company.globalKpi.turnover, 101500);
-    assert.equal(company.globalKpi.costVsTurnoverPct, 1.18, '1,200 / 101,500');
+    assert.equal(company.globalKpi!.turnover, 101500);
+    assert.equal(company.globalKpi!.costVsTurnoverPct, 1.18, '1,200 / 101,500');
   });
 }
 
@@ -118,7 +118,7 @@ async function testFrozenVersionsConvertAtTheirRateSet() {
     const company = await svc.generateCompany(YEAR, 'budget', seeded.newYork, seeded.tenantId, { manager: runner.manager });
     assert.equal(company.company.turnover, 28000, '35,000 USD at the frozen 0.8');
     assert.equal(company.company.costVsTurnoverPct, 2.14, '600 / 28,000');
-    assert.equal(company.globalKpi.turnover, 98000);
+    assert.equal(company.globalKpi!.turnover, 98000);
   });
 }
 
@@ -140,9 +140,9 @@ async function testMissingRateIsLeftOutWithAWarning() {
     }]);
     const company = await svc.generateCompany(YEAR, 'budget', seeded.newYork, seeded.tenantId, { manager: runner.manager });
     assert.equal(company.company.turnover, null);
-    assert.equal(company.globalKpi.turnover, 70000, 'the global turnover leaves out the company without a rate');
-    assert.equal(company.globalKpi.amount, 1200, 'the global cost keeps every company');
-    assert.equal(company.globalKpi.costVsTurnoverPct, 0.86, 'the ratio sets Paris cost (600) against Paris turnover (70,000) alone');
+    assert.equal(company.globalKpi!.turnover, 70000, 'the global turnover leaves out the company without a rate');
+    assert.equal(company.globalKpi!.amount, 1200, 'the global cost keeps every company');
+    assert.equal(company.globalKpi!.costVsTurnoverPct, 0.86, 'the ratio sets Paris cost (600) against Paris turnover (70,000) alone');
     assert.equal(company.warnings.filter((warning) => typeof warning !== 'string' && warning.code === 'turnover_fx_missing').length, 1);
   });
 }

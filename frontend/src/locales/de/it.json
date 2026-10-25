@@ -1923,6 +1923,14 @@
           "fileAttached_one": "Datei angehängt.",
           "fileAttached_other": "{{count}} Dateien angehängt.",
           "fileDeleted": "Datei gelöscht."
+        },
+        "outside": {
+          "and_one": "und {{count}} Zeile außerhalb Ihres Zugriffs",
+          "and_other": "und {{count}} Zeilen außerhalb Ihres Zugriffs",
+          "only_one": "{{count}} Zeile außerhalb Ihres Zugriffs",
+          "only_other": "{{count}} Zeilen außerhalb Ihres Zugriffs",
+          "count_one": "{{count}} Budgetzeile",
+          "count_other": "{{count}} Budgetzeilen"
         }
       },
       "untitled": "Unbenannte Anwendung",

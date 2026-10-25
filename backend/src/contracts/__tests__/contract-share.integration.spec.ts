@@ -54,7 +54,7 @@ async function testShareContract() {
     // A person of the tenant and a plain address; a person of another tenant is dropped.
     assert.deepEqual(
       await svc.shareContract(b.contractId, { recipient_user_ids: [b.userId, a.userId], recipient_emails: ['buyer@example.com'], message: 'Renewal due' }, b.userId, opts),
-      { ok: true },
+      { ok: true, cannot_open: [] },
     );
     assert.equal(shares.length, 1);
     assert.equal(shares[0].itemType, 'contract');

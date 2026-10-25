@@ -1,15 +1,16 @@
 import { useAuth } from './AuthContext';
 
-/** The person's data access (`GET /auth/me`): `limited` scopes the budget and contracts to `nodes`. */
+/** A node of the person's data access, as `GET /auth/me` returns it (backend `data-access-profile.ts`). */
 export type DataAccessNode = {
-  node_type: string;
-  access: 'read' | 'edit' | string;
-  company_id?: string | null;
-  cost_center_id?: string | null;
-  company_name?: string | null;
-  cost_center_code?: string | null;
-  cost_center_name?: string | null;
+  type: 'all' | 'company' | 'cost_center';
+  id: string | null;
+  name: string | null;
+  access: 'read' | 'edit';
+  /** Cost centre nodes only. */
+  code?: string | null;
+  kind?: 'group' | 'cost_center' | null;
 };
+/** The person's data access (`GET /auth/me`): `limited` scopes the budget and contracts to `nodes`. */
 export type DataAccessProfile = {
   available: boolean;
   mode: 'all' | 'limited';
@@ -20,6 +21,18 @@ export type DataAccessProfile = {
 /** A person whose access is limited (mode `limited`): reserved actions are hidden, totals are calculated on their access. */
 export function isDataAccessLimited(dataAccess: DataAccessProfile | null | undefined): boolean {
   return dataAccess?.mode === 'limited';
+}
+
+/**
+ * The companies whose chargeback report a person opens (spec §5.2): null for everyone when the
+ * access is not limited or holds an "all" node; else the companies of the company nodes (a
+ * cost-centre node opens none).
+ */
+export function chargebackCompanyIds(dataAccess: DataAccessProfile | null | undefined): ReadonlySet<string> | null {
+  if (!isDataAccessLimited(dataAccess)) return null;
+  const nodes = dataAccess?.nodes ?? [];
+  if (nodes.some((node) => node.type === 'all')) return null;
+  return new Set(nodes.filter((node) => node.type === 'company' && node.id).map((node) => node.id as string));
 }
 
 /**

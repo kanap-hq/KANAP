@@ -847,7 +847,8 @@
     "copy": "Kopieren",
     "copiedToClipboard": "In die Zwischenablage kopiert",
     "orEmailSection": "Oder per E-Mail an jemanden senden",
-    "sendEmail": "E-Mail senden"
+    "sendEmail": "E-Mail senden",
+    "cannotOpen": "{{name}} kann dieses Element nicht öffnen."
   },
   "enumEditor": {
     "name": "Name",

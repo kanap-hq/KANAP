@@ -1,5 +1,7 @@
 import { TechnologyCpeEvents } from '../../technologies/technology-cpe-events';
 import { linkedLineOf } from '../../spend/budget-nature';
+import { countRelatedBudgetLines } from '../../common/relations/related-objects';
+import { hiddenLineCount } from '../../data-access/hidden-links';
 import { copyClassification } from './application-classification';
 import { classificationPatch, classificationReadState } from './application-classification';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
@@ -408,6 +410,13 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       links_count: string | number;
       attachments_count: string | number;
     }> = rows[0] || {};
+    // The linked lines the Relations tab counts without listing them (`budget_lines_hidden`): those
+    // outside a limited person's data access, or every linked line without the budget right.
+    const budgetLinesHidden = readsBudget
+      ? await hiddenLineCount(mg, 'application', resolvedAppId)
+      : await countRelatedBudgetLines(
+        mg, { links: 'application_spend_items', owner: 'application_id' }, 'application', this.ensureTenantId(opts?.tenantId), resolvedAppId,
+      );
     const counts = {
       opex: Number(row.opex_count || 0),
       capex: Number(row.capex_count || 0),
@@ -420,11 +429,12 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       processes: Number(row.processes_count || 0),
       links: Number(row.links_count || 0),
       attachments: Number(row.attachments_count || 0),
+      budget_lines_hidden: budgetLinesHidden,
     };
     return {
       ...counts,
       // The badge counts requests and leaves tasks out (fried, 2026-10-21); the incidents are added by the page.
-      total: counts.opex + counts.capex + counts.contracts + counts.projects + counts.requests + counts.links + counts.attachments,
+      total: counts.opex + counts.capex + counts.budget_lines_hidden + counts.contracts + counts.projects + counts.requests + counts.links + counts.attachments,
     };
   }
 

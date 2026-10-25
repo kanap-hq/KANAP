@@ -1210,6 +1210,8 @@
       "follows": "Succède à <link>{{reference}}</link> ({{type}})",
       "replacedBy": "Remplacée par <link>{{reference}}</link> ({{type}}) à partir de {{year}}",
       "replacedByNoYear": "Remplacée par <link>{{reference}}</link> ({{type}})",
+      "followsHidden": "Succède à {{reference}}",
+      "replacedByHidden": "Remplacée par {{reference}}",
       "type": {
         "opex": "ligne OPEX",
         "capex": "ligne CAPEX"
@@ -1388,6 +1390,7 @@
       "itCostsPerItUser": "Coûts IT par utilisateur IT",
       "item": "Ligne",
       "allocationMethod": "Méthode de ventilation",
+      "allocationPct": "Ventilation",
       "receivables": "Créances",
       "payables": "Dettes",
       "net": "Net",
@@ -1451,7 +1454,10 @@
       "chargebackKpis": "KPI de refacturation",
       "chartTitle": "Refacturation par département : {{name}}",
       "chartSubtitle": "Totaux {{metric}}",
-      "chartFootnote": "{{metric}} global : {{total}}"
+      "chartFootnote": "{{metric}} global : {{total}}",
+      "noCompanyInAccess": "Aucune société ne fait partie de votre accès aux données.",
+      "fxMissingHiddenLines_one": "Aucun taux de change pour {{references}} : sa part est exclue des totaux.",
+      "fxMissingHiddenLines_other": "Aucun taux de change pour {{references}} : leurs parts sont exclues des totaux."
     },
     "topOpex": {
       "title": "Top lignes",

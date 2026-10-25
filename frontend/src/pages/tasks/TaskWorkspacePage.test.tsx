@@ -405,6 +405,23 @@ describe('TaskWorkspacePage relation changes', () => {
     expect(screen.queryByTestId('task-still-following')).toBeNull();
   });
 
+  it('saves a task whose budget line the person cannot read, which comes without its id', async () => {
+    taskQueryMock.task = makeTask({
+      related_object_type: 'spend_item',
+      related_object_id: null,
+      related_object_name: 'BL-12',
+      related_object_hidden: true,
+      phase_id: null,
+      phase_name: null,
+    });
+    renderEditPage();
+    fireEvent.click(await screen.findByText('Hand over'));
+    await waitFor(() => {
+      expect(api.patch).toHaveBeenCalledWith('/tasks/task-1', { assignee_user_id: 'user-2' });
+    });
+    expect(screen.queryByText(/relatedItemRequired/)).toBeNull();
+  });
+
   it('uses the global move endpoint when making a project task standalone', async () => {
     renderEditPage();
 

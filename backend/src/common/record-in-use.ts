@@ -1,5 +1,6 @@
 import { ConflictException, HttpStatus, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { DataAccessHiddenLinesException } from '../data-access/hidden-links';
 import { mapDatabaseError } from './filters/database-error.mapping';
 import { readUsages, type UsageQuery, type UsageType } from './record-usages';
 
@@ -153,7 +154,7 @@ export async function refusalsFrom<R extends { id: string }>(
   ids: readonly string[],
   rows: readonly R[],
   nameOf: (row: R) => string,
-  refusalOf: (row: R) => Promise<RecordInUseException | null>,
+  refusalOf: (row: R) => Promise<RecordInUseException | DataAccessHiddenLinesException | null>,
 ): Promise<{ refused: DeleteRefusal[] }> {
   const byId = new Map(rows.map((row) => [String(row.id).toLowerCase(), row]));
   const refused: DeleteRefusal[] = [];
@@ -203,7 +204,7 @@ export async function refusalsOf(
  * with its English sentence as `reason`, in place of the driver's. Spread after `reason`.
  */
 export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[]; params?: RefusalParams; reason?: string } {
-  if (error instanceof RecordInUseException) {
+  if (error instanceof RecordInUseException || error instanceof DataAccessHiddenLinesException) {
     return { code: error.code, usages: error.usages, ...(error.params ? { params: error.params } : {}) };
   }
   if (error instanceof NotFoundException) return { code: 'not_found' };

@@ -47,7 +47,11 @@ const SYNC_LOCK_TIMEOUT = '5s';
  * (disclosure, spec §6.6): EXECUTE is revoked from PUBLIC and granted by the sync, so the check
  * tests them by name. A function not created yet is not a missing grant.
  */
-const DIRECT_CALL_FUNCTIONS = ['data_access_hidden_count(text, uuid)', 'data_access_reference(text, uuid)'];
+const DIRECT_CALL_FUNCTIONS = [
+  'data_access_hidden_count(text, uuid)',
+  'data_access_reference(text, uuid)',
+  'data_access_can_read(uuid, text, uuid)',
+];
 
 type CatalogState = {
   roleExists: boolean;
@@ -177,11 +181,27 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** `data_access_sync_policies()` in a transaction of its own, under the 5 s lock timeout. */
+/**
+ * `data_access_sync_policies()` in a transaction of its own, under the 5 s lock timeout, then
+ * EXECUTE on the functions the application calls directly (DIRECT_CALL_FUNCTIONS, those that
+ * exist): the sync of migration 1854500000000 grants only the functions it knows, and a later one
+ * (`data_access_can_read`, lot 4) would stay missing on a database where the role came after it.
+ */
 async function runSync(session: DataAccessSession): Promise<void> {
   await session.inTransaction(async () => {
     await session.query(`SET LOCAL lock_timeout = '${SYNC_LOCK_TIMEOUT}'`);
     await session.query(`SELECT data_access_sync_policies()`);
+    await session.query(`
+      DO $$
+      DECLARE v_signature text;
+      BEGIN
+        FOREACH v_signature IN ARRAY ARRAY[${DIRECT_CALL_FUNCTIONS.map((f) => `'${f}'`).join(', ')}]::text[] LOOP
+          IF to_regprocedure(v_signature) IS NOT NULL THEN
+            EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO ${DATA_ACCESS_LIMITED_ROLE}', v_signature);
+          END IF;
+        END LOOP;
+      END
+      $$`);
   });
 }
 

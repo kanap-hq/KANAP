@@ -67,6 +67,22 @@ describe('deleteFailureReason', () => {
     }
   });
 
+  it('says an object is linked to lines outside the data access, from a delete check or a refused delete', () => {
+    const refusal = { code: 'APPLICATION_HIDDEN_LINES', usages: [], params: { count: 3 } };
+    expect(deleteFailureReason(refusal, i18n.en.t, 'en')).toBe('This application is linked to 3 lines outside your access.');
+    expect(deleteFailureReason({ ...refusal, code: 'PROJECT_HIDDEN_LINES', params: { count: 1 } }, i18n.fr.t, 'fr'))
+      .toBe('Ce projet est lié à 1 ligne hors de votre accès.');
+    // The 403 of the delete itself, by its sentence.
+    const refused = { code: 'DATA_ACCESS_LIMITED', message: 'This asset is linked to 2 lines outside your access.' };
+    expect(deleteFailureReason(refused, i18n.es.t, 'es')).toBe('Este activo está vinculado a 2 líneas fuera de su acceso.');
+    for (const language of LANGUAGES) {
+      for (const type of ['APPLICATION', 'ASSET', 'TECHNOLOGY', 'PROJECT', 'REQUEST']) {
+        expect(deleteFailureReason({ code: `${type}_HIDDEN_LINES`, usages: [], params: { count: 2 } }, i18n[language].t, language), `${language} ${type}`)
+          .toMatch(/ 2 /);
+      }
+    }
+  });
+
   it('says how many compliance requirements a refused contract has recorded, in each language', () => {
     const refusal = { code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', usages: [{ type: 'compliance_requirements', total: 3 }] };
     expect(deleteFailureReason(refusal, i18n.en.t, 'en'))

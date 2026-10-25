@@ -405,6 +405,17 @@ export function resolveAiQuerySort(
   return { param: `${mappedField}:${direction.toUpperCase()}`, applied: { field, direction }, ignored: [] };
 }
 
+/**
+ * A task of a budget line the person cannot read (data-scoped access, `related_object_hidden`):
+ * the task list and page name the line by its reference; Plaid and MCP show no trace of it, neither
+ * its reference nor its id (spec §5.4). The task's own type of object stays.
+ */
+function withoutHiddenLine<T extends { related_object_hidden?: true }>(row: T): T {
+  if (row.related_object_hidden !== true) return row;
+  const { related_object_hidden: _hidden, ...task } = row;
+  return { ...task, related_object_id: null, related_object_name: null } as unknown as T;
+}
+
 @Injectable()
 export class AiQueryExecutor {
   constructor(
@@ -576,6 +587,10 @@ export class AiQueryExecutor {
   }
 
   private mapTask(row: any): AiEntitySummaryDto {
+    // A task of a line the person cannot read (data-scoped access): the task list names the line
+    // by its reference (`related_object_hidden`); Plaid and MCP name nothing (spec §5.4: neither
+    // mention nor reference). The task's own type of object stays, as on any visible task.
+    const hiddenLine = row.related_object_hidden === true;
     return toEntitySummary('tasks', {
       id: row.id,
       item_number: row.item_number ?? null,
@@ -593,7 +608,7 @@ export class AiQueryExecutor {
         phase: scalar(row.phase_name),
         labels: scalar(Array.isArray(row.labels) ? row.labels.join(', ') : null),
         related: scalar(row.related_object_type),
-        related_label: scalar(row.related_object_name),
+        related_label: hiddenLine ? null : scalar(row.related_object_name),
         applications: scalar(Array.isArray(row.applications) ? row.applications.map((item: any) => item?.name).filter(Boolean).join(', ') : null),
         assets: scalar(Array.isArray(row.assets) ? row.assets.map((item: any) => item?.name).filter(Boolean).join(', ') : null),
         category: scalar(row.category_name),
@@ -1892,6 +1907,11 @@ export class AiQueryExecutor {
     throw entityNotFound(entityType, value);
   }
 
+  /** The person reads the budget: a project's or request's budget lines are named, else counted. */
+  private async readsBudget(context: AiExecutionContextWithManager): Promise<boolean> {
+    return (await this.policy?.canReadEntityType(context, 'spend_items', context.manager)) === true;
+  }
+
   private toDetailResult(
     entity: AiEntitySummaryDto,
     row: unknown,
@@ -2294,14 +2314,14 @@ export class AiQueryExecutor {
     if (entityType === 'tasks') {
       const row = await this.tasks.getOne(entityId, { manager: context.manager, accessScope });
       if (!row) throw new NotFoundException('Task not found.');
-      return this.toDetailResult(this.mapTask(row), row);
+      return this.toDetailResult(this.mapTask(row), withoutHiddenLine(row));
     }
 
     if (entityType === 'projects') {
       const row = await this.projects.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,source_requests,urls,dependencies,attachments,phases,milestones,financials' },
-        { manager: context.manager, tenantId: context.tenantId, accessScope },
+        { manager: context.manager, tenantId: context.tenantId, accessScope, readsBudget: await this.readsBudget(context) },
       );
       return this.toDetailResult(this.mapProject(row), row);
     }
@@ -2310,7 +2330,7 @@ export class AiQueryExecutor {
       const row = await this.requests.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,origin_task,urls,attachments,projects,dependencies,financials,business_processes' },
-        { manager: context.manager, accessScope },
+        { manager: context.manager, accessScope, readsBudget: await this.readsBudget(context) },
       );
       return this.toDetailResult(this.mapRequest(row), row);
     }

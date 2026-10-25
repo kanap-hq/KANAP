@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 
 vi.mock('react-i18next', () => {
-  const t = (key: string) => key;
+  const t = (key: string, options?: { references?: string }) => (options?.references ? `${key}: ${options.references}` : key);
   const translation = { t, i18n: { language: 'fr', resolvedLanguage: 'fr' } };
   return { useTranslation: () => translation };
 });
@@ -106,6 +106,17 @@ describe('chargeback turnover indicator', () => {
     await waitFor(() => expect(cellTexts()).toContain('Acme France'));
     // The company row and the totals row.
     expect(cellTexts().filter((text) => text === EXPECTED)).toHaveLength(2);
+  });
+
+  it('names the hidden lines without a rate by their reference, without a link', async () => {
+    const current = get.getMockImplementation() as (url: string) => Promise<{ data: Record<string, unknown> }>;
+    const base = await current('/reports/chargeback/company');
+    get.mockImplementation(async (url: string) => (url === '/reports/chargeback/company'
+      ? { data: { ...base.data, globalKpi: null, dataAccessLimited: true, fxMissingHiddenLines: [12, 14] } }
+      : { data: { items: [] } }));
+    renderReport(<CompanyChargebackReport />);
+    const warning = await screen.findByText('reports.companyChargeback.fxMissingHiddenLines: BL-12, BL-14');
+    expect(warning.closest('a')).toBeNull();
   });
 
   it('shows the turnover of the global report in the reporting currency', async () => {

@@ -847,7 +847,8 @@
     "copy": "Copiar",
     "copiedToClipboard": "Copiado al portapapeles",
     "orEmailSection": "O enviarlo por correo a alguien",
-    "sendEmail": "Enviar correo"
+    "sendEmail": "Enviar correo",
+    "cannotOpen": "{{name}} no podrá abrir este elemento."
   },
   "enumEditor": {
     "name": "Nombre",

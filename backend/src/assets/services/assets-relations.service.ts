@@ -8,6 +8,7 @@ import { AssetSpendItemLink } from '../asset-spend-item.entity';
 import { AssetContractLink } from '../asset-contract.entity';
 import { AuditService } from '../../audit/audit.service';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
+import { auditedLinkSet, hiddenLineCount } from '../../data-access/hidden-links';
 
 /**
  * Service for managing asset relations and financial links (spend, capex, contracts).
@@ -356,8 +357,17 @@ export class AssetsRelationsService extends AssetsBaseService {
       await repo.save(entities);
     }
 
+    // The lines a limited person cannot read stayed linked: the audit row says how many (spec §6.6).
+    const hidden = await hiddenLineCount(mg, 'asset', assetId);
     await this.audit.log(
-      { table: 'asset_spend_items', recordId: assetId, action: 'update', before: { ids: before }, after: { ids: normalizedIds }, userId },
+      {
+        table: 'asset_spend_items',
+        recordId: assetId,
+        action: 'update',
+        before: auditedLinkSet({ ids: before }, hidden),
+        after: auditedLinkSet({ ids: normalizedIds }, hidden),
+        userId,
+      },
       { manager: opts?.manager },
     );
 
@@ -432,8 +442,17 @@ export class AssetsRelationsService extends AssetsBaseService {
       await repo.save(entities);
     }
 
+    // The lines a limited person cannot read stayed linked: the audit row says how many (spec §6.6).
+    const hidden = await hiddenLineCount(mg, 'asset', assetId);
     await this.audit.log(
-      { table: 'asset_capex_items', recordId: assetId, action: 'update', before: { ids: before }, after: { ids: normalizedIds }, userId },
+      {
+        table: 'asset_capex_items',
+        recordId: assetId,
+        action: 'update',
+        before: auditedLinkSet({ ids: before }, hidden),
+        after: auditedLinkSet({ ids: normalizedIds }, hidden),
+        userId,
+      },
       { manager: opts?.manager },
     );
 

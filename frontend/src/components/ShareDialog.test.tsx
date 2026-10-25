@@ -6,7 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../config/ThemeContext';
 
 vi.mock('react-i18next', () => {
-  const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
+  const t = (key: string, opts?: { name?: string }) => (opts?.name ? `${key} ${opts.name}` : key);
+  const translation = { t, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation };
 });
 vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
@@ -193,5 +194,46 @@ describe('ShareDialog limits', () => {
       <ShareDialog open onClose={() => undefined} itemType="contract" itemId="c-1" itemName="SAP Maintenance" />
     </ThemeProvider></QueryClientProvider>);
     expect(screen.getByPlaceholderText('share.addPersonalMessage')).toHaveAttribute('maxLength', '2000');
+  });
+});
+
+describe('ShareDialog people who cannot open the item', () => {
+  it('stays open after sending and names each chosen person who cannot open it', async () => {
+    const apiPost = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
+    apiPost.mockReset();
+    apiPost.mockResolvedValue({ data: { success: true, cannot_open: [{ id: 'u-1', name: 'Hélène Dupré' }, { id: 'u-3', name: 'Marc Zola' }] } });
+    const onClose = vi.fn();
+    const client = new QueryClient();
+    render(<QueryClientProvider client={client}><ThemeProvider theme={createAppTheme('light')}>
+      <ShareDialog open onClose={onClose} itemType="opex" itemId="item-1" itemName="Line" />
+    </ThemeProvider></QueryClientProvider>);
+    const input = screen.getByPlaceholderText('share.searchUsersOrEmail') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'buyer@example.com' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: 'share.sendEmail' }));
+
+    expect(await screen.findByText('share.cannotOpen Hélène Dupré')).toBeInTheDocument();
+    expect(screen.getByText('share.cannotOpen Marc Zola')).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+    // The link went: the recipients are cleared, so a second click does not send it again.
+    expect(screen.queryByText('buyer@example.com')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'share.sendEmail' })).toBeDisabled();
+  });
+
+  it('closes after sending when everyone can open the item', async () => {
+    const apiPost = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
+    apiPost.mockReset();
+    apiPost.mockResolvedValue({ data: { success: true, cannot_open: [] } });
+    const onClose = vi.fn();
+    const client = new QueryClient();
+    render(<QueryClientProvider client={client}><ThemeProvider theme={createAppTheme('light')}>
+      <ShareDialog open onClose={onClose} itemType="task" itemId="t-1" itemName="Task" />
+    </ThemeProvider></QueryClientProvider>);
+    const input = screen.getByPlaceholderText('share.searchUsersOrEmail') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'buyer@example.com' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: 'share.sendEmail' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(screen.queryByText(/share\.cannotOpen/)).not.toBeInTheDocument();
   });
 });

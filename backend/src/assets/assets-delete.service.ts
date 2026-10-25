@@ -8,6 +8,7 @@ import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
+import { assertNoHiddenLines, hiddenLinesRefusals } from '../data-access/hidden-links';
 
 /** The relations a delete takes with it, in the shape of the relations audit (`assets-relations.service.ts`). */
 type RelationRef = { related_asset_id: string; relation_type: string };
@@ -131,7 +132,8 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
 
   /**
    * The check before a delete (`POST /assets/delete-check`): which of `ids` would be refused, and why,
-   * and what the others would take with them (`warnings`, which never refuse).
+   * and what the others would take with them (`warnings`, which never refuse); for a limited person,
+   * also those linked to lines outside their access (spec §5.4).
    */
   async deleteCheck(
     ids: string[],
@@ -145,7 +147,8 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
       `SELECT id, name FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
       [tenantId, wanted],
     );
-    const { refused } = await refusalsFrom(wanted, rows, (row) => row.name, (row) => this.refusalOf(row, tenantId, manager));
+    const hidden = await hiddenLinesRefusals(manager, 'asset', rows.map((row) => row.id));
+    const { refused } = await refusalsFrom(wanted, rows, (row) => row.name, async (row) => (await this.refusalOf(row, tenantId, manager)) ?? hidden.get(row.id) ?? null);
     return { refused, warnings: await this.warningsOf(wanted, rows, tenantId, manager) };
   }
 
@@ -291,6 +294,8 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
 
     const refusal = await this.refusalOf(asset, tenantId, manager);
     if (refusal) throw refusal;
+    // Its cascade would drop links to lines the person cannot read (spec §5.4).
+    await assertNoHiddenLines(manager, 'asset', asset.id);
 
     // Its memberships and relations go with it (ON DELETE CASCADE): audited first, on the other side.
     const cascade = await this.auditCascade(asset, tenantId, userId, manager);

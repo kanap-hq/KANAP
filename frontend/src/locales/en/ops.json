@@ -1209,6 +1209,8 @@
       "follows": "Follows <link>{{reference}}</link> ({{type}})",
       "replacedBy": "Replaced by <link>{{reference}}</link> ({{type}}) from {{year}}",
       "replacedByNoYear": "Replaced by <link>{{reference}}</link> ({{type}})",
+      "followsHidden": "Follows {{reference}}",
+      "replacedByHidden": "Replaced by {{reference}}",
       "type": {
         "opex": "OPEX line",
         "capex": "CAPEX line"
@@ -1387,6 +1389,7 @@
       "itCostsPerItUser": "IT costs per IT user",
       "item": "Line",
       "allocationMethod": "Allocation method",
+      "allocationPct": "Allocation",
       "receivables": "Receivables",
       "payables": "Payables",
       "net": "Net",
@@ -1450,7 +1453,10 @@
       "chargebackKpis": "Chargeback KPIs",
       "chartTitle": "Chargeback by department: {{name}}",
       "chartSubtitle": "{{metric}} totals",
-      "chartFootnote": "Overall {{metric}}: {{total}}"
+      "chartFootnote": "Overall {{metric}}: {{total}}",
+      "noCompanyInAccess": "No company is part of your data access.",
+      "fxMissingHiddenLines_one": "No exchange rate for {{references}}: its share is left out of the totals.",
+      "fxMissingHiddenLines_other": "No exchange rate for {{references}}: their shares are left out of the totals."
     },
     "topOpex": {
       "title": "Top lines",

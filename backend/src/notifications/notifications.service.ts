@@ -29,6 +29,7 @@ import {
 import { renderCommentEmail } from '../common/markdown-worker';
 import { EmailBranding, resolveEmailBranding } from '../email/email-branding';
 import { getEmailStrings, resolveEmailLocale } from '../i18n/email-i18n';
+import { personsByReadAccess, SCOPED_TASK_OBJECT_TYPES } from '../data-access/can-read';
 
 type ItemType = 'request' | 'project' | 'task' | 'contract' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
 type TriggerType = 'status_change' | 'team_added' | 'team_change_as_lead' | 'comment' | 'assignment' | 'expiration_warning' | 'vulnerability';
@@ -1601,13 +1602,16 @@ export class NotificationsService {
   /**
    * Get recipients for a task based on their roles.
    * Excludes users with system roles (e.g., Contact) who cannot log in.
+   * The creator is not named on the task (spec §2.5): on a task of a budget line or a contract,
+   * a creator who is not also assignee, owner or observer is a recipient only when they can read
+   * the task (`data_access_can_read`, spec §5.6). The named persons always are.
    */
   async getTaskRecipients(
     taskId: string,
     manager: EntityManager,
   ): Promise<Array<NotificationRecipient & { role: 'assignee' | 'requestor' | 'owner' | 'viewer' }>> {
     const task = await manager.query(
-      `SELECT t.assignee_user_id, t.creator_id, t.owner_ids, t.viewer_ids
+      `SELECT t.assignee_user_id, t.creator_id, t.owner_ids, t.viewer_ids, t.related_object_type
        FROM tasks t
        WHERE t.id = $1`,
       [taskId],
@@ -1634,6 +1638,18 @@ export class NotificationsService {
     for (const viewerId of t.viewer_ids || []) {
       userIds.add(viewerId);
       if (!roleMap.has(viewerId)) roleMap.set(viewerId, 'viewer');
+    }
+
+    // Not named on a scoped task: kept only when they can read it, one statement for all.
+    if (SCOPED_TASK_OBJECT_TYPES.includes(t.related_object_type)) {
+      const named = new Set<string>([t.assignee_user_id, ...(t.owner_ids || []), ...(t.viewer_ids || [])].filter(Boolean));
+      const unnamed = Array.from(userIds).filter((id) => !named.has(id));
+      if (unnamed.length > 0) {
+        const readers = await personsByReadAccess(manager, 'task', taskId, unnamed, true);
+        for (const id of unnamed) {
+          if (!readers.has(String(id).toLowerCase())) userIds.delete(id);
+        }
+      }
     }
 
     if (userIds.size === 0) return [];
