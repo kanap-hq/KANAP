@@ -9,7 +9,13 @@ import { Asset } from '../../assets/asset.entity';
 import { AuditService } from '../../audit/audit.service';
 import { BulkDeleteResult } from '../../common/delete.types';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
-import { ConnectionsBaseService, ServiceOpts, Topology } from './connections-base.service';
+import {
+  assetSummary,
+  AssetSummary,
+  ConnectionsBaseService,
+  ServiceOpts,
+  Topology,
+} from './connections-base.service';
 import {
   AbsorbedServer,
   absorbClusterMembers,
@@ -72,6 +78,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         .select('a')
         .from(Asset, 'a')
         .where('a.id IN (:...ids)', { ids: uniqueAssetIds })
+        .andWhere('a.tenant_id = :tenant', { tenant })
         .getMany();
       assetMap = new Map(rows.map((r) => [r.id, r]));
     }
@@ -84,6 +91,10 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         contains_pii: conn.contains_pii,
       },
     ];
+    const summaryOf = (assetId: string | null): AssetSummary | null => {
+      const a = assetId ? assetMap.get(assetId) : null;
+      return a ? assetSummary(a) : null;
+    };
     const effectiveRiskMap = await this.computeEffectiveRiskForConnections(tenant, riskBases, mg);
     const effective = effectiveRiskMap.get(conn.id);
 
@@ -102,50 +113,14 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         code: p.connection_type_code,
         port_override: p.port_override ?? null,
       })),
-      servers: servers.map((row) => {
-        const a = assetMap.get(row.asset_id);
-        return a
-          ? {
-              id: a.id,
-              name: a.name,
-              environment: (a as any).environment,
-              kind: (a as any).kind,
-              provider: (a as any).provider,
-              is_cluster: !!(a as any).is_cluster,
-            }
-          : null;
-      }).filter(Boolean),
-      source_server: conn.source_asset_id
-        ? (() => {
-            const a = assetMap.get(conn.source_asset_id);
-            return a
-              ? {
-                  id: a.id,
-                  name: a.name,
-                  environment: (a as any).environment,
-                  kind: (a as any).kind,
-                  provider: (a as any).provider,
-                  is_cluster: !!(a as any).is_cluster,
-                }
-              : null;
-          })()
-        : null,
-      destination_server: conn.destination_asset_id
-        ? (() => {
-            const a = assetMap.get(conn.destination_asset_id);
-            return a
-              ? {
-                  id: a.id,
-                  name: a.name,
-                  environment: (a as any).environment,
-                  kind: (a as any).kind,
-                  provider: (a as any).provider,
-                  is_cluster: !!(a as any).is_cluster,
-                }
-              : null;
-          })()
-        : null,
-      legs: includeLegs ? legs : undefined,
+      servers: servers
+        .map((row) => summaryOf(row.asset_id))
+        .filter((summary): summary is AssetSummary => !!summary),
+      source_server: summaryOf(conn.source_asset_id),
+      destination_server: summaryOf(conn.destination_asset_id),
+      legs: includeLegs
+        ? legs.map((leg) => ({ ...leg, equipment_asset: summaryOf(leg.equipment_asset_id) }))
+        : undefined,
     };
   }
 

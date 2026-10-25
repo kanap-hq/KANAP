@@ -34,10 +34,11 @@ export class ConnectionsLegsService extends ConnectionsBaseService {
     const mg = opts?.manager ?? this.connRepo.manager;
     await this.ensureConnection(connectionId, mg);
     const legRepo = this.getLegRepo(mg);
-    return legRepo.find({
+    const legs = await legRepo.find({
       where: { connection_id: connectionId, tenant_id: tenant } as any,
       order: { order_index: 'ASC', created_at: 'ASC' },
     });
+    return this.attachEquipmentAssets(legs, tenant, mg);
   }
 
   /**
@@ -108,7 +109,8 @@ export class ConnectionsLegsService extends ConnectionsBaseService {
       { manager: mg },
     );
 
-    return saved;
+    const [leg] = await this.attachEquipmentAssets([saved], tenant, mg);
+    return leg;
   }
 
   /**
@@ -202,7 +204,8 @@ export class ConnectionsLegsService extends ConnectionsBaseService {
       { manager: mg },
     );
 
-    return saved;
+    const [legWithEquipment] = await this.attachEquipmentAssets([saved], tenant, mg);
+    return legWithEquipment;
   }
 
   /**
