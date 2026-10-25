@@ -1,37 +1,156 @@
 ref;title;category;severity;status;confidential;started_at (Europe/Paris);detected_at (Europe/Paris);resolved_at (Europe/Paris);closed_at (Europe/Paris);reporter;owner;description;review;source_ref;personal_data_affected;authority_notification_required;authority_notified_at (Europe/Paris);notified_parties
-;Cave B humidity readings lost overnight;infrastructure;major;closed;false;2026-03-14 01:20;2026-03-14 06:45;2026-03-14 09:30;2026-03-20 17:00;jacques.dubois@fromage-co.example;lucas.bernard@fromage-co.example;The Cave B IoT gateway stopped forwarding sensor data. CaveGuard showed stale values for five hours and raised no alert, so the night shift did not check the Brie cave.;"## Summary
-CAVE-GW-02 froze after a firmware watchdog failure. CaveGuard kept the last readings on screen and did not flag the missing data.
+;Cave B humidity readings lost overnight;infrastructure;major;closed;false;2026-03-14 01:20;2026-03-14 06:45;2026-03-14 09:30;2026-03-20 17:00;jacques.dubois@fromage-co.example;lucas.bernard@fromage-co.example;The Cave B IoT gateway stopped forwarding sensor data. CaveGuard showed stale values for five hours and raised no alert, so the night shift did not check the Brie cave.;"## Detailed description
+
+On 14 March 2026 at 01:20, the Cave B IoT gateway CAVE-GW-02 stopped forwarding sensor data after a firmware watchdog failure. CaveGuard kept the last values on screen and raised no alert, so the missing data went unnoticed until the night shift checked the cave at 06:45. The gateway was restarted and readings resumed at 07:25. The incident was closed on 20 March after the corrective actions were reviewed.
 
 ## Impact
-- 18 sensors of Cave B without data from 01:20 to 06:45.
-- Two Brie batches checked by hand at 07:00: humidity had dropped to 82%, within tolerance.
+
+- 18 sensors in Cave B sent no data from 01:20 to 06:45, a gap of five hours and twenty-five minutes.
+- The night shift had no humidity trend for the Brie cave. Two Brie batches were checked by hand at 07:00: humidity had dropped to 82%, still within the tolerance applied by Quality.
+- No batch was lost and no customer delivery was affected.
 
 ## Root cause
-The gateway firmware had no automatic restart on watchdog failure.
 
-## Actions
-- Firmware updated on both cave gateways (done).
-- CaveGuard now alerts when a sensor sends nothing for 15 minutes (done).
-- Add the gateways to PRTG monitoring (open).";;false;false;;
-;Phishing campaign against accounts payable;security;major;closed;true;2026-04-07 08:10;2026-04-07 09:05;2026-04-07 12:30;2026-04-15 10:00;maria.casanova@fromage-co.example;lucas.bernard@fromage-co.example;"Fake supplier invoices with a link to a cloned Microsoft sign-in page reached 23 people in Finance. One user entered a password; Okta blocked the sign-in at the MFA step.";;SOC-2026-0412;false;false;;
-;SAP month-end close slowed down by host memory contention;infrastructure;major;closed;false;2026-04-30 16:00;2026-04-30 17:20;2026-05-01 09:00;2026-05-06 11:00;maria.casanova@fromage-co.example;pierre.martin@fromage-co.example;Financial close jobs ran four times slower than usual. PAR-ESX-01 was overcommitted after a host maintenance, with the S/4HANA and BW servers on the same host.;;;false;false;;
-;B2B portal down: database disk full;application;critical;closed;false;2026-06-02 07:50;2026-06-02 08:05;2026-06-02 11:10;2026-06-12 15:00;isabelle.moreau@fromage-co.example;marc.petit@fromage-co.example;Distributors could not place orders for three hours. The PostgreSQL 13 server of the B2B portal filled its disk with write-ahead logs after the archive job failed.;"## Summary
-The WAL archive job on PAR-DB-01 had been failing for six days. The disk filled at 07:50 and PostgreSQL stopped accepting writes.
+The CAVE-GW-02 firmware had no automatic restart on watchdog failure. CaveGuard only alerted on threshold breaches, not on missing data, and the gateway was not in PRTG, so nothing reported the silence.
+
+## Corrective actions
+
+- Firmware updated on both cave gateways to a build with an automatic restart on watchdog failure (done, 16 March 2026).
+- CaveGuard now raises an alert when a sensor sends nothing for 15 minutes (done, 18 March 2026).
+- CAVE-GW-02 added to PRTG with a ping and a data-freshness check (open at closure, owner Lucas Bernard).
+- Night-shift checklist updated to check the CaveGuard data-freshness indicator at the start of each shift (done, 19 March 2026).
+
+## Lessons learned
+
+Monitoring the absence of data matters as much as monitoring the values. A sensor that stops sending is invisible to a threshold alert. The gateway also needed to be in the standard monitoring tool, not only in CaveGuard. The next IoT rollout will include both checks from the start.";;false;false;;
+;Phishing campaign against accounts payable;security;major;closed;true;2026-04-07 08:10;2026-04-07 09:05;2026-04-07 12:30;2026-04-15 10:00;maria.casanova@fromage-co.example;lucas.bernard@fromage-co.example;"Fake supplier invoices with a link to a cloned Microsoft sign-in page reached 23 people in Finance. One user entered a password; Okta blocked the sign-in at the MFA step.";"## Detailed description
+
+On 7 April 2026 at 08:10, 23 Finance users received an email that appeared to come from a known supplier, with an invoice link to a cloned Microsoft sign-in page. One user entered their password at 08:42. Okta required MFA and blocked the sign-in. The user reported the email at 09:05. Security blocked the sender and the lookalike domain, purged the messages from all mailboxes, reset the user's password and revoked their sessions by 12:30. The incident was closed on 15 April after the mailbox and sign-in logs were reviewed.
 
 ## Impact
-- Fromage B2B Portal unavailable from 07:50 to 11:10.
-- About 140 orders taken by phone and keyed in afterwards.
+
+- 23 Finance users received the phishing email.
+- One credential was entered on the cloned page. MFA blocked the sign-in, and no mailbox access, payment change or data exfiltration was found.
+- The incident is restricted to the register administrators. The affected user is not named in this review.
 
 ## Root cause
-The archive target changed during the SAN migration and nobody watched the job.
 
-## Actions
-- Archive job fixed and monitored (done).
-- Disk usage alert at 80% on database servers (done).
-- Upgrade PostgreSQL 13, out of support, as part of the portal roadmap (open).";;false;false;;
-;Order confirmations sent to the wrong customers;data;major;closed;false;2026-07-09 14:00;2026-07-09 15:30;2026-07-09 16:10;2026-07-24 12:00;isabelle.moreau@fromage-co.example;marc.petit@fromage-co.example;A caching bug in the online shop release sent 214 order confirmation emails with another customer name, address and order content.;;;true;true;2026-07-11 10:00;"CNIL; 214 affected customers informed by email on 10 July"
+The lookalike domain was not on the mail filter's block list and its reputation was still clean. The invoice theme matched a real supplier process, so the message looked ordinary. MFA prevented the account takeover. The filter relied on domain reputation and did not detect the newly registered lookalike.
+
+## Corrective actions
+
+- Sender and lookalike domain blocked (done, 7 April 2026).
+- Phishing messages purged from all mailboxes (done, 7 April 2026).
+- User password reset and sessions revoked (done, 7 April 2026).
+- Detection rule for lookalike supplier domains added (done, 9 April 2026).
+- Finance awareness note on invoice verification by phone (done, 10 April 2026).
+- Invoice-themed phishing simulation added to the quarterly campaign (open, owner Lucas Bernard).
+
+## Lessons learned
+
+MFA turned a stolen password into a blocked sign-in. The fast report from the user made the response short. Newly registered lookalike domains need a detection rule, not only a block list. Any change of supplier bank details should be verified through a known phone number, not the number in the email.";SOC-2026-0412;false;false;;
+;SAP month-end close slowed down by host memory contention;infrastructure;major;closed;false;2026-04-30 16:00;2026-04-30 17:20;2026-05-01 09:00;2026-05-06 11:00;maria.casanova@fromage-co.example;pierre.martin@fromage-co.example;Financial close jobs ran four times slower than usual. PAR-ESX-01 was overcommitted after a host maintenance, with the S/4HANA and BW servers on the same host.;"## Detailed description
+
+On 30 April 2026 at 16:00, the month-end close jobs ran about four times slower than usual. The first checks at 17:20 showed memory contention on PAR-ESX-01: a host maintenance on 29 April had left the S/4HANA and BW production VMs on the same host with no memory reservation rule. The BW VM was moved to PAR-ESX-02 and the close jobs returned to normal speed at 19:10. The close completed on 1 May at 09:00. The incident was closed on 6 May after Finance confirmed the figures.
+
+## Impact
+
+- Month-end close jobs were four times slower for about three hours, from 16:00 to 19:10.
+- The Finance team could not start the first consolidation run on 30 April and had to wait until the morning of 1 May.
+- The close completed on 1 May with no data loss and no double posting.
+
+## Root cause
+
+The 29 April maintenance left both SAP production VMs on PAR-ESX-01 and lowered the memory available to them. VMware DRS had no rule to keep the two VMs apart, and no alert watched host memory contention, so the close jobs competed for memory.
+
+## Corrective actions
+
+- BW VM moved to PAR-ESX-02 and memory reservations checked on both SAP VMs (done, 30 April 2026).
+- DRS anti-affinity rule added for the S/4HANA and BW production VMs (done, 4 May 2026).
+- Host memory alert at 90% added for the ESXi hosts that carry SAP production (done, 5 May 2026).
+- Maintenance checklist updated with a memory reservation and placement check for SAP hosts (done, 5 May 2026).
+- Capacity review before each month-end close during the SAP Cheddar migration (open, owner Pierre Martin).
+
+## Lessons learned
+
+A host maintenance is a change to the SAP production platform, even when no VM is rebooted. Placement and memory reservations must be checked before the close window. An anti-affinity rule is a small control that prevents a maintenance from putting both production VMs on one host. The next close will include a capacity check in the runbook.";;false;false;;
+;B2B portal down: database disk full;application;critical;closed;false;2026-06-02 07:50;2026-06-02 08:05;2026-06-02 11:10;2026-06-12 15:00;isabelle.moreau@fromage-co.example;marc.petit@fromage-co.example;Distributors could not place orders for three hours. The PostgreSQL 13 server of the B2B portal filled its disk with write-ahead logs after the archive job failed.;"## Detailed description
+
+The WAL archive job on PAR-DB-01 had been failing for six days. The disk filled at 07:50 on 2 June 2026 and PostgreSQL stopped accepting writes, so the Fromage B2B Portal was unavailable to distributors. The first calls reached the Sales team at 07:50 and the incident was detected at 08:05. The archive target was corrected at 09:20, the WAL backlog was archived and the disk usage fell. The database accepted writes again at 10:50 and the portal was opened at 11:10. The incident was closed on 12 June after the review with Sales and Infrastructure.
+
+## Impact
+
+- Fromage B2B Portal unavailable from 07:50 to 11:10, three hours and twenty minutes.
+- About 140 orders were taken by phone and keyed in afterwards.
+- No order was lost and no customer data was exposed.
+
+## Root cause
+
+The archive target changed during the SAN migration and nobody watched the job. No alert watched disk usage on the database server, so a failing archive job had six days to fill the disk.
+
+## Corrective actions
+
+- Archive job fixed and monitored (done, 2 June 2026).
+- Disk usage alert at 80% on database servers (done, 4 June 2026).
+- WAL archive target added to the SAN migration checklist (done, 5 June 2026).
+- Upgrade PostgreSQL 13, out of support, as part of the portal roadmap (open, tracked as a corrective task, target December 2026).
+
+## Lessons learned
+
+Backup and archive jobs are production services: their success and the disk space they consume need a monitor. An infrastructure change that moves a target must include the jobs that write to it. The phone fallback worked, but three hours of manual orders is a cost the portal roadmap must remove.";;false;false;;
+;Order confirmations sent to the wrong customers;data;major;closed;false;2026-07-09 14:00;2026-07-09 15:30;2026-07-09 16:10;2026-07-24 12:00;isabelle.moreau@fromage-co.example;marc.petit@fromage-co.example;A caching bug in the online shop release sent 214 order confirmation emails with another customer name, address and order content.;"## Detailed description
+
+A caching bug in the online shop release deployed on 9 July 2026 at 13:40 caused 214 order confirmation emails to be sent with another customer's name, address and order content. The first reports reached Customer Service at 15:30. The release was rolled back at 15:45 and the email queue was stopped at 16:10. The affected customers were informed by email on 10 July and the CNIL was notified on 11 July at 10:00. The incident was closed on 24 July after the fix and the notification were reviewed.
+
+## Impact
+
+- 214 customers received a confirmation email with personal data of another customer: name, address and order content.
+- No payment data, password or bank detail was exposed.
+- Customer Service handled calls and emails from affected customers. No misuse of the data has been identified.
+
+## Root cause
+
+The cache key of the order confirmation template did not include the customer id in the new release, so a cached message could be reused for the next order. The release had no test with two concurrent customers and no check of the rendered email before it was sent.
+
+## Corrective actions
+
+- Release rolled back and email queue stopped (done, 9 July 2026).
+- Cache key fixed to include the customer and order id (done, 10 July 2026).
+- Regression test with two customers and a shared cache added (done, 11 July 2026).
+- Email rendering check added to the release checklist (done, 14 July 2026).
+- Affected customers informed and CNIL notified (done, 10 and 11 July 2026).
+- Review of the release process for personalised content (open, owner Marc Petit).
+
+## Lessons learned
+
+Personalised content must be tested with at least two identities, including when a cache is involved. A cache key is part of the data protection design. Detection took 90 minutes because the first reports came from customers; an alert on repeated customer names in the email queue would shorten it.";;true;true;2026-07-11 10:00;"CNIL; 214 affected customers informed by email on 10 July"
 ;Veeam backup jobs failing on the backup SAN;infrastructure;minor;resolved;false;2026-08-18 22:00;2026-08-19 07:30;2026-08-21 18:00;;pierre.martin@fromage-co.example;pierre.martin@fromage-co.example;Three nights of failed backup jobs after two disk failures on PAR-SAN-02. The array reaches end of life in December 2026 and no spare disks are left under support.;;;false;false;;
 ;CheeseTrack offline during SQL Server cluster failover;infrastructure;minor;resolved;false;2026-09-12 21:05;2026-09-12 21:10;2026-09-12 21:45;;jacques.dubois@fromage-co.example;pierre.martin@fromage-co.example;Patching PAR-SQL-02 triggered a failover that CheeseTrack did not follow: its connection string named the node, not the listener. Cold chain scans were queued on the handhelds and synced afterwards.;;;false;false;;
 ;Microsoft Teams outage in Western Europe;supplier;low;closed;false;2026-09-24 09:30;2026-09-24 09:40;2026-09-24 12:15;2026-09-25 09:00;amelie.rousseau@fromage-co.example;sophie.laurent@fromage-co.example;Microsoft service incident: meetings and chat unavailable for most users for close to three hours. No action on our side beyond informing users.;;Microsoft 365 TM891245;false;false;;
-;Lab results cannot be saved in QualityLab LIMS;application;major;in_progress;false;2026-10-14 10:00;2026-10-14 10:20;;;catherine.blanc@fromage-co.example;sophie.laurent@fromage-co.example;The embedded SQL Server 2017 Express database reached its 10 GB limit. Results are recorded on paper until the database moves to the SQL Server cluster.;;;false;false;;
+;Lab results cannot be saved in QualityLab LIMS;application;major;in_progress;false;2026-10-14 10:00;2026-10-14 10:20;;;catherine.blanc@fromage-co.example;sophie.laurent@fromage-co.example;The embedded SQL Server 2017 Express database reached its 10 GB limit. Results are recorded on paper until the database moves to the SQL Server cluster.;"## Detailed description
+
+Since 14 October 2026 at 10:00, QualityLab LIMS refuses to save new lab results. The first failures were reported at 10:20. The application still opens and shows existing results, but any write fails. The embedded SQL Server 2017 Express database has reached its 10 GB size limit. The Quality team records results on paper until the database is moved to the SQL Server cluster. The incident is still in progress; this review is partial.
+
+## Impact
+
+- Lab results cannot be saved in QualityLab since 10:00 on 14 October.
+- Results are recorded on paper and keyed in later. No result has been lost so far.
+- Batch release and certificate preparation are delayed by about half a day.
+- The LIMS remains available for reading existing results.
+
+## Root cause
+
+Under investigation. The embedded SQL Server 2017 Express database reached its 10 GB limit. The exact growth is still being analysed: result history, audit tables and attachments are the main candidates. The move to the SQL Server cluster is the durable fix.
+
+## Corrective actions
+
+- Paper fallback agreed with Quality; a daily reconciliation checks that every result is recorded (done).
+- Database size and free space monitored daily (done).
+- Move the QualityLab database to the SQL Server cluster (in progress, owner Sophie Laurent, target December 2026).
+- Archive or purge old results under the retention policy (planned).
+- Vendor support case opened for the Express limit and the migration (in progress).
+
+## Lessons learned
+
+An Express edition database is not a fit for a LIMS with years of results. Capacity and edition limits need a monthly check, not a reaction to a full database. The paper fallback works but adds a reconciliation step; the migration should be planned outside a production campaign.";;false;false;;
 ;VPN to the Gouda site keeps dropping;infrastructure;minor;open;false;2026-10-19 08:00;2026-10-19 09:15;;;jan.bakker@kaasmeester.example;lucas.bernard@fromage-co.example;The site-to-site VPN between GOU-FW-01 and Paris renegotiates every few minutes since Sunday. Dutch users find Sage X3 slow and lose their sessions.;;;false;false;;
