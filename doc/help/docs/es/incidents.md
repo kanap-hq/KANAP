@@ -37,7 +37,7 @@ Vaya a **Panorama IT > Incidentes** para ver el registro. Haga clic en **Nuevo i
 - **Inicio**: cuándo empezó realmente el incidente, si difiere del momento en que lo advirtió
 - **Responsable**: quién se encarga de gestionarlo
 
-El **Declarante** es usted por defecto. Ambas fechas admiten valores pasados: un incidente descubierto el lunes por la mañana puede registrarse como iniciado el sábado por la noche.
+El **Notificante** es usted por defecto. Ambas fechas admiten valores pasados: un incidente descubierto el lunes por la mañana puede registrarse como iniciado el sábado por la noche.
 
 **Permisos**:
 
@@ -47,7 +47,7 @@ El **Declarante** es usted por defecto. Ambas fechas admiten valores pasados: un
 
 Estos permisos cubren también la revisión del incidente y la exportación PDF: quien trabaja con incidentes no necesita ningún permiso sobre la base de conocimiento para redactar la revisión. Consulte [Vista general](#vista-general).
 
-Un incidente restringido queda oculto para todos excepto los administradores del registro, el declarante y el responsable. En un espacio de trabajo de fábrica eso equivale a Administrador y Administrador de panorama IT, más quien lo registró o es responsable de la ficha. Un lector o colaborador que no sea el declarante ni el responsable no lo ve en la lista, en la búsqueda, en el chat ni en la exportación CSV: abrirlo por su referencia devuelve el mismo «no encontrado» que un número inexistente. Sus tareas vinculadas también les quedan ocultas: en la lista de tareas, en la búsqueda, en el panel de control, en Plaid y entre los objetos vinculados. La revisión del incidente está sujeta a la misma restricción, se llegue a ella por donde se llegue: base de conocimiento, búsqueda, asistente, exportaciones e imágenes pegadas en el texto.
+Un incidente restringido queda oculto para todos excepto los administradores del registro, el notificante y el responsable. En un espacio de trabajo de fábrica eso equivale a Administrador y Administrador de panorama IT, más quien lo registró o es responsable de la ficha. Un lector o colaborador que no sea el notificante ni el responsable no lo ve en la lista, en la búsqueda, en el chat ni en la exportación CSV: abrirlo por su referencia devuelve el mismo «no encontrado» que un número inexistente. Sus tareas vinculadas también les quedan ocultas: en la lista de tareas, en la búsqueda, en el panel de control, en Plaid y entre los objetos vinculados. La revisión del incidente está sujeta a la misma restricción, se llegue a ella por donde se llegue: base de conocimiento, búsqueda, asistente, exportaciones e imágenes pegadas en el texto.
 
 **Restringir a los administradores del registro** está en el cajón de propiedades, bajo Clasificación. Un colaborador puede activarlo mientras aún vea la ficha; solo un administrador puede desactivarlo, también después del cierre. El cambio se escribe en el diario. El registro de auditoría solo muestra las líneas de un incidente restringido, de su revisión y de sus tareas a las personas que ven el incidente, y las pastillas de relación documental omiten su título. Solo la lista «vistos recientemente», guardada en el navegador de cada persona, puede seguir mostrando el título a quien abrió el incidente antes de la restricción.
 
@@ -103,7 +103,7 @@ El cajón permanece visible en todas las pestañas y guarda a medida que edita.
 - **Categoría**: de la lista configurada en la configuración de Panorama IT
 - **Gravedad**: Crítica, Mayor, Menor, Baja. Elija el nivel que refleje el impacto de negocio en ese momento; cada cambio queda anotado en el diario, así que subirlo o bajarlo después es normal y trazable
 - **Estado**: Abierto, En curso, Resuelto, Cerrado. El estado solo avanza. Volver atrás se hace con **Reabrir**, para que el registro no pueda rebobinarse discretamente
-- **Restringir a los administradores del registro**: ocultar el incidente a los demás lectores y colaboradores. El declarante y el responsable siguen viéndolo. Solo un administrador puede levantar la restricción, también después del cierre. Cuando está activa, la línea de metadatos muestra **Restringido**
+- **Restringir a los administradores del registro**: ocultar el incidente a los demás lectores y colaboradores. El notificante y el responsable siguen viéndolo. Solo un administrador puede levantar la restricción, también después del cierre. Cuando está activa, la línea de metadatos muestra **Restringido**
 
 **Fechas**:
 
@@ -112,7 +112,7 @@ El cajón permanece visible en todas las pestañas y guarda a medida que edita.
 - **Resuelto**: se rellena automáticamente al pasar el estado a Resuelto y sigue siendo editable mientras el incidente está abierto, para corregirlo a la hora real del restablecimiento
 - **Cerrado**: de solo lectura, se marca al cerrar el incidente
 
-**Personas**: **Declarante** (quien lo registró) y **Responsable** (quien lo gestiona).
+**Personas**: **Notificante** (quien lo registró) y **Responsable** (quien lo gestiona).
 
 **Origen**: **Referencia externa** para el número de ticket, el identificador de alerta o la referencia de correo por la que se comunicó el incidente por primera vez.
 

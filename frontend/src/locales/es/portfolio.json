@@ -252,10 +252,6 @@
       "actions": {
         "copyReference": "Copiar referencia"
       },
-      "confirmations": {
-        "unsavedNavigate": "Tiene cambios sin guardar. ¿Guardar antes de salir?",
-        "unsavedSwitchTabs": "Tiene cambios sin guardar. ¿Guardar antes de cambiar de pestaña?"
-      },
       "loadingTabs": {
         "activity": "Actividad",
         "knowledge": "Conocimiento",
@@ -583,11 +579,6 @@
         "submitNewRecommendation": "Enviar nueva recomendación",
         "submitRecommendation": "Enviar recomendación"
       },
-      "confirmations": {
-        "unsavedNavigate": "Tiene cambios sin guardar. ¿Guardar antes de salir?",
-        "unsavedRecommendation": "Tiene una recomendación sin guardar. ¿Descartarla?",
-        "unsavedSwitchTabs": "Tiene cambios sin guardar. ¿Guardar antes de cambiar de pestaña?"
-      },
       "deleteDialog": {
         "message": "¿Eliminar esta solicitud? Esta acción no se puede deshacer.",
         "title": "Eliminar solicitud"
@@ -744,8 +735,7 @@
         "relatedItem": "Elemento relacionado"
       },
       "confirmations": {
-        "deleteTask": "¿Está seguro de que desea eliminar esta tarea? Esta acción no se puede deshacer.",
-        "unsavedNavigate": "Tiene cambios sin guardar. ¿Guardar antes de salir?"
+        "deleteTask": "¿Está seguro de que desea eliminar esta tarea? Esta acción no se puede deshacer."
       },
       "description": {
         "label": "Descripción",
@@ -897,6 +887,7 @@
           "assigneeMissing": "Falta asignado",
           "noClassification": "Sin clasificación definida.",
           "projectLevel": "Nivel de proyecto",
+          "requestorMissing": "Falta solicitante",
           "standaloneTask": "Tarea independiente",
           "unknown": "Desconocido",
           "relatedTypes": {

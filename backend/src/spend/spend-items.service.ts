@@ -38,6 +38,7 @@ import { ItemNumberService } from '../common/item-number.service';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
+import { displayName as personDisplayName } from '../common/display-name';
 import type { BudgetColumn } from './amounts-write.util';
 import { ItemWriteFields, resolveItemWrite } from './item-write.util';
 import { assertLinesEditable, isLimitedTransaction, lineEditableField } from '../data-access/line-write-checks';
@@ -390,9 +391,7 @@ export class SpendItemsService {
     if (!item) throw new NotFoundException(this.contract.notFound);
 
     const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE tenant_id = $1 AND id = $2', [tenantId, userId]);
-    const senderName = senderRows.length > 0
-      ? `${senderRows[0].first_name} ${senderRows[0].last_name}`.trim() || 'Someone'
-      : 'Someone';
+    const senderName = personDisplayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
       ? await mg.query(

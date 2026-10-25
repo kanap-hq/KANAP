@@ -52,7 +52,7 @@ import {
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { useTenant } from '../../tenant/TenantContext';
-import { StatusDot, useKanapDialogs } from '../../components/design';
+import { StatusDot, unsavedConfirm, useKanapDialogs } from '../../components/design';
 import { fieldResetSx } from '../../theme/formSx';
 import {
   PROJECT_ORIGIN_TABS,
@@ -1298,7 +1298,7 @@ export default function TaskWorkspacePage() {
     }
     await waitForSidebarSaves();
     if (dirty) {
-      const proceed = await dialogs.confirm(t('portfolio:workspace.task.confirmations.unsavedNavigate'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndLeave'));
       if (proceed) {
         setSaving(true);
         try { await handleSave(); } catch { setSaving(false); return; }

@@ -3327,7 +3327,6 @@
     }
   },
   "confirmations": {
-    "unsavedSaveBeforeNav": "Vous avez des modifications non enregistrées. Enregistrer avant de naviguer ?",
     "unsavedSave": "Vous avez des modifications non enregistrées. Voulez-vous les enregistrer ?",
     "unsavedLeave": "Vous avez des modifications non enregistrées. Voulez-vous quitter sans enregistrer ?",
     "unsavedLeaveTab": "Vous avez des modifications non enregistrées. Quitter cet onglet ?",

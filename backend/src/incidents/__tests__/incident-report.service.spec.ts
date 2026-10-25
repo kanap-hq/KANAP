@@ -328,6 +328,26 @@ function testRestrictedDocumentsOmitted() {
   assert.equal(markdown.includes('DOC-9'), false);
 }
 
+/** Spanish and German reports use the same reporter and journal words as the workspace. */
+function testReporterAndJournalWords() {
+  const es = labelsFor('es');
+  assert.equal(es.reporter, 'Notificante');
+  assert.equal(es.journal, 'Diario');
+  const esMarkdown = buildMarkdown(fixture(), 'es', es);
+  assert.ok(esMarkdown.includes('- **Notificante:** Thomas Berger'));
+  assert.ok(esMarkdown.includes('## Diario'));
+  assert.equal(esMarkdown.includes('Declarante'), false);
+  assert.equal(esMarkdown.includes('## Registro'), false);
+
+  const de = labelsFor('de');
+  assert.equal(de.reporter, 'Melder');
+  assert.equal(de.journal, 'Verlauf');
+  const deMarkdown = buildMarkdown(fixture(), 'de', de);
+  assert.ok(deMarkdown.includes('- **Melder:** Thomas Berger'));
+  assert.ok(deMarkdown.includes('## Verlauf'));
+  assert.equal(deMarkdown.includes('Meldende'), false);
+}
+
 function testFrenchChangeLabels() {
   const markdown = buildMarkdown(fixture(), 'fr', labelsFor('fr'));
   assert.match(markdown, /Statut: En cours → Résolu/);
@@ -545,6 +565,7 @@ async function run() {
   testMarkdownLinkAndFenceEscaping();
   testReportTimestampsUseTimezone();
   testRestrictedDocumentsOmitted();
+  testReporterAndJournalWords();
   testFrenchChangeLabels();
   testSystemEntriesInReportLanguage();
   testLinkChangeUsesContentOnly();

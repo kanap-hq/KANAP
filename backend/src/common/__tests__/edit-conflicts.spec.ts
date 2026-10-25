@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
-import { EDIT_CONFLICT_CODE, EditConflictException, conflictingFields, sameFieldValue, splitEditBase } from '../edit-conflicts';
+import { EDIT_CONFLICT_CODE, EditConflictException, conflictingFields, displayName, sameFieldValue, splitEditBase } from '../edit-conflicts';
 
 // The comparison and the body contract of the field-level edit conflicts
 // (plan planning/perf-scale, lot 3C). The races, the audit lookup and the
@@ -78,6 +78,12 @@ function testSplitBase() {
   assert.throws(() => splitEditBase({ notes: 'x', base: ['y'] }), BadRequestException);
 }
 
+function testDisplayNameStaysBlankWithoutAName() {
+  assert.equal(displayName({ first_name: null, last_name: null }), '');
+  assert.equal(displayName({ first_name: 'Marie', last_name: null }), 'Marie');
+  assert.equal(displayName({ first_name: 'Marie', last_name: 'Dupont' }), 'Marie Dupont');
+}
+
 function testAnswer() {
   const error = new EditConflictException([{
     field: 'notes', base: 'a', current: 'c', mine: 'b',
@@ -99,6 +105,7 @@ function main() {
   testIdsAndOthers();
   testConflictingFields();
   testSplitBase();
+  testDisplayNameStaysBlankWithoutAName();
   testAnswer();
   console.log('edit-conflicts.spec: ok');
 }

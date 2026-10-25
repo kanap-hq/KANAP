@@ -3327,7 +3327,6 @@
     }
   },
   "confirmations": {
-    "unsavedSaveBeforeNav": "You have unsaved changes. Save before navigating?",
     "unsavedSave": "You have unsaved changes. Do you want to save them?",
     "unsavedLeave": "You have unsaved changes. Do you want to leave without saving?",
     "unsavedLeaveTab": "You have unsaved changes. Leave this tab?",

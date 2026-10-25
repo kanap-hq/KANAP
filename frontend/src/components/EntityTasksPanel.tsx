@@ -119,17 +119,15 @@ export default function EntityTasksPanel({ entityType, entityId, phases = [], di
 
   return (
     <Stack spacing={2}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-            {title}
-          </Typography>
-          {hasActiveFilters && (
-            <IconButton size="small" onClick={clearFilters} title={t('portfolio:shared.entityTasksPanel.clearFilters')}>
-              <ClearIcon fontSize="small" />
-            </IconButton>
-          )}
-        </Stack>
+      <Stack direction="row" alignItems="center" spacing={1}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+          {title}
+        </Typography>
+        {hasActiveFilters && (
+          <IconButton size="small" onClick={clearFilters} title={t('portfolio:shared.entityTasksPanel.clearFilters')}>
+            <ClearIcon fontSize="small" />
+          </IconButton>
+        )}
         {!disabled && (
           <Button startIcon={<AddIcon />} size="small" onClick={() => handleCreateTask()}>
             {t('portfolio:shared.entityTasksPanel.addTask')}

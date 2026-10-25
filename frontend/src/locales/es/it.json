@@ -1525,7 +1525,7 @@
       "next": "Incidente siguiente",
       "tabs": {
         "overview": "Vista general",
-        "journal": "Registro",
+        "journal": "Diario",
         "relations": "Relaciones",
         "documents": "Documentos"
       },
@@ -1538,11 +1538,11 @@
       },
       "dialogs": {
         "reopenTitle": "Reabrir incidente",
-        "reopenMessage": "El incidente vuelve al estado En curso. El motivo queda anotado en el registro.",
+        "reopenMessage": "El incidente vuelve al estado En curso. El motivo queda anotado en el diario.",
         "reopenPlaceholder": "p. ej., el problema volvió a producirse tras la corrección",
         "reopenConfirm": "Reabrir",
         "cancelTitle": "Cancelar incidente",
-        "cancelMessage": "El incidente conserva su número y se marca como cancelado. El motivo queda anotado en el registro.",
+        "cancelMessage": "El incidente conserva su número y se marca como cancelado. El motivo queda anotado en el diario.",
         "cancelPlaceholder": "p. ej., registrado dos veces, ver INC-12",
         "cancelConfirm": "Cancelar incidente",
         "loseAccessTitle": "Ya no verá este incidente",
@@ -1583,7 +1583,7 @@
         "cancelledBanner": "Cancelado el {{date}}. Reábralo para hacer cambios."
       },
       "journal": {
-        "placeholder": "Añadir una nota al registro",
+        "placeholder": "Añadir una nota al diario",
         "add": "Añadir",
         "empty": "Todavía no hay entradas.",
         "recordedAt": "registrada el {{date}}",
@@ -1618,7 +1618,7 @@
         "selectSeverity": "Seleccione la gravedad",
         "status": "Estado",
         "restrictAccess": "Restringir a los administradores del registro",
-        "restrictAccessHint": "Solo los administradores del registro, el declarante y el responsable pueden abrir este incidente.",
+        "restrictAccessHint": "Solo los administradores del registro, el notificante y el responsable pueden abrir este incidente.",
         "started": "Inicio",
         "detected": "Detectado",
         "resolved": "Resuelto",
@@ -1641,7 +1641,7 @@
         "loadFailed": "Error al cargar el incidente",
         "saveFailed": "Error al guardar el incidente",
         "createFailed": "Error al crear el incidente",
-        "entryFailed": "Error al añadir la entrada del registro",
+        "entryFailed": "Error al añadir la entrada del diario",
         "attachmentsFailed": "Error al actualizar los adjuntos",
         "exportPdfFailed": "No se ha podido exportar el informe PDF.",
         "confidentialityFailed": "No se pudo actualizar el acceso",
@@ -2046,7 +2046,7 @@
       "newTitle": "Nuevo servidor",
       "tabs": {
         "overview": "Vista general",
-        "operations": "Operación",
+        "operations": "Operaciones",
         "network": "Red",
         "hardware": "Hardware",
         "dependencies": "Dependencias",
@@ -2325,7 +2325,7 @@
         "overview": "Resumen",
         "servers": "Servidores",
         "applications": "Aplicaciones",
-        "operations": "Operación",
+        "operations": "Operaciones",
         "compliance": "Cumplimiento",
         "relations": "Relaciones"
       },
@@ -3327,7 +3327,6 @@
     }
   },
   "confirmations": {
-    "unsavedSaveBeforeNav": "Tiene cambios no guardados. ¿Desea guardar antes de navegar?",
     "unsavedSave": "Tiene cambios no guardados. ¿Desea guardarlos?",
     "unsavedLeave": "Tiene cambios no guardados. ¿Desea salir sin guardar?",
     "unsavedLeaveTab": "Tiene cambios no guardados. ¿Salir de esta pestaña?",

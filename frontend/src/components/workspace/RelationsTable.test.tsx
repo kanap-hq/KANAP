@@ -4,7 +4,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
-import { RelationsTable, fitColumnWidths, fitColumns, type RelationsColumn } from './RelationsTable';
+import {
+  GROW_MAX, NAME_MAX, NAME_MIN_WIDE, RelationsSection, RelationsTable,
+  actionColumnWidth, fitColumnWidths, fitColumns, sizeRelationColumns, type RelationsColumn,
+} from './RelationsTable';
 
 type Row = { id: string; name: string; family: string };
 
@@ -112,6 +115,101 @@ describe('fitColumns', () => {
   });
 });
 
+describe('sizeRelationColumns', () => {
+  // Name content below its wide minimum, one column that grows to its text, one capped at
+  // GROW_MAX, and a wrapping column that must stay put.
+  const columns: Array<Pick<RelationsColumn<unknown>, 'width' | 'wrap'>> = [
+    {},
+    { width: 200 },
+    { width: 80 },
+    { width: 140, wrap: true },
+  ];
+  const content = [10, 300, 1000, 500];
+  const targets = [NAME_MIN_WIDE, 300, GROW_MAX, 140];
+  const natural = targets.reduce((sum, width) => sum + width, 0);
+  const base = [120, 200, 80, 140].reduce((sum, width) => sum + width, 0);
+  const sum = (widths: Array<number | undefined>) => widths.reduce<number>((total, width) => total + (width ?? 0), 0);
+
+  it('gives the name its content on a wide frame, bounded below and above', () => {
+    expect(sizeRelationColumns(columns, content, natural + 80)).toEqual({ columns, widths: targets, tableWidth: natural });
+    expect(sizeRelationColumns([{}], [NAME_MAX + 250], 1000)).toEqual({
+      columns: [{}], widths: [NAME_MAX], tableWidth: NAME_MAX,
+    });
+    expect(targets[0]).toBe(NAME_MIN_WIDE);
+  });
+
+  it('grows a column up to its content and no further than GROW_MAX, and never past a wider declaration', () => {
+    expect(sizeRelationColumns([{ width: 200 }], [300], 1000).widths).toEqual([300]);
+    expect(sizeRelationColumns([{ width: 200 }], [500], 1000).widths).toEqual([GROW_MAX]);
+    expect(sizeRelationColumns([{ width: 400 }], [500], 1000).widths).toEqual([400]);
+    expect(sizeRelationColumns([{ width: 400 }], [350], 1000).widths).toEqual([400]);
+  });
+
+  it('keeps a wrapping column at its declared width', () => {
+    expect(sizeRelationColumns([{ width: 140, wrap: true }], [500], 1000)).toEqual({
+      columns: [{ width: 140, wrap: true }], widths: [140], tableWidth: 140,
+    });
+  });
+
+  it('is continuous at both edges of the middle regime', () => {
+    const atNatural = sizeRelationColumns(columns, content, natural);
+    const justUnder = sizeRelationColumns(columns, content, natural - 1);
+    expect(atNatural).toEqual({ columns, widths: targets, tableWidth: natural });
+    expect(justUnder.tableWidth).toBeUndefined();
+    expect(sum(justUnder.widths)).toBe(natural - 1);
+    justUnder.widths.forEach((width, index) => {
+      expect(targets[index] - width!).toBeGreaterThanOrEqual(0);
+      expect(targets[index] - width!).toBeLessThanOrEqual(1);
+    });
+
+    expect(sizeRelationColumns(columns, content, base).widths).toEqual([120, 200, 80, 140]);
+    let previous = sizeRelationColumns(columns, content, base).widths as number[];
+    for (let available = base + 1; available < natural; available += 1) {
+      const widths = sizeRelationColumns(columns, content, available).widths as number[];
+      expect(sum(widths)).toBe(available);
+      widths.forEach((width, index) => {
+        expect(width).toBeGreaterThanOrEqual(previous[index]);
+        expect(width - previous[index]).toBeLessThanOrEqual(1);
+      });
+      previous = widths;
+    }
+
+    // One pixel under the base is the narrow fit, the same one the table uses today.
+    expect(sizeRelationColumns(columns, content, base - 1)).toEqual(fitColumns(columns, base - 1));
+  });
+
+  it('matches fitColumns below the base, including a column hidden by its order', () => {
+    const wide = COLUMNS.map(() => 400);
+    expect(sizeRelationColumns(COLUMNS, wide, 300)).toEqual(fitColumns(COLUMNS, 300));
+    expect(sizeRelationColumns(COLUMNS, wide, 365)).toEqual(fitColumns(COLUMNS, 365));
+    expect(sizeRelationColumns(COLUMNS, COLUMNS.map(() => 0), 100)).toEqual(fitColumns(COLUMNS, 100));
+    // The base of a table that already hid columns is the columns still passed in.
+    const shown = COLUMNS.filter((column) => column.key !== 'via' && column.key !== 'link' && column.key !== 'family');
+    const shownBase = 72 + 72 + 100 + 120;
+    expect(sizeRelationColumns(shown, shown.map(() => 0), shownBase).widths).toEqual([72, 120, 72, 100]);
+    expect(sizeRelationColumns(shown, shown.map(() => 0), shownBase - 1)).toEqual(fitColumns(shown, shownBase - 1));
+  });
+});
+
+describe('actionColumnWidth', () => {
+  const dataBase = 734;
+
+  it('grows to the measured label, with no cap, and never under the declaration', () => {
+    // « Verknüpfen » measures 75px against a 56px declaration.
+    expect(actionColumnWidth(56, 75, dataBase, dataBase + 75)).toBe(75);
+    expect(actionColumnWidth(56, 75, dataBase, 2000)).toBe(75);
+    // A short label has no GROW_MAX: the column takes its content.
+    expect(actionColumnWidth(56, 500, dataBase, dataBase + 500)).toBe(500);
+    expect(actionColumnWidth(56, 40, dataBase, 2000)).toBe(56);
+    expect(actionColumnWidth(56, 0, dataBase, 2000)).toBe(56);
+  });
+
+  it('keeps the declaration when the grown width does not fit the base', () => {
+    expect(actionColumnWidth(56, 75, dataBase, dataBase + 75 - 1)).toBe(56);
+    expect(actionColumnWidth(56, 75, dataBase, 405)).toBe(56);
+  });
+});
+
 describe('RelationsTable at narrow width', () => {
   it('keeps the declared widths until the frame is measured', () => {
     const { container } = renderTable();
@@ -121,10 +219,14 @@ describe('RelationsTable at narrow width', () => {
   it('fits the columns to the frame and follows its resizes', () => {
     frameWidth = 1200;
     const { container } = renderTable({ onRemove: () => {} });
-    expect(colWidths(container)).toEqual([...COLUMNS.map((column) => column.width), 40]);
+    // Nothing is measured here, so the name takes its wide minimum and the table stops at that.
+    const declared = COLUMNS.reduce((sum, column) => sum + (column.width ?? 0), 0);
+    expect(colWidths(container)).toEqual([72, NAME_MIN_WIDE, 110, 72, 120, 140, 100, 40]);
+    expect(screen.getByRole('table').style.width).toBe(`${declared + NAME_MIN_WIDE + 40}px`);
 
     frameWidth = 405;
     act(() => resize?.());
+    expect(screen.getByRole('table').style.width).toBe('');
     expect(screen.getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Ref', 'Name', 'Version', 'Support end']);
     expect(screen.queryByText('SRV-1')).toBeNull();
     const widths = colWidths(container);
@@ -163,6 +265,167 @@ describe('RelationsTable at narrow width', () => {
     vi.spyOn(cell, 'scrollWidth', 'get').mockReturnValue(200);
     fireEvent.mouseOver(screen.getByText('PostgreSQL'));
     expect(cell).not.toHaveAttribute('title');
+  });
+});
+
+describe('RelationsTable action column', () => {
+  const fixed = COLUMNS.reduce((sum, column) => sum + (column.width ?? 0), 0);
+  const action = { width: 56, render: () => <button type="button">Verknüpfen</button> };
+
+  function mockActionMeasure(width: number) {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+      const value = this.tagName === 'TH' && this.hasAttribute('aria-hidden') ? width : 0;
+      return { x: 0, y: 0, top: 0, left: 0, bottom: 0, right: value, width: value, height: 0, toJSON() { return {}; } } as DOMRect;
+    });
+  }
+
+  it('grows to the measured label on a wide frame and keeps that width in the natural width', () => {
+    mockActionMeasure(75);
+    frameWidth = 1600;
+    const { container } = renderTable({ action });
+    const widths = colWidths(container);
+    expect(widths[widths.length - 1]).toBe(75);
+    expect(screen.getByRole('table').style.width).toBe(`${fixed + NAME_MIN_WIDE + 75}px`);
+  });
+
+  it('keeps the declared width when the measured label does not fit', () => {
+    mockActionMeasure(75);
+    frameWidth = 405;
+    const { container } = renderTable({ action });
+    const widths = colWidths(container);
+    expect(widths[widths.length - 1]).toBe(56);
+    expect(screen.getByRole('table').style.width).toBe('');
+    expect(screen.getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Ref', 'Name', 'Version', 'Support end']);
+  });
+});
+
+describe('RelationsTable on a wide frame', () => {
+  const fixed = COLUMNS.reduce((sum, column) => sum + (column.width ?? 0), 0);
+
+  it('takes its natural width and the section caps itself there', () => {
+    frameWidth = 1600;
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter>
+          <RelationsSection title="Technologies" onAdd={() => {}} addLabel="Add">
+            <RelationsTable columns={COLUMNS} rows={ROWS} rowKey={(row) => row.id} onRemove={() => {}} ariaLabel="Technologies" />
+          </RelationsSection>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+    const natural = fixed + NAME_MIN_WIDE + 40;
+    const table = screen.getByRole('table', { name: 'Technologies' });
+    expect(table.style.width).toBe(`${natural}px`);
+    expect(colWidths(table)).toEqual([72, NAME_MIN_WIDE, 110, 72, 120, 140, 100, 40]);
+    expect(getComputedStyle(screen.getByRole('region', { name: 'Technologies' })).maxWidth).toBe(`${natural}px`);
+  });
+
+  it('caps the section at the widest of its tables', () => {
+    frameWidth = 1600;
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter>
+          <RelationsSection title="Relations">
+            <RelationsTable columns={COLUMNS.slice(0, 2)} rows={ROWS} rowKey={(row) => row.id} ariaLabel="Short" />
+            <RelationsTable columns={COLUMNS} rows={ROWS} rowKey={(row) => row.id} onRemove={() => {}} ariaLabel="Technologies" />
+          </RelationsSection>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+    const wide = fixed + NAME_MIN_WIDE + 40;
+    // The shorter table fills the section. Its name column keeps no width of its own, so it takes the surplus.
+    expect(screen.getByRole('table', { name: 'Short' }).style.width).toBe('');
+    expect(colWidths(screen.getByRole('table', { name: 'Short' }))).toEqual([72, undefined]);
+    expect(screen.getByRole('table', { name: 'Technologies' }).style.width).toBe(`${wide}px`);
+    expect(getComputedStyle(screen.getByRole('region', { name: 'Relations' })).maxWidth).toBe(`${wide}px`);
+  });
+});
+
+describe('sibling relation sections', () => {
+  function renderSections(children: React.ReactNode) {
+    return render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter>{children}</MemoryRouter>
+      </ThemeProvider>,
+    );
+  }
+
+  it('shares one max width, and the narrower table fills its section', () => {
+    frameWidth = 1600;
+    const fixed = COLUMNS.reduce((sum, column) => sum + (column.width ?? 0), 0);
+    const wide = fixed + NAME_MIN_WIDE + 40;
+    renderSections(
+      <>
+        <RelationsSection title="Short" onAdd={() => {}} addLabel="Add">
+          <RelationsTable columns={COLUMNS.slice(0, 2)} rows={ROWS} rowKey={(row) => row.id} ariaLabel="Short" />
+        </RelationsSection>
+        <RelationsSection title="Empty" onAdd={() => {}} addLabel="Add">
+          <span>None</span>
+        </RelationsSection>
+        <RelationsSection title="Wide" onAdd={() => {}} addLabel="Add">
+          <RelationsTable columns={COLUMNS} rows={ROWS} rowKey={(row) => row.id} onRemove={() => {}} ariaLabel="Wide" />
+        </RelationsSection>
+      </>,
+    );
+    for (const name of ['Short', 'Empty', 'Wide']) {
+      expect(getComputedStyle(screen.getByRole('region', { name })).maxWidth).toBe(`${wide}px`);
+    }
+    expect(screen.getByRole('table', { name: 'Short' }).style.width).toBe('');
+    expect(colWidths(screen.getByRole('table', { name: 'Short' }))).toEqual([72, undefined]);
+    expect(screen.getByRole('table', { name: 'Wide' }).style.width).toBe(`${wide}px`);
+  });
+
+  it('drops the cap and fills every table when a sibling table is between its base and its natural width', () => {
+    // 530px holds the short table (natural 312) and sits in the middle regime of the other
+    // (base 520, natural 640).
+    frameWidth = 530;
+    const mid: Array<RelationsColumn<Row>> = [
+      { key: 'name', header: 'Name', render: (row) => row.name },
+      { key: 'a', header: 'A', width: 200, render: () => 'a' },
+      { key: 'b', header: 'B', width: 200, render: () => 'b' },
+    ];
+    renderSections(
+      <>
+        <RelationsSection title="Short" onAdd={() => {}} addLabel="Add">
+          <RelationsTable columns={COLUMNS.slice(0, 2)} rows={ROWS} rowKey={(row) => row.id} ariaLabel="Short" />
+        </RelationsSection>
+        <RelationsSection title="Mid" onAdd={() => {}} addLabel="Add">
+          <RelationsTable columns={mid} rows={ROWS} rowKey={(row) => row.id} ariaLabel="Mid" />
+        </RelationsSection>
+      </>,
+    );
+    expect(getComputedStyle(screen.getByRole('region', { name: 'Short' })).maxWidth).toBe('none');
+    expect(getComputedStyle(screen.getByRole('region', { name: 'Mid' })).maxWidth).toBe('none');
+    // The short table fills its section too, so its Add stays on the table's right edge.
+    expect(screen.getByRole('table', { name: 'Short' }).style.width).toBe('');
+    expect(colWidths(screen.getByRole('table', { name: 'Short' }))).toEqual([72, undefined]);
+    expect(screen.getByRole('table', { name: 'Mid' }).style.width).toBe('');
+  });
+
+  it('gives the surplus to an empty spacer column when the stretched table has no name column', () => {
+    frameWidth = 1600;
+    const sized = (prefix: string, count: number): Array<RelationsColumn<Row>> => Array.from({ length: count }, (_, index) => (
+      { key: `${prefix}${index}`, header: `${prefix}${index}`, width: 100, render: () => 'x' }
+    ));
+    renderSections(
+      <>
+        <RelationsSection title="Narrow">
+          <RelationsTable columns={sized('n', 2)} rows={ROWS} rowKey={(row) => row.id} action={{ width: 56, render: () => 'Link' }} ariaLabel="Narrow" />
+        </RelationsSection>
+        <RelationsSection title="Broad">
+          <RelationsTable columns={sized('b', 5)} rows={ROWS} rowKey={(row) => row.id} ariaLabel="Broad" />
+        </RelationsSection>
+      </>,
+    );
+    const narrow = screen.getByRole('table', { name: 'Narrow' });
+    expect(narrow.style.width).toBe('');
+    // Two sized columns keep their widths, the spacer has none, the action column stays last.
+    expect(colWidths(narrow)).toEqual([100, 100, undefined, 56]);
+    expect(narrow.querySelectorAll('thead th')).toHaveLength(4);
+    expect(narrow.querySelectorAll('tbody tr')[0].children).toHaveLength(4);
+    expect(narrow.querySelectorAll('tbody tr')[0].children[3].textContent).toBe('Link');
+    const broad = screen.getByRole('table', { name: 'Broad' });
+    expect(colWidths(broad)).toEqual([100, 100, 100, 100, 100]);
   });
 });
 

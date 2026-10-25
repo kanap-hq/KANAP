@@ -58,8 +58,6 @@
       "access": "Acceso"
     },
     "workspace": {
-      "unsavedNavigate": "Tiene cambios no guardados. ¿Desea guardar antes de navegar?",
-      "unsavedSwitchTab": "Tiene cambios no guardados. ¿Desea guardar antes de cambiar de pestaña?",
       "itemCountOf": "{{entity}} {{current}} de {{total}}"
     },
     "messages": {

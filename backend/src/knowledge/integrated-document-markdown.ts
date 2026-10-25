@@ -36,9 +36,9 @@ export function prepareRecoveredContent(content: string | null | undefined): str
   return normalized;
 }
 
-/** The specification document of an interface, legacy HTML texts converted. */
-export function interfaceSpecificationMarkdown(row: InterfaceSpecificationSource): string {
-  return buildInterfaceSpecificationMarkdown(row, (text) => (isHtmlContent(text) ? htmlToMarkdown(text) : text));
+/** The specification document of an interface, legacy HTML texts converted. Headings follow `language` (English when omitted). */
+export function interfaceSpecificationMarkdown(row: InterfaceSpecificationSource, language?: string | null): string {
+  return buildInterfaceSpecificationMarkdown(row, (text) => (isHtmlContent(text) ? htmlToMarkdown(text) : text), language);
 }
 
 function parseMarkdownTokens(content: string): MarkdownToken[] | null {

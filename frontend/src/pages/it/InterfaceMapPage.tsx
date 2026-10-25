@@ -39,16 +39,8 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../utils/applicationClassification';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { APPLICATION_ENVIRONMENTS, environmentLabel } from '../../utils/applicationEnvironments';
 import { legTypeLabel, routeTypeLabel } from '../../utils/interfaceLegType';
-// Label keys under it:enums.environment.
-const ENVIRONMENT_OPTIONS = [
-  { labelKey: 'production', value: 'prod' },
-  { labelKey: 'preProd', value: 'pre_prod' },
-  { labelKey: 'qa', value: 'qa' },
-  { labelKey: 'test', value: 'test' },
-  { labelKey: 'dev', value: 'dev' },
-  { labelKey: 'sandbox', value: 'sandbox' },
-];
 
 type ApiMapNode = {
   id: string;
@@ -548,9 +540,9 @@ export default function InterfaceMapPage() {
         }}
         sx={{ minWidth: 160 }}
       >
-        {ENVIRONMENT_OPTIONS.map((option) => (
+        {APPLICATION_ENVIRONMENTS.map((option) => (
           <MenuItem key={option.value} value={option.value}>
-            {t(`enums.environment.${option.labelKey}`)}
+            {environmentLabel(t, option.value)}
           </MenuItem>
         ))}
       </TextField>
@@ -664,7 +656,7 @@ export default function InterfaceMapPage() {
           <Stack spacing={2} alignItems="center">
             <CircularProgress size={32} />
             <Typography variant="body2" color="text.secondary">
-              {t('pages.interfaceMap.building', { env: environment.toUpperCase() })}
+              {t('pages.interfaceMap.building', { env: environmentLabel(t, environment) })}
             </Typography>
           </Stack>
         </Box>
@@ -857,7 +849,7 @@ export default function InterfaceMapPage() {
                                   .sort((a, b) => envOrder.indexOf(a) - envOrder.indexOf(b))
                                   .map((env) => (
                                     <Box key={env}>
-                                      <Typography variant="caption" color="text.secondary">{env.toUpperCase()}</Typography>
+                                      <Typography variant="caption" color="text.secondary">{environmentLabel(t, env)}</Typography>
                                       <Stack spacing={0.25} sx={{ mt: 0.25 }}>
                                         {(() => {
                                           // The clusters first, each followed by the members that inherit it, then the other servers.
@@ -998,7 +990,7 @@ export default function InterfaceMapPage() {
                   {selectedLinkBindings.length > 0 && (
                     <Stack spacing={0.5} sx={{ mt: 1 }}>
                       <Typography variant="subtitle2">
-	                        {t('pages.interfaceMap.endpointsEnv', { env: environment.toUpperCase() })}
+	                        {t('pages.interfaceMap.endpointsEnv', { env: environmentLabel(t, environment) })}
 	                      </Typography>
                       {selectedLinkBindings.map((binding) => {
                         const sourceApp = nodeById.get(binding.source_application_id)?.name || binding.source_application_id;
@@ -1031,7 +1023,7 @@ export default function InterfaceMapPage() {
 	                  )}
                   <Stack spacing={0.5} sx={{ mt: 1 }}>
                     <Typography variant="subtitle2">
-                      {t('pages.interfaceMap.infraConnections', { env: environment.toUpperCase() })}
+                      {t('pages.interfaceMap.infraConnections', { env: environmentLabel(t, environment) })}
                     </Typography>
                     {linkedConnectionsLoading && (
                       <Typography variant="body2" color="text.secondary">
@@ -1045,7 +1037,7 @@ export default function InterfaceMapPage() {
                     )}
                     {!linkedConnectionsLoading && !linkedConnectionsError && linkedConnections.length === 0 && (
                       <Typography variant="body2" color="text.secondary">
-                        {t('pages.interfaceMap.noInfra', { env: environment.toUpperCase() })}
+                        {t('pages.interfaceMap.noInfra', { env: environmentLabel(t, environment) })}
                       </Typography>
                     )}
                     {!linkedConnectionsLoading && linkedConnections.length > 0 && (
@@ -1101,7 +1093,7 @@ export default function InterfaceMapPage() {
                                       {t('pages.interfaceMap.protocolsValue', { value: protocolLabels.length > 0 ? protocolLabels.join(', ') : '—' })}
                                     </Typography>
                                     <Typography variant="caption" color="text.secondary">
-                                      {t('pages.interfaceMap.bindingValue', { env: link.environment.toUpperCase(), leg: legTypeLabel(t, link.leg_type) })}
+                                      {t('pages.interfaceMap.bindingValue', { env: environmentLabel(t, link.environment), leg: legTypeLabel(t, link.leg_type) })}
                                     </Typography>
                                   </Stack>
                                 );

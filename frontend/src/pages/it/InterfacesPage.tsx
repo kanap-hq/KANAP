@@ -39,6 +39,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { classificationText } from '../../utils/applicationClassification';
+import { environmentLabel } from '../../utils/applicationEnvironments';
 import { setListFiltersParam } from '../../lib/listContext';
 import { countValueFormatter } from '../../components/grid/countValueFormatter';
 type InterfaceRow = {
@@ -206,14 +207,14 @@ export default function InterfacesPage() {
               }}
             >
               <StatusDot color={getEnvDotColor(env, mode)} />
-              {env.toUpperCase()}
+              {environmentLabel(t, env)}
             </Box>
           ))}
         </Link>
       );
     };
     return Cell;
-  }, [getInterfaceHref, handleInternalNavigate, theme.palette.mode]);
+  }, [getInterfaceHref, handleInternalNavigate, t, theme.palette.mode]);
 
   // Business processes the interfaces use, read through the interfaces permission.
   const getBusinessProcessValues = useCallback(async (): Promise<CheckboxSetFilterOption[]> => {

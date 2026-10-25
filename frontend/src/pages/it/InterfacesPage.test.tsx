@@ -88,4 +88,21 @@ describe('InterfacesPage', () => {
     expect(params.get('q')).toBe('pay');
     expect(JSON.parse(params.get('filters') ?? '{}')).toEqual(filters);
   });
+
+  it('shows the translated environment label in the Environments column, not the raw code', () => {
+    render(<MemoryRouter><InterfacesPage /></MemoryRouter>);
+    const Cell = lastProps().columns.find((c) => c.field === 'binding_environments')!.cellRenderer!;
+    const { container } = render(
+      <MemoryRouter>
+        <Cell
+          value={['prod', 'pre_prod']}
+          data={{ id: 'i-1', interface_reference: 'INT-7', binding_environments: ['prod', 'pre_prod', 'QA'] }}
+        />
+      </MemoryRouter>,
+    );
+    expect(container.textContent).toContain('enums.environment.prod');
+    expect(container.textContent).toContain('enums.environment.preProd');
+    expect(container.textContent).toContain('enums.environment.qa');
+    expect(container.textContent).not.toMatch(/PROD|PRE-PROD|PRE_PROD/);
+  });
 });

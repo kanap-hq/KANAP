@@ -15,6 +15,7 @@ import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/sta
 import { ContractUpsertDto } from './dto/contract.dto';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
+import { displayName } from '../common/display-name';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
 import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
@@ -1789,9 +1790,7 @@ export class ContractsService {
       'SELECT first_name, last_name FROM users WHERE tenant_id = $1 AND id = $2',
       [tenantId, userId],
     );
-    const senderName = senderRows.length > 0
-      ? `${senderRows[0].first_name || ''} ${senderRows[0].last_name || ''}`.trim() || 'Someone'
-      : 'Someone';
+    const senderName = displayName(senderRows[0], 'Someone');
     const validIds = userIds.filter((id) => isUuid(String(id)));
     const recipients = validIds.length > 0
       ? await mg.query(

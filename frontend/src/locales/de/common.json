@@ -682,10 +682,30 @@
       "timeline": "Verlauf",
       "people": "Personen",
       "record": "Eintrag",
-      "source": "Quelle"
+      "source": "Quelle",
+      "basic": "Grunddaten",
+      "context": "Kontext",
+      "dates": "Daten",
+      "ip_addresses": "IP-Adressen",
+      "effort": "Aufwand",
+      "team": "Team",
+      "scoring": "Bewertung",
+      "analysis": "Analyse"
     },
     "presets": {
       "applications": {
+        "enrichment": "Datenanreicherung"
+      },
+      "assets": {
+        "enrichment": "Datenanreicherung"
+      },
+      "tasks": {
+        "enrichment": "Datenanreicherung"
+      },
+      "portfolio_projects": {
+        "enrichment": "Datenanreicherung"
+      },
+      "portfolio_requests": {
         "enrichment": "Datenanreicherung"
       }
     },
@@ -759,6 +779,126 @@
         "authority_notification_required": "Meldung an Behörde erforderlich",
         "authority_notified_at": "Gemeldet am",
         "notified_parties": "Informierte Parteien"
+      },
+      "assets": {
+        "id": "ID",
+        "name": "Name",
+        "location_reference": "Standort",
+        "kind": "Asset-Typ",
+        "is_cluster": "Ist ein Cluster",
+        "status": "Lebenszyklus",
+        "go_live_date": "Inbetriebnahmedatum",
+        "end_of_life_date": "Datum Lebensende",
+        "notes": "Notizen",
+        "environment": "Umgebung",
+        "hostname": "Hostname",
+        "domain": "Domäne",
+        "admin_zone": "Administrationszone",
+        "aliases": "Aliase",
+        "operating_system": "Betriebssystem",
+        "cluster": "Cluster-Mitgliedschaft",
+        "ip_1_type": "IP-Typ 1",
+        "ip_1_address": "IP-Adresse 1",
+        "ip_1_subnet_cidr": "IP-Subnetz 1 (CIDR)",
+        "ip_2_type": "IP-Typ 2",
+        "ip_2_address": "IP-Adresse 2",
+        "ip_2_subnet_cidr": "IP-Subnetz 2 (CIDR)",
+        "ip_3_type": "IP-Typ 3",
+        "ip_3_address": "IP-Adresse 3",
+        "ip_3_subnet_cidr": "IP-Subnetz 3 (CIDR)",
+        "ip_4_type": "IP-Typ 4",
+        "ip_4_address": "IP-Adresse 4",
+        "ip_4_subnet_cidr": "IP-Subnetz 4 (CIDR)",
+        "vulnerabilities_to_review": "Zu prüfende Schwachstellen",
+        "severe_vulnerabilities": "Schwerwiegende Schwachstellen"
+      },
+      "tasks": {
+        "id": "ID",
+        "title": "Titel",
+        "description": "Beschreibung",
+        "task_type_name": "Aufgabentyp",
+        "related_object_type": "Typ des verknüpften Objekts",
+        "related_object_id": "ID des verknüpften Objekts",
+        "related_object_name": "Name des verknüpften Objekts",
+        "phase_name": "Phase",
+        "priority_level": "Priorität",
+        "category_name": "Kategorie",
+        "stream_name": "Stream",
+        "source_name": "Quelle",
+        "company_name": "Unternehmen",
+        "status": "Status",
+        "start_date": "Startdatum",
+        "due_date": "Fälligkeitsdatum",
+        "assignee_email": "E-Mail Zuständige/r",
+        "creator_email": "E-Mail Antragsteller/in",
+        "viewer_email_1": "E-Mail Beobachter/in 1",
+        "viewer_email_2": "E-Mail Beobachter/in 2",
+        "viewer_email_3": "E-Mail Beobachter/in 3",
+        "viewer_email_4": "E-Mail Beobachter/in 4",
+        "owner_email_1": "E-Mail Verantwortliche/r 1",
+        "owner_email_2": "E-Mail Verantwortliche/r 2",
+        "owner_email_3": "E-Mail Verantwortliche/r 3",
+        "owner_email_4": "E-Mail Verantwortliche/r 4",
+        "labels": "Labels"
+      },
+      "portfolio_projects": {
+        "id": "ID",
+        "name": "Name",
+        "status": "Status",
+        "purpose": "Zweck",
+        "origin": "Herkunft",
+        "source_name": "Quelle",
+        "category_name": "Kategorie",
+        "stream_name": "Stream",
+        "company_name": "Unternehmen",
+        "department_name": "Abteilung",
+        "planned_start": "Geplanter Start",
+        "planned_end": "Geplantes Ende",
+        "actual_start": "Tatsächlicher Beginn",
+        "actual_end": "Tatsächliches Ende",
+        "baseline_start_date": "Baseline-Start",
+        "baseline_end_date": "Baseline-Ende",
+        "execution_progress": "Fortschritt (%)",
+        "estimated_effort_it": "Geschätzter IT-Aufwand (PT)",
+        "estimated_effort_business": "Geschätzter Fachbereichs-Aufwand (PT)",
+        "actual_effort_it": "Tatsächlicher IT-Aufwand (PT)",
+        "actual_effort_business": "Tatsächlicher Fachbereichs-Aufwand (PT)",
+        "baseline_effort_it": "Baseline IT-Aufwand (PT)",
+        "baseline_effort_business": "Baseline Fachbereichs-Aufwand (PT)",
+        "business_sponsor_email": "E-Mail Fachbereichssponsor",
+        "business_lead_email": "E-Mail Fachbereichsleiter",
+        "it_sponsor_email": "E-Mail IT-Sponsor",
+        "it_lead_email": "E-Mail IT-Leiter",
+        "criteria_values": "Bewertungskriterien (JSON)",
+        "priority_score": "Prioritätsscore",
+        "priority_override": "Prioritätsüberschreibung",
+        "override_value": "Überschreibungswert",
+        "override_justification": "Begründung der Überschreibung"
+      },
+      "portfolio_requests": {
+        "id": "ID",
+        "name": "Name",
+        "status": "Status",
+        "purpose": "Zweck",
+        "source_name": "Quelle",
+        "category_name": "Kategorie",
+        "stream_name": "Stream",
+        "requestor_email": "E-Mail Antragsteller/in",
+        "company_name": "Unternehmen",
+        "department_name": "Abteilung",
+        "target_delivery_date": "Ziellieferdatum",
+        "current_situation": "Aktuelle Situation",
+        "expected_benefits": "Erwarteter Nutzen",
+        "risks": "Risiken",
+        "business_sponsor_email": "E-Mail Fachbereichssponsor",
+        "business_lead_email": "E-Mail Fachbereichsleiter",
+        "it_sponsor_email": "E-Mail IT-Sponsor",
+        "it_lead_email": "E-Mail IT-Leiter",
+        "criteria_values": "Bewertungskriterien (JSON)",
+        "priority_score": "Prioritätsscore",
+        "priority_override": "Prioritätsüberschreibung",
+        "override_value": "Überschreibungswert",
+        "override_justification": "Begründung der Überschreibung"
       }
     }
   },
@@ -1027,6 +1167,28 @@
     "endOfValidity": "Ende der Gültigkeit",
     "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben.",
     "activeUntil": "Aktiv bis {{date}}"
+  },
+  "unsaved": {
+    "saveAndLeave": {
+      "message": "Sie haben ungespeicherte Änderungen. Vor dem Verlassen speichern?",
+      "confirm": "Speichern und verlassen",
+      "cancel": "Ohne Speichern verlassen"
+    },
+    "leaveWithoutSaving": {
+      "message": "Sie haben ungespeicherte Änderungen. Ohne Speichern verlassen?",
+      "confirm": "Ohne Speichern verlassen",
+      "cancel": "Bleiben"
+    },
+    "saveAndSwitch": {
+      "message": "Sie haben ungespeicherte Änderungen. Vor dem Wechsel der Registerkarte speichern?",
+      "confirm": "Speichern und wechseln",
+      "cancel": "Ohne Speichern wechseln"
+    },
+    "saveAndContinue": {
+      "message": "Sie haben ungespeicherte Änderungen. Vor dem Fortfahren speichern?",
+      "confirm": "Speichern und fortfahren",
+      "cancel": "Bleiben"
+    }
   },
   "autosave": {
     "leaveTitle": "Änderungen nicht gespeichert",

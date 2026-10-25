@@ -67,7 +67,8 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { assetDeleteCheck } from '../../utils/deleteCheck';
 import { deleteFailureReason } from '../../utils/deleteRefusal';
 import { isValidHostname, sanitizeHostname } from '../../utils/hostname';
-import { KanapDialog, PropertyGroup, PropertyRow, useKanapDialogs } from '../../components/design';
+import { KanapDialog, PropertyGroup, PropertyRow, unsavedConfirm, useKanapDialogs } from '../../components/design';
+import { useLeaveGuard } from '../../hooks/leaveGuard';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
@@ -1369,7 +1370,8 @@ export default function AssetWorkspacePage() {
   const confirmAndNavigate = React.useCallback(async (targetId: string | null) => {
     if (!targetId) return;
     if (isCreate && dirty) {
-      const proceed = await dialogs.confirm(t('confirmations.unsavedSaveBeforeNav'));
+      // True saves, then the move continues. False drops the draft and still moves.
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndLeave'));
       if (proceed) {
         try { await handleSave(); } catch { return; }
       } else {
@@ -1380,8 +1382,15 @@ export default function AssetWorkspacePage() {
     navigate(`/it/assets/${targetId}/${tab}${qs ? `?${qs}` : ''}`);
   }, [dialogs, dirty, handleSave, handleReset, isCreate, listContextParams, navigate, tab, t]);
 
+  // True leaves and drops the draft. False stays. A menu link asks the same question.
+  const confirmLeaveWithoutSaving = React.useCallback(async () => {
+    if (!(isCreate && dirty)) return true;
+    return dialogs.confirm(unsavedConfirm(t, 'leaveWithoutSaving'));
+  }, [dialogs, dirty, isCreate, t]);
+  useLeaveGuard(() => isCreate && dirty, confirmLeaveWithoutSaving);
+
   const handleClose = async () => {
-    if (isCreate && dirty && !(await dialogs.confirm(t('confirmations.unsavedSaveBeforeNav')))) return;
+    if (!(await confirmLeaveWithoutSaving())) return;
     const qs = listContextParams.toString();
     navigate(`/it/assets${qs ? `?${qs}` : ''}`);
   };

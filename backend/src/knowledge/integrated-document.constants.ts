@@ -1,3 +1,5 @@
+import { interfaceSpecificationTemplateMarkdown } from './interface-specification-markdown';
+
 export type IntegratedDocumentSourceEntityType =
   | 'requests'
   | 'projects'
@@ -170,24 +172,10 @@ export const INTEGRATED_DOCUMENT_SLOT_DEFINITIONS: IntegratedDocumentSlotDefinit
     documentTypeDescription: 'Managed document type for interface specification integrated docs',
     templateTitle: 'Interface Specification Template',
     templateSummary: 'Managed template for interface specification integrated documents',
-    templateContentMarkdown: [
-      '## Business Purpose & Overview',
-      '',
-      '## Business Objects',
-      '',
-      '## Use Cases',
-      '',
-      '## Business Rules',
-      '',
-      '## Impact of Failure',
-      '',
-      '## Transformations Overview',
-      '',
-      '## Error Handling',
-      '',
-      '## Data & Compliance Notes',
-      '',
-    ].join('\n'),
+    // English on purpose: the library template belongs to the tenant, which has no
+    // language. A new interface document takes the creator's language instead
+    // (`provisionForInterface`). A re-seed never rewrites a template that exists.
+    templateContentMarkdown: interfaceSpecificationTemplateMarkdown('en'),
   },
   {
     sourceEntityType: 'incidents',

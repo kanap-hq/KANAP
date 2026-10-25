@@ -31,14 +31,41 @@ function testInterfaceDefinitionsIncludeSpecificationSlot() {
   });
 
   assert.equal(folderDefinitions.some((definition) => definition.sourceEntityType === 'interfaces'), true);
-  assert.equal(
-    slotDefinitions.some(
-      (definition) =>
-        definition.sourceEntityType === 'interfaces'
-        && definition.slotKey === 'specification',
-    ),
-    true,
+  const slot = slotDefinitions.find(
+    (definition) => definition.sourceEntityType === 'interfaces' && definition.slotKey === 'specification',
   );
+  assert.ok(slot, 'interfaces:specification slot is seeded');
+  // The library template stays English: a tenant has no language. The document of a
+  // new interface takes the creator's language at provision time.
+  assert.deepEqual(
+    String(slot?.templateContentMarkdown || '').split('\n').filter((line) => line.startsWith('## ')),
+    [
+      '## Business Purpose & Overview',
+      '## Business Objects',
+      '## Use Cases',
+      '## Business Rules',
+      '## Impact of Failure',
+      '## Transformations Overview',
+      '## Error Handling',
+      '## Data & Compliance Notes',
+    ],
+  );
+}
+
+function testOtherSlotsShipNoHeadingTemplate() {
+  const { slotDefinitions } = getManagedDocsSeedDefinitions();
+  for (const key of ['requests:purpose', 'requests:risks_mitigations', 'projects:purpose', 'applications:overview'] as const) {
+    const [sourceEntityType, slotKey] = key.split(':');
+    const slot = slotDefinitions.find(
+      (definition) => definition.sourceEntityType === sourceEntityType && definition.slotKey === slotKey,
+    );
+    assert.ok(slot, key);
+    assert.deepEqual(
+      String(slot?.templateContentMarkdown || '').split('\n').filter((line) => line.startsWith('## ')),
+      [],
+      `${key} ships no heading template`,
+    );
+  }
 }
 
 function testDefaultDefinitionsRemainUnfiltered() {
@@ -182,6 +209,7 @@ async function run() {
   testFoundationDefinitionsExcludeInterfaces();
   testProvisioningConstantsMatchTheSharedSlot();
   testInterfaceDefinitionsIncludeSpecificationSlot();
+  testOtherSlotsShipNoHeadingTemplate();
   testDefaultDefinitionsRemainUnfiltered();
   testIncidentReviewSlotIsDeclared();
   testExplicitDefinitionsWinOverTheSourceFilter();

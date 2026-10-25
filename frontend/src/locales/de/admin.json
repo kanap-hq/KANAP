@@ -889,10 +889,6 @@
     },
     "title": "Kontenplanvorlagen (Plattform-Admin)"
   },
-  "confirmations": {
-    "unsavedNavigate": "Sie haben ungespeicherte Änderungen. Vor dem Navigieren speichern?",
-    "unsavedSwitchTab": "Sie haben ungespeicherte Änderungen. Vor dem Wechsel der Registerkarte speichern?"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",

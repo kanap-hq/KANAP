@@ -682,10 +682,30 @@
       "timeline": "Cronología",
       "people": "Personas",
       "record": "Registro",
-      "source": "Origen"
+      "source": "Origen",
+      "basic": "Datos básicos",
+      "context": "Contexto",
+      "dates": "Fechas",
+      "ip_addresses": "Direcciones IP",
+      "effort": "Esfuerzo",
+      "team": "Equipo",
+      "scoring": "Evaluación",
+      "analysis": "Análisis"
     },
     "presets": {
       "applications": {
+        "enrichment": "Enriquecimiento de datos"
+      },
+      "assets": {
+        "enrichment": "Enriquecimiento de datos"
+      },
+      "tasks": {
+        "enrichment": "Enriquecimiento de datos"
+      },
+      "portfolio_projects": {
+        "enrichment": "Enriquecimiento de datos"
+      },
+      "portfolio_requests": {
         "enrichment": "Enriquecimiento de datos"
       }
     },
@@ -759,6 +779,126 @@
         "authority_notification_required": "Requiere notificación a la autoridad",
         "authority_notified_at": "Notificado el",
         "notified_parties": "Partes informadas"
+      },
+      "assets": {
+        "id": "ID",
+        "name": "Nombre",
+        "location_reference": "Ubicación",
+        "kind": "Tipo de activo",
+        "is_cluster": "Es un clúster",
+        "status": "Ciclo de vida",
+        "go_live_date": "Fecha de puesta en marcha",
+        "end_of_life_date": "Fecha de fin de vida",
+        "notes": "Notas",
+        "environment": "Entorno",
+        "hostname": "Nombre de host",
+        "domain": "Dominio",
+        "admin_zone": "Zona de administración",
+        "aliases": "Alias",
+        "operating_system": "Sistema operativo",
+        "cluster": "Pertenencia al clúster",
+        "ip_1_type": "Tipo de IP 1",
+        "ip_1_address": "Dirección IP 1",
+        "ip_1_subnet_cidr": "Subred IP 1 (CIDR)",
+        "ip_2_type": "Tipo de IP 2",
+        "ip_2_address": "Dirección IP 2",
+        "ip_2_subnet_cidr": "Subred IP 2 (CIDR)",
+        "ip_3_type": "Tipo de IP 3",
+        "ip_3_address": "Dirección IP 3",
+        "ip_3_subnet_cidr": "Subred IP 3 (CIDR)",
+        "ip_4_type": "Tipo de IP 4",
+        "ip_4_address": "Dirección IP 4",
+        "ip_4_subnet_cidr": "Subred IP 4 (CIDR)",
+        "vulnerabilities_to_review": "Vulnerabilidades por revisar",
+        "severe_vulnerabilities": "Vulnerabilidades graves"
+      },
+      "tasks": {
+        "id": "ID",
+        "title": "Título",
+        "description": "Descripción",
+        "task_type_name": "Tipo de tarea",
+        "related_object_type": "Tipo de objeto relacionado",
+        "related_object_id": "ID del objeto relacionado",
+        "related_object_name": "Nombre del objeto relacionado",
+        "phase_name": "Fase",
+        "priority_level": "Prioridad",
+        "category_name": "Categoría",
+        "stream_name": "Línea",
+        "source_name": "Origen",
+        "company_name": "Empresa",
+        "status": "Estado",
+        "start_date": "Fecha de inicio",
+        "due_date": "Fecha de vencimiento",
+        "assignee_email": "Correo del asignado",
+        "creator_email": "Correo del solicitante",
+        "viewer_email_1": "Correo del observador 1",
+        "viewer_email_2": "Correo del observador 2",
+        "viewer_email_3": "Correo del observador 3",
+        "viewer_email_4": "Correo del observador 4",
+        "owner_email_1": "Correo del responsable 1",
+        "owner_email_2": "Correo del responsable 2",
+        "owner_email_3": "Correo del responsable 3",
+        "owner_email_4": "Correo del responsable 4",
+        "labels": "Etiquetas"
+      },
+      "portfolio_projects": {
+        "id": "ID",
+        "name": "Nombre",
+        "status": "Estado",
+        "purpose": "Objetivo",
+        "origin": "Procedencia",
+        "source_name": "Origen",
+        "category_name": "Categoría",
+        "stream_name": "Línea",
+        "company_name": "Empresa",
+        "department_name": "Departamento",
+        "planned_start": "Inicio planificado",
+        "planned_end": "Fin planificado",
+        "actual_start": "Inicio real",
+        "actual_end": "Fin real",
+        "baseline_start_date": "Inicio de línea base",
+        "baseline_end_date": "Fin de línea base",
+        "execution_progress": "Progreso (%)",
+        "estimated_effort_it": "Esfuerzo IT estimado (DP)",
+        "estimated_effort_business": "Esfuerzo de negocio estimado (DP)",
+        "actual_effort_it": "Esfuerzo IT real (DP)",
+        "actual_effort_business": "Esfuerzo de negocio real (DP)",
+        "baseline_effort_it": "Esfuerzo IT de línea base (DP)",
+        "baseline_effort_business": "Esfuerzo de negocio de línea base (DP)",
+        "business_sponsor_email": "Correo del patrocinador de negocio",
+        "business_lead_email": "Correo del responsable de negocio",
+        "it_sponsor_email": "Correo del patrocinador IT",
+        "it_lead_email": "Correo del responsable IT",
+        "criteria_values": "Criterios de evaluación (JSON)",
+        "priority_score": "Puntuación de prioridad",
+        "priority_override": "Sobrescritura de prioridad",
+        "override_value": "Valor de sobrescritura",
+        "override_justification": "Justificación de la sobrescritura"
+      },
+      "portfolio_requests": {
+        "id": "ID",
+        "name": "Nombre",
+        "status": "Estado",
+        "purpose": "Objetivo",
+        "source_name": "Origen",
+        "category_name": "Categoría",
+        "stream_name": "Línea",
+        "requestor_email": "Correo del solicitante",
+        "company_name": "Empresa",
+        "department_name": "Departamento",
+        "target_delivery_date": "Fecha de entrega objetivo",
+        "current_situation": "Situación actual",
+        "expected_benefits": "Beneficios esperados",
+        "risks": "Riesgos",
+        "business_sponsor_email": "Correo del patrocinador de negocio",
+        "business_lead_email": "Correo del responsable de negocio",
+        "it_sponsor_email": "Correo del patrocinador IT",
+        "it_lead_email": "Correo del responsable IT",
+        "criteria_values": "Criterios de evaluación (JSON)",
+        "priority_score": "Puntuación de prioridad",
+        "priority_override": "Sobrescritura de prioridad",
+        "override_value": "Valor de sobrescritura",
+        "override_justification": "Justificación de la sobrescritura"
       }
     }
   },
@@ -1027,6 +1167,28 @@
     "endOfValidity": "Fin de validez",
     "endOfValidityHint": "Dejar en blanco para permanecer activo indefinidamente.",
     "activeUntil": "Activo hasta el {{date}}"
+  },
+  "unsaved": {
+    "saveAndLeave": {
+      "message": "Tiene cambios sin guardar. ¿Guardar antes de salir?",
+      "confirm": "Guardar y salir",
+      "cancel": "Salir sin guardar"
+    },
+    "leaveWithoutSaving": {
+      "message": "Tiene cambios sin guardar. ¿Salir sin guardar?",
+      "confirm": "Salir sin guardar",
+      "cancel": "Quedarse"
+    },
+    "saveAndSwitch": {
+      "message": "Tiene cambios sin guardar. ¿Guardar antes de cambiar de pestaña?",
+      "confirm": "Guardar y cambiar de pestaña",
+      "cancel": "Cambiar de pestaña sin guardar"
+    },
+    "saveAndContinue": {
+      "message": "Tiene cambios sin guardar. ¿Guardar antes de continuar?",
+      "confirm": "Guardar y continuar",
+      "cancel": "Quedarse"
+    }
   },
   "autosave": {
     "leaveTitle": "Cambios sin guardar",

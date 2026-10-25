@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
@@ -15,13 +15,26 @@ const TASK_TYPES = [
   { id: 'tt-own', name: 'Change', code: null, description: null, is_active: true, display_order: 3 },
 ];
 
+const LOOKUP_PEOPLE = [
+  { id: 'u-camille', first_name: 'Camille', last_name: 'Bernard', email: 'camille.bernard@fromage-co.com', status: 'enabled' },
+  { id: 'u-lea', first_name: 'Léa', last_name: 'Martin', email: null, status: 'enabled' },
+];
+
 vi.mock('../../../api', () => ({
   default: {
-    get: vi.fn((url: string) => Promise.resolve({ data: url === '/portfolio/classification/task-types' ? TASK_TYPES : [] })),
+    get: vi.fn((url: string) => {
+      if (url === '/portfolio/classification/task-types') return Promise.resolve({ data: TASK_TYPES });
+      if (url === '/users/lookup') return Promise.resolve({ data: { items: LOOKUP_PEOPLE, has_more: false } });
+      return Promise.resolve({ data: [] });
+    }),
   },
 }));
 vi.mock('../../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('./DrawerKnowledgeSection', () => ({ default: () => null }));
+
+import api from '../../../api';
+
+const apiGet = (api as unknown as { get: ReturnType<typeof vi.fn> }).get;
 
 const task = (over: Record<string, unknown> = {}) => ({
   id: '',
@@ -51,19 +64,26 @@ const task = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-function renderDrawer(props: { readOnly: boolean; task?: ReturnType<typeof task> }) {
+function renderDrawer(props: { readOnly: boolean; task?: ReturnType<typeof task>; onPatch?: (patch: Record<string, unknown>) => void }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ThemeModeProvider>
         <ThemeProvider theme={createAppTheme('light')}>
           <MemoryRouter>
-            <TaskPropertiesDrawer task={props.task ?? task()} open onToggle={() => {}} onPatch={() => {}} readOnly={props.readOnly} isCreate />
+            <TaskPropertiesDrawer task={props.task ?? task()} open onToggle={() => {}} onPatch={props.onPatch ?? (() => {})} readOnly={props.readOnly} isCreate />
           </MemoryRouter>
         </ThemeProvider>
       </ThemeModeProvider>
     </QueryClientProvider>,
   );
+}
+
+/** The property row whose label is `label` (the label box is the direct parent of the text). */
+function fieldRow(label: string): HTMLElement {
+  const row = screen.getByText(label).parentElement;
+  if (!row) throw new Error(`missing row for ${label}`);
+  return row;
 }
 
 afterEach(async () => {
@@ -85,5 +105,55 @@ describe('TaskPropertiesDrawer task type', () => {
     fireEvent.mouseDown(screen.getByText('Tâche'));
     const listbox = await screen.findByRole('listbox');
     expect(within(listbox).getAllByRole('option').map((node) => node.textContent)).toEqual(['—', 'Tâche', 'Defect', 'Problème', 'Change']);
+  });
+});
+
+describe('TaskPropertiesDrawer people', () => {
+  const named = task({
+    creator_id: 'u-camille',
+    creator_name: 'Camille Bernard',
+    assignee_user_id: 'u-marc',
+    assignee_name: 'Marc Zola',
+  });
+
+  it('shows the requestor by name in the same control as the assignee, and never the email', async () => {
+    apiGet.mockClear();
+    renderDrawer({ readOnly: false, task: named });
+    const requestor = within(fieldRow('Requestor')).getByRole('button', { name: 'Camille Bernard' });
+    const assignee = within(fieldRow('Assignee')).getByRole('button', { name: 'Marc Zola' });
+    expect(requestor.tagName).toBe(assignee.tagName);
+    expect(within(fieldRow('Requestor')).queryByRole('combobox')).toBeNull();
+    expect(screen.queryByText('camille.bernard@fromage-co.com')).toBeNull();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 300)); });
+    expect(apiGet.mock.calls.some((call) => call[0] === '/users/lookup')).toBe(false);
+    expect(screen.queryByText('camille.bernard@fromage-co.com')).toBeNull();
+  });
+
+  it('uses the same empty placeholder style as the assignee', () => {
+    renderDrawer({ readOnly: false });
+    expect(within(fieldRow('Requestor')).getByRole('button', { name: 'Requestor missing' })).toBeEnabled();
+    expect(within(fieldRow('Assignee')).getByRole('button', { name: 'Assignee missing' })).toBeEnabled();
+  });
+
+  it('patches creator_id from the anchored search', async () => {
+    const onPatch = vi.fn();
+    renderDrawer({ readOnly: false, onPatch, task: named });
+    fireEvent.click(within(fieldRow('Requestor')).getByRole('button', { name: 'Camille Bernard' }));
+    expect(await screen.findByPlaceholderText('Requestor')).toBeTruthy();
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Léa Martin' }));
+    expect(onPatch).toHaveBeenCalledWith({ creator_id: 'u-lea' });
+  });
+
+  it('shows the name without opening a control when read-only', () => {
+    const onPatch = vi.fn();
+    renderDrawer({ readOnly: true, onPatch, task: named });
+    const requestor = within(fieldRow('Requestor')).getByRole('button', { name: 'Camille Bernard' });
+    const assignee = within(fieldRow('Assignee')).getByRole('button', { name: 'Marc Zola' });
+    expect(requestor).toBeDisabled();
+    expect(assignee).toBeDisabled();
+    fireEvent.click(requestor);
+    expect(screen.queryByPlaceholderText('Requestor')).toBeNull();
+    expect(onPatch).not.toHaveBeenCalled();
+    expect(screen.queryByText('camille.bernard@fromage-co.com')).toBeNull();
   });
 });
