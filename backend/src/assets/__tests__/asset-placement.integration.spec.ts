@@ -18,6 +18,7 @@ import {
   replaceHostLinks,
   type ReplacedHostLink,
 } from '../placement-rules';
+import { AssetsRelationsService } from '../services/assets-relations.service';
 
 // The placement rules of a virtual machine carried by a cluster (clusters pass, lot C1b), on the
 // rules alone: R1 absorption by a cluster of its members' `contains`, R2 refusal of a member's
@@ -341,10 +342,225 @@ async function testTenantIsolation() {
   });
 }
 
+/** The real relations service, on the manager each call receives and a capturing audit. */
+function relationsService(audit: ReturnType<typeof captureAudit>): AssetsRelationsService {
+  return new AssetsRelationsService(undefined as any, undefined as any, undefined as any, undefined as any, audit as any);
+}
+
+/** The cluster, its two members in service, a retired member and a host outside it. */
+async function seedPlacement(runner: QueryRunner, tag: string) {
+  const tenantId = await seedTenant(runner, tag);
+  const cluster = await asset(runner, tenantId, 'PAR-VSPHERE-CL01', { cluster: true });
+  const host1 = await asset(runner, tenantId, 'par-esx-01');
+  const host2 = await asset(runner, tenantId, 'par-esx-02');
+  const retiredHost = await asset(runner, tenantId, 'par-esx-old', { retired: true });
+  const host3 = await asset(runner, tenantId, 'par-esx-03');
+  for (const host of [host1, host2, retiredHost]) await addMember(runner, tenantId, cluster, host);
+  return { tenantId, cluster, host1, host2, host3, retiredHost };
+}
+
+/** A cluster adds V1 that H1 carried: it absorbs the host's link, audits both, reports the removal. */
+async function testServiceAbsorption() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId: t, cluster, host1 } = await seedPlacement(runner, 'placement-svc-absorb');
+    const audit = captureAudit();
+    const relations = relationsService(audit);
+    const vm1 = await asset(runner, t, 'par-app-01');
+    await contains(runner, t, host1, vm1);
+
+    const result = await relations.addRelationWithPlacement(cluster, vm1, 'contains', t, 'user-1', { manager: runner.manager, tenantId: t });
+    assert.deepEqual(result, {
+      changed: true,
+      replaced: [{
+        host_id: host1, host_name: 'par-esx-01', asset_id: vm1, asset_name: 'par-app-01',
+        cluster_id: cluster, cluster_name: 'PAR-VSPHERE-CL01',
+      }],
+      doubles: [],
+    });
+    assert.deepEqual(await relationsOf(runner, t, host1), []);
+    assert.deepEqual(await relationsOf(runner, t, cluster), [{ related_asset_id: vm1, relation_type: 'contains' }]);
+    // The cluster's insertion, then the host's absorption: one entry each.
+    assert.deepEqual(audit.entries.map((entry) => `${entry.recordId}:${entry.action}`), [`${cluster}:update`, `${host1}:update`]);
+    assert.deepEqual(audit.entries[0].before, { relations: [] });
+    assert.deepEqual(audit.entries[0].after, { relations: [{ related_asset_id: vm1, relation_type: 'contains' }] });
+    assert.deepEqual(audit.entries[1].before, { relations: [{ related_asset_id: vm1, relation_type: 'contains' }] });
+    assert.deepEqual(audit.entries[1].after, { relations: [] });
+    assert.equal(audit.entries[1].userId, 'user-1');
+  });
+}
+
+/** Two members and a non-member carry V2: the cluster absorbs the members only, the non-member is reported. */
+async function testServiceDoubles() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId: t, cluster, host1, host2, host3 } = await seedPlacement(runner, 'placement-svc-doubles');
+    const audit = captureAudit();
+    const relations = relationsService(audit);
+    const vm2 = await asset(runner, t, 'par-app-02');
+    await contains(runner, t, host1, vm2);
+    await contains(runner, t, host2, vm2);
+    await contains(runner, t, host3, vm2);
+
+    const result = await relations.addRelationWithPlacement(cluster, vm2, 'contains', t, null, { manager: runner.manager, tenantId: t });
+    assert.equal(result.changed, true);
+    assert.deepEqual(result.replaced.map((link) => link.host_name), ['par-esx-01', 'par-esx-02']);
+    assert.deepEqual(result.doubles, [{
+      asset_id: vm2,
+      asset_name: 'par-app-02',
+      containers: [
+        { id: host3, name: 'par-esx-03' },
+        { id: cluster, name: 'PAR-VSPHERE-CL01' },
+      ],
+    }]);
+    assert.deepEqual(await relationsOf(runner, t, host3), [{ related_asset_id: vm2, relation_type: 'contains' }]);
+    assert.deepEqual(audit.entries.map((entry) => entry.recordId), [cluster, host1, host2]);
+  });
+}
+
+/** A replacement absorbs the added containers, and a second identical save removes nothing. */
+async function testServiceBulkReplace() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId: t, cluster, host1, host2 } = await seedPlacement(runner, 'placement-svc-bulk');
+    const audit = captureAudit();
+    const relations = relationsService(audit);
+    const vm1 = await asset(runner, t, 'par-app-01');
+    const vm2 = await asset(runner, t, 'par-app-02');
+    await contains(runner, t, host1, vm1);
+    await contains(runner, t, host2, vm2);
+    audit.entries.length = 0;
+
+    const first = await relations.bulkReplaceRelations(
+      cluster,
+      [{ related_asset_id: vm1, relation_type: 'contains' }, { related_asset_id: vm2, relation_type: 'contains' }],
+      t, 'user-2', { manager: runner.manager, tenantId: t },
+    );
+    assert.deepEqual(Object.keys(first).sort(), ['incoming', 'outgoing', 'replaced_host_links']);
+    assert.deepEqual((first as any).replaced_host_links.map((link: ReplacedHostLink) => `${link.host_name}>${link.asset_name}`), [
+      'par-esx-01>par-app-01', 'par-esx-02>par-app-02',
+    ]);
+    assert.deepEqual(await relationsOf(runner, t, host1), []);
+    assert.deepEqual(await relationsOf(runner, t, host2), []);
+    // The cluster's replacement, then one entry per host that lost a link.
+    assert.deepEqual(audit.entries.map((entry) => entry.recordId), [cluster, host1, host2]);
+    assert.equal(audit.entries[1].userId, 'user-2');
+
+    audit.entries.length = 0;
+    const second = await relations.bulkReplaceRelations(
+      cluster,
+      [{ related_asset_id: vm1, relation_type: 'contains' }, { related_asset_id: vm2, relation_type: 'contains' }],
+      t, 'user-2', { manager: runner.manager, tenantId: t },
+    );
+    assert.deepEqual(Object.keys(second).sort(), ['incoming', 'outgoing']);
+    assert.deepEqual(audit.entries.map((entry) => entry.recordId), [cluster], 'only the replacement itself is audited');
+    assert.deepEqual(await storedContains(runner, t), [`${cluster}>${vm1}`, `${cluster}>${vm2}`].sort());
+  });
+}
+
+/** An older double is corrected by re-posting the cluster's link; re-posting the host's is a no-op. */
+async function testServiceExistingDouble() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId: t, cluster, host2 } = await seedPlacement(runner, 'placement-svc-legacy');
+    const audit = captureAudit();
+    const relations = relationsService(audit);
+    const vm3 = await asset(runner, t, 'par-app-03');
+    await contains(runner, t, cluster, vm3);
+    await contains(runner, t, host2, vm3);
+    audit.entries.length = 0;
+
+    // The host's link is already stored: posting it again is neither refused nor written.
+    const again = await relations.addRelationWithPlacement(host2, vm3, 'contains', t, null, { manager: runner.manager, tenantId: t });
+    assert.equal(again.changed, false);
+    assert.deepEqual(again.replaced, []);
+    assert.deepEqual(again.doubles.map((entry) => entry.asset_id), [vm3]);
+    assert.equal(audit.entries.length, 0);
+    assert.deepEqual(await storedContains(runner, t), [`${cluster}>${vm3}`, `${host2}>${vm3}`].sort());
+
+    // Re-posting the cluster's link, already there, absorbs the member's legacy link.
+    const result = await relations.addRelationWithPlacement(cluster, vm3, 'contains', t, null, { manager: runner.manager, tenantId: t });
+    assert.equal(result.changed, true);
+    assert.deepEqual(result.replaced, [{
+      host_id: host2, host_name: 'par-esx-02', asset_id: vm3, asset_name: 'par-app-03',
+      cluster_id: cluster, cluster_name: 'PAR-VSPHERE-CL01',
+    }]);
+    assert.deepEqual(await relationsOf(runner, t, host2), []);
+    assert.deepEqual(audit.entries.map((entry) => entry.recordId), [host2], 'the cluster link was already there: no cluster audit');
+    assert.deepEqual(await relationsOf(runner, t, cluster), [{ related_asset_id: vm3, relation_type: 'contains' }]);
+  });
+}
+
+/** R2 on the service: refused on an add and on a replacement, accepted by the other hosts. */
+async function testServiceRefusal() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId: t, cluster, host1, host3, retiredHost } = await seedPlacement(runner, 'placement-svc-refusal');
+    const audit = captureAudit();
+    const relations = relationsService(audit);
+    const retiredCluster = await asset(runner, t, 'PAR-OLD-CL01', { cluster: true, retired: true });
+    await addMember(runner, t, retiredCluster, host1);
+    const vm4 = await asset(runner, t, 'par-app-04');
+    const vm5 = await asset(runner, t, 'par-app-05');
+    const vm6 = await asset(runner, t, 'par-app-06');
+    const vm7 = await asset(runner, t, 'par-app-07');
+    await contains(runner, t, cluster, vm4);
+    await contains(runner, t, retiredCluster, vm6);
+
+    const opts = { manager: runner.manager, tenantId: t };
+    assert.deepEqual(await refusal(() => relations.addRelation(host1, vm4, 'contains', t, null, opts), runner), {
+      status: 409,
+      code: 'placement_inherited',
+      params: { cluster: 'PAR-VSPHERE-CL01' },
+      message: 'This asset is already contained by the cluster PAR-VSPHERE-CL01, which one of its hosts belongs to.',
+    });
+    assert.equal((await refusal(
+      () => relations.bulkReplaceRelations(host1, [{ related_asset_id: vm4, relation_type: 'contains' }], t, null, opts),
+      runner,
+    )).code, 'placement_inherited');
+    assert.deepEqual(await relationsOf(runner, t, host1), [], 'nothing written by either refusal');
+    assert.equal(audit.entries.length, 0);
+
+    // A retired host and a host outside the cluster are not concerned; a retired cluster refuses nothing.
+    assert.equal(await relations.addRelation(retiredHost, vm5, 'contains', t, null, opts), true);
+    assert.equal(await relations.addRelation(host3, vm5, 'contains', t, null, opts), true);
+    assert.equal(await relations.addRelation(host1, vm6, 'contains', t, null, opts), true);
+    // A host member may place an asset no cluster of its own contains.
+    assert.equal(await relations.addRelation(host1, vm7, 'contains', t, null, opts), true);
+  });
+}
+
+/** A `depends_on` and a removal keep their behaviour: no placement rule, no absorption. */
+async function testServiceOtherWrites() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId: t, cluster, host1 } = await seedPlacement(runner, 'placement-svc-other');
+    const audit = captureAudit();
+    const relations = relationsService(audit);
+    const vm8 = await asset(runner, t, 'par-app-08');
+    await contains(runner, t, cluster, vm8);
+    const opts = { manager: runner.manager, tenantId: t };
+
+    // The dependency is not a container: written even though the cluster contains the asset.
+    assert.equal(await relations.addRelation(host1, vm8, 'depends_on', t, null, opts), true);
+    const again = await relations.addRelationWithPlacement(host1, vm8, 'depends_on', t, null, opts);
+    assert.deepEqual(again, { changed: false, replaced: [], doubles: [] });
+    assert.deepEqual(await relationsOf(runner, t, host1), [{ related_asset_id: vm8, relation_type: 'depends_on' }]);
+
+    // A removal writes nothing else and absorbs nothing.
+    assert.equal(await relations.removeRelation(host1, vm8, 'depends_on', t, null, opts), true);
+    assert.equal(await relations.removeRelation(host1, vm8, 'depends_on', t, null, opts), false);
+    assert.deepEqual(await relationsOf(runner, t, cluster), [{ related_asset_id: vm8, relation_type: 'contains' }]);
+    assert.deepEqual(audit.entries.map((entry) => `${entry.recordId}:${entry.action}`), [
+      `${host1}:update`, `${host1}:update`,
+    ]);
+  });
+}
+
 void runSpecs('asset-placement.integration.spec', [
   ['testAbsorption', testAbsorption],
   ['testAbsorptionScope', testAbsorptionScope],
   ['testRefusal', testRefusal],
   ['testDoubleContainers', testDoubleContainers],
   ['testTenantIsolation', testTenantIsolation],
+  ['testServiceAbsorption', testServiceAbsorption],
+  ['testServiceDoubles', testServiceDoubles],
+  ['testServiceBulkReplace', testServiceBulkReplace],
+  ['testServiceExistingDouble', testServiceExistingDouble],
+  ['testServiceRefusal', testServiceRefusal],
+  ['testServiceOtherWrites', testServiceOtherWrites],
 ]);

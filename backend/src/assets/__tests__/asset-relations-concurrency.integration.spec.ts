@@ -19,7 +19,7 @@ import { withTenantExecution } from '../../common/tenant-runner';
 // cluster row the same way, so on two connections at once one waits for the
 // other: no unique violation, and the relations match the order they ran in.
 
-type Seed = { tenantId: string; cluster: string; vm1: string; vm2: string };
+type Seed = { tenantId: string; cluster: string; host: string; vm1: string; vm2: string };
 
 const service = new AssetsRelationsService(
   dataSource.getRepository(Asset),
@@ -42,9 +42,16 @@ async function seedTenant(tag: string): Promise<Seed> {
        VALUES ($1, $2, 'vm', 'prod', 'active', $3, $4) RETURNING id`,
       [tenantId, name, isCluster ? null : name, isCluster],
     ))[0].id as string;
+    const cluster = await asset('PAR-VSPHERE-CL01', true);
+    const host = await asset('par-esx-01', false);
+    await manager.query(
+      `INSERT INTO asset_cluster_members (tenant_id, cluster_id, asset_id) VALUES ($1, $2, $3)`,
+      [tenantId, cluster, host],
+    );
     return {
       tenantId,
-      cluster: await asset('PAR-VSPHERE-CL01', true),
+      cluster,
+      host,
       vm1: await asset('par-app-01', false),
       vm2: await asset('par-app-02', false),
     };
@@ -57,6 +64,19 @@ async function contained(seed: Seed): Promise<string[]> {
       `SELECT related_asset_id FROM asset_relations
        WHERE tenant_id = $1 AND asset_id = $2 AND relation_type = 'contains'`,
       [seed.tenantId, seed.cluster],
+    );
+    const names: Record<string, string> = { [seed.vm1]: 'vm1', [seed.vm2]: 'vm2' };
+    return rows.map((row) => names[row.related_asset_id]).sort();
+  });
+}
+
+/** The virtual machines the member host carries directly, as `vm1`/`vm2`. */
+async function hostContained(seed: Seed): Promise<string[]> {
+  return withTenantExecution(dataSource, seed.tenantId, async (manager) => {
+    const rows: Array<{ related_asset_id: string }> = await manager.query(
+      `SELECT related_asset_id FROM asset_relations
+       WHERE tenant_id = $1 AND asset_id = $2 AND relation_type = 'contains'`,
+      [seed.tenantId, seed.host],
     );
     const names: Record<string, string> = { [seed.vm1]: 'vm1', [seed.vm2]: 'vm2' };
     return rows.map((row) => names[row.related_asset_id]).sort();
@@ -160,6 +180,40 @@ async function main() {
       );
       assert.equal(added, false);
       assert.deepEqual(await contained(seed), ['vm1']);
+    }
+
+    // The cluster attaches vm1 first; the member host waits, then is refused (R2): it would add
+    // a second container the cluster already carries.
+    {
+      const seed = await seedTenant('cluster-before-host');
+      made.push(seed.tenantId);
+      const result = await overlap(
+        seed,
+        (m) => service.addRelation(seed.cluster, seed.vm1, 'contains', seed.tenantId, null, netboxOpts(m, seed.tenantId)),
+        (m) => service.addRelation(seed.host, seed.vm1, 'contains', seed.tenantId, null, { manager: m, tenantId: seed.tenantId }),
+      ).then(
+        (value) => ({ ok: true as const, value }),
+        (error: any) => ({ ok: false as const, error }),
+      );
+      assert.equal(result.ok, false);
+      assert.equal((result as any).error?.getResponse?.().code, 'placement_inherited');
+      assert.deepEqual(await contained(seed), ['vm1']);
+      assert.deepEqual(await hostContained(seed), []);
+    }
+
+    // The member host attaches vm1 first; the cluster waits, then absorbs the host's link,
+    // read again after its host lock.
+    {
+      const seed = await seedTenant('host-before-cluster');
+      made.push(seed.tenantId);
+      const result = await overlap(
+        seed,
+        (m) => service.addRelation(seed.host, seed.vm1, 'contains', seed.tenantId, null, netboxOpts(m, seed.tenantId)),
+        (m) => service.addRelation(seed.cluster, seed.vm1, 'contains', seed.tenantId, null, { manager: m, tenantId: seed.tenantId }),
+      );
+      assert.equal(result, true);
+      assert.deepEqual(await contained(seed), ['vm1']);
+      assert.deepEqual(await hostContained(seed), []);
     }
 
     console.log('asset-relations-concurrency.integration.spec.ts OK');
