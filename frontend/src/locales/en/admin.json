@@ -1702,6 +1702,8 @@
       "tasks": "tasks",
       "application-links": "application links",
       "landscape": "instances, interfaces and connections",
+      "incident-tasks": "corrective tasks",
+      "incident-journal": "incident journal",
       "budget-links": "budget links",
       "portfolio-teams": "project teams and phases",
       "allocations": "company allocations",

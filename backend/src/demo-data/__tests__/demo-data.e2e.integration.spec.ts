@@ -60,6 +60,17 @@ delete process.env.EMAIL_OVERRIDE;
 
 const FIXTURES = backendPath('fixtures', 'fromage-co');
 
+const INCIDENT_REVIEW_HEADINGS = ['Detailed description', 'Impact', 'Root cause', 'Corrective actions', 'Lessons learned'];
+const REVIEWED_INCIDENTS = [
+  'Cave B humidity readings lost overnight',
+  'Phishing campaign against accounts payable',
+  'SAP month-end close slowed down by host memory contention',
+  'B2B portal down: database disk full',
+  'Order confirmations sent to the wrong customers',
+  'Lab results cannot be saved in QualityLab LIMS',
+];
+const B2B_INCIDENT = 'B2B portal down: database disk full';
+
 /** Data rows of a fixture file (`;`-separated, no quoted line breaks in these files). */
 function fixtureRows(name: string): string[] {
   return fs.readFileSync(path.join(FIXTURES, name), 'utf8').split(/\r?\n/).slice(1).filter((line) => line.trim() !== '');
@@ -162,6 +173,117 @@ async function checkContactSuppliers(tenantId: string) {
   const contacts = await tenantCount(tenantId, `SELECT count(*) AS n FROM contacts WHERE tenant_id = $1`);
   const links = await tenantCount(tenantId, `SELECT count(*) AS n FROM supplier_contacts WHERE tenant_id = $1`);
   assert.deepEqual({ contacts, links }, { contacts: expected.length, links: expected.length }, 'one supplier link per contact');
+}
+
+/**
+ * The incident register of the data set: ten rows in their order, six reviews on the five
+ * headings of the model, the journal of the B2B portal, the SAP close and the LIMS signed by
+ * their people and backdated, the three corrective tasks, and no incident on a cluster.
+ */
+async function checkIncidents(tenantId: string) {
+  const incidents: Array<{ item_number: number; title: string; status: string }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT item_number, title, status FROM incidents WHERE tenant_id = $1 ORDER BY item_number`,
+    [tenantId],
+  ));
+  assert.equal(incidents.length, 10, 'ten incidents, no row added or removed');
+  assert.equal(incidents[3]?.title, B2B_INCIDENT, 'INC-4 is the B2B portal');
+  assert.equal(incidents[3]?.status, 'closed');
+  assert.equal(incidents[8]?.title, 'Lab results cannot be saved in QualityLab LIMS', 'INC-9 is the LIMS');
+  assert.equal(incidents[8]?.status, 'in_progress');
+
+  const reviews: Array<{ title: string; content_markdown: string }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT i.title, d.content_markdown
+       FROM incidents i
+       JOIN integrated_document_bindings b
+         ON b.tenant_id = i.tenant_id AND b.source_entity_type = 'incidents'
+        AND b.source_entity_id = i.id AND b.slot_key = 'review'
+       JOIN documents d ON d.id = b.document_id AND d.tenant_id = b.tenant_id
+      WHERE i.tenant_id = $1 AND i.title = ANY($2::text[])`,
+    [tenantId, REVIEWED_INCIDENTS],
+  ));
+  const headings = (markdown: string) =>
+    markdown.split(/\r?\n/).filter((line) => /^##\s+/.test(line)).map((line) => line.replace(/^##\s+/, '').trim());
+  for (const title of REVIEWED_INCIDENTS) {
+    const review = reviews.find((row) => row.title === title);
+    assert.ok(review, `${title}: the review is filled`);
+    assert.deepEqual(headings(review.content_markdown), INCIDENT_REVIEW_HEADINGS, `${title}: the five headings of the model`);
+    assert.ok(!/^##\s+(Summary|Actions)\s*$/m.test(review.content_markdown), `${title}: no four-part heading`);
+  }
+  assert.match(reviews.find((row) => row.title === REVIEWED_INCIDENTS[5])!.content_markdown, /Under investigation/, 'the LIMS root cause is still under investigation');
+
+  const entries: Array<{
+    item_number: number;
+    title: string;
+    kind: string;
+    content: string | null;
+    occurred_at: Date;
+    created_at: Date;
+    author_email: string | null;
+    changed_fields: any;
+  }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT i.item_number, i.title, e.kind, e.content, e.occurred_at, e.created_at,
+            lower(u.email) AS author_email, e.changed_fields
+       FROM incident_entries e
+       JOIN incidents i ON i.id = e.incident_id AND i.tenant_id = e.tenant_id
+       LEFT JOIN users u ON u.id = e.author_id AND u.tenant_id = e.tenant_id
+      WHERE e.tenant_id = $1
+        AND i.title = ANY($2::text[])
+        AND e.kind IN ('note', 'status_change', 'severity_change')
+      ORDER BY i.item_number, e.occurred_at, e.created_at`,
+    [tenantId, ['B2B portal down: database disk full', 'SAP month-end close slowed down by host memory contention', 'Lab results cannot be saved in QualityLab LIMS']],
+  ));
+  assert.equal(entries.length, fixtureRows('32-incident-journal.csv').length, 'every journal row imported');
+  const knownAuthors = new Set(fixtureRows('10-users.csv').map((line) => line.split(';')[0].trim().toLowerCase()));
+  for (const entry of entries) {
+    assert.ok(knownAuthors.has(String(entry.author_email)), `${entry.title}: ${entry.author_email} is one of the incident people`);
+    assert.ok(new Date(entry.created_at).getTime() > new Date(entry.occurred_at).getTime(), `${entry.title}: the entry is backdated, its creation time is the load`);
+  }
+  const b2b = entries.filter((entry) => entry.item_number === 4);
+  assert.ok(b2b.some((entry) => entry.kind === 'note' && entry.author_email === 'isabelle.moreau@fromage-co.example'), 'the reporter wrote a note');
+  assert.ok(b2b.some((entry) => entry.kind === 'note' && entry.author_email === 'amelie.rousseau@fromage-co.example'), 'the application owner wrote a note');
+  assert.deepEqual(
+    b2b.filter((entry) => entry.kind === 'status_change').map((entry) => `${entry.changed_fields.status.from}->${entry.changed_fields.status.to}`),
+    ['open->in_progress', 'in_progress->resolved'],
+    'the B2B status story',
+  );
+  assert.deepEqual(b2b.find((entry) => entry.kind === 'severity_change')?.changed_fields, { severity: { from: 'major', to: 'critical' } });
+  assert.ok(entries.some((entry) => entry.item_number === 3 && entry.kind === 'severity_change' && entry.author_email === 'pierre.martin@fromage-co.example'));
+  assert.ok(entries.some((entry) => entry.item_number === 9 && entry.kind === 'status_change' && entry.changed_fields.status.to === 'in_progress'));
+
+  const tasks: Array<{
+    item_number: number;
+    title: string;
+    status: string;
+    due_date: string;
+    assignee_email: string | null;
+    related_object_type: string;
+  }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT i.item_number, t.title, t.status, to_char(t.due_date, 'YYYY-MM-DD') AS due_date,
+            lower(u.email) AS assignee_email, t.related_object_type
+       FROM tasks t
+       JOIN incidents i ON i.id = t.related_object_id AND i.tenant_id = t.tenant_id
+       LEFT JOIN users u ON u.id = t.assignee_user_id AND u.tenant_id = t.tenant_id
+      WHERE t.tenant_id = $1 AND t.related_object_type = 'incident'
+      ORDER BY i.item_number`,
+    [tenantId],
+  ));
+  assert.deepEqual(tasks.map((task) => task.item_number), [2, 3, 4], 'the phishing, SAP and B2B corrective tasks');
+  assert.deepEqual(tasks.map((task) => task.assignee_email), [
+    'lucas.bernard@fromage-co.example',
+    'pierre.martin@fromage-co.example',
+    'marc.petit@fromage-co.example',
+  ]);
+  assert.deepEqual(tasks.map((task) => task.due_date), ['2026-04-30', '2026-11-30', '2026-12-31']);
+  assert.deepEqual(tasks.map((task) => task.status), ['done', 'in_progress', 'open']);
+
+  const clusters = await tenantCount(
+    tenantId,
+    `SELECT count(*) AS n
+       FROM incident_assets ia
+       JOIN assets a ON a.id = ia.asset_id AND a.tenant_id = ia.tenant_id
+      WHERE ia.tenant_id = $1 AND a.is_cluster`,
+  );
+  assert.equal(clusters, 0, 'no incident linked to a cluster');
 }
 
 async function serve(): Promise<Served> {
@@ -329,6 +451,7 @@ async function testLoadResetAndFailure() {
     assert.deepEqual(countDifferences(neighbourCounts, await countTenantRows(b.tenantId)), [], 'the neighbour tenant is untouched');
     await checkDimensions(a.tenantId);
     await checkContactSuppliers(a.tenantId);
+    await checkIncidents(a.tenantId);
 
     // ── The loader's token: refused on another tenant's host, accepted on its own ──
     assert.equal(served.loaderEnvs.length, 1);
