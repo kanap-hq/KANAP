@@ -150,6 +150,14 @@ function testAuditLogIncidentVisibilitySql(): void {
   assert.match(sql, /integrated_document_bindings b_audit/);
   assert.match(sql, /a\.table_name = 'tasks'/);
   assert.match(sql, /tasks t_audit/);
+  assert.match(sql, /a\.table_name = 'task_attachments'/);
+  assert.match(sql, /task_attachments c_audit/);
+  assert.match(sql, /a\.table_name = 'task_time_entries'/);
+  assert.match(sql, /task_time_entries c_audit/);
+  assert.match(sql, /a\.table_name = 'document_attachments'/);
+  assert.match(sql, /document_attachments da_audit/);
+  assert.match(sql, /a\.table_name = 'document_incidents'/);
+  assert.match(sql, /document_incidents di_audit/);
   assert.match(sql, /i_audit\.tenant_id = \$1/);
   assert.doesNotMatch(sql, /i_audit\.tenant_id = a\.tenant_id/);
   assert.deepEqual(readerParams, ['tenant', uuidReader.userId]);

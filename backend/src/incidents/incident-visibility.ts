@@ -290,6 +290,35 @@ export function auditLogIncidentVisibilitySql(
         WHERE t_audit.tenant_id = ${tenantRef}
           AND t_audit.related_object_type = 'incident'
           AND (${hidden})`;
+  const taskChildIds = (childTable: 'task_attachments' | 'task_time_entries') => `SELECT c_audit.id
+        FROM ${childTable} c_audit
+        JOIN tasks t_audit
+          ON t_audit.id = c_audit.task_id
+         AND t_audit.tenant_id = c_audit.tenant_id
+        JOIN incidents i_audit
+          ON i_audit.id = t_audit.related_object_id
+         AND i_audit.tenant_id = t_audit.tenant_id
+        WHERE c_audit.tenant_id = ${tenantRef}
+          AND t_audit.related_object_type = 'incident'
+          AND (${hidden})`;
+  const documentAttachmentIds = `SELECT da_audit.id
+        FROM document_attachments da_audit
+        JOIN integrated_document_bindings b_audit
+          ON b_audit.document_id = da_audit.document_id
+         AND b_audit.tenant_id = da_audit.tenant_id
+        JOIN incidents i_audit
+          ON i_audit.id = b_audit.source_entity_id
+         AND i_audit.tenant_id = b_audit.tenant_id
+        WHERE da_audit.tenant_id = ${tenantRef}
+          AND b_audit.source_entity_type = 'incidents'
+          AND (${hidden})`;
+  const documentIncidentIds = `SELECT di_audit.id
+        FROM document_incidents di_audit
+        JOIN incidents i_audit
+          ON i_audit.id = di_audit.incident_id
+         AND i_audit.tenant_id = di_audit.tenant_id
+        WHERE di_audit.tenant_id = ${tenantRef}
+          AND (${hidden})`;
 
   return ` AND NOT (
       (${auditAlias}.table_name IN ('incidents', 'incident_assets', 'incident_applications', 'incident_technologies') AND ${recordId} IN (${incidentIds}))
@@ -297,6 +326,10 @@ export function auditLogIncidentVisibilitySql(
       OR (${auditAlias}.table_name = 'incident_attachments' AND ${recordId} IN (${attachmentIds}))
       OR (${auditAlias}.table_name = 'documents' AND ${recordId} IN (${reviewDocumentIds}))
       OR (${auditAlias}.table_name = 'tasks' AND ${recordId} IN (${taskIds}))
+      OR (${auditAlias}.table_name = 'task_attachments' AND ${recordId} IN (${taskChildIds('task_attachments')}))
+      OR (${auditAlias}.table_name = 'task_time_entries' AND ${recordId} IN (${taskChildIds('task_time_entries')}))
+      OR (${auditAlias}.table_name = 'document_attachments' AND ${recordId} IN (${documentAttachmentIds}))
+      OR (${auditAlias}.table_name = 'document_incidents' AND ${recordId} IN (${documentIncidentIds}))
   )`;
 }
 

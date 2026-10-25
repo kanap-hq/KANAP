@@ -54,7 +54,11 @@ type Seed = {
   publicTaskId: string;
   restrictedEntryId: string;
   restrictedAttachmentId: string;
+  restrictedTaskAttachmentId: string;
+  restrictedTimeEntryId: string;
   reviewDocumentId: string;
+  reviewDocumentAttachmentId: string;
+  documentIncidentId: string;
   sharedDocumentId: string;
   assetId: string;
   applicationId: string;
@@ -171,6 +175,16 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
      VALUES ($1, $2, 'evidence.pdf', 'evidence.pdf', 'files/evidence.pdf') RETURNING id`,
     [tenantId, restrictedIncident.id],
   );
+  const taskAttachment = await one(
+    `INSERT INTO task_attachments (tenant_id, task_id, original_filename, stored_filename, storage_path)
+     VALUES ($1, $2, 'task-evidence.pdf', 'task-evidence.pdf', 'files/task-evidence.pdf') RETURNING id`,
+    [tenantId, restrictedTask.id],
+  );
+  const timeEntry = await one(
+    `INSERT INTO task_time_entries (tenant_id, task_id, hours, logged_at)
+     VALUES ($1, $2, 1.5, now()) RETURNING id`,
+    [tenantId, restrictedTask.id],
+  );
 
   const asset = await one(
     `INSERT INTO assets (tenant_id, name, kind, environment, status, created_at, updated_at)
@@ -234,9 +248,14 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
      VALUES ($1, 'incidents', $2, 'review', $3, true)`,
     [tenantId, restrictedIncident.id, reviewDocument.id],
   );
-  await runner.query(
-    `INSERT INTO document_incidents (tenant_id, document_id, incident_id) VALUES ($1, $2, $3)`,
+  const documentIncident = await one(
+    `INSERT INTO document_incidents (tenant_id, document_id, incident_id) VALUES ($1, $2, $3) RETURNING id`,
     [tenantId, reviewDocument.id, restrictedIncident.id],
+  );
+  const documentAttachment = await one(
+    `INSERT INTO document_attachments (tenant_id, document_id, original_filename, stored_filename, storage_path, size)
+     VALUES ($1, $2, 'review-evidence.pdf', 'review-evidence.pdf', 'files/review-evidence.pdf', 10) RETURNING id`,
+    [tenantId, reviewDocument.id],
   );
   const sharedDocument = await one(
     `INSERT INTO documents (tenant_id, item_number, title, library_id)
@@ -257,6 +276,10 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
     attachment: await seedAudit(runner, tenantId, 'incident_attachments', attachment.id),
     document: await seedAudit(runner, tenantId, 'documents', reviewDocument.id),
     task: await seedAudit(runner, tenantId, 'tasks', restrictedTask.id),
+    taskAttachment: await seedAudit(runner, tenantId, 'task_attachments', taskAttachment.id),
+    taskTimeEntry: await seedAudit(runner, tenantId, 'task_time_entries', timeEntry.id),
+    documentAttachment: await seedAudit(runner, tenantId, 'document_attachments', documentAttachment.id),
+    documentIncident: await seedAudit(runner, tenantId, 'document_incidents', documentIncident.id),
     control: await seedAudit(runner, tenantId, 'suppliers', null),
   };
 
@@ -272,7 +295,11 @@ async function seed(runner: QueryRunner, tag: string): Promise<Seed> {
     publicTaskId: publicTask.id,
     restrictedEntryId: entry.id,
     restrictedAttachmentId: attachment.id,
+    restrictedTaskAttachmentId: taskAttachment.id,
+    restrictedTimeEntryId: timeEntry.id,
     reviewDocumentId: reviewDocument.id,
+    reviewDocumentAttachmentId: documentAttachment.id,
+    documentIncidentId: documentIncident.id,
     sharedDocumentId: sharedDocument.id,
     assetId: asset.id,
     applicationId: application.id,
@@ -635,9 +662,9 @@ async function testAuditLog(): Promise<void> {
     const opts = (v: IncidentViewer) => ({ manager: runner.manager, viewer: v });
 
     const adminList = await audit.list({ limit: 100 }, opts(viewer(s.adminId, true)));
-    assert.equal(adminList.total, 9, 'incidents:admin sees every audit row');
+    assert.equal(adminList.total, 13, 'incidents:admin sees every audit row');
     const reporterList = await audit.list({ limit: 100 }, opts(viewer(s.reporterId, false)));
-    assert.equal(reporterList.total, 9, 'the reporter sees the rows of their incident');
+    assert.equal(reporterList.total, 13, 'the reporter sees the rows of their incident');
     const readerList = await audit.list({ limit: 100 }, opts(viewer(s.readerId, false)));
     assert.equal(readerList.total, 1, 'the reader sees only the unrelated audit row');
 
@@ -661,12 +688,12 @@ async function testAuditLog(): Promise<void> {
       return content;
     };
     const readerExport = await exportText(viewer(s.readerId, false));
-    for (const table of ['incidents', 'incident_entries', 'incident_assets', 'incident_applications', 'incident_technologies', 'incident_attachments', 'documents', 'tasks']) {
+    for (const table of ['incidents', 'incident_entries', 'incident_assets', 'incident_applications', 'incident_technologies', 'incident_attachments', 'documents', 'tasks', 'task_attachments', 'task_time_entries', 'document_attachments', 'document_incidents']) {
       assert.ok(!readerExport.includes(`${AUDIT_MARK}-${table}`), `the reader export omits the ${table} row`);
     }
     assert.ok(readerExport.includes(`${AUDIT_MARK}-suppliers`), 'the reader export keeps the unrelated row');
     const reporterExport = await exportText(viewer(s.reporterId, false));
-    for (const table of ['incidents', 'incident_entries', 'incident_assets', 'incident_applications', 'incident_technologies', 'incident_attachments', 'documents', 'tasks']) {
+    for (const table of ['incidents', 'incident_entries', 'incident_assets', 'incident_applications', 'incident_technologies', 'incident_attachments', 'documents', 'tasks', 'task_attachments', 'task_time_entries', 'document_attachments', 'document_incidents']) {
       assert.ok(reporterExport.includes(`${AUDIT_MARK}-${table}`), `the reporter export keeps the ${table} row`);
     }
   });
