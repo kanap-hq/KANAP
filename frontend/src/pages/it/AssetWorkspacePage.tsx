@@ -51,7 +51,7 @@ import AssetRelationsTab from './workspace/AssetRelationsTab';
 import { assetRelationsBadge, assetRelationsKey, fetchAssetRelationsTab } from './workspace/assetRelationsData';
 import AssetTechnologiesSection from './components/AssetTechnologiesSection';
 import { invalidateTechnologyLinks } from './components/technologyLinkQueries';
-import ReachVulnerabilitiesSection, { type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
+import ReachVulnerabilitiesSection, { reachVulnerabilitiesRefetchMs, type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
 import VulnerabilitySevereBadge, { highestSevereOf } from './workspace/VulnerabilitySevereBadge';
 import PendingMetadata from './workspace/PendingMetadata';
 import { useFeatures } from '../../config/FeaturesContext';
@@ -1236,7 +1236,8 @@ export default function AssetWorkspacePage() {
   const relationCounts = assetRelationsQuery.data?.counts;
   // One query for the Vulnerabilities section and the severe badge. Its key sits under the asset's
   // technologies: every change of a technology link (`invalidateTechnologyLinks`), on this asset or on
-  // the host or cluster that carries technologies to it, reads it again.
+  // the host or cluster that carries technologies to it, reads it again. While a match is still
+  // queued, it reads again every second, and stops once the answer is no longer pending.
   const { config: featuresConfig } = useFeatures();
   const vulnerabilityFeed = featuresConfig.features.vulnerabilityFeed === true;
   const assetVulnerabilitiesKey = React.useMemo(() => ['asset-technologies', id, 'vulnerabilities'] as const, [id]);
@@ -1244,6 +1245,7 @@ export default function AssetWorkspacePage() {
     queryKey: assetVulnerabilitiesKey,
     queryFn: async () => (await api.get<ReachVulnerabilities>(`/assets/${id}/vulnerabilities`)).data,
     enabled: vulnerabilityFeed && !isCreate && !!id,
+    refetchInterval: (query) => reachVulnerabilitiesRefetchMs(query.state.data),
   });
   // A retired asset counts nothing (`totals: null`): no section and no badge.
   const reachVulnerabilities = vulnerabilityFeed && !isCreate && assetVulnerabilitiesQuery.data?.totals

@@ -45,7 +45,20 @@ export type ReachVulnerabilities = {
    * `critical` among them; null when retired.
    */
   member_totals?: { open: number; severe: number; exploited_severe: number; critical?: number } | null;
+  /**
+   * True while a match is queued or running for a technology of this record that has CPE
+   * identifiers. The section then says the search is in progress instead of that nothing is to review.
+   */
+  pending?: boolean;
 };
+
+/** How often a record reads its vulnerabilities again while `pending` is true. */
+export const REACH_VULNERABILITIES_POLL_MS = 1_000;
+
+/** Refetch while a match is queued for this record, and stop once the answer is no longer pending. */
+export function reachVulnerabilitiesRefetchMs(data: ReachVulnerabilities | undefined): number | false {
+  return data?.pending ? REACH_VULNERABILITIES_POLL_MS : false;
+}
 
 /** The anchor of the section. */
 export const REACH_VULNERABILITIES_ANCHOR = 'vulnerabilities';
@@ -83,6 +96,8 @@ const rowKey = (row: ReachVulnerabilityRow) => `${row.technology.id}:${row.versi
  * technologies its cluster's members carry: they are not counted. What only the host it runs on
  * carries (the platform underneath) waits under one folded line, not counted either.
  * Pure: the caller fetches the data, and hides the section while the vulnerability feed is off.
+ * While `pending` is set and no line is ready, the empty line says the search is in progress.
+ * The caller refetches on `reachVulnerabilitiesRefetchMs` until `pending` is no longer set.
  */
 export default function ReachVulnerabilitiesSection({ data, kind, subjectReference, heading, onRecordOnServer }: Props) {
   const { t } = useTranslation('it');
@@ -190,6 +205,8 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
   const carried = kind === 'asset' ? data.indirect ?? [] : [];
   const indirect = carried.filter((row) => !row.through_host);
   const platform = carried.filter((row) => row.through_host);
+  // A match still running, and nothing to show yet: say so, instead of the empty line.
+  const showPending = data.pending === true && data.rows.length === 0 && indirect.length === 0;
   const platformFold = platform.length > 0
     ? { label: t('pages.vulnerabilities.reach.platform', { count: platform.length }), rows: platform }
     : undefined;
@@ -215,7 +232,11 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
     <Box id={REACH_VULNERABILITIES_ANCHOR} sx={{ scrollMarginTop: 16 }}>
       <RelationsSection title={title} heading={heading} count={count}>
         {data.rows.length === 0 ? (indirect.length === 0 && (
-          <RelationsEmpty>{t(`pages.vulnerabilities.reach.empty.${kind}`)}</RelationsEmpty>
+          <RelationsEmpty>
+            {showPending
+              ? <span role="status" data-testid="reach-vulnerabilities-pending">{t('pages.vulnerabilities.section.searching')}</span>
+              : t(`pages.vulnerabilities.reach.empty.${kind}`)}
+          </RelationsEmpty>
         )) : (
           <RelationsTable columns={directColumns} rows={data.rows} rowKey={rowKey} ariaLabel={title} />
         )}
