@@ -135,7 +135,7 @@ async function testSectionsWithRightAreLoaded() {
   assert.equal(calls.relations[0].opts.technologies, true);
   assert.equal(calls.relations[0].opts.applications, true);
   assert.deepEqual(calls.tasks[0].target, { type: 'incident', id: INCIDENT_ID });
-  assert.deepEqual(calls.tasks[0].opts, { manager, tenantId: TENANT_ID });
+  assert.deepEqual(calls.tasks[0].opts, { manager, tenantId: TENANT_ID, viewer: { userId: USER_ID, isAdmin: false } });
   assert.equal(calls.userQueries.length, 1, 'one query for every assignee of the record');
 }
 

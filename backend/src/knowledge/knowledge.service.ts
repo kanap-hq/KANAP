@@ -1631,10 +1631,24 @@ export class KnowledgeService {
     resource: string,
     opts?: { applyDataAccess?: boolean },
   ): Promise<boolean> {
+    return (await this.inlineAttachmentViewer(manager, tenantId, refreshToken, resource, opts)) !== null;
+  }
+
+  /**
+   * The same check as `canAccessInlineAttachment`, returning the person instead of a boolean, for
+   * routes that also filter on who reads (the restricted-incident rule of task images).
+   */
+  async inlineAttachmentViewer(
+    manager: EntityManager,
+    tenantId: string,
+    refreshToken: string | null | undefined,
+    resource: string,
+    opts?: { applyDataAccess?: boolean },
+  ): Promise<string | null> {
     const userId = await this.resolveInlineAttachmentViewer(manager, tenantId, refreshToken, resource);
-    if (!userId) return false;
+    if (!userId) return null;
     if (opts?.applyDataAccess) await applyDataAccess(manager, userId);
-    return true;
+    return userId;
   }
 
   /** The person of the session cookie when allowed to read `resource` (>= reader), else null. */

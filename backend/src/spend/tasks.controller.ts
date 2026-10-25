@@ -51,7 +51,6 @@ import { PermissionLevel } from '../permissions/permissions.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { incidentViewerFromRequest, resolveIncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
-import { applyDataAccess } from '../data-access/data-access';
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -613,10 +612,9 @@ export class TasksController {
       await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
       // Require the caller to be an authenticated tenant user with >= reader on tasks; the
       // attachment is then read under the person's data access (spec §6.3).
-      const userId = await this.knowledge.resolveInlineAttachmentViewer(
-        runner.manager, tenantId, refreshToken, 'tasks',
+      const userId = await this.knowledge.inlineAttachmentViewer(
+        runner.manager, tenantId, refreshToken, 'tasks', { applyDataAccess: true },
       );
-      if (userId) await applyDataAccess(runner.manager, userId);
       // Only embedded images (source_field set) are served on this inline route, and
       // only when the image's task is not one of a restricted incident this person cannot see.
       const params: unknown[] = [tenantId, attachmentId];
