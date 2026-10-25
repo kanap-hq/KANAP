@@ -14,6 +14,7 @@ import {
   type ConnectionAssetPart,
   type ViaCluster,
 } from '../effective-connection-assets';
+import { inheritingMembersOf } from '../../app-asset-assignments/cluster-assignment-rules';
 import { parsePagination } from '../../common/pagination';
 import { compileAgFilterCondition, createParamNameGenerator, FilterTargetConfig } from '../../common/ag-grid-filtering';
 import {
@@ -796,6 +797,7 @@ export class ConnectionsListService extends ConnectionsBaseService {
       if (leg.equipment_entity_code) entityCodes.add(String(leg.equipment_entity_code).trim().toLowerCase());
     }
 
+    const namedIds = new Set(assetIds);
     const assetRows: Array<{
       id: string;
       name: string;
@@ -808,10 +810,42 @@ export class ConnectionsListService extends ConnectionsBaseService {
         ? await mg.query(
             `SELECT id, name, environment, location_id, provider, is_cluster
              FROM assets
-             WHERE id = ANY($1::uuid[])`,
-            [Array.from(assetIds)],
+             WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+            [tenant, Array.from(assetIds)],
           )
         : [];
+
+    // A cluster draws the members in service it carries, even when no connection names them.
+    const clusterIds = assetRows.filter((row) => !!row.is_cluster).map((row) => row.id);
+    const membersByCluster = await inheritingMembersOf(mg, tenant, clusterIds);
+    const memberIds = Array.from(
+      new Set(
+        Array.from(membersByCluster.values())
+          .flat()
+          .map((member) => member.id)
+          .filter((id) => !assetIds.has(id)),
+      ),
+    );
+    if (memberIds.length > 0) {
+      const memberRows: Array<{
+        id: string;
+        name: string;
+        environment: string;
+        location_id: string | null;
+        provider: string;
+        is_cluster: boolean;
+      }> = await mg.query(
+        `SELECT id, name, environment, location_id, provider, is_cluster
+         FROM assets
+         WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [tenant, memberIds],
+      );
+      for (const row of memberRows) {
+        if (assetIds.has(row.id)) continue;
+        assetRows.push(row);
+        assetIds.add(row.id);
+      }
+    }
 
     const locationIds = Array.from(
       new Set(assetRows.map((a) => a.location_id).filter((v): v is string => !!v)),
@@ -819,8 +853,8 @@ export class ConnectionsListService extends ConnectionsBaseService {
     const locationMap: Map<string, { id: string; hosting_type: string | null; provider: string | null }> = new Map();
     if (locationIds.length > 0) {
       const locRows: Array<{ id: string; hosting_type: string | null; provider: string | null }> = await mg.query(
-        `SELECT id, hosting_type, provider FROM locations WHERE id = ANY($1::uuid[])`,
-        [locationIds],
+        `SELECT id, hosting_type, provider FROM locations WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [tenant, locationIds],
       );
       locRows.forEach((loc) => locationMap.set(loc.id, loc));
     }
@@ -901,7 +935,10 @@ export class ConnectionsListService extends ConnectionsBaseService {
       environment: row.environment || null,
       hosting_category: deriveHostingCategory(row),
       graph_tier: assetTierMap.get(row.id) || null,
-      member_server_ids: row.is_cluster ? (clusterMembersMap.get(row.id) || []) : undefined,
+      member_server_ids: row.is_cluster
+        ? (membersByCluster.get(row.id) || []).map((member) => member.id)
+        : undefined,
+      implicit_member: !namedIds.has(row.id),
     }));
 
     // Build flat array of cluster memberships for frontend graph force
