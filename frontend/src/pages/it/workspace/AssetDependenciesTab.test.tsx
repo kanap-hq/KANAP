@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 import api from '../../../api';
 import AssetDependenciesTab from './AssetDependenciesTab';
@@ -151,6 +151,10 @@ describe('AssetDependenciesTab', () => {
     mocked.delete.mockResolvedValue({ data: { ok: true, changed: true } } as never);
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('shows the impact, then the four directions in order', async () => {
     renderTab();
     await screen.findByText('vm-app-01');
@@ -216,6 +220,19 @@ describe('AssetDependenciesTab', () => {
     await screen.findByText('san-01');
     expect(screen.queryByRole('button', { name: /throughMembers/ })).toBeNull();
     expect(screen.queryByText('workspace.asset.relations.via')).toBeNull();
+  });
+
+  it('keeps the Via column of the folded line at a narrow width, where the environment hides', async () => {
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.tagName === 'DIV' ? 500 : 0;
+    });
+    renderTab({ relations: clusterRelations() });
+    await screen.findByText('backup-01');
+    const region = screen.getByRole('region', { name: A('dependsOn') });
+    fireEvent.click(within(region).getByRole('button', { name: 'workspace.asset.relations.throughMembers(count=2)' }));
+    expect(within(region).getByText('workspace.asset.relations.via')).toBeTruthy();
+    expect(within(region).getByText('esx-host-01')).toBeTruthy();
+    expect(within(region).queryByText('enums.environment.prod')).toBeNull();
   });
 
   it('explains Contains in a tooltip on its title, and no other direction', async () => {

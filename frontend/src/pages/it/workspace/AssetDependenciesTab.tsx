@@ -143,7 +143,7 @@ export default function AssetDependenciesTab({ assetId }: { assetId: string }) {
       header: t('workspace.asset.relations.via'),
       width: 160,
       wrap: true,
-      hideOrder: 2,
+      // The folded line exists to name the members that carry each row: its Via column never hides.
       render: (row) => (row.via && row.via.length > 0 ? <ViaAssetNames assets={row.via} /> : null),
     };
     // A contained asset held by another container in service is flagged next to its name (R3).
