@@ -2137,6 +2137,12 @@ const TECHNOLOGIES = [
   { catalog: 'veeam-backup-and-replication', installed: [['PAR-BKP-01', '12', null]] },
 ];
 
+// Installations an older fixture wrote and the list above no longer declares, removed when the
+// setup runs again: an installation someone added by hand stays.
+const REMOVED_INSTALLATIONS = {
+  vsphere: ['PAR-ESX-01', 'PAR-ESX-02', 'PAR-ESX-05'],
+};
+
 const PROCESS_APPLICATIONS = {
   'Order-to-Cash': ['SAP S/4HANA', 'La Boutique du Fromage', 'Salesforce Sales Cloud', 'Fromage B2B Portal'],
   'Procure-to-Pay': ['SAP S/4HANA', 'Coupa Procurement'],
@@ -2235,9 +2241,6 @@ async function ensureTechnologies() {
   info('Ensuring technologies');
   const assets = await getAll('/assets?limit=1000');
   const assetId = (name) => assets.find((item) => item.name === name)?.id ?? '';
-  // The servers of the dataset: an older fixture installed a technology on some of them that the
-  // list above no longer declares (VMware vSphere on the vSphere hosts), and those links go.
-  const fixtureServers = new Set(readCsv('18-assets.csv').map((row) => row.name));
   for (const spec of TECHNOLOGIES) {
     const adopted = await apiPost('/technologies/adopt', { catalog_key: spec.catalog });
     const technologyId = adopted?.technology?.id;
@@ -2254,13 +2257,10 @@ async function ensureTechnologies() {
       }
       await apiPost(`/technologies/${technologyId}/assets`, { asset_id: id, version_label: version ?? undefined, notes: notes ?? undefined });
     }
-    // Only an installation on one of the dataset's servers counts: a technology carried from
-    // another server is another row (`kind: carried`), and an asset created outside the fixture
-    // keeps whatever someone installed on it.
-    const declared = new Set(installed.map(([server]) => server));
-    for (const row of items(await apiGet(`/technologies/${technologyId}/assets`))) {
-      if (row.kind !== 'installed' || !row.link_id) continue;
-      if (!fixtureServers.has(row.asset_name) || declared.has(row.asset_name)) continue;
+    // A technology carried from another server is another row (`kind: carried`).
+    const removed = new Set(REMOVED_INSTALLATIONS[spec.catalog] ?? []);
+    for (const row of removed.size ? items(await apiGet(`/technologies/${technologyId}/assets`)) : []) {
+      if (row.kind !== 'installed' || !row.link_id || !removed.has(row.asset_name)) continue;
       await apiDelete(`/technologies/${technologyId}/assets/${row.link_id}`);
       ok(`Removed the installation of '${spec.catalog}' on '${row.asset_name}'`);
     }
