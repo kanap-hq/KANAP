@@ -1234,6 +1234,8 @@ export async function* streamChat(params: {
   conversation_id?: string;
   attachment_ids?: string[];
   truncate_from_message_id?: string | null;
+  /** The browser's IANA zone, so the assistant reads and writes date-times in the user's time. */
+  time_zone?: string;
   signal?: AbortSignal;
 }): AsyncGenerator<ChatStreamEvent> {
   const { signal, ...body } = params;

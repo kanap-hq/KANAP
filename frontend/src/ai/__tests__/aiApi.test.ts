@@ -47,6 +47,27 @@ describe('streamChat', () => {
     expect(reader.releaseLock).toHaveBeenCalledTimes(1);
   });
 
+  it('sends the time zone the chat provides', async () => {
+    const reader = createReader(['{"type":"done"}\n']);
+    let sentBody: any = null;
+
+    vi.stubGlobal('fetch', vi.fn(async (_url: any, init: any) => {
+      sentBody = JSON.parse(init.body);
+      return {
+        ok: true,
+        body: {
+          getReader: () => reader,
+        },
+      };
+    }));
+
+    for await (const _event of streamChat({ message: 'hello', time_zone: 'Europe/Paris' })) {
+      // drain the stream
+    }
+
+    expect(sentBody).toMatchObject({ message: 'hello', time_zone: 'Europe/Paris' });
+  });
+
   it('fails closed when the NDJSON buffer grows beyond the safety limit', async () => {
     const reader = createReader(['a'.repeat(1_048_577)]);
 

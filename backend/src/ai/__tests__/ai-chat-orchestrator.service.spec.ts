@@ -35,6 +35,7 @@ function createOrchestrator(options?: {
   let conversationCreated = false;
   let messageIndex = 0;
   const recordedRequests: any[] = [];
+  const systemPromptParams: any[] = [];
   const executedToolCalls: Array<{ toolName: string; input: any }> = [];
   const toolExecuteCount = { value: 0 };
   const approvalCalls = { approve: 0, reject: 0 };
@@ -307,10 +308,13 @@ function createOrchestrator(options?: {
 
   const mockSystemPrompt = {
     build: () => 'You are Plaid.',
-    buildWithMetadata: () => ({
-      text: 'You are Plaid.',
-      sections: [{ key: 'identity', label: 'Assistant identity', size: 'You are Plaid.'.length }],
-    }),
+    buildWithMetadata: (params: any) => {
+      systemPromptParams.push(params);
+      return {
+        text: 'You are Plaid.',
+        sections: [{ key: 'identity', label: 'Assistant identity', size: 'You are Plaid.'.length }],
+      };
+    },
   };
 
   const mockBuiltinUsage = {
@@ -344,7 +348,7 @@ function createOrchestrator(options?: {
     } as any,
   );
 
-  return { orchestrator, persistedMessages, providerCallCount, recordedRequests, toolExecuteCount, executedToolCalls, approvalCalls };
+  return { orchestrator, persistedMessages, providerCallCount, recordedRequests, systemPromptParams, toolExecuteCount, executedToolCalls, approvalCalls };
 }
 
 async function collectEvents(gen: AsyncGenerator<ChatStreamEvent>): Promise<ChatStreamEvent[]> {
@@ -476,6 +480,59 @@ async function testToolCallFlow() {
   const done = events.find((e) => e.type === 'done') as any;
   assert.deepEqual(done.last_usage, { input_tokens: 200, output_tokens: 100 });
   assert.deepEqual(done.conversation_usage, { input_tokens: 300, output_tokens: 150 });
+}
+
+async function testToolResultDateTimesUseTheUserTimeZone() {
+  const { orchestrator, persistedMessages, recordedRequests, systemPromptParams } = createOrchestrator({
+    providerEvents: [
+      { type: 'tool_call_start', id: 'tc-1', name: 'get_entity_detail' },
+      { type: 'tool_call_delta', id: 'tc-1', arguments: '{"entity_type":"incidents","entity_id":"INC-23"}' },
+      { type: 'tool_call_end', id: 'tc-1' },
+      { type: 'done', usage: { input_tokens: 100, output_tokens: 50 } },
+    ],
+    providerToolEvents: [
+      { type: 'text_delta', text: 'Started at 07:50.' },
+      { type: 'done', usage: { input_tokens: 200, output_tokens: 100 } },
+    ],
+    toolResult: {
+      ref: 'INC-23',
+      started_at: '2026-06-02T05:50:00.000Z',
+      detected_at: '2026-06-02T06:05:00.000Z',
+      resolved_at: '2026-06-02T09:10:00.000Z',
+      starts_on: '2026-06-02',
+      title: 'B2B portal down',
+    },
+  });
+
+  const events = await collectEvents(
+    orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: 'When did INC-23 start?',
+      timeZone: 'Europe/Paris',
+    }),
+  );
+
+  assert.equal(systemPromptParams[0].timeZone, 'Europe/Paris', 'the system prompt receives the resolved zone');
+
+  const toolResult = events.find((event) => event.type === 'tool_result') as any;
+  assert.equal(toolResult.result.started_at, '2026-06-02T07:50:00+02:00');
+  assert.equal(toolResult.result.detected_at, '2026-06-02T08:05:00+02:00');
+  assert.equal(toolResult.result.resolved_at, '2026-06-02T11:10:00+02:00');
+  assert.equal(toolResult.result.starts_on, '2026-06-02', 'a date-only field keeps its day');
+
+  const modelToolMessage = recordedRequests[1].messages.find((message: any) => message.role === 'tool');
+  assert.match(modelToolMessage.content, /2026-06-02T07:50:00\+02:00/);
+  assert.match(modelToolMessage.content, /2026-06-02T11:10:00\+02:00/);
+  assert.doesNotMatch(modelToolMessage.content, /2026-06-02T05:50:00\.000Z/, 'the model reads no UTC instant');
+
+  const persistedToolMessage = persistedMessages.find((message: any) => message.role === 'tool');
+  assert.match(persistedToolMessage.content, /2026-06-02T07:50:00\+02:00/, 'the persisted history keeps the user zone');
 }
 
 async function testDeepSeekReasoningContentIsReplayedForToolContinuation() {
@@ -3026,6 +3083,7 @@ async function run() {
   assert.equal(linked, 'Updated [CPX-2](/ops/budget/BL-127).');
   await testSimpleTextResponse();
   await testToolCallFlow();
+  await testToolResultDateTimesUseTheUserTimeZone();
   await testDeepSeekReasoningContentIsReplayedForToolContinuation();
   await testDeepSeekReasoningContentIsReplayedForEverySplitToolCall();
   await testReasoningContentIsNotReplayedForNonDeepSeekEndpoint();
