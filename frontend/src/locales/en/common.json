@@ -684,7 +684,11 @@
       "basic": "Basics",
       "context": "Context",
       "dates": "Dates",
-      "ip_addresses": "IP addresses"
+      "ip_addresses": "IP addresses",
+      "effort": "Effort",
+      "team": "Team",
+      "scoring": "Scoring",
+      "analysis": "Analysis"
     },
     "presets": {
       "applications": {
@@ -694,6 +698,12 @@
         "enrichment": "Data enrichment"
       },
       "tasks": {
+        "enrichment": "Data enrichment"
+      },
+      "portfolio_projects": {
+        "enrichment": "Data enrichment"
+      },
+      "portfolio_requests": {
         "enrichment": "Data enrichment"
       }
     },
@@ -828,6 +838,65 @@
         "owner_email_3": "Owner 3 email",
         "owner_email_4": "Owner 4 email",
         "labels": "Labels"
+      },
+      "portfolio_projects": {
+        "id": "ID",
+        "name": "Name",
+        "status": "Status",
+        "purpose": "Purpose",
+        "origin": "Origin",
+        "source_name": "Source",
+        "category_name": "Category",
+        "stream_name": "Stream",
+        "company_name": "Company",
+        "department_name": "Department",
+        "planned_start": "Planned start",
+        "planned_end": "Planned end",
+        "actual_start": "Actual start",
+        "actual_end": "Actual end",
+        "baseline_start_date": "Baseline start",
+        "baseline_end_date": "Baseline end",
+        "execution_progress": "Progress (%)",
+        "estimated_effort_it": "Estimated IT effort (MD)",
+        "estimated_effort_business": "Estimated business effort (MD)",
+        "actual_effort_it": "Actual IT effort (MD)",
+        "actual_effort_business": "Actual business effort (MD)",
+        "baseline_effort_it": "Baseline IT effort (MD)",
+        "baseline_effort_business": "Baseline business effort (MD)",
+        "business_sponsor_email": "Business sponsor email",
+        "business_lead_email": "Business lead email",
+        "it_sponsor_email": "IT sponsor email",
+        "it_lead_email": "IT lead email",
+        "criteria_values": "Evaluation criteria (JSON)",
+        "priority_score": "Priority score",
+        "priority_override": "Priority override",
+        "override_value": "Override value",
+        "override_justification": "Override justification"
+      },
+      "portfolio_requests": {
+        "id": "ID",
+        "name": "Name",
+        "status": "Status",
+        "purpose": "Purpose",
+        "source_name": "Source",
+        "category_name": "Category",
+        "stream_name": "Stream",
+        "requestor_email": "Requestor email",
+        "company_name": "Company",
+        "department_name": "Department",
+        "target_delivery_date": "Target delivery date",
+        "current_situation": "Current situation",
+        "expected_benefits": "Expected benefits",
+        "risks": "Risks",
+        "business_sponsor_email": "Business sponsor email",
+        "business_lead_email": "Business lead email",
+        "it_sponsor_email": "IT sponsor email",
+        "it_lead_email": "IT lead email",
+        "criteria_values": "Evaluation criteria (JSON)",
+        "priority_score": "Priority score",
+        "priority_override": "Priority override",
+        "override_value": "Override value",
+        "override_justification": "Override justification"
       }
     }
   },

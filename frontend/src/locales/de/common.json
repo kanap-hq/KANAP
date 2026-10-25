@@ -684,7 +684,11 @@
       "basic": "Grunddaten",
       "context": "Kontext",
       "dates": "Daten",
-      "ip_addresses": "IP-Adressen"
+      "ip_addresses": "IP-Adressen",
+      "effort": "Aufwand",
+      "team": "Team",
+      "scoring": "Bewertung",
+      "analysis": "Analyse"
     },
     "presets": {
       "applications": {
@@ -694,6 +698,12 @@
         "enrichment": "Datenanreicherung"
       },
       "tasks": {
+        "enrichment": "Datenanreicherung"
+      },
+      "portfolio_projects": {
+        "enrichment": "Datenanreicherung"
+      },
+      "portfolio_requests": {
         "enrichment": "Datenanreicherung"
       }
     },
@@ -828,6 +838,65 @@
         "owner_email_3": "E-Mail Verantwortliche/r 3",
         "owner_email_4": "E-Mail Verantwortliche/r 4",
         "labels": "Labels"
+      },
+      "portfolio_projects": {
+        "id": "ID",
+        "name": "Name",
+        "status": "Status",
+        "purpose": "Zweck",
+        "origin": "Herkunft",
+        "source_name": "Quelle",
+        "category_name": "Kategorie",
+        "stream_name": "Stream",
+        "company_name": "Unternehmen",
+        "department_name": "Abteilung",
+        "planned_start": "Geplanter Start",
+        "planned_end": "Geplantes Ende",
+        "actual_start": "Tatsächlicher Beginn",
+        "actual_end": "Tatsächliches Ende",
+        "baseline_start_date": "Baseline-Start",
+        "baseline_end_date": "Baseline-Ende",
+        "execution_progress": "Fortschritt (%)",
+        "estimated_effort_it": "Geschätzter IT-Aufwand (PT)",
+        "estimated_effort_business": "Geschätzter Fachbereichs-Aufwand (PT)",
+        "actual_effort_it": "Tatsächlicher IT-Aufwand (PT)",
+        "actual_effort_business": "Tatsächlicher Fachbereichs-Aufwand (PT)",
+        "baseline_effort_it": "Baseline IT-Aufwand (PT)",
+        "baseline_effort_business": "Baseline Fachbereichs-Aufwand (PT)",
+        "business_sponsor_email": "E-Mail Fachbereichssponsor",
+        "business_lead_email": "E-Mail Fachbereichsleiter",
+        "it_sponsor_email": "E-Mail IT-Sponsor",
+        "it_lead_email": "E-Mail IT-Leiter",
+        "criteria_values": "Bewertungskriterien (JSON)",
+        "priority_score": "Prioritätsscore",
+        "priority_override": "Prioritätsüberschreibung",
+        "override_value": "Überschreibungswert",
+        "override_justification": "Begründung der Überschreibung"
+      },
+      "portfolio_requests": {
+        "id": "ID",
+        "name": "Name",
+        "status": "Status",
+        "purpose": "Zweck",
+        "source_name": "Quelle",
+        "category_name": "Kategorie",
+        "stream_name": "Stream",
+        "requestor_email": "E-Mail Antragsteller/in",
+        "company_name": "Unternehmen",
+        "department_name": "Abteilung",
+        "target_delivery_date": "Ziellieferdatum",
+        "current_situation": "Aktuelle Situation",
+        "expected_benefits": "Erwarteter Nutzen",
+        "risks": "Risiken",
+        "business_sponsor_email": "E-Mail Fachbereichssponsor",
+        "business_lead_email": "E-Mail Fachbereichsleiter",
+        "it_sponsor_email": "E-Mail IT-Sponsor",
+        "it_lead_email": "E-Mail IT-Leiter",
+        "criteria_values": "Bewertungskriterien (JSON)",
+        "priority_score": "Prioritätsscore",
+        "priority_override": "Prioritätsüberschreibung",
+        "override_value": "Überschreibungswert",
+        "override_justification": "Begründung der Überschreibung"
       }
     }
   },
