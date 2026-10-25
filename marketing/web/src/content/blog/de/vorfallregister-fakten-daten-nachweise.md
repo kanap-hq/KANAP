@@ -32,7 +32,7 @@ Für den Anfang genügen drei Felder: ein Titel, ein Schweregrad und der Zeitpun
 
 ## Eine belastbare Chronologie
 
-![Der Verlauf eines schweren Vorfalls, mit datierten Notizen und Änderungen von Status und Schweregrad.](/screenshots/incidents-journal-2026-10-25.png)
+![Der Verlauf eines schweren Vorfalls, mit datierten Notizen und Änderungen von Status und Schweregrad.](/screenshots/incidents-journal-1600-2026-10-25.png)
 
 Erst der Verlauf macht aus einem Formular ein Register. Er hält alles fest, was mit dem Vorfall geschieht: die Notizen des Teams, jede Änderung von Status und Schweregrad, jedes verknüpfte oder gelöste Asset und jede verknüpfte oder gelöste Anwendung, jede Wiederöffnung mit ihrer Begründung. Nichts davon lässt sich bearbeiten oder löschen, von niemandem.
 
@@ -46,7 +46,7 @@ Die Nummerierung bleibt lückenlos. Ein Duplikat wird mit einer Begründung abge
 
 ## Den Vorfall mit dem verknüpfen, was er getroffen hat
 
-![Der Reiter Beziehungen eines Vorfalls: seine Assets, seine Anwendungen, seine Technologien und ein Vorschlag.](/screenshots/incidents-relations-2026-10-25.png)
+![Der Reiter Beziehungen eines Vorfalls: seine Assets, seine Anwendungen, seine Technologien und ein Vorschlag.](/screenshots/incidents-relations-1600-2026-10-25.png)
 
 Ein isolierter Vorfall in einem Register hat wenig Gewicht. In KANAP wird er mit der IT-Landschaft verknüpft: den betroffenen Servern, den Fachanwendungen mit ihrer Kritikalität, den beteiligten Technologien. KANAP schlägt die Technologien der bereits verknüpften Server und Anwendungen vor, mit ihrer Herkunft, zum Beispiel „Technologie des Assets AST-12“. Ein Klick genügt, um sie hinzuzufügen.
 

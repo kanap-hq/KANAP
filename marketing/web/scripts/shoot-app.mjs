@@ -1015,7 +1015,7 @@ const PAGES = {
     },
   },
   // Incidents article (2026-10-25): journal tab of INC-28 (critical, resolved), dated notes plus severity and status changes. Read-only.
-  'incidents-journal-2026-10-25': {
+  'incidents-journal-1600-2026-10-25': {
     frame: 1600,
     path: '/it/incidents/INC-28/journal',
     waitFor: 'main',
@@ -1039,7 +1039,7 @@ const PAGES = {
     },
   },
   // Incidents article (2026-10-25): relations tab of INC-28, linked assets, applications, technologies and suggestions. Read-only.
-  'incidents-relations-2026-10-25': {
+  'incidents-relations-1600-2026-10-25': {
     frame: 1600,
     path: '/it/incidents/INC-28/relations',
     waitFor: 'main',

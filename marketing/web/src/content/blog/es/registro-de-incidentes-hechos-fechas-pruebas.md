@@ -32,7 +32,7 @@ Para empezar, bastan tres campos: un título, una gravedad y la hora de detecci�
 
 ## Una cronología sólida
 
-![La pestaña Registro de un incidente grave, con notas fechadas y cambios de estado y de gravedad.](/screenshots/incidents-journal-2026-10-25.png)
+![La pestaña Registro de un incidente grave, con notas fechadas y cambios de estado y de gravedad.](/screenshots/incidents-journal-1600-2026-10-25.png)
 
 La pestaña Registro es la que convierte un formulario en un registro. Guarda todo lo que le sucede al incidente: las notas del equipo, cada cambio de estado y de gravedad, cada activo o aplicación vinculado o desvinculado, cada reapertura con su motivo. Nada de lo que contiene puede modificarse ni eliminarse, por nadie.
 
@@ -46,7 +46,7 @@ La numeración sigue siendo continua. Un duplicado se cancela con un motivo, e I
 
 ## Vincular el incidente con lo que afectó
 
-![La pestaña Relaciones de un incidente: sus activos, sus aplicaciones, sus tecnologías y una sugerencia.](/screenshots/incidents-relations-2026-10-25.png)
+![La pestaña Relaciones de un incidente: sus activos, sus aplicaciones, sus tecnologías y una sugerencia.](/screenshots/incidents-relations-1600-2026-10-25.png)
 
 Un incidente aislado en un registro tiene poco peso. En KANAP, se vincula al panorama IT: los servidores afectados, las aplicaciones de negocio con su criticidad, las tecnologías implicadas. KANAP sugiere las tecnologías de los servidores y las aplicaciones ya vinculados, con su origen, por ejemplo «tecnología del activo AST-12». Basta un clic para añadirlas.
 

@@ -32,7 +32,7 @@ To start, three fields are enough: a title, a severity and the detection time. T
 
 ## A solid timeline
 
-![The journal of a major incident, with dated notes and status and severity changes.](/screenshots/incidents-journal-2026-10-25.png)
+![The journal of a major incident, with dated notes and status and severity changes.](/screenshots/incidents-journal-1600-2026-10-25.png)
 
 The journal is what turns a form into a register. It keeps everything that happens to the incident: the team's notes, each status and severity change, each asset or application linked or unlinked, each reopening with its reason. Nothing it contains can be edited or deleted, by anyone.
 
@@ -46,7 +46,7 @@ Numbering stays continuous. A duplicate is cancelled with a reason, and INC-13 n
 
 ## Linking the incident to what it hit
 
-![The Relations tab of an incident: its assets, its applications, its technologies and a suggestion.](/screenshots/incidents-relations-2026-10-25.png)
+![The Relations tab of an incident: its assets, its applications, its technologies and a suggestion.](/screenshots/incidents-relations-1600-2026-10-25.png)
 
 An incident on its own in a register carries little weight. In KANAP, it is linked to the IT landscape: the servers hit, the business applications with their criticality, the technologies involved. KANAP suggests the technologies carried by the servers and applications already linked, with their origin, for example “technology of the asset AST-12”. One click adds them.
 
