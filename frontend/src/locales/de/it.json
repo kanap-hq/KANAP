@@ -21,7 +21,10 @@
         "applications": "Anwendungen",
         "tasks": "Aufgaben",
         "created": "Erstellt am",
-        "access": "Zugriff"
+        "access": "Zugriff",
+        "personalData": "Personenbezogene Daten",
+        "authorityRequired": "Meldung erforderlich",
+        "authorityNotified": "Gemeldet am"
       },
       "filters": {
         "noCategory": "(Keine Kategorie)",

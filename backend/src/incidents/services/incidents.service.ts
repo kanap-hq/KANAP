@@ -38,7 +38,8 @@ const COUNT_COLUMNS = Object.entries(COUNT_EXPRESSIONS).map(([name, sql]) => `${
 
 const ROW_COLUMNS = `
   i.id, i.item_number, i.title, i.category, i.severity, i.status, i.confidential,
-  i.started_at, i.detected_at, i.resolved_at, i.closed_at,
+  i.started_at, i.detected_at, i.resolved_at, i.closed_at, i.authority_notified_at,
+  i.personal_data_affected, i.authority_notification_required,
   i.owner_user_id, ${OWNER_NAME} AS owner_name,
   i.reporter_user_id, ${REPORTER_NAME} AS reporter_name,
   ${COUNT_COLUMNS},
@@ -55,6 +56,7 @@ const FIELD_EXPRESSIONS: Record<string, string> = {
   detected_at: 'i.detected_at',
   resolved_at: 'i.resolved_at',
   closed_at: 'i.closed_at',
+  authority_notified_at: 'i.authority_notified_at',
   owner_name: OWNER_NAME,
   reporter_name: REPORTER_NAME,
   source_ref: 'i.source_ref',
@@ -75,7 +77,7 @@ const FIELD_EXPRESSIONS: Record<string, string> = {
 };
 
 const INCIDENT_TEXT_SORTS = new Set(['title', 'owner_name', 'reporter_name', 'source_ref', 'linked_assets', 'linked_applications']);
-const DATE_FIELDS = new Set(['started_at', 'detected_at', 'resolved_at', 'closed_at', 'created_at', 'updated_at']);
+const DATE_FIELDS = new Set(['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at', 'created_at', 'updated_at']);
 const NUMBER_FIELDS = new Set(Object.keys(COUNT_EXPRESSIONS));
 const BOOLEAN_FILTER_FIELDS = new Set<string>(['personal_data_affected', 'authority_notification_required', 'confidential']);
 

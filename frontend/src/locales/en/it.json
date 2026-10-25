@@ -21,7 +21,10 @@
         "applications": "Applications",
         "tasks": "Tasks",
         "created": "Created on",
-        "access": "Access"
+        "access": "Access",
+        "personalData": "Personal data",
+        "authorityRequired": "Notification required",
+        "authorityNotified": "Notified on"
       },
       "filters": {
         "noCategory": "(No category)",

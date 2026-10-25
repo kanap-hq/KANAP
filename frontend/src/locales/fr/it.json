@@ -21,7 +21,10 @@
         "applications": "Applications",
         "tasks": "Tâches",
         "created": "Créé le",
-        "access": "Accès"
+        "access": "Accès",
+        "personalData": "Données personnelles",
+        "authorityRequired": "Notification requise",
+        "authorityNotified": "Notifié le"
       },
       "filters": {
         "noCategory": "(Aucune catégorie)",
