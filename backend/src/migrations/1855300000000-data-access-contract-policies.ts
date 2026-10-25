@@ -242,6 +242,102 @@ const readableContract = (p: string, reach: Reach) => `(${readableContractDirect
                  WHERE i.contract_id = ${p}id${reach === 'definer' ? ` AND ${IN_TENANT('i.')} AND ${readableLine('i.')}` : ''}))`;
 
 /** A line, named by `ref`, readable. */
+/**
+ * `data_access_can_read(p_user, p_type, p_id)` (lot 4, spec §5.6, §6.6) tests another person's
+ * access without changing role. Its predicates take that person's values instead of the settings
+ * (`Who`); they are copied from the builders above, as migration 1855100000000 did. Lot 5 replaces
+ * the placeholder `CONTRACT_READABLE = 'true'` by lisible_contrat with the person's values.
+ */
+type Who = { readAll: string; readCompanies: string; readNodes: string; user: string; userText: string };
+
+/** The caller, from the settings of the transaction (as the policies read them). */
+const CALLER: Who = {
+  readAll: READ_ALL,
+  readCompanies: READ_COMPANIES,
+  readNodes: READ_NODES,
+  user: USER,
+  userText: USER_TEXT,
+};
+
+/** The person asked about, from the variables the function computes. */
+const PERSON: Who = {
+  readAll: 'v_read_all',
+  readCompanies: 'v_read_companies',
+  readNodes: 'v_read_nodes',
+  user: 'p_user',
+  userText: 'p_user::text',
+};
+
+/** lisible_ligne (spec §6.4) on the line `p`, with the values of `w`. */
+const readableLineFor = (p: string, w: Who) => `(${w.readAll}
+        OR ${p}paying_company_id = ANY (${w.readCompanies})
+        OR ${p}cost_center_id = ANY (${w.readNodes})
+        OR ${p}owner_it_id = ${w.user}
+        OR ${p}owner_business_id = ${w.user})`;
+
+/** lisible_contrat (spec §6.4) on the contract `p`, with the values of `w` (SECURITY DEFINER: tenant filtered). */
+const readableContractFor = (p: string, w: Who) => `(${w.readAll}
+        OR ${p}company_id = ANY (${w.readCompanies})
+        OR ${p}cost_center_id = ANY (${w.readNodes})
+        OR ${p}owner_user_id = ${w.user}
+        OR EXISTS (SELECT 1 FROM public.contract_spend_items l JOIN public.spend_items i ON i.id = l.spend_item_id
+                   WHERE l.contract_id = ${p}id AND ${IN_TENANT('l.')} AND ${IN_TENANT('i.')} AND ${readableLineFor('i.', w)})
+        OR EXISTS (SELECT 1 FROM public.spend_items i
+                   WHERE i.contract_id = ${p}id AND ${IN_TENANT('i.')} AND ${readableLineFor('i.', w)}))`;
+
+/** Participant of the task `p` (spec §2.5, §4.4), with the values of `w`. */
+const taskParticipantFor = (p: string, w: Who) => `(${p}assignee_user_id = ${w.user}
+        OR ${p}owner_ids ? ${w.userText}
+        OR ${p}viewer_ids ? ${w.userText})`;
+
+/** Task visible (spec §4.4), with the values of `w`. */
+const readableTaskFor = (p: string, w: Who) => `(${w.readAll}
+        OR ${p}related_object_type IS NULL OR ${p}related_object_type NOT IN ${SCOPED_TASK_TYPES}
+        OR ${taskParticipantFor(p, w)}
+        OR (${p}related_object_type IN ${LINE_TASK_TYPES} AND EXISTS (
+              SELECT 1 FROM public.spend_items i
+              WHERE i.id = ${p}related_object_id AND ${IN_TENANT('i.')} AND ${readableLineFor('i.', w)}))
+        OR (${p}related_object_type = 'contract' AND EXISTS (
+              SELECT 1 FROM public.contracts c
+              WHERE c.id = ${p}related_object_id AND ${IN_TENANT('c.')} AND ${readableContractFor('c.', w)})))`;
+
+/**
+ * Step 5 of data_access_apply (1854400000000): the person's nodes, the tree unfolded, kept to the
+ * read lists (every edit node is also a read node). A company node brings the company and the
+ * centres whose company it is; a group brings itself, its subgroups and their centres; a centre
+ * brings itself; disabled nodes count.
+ */
+const UNFOLD_NODES = `
+      WITH RECURSIVE seeds AS (
+        SELECT n.node_type, n.company_id, n.cost_center_id, n.access
+        FROM public.user_data_access_nodes n
+        WHERE n.tenant_id = v_tenant AND n.user_id = p_user
+      ),
+      subtree (id, company_id, access) AS (
+        SELECT c.id, c.company_id, s.access
+        FROM seeds s
+        JOIN public.cost_centers c ON c.tenant_id = v_tenant AND c.id = s.cost_center_id
+        WHERE s.node_type = 'cost_center'
+        UNION
+        SELECT ch.id, ch.company_id, t.access
+        FROM subtree t
+        JOIN public.cost_centers ch ON ch.tenant_id = v_tenant AND ch.parent_id = t.id
+      ),
+      tree (id, company_id, access) AS (
+        SELECT id, company_id, access FROM subtree
+        UNION
+        SELECT c.id, c.company_id, s.access
+        FROM seeds s
+        JOIN public.cost_centers c ON c.tenant_id = v_tenant AND c.company_id = s.company_id
+        WHERE s.node_type = 'company'
+      )
+      SELECT
+        EXISTS (SELECT 1 FROM seeds WHERE node_type = 'all'),
+        coalesce((SELECT array_agg(DISTINCT company_id ORDER BY company_id) FROM seeds
+                  WHERE node_type = 'company'), '{}'::uuid[]),
+        coalesce((SELECT array_agg(DISTINCT id ORDER BY id) FROM tree), '{}'::uuid[])
+      INTO v_read_all, v_read_companies, v_read_nodes`;
+
 const lineReadableById = (ref: string, reach: Reach) => reach === 'filtered'
   ? `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref})`
   : `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref} AND ${IN_TENANT('i.')} AND ${readableLine('i.')})`;
@@ -501,6 +597,7 @@ export class DataAccessContractPolicies1855300000000 implements MigrationInterfa
     await createPolicyFunctions(queryRunner);
     await createContractPlacementTrigger(queryRunner);
     await createContractLinkTriggers(queryRunner);
+    await createCanReadFunction(queryRunner);
 
     await queryRunner.query(`SET LOCAL lock_timeout = '5s'`);
     await queryRunner.query(`SELECT data_access_sync_policies()`);
@@ -517,6 +614,7 @@ export class DataAccessContractPolicies1855300000000 implements MigrationInterfa
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`SET LOCAL lock_timeout = '5s'`);
+    await restoreLotFourCanRead(queryRunner);
     await restoreLotTwoFunctions(queryRunner);
     // The expected list is the lot 2 one again: the sync drops the contract policies and recreates
     // the lot 2 ones.
@@ -808,6 +906,125 @@ async function createContractLinkTriggers(queryRunner: QueryRunner): Promise<voi
     BEFORE INSERT OR UPDATE OR DELETE ON contract_spend_items
     FOR EACH ROW EXECUTE FUNCTION data_access_contract_spend_items_link()
   `);
+}
+
+/**
+ * `data_access_can_read` with the contract branch given: the lot 5 form checks the caller's
+ * visibility of the contract before answering and applies lisible_contrat with the person's values;
+ * the lot 4 form (restored by down()) answered `true` for every contract and only tested that the
+ * contract existed.
+ */
+function canReadSql(contractStart: string, contractResult: string): string {
+  return `
+    CREATE OR REPLACE FUNCTION data_access_can_read(p_user uuid, p_type text, p_id uuid)
+    RETURNS boolean
+    LANGUAGE plpgsql
+    STABLE
+    SECURITY DEFINER
+    SET search_path = public, pg_temp
+    AS $fn$
+    DECLARE
+      v_tenant uuid := app_current_tenant();
+      v_mode text;
+      v_read_all boolean;
+      v_read_companies uuid[];
+      v_read_nodes uuid[];
+    BEGIN
+      IF p_type IS NULL OR p_type NOT IN ('spend_item', 'task', 'contract') THEN
+        RAISE EXCEPTION 'data_access_can_read: unknown type %', p_type USING ERRCODE = '22023';
+      END IF;
+      IF NOT (${MODE_LIMITED}) AND ${ROLE_TAKEN} THEN
+        RETURN NULL;
+      END IF;
+
+      -- The starting object: in the tenant, and visible to a limited caller.
+      IF p_type = 'spend_item' THEN
+        IF NOT EXISTS (
+          SELECT 1 FROM public.spend_items i
+          WHERE i.id = p_id AND ${IN_TENANT('i.')}
+            AND (NOT (${MODE_LIMITED}) OR ${readableLineFor('i.', CALLER)})
+        ) THEN
+          RETURN NULL;
+        END IF;
+      ELSIF p_type = 'task' THEN
+        IF NOT EXISTS (SELECT 1 FROM public.tasks t WHERE t.id = p_id AND ${IN_TENANT('t.')})
+           OR ((${MODE_LIMITED}) AND NOT data_access_task_visible(p_id)) THEN
+          RETURN NULL;
+        END IF;
+      ELSE
+        ${contractStart}
+      END IF;
+
+      -- The person: unknown, refused; all data or Administrator, everything (data_access_apply, steps 1-3).
+      SELECT u.data_access_mode INTO v_mode
+      FROM public.users u
+      WHERE u.id = p_user AND u.tenant_id = v_tenant;
+      IF NOT FOUND THEN
+        RETURN false;
+      END IF;
+      IF v_mode = 'all' OR EXISTS (
+        SELECT 1
+        FROM (
+          SELECT u.role_id FROM public.users u WHERE u.id = p_user AND u.tenant_id = v_tenant
+          UNION
+          SELECT ur.role_id FROM public.user_roles ur WHERE ur.user_id = p_user AND ur.tenant_id = v_tenant
+        ) assigned
+        JOIN public.roles r ON r.id = assigned.role_id AND r.tenant_id = v_tenant
+        WHERE lower(trim(r.role_name)) = 'administrator'
+      ) THEN
+        RETURN true;
+      END IF;
+
+      -- Limited: the nodes unfolded (data_access_apply, step 5).
+${UNFOLD_NODES};
+
+      IF p_type = 'spend_item' THEN
+        RETURN EXISTS (
+          SELECT 1 FROM public.spend_items i
+          WHERE i.id = p_id AND ${IN_TENANT('i.')} AND ${readableLineFor('i.', PERSON)});
+      ELSIF p_type = 'task' THEN
+        RETURN EXISTS (
+          SELECT 1 FROM public.tasks t
+          WHERE t.id = p_id AND ${IN_TENANT('t.')} AND ${readableTaskFor('t.', PERSON)});
+      END IF;
+      ${contractResult}
+    END
+    $fn$
+  `;
+}
+
+/** The lot 5 rule: the caller must see the contract, and the answer uses the person's values. */
+async function createCanReadFunction(queryRunner: QueryRunner): Promise<void> {
+  await grantCanRead(queryRunner, true);
+  console.log(`${LOG_PREFIX} data_access_can_read: contracts scoped`);
+}
+
+/** The lot 4 body (1855100000000), restored by down(): every contract readable, existence only. */
+async function restoreLotFourCanRead(queryRunner: QueryRunner): Promise<void> {
+  await grantCanRead(queryRunner, false);
+}
+
+async function grantCanRead(queryRunner: QueryRunner, scopedContracts: boolean): Promise<void> {
+  const contractStart = scopedContracts
+    ? `IF NOT EXISTS (SELECT 1 FROM public.contracts c WHERE c.id = p_id AND ${IN_TENANT('c.')})
+           OR ((${MODE_LIMITED}) AND NOT data_access_contract_visible(p_id)) THEN
+          RETURN NULL;
+        END IF;`
+    : `IF NOT EXISTS (SELECT 1 FROM public.contracts c WHERE c.id = p_id AND ${IN_TENANT('c.')}) THEN
+          RETURN NULL;
+        END IF;`;
+  const contractResult = scopedContracts
+    ? `RETURN EXISTS (
+          SELECT 1 FROM public.contracts c
+          WHERE c.id = p_id AND ${IN_TENANT('c.')} AND ${readableContractFor('c.', PERSON)});`
+    : 'RETURN true;';
+  await queryRunner.query(canReadSql(contractStart, contractResult));
+  await queryRunner.query(`REVOKE EXECUTE ON FUNCTION data_access_can_read(uuid, text, uuid) FROM PUBLIC`);
+  await queryRunner.query(`GRANT EXECUTE ON FUNCTION data_access_can_read(uuid, text, uuid) TO CURRENT_USER`);
+  const [role] = await queryRunner.query(`SELECT to_regrole($1) IS NOT NULL AS present`, [LIMITED_ROLE]);
+  if (role?.present) {
+    await queryRunner.query(`GRANT EXECUTE ON FUNCTION data_access_can_read(uuid, text, uuid) TO ${LIMITED_ROLE}`);
+  }
 }
 
 /**
