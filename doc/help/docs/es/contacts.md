@@ -108,7 +108,7 @@ En el espacio de trabajo de Aplicaciones, la pestaña **Técnico y soporte** ref
 
 ### Soporte de tecnologías
 
-En el espacio de trabajo de Tecnologías, la pestaña **Operación** lista los contactos de soporte de una tecnología. Consulte [Tecnologías](technologies.md#operacion). En la sección **Usado en** del contacto, una tecnología retirada aparece al final, marcada como **Desactivado**.
+En el espacio de trabajo de Tecnologías, la pestaña **Operaciones** lista los contactos de soporte de una tecnología. Consulte [Tecnologías](technologies.md#operaciones). En la sección **Usado en** del contacto, una tecnología retirada aparece al final, marcada como **Desactivado**.
 
 ### Contactos de ubicación
 

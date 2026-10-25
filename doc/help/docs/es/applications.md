@@ -227,7 +227,7 @@ Haga clic en **Añadir servidor** en el encabezado del despliegue para vincular 
 
 Cuando la aplicación está asignada directamente a cada miembro en servicio de un clúster, una línea bajo la tabla los nombra, con un botón para asignar la aplicación al clúster (**Asignar a** y su nombre). Tras una confirmación, el clúster toma la asignación y se quitan las asignaciones propias de los miembros. La aplicación sigue entonces disponible mientras un miembro siga activo.
 
-**Consejo**: Documente primero los servidores en **Panorama IT > Activos**, luego vincúlelos aquí. La pestaña Operación del activo muestra las mismas asignaciones de forma inversa, en **Aplicaciones alojadas**.
+**Consejo**: Documente primero los servidores en **Panorama IT > Activos**, luego vincúlelos aquí. La pestaña Operaciones del activo muestra las mismas asignaciones de forma inversa, en **Aplicaciones alojadas**.
 
 ---
 

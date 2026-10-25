@@ -107,7 +107,7 @@ Cuando se siguen las vulnerabilidades, la columna **Editor** también abre la p�
 
 ## El espacio de trabajo de la tecnología
 
-El espacio de trabajo tiene una cabecera, un panel de propiedades a la derecha y seis pestañas: **Resumen**, **Servidores**, **Aplicaciones**, **Operación**, **Cumplimiento** y **Relaciones**. Las pestañas **Servidores**, **Aplicaciones** y **Relaciones** muestran su número en una insignia.
+El espacio de trabajo tiene una cabecera, un panel de propiedades a la derecha y seis pestañas: **Resumen**, **Servidores**, **Aplicaciones**, **Operaciones**, **Cumplimiento** y **Relaciones**. Las pestañas **Servidores**, **Aplicaciones** y **Relaciones** muestran su número en una insignia.
 
 ### Cabecera
 
@@ -248,7 +248,7 @@ Una aplicación aparece de dos maneras:
 
 **Exportar CSV** descarga las filas en el idioma de su pantalla.
 
-### Operación
+### Operaciones
 
 A quién llamar y cómo obtener ayuda:
 
@@ -306,7 +306,7 @@ Una sección solo aparece si puede leer su módulo. **Añadir** (`infrastructure
 Puede registrar que un servidor lleva una tecnología desde cualquiera de los dos lados:
 
 - Desde la tecnología: pestaña **Servidores**, **Añadir**, y elija el servidor y la versión.
-- Desde el servidor: pestaña **Operación** del activo, sección **Tecnologías**, **Añadir**, y elija la tecnología y la versión. Consulte [Activos](assets.md#operations).
+- Desde el servidor: pestaña **Operaciones** del activo, sección **Tecnologías**, **Añadir**, y elija la tecnología y la versión. Consulte [Activos](assets.md#operations).
 
 Registre la tecnología en el servidor donde está instalada: el host para un hipervisor, cada controlador de dominio para Active Directory, el servidor de base de datos para SQL Server. Los servidores que se ejecutan dentro de él, y el clúster de esos servidores, la muestran entonces sin más trabajo. Una tecnología en la nube, como Entra ID, no se ejecuta en ninguno de sus servidores: declárela en las aplicaciones.
 
@@ -365,7 +365,7 @@ Un archivo grande tarda en cargarse y retiene los vínculos de sus tecnologías 
 ## Dónde aparecen las tecnologías
 
 - **Aplicaciones**: la sección **Tecnologías**, arriba en la pestaña Operaciones, lista aquello de lo que depende una aplicación. Consulte [Aplicaciones](applications.md#operations).
-- **Activos**: la sección **Tecnologías** de la pestaña Operación de un activo lista lo que lleva el servidor, con su sistema operativo primero. Consulte [Activos](assets.md#operations).
+- **Activos**: la sección **Tecnologías** de la pestaña Operaciones de un activo lista lo que lleva el servidor, con su sistema operativo primero. Consulte [Activos](assets.md#operations).
 - **Contratos**, **líneas presupuestarias** e **incidentes**: un campo **Tecnologías** en su pestaña Relaciones, para los usuarios que pueden leer la infraestructura.
 - Informe **Fin de soporte**: las versiones que llegan a su fin de soporte, sistemas operativos incluidos, y lo que afectan. Consulte [Fin de soporte](end-of-support.md).
 - **Vulnerabilidades**: las vulnerabilidades conocidas de las versiones en uso, y los servidores y aplicaciones a los que llegan. Consulte [Vulnerabilidades](vulnerabilities.md).

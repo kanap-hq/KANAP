@@ -94,7 +94,7 @@ Para crear un clúster, elija **Añadir clúster** en el menú **Añadir activo*
 
 ### Aplicaciones en un clúster { #applications-on-a-cluster }
 
-Una aplicación puede asignarse a un clúster, desde la pestaña **Despliegues** de la aplicación o la pestaña **Operación** del clúster. Sus miembros en servicio alojan entonces la aplicación con el rol de la asignación del clúster. Un miembro añadido más tarde también la aloja. Un miembro sacado del clúster deja de alojarla. Un miembro retirado no hereda nada, y un clúster retirado no transmite nada.
+Una aplicación puede asignarse a un clúster, desde la pestaña **Despliegues** de la aplicación o la pestaña **Operaciones** del clúster. Sus miembros en servicio alojan entonces la aplicación con el rol de la asignación del clúster. Un miembro añadido más tarde también la aloja. Un miembro sacado del clúster deja de alojarla. Un miembro retirado no hereda nada, y un clúster retirado no transmite nada.
 
 Dónde asignar depende del clúster:
 
@@ -107,7 +107,7 @@ Cuando asigna una aplicación a un miembro de un clúster, KANAP pregunta **¿As
 
 Allí donde KANAP lee dónde se ejecuta una aplicación, cuenta los miembros del clúster: las vulnerabilidades y el fin de soporte de la aplicación, su tipo de alojamiento (un clúster sin ubicación toma el tipo de alojamiento de sus miembros), las zonas de administración, las aplicaciones de una ubicación o de un contrato sobre un servidor, el asistente y Conocimiento. En el impacto de un miembro caído, el clúster queda degradado y sus aplicaciones siguen funcionando. Consulte [Dependencias](#dependencies).
 
-Los miembros se gestionan en la parte superior de la pestaña **Operación** del clúster. Consulte [Operación](#operations). Las reglas:
+Los miembros se gestionan en la parte superior de la pestaña **Operaciones** del clúster. Consulte [Operaciones](#operations). Las reglas:
 
 - Un miembro es un activo simple. Un clúster no puede ser miembro, y un activo no puede ser miembro de sí mismo.
 - Un clúster que tiene miembros no puede volver a ser un activo simple: quite primero sus miembros.
@@ -138,7 +138,7 @@ Antes de eliminar un activo, la confirmación indica lo que se va con él: los c
 
 Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un **encabezado** con metadatos rápidos, un **panel de propiedades** a la derecha (la tarjeta de identidad del activo, siempre visible) y un **área de contenido** en el centro que cambia con cada pestaña.
 
-Las pestañas son **Vista general**, **Operación**, **Red**, **Hardware** (solo para tipos de activos físicos), **Dependencias** y **Relaciones**. Al crear un activo, **Vista general** y **Red** están abiertas. Las demás pestañas se abren en cuanto hace clic en **Crear**.
+Las pestañas son **Vista general**, **Operaciones**, **Red**, **Hardware** (solo para tipos de activos físicos), **Dependencias** y **Relaciones**. Al crear un activo, **Vista general** y **Red** están abiertas. Las demás pestañas se abren en cuanto hace clic en **Crear**.
 
 ### Encabezado
 
@@ -197,9 +197,9 @@ La pestaña Vista general es la página de inicio del activo.
 
 ---
 
-### Operación { #operations }
+### Operaciones { #operations }
 
-La pestaña Operación muestra el clúster del activo y lo que se ejecuta en él: las aplicaciones que aloja, las tecnologías que lleva y sus vulnerabilidades. Se abre una vez creado el activo.
+La pestaña Operaciones muestra el clúster del activo y lo que se ejecuta en él: las aplicaciones que aloja, las tecnologías que lleva y sus vulnerabilidades. Se abre una vez creado el activo.
 
 **Clúster**, en la parte superior de la pestaña:
 
@@ -313,7 +313,7 @@ Hace seguimiento de los detalles físicos del hardware. Se guarda automáticamen
 
 ### Dependencias { #dependencies }
 
-La pestaña Dependencias muestra la posición del activo entre los demás activos: lo que se detiene con él y sus relaciones con otros activos. Se abre una vez creado el activo. La insignia de la pestaña cuenta las relaciones entre activos. Los miembros de un clúster están en la pestaña [Operación](#operations).
+La pestaña Dependencias muestra la posición del activo entre los demás activos: lo que se detiene con él y sus relaciones con otros activos. Se abre una vez creado el activo. La insignia de la pestaña cuenta las relaciones entre activos. Los miembros de un clúster están en la pestaña [Operaciones](#operations).
 
 **Si este servidor cae**: la pestaña empieza por lo que se detiene con este activo. Una línea de resumen cuenta las aplicaciones, activos, clústeres y procesos de negocio afectados, y después una tabla por tipo:
 
@@ -343,7 +343,7 @@ Con `infrastructure:member`, **Añadir**, a la derecha de una sección, abre una
 
 ### Relaciones
 
-La pestaña Relaciones muestra con qué está vinculado el activo: líneas presupuestarias, contratos, proyectos, tareas e incidentes, cada uno en su propia tabla, y después sus enlaces y archivos. Las relaciones entre activos están en la pestaña [Dependencias](#dependencies), y las tecnologías del activo en la pestaña [Operación](#operations). La pestaña se abre una vez creado el activo. Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta los registros vinculados que puede ver, así como los enlaces y archivos.
+La pestaña Relaciones muestra con qué está vinculado el activo: líneas presupuestarias, contratos, proyectos, tareas e incidentes, cada uno en su propia tabla, y después sus enlaces y archivos. Las relaciones entre activos están en la pestaña [Dependencias](#dependencies), y las tecnologías del activo en la pestaña [Operaciones](#operations). La pestaña se abre una vez creado el activo. Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta los registros vinculados que puede ver, así como los enlaces y archivos.
 
 **Registros vinculados**, una tabla cada uno:
 
@@ -512,7 +512,7 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 - **Use clústeres**: Agrupe activos relacionados (p. ej., clúster web, clúster de bases de datos) para simplificar la gestión. Asigne al clúster una aplicación que se ejecuta en cada nodo, y una aplicación de una máquina virtual a esa máquina.
 - **Haga seguimiento del ciclo de vida**: Marque los activos obsoletos y retirados para mantener los conteos de inventario precisos.
 - **Vincule a ubicaciones**: Asigne activos a ubicaciones para que el tipo de alojamiento, país y ciudad se rellenen automáticamente.
-- **Asigne a aplicaciones**: Use la sección **Aplicaciones alojadas** de la pestaña Operación para vincular activos a despliegues de aplicaciones. Las mismas asignaciones aparecen en la pestaña Despliegues de la aplicación.
+- **Asigne a aplicaciones**: Use la sección **Aplicaciones alojadas** de la pestaña Operaciones para vincular activos a despliegues de aplicaciones. Las mismas asignaciones aparecen en la pestaña Despliegues de la aplicación.
 - **Use la pestaña Relaciones**: Conecte activos a líneas presupuestarias, contratos y proyectos para visibilidad financiera.
 - **Vincule tareas aquí**: Añada una tarea en Relaciones > Tareas. El vínculo también aparece en la actividad de la tarea.
 - **Adjunte documentación**: Suba archivos de configuración, diagramas de arquitectura o documentos del proveedor directamente a la pestaña Relaciones.
