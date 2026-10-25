@@ -389,7 +389,7 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml build --pull
 docker compose -f infra/compose.onprem.yml up -d --wait
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 ```
 
 If the build stops with `signal: killed`, the server ran out of memory. `sudo dmesg | grep -i oom` confirms it. Check the free memory with `free -m` and stop the other services that use it. Check that PostgreSQL and the storage still run (`pg_lsclusters`, `systemctl status --no-pager rustfs`). Then restart Docker, which stops what is left of the killed build, build the two images one after the other, which needs less memory, and start KANAP:
@@ -414,7 +414,6 @@ docker compose -f infra/compose.onprem.yml up -d --wait
 [RATE-LIMIT] Client address: taken from X-Forwarded-For behind 1 trusted proxy (RATE_LIMIT_TRUST_PROXY=true)
 [CORS] Configured 1 origin pattern(s)
 [DB] Connected as PostgreSQL role "kanap" with native RLS enforcement
-Admin seeding disabled (set SEED_ADMIN=true to enable)
 [on-prem] Default chart of accounts created
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
@@ -428,7 +427,7 @@ The number of migrations depends on the version, and the pool figures on your Po
 
 The block leaves out the migration lines: about 40 lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: KANAP keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time, and for the source in brackets (for example `LOG [NestApplication]`). Some of these lines end with a duration such as `+0ms`. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
 
-Two lines are expected and need no action: `Admin seeding disabled ...` and, until you configure email, the `EmailService` warning. A `[SECURITY]`, `[CONFIG]`, `[CORS]` or `[ENV] APP_ENV is not set` warning means a setting needs attention: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains every line.
+Until you configure email, the `EmailService` warning is expected and needs no action. A `[SECURITY]`, `[CONFIG]`, `[CORS]` or `[ENV] APP_ENV is not set` warning means a setting needs attention: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains every line.
 
 ---
 

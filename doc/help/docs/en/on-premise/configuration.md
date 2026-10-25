@@ -18,7 +18,7 @@ docker compose -f infra/compose.onprem.yml up -d api
 |----------|-------------|---------|
 | `DEPLOYMENT_MODE` | **Must be `single-tenant`** for on-premise deployments | `single-tenant` |
 
-Write the value exactly. A misspelled value (`single_tenant`) starts KANAP in cloud mode without any warning.
+Write `single-tenant` or `multi-tenant`. Leave the variable unset for multi-tenant, the cloud default. Any other value, including a misspelling such as `single_tenant`, stops the API at start. The message names the accepted values.
 
 ## Optional: tenant identity
 
@@ -95,7 +95,7 @@ If `CORS_ORIGINS` and the application address (`APP_BASE_URL`) are both missing 
 
 Set `APP_ENV=production` when users reach KANAP over HTTPS, which is the documented setup. If `NODE_ENV` is set and `APP_ENV` is not, KANAP reads `NODE_ENV` instead.
 
-**Start-up checks.** The API refuses to start if `JWT_SECRET` or `DATABASE_URL` is missing or empty, and, with `APP_ENV=production`, if `APP_BASE_URL` or `CORS_ORIGINS` is missing. It also refuses to run if the PostgreSQL role from `DATABASE_URL` is `SUPERUSER` or `BYPASSRLS`. That last check runs after the migrations, so the migrations have already run with that role when the message appears.
+**Start-up checks.** The API refuses to start if `DEPLOYMENT_MODE` is any value other than `single-tenant`, `multi-tenant` or unset, if `JWT_SECRET` or `DATABASE_URL` is missing or empty, and, with `APP_ENV=production`, if `APP_BASE_URL` or `CORS_ORIGINS` is missing. It also refuses to run if the PostgreSQL role from `DATABASE_URL` is `SUPERUSER` or `BYPASSRLS`. That last check runs after the migrations, so the migrations have already run with that role when the message appears.
 
 ## What the API log shows at start
 
@@ -103,7 +103,7 @@ Read the API log after every start and after every change to `.env`:
 
 ```bash
 cd /opt/kanap
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 ```
 
 The filter keeps the lines below and leaves out the framework details. Without it, `docker compose -f infra/compose.onprem.yml logs api` shows everything.
@@ -122,7 +122,6 @@ The filter keeps the lines below and leaves out the framework details. Without i
 [RATE-LIMIT] Client address: taken from X-Forwarded-For behind 1 trusted proxy (RATE_LIMIT_TRUST_PROXY=true)
 [CORS] Configured 1 origin pattern(s)
 [DB] Connected as PostgreSQL role "kanap" with native RLS enforcement
-Admin seeding disabled (set SEED_ADMIN=true to enable)
 [on-prem] Default chart of accounts created
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
@@ -154,7 +153,6 @@ The number of migrations changes from version to version. On later starts it is 
 | `[CORS] CORS_ORIGINS and APP_BASE_URL are not set: browsers are still allowed from every origin in this version; ...` | Set both. A later version allows only the configured addresses. |
 | `[CORS] CORS_ORIGINS entry ... is a pattern: it is still accepted in this version. ...` | Replace the pattern with the exact address. |
 | `[DB] Connected as PostgreSQL role "kanap" with native RLS enforcement` | Informational. The API uses the application role. |
-| `Admin seeding disabled (set SEED_ADMIN=true to enable)` | Expected on-premise. Nothing to do: the administrator is created from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. |
 | `[on-prem] Default chart of accounts created`, `[on-prem] Created tenant '...'`, `[on-prem] Created administrator account ...`, `[on-prem] Created default subscription (On-Prem)` | First start only. |
 | `[on-prem] Administrator account ... left unchanged: the workspace has an active administrator` | Later starts. Nothing to do. |
 | `[on-prem] Restored ... as an enabled administrator: the workspace had no active administrator (password unchanged)` | A warning. No active administrator was left, so KANAP restored the `ADMIN_EMAIL` account. |
