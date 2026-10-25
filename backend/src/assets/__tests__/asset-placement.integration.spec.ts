@@ -80,12 +80,16 @@ async function storedContains(runner: QueryRunner, tenantId: string): Promise<st
   return rows.map((row) => `${row.asset_id}>${row.related_asset_id}`).sort();
 }
 
+// Rows written in one transaction share created_at: relations compare as a set, sorted by key.
+const sortRelations = (rows: Array<{ related_asset_id: string; relation_type: string }>) =>
+  [...rows].sort((x, y) => `${x.relation_type}|${x.related_asset_id}`.localeCompare(`${y.relation_type}|${y.related_asset_id}`));
+
 async function relationsOf(runner: QueryRunner, tenantId: string, assetId: string): Promise<any[]> {
-  return runner.query(
+  return sortRelations(await runner.query(
     `SELECT related_asset_id, relation_type FROM asset_relations
-      WHERE tenant_id = $1 AND asset_id = $2 ORDER BY created_at, id`,
+      WHERE tenant_id = $1 AND asset_id = $2`,
     [tenantId, assetId],
-  );
+  ));
 }
 
 async function refusal(run: () => Promise<unknown>, runner: QueryRunner): Promise<{ status?: number; code?: string; params?: unknown; message: string }> {
@@ -161,13 +165,11 @@ async function testAbsorption() {
     assert.deepEqual({ table: h1Entry.table, action: h1Entry.action, userId: h1Entry.userId }, {
       table: 'asset_relations', action: 'update', userId: 'user-1',
     });
-    assert.deepEqual(h1Entry.before, {
-      relations: [
-        { related_asset_id: vm1, relation_type: 'contains' },
-        { related_asset_id: vm2, relation_type: 'contains' },
-        { related_asset_id: vm2, relation_type: 'depends_on' },
-      ],
-    });
+    assert.deepEqual(sortRelations((h1Entry.before as any).relations), sortRelations([
+      { related_asset_id: vm1, relation_type: 'contains' },
+      { related_asset_id: vm2, relation_type: 'contains' },
+      { related_asset_id: vm2, relation_type: 'depends_on' },
+    ]));
     assert.deepEqual(h1Entry.after, {
       relations: [{ related_asset_id: vm2, relation_type: 'depends_on' }],
     });
@@ -606,10 +608,10 @@ async function testAssistantRules() {
     const previewId = randomUUID();
     await execute(absorbing, previewId);
     assert.deepEqual(await relationsOf(runner, t, host1), []);
-    assert.deepEqual(await relationsOf(runner, t, cluster), [
+    assert.deepEqual(await relationsOf(runner, t, cluster), sortRelations([
       { related_asset_id: vm2, relation_type: 'contains' },
       { related_asset_id: vm1, relation_type: 'contains' },
-    ]);
+    ]));
     assert.deepEqual(audit.entries.map((entry) => `${entry.recordId}:${(entry as any).source}:${(entry as any).sourceRef}`), [
       `${host1}:ai_chat:${previewId}`,
       `${cluster}:ai_chat:${previewId}`,
@@ -641,10 +643,10 @@ async function testAssistantRules() {
     assert.equal(refused.code, 'placement_inherited');
     assert.deepEqual(await relationsOf(runner, t, host3), [{ related_asset_id: vm3, relation_type: 'contains' }],
       'nothing written for the late member, the earlier link stays');
-    assert.deepEqual(await relationsOf(runner, t, cluster), [
+    assert.deepEqual(await relationsOf(runner, t, cluster), sortRelations([
       { related_asset_id: vm2, relation_type: 'contains' },
       { related_asset_id: vm1, relation_type: 'contains' },
-    ]);
+    ]));
   });
 }
 
