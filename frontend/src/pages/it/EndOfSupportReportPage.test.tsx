@@ -199,6 +199,17 @@ describe('EndOfSupportReportPage', () => {
     expect(document.querySelectorAll('tr.detail')).toHaveLength(1);
   });
 
+  it('shows the servers count the server gives, the one the detail lists', async () => {
+    respond();
+    renderPage();
+    const row = (await screen.findByRole('link', { name: /SQL Server/ })).closest('tr')!;
+    const headers = Array.from(row.closest('table')!.querySelectorAll('thead th')).map((th) => th.textContent);
+    const servers = row.querySelectorAll('td')[headers.indexOf('Servers')];
+    expect(servers.textContent).toBe(String(SQL.server_count));
+    fireEvent.click(row);
+    expect(within(row.nextElementSibling as HTMLElement).getAllByRole('link', { name: /^SRV-/ })).toHaveLength(SQL.server_count);
+  });
+
   it('shows the short type label, the full one on hover', async () => {
     respond();
     renderPage();

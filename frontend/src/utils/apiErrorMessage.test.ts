@@ -101,11 +101,37 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(date, fr, 'fallback')).toBe('La date « Depuis » n’est pas une date valide.');
     const inUse = { response: { status: 409, data: { code: 'DEPLOYMENT_IN_USE', message: 'Cannot delete', usages: [{ type: 'server_assignments', total: 2 }] } } };
     expect(getApiErrorMessage(inUse, t, 'fallback')).toMatch(/^This deployment still has 2 .+\. Remove them first\.$/);
-    for (const code of ['assignment_duplicate', 'assignment_cluster', 'assignment_role_invalid', 'deployment_environment_taken', 'deployment_lifecycle_invalid', 'date_invalid']) {
+    const inherited = { response: { status: 409, data: { code: 'assignment_inherited', message: 'Already inherited', params: { cluster: 'ESX Paris' } } } };
+    expect(getApiErrorMessage(inherited, fr, 'fallback')).toBe('Déjà hébergée par ce serveur via ESX Paris.');
+    for (const code of ['assignment_duplicate', 'assignment_inherited', 'assignment_role_invalid', 'deployment_environment_taken', 'deployment_lifecycle_invalid', 'date_invalid']) {
       for (const language of ['en', 'fr', 'de', 'es']) {
-        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', environment: 'prod', field: 'since_date' } } } }, i18n.getFixedT(language), 'fallback');
+        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', environment: 'prod', field: 'since_date', cluster: 'ESX Paris' } } } }, i18n.getFixedT(language), 'fallback');
         expect(text, `${code} in ${language}`).not.toBe('server words');
         expect(text).not.toMatch(/{{|since_date|\bprod\b/);
+      }
+    }
+  });
+
+  it('translates the cluster refusals, with their values', () => {
+    const fr = i18n.getFixedT('fr');
+    const members = { response: { status: 400, data: { code: 'cluster_has_members', message: 'server words', params: { count: 3 } } } };
+    expect(getApiErrorMessage(members, fr, 'fallback')).toBe('Retirez d\'abord ses 3 membres.');
+    expect(getApiErrorMessage(members, t, 'fallback')).toBe('Remove its 3 members first.');
+    const member = { response: { status: 400, data: { code: 'cluster_switch_member', message: 'server words', params: { cluster: 'ESX-PAR' } } } };
+    expect(getApiErrorMessage(member, fr, 'fallback')).toBe('Membre de ESX-PAR : il ne peut pas devenir un cluster.');
+    const os = { response: { status: 400, data: { code: 'os_cluster_with_members', message: 'server words' } } };
+    expect(getApiErrorMessage(os, fr, 'fallback')).toBe('Ce cluster a des membres : pas de système d\'exploitation.');
+    const codes = [
+      'cluster_has_members', 'cluster_switch_member', 'cluster_member_self', 'cluster_member_is_cluster',
+      'cluster_member_not_found', 'cluster_os_with_members', 'os_cluster_with_members',
+      'CSV_CLUSTER_NOT_FOUND', 'CSV_CLUSTER_AMBIGUOUS', 'CSV_CLUSTER_NOT_A_CLUSTER',
+    ];
+    for (const code of codes) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const params = { count: 1, cluster: 'ESX-PAR', name: 'ESX-LYO', os: 'Ubuntu 22.04' };
+        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params } } }, i18n.getFixedT(language), 'fallback');
+        expect(text, `${code} in ${language}`).not.toBe('server words');
+        expect(text).not.toMatch(/{{|—/);
       }
     }
   });

@@ -75,6 +75,7 @@ export default function AssetDependenciesTab({
       }),
       kind: direction,
       title: t(`workspace.asset.relations.${key}`),
+      hint: direction === 'contains' ? t('workspace.asset.relations.containsHint') : undefined,
       empty: t(`workspace.asset.relations.empty.${key}`),
       // An asset never relates to itself: the picker leaves it out.
       linkedIds: (rows) => new Set([assetId, ...rows.map((row) => row.id)]),

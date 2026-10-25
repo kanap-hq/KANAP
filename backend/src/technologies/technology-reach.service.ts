@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import type { LinkSource } from '../common/link-provenance';
 
 /**
@@ -15,10 +16,18 @@ import type { LinkSource } from '../common/link-provenance';
  * at most `MAX_DEPTH` edges away, never twice on one path (a `contains` cycle A <-> B stops). Every
  * reached asset keeps the asset the technology is installed on (`via`, null on that asset itself)
  * and the version of that link (null when unknown). The applications of a technology are those
- * assigned to a reached asset (hosted), plus those that declare it (`application_technologies`).
+ * that run on a reached asset (hosted), plus those that declare it (`application_technologies`).
+ * The servers an application runs on are its effective assignments (`effectiveAssignmentsSql`): an
+ * instance assigned to a cluster runs on the cluster and on its members in service. The fragment
+ * is only called inside the methods, never at load (it imports `assetInServiceSql` from here).
  *
  * Retired assets (`assetInServiceSql`) take no part: their links count for nothing, and no edge
  * leads to or from them, so the traversal stops there.
+ *
+ * A path through at least one `contains` edge brings the platform underneath (`through_host`: the
+ * ESXi of the host a VM runs on), not a technology of the asset itself; the member edges keep the
+ * same layer of machine (the Windows of a cluster's members). A technology and version reached by
+ * two paths, one of them without `contains`, is not through a host.
  *
  * Over-approximation is assumed and shown: an application on a server carrying SQL Server 2016 and
  * 2019 is listed with both. Each statement is static SQL, carries `tenant_id` on every table and
@@ -35,47 +44,106 @@ export function assetInServiceSql(alias: string): string {
   return `${alias}.status IS DISTINCT FROM 'retired'`;
 }
 
-/** Joins the asset `alias` = `idExpr` of the tenant `$1`, in service. */
-const ASSET_IN_SERVICE_JOIN = (alias: string, idExpr: string) =>
-  `JOIN assets ${alias} ON ${alias}.tenant_id = $1 AND ${alias}.id = ${idExpr} AND ${assetInServiceSql(alias)}`;
+/** Joins the asset `alias` = `idExpr` of the tenant `tenant` (`$1` by default), in service. */
+const ASSET_IN_SERVICE_JOIN = (alias: string, idExpr: string, tenant = '$1') =>
+  `JOIN assets ${alias} ON ${alias}.tenant_id = ${tenant} AND ${alias}.id = ${idExpr} AND ${assetInServiceSql(alias)}`;
 
-/** The "carries" edges of the tenant `$1` between assets in service: `carrier` carries `carried`. */
-const EDGES = `(
-  SELECT r.asset_id AS carrier, r.related_asset_id AS carried
+/**
+ * The "carries" edges of the tenant `tenant` between assets in service: `carrier` carries `carried`,
+ * `kind` the link (`contains`: a host and its VM; `member`: a member and its cluster).
+ */
+const edgesSql = (tenant: string) => `(
+  SELECT r.asset_id AS carrier, r.related_asset_id AS carried, 'contains' AS kind
     FROM asset_relations r
-    ${ASSET_IN_SERVICE_JOIN('ec', 'r.asset_id')}
-    ${ASSET_IN_SERVICE_JOIN('ed', 'r.related_asset_id')}
-   WHERE r.tenant_id = $1 AND r.relation_type = 'contains'
+    ${ASSET_IN_SERVICE_JOIN('ec', 'r.asset_id', tenant)}
+    ${ASSET_IN_SERVICE_JOIN('ed', 'r.related_asset_id', tenant)}
+   WHERE r.tenant_id = ${tenant} AND r.relation_type = 'contains'
   UNION ALL
-  SELECT m.asset_id, m.cluster_id
+  SELECT m.asset_id, m.cluster_id, 'member'
     FROM asset_cluster_members m
-    ${ASSET_IN_SERVICE_JOIN('ec', 'm.asset_id')}
-    ${ASSET_IN_SERVICE_JOIN('ed', 'm.cluster_id')}
-   WHERE m.tenant_id = $1
+    ${ASSET_IN_SERVICE_JOIN('ec', 'm.asset_id', tenant)}
+    ${ASSET_IN_SERVICE_JOIN('ed', 'm.cluster_id', tenant)}
+   WHERE m.tenant_id = ${tenant}
 )`;
+const EDGES = edgesSql('$1');
 
-/** Down the edges from the installed links of the technologies `$2`: one row per reached asset and link. */
-export const REACH_FROM_TECHNOLOGIES = `
+/**
+ * Down the edges from the installed links of the technologies `technology` names (a condition on
+ * `at.technology_id`) in the tenant `tenant`: one row per reached asset and path, `through_host`
+ * true when the path crosses a `contains` edge.
+ */
+const reachFromTechnologiesSql = (tenant: string, technology: string) => `
   reach AS (
     SELECT at.technology_id, at.id AS link_id, at.asset_id, at.asset_id AS installed_on, at.technology_version_id,
-           at.source, 0 AS depth, ARRAY[at.asset_id] AS path
+           at.source, 0 AS depth, ARRAY[at.asset_id] AS path, false AS through_host
       FROM asset_technologies at
-      ${ASSET_IN_SERVICE_JOIN('a0', 'at.asset_id')}
-     WHERE at.tenant_id = $1 AND at.technology_id = ANY($2::uuid[])
+      ${ASSET_IN_SERVICE_JOIN('a0', 'at.asset_id', tenant)}
+     WHERE at.tenant_id = ${tenant} AND at.technology_id ${technology}
     UNION ALL
-    SELECT r.technology_id, r.link_id, e.carried, r.installed_on, r.technology_version_id, r.source, r.depth + 1, r.path || e.carried
+    SELECT r.technology_id, r.link_id, e.carried, r.installed_on, r.technology_version_id, r.source, r.depth + 1, r.path || e.carried,
+           r.through_host OR e.kind = 'contains'
       FROM reach r
-      JOIN ${EDGES} e ON e.carrier = r.asset_id
+      JOIN ${edgesSql(tenant)} e ON e.carrier = r.asset_id
      WHERE r.depth < ${MAX_DEPTH} AND NOT e.carried = ANY(r.path)
   )`;
 
-/** Up the edges from the assets `$2`: one row per asset and carrier (the asset itself at depth 0). */
+/** `reachFromTechnologiesSql` over the technologies `$2` of the tenant `$1`. */
+export const REACH_FROM_TECHNOLOGIES = reachFromTechnologiesSql('$1', '= ANY($2::uuid[])');
+
+/**
+ * The servers of the technologies `technology` names (a condition on `at.technology_id`) in the
+ * tenant `tenant` (decision of 2026-10-24, amending Q3 of the clusters pass): the assets in service
+ * the technology is installed on (a direct link), clusters excluded. What the graph carries (the VMs
+ * of a host, a cluster) does not count. One row per technology, version and server. The list, the
+ * record, the versions, the end of support report and the assistant count these; the Servers tab of
+ * a technology still lists the clusters and the carried assets.
+ */
+const serversOfTechnologiesSql = (tenant: string, technology: string) => `
+  servers_of AS (
+    SELECT DISTINCT at.technology_id, at.technology_version_id, at.asset_id
+      FROM asset_technologies at
+      JOIN assets sa ON sa.tenant_id = ${tenant} AND sa.id = at.asset_id AND ${assetInServiceSql('sa')} AND sa.is_cluster IS NOT TRUE
+     WHERE at.tenant_id = ${tenant} AND at.technology_id ${technology}
+  )`;
+const SERVERS_OF_TECHNOLOGIES = serversOfTechnologiesSql('$1', '= ANY($2::uuid[])');
+
+/**
+ * The servers (`serversOfTechnologiesSql`) of the technologies of the tenant `tenant` that
+ * `technology` names (a condition on `at.technology_id`, every technology by default), as a
+ * derived table to join on `technology_id`, one row per technology that has a server: `servers`,
+ * and `version_servers`, the servers of each version (version id to count, a version with no
+ * server absent). One statement: the assistant's list, its sort, its filters and its aggregates
+ * join it.
+ */
+export function technologyServerFiguresSql(tenant: string, technology = 'IS NOT NULL'): string {
+  return `(WITH ${serversOfTechnologiesSql(tenant, technology)},
+           per_technology AS (
+             SELECT technology_id, count(DISTINCT asset_id)::int AS servers FROM servers_of GROUP BY technology_id
+           ),
+           per_version AS (
+             SELECT technology_id, technology_version_id, count(DISTINCT asset_id)::int AS servers
+               FROM servers_of WHERE technology_version_id IS NOT NULL
+              GROUP BY technology_id, technology_version_id
+           ),
+           version_servers AS (
+             SELECT technology_id, jsonb_object_agg(technology_version_id, servers) AS version_servers
+               FROM per_version GROUP BY technology_id
+           )
+           SELECT pt.technology_id, pt.servers, COALESCE(vs.version_servers, '{}'::jsonb) AS version_servers
+             FROM per_technology pt
+             LEFT JOIN version_servers vs ON vs.technology_id = pt.technology_id)`;
+}
+
+/**
+ * Up the edges from the assets `$2`: one row per asset, carrier and path (the asset itself at depth
+ * 0), `through_host` true when the path crosses a `contains` edge.
+ */
 const CARRIERS_OF_ASSETS = `
   up AS (
-    SELECT a.id AS asset_id, a.id AS carrier_id, 0 AS depth, ARRAY[a.id] AS path
+    SELECT a.id AS asset_id, a.id AS carrier_id, 0 AS depth, ARRAY[a.id] AS path, false AS through_host
       FROM assets a WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[]) AND ${assetInServiceSql('a')}
     UNION ALL
-    SELECT u.asset_id, e.carrier, u.depth + 1, u.path || e.carrier
+    SELECT u.asset_id, e.carrier, u.depth + 1, u.path || e.carrier, u.through_host OR e.kind = 'contains'
       FROM up u
       JOIN ${EDGES} e ON e.carried = u.carrier_id
      WHERE u.depth < ${MAX_DEPTH} AND NOT e.carrier = ANY(u.path)
@@ -92,6 +160,8 @@ export type ReachedAsset = {
   link_id: string | null;
   source: LinkSource;
   depth: number;
+  /** Carried through at least one `contains` edge on every path (the platform underneath); false when installed. */
+  through_host: boolean;
 };
 
 /** An application of the technology, hosted on a reached asset or declaring it. */
@@ -121,16 +191,27 @@ export type ReachingTechnology = {
   environment: string | null;
   /** Hosted (applications): the server the instance is assigned to. */
   asset_id: string | null;
-  /** Carried or hosted through a carrier: the asset the technology is installed on. */
+  /** Carried or hosted through a carrier: the asset the technology is installed on (the first of `via_asset_ids`). */
   via_asset_id: string | null;
+  /**
+   * Carried to an asset: every asset that carries this technology and version to it (a host, the
+   * members of a cluster), by name. Null otherwise.
+   */
+  via_asset_ids?: string[] | null;
   link_id: string | null;
   source: LinkSource;
   /** True when this installed link is the server's operating system. */
   is_operating_system?: boolean;
+  /**
+   * Carried to an asset: true when every path that brings this technology and version crosses a
+   * `contains` edge (the platform underneath: the hypervisor of the host). False otherwise.
+   */
+  through_host?: boolean;
 };
 
 export type TechnologyCounts = {
   technology_id: string;
+  /** Assets in service it is installed on, clusters excluded (`serversOfTechnologiesSql`). */
   servers: number;
   applications: number;
   versions_in_use: number;
@@ -157,16 +238,19 @@ const DECLARED_IN_SERVICE = `EXISTS (SELECT 1 FROM applications ap WHERE ap.tena
 
 const DAY = (expr: string) => `to_char(${expr}, 'YYYY-MM-DD')`;
 
-/** Distinct reached assets, keeping for each one the shortest path (direct links first). */
+/**
+ * Distinct reached assets, keeping for each one a path without `contains` when there is one, then
+ * the shortest (direct links first).
+ */
 const REACHED_ASSETS_SELECT = `
   SELECT DISTINCT ON (r.technology_id, r.asset_id, r.technology_version_id, r.installed_on)
          r.technology_id, r.asset_id,
          CASE WHEN r.depth = 0 THEN NULL ELSE r.installed_on END AS via_asset_id,
          r.technology_version_id,
          CASE WHEN r.depth = 0 THEN r.link_id ELSE NULL END AS link_id,
-         r.source, r.depth
+         r.source, r.depth, r.through_host
     FROM reach r
-   ORDER BY r.technology_id, r.asset_id, r.technology_version_id, r.installed_on, r.depth`;
+   ORDER BY r.technology_id, r.asset_id, r.technology_version_id, r.installed_on, r.through_host, r.depth`;
 
 /**
  * Runs a deduction with JIT compilation off for this statement. The planner cannot estimate a
@@ -225,22 +309,36 @@ export class TechnologyReachService {
   }
 
   /**
-   * The applications of each technology of `technologyIds`: hosted (an instance assigned to a
-   * reached asset, per environment, server and version) and declared.
+   * The applications of each technology of `technologyIds`: hosted (an instance running on a
+   * reached asset, effective assignments, per environment, server and version) and declared.
+   *
+   * An instance starts from its effective servers: a path that passes through another of them
+   * (the node of a cluster the instance runs on, carrying its technologies to the cluster) brings
+   * nothing that server's own row does not, and is left out. A reached asset keeps a row while one
+   * path to it passes through none; its provenance is that path's.
    */
   async applicationsOfTechnologies(mg: EntityManager, tenantId: string, technologyIds: string[]): Promise<ReachedApplication[]> {
     if (technologyIds.length === 0) return [];
-    return withoutJit(mg, 
+    return withoutJit(mg,
       `WITH RECURSIVE ${REACH_FROM_TECHNOLOGIES},
-       reached AS (${REACHED_ASSETS_SELECT})
-       SELECT r.technology_id, i.application_id, 'hosted' AS kind, i.environment, r.asset_id, r.via_asset_id,
-              r.technology_version_id, NULL::uuid AS link_id, r.source
-         FROM reached r
-         -- One row per instance and server, whatever the roles (no DISTINCT over the whole result:
-         -- the recursive estimate is far too high and its hash table alone costs more than the query).
-         JOIN (SELECT DISTINCT a.app_instance_id, a.asset_id FROM app_asset_assignments a WHERE a.tenant_id = $1) x ON x.asset_id = r.asset_id
-         JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
-         ${HOSTING_IN_SERVICE}
+       -- One row per instance and server, whatever the roles.
+       eff AS MATERIALIZED (SELECT DISTINCT a.app_instance_id, a.asset_id FROM (${effectiveAssignmentsSql({ tenant: '$1' })}) a)
+       SELECT h.technology_id, h.application_id, 'hosted' AS kind, h.environment, h.asset_id, h.via_asset_id,
+              h.technology_version_id, NULL::uuid AS link_id, h.source
+         FROM (
+           SELECT DISTINCT ON (r.technology_id, x.app_instance_id, r.asset_id, r.technology_version_id, r.installed_on)
+                  r.technology_id, i.application_id, i.environment, r.asset_id,
+                  CASE WHEN r.depth = 0 THEN NULL ELSE r.installed_on END AS via_asset_id,
+                  r.technology_version_id, r.source
+             FROM reach r
+             JOIN eff x ON x.asset_id = r.asset_id
+             JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
+             ${HOSTING_IN_SERVICE}
+            WHERE r.depth = 0
+               OR NOT EXISTS (SELECT 1 FROM eff y
+                               WHERE y.app_instance_id = x.app_instance_id AND y.asset_id = ANY(r.path) AND y.asset_id <> r.asset_id)
+            ORDER BY r.technology_id, x.app_instance_id, r.asset_id, r.technology_version_id, r.installed_on, r.through_host, r.depth
+         ) h
        UNION ALL
        SELECT d.technology_id, d.application_id, 'declared', NULL, NULL, NULL, d.technology_version_id, d.id, d.source
          FROM application_technologies d
@@ -250,29 +348,52 @@ export class TechnologyReachService {
   }
 
   /**
-   * The technologies of each asset of `assetIds`: installed on it, or carried to it by the graph
-   * (`via` the asset they are installed on).
+   * The technologies of each asset of `assetIds`: installed on it (one row per link), or carried to
+   * it by the graph, one row per technology and version with every asset that carries it
+   * (`via_asset_ids`, by name; `via_asset_id` the first, `link_id` and `source` its link's): a
+   * cluster gets one row for a version its members carry, whatever their number (K2-1).
    */
   async technologiesOfAssets(mg: EntityManager, tenantId: string, assetIds: string[]): Promise<ReachingTechnology[]> {
     if (assetIds.length === 0) return [];
     return withoutJit(mg, 
-      `WITH RECURSIVE ${CARRIERS_OF_ASSETS}
-       SELECT DISTINCT ON (u.asset_id, at.id)
-              u.asset_id AS subject_id, at.technology_id,
-              CASE WHEN u.depth = 0 THEN 'installed' ELSE 'carried' END AS kind,
-              at.technology_version_id, NULL::text AS environment, NULL::uuid AS asset_id,
-              CASE WHEN u.depth = 0 THEN NULL ELSE u.carrier_id END AS via_asset_id,
-              at.id AS link_id, at.source, at.is_operating_system
-         FROM up u
-         JOIN asset_technologies at ON at.tenant_id = $1 AND at.asset_id = u.carrier_id
-        ORDER BY u.asset_id, at.id, u.depth`,
+      `WITH RECURSIVE ${CARRIERS_OF_ASSETS},
+       found AS (
+         SELECT DISTINCT ON (u.asset_id, at.id) u.asset_id, u.carrier_id, u.depth, u.through_host, at.id AS link_id, at.technology_id,
+                at.technology_version_id, at.source, at.is_operating_system
+           FROM up u
+           JOIN asset_technologies at ON at.tenant_id = $1 AND at.asset_id = u.carrier_id
+          ORDER BY u.asset_id, at.id, u.through_host, u.depth
+       )
+       SELECT f.asset_id AS subject_id, f.technology_id, 'installed' AS kind, f.technology_version_id,
+              NULL::text AS environment, NULL::uuid AS asset_id, NULL::uuid AS via_asset_id, NULL::uuid[] AS via_asset_ids,
+              f.link_id, f.source, f.is_operating_system, false AS through_host
+         FROM found f
+        WHERE f.depth = 0
+       UNION ALL
+       SELECT c.asset_id, c.technology_id, 'carried', c.technology_version_id, NULL, NULL,
+              c.via_asset_ids[1], c.via_asset_ids, c.link_ids[1], c.sources[1], false, c.through_host
+         FROM (
+           -- One line per technology and version: through a host only when every carrier is.
+           SELECT f.asset_id, f.technology_id, f.technology_version_id,
+                  array_agg(f.carrier_id ORDER BY lower(ca.name), ca.id) AS via_asset_ids,
+                  array_agg(f.link_id ORDER BY lower(ca.name), ca.id) AS link_ids,
+                  array_agg(f.source ORDER BY lower(ca.name), ca.id) AS sources,
+                  bool_and(f.through_host) AS through_host
+             FROM found f
+             JOIN assets ca ON ca.tenant_id = $1 AND ca.id = f.carrier_id
+            WHERE f.depth > 0
+            GROUP BY f.asset_id, f.technology_id, f.technology_version_id
+         ) c`,
       [tenantId, assetIds],
     );
   }
 
   /**
    * The technologies of each application of `applicationIds`: declared, and hosted (installed on
-   * or carried to a server an instance is assigned to, per environment and server).
+   * or carried to a server an instance runs on, effective assignments, per environment and server).
+   * As in `applicationsOfTechnologies`, a path from a server up to the asset a technology is
+   * installed on that passes through another server of the application and environment (a cluster
+   * the application runs on, carried by its nodes) is left out: that server's own row brings it.
    */
   async technologiesOfApplications(mg: EntityManager, tenantId: string, applicationIds: string[]): Promise<ReachingTechnology[]> {
     if (applicationIds.length === 0) return [];
@@ -280,7 +401,7 @@ export class TechnologyReachService {
       `WITH RECURSIVE servers AS (
          SELECT DISTINCT i.application_id, i.environment, x.asset_id
            FROM app_instances i
-           JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.app_instance_id = i.id
+           JOIN (${effectiveAssignmentsSql({ tenant: '$1', applications: '$2' })}) x ON x.tenant_id = $1 AND x.app_instance_id = i.id
            ${ASSET_IN_SERVICE_JOIN('sa', 'x.asset_id')}
            ${HOSTING_IN_SERVICE}
           WHERE i.tenant_id = $1 AND i.application_id = ANY($2::uuid[])
@@ -294,19 +415,24 @@ export class TechnologyReachService {
            JOIN ${EDGES} e ON e.carried = u.carrier_id
           WHERE u.depth < ${MAX_DEPTH} AND NOT e.carrier = ANY(u.path)
        ),
-       carried AS (
-         SELECT DISTINCT ON (u.asset_id, at.id) u.asset_id, u.carrier_id, u.depth, at.id AS link_id, at.technology_id,
+       hosted AS (
+         SELECT DISTINCT ON (s.application_id, s.environment, s.asset_id, at.id)
+                s.application_id, s.environment, s.asset_id, u.carrier_id, u.depth, at.technology_id,
                 at.technology_version_id, at.source
-           FROM up u
+           FROM servers s
+           JOIN up u ON u.asset_id = s.asset_id
            JOIN asset_technologies at ON at.tenant_id = $1 AND at.asset_id = u.carrier_id
-          ORDER BY u.asset_id, at.id, u.depth
+          WHERE u.depth = 0
+             OR NOT EXISTS (SELECT 1 FROM servers s2
+                             WHERE s2.application_id = s.application_id AND s2.environment IS NOT DISTINCT FROM s.environment
+                               AND s2.asset_id = ANY(u.path) AND s2.asset_id <> s.asset_id)
+          ORDER BY s.application_id, s.environment, s.asset_id, at.id, u.depth
        )
-       SELECT s.application_id AS subject_id, c.technology_id, 'hosted' AS kind, c.technology_version_id,
-              s.environment, s.asset_id,
+       SELECT c.application_id AS subject_id, c.technology_id, 'hosted' AS kind, c.technology_version_id,
+              c.environment, c.asset_id,
               CASE WHEN c.depth = 0 THEN NULL ELSE c.carrier_id END AS via_asset_id,
               NULL::uuid AS link_id, c.source
-         FROM servers s
-         JOIN carried c ON c.asset_id = s.asset_id
+         FROM hosted c
        UNION ALL
        SELECT d.application_id, d.technology_id, 'declared', d.technology_version_id, NULL, NULL, NULL, d.id, d.source
          FROM application_technologies d
@@ -316,7 +442,20 @@ export class TechnologyReachService {
   }
 
   /**
-   * The counters of the technology list for a page of ids, in one statement: servers reached,
+   * The servers of each technology of `technologyIds` (`serversOfTechnologiesSql`): one row per
+   * technology, version and server in service it is installed on, clusters excluded.
+   */
+  async serversOfTechnologies(mg: EntityManager, tenantId: string, technologyIds: string[]): Promise<Array<{ technology_id: string; technology_version_id: string | null; asset_id: string }>> {
+    if (technologyIds.length === 0) return [];
+    return mg.query(
+      `WITH ${SERVERS_OF_TECHNOLOGIES}
+       SELECT technology_id, technology_version_id, asset_id FROM servers_of`,
+      [tenantId, technologyIds],
+    );
+  }
+
+  /**
+   * The counters of the technology list for a page of ids, in one statement: servers (`serversOfTechnologiesSql`),
    * applications (hosted or declared), versions in use (on an asset or declared), the next
    * standard end of support among them and how many have ended.
    */
@@ -325,15 +464,16 @@ export class TechnologyReachService {
     if (technologyIds.length === 0) return out;
     const rows: Array<Record<string, any>> = await withoutJit(mg, 
       `WITH RECURSIVE ${REACH_FROM_TECHNOLOGIES},
+       ${SERVERS_OF_TECHNOLOGIES},
        servers AS (
-         SELECT r.technology_id, count(DISTINCT r.asset_id)::int AS servers FROM reach r GROUP BY r.technology_id
+         SELECT s.technology_id, count(DISTINCT s.asset_id)::int AS servers FROM servers_of s GROUP BY s.technology_id
        ),
        apps AS (
          SELECT h.technology_id, count(DISTINCT h.application_id)::int AS applications
            FROM (
              SELECT r.technology_id, i.application_id
                FROM reach r
-               JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.asset_id = r.asset_id
+               JOIN (${effectiveAssignmentsSql({ tenant: '$1' })}) x ON x.tenant_id = $1 AND x.asset_id = r.asset_id
                JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
                ${HOSTING_IN_SERVICE}
              UNION ALL

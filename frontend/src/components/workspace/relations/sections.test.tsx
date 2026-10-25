@@ -4,7 +4,7 @@ import type { TFunction } from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
 import { formatAmount } from '../../../i18n/formatters';
 import api from '../../../api';
-import { budgetLinesSection, searchRelationItems } from './sections';
+import { assetsSection, budgetLinesSection, searchRelationItems } from './sections';
 import type { BudgetLineRow } from './types';
 
 vi.mock('../../../api', () => ({ default: { get: vi.fn() } }));
@@ -66,6 +66,26 @@ describe('relation picker search', () => {
     } as never);
     const options = await searchRelationItems('/portfolio/projects', 'project', (row) => row.name ?? '')('');
     expect(options.map((option) => option.ref)).toEqual(['PRJ-3', 'PRJ-9', 'PRJ-14', null]);
+  });
+});
+
+describe('asset relation picker', () => {
+  it('names a cluster as the server pickers do, and leaves a plain asset as it is', async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { items: [
+        { id: 'a-1', name: 'QA-CL-A', asset_reference: 'AST-71', is_cluster: true },
+        { id: 'a-2', name: 'QA-VM1', asset_reference: 'AST-74', is_cluster: false },
+        { id: 'a-3', name: 'QA-VM2', asset_reference: 'AST-75' },
+      ] },
+    } as never);
+    const label = (code?: string | null) => code ?? '';
+    const section = assetsSection({ t, rows: [], kindLabel: label, environmentLabel: label, statusLabel: label });
+    const options = await section.search!('QA');
+    expect(options).toEqual([
+      { id: 'a-1', label: 'common:selects.cluster QA-CL-A', ref: 'AST-71' },
+      { id: 'a-2', label: 'QA-VM1', ref: 'AST-74' },
+      { id: 'a-3', label: 'QA-VM2', ref: 'AST-75' },
+    ]);
   });
 });
 

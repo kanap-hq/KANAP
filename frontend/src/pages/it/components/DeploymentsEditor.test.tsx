@@ -74,6 +74,7 @@ const serversPayload = {
 /** Routes the reads: the deployments' servers, then the server picker's search. */
 function routeGets(url: string) {
   if (url.endsWith('/deployment-servers')) return Promise.resolve({ data: serversPayload });
+  if (url.endsWith('/clusters') || url.endsWith('/members')) return Promise.resolve({ data: { items: [] } });
   return Promise.resolve({ data: { items: [{ id: 'srv-9', name: 'PAR-ESX-09', environment: 'prod', kind: 'vm', provider: 'on_prem' }] } });
 }
 

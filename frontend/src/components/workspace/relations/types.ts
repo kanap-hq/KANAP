@@ -103,6 +103,8 @@ export type RelationTotal = { key: string; label: React.ReactNode; cells: Record
 export type SectionSpec<T extends AnyRow> = {
   kind: string;
   title: string;
+  /** One sentence in a tooltip after the title. */
+  hint?: string;
   empty: string;
   searchPlaceholder: string;
   rows: T[] | null;

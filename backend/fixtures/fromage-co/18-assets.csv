@@ -13,8 +13,8 @@ PAR-WEB-01;PAR-DC1;Virtual Machine;prod;false;active;2021-06-01;;par-web-01.from
 PAR-MON-01;PAR-DC1;Virtual Machine;prod;false;active;2019-01-01;;par-mon-01.fromage-co.local;Windows Server 2022;PRTG Network Monitor — monitors all on-prem infrastructure
 PAR-BKP-01;PAR-DC1;Virtual Machine;prod;false;active;2019-03-01;;par-bkp-01.fromage-co.local;Windows Server 2022;Veeam Backup & Replication server — RPO 4h / RTO 8h
 PAR-AD-01;PAR-DC1;Virtual Machine;prod;false;active;2016-06-01;;par-ad-01.fromage-co.local;Windows Server 2022;Active Directory domain controller + DNS + DHCP
-PAR-FW-01;PAR-DC1;Firewall;prod;true;active;2021-01-01;;par-fw-01.fromage-co.local;FortiOS 7.4;FortiGate 200F — primary firewall, HA active-passive pair
-PAR-FW-02;PAR-DC1;Firewall;prod;true;active;2021-01-01;;par-fw-02.fromage-co.local;FortiOS 7.4;FortiGate 200F — secondary firewall, HA passive
+PAR-FW-01;PAR-DC1;Firewall;prod;false;active;2021-01-01;;par-fw-01.fromage-co.local;FortiOS 7.4;FortiGate 200F — primary firewall, HA active-passive pair
+PAR-FW-02;PAR-DC1;Firewall;prod;false;active;2021-01-01;;par-fw-02.fromage-co.local;FortiOS 7.4;FortiGate 200F — secondary firewall, HA passive
 GOU-ESX-01;GOU-DC1;Physical Server;prod;false;active;2022-09-01;;gou-esx-01.kaasmeester.local;VMware ESXi 8.0;Dell PowerEdge R650 — 32 cores, 256GB RAM — single host for Gouda site
 GOU-SAGE-01;GOU-DC1;Virtual Machine;prod;false;active;2020-01-01;;gou-sage-01.kaasmeester.local;Windows Server 2022;Sage X3 V12 — Dutch accounting and operations
 GOU-FW-01;GOU-DC1;Firewall;prod;false;active;2022-09-01;;gou-fw-01.kaasmeester.local;FortiOS 7.4;FortiGate 60F — site firewall with VPN to Paris DC

@@ -166,6 +166,7 @@
     "assets": {
       "title": "Actifs",
       "addAsset": "Ajouter un actif",
+      "addCluster": "Ajouter un cluster",
       "importCsv": "Importer CSV",
       "exportCsv": "Exporter CSV",
       "exportTitle": "Exporter les actifs",
@@ -190,6 +191,7 @@
       },
       "filters": {
         "noCluster": "(Aucun cluster)",
+        "isCluster": "(Est un cluster)",
         "noLocation": "(Aucun site)",
         "noSubLocation": "(Aucun sous-site)",
         "blank": "(Vide)"
@@ -683,9 +685,9 @@
           "application": "Aucune vulnérabilité à traiter sur cette application."
         },
         "indirect": {
-          "title": "Par un autre actif",
-          "hint": "Non comptées : ces technologies sont installées sur un autre actif (un hôte, un cluster)."
+          "title": "Sur ses membres"
         },
+        "platform": "Plateforme sous-jacente ({{count}})",
         "countLink_one": "Voir la vulnérabilité à traiter dans la page Vulnérabilités",
         "countLink_other": "Voir les {{count}} vulnérabilités à traiter dans la page Vulnérabilités"
       },
@@ -694,6 +696,8 @@
         "label_other": "{{count}} graves",
         "hint_one": "{{count}} vulnérabilité critique ou élevée à traiter",
         "hint_other": "{{count}} vulnérabilités critiques ou élevées à traiter",
+        "hintMembers_one": "{{count}} vulnérabilité critique ou élevée à traiter, membres compris",
+        "hintMembers_other": "{{count}} vulnérabilités critiques ou élevées à traiter, membres compris",
         "exploited_one": "{{count}} connue comme exploitée",
         "exploited_other": "{{count}} connues comme exploitées"
       },
@@ -788,7 +792,6 @@
       "noApplications": "Aucune application affectée.",
       "viewCluster": "Voir le cluster",
       "editServer": "Modifier le serveur",
-      "clusterHint": "Nœud de cluster : gérez les membres dans l'espace Serveurs.",
       "purpose": "Objet :",
       "typicalPorts": "Ports usuels :",
       "topology": "Topologie :",
@@ -1450,6 +1453,7 @@
         "save_failed": "Cet objet n'a pas pu être enregistré. Les détails figurent dans le journal du serveur.",
         "validation_failed": "Cet objet a été refusé :",
         "os_ambiguous": "Le système d'exploitation « {{value}} » correspond à plusieurs entrées de votre catalogue, la valeur n'a pas été modifiée.",
+        "os_cluster_with_members": "Cet actif est un cluster avec des membres, le système d'exploitation « {{value}} » n'a donc pas été repris.",
         "status_not_mapped": "Le statut Netbox « {{value}} » n'a pas d'équivalent dans KANAP, le cycle de vie n'a pas été modifié.",
         "lifecycle_not_in_catalog": "Le cycle de vie « {{value}} » ne figure pas dans votre catalogue, la valeur n'a pas été modifiée.",
         "no_ip_address_type": "Aucun type d'adresse IP n'est défini dans les paramètres IT, l'adresse n'a pas été importée.",
@@ -2040,7 +2044,6 @@
         "assetType": "Type d'actif",
         "startTyping": "Commencez à saisir pour rechercher",
         "isCluster": "Ce serveur représente un cluster",
-        "clusterInfo": "Les actifs de cluster peuvent être des endpoints dans les connexions. Affectez les instances d'application aux hôtes membres.",
         "location": "Site",
         "subLocation": "Sous-site",
         "selectSubLocation": "Sélectionnez un sous-site",
@@ -2066,8 +2069,8 @@
         "environment": "Environnement",
         "members": "Membres",
         "editMembers": "Modifier les membres",
+        "addMembers": "Ajouter des membres",
         "loadingMembers": "Chargement des membres…",
-        "noMembers": "Aucun membre ajouté pour le moment.",
         "clusterMembership": "Appartenance au cluster",
         "loadingClusters": "Chargement des clusters…",
         "notInCluster": "Ne fait partie d'aucun cluster.",
@@ -2107,6 +2110,7 @@
         "add": "Ajouter",
         "search": "Rechercher des technologies",
         "empty": "Aucune technologie sur ce serveur.",
+        "platform": "Plateforme sous-jacente ({{count}})",
         "operatingSystem": "Système d'exploitation",
         "edit": "Modifier",
         "editNamed": "Modifier {{name}}",
@@ -2120,12 +2124,11 @@
           "family": "Famille",
           "version": "Version",
           "via": "Via",
-          "viaHint": "Serveur sur lequel la technologie est installée, pour une ligne déduite"
+          "viaHint": "Actif sur lequel la technologie est installée, pour une ligne déduite"
         }
       },
       "assignments": {
         "addAssignment": "Ajouter une affectation",
-        "clusterCannotHost": "Les actifs de cluster ne peuvent pas héberger d'affectations d'applications. Affectez les hôtes membres.",
         "noAssignments": "Aucune affectation pour le moment.",
         "assignmentAdded": "Affectation ajoutée",
         "application": "Application",
@@ -2160,11 +2163,18 @@
       },
       "editMembersDialog": {
         "title": "Modifier les membres",
-        "memberServers": "Serveurs membres",
-        "searchServers": "Rechercher des serveurs",
-        "membersHint": "Les membres doivent être des serveurs non-cluster.",
-        "clusterOption": "Cluster : {{name}}",
-        "clusterTag": "cluster"
+        "memberServers": "Membres",
+        "searchServers": "Rechercher des membres",
+        "narrowSearch": "Affinez la recherche",
+        "removeOsTitle": "Retirer le système d'exploitation ?",
+        "removeOsMessage": "Un cluster avec des membres n'a pas de système d'exploitation : {{os}} sera retiré.",
+        "removeOsConfirm": "Retirer et enregistrer",
+        "removeMembersTitle": "Retirer des membres ?",
+        "removeMemberLine": "{{member}} n'hébergera plus {{applications}}.",
+        "removeAnyway": "Retirer quand même",
+        "andOthers_one": "{{count}} autre",
+        "andOthers_other": "{{count}} autres",
+        "differentEnvironment": "Environnement différent du cluster"
       },
       "newAsset": "Nouvel actif",
       "untitled": "Actif sans nom",
@@ -2178,6 +2188,11 @@
         "goLive": "Mise en service",
         "editGoLive": "Modifier la mise en service"
       },
+      "clusterSwitch": {
+        "hint": "Un cluster regroupe des serveurs membres.",
+        "membersHint": "Serveurs qui forment ce cluster."
+      },
+      "readOnlyRole": "Votre rôle ne permet pas de modifier.",
       "hardware": {
         "serialNumber": "Numéro de série",
         "serialNumberPlaceholder": "ex. : SN-000123",
@@ -2193,9 +2208,9 @@
         "notesPlaceholder": "ex. : alimentation remplacée sous garantie"
       },
       "impact": {
-        "title": "Si ce serveur tombe",
-        "empty": "Aucun autre élément ne dépend de ce serveur.",
-        "emptyInfrastructure": "Aucune autre infrastructure ne dépend de ce serveur.",
+        "title": "Si cet actif tombe",
+        "empty": "Aucun autre élément ne dépend de cet actif.",
+        "emptyInfrastructure": "Aucune autre infrastructure ne dépend de cet actif.",
         "loadFailed": "L'impact n'a pas pu être chargé.",
         "more_one": "et {{count}} autre",
         "more_other": "et {{count}} autres",
@@ -2228,19 +2243,23 @@
         },
         "via": {
           "contains": "Dans {{name}}",
-          "containsThisServer": "Dans ce serveur",
+          "containsThisServer": "Dans cet actif",
           "dependsOn": "Dépend de {{name}}",
-          "dependsOnThisServer": "Dépend de ce serveur",
+          "dependsOnThisServer": "Dépend de cet actif",
+          "member": "Membre de {{name}}",
+          "memberThisServer": "Membre de ce cluster",
           "on": "Sur {{name}}",
-          "onThisServer": "Sur ce serveur",
-          "onThisServerAnd": "Sur ce serveur, {{name}}",
-          "thisServer": "Ce serveur",
-          "thisServerAnd": "Ce serveur, {{name}}"
+          "onThisServer": "Sur cet actif",
+          "onThisServerAnd": "Sur cet actif, {{name}}",
+          "thisServer": "Cet actif",
+          "thisServerAnd": "Cet actif, {{name}}"
         },
         "state": {
           "down": "Tombé",
           "degraded_one": "Dégradé, {{count}} membre tombé sur {{members}}",
-          "degraded_other": "Dégradé, {{count}} membres tombés sur {{members}}"
+          "degraded_other": "Dégradé, {{count}} membres tombés sur {{members}}",
+          "degradedHint_one": "{{count}} membre sur {{members}} tient encore",
+          "degradedHint_other": "{{count}} membres sur {{members}} tiennent encore"
         }
       },
       "support": {
@@ -2270,7 +2289,8 @@
           "containedBy": "Contenu dans aucun actif.",
           "dependsOn": "Ne dépend d'aucun actif.",
           "dependedOnBy": "Aucun actif ne dépend de celui-ci."
-        }
+        },
+        "containsHint": "Actifs hébergés par celui-ci, par exemple des VM."
       }
     },
     "technology": {
@@ -2432,6 +2452,7 @@
         "add": "Ajouter",
         "search": "Rechercher des serveurs",
         "empty": "Aucun serveur ne porte cette technologie.",
+        "hosted": "Actifs hébergés ({{count}})",
         "total": "Total",
         "serverCount_one": "{{count}} serveur",
         "serverCount_other": "{{count}} serveurs",
@@ -3190,6 +3211,25 @@
     },
     "versionTimeline": {
       "title": "Historique des versions"
+    },
+    "clusterAssignment": {
+      "title": "Affecter au cluster ?",
+      "inCluster_one": "{{server}} fait partie de {{cluster}}. Son seul membre hébergera {{subject}}.",
+      "inCluster_other": "{{server}} fait partie de {{cluster}}. Ses {{count}} membres hébergeront {{subject}}.",
+      "inClusters": "{{server}} fait partie de plusieurs clusters.",
+      "memberCount_one": "{{count}} membre",
+      "memberCount_other": "{{count}} membres",
+      "assignToCluster": "Affecter au cluster",
+      "assignedToCluster": "Affecté au cluster",
+      "serverOnly": "Ce serveur seulement",
+      "absorbed_one": "L'affectation directe de {{names}} sera remplacée.",
+      "absorbed_other": "Les affectations directes de {{names}} seront remplacées.",
+      "via": "via",
+      "inheritedFrom": "Via {{cluster}}",
+      "groupLine": "{{subject}} sur {{members}}",
+      "groupAssignTo": "Affecter à {{cluster}}",
+      "groupConfirm": "{{application}} restera disponible tant qu'un membre tient.",
+      "thisApplication": "L'application"
     }
   },
   "enums": {

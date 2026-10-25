@@ -95,7 +95,7 @@ describe('ReachVulnerabilitiesSection', () => {
     expect(screen.queryByRole('button', { name: 'Record on a server' })).toBeNull();
   });
 
-  it('lists apart, without counting them, the technologies another asset carries', () => {
+  it('lists apart, under its own title, what a cluster\'s members carry', () => {
     renderSection({
       data: {
         rows: [],
@@ -103,16 +103,92 @@ describe('ReachVulnerabilitiesSection', () => {
         totals: { open: 0, severe: 0, exploited_severe: 0 },
       },
     });
-    expect(screen.getByText('No vulnerability to review on this asset.')).toBeTruthy();
+    expect(screen.queryByText('No vulnerability to review on this asset.')).toBeNull();
     const part = screen.getByTestId('reach-indirect');
-    expect(part.textContent).toContain('Through another asset');
-    expect(part.textContent).toContain('Not counted');
-    const indirect = within(part).getByRole('table', { name: 'Through another asset' });
+    expect(part.textContent).toContain('On its members');
+    const indirect = within(part).getByRole('table', { name: 'On its members' });
     const line = within(indirect).getAllByRole('row')[1];
-    expect(line.textContent).toContain('through PAR-ESX-01');
+    expect(line.textContent).toContain('PAR-ESX-01');
+    expect(line.textContent).not.toContain('through');
     expect(within(line).getByRole('link', { name: 'See' }).getAttribute('href')).toBe('/it/vulnerabilities?asset=AST-9&technology=TEC-2');
     // No count next to the title: nothing counts.
     expect(screen.getByRole('region', { name: 'Vulnerabilities' }).querySelector('h2')?.nextSibling).toBeNull();
+  });
+
+  it('names every asset that carries an indirect line, once, each a link to its page', () => {
+    renderSection({
+      data: {
+        rows: [],
+        indirect: [row({
+          technology: { id: 'tech-3', name: 'Microsoft SQL Server Enterprise Edition with a very long name', reference: 'TEC-2' },
+          via: { id: 'a-1', name: 'PAR-SQL-01', reference: 'AST-1' },
+          via_assets: [{ id: 'a-1', name: 'PAR-SQL-01', reference: 'AST-1' }, { id: 'a-2', name: 'PAR-SQL-02', reference: 'AST-2' }],
+        })],
+        totals: { open: 0, severe: 0, exploited_severe: 0 },
+      },
+    });
+    const indirect = within(screen.getByTestId('reach-indirect')).getByRole('table', { name: 'On its members' });
+    const lines = within(indirect).getAllByRole('row').slice(1);
+    expect(lines).toHaveLength(1);
+    expect(within(lines[0]).getByRole('link', { name: 'PAR-SQL-01' }).getAttribute('href')).toBe('/it/assets/a-1/overview');
+    expect(within(lines[0]).getByRole('link', { name: 'PAR-SQL-02' }).getAttribute('href')).toBe('/it/assets/a-2/overview');
+    expect(within(lines[0]).getByTitle('PAR-SQL-01, PAR-SQL-02')).toBeTruthy();
+    // A long technology name is cut by the ellipsis, whole on hover; the counts keep their fixed room.
+    expect(within(lines[0]).getByTitle('Microsoft SQL Server Enterprise Edition with a very long name')).toBeTruthy();
+    expect(lines[0].querySelector('td.w')?.textContent).toBe('9.0.80');
+  });
+
+  it('folds the platform underneath of a VM under one closed line, with the usual empty line', () => {
+    renderSection({
+      data: {
+        rows: [],
+        indirect: [row({ technology: { id: 'tech-3', name: 'VMware ESXi', reference: 'TEC-2' }, via: { id: 'a-9', name: 'PAR-ESX-01', reference: 'AST-9' }, through_host: true })],
+        totals: { open: 0, severe: 0, exploited_severe: 0 },
+      },
+    });
+    expect(screen.getByText('No vulnerability to review on this asset.')).toBeTruthy();
+    // No "On its members" part, no other text: the folded line only.
+    expect(screen.queryByTestId('reach-indirect')).toBeNull();
+    const part = screen.getByTestId('reach-platform');
+    const fold = within(part).getByRole('button', { name: 'Underlying platform (1)' });
+    expect(fold.getAttribute('aria-expanded')).toBe('false');
+    expect(part.textContent).toBe('Underlying platform (1)');
+    fireEvent.click(fold);
+    expect(fold.getAttribute('aria-expanded')).toBe('true');
+    const table = within(part).getByRole('table');
+    expect(within(table).getAllByRole('columnheader').length).toBeGreaterThan(0);
+    const line = within(table).getAllByRole('row').find((tr) => tr.textContent?.includes('VMware ESXi'))!;
+    expect(line.textContent).toContain('PAR-ESX-01');
+    expect(screen.getByRole('region', { name: 'Vulnerabilities' }).querySelector('h2')?.nextSibling).toBeNull();
+  });
+
+  it('folds the platform underneath of a cluster under the lines its members carry', () => {
+    renderSection({
+      data: {
+        rows: [],
+        indirect: [
+          row({ via: { id: 'm-1', name: 'NODE-A', reference: 'AST-1' }, through_host: false }),
+          row({ technology: { id: 'tech-3', name: 'VMware ESXi', reference: 'TEC-2' }, via: { id: 'a-9', name: 'PAR-ESX-01', reference: 'AST-9' }, through_host: true }),
+        ],
+        totals: { open: 0, severe: 0, exploited_severe: 0 },
+        member_totals: { open: 6, severe: 3, exploited_severe: 1 },
+      },
+    });
+    const indirect = within(screen.getByTestId('reach-indirect')).getByRole('table', { name: 'On its members' });
+    const before = within(indirect).getAllByRole('row').slice(1);
+    expect(before.map((tr) => tr.textContent?.includes('Tomcat'))).toEqual([true, false]);
+    expect(before[1].textContent).toBe('Underlying platform (1)');
+    fireEvent.click(within(indirect).getByRole('button', { name: 'Underlying platform (1)' }));
+    expect(within(indirect).getAllByRole('row').slice(1).map((tr) => tr.textContent?.includes('VMware ESXi'))).toEqual([false, false, true]);
+    expect(screen.queryByTestId('reach-platform')).toBeNull();
+    expect(screen.getByTestId('reach-vulnerabilities-count').textContent).toBe('6');
+  });
+
+  it('counts a cluster on its members too: the count after the title follows member_totals', () => {
+    renderSection({
+      data: { rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, member_totals: { open: 9, severe: 4, exploited_severe: 1 } },
+    });
+    expect(screen.getByTestId('reach-vulnerabilities-count').textContent).toBe('9');
   });
 
   it('fits a record page with its properties panel open: no horizontal scroll, long cells wrap', () => {

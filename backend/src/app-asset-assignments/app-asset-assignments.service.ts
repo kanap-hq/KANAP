@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { AppAssetAssignment } from './app-asset-assignment.entity';
 import { AppInstance } from '../app-instances/app-instance.entity';
 import { Asset } from '../assets/asset.entity';
@@ -11,6 +11,14 @@ import {
   ParticipationAccessScope,
 } from '../auth/business-contributor-scope';
 import { applicationBadRequest, applicationConflict } from '../applications/application-rules';
+import { effectiveAssignmentsSql, groupableAssignmentsSql, ViaCluster } from './effective-assignments';
+import {
+  assertNotInherited,
+  inheritingMembersOf,
+  lockAssignmentClusters,
+  mergeAbsorbed,
+  normalizeServerRole,
+} from './cluster-assignment-rules';
 
 type AssignmentRow = {
   id: string;
@@ -29,17 +37,48 @@ type AssignmentRow = {
   asset_region: string | null;
   asset_zone: string | null;
   asset_status: string;
+  asset_is_cluster: boolean | null;
   location_hosting_type: string | null;
+  inherited: boolean;
+  via_clusters: ViaCluster[];
 };
 
-const ASSIGNMENT_COLUMNS = `aaa.*, a.name AS asset_name, a.asset_reference AS asset_reference, a.kind AS asset_kind, a.provider AS asset_provider,
-              a.environment AS asset_environment, a.region AS asset_region, a.zone AS asset_zone, a.status AS asset_status,
-              l.hosting_type AS location_hosting_type`;
+/** A member in service of a cluster, inheriting the cluster's row (Deployments tab). */
+type InheritingMember = {
+  asset_id: string;
+  name: string;
+  asset_reference: string | null;
+  kind: string;
+  environment: string;
+  status: string;
+};
 
-const ASSIGNMENT_JOINS = `JOIN assets a ON a.id = aaa.asset_id AND a.tenant_id = aaa.tenant_id
-       LEFT JOIN locations l ON l.id = a.location_id AND l.tenant_id = a.tenant_id`;
+/** A deployment and role assigned directly to every member in service of a cluster (A7). */
+type GroupableAssignment = {
+  cluster_id: string;
+  cluster_name: string;
+  app_instance_id: string;
+  role: string;
+  application_id: string;
+  application_name: string;
+  environment: string;
+  member_ids: string[];
+};
+
+/** The effective rows (`effectiveAssignmentsSql` as `e`) with their server (`a`) and its location (`l`). */
+const EFFECTIVE_SERVER_COLUMNS = `e.assignment_id AS id, e.app_instance_id, e.asset_id, e.role, e.since_date, e.notes, e.created_at, e.updated_at,
+              e.inherited, e.via_clusters,
+              a.name AS asset_name, a.asset_reference AS asset_reference, a.kind AS asset_kind, a.provider AS asset_provider,
+              a.environment AS asset_environment, a.region AS asset_region, a.zone AS asset_zone, a.status AS asset_status,
+              a.is_cluster AS asset_is_cluster, l.hosting_type AS location_hosting_type`;
+
+const EFFECTIVE_SERVER_JOINS = `JOIN assets a ON a.tenant_id = e.tenant_id AND a.id = e.asset_id
+       LEFT JOIN locations l ON l.tenant_id = a.tenant_id AND l.id = a.location_id`;
 
 type ServiceOpts = { manager?: EntityManager; tenantId?: string | null };
+
+/** A member whose direct row a cluster's row replaced (A4), for the message of the screen. */
+export type AbsorbedMember = { asset_id: string; name: string };
 
 @Injectable()
 export class AppAssetAssignmentsService {
@@ -132,16 +171,9 @@ export class AppAssetAssignmentsService {
   }
 
   private async normalizeRole(value: unknown, tenantId: string, manager?: EntityManager): Promise<string> {
-    const normalized = String(value || '').trim().toLowerCase();
-    if (!normalized) {
-      throw applicationBadRequest('assignment_role_invalid', 'role is required', { value: '' });
-    }
+    if (!String(value || '').trim()) return normalizeServerRole(value, []);
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set((settings.serverRoles || []).map((item) => item.code));
-    if (!allowed.has(normalized)) {
-      throw applicationBadRequest('assignment_role_invalid', `Invalid role "${value}"`, { value: String(value ?? '') });
-    }
-    return normalized;
+    return normalizeServerRole(value, settings.serverRoles);
   }
 
   /** No date when none is given; a refusal (`date_invalid`) when one is given that is not a date. */
@@ -154,17 +186,83 @@ export class AppAssetAssignmentsService {
     return date;
   }
 
-  private assertNotCluster(asset: Asset) {
-    if (asset.is_cluster) {
-      throw applicationBadRequest(
-        'assignment_cluster',
-        'Cannot assign application instances to a cluster asset; select a specific host',
-      );
+  private duplicateRefusal() {
+    return applicationConflict('assignment_duplicate', 'Asset already assigned with this role');
+  }
+
+  /** Saves `row`; two writers racing on one server and role meet the unique key: `assignment_duplicate`. */
+  private async saveRow(repo: Repository<AppAssetAssignment>, row: AppAssetAssignment): Promise<AppAssetAssignment> {
+    try {
+      return await repo.save(row);
+    } catch (error: any) {
+      if ((error?.code ?? error?.driverError?.code) === '23505') throw this.duplicateRefusal();
+      throw error;
     }
   }
 
-  private duplicateRefusal() {
-    return applicationConflict('assignment_duplicate', 'Asset already assigned with this role');
+  /**
+   * The cluster rules (`cluster-assignment-rules.ts`) for `row`, about to be saved on its server,
+   * after `lockAssignmentClusters`:
+   * - on a member, A3: no direct row for what one of its clusters carries (`assignment_inherited`);
+   * - on a cluster, A4: the direct rows of the same deployment and role on its members are deleted
+   *   (each audited as a deletion), `row` takes the earliest date and their notes after its own.
+   * Returns the members absorbed, by name.
+   */
+  private async applyClusterRules(
+    mg: EntityManager,
+    tenantId: string,
+    row: AppAssetAssignment,
+    isCluster: boolean,
+    userId: string | null,
+  ): Promise<AbsorbedMember[]> {
+    if (!isCluster) {
+      await assertNotInherited(mg, tenantId, row.app_instance_id, row.asset_id, row.role, row.id ?? null);
+      return [];
+    }
+    const members = (await inheritingMembersOf(mg, tenantId, [row.asset_id])).get(row.asset_id) ?? [];
+    if (members.length === 0) return [];
+    const repo = this.getRepo(mg);
+    const rows = await repo.find({
+      where: { tenant_id: tenantId, app_instance_id: row.app_instance_id, role: row.role, asset_id: In(members.map((m) => m.id)) },
+    });
+    const absorbed = members.flatMap((member) => rows
+      .filter((candidate) => candidate.asset_id === member.id && candidate.id !== row.id)
+      .map((candidate) => ({ member, row: candidate })));
+    if (absorbed.length === 0) return [];
+    const merged = mergeAbsorbed(row, absorbed.map((item) => item.row));
+    row.since_date = merged.since_date as any;
+    row.notes = merged.notes;
+    await repo.delete({ tenant_id: tenantId, id: In(absorbed.map((item) => item.row.id)) } as any);
+    for (const { row: gone } of absorbed) {
+      await this.audit.log(
+        { table: 'app_asset_assignments', recordId: gone.id, action: 'delete', before: gone, after: null, userId },
+        { manager: mg },
+      );
+    }
+    return absorbed.map(({ member }) => ({ asset_id: member.id, name: member.name }));
+  }
+
+  /**
+   * Writes `row` over its stored row by id (`UPDATE ... WHERE id`), never re-inserting it: a row
+   * deleted meanwhile (absorbed by its cluster's row) is `404`.
+   */
+  private async updateRow(repo: Repository<AppAssetAssignment>, tenantId: string, row: AppAssetAssignment): Promise<AppAssetAssignment> {
+    let result;
+    try {
+      result = await repo.createQueryBuilder()
+        .update(AppAssetAssignment)
+        .set({ asset_id: row.asset_id, role: row.role, since_date: row.since_date, notes: row.notes, updated_at: () => 'now()' })
+        .where('tenant_id = :tenantId AND id = :id', { tenantId, id: row.id })
+        .returning(['updated_at'])
+        .execute();
+    } catch (error: any) {
+      if ((error?.code ?? error?.driverError?.code) === '23505') throw this.duplicateRefusal();
+      throw error;
+    }
+    const stored = Array.isArray(result.raw) ? result.raw[0] : null;
+    if (!stored) throw new NotFoundException('Assignment not found');
+    row.updated_at = stored.updated_at;
+    return row;
   }
 
   private normalizeNotes(value: unknown): string | null {
@@ -185,6 +283,9 @@ export class AppAssetAssignmentsService {
       notes: row.notes,
       created_at: row.created_at,
       updated_at: row.updated_at,
+      inherited: !!row.inherited,
+      via_clusters: row.via_clusters ?? [],
+      members: [] as InheritingMember[],
       hosting: this.deriveHosting(
         { location_hosting_type: row.location_hosting_type, asset_provider: row.asset_provider },
         settings.hostingTypes || [],
@@ -199,6 +300,7 @@ export class AppAssetAssignmentsService {
         region: row.asset_region,
         zone: row.asset_zone,
         status: row.asset_status,
+        is_cluster: !!row.asset_is_cluster,
       },
       // Backwards compatibility: include server alias
       server: {
@@ -221,15 +323,53 @@ export class AppAssetAssignmentsService {
     const tenantId = await this.tenantOf(mg, opts?.tenantId);
     const instance = await this.ensureInstance(instanceId, tenantId, mg);
     await this.assertApplicationVisible(instance.application_id, tenantId, opts?.accessScope, mg);
+    return this.deploymentServers(mg, tenantId, { instances: '$2' }, [instanceId]);
+  }
+
+  /**
+   * The servers of deployments as the Deployments tab lists them (`effectiveAssignmentsSql`), and
+   * the direct rows that could move to their cluster. `scope` names `$2`, an array of deployment
+   * or application ids.
+   *
+   * - `items`: the rows stored on the deployments, `inherited` false. A member never comes as a
+   *   row of its own for what it inherits: a cluster's row carries the members in service that
+   *   inherit it (`members`, by name; `[]` on any other row). `via_clusters` names the clusters
+   *   that also give a direct row (older data); that member then also shows in their `members`.
+   * - `groupable`: a deployment and role assigned directly to every member in service of a cluster
+   *   that has at least two (`groupableAssignmentsSql`).
+   */
+  private async deploymentServers(
+    mg: EntityManager,
+    tenantId: string,
+    scope: { instances: string } | { applications: string },
+    ids: string[],
+  ) {
     const rows: AssignmentRow[] = await mg.query(
-      `SELECT ${ASSIGNMENT_COLUMNS}
-       FROM app_asset_assignments aaa
-       ${ASSIGNMENT_JOINS}
-       WHERE aaa.tenant_id = $1 AND aaa.app_instance_id = $2
-       ORDER BY a.name ASC`,
-      [tenantId, instanceId],
+      `SELECT ${EFFECTIVE_SERVER_COLUMNS}
+       FROM (${effectiveAssignmentsSql({ tenant: '$1', ...scope })}) e
+       ${EFFECTIVE_SERVER_JOINS}
+       ORDER BY a.name ASC, a.id, e.role`,
+      [tenantId, ids],
     );
-    return { items: await this.mapRows(rows, tenantId, mg) };
+    const items = await this.mapRows(rows.filter((row) => !row.inherited), tenantId, mg);
+    const byKey = new Map(items.map((item) => [`${item.app_instance_id}|${item.asset_id}|${item.role}`, item]));
+    for (const row of rows) {
+      for (const via of row.via_clusters ?? []) {
+        byKey.get(`${row.app_instance_id}|${via.id}|${row.role}`)?.members.push({
+          asset_id: row.asset_id,
+          name: row.asset_name,
+          asset_reference: row.asset_reference,
+          kind: row.asset_kind,
+          environment: row.asset_environment,
+          status: row.asset_status,
+        });
+      }
+    }
+    const instances = 'instances' in scope
+      ? scope.instances
+      : `ARRAY(SELECT gi.id FROM app_instances gi WHERE gi.tenant_id = $1 AND gi.application_id = ANY(${scope.applications}::uuid[]))`;
+    const groupable: GroupableAssignment[] = await mg.query(groupableAssignmentsSql({ tenant: '$1', instances }), [tenantId, ids]);
+    return { items, groupable };
   }
 
   /**
@@ -253,16 +393,7 @@ export class AppAssetAssignmentsService {
     );
     if (!apps[0]) throw new NotFoundException('Application not found');
     await this.assertApplicationVisible(apps[0].id, tenantId, opts?.accessScope, mg);
-    const rows: AssignmentRow[] = await mg.query(
-      `SELECT ${ASSIGNMENT_COLUMNS}
-       FROM app_asset_assignments aaa
-       JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = aaa.tenant_id
-       ${ASSIGNMENT_JOINS}
-       WHERE aaa.tenant_id = $1 AND ai.application_id = $2
-       ORDER BY a.name ASC`,
-      [tenantId, apps[0].id],
-    );
-    return { items: await this.mapRows(rows, tenantId, mg) };
+    return this.deploymentServers(mg, tenantId, { applications: '$2' }, [apps[0].id]);
   }
 
   async create(instanceId: string, payload: any, userId: string | null, opts?: ServiceOpts) {
@@ -276,13 +407,24 @@ export class AppAssetAssignmentsService {
     // Accept both asset_id and server_id for backwards compatibility
     const assetId = this.normalizeNullableId(payload.asset_id ?? payload.assetId ?? payload.server_id ?? payload.serverId);
     if (!assetId) throw applicationBadRequest('asset_required', 'asset_id is required');
-    const asset = await this.ensureAsset(assetId, tenantId, mg);
-    this.assertNotCluster(asset);
     const role = await this.normalizeRole(payload.role, instance.tenant_id, mg);
     const sinceDate = this.parseDate(payload.since_date, 'since_date');
+    // The cluster, or the clusters of a member, are locked before the server and its rows are read.
+    await lockAssignmentClusters(mg, tenantId, [assetId]);
+    const asset = await this.ensureAsset(assetId, tenantId, mg);
     const existing = await repo.findOne({ where: { tenant_id: tenantId, app_instance_id: instanceId, asset_id: assetId, role } as any });
     if (existing) {
-      throw this.duplicateRefusal();
+      // The cluster already carries the row (older data, or "Assign to the cluster" on a set it
+      // carries): its members' identical direct rows join it (A4). Nothing to absorb: a duplicate.
+      const before = { ...existing };
+      const absorbed = asset.is_cluster ? await this.applyClusterRules(mg, tenantId, existing, true, userId) : [];
+      if (absorbed.length === 0) throw this.duplicateRefusal();
+      const saved = await this.updateRow(repo, tenantId, existing);
+      await this.audit.log(
+        { table: 'app_asset_assignments', recordId: saved.id, action: 'update', before, after: saved, userId },
+        { manager: mg },
+      );
+      return { ...saved, absorbed };
     }
     const assignment = repo.create({
       tenant_id: tenantId,
@@ -292,12 +434,13 @@ export class AppAssetAssignmentsService {
       since_date: sinceDate,
       notes: this.normalizeNotes(payload.notes),
     });
-    const saved = await repo.save(assignment);
+    const absorbed = await this.applyClusterRules(mg, tenantId, assignment, !!asset.is_cluster, userId);
+    const saved = await this.saveRow(repo, assignment);
     await this.audit.log(
       { table: 'app_asset_assignments', recordId: saved.id, action: 'create', before: null, after: saved, userId },
       { manager: mg },
     );
-    return saved;
+    return { ...saved, absorbed };
   }
 
   async update(
@@ -322,8 +465,7 @@ export class AppAssetAssignmentsService {
       if (!assetId) {
         throw applicationBadRequest('asset_required', 'asset_id is required');
       }
-      const asset = await this.ensureAsset(assetId, tenantId, mg);
-      this.assertNotCluster(asset);
+      await this.ensureAsset(assetId, tenantId, mg);
       patch.asset_id = assetId;
     }
     if (payload.role !== undefined) {
@@ -337,7 +479,12 @@ export class AppAssetAssignmentsService {
     }
     const nextAssetId = patch.asset_id ?? assignment.asset_id;
     const nextRole = patch.role ?? assignment.role;
-    if (nextAssetId !== assignment.asset_id || nextRole !== assignment.role) {
+    const moved = nextAssetId !== assignment.asset_id || nextRole !== assignment.role;
+    let nextIsCluster = false;
+    if (moved) {
+      // As in create: the clusters first, then the server and the rows.
+      await lockAssignmentClusters(mg, tenantId, [nextAssetId]);
+      nextIsCluster = !!(await this.ensureAsset(nextAssetId, tenantId, mg)).is_cluster;
       const duplicate = await repo.findOne({
         where: { tenant_id: tenantId, app_instance_id: instanceId, asset_id: nextAssetId, role: nextRole } as any,
       });
@@ -347,14 +494,25 @@ export class AppAssetAssignmentsService {
     }
     const before = { ...assignment };
     Object.assign(assignment, patch);
-    const saved = await repo.save(assignment);
+    // A row that changes server or role follows the cluster rules of a new row (A3, A4).
+    const absorbed = moved ? await this.applyClusterRules(mg, tenantId, assignment, nextIsCluster, userId) : [];
+    const saved = await this.updateRow(repo, tenantId, assignment);
     await this.audit.log(
       { table: 'app_asset_assignments', recordId: saved.id, action: 'update', before, after: saved, userId },
       { manager: mg },
     );
-    return saved;
+    return { ...saved, absorbed };
   }
 
+  /**
+   * The Operations tab of a server: its effective rows (`effectiveAssignmentsSql`), its own and,
+   * for a member, those of its clusters (`inherited`, `via_clusters`; `id` is then the cluster's
+   * row, which only the cluster edits). A Business Contributor sees the rows of the applications
+   * they take part in, inherited or not. `groupable`, on a direct row of a member: the set that
+   * could move to its cluster (`groupableAssignmentsSql`), else null.
+   *
+   * Answer: the rows, an array (`listGroupableByAsset` gives a cluster's sets).
+   */
   async listByAsset(assetId: string, opts?: ServiceOpts & { accessScope?: ParticipationAccessScope }) {
     const mg = opts?.manager ?? this.repo.manager;
     const tenantId = await this.tenantOf(mg, opts?.tenantId);
@@ -375,19 +533,36 @@ export class AppAssetAssignmentsService {
       notes: string | null;
       created_at: Date;
       updated_at: Date;
+      inherited: boolean;
+      via_clusters: ViaCluster[];
       app_id: string;
       app_name: string;
       environment: string;
     }> = await mg.query(
-      `SELECT aaa.*, ai.application_id AS app_id, ai.environment, a.name AS app_name
-       FROM app_asset_assignments aaa
-       JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = aaa.tenant_id
+      `SELECT e.assignment_id AS id, e.app_instance_id, e.asset_id, e.role, e.since_date, e.notes, e.created_at, e.updated_at,
+              e.inherited, e.via_clusters, ai.application_id AS app_id, ai.environment, a.name AS app_name
+       FROM (${effectiveAssignmentsSql({ tenant: '$2', assets: 'ARRAY[$1::uuid]' })}) e
+       JOIN app_instances ai ON ai.id = e.app_instance_id AND ai.tenant_id = e.tenant_id
        JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
-       WHERE aaa.asset_id = $1 AND aaa.tenant_id = $2
+       WHERE ai.tenant_id = $2
         ${accessScopeSql}
-       ORDER BY ai.environment ASC, a.name ASC`,
+       ORDER BY ai.environment ASC, a.name ASC, e.inherited, e.role`,
       params,
     );
+    const groupable: GroupableAssignment[] = rows.some((row) => !row.inherited)
+      ? await mg.query(
+        groupableAssignmentsSql({
+          tenant: '$1',
+          clusters: 'ARRAY(SELECT gm.cluster_id FROM asset_cluster_members gm WHERE gm.tenant_id = $1 AND gm.asset_id = $2)',
+        }),
+        [tenantId, assetId],
+      )
+      : [];
+    const groupableOf = (row: { inherited: boolean; app_instance_id: string; role: string }) => {
+      if (row.inherited) return null;
+      const set = groupable.find((g) => g.app_instance_id === row.app_instance_id && g.role === row.role && g.member_ids.includes(assetId));
+      return set ? { cluster_id: set.cluster_id, cluster_name: set.cluster_name, member_ids: set.member_ids } : null;
+    };
     return rows.map((row) => ({
       id: row.id,
       app_instance_id: row.app_instance_id,
@@ -400,7 +575,38 @@ export class AppAssetAssignmentsService {
       updated_at: row.updated_at,
       application: { id: row.app_id, name: row.app_name },
       environment: row.environment,
+      inherited: !!row.inherited,
+      via_clusters: row.via_clusters ?? [],
+      groupable: groupableOf(row),
     }));
+  }
+
+  /**
+   * The sets of direct rows on the members of a cluster that could move to it
+   * (`groupableAssignmentsSql`, limited to the applications a Business Contributor takes part in),
+   * as `{ items }`; `[]` for any other server.
+   */
+  async listGroupableByAsset(assetId: string, opts?: ServiceOpts & { accessScope?: ParticipationAccessScope }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const tenantId = await this.tenantOf(mg, opts?.tenantId);
+    const asset = await this.ensureAsset(assetId, tenantId, mg);
+    const items: GroupableAssignment[] = asset.is_cluster
+      ? await mg.query(
+        groupableAssignmentsSql({
+          tenant: '$1',
+          clusters: 'ARRAY[$2::uuid]',
+          ...(opts?.accessScope
+            ? {
+              instances: `ARRAY(SELECT gi.id FROM app_instances gi
+                 JOIN applications a ON a.tenant_id = gi.tenant_id AND a.id = gi.application_id
+                WHERE gi.tenant_id = $1 AND ${applicationParticipantCondition('a', '$3')})`,
+            }
+            : {}),
+        }),
+        opts?.accessScope ? [tenantId, assetId, opts.accessScope.userId] : [tenantId, assetId],
+      )
+      : [];
+    return { items };
   }
 
   // Backwards compatibility alias
@@ -425,7 +631,8 @@ export class AppAssetAssignmentsService {
   }
 
   /**
-   * Returns unique assets assigned to app instances for the given applications and environments.
+   * Returns unique assets assigned to app instances for the given applications and environments,
+   * as effective (`effectiveAssignmentsSql`): a cluster and its members in service.
    * Used by the Connection Map to pre-select assets based on application selection.
    */
   async listAssetsByApps(
@@ -463,9 +670,9 @@ export class AppAssetAssignmentsService {
         a.kind,
         a.provider,
         a.is_cluster
-      FROM assets a
-      INNER JOIN app_asset_assignments aaa ON aaa.asset_id = a.id AND aaa.tenant_id = a.tenant_id
-      INNER JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = aaa.tenant_id
+      FROM (${effectiveAssignmentsSql({ tenant: '$3', applications: '$1' })}) e
+      INNER JOIN assets a ON a.id = e.asset_id AND a.tenant_id = e.tenant_id
+      INNER JOIN app_instances ai ON ai.id = e.app_instance_id AND ai.tenant_id = e.tenant_id
       INNER JOIN applications app_scope ON app_scope.id = ai.application_id AND app_scope.tenant_id = ai.tenant_id
       WHERE a.tenant_id = $3
         AND ai.application_id = ANY($1)

@@ -43,7 +43,7 @@ Finden Sie Server über die Anwendungen, die auf ihnen laufen:
 
 1. Wählen Sie eine oder mehrere Anwendungen aus dem Dropdown **Anwendungen**
 2. Wählen Sie Umgebungen im Dropdown **App-Umgebung** (es erscheinen nur Umgebungen, in denen die ausgewählten Apps zugewiesene Server haben)
-3. Die übereinstimmenden Server werden automatisch zum Filter **Server** hinzugefügt
+3. Die übereinstimmenden Server werden automatisch zum Filter **Server** hinzugefügt. Eine einem Cluster zugeordnete Anwendung bringt den Cluster und seine Mitglieder mit
 
 Dies ist nützlich, wenn Sie die Infrastrukturverbindungen für eine Anwendung sehen möchten, ohne zu wissen, auf welchen Servern sie läuft.
 
@@ -87,7 +87,7 @@ Wenn aktiviert (Standard), behält die Karte ihr Force-Layout, fügt aber vertik
 - **Server** verwenden die in den IT-Landschaft-Einstellungen konfigurierten Rollenzuweisungen
 - **Entitäten** verwenden ihre konfigurierte **Graph-Tier** (Standard Oben)
 - **Nicht zugewiesene Server** fallen auf Mitte zurück
-- **Cluster** erben das Tier mit der höchsten Priorität von ihren Mitgliedern
+- **Cluster** verwenden die ihnen zugeordneten Rollen, sonst das Tier mit der höchsten Priorität ihrer Mitglieder. Ein Mitglied übernimmt auch die Rollen seines Clusters
 
 Verwenden Sie diesen Schalter, wenn Sie eine Topologieansicht wünschen, die wie Architektur-Tiers gelesen wird (Edge-Komponenten oben, Datenspeicher unten). Die Einstellung gilt nur für die Sitzung und wird beim Neuladen der Seite zurückgesetzt.
 
@@ -118,8 +118,8 @@ Sie können auch mit dem Mausrad zoomen und durch Klicken und Ziehen des Hinterg
 Klicken Sie auf einen Server- oder Cluster-Knoten, um seine Verbindungen hervorzuheben und ein Detail-Panel zu öffnen, das Folgendes zeigt:
 
 - **Server-Typ**, **Server-Standort**, **Betriebssystem**, **Netzwerksegment**, **IP-Adresse**
-- **Zugewiesene Anwendungen**: Apps, die auf diesem Server laufen, gruppiert nach Umgebung. Klicken Sie auf einen App-Namen, um sie zu öffnen.
-- Schaltfläche **Server bearbeiten** oder **Cluster anzeigen**, um den Arbeitsbereich zu öffnen
+- **Zugewiesene Anwendungen**: Apps, die auf diesem Server laufen, gruppiert nach Umgebung. Bei einem Mitglied zeigt eine seinem Cluster zugeordnete App „über“ und den Namen des Clusters. Klicken Sie auf einen App-Namen, um sie zu öffnen.
+- Schaltfläche **Server bearbeiten** oder **Cluster anzeigen**, um den Arbeitsbereich zu öffnen. **Cluster anzeigen** öffnet den Cluster auf seinem Reiter **Abhängigkeiten**, wo seine Mitglieder verwaltet werden
 
 Klicken Sie auf einen Entitätsknoten, um seinen Typ und seine Umgebung zu sehen.
 

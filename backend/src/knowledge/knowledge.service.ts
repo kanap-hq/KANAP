@@ -9,6 +9,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'crypto';
 import * as path from 'path';
@@ -7027,7 +7028,9 @@ export class KnowledgeService {
       manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.asset_reference AS item_ref, a.name, a.status
          FROM app_instances ai
-         JOIN app_asset_assignments aaa ON aaa.app_instance_id = ai.id AND aaa.tenant_id = ai.tenant_id
+         -- The servers the application runs on (effective: a cluster and its members in service).
+         JOIN (${effectiveAssignmentsSql({ tenant: 'app_current_tenant()', applications: 'ARRAY[$1::uuid]' })}) aaa
+           ON aaa.app_instance_id = ai.id AND aaa.tenant_id = ai.tenant_id
          JOIN assets a ON a.id = aaa.asset_id AND a.tenant_id = aaa.tenant_id
          WHERE ai.application_id = $1
          ORDER BY a.name ASC`,
@@ -7111,7 +7114,8 @@ export class KnowledgeService {
       ),
       manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.sequential_id AS item_ref, a.name, a.status
-         FROM app_asset_assignments aaa
+         -- The applications running on the asset (effective: a member runs what its clusters carry).
+         FROM (${effectiveAssignmentsSql({ tenant: 'app_current_tenant()', assets: 'ARRAY[$1::uuid]' })}) aaa
          JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = aaa.tenant_id
          JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
          WHERE aaa.asset_id = $1

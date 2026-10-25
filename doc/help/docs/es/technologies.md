@@ -86,7 +86,7 @@ Cada fila es una tecnología. Haga clic en una fila para abrirla.
 | **Nombre** | El nombre de la tecnología |
 | **Familia** | El tipo de tecnología |
 | **Editor** | Quién la edita |
-| **Servidores** | Los activos que la llevan, directamente o porque están dentro de un activo que la lleva |
+| **Servidores** | Los activos en servicio en los que está instalada. Los clústeres no se cuentan, ni las máquinas virtuales de un host que la lleva. La insignia **Servidores** de la ficha y el informe [Fin de soporte](end-of-support.md) dan el mismo número |
 | **Aplicaciones** | Las aplicaciones que la declaran o se alojan en un servidor que la lleva |
 | **Próximo fin de soporte** | El fin de soporte estándar más cercano por venir entre las versiones en uso. En naranja cuando cae dentro de los próximos 12 meses |
 | **Vulnerabilidades por revisar** | Las vulnerabilidades conocidas que quedan por revisar en las versiones en uso que están en las alertas. En naranja con el número de críticas o altas (`3 · 1 críticas o altas`). Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) sobre esta tecnología. Presente cuando se siguen las vulnerabilidades |
@@ -149,7 +149,7 @@ Un tipo marcado con **Dejar de proponer** se mantiene en las tecnologías que lo
 | **Sin soporte** | Todas las fechas de fin han pasado |
 | **Fecha desconocida** | No hay fecha de fin registrada |
 
-El soporte sigue vigente el día de su fecha de fin. Con una sola fecha, esa fecha es el fin. **Añadir versión** añade una línea; pase el ratón por una línea para editarla o eliminarla. Eliminar una versión que usan servidores o aplicaciones pide confirmación: esos vínculos muestran entonces una versión desconocida.
+El soporte sigue vigente el día de su fecha de fin. Con una sola fecha, esa fecha es el fin. **Añadir versión** añade una línea; pase el ratón por una línea para editarla o eliminarla. Eliminar una versión que usan servidores o aplicaciones pide confirmación, con el número de servidores en los que está instalada y de aplicaciones: esos vínculos muestran entonces una versión desconocida.
 
 **Notas**: al final de la pestaña, texto libre, como las condiciones de licencia o las fechas de renovación.
 
@@ -208,20 +208,22 @@ Los servidores que llevan la tecnología, una fila por servidor y versión:
 
 | Columna | Qué muestra |
 |---|---|
-| **Ref.**, **Servidor** | El servidor. Haga clic en la fila para abrirlo |
+| **Ref.**, **Servidor** | El servidor. Un clúster muestra un icono delante de su nombre. Haga clic en la fila para abrirlo |
 | **Entorno**, **Sistema operativo** | Tomados del servidor |
 | **Versión** | La versión instalada. Un guion indica que la versión es desconocida |
-| **Vía** | Para un servidor que lleva la tecnología a través de otro: el servidor o clúster en el que está instalada. La columna solo aparece si la pestaña tiene una fila así |
+| **Vía** | Para un servidor que lleva la tecnología a través de otro: los activos en los que está instalada. La columna solo aparece si la pestaña tiene una fila así |
 | **Notas** | Texto libre sobre esta instalación, por ejemplo «nodo del clúster» |
 
 Una tecnología llega a un servidor de dos maneras:
 
 - **Instalada**: alguien vinculó la tecnología a este servidor. Puede cambiar la versión y las notas en el sitio, o quitar la fila.
-- **A través de otro servidor**: la tecnología está instalada en el servidor o clúster en el que se ejecuta este, por ejemplo SQL Server instalado en un clúster y mostrado en cada uno de sus miembros. La fila nombra ese servidor en **Vía**. Sigue a la instalación: cámbiela o quítela en ese servidor.
+- **A través de otro servidor**: para un clúster, la tecnología está instalada en sus miembros. Por ejemplo, SQL Server instalado en los nodos de un clúster aparece en el clúster en una fila por versión, con los nodos que lo llevan en **Vía**. Sigue a la instalación: cámbiela o quítela en esos servidores.
+
+Los servidores que se ejecutan dentro de un host que lleva la tecnología, como las máquinas virtuales de un host ESXi, se agrupan bajo una línea cerrada al final de la tabla, **Activos alojados (n)**. Haga clic en ella para mostrarlos, con su host en **Vía**.
 
 **Añadir** (`infrastructure:member`) abre una búsqueda de servidor y luego el selector de versión: elija una versión, **Versión desconocida**, o escriba una etiqueta nueva y elija **Añadir la versión «…»** para crearla. Cada cambio se guarda de inmediato.
 
-Un servidor retirado sigue en la lista, en gris y marcado como «retirado», para que pueda quitar su vínculo. No cuenta en ninguna parte: ni en la insignia, ni en el total, ni en los contadores de la lista, ni en los informes. La fila **Total** cuenta los servidores en servicio, cada uno una vez.
+Un servidor retirado sigue en la lista, en gris y marcado como «retirado», para que pueda quitar su vínculo. No cuenta en ninguna parte: ni en la insignia, ni en el total, ni en los contadores de la lista, ni en los informes. La insignia y la fila **Total** cuentan los servidores en servicio en los que la tecnología está instalada, cada uno una vez. Un clúster y un activo alojado aparecen en la lista sin contarse.
 
 ### Aplicaciones
 
@@ -273,7 +275,7 @@ Un resumen de las vulnerabilidades, una fila por versión instalada de la tecnol
 | Columna | Qué muestra |
 |---|---|
 | **Versión** | La versión. Una versión fuera de las alertas aparece atenuada e indica **Excluida de las alertas**. **Versión no registrada (potencialmente afectada)** agrupa los servidores y aplicaciones que no indican ninguna versión; esta fila solo aparece si los hay |
-| **Servidores** | Cuántos servidores en servicio tienen esta versión registrada en sí mismos. Un servidor que se ejecuta dentro de otro no se cuenta. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts) |
+| **Servidores** | Cuántos servidores en servicio tienen esta versión registrada en sí mismos. Los clústeres y los servidores que se ejecutan dentro de otro no se cuentan. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts) |
 | **Crítica**, **Alta**, **Media**, **Baja**, **Sin evaluar** | Una columna por gravedad: las vulnerabilidades aún por revisar. Una vulnerabilidad de gravedad **Ninguna** cuenta con **Baja**. Un punto indica que no queda ninguna. Pase el cursor por un encabezado para un recordatorio |
 | **Total** | Las vulnerabilidades distintas de esta versión, en todos los estados |
 
@@ -306,7 +308,7 @@ Puede registrar que un servidor lleva una tecnología desde cualquiera de los do
 - Desde la tecnología: pestaña **Servidores**, **Añadir**, y elija el servidor y la versión.
 - Desde el servidor: pestaña **Operación** del activo, sección **Tecnologías**, **Añadir**, y elija la tecnología y la versión. Consulte [Activos](assets.md#operations).
 
-Registre la tecnología en el servidor donde está instalada: el host para un hipervisor, cada controlador de dominio para Active Directory, el servidor de base de datos para SQL Server. Los servidores que se ejecutan dentro de él, o los miembros de su clúster, la muestran entonces sin más trabajo. Una tecnología en la nube, como Entra ID, no se ejecuta en ninguno de sus servidores: declárela en las aplicaciones.
+Registre la tecnología en el servidor donde está instalada: el host para un hipervisor, cada controlador de dominio para Active Directory, el servidor de base de datos para SQL Server. Los servidores que se ejecutan dentro de él, y el clúster de esos servidores, la muestran entonces sin más trabajo. Una tecnología en la nube, como Entra ID, no se ejecuta en ninguno de sus servidores: declárela en las aplicaciones.
 
 ---
 
@@ -339,7 +341,7 @@ Haga clic en **Importar vínculos** o **Exportar vínculos** en la barra de herr
 
 La columna `operating_system` admite tres valores:
 
-- **sí**: el vínculo pasa a ser el sistema operativo del servidor. La importación rechaza la fila cuando la tecnología no es de la familia **Sistema operativo**, cuando el servidor es un clúster o cuando el servidor ya tiene otro sistema operativo.
+- **sí**: el vínculo pasa a ser el sistema operativo del servidor. La importación rechaza la fila cuando la tecnología no es de la familia **Sistema operativo**, cuando el servidor es un clúster que tiene miembros o cuando el servidor ya tiene otro sistema operativo.
 - **no**: el vínculo nunca se marca.
 - **Vacía**: un vínculo nuevo sigue la regla de la ficha del servidor. Una tecnología de la familia **Sistema operativo** pasa a ser el sistema operativo del servidor cuando este aún no tiene ninguno y no es un clúster. La vista previa lo indica en la fila.
 

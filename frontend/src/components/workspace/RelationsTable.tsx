@@ -1,8 +1,10 @@
 import React from 'react';
 import { Box, Button, IconButton, Typography, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
+import InfoHint from './InfoHint';
 
 /** One column of a relations table. */
 export type RelationsColumn<T> = {
@@ -56,6 +58,12 @@ type TableProps<T> = {
   action?: { width: number; render: (row: T) => React.ReactNode };
   /** Total lines under the rows: a label in the first column, then cells by column key. */
   totals?: Array<{ key: string; label: React.ReactNode; cells: Record<string, React.ReactNode> }>;
+  /**
+   * Rows kept under one folded line at the end of the body, closed at first: `label` names them
+   * with their count, a click opens them in this table. With no other row, the headers show once
+   * the line is open.
+   */
+  folded?: { label: React.ReactNode; rows: T[] };
   ariaLabel?: string;
 };
 
@@ -160,9 +168,11 @@ function titleCutCell(event: React.MouseEvent) {
  * headers, 13px cells, horizontal borders only, row hover, the whole row opens the object, and an
  * unlink icon revealed on hover. Shared by every object that shows its relations.
  */
-export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, linkRows, onRowOpen, rowMuted, onRemove, removeLabel, canRemove, action, totals, ariaLabel }: TableProps<T>) {
+export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, linkRows, onRowOpen, rowMuted, onRemove, removeLabel, canRemove, action, totals, folded, ariaLabel }: TableProps<T>) {
   const theme = useTheme();
   const navigate = useNavigate();
+  const [unfolded, setUnfolded] = React.useState(false);
+  const foldedRows = folded?.rows ?? [];
   const open = (row: T) => {
     const href = rowHref?.(row);
     if (href) navigate(href);
@@ -176,6 +186,62 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
     ? fitColumns(allColumns, frameWidth - actionWidth - removeWidth)
     : { columns: allColumns, widths: allColumns.map((column) => column.width) };
   const { columns } = fitted;
+  /** One row of the body, a main one or a folded one. */
+  const renderRow = (row: T) => {
+    const href = rowHref?.(row) ?? null;
+    const opens = !!href || !!onRowOpen;
+    const muted = rowMuted?.(row) ?? false;
+    const nameIndex = columns.findIndex((column) => !column.width);
+    const linkIndex = linkRows && href ? Math.max(nameIndex, 0) : -1;
+    const cells: React.ReactNode[] = [];
+    for (let index = 0; index < columns.length;) {
+      const column = columns[index];
+      const span = Math.max(1, Math.min(column.span?.(row) ?? 1, columns.length - index));
+      cells.push(
+        <Box
+          component="td"
+          key={column.key}
+          colSpan={span > 1 ? span : undefined}
+          className={[column.align === 'right' && span === 1 ? 'r' : null, column.wrap ? 'w' : null].filter(Boolean).join(' ') || undefined}
+          sx={muted && index === nameIndex ? { '&&': { color: 'kanap.text.tertiary' } } : undefined}
+        >
+          {index === linkIndex ? (
+            <RouterLink to={href!} className="relations-row-link">{column.render(row)}</RouterLink>
+          ) : column.render(row)}
+        </Box>,
+      );
+      index += span;
+    }
+    return (
+      <tr
+        key={rowKey(row)}
+        data-href={href ?? (onRowOpen ? '' : undefined)}
+        tabIndex={opens && linkIndex < 0 ? 0 : undefined}
+        onClick={opens ? (event) => { if (!(event.target as HTMLElement).closest('a')) open(row); } : undefined}
+        onKeyDown={opens && linkIndex < 0 ? (event) => { if (event.key === 'Enter') open(row); } : undefined}
+      >
+        {cells}
+        {action ? (
+          <td className="r" onClick={(event) => event.stopPropagation()}>{action.render(row)}</td>
+        ) : null}
+        {onRemove && canRemove && !canRemove(row) ? (
+          <td />
+        ) : onRemove ? (
+          <td className="r" onClick={(event) => event.stopPropagation()}>
+            <IconButton
+              className="relations-remove"
+              size="small"
+              aria-label={removeLabel?.(row)}
+              onClick={() => onRemove(row)}
+              sx={{ p: '2px', color: 'kanap.text.tertiary' }}
+            >
+              <CloseIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </td>
+        ) : null}
+      </tr>
+    );
+  };
   return (
     <Box ref={setFrame} sx={{ width: '100%', overflowX: 'auto' }}>
       <Box
@@ -233,69 +299,46 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
           {actionWidth > 0 && <col style={{ width: actionWidth }} />}
           {removeWidth > 0 && <col style={{ width: removeWidth }} />}
         </colgroup>
-        <thead>
-          <tr>
-            {columns.map((column) => <th key={column.key} className={column.align === 'right' ? 'r' : undefined}>{column.header}</th>)}
-            {actionWidth > 0 && <th aria-hidden />}
-            {removeWidth > 0 && <th aria-hidden />}
-          </tr>
-        </thead>
+        {(rows.length > 0 || unfolded || foldedRows.length === 0) && (
+          <thead>
+            <tr>
+              {columns.map((column) => <th key={column.key} className={column.align === 'right' ? 'r' : undefined}>{column.header}</th>)}
+              {actionWidth > 0 && <th aria-hidden />}
+              {removeWidth > 0 && <th aria-hidden />}
+            </tr>
+          </thead>
+        )}
         <tbody>
-          {rows.map((row) => {
-            const href = rowHref?.(row) ?? null;
-            const opens = !!href || !!onRowOpen;
-            const muted = rowMuted?.(row) ?? false;
-            const nameIndex = columns.findIndex((column) => !column.width);
-            const linkIndex = linkRows && href ? Math.max(nameIndex, 0) : -1;
-            const cells: React.ReactNode[] = [];
-            for (let index = 0; index < columns.length;) {
-              const column = columns[index];
-              const span = Math.max(1, Math.min(column.span?.(row) ?? 1, columns.length - index));
-              cells.push(
+          {rows.map(renderRow)}
+          {foldedRows.length > 0 && (
+            <tr data-folded="">
+              <td colSpan={columns.length + (actionWidth > 0 ? 1 : 0) + (removeWidth > 0 ? 1 : 0)}>
                 <Box
-                  component="td"
-                  key={column.key}
-                  colSpan={span > 1 ? span : undefined}
-                  className={[column.align === 'right' && span === 1 ? 'r' : null, column.wrap ? 'w' : null].filter(Boolean).join(' ') || undefined}
-                  sx={muted && index === nameIndex ? { '&&': { color: 'kanap.text.tertiary' } } : undefined}
+                  component="button"
+                  type="button"
+                  aria-expanded={unfolded}
+                  onClick={() => setUnfolded((value) => !value)}
+                  sx={{
+                    all: 'unset',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    cursor: 'pointer',
+                    color: 'kanap.text.secondary',
+                    '&:hover': { color: 'kanap.text.primary' },
+                    '&:focus-visible': { outline: `2px solid ${theme.palette.primary.main}`, outlineOffset: 2, borderRadius: '2px' },
+                  }}
                 >
-                  {index === linkIndex ? (
-                    <RouterLink to={href!} className="relations-row-link">{column.render(row)}</RouterLink>
-                  ) : column.render(row)}
-                </Box>,
-              );
-              index += span;
-            }
-            return (
-              <tr
-                key={rowKey(row)}
-                data-href={href ?? (onRowOpen ? '' : undefined)}
-                tabIndex={opens && linkIndex < 0 ? 0 : undefined}
-                onClick={opens ? (event) => { if (!(event.target as HTMLElement).closest('a')) open(row); } : undefined}
-                onKeyDown={opens && linkIndex < 0 ? (event) => { if (event.key === 'Enter') open(row); } : undefined}
-              >
-                {cells}
-                {action ? (
-                  <td className="r" onClick={(event) => event.stopPropagation()}>{action.render(row)}</td>
-                ) : null}
-                {onRemove && canRemove && !canRemove(row) ? (
-                  <td />
-                ) : onRemove ? (
-                  <td className="r" onClick={(event) => event.stopPropagation()}>
-                    <IconButton
-                      className="relations-remove"
-                      size="small"
-                      aria-label={removeLabel?.(row)}
-                      onClick={() => onRemove(row)}
-                      sx={{ p: '2px', color: 'kanap.text.tertiary' }}
-                    >
-                      <CloseIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </td>
-                ) : null}
-              </tr>
-            );
-          })}
+                  <KeyboardArrowRightIcon
+                    aria-hidden
+                    sx={{ fontSize: 16, transition: 'transform 120ms', transform: unfolded ? 'rotate(90deg)' : 'none' }}
+                  />
+                  {folded!.label}
+                </Box>
+              </td>
+            </tr>
+          )}
+          {unfolded && foldedRows.map(renderRow)}
         </tbody>
         {totals && totals.length > 0 && (
           <tfoot>
@@ -328,13 +371,15 @@ type SectionProps = {
   addLabel?: string;
   /** The page's own section title, in place of the default one (the section keeps `title` as its name). */
   heading?: React.ReactNode;
+  /** One sentence in a tooltip, on an information icon after the title. */
+  hint?: string;
   /** Other actions on the right of the title, before "Add" (a refresh, its result line). */
   actions?: React.ReactNode;
   children: React.ReactNode;
 };
 
 /** A Relations section: title and count, an "Add" text action on the right, then its content. */
-export function RelationsSection({ title, count, onAdd, adding, addLabel, heading, actions, children }: SectionProps) {
+export function RelationsSection({ title, count, onAdd, adding, addLabel, heading, hint, actions, children }: SectionProps) {
   return (
     <Box component="section" aria-label={title}>
       <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 0.75, minHeight: 28 }}>
@@ -344,6 +389,7 @@ export function RelationsSection({ title, count, onAdd, adding, addLabel, headin
               {title}
             </Typography>
           )}
+          {hint && <InfoHint text={hint} />}
           {count != null && <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{count}</Typography>}
         </Box>
         {actions}

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { bilingualDocumentTsQuerySql } from '../common/document-search-tsquery';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -2846,7 +2847,9 @@ export class AiEntityService {
       manager.query<SearchRow[]>(
         `SELECT a.id, a.asset_reference AS item_ref, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
          FROM app_instances ai
-         JOIN app_asset_assignments aaa ON aaa.app_instance_id = ai.id AND aaa.tenant_id = $2 AND aaa.tenant_id = ai.tenant_id
+         -- The servers the application runs on (effective: a cluster and its members in service).
+         JOIN (${effectiveAssignmentsSql({ tenant: '$2', applications: 'ARRAY[$1::uuid]' })}) aaa
+           ON aaa.app_instance_id = ai.id AND aaa.tenant_id = $2 AND aaa.tenant_id = ai.tenant_id
          JOIN assets a ON a.id = aaa.asset_id AND a.tenant_id = $2 AND a.tenant_id = aaa.tenant_id
          WHERE ai.application_id = $1
            AND ai.tenant_id = $2
@@ -2964,7 +2967,8 @@ export class AiEntityService {
       ),
       manager.query<SearchRow[]>(
         `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
-         FROM app_asset_assignments aaa
+         -- The applications running on the asset (effective: a member runs what its clusters carry).
+         FROM (${effectiveAssignmentsSql({ tenant: '$2', assets: 'ARRAY[$1::uuid]' })}) aaa
          JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = $2 AND ai.tenant_id = aaa.tenant_id
          JOIN applications a ON a.id = ai.application_id AND a.tenant_id = $2 AND a.tenant_id = ai.tenant_id
          WHERE aaa.asset_id = $1

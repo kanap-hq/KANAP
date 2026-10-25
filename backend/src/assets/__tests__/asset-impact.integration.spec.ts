@@ -8,6 +8,8 @@ import type { QueryRunner } from 'typeorm';
 // "If this server goes down" (lot T5) against a real database, in transactions rolled back at the
 // end: a host and its VMs, a dependency, a diamond, degraded and down clusters, a `contains` cycle,
 // the depth limits, the row cap, applications out of service, retired assets, the read rights, and tenant isolation.
+// Clusters (passe clusters, lot A3a): a cluster takes its members in service (`member`); a cluster
+// down with all its members takes the VMs it contains; a degraded one takes nothing.
 
 const service = () => new AssetImpactService();
 
@@ -121,6 +123,58 @@ async function testClusters() {
     const all = await service().impactOf(g.ids.host, ctxOf(runner, g.tenantId));
     assert.deepEqual(all.clusters.map((row) => `${row.name}|${row.state}|${row.fallen_members}/${row.members}`), ['SOLO-CL|down|1/1', 'VSPHERE-CL|down|2/2']);
     assert.ok(all.applications!.some((row) => row.id === g.apps.other && row.via[0]?.name === 'VSPHERE-CL'), 'an application on a cluster that is down falls');
+  });
+}
+
+async function testClusterFalls() {
+  await inRolledBackTransaction(async (runner) => {
+    const g = await seed(runner, 'impact-cluster-falls');
+    const a = (name: string, cluster = false) => asset(runner, g.tenantId, name, cluster);
+    const ids = { bay: await a('BAY-01'), n1: await a('NODE-A'), n2: await a('NODE-B'), old: await a('NODE-OLD'), cl: await a('PROD-CL', true), vm: await a('CL-VM') };
+    await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [g.tenantId, ids.old]);
+    for (const node of [ids.n1, ids.n2, ids.old]) await member(runner, g.tenantId, ids.cl, node);
+    // Both nodes depend on the bay; the cluster holds a VM.
+    await dependsOn(runner, g.tenantId, ids.n1, ids.bay);
+    await dependsOn(runner, g.tenantId, ids.n2, ids.bay);
+    await contains(runner, g.tenantId, ids.cl, ids.vm);
+    const apps = {
+      a: await application(runner, g.tenantId, 'App A'), b: await application(runner, g.tenantId, 'App B'),
+      cl: await application(runner, g.tenantId, 'App CL'), vm: await application(runner, g.tenantId, 'App VM'), old: await application(runner, g.tenantId, 'App Old'),
+    };
+    await assign(runner, g.tenantId, apps.a, ids.n1, 'prod');
+    await assign(runner, g.tenantId, apps.b, ids.n2, 'prod');
+    await assign(runner, g.tenantId, apps.cl, ids.cl, 'prod');
+    await assign(runner, g.tenantId, apps.vm, ids.vm, 'prod');
+    await assign(runner, g.tenantId, apps.old, ids.old, 'prod');
+    const line = (row: { name: string; depth: number; relation: string | null; via: Array<{ name: string }> }) =>
+      `${row.name}|${row.depth}|${row.relation ?? '-'}|${row.via.map((v) => v.name).join('>')}`;
+
+    // The cluster falls: its members in service, what it holds, their applications and its own.
+    const cluster = await service().impactOf(ids.cl, ctxOf(runner, g.tenantId));
+    assert.deepEqual(
+      cluster.assets.map(line),
+      ['PROD-CL|0|-|', 'CL-VM|1|contains|PROD-CL', 'NODE-A|1|member|PROD-CL', 'NODE-B|1|member|PROD-CL'],
+      'the members in service fall with the cluster; the retired member is not taken',
+    );
+    assert.deepEqual(cluster.applications!.map((row) => `${row.name}|${row.via.map((v) => v.name).join(',')}`), ['App A|NODE-A', 'App B|NODE-B', 'App CL|PROD-CL', 'App VM|CL-VM']);
+    assert.deepEqual(cluster.clusters, [], 'the cluster is the server row, not a cluster row');
+
+    // The bay takes both nodes: the cluster goes down, and takes its VM and its application (K2-3).
+    const bay = await service().impactOf(ids.bay, ctxOf(runner, g.tenantId));
+    assert.deepEqual(
+      bay.assets.map(line),
+      ['BAY-01|0|-|', 'NODE-A|1|depends_on|BAY-01', 'NODE-B|1|depends_on|BAY-01', 'CL-VM|3|contains|BAY-01>NODE-A>PROD-CL'],
+    );
+    assert.deepEqual(bay.clusters.map((row) => `${row.name}|${row.state}|${row.fallen_members}/${row.members}`), ['PROD-CL|down|2/2']);
+    assert.deepEqual(bay.applications!.map((row) => row.name), ['App A', 'App B', 'App CL', 'App VM']);
+    assert.equal(bay.totals.assets, 3, 'the cluster down is listed in clusters, not in assets');
+
+    // One node only: the cluster is degraded, its VM and its application stand.
+    const single = await service().impactOf(ids.n1, ctxOf(runner, g.tenantId));
+    assert.deepEqual(single.assets.map(line), ['NODE-A|0|-|']);
+    assert.deepEqual(single.clusters.map((row) => `${row.name}|${row.state}|${row.fallen_members}/${row.members}`), ['PROD-CL|degraded|1/2']);
+    assert.deepEqual(single.applications!.map((row) => row.name), ['App A']);
+    assert.deepEqual(single.clusters.map((row) => row.applications), [1], 'the cluster carries App CL itself');
   });
 }
 
@@ -255,6 +309,7 @@ async function testTenantIsolation() {
 runSpecs('asset-impact.integration.spec', [
   ['host, VMs and a dependency', testHostVmsAndDependency],
   ['degraded and down clusters', testClusters],
+  ['a cluster falls with its members, a cluster down takes its VMs', testClusterFalls],
   ['cycle and depth', testCycleAndDepth],
   ['applications out of service', testOutOfService],
   ['retired assets', testRetiredAssets],

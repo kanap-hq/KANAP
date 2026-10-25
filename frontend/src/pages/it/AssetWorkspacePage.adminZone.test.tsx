@@ -85,7 +85,7 @@ function renderAsset(asset: typeof ASSET = ASSET) {
   get.mockImplementation(async (url: string) => {
     if (url === '/assets/asset-1') return { data: asset };
     if (url === '/locations') return { data: { items: [] } };
-    if (url.endsWith('/assignments')) return { data: [] };
+    if (url.endsWith('/assignments')) return { data: { items: [], groupable: [] } };
     if (url.endsWith('/clusters') || url.endsWith('/members')) return { data: { items: [] } };
     return { data: { items: [], outgoing: [], incoming: [] } };
   });
@@ -152,6 +152,29 @@ describe('Asset properties: administration zone', () => {
     expect(options).toEqual(['common:labels.none', 'Tier 0', 'Tier 1']);
     fireEvent.click(screen.getByRole('option', { name: 'Tier 1' }));
     expect(patch).toHaveBeenCalledWith('/assets/asset-1', { admin_zone: 'tier_1' });
+  });
+
+  it('saves a field changed while another saves after it, and keeps its value meanwhile', async () => {
+    let answerFirst: (value: unknown) => void = () => undefined;
+    patch.mockImplementationOnce(() => new Promise((resolve) => { answerFirst = resolve; }));
+    patch.mockResolvedValueOnce({ data: { ...ASSET, is_cluster: true, admin_zone: 'tier_1' } });
+    renderAsset();
+    const field = await zoneShowing('Tier 0');
+    const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
+    fireEvent.click(toggle);
+    await waitFor(() => expect(patch).toHaveBeenCalledTimes(1));
+    fireEvent.mouseDown(field);
+    fireEvent.click(screen.getByRole('option', { name: 'Tier 1' }));
+    // The zone waits for the switch, and shows its new value.
+    expect(patch).toHaveBeenCalledTimes(1);
+    expect(field).toHaveTextContent('Tier 1');
+    // The switch's answer still holds the old zone: the zone keeps its new value, then saves.
+    answerFirst({ data: { ...ASSET, is_cluster: true } });
+    await waitFor(() => expect(patch).toHaveBeenCalledTimes(2));
+    expect(patch.mock.calls.map((call) => call[1])).toEqual([{ is_cluster: true }, { admin_zone: 'tier_1' }]);
+    expect(screen.getByRole('combobox', { name: 'workspace.asset.technical.adminZone' })).toHaveTextContent('Tier 1');
+    await waitFor(() => expect(toggle).toBeChecked());
+    expect(field).toBeEnabled();
   });
 
   it('keeps a retired zone while it is the value', async () => {

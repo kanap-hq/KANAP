@@ -34,6 +34,7 @@ import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import GridOnIcon from '@mui/icons-material/GridOn';
 import PageHeader from '../../components/PageHeader';
 import LightModeIsland from '../../components/LightModeIsland';
+import ViaAssetNames from '../../components/workspace/ViaAssetNames';
 import api from '../../api';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import ConnectionMapGraph, { ClusterMembership, ConnectionMapLink, ConnectionMapNode, GraphControlsApi } from './components/ConnectionMapGraph';
@@ -153,7 +154,8 @@ type ServerMapSummary = {
   ip: string | null;
   location_reference: string | null;
   location_name: string | null;
-  assigned_applications: Array<{ id: string; name: string; environment: string }>;
+  /** A member also lists what its clusters carry: `inherited`, with the clusters in `via_clusters`. */
+  assigned_applications: Array<{ id: string; name: string; environment: string; inherited?: boolean; via_clusters?: Array<{ id: string; name: string }> }>;
   is_cluster?: boolean;
 };
 
@@ -1250,15 +1252,21 @@ export default function ConnectionMapPage() {
                                           .slice()
                                           .sort((a, b) => a.name.localeCompare(b.name))
                                           .map((app) => (
-                                            <Button
-                                              key={`${app.id}-${app.environment}`}
-                                              variant="text"
-                                              size="small"
-                                              onClick={() => navigate(`/it/applications/${app.id}/overview`)}
-                                              sx={{ justifyContent: 'flex-start', textAlign: 'left', px: 0 }}
-                                            >
-                                              {app.name}
-                                            </Button>
+                                            <Box key={`${app.id}-${app.environment}`} sx={{ display: 'flex', alignItems: 'baseline', gap: '6px', minWidth: 0 }}>
+                                              <Button
+                                                variant="text"
+                                                size="small"
+                                                onClick={() => navigate(`/it/applications/${app.id}/overview`)}
+                                                sx={{ justifyContent: 'flex-start', textAlign: 'left', px: 0, minWidth: 0 }}
+                                              >
+                                                {app.name}
+                                              </Button>
+                                              {app.inherited && (app.via_clusters?.length ?? 0) > 0 && (
+                                                <Box component="span" sx={(muiTheme) => ({ fontSize: 12, color: muiTheme.palette.kanap.text.tertiary })}>
+                                                  {t('components.clusterAssignment.via')} <ViaAssetNames assets={app.via_clusters ?? []} />
+                                                </Box>
+                                              )}
+                                            </Box>
                                           ))}
                                       </Stack>
                                     </Box>
@@ -1276,16 +1284,12 @@ export default function ConnectionMapPage() {
                             variant="contained"
                             size="small"
                             onClick={() => {
-                              navigate(`/it/assets/${selectedNode.id}/overview`);
+                              // The members of a cluster are managed on the Dependencies tab.
+                              navigate(`/it/assets/${selectedNode.id}/${selectedNode.kind === 'cluster' ? 'dependencies' : 'overview'}`);
                             }}
                           >
                             {selectedNode.kind === 'cluster' ? t('pages.connectionMap.viewCluster') : t('pages.connectionMap.editServer')}
                           </Button>
-                          {selectedNode.kind === 'cluster' && (
-                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                              {t('pages.connectionMap.clusterHint')}
-                            </Typography>
-                          )}
                         </Box>
                       </Stack>
                     );

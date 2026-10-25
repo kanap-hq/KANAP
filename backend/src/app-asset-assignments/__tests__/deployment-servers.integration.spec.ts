@@ -96,11 +96,8 @@ async function testCodedRefusals() {
       409, 'deployment_environment_taken', { environment: 'prod' });
 
     const server = await seedAsset(runner, t, 'srv-1');
-    const cluster = await seedAsset(runner, t, 'cluster-1', true);
     await expectCoded(() => assignments.create(prod, null, null, { manager: m, tenantId: t }), 400, 'body_required');
     await expectCoded(() => assignments.create(prod, { role: 'app' }, null, { manager: m, tenantId: t }), 400, 'asset_required');
-    await expectCoded(() => assignments.create(prod, { server_id: cluster, role: 'app' }, null, { manager: m, tenantId: t }),
-      400, 'assignment_cluster');
     await expectCoded(() => assignments.create(prod, { server_id: server, role: 'nope' }, null, { manager: m, tenantId: t }),
       400, 'assignment_role_invalid', { value: 'nope' });
     await expectCoded(() => assignments.create(prod, { server_id: server, role: '' }, null, { manager: m, tenantId: t }),

@@ -1,6 +1,6 @@
 import i18next, { type i18n as I18n } from 'i18next';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { deleteFailureReason } from './deleteRefusal';
+import { assetDeleteWarningLines, deleteFailureReason, type AssetDeleteWarning } from './deleteRefusal';
 
 const LANGUAGES = ['en', 'fr', 'de', 'es'] as const;
 
@@ -137,5 +137,53 @@ describe('deleteFailureReason', () => {
   it('keeps the reason of a failure without a code', () => {
     expect(deleteFailureReason({ reason: 'This line has amounts in a frozen budget column.' }, i18n.fr.t, 'fr'))
       .toBe('This line has amounts in a frozen budget column.');
+  });
+
+  describe('assetDeleteWarningLines', () => {
+    const relation = (name: string, type = 'depends_on') => ({ id: name, name, relation_type: type, direction: 'outgoing' });
+    const warning = (patch: Partial<AssetDeleteWarning>): AssetDeleteWarning => ({
+      id: 'a', name: 'srv', member_of: [], member_count: 0, relations: [], relations_total: 0, ...patch,
+    });
+
+    it('names the cluster a server leaves, in the interface language', () => {
+      const one = warning({ member_of: [{ id: 'c', name: 'PAR-SQL-CL01' }] });
+      expect(assetDeleteWarningLines(one, i18n.en.t, 'en')).toEqual(['Member of PAR-SQL-CL01: it will leave this cluster.']);
+      expect(assetDeleteWarningLines(one, i18n.fr.t, 'fr')).toEqual(['Membre de PAR-SQL-CL01 : il quittera ce cluster.']);
+      const two = warning({ member_of: [{ id: 'c', name: 'CL-1' }, { id: 'd', name: 'CL-2' }] });
+      expect(assetDeleteWarningLines(two, i18n.en.t, 'en')).toEqual(['Member of CL-1 and CL-2: it will leave these clusters.']);
+    });
+
+    it('counts the members a cluster lets go', () => {
+      expect(assetDeleteWarningLines(warning({ member_count: 2 }), i18n.fr.t, 'fr')).toEqual(['Cluster de 2 membres : ils perdront leur cluster.']);
+      expect(assetDeleteWarningLines(warning({ member_count: 1 }), i18n.en.t, 'en')).toEqual(['Cluster of 1 member: it will lose its cluster.']);
+    });
+
+    it('counts the links and names the first assets, then the others', () => {
+      const few = warning({ relations: [relation('PAR-ESX-01'), relation('PAR-ESX-02')], relations_total: 2 });
+      expect(assetDeleteWarningLines(few, i18n.en.t, 'en')).toEqual(['2 links will be removed: PAR-ESX-01 and PAR-ESX-02.']);
+      const many = warning({ relations: ['A', 'B', 'C', 'D', 'E'].map((name) => relation(name)), relations_total: 12 });
+      expect(assetDeleteWarningLines(many, i18n.en.t, 'en')).toEqual(['12 links will be removed: A, B, C and 9 more.']);
+      expect(assetDeleteWarningLines(many, i18n.fr.t, 'fr')).toEqual(['12 liens seront supprimés : A, B, C et 9 autres.']);
+      // Two links to one asset name it once and count both.
+      const twice = warning({ relations: [relation('A'), relation('A', 'contains')], relations_total: 2 });
+      expect(assetDeleteWarningLines(twice, i18n.en.t, 'en')).toEqual(['2 links will be removed: A.']);
+    });
+
+    it('gives one line per case and none for an asset without any', () => {
+      const all = warning({ member_of: [{ id: 'c', name: 'CL' }], member_count: 3, relations: [relation('X')], relations_total: 1 });
+      expect(assetDeleteWarningLines(all, i18n.en.t, 'en')).toHaveLength(3);
+      expect(assetDeleteWarningLines(warning({}), i18n.en.t, 'en')).toEqual([]);
+    });
+
+    it('has every sentence in each language, in both plural forms', () => {
+      for (const language of LANGUAGES) {
+        for (const key of ['memberOf', 'hasMembers', 'links', 'more']) {
+          for (const form of ['one', 'other']) {
+            expect(i18n[language].exists(`common:delete.assetWarning.${key}_${form}`), `${language} ${key}_${form}`).toBe(true);
+          }
+        }
+        expect(i18n[language].exists('common:delete.anyway'), `${language} anyway`).toBe(true);
+      }
+    });
   });
 });

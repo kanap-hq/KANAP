@@ -86,7 +86,7 @@ Jede Zeile ist eine Technologie. Klicken Sie auf eine Zeile, um sie zu öffnen.
 | **Name** | Der Name der Technologie |
 | **Familie** | Die Art der Technologie |
 | **Hersteller** | Wer sie herausgibt |
-| **Server** | Assets, die sie tragen, direkt oder weil sie in einem Asset liegen, das sie trägt |
+| **Server** | Assets in Betrieb, auf denen sie installiert ist. Cluster werden nicht gezählt, ebenso wenig die virtuellen Maschinen eines Hosts, der sie trägt. Das Badge **Server** des Datensatzes und der Bericht [Supportende](end-of-support.md) zeigen dieselbe Zahl |
 | **Anwendungen** | Anwendungen, die sie deklarieren oder auf einem Server gehostet werden, der sie trägt |
 | **Nächstes Supportende** | Das früheste kommende Ende des Standardsupports unter den Versionen im Einsatz. Orange, wenn es in die nächsten 12 Monate fällt |
 | **Zu prüfende Schwachstellen** | Die bekannten Schwachstellen, die auf den Versionen im Einsatz in den Warnungen noch zu prüfen sind. Orange mit der Anzahl der kritischen oder hohen (`3 · 1 kritisch oder hoch`). Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md) für diese Technologie. Vorhanden, wenn Schwachstellen verfolgt werden |
@@ -149,7 +149,7 @@ Ein als **Nicht mehr anbieten** markierter Typ bleibt bei den Technologien, die 
 | **Kein Support** | Alle Enddaten sind überschritten |
 | **Datum unbekannt** | Kein Enddatum erfasst |
 
-Der Support läuft an seinem Enddatum noch. Bei nur einem Datum ist dieses Datum das Ende. **Version hinzufügen** fügt eine Zeile hinzu; fahren Sie über eine Zeile, um sie zu bearbeiten oder zu löschen. Das Löschen einer Version, die Server oder Anwendungen nutzen, fragt zuerst nach: Diese Verknüpfungen zeigen dann eine unbekannte Version.
+Der Support läuft an seinem Enddatum noch. Bei nur einem Datum ist dieses Datum das Ende. **Version hinzufügen** fügt eine Zeile hinzu; fahren Sie über eine Zeile, um sie zu bearbeiten oder zu löschen. Das Löschen einer Version, die Server oder Anwendungen nutzen, fragt zuerst nach, mit der Zahl der Server, auf denen sie installiert ist, und der Anwendungen: Diese Verknüpfungen zeigen dann eine unbekannte Version.
 
 **Notizen**: unten im Reiter, Freitext, etwa Lizenzbedingungen oder Verlängerungstermine.
 
@@ -208,20 +208,22 @@ Die Server, die die Technologie tragen, eine Zeile pro Server und Version:
 
 | Spalte | Was sie zeigt |
 |---|---|
-| **Ref.**, **Server** | Der Server. Ein Klick auf die Zeile öffnet ihn |
+| **Ref.**, **Server** | Der Server. Ein Cluster zeigt ein Symbol vor seinem Namen. Ein Klick auf die Zeile öffnet ihn |
 | **Umgebung**, **Betriebssystem** | Vom Server übernommen |
 | **Version** | Die installierte Version. Ein Strich bedeutet, dass die Version unbekannt ist |
-| **Über** | Bei einem Server, der die Technologie über einen anderen trägt: der Server oder Cluster, auf dem sie installiert ist. Die Spalte erscheint nur, wenn der Reiter eine solche Zeile hat |
+| **Über** | Bei einem Server, der die Technologie über einen anderen trägt: die Assets, auf denen sie installiert ist. Die Spalte erscheint nur, wenn der Reiter eine solche Zeile hat |
 | **Notizen** | Freitext zu dieser Installation, zum Beispiel „Clusterknoten“ |
 
 Eine Technologie erreicht einen Server auf zwei Wegen:
 
 - **Installiert**: Jemand hat die Technologie mit diesem Server verknüpft. Sie können Version und Notizen direkt ändern oder die Zeile entfernen.
-- **Über einen anderen Server**: Die Technologie ist auf dem Server oder Cluster installiert, in dem dieser läuft, zum Beispiel SQL Server auf einem Cluster, angezeigt auf jedem seiner Mitglieder. Die Zeile nennt diesen Server unter **Über**. Sie folgt der Installation: Ändern oder entfernen Sie sie auf jenem Server.
+- **Über einen anderen Server**: Bei einem Cluster ist die Technologie auf seinen Mitgliedern installiert. Zum Beispiel erscheint SQL Server, auf den Knoten eines Clusters installiert, auf dem Cluster in einer Zeile pro Version, mit den Knoten, die ihn tragen, unter **Über**. Sie folgt der Installation: Ändern oder entfernen Sie sie auf jenen Servern.
+
+Die Server, die in einem Host laufen, der die Technologie trägt, etwa die virtuellen Maschinen eines ESXi-Hosts, stehen unter einer geschlossenen Zeile am Ende der Tabelle, **Gehostete Assets (n)**. Klicken Sie darauf, um sie anzuzeigen, mit ihrem Host unter **Über**.
 
 **Hinzufügen** (`infrastructure:member`) öffnet eine Serversuche, dann die Versionsauswahl: Wählen Sie eine Version, **Version unbekannt**, oder geben Sie eine neue Bezeichnung ein und wählen Sie **Version „…“ hinzufügen**, um sie anzulegen. Jede Änderung wird sofort gespeichert.
 
-Ein außer Betrieb genommener Server bleibt gelistet, ausgegraut und als „außer Betrieb“ markiert, damit Sie seine Verknüpfung entfernen können. Er zählt nirgends: weder im Badge noch in der Summe, den Zählern der Liste oder den Berichten. Die Zeile **Gesamt** zählt die Server in Betrieb, jeden einmal.
+Ein außer Betrieb genommener Server bleibt gelistet, ausgegraut und als „außer Betrieb“ markiert, damit Sie seine Verknüpfung entfernen können. Er zählt nirgends: weder im Badge noch in der Summe, den Zählern der Liste oder den Berichten. Das Badge und die Zeile **Gesamt** zählen die Server in Betrieb, auf denen die Technologie installiert ist, jeden einmal. Ein Cluster und ein gehostetes Asset werden gelistet, aber nicht gezählt.
 
 ### Anwendungen
 
@@ -273,7 +275,7 @@ Eine Zusammenfassung der Schwachstellen, eine Zeile pro installierter Version de
 | Spalte | Was sie zeigt |
 |---|---|
 | **Version** | Die Version. Eine Version außerhalb der Warnungen ist ausgegraut und zeigt **Von den Warnungen ausgeschlossen**. **Version nicht erfasst (möglicherweise betroffen)** fasst die Server und Anwendungen zusammen, die keine Version angeben; diese Zeile erscheint nur, wenn es solche gibt |
-| **Server** | Wie viele Server in Betrieb diese Version selbst erfasst haben. Ein Server, der in einem anderen läuft, wird nicht gezählt. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts) |
+| **Server** | Wie viele Server in Betrieb diese Version selbst erfasst haben. Cluster und Server, die in einem anderen laufen, werden nicht gezählt. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts) |
 | **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Nicht bewertet** | Eine Spalte pro Schweregrad: die noch zu prüfenden Schwachstellen. Eine Schwachstelle mit dem Schweregrad **Keine** zählt bei **Niedrig**. Ein Punkt bedeutet, dass keine mehr übrig ist. Fahren Sie über eine Überschrift für einen Hinweis |
 | **Gesamt** | Die verschiedenen Schwachstellen dieser Version, alle Status zusammen |
 
@@ -306,7 +308,7 @@ Dass ein Server eine Technologie trägt, erfassen Sie von beiden Seiten:
 - Von der Technologie aus: Reiter **Server**, **Hinzufügen**, dann Server und Version wählen.
 - Vom Server aus: Reiter **Betrieb** des Assets, Abschnitt **Technologien**, **Hinzufügen**, dann Technologie und Version wählen. Siehe [Assets](assets.md#operations).
 
-Erfassen Sie die Technologie auf dem Server, auf dem sie installiert ist: dem Host für einen Hypervisor, jedem Domänencontroller für Active Directory, dem Datenbankserver für SQL Server. Die Server, die darin laufen, oder die Mitglieder seines Clusters zeigen sie dann ohne weitere Eingabe. Eine Cloud-Technologie wie Entra ID läuft auf keinem Ihrer Server: Deklarieren Sie sie stattdessen bei den Anwendungen.
+Erfassen Sie die Technologie auf dem Server, auf dem sie installiert ist: dem Host für einen Hypervisor, jedem Domänencontroller für Active Directory, dem Datenbankserver für SQL Server. Die Server, die darin laufen, und der Cluster dieser Server zeigen sie dann ohne weitere Eingabe. Eine Cloud-Technologie wie Entra ID läuft auf keinem Ihrer Server: Deklarieren Sie sie stattdessen bei den Anwendungen.
 
 ---
 
@@ -339,7 +341,7 @@ Klicken Sie in der Symbolleiste auf **Verknüpfungen importieren** oder **Verkn�
 
 Die Spalte `operating_system` kennt drei Werte:
 
-- **Ja**: Die Verknüpfung wird zum Betriebssystem des Servers. Der Import lehnt die Zeile ab, wenn die Technologie nicht zur Familie **Betriebssystem** gehört, wenn der Server ein Cluster ist oder wenn der Server bereits ein anderes Betriebssystem hat.
+- **Ja**: Die Verknüpfung wird zum Betriebssystem des Servers. Der Import lehnt die Zeile ab, wenn die Technologie nicht zur Familie **Betriebssystem** gehört, wenn der Server ein Cluster mit Mitgliedern ist oder wenn der Server bereits ein anderes Betriebssystem hat.
 - **Nein**: Die Verknüpfung wird nie markiert.
 - **Leer**: Eine neue Verknüpfung folgt der Regel der Serverseite. Eine Technologie der Familie **Betriebssystem** wird zum Betriebssystem des Servers, wenn dieser noch keines hat und kein Cluster ist. Die Vorschau zeigt es in der Zeile an.
 

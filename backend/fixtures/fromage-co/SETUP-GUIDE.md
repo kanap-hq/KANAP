@@ -108,7 +108,16 @@ its own: load the current dataset on a new tenant instead.
    app instances, interfaces + bindings, connections + equipment hops,
    interface↔connection links, contract↔spend links, spend↔application links,
    portfolio teams and capacity, project phases and team members, company
-   allocations on selected spend/CAPEX versions.
+   allocations on selected spend/CAPEX versions. Then the IT landscape: the
+   `PAR-VSPHERE-CL01` and `PAR-SQL-CL01` clusters and their members, the VMs
+   of the vSphere cluster (contained by the cluster itself), the
+   applications on their servers (on a cluster, the row is on the cluster and
+   its members inherit it), technologies, business processes and incidents.
+   On a tenant built by an earlier version of the fixture, the runner moves
+   the VMs from `PAR-ESX-01` and `PAR-ESX-02` to the cluster, replaces the
+   rows of CheeseTrack, Sage X3 and VMware vSphere on the cluster members by
+   one row on the cluster, and turns `PAR-FW-01` and `PAR-FW-02` into plain
+   firewalls.
 7. **Service Desk Docs**: a knowledge library with five published guides
    (VPN, SAP access, CaveGuard alerts, guest Wi-Fi, label printers). The
    documents are in `docs/*.md`.

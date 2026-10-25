@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState, useCallback } from 'react';
-import { Box, Button, Link, Stack, Typography, useTheme } from '@mui/material';
+import { Box, Button, Link, Menu, MenuItem, Stack, useTheme } from '@mui/material';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
@@ -11,7 +12,7 @@ import { useAuth } from '../../auth/AuthContext';
 import ForbiddenPage from '../ForbiddenPage';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
-import { recordsInUseCheck } from '../../utils/deleteCheck';
+import { assetsDeleteCheck } from '../../utils/deleteCheck';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
@@ -22,6 +23,7 @@ import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 import { countValueFormatter } from '../../components/grid/countValueFormatter';
 import { useFeatures } from '../../config/FeaturesContext';
+import ClusterMark from '../../components/workspace/ClusterMark';
 import VulnerabilityCountCell from '../../components/vulnerabilities/VulnerabilityCountCell';
 import {
   VULNERABILITIES_FIELD,
@@ -75,6 +77,8 @@ const ENV_LABEL_KEYS: Record<string, string> = {
   sandbox: 'enums.environment.sandbox',
 };
 
+/** The server's filter value for "is a cluster" (`CLUSTER_FILTER_IS_CLUSTER`). */
+const CLUSTER_FILTER_IS_CLUSTER = '__cluster__';
 const ENV_ORDER = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'];
 
 export default function AssetsPage() {
@@ -91,6 +95,7 @@ export default function AssetsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [addMenu, setAddMenu] = useState<HTMLElement | null>(null);
   const { labelFor } = useItOpsEnumOptions();
   const envLabelMap = useMemo(
     () => Object.fromEntries(Object.entries(ENV_LABEL_KEYS).map(([code, key]) => [code, t(key)])) as Record<string, string>,
@@ -138,12 +143,15 @@ export default function AssetsPage() {
       labelMap?: Record<string, string>;
       labelFn?: (code: string) => string;
       order?: Array<string | null>;
+      /** Values listed after the others, in this order (the server's own order for them). */
+      trailing?: Array<string | null>;
       emptyLabel?: string;
     },
   ) => {
     const labelMap = opts?.labelMap;
     const labelFn = opts?.labelFn;
     const order = opts?.order;
+    const trailing = opts?.trailing;
     const emptyLabel = opts?.emptyLabel ?? t('pages.assets.filters.blank');
     return async ({ context }: any) => {
       const queryState = context?.getQueryState?.() ?? {};
@@ -169,7 +177,15 @@ export default function AssetsPage() {
         }
         return { value, label };
       });
-      if (order && order.length > 0) {
+      if (trailing && trailing.length > 0) {
+        const rank = (value: string | null) => trailing.indexOf(value);
+        options.sort((a, b) => {
+          const ra = rank(a.value);
+          const rb = rank(b.value);
+          if (ra !== -1 || rb !== -1) return ra - rb;
+          return (a.label || '').localeCompare(b.label || '');
+        });
+      } else if (order && order.length > 0) {
         const orderMap = new Map(order.map((val, index) => [val, index]));
         options.sort((a, b) => {
           const aIndex = orderMap.has(a.value) ? (orderMap.get(a.value) as number) : Number.MAX_SAFE_INTEGER;
@@ -256,7 +272,6 @@ export default function AssetsPage() {
 
   const ClusterCell = useMemo(() => {
     const Cell: React.FC<ICellRendererParams<AssetRow, any>> = (params) => {
-      const id = params.data?.id;
       const value = params.data?.cluster;
       const isCluster = params.data?.is_cluster;
       const data = params.data;
@@ -271,11 +286,9 @@ export default function AssetsPage() {
           color="inherit"
         >
           {isCluster ? (
-            <Typography variant="body2" color="text.secondary">{t('pages.assets.columns.cluster')}</Typography>
-          ) : value ? (
-            value
+            <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center' }}><ClusterMark /></Box>
           ) : (
-            '—'
+            value || null
           )}
         </Link>
       );
@@ -336,10 +349,14 @@ export default function AssetsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAssetFilterValues('cluster', { emptyLabel: t('pages.assets.filters.noCluster') }),
+        getValues: getAssetFilterValues('cluster', {
+          emptyLabel: t('pages.assets.filters.noCluster'),
+          labelFn: (v) => (v === CLUSTER_FILTER_IS_CLUSTER ? t('pages.assets.filters.isCluster') : v),
+          trailing: [CLUSTER_FILTER_IS_CLUSTER, null],
+        }),
         searchable: false,
       },
-      valueFormatter: (p) => (p.data?.is_cluster ? t('pages.assets.columns.cluster') : p.value || '—'),
+      valueFormatter: (p) => (p.data?.is_cluster ? t('pages.assets.columns.cluster') : p.value || ''),
       cellRenderer: ClusterCell,
     },
     {
@@ -476,13 +493,23 @@ export default function AssetsPage() {
     { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, filter: 'agDateColumnFilter', valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToWorkspace },
   ], [ClickToWorkspace, ClusterCell, EnvironmentCell, envLabel, envLabelMap, getAssetFilterValues, labelFor, lifecycleLabel, t, vulnerabilityFeed]);
 
+  // A new cluster opens the creation with the Cluster switch already on.
+  const openNew = (cluster: boolean) => {
+    setAddMenu(null);
+    const sp = buildWorkspaceSearch();
+    if (cluster) sp.set('cluster', '1');
+    navigate(`/it/assets/new/overview?${sp.toString()}`);
+  };
+
   const actions = (
     <Stack direction="row" spacing={1}>
       {hasLevel('infrastructure', 'member') && (
-        <Button variant="action-primary" onClick={() => {
-          const sp = buildWorkspaceSearch();
-          navigate(`/it/assets/new/overview?${sp.toString()}`);
-        }}>
+        <Button
+          variant="action-primary"
+          endIcon={<ArrowDropDownIcon />}
+          aria-haspopup="menu"
+          onClick={(event) => setAddMenu(event.currentTarget)}
+        >
           {t('pages.assets.addAsset')}
         </Button>
       )}
@@ -496,7 +523,7 @@ export default function AssetsPage() {
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
           // Asked on click: those still in use are kept, with what uses them.
-          checkDelete={(ids) => recordsInUseCheck('/assets', ids)}
+          checkDelete={(ids) => assetsDeleteCheck(ids, t, locale)}
           itemLabels={{
             toDelete: (count) => t('pages.assets.delete.toDelete', { count }),
             kept: (count) => t('pages.assets.delete.kept', { count }),
@@ -532,6 +559,16 @@ export default function AssetsPage() {
         }}
       />
       )}
+      <Menu
+        anchorEl={addMenu}
+        open={!!addMenu}
+        onClose={() => setAddMenu(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        <MenuItem sx={{ fontSize: 13 }} onClick={() => openNew(false)}>{t('pages.assets.addAsset')}</MenuItem>
+        <MenuItem sx={{ fontSize: 13 }} onClick={() => openNew(true)}>{t('pages.assets.addCluster')}</MenuItem>
+      </Menu>
       <CsvExportDialogV2
         open={exportOpen}
         onClose={() => setExportOpen(false)}

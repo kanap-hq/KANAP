@@ -1021,7 +1021,8 @@ async function ensureAssets(locationIdByFixtureCode) {
   const kindCodes = codeByLabel(settings.serverKinds);
   const locations = await getAll('/locations?limit=500');
   const locationById = new Map(locations.map((item) => [item.id, item]));
-  const existing = new Set((await getAll('/assets?limit=1000')).map((item) => item.name));
+  const existingAssets = await getAll('/assets?limit=1000');
+  const existing = new Set(existingAssets.map((item) => item.name));
   // CSV hostnames are FQDNs; the API wants a bare hostname + a domain code.
   const domainBySuffix = new Map((settings.domains ?? []).filter((d) => d.dns_suffix).map((d) => [lower(d.dns_suffix), d.code]));
   const splitFqdn = (value) => {
@@ -1033,7 +1034,18 @@ async function ensureAssets(locationIdByFixtureCode) {
   };
 
   for (const row of readCsv('18-assets.csv')) {
-    if (existing.has(row.name)) continue;
+    if (existing.has(row.name)) {
+      // Older fixtures marked the firewalls PAR-FW-01 and PAR-FW-02 as clusters (with no member):
+      // an asset the file no longer calls a cluster becomes a plain asset again, unless someone
+      // gave it members since (the server refuses the switch then).
+      const asset = existingAssets.find((item) => item.name === row.name);
+      if (asset?.is_cluster && !boolValue(row.is_cluster)) {
+        const members = items(await apiGet(`/assets/${asset.id}/members`));
+        if (members.length > 0) warn(`'${row.name}' has members; it stays a cluster`);
+        else await apiPatch(`/assets/${asset.id}`, { is_cluster: false });
+      }
+      continue;
+    }
     const locationId = locationIdByFixtureCode.get(row.location_code);
     if (!locationId) {
       warn(`Unknown location code '${row.location_code}' for asset '${row.name}'`);
@@ -1977,24 +1989,35 @@ async function runImports() {
 //
 // The examples of the technology layer: two domain controllers carry Active Directory; Entra ID is
 // subscribed and declared by several applications; two ESXi hosts in a vSphere cluster contain
-// the VMs; a SQL Server cluster runs two versions; the application server carries Tomcat and a SQL
+// the VMs, which belong to the cluster and can move between its hosts; a SQL Server cluster runs two
+// versions; the application server carries Tomcat and a SQL
 // Server Express; the RDS database carries PostgreSQL. With the hosting of applications on these
 // servers, business processes linked to applications, an unknown version (Active Directory) and
 // versions past their end of support (PostgreSQL 13, SQL Server 2017). The demo stories on top:
 // the cave edge node and gateways carry CaveGuard and its dashboard; the IT tools (PRTG, Veeam,
 // vSphere) run on their own servers, Veeam on the backup SAN that reaches end of life; the two aging
 // hosts carry Talend and the S/4HANA QA server; S/4HANA prod and QA run on separate servers.
-// Every step is idempotent.
+// An application on a cluster is assigned to the cluster, and its members inherit it.
+// Every step is idempotent, and brings a tenant built by an older fixture to the same state.
 
 const ASSET_CLUSTERS = {
   'PAR-VSPHERE-CL01': ['PAR-ESX-01', 'PAR-ESX-02'],
   'PAR-SQL-CL01': ['PAR-SQL-01', 'PAR-SQL-02'],
 };
 
+/**
+ * Each content sits in one container. A container visited here loses its `contains` relations to an
+ * asset the map puts in another container: PAR-ESX-01 and PAR-ESX-02 held the VMs of the vSphere
+ * cluster in older fixtures, and now contain nothing.
+ */
 const ASSET_CONTAINS = {
-  'PAR-ESX-01': ['PAR-ERP-01', 'PAR-ERP-02', 'PAR-AD-01', 'PAR-SQL-01', 'PAR-VCENTER-01'],
-  'PAR-ESX-02': ['PAR-DB-01', 'PAR-APP-01', 'PAR-WEB-01', 'PAR-AD-02', 'PAR-SQL-02'],
-  'PAR-VSPHERE-CL01': ['PAR-MON-01', 'PAR-BKP-01'],
+  'PAR-VSPHERE-CL01': [
+    'PAR-ERP-01', 'PAR-ERP-02', 'PAR-AD-01', 'PAR-SQL-01', 'PAR-VCENTER-01',
+    'PAR-DB-01', 'PAR-APP-01', 'PAR-WEB-01', 'PAR-AD-02', 'PAR-SQL-02',
+    'PAR-MON-01', 'PAR-BKP-01',
+  ],
+  'PAR-ESX-01': [],
+  'PAR-ESX-02': [],
   // The aging hosts, scheduled for the DC refresh.
   'PAR-ESX-03': ['PAR-ETL-01'],
   'PAR-ESX-04': ['PAR-ERP-QA-01'],
@@ -2009,14 +2032,14 @@ const APP_SERVERS = [
   ['Fromage B2B Portal', 'prod', 'PAR-APP-01', 'app'],
   ['Fromage B2B Portal', 'prod', 'PAR-DB-01', 'db'],
   ['QualityLab LIMS', 'prod', 'PAR-APP-01', 'app'],
+  ['La Boutique du Fromage', 'prod', 'AWS-EC2-BOUTIQUE', 'web'],
   ['La Boutique du Fromage', 'prod', 'AWS-RDS-BOUTIQUE', 'db'],
-  // An instance cannot be assigned to a cluster asset (AWS-EC2-BOUTIQUE is one): the databases name both nodes.
-  ['CheeseTrack', 'prod', 'PAR-SQL-01', 'db'],
-  ['CheeseTrack', 'prod', 'PAR-SQL-02', 'db'],
+  // On a cluster, the row of the cluster replaces those of its members (an older fixture's rows on
+  // PAR-SQL-01, PAR-SQL-02, PAR-ESX-01 and PAR-ESX-02 are deleted when it is written).
+  ['CheeseTrack', 'prod', 'PAR-SQL-CL01', 'db'],
   ['Sage X3', 'prod', 'GOU-SAGE-01', 'app'],
   ['Sage X3', 'prod', 'PRM-SAGE-01', 'app'],
-  ['Sage X3', 'prod', 'PAR-SQL-01', 'db'],
-  ['Sage X3', 'prod', 'PAR-SQL-02', 'db'],
+  ['Sage X3', 'prod', 'PAR-SQL-CL01', 'db'],
   ['CaveGuard IoT', 'prod', 'CAVE-EDGE-01', 'app'],
   ['CaveGuard IoT', 'prod', 'CAVE-GW-01', 'proxy'],
   ['CaveGuard IoT', 'prod', 'CAVE-GW-02', 'proxy'],
@@ -2026,8 +2049,7 @@ const APP_SERVERS = [
   ['Veeam Backup & Replication', 'prod', 'PAR-BKP-01', 'backup'],
   ['Veeam Backup & Replication', 'prod', 'PAR-SAN-02', 'backup'],
   ['VMware vSphere', 'prod', 'PAR-VCENTER-01', 'app'],
-  ['VMware vSphere', 'prod', 'PAR-ESX-01', 'virtualization'],
-  ['VMware vSphere', 'prod', 'PAR-ESX-02', 'virtualization'],
+  ['VMware vSphere', 'prod', 'PAR-VSPHERE-CL01', 'virtualization'],
   ['VMware vSphere', 'prod', 'PAR-ESX-03', 'virtualization'],
   ['VMware vSphere', 'prod', 'PAR-ESX-04', 'virtualization'],
 ];
@@ -2089,17 +2111,26 @@ async function ensureAssetGraph() {
     }
     await apiPost(`/assets/${clusterId}/members`, { asset_ids: memberIds });
   }
+  const containerOf = new Map();
+  for (const [container, contents] of Object.entries(ASSET_CONTAINS)) {
+    for (const name of contents) containerOf.set(idOf(name), container);
+  }
+  containerOf.delete('');
   for (const [container, contents] of Object.entries(ASSET_CONTAINS)) {
     const containerId = idOf(container);
     if (!containerId) {
       warn(`Asset '${container}' not found`);
       continue;
     }
-    // The relations already there (`outgoing`) are kept: the route replaces the whole set.
+    // The relations already there (`outgoing`) are kept, except a `contains` of an asset placed in
+    // another container: the route replaces the whole set.
     const current = (await apiGet(`/assets/${containerId}/relations`))?.outgoing ?? [];
     const relations = new Map();
     for (const relation of current) {
-      if (relation?.related_asset_id && relation?.relation_type) relations.set(`${relation.relation_type}:${relation.related_asset_id}`, relation);
+      if (!relation?.related_asset_id || !relation?.relation_type) continue;
+      const placedIn = containerOf.get(relation.related_asset_id);
+      if (relation.relation_type === 'contains' && placedIn && placedIn !== container) continue;
+      relations.set(`${relation.relation_type}:${relation.related_asset_id}`, relation);
     }
     for (const name of contents) {
       const id = idOf(name);

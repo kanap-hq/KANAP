@@ -592,10 +592,11 @@ export class AssetsController {
   replaceMembers(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     const tenantId: string | undefined = req?.tenant?.id;
     const assetIds = body?.asset_ids ?? body?.assetIds ?? body?.server_ids ?? body?.serverIds;
+    // `remove_operating_system: true` removes the cluster's operating system with the first members.
     return this.svc.replaceClusterMembers(id, assetIds, tenantId ?? '', req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
       tenantId,
-    });
+    }, { removeOperatingSystem: body?.remove_operating_system });
   }
 
   @UseGuards(PermissionGuard)

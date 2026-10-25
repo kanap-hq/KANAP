@@ -36,8 +36,8 @@ function impact(overrides: Partial<AssetImpact> = {}): AssetImpact {
       { id: 'web', reference: 'AST-3', name: 'WEB-01', kind: 'vm', depth: 2, relation: 'depends_on', via: [host, vm1] },
     ],
     clusters: [
-      { id: 'cl', reference: 'AST-9', name: 'VSPHERE-CL', state: 'degraded', members: 2, fallen_members: 1, via: [host], via_total: 1 },
-      { id: 'solo', reference: 'AST-8', name: 'SOLO-CL', state: 'down', members: 1, fallen_members: 1, via: [host], via_total: 1 },
+      { id: 'cl', reference: 'AST-9', name: 'VSPHERE-CL', state: 'degraded', members: 3, fallen_members: 2, applications: 0, via: [host, { id: 'esx2', name: 'ESX-02' }], via_total: 2 },
+      { id: 'solo', reference: 'AST-8', name: 'SOLO-CL', state: 'down', members: 1, fallen_members: 1, applications: 0, via: [host], via_total: 1 },
     ],
     applications: [
       { id: 'erp', reference: 'APP-4', name: 'ERP', criticality: 'business_critical', environments: ['prod', 'pre_prod'], via: [vm1, host], via_total: 2 },
@@ -109,16 +109,90 @@ describe('AssetImpactSection', () => {
     expect(within(assetRows[1]).getByText('kind:vm')).toBeInTheDocument();
 
     const clusters = screen.getByRole('table', { name: `${P}.sections.clusters` });
-    expect(within(clusters).getByText(`${P}.state.degraded(count=1,members=2)`)).toBeInTheDocument();
+    expect(within(clusters).getByText(`${P}.state.degraded(count=2,members=3)`)).toBeInTheDocument();
     expect(within(clusters).getByText(`${P}.state.down`)).toBeInTheDocument();
     // The server's own name reads through a whole-sentence key in every language.
-    expect(within(clusters).getAllByText(`${P}.via.thisServer`)).toHaveLength(2);
+    expect(within(clusters).getByText(`${P}.via.thisServer`)).toBeInTheDocument();
+    expect(within(clusters).getByText(`${P}.via.thisServerAnd(name=ESX-02)`)).toBeInTheDocument();
     expect(screen.queryByRole('table', { name: `${P}.sections.technologies` })).not.toBeInTheDocument();
     expect(screen.queryByText('TEC-1')).not.toBeInTheDocument();
     expect(within(screen.getByRole('table', { name: `${P}.sections.processes` })).getByText('Finance')).toBeInTheDocument();
 
     fireEvent.click(within(assetRows[1]).getByText('WEB-01'));
     expect(screen.getByTestId('location')).toHaveTextContent('/it/assets/web/overview');
+  });
+
+  it('words the members of a cluster that falls, and the VMs it takes down', async () => {
+    const cluster = { id: 'host', name: 'SQL-CL' };
+    const member = { id: 'm1', name: 'SQL-01' };
+    renderSection(impact({
+      asset: { id: 'host', reference: 'AST-1', name: 'SQL-CL' },
+      assets: [
+        { id: 'host', reference: 'AST-1', name: 'SQL-CL', kind: 'cluster', depth: 0, relation: null, via: [] },
+        { id: 'm1', reference: 'AST-2', name: 'SQL-01', kind: 'server', depth: 1, relation: 'member', via: [cluster] },
+        { id: 'vm', reference: 'AST-3', name: 'VM-01', kind: 'vm', depth: 2, relation: 'contains', via: [cluster, member] },
+      ],
+      clusters: [], applications: [], processes: [], totals: { assets: 2, applications: 0, clusters: 0, technologies: 0, processes: 0 },
+    }));
+    const assets = await screen.findByRole('table', { name: `${P}.sections.assets` });
+    expect(within(assets).getByText(`${P}.via.memberThisServer`)).toBeInTheDocument();
+    expect(within(assets).getByText(`${P}.via.contains(name=SQL-01)`)).toBeInTheDocument();
+    expect(within(assets).queryByText(`${P}.via.containsThisServer`)).not.toBeInTheDocument();
+  });
+
+  it('names the member of a cluster further down the path', async () => {
+    const other = { id: 'other', name: 'ESX-02' };
+    renderSection(impact({
+      assets: [
+        impact().assets[0],
+        { id: 'm1', reference: 'AST-2', name: 'SQL-01', kind: 'server', depth: 2, relation: 'member', via: [{ id: 'host', name: 'ESX-01' }, other] },
+      ],
+      clusters: [], applications: [], processes: [], totals: { assets: 1, applications: 0, clusters: 0, technologies: 0, processes: 0 },
+    }));
+    const assets = await screen.findByRole('table', { name: `${P}.sections.assets` });
+    expect(within(assets).getByText(`${P}.via.member(name=ESX-02)`)).toBeInTheDocument();
+  });
+
+  it('says in a tooltip what stands in a degraded cluster', async () => {
+    renderSection(impact());
+    const clusters = await screen.findByRole('table', { name: `${P}.sections.clusters` });
+    expect(within(clusters).getByTitle(`${P}.state.degradedHint(count=1,members=3)`)).toHaveTextContent(`${P}.state.degraded(count=2,members=3)`);
+    // A cluster that is down has nothing left to say.
+    const down = within(clusters).getByText(`${P}.state.down`);
+    expect(down.closest('[title]')).toBeNull();
+  });
+
+  it('does not repeat the cluster of a member that is its only fallen member: it is in its membership', async () => {
+    // The page is the member's own: it is the one fallen member of the degraded cluster.
+    renderSection(impact({
+      clusters: [
+        { id: 'cl', reference: 'AST-9', name: 'VSPHERE-CL', state: 'degraded', members: 2, fallen_members: 1, applications: 0, via: [{ id: 'host', name: 'ESX-01' }], via_total: 1 },
+      ],
+      totals: { assets: 2, applications: 1, clusters: 1, technologies: 1, processes: 1 },
+    }));
+    await screen.findByText(`${P}.title`);
+    expect(screen.queryByRole('table', { name: `${P}.sections.clusters` })).not.toBeInTheDocument();
+    expect(screen.queryByText(new RegExp('summary.clustersDegraded'))).not.toBeInTheDocument();
+  });
+
+  it('keeps the cluster of the only fallen member when the cluster carries applications', async () => {
+    const own = { id: 'cl', reference: 'AST-9', name: 'VSPHERE-CL', state: 'degraded' as const, members: 2, fallen_members: 1, via: [{ id: 'host', name: 'ESX-01' }], via_total: 1 };
+    renderSection(impact({ clusters: [{ ...own, applications: 2 }], totals: { assets: 2, applications: 1, clusters: 1, technologies: 1, processes: 1 } }));
+    const clusters = await screen.findByRole('table', { name: `${P}.sections.clusters` });
+    expect(within(clusters).getByTitle(`${P}.state.degradedHint(count=1,members=2)`)).toHaveTextContent(`${P}.state.degraded(count=1,members=2)`);
+  });
+
+  it('keeps a member\'s cluster that goes down, or that other fallen assets degrade', async () => {
+    renderSection(impact({
+      clusters: [
+        { id: 'solo', reference: 'AST-8', name: 'SOLO-CL', state: 'down', members: 1, fallen_members: 1, applications: 0, via: [{ id: 'host', name: 'ESX-01' }], via_total: 1 },
+        { id: 'cl', reference: 'AST-9', name: 'VSPHERE-CL', state: 'degraded', members: 3, fallen_members: 2, applications: 0, via: [{ id: 'host', name: 'ESX-01' }, { id: 'esx2', name: 'ESX-02' }], via_total: 2 },
+      ],
+      totals: { assets: 2, applications: 1, clusters: 2, technologies: 1, processes: 1 },
+    }));
+    const clusters = await screen.findByRole('table', { name: `${P}.sections.clusters` });
+    expect(within(clusters).getAllByRole('row')).toHaveLength(3);
+    expect(screen.getByRole('region', { name: `${P}.sections.clusters` })).toHaveTextContent(`${P}.sections.clusters2`);
   });
 
   it('shows the first rows of a long list and counts the rest', async () => {

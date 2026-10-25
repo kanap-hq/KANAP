@@ -15,7 +15,9 @@ import { DataSource, QueryRunner } from 'typeorm';
 // - Every field filters and sorts: reference, name, family, publisher, hosting_type, lifecycle,
 //   admin_zone, server_count, application_count, support_status, end_of_standard_support,
 //   end_of_support, open_vulnerabilities.
-// - server_count leaves retired assets out; the support fields read the versions in use only, by
+// - server_count counts the servers as the technology list does (assets in service the technology
+//   is installed on, clusters excluded; what the graph carries does not count);
+//   the support fields read the versions in use only, by
 //   the End of support report's rule: a version in extended support is not out of support, and
 //   the assistant's out of support and extended support versions are the report's.
 // - application_count and the application sections stay in the caller's read scope: a Business
@@ -249,7 +251,8 @@ async function testListAndFigures(harness: Harness, runner: QueryRunner, s: Seed
   assert.equal(entra.metadata.versions_in_use, null);
   const vsphere = all.items.find((item: any) => item.label === 'VMware vSphere');
   assert.equal(vsphere.metadata.support_status, 'unknown', 'a version in use without a date');
-  assert.equal(vsphere.metadata.versions_in_use, '8: no end of support date, 1 server');
+  assert.equal(vsphere.metadata.versions_in_use, '8: no end of support date, 1 server', 'the servers of a version: installed on them');
+  assert.equal(vsphere.metadata.server_count, 1, 'the host, not the server it contains');
   const metadataText = JSON.stringify(all.items.map((item: any) => ({ ...item, id: undefined })));
   assert.doesNotMatch(metadataText, UUID_IN_TEXT, 'no id besides the item\'s own');
 }
@@ -266,6 +269,7 @@ async function testEveryFilter(harness: Harness, runner: QueryRunner, s: Seed) {
     [{ admin_zone: [null] }, ['PostgreSQL', 'VMware vSphere', 'Windows Server']],
     [{ server_count: { op: 'gte', value: 1 } }, ['PostgreSQL', 'VMware vSphere', 'Windows Server']],
     [{ server_count: { op: 'eq', value: 2 } }, ['Windows Server']],
+    [{ server_count: { op: 'eq', value: 1 } }, ['PostgreSQL', 'VMware vSphere']],
     [{ server_count: { op: 'between', value: 0, valueTo: 0 } }, ['Entra ID']],
     [{ application_count: { op: 'gt', value: 0 } }, ['Entra ID', 'PostgreSQL']],
     [{ application_count: { op: 'lt', value: 1 } }, ['VMware vSphere', 'Windows Server']],
@@ -619,6 +623,46 @@ async function testContextBounds(harness: Harness, runner: QueryRunner, s: Seed)
  * only on a retired server and a disabled application; Zeta undated runs a version without date;
  * Zeta many declares 12 versions without date. Then the parity with the End of support report.
  */
+/**
+ * One servers definition with the technology list (`countsOfTechnologies`): a technology installed on
+ * a cluster and on its member counts the member only, the cluster excluded.
+ */
+async function testServersAsTheTechnologyList(harness: Harness, runner: QueryRunner, s: Seed) {
+  const t = s.tenantId;
+  const asset = (name: string, cluster: boolean) => insertId(runner,
+    `INSERT INTO assets (tenant_id, name, kind, environment, status, is_cluster) VALUES ($1, $2, 'server', 'prod', 'active', $3)`, [t, name, cluster]);
+  const cluster = await asset('cluster-c', true);
+  const member = await asset('node-m', false);
+  await runner.query(`INSERT INTO asset_cluster_members (tenant_id, cluster_id, asset_id) VALUES ($1, $2, $3)`, [t, cluster, member]);
+  for (const assetId of [cluster, member]) {
+    await runner.query(`INSERT INTO asset_technologies (tenant_id, asset_id, technology_id) VALUES ($1, $2, $3)`, [t, assetId, s.tech.entra]);
+  }
+  const all = await list(harness, runner, s, { limit: 100 });
+  const entra = all.items.find((item: any) => item.label === 'Entra ID');
+  assert.equal(entra.metadata.server_count, 1, 'the member only: the cluster is not a server');
+  const { TechnologyReachService } = require('../../technologies/technology-reach.service');
+  const ids = Object.values(s.tech);
+  const counts: Map<string, { servers: number }> = await harness.app.get(TechnologyReachService).countsOfTechnologies(runner.manager, t, ids);
+  const seeded = all.items.filter((i: any) => ids.includes(i.id));
+  assert.equal(seeded.length, ids.length, 'the four seeded technologies');
+  for (const item of seeded) {
+    assert.equal(item.metadata.server_count, counts.get(item.id)!.servers, `${item.label}: the technology list's count`);
+  }
+
+  // The servers of each version follow the same definition: the host it is installed on, neither
+  // the server it contains nor the cluster.
+  const [{ id: vs8 }] = await runner.query(
+    `SELECT id FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND label = '8'`, [t, s.tech.vsphere]);
+  const [{ id: clusterLink }] = await runner.query(
+    `INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id) VALUES ($1, $2, $3, $4) RETURNING id`,
+    [t, cluster, s.tech.vsphere, vs8]);
+  const vsphere = (await list(harness, runner, s, { limit: 100 })).items.find((item: any) => item.label === 'VMware vSphere');
+  assert.equal(vsphere.metadata.versions_in_use, '8: no end of support date, 1 server');
+  const detail = await harness.executor.executeDetail(ctx(runner, s, 'full'), { entity_type: 'technologies', entity_id: 'TEC-4' });
+  assert.deepEqual(detail.data.versions.map((v: any) => [v.label, v.server_count]), [['8', 1]], 'the detail counts the same');
+  await runner.query(`DELETE FROM asset_technologies WHERE tenant_id = $1 AND id = $2`, [t, clusterLink]);
+}
+
 async function testSupportStatus(harness: Harness, runner: QueryRunner, s: Seed) {
   const [{ today }] = await runner.query(`SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS today`);
   const shift = (days: number) => {
@@ -737,6 +781,7 @@ async function run() {
       await testApplicationsReachCache(runner, s);
       await testContextBounds(harness, runner, s);
       await testSupportStatus(harness, runner, s);
+      await testServersAsTheTechnologyList(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

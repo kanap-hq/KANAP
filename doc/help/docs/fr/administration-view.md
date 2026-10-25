@@ -67,8 +67,8 @@ La table liste tous les actifs qui ne sont pas retirés, et en charge d'autres �
 | **Réf.**, **Nom**, **Type** | L'actif |
 | **Zone** | Sa zone d'administration, ou **Sans zone** |
 | **Technologies** | Les technologies installées sur l'actif. Les deux premiers noms s'affichent, puis le nombre des autres ; survolez la cellule pour la liste complète |
-| **Applications** | Les applications en service hébergées sur l'actif, affichées de la même façon. Cliquez sur un nom pour ouvrir l'application |
-| **Contrôles** | Les points de contrôle qui concernent l'actif. Survolez **Hôte moins sensible** pour en voir la raison : **Fait tourner** nomme l'actif plus sensible qu'il fait tourner, **Membre du cluster** nomme le cluster plus sensible, chacun avec sa zone |
+| **Applications** | Les applications en service hébergées sur l'actif, affichées de la même façon, y compris celles affectées à son cluster. Cliquez sur un nom pour ouvrir l'application |
+| **Contrôles** | Les points de contrôle qui concernent l'actif. Survolez **Hôte moins sensible** pour en voir la raison : **Fait tourner** nomme l'actif plus sensible qu'il fait tourner, **Membre du cluster** nomme le cluster plus sensible, chacun par sa référence et son nom, avec sa zone |
 
 Recherchez sur le nom ou la référence. Filtrez sur **Type**, **Zone** (y compris **Sans zone**) et **Contrôles**, et triez sur **Réf.**, **Nom**, **Type** ou **Zone**. Le tri sur la zone suit l'ordre des paramètres, avec les actifs sans zone à la fin. La bande et les boutons des points de contrôle posent les mêmes filtres que les colonnes **Zone** et **Contrôles**.
 

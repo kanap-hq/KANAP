@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import {
   applicationParticipantCondition,
   type ParticipationAccessScope,
@@ -86,6 +87,16 @@ async function listAssets(manager: EntityManager, location: LocationRow): Promis
   }));
 }
 
+/**
+ * The deployments running on the assets of the location `$2` of the tenant `$1`: the effective
+ * assignments (`effectiveAssignmentsSql`), so that a member placed here lists the applications its
+ * clusters carry.
+ */
+const applicationsAtLocationSql = effectiveAssignmentsSql({
+  tenant: '$1',
+  assets: 'ARRAY(SELECT ls.id FROM assets ls WHERE ls.tenant_id = $1 AND ls.location_id = $2)',
+});
+
 async function listApplications(
   manager: EntityManager,
   location: LocationRow,
@@ -97,7 +108,7 @@ async function listApplications(
     `SELECT a.id, a.sequential_id AS reference, a.name, a.lifecycle, a.status::text AS status,
             ARRAY_AGG(DISTINCT ai.environment ORDER BY ai.environment) AS environments
        FROM assets s
-       JOIN app_asset_assignments asa ON asa.asset_id = s.id AND asa.tenant_id = s.tenant_id
+       JOIN (${applicationsAtLocationSql}) asa ON asa.asset_id = s.id AND asa.tenant_id = s.tenant_id
        JOIN app_instances ai ON ai.id = asa.app_instance_id AND ai.tenant_id = asa.tenant_id
        JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
       WHERE s.tenant_id = $1 AND s.location_id = $2 ${scoped}
@@ -146,7 +157,7 @@ export async function readLocationRelationCounts(
   const applications = ctx.access.applications
     ? `(SELECT count(DISTINCT a.id)
           FROM assets s
-          JOIN app_asset_assignments asa ON asa.asset_id = s.id AND asa.tenant_id = s.tenant_id
+          JOIN (${applicationsAtLocationSql}) asa ON asa.asset_id = s.id AND asa.tenant_id = s.tenant_id
           JOIN app_instances ai ON ai.id = asa.app_instance_id AND ai.tenant_id = asa.tenant_id
           JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
          WHERE s.tenant_id = $1 AND s.location_id = $2 ${scopeSql(params, ctx.applicationScope)})`

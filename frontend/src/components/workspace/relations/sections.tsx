@@ -360,8 +360,8 @@ async function searchNamed(
   q: string,
   signal: AbortSignal | undefined,
   sorted: boolean,
-): Promise<Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null }>> {
-  const res = await api.get<{ items: Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null }> }>(endpoint, {
+): Promise<Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null; is_cluster?: boolean }>> {
+  const res = await api.get<{ items: Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null; is_cluster?: boolean }> }>(endpoint, {
     params: { page: 1, limit: PAGE, ...(sorted ? { sort: 'name:ASC' } : {}), ...(q ? { q } : {}) },
     signal,
   });
@@ -446,7 +446,12 @@ export function assetsSection({
     ],
     search: async (q, signal) => {
       const items = await searchNamed('/assets', q, signal, true);
-      return items.map((row) => ({ id: row.id, label: row.name, ref: row.asset_reference ?? null }));
+      // A cluster is named as the server pickers name it.
+      return items.map((row) => ({
+        id: row.id,
+        label: row.is_cluster ? `${t('common:selects.cluster')} ${row.name}` : row.name,
+        ref: row.asset_reference ?? null,
+      }));
     },
   };
 }

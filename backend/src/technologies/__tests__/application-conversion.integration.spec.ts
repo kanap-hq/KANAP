@@ -13,7 +13,7 @@ import { DEFAULT_HOSTING_TYPES } from '../../it-ops-settings/it-ops-settings.ser
 import { assert, inRolledBackTransaction, runSpecs, seedItem, seedTenant, setTenant, underSavepoint } from '../../spend/__tests__/round-inputs.fixtures';
 import { ApplicationConversionController } from '../application-conversion.controller';
 import { ApplicationConversionService } from '../application-conversion.service';
-import { asset, assign, one, services, type AuditEntry } from './technologies.fixtures';
+import { asset, assign, member, one, services, type AuditEntry } from './technologies.fixtures';
 
 // Converting an application to a technology (lot C1) against a real database: the preview and the
 // conversion of a fully linked application (its managed document released with its file), the
@@ -376,6 +376,47 @@ async function testHostingType() {
   });
 }
 
+/**
+ * An application on a cluster (clusters pass, PR B): the technology goes on the cluster's members
+ * in service and on a direct server, never on the cluster, which counts as no server. The preview
+ * counts the same set and takes the hosting type from their sites; a disabled deployment on the
+ * same cluster loses no server.
+ */
+async function testOnCluster() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'conv-cluster');
+    const svc = conversion([], memoryStorage());
+    const opts = { manager: runner.manager, tenantId };
+    const cloud = await one(runner,
+      `INSERT INTO locations (tenant_id, name, hosting_type, location_reference) VALUES ($1, 'Cloud', 'public_cloud', 'Cloud') RETURNING id`, [tenantId]);
+    const cluster = await asset(runner, tenantId, 'SQL-CL', true);
+    const node1 = await asset(runner, tenantId, 'SQL-01');
+    const node2 = await asset(runner, tenantId, 'SQL-02');
+    const retired = await asset(runner, tenantId, 'SQL-OLD');
+    const direct = await asset(runner, tenantId, 'SQL-03');
+    for (const node of [node1, node2, retired]) await member(runner, tenantId, cluster, node);
+    await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [tenantId, retired]);
+    // The cluster has no site; its members are in the cloud, the direct server nowhere.
+    await runner.query(`UPDATE assets SET location_id = $2 WHERE tenant_id = $1 AND id = ANY($3::uuid[])`, [tenantId, cloud, [node1, node2]]);
+    const app = await application(runner, tenantId, 'SQL Server');
+    await assign(runner, tenantId, app, cluster, 'prod');
+    await assign(runner, tenantId, app, direct, 'prod');
+    await assign(runner, tenantId, app, cluster, 'dev');
+    await runner.query(`UPDATE app_instances SET status = 'disabled', disabled_at = now() - interval '1 day' WHERE tenant_id = $1 AND application_id = $2 AND environment = 'dev'`, [tenantId, app]);
+
+    const preview = await svc.preview(app, opts);
+    assert.equal(preview.moves.servers, 3, 'both members in service and the direct server');
+    assert.equal(preview.losses.disabled_instance_servers, 0, 'the disabled deployment\'s servers are installed anyway');
+    assert.equal(preview.hosting_type, 'public_cloud', 'the sites of the members');
+
+    const { technology } = await svc.convert(app, { family: 'database' }, opts);
+    const rows = await runner.query(`SELECT asset_id FROM asset_technologies WHERE tenant_id = $1 AND technology_id = $2 ORDER BY asset_id`, [tenantId, technology.id]);
+    assert.deepEqual(rows.map((r: any) => r.asset_id), [node1, node2, direct].sort());
+    const [row] = await runner.query(`SELECT hosting_type FROM technologies WHERE tenant_id = $1 AND id = $2`, [tenantId, technology.id]);
+    assert.equal(row.hosting_type, 'public_cloud');
+  });
+}
+
 async function testRefusals() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'conv-refuse');
@@ -577,6 +618,7 @@ void runSpecs('application conversion', [
   ['the preview hides what the caller cannot read', testPreviewReadAccess],
   ['an application without servers becomes SaaS', testSubscribedWithoutServers],
   ['hosting type from the model, the sites, then the servers', testHostingType],
+  ['an application on a cluster installs on its members', testOnCluster],
   ['each refusal', testRefusals],
   ['a file missing at the copy', testMissingFileAtCopy],
   ['a failure in the middle loses nothing', testFailureInTheMiddle],
