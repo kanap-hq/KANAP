@@ -541,18 +541,17 @@ async function testMemberDependencies() {
     const cluster = await makeAsset(seed.tenantId, 'PAR-VSPHERE-CL01', true);
     const host1 = await makeAsset(seed.tenantId, 'PAR-ESX-02');
     const host2 = await makeAsset(seed.tenantId, 'PAR-ESX-01');
-    const host3 = await makeAsset(seed.tenantId, 'PAR-ESX-05');
     const retiredHost = await makeAsset(seed.tenantId, 'PAR-ESX-OLD', false, 'retired');
     const san = await makeAsset(seed.tenantId, 'PAR-SAN-01');
     const retiredTarget = await makeAsset(seed.tenantId, 'Retired array', false, 'retired');
     const directTarget = await makeAsset(seed.tenantId, 'Backup service');
     const ignoredByRetired = await makeAsset(seed.tenantId, 'Ignored target');
-    for (const host of [host1, host2, host3, retiredHost]) await member(seed.tenantId, cluster.id, host.id);
+    for (const host of [host1, host2, retiredHost]) await member(seed.tenantId, cluster.id, host.id);
     // Two members depend on the same array, one member depends on another (a relation between
     // nodes), and a retired member depends on a target of its own.
     await depend(seed.tenantId, host1.id, san.id);
     await depend(seed.tenantId, host2.id, san.id);
-    await depend(seed.tenantId, host3.id, host2.id);
+    await depend(seed.tenantId, host2.id, host1.id);
     await depend(seed.tenantId, host2.id, retiredTarget.id);
     await depend(seed.tenantId, retiredHost.id, ignoredByRetired.id);
     // The cluster already depends on the backup service, which one member also depends on.
