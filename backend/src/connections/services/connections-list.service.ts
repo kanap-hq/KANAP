@@ -9,6 +9,11 @@ import { ConnectionLeg } from '../connection-leg.entity';
 import { Asset } from '../../assets/asset.entity';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
+import {
+  effectiveConnectionAssetsSql,
+  type ConnectionAssetPart,
+  type ViaCluster,
+} from '../effective-connection-assets';
 import { parsePagination } from '../../common/pagination';
 import { compileAgFilterCondition, createParamNameGenerator, FilterTargetConfig } from '../../common/ag-grid-filtering';
 import {
@@ -40,7 +45,24 @@ type ListItem = Connection & {
   derived_interface_count?: number;
   classification_incomplete?: boolean;
   linked_interface_count?: number;
+  asset_roles?: ConnectionAssetRole[];
+  inherited?: boolean;
+  via_clusters?: ViaCluster[];
+  servers?: ConnectionServerRef[];
 };
+
+/** One stored or inherited place a connection names the asset in (the Network tab). */
+type ConnectionAssetRole = {
+  part: ConnectionAssetPart;
+  hop_order: number | null;
+  inherited: boolean;
+  via_clusters: ViaCluster[];
+};
+
+/** A server named on a multi-server connection, as the Network tab lists it. */
+type ConnectionServerRef = { id: string; name: string; asset_reference: string | null; is_cluster: boolean };
+
+const PART_ORDER: Record<ConnectionAssetPart, number> = { source: 0, destination: 1, server: 2, hop: 3 };
 
 /** Grid columns the connections list filters on; the risk columns read the effective values. */
 const CONNECTION_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
@@ -318,20 +340,25 @@ export class ConnectionsListService extends ConnectionsBaseService {
     const aid = this.normalizeRequiredText(assetId, 'assetId');
     const mg = opts?.manager ?? this.connRepo.manager;
 
-    const rows: Array<{ id: string }> = await mg.query(
-      `SELECT DISTINCT c.id
-       FROM connections c
-       LEFT JOIN connection_servers cs ON cs.connection_id = c.id AND cs.tenant_id = c.tenant_id
-       WHERE c.tenant_id = $1
-         AND (c.source_asset_id = $2 OR c.destination_asset_id = $2 OR cs.asset_id = $2)`,
-      [tenant, aid],
+    // The effective rows of this asset: its named places (an endpoint, a server, the equipment of
+    // a hop) and the places its clusters carry. The rest of the item is unchanged.
+    const rows: Array<{
+      connection_id: string;
+      part: ConnectionAssetPart;
+      hop_order: number | null;
+      inherited: boolean;
+      via_clusters: ViaCluster[];
+    }> = await mg.query(
+      `SELECT e.connection_id, e.part, e.hop_order, e.inherited, e.via_clusters
+         FROM (${effectiveConnectionAssetsSql({ tenant: '$1', assets: '$2' })}) e`,
+      [tenant, [aid]],
     );
 
     if (!rows || rows.length === 0) {
       return { items: [], total: 0 };
     }
 
-    const ids = Array.from(new Set(rows.map((r) => r.id)));
+    const ids = Array.from(new Set(rows.map((r) => r.connection_id)));
     const repo = this.getRepo(opts?.manager);
     const itemsRaw = await repo.find({
       where: { id: In(ids), tenant_id: tenant } as any,
@@ -349,7 +376,75 @@ export class ConnectionsListService extends ConnectionsBaseService {
     }));
     const effectiveRiskMap = await this.computeEffectiveRiskForConnections(tenant, riskBases, mg);
     const items = await this.enrichListItems(itemsRaw, tenant, mg, effectiveRiskMap);
+    await this.attachNetworkTab(tenant, items, rows, mg);
     return { items, total: items.length };
+  }
+
+  /**
+   * The Network tab of one asset: its `asset_roles` (sorted source, destination, server, hop, then
+   * hop order, direct before inherited), its `inherited` and union `via_clusters`, and the named
+   * servers of its multi-server connections.
+   */
+  private async attachNetworkTab(
+    tenant: string,
+    items: ListItem[],
+    rows: Array<{
+      connection_id: string;
+      part: ConnectionAssetPart;
+      hop_order: number | null;
+      inherited: boolean;
+      via_clusters: ViaCluster[];
+    }>,
+    mg: EntityManager,
+  ): Promise<void> {
+    const rolesByConnection = new Map<string, ConnectionAssetRole[]>();
+    for (const row of rows) {
+      const roles = rolesByConnection.get(row.connection_id) ?? [];
+      roles.push({
+        part: row.part,
+        hop_order: row.hop_order,
+        inherited: row.inherited,
+        via_clusters: row.via_clusters,
+      });
+      rolesByConnection.set(row.connection_id, roles);
+    }
+
+    const multiServerIds = items.filter((item) => item.topology === 'multi_server').map((item) => item.id);
+    const serversByConnection = new Map<string, ConnectionServerRef[]>();
+    if (multiServerIds.length > 0) {
+      const serverRows: Array<ConnectionServerRef & { connection_id: string }> = await mg.query(
+        `SELECT cs.connection_id, a.id, a.name, a.asset_reference, a.is_cluster
+           FROM connection_servers cs
+           JOIN assets a ON a.tenant_id = cs.tenant_id AND a.id = cs.asset_id
+          WHERE cs.tenant_id = $1 AND cs.connection_id = ANY($2::uuid[])
+          ORDER BY a.name, a.id`,
+        [tenant, multiServerIds],
+      );
+      for (const row of serverRows) {
+        const servers = serversByConnection.get(row.connection_id) ?? [];
+        servers.push({ id: row.id, name: row.name, asset_reference: row.asset_reference, is_cluster: !!row.is_cluster });
+        serversByConnection.set(row.connection_id, servers);
+      }
+    }
+
+    for (const item of items) {
+      const roles = (rolesByConnection.get(item.id) ?? []).sort(
+        (a, b) =>
+          PART_ORDER[a.part] - PART_ORDER[b.part] ||
+          (a.hop_order ?? 0) - (b.hop_order ?? 0) ||
+          Number(a.inherited) - Number(b.inherited),
+      );
+      const viaById = new Map<string, ViaCluster>();
+      for (const role of roles) {
+        for (const via of role.via_clusters) viaById.set(via.id, via);
+      }
+      item.asset_roles = roles;
+      item.inherited = roles.length > 0 && roles.every((role) => role.inherited);
+      item.via_clusters = Array.from(viaById.values()).sort(
+        (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
+      );
+      item.servers = item.topology === 'multi_server' ? serversByConnection.get(item.id) ?? [] : [];
+    }
   }
 
   /**
