@@ -3,6 +3,7 @@ import 'dotenv/config';
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { NotFoundException } from '@nestjs/common';
 import { DataSource, EntityManager, QueryRunner } from 'typeorm';
 import appDataSource from '../../data-source';
 import { applyDataAccess } from '../data-access';
@@ -208,15 +209,64 @@ async function testSupportContract(runner: QueryRunner, s: ContractSeed): Promis
     dataSource.getRepository(AssetSupportContact),
     auditOf(),
   );
+  const refusal = async (fn: () => Promise<unknown>): Promise<any> => {
+    try {
+      await fn();
+    } catch (error) {
+      return error;
+    }
+    assert.fail('expected a refusal');
+  };
   await as(runner, s.persons.marta, async (m) => {
     const info: any = await service.getSupportInfo(s.asset, { manager: m, tenantId: s.tenantId });
     assert.equal(info?.support_contract_hidden, true);
     assert.equal(info?.support_contract_id, null);
+
+    // Keeping the stored hidden contract while editing another field stays allowed; the write
+    // answer hides it exactly as the GET does.
+    const kept: any = await service.upsertSupportInfo(
+      s.asset, { notes: 'kept hidden' }, s.tenantId, s.persons.marta, { manager: m },
+    );
+    assert.equal(kept.notes, 'kept hidden', 'the other field is written');
+    assert.equal(kept.support_contract_id, null);
+    assert.equal(kept.support_contract_hidden, true);
+    const stored: any = await m.query(
+      `SELECT support_contract_id, notes FROM asset_support_info WHERE tenant_id = $1 AND asset_id = $2`,
+      [s.tenantId, s.asset],
+    );
+    assert.equal(stored[0].support_contract_id, s.contracts.CH, 'the hidden link is kept');
+    assert.equal(stored[0].notes, 'kept hidden');
+
+    // A contract the person reads is set and named in the answer.
+    const visible: any = await service.upsertSupportInfo(
+      s.asset, { support_contract_id: s.contracts.CE }, s.tenantId, s.persons.marta, { manager: m },
+    );
+    assert.equal(visible.support_contract_id, s.contracts.CE);
+    assert.equal('support_contract_hidden' in visible, false, 'a visible contract is named, not flagged');
+
+    // Changing it to the hidden contract is refused like an unknown id: the same 404, never the
+    // foreign key's 409.
+    const hidden = await refusal(() => service.upsertSupportInfo(
+      s.asset, { support_contract_id: s.contracts.CH }, s.tenantId, s.persons.marta, { manager: m },
+    ));
+    const unknown = await refusal(() => service.upsertSupportInfo(
+      s.asset, { support_contract_id: randomUUID() }, s.tenantId, s.persons.marta, { manager: m },
+    ));
+    assert.ok(hidden instanceof NotFoundException, `hidden contract: ${hidden?.stack ?? hidden}`);
+    assert.ok(unknown instanceof NotFoundException, `unknown contract: ${unknown?.stack ?? unknown}`);
+    assert.equal(hidden.getStatus(), 404);
+    assert.equal(unknown.getStatus(), 404);
+    assert.equal(hidden.message, unknown.message, 'a hidden contract answers as a missing one');
+    const refusedRow: any = await m.query(
+      `SELECT support_contract_id FROM asset_support_info WHERE tenant_id = $1 AND asset_id = $2`,
+      [s.tenantId, s.asset],
+    );
+    assert.equal(refusedRow[0].support_contract_id, s.contracts.CE, 'the refusals wrote nothing');
   });
   await applyDataAccess(runner, s.persons.ulla);
   const unscoped = await service.getSupportInfo(s.asset, { manager: runner.manager, tenantId: s.tenantId });
   assert.equal(unscoped?.support_contract_id, s.contracts.CH, 'unscoped: unchanged');
-  console.log('  asset support contract: hidden flag, no id; unchanged without a scope: OK');
+  console.log('  asset support contract: hidden and unknown ids the same 404, write answer hides it, keeping it on another edit allowed: OK');
 }
 
 function panelContext(personId: string, manager: EntityManager, s: ContractSeed) {

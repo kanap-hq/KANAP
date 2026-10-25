@@ -1,12 +1,13 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { AssetSupportInfo } from '../asset-support-info.entity';
 import { AssetSupportContact } from '../asset-support-contact.entity';
 import { ExternalContact } from '../../contacts/external-contact.entity';
 import { AuditService } from '../../audit/audit.service';
 import { isLimitedTransaction } from '../../data-access/line-write-checks';
+import { assertContractReadable } from '../../data-access/contract-write-checks';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 
 /**
@@ -43,10 +44,16 @@ export class AssetsSupportService extends AssetsBaseService {
     await this.ensureAsset(assetId, opts?.manager, tenantId);
     const repo = this.getSupportInfoRepo(opts);
     const info = await repo.findOne({ where: { asset_id: assetId, tenant_id: tenantId } as any });
-    if (!info || !info.support_contract_id) return info || null;
-    // The support contract of an asset (spec §5.4 "Champ simple"): a limited person who cannot read
-    // it gets neither its id nor its name, and `support_contract_hidden` for the label.
-    const manager = opts?.manager ?? repo.manager;
+    return this.concealSupportContract(opts?.manager ?? repo.manager, info);
+  }
+
+  /**
+   * The support contract of an asset (spec §5.4 "Champ simple"): a limited person who cannot read
+   * it gets neither its id nor its name, and `support_contract_hidden` for the label. The same
+   * answer on a write, as on the GET.
+   */
+  private async concealSupportContract(manager: EntityManager, info: AssetSupportInfo | null) {
+    if (!info?.support_contract_id) return info;
     if (!(await isLimitedTransaction(manager))) return info;
     const [row]: Array<{ visible: boolean }> = await manager.query(
       `SELECT data_access_contract_visible($1::uuid) AS visible`, [info.support_contract_id],
@@ -68,13 +75,23 @@ export class AssetsSupportService extends AssetsBaseService {
     const tenant = this.ensureTenantId(tenantId);
     const asset = await this.ensureAsset(assetId, opts?.manager, tenant);
     const repo = this.getSupportInfoRepo(opts);
+    const manager = opts?.manager ?? repo.manager;
 
     let existing = await repo.findOne({ where: { asset_id: assetId, tenant_id: tenant } as any });
     const before = existing ? { ...existing } : null;
 
+    // Setting or changing the support contract is a link to it: a limited person links only a
+    // contract they can read, and a hidden one answers as a missing one (the same 404), never the
+    // foreign key's 409. A hidden contract already stored stays when the field does not change.
+    const nextContract = data.support_contract_id === undefined ? undefined : this.normalizeNullable(data.support_contract_id);
+    const storedContract = existing?.support_contract_id ?? null;
+    const contractChanged = nextContract !== undefined
+      && (nextContract?.toLowerCase() ?? null) !== (storedContract?.toLowerCase() ?? null);
+    if (contractChanged) await assertContractReadable(manager, nextContract);
+
     if (existing) {
       if (data.vendor_id !== undefined) existing.vendor_id = this.normalizeNullable(data.vendor_id);
-      if (data.support_contract_id !== undefined) existing.support_contract_id = this.normalizeNullable(data.support_contract_id);
+      if (nextContract !== undefined) existing.support_contract_id = nextContract;
       if (data.support_tier !== undefined) existing.support_tier = this.normalizeNullable(data.support_tier);
       if (data.support_expiry !== undefined) existing.support_expiry = data.support_expiry;
       if (data.notes !== undefined) existing.notes = this.normalizeNullable(data.notes);
@@ -84,7 +101,7 @@ export class AssetsSupportService extends AssetsBaseService {
         tenant_id: asset.tenant_id,
         asset_id: assetId,
         vendor_id: this.normalizeNullable(data.vendor_id),
-        support_contract_id: this.normalizeNullable(data.support_contract_id),
+        support_contract_id: nextContract ?? null,
         support_tier: this.normalizeNullable(data.support_tier),
         support_expiry: data.support_expiry ?? null,
         notes: this.normalizeNullable(data.notes),
@@ -96,7 +113,7 @@ export class AssetsSupportService extends AssetsBaseService {
       { table: 'asset_support_info', recordId: saved.id, action: before ? 'update' : 'create', before, after: saved, userId },
       { manager: opts?.manager },
     );
-    return saved;
+    return this.concealSupportContract(manager, saved);
   }
 
   /**
