@@ -6,6 +6,7 @@ import { AssetSupportInfo } from '../asset-support-info.entity';
 import { AssetSupportContact } from '../asset-support-contact.entity';
 import { ExternalContact } from '../../contacts/external-contact.entity';
 import { AuditService } from '../../audit/audit.service';
+import { isLimitedTransaction } from '../../data-access/line-write-checks';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 
 /**
@@ -42,7 +43,16 @@ export class AssetsSupportService extends AssetsBaseService {
     await this.ensureAsset(assetId, opts?.manager, tenantId);
     const repo = this.getSupportInfoRepo(opts);
     const info = await repo.findOne({ where: { asset_id: assetId, tenant_id: tenantId } as any });
-    return info || null;
+    if (!info || !info.support_contract_id) return info || null;
+    // The support contract of an asset (spec §5.4 "Champ simple"): a limited person who cannot read
+    // it gets neither its id nor its name, and `support_contract_hidden` for the label.
+    const manager = opts?.manager ?? repo.manager;
+    if (!(await isLimitedTransaction(manager))) return info;
+    const [row]: Array<{ visible: boolean }> = await manager.query(
+      `SELECT data_access_contract_visible($1::uuid) AS visible`, [info.support_contract_id],
+    );
+    if (row?.visible === true) return info;
+    return { ...info, support_contract_id: null, support_contract_hidden: true };
   }
 
   /**

@@ -18,6 +18,7 @@ import {
   type RelatedProject,
 } from '../common/relations/related-objects';
 import { parseTargetId, UUID_RE } from '../common/relations/relation-target';
+import { hiddenContractCount } from '../data-access/hidden-links';
 import { FxRateService } from '../currency/fx-rate.service';
 import type { IncidentViewer } from '../incidents/incident-visibility';
 import { IncidentRelationsService } from '../incidents/services/incident-relations.service';
@@ -105,6 +106,8 @@ export type AssetRelationsTab = {
   /** The linked lines `budget_lines` leaves out, counted (`readRelatedBudgetLines`). */
   budget_lines_hidden: number;
   contracts: RelatedContract[] | null;
+  /** The linked contracts the contracts policy hides from a limited person (spec §5.4). */
+  contracts_hidden: number;
   projects: RelatedProject[] | null;
   tasks: AssetRelatedTask[] | null;
   incidents: RelatedIncident[] | null;
@@ -199,6 +202,7 @@ export class AssetRelationsTabService {
       mg, this.fxRates, LINES, 'asset', tenantId, asset.id, year, measure, ctx.access.budget_lines,
     );
     const contracts = ctx.access.contracts ? await listRelatedContracts(mg, CONTRACTS, tenantId, asset.id) : null;
+    const contractsHidden = ctx.access.contracts ? await hiddenContractCount(mg, 'asset', asset.id) : 0;
     const projects = ctx.access.projects ? await listRelatedProjects(mg, PROJECTS, tenantId, asset.id, ctx.scopes.project) : null;
     const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, asset.id, ctx.scopes.task) : null;
     const incidents = ctx.access.incidents
@@ -221,7 +225,7 @@ export class AssetRelationsTabService {
     };
     const { assets: _assets, ...otherCounts } = counts;
     const total = Object.values(otherCounts).reduce((sum, n) => sum + n, 0);
-    return { year, budget_column, assets, budget_lines, budget_lines_hidden, contracts, projects, tasks, incidents, counts: { ...counts, total } };
+    return { year, budget_column, assets, budget_lines, budget_lines_hidden, contracts, contracts_hidden: contractsHidden, projects, tasks, incidents, counts: { ...counts, total } };
   }
 
   /**

@@ -11,7 +11,7 @@ import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 import { withSavepoint } from '../common/savepoint.util';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
-import { assertNoHiddenLines, hiddenLinesRefusals } from '../data-access/hidden-links';
+import { assertNoHiddenLinks, hiddenLinksRefusals } from '../data-access/hidden-links';
 
 @Injectable()
 export class ApplicationsDeleteService extends BaseDeleteService<Application> {
@@ -88,7 +88,7 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     const wanted = checkIds(ids);
     if (wanted.length === 0) return { refused: [], removes: [] };
     const rows = await this.readCounts(wanted, manager);
-    const hidden = await hiddenLinesRefusals(manager, 'application', rows.map((row) => row.id));
+    const hidden = await hiddenLinksRefusals(manager, 'application', rows.map((row) => row.id));
     const { refused } = await refusalsFrom(wanted, rows, (row) => row.name, async (row) => this.refusalOf(row) ?? hidden.get(row.id) ?? null);
     const refusedIds = new Set(refused.map((refusal) => refusal.id));
     const deleted = rows.filter((row) => !refusedIds.has(row.id));
@@ -121,7 +121,7 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     const refusal = counts ? this.refusalOf(counts) : null;
     if (refusal) throw refusal;
     // Its cascade would drop links to lines the person cannot read (spec §5.4).
-    await assertNoHiddenLines(manager, 'application', applicationId);
+    await assertNoHiddenLinks(manager, 'application', applicationId);
     // Its technology declarations go with it: those technologies are matched again after the commit.
     if (this.cpeEvents) await this.cpeEvents.emitForSubjects(manager, (app as any).tenant_id, 'application', [applicationId]);
 

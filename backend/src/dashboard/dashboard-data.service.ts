@@ -5,7 +5,7 @@ import {
   projectParticipantCondition,
   taskParticipantCondition,
 } from '../auth/business-contributor-scope';
-import { TASK_HIDDEN_LINE_REFERENCE_SQL } from '../spend/tasks.service';
+import { TASK_HIDDEN_CONTRACT_SQL, TASK_HIDDEN_LINE_REFERENCE_SQL } from '../spend/tasks.service';
 
 interface ServiceOptions {
   manager?: EntityManager;
@@ -80,6 +80,8 @@ export interface StaleTaskItem {
   relatedObjectType: string | null;
   relatedObjectId: string | null;
   relatedObjectName: string | null;
+  /** Set to `contract` when the task names a contract the person cannot read (no id, no name). */
+  relatedObjectHiddenKind?: 'contract';
 }
 
 export interface KnowledgeReviewItem {
@@ -517,6 +519,7 @@ export class DashboardDataService {
           ELSE NULL
         END AS related_object_name,
         ${TASK_HIDDEN_LINE_REFERENCE_SQL} AS related_object_reference,
+        ${TASK_HIDDEN_CONTRACT_SQL} AS related_object_contract_hidden,
         GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (NOW() - t.updated_at)) / 86400))::int AS stale_days
       FROM tasks t
       LEFT JOIN users u ON u.id = t.assignee_user_id AND u.tenant_id = t.tenant_id
@@ -544,8 +547,10 @@ export class DashboardDataService {
       assigneeName: row.assignee_name || null,
       relatedObjectType: row.related_object_type || null,
       // A line the person cannot read (data-scoped access): its reference alone, without its id.
-      relatedObjectId: row.related_object_reference ? null : row.related_object_id || null,
-      relatedObjectName: row.related_object_reference || row.related_object_name || null,
+      // A contract: no name, no id, its kind for the label.
+      relatedObjectId: (row.related_object_contract_hidden || row.related_object_reference) ? null : row.related_object_id || null,
+      relatedObjectName: row.related_object_contract_hidden ? null : (row.related_object_reference || row.related_object_name || null),
+      ...(row.related_object_contract_hidden ? { relatedObjectHiddenKind: 'contract' as const } : {}),
     }));
   }
 
