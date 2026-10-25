@@ -47,7 +47,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { useTenant } from '../../tenant/TenantContext';
 import { getScoreColor } from '../tasks/theme/taskDetailTokens';
 import { portfolioLinksKey, usePortfolioRelationsBadge } from './workspace/portfolioRelations';
-import { KanapDialog, useKanapDialogs } from '../../components/design';
+import { KanapDialog, unsavedConfirm, useKanapDialogs } from '../../components/design';
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
@@ -734,7 +734,7 @@ export default function RequestWorkspacePage() {
 
   const handleOpenRecommendationDialog = React.useCallback(async () => {
     if (hasUnsavedChanges) {
-      const proceed = await dialogs.confirm(t('portfolio:workspace.request.confirmations.unsavedRecommendation'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndContinue'));
       if (!proceed) return;
       const ok = await handleSave();
       if (!ok) return;
@@ -778,7 +778,7 @@ export default function RequestWorkspacePage() {
   const onTabChange = async (_: React.SyntheticEvent | null, nextValue: TabKey) => {
     if (isCreate && nextValue !== 'summary') return;
     if (hasUnsavedChanges) {
-      const proceed = await dialogs.confirm(t('portfolio:workspace.request.confirmations.unsavedSwitchTabs'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndSwitch'));
       if (proceed) {
         void handleSave().then((ok) => {
           if (ok) navigate(`/portfolio/requests/${id}/${nextValue}?${searchParams.toString()}`);
@@ -828,7 +828,7 @@ export default function RequestWorkspacePage() {
   const confirmAndNavigate = React.useCallback(async (targetId: string | null) => {
     if (!targetId) return;
     if (hasUnsavedChanges) {
-      const proceed = await dialogs.confirm(t('portfolio:workspace.request.confirmations.unsavedNavigate'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndLeave'));
       if (proceed) {
         const ok = await handleSave();
         if (!ok) return;
@@ -842,7 +842,7 @@ export default function RequestWorkspacePage() {
 
   const closeWorkspace = React.useCallback(async () => {
     if (hasUnsavedChanges) {
-      const proceed = await dialogs.confirm(t('portfolio:workspace.request.confirmations.unsavedNavigate'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndLeave'));
       if (proceed) {
         const ok = await handleSave();
         if (!ok) return;

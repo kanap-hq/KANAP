@@ -874,10 +874,6 @@
     },
     "title": "Plantillas de plan de cuentas (Admin plataforma)"
   },
-  "confirmations": {
-    "unsavedNavigate": "Tiene cambios sin guardar. ¿Desea guardar antes de navegar?",
-    "unsavedSwitchTab": "Tiene cambios sin guardar. ¿Desea guardar antes de cambiar de pestaña?"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",

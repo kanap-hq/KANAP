@@ -11,7 +11,7 @@ import BusinessProcessOverviewEditor, { BusinessProcessOverviewEditorHandle } fr
 import BusinessProcessCreateEditor, { BusinessProcessCreateEditorHandle } from './editors/BusinessProcessCreateEditor';
 import BusinessProcessCategoryManagerDialog from './BusinessProcessCategoryManagerDialog';
 import BusinessProcessApplicationsSection from './BusinessProcessApplicationsSection';
-import { useKanapDialogs } from '../../components/design';
+import { unsavedConfirm, useKanapDialogs } from '../../components/design';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 
 type TabKey = 'overview';
@@ -91,7 +91,7 @@ export default function BusinessProcessWorkspacePage() {
   const confirmAndNavigate = async (targetId: string | null) => {
     if (!targetId) return;
     if (dirty) {
-      const proceed = await dialogs.confirm(t('shared.workspace.unsavedNavigate'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndLeave'));
       if (proceed) {
         try {
           await handleSave();
@@ -115,7 +115,7 @@ export default function BusinessProcessWorkspacePage() {
   const onTabChange = async (_: React.SyntheticEvent, nextValue: TabKey) => {
     if (isCreate && nextValue !== 'overview') return;
     if (dirty) {
-      const proceed = await dialogs.confirm(t('shared.workspace.unsavedSwitchTab'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndSwitch'));
       if (proceed) {
         void handleSave().then(() =>
           navigate(`/master-data/business-processes/${id}/${nextValue}?${searchParams.toString()}`),

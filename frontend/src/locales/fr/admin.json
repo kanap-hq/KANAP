@@ -874,10 +874,6 @@
     },
     "title": "Modèles de plan comptable (Admin plateforme)"
   },
-  "confirmations": {
-    "unsavedNavigate": "Vous avez des modifications non enregistrées. Enregistrer avant de naviguer ?",
-    "unsavedSwitchTab": "Vous avez des modifications non enregistrées. Enregistrer avant de changer d'onglet ?"
-  },
   "platformAi": {
     "actions": {
       "save": "Save",

@@ -1,11 +1,12 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
+import { confirmLeave } from '../../hooks/leaveGuard';
 import AssetWorkspacePage from './AssetWorkspacePage';
 import { invalidateTechnologyLinks } from './components/technologyLinkQueries';
 
@@ -970,5 +971,53 @@ describe('Asset workspace: section placement', () => {
       await invalidateTechnologyLinks(queryClient);
       await waitFor(() => expect(vulnerabilityCalls()).toBe(2));
     });
+  });
+});
+
+describe('Asset creation: leaving with unsaved changes', () => {
+  beforeEach(() => {
+    get.mockReset();
+    auth.level = 'member';
+    features.vulnerabilityFeed = false;
+  });
+
+  async function typeName() {
+    renderAt('/it/assets/new/overview');
+    const name = await screen.findByPlaceholderText('workspace.asset.overview.namePlaceholder');
+    fireEvent.change(name, { target: { value: 'srv-1' } });
+  }
+
+  it('names leave and stay on Back, and Stay keeps the draft', async () => {
+    await typeName();
+    fireEvent.click(screen.getByRole('button', { name: 'pages.assets.title' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:unsaved.leaveWithoutSaving.message')).toBeInTheDocument();
+    const leave = within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.confirm' });
+    const stay = within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel' });
+    expect(leave).toHaveClass('MuiButton-action-danger');
+    expect(within(dialog).queryByRole('button', { name: 'common:buttons.continue' })).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: 'common:buttons.cancel' })).toBeNull();
+    fireEvent.click(stay);
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(currentPath()).toBe('/it/assets/new/overview');
+    expect(screen.getByPlaceholderText('workspace.asset.overview.namePlaceholder')).toHaveValue('srv-1');
+  });
+
+  it('leaves and drops the draft when the person chooses to', async () => {
+    await typeName();
+    fireEvent.click(screen.getByRole('button', { name: 'pages.assets.title' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:unsaved.leaveWithoutSaving.confirm' }));
+    await waitFor(() => expect(screen.queryByTestId('location')).toBeNull());
+  });
+
+  it('asks the same question before a menu link leaves', async () => {
+    await typeName();
+    let answer!: Promise<boolean>;
+    await act(async () => { answer = confirmLeave(); });
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:unsaved.leaveWithoutSaving.message')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel' }));
+    await expect(answer).resolves.toBe(false);
+    expect(currentPath()).toBe('/it/assets/new/overview');
   });
 });

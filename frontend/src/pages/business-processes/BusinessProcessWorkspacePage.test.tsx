@@ -9,6 +9,14 @@ import { KanapDialogProvider } from '../../components/design';
 
 const navigateMock = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ canAdmin: true }));
+const navState = vi.hoisted(() => ({
+  total: 0,
+  index: 0,
+  hasPrev: false,
+  hasNext: false,
+  prevId: null as string | null,
+  nextId: null as string | null,
+}));
 // A stable `t`: a new one on each render would loop the effects.
 const t = vi.hoisted(() => (key: string) => key);
 
@@ -25,10 +33,14 @@ vi.mock('../../auth/AuthContext', () => ({
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../hooks/useBusinessProcessNav', () => ({
-  useBusinessProcessNav: () => ({ total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
+  useBusinessProcessNav: () => navState,
 }));
 // The editors and the applications section load their own data: the tests are about the header.
-vi.mock('./editors/BusinessProcessOverviewEditor', () => ({ default: React.forwardRef(() => null) }));
+vi.mock('./editors/BusinessProcessOverviewEditor', () => ({
+  default: React.forwardRef(({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }, _ref: React.ForwardedRef<unknown>) => (
+    <button type="button" onClick={() => onDirtyChange?.(true)}>mark-dirty</button>
+  )),
+}));
 vi.mock('./editors/BusinessProcessCreateEditor', () => ({ default: React.forwardRef(() => null) }));
 vi.mock('./BusinessProcessApplicationsSection', () => ({ default: () => null }));
 vi.mock('./BusinessProcessCategoryManagerDialog', () => ({ default: () => null }));
@@ -63,6 +75,12 @@ describe('BusinessProcessWorkspacePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     auth.canAdmin = true;
+    navState.total = 0;
+    navState.index = 0;
+    navState.hasPrev = false;
+    navState.hasNext = false;
+    navState.prevId = null;
+    navState.nextId = null;
     mocked.delete.mockResolvedValue({ data: {} });
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/business-processes/bp-1') return { data: { id: 'bp-1', name: 'Order to cash' } };
@@ -105,5 +123,23 @@ describe('BusinessProcessWorkspacePage', () => {
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/business-processes/bp-1'));
     expect(navigateMock).toHaveBeenCalledWith('/master-data/business-processes?sort=name%3Aasc');
     expect(mocked.get.mock.calls.filter(([url]) => url === '/business-processes/bp-1')).toHaveLength(1);
+  });
+
+  it('names save and discard when leaving a dirty process, and discarding still leaves', async () => {
+    navState.total = 2;
+    navState.hasNext = true;
+    navState.nextId = 'bp-2';
+    renderAt('/master-data/business-processes/bp-1/overview');
+    await screen.findByText('Order to cash');
+    fireEvent.click(screen.getByRole('button', { name: 'mark-dirty' }));
+    fireEvent.click(screen.getByRole('button', { name: 'shared.labels.next' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:unsaved.saveAndLeave.message')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.confirm' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.cancel' })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'common:buttons.continue' })).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: 'common:buttons.cancel' })).toBeNull();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.cancel' }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/business-processes/bp-2/overview?'));
   });
 });

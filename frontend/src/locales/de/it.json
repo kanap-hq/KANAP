@@ -3327,7 +3327,6 @@
     }
   },
   "confirmations": {
-    "unsavedSaveBeforeNav": "Sie haben nicht gespeicherte Änderungen. Vor dem Navigieren speichern?",
     "unsavedSave": "Sie haben nicht gespeicherte Änderungen. Möchten Sie diese speichern?",
     "unsavedLeave": "Sie haben nicht gespeicherte Änderungen. Möchten Sie ohne Speichern fortfahren?",
     "unsavedLeaveTab": "Sie haben nicht gespeicherte Änderungen. Diesen Tab verlassen?",

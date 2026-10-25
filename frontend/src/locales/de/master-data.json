@@ -57,8 +57,6 @@
       "enabled": "Aktiviert"
     },
     "workspace": {
-      "unsavedNavigate": "Sie haben nicht gespeicherte Änderungen. Vor dem Navigieren speichern?",
-      "unsavedSwitchTab": "Sie haben nicht gespeicherte Änderungen. Vor dem Tab-Wechsel speichern?",
       "itemCountOf": "{{entity}} {{current}} von {{total}}"
     },
     "messages": {
