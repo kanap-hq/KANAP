@@ -71,8 +71,14 @@ export default function AssetDependenciesTab({ assetId }: { assetId: string }) {
   // A cluster can carry the link in place of its host: the question is asked before writing.
   const placeLink = async (kind: 'contains' | 'contained_by', targetId: string) => {
     const hostId = kind === 'contains' ? assetId : targetId;
+    // A contained-by link reads the containers already loaded with the page; a contains link
+    // lets the question read the target's own containers.
     const containers = kind === 'contained_by' ? (data?.assets.contained_by ?? []).map((row) => row.id) : [];
-    const answer = await placement.resolvePlacement({ hostId, excludeClusterIds: containers });
+    const answer = await placement.resolvePlacement({
+      hostId,
+      excludeClusterIds: containers,
+      placedAssetId: kind === 'contains' ? targetId : undefined,
+    });
     if (answer.status === 'cancelled') return;
     // A chosen cluster carries the link, whichever side of the page it sits on.
     const request = answer.clusterId

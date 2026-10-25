@@ -129,6 +129,29 @@ describe('usePlacementQuestion', () => {
     expect(mocked.get).not.toHaveBeenCalledWith('/assets/cl-2/members');
   });
 
+  it('raises no question for a cluster that already contains the placed asset', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/assets/host-1/clusters') return { data: { items: [{ id: 'cl-1', name: 'PAR-VSPHERE-CL01', status: 'active' }] } } as never;
+      if (url === '/assets/vm-1/relations') return { data: { incoming: [{ asset_id: 'cl-1', relation_type: 'contains' }] } } as never;
+      return { data: { items: [] } } as never;
+    });
+    ask({ hostId: 'host-1', excludeClusterIds: [], placedAssetId: 'vm-1' });
+    expect(await screen.findByText('ok:none')).toBeTruthy();
+    expect(screen.queryByText('components.clusterPlacement.title')).toBeNull();
+    expect(mocked.get).not.toHaveBeenCalledWith('/assets/cl-1/members');
+  });
+
+  it('still asks when the containers of the placed asset cannot be read', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/assets/host-1/clusters') return { data: { items: [{ id: 'cl-1', name: 'PAR-VSPHERE-CL01', status: 'active' }] } } as never;
+      if (url === '/assets/vm-1/relations') throw { response: { status: 500 } };
+      if (url === '/assets/cl-1/members') return { data: { items: [member('host-1', 'esx-01')] } } as never;
+      return { data: { items: [] } } as never;
+    });
+    ask({ hostId: 'host-1', excludeClusterIds: [], placedAssetId: 'vm-1' });
+    expect(await screen.findByText('components.clusterPlacement.title')).toBeTruthy();
+  });
+
   it('places directly when the reads fail', async () => {
     mocked.get.mockRejectedValue({ response: { status: 500 } });
     ask();

@@ -11,14 +11,26 @@ export type PlacementInput = {
   hostId: string;
   /** Clusters already holding the asset: their hosts do not raise the question again. */
   excludeClusterIds: string[];
+  /**
+   * The asset a `contains` link places, when the caller has not loaded its containers: the
+   * clusters that already contain it are read and excluded as well.
+   */
+  placedAssetId?: string;
 };
 
 type ClusterChoice = { id: string; name: string; count: number };
 type Pending = { host: string; clusters: ClusterChoice[]; resolve: (answer: string | null) => void };
 
 type AssetRef = { id: string; name: string; status?: string };
+type RelationRow = { asset_id: string; relation_type: string };
 
 const HOST_ONLY = 'host';
+
+/** The clusters (and other containers) that already hold an asset, from its incoming relations. */
+async function containerIdsOf(assetId: string): Promise<string[]> {
+  const incoming = (await api.get<{ incoming: RelationRow[] }>(`/assets/${assetId}/relations`)).data?.incoming ?? [];
+  return incoming.filter((row) => row.relation_type === 'contains').map((row) => row.asset_id);
+}
 
 function QuestionDialog({ pending }: { pending: Pending }) {
   const { t } = useTranslation('it');
@@ -73,8 +85,9 @@ function QuestionDialog({ pending }: { pending: Pending }) {
  *
  * `resolvePlacement` reads the clusters of the host (`GET /assets/:id/clusters`) and their members
  * in service. A host of no cluster, a retired host and a retired cluster raise no question; nor
- * does a cluster already holding the asset (`excludeClusterIds`). A read fails: no question, the
- * server still applies its placement rules. Render `placementDialog` once.
+ * does a cluster already holding the asset (`excludeClusterIds`, or the containers of
+ * `placedAssetId`). A read fails: no question, the server still applies its placement rules.
+ * Render `placementDialog` once.
  */
 export default function usePlacementQuestion() {
   const [pending, setPending] = React.useState<Pending | null>(null);
@@ -82,6 +95,13 @@ export default function usePlacementQuestion() {
   const resolvePlacement = React.useCallback(async (input: PlacementInput): Promise<PlacementOutcome> => {
     try {
       const excluded = new Set(input.excludeClusterIds);
+      if (input.placedAssetId) {
+        try {
+          for (const id of await containerIdsOf(input.placedAssetId)) excluded.add(id);
+        } catch {
+          // The containers cannot be read: the question still helps, and the server refuses a duplicate.
+        }
+      }
       const clusters = ((await api.get<{ items: AssetRef[] }>(`/assets/${input.hostId}/clusters`)).data?.items ?? [])
         .filter((cluster) => cluster.status !== 'retired' && !excluded.has(cluster.id));
       const choices: ClusterChoice[] = [];

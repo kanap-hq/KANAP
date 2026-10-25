@@ -76,9 +76,10 @@ type TabOptions = {
   relations?: AssetRelationsData;
   clusters?: Record<string, AssetRef[]>;
   members?: Record<string, AssetRef[]>;
+  incoming?: Record<string, Array<{ asset_id: string; relation_type: string }>>;
 };
 
-function renderTab({ relations: data = relations(), clusters = {}, members = {} }: TabOptions = {}) {
+function renderTab({ relations: data = relations(), clusters = {}, members = {}, incoming = {} }: TabOptions = {}) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/assets/as-1/relations-tab') return { data } as never;
     if (url === '/assets') {
@@ -88,6 +89,8 @@ function renderTab({ relations: data = relations(), clusters = {}, members = {} 
         { id: 'as-9', name: 'edge-fw', asset_reference: 'AST-9' },
       ] } } as never;
     }
+    const relationsMatch = /^\/assets\/(.+)\/relations$/.exec(url);
+    if (relationsMatch) return { data: { outgoing: [], incoming: incoming[relationsMatch[1]] ?? [] } } as never;
     const clusterMatch = /^\/assets\/(.+)\/clusters$/.exec(url);
     if (clusterMatch) return { data: { items: clusters[clusterMatch[1]] ?? [] } } as never;
     const memberMatch = /^\/assets\/(.+)\/members$/.exec(url);
@@ -214,6 +217,30 @@ describe('AssetDependenciesTab', () => {
     expect(await screen.findByText('workspace.asset.relations.placementReplaced(cluster=PAR-VSPHERE-CL01,hosts=esx-07,asset=edge-fw)')).toBeTruthy();
     await waitFor(() => expect(invalidated(['asset-impact'])).toBe(true));
     expect(invalidated(assetRelationsKey('as-1'))).toBe(true);
+  });
+
+  it('asks nothing when the cluster already contains the asset, and shows the server refusal', async () => {
+    renderTab({
+      clusters: { 'as-1': [{ id: 'cl-1', name: 'PAR-VSPHERE-CL01', status: 'active' }] },
+      members: {
+        'cl-1': [
+          { id: 'as-1', name: 'this-server', status: 'active' },
+          { id: 'as-9', name: 'edge-fw', status: 'active' },
+        ],
+      },
+      incoming: { 'as-9': [{ asset_id: 'cl-1', relation_type: 'contains' }] },
+    });
+    mocked.post.mockRejectedValue({
+      response: { status: 409, data: { code: 'placement_inherited', params: { cluster: 'PAR-VSPHERE-CL01' } } },
+    });
+    await screen.findByText('vm-app-01');
+    fireEvent.click(within(screen.getByRole('region', { name: A('contains') })).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
+
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/contains', { id: 'as-9' }));
+    expect(screen.queryByText('components.clusterPlacement.title')).toBeNull();
+    expect(mocked.get).toHaveBeenCalledWith('/assets/as-9/relations');
+    expect(await screen.findByText('errors:placement_inherited(cluster=PAR-VSPHERE-CL01)')).toBeTruthy();
   });
 
   it('keeps the link on the host only, and writes nothing when the question closes', async () => {
