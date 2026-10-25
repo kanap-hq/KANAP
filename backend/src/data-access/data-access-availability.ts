@@ -10,8 +10,9 @@ import { DataSource, QueryRunner } from 'typeorm';
  *   them, so no migration runs under them (they would refuse everything to everyone without
  *   context, spec §10.6).
  * - The lead process (the single process, or worker 1), once per start, after the migrations: when
- *   the limited role exists and a grant or an expected policy is missing, or the application role
- *   inherits it, it runs `data_access_sync_policies()` under a 5 s lock timeout (under inheritance
+ *   the limited role exists and a grant or an expected policy is missing or different, or the
+ *   application role inherits it, it runs `data_access_sync_policies()` under a 5 s lock timeout
+ *   (under inheritance
  *   the sync drops every policy on the role and creates none); a failure is logged and retried at
  *   the next start. It then checks the availability, keeps it and logs one line.
  * - Every process reads the availability through `dataAccessAvailability()`: kept in memory for a
@@ -59,6 +60,7 @@ type CatalogState = {
   schemaCreateMissing: boolean;
   grantsMissing: boolean;
   policiesMissing: boolean;
+  policiesDifferent: boolean;
 };
 
 /**
@@ -70,7 +72,10 @@ type CatalogState = {
  * the access functions, revoked from PUBLIC when SECURITY DEFINER); without it, every statement of
  * a limited person on that table fails. EXECUTE also on the disclosure functions the application
  * calls directly (DIRECT_CALL_FUNCTIONS). Policies: every expected policy exists, restrictive, on
- * its command and targeting the role (same test as `data_access_apply`).
+ * its command and targeting the role (same test as `data_access_apply`), and its body is the
+ * expected one: the comment carries `kda:<source fingerprint>:<md5 of the deparsed expressions>`,
+ * compared with the fingerprint of `data_access_expected_policies()` and the expressions read now
+ * (spec §6.2, lot 5).
  */
 async function readCatalogState(session: DataAccessSession): Promise<CatalogState> {
   const [base] = await session.query(
@@ -82,7 +87,14 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
   const roleExists = base?.role_exists === true;
   const schemaCreateMissing = base?.schema_create_missing === true;
   if (!roleExists) {
-    return { roleExists, inherits: false, schemaCreateMissing, grantsMissing: false, policiesMissing: false };
+    return {
+      roleExists,
+      inherits: false,
+      schemaCreateMissing,
+      grantsMissing: false,
+      policiesMissing: false,
+      policiesDifferent: false,
+    };
   }
   const [state] = await session.query(
     `WITH lim AS (SELECT to_regrole($1) AS oid)
@@ -136,7 +148,23 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
                WHEN 'SELECT' THEN 'r' WHEN 'INSERT' THEN 'a' WHEN 'UPDATE' THEN 'w'
                WHEN 'DELETE' THEN 'd' WHEN 'ALL' THEN '*' END
          )
-       ) AS policies_missing`,
+       ) AS policies_missing,
+       EXISTS (
+         SELECT 1
+         FROM data_access_expected_policies() e
+         JOIN pg_policy p ON p.polname = e.policy_name
+         JOIN pg_class c ON c.oid = p.polrelid AND c.relname = e.table_name
+         JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
+         WHERE NOT p.polpermissive
+           AND (SELECT oid FROM lim) = ANY (p.polroles)
+           AND p.polcmd::text = CASE upper(e.command)
+             WHEN 'SELECT' THEN 'r' WHEN 'INSERT' THEN 'a' WHEN 'UPDATE' THEN 'w'
+             WHEN 'DELETE' THEN 'd' WHEN 'ALL' THEN '*' END
+           AND coalesce(obj_description(p.oid, 'pg_policy'), '') IS DISTINCT FROM
+               'kda:' || e.fingerprint || ':' ||
+               md5(coalesce(pg_get_expr(p.polqual, p.polrelid), '') || '|' ||
+                   coalesce(pg_get_expr(p.polwithcheck, p.polrelid), ''))
+       ) AS policies_different`,
     [DATA_ACCESS_LIMITED_ROLE, DIRECT_CALL_FUNCTIONS],
   );
   return {
@@ -145,6 +173,7 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
     schemaCreateMissing,
     grantsMissing: state?.grants_missing === true,
     policiesMissing: state?.policies_missing === true,
+    policiesDifferent: state?.policies_different === true,
   };
 }
 
@@ -172,7 +201,7 @@ export async function checkDataAccessAvailability(session: DataAccessSession): P
   if (!(await canTakeRole(session))) missing.push('membership');
   if (state.inherits) missing.push('inheritance');
   if (state.schemaCreateMissing) missing.push('schema_create');
-  if (state.policiesMissing) missing.push('policies');
+  if (state.policiesMissing || state.policiesDifferent) missing.push('policies');
   if (state.grantsMissing) missing.push('grants');
   return { available: missing.length === 0, missing };
 }
@@ -252,7 +281,7 @@ export async function runDataAccessBeforeMigrations(
 
 /**
  * The startup routine of the lead process: sync when the role exists and a grant or a policy is
- * missing, or the application role inherits it, then check. Never throws: a failed sync or check is logged, and the function stays
+ * missing or different, or the application role inherits it, then check. Never throws: a failed sync or check is logged, and the function stays
  * unavailable until the next start.
  */
 export async function synchroniseDataAccess(
@@ -264,7 +293,7 @@ export async function synchroniseDataAccess(
     const state = await readCatalogState(session);
     if (state.roleExists) {
       sync = 'not_needed';
-      if (state.grantsMissing || state.policiesMissing || state.inherits) {
+      if (state.grantsMissing || state.policiesMissing || state.policiesDifferent || state.inherits) {
         try {
           await runSync(session);
           sync = 'done';

@@ -261,7 +261,8 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
   its data-access policies in the policy rows of the migration that defines
   `data_access_expected_policies()` and `data_access_sync_policies()`, or an exclusion with a
   reason in `backend/src/data-access/data-access-tables.inventory.ts`. The inventory spec fails
-  otherwise.
+  otherwise. A migration that changes the policy set copies the TS builders of the previous one
+  and redefines both functions with the complete list of rows.
 - A function that maintains data derived from a scoped table (totals, search index) is
   `SECURITY DEFINER`, with `search_path` pinned. A later `CREATE OR REPLACE` of it resets it to
   `SECURITY INVOKER`: repeat `SECURITY DEFINER` in the new definition. The inventory spec catches

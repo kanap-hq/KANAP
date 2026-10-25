@@ -300,11 +300,16 @@ async function testEndOfTransaction(): Promise<void> {
 async function testExpectedPolicies(): Promise<void> {
   const countExpected = async () => (await client.query(`SELECT count(*)::int AS n FROM data_access_expected_policies()`)).rows[0].n;
   const before = await countExpected();
-  const setExpected = (row: string) => client.query(`
-    CREATE OR REPLACE FUNCTION data_access_expected_policies()
-    RETURNS TABLE (policy_name text, table_name text, command text)
-    LANGUAGE sql STABLE SET search_path = public, pg_temp
-    AS $fn$ ${row} $fn$`);
+  // The live function has a fourth column (fingerprint, lot 5): its return type cannot change
+  // through CREATE OR REPLACE, so replace it by a DROP then a CREATE. The rollback restores it.
+  const setExpected = async (row: string) => {
+    await client.query(`DROP FUNCTION IF EXISTS data_access_expected_policies()`);
+    await client.query(`
+      CREATE FUNCTION data_access_expected_policies()
+      RETURNS TABLE (policy_name text, table_name text, command text)
+      LANGUAGE sql STABLE SET search_path = public, pg_temp
+      AS $fn$ ${row} $fn$`);
+  };
 
   // An expected policy missing: KDA01. DDL is transactional: the rollback restores the function.
   await inTransaction(async () => {

@@ -636,30 +636,38 @@ export class DataAccessContractPolicies1855300000000 implements MigrationInterfa
 async function createPolicyFunctions(queryRunner: QueryRunner): Promise<void> {
   const rows = dataAccessPolicyRows();
   const expectedValues = rows
-    .map((r) => `('${dataAccessPolicyName(r)}', '${r.table}', '${r.command}')`)
+    .map((r) => `('${dataAccessPolicyName(r)}', '${r.table}', '${r.command}', ${literal(r.using)}, ${literal(r.check)})`)
     .join(',\n        ');
   const definitionValues = rows
     .map((r) => `('${r.table}', '${r.command}', ${literal(r.using)}, ${literal(r.check)})`)
     .join(',\n          ');
 
-  // The single source of the policies the database must hold (policy, table, command).
+  // The single source of the policies the database must hold (policy, table, command, fingerprint).
+  // The fingerprint is the md5 of the command and of the two policy texts; a change of either
+  // changes it. The return type changes from lot 2 (three columns to four): DROP first.
+  await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_expected_policies()`);
   await queryRunner.query(`
     CREATE OR REPLACE FUNCTION data_access_expected_policies()
-    RETURNS TABLE (policy_name text, table_name text, command text)
+    RETURNS TABLE (policy_name text, table_name text, command text, fingerprint text)
     LANGUAGE sql
     STABLE
     SET search_path = public, pg_temp
     AS $fn$
-      SELECT v.policy_name, v.table_name, v.command
+      SELECT v.policy_name, v.table_name, v.command,
+             md5(v.command || '|' || coalesce(v.using_expr, '') || '|' || coalesce(v.check_expr, '')) AS fingerprint
       FROM (VALUES
         ${expectedValues}
-      ) AS v(policy_name, table_name, command)
+      ) AS v(policy_name, table_name, command, using_expr, check_expr)
     $fn$
   `);
 
-  // Grants as in lot 1, the stray policies dropped, then each expected policy dropped and created
-  // from the definitions below (one row per policy: table, command, USING, WITH CHECK). Policy
-  // DDL takes an exclusive lock on its table: callers set lock_timeout, the function does not.
+  // Grants as in lot 1, the stray policies dropped, then each missing or different expected policy
+  // recreated from the definitions below (one row per policy: table, command, USING, WITH CHECK).
+  // A policy carries its source fingerprint and the md5 of its deparsed expressions in
+  // `COMMENT ON POLICY`: a missing comment, a changed source fingerprint or an altered body makes
+  // it different (spec §6.2, review notes M4 and M5). It is the only policy recreated; the others
+  // keep their oid. Policy DDL takes an exclusive lock on its table: callers set lock_timeout, the
+  // function does not.
   await queryRunner.query(`
     CREATE OR REPLACE FUNCTION data_access_sync_policies()
     RETURNS void
@@ -670,10 +678,18 @@ async function createPolicyFunctions(queryRunner: QueryRunner): Promise<void> {
       v_role oid := to_regrole('${LIMITED_ROLE}');
       r record;
       v_name text;
+      v_cmd text;
       v_expected int;
+      v_defined int := 0;
       v_created int := 0;
       v_inherits boolean;
       v_dropped int := 0;
+      v_fingerprint text;
+      v_comment text;
+      v_deparsed text;
+      v_permissive boolean;
+      v_role_ok boolean;
+      v_polcmd text;
     BEGIN
       IF v_role IS NULL THEN
         RETURN;
@@ -741,15 +757,44 @@ ${[...LINE_HELPER_SIGNATURES, ...ACCESS_DEFINER_SIGNATURES, ...CONTRACT_HELPER_S
         ) THEN
           RAISE EXCEPTION 'data access: policy % is defined but not expected', v_name;
         END IF;
-        v_created := v_created + 1;
+        v_defined := v_defined + 1;
+        v_cmd := CASE upper(r.command)
+          WHEN 'SELECT' THEN 'r' WHEN 'INSERT' THEN 'a' WHEN 'UPDATE' THEN 'w'
+          WHEN 'DELETE' THEN 'd' WHEN 'ALL' THEN '*' END;
+        v_fingerprint := md5(r.command || '|' || coalesce(r.using_expr, '') || '|' || coalesce(r.check_expr, ''));
+        SELECT p.polpermissive, v_role = ANY (p.polroles), p.polcmd::text,
+               obj_description(p.oid, 'pg_policy'),
+               md5(coalesce(pg_get_expr(p.polqual, p.polrelid), '') || '|' || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), ''))
+        INTO v_permissive, v_role_ok, v_polcmd, v_comment, v_deparsed
+        FROM pg_policy p
+        JOIN pg_class c ON c.oid = p.polrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = r.table_name AND p.polname = v_name;
+        IF FOUND THEN
+          -- Unchanged: restrictive, on the role, on its command, and the comment still holds the
+          -- expected source fingerprint and the md5 of the deparsed expressions read now.
+          IF NOT v_permissive AND v_role_ok AND v_polcmd = v_cmd
+             AND v_comment = 'kda:' || v_fingerprint || ':' || v_deparsed THEN
+            CONTINUE;
+          END IF;
+        END IF;
         EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', v_name, r.table_name);
         EXECUTE format('CREATE POLICY %I ON public.%I AS RESTRICTIVE FOR %s TO ${LIMITED_ROLE}%s%s',
                        v_name, r.table_name, r.command,
                        CASE WHEN r.using_expr IS NULL THEN '' ELSE ' USING (' || r.using_expr || ')' END,
                        CASE WHEN r.check_expr IS NULL THEN '' ELSE ' WITH CHECK (' || r.check_expr || ')' END);
+        SELECT md5(coalesce(pg_get_expr(p.polqual, p.polrelid), '') || '|' || coalesce(pg_get_expr(p.polwithcheck, p.polrelid), ''))
+        INTO v_deparsed
+        FROM pg_policy p
+        JOIN pg_class c ON c.oid = p.polrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = r.table_name AND p.polname = v_name;
+        EXECUTE format('COMMENT ON POLICY %I ON public.%I IS %L',
+                       v_name, r.table_name, 'kda:' || v_fingerprint || ':' || v_deparsed);
+        v_created := v_created + 1;
       END LOOP;
-      IF v_created <> v_expected THEN
-        RAISE EXCEPTION 'data access: % policies expected, % defined', v_expected, v_created;
+      IF v_defined <> v_expected THEN
+        RAISE EXCEPTION 'data access: % policies expected, % defined', v_expected, v_defined;
       END IF;
 
       -- EXECUTE on every function the policies of the role call (their dependencies), whatever
@@ -1258,6 +1303,8 @@ async function restoreLotTwoHiddenCount(queryRunner: QueryRunner): Promise<void>
 
 /** The lot 2 bodies of the two functions this migration replaces (1854500000000). */
 async function restoreLotTwoFunctions(queryRunner: QueryRunner): Promise<void> {
+  // The lot 5 function has a fourth column: the lot 2 return type needs a DROP.
+  await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_expected_policies()`);
   await queryRunner.query(`
     CREATE OR REPLACE FUNCTION data_access_expected_policies()
     RETURNS TABLE (policy_name text, table_name text, command text)
