@@ -266,6 +266,21 @@
   "PROJECT_HIDDEN_LINES_other": "Ce projet est lié à {{count}} lignes hors de votre accès.",
   "REQUEST_HIDDEN_LINES_one": "Cette demande est liée à {{count}} ligne hors de votre accès.",
   "REQUEST_HIDDEN_LINES_other": "Cette demande est liée à {{count}} lignes hors de votre accès.",
+  "APPLICATION_HIDDEN_CONTRACTS_one": "Cette application est liée à {{count}} contrat hors de votre accès.",
+  "APPLICATION_HIDDEN_CONTRACTS_other": "Cette application est liée à {{count}} contrats hors de votre accès.",
+  "ASSET_HIDDEN_CONTRACTS_one": "Cet actif est lié à {{count}} contrat hors de votre accès.",
+  "ASSET_HIDDEN_CONTRACTS_other": "Cet actif est lié à {{count}} contrats hors de votre accès.",
+  "TECHNOLOGY_HIDDEN_CONTRACTS_one": "Cette technologie est liée à {{count}} contrat hors de votre accès.",
+  "TECHNOLOGY_HIDDEN_CONTRACTS_other": "Cette technologie est liée à {{count}} contrats hors de votre accès.",
+  "APPLICATION_HIDDEN_LINKS": "Cette application est liée à {{lines}} et {{contracts}} hors de votre accès.",
+  "ASSET_HIDDEN_LINKS": "Cet actif est lié à {{lines}} et {{contracts}} hors de votre accès.",
+  "TECHNOLOGY_HIDDEN_LINKS": "Cette technologie est liée à {{lines}} et {{contracts}} hors de votre accès.",
+  "hiddenLinks": {
+    "line_one": "{{count}} ligne",
+    "line_other": "{{count}} lignes",
+    "contract_one": "{{count}} contrat",
+    "contract_other": "{{count}} contrats"
+  },
   "dataAccess": {
     "outside": "Cet élément est hors de votre accès aux données.",
     "chargebackCompany": "La refacturation de cette société est hors de votre accès aux données.",

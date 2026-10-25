@@ -266,6 +266,21 @@
   "PROJECT_HIDDEN_LINES_other": "This project is linked to {{count}} lines outside your access.",
   "REQUEST_HIDDEN_LINES_one": "This request is linked to {{count}} line outside your access.",
   "REQUEST_HIDDEN_LINES_other": "This request is linked to {{count}} lines outside your access.",
+  "APPLICATION_HIDDEN_CONTRACTS_one": "This application is linked to {{count}} contract outside your access.",
+  "APPLICATION_HIDDEN_CONTRACTS_other": "This application is linked to {{count}} contracts outside your access.",
+  "ASSET_HIDDEN_CONTRACTS_one": "This asset is linked to {{count}} contract outside your access.",
+  "ASSET_HIDDEN_CONTRACTS_other": "This asset is linked to {{count}} contracts outside your access.",
+  "TECHNOLOGY_HIDDEN_CONTRACTS_one": "This technology is linked to {{count}} contract outside your access.",
+  "TECHNOLOGY_HIDDEN_CONTRACTS_other": "This technology is linked to {{count}} contracts outside your access.",
+  "APPLICATION_HIDDEN_LINKS": "This application is linked to {{lines}} and {{contracts}} outside your access.",
+  "ASSET_HIDDEN_LINKS": "This asset is linked to {{lines}} and {{contracts}} outside your access.",
+  "TECHNOLOGY_HIDDEN_LINKS": "This technology is linked to {{lines}} and {{contracts}} outside your access.",
+  "hiddenLinks": {
+    "line_one": "{{count}} line",
+    "line_other": "{{count}} lines",
+    "contract_one": "{{count}} contract",
+    "contract_other": "{{count}} contracts"
+  },
   "dataAccess": {
     "outside": "This item is outside your data access.",
     "chargebackCompany": "The chargeback of this company is outside your data access.",

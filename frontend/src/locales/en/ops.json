@@ -375,10 +375,13 @@
     "exportCsv": "Export CSV",
     "exportTitle": "Export contracts",
     "importTitle": "Import contracts",
+    "readOnlyInYourAccess": "Read only in your access",
+    "outsideYourAccess": "Contract outside your access",
     "columns": {
       "contract": "Contract",
       "supplier": "Supplier",
       "company": "Company",
+      "costCenter": "Cost center",
       "start": "Start",
       "durationMonths": "Duration (m)",
       "autoRenewal": "Auto-renewal",
@@ -400,6 +403,7 @@
     },
     "list": {
       "toDecide": "To decide within {{days}} days ({{count}})",
+      "withoutCostCenter": "Without cost center",
       "dueIn_one": "in {{count}} day",
       "dueIn_other": "in {{count}} days",
       "dueToday": "today",
@@ -445,6 +449,7 @@
       "name": "Contract name",
       "supplier": "Supplier",
       "company": "Contracting company",
+      "costCenter": "Cost center or group",
       "owner": "Owner",
       "status": "Status",
       "startDate": "Start",
@@ -494,6 +499,10 @@
       "currencyRequired": "Choose a currency.",
       "invalidMonths": "Enter a whole number of months.",
       "invalidAmount": "Enter an amount with at most two decimals."
+    },
+    "relations": {
+      "closedDocuments_one": "{{count}} attachment, for people who see this contract",
+      "closedDocuments_other": "{{count}} attachments, for people who see this contract"
     },
     "deadlines": {
       "title": "Deadlines",

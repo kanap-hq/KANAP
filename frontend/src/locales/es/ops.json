@@ -375,10 +375,13 @@
     "exportCsv": "Exportar CSV",
     "exportTitle": "Exportar contratos",
     "importTitle": "Importar contratos",
+    "readOnlyInYourAccess": "Solo lectura en su acceso",
+    "outsideYourAccess": "Contrato fuera de su acceso",
     "columns": {
       "contract": "Contrato",
       "supplier": "Proveedor",
       "company": "Empresa",
+      "costCenter": "Centro de coste",
       "start": "Inicio",
       "durationMonths": "Duración (m)",
       "autoRenewal": "Renovación auto.",
@@ -400,6 +403,7 @@
     },
     "list": {
       "toDecide": "Por decidir en {{days}} días ({{count}})",
+      "withoutCostCenter": "Sin centro de coste",
       "dueIn_one": "en {{count}} día",
       "dueIn_other": "en {{count}} días",
       "dueToday": "hoy",
@@ -445,6 +449,7 @@
       "name": "Nombre del contrato",
       "supplier": "Proveedor",
       "company": "Empresa contratante",
+      "costCenter": "Centro de coste o grupo",
       "owner": "Responsable",
       "status": "Estado",
       "startDate": "Inicio",
@@ -494,6 +499,10 @@
       "currencyRequired": "Elija una moneda.",
       "invalidMonths": "Introduzca un número entero de meses.",
       "invalidAmount": "Introduzca un importe con dos decimales como máximo."
+    },
+    "relations": {
+      "closedDocuments_one": "{{count}} adjunto, reservado a las personas que ven este contrato",
+      "closedDocuments_other": "{{count}} adjuntos, reservados a las personas que ven este contrato"
     },
     "deadlines": {
       "title": "Vencimientos",

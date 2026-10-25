@@ -266,6 +266,21 @@
   "PROJECT_HIDDEN_LINES_other": "Dieses Projekt ist mit {{count}} Zeilen außerhalb Ihres Zugriffs verknüpft.",
   "REQUEST_HIDDEN_LINES_one": "Diese Anfrage ist mit {{count}} Zeile außerhalb Ihres Zugriffs verknüpft.",
   "REQUEST_HIDDEN_LINES_other": "Diese Anfrage ist mit {{count}} Zeilen außerhalb Ihres Zugriffs verknüpft.",
+  "APPLICATION_HIDDEN_CONTRACTS_one": "Diese Anwendung ist mit {{count}} Vertrag außerhalb Ihres Zugriffs verknüpft.",
+  "APPLICATION_HIDDEN_CONTRACTS_other": "Diese Anwendung ist mit {{count}} Verträgen außerhalb Ihres Zugriffs verknüpft.",
+  "ASSET_HIDDEN_CONTRACTS_one": "Dieses Asset ist mit {{count}} Vertrag außerhalb Ihres Zugriffs verknüpft.",
+  "ASSET_HIDDEN_CONTRACTS_other": "Dieses Asset ist mit {{count}} Verträgen außerhalb Ihres Zugriffs verknüpft.",
+  "TECHNOLOGY_HIDDEN_CONTRACTS_one": "Diese Technologie ist mit {{count}} Vertrag außerhalb Ihres Zugriffs verknüpft.",
+  "TECHNOLOGY_HIDDEN_CONTRACTS_other": "Diese Technologie ist mit {{count}} Verträgen außerhalb Ihres Zugriffs verknüpft.",
+  "APPLICATION_HIDDEN_LINKS": "Diese Anwendung ist mit {{lines}} und {{contracts}} außerhalb Ihres Zugriffs verknüpft.",
+  "ASSET_HIDDEN_LINKS": "Dieses Asset ist mit {{lines}} und {{contracts}} außerhalb Ihres Zugriffs verknüpft.",
+  "TECHNOLOGY_HIDDEN_LINKS": "Diese Technologie ist mit {{lines}} und {{contracts}} außerhalb Ihres Zugriffs verknüpft.",
+  "hiddenLinks": {
+    "line_one": "{{count}} Zeile",
+    "line_other": "{{count}} Zeilen",
+    "contract_one": "{{count}} Vertrag",
+    "contract_other": "{{count}} Verträgen"
+  },
   "dataAccess": {
     "outside": "Dieses Element liegt außerhalb Ihres Datenzugriffs.",
     "chargebackCompany": "Die Leistungsverrechnung dieses Unternehmens liegt außerhalb Ihres Datenzugriffs.",
