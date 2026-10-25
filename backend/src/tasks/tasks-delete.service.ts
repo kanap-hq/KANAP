@@ -10,6 +10,7 @@ import { UserTimeAggregateService } from '../portfolio/services/user-time-aggreg
 import { deleteTaskActivities } from './task-delete-cleanup';
 import { assertTaskDeletable } from './task-data-access';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
+import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 
 /**
  * The refusal of each task's delete that is the origin of a request (`TASK_REQUEST_ORIGIN`, the
@@ -94,13 +95,19 @@ export class TasksDeleteService extends BaseDeleteService<Task> {
   }
 
   /** The check before a delete (`POST /tasks/delete-check`): the tasks of `ids` a request started from, which it would refuse. Nothing is written. */
-  async deleteCheck(ids: unknown[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+  async deleteCheck(ids: unknown[], opts?: { manager?: EntityManager; viewer?: IncidentViewer | null }): Promise<{ refused: DeleteRefusal[] }> {
     const manager = opts?.manager ?? this.repository.manager;
     const wanted = checkIds(ids);
     if (wanted.length === 0) return { refused: [] };
+    const params: unknown[] = [wanted];
+    const visibility = taskIncidentVisibilitySql('t', opts?.viewer, params);
     const rows: Array<{ id: string; title: string }> = await manager.query(
-      `SELECT id::text AS id, title FROM tasks WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
-      [wanted],
+      `SELECT t.id::text AS id, t.title
+       FROM tasks t
+       WHERE t.tenant_id = app_current_tenant()
+         AND t.id = ANY($1::uuid[])
+         ${visibility}`,
+      params,
     );
     const refusals = await originRefusals(manager, rows);
     const byId = new Map(rows.map((row, index) => [row.id, refusals[index]]));
@@ -110,12 +117,37 @@ export class TasksDeleteService extends BaseDeleteService<Task> {
   /**
    * Bulk delete multiple tasks
    */
-  async bulkDelete(taskIds: string[], userId: string | null, opts?: { manager?: EntityManager }): Promise<BulkDeleteResult> {
+  async bulkDelete(
+    taskIds: string[],
+    userId: string | null,
+    opts?: { manager?: EntityManager; viewer?: IncidentViewer | null },
+  ): Promise<BulkDeleteResult> {
     const manager = opts?.manager ?? this.repository.manager;
     const repo = this.getRepo(manager);
     const result: BulkDeleteResult = { deleted: [], failed: [] };
 
+    // One batch read: a task of an incident this reader cannot see is absent, so its
+    // id reads as unknown and is never deleted or named.
+    const wanted = checkIds(taskIds);
+    const params: unknown[] = [wanted];
+    const visibility = wanted.length > 0 ? taskIncidentVisibilitySql('t', opts?.viewer, params) : '';
+    const visibleRows: Array<{ id: string }> = wanted.length > 0
+      ? await manager.query(
+        `SELECT t.id::text AS id
+         FROM tasks t
+         WHERE t.tenant_id = app_current_tenant()
+           AND t.id = ANY($1::uuid[])
+           ${visibility}`,
+        params,
+      )
+      : [];
+    const visible = new Set(visibleRows.map((row) => row.id.toLowerCase()));
+
     for (const id of taskIds) {
+      if (!visible.has(String(id || '').toLowerCase())) {
+        result.failed.push({ id, name: 'Unknown', reason: 'Not found', code: 'not_found' });
+        continue;
+      }
       try {
         const found = await withSavepoint(manager, async () => {
           const before = await repo.findOne({ where: { id } as any });

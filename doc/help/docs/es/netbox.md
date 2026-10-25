@@ -70,13 +70,15 @@ Esta tabla no es un filtro. Una plataforma que quede en **Sin correspondencia** 
 
 Netbox concede permisos de lectura por tipo de objeto, así que un token autorizado a leer equipos, roles y sitios puede aun así tener vedadas las plataformas. Los roles y los sitios siguen funcionando y la importación no se ve afectada. Solo esta sección queda vacía, y dice por qué.
 
-### Clústeres
+### Clústeres { #clusters }
 
 La sección **Clústeres** asocia cada clúster de Netbox con un clúster de KANAP: un activo marcado como clúster y en servicio. Cada fila muestra cuántas máquinas virtuales contiene el clúster de Netbox. Se sugiere un clúster de KANAP con el mismo nombre y, como en el resto, una sugerencia solo cuenta cuando pulsa **Guardar correspondencias**.
 
 En la siguiente ejecución, cada máquina virtual de un clúster asociado se añade a las relaciones **Contiene** de su clúster de KANAP. Una tecnología instalada en el clúster llega entonces a la máquina y a las aplicaciones alojadas en ella. Una máquina cuyo único cambio es su clúster aparece en **Por actualizar**, con una línea **Clúster**. Una máquina que crea la ejecución entra en su clúster de inmediato.
 
-La importación solo añade:
+Cuando un host miembro del clúster asociado contiene hoy la máquina, vincularla al clúster sustituye el vínculo del host. La vista previa lo muestra en la fila de la máquina, con una línea **Ubicación** del host al clúster. Consulte [Máquinas virtuales en un clúster](assets.md#virtual-machines-on-a-cluster).
+
+Fuera de ese caso, la importación solo añade:
 
 - Una máquina que ya está en otro clúster de KANAP se queda ahí. La vista previa lo indica en la fila de la máquina, para que pueda quitar esa relación a mano si está desfasada.
 - Cambiar una correspondencia añade las máquinas al nuevo clúster y las mantiene en el antiguo.

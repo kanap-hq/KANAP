@@ -20,10 +20,12 @@ import {
 import { parseTargetId, UUID_RE } from '../common/relations/relation-target';
 import { hiddenContractCount } from '../data-access/hidden-links';
 import { FxRateService } from '../currency/fx-rate.service';
-import type { IncidentViewer } from '../incidents/incident-visibility';
+import { taskIncidentVisibilitySql, type IncidentViewer } from '../incidents/incident-visibility';
 import { IncidentRelationsService } from '../incidents/services/incident-relations.service';
 import { auditTableOf, type BudgetNature } from '../spend/budget-nature';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
+import { assetInServiceSql } from '../technologies/technology-reach.service';
+import { doubleContainersOf, type DoubleContainer, type ReplacedHostLink } from './placement-rules';
 import { AssetsRelationsService } from './services/assets-relations.service';
 
 /**
@@ -98,10 +100,29 @@ export type AssetRelationsCounts = {
   total: number;
 };
 
+/** A contained asset, with the other containers in service it also has (R3), when any. */
+export type AssetRelatedAsset = RelatedAsset & { also_contained_by?: Array<{ id: string; name: string }> };
+
+/** An asset a cluster's members depend on, with the members that depend on it. */
+export type AssetMemberDependency = AssetRelatedAsset & { via: Array<{ id: string; name: string }> };
+
+/** The four directions, plus a cluster's dependencies through its members (absent on any other asset). */
+export type AssetRelationsByDirection = Record<AssetDirection, AssetRelatedAsset[]> & {
+  depends_on_through_members?: AssetMemberDependency[];
+};
+
+/** The answer of a relation write: the placement fields only when the write has something to say. */
+export type AssetRelationWrite = {
+  ok: true;
+  changed: boolean;
+  replaced_host_links?: ReplacedHostLink[];
+  double_containers?: DoubleContainer[];
+};
+
 export type AssetRelationsTab = {
   year: number;
   budget_column: { key: string; label: string };
-  assets: Record<AssetDirection, RelatedAsset[]>;
+  assets: AssetRelationsByDirection;
   budget_lines: RelatedBudgetLine[] | null;
   /** The linked lines `budget_lines` leaves out, counted (`readRelatedBudgetLines`). */
   budget_lines_hidden: number;
@@ -114,7 +135,7 @@ export type AssetRelationsTab = {
   counts: AssetRelationsCounts;
 };
 
-type AssetRow = { id: string; tenant_id: string };
+type AssetRow = { id: string; tenant_id: string; is_cluster: boolean };
 
 const LINES = { links: 'asset_spend_items', owner: 'asset_id' } as const;
 const CONTRACTS = { links: 'asset_contracts', owner: 'asset_id' } as const;
@@ -165,9 +186,15 @@ async function loadAsset(mg: EntityManager, tenantId: string, ref: string): Prom
   const value = String(ref || '').trim();
   let rows: AssetRow[] = [];
   if (UUID_RE.test(value)) {
-    rows = await mg.query(`SELECT id, tenant_id FROM assets WHERE tenant_id = $1 AND id = $2`, [tenantId, value.toLowerCase()]);
+    rows = await mg.query(
+      `SELECT id, tenant_id, COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, value.toLowerCase()],
+    );
   } else if (/^AST-\d+$/i.test(value)) {
-    rows = await mg.query(`SELECT id, tenant_id FROM assets WHERE tenant_id = $1 AND asset_reference = $2`, [tenantId, value.toUpperCase()]);
+    rows = await mg.query(
+      `SELECT id, tenant_id, COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND asset_reference = $2`,
+      [tenantId, value.toUpperCase()],
+    );
   }
   if (!rows[0]) throw new NotFoundException(ASSET_NOT_FOUND);
   return rows[0];
@@ -204,7 +231,7 @@ export class AssetRelationsTabService {
     const contracts = ctx.access.contracts ? await listRelatedContracts(mg, CONTRACTS, tenantId, asset.id) : null;
     const contractsHidden = ctx.access.contracts ? await hiddenContractCount(mg, 'asset', asset.id) : 0;
     const projects = ctx.access.projects ? await listRelatedProjects(mg, PROJECTS, tenantId, asset.id, ctx.scopes.project) : null;
-    const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, asset.id, ctx.scopes.task) : null;
+    const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, asset.id, ctx.scopes.task, ctx.incidentViewer) : null;
     const incidents = ctx.access.incidents
       ? await listRelatedIncidents(mg, tenantId, INCIDENTS, asset.id, ctx.incidentViewer)
       : null;
@@ -239,7 +266,7 @@ export class AssetRelationsTabService {
     targetId: string,
     add: boolean,
     ctx: AssetRelationsContext,
-  ): Promise<{ ok: true; changed: boolean }> {
+  ): Promise<AssetRelationWrite> {
     const kind = assetRelationKindOrThrow(kindValue);
     const mg = ctx.manager;
     if (kind === 'budget_lines' || kind === 'contracts' || kind === 'projects') {
@@ -292,10 +319,17 @@ export class AssetRelationsTabService {
     const row = DIRECTION_ROWS[kind];
     const [source, related] = row.outgoing ? [asset.id, id] : [id, asset.id];
     const opts = { manager: mg, tenantId };
-    const changed = add
-      ? await this.relations.addRelation(source, related, row.type, tenantId, userId, opts)
-      : await this.relations.removeRelation(source, related, row.type, tenantId, userId, opts);
-    return { ok: true, changed };
+    if (!add) {
+      const changed = await this.relations.removeRelation(source, related, row.type, tenantId, userId, opts);
+      return { ok: true, changed };
+    }
+    // The placement rules of a `contains` (R1 absorption, R2 refusal, R3 doubles): the response
+    // tells the screen what the cluster replaced and what the asset now has as containers.
+    const write = await this.relations.addRelationWithPlacement(source, related, row.type, tenantId, userId, opts);
+    const response: AssetRelationWrite = { ok: true, changed: write.changed };
+    if (write.replaced.length > 0) response.replaced_host_links = write.replaced;
+    if (write.doubles.length > 0) response.double_containers = write.doubles;
+    return response;
   }
 
   /**
@@ -349,7 +383,7 @@ export class AssetRelationsTabService {
   }
 
   /** The relations of the asset in both directions, with the other asset's fields, by name. */
-  private async listAssetRelations(mg: EntityManager, asset: AssetRow): Promise<Record<AssetDirection, RelatedAsset[]>> {
+  private async listAssetRelations(mg: EntityManager, asset: AssetRow): Promise<AssetRelationsByDirection> {
     const rows: Array<RelatedAsset & { relation_type: 'contains' | 'depends_on'; outgoing: boolean }> = await mg.query(
       `SELECT r.relation_type, (r.asset_id = $2) AS outgoing,
               a.id, a.asset_reference AS reference, a.name, a.kind, a.environment, a.status
@@ -360,19 +394,69 @@ export class AssetRelationsTabService {
         ORDER BY lower(a.name), a.id`,
       [asset.tenant_id, asset.id],
     );
-    const out: Record<AssetDirection, RelatedAsset[]> = { contains: [], contained_by: [], depends_on: [], depended_on_by: [] };
+    const out: AssetRelationsByDirection = { contains: [], contained_by: [], depends_on: [], depended_on_by: [] };
     for (const { relation_type, outgoing, ...related } of rows) {
       const direction = ASSET_DIRECTIONS.find((d) => DIRECTION_ROWS[d].type === relation_type && DIRECTION_ROWS[d].outgoing === outgoing);
       if (direction) out[direction].push(related);
     }
+    // R3: each contained asset also held by another container in service, in one batch.
+    const doubles = await doubleContainersOf(mg, asset.tenant_id, out.contains.map((row) => row.id));
+    const othersById = new Map(
+      doubles.map((entry) => [entry.asset_id, entry.containers.filter((container) => container.id !== asset.id)]),
+    );
+    for (const row of out.contains) {
+      const others = othersById.get(row.id);
+      if (others && others.length > 0) row.also_contained_by = others;
+    }
+    if (asset.is_cluster) out.depends_on_through_members = await this.listMemberDependencies(mg, asset);
     return out;
   }
 
+  /**
+   * What the members in service of a cluster depend on, in one statement: one row per target,
+   * with the members that depend on it. The cluster's own dependencies and the members themselves
+   * are left out (a relation between nodes stays in the cluster), and a retired cluster passes
+   * nothing. A retired target stays listed, as in `depends_on`.
+   */
+  private async listMemberDependencies(mg: EntityManager, asset: AssetRow): Promise<AssetMemberDependency[]> {
+    return mg.query(
+      `SELECT t.id, t.asset_reference AS reference, t.name, t.kind, t.environment, t.status,
+              json_agg(json_build_object('id', m.id, 'name', m.name) ORDER BY lower(m.name), m.id) AS via
+         FROM assets c
+         JOIN asset_cluster_members cm ON cm.tenant_id = c.tenant_id AND cm.cluster_id = c.id
+         JOIN assets m ON m.tenant_id = cm.tenant_id AND m.id = cm.asset_id AND ${assetInServiceSql('m')}
+         JOIN asset_relations r ON r.tenant_id = m.tenant_id AND r.asset_id = m.id AND r.relation_type = 'depends_on'
+         JOIN assets t ON t.tenant_id = r.tenant_id AND t.id = r.related_asset_id
+        WHERE c.tenant_id = $1 AND c.id = $2 AND COALESCE(c.is_cluster, false) AND ${assetInServiceSql('c')}
+          AND t.id <> c.id
+          AND NOT EXISTS (
+            SELECT 1 FROM asset_cluster_members own
+             WHERE own.tenant_id = c.tenant_id AND own.cluster_id = c.id AND own.asset_id = t.id
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM asset_relations direct
+             WHERE direct.tenant_id = c.tenant_id AND direct.asset_id = c.id
+               AND direct.related_asset_id = t.id AND direct.relation_type = 'depends_on'
+          )
+        GROUP BY t.id, t.asset_reference, t.name, t.kind, t.environment, t.status
+        ORDER BY lower(t.name), t.id`,
+      [asset.tenant_id, asset.id],
+    );
+  }
+
   /** Tasks linked to the asset, open ones first, then by due date. */
-  private async listTasks(mg: EntityManager, tenantId: string, assetId: string, scope?: ParticipationAccessScope): Promise<AssetRelatedTask[]> {
+  private async listTasks(
+    mg: EntityManager,
+    tenantId: string,
+    assetId: string,
+    scope?: ParticipationAccessScope,
+    viewer?: IncidentViewer | null,
+  ): Promise<AssetRelatedTask[]> {
     const params: unknown[] = [tenantId, assetId];
     const bind = binder(params);
     const scopeSql = scope ? `AND ${taskParticipantCondition('t', bind(scope.userId))}` : '';
+    // A task of an incident the reader cannot see is absent from the asset's Relations tab.
+    const incidentVisibilitySql = taskIncidentVisibilitySql('t', viewer, params);
     return mg.query(
       `SELECT t.id, t.item_number, t.title, t.status,
               NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') AS assignee_name,
@@ -381,6 +465,7 @@ export class AssetRelationsTabService {
          JOIN tasks t ON t.id = l.task_id AND t.tenant_id = l.tenant_id
          LEFT JOIN users u ON u.id = t.assignee_user_id AND u.tenant_id = t.tenant_id
         WHERE l.tenant_id = $1 AND l.asset_id = $2 ${scopeSql}
+        ${incidentVisibilitySql}
         ORDER BY (COALESCE(t.status, '') IN ('done', 'cancelled')) ASC, t.due_date ASC NULLS LAST, t.item_number ASC NULLS LAST, t.id`,
       params,
     );

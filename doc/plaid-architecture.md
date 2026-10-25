@@ -76,6 +76,8 @@ The orchestrator:
 - validates chat access through `AiPolicyService`
 - resolves the provider source, model, API key, and endpoint from tenant or
   platform AI settings
+- resolves the time zone from the optional `time_zone` body field (sent by the
+  chat frontend), the user's notification preference, then UTC
 - loads conversation history, user profile context, attachments, and pending
   previews
 - selects a context profile from the latest turn, for example read, entity
@@ -85,12 +87,19 @@ The orchestrator:
   tool guidance, write-preview guidance, and writable field summaries
 - streams the model response and buffers provider-native tool calls
 - executes each tool call through `AiCapabilityDispatcherService`
+- writes every date-time value in a tool result in the user's time zone with an
+  explicit offset (`2026-06-02T07:50:00+02:00`); date-only values keep their
+  calendar day, and the system prompt gives the zone, the local date, and the
+  local time
 - injects tool results, preview events, context items, activity events, and final
   assistant text back into the stream
 
 The loop is bounded by `MAX_TOOL_ITERATIONS = 20`. Tool schemas are filtered by
 the context profile so the model sees the smallest useful tool surface for the
 turn.
+
+MCP reads the dispatcher output directly, so it keeps the ISO UTC values
+(`2026-06-02T05:50:00.000Z`): an external client gets an unambiguous instant.
 
 ## Context Engineering
 

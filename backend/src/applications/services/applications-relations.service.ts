@@ -35,7 +35,7 @@ import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { TechnologyLinksService, type DeploymentServer, type LinkInput } from '../../technologies/technology-links.service';
 import { technologyReference } from '../../technologies/technology-rows';
-import { type IncidentViewer } from '../../incidents/incident-visibility';
+import { type IncidentViewer, taskIncidentVisibilitySql } from '../../incidents/incident-visibility';
 import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
 import { hiddenContractCount } from '../../data-access/hidden-links';
 
@@ -214,7 +214,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     const contractsHidden = ctx.access.contracts ? await hiddenContractCount(mg, 'application', app.id) : 0;
     const projects = ctx.access.projects ? await listRelatedProjects(mg, PROJECT_LINKS, tenantId, app.id, ctx.scopes.project) : null;
     const requests = ctx.access.requests ? await this.listRequests(mg, tenantId, app.id, ctx.scopes.request) : null;
-    const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, app.id, ctx.scopes.task) : null;
+    const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, app.id, ctx.scopes.task, ctx.incidentViewer) : null;
     const linkOpts = { manager: mg, tenantId, userId: ctx.userId };
     const technologies = ctx.access.technologies ? await this.listTechnologies(mg, tenantId, app.id, linkOpts) : null;
     const deploymentServers = ctx.access.technologies ? await this.technologyLinks.deploymentServersOfApplication(app.id, linkOpts) : null;
@@ -288,10 +288,18 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
   }
 
   /** Tasks linked to the application itself, never through a linked project (fried, 2026-10-16). */
-  private async listTasks(mg: EntityManager, tenantId: string, appId: string, scope?: ParticipationAccessScope): Promise<RelatedTask[]> {
+  private async listTasks(
+    mg: EntityManager,
+    tenantId: string,
+    appId: string,
+    scope?: ParticipationAccessScope,
+    viewer?: IncidentViewer | null,
+  ): Promise<RelatedTask[]> {
     const params: unknown[] = [tenantId, appId];
     const bind = binder(params);
     const scopeSql = scope ? `AND ${taskParticipantCondition('t', bind(scope.userId))}` : '';
+    // A task of an incident the reader cannot see is absent from the application's Relations tab.
+    const incidentVisibilitySql = taskIncidentVisibilitySql('t', viewer, params);
     return mg.query(
       `SELECT t.id, t.item_number, t.title, t.status,
               NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') AS assignee_name,
@@ -300,6 +308,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
        JOIN tasks t ON t.id = l.task_id AND t.tenant_id = l.tenant_id
        LEFT JOIN users u ON u.id = t.assignee_user_id AND u.tenant_id = t.tenant_id
        WHERE l.tenant_id = $1 AND l.application_id = $2 ${scopeSql}
+       ${incidentVisibilitySql}
        ORDER BY (COALESCE(t.status, '') IN ('done', 'cancelled')) ASC, t.due_date ASC NULLS LAST, t.item_number ASC NULLS LAST, t.id`,
       params,
     );

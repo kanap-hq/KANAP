@@ -13,20 +13,31 @@ import { AssetsRelationsService } from '../services/assets-relations.service';
 import { AuditLog } from '../../audit/audit.entity';
 import { AuditService } from '../../audit/audit.service';
 import { withTenantExecution } from '../../common/tenant-runner';
+import { AiRelationMutationSupportService } from '../../ai/mutation/ai-relation-mutation-support.service';
+import { AiTaskMutationSupportService } from '../../ai/mutation/ai-task-mutation-support.service';
 
 // `addRelation` (the Netbox import attaching a virtual machine to its cluster)
 // and `bulkReplaceRelations` (a person saving the cluster's relations) lock the
 // cluster row the same way, so on two connections at once one waits for the
-// other: no unique violation, and the relations match the order they ran in.
+// other: no unique violation, and the relations match the order they ran in. The assistant's
+// execution takes the same locks in the same order, so a cluster's absorption running at the
+// same time cannot leave a host link behind it.
 
-type Seed = { tenantId: string; cluster: string; vm1: string; vm2: string };
+type Seed = { tenantId: string; cluster: string; host: string; vm1: string; vm2: string };
 
+const auditService = new AuditService(dataSource.getRepository(AuditLog));
 const service = new AssetsRelationsService(
   dataSource.getRepository(Asset),
   dataSource.getRepository(AssetRelation),
   dataSource.getRepository(AssetSpendItemLink),
   dataSource.getRepository(AssetContractLink),
-  new AuditService(dataSource.getRepository(AuditLog)),
+  auditService,
+);
+const assistant = new AiRelationMutationSupportService(
+  auditService,
+  undefined as any,
+  new AiTaskMutationSupportService(),
+  undefined as any,
 );
 
 async function seedTenant(tag: string): Promise<Seed> {
@@ -42,9 +53,16 @@ async function seedTenant(tag: string): Promise<Seed> {
        VALUES ($1, $2, 'vm', 'prod', 'active', $3, $4) RETURNING id`,
       [tenantId, name, isCluster ? null : name, isCluster],
     ))[0].id as string;
+    const cluster = await asset('PAR-VSPHERE-CL01', true);
+    const host = await asset('par-esx-01', false);
+    await manager.query(
+      `INSERT INTO asset_cluster_members (tenant_id, cluster_id, asset_id) VALUES ($1, $2, $3)`,
+      [tenantId, cluster, host],
+    );
     return {
       tenantId,
-      cluster: await asset('PAR-VSPHERE-CL01', true),
+      cluster,
+      host,
       vm1: await asset('par-app-01', false),
       vm2: await asset('par-app-02', false),
     };
@@ -57,6 +75,19 @@ async function contained(seed: Seed): Promise<string[]> {
       `SELECT related_asset_id FROM asset_relations
        WHERE tenant_id = $1 AND asset_id = $2 AND relation_type = 'contains'`,
       [seed.tenantId, seed.cluster],
+    );
+    const names: Record<string, string> = { [seed.vm1]: 'vm1', [seed.vm2]: 'vm2' };
+    return rows.map((row) => names[row.related_asset_id]).sort();
+  });
+}
+
+/** The virtual machines the member host carries directly, as `vm1`/`vm2`. */
+async function hostContained(seed: Seed): Promise<string[]> {
+  return withTenantExecution(dataSource, seed.tenantId, async (manager) => {
+    const rows: Array<{ related_asset_id: string }> = await manager.query(
+      `SELECT related_asset_id FROM asset_relations
+       WHERE tenant_id = $1 AND asset_id = $2 AND relation_type = 'contains'`,
+      [seed.tenantId, seed.host],
     );
     const names: Record<string, string> = { [seed.vm1]: 'vm1', [seed.vm2]: 'vm2' };
     return rows.map((row) => names[row.related_asset_id]).sort();
@@ -76,6 +107,62 @@ async function lastReplaceBefore(seed: Seed): Promise<string[]> {
     return (rows[0]?.before_json?.relations ?? []).map((r: any) => names[r.related_asset_id]).sort();
   });
 }
+
+/** The audit entries of the member host's relations, oldest first, with the names `vm1`/`vm2`. */
+async function hostAudits(seed: Seed): Promise<Array<{ sourceRef: string | null; before: string[]; after: string[] }>> {
+  return withTenantExecution(dataSource, seed.tenantId, async (manager) => {
+    const rows: Array<{ source_ref: string | null; before_json: any; after_json: any }> = await manager.query(
+      `SELECT source_ref, before_json, after_json FROM audit_log
+       WHERE tenant_id = $1 AND table_name = 'asset_relations' AND record_id = $2
+       ORDER BY created_at, id`,
+      [seed.tenantId, seed.host],
+    );
+    const names: Record<string, string> = { [seed.vm1]: 'vm1', [seed.vm2]: 'vm2' };
+    // The relations service logs `{ relations }`, the assistant its items (`payload`).
+    const list = (value: any) => (Array.isArray(value) ? value.map((item: any) => item.payload ?? item) : value?.relations ?? [])
+      .map((row: any) => `${row.relation_type}:${names[row.related_asset_id]}`)
+      .sort();
+    return rows.map((row) => ({ sourceRef: row.source_ref, before: list(row.before_json), after: list(row.after_json) }));
+  });
+}
+
+/** The relations of the member host, as `type:vm`. */
+async function hostRelations(seed: Seed): Promise<string[]> {
+  return withTenantExecution(dataSource, seed.tenantId, async (manager) => {
+    const rows: Array<{ related_asset_id: string; relation_type: string }> = await manager.query(
+      `SELECT related_asset_id, relation_type FROM asset_relations WHERE tenant_id = $1 AND asset_id = $2`,
+      [seed.tenantId, seed.host],
+    );
+    const names: Record<string, string> = { [seed.vm1]: 'vm1', [seed.vm2]: 'vm2' };
+    return rows.map((row) => `${row.relation_type}:${names[row.related_asset_id]}`).sort();
+  });
+}
+
+/**
+ * The member host already contains vm1 (an old double); the assistant prepares, in its own
+ * transaction, a preview on the host that keeps that link and adds `depends_on vm2`. Returns the
+ * preview as `executePreview` reads it.
+ */
+async function hostKeepsLinkPreview(seed: Seed): Promise<any> {
+  await withTenantExecution(dataSource, seed.tenantId, (manager) => manager.query(
+    `INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type) VALUES ($1, $2, $3, 'contains')`,
+    [seed.tenantId, seed.host, seed.vm1],
+  ));
+  const prepared = await withTenantExecution(dataSource, seed.tenantId, (manager) => assistant.prepareUpdatePreview(
+    { manager, tenantId: seed.tenantId, userId: null } as any,
+    { entity_type: 'assets', ref: seed.host, relation: 'relations', add: [{ related_asset_ref: seed.vm2, relation_type: 'depends_on' }] },
+  ));
+  return {
+    id: randomUUID(),
+    target_entity_type: 'assets',
+    target_entity_id: prepared.targetEntityId,
+    mutation_input: prepared.mutationInput,
+    current_values: prepared.currentValues,
+  };
+}
+
+const executeAs = (manager: any, seed: Seed, preview: any) =>
+  assistant.executePreview({ manager, tenantId: seed.tenantId, userId: null } as any, preview);
 
 /**
  * Runs `first` in a transaction and, while it is still open, starts `second`
@@ -160,6 +247,85 @@ async function main() {
       );
       assert.equal(added, false);
       assert.deepEqual(await contained(seed), ['vm1']);
+    }
+
+    // The cluster attaches vm1 first; the member host waits, then is refused (R2): it would add
+    // a second container the cluster already carries.
+    {
+      const seed = await seedTenant('cluster-before-host');
+      made.push(seed.tenantId);
+      const result = await overlap(
+        seed,
+        (m) => service.addRelation(seed.cluster, seed.vm1, 'contains', seed.tenantId, null, netboxOpts(m, seed.tenantId)),
+        (m) => service.addRelation(seed.host, seed.vm1, 'contains', seed.tenantId, null, { manager: m, tenantId: seed.tenantId }),
+      ).then(
+        (value) => ({ ok: true as const, value }),
+        (error: any) => ({ ok: false as const, error }),
+      );
+      assert.equal(result.ok, false);
+      assert.equal((result as any).error?.getResponse?.().code, 'placement_inherited');
+      assert.deepEqual(await contained(seed), ['vm1']);
+      assert.deepEqual(await hostContained(seed), []);
+    }
+
+    // The member host attaches vm1 first; the cluster waits, then absorbs the host's link,
+    // read again after its host lock.
+    {
+      const seed = await seedTenant('host-before-cluster');
+      made.push(seed.tenantId);
+      const result = await overlap(
+        seed,
+        (m) => service.addRelation(seed.host, seed.vm1, 'contains', seed.tenantId, null, netboxOpts(m, seed.tenantId)),
+        (m) => service.addRelation(seed.cluster, seed.vm1, 'contains', seed.tenantId, null, { manager: m, tenantId: seed.tenantId }),
+      );
+      assert.equal(result, true);
+      assert.deepEqual(await contained(seed), ['vm1']);
+      assert.deepEqual(await hostContained(seed), []);
+    }
+
+    // The assistant keeps the host's `contains vm1` and runs first; the cluster's replacement
+    // that takes vm1 waits for the cluster lock, then absorbs the link the assistant wrote again.
+    // The host's audit entry from the absorption lists the relations the assistant left.
+    {
+      const seed = await seedTenant('assistant-before-cluster');
+      made.push(seed.tenantId);
+      const preview = await hostKeepsLinkPreview(seed);
+      const result: any = await overlap(
+        seed,
+        (m) => executeAs(m, seed, preview),
+        (m) => service.bulkReplaceRelations(seed.cluster, [{ related_asset_id: seed.vm1, relation_type: 'contains' }],
+          seed.tenantId, null, { manager: m, tenantId: seed.tenantId }),
+      );
+      assert.deepEqual(result.replaced_host_links?.map((link: any) => link.host_id), [seed.host]);
+      assert.deepEqual(await contained(seed), ['vm1']);
+      assert.deepEqual(await hostRelations(seed), ['depends_on:vm2']);
+      const audits = await hostAudits(seed);
+      assert.deepEqual(audits.map((entry) => entry.sourceRef), [preview.id, null]);
+      assert.deepEqual(audits[1], { sourceRef: null, before: ['contains:vm1', 'depends_on:vm2'], after: ['depends_on:vm2'] });
+    }
+
+    // The cluster takes vm1 first and absorbs the host's link; the assistant's execution waits
+    // for the cluster lock, then finds the host's relations changed since the preview: refused,
+    // nothing written again, and no audit entry from the assistant.
+    {
+      const seed = await seedTenant('cluster-before-assistant');
+      made.push(seed.tenantId);
+      const preview = await hostKeepsLinkPreview(seed);
+      const result = await overlap(
+        seed,
+        (m) => service.bulkReplaceRelations(seed.cluster, [{ related_asset_id: seed.vm1, relation_type: 'contains' }],
+          seed.tenantId, null, { manager: m, tenantId: seed.tenantId }),
+        (m) => executeAs(m, seed, preview),
+      ).then(
+        () => ({ ok: true as const }),
+        (error: any) => ({ ok: false as const, error }),
+      );
+      assert.equal(result.ok, false);
+      assert.equal((result as any).error?.getStatus?.(), 409);
+      assert.match(String((result as any).error?.message), /changed after the preview/);
+      assert.deepEqual(await contained(seed), ['vm1']);
+      assert.deepEqual(await hostRelations(seed), []);
+      assert.deepEqual(await hostAudits(seed), [{ sourceRef: null, before: ['contains:vm1'], after: [] }]);
     }
 
     console.log('asset-relations-concurrency.integration.spec.ts OK');

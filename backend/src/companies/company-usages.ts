@@ -1,5 +1,6 @@
 import { naturesAnd } from '../spend/budget-nature';
 import { activeSql, type UsageQuery } from '../common/record-usages';
+import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 
 /**
  * The objects that keep a company from being deleted, read like a supplier's usages
@@ -149,3 +150,27 @@ export const COMPANY_USAGE_QUERIES: readonly UsageQuery[] = [
            LIMIT $3`,
   },
 ];
+
+
+/**
+ * The same groups for a reader: the tasks of a restricted incident the reader
+ * cannot see are absent from the company's usages. The delete enforcement keeps
+ * the full list above; only the read that lists usages asks for this variant.
+ */
+export function companyUsageQueries(viewer?: IncidentViewer | null): readonly UsageQuery[] {
+  if (viewer?.isAdmin) return COMPANY_USAGE_QUERIES;
+  const params: unknown[] = [null, null, null];
+  const visibility = taskIncidentVisibilitySql('t', viewer, params);
+  const tasksSql = `SELECT t.id, 'T-' || t.item_number::text AS reference, t.title AS name, t.status, true AS active,
+                 count(*) OVER () AS total
+            FROM tasks t
+           WHERE t.tenant_id = $1 AND t.company_id = $2
+             ${visibility}
+           ORDER BY t.item_number, t.id
+           LIMIT $3`;
+  return COMPANY_USAGE_QUERIES.map((query) => (
+    query.type === 'tasks'
+      ? { ...query, sql: tasksSql, viewerScoped: params.length > 3 }
+      : query
+  ));
+}

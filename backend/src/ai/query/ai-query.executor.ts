@@ -47,6 +47,7 @@ import {
   isParticipationScopedAiEntityType,
   participantConditionForAiEntity,
   resolveAiDocumentIncidentViewer,
+  resolveAiIncidentViewer,
   resolveAiParticipationAccessScope,
 } from './ai-query-scope.util';
 import {
@@ -1350,6 +1351,7 @@ export class AiQueryExecutor {
         manager: context.manager,
         tenantId: context.tenantId,
         accessScope,
+        viewer: await resolveAiIncidentViewer(context),
       });
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
@@ -2312,7 +2314,11 @@ export class AiQueryExecutor {
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
 
     if (entityType === 'tasks') {
-      const row = await this.tasks.getOne(entityId, { manager: context.manager, accessScope });
+      const row = await this.tasks.getOne(entityId, {
+        manager: context.manager,
+        accessScope,
+        viewer: await resolveAiIncidentViewer(context),
+      });
       if (!row) throw new NotFoundException('Task not found.');
       return this.toDetailResult(this.mapTask(row), withoutHiddenLine(row));
     }
@@ -2330,7 +2336,12 @@ export class AiQueryExecutor {
       const row = await this.requests.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,origin_task,urls,attachments,projects,dependencies,financials,business_processes' },
-        { manager: context.manager, accessScope, readsBudget: await this.readsBudget(context) },
+        {
+          manager: context.manager,
+          accessScope,
+          readsBudget: await this.readsBudget(context),
+          viewer: await resolveAiIncidentViewer(context),
+        },
       );
       return this.toDetailResult(this.mapRequest(row), row);
     }
@@ -2551,29 +2562,47 @@ export class AiQueryExecutor {
 
     if (entityType === 'incidents') {
       const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
+      // The record's linked sections follow the same module reads as the incident's REST
+      // routes: infrastructure for assets and technologies, applications (narrowed to a
+      // Business Contributor's participation) for applications, tasks for tasks. A section
+      // without its right stays absent from the detail instead of failing the call.
+      const [readsInfrastructure, readsApplications, readsTasks] = await Promise.all([
+        this.policy?.canReadEntityType(context, 'technologies', context.manager) ?? false,
+        this.policy?.canReadEntityType(context, 'applications', context.manager) ?? false,
+        this.policy?.canReadEntityType(context, 'tasks', context.manager) ?? false,
+      ]);
+      const applicationScope = readsApplications
+        ? await resolveAiParticipationAccessScope(context, 'applications')
+        : undefined;
       const record = await this.incidentRecords.load(entityId, {
         manager: context.manager,
         tenantId: context.tenantId,
         userId: context.userId,
         viewer,
+        technologies: readsInfrastructure,
+        applications: readsApplications,
+        tasks: readsTasks,
+        applicationScope,
       });
       // The four narrative columns are gone: the review document carries them
       // now (planning/incident-review-document.md §3.6). The record service
       // already applied the incident permissions and row visibility, and the
       // business reference is exposed, never the document UUID.
-      return this.toDetailResult(this.mapIncident(record.incident), {
+      const detail: Record<string, unknown> = {
         ...record.incident,
         review_markdown: record.review?.content_markdown ?? null,
         review_document_ref: record.review?.item_number != null
           ? `DOC-${Number(record.review.item_number)}`
           : null,
         entries: record.entries,
-        assets: record.assets,
-        applications: record.applications,
-        tasks: record.tasks,
         documents: record.documents,
         attachments: record.attachments,
-      });
+      };
+      if (record.assets !== null) detail.assets = record.assets;
+      if (record.applications !== null) detail.applications = record.applications;
+      if (record.technologies !== null) detail.technologies = record.technologies;
+      if (record.tasks !== null) detail.tasks = record.tasks;
+      return this.toDetailResult(this.mapIncident(record.incident), detail);
     }
 
     throw new BadRequestException('Unsupported entity type.');
@@ -2835,6 +2864,7 @@ export class AiQueryExecutor {
         manager: context.manager,
         tenantId: context.tenantId,
         accessScope,
+        viewer: await resolveAiIncidentViewer(context),
       }) as any;
     } else if (input.entity_type === 'projects') {
       raw = await this.projects.listFilterValues(query, {

@@ -44,6 +44,7 @@ import ClusterGroupLine from './components/ClusterGroupLine';
 import useClusterAssignmentQuestion from './components/useClusterAssignmentQuestion';
 import HardwareInfoPanel from './editors/HardwareInfoPanel';
 import SupportInfoPanel from './editors/SupportInfoPanel';
+import AssetConnectionsSection from './workspace/AssetConnectionsSection';
 import AssetDependenciesTab from './workspace/AssetDependenciesTab';
 import AssetRelationsTab from './workspace/AssetRelationsTab';
 import { assetRelationsBadge, assetRelationsKey, fetchAssetRelationsTab } from './workspace/assetRelationsData';
@@ -176,17 +177,6 @@ type ClusterSummary = {
   name: string;
   environment: string;
   status: string;
-};
-
-type ServerConnectionRow = {
-  id: string;
-  connection_reference: string;
-  name: string;
-  topology: 'server_to_server' | 'multi_server';
-  lifecycle: string;
-  protocol_labels?: string[];
-  source_label?: string | null;
-  destination_label?: string | null;
 };
 
 type TabKey = 'overview' | 'operations' | 'network' | 'hardware' | 'dependencies' | 'relations';
@@ -354,12 +344,10 @@ export default function AssetWorkspacePage() {
   const [clusterMembers, setClusterMembers] = React.useState<ClusterMember[]>([]);
   const [clusterError, setClusterError] = React.useState<string | null>(null);
   const [clusterLoading, setClusterLoading] = React.useState(false);
-  // The asset whose members (or clusters) were last read: until then the section is loading, not empty.
+  // The asset whose members were last read: until then the cluster section is loading, not empty.
   const [membersLoadedFor, setMembersLoadedFor] = React.useState<string | null>(null);
-  const [clustersLoadedFor, setClustersLoadedFor] = React.useState<string | null>(null);
   const [clustersForServer, setClustersForServer] = React.useState<ClusterSummary[]>([]);
   const [clustersError, setClustersError] = React.useState<string | null>(null);
-  const [clustersLoading, setClustersLoading] = React.useState(false);
   const canCreateKnowledge = hasLevel('knowledge', 'member');
   const [memberDialogOpen, setMemberDialogOpen] = React.useState(false);
   const [memberSelection, setMemberSelection] = React.useState<ServerOption[]>([]);
@@ -370,9 +358,6 @@ export default function AssetWorkspacePage() {
   const [memberOptionsFull, setMemberOptionsFull] = React.useState(false);
   const [memberSaving, setMemberSaving] = React.useState(false);
   const [memberSaveError, setMemberSaveError] = React.useState<string | null>(null);
-  const [connections, setConnections] = React.useState<ServerConnectionRow[]>([]);
-  const [connectionsError, setConnectionsError] = React.useState<string | null>(null);
-  const [connectionsLoading, setConnectionsLoading] = React.useState(false);
   const [assetTypeAnchorEl, setAssetTypeAnchorEl] = React.useState<HTMLElement | null>(null);
   const [locationAnchorEl, setLocationAnchorEl] = React.useState<HTMLElement | null>(null);
   const [goLiveAnchorEl, setGoLiveAnchorEl] = React.useState<HTMLElement | null>(null);
@@ -391,11 +376,6 @@ export default function AssetWorkspacePage() {
   }, [data, isCreate, routeId]);
   const queryClient = useQueryClient();
   const { byField, labelFor, settings } = useItOpsEnumOptions();
-  const topologyLabel = React.useCallback((v?: string) => {
-    if (v === 'server_to_server') return t('enums.topology.serverToServer');
-    if (v === 'multi_server') return t('enums.topology.multiServer');
-    return v || '';
-  }, [t]);
   const serverRoleOptions = React.useMemo(
     () => (byField.serverRole || []).map((o) => ({
       value: o.code,
@@ -540,11 +520,8 @@ export default function AssetWorkspacePage() {
     if (isCreate || !id || loadedIsCluster) {
       setClustersForServer([]);
       setClustersError(null);
-      setClustersLoading(false);
-      setClustersLoadedFor(null);
       return;
     }
-    setClustersLoading(true);
     setClustersError(null);
     try {
       const res = await api.get<{ items: ClusterSummary[] }>(`/assets/${id}/clusters`);
@@ -552,9 +529,6 @@ export default function AssetWorkspacePage() {
     } catch (e: any) {
       setClustersError(getApiErrorMessage(e, t, t('messages.loadClustersFailed')));
       setClustersForServer([]);
-    } finally {
-      setClustersLoading(false);
-      setClustersLoadedFor(id);
     }
   }, [clusterSwitchSaving, id, isCreate, loadedAssetId, loadedIsCluster]);
 
@@ -764,33 +738,6 @@ export default function AssetWorkspacePage() {
     setNotes(data.notes || '');
     setDirty(false);
   }, [data]);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    if (isCreate || !id) {
-      setConnections([]);
-      setConnectionsError(null);
-      setConnectionsLoading(false);
-      return () => { cancelled = true; };
-    }
-    const loadConnections = async () => {
-      setConnectionsLoading(true);
-      setConnectionsError(null);
-      try {
-        const res = await api.get<{ items: ServerConnectionRow[] }>(`/connections/by-server/${id}`);
-        if (cancelled) return;
-        setConnections(res.data?.items || []);
-      } catch (e: any) {
-        if (cancelled) return;
-        setConnectionsError(getApiErrorMessage(e, t, t('messages.loadConnectionsFailed')));
-        setConnections([]);
-      } finally {
-        if (!cancelled) setConnectionsLoading(false);
-      }
-    };
-    void loadConnections();
-    return () => { cancelled = true; };
-  }, [id, isCreate, t]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -1446,8 +1393,8 @@ export default function AssetWorkspacePage() {
     {
       key: 'dependencies',
       label: t('workspace.asset.tabs.dependencies'),
-      // Relations between assets, plus the saved members of a cluster or the clusters of a server.
-      badge: (relationCounts?.assets ?? 0) + (isCluster ? clusterMembers.length : clustersForServer.length),
+      // Relations between assets: the one thing the tab shows.
+      badge: relationCounts?.assets ?? 0,
       disabled: isCreate,
     },
     { key: 'relations', label: t('workspace.asset.tabs.relations'), badge: assetRelationsBadge(assetRelationsQuery.data) ?? 0, disabled: isCreate },
@@ -1760,9 +1707,8 @@ export default function AssetWorkspacePage() {
     </>
   );
 
-  // The cluster sections of the Dependencies tab, which is off in creation.
+  // The cluster sections at the top of the Operations tab, which is off in creation.
   const membersPending = isCluster && !isCreate && (clusterLoading || membersLoadedFor !== id);
-  const clustersPending = !isCluster && !isCreate && (clustersLoading || clustersLoadedFor !== id);
   const clusterSection = (
     <>
       {isCluster && (
@@ -1819,33 +1765,26 @@ export default function AssetWorkspacePage() {
           )}
         </Box>
       )}
-      {!isCluster && (
+      {!isCluster && (clustersError || clustersForServer.length > 0) && (
         <Box>
           <Box sx={{ mb: 1 }}>
             <SectionLabel>{t('workspace.asset.technical.clusterMembership')}</SectionLabel>
           </Box>
           {clustersError && <Alert severity="error" sx={{ mb: 1 }}>{clustersError}</Alert>}
-          {clustersPending && (
-            <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.loadingClusters')}</Typography>
-          )}
-          {!clustersPending && (
-            clustersForServer.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.notInCluster')}</Typography>
-            ) : (
-              <Stack spacing={0.75} sx={{ mt: 0.5 }}>
-                {clustersForServer.map((c) => (
-                  <Stack key={c.id} direction="row" justifyContent="space-between" alignItems="center">
-                    <Box>
-                      <Button size="small" onClick={() => navigate(`/it/assets/${c.id}/overview`)}>{c.name}</Button>
-                      <Typography variant="caption" color="text.secondary" display="block">
-                        {environmentLabel(c.environment)} / {labelFor('lifecycleStatus', c.status) || c.status}
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">{t('workspace.asset.meta.cluster')}</Typography>
-                  </Stack>
-                ))}
-              </Stack>
-            )
+          {clustersForServer.length > 0 && (
+            <Stack spacing={0.75} sx={{ mt: 0.5 }}>
+              {clustersForServer.map((c) => (
+                <Stack key={c.id} direction="row" justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Button size="small" onClick={() => navigate(`/it/assets/${c.id}/overview`)}>{c.name}</Button>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {environmentLabel(c.environment)} / {labelFor('lifecycleStatus', c.status) || c.status}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">{t('workspace.asset.meta.cluster')}</Typography>
+                </Stack>
+              ))}
+            </Stack>
           )}
         </Box>
       )}
@@ -2157,6 +2096,7 @@ export default function AssetWorkspacePage() {
           )}
           {validTab === 'operations' && (
             <Stack spacing={3.5}>
+              {!isCreate && clusterSection}
               {!isCreate && (
                 <Box>
                   {assignmentsError && <Alert severity="error" sx={{ mb: 2 }}>{assignmentsError}</Alert>}
@@ -2532,53 +2472,7 @@ export default function AssetWorkspacePage() {
                   <Box sx={{ mb: 1 }}>
                     <SectionLabel>{t('workspace.asset.connections.title')}</SectionLabel>
                   </Box>
-                  {connectionsError && <Alert severity="error" sx={{ mb: 2 }}>{connectionsError}</Alert>}
-                  {!connectionsLoading && (
-                    connections.length === 0 ? (
-                      <Typography variant="body2" color="text.secondary">{t('workspace.asset.connections.noConnections')}</Typography>
-                    ) : (
-                      <Table size="small" sx={denseTableSx}>
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>{t('workspace.asset.connections.connectionId')}</TableCell>
-                            <TableCell>{t('workspace.asset.connections.name')}</TableCell>
-                            <TableCell>{t('workspace.asset.connections.topology')}</TableCell>
-                            <TableCell>{t('workspace.asset.connections.protocols')}</TableCell>
-                            <TableCell>{t('workspace.asset.connections.source')}</TableCell>
-                            <TableCell>{t('workspace.asset.connections.destination')}</TableCell>
-                            <TableCell>{t('workspace.asset.connections.lifecycle')}</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {connections.map((conn) => (
-                            <TableRow key={conn.id} hover>
-                              <TableCell>
-                                <Button size="small" onClick={() => navigate(`/it/connections/${conn.connection_reference || conn.id}/overview`)} sx={{ fontFamily: "'JetBrains Mono Variable', monospace", textTransform: 'none' }}>
-                                  {conn.connection_reference}
-                                </Button>
-                              </TableCell>
-                              <TableCell>
-                                <Button size="small" onClick={() => navigate(`/it/connections/${conn.connection_reference || conn.id}/overview`)}>
-                                  {conn.name}
-                                </Button>
-                              </TableCell>
-                              <TableCell>{topologyLabel(conn.topology)}</TableCell>
-                              <TableCell>
-                                <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                                  {(conn.protocol_labels || []).map((p) => (
-                                    <Box key={p} component="span" sx={{ color: 'text.secondary', fontSize: '0.8125rem' }}>{p}</Box>
-                                  ))}
-                                </Stack>
-                              </TableCell>
-                              <TableCell>{conn.source_label || '-'}</TableCell>
-                              <TableCell>{conn.destination_label || '-'}</TableCell>
-                              <TableCell>{labelFor('lifecycleStatus', conn.lifecycle) || conn.lifecycle}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )
-                  )}
+                  <AssetConnectionsSection assetId={id} />
                 </Box>
               )}
             </Stack>
@@ -2591,7 +2485,7 @@ export default function AssetWorkspacePage() {
               netboxOwns={netboxOwns}
             />
           )}
-          {validTab === 'dependencies' && !isCreate && !!id && <AssetDependenciesTab assetId={id} clusterSection={clusterSection} />}
+          {validTab === 'dependencies' && !isCreate && !!id && <AssetDependenciesTab assetId={id} />}
           {validTab === 'relations' && !isCreate && !!id && <AssetRelationsTab assetId={id} />}
       </PortfolioDetailWorkspaceShell>
       <KanapDialog

@@ -585,6 +585,29 @@ describe('NetboxSyncPage', () => {
     )).toBeInTheDocument();
   });
 
+  it('labels the placement a virtual machine changes', async () => {
+    (apiClient.post as any).mockImplementation((url: string) => {
+      if (url === '/netbox/sync/preview') {
+        return Promise.resolve({
+          ...PREVIEW,
+          rows: [{
+            external_type: 'vm', external_id: '60', external_name: 'par-app-02',
+            external_url: 'https://netbox.internal/virtualization/virtual-machines/60/',
+            action: 'update',
+            asset: { id: 'asset-60', name: 'par-app-02', asset_reference: 'AST-60' },
+            matched_by: 'link', candidates: [], skip_reason: null,
+            diffs: [{ field: 'placement', before: 'PAR-ESX-01', after: 'PAR-VSPHERE-CL01' }],
+            warnings: [],
+          }],
+        });
+      }
+      throw new Error(`Unexpected POST ${url}`);
+    });
+    await openPreview();
+
+    expect(screen.getByText('Placement: PAR-ESX-01 → PAR-VSPHERE-CL01')).toBeInTheDocument();
+  });
+
   it('points at the mappings when no match is saved, instead of listing skipped objects', async () => {
     const defaultGet = (apiClient.get as any).getMockImplementation();
     (apiClient.get as any).mockImplementation((url: string, config?: any) => (

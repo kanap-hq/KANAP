@@ -7,6 +7,8 @@
       "exportCsv": "Export CSV",
       "importTitle": "Import incidents",
       "exportTitle": "Export incidents",
+      "exportScope_one": "Filtered export: {{count}} incident",
+      "exportScope_other": "Filtered export: {{count}} incidents",
       "columns": {
         "reference": "Ref",
         "title": "Title",
@@ -21,7 +23,10 @@
         "applications": "Applications",
         "tasks": "Tasks",
         "created": "Created on",
-        "access": "Access"
+        "access": "Access",
+        "personalData": "Personal data",
+        "authorityRequired": "Notification required",
+        "authorityNotified": "Notified on"
       },
       "filters": {
         "noCategory": "(No category)",
@@ -805,7 +810,9 @@
         "entity": "Entities",
         "cluster": "Clusters",
         "server": "Servers"
-      }
+      },
+      "hiddenMembers_one": "{{count}} more member",
+      "hiddenMembers_other": "{{count}} more members"
     },
     "administrationView": {
       "tabs": {
@@ -1359,7 +1366,8 @@
         "model": "Model",
         "rack_location": "Rack location",
         "rack_unit": "Rack unit",
-        "cluster": "Cluster"
+        "cluster": "Cluster",
+        "placement": "Placement"
       },
       "mappings": {
         "intro": "Only mapped roles and sites are imported. Anything left on \"Do not import\" is skipped.",
@@ -1579,6 +1587,7 @@
         "placeholder": "Add a note to the journal",
         "add": "Add",
         "empty": "No entries yet.",
+        "recordedAt": "recorded {{date}}",
         "systemAuthor": "System",
         "unknownAuthor": "Unknown",
         "kinds": {
@@ -2080,8 +2089,6 @@
         "addMembers": "Add members",
         "loadingMembers": "Loading members…",
         "clusterMembership": "Cluster membership",
-        "loadingClusters": "Loading clusters…",
-        "notInCluster": "Not part of any cluster.",
         "identity": "Identity",
         "hostname": "Hostname",
         "hostnameRequired": "Hostname is required when a domain is selected",
@@ -2291,6 +2298,7 @@
         "contains": "Contains",
         "containedBy": "Contained by",
         "dependedOnBy": "Depended on by",
+        "throughMembers": "Through members ({{count}})",
         "deleteAttachmentConfirm": "Delete attachment \"{{name}}\"?",
         "empty": {
           "contains": "Contains no asset.",
@@ -2298,7 +2306,10 @@
           "dependsOn": "Depends on no asset.",
           "dependedOnBy": "No asset depends on this one."
         },
-        "containsHint": "Assets hosted by this one, such as VMs."
+        "containsHint": "Assets hosted by this one, such as VMs.",
+        "alsoContainedBy": "Also contained by {{names}}",
+        "via": "Via",
+        "placementReplaced": "{{cluster}} replaces the link between {{hosts}} and {{asset}}."
       }
     },
     "technology": {
@@ -2526,6 +2537,8 @@
     "connection": {
       "title": "Connection",
       "newTitle": "New connection",
+      "absorbed_one": "{{names}} was removed from the list: it is covered by {{clusters}}.",
+      "absorbed_other": "{{names}} were removed from the list: they are covered by {{clusters}}.",
       "tabs": {
         "overview": "Overview",
         "layers": "Layers",
@@ -2541,12 +2554,9 @@
         "connectionType": "Connection type",
         "selectSource": "Select a source entity or server",
         "selectDestination": "Select a destination entity or server",
-        "sourceClusterHint": "Source endpoint is a cluster. Member hosts are listed in the Servers workspace.",
-        "destinationClusterHint": "Destination endpoint is a cluster. Member hosts are listed in the Servers workspace.",
         "connectedServers": "Connected servers",
         "searchSelectServers": "Search and select servers",
         "selectTwoServers": "Select at least two servers.",
-        "multiClusterHint": "One or more selected endpoints are clusters. Their member hosts are managed in the Servers workspace.",
         "protocols": "Protocols",
         "protocolsPlaceholder": "Select protocols (from connection types)",
         "typicalPorts": "Typical ports",
@@ -3238,6 +3248,20 @@
       "groupAssignTo": "Assign to {{cluster}}",
       "groupConfirm": "{{application}} will stay available as long as one member stands.",
       "thisApplication": "The application"
+    },
+    "clusterConnection": {
+      "title": "Connect to the cluster?",
+      "inCluster_one": "{{server}} is part of {{cluster}}. The connection will cover its only member.",
+      "inCluster_other": "{{server}} is part of {{cluster}}. The connection will cover its {{count}} members.",
+      "connectToCluster": "Connect to the cluster"
+    },
+    "clusterPlacement": {
+      "title": "Place in the cluster?",
+      "inCluster_one": "{{host}} is the only host of {{cluster}}.",
+      "inCluster_other": "{{host}} is part of {{cluster}}. In the cluster, the asset can run on any of its {{count}} hosts.",
+      "inClusters": "{{host}} is part of several clusters.",
+      "placeInCluster": "Place in the cluster",
+      "hostOnly": "This host only"
     }
   },
   "enums": {

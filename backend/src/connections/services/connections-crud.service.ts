@@ -9,7 +9,19 @@ import { Asset } from '../../assets/asset.entity';
 import { AuditService } from '../../audit/audit.service';
 import { BulkDeleteResult } from '../../common/delete.types';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
-import { ConnectionsBaseService, ServiceOpts, Topology } from './connections-base.service';
+import {
+  assetSummary,
+  AssetSummary,
+  ConnectionsBaseService,
+  ServiceOpts,
+  Topology,
+} from './connections-base.service';
+import {
+  AbsorbedServer,
+  absorbClusterMembers,
+  connectionSameEndpointRefusal,
+  connectionServersMinRefusal,
+} from '../connection-cluster-rules';
 
 /**
  * Service for core CRUD operations on connections.
@@ -67,6 +79,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         .select('a')
         .from(Asset, 'a')
         .where('a.id IN (:...ids)', { ids: uniqueAssetIds })
+        .andWhere('a.tenant_id = :tenant', { tenant })
         .getMany();
       assetMap = new Map(rows.map((r) => [r.id, r]));
     }
@@ -79,6 +92,10 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         contains_pii: conn.contains_pii,
       },
     ];
+    const summaryOf = (assetId: string | null): AssetSummary | null => {
+      const a = assetId ? assetMap.get(assetId) : null;
+      return a ? assetSummary(a) : null;
+    };
     const effectiveRiskMap = await this.computeEffectiveRiskForConnections(tenant, riskBases, mg);
     const effective = effectiveRiskMap.get(conn.id);
 
@@ -97,50 +114,14 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         code: p.connection_type_code,
         port_override: p.port_override ?? null,
       })),
-      servers: servers.map((row) => {
-        const a = assetMap.get(row.asset_id);
-        return a
-          ? {
-              id: a.id,
-              name: a.name,
-              environment: (a as any).environment,
-              kind: (a as any).kind,
-              provider: (a as any).provider,
-              is_cluster: !!(a as any).is_cluster,
-            }
-          : null;
-      }).filter(Boolean),
-      source_server: conn.source_asset_id
-        ? (() => {
-            const a = assetMap.get(conn.source_asset_id);
-            return a
-              ? {
-                  id: a.id,
-                  name: a.name,
-                  environment: (a as any).environment,
-                  kind: (a as any).kind,
-                  provider: (a as any).provider,
-                  is_cluster: !!(a as any).is_cluster,
-                }
-              : null;
-          })()
-        : null,
-      destination_server: conn.destination_asset_id
-        ? (() => {
-            const a = assetMap.get(conn.destination_asset_id);
-            return a
-              ? {
-                  id: a.id,
-                  name: a.name,
-                  environment: (a as any).environment,
-                  kind: (a as any).kind,
-                  provider: (a as any).provider,
-                  is_cluster: !!(a as any).is_cluster,
-                }
-              : null;
-          })()
-        : null,
-      legs: includeLegs ? legs : undefined,
+      servers: servers
+        .map((row) => summaryOf(row.asset_id))
+        .filter((summary): summary is AssetSummary => !!summary),
+      source_server: summaryOf(conn.source_asset_id),
+      destination_server: summaryOf(conn.destination_asset_id),
+      legs: includeLegs
+        ? legs.map((leg) => ({ ...leg, equipment_asset: summaryOf(leg.equipment_asset_id) }))
+        : undefined,
     };
   }
 
@@ -170,6 +151,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     let destination_asset_id: string | null = null;
     let destination_entity_code: string | null = null;
     let multiAssetIds: string[] = [];
+    let absorbed: AbsorbedServer[] = [];
 
     if (topology === 'server_to_server') {
       const normalizeSide = async (
@@ -192,6 +174,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
       // Accept both asset_id and server_id for backwards compatibility
       const src = await normalizeSide(body.source_asset_id ?? body.source_server_id, body.source_entity_code, 'source');
       const dst = await normalizeSide(body.destination_asset_id ?? body.destination_server_id, body.destination_entity_code, 'destination');
+      if (src.asset && src.asset === dst.asset) throw connectionSameEndpointRefusal();
       source_asset_id = src.asset;
       source_entity_code = src.entity;
       destination_asset_id = dst.asset;
@@ -205,13 +188,15 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
             .filter((v): v is string => !!v),
         ),
       );
-      if (normalizedIds.length < 2) {
-        throw new BadRequestException('Select at least two assets for a multi-server connection');
-      }
       for (const aid of normalizedIds) {
         await this.ensureAsset(aid, tenant, mg);
       }
-      multiAssetIds = normalizedIds;
+      const { kept, absorbed: listAbsorbed } = await absorbClusterMembers(mg, tenant, normalizedIds);
+      if (kept.length < 2) {
+        throw connectionServersMinRefusal();
+      }
+      multiAssetIds = kept;
+      absorbed = listAbsorbed;
     }
 
     const repo = this.getRepo(mg);
@@ -260,7 +245,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
       { manager: mg },
     );
 
-    return saved;
+    return { ...saved, absorbed };
   }
 
   /**
@@ -343,6 +328,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     let destination_asset_id = existing.destination_asset_id;
     let destination_entity_code = existing.destination_entity_code;
     let multiAssetIds: string[] | null = null;
+    let absorbed: AbsorbedServer[] = [];
 
     if (topology === 'server_to_server') {
       const normalizeSide = async (
@@ -380,6 +366,11 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         destination_entity_code,
         'destination',
       );
+      // An existing loop can still be renamed, but touching a side may not keep it looped.
+      const sameEndpoint = !!src.asset && src.asset === dst.asset;
+      const unchanged =
+        existing.source_asset_id === src.asset && existing.destination_asset_id === dst.asset;
+      if (sameEndpoint && !unchanged) throw connectionSameEndpointRefusal();
       source_asset_id = src.asset;
       source_entity_code = src.entity;
       destination_asset_id = dst.asset;
@@ -397,19 +388,21 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
             ),
           );
       if (normalizedIds !== null) {
-        if (normalizedIds.length < 2) {
-          throw new BadRequestException('Select at least two assets for a multi-server connection');
-        }
         for (const aid of normalizedIds) {
           await this.ensureAsset(aid, tenant, mg);
         }
-        multiAssetIds = normalizedIds;
+        const { kept, absorbed: listAbsorbed } = await absorbClusterMembers(mg, tenant, normalizedIds);
+        if (kept.length < 2) {
+          throw connectionServersMinRefusal();
+        }
+        multiAssetIds = kept;
+        absorbed = listAbsorbed;
       } else {
         // Keep current multi-server list; load it
         const existingServers = await this.getConnServerRepo(mg).find({ where: { connection_id: id } });
         multiAssetIds = existingServers.map((cs) => cs.asset_id);
         if (multiAssetIds.length < 2) {
-          throw new BadRequestException('Select at least two assets for a multi-server connection');
+          throw connectionServersMinRefusal();
         }
       }
       // Clear S2S fields
@@ -471,7 +464,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
 
     // Return the enriched response so the frontend keeps protocol_codes, source_server,
     // effective_*, etc. without an extra round-trip.
-    return this.get(id, tenant, { manager: mg });
+    return { ...(await this.get(id, tenant, { manager: mg })), absorbed };
   }
 
   /**

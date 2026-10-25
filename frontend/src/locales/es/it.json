@@ -7,6 +7,8 @@
       "exportCsv": "Exportar CSV",
       "importTitle": "Importar incidentes",
       "exportTitle": "Exportar incidentes",
+      "exportScope_one": "Exportación filtrada: {{count}} incidente",
+      "exportScope_other": "Exportación filtrada: {{count}} incidentes",
       "columns": {
         "reference": "Ref.",
         "title": "Título",
@@ -21,7 +23,10 @@
         "applications": "Aplicaciones",
         "tasks": "Tareas",
         "created": "Creado el",
-        "access": "Acceso"
+        "access": "Acceso",
+        "personalData": "Datos personales",
+        "authorityRequired": "Notificación requerida",
+        "authorityNotified": "Notificado el"
       },
       "filters": {
         "noCategory": "(Sin categoría)",
@@ -805,7 +810,9 @@
         "entity": "Entidades",
         "cluster": "Clusters",
         "server": "Servidores"
-      }
+      },
+      "hiddenMembers_one": "{{count}} miembro más",
+      "hiddenMembers_other": "{{count}} miembros más"
     },
     "administrationView": {
       "tabs": {
@@ -1359,7 +1366,8 @@
         "model": "Modelo",
         "rack_location": "Ubicación en el rack",
         "rack_unit": "Unidad de rack",
-        "cluster": "Clúster"
+        "cluster": "Clúster",
+        "placement": "Ubicación"
       },
       "mappings": {
         "intro": "Solo se importan los roles y los sitios con correspondencia. Todo lo que quede en «No importar» se deja fuera.",
@@ -1579,6 +1587,7 @@
         "placeholder": "Añadir una nota al registro",
         "add": "Añadir",
         "empty": "Todavía no hay entradas.",
+        "recordedAt": "registrada el {{date}}",
         "systemAuthor": "Sistema",
         "unknownAuthor": "Desconocido",
         "kinds": {
@@ -2080,8 +2089,6 @@
         "addMembers": "Añadir miembros",
         "loadingMembers": "Cargando miembros…",
         "clusterMembership": "Pertenencia al clúster",
-        "loadingClusters": "Cargando clústeres…",
-        "notInCluster": "No pertenece a ningún clúster.",
         "identity": "Identidad",
         "hostname": "Nombre de host",
         "hostnameRequired": "El nombre de host es obligatorio cuando se selecciona un dominio",
@@ -2291,6 +2298,7 @@
         "contains": "Contiene",
         "containedBy": "Contenido en",
         "dependedOnBy": "Requerido por",
+        "throughMembers": "A través de los miembros ({{count}})",
         "deleteAttachmentConfirm": "¿Eliminar el adjunto «{{name}}»?",
         "empty": {
           "contains": "No contiene ningún activo.",
@@ -2298,7 +2306,10 @@
           "dependsOn": "No depende de ningún activo.",
           "dependedOnBy": "Ningún activo depende de este."
         },
-        "containsHint": "Activos alojados en este, por ejemplo VM."
+        "containsHint": "Activos alojados en este, por ejemplo VM.",
+        "alsoContainedBy": "También contenido en {{names}}",
+        "via": "Vía",
+        "placementReplaced": "{{cluster}} sustituye el vínculo entre {{hosts}} y {{asset}}."
       }
     },
     "technology": {
@@ -2526,6 +2537,8 @@
     "connection": {
       "title": "Conexión",
       "newTitle": "Nueva conexión",
+      "absorbed_one": "{{names}} se ha quitado de la lista: lo cubre {{clusters}}.",
+      "absorbed_other": "{{names}} se han quitado de la lista: los cubre {{clusters}}.",
       "tabs": {
         "overview": "Vista general",
         "layers": "Capas",
@@ -2541,12 +2554,9 @@
         "connectionType": "Tipo de conexión",
         "selectSource": "Seleccione una entidad o servidor de origen",
         "selectDestination": "Seleccione una entidad o servidor de destino",
-        "sourceClusterHint": "El endpoint de origen es un clúster. Los hosts miembros están listados en el espacio de servidores.",
-        "destinationClusterHint": "El endpoint de destino es un clúster. Los hosts miembros están listados en el espacio de servidores.",
         "connectedServers": "Servidores conectados",
         "searchSelectServers": "Buscar y seleccionar servidores",
         "selectTwoServers": "Seleccione al menos dos servidores.",
-        "multiClusterHint": "Uno o más endpoints seleccionados son clústeres. Sus hosts miembros se gestionan en el espacio de servidores.",
         "protocols": "Protocolos",
         "protocolsPlaceholder": "Seleccione protocolos (de tipos de conexión)",
         "typicalPorts": "Puertos típicos",
@@ -3238,6 +3248,20 @@
       "groupAssignTo": "Asignar a {{cluster}}",
       "groupConfirm": "{{application}} seguirá disponible mientras un miembro siga activo.",
       "thisApplication": "La aplicación"
+    },
+    "clusterConnection": {
+      "title": "¿Conectar con el clúster?",
+      "inCluster_one": "{{server}} forma parte de {{cluster}}. La conexión cubrirá su único miembro.",
+      "inCluster_other": "{{server}} forma parte de {{cluster}}. La conexión cubrirá sus {{count}} miembros.",
+      "connectToCluster": "Conectar con el clúster"
+    },
+    "clusterPlacement": {
+      "title": "¿Colocar en el clúster?",
+      "inCluster_one": "{{host}} es el único host de {{cluster}}.",
+      "inCluster_other": "{{host}} pertenece a {{cluster}}. En el clúster, el activo puede ejecutarse en cualquiera de sus {{count}} hosts.",
+      "inClusters": "{{host}} pertenece a varios clústeres.",
+      "placeInCluster": "Colocar en el clúster",
+      "hostOnly": "Solo este host"
     }
   },
   "enums": {

@@ -6,8 +6,10 @@ import { AiExecutionContextWithManager } from '../ai.types';
 import {
   participantConditionForAiEntity,
   ParticipationScopedAiEntityType,
+  resolveAiIncidentViewer,
   resolveAiParticipationAccessScope,
 } from '../query/ai-query-scope.util';
+import { taskIncidentVisibilitySql } from '../../incidents/incident-visibility';
 
 const TASK_REF_RE = /^T-(\d+)$/i;
 const PROJECT_REF_RE = /^(?:PRJ-|project\s+#?|prj\s+#?|#)?(\d+)$/i;
@@ -449,9 +451,11 @@ export class AiTaskMutationSupportService {
 
     let rows: any[] = [];
     const accessScope = await resolveAiParticipationAccessScope(context, 'tasks');
+    const viewer = await resolveAiIncidentViewer(context);
     if (isUuid(normalized)) {
       const params: unknown[] = [context.tenantId, normalized];
       const accessScopeSql = appendParticipationScopeSql('tasks', 't', params, accessScope);
+      const incidentSql = taskIncidentVisibilitySql('t', viewer, params);
       rows = await context.manager.query(
         `
         SELECT t.id,
@@ -467,6 +471,7 @@ export class AiTaskMutationSupportService {
         WHERE t.tenant_id = $1
           AND t.id = $2
           ${accessScopeSql}
+          ${incidentSql}
         LIMIT 1
         `,
         params,
@@ -478,6 +483,7 @@ export class AiTaskMutationSupportService {
       }
       const params: unknown[] = [context.tenantId, Number.parseInt(match[1], 10)];
       const accessScopeSql = appendParticipationScopeSql('tasks', 't', params, accessScope);
+      const incidentSql = taskIncidentVisibilitySql('t', viewer, params);
       rows = await context.manager.query(
         `
         SELECT t.id,
@@ -493,6 +499,7 @@ export class AiTaskMutationSupportService {
         WHERE t.tenant_id = $1
           AND t.item_number = $2
           ${accessScopeSql}
+          ${incidentSql}
         LIMIT 1
         `,
         params,

@@ -70,13 +70,15 @@ Ce tableau n'est pas un filtre. Une plateforme laissée sur **Aucune corresponda
 
 Netbox accorde les droits de lecture par type d'objet : un jeton autorisé à lire les équipements, les rôles et les sites peut malgré tout se voir refuser les plateformes. Les rôles et les sites continuent de fonctionner et l'import n'est pas affecté. Seule cette section reste vide, et elle en dit la raison.
 
-### Clusters
+### Clusters { #clusters }
 
 La section **Clusters** associe chaque cluster Netbox à un cluster KANAP : un actif marqué comme cluster et en service. Chaque ligne indique combien de machines virtuelles le cluster Netbox contient. Un cluster KANAP du même nom est suggéré et, comme ailleurs, une suggestion ne compte qu'une fois que vous appuyez sur **Enregistrer les correspondances**.
 
 À la synchronisation suivante, chaque machine virtuelle d'un cluster associé est ajoutée aux relations **Contient** de son cluster KANAP. Une technologie installée sur le cluster atteint alors la machine et les applications qu'elle héberge. Une machine dont seul le cluster change apparaît sous **À mettre à jour**, avec une ligne **Cluster**. Une machine créée par la synchronisation rejoint son cluster tout de suite.
 
-L'import ne fait qu'ajouter :
+Quand un hôte membre du cluster associé contient aujourd'hui la machine, la rattacher au cluster remplace le lien de l'hôte. L'aperçu le montre sur la ligne de la machine, avec une ligne **Placement** de l'hôte vers le cluster. Voir [Machines virtuelles sur un cluster](assets.md#virtual-machines-on-a-cluster).
+
+Hors ce cas, l'import ne fait qu'ajouter :
 
 - Une machine déjà présente dans un autre cluster KANAP y reste. L'aperçu le signale sur la ligne de la machine, pour que vous puissiez retirer cette relation à la main si elle est périmée.
 - Modifier une correspondance ajoute les machines au nouveau cluster et les garde dans l'ancien.

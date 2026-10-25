@@ -90,7 +90,7 @@ Assets can be organized into clusters:
 - **Regular asset**: An individual infrastructure instance
 - **Cluster**: A group of assets acting as a single logical unit
 
-To create a cluster, choose **Add cluster** in the **Add asset** menu, or turn on the **Cluster** switch in the properties drawer of an asset. A cluster can be an endpoint in connections.
+To create a cluster, choose **Add cluster** in the **Add asset** menu, or turn on the **Cluster** switch in the properties drawer of an asset. A connection set on a cluster applies to its members: see [Connections on a cluster](connections.md#connections-on-a-cluster).
 
 ### Applications on a cluster { #applications-on-a-cluster }
 
@@ -107,7 +107,7 @@ When you assign an application to a member of a cluster, KANAP asks **Assign to 
 
 Wherever KANAP reads where an application runs, it counts the members of the cluster: the vulnerabilities and end of support of the application, its hosting type (a cluster without a location takes the hosting type of its members), the administration zones, the applications of a location or of a contract on a server, the assistant and Knowledge. In the impact of a fallen member, the cluster is degraded and its applications keep running. See [Dependencies](#dependencies).
 
-Members are managed from the **Dependencies** tab of the cluster. See [Dependencies](#dependencies). The rules:
+Members are managed at the top of the **Operations** tab of the cluster. See [Operations](#operations). The rules:
 
 - A member is a plain asset. A cluster cannot be a member, and an asset cannot be a member of itself.
 - A cluster that has members cannot be turned back into a plain asset: remove its members first.
@@ -115,6 +115,18 @@ Members are managed from the **Dependencies** tab of the cluster. See [Dependenc
 - A cluster that has members has no operating system: each member has its own. A cluster without members can keep one, for example a group of cloud instances whose servers you do not record. See [Operating system](#operating-system).
 
 Installations upgraded from an earlier version keep their clusters. Memberships that break these rules were removed during the upgrade. A cluster name typed in the former text field became a real membership when it named exactly one cluster.
+
+### Virtual machines on a cluster { #virtual-machines-on-a-cluster }
+
+A virtualisation cluster contains its virtual machines: add them to the **Contains** section of the cluster, on its **Dependencies** tab. A machine in the cluster can run on any of its hosts.
+
+When you add a **Contains** relation from a host that belongs to a cluster, KANAP asks **Place in the cluster?**. **Place in the cluster** puts the relation on the cluster. **This host only** keeps it on the host. The same question comes when you add such a host under **Contained by**. A retired host or cluster raises no question.
+
+- Placing an asset in the cluster replaces the links the member hosts held to it. A message names the hosts.
+- A host cannot contain an asset its cluster already contains. The message names the cluster.
+- An asset with two containers in service, such as a host and a cluster, carries a warning icon next to its name in **Contains** and **Contained by**. The tooltip names the other containers. Remove the link that is out of date.
+
+The assistant and the [Netbox synchronisation](netbox.md#clusters) follow the same rules, without the question.
 
 ### Deleting a cluster or a member { #deleting-a-cluster-or-a-member }
 
@@ -187,7 +199,12 @@ The Overview tab is the asset's home page.
 
 ### Operations { #operations }
 
-The Operations tab shows what runs on the asset: the applications it hosts, the technologies it carries and their vulnerabilities. It opens once the asset is created.
+The Operations tab shows the cluster of the asset and what runs on it: the applications it hosts, the technologies it carries and their vulnerabilities. It opens once the asset is created.
+
+**Cluster**, at the top of the tab:
+
+- On a **cluster**, the **Members** section lists the member assets (Name, Environment, Status, Operating system). Click a name to open that asset. **Add members** (on a cluster without members) or **Edit members** opens a search dialog. It offers plain assets only, never a cluster or the cluster itself. A warning icon marks a member whose environment differs from the cluster's. When you remove members from a cluster that carries applications, **Remove members?** names the applications each one will no longer host. **Remove anyway** saves.
+- On a server that belongs to a cluster, the **Cluster membership** section shows its clusters, with their environment and status. Click a name to open the cluster. A server in no cluster has no such section.
 
 **Hosted applications**: the applications running on this asset. Each row shows:
 
@@ -274,7 +291,7 @@ Assets support multiple IP addresses, each with its own network configuration:
 
 This lets you document multiple network interfaces per asset, for example a physical server with both a host IP and an IPMI management address on different subnets.
 
-**Connections**: A read-only view of all connections involving this asset, once it is created. Each row shows the connection ID and name (clickable: opens the Connection workspace), topology (Server to Server or Multi-server), protocols, source and destination endpoint labels, and lifecycle status. To create or edit a connection, navigate to **IT Landscape > Connections**.
+**Connections**: A read-only view of the connections of this asset, once it is created: those where it is an endpoint, a server or the equipment of a hop, and those of its clusters. Each row shows the reference and name (click to open the connection), topology, protocols, source and destination, and lifecycle status. Under the name, **Hop 2** means the asset is the equipment of that hop, and **via** names the cluster when the connection reaches the asset through it. A multi-server connection names its servers in place of the source and destination. To create or edit a connection, navigate to **IT Landscape > Connections**.
 
 ---
 
@@ -296,7 +313,7 @@ Tracks physical hardware details. Saves automatically as you type.
 
 ### Dependencies { #dependencies }
 
-The Dependencies tab shows how the asset stands among the other assets: what stops with it, its cluster, and its relations with other assets. It opens once the asset is created. The tab badge counts the relations between assets, plus the members of a cluster or the clusters the asset belongs to.
+The Dependencies tab shows how the asset stands among the other assets: what stops with it and its relations with other assets. It opens once the asset is created. The tab badge counts the relations between assets. The members of a cluster are on the [Operations](#operations) tab.
 
 **If this server goes down**: the tab opens on what stops with this asset. A summary line counts the applications, assets, clusters and business processes affected, then one table per kind:
 
@@ -306,11 +323,6 @@ The Dependencies tab shows how the asset stands among the other assets: what sto
 - **Business processes**: the processes of the affected applications.
 
 Retired assets stop the chain: nothing falls through them. Each table shows its first 50 rows and counts the rest. The applications and the processes need the right to read them. The section updates as soon as you add or remove a relation between assets, change the members of a cluster or turn the **Cluster** switch on or off.
-
-**Cluster**:
-
-- On a **cluster**, the **Members** section lists the member assets (Name, Environment, Status, Operating system). Click a name to open that asset. **Add members** (on a cluster without members) or **Edit members** opens a search dialog. It offers plain assets only, never a cluster or the cluster itself. A warning icon marks a member whose environment differs from the cluster's. When you remove members from a cluster that carries applications, **Remove members?** names the applications each one will no longer host. **Remove anyway** saves.
-- On **any other asset**, the **Cluster membership** section shows the clusters this asset belongs to, with their environment and status. Click a name to open the cluster.
 
 **Relations between assets**, one table per direction:
 
@@ -323,7 +335,9 @@ Retired assets stop the chain: nothing falls through them. Each table shows its 
 
 Each table shows the reference (`AST-12`), name, type, environment and status. A retired or disabled asset stays listed with its name greyed out. Click a row to open the asset.
 
-With `infrastructure:member`, **Add** at the right of a section opens a search for an asset. Pick a result: the relation is saved at once. To remove a relation, hover the row and click the cross at its end. Readers see the tables read-only.
+On a cluster, **Depends on** ends with a folded line, **Through members (n)**. It lists the assets that the cluster's members in service depend on, with those members in the **Via** column. These rows are read-only and stay out of the tab badge.
+
+With `infrastructure:member`, **Add** at the right of a section opens a search for an asset. Pick a result: the relation is saved at once. To remove a relation, hover the row and click the cross at its end. Readers see the tables read-only. A **Contains** relation from a member of a cluster first asks where to place the asset: see [Virtual machines on a cluster](#virtual-machines-on-a-cluster).
 
 ---
 

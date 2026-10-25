@@ -44,6 +44,8 @@ export class AiChatController {
       conversation_id?: string;
       attachment_ids?: string[];
       truncate_from_message_id?: string | null;
+      /** The browser's IANA zone; validated against the user's stored zone, then UTC. */
+      time_zone?: string;
     },
     @Req() req: any,
     @Res() res: Response,
@@ -62,6 +64,7 @@ export class AiChatController {
       userMessage: body.message,
       attachmentIds,
       truncateFromMessageId,
+      timeZone: body.time_zone,
       signal: abortController.signal,
     });
 

@@ -7,17 +7,14 @@ Les connexions documentent les chemins réseau de niveau infrastructure entre le
 Naviguez vers **Cartographie SI > Connexions** pour voir votre registre de connexions. Cliquez sur **Ajouter une connexion** pour créer votre première entrée.
 
 **Champs obligatoires** :
-  - **ID de connexion** : Un identifiant unique (par ex., `CONN-WEB-DB-001`)
   - **Nom** : Un nom descriptif
-  - **Type de connexion** : Serveur à serveur ou Multi-serveurs
-  - **Source** / **Destination** : Une entité, cluster ou serveur à chaque extrémité (pour Serveur à serveur)
+  - **Topologie** : Serveur à serveur ou Multi-serveur
+  - **Endpoints** : Une source et une destination (Serveur à serveur), ou au moins deux serveurs (Multi-serveur)
   - **Protocoles** : Au moins un protocole réseau
 
-**Fortement recommandé** :
-  - **Objectif** : Pourquoi cette connexion existe
-  - **Cycle de vie** : Statut actuel
+KANAP donne à chaque connexion une référence, par exemple `CONN-12`.
 
-**Conseil** : Les connexions peuvent être liées aux bindings d'interfaces pour montrer quelle infrastructure supporte chaque intégration applicative.
+**Conseil** : Les connexions peuvent être liées aux liaisons d'interfaces pour montrer quelle infrastructure supporte chaque intégration applicative.
 
 ---
 
@@ -26,9 +23,9 @@ Naviguez vers **Cartographie SI > Connexions** pour voir votre registre de conne
 La liste vous offre une vue filtrable de chaque connexion de votre registre.
 
 **Colonnes par défaut** :
-  - **ID de connexion** : Identifiant unique (cliquez pour ouvrir l'espace de travail)
+  - **Référence** : La référence de la connexion, par exemple `CONN-12` (cliquez pour ouvrir l'espace de travail)
   - **Nom** : Nom de la connexion (cliquez pour ouvrir l'espace de travail)
-  - **Topologie** : Serveur à serveur ou Multi-serveurs
+  - **Topologie** : Serveur à serveur ou Multi-serveur
   - **Source** / **Destination** : Les points de terminaison connectés
   - **Protocoles** : Protocoles réseau affichés sous forme de pastilles
   - **Criticité** : Importance métier ; peut être dérivée des interfaces liées
@@ -36,7 +33,7 @@ La liste vous offre une vue filtrable de chaque connexion de votre registre.
   - **PII** : Si des données personnelles transitent par cette connexion
   - **Risque** : Manuel ou Dérivé (affiche le nombre d'interfaces liées)
   - **Cycle de vie** : Statut actuel
-  - **Créé** : Date de création de l'enregistrement
+  - **Créé le** : Date de création de l'enregistrement
 
 **Colonnes supplémentaires** (via le sélecteur de colonnes) :
   - **Serveurs** : Nombre de serveurs dans une connexion multi-serveurs
@@ -55,99 +52,70 @@ La liste vous offre une vue filtrable de chaque connexion de votre registre.
 
 ---
 
-## Types de connexion
+## Types de connexion { #connection-types }
 
 ### Serveur à serveur
 
-Une connexion directe entre deux points de terminaison spécifiques. Chaque côté peut être un serveur, un cluster ou une entité nommée :
+Une connexion directe entre deux extrémités. Chaque côté est un serveur, un cluster ou une entité :
 
-- **Source** : Où le trafic prend son origine. Choisissez un serveur, cluster ou entité
-- **Destination** : Où le trafic se termine ; mêmes options
-- Vous ne pouvez pas sélectionner à la fois un serveur et une entité pour le même côté ; choisissez l'un ou l'autre
+- **Source** : L'origine du trafic
+- **Destination** : L'arrivée du trafic
+- Un côté porte un seul serveur, cluster ou entité
+- La source et la destination ne peuvent pas être le même actif
 
-Si un point de terminaison est un cluster, une note vous rappellera que les hôtes membres sont gérés dans l'espace de travail Serveurs.
+### Multi-serveur
 
-### Multi-serveurs
+Une connexion entre plusieurs serveurs, par exemple une réplication entre nœuds ou un maillage. Sélectionnez au moins deux serveurs ou clusters.
 
-Une connexion impliquant plusieurs serveurs (par ex., clusters à équilibrage de charge ou topologies maillées) :
+### Connexions sur un cluster { #connections-on-a-cluster }
 
-- Sélectionnez au moins deux serveurs dans le sélecteur **Serveurs connectés**
-- Utilisez les **couches** pour définir le chemin de routage entre eux
+Une source, une destination, un serveur d'une connexion multi-serveur ou l'équipement d'un saut peut être un cluster. La connexion vaut alors pour les membres en service du cluster. Un membre ajouté plus tard la reçoit aussi. Un membre retiré du cluster la perd. Un membre retiré du service ne reçoit rien, et un cluster retiré ne transmet rien.
+
+Les sélecteurs marquent un cluster d'une icône et listent ses membres sous son nom.
+
+Quand vous choisissez un serveur membre d'un cluster, KANAP demande **Raccorder au cluster ?**. **Raccorder au cluster** pose le cluster sur la connexion, pour tous ses membres. **Ce serveur seulement** garde le serveur. KANAP ne pose pas la question quand l'autre côté est déjà ce cluster ou un de ses membres : la connexion reste sur le serveur.
+
+Une liste multi-serveur qui contient un cluster et un de ses membres ne garde que le cluster. Un message nomme les membres retirés de la liste. Une liste doit garder au moins deux serveurs.
+
+L'onglet [Réseau](assets.md#network) de chaque membre liste les connexions de ses clusters, et la [carte des connexions](connection-map.md) dessine les membres d'un cluster.
 
 ---
 
 ## L'espace de travail Connexions
 
-Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte quatre onglets : **Vue d'ensemble**, **Couches**, **Criticité & Conformité** et **Interfaces liées**.
+Cliquez sur une ligne pour ouvrir l'espace de travail. Il a deux onglets : **Vue d'ensemble** et **Chemin**. Le panneau des propriétés, à droite, porte **Cycle de vie**, **Topologie**, **Mode de risque**, **Criticité**, **Classification des données**, **Contient des PII** et **Créé le**. Les modifications s'enregistrent automatiquement.
 
-**Supprimer**, une icône corbeille dans l'en-tête, supprime la connexion après une confirmation (`infrastructure:member`). La confirmation compte les liaisons d'interface dont elle est détachée. Les interfaces elles-mêmes restent.
+**Supprimer**, une icône de corbeille dans l'en-tête, supprime la connexion après confirmation (`infrastructure:member`). La confirmation compte les liaisons d'interfaces dont elle est détachée. Les interfaces elles-mêmes restent.
 
 ### Vue d'ensemble
 
-L'onglet Vue d'ensemble capture l'identité et la topologie de la connexion.
+- **Description** : Pourquoi cette connexion existe et ce qu'elle transporte
+- **Endpoints** : La source et la destination, ou les serveurs d'une connexion multi-serveur. Voir [Types de connexion](#connection-types)
+- **Protocoles** : Un ou plusieurs protocoles réseau, issus de vos paramètres de types de connexion, avec leurs ports usuels
+- **Dérivation du risque** : En mode de risque dérivé, les interfaces dont vient le risque, avec leur criticité, leur classification des données et leurs PII
+- **Interfaces associées** : Les liaisons d'interfaces liées à cette connexion. **Associer une existante** en lie une autre
 
-**Ce que vous pouvez modifier** :
-  - **ID de connexion** : Identifiant unique
-  - **Nom** : Nom d'affichage
-  - **Objectif** : Pourquoi cette connexion existe (texte libre)
-  - **Type de connexion** : Serveur à serveur ou Multi-serveurs
-  - **Source** / **Destination** : Pour Serveur à serveur, choisissez un serveur, cluster ou entité dans une liste déroulante groupée
-  - **Serveurs connectés** : Pour Multi-serveurs, recherchez et sélectionnez deux serveurs ou plus
-  - **Protocoles** : Un ou plusieurs protocoles réseau (tirés de vos paramètres de types de connexion)
-  - **Cycle de vie** : Statut actuel
-  - **Notes** : Contexte supplémentaire
+### Chemin
 
-Lorsque vous sélectionnez des protocoles, le système affiche leurs ports typiques pour référence.
+L'onglet Chemin documente le chemin réseau de la connexion, saut par saut : proxys inverses, pare-feu, répartiteurs de charge. Créez d'abord la connexion pour ajouter des sauts.
 
----
+Chaque saut a :
 
-### Couches
+  - Une fonction, par exemple Pare-feu, Proxy inverse ou Répartiteur de charge
+  - **Équipement** : Un serveur, un cluster ou une entité, ou rien quand l'équipement n'est pas documenté. Un serveur membre d'un cluster pose la même question qu'une extrémité. Voir [Connexions sur un cluster](#connections-on-a-cluster)
+  - **Protocoles (surcharge)** et **Port** : Quand ils diffèrent de ceux de la connexion
+  - **Notes**
 
-L'onglet Couches vous permet de définir un chemin réseau ordonné de trois sauts maximum, utile pour documenter les reverse proxies, pare-feu ou routage intermédiaire.
+**Ajouter un saut** ajoute un saut à la fin. Les flèches réordonnent les sauts et la corbeille en retire un. Chaque modification s'enregistre aussitôt.
 
-**Ce que chaque couche capture** :
-  - **Ordre** : Numéro de séquence (1 à 3)
-  - **Nom** : Un libellé pour la couche (par ex., `direct`, `reverse_proxy`, `firewall`)
-  - **Source** / **Destination** : Une entité, cluster ou serveur à chaque extrémité du saut
-  - **Protocoles** : Quels protocoles sont utilisés à cette couche
-  - **Port personnalisé** : Port personnalisé si différent du port par défaut du protocole (auto-rempli quand vous choisissez un protocole)
-  - **Notes** : Notes spécifiques à la couche
+### Risque
 
-Les couches sont enregistrées indépendamment de l'onglet Vue d'ensemble. Utilisez le bouton **Enregistrer les couches** pour persister vos modifications.
+**Mode de risque**, dans le panneau des propriétés :
 
-**Conseil** : Vous devez d'abord enregistrer la connexion elle-même avant de pouvoir ajouter des couches.
+  - **Manuel** : Vous fixez directement la criticité, la classification des données et les PII
+  - **Dérivé** : Les valeurs viennent des liaisons d'interfaces liées. Les champs sont en lecture seule et montrent les valeurs les plus élevées parmi les interfaces liées
 
----
-
-### Criticité & Conformité
-
-Cet onglet contrôle la classification des risques et les paramètres de protection des données.
-
-**Mode de risque** :
-  - **Manuel** : Vous définissez directement la criticité, la classe de données et le PII
-  - **Dérivé** : Les valeurs sont agrégées depuis les bindings d'interfaces liées : l'onglet affiche les valeurs effectives et liste une fois chaque interface qui contribue, avec les environnements où elle est liée
-
-**Champs** :
-  - **Criticité** : un niveau de criticité métier issu du catalogue de votre organisation, dans [Classifications et continuité](it-ops-settings.md#classifications-et-continuite). Les niveaux par défaut sont Critique, Élevée, Modérée et Faible
-  - **Classe de données** : Tirée des paramètres de classification de données de votre organisation
-  - **Contient des PII** : Si des données personnelles transitent par la connexion
-
-Lorsque le mode de risque est Dérivé, les champs criticité, classe de données et PII deviennent lecture seule et reflètent les valeurs les plus élevées de toutes les interfaces liées.
-
----
-
-### Interfaces liées
-
-Cet onglet montre quels bindings d'interfaces sont liés à cette connexion.
-
-**Ce que vous verrez** :
-  - **Interface** : Nom et code, avec des pastilles de criticité / classe de données / PII
-  - **Environnement** : Environnement du binding et type de segment
-  - **Point source** / **Point cible** : Les points de terminaison du binding
-  - **Cycle de vie** : Statut du cycle de vie de l'interface
-  - **Actions** : Un bouton pour naviguer vers l'espace de travail de l'interface
-
-Cet onglet est en lecture seule. Pour lier un binding d'interface à une connexion, utilisez l'espace de travail Interface ou la carte des connexions.
+**Criticité** utilise les niveaux de [Classifications et continuité](it-ops-settings.md#classifications-et-continuite). Les niveaux par défaut sont Critique, Élevée, Modérée et Faible. **Classification des données** vient de vos paramètres de classification des données.
 
 ---
 

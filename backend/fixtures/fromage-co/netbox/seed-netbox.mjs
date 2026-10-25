@@ -280,7 +280,7 @@ const DEVICES = [
   { name: 'par-esx-02', site: 'paris-data-center', role: 'server', type: 'poweredge-r750', serial: 'DELL-PAR-ESX02', platform: 'vmware-esxi-8-0', rack: 'PAR-R01', position: 38, ip: '10.10.10.12/24' },
   { name: 'PAR-ESX-03', site: 'paris-data-center', role: 'server', type: 'poweredge-r640', serial: 'DELL-PAR-ESX03', platform: 'vmware-esxi-8-0', rack: 'PAR-R01', position: 36, ip: '10.10.10.13/24', status: 'decommissioning' },
   { name: 'PAR-ESX-04', site: 'paris-data-center', role: 'server', type: 'poweredge-r640', serial: 'DELL-PAR-ESX04', platform: 'vmware-esxi-8-0', rack: 'PAR-R01', position: 34, ip: '10.10.10.14/24' },
-  { name: 'PAR-ESX-05', site: 'paris-data-center', role: 'server', type: 'poweredge-r650', serial: 'DELL-PAR-ESX05', platform: 'vmware-esxi-8-0', rack: 'PAR-R01', position: 32, ip: '10.10.10.15/24' },
+  { name: 'PAR-ESX-05', site: 'paris-data-center', role: 'server', type: 'poweredge-r750', serial: 'DELL-PAR-ESX05', platform: 'vmware-esxi-8-0', rack: 'PAR-R01', position: 32, ip: '10.10.10.15/24' },
   { name: null, site: 'paris-data-center', role: 'server', type: 'poweredge-r640', serial: 'DELL-PAR-SPARE01', rack: 'PAR-R01', position: 30, status: 'inventory' },
   { name: 'PAR-PP-01', site: 'paris-data-center', role: 'patch-panel', type: 'patch-panel-24', serial: 'GEN-PAR-PP01', rack: 'PAR-R01', position: 42 },
   { name: 'PAR-SAN-01', site: 'paris-data-center', role: 'storage', type: 'fas2750', serial: 'NTAP-PAR-SAN01', rack: 'PAR-R02', position: 20, ip: '10.10.10.21/24' },

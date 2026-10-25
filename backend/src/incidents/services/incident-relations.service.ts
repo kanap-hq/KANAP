@@ -15,6 +15,9 @@ import {
   listRelatedApplications,
   listRelatedAssets,
   listRelatedTechnologies,
+  type RelatedApplication,
+  type RelatedAsset,
+  type RelatedTechnology,
   type RelationLinkTable,
 } from '../../common/relations/related-objects';
 import { parseTargetId } from '../../common/relations/relation-target';
@@ -164,6 +167,25 @@ export class IncidentRelationsService extends IncidentsBaseService {
   }
 
   /**
+   * The linked sections of a complete record (`IncidentRecordService.load`): the same rows and
+   * the same rights as the Relations tab, without the suggestions. A section is null without the
+   * module read, so a caller that lacks it gets no linked object and no error.
+   */
+  async listForRecord(
+    incidentId: string,
+    opts?: ServiceOpts,
+  ): Promise<{
+    assets: RelatedAsset[] | null;
+    applications: RelatedApplication[] | null;
+    technologies: RelatedTechnology[] | null;
+  }> {
+    const mg = this.getManager(opts);
+    const tenantId = this.ensureTenantId(opts?.tenantId);
+    const incident = await this.ensureIncident(incidentId, mg, tenantId, opts?.viewer);
+    return this.readSections(mg, tenantId, incident.id, opts);
+  }
+
+  /**
    * The Relations tab in one round trip. `assets` and `technologies` are null without a read of
    * the infrastructure (`opts.technologies`); `applications` is null without a read of applications.
    * A Business Contributor's `applicationScope` narrows the applications. `editable` is false on a
@@ -174,21 +196,38 @@ export class IncidentRelationsService extends IncidentsBaseService {
     const tenantId = this.ensureTenantId(opts?.tenantId);
     const incident = await this.ensureIncident(incidentId, mg, tenantId, opts?.viewer);
     const editable = !isFrozenIncidentStatus(incident.status);
+    const sections = await this.readSections(mg, tenantId, incident.id, opts);
     const readsInfrastructure = opts?.technologies === true;
     const readsApplications = opts?.applications === true;
-    const assets = readsInfrastructure
-      ? await listRelatedAssets(mg, INCIDENT_ASSET_ROWS, tenantId, incident.id)
-      : null;
-    const applications = readsApplications
-      ? await listRelatedApplications(mg, INCIDENT_APPLICATION_ROWS, tenantId, incident.id, opts?.applicationScope)
-      : null;
-    const technologies = readsInfrastructure
-      ? await listRelatedTechnologies(mg, INCIDENT_TECHNOLOGY_ROWS, tenantId, incident.id)
-      : null;
     const suggestions = editable && readsInfrastructure
       ? await this.suggestTechnologies(mg, tenantId, incident.id, readsApplications, opts?.applicationScope)
       : [];
-    return { assets, applications, technologies, editable, suggestions };
+    return { ...sections, editable, suggestions };
+  }
+
+  /** The three link tables, each one only when the caller reads its module. */
+  private async readSections(
+    mg: EntityManager,
+    tenantId: string,
+    incidentId: string,
+    opts?: ServiceOpts,
+  ): Promise<{
+    assets: RelatedAsset[] | null;
+    applications: RelatedApplication[] | null;
+    technologies: RelatedTechnology[] | null;
+  }> {
+    const readsInfrastructure = opts?.technologies === true;
+    const readsApplications = opts?.applications === true;
+    const assets = readsInfrastructure
+      ? await listRelatedAssets(mg, INCIDENT_ASSET_ROWS, tenantId, incidentId)
+      : null;
+    const applications = readsApplications
+      ? await listRelatedApplications(mg, INCIDENT_APPLICATION_ROWS, tenantId, incidentId, opts?.applicationScope)
+      : null;
+    const technologies = readsInfrastructure
+      ? await listRelatedTechnologies(mg, INCIDENT_TECHNOLOGY_ROWS, tenantId, incidentId)
+      : null;
+    return { assets, applications, technologies };
   }
 
   /**

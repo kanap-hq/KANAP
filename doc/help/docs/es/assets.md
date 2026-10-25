@@ -90,7 +90,7 @@ Los activos pueden organizarse en clústeres:
 - **Activo regular**: Una instancia individual de infraestructura
 - **Clúster**: Un grupo de activos que actúan como una única unidad lógica
 
-Para crear un clúster, elija **Añadir clúster** en el menú **Añadir activo**, o active el conmutador **Clúster** en el panel de propiedades de un activo. Un clúster puede ser un extremo de conexiones.
+Para crear un clúster, elija **Añadir clúster** en el menú **Añadir activo**, o active el conmutador **Clúster** en el panel de propiedades de un activo. Una conexión puesta en un clúster vale para sus miembros: consulte [Conexiones en un clúster](connections.md#connections-on-a-cluster).
 
 ### Aplicaciones en un clúster { #applications-on-a-cluster }
 
@@ -107,7 +107,7 @@ Cuando asigna una aplicación a un miembro de un clúster, KANAP pregunta **¿As
 
 Allí donde KANAP lee dónde se ejecuta una aplicación, cuenta los miembros del clúster: las vulnerabilidades y el fin de soporte de la aplicación, su tipo de alojamiento (un clúster sin ubicación toma el tipo de alojamiento de sus miembros), las zonas de administración, las aplicaciones de una ubicación o de un contrato sobre un servidor, el asistente y Conocimiento. En el impacto de un miembro caído, el clúster queda degradado y sus aplicaciones siguen funcionando. Consulte [Dependencias](#dependencies).
 
-Los miembros se gestionan desde la pestaña **Dependencias** del clúster. Consulte [Dependencias](#dependencies). Las reglas:
+Los miembros se gestionan en la parte superior de la pestaña **Operación** del clúster. Consulte [Operación](#operations). Las reglas:
 
 - Un miembro es un activo simple. Un clúster no puede ser miembro, y un activo no puede ser miembro de sí mismo.
 - Un clúster que tiene miembros no puede volver a ser un activo simple: quite primero sus miembros.
@@ -115,6 +115,18 @@ Los miembros se gestionan desde la pestaña **Dependencias** del clúster. Consu
 - Un clúster que tiene miembros no tiene sistema operativo: cada miembro tiene el suyo. Un clúster sin miembros puede conservar uno, por ejemplo un grupo de instancias en la nube cuyos servidores usted no registra. Consulte [Sistema operativo](#sistema-operativo).
 
 Las instalaciones actualizadas desde una versión anterior conservan sus clústeres. Las pertenencias contrarias a estas reglas se retiraron durante la actualización. Un nombre de clúster escrito en el antiguo campo de texto se convirtió en una pertenencia real cuando designaba un único clúster.
+
+### Máquinas virtuales en un clúster { #virtual-machines-on-a-cluster }
+
+Un clúster de virtualización contiene sus máquinas virtuales: añádalas a la sección **Contiene** del clúster, en su pestaña **Dependencias**. Una máquina del clúster puede ejecutarse en cualquiera de sus hosts.
+
+Cuando añade una relación **Contiene** desde un host que pertenece a un clúster, KANAP pregunta **¿Colocar en el clúster?**. **Colocar en el clúster** pone la relación en el clúster. **Solo este host** la mantiene en el host. La misma pregunta aparece cuando añade un host así en **Contenido en**. Un host o un clúster retirado no plantea la pregunta.
+
+- Colocar un activo en el clúster sustituye los vínculos que los hosts miembros tenían con él. Un mensaje nombra los hosts.
+- Un host no puede contener un activo que su clúster ya contiene. El mensaje nombra el clúster.
+- Un activo con dos contenedores en servicio, por ejemplo un host y un clúster, lleva un icono de advertencia junto a su nombre en **Contiene** y **Contenido en**. La información emergente nombra los demás contenedores. Quite el vínculo que ya no está al día.
+
+El asistente y la [sincronización con Netbox](netbox.md#clusters) siguen las mismas reglas, sin la pregunta.
 
 ### Eliminar un clúster o un miembro { #deleting-a-cluster-or-a-member }
 
@@ -187,7 +199,12 @@ La pestaña Vista general es la página de inicio del activo.
 
 ### Operación { #operations }
 
-La pestaña Operación muestra lo que se ejecuta en el activo: las aplicaciones que aloja, las tecnologías que lleva y sus vulnerabilidades. Se abre una vez creado el activo.
+La pestaña Operación muestra el clúster del activo y lo que se ejecuta en él: las aplicaciones que aloja, las tecnologías que lleva y sus vulnerabilidades. Se abre una vez creado el activo.
+
+**Clúster**, en la parte superior de la pestaña:
+
+- En un **clúster**, la sección **Miembros** lista los activos miembros (Nombre, Entorno, Estado, Sistema operativo). Haga clic en un nombre para abrir ese activo. **Añadir miembros** (en un clúster sin miembros) o **Editar miembros** abre un cuadro de diálogo de búsqueda. Solo ofrece activos simples, nunca un clúster ni el propio clúster. Un icono de advertencia señala un miembro cuyo entorno difiere del del clúster. Cuando quita miembros de un clúster que lleva aplicaciones, **¿Quitar miembros?** nombra las aplicaciones que cada uno dejará de alojar. **Quitar de todos modos** guarda.
+- En un servidor que pertenece a un clúster, la sección **Pertenencia al clúster** muestra sus clústeres, con su entorno y su estado. Haga clic en un nombre para abrir el clúster. Un servidor que no está en ningún clúster no tiene esta sección.
 
 **Aplicaciones alojadas**: las aplicaciones que se ejecutan en este activo. Cada fila muestra:
 
@@ -274,7 +291,7 @@ Los activos admiten múltiples direcciones IP, cada una con su propia configurac
 
 Esto le permite documentar múltiples interfaces de red por activo, por ejemplo, un servidor físico con tanto una IP de host como una dirección de gestión IPMI en subredes diferentes.
 
-**Conexiones**: Una vista de solo lectura de todas las conexiones que involucran a este activo, una vez creado. Cada fila muestra el ID y nombre de la conexión (clicable: abre el espacio de trabajo de Conexión), topología (Servidor a Servidor o Multi-servidor), protocolos, etiquetas de los puntos finales de origen y destino, y estado del ciclo de vida. Para crear o editar una conexión, navegue a **Panorama IT > Conexiones**.
+**Conexiones**: Una vista de solo lectura de las conexiones de este activo, una vez creado: aquellas en las que es un extremo, un servidor o el equipo de un salto, y las de sus clústeres. Cada fila muestra la referencia y el nombre (haga clic para abrir la conexión), la topología, los protocolos, el origen y el destino, y el estado del ciclo de vida. Bajo el nombre, **Salto 2** indica que el activo es el equipo de ese salto, y **vía** nombra el clúster cuando la conexión llega al activo a través de él. Una conexión multi-servidor nombra sus servidores en lugar del origen y el destino. Para crear o editar una conexión, navegue a **Panorama IT > Conexiones**.
 
 ---
 
@@ -296,7 +313,7 @@ Hace seguimiento de los detalles físicos del hardware. Se guarda automáticamen
 
 ### Dependencias { #dependencies }
 
-La pestaña Dependencias muestra la posición del activo entre los demás activos: lo que se detiene con él, su clúster y sus relaciones con otros activos. Se abre una vez creado el activo. La insignia de la pestaña cuenta las relaciones entre activos, más los miembros de un clúster o los clústeres a los que pertenece el activo.
+La pestaña Dependencias muestra la posición del activo entre los demás activos: lo que se detiene con él y sus relaciones con otros activos. Se abre una vez creado el activo. La insignia de la pestaña cuenta las relaciones entre activos. Los miembros de un clúster están en la pestaña [Operación](#operations).
 
 **Si este servidor cae**: la pestaña empieza por lo que se detiene con este activo. Una línea de resumen cuenta las aplicaciones, activos, clústeres y procesos de negocio afectados, y después una tabla por tipo:
 
@@ -306,11 +323,6 @@ La pestaña Dependencias muestra la posición del activo entre los demás activo
 - **Procesos de negocio**: los procesos de las aplicaciones afectadas.
 
 Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla muestra sus 50 primeras filas y cuenta el resto. Las aplicaciones y los procesos requieren el derecho de leerlos. La sección se actualiza en cuanto añade o quita una relación entre activos, cambia los miembros de un clúster o activa o desactiva el conmutador **Clúster**.
-
-**Clúster**:
-
-- En un **clúster**, la sección **Miembros** lista los activos miembros (Nombre, Entorno, Estado, Sistema operativo). Haga clic en un nombre para abrir ese activo. **Añadir miembros** (en un clúster sin miembros) o **Editar miembros** abre un cuadro de diálogo de búsqueda. Solo ofrece activos simples, nunca un clúster ni el propio clúster. Un icono de advertencia señala un miembro cuyo entorno difiere del del clúster. Cuando quita miembros de un clúster que lleva aplicaciones, **¿Quitar miembros?** nombra las aplicaciones que cada uno dejará de alojar. **Quitar de todos modos** guarda.
-- En **cualquier otro activo**, la sección **Pertenencia al clúster** muestra los clústeres a los que pertenece este activo, con su entorno y su estado. Haga clic en un nombre para abrir el clúster.
 
 **Relaciones entre activos**, una tabla por sentido:
 
@@ -323,7 +335,9 @@ Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla 
 
 Cada tabla muestra la referencia (`AST-12`), el nombre, el tipo, el entorno y el estado. Un activo retirado o desactivado sigue en la lista con el nombre atenuado. Haga clic en una fila para abrir el activo.
 
-Con `infrastructure:member`, **Añadir**, a la derecha de una sección, abre una búsqueda de activo. Elija un resultado: la relación se guarda al instante. Para quitar una relación, pase el cursor sobre la fila y haga clic en la cruz al final. Los lectores ven las tablas en solo lectura.
+En un clúster, **Depende de** termina con una línea plegada, **A través de los miembros (n)**. Enumera los activos de los que dependen los miembros en servicio del clúster, con esos miembros en la columna **Vía**. Estas filas son de solo lectura y no cuentan en la insignia de la pestaña.
+
+Con `infrastructure:member`, **Añadir**, a la derecha de una sección, abre una búsqueda de activo. Elija un resultado: la relación se guarda al instante. Para quitar una relación, pase el cursor sobre la fila y haga clic en la cruz al final. Los lectores ven las tablas en solo lectura. Una relación **Contiene** desde un miembro de un clúster pregunta primero dónde colocar el activo: consulte [Máquinas virtuales en un clúster](#virtual-machines-on-a-cluster).
 
 ---
 

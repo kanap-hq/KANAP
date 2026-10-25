@@ -14,13 +14,13 @@ KANAP décrit votre paysage en trois boîtes :
 
 Un serveur porte des technologies. Une application est hébergée sur des serveurs et dépend de technologies.
 
-Créez une technologie quand personne ne travaille dans le produit lui-même, mais que d'autres applications tombent ou deviennent exposées quand il tombe. Gardez une fiche comme application quand les utilisateurs métier s'y connectent et s'en servent pour leur travail.
+Enregistrez une application pour ce que vous gérez comme un service, avec ses responsables, sa criticité, ses contrats et ses coûts. Enregistrez une technologie pour un produit installé sur vos serveurs, suivi par ses versions, ses dates de fin de support et ses vulnérabilités. On travaille rarement dans une technologie elle-même, pourtant d'autres applications tombent ou deviennent exposées quand elle tombe. Un même produit peut être les deux : voir VMware vSphere ci-dessous.
 
 Quelques exemples :
 
 - **Entra ID** : une technologie **SaaS** de la famille **Annuaire et identité**, éditée par Microsoft. Elle ne tourne sur aucun de vos serveurs. Les applications qui connectent leurs utilisateurs par ce service la déclarent.
 - **Active Directory** : une technologie **Sur site** de la même famille, portée par vos contrôleurs de domaine. Les applications qui l'utilisent la déclarent.
-- **vSphere** : une technologie **Sur site**, portée par la machine virtuelle vCenter et par les hôtes.
+- **VMware vSphere** : une technologie **Sur site** installée sur le serveur vCenter, tandis que les hôtes portent ESXi et que le service de virtualisation est suivi comme application.
 - **SQL Server** : une technologie avec une ligne par version en service (2016, 2019, 2022). Chaque serveur porte sa propre version, et le rapport des fins de support peut nommer les serveurs restés sur une ancienne.
 - **Windows Server** : une technologie de la famille **Système d'exploitation**. Chaque serveur enregistre sa version, et cette technologie est le système d'exploitation du serveur. Voir [Systèmes d'exploitation](#systemes-dexploitation).
 - **Une application SaaS** : aucune technologie à saisir. L'éditeur maintient ce sur quoi elle tourne.

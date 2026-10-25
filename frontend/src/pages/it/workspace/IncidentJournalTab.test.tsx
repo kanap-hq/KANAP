@@ -10,14 +10,21 @@ import { createAppTheme } from '../../../config/ThemeContext';
 vi.mock('../../../api/endpoints/incidents', () => ({ incidentsApi: { listEntries: vi.fn(), createEntry: vi.fn() } }));
 
 import { incidentsApi } from '../../../api/endpoints/incidents';
+import { formatShortDateTime } from '../../../lib/dateFormat';
 import IncidentJournalTab from './IncidentJournalTab';
 
 const listEntries = incidentsApi.listEntries as unknown as ReturnType<typeof vi.fn>;
 
-function entry(id: string, kind: string, content: string) {
+function entry(
+  id: string,
+  kind: string,
+  content: string,
+  times: { occurred_at?: string; created_at?: string } = {},
+) {
+  const occurredAt = times.occurred_at ?? '2026-10-16T08:00:00.000Z';
   return {
     id, kind, content, changed_fields: null, author_id: null, author_name: null,
-    occurred_at: '2026-10-16T08:00:00.000Z', created_at: '2026-10-16T08:00:00.000Z',
+    occurred_at: occurredAt, created_at: times.created_at ?? occurredAt,
   };
 }
 
@@ -58,5 +65,31 @@ describe('IncidentJournalTab system entries', () => {
     expect(screen.getByText('Revue d’incident importée')).toBeInTheDocument();
     // A note someone typed stays as written.
     expect(screen.getAllByText('Incident logged')).toHaveLength(1);
+  });
+});
+
+// A note can be written after the facts it describes: the journal keeps the facts time as the main
+// time and adds the server recording time only when the two differ.
+describe('IncidentJournalTab recorded time', () => {
+  afterEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('shows the recording time only when it differs from the facts time', async () => {
+    await i18n.changeLanguage('en');
+    const recordedAt = '2026-10-27T10:12:00.000Z';
+    listEntries.mockResolvedValue([
+      entry('e1', 'note', 'Backdated note', {
+        occurred_at: '2026-10-16T08:00:00.000Z',
+        created_at: recordedAt,
+      }),
+      entry('e2', 'note', 'Normal note'),
+    ]);
+
+    renderTab();
+
+    expect(await screen.findByText('Backdated note')).toBeInTheDocument();
+    expect(screen.getByText(`recorded ${formatShortDateTime(recordedAt, 'en')}`)).toBeInTheDocument();
+    expect(screen.getAllByText(/^recorded /)).toHaveLength(1);
   });
 });

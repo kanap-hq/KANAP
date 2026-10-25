@@ -38,6 +38,7 @@ import ViaAssetNames from '../../components/workspace/ViaAssetNames';
 import api from '../../api';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import ConnectionMapGraph, { ClusterMembership, ConnectionMapLink, ConnectionMapNode, GraphControlsApi } from './components/ConnectionMapGraph';
+import { foldMembers, withImplicitMembers } from './connectionMapMembers';
 
 import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../utils/applicationClassification';
@@ -53,6 +54,7 @@ type ApiConnectionMapNode = {
   hosting_category: 'on_prem' | 'cloud' | null;
   graph_tier?: string | null;
   member_server_ids?: string[];
+  implicit_member?: boolean;
 };
 
 type ApiConnectionMapLeg = {
@@ -172,6 +174,7 @@ export function toGraphNodes(nodes: ApiConnectionMapNode[], entityName: (code: s
       networkSegment: n.network_segment,
       hostingCategory: n.hosting_category,
       graphTier: n.graph_tier || null,
+      implicitMember: !!n.implicit_member,
     } as ConnectionMapNode;
   });
 }
@@ -503,9 +506,19 @@ export default function ConnectionMapPage() {
       if (sid) nodeIds.add(String(sid));
       if (tid) nodeIds.add(String(tid));
     });
-    const nodes = allNodes.filter((n) => nodeIds.has(n.id));
+    // A start coming from the address stays on the map even when no link names it, and brings
+    // its clusters along (a member without any connection still shows its cluster).
+    const drawnNodeIds = new Set(nodeIds);
+    const rootSet = new Set(rootNodeIds);
+    allNodes.forEach((node) => {
+      if (rootSet.has(node.id)) drawnNodeIds.add(node.id);
+    });
+    (data.clusterMemberships ?? []).forEach((m) => {
+      if (rootSet.has(m.server_id)) drawnNodeIds.add(m.cluster_id);
+    });
+    const nodes = withImplicitMembers(allNodes, drawnNodeIds, data.clusterMemberships ?? []);
     return { nodes, links };
-  }, [data, showMultiServer, showLayers, settings?.connectionTypes, entityName]);
+  }, [data, showMultiServer, showLayers, settings?.connectionTypes, entityName, rootNodeIds]);
 
   // Memoize clusterMemberships to avoid triggering graph re-render on every parent render
   const clusterMembershipsRaw = React.useMemo(() => {
@@ -535,13 +548,15 @@ export default function ConnectionMapPage() {
   }, [graphData.nodes, t]);
 
   React.useEffect(() => {
+    // The map has not answered yet: its empty node list would drop the starts of the address.
+    if (!data) return;
     if (rootNodeIds.length === 0) return;
     const valid = rootNodeIds.filter((id) => graphData.nodes.some((n) => n.id === id));
     if (valid.length !== rootNodeIds.length) {
       setRootNodeIds(valid);
       if (valid.length === 0) setDepthLimit('all');
     }
-  }, [graphData.nodes, rootNodeIds]);
+  }, [data, graphData.nodes, rootNodeIds]);
 
   React.useEffect(() => {
     if (rootNodeIds.length === 0 && depthLimit !== 'all') {
@@ -561,16 +576,14 @@ export default function ConnectionMapPage() {
     const nodeMap = new Map<string, ConnectionMapNode>();
     graphData.nodes.forEach((n) => nodeMap.set(n.id, n));
 
-    // When depth=0, also show parent clusters of the selected member servers so the cluster
-    // node and its implicit link render (even though clusters can't be directly selected via apps).
+    // A member taken as a start brings the connections of its clusters: the cluster becomes a
+    // start at depth 0, so its counterparts are at depth 1, as if they were neighbours of the member.
     const rootSet = new Set(rootNodeIds);
-    if (depthLimit === 0 && clusterMembershipsRaw.length > 0) {
-      clusterMembershipsRaw.forEach((m) => {
-        if (rootSet.has(m.server_id)) {
-          rootSet.add(m.cluster_id);
-        }
-      });
-    }
+    clusterMembershipsRaw.forEach((m) => {
+      if (rootSet.has(m.server_id)) {
+        rootSet.add(m.cluster_id);
+      }
+    });
 
     // Also for depth=0, include adjacent entity nodes (they can't be selected via apps but are key endpoints).
     if (depthLimit === 0) {
@@ -623,6 +636,12 @@ export default function ConnectionMapPage() {
     }
 
     const includedIds = new Set<string>(visited.keys());
+    // A drawn cluster shows its members, even outside the depth. They bring no link of their own.
+    clusterMembershipsRaw.forEach((m) => {
+      if (includedIds.has(m.cluster_id) && nodeMap.has(m.server_id)) {
+        includedIds.add(m.server_id);
+      }
+    });
     const nodes = graphData.nodes.filter((n) => includedIds.has(n.id));
     const links = graphData.links.filter((l) => {
       const sid = typeof l.source === 'object' ? l.source.id : l.source;
@@ -630,7 +649,7 @@ export default function ConnectionMapPage() {
       return includedIds.has(sid) && includedIds.has(tid);
     });
     return { nodes, links };
-  }, [graphData, rootNodeIds, depthLimit, isPrimaryNode]);
+  }, [graphData, rootNodeIds, depthLimit, isPrimaryNode, clusterMembershipsRaw]);
 
   // Filter cluster memberships to only include those where both cluster and member are in the filtered graph
   const clusterMemberships = React.useMemo(() => {
@@ -639,6 +658,14 @@ export default function ConnectionMapPage() {
       (m) => nodeIds.has(m.cluster_id) && nodeIds.has(m.server_id),
     );
   }, [filteredGraph.nodes, clusterMembershipsRaw]);
+
+  // The options and the panel keep the unfolded graph: a folded member stays selectable as a start.
+  const foldedGraph = React.useMemo(() => foldMembers(
+    filteredGraph,
+    clusterMemberships,
+    rootNodeIds,
+    (count) => t('pages.connectionMap.hiddenMembers', { count }),
+  ), [filteredGraph, clusterMemberships, rootNodeIds, t]);
 
   React.useEffect(() => {
     if (selectedNodeId && !filteredGraph.nodes.some((n) => n.id === selectedNodeId)) {
@@ -1123,9 +1150,9 @@ export default function ConnectionMapPage() {
 
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <ConnectionMapGraph
-              nodes={filteredGraph.nodes}
+              nodes={foldedGraph.nodes}
               links={filteredGraph.links}
-              clusterMemberships={clusterMemberships}
+              clusterMemberships={foldedGraph.memberships}
               selectedNodeId={selectedNodeId}
               selectedLinkId={selectedLinkId}
               frozen={isFrozen}
@@ -1284,8 +1311,8 @@ export default function ConnectionMapPage() {
                             variant="contained"
                             size="small"
                             onClick={() => {
-                              // The members of a cluster are managed on the Dependencies tab.
-                              navigate(`/it/assets/${selectedNode.id}/${selectedNode.kind === 'cluster' ? 'dependencies' : 'overview'}`);
+                              // The cluster sections stand at the top of the Operations tab.
+                              navigate(`/it/assets/${selectedNode.id}/${selectedNode.kind === 'cluster' ? 'operations' : 'overview'}`);
                             }}
                           >
                             {selectedNode.kind === 'cluster' ? t('pages.connectionMap.viewCluster') : t('pages.connectionMap.editServer')}

@@ -523,10 +523,12 @@ async function testChatControllerRejectsPlatformHostBeforeStreaming() {
 
 async function testChatControllerStreamsForTenantHost() {
   let capturedContext: any = null;
+  let capturedParams: any = null;
   const controller = new AiChatController(
     {
       prepareRequest: async (params: any) => {
         capturedContext = params.context;
+        capturedParams = params;
         return { providerSource: 'custom' };
       },
       streamPrepared: async function* () {
@@ -542,12 +544,13 @@ async function testChatControllerStreamsForTenantHost() {
   const req = Object.assign(new EventEmitter(), createRequest({ isPlatformHost: false }));
 
   await controller.stream(
-    { message: 'hello' },
+    { message: 'hello', time_zone: 'Europe/Paris' },
     req as any,
     response,
   );
 
   assert.equal(capturedContext?.isPlatformHost, false);
+  assert.equal(capturedParams?.timeZone, 'Europe/Paris', 'the chat body time_zone reaches the orchestrator');
   assert.equal(state.flushed, true);
   assert.equal(state.ended, true);
   assert.equal(state.writes.length, 2);

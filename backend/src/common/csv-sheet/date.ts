@@ -157,6 +157,34 @@ export function formatCsvDateTime(value: Date | string, language: CsvLanguage, t
 }
 
 /**
+ * An instant as an ISO date-time in `timeZone`, with the zone's explicit offset
+ * at that instant (`2026-06-02T07:50:00+02:00`). Used where a reader must not
+ * guess the zone, such as the AI tool results. A value that is not a date, and
+ * a zone nobody knows, give null. Date-only values are not written this way:
+ * a reader keeps their calendar day.
+ */
+export function isoDateTimeInTimeZone(value: Date | string, timeZone: string): string | null {
+  if (typeof value === 'string' && !/^\d{4}-\d{2}-\d{2}T/.test(value.trim())) return null;
+  const date = value instanceof Date ? value : new Date(String(value).trim());
+  const epochMs = date.getTime();
+  if (Number.isNaN(epochMs)) return null;
+  let offsetMs: number;
+  try {
+    offsetMs = zoneOffset(epochMs, timeZone);
+  } catch {
+    return null;
+  }
+  const wall = new Date(epochMs + offsetMs).toISOString();
+  const offsetMinutes = Math.round(offsetMs / 60_000);
+  const sign = offsetMinutes < 0 ? '-' : '+';
+  const absolute = Math.abs(offsetMinutes);
+  const hours = String(Math.floor(absolute / 60)).padStart(2, '0');
+  const minutes = String(absolute % 60).padStart(2, '0');
+  const milliseconds = wall.slice(20, 23);
+  return `${wall.slice(0, 19)}${milliseconds === '000' ? '' : `.${milliseconds}`}${sign}${hours}:${minutes}`;
+}
+
+/**
  * The instant a clock in `timeZone` shows as this day and time (`HH:mm` or
  * `HH:mm:ss`; no time is the zone's midnight). In the hour the clocks repeat
  * in autumn, the second pass is taken; a time the clocks skip in spring reads

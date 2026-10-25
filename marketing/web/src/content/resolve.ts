@@ -42,6 +42,14 @@ import knowledgeEn from './features/knowledge/en';
 import knowledgeFr from './features/knowledge/fr';
 import knowledgeDe from './features/knowledge/de';
 import knowledgeEs from './features/knowledge/es';
+import contractsEn from './features/contracts/en';
+import contractsFr from './features/contracts/fr';
+import contractsDe from './features/contracts/de';
+import contractsEs from './features/contracts/es';
+import incidentsEn from './features/incidents/en';
+import incidentsFr from './features/incidents/fr';
+import incidentsDe from './features/incidents/de';
+import incidentsEs from './features/incidents/es';
 import aiEn from './features/ai/en';
 import aiFr from './features/ai/fr';
 import aiDe from './features/ai/de';
@@ -145,6 +153,8 @@ const FEATURE_MAP: Record<DeepDiveSlug, Record<Locale, FeatureContent>> = {
   'it-landscape': { en: itLandscapeEn, fr: itLandscapeFr, de: itLandscapeDe, es: itLandscapeEs },
   portfolio: { en: portfolioEn, fr: portfolioFr, de: portfolioDe, es: portfolioEs },
   knowledge: { en: knowledgeEn, fr: knowledgeFr, de: knowledgeDe, es: knowledgeEs },
+  contracts: { en: contractsEn, fr: contractsFr, de: contractsDe, es: contractsEs },
+  incidents: { en: incidentsEn, fr: incidentsFr, de: incidentsDe, es: incidentsEs },
   ai: { en: aiEn, fr: aiFr, de: aiDe, es: aiEs },
 };
 

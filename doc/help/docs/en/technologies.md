@@ -14,13 +14,13 @@ KANAP describes your landscape in three boxes:
 
 A server carries technologies. An application is hosted on servers and depends on technologies.
 
-Create a technology when people do not work in the product itself, yet other applications fail or become exposed when it fails. Keep a record as an application when business users log in to it and use it for their work.
+Record an application for what you manage as a service, with its owners, criticality, contracts and costs. Record a technology for a product installed on your servers, followed through its versions, end of support dates and vulnerabilities. People rarely work in a technology itself, yet other applications fail or become exposed when it fails. One product can be both: see VMware vSphere below.
 
 A few examples:
 
 - **Entra ID**: a **SaaS** technology of the **Directory and identity** family, published by Microsoft. It runs on none of your servers. The applications that sign users in through it declare it.
 - **Active Directory**: an **On-prem** technology of the same family, carried by your domain controllers. The applications that use it declare it.
-- **vSphere**: an **On-prem** technology carried by the vCenter virtual machine and by the hosts.
+- **VMware vSphere**: an **On-prem** technology installed on the vCenter server, while the hosts carry ESXi and the virtualization service is tracked as an application.
 - **SQL Server**: one technology with one line per version in use (2016, 2019, 2022). Each server carries its own version, so the end of support report can name the servers still on an old one.
 - **Windows Server**: a technology of the **Operating system** family. Each server records its version, and that technology is the server's operating system. See [Operating systems](#operating-systems).
 - **A SaaS application**: no technology to record. The publisher maintains what it runs on.

@@ -27,7 +27,7 @@ Die Karte verwendet ein kraftgerichtetes Graph-Layout, in dem:
 | **Cluster** | Abgerundetes Rechteck, gestrichelter Rand | Cyan | Gruppen von Servern, die als eine einzige logische Einheit fungieren |
 | **Entitäten** | Pillen- / Stadionform | Orange | Logische Endpunkte (externe Systeme, SaaS-Dienste) |
 
-Cluster-Mitglieder erscheinen als separate Server-Knoten mit gestrichelten Indikatorlinien, die sie mit ihrem übergeordneten Cluster-Knoten verbinden.
+Ein Cluster bringt seine Mitglieder in Betrieb mit: Jedes ist ein Server-Knoten, mit dem Cluster durch eine gestrichelte Linie verbunden. Siehe [Cluster-Visualisierung](#cluster-visualization).
 
 ---
 
@@ -119,7 +119,7 @@ Klicken Sie auf einen Server- oder Cluster-Knoten, um seine Verbindungen hervorz
 
 - **Server-Typ**, **Server-Standort**, **Betriebssystem**, **Netzwerksegment**, **IP-Adresse**
 - **Zugewiesene Anwendungen**: Apps, die auf diesem Server laufen, gruppiert nach Umgebung. Bei einem Mitglied zeigt eine seinem Cluster zugeordnete App „über“ und den Namen des Clusters. Klicken Sie auf einen App-Namen, um sie zu öffnen.
-- Schaltfläche **Server bearbeiten** oder **Cluster anzeigen**, um den Arbeitsbereich zu öffnen. **Cluster anzeigen** öffnet den Cluster auf seinem Reiter **Abhängigkeiten**, wo seine Mitglieder verwaltet werden
+- Schaltfläche **Server bearbeiten** oder **Cluster anzeigen**, um den Arbeitsbereich zu öffnen. **Cluster anzeigen** öffnet den Cluster auf seinem Reiter **Betrieb**, wo seine Mitglieder verwaltet werden
 
 Klicken Sie auf einen Entitätsknoten, um seinen Typ und seine Umgebung zu sehen.
 
@@ -155,13 +155,14 @@ Die Karte unterstützt URL-Parameter für die gemeinsame Nutzung bestimmter Ansi
 
 ---
 
-## Cluster-Visualisierung
+## Cluster-Visualisierung { #cluster-visualization }
 
 Cluster erscheinen als unterscheidbare Knoten mit einem gestrichelten cyanfarbenen Rand:
 
-- Cluster-Mitglieder erscheinen als separate Knoten, die mit ihrem übergeordneten Cluster durch gestrichelte Indikatorlinien verbunden sind
-- Bei der Filterung mit Tiefe=0 werden sowohl die ausgewählten Member-Server als auch ihre übergeordneten Cluster angezeigt
-- Member-Server behalten ihre individuellen Server-zu-Server-Verbindungen zusätzlich zu den eigenen Verbindungen des Clusters
+- Ein Cluster auf der Karte zeigt seine Mitglieder in Betrieb, mit ihm durch gestrichelte Linien verbunden, auch wenn keine Verbindung sie nennt. Eine Verbindung auf dem Cluster gilt für jedes von ihnen. Siehe [Verbindungen auf einem Cluster](connections.md#connections-on-a-cluster)
+- Ab mehr als zehn Mitgliedern werden die Mitglieder, die keine Verbindung nennt, eingeklappt. Der Cluster zeigt **+N** nach seiner Umgebung, und sein Tooltip nennt die Zahl der ausgeblendeten Mitglieder. Ein in **Server** gewähltes Mitglied bleibt immer sichtbar
+- Ein in **Server** gewähltes Mitglied bringt die Verbindungen seiner Cluster mit: Seine Cluster gelten ebenfalls als gewählt
+- Mitglieder behalten ihre eigenen Verbindungen zusätzlich zu denen des Clusters
 
 ---
 

@@ -7,15 +7,12 @@ Las Conexiones documentan las rutas de red a nivel de infraestructura entre serv
 Navegue a **Panorama IT > Conexiones** para ver su registro de conexiones. Haga clic en **Añadir conexión** para crear su primera entrada.
 
 **Campos obligatorios**:
-  - **ID de conexión**: Un identificador único (p. ej., `CONN-WEB-DB-001`)
   - **Nombre**: Un nombre descriptivo
-  - **Tipo de conexión**: Servidor a servidor o Multi-servidor
-  - **Origen** / **Destino**: Una entidad, clúster o servidor en cada extremo (para Servidor a servidor)
+  - **Topología**: Servidor a servidor o Multi-servidor
+  - **Endpoints**: Un origen y un destino (Servidor a servidor), o al menos dos servidores (Multi-servidor)
   - **Protocolos**: Al menos un protocolo de red
 
-**Muy recomendados**:
-  - **Propósito**: Por qué existe esta conexión
-  - **Ciclo de vida**: Estado actual
+KANAP da a cada conexión una referencia, por ejemplo `CONN-12`.
 
 **Consejo**: Las conexiones pueden vincularse a enlaces de interfaz para mostrar qué infraestructura soporta cada integración de aplicaciones.
 
@@ -26,7 +23,7 @@ Navegue a **Panorama IT > Conexiones** para ver su registro de conexiones. Haga 
 La lista proporciona una visión filtrable de todas las conexiones en su registro.
 
 **Columnas predeterminadas**:
-  - **ID de conexión**: Identificador único (haga clic para abrir el espacio de trabajo)
+  - **Referencia**: La referencia de la conexión, por ejemplo `CONN-12` (haga clic para abrir el espacio de trabajo)
   - **Nombre**: Nombre de la conexión (haga clic para abrir el espacio de trabajo)
   - **Topología**: Servidor a servidor o Multi-servidor
   - **Origen** / **Destino**: Los puntos de conexión
@@ -36,7 +33,7 @@ La lista proporciona una visión filtrable de todas las conexiones en su registr
   - **PII**: Si datos personales atraviesan esta conexión
   - **Riesgo**: Manual o Derivado (muestra el número de interfaces vinculadas)
   - **Ciclo de vida**: Estado actual
-  - **Creado**: Cuándo se creó el registro
+  - **Creado el**: Cuándo se creó el registro
 
 **Columnas adicionales** (mediante el selector de columnas):
   - **Servidores**: Conteo de servidores en una conexión multi-servidor
@@ -55,99 +52,70 @@ La lista proporciona una visión filtrable de todas las conexiones en su registr
 
 ---
 
-## Tipos de conexión
+## Tipos de conexión { #connection-types }
 
 ### Servidor a servidor
 
-Una conexión directa entre dos puntos de conexión específicos. Cada lado puede ser un servidor, un clúster o una entidad con nombre:
+Una conexión directa entre dos extremos. Cada lado es un servidor, un clúster o una entidad:
 
-- **Origen**: Donde se origina el tráfico: seleccione un servidor, clúster o entidad
-- **Destino**: Donde termina el tráfico: mismas opciones
-- No puede seleccionar tanto un servidor como una entidad para el mismo lado; elija uno u otro
-
-Si un punto de conexión es un clúster, una nota le recordará que los hosts miembros se gestionan en el espacio de trabajo de Servidores.
+- **Origen**: Donde se origina el tráfico
+- **Destino**: Donde termina el tráfico
+- Un lado lleva un solo servidor, clúster o entidad
+- El origen y el destino no pueden ser el mismo activo
 
 ### Multi-servidor
 
-Una conexión que involucra múltiples servidores (p. ej., clústeres con balanceo de carga o topologías en malla):
+Una conexión entre varios servidores, por ejemplo una replicación entre nodos o una malla. Seleccione al menos dos servidores o clústeres.
 
-- Seleccione al menos dos servidores del selector de **Servidores conectados**
-- Utilice **Capas** para definir la ruta entre ellos
+### Conexiones en un clúster { #connections-on-a-cluster }
+
+Un origen, un destino, un servidor de una conexión multi-servidor o el equipo de un salto puede ser un clúster. La conexión vale entonces para los miembros en servicio del clúster. Un miembro añadido más tarde también la recibe. Un miembro que sale del clúster la pierde. Un miembro retirado no recibe nada, y un clúster retirado no transmite nada.
+
+Los selectores marcan un clúster con un icono y listan sus miembros bajo su nombre.
+
+Cuando elige un servidor que pertenece a un clúster, KANAP pregunta **¿Conectar con el clúster?**. **Conectar con el clúster** pone el clúster en la conexión, para todos sus miembros. **Solo este servidor** mantiene el servidor. KANAP no pregunta cuando el otro lado ya es ese clúster o uno de sus miembros: la conexión se queda en el servidor.
+
+Una lista multi-servidor que contiene un clúster y uno de sus miembros solo conserva el clúster. Un mensaje nombra los miembros quitados de la lista. Una lista debe conservar al menos dos servidores.
+
+La pestaña [Red](assets.md#network) de cada miembro lista las conexiones de sus clústeres, y el [Mapa de conexiones](connection-map.md) dibuja los miembros de un clúster.
 
 ---
 
 ## El espacio de trabajo de Conexiones
 
-Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene cuatro pestañas: **Visión general**, **Capas**, **Criticidad y conformidad** e **Interfaces relacionadas**.
+Haga clic en una fila para abrir el espacio de trabajo. Tiene dos pestañas: **Vista general** y **Ruta**. El panel de propiedades de la derecha contiene **Ciclo de vida**, **Topología**, **Modo de riesgo**, **Criticidad**, **Clasificación de datos**, **Contiene PII** y **Creado el**. Los cambios se guardan automáticamente.
 
-**Eliminar**, un icono de papelera en el encabezado, elimina la conexión tras una confirmación (`infrastructure:member`). La confirmación cuenta los enlaces de interfaz de los que se desvincula. Las interfaces en sí se conservan.
+**Eliminar**, un icono de papelera en el encabezado, elimina la conexión tras una confirmación (`infrastructure:member`). La confirmación cuenta los enlaces de interfaz de los que se desvincula. Las interfaces se conservan.
 
-### Visión general
+### Vista general
 
-La pestaña Visión general captura la identidad y topología de la conexión.
+- **Descripción**: Por qué existe esta conexión y qué transporta
+- **Endpoints**: El origen y el destino, o los servidores de una conexión multi-servidor. Consulte [Tipos de conexión](#connection-types)
+- **Protocolos**: Uno o varios protocolos de red, de su configuración de tipos de conexión, con sus puertos habituales
+- **Derivación del riesgo**: En modo de riesgo derivado, las interfaces de las que viene el riesgo, con su criticidad, su clasificación de datos y su PII
+- **Interfaces asociadas**: Los enlaces de interfaz vinculados a esta conexión. **Asociar existente** vincula otro
 
-**Qué puede editar**:
-  - **ID de conexión**: Identificador único
-  - **Nombre**: Nombre visible
-  - **Propósito**: Por qué existe esta conexión (texto libre)
-  - **Tipo de conexión**: Servidor a servidor o Multi-servidor
-  - **Origen** / **Destino**: Para Servidor a servidor, seleccione un servidor, clúster o entidad desde un desplegable agrupado
-  - **Servidores conectados**: Para Multi-servidor, busque y seleccione dos o más servidores
-  - **Protocolos**: Uno o más protocolos de red (tomados de su configuración de Tipos de conexión)
-  - **Ciclo de vida**: Estado actual
-  - **Notas**: Contexto adicional
+### Ruta
 
-Cuando selecciona protocolos, el sistema muestra sus puertos típicos como referencia.
+La pestaña Ruta documenta la ruta de red de la conexión, salto a salto: proxies inversos, cortafuegos, balanceadores de carga. Cree primero la conexión para añadir saltos.
 
----
+Cada salto tiene:
 
-### Capas
+  - Una función, por ejemplo Cortafuegos, Proxy inverso o Balanceador de carga
+  - **Equipo**: Un servidor, un clúster o una entidad, o nada cuando el equipo no está documentado. Un servidor que pertenece a un clúster plantea la misma pregunta que un extremo. Consulte [Conexiones en un clúster](#connections-on-a-cluster)
+  - **Protocolos (sustitución)** y **Puerto**: Cuando difieren de los de la conexión
+  - **Notas**
 
-La pestaña Capas le permite definir una ruta de red ordenada de hasta tres saltos. Es útil para documentar proxies inversos, firewalls o enrutamiento intermedio.
+**Añadir salto** añade un salto al final. Las flechas reordenan los saltos y la papelera quita uno. Cada cambio se guarda al instante.
 
-**Qué captura cada capa**:
-  - **Orden**: Número de secuencia (1 a 3)
-  - **Nombre**: Una etiqueta para la capa (p. ej., `direct`, `reverse_proxy`, `firewall`)
-  - **Origen** / **Destino**: Una entidad, clúster o servidor en cada extremo del salto
-  - **Protocolos**: Qué protocolos se usan en esta capa
-  - **Puerto personalizado**: Puerto personalizado si es diferente al predeterminado del protocolo (se autocompleta al seleccionar un protocolo)
-  - **Notas**: Notas específicas de la capa
+### Riesgo
 
-Las capas se guardan independientemente de la pestaña Visión general. Utilice el botón **Guardar capas** para persistir sus cambios.
+**Modo de riesgo**, en el panel de propiedades:
 
-**Consejo**: Debe guardar la conexión antes de poder añadir capas.
+  - **Manual**: Usted fija directamente la criticidad, la clasificación de datos y la PII
+  - **Derivado**: Los valores vienen de los enlaces de interfaz vinculados. Los campos son de solo lectura y muestran los valores más altos entre las interfaces vinculadas
 
----
-
-### Criticidad y conformidad
-
-Esta pestaña controla la clasificación de riesgo y la configuración de protección de datos.
-
-**Modo de riesgo**:
-  - **Manual**: Usted establece la criticidad, clase de datos y PII directamente
-  - **Derivado**: Los valores se agregan desde los enlaces de interfaz vinculados: la pestaña muestra los valores efectivos y enumera una vez cada interfaz que contribuye, con los entornos en los que está enlazada
-
-**Campos**:
-  - **Criticidad**: un nivel de criticidad de negocio del catálogo de su organización, en [Clasificaciones y continuidad](it-ops-settings.md#clasificaciones-y-continuidad). Los niveles por defecto son Crítica, Alta, Moderada y Baja
-  - **Clase de datos**: Tomada de la configuración de clasificación de datos de su organización
-  - **Contiene PII**: Si datos personales atraviesan la conexión
-
-Cuando el modo de riesgo es Derivado, los campos de criticidad, clase de datos y PII son de solo lectura y reflejan los valores más altos de todas las interfaces vinculadas.
-
----
-
-### Interfaces relacionadas
-
-Esta pestaña muestra qué enlaces de interfaz están vinculados a esta conexión.
-
-**Qué verá**:
-  - **Interfaz**: Nombre y código, con chips de criticidad / clase de datos / PII
-  - **Entorno**: Entorno del enlace y tipo de ruta
-  - **Punto de conexión de origen** / **Punto de conexión de destino**: Los puntos de conexión del enlace
-  - **Ciclo de vida**: Estado del ciclo de vida de la interfaz
-  - **Acciones**: Un botón para navegar al espacio de trabajo de la interfaz
-
-Esta pestaña es de solo lectura. Para vincular un enlace de interfaz a una conexión, utilice el espacio de trabajo de Interfaces o el Mapa de conexiones.
+**Criticidad** usa los niveles de [Clasificaciones y continuidad](it-ops-settings.md#clasificaciones-y-continuidad). Los niveles por defecto son Crítica, Alta, Moderada y Baja. **Clasificación de datos** viene de su configuración de clasificación de datos.
 
 ---
 

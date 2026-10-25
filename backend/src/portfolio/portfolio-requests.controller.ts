@@ -21,6 +21,7 @@ import { createRequestReleaseConnection } from '../common/import-connection';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { resolveToUuid } from '../common/resolve-item-id';
+import { incidentViewerFromRequest } from '../incidents/incident-visibility';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { resolveInlineTenantSlug } from '../common/resolve-inline-tenant-slug';
@@ -348,7 +349,12 @@ export class PortfolioRequestsController {
   async get(@Param('id') idOrRef: string, @Query() query: any, @Req() req: any) {
     const { id, accessScope } = await this.resolveForAccess(idOrRef, req, 'reader');
     const readsBudget = hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'budget', 'reader');
-    return this.svc.get(id, query, { manager: req?.queryRunner?.manager, accessScope, readsBudget });
+    return this.svc.get(id, query, {
+      manager: req?.queryRunner?.manager,
+      accessScope,
+      readsBudget,
+      viewer: incidentViewerFromRequest(req),
+    });
   }
 
   @UseGuards(PermissionGuard)
@@ -1033,6 +1039,7 @@ export class PortfolioRequestsController {
     const tenantId = req?.tenant?.id ?? '';
     return this.svc.convertFromTask(taskId, body ?? {}, tenantId, req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
+      viewer: incidentViewerFromRequest(req),
     });
   }
 }

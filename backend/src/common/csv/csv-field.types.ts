@@ -119,6 +119,13 @@ export interface CsvEntityConfig {
   upsertKeyIgnoresOuterSpaces?: boolean;
   /** Field definitions */
   fields: CsvFieldDefinition[];
+  /**
+   * The header of a column in the file's language, by `csvColumn` (`{ severity: { fr: 'Gravité' } }`).
+   * The export writes it, and the import accepts it as well as the technical `csvColumn` (`severity`),
+   * so an exported file reads back whatever language it was written in. A language without a text
+   * keeps the technical header.
+   */
+  headerLabels?: Record<string, Partial<Record<CsvLanguage, string>>>;
   /** Export presets (e.g., 'basic', 'full') */
   exportPresets?: CsvExportPreset[];
   /** Relation handlers for complex relationships */

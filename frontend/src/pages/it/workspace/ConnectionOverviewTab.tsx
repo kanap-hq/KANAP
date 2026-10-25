@@ -28,6 +28,8 @@ const MarkdownEditor = React.lazy(() => import('../../../components/MarkdownEdit
 import ConnectionEndpointPicker from './ConnectionEndpointPicker';
 import ConnectionLinkInterfacesDialog from './ConnectionLinkInterfacesDialog';
 import ConnectionProtocolsTable, { type ConnectionProtocol } from './ConnectionProtocolsTable';
+import ConnectionServersPicker from './ConnectionServersPicker';
+import type { ServerOption } from '../../../components/fields/serverOptionRender';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { legTypeLabel } from '../../../utils/interfaceLegType';
@@ -35,12 +37,6 @@ import { classificationText } from '../../../utils/applicationClassification';
 
 const NOTES_DEBOUNCE_MS = 900;
 
-
-type AssetSummary = {
-  id: string;
-  name: string;
-  asset_reference?: string | null;
-};
 
 type ConnectionTypeOption = { code: string; label: string; typicalPorts: string };
 
@@ -72,7 +68,7 @@ type Props = {
   source: { asset_id: string | null; entity_code: string | null };
   destination: { asset_id: string | null; entity_code: string | null };
   multiServerIds: string[];
-  assetMap: Record<string, AssetSummary>;
+  assetMap: Record<string, ServerOption>;
   protocols: ConnectionProtocol[];
   riskMode: 'manual' | 'derived';
   linkedInterfaces: LinkedInterfaceRow[];
@@ -83,8 +79,9 @@ type Props = {
   onEndpointChange: (
     side: 'source' | 'destination',
     next: { asset_id: string | null; entity_code: string | null },
+    asset?: ServerOption,
   ) => void;
-  onMultiServerChange: (nextIds: string[]) => void;
+  onMultiServerChange: (next: ServerOption[]) => void;
   onProtocolsChange: (next: ConnectionProtocol[]) => void;
   onLinkedInterfacesChanged: () => void;
 };
@@ -147,10 +144,6 @@ export default function ConnectionOverviewTab({
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const baselineRef = React.useRef(initialDescription);
 
-  const [multiSearch, setMultiSearch] = React.useState('');
-  const [multiOptions, setMultiOptions] = React.useState<AssetSummary[]>([]);
-  const [multiLoading, setMultiLoading] = React.useState(false);
-
   const [linkDialogOpen, setLinkDialogOpen] = React.useState(false);
   const [unlinkingLinkId, setUnlinkingLinkId] = React.useState<string | null>(null);
   const [unlinkError, setUnlinkError] = React.useState<string | null>(null);
@@ -176,28 +169,6 @@ export default function ConnectionOverviewTab({
     setDescription(initialDescription);
     baselineRef.current = initialDescription;
   }, [initialDescription, connectionId]);
-
-  React.useEffect(() => {
-    if (topology !== 'multi_server') return;
-    let cancelled = false;
-    const handle = setTimeout(async () => {
-      setMultiLoading(true);
-      try {
-        const res = await api.get<{ items: AssetSummary[] }>('/assets', {
-          params: { q: multiSearch || undefined, limit: 50, sort: 'name:ASC' },
-        });
-        if (!cancelled) setMultiOptions(res.data.items || []);
-      } catch {
-        if (!cancelled) setMultiOptions([]);
-      } finally {
-        if (!cancelled) setMultiLoading(false);
-      }
-    }, 200);
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
-    };
-  }, [multiSearch, topology]);
 
   const persistDescription = React.useCallback(
     async (next: string) => {
@@ -236,15 +207,16 @@ export default function ConnectionOverviewTab({
     };
   }, []);
 
-  const selectedMultiOptions = React.useMemo(() => {
-    return multiServerIds.map((id) => {
-      const fromOptions = multiOptions.find((o) => o.id === id);
-      if (fromOptions) return fromOptions;
-      const fromMap = assetMap[id];
-      if (fromMap) return { id, name: fromMap.name, asset_reference: fromMap.asset_reference || null };
-      return { id, name: id.slice(0, 8), asset_reference: null };
-    });
-  }, [multiServerIds, multiOptions, assetMap]);
+  const multiServerOptions = React.useMemo(
+    () => multiServerIds.map((id) => assetMap[id] ?? {
+      id,
+      name: id.slice(0, 8),
+      environment: '',
+      kind: '',
+      provider: '',
+    }),
+    [multiServerIds, assetMap],
+  );
 
   const selectedProtocols = React.useMemo(
     () =>
@@ -328,53 +300,25 @@ export default function ConnectionOverviewTab({
               label={t('workspace.connection.layers.source')}
               value={source}
               disabled={!canManage}
-              initialAssetName={source.asset_id ? assetMap[source.asset_id]?.name || null : null}
-              initialAssetReference={source.asset_id ? assetMap[source.asset_id]?.asset_reference || null : null}
-              onChange={(next) => onEndpointChange('source', next)}
+              initialAsset={source.asset_id ? assetMap[source.asset_id] : null}
+              onChange={(next, asset) => onEndpointChange('source', next, asset)}
             />
             <ConnectionEndpointPicker
               label={t('workspace.connection.layers.destination')}
               value={destination}
               disabled={!canManage}
-              initialAssetName={destination.asset_id ? assetMap[destination.asset_id]?.name || null : null}
-              initialAssetReference={destination.asset_id ? assetMap[destination.asset_id]?.asset_reference || null : null}
-              onChange={(next) => onEndpointChange('destination', next)}
+              initialAsset={destination.asset_id ? assetMap[destination.asset_id] : null}
+              onChange={(next, asset) => onEndpointChange('destination', next, asset)}
             />
           </Box>
         ) : (
           <Box sx={{ maxWidth: 760 }}>
             <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 0.25 }}>{t('workspace.connection.overview.serversMin')}</Typography>
-            <Autocomplete
-              size="small"
-              multiple
+            <ConnectionServersPicker
+              value={multiServerOptions}
+              onChange={onMultiServerChange}
               disabled={!canManage}
-              options={multiOptions}
-              loading={multiLoading}
-              getOptionLabel={(opt) => `${opt.asset_reference ? `${opt.asset_reference} · ` : ''}${opt.name}`}
-              isOptionEqualToValue={(opt, val) => opt.id === val.id}
-              value={selectedMultiOptions}
-              onChange={(_, val) => onMultiServerChange(val.map((v) => v.id))}
-              onInputChange={(_, val, reason) => {
-                if (reason !== 'reset') setMultiSearch(val);
-              }}
-              renderTags={(value, getTagProps) =>
-                value.map((opt, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={opt.id}
-                    label={`${opt.asset_reference ? `${opt.asset_reference} · ` : ''}${opt.name}`}
-                    size="small"
-                  />
-                ))
-              }
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  variant="standard"
-                  placeholder={t('workspace.connection.overview.addServer')}
-                  sx={{ '& input': { fontSize: 13, padding: '4px 0 !important' } }}
-                />
-              )}
+              placeholder={t('workspace.connection.overview.addServer')}
             />
             {multiServerIds.length < 2 && (
               <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.5 }}>
