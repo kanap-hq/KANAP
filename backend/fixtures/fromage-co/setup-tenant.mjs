@@ -1006,9 +1006,13 @@ async function ensureLocations() {
 }
 
 // Notes this fixture wrote before lot C3, replaced on a tenant loaded by an older fixture. A note
-// someone edited by hand is never overwritten.
+// someone edited by hand is never overwritten. The cluster note was written with two hosts before
+// lot C3 and with the third host after the upgrade; both values are the fixture's own.
 const REPLACED_ASSET_NOTES = {
-  'PAR-VSPHERE-CL01': ['vSphere cluster of PAR-ESX-01 and PAR-ESX-02 — HA and DRS'],
+  'PAR-VSPHERE-CL01': [
+    'vSphere cluster of PAR-ESX-01 and PAR-ESX-02 — HA and DRS',
+    'vSphere cluster of PAR-ESX-01, PAR-ESX-02 and PAR-ESX-05 — HA and DRS',
+  ],
   'PAR-SAN-01': ['NetApp FAS2750 — 50TB usable, primary SAN for all VMs'],
 };
 
@@ -2116,7 +2120,7 @@ const TECHNOLOGIES = [
   },
   {
     catalog: 'vsphere',
-    installed: [['PAR-ESX-01', '8.0', null], ['PAR-ESX-02', '8.0', null], ['PAR-ESX-05', '8.0', null], ['PAR-VCENTER-01', '8.0', 'vCenter Server']],
+    installed: [['PAR-VCENTER-01', '8.0', 'vCenter Server']],
     contracts: ['Broadcom VMware ELA'],
     owners: [['marc.petit@fromage-co.example', 'it']],
   },
@@ -2231,6 +2235,9 @@ async function ensureTechnologies() {
   info('Ensuring technologies');
   const assets = await getAll('/assets?limit=1000');
   const assetId = (name) => assets.find((item) => item.name === name)?.id ?? '';
+  // The servers of the dataset: an older fixture installed a technology on some of them that the
+  // list above no longer declares (VMware vSphere on the vSphere hosts), and those links go.
+  const fixtureServers = new Set(readCsv('18-assets.csv').map((row) => row.name));
   for (const spec of TECHNOLOGIES) {
     const adopted = await apiPost('/technologies/adopt', { catalog_key: spec.catalog });
     const technologyId = adopted?.technology?.id;
@@ -2238,13 +2245,24 @@ async function ensureTechnologies() {
       warn(`Catalog entry '${spec.catalog}' could not be adopted`);
       continue;
     }
-    for (const [server, version, notes] of spec.installed ?? []) {
+    const installed = spec.installed ?? [];
+    for (const [server, version, notes] of installed) {
       const id = assetId(server);
       if (!id) {
         warn(`Asset '${server}' not found for '${spec.catalog}'`);
         continue;
       }
       await apiPost(`/technologies/${technologyId}/assets`, { asset_id: id, version_label: version ?? undefined, notes: notes ?? undefined });
+    }
+    // Only an installation on one of the dataset's servers counts: a technology carried from
+    // another server is another row (`kind: carried`), and an asset created outside the fixture
+    // keeps whatever someone installed on it.
+    const declared = new Set(installed.map(([server]) => server));
+    for (const row of items(await apiGet(`/technologies/${technologyId}/assets`))) {
+      if (row.kind !== 'installed' || !row.link_id) continue;
+      if (!fixtureServers.has(row.asset_name) || declared.has(row.asset_name)) continue;
+      await apiDelete(`/technologies/${technologyId}/assets/${row.link_id}`);
+      ok(`Removed the installation of '${spec.catalog}' on '${row.asset_name}'`);
     }
     if (spec.declaredBy?.length) {
       const ids = await appIdsFromNames(spec.declaredBy);

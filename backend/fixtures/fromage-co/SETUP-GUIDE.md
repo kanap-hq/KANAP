@@ -122,8 +122,10 @@ its own: load the current dataset on a new tenant instead.
    `PAR-ESX-05`, replaces the old notes of the cluster and the array, brings
    the VM links back to the cluster, removes double containers, replaces the
    rows of CheeseTrack, Sage X3 and VMware vSphere on the cluster members by
-   one row on the cluster, and turns `PAR-FW-01` and `PAR-FW-02` into plain
-   firewalls.
+   one row on the cluster, turns `PAR-FW-01` and `PAR-FW-02` into plain
+   firewalls, and removes the VMware vSphere installations older versions put
+   on the cluster hosts: the vCenter carries that technology, the hosts keep
+   ESXi.
 7. **Service Desk Docs**: a knowledge library with five published guides
    (VPN, SAP access, CaveGuard alerts, guest Wi-Fi, label printers). The
    documents are in `docs/*.md`.
