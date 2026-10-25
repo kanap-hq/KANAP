@@ -106,6 +106,7 @@
   "CSV_STATUS_DATE_PASSED": "Der Status ist enabled, aber das Gültigkeitsende ist überschritten. Leeren Sie das Datum oder setzen Sie den Status auf disabled. Stammt die Datei aus einem älteren Export, exportieren Sie die Daten erneut.",
   "CSV_STATUS_DATE_FUTURE": "Der Status ist disabled, aber das Gültigkeitsende liegt noch in der Zukunft. Setzen Sie den Status auf enabled oder geben Sie ein vergangenes Datum ein.",
   "CSV_IMPORT_FAILED": "Der Import ist fehlgeschlagen: {{reason}}",
+  "CSV_INCIDENT_STATUS_RESERVED": "{{reference}}: Der Status kann durch den Import nicht von \"{{from}}\" auf \"{{to}}\" wechseln. Nur ein Registeradministrator darf das; verwenden Sie Wieder öffnen oder Vorfall abbrechen in der Anwendung.",
   "CSV_TECHNOLOGY_NOT_ADOPTED": "Unbekannte Technologie „{{value}}“. Übernehmen Sie sie zuerst aus dem Katalog.",
   "CSV_NAME_AMBIGUOUS": "Mehrere Einträge heißen „{{value}}“.",
   "CSV_LINK_DUPLICATE": "Diese Verknüpfung steht bereits in Zeile {{firstRow}}.",

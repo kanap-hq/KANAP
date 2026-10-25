@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/com
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { textSortKey, type TextSortKey } from '../../common/list-sort';
-import { Incident, IncidentStatus } from '../incident.entity';
+import { Incident, INCIDENT_STATUS_RANK, IncidentStatus } from '../incident.entity';
 import { IncidentChangedFields } from '../incident-entry.entity';
 import { AuditService } from '../../audit/audit.service';
 import { ItemNumberService } from '../../common/item-number.service';
@@ -16,9 +16,6 @@ import { binder } from '../../common/relations/related-objects';
 import { assertSetFilterModes } from '../../common/ag-grid-filtering';
 
 const DEFAULT_SORT: Sort = { field: 'detected_at', direction: 'DESC' };
-
-/** Forward-only lifecycle. Backward moves go through reopen; cancelled only through cancel. */
-const STATUS_RANK: Record<IncidentStatus, number> = { open: 0, in_progress: 1, resolved: 2, closed: 3, cancelled: 4 };
 
 const OWNER_NAME = userNameSql('o');
 const REPORTER_NAME = userNameSql('r');
@@ -562,7 +559,7 @@ export class IncidentsService extends IncidentsBaseService {
     const incident = await this.lockVisibleIncident(mg, id, tenantId, opts?.viewer);
     this.assertEditable(incident);
 
-    if (dto.status !== undefined && dto.status !== incident.status && STATUS_RANK[dto.status] < STATUS_RANK[incident.status]) {
+    if (dto.status !== undefined && dto.status !== incident.status && INCIDENT_STATUS_RANK[dto.status] < INCIDENT_STATUS_RANK[incident.status]) {
       throw new BadRequestException('Status cannot move backwards. Use Reopen instead.');
     }
     await this.ensureUsers([dto.reporter_user_id, dto.owner_user_id], mg, tenantId);

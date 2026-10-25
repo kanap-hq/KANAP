@@ -62,4 +62,13 @@ describe('IncidentsPage CSV', () => {
       expect(errors.CSV_HEADER_ZONELESS_DATE_TIMES, lang).toContain('{{example}}');
     }
   });
+
+  it('words the import lifecycle refusal in each language', async () => {
+    for (const lang of ['en', 'fr', 'de', 'es']) {
+      const errors = (await import(`../../locales/${lang}/errors.json`)).default as Record<string, string>;
+      for (const placeholder of ['{{reference}}', '{{from}}', '{{to}}']) {
+        expect(errors.CSV_INCIDENT_STATUS_RESERVED, `${lang} ${placeholder}`).toContain(placeholder);
+      }
+    }
+  });
 });

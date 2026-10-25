@@ -9,7 +9,7 @@ import { allocateItemNumbers } from '../common/item-number.service';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { findCatalogOption, requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
 import { sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
-import { INCIDENT_SEVERITIES, INCIDENT_STATUSES } from './incident.entity';
+import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, isReservedIncidentStatusMove } from './incident.entity';
 import { incidentVisibleToViewer, type IncidentViewer } from './incident-visibility';
 
 /**
@@ -32,7 +32,8 @@ import { incidentVisibleToViewer, type IncidentViewer } from './incident-visibil
 
 const REF_INPUT_RE = /^(?:INC[-\s]?)?(\d+)$/i;
 
-const IMPORT_ENTRY_CONTENT = 'Imported from CSV';
+/** Reason written on the entries an import creates (inserted rows, Reopen and Cancel moves). */
+export const IMPORT_ENTRY_CONTENT = 'Imported from CSV';
 
 /** Rows inserted by the current import, marked in beforeCommit, journalled in afterCommit. */
 const insertedByImport = new WeakSet<object>();
@@ -83,6 +84,14 @@ export function takePreviousIncidentStatus(entity: object): string | null {
 function incidentLabel(entity: any): string {
   return entity.item_number ? `INC-${entity.item_number}` : `"${entity.title ?? ''}"`;
 }
+
+/** The refusal of a status move only an administrator may make by import. */
+export function importStatusReservedMessage(label: string, from: string, to: string): string {
+  return `${label}: status cannot change from "${from}" to "${to}" through import. `
+    + 'Only a register administrator can do that; use Reopen or Cancel in the app instead.';
+}
+
+const IMPORT_STATUS_RESERVED_CODE = 'CSV_INCIDENT_STATUS_RESERVED';
 
 function importViewer(context: CsvImportContext): IncidentViewer {
   return context.viewer ?? { userId: context.userId ?? null, isAdmin: context.isAdmin === true };
@@ -421,13 +430,32 @@ export const incidentCsvConfig: CsvEntityConfig = {
    * Blank cells a full replace emptied, by the rules of beforeCommit: a blank boolean is false,
    * a blank confidential flag keeps the stored one (a new row gets false there). Applied here
    * too, so the preflight's check of emptied columns sees the same values as the load.
+   *
+   * The forward-only lifecycle is checked here, on the matched stored row: a status that moves
+   * backwards, or to `cancelled`, is reserved to `incidents:admin` (Reopen or Cancel). A
+   * contributor gets a row error, with the INC-N reference, in both the preflight and the load.
    */
-  afterValidate: async (rows) => {
+  afterValidate: async (rows, context) => {
+    const viewer = importViewer(context);
     for (const row of rows) {
       for (const column of ['personal_data_affected', 'authority_notification_required']) {
         if (row.parsed[column] === null) row.parsed[column] = false;
       }
       if (row.parsed.confidential === null) delete row.parsed.confidential;
+
+      // insert_only skips the matched rows; they cannot move a stored status.
+      if (viewer.isAdmin || context.params.operation === 'insert_only' || row.isInsert || row.errors.length > 0) continue;
+      const previous = row.existingEntity?.status;
+      const next = row.parsed.status;
+      if (!isReservedIncidentStatusMove(next, previous)) continue;
+      const reference = incidentLabel(row.existingEntity);
+      row.errors.push({
+        row: row.rowNumber,
+        column: 'status',
+        message: importStatusReservedMessage(reference, previous, next),
+        code: IMPORT_STATUS_RESERVED_CODE,
+        params: { reference, from: String(previous), to: String(next) },
+      });
     }
   },
 
@@ -557,6 +585,11 @@ export const incidentCsvConfig: CsvEntityConfig = {
       }
       for (const entity of updateEntities) {
         const row = byId.get(entity.id);
+        // The authoritative check, on the locked pre-image: afterValidate saw the
+        // row before the lock, and another transaction may have closed it since.
+        if (row && !viewer.isAdmin && isReservedIncidentStatusMove(entity.status, row.status)) {
+          throw new Error(importStatusReservedMessage(incidentLabel(entity), row.status, String(entity.status)));
+        }
         if (entity.confidential == null) {
           entity.confidential = row?.confidential ?? false;
         }

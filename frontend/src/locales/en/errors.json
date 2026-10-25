@@ -106,6 +106,7 @@
   "CSV_STATUS_DATE_PASSED": "The status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.",
   "CSV_STATUS_DATE_FUTURE": "The status is disabled but the end of validity is still to come. Set the status to enabled or enter a date that has passed.",
   "CSV_IMPORT_FAILED": "The import failed: {{reason}}",
+  "CSV_INCIDENT_STATUS_RESERVED": "{{reference}}: status cannot change from \"{{from}}\" to \"{{to}}\" through import. Only a register administrator can do that; use Reopen or Cancel in the app instead.",
   "CSV_TECHNOLOGY_NOT_ADOPTED": "Unknown technology \"{{value}}\". Adopt it from the catalog first.",
   "CSV_NAME_AMBIGUOUS": "Several records are named \"{{value}}\".",
   "CSV_LINK_DUPLICATE": "This link is already on row {{firstRow}}.",

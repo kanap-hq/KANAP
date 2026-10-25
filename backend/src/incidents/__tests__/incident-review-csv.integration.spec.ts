@@ -685,6 +685,145 @@ async function testClosedIncidentImportIsAllowedAndVersioned() {
 }
 
 // ---------------------------------------------------------------------------
+// 4b. The forward-only lifecycle also holds on import; an admin move is journalled
+// ---------------------------------------------------------------------------
+
+async function readStatus(runner: QueryRunner, incidentId: string): Promise<string> {
+  const rows = await runner.manager.query('SELECT status FROM incidents WHERE id = $1', [incidentId]);
+  return String(rows[0]?.status ?? '');
+}
+
+/** One update row on an existing incident, with the given status and no review change. */
+function statusImportRow(incident: { item_number: number; title: string }, status: string): string {
+  return `${REVIEW_HEADERS}\nINC-${incident.item_number};${incident.title};major;${status};2026-03-10T08:00:00Z;false;short;`;
+}
+
+async function testImportLifecycleGuardAndAdminJournal() {
+  await withFixture(async (runner, f) => {
+    const services = createServices(runner.manager);
+    const adminOpts = { manager: runner.manager, tenantId: f.tenantId, viewer: { userId: f.users.admin, isAdmin: true } };
+    const contributor = importOpts(runner, f, f.users.contributor, false);
+    const admin = importOpts(runner, f, f.users.admin, true);
+
+    const closed = await createIncident(runner, f, services, { title: 'Closed before import' });
+    await services.incidents.update(closed.id, { status: 'closed' }, f.users.admin, adminOpts);
+
+    // A contributor cannot reopen or cancel it by file, and nothing changes.
+    const entriesBefore = await readEntries(runner, f, closed.id);
+    const rowBefore = (await runner.manager.query(
+      'SELECT title, severity, status, detected_at, description FROM incidents WHERE id = $1',
+      [closed.id],
+    ))[0];
+    for (const target of ['open', 'cancelled']) {
+      const result = await services.csv.import(
+        csvFile(statusImportRow(closed, target)),
+        { dryRun: false, mode: 'enrich', operation: 'upsert' },
+        contributor,
+      );
+      assert.equal(result.ok, false, `${target}: a contributor import is refused`);
+      assert.equal(result.errors.length, 1, `${target}: one row error`);
+      assert.equal(result.errors[0].row, 2);
+      assert.equal(result.errors[0].column, 'status');
+      assert.equal(result.errors[0].code, 'CSV_INCIDENT_STATUS_RESERVED');
+      assert.deepEqual(result.errors[0].params, {
+        reference: `INC-${closed.item_number}`,
+        from: 'closed',
+        to: target,
+      });
+      assert.deepEqual(
+        (await runner.manager.query(
+          'SELECT title, severity, status, detected_at, description FROM incidents WHERE id = $1',
+          [closed.id],
+        ))[0],
+        rowBefore,
+        `${target}: the row is unchanged`,
+      );
+      assert.deepEqual(await readEntries(runner, f, closed.id), entriesBefore, `${target}: no journal entry`);
+    }
+
+    // The §3.8 exception is unchanged: a contributor may still correct the review of the closed
+    // incident as long as the row keeps its stored status.
+    const reviewCsv = `${REVIEW_HEADERS}\nINC-${closed.item_number};${closed.title};major;closed;2026-03-10T08:00:00Z;false;short;${cell('## Impact\n\ncorrected by contributor')}`;
+    const reviewResult = await services.csv.import(
+      csvFile(reviewCsv),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      contributor,
+    );
+    assert.deepEqual(reviewResult.errors, []);
+    assert.match((await readReview(runner, f, closed.id)).content_markdown, /corrected by contributor/);
+    assert.equal(await readStatus(runner, closed.id), 'closed');
+
+    // An administrator reopens it: a Reopen-shaped entry, with the import reason.
+    const reopened = await services.csv.import(
+      csvFile(statusImportRow(closed, 'open')),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      admin,
+    );
+    assert.deepEqual(reopened.errors, []);
+    assert.equal(await readStatus(runner, closed.id), 'open');
+    const reopenEntry = (await readEntries(runner, f, closed.id))
+      .find((e: any) => e.kind === 'reopen' && e.content === 'Imported from CSV');
+    assert.ok(reopenEntry, 'the import journals a Reopen-shaped entry');
+    assert.equal(reopenEntry.content, 'Imported from CSV');
+    assert.deepEqual(reopenEntry.changed_fields, { status: { from: 'closed', to: 'open' } });
+
+    // Cancelling a closed incident: a Cancel-shaped entry, with the frozen review version.
+    const toCancel = await createIncident(runner, f, services, { title: 'Closed then cancelled' });
+    await services.incidents.update(toCancel.id, { status: 'closed' }, f.users.admin, adminOpts);
+    const cancelled = await services.csv.import(
+      csvFile(statusImportRow(toCancel, 'cancelled')),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      admin,
+    );
+    assert.deepEqual(cancelled.errors, []);
+    assert.equal(await readStatus(runner, toCancel.id), 'cancelled');
+    const cancelEntry = (await readEntries(runner, f, toCancel.id))
+      .find((e: any) => e.changed_fields?.status?.to === 'cancelled' && e.content === 'Imported from CSV');
+    assert.ok(cancelEntry, 'the import journals a Cancel-shaped entry');
+    assert.equal(cancelEntry.content, 'Imported from CSV');
+    assert.deepEqual(cancelEntry.changed_fields.status, { from: 'closed', to: 'cancelled' });
+    assert.ok(cancelEntry.changed_fields.review_version, 'a cancellation freezes the review');
+
+    // A cancellation from an open incident is reserved too, and journalled the same way.
+    const open = await createIncident(runner, f, services, { title: 'Open then cancelled' });
+    const refused = await services.csv.import(
+      csvFile(statusImportRow(open, 'cancelled')),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      contributor,
+    );
+    assert.equal(refused.ok, false, 'a contributor cannot cancel an open incident by file');
+    assert.equal(await readStatus(runner, open.id), 'open');
+    const cancelledOpen = await services.csv.import(
+      csvFile(statusImportRow(open, 'cancelled')),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      admin,
+    );
+    assert.deepEqual(cancelledOpen.errors, []);
+    const openCancelEntry = (await readEntries(runner, f, open.id))
+      .find((e: any) => e.changed_fields?.status?.to === 'cancelled' && e.content === 'Imported from CSV');
+    assert.ok(openCancelEntry, 'the cancellation is journalled');
+    assert.equal(openCancelEntry.content, 'Imported from CSV');
+    assert.deepEqual(openCancelEntry.changed_fields.status, { from: 'open', to: 'cancelled' });
+
+    // A forward move keeps the existing closure snapshot, with no Reopen or Cancel entry.
+    const forward = await createIncident(runner, f, services, { title: 'Forward to closed' });
+    const closedForward = await services.csv.import(
+      csvFile(statusImportRow(forward, 'closed')),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      contributor,
+    );
+    assert.deepEqual(closedForward.errors, [], 'a contributor may still close an incident by file');
+    assert.equal(await readStatus(runner, forward.id), 'closed');
+    const forwardEntries = await readEntries(runner, f, forward.id);
+    assert.equal(forwardEntries.some((e: any) => e.kind === 'reopen'), false);
+    assert.equal(forwardEntries.some((e: any) => e.content === 'Imported from CSV' && e.kind !== 'system'), false);
+    const closure = forwardEntries.find((e: any) => e.changed_fields?.review_version);
+    assert.ok(closure, 'the closure snapshot is taken as before');
+    assert.deepEqual(closure.changed_fields.status, { from: 'open', to: 'closed' });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // 5. An invisible incident is refused, and a lock conflict rolls the row back
 // ---------------------------------------------------------------------------
 
@@ -1096,6 +1235,7 @@ async function run() {
     await testReviewTemplateFollowsTheCreatorLanguage();
   await testInsertedRowsAreProvisioned();
     await testClosedIncidentImportIsAllowedAndVersioned();
+    await testImportLifecycleGuardAndAdminJournal();
     await testInvisibleIncidentRefused();
     await testLockConflictRollsBackTheUpsert();
     await testClosureSnapshotAndReopen();
