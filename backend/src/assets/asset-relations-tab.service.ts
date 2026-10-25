@@ -23,6 +23,7 @@ import type { IncidentViewer } from '../incidents/incident-visibility';
 import { IncidentRelationsService } from '../incidents/services/incident-relations.service';
 import { auditTableOf, type BudgetNature } from '../spend/budget-nature';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
+import { doubleContainersOf, type DoubleContainer, type ReplacedHostLink } from './placement-rules';
 import { AssetsRelationsService } from './services/assets-relations.service';
 
 /**
@@ -97,10 +98,21 @@ export type AssetRelationsCounts = {
   total: number;
 };
 
+/** A contained asset, with the other containers in service it also has (R3), when any. */
+export type AssetRelatedAsset = RelatedAsset & { also_contained_by?: Array<{ id: string; name: string }> };
+
+/** The answer of a relation write: the placement fields only when the write has something to say. */
+export type AssetRelationWrite = {
+  ok: true;
+  changed: boolean;
+  replaced_host_links?: ReplacedHostLink[];
+  double_containers?: DoubleContainer[];
+};
+
 export type AssetRelationsTab = {
   year: number;
   budget_column: { key: string; label: string };
-  assets: Record<AssetDirection, RelatedAsset[]>;
+  assets: Record<AssetDirection, AssetRelatedAsset[]>;
   budget_lines: RelatedBudgetLine[] | null;
   contracts: RelatedContract[] | null;
   projects: RelatedProject[] | null;
@@ -233,7 +245,7 @@ export class AssetRelationsTabService {
     targetId: string,
     add: boolean,
     ctx: AssetRelationsContext,
-  ): Promise<{ ok: true; changed: boolean }> {
+  ): Promise<AssetRelationWrite> {
     const kind = assetRelationKindOrThrow(kindValue);
     const mg = ctx.manager;
     if (kind === 'budget_lines' || kind === 'contracts' || kind === 'projects') {
@@ -286,10 +298,17 @@ export class AssetRelationsTabService {
     const row = DIRECTION_ROWS[kind];
     const [source, related] = row.outgoing ? [asset.id, id] : [id, asset.id];
     const opts = { manager: mg, tenantId };
-    const changed = add
-      ? await this.relations.addRelation(source, related, row.type, tenantId, userId, opts)
-      : await this.relations.removeRelation(source, related, row.type, tenantId, userId, opts);
-    return { ok: true, changed };
+    if (!add) {
+      const changed = await this.relations.removeRelation(source, related, row.type, tenantId, userId, opts);
+      return { ok: true, changed };
+    }
+    // The placement rules of a `contains` (R1 absorption, R2 refusal, R3 doubles): the response
+    // tells the screen what the cluster replaced and what the asset now has as containers.
+    const write = await this.relations.addRelationWithPlacement(source, related, row.type, tenantId, userId, opts);
+    const response: AssetRelationWrite = { ok: true, changed: write.changed };
+    if (write.replaced.length > 0) response.replaced_host_links = write.replaced;
+    if (write.doubles.length > 0) response.double_containers = write.doubles;
+    return response;
   }
 
   /**
@@ -343,7 +362,7 @@ export class AssetRelationsTabService {
   }
 
   /** The relations of the asset in both directions, with the other asset's fields, by name. */
-  private async listAssetRelations(mg: EntityManager, asset: AssetRow): Promise<Record<AssetDirection, RelatedAsset[]>> {
+  private async listAssetRelations(mg: EntityManager, asset: AssetRow): Promise<Record<AssetDirection, AssetRelatedAsset[]>> {
     const rows: Array<RelatedAsset & { relation_type: 'contains' | 'depends_on'; outgoing: boolean }> = await mg.query(
       `SELECT r.relation_type, (r.asset_id = $2) AS outgoing,
               a.id, a.asset_reference AS reference, a.name, a.kind, a.environment, a.status
@@ -354,10 +373,19 @@ export class AssetRelationsTabService {
         ORDER BY lower(a.name), a.id`,
       [asset.tenant_id, asset.id],
     );
-    const out: Record<AssetDirection, RelatedAsset[]> = { contains: [], contained_by: [], depends_on: [], depended_on_by: [] };
+    const out: Record<AssetDirection, AssetRelatedAsset[]> = { contains: [], contained_by: [], depends_on: [], depended_on_by: [] };
     for (const { relation_type, outgoing, ...related } of rows) {
       const direction = ASSET_DIRECTIONS.find((d) => DIRECTION_ROWS[d].type === relation_type && DIRECTION_ROWS[d].outgoing === outgoing);
       if (direction) out[direction].push(related);
+    }
+    // R3: each contained asset also held by another container in service, in one batch.
+    const doubles = await doubleContainersOf(mg, asset.tenant_id, out.contains.map((row) => row.id));
+    const othersById = new Map(
+      doubles.map((entry) => [entry.asset_id, entry.containers.filter((container) => container.id !== asset.id)]),
+    );
+    for (const row of out.contains) {
+      const others = othersById.get(row.id);
+      if (others && others.length > 0) row.also_contained_by = others;
     }
     return out;
   }
