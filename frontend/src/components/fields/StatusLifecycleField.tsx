@@ -1,4 +1,5 @@
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { Box, Stack, TextField, IconButton, InputAdornment } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
 import { useTranslation } from 'react-i18next';
@@ -101,20 +102,18 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     setInputText(formatted);
   }, [disabledAt, sep]);
 
-  const handleDisabledAtTextChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = event.target.value;
-    const formatted = formatEuPartial(raw, sep);
-    setInputText(formatted);
-    const iso = euDateToIsoEndOfDay(formatted);
-    // The day already stored, typed again: it keeps its time of day (a switch sets one), nothing is sent.
-    if (iso && formatted !== isoToEuDate(disabledAt, sep)) {
-      onDisabledAtChange(iso);
-      onStatusChange(deriveStatusFromDisabledAt(iso));
-    }
-  }, [disabledAt, onDisabledAtChange, onStatusChange, sep]);
+  // The text last sent to the caller, so that Enter then blur (or Ctrl+S then blur) sends once.
+  const sentTextRef = React.useRef<string | null>(null);
+  React.useEffect(() => { sentTextRef.current = null; }, [disabledAt]);
 
-  const handleDisabledAtBlur = React.useCallback(() => {
-    setFocused(false);
+  // Typing only changes the text: the date is sent once, on Enter, blur or Ctrl+S.
+  const handleDisabledAtTextChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    sentTextRef.current = null;
+    setInputText(formatEuPartial(event.target.value, sep));
+  }, [sep]);
+
+  const commitDisabledAt = React.useCallback(() => {
+    if (sentTextRef.current === inputText) return;
     const iso = euDateToIsoEndOfDay(inputText);
     if (!iso && inputText.trim() !== '') {
       // Invalid → keep text as-is for user correction; do not change outer value
@@ -122,14 +121,47 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     }
     if (!iso) {
       // Empty → clear
+      setInputText('');
+      if (!disabledAt) return;
+      sentTextRef.current = inputText;
       onDisabledAtChange(null);
       onStatusChange(deriveStatusFromDisabledAt(null));
-      setInputText('');
-    } else {
-      // Normalize displayed value
-      setInputText(isoToEuDate(iso, sep));
+      return;
     }
-  }, [inputText, onDisabledAtChange, onStatusChange, sep]);
+    // Normalize displayed value
+    setInputText(isoToEuDate(iso, sep));
+    // The day already stored, typed again: it keeps its time of day (a switch sets one), nothing is sent.
+    if (inputText === isoToEuDate(disabledAt, sep)) return;
+    sentTextRef.current = inputText;
+    onDisabledAtChange(iso);
+    onStatusChange(deriveStatusFromDisabledAt(iso));
+  }, [disabledAt, inputText, onDisabledAtChange, onStatusChange, sep]);
+
+  const handleDisabledAtBlur = React.useCallback(() => {
+    setFocused(false);
+    commitDisabledAt();
+  }, [commitDisabledAt]);
+
+  const handleDisabledAtKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    // Alt+Down opens the calendar from the keyboard; its button is out of the tab order.
+    if (event.altKey && event.key === 'ArrowDown') {
+      event.preventDefault();
+      openCalendar();
+    } else if (event.key === 'Enter') {
+      commitDisabledAt();
+    } else if (event.key === 'Escape') {
+      // Cancels the typing and keeps the key from closing the page; with nothing typed it goes on.
+      if (inputText === isoToEuDate(disabledAt, sep)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      sentTextRef.current = null;
+      setInputText(isoToEuDate(disabledAt, sep));
+    } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+      // The page's save shortcut listens on the window, after this handler: the date and what the
+      // page does with it must be rendered before the key gets there, or it saves the old value.
+      flushSync(commitDisabledAt);
+    }
+  };
 
   // In-page calendar, hung from the date input box.
   const dateFieldRef = React.useRef<HTMLDivElement | null>(null);
@@ -173,13 +205,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
             onChange={handleDisabledAtTextChange}
             onFocus={() => setFocused(true)}
             onBlur={handleDisabledAtBlur}
-            onKeyDown={(event) => {
-              // Alt+Down opens the calendar from the keyboard; its button is out of the tab order.
-              if (event.altKey && event.key === 'ArrowDown') {
-                event.preventDefault();
-                openCalendar();
-              }
-            }}
+            onKeyDown={handleDisabledAtKeyDown}
             disabled={disabled}
             name={disabledAtName}
             error={disabledAtError}

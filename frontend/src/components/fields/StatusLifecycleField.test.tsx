@@ -1,11 +1,12 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
 import { STATUS_DISABLED, STATUS_ENABLED, StatusValue } from '../../constants/status';
 import StatusLifecycleField from './StatusLifecycleField';
+import PortfolioDetailWorkspaceShell from '../../pages/portfolio/workspace/PortfolioDetailWorkspaceShell';
 
 function renderField(props: Partial<React.ComponentProps<typeof StatusLifecycleField>> & { status: StatusValue }) {
   const onStatusChange = vi.fn();
@@ -154,7 +155,182 @@ describe('StatusLifecycleField', () => {
 
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: '17/10/2031' } });
+    expect(onDisabledAtChange).not.toHaveBeenCalled();
+    fireEvent.blur(input);
     expect(onDisabledAtChange).toHaveBeenCalledWith(new Date(2031, 9, 17, 23, 59, 0, 0).toISOString());
+  });
+
+  describe('typing the end of validity', () => {
+    const placeholder = () => i18n.t('common:labels.datePlaceholder');
+    const typeDigits = (input: HTMLElement, digits: string) => {
+      let typed = '';
+      for (const digit of digits) {
+        typed += digit;
+        fireEvent.change(input, { target: { value: typed } });
+      }
+    };
+
+    it('sends nothing while typing, then the date and the derived status once on blur', () => {
+      const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED });
+      const input = screen.getByPlaceholderText(placeholder()) as HTMLInputElement;
+      fireEvent.focus(input);
+      typeDigits(input, '17102031');
+      expect(input.value).toBe('17/10/2031');
+      expect(onDisabledAtChange).not.toHaveBeenCalled();
+      expect(onStatusChange).not.toHaveBeenCalled();
+      fireEvent.blur(input);
+      const iso = new Date(2031, 9, 17, 23, 59, 0, 0).toISOString();
+      expect(onDisabledAtChange).toHaveBeenCalledTimes(1);
+      expect(onDisabledAtChange).toHaveBeenCalledWith(iso);
+      expect(onStatusChange).toHaveBeenCalledTimes(1);
+      expect(onStatusChange).toHaveBeenCalledWith(STATUS_ENABLED);
+    });
+
+    it('sends a date already passed with the disabled status', () => {
+      const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED });
+      const input = screen.getByPlaceholderText(placeholder());
+      fireEvent.focus(input);
+      typeDigits(input, '01012020');
+      fireEvent.blur(input);
+      expect(onDisabledAtChange).toHaveBeenCalledTimes(1);
+      expect(onStatusChange).toHaveBeenCalledWith(STATUS_DISABLED);
+    });
+
+    it('sends on Enter, and once when the blur follows', () => {
+      const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED });
+      const input = screen.getByPlaceholderText(placeholder());
+      fireEvent.focus(input);
+      typeDigits(input, '17102031');
+      fireEvent.keyDown(input, { key: 'Enter' });
+      expect(onDisabledAtChange).toHaveBeenCalledTimes(1);
+      expect(onStatusChange).toHaveBeenCalledTimes(1);
+      fireEvent.blur(input);
+      expect(onDisabledAtChange).toHaveBeenCalledTimes(1);
+      expect(onStatusChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps an incomplete or invalid text and sends nothing', () => {
+      const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED });
+      const input = screen.getByPlaceholderText(placeholder()) as HTMLInputElement;
+      fireEvent.focus(input);
+      typeDigits(input, '1710');
+      fireEvent.blur(input);
+      expect(input.value).toBe('17/10');
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: '32132031' } });
+      expect(input.value).toBe('32/13/2031');
+      fireEvent.keyDown(input, { key: 'Enter' });
+      fireEvent.blur(input);
+      expect(onDisabledAtChange).not.toHaveBeenCalled();
+      expect(onStatusChange).not.toHaveBeenCalled();
+    });
+
+    it('clears an end of validity emptied by hand on blur, and sends nothing when there was none', () => {
+      const first = renderField({ status: STATUS_DISABLED, disabledAt: '2026-06-30T21:59:00.000Z' });
+      const input = screen.getByPlaceholderText(placeholder());
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: '' } });
+      expect(first.onDisabledAtChange).not.toHaveBeenCalled();
+      fireEvent.blur(input);
+      expect(first.onDisabledAtChange).toHaveBeenCalledTimes(1);
+      expect(first.onDisabledAtChange).toHaveBeenCalledWith(null);
+      expect(first.onStatusChange).toHaveBeenCalledWith(STATUS_ENABLED);
+      cleanup();
+
+      const second = renderField({ status: STATUS_ENABLED });
+      const empty = screen.getByPlaceholderText(placeholder());
+      fireEvent.focus(empty);
+      fireEvent.blur(empty);
+      expect(second.onDisabledAtChange).not.toHaveBeenCalled();
+      expect(second.onStatusChange).not.toHaveBeenCalled();
+    });
+
+    it('sends nothing for the day already stored, typed digit by digit', () => {
+      const stored = '2031-10-16T14:37:12.000Z';
+      const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED, disabledAt: stored });
+      const input = screen.getByPlaceholderText(placeholder());
+      const local = new Date(stored);
+      const sameDay = `${String(local.getDate()).padStart(2, '0')}${String(local.getMonth() + 1).padStart(2, '0')}${local.getFullYear()}`;
+      fireEvent.focus(input);
+      typeDigits(input, sameDay);
+      fireEvent.keyDown(input, { key: 'Enter' });
+      fireEvent.blur(input);
+      expect(onDisabledAtChange).not.toHaveBeenCalled();
+      expect(onStatusChange).not.toHaveBeenCalled();
+    });
+
+    it('cancels the typing on Escape and keeps the key from reaching the page', () => {
+      const stored = '2031-10-16T14:37:12.000Z';
+      const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED, disabledAt: stored });
+      const input = screen.getByPlaceholderText(placeholder()) as HTMLInputElement;
+      const pageKey = vi.fn();
+      window.addEventListener('keydown', pageKey);
+      try {
+        const local = new Date(stored);
+        const storedText = `${String(local.getDate()).padStart(2, '0')}/${String(local.getMonth() + 1).padStart(2, '0')}/${local.getFullYear()}`;
+        fireEvent.focus(input);
+        typeDigits(input, '17102031');
+        expect(fireEvent.keyDown(input, { key: 'Escape' })).toBe(false);
+        expect(pageKey).not.toHaveBeenCalled();
+        expect(input.value).toBe(storedText);
+        fireEvent.blur(input);
+        expect(onDisabledAtChange).not.toHaveBeenCalled();
+        expect(onStatusChange).not.toHaveBeenCalled();
+
+        // Nothing typed: the key goes on to the page.
+        fireEvent.focus(input);
+        expect(fireEvent.keyDown(input, { key: 'Escape' })).toBe(true);
+        expect(pageKey).toHaveBeenCalledTimes(1);
+      } finally {
+        window.removeEventListener('keydown', pageKey);
+      }
+    });
+
+    it('commits the typed date before the page save shortcut reads its state', () => {
+      const saved: Array<string | null> = [];
+      function Page() {
+        const [disabledAt, setDisabledAt] = React.useState<string | null>(null);
+        const [status, setStatus] = React.useState<StatusValue>(STATUS_ENABLED);
+        return (
+          <PortfolioDetailWorkspaceShell
+            activeTab="overview"
+            tabs={[{ key: 'overview', label: 'Overview' }]}
+            onTabChange={() => undefined}
+            drawerStorageKey="kanap.test.statusLifecycle"
+            backLabel="Back"
+            onBack={() => undefined}
+            title="Title"
+            titleFallback="Untitled"
+            // Reads the page state in the render the shortcut was registered in, as the pages do.
+            onSaveShortcut={() => saved.push(disabledAt)}
+            properties={(
+              <StatusLifecycleField
+                status={status}
+                onStatusChange={setStatus}
+                disabledAt={disabledAt}
+                onDisabledAtChange={setDisabledAt}
+                onDisableNow={() => undefined}
+              />
+            )}
+          >
+            <div>content</div>
+          </PortfolioDetailWorkspaceShell>
+        );
+      }
+      render(
+        <ThemeProvider theme={createAppTheme('light')}>
+          <Page />
+        </ThemeProvider>,
+      );
+      const input = screen.getByPlaceholderText(i18n.t('common:labels.datePlaceholder'));
+      fireEvent.focus(input);
+      typeDigits(input, '17102031');
+      expect(saved).toEqual([]);
+      fireEvent.keyDown(input, { key: 's', ctrlKey: true });
+      expect(saved).toEqual([new Date(2031, 9, 17, 23, 59, 0, 0).toISOString()]);
+      fireEvent.blur(input);
+      expect(saved).toHaveLength(1);
+    });
   });
 
   it('clears the end of validity from the calendar', () => {
