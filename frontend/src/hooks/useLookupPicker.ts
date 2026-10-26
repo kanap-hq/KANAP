@@ -292,13 +292,16 @@ export function useLookupPicker<T extends LookupOption>({
     [searching, resultIds, pendingText, unavailableSet],
   );
 
+  // Read once here. `label` runs inside Autocomplete's render, and calling `t` from there
+  // can update this panel while Autocomplete is still rendering.
+  const unavailableLabel = t('selects.valueUnavailable');
   /** The label of an option: the picker's own, `…` while it loads, "Value no longer available" when it cannot. */
   const label = React.useCallback((option: T | null | undefined, own: (option: T) => string): string => {
     if (!option?.id) return '';
-    if (unavailableSet.has(option.id)) return t('selects.valueUnavailable');
+    if (unavailableSet.has(option.id)) return unavailableLabel;
     if (pendingSet.has(option.id)) return PENDING_LABEL;
     return own(option) ?? '';
-  }, [pendingSet, unavailableSet, t]);
+  }, [pendingSet, unavailableLabel, unavailableSet]);
 
   const loading = (open && search.isFetching) || hydration.isLoading;
 
@@ -306,6 +309,9 @@ export function useLookupPicker<T extends LookupOption>({
   const onOpen = React.useCallback(() => setOpen(true), []);
   const onClose = React.useCallback(() => { setOpen(false); setText(''); }, []);
   const onInputChange = React.useCallback((_event: React.SyntheticEvent | null, next: string, reason: string) => {
+    // `reset` runs while Autocomplete is rendering. A setState from there updates the
+    // panel that owns this picker and React warns. Closing and clearing still reset the search.
+    if (reason === 'reset') return;
     if (reason === 'input') setText(next);
     else setText('');
   }, []);

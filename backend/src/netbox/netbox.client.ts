@@ -435,11 +435,17 @@ export class NetboxClient {
       if (code === 'ETIMEDOUT' || code === 'ESOCKETTIMEDOUT' || error?.name === 'AbortError') {
         throw new NetboxApiError('timeout', `The Netbox server did not answer within ${Math.round(timeoutMs / 1000)} seconds.`, true);
       }
-      throw new NetboxApiError(
-        'provider_unavailable',
-        `KANAP could not reach the Netbox server: ${sanitizeNetboxText(String(error?.message || error || 'request failed'), connection.token)}`,
-        true,
+      // The syscall and the address stay in the log. The thrown sentence does not
+      // carry them: the screen translates a code, and an internal address is not
+      // something an administrator should read back.
+      this.logger.warn(
+        `Netbox request failed (${code || error?.name || 'unknown'}): `
+        + sanitizeNetboxText(String(error?.message || error || 'request failed'), connection.token),
       );
+      if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') {
+        throw new NetboxApiError('dns', 'KANAP could not find the Netbox server from its address.');
+      }
+      throw new NetboxApiError('provider_unavailable', 'KANAP could not reach the Netbox server.', true);
     }
 
     if (response.status >= 300 && response.status < 400) {

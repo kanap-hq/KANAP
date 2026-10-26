@@ -4,6 +4,8 @@ import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-a
 import { AuditService } from '../../audit/audit.service';
 import { assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { languageOf, writeCsv } from '../../common/csv-sheet';
+import { shippedLabelIn } from '../../it-ops-settings/catalog-shipped-labels';
+import type { CsvLanguage } from '../../common/csv-sheet/types';
 import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
 import { ItOpsSettingsService, type AdminZoneOption, type DomainOption, type DomainTrustDirection } from '../../it-ops-settings/it-ops-settings.service';
 import { gridTextClause, gridTextModel } from '../technologies.service';
@@ -24,13 +26,15 @@ import { inServiceSql } from '../technology-reach.service';
  * pair is left out when either zone is missing, deprecated or outside the catalog, and a self-link
  * is left out.
  *
- * A domain controller, for the domains section, is an asset of the domain (`assets.domain`), not
- * retired, assigned the server role `domain-controller` on an instance in service, or carrying an
- * installed technology of the `directory` family that is not retired. Roles and hosted
- * applications read the effective assignments (`effectiveAssignmentsSql`): a deployment assigned
- * to a cluster is judged on the zone of the cluster and of each member in service, as if assigned
- * to each of them. The control point uses the
- * role only. Each control counts distinct assets: exactly the rows of the asset list filtered on it.
+ * A domain controller is an asset that is not retired, and that either carries the role
+ * `domain-controller` on an instance in service, or an installed technology of the `directory`
+ * family that is not retired. The domains section lists those assets of a domain of the catalog.
+ * The control counts exactly those assets, when their zone is not the most sensitive one: a
+ * directory server with no domain, or a domain outside the catalog, counts only among the
+ * directory services outside the zone. Each control counts distinct assets: exactly the rows of
+ * the asset list filtered on it. Roles and hosted applications read the effective assignments
+ * (`effectiveAssignmentsSql`): a deployment assigned to a cluster is judged on the zone of the
+ * cluster and of each member in service, as if assigned to each of them.
  * Retired assets and retired technologies are left out of every control. A deprecated or unknown
  * zone is shown only while an asset or a directory service still carries it. Every statement
  * carries `tenant_id` and reads the tenant in batches.
@@ -57,13 +61,71 @@ export const CONTROL_KEYS = [
 ] as const;
 export type ControlKey = (typeof CONTROL_KEYS)[number];
 
-/** English titles of the controls, written in the Controls column of the export. The screen translates the keys. */
-export const CONTROL_TITLES: Record<ControlKey, string> = {
-  assets_without_zone: 'Assets without an administration zone',
-  domain_controllers_outside: 'Domain controllers outside the most sensitive zone',
-  directory_assets_outside: 'Assets carrying a directory service outside the most sensitive zone',
-  trust_raised: 'What runs an asset is in a less sensitive zone',
-  applications_on_most_sensitive: 'Applications hosted in the most sensitive zone',
+/** Titles of the controls, the screen's full titles (`controlsList.*.title`), one map per language. */
+const CONTROL_TITLES_BY_LANGUAGE: Record<CsvLanguage, Record<ControlKey, string>> = {
+  en: {
+    assets_without_zone: 'Assets without an administration zone',
+    domain_controllers_outside: 'Domain controllers outside the most sensitive zone',
+    directory_assets_outside: 'Assets carrying a directory service outside the most sensitive zone',
+    trust_raised: 'What runs an asset is in a less sensitive zone',
+    applications_on_most_sensitive: 'Applications hosted in the most sensitive zone',
+  },
+  fr: {
+    assets_without_zone: "Actifs sans zone d'administration",
+    domain_controllers_outside: 'Contrôleurs de domaine hors de la zone la plus sensible',
+    directory_assets_outside: "Actifs portant un service d'annuaire hors de la zone la plus sensible",
+    trust_raised: 'Ce qui fait tourner un actif est dans une zone moins sensible',
+    applications_on_most_sensitive: 'Applications hébergées dans la zone la plus sensible',
+  },
+  de: {
+    assets_without_zone: 'Assets ohne Administrationszone',
+    domain_controllers_outside: 'Domänencontroller außerhalb der sensibelsten Zone',
+    directory_assets_outside: 'Assets mit einem Verzeichnisdienst außerhalb der sensibelsten Zone',
+    trust_raised: 'Was ein Asset betreibt, liegt in einer weniger sensiblen Zone',
+    applications_on_most_sensitive: 'In der sensibelsten Zone gehostete Anwendungen',
+  },
+  es: {
+    assets_without_zone: 'Activos sin zona de administración',
+    domain_controllers_outside: 'Controladores de dominio fuera de la zona más sensible',
+    directory_assets_outside: 'Activos que llevan un servicio de directorio fuera de la zona más sensible',
+    trust_raised: 'Lo que ejecuta un activo está en una zona menos sensible',
+    applications_on_most_sensitive: 'Aplicaciones alojadas en la zona más sensible',
+  },
+};
+
+/** English titles of the controls. The export writes `CONTROL_TITLES_BY_LANGUAGE`. */
+export const CONTROL_TITLES: Record<ControlKey, string> = CONTROL_TITLES_BY_LANGUAGE.en;
+
+/** An empty zone, in the words of the grid (`pages.administrationView.noZone`). */
+const NO_ZONE_LABEL: Record<CsvLanguage, string> = {
+  en: 'No zone',
+  fr: 'Sans zone',
+  de: 'Keine Zone',
+  es: 'Sin zona',
+};
+
+/** Directory export headers, one row per language. No comma: the English file splits on it. */
+const DOMAIN_CSV_HEADERS: Record<CsvLanguage, string[]> = {
+  en: ['Domain', 'DNS suffix', 'Forest', 'Trusts', 'Trusts declared by other domains', 'Number of accounts', 'Number of computers', 'Domain controllers', 'Domain controller servers'],
+  fr: ['Domaine', 'Suffixe DNS', 'Forêt', 'Approbations', "Approbations déclarées par d'autres domaines", 'Nombre de comptes', "Nombre d'ordinateurs", 'Contrôleurs de domaine', 'Serveurs contrôleurs de domaine'],
+  de: ['Domäne', 'DNS-Suffix', 'Gesamtstruktur', 'Vertrauensstellungen', 'Von anderen Domänen erklärte Vertrauensstellungen', 'Anzahl der Konten', 'Anzahl der Computer', 'Domänencontroller', 'Domänencontroller-Server'],
+  es: ['Dominio', 'Sufijo DNS', 'Bosque', 'Confianzas', 'Confianzas declaradas por otros dominios', 'Número de cuentas', 'Número de equipos', 'Controladores de dominio', 'Servidores controladores de dominio'],
+};
+
+/** Asset export headers, one row per language, in the words of the screen's columns. */
+const ASSET_CSV_HEADERS: Record<CsvLanguage, string[]> = {
+  en: ['Zone', 'Reference', 'Name', 'Type', 'Technologies', 'Applications', 'Controls', 'Dependency'],
+  fr: ['Zone', 'Référence', 'Nom', 'Type', 'Technologies', 'Applications', 'Contrôles', 'Dépendance'],
+  de: ['Zone', 'Referenz', 'Name', 'Typ', 'Technologien', 'Anwendungen', 'Kontrollen', 'Abhängigkeit'],
+  es: ['Zona', 'Referencia', 'Nombre', 'Tipo', 'Tecnologías', 'Aplicaciones', 'Controles', 'Dependencia'],
+};
+
+/** The direction of a trust in the directory export, in the words of the screen. */
+const TRUST_DIRECTION_LABELS: Record<CsvLanguage, Record<DomainTrustDirection, string>> = {
+  en: { two_way: 'two-way', outgoing: 'outgoing', incoming: 'incoming' },
+  fr: { two_way: 'bidirectionnelle', outgoing: 'sortante', incoming: 'entrante' },
+  de: { two_way: 'bidirektional', outgoing: 'ausgehend', incoming: 'eingehend' },
+  es: { two_way: 'bidireccional', outgoing: 'saliente', incoming: 'entrante' },
 };
 
 /** English relation names in the export. The screen uses the same words, translated. */
@@ -170,7 +232,7 @@ type RankCtx = {
   kinds: Map<string, string>;
 };
 
-type Markers = { ranks: string; most: string; role: string; family: string };
+type Markers = { ranks: string; most: string; role: string; family: string; domains: string };
 
 type DirectoryRow = { id: string; item_number: number; name: string; zone: string | null; servers: number };
 type AssetPageRow = { id: string; reference: string | null; name: string; kind: string; zone: string | null };
@@ -246,17 +308,47 @@ function whole(value: unknown, fallback: number, max: number): number {
   return Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : fallback;
 }
 
-/** Domain controllers outside the most sensitive zone: the role on an instance in service, nothing else. */
-function controllersSql(role: string, most: string, ids?: string): string {
-  const only = ids ? `AND ax.id = ANY(${ids}::uuid[])` : '';
-  return `SELECT DISTINCT ax.id AS asset_id
-    FROM assets ax
-    JOIN (${effectiveAssignmentsSql({ tenant: '$1', assets: ids })}) aa ON aa.tenant_id = $1 AND aa.asset_id = ax.id AND aa.role = ${role}
-    JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
-    JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
-    WHERE ax.tenant_id = $1 AND ax.status <> 'retired'
-      AND ${zoneOf('ax')} IS DISTINCT FROM ${most}
-      ${only}`;
+/**
+ * Domain controllers: the role on an instance in service, or a directory technology that is not
+ * retired. The same definition feeds the domains section and the control.
+ */
+function domainControllersSql(role: string, family: string, ids?: string): string {
+  const only = ids ? `AND a.id = ANY(${ids}::uuid[])` : '';
+  return `SELECT DISTINCT a.id AS asset_id
+    FROM assets a
+    WHERE a.tenant_id = $1 AND a.status <> 'retired'
+      ${only}
+      AND (
+        a.id IN (
+          SELECT aa.asset_id FROM (${effectiveAssignmentsSql({ tenant: '$1', assets: ids })}) aa
+            JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
+            JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
+           WHERE aa.role = ${role}
+        )
+        OR EXISTS (
+          SELECT 1 FROM asset_technologies at
+            JOIN technologies t ON t.tenant_id = $1 AND t.id = at.technology_id
+              AND t.family = ${family} AND t.lifecycle <> 'retired'
+           WHERE at.tenant_id = $1 AND at.asset_id = a.id
+        )
+      )`;
+}
+
+/**
+ * The controllers the domains section lists (`domains`: the codes of the catalog's domains, a
+ * `text[]` placeholder) whose zone is not the most sensitive one.
+ */
+function controllersSql(role: string, family: string, most: string, domains: string, ids?: string): string {
+  return `SELECT s.asset_id
+    FROM (${domainControllersSql(role, family, ids)}) s
+    JOIN assets ax ON ax.tenant_id = $1 AND ax.id = s.asset_id
+    WHERE ${zoneOf('ax')} IS DISTINCT FROM ${most}
+      AND ax.domain = ANY(${domains}::text[])`;
+}
+
+/** The codes of the domains the domains section lists: the catalog's, without the system entries. */
+function listedDomainCodes(domains: DomainOption[]): string[] {
+  return domains.filter((option) => !option.system).map((option) => option.code);
 }
 
 /** Assets with a direct link to a directory technology that is not retired, outside the most sensitive zone. */
@@ -598,7 +690,7 @@ export class AdministrationViewService {
       const m = this.markers(params, ctx);
       sql = `SELECT
         (SELECT count(*)::int FROM assets a WHERE a.tenant_id = $1 AND a.status <> 'retired' AND ${zoneOf('a')} IS NULL) AS assets_without_zone,
-        (SELECT count(*)::int FROM (${controllersSql(m.role, m.most)}) s) AS domain_controllers_outside,
+        (SELECT count(*)::int FROM (${controllersSql(m.role, m.family, m.most, m.domains)}) s) AS domain_controllers_outside,
         (SELECT count(*)::int FROM (${directorySql(m.family, m.most)}) s) AS directory_assets_outside,
         (SELECT count(DISTINCT asset_id)::int FROM (${trustSql(m.ranks)}) s) AS trust_raised,
         (SELECT count(DISTINCT ax.id)::int ${hostedFrom(m.most)}) AS applications_on_most_sensitive`;
@@ -631,19 +723,7 @@ export class AdministrationViewService {
       `SELECT a.domain, a.id, a.name, a.asset_reference
          FROM assets a
         WHERE a.tenant_id = $1 AND a.domain = ANY($2::text[]) AND a.status <> 'retired'
-          AND (
-            a.id IN (
-              SELECT aa.asset_id FROM (${effectiveAssignmentsSql({ tenant: '$1' })}) aa
-                JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
-                JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
-               WHERE aa.role = $3
-            )
-            OR EXISTS (
-              SELECT 1 FROM asset_technologies at
-                JOIN technologies t ON t.tenant_id = $1 AND t.id = at.technology_id AND t.family = $4 AND t.lifecycle <> 'retired'
-               WHERE at.tenant_id = $1 AND at.asset_id = a.id
-            )
-          )
+          AND a.id IN (SELECT asset_id FROM (${domainControllersSql('$3', '$4')}) s)
         ORDER BY lower(a.name), a.id`,
       [tenantId, listed.map((option) => option.code), DOMAIN_CONTROLLER_ROLE, DIRECTORY_FAMILY],
     );
@@ -682,7 +762,9 @@ export class AdministrationViewService {
     const role = `$${params.length}`;
     params.push(DIRECTORY_FAMILY);
     const family = `$${params.length}`;
-    return { ranks, most, role, family };
+    params.push(listedDomainCodes(ctx.domains));
+    const domains = `$${params.length}`;
+    return { ranks, most, role, family, domains };
   }
 
   /** The WHERE of the asset list, on `a`. The same clause scopes a bulk assignment of the filter. */
@@ -738,10 +820,13 @@ export class AdministrationViewService {
     const ranks = keys.includes('trust_raised') ? bind(ctx.ranks, 'text[]') : null;
     const most = keys.some((key) => key !== 'assets_without_zone' && key !== 'trust_raised') ? bind(ctx.most, 'text') : null;
     const role = keys.includes('domain_controllers_outside') ? bind(DOMAIN_CONTROLLER_ROLE, 'text') : null;
-    const family = keys.includes('directory_assets_outside') ? bind(DIRECTORY_FAMILY, 'text') : null;
+    const family = keys.includes('directory_assets_outside') || keys.includes('domain_controllers_outside')
+      ? bind(DIRECTORY_FAMILY, 'text')
+      : null;
+    const domains = keys.includes('domain_controllers_outside') ? bind(listedDomainCodes(ctx.domains), 'text[]') : null;
     const parts = keys.map((key) => {
       if (key === 'assets_without_zone') return `${zoneOf('a')} IS NULL`;
-      if (key === 'domain_controllers_outside') return `a.id IN (${controllersSql(role!, most!)})`;
+      if (key === 'domain_controllers_outside') return `a.id IN (${controllersSql(role!, family!, most!, domains!)})`;
       if (key === 'directory_assets_outside') return `a.id IN (${directorySql(family!, most!)})`;
       if (key === 'trust_raised') return `a.id IN (SELECT asset_id FROM (${trustSql(ranks!)}) pairs)`;
       return `a.id IN (SELECT DISTINCT ax.id ${hostedFrom(most!)})`;
@@ -828,8 +913,8 @@ export class AdministrationViewService {
     if (ctx.most) {
       // Each statement binds only the parameters it names. A hole in $1..$n is untyped.
       const controllerRows: Array<{ asset_id: string }> = await mg.query(
-        `SELECT asset_id FROM (${controllersSql('$4', '$3', '$2')}) s`,
-        [tenantId, ids, ctx.most, DOMAIN_CONTROLLER_ROLE],
+        `SELECT asset_id FROM (${controllersSql('$4', '$5', '$3', '$6', '$2')}) s`,
+        [tenantId, ids, ctx.most, DOMAIN_CONTROLLER_ROLE, DIRECTORY_FAMILY, listedDomainCodes(ctx.domains)],
       );
       for (const row of controllerRows) controllers.add(row.asset_id);
       const directoryRows: Array<{ asset_id: string }> = await mg.query(
@@ -925,22 +1010,32 @@ export class AdministrationViewService {
       pageParams,
     );
     const items = await this.decorate(opts, ctx, rows, null);
-    const zoneLabel = (code: string | null) => (code ? ctx.catalog.find((option) => option.code === code)?.label || code : '');
-    const headers = ['Zone', 'Reference', 'Name', 'Type', 'Technologies', 'Applications', 'Controls', 'Dependency'];
+    const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, query.language);
+    const headers = ASSET_CSV_HEADERS[language] ?? ASSET_CSV_HEADERS.en;
+    const controlTitles = CONTROL_TITLES_BY_LANGUAGE[language] ?? CONTROL_TITLES_BY_LANGUAGE.en;
+    // Shipped values in the file's language, as the screen shows them; a label the tenant typed stays as it is.
+    const zoneLabel = (code: string | null) => {
+      if (!code) return NO_ZONE_LABEL[language];
+      const option = ctx.catalog.find((entry) => entry.code === code);
+      return option ? shippedLabelIn('adminZones', option, language) ?? (option.label || code) : code;
+    };
+    const kindLabel = (code: string) => {
+      const label = ctx.kinds.get(code);
+      return label === undefined ? code : shippedLabelIn('serverKinds', { code, label }, language) ?? label;
+    };
     const lines = items.map((item) => [
       zoneLabel(item.zone),
       item.reference ?? '',
       item.name,
-      ctx.kinds.get(item.kind) ?? item.kind,
+      kindLabel(item.kind),
       item.technologies.items.map((link) => `${link.reference ?? ''} ${link.name}${link.version ? ` (${link.version})` : ''}`.trim()).join('; '),
       item.applications.items.map((link) => `${link.reference ? `${link.reference} ` : ''}${link.name}`.trim()).join('; '),
-      item.findings.map((key) => CONTROL_TITLES[key]).join('; '),
+      item.findings.map((key) => controlTitles[key]).join('; '),
       item.trust_peers.items.map((link) => {
         const who = [link.reference, link.name].filter(Boolean).join(' ');
         return `${TRUST_RELATION_LABEL[link.relation]} ${who} (${zoneLabel(link.zone)})`.trim();
       }).join('; '),
     ]);
-    const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, query.language);
     return { filename: 'administration_view_assets.csv', content: writeCsv({ language, headers, rows: lines }) };
   }
 
@@ -948,8 +1043,8 @@ export class AdministrationViewService {
     const ctx = await this.context(opts);
     const domains = await this.domains(opts, ctx.domains);
     const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, query.language);
-    const headers = ['Domain', 'DNS suffix', 'Forest', 'Trusts', 'Trusts declared by other domains', 'Number of accounts', 'Number of computers', 'Domain controllers', 'Domain controller servers'];
-    const direction: Record<DomainTrustDirection, string> = { two_way: 'two-way', outgoing: 'outgoing', incoming: 'incoming' };
+    const headers = DOMAIN_CSV_HEADERS[language] ?? DOMAIN_CSV_HEADERS.en;
+    const direction = TRUST_DIRECTION_LABELS[language] ?? TRUST_DIRECTION_LABELS.en;
     const rows = domains.map((domain) => [
       domain.label,
       domain.dns_suffix,

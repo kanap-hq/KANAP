@@ -2,7 +2,9 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { assetBadRequest, assetFqdnOf } from '../asset-rules';
 import { isValidHostname } from '../hostname.util';
+import { isValidIpAddress } from '../ip-address.util';
 
 /**
  * Service for validating asset fields against IT Ops settings.
@@ -51,6 +53,33 @@ export class AssetsValidationService {
     return code;
   }
 
+  /**
+   * The provider the screen stores when the site changes and the request does not name one.
+   * A cloud site keeps its provider when that code is in the catalog. Anything else, including an
+   * on-premises site, falls back to `other`, or to the first provider when `other` is absent.
+   */
+  async providerForSite(locationId: string, tenantId: string, manager: EntityManager): Promise<string | null> {
+    const rows: Array<{ hosting_type: string | null; provider: string | null }> = await manager.query(
+      `SELECT hosting_type, provider
+       FROM locations
+       WHERE id = $1 AND tenant_id = $2
+       LIMIT 1`,
+      [locationId, tenantId],
+    );
+    const site = rows[0];
+    if (!site) return null;
+    const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
+    const hosting = (settings.hostingTypes || []).find((item) => item.code === site.hosting_type);
+    const onPrem = hosting?.category === 'on_prem';
+    const providers = settings.serverProviders || [];
+    const fallback = providers.find((item) => item.code === 'other')?.code || providers[0]?.code || null;
+    if (!onPrem) {
+      const code = String(site.provider || '').trim().toLowerCase();
+      if (code && providers.some((item) => item.code === code)) return code;
+    }
+    return fallback;
+  }
+
   async resolveDomain(
     value: unknown,
     tenantId: string,
@@ -96,20 +125,13 @@ export class AssetsValidationService {
     manager?: EntityManager,
   ): Promise<string | null> {
     if (!hostname || !hostname.trim()) return null;
-    const cleanHostname = hostname.trim().toLowerCase();
-
     if (!domainCode || domainCode === 'workgroup' || domainCode === 'n-a') {
-      return cleanHostname;
+      return assetFqdnOf(hostname, { code: domainCode });
     }
 
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
     const domain = ((settings as any).domains || []).find((d: any) => d.code === domainCode);
-
-    if (!domain || !domain.dns_suffix) {
-      return cleanHostname;
-    }
-
-    return `${cleanHostname}.${domain.dns_suffix}`;
+    return assetFqdnOf(hostname, { code: domainCode, dns_suffix: domain?.dns_suffix });
   }
 
   normalizeAliases(value: unknown): string[] | null {
@@ -168,6 +190,10 @@ export class AssetsValidationService {
 
       if (!ip) continue;
 
+      if (!isValidIpAddress(ip)) {
+        throw assetBadRequest('asset_ip_invalid', `"${ip}" is not a valid IP address.`, { value: ip });
+      }
+
       if (!type || !allowedTypes.has(type)) {
         throw new BadRequestException(`Invalid IP address type "${type}"`);
       }
@@ -214,8 +240,10 @@ export class AssetsValidationService {
       );
 
       if (rows.length > 0) {
-        throw new BadRequestException(
+        throw assetBadRequest(
+          'asset_ip_taken',
           `IP address "${entry.ip}" is already used by asset "${rows[0].name}" in subnet "${entry.subnet_cidr}"`,
+          { value: entry.ip, name: rows[0].name, subnet: entry.subnet_cidr as string },
         );
       }
     }

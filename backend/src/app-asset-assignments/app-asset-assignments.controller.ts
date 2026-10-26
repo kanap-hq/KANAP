@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { AppAssetAssignmentsService } from './app-asset-assignments.service';
 import { resolveBusinessContributorScope } from '../auth/business-contributor-scope';
+import { hasLevel } from '../common/relations/relations-access';
 
 @UseGuards(JwtAuthGuard)
 @Controller()
@@ -20,15 +21,28 @@ export class AppAssetAssignmentsController {
     return this.svc.list(instanceId, { ...this.opts(req), accessScope });
   }
 
+  /**
+   * A server assignment changes the application and the server: the routes require
+   * `applications:member` (guard), and this the same level on the infrastructure, as the screen does.
+   */
+  private assertInfrastructureMember(req: any): void {
+    if (!hasLevel(req ?? {}, 'infrastructure', 'member')) {
+      throw new ForbiddenException('Changing the servers of a deployment needs the member level on the infrastructure.');
+    }
+  }
+
   private createForDeployment(instanceId: string, body: any, req: any) {
+    this.assertInfrastructureMember(req);
     return this.svc.create(instanceId, body, req.user?.sub ?? null, this.opts(req));
   }
 
   private updateForDeployment(instanceId: string, assignmentId: string, body: any, req: any) {
+    this.assertInfrastructureMember(req);
     return this.svc.update(instanceId, assignmentId, body, req.user?.sub ?? null, this.opts(req));
   }
 
   private deleteForDeployment(instanceId: string, assignmentId: string, req: any) {
+    this.assertInfrastructureMember(req);
     return this.svc.delete(instanceId, assignmentId, req.user?.sub ?? null, this.opts(req));
   }
 

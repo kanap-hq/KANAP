@@ -176,6 +176,9 @@
       "exportCsv": "CSV exportieren",
       "exportTitle": "Assets exportieren",
       "importTitle": "Assets importieren",
+      "exportScope_one": "{{count}} Asset, entsprechend den Filtern der Liste.",
+      "exportScope_other": "{{count}} Assets, entsprechend den Filtern der Liste.",
+      "exportScopeAll": "Alle Assets ({{count}}).",
       "dataEnrichment": "Datenanreicherung",
       "columns": {
         "name": "Name",
@@ -207,7 +210,13 @@
         "kept_one": "{{count}} Asset kann nicht gelöscht werden und bleibt erhalten:",
         "kept_other": "{{count}} Assets können nicht gelöscht werden und bleiben erhalten:",
         "deleted_one": "{{count}} Asset gelöscht",
-        "deleted_other": "{{count}} Assets gelöscht"
+        "deleted_other": "{{count}} Assets gelöscht",
+        "title_one": "{{count}} Asset löschen",
+        "title_other": "{{count}} Assets löschen",
+        "keptDone_one": "{{count}} Asset bleibt erhalten",
+        "keptDone_other": "{{count}} Assets bleiben erhalten",
+        "keptReason_one": "Bleibt erhalten: {{usages}} nutzt es.",
+        "keptReason_other": "Bleibt erhalten: {{usages}} nutzen es."
       }
     },
     "technologies": {
@@ -826,6 +835,8 @@
       "noZones": "Noch keine Administrationszonen definiert.",
       "openSettings": "In den IT-Einstellungen definieren",
       "noZone": "Keine Zone",
+      "filterZonesHint": "Wählen Sie eine Zone, um die Asset-Liste zu filtern.",
+      "filterZone": "Assets in {{name}} anzeigen.",
       "unknownZone": "Unbekannte Zone ({{code}})",
       "kindCount": "{{kind}}: {{count}}",
       "assetCount_one": "{{count}} Asset",
@@ -855,6 +866,8 @@
         "domainControllers": "Domänencontroller"
       },
       "controls": "Kontrollpunkte",
+      "controlsCount_one": "{{count}} Kontrolle",
+      "controlsCount_other": "{{count}} Kontrollen",
       "controlsHint": "Die sensibelste Zone ist {{zone}}.",
       "controlsNoCatalog": "Fügen Sie in den IT-Einstellungen eine Administrationszone hinzu, um die übrigen Prüfungen auszuführen.",
       "controlsList": {
@@ -908,7 +921,7 @@
         "title": "Einer Zone zuordnen",
         "zone": "Zone",
         "save": "Zuordnen",
-        "scopeSelected_one": "Das ausgewählte Asset.",
+        "scopeSelected_one": "Diese Zuordnung betrifft das ausgewählte Asset.",
         "scopeSelected_other": "Die {{count}} ausgewählten Assets.",
         "scopeAll": "Alle Assets des aktuellen Filters.",
         "scopeAllBut_one": "Alle Assets des aktuellen Filters außer {{count}}.",
@@ -1293,10 +1306,10 @@
         },
         "subLocations": {
           "create": "Neu",
-          "adopt": "Vorhanden, jetzt mit Netbox verknüpft",
-          "rename": "Umbenannt",
-          "update": "Beschreibung aktualisiert",
-          "conflict": "Name bereits vergeben, unverändert gelassen",
+          "adopt": "Vorhanden, wird mit Netbox verknüpft",
+          "rename": "Wird umbenannt",
+          "update": "Die Beschreibung wird aktualisiert",
+          "conflict": "Name bereits vergeben, wird unverändert gelassen",
           "assets_one": "{{count}} Asset",
           "assets_other": "{{count}} Assets"
         },
@@ -1305,6 +1318,7 @@
         "filterPlaceholder": "z. B. par-esx",
         "candidates": "Vorschläge:",
         "alreadyIdentical": "An diesem Asset ist nichts zu ändern.",
+        "skippedMore": "Und {{count}} weitere",
         "acceptSingle_one": "Das Objekt mit nur einem Vorschlag verknüpfen",
         "acceptSingle_other": "Die {{count}} Objekte mit nur einem Vorschlag verknüpfen",
         "decided": {
@@ -1315,9 +1329,9 @@
         "actions": {
           "undo": "Rückgängig",
           "decide": "Entscheiden",
-          "change": "Korrigieren",
+          "change": "Stattdessen verknüpfen",
           "decideFor": "Über {{name}} entscheiden",
-          "changeFor": "Vorschlag für {{name}} korrigieren",
+          "changeFor": "Stattdessen verknüpfen für {{name}}",
           "undoFor": "Auswahl für {{name}} rückgängig machen"
         },
         "menu": {
@@ -1473,6 +1487,24 @@
         "cluster_not_mapped": "Der Netbox-Cluster „{{value}}“ ist keinem KANAP-Cluster zugeordnet, daher wurden seine virtuellen Maschinen keinem Cluster zugewiesen.",
         "cluster_match_invalid": "Der Netbox-Cluster „{{value}}“ ist einem Asset zugeordnet, das gelöscht, ausgemustert oder kein Cluster mehr ist, daher wurden seine virtuellen Maschinen ihm nicht zugewiesen.",
         "cluster_other_present": "KANAP ordnet die virtuelle Maschine „{{name}}“ auch {{value}} zu. Diese Beziehung wurde beibehalten: Entfernen Sie sie manuell, wenn sie veraltet ist."
+      },
+      "previewNotices": {
+        "os_not_in_catalog": "Das Betriebssystem „{{value}}“ steht nicht in Ihrem Katalog, der Wert wird unverändert bleiben.",
+        "domain_not_in_catalog": "Die Domäne „{{value}}“ steht nicht in Ihrem Katalog, der Wert wird unverändert bleiben.",
+        "hostname_invalid": "„{{value}}“ lässt sich nicht als Hostname verwenden, der Hostname wird unverändert bleiben.",
+        "ipv6_skipped": "Die primäre Adresse ist eine IPv6-Adresse, die nicht importiert wird.",
+        "ip_conflict_skipped": "Die Adresse {{value}} wird bereits von einem anderen Asset genutzt und wird ausgelassen.",
+        "subnet_not_in_catalog": "Das Subnetz {{value}} steht nicht in Ihrem Katalog, die Adresse wird ohne es gespeichert.",
+        "fetch_incomplete": "Netbox hat mehr Seiten geliefert als erwartet. Einige Objekte werden nicht geprüft.",
+        "os_ambiguous": "Das Betriebssystem „{{value}}“ passt zu mehreren Einträgen in Ihrem Katalog, der Wert wird unverändert bleiben.",
+        "status_not_mapped": "Der Netbox-Status „{{value}}“ hat keine Entsprechung in KANAP, der Lebenszyklus wird unverändert bleiben.",
+        "lifecycle_not_in_catalog": "Der Lebenszyklus „{{value}}“ steht nicht in Ihrem Katalog, der Wert wird unverändert bleiben.",
+        "no_ip_address_type": "In den IT-Einstellungen ist kein IP-Adresstyp eingerichtet, die Adresse wird nicht importiert.",
+        "sub_location_name_taken": "Ein Unterstandort mit dem Namen „{{value}}“ existiert an diesem Standort bereits für eine andere Netbox-Location. Der Unterstandort wird unverändert bleiben.",
+        "locations_unavailable": "Netbox hat seine Locations nicht zurückgegeben. Die Unterstandorte werden unverändert bleiben.",
+        "cluster_not_mapped": "Der Netbox-Cluster „{{value}}“ ist keinem KANAP-Cluster zugeordnet, daher werden seine virtuellen Maschinen keinem Cluster zugewiesen.",
+        "cluster_match_invalid": "Der Netbox-Cluster „{{value}}“ ist einem Asset zugeordnet, das gelöscht, ausgemustert oder kein Cluster mehr ist, daher werden seine virtuellen Maschinen ihm nicht zugewiesen.",
+        "cluster_other_present": "KANAP ordnet die virtuelle Maschine „{{name}}“ auch {{value}} zu. Diese Beziehung wird beibehalten: Entfernen Sie sie manuell, wenn sie veraltet ist."
       },
       "netboxStatus": {
         "active": "Aktiv",
@@ -2123,6 +2155,7 @@
         "search": "Technologien suchen",
         "empty": "Keine Technologie auf diesem Server.",
         "platform": "Zugrunde liegende Plattform ({{count}})",
+        "emptyAsset": "Keine Technologie auf diesem Asset.",
         "operatingSystem": "Betriebssystem",
         "edit": "Bearbeiten",
         "editNamed": "{{name}} bearbeiten",
@@ -2142,7 +2175,9 @@
       "assignments": {
         "addAssignment": "Zuordnung hinzufügen",
         "noAssignments": "Noch keine Zuordnungen.",
+        "noApplicationAccess": "Sie haben keinen Zugriff auf die Anwendungen.",
         "assignmentAdded": "Zuordnung hinzugefügt",
+        "removed": "{{name}} entfernt.",
         "application": "Anwendung",
         "environment": "Umgebung",
         "role": "Rolle",
@@ -2156,6 +2191,7 @@
         "environmentRequired": "Umgebung (Instanz) ist erforderlich",
         "roleRequired": "Rolle ist erforderlich",
         "selectAppForEnv": "Wählen Sie eine Anwendung, um eine Umgebung auszuwählen.",
+        "chooseEnvironment": "Wählen Sie eine Umgebung.",
         "noInstances": "Keine Instanzen für diese Anwendung",
         "noServerRoles": "Keine Serverrollen konfiguriert; aktualisieren Sie die IT-Landschaft-Einstellungen.",
         "assign": "Zuordnen"
@@ -2190,6 +2226,8 @@
       },
       "newAsset": "Neues Asset",
       "untitled": "Unbenanntes Asset",
+      "notFound": "Asset nicht gefunden.",
+      "backToList": "Zurück zur Liste",
       "previous": "Vorheriges Asset",
       "next": "Nächstes Asset",
       "deleteConfirm": "Asset „{{name}}“ löschen?",
@@ -2220,9 +2258,12 @@
         "notesPlaceholder": "z. B. Netzteil im Rahmen der Garantie ersetzt"
       },
       "impact": {
-        "title": "Wenn dieses Asset ausfällt",
-        "empty": "Nichts anderes hängt von diesem Asset ab.",
-        "emptyInfrastructure": "Keine andere Infrastruktur hängt von diesem Asset ab.",
+        "title": "Wenn dieser Server ausfällt",
+        "titleAsset": "Wenn dieses Asset ausfällt",
+        "empty": "Nichts anderes hängt von diesem Server ab.",
+        "emptyAsset": "Nichts anderes hängt von diesem Asset ab.",
+        "emptyInfrastructure": "Keine andere Infrastruktur hängt von diesem Server ab.",
+        "emptyInfrastructureAsset": "Keine andere Infrastruktur hängt von diesem Asset ab.",
         "loadFailed": "Die Auswirkungen konnten nicht geladen werden.",
         "more_one": "und {{count}} weiteres",
         "more_other": "und {{count}} weitere",
@@ -2255,16 +2296,23 @@
         },
         "via": {
           "contains": "In {{name}}",
-          "containsThisServer": "In diesem Asset",
+          "containsThisServer": "In diesem Server",
+          "containsThisAsset": "In diesem Asset",
           "dependsOn": "Hängt ab von {{name}}",
-          "dependsOnThisServer": "Hängt von diesem Asset ab",
+          "dependsOnThisServer": "Hängt von diesem Server ab",
+          "dependsOnThisAsset": "Hängt von diesem Asset ab",
           "member": "Mitglied von {{name}}",
           "memberThisServer": "Mitglied dieses Clusters",
+          "memberThisAsset": "Mitglied dieses Clusters",
           "on": "Auf {{name}}",
-          "onThisServer": "Auf diesem Asset",
-          "onThisServerAnd": "Auf diesem Asset, {{name}}",
-          "thisServer": "Dieses Asset",
-          "thisServerAnd": "Dieses Asset, {{name}}"
+          "onThisServer": "Auf diesem Server",
+          "onThisAsset": "Auf diesem Asset",
+          "onThisServerAnd": "Auf diesem Server, {{name}}",
+          "onThisAssetAnd": "Auf diesem Asset, {{name}}",
+          "thisServer": "Dieser Server",
+          "thisAsset": "Dieses Asset",
+          "thisServerAnd": "Dieser Server, {{name}}",
+          "thisAssetAnd": "Dieses Asset, {{name}}"
         },
         "state": {
           "down": "Ausgefallen",
@@ -2304,6 +2352,9 @@
           "dependedOnBy": "Kein Asset hängt von diesem ab."
         },
         "containsHint": "Von diesem Asset gehostete Assets, zum Beispiel VMs.",
+        "feedback": {
+          "unlinked": "{{name}} getrennt."
+        },
         "alsoContainedBy": "Auch enthalten in {{names}}",
         "via": "Über",
         "placementReplaced": "{{cluster}} ersetzt die Verknüpfung zwischen {{hosts}} und {{asset}}.",
@@ -3329,7 +3380,7 @@
     "unsavedLeave": "Sie haben nicht gespeicherte Änderungen. Möchten Sie ohne Speichern fortfahren?",
     "unsavedLeaveTab": "Sie haben nicht gespeicherte Änderungen. Diesen Tab verlassen?",
     "unsavedContinue": "Sie haben nicht gespeicherte Änderungen. Ohne Speichern fortfahren?",
-    "removeAssignment": "Diese Zuordnung entfernen?",
+    "removeAssignment": "Zuordnung von {{name}} entfernen?",
     "deleteInstance": "Instanz {{env}} löschen?",
     "deleteLocation": "Standort löschen?",
     "removeBinding": "Diese Bindung entfernen?",

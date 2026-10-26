@@ -21,7 +21,7 @@ vi.mock('../config/ThemeContext', () => ({ useThemeMode: () => ({ resolvedMode: 
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 
 import api from '../api';
-import ServerDataGrid from './ServerDataGrid';
+import ServerDataGrid, { DATE_COLUMN_FILTER } from './ServerDataGrid';
 import CheckboxSetFilter from './CheckboxSetFilter';
 import CheckboxSetFloatingFilter from './CheckboxSetFloatingFilter';
 
@@ -45,6 +45,8 @@ type GridProps = {
   showFilteredColumns?: boolean;
   /** Adds a date column with the grid's date filter. */
   withDateColumn?: boolean;
+  /** That date column uses the date menu under the header, as the asset list does. */
+  withDateMenu?: boolean;
 };
 
 type Row = { id: string; name: string; other: string; status: string; secret?: string };
@@ -77,14 +79,15 @@ function SearchSpy({ onChange }: { onChange: (search: string) => void }) {
 }
 
 const DATE_COLUMN = { field: 'due', headerName: 'Due', filter: 'agDateColumnFilter' } as any;
+const DATE_MENU_COLUMN = { field: 'due', headerName: 'Due', width: 170, ...DATE_COLUMN_FILTER } as any;
 
-function Grid({ queryClient, getValues, withSuppressedColumn, withDateColumn, onSearchChange, ...props }: GridProps) {
+function Grid({ queryClient, getValues, withSuppressedColumn, withDateColumn, withDateMenu, onSearchChange, ...props }: GridProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         {onSearchChange && <SearchSpy onChange={onSearchChange} />}
         <ServerDataGrid<Row>
-          columns={[...columns(!!withSuppressedColumn, getValues), ...(withDateColumn ? [DATE_COLUMN] : [])]}
+          columns={[...columns(!!withSuppressedColumn, getValues), ...(withDateColumn ? [withDateMenu ? DATE_MENU_COLUMN : DATE_COLUMN] : [])]}
           endpoint="/things"
           queryKey="things"
           defaultSort={{ field: 'name', direction: 'ASC' }}
@@ -430,6 +433,17 @@ describe('ServerDataGrid column filters follow the grid model', () => {
     await quiet();
     expect(grid.api().getColumn('secret').isVisible()).toBe(false);
     expect(grid.api().getFilterModel()).toHaveProperty('secret');
+  }, 30_000);
+
+  it('date filter: the floating cell opens the date menu and keeps no text box', async () => {
+    // A date column used to inherit the text box. Typing a date there wrote a text model the date
+    // filter dropped, so the list and the address stayed unchanged. The cell now opens the menu.
+    layoutPopups();
+    await mount({ withDateColumn: true, withDateMenu: true });
+    const cell = floatingFilterCell('due');
+    expect(cell.querySelector('input')).toBeNull();
+    fireEvent.click(cell.querySelector('button')!);
+    await waitFor(() => expect(document.querySelector('.ag-popup input[inputmode="numeric"]')).not.toBeNull());
   }, 30_000);
 
   it("date filter: the app's date field in place of the browser picker, and the server gets an ISO date", async () => {

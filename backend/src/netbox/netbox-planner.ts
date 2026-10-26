@@ -265,6 +265,8 @@ export type NetboxReviewBatch = {
   remaining: number;
   /** Out-of-scope objects, counted by reason: they are never listed one by one. */
   skipped_by_reason: Record<string, number>;
+  /** The first names for each reason, capped. An empty string is an object with no name. */
+  skipped_names: Record<string, string[]>;
 };
 
 /**
@@ -295,13 +297,19 @@ export type NetboxReviewBatch = {
  * Inside a group the Netbox order is kept, so a batch is stable from one
  * preview to the next.
  */
+/** Names kept per skip reason. The count stays complete; the list only names a sample. */
+const SKIPPED_NAME_CAP = 20;
+
 export function buildReviewBatch(rows: NetboxPlanRow[], limit: number): NetboxReviewBatch {
   const skippedByReason: Record<string, number> = {};
+  const skippedNames: Record<string, string[]> = {};
   const listed: Array<{ row: NetboxPlanRow; rank: number; index: number }> = [];
   rows.forEach((row, index) => {
     if (row.action === 'skipped' && row.decision == null) {
       const reason = row.skip_reason ?? 'ignored';
       skippedByReason[reason] = (skippedByReason[reason] ?? 0) + 1;
+      const names = skippedNames[reason] ?? (skippedNames[reason] = []);
+      if (names.length < SKIPPED_NAME_CAP) names.push(row.external_name?.trim() || '');
       return;
     }
     if (row.action === 'unchanged' && row.warnings.length === 0 && row.decision == null) return;
@@ -318,6 +326,7 @@ export function buildReviewBatch(rows: NetboxPlanRow[], limit: number): NetboxRe
     rows: listed.slice(0, limit).map((entry) => entry.row),
     remaining: listed.slice(limit).filter((entry) => isWrite(entry.row)).length,
     skipped_by_reason: skippedByReason,
+    skipped_names: skippedNames,
   };
 }
 

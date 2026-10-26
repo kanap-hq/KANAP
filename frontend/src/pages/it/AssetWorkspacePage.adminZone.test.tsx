@@ -149,7 +149,7 @@ describe('Asset properties: administration zone', () => {
     const field = await zoneShowing('Tier 0');
     fireEvent.mouseDown(field);
     const options = within(screen.getByRole('listbox')).getAllByRole('option').map((option) => option.textContent);
-    expect(options).toEqual(['common:labels.none', 'Tier 0', 'Tier 1']);
+    expect(options).toEqual(['pages.administrationView.noZone', 'Tier 0', 'Tier 1']);
     fireEvent.click(screen.getByRole('option', { name: 'Tier 1' }));
     expect(patch).toHaveBeenCalledWith('/assets/asset-1', { admin_zone: 'tier_1' });
   });
@@ -182,7 +182,7 @@ describe('Asset properties: administration zone', () => {
     const field = await zoneShowing('common.deprecatedOption:Old zone');
     fireEvent.mouseDown(field);
     const options = within(screen.getByRole('listbox')).getAllByRole('option').map((option) => option.textContent);
-    expect(options).toEqual(['common:labels.none', 'Tier 0', 'common.deprecatedOption:Old zone', 'Tier 1']);
+    expect(options).toEqual(['pages.administrationView.noZone', 'Tier 0', 'common.deprecatedOption:Old zone', 'Tier 1']);
   });
 
   it('shows a value outside the catalog as legacy and does not offer a retired zone', async () => {
@@ -190,7 +190,7 @@ describe('Asset properties: administration zone', () => {
     const field = await zoneShowing('common.legacyOption:ghost');
     fireEvent.mouseDown(field);
     const options = within(screen.getByRole('listbox')).getAllByRole('option').map((option) => option.textContent);
-    expect(options).toEqual(['common:labels.none', 'common.legacyOption:ghost', 'Tier 0', 'Tier 1']);
+    expect(options).toEqual(['pages.administrationView.noZone', 'common.legacyOption:ghost', 'Tier 0', 'Tier 1']);
   });
 
   it('is disabled without the right to manage assets', async () => {

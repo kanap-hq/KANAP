@@ -19,7 +19,9 @@ Every master data page has **Export CSV** and **Import CSV** in its toolbar, and
 | Spanish | `;` | `12280,50` | `01/03/2027` | `sí`, `no` |
 | German | `;` | `12280,50` | `01.03.2027` | `ja`, `nein` |
 
-A date the file cannot settle on its own, such as `01/03/2027`, is read in the order of the language the screen is shown in: day first in French, German and Spanish, month first in English. The check says how it read the file, with a button to change the reading. A date with a day above 12 settles the question on its own, and the file carries no record of the language it was exported in.
+**Dates** are written year first (`2027-03-01`, `2027/03/01` or `2027.03.01`), or with the day and the month before the year (`01/03/2027`, `01.03.2027`). A date written in words, such as `Mar 1 2027`, is refused, and so is a day that is not on the calendar, such as `31/02/2027`.
+
+On the master data pages, a date the file cannot settle on its own, such as `01/03/2027`, is read in the order of the language the screen is shown in: day first in French, German and Spanish, month first in English. The check says how it read the file, with a button to change the reading. A date with a day above 12 settles the question on its own, and the file carries no record of the language it was exported in. The files of applications, assets, incidents, projects, requests and tasks always read such a date day first.
 
 An import reads yes or no in any of these languages, and the `true`, `false`, `1` and `0` of older files. The files of applications, assets, incidents, projects, requests and tasks follow the same table, and so do the link files of the technologies list. See [Technologies](technologies.md#import-and-export-links).
 

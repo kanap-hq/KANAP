@@ -7,13 +7,15 @@ Assets document your infrastructure inventory: physical servers, virtual machine
 Navigate to **IT Landscape > Assets** to see your asset inventory. Click **Add asset** to create your first entry.
 
 **Required fields**:
-- **Name**: A unique asset name or hostname
-- **Asset type**: Web server, Virtual machine, Physical server, Container, etc. (configurable in **IT Landscape > Settings**)
+- **Name**: The asset name or hostname, up to 200 characters
+- **Asset type**: Web server, Virtual machine, Physical server, Container, etc. (configurable in **IT Landscape > Settings**). No type is preselected: **Create** stays unavailable until you choose one
 - **Location**: Where the asset is hosted (determines provider, hosting type, and country)
 
 **Strongly recommended**:
 - **Lifecycle**: Current status (Active, Deprecated, Retired, etc.)
 - **Environment**: Which environment this asset belongs to (Prod, Pre-prod, QA, Test, Dev, Sandbox)
+
+**Unique names**: two assets cannot share a name or an FQDN. Letter case and spaces at either end do not count. KANAP refuses the duplicate and names the asset that already has it (`AST-12`). Duplicates recorded earlier stay editable as long as you leave that value unchanged.
 
 **Tip**: Use consistent naming conventions that include environment and role information (e.g., `prod-web-01`, `dev-db-master`). When creating a new asset, the hostname is automatically derived from the name you type.
 
@@ -32,7 +34,7 @@ The asset list gives you a filterable, sortable overview of every asset in your 
 
 | Column | What it shows |
 |--------|---------------|
-| **#** | Asset reference (e.g., `AST-123`), monospaced |
+| **#** | Asset reference (e.g., `AST-123`), monospaced. Sorts by number |
 | **Name** | Asset name (click to open workspace) |
 | **Vulnerabilities to review** | The vulnerabilities still to review on the technologies recorded on the asset, then, in orange, how many are critical or high (`5 · 2`). Empty for a retired asset or when none is left. Click it to open the [Vulnerabilities](vulnerabilities.md) page filtered on the asset. Present when vulnerabilities are followed |
 | **Asset Type** | The asset's type (e.g., Virtual Machine, Physical Server) |
@@ -41,7 +43,7 @@ The asset list gives you a filterable, sortable overview of every asset in your 
 | **Location** | Where the asset is hosted |
 | **Hosting** | Hosting type (derived from location) |
 | **OS** | Operating system: the technology marked as the server's operating system, with its version |
-| **Network Zone** | Network segment (derived from subnet) |
+| **Network Zone** | The network zone of the subnet of the first IP address. A subnet attached to the asset's location comes before a subnet of the same range with no location |
 | **Lifecycle** | Current lifecycle status |
 | **Assignments** | Number of application assignments, those inherited from its clusters included |
 | **Created** | When the record was created |
@@ -74,11 +76,13 @@ Most columns support checkbox set filters for quick multi-select filtering. Filt
 
 Sorting on **Vulnerabilities to review** orders the assets by their critical or high vulnerabilities, then by their total. Retired assets come last. The column counts direct links only: a virtual machine does not count the vulnerabilities of its host. See [What KANAP counts](vulnerabilities.md#what-kanap-counts).
 
+**Quick search** looks in the name, the reference, the host name, the FQDN, the IP addresses, the cluster, the location, the sub-location and the operating system.
+
 **Tip**: Combine filters across columns to narrow results. For example, filter by Environment = "Prod" and Lifecycle = "Active" to see only active production assets.
 
 **Actions**:
 - **Add asset**: opens a menu (`infrastructure:member`). **Add asset** creates an asset; **Add cluster** creates one with the **Cluster** switch already on
-- **Import CSV** / **Export CSV**: Bulk operations (`infrastructure:admin`)
+- **Import CSV** / **Export CSV**: Bulk operations (`infrastructure:admin`). The export holds the assets the list shows. See [Export options](#export-options)
 - **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`). An asset still assigned to applications or linked to connections cannot be deleted: remove it from them first. An assignment the asset only inherits from its cluster does not block it. Before anything is deleted, the confirmation lists the assets kept, with the reason, and what the others take with them (see [Deleting a cluster or a member](#deleting-a-cluster-or-a-member))
 
 ---
@@ -138,6 +142,8 @@ Before you delete an asset, the confirmation says what goes with it: the cluster
 
 Click any row to open the workspace. The workspace has a **header** with quick metadata, a **properties drawer** on the right (the asset's identity card, always visible), and a **content area** in the centre that switches with each tab.
 
+An address that names no asset opens an **Asset not found** page, with a link back to the list.
+
 The tabs are **Overview**, **Operations**, **Network**, **Hardware** (physical asset types only), **Dependencies** and **Relations**. When you create an asset, **Overview** and **Network** are open. The other tabs open once you click **Create**.
 
 ### Header
@@ -159,12 +165,12 @@ The drawer shows the asset's identity card on every tab. Edits save automaticall
 - **Asset type** (required)
 - **Cluster**: turn it on to mark the asset as a cluster. The change saves at once and removes nothing. It is refused for a cluster that has members, and for a member of a cluster. See [Clusters](#clusters)
 - **Environment**: Prod, Pre-prod, QA, Test, Dev, Sandbox
-- **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller and the hypervisor that runs it. Choose from the zones configured in **IT Landscape > Settings**. The asset then appears in that zone on the [Administration zones](administration-view.md) page
+- **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller and the hypervisor that runs it. Choose from the zones configured in **IT Landscape > Settings**, or **No zone**. The asset then appears in that zone on the [Administration zones](administration-view.md) page
 
 **Location**:
 - **Location** (required)
 - **Sub-location** (when the location has sub-locations defined)
-- **Hosting type**, **Operating company** or **Cloud provider**, **Country**, **City**: read-only, derived from the location
+- **Hosting type**, **Operating company** or **Cloud provider**, **Country**, **City**: read-only, derived from the location. They follow when you change the location
 
 **Lifecycle**:
 - **Lifecycle**: Active, Deprecated, Retired, etc. (configurable in Settings)
@@ -216,7 +222,7 @@ The Operations tab shows the cluster of the asset and what runs on it: the appli
 | **Since** | Date the server was assigned |
 | **Notes** | Free-text notes |
 
-Click **Add assignment** to attach this asset to an application deployment (`applications:member`). Pick the application, then the environment (the application must already have a deployment in that environment), then the role and optional date / notes. On a member of a cluster, KANAP first asks whether to assign the cluster or this server only. See [Applications on a cluster](#applications-on-a-cluster). The pencil at the end of a row opens the application: the assignment is edited in its **Deployments** tab. The bin icon removes the assignment, after a confirmation. **Add assignment** is unavailable while no server role is set up in **IT Landscape > Settings**.
+Click **Add assignment** to attach this asset to an application deployment. Pick the application, then the environment (the application must already have a deployment in that environment), then the role and optional date / notes. On a member of a cluster, KANAP first asks whether to assign the cluster or this server only. See [Applications on a cluster](#applications-on-a-cluster). The pencil at the end of a row opens the application: the assignment is edited in its **Deployments** tab. The bin icon removes the assignment, after a confirmation. **Add assignment** is unavailable while no server role is set up in **IT Landscape > Settings**. These commands need `infrastructure:member` and `applications:member`. Without both, the table is read-only.
 
 On a member, an application assigned to its cluster shows "via" the cluster's name, without pencil or bin: change it on the cluster.
 
@@ -284,7 +290,7 @@ Assets support multiple IP addresses, each with its own network configuration:
 
 - Click **Add IP address** to add a new entry.
 - **Type**: The purpose of the IP address (Host, IPMI, Management, iSCSI, or custom types from Settings)
-- **IP address**: The address itself
+- **IP address**: The address itself. A malformed address is refused, with the message under the field
 - **Subnet**: Network subnet from the configured list (filtered to the asset's location)
 - **Network zone**: Automatically derived from the selected subnet (read-only)
 - **VLAN**: Automatically derived from the selected subnet (read-only)
@@ -337,7 +343,7 @@ Each table shows the reference (`AST-12`), name, type, environment and status. A
 
 On a cluster, **Depends on** ends with a folded line, **Through members (n)**. It lists the assets that the cluster's members in service depend on, with those members in the **Via** column. These rows are read-only and stay out of the tab badge.
 
-With `infrastructure:member`, **Add** at the right of a section opens a search for an asset. Pick a result: the relation is saved at once. To remove a relation, hover the row and click the cross at its end. Readers see the tables read-only. A **Contains** relation from a member of a cluster first asks where to place the asset: see [Virtual machines on a cluster](#virtual-machines-on-a-cluster).
+With `infrastructure:member`, **Add** at the right of a section opens a search for an asset. Pick a result: the relation is saved at once. To remove a relation, hover the row and click the cross at its end. A message confirms it and offers **Undo**. Readers see the tables read-only. A **Contains** relation from a member of a cluster first asks where to place the asset: see [Virtual machines on a cluster](#virtual-machines-on-a-cluster).
 
 ---
 
@@ -359,14 +365,14 @@ You only see the sections of the modules you can read: budget, contracts, portfo
 
 Dates in orange need attention: a contract whose renewal decision is due within your contract decision window, or an open task past its due date. A disabled budget line or contract stays listed with its name greyed out. From two rows on, the budget lines and the contracts end with a total line. The budget line total is in the reporting currency and leaves out a line whose currency has no exchange rate for the year: a one-line warning under the table names it. Contracts get one total per currency, without the disabled ones.
 
-**Adding and removing links** (`infrastructure:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. Linking also needs a read of the target module, so **Add** is absent from a section you cannot read. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Readers see the tables read-only.
+**Adding and removing links** (`infrastructure:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. Linking also needs a read of the target module, so **Add** is absent from a section you cannot read. To remove a link, hover the row and click the cross at its end. A message confirms it and offers **Undo**. Removing a link deletes nothing else. Readers see the tables read-only.
 
 - A task you link or unlink here also shows in the task's activity.
 - Linking or unlinking an incident also needs `incidents:contributor` and is recorded in the incident's journal. A closed or cancelled incident cannot be linked or unlinked: reopen it first.
 
 **Links and files**: the web links of the asset (vendor portals, monitoring dashboards, documentation) and its files (configuration files, diagrams, vendor documents), one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With `infrastructure:member`:
 
-- **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
+- **Add link** opens a dialog for a URL and an optional name; the link is saved at once. An address typed without `http://` or `https://` gets `https://`. Any other scheme is refused. To change a link, hover its row and click the pencil.
 - **Attach file** opens the file chooser. You can also drop files on the section.
 - To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
 
@@ -384,7 +390,11 @@ From the Assets list:
 
 **Permissions required**: `infrastructure:admin` for import/export operations.
 
-### Export options
+### Export options { #export-options }
+
+**What the file holds**: the assets the list shows. The export follows the column filters and the quick search. The dialog says how many assets the file will hold. You can also export the whole register.
+
+The asset type, lifecycle, domain, administration zone and IP address type columns hold the names shown on screen, in the language of the screen.
 
 | Option | Description |
 |--------|-------------|
@@ -411,6 +421,19 @@ From the Assets list:
 
 4. **Apply changes**: If validation passes, click **Import** to commit changes.
 
+### What preflight refuses
+
+Preflight reports an error on the row, and nothing is loaded, for:
+
+- a host name that breaks the rule of the Network tab;
+- a malformed IP address;
+- an asset type, domain, lifecycle, administration zone or IP address type that matches nothing in **IT Landscape > Settings**;
+- a date that is not on the calendar, such as `31/02/2025`, or a date written in words. See [CSV files](csv-files.md) for the forms a date can take;
+- an IP address slot filled while an earlier one is empty, for example `ip_2_address` without `ip_1_address`;
+- a name or an FQDN that another asset already has.
+
+For an existing asset, the host name and the IP addresses are checked again only when the file changes them.
+
 ### Field reference
 
 **Core fields**:
@@ -419,7 +442,7 @@ From the Assets list:
 |------------|-------------|----------|-------|
 | `id` | Asset UUID | No | For updates; leave blank for new assets |
 | `name` | Asset name | Yes | Used as unique identifier for matching |
-| `location_code` | Location code | Yes | Must match an existing location code |
+| `location_reference` | Location code | Yes | The **Code** of an existing location |
 | `kind` | Asset type | Yes | Accepts code or label (e.g., `vm` or `Virtual Machine`) |
 | `environment` | Environment | Yes | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Lifecycle status | No | Accepts code or label (e.g., `active` or `Active`) |
@@ -445,7 +468,7 @@ From the Assets list:
 
 ### Label and code acceptance
 
-For fields configured in **IT Landscape > Settings**, you can use either the internal code or the display label:
+For fields configured in **IT Landscape > Settings**, you can use either the internal code or the name shown on screen, in English, French, German or Spanish:
 
 | Field | Example codes | Example labels |
 |-------|---------------|----------------|
@@ -455,7 +478,7 @@ For fields configured in **IT Landscape > Settings**, you can use either the int
 | Administration zone (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (core of trust)`, `Tier 1 (servers and applications)` |
 | IP Address Type | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
-The system automatically normalizes values during import, so `Virtual Machine`, `virtual machine`, and `vm` all resolve to the same asset type. A value that matches several entries is refused rather than guessed. The CSV export writes names for these columns, so an exported file can be imported back as is.
+The system automatically normalizes values during import, so `Virtual Machine`, `virtual machine`, and `vm` all resolve to the same asset type. A value that matches several entries is refused rather than guessed. The CSV export writes names for these columns, in the language of the screen, so an exported file can be imported back as is.
 
 **Operating system**: the `operating_system` column holds the technology name followed by its version, as the export writes it (`Windows Server 2019`, `Ubuntu 24.04 LTS`). On import, KANAP looks for the technology among yours, then in the catalog, and records the version. A technology or a version it does not find is created, so check the spelling first. The value becomes the server's operating system.
 
@@ -478,14 +501,14 @@ If you include the `id` column with a valid UUID, matching uses ID first, then f
 ### Derived fields
 
 Some fields are computed and cannot be imported:
-- **Provider**: Automatically derived from the asset's location
+- **Provider**: Automatically derived from the asset's location, and updated when the location changes
 - **FQDN**: Computed from hostname + domain
 - **Vulnerabilities**: `vulnerabilities_to_review` (the vulnerabilities still to review) and `severe_vulnerabilities` (those critical or high), as the list column counts them. Export only: the import ignores them. Empty for a retired asset. Left out of the file when vulnerabilities are not followed
 
 ### Limitations
 
 - **Maximum 4 IP addresses**: Assets support up to 4 IP address entries via CSV
-- **Location required**: Every asset must have a valid location code
+- **Location required**: Every asset must have the code of an existing location
 - **Relations not included**: Application assignments, connections, financial links, projects, tasks, and attachments must be managed in the workspace
 
 ### Troubleshooting
@@ -499,7 +522,7 @@ Some fields are computed and cannot be imported:
 ### Example CSV
 
 ```csv
-name;location_code;kind;environment;status;hostname;domain;ip_1_type;ip_1_address
+name;location_reference;kind;environment;status;hostname;domain;ip_1_type;ip_1_address
 PROD-WEB-01;NYC-DC1;Virtual Machine;prod;Active;prodweb01;corp;Host IP;10.0.1.10
 PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 ```

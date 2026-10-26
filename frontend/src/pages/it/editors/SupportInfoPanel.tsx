@@ -55,16 +55,42 @@ type SupportContactRow = {
   } | null;
 };
 
+type SupportDraft = { info: SupportInfo; contacts: SupportContactRow[] };
+
+function normalizeInfo(data?: SupportInfo | null): SupportInfo {
+  return {
+    vendor_id: data?.vendor_id || null,
+    support_contract_id: data?.support_contract_id || null,
+    support_tier: data?.support_tier || null,
+    support_expiry: data?.support_expiry || null,
+    notes: data?.notes || null,
+  };
+}
+
+function sameSupport(info: SupportInfo, contacts: SupportContactRow[], draft: SupportDraft) {
+  return JSON.stringify(normalizeInfo(info)) === JSON.stringify(normalizeInfo(draft.info))
+    && JSON.stringify(normalizeContacts(contacts)) === JSON.stringify(normalizeContacts(draft.contacts));
+}
+
+// A save that fails while the panel is leaving. The next visit shows it again.
+const supportDrafts = new Map<string, SupportDraft>();
+
+export function clearSupportInfoDrafts() {
+  supportDrafts.clear();
+}
+
 type Props = {
   assetId: string;
   onDirtyChange?: (dirty: boolean) => void;
+  /** The fiche's message bar. The panel is gone when a save on leaving fails. */
+  onSaveError?: (message: string | null) => void;
 };
 
 function normalizeContacts(rows: SupportContactRow[]) {
   return rows.map((r) => ({ contact_id: r.contact_id, role: (r.role || '').trim() }));
 }
 
-export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
+export default function SupportInfoPanel({ assetId, onDirtyChange, onSaveError }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
   const readOnly = !hasLevel('infrastructure', 'member');
@@ -93,7 +119,11 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
 
   // Vendors and contracts searched as the user types; the chosen ones keep their labels (read by id).
   const vendorPicker = useLookupPicker<VendorOption>({ endpoint: '/suppliers/lookup', value: vendorId ? [vendorId] : [] });
-  const contractPicker = useLookupPicker<ContractOption>({ endpoint: '/contracts/lookup', value: contractId ? [contractId] : [] });
+  const contractPicker = useLookupPicker<ContractOption>({
+    endpoint: '/contracts/lookup',
+    value: contractId ? [contractId] : [],
+    scope: vendorId ? { supplier_id: vendorId } : undefined,
+  });
 
   const infoDirty = React.useMemo(() => {
     return (
@@ -120,55 +150,46 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
     setError(null);
     try {
       // Load support info
+      let serverInfo = normalizeInfo(null);
+      let serverHidden = false;
       try {
         const res = await api.get(`/assets/${assetId}/support-info`);
-        const data = res.data as SupportInfo | null;
-        if (data) {
-          setVendorId(data.vendor_id || null);
-          setContractId(data.support_contract_id || null);
-          setContractHidden(data.support_contract_hidden === true);
-          setSupportTier(data.support_tier || '');
-          setSupportExpiry(data.support_expiry || '');
-          setNotes(data.notes || '');
-          setBaseline(data);
-        } else {
-          setVendorId(null);
-          setContractId(null);
-          setContractHidden(false);
-          setSupportTier('');
-          setSupportExpiry('');
-          setNotes('');
-          setBaseline({});
-        }
+        serverInfo = normalizeInfo(res.data as SupportInfo | null);
+        serverHidden = (res.data as SupportInfo | null)?.support_contract_hidden === true;
       } catch (e: any) {
         if (e?.response?.status !== 404) {
           throw e;
         }
-        setVendorId(null);
-        setContractId(null);
-        setContractHidden(false);
-        setSupportTier('');
-        setSupportExpiry('');
-        setNotes('');
-        setBaseline({});
       }
 
       // Load support contacts
+      let serverContacts: SupportContactRow[] = [];
       try {
         const res = await api.get(`/assets/${assetId}/support-contacts`);
         const items = (res.data || []) as SupportContactRow[];
-        const mapped = items.map((row) => ({
+        serverContacts = items.map((row) => ({
           id: row.id,
           contact_id: row.contact_id || null,
           role: row.role || '',
           contact: row.contact || null,
         }));
-        setSupportContacts(mapped.length > 0 ? mapped : []);
-        setContactsBaseline(mapped);
       } catch {
-        setSupportContacts([]);
-        setContactsBaseline([]);
+        serverContacts = [];
       }
+      const draft = supportDrafts.get(assetId);
+      if (draft && sameSupport(serverInfo, serverContacts, draft)) supportDrafts.delete(assetId);
+      const kept = supportDrafts.get(assetId);
+      const shownInfo = kept?.info ?? serverInfo;
+      const shownContacts = kept?.contacts ?? serverContacts;
+      setVendorId(shownInfo.vendor_id || null);
+      setContractId(shownInfo.support_contract_id || null);
+      setContractHidden(serverHidden);
+      setSupportTier(shownInfo.support_tier || '');
+      setSupportExpiry(shownInfo.support_expiry || '');
+      setNotes(shownInfo.notes || '');
+      setBaseline(serverInfo);
+      setSupportContacts(shownContacts);
+      setContactsBaseline(serverContacts);
     } catch (e: any) {
       setError(getApiErrorMessage(e, t, t('messages.loadSupportInfoFailed')));
     } finally {
@@ -227,27 +248,30 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
 
   const save = React.useCallback(async () => {
     if (readOnly) return;
+    supportDrafts.set(assetId, { info: supportInfoPayload, contacts: supportContacts });
     savingRef.current = true;
     setSaving(true);
     setError(null);
     try {
-      // Save support info
+      // The support record and its contacts are two routes. Both are sent, and either failure is reported.
       await api.post(`/assets/${assetId}/support-info`, supportInfoPayload);
       setBaseline(supportInfoPayload);
 
-      // Save support contacts
       await api.post(`/assets/${assetId}/support-contacts/bulk-replace`, { contacts: contactsPayload });
       failedSaveSignatureRef.current = null;
       setContactsBaseline(supportContacts);
+      onSaveError?.(null);
     } catch (e: any) {
       failedSaveSignatureRef.current = saveSignature;
+      // The panel is on screen, so the failure stays in its own alert. Drop a page banner this
+      // panel left behind on an earlier leave, so the same sentence is not shown twice.
       setError(getApiErrorMessage(e, t, t('messages.saveSupportInfoFailed')));
-      throw e;
+      onSaveError?.(null);
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [assetId, contactsPayload, readOnly, saveSignature, supportContacts, supportInfoPayload, t]);
+  }, [assetId, contactsPayload, onSaveError, readOnly, saveSignature, supportContacts, supportInfoPayload, t]);
 
   React.useEffect(() => {
     if (!dirty || loading || saving || readOnly) return undefined;
@@ -263,10 +287,15 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
     const pending = dirty && !loading && !saving && !readOnly && failedSaveSignatureRef.current !== saveSignature;
     pendingFlushRef.current = pending
       ? () => {
+          const draft = { info: supportInfoPayload, contacts: supportContacts };
+          supportDrafts.set(assetId, draft);
           void (async () => {
             await api.post(`/assets/${assetId}/support-info`, supportInfoPayload);
             await api.post(`/assets/${assetId}/support-contacts/bulk-replace`, { contacts: contactsPayload });
-          })().catch(() => undefined);
+            onSaveError?.(null);
+          })().catch((e) => {
+            onSaveError?.(getApiErrorMessage(e, t, t('messages.saveSupportInfoFailed')));
+          });
         }
       : null;
   });
@@ -290,7 +319,10 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
             value={selectedVendor}
             onChange={(_, v) => {
               vendorPicker.remember([v]);
-              setVendorId(v?.id || null);
+              const next = v?.id || null;
+              setVendorId(next);
+              // A contract belongs to one vendor. Changing the vendor drops a contract of the previous one.
+              if (next !== vendorId) setContractId(null);
             }}
             getOptionLabel={(o) => vendorPicker.label(o, (vendor) => vendor.name ?? '')}
             disabled={readOnly || saving}
@@ -413,7 +445,7 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
             </Button>
           )}
         </Box>
-        <Table size="small">
+        <Table size="small" sx={{ width: '100%', tableLayout: 'fixed', '& th, & td': { whiteSpace: 'normal', overflowWrap: 'anywhere' } }}>
           <TableHead>
             <TableRow>
               <TableCell>{t('common:selects.contact')}</TableCell>
@@ -434,7 +466,7 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
             )}
             {supportContacts.map((row, idx) => (
               <TableRow key={row.id || idx}>
-                <TableCell sx={{ minWidth: 260 }}>
+                <TableCell sx={{ width: '32%', minWidth: 0 }}>
                   <ContactSelect
                     value={row.contact_id}
                     onChange={(v) => void setContactRowContact(idx, v)}
@@ -447,7 +479,7 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
                 <TableCell>{row.contact?.email || '—'}</TableCell>
                 <TableCell>{row.contact?.phone || '—'}</TableCell>
                 <TableCell>{row.contact?.mobile || '—'}</TableCell>
-                <TableCell sx={{ minWidth: 180 }}>
+                <TableCell sx={{ width: '22%', minWidth: 0 }}>
                   <TextField
                     value={row.role}
                     onChange={(e) => setContactRowRole(idx, e.target.value)}

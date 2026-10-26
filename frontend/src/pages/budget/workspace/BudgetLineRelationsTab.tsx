@@ -134,13 +134,8 @@ export default function BudgetLineRelationsTab({
   const saveLink = async (linkRow: LinksAndFilesLink | null, draft: LinkDraft) => {
     setError(null);
     const body = { description: draft.name, url: draft.url };
-    try {
-      if (linkRow) await api.patch(`${itemsApi}/${lineId}/links/${linkRow.id}`, body);
-      else await api.post(`${itemsApi}/${lineId}/links`, body);
-    } catch (e) {
-      failed(e);
-      throw e;
-    }
+    if (linkRow) await api.patch(`${itemsApi}/${lineId}/links/${linkRow.id}`, body);
+    else await api.post(`${itemsApi}/${lineId}/links`, body);
     await queryClient.invalidateQueries({ queryKey: linksKey });
     onRelationsChange();
   };

@@ -7,13 +7,15 @@ Les Actifs documentent votre inventaire d'infrastructure : serveurs physiques, m
 Rendez-vous dans **Cartographie SI > Actifs** pour voir votre inventaire d'actifs. Cliquez sur **Ajouter un actif** pour créer votre première entrée.
 
 **Champs obligatoires** :
-- **Nom** : Un nom d'actif ou nom d'hôte unique
-- **Type d'actif** : Serveur web, Machine virtuelle, Serveur physique, Conteneur, etc. (configurable dans **Cartographie SI > Paramètres**)
+- **Nom** : Le nom de l'actif ou son nom d'hôte, 200 caractères au plus
+- **Type d'actif** : Serveur web, Machine virtuelle, Serveur physique, Conteneur, etc. (configurable dans **Cartographie SI > Paramètres**). Aucun type n'est présélectionné : **Créer** reste indisponible tant que vous n'en avez pas choisi un
 - **Site** : Où l'actif est hébergé (détermine le fournisseur, le type d'hébergement et le pays)
 
 **Fortement recommandé** :
 - **Cycle de vie** : Statut actuel (Actif, Obsolète, Retiré, etc.)
 - **Environnement** : À quel environnement cet actif appartient (Prod, Pré-prod, QA, Test, Dev, Sandbox)
+
+**Noms uniques** : deux actifs ne peuvent pas avoir le même nom ni le même FQDN. La casse et les espaces en début ou en fin ne comptent pas. KANAP refuse le doublon et nomme l'actif qui porte déjà la valeur (`AST-12`). Les doublons enregistrés auparavant restent modifiables tant que vous ne changez pas cette valeur.
 
 **Conseil** : Utilisez des conventions de nommage cohérentes incluant l'environnement et les informations de rôle (ex. : `prod-web-01`, `dev-db-master`). Lors de la création d'un nouvel actif, le nom d'hôte est automatiquement dérivé du nom que vous saisissez.
 
@@ -32,7 +34,7 @@ La liste des actifs vous donne une vue filtrable et triable de chaque actif de v
 
 | Colonne | Ce qu'elle affiche |
 |---------|--------------------|
-| **#** | Référence de l'actif (ex. : `AST-123`), monospace |
+| **#** | Référence de l'actif (ex. : `AST-123`), monospace. Se trie par numéro |
 | **Nom** | Nom de l'actif (cliquez pour ouvrir l'espace de travail) |
 | **Vulnérabilités à traiter** | Les vulnérabilités encore à traiter sur les technologies renseignées sur l'actif, puis, en orange, le nombre de critiques ou élevées (`5 · 2`). Vide pour un actif retiré ou quand il n'en reste aucune. Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif. Présente quand les vulnérabilités sont suivies |
 | **Type d'actif** | Le type de l'actif (ex. : Machine virtuelle, Serveur physique) |
@@ -41,7 +43,7 @@ La liste des actifs vous donne une vue filtrable et triable de chaque actif de v
 | **Site** | Où l'actif est hébergé |
 | **Hébergement** | Type d'hébergement (dérivé du site) |
 | **OS** | Système d'exploitation : la technologie marquée comme système d'exploitation du serveur, avec sa version |
-| **Zone réseau** | Segment réseau (dérivé du sous-réseau) |
+| **Zone réseau** | La zone réseau du sous-réseau de la première adresse IP. Un sous-réseau rattaché au site de l'actif passe avant un sous-réseau de même plage sans site |
 | **Cycle de vie** | Statut de cycle de vie actuel |
 | **Assignations** | Nombre d'assignations d'applications, y compris celles héritées de ses clusters |
 | **Créé** | Quand l'enregistrement a été créé |
@@ -74,11 +76,13 @@ La plupart des colonnes prennent en charge des filtres par jeu de cases à coche
 
 Le tri sur **Vulnérabilités à traiter** classe les actifs par leurs vulnérabilités critiques ou élevées, puis par leur total. Les actifs retirés viennent en dernier. La colonne ne compte que les liens directs : une machine virtuelle ne compte pas les vulnérabilités de son hôte. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts).
 
+**La recherche rapide** porte sur le nom, la référence, le nom d'hôte, le FQDN, les adresses IP, le cluster, le site, le sous-site et le système d'exploitation.
+
 **Conseil** : Combinez les filtres entre colonnes pour affiner les résultats. Par exemple, filtrez par Environnement = « Prod » et Cycle de vie = « Actif » pour voir uniquement les actifs de production actifs.
 
 **Actions** :
 - **Ajouter un actif** : ouvre un menu (`infrastructure:member`). **Ajouter un actif** crée un actif ; **Ajouter un cluster** en crée un avec l'interrupteur **Cluster** déjà activé
-- **Import CSV** / **Export CSV** : Opérations en masse (`infrastructure:admin`)
+- **Import CSV** / **Export CSV** : Opérations en masse (`infrastructure:admin`). L'export contient les actifs que la liste affiche. Voir [Options d'export](#export-options)
 - **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé : retirez-le d'abord de ces éléments. Une affectation que l'actif hérite seulement de son cluster ne bloque pas. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison, et ce que les autres emportent avec eux (voir [Supprimer un cluster ou un membre](#deleting-a-cluster-or-a-member))
 
 ---
@@ -138,6 +142,8 @@ Avant la suppression d'un actif, la confirmation dit ce qui part avec lui : les 
 
 Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **tiroir des propriétés** sur la droite (la carte d'identité de l'actif, toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
 
+Une adresse qui ne désigne aucun actif ouvre une page **Actif introuvable**, avec un lien de retour à la liste.
+
 Les onglets sont **Vue d'ensemble**, **Exploitation**, **Réseau**, **Matériel** (types d'actifs physiques uniquement), **Dépendances** et **Relations**. À la création d'un actif, **Vue d'ensemble** et **Réseau** sont ouverts. Les autres onglets s'ouvrent dès que vous cliquez sur **Créer**.
 
 ### En-tête
@@ -159,12 +165,12 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 - **Type d'actif** (obligatoire)
 - **Cluster** : activez-le pour marquer l'actif comme cluster. Le changement s'enregistre aussitôt et ne retire rien. Il est refusé pour un cluster qui a des membres et pour un membre d'un cluster. Voir [Clusters](#clusters)
 - **Environnement** : Prod, Pré-prod, QA, Test, Dev, Sandbox
-- **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**. L'actif apparaît alors dans cette zone sur la page [Zones d'administration](administration-view.md)
+- **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**, ou **Sans zone**. L'actif apparaît alors dans cette zone sur la page [Zones d'administration](administration-view.md)
 
 **Site** :
 - **Site** (obligatoire)
 - **Sous-site** (lorsque le site a des sous-sites définis)
-- **Type d'hébergement**, **Société exploitante** ou **Fournisseur cloud**, **Pays**, **Ville** : en lecture seule, dérivés du site
+- **Type d'hébergement**, **Société exploitante** ou **Fournisseur cloud**, **Pays**, **Ville** : en lecture seule, dérivés du site. Ils suivent quand vous changez de site
 
 **Cycle de vie** :
 - **Cycle de vie** : Actif, Obsolète, Retiré, etc. (configurable dans les Paramètres)
@@ -216,7 +222,7 @@ L'onglet Exploitation montre le cluster de l'actif et ce qui tourne sur lui : le
 | **Depuis** | Date à laquelle le serveur a été affecté |
 | **Notes** | Notes en texte libre |
 
-Cliquez sur **Ajouter une affectation** pour rattacher cet actif à un déploiement d'application (`applications:member`). Choisissez l'application, puis l'environnement (l'application doit déjà avoir un déploiement dans cet environnement), puis le rôle et la date / les notes optionnelles. Sur un membre d'un cluster, KANAP demande d'abord s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](#applications-on-a-cluster). Le crayon en fin de ligne ouvre l'application : l'affectation se modifie dans son onglet **Déploiements**. L'icône corbeille retire l'affectation, après une confirmation. **Ajouter une affectation** est indisponible tant qu'aucun rôle serveur n'est configuré dans **Cartographie SI > Paramètres**.
+Cliquez sur **Ajouter une affectation** pour rattacher cet actif à un déploiement d'application. Choisissez l'application, puis l'environnement (l'application doit déjà avoir un déploiement dans cet environnement), puis le rôle et la date / les notes optionnelles. Sur un membre d'un cluster, KANAP demande d'abord s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](#applications-on-a-cluster). Le crayon en fin de ligne ouvre l'application : l'affectation se modifie dans son onglet **Déploiements**. L'icône corbeille retire l'affectation, après une confirmation. **Ajouter une affectation** est indisponible tant qu'aucun rôle serveur n'est configuré dans **Cartographie SI > Paramètres**. Ces commandes demandent `infrastructure:member` et `applications:member`. Sans les deux, le tableau est en lecture seule.
 
 Sur un membre, une application affectée à son cluster s'affiche « via » le nom du cluster, sans crayon ni corbeille : modifiez-la sur le cluster.
 
@@ -284,7 +290,7 @@ Les actifs prennent en charge plusieurs adresses IP, chacune avec sa propre conf
 
 - Cliquez sur **Ajouter une adresse IP** pour ajouter une nouvelle entrée.
 - **Type** : L'objectif de l'adresse IP (Hôte, IPMI, Management, iSCSI, ou types personnalisés depuis les Paramètres)
-- **Adresse IP** : L'adresse elle-même
+- **Adresse IP** : L'adresse elle-même. Une adresse mal formée est refusée, avec le message sous le champ
 - **Sous-réseau** : Sous-réseau depuis la liste configurée (filtré au site de l'actif)
 - **Zone réseau** : Dérivée automatiquement du sous-réseau sélectionné (lecture seule)
 - **VLAN** : Dérivé automatiquement du sous-réseau sélectionné (lecture seule)
@@ -337,7 +343,7 @@ Chaque tableau affiche la référence (`AST-12`), le nom, le type, l'environneme
 
 Sur un cluster, **Dépend de** se termine par une ligne repliée, **Par les membres (n)**. Elle liste les actifs dont dépendent les membres en service du cluster, avec ces membres dans la colonne **Via**. Ces lignes sont en lecture seule et ne comptent pas dans la pastille de l'onglet.
 
-Avec `infrastructure:member`, **Ajouter**, à droite d'une section, ouvre une recherche d'actif. Choisissez un résultat : la relation est enregistrée aussitôt. Pour retirer une relation, survolez la ligne et cliquez sur la croix en fin de ligne. Les lecteurs voient les tableaux en lecture seule. Une relation **Contient** depuis un membre d'un cluster demande d'abord où placer l'actif : voir [Machines virtuelles sur un cluster](#virtual-machines-on-a-cluster).
+Avec `infrastructure:member`, **Ajouter**, à droite d'une section, ouvre une recherche d'actif. Choisissez un résultat : la relation est enregistrée aussitôt. Pour retirer une relation, survolez la ligne et cliquez sur la croix en fin de ligne. Un message le confirme et propose **Annuler**. Les lecteurs voient les tableaux en lecture seule. Une relation **Contient** depuis un membre d'un cluster demande d'abord où placer l'actif : voir [Machines virtuelles sur un cluster](#virtual-machines-on-a-cluster).
 
 ---
 
@@ -359,14 +365,14 @@ Vous ne voyez que les sections des modules que vous pouvez lire : budget, contra
 
 Les dates en orange demandent votre attention : un contrat dont la décision de renouvellement tombe dans votre fenêtre de décision des contrats, ou une tâche ouverte dont l'échéance est passée. Une ligne budgétaire ou un contrat désactivé reste affiché, son nom grisé. À partir de deux lignes, les lignes budgétaires et les contrats se terminent par une ligne de total. Le total des lignes budgétaires est dans la devise de reporting et exclut une ligne dont la devise n'a pas de taux de change pour l'année : un avertissement d'une ligne sous le tableau l'indique. Les contrats ont un total par devise, sans les contrats désactivés.
 
-**Ajouter et retirer des liens** (`infrastructure:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Lier demande aussi de pouvoir lire le module cible : **Ajouter** est donc absent d'une section que vous ne pouvez pas lire. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Les lecteurs voient les tableaux en lecture seule.
+**Ajouter et retirer des liens** (`infrastructure:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Lier demande aussi de pouvoir lire le module cible : **Ajouter** est donc absent d'une section que vous ne pouvez pas lire. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Un message le confirme et propose **Annuler**. Retirer un lien ne supprime rien d'autre. Les lecteurs voient les tableaux en lecture seule.
 
 - Une tâche liée ou déliée ici apparaît aussi dans l'activité de la tâche.
 - Lier ou délier un incident demande aussi `incidents:contributor` et s'inscrit dans le journal de l'incident. Un incident clos ou annulé ne peut être ni lié ni délié : rouvrez-le d'abord.
 
 **Liens et fichiers** : les liens web de l'actif (portails fournisseurs, tableaux de bord de monitoring, documentation) et ses fichiers (fichiers de configuration, schémas, documents fournisseurs), une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et sa date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec `infrastructure:member` :
 
-- **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
+- **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Une adresse saisie sans `http://` ni `https://` reçoit `https://`. Tout autre schéma est refusé. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
 - **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section.
 - Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
 
@@ -384,7 +390,11 @@ Depuis la liste des Actifs :
 
 **Autorisations requises** : `infrastructure:admin` pour les opérations d'import/export.
 
-### Options d'export
+### Options d'export { #export-options }
+
+**Contenu du fichier** : les actifs que la liste affiche. L'export suit les filtres des colonnes et la recherche rapide. La boîte de dialogue indique combien d'actifs le fichier contiendra. Vous pouvez aussi exporter tout le référentiel.
+
+Les colonnes du type d'actif, du cycle de vie, du domaine, de la zone d'administration et du type d'adresse IP contiennent les libellés de l'écran, dans la langue de l'écran.
 
 | Option | Description |
 |--------|-------------|
@@ -411,6 +421,19 @@ Depuis la liste des Actifs :
 
 4. **Appliquez les modifications** : Si la validation réussit, cliquez sur **Importer** pour valider les changements.
 
+### Ce que la vérification préalable refuse
+
+La vérification préalable signale une erreur sur la ligne, et rien n'est chargé, pour :
+
+- un nom d'hôte qui ne respecte pas la règle de l'onglet Réseau ;
+- une adresse IP mal formée ;
+- un type d'actif, un domaine, un cycle de vie, une zone d'administration ou un type d'adresse IP qui ne correspond à rien dans **Cartographie SI > Paramètres** ;
+- une date absente du calendrier, comme `31/02/2025`, ou une date écrite en toutes lettres. Les formes de date acceptées sont dans [Fichiers CSV](csv-files.md) ;
+- un emplacement d'adresse IP rempli alors qu'un emplacement précédent est vide, par exemple `ip_2_address` sans `ip_1_address` ;
+- un nom ou un FQDN qu'un autre actif porte déjà.
+
+Pour un actif existant, le nom d'hôte et les adresses IP ne sont revérifiés que si le fichier les change.
+
 ### Référence des champs
 
 **Champs principaux** :
@@ -419,7 +442,7 @@ Depuis la liste des Actifs :
 |-------------|-------------|-------------|-------|
 | `id` | UUID de l'actif | Non | Pour les mises à jour ; laisser vide pour les nouveaux actifs |
 | `name` | Nom de l'actif | Oui | Utilisé comme identifiant unique pour la correspondance |
-| `location_code` | Code du site | Oui | Doit correspondre à un code de site existant |
+| `location_reference` | Code du site | Oui | Le **Code** d'un site existant |
 | `kind` | Type d'actif | Oui | Accepte un code ou un libellé (ex. : `vm` ou `Virtual Machine`) |
 | `environment` | Environnement | Oui | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Statut de cycle de vie | Non | Accepte un code ou un libellé (ex. : `active` ou `Active`) |
@@ -445,7 +468,7 @@ Depuis la liste des Actifs :
 
 ### Acceptation des libellés et codes
 
-Pour les champs configurés dans **Cartographie SI > Paramètres**, vous pouvez utiliser soit le code interne, soit le libellé d'affichage :
+Pour les champs configurés dans **Cartographie SI > Paramètres**, vous pouvez utiliser soit le code interne, soit le libellé affiché à l'écran, en anglais, français, allemand ou espagnol :
 
 | Champ | Exemples de codes | Exemples de libellés |
 |-------|-------------------|----------------------|
@@ -455,7 +478,7 @@ Pour les champs configurés dans **Cartographie SI > Paramètres**, vous pouvez 
 | Zone d'administration (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (cœur de confiance)`, `Tier 1 (serveurs et applications)` |
 | Type d'adresse IP | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
-Le système normalise automatiquement les valeurs lors de l'import, donc `Virtual Machine`, `virtual machine` et `vm` se résolvent tous vers le même type d'actif. Une valeur qui correspond à plusieurs entrées est refusée plutôt que devinée. L'export CSV écrit les noms pour ces colonnes, si bien qu'un fichier exporté peut être réimporté tel quel.
+Le système normalise automatiquement les valeurs lors de l'import, donc `Virtual Machine`, `virtual machine` et `vm` se résolvent tous vers le même type d'actif. Une valeur qui correspond à plusieurs entrées est refusée plutôt que devinée. L'export CSV écrit les noms pour ces colonnes, dans la langue de l'écran, si bien qu'un fichier exporté peut être réimporté tel quel.
 
 **Système d'exploitation** : la colonne `operating_system` contient le nom de la technologie suivi de sa version, comme l'écrit l'export (`Windows Server 2019`, `Ubuntu 24.04 LTS`). À l'import, KANAP cherche la technologie parmi les vôtres, puis dans le catalogue, et enregistre la version. Une technologie ou une version introuvable est créée : vérifiez donc l'orthographe avant. La valeur devient le système d'exploitation du serveur.
 
@@ -478,14 +501,14 @@ Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d
 ### Champs dérivés
 
 Certains champs sont calculés et ne peuvent pas être importés :
-- **Fournisseur** : Dérivé automatiquement du site de l'actif
+- **Fournisseur** : Dérivé automatiquement du site de l'actif, et mis à jour quand le site change
 - **FQDN** : Calculé à partir du nom d'hôte + domaine
 - **Vulnérabilités** : `vulnerabilities_to_review` (les vulnérabilités encore à traiter) et `severe_vulnerabilities` (celles critiques ou élevées), comptées comme dans la colonne de la liste. Export seulement : l'import les ignore. Vides pour un actif retiré. Absentes du fichier quand les vulnérabilités ne sont pas suivies
 
 ### Limitations
 
 - **Maximum 4 adresses IP** : Les actifs prennent en charge jusqu'à 4 entrées d'adresse IP via CSV
-- **Site obligatoire** : Chaque actif doit avoir un code de site valide
+- **Site obligatoire** : Chaque actif doit avoir le code d'un site existant
 - **Relations non incluses** : Les assignations d'applications, connexions, liens financiers, projets, tâches et pièces jointes doivent être gérés dans l'espace de travail
 
 ### Résolution de problèmes
@@ -499,7 +522,7 @@ Certains champs sont calculés et ne peuvent pas être importés :
 ### Exemple CSV
 
 ```csv
-name;location_code;kind;environment;status;hostname;domain;ip_1_type;ip_1_address
+name;location_reference;kind;environment;status;hostname;domain;ip_1_type;ip_1_address
 PROD-WEB-01;NYC-DC1;Virtual Machine;prod;Active;prodweb01;corp;Host IP;10.0.1.10
 PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 ```

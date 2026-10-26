@@ -1,10 +1,12 @@
 import type { CsvLanguage } from '../common/csv-sheet';
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
-import { exportCatalogLabels } from '../it-ops-settings/catalog-resolve';
+import { exportCatalogLabelsIn } from '../it-ops-settings/catalog-resolve';
+import { shippedLabelIn } from '../it-ops-settings/catalog-shipped-labels';
+import { AssetsListService } from './services/assets-list.service';
 import { OperatingSystemService } from '../technologies/operating-system.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, EntityManager } from 'typeorm';
+import { Repository, EntityManager, SelectQueryBuilder } from 'typeorm';
 import { Asset } from './asset.entity';
 import {
   CsvExportService,
@@ -14,8 +16,9 @@ import {
   CsvImportResult,
   CsvFieldInfo,
 } from '../common/csv';
+import { clusterMembershipsOf, clusterNamesText, lockAssetNames } from './asset-rules';
+import { assetEnvironmentLabel } from './asset-environments';
 import { assetCsvConfig } from './asset-csv.config';
-import { clusterMembershipsOf, clusterNamesText } from './asset-rules';
 import { assetVulnerabilityCounts } from '../vulnerabilities/vulnerability-reach-counts';
 import {
   csvConfigForVulnerabilityFeed,
@@ -34,6 +37,7 @@ export class AssetsCsvService {
     private readonly importSvc: CsvImportService,
     private readonly itOpsSettings: ItOpsSettingsService,
     private readonly operatingSystems: OperatingSystemService,
+    private readonly list: AssetsListService,
   ) {}
 
   /**
@@ -50,42 +54,44 @@ export class AssetsCsvService {
     environment?: string;
     kind?: string;
     status?: string;
+    /** The list request: filters, search and scope. The same query the grid sends. */
+    query?: Record<string, unknown>;
   }): Promise<CsvExportResult> {
-    const { manager, tenantId, scope, fields, preset, environment, kind, status } = opts;
+    const { manager, tenantId, scope, fields, preset } = opts;
 
-    // Build query for assets
     let queryBuilder = manager
       .getRepository(Asset)
       .createQueryBuilder('asset')
       .where('asset.tenant_id = :tenantId', { tenantId });
 
-    // Apply filters
-    if (environment) {
-      queryBuilder = queryBuilder.andWhere('asset.environment = :environment', { environment });
-    }
-    if (kind) {
-      queryBuilder = queryBuilder.andWhere('asset.kind = :kind', { kind });
-    }
-    if (status) {
-      queryBuilder = queryBuilder.andWhere('asset.status = :status', { status });
-    }
-
-    queryBuilder = queryBuilder.orderBy('asset.name', 'ASC');
-
-    // Get assets (empty for template export)
-    const assets = scope === 'template' ? [] : await queryBuilder.getMany();
+    // A template is headers only. A data export is the rows the list shows.
+    const assets = scope === 'template' ? [] : await this.rowsForExport(queryBuilder, opts);
     if (assets.length) {
-      // Users never see codes: catalog-backed columns are exported as names (import accepts either).
-      // The operating system is already the readable label of the marked link. Cluster Membership
-      // is the names of the asset's real clusters, never the legacy text (empty for a cluster).
+      // Catalog columns are the names the screen shows in the file's language. A name the tenant
+      // typed stays as stored. The operating system is already the readable label of the marked link.
+      // Cluster Membership is the names of the asset's real clusters, never the legacy text (empty
+      // for a cluster).
       const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
       const labels = await this.operatingSystems.labelsOf(manager, tenantId, assets.map((asset) => asset.id));
       const memberships = await clusterMembershipsOf(manager, tenantId, assets.map((asset) => asset.id));
-      const ipTypeLabel = (code: string) => settings.ipAddressTypes.find((option) => option.code === code)?.label || code;
+      const ipTypeLabel = (code: string) => {
+        const option = settings.ipAddressTypes.find((item) => item.code === code);
+        if (!option) return code;
+        return shippedLabelIn('ipAddressTypes', option, opts.language) ?? (option.label || code);
+      };
       for (const asset of assets) {
         asset.operating_system = labels.get(asset.id) ?? null;
         asset.cluster = clusterNamesText(memberships.get(asset.id));
-        exportCatalogLabels(asset, { kind: settings.serverKinds, status: settings.lifecycleStates, domain: settings.domains });
+        exportCatalogLabelsIn(asset, {
+          kind: { list: 'serverKinds', options: settings.serverKinds },
+          status: { list: 'lifecycleStates', options: settings.lifecycleStates },
+          domain: { list: 'domains', options: settings.domains },
+          admin_zone: { list: 'adminZones', options: settings.adminZones },
+        }, opts.language);
+        if (asset.environment) {
+          // The file shows the name, not the stored code. This row is not written back.
+          (asset as { environment: string }).environment = assetEnvironmentLabel(asset.environment, opts.language);
+        }
         if (Array.isArray(asset.ip_addresses)) asset.ip_addresses = asset.ip_addresses.map((ip) => ({ ...ip, type: ipTypeLabel(ip.type) }));
       }
       // Vulnerabilities to review and severe ones (shared module), empty for a retired asset.
@@ -105,6 +111,41 @@ export class AssetsCsvService {
     });
   }
 
+  /** The assets the list would show for this request, plus the older environment, kind and status filters. */
+  private async rowsForExport(queryBuilder: SelectQueryBuilder<Asset>, opts: {
+    manager: EntityManager;
+    tenantId: string;
+    environment?: string;
+    kind?: string;
+    status?: string;
+    query?: Record<string, unknown>;
+  }): Promise<Asset[]> {
+    const raw = opts.query?.filters;
+    let parsed: unknown = raw ?? {};
+    if (typeof raw === 'string') {
+      try {
+        parsed = raw.trim() ? JSON.parse(raw) : {};
+      } catch {
+        throw new BadRequestException('The list filters could not be read.');
+      }
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      throw new BadRequestException('The list filters could not be read.');
+    }
+    const filters: Record<string, unknown> = { ...(parsed as Record<string, unknown>) };
+    for (const [field, value] of Object.entries({ environment: opts.environment, kind: opts.kind, status: opts.status })) {
+      if (value) filters[field] = { filterType: 'set', values: [value] };
+    }
+    const matching = await this.list.listIds(
+      // Every matching asset: the navigation's 10,000 cap does not apply to the export.
+      { ...opts.query, filters: JSON.stringify(filters), __export: true },
+      { manager: opts.manager, tenantId: opts.tenantId },
+    );
+    if (!matching.ids.length) queryBuilder.andWhere('FALSE');
+    else queryBuilder.andWhere('asset.id = ANY(:ids)', { ids: matching.ids });
+    return queryBuilder.orderBy('asset.name', 'ASC').getMany();
+  }
+
   /**
    * Import assets from CSV file.
    */
@@ -118,6 +159,8 @@ export class AssetsCsvService {
     },
   ): Promise<CsvImportResult> {
     return opts.manager.transaction(async (manager) => {
+      await manager.query('SELECT id FROM tenants WHERE id = $1 FOR UPDATE', [opts.tenantId]);
+      await lockAssetNames(manager, opts.tenantId);
       const itOpsSettings = await this.itOpsSettings.getSettingsForWrite(opts.tenantId, manager);
       return this.importSvc.import(assetCsvConfig, file, params, { ...opts, manager, itOpsSettings });
     });

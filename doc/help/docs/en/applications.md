@@ -223,7 +223,7 @@ The Deployments tab documents where the application actually runs: one block per
 | **Hosting** | Derived from the asset's location |
 | **Since** | Date the server was assigned to this deployment |
 
-Click **Add server** on the deployment header to attach an asset. The picker lists the clusters with their members under their name. The assignment of a cluster reaches its members in service: they show under the cluster's row, without actions. Change the assignment on the cluster. When you pick a member of a cluster, KANAP asks whether to assign the cluster or this server only. See [Applications on a cluster](assets.md#applications-on-a-cluster).
+Click **Add server** on the deployment header to attach an asset. The picker lists the clusters with their members under their name. The assignment of a cluster reaches its members in service: they show under the cluster's row, without actions. Change the assignment on the cluster. When you pick a member of a cluster, KANAP asks whether to assign the cluster or this server only. See [Applications on a cluster](assets.md#applications-on-a-cluster). Adding, changing or removing a server needs `applications:member` and `infrastructure:member`.
 
 When the application is assigned directly to each member in service of a cluster, a line under the table names them, with a button to assign the application to the cluster (**Assign to** and its name). After a confirmation, the cluster takes the assignment and the members' own assignments are removed. The application then stays available as long as one member stands.
 

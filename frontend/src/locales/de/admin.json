@@ -1621,7 +1621,7 @@
       "title": "Netbox-Inventar",
       "description": "Übernehmen Sie Ihr Netbox-Inventar in die KANAP-Assets. Netbox bleibt die Referenz für die dort beschriebenen Geräte.",
       "status": {
-        "connected": "Verbunden",
+        "connected": "Konfiguriert",
         "disabled": "Deaktiviert",
         "notConfigured": "Nicht konfiguriert"
       },
@@ -1654,8 +1654,12 @@
         "saveFailed": "Die Einstellungen konnten nicht gespeichert werden.",
         "loadFailed": "Die Netbox-Einstellungen konnten nicht geladen werden.",
         "testSuccess": "Verbindung zu Netbox {{version}} hergestellt.",
+        "testSuccessPlain": "Verbindung zu Netbox hergestellt.",
         "testFailed": "Die Verbindung zu Netbox ist fehlgeschlagen.",
-        "nextStep": "Netbox ist verbunden."
+        "nextStep": "Netbox ist konfiguriert.",
+        "lastTestOk": "Letzter Test erfolgreich am {{date}}",
+        "lastTestFailed": "Letzter Test fehlgeschlagen am {{date}}",
+        "lastTestSession": "Dieses Ergebnis gilt nur für diese Sitzung."
       },
       "actions": {
         "save": "Einstellungen speichern",

@@ -11,6 +11,7 @@ const post = vi.hoisted(() => vi.fn());
 const apiGet = vi.hoisted(() => vi.fn());
 const grid = vi.hoisted(() => ({ calls: [] as any[] }));
 const features = vi.hoisted(() => ({ vulnerabilityFeed: false, isLoading: false }));
+const dateFloatingFilter = vi.hoisted(() => ({ marker: 'date-floating-filter' }));
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -26,6 +27,10 @@ vi.mock('../../components/ServerDataGrid', () => ({
   default: (props: unknown) => {
     grid.calls.push(props);
     return null;
+  },
+  DATE_COLUMN_FILTER: {
+    filter: 'agDateColumnFilter',
+    floatingFilterComponent: dateFloatingFilter,
   },
 }));
 vi.mock('../../components/csv', () => ({ CsvExportDialogV2: () => null, CsvImportDialogV2: () => null }));
@@ -116,6 +121,62 @@ describe('AssetsPage delete', () => {
     expect(String(props.itemLabels.toDelete(2))).toBe('pages.assets.delete.toDelete');
     expect(String(props.itemLabels.kept(1))).toBe('pages.assets.delete.kept');
     expect(String(props.itemLabels.deleted(2))).toBe('pages.assets.delete.deleted');
+    expect(props.itemLabels.titleCountsDeleted).toBe(true);
+    expect(String(props.itemLabels.title(2))).toBe('pages.assets.delete.title');
+    expect(String(props.itemLabels.keptDone(1))).toBe('pages.assets.delete.keptDone');
+    expect(String(props.itemLabels.keptReason({ usages: '1 connection', count: 1 }))).toBe('pages.assets.delete.keptReason');
+    expect(props.getItemName({ asset_reference: 'AST-4', name: 'srv' })).toBe('AST-4 srv');
+    expect(props.getItemName({ name: 'srv' })).toBe('srv');
+  });
+});
+
+describe('AssetsPage columns', () => {
+  const column = (field: string) => lastProps().columns.find((col) => col.field === field) as {
+    field?: string;
+    width?: number;
+    minWidth?: number;
+    flex?: number;
+    hide?: boolean;
+    defaultHidden?: boolean;
+    initialHide?: boolean;
+    filter?: string;
+    floatingFilterComponent?: unknown;
+  };
+
+  it('keeps the optional columns out of the default layout without forcing them hidden later', () => {
+    renderPage();
+    for (const field of ['sub_location_name', 'admin_zone', 'go_live_date', 'end_of_life_date']) {
+      expect(column(field).defaultHidden).toBe(true);
+      expect(column(field).initialHide).toBe(true);
+      expect(column(field).hide).toBeUndefined();
+    }
+  });
+
+  it('filters its dates from the date menu, not from a text box', () => {
+    renderPage();
+    for (const field of ['go_live_date', 'end_of_life_date', 'created_at']) {
+      expect(column(field).filter).toBe('agDateColumnFilter');
+      expect(column(field).floatingFilterComponent).toBe(dateFloatingFilter);
+    }
+  });
+
+  it('asks the list to sort catalog columns in the screen language', () => {
+    renderPage();
+    expect((lastProps() as { extraParams?: { language?: string } }).extraParams).toEqual({ language: 'en' });
+  });
+
+  it('versions the saved column layout, so an older one is dropped', () => {
+    renderPage();
+    expect((lastProps() as { columnPreferencesKey?: string; columnLayoutVersion?: number }).columnLayoutVersion).toBe(1);
+  });
+
+  it('fits the default columns, Created on included, in a 1657px grid', () => {
+    renderPage();
+    // The checkbox column is 50px. 1657px is the list beside the open navigation at 1920px.
+    const fields = ['asset_reference', 'name', 'kind', 'cluster', 'environment', 'location_name', 'hosting_type', 'operating_system', 'network_segment', 'status', 'assignments_count', 'created_at'];
+    const sum = 50 + fields.reduce((total, field) => total + (column(field).width ?? column(field).minWidth ?? 0), 0);
+    expect(sum).toBeLessThanOrEqual(1657);
+    expect(fields).toContain('created_at');
   });
 
   it('notes, under each asset the delete takes something with, what it takes, and asks "Delete anyway"', async () => {

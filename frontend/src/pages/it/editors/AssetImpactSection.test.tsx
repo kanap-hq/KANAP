@@ -53,7 +53,7 @@ function Location() {
   return <div data-testid="location">{useLocation().pathname}</div>;
 }
 
-function renderSection(data: AssetImpact | Error) {
+function renderSection(data: AssetImpact | Error, isServer = true) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url !== '/assets/host/impact') throw new Error(`unexpected GET ${url}`);
     if (data instanceof Error) throw data;
@@ -65,7 +65,7 @@ function renderSection(data: AssetImpact | Error) {
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter initialEntries={['/it/assets/host/relations']}>
           <Routes>
-            <Route path="*" element={<><AssetImpactSection assetId="host" /><Location /></>} />
+            <Route path="*" element={<><AssetImpactSection assetId="host" isServer={isServer} /><Location /></>} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -264,5 +264,33 @@ describe('AssetImpactSection', () => {
   it('says when the impact cannot be read', async () => {
     renderSection(new Error('boom'));
     expect(await screen.findByText(`${P}.loadFailed`)).toBeInTheDocument();
+  });
+
+  it('speaks of the asset when it is not a server', async () => {
+    renderSection(impact(), false);
+    expect(await screen.findByText(`${P}.titleAsset`)).toBeInTheDocument();
+    expect(screen.queryByText(`${P}.title`)).not.toBeInTheDocument();
+    const apps = screen.getByRole('table', { name: `${P}.sections.applications` });
+    expect(within(apps).getByText(`${P}.via.onThisAssetAnd(name=VM-01)`)).toBeInTheDocument();
+    const assets = screen.getByRole('table', { name: `${P}.sections.assets` });
+    const assetRows = within(assets).getAllByRole('row').slice(1);
+    expect(within(assetRows[0]).getByText(`${P}.via.containsThisAsset`)).toBeInTheDocument();
+    const clusters = screen.getByRole('table', { name: `${P}.sections.clusters` });
+    expect(within(clusters).getByText(`${P}.via.thisAsset`)).toBeInTheDocument();
+    expect(within(clusters).getByText(`${P}.via.thisAssetAnd(name=ESX-02)`)).toBeInTheDocument();
+  });
+
+  it('says nothing else depends on an asset that is not a server', async () => {
+    const none = { assets: 0, applications: 0, clusters: 0, technologies: 0, processes: 0 };
+    renderSection(impact({
+      assets: impact().assets.slice(0, 1),
+      clusters: [],
+      applications: [],
+      technologies: [],
+      processes: [],
+      totals: none,
+    }), false);
+    expect(await screen.findByText(`${P}.emptyAsset`)).toBeInTheDocument();
+    expect(screen.queryByText(`${P}.empty`)).not.toBeInTheDocument();
   });
 });

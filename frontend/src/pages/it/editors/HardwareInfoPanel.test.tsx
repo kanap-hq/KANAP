@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
-import HardwareInfoPanel from './HardwareInfoPanel';
+import HardwareInfoPanel, { clearHardwareInfoDrafts } from './HardwareInfoPanel';
 
 const get = vi.hoisted(() => vi.fn());
 const post = vi.hoisted(() => vi.fn());
@@ -29,6 +29,7 @@ function renderPanel() {
 
 describe('HardwareInfoPanel', () => {
   beforeEach(() => {
+    clearHardwareInfoDrafts();
     get.mockReset();
     post.mockReset();
     get.mockResolvedValue({ data: null });
@@ -64,6 +65,42 @@ describe('HardwareInfoPanel', () => {
     await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-2/hardware-info'));
     await wait(800);
     expect(post).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the typed value and tells the fiche when the save on leaving fails', async () => {
+    post.mockRejectedValueOnce({ response: { status: 500 } });
+    const onSaveError = vi.fn();
+    const panel = () => (
+      <ThemeProvider theme={createAppTheme('light')}>
+        <HardwareInfoPanel assetId="asset-1" onSaveError={onSaveError} />
+      </ThemeProvider>
+    );
+    const view = render(panel());
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-1/hardware-info'));
+    const serial = screen.getByPlaceholderText('workspace.asset.hardware.serialNumberPlaceholder');
+    await waitFor(() => expect(serial).toBeEnabled());
+    fireEvent.change(serial, { target: { value: 'SN-42' } });
+    view.unmount();
+    await waitFor(() => expect(onSaveError).toHaveBeenCalledWith('messages.saveHardwareInfoFailed'));
+    render(panel());
+    const again = await screen.findByPlaceholderText('workspace.asset.hardware.serialNumberPlaceholder');
+    await waitFor(() => expect(again).toHaveValue('SN-42'));
+  });
+
+  it('shows a failed autosave in the panel and not on the page banner', async () => {
+    post.mockRejectedValue({ response: { status: 500 } });
+    const onSaveError = vi.fn();
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <HardwareInfoPanel assetId="asset-1" onSaveError={onSaveError} />
+      </ThemeProvider>,
+    );
+    const serial = await screen.findByPlaceholderText('workspace.asset.hardware.serialNumberPlaceholder');
+    await waitFor(() => expect(serial).toBeEnabled());
+    fireEvent.change(serial, { target: { value: 'SN-42' } });
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('messages.saveHardwareInfoFailed'));
+    expect(onSaveError).not.toHaveBeenCalledWith('messages.saveHardwareInfoFailed');
+    expect(screen.getAllByText('messages.saveHardwareInfoFailed')).toHaveLength(1);
   });
 
   it('saves after the autosave delay while it stays on the page, and not again on leaving', async () => {

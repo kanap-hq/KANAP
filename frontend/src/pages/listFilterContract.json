@@ -508,7 +508,9 @@
     ]
   },
   "/assets": {
-    "params": {},
+    "params": {
+      "language": "en"
+    },
     "filters": {
       "asset_reference": "text",
       "name": "text",

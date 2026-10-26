@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 import api from '../../../api';
 import AssetDependenciesTab from './AssetDependenciesTab';
+import { ApplicationFeedbackProvider } from '../applicationFeedback';
 import { assetRelationsKey, type AssetRelationsData } from './assetRelationsData';
 
 const rights = vi.hoisted(() => ({} as Record<string, string>));
@@ -127,8 +128,10 @@ function renderTab({ relations: data = relations(), clusters = {}, members = {},
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter>
-          <AssetDependenciesTab assetId="as-1" />
-          <Location />
+          <ApplicationFeedbackProvider onError={() => undefined}>
+            <AssetDependenciesTab assetId="as-1" />
+            <Location />
+          </ApplicationFeedbackProvider>
         </MemoryRouter>
       </ThemeProvider>
     </QueryClientProvider>,
@@ -265,6 +268,14 @@ describe('AssetDependenciesTab', () => {
       fireEvent.click(await screen.findByRole('option', { name: /edge-fw/ }));
       await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(`/assets/as-1/relations/${kind}`, { id: 'as-9' }));
     }
+  });
+
+  it('offers to put an unlinked asset back', async () => {
+    renderTab();
+    fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.remove(name=san-01)' }));
+    expect(await screen.findByText('workspace.asset.relations.feedback.unlinked(name=san-01)')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/depends_on', { id: 'as-4' }));
   });
 
   it('asks where to place an asset a cluster contains, writes on the cluster and says what it replaced', async () => {

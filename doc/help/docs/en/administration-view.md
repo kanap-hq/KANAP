@@ -49,7 +49,7 @@ The most sensitive zone is the first zone of the settings that is not marked **N
 | Control point | Assets it lists |
 |---|---|
 | **Without a zone** | The assets that have no zone |
-| **Domain controller outside** | The assets assigned the **Domain controller** server role on an application in service, when their zone is not the most sensitive one |
+| **Domain controller outside** | The domain controllers the **Directories and domains** tab lists, when their zone is not the most sensitive one. A directory server with no domain, or with a domain missing from the settings, counts under **Directory service outside** only |
 | **Directory service outside** | The assets with a directory technology installed on them, such as Active Directory, when their zone is not the most sensitive one |
 | **Less sensitive host** | The assets to raise: a host that runs an asset of a more sensitive zone (a Tier 1 host that runs a Tier 0 virtual machine, for example), or a member of a cluster in a more sensitive zone (a Tier 1 ESX host in a Tier 0 cluster, for example) |
 | **Application hosted** | The assets of the most sensitive zone that host an application in service. Review whether each application belongs there |
@@ -95,7 +95,7 @@ If assets enter the filter between the count and the confirmation, KANAP refuses
 | **DNS suffix** | The suffix of its machines' names |
 | **Trusts** | The domains it has a trust with, and the direction of each one |
 | **Accounts**, **Computers** | The numbers recorded in the settings. A dash means none is recorded |
-| **Domain controllers** | How many servers KANAP deduces as controllers of the domain, then their names |
+| **Domain controllers** | How many servers KANAP deduces as controllers of the domain, then their names. Click a name to open the asset |
 
 **Trusts** also lists, in grey, the trusts declared on another domain toward this one, with the direction seen from this domain: an outgoing trust of A toward B reads as incoming on B. The directions mean:
 

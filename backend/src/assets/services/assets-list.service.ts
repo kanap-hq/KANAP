@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { textSortKey, type TextSortKey } from '../../common/list-sort';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import { shippedLabelIn } from '../../it-ops-settings/catalog-shipped-labels';
+import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { Asset } from '../asset.entity';
 import { parsePagination, Sort } from '../../common/pagination';
 import { operatingSystemLabelSql } from '../../technologies/operating-system-codes';
@@ -20,8 +22,85 @@ import {
 /** The readable operating system, one scalar subquery on the assets alias `a`. */
 const ASSET_OS_LABEL = operatingSystemLabelSql('a');
 
-/** The asset list columns that sort alphabetically. */
-const ASSET_TEXT_SORTS = new Set(['name', 'asset_reference', 'provider', 'region', 'zone', 'hostname', 'fqdn', 'operating_system', 'location_name', 'sub_location_name']);
+/**
+ * The asset list columns that sort alphabetically. The reference sorts by its number, the dates by
+ * the day, the Cluster column by its first real cluster (`clusterSortValue`).
+ */
+const ASSET_TEXT_SORTS = new Set([
+  'name', 'provider', 'region', 'zone', 'hostname', 'fqdn', 'operating_system', 'location_name', 'sub_location_name',
+  'kind', 'hosting_type', 'admin_zone', 'network_segment',
+]);
+
+/**
+ * The tenant's subnets (IT settings), read once per statement as one jsonb map: a CTE named
+ * `asset_subnets` whose single row holds `zones`, keyed `<cidr>|<site id>` (`<cidr>|` for a
+ * subnet with no site) with the network zone as value, for the tenant `tenant` (its
+ * placeholder). The first subnet listed wins a duplicate key. CIDRs compare without case and
+ * without surrounding spaces. Every statement that reads the network zone starts with it.
+ */
+const assetSubnetsCte = (tenant: string) => `asset_subnets AS MATERIALIZED (
+  SELECT jsonb_object_agg(subnet_key, network_zone ORDER BY position DESC) AS zones
+  FROM (
+    SELECT lower(btrim(subnet->>'cidr')) || '|' || COALESCE(NULLIF(subnet->>'location_id', ''), '') AS subnet_key,
+           subnet->'network_zone' AS network_zone,
+           position
+    FROM tenants tn
+    CROSS JOIN LATERAL jsonb_array_elements(
+      CASE WHEN jsonb_typeof(tn.metadata->'it_ops'->'subnets') = 'array' THEN tn.metadata->'it_ops'->'subnets' ELSE '[]'::jsonb END
+    ) WITH ORDINALITY AS s(subnet, position)
+    WHERE tn.id = ${tenant} AND jsonb_typeof(subnet) = 'object' AND NULLIF(btrim(subnet->>'cidr'), '') IS NOT NULL
+  ) keyed
+)`;
+
+/**
+ * The network zone of the first IP: the zone of the subnet whose CIDR is that address's
+ * subnet, on the asset's site; else the zone of that CIDR's subnet with no site. The IP row
+ * itself has no zone. Two map lookups per asset in `asset_subnets` (`assetSubnetsCte`).
+ */
+const ASSET_NETWORK_ZONE_SQL = `(
+  SELECT COALESCE(
+    sn.zones ->> (lower(btrim(a.ip_addresses->0->>'subnet_cidr')) || '|' || a.location_id::text),
+    sn.zones ->> (lower(btrim(a.ip_addresses->0->>'subnet_cidr')) || '|')
+  )
+  FROM asset_subnets sn
+)`;
+
+const CATALOG_LANGUAGES = ['en', 'fr', 'de', 'es'] as const;
+type CatalogLanguage = (typeof CATALOG_LANGUAGES)[number];
+
+/**
+ * The label a catalog value is sorted by. With a language: the shipped label in that language
+ * while the tenant still stores the shipped source (or a former one), otherwise the tenant's
+ * own label. Without a language: the stored label. An empty label stays the code.
+ */
+function displayedCatalogLabel(
+  list: string,
+  option: { code: string; label?: string | null },
+  language: CatalogLanguage | undefined,
+): string {
+  const shipped = language ? shippedLabelIn(list, option, language) : null;
+  return shipped || option.label || option.code;
+}
+
+/**
+ * A catalog column sorted by the label the screen shows: the labels go as one jsonb parameter
+ * (code to displayed label), pushed on `params`. An unknown code stays the code.
+ */
+function catalogLabelSql(
+  list: string,
+  column: string,
+  options: Array<{ code: string; label?: string | null }>,
+  params: unknown[],
+  language: CatalogLanguage | undefined,
+): string {
+  const labels: Record<string, string> = {};
+  for (const option of options) {
+    if (option.code && !(option.code in labels)) labels[option.code] = displayedCatalogLabel(list, option, language);
+  }
+  if (Object.keys(labels).length === 0) return column;
+  params.push(JSON.stringify(labels));
+  return `COALESCE(($${params.length}::jsonb ->> ${column}), ${column})`;
+}
 
 /**
  * The value of the Cluster filter that keeps the clusters themselves. `null` keeps the plain
@@ -38,14 +117,6 @@ function clusterSortValue(key: TextSortKey): string {
       FROM asset_cluster_members m
       JOIN assets c ON c.tenant_id = m.tenant_id AND c.id = m.cluster_id AND c.is_cluster
      WHERE m.tenant_id = a.tenant_id AND m.asset_id = a.id AND NOT COALESCE(a.is_cluster, false))`);
-}
-
-/** The sort value of a list column: text alphabetically (case and accents ignored), else as stored. */
-async function assetSortField(mg: any, sortFieldMap: Record<string, string>, field: string): Promise<string> {
-  if (field === 'cluster') return clusterSortValue(await textSortKey(mg));
-  return ASSET_TEXT_SORTS.has(field) && sortFieldMap[field]
-    ? (await textSortKey(mg))(sortFieldMap[field])
-    : sortFieldMap[field] || 'a.created_at';
 }
 
 /**
@@ -107,9 +178,10 @@ const LIST_JOINS = `
  * (`a.asset_reference AS ref`, `vc.open AS vc_open`); `page` holds the placeholders of the limit
  * and the offset.
  */
-function orderedRowsSql(p: { columns: string[]; vulnerabilityJoin: string; whereConditions: string; ordering: ReturnType<typeof listSort>; page: string }): string {
+function orderedRowsSql(p: { columns: string[]; vulnerabilityJoin: string; whereConditions: string; ordering: ReturnType<typeof listSort>; page: string; tenant: string }): string {
   return `
-      WITH list_rows AS MATERIALIZED (
+      WITH ${assetSubnetsCte(p.tenant)},
+      list_rows AS MATERIALIZED (
         SELECT DISTINCT a.id, ${p.ordering.value} AS sort_value${p.columns.map((column) => `, ${column}`).join('')}
         FROM assets a
         ${LIST_JOINS}
@@ -130,8 +202,69 @@ function orderedRowsSql(p: { columns: string[]; vulnerabilityJoin: string; where
 export class AssetsListService extends AssetsBaseService {
   constructor(
     @InjectRepository(Asset) assetRepo: Repository<Asset>,
+    @Optional() private readonly itOpsSettings?: ItOpsSettingsService,
   ) {
     super(assetRepo);
+  }
+
+  /** A screen language the catalog sort understands. Anything else sorts by the stored label. */
+  private catalogLanguage(opts?: ServiceOpts): CatalogLanguage | undefined {
+    return CATALOG_LANGUAGES.find((language) => language === opts?.language);
+  }
+
+  /**
+   * The sort expression shared by the page and the id list, or null for an unknown column. Type,
+   * hosting and administration zone sort by the label shown in `language` (the shipped translation
+   * while the tenant keeps it, otherwise the tenant's label), as one jsonb parameter pushed on
+   * `params`. Without a language they sort by the stored label. The reference sorts by its number
+   * (AST-2 before AST-10). Without the settings service, those three fall back to the code.
+   */
+  private async sortExpression(mg: EntityManager, tenantId: string, field: string, params: unknown[], language: CatalogLanguage | undefined): Promise<string | null> {
+    const catalogs: Record<string, { list: string; column: string; options: (settings: any) => Array<{ code: string; label?: string | null }> | undefined }> = {
+      kind: { list: 'serverKinds', column: 'a.kind', options: (settings) => settings?.serverKinds },
+      admin_zone: { list: 'adminZones', column: 'a.admin_zone', options: (settings) => settings?.adminZones },
+      hosting_type: { list: 'hostingTypes', column: 'l.hosting_type', options: (settings) => settings?.hostingTypes },
+    };
+    const catalog = catalogs[field];
+    if (catalog) {
+      const settings = this.itOpsSettings ? await this.itOpsSettings.getSettings(tenantId, { manager: mg }) : null;
+      const options = catalog.options(settings);
+      return options && options.length > 0 ? catalogLabelSql(catalog.list, catalog.column, options, params, language) : catalog.column;
+    }
+    const plain: Record<string, string> = {
+      name: 'a.name',
+      asset_reference: `NULLIF(substring(a.asset_reference FROM '([0-9]+)$'), '')::int`,
+      environment: 'a.environment',
+      provider: 'a.provider',
+      status: 'a.status',
+      region: 'a.region',
+      zone: 'a.zone',
+      hostname: 'a.hostname',
+      fqdn: 'a.fqdn',
+      operating_system: ASSET_OS_LABEL,
+      is_cluster: 'COALESCE(a.is_cluster, false)::text',
+      created_at: 'a.created_at',
+      updated_at: 'a.updated_at',
+      location_name: 'l.name',
+      sub_location_name: 'sl.name',
+      network_segment: ASSET_NETWORK_ZONE_SQL,
+      go_live_date: 'a.go_live_date',
+      end_of_life_date: 'a.end_of_life_date',
+    };
+    return Object.prototype.hasOwnProperty.call(plain, field) ? plain[field] : null;
+  }
+
+  /**
+   * The list's ORDER BY: text alphabetically (case and accents ignored), else the raw value;
+   * creation date by default. The Cluster column sorts by the first name of the asset's real clusters.
+   */
+  private async listOrdering(mg: EntityManager, tenantId: string, sort: Sort, params: unknown[], language: CatalogLanguage | undefined): Promise<ReturnType<typeof listSort>> {
+    if (sort.field === 'cluster') return listSort(sort, clusterSortValue(await textSortKey(mg)));
+    const expression = await this.sortExpression(mg, tenantId, sort.field, params, language);
+    const sortField = expression && ASSET_TEXT_SORTS.has(sort.field)
+      ? (await textSortKey(mg))(expression)
+      : expression || 'a.created_at';
+    return listSort(sort, sortField);
   }
 
   /**
@@ -145,30 +278,10 @@ export class AssetsListService extends AssetsBaseService {
     const tenantId = this.ensureTenantId(opts?.tenantId);
     const { whereConditions, params, joinsVulnerabilities, tenantParam } = this.buildFilterWhereConditions(filters, q, undefined, tenantId);
 
-    // Sort field mapping
-    const sortFieldMap: Record<string, string> = {
-      name: 'a.name',
-      asset_reference: 'a.asset_reference',
-      environment: 'a.environment',
-      kind: 'a.kind',
-      provider: 'a.provider',
-      status: 'a.status',
-      region: 'a.region',
-      zone: 'a.zone',
-      hostname: 'a.hostname',
-      fqdn: 'a.fqdn',
-      admin_zone: 'a.admin_zone',
-      operating_system: ASSET_OS_LABEL,
-      is_cluster: 'COALESCE(a.is_cluster, false)::text',
-      created_at: 'a.created_at',
-      updated_at: 'a.updated_at',
-      location_name: 'l.name',
-      hosting_type: 'l.hosting_type',
-      sub_location_name: 'sl.name',
-    };
-    // Text alphabetically, case and accents ignored; the id breaks ties.
-    const sortField = await assetSortField(mg, sortFieldMap, sort.field);
-    const ordering = listSort(sort, sortField);
+    // The count of a page past the end reads the filters' parameters only.
+    const filterParams = [...params];
+    // The id breaks ties.
+    const ordering = await this.listOrdering(mg, tenantId, sort, params, this.catalogLanguage(opts));
     const vulnerabilityJoin = joinsVulnerabilities || ordering.joinsVulnerabilities ? vulnerabilityCountsJoin(tenantParam) : '';
 
     const countsJoined = vulnerabilityJoin !== '';
@@ -179,6 +292,7 @@ export class AssetsListService extends AssetsBaseService {
         whereConditions,
         ordering,
         page: `LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        tenant: tenantParam,
       }),
       [...params, limit, skip],
     );
@@ -186,7 +300,7 @@ export class AssetsListService extends AssetsBaseService {
 
     if (ids.length === 0) {
       // A page past the end (or an empty list): no row carries the total.
-      const total = skip > 0 ? await this.countRows(mg, whereConditions, params, joinsVulnerabilities ? vulnerabilityCountsJoin(tenantParam) : '') : 0;
+      const total = skip > 0 ? await this.countRows(mg, whereConditions, filterParams, joinsVulnerabilities ? vulnerabilityCountsJoin(tenantParam) : '', tenantParam) : 0;
       return { items: [], total, page, limit };
     }
     const total = Number(paginatedIds[0].list_total) || 0;
@@ -197,6 +311,7 @@ export class AssetsListService extends AssetsBaseService {
 
     // Fetch full data for paginated IDs
     const itemsQuery = `
+      WITH ${assetSubnetsCte('$2')}
       SELECT
         a.id, a.tenant_id, a.name, a.asset_reference, a.kind, a.provider, a.environment,
         a.region, a.zone, a.hostname, a.domain, a.admin_zone, a.fqdn, a.aliases,
@@ -206,7 +321,7 @@ export class AssetsListService extends AssetsBaseService {
         l.name AS location_name,
         l.hosting_type AS hosting_type,
         sl.name AS sub_location_name,
-        a.ip_addresses->0->>'network_segment' AS network_segment
+        ${ASSET_NETWORK_ZONE_SQL} AS network_segment
       FROM assets a
       LEFT JOIN locations l ON l.id = a.location_id AND l.tenant_id = a.tenant_id
       LEFT JOIN location_sub_items sl ON sl.id = a.sub_location_id AND sl.tenant_id = a.tenant_id
@@ -229,9 +344,10 @@ export class AssetsListService extends AssetsBaseService {
   }
 
   /** The number of assets the filters keep (the list's rows counted by id). */
-  private async countRows(mg: any, whereConditions: string, params: any[], vulnerabilityJoin: string): Promise<number> {
+  private async countRows(mg: any, whereConditions: string, params: any[], vulnerabilityJoin: string, tenant: string): Promise<number> {
     const rows = await mg.query(
-      `SELECT COUNT(DISTINCT a.id)::int as count
+      `WITH ${assetSubnetsCte(tenant)}
+      SELECT COUNT(DISTINCT a.id)::int as count
       FROM assets a
       ${LIST_JOINS}
       ${vulnerabilityJoin}
@@ -252,37 +368,24 @@ export class AssetsListService extends AssetsBaseService {
     const tenantId = this.ensureTenantId(opts?.tenantId);
     const { whereConditions, params, joinsVulnerabilities, tenantParam } = this.buildFilterWhereConditions(filters, q, undefined, tenantId);
 
-    // Sort field mapping
-    const sortFieldMap: Record<string, string> = {
-      name: 'a.name',
-      asset_reference: 'a.asset_reference',
-      environment: 'a.environment',
-      kind: 'a.kind',
-      provider: 'a.provider',
-      status: 'a.status',
-      region: 'a.region',
-      zone: 'a.zone',
-      hostname: 'a.hostname',
-      fqdn: 'a.fqdn',
-      admin_zone: 'a.admin_zone',
-      operating_system: ASSET_OS_LABEL,
-      is_cluster: 'COALESCE(a.is_cluster, false)::text',
-      created_at: 'a.created_at',
-      updated_at: 'a.updated_at',
-      location_name: 'l.name',
-      hosting_type: 'l.hosting_type',
-      sub_location_name: 'sl.name',
-    };
-    // Text alphabetically, case and accents ignored; the id breaks ties.
-    const sortField = await assetSortField(mg, sortFieldMap, sort.field);
-    const ordering = listSort(sort, sortField);
+    // The id breaks ties.
+    const ordering = await this.listOrdering(mg, tenantId, sort, params, this.catalogLanguage(opts));
     const vulnerabilityJoin = joinsVulnerabilities || ordering.joinsVulnerabilities ? vulnerabilityCountsJoin(tenantParam) : '';
 
-    // Need a subquery to properly order by sort field
+    // The navigation reads at most 10,000 ids; the CSV export (`__export`, set by the server
+    // only: a query string never carries a boolean) reads every matching asset.
+    const unlimited = query?.__export === true;
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
     const rows: Array<{ id: string; ref: string | null; list_total: number }> = await mg.query(
-      orderedRowsSql({ columns: ['a.asset_reference AS ref'], vulnerabilityJoin, whereConditions, ordering, page: `LIMIT $${params.length + 1}` }),
-      [...params, limit],
+      orderedRowsSql({
+        columns: ['a.asset_reference AS ref'],
+        vulnerabilityJoin,
+        whereConditions,
+        ordering,
+        page: unlimited ? '' : `LIMIT $${params.length + 1}`,
+        tenant: tenantParam,
+      }),
+      unlimited ? params : [...params, limit],
     );
     const total = rows.length > 0 ? Number(rows[0].list_total) || 0 : 0;
     const ids = rows.map((r) => r.id);
@@ -388,7 +491,7 @@ export class AssetsListService extends AssetsBaseService {
       location_name: 'l.name',
       hosting_type: 'l.hosting_type',
       sub_location_name: 'sl.name',
-      network_segment: "a.ip_addresses->0->>'network_segment'",
+      network_segment: ASSET_NETWORK_ZONE_SQL,
       cluster: 'cluster_asset.name',
     };
 
@@ -408,9 +511,11 @@ export class AssetsListService extends AssetsBaseService {
 
       // The Cluster column: the names of the real clusters the kept assets belong to, then
       // `CLUSTER_FILTER_IS_CLUSTER` when a cluster is kept, then null for a plain asset of no cluster.
+      // Every statement starts with the tenant's subnets: a filter may read the network zone.
       const distinctQuery = field === 'cluster'
         ? `
-        WITH kept AS MATERIALIZED (SELECT DISTINCT a.id, a.tenant_id, COALESCE(a.is_cluster, false) AS is_cluster ${keptRows})
+        WITH ${assetSubnetsCte(tenantParam)},
+        kept AS MATERIALIZED (SELECT DISTINCT a.id, a.tenant_id, COALESCE(a.is_cluster, false) AS is_cluster ${keptRows})
         SELECT value FROM (
           SELECT DISTINCT c.name AS value, 0 AS bucket
             FROM kept k
@@ -430,6 +535,7 @@ export class AssetsListService extends AssetsBaseService {
         ORDER BY bucket, value ASC
       `
         : `
+        WITH ${assetSubnetsCte(tenantParam)}
         SELECT DISTINCT ${expression} as value
         ${keptRows}
         ORDER BY value ASC NULLS LAST
@@ -478,7 +584,7 @@ export class AssetsListService extends AssetsBaseService {
       location_name: 'l.name',
       hosting_type: 'l.hosting_type',
       sub_location_name: 'sl.name',
-      network_segment: "a.ip_addresses->0->>'network_segment'",
+      network_segment: ASSET_NETWORK_ZONE_SQL,
       cluster: 'cluster_asset.name',
     };
 
@@ -590,6 +696,8 @@ export class AssetsListService extends AssetsBaseService {
         OR cluster_asset.name ILIKE $${qIdx}
         OR a.fqdn ILIKE $${qIdx}
         OR sl.name ILIKE $${qIdx}
+        OR l.name ILIKE $${qIdx}
+        OR ${ASSET_OS_LABEL} ILIKE $${qIdx}
       )`;
     }
 

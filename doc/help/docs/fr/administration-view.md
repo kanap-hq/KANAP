@@ -49,7 +49,7 @@ La zone la plus sensible est la première zone des paramètres qui n'est pas mar
 | Point de contrôle | Actifs listés |
 |---|---|
 | **Zone non renseignée** | Les actifs qui n'ont pas de zone |
-| **Contrôleur de domaine hors zone** | Les actifs affectés avec le rôle de serveur **Contrôleur de domaine** à une application en service, quand leur zone n'est pas la plus sensible |
+| **Contrôleur de domaine hors zone** | Les contrôleurs de domaine que liste l'onglet **Annuaires et domaines**, quand leur zone n'est pas la plus sensible. Un serveur d'annuaire sans domaine, ou dont le domaine manque dans les paramètres, compte seulement sous **Service d'annuaire hors zone** |
 | **Service d'annuaire hors zone** | Les actifs sur lesquels une technologie d'annuaire est installée, comme Active Directory, quand leur zone n'est pas la plus sensible |
 | **Hôte moins sensible** | Les actifs à remonter : un hôte qui fait tourner un actif d'une zone plus sensible (un hôte en tier 1 qui fait tourner une machine virtuelle en tier 0, par exemple), ou le membre d'un cluster d'une zone plus sensible (un hôte ESX en tier 1 dans un cluster en tier 0, par exemple) |
 | **Application hébergée** | Les actifs de la zone la plus sensible qui hébergent une application en service. Vérifiez que chaque application y a sa place |
@@ -95,7 +95,7 @@ Si des actifs entrent dans le filtre entre le décompte et la confirmation, KANA
 | **Suffixe DNS** | Le suffixe des noms de ses machines |
 | **Approbations** | Les domaines avec lesquels il a une approbation, et le sens de chacune |
 | **Comptes**, **Ordinateurs** | Les nombres saisis dans les paramètres. Un tiret signifie qu'aucun n'est saisi |
-| **Contrôleurs de domaine** | Le nombre de serveurs que KANAP déduit comme contrôleurs du domaine, puis leurs noms |
+| **Contrôleurs de domaine** | Le nombre de serveurs que KANAP déduit comme contrôleurs du domaine, puis leurs noms. Cliquez sur un nom pour ouvrir l'actif |
 
 **Approbations** liste aussi, en gris, les approbations déclarées sur un autre domaine envers celui-ci, avec le sens vu depuis ce domaine : une approbation sortante de A vers B se lit comme entrante sur B. Les sens signifient :
 

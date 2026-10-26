@@ -20,6 +20,7 @@ import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
 import { displayName } from '../common/display-name';
 import { sortedFindQuery } from '../common/list-sort';
+import { assertWebLinkUrl } from '../common/web-link-url';
 import { duplicateNameException } from '../common/duplicate-name';
 import {
   readLocationRelationCounts,
@@ -822,7 +823,7 @@ export class LocationsService {
   ) {
     await this.loadLocationOrThrow(locationId, opts?.manager);
     if (!body || typeof body !== 'object') throw new BadRequestException('Body is required');
-    const url = this.normalizeRequired(body.url, 'url');
+    const url = assertWebLinkUrl(this.normalizeRequired(body.url, 'url'));
     const description = this.normalizeNullable(body.description);
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(LocationLink);
@@ -854,7 +855,7 @@ export class LocationsService {
       existing.description = this.normalizeNullable(body.description);
     }
     if (Object.prototype.hasOwnProperty.call(body ?? {}, 'url')) {
-      existing.url = this.normalizeRequired(body.url, 'url');
+      existing.url = assertWebLinkUrl(this.normalizeRequired(body.url, 'url'));
     }
     existing.updated_at = new Date();
     const saved = await repo.save(existing);

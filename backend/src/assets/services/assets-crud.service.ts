@@ -14,6 +14,7 @@ import {
 import { LinkSource } from '../../common/link-provenance';
 import { operatingSystemLabelSql } from '../../technologies/operating-system-codes';
 import { OperatingSystemService } from '../../technologies/operating-system.service';
+import { assertAssetFqdnFree, assertAssetNameFree, assetNameKey, lockAssetNames } from '../asset-rules';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 import { AssetsValidationService } from './assets-validation.service';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
@@ -220,8 +221,12 @@ export class AssetsCrudService extends AssetsBaseService {
       throw new BadRequestException('A host name can use only letters, digits, hyphens and dots. Each part between dots must be 63 characters or less.');
     }
 
-    // Compute FQDN
+    // Compute FQDN, then refuse a name or FQDN another asset of the tenant already carries.
     const fqdn = await this.validation.computeFqdn(hostname, domain, tenant, opts?.manager);
+    const manager = this.getManager(opts);
+    await lockAssetNames(manager, tenant);
+    await assertAssetNameFree(manager, tenant, name);
+    await assertAssetFqdnFree(manager, tenant, fqdn);
 
     // Process aliases
     const aliases = this.validation.normalizeAliases((body as any).aliases);
@@ -280,9 +285,11 @@ export class AssetsCrudService extends AssetsBaseService {
     const before = { ...existing };
     const has = (key: keyof Asset | string) => Object.prototype.hasOwnProperty.call(body, key);
 
+    let nameToCheck: string | null = null;
     if (has('name')) {
       const name = this.normalizeNullable(body.name);
       if (!name) throw new BadRequestException('name is required');
+      if (assetNameKey(name) !== assetNameKey(existing.name)) nameToCheck = name;
       existing.name = name;
     }
     if (has('environment')) {
@@ -331,6 +338,17 @@ export class AssetsCrudService extends AssetsBaseService {
       existing.fqdn = await this.validation.computeFqdn(newHostname, newDomain, tenant, opts?.manager);
     }
 
+    // A duplicate that already exists stays editable until its name or FQDN actually changes.
+    const fqdnToCheck = has('hostname') || has('domain')
+      ? (existing.fqdn && assetNameKey(existing.fqdn) !== assetNameKey(before.fqdn) ? existing.fqdn : null)
+      : null;
+    if (nameToCheck || fqdnToCheck) {
+      const manager = this.getManager(opts);
+      await lockAssetNames(manager, tenant);
+      if (nameToCheck) await assertAssetNameFree(manager, tenant, nameToCheck, existing.id);
+      if (fqdnToCheck) await assertAssetFqdnFree(manager, tenant, fqdnToCheck, existing.id);
+    }
+
     if (has('ip_addresses')) {
       existing.ip_addresses = await this.validation.validateIpAddresses((body as any).ip_addresses, tenant, this.getManager(opts), existing.id);
     }
@@ -366,6 +384,11 @@ export class AssetsCrudService extends AssetsBaseService {
           existing.sub_location_id = await this.resolveSubLocationId((body as any).sub_location_id, newLocationId, tenant, opts?.manager);
         } else {
           existing.sub_location_id = null;
+        }
+        // The screen deduces the provider from the new site, unless this request names one.
+        if (!has('provider') && newLocationId) {
+          const provider = await this.validation.providerForSite(newLocationId, tenant, this.getManager(opts));
+          if (provider) existing.provider = provider;
         }
       } else if (has('sub_location_id')) {
         // Location same: just resolve sub_location_id against current location
@@ -403,6 +426,9 @@ export class AssetsCrudService extends AssetsBaseService {
    */
   private async assertClusterSwitch(tenantId: string, assetId: string, to: boolean, opts?: ServiceOpts) {
     const mg = this.getManager(opts);
+    // The tenant row before the asset row, as every asset writer takes them (`lockAssetNames`, the
+    // import, `getSettingsForWrite`): a later settings read of this update never waits behind it.
+    await mg.query('SELECT 1 FROM tenants WHERE id = $1 FOR SHARE', [tenantId]);
     const [locked]: Array<{ is_cluster: boolean }> = await mg.query(
       `SELECT COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
       [tenantId, assetId],

@@ -115,13 +115,8 @@ export default function ContractRelationsTab({
   const saveLink = async (linkRow: LinksAndFilesLink | null, draft: LinkDraft) => {
     setError(null);
     const body = { description: draft.name, url: draft.url };
-    try {
-      if (linkRow) await api.patch(`/contracts/${contractId}/links/${linkRow.id}`, body);
-      else await api.post(`/contracts/${contractId}/links`, body);
-    } catch (e) {
-      failed(e);
-      throw e;
-    }
+    if (linkRow) await api.patch(`/contracts/${contractId}/links/${linkRow.id}`, body);
+    else await api.post(`/contracts/${contractId}/links`, body);
     await queryClient.invalidateQueries({ queryKey: linksKey });
     onChanged();
   };

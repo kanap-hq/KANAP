@@ -7,13 +7,15 @@ Los activos documentan el inventario de su infraestructura: servidores físicos,
 Navegue a **Panorama IT > Activos** para ver su inventario de activos. Haga clic en **Añadir activo** para crear su primera entrada.
 
 **Campos obligatorios**:
-- **Nombre**: Un nombre de activo o nombre de host único
-- **Tipo de activo**: Servidor web, Máquina virtual, Servidor físico, Contenedor, etc. (configurable en **Panorama IT > Configuración**)
+- **Nombre**: El nombre del activo o su nombre de host, 200 caracteres como máximo
+- **Tipo de activo**: Servidor web, Máquina virtual, Servidor físico, Contenedor, etc. (configurable en **Panorama IT > Configuración**). No hay ningún tipo preseleccionado: **Crear** no está disponible hasta que elija uno
 - **Ubicación**: Dónde se aloja el activo (determina el proveedor, el tipo de alojamiento y el país)
 
 **Muy recomendados**:
 - **Ciclo de vida**: Estado actual (Activo, Obsoleto, Retirado, etc.)
 - **Entorno**: A qué entorno pertenece este activo (Prod, Pre-prod, QA, Test, Dev, Sandbox)
+
+**Nombres únicos**: dos activos no pueden tener el mismo nombre ni el mismo FQDN. Las mayúsculas y los espacios al principio o al final no cuentan. KANAP rechaza el duplicado e indica el activo que ya tiene el valor (`AST-12`). Los duplicados registrados antes siguen siendo editables mientras no cambie ese valor.
 
 **Consejo**: Use convenciones de nomenclatura coherentes que incluyan información de entorno y rol (p. ej., `prod-web-01`, `dev-db-master`). Al crear un nuevo activo, el nombre de host se deriva automáticamente del nombre que escriba.
 
@@ -32,7 +34,7 @@ La lista de activos le ofrece una visión filtrable y ordenable de cada activo d
 
 | Columna | Qué muestra |
 |---------|-------------|
-| **#** | Referencia del activo (p. ej., `AST-123`), monoespaciado |
+| **#** | Referencia del activo (p. ej., `AST-123`), monoespaciado. Se ordena por número |
 | **Nombre** | Nombre del activo (haga clic para abrir el espacio de trabajo) |
 | **Vulnerabilidades por revisar** | Las vulnerabilidades aún por revisar en las tecnologías registradas en el activo y, en naranja, cuántas son críticas o altas (`5 · 2`). Vacía para un activo retirado o cuando no queda ninguna. Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) filtrada por el activo. Presente cuando se siguen las vulnerabilidades |
 | **Tipo de activo** | El tipo del activo (p. ej., Máquina Virtual, Servidor Físico) |
@@ -41,7 +43,7 @@ La lista de activos le ofrece una visión filtrable y ordenable de cada activo d
 | **Ubicación** | Dónde se aloja el activo |
 | **Alojamiento** | Tipo de alojamiento (derivado de la ubicación) |
 | **OS** | Sistema operativo: la tecnología marcada como sistema operativo del servidor, con su versión |
-| **Zona de red** | Segmento de red (derivado de la subred) |
+| **Zona de red** | La zona de red de la subred de la primera dirección IP. Una subred vinculada a la ubicación del activo tiene prioridad sobre una subred del mismo rango sin ubicación |
 | **Ciclo de vida** | Estado actual del ciclo de vida |
 | **Asignaciones** | Número de asignaciones de aplicaciones, incluidas las heredadas de sus clústeres |
 | **Creado** | Cuándo se creó el registro |
@@ -74,11 +76,13 @@ La mayoría de columnas admiten filtros de conjunto de casillas para un filtrado
 
 Ordenar por **Vulnerabilidades por revisar** clasifica los activos por sus vulnerabilidades críticas o altas y luego por su total. Los activos retirados van al final. La columna solo cuenta vínculos directos: una máquina virtual no cuenta las vulnerabilidades de su host. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts).
 
+**La búsqueda rápida** abarca el nombre, la referencia, el nombre de host, el FQDN, las direcciones IP, el clúster, la ubicación, la sububicación y el sistema operativo.
+
 **Consejo**: Combine filtros entre columnas para acotar resultados. Por ejemplo, filtre por Entorno = "Prod" y Ciclo de vida = "Activo" para ver solo los activos activos de producción.
 
 **Acciones**:
 - **Añadir activo**: abre un menú (`infrastructure:member`). **Añadir activo** crea un activo; **Añadir clúster** crea uno con el conmutador **Clúster** ya activado
-- **Importar CSV** / **Exportar CSV**: Operaciones masivas (`infrastructure:admin`)
+- **Importar CSV** / **Exportar CSV**: Operaciones masivas (`infrastructure:admin`). La exportación contiene los activos que muestra la lista. Consulte [Opciones de exportación](#export-options)
 - **Eliminar activo** (filas seleccionadas): Eliminar los activos seleccionados (`infrastructure:admin`). Un activo todavía asignado a aplicaciones o vinculado a conexiones no se puede eliminar: retírelo primero de ellas. Una asignación que el activo solo hereda de su clúster no lo impide. Antes de eliminar nada, la confirmación enumera los activos que se conservan, con el motivo, y lo que los demás se llevan consigo (consulte [Eliminar un clúster o un miembro](#deleting-a-cluster-or-a-member))
 
 ---
@@ -138,6 +142,8 @@ Antes de eliminar un activo, la confirmación indica lo que se va con él: los c
 
 Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un **encabezado** con metadatos rápidos, un **panel de propiedades** a la derecha (la tarjeta de identidad del activo, siempre visible) y un **área de contenido** en el centro que cambia con cada pestaña.
 
+Una dirección que no designa ningún activo abre una página **Activo no encontrado**, con un enlace para volver a la lista.
+
 Las pestañas son **Vista general**, **Operaciones**, **Red**, **Hardware** (solo para tipos de activos físicos), **Dependencias** y **Relaciones**. Al crear un activo, **Vista general** y **Red** están abiertas. Las demás pestañas se abren en cuanto hace clic en **Crear**.
 
 ### Encabezado
@@ -159,12 +165,12 @@ El panel muestra la tarjeta de identidad del activo en cada pestaña. Las edicio
 - **Tipo de activo** (obligatorio)
 - **Clúster**: actívelo para marcar el activo como clúster. El cambio se guarda de inmediato y no quita nada. Se rechaza para un clúster que tiene miembros y para un miembro de un clúster. Consulte [Clústeres](#clusteres)
 - **Entorno**: Prod, Pre-prod, QA, Test, Dev, Sandbox
-- **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo, por ejemplo el Tier 0 para un controlador de dominio y el hipervisor que lo ejecuta. Elija entre las zonas configuradas en **Panorama IT > Configuración**. El activo aparece entonces en esa zona en la página [Zonas de administración](administration-view.md)
+- **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo, por ejemplo el Tier 0 para un controlador de dominio y el hipervisor que lo ejecuta. Elija entre las zonas configuradas en **Panorama IT > Configuración**, o **Sin zona**. El activo aparece entonces en esa zona en la página [Zonas de administración](administration-view.md)
 
 **Ubicación**:
 - **Ubicación** (obligatorio)
 - **Sub-ubicación** (cuando la ubicación tiene sub-ubicaciones definidas)
-- **Tipo de alojamiento**, **Empresa operadora** o **Proveedor cloud**, **País**, **Ciudad**: de solo lectura, derivados de la ubicación
+- **Tipo de alojamiento**, **Empresa operadora** o **Proveedor cloud**, **País**, **Ciudad**: de solo lectura, derivados de la ubicación. Se actualizan cuando cambia la ubicación
 
 **Ciclo de vida**:
 - **Ciclo de vida**: Activo, Obsoleto, Retirado, etc. (configurable en Configuración)
@@ -216,7 +222,7 @@ La pestaña Operaciones muestra el clúster del activo y lo que se ejecuta en é
 | **Desde** | Fecha en que se asignó el servidor |
 | **Notas** | Notas de texto libre |
 
-Haga clic en **Añadir asignación** para vincular este activo a un despliegue de aplicación (`applications:member`). Elija la aplicación, luego el entorno (la aplicación ya debe tener un despliegue en ese entorno), luego el rol y la fecha / notas opcionales. En un miembro de un clúster, KANAP pregunta primero si asignar el clúster o solo este servidor. Consulte [Aplicaciones en un clúster](#applications-on-a-cluster). El lápiz al final de una fila abre la aplicación: la asignación se edita en su pestaña **Despliegues**. El icono de papelera quita la asignación, tras una confirmación. **Añadir asignación** no está disponible mientras no haya ningún rol de servidor configurado en **Panorama IT > Configuración**.
+Haga clic en **Añadir asignación** para vincular este activo a un despliegue de aplicación. Elija la aplicación, luego el entorno (la aplicación ya debe tener un despliegue en ese entorno), luego el rol y la fecha / notas opcionales. En un miembro de un clúster, KANAP pregunta primero si asignar el clúster o solo este servidor. Consulte [Aplicaciones en un clúster](#applications-on-a-cluster). El lápiz al final de una fila abre la aplicación: la asignación se edita en su pestaña **Despliegues**. El icono de papelera quita la asignación, tras una confirmación. **Añadir asignación** no está disponible mientras no haya ningún rol de servidor configurado en **Panorama IT > Configuración**. Estos comandos requieren `infrastructure:member` y `applications:member`. Sin ambos, la tabla es de solo lectura.
 
 En un miembro, una aplicación asignada a su clúster se muestra «vía» el nombre del clúster, sin lápiz ni papelera: modifíquela en el clúster.
 
@@ -284,7 +290,7 @@ Los activos admiten múltiples direcciones IP, cada una con su propia configurac
 
 - Haga clic en **Añadir dirección IP** para añadir una nueva entrada.
 - **Tipo**: El propósito de la dirección IP (Host, IPMI, Gestión, iSCSI o tipos personalizados de Configuración)
-- **Dirección IP**: La dirección en sí
+- **Dirección IP**: La dirección en sí. Una dirección mal formada se rechaza, con el mensaje bajo el campo
 - **Subred**: Subred de red de la lista configurada (filtrada por la ubicación del activo)
 - **Zona de red**: Derivada automáticamente de la subred seleccionada (solo lectura)
 - **VLAN**: Derivada automáticamente de la subred seleccionada (solo lectura)
@@ -337,7 +343,7 @@ Cada tabla muestra la referencia (`AST-12`), el nombre, el tipo, el entorno y el
 
 En un clúster, **Depende de** termina con una línea plegada, **A través de los miembros (n)**. Enumera los activos de los que dependen los miembros en servicio del clúster, con esos miembros en la columna **Vía**. Estas filas son de solo lectura y no cuentan en la insignia de la pestaña.
 
-Con `infrastructure:member`, **Añadir**, a la derecha de una sección, abre una búsqueda de activo. Elija un resultado: la relación se guarda al instante. Para quitar una relación, pase el cursor sobre la fila y haga clic en la cruz al final. Los lectores ven las tablas en solo lectura. Una relación **Contiene** desde un miembro de un clúster pregunta primero dónde colocar el activo: consulte [Máquinas virtuales en un clúster](#virtual-machines-on-a-cluster).
+Con `infrastructure:member`, **Añadir**, a la derecha de una sección, abre una búsqueda de activo. Elija un resultado: la relación se guarda al instante. Para quitar una relación, pase el cursor sobre la fila y haga clic en la cruz al final. Un mensaje lo confirma y ofrece **Deshacer**. Los lectores ven las tablas en solo lectura. Una relación **Contiene** desde un miembro de un clúster pregunta primero dónde colocar el activo: consulte [Máquinas virtuales en un clúster](#virtual-machines-on-a-cluster).
 
 ---
 
@@ -359,14 +365,14 @@ Solo ve las secciones de los módulos que puede leer: presupuesto, contratos, pr
 
 Las fechas en naranja requieren atención: un contrato cuya decisión de renovación cae dentro de su ventana de decisión de contratos, o una tarea abierta con el vencimiento pasado. Una línea presupuestaria o un contrato desactivado sigue en la lista con el nombre atenuado. A partir de dos filas, las líneas presupuestarias y los contratos terminan con una fila de total. El total de las líneas presupuestarias está en la moneda de reporte y excluye una línea cuya moneda no tiene tipo de cambio para el año: un aviso de una línea bajo la tabla la indica. Los contratos tienen un total por moneda, sin los contratos desactivados.
 
-**Añadir y quitar vínculos** (`infrastructure:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Vincular también requiere poder leer el módulo de destino, así que **Añadir** no aparece en una sección que no puede leer. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Los lectores ven las tablas en solo lectura.
+**Añadir y quitar vínculos** (`infrastructure:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Vincular también requiere poder leer el módulo de destino, así que **Añadir** no aparece en una sección que no puede leer. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Un mensaje lo confirma y ofrece **Deshacer**. Quitar un vínculo no elimina nada más. Los lectores ven las tablas en solo lectura.
 
 - Una tarea que vincula o desvincula aquí también aparece en la actividad de la tarea.
 - Vincular o desvincular un incidente requiere también `incidents:contributor` y queda registrado en el diario del incidente. Un incidente cerrado o cancelado no se puede vincular ni desvincular: reábralo primero.
 
 **Enlaces y archivos**: los enlaces web del activo (portales de proveedores, paneles de monitoreo, documentación) y sus archivos (archivos de configuración, diagramas, documentos del proveedor), una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con `infrastructure:member`:
 
-- **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
+- **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Una dirección escrita sin `http://` ni `https://` recibe `https://`. Cualquier otro esquema se rechaza. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
 - **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección.
 - Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
 
@@ -384,7 +390,11 @@ Desde la lista de Activos:
 
 **Permisos requeridos**: `infrastructure:admin` para operaciones de importación/exportación.
 
-### Opciones de exportación
+### Opciones de exportación { #export-options }
+
+**Contenido del archivo**: los activos que muestra la lista. La exportación sigue los filtros de las columnas y la búsqueda rápida. El diálogo indica cuántos activos tendrá el archivo. También puede exportar todo el registro.
+
+Las columnas de tipo de activo, ciclo de vida, dominio, zona de administración y tipo de dirección IP contienen las etiquetas de la pantalla, en el idioma de la pantalla.
 
 | Opción | Descripción |
 |--------|-------------|
@@ -411,6 +421,19 @@ Desde la lista de Activos:
 
 4. **Aplicar cambios**: Si la validación es correcta, haga clic en **Importar** para confirmar los cambios.
 
+### Lo que la verificación previa rechaza
+
+La verificación previa indica un error en la fila, y no se carga nada, en estos casos:
+
+- un nombre de host que no cumple la regla de la pestaña Red;
+- una dirección IP mal formada;
+- un tipo de activo, dominio, ciclo de vida, zona de administración o tipo de dirección IP que no coincide con nada en **Panorama IT > Configuración**;
+- una fecha que no existe en el calendario, como `31/02/2025`, o una fecha escrita en letras. Las formas de fecha aceptadas están en [Archivos CSV](csv-files.md);
+- una posición de dirección IP rellenada mientras una anterior está vacía, por ejemplo `ip_2_address` sin `ip_1_address`;
+- un nombre o un FQDN que ya tiene otro activo.
+
+Para un activo existente, el nombre de host y las direcciones IP solo se vuelven a comprobar si el archivo los cambia.
+
 ### Referencia de campos
 
 **Campos principales**:
@@ -419,7 +442,7 @@ Desde la lista de Activos:
 |-------------|-------------|-------------|-------|
 | `id` | UUID del activo | No | Para actualizaciones; deje en blanco para nuevos activos |
 | `name` | Nombre del activo | Sí | Se usa como identificador único para coincidencias |
-| `location_code` | Código de ubicación | Sí | Debe coincidir con un código de ubicación existente |
+| `location_reference` | Código de ubicación | Sí | El **Código** de una ubicación existente |
 | `kind` | Tipo de activo | Sí | Acepta código o etiqueta (p. ej., `vm` o `Virtual Machine`) |
 | `environment` | Entorno | Sí | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Estado del ciclo de vida | No | Acepta código o etiqueta (p. ej., `active` o `Active`) |
@@ -445,7 +468,7 @@ Desde la lista de Activos:
 
 ### Aceptación de etiquetas y códigos
 
-Para campos configurados en **Panorama IT > Configuración**, puede usar tanto el código interno como la etiqueta visible:
+Para campos configurados en **Panorama IT > Configuración**, puede usar tanto el código interno como la etiqueta que muestra la pantalla, en inglés, francés, alemán o español:
 
 | Campo | Ejemplos de códigos | Ejemplos de etiquetas |
 |-------|---------------------|----------------------|
@@ -455,7 +478,7 @@ Para campos configurados en **Panorama IT > Configuración**, puede usar tanto e
 | Zona de administración (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (núcleo de confianza)`, `Tier 1 (servidores y aplicaciones)` |
 | Tipo de dirección IP | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
-El sistema normaliza automáticamente los valores durante la importación, por lo que `Virtual Machine`, `virtual machine` y `vm` se resuelven al mismo tipo de activo. Un valor que coincide con varias entradas se rechaza en lugar de adivinarse. La exportación CSV escribe nombres en estas columnas, de modo que un archivo exportado se puede volver a importar tal cual.
+El sistema normaliza automáticamente los valores durante la importación, por lo que `Virtual Machine`, `virtual machine` y `vm` se resuelven al mismo tipo de activo. Un valor que coincide con varias entradas se rechaza en lugar de adivinarse. La exportación CSV escribe nombres en estas columnas, en el idioma de la pantalla, de modo que un archivo exportado se puede volver a importar tal cual.
 
 **Sistema operativo**: la columna `operating_system` contiene el nombre de la tecnología seguido de su versión, tal como lo escribe la exportación (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Al importar, KANAP busca la tecnología entre las suyas y después en el catálogo, y registra la versión. Una tecnología o una versión que no encuentra se crea: revise antes la ortografía. El valor pasa a ser el sistema operativo del servidor.
 
@@ -478,14 +501,14 @@ Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el I
 ### Campos derivados
 
 Algunos campos se calculan y no pueden importarse:
-- **Proveedor**: Derivado automáticamente de la ubicación del activo
+- **Proveedor**: Derivado automáticamente de la ubicación del activo, y actualizado cuando cambia la ubicación
 - **FQDN**: Calculado a partir del nombre de host + dominio
 - **Vulnerabilidades**: `vulnerabilities_to_review` (las vulnerabilidades aún por revisar) y `severe_vulnerabilities` (las críticas o altas), contadas como en la columna de la lista. Solo exportación: la importación las ignora. Vacías para un activo retirado. Ausentes del archivo cuando no se siguen las vulnerabilidades
 
 ### Limitaciones
 
 - **Máximo 4 direcciones IP**: Los activos admiten hasta 4 entradas de direcciones IP vía CSV
-- **Ubicación obligatoria**: Cada activo debe tener un código de ubicación válido
+- **Ubicación obligatoria**: Cada activo debe tener el código de una ubicación existente
 - **Relaciones no incluidas**: Las asignaciones de aplicaciones, conexiones, vínculos financieros, proyectos, tareas y adjuntos deben gestionarse en el espacio de trabajo
 
 ### Solución de problemas
@@ -499,7 +522,7 @@ Algunos campos se calculan y no pueden importarse:
 ### Ejemplo CSV
 
 ```csv
-name;location_code;kind;environment;status;hostname;domain;ip_1_type;ip_1_address
+name;location_reference;kind;environment;status;hostname;domain;ip_1_type;ip_1_address
 PROD-WEB-01;NYC-DC1;Virtual Machine;prod;Active;prodweb01;corp;Host IP;10.0.1.10
 PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 ```

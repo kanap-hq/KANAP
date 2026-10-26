@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { operatingSystemLabelSql } from '../technologies/operating-system-codes';
 
@@ -10,6 +10,10 @@ type Params = Record<string, string | number>;
  */
 export function assetBadRequest(code: string, message: string, params?: Params): BadRequestException {
   return new BadRequestException({ code, message, ...(params ? { params } : {}) });
+}
+
+export function assetConflict(code: string, message: string, params?: Params): ConflictException {
+  return new ConflictException({ code, message, ...(params ? { params } : {}) });
 }
 
 /** The code, message and params of a coded refusal, for a CSV row error. */
@@ -215,4 +219,136 @@ export async function clusterMembershipsOf(
 /** The names of the clusters, joined as the list and the CSV show them. */
 export function clusterNamesText(clusters: ReadonlyArray<{ name: string }> | undefined): string | null {
   return clusters && clusters.length > 0 ? clusters.map((c) => c.name).join(', ') : null;
+}
+
+/**
+ * Names and FQDNs compare without case and without the spaces around them, as the database
+ * compares them (`lower(btrim(...))`): `btrim` removes the space character only.
+ */
+export function assetNameKey(value: unknown): string {
+  const text = String(value ?? '');
+  let start = 0;
+  let end = text.length;
+  while (start < end && text[start] === ' ') start += 1;
+  while (end > start && text[end - 1] === ' ') end -= 1;
+  return text.slice(start, end).toLowerCase();
+}
+
+/**
+ * The FQDN the screen stores: the host name, plus the domain's DNS suffix. A workgroup, an empty
+ * domain and a domain without a suffix keep the host name alone. An empty host name has no FQDN.
+ */
+export function assetFqdnOf(
+  hostname: string | null | undefined,
+  domain: { code?: string | null; dns_suffix?: string | null } | null,
+): string | null {
+  if (!hostname || !String(hostname).trim()) return null;
+  const clean = String(hostname).trim().toLowerCase();
+  const code = String(domain?.code ?? '').trim().toLowerCase();
+  if (!code || code === 'workgroup' || code === 'n-a') return clean;
+  const suffix = String(domain?.dns_suffix ?? '').trim().toLowerCase();
+  if (!suffix) return clean;
+  return `${clean}.${suffix}`;
+}
+
+export type AssetIdentityHolder = { id: string; name: string; ref: string };
+
+function holderOf(row: { id: string; name: string; asset_reference?: string | null }): AssetIdentityHolder {
+  return { id: String(row.id), name: row.name, ref: row.asset_reference || row.name };
+}
+
+/** Assets of the tenant whose name or FQDN key is one of `keys`. */
+export async function assetIdentityHolders(
+  manager: { query: (sql: string, params?: unknown[]) => Promise<any[]> },
+  tenantId: string,
+  column: 'name' | 'fqdn',
+  keys: string[],
+): Promise<Array<AssetIdentityHolder & { key: string }>> {
+  const wanted = [...new Set(keys.map((key) => assetNameKey(key)).filter(Boolean))];
+  if (wanted.length === 0) return [];
+  const rows: Array<{ id: string; name: string; asset_reference?: string | null; name_key?: string; fqdn?: string | null }> = await manager.query(
+    `SELECT id::text AS id, name, asset_reference, lower(btrim(${column})) AS name_key
+       FROM assets
+      WHERE tenant_id = $1 AND lower(btrim(${column})) = ANY($2::text[])
+      ORDER BY created_at ASC, id ASC`,
+    [tenantId, wanted],
+  );
+  return rows
+    .filter((row) => wanted.includes(assetNameKey(row.name_key ?? (column === 'name' ? row.name : row.fqdn))))
+    .map((row) => ({ ...holderOf(row), key: assetNameKey(row.name_key ?? (column === 'name' ? row.name : row.fqdn)) }));
+}
+
+/** Assets of the tenant that carry this name, except `excludeId`. */
+export async function assetsNamed(
+  manager: { query: (sql: string, params?: unknown[]) => Promise<any[]> },
+  tenantId: string,
+  name: string,
+  excludeId?: string | null,
+): Promise<AssetIdentityHolder[]> {
+  const key = assetNameKey(name);
+  if (!key) return [];
+  const rows: Array<{ id: string; name: string; asset_reference?: string | null }> = await manager.query(
+    `SELECT id::text AS id, name, asset_reference
+       FROM assets
+      WHERE tenant_id = $1 AND lower(btrim(name)) = $2 AND ($3::uuid IS NULL OR id <> $3::uuid)
+      ORDER BY created_at ASC, id ASC`,
+    [tenantId, key, excludeId ?? null],
+  );
+  return rows.filter((row) => assetNameKey(row.name) === key && String(row.id) !== String(excludeId ?? '')).map(holderOf);
+}
+
+/** Assets of the tenant that carry this FQDN, except `excludeId`. An empty FQDN matches nothing. */
+export async function assetsWithFqdn(
+  manager: { query: (sql: string, params?: unknown[]) => Promise<any[]> },
+  tenantId: string,
+  fqdn: string | null | undefined,
+  excludeId?: string | null,
+): Promise<AssetIdentityHolder[]> {
+  const key = assetNameKey(fqdn);
+  if (!key) return [];
+  const rows: Array<{ id: string; name: string; asset_reference?: string | null; fqdn?: string | null }> = await manager.query(
+    `SELECT id::text AS id, name, asset_reference, fqdn
+       FROM assets
+      WHERE tenant_id = $1 AND lower(btrim(fqdn)) = $2 AND ($3::uuid IS NULL OR id <> $3::uuid)
+      ORDER BY created_at ASC, id ASC`,
+    [tenantId, key, excludeId ?? null],
+  );
+  return rows.filter((row) => assetNameKey(row.fqdn) === key && String(row.id) !== String(excludeId ?? '')).map(holderOf);
+}
+
+/**
+ * Serializes the name and FQDN checks of a tenant until the end of the transaction. The tenant
+ * row is locked first (FOR SHARE), then the names: the order the import takes (tenant FOR UPDATE,
+ * then the names) and the settings reads of a write (`getSettingsForWrite`, FOR SHARE) follow, so
+ * two writers never wait on each other in opposite orders.
+ */
+export async function lockAssetNames(manager: { query: (sql: string, params?: unknown[]) => Promise<any[]> }, tenantId: string): Promise<void> {
+  await manager.query('SELECT 1 FROM tenants WHERE id = $1 FOR SHARE', [tenantId]);
+  await manager.query(`SELECT pg_advisory_xact_lock(hashtext('assets:names:' || $1))`, [tenantId]);
+}
+
+/** 409 `asset_name_taken` when another asset of the tenant already has this name. */
+export async function assertAssetNameFree(
+  manager: { query: (sql: string, params?: unknown[]) => Promise<any[]> },
+  tenantId: string,
+  name: string,
+  excludeId?: string | null,
+): Promise<void> {
+  const [holder] = await assetsNamed(manager, tenantId, name, excludeId);
+  if (holder) {
+    throw assetConflict('asset_name_taken', `An asset already has this name: ${holder.ref}`, { name: holder.name, ref: holder.ref });
+  }
+}
+
+/** 409 `asset_fqdn_taken` when another asset of the tenant already has this FQDN. */
+export async function assertAssetFqdnFree(
+  manager: { query: (sql: string, params?: unknown[]) => Promise<any[]> },
+  tenantId: string,
+  fqdn: string | null | undefined,
+  excludeId?: string | null,
+): Promise<void> {
+  const [holder] = await assetsWithFqdn(manager, tenantId, fqdn, excludeId);
+  if (holder) {
+    throw assetConflict('asset_fqdn_taken', `An asset already has this FQDN: ${holder.ref}`, { fqdn: assetNameKey(fqdn), ref: holder.ref });
+  }
 }

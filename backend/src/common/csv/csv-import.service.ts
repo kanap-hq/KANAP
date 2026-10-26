@@ -1078,31 +1078,37 @@ export class CsvImportService {
   }
 
   /**
-   * Parse a date value.
+   * Parse a date value: year first (`YYYY-MM-DD`, also `YYYY-M-D`, `YYYY/MM/DD`, `YYYY.MM.DD`,
+   * with an optional time after it that is ignored) or day first (`D/M/YYYY`, `D.M.YYYY`). The
+   * day is read from its year, month and day as written, with no time zone. A day that is not on
+   * the calendar (`31/02/2025`, `2025/02/31`) is refused here, before a row reaches the database:
+   * PostgreSQL would abort the whole import transaction. Any other form is refused.
    */
   private parseDate(value: string, columnName: string): string {
-    // Try ISO format first
-    const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (isoMatch) {
-      return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
-    }
+    const invalid = (): never => {
+      throw new CsvCellError('CSV_DATE_INVALID', `Invalid date in ${columnName}: "${value}"`, { value });
+    };
+    const calendarDay = (year: string, month: string, day: string): string => {
+      const y = Number(year);
+      const m = Number(month);
+      const d = Number(day);
+      const date = new Date(Date.UTC(y, m - 1, d));
+      const real = Number.isInteger(y) && m >= 1 && m <= 12 && d >= 1 && d <= 31
+        && date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+      if (!real) invalid();
+      return `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    };
+    const text = value.trim();
 
-    // Try European format (DD/MM/YYYY or DD.MM.YYYY)
-    const euroMatch = value.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})$/);
-    if (euroMatch) {
-      const day = euroMatch[1].padStart(2, '0');
-      const month = euroMatch[2].padStart(2, '0');
-      const year = euroMatch[3];
-      return `${year}-${month}-${day}`;
-    }
+    // Year first, one separator throughout; a time after the day (`T10:00:00Z`) is not read.
+    const yearFirst = text.match(/^(\d{4})([-/.])(\d{1,2})\2(\d{1,2})(?:[T ].*)?$/);
+    if (yearFirst) return calendarDay(yearFirst[1], yearFirst[3], yearFirst[4]);
 
-    // Try parsing as Date
-    const parsed = new Date(value);
-    if (!isNaN(parsed.getTime())) {
-      return parsed.toISOString().split('T')[0];
-    }
+    // Day first (DD/MM/YYYY or DD.MM.YYYY)
+    const dayFirst = text.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})$/);
+    if (dayFirst) return calendarDay(dayFirst[3], dayFirst[2], dayFirst[1]);
 
-    throw new CsvCellError('CSV_DATE_INVALID', `Invalid date in ${columnName}: "${value}"`, { value });
+    return invalid();
   }
 
   /**

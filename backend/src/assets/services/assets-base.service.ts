@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager, Repository } from 'typeorm';
+import { resolveAssetId } from '../asset-identifier';
 import { Asset } from '../asset.entity';
 import { AuditSourceOptions } from '../../audit/audit.service';
 import type { LinkSource } from '../../common/link-provenance';
@@ -21,6 +22,11 @@ export type EnvironmentValue = (typeof ENVIRONMENTS)[number];
 export interface ServiceOpts extends AuditSourceOptions {
   manager?: EntityManager;
   tenantId?: string;
+  /**
+   * Language the list sorts catalog columns in (`en`, `fr`, `de`, `es`). Omitted, those columns
+   * sort by the tenant's stored label.
+   */
+  language?: 'en' | 'fr' | 'de' | 'es';
   /**
    * Provenance of the operating-system link (`manual` when omitted). Separate from `source`,
    * which is the audit entry of the asset row.
@@ -69,8 +75,10 @@ export abstract class AssetsBaseService {
   }
 
   async ensureAsset(id: string, manager?: EntityManager, tenantId?: string): Promise<Asset> {
+    const mg = manager ?? this.assetRepo.manager;
+    const resolvedId = await resolveAssetId(mg, id, tenantId);
     const repo = this.getRepo(manager);
-    const where: Record<string, any> = { id };
+    const where: Record<string, any> = { id: resolvedId };
     if (tenantId) {
       where.tenant_id = tenantId;
     }

@@ -19,7 +19,9 @@ Cada página de datos maestros tiene **Exportar CSV** e **Importar CSV** en su b
 | Español | `;` | `12280,50` | `01/03/2027` | `sí`, `no` |
 | Alemán | `;` | `12280,50` | `01.03.2027` | `ja`, `nein` |
 
-Una fecha que el archivo no puede decidir por sí solo, como `01/03/2027`, se lee en el orden del idioma en que se muestra la pantalla: día primero en francés, alemán y español, mes primero en inglés. La verificación indica cómo ha leído el archivo, con un botón para cambiar la lectura. Una fecha con un día superior a 12 decide la cuestión por sí sola, y el archivo no guarda ninguna constancia del idioma en que se exportó.
+**Las fechas** se escriben con el año primero (`2027-03-01`, `2027/03/01` o `2027.03.01`), o con el día y el mes antes del año (`01/03/2027`, `01.03.2027`). Una fecha escrita en letras, como `Mar 1 2027`, se rechaza, igual que un día que no existe en el calendario, como `31/02/2027`.
+
+En las páginas de datos maestros, una fecha que el archivo no puede decidir por sí solo, como `01/03/2027`, se lee en el orden del idioma en que se muestra la pantalla: día primero en francés, alemán y español, mes primero en inglés. La verificación indica cómo ha leído el archivo, con un botón para cambiar la lectura. Una fecha con un día superior a 12 decide la cuestión por sí sola, y el archivo no guarda ninguna constancia del idioma en que se exportó. Los archivos de aplicaciones, activos, incidentes, proyectos, solicitudes y tareas siempre leen esa fecha con el día primero.
 
 Una importación lee sí o no en cualquiera de estos idiomas, y los `true`, `false`, `1` y `0` de los archivos anteriores. Los archivos de aplicaciones, activos, incidentes, proyectos, solicitudes y tareas siguen la misma tabla, al igual que los archivos de vínculos de la lista de tecnologías. Consulte [Tecnologías](technologies.md#importar-y-exportar-vinculos).
 

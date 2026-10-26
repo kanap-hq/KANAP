@@ -39,7 +39,7 @@ Go to **Administration > Integrations** and open the **Netbox inventory** card.
 | **Automatic synchronisation** | Runs every hour and applies the changes on its own. Leave it off until your first run looks right. |
 | **Environment for new assets** | Applied to the assets this integration creates. It is never changed afterwards. |
 
-**Test connection** makes a read-only call and reports the Netbox version it found, or the reason it failed. Run it after every change to the address or the token. Once the settings are saved, the card offers a link to **Set up the synchronisation**, which takes you to the **Netbox** tab of **IT Landscape > Settings**.
+**Test connection** makes a read-only call and reports the Netbox version it found, or the reason it failed. Run it after every change to the address or the token. The card shows **Configured** once the connection is saved and switched on. Next to it, the card shows the result and the date of the last test: "Last test succeeded on …" or "Last test failed on …". Once the settings are saved, the card offers a link to **Set up the synchronisation**, which takes you to the **Netbox** tab of **IT Landscape > Settings**.
 
 ---
 
@@ -100,15 +100,15 @@ The preview is grouped:
 - **To create**: objects with no counterpart in KANAP. They will be created.
 - **To update**: objects matched to an existing asset that differs. Nothing is changed yet, the values are written when you apply. Each one lists the fields that change, field by field, as `before → after`.
 - **Needs a decision**: objects KANAP will not decide on its own. Nothing happens to them until you settle them, here or later on the page.
-- **Skipped**: objects out of scope, counted by reason (role not mapped, site not mapped, no name in Netbox, ignored by you).
+- **Skipped**: objects out of scope, counted by reason (role not mapped, site not mapped, no name in Netbox, ignored by you). The first 20 objects of each reason are named, then the count of the others.
 - **Missing from Netbox**: assets a previous run linked whose Netbox object is gone.
 - **Warnings**: values Netbox reports that KANAP could not take over, for example an operating system KANAP cannot find among its technologies. An object with nothing to change but something to report appears here too.
 
-Read it, then press **Apply**. Objects that are already identical are counted as unchanged and not touched at all. A large inventory is reviewed in batches of 500. **Apply this batch** writes only what the preview lists; everything else is left exactly as it is. The page then says how many objects still wait and offers **Review the next batch**, until nothing is left. Nothing you have not been shown is ever created or updated by a run you start yourself. Objects out of scope are counted by reason and not listed, so they never take the place of an object you need to read. The filter at the top narrows the list to an object or an asset name.
+Read it, then press **Apply**. Objects that are already identical are counted as unchanged and not touched at all. A large inventory is reviewed in batches of 500. **Apply this batch** writes only what the preview lists; everything else is left exactly as it is. The page then says how many objects still wait and offers **Review the next batch**, until nothing is left. Nothing you have not been shown is ever created or updated by a run you start yourself. Objects out of scope sit apart, under **Skipped**, so they never take the place of an object you need to read. The filter at the top narrows the list to an object or an asset name.
 
 ### Correct the preview before applying
 
-KANAP can only recognise an asset through its serial number, its host name or its name. Equipment you renamed, with none of these in common, shows up under **To create** and would be created a second time. The preview lets you settle that first. A row KANAP proposes something for has a button, **Correct** under **To create** and **To update**, **Decide** on objects that need a decision. An object already linked by an earlier run has none: it is settled, and the row only shows what changes. A first match says what it rests on ("Recognised by its serial number"), so you can tell a wrong one. The button opens these choices:
+KANAP can only recognise an asset through its serial number, its host name or its name. Equipment you renamed, with none of these in common, shows up under **To create** and would be created a second time. The preview lets you settle that first. A row KANAP proposes something for has a button, **Link instead** under **To create** and **To update**, **Decide** on objects that need a decision. An object already linked by an earlier run has none: it is settled, and the row only shows what changes. A first match says what it rests on ("Recognised by its serial number"), so you can tell a wrong one. The button opens these choices:
 
 - **Link to an existing asset**: search for the asset and pick it. The row moves to **To update** and shows what Netbox will change on that asset, field by field, so you still read before you apply.
 - **Create a new asset**: for an object under **Needs a decision**, or one KANAP matched to the wrong asset.
@@ -274,8 +274,8 @@ The tile stays out of the way when there is nothing to do: one line saying the s
 | What you see | What it usually means |
 |--------------|-----------------------|
 | Netbox rejected the API token | The token was truncated when pasted, has expired, or is restricted to another address. Create a fresh one in Netbox and save it again. |
-| Private or internal hosts are not allowed | The cloud edition only reaches public addresses. Either publish Netbox at an address KANAP can reach, or run KANAP on-premise next to it. |
-| The certificate could not be verified | Netbox presents a certificate KANAP does not trust. Install a trusted certificate, or turn on **Ignore certificate errors** if the certificate is one of yours. |
+| This address points at a private network | The cloud edition only reaches public addresses. Either publish Netbox at an address KANAP can reach, or run KANAP on-premise next to it. |
+| The Netbox certificate could not be verified | Netbox presents a certificate KANAP does not trust. Install a trusted certificate, or turn on **Ignore certificate errors** if the certificate is one of yours. |
 | The Netbox server did not answer in time | Netbox is slow, unreachable, or behind a firewall that drops the call. Check from the KANAP server, then raise the request timeout if the instance is simply large. |
 | Objects show as skipped, reason "Role not mapped" or "Site not mapped" | Expected for anything you left on **Do not import**. If it was not meant to be skipped, map the role or the site and run again. |
 | A warning says an operating system is not in your catalogue | The Netbox platform has no match in **Mappings > Operating systems**, and its name matches no technology of the **Operating system** family and no operating system of the catalog. Match it in the Mappings tab, or add the technology in **IT Landscape > Technologies**, then run again. The operating system is left unchanged until you do. |

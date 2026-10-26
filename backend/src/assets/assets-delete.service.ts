@@ -2,6 +2,7 @@ import { TechnologyCpeEvents } from '../technologies/technology-cpe-events';
 import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import { resolveAssetId } from './asset-identifier';
 import { Asset } from './asset.entity';
 import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
@@ -51,8 +52,9 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
   }
 
   private async ensureAsset(id: string, tenantId: string, manager: EntityManager) {
+    const resolvedId = await resolveAssetId(manager, id, tenantId);
     const repo = this.getRepo(manager);
-    const asset = await repo.findOne({ where: { id, tenant_id: tenantId } as any });
+    const asset = await repo.findOne({ where: { id: resolvedId, tenant_id: tenantId } as any });
     if (!asset) {
       throw new NotFoundException('Asset not found');
     }
@@ -338,12 +340,12 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
     // Its memberships and relations go with it (ON DELETE CASCADE): audited first, on the other side.
     const cascade = await this.auditCascade(asset, tenantId, userId, manager);
     // Its technology links go with it: those technologies are matched again after the commit.
-    await this.cpeEvents?.emitForSubjects(manager, tenantId, 'asset', [id]);
-    await this.getRepo(manager).delete({ id, tenant_id: tenantId } as any);
+    await this.cpeEvents?.emitForSubjects(manager, tenantId, 'asset', [asset.id]);
+    await this.getRepo(manager).delete({ id: asset.id, tenant_id: tenantId } as any);
 
     await this.audit.log(
       {
-        table: 'assets', recordId: id, action: 'delete',
+        table: 'assets', recordId: asset.id, action: 'delete',
         before: {
           ...asset,
           ...(cascade.members.length > 0 ? { members: cascade.members } : {}),

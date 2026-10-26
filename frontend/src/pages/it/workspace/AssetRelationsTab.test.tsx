@@ -8,6 +8,7 @@ import { createAppTheme } from '../../../config/ThemeContext';
 import { KanapDialogProvider } from '../../../components/design';
 import api from '../../../api';
 import AssetRelationsTab from './AssetRelationsTab';
+import { ApplicationFeedbackProvider } from '../applicationFeedback';
 import { assetRelationsBadge, assetRelationsKey, type AssetRelationsData } from './assetRelationsData';
 
 const rights = vi.hoisted(() => ({} as Record<string, string>));
@@ -106,8 +107,10 @@ function renderTab(data: AssetRelationsData) {
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <MemoryRouter>
-            <AssetRelationsTab assetId="as-1" />
-            <Location />
+            <ApplicationFeedbackProvider onError={() => undefined}>
+              <AssetRelationsTab assetId="as-1" />
+              <Location />
+            </ApplicationFeedbackProvider>
           </MemoryRouter>
         </KanapDialogProvider>
       </ThemeProvider>
@@ -213,6 +216,14 @@ describe('AssetRelationsTab', () => {
     fireEvent.click(screen.getByRole('option', { name: /Fan failure/ }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/incidents', { id: 'inc-9' }));
     expect(badgeRead()).toBe(true);
+  });
+
+  it('offers to put an unlinked row back', async () => {
+    renderTab(relations());
+    fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.remove(name=Patch the host)' }));
+    expect(await screen.findByText('workspace.asset.relations.feedback.unlinked(name=Patch the host)')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/tasks', { id: 'tsk-1' }));
   });
 
   it('unlinks a task and keeps a closed incident', async () => {

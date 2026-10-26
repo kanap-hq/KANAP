@@ -17,6 +17,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useTranslation } from 'react-i18next';
+import { csvEntityOf } from './csvLabels';
 import { screenLanguage } from './readings';
 import api from '../../api';
 import { useCsvImport } from './useCsvImport';
@@ -229,7 +230,7 @@ export default function CsvImportDialogV2({
         )}
 
         {(phase === 'validate' || phase === 'result') && result && (
-          <CsvValidationResults result={result} />
+          <CsvValidationResults result={result} entity={csvEntityOf(endpoint)} />
         )}
 
         {loading && <LinearProgress sx={{ mt: 2 }} />}

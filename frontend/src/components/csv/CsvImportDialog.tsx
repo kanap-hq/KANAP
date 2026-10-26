@@ -6,6 +6,7 @@ import type { TFunction } from 'i18next';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { csvRequestErrorMessage } from './csvRequestError';
+import { csvEntityOf, csvFieldLabel } from './csvLabels';
 import { CsvReportMessage, csvMessageText } from './csvMessage';
 import { AmountReading, DateReading, amountReadingOf, dateReadingOf, screenLanguage } from './readings';
 
@@ -34,11 +35,12 @@ type ImportReport = {
 type RowError = CsvReportMessage;
 
 /** A row error in the interface language when it has a code, with the column it is about. */
-function rowErrorText(err: RowError, t: TFunction): string {
+function rowErrorText(err: RowError, t: TFunction, entity: string): string {
   const message = csvMessageText(err, t);
   if (err.row === 0) return t('csv.headerError', { message });
-  return err.code && err.column
-    ? t('csv.rowColumnError', { row: err.row, column: err.column, message })
+  const column = err.column ? csvFieldLabel(t, entity, { csvColumn: err.column, label: err.column }) : err.column;
+  return err.code && column
+    ? t('csv.rowColumnError', { row: err.row, column, message })
     : t('csv.rowError', { row: err.row, message });
 }
 
@@ -99,6 +101,7 @@ export default function CsvImportDialog({
 }) {
   const { t, i18n } = useTranslation(['common', 'ops']);
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
+  const entity = csvEntityOf(endpoint);
   const [file, setFile] = useState<File | null>(null);
   const [hover, setHover] = useState(false);
   const [report, setReport] = useState<ImportReport | null>(null);
@@ -340,7 +343,7 @@ export default function CsvImportDialog({
             {(report as any).errors && (report as any).errors.length > 0 && (
               <Box sx={{ mt: 1 }}>
                 {(report as any).errors.slice(0, 5).map((err: any, i: number) => (
-                  <Typography key={i} variant="body2">{rowErrorText(err, t)}</Typography>
+                  <Typography key={i} variant="body2">{rowErrorText(err, t, entity)}</Typography>
                 ))}
                 {(report as any).errors.length > 5 && (
                   <Typography variant="caption">{t('csv.andMoreErrors', { count: (report as any).errors.length - 5 })}</Typography>
@@ -350,7 +353,7 @@ export default function CsvImportDialog({
             {warnings.length > 0 && (
               <Alert severity="warning" sx={{ mt: 1 }} data-testid="csv-import-warnings">
                 {warnings.slice(0, 5).map((warning, i) => (
-                  <Box key={i} component="span" sx={{ display: 'block' }}>{rowErrorText(warning, t)}</Box>
+                  <Box key={i} component="span" sx={{ display: 'block' }}>{rowErrorText(warning, t, entity)}</Box>
                 ))}
                 {warnings.length > 5 && (
                   <Box component="span" sx={{ display: 'block' }}>{t('csv.andMoreErrors', { count: warnings.length - 5 })}</Box>

@@ -31,6 +31,7 @@ vi.mock('../../components/ServerDataGrid', () => ({
     grid(props);
     return null;
   },
+  DATE_COLUMN_FILTER: { filter: 'agDateColumnFilter' },
 }));
 
 import ApplicationsPage from './ApplicationsPage';

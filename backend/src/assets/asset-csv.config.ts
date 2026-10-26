@@ -1,9 +1,11 @@
+import { assetEnvironmentCode } from './asset-environments';
 import { findCatalogOption, requireImportCatalogs, resolveCatalogCode } from '../it-ops-settings/catalog-resolve';
 import {
   ArrayStrategy,
   CsvEntityConfig,
   CsvFieldType,
   CsvImportContext,
+  CsvImportRow,
 } from '../common/csv';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { AuditLog } from '../audit/audit.entity';
@@ -12,6 +14,8 @@ import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-s
 import { TechnologyCatalogService } from '../technologies/catalog/technology-catalog.service';
 import { OperatingSystemService } from '../technologies/operating-system.service';
 import { vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
+import { isValidHostname } from './hostname.util';
+import { isValidIpAddress } from './ip-address.util';
 import { operatingSystemLabelSql } from '../technologies/operating-system-codes';
 import type { NotificationsService } from '../notifications/notifications.service';
 import { Asset } from './asset.entity';
@@ -20,6 +24,9 @@ import { AssetsCrudService } from './services/assets-crud.service';
 import type { AssetsValidationService } from './services/assets-validation.service';
 import {
   assetBadRequest,
+  assetFqdnOf,
+  assetIdentityHolders,
+  assetNameKey,
   clusterMembershipsOf,
   clusterOsWithMembersRefusal,
   clusterSwitchRefusals,
@@ -280,6 +287,11 @@ function sameOperatingSystem(current: string, wanted: string): boolean {
  * IP addresses get their type resolved and their values trimmed.
  */
 function resolveAssetCatalogs(entity: any, settings: ItOpsSettings): void {
+  if (entity.environment != null && String(entity.environment).trim() !== '') {
+    const code = assetEnvironmentCode(entity.environment);
+    if (!code) throw new Error(`Unknown environment "${entity.environment}"`);
+    entity.environment = code;
+  }
   if (entity.kind) entity.kind = resolveCatalogCode(entity.kind, settings.serverKinds);
   if (entity.status) entity.status = resolveCatalogCode(entity.status, settings.lifecycleStates);
   if (entity.domain) entity.domain = resolveCatalogCode(entity.domain, settings.domains);
@@ -311,6 +323,169 @@ function resolveAssetCatalogs(entity: any, settings: ItOpsSettings): void {
   }
 
   entity.ip_addresses = normalizedIps.length > 0 ? normalizedIps : null;
+}
+
+/**
+ * The checks of the asset screen, on every row of the dry run and the load: a host name, an IP
+ * address, and a type, domain, lifecycle or administration zone that is not in the catalog.
+ * A later IP address set while an earlier address cell of the file is empty is a row error
+ * (`asset_ip_gap`): the nested columns would otherwise shift that address into the empty slot.
+ * An impossible day is already refused by the shared date parser (`CSV_DATE_INVALID`).
+ * On an existing asset, the host name and each IP address are checked only when the file changes
+ * them, as the screen does: a stored value that an older rule let through does not block the row.
+ */
+async function validateAssetRows(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
+  const settings = await requireImportCatalogs(context);
+  const fail = (row: CsvImportRow, code: string, message: string, params: Record<string, string | number>, column: string) =>
+    row.errors.push({ row: row.rowNumber, column, message, code, params });
+  const catalog = (row: CsvImportRow, column: string, options: Parameters<typeof findCatalogOption>[1], code: string, label: string) => {
+    if (!(column in row.raw)) return;
+    const value = String(row.raw[column] ?? '').trim();
+    if (!value) return;
+    let found: ReturnType<typeof findCatalogOption> = null;
+    try { found = findCatalogOption(value, options); } catch { found = null; }
+    if (!found) fail(row, code, `Unknown ${label} "${value}"`, { value }, column);
+  };
+
+  for (const row of rows) {
+    const existing = row.existingEntity as { hostname?: string | null; ip_addresses?: Array<{ ip?: unknown }> | null } | undefined;
+    if ('hostname' in row.raw) {
+      const hostname = String(row.raw.hostname ?? '').trim();
+      const unchanged = !!existing && hostname === String(existing.hostname ?? '').trim();
+      if (hostname && !unchanged && !isValidHostname(hostname)) {
+        fail(row, 'asset_hostname_invalid', `"${hostname}" is not a valid host name`, { value: hostname }, 'hostname');
+      }
+    }
+    if ('environment' in row.raw) {
+      const environment = String(row.raw.environment ?? '').trim();
+      if (environment && !assetEnvironmentCode(environment)) {
+        fail(row, 'asset_environment_invalid', `Unknown environment "${environment}"`, { value: environment }, 'environment');
+      }
+    }
+    catalog(row, 'kind', settings.serverKinds ?? [], 'asset_kind_invalid', 'asset type');
+    catalog(row, 'domain', settings.domains ?? [], 'asset_domain_invalid', 'domain');
+    catalog(row, 'status', settings.lifecycleStates ?? [], 'asset_lifecycle_invalid', 'lifecycle');
+    catalog(row, 'admin_zone', settings.adminZones ?? [], 'asset_admin_zone_invalid', 'administration zone');
+
+    for (let slot = 1; slot <= 4; slot++) {
+      const typeColumn = `ip_${slot}_type`;
+      const addressColumn = `ip_${slot}_address`;
+      if (typeColumn in row.raw) {
+        const type = String(row.raw[typeColumn] ?? '').trim();
+        if (type) {
+          let found: ReturnType<typeof findCatalogOption> = null;
+          try { found = findCatalogOption(type, settings.ipAddressTypes ?? []); } catch { found = null; }
+          if (!found) fail(row, 'asset_ip_type_invalid', `Unknown IP address type "${type}"`, { value: type }, typeColumn);
+        }
+      }
+      if (!(addressColumn in row.raw)) continue;
+      const address = String(row.raw[addressColumn] ?? '').trim();
+      const stored = Array.isArray(existing?.ip_addresses) ? existing.ip_addresses[slot - 1]?.ip : undefined;
+      const unchanged = !!existing && address === String(stored ?? '').trim();
+      if (address && !unchanged && !isValidIpAddress(address)) {
+        fail(row, 'asset_ip_invalid', `"${address}" is not a valid IP address`, { value: address }, addressColumn);
+      }
+    }
+
+    for (let slot = 2; slot <= 4; slot++) {
+      const addressColumn = `ip_${slot}_address`;
+      if (!(addressColumn in row.raw) || !String(row.raw[addressColumn] ?? '').trim()) continue;
+      for (let earlier = 1; earlier < slot; earlier++) {
+        const earlierColumn = `ip_${earlier}_address`;
+        if (earlierColumn in row.raw && !String(row.raw[earlierColumn] ?? '').trim()) {
+          fail(row, 'asset_ip_gap', `IP ${slot} is set while IP ${earlier} is empty`, { slot, earlier }, addressColumn);
+          break;
+        }
+      }
+    }
+  }
+}
+
+/** The domain code a cell names, or null when the cell is empty or matches nothing. */
+function domainCodeOf(value: unknown, settings: ItOpsSettings): string | null {
+  const text = String(value ?? '').trim();
+  if (!text) return null;
+  try {
+    return findCatalogOption(text, settings.domains ?? [])?.code ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The FQDN a row will store. A column the file leaves out keeps the stored value. An unknown
+ * domain is left unresolved: that row is already refused, and its FQDN is not guessed.
+ */
+function rowFqdn(row: CsvImportRow, settings: ItOpsSettings): string | null | undefined {
+  const existing = row.existingEntity;
+  const hostname = 'hostname' in row.parsed ? row.parsed.hostname : existing?.hostname ?? null;
+  let code: string | null;
+  if ('domain' in row.parsed) {
+    const raw = row.parsed.domain;
+    if (raw == null || String(raw).trim() === '') {
+      code = null;
+    } else {
+      const resolved = domainCodeOf(raw, settings);
+      if (!resolved) return undefined;
+      code = resolved;
+    }
+  } else {
+    code = existing?.domain ?? null;
+  }
+  const domain = code ? (settings.domains ?? []).find((item) => item.code === code) : null;
+  return assetFqdnOf(hostname, code ? { code, dns_suffix: domain?.dns_suffix } : null);
+}
+
+/**
+ * A name or FQDN another asset already carries is a row error. A stored duplicate stays
+ * importable while the value does not change. Two new rows with the same FQDN: the later one.
+ */
+async function assertAssetIdentityRows(rows: CsvImportRow[], context: CsvImportContext): Promise<void> {
+  const settings = await requireImportCatalogs(context);
+  const fail = (row: CsvImportRow, code: string, message: string, params: Record<string, string | number>, column: string) =>
+    row.errors.push({ row: row.rowNumber, column, message, code, params });
+  const nameKeys = [...new Set(rows.map((row) => assetNameKey(row.raw.name)).filter(Boolean))];
+  const fqdns = new Map<CsvImportRow, string | null | undefined>();
+  for (const row of rows) fqdns.set(row, rowFqdn(row, settings));
+  const fqdnKeys = [...new Set([...fqdns.values()].filter((fqdn): fqdn is string => !!fqdn).map((fqdn) => assetNameKey(fqdn)))];
+  const [nameHolders, fqdnHolders] = await Promise.all([
+    assetIdentityHolders(context.manager, context.tenantId, 'name', nameKeys),
+    assetIdentityHolders(context.manager, context.tenantId, 'fqdn', fqdnKeys),
+  ]);
+  const namesByKey = new Map<string, typeof nameHolders>();
+  for (const holder of nameHolders) namesByKey.set(holder.key, [...(namesByKey.get(holder.key) ?? []), holder]);
+  const fqdnsByKey = new Map<string, typeof fqdnHolders>();
+  for (const holder of fqdnHolders) fqdnsByKey.set(holder.key, [...(fqdnsByKey.get(holder.key) ?? []), holder]);
+  const claimedFqdn = new Map<string, string>();
+
+  for (const row of rows) {
+    const name = String(row.raw.name ?? '').trim();
+    const existing = row.existingEntity;
+    const named = namesByKey.get(assetNameKey(name)) ?? [];
+    const others = named.filter((holder) => holder.id !== String(existing?.id ?? ''));
+    if (name && !existing && named.length) {
+      fail(row, 'asset_name_taken', `An asset already has this name: ${named[0].ref}`, { name: named[0].name, ref: named[0].ref }, 'name');
+    } else if (name && existing && others.length && assetNameKey(name) !== assetNameKey(existing.name)) {
+      fail(row, 'asset_name_taken', `An asset already has this name: ${others[0].ref}`, { name: others[0].name, ref: others[0].ref }, 'name');
+    }
+
+    const fqdn = fqdns.get(row);
+    if (!fqdn) continue;
+    const key = assetNameKey(fqdn);
+    const previous = assetNameKey(existing?.fqdn);
+    if (existing && key === previous) continue;
+    const holder = (fqdnsByKey.get(key) ?? []).find((item) => item.id !== String(existing?.id ?? ''));
+    if (holder) {
+      fail(row, 'asset_fqdn_taken', `An asset already has this FQDN: ${holder.ref}`, { fqdn: key, ref: holder.ref }, 'hostname');
+      continue;
+    }
+    const claimed = claimedFqdn.get(key);
+    if (claimed) {
+      fail(row, 'asset_fqdn_taken', `An asset already has this FQDN: ${claimed}`, { fqdn: key, ref: claimed }, 'hostname');
+      continue;
+    }
+    claimedFqdn.set(key, existing?.asset_reference || name);
+  }
 }
 
 /**
@@ -405,6 +580,8 @@ export const assetCsvConfig: CsvEntityConfig = {
   tableName: 'assets',
   displayName: 'Assets',
   upsertKey: ['name'],
+  // Same rule as the unique names: `lower(btrim(name))`.
+  upsertKeyIgnoresOuterSpaces: true,
   fields: [
     // Identity
     {
@@ -503,8 +680,8 @@ export const assetCsvConfig: CsvEntityConfig = {
     {
       csvColumn: 'environment',
       entityProperty: 'environment',
-      type: CsvFieldType.ENUM,
-      enumValues: ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'],
+      // A code or the name the screen shows in any language. Resolved in beforeCommit.
+      type: CsvFieldType.STRING,
       required: true,
       defaultExport: true,
       label: 'Environment',
@@ -712,8 +889,14 @@ export const assetCsvConfig: CsvEntityConfig = {
     },
   ],
 
-  /** The cluster rules (`checkClusterSwitchAndOs`) and the Cluster Membership cells (`checkClusterMemberships`). */
+  /**
+   * The checks of the asset screen and the unique name and FQDN (`validateAssetRows`,
+   * `assertAssetIdentityRows`), then the cluster rules (`checkClusterSwitchAndOs`) and the Cluster
+   * Membership cells (`checkClusterMemberships`), which skip the rows already in error.
+   */
   afterValidate: async (rows, context) => {
+    await validateAssetRows(rows, context);
+    await assertAssetIdentityRows(rows, context);
     await checkClusterSwitchAndOs(rows, context);
     await checkClusterMemberships(rows, context);
   },
@@ -799,6 +982,8 @@ export const assetCsvConfig: CsvEntityConfig = {
     //    The operating system is resolved after the row exists, so the link can point at it.
     for (const entity of entities) {
       resolveAssetCatalogs(entity, settings);
+      const domain = entity.domain ? (settings.domains ?? []).find((item) => item.code === entity.domain) : null;
+      entity.fqdn = assetFqdnOf(entity.hostname, entity.domain ? { code: entity.domain, dns_suffix: domain?.dns_suffix } : null);
       if (Object.prototype.hasOwnProperty.call(entity, 'operating_system')) {
         const raw = entity.operating_system;
         const text = raw == null ? '' : String(raw).trim();

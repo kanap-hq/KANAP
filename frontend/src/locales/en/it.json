@@ -176,6 +176,9 @@
       "exportCsv": "Export CSV",
       "exportTitle": "Export assets",
       "importTitle": "Import assets",
+      "exportScope_one": "{{count}} asset, following the filters of the list.",
+      "exportScope_other": "{{count}} assets, following the filters of the list.",
+      "exportScopeAll": "All assets ({{count}}).",
       "dataEnrichment": "Data enrichment",
       "columns": {
         "name": "Name",
@@ -207,7 +210,13 @@
         "kept_one": "{{count}} asset cannot be deleted and is kept:",
         "kept_other": "{{count}} assets cannot be deleted and are kept:",
         "deleted_one": "{{count}} asset deleted",
-        "deleted_other": "{{count}} assets deleted"
+        "deleted_other": "{{count}} assets deleted",
+        "title_one": "Delete {{count}} asset",
+        "title_other": "Delete {{count}} assets",
+        "keptDone_one": "{{count}} asset kept",
+        "keptDone_other": "{{count}} assets kept",
+        "keptReason_one": "Kept: {{usages}} uses it.",
+        "keptReason_other": "Kept: {{usages}} use it."
       }
     },
     "technologies": {
@@ -826,6 +835,8 @@
       "noZones": "No administration zones defined yet.",
       "openSettings": "Define them in the IT settings",
       "noZone": "No zone",
+      "filterZonesHint": "Choose a zone to filter the asset list.",
+      "filterZone": "Show the assets in {{name}}.",
       "unknownZone": "Unknown zone ({{code}})",
       "kindCount": "{{kind}}: {{count}}",
       "assetCount_one": "{{count}} asset",
@@ -855,6 +866,8 @@
         "domainControllers": "Domain controllers"
       },
       "controls": "Control points",
+      "controlsCount_one": "{{count}} control",
+      "controlsCount_other": "{{count}} controls",
       "controlsHint": "The most sensitive zone is {{zone}}.",
       "controlsNoCatalog": "Add an administration zone in the IT settings to run the other checks.",
       "controlsList": {
@@ -908,7 +921,7 @@
         "title": "Assign to a zone",
         "zone": "Zone",
         "save": "Assign",
-        "scopeSelected_one": "The selected asset.",
+        "scopeSelected_one": "This assignment covers the selected asset.",
         "scopeSelected_other": "The {{count}} selected assets.",
         "scopeAll": "Every asset of the current filter.",
         "scopeAllBut_one": "Every asset of the current filter but {{count}}.",
@@ -1293,10 +1306,10 @@
         },
         "subLocations": {
           "create": "New",
-          "adopt": "Existing, now linked to Netbox",
-          "rename": "Renamed",
-          "update": "Description updated",
-          "conflict": "Name already used, left unchanged",
+          "adopt": "Existing, will be linked to Netbox",
+          "rename": "Will be renamed",
+          "update": "Description will be updated",
+          "conflict": "Name already used, will be left unchanged",
           "assets_one": "{{count}} asset",
           "assets_other": "{{count}} assets"
         },
@@ -1305,6 +1318,7 @@
         "filterPlaceholder": "e.g., par-esx",
         "candidates": "Suggested:",
         "alreadyIdentical": "Nothing to change on this asset.",
+        "skippedMore": "And {{count}} more",
         "acceptSingle_one": "Link the object that has a single suggestion",
         "acceptSingle_other": "Link the {{count}} objects that have a single suggestion",
         "decided": {
@@ -1315,9 +1329,9 @@
         "actions": {
           "undo": "Undo",
           "decide": "Decide",
-          "change": "Correct",
+          "change": "Link instead",
           "decideFor": "Decide about {{name}}",
-          "changeFor": "Correct the proposal for {{name}}",
+          "changeFor": "Link instead for {{name}}",
           "undoFor": "Undo the choice for {{name}}"
         },
         "menu": {
@@ -1473,6 +1487,24 @@
         "cluster_not_mapped": "The Netbox cluster \"{{value}}\" is not matched with a KANAP cluster, so its virtual machines were not attached to one.",
         "cluster_match_invalid": "The Netbox cluster \"{{value}}\" is matched with an asset that is deleted, retired or no longer a cluster, so its virtual machines were not attached to it.",
         "cluster_other_present": "KANAP also places the virtual machine \"{{name}}\" in {{value}}. That relation was kept: remove it by hand if it is out of date."
+      },
+      "previewNotices": {
+        "os_not_in_catalog": "The operating system \"{{value}}\" is not in your catalogue, so it will be left unchanged.",
+        "domain_not_in_catalog": "The domain \"{{value}}\" is not in your catalogue, so it will be left unchanged.",
+        "hostname_invalid": "\"{{value}}\" cannot be used as a host name, so the host name will be left unchanged.",
+        "ipv6_skipped": "The primary address is an IPv6 address, which will not be imported.",
+        "ip_conflict_skipped": "The address {{value}} is already used by another asset, so it will be left out.",
+        "subnet_not_in_catalog": "The subnet {{value}} is not in your catalogue, so the address will be saved without it.",
+        "fetch_incomplete": "Netbox returned more pages than expected. Some objects will not be looked at.",
+        "os_ambiguous": "The operating system \"{{value}}\" matches more than one entry in your catalogue, so it will be left unchanged.",
+        "status_not_mapped": "The Netbox status \"{{value}}\" has no equivalent in KANAP, so the lifecycle will be left unchanged.",
+        "lifecycle_not_in_catalog": "The lifecycle \"{{value}}\" is not in your catalogue, so it will be left unchanged.",
+        "no_ip_address_type": "No IP address type is set up in the IT settings, so the address will not be imported.",
+        "sub_location_name_taken": "A sub-location named \"{{value}}\" already exists at this location for another Netbox location. The sub-location will be left unchanged.",
+        "locations_unavailable": "Netbox did not return its locations. Sub-locations will be left unchanged.",
+        "cluster_not_mapped": "The Netbox cluster \"{{value}}\" is not matched with a KANAP cluster, so its virtual machines will not be attached to one.",
+        "cluster_match_invalid": "The Netbox cluster \"{{value}}\" is matched with an asset that is deleted, retired or no longer a cluster, so its virtual machines will not be attached to it.",
+        "cluster_other_present": "KANAP also places the virtual machine \"{{name}}\" in {{value}}. That relation will be kept: remove it by hand if it is out of date."
       },
       "netboxStatus": {
         "active": "Active",
@@ -2123,6 +2155,7 @@
         "search": "Search technologies",
         "empty": "No technology on this server.",
         "platform": "Underlying platform ({{count}})",
+        "emptyAsset": "No technology on this asset.",
         "operatingSystem": "Operating system",
         "edit": "Edit",
         "editNamed": "Edit {{name}}",
@@ -2142,7 +2175,9 @@
       "assignments": {
         "addAssignment": "Add assignment",
         "noAssignments": "No assignments yet.",
+        "noApplicationAccess": "You do not have access to the applications.",
         "assignmentAdded": "Assignment added",
+        "removed": "{{name}} removed.",
         "application": "Application",
         "environment": "Environment",
         "role": "Role",
@@ -2156,6 +2191,7 @@
         "environmentRequired": "Environment (instance) is required",
         "roleRequired": "Role is required",
         "selectAppForEnv": "Select an application to choose an environment.",
+        "chooseEnvironment": "Choose an environment.",
         "noInstances": "No instances for this application",
         "noServerRoles": "No server roles configured; update IT ops settings.",
         "assign": "Assign"
@@ -2190,6 +2226,8 @@
       },
       "newAsset": "New asset",
       "untitled": "Untitled asset",
+      "notFound": "Asset not found.",
+      "backToList": "Back to the list",
       "previous": "Previous asset",
       "next": "Next asset",
       "deleteConfirm": "Delete asset \"{{name}}\"?",
@@ -2220,9 +2258,12 @@
         "notesPlaceholder": "e.g., Power supply replaced under warranty"
       },
       "impact": {
-        "title": "If this asset goes down",
-        "empty": "Nothing else depends on this asset.",
-        "emptyInfrastructure": "No other infrastructure depends on this asset.",
+        "title": "If this server goes down",
+        "titleAsset": "If this asset goes down",
+        "empty": "Nothing else depends on this server.",
+        "emptyAsset": "Nothing else depends on this asset.",
+        "emptyInfrastructure": "No other infrastructure depends on this server.",
+        "emptyInfrastructureAsset": "No other infrastructure depends on this asset.",
         "loadFailed": "The impact could not be loaded.",
         "more_one": "and {{count}} more",
         "more_other": "and {{count}} more",
@@ -2255,16 +2296,23 @@
         },
         "via": {
           "contains": "In {{name}}",
-          "containsThisServer": "In this asset",
+          "containsThisServer": "In this server",
+          "containsThisAsset": "In this asset",
           "dependsOn": "Depends on {{name}}",
-          "dependsOnThisServer": "Depends on this asset",
+          "dependsOnThisServer": "Depends on this server",
+          "dependsOnThisAsset": "Depends on this asset",
           "member": "Member of {{name}}",
           "memberThisServer": "Member of this cluster",
+          "memberThisAsset": "Member of this cluster",
           "on": "On {{name}}",
-          "onThisServer": "On this asset",
-          "onThisServerAnd": "On this asset, {{name}}",
-          "thisServer": "This asset",
-          "thisServerAnd": "This asset, {{name}}"
+          "onThisServer": "On this server",
+          "onThisAsset": "On this asset",
+          "onThisServerAnd": "On this server, {{name}}",
+          "onThisAssetAnd": "On this asset, {{name}}",
+          "thisServer": "This server",
+          "thisAsset": "This asset",
+          "thisServerAnd": "This server, {{name}}",
+          "thisAssetAnd": "This asset, {{name}}"
         },
         "state": {
           "down": "Down",
@@ -2304,6 +2352,9 @@
           "dependedOnBy": "No asset depends on this one."
         },
         "containsHint": "Assets hosted by this one, such as VMs.",
+        "feedback": {
+          "unlinked": "{{name}} unlinked."
+        },
         "alsoContainedBy": "Also contained by {{names}}",
         "via": "Via",
         "placementReplaced": "{{cluster}} replaces the link between {{hosts}} and {{asset}}.",
@@ -3329,7 +3380,7 @@
     "unsavedLeave": "You have unsaved changes. Do you want to leave without saving?",
     "unsavedLeaveTab": "You have unsaved changes. Leave this tab?",
     "unsavedContinue": "You have unsaved changes. Continue without saving?",
-    "removeAssignment": "Remove this assignment?",
+    "removeAssignment": "Remove the {{name}} assignment?",
     "deleteInstance": "Delete {{env}} instance?",
     "deleteLocation": "Delete location?",
     "removeBinding": "Remove this binding?",

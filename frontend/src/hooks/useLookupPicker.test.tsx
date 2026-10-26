@@ -76,6 +76,19 @@ describe('useLookupPicker (through SupplierSelect)', () => {
     vi.useRealTimers();
   });
 
+  it('opening the list does not update the picker while the autocomplete renders', async () => {
+    const errors: unknown[][] = [];
+    const spy = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+      errors.push(args);
+    });
+    renderSelect();
+    openList(screen.getByRole('combobox'));
+    await screen.findAllByRole('option');
+    spy.mockRestore();
+    const rendering = errors.filter((args) => args.some((arg) => String(arg).includes('while rendering')));
+    expect(rendering).toEqual([]);
+  });
+
   it('reads nothing on mount, and the first page when the list opens', async () => {
     renderSelect();
     const input = screen.getByRole('combobox');

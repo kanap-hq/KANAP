@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { webLinkUrlsOf } from '../../common/web-link-url';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { PortfolioProject } from '../portfolio-project.entity';
@@ -224,14 +225,15 @@ export class PortfolioDependenciesService extends PortfolioProjectsBaseService {
 
     const project = await this.ensureProject(projectId, mg);
 
+    // Every address is checked before the old links go: a refused one changes nothing.
+    const checked = webLinkUrlsOf(urls);
     await repo.delete({ project_id: projectId });
 
-    const toInsert = (urls || [])
-      .filter((u) => u.url && String(u.url).trim())
+    const toInsert = checked
       .map((u) => repo.create({
         tenant_id: project.tenant_id,
         project_id: projectId,
-        url: String(u.url).trim(),
+        url: u.url,
         label: u.label ? String(u.label).trim() : null,
       }));
 

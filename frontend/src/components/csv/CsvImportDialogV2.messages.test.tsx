@@ -162,6 +162,29 @@ describe('CsvImportDialogV2 messages', () => {
     expect(screen.getByText('1 ignorée')).toBeInTheDocument();
   });
 
+  it('names an asset column by its export label', async () => {
+    post.mockResolvedValueOnce({
+      data: report({
+        ok: false,
+        inserted: 0,
+        errors: [
+          { row: 2, column: 'hostname', message: 'not a host name', code: 'asset_hostname_invalid', params: { value: 'qa c4!' } },
+          { row: 3, column: 'ip_1_address', message: 'not an ip', code: 'asset_ip_invalid', params: { value: '999.999.1.1' } },
+          { row: 4, column: 'go_live_date', message: 'not a date', code: 'CSV_DATE_INVALID', params: { value: '31/02/2025' } },
+        ],
+      }),
+    });
+    render(<CsvImportDialogV2 open onClose={() => undefined} endpoint="/assets" />);
+    pick('actifs.csv');
+    fireEvent.click(screen.getByRole('button', { name: 'Valider' }));
+    await screen.findByText(/n'est pas un nom d'hôte valide/);
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      "Ligne 2 : « qa c4! » n'est pas un nom d'hôte valide. (Nom d’hôte)",
+      "Ligne 3 : « 999.999.1.1 » n'est pas une adresse IP valide. (Adresse IP 1)",
+      "Ligne 4 : « 31/02/2025 » n'est pas une date. Utilisez 2026-09-02 ou 02/09/2026. (Date de mise en service)",
+    ]);
+  });
+
   it('names the column after a message only when the message does not', async () => {
     post.mockResolvedValueOnce({
       data: report({
@@ -183,7 +206,7 @@ describe('CsvImportDialogV2 messages', () => {
     await screen.findByText(/Fuseau horaire inconnu/);
     expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       'Fuseau horaire inconnu dans la colonne detected_at : Foo/Bar. Utilisez un fuseau comme Europe/Paris ou UTC.',
-      'Ligne 2 : Une valeur est obligatoire. (name)',
+      'Ligne 2 : Une valeur est obligatoire. (Nom)',
     ]);
   });
 });

@@ -206,15 +206,18 @@ describe('TechnologyRelationsTab', () => {
   });
 
   it('opens a web link at an absolute http or https address, as the other lists of websites', async () => {
-    const open = vi.spyOn(window, 'open').mockReturnValue(null);
     renderTab(relations({ links: [
       { id: 'lnk-1', description: 'VMware support', url: 'www.vmware.com/support', created_at: '2026-10-01T10:00:00Z' },
       { id: 'lnk-2', description: 'Script', url: 'javascript:alert(document.domain)', created_at: '2026-10-01T10:00:00Z' },
     ] }));
-    fireEvent.click(await screen.findByText('VMware support'));
-    expect(open).toHaveBeenCalledWith('https://www.vmware.com/support', '_blank', 'noopener,noreferrer');
-    fireEvent.click(screen.getByText('Script'));
-    expect(open).toHaveBeenCalledWith('https://javascript:alert(document.domain)', '_blank', 'noopener,noreferrer');
+    const support = await screen.findByRole('link', { name: 'VMware support' });
+    expect(support).toHaveAttribute('href', 'https://www.vmware.com/support');
+    expect(support).toHaveAttribute('target', '_blank');
+    expect(support).toHaveAttribute('rel', 'noopener noreferrer');
+    const script = screen.getByRole('link', { name: 'Script' });
+    expect(script).toHaveAttribute('href', 'https://javascript:alert(document.domain)');
+    expect(script).toHaveAttribute('target', '_blank');
+    expect(script).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('deletes a document after a confirmation', async () => {

@@ -168,7 +168,8 @@ async function testHostingType(runner: QueryRunner, s: Seed) {
 }
 
 async function testAdministration(runner: QueryRunner, s: Seed) {
-  const settings = { adminZones: ZONES, domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES, serverKinds: [] };
+  // A domain controller counts only in a domain of the catalog, as the Directories tab lists it.
+  const settings = { adminZones: ZONES, domains: [{ code: 'corp', label: 'Corp', dns_suffix: 'corp.example.com' }], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES, serverKinds: [] };
   const svc = new AdministrationViewService({ getSettings: async () => settings } as any, new AuditService({} as any));
   const opts = { manager: runner.manager, tenantId: s.tenantId };
   const filtered = async (key: string) => ids((await svc.assets({ filters: JSON.stringify({ control: { filterType: 'set', values: [key] } }), limit: 50 }, opts)).items);

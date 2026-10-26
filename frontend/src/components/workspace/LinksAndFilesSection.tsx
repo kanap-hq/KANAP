@@ -1,10 +1,11 @@
 import React from 'react';
-import { Box, Button, IconButton, Stack, TextField } from '@mui/material';
+import { Alert, Box, Button, IconButton, Stack, TextField } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import LinkIcon from '@mui/icons-material/Link';
 import InsertDriveFileOutlinedIcon from '@mui/icons-material/InsertDriveFileOutlined';
 import { useTranslation } from 'react-i18next';
 import { KanapDialog, PropertyRow } from '../design';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { normalizeWebsiteUrl } from '../design/RelevantWebsitesList';
 import { formatShortDate } from '../../lib/dateFormat';
 import { drawerFieldValueSx } from '../../theme/formSx';
@@ -56,6 +57,15 @@ export function urlDomain(url: string): string {
 }
 
 const linkName = (link: LinksAndFilesLink) => String(link.name || '').trim() || link.url;
+
+/** The row of a web link: a real address, opened in a new tab. Only http or https. */
+function webLinkAnchor(url: string, children: React.ReactNode) {
+  return (
+    <a href={normalizeWebsiteUrl(url)} target="_blank" rel="noopener noreferrer" className="relations-row-link">
+      {children}
+    </a>
+  );
+}
 const dragHasFiles = (event: React.DragEvent) => Array.from(event.dataTransfer?.types || []).includes('Files');
 
 /**
@@ -76,6 +86,7 @@ export default function LinksAndFilesSection({
   /** The link the dialog edits; null when it adds one. */
   const [editing, setEditing] = React.useState<LinksAndFilesLink | null>(null);
   const [draft, setDraft] = React.useState({ name: '', url: '' });
+  const [dialogError, setDialogError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [dragging, setDragging] = React.useState(false);
   const dragDepth = React.useRef(0);
@@ -92,6 +103,7 @@ export default function LinksAndFilesSection({
   const openDialog = (link: LinksAndFilesLink | null) => {
     setEditing(link);
     setDraft({ name: link?.name ?? '', url: link?.url ?? '' });
+    setDialogError(null);
     setDialogOpen(true);
   };
 
@@ -100,12 +112,14 @@ export default function LinksAndFilesSection({
     if (!url) return;
     const next = { name: draft.name.trim() || null, url };
     setSaving(true);
+    setDialogError(null);
     try {
       if (editing) await onEditLink(editing, next);
       else await onAddLink(next);
       setDialogOpen(false);
-    } catch {
-      // The caller shows the error; the dialog stays open with the draft.
+    } catch (e) {
+      // A refusal stays in the dialog. The page banner sits under the dialog veil.
+      setDialogError(getApiErrorMessage(e, t, t('linksAndFiles.saveFailed')));
     } finally {
       setSaving(false);
     }
@@ -125,12 +139,17 @@ export default function LinksAndFilesSection({
         ? <LinkIcon sx={iconSx} titleAccess={t('linksAndFiles.types.link')} />
         : <InsertDriveFileOutlinedIcon sx={iconSx} titleAccess={t('linksAndFiles.types.file')} />),
     },
-    { key: 'name', header: t('linksAndFiles.columns.name'), render: (row) => nameOf(row) },
+    {
+      key: 'name', header: t('linksAndFiles.columns.name'),
+      render: (row) => (row.kind === 'link' ? webLinkAnchor(row.link.url, nameOf(row)) : nameOf(row)),
+    },
     {
       key: 'detail', header: linksOnly ? t('linksAndFiles.columns.address') : t('linksAndFiles.columns.detail'), width: 180, hideOrder: 2,
       render: (row) => (
         <Box component="span" sx={{ color: 'kanap.text.secondary' }} title={row.kind === 'link' ? row.link.url : undefined}>
-          {row.kind === 'link' ? urlDomain(row.link.url) : row.file.size != null ? formatFileSize(row.file.size, lang) : '—'}
+          {row.kind === 'link'
+            ? webLinkAnchor(row.link.url, urlDomain(row.link.url))
+            : row.file.size != null ? formatFileSize(row.file.size, lang) : '—'}
         </Box>
       ),
     },
@@ -245,6 +264,7 @@ export default function LinksAndFilesSection({
         initialFocusRef={nameInput}
       >
         <Stack spacing={1.25}>
+          {dialogError && <Alert severity="error">{dialogError}</Alert>}
           <PropertyRow label={t('linksAndFiles.columns.name')}>
             <TextField
               value={draft.name}

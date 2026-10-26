@@ -8,6 +8,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { assertMarkdownSize } from '../../common/markdown-limits';
+import { assertWebLinkUrl } from '../../common/web-link-url';
 import { Application } from '../application.entity';
 import { ApplicationOwner } from '../application-owner.entity';
 import { ApplicationCompany } from '../application-company.entity';
@@ -449,8 +450,9 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const mg = this.getManager(opts);
     const resolvedAppId = await this.resolveApplicationIdentifier(appId, mg);
     const repo = mg.getRepository(ApplicationLink);
-    const entity = repo.create({ application_id: resolvedAppId, description: body.description ?? null, purpose: body.purpose ?? 'general', url: String(body.url || '').trim() });
-    if (!entity.url) throw new BadRequestException('url is required');
+    const url = assertWebLinkUrl(body.url);
+    if (!url) throw new BadRequestException('url is required');
+    const entity = repo.create({ application_id: resolvedAppId, description: body.description ?? null, purpose: body.purpose ?? 'general', url });
     const saved = await repo.save(entity);
     await this.audit.log({ table: 'application_links', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
     return saved;
@@ -465,7 +467,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const before = { ...existing };
     if (body.purpose !== undefined) existing.purpose = body.purpose;
     if (body.description !== undefined) existing.description = body.description as any;
-    if (body.url !== undefined) existing.url = String(body.url || '').trim();
+    if (body.url !== undefined) existing.url = assertWebLinkUrl(body.url);
     const saved = await repo.save(existing);
     await this.audit.log({ table: 'application_links', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager: mg });
     return saved;

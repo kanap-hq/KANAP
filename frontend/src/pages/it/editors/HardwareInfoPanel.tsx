@@ -19,9 +19,34 @@ type HardwareInfo = {
   notes?: string | null;
 };
 
+function normalizeHardware(data?: HardwareInfo | null): HardwareInfo {
+  return {
+    serial_number: data?.serial_number || null,
+    manufacturer: data?.manufacturer || null,
+    model: data?.model || null,
+    purchase_date: data?.purchase_date || null,
+    rack_location: data?.rack_location || null,
+    rack_unit: data?.rack_unit || null,
+    notes: data?.notes || null,
+  };
+}
+
+function sameHardware(a: HardwareInfo, b: HardwareInfo) {
+  return JSON.stringify(normalizeHardware(a)) === JSON.stringify(normalizeHardware(b));
+}
+
+// A save that fails while the panel is leaving. The next visit shows it again.
+const hardwareDrafts = new Map<string, HardwareInfo>();
+
+export function clearHardwareInfoDrafts() {
+  hardwareDrafts.clear();
+}
+
 type Props = {
   assetId: string;
   onDirtyChange?: (dirty: boolean) => void;
+  /** The fiche's message bar. The panel is gone when a save on leaving fails. */
+  onSaveError?: (message: string | null) => void;
   /** The asset is fed by Netbox, so the hint below applies to it. */
   netboxManaged?: boolean;
   /**
@@ -35,6 +60,7 @@ type Props = {
 export default function HardwareInfoPanel({
   assetId,
   onDirtyChange,
+  onSaveError,
   netboxManaged = false,
   netboxOwns = () => false,
 }: Props) {
@@ -82,29 +108,32 @@ export default function HardwareInfoPanel({
     setError(null);
     try {
       const res = await api.get(`/assets/${assetId}/hardware-info`);
-      const data = res.data as HardwareInfo | null;
-      if (data) {
-        setSerialNumber(data.serial_number || '');
-        setManufacturer(data.manufacturer || '');
-        setModel(data.model || '');
-        setPurchaseDate(data.purchase_date || '');
-        setRackLocation(data.rack_location || '');
-        setRackUnit(data.rack_unit || '');
-        setNotes(data.notes || '');
-        setBaseline(data);
-      } else {
-        setSerialNumber('');
-        setManufacturer('');
-        setModel('');
-        setPurchaseDate('');
-        setRackLocation('');
-        setRackUnit('');
-        setNotes('');
-        setBaseline({});
-      }
+      const server = normalizeHardware(res.data as HardwareInfo | null);
+      const draft = hardwareDrafts.get(assetId);
+      if (draft && sameHardware(server, draft)) hardwareDrafts.delete(assetId);
+      const shown = hardwareDrafts.get(assetId) ?? server;
+      setSerialNumber(shown.serial_number || '');
+      setManufacturer(shown.manufacturer || '');
+      setModel(shown.model || '');
+      setPurchaseDate(shown.purchase_date || '');
+      setRackLocation(shown.rack_location || '');
+      setRackUnit(shown.rack_unit || '');
+      setNotes(shown.notes || '');
+      setBaseline(server);
     } catch (e: any) {
-      // 404 means no hardware info yet, which is OK
-      if (e?.response?.status !== 404) {
+      // 404 means no hardware info yet, which is OK. A draft from a failed leave still shows.
+      if (e?.response?.status === 404) {
+        const draft = hardwareDrafts.get(assetId);
+        const shown = draft ?? normalizeHardware(null);
+        setSerialNumber(shown.serial_number || '');
+        setManufacturer(shown.manufacturer || '');
+        setModel(shown.model || '');
+        setPurchaseDate(shown.purchase_date || '');
+        setRackLocation(shown.rack_location || '');
+        setRackUnit(shown.rack_unit || '');
+        setNotes(shown.notes || '');
+        setBaseline(normalizeHardware(null));
+      } else {
         setError(getApiErrorMessage(e, t, t('messages.loadHardwareInfoFailed')));
       }
     } finally {
@@ -130,6 +159,7 @@ export default function HardwareInfoPanel({
 
   const save = React.useCallback(async () => {
     if (readOnly) return;
+    hardwareDrafts.set(assetId, hardwarePayload);
     savingRef.current = true;
     setSaving(true);
     setError(null);
@@ -137,15 +167,18 @@ export default function HardwareInfoPanel({
       await api.post(`/assets/${assetId}/hardware-info`, hardwarePayload);
       failedSaveSignatureRef.current = null;
       setBaseline(hardwarePayload);
+      onSaveError?.(null);
     } catch (e: any) {
       failedSaveSignatureRef.current = saveSignature;
+      // The panel is on screen, so the failure stays in its own alert. Drop a page banner this
+      // panel left behind on an earlier leave, so the same sentence is not shown twice.
       setError(getApiErrorMessage(e, t, t('messages.saveHardwareInfoFailed')));
-      throw e;
+      onSaveError?.(null);
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [assetId, hardwarePayload, readOnly, saveSignature, t]);
+  }, [assetId, hardwarePayload, onSaveError, readOnly, saveSignature, t]);
 
   React.useEffect(() => {
     if (!dirty || loading || saving || readOnly) return undefined;
@@ -160,7 +193,14 @@ export default function HardwareInfoPanel({
   React.useEffect(() => {
     const pending = dirty && !loading && !saving && !readOnly && failedSaveSignatureRef.current !== saveSignature;
     pendingFlushRef.current = pending
-      ? () => { void api.post(`/assets/${assetId}/hardware-info`, hardwarePayload).catch(() => undefined); }
+      ? () => {
+          const payload = hardwarePayload;
+          hardwareDrafts.set(assetId, payload);
+          void api.post(`/assets/${assetId}/hardware-info`, payload).then(
+            () => { onSaveError?.(null); },
+            (e) => { onSaveError?.(getApiErrorMessage(e, t, t('messages.saveHardwareInfoFailed'))); },
+          );
+        }
       : null;
   });
 

@@ -113,17 +113,12 @@ export default function PortfolioRelationsTab({
   const saveLink = async (linkRow: LinksAndFilesLink | null, draft: LinkDraft) => {
     setError(null);
     const next = { url: draft.url.trim(), label: draft.name?.trim() || null };
-    try {
-      const current = storedUrls();
-      const urls = linkRow
-        ? current.map((row) => (row.id === linkRow.id ? next : { url: row.url, label: row.label }))
-        : [...current.map((row) => ({ url: row.url, label: row.label })), next];
-      if (linkRow && !current.some((row) => row.id === linkRow.id)) throw new Error();
-      await api.post(`${base}/urls`, { urls: urlBody(urls) });
-    } catch (e) {
-      failed(e);
-      throw e;
-    }
+    const current = storedUrls();
+    const urls = linkRow
+      ? current.map((row) => (row.id === linkRow.id ? next : { url: row.url, label: row.label }))
+      : [...current.map((row) => ({ url: row.url, label: row.label })), next];
+    if (linkRow && !current.some((row) => row.id === linkRow.id)) throw new Error();
+    await api.post(`${base}/urls`, { urls: urlBody(urls) });
     await refreshLinks();
   };
 

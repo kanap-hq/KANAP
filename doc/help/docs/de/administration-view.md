@@ -49,7 +49,7 @@ Die sensibelste Zone ist die erste Zone der Einstellungen, die nicht als **Nicht
 | Kontrollpunkt | Gelistete Assets |
 |---|---|
 | **Ohne Zone** | Die Assets ohne Zone |
-| **Domänencontroller außerhalb** | Die Assets, die einer Anwendung in Betrieb mit der Serverrolle **Domänencontroller** zugeordnet sind, wenn ihre Zone nicht die sensibelste ist |
+| **Domänencontroller außerhalb** | Die Domänencontroller, die der Reiter **Verzeichnisse und Domänen** auflistet, wenn ihre Zone nicht die sensibelste ist. Ein Verzeichnisserver ohne Domäne oder mit einer Domäne, die in den Einstellungen fehlt, zählt nur unter **Verzeichnisdienst außerhalb** |
 | **Verzeichnisdienst außerhalb** | Die Assets, auf denen eine Verzeichnistechnologie wie Active Directory installiert ist, wenn ihre Zone nicht die sensibelste ist |
 | **Weniger sensibler Host** | Die höher einzustufenden Assets: ein Host, der ein Asset einer sensibleren Zone betreibt (zum Beispiel ein Tier-1-Host mit einer virtuellen Tier-0-Maschine), oder das Mitglied eines Clusters einer sensibleren Zone (zum Beispiel ein Tier-1-ESX-Host in einem Tier-0-Cluster) |
 | **Gehostete Anwendung** | Die Assets der sensibelsten Zone, die eine Anwendung in Betrieb hosten. Prüfen Sie, ob jede Anwendung dorthin gehört |
@@ -95,7 +95,7 @@ Kommen zwischen der Zählung und der Bestätigung Assets in den Filter hinzu, le
 | **DNS-Suffix** | Das Suffix der Namen ihrer Computer |
 | **Vertrauensstellungen** | Die Domänen, mit denen sie eine Vertrauensstellung hat, und die Richtung jeder einzelnen |
 | **Konten**, **Computer** | Die in den Einstellungen erfassten Anzahlen. Ein Strich bedeutet, dass keine erfasst ist |
-| **Domänencontroller** | Wie viele Server KANAP als Controller der Domäne ableitet, dann ihre Namen |
+| **Domänencontroller** | Wie viele Server KANAP als Controller der Domäne ableitet, dann ihre Namen. Klicken Sie auf einen Namen, um das Asset zu öffnen |
 
 **Vertrauensstellungen** listet außerdem, in Grau, die Vertrauensstellungen, die bei einer anderen Domäne gegenüber dieser deklariert sind, mit der Richtung aus Sicht dieser Domäne: Eine ausgehende Vertrauensstellung von A zu B erscheint bei B als eingehend. Die Richtungen bedeuten:
 

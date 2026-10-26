@@ -171,18 +171,26 @@ async function testService() {
   });
 }
 
-/** A web link takes an http or https address, or one without a scheme; any other scheme is a 400. */
+/** A web link takes an http or https address. A missing scheme or another scheme is `link_url_invalid`. */
 async function testWebLinks() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'tsc-links');
     const { technologies } = services([]);
     const opts = { manager: runner.manager, tenantId, userId: null };
     const sql = await technology(runner, tenantId, 1, 'SQL Server', 'database');
-    for (const url of ['https://learn.microsoft.com/sql', 'HTTP://intranet/sql', 'www.vmware.com/support', 'intranet:8080/wiki']) {
+    for (const url of ['https://learn.microsoft.com/sql', 'HTTP://intranet/sql']) {
       assert.equal((await technologies.createLink(sql, { url: ` ${url} ` }, opts)).url, url, url);
     }
+    // An address without a scheme gets https://, as the screens open it.
+    for (const [typed, stored] of [['www.vmware.com/support', 'https://www.vmware.com/support'], ['intranet:8080/wiki', 'https://intranet:8080/wiki']]) {
+      assert.equal((await technologies.createLink(sql, { url: typed }, opts)).url, stored, typed);
+    }
     for (const url of ['javascript:alert(document.domain)', 'JavaScript:void(0)', 'data:text/html,<b>x</b>', 'ftp://files.example.test', 'vbscript:msgbox']) {
-      await assert.rejects(technologies.createLink(sql, { url }, opts), BadRequestException, url);
+      await assert.rejects(technologies.createLink(sql, { url }, opts), (err: unknown) => {
+        assert.ok(err instanceof BadRequestException, url);
+        assert.equal((err.getResponse() as { code?: string }).code, 'link_url_invalid', url);
+        return true;
+      });
     }
     const link = await technologies.createLink(sql, { url: 'https://example.test', description: 'Docs' }, opts);
     await assert.rejects(technologies.updateLink(sql, link.id, { url: 'javascript:alert(1)' }, opts), BadRequestException);

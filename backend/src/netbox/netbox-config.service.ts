@@ -16,6 +16,7 @@ import {
 import { NETBOX_LEGACY_VM_ROLE_SLUG, NETBOX_VIRTUAL_MACHINES_SLUG } from './netbox-mapper';
 import { NetboxNotice, netboxNoticeFromStore } from './netbox-notice';
 import { NetboxSyncCounts } from './netbox-planner';
+import { netboxBadRequest, netboxFailureOf } from './netbox-errors';
 import { NetboxConnection } from './netbox.types';
 
 // The Netbox connection lives in ai_adapter_configs, the table that already
@@ -37,11 +38,7 @@ export { NETBOX_LINK_SOURCE } from './netbox.types';
 const NETBOX_ADAPTER_ENVIRONMENT = 'production';
 const NETBOX_LIVE_TEST_SAFETY = 'mock_only';
 
-const BASE_URL_MESSAGE = 'The Netbox address must be a full web address starting with http:// or https:// '
-  + '(for example https://netbox.example.com). Copy it from the browser address bar when you are logged into Netbox.';
-const TIMEOUT_MESSAGE = 'The request timeout must be a whole number of seconds between '
-  + `${NETBOX_MIN_TIMEOUT_SECONDS} and ${NETBOX_MAX_TIMEOUT_SECONDS}, or empty to use the default.`;
-const TOKEN_MISSING_MESSAGE = 'No Netbox API token is saved yet. Add one in Netbox under your profile, API tokens, then paste it here.';
+
 
 export type NetboxSyncStateView = {
   status: 'never' | 'running' | 'success' | 'failure';
@@ -70,6 +67,8 @@ export type NetboxIntegrationView = {
   default_environment: string;
   secret_writable: boolean;
   updated_at: string | null;
+  /** The last connection test kept on this configuration. Null until one is recorded. */
+  last_test: { ok: boolean; tested_at: string } | null;
 };
 
 export type NetboxIntegrationSaveInput = {
@@ -151,22 +150,33 @@ export const NETBOX_ADDRESS_MAX_LENGTH = 2048;
 
 export function normalizeNetboxAddress(raw: string): string {
   if (String(raw || '').trim().length > NETBOX_ADDRESS_MAX_LENGTH) {
-    throw new BadRequestException(`The Netbox address must be at most ${NETBOX_ADDRESS_MAX_LENGTH} characters long.`);
+    throw netboxBadRequest('netbox_address_too_long');
   }
   const trimmed = normalizeNetboxBaseUrl(raw);
   let parsed: URL;
   try {
     parsed = new URL(trimmed);
   } catch {
-    throw new BadRequestException(BASE_URL_MESSAGE);
+    throw netboxBadRequest('netbox_base_url_invalid');
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new BadRequestException(BASE_URL_MESSAGE);
+    throw netboxBadRequest('netbox_base_url_invalid');
   }
   if (parsed.username || parsed.password || parsed.search || parsed.hash) {
-    throw new BadRequestException('The Netbox address must not contain a query string, a fragment, or a user name and password.');
+    throw netboxBadRequest('netbox_base_url_invalid');
   }
   return trimmed;
+}
+
+/** The last connection test stored in the configuration, or null when it is not usable. */
+export function readLastConnectionTest(
+  metadata: Record<string, unknown> | null,
+): { ok: boolean; tested_at: string } | null {
+  const raw = asRecord(metadata?.last_connection_test);
+  if (!raw || typeof raw.ok !== 'boolean') return null;
+  const testedAt = textOrNull(raw.tested_at);
+  if (!testedAt || Number.isNaN(Date.parse(testedAt))) return null;
+  return { ok: raw.ok, tested_at: testedAt };
 }
 
 /** Reads a stored sync state, downgrading a run that has been stuck for an hour. */
@@ -239,7 +249,42 @@ export class NetboxConfigService {
       updated_at: config?.updated_at instanceof Date
         ? config.updated_at.toISOString()
         : textOrNull(config?.updated_at),
+      last_test: readLastConnectionTest(metadata),
     };
+  }
+
+  /**
+   * Keeps the outcome of the connection test on the existing configuration.
+   * Writes only `metadata_json.last_connection_test`: the call to Netbox can
+   * take minutes, and a save made meanwhile (address, token, mappings, sync
+   * state) must survive. The row must still hold the address and token the test
+   * used, otherwise the outcome describes values that are gone and is dropped.
+   * Returns whether the outcome was written.
+   */
+  async recordConnectionTest(
+    manager: EntityManager,
+    config: AiAdapterConfig,
+    result: { ok: boolean; tested_at: string },
+  ): Promise<boolean> {
+    const rows = await manager.query(
+      `WITH changed AS (
+         UPDATE ai_adapter_configs
+         SET metadata_json = jsonb_set(coalesce(metadata_json, '{}'::jsonb), '{last_connection_test}', $1::jsonb)
+         WHERE id = $2 AND tenant_id = $3
+           AND base_url IS NOT DISTINCT FROM $4
+           AND credential_ref_json IS NOT DISTINCT FROM $5::jsonb
+         RETURNING 1
+       )
+       SELECT count(*)::int AS n FROM changed`,
+      [
+        JSON.stringify({ ok: result.ok, tested_at: result.tested_at }),
+        config.id,
+        config.tenant_id,
+        config.base_url ?? null,
+        config.credential_ref_json == null ? null : JSON.stringify(config.credential_ref_json),
+      ],
+    );
+    return Number(rows?.[0]?.n ?? 0) > 0;
   }
 
   getMapping(config: AiAdapterConfig | null): NetboxMappingView {
@@ -271,11 +316,15 @@ export class NetboxConfigService {
     let baseUrl = textOrNull(existing?.base_url);
     if (input.base_url !== undefined) {
       const raw = textOrNull(input.base_url);
-      if (!raw) throw new BadRequestException(BASE_URL_MESSAGE);
-      baseUrl = normalizeNetboxAddress(raw);
-      assertPublicHttpUrl(baseUrl); // SSRF: blocks internal targets in cloud, no-op on-prem
+      if (!raw) throw netboxBadRequest('netbox_base_url_invalid');
+      try {
+        baseUrl = normalizeNetboxAddress(raw);
+        assertPublicHttpUrl(baseUrl); // SSRF: blocks internal targets in cloud, no-op on-prem
+      } catch (error) {
+        throw netboxBadRequest(netboxFailureOf(error).code);
+      }
     }
-    if (!baseUrl) throw new BadRequestException(BASE_URL_MESSAGE);
+    if (!baseUrl) throw netboxBadRequest('netbox_base_url_invalid');
 
     let timeoutSeconds = existing?.timeout_seconds ?? null;
     if (input.request_timeout_seconds !== undefined) {
@@ -285,7 +334,7 @@ export class NetboxConfigService {
       } else {
         const parsed = Number(raw);
         if (!Number.isInteger(parsed) || parsed < NETBOX_MIN_TIMEOUT_SECONDS || parsed > NETBOX_MAX_TIMEOUT_SECONDS) {
-          throw new BadRequestException(TIMEOUT_MESSAGE);
+          throw netboxBadRequest('netbox_timeout_invalid');
         }
         timeoutSeconds = parsed;
       }
@@ -311,10 +360,15 @@ export class NetboxConfigService {
     if (token) {
       credentialRef = this.encryptedCredentialRef(token);
     }
+    // A new address or a new token makes the stored connection test describe a
+    // configuration that is gone. An empty token keeps the stored secret, so
+    // the test still applies.
+    const addressChanged = !!existing && textOrNull(existing.base_url) !== baseUrl;
+    const tokenChanged = !!existing && !!token;
 
     const enabled = booleanOr(input.enabled, existing?.enabled ?? false);
     if (enabled && !credentialRef) {
-      throw new BadRequestException(TOKEN_MISSING_MESSAGE);
+      throw netboxBadRequest('netbox_token_missing');
     }
 
     const repo = this.repo(manager);
@@ -334,7 +388,22 @@ export class NetboxConfigService {
       updated_at: new Date(),
       created_at: existing?.created_at ?? new Date(),
     });
-    return this.toView(await repo.save(entity));
+    const saved = await repo.save(entity);
+    if (addressChanged || tokenChanged) {
+      // Only this key. The save above may have copied the previous test into
+      // its snapshot; removing it here leaves every other metadata key as it
+      // stands now, including one written while the save was in flight.
+      await manager.query(
+        `UPDATE ai_adapter_configs
+            SET metadata_json = coalesce(metadata_json, '{}'::jsonb) - 'last_connection_test'
+          WHERE id = $1 AND tenant_id = $2`,
+        [saved.id, tenantId],
+      );
+      const cleared = { ...(asRecord(saved.metadata_json) ?? {}) };
+      delete cleared.last_connection_test;
+      return this.toView({ ...saved, metadata_json: cleared });
+    }
+    return this.toView(saved);
   }
 
   /** Full replacement of the mapping tables the body carries. */
@@ -445,7 +514,7 @@ export class NetboxConfigService {
     const metadata = asRecord(config?.metadata_json);
     const baseUrl = overrides?.baseUrl ?? textOrNull(config?.base_url);
     if (!baseUrl) {
-      throw new BadRequestException('Add the Netbox address first, then try again.');
+      throw netboxBadRequest('netbox_base_url_invalid');
     }
     const token = overrides?.token ?? this.revealToken(config);
     const timeoutSeconds = overrides?.timeoutSeconds ?? config?.timeout_seconds ?? null;
@@ -467,15 +536,15 @@ export class NetboxConfigService {
   private revealToken(config: AiAdapterConfig | null): string {
     const credential = parseCredentialRef(config?.credential_ref_json);
     if (!credential || credential.kind === 'none') {
-      throw new BadRequestException(TOKEN_MISSING_MESSAGE);
+      throw netboxBadRequest('netbox_token_missing');
     }
     if (credential.kind !== 'encrypted') {
-      throw new BadRequestException('The saved Netbox token cannot be read on this server. Enter the token again and save.');
+      throw netboxBadRequest('netbox_token_unreadable');
     }
     try {
       return this.cipher.decrypt(credential.ciphertext);
     } catch {
-      throw new BadRequestException('The saved Netbox token cannot be read on this server. Enter the token again and save.');
+      throw netboxBadRequest('netbox_token_unreadable');
     }
   }
 

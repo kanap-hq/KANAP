@@ -27,6 +27,7 @@ import {
 } from '../../../components/workspace/relations';
 import useBudgetColumns from '../../../hooks/useBudgetColumns';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { useApplicationFeedback } from '../applicationFeedback';
 import { assetRelationsKey, type AssetRelationsData, type AssetTaskRow as TaskRow } from './assetRelationsData';
 
 type WebLinkRow = { id: string; description: string | null; url: string; created_at: string | null };
@@ -51,6 +52,7 @@ const DONE_TASK = new Set(['done', 'cancelled']);
  */
 export default function AssetRelationsTab({ assetId }: { assetId: string }) {
   const { t, i18n } = useTranslation(['it', 'common', 'portfolio', 'ops']);
+  const feedback = useApplicationFeedback();
   const theme = useTheme();
   const { hasLevel } = useAuth();
   const dialogs = useKanapDialogs();
@@ -98,13 +100,8 @@ export default function AssetRelationsTab({ assetId }: { assetId: string }) {
   const saveLink = async (linkRow: LinksAndFilesLink | null, draft: LinkDraft) => {
     setError(null);
     const body = { description: draft.name, url: draft.url };
-    try {
-      if (linkRow) await api.patch(`/assets/${assetId}/links/${linkRow.id}`, body);
-      else await api.post(`/assets/${assetId}/links`, body);
-    } catch (e) {
-      failed(e);
-      throw e;
-    }
+    if (linkRow) await api.patch(`/assets/${assetId}/links/${linkRow.id}`, body);
+    else await api.post(`/assets/${assetId}/links`, body);
     await queryClient.invalidateQueries({ queryKey: linksKey });
     changed();
   };
@@ -227,6 +224,19 @@ export default function AssetRelationsTab({ assetId }: { assetId: string }) {
     }),
   ];
 
+  const nameOf = (kind: string, targetId: string) => {
+    const section = sections.find((item) => item.kind === kind);
+    const row = (section?.rows as Array<{ id: string }> | null | undefined)?.find((item) => item.id === targetId);
+    return section && row ? section.label(row) : '';
+  };
+  // Unlinking stays immediate. The message offers to put the link back. Web links and files stay as they are.
+  const handleUnlink = async (kind: string, targetId: string) => {
+    const name = nameOf(kind, targetId);
+    if (await unlink(kind, targetId)) {
+      feedback.undo(t('workspace.asset.relations.feedback.unlinked', { name }), async () => { await link(kind, targetId); });
+    }
+  };
+
   return (
     <Stack spacing={3}>
       {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
@@ -237,7 +247,7 @@ export default function AssetRelationsTab({ assetId }: { assetId: string }) {
         canEdit={canEdit}
         searchKeyPrefix="asset"
         onLink={(kind, targetId) => { void link(kind, targetId); }}
-        onUnlink={(kind, targetId) => { void unlink(kind, targetId); }}
+        onUnlink={(kind, targetId) => { void handleUnlink(kind, targetId); }}
       />
 
       <LinksAndFilesSection
