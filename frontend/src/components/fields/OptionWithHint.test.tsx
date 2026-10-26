@@ -11,8 +11,16 @@ const stableT = vi.hoisted(() => (key: string) => key);
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: stableT, i18n: { language: 'en', resolvedLanguage: 'en' } }),
+  initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 vi.mock('../../api', () => ({ default: { get: apiGet } }));
+vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({
+  default: () => ({ data: { businessCriticalityLevels: [{ code: 'high', label: 'High' }] } }),
+}));
+vi.mock('../../hooks/useItOpsSettings', () => ({
+  useItOpsSettings: () => ({ data: { lifecycleStates: [{ code: 'active', label: 'Active' }] } }),
+  default: () => ({ data: { lifecycleStates: [{ code: 'active', label: 'Active' }] } }),
+}));
 
 import ApplicationSelect from './ApplicationSelect';
 import MultiRoleSelect from './MultiRoleSelect';
@@ -57,7 +65,7 @@ describe('picker options: one line, the description in a delayed tooltip', () =>
     apiGet.mockResolvedValue({ data: { items: [{ id: 'a1', name: 'Billing', lifecycle: 'active', criticality: 'high' }] } });
     renderField(<ApplicationSelect value={null} onChange={() => undefined} />);
     const [option] = await openList();
-    await expectOneLineWithHint(option, 'Billing', 'active · high');
+    await expectOneLineWithHint(option, 'Billing', 'Active · High');
   });
 
   it('ServerSelect: environment, kind and provider move to the tooltip; a cluster carries its mark and its members', async () => {
