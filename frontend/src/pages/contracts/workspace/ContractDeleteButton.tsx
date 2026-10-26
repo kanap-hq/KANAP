@@ -55,10 +55,11 @@ export default function ContractDeleteButton({ contractId, contractName, beforeD
       await beforeDelete();
       await api.delete(`/contracts/${contractId}`);
       // The page leaves first: its own contract is gone, the lists read again.
-      queryClient.removeQueries({ queryKey: ['contracts', contractId], exact: true });
       onDeleted();
+      queryClient.removeQueries({ queryKey: ['contracts', contractId], exact: true });
       void queryClient.invalidateQueries({
-        predicate: (query) => ['contracts', 'contracts-ids', 'contracts-totals'].includes(String(query.queryKey[0])),
+        predicate: (query) => ['contracts', 'contracts-ids', 'contracts-totals'].includes(String(query.queryKey[0]))
+          && query.queryKey[1] !== contractId,
       });
     } catch (err) {
       setBusy(false);
