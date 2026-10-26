@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -9,6 +9,7 @@ import { KanapDialogProvider } from '../components/design';
 import UsersPage from './UsersPage';
 
 const deleteButton = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
+const grid = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
 const post = vi.hoisted(() => vi.fn());
 
 vi.mock('react-i18next', () => ({
@@ -18,7 +19,26 @@ vi.mock('react-i18next', () => ({
 vi.mock('../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true, tenantAuth: null }) }));
 vi.mock('../api', () => ({ default: { get: vi.fn(async () => ({ data: { items: [] } })), post } }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
-vi.mock('../components/ServerDataGrid', () => ({ default: () => null }));
+vi.mock('../components/ServerDataGrid', () => ({
+  default: (props: Record<string, any>) => {
+    grid.props = props;
+    // The chooser lists every column except those kept out of the tool panel (ServerDataGrid).
+    const offered = (props.columns as any[]).filter((column) => !column.suppressColumnsToolPanel);
+    const actions = (props.columns as any[]).find((column) => column.colId === 'row_actions');
+    return (
+      <div>
+        <ul aria-label="column-chooser">
+          {offered.map((column) => (
+            <li key={column.field || column.colId}>{column.headerName || column.field || column.colId}</li>
+          ))}
+        </ul>
+        {actions?.cellRenderer?.({
+          data: { id: 'u-1', email: 'ada@example.test', first_name: 'Ada', last_name: 'Lovelace', status: 'enabled' },
+        })}
+      </div>
+    );
+  },
+}));
 vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
 vi.mock('../components/csv/CsvImportDialog', () => ({ default: () => null }));
 vi.mock('../components/DeleteSelectedButton', () => ({
@@ -27,6 +47,26 @@ vi.mock('../components/DeleteSelectedButton', () => ({
     return null;
   },
 }));
+
+describe('UsersPage columns', () => {
+  it('keeps the actions column out of the chooser and keeps the row menu', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <KanapDialogProvider>
+            <MemoryRouter><UsersPage /></MemoryRouter>
+          </KanapDialogProvider>
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    const columns = grid.props!.columns as Array<{ field?: string; colId?: string; headerName?: string; suppressColumnsToolPanel?: boolean }>;
+    const actions = columns.find((column) => column.colId === 'row_actions');
+    expect(actions?.suppressColumnsToolPanel).toBe(true);
+    const offered = screen.getAllByRole('listitem').map((item) => item.textContent);
+    expect(offered).not.toContain('row_actions');
+    expect(screen.getByRole('button', { name: 'users.actions.rowMenu' })).toBeInTheDocument();
+  });
+});
 
 describe('UsersPage delete', () => {
   it('asks the delete check before its confirmation, and names the users in its words', async () => {

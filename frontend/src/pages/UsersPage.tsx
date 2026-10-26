@@ -317,7 +317,7 @@ export default function UsersPage() {
       cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,
     },
     ...(canManageUsers
-      ? [{ colId: 'row_actions', headerName: '', width: 56, sortable: false, filter: false, resizable: false, pinned: 'right', cellRenderer: RowActionsCell } as EnhancedColDef<any>]
+      ? [{ colId: 'row_actions', headerName: '', width: 56, sortable: false, filter: false, resizable: false, pinned: 'right', suppressColumnsToolPanel: true, cellRenderer: RowActionsCell } as EnhancedColDef<any>]
       : []),
   ], [ClickableCell, ClickableCellGeneric, UserStatusCell, RowActionsCell, canAdminDataAccess, canManageUsers, dataAccessAnyLimited, dateFilterParams, getRoleFilterValues, locale, t]);
 
