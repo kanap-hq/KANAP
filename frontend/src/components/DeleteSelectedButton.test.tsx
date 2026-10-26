@@ -378,9 +378,12 @@ describe('DeleteSelectedButton', () => {
         renderLiftable([rows[1]], [BOUND]);
         const dialog = await screen.findByRole('dialog');
         expect(within(dialog).getByTestId('delete-kept')).toHaveTextContent('Frozen');
+        // Nothing can go until the option is checked: no "0 will be deleted".
+        expect(dialog).not.toHaveTextContent('to delete:0');
         const remove = within(dialog).getByRole('button', { name: 'buttons.delete' });
         expect(remove).toBeDisabled();
         fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Also delete bindings' }));
+        expect(dialog).toHaveTextContent('to delete:1');
         expect(remove).toBeEnabled();
         fireEvent.click(remove);
         await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/interfaces/bulk', { data: { ids: ['b'], deleteRelatedBindings: true } }));

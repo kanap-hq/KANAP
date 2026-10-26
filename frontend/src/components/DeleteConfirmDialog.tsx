@@ -98,9 +98,12 @@ export default function DeleteConfirmDialog({
         </Typography>
       )}
 
-      <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
-        {itemsLabel ?? t('delete.itemsToDelete', { count: itemCount })}
-      </Typography>
+      {/* A zero count ("0 interfaces will be deleted") reads as a bug: the kept list says why. */}
+      {itemCount > 0 && (
+        <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+          {itemsLabel ?? t('delete.itemsToDelete', { count: itemCount })}
+        </Typography>
+      )}
 
       {displayItems.length > 0 && (
         <Box
