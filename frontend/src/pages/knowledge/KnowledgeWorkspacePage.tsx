@@ -42,6 +42,7 @@ import { getApiErrorMessage, getDocumentSaveErrorMessage } from '../../utils/api
 import { getDotColor, KNOWLEDGE_STATUS_COLORS } from '../../utils/statusColors';
 import { knowledgeFolderName, knowledgeLibraryName } from '../../utils/knowledgeNames';
 import { normalizeMarkdownForRichTextEditor } from '../../lib/markdownEditorNormalization';
+import { releaseLockKeepalive } from '../../lib/releaseLockKeepalive';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { classifyKnowledgeLoadError } from './knowledgeLoadError';
 
@@ -231,6 +232,9 @@ export default function KnowledgeWorkspacePage() {
   // Mirrors the held token so a release can claim it synchronously: a second
   // release (Done, then the unmount cleanup) finds nothing left to release.
   const lockTokenRef = React.useRef<string | null>(null);
+  // Set while an axios release is still in flight. A reload cancels that
+  // request; pagehide sends it again with keepalive, then clears this.
+  const releaseInFlightTokenRef = React.useRef<string | null>(null);
   const setLockToken = React.useCallback((next: string | null) => {
     lockTokenRef.current = next;
     setLockTokenState(next);
@@ -786,14 +790,21 @@ export default function KnowledgeWorkspacePage() {
   }, [id, isCreate, lockToken]);
 
   const releaseLock = React.useCallback(async () => {
+    // Claim the token first: a second caller (the unmount cleanup after Done)
+    // finds nothing left to release.
     const heldToken = lockTokenRef.current;
     if (isCreate || !heldToken) return;
     lockTokenRef.current = null;
+    releaseInFlightTokenRef.current = heldToken;
     try {
       await api.delete(`/knowledge/${id}/locks`, {
         headers: { 'X-Lock-Token': heldToken },
       });
-    } catch { /* best effort */ }
+    } catch { /* best effort */ } finally {
+      if (releaseInFlightTokenRef.current === heldToken) {
+        releaseInFlightTokenRef.current = null;
+      }
+    }
     setLockToken(null);
     setLockExpiresAt(null);
   }, [id, isCreate, setLockToken]);
@@ -830,6 +841,27 @@ export default function KnowledgeWorkspacePage() {
   React.useEffect(() => {
     return () => { void releaseLock(); };
   }, [releaseLock]);
+
+  // A reload or a closed tab discards the page without unmounting, so the
+  // axios release above never leaves the browser and the lock stays until it
+  // expires. pagehide still runs: fetch keepalive delivers the same DELETE,
+  // lock header included, after the document is gone. A release already in
+  // flight is sent again, because that axios call is cancelled with the page.
+  React.useEffect(() => {
+    if (isCreate || !id) return;
+    const onPageHide = () => {
+      const heldToken = lockTokenRef.current ?? releaseInFlightTokenRef.current;
+      if (!heldToken) return;
+      lockTokenRef.current = null;
+      releaseInFlightTokenRef.current = null;
+      releaseLockKeepalive(`/knowledge/${id}/locks`, heldToken);
+      setLockToken(null);
+      setLockExpiresAt(null);
+      setEditMode(false);
+    };
+    window.addEventListener('pagehide', onPageHide);
+    return () => window.removeEventListener('pagehide', onPageHide);
+  }, [id, isCreate, setLockToken]);
 
   // Autosaves refused in a row by a busy server or left without an answer, and when the next
   // one may go (the server's Retry-After, growing waits).

@@ -5,8 +5,10 @@ import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../api';
+import { setAccessToken } from '../../auth/accessTokenStore';
 import { KanapDialogProvider } from '../../components/design';
 import { createAppTheme } from '../../config/ThemeContext';
+import { releaseLockKeepaliveUrl } from '../../lib/releaseLockKeepalive';
 import KnowledgeWorkspacePage from './KnowledgeWorkspacePage';
 import { classifyKnowledgeLoadError } from './knowledgeLoadError';
 
@@ -213,6 +215,100 @@ describe('KnowledgeWorkspacePage — edit lock', () => {
     view.unmount();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(releaseCalls()).toHaveLength(1);
+  });
+
+  it('releases the lock on pagehide so a reload does not keep it', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    setAccessToken('access-1', Date.now() + 60_000);
+    try {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+      const view = renderWorkspace(queryClient);
+
+      fireEvent.click(await screen.findByText('workspace.actions.edit'));
+      await screen.findByText('workspace.actions.done');
+      expect(api.delete).not.toHaveBeenCalled();
+
+      await act(async () => {
+        window.dispatchEvent(new Event('pagehide'));
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe(releaseLockKeepaliveUrl(LOCKS_URL));
+      expect(init).toMatchObject({
+        method: 'DELETE',
+        keepalive: true,
+        credentials: 'include',
+        headers: {
+          'X-Lock-Token': 'tok-1',
+          Authorization: 'Bearer access-1',
+        },
+      });
+      // The page is no longer editing, and the spent token is not released again.
+      await screen.findByText('workspace.actions.edit');
+      expect(api.delete).not.toHaveBeenCalled();
+
+      window.dispatchEvent(new Event('pagehide'));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // The same user comes back and takes a fresh lock. Leaving then releases that one.
+      fireEvent.click(screen.getByText('workspace.actions.edit'));
+      await screen.findByText('workspace.actions.done');
+      expect(vi.mocked(api.post).mock.calls.filter(([url]) => url === LOCKS_URL)).toHaveLength(2);
+      view.unmount();
+      await waitFor(() => expect(vi.mocked(api.delete).mock.calls.filter(([url]) => url === LOCKS_URL)).toHaveLength(1));
+    } finally {
+      setAccessToken(null);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('does not release on pagehide when the document is not being edited', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+      renderWorkspace(queryClient);
+      await screen.findByText('workspace.actions.edit');
+
+      window.dispatchEvent(new Event('pagehide'));
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(api.delete).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('sends the keepalive release on pagehide when the axios release is still in flight', async () => {
+    vi.mocked(api.delete).mockReturnValue(new Promise(() => {}) as any);
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+      renderWorkspace(queryClient);
+
+      fireEvent.click(await screen.findByText('workspace.actions.edit'));
+      fireEvent.click(await screen.findByText('workspace.actions.done'));
+      await waitFor(() => expect(api.delete).toHaveBeenCalledWith(
+        LOCKS_URL,
+        { headers: { 'X-Lock-Token': 'tok-1' } },
+      ));
+
+      await act(async () => {
+        window.dispatchEvent(new Event('pagehide'));
+      });
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock.mock.calls[0][1]).toMatchObject({
+        method: 'DELETE',
+        keepalive: true,
+        headers: { 'X-Lock-Token': 'tok-1' },
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 
