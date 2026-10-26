@@ -133,7 +133,7 @@ describe('deleteFailureReason', () => {
     const folder = { code: 'KNOWLEDGE_FOLDER_HAS_SUBFOLDERS', usages: [{ type: 'sub_folders', total: 1 }] };
     expect(deleteFailureReason(folder, i18n.fr.t, 'fr')).toBe('Ce dossier contient encore 1 sous-dossier. Déplacez-le ou supprimez-le d’abord.');
     const asset = { code: 'ASSET_IN_USE', usages: [{ type: 'connections', total: 1 }] };
-    expect(deleteFailureReason(asset, i18n.fr.t, 'fr')).toBe('Cet actif est utilisé par 1 connexion. Retirez-le de cet élément avant de le supprimer.');
+    expect(deleteFailureReason(asset, i18n.fr.t, 'fr')).toBe('Cet actif est utilisé par 1 connexion. Retirez-le de là avant de le supprimer.');
     // Every sentence that points back at what holds the record has both forms, in each language.
     const codes = ['ASSET_IN_USE', 'COST_CENTER_HAS_NODES', 'CHART_OF_ACCOUNTS_IN_USE', 'ANALYTICS_DIMENSION_HAS_VALUES', 'TEAM_NOT_EMPTY',
       'ROLE_IN_USE', 'DEPLOYMENT_IN_USE', 'INTERFACE_HAS_BINDINGS', 'KNOWLEDGE_FOLDER_HAS_SUBFOLDERS'];
@@ -154,7 +154,7 @@ describe('deleteFailureReason', () => {
     expect(deleteFailureReason(refusal, i18n.en.t, 'en'))
       .toBe('This asset is used by 2 application assignments (CheeseTrack and Sage X3). Remove it from them before deleting it.');
     expect(deleteFailureReason(refusal, i18n.fr.t, 'fr'))
-      .toBe('Cet actif est utilisé par 2 affectations à des applications (CheeseTrack et Sage X3). Retirez-le de ces éléments avant de le supprimer.');
+      .toBe('Cet actif est utilisé par 2 affectations à des applications (CheeseTrack et Sage X3). Retirez-le de chacun d\'eux avant de le supprimer.');
     const many = {
       code: 'ASSET_IN_USE',
       usages: [{ type: 'app_assignments', total: 5 }],
@@ -162,6 +162,41 @@ describe('deleteFailureReason', () => {
     };
     expect(deleteFailureReason(many, i18n.en.t, 'en')).toContain('(Alpha, Bravo, Charlie, and 2 others)');
     expect(deleteFailureReason(many, i18n.fr.t, 'fr')).toContain('(Alpha, Bravo, Charlie et 2 autres)');
+  });
+
+  it('names up to five connections by reference and name, then how many more', () => {
+    const one = {
+      code: 'ASSET_IN_USE',
+      usages: [{ type: 'connections', total: 1 }],
+      connections: ['CONN-4 · Paris to Gouda'],
+    };
+    expect(deleteFailureReason(one, i18n.en.t, 'en'))
+      .toBe('This asset is used by 1 connection (CONN-4 · Paris to Gouda). Remove it from there before deleting it.');
+    expect(deleteFailureReason(one, i18n.fr.t, 'fr'))
+      .toBe('Cet actif est utilisé par 1 connexion (CONN-4 · Paris to Gouda). Retirez-le de là avant de le supprimer.');
+    expect(deleteFailureReason(one, i18n.de.t, 'de'))
+      .toBe('Dieses Asset wird noch verwendet: 1 Verbindung (CONN-4 · Paris to Gouda). Entfernen Sie es dort, bevor Sie es löschen.');
+    expect(deleteFailureReason(one, i18n.es.t, 'es'))
+      .toBe('Este activo se usa en 1 conexión (CONN-4 · Paris to Gouda). Quítelo de allí antes de eliminarlo.');
+    const both = {
+      code: 'ASSET_IN_USE',
+      usages: [{ type: 'app_assignments', total: 1 }, { type: 'connections', total: 1 }],
+      applications: ['CheeseTrack'],
+      connections: ['CONN-4 · Paris to Gouda'],
+    };
+    expect(deleteFailureReason(both, i18n.en.t, 'en'))
+      .toBe('This asset is used by 1 application assignment (CheeseTrack) and 1 connection (CONN-4 · Paris to Gouda). Remove it from them before deleting it.');
+    const many = {
+      code: 'ASSET_IN_USE',
+      usages: [{ type: 'connections', total: 7 }],
+      connections: ['CONN-1 · A', 'CONN-2 · B', 'CONN-3 · C', 'CONN-4 · D', 'CONN-5 · E'],
+    };
+    expect(deleteFailureReason(many, i18n.en.t, 'en'))
+      .toContain('(CONN-1 · A, CONN-2 · B, CONN-3 · C, CONN-4 · D, CONN-5 · E and 2 more)');
+    expect(deleteFailureReason(many, i18n.fr.t, 'fr'))
+      .toContain('(CONN-1 · A, CONN-2 · B, CONN-3 · C, CONN-4 · D, CONN-5 · E et 2 autres)');
+    expect(deleteFailureReason({ ...one, usages: [{ type: 'connections', total: 2 }] }, i18n.en.t, 'en'))
+      .toContain('(CONN-4 · Paris to Gouda and 1 more)');
   });
 
   it('keeps the reason of a failure without a code', () => {

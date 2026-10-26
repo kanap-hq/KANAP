@@ -40,17 +40,27 @@ async function seedAsset(runner: QueryRunner, tenantId: string, name: string): P
   return assetId;
 }
 
-async function seedConnectionThrough(runner: QueryRunner, tenantId: string, hopAssetId: string) {
+async function seedConnectionThrough(runner: QueryRunner, tenantId: string, hopAssetId: string): Promise<string> {
   const connectionId = randomUUID();
+  const reference = `CONN-${connectionId.slice(0, 6)}`;
   await runner.query(
     `INSERT INTO connections (id, tenant_id, connection_reference, name, topology)
      VALUES ($1, $2, $3, 'Paris to Gouda', 'server_to_server')`,
-    [connectionId, tenantId, `CON-${connectionId.slice(0, 6)}`],
+    [connectionId, tenantId, reference],
   );
   await runner.query(
     `INSERT INTO connection_legs (tenant_id, connection_id, order_index, equipment_asset_id)
      VALUES ($1, $2, 1, $3)`,
     [tenantId, connectionId, hopAssetId],
+  );
+  return reference;
+}
+
+async function seedConnectionFrom(runner: QueryRunner, tenantId: string, assetId: string, reference: string, name: string) {
+  await runner.query(
+    `INSERT INTO connections (tenant_id, connection_reference, name, topology, source_asset_id)
+     VALUES ($1, $2, $3, 'server_to_server', $4)`,
+    [tenantId, reference, name, assetId],
   );
 }
 
@@ -227,7 +237,7 @@ async function run() {
 
     const plain = await seedAsset(runner, tenantId, 'par-spare-01');
     const hop = await seedAsset(runner, tenantId, 'par-fw-01');
-    await seedConnectionThrough(runner, tenantId, hop);
+    const hopReference = await seedConnectionThrough(runner, tenantId, hop);
     await seedAssignment(runner, tenantId, hop, 'Sage X3');
     await seedAssignment(runner, tenantId, hop, 'CheeseTrack');
 
@@ -253,6 +263,14 @@ async function run() {
     assert.deepEqual(refusal.usages, [{ type: 'app_assignments', total: 2 }, { type: 'connections', total: 1 }]);
     assert.deepEqual(refusal.params, undefined);
     assert.deepEqual(refusal.applications, ['CheeseTrack', 'Sage X3']);
+    assert.deepEqual(refusal.connections, [`${hopReference} · Paris to Gouda`]);
+
+    // Six connections: the refusal names the first five by reference, and counts the rest.
+    const busy = await seedAsset(runner, tenantId, 'par-busy-01');
+    for (let n = 1; n <= 6; n += 1) await seedConnectionFrom(runner, tenantId, busy, `CONN-${n}`, `Link ${n}`);
+    const busyRefusal = (await service.deleteCheck([busy], tenantId, { manager: runner.manager })).refused[0];
+    assert.deepEqual(busyRefusal.usages, [{ type: 'connections', total: 6 }]);
+    assert.deepEqual(busyRefusal.connections, [1, 2, 3, 4, 5].map((n) => `CONN-${n} · Link ${n}`));
 
     await testStopsHosting(runner, tenantId);
     await testCascade(runner, tenantId, hop);

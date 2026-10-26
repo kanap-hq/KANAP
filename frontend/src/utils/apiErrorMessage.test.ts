@@ -213,7 +213,7 @@ describe('getApiErrorMessage', () => {
       'This asset is used by 1 application assignment and 2 connections. Remove it from them before deleting it.',
     );
     expect(getApiErrorMessage(refused, i18n.getFixedT('fr'), 'fallback')).toBe(
-      'Cet actif est utilisé par 1 affectation à une application et 2 connexions. Retirez-le de ces éléments avant de le supprimer.',
+      'Cet actif est utilisé par 1 affectation à une application et 2 connexions. Retirez-le de chacun d\'eux avant de le supprimer.',
     );
     // One subfolder: the sentence says "it", not "them".
     const folder = { response: { status: 409, data: { code: 'KNOWLEDGE_FOLDER_HAS_SUBFOLDERS', message: 'raw', usages: [{ type: 'sub_folders', total: 1 }] } } };
@@ -239,7 +239,27 @@ describe('getApiErrorMessage', () => {
       'This asset is used by 1 application assignment (CheeseTrack). Remove it from there before deleting it.',
     );
     expect(getApiErrorMessage(refused, i18n.getFixedT('fr'), 'fallback')).toBe(
-      'Cet actif est utilisé par 1 affectation à une application (CheeseTrack). Retirez-le de cet élément avant de le supprimer.',
+      'Cet actif est utilisé par 1 affectation à une application (CheeseTrack). Retirez-le de là avant de le supprimer.',
+    );
+  });
+
+  it('names the connections an asset delete refusal carries', () => {
+    const refused = {
+      response: {
+        status: 409,
+        data: {
+          code: 'ASSET_IN_USE',
+          message: 'Cannot delete asset "srv-01": is linked to 1 connection(s): CONN-4 · Paris to Gouda',
+          usages: [{ type: 'connections', total: 1 }],
+          connections: ['CONN-4 · Paris to Gouda'],
+        },
+      },
+    };
+    expect(getApiErrorMessage(refused, t, 'fallback')).toBe(
+      'This asset is used by 1 connection (CONN-4 · Paris to Gouda). Remove it from there before deleting it.',
+    );
+    expect(getApiErrorMessage(refused, i18n.getFixedT('fr'), 'fallback')).toBe(
+      'Cet actif est utilisé par 1 connexion (CONN-4 · Paris to Gouda). Retirez-le de là avant de le supprimer.',
     );
   });
 

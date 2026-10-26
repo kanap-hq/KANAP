@@ -13,6 +13,8 @@ type ApiErrorPayload = {
   params?: unknown;
   /** The applications an asset delete refusal names. */
   applications?: unknown;
+  /** The connections an asset delete refusal names (reference and name). */
+  connections?: unknown;
 };
 
 type ApiErrorLike = {
@@ -156,6 +158,9 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
     const applications = Array.isArray(payload?.applications)
       ? payload.applications.map((name) => String(name ?? '')).filter(Boolean)
       : undefined;
+    const connections = Array.isArray(payload?.connections)
+      ? payload.connections.map((name) => String(name ?? '')).filter(Boolean)
+      : undefined;
     // The language of `t` (a fixed one), else the interface's.
     const language = (t as { lng?: string }).lng || i18next.resolvedLanguage || i18next.language || 'en';
     const params = payload?.params && typeof payload.params === 'object' ? { ...(payload.params as Record<string, unknown>) } : {};
@@ -171,7 +176,7 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
       ...params,
       defaultValue: message || fallback,
       ...(variant ? { context: variant } : {}),
-      ...(usages ? { ...usageTotal(usages), usages: refusalUsages(usages, applications, t, language) } : {}),
+      ...(usages ? { ...usageTotal(usages), usages: refusalUsages(usages, applications, t, language, connections) } : {}),
     });
     if (typeof translated === 'string' && translated.trim()) {
       return translated;

@@ -83,7 +83,7 @@ Sorting on **Vulnerabilities to review** orders the assets by their critical or 
 **Actions**:
 - **Add asset**: opens a menu (`infrastructure:member`). **Add asset** creates an asset; **Add cluster** creates one with the **Cluster** switch already on
 - **Import CSV** / **Export CSV**: Bulk operations (`infrastructure:admin`). The export holds the assets the list shows. See [Export options](#export-options)
-- **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`). An asset still assigned to applications or linked to connections cannot be deleted: remove it from them first. An assignment the asset only inherits from its cluster does not block it. Before anything is deleted, the confirmation lists the assets kept, with the reason, and what the others take with them (see [Deleting a cluster or a member](#deleting-a-cluster-or-a-member))
+- **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`). An asset still assigned to applications or linked to connections cannot be deleted. The refusal names the applications, and up to five connections by reference and name. Remove the asset from them first. An assignment the asset only inherits from its cluster does not block it. Before anything is deleted, the confirmation lists the assets kept, with the reason, and what the others take with them (see [Deleting a cluster or a member](#deleting-a-cluster-or-a-member))
 
 ---
 

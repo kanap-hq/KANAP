@@ -34,6 +34,16 @@ export type AssetDeleteWarning = {
 };
 
 const WARNING_RELATIONS_LIMIT = 10;
+/** Connections a refusal names (reference and name). The screen says how many remain past these. */
+const NAMED_CONNECTIONS = 5;
+
+/** "CONN-4 · Paris to Gouda": the reference the lists show, then the name. */
+function connectionLabel(row: { connection_reference?: string | null; name?: string | null }): string {
+  const reference = String(row.connection_reference ?? '').trim();
+  const name = String(row.name ?? '').trim();
+  if (reference && name) return `${reference} · ${name}`;
+  return reference || name;
+}
 
 @Injectable()
 export class AssetsDeleteService extends BaseDeleteService<Asset> {
@@ -96,11 +106,10 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
   }
 
   private async findConnections(assetId: string, tenantId: string, manager: EntityManager) {
-    const baseIdsQuery = `
-      SELECT DISTINCT c.id, c.name, c.created_at
+    const match = `
       FROM connections c
-      LEFT JOIN connection_servers cs ON cs.connection_id = c.id
-      LEFT JOIN connection_legs cl ON cl.connection_id = c.id
+      LEFT JOIN connection_servers cs ON cs.tenant_id = c.tenant_id AND cs.connection_id = c.id
+      LEFT JOIN connection_legs cl ON cl.tenant_id = c.tenant_id AND cl.connection_id = c.id
       WHERE c.tenant_id = $1
         AND (
           c.source_asset_id = $2
@@ -109,18 +118,25 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
           OR cl.equipment_asset_id = $2
         )`;
 
-    const sampleQuery = `${baseIdsQuery}\n      ORDER BY c.created_at DESC\n      LIMIT 5`;
-    const rows: Array<{ id: string; name: string }> = await manager.query(sampleQuery, [tenantId, assetId]);
+    const rows: Array<{ connection_reference: string; name: string }> = await manager.query(
+      `SELECT DISTINCT c.connection_reference, c.name
+       ${match}
+       ORDER BY c.connection_reference ASC, c.name ASC
+       LIMIT $3`,
+      [tenantId, assetId, NAMED_CONNECTIONS],
+    );
 
-    const countQuery = `SELECT COUNT(*)::int AS count FROM (${baseIdsQuery.replace(', c.name, c.created_at', '')}) sub`;
-    const [{ count }] = await manager.query(countQuery, [tenantId, assetId]);
+    const [{ count }] = await manager.query(
+      `SELECT COUNT(*)::int AS count FROM (SELECT DISTINCT c.id ${match}) sub`,
+      [tenantId, assetId],
+    );
     return { count: Number(count || 0), samples: rows };
   }
 
   private buildConflictMessage(
     assetName: string,
     assignments: { count: number; samples: Array<{ name: string; environment: string }> },
-    connections: { count: number; samples: Array<{ name: string }> },
+    connections: { count: number; samples: Array<{ connection_reference?: string | null; name?: string | null }> },
   ): string {
     const parts: string[] = [];
     if (assignments.count > 0) {
@@ -129,7 +145,7 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
       parts.push(`has ${assignments.count} application assignment(s): ${list.join(', ')}${extra}`);
     }
     if (connections.count > 0) {
-      const list = connections.samples.map((c) => c.name);
+      const list = connections.samples.map((c) => connectionLabel(c)).filter(Boolean);
       const extra = connections.count > list.length ? ` +${connections.count - list.length} more` : '';
       parts.push(`is linked to ${connections.count} connection(s): ${list.join(', ')}${extra}`);
     }
@@ -138,7 +154,8 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
 
   /**
    * The refusal of an asset's delete (`ASSET_IN_USE`, with its application assignments and
-   * connections counted), or null when nothing uses it. Removing those links frees the asset.
+   * connections counted, and up to five connections named by reference and name), or null when
+   * nothing uses it. Removing those links frees the asset.
    */
   private async refusalOf(asset: Asset, tenantId: string, manager: EntityManager): Promise<RecordInUseException | null> {
     const assignments = await this.findAssignments(asset.id, tenantId, manager);
@@ -147,6 +164,7 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
     const usages: UsageCount[] = [];
     if (assignments.count > 0) usages.push({ type: 'app_assignments', total: assignments.count });
     if (connections.count > 0) usages.push({ type: 'connections', total: connections.count });
+    const namedConnections = connections.samples.map((row) => connectionLabel(row)).filter(Boolean);
     return new RecordInUseException(
       'ASSET_IN_USE',
       'asset',
@@ -155,6 +173,7 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
       this.buildConflictMessage(asset.name, assignments, connections),
       undefined,
       assignments.applications.length > 0 ? assignments.applications : undefined,
+      namedConnections.length > 0 ? namedConnections : undefined,
     );
   }
 

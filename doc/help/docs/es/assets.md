@@ -83,7 +83,7 @@ Ordenar por **Vulnerabilidades por revisar** clasifica los activos por sus vulne
 **Acciones**:
 - **Añadir activo**: abre un menú (`infrastructure:member`). **Añadir activo** crea un activo; **Añadir clúster** crea uno con el conmutador **Clúster** ya activado
 - **Importar CSV** / **Exportar CSV**: Operaciones masivas (`infrastructure:admin`). La exportación contiene los activos que muestra la lista. Consulte [Opciones de exportación](#export-options)
-- **Eliminar activo** (filas seleccionadas): Eliminar los activos seleccionados (`infrastructure:admin`). Un activo todavía asignado a aplicaciones o vinculado a conexiones no se puede eliminar: retírelo primero de ellas. Una asignación que el activo solo hereda de su clúster no lo impide. Antes de eliminar nada, la confirmación enumera los activos que se conservan, con el motivo, y lo que los demás se llevan consigo (consulte [Eliminar un clúster o un miembro](#deleting-a-cluster-or-a-member))
+- **Eliminar activo** (filas seleccionadas): Eliminar los activos seleccionados (`infrastructure:admin`). Un activo todavía asignado a aplicaciones o vinculado a conexiones no se puede eliminar. La negativa nombra las aplicaciones y hasta cinco conexiones por referencia y nombre. Retire primero el activo de esos vínculos. Una asignación que el activo solo hereda de su clúster no lo impide. Antes de eliminar nada, la confirmación enumera los activos que se conservan, con el motivo, y lo que los demás se llevan consigo (consulte [Eliminar un clúster o un miembro](#deleting-a-cluster-or-a-member))
 
 ---
 

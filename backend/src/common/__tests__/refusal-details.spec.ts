@@ -32,7 +32,29 @@ function testUnknownErrorHasNoCode() {
   assert.deepEqual(refusalDetails(new Error('boom')), {});
 }
 
-for (const test of [testRefusalKeepsItsCode, testRecordGoneIsNotFound, testDatabaseRefusalIsMapped, testUnknownErrorHasNoCode]) {
+function testAssetRefusalNamesItsConnections() {
+  const refusal = new RecordInUseException(
+    'ASSET_IN_USE',
+    'asset',
+    'par-fw-01',
+    [{ type: 'connections', total: 6 }],
+    'raw',
+    undefined,
+    ['CheeseTrack'],
+    ['CONN-1 · Paris to Gouda'],
+  );
+  assert.deepEqual(refusalDetails(refusal), {
+    code: 'ASSET_IN_USE',
+    usages: [{ type: 'connections', total: 6 }],
+    applications: ['CheeseTrack'],
+    connections: ['CONN-1 · Paris to Gouda'],
+  });
+  const body = refusal.getResponse() as { connections?: string[]; applications?: string[] };
+  assert.deepEqual(body.connections, ['CONN-1 · Paris to Gouda']);
+  assert.deepEqual(body.applications, ['CheeseTrack']);
+}
+
+for (const test of [testRefusalKeepsItsCode, testRecordGoneIsNotFound, testDatabaseRefusalIsMapped, testUnknownErrorHasNoCode, testAssetRefusalNamesItsConnections]) {
   test();
 }
 console.log('refusal-details.spec: ok');

@@ -91,11 +91,11 @@ const asset = (r: QueryRunner, t: string, name: string) =>
     [t, name],
   );
 
-async function connectionFrom(r: QueryRunner, t: string, assetId: string, name: string) {
+async function connectionFrom(r: QueryRunner, t: string, assetId: string, reference: string, name: string) {
   await r.query(
     `INSERT INTO connections (tenant_id, connection_reference, name, topology, source_asset_id)
      VALUES ($1, $2, $3, 'server_to_server', $4)`,
-    [t, `CON-${randomUUID().slice(0, 6)}`, name, assetId],
+    [t, reference, name, assetId],
   );
 }
 
@@ -104,11 +104,12 @@ async function testAssets() {
     const svc = new AssetsDeleteService(runner.manager.getRepository(Asset), noAudit);
     const free = await asset(runner, t, 'par-spare-01');
     const used = await asset(runner, t, 'par-fw-01');
-    await connectionFrom(runner, t, used, 'Paris to Gouda');
-    await connectionFrom(runner, t, used, 'Paris to Lyon');
+    await connectionFrom(runner, t, used, 'CONN-1', 'Paris to Gouda');
+    await connectionFrom(runner, t, used, 'CONN-2', 'Paris to Lyon');
+    const connections = ['CONN-1 · Paris to Gouda', 'CONN-2 · Paris to Lyon'];
 
     assert.deepEqual(await svc.deleteCheck([free, used, 'nope', randomUUID()], t, { manager: runner.manager }), {
-      refused: [{ id: used, name: 'par-fw-01', code: 'ASSET_IN_USE', usages: [{ type: 'connections', total: 2 }] }],
+      refused: [{ id: used, name: 'par-fw-01', code: 'ASSET_IN_USE', usages: [{ type: 'connections', total: 2 }], connections }],
       // Nothing the cascade would remove (memberships, relations): no warning.
       warnings: [],
     });
@@ -121,6 +122,7 @@ async function testAssets() {
     assert.deepEqual(bulk.deleted, [free]);
     assert.equal(bulk.failed[0].code, 'ASSET_IN_USE');
     assert.deepEqual(bulk.failed[0].usages, [{ type: 'connections', total: 2 }]);
+    assert.deepEqual((bulk.failed[0] as { connections?: string[] }).connections, connections);
   });
 }
 
