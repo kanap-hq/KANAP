@@ -350,6 +350,8 @@ Links are bidirectional: from the linked Application or Asset workspace, the tas
 
 **Tip**: Reserve these links for tasks that are operationally about the app or asset, not every task that mentions one in passing. Otherwise the relation becomes noise instead of signal.
 
+You see each linked record only when you can read its module: applications need the applications, assets the infrastructure. The same holds for the record a task belongs to: a project needs the projects, a budget line the budget, a contract the contracts, an incident the incidents. Otherwise the field is absent from the drawer, the list and Plaid, and the task keeps its link.
+
 ---
 
 ## Creating tasks from other workspaces
