@@ -1,6 +1,6 @@
 {
   "name": "cio-backend",
-  "version": "26.10.6",
+  "version": "26.10.7",
   "private": true,
   "license": "AGPL-3.0-only",
   "type": "commonjs",
