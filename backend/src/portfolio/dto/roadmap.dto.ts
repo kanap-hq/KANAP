@@ -3,6 +3,9 @@ import { ProjectSchedulingMode, ProjectStatus } from '../portfolio-project.entit
 
 const DATE_YMD_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
+/** A ceiling on every collection a roadmap request carries, so a huge body fails once. */
+const MAX_ROADMAP_COLLECTION = 10_000;
+
 function isValidYmd(value: string): boolean {
   if (!DATE_YMD_REGEX.test(value)) return false;
   const [y, m, d] = value.split('-').map((part) => Number(part));
@@ -21,6 +24,7 @@ const AllocationModes = ['auto', 'manual'] as const;
 
 const GenerateStatusesSchema = z.array(z.enum(RoadmapCandidateStatuses))
   .min(1)
+  .max(4)
   .default(['waiting_list', 'planned', 'in_progress', 'in_testing']);
 
 const ScheduleConstraintSchema = z.union([
@@ -71,13 +75,13 @@ const ScenarioDraftProjectSchema = z.object({
   categoryId: z.string().uuid().nullable(),
   sourceId: z.string().uuid().nullable(),
   streamId: z.string().uuid().nullable(),
-  blockerProjectIds: z.array(z.string().uuid()).default([]),
+  blockerProjectIds: z.array(z.string().uuid()).max(MAX_ROADMAP_COLLECTION).default([]),
   itLeadId: z.string().uuid().nullable(),
   businessLeadId: z.string().uuid().nullable(),
   itAllocationMode: z.enum(AllocationModes),
   businessAllocationMode: z.enum(AllocationModes),
-  itAllocations: z.array(ScenarioAllocationSchema).default([]),
-  businessAllocations: z.array(ScenarioAllocationSchema).default([]),
+  itAllocations: z.array(ScenarioAllocationSchema).max(MAX_ROADMAP_COLLECTION).default([]),
+  businessAllocations: z.array(ScenarioAllocationSchema).max(MAX_ROADMAP_COLLECTION).default([]),
   constraint: ScheduleConstraintSchema.nullable().optional(),
 }).superRefine((val, ctx) => {
   const validateManualAllocations = (
@@ -104,6 +108,7 @@ const ScenarioDraftProjectSchema = z.object({
 
 const RoadmapScenarioSchema = z.object({
   projectOverrides: z.array(ScenarioProjectOverrideSchema)
+    .max(MAX_ROADMAP_COLLECTION)
     .default([])
     .superRefine((overrides, ctx) => {
       const seen = new Set<string>();
@@ -120,6 +125,7 @@ const RoadmapScenarioSchema = z.object({
       });
     }),
   scenarioProjects: z.array(ScenarioDraftProjectSchema)
+    .max(MAX_ROADMAP_COLLECTION)
     .default([])
     .superRefine((projects, ctx) => {
       const seen = new Set<string>();
@@ -145,7 +151,7 @@ export const RoadmapGenerateSchema = z.object({
   parallelizationLimit: z.number().int().min(1).max(5).default(1),
   optimizationMode: z.enum(['priority_focused', 'completion_focused']).default('priority_focused'),
   includeAlreadyScheduled: z.boolean().default(true),
-  excludedProjectIds: z.array(z.string().uuid()).default([]),
+  excludedProjectIds: z.array(z.string().uuid()).max(MAX_ROADMAP_COLLECTION).default([]),
   contextSwitchPenaltyPct: z.number().min(0).max(0.5).default(0.05),
   contextSwitchGrace: z.number().int().min(0).max(10).default(1),
   scenario: RoadmapScenarioSchema.optional(),
@@ -171,6 +177,7 @@ export const RoadmapApplyProjectSchema = z.object({
 export const RoadmapApplySchema = z.object({
   projects: z.array(RoadmapApplyProjectSchema)
     .min(1, 'At least one project is required')
+    .max(MAX_ROADMAP_COLLECTION)
     .superRefine((projects, ctx) => {
       const seen = new Set<string>();
       projects.forEach((project, index) => {

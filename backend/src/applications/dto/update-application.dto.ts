@@ -82,7 +82,7 @@ export const UpdateApplicationSchema = z.object({
   etl_enabled: z.boolean().optional(),
 
   /** Access methods available */
-  access_methods: z.array(z.string()).optional(),
+  access_methods: z.array(z.string()).max(1000).optional(),
 
   /** Contains personally identifiable information */
   contains_pii: z.boolean().optional(),

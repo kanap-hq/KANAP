@@ -32,7 +32,8 @@ export const ListCapexQuerySchema = ListQuerySchema.extend({
       if (val === undefined || val === null || val === '') return undefined;
       const num = typeof val === 'number' ? val : parseInt(val, 10);
       return isNaN(num) ? undefined : num;
-    }),
+    })
+    .optional(),
 });
 
 export type ListCapexQueryInput = z.input<typeof ListCapexQuerySchema>;
@@ -68,7 +69,7 @@ export class ListCapexQueryDto implements ListCapexQuery {
     return ListCapexQuerySchema.parse(input);
   }
 
-  static safeParse(input: unknown): z.SafeParseReturnType<ListCapexQueryInput, ListCapexQuery> {
+  static safeParse(input: unknown): z.ZodSafeParseResult<ListCapexQuery> {
     return ListCapexQuerySchema.safeParse(input);
   }
 

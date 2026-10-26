@@ -2,6 +2,7 @@ import { classificationDriftSnapshot } from '../providers/ticket-classification'
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { In } from 'typeorm';
 import { z } from 'zod';
+import { legacyFlattenError } from '../../../common/zod-error';
 import { KnowledgeService } from '../../../knowledge/knowledge.service';
 import { BraveSearchResult, BraveSearchService } from '../../web-search/brave-search.service';
 import { AiEntityService } from '../../ai-entity.service';
@@ -288,13 +289,13 @@ const AutomationDryRunInputSchema = z.object({
   provider_key: AutomationProviderKeySchema,
   job_key: z.string().trim().min(1).max(128),
   target: AutomationTargetInputSchema,
-  variables: z.record(z.unknown()).default({}),
+  variables: z.record(z.string(), z.unknown()).default({}),
 }).strict();
 const AutomationLaunchPrepareInputSchema = z.object({
   provider_key: AutomationProviderKeySchema,
   job_key: z.string().trim().min(1).max(128),
   target: AutomationTargetInputSchema,
-  variables: z.record(z.unknown()).default({}),
+  variables: z.record(z.string(), z.unknown()).default({}),
   evidence_ids: z.array(z.string().trim().min(1)).max(100).optional(),
   recommendation_id: z.string().trim().min(1).optional(),
   decision_id: z.string().trim().min(1).optional(),
@@ -2321,9 +2322,9 @@ export class AiCapabilityRegistry {
     rawInput: unknown,
   ): Promise<unknown> {
     const { policy, knowledge } = this.knowledgeServices();
-    const parsed = InternalKnowledgeSearchInputSchema.safeParse(rawInput);
+    const parsed = InternalKnowledgeSearchInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     await policy.assertKnowledgeReadAccess(context, context.manager);
     const result = await knowledge.search(
@@ -2369,9 +2370,9 @@ export class AiCapabilityRegistry {
     if (!this.braveSearch) {
       throw new BadRequestException('Web search capability is not configured.');
     }
-    const parsed = InternalWebSearchInputSchema.safeParse(rawInput);
+    const parsed = InternalWebSearchInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     // BraveSearchService.search() sanitises the query to public-only terms (stripping UUIDs,
     // PRJ/REQ/DOC/T-N refs, emails, internal hostnames) and throws if nothing public-meaningful
@@ -2395,9 +2396,9 @@ export class AiCapabilityRegistry {
     rawInput: unknown,
   ): Promise<unknown> {
     const { policy, knowledge } = this.knowledgeServices();
-    const parsed = InternalKnowledgeDocumentInputSchema.safeParse(rawInput);
+    const parsed = InternalKnowledgeDocumentInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     await policy.assertKnowledgeReadAccess(context, context.manager);
     const document = await knowledge.get(parsed.data.document_id, { manager: context.manager, userId: context.userId });
@@ -2458,9 +2459,9 @@ export class AiCapabilityRegistry {
     if (!this.policy || !this.queryExecutor) {
       return this.entityCapabilityUnavailable();
     }
-    const parsed = InternalEntitySearchInputSchema.safeParse(rawInput);
+    const parsed = InternalEntitySearchInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     await this.policy.assertEntityTypeReadAccess(context, parsed.data.entity_type, context.manager);
     const result = await this.queryExecutor.execute(context, {
@@ -2487,9 +2488,9 @@ export class AiCapabilityRegistry {
     if (!this.policy || !this.queryExecutor) {
       return this.entityCapabilityUnavailable();
     }
-    const parsed = InternalEntityDetailInputSchema.safeParse(rawInput);
+    const parsed = InternalEntityDetailInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     await this.policy.assertEntityTypeReadAccess(context, parsed.data.entity_type, context.manager);
     const result = await this.queryExecutor.executeDetail(context, {
@@ -2515,9 +2516,9 @@ export class AiCapabilityRegistry {
     if (!this.policy || !this.entityService) {
       return this.entityCapabilityUnavailable();
     }
-    const parsed = InternalEntityContextInputSchema.safeParse(rawInput);
+    const parsed = InternalEntityContextInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     // getEntityContext asserts the same permission internally; asserting here first keeps
     // the handler pattern uniform with the other internal capabilities.
@@ -2539,9 +2540,9 @@ export class AiCapabilityRegistry {
     context: AiExecutionContextWithManager,
     rawInput: unknown,
   ): Promise<unknown> {
-    const parsed = ExecuteApprovedPreviewInputSchema.safeParse(rawInput);
+    const parsed = ExecuteApprovedPreviewInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
 
     const actions = [];
@@ -3063,9 +3064,9 @@ export class AiCapabilityRegistry {
     rawInput: unknown,
     execution: CapabilityExecutionContext,
   ): Promise<unknown> {
-    const parsed = PrepareClassificationUpdateInputSchema.safeParse(rawInput);
+    const parsed = PrepareClassificationUpdateInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const providerKeyValue = parsed.data.provider_key ?? 'mock';
     const provider = await this.providers.ticketing(context, providerKeyValue);
@@ -3139,9 +3140,9 @@ export class AiCapabilityRegistry {
     context: AiExecutionContextWithManager,
     rawInput: unknown,
   ): Promise<unknown> {
-    const parsed = AddApprovedClassificationUpdateInputSchema.safeParse(rawInput);
+    const parsed = AddApprovedClassificationUpdateInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const action = await this.actions.findProviderActionForExecution(context, parsed.data.action_request_id);
     this.actions.verifyProviderActionIntegrity(action);
@@ -3193,9 +3194,9 @@ export class AiCapabilityRegistry {
     rawInput: unknown,
     execution: CapabilityExecutionContext,
   ): Promise<unknown> {
-    const parsed = PrepareStatusUpdateInputSchema.safeParse(rawInput);
+    const parsed = PrepareStatusUpdateInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const providerKeyValue = parsed.data.provider_key ?? 'mock';
     const provider = await this.providers.ticketing(context, providerKeyValue);
@@ -3270,9 +3271,9 @@ export class AiCapabilityRegistry {
     context: AiExecutionContextWithManager,
     rawInput: unknown,
   ): Promise<unknown> {
-    const parsed = AddApprovedStatusUpdateInputSchema.safeParse(rawInput);
+    const parsed = AddApprovedStatusUpdateInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const action = await this.actions.findProviderActionForExecution(context, parsed.data.action_request_id);
     this.actions.verifyProviderActionIntegrity(action);
@@ -3327,9 +3328,9 @@ export class AiCapabilityRegistry {
     rawInput: unknown,
     execution: CapabilityExecutionContext,
   ): Promise<unknown> {
-    const parsed = PrepareAssignmentUpdateInputSchema.safeParse(rawInput);
+    const parsed = PrepareAssignmentUpdateInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const providerKeyValue = parsed.data.provider_key ?? 'mock';
     const provider = await this.providers.ticketing(context, providerKeyValue);
@@ -3403,9 +3404,9 @@ export class AiCapabilityRegistry {
     context: AiExecutionContextWithManager,
     rawInput: unknown,
   ): Promise<unknown> {
-    const parsed = AddApprovedAssignmentUpdateInputSchema.safeParse(rawInput);
+    const parsed = AddApprovedAssignmentUpdateInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const action = await this.actions.findProviderActionForExecution(context, parsed.data.action_request_id);
     this.actions.verifyProviderActionIntegrity(action);
@@ -3464,9 +3465,9 @@ export class AiCapabilityRegistry {
     rawInput: unknown,
     execution: CapabilityExecutionContext,
   ): Promise<unknown> {
-    const parsed = PrepareParticipantUpdateInputSchema.safeParse(rawInput);
+    const parsed = PrepareParticipantUpdateInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const providerKeyValue = parsed.data.provider_key ?? 'mock';
     const provider = await this.providers.ticketing(context, providerKeyValue);
@@ -3542,9 +3543,9 @@ export class AiCapabilityRegistry {
     context: AiExecutionContextWithManager,
     rawInput: unknown,
   ): Promise<unknown> {
-    const parsed = AddApprovedParticipantUpdateInputSchema.safeParse(rawInput);
+    const parsed = AddApprovedParticipantUpdateInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const action = await this.actions.findProviderActionForExecution(context, parsed.data.action_request_id);
     this.actions.verifyProviderActionIntegrity(action);
@@ -3596,9 +3597,9 @@ export class AiCapabilityRegistry {
     rawInput: unknown,
     execution: CapabilityExecutionContext,
   ): Promise<unknown> {
-    const parsed = PrepareInternalNoteInputSchema.safeParse(rawInput);
+    const parsed = PrepareInternalNoteInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const providerKeyValue = parsed.data.provider_key ?? 'mock';
     const ticketId = parsed.data.ticket_id;
@@ -3690,9 +3691,9 @@ export class AiCapabilityRegistry {
     context: AiExecutionContextWithManager,
     rawInput: unknown,
   ): Promise<unknown> {
-    const parsed = AddApprovedInternalNoteInputSchema.safeParse(rawInput);
+    const parsed = AddApprovedInternalNoteInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const action = await this.actions.findProviderActionForExecution(context, parsed.data.action_request_id);
     this.actions.verifyProviderActionIntegrity(action);
@@ -3740,9 +3741,9 @@ export class AiCapabilityRegistry {
     rawInput: unknown,
     execution: CapabilityExecutionContext,
   ): Promise<unknown> {
-    const parsed = PreparePublicReplyInputSchema.safeParse(rawInput);
+    const parsed = PreparePublicReplyInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const providerKeyValue = parsed.data.provider_key ?? 'mock';
     const ticketId = parsed.data.ticket_id;
@@ -3815,9 +3816,9 @@ export class AiCapabilityRegistry {
     context: AiExecutionContextWithManager,
     rawInput: unknown,
   ): Promise<unknown> {
-    const parsed = AddApprovedPublicReplyInputSchema.safeParse(rawInput);
+    const parsed = AddApprovedPublicReplyInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const action = await this.actions.findProviderActionForExecution(context, parsed.data.action_request_id);
     this.actions.verifyProviderActionIntegrity(action);
@@ -4003,9 +4004,9 @@ export class AiCapabilityRegistry {
     context: AiExecutionContextWithManager,
     rawInput: unknown,
   ): Promise<unknown> {
-    const parsed = AutomationListInputSchema.safeParse(rawInput);
+    const parsed = AutomationListInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const providerKeyValue = parsed.data.provider_key ?? 'mock';
     const jobs = await this.automationCatalog.listAllowedJobs(context, providerKeyValue);
@@ -4017,9 +4018,9 @@ export class AiCapabilityRegistry {
     context: AiExecutionContextWithManager,
     rawInput: unknown,
   ): Promise<unknown> {
-    const parsed = AutomationJobInputSchema.safeParse(rawInput);
+    const parsed = AutomationJobInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const providerKeyValue = parsed.data.provider_key ?? 'mock';
     const job = await this.automationCatalog.getCatalogJob(context, providerKeyValue, parsed.data.job_key);
@@ -4031,9 +4032,9 @@ export class AiCapabilityRegistry {
     context: AiExecutionContextWithManager,
     rawInput: unknown,
   ): Promise<unknown> {
-    const parsed = AutomationDryRunInputSchema.safeParse(rawInput);
+    const parsed = AutomationDryRunInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const providerKeyValue = parsed.data.provider_key ?? 'mock';
     const job = await this.automationCatalog.getCatalogJob(context, providerKeyValue, parsed.data.job_key);
@@ -4058,9 +4059,9 @@ export class AiCapabilityRegistry {
     rawInput: unknown,
     execution: CapabilityExecutionContext,
   ): Promise<unknown> {
-    const parsed = AutomationLaunchPrepareInputSchema.safeParse(rawInput);
+    const parsed = AutomationLaunchPrepareInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const providerKeyValue = parsed.data.provider_key ?? 'mock';
     const job = await this.automationCatalog.getCatalogJob(context, providerKeyValue, parsed.data.job_key);
@@ -4160,9 +4161,9 @@ export class AiCapabilityRegistry {
     context: AiExecutionContextWithManager,
     rawInput: unknown,
   ): Promise<unknown> {
-    const parsed = AutomationLaunchApprovedInputSchema.safeParse(rawInput);
+    const parsed = AutomationLaunchApprovedInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const action = await this.actions.findProviderActionForExecution(context, parsed.data.action_request_id);
     this.actions.verifyProviderActionIntegrity(action);
@@ -4235,9 +4236,9 @@ export class AiCapabilityRegistry {
     actionPayload: AutomationLaunchActionPayload;
     jobRunId: string;
   }> {
-    const parsed = AutomationJobRunInputSchema.safeParse(rawInput);
+    const parsed = AutomationJobRunInputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
-      throw new BadRequestException(parsed.error.flatten());
+      throw new BadRequestException(legacyFlattenError(parsed.error));
     }
     const action = await this.actions.findProviderActionForExecution(context, parsed.data.action_request_id);
     this.actions.verifyProviderActionIntegrity(action);

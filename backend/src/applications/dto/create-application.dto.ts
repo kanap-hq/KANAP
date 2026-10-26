@@ -112,7 +112,7 @@ export const CreateApplicationSchema = z.object({
   etl_enabled: z.boolean().optional().default(false),
 
   /** Access methods available */
-  access_methods: z.array(z.string()).optional().default([]),
+  access_methods: z.array(z.string()).max(1000).optional().default([]),
 
   /** Contains personally identifiable information */
   contains_pii: z.boolean().optional().default(false),

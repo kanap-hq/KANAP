@@ -158,7 +158,7 @@ function plannerActionSchemaFor(actionVocabulary: readonly string[]) {
     verbatim_ref: z.string().trim().min(1).max(120).nullable().optional(),
     body: z.string().trim().min(1).max(12000).nullable().optional(),
     transition_key: z.string().trim().min(1).max(80).nullable().optional(),
-    proposed: z.record(z.string().trim().min(1).max(256)).nullable().optional(),
+    proposed: z.record(z.string(), z.string().trim().min(1).max(256)).nullable().optional(),
     target: RoutingTargetSchema.nullable().optional(),
     operation: z.enum(['add_observer', 'remove_observer', 'set_observers']).nullable().optional(),
     participants: z.array(RoutingTargetSchema).max(20).nullable().optional(),

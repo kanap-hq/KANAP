@@ -49,7 +49,8 @@ export const ListQuerySchema = z.object({
       } catch {
         return undefined;
       }
-    }),
+    })
+    .optional(),
 
   /** Comma-separated list of relations to include */
   include: z
@@ -106,7 +107,7 @@ export class ListQueryDto implements ListQuery {
   /**
    * Safely parse query parameters, returning success/error result.
    */
-  static safeParse(input: unknown): z.SafeParseReturnType<ListQueryInput, ListQuery> {
+  static safeParse(input: unknown): z.ZodSafeParseResult<ListQuery> {
     return ListQuerySchema.safeParse(input);
   }
 
