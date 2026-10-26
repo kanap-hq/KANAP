@@ -109,13 +109,58 @@ export function withAnalyticsAxisFields(registry: AiEntityFilterRegistry, axes: 
   return { ...registry, fields, sortFields };
 }
 
+/** Whether the caller reads a family (`AiPolicyService.canReadEntityType`). */
+export type AiReadProbe = (entityType: AiQueryEntityType) => Promise<boolean>;
+
+/**
+ * Fields that count another module's records, with that module: listed, filtered, sorted and
+ * aggregated only for a caller who reads it, as on the record's page (the application Relations tab).
+ */
+const LINKED_COUNT_FIELDS: Partial<Record<AiQueryEntityType, Record<string, AiQueryEntityType>>> = {
+  applications: { spend_count: 'spend_items', capex_count: 'capex_items', contracts_count: 'contracts' },
+};
+
+/** The registry without the linked counts of the modules the caller does not read. */
+export async function withoutUnreadableLinkedCounts(
+  registry: AiEntityFilterRegistry,
+  canRead: AiReadProbe,
+): Promise<AiEntityFilterRegistry> {
+  const gated = LINKED_COUNT_FIELDS[registry.entityType];
+  if (!gated) return registry;
+  const hidden = new Set<string>();
+  for (const [field, entityType] of Object.entries(gated)) {
+    if (!(await canRead(entityType))) hidden.add(field);
+  }
+  if (!hidden.size) return registry;
+  const kept = <T>(record: Record<string, T>) => Object.fromEntries(Object.entries(record).filter(([key]) => !hidden.has(key)));
+  return {
+    ...registry,
+    fields: kept(registry.fields),
+    sortFields: kept(registry.sortFields),
+    aggregate: {
+      ...registry.aggregate,
+      ...(registry.aggregate.metricFields ? { metricFields: kept(registry.aggregate.metricFields) } : {}),
+    },
+  };
+}
+
 /**
  * The registry of one entity type for the tenant of the call: OPEX and CAPEX
  * gain the fields of the analytics dimensions that apply to their lines (one
  * tenant-predicated query), every other type is the static registry. Resolved once per tool call and passed
- * down; `getAiEntityRegistry` stays for static callers.
+ * down; `getAiEntityRegistry` stays for static callers. With `canRead` (every tool call), the
+ * counts of the modules the caller does not read are left out (`withoutUnreadableLinkedCounts`).
  */
 export async function resolveAiEntityRegistry(
+  context: { manager: EntityManager; tenantId: string },
+  entityType: AiQueryEntityType,
+  canRead?: AiReadProbe,
+): Promise<AiEntityFilterRegistry> {
+  const registry = await tenantRegistry(context, entityType);
+  return canRead ? withoutUnreadableLinkedCounts(registry, canRead) : registry;
+}
+
+async function tenantRegistry(
   context: { manager: EntityManager; tenantId: string },
   entityType: AiQueryEntityType,
 ): Promise<AiEntityFilterRegistry> {

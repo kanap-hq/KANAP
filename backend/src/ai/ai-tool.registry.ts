@@ -317,7 +317,8 @@ export class AiToolRegistry {
           execute: async (context, input) => {
             await this.policy.assertEntityTypeReadAccess(context, input.entity_type, context.manager);
             // OPEX and CAPEX list the tenant's analytics dimensions (`analytics:<code>`) among their fields.
-            const description = describeAiEntityFilters(input.entity_type, await resolveAiEntityRegistry(context, input.entity_type));
+            const description = describeAiEntityFilters(input.entity_type, await resolveAiEntityRegistry(context, input.entity_type, (entityType) =>
+              this.policy.canReadEntityType(context, entityType, context.manager)));
             if (input.entity_type !== 'spend_items' && input.entity_type !== 'capex_items') return description;
             // Amount field descriptions are positional; the tenant's column names come with them (MCP clients have no system prompt).
             return { ...description, budget_columns: budgetColumnsAiContext(await readBudgetColumns(context.manager, context.tenantId)) };

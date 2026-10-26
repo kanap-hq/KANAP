@@ -58,7 +58,7 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
-import { analyticsAxisFields, resolveAiEntityRegistry } from './registries';
+import { AiReadProbe, analyticsAxisFields, resolveAiEntityRegistry } from './registries';
 import { budgetFteFields } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
 import { entityNotFound, isUuid, resolveAiEntityReference } from '../ai-entity-reference.util';
@@ -117,6 +117,31 @@ function vulnerabilityCountsMetadata(row: any): { open_vulnerabilities: number |
 /** The detail's counts, under the assistant's field names (shared module, one id). */
 function vulnerabilityCountsOf(counts: VulnerabilityReachCounts | undefined) {
   return { open_vulnerabilities: counts?.open ?? null, severe_vulnerabilities: counts?.severe ?? null };
+}
+
+/** The modules whose linked records a detail lists, each on its read right (`readableLinks`). */
+type AiReadableLinks = { budget: boolean; contracts: boolean; projects: boolean; applications: boolean };
+
+/**
+ * An application's relation counts (`relationCounts`) without the modules the caller does not
+ * read: null, never 0, and left out of `total`.
+ */
+function readableRelationCounts<T extends { opex: number; capex: number; contracts: number; projects: number; total: number }>(
+  counts: T,
+  reads: AiReadableLinks,
+): Omit<T, 'opex' | 'capex' | 'contracts' | 'projects'> & { opex: number | null; capex: number | null; contracts: number | null; projects: number | null } {
+  const unread = (shown: boolean, value: number) => (shown ? 0 : value);
+  return {
+    ...counts,
+    opex: reads.budget ? counts.opex : null,
+    capex: reads.budget ? counts.capex : null,
+    contracts: reads.contracts ? counts.contracts : null,
+    projects: reads.projects ? counts.projects : null,
+    total: counts.total
+      - unread(reads.budget, counts.opex + counts.capex)
+      - unread(reads.contracts, counts.contracts)
+      - unread(reads.projects, counts.projects),
+  };
 }
 
 function numericScalar(value: unknown): number | null {
@@ -675,7 +700,9 @@ export class AiQueryExecutor {
     });
   }
 
-  private mapApplication(row: any): AiEntitySummaryDto {
+  /** With the list's `registry`, the counts it leaves out (`withoutUnreadableLinkedCounts`) are null. */
+  private mapApplication(row: any, registry?: AiEntityFilterRegistry): AiEntitySummaryDto {
+    const count = (field: string) => (registry && !registry.fields[field] ? null : numericScalar(row[field]));
     return toEntitySummary('applications', {
       id: row.id,
       reference: row.sequential_id ?? null,
@@ -741,9 +768,9 @@ export class AiQueryExecutor {
         data_residency: scalar(Array.isArray(row.data_residency)
           ? row.data_residency.map((entry: any) => typeof entry === 'string' ? entry : entry?.country_iso).filter(Boolean).join(', ')
           : null),
-        spend_count: numericScalar(row.spend_count),
-        capex_count: numericScalar(row.capex_count),
-        contracts_count: numericScalar(row.contracts_count),
+        spend_count: count('spend_count'),
+        capex_count: count('capex_count'),
+        contracts_count: count('contracts_count'),
         suites_count: numericScalar(row.suites_count),
         components_count: numericScalar(row.components_count),
         ...vulnerabilityCountsMetadata(row),
@@ -1268,7 +1295,7 @@ export class AiQueryExecutor {
       scope?: AiQueryScope;
     },
   ): Promise<AiQueryResult> {
-    const registry = await resolveAiEntityRegistry(context, input.entity_type);
+    const registry = await resolveAiEntityRegistry(context, input.entity_type, this.readProbe(context));
     const sort = resolveAiQuerySort(registry, input.sort);
     const result = await this.executeQuery(context, input, registry, sort);
     const requestedLimit = Math.floor(Number(input.limit));
@@ -1430,7 +1457,7 @@ export class AiQueryExecutor {
       const returned = Array.isArray(result.items) ? result.items.length : 0;
       const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapApplication(row)),
+        items: (result.items || []).map((row: any) => this.mapApplication(row, registry)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -2145,6 +2172,7 @@ export class AiQueryExecutor {
       { manager: context.manager },
     );
     const summary = withDetailAiKeys(row, registry);
+    const reads = await this.readableLinks(context);
 
     const [
       financialVersions,
@@ -2166,9 +2194,9 @@ export class AiQueryExecutor {
         foreignKey: 'spend_item_id',
         id: spendItemId,
       }).catch(() => []),
-      this.spendItems.listApplications(spendItemId, { manager: context.manager }).catch(() => ({ items: [] })),
-      this.spendItems.listProjects(spendItemId, { manager: context.manager }).catch(() => ({ items: [] })),
-      this.contracts.listContractsForSpendItem(spendItemId, { manager: context.manager }).catch(() => ({ items: [] })),
+      reads.applications ? this.spendItems.listApplications(spendItemId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
+      reads.projects ? this.spendItems.listProjects(spendItemId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
+      reads.contracts ? this.contracts.listContractsForSpendItem(spendItemId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
       this.spendItems.listLinks(spendItemId, { manager: context.manager }).catch(() => []),
       this.spendItems.listAttachments(spendItemId, { manager: context.manager }).catch(() => []),
     ]);
@@ -2192,6 +2220,7 @@ export class AiQueryExecutor {
     registry: AiEntityFilterRegistry,
   ): Promise<Record<string, unknown>> {
     const anchorYear = new Date().getFullYear();
+    const reads = await this.readableLinks(context);
     const [[row], financialVersions, contacts, linkedApplications, linkedProjects, linkedContracts] = await Promise.all([
       this.capexItems.summaryRowsByIds(
         [capexItemId],
@@ -2216,9 +2245,9 @@ export class AiQueryExecutor {
         foreignKey: 'spend_item_id',
         id: capexItemId,
       }).catch(() => []),
-      this.capexItems.listApplications(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
-      this.capexItems.listProjects(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
-      this.contracts.listContractsForCapexItem(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })),
+      reads.applications ? this.capexItems.listApplications(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
+      reads.projects ? this.capexItems.listProjects(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
+      reads.contracts ? this.contracts.listContractsForCapexItem(capexItemId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
     ]);
     const summary = withDetailAiKeys(row, registry);
 
@@ -2263,13 +2292,14 @@ export class AiQueryExecutor {
       email: names.owner_email,
     });
 
+    const reads = await this.readableLinks(context);
     const [contacts, linkedCapexItems, tasks] = await Promise.all([
       this.loadLinkedContacts(context, {
         table: 'contract_contacts',
         foreignKey: 'contract_id',
         id: contractId,
       }).catch(() => []),
-      this.contracts.listLinkedCapexItems(contractId, { manager: context.manager }).catch(() => ({ items: [] })),
+      reads.budget ? this.contracts.listLinkedCapexItems(contractId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
       this.contracts.listTasks(contractId, { manager: context.manager }).catch(() => []),
     ]);
 
@@ -2283,8 +2313,30 @@ export class AiQueryExecutor {
           }
         : null,
       contacts,
+      // The OPEX lines come with the contract (`contracts.get`): both natures need the budget right.
+      ...(reads.budget ? {} : { linked_spend_items: null }),
       linked_capex_items: linkedCapexItems,
       tasks,
+    };
+  }
+
+  /** Whether the caller reads a family; nothing without the policy. */
+  private readProbe(context: AiExecutionContextWithManager): AiReadProbe {
+    return async (entityType) => !!(await this.policy?.canReadEntityType(context, entityType, context.manager));
+  }
+
+  /**
+   * The linked modules a detail may list, each on its own read right, as on the record's page
+   * (the application Relations tab). Without it, the list and its count are null, never 0.
+   */
+  private async readableLinks(context: AiExecutionContextWithManager): Promise<AiReadableLinks> {
+    const reads = this.readProbe(context);
+    // One after the other: the probes share the request's connection.
+    return {
+      budget: await reads('spend_items'),
+      contracts: await reads('contracts'),
+      projects: await reads('projects'),
+      applications: await reads('applications'),
     };
   }
 
@@ -2353,12 +2405,14 @@ export class AiQueryExecutor {
         include: 'instances,deployments,support',
         accessScope,
       });
-      row.relation_counts = await this.applications.relationCounts(entityId, {
+      const reads = await this.readableLinks(context);
+      const counts = await this.applications.relationCounts(entityId, {
         manager: context.manager,
         tenantId: context.tenantId,
         accessScope,
         projectAccessScope: await resolveAiParticipationAccessScope(context, 'projects'),
       }).catch(() => null);
+      row.relation_counts = counts ? readableRelationCounts(counts, reads) : null;
       if (row.supplier_id) {
         const supplierRows = await context.manager.query(
           `SELECT name FROM suppliers WHERE id = $1 AND tenant_id = $2 LIMIT 1`,
@@ -2371,27 +2425,40 @@ export class AiQueryExecutor {
         row.capex_count = row.relation_counts.capex;
         row.contracts_count = row.relation_counts.contracts;
       }
-      row.linked_spend_items = await this.applications.listLinkedSpendItems(entityId, {
-        manager: context.manager,
-        tenantId: context.tenantId,
-        accessScope,
-      }).catch(() => ({ items: [] }));
-      row.linked_capex_items = await this.applications.listLinkedCapexItems(entityId, {
-        manager: context.manager,
-        tenantId: context.tenantId,
-        accessScope,
-      }).catch(() => ({ items: [] }));
-      row.linked_contracts = await this.applications.listLinkedContracts(entityId, {
-        manager: context.manager,
-        tenantId: context.tenantId,
-        accessScope,
-      }).catch(() => ({ items: [] }));
-      row.projects = await this.applications.listProjects(entityId, {
-        manager: context.manager,
-        tenantId: context.tenantId,
-        accessScope,
-        projectAccessScope: await resolveAiParticipationAccessScope(context, 'projects'),
-      }).catch(() => ({ items: [] }));
+      if (!reads.budget) {
+        row.spend_count = null;
+        row.capex_count = null;
+      }
+      if (!reads.contracts) row.contracts_count = null;
+      row.linked_spend_items = reads.budget
+        ? await this.applications.listLinkedSpendItems(entityId, {
+          manager: context.manager,
+          tenantId: context.tenantId,
+          accessScope,
+        }).catch(() => ({ items: [] }))
+        : null;
+      row.linked_capex_items = reads.budget
+        ? await this.applications.listLinkedCapexItems(entityId, {
+          manager: context.manager,
+          tenantId: context.tenantId,
+          accessScope,
+        }).catch(() => ({ items: [] }))
+        : null;
+      row.linked_contracts = reads.contracts
+        ? await this.applications.listLinkedContracts(entityId, {
+          manager: context.manager,
+          tenantId: context.tenantId,
+          accessScope,
+        }).catch(() => ({ items: [] }))
+        : null;
+      row.projects = reads.projects
+        ? await this.applications.listProjects(entityId, {
+          manager: context.manager,
+          tenantId: context.tenantId,
+          accessScope,
+          projectAccessScope: await resolveAiParticipationAccessScope(context, 'projects'),
+        }).catch(() => ({ items: [] }))
+        : null;
       row.suites = await this.applications.listSuites(entityId, {
         manager: context.manager,
         tenantId: context.tenantId,
@@ -2412,10 +2479,19 @@ export class AiQueryExecutor {
       row.support_info = await this.assets.getSupportInfo(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => null);
       row.support_contacts = await this.assets.listSupportContacts(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       row.relations = await this.assets.listRelations(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ outgoing: [], incoming: [] }));
-      row.linked_spend_items = await this.assets.listLinkedSpendItems(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }));
-      row.linked_capex_items = await this.assets.listLinkedCapexItems(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }));
-      row.linked_contracts = await this.assets.listLinkedContracts(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }));
-      row.projects = await this.assets.listProjects(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }));
+      const reads = await this.readableLinks(context);
+      row.linked_spend_items = reads.budget
+        ? await this.assets.listLinkedSpendItems(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }))
+        : null;
+      row.linked_capex_items = reads.budget
+        ? await this.assets.listLinkedCapexItems(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }))
+        : null;
+      row.linked_contracts = reads.contracts
+        ? await this.assets.listLinkedContracts(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }))
+        : null;
+      row.projects = reads.projects
+        ? await this.assets.listProjects(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => ({ items: [] }))
+        : null;
       row.cluster_members = await this.assets.listClusterMembers(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       row.clusters = await this.assets.listClustersForAsset(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       row.links = await this.assets.listLinks(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
@@ -2428,7 +2504,7 @@ export class AiQueryExecutor {
       const row: any = await this.spendItems.get(entityId, { manager: context.manager });
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Spend item not found.');
       await this.withoutHiddenAnalyticsValues(context, row, 'opex');
-      const registry = await resolveAiEntityRegistry(context, entityType);
+      const registry = await resolveAiEntityRegistry(context, entityType, this.readProbe(context));
       // The id, not the reference the caller may have given (`get` accepts both).
       Object.assign(row, await this.loadSpendItemDeepDetail(context, row.id as string, registry));
       return this.toDetailResult(this.mapSpendItem(row, registry), row);
@@ -2441,7 +2517,7 @@ export class AiQueryExecutor {
       const capexItemId = row.id as string;
       await this.withoutHiddenAnalyticsValues(context, row, 'capex');
       await this.withCapexDescriptions(context, [row]);
-      const registry = await resolveAiEntityRegistry(context, entityType);
+      const registry = await resolveAiEntityRegistry(context, entityType, this.readProbe(context));
       Object.assign(row, await this.loadCapexItemDeepDetail(context, capexItemId, registry));
       row.links = await this.capexItems.listLinks(capexItemId, { manager: context.manager }).catch(() => []);
       row.attachments = await this.capexItems.listAttachments(capexItemId, { manager: context.manager }).catch(() => []);
@@ -2789,7 +2865,7 @@ export class AiQueryExecutor {
       fields: string[];
     },
   ): Promise<AiFilterValuesResult> {
-    const registry = await resolveAiEntityRegistry(context, input.entity_type);
+    const registry = await resolveAiEntityRegistry(context, input.entity_type, this.readProbe(context));
     const requestedFields = Array.from(
       new Set(
         (input.fields || [])

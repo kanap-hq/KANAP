@@ -570,6 +570,8 @@ async function testAiCapexDetail() {
     args[6] = { listContractsForCapexItem: async () => ({ items: [] }) };
     args[17] = svc;
     args[23] = realAllocationCalculator();
+    // A caller who reads every module: the linked applications need the applications right.
+    args[24] = { canReadEntityType: async () => true };
     // By reference: the detail reads the line under its id.
     const detail: any = await new (AiQueryExecutor as any)(...args).executeDetail(aiContext(runner, tenantId), {
       entity_type: 'capex_items',
