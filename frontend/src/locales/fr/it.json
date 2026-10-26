@@ -903,7 +903,7 @@
       "more": "+{{count}}",
       "moreItems": "Et {{count}} de plus",
       "trustPeer": {
-        "contains": "Fait tourner {{asset}} ({{zone}})",
+        "contains": "Héberge {{asset}} ({{zone}})",
         "cluster": "Membre du cluster {{asset}} ({{zone}})"
       },
       "selection": {

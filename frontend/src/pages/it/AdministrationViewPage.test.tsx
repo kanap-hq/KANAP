@@ -1,4 +1,4 @@
-import '../../i18n';
+import { changeAppLanguage } from '../../i18n';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -398,6 +398,19 @@ describe('AdministrationViewPage', () => {
     expect(column('control').autoHeight).toBeUndefined();
     fireEvent.mouseOver(within(cell('control', ROW)).getByText('Less sensitive host'));
     expect((await screen.findByRole('tooltip')).textContent).toBe('Runs AST-7 dc1 (Niveau 0)Member of cluster AST-5 vsphere (Niveau 0)');
+  });
+
+  it('names a host in French as Héberge', async () => {
+    await changeAppLanguage('fr');
+    const view = renderPage();
+    try {
+      await screen.findByRole('group', { name: "Zones d'administration" });
+      fireEvent.mouseOver(within(cell('control', ROW)).getByText('Hôte moins sensible'));
+      expect((await screen.findByRole('tooltip')).textContent).toBe('Héberge AST-7 dc1 (Niveau 0)Membre du cluster AST-5 vsphere (Niveau 0)');
+    } finally {
+      view.unmount();
+      await changeAppLanguage('en');
+    }
   });
 
   it('counts three controls on one line and names each in the tooltip', async () => {
