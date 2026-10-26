@@ -30,6 +30,7 @@ import { CoaField, CountryField, CurrencyField, defaultCoaFor } from './CompanyF
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import CompanyMetricsTab from './CompanyMetricsTab';
 import CompanyAccessTab from './CompanyAccessTab';
+import { displayedCompanyCity } from './companyCity';
 
 type TabKey = 'overview' | 'details' | 'access';
 const TAB_KEYS: TabKey[] = ['overview', 'details', 'access'];
@@ -382,7 +383,7 @@ export default function CompanyWorkspacePage() {
       label={row.label}
       placeholder={row.placeholder}
       required={row.required}
-      value={data?.[row.field] ?? ''}
+      value={row.field === 'city' ? displayedCompanyCity(data?.[row.field]) : (data?.[row.field] ?? '')}
       disabled={disabled}
       error={errors[row.field]}
       onCommit={(next) => commitText(row.field, next)}
