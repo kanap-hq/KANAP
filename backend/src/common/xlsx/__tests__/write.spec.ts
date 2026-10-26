@@ -186,6 +186,26 @@ function linksAndParts() {
   assert.ok(!sheetXml(one([['a', 'b']])).includes('hyperlinks') && !new AdmZip(one([['a', 'b']])).getEntry('xl/worksheets/_rels/sheet1.xml.rels'), 'no links, no part');
   assert.ok(xml.includes('<hyperlink ref="C2"') && sheetXml(write([{ name: 'S', headers: ['A', 'B'], rows: [['a', 'b']], links: ['/p'] }])).includes('ref="B2"'), 'default link column is 2');
 
+  // An absolute link keeps its own host; the target is URI-encoded, an existing %xx kept.
+  assert.ok(rels.includes('Target="https://other.example.com/z"'), 'no base in front of an absolute link');
+  const encoded = text(
+    write([{ name: 'S', headers: ['A', 'B'], rows: [['a', 'b'], ['a', 'b']], links: ['/docs/Café plan', 'https://x.example/a%20b c'] }], 'en', 'https://app.example.com'),
+    'xl/worksheets/_rels/sheet1.xml.rels',
+  );
+  assert.ok(encoded.includes('Target="https://app.example.com/docs/Caf%C3%A9%20plan"'), 'space and accent encoded');
+  assert.ok(encoded.includes('Target="https://x.example/a%20b%20c"'), 'an existing %20 is not encoded twice');
+
+  // Excel's limits: a target over 2,079 characters, or a link past 65,530 in a sheet, is left out; the cell stays.
+  const long = '/p/' + 'x'.repeat(2079 - 3);
+  const tooLong = write([{ name: 'S', headers: ['A', 'B'], rows: [['a', 'b'], ['a', 'b']], links: [long, `${long}y`] }]);
+  assert.ok(sheetXml(tooLong).includes('<hyperlinks><hyperlink ref="B2" r:id="rId1"/></hyperlinks>'), 'only the link within 2,079 characters');
+  assert.ok(sheetXml(tooLong).includes('<c r="B3" t="inlineStr">'), 'the cell of a dropped link stays');
+  const count = 65_531;
+  const many = write([{ name: 'S', headers: ['A'], rows: Array.from({ length: count }, () => ['a']), links: Array.from({ length: count }, (_, i) => `/p/${i}`), linkColumn: 1 }]);
+  const manyXml = sheetXml(many);
+  assert.equal((manyXml.match(/<hyperlink /g) ?? []).length, 65_530, '65,530 links at most');
+  assert.ok(manyXml.includes(`<c r="A${count + 1}" t="inlineStr">`) && !manyXml.includes(`<hyperlink ref="A${count + 1}"`), 'the row past the limit keeps its cell');
+
   const parts = new AdmZip(write([{ name: 'S1', headers: ['A'], rows: [] }, { name: 'S2', headers: ['A'], rows: [] }]))
     .getEntries().map((e) => e.entryName).sort();
   assert.deepEqual(parts, [

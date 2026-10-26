@@ -29,7 +29,11 @@ export interface XlsxSheet {
   rows: readonly (readonly XlsxCell[])[];
   /** `styled` (default): bold header, frozen first row, filter and column widths. `plain`: the header is a row of text. */
   header?: 'styled' | 'plain';
-  /** One link per row (or `null`), written on `linkColumn`. An app path such as `/budget/3`: `appBaseUrl` is put in front when given. */
+  /**
+   * One link per row (or `null`), written on `linkColumn`. An app path such as `/budget/3`: `appBaseUrl` is put in
+   * front when given; an absolute link is kept. A target over XLSX_MAX_LINK_LENGTH, or past XLSX_MAX_LINKS_PER_SHEET
+   * links, is left out.
+   */
   links?: readonly (string | null)[];
   /** 1-based column that carries the row link. Default 2. */
   linkColumn?: number;
@@ -43,6 +47,10 @@ export interface XlsxWriteRequest {
 
 /** Excel's limit for the text of one cell. */
 export const XLSX_MAX_TEXT_LENGTH = 32_767;
+/** Excel's limit for the target of a link: a longer one is left out (the cell stays). */
+export const XLSX_MAX_LINK_LENGTH = 2_079;
+/** Excel's limit for the links of one sheet: the rows after it keep their cells, without link. */
+export const XLSX_MAX_LINKS_PER_SHEET = 65_530;
 
 /**
  * The XLSX date format of each language, the way the CSV writes days. The locale tag keeps
@@ -95,6 +103,18 @@ export function daySerial(iso: string): number {
     throw new Error(`xlsx: "${iso}" is not a calendar day (YYYY-MM-DD)`);
   }
   return (time - Date.UTC(1899, 11, 30)) / 86_400_000;
+}
+
+/**
+ * The target of a row link: an app path (`/budget/3`) gets `appBaseUrl` in front, an absolute
+ * link is kept. The result is URI-encoded (spaces, accents), an existing `%xx` left as is.
+ */
+function linkTarget(link: string, appBaseUrl: string): string {
+  const raw = (appBaseUrl && link.startsWith('/') ? `${appBaseUrl}${link}` : link).replace(XML_FORBIDDEN, '');
+  return raw
+    .split(/(%[0-9A-Fa-f]{2})/)
+    .map((part) => (/^%[0-9A-Fa-f]{2}$/.test(part) ? part : encodeURI(part)))
+    .join('');
 }
 
 /** Text safe for a cell: no character XML forbids, at most 32,767 characters. */
@@ -202,8 +222,8 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string): BuiltSh
     }
 
     const link = sheet.links?.[rowIndex];
-    if (link) {
-      const target = appBaseUrl ? `${appBaseUrl}${link}` : link;
+    const target = link ? linkTarget(link, appBaseUrl) : '';
+    if (target && target.length <= XLSX_MAX_LINK_LENGTH && hyperlinks.length < XLSX_MAX_LINKS_PER_SHEET) {
       const relId = `rId${hyperlinkRels.length + 1}`;
       hyperlinks.push(`<hyperlink ref="${linkColumnName}${rowNumber}" r:id="${relId}"/>`);
       hyperlinkRels.push(
