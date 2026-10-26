@@ -1567,8 +1567,6 @@
         "minutes": "{{count}}m"
       },
       "create": {
-        "title": "Title",
-        "titlePlaceholder": "e.g., mail service unavailable at the Lyon office",
         "description": "Description",
         "titleRequired": "Title is required.",
         "severityRequired": "Severity is required.",

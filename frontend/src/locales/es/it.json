@@ -1567,8 +1567,6 @@
         "minutes": "{{count}} min"
       },
       "create": {
-        "title": "Título",
-        "titlePlaceholder": "p. ej., servicio de correo no disponible en la oficina de Lyon",
         "description": "Descripción",
         "titleRequired": "El título es obligatorio.",
         "severityRequired": "La gravedad es obligatoria.",
