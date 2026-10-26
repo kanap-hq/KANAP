@@ -1,4 +1,6 @@
 import { LinkedModule, LinkedReads, loadLinkedReads } from '../common/relations/linked-reads';
+import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
+import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import {
   BadRequestException,
   ConflictException,
@@ -517,12 +519,16 @@ function applyDocumentLinkedEntityFilters(
   filters: Record<string, any> | undefined,
   nextParam: () => string,
   documentAlias = 'd',
+  reads?: LinkedReads | null,
 ): void {
   if (!filters || typeof filters !== 'object') return;
 
   for (const field of Object.keys(DOCUMENT_LINKED_ENTITY_FILTERS) as DocumentLinkedEntityField[]) {
     const model = filters[field];
     if (!model) continue;
+    // A name filter on a module the reader does not read is ignored: it would tell which documents
+    // link a record they cannot see.
+    if (reads && !reads[DOCUMENT_LINKED_FILTER_MODULES[field]]) continue;
     const param = nextParam();
     const compiled = compileDocumentLinkedEntityFilterCondition(field, model, documentAlias, `:${param}`);
     if (!compiled) continue;
@@ -694,14 +700,32 @@ type EntityKnowledgeContextGroupDefinition = {
 
 
 /** The module that reads each family a document links to. */
-const DOCUMENT_RELATION_MODULES: Record<string, LinkedModule> = {
+export const DOCUMENT_RELATION_MODULES: Record<string, LinkedModule> = {
   applications: 'applications',
   assets: 'assets',
   projects: 'projects',
   requests: 'requests',
   tasks: 'tasks',
   interfaces: 'applications',
+  connections: 'assets',
   incidents: 'incidents',
+};
+
+/** The participation resource of each family a Business Contributor reads inside their participation. */
+const KNOWLEDGE_SOURCE_SCOPES = {
+  projects: 'portfolio_projects',
+  requests: 'portfolio_requests',
+  applications: 'applications',
+  tasks: 'tasks',
+} as const;
+
+/** The module of each linked-name filter of the documents list. */
+const DOCUMENT_LINKED_FILTER_MODULES: Record<DocumentLinkedEntityField, LinkedModule> = {
+  linked_application: 'applications',
+  linked_asset: 'assets',
+  linked_project: 'projects',
+  linked_request: 'requests',
+  linked_task: 'tasks',
 };
 
 /** A document's linked records without the families whose module the reader does not read. */
@@ -3203,7 +3227,8 @@ export class KnowledgeService {
       }
     }
 
-    applyDocumentLinkedEntityFilters(qb, filters as Record<string, any> | undefined, nextLinkedEntityParam);
+    const linkedReads = opts.userId ? await loadLinkedReads(manager, opts.userId, tenantId) : null;
+    applyDocumentLinkedEntityFilters(qb, filters as Record<string, any> | undefined, nextLinkedEntityParam, 'd', linkedReads);
     applyDocumentColumnFilters(qb, filters as Record<string, any> | undefined);
 
 
@@ -7285,6 +7310,41 @@ export class KnowledgeService {
     ];
   }
 
+  /**
+   * The context groups without the linked records the reader may not see, as on those records'
+   * pages: each family on its module's read, a Business Contributor's projects, requests,
+   * applications and tasks inside their participation. The record itself (`direct`) stays.
+   */
+  private async withReadableKnowledgeSources(
+    manager: EntityManager,
+    definitions: EntityKnowledgeContextGroupDefinition[],
+    userId: string | null,
+  ): Promise<EntityKnowledgeContextGroupDefinition[]> {
+    const linked = definitions.filter((definition) => definition.key !== 'direct' && definition.sources.length > 0);
+    if (linked.length === 0) return definitions;
+    const reads = await loadLinkedReads(manager, userId);
+    const inScope = new Map<string, Set<string>>();
+    for (const [family, resource] of Object.entries(KNOWLEDGE_SOURCE_SCOPES) as Array<[keyof typeof KNOWLEDGE_SOURCE_SCOPES, string]>) {
+      const ids = linked.flatMap((definition) => definition.sources
+        .filter((source) => source.entity_type === family)
+        .map((source) => source.entity_id));
+      if (!userId || ids.length === 0 || !reads[family]) continue;
+      const scope = await resolveBusinessContributorScopeForUser({ manager, userId }, resource, 'reader');
+      if (scope) inScope.set(family, await idsInScope(manager, family, ids, scope));
+    }
+    return definitions.map((definition) => (definition.key === 'direct'
+      ? definition
+      : {
+        ...definition,
+        sources: definition.sources.filter((source) => {
+          const module = DOCUMENT_RELATION_MODULES[source.entity_type];
+          if (module && !reads[module]) return false;
+          const visible = inScope.get(source.entity_type);
+          return !visible || visible.has(source.entity_id);
+        }),
+      }));
+  }
+
   async getKnowledgeContextForEntity(
     entity: KnowledgeContextRootEntityType,
     entityId: string,
@@ -7312,7 +7372,7 @@ export class KnowledgeService {
     const groups: EntityKnowledgeContextGroup[] = [];
     const distinctDocumentIds = new Set<string>();
 
-    for (const definition of definitions) {
+    for (const definition of await this.withReadableKnowledgeSources(manager, definitions, opts?.userId ?? null)) {
       if (definition.sources.length === 0) continue;
       const rowsBySourceId = await this.listDocumentRowsForKnowledgeSources(definition.sources, manager, opts?.userId ?? null);
       const group = this.buildKnowledgeContextGroup(definition, rowsBySourceId);
