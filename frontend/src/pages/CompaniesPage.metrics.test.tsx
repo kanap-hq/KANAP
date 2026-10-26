@@ -78,6 +78,14 @@ describe('CompaniesPage metric cells', () => {
     });
   });
 
+  it('leaves the starting-company city blank and keeps a real city', () => {
+    renderPage();
+    expect(column('city')({ value: 'Unknown' })).toBe('');
+    expect(column('city')({ value: ' Unknown ' })).toBe('');
+    expect(column('city')({ value: 'Paris' })).toBe('Paris');
+    expect(column('city')({ value: null })).toBe('');
+  });
+
   it('shows a dash on the pinned turnover total when the year has no turnover', async () => {
     await i18n.changeLanguage('fr');
     totalsPayload.current = { headcount: 4, it_users: 2, turnover: null, turnover_currency: 'EUR' };

@@ -19,6 +19,7 @@ import { metricValueFormatter } from '../components/grid/metricValueFormatter';
 import FxMissingNotice, { FxMissingMark } from '../components/finance/FxMissingNotice';
 import { companyTurnoverFxMissing, companyTurnoverFxNotice, type CompanyTurnoverFxMissing } from './companies/turnoverFxNotice';
 import { companyListYear } from './companies/companyYear';
+import { displayedCompanyCity } from './companies/companyCity';
 
 /** The pinned total, with the orange mark when some turnover was left out. */
 function TurnoverTotalCell({ value, missing }: { value: React.ReactNode; missing: CompanyTurnoverFxMissing[] }) {
@@ -162,6 +163,7 @@ export default function CompaniesPage() {
       headerName: t('companies.columns.city'),
       width: 140,
       defaultHidden: true,
+      valueFormatter: (params: { value?: string | null }) => displayedCompanyCity(params.value),
       cellRenderer: (params: any) => (
         <LinkCellRenderer
           {...params}

@@ -242,6 +242,23 @@ describe('CompanyWorkspacePage', () => {
     expect(mocked.patch).toHaveBeenCalledTimes(2);
   });
 
+  it('shows an empty city when the stored city is the starting-company placeholder', async () => {
+    mocked.get.mockImplementation(async (url: string, config?: { params?: { year?: number } }) => {
+      if (url === '/companies/co-1') return { data: { ...COMPANY, city: 'Unknown' } };
+      if (url === '/chart-of-accounts') return { data: { items: COAS } };
+      if (url === '/company-metrics/co-1') return { data: metrics[config?.params?.year ?? 0] ?? null };
+      return { data: { items: [] } };
+    });
+    renderAt('/master-data/companies/co-1/overview');
+    const city = await screen.findByLabelText('companies.fields.city');
+    await waitFor(() => expect(city).toHaveValue(''));
+    expect(screen.queryByDisplayValue('Unknown')).toBeNull();
+    fireEvent.blur(city);
+    expect(await screen.findByText('companies.messages.cityRequired')).toBeInTheDocument();
+    expect(city).toHaveValue('');
+    expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
   it('refuses an empty city without a request', async () => {
     renderAt('/master-data/companies/co-1/overview');
     const city = await screen.findByLabelText('companies.fields.city');
