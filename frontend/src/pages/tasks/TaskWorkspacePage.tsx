@@ -95,10 +95,12 @@ interface TaskData {
   owner_ids: string[];
   viewer_ids: string[];
   labels: string[];
-  application_ids: string[];
-  asset_ids: string[];
-  applications?: Array<{ id: string; name?: string | null; sequential_id?: string | null }>;
-  assets?: Array<{ id: string; name?: string | null; asset_reference?: string | null; hostname?: string | null }>;
+  /** Null, with `applications`, for a person who does not read applications: the field is not shown. */
+  application_ids: string[] | null;
+  /** Null, with `assets`, for a person who does not read the infrastructure. */
+  asset_ids: string[] | null;
+  applications?: Array<{ id: string; name?: string | null; sequential_id?: string | null }> | null;
+  assets?: Array<{ id: string; name?: string | null; asset_reference?: string | null; hostname?: string | null }> | null;
   related_object_type: 'spend_item' | 'contract' | 'capex_item' | 'project' | 'incident' | null;
   related_object_id: string | null;
   related_object_name: string | null;
@@ -424,10 +426,11 @@ export default function TaskWorkspacePage() {
     phase_id: source.phase_id,
     labels: source.labels,
     viewer_ids: source.viewer_ids,
-    application_ids: source.application_ids || [],
-    asset_ids: source.asset_ids || [],
-    applications: source.applications || [],
-    assets: source.assets || [],
+    // Null stays null: the person does not read that module, and the field is not shown.
+    application_ids: source.application_ids === null ? null : source.application_ids || [],
+    asset_ids: source.asset_ids === null ? null : source.asset_ids || [],
+    applications: source.applications === null ? null : source.applications || [],
+    assets: source.assets === null ? null : source.assets || [],
     related_object_type: source.related_object_type,
     related_object_id: source.related_object_id,
     related_object_name: source.related_object_name,

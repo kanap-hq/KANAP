@@ -3644,6 +3644,11 @@ async function testAiUsersEntitySupportsContributorReadsAndTenantIsolation() {
 
     const policy = createPermissivePolicyStub();
     const { knowledge, queryExecutor, aggregateExecutor } = createAiQueryHarness(runner.manager);
+    // The team, availability and expertise columns are the users administration's: the permissive
+    // policy stands for an administrator of users (a reader gets name, email and status, see
+    // common/relations/__tests__/linked-records-follow-rights.integration.spec.ts).
+    (queryExecutor as any).policy = policy;
+    (aggregateExecutor as any).policy = policy;
     const entityService = new AiEntityService(knowledge as any, policy);
     const registry = new AiToolRegistry(
       entityService,

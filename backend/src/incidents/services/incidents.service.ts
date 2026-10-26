@@ -131,6 +131,15 @@ type IncidentWhere = {
 /**
  * Incident CRUD, AG-Grid list, ids/filter-values, lifecycle transitions and the closure lock.
  */
+
+/** A row's `asset_count` and `application_count`, each null for a reader without its module. */
+function withReadableCounts<T extends Record<string, unknown>>(row: T, opts?: ServiceOpts): T {
+  return {
+    ...row,
+    ...('asset_count' in row && opts?.technologies !== true ? { asset_count: null } : {}),
+    ...('application_count' in row && opts?.applications !== true ? { application_count: null } : {}),
+  };
+}
 @Injectable()
 export class IncidentsService extends IncidentsBaseService {
   constructor(
@@ -165,7 +174,8 @@ export class IncidentsService extends IncidentsBaseService {
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
       [...params, limit, skip],
     );
-    return { items, total, page, limit };
+    // The linked counts of a module the reader does not read are null, never a number.
+    return { items: items.map((row: Record<string, unknown>) => withReadableCounts(row, opts)), total, page, limit };
   }
 
   /**
@@ -458,7 +468,9 @@ export class IncidentsService extends IncidentsBaseService {
         ? await this.applicationCountInScope(mg, tenantId, id, opts.applicationScope.userId)
         : incident.application_count;
     return {
-      ...incident,
+      ...withReadableCounts(incident, opts),
+      // A Business Contributor counts the applications they may see, as `counts.applications`.
+      application_count: applicationCount,
       counts: {
         entries: entry_count,
         // The Relations tab's sections: each count is null for a caller who cannot see that section.

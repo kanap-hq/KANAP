@@ -1,3 +1,4 @@
+import type { PortfolioLinkedReads } from '../portfolio-linked-reads';
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { PortfolioProject, ProjectStatus, ProjectOrigin } from '../portfolio-project.entity';
@@ -26,6 +27,8 @@ export interface ServiceOpts {
   accessScope?: ParticipationAccessScope;
   /** The reader holds the budget right (see the base service's options). */
   readsBudget?: boolean;
+  /** What the project may name of other records (see the base service's options). */
+  linked?: PortfolioLinkedReads;
 }
 
 /**

@@ -1,3 +1,4 @@
+import { LinkedModule, LinkedReads, loadLinkedReads } from '../common/relations/linked-reads';
 import {
   BadRequestException,
   ConflictException,
@@ -691,6 +692,27 @@ type EntityKnowledgeContextGroupDefinition = {
   sources: EntityKnowledgeContextSource[];
 };
 
+
+/** The module that reads each family a document links to. */
+const DOCUMENT_RELATION_MODULES: Record<string, LinkedModule> = {
+  applications: 'applications',
+  assets: 'assets',
+  projects: 'projects',
+  requests: 'requests',
+  tasks: 'tasks',
+  interfaces: 'applications',
+  incidents: 'incidents',
+};
+
+/** A document's linked records without the families whose module the reader does not read. */
+function readableDocumentRelations<T extends Record<string, unknown>>(relations: T, reads: LinkedReads): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(relations).filter(([family]) => {
+      const module = DOCUMENT_RELATION_MODULES[family];
+      return !module || reads[module];
+    }),
+  ) as Partial<T>;
+}
 @Injectable()
 export class KnowledgeService {
   private readonly logger = new Logger(KnowledgeService.name);
@@ -3759,6 +3781,7 @@ export class KnowledgeService {
       opts?.tenantId ?? document.tenant_id,
     );
     const backlinkLibraries = await this.listAccessibleLibraryIds(manager, opts?.userId || null, 'reader');
+    const linkedReads = await loadLinkedReads(manager, opts?.userId || null, opts?.tenantId ?? document.tenant_id);
 
     // The tasks a document links follow the same rule: a task of a restricted
     // incident the reader cannot see is absent from the list.
@@ -3887,7 +3910,9 @@ export class KnowledgeService {
       item_ref: `DOC-${document.item_number}`,
       contributors,
       classifications,
-      relations: {
+      // Each family only for a reader of its module, as on the linked record's page: the key is
+      // absent otherwise, so the screen neither shows nor saves it.
+      relations: readableDocumentRelations({
         applications: relations[0].map((row: any) => ({ id: row.application_id, name: row.name })),
         assets: relations[1].map((row: any) => ({ id: row.asset_id, name: row.name })),
         projects: relations[2].map((row: any) => ({ id: row.project_id, name: row.item_number ? `PRJ-${row.item_number} - ${row.name}` : row.name })),
@@ -3898,7 +3923,7 @@ export class KnowledgeService {
           name: [row.interface_reference || row.interface_code, row.name].filter(Boolean).join(' - ') || row.name || row.interface_id,
         })),
         incidents: relations[6].map((row: any) => ({ id: row.incident_id, name: `INC-${row.item_number} · ${row.title}` })),
-      },
+      }, linkedReads),
       incoming_references: incomingReferences,
       attachments,
       edit_lock: editLock,

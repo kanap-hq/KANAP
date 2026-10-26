@@ -487,6 +487,15 @@ function appendNullableParticipationScopeSql(
   return `AND (${alias}.id IS NULL OR ${participantConditionForAiEntity(entityType, alias, `$${params.length}`)})`;
 }
 
+
+/** The family of the object a task belongs to (`tasks.related_object_type`). */
+const TASK_RELATED_ENTITY_TYPES: Record<string, AiEntitySummaryDto['type']> = {
+  project: 'projects',
+  spend_item: 'spend_items',
+  capex_item: 'capex_items',
+  contract: 'contracts',
+  incident: 'incidents',
+};
 @Injectable()
 export class AiEntityService {
   private readonly logger = new Logger(AiEntityService.name);
@@ -2090,12 +2099,17 @@ export class AiEntityService {
        ORDER BY t.updated_at DESC, t.created_at DESC`,
       params,
     );
+    const readsRelated = new Map<string, boolean>();
+    for (const type of new Set(rows.map((row) => String(row.related_object_type ?? '')))) {
+      readsRelated.set(type, await this.canReadTaskRelated(context, type));
+    }
     return rows.map((row) => ({
       ...toSummary('tasks', row),
       metadata: {
         task_type: row.task_type_name ?? null,
         related_to: row.related_object_type ?? null,
-        related_object_name: row.related_object_name ?? null,
+        // The object's name only for a reader of its module.
+        related_object_name: readsRelated.get(String(row.related_object_type ?? '')) ? row.related_object_name ?? null : null,
         assignee: row.assignee_name || null,
         priority: row.priority_level ?? null,
       },
@@ -2162,10 +2176,10 @@ export class AiEntityService {
     const offset = Math.min(Math.max(Number(input.offset) || 0, 0), 5000);
 
     const { rows, total } = await this.runSearchIndexQuery(context, allowed, input.query, limit, offset);
-    const items = rows.map((row) => {
+    const items = await this.withUserLookupOnly(context, rows.map((row) => {
       const { _score, ...item } = this.searchIndexRowToSummary(row);
       return item;
-    });
+    }));
     const truncated = offset + items.length < total;
 
     return {
@@ -2365,6 +2379,20 @@ export class AiEntityService {
       rows,
       total: rows.length > 0 ? Math.max(Number(rows[0].total_count) || 0, rows.length) : 0,
     };
+  }
+
+  /**
+   * People as the users list shows them to the caller: every column to an administrator of users,
+   * the name and the email to a reader (`toUserLookup`), never the job, role, team or company.
+   */
+  private async withUserLookupOnly<T extends AiEntitySummaryDto>(context: AiExecutionContextWithManager, items: T[]): Promise<T[]> {
+    if (!items.some((item) => item.type === 'users')) return items;
+    if (await this.policy.canReadEntityType(context, 'users', context.manager, 'admin')) return items;
+    return items.map((item) => {
+      if (item.type !== 'users') return item;
+      const email = typeof item.metadata?.email === 'string' ? item.metadata.email : null;
+      return { ...item, summary: email && email !== item.label ? email : null, match_context: null, metadata: { email } };
+    });
   }
 
   private searchIndexRowToSummary(row: any): AiEntitySummaryDto & { _score: number } {
@@ -2645,7 +2673,7 @@ export class AiEntityService {
         0,
       );
       return {
-        items: rows.map((row) => this.searchIndexRowToSummary(row)),
+        items: await this.withUserLookupOnly(context, rows.map((row) => this.searchIndexRowToSummary(row))),
         total,
       };
     }
@@ -2669,7 +2697,10 @@ export class AiEntityService {
     if (type === 'spend_items') return this.searchSpendItems(context, query, fetchLimit);
     if (type === 'suppliers') return this.searchSuppliers(context, query, fetchLimit);
     if (type === 'tasks') return this.searchTasks(context, query, fetchLimit);
-    if (type === 'users') return this.searchUsers(context, query, fetchLimit);
+    if (type === 'users') {
+      const result = await this.searchUsers(context, query, fetchLimit);
+      return { ...result, items: await this.withUserLookupOnly(context, result.items) };
+    }
     if (type !== 'documents') {
       throw new BadRequestException('Unsupported entity type.');
     }
@@ -2805,24 +2836,45 @@ export class AiEntityService {
   /**
    * The groups whose records the caller reads, each on its family's read right, as on the
    * record's page: reading an application or an asset does not open its projects or requests.
+   * `alwaysShown` names the relations the record's page shows without that right (the servers of an
+   * application's Deployments tab).
    */
   private async readableGroups(
     context: AiExecutionContextWithManager,
     groups: AiEntityRelationshipGroupDto[],
+    alwaysShown: string[] = [],
   ): Promise<AiEntityRelationshipGroupDto[]> {
-    const reads = new Map<string, Promise<boolean>>();
-    const canRead = (entityType: AiEntitySummaryDto['type']) => {
-      if (!reads.has(entityType)) reads.set(entityType, this.policy.canReadEntityType(context, entityType, context.manager));
-      return reads.get(entityType)!;
-    };
     const kept: AiEntityRelationshipGroupDto[] = [];
     for (const group of groups) {
+      if (alwaysShown.includes(group.relation)) {
+        kept.push(group);
+        continue;
+      }
       const types = Array.from(new Set(group.items.map((item) => item.type)));
       let readable = true;
-      for (const type of types) readable = readable && await canRead(type);
+      for (const type of types) readable = readable && await this.canReadType(context, type);
       if (readable) kept.push(group);
     }
     return kept;
+  }
+
+  /** The caller's read of one family, asked once per call (the probes share the call's connection). */
+  private canReadType(context: AiExecutionContextWithManager, entityType: AiEntitySummaryDto['type']): Promise<boolean> {
+    const host = context as AiExecutionContextWithManager & { __aiEntityReadCache?: Map<string, Promise<boolean>> };
+    host.__aiEntityReadCache ??= new Map();
+    if (!host.__aiEntityReadCache.has(entityType)) {
+      host.__aiEntityReadCache.set(entityType, this.policy.canReadEntityType(context, entityType, context.manager));
+    }
+    return host.__aiEntityReadCache.get(entityType)!;
+  }
+
+  /**
+   * Whether the caller reads the object a task belongs to: a project, a budget line, a contract or
+   * an incident, each on its module. A task without one reads as true.
+   */
+  private canReadTaskRelated(context: AiExecutionContextWithManager, relatedType: string | null | undefined): Promise<boolean> {
+    const entityType = TASK_RELATED_ENTITY_TYPES[String(relatedType ?? '')];
+    return entityType ? this.canReadType(context, entityType) : Promise.resolve(true);
   }
 
   private async buildApplicationContext(context: AiExecutionContextWithManager, applicationId: string, manager: AiExecutionContextWithManager['manager']): Promise<AiEntityContextPayloadDto> {
@@ -2946,7 +2998,8 @@ export class AiEntityService {
         { relation: 'related_applications', label: 'Related Applications', items: this.dedupe(relatedApplicationRows.map((row) => toSummary('applications', row))) },
         { relation: 'linked_assets', label: 'Linked Assets', items: this.dedupe(assetRows.map((row) => toSummary('assets', row))) },
         ...await this.applicationTechnologyGroups(context, applicationId),
-      ].filter((group) => group.items.length > 0)),
+      // The servers the application runs on: its Deployments tab shows them without the infrastructure right.
+      ].filter((group) => group.items.length > 0), ['linked_assets']),
       knowledge: await this.getKnowledgeContext(context, 'applications', applicationId, manager),
     };
   }
@@ -3373,6 +3426,8 @@ export class AiEntityService {
       ),
     ]);
 
+    // A dependency on a project shows only to a reader of projects; the requests are the caller's own family.
+    const readsProjects = await this.canReadType(context, 'projects');
     const dependencyItems = dependencyRows.flatMap((row) => {
       const items: AiEntitySummaryDto[] = [];
       if (row.request_id) {
@@ -3412,19 +3467,19 @@ export class AiEntityService {
           current_situation: request.current_situation ?? null,
           expected_benefits: request.expected_benefits ?? null,
           target_delivery_date: request.target_delivery_date ?? null,
-          origin_task: request.origin_task_ref ?? null,
+          origin_task: (await this.canReadType(context, 'tasks')) ? request.origin_task_ref ?? null : null,
           requestor: request.requestor_id ? toPersonMetadata({ id: request.requestor_id, name: request.requestor_name }) : null,
           business_lead: request.business_lead_id ? toPersonMetadata({ id: request.business_lead_id, name: request.business_lead_name }) : null,
           it_lead: request.it_lead_id ? toPersonMetadata({ id: request.it_lead_id, name: request.it_lead_name }) : null,
           contributors: contributorRows.map((row) => toPersonMetadata(row)),
         },
       },
-      related: [
+      related: await this.readableGroups(context, [
         { relation: 'resulting_projects', label: 'Resulting Projects', items: projectRows.map((row) => toSummary('projects', row)) },
-        { relation: 'dependencies', label: 'Dependencies', items: this.dedupe(dependencyItems) },
+        { relation: 'dependencies', label: 'Dependencies', items: this.dedupe(dependencyItems.filter((item) => item.type !== 'projects' || readsProjects)) },
         { relation: 'linked_applications', label: 'Linked Applications', items: applicationRows.map((row) => toSummary('applications', row)) },
         { relation: 'linked_assets', label: 'Linked Assets', items: assetRows.map((row) => toSummary('assets', row)) },
-      ].filter((group) => group.items.length > 0),
+      ].filter((group) => group.items.length > 0)),
       knowledge: await this.getKnowledgeContext(context, 'requests', requestId, manager),
     };
   }
@@ -3613,14 +3668,14 @@ export class AiEntityService {
           recent_activity_truncated: recentActivity.total > recentActivity.items.length,
         },
       },
-      related: [
+      related: await this.readableGroups(context, [
         { relation: 'source_requests', label: 'Source Requests', items: requestRows.map((row) => toSummary('requests', row)) },
         { relation: 'dependencies', label: 'Dependencies', items: dependencyRows.map((row) => toSummary('projects', row)) },
         { relation: 'linked_applications', label: 'Linked Applications', items: applicationRows.map((row) => toSummary('applications', row)) },
         { relation: 'linked_assets', label: 'Linked Assets', items: assetRows.map((row) => toSummary('assets', row)) },
         { relation: 'project_tasks', label: 'Project Tasks', items: projectTaskRows.map((row) => toProjectTaskSummary(row)) },
         { relation: 'integrated_documents', label: 'Integrated Documents', items: integratedDocumentRows },
-      ].filter((group) => group.items.length > 0),
+      ].filter((group) => group.items.length > 0)),
       knowledge: await this.getKnowledgeContext(context, 'projects', projectId, manager),
     };
   }
@@ -3721,6 +3776,9 @@ export class AiEntityService {
       ),
     ]);
 
+    // The object the task belongs to, on its module's read: without it, no name, no project, no phase.
+    const readsRelated = await this.canReadTaskRelated(context, task.related_object_type);
+
     if (applicationRows.length > 0) {
       relatedGroups.push({
         relation: 'linked_applications',
@@ -3737,7 +3795,7 @@ export class AiEntityService {
       });
     }
 
-    if (task.related_object_type === 'project' && task.related_object_id) {
+    if (task.related_object_type === 'project' && task.related_object_id && readsRelated) {
       const projectAccessScope = await resolveAiParticipationAccessScope(context, 'projects');
       const relatedProjectParams: unknown[] = [task.related_object_id, tenantId];
       const relatedProjectScopeSql = appendParticipationScopeSql('projects', 'p', relatedProjectParams, projectAccessScope);
@@ -3789,18 +3847,18 @@ export class AiEntityService {
         metadata: {
           task_type: task.task_type_name ?? null,
           related_to: task.related_object_type ?? null,
-          related_object_name: task.related_object_name ?? null,
+          related_object_name: readsRelated ? task.related_object_name ?? null : null,
           assignee: task.assignee_name || null,
           creator: task.creator_id ? toPersonMetadata({ id: task.creator_id, name: task.creator_name, email: task.creator_email }) : null,
           priority_level: task.priority_level ?? null,
-          phase: toTaskPhaseMetadata(task),
+          phase: readsRelated ? toTaskPhaseMetadata(task) : null,
           recent_activity: recentActivity.items,
           recent_activity_total: recentActivity.total,
           recent_activity_returned: recentActivity.items.length,
           recent_activity_truncated: recentActivity.total > recentActivity.items.length,
         },
       },
-      related: relatedGroups,
+      related: await this.readableGroups(context, relatedGroups),
       knowledge: await this.getKnowledgeContext(context, 'tasks', taskId, manager),
     };
   }

@@ -1,3 +1,4 @@
+import { idsInScope } from '../portfolio-linked-reads';
 import { BadRequestException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { linkedLineOf } from '../../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -167,15 +168,21 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       result.department = departments[0] || null;
     }
 
-    // Load source requests
+    // Load source requests: a reader of requests sees those they may open; for anyone else the list is null.
     if (include.has('source_requests')) {
-      result.source_requests = await mg.query(
-        `SELECT r.id, r.item_number, r.name, r.status, r.priority_score
-         FROM portfolio_request_projects rp
-         JOIN portfolio_requests r ON r.id = rp.request_id
-         WHERE rp.project_id = $1`,
-        [id]
-      );
+      if (opts?.linked?.reads.requests !== true) {
+        result.source_requests = null;
+      } else {
+        const sourceRequests: Array<{ id: string }> = await mg.query(
+          `SELECT r.id, r.item_number, r.name, r.status, r.priority_score
+           FROM portfolio_request_projects rp
+           JOIN portfolio_requests r ON r.id = rp.request_id
+           WHERE rp.project_id = $1`,
+          [id]
+        );
+        const visible = await idsInScope(mg, 'requests', sourceRequests.map((row) => row.id), opts.linked.requestScope);
+        result.source_requests = sourceRequests.filter((row) => visible.has(String(row.id)));
+      }
     }
 
     // Load URLs
@@ -195,7 +202,9 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
          WHERE d.project_id = $1`,
         [id]
       );
-      result.dependencies = rawDeps.map((d: any) => ({
+      // A Business Contributor's dependencies stop at the projects they take part in.
+      const visible = await idsInScope(mg, 'projects', rawDeps.map((d: any) => d.depends_on_project_id), opts?.accessScope);
+      result.dependencies = rawDeps.filter((d: any) => visible.has(String(d.depends_on_project_id))).map((d: any) => ({
         id: d.id,
         target_type: 'project' as const,
         target_id: d.depends_on_project_id,

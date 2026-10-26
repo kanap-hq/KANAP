@@ -5,6 +5,7 @@ import { ParticipationAccessScope, taskParticipantCondition } from '../auth/busi
 import { IncidentViewer, incidentRelatedLabelSql, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { textSortKey } from '../common/list-sort';
 import { resolveRecordCreators } from '../audit/record-creator.util';
+import type { LinkedModule, LinkedReads } from '../common/relations/linked-reads';
 import { assertSetFilterModes, bindPositional, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type CompiledCondition } from '../common/ag-grid-filtering';
 
 export interface TaskListItem {
@@ -61,10 +62,12 @@ export interface TaskListItem {
   created_by_name?: string | null;
   owner_ids: string[];
   viewer_ids: string[];
-  application_ids: string[];
-  asset_ids: string[];
-  applications?: Array<{ id: string; name: string | null; sequential_id?: string | null }>;
-  assets?: Array<{ id: string; name: string | null; asset_reference?: string | null; hostname?: string | null }>;
+  /** Null, as `applications`, for a person who does not read applications (`withReadableTaskLinks`). */
+  application_ids: string[] | null;
+  /** Null, as `assets`, for a person who does not read the infrastructure. */
+  asset_ids: string[] | null;
+  applications?: Array<{ id: string; name: string | null; sequential_id?: string | null }> | null;
+  assets?: Array<{ id: string; name: string | null; asset_reference?: string | null; hostname?: string | null }> | null;
   converted_request_id?: string | null;
   converted_request_item_number?: number | null;
 }
@@ -776,11 +779,70 @@ function withHiddenReference(row: TaskListItem & { related_object_reference?: st
   return { ...task, related_object_id: null, related_object_name: reference, related_object_hidden: true };
 }
 
+/** The module that reads each kind of object a task belongs to. */
+const TASK_RELATED_MODULES: Record<string, LinkedModule> = {
+  project: 'projects',
+  spend_item: 'budget',
+  capex_item: 'budget',
+  contract: 'contracts',
+  incident: 'incidents',
+};
+
+/**
+ * A task row without the linked records of the modules the person does not read, as on the
+ * records' own pages: applications and assets are null (the field disappears from the screen), the
+ * object the task belongs to loses its id and its name (`related_object_hidden`, without a kind:
+ * the screen shows nothing in its place), and so do the project's name and the converted request.
+ * The task keeps its own type of object, so an edit of another field leaves the link untouched.
+ */
+export function withReadableTaskLinks<T extends Record<string, any>>(row: T, reads: LinkedReads): T {
+  const task: Record<string, any> = { ...row };
+  if (!reads.applications) {
+    task.applications = null;
+    task.application_ids = null;
+  }
+  if (!reads.assets) {
+    task.assets = null;
+    task.asset_ids = null;
+  }
+  const module = TASK_RELATED_MODULES[String(task.related_object_type ?? '')];
+  if (module && !reads[module] && task.related_object_type) {
+    task.related_object_id = null;
+    task.related_object_name = null;
+    task.related_object_hidden = true;
+    delete task.related_object_hidden_kind;
+  }
+  if (!reads.projects && 'project_name' in task) task.project_name = null;
+  if (!reads.requests) {
+    if ('converted_request_id' in task) task.converted_request_id = null;
+    if ('converted_request_item_number' in task) task.converted_request_item_number = null;
+  }
+  return task as T;
+}
+
+/** The filter-value fields that name another module's records, with that module. */
+const TASK_LINKED_VALUE_FIELDS: Record<string, LinkedModule> = {
+  application_name: 'applications',
+  asset_name: 'assets',
+};
+
 /** The ORDER BY key of a task list field: text alphabetically, the creation date by default. */
 async function taskSortKey(manager: EntityManager, field: string): Promise<string> {
   const expr = TASK_SORT_EXPRESSIONS[field] ?? 't.created_at';
   return TASK_TEXT_SORTS.has(field) ? (await textSortKey(manager))(expr) : expr;
 }
+
+/**
+ * How a read of tasks is scoped. `linkedReads`: the modules the person reads; the rows then leave
+ * out the linked records of the others (`withReadableTaskLinks`). The screen and the assistant pass it.
+ */
+export type TaskReadOptions = {
+  manager?: EntityManager;
+  tenantId: string;
+  accessScope?: ParticipationAccessScope;
+  viewer?: IncidentViewer | null;
+  linkedReads?: LinkedReads;
+};
 
 @Injectable()
 export class TasksService {
@@ -796,11 +858,11 @@ export class TasksService {
     return sessionTenant;
   }
 
-  async list(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }) {
+  async list(query: any, opts: TaskReadOptions) {
     return this.listAllTasks(query, opts);
   }
 
-  async listAllTasks(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<{ items: TaskListItem[]; total: number; page: number; limit: number }> {
+  async listAllTasks(query: any, opts: TaskReadOptions): Promise<{ items: TaskListItem[]; total: number; page: number; limit: number }> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const { page, limit, skip, sort, q, filters } = parsePagination(query);
@@ -916,7 +978,10 @@ export class TasksService {
       LIMIT ${limit} OFFSET ${skip}
     `;
 
-    const items: TaskListItem[] = (await manager.query(dataQuery, params)).map(withHiddenReference);
+    const reads = opts?.linkedReads;
+    const items: TaskListItem[] = (await manager.query(dataQuery, params))
+      .map(withHiddenReference)
+      .map((row: TaskListItem) => (reads ? withReadableTaskLinks(row, reads) : row));
 
     return { items, total, page, limit };
   }
@@ -984,7 +1049,7 @@ export class TasksService {
     return { ids, refs, total };
   }
 
-  async listFilterValues(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<Record<string, Array<string | null>>> {
+  async listFilterValues(query: any, opts: TaskReadOptions): Promise<Record<string, Array<string | null>>> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const q = (query.q as string) || '';
@@ -1002,7 +1067,11 @@ export class TasksService {
     }
 
     const rawFields = String(query.fields || query.field || '').split(',').map((f) => f.trim()).filter(Boolean);
-    const fields = rawFields.filter((field) => Object.prototype.hasOwnProperty.call(TASK_FILTER_VALUE_FIELDS, field));
+    const reads = opts?.linkedReads;
+    // Names of another module's records only for a person who reads it.
+    const fields = rawFields
+      .filter((field) => Object.prototype.hasOwnProperty.call(TASK_FILTER_VALUE_FIELDS, field))
+      .filter((field) => !reads || !TASK_LINKED_VALUE_FIELDS[field] || reads[TASK_LINKED_VALUE_FIELDS[field]]);
     if (fields.length === 0) return {};
 
     const results: Record<string, Array<string | null>> = {};
@@ -1104,7 +1173,7 @@ export class TasksService {
   }
 
   /** `tenantId`: the request's tenant; without it, the session tenant of the manager. */
-  async getOne(id: string, opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<TaskListItem | null> {
+  async getOne(id: string, opts?: Partial<TaskReadOptions>): Promise<TaskListItem | null> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = await this.resolveTenantId(manager, opts?.tenantId);
     const params: any[] = [id, tenantId];
@@ -1191,7 +1260,7 @@ export class TasksService {
       LIMIT 1
     `;
     const rows: TaskListItem[] = (await manager.query(dataQuery, params)).map(withHiddenReference);
-    const task = rows[0];
+    const task = rows[0] && opts?.linkedReads ? withReadableTaskLinks(rows[0], opts.linkedReads) : rows[0];
     if (!task) return null;
 
     // `creator_id` is the requestor (mutable, labelled "Requestor"), so the

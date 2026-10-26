@@ -36,6 +36,7 @@ import { TaskTimeEntriesService } from '../tasks/task-time-entries.service';
 import { TasksCsvService } from '../tasks/tasks-csv.service';
 import { StorageService } from '../common/storage/storage.service';
 import { resolveToUuid } from '../common/resolve-item-id';
+import { linkedReadsFromContext } from '../common/relations/linked-reads';
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { createRequestReleaseConnection } from '../common/import-connection';
@@ -51,6 +52,11 @@ import { PermissionLevel } from '../permissions/permissions.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { incidentViewerFromRequest, resolveIncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
+
+/** The modules the caller reads: a task names its linked records only in these. */
+function linkedReadsOfRequest(req: any) {
+  return linkedReadsFromContext({ isAdmin: req?.isAdmin === true, permissions: req?.permissions });
+}
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -165,6 +171,7 @@ export class TasksController {
       tenantId: req?.tenant?.id,
       accessScope,
       viewer: incidentViewerFromRequest(req),
+      linkedReads: linkedReadsOfRequest(req),
     });
   }
 
@@ -191,6 +198,7 @@ export class TasksController {
       tenantId: req?.tenant?.id,
       accessScope,
       viewer: incidentViewerFromRequest(req),
+      linkedReads: linkedReadsOfRequest(req),
     });
   }
 
@@ -307,6 +315,7 @@ export class TasksController {
       tenantId: req?.tenant?.id,
       accessScope,
       viewer: incidentViewerFromRequest(req),
+      linkedReads: linkedReadsOfRequest(req),
     });
     if (!res) {
       const { NotFoundException } = await import('@nestjs/common');

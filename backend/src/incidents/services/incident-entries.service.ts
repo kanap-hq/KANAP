@@ -14,6 +14,29 @@ const ENTRY_FROM = `
   FROM incident_entries e
   LEFT JOIN users u ON u.id = e.author_id AND u.tenant_id = e.tenant_id`;
 
+/** The module flag that reads each family a link change names (`ServiceOpts`). */
+const LINK_CHANGE_READS: Record<string, 'technologies' | 'applications'> = {
+  assets: 'technologies',
+  technologies: 'technologies',
+  applications: 'applications',
+};
+
+/**
+ * Whether the reader may see a journal entry. A link change names linked records (`Assets linked:
+ * AST-50`): it shows only to a reader of their module, as the Relations tab. Notes and the other
+ * entries keep their text.
+ */
+function readableLinkChange(
+  row: { kind?: string; changed_fields?: Record<string, unknown> | null },
+  opts?: ServiceOpts,
+): boolean {
+  if (row.kind !== 'link_change') return true;
+  return Object.keys(row.changed_fields ?? {}).every((family) => {
+    const read = LINK_CHANGE_READS[family];
+    return !read || opts?.[read] === true;
+  });
+}
+
 /**
  * Append-only journal: list + notes. Change entries are written by the other services.
  */
@@ -35,7 +58,7 @@ export class IncidentEntriesService extends IncidentsBaseService {
       [incidentId, tenantId],
     );
     await this.decorateReviewVersions(rows, incidentId, mg, tenantId);
-    return rows;
+    return rows.filter((row: { kind?: string; changed_fields?: Record<string, unknown> | null }) => readableLinkChange(row, opts));
   }
 
   /**
