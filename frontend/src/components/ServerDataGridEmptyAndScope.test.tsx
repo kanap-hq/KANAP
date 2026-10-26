@@ -104,6 +104,27 @@ describe('ServerDataGrid', () => {
       view.unmount();
     }, 20_000);
 
+    it('shows the empty line of the page under the filters it opens on, and the filtered line once the user narrows further', async () => {
+      const opening = { name: { filterType: 'text', type: 'contains', filter: 'al' } };
+      get.mockImplementation(async () => page([]));
+      let gridApi: any = null;
+      const view = render(<Grid defaultFilterModel={opening} emptyState={<button type="button">Create the first thing</button>} onGridApiReady={(a) => { gridApi = a; }} />);
+      expect(await screen.findByRole('button', { name: 'Create the first thing' })).toBeInTheDocument();
+      expect(screen.queryByText('common:filters.noResultsFiltered')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'common:filters.clearAll' })).not.toBeInTheDocument();
+      const withOpeningFilters = get.mock.calls.some((call) => {
+        const filters = (call[1] as Config | undefined)?.params.filters;
+        return typeof filters === 'string' && filters.includes('"al"');
+      });
+      expect(withOpeningFilters).toBe(true);
+
+      await act(async () => { gridApi.setFilterModel({ name: { filterType: 'text', type: 'contains', filter: 'zz' } }); });
+      expect(await screen.findByText('common:filters.noResultsFiltered')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Create the first thing' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'common:filters.clearAll' })).toBeInTheDocument();
+      view.unmount();
+    }, 20_000);
+
     it('shows nothing of the kind when the rows fail to load', async () => {
       get.mockRejectedValue(new Error('boom'));
       const view = render(<Grid />);

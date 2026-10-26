@@ -178,9 +178,10 @@ export type ServerDataGridProps<T> = {
    */
   setFilterExcludeMode?: boolean;
   /**
-   * What an empty list says when no search or filter narrows it (one line, with the page's create
-   * action when the user may create). Default: "No results". A narrowed empty list keeps its own
-   * message and its way out.
+   * What an empty list says when nothing narrows it beyond the filters the page opens on (one line,
+   * with the page's create action when the user may create). Default: "No results". A search, a
+   * filter other than those opening filters, or a Show scope other than the default keeps the
+   * filtered message and its way out.
    */
   emptyState?: React.ReactNode;
   /** A class for one row, from its data (a muted row when it stays out of the alerts). */
@@ -715,7 +716,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   // The latest list answer without its rows, for `rowCountText`.
   const [rowCountAnswer, setRowCountAnswer] = useState<Record<string, unknown> | null>(null);
   // Set once the first page of the current query came back empty: 'filtered' when a search, a filter
-  // or a Show scope other than the default narrows it. Never while loading or after an error.
+  // other than the page's opening filters, or a Show scope other than the default narrows it.
+  // Never while loading or after an error.
   const [emptyResult, setEmptyResult] = useState<null | 'empty' | 'filtered'>(null);
   // The last loaded list had a search, filters other than the page's default or a Show scope other than the default.
   const [offDefault, setOffDefault] = useState(false);
@@ -1179,12 +1181,15 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           setRowCountAnswer(answer);
         }
         if (startRow === 0) {
-          const narrowed = !!reqParams.q || !!reqParams.filters || scopeNarrowsRef.current();
+          // The filters a page opens on are sent with every request. They are not a narrowing:
+          // an empty list under them is empty, the same way "Reset filters" treats them.
+          const filtersOffDefault = filterModelKey(fm) !== defaultFilterKeyRef.current;
+          const narrowed = !!reqParams.q || filtersOffDefault || scopeNarrowsRef.current();
           setEmptyResult(total === 0 ? (narrowed ? 'filtered' : 'empty') : null);
           const openingSort = `${defaultSortRef.current.field}:${defaultSortRef.current.direction}`;
           const sortOff = resetSortOnResetRef.current
             && parseSortParam((params as any).sortModel, defaultSortRef.current) !== openingSort;
-          setOffDefault(!!reqParams.q || scopeNarrowsRef.current() || filterModelKey(fm) !== defaultFilterKeyRef.current || sortOff);
+          setOffDefault(!!reqParams.q || scopeNarrowsRef.current() || filtersOffDefault || sortOff);
         }
         onTotalChangeRef.current?.(total);
         if (startRow === 0) onListAnswerRef.current?.((res.data ?? {}) as Record<string, unknown>);
