@@ -293,11 +293,24 @@ async function testAccess() {
     }
     assert.equal(served.children.length, 0);
 
-    // A workspace that holds data: no load offered, and why.
-    await inTenant(t.tenantId, (m) => m.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Real supplier')`, [t!.tenantId]));
+    // A workspace that holds data: no load offered, and which tables stand in the way.
+    await inTenant(t.tenantId, async (m) => {
+      await m.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Real supplier')`, [t!.tenantId]);
+      await m.query(
+        `INSERT INTO applications (tenant_id, name) VALUES ($1, 'Billing'), ($1, 'Portal')`,
+        [t!.tenantId],
+      );
+    });
     const full = await client(served, t).get();
     assert.equal(full.body.can_load, false);
     assert.equal(full.body.load_refusal, 'tenant_not_empty');
+    assert.deepEqual(full.body.blocking, [
+      { table: 'applications', count: 2 },
+      { table: 'suppliers', count: 1 },
+    ]);
+    const hidden = await client(served, t).banner();
+    assert.equal(hidden.body.load_refusal, 'tenant_not_empty');
+    assert.equal(hidden.body.blocking, null, 'the banner does not list what blocks');
   } finally {
     await served.close();
     await cleanupTenants([t?.tenantId, other?.tenantId]);
@@ -320,6 +333,7 @@ async function testOverviewAndLoad() {
     assert.equal(first.body.status, 'idle');
     assert.equal(first.body.can_load, true);
     assert.equal(first.body.load_refusal, null);
+    assert.equal(first.body.blocking, null);
     assert.equal(first.body.created_since_load, null);
     assert.equal(first.body.workspace_name, 'Load Org', 'the name to type, trimmed');
     assert.equal(first.body.loaded_by_name, null);
@@ -344,6 +358,7 @@ async function testOverviewAndLoad() {
     const loaded = await owner.get();
     assert.equal(loaded.body.status, 'loaded');
     assert.equal(loaded.body.can_load, false);
+    assert.equal(loaded.body.blocking, null);
     assert.equal(loaded.body.created_since_load, 0);
 
     // Created after the load: a company and a document of the templates library count (the reset
@@ -460,6 +475,7 @@ async function testFrozenWorkspace() {
     const frozen = await owner.get();
     assert.equal(frozen.body.can_load, false);
     assert.equal(frozen.body.load_refusal, 'SUBSCRIPTION_FROZEN');
+    assert.equal(frozen.body.blocking, null);
     const load = await owner.load();
     assert.equal(load.status, 403, JSON.stringify(load.body));
     assert.equal(load.body.code, 'SUBSCRIPTION_FROZEN');

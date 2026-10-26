@@ -35,8 +35,9 @@ export class DemoDataController {
   constructor(private readonly demo: DemoDataService) {}
 
   /**
-   * The state, whether a load can start, the objects created since a load, the workspace name.
-   * `?view=banner`: the light answer of the home banner (`DemoOverviewView`).
+   * The state, whether a load can start, what blocks a load, the objects created since a load,
+   * the workspace name. `?view=banner`: the light answer of the home banner (`DemoOverviewView`),
+   * without the list of what blocks a load.
    */
   @Get()
   async overview(@Req() req: any, @Query('view') view?: string): Promise<DemoDataOverview> {

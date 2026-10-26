@@ -104,6 +104,12 @@ export type DemoDataOverview = DemoDataState & {
   can_load: boolean;
   /** Why a load would be refused now (status `idle` or `failed`), null when it would not be. */
   load_refusal: DemoLoadRefusal | null;
+  /**
+   * What stands in the way when `load_refusal` is `tenant_not_empty`: each table, and how many of
+   * its rows are outside the starting state (`countTenantContent`). Null otherwise. The banner
+   * view leaves it null.
+   */
+  blocking: TenantContentCount[] | null;
   /** Objects users created since the load (`countCreatedSinceLoad`); null unless the status is `loaded`. */
   created_since_load: number | null;
   /** The name an administrator types to confirm a reset. */
@@ -113,9 +119,10 @@ export type DemoDataOverview = DemoDataState & {
 };
 
 /**
- * `page`: everything. `banner`: what the home banner needs, cheaply: no count of the objects
- * created since a load, and no check of the workspace content once the banner can no longer
- * show (hidden, or sample data loaded once): then `can_load` is false.
+ * `page`: everything, including `blocking` when the workspace is not empty. `banner`: what the
+ * home banner needs, cheaply: no count of the objects created since a load, no list of what
+ * blocks a load, and no check of the workspace content once the banner can no longer show
+ * (hidden, or sample data loaded once): then `can_load` is false.
  */
 export type DemoOverviewView = 'page' | 'banner';
 
@@ -315,19 +322,23 @@ export function startingDimensionValues(): Array<[string, string]> {
   return [...pairs.values()];
 }
 
+/** A table that holds rows outside the starting state, and how many (`countTenantContent`). */
+export type TenantContentCount = { table: string; count: number };
+
 /**
- * The tables that hold more than activation leaves (empty: the workspace is still in its
- * starting state). Every table of `DEMO_LOAD_EMPTY_TABLES` must be empty. Activation also
- * creates, and these may hold only that: one company; documents in the templates library;
- * the chart of accounts made from the default template, with that template's accounts; the
- * standard calendar of the company's country; the values of the recommended dimensions in any
- * of the four languages (`recommended-dimensions.seed.ts`, the cost pool on the default dimension
- * or on `cost_pool`) and those of the three CAPEX dimensions older tenants received
- * (`capex-dimensions.seed.ts`), by dimension code and value name: a value an administrator added,
- * or renamed, counts. And no `.example` user (sample data users).
- * Runs under the tenant's RLS context.
+ * The tables that hold more than activation leaves, each with how many rows are outside the
+ * starting state (empty: the workspace is still in its starting state). Every table of
+ * `DEMO_LOAD_EMPTY_TABLES` must be empty, so its count is every row. Activation also creates,
+ * and these may hold only that: one company (the count is the companies beyond it); documents
+ * in the templates library; the chart of accounts made from the default template, with that
+ * template's accounts; one standard calendar of a country (region empty, code equal to the
+ * country); the values of the recommended dimensions in any of the four languages
+ * (`recommended-dimensions.seed.ts`, the cost pool on the default dimension or on `cost_pool`)
+ * and those of the three CAPEX dimensions older tenants received (`capex-dimensions.seed.ts`),
+ * by dimension code and value name: a value an administrator added, or renamed, counts. And no
+ * `.example` user (sample data users). The counts are one query. Runs under the tenant's RLS context.
  */
-export async function findTenantContent(manager: EntityManager, tenantId: string): Promise<string[]> {
+export async function countTenantContent(manager: EntityManager, tenantId: string): Promise<TenantContentCount[]> {
   const [template]: Array<{ template_code: string; csv_payload: string | null }> = await manager.query(
     `SELECT template_code, csv_payload FROM coa_templates WHERE is_global = true AND loaded_by_default = true LIMIT 1`,
   );
@@ -337,37 +348,44 @@ export async function findTenantContent(manager: EntityManager, tenantId: string
   const templateNumbers = baselineChart && template?.csv_payload ? await templateAccountNumbers(template.csv_payload) : [];
   const checks = [
     ...DEMO_LOAD_EMPTY_TABLES.map((table) =>
-      `SELECT '${table}' AS t WHERE EXISTS (SELECT 1 FROM ${table} WHERE tenant_id = $1)`),
-    `SELECT 'companies' AS t WHERE (SELECT count(*) FROM companies WHERE tenant_id = $1) > 1`,
-    `SELECT 'documents' AS t WHERE EXISTS (
-       SELECT 1 FROM documents d LEFT JOIN document_libraries l ON l.id = d.library_id AND l.tenant_id = d.tenant_id
-        WHERE d.tenant_id = $1 AND l.slug IS DISTINCT FROM 'templates')`,
-    `SELECT 'chart_of_accounts' AS t WHERE EXISTS (
-       SELECT 1 FROM chart_of_accounts WHERE tenant_id = $1 AND id IS DISTINCT FROM $2::uuid)`,
-    `SELECT 'accounts' AS t WHERE EXISTS (
-       SELECT 1 FROM accounts WHERE tenant_id = $1
-          AND (coa_id IS DISTINCT FROM $2::uuid OR NOT (account_number::text = ANY($3::text[]))))`,
-    `SELECT 'working_day_profiles' AS t WHERE EXISTS (
-       SELECT 1 FROM working_day_profiles WHERE tenant_id = $1
-          AND NOT (region_code IS NULL AND country_iso IS NOT NULL AND code = country_iso))
-       OR (SELECT count(*) FROM working_day_profiles WHERE tenant_id = $1) > 1`,
-    `SELECT 'users' AS t WHERE EXISTS (SELECT 1 FROM users WHERE tenant_id = $1 AND lower(email) LIKE '%.example')`,
-    `SELECT 'analytics_categories' AS t WHERE EXISTS (
-       SELECT 1 FROM analytics_categories c
-         JOIN analytics_axes a ON a.id = c.axis_id AND a.tenant_id = c.tenant_id
-        WHERE c.tenant_id = $1
-          AND NOT EXISTS (SELECT 1 FROM unnest($4::text[], $5::text[]) AS s(code, name)
-                           WHERE lower(a.code) = s.code AND lower(c.name) = s.name))`,
+      `SELECT '${table}' AS t, count(*)::int AS n FROM ${table} WHERE tenant_id = $1`),
+    `SELECT 'companies' AS t, GREATEST(count(*) - 1, 0)::int AS n FROM companies WHERE tenant_id = $1`,
+    `SELECT 'documents' AS t, count(*)::int AS n
+       FROM documents d LEFT JOIN document_libraries l ON l.id = d.library_id AND l.tenant_id = d.tenant_id
+      WHERE d.tenant_id = $1 AND l.slug IS DISTINCT FROM 'templates'`,
+    `SELECT 'chart_of_accounts' AS t, count(*)::int AS n
+       FROM chart_of_accounts WHERE tenant_id = $1 AND id IS DISTINCT FROM $2::uuid`,
+    `SELECT 'accounts' AS t, count(*)::int AS n FROM accounts WHERE tenant_id = $1
+        AND (coa_id IS DISTINCT FROM $2::uuid OR NOT (account_number::text = ANY($3::text[])))`,
+    `SELECT 'working_day_profiles' AS t,
+            (count(*) - CASE WHEN count(*) FILTER (
+               WHERE region_code IS NULL AND country_iso IS NOT NULL AND code = country_iso) > 0
+             THEN 1 ELSE 0 END)::int AS n
+       FROM working_day_profiles WHERE tenant_id = $1`,
+    `SELECT 'users' AS t, count(*)::int AS n FROM users WHERE tenant_id = $1 AND lower(email) LIKE '%.example'`,
+    `SELECT 'analytics_categories' AS t, count(*)::int AS n
+       FROM analytics_categories c
+       JOIN analytics_axes a ON a.id = c.axis_id AND a.tenant_id = c.tenant_id
+      WHERE c.tenant_id = $1
+        AND NOT EXISTS (SELECT 1 FROM unnest($4::text[], $5::text[]) AS s(code, name)
+                         WHERE lower(a.code) = s.code AND lower(c.name) = s.name)`,
   ];
   const seeded = startingDimensionValues();
-  const rows: Array<{ t: string }> = await manager.query(checks.join(' UNION ALL '), [
+  const rows: Array<{ t: string; n: number | string }> = await manager.query(checks.join(' UNION ALL '), [
     tenantId,
     baselineChart?.id ?? null,
     templateNumbers,
     seeded.map(([code]) => code),
     seeded.map(([, name]) => name),
   ]);
-  return rows.map((row) => row.t);
+  return rows
+    .map((row) => ({ table: row.t, count: Number(row.n) }))
+    .filter((row) => row.count > 0);
+}
+
+/** The table names of `countTenantContent` (what a load's 409 lists). */
+export async function findTenantContent(manager: EntityManager, tenantId: string): Promise<string[]> {
+  return (await countTenantContent(manager, tenantId)).map((row) => row.table);
 }
 
 /**
@@ -506,9 +524,17 @@ export class DemoDataService implements OnApplicationShutdown {
       const mayLoad = state.status === 'idle' || state.status === 'failed';
       const bannerOver = banner && (!!state.dismissed_at || !!state.ever_loaded_at);
       let refusal: DemoLoadRefusal | null = null;
+      let blocking: TenantContentCount[] | null = null;
       if (mayLoad && !bannerOver) {
-        refusal = (await this.subscriptionRefusal(manager, tenant.id))
-          ?? ((await findTenantContent(manager, tenant.id)).length > 0 ? 'tenant_not_empty' : null);
+        refusal = await this.subscriptionRefusal(manager, tenant.id);
+        if (!refusal) {
+          const content = await countTenantContent(manager, tenant.id);
+          if (content.length > 0) {
+            refusal = 'tenant_not_empty';
+            // The home banner only needs the refusal. The page lists the tables.
+            if (!banner) blocking = content;
+          }
+        }
       }
       const canLoad = mayLoad && !bannerOver && refusal === null;
       const createdSinceLoad = !banner && state.status === 'loaded' && state.loaded_at
@@ -527,6 +553,7 @@ export class DemoDataService implements OnApplicationShutdown {
         ...state,
         can_load: canLoad,
         load_refusal: refusal,
+        blocking,
         created_since_load: createdSinceLoad,
         workspace_name: workspaceConfirmationName(tenant),
         loaded_by_name: loadedByName,

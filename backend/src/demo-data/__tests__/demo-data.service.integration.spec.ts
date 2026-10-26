@@ -33,6 +33,7 @@ import {
   DEMO_LOAD_EMPTY_TABLES,
   DEMO_SCRIPT_RELATIVE_PATH,
   DemoDataService,
+  countTenantContent,
   demoLoadTimeoutMs,
   findDemoScript,
   findTenantContent,
@@ -599,6 +600,12 @@ async function testRefusals() {
       assert.ok(error instanceof ConflictException, `${tables}: ${String(error)}`);
       assert.equal(codeOf(error), 'tenant_not_empty');
       assert.deepEqual([...(error.getResponse() as any).tables].sort(), tables, tables.join(', '));
+      const counted = await inTenant(t.tenantId, (m) => countTenantContent(m, t.tenantId));
+      assert.deepEqual(
+        counted.map((row) => `${row.table}:${row.count}`).sort(),
+        [...tables].map((table) => `${table}:1`).sort(),
+        `${tables}: one row outside the starting state`,
+      );
       for (const statement of remove.split('; ')) await inTenant(t.tenantId, (m) => m.query(statement, [t.tenantId]));
       assert.deepEqual(await inTenant(t.tenantId, (m) => findTenantContent(m, t.tenantId)), [], `${tables}: removed`);
     }
