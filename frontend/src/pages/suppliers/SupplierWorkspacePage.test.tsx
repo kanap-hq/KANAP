@@ -280,6 +280,8 @@ describe('SupplierWorkspacePage', () => {
     const date = screen.getByPlaceholderText('labels.datePlaceholder');
     fireEvent.focus(date);
     fireEvent.change(date, { target: { value: '31/12/2099' } });
+    expect(mocked.patch).not.toHaveBeenCalled();
+    fireEvent.blur(date);
     await waitFor(() => expect(mocked.patch).toHaveBeenCalled());
     const [url, body] = lastPatch();
     expect(url).toBe('/suppliers/s-1');

@@ -1,20 +1,25 @@
 import React from 'react';
 import { act, render, screen } from '@testing-library/react';
+import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createAppTheme } from '../../config/ThemeContext';
 
 const grid = vi.hoisted(() => ({ calls: [] as any[] }));
 const features = vi.hoisted(() => ({ vulnerabilityFeed: false, isLoading: false }));
+const auth = vi.hoisted(() => ({ write: true }));
 
 vi.mock('react-i18next', () => {
   const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
   return { useTranslation: () => translation, initReactI18next: { type: '3rdParty', init: () => {} } };
 });
-vi.mock('../../auth/AuthContext', () => {
-  const auth = { hasLevel: () => true, profile: { id: 'u-1' } };
-  return { useAuth: () => auth };
-});
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({
+    hasLevel: (_area: string, level: string) => level === 'reader' || auth.write,
+    profile: { id: 'u-1' },
+  }),
+}));
 vi.mock('../../tenant/TenantContext', () => {
   const tenant = { tenantSlug: 'acme' };
   return { useTenant: () => tenant };
@@ -59,6 +64,7 @@ describe('ApplicationsPage', () => {
     grid.calls = [];
     features.vulnerabilityFeed = false;
     features.isLoading = false;
+    auth.write = true;
   });
 
   it('asks for the suites whenever the name cell shows them, the suites column hidden', () => {
@@ -247,5 +253,22 @@ describe('ApplicationsPage', () => {
     renderPage('?criticality=high');
     expect(grid.calls.length).toBeGreaterThan(0);
     expect(lastProps().columns.map((column) => column.field)).not.toContain('vulnerabilities_to_review');
+  });
+
+  it('says the list is empty in one line, with the creation for someone who may create', () => {
+    renderPage();
+    const emptyState = (lastProps() as { emptyState?: React.ReactElement }).emptyState;
+    render(<ThemeProvider theme={createAppTheme('light')}>{emptyState}</ThemeProvider>);
+    expect(screen.getByTestId('applications-empty').textContent).toContain('pages.applications.empty');
+    expect(screen.getByRole('button', { name: 'pages.applications.newAppService' })).toBeInTheDocument();
+  });
+
+  it('leaves the creation out of the empty list for a reader', () => {
+    auth.write = false;
+    renderPage();
+    const emptyState = (lastProps() as { emptyState?: React.ReactElement }).emptyState;
+    render(<ThemeProvider theme={createAppTheme('light')}>{emptyState}</ThemeProvider>);
+    expect(screen.getByTestId('applications-empty').textContent).toBe('pages.applications.empty');
+    expect(screen.queryByRole('button', { name: 'pages.applications.newAppService' })).toBeNull();
   });
 });
