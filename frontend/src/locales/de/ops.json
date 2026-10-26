@@ -964,6 +964,8 @@
       "frozenVersionsKept_other": "Die {{count}} eingefrorenen Versionen von {{year}} behalten den Kurs ihres Einfrierens.",
       "syncFetched_one": "{{count}} Kurs abgerufen.",
       "syncFetched_other": "{{count}} Kurse abgerufen.",
+      "syncUpToDate": "Die Wechselkurse sind aktuell.",
+      "syncNoneFetched": "Es wurde kein neuer Kurs abgerufen.",
       "syncStillMissing": "Weiterhin fehlend: {{pairs}}.",
       "syncContinues": "Die Synchronisierung läuft im Hintergrund weiter.",
       "syncSourceUnreachable": "Die Wechselkursquelle hat nicht geantwortet. Versuchen Sie es später erneut, oder geben Sie die fehlenden Kurse ein.",

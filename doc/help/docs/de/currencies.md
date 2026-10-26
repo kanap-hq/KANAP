@@ -89,6 +89,7 @@ Die Schaltfläche **Wechselkurssynchronisierung erzwingen** ruft die Kurse sofor
 **Was passiert**:
   - Die Schaltfläche bleibt beschäftigt, während KANAP die Kurse abruft, höchstens 20 Sekunden
   - Eine Meldung über der Tabelle nennt dann das Ergebnis: die Zahl der abgerufenen Kurse, zum Beispiel **12 Kurse abgerufen.**, gefolgt von den Paaren, die noch keinen Kurs haben, zum Beispiel **Weiterhin fehlend: BRL 2026.**, oder von **Jede verwendete Währung hat einen Kurs.**
+  - Wenn der Abruf keinen neuen Kurs bringt und jede verwendete Währung bereits einen Kurs hat, lautet die Meldung **Die Wechselkurse sind aktuell.** Wenn noch Paare fehlen, lautet sie **Es wurde kein neuer Kurs abgerufen.** und nennt sie.
   - Wenn die Quellen nicht geantwortet haben, sagt die Meldung das, und die bereits gespeicherten Kurse bleiben bestehen
   - Dauert der Abruf länger, lautet die Meldung **Die Synchronisierung läuft im Hintergrund weiter.** Die Tabelle und der Block der fehlenden Kurse aktualisieren sich, sobald er endet
   - Läuft bereits eine Aktualisierung, fügt KANAP ihr Ihre Jahre hinzu, sodass keine Anfrage verloren geht

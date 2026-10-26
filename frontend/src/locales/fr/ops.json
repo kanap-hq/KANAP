@@ -964,6 +964,8 @@
       "frozenVersionsKept_other": "Les {{count}} versions gelées de {{year}} gardent le taux de leur gel.",
       "syncFetched_one": "{{count}} taux récupéré.",
       "syncFetched_other": "{{count}} taux récupérés.",
+      "syncUpToDate": "Les taux de change sont à jour.",
+      "syncNoneFetched": "Aucun nouveau taux n'a été récupéré.",
       "syncStillMissing": "Toujours manquants : {{pairs}}.",
       "syncContinues": "La synchronisation continue en arrière-plan.",
       "syncSourceUnreachable": "La source des taux de change n'a pas répondu. Réessayez plus tard ou saisissez les taux manquants.",
