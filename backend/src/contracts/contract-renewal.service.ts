@@ -8,6 +8,7 @@ import { Subscription } from '../billing/subscription.entity';
 import { evaluateSubscriptionAccess } from '../billing/subscription-freeze.util';
 import { deriveStatusFromDisabledAt, endOfValidityFromDate } from '../common/status';
 import { withTenant } from '../common/tenant-runner';
+import { tenantSeedLanguage } from '../analytics/recommended-dimensions.seed';
 import { resolveEmailLocale } from '../i18n/email-i18n';
 import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
 import { TaskActivitiesService } from '../tasks/task-activities.service';
@@ -418,12 +419,12 @@ export class ContractRenewalService implements OnModuleInit {
         const [user]: Array<{ locale: string | null }> = userId
           ? await mg.query(`SELECT locale FROM users WHERE tenant_id = $1 AND id = $2`, [tenantId, userId])
           : [];
-        const language = resolveEmailLocale(user?.locale ?? null);
+        const language = await this.renewalLanguage(mg, tenantId, user?.locale);
         const [assignee]: Array<{ locale: string | null }> = await mg.query(
           `SELECT u.locale FROM tasks t JOIN users u ON u.tenant_id = t.tenant_id AND u.id = t.assignee_user_id WHERE t.tenant_id = $1 AND t.id = $2`,
           [tenantId, openTaskId],
         );
-        const text = renewalTaskText(resolveEmailLocale(assignee?.locale ?? user?.locale ?? null), after.name, end, 'end');
+        const text = renewalTaskText(await this.renewalLanguage(mg, tenantId, assignee?.locale, user?.locale), after.name, end, 'end');
         await this.tasks.updateForTarget(
           { type: 'contract', id: after.id, payload: { id: openTaskId, title: text.title, due_date: end.deadline } as any },
           userId ?? undefined,
@@ -477,7 +478,7 @@ export class ContractRenewalService implements OnModuleInit {
       const [user]: Array<{ locale: string | null }> = userId
         ? await mg.query(`SELECT locale FROM users WHERE tenant_id = $1 AND id = $2`, [tenantId, userId])
         : [];
-      const reason = resumeRenewalComment(resolveEmailLocale(user?.locale ?? null), previousEnd);
+      const reason = resumeRenewalComment(await this.renewalLanguage(mg, tenantId, user?.locale), previousEnd);
       const { state: next, taskId: nextTaskId } = await this.loadState(mg, after, today, windowDays);
       if (next.kind === 'pending' && next.mode === 'renewal' && (!nextTaskId || nextTaskId === endTaskId)) {
         // The renewal decision is due: the task becomes its task.
@@ -485,7 +486,7 @@ export class ContractRenewalService implements OnModuleInit {
           `SELECT u.locale FROM tasks t JOIN users u ON u.tenant_id = t.tenant_id AND u.id = t.assignee_user_id WHERE t.tenant_id = $1 AND t.id = $2`,
           [tenantId, endTaskId],
         );
-        const text = renewalTaskText(resolveEmailLocale(assignee?.locale ?? user?.locale ?? null), after.name, next.term, 'renewal');
+        const text = renewalTaskText(await this.renewalLanguage(mg, tenantId, assignee?.locale, user?.locale), after.name, next.term, 'renewal');
         await this.tasks.updateForTarget(
           { type: 'contract', id: after.id, payload: { id: endTaskId, title: text.title, due_date: next.term.deadline } as any },
           userId ?? undefined,
@@ -646,9 +647,23 @@ export class ContractRenewalService implements OnModuleInit {
   }
 
   /**
+   * The language of a renewal task or of its comment. The first locale that is set wins (the
+   * assignee, then the person acting). A null locale is someone who never chose a language, so
+   * the text uses the tenant's (`tenants.metadata.language`, set when the tenant was created),
+   * then English.
+   */
+  private async renewalLanguage(mg: EntityManager, tenantId: string, ...locales: Array<string | null | undefined>): Promise<string> {
+    for (const locale of locales) {
+      if (locale != null) return resolveEmailLocale(locale);
+    }
+    const [row]: Array<{ metadata: unknown }> = await mg.query(`SELECT metadata FROM tenants WHERE id = $1`, [tenantId]);
+    return tenantSeedLanguage(row?.metadata);
+  }
+
+  /**
    * The decision task of a term (`renewal` mode) or an end (`end` mode), assigned to the enabled
-   * owner in their language, due on the deadline (the end for an end), with its `renewal_task`
-   * row under the term's key. Null without an enabled owner.
+   * owner in their language (the tenant's when they never chose one), due on the deadline (the
+   * end for an end), with its `renewal_task` row under the term's key. Null without an enabled owner.
    */
   private async createDecisionTask(mg: EntityManager, contract: Contract, term: RenewalTerm, mode: RenewalMode): Promise<{ id: string } | null> {
     const tenantId = contract.tenant_id;
@@ -656,7 +671,7 @@ export class ContractRenewalService implements OnModuleInit {
       ? await mg.query(`SELECT id, locale FROM users WHERE tenant_id = $1 AND id = $2 AND status = 'enabled'`, [tenantId, contract.owner_user_id])
       : [];
     if (!owner) return null;
-    const text = renewalTaskText(resolveEmailLocale(owner.locale), contract.name, term, mode);
+    const text = renewalTaskText(await this.renewalLanguage(mg, tenantId, owner.locale), contract.name, term, mode);
     const task = await this.tasks.createForTarget(
       {
         type: 'contract',
