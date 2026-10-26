@@ -1,4 +1,5 @@
 import React from 'react';
+import { flushSync } from 'react-dom';
 import { TextField, InputAdornment, IconButton, SxProps, Theme, Box } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
 import { dateInputSeparator, euToYmd, ymdToEu, formatEuPartialAt } from '../../lib/date-eu';
@@ -54,6 +55,10 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
 
   // Normalize the input value to YYYY-MM-DD format
   const normalizedYmd = toYmdOnly(valueYmd);
+  // The date the field last stood for: the value, or a typed date sent and not yet back from the
+  // caller, so a blur right after Enter does not send it twice.
+  const committedRef = React.useRef(normalizedYmd);
+  React.useEffect(() => { committedRef.current = normalizedYmd; }, [normalizedYmd]);
 
   // sync from value (skip while the user is editing, and keep an invalid typed text on screen)
   React.useEffect(() => {
@@ -71,8 +76,30 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
     setText(formatted);
     setInvalid(false);
     pendingCaretRef.current = caret;
-    const ymd = euToYmd(formatted);
-    if (ymd) onChangeYmd(ymd);
+  };
+
+  // A typed date is sent on blur, Enter or Ctrl+S, once complete, and only when it changes the value:
+  // typing "15" over a day sends nothing on the way. An emptied text clears the date. Returns false
+  // when the text is not a date (the blur then shows the error).
+  const commitText = () => {
+    const ymd = euToYmd(text);
+    if (!ymd && text.trim() === '') {
+      setText('');
+      setInvalid(false);
+      if (committedRef.current) {
+        committedRef.current = '';
+        onChangeYmd('');
+      }
+      return true;
+    }
+    if (!ymd) return false;
+    setText(ymdToEu(ymd, sep));
+    setInvalid(false);
+    if (ymd !== committedRef.current) {
+      committedRef.current = ymd;
+      onChangeYmd(ymd);
+    }
+    return true;
   };
 
   const onFocus = () => {
@@ -93,20 +120,8 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
     pendingCaretRef.current = null;
     selectOnMouseUpRef.current = false;
     mouseDownRef.current = false;
-    const ymd = euToYmd(text);
-    if (!ymd && text.trim() === '') {
-      onChangeYmd('');
-      setText('');
-      setInvalid(false);
-      return;
-    }
-    if (ymd) {
-      setText(ymdToEu(ymd, sep));
-      setInvalid(false);
-      return;
-    }
     // A non-empty text that is not a full valid date stays in place and shows the error.
-    setInvalid(true);
+    if (!commitText()) setInvalid(true);
   };
 
   // Select the whole edit text on entering the field, so the first keystroke replaces the date.
@@ -145,18 +160,32 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
   const onCalendarSelect = (ymd: string) => {
     pendingCaretRef.current = null;
     setInvalid(false);
+    committedRef.current = ymd;
     onChangeYmd(ymd);
     setText(ymdToEu(ymd, sep));
   };
 
-  // Alt+Down opens the calendar from the keyboard: the button itself stays out of the tab order.
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Escape drops the typing and keeps the focus. It stops here only when there was typing to
+    // drop, so a second Escape (or one on an untouched field) still closes a popover or the page.
     if (e.key === 'Escape') {
+      const savedText = ymdToEu(normalizedYmd, sep);
+      if (text !== savedText) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       pendingCaretRef.current = null;
-      setText(ymdToEu(normalizedYmd, sep));
+      setText(savedText);
       setInvalid(false);
       return;
     }
+    // Enter and Ctrl+S send the date now and render the caller before the key goes on, so a save
+    // shortcut further up (or a form) reads the new date. The focus stays in the field.
+    if (e.key === 'Enter' || ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's')) {
+      flushSync(() => { commitText(); });
+      return;
+    }
+    // Alt+Down opens the calendar from the keyboard: the button itself stays out of the tab order.
     if (e.altKey && e.key === 'ArrowDown') {
       e.preventDefault();
       openPicker();

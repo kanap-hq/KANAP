@@ -76,7 +76,9 @@ describe('DateEUField replaces the saved date on the first keystroke', () => {
     expect(input.selectionEnd).toBe(input.value.length);
     await user.type(input, '21102026', { skipClick: true });
     expect(input.value).toBe('21/10/2026');
-    expect(onChangeYmd).toHaveBeenLastCalledWith('2026-10-21');
+    expect(onChangeYmd).not.toHaveBeenCalled();
+    await user.keyboard('{Enter}');
+    expect(onChangeYmd.mock.calls).toEqual([['2026-10-21']]);
   });
 
   it('does not select the whole date again when the focused field is clicked', async () => {
@@ -99,7 +101,8 @@ describe('DateEUField replaces the saved date on the first keystroke', () => {
     expect(input.selectionEnd).toBe(input.value.length);
     await user.type(input, '21102026', { skipClick: true });
     expect(input.value).toBe('21/10/2026');
-    expect(onChangeYmd).toHaveBeenLastCalledWith('2026-10-21');
+    fireEvent.blur(input);
+    expect(onChangeYmd.mock.calls).toEqual([['2026-10-21']]);
   });
 });
 
@@ -112,7 +115,8 @@ describe('DateEUField keeps the rest of the date while editing the middle', () =
     input.setSelectionRange(0, 2);
     await user.keyboard('21');
     expect(input.value).toBe('21/03/2022');
-    expect(onChangeYmd).toHaveBeenLastCalledWith('2022-03-21');
+    fireEvent.blur(input);
+    expect(onChangeYmd.mock.calls).toEqual([['2022-03-21']]);
   });
 
   it('deletes a month digit with backspace instead of padding it back', async () => {
@@ -168,7 +172,9 @@ describe('DateEUField reports an invalid date on blur', () => {
     fireEvent.change(input, { target: { value: '21/10/2026' } });
     expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
     expect(input).not.toHaveAttribute('aria-invalid', 'true');
-    expect(onChangeYmd).toHaveBeenLastCalledWith('2026-10-21');
+    fireEvent.blur(input);
+    expect(input).not.toHaveAttribute('aria-invalid', 'true');
+    expect(onChangeYmd.mock.calls).toEqual([['2026-10-21']]);
   });
 
   it('clears an emptied field on blur', () => {
@@ -208,6 +214,115 @@ describe('DateEUField reports an invalid date on blur', () => {
   });
 });
 
+describe('DateEUField sends a typed date once, when the typing ends', () => {
+  it('sends nothing while a day is typed over the selected one, then the date once on blur', async () => {
+    const user = userEvent.setup();
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-21' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    input.setSelectionRange(0, 2);
+    await user.keyboard('1');
+    expect(input.value).toBe('01/03/2022');
+    await user.keyboard('5');
+    expect(input.value).toBe('15/03/2022');
+    expect(onChangeYmd).not.toHaveBeenCalled();
+    fireEvent.blur(input);
+    expect(onChangeYmd.mock.calls).toEqual([['2022-03-15']]);
+  });
+
+  it('sends the date on Enter, keeps the focus, and does not send it again on blur', async () => {
+    const user = userEvent.setup();
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-21' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    await user.keyboard('15102022');
+    expect(input.value).toBe('15/10/2022');
+    expect(onChangeYmd).not.toHaveBeenCalled();
+    await user.keyboard('{Enter}');
+    expect(onChangeYmd.mock.calls).toEqual([['2022-10-15']]);
+    expect(document.activeElement).toBe(input);
+    expect(input.value).toBe('15/10/2022');
+    // The caller has not given the new value back yet: the blur must not send it a second time.
+    fireEvent.blur(input);
+    expect(onChangeYmd).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends nothing when the typed date is the value', () => {
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-21' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '21/03/2022' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.blur(input);
+    expect(onChangeYmd).not.toHaveBeenCalled();
+  });
+
+  it('clears an empty field on blur only when it had a date', () => {
+    const { onChangeYmd } = renderField({ valueYmd: '' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.blur(input);
+    expect(onChangeYmd).not.toHaveBeenCalled();
+  });
+
+  it('drops the typing on Escape, keeps the focus and keeps that Escape from the page', async () => {
+    const user = userEvent.setup();
+    const parentKeyDown = vi.fn();
+    const windowKeyDown = vi.fn();
+    const onWindowKey = (event: KeyboardEvent) => windowKeyDown(event.key);
+    window.addEventListener('keydown', onWindowKey);
+    try {
+      const onChangeYmd = vi.fn();
+      render(
+        <ThemeProvider theme={createAppTheme('light')}>
+          <div onKeyDown={(event) => parentKeyDown(event.key)}>
+            <DateEUField label="Go-live" valueYmd="2022-03-21" onChangeYmd={onChangeYmd} />
+          </div>
+        </ThemeProvider>,
+      );
+      const input = screen.getByRole('textbox') as HTMLInputElement;
+      await user.click(input);
+      await user.keyboard('1504');
+      expect(input.value).toBe('15/04');
+      await user.keyboard('{Escape}');
+      expect(input.value).toBe('21/03/2022');
+      expect(document.activeElement).toBe(input);
+      expect(parentKeyDown).not.toHaveBeenCalledWith('Escape');
+      expect(windowKeyDown).not.toHaveBeenCalledWith('Escape');
+
+      // Nothing typed any more: the next Escape goes on to the page (a popover or the page closes).
+      await user.keyboard('{Escape}');
+      expect(parentKeyDown).toHaveBeenCalledWith('Escape');
+      expect(windowKeyDown).toHaveBeenCalledWith('Escape');
+      fireEvent.blur(input);
+      expect(onChangeYmd).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener('keydown', onWindowKey);
+    }
+  });
+
+  it('sends a typed date on Ctrl+S before a save shortcut of the page reads it', () => {
+    // A page that keeps the date in its state and saves it from a window Ctrl+S handler bound to
+    // that state, as the task page does: the handler must see the date typed in the same key press.
+    const saved: string[] = [];
+    function Page() {
+      const [date, setDate] = React.useState('2022-03-21');
+      React.useEffect(() => {
+        const onKey = (event: KeyboardEvent) => { if (event.ctrlKey && event.key === 's') saved.push(date); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [date]);
+      return <DateEUField label="Go-live" valueYmd={date} onChangeYmd={setDate} />;
+    }
+    render(<ThemeProvider theme={createAppTheme('light')}><Page /></ThemeProvider>);
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '15/03/2022' } });
+    fireEvent.keyDown(input, { key: 's', ctrlKey: true });
+    expect(saved).toEqual(['2022-03-15']);
+  });
+});
+
 describe('DateEUField typing follows the language', () => {
   afterEach(async () => {
     await i18n.changeLanguage('en');
@@ -229,16 +344,18 @@ describe('DateEUField typing follows the language', () => {
     expect(input.value).toBe(typed.slice(0, 5).replace('15', '20'));
     fireEvent.change(input, { target: { value: '20102026' } });
     expect(input.value).toBe(typed.replace('15', '20'));
-    expect(onChangeYmd).toHaveBeenLastCalledWith('2026-10-20');
+    fireEvent.blur(input);
+    expect(onChangeYmd.mock.calls).toEqual([['2026-10-20']]);
   });
 
   it.each(['en', 'fr', 'es', 'de'])('%s: accepts slashes, dots and dashes', async (language) => {
     await i18n.changeLanguage(language);
     const { onChangeYmd } = renderField({ valueYmd: '' });
     const input = screen.getByRole('textbox') as HTMLInputElement;
-    fireEvent.focus(input);
     for (const [text, ymd] of [['01/02/2026', '2026-02-01'], ['03.04.2026', '2026-04-03'], ['05-06-2026', '2026-06-05']]) {
+      fireEvent.focus(input);
       fireEvent.change(input, { target: { value: text } });
+      fireEvent.blur(input);
       expect(onChangeYmd).toHaveBeenLastCalledWith(ymd);
     }
   });

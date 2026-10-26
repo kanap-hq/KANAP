@@ -7,8 +7,10 @@ import { createAppTheme } from '../../../config/ThemeContext';
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
 }));
+vi.mock('../../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 
 import PortfolioDetailWorkspaceShell from './PortfolioDetailWorkspaceShell';
+import DateEUField from '../../../components/fields/DateEUField';
 
 function renderShell(extra: Partial<React.ComponentProps<typeof PortfolioDetailWorkspaceShell>> = {}) {
   return render(
@@ -272,3 +274,40 @@ function CreateTitleHarness() {
     </>
   );
 }
+
+describe('PortfolioDetailWorkspaceShell Ctrl+S', () => {
+  it('saves a date typed in a field and not yet left, with the state of that key press', () => {
+    // As the request and project pages: the save shortcut exists once there is something to save,
+    // and reads the page state from its closure.
+    const saved: string[] = [];
+    function Page() {
+      const [date, setDate] = React.useState('2026-03-21');
+      const [dirty, setDirty] = React.useState(false);
+      return (
+        <ThemeProvider theme={createAppTheme('light')}>
+          <PortfolioDetailWorkspaceShell
+            activeTab="overview"
+            tabs={[{ key: 'overview', label: 'Overview' }]}
+            onTabChange={() => undefined}
+            drawerStorageKey="kanap.test.drawerOpen"
+            backLabel="Back"
+            onBack={() => undefined}
+            title="Title"
+            titleFallback="Untitled"
+            onSaveShortcut={dirty ? () => { saved.push(date); } : undefined}
+          >
+            <DateEUField label="Start" valueYmd={date} onChangeYmd={(next) => { setDate(next); setDirty(true); }} />
+          </PortfolioDetailWorkspaceShell>
+        </ThemeProvider>
+      );
+    }
+    render(<Page />);
+    const input = screen.getByRole('textbox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '15/04/2026' } });
+    const press = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true });
+    fireEvent(input, press);
+    expect(saved).toEqual(['2026-04-15']);
+    expect(press.defaultPrevented).toBe(true);
+  });
+});

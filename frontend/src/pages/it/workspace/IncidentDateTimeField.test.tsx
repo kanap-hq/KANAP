@@ -43,7 +43,8 @@ describe('IncidentDateTimeField', () => {
     const { onChange, date, time } = renderField(iso(2026, 10, 15, 14, 5));
     fireEvent.focus(date);
     fireEvent.change(date, { target: { value: '16102026' } });
-    expect(onChange).toHaveBeenLastCalledWith(iso(2026, 10, 16, 14, 5));
+    fireEvent.blur(date);
+    expect(onChange.mock.calls).toEqual([[iso(2026, 10, 16, 14, 5)]]);
     onChange.mockClear();
     fireEvent.change(time, { target: { value: '9:30' } });
     expect(onChange).not.toHaveBeenCalled();
@@ -56,7 +57,8 @@ describe('IncidentDateTimeField', () => {
     const { onChange, date, time } = renderField(null);
     fireEvent.focus(date);
     fireEvent.change(date, { target: { value: '01022026' } });
-    expect(onChange).toHaveBeenLastCalledWith(iso(2026, 2, 1, 0, 0));
+    fireEvent.blur(date);
+    expect(onChange.mock.calls).toEqual([[iso(2026, 2, 1, 0, 0)]]);
     expect(time.value).toBe('00:00');
     onChange.mockClear();
     fireEvent.change(time, { target: { value: '25:00' } });
@@ -70,6 +72,7 @@ describe('IncidentDateTimeField', () => {
     const { onChange, date, time } = renderField(null);
     fireEvent.focus(date);
     fireEvent.change(date, { target: { value: '01022026' } });
+    fireEvent.blur(date);
     expect(time.value).toBe('00:00');
     onChange.mockClear();
     await user.click(time);
@@ -102,7 +105,9 @@ describe('IncidentDateTimeField', () => {
     expect(date.value).toBe('15/03/2022');
     await user.type(date, '21102026', { skipClick: true });
     expect(date.value).toBe('21/10/2026');
-    expect(onChange).toHaveBeenLastCalledWith(iso(2026, 10, 21, 14, 5));
+    expect(onChange).not.toHaveBeenCalled();
+    await user.keyboard('{Enter}');
+    expect(onChange.mock.calls).toEqual([[iso(2026, 10, 21, 14, 5)]]);
   });
 
   it('shows an invalid date and leaves the saved timestamp alone', () => {
