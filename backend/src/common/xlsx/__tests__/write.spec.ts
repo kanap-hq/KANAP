@@ -36,6 +36,11 @@ function types() {
   assert.equal(cellOf(xml, 'B4'), '<c r="B4" s="1"><v>46280</v></c>', 'date is a serial, style 1');
   assert.ok(!xml.includes('r="B5"'), 'null writes no cell');
   assert.ok(!xml.includes('r="A6"') && xml.includes('r="B6"'), 'an empty text writes no cell');
+  // Before 1900-03-01 Excel's serials are wrong (its 1900-02-29) or negative: the day is text, in the language's format.
+  const early = sheetXml(write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'date', iso: '1900-02-28' }], [{ kind: 'date', iso: '1850-07-04' }], [{ kind: 'date', iso: '1900-03-01' }]] }], 'fr'));
+  assert.equal(cellOf(early, 'A2'), '<c r="A2" t="inlineStr"><is><t xml:space="preserve">28/02/1900</t></is></c>', 'the day before the leap-year bug is text');
+  assert.equal(cellOf(early, 'A3'), '<c r="A3" t="inlineStr"><is><t xml:space="preserve">04/07/1850</t></is></c>', 'a day before 1900 is text');
+  assert.equal(cellOf(early, 'A4'), '<c r="A4" s="1"><v>61</v></c>', '1900-03-01 is serial 61');
   assert.ok(!/<c [^>]*s="[12]"[^>]*t="inlineStr"/.test(xml.replace(/<row r="1">.*?<\/row>/, '')), 'no text cell carries a style');
 }
 

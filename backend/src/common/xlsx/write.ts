@@ -1,5 +1,6 @@
 import AdmZip = require('adm-zip');
 import { neutralizeCsvFormulaValue } from '../csv/csv-export.service';
+import { formatCsvDate } from '../csv-sheet/date';
 import type { CsvLanguage } from '../csv-sheet/types';
 
 /**
@@ -17,7 +18,7 @@ export type XlsxCell =
   | { kind: 'number'; value: number }
   /** A decimal written as text, such as `-1234.50`, stored as is in the cell. */
   | { kind: 'amount'; value: string }
-  /** A calendar day, `YYYY-MM-DD`. */
+  /** A calendar day, `YYYY-MM-DD`. A day before 1900-03-01 is written as text in the language's format. */
   | { kind: 'date'; iso: string }
   /** An empty cell: nothing is written. */
   | null;
@@ -76,6 +77,12 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const XML_FORBIDDEN =
   /[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
 const SHEET_NAME_FORBIDDEN = /[\[\]:*?/\\\u0000-\u001F]/g;
+
+/**
+ * The first day written as a date cell. Excel counts 1900-02-29, which never existed, so its serials
+ * before this day are off by one, and it has no serial before 1900.
+ */
+const FIRST_SERIAL_DAY = '1900-03-01';
 
 const WIDTH_SAMPLE_ROWS = 1000;
 const WIDTH_MIN = 8;
@@ -149,7 +156,7 @@ interface BuiltSheet {
   usesExtraStyles: boolean;
 }
 
-function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string): BuiltSheet {
+function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string, language: CsvLanguage): BuiltSheet {
   const styled = (sheet.header ?? 'styled') === 'styled';
   const columns = sheet.headers.length;
   const names: string[] = [];
@@ -214,7 +221,9 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string): BuiltSh
         usesAmount = true;
         if (sample) widths[index] = Math.max(widths[index], cell.value.length + Math.floor(cell.value.length / 3));
       } else if (cell.kind === 'date') {
-        cells.push(`<c r="${ref}" s="${STYLE_DATE}"><v>${daySerial(cell.iso)}</v></c>`);
+        const serial = daySerial(cell.iso);
+        if (cell.iso < FIRST_SERIAL_DAY) cells.push(textCell(ref, formatCsvDate(cell.iso, language), false));
+        else cells.push(`<c r="${ref}" s="${STYLE_DATE}"><v>${serial}</v></c>`);
         dateColumns.add(index + 1);
       } else {
         throw new Error(`xlsx: sheet "${name}" ${ref}: unknown cell kind`);
@@ -304,7 +313,7 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   const { language, sheets } = request;
   const appBaseUrl = String(request.appBaseUrl || '').trim().replace(/\/$/, '');
   const taken = new Set<string>();
-  const built = sheets.map((sheet) => buildSheet(sheet, sheetName(sheet.name, taken), appBaseUrl));
+  const built = sheets.map((sheet) => buildSheet(sheet, sheetName(sheet.name, taken), appBaseUrl, language));
   const extraStyles = built.some((sheet) => sheet.usesExtraStyles);
 
   const sheetOverrides = built
