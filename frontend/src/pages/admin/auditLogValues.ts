@@ -248,12 +248,56 @@ function jsonValue(value: unknown): AuditValue {
   return { text: `${text.slice(0, JSON_MAX_LENGTH - 1)}…`, title: text };
 }
 
+/** The before/after of a `user_data_access` entry: `{ mode, nodes: [{ type, name, code, access }] }`. */
+function isDataAccessSnapshot(snapshot: unknown): snapshot is { mode?: unknown; nodes?: unknown } {
+  return isPlainObject(snapshot)
+    && (snapshot.mode === 'all' || snapshot.mode === 'limited')
+    && Array.isArray(snapshot.nodes);
+}
+
+function dataAccessModeText(value: unknown, context: AuditValueContext): AuditValue | null {
+  if (value === 'all') return { text: context.t('auditLogs.dataAccess.allData') };
+  if (value === 'limited') return { text: context.t('auditLogs.dataAccess.limitedTo') };
+  return null;
+}
+
+function dataAccessNodeText(value: unknown, context: AuditValueContext): string | null {
+  if (!isPlainObject(value)) return null;
+  const access = value.access === 'edit'
+    ? context.t('auditLogs.dataAccess.edit')
+    : context.t('auditLogs.dataAccess.read');
+  if (value.type === 'all') {
+    return context.t('auditLogs.dataAccess.node', {
+      name: context.t('auditLogs.dataAccess.everything'),
+      access,
+    });
+  }
+  const name = typeof value.name === 'string' && value.name.trim()
+    ? value.name
+    : (typeof value.code === 'string' ? value.code : '');
+  if (!name) return null;
+  return context.t('auditLogs.dataAccess.node', { name, access });
+}
+
+function dataAccessNodesText(value: unknown[], context: AuditValueContext): AuditValue {
+  const texts = value.map((node) => dataAccessNodeText(node, context)).filter((text): text is string => !!text);
+  if (texts.length === 0) return { text: context.t('auditLogs.dataAccess.noNodes') };
+  return { text: texts.join(', ') };
+}
+
 /**
  * The text of a value cell: empty marker, yes/no, short dates, locale numbers, scalar lists,
  * one-line JSON for objects, the name of a person or a readable neighbour instead of an id.
  */
 export function formatAuditValue(value: unknown, field: string, context: AuditValueContext): AuditValue {
   if (value === null || value === undefined) return { text: DASH };
+  if (field === 'mode' && isDataAccessSnapshot(context.snapshot)) {
+    const mode = dataAccessModeText(value, context);
+    if (mode) return mode;
+  }
+  if (field === 'nodes' && Array.isArray(value) && isDataAccessSnapshot(context.snapshot)) {
+    return dataAccessNodesText(value, context);
+  }
   if (typeof value === 'boolean') return { text: context.t(value ? 'auditLogs.values.yes' : 'auditLogs.values.no') };
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) return { text: String(value) };

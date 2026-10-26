@@ -17,6 +17,7 @@ import {
 function centerUsages(usage: CostCenterUsage | undefined): UsageCount[] {
   const usages = lineUsages(usage);
   if (usage && usage.contracts > 0) usages.push({ type: 'contracts', total: usage.contracts });
+  if (usage && (usage.dataAccess ?? 0) > 0) usages.push({ type: 'data_access', total: usage.dataAccess! });
   return usages;
 }
 

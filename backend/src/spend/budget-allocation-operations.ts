@@ -2,7 +2,6 @@ import { BadRequestException } from '@nestjs/common';
 import { DeepPartial, EntityManager, In } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { AmountScope } from './amounts-write.util';
-import { formatAllocationMethodLabel } from './allocation-utils';
 import { currentTenantId, loadItemsValidIn, loadVersions } from './budget-column-operations';
 import { SpendAllocation } from './spend-allocation.entity';
 import { SpendVersion } from './spend-version.entity';
@@ -81,7 +80,7 @@ export type AllocationPreview = {
 /** One line's allocation copy with the line's own number (its BL-n reference): decided (a dry run) or done. */
 export type AllocationCopyLine = AllocationPreview & { itemNumber: number };
 
-function emptyPreview(item: { id: string; name: string; item_number: number }, action: AllocationAction, message: string): AllocationCopyLine {
+function emptyPreview(item: { id: string; name: string; item_number: number }, action: AllocationAction, message?: string): AllocationCopyLine {
   return {
     itemId: item.id,
     itemName: item.name,
@@ -95,7 +94,7 @@ function emptyPreview(item: { id: string; name: string; item_number: number }, a
     sourceAllocationsCount: 0,
     destinationAllocationsCount: 0,
     action,
-    message,
+    ...(message ? { message } : {}),
   };
 }
 
@@ -227,7 +226,7 @@ export async function runAllocationCopy(
   for (const item of items) {
     const sourceVersion = version(item.id, sourceYear);
     if (!sourceVersion) {
-      lines.push(emptyPreview(item, 'skip_missing_source_version', `No allocation data for ${sourceYear}`));
+      lines.push(emptyPreview(item, 'skip_missing_source_version'));
       skipped++;
       continue;
     }
@@ -256,19 +255,15 @@ export async function runAllocationCopy(
       itemName: item.name,
       itemNumber: Number(item.item_number),
       sourceMethod,
-      sourceMethodLabel: formatAllocationMethodLabel(sourceMethod),
+      // The screen translates the method codes. The label fields stay empty.
+      sourceMethodLabel: '',
       destinationMethod,
-      destinationMethodLabel: formatAllocationMethodLabel(destinationMethod),
+      destinationMethodLabel: '',
       resultMethod,
-      resultMethodLabel: formatAllocationMethodLabel(resultMethod),
+      resultMethodLabel: '',
       sourceAllocationsCount: shareCount,
       destinationAllocationsCount: destinationManual.length,
       action,
-      message: action === 'skip_destination_has_data'
-        ? 'Destination already has allocations'
-        : action === 'skip_no_source_allocations'
-          ? 'No allocations in source year'
-          : undefined,
     };
     lines.push(line);
     if (dryRun) {
@@ -322,8 +317,8 @@ export async function runAllocationCopy(
     if (!overwrite && lockedManual > 0) {
       // A manual split was saved meanwhile: kept, as for a destination that had one from the start.
       Object.assign(line, {
-        action: 'skip_destination_has_data', resultMethod: locked.allocation_method, resultMethodLabel: formatAllocationMethodLabel(locked.allocation_method),
-        destinationAllocationsCount: lockedManual, message: 'Destination already has allocations',
+        action: 'skip_destination_has_data', resultMethod: locked.allocation_method, resultMethodLabel: '',
+        destinationAllocationsCount: lockedManual, message: undefined,
       });
       skipped++;
       continue;

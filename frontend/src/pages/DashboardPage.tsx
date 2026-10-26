@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import PageHeader from '../components/PageHeader';
 import api from '../api';
 import { useAuth } from '../auth/AuthContext';
+import { formatCompactAmount, formatThousandsAmount } from '../i18n/formatters';
 import { useLocale } from '../i18n/useLocale';
 import DashboardTile from './workspace/tiles/DashboardTile';
 import { AmountColumnKey, amountFieldKey, slotYear, YearSlot, yearSlotLabel } from '../components/finance/amountColumns';
@@ -59,41 +60,22 @@ const tileLayoutSx = (wide = false) => (theme: Theme) => ({
 /** A tile row that opens what it names: neutral text, the hover background only. */
 const ROW_LINK_SX = { color: 'inherit', textDecoration: 'none', borderRadius: '5px', mx: -0.5, px: 0.5, '&:hover': { bgcolor: 'kanap.bg.hover' } } as const;
 
-function formatNumber(v: any) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '\u2014';
-  const i = Math.round(n);
-  return i.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-}
+type SnapshotTotals = {
+  [amount: string]: number | FxMissing[] | string | null | undefined;
+  fxMissing?: FxMissing[];
+  reportingCurrency?: string | null;
+};
 
-function formatCompact(v: any) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '\u2014';
-  try {
-    return new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n);
-  } catch {
-    const abs = Math.abs(n);
-    if (abs >= 1_000_000) return `${Math.round(n / 100_000) / 10}M`;
-    if (abs >= 1_000) return `${Math.round(n / 100) / 10}k`;
-    return String(Math.round(n));
-  }
+/** The reporting currency a totals or aggregate answer names. Null when it names none: never a guessed code. */
+function reportingCurrencyOf(data: { reportingCurrency?: unknown } | null | undefined): string | null {
+  const code = data?.reportingCurrency;
+  return typeof code === 'string' && code.trim() ? code.trim() : null;
 }
-
-function formatThousandsK(v: any) {
-  const n = Number(v ?? 0);
-  if (!isFinite(n)) return '\u2014';
-  const thousands = Math.round(n / 1000);
-  const abs = Math.abs(thousands);
-  const formatted = formatNumber(abs);
-  const sign = thousands < 0 ? '-' : '';
-  return `${sign}${formatted}k`;
-}
-
-type SnapshotTotals = Record<string, number> & { fxMissing?: FxMissing[] };
 
 /**
  * Every year and column from each list's totals; the combined total comes from the server. The
- * amounts left out for lack of an exchange rate: the three answers' entries together.
+ * amounts left out for lack of an exchange rate: the three answers' entries together. The reporting
+ * currency is the combined total's, else either nature's: the three name the same tenant currency.
  */
 function useBudgetSnapshot(enabled: boolean) {
   return useQuery({
@@ -109,9 +91,11 @@ function useBudgetSnapshot(enabled: boolean) {
         const res = await api.get<SnapshotTotals>(endpoint, { signal });
         return [scope, res.data] as const;
       }));
+      const byScope = Object.fromEntries(totals) as Record<BudgetScope, SnapshotTotals>;
       return {
-        totals: Object.fromEntries(totals) as Record<BudgetScope, Record<string, number>>,
+        totals: byScope as unknown as Record<BudgetScope, Record<string, number>>,
         fxMissing: mergeFxMissing(...totals.map(([, data]) => data?.fxMissing)),
+        reportingCurrency: reportingCurrencyOf(byScope.all) ?? reportingCurrencyOf(byScope.opex) ?? reportingCurrencyOf(byScope.capex),
       };
     },
     staleTime: 5 * 60 * 1000,
@@ -287,7 +271,8 @@ function useMyBudget(scope: BudgetScope, profile: ProfileName, metric: AmountCol
     }
     return [...byId.values()].sort((a, b) => b.value - a.value).slice(0, MY_TOP_LINES);
   }, [query.data]);
-  return { rows, topLines, fxMissing: query.fxMissing, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch };
+  const reportingCurrency = (query.data ?? []).reduce<string | null>((found, result) => found ?? reportingCurrencyOf(result), null);
+  return { rows, topLines, fxMissing: query.fxMissing, reportingCurrency, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch };
 }
 
 /** This year's default column by cost center, the five largest (lines without one in the ranking too). */
@@ -295,7 +280,7 @@ function useCostCenterTotals(scope: BudgetScope, metric: AmountColumnKey, enable
   const request = useMemo(() => costCenterTotalsRequest(metric, 5), [metric]);
   const query = useBudgetAggregate(scope, request, { enabled });
   const rows = useMemo(() => readCostCenterTotals(query.data), [query.data]);
-  return { rows, fxMissing: query.data?.fxMissing, isLoading: enabled && query.isLoading, isError: query.isError, refetch: query.refetch };
+  return { rows, fxMissing: query.data?.fxMissing, reportingCurrency: reportingCurrencyOf(query.data), isLoading: enabled && query.isLoading, isError: query.isError, refetch: query.refetch };
 }
 
 type RecentUpdate = { scope: NatureScope; id: string; ref: string; name: string; at: string | null };
@@ -350,7 +335,7 @@ function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: Am
       // A line without a rate sorts last, so it can miss this list. The totals name every such line.
       const [res, totals] = await Promise.all([
         api.get<ServerListResponse<BudgetSummaryRow & { nature: NatureScope }>>('/budget-lines/summary', { params }),
-        api.get<{ fxMissing?: FxMissing[] }>('/budget-lines/summary/totals', {
+        api.get<{ fxMissing?: FxMissing[]; reportingCurrency?: string | null }>('/budget-lines/summary/totals', {
           params: { amounts: currentYearField(column), ...(filters ? { filters } : {}) },
         }),
       ]);
@@ -363,7 +348,7 @@ function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: Am
         yMissingRate: missingRateOfRow(row, column, Y),
       }));
       const fxMissing = (totals.data?.fxMissing ?? []).filter((item) => item?.currency && item.year === Y);
-      return { items, fxMissing };
+      return { items, fxMissing, reportingCurrency: reportingCurrencyOf(totals.data) };
     },
     staleTime: 60 * 1000,
   });
@@ -384,7 +369,7 @@ function useTopIncreases(scope: BudgetScope, enabled: boolean, column: AmountCol
     // The line's reference; its id only when it has none (the page opens either).
     path: buildItemPath('budget', row.itemNumber != null ? formatItemRef('budget', row.itemNumber) : row.id),
   })), [query.data]);
-  return { items, fxMissing: query.data?.fxMissing, isLoading: enabled && (query.isLoading || !columnReady) };
+  return { items, fxMissing: query.data?.fxMissing, reportingCurrency: reportingCurrencyOf(query.data), isLoading: enabled && (query.isLoading || !columnReady) };
 }
 
 /** All / OPEX / CAPEX choice of a dashboard tile, remembered per tile; a type the user cannot read falls back to the default. */
@@ -464,7 +449,7 @@ export default function DashboardPage() {
   const topFxMissing = topItemsResult?.fxMissing;
   const topLoading = topQueryLoading || (readableScopes.length > 0 && !budgetColumns.ready);
   const [increaseScope, setIncreaseScope] = useTileScope('topIncreases');
-  const { items: topIncreases, fxMissing: increasesFxMissing, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0 && tileEnabled('top-increases'), defaultColumn.key, budgetColumns.ready, 5);
+  const { items: topIncreases, fxMissing: increasesFxMissing, reportingCurrency: increasesCurrency, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0 && tileEnabled('top-increases'), defaultColumn.key, budgetColumns.ready, 5);
 
   const [myBudgetScope, setMyBudgetScope] = useTileScope('myBudget');
   const myBudget = useMyBudget(myBudgetScope, profile, defaultColumn.key, readableScopes.length > 0 && tileEnabled('my-budget') && budgetColumns.ready);
@@ -507,6 +492,7 @@ export default function DashboardPage() {
             <DashboardTile
               icon="AccountBalanceWallet"
               title={t('dashboard.budgetSnapshot')}
+              currency={snapshot.data?.reportingCurrency ?? undefined}
               action={<Button size="small" onClick={() => navigate(listHref('all', {}))}>{t('buttons.view')}</Button>}
               isLoading={snapshot.isLoading || !budgetColumns.ready}
               isError={snapshot.isError}
@@ -534,7 +520,7 @@ export default function DashboardPage() {
                           {snapshotColumns.map((column) => (
                             <TableCell key={column.key} align="right">
                               <Box component={RouterLink} to={listHref(row.scope, {})} sx={ROW_LINK_SX}>
-                                {formatThousandsK(row.values[column.key])}
+                                {formatThousandsAmount(row.values[column.key], locale)}
                               </Box>
                             </TableCell>
                           ))}
@@ -604,6 +590,7 @@ export default function DashboardPage() {
               icon="VerifiedUser"
               title={t('dashboard.myBudget.title')}
               subtitle={columnY}
+              currency={myBudget.reportingCurrency ?? undefined}
               isLoading={myBudgetLoading}
               isError={myBudget.isError}
               onRetry={myBudget.refetch}
@@ -620,7 +607,7 @@ export default function DashboardPage() {
                       <>
                         <Typography variant="body1" noWrap sx={{ flex: 1, color: 'inherit' }}>{label}</Typography>
                         <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>{lines}</Typography>
-                        <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right', color: 'inherit' }}>{formatThousandsK(r.value)}</Typography>
+                        <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right', color: 'inherit' }}>{formatThousandsAmount(r.value, locale)}</Typography>
                       </>
                     );
                     // No line in that role: plain text, nothing to open.
@@ -645,7 +632,7 @@ export default function DashboardPage() {
                             <Typography sx={{ fontFamily: 'monospace', fontSize: 11, color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>{line.ref}</Typography>
                           )}
                           <Typography variant="body1" noWrap title={line.name} sx={{ flex: 1, minWidth: 0 }}>{line.name}</Typography>
-                          <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsK(line.value)}</Typography>
+                          <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsAmount(line.value, locale)}</Typography>
                         </Stack>
                       ))}
                     </>
@@ -710,6 +697,7 @@ export default function DashboardPage() {
               icon="Leaderboard"
               title={t('dashboard.topItems')}
               subtitle={columnY}
+              currency={topItemsResult?.reportingCurrency ?? undefined}
               isLoading={topLoading}
               action={(
                 <Stack direction="row" alignItems="center">
@@ -726,12 +714,12 @@ export default function DashboardPage() {
                       // No exchange rate this year: the amount in the line currency, marked.
                       <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 90, justifyContent: 'flex-end' }}>
                         <Typography variant="body1" sx={{ color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>
-                          {t('ops:shared.fxMissing.localAmount', { amount: formatThousandsK(r.y), currency: r.yMissingRate.currency })}
+                          {t('ops:shared.fxMissing.localAmount', { amount: formatThousandsAmount(r.y, locale), currency: r.yMissingRate.currency })}
                         </Typography>
                         <FxMissingMark currency={r.yMissingRate.currency} year={r.yMissingRate.year} />
                       </Stack>
                     ) : (
-                      <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsK(r.y)}</Typography>
+                      <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsAmount(r.y, locale)}</Typography>
                     )}
                   </Stack>
                 ))}
@@ -749,6 +737,7 @@ export default function DashboardPage() {
               icon="TrendingUp"
               title={t('dashboard.topIncreases')}
               subtitle={t('dashboard.columnYvsYminus1', { column: defaultColumn.label })}
+              currency={increasesCurrency ?? undefined}
               isLoading={increasesLoading}
               action={(
                 <Stack direction="row" alignItems="center">
@@ -761,7 +750,7 @@ export default function DashboardPage() {
                 {topIncreases.map((r) => (
                   <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
                     <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                    <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>+{formatCompact(r.delta)}</Typography>
+                    <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>+{formatCompactAmount(r.delta, locale)}</Typography>
                   </Stack>
                 ))}
                 {topIncreases.length === 0 && (
@@ -778,6 +767,7 @@ export default function DashboardPage() {
               icon="Groups"
               title={t('dashboard.byCostCenter')}
               subtitle={columnY}
+              currency={costCenters.reportingCurrency ?? undefined}
               isLoading={costCentersLoading}
               isError={costCenters.isError}
               onRetry={costCenters.refetch}
@@ -800,7 +790,7 @@ export default function DashboardPage() {
                     <Box sx={{ flex: 1, minWidth: 24, height: 4, borderRadius: '2px', bgcolor: 'kanap.sliderTrack', overflow: 'hidden' }}>
                       <Box sx={{ height: '100%', borderRadius: '2px', bgcolor: 'kanap.teal', width: `${largestCostCenter > 0 ? (r.value / largestCostCenter) * 100 : 0}%` }} />
                     </Box>
-                    <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsK(r.value)}</Typography>
+                    <Typography variant="body1" sx={{ minWidth: 72, textAlign: 'right' }}>{formatThousandsAmount(r.value, locale)}</Typography>
                   </Stack>
                 ))}
                 {costCenters.rows.length === 0 && (

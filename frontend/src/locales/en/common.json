@@ -200,6 +200,8 @@
       "cost_centers_other": "{{count}} cost centers",
       "departments_one": "{{count}} department",
       "departments_other": "{{count}} departments",
+      "data_access_one": "the data access of {{count}} person",
+      "data_access_other": "the data access of {{count}} people",
       "users_one": "{{count}} user",
       "users_other": "{{count}} users",
       "locations_one": "{{count}} location",
@@ -333,6 +335,7 @@
     "columnY": "{{column}}, Y",
     "topIncreases": "Top increases",
     "columnYvsYminus1": "{{column}}, Y vs Y-1",
+    "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "No increases",
     "myBudget": {
       "title": "My budget",

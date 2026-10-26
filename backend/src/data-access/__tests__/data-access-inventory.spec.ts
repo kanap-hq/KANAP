@@ -84,6 +84,8 @@ const APPLY_CALLS: Record<string, number> = {
   'ai/execution/ai-tenant-execution.service.ts': 1,
   // canAccessInlineAttachment (option applyDataAccess) and the knowledge inline route.
   'knowledge/knowledge.service.ts': 2,
+  // The admin preview: the target's proposed access, then the caller's again (spec §8).
+  'data-access/data-access-admin.service.ts': 2,
 };
 
 /** The inline-attachment routes that ask canAccessInlineAttachment to apply the access. */

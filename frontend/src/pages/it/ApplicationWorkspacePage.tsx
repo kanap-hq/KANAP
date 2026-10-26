@@ -28,7 +28,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
-import { KanapDialog, PropertyGroup, PropertyRow, StatusDot } from '../../components/design';
+import { KanapDialog, PropertyGroup, PropertyRow, StatusDot, unsavedConfirm, useKanapDialogs } from '../../components/design';
 import IntegratedDocumentEditor, { type IntegratedDocumentEditorHandle } from '../../components/IntegratedDocumentEditor';
 import DateEUField from '../../components/fields/DateEUField';
 import EntityKnowledgePanel from '../../components/EntityKnowledgePanel';
@@ -58,7 +58,7 @@ import SendLinkButton from '../../components/workspace/SendLinkButton';
 import DeploymentsEditor from './components/DeploymentsEditor';
 import ApplicationRelationsPanel from './editors/ApplicationRelationsPanel';
 import ApplicationTechnologiesSection from './workspace/ApplicationTechnologiesSection';
-import ReachVulnerabilitiesSection, { type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
+import ReachVulnerabilitiesSection, { reachVulnerabilitiesRefetchMs, type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
 import VulnerabilitySevereBadge, { highestSevereOf } from './workspace/VulnerabilitySevereBadge';
 import PendingMetadata from './workspace/PendingMetadata';
 import { useFeatures } from '../../config/FeaturesContext';
@@ -72,6 +72,7 @@ import { useLocale } from '../../i18n/useLocale';
 import ApplicationClassificationPanel, { HelpLabel, HelpTip, type RecoveryDependency } from './components/ApplicationClassificationPanel';
 import ApplicationCriticalityMetadata from './components/ApplicationCriticalityMetadata';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
+import { useLeaveGuard } from '../../hooks/leaveGuard';
 
 type TabKey = 'overview' | 'deployments' | 'interfaces' | 'operations' | 'compliance' | 'relations';
 
@@ -1443,10 +1444,13 @@ export default function ApplicationWorkspacePage() {
   const canCreateKnowledge = hasLevel('knowledge', 'member');
   const overviewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
   const createRef = React.useRef<ApplicationCreateEditorHandle>(null);
-  const [createName, setCreateName] = React.useState('');
+  const dialogs = useKanapDialogs();
   const [versionDialogOpen, setVersionDialogOpen] = React.useState(false);
   const [savingCreate, setSavingCreate] = React.useState(false);
   const [createDirty, setCreateDirty] = React.useState(false);
+  const [createName, setCreateName] = React.useState('');
+  const [propertiesHost, setPropertiesHost] = React.useState<HTMLDivElement | null>(null);
+  const [bodyHost, setBodyHost] = React.useState<HTMLDivElement | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const feedbackRef = React.useRef<ReturnType<typeof useApplicationFeedback>>({ error: () => undefined, undo: () => undefined, info: () => undefined });
 
@@ -1486,11 +1490,13 @@ export default function ApplicationWorkspacePage() {
     enabled: !isCreate && !!app?.id,
   });
   // One read for the Operations section and the badge of the metadata bar. Technology link writes
-  // and CVE state changes invalidate every `vulnerabilities` query.
+  // and CVE state changes invalidate every `vulnerabilities` query. While a match is still queued,
+  // it reads again every second, and stops once the answer is no longer pending.
   const vulnerabilitiesQuery = useQuery({
     queryKey: ['vulnerabilities', 'application', app?.id],
     queryFn: async () => (await api.get<ReachVulnerabilities>(`/applications/${app!.id}/vulnerabilities`)).data,
     enabled: vulnerabilityFeed && !isCreate && !!app?.id,
+    refetchInterval: (query) => reachVulnerabilitiesRefetchMs(query.state.data),
   });
   // Out of service (`totals: null`): nothing counts, the section and the badge disappear.
   const vulnerabilities = vulnerabilityFeed && !isCreate && vulnerabilitiesQuery.data?.totals ? vulnerabilitiesQuery.data : null;
@@ -1516,10 +1522,18 @@ export default function ApplicationWorkspacePage() {
     window.history.replaceState(null, '', `/it/applications/${canonicalBase}/${routeTab}${qs ? `?${qs}` : ''}`);
   }, [app?.name, app?.sequential_id, isCreate, navigate, routeId, routeTab, searchParams]);
 
-  const closeWorkspace = React.useCallback(() => {
+  // True leaves and drops the draft. False stays. A menu link asks the same question.
+  const confirmLeaveCreate = React.useCallback(async () => {
+    if (!(isCreate && createDirty)) return true;
+    return dialogs.confirm(unsavedConfirm(t, 'leaveWithoutSaving'));
+  }, [createDirty, dialogs, isCreate, t]);
+  useLeaveGuard(() => isCreate && createDirty, confirmLeaveCreate);
+
+  const closeWorkspace = React.useCallback(async () => {
+    if (!(await confirmLeaveCreate())) return;
     const qs = listContextParams.toString();
     navigate(`/it/applications${qs ? `?${qs}` : ''}`);
-  }, [listContextParams, navigate]);
+  }, [confirmLeaveCreate, listContextParams, navigate]);
 
   const canonicalPathFor = React.useCallback((targetId: string, tab: TabKey = routeTab) => {
     const qs = listContextParams.toString();
@@ -1656,8 +1670,7 @@ export default function ApplicationWorkspacePage() {
       {!!error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{error}</Alert>}
       {!!appQuery.error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{t('messages.loadApplicationFailed')}</Alert>}
 
-      <ApplicationCreateEditor ref={createRef} onDirtyChange={setCreateDirty} onNameChange={setCreateName}>
-      {({ properties: createProperties, body: createBody }) => <PortfolioDetailWorkspaceShell
+      <PortfolioDetailWorkspaceShell
         activeTab={routeTab}
         tabs={tabs}
         onTabChange={handleTabChange}
@@ -1671,12 +1684,16 @@ export default function ApplicationWorkspacePage() {
         canEditTitle={isCreate || canManage}
         readOnly={!isCreate && !canManage}
         onTitleSave={(value) => {
-          if (isCreate) createRef.current?.setName(value);
-          else void patchApplication({ name: value });
+          if (isCreate) {
+            createRef.current?.setName(value);
+            return;
+          }
+          void patchApplication({ name: value });
         }}
         titleRequiredMessage={t('messages.nameRequired')}
         titleMaxLength={APPLICATION_NAME_MAX}
         isCreate={isCreate}
+        forceDrawerOpen={isCreate}
         nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
@@ -1764,8 +1781,9 @@ export default function ApplicationWorkspacePage() {
             </IconButton>
           </>
         )}
-        forceDrawerOpen={isCreate}
-        properties={isCreate ? createProperties : app ? (
+        properties={isCreate ? (
+          <Box ref={setPropertiesHost} />
+        ) : app ? (
           <ApplicationProperties
             app={app}
             canManage={canManage}
@@ -1774,7 +1792,17 @@ export default function ApplicationWorkspacePage() {
           />
         ) : <Box />}
       >
-        {isCreate && routeTab === 'overview' && createBody}
+        {isCreate && (
+          <ApplicationCreateEditor
+            ref={createRef}
+            onDirtyChange={setCreateDirty}
+            onNameChange={setCreateName}
+            presentation="split"
+            propertiesHost={propertiesHost}
+            bodyHost={bodyHost}
+          />
+        )}
+        {isCreate && routeTab === 'overview' && <Box ref={setBodyHost} />}
 
         {!isCreate && app && routeTab === 'overview' && (
           <OverviewTab
@@ -1850,8 +1878,7 @@ export default function ApplicationWorkspacePage() {
             onOpenKnowledge={openKnowledge}
           />
         )}
-      </PortfolioDetailWorkspaceShell>}
-      </ApplicationCreateEditor>
+      </PortfolioDetailWorkspaceShell>
 
       {app && canManage && (
         <CreateVersionDialog

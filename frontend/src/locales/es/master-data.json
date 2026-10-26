@@ -54,7 +54,8 @@
       "contacts": "Contactos",
       "prev": "Ant.",
       "next": "Sig.",
-      "enabled": "Habilitado"
+      "enabled": "Habilitado",
+      "access": "Acceso"
     },
     "workspace": {
       "itemCountOf": "{{entity}} {{current}} de {{total}}"
@@ -1110,7 +1111,8 @@
     "account": {
       "accountNumberRequired": "El número de cuenta es obligatorio",
       "accountNumberTooLong": "Utilice como máximo {{max}} dígitos",
-      "accountNameRequired": "El nombre de la cuenta es obligatorio"
+      "accountNameRequired": "El nombre de la cuenta es obligatorio",
+      "chartOfAccountsRequired": "El plan de cuentas es obligatorio"
     }
   }
 }

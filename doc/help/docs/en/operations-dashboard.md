@@ -27,7 +27,7 @@ The tiles below are listed in their default order.
 
 ### Budget
 
-A table covering three fiscal years: last year (Y-1), the current year (Y) and next year (Y+1). Each year has three rows: **OPEX**, **CAPEX** and **Total**. The value columns are the budget columns your organisation shows, under their names (**Budget**, **Revision**, **Actuals** and **Expected landing** with the standard settings, plus **Forecast** when it is shown). You can keep fewer of them in [Customize](#customizing-the-overview). A column shows when it holds an amount for at least one row. Hidden columns never appear. All amounts are rounded to the nearest thousand and displayed with a "k" suffix (for example, `7 846k`).
+A table covering three fiscal years: last year (Y-1), the current year (Y) and next year (Y+1). Each year has three rows: **OPEX**, **CAPEX** and **Total**. The value columns are the budget columns your organisation shows, under their names (**Budget**, **Revision**, **Actuals** and **Expected landing** with the standard settings, plus **Forecast** when it is shown). You can keep fewer of them in [Customize](#customizing-the-overview). A column shows when it holds an amount for at least one row. Hidden columns never appear. All amounts are rounded to the nearest thousand and displayed with a "k" suffix (for example, `7,846k`). Separators follow the interface language.
 
 Click an amount to open the [budget lines list](budget-lines.md) on that type. A **Total** amount opens the list on both types. Click **View** to open the list.
 
@@ -67,13 +67,13 @@ Click **View all** to open the Contracts page.
 
 ### Top lines
 
-The five largest lines for the current year, ranked by the default column. The subtitle names the column, for example **Budget, Y**. Amounts are rounded to thousands with a "k" suffix.
+The five largest lines for the current year, ranked by the default column. The subtitle names the column, for example **Budget, Y**. Amounts are rounded to thousands with a "k" suffix, with the separators of the interface language.
 
 Use the **All** / **OPEX** / **CAPEX** tabs to choose the type. Click **Open** to view the full Top items report on the same type.
 
 ### Top increases
 
-The five lines with the largest increase in the default column compared to the previous year. The subtitle names the column, for example **Budget, Y vs Y-1**. Lines whose amount stayed flat or went down do not appear.
+The five lines with the largest increase in the default column compared to the previous year. The subtitle names the column, for example **Budget, Y vs Y-1**. Lines whose amount stayed flat or went down do not appear. A small increase stays in full. A larger one is shortened, for example `340.1k`.
 
 Use the **All** / **OPEX** / **CAPEX** tabs to choose the type. Click **Open** to view the full Top increase / decrease report on the same type.
 
@@ -103,6 +103,6 @@ Click **Customize** to open **Budget dashboard settings**. Your choices apply to
 ## Tips
 
 - **Which column the tiles use**: A budget administrator chooses the default column and the column names in [Budget columns](budget-operations.md#budget-columns). The tiles and the reports they open follow that choice.
-- **Rounded numbers**: Every amount on the overview is rounded to thousands for a compact view. Open the budget lines list, or the reports, when you need exact figures.
+- **Rounded numbers**: Budget, Top lines, My budget and By cost center round amounts to thousands with a k, for example `7,846k`. The Top increases tile keeps a small change in full and shortens a larger one, for example `340.1k`. Open the budget lines list, or the reports, when you need exact figures.
 - **Missing buttons**: If you do not see the **New OPEX line** or **New CAPEX line** buttons, your current role does not have the Member level on Budget. Ask your administrator to check your access.
 - **Empty tiles**: A tile that shows "No data" simply means there are no records of that type yet. Once you or your team start entering data, the tile will populate automatically.

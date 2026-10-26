@@ -200,6 +200,8 @@
       "cost_centers_other": "{{count}} Kostenstellen",
       "departments_one": "{{count}} Abteilung",
       "departments_other": "{{count}} Abteilungen",
+      "data_access_one": "der Datenzugriff von {{count}} Person",
+      "data_access_other": "der Datenzugriff von {{count}} Personen",
       "users_one": "{{count}} Benutzer",
       "users_other": "{{count}} Benutzer",
       "locations_one": "{{count}} Standort",
@@ -333,6 +335,7 @@
     "columnY": "{{column}}, J",
     "topIncreases": "Stärkste Zuwächse",
     "columnYvsYminus1": "{{column}}, J vs J-1",
+    "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "Keine Zuwächse",
     "myBudget": {
       "title": "Mein Budget",

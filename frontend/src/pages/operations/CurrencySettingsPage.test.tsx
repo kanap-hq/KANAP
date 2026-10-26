@@ -543,6 +543,44 @@ describe('CurrencySettingsPage', () => {
     expect(alert).not.toHaveTextContent('fetched');
   });
 
+  it('says the rates are up to date when the sync fetched nothing new', async () => {
+    const user = userEvent.setup();
+    mocked.post.mockResolvedValue({
+      data: { ok: true, completed: true, years: [2026], fetched: 0, stillMissing: [] },
+    });
+    renderPage();
+    await waitForSettings();
+    await user.click(screen.getByRole('button', { name: 'Force FX rates sync' }));
+    const slot = screen.getByTestId('sync-result');
+    const alert = await within(slot).findByRole('alert');
+    expect(alert).toHaveTextContent('Exchange rates are up to date.');
+    expect(alert).not.toHaveTextContent('0');
+    expect(alert).not.toHaveTextContent('fetched');
+    expect(alert.className).toMatch(/Success/);
+  });
+
+  it('names the pairs still missing when the sync fetched nothing new', async () => {
+    const user = userEvent.setup();
+    mocked.post.mockResolvedValue({
+      data: {
+        ok: true,
+        completed: true,
+        years: [2026],
+        fetched: 0,
+        stillMissing: [{ currency: 'FKP', year: 2026 }],
+      },
+    });
+    renderPage();
+    await waitForSettings();
+    await user.click(screen.getByRole('button', { name: 'Force FX rates sync' }));
+    const slot = screen.getByTestId('sync-result');
+    const alert = await within(slot).findByRole('alert');
+    expect(alert).toHaveTextContent('No new rate was fetched.');
+    expect(alert).toHaveTextContent('Still missing: FKP 2026.');
+    expect(alert).not.toHaveTextContent('0 rates fetched');
+    expect(alert.className).toMatch(/Success/);
+  });
+
   it('says every used currency has a rate when the sync finishes with nothing missing', async () => {
     const user = userEvent.setup();
     mocked.post.mockResolvedValue({

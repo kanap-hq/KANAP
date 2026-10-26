@@ -279,7 +279,7 @@ To add, change or remove a declared technology, and to record it on servers, you
 | **Crit.**, **High**, **Med.**, **Low**, **N/R** | One column per severity (Critical, High, Medium, Low, Not rated, the full name in a tooltip on the header): the vulnerabilities still to review. A vulnerability rated **None** counts with **Low** |
 | **Total** | The distinct vulnerabilities still to review on this line |
 
-**See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the application and the technology. When nothing is left to review, the section says so in one line. A disabled application has no section.
+**See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the application and the technology. When nothing is left to review, the section says so in one line. While the match of a technology just recorded on this application, or on one of its deployment servers, is still running, the section says "Searching for vulnerabilities…" and fills in on its own. A disabled application has no section.
 
 The section counts direct links only. A technology the **Technologies** section shows through the host of a virtual machine does not count here: it counts on the host. See [What KANAP counts](vulnerabilities.md#what-kanap-counts).
 

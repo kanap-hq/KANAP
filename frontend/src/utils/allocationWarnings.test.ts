@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '../i18n';
+import { allocationMethodLabel, chargebackDepartmentLabel } from './allocationLabels';
 import { allocationWarningKey, allocationWarningText, amountFxMissingOf, type ReportWarning } from './allocationWarnings';
 
 const warning = {
@@ -48,6 +49,65 @@ describe('allocationWarningText', () => {
 
   it('shows a sentence from the server as it is', () => {
     expect(allocationWarningText(i18n.getFixedT('fr'), 'Missing paying company for "X" (year 2026).')).toBe('Missing paying company for "X" (year 2026).');
+  });
+
+  it('words a missing paying company in each language', () => {
+    const missing = { code: 'missing_paying_company' as const, item: 'Messagerie', year: 2026 };
+    for (const lng of ['en', 'fr', 'de', 'es']) {
+      const text = allocationWarningText(i18n.getFixedT(lng), missing);
+      expect(text).not.toContain('chargebackWarnings');
+      expect(text).toContain('Messagerie');
+      expect(text).toContain('2026');
+    }
+    expect(allocationWarningText(i18n.getFixedT('fr'), missing)).toBe(
+      'Société payeuse manquante pour « Messagerie » (année 2026). Les totaux payés excluent cette ligne.',
+    );
+    expect(allocationWarningKey(missing)).toBe('missing_paying_company:2026:Messagerie');
+  });
+
+  it('words a stored allocation and a skipped one from their codes', () => {
+    const stored = {
+      code: 'stored_allocation_used' as const,
+      item: 'Paie',
+      year: 2026,
+      reason: { code: 'provide_driver' as const, driver: 'headcount' as const },
+    };
+    expect(allocationWarningText(i18n.getFixedT('fr'), stored)).toBe(
+      'Ventilation enregistrée utilisée pour « Paie » (année 2026) : Fournissez Effectif pour les sociétés sélectionnées.',
+    );
+    const skipped = {
+      code: 'allocations_skipped' as const,
+      item: 'Paie',
+      year: 2026,
+      reason: { code: 'text' as const, text: 'Calculator detail' },
+    };
+    expect(allocationWarningText(i18n.getFixedT('en'), skipped)).toBe(
+      'Skipped allocations for "Paie" (year 2026): Calculator detail',
+    );
+    expect(allocationWarningKey(stored)).toBe('stored_allocation_used:2026:Paie');
+  });
+});
+
+describe('allocation method and department labels', () => {
+  it('translates the method codes and the department fallbacks', () => {
+    const fr = i18n.getFixedT('fr');
+    expect(allocationMethodLabel(fr, 'headcount')).toBe('Effectif');
+    expect(allocationMethodLabel(fr, 'it_users')).toBe('Utilisateurs IT');
+    expect(allocationMethodLabel(fr, 'turnover')).toBe("Chiffre d'affaires");
+    expect(allocationMethodLabel(fr, 'manual_company')).toBe('Manuel par société');
+    expect(allocationMethodLabel(fr, 'manual_department')).toBe('Manuel par département');
+    expect(allocationMethodLabel(fr, 'manual_pct')).toBe('Pourcentages manuels');
+    expect(allocationMethodLabel(fr, 'default')).toBe('Par défaut');
+    expect(allocationMethodLabel(fr, null)).toBe('');
+    expect(chargebackDepartmentLabel(fr, null, null)).toBe('Coûts communs');
+    expect(chargebackDepartmentLabel(fr, 'dept-1', null)).toBe('Département inconnu');
+    expect(chargebackDepartmentLabel(fr, 'dept-1', 'Finance')).toBe('Finance');
+    for (const lng of ['en', 'de', 'es']) {
+      const t = i18n.getFixedT(lng);
+      expect(allocationMethodLabel(t, 'manual_pct')).not.toContain('allocationMethod');
+      expect(chargebackDepartmentLabel(t, null, 'Common Costs')).toBe(t('ops:reports.globalChargeback.commonCosts'));
+      expect(chargebackDepartmentLabel(t, 'dept-1', '  ')).not.toContain('unknownDepartment');
+    }
   });
 });
 

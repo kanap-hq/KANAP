@@ -1567,8 +1567,6 @@
         "minutes": "{{count}} Min."
       },
       "create": {
-        "title": "Titel",
-        "titlePlaceholder": "z. B. Mailservice am Standort Lyon nicht verfügbar",
         "description": "Beschreibung",
         "titleRequired": "Titel ist erforderlich.",
         "severityRequired": "Schweregrad ist erforderlich.",

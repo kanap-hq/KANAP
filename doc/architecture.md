@@ -5,7 +5,7 @@ Metadata
 - Audience: Engineers, architects, product, operations
 - Status: current
 - Owner: TBD
-- Last Updated: 2026-10-02
+- Last Updated: 2026-10-25
 
 ## Summary
 KANAP is a NestJS API, a Vite/React single-page app and an Astro marketing site in front of one PostgreSQL 15 database. The same code base ships in two deployment modes selected at runtime: `multi-tenant` (the cloud SaaS, one shared database with row-level security per tenant) and `single-tenant` (on-premise, one tenant, no platform layer). See [Deployment Modes](#deployment-modes).
@@ -16,7 +16,7 @@ Production topology layers Cloudflare in front of a host Nginx front door for ro
 Goals, constraints, assumptions, and relevant background for architectural choices.
 
 ## Deployment Modes
-- `DEPLOYMENT_MODE=single-tenant` selects on-premise mode; any other value (or unset) is `multi-tenant`. Flags are computed once in `backend/src/config/features.ts` and are the single source of truth:
+- `DEPLOYMENT_MODE=single-tenant` selects on-premise mode. `multi-tenant`, or leaving the variable unset, selects cloud mode. Any other value stops the API at start and the message names the accepted values. Flags are computed once in `backend/src/config/features.ts` (`parseDeploymentMode` in `backend/src/common/deployment-mode.ts`) and are the single source of truth:
   - `SINGLE_TENANT`, `DEPLOYMENT_MODE`
   - `STRIPE_BILLING` (multi-tenant only, needs `STRIPE_SECRET_KEY`)
   - `ENTRA_SSO` (`ENTRA_CLIENT_ID` present)

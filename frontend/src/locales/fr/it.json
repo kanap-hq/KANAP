@@ -1567,8 +1567,6 @@
         "minutes": "{{count}} min"
       },
       "create": {
-        "title": "Titre",
-        "titlePlaceholder": "ex. service de messagerie indisponible sur le site de Lyon",
         "description": "Description",
         "titleRequired": "Le titre est obligatoire.",
         "severityRequired": "La gravité est obligatoire.",

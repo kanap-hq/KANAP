@@ -135,12 +135,20 @@ function SyncResult({ notice }: { notice: SyncNotice | null }) {
       )}
       {notice?.completed === true && !notice.failed && (
         <Alert severity="success">
-          <Box>{t(`${C}.syncFetched`, { count: notice.fetched })}</Box>
           <Box>
-            {notice.stillMissing.length > 0
-              ? t(`${C}.syncStillMissing`, { pairs })
-              : t(`${C}.missingNone`)}
+            {notice.fetched > 0
+              ? t(`${C}.syncFetched`, { count: notice.fetched })
+              : notice.stillMissing.length > 0
+                ? t(`${C}.syncNoneFetched`)
+                : t(`${C}.syncUpToDate`)}
           </Box>
+          {(notice.fetched > 0 || notice.stillMissing.length > 0) && (
+            <Box>
+              {notice.stillMissing.length > 0
+                ? t(`${C}.syncStillMissing`, { pairs })
+                : t(`${C}.missingNone`)}
+            </Box>
+          )}
         </Alert>
       )}
       {notice?.completed === false && <Alert severity="info">{t(`${C}.syncContinues`)}</Alert>}

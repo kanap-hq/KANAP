@@ -104,7 +104,8 @@
       "sections": {
         "ai": "Künstliche Intelligenz",
         "integrations": "Integrationen"
-      }
+      },
+      "dataAccess": "Datenzugriff"
     },
     "platform": {
       "tenants": "Mandanten",

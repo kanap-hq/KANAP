@@ -235,6 +235,11 @@ export class NvdFeedService implements OnModuleInit {
   private readonly rematchProducts = new Set<string>();
   /** Technologies to match once the transaction that changed them has committed (`txid`). */
   private afterCommit: Array<{ tenantId: string; technologyId: string; products: string[]; txid: string; queuedAt: number }> = [];
+  /**
+   * Technologies taken out of `afterCommit` whose match has not finished. A record still says the
+   * match is running for them: the rows are written only when the match commits.
+   */
+  private readonly matchingNow = new Map<string, Set<string>>();
   private draining = false;
   /** How long the queue waits between two reads of the transactions' status. */
   drainDelayMs = 200;
@@ -422,6 +427,34 @@ export class NvdFeedService implements OnModuleInit {
     void this.drain();
   }
 
+  /**
+   * Technology ids of this tenant whose match is queued or running. The record's vulnerabilities
+   * route uses it to say the search is in progress (`VulnerabilityReachService`). Empty almost
+   * always: the queue only holds a technology between a change and the match that follows it.
+   */
+  pendingTechnologyIds(tenantId: string): string[] {
+    const ids = new Set<string>();
+    for (const item of this.afterCommit) {
+      if (item.tenantId === tenantId) ids.add(item.technologyId);
+    }
+    for (const id of this.matchingNow.get(tenantId) ?? []) ids.add(id);
+    return Array.from(ids);
+  }
+
+  /** Keeps a technology visible as pending from the moment it leaves the queue until its match ends. */
+  private markMatching(tenantId: string, technologyId: string): void {
+    const ids = this.matchingNow.get(tenantId) ?? new Set<string>();
+    ids.add(technologyId);
+    this.matchingNow.set(tenantId, ids);
+  }
+
+  private unmarkMatching(tenantId: string, technologyId: string): void {
+    const ids = this.matchingNow.get(tenantId);
+    if (!ids) return;
+    ids.delete(technologyId);
+    if (ids.size === 0) this.matchingNow.delete(tenantId);
+  }
+
   /** Resolves once the after-commit queue and the collections it started are finished (for the specs). */
   async whenIdle(timeoutMs = 15_000): Promise<void> {
     const until = Date.now() + timeoutMs;
@@ -446,6 +479,8 @@ export class NvdFeedService implements OnModuleInit {
         // Only the items whose status was read: one queued during the read waits for the next turn.
         const asked = new Set(txids);
         const ready = this.afterCommit.filter((item) => asked.has(item.txid) && status.get(item.txid) === 'committed');
+        // Mark every ready technology before the first match: the ones waiting behind it stay pending too.
+        for (const item of ready) this.markMatching(item.tenantId, item.technologyId);
         this.afterCommit = this.afterCommit.filter((item) => !asked.has(item.txid)
           || (status.get(item.txid) === 'in progress' && Date.now() - item.queuedAt < 10 * 60_000));
         for (const item of ready) {
@@ -455,6 +490,8 @@ export class NvdFeedService implements OnModuleInit {
             if (fresh.length > 0) void this.collectNew(item.tenantId, fresh);
           } catch (error: any) {
             this.logger.warn(`[${NVD_FEED_TASK_NAME}] matching of technology ${item.technologyId} after a change: ${String(error?.message ?? error).slice(0, 300)}`);
+          } finally {
+            this.unmarkMatching(item.tenantId, item.technologyId);
           }
         }
         if (this.afterCommit.length > 0 && ready.length === 0) await new Promise((r) => setTimeout(r, this.drainDelayMs));

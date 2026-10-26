@@ -177,6 +177,7 @@ function controller(opts: {
     },
   };
   const fxIngestion = {
+    releaseRateSnapshot: () => undefined,
     refreshWithin: async () => (opts.completed ? { completed: true, failed: opts.failed ?? false } : { completed: false }),
   };
   const manager = {
@@ -261,6 +262,7 @@ async function testRefreshCountsTheCurrentBaseOnly() {
   const settings = { getSettings: async () => ({ reportingCurrency: 'USD' }) };
   const calls: unknown[] = [];
   const fxIngestion = {
+    releaseRateSnapshot: () => undefined,
     refreshWithin: async (...args: unknown[]) => {
       calls.push(args);
       return { completed: true, failed: false };
@@ -279,6 +281,87 @@ async function testRefreshCountsTheCurrentBaseOnly() {
   console.log('ok - the forced sync counts the pairs of the current reporting currency only');
 }
 
+/**
+ * Adding a currency queues a refresh that used to start as soon as the response
+ * was sent. The page's follow-up then compared the pairs and saw 0, because the
+ * run had already stored the new ones. The save holds that run until the
+ * follow-up has read the pairs already stored.
+ */
+async function testAddedCurrencyCountsRatesWrittenAfterTheSnapshot() {
+  const service = ingestion() as any;
+  const calls = controlledRuns(service);
+  let written = false;
+  const realRefresh = service.refreshTenant;
+  service.refreshTenant = (...args: unknown[]) => {
+    const pending = realRefresh(...args);
+    const call = calls[calls.length - 1];
+    const release = call.release;
+    call.release = () => {
+      written = true;
+      release();
+    };
+    return pending;
+  };
+  const snapshotHold = service.holdForRateSnapshot('tenant-1');
+  await service.queueManualRefresh('tenant-1', [2026], {
+    label: 'currency-settings',
+    startAfter: Promise.all([Promise.resolve(), snapshotHold]),
+  });
+  await tick();
+  assert.equal(calls.length, 0, 'the response has gone out, and the run still waits for the snapshot');
+
+  let readsBeforeWrite = 0;
+  const manager = {
+    query: async (sql: string) => {
+      if (!sql.includes('currency_rate_sets')) return [];
+      if (!written) {
+        readsBeforeWrite += 1;
+        return [];
+      }
+      return [{ fiscal_year: 2026, rates: { FKP: 1.25, EUR: 1 } }];
+    },
+  };
+  const settings = { getSettings: async () => ({ reportingCurrency: 'EUR' }) };
+  const manualRates = { listMissingPairs: async () => [] };
+  const api = new CurrencyController(settings as any, service, manualRates as any, { manager } as any);
+  const pending = api.refreshRates({ years: [2026] }, {
+    tenant: { id: 'tenant-1' },
+    queryRunner: { manager },
+  });
+  await tick();
+  assert.equal(calls.length, 1, 'the run queued by the save starts once the pairs are read');
+  assert.equal(readsBeforeWrite, 1, 'the pairs already stored are read before that run writes');
+  // The follow-up names the current base, so it does not join the run queued by the save.
+  // It waits for the next one. Both write only after the snapshot.
+  for (let guard = 0; guard < 4; guard += 1) {
+    const seen = calls.length;
+    calls[seen - 1].release();
+    await tick();
+    if (calls.length === seen) break;
+  }
+  const result = await pending;
+  assert.equal(result.completed, true);
+  if (!result.completed) return;
+  assert.equal(result.failed, false);
+  assert.equal(result.fetched, 2, 'FKP and EUR, written by the run, are counted');
+  console.log('ok - adding a currency counts the rates its refresh brings in');
+}
+
+async function testSnapshotHoldStartsTheRunOnItsOwn() {
+  const service = ingestion() as any;
+  const calls = controlledRuns(service);
+  const hold = service.holdForRateSnapshot('tenant-1', 30);
+  await service.queueManualRefresh('tenant-1', [2026], { label: 'currency-settings', startAfter: hold });
+  await tick();
+  assert.equal(calls.length, 0, 'the run waits for the follow-up');
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.equal(calls.length, 1, 'without a follow-up, the run starts on its own');
+  calls[0].release();
+  await tick();
+  assert.equal(service.hasQueuedRefresh('tenant-1'), false);
+  console.log('ok - a settings refresh starts on its own when the page never asks for the count');
+}
+
 (async () => {
   await testTimeoutLeavesTheJobRunning();
   await testForcedSyncWhileAnotherJobRuns();
@@ -288,6 +371,8 @@ async function testRefreshCountsTheCurrentBaseOnly() {
   await testGateDelaysTheRun();
   await testRefreshAnswer();
   await testRefreshCountsTheCurrentBaseOnly();
+  await testAddedCurrencyCountsRatesWrittenAfterTheSnapshot();
+  await testSnapshotHoldStartsTheRunOnItsOwn();
   console.log('fx-refresh-wait.spec: ok');
 })().catch((error) => {
   console.error(error);

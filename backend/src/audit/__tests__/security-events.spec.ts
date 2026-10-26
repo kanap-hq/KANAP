@@ -181,6 +181,7 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /contracts/compliance-register/export',
   'GET /contracts/export',
   'GET /cost-centers/export',
+  'GET /data-access/export',
   'GET /departments/export',
   'GET /incidents/:id/report',
   'GET /incidents/export',

@@ -12,6 +12,8 @@ import { metricFileName, MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useTranslation } from 'react-i18next';
+import { formatPercentPoints } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { excludedAccountValues, readTopItems, topItemsRequest } from './reportAggregates';
@@ -21,6 +23,7 @@ import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure 
 
 export default function TopOpexReport() {
   const { t } = useTranslation(["ops"]);
+  const locale = useLocale();
   const budgetColumns = useBudgetColumns();
   const now = new Date();
   const Y = now.getFullYear();
@@ -125,7 +128,7 @@ export default function TopOpexReport() {
                   title: escapeTooltipText(datum.name),
                   data: [
                     { label: metricLabel, value: formatNumber(value) },
-                    { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
+                    { label: t('reports.shared.share'), value: formatPercentPoints(pct, locale, 1) },
                   ],
                 };
               },
@@ -166,7 +169,7 @@ export default function TopOpexReport() {
                 title: escapeTooltipText(datum.name),
                 data: [
                   { label: metricLabel, value: formatNumber(value) },
-                  { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
+                  { label: t('reports.shared.share'), value: formatPercentPoints(pct, locale, 1) },
                 ],
               };
             },
@@ -174,7 +177,7 @@ export default function TopOpexReport() {
         },
       ],
     };
-  }, [chartData, totalMetric, knownTotal, year, chartType, metricLabel, scopeLabel, measureText, formatNumber, t]);
+  }, [chartData, totalMetric, knownTotal, year, chartType, metricLabel, scopeLabel, measureText, formatNumber, locale, t]);
 
   const selectionSharePct = useMemo(() => (
     topSelectionTotal != null && totalMetric > 0 ? Math.round((topSelectionTotal / totalMetric) * 100) : null

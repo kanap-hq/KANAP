@@ -10,6 +10,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import IncidentWorkspacePage from './IncidentWorkspacePage';
 
 const navigateMock = vi.hoisted(() => vi.fn());
+const shellProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
 const dialogsMock = vi.hoisted(() => ({
   confirm: vi.fn(async () => true),
   prompt: vi.fn(async () => 'human error'),
@@ -26,6 +27,7 @@ vi.mock('../../api/endpoints/incidents', async (importOriginal) => {
     ...actual,
     incidentsApi: {
       get: vi.fn(),
+      create: vi.fn(),
       update: vi.fn(),
       cancel: vi.fn(),
       reopen: vi.fn(),
@@ -101,7 +103,11 @@ vi.mock('../../components/EntityKnowledgePanel', () => ({
   ),
 }));
 vi.mock('./workspace/IncidentMetadataBar', () => ({ default: () => null }));
-vi.mock('./workspace/IncidentPropertiesDrawer', () => ({ default: () => null }));
+vi.mock('./workspace/IncidentPropertiesDrawer', () => ({
+  default: ({ onChange, isCreate }: { onChange?: (patch: { severity?: string }) => void; isCreate?: boolean }) => (
+    isCreate ? <button type="button" onClick={() => onChange?.({ severity: 'major' })}>set-severity</button> : null
+  ),
+}));
 vi.mock('./workspace/IncidentRelationsTab', () => ({ default: () => null }));
 vi.mock('./workspace/IncidentJournalTab', () => ({
   default: () => null,
@@ -109,17 +115,26 @@ vi.mock('./workspace/IncidentJournalTab', () => ({
 }));
 
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ children, actions, onBack, onTabChange, onSaveShortcut, nav, tabs }: any) => (
-    <div>
-      {tabs?.map((tab: any) => <span key={tab.key} data-testid={`tab-${tab.key}`}>{tab.badge ?? ''}</span>)}
-      <button type="button" onClick={() => onBack?.()}>shell-back</button>
-      <button type="button" onClick={() => onTabChange?.('journal')}>shell-tab-journal</button>
-      <button type="button" onClick={() => onSaveShortcut?.()}>shell-save-shortcut</button>
-      <button type="button" onClick={() => nav?.onNext?.()}>shell-next</button>
-      <div>{actions}</div>
-      <div>{children}</div>
-    </div>
-  ),
+  default: (props: any) => {
+    shellProps.current = props;
+    const { children, actions, onBack, onTabChange, onSaveShortcut, nav, tabs, title, canEditTitle, onTitleSave, titleError, properties } = props;
+    return (
+      <div>
+        {tabs?.map((tab: any) => <span key={tab.key} data-testid={`tab-${tab.key}`}>{tab.badge ?? ''}</span>)}
+        <button type="button" onClick={() => onBack?.()}>shell-back</button>
+        <button type="button" onClick={() => onTabChange?.('journal')}>shell-tab-journal</button>
+        <button type="button" onClick={() => onSaveShortcut?.()}>shell-save-shortcut</button>
+        <button type="button" onClick={() => nav?.onNext?.()}>shell-next</button>
+        {canEditTitle ? (
+          <input aria-label="shell-title" defaultValue={title} onBlur={(event) => onTitleSave?.(event.target.value)} />
+        ) : null}
+        {titleError ? <div role="alert">{titleError}</div> : null}
+        <div>{properties}</div>
+        <div>{actions}</div>
+        <div>{children}</div>
+      </div>
+    );
+  },
 }));
 
 const theme = createAppTheme('light');
@@ -179,6 +194,115 @@ async function typeInReview(text: string) {
   fireEvent.change(editor, { target: { value: text } });
   return editor;
 }
+
+function renderNewIncident() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <ThemeProvider theme={theme}>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/it/incidents/new/overview']}>
+          <Routes>
+            <Route path="/it/incidents/:id/:tab" element={<IncidentWorkspacePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>,
+  );
+}
+
+describe('IncidentWorkspacePage — new incident title', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authLevel.incidents = 'contributor';
+    shellProps.current = null;
+  });
+
+  it('types the title in the header and keeps the description in the body', () => {
+    renderNewIncident();
+
+    expect(screen.getByLabelText('shell-title')).toHaveValue('');
+    expect(shellProps.current).toMatchObject({
+      canEditTitle: true,
+      title: '',
+      titleFallback: 'workspace.incident.newTitle',
+      titleRequiredMessage: 'workspace.incident.create.titleRequired',
+    });
+    expect(screen.queryByText('workspace.incident.create.title')).toBeNull();
+    expect(screen.getByPlaceholderText('workspace.incident.overview.descriptionPlaceholder')).toBeInTheDocument();
+    expect(screen.getByText('set-severity')).toBeInTheDocument();
+  });
+
+  it('shows the required error in the header when creating without a title', () => {
+    renderNewIncident();
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('workspace.incident.create.titleRequired');
+    expect(screen.queryByText('workspace.incident.create.severityRequired')).toBeNull();
+    expect(incidentsApi.create).not.toHaveBeenCalled();
+
+    const title = screen.getByLabelText('shell-title');
+    fireEvent.change(title, { target: { value: 'Mail outage' } });
+    fireEvent.blur(title);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+
+    expect(screen.queryByText('workspace.incident.create.titleRequired')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('workspace.incident.create.severityRequired');
+    expect(incidentsApi.create).not.toHaveBeenCalled();
+  });
+
+  it('creates the incident from the header title and the description', async () => {
+    vi.mocked(incidentsApi.create).mockResolvedValue({ ...incident, title: 'Mail outage', item_number: 4 });
+    renderNewIncident();
+
+    fireEvent.click(screen.getByText('set-severity'));
+    const title = screen.getByLabelText('shell-title');
+    fireEvent.change(title, { target: { value: '  Mail outage  ' } });
+    fireEvent.blur(title);
+    fireEvent.change(screen.getByPlaceholderText('workspace.incident.overview.descriptionPlaceholder'), {
+      target: { value: '  The Lyon office lost mail  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+
+    await waitFor(() => expect(incidentsApi.create).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(incidentsApi.create).mock.calls[0][0]).toMatchObject({
+      title: 'Mail outage',
+      severity: 'major',
+      description: 'The Lyon office lost mail',
+    });
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/it/incidents/INC-4/overview', { replace: true }));
+  });
+
+  it('offers no header title to a reader', () => {
+    authLevel.incidents = 'reader';
+    renderNewIncident();
+
+    expect(screen.queryByLabelText('shell-title')).toBeNull();
+    expect(shellProps.current).toMatchObject({ canEditTitle: false, titleRequiredMessage: undefined });
+    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeDisabled();
+  });
+
+  it('keeps an existing incident title on the loaded record', async () => {
+    authLevel.incidents = 'admin';
+    vi.mocked(incidentsApi.get).mockResolvedValue(incident);
+    vi.mocked(api.get).mockResolvedValue({
+      data: { id: 'doc-1', item_number: 12, item_ref: 'DOC-12', content_markdown: '', revision: 1, edit_lock: null },
+    } as any);
+    renderPage();
+
+    await screen.findByLabelText('workspace.incident.overview.review');
+    expect(screen.getByLabelText('shell-title')).toHaveValue('Router down');
+    expect(shellProps.current).toMatchObject({
+      canEditTitle: true,
+      title: 'Router down',
+      titleFallback: 'workspace.incident.untitled',
+      titleRequiredMessage: undefined,
+      titleError: null,
+    });
+    expect(screen.queryByText('workspace.incident.create.description')).toBeNull();
+    expect(screen.getByDisplayValue('Short summary')).toBeInTheDocument();
+  });
+});
 
 describe('IncidentWorkspacePage — review draft is flushed before every transition', () => {
   beforeEach(() => {

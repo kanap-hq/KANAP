@@ -69,6 +69,20 @@ export const COMPANY_USAGE_QUERIES: readonly UsageQuery[] = [
            LIMIT $3`,
   },
   {
+    // The company nodes of the data access (lot 6, spec §3.2): deleting the company would leave
+    // those persons with a node that points nowhere.
+    type: 'data_access',
+    resource: 'users',
+    sql: `SELECT n.user_id AS id, NULL::text AS reference,
+                 trim(concat_ws(' ', u.first_name, u.last_name)) AS name, NULL::text AS status,
+                 true AS active, count(*) OVER () AS total
+            FROM user_data_access_nodes n
+            JOIN users u ON u.tenant_id = n.tenant_id AND u.id = n.user_id
+           WHERE n.tenant_id = $1 AND n.node_type = 'company' AND n.company_id = $2
+           ORDER BY lower(u.last_name), lower(u.first_name), n.user_id
+           LIMIT $3`,
+  },
+  {
     type: 'users',
     resource: 'users',
     sql: `SELECT u.id, NULL::text AS reference, trim(concat_ws(' ', u.first_name, u.last_name)) AS name, u.status,

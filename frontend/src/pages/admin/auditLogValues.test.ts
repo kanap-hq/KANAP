@@ -68,6 +68,28 @@ describe('formatAuditValue', () => {
     expect(formatAuditValue([{ a: 1 }, { b: 2 }], 'notes', context()).text).toBe('[{"a":1},{"b":2}]');
   });
 
+  it('names the data-access table and its sources', () => {
+    expect(t('auditLogs.tableNames.user_data_access')).toBe('Data access');
+    expect(t('auditLogs.sources.screen')).toBe('Screen');
+    expect(t('auditLogs.sources.import')).toBe('Import');
+  });
+
+  it('reads the before and after of a data-access entry', () => {
+    const snapshot = {
+      mode: 'limited',
+      nodes: [
+        { type: 'company', name: 'Alpha Spain', access: 'edit' },
+        { type: 'cost_center', code: 'INF', name: 'Infrastructure', access: 'read' },
+        { type: 'all', name: null, access: 'read' },
+      ],
+    };
+    expect(formatAuditValue('limited', 'mode', context({ snapshot })).text).toBe('Limited to');
+    expect(formatAuditValue('all', 'mode', context({ snapshot })).text).toBe('All data');
+    expect(formatAuditValue(snapshot.nodes, 'nodes', context({ snapshot })).text)
+      .toBe('Alpha Spain (Edit), Infrastructure (Read), Everything (Read)');
+    expect(formatAuditValue([], 'nodes', context({ snapshot })).text).toBe('No node');
+  });
+
   it('truncates long JSON and keeps the full value in the title', () => {
     const value = { note: 'x'.repeat(180) };
     const display = formatAuditValue(value, 'notes', context());

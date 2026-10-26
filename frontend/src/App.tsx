@@ -29,6 +29,7 @@ const SuppliersPage = React.lazy(() => import('./pages/SuppliersPage'));
 const SupplierWorkspacePage = React.lazy(() => import('./pages/suppliers/SupplierWorkspacePage'));
 const AccountWorkspacePage = React.lazy(() => import('./pages/accounts/AccountWorkspacePage'));
 const UsersPage = React.lazy(() => import('./pages/UsersPage'));
+const DataAccessPage = React.lazy(() => import('./pages/admin/DataAccessPage'));
 const AnalyticsCategoriesPage = React.lazy(() => import('./pages/AnalyticsCategoriesPage'));
 const AnalyticsWorkspacePage = React.lazy(() => import('./pages/analytics/AnalyticsWorkspacePage'));
 const AnalyticsDimensionWorkspacePage = React.lazy(() => import('./pages/analytics/AnalyticsDimensionWorkspacePage'));
@@ -326,6 +327,7 @@ function AppRoutes() {
           <Route path="/master-data/business-processes/:id/:tab" element={<BusinessProcessWorkspacePage />} />
           <Route path="/admin" element={<AdminDefaultRedirect />} />
           <Route path="/admin/users" element={<UsersPage />} />
+          <Route path="/admin/data-access" element={<DataAccessPage />} />
           <Route path="/admin/roles" element={<RolesPage />} />
           <Route path="/admin/audit-logs" element={<AuditLogsPage />} />
           {config.features.billing && <Route path="/admin/billing" element={<BillingCenter />} />}

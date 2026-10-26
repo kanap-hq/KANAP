@@ -398,9 +398,10 @@ export default function CompaniesPage() {
       const totals = res.data || {};
       const pinned = {
         name: t('companies.pinnedTotal'),
-        headcount_year: Number(totals.headcount || 0),
-        it_users_year: Number(totals.it_users || 0),
-        turnover_year: Number(totals.turnover || 0),
+        // Null when the year has no figure. `Number(x || 0)` would paint a zero.
+        headcount_year: totals.headcount == null ? null : Number(totals.headcount),
+        it_users_year: totals.it_users == null ? null : Number(totals.it_users),
+        turnover_year: totals.turnover == null ? null : Number(totals.turnover),
         turnover_currency: totals.turnover_currency ?? null,
         turnover_fx_missing: companyTurnoverFxMissing(totals.turnover_fx_missing),
       } as Partial<CompanyRow>;

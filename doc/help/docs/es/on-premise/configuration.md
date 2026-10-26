@@ -18,7 +18,7 @@ docker compose -f infra/compose.onprem.yml up -d api
 |----------|-------------|---------|
 | `DEPLOYMENT_MODE` | **Debe ser `single-tenant`** en los despliegues on-premise | `single-tenant` |
 
-Escriba el valor exactamente. Un valor mal escrito (`single_tenant`) arranca KANAP en modo nube sin ninguna advertencia.
+Escriba `single-tenant` o `multi-tenant`. Deje la variable sin definir para multi-tenant, el valor predeterminado de la nube. Cualquier otro valor, incluido un error como `single_tenant`, detiene la API al arrancar. El mensaje nombra los valores aceptados.
 
 ## Opcional: identidad del espacio de trabajo
 
@@ -95,7 +95,7 @@ Si faltan a la vez `CORS_ORIGINS` y la dirección de la aplicación (`APP_BASE_U
 
 Defina `APP_ENV=production` cuando los usuarios accedan a KANAP por HTTPS, que es la configuración documentada. Si `NODE_ENV` está definido y `APP_ENV` no, KANAP lee `NODE_ENV` en su lugar.
 
-**Comprobaciones al arrancar.** La API se niega a arrancar si `JWT_SECRET` o `DATABASE_URL` falta o está vacío y, con `APP_ENV=production`, si falta `APP_BASE_URL` o `CORS_ORIGINS`. También se niega a funcionar si el rol de PostgreSQL de `DATABASE_URL` es `SUPERUSER` o `BYPASSRLS`. Esta última comprobación se hace después de las migraciones, así que las migraciones ya se han ejecutado con ese rol cuando aparece el mensaje.
+**Comprobaciones al arrancar.** La API se niega a arrancar si `DEPLOYMENT_MODE` tiene un valor distinto de `single-tenant`, `multi-tenant` o sin definir, si `JWT_SECRET` o `DATABASE_URL` falta o está vacío y, con `APP_ENV=production`, si falta `APP_BASE_URL` o `CORS_ORIGINS`. También se niega a funcionar si el rol de PostgreSQL de `DATABASE_URL` es `SUPERUSER` o `BYPASSRLS`. Esta última comprobación se hace después de las migraciones, así que las migraciones ya se han ejecutado con ese rol cuando aparece el mensaje.
 
 ## Qué muestra el registro de la API al arrancar
 
@@ -103,7 +103,7 @@ Lea el registro de la API después de cada arranque y de cada cambio en `.env`:
 
 ```bash
 cd /opt/kanap
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 ```
 
 El filtro conserva las líneas siguientes y omite los detalles del framework. Sin él, `docker compose -f infra/compose.onprem.yml logs api` lo muestra todo.
@@ -122,7 +122,6 @@ El filtro conserva las líneas siguientes y omite los detalles del framework. Si
 [RATE-LIMIT] Client address: taken from X-Forwarded-For behind 1 trusted proxy (RATE_LIMIT_TRUST_PROXY=true)
 [CORS] Configured 1 origin pattern(s)
 [DB] Connected as PostgreSQL role "kanap" with native RLS enforcement
-Admin seeding disabled (set SEED_ADMIN=true to enable)
 [on-prem] Default chart of accounts created
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
@@ -154,7 +153,6 @@ El número de migraciones cambia de una versión a otra. En los arranques siguie
 | `[CORS] CORS_ORIGINS and APP_BASE_URL are not set: browsers are still allowed from every origin in this version; ...` | Defina ambos. Una versión posterior solo permitirá las direcciones configuradas. |
 | `[CORS] CORS_ORIGINS entry ... is a pattern: it is still accepted in this version. ...` | Sustituya el patrón por la dirección exacta. |
 | `[DB] Connected as PostgreSQL role "kanap" with native RLS enforcement` | Informativa. La API usa el rol de aplicación. |
-| `Admin seeding disabled (set SEED_ADMIN=true to enable)` | Esperada on-premise. No hay nada que hacer: el administrador se crea a partir de `ADMIN_EMAIL` y `ADMIN_PASSWORD`. |
 | `[on-prem] Default chart of accounts created`, `[on-prem] Created tenant '...'`, `[on-prem] Created administrator account ...`, `[on-prem] Created default subscription (On-Prem)` | Solo en el primer arranque. |
 | `[on-prem] Administrator account ... left unchanged: the workspace has an active administrator` | Arranques siguientes. No hay nada que hacer. |
 | `[on-prem] Restored ... as an enabled administrator: the workspace had no active administrator (password unchanged)` | Una advertencia. No quedaba ningún administrador activo, así que KANAP restableció la cuenta `ADMIN_EMAIL`. |

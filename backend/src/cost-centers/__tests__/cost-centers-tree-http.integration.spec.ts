@@ -5,19 +5,28 @@ import { randomUUID } from 'node:crypto';
 import { AddressInfo } from 'node:net';
 import { INestApplication, Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import * as jwt from 'jsonwebtoken';
 import { DataSource, QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
+import { AuditLog } from '../../audit/audit.entity';
 import { AuditService } from '../../audit/audit.service';
 import { buildAccessTokenPayload } from '../../auth/auth.service';
 import { REQUIRE_ANY_LEVEL_KEY } from '../../auth/require-level.decorator';
 import { StripeConfigService } from '../../billing/stripe/stripe.config';
+import { CompaniesController } from '../../companies/companies.controller';
+import { CompaniesDeleteService } from '../../companies/companies-delete.service';
+import { CompaniesService } from '../../companies/companies.service';
 import { ListContextsService } from '../../common/list-context/list-contexts.service';
 import { useRequestPipeline } from '../../common/request-pipeline';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { RolePermission } from '../../permissions/role-permission.entity';
 import { UserPageRole } from '../../permissions/user-page-role.entity';
+import { Role } from '../../roles/role.entity';
 import { User } from '../../users/user.entity';
+import { UserRole } from '../../users/user-role.entity';
+import { UsersController } from '../../users/users.controller';
+import { UsersDeleteService } from '../../users/users-delete.service';
 import { UsersService } from '../../users/users.service';
 import { createRaceTenant, dropRaceTenant, seed } from '../../spend/__tests__/race-harness';
 import { CostCentersCsvService } from '../cost-centers-csv.service';
@@ -38,15 +47,23 @@ import { CostCentersService } from '../cost-centers.service';
 process.env.JWT_SECRET = process.env.JWT_SECRET || `cost-centers-tree-http-${randomUUID()}`;
 
 @Module({
-  controllers: [CostCentersController],
+  controllers: [CostCentersController, CompaniesController, UsersController],
   providers: [
     ListContextsService,
     { provide: CostCentersService, useFactory: () => new CostCentersService(new AuditService(undefined as any)) },
-    // Not reached by the two routes under test.
+    // Not reached by the routes under test.
     { provide: CostCentersDeleteService, useValue: {} },
     { provide: CostCentersCsvService, useValue: {} },
+    // The company and user lookups read the reference in SQL; their services are not reached.
+    { provide: CompaniesService, useValue: {} },
+    { provide: CompaniesDeleteService, useValue: {} },
+    { provide: UsersDeleteService, useValue: {} },
     // PermissionGuard's dependencies, as the lookup access spec builds them (no Stripe: no freeze check).
     { provide: UsersService, useFactory: () => new (UsersService as any)(dataSource.getRepository(User)) },
+    { provide: getRepositoryToken(UserRole), useFactory: () => dataSource.getRepository(UserRole) },
+    { provide: getRepositoryToken(Role), useFactory: () => dataSource.getRepository(Role) },
+    { provide: getRepositoryToken(User), useFactory: () => dataSource.getRepository(User) },
+    { provide: AuditService, useFactory: () => new AuditService(dataSource.getRepository(AuditLog)) },
     {
       provide: PermissionsService,
       useFactory: () => new PermissionsService(dataSource.getRepository(UserPageRole), dataSource.getRepository(RolePermission)),
@@ -108,7 +125,10 @@ async function main() {
   let app: INestApplication | undefined;
   try {
     // The route's guard list, pinned: a change to who reads the tree must change this spec.
-    assert.deepEqual(TREE_READERS, ['cost_centers', 'budget', 'reporting'].map((resource) => ({ resource, level: 'reader' })));
+    assert.deepEqual(TREE_READERS, [
+      ...['cost_centers', 'budget', 'reporting'].map((resource) => ({ resource, level: 'reader' })),
+      { resource: 'users', level: 'admin' },
+    ]);
     for (const handler of ['tree', 'treeCount'] as const) {
       assert.deepEqual(Reflect.getMetadata(REQUIRE_ANY_LEVEL_KEY, (CostCentersController.prototype as any)[handler]), TREE_READERS, handler);
     }
@@ -122,6 +142,9 @@ async function main() {
         reporting: await seedPerson(runner, tenantA, 'reporting reader', { reporting: 'reader' }),
         admin: await seedPerson(runner, tenantA, 'admin', {}, 'Administrator'),
         tasks: await seedPerson(runner, tenantA, 'tasks member', { tasks: 'member', companies: 'admin' }),
+        // Administers users and nothing else: the data-access screens' pickers need the tree and
+        // the company and person sources for this person (spec §7.1).
+        usersAdmin: await seedPerson(runner, tenantA, 'users admin', { users: 'admin' }),
       };
       const group = await one(`INSERT INTO cost_centers (tenant_id, code, kind, name) VALUES ($1, 'T-G', 'group', 'Tree group') RETURNING id`, [tenantA]);
       // Siblings by sort order, then code: T-2 (sort 0) before T-1 (sort 5).
@@ -169,18 +192,28 @@ async function main() {
     console.log('ok - the tree in tree order, effective status; count');
 
     // Who reads it: the page, the item forms and the reports; nobody else.
-    for (const who of ['page', 'budget', 'reporting', 'admin'] as const) {
+    for (const who of ['page', 'budget', 'reporting', 'admin', 'usersAdmin'] as const) {
       const answer = await get('/cost-centers/tree', a.people[who]);
       assert.equal(answer.status, 200, `${who}: reads the tree`);
       assert.equal(answer.text, tree.text, `${who}: the same tree`);
       assert.equal((await get('/cost-centers/tree/count', a.people[who])).status, 200, `${who}: reads the count`);
     }
+    // The picker sources of the data-access screens for a users administrator without budget
+    // rights: the tree above (useCostCenterTree), the company source (CompanySelect) and the
+    // person source (AccessPersonAdd).
+    const companiesLookup = await get('/companies/lookup?q=Tree', a.people.usersAdmin);
+    assert.equal(companiesLookup.status, 200, companiesLookup.text);
+    assert.deepEqual(companiesLookup.body.items.map((company: any) => [company.id, company.name]), [[a.paris, 'Tree Paris']]);
+    const peopleLookup = await get('/users/lookup?q=Tree', a.people.usersAdmin);
+    assert.equal(peopleLookup.status, 200, peopleLookup.text);
+    assert.equal(peopleLookup.body.items.length, 6, 'the users administrator searches the person list');
+    assert.ok(peopleLookup.body.items.every((person: any) => person.first_name === 'Tree'), peopleLookup.text);
     assert.equal((await get('/cost-centers/tree', a.people.tasks)).status, 403, 'no cost center, budget or reporting access: refused');
     assert.equal((await get('/cost-centers/tree/count', a.people.tasks)).status, 403);
     const anonymous = await fetch(`${base}/cost-centers/tree`, { headers: { 'x-probe-tenant': tenantA } });
     assert.equal(anonymous.status, 401);
     await waitForIdlePool();
-    console.log('ok - read by cost center, budget and reporting readers and administrators; 403 otherwise, 401 without a token');
+    console.log('ok - read by cost center, budget and reporting readers, administrators and users administrators; company and person sources for a users administrator; 403 otherwise, 401 without a token');
 
     // Tenant: another tenant's administrator reads an empty tree.
     const other = await get('/cost-centers/tree', b.admin);

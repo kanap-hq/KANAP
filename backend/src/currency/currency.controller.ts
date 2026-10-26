@@ -63,10 +63,13 @@ export class CurrencyController {
 
   /**
    * Saves the settings in the request transaction (the new currency rows with
-   * them) and queues the rate refresh without waiting for it: the run starts
-   * once this request has committed. `refreshYears` names the years it fetches
-   * (every year in use for a new reporting currency, otherwise the current one);
-   * `POST /currency/rates/refresh` with those years waits for the result.
+   * them) and queues the rate refresh without waiting for it. The run starts
+   * once this request has committed and the follow-up refresh has read the
+   * pairs already stored, so that call counts the rates the run brings in.
+   * Without a follow-up, the hold ends on its own and the run still starts.
+   * `refreshYears` names the years it fetches (every year in use for a new
+   * reporting currency, otherwise the current one); `POST /currency/rates/refresh`
+   * with those years waits for the result.
    */
   @ReservedToUnscopedDataAccess()
   @Patch('settings')
@@ -91,7 +94,7 @@ export class CurrencyController {
     const before = await this.settings.getSettings(tenantId, { manager });
     // Inserts the currency rows of the new settings in this same transaction.
     const next = await this.settings.updateSettings(tenantId, payload, req.user?.sub ?? null, { manager });
-    const startAfter = responseSent(req);
+    const startAfter = this.refreshAfterSnapshot(req, tenantId);
     if (next.reportingCurrency !== before.reportingCurrency) {
       const readManager = manager ?? this.rateSets.manager;
       await this.ensureTenantContext(readManager, tenantId);
@@ -207,6 +210,9 @@ export class CurrencyController {
     const years = await this.resolveSyncYears(tenantId, requested, entityManager);
     const { reportingCurrency } = await this.settings.getSettings(tenantId, { manager: entityManager });
     const before = await this.usablePairs(entityManager, tenantId, years, reportingCurrency);
+    // A settings save is holding its run until this read. Releasing it here, and
+    // not before, is what makes `fetched` the rates that run brings in.
+    this.fxIngestion.releaseRateSnapshot(tenantId);
     // The fetch commits on its own connection. This request only waits, then reads.
     const outcome = await this.fxIngestion.refreshWithin(tenantId, years, { label: 'manual-api', reportingCurrency });
     if (!outcome.completed) return { ok: true, completed: false, years };
@@ -217,6 +223,16 @@ export class CurrencyController {
     }
     const stillMissing = await this.manualRates.listMissingPairs(tenantId, entityManager, { report: false });
     return { ok: true, completed: true, failed: outcome.failed, years, fetched, stillMissing };
+  }
+
+  /**
+   * The queued settings refresh waits for the commit and for the follow-up to
+   * snapshot the pairs already stored. The timer inside the hold covers a
+   * client that never calls the follow-up.
+   */
+  private refreshAfterSnapshot(req: any, tenantId: string): Promise<unknown> {
+    const committed = responseSent(req) ?? Promise.resolve();
+    return Promise.all([committed, this.fxIngestion.holdForRateSnapshot(tenantId)]);
   }
 
   /**
