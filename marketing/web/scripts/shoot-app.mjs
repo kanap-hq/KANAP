@@ -14,8 +14,11 @@
  *   node scripts/shoot-app.mjs --inspect-fixed        # debug floating elements
  *
  * Output defaults to 2000x1050 CSS px at deviceScaleFactor 2 (4000x2100 PNG).
- * Site and blog standard (Fried, 2026-10-10): --width 1920 --height 1080 --scale 1
- * --lang en (1920 x 1080 PNG, English UI whatever the page language).
+ * Site and blog standard (Fried, 2026-10-10, frames 2026-10-25): --lang en and a
+ * 1920 x 1080 PNG, English UI whatever the page language. Each shot picks its frame
+ * (see FRAME_SET): the smallest window that still shows its whole subject (no
+ * column, section or text cut that the caption talks about) with KANAP's layout
+ * intact. Compare candidates with --frames 1920,1600,1440,1280, then set `frame`.
  *
  * Requirements:
  *   - chromium at /usr/bin/chromium (override with CHROMIUM_PATH)
@@ -40,6 +43,21 @@ const THEME = flag('theme', 'light');
 const WIDTH = Number(flag('width', 2000));
 const HEIGHT = Number(flag('height', 1050));
 const SCALE = Number(flag('scale', 2)); // 1 for the site standard: 1920 x 1080 window, 1920 px PNG
+// Frame (Fried, 2026-10-25): every site and blog shot is a 1920 x 1080 PNG, but each
+// shot picks the browser window that reads best: 1920, 1600, 1440 or 1280 CSS px
+// wide, zoomed to fill 1920 px. Never below 1280: KANAP switches to its compact
+// layout. A shot sets `frame: 1600` in its definition; --frame forces one for the
+// run; --frames 1920,1600,1280 shoots each candidate as name@1600.png to compare.
+const FRAME_SET = [1920, 1600, 1440, 1280];
+const FRAME = Number(flag('frame', 0));
+const FRAMES = (flag('frames', '') || '').split(',').map(Number).filter(Boolean);
+for (const f of [FRAME, ...FRAMES].filter(Boolean)) {
+  if (!FRAME_SET.includes(f)) {
+    console.error(`frame ${f} is not one of ${FRAME_SET.join(', ')}`);
+    process.exit(2);
+  }
+}
+const frameViewport = (frame) => ({ width: frame, height: Math.round((frame * 1080) / 1920), deviceScaleFactor: 1920 / frame });
 const EMAIL = process.env.APP_EMAIL;
 const PASSWORD = process.env.APP_PASSWORD;
 
@@ -146,18 +164,31 @@ const waitForReport = (page) =>
     .waitForFunction(() => document.querySelector('main table tbody tr, main .ag-row, main .ag-charts-wrapper canvas'), { timeout: 40000 })
     .catch(() => console.warn('report still empty'));
 
+// Open a contract from the list by its name (contracts have no business reference, their address carries a UUID).
+const openContract = async (page, name) => {
+  await page.waitForFunction((n) => document.querySelector('main')?.innerText.includes(n), { timeout: 30000 }, name);
+  const [cell] = await page.$$(`xpath/.//main//*[normalize-space(text())="${name}"]`);
+  await cell.click();
+  await page.waitForFunction(() => location.pathname.includes('/overview'), { timeout: 20000 });
+  await page.waitForFunction(() => /Without a decision|Deadlines/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+  await sleep(1000);
+};
+
 const PAGES = {
   dashboard: { path: '/', waitFor: 'main', prepare: waitForWidgets },
   // Incidents feature page (October 2026), fromage fixture on the local dev tenant (INC-20 to INC-29): INC-23 carries a filled review,
   // INC-24 the personal data and authority notification, INC-22 the most links.
   'feature-incidents-register': {
-    path: '/it/incidents',
+    frame: 1920,
+    // Category filter: leaves out test incidents filed under "Other" on the shared dev tenant.
+    path: `/it/incidents?filters=${encodeURIComponent(JSON.stringify({ category: { filterType: 'set', values: ['infrastructure', 'application', 'data', 'supplier', 'security'] } }))}`,
     waitFor: 'main',
     async prepare(page) {
       await page.waitForFunction(() => document.querySelectorAll('main .ag-row, main table tbody tr').length > 3, { timeout: 30000 }).catch(() => {});
     },
   },
   'feature-incidents-review': {
+    frame: 1920,
     path: '/it/incidents/INC-23/overview',
     waitFor: 'main',
     async prepare(page) {
@@ -165,6 +196,7 @@ const PAGES = {
     },
   },
   'feature-incidents-compliance': {
+    frame: 1280,
     path: '/it/incidents/INC-24/relations',
     waitFor: 'main',
     async prepare(page) {
@@ -178,9 +210,48 @@ const PAGES = {
       });
     },
   },
-  'feature-incidents-relations': { path: '/it/incidents/INC-22/relations', waitFor: 'main' },
+  'feature-incidents-relations': {
+    frame: 1440, path: '/it/incidents/INC-22/relations', waitFor: 'main' },
+  // Contracts feature page: list with the 2026 commitment, budget and gap. Read-only.
+  'feature-contracts-list': {
+    frame: 1920,
+    path: '/ops/contracts',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await sleep(1000);
+      await (await page.$('.MuiSelect-select')).click();
+      await page.waitForSelector('li[role="option"]', { timeout: 10000 });
+      await sleep(400);
+      await clickText(page, 'li[role="option"]', String(new Date().getFullYear()));
+      await page.waitForFunction(() => /Committed \d{4}/.test(document.querySelector('main')?.innerText || ''), { timeout: 20000 }).catch(() => {});
+      await sleep(1500);
+    },
+  },
+  // Contracts feature page: SAP Maintenance & Support, deadlines and the renewal decision. Read-only.
+  'feature-contracts-overview': {
+    frame: 1440,
+    path: '/ops/contracts',
+    waitFor: 'main',
+    async prepare(page) {
+      await openContract(page, 'SAP Maintenance & Support');
+    },
+  },
+  // Contracts feature page: the same contract after "Terminate" (nothing confirmed: the panel is left open as is).
+  'feature-contracts-cancel': {
+    frame: 1920,
+    path: '/ops/contracts',
+    waitFor: 'main',
+    async prepare(page) {
+      await openContract(page, 'SAP Maintenance & Support');
+      await clickText(page, 'button', 'Terminate');
+      await page.waitForFunction(() => /lose this contract|will not renew/.test(document.querySelector('main')?.innerText || ''), { timeout: 20000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
   // Contracts feature page: Budget tab of SAP Maintenance & Support (contracts have no business reference).
   'feature-contracts-budget': {
+    frame: 1920,
     path: '/ops/contracts',
     waitFor: 'main',
     async prepare(page) {
@@ -901,7 +972,7 @@ const PAGES = {
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
 // Flags that take a value, so their value is not read as a shot name.
-const VALUE_FLAGS = ['base', 'out', 'theme', 'width', 'height', 'scale', 'lang', 'staffing-item', 'hide', 'cols-off'];
+const VALUE_FLAGS = ['base', 'out', 'theme', 'width', 'height', 'scale', 'lang', 'staffing-item', 'hide', 'cols-off', 'frame', 'frames'];
 const positional = args.filter((a, i) => !a.startsWith('--') && !VALUE_FLAGS.includes(args[i - 1]?.slice(2)));
 // A positional starting with "/" is an ad-hoc path, saved as path-<slug>.png (for scouting).
 const adHoc = (p) => [`path-${p.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')}`, { path: p, waitFor: 'main' }];
@@ -1033,20 +1104,26 @@ try {
     }
     // domcontentloaded + explicit wait: the SPA keeps polling, so networkidle0
     // never reliably settles.
-    await page.goto(`${BASE}${def.path}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForSelector(def.waitFor || 'main', { timeout: 20000 }).catch(() => {});
-    // Re-apply the theme + hide rules after a full navigation.
-    await page.evaluate((theme) => {
-      document.documentElement.setAttribute('data-theme', theme);
-      const style = document.createElement('style');
-      style.textContent = '.tsqd-open-btn-container{display:none!important}';
-      document.head.appendChild(style);
-    }, THEME);
-    if (def.prepare) await def.prepare(page);
-    await sleep(2500); // let charts and AG Grid settle
-    const out = `${OUT_DIR}/${name}.png`;
-    await page.screenshot({ path: out, fullPage: has('full') });
-    console.log(out);
+    // --frames shoots every candidate frame (name@1600.png...) to pick the most
+    // readable one; otherwise the shot's own frame, else the run's viewport.
+    const frames = FRAMES.length ? FRAMES : [FRAME || def.frame || 0];
+    for (const frame of frames) {
+      await page.setViewport(frame ? frameViewport(frame) : { width: WIDTH, height: HEIGHT, deviceScaleFactor: SCALE });
+      await page.goto(`${BASE}${def.path}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForSelector(def.waitFor || 'main', { timeout: 20000 }).catch(() => {});
+      // Re-apply the theme + hide rules after a full navigation.
+      await page.evaluate((theme) => {
+        document.documentElement.setAttribute('data-theme', theme);
+        const style = document.createElement('style');
+        style.textContent = '.tsqd-open-btn-container{display:none!important}';
+        document.head.appendChild(style);
+      }, THEME);
+      if (def.prepare) await def.prepare(page);
+      await sleep(2500); // let charts and AG Grid settle
+      const out = `${OUT_DIR}/${name}${FRAMES.length ? `@${frame}` : ''}.png`;
+      await page.screenshot({ path: out, fullPage: has('full') });
+      console.log(out);
+    }
   }
 } finally {
   await browser.close();
