@@ -165,7 +165,7 @@ export default function ConnectionMetadataBar({
                 setLifecycleAnchor(null);
               }}
             >
-              {opt.deprecated ? `${opt.label} (deprecated)` : opt.label}
+              {opt.deprecated ? `${opt.label} (${t('common:enumEditor.retiredSuffix')})` : opt.label}
             </MenuItem>
           ))}
         </Box>

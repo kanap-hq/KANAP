@@ -788,6 +788,8 @@
       "servers": "Serveurs",
       "selectServers": "Sélectionner des serveurs, clusters ou entités",
       "selectedServers": "Serveurs sélectionnés ({{count}})",
+      "more": "+{{count}}",
+      "removeServer": "Retirer {{name}}",
       "showMultiServer": "Afficher les connexions multi-serveurs",
       "showLayers": "Afficher les couches de connexion",
       "roleBased": "Placement par rôle",

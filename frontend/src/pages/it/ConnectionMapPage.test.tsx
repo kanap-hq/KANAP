@@ -62,9 +62,9 @@ function Where() {
   return <div data-testid="where">{location.pathname}</div>;
 }
 
-function renderPage() {
+function renderPage(entry = '/it/connection-map', map: typeof MAP = MAP) {
   get.mockImplementation(async (url: string) => {
-    if (url === '/connections/map') return { data: MAP };
+    if (url === '/connections/map') return { data: map };
     if (url.endsWith('/map-summary')) {
       const id = url.split('/')[2];
       return { data: { id, name: id, kind: 'vm', environment: 'prod', operating_system: null, ip_addresses: null, location_reference: null, location_name: null, assigned_applications: APPLICATIONS[id] ?? [], is_cluster: id === 'cl-1' } };
@@ -74,7 +74,7 @@ function renderPage() {
   render(
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <MemoryRouter initialEntries={['/it/connection-map']}>
+        <MemoryRouter initialEntries={[entry]}>
           <Routes>
             <Route path="/it/connection-map" element={<ConnectionMapPage />} />
             <Route path="/it/assets/:id/:tab" element={<Where />} />
@@ -84,6 +84,56 @@ function renderPage() {
     </ThemeProvider>,
   );
 }
+
+function warned(spy: { mock: { calls: unknown[][] } }) {
+  return spy.mock.calls.map((call) => call.map((part) => String(part)).join(' ')).join('\n');
+}
+
+function fill(template: string, options?: Record<string, unknown>) {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(options?.[name] ?? ''));
+}
+
+describe('ConnectionMapPage server picker', () => {
+  beforeEach(() => { get.mockReset(); translation.t = (key: string) => key; });
+
+  it('opens the grouped server list without nesting options inside the group', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      renderPage();
+      await screen.findByRole('button', { name: 'node QA-CL-A' });
+      fireEvent.mouseDown(screen.getByRole('combobox', { name: 'pages.connectionMap.servers' }));
+      expect(await screen.findByRole('option', { name: 'QA-VM1' })).toBeTruthy();
+      expect(warned(errors)).not.toContain('validateDOMNesting');
+    } finally {
+      errors.mockRestore();
+    }
+  });
+
+  it('shows the overflow chip from the French locale', async () => {
+    const previous = translation.t;
+    translation.t = (key: string, options?: Record<string, unknown>) => {
+      if (key === 'pages.connectionMap.more') return fill(fr.pages.connectionMap.more, options);
+      if (key === 'pages.connectionMap.removeServer') return fill(fr.pages.connectionMap.removeServer, options);
+      return key;
+    };
+    try {
+      const map = {
+        ...MAP,
+        nodes: [
+          ...MAP.nodes,
+          { id: 'srv-2', name: 'QA-VM2', kind: 'server' as const, environment: 'prod', network_segment: null, hosting_category: null },
+        ],
+      };
+      renderPage('/it/connection-map?rootIds=cl-1,srv-1,srv-2', map);
+      expect(await screen.findByRole('button', { name: '+2' })).toBeTruthy();
+      expect(screen.queryByText('+2 more')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: '+2' }));
+      expect(await screen.findByRole('button', { name: 'Retirer QA-VM2' })).toBeTruthy();
+    } finally {
+      translation.t = previous;
+    }
+  });
+});
 
 describe('ConnectionMapPage node panel', () => {
   beforeEach(() => { get.mockReset(); });
@@ -165,6 +215,18 @@ describe('map panel open labels', () => {
       'Voir le cluster',
       'Cluster anzeigen',
       'Ver clúster',
+    ]);
+    expect(maps.map((locale) => locale.pages.connectionMap.more)).toEqual([
+      '+{{count}}',
+      '+{{count}}',
+      '+{{count}}',
+      '+{{count}}',
+    ]);
+    expect(maps.map((locale) => locale.pages.connectionMap.removeServer)).toEqual([
+      'Remove {{name}}',
+      'Retirer {{name}}',
+      '{{name}} entfernen',
+      'Quitar {{name}}',
     ]);
     for (const locale of maps) {
       expect(locale.pages.connectionMap).not.toHaveProperty('editServer');

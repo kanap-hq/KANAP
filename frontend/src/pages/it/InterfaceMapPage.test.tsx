@@ -142,6 +142,27 @@ function renderPage(entry = '/it/interface-map', map: typeof MAP | typeof LINKED
   );
 }
 
+function warned(spy: { mock: { calls: unknown[][] } }) {
+  return spy.mock.calls.map((call) => call.map((part) => String(part)).join(' ')).join('\n');
+}
+
+describe('InterfaceMapPage application picker', () => {
+  beforeEach(() => { get.mockReset(); });
+
+  it('opens the grouped application list without nesting options inside the group', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      renderPage();
+      await screen.findByRole('button', { name: 'node CheeseTrack' });
+      fireEvent.mouseDown(screen.getByRole('combobox', { name: 'pages.maps.applications' }));
+      expect(await screen.findByRole('option', { name: 'CheeseTrack' })).toBeTruthy();
+      expect(warned(errors)).not.toContain('validateDOMNesting');
+    } finally {
+      errors.mockRestore();
+    }
+  });
+});
+
 describe('InterfaceMapPage application panel', () => {
   beforeEach(() => { get.mockReset(); });
 
