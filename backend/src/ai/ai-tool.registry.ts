@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { describeZodIssues, invalidInputMessage } from './control-plane/dispatcher/ai-input-validation.util';
+import { legacyFlattenError } from '../common/zod-error';
 import { z } from 'zod';
-import zodToJsonSchema from 'zod-to-json-schema';
 import { Features } from '../config/features';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
@@ -192,7 +192,7 @@ const PrepareMutationPlanInputSchema = z.object({
 });
 
 /** The schema's field descriptions, the single source of a read tool's `inputSummary`. */
-function fieldDescriptions(schema: z.AnyZodObject): Record<string, string> {
+function fieldDescriptions(schema: z.ZodObject<any>): Record<string, string> {
   return Object.fromEntries(
     Object.entries(schema.shape as Record<string, z.ZodTypeAny>)
       .flatMap(([field, type]) => (type.description ? [[field, type.description]] : [])),
@@ -237,12 +237,17 @@ function normalizeJsonSchemaForProviders(value: unknown): unknown {
 
   if (
     normalized.nullable === true
-    && normalized.type === undefined
     && Array.isArray(normalized.enum)
     && normalized.enum.length === 1
-    && normalized.enum[0] === 'null'
+    && (normalized.enum[0] === null || normalized.enum[0] === 'null')
   ) {
     return { type: 'null' };
+  }
+
+  // Zod 4's OpenAPI 3.0 output leaves a plain object open; the provider tool schemas have always
+  // declared `additionalProperties: false` (zod-to-json-schema's output for a stripping object).
+  if (normalized.type === 'object' && normalized.properties && normalized.additionalProperties === undefined) {
+    normalized.additionalProperties = false;
   }
 
   if (normalized.exclusiveMinimum === true && typeof normalized.minimum === 'number') {
@@ -258,6 +263,15 @@ function normalizeJsonSchemaForProviders(value: unknown): unknown {
   } else if (normalized.exclusiveMaximum === false) {
     delete normalized.exclusiveMaximum;
   }
+
+  // `z.int()` bounds itself by the safe-integer range. These bounds say nothing a model can use
+  // (JSON cannot carry an exact integer outside it) and the tool schemas never showed them.
+  if (normalized.minimum === Number.MIN_SAFE_INTEGER) delete normalized.minimum;
+  if (normalized.maximum === Number.MAX_SAFE_INTEGER) delete normalized.maximum;
+
+  // Zod 4 adds the regex behind `format: "uuid"` and `format: "email"`. The providers read the
+  // format, as they always did; the pattern only widens the diff.
+  if (typeof normalized.format === 'string' && typeof normalized.pattern === 'string') delete normalized.pattern;
 
   return normalized;
 }
@@ -890,7 +904,7 @@ export class AiToolRegistry {
     return tools.map((item) => {
       const definition = this.definitions.get(item.name)!;
       const jsonSchema = normalizeJsonSchemaForProviders(
-        zodToJsonSchema(definition.inputSchema as any, { target: 'openApi3' }),
+        z.toJSONSchema(definition.inputSchema as any, { target: 'openapi-3.0', io: 'input' }),
       );
       return {
         name: definition.name,
@@ -926,11 +940,11 @@ export class AiToolRegistry {
       throw new BadRequestException('AI tool is not available.');
     }
 
-    const parsed = definition.inputSchema.safeParse(rawInput);
+    const parsed = definition.inputSchema.safeParse(rawInput, { reportInput: true });
     if (!parsed.success) {
       throw new BadRequestException({
         message: invalidInputMessage(definition.name, describeZodIssues(parsed.error.issues)),
-        ...parsed.error.flatten(),
+        ...legacyFlattenError(parsed.error),
       });
     }
 

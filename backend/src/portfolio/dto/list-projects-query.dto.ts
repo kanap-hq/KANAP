@@ -18,7 +18,8 @@ export const ListProjectsQuerySchema = ListQuerySchema.extend({
         .map((s) => s.trim())
         .filter(Boolean);
       return statuses.length > 0 ? statuses : undefined;
-    }),
+    })
+    .optional(),
 
   /** Filter by origin */
   origin: z.enum(ProjectOrigins).optional(),
@@ -67,7 +68,8 @@ export const ListProjectsQuerySchema = ListQuerySchema.extend({
       if (val === undefined || val === null || val === '') return undefined;
       const num = typeof val === 'number' ? val : parseInt(val, 10);
       return isNaN(num) ? undefined : num;
-    }),
+    })
+    .optional(),
 
   /** Filter by month (for timeline views) */
   month: z
@@ -77,7 +79,8 @@ export const ListProjectsQuerySchema = ListQuerySchema.extend({
       if (val === undefined || val === null || val === '') return undefined;
       const num = typeof val === 'number' ? val : parseInt(val, 10);
       return isNaN(num) || num < 1 || num > 12 ? undefined : num;
-    }),
+    })
+    .optional(),
 });
 
 export type ListProjectsQueryInput = z.input<typeof ListProjectsQuerySchema>;
@@ -121,7 +124,7 @@ export class ListProjectsQueryDto implements ListProjectsQuery {
     return ListProjectsQuerySchema.parse(input);
   }
 
-  static safeParse(input: unknown): z.SafeParseReturnType<ListProjectsQueryInput, ListProjectsQuery> {
+  static safeParse(input: unknown): z.ZodSafeParseResult<ListProjectsQuery> {
     return ListProjectsQuerySchema.safeParse(input);
   }
 

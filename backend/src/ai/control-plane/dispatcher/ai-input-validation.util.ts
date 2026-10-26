@@ -1,5 +1,6 @@
 import type { ErrorObject } from 'ajv';
 import type { ZodIssue } from 'zod';
+import { legacyIssueMessage } from '../../../common/zod-error';
 
 /**
  * Readable reasons for a tool input refused by its schema, for the caller's model (Plaid chat
@@ -10,8 +11,8 @@ import type { ZodIssue } from 'zod';
 /** Allowed values listed in full up to this count; a longer list points to the tool's schema. */
 const MAX_LISTED_VALUES = 30;
 
-function fieldName(path: string | Array<string | number>): string {
-  const parts = Array.isArray(path) ? path.map(String) : path.split('/').filter(Boolean);
+function fieldName(path: string | ReadonlyArray<PropertyKey>): string {
+  const parts = typeof path === 'string' ? path.split('/').filter(Boolean) : path.map(String);
   return parts.join('.');
 }
 
@@ -65,15 +66,13 @@ function zodReason(issue: ZodIssue): string {
     case 'unrecognized_keys':
       return issue.keys.map((key) => `unknown field "${child(field, key)}"`).join('; ');
     case 'invalid_type':
-      return issue.received === 'undefined'
+      return issue.input === undefined
         ? `missing required field "${field}"`
         : `${quoted(field)} must be ${issue.expected}`;
-    case 'invalid_enum_value':
-      return `${quoted(field)} must be ${listValues(issue.options)}`;
-    case 'invalid_literal':
-      return `${quoted(field)} must be ${JSON.stringify(issue.expected)}`;
+    case 'invalid_value':
+      return `${quoted(field)} must be ${listValues(issue.values)}`;
     default:
-      return `${quoted(field)}: ${issue.message}`;
+      return `${quoted(field)}: ${legacyIssueMessage(issue)}`;
   }
 }
 

@@ -35,7 +35,8 @@ export const ListSpendQuerySchema = ListQuerySchema.extend({
       if (val === undefined || val === null || val === '') return undefined;
       const num = typeof val === 'number' ? val : parseInt(val, 10);
       return isNaN(num) ? undefined : num;
-    }),
+    })
+    .optional(),
 });
 
 export type ListSpendQueryInput = z.input<typeof ListSpendQuerySchema>;
@@ -72,7 +73,7 @@ export class ListSpendQueryDto implements ListSpendQuery {
     return ListSpendQuerySchema.parse(input);
   }
 
-  static safeParse(input: unknown): z.SafeParseReturnType<ListSpendQueryInput, ListSpendQuery> {
+  static safeParse(input: unknown): z.ZodSafeParseResult<ListSpendQuery> {
     return ListSpendQuerySchema.safeParse(input);
   }
 

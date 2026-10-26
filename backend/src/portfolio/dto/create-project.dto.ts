@@ -66,7 +66,7 @@ export const CreateProjectSchema = z.object({
   override_value: z.number().nullable().optional(),
 
   /** Criteria values (JSON object) */
-  criteria_values: z.record(z.string()).optional().default({}),
+  criteria_values: z.record(z.string(), z.string()).optional().default({}),
 
   /** Execution progress percentage */
   execution_progress: z.number().min(0).max(100).optional().default(0),

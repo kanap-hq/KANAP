@@ -20,7 +20,8 @@ export const ListApplicationsQuerySchema = ListQuerySchema.extend({
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean);
-    }),
+    })
+    .optional(),
 
   /** Filter by criticality */
   criticality: z.string().optional(),
@@ -36,7 +37,8 @@ export const ListApplicationsQuerySchema = ListQuerySchema.extend({
       if (val === undefined || val === null || val === '') return undefined;
       if (typeof val === 'boolean') return val;
       return val.toLowerCase() === 'true';
-    }),
+    })
+    .optional(),
 
   /** Filter by suite status */
   is_suite: z
@@ -46,7 +48,8 @@ export const ListApplicationsQuerySchema = ListQuerySchema.extend({
       if (val === undefined || val === null || val === '') return undefined;
       if (typeof val === 'boolean') return val;
       return val.toLowerCase() === 'true';
-    }),
+    })
+    .optional(),
 
   /** Filter by SSO enabled */
   sso_enabled: z
@@ -56,7 +59,8 @@ export const ListApplicationsQuerySchema = ListQuerySchema.extend({
       if (val === undefined || val === null || val === '') return undefined;
       if (typeof val === 'boolean') return val;
       return val.toLowerCase() === 'true';
-    }),
+    })
+    .optional(),
 
   /** Filter by MFA supported */
   mfa_supported: z
@@ -66,7 +70,8 @@ export const ListApplicationsQuerySchema = ListQuerySchema.extend({
       if (val === undefined || val === null || val === '') return undefined;
       if (typeof val === 'boolean') return val;
       return val.toLowerCase() === 'true';
-    }),
+    })
+    .optional(),
 
   /** Filter by contains PII */
   contains_pii: z
@@ -76,7 +81,8 @@ export const ListApplicationsQuerySchema = ListQuerySchema.extend({
       if (val === undefined || val === null || val === '') return undefined;
       if (typeof val === 'boolean') return val;
       return val.toLowerCase() === 'true';
-    }),
+    })
+    .optional(),
 
   /** Scope by owner user ID (My apps) */
   ownerUserId: z.string().uuid().optional(),
@@ -122,7 +128,7 @@ export class ListApplicationsQueryDto implements ListApplicationsQuery {
     return ListApplicationsQuerySchema.parse(input);
   }
 
-  static safeParse(input: unknown): z.SafeParseReturnType<ListApplicationsQueryInput, ListApplicationsQuery> {
+  static safeParse(input: unknown): z.ZodSafeParseResult<ListApplicationsQuery> {
     return ListApplicationsQuerySchema.safeParse(input);
   }
 

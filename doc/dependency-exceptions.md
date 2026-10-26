@@ -33,14 +33,12 @@ This table lists the major upgrades that are planned or queued for planning, inc
 | `fast-csv` | backend | 4.x | 5.x | To be scheduled |
 | `helmet` | backend | 7.x | 8.x | To be scheduled |
 | `marked` | backend | 14.x | 18.x | To be scheduled |
-| `nestjs-zod` | backend | 3.x | 5.x | To be scheduled |
 | `pino` | backend | 9.x | 10.x | To be scheduled |
 | `pino-http` | backend | 9.x | 11.x | To be scheduled |
 | `stripe` | backend | 20.x | 23.x | To be scheduled |
 | `typeorm` | backend | 0.3.x | 1.x | To be scheduled |
 | `typescript` | backend | 5.x | 7.x | To be scheduled |
 | `undici` | backend | 7.x | 8.x | To be scheduled |
-| `zod` | backend | 3.x | 4.x | To be scheduled |
 | `@mui/icons-material` | frontend | 5.x | 9.x | To be scheduled |
 | `@mui/material` | frontend | 5.x | 9.x | To be scheduled |
 | `ag-charts-community` | frontend | 9.x | 14.x | To be scheduled |

@@ -38,7 +38,7 @@ export class ListInterfacesQueryDto implements ListInterfacesQuery {
     return ListInterfacesQuerySchema.parse(input);
   }
 
-  static safeParse(input: unknown): z.SafeParseReturnType<ListInterfacesQueryInput, ListInterfacesQuery> {
+  static safeParse(input: unknown): z.ZodSafeParseResult<ListInterfacesQuery> {
     return ListInterfacesQuerySchema.safeParse(input);
   }
 
