@@ -216,6 +216,12 @@ function formatConnectionOption(option: ConnectionOption | null | undefined) {
   return [option.connection_reference, option.name].filter(Boolean).join(' · ');
 }
 
+function topologyLabel(t: TFunction, value: string | null | undefined): string {
+  if (value === 'server_to_server') return t('it:enums.topology.serverToServer');
+  if (value === 'multi_server') return t('it:enums.topology.multiServer');
+  return value || '';
+}
+
 function connectionOptionFromLink(link: BindingConnection): ConnectionOption {
   return {
     id: link.connection.id,
@@ -1018,6 +1024,14 @@ export default function InterfaceBindingsMatrix({
     </Stack>
   );
 
+  const connectionOptionDetail = (option: ConnectionOption) => [
+    topologyLabel(t, option.topology),
+    option.lifecycle ? labelFor('lifecycleStatus', option.lifecycle) : '',
+    option.criticality
+      ? classificationCatalog?.businessCriticalityLevels.find((item) => item.code === option.criticality)?.label || option.criticality
+      : '',
+  ].filter(Boolean).join(' · ');
+
   const renderBindingFormContent = (surface: 'dialog' | 'panel') => {
     if (!dialogState) return null;
     const gridSx = surface === 'panel' ? panelFormGridSx : dialogGridSx;
@@ -1150,20 +1164,23 @@ export default function InterfaceBindingsMatrix({
               clearOnBlur={false}
               noOptionsText={bindingConnectionSearch ? t('it:workspace.interface.bindings.noConnectionsFound') : t('it:workspace.interface.bindings.noConnections')}
               ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-              renderOption={(props, option) => (
-                <Box component="li" {...props} key={option.id}>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography className="kanap-autocomplete-option-primary">
-                      {formatConnectionOption(option)}
-                    </Typography>
-                    {(option.topology || option.lifecycle || option.criticality) && (
-                      <Typography className="kanap-autocomplete-option-secondary">
-                        {[option.topology, option.lifecycle, option.criticality].filter(Boolean).join(' · ')}
+              renderOption={(props, option) => {
+                const detail = connectionOptionDetail(option);
+                return (
+                  <Box component="li" {...props} key={option.id}>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography className="kanap-autocomplete-option-primary">
+                        {formatConnectionOption(option)}
                       </Typography>
-                    )}
+                      {detail && (
+                        <Typography className="kanap-autocomplete-option-secondary">
+                          {detail}
+                        </Typography>
+                      )}
+                    </Box>
                   </Box>
-                </Box>
-              )}
+                );
+              }}
               renderInput={(params) => (
                 <TextField
                   {...params}
