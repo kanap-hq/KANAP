@@ -83,13 +83,13 @@ export function CsvValidationResults({
         {result.inserted > 0 && (
           <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
             <StatusDot color={getDotColor('success', mode)} />
-            <Typography variant="body2" sx={{ color: getDotColor('success', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t('csv.toInsert', { count: result.inserted })}</Typography>
+            <Typography variant="body2" sx={{ color: getDotColor('success', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t(isValidation ? 'csv.toInsert' : 'csv.created', { count: result.inserted })}</Typography>
           </Box>
         )}
         {result.updated > 0 && (
           <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
             <StatusDot color={getDotColor('info', mode)} />
-            <Typography variant="body2" sx={{ color: getDotColor('info', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t('csv.toUpdate', { count: result.updated })}</Typography>
+            <Typography variant="body2" sx={{ color: getDotColor('info', mode), fontWeight: 500, fontSize: '0.8125rem' }}>{t(isValidation ? 'csv.toUpdate' : 'csv.updated', { count: result.updated })}</Typography>
           </Box>
         )}
         {(result.unchanged ?? 0) > 0 && (
