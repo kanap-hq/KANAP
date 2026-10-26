@@ -12,7 +12,7 @@ Bienvenido a KANAP. Esta guía le lleva por todo lo que necesita para sentirse p
 
     [:material-download: Descargar la hoja de referencia (PDF)](downloads/kanap-getting-started.pdf){ .md-button .md-button--primary }
 
-Para flujos de trabajo específicos por rol, consulte el [Portafolio - Inicio Rápido](index.md) y el [Panorama IT - Inicio Rápido](apps-and-assets.md).
+Para flujos de trabajo específicos por rol, consulte el [Portafolio: Inicio Rápido](index.md) y el [Panorama IT: Inicio Rápido](apps-and-assets.md).
 
 ---
 
@@ -275,8 +275,8 @@ El correo semanal y las notificaciones en tiempo real le mantienen informado sin
 
 | Si trabaja con... | Lea el... |
 |-------------------|-----------|
-| Aplicaciones, servidores, infraestructura | [Panorama IT - Inicio Rápido](apps-and-assets.md) |
-| Solicitudes, proyectos, planificación de portafolio | [Portafolio - Inicio Rápido](index.md) |
+| Aplicaciones, servidores, infraestructura | [Panorama IT: Inicio Rápido](apps-and-assets.md) |
+| Solicitudes, proyectos, planificación de portafolio | [Portafolio: Inicio Rápido](index.md) |
 | Versiones de software, fechas de soporte, avisos de seguridad | Páginas [Tecnologías](../technologies.md), [Fin de soporte](../end-of-support.md) y [Vulnerabilidades](../vulnerabilities.md) |
 | Caídas de servicio y su impacto | Página [Incidentes](../incidents.md) |
 | Inventario Netbox, mesa de servicio y otras herramientas conectadas | Páginas [Sincronización con Netbox](../netbox.md) e [Integraciones](../integrations.md) |

@@ -24,10 +24,10 @@ La page compte deux onglets :
 
 Dans l'onglet **Listes**, l'éditeur **Classifications et continuité** se trouve en haut. En dessous, les listes sont regroupées en quatre sections repliables :
 
-1. **Sites** - Listes utilisées lors de la création ou de la modification des sites.
-2. **Serveurs et connexions** - Listes utilisées pour les serveurs, les connexions et les données de risque/endpoint associées.
-3. **Applications, services et interfaces** - Listes utilisées pour les applications, les instances d'application, les interfaces et les liaisons.
-4. **Incidents** - Listes utilisées par le registre des incidents.
+1. **Sites**: Listes utilisées lors de la création ou de la modification des sites.
+2. **Serveurs et connexions**: Listes utilisées pour les serveurs, les connexions et les données de risque/endpoint associées.
+3. **Applications, services et interfaces**: Listes utilisées pour les applications, les instances d'application, les interfaces et les liaisons.
+4. **Incidents**: Listes utilisées par le registre des incidents.
 
 Les listes des technologies sont dans deux sections : **Familles de technologies** et **Zones d'administration** sous **Serveurs et connexions**, **Types d'hébergement** sous **Sites**. Les autres écrans appellent cette page les réglages IT.
 
@@ -37,7 +37,7 @@ Dans une section, les listes sont triées par nom. Chaque liste apparaît comme 
 
 Chaque liste possède ses propres contrôles en haut :
 
-- **Ajouter un élément** - Insère une nouvelle ligne en haut de la liste, focalisée et prête à saisir. Son champ de nom affiche un exemple propre à la liste.
+- **Ajouter un élément**: Insère une nouvelle ligne en haut de la liste, focalisée et prête à saisir. Son champ de nom affiche un exemple propre à la liste.
 - Les modifications sont enregistrées automatiquement environ une seconde et demie après votre dernière saisie, dès que toutes les lignes sont valides. Un indicateur d'enregistrement s'affiche à côté de la liste.
 
 Pour les longues listes (plus de 25 lignes), le tableau virtualise les lignes, affichant environ 20 à la fois avec un défilement fluide et des en-têtes fixes.
@@ -145,7 +145,7 @@ Catalogue à deux niveaux (catégorie et entrée) des protocoles de connexion, a
 **Où c'est utilisé** :
 - Espace de travail Connexions > Sélecteur **Type de connexion**
 
-Le champ **Ports courants** est en texte libre - vous pouvez saisir des ports uniques (`443`), des listes (`80, 443`), des plages (`9101-9103`), ou des indicateurs comme `multiple` ou `à préciser`.
+Le champ **Ports courants** est en texte libre: vous pouvez saisir des ports uniques (`443`), des listes (`80, 443`), des plages (`9101-9103`), ou des indicateurs comme `multiple` ou `à préciser`.
 
 Les catégories par défaut incluent : Application, Authentification, Sauvegarde, Base de données, Email, Partage de fichiers, Transfert de fichiers, Messagerie, Supervision, Services réseau, Accès distant, Réplication, Stockage, VPN / Tunnel, Générique.
 
@@ -167,8 +167,8 @@ Survolez les en-têtes **Forêt**, **Nombre de comptes** et **Nombre d'ordinateu
 - **Cartographie SI > Zones d'administration** : domaines groupés par forêt, avec leurs approbations, leurs comptages et leurs contrôleurs de domaine. Voir [Zones d'administration](administration-view.md#services-dannuaire-et-domaines).
 
 **Entrées système** (ne peuvent pas être modifiées ni supprimées) :
-- **Workgroup** - Pour les actifs autonomes non joints à un domaine
-- **N/A** - Pour les types d'actifs où l'appartenance au domaine ne s'applique pas (ex. : équipements réseau, baies)
+- **Workgroup**: Pour les actifs autonomes non joints à un domaine
+- **N/A**: Pour les types d'actifs où l'appartenance au domaine ne s'applique pas (ex. : équipements réseau, baies)
 
 **Comportement de remplissage automatique** : Lors de l'ajout d'un nouveau domaine, le suffixe DNS se remplit automatiquement à partir du nom que vous saisissez, jusqu'à ce que vous le modifiiez vous-même.
 
@@ -399,7 +399,7 @@ Catégories utilisées pour classer les entrées du registre des incidents.
 
 ## Impact des modifications sur les données existantes
 
-- **Les enregistrements existants conservent leur valeur** - Renommer ne modifie que ce que les utilisateurs voient, pas les données sous-jacentes.
+- **Les enregistrements existants conservent leur valeur**: Renommer ne modifie que ce que les utilisateurs voient, pas les données sous-jacentes.
 - **Valeurs marquées Ne plus proposer** :
   - Restent valides pour les enregistrements qui les utilisent déjà.
   - Sont masquées des menus déroulants lors de la création de nouveaux enregistrements.
@@ -441,8 +441,8 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 
 ## Conseils
 
-- **Alignez les noms avec votre terminologie** - Revoyez les valeurs par défaut et renommez les valeurs pour correspondre à la manière dont votre organisation parle de ces concepts. Les enregistrements conservent leur lien avec la valeur ; seul le nom change.
-- **Retirez progressivement** - Lors de la transition vers une nouvelle valeur, cochez **Ne plus proposer** sur l'ancienne plutôt que de la supprimer. Cela préserve les données historiques tout en orientant les utilisateurs vers les nouvelles options.
-- **Coordonnez les classifications de données avec la sécurité** - Les modifications des classifications de données doivent être alignées avec vos politiques de sécurité de l'information. Consultez la conformité avant d'ajouter ou renommer les niveaux de classification.
-- **Utilisez les ports courants comme documentation** - Le champ **Ports courants** des types de connexion est informatif. Remplissez-le pour aider les utilisateurs à comprendre quels ports chaque type de connexion utilise couramment.
-- **Ajustez la lisibilité des cartes avec les niveaux** - Gardez les niveaux du graphe des entités et des rôles de serveur alignés avec vos couches d'architecture (edge, app, données) pour des dispositions de Carte des connexions plus claires.
+- **Alignez les noms avec votre terminologie**: Revoyez les valeurs par défaut et renommez les valeurs pour correspondre à la manière dont votre organisation parle de ces concepts. Les enregistrements conservent leur lien avec la valeur ; seul le nom change.
+- **Retirez progressivement**: Lors de la transition vers une nouvelle valeur, cochez **Ne plus proposer** sur l'ancienne plutôt que de la supprimer. Cela préserve les données historiques tout en orientant les utilisateurs vers les nouvelles options.
+- **Coordonnez les classifications de données avec la sécurité**: Les modifications des classifications de données doivent être alignées avec vos politiques de sécurité de l'information. Consultez la conformité avant d'ajouter ou renommer les niveaux de classification.
+- **Utilisez les ports courants comme documentation**: Le champ **Ports courants** des types de connexion est informatif. Remplissez-le pour aider les utilisateurs à comprendre quels ports chaque type de connexion utilise couramment.
+- **Ajustez la lisibilité des cartes avec les niveaux**: Gardez les niveaux du graphe des entités et des rôles de serveur alignés avec vos couches d'architecture (edge, app, données) pour des dispositions de Carte des connexions plus claires.
