@@ -135,13 +135,15 @@ function cellText(text: string): string {
 
 /** A sheet name Excel accepts, unique (without regard to case) among the names already taken. */
 function sheetName(raw: string, taken: Set<string>): string {
+  // A cut can split a surrogate pair: what XML forbids is removed after it.
+  const cut = (text: string, length: number): string => text.slice(0, length).replace(XML_FORBIDDEN, '');
   let base = String(raw ?? '').replace(SHEET_NAME_FORBIDDEN, '-').trim().replace(/^'+|'+$/g, '').trim();
-  base = base.slice(0, 31).trim();
+  base = cut(base, 31).trim();
   if (!base) base = 'Sheet';
   let name = base;
   for (let attempt = 2; taken.has(name.toLowerCase()); attempt += 1) {
     const suffix = ` (${attempt})`;
-    name = `${base.slice(0, 31 - suffix.length).trimEnd()}${suffix}`;
+    name = `${cut(base, 31 - suffix.length).trimEnd()}${suffix}`;
   }
   taken.add(name.toLowerCase());
   return name;

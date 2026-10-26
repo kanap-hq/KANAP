@@ -157,6 +157,10 @@ function sheetNames() {
   assert.equal(long[1].length, 31, 'a suffixed name still fits 31 characters');
   assert.equal(new Set(long.map((n) => n.toLowerCase())).size, 2);
   assert.deepEqual(names(['Tâches & co']), ['Tâches & co'], 'accents and ampersand kept');
+  // A cut through a surrogate pair, a lone surrogate or a character XML forbids: removed, the name stays valid XML.
+  const emoji = names(['x'.repeat(30) + '😀z', 'a\uD800b\uFFFEc', 'y'.repeat(28) + '😀😀', 'y'.repeat(28) + '😀😀']);
+  assert.deepEqual(emoji, ['x'.repeat(30), 'abc', 'y'.repeat(28) + '😀', 'y'.repeat(27) + ' (2)']);
+  assert.ok(!/[\uD800-\uDFFF]/.test(emoji.join('').replace(/😀/g, '')), 'no lone surrogate');
 }
 
 function validation() {
