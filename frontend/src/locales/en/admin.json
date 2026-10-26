@@ -1742,7 +1742,8 @@
       "users": "18 fictional users, who cannot sign in",
       "landscape": "Applications and their landscape: instances, interfaces and connections",
       "business": "Contracts, the budget of the current year, projects and tasks",
-      "duration": "Loading takes less than a minute. You can erase everything later from {{path}}."
+      "startingCompany": "The starting company \"{{name}}\" is replaced by the sample companies.",
+      "duration": "Loading takes about two minutes. You can erase everything later from {{path}}."
     },
     "resetDialog": {
       "title": "Erase everything and start over",

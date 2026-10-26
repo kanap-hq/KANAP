@@ -21,7 +21,7 @@ Le jeu décrit Fromage & Co, une fromagerie fictive :
 - **Des contrats, le budget de l'année en cours, des projets et des tâches**
 - **Des lignes budgétaires classées sur les [dimensions recommandées](analytics.md#dimensions-recommandees)** : chaque ligne a une nature de coût et un domaine IT, les lignes CAPEX et les lignes build ont un motif, et les lignes CAPEX ont une priorité. Le jeu ajoute aussi **Récurrence**, dans la langue de l'espace de travail, et deux dimensions propres, **Business domain** et **Budget reference**, dont les noms et les valeurs restent en anglais
 
-Les dates suivent l'année en cours, si bien que le budget paraît toujours à jour. Le chargement prend moins d'une minute.
+Les dates suivent l'année en cours, si bien que le budget paraît toujours à jour. Le chargement prend environ deux minutes.
 
 Les utilisateurs fictifs n'ont ni mot de passe ni accès. Ils servent à donner un aspect réaliste aux responsables, aux personnes assignées et aux équipes projet. KANAP ne leur envoie aucun e-mail, et l'effacement les supprime.
 
@@ -42,7 +42,7 @@ Ce qu'un nouvel espace de travail crée pour vous (sa première société, le pl
 2. Cliquez sur **Charger les données d'exemple**.
 3. Lisez le résumé dans la fenêtre et confirmez avec **Charger les données d'exemple**.
 
-La page suit le chargement étape par étape (par exemple « Étape 4 sur 19 : plans comptables ») et le statut passe à **Chargées** à la fin. La bande de statut indique alors quand les données ont été chargées et par qui. Tout ce que vous voyez dans KANAP se rafraîchit avec les nouvelles données.
+La page suit le chargement étape par étape (par exemple « Étape 4 sur 21 : plans comptables ») et le statut passe à **Chargées** à la fin. La bande de statut indique alors quand les données ont été chargées et par qui. Tout ce que vous voyez dans KANAP se rafraîchit avec les nouvelles données.
 
 **Si un chargement n'est pas possible**, la page n'affiche pas le bouton **Charger les données d'exemple**. Une ligne en explique la raison :
 

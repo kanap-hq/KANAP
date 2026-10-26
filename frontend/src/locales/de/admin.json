@@ -1742,7 +1742,8 @@
       "users": "18 fiktive Benutzer, die sich nicht anmelden können",
       "landscape": "Anwendungen und ihre Landschaft: Instanzen, Schnittstellen und Verbindungen",
       "business": "Verträge, das Budget des laufenden Jahres, Projekte und Aufgaben",
-      "duration": "Das Laden dauert weniger als eine Minute. Sie können später alles unter {{path}} löschen."
+      "startingCompany": "Das Ausgangsunternehmen „{{name}}“ wird durch die Beispielunternehmen ersetzt.",
+      "duration": "Das Laden dauert etwa zwei Minuten. Sie können später alles unter {{path}} löschen."
     },
     "resetDialog": {
       "title": "Alles löschen und neu beginnen",
