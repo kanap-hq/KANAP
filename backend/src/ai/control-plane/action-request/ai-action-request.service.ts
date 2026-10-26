@@ -92,6 +92,36 @@ export function mutationPreviewDtosFromCapabilityResult(result: unknown): AiMuta
   return Array.isArray(previews) ? previews.filter(isMutationPreviewDto) : [];
 }
 
+const NESTED_PREVIEW_KEYS = ['results', 'followUpPreviews'] as const;
+
+/**
+ * Every preview card inside a capability result, including the execution
+ * shape `{ results, followUpPreviews }`. Callers that show a card to the
+ * user read this from the handler output before redaction.
+ */
+export function userFacingPreviewDtosFromCapabilityResult(result: unknown): AiMutationPreviewDto[] {
+  const collected = mutationPreviewDtosFromCapabilityResult(result);
+  if (!result || typeof result !== 'object') {
+    return collected;
+  }
+  const record = result as Record<string, unknown>;
+  const seen = new Set(collected.map((preview) => preview.preview_id));
+  for (const key of NESTED_PREVIEW_KEYS) {
+    const value = record[key];
+    if (!Array.isArray(value)) {
+      continue;
+    }
+    for (const entry of value) {
+      if (!isMutationPreviewDto(entry) || seen.has(entry.preview_id)) {
+        continue;
+      }
+      seen.add(entry.preview_id);
+      collected.push(entry);
+    }
+  }
+  return collected;
+}
+
 @Injectable()
 export class AiActionRequestService {
   constructor(
