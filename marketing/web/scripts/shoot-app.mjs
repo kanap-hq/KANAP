@@ -1014,8 +1014,8 @@ const PAGES = {
       await sleep(1000);
     },
   },
-  // Incidents article (2026-10-25): journal tab of INC-28 (critical, resolved), dated notes plus severity and status changes. Read-only.
-  'incidents-journal-1600-2026-10-25': {
+  // Incidents article (2026-10-26): journal tab of INC-28 (critical, resolved), dated notes plus severity and status changes. Read-only.
+  'incidents-journal-2026-10-26': {
     frame: 1600,
     path: '/it/incidents/INC-28/journal',
     waitFor: 'main',
@@ -1038,8 +1038,8 @@ const PAGES = {
       await sleep(700);
     },
   },
-  // Incidents article (2026-10-25): relations tab of INC-28, linked assets, applications, technologies and suggestions. Read-only.
-  'incidents-relations-1600-2026-10-25': {
+  // Incidents article (2026-10-26, retaken after the relations tables were resized): relations tab of INC-28, linked assets, applications, technologies and suggestions. Read-only.
+  'incidents-relations-2026-10-26': {
     frame: 1600,
     path: '/it/incidents/INC-28/relations',
     waitFor: 'main',
@@ -1049,8 +1049,8 @@ const PAGES = {
       await sleep(1000);
     },
   },
-  // Incidents article (2026-10-25): overview tab of INC-28, description and incident review. Read-only.
-  'incidents-review-2026-10-25': {
+  // Incidents article (2026-10-26): overview tab of INC-28, description and incident review. Read-only.
+  'incidents-review-2026-10-26': {
     frame: 1920,
     path: '/it/incidents/INC-28/overview',
     waitFor: 'main',
@@ -1060,10 +1060,10 @@ const PAGES = {
       await sleep(1500);
     },
   },
-  // Incidents article (2026-10-25): register filtered on Critical and Major. Read-only; set filters separately (they persist).
-  'incidents-register-2026-10-25': {
+  // Incidents article (2026-10-26): register filtered on Critical and Major, Resolved and Closed (leaves out the open test incident INC-43). Read-only; set filters separately (they persist).
+  'incidents-register-2026-10-26': {
     frame: 1920,
-    path: '/it/incidents?filters=%7B%22severity%22%3A%7B%22filterType%22%3A%22set%22%2C%22values%22%3A%5B%22critical%22%2C%22major%22%5D%7D%7D',
+    path: '/it/incidents?filters=%7B%22severity%22%3A%7B%22filterType%22%3A%22set%22%2C%22values%22%3A%5B%22critical%22%2C%22major%22%5D%7D%2C%22status%22%3A%7B%22filterType%22%3A%22set%22%2C%22values%22%3A%5B%22resolved%22%2C%22closed%22%5D%7D%7D',
     waitFor: 'main',
     async prepare(page) {
       await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });

@@ -32,7 +32,7 @@ Para empezar, bastan tres campos: un título, una gravedad y la hora de detecci�
 
 ## Una cronología sólida
 
-![La pestaña Registro de un incidente grave, con notas fechadas y cambios de estado y de gravedad.](/screenshots/incidents-journal-1600-2026-10-25.png)
+![La pestaña Registro de un incidente crítico, con notas fechadas y cambios de estado y de gravedad.](/screenshots/incidents-journal-2026-10-26.png)
 
 La pestaña Registro es la que convierte un formulario en un registro. Guarda todo lo que le sucede al incidente: las notas del equipo, cada cambio de estado y de gravedad, cada activo o aplicación vinculado o desvinculado, cada reapertura con su motivo. Nada de lo que contiene puede modificarse ni eliminarse, por nadie.
 
@@ -46,7 +46,7 @@ La numeración sigue siendo continua. Un duplicado se cancela con un motivo, e I
 
 ## Vincular el incidente con lo que afectó
 
-![La pestaña Relaciones de un incidente: sus activos, sus aplicaciones, sus tecnologías y una sugerencia.](/screenshots/incidents-relations-1600-2026-10-25.png)
+![La pestaña Relaciones de un incidente: sus activos, sus aplicaciones, sus tecnologías y las tecnologías sugeridas.](/screenshots/incidents-relations-2026-10-26.png)
 
 Un incidente aislado en un registro tiene poco peso. En KANAP, se vincula al panorama IT: los servidores afectados, las aplicaciones de negocio con su criticidad, las tecnologías implicadas. KANAP sugiere las tecnologías de los servidores y las aplicaciones ya vinculados, con su origen, por ejemplo «tecnología del activo AST-12». Basta un clic para añadirlas.
 
@@ -56,7 +56,7 @@ Las acciones correctivas se convierten en tareas, con un responsable y una fecha
 
 ## La revisión del incidente, congelada al cerrar
 
-![La vista general de un incidente, con su descripción y su revisión del incidente.](/screenshots/incidents-review-2026-10-25.png)
+![La vista general de un incidente, con su descripción y su revisión del incidente.](/screenshots/incidents-review-2026-10-26.png)
 
 Cada incidente tiene dos textos. La descripción cabe en una o dos frases: lo que pasó, tal como se observó. La revisión del incidente es el informe completo, redactado en un documento de verdad, con títulos, tablas e imágenes pegadas.
 
@@ -79,7 +79,7 @@ Un incidente de seguridad sensible puede restringirse. Entonces solo lo ven los 
 
 ## Lo que recibe el auditor
 
-![El registro filtrado por los incidentes de gravedad Crítica y Alta.](/screenshots/incidents-register-2026-10-25.png)
+![El registro filtrado por los incidentes de gravedad Crítica y Alta.](/screenshots/incidents-register-2026-10-26.png)
 
 El registro se filtra por periodo, gravedad, categoría o indicador de conformidad. Las gravedades Crítica y Alta del último año dan la lista corta que piden la mayoría de los comités y las auditorías, y la exportación CSV la entrega tal cual.
 

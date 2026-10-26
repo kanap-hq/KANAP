@@ -32,7 +32,7 @@ Für den Anfang genügen drei Felder: ein Titel, ein Schweregrad und der Zeitpun
 
 ## Eine belastbare Chronologie
 
-![Der Verlauf eines schweren Vorfalls, mit datierten Notizen und Änderungen von Status und Schweregrad.](/screenshots/incidents-journal-1600-2026-10-25.png)
+![Der Verlauf eines kritischen Vorfalls, mit datierten Notizen und Änderungen von Status und Schweregrad.](/screenshots/incidents-journal-2026-10-26.png)
 
 Erst der Verlauf macht aus einem Formular ein Register. Er hält alles fest, was mit dem Vorfall geschieht: die Notizen des Teams, jede Änderung von Status und Schweregrad, jedes verknüpfte oder gelöste Asset und jede verknüpfte oder gelöste Anwendung, jede Wiederöffnung mit ihrer Begründung. Nichts davon lässt sich bearbeiten oder löschen, von niemandem.
 
@@ -46,7 +46,7 @@ Die Nummerierung bleibt lückenlos. Ein Duplikat wird mit einer Begründung abge
 
 ## Den Vorfall mit dem verknüpfen, was er getroffen hat
 
-![Der Reiter Beziehungen eines Vorfalls: seine Assets, seine Anwendungen, seine Technologien und ein Vorschlag.](/screenshots/incidents-relations-1600-2026-10-25.png)
+![Der Reiter Beziehungen eines Vorfalls: seine Assets, seine Anwendungen, seine Technologien und die vorgeschlagenen Technologien.](/screenshots/incidents-relations-2026-10-26.png)
 
 Ein isolierter Vorfall in einem Register hat wenig Gewicht. In KANAP wird er mit der IT-Landschaft verknüpft: den betroffenen Servern, den Fachanwendungen mit ihrer Kritikalität, den beteiligten Technologien. KANAP schlägt die Technologien der bereits verknüpften Server und Anwendungen vor, mit ihrer Herkunft, zum Beispiel „Technologie des Assets AST-12“. Ein Klick genügt, um sie hinzuzufügen.
 
@@ -56,7 +56,7 @@ Korrekturmaßnahmen werden zu Aufgaben, mit einem Verantwortlichen und einer Fri
 
 ## Die Vorfallanalyse, beim Schließen eingefroren
 
-![Die Übersicht eines Vorfalls, mit seiner Beschreibung und seiner Vorfallanalyse.](/screenshots/incidents-review-2026-10-25.png)
+![Die Übersicht eines Vorfalls, mit seiner Beschreibung und seiner Vorfallanalyse.](/screenshots/incidents-review-2026-10-26.png)
 
 Jeder Vorfall hat zwei Texte. Die Beschreibung passt in ein oder zwei Sätze: was geschehen ist, so wie es beobachtet wurde. Die Vorfallanalyse ist der vollständige Bericht, verfasst in einem echten Dokument, mit Überschriften, Tabellen und eingefügten Bildern.
 
@@ -79,7 +79,7 @@ Ein sensibler Sicherheitsvorfall kann eingeschränkt werden. Dann sehen ihn nur 
 
 ## Was der Auditor erhält
 
-![Das Register, gefiltert auf die Schweregrade Kritisch und Hoch.](/screenshots/incidents-register-2026-10-25.png)
+![Das Register, gefiltert auf die Schweregrade Kritisch und Hoch.](/screenshots/incidents-register-2026-10-26.png)
 
 Das Register lässt sich nach Zeitraum, Schweregrad, Kategorie oder Compliance-Kennzeichen filtern. Die Schweregrade Kritisch und Hoch über das vergangene Jahr ergeben die kurze Liste, die die meisten Gremien und Audits verlangen, und der CSV-Export liefert sie unverändert.
 

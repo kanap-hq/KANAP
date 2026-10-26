@@ -32,7 +32,7 @@ Pour démarrer, trois champs suffisent : un titre, une gravité et l'heure de d�
 
 ## Une chronologie solide
 
-![Le journal d'un incident majeur, avec des notes datées et des changements de statut et de gravité.](/screenshots/incidents-journal-1600-2026-10-25.png)
+![Le journal d'un incident critique, avec des notes datées et des changements de statut et de gravité.](/screenshots/incidents-journal-2026-10-26.png)
 
 Le journal fait d'un formulaire un registre. Il garde tout ce qui arrive à l'incident : les notes de l'équipe, chaque changement de statut et de gravité, chaque actif ou application lié ou délié, chaque réouverture avec son motif. Rien de ce qu'il contient ne peut être modifié ni supprimé, par personne.
 
@@ -46,7 +46,7 @@ La numérotation reste continue. Un doublon s'annule avec un motif, et INC-13 ne
 
 ## Relier l'incident à ce qu'il a touché
 
-![L'onglet Relations d'un incident : ses actifs, ses applications, ses technologies et une suggestion.](/screenshots/incidents-relations-1600-2026-10-25.png)
+![L'onglet Relations d'un incident : ses actifs, ses applications, ses technologies et les technologies suggérées.](/screenshots/incidents-relations-2026-10-26.png)
 
 Un incident isolé dans un registre est faible. Dans KANAP, il se relie à la cartographie : les serveurs touchés, les applications métier avec leur criticité, les technologies en cause. KANAP suggère les technologies portées par les serveurs et les applications déjà liés, avec leur origine, par exemple « technologie de l'actif AST-12 ». Un clic suffit pour les ajouter.
 
@@ -56,7 +56,7 @@ Les actions correctives deviennent des tâches, avec un responsable et une éch�
 
 ## La revue d'incident figée à la clôture
 
-![La vue d'ensemble d'un incident, avec sa description et sa revue d'incident.](/screenshots/incidents-review-2026-10-25.png)
+![La vue d'ensemble d'un incident, avec sa description et sa revue d'incident.](/screenshots/incidents-review-2026-10-26.png)
 
 Chaque incident a deux textes. La description tient en une ou deux phrases : ce qui s'est passé, tel qu'observé. La revue d'incident est le constat complet, rédigé dans un vrai document, avec des titres, des tableaux et des images collées.
 
@@ -79,7 +79,7 @@ Un incident de sécurité sensible peut être restreint. Seuls les administrateu
 
 ## Ce que l'auditeur reçoit
 
-![Le registre filtré sur les incidents critiques et majeurs.](/screenshots/incidents-register-2026-10-25.png)
+![Le registre filtré sur les incidents critiques et majeurs.](/screenshots/incidents-register-2026-10-26.png)
 
 Le registre se filtre par période, gravité, catégorie ou indicateur de conformité. Les gravités Critique et Majeure sur l'année écoulée donnent la liste courte que demandent la plupart des comités et des audits, et l'export CSV la remet telle quelle.
 
