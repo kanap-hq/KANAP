@@ -122,7 +122,7 @@ function sheetName(raw: string, taken: Set<string>): string {
 
 interface BuiltSheet {
   name: string;
-  xml: string;
+  xml: Buffer;
   relsXml: string | null;
   /** `A1:Xn` of the filter, for the workbook's defined name. */
   filterRange: string | null;
@@ -160,7 +160,8 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string): BuiltSh
     headerCells.push(`<c r="${ref}"${headerStyle} t="inlineStr"><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`);
   });
 
-  const chunks: string[] = [`<row r="1">${headerCells.join('')}</row>`];
+  // Each row is turned into bytes as soon as it is built: the sheet is never held as one large string.
+  const rowBuffers: Buffer[] = [Buffer.from(`<row r="1">${headerCells.join('')}</row>`, 'utf8')];
   const hyperlinks: string[] = [];
   const hyperlinkRels: string[] = [];
 
@@ -209,11 +210,11 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string): BuiltSh
         `<Relationship Id="${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="${xmlEscape(target)}" TargetMode="External"/>`,
       );
     }
-    chunks.push(`<row r="${rowNumber}">${cells.join('')}</row>`);
+    rowBuffers.push(Buffer.from(`\n    <row r="${rowNumber}">${cells.join('')}</row>`, 'utf8'));
   });
 
   const hyperlinksXml = hyperlinks.length > 0 ? `<hyperlinks>${hyperlinks.join('')}</hyperlinks>` : '';
-  let xml: string;
+  let xml: Buffer;
   let filterRange: string | null = null;
 
   if (!styled) {
@@ -225,16 +226,20 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string): BuiltSh
             .map((column) => `<col min="${column}" max="${column}" width="${WIDTH_DATE_MIN}" customWidth="1"/>`)
             .join('')}</cols>`
         : '';
-    xml = [
-      XML_HEAD,
-      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
-      `  ${dateColumnsXml}`,
-      '  <sheetData>',
-      `    ${chunks.join('\n    ')}`,
-      '  </sheetData>',
-      `  ${hyperlinksXml}`,
-      '</worksheet>',
-    ].join('\n');
+    xml = Buffer.concat([
+      Buffer.from(
+        [
+          XML_HEAD,
+          '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
+          `  ${dateColumnsXml}`,
+          '  <sheetData>',
+          '    ',
+        ].join('\n'),
+        'utf8',
+      ),
+      ...rowBuffers,
+      Buffer.from(['', '  </sheetData>', `  ${hyperlinksXml}`, '</worksheet>'].join('\n'), 'utf8'),
+    ]);
   } else {
     const colsXml = widths
       .map((measured, index) => {
@@ -252,11 +257,12 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string): BuiltSh
       '  <sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>',
     ];
     if (columns > 0) parts.push(`  <cols>${colsXml}</cols>`);
-    parts.push('  <sheetData>', `    ${chunks.join('\n    ')}`, '  </sheetData>');
-    if (filterRange) parts.push(`  <autoFilter ref="${filterRange}"/>`);
-    if (hyperlinksXml) parts.push(`  ${hyperlinksXml}`);
-    parts.push('</worksheet>');
-    xml = parts.join('\n');
+    parts.push('  <sheetData>', '    ');
+    const tail = ['', '  </sheetData>'];
+    if (filterRange) tail.push(`  <autoFilter ref="${filterRange}"/>`);
+    if (hyperlinksXml) tail.push(`  ${hyperlinksXml}`);
+    tail.push('</worksheet>');
+    xml = Buffer.concat([Buffer.from(parts.join('\n'), 'utf8'), ...rowBuffers, Buffer.from(tail.join('\n'), 'utf8')]);
   }
 
   const relsXml =
@@ -362,7 +368,7 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   zip.addFile('xl/_rels/workbook.xml.rels', Buffer.from(workbookRelsXml, 'utf8'));
   zip.addFile('xl/styles.xml', Buffer.from(stylesXml, 'utf8'));
   built.forEach((sheet, index) => {
-    zip.addFile(`xl/worksheets/sheet${index + 1}.xml`, Buffer.from(sheet.xml, 'utf8'));
+    zip.addFile(`xl/worksheets/sheet${index + 1}.xml`, sheet.xml);
   });
   built.forEach((sheet, index) => {
     if (sheet.relsXml) zip.addFile(`xl/worksheets/_rels/sheet${index + 1}.xml.rels`, Buffer.from(sheet.relsXml, 'utf8'));
