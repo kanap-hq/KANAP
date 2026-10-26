@@ -1,7 +1,8 @@
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { Controller, Get, Post } from '@nestjs/common';
-import { lastValueFrom, of } from 'rxjs';
+import { BadRequestException } from '@nestjs/common';
+import { defer, lastValueFrom, of } from 'rxjs';
 import { ExportEventsInterceptor } from '../export-events.interceptor';
 import {
   AUDIT_EVENT_ACTIONS as SCREEN_ACTIONS,
@@ -13,10 +14,18 @@ import {
   AUTH_EVENT_REASONS,
   AUTH_EVENT_TABLE,
   authEventEntry,
+  declaredExportFormat,
+  EXPORT_QUERY_MAX_LENGTH,
   exportEventEntry,
+  exportFormat,
+  exportQuery,
   exportResource,
   ExportRoute,
+  ExportRouteFormat,
   exportRoutePath,
+  QUERY_AS_SENT,
+  recordExportRows,
+  reportedExportRows,
   handlerRoutePaths,
   isExportRoutePath,
   joinRoutePath,
@@ -34,6 +43,8 @@ import { fileSigns, scanRoutes } from './controller-routes';
 //   ExportEventsInterceptor, which writes its row in the request's transaction
 //   before the handler runs, and writes nothing for other routes; the other
 //   routes that send a file send a stored file (attachment, inline image, logo);
+// - the row says the format and the query (bounded, `ctx` as its id), never the
+//   body, and the row count once the handler reports it (recordExportRows);
 // - the event writer never rejects, and writes nothing without a tenant.
 
 const request = (headers: Record<string, unknown> = {}, ip: unknown = '198.51.100.7') => ({ ip, headers });
@@ -131,6 +142,7 @@ class ChartProbe {
   }
 
   @ExportRoute()
+  @ExportRouteFormat('pdf')
   @Get(':id/report')
   report() {
     return 'report';
@@ -269,13 +281,27 @@ function fakeContext(controller: object, handler: object, req: any) {
 
 function recordingRequest(extra: Record<string, unknown> = {}) {
   const inserted: any[] = [];
+  const updates: Array<{ sql: string; params: unknown[] }> = [];
   const order: string[] = [];
-  const manager = { getRepository: () => ({ insert: async (row: any) => { order.push('audit'); inserted.push(row); } }) };
-  const req = {
+  const manager = {
+    getRepository: () => ({
+      insert: async (row: any) => {
+        order.push('audit');
+        inserted.push(row);
+        return { identifiers: [{ id: 'row-1' }] };
+      },
+    }),
+    query: async (sql: string, params: unknown[]) => {
+      order.push('rows');
+      updates.push({ sql, params });
+      return [];
+    },
+  };
+  const req: any = {
     tenant: { id: 'tenant-1' }, user: { sub: 'user-9' }, path: '/chart-of-accounts/abc/accounts/export',
     ip: '198.51.100.20', headers: { 'user-agent': 'Probe browser' }, queryRunner: { manager, isReleased: false }, ...extra,
   };
-  return { req, inserted, order };
+  return { req, inserted, updates, order };
 }
 
 async function testInterceptorWritesTheExportBeforeTheHandler() {
@@ -290,9 +316,11 @@ async function testInterceptorWritesTheExportBeforeTheHandler() {
   assert.equal(inserted[0].action, 'export');
   assert.equal(inserted[0].user_id, 'user-9');
   assert.deepEqual(inserted[0].after_json, {
-    resource: 'chart-of-accounts/accounts', path: '/chart-of-accounts/abc/accounts/export', ip: '198.51.100.20', user_agent: 'Probe browser',
+    resource: 'chart-of-accounts/accounts', path: '/chart-of-accounts/abc/accounts/export', format: 'csv', query: {}, ip: '198.51.100.20', user_agent: 'Probe browser',
   }, 'the address and agent as for sign-in events');
-  assert.deepEqual(exportEventEntry('/export', { path: '/export', user: { sub: 'user-9' } }).after, { resource: 'document', path: '/export', ip: null, user_agent: null });
+  assert.deepEqual(exportEventEntry('/export', { path: '/export', user: { sub: 'user-9' } }).after, {
+    resource: 'document', path: '/export', format: 'csv', query: {}, ip: null, user_agent: null,
+  });
   const unchecked = exportEventEntry('/export', { path: '/export', ip: 'not-an-address', headers: { 'user-agent': `  ${'a'.repeat(300)}  ` } }).after;
   assert.equal(unchecked.ip, null, 'an address that is not a valid IP is left out');
   assert.equal(unchecked.user_agent, 'a'.repeat(200), 'the agent is cut like on sign-in events');
@@ -303,8 +331,8 @@ async function testInterceptorWritesTheExportBeforeTheHandler() {
   const marked = recordingRequest({ path: '/chart-of-accounts/abc/report' });
   assert.equal(await lastValueFrom(interceptor.intercept(fakeContext(ChartProbe, ChartProbe.prototype.report, marked.req), { handle: () => of('pdf') })), 'pdf');
   assert.deepEqual(marked.inserted.map((row) => row.after_json), [
-    { resource: 'chart-of-accounts/report', path: '/chart-of-accounts/abc/report', ip: '198.51.100.20', user_agent: 'Probe browser' },
-  ]);
+    { resource: 'chart-of-accounts/report', path: '/chart-of-accounts/abc/report', format: 'pdf', query: {}, ip: '198.51.100.20', user_agent: 'Probe browser' },
+  ], 'the format the route declares');
 
   // Another route: nothing written. No tenant transaction: nothing written, the handler still runs.
   const other = recordingRequest();
@@ -313,6 +341,92 @@ async function testInterceptorWritesTheExportBeforeTheHandler() {
   const noTransaction = recordingRequest({ queryRunner: undefined });
   assert.equal(await lastValueFrom(interceptor.intercept(fakeContext(DocumentExportProbe, DocumentExportProbe.prototype.exportDocument, noTransaction.req), { handle: () => of('doc') })), 'doc');
   assert.equal(noTransaction.inserted.length, 0);
+}
+
+function testExportFormat() {
+  assert.equal(declaredExportFormat(ChartProbe.prototype.report), 'pdf');
+  assert.equal(declaredExportFormat(ChartProbe.prototype.exportAccounts), undefined);
+  assert.equal(exportFormat({ query: {} }), 'csv', 'a list export that names no format: csv');
+  assert.equal(exportFormat({ query: { format: ' XLSX ' } }), 'xlsx', 'the format query, lower case');
+  assert.equal(exportFormat({ query: { format: 'xlsx' } }, 'pdf'), 'xlsx', 'the query wins over the declared format');
+  assert.equal(exportFormat({ query: {}, body: { format: 'DOCX', content: '# Secret plan' } }), 'docx', 'a document export: the format field of the body');
+  assert.equal(exportFormat({ query: {}, body: {} }, 'pdf'), 'pdf', 'no format sent: the declared one');
+  assert.equal(exportFormat({ query: { format: ['xlsx', 'csv'] } }), 'csv', 'a format that is not one value is not read');
+  assert.equal(exportFormat({ query: { format: 'x'.repeat(50) } }).length, 20, 'cut to 20 characters');
+  // The body never reaches the row: only its format.
+  const document = exportEventEntry('/export', { path: '/export', body: { format: 'pdf', content: '# Secret plan', title: 'Plan' } }).after;
+  assert.equal(document.format, 'pdf');
+  assert.ok(!JSON.stringify(document).includes('Secret plan') && !JSON.stringify(document).includes('Plan'), 'no body in the row');
+}
+
+function testExportQuery() {
+  assert.deepEqual(
+    exportQuery({ sort: 'name:ASC', columns: 'budget,actual', amountYears: ['2026', '2027'], all: 'true', format: 'xlsx', nested: { a: 1 }, empty: undefined }),
+    { all: 'true', amountYears: ['2026', '2027'], columns: 'budget,actual', format: 'xlsx', nested: '{"a":1}', sort: 'name:ASC' },
+  );
+  assert.deepEqual(Object.keys(exportQuery({ z: '1', a: '2', m: '3' })), ['a', 'm', 'z'], 'keys sorted');
+  assert.deepEqual(exportQuery(undefined), {});
+  assert.deepEqual(exportQuery('x=1'), {});
+
+  // A saved list context: the row keeps its id, not the filters ListContextInterceptor merged in.
+  const req: any = { path: '/suppliers/export', query: { filters: '{"status":"enabled"}', sort: 'name:ASC' } };
+  req[QUERY_AS_SENT] = { ctx: 'c0ffee00-1234-4abc-8def-000000000001', sort: 'name:ASC', format: 'xlsx' };
+  const withContext = exportEventEntry('/suppliers/export', req).after;
+  assert.deepEqual(withContext.query, { ctx: 'c0ffee00-1234-4abc-8def-000000000001', format: 'xlsx', sort: 'name:ASC' });
+  assert.equal(withContext.format, 'xlsx');
+
+  // Bounded: the longest entries go first, the short ones stay, and the object says it was cut.
+  const long = exportQuery({ q: 'widget', filters: 'f'.repeat(1500), sort: 'name:ASC', search: 's'.repeat(900), ctx: 'abc' });
+  assert.deepEqual(long, { ctx: 'abc', q: 'widget', search: 's'.repeat(900), sort: 'name:ASC', truncated: true });
+  assert.ok(JSON.stringify(long).length <= EXPORT_QUERY_MAX_LENGTH);
+  const many = exportQuery(Object.fromEntries(Array.from({ length: 300 }, (_, index) => [`k${String(index).padStart(3, '0')}`, 'v'.repeat(index % 7)])));
+  assert.ok(JSON.stringify(many).length <= EXPORT_QUERY_MAX_LENGTH, 'many short values: still within the bound');
+  assert.equal(many.truncated, true);
+  assert.equal(many.k000, '', 'the shortest are kept');
+  assert.deepEqual(exportQuery({ ['k'.repeat(3000)]: '1' }), { truncated: true }, 'a key longer than the bound is dropped');
+  const exact = exportQuery({ a: 'x'.repeat(EXPORT_QUERY_MAX_LENGTH - 8) });
+  assert.equal(JSON.stringify(exact).length, EXPORT_QUERY_MAX_LENGTH, 'exactly at the bound: kept whole');
+  assert.equal(exact.truncated, undefined);
+}
+
+async function testRowCount() {
+  const interceptor = new ExportEventsInterceptor();
+  const context = (req: any) => fakeContext(ChartProbe, ChartProbe.prototype.exportAccounts, req);
+
+  // The handler reports its count: the interceptor writes it on its own row, after the handler, in the same transaction.
+  const counted = recordingRequest();
+  const handler = { handle: () => defer(async () => { counted.order.push('handler'); recordExportRows(counted.req, 42); return undefined; }) };
+  await lastValueFrom(interceptor.intercept(context(counted.req), handler), { defaultValue: undefined });
+  assert.deepEqual(counted.order, ['audit', 'handler', 'rows']);
+  assert.equal(counted.updates.length, 1);
+  assert.match(counted.updates[0].sql, /UPDATE audit_log SET after_json = jsonb_set\(.*'\{rows\}'.*WHERE id = \$2 AND tenant_id = \$3/s);
+  assert.deepEqual(counted.updates[0].params, [42, 'row-1', 'tenant-1'], 'its own row, scoped by tenant');
+
+  // A handler that reports nothing: no rows on the row.
+  const silent = recordingRequest();
+  await lastValueFrom(interceptor.intercept(context(silent.req), { handle: () => of('file') }));
+  assert.deepEqual(silent.order, ['audit']);
+  assert.equal(silent.updates.length, 0);
+
+  // A count that is not a whole number of rows is not recorded.
+  const odd = recordingRequest();
+  for (const count of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) recordExportRows(odd.req, count);
+  assert.equal(reportedExportRows(odd.req), undefined);
+  recordExportRows(null, 3);
+  recordExportRows(odd.req, 0);
+  assert.equal(reportedExportRows(odd.req), 0, 'zero rows is a count');
+
+  // A refused export: the error goes on to TenantInterceptor, which rolls the row back; no count is written.
+  const refused = recordingRequest();
+  const failing = {
+    handle: () => defer(async () => {
+      recordExportRows(refused.req, 5);
+      throw new BadRequestException('format must be csv or xlsx.');
+    }),
+  };
+  await assert.rejects(lastValueFrom(interceptor.intercept(context(refused.req), failing)), /format must be csv or xlsx/);
+  assert.deepEqual(refused.order, ['audit'], 'nothing after the failed handler');
+  assert.equal(refused.updates.length, 0);
 }
 
 async function testEventWriterNeverRejects() {
@@ -356,7 +470,10 @@ async function run() {
   testFileSignsAreFound();
   testEveryRouteThatSendsAFileIsRecorded();
   testTheAuditLogPageLabelsEveryEvent();
+  testExportFormat();
+  testExportQuery();
   await testInterceptorWritesTheExportBeforeTheHandler();
+  await testRowCount();
   await testEventWriterNeverRejects();
   console.log('security-events.spec: all assertions passed');
 }

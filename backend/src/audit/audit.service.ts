@@ -69,10 +69,11 @@ export type AuditEntry = {
 /**
  * Writes one `audit_log` row with `manager`, whose transaction carries the tenant
  * (`app.current_tenant`, the default of `tenant_id`). `AuditService.log` and the security
- * events (security-events.service.ts, export-events.interceptor.ts) write through here.
+ * events (security-events.service.ts, export-events.interceptor.ts) write through here. Returns
+ * the new row's id.
  */
-export async function writeAuditLog(manager: EntityManager, params: AuditEntry): Promise<void> {
-  await manager.getRepository(AuditLog).insert({
+export async function writeAuditLog(manager: EntityManager, params: AuditEntry): Promise<string | null> {
+  const result = await manager.getRepository(AuditLog).insert({
     table_name: params.table,
     record_id: params.recordId ?? null,
     action: params.action,
@@ -86,6 +87,8 @@ export async function writeAuditLog(manager: EntityManager, params: AuditEntry):
     // order its changes were committed in (plan planning/perf-scale, lot 3B).
     created_at: () => 'clock_timestamp()',
   } as any);
+  const id = result?.identifiers?.[0]?.id;
+  return typeof id === 'string' ? id : null;
 }
 
 @Injectable()

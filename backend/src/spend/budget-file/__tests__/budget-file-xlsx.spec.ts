@@ -6,6 +6,8 @@ import { parseExportFormat, XLSX_CONTENT_TYPE } from '../../../common/xlsx';
 import { writeCsv } from '../../../common/csv-sheet';
 import { budgetCsvRows, buildBudgetExport, exportListQuery, writeBudgetFile } from '../export-file';
 import { emptyMonths, StoredLine } from '../types';
+import { budgetFileBody } from '../send-export';
+import { reportedExportRows } from '../../../audit/security-events';
 
 // The budget file in xlsx, without a database: the cells of `buildBudgetExport` written by the common
 // writer and read back from the sheet's XML (Excel export, lot 1, run B).
@@ -114,11 +116,26 @@ function testFormat() {
   console.log('  format: csv by default, xlsx, anything else 400: OK');
 }
 
+function testRouteAnswer() {
+  const headers: Record<string, string> = {};
+  const req = {};
+  const res = { req, setHeader: (name: string, value: string) => { headers[name] = value; } } as any;
+  const content = Buffer.from('xlsx');
+  const body = budgetFileBody(res, { filename: 'budget.xlsx', contentType: XLSX_CONTENT_TYPE, content, rows: 2, dataAccessLimited: true });
+  assert.equal(body, content);
+  assert.equal(headers['Content-Type'], XLSX_CONTENT_TYPE);
+  assert.match(headers['Content-Disposition'], /budget\.xlsx/);
+  assert.equal(headers['X-Data-Access'], 'limited');
+  assert.equal(reportedExportRows(req), 2, 'the line count goes to the export row of the audit log');
+  console.log('  route answer: type, name, access header and the line count for the audit row: OK');
+}
+
 function run() {
   console.log('budget file xlsx');
   testWorkbook();
   testCsvBranch();
   testFormat();
+  testRouteAnswer();
   console.log('budget-file-xlsx.spec: all assertions passed');
 }
 

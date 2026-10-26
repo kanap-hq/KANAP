@@ -30,7 +30,7 @@ import { FreezeService } from '../freeze/freeze.service';
 import { analyzeAfterLargeImport } from './budget-import-statistics';
 import { BudgetFileService, canCreateSuppliers } from './budget-file/budget-file.service';
 import { exportListQuery } from './budget-file/export-file';
-import { sendBudgetFile } from './budget-file/send-export';
+import { budgetFileBody } from './budget-file/send-export';
 import { parseExportFormat } from '../common/xlsx';
 import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
@@ -167,7 +167,7 @@ export class CapexItemsController {
       detail: query.detail,
       format,
     });
-    sendBudgetFile(res, exported);
+    res.send(budgetFileBody(res, exported));
   }
 
   @ReadOnlyRoute()

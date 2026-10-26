@@ -12,9 +12,10 @@ import type { AuditEntry } from './audit.service';
  *   hash or link, and no e-mail address (an attempt on an unknown address keeps its reason only).
  *   Kept AUTH_EVENT_RETENTION_DAYS days (cleanup/auth-event-retention.service.ts);
  * - exports: `table_name = 'export'`, `action = 'export'`, the person in `user_id`, and
- *   `after_json = { resource, path, ip, user_agent }` (export-events.interceptor.ts): every route whose path ends
- *   with `/export`, and the other routes that send a file the server produces, marked
- *   `@ExportRoute()`.
+ *   `after_json = { resource, path, format, query, ip, user_agent }`, plus `rows` when the handler
+ *   reports how many rows it exported (`recordExportRows`) (export-events.interceptor.ts): every
+ *   route whose path ends with `/export`, and the other routes that send a file the server
+ *   produces, marked `@ExportRoute()`. Never the request body.
  */
 
 export const AUTH_EVENT_TABLE = 'auth';
@@ -162,6 +163,20 @@ export const EXPORT_ROUTE_METADATA = 'kanap:export-route';
  */
 export const ExportRoute = (): MethodDecorator => SetMetadata(EXPORT_ROUTE_METADATA, true);
 
+export const EXPORT_FORMAT_METADATA = 'kanap:export-format';
+
+/**
+ * The format of the file a route sends when the request names none (`pdf` for the PDF report of
+ * an incident or a document): written on its export row. A route without it is recorded as `csv`.
+ */
+export const ExportRouteFormat = (format: string): MethodDecorator => SetMetadata(EXPORT_FORMAT_METADATA, format);
+
+/** The format a controller method declares with `@ExportRouteFormat()`, if any. */
+export function declaredExportFormat(handler: object): string | undefined {
+  const format = Reflect.getMetadata(EXPORT_FORMAT_METADATA, handler);
+  return typeof format === 'string' && format ? format : undefined;
+}
+
 /**
  * The route pattern an export of this controller method is recorded under: its path ending with
  * `/export`, or its path when the method is marked `@ExportRoute()`. Undefined for other routes.
@@ -185,14 +200,91 @@ export function exportResource(path: string): string {
   return segments.join('/') || 'document';
 }
 
+/** The query of an export row is at most this long once serialised. */
+export const EXPORT_QUERY_MAX_LENGTH = 2_000;
+const EXPORT_FORMAT_MAX_LENGTH = 20;
+
+/**
+ * Set by ListContextInterceptor before it merges a saved list context into the query: the query as
+ * the client sent it, whose `ctx` names the context.
+ */
+export const QUERY_AS_SENT = Symbol('kanap.queryAsSent');
+
+type ExportRequest = ({
+  path?: unknown;
+  user?: { sub?: unknown };
+  query?: unknown;
+  body?: unknown;
+  [QUERY_AS_SENT]?: unknown;
+} & NonNullable<RequestLike>) | null | undefined;
+
+function formatValue(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const value = raw.trim().toLowerCase().slice(0, EXPORT_FORMAT_MAX_LENGTH);
+  return value || null;
+}
+
+/**
+ * The format of an export: the `format` query, else the `format` field of the body (the document
+ * exports, `POST /export` and `POST /knowledge/:idOrRef/export`, take it there), lower case, else
+ * the format the route declares (`@ExportRouteFormat`), else `csv`.
+ */
+export function exportFormat(req: ExportRequest, declared?: string): string {
+  const query = req?.[QUERY_AS_SENT] ?? req?.query;
+  const body = req?.body;
+  return (
+    formatValue(query && typeof query === 'object' ? (query as Record<string, unknown>).format : undefined)
+    ?? formatValue(body && typeof body === 'object' ? (body as Record<string, unknown>).format : undefined)
+    ?? declared
+    ?? 'csv'
+  );
+}
+
+function queryValue(raw: unknown): string | string[] | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (Array.isArray(raw)) return raw.map((item) => (typeof item === 'string' ? item : JSON.stringify(item) ?? String(item)));
+  if (typeof raw === 'object') return JSON.stringify(raw);
+  return String(raw);
+}
+
+function sortedObject(entries: Array<[string, unknown]>): Record<string, unknown> {
+  return Object.fromEntries([...entries].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+}
+
+/**
+ * The query of an export as the client sent it (`ctx` stays the id of the saved list context):
+ * keys sorted, values as strings or lists of strings. At most EXPORT_QUERY_MAX_LENGTH characters
+ * once serialised: the longest entries are dropped first, and `truncated: true` says so.
+ */
+export function exportQuery(raw: unknown): Record<string, unknown> {
+  const entries: Array<[string, string | string[]]> = [];
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+      const kept = queryValue(value);
+      if (kept !== undefined) entries.push([key, kept]);
+    }
+  }
+  const whole = sortedObject(entries);
+  if (JSON.stringify(whole).length <= EXPORT_QUERY_MAX_LENGTH) return whole;
+  const size = ([key, value]: [string, unknown]) => JSON.stringify(key).length + JSON.stringify(value).length;
+  // Longest first; on a tie, the later key first, so the result does not depend on the input order.
+  const longestFirst = [...entries].sort((a, b) => size(b) - size(a) || (a[0] < b[0] ? 1 : a[0] > b[0] ? -1 : 0));
+  const kept = new Map(entries);
+  for (const [key] of longestFirst) {
+    kept.delete(key);
+    kept.delete('truncated');
+    const next = sortedObject([...kept.entries(), ['truncated', true]]);
+    if (JSON.stringify(next).length <= EXPORT_QUERY_MAX_LENGTH) return next;
+  }
+  return { truncated: true };
+}
+
 /**
  * The audit row of an export: the route's resource, the path asked for without its query
- * (500 characters at most), and the client address and user agent (authEventDetails).
+ * (500 characters at most), the format (exportFormat), the query (exportQuery), and the client
+ * address and user agent (authEventDetails).
  */
-export function exportEventEntry(
-  routePath: string,
-  req: ({ path?: unknown; user?: { sub?: unknown } } & NonNullable<RequestLike>) | null | undefined,
-): AuditEntry {
+export function exportEventEntry(routePath: string, req: ExportRequest, declaredFormat?: string): AuditEntry {
   const userId = typeof req?.user?.sub === 'string' && req.user.sub ? req.user.sub : null;
   const path = (typeof req?.path === 'string' && req.path ? req.path : routePath).slice(0, 500);
   return {
@@ -200,9 +292,35 @@ export function exportEventEntry(
     recordId: null,
     action: EXPORT_EVENT_ACTION,
     before: null,
-    after: { resource: exportResource(routePath), path, ...authEventDetails(req) },
+    after: {
+      resource: exportResource(routePath),
+      path,
+      format: exportFormat(req, declaredFormat),
+      query: exportQuery(req?.[QUERY_AS_SENT] ?? req?.query),
+      ...authEventDetails(req),
+    },
     userId,
     source: 'user',
     sourceRef: null,
   };
+}
+
+const EXPORT_ROWS = Symbol('kanap.exportRows');
+
+/**
+ * Called by an export's handler once it knows how many rows it exported: ExportEventsInterceptor
+ * writes the count on the request's export row (`after_json.rows`), in the request transaction,
+ * after the handler. Rows are absent from the row of an export that does not call it.
+ */
+export function recordExportRows(req: unknown, count: number): void {
+  if (!req || typeof req !== 'object') return;
+  if (!Number.isSafeInteger(count) || count < 0) return;
+  (req as { [EXPORT_ROWS]?: number })[EXPORT_ROWS] = count;
+}
+
+/** The count a handler reported with recordExportRows, if any. */
+export function reportedExportRows(req: unknown): number | undefined {
+  if (!req || typeof req !== 'object') return undefined;
+  const count = (req as { [EXPORT_ROWS]?: unknown })[EXPORT_ROWS];
+  return typeof count === 'number' ? count : undefined;
 }

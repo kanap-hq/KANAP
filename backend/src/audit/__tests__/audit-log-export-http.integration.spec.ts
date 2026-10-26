@@ -261,7 +261,7 @@ async function main() {
     const [own, created, updated, login, failed] = rows;
     assert.match(own.date, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/, 'ISO 8601 date');
     assert.equal(own.user, 'Alice Admin');
-    assert.deepEqual(JSON.parse(own.after), { resource: 'audit-logs', path: '/audit-logs/export', ip: '127.0.0.1', user_agent: 'Export probe' });
+    assert.deepEqual(JSON.parse(own.after), { resource: 'audit-logs', path: '/audit-logs/export', format: 'csv', query: {}, ip: '127.0.0.1', user_agent: 'Export probe' });
     assert.equal(own.ip, '127.0.0.1', 'an export row fills the address column');
     assert.equal(own.user_agent, 'Export probe', 'an export row fills the agent column');
     assert.equal(created.user, 'Alice Admin');
@@ -355,7 +355,9 @@ async function main() {
     const recordedA = await exportRows(tenantA);
     assert.equal(recordedA.length, 13, 'one row per export made in tenant A (thirteen answered 200)');
     for (const row of recordedA) {
-      assert.deepEqual(row.after_json, { resource: 'audit-logs', path: '/audit-logs/export', ip: '127.0.0.1', user_agent: 'Export probe' });
+      const { query, ...rest } = row.after_json;
+      assert.deepEqual(rest, { resource: 'audit-logs', path: '/audit-logs/export', format: 'csv', ip: '127.0.0.1', user_agent: 'Export probe' });
+      assert.equal(typeof query, 'object', 'the query asked for');
     }
     assert.equal(recordedA.filter((row) => row.user_id === a.dash.id).length, 1);
     const recordedB = await exportRows(tenantB);

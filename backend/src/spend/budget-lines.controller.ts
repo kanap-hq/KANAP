@@ -16,7 +16,7 @@ import {
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { BudgetFileService } from './budget-file/budget-file.service';
 import { exportListQuery } from './budget-file/export-file';
-import { sendBudgetFile } from './budget-file/send-export';
+import { budgetFileBody } from './budget-file/send-export';
 import { parseExportFormat } from '../common/xlsx';
 import { budgetListAccess } from './budget-list/budget-list.runtime';
 import { ListSpendQueryInput } from './dto';
@@ -128,7 +128,7 @@ export class BudgetLinesController {
       detail: query.detail,
       format,
     });
-    sendBudgetFile(res, exported);
+    res.send(budgetFileBody(res, exported));
   }
 
   // Which lines a delete would refuse (amounts in a frozen column), asked before the confirmation.
