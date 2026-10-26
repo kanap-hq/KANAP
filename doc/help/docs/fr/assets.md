@@ -45,7 +45,7 @@ La liste des actifs vous donne une vue filtrable et triable de chaque actif de v
 | **OS** | Système d'exploitation : la technologie marquée comme système d'exploitation du serveur, avec sa version |
 | **Zone réseau** | La zone réseau du sous-réseau de la première adresse IP. Un sous-réseau rattaché au site de l'actif passe avant un sous-réseau de même plage sans site |
 | **Cycle de vie** | Statut de cycle de vie actuel |
-| **Assignations** | Nombre d'assignations d'applications, y compris celles héritées de ses clusters |
+| **Affectations** | Nombre d'affectations d'applications, y compris celles héritées de ses clusters |
 | **Créé** | Quand l'enregistrement a été créé |
 
 **Tri par défaut** : **Créé** décroissant (le plus récent en premier).
@@ -509,7 +509,7 @@ Certains champs sont calculés et ne peuvent pas être importés :
 
 - **Maximum 4 adresses IP** : Les actifs prennent en charge jusqu'à 4 entrées d'adresse IP via CSV
 - **Site obligatoire** : Chaque actif doit avoir le code d'un site existant
-- **Relations non incluses** : Les assignations d'applications, connexions, liens financiers, projets, tâches et pièces jointes doivent être gérés dans l'espace de travail
+- **Relations non incluses** : Les affectations d'applications, connexions, liens financiers, projets, tâches et pièces jointes doivent être gérés dans l'espace de travail
 
 ### Résolution de problèmes
 

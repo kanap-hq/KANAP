@@ -107,7 +107,7 @@ Une cellule sans valeur affiche un tiret.
 - **Suites** : Suites parentes auxquelles cette application appartient
 - **Fournisseur** : Nom du fournisseur lié
 - **Responsables métier** / **Responsables IT** : Responsables assignés (tronqués, survolez ou cliquez pour tout voir)
-- **Hébergement** : Dérivé des sites des serveurs assignés aux déploiements de l'app. Une application sur un cluster prend aussi les sites de ses membres
+- **Hébergement** : Dérivé des sites des serveurs affectés aux déploiements de l'app. Une application sur un cluster prend aussi les sites de ses membres
 - **Exposition externe** : Si l'app est accessible depuis Internet
 - **SSO activé** / **MFA activé** : Fonctionnalités d'authentification
 - **Intégration de données / ETL** : Si l'app participe à des intégrations de données
@@ -214,14 +214,14 @@ L'onglet Déploiements documente où l'application s'exécute réellement : un b
 
 **Ajouter un déploiement** ouvre une boîte de dialogue où vous définissez l'environnement, le cycle de vie, l'URL de base, les indicateurs SSO/MFA et les notes. Chaque environnement ne peut être ajouté qu'une seule fois. La pastille de cycle de vie sur l'en-tête d'un déploiement peut aussi être modifiée en ligne depuis un menu contextuel. Un déploiement qui a encore des serveurs ou des liaisons d'interface ne peut pas être supprimé : retirez-les d'abord.
 
-**Serveurs par déploiement** : Chaque bloc de déploiement affiche un tableau des serveurs assignés :
+**Serveurs par déploiement** : Chaque bloc de déploiement affiche un tableau des serveurs affectés :
 
 | Colonne | Ce qu'elle affiche |
 |---------|--------------------|
 | **Serveur** | Nom de l'actif (cliquable) |
 | **Rôle** | ex. : Web, Base de données, Application (depuis la liste des rôles serveur dans les Paramètres) |
 | **Hébergement** | Dérivé du site de l'actif |
-| **Depuis** | Date à laquelle le serveur a été assigné à ce déploiement |
+| **Depuis** | Date à laquelle le serveur a été affecté à ce déploiement |
 
 Cliquez sur **Ajouter un serveur** dans l'en-tête du déploiement pour rattacher un actif. Le sélecteur liste les clusters avec leurs membres sous leur nom. L'affectation d'un cluster s'étend à ses membres en service : ils s'affichent sous la ligne du cluster, sans actions. Modifiez l'affectation sur le cluster. Quand vous choisissez un membre d'un cluster, KANAP demande s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](assets.md#applications-on-a-cluster). Ajouter, modifier ou retirer un serveur demande `applications:member` et `infrastructure:member`.
 
@@ -444,7 +444,7 @@ Les valeurs de classification et de continuité sont copiées, mais la nouvelle 
 
 **Toujours copiés** : la description, les processus métier, les méthodes d'accès, les cases **Exposition externe**, **Intégration de données / ETL** et **Peut contenir des applications enfants**, et le nombre d'utilisateurs saisi à la main.
 
-**Non copié** (à configurer de zéro) : appartenance à une suite, pièces jointes, dates de la source, dernier test de reprise, revue de classification et assignations d'actifs. L'assistant les liste.
+**Non copié** (à configurer de zéro) : appartenance à une suite, pièces jointes, dates de la source, dernier test de reprise, revue de classification et affectations d'actifs. L'assistant les liste.
 
 ### Migration d'interfaces
 
@@ -473,7 +473,7 @@ Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une appl
 
 **Ce qui est copié** : Tous les champs principaux (sauf la date du dernier test PRA), y compris les valeurs de classification et de continuité, responsables, sociétés, départements, suites, lignes OPEX/CAPEX, contrats, liens, résidence des données et contacts de support. La revue de la copie est réinitialisée.
 
-**Ce qui N'est PAS copié** : Déploiements, interfaces, assignations d'actifs, pièces jointes, champs de version (version, date de mise en production, fin de support).
+**Ce qui N'est PAS copié** : Déploiements, interfaces, affectations d'actifs, pièces jointes, champs de version (version, date de mise en production, fin de support).
 
 ### Comparaison : Copier l'élément vs Nouvelle version
 
@@ -503,7 +503,7 @@ Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une appl
 | Déploiements | Non | Optionnel (par défaut : non) |
 | Liaisons | Non | Optionnel (par défaut : non) |
 | Interfaces | Non | Sélectionné par l'utilisateur |
-| Assignations d'actifs | Non | Non |
+| Affectations d'actifs | Non | Non |
 | Pièces jointes | Non | Non |
 
 **Champs principaux** :
@@ -689,7 +689,7 @@ Une ligne retrouvée par son `id` avec un autre nom renomme l'application. Le no
 ### Limitations
 
 - **Déploiements non inclus** : Les déploiements d'environnement (Prod, QA, Dev) nécessitent une configuration dans l'espace de travail
-- **Assignations de serveurs exclues** : Les liaisons serveur doivent être configurées dans l'onglet Déploiements
+- **Affectations de serveurs exclues** : Les liaisons serveur doivent être configurées dans l'onglet Déploiements
 - **Interfaces exclues** : Les définitions d'intégration ne font pas partie de l'import/export CSV
 - **Maximum 4 responsables par type** : Jusqu'à 4 responsables métier et 4 responsables IT peuvent être importés/exportés
 - **Métriques utilisateurs en export uniquement** : Les champs d'audience et de comptage d'utilisateurs (`users_mode`, `users_year`, `users_override`) sont gérés dans l'espace de travail

@@ -24,10 +24,10 @@ Die Seite hat zwei Tabs:
 
 Im Tab **Listen** steht der Editor **Einstufungen und Kontinuität** oben. Darunter sind die Listen in vier zusammenklappbare Abschnitte gruppiert:
 
-1. **Standorte** - Listen für die Erstellung oder Bearbeitung von Standorten.
-2. **Server und Verbindungen** - Listen für Server, Verbindungen und zugehörige Risiko-/Endpoint-Daten.
-3. **Anwendungen, Services und Schnittstellen** - Listen für Anwendungen, Anwendungsinstanzen, Schnittstellen und Bindungen.
-4. **Vorfälle** - Listen für das Vorfallsregister.
+1. **Standorte**: Listen für die Erstellung oder Bearbeitung von Standorten.
+2. **Server und Verbindungen**: Listen für Server, Verbindungen und zugehörige Risiko-/Endpoint-Daten.
+3. **Anwendungen, Services und Schnittstellen**: Listen für Anwendungen, Anwendungsinstanzen, Schnittstellen und Bindungen.
+4. **Vorfälle**: Listen für das Vorfallsregister.
 
 Die Listen der Technologien stehen in zwei Abschnitten: **Technologiefamilien** und **Administrationszonen** unter **Server und Verbindungen**, **Hosting-Typen** unter **Standorte**. Andere Seiten nennen diese Seite die IT-Einstellungen.
 
@@ -37,7 +37,7 @@ Innerhalb eines Abschnitts sind die Listen nach Namen sortiert. Jede Liste ersch
 
 Jede Liste hat oben eigene Steuerungen:
 
-- **Element hinzufügen** - Fügt oben in der Liste eine neue Zeile ein, fokussiert und bereit zur Eingabe. Ihr Namensfeld zeigt ein Beispiel für diese Liste.
+- **Element hinzufügen**: Fügt oben in der Liste eine neue Zeile ein, fokussiert und bereit zur Eingabe. Ihr Namensfeld zeigt ein Beispiel für diese Liste.
 - Bearbeitungen werden etwa eineinhalb Sekunden nach Ihrer letzten Änderung automatisch gespeichert, sobald alle Zeilen gültig sind. Neben der Liste erscheint eine Speicheranzeige.
 
 Bei langen Listen (mehr als 25 Zeilen) virtualisiert die Tabelle die Zeilen: Sie zeigt etwa 20 Zeilen gleichzeitig, mit flüssigem Scrollen und fixierten Spaltenköpfen.
@@ -167,8 +167,8 @@ Fahren Sie mit der Maus über die Spaltenköpfe **Gesamtstruktur**, **Anzahl der
 - **IT-Landschaft > Administrationszonen**: Domänen nach Gesamtstruktur gruppiert, mit ihren Vertrauensstellungen, Anzahlen und Domänencontrollern. Siehe [Administrationszonen](administration-view.md#verzeichnisdienste-und-domanen).
 
 **Systemeinträge** (können weder geändert noch gelöscht werden):
-- **Workgroup** - Für eigenständige Assets, die keiner Domäne beigetreten sind
-- **N/A** - Für Asset-Typen, bei denen eine Domänenmitgliedschaft nicht zutrifft (z. B. Netzwerkgeräte, Racks)
+- **Workgroup**: Für eigenständige Assets, die keiner Domäne beigetreten sind
+- **N/A**: Für Asset-Typen, bei denen eine Domänenmitgliedschaft nicht zutrifft (z. B. Netzwerkgeräte, Racks)
 
 **Automatisches Ausfüllen**: Wenn Sie eine neue Domäne hinzufügen, wird das DNS-Suffix aus dem eingegebenen Namen vorausgefüllt, bis Sie es selbst bearbeiten.
 
@@ -399,7 +399,7 @@ Kategorien zur Einordnung der Einträge im Vorfallsregister.
 
 ## Wie Änderungen bestehende Daten beeinflussen
 
-- **Bestehende Datensätze behalten ihren Wert** - Ein Umbenennen ändert nur die Anzeige, nicht die zugrunde liegenden Daten.
+- **Bestehende Datensätze behalten ihren Wert**: Ein Umbenennen ändert nur die Anzeige, nicht die zugrunde liegenden Daten.
 - **Als „Nicht mehr anbieten“ markierte Werte**:
   - Bleiben für Datensätze gültig, die sie bereits verwenden.
   - Werden beim Erstellen neuer Datensätze in den Dropdowns ausgeblendet.
@@ -441,8 +441,8 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 
 ## Tipps
 
-- **Namen an Ihre Terminologie anpassen** - Prüfen Sie die Standardwerte und benennen Sie sie so um, wie Ihre Organisation über diese Begriffe spricht. Datensätze behalten ihre Verknüpfung mit dem Wert; nur der Name ändert sich.
-- **Schrittweise auslaufen lassen** - Wenn Sie sich von einem Wert verabschieden, markieren Sie ihn mit **Nicht mehr anbieten**, statt ihn zu entfernen. So bleiben historische Daten intakt, und Benutzer werden zu den neuen Optionen gelenkt.
-- **Datenklassen mit der Sicherheitsabteilung abstimmen** - Änderungen an Datenklassen sollten mit Ihren Richtlinien zur Informationssicherheit übereinstimmen. Sprechen Sie mit der Compliance, bevor Sie Klassifizierungsstufen hinzufügen oder umbenennen.
-- **Typische Ports als Dokumentation nutzen** - Das Feld **Typische Ports** bei den Verbindungstypen dient der Information. Füllen Sie es aus, damit Benutzer wissen, welche Ports ein Verbindungstyp üblicherweise verwendet.
-- **Kartenlesbarkeit mit Ebenen optimieren** - Richten Sie die Graph-Ebenen von Entitäten und Serverrollen an Ihren Architekturschichten aus (Edge, Anwendung, Daten), um übersichtlichere Layouts in der Verbindungskarte zu erhalten.
+- **Namen an Ihre Terminologie anpassen**: Prüfen Sie die Standardwerte und benennen Sie sie so um, wie Ihre Organisation über diese Begriffe spricht. Datensätze behalten ihre Verknüpfung mit dem Wert; nur der Name ändert sich.
+- **Schrittweise auslaufen lassen**: Wenn Sie sich von einem Wert verabschieden, markieren Sie ihn mit **Nicht mehr anbieten**, statt ihn zu entfernen. So bleiben historische Daten intakt, und Benutzer werden zu den neuen Optionen gelenkt.
+- **Datenklassen mit der Sicherheitsabteilung abstimmen**: Änderungen an Datenklassen sollten mit Ihren Richtlinien zur Informationssicherheit übereinstimmen. Sprechen Sie mit der Compliance, bevor Sie Klassifizierungsstufen hinzufügen oder umbenennen.
+- **Typische Ports als Dokumentation nutzen**: Das Feld **Typische Ports** bei den Verbindungstypen dient der Information. Füllen Sie es aus, damit Benutzer wissen, welche Ports ein Verbindungstyp üblicherweise verwendet.
+- **Kartenlesbarkeit mit Ebenen optimieren**: Richten Sie die Graph-Ebenen von Entitäten und Serverrollen an Ihren Architekturschichten aus (Edge, Anwendung, Daten), um übersichtlichere Layouts in der Verbindungskarte zu erhalten.

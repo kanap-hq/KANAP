@@ -42,7 +42,7 @@ Filtre multi-sélection pour le statut de cycle de vie de la connexion (Actif, P
 Trouvez des serveurs via les applications qui s'y exécutent :
 
 1. Sélectionnez une ou plusieurs applications dans le menu déroulant **Applications**
-2. Choisissez les environnements dans le menu déroulant **Env. d'app** (seuls les environnements où les apps sélectionnées ont des serveurs assignés apparaissent)
+2. Choisissez les environnements dans le menu déroulant **Env. d'app** (seuls les environnements où les apps sélectionnées ont des serveurs affectés apparaissent)
 3. Les serveurs correspondants sont automatiquement ajoutés au filtre **Serveurs**. Une application affectée à un cluster apporte le cluster et ses membres
 
 C'est utile lorsque vous voulez voir les connexions d'infrastructure pour une application sans savoir sur quels serveurs elle s'exécute.
@@ -118,7 +118,7 @@ Vous pouvez également zoomer avec la molette de la souris et faire un panoramiq
 Cliquez sur un nœud serveur ou cluster pour mettre en évidence ses connexions et ouvrir un panneau de détails affichant :
 
 - **Type de serveur**, **Site du serveur**, **Système d'exploitation**, **Segment réseau**, **Adresse IP**
-- **Applications assignées** : Apps s'exécutant sur ce serveur, regroupées par environnement. Sur un membre, une app affectée à son cluster s'affiche « via » le nom du cluster. Cliquez sur un nom d'app pour l'ouvrir.
+- **Applications affectées** : Apps s'exécutant sur ce serveur, regroupées par environnement. Sur un membre, une app affectée à son cluster s'affiche « via » le nom du cluster. Cliquez sur un nom d'app pour l'ouvrir.
 - Bouton **Modifier le serveur** ou **Voir le cluster** pour ouvrir l'espace de travail. **Voir le cluster** ouvre le cluster sur son onglet **Exploitation**, où se gèrent ses membres
 
 Cliquez sur un nœud entité pour voir son type et son environnement.

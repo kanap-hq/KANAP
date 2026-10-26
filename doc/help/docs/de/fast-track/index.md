@@ -156,7 +156,7 @@ Siehe [Anfragen-Referenz](../portfolio-requests.md) für alle Statusübergänge.
 
 Ihr neues Projekt erbt den Anfragenkontext, muss aber noch für die Umsetzung eingerichtet werden.
 
-Gehen Sie zu **Portfolio > Projekte** und öffnen Sie Ihr neu erstelltes Projekt. Der Projekt-Arbeitsbereich hat sieben Tabs (**Zusammenfassung**, **Aktivität**, **Zeitplan**, **Fortschritt**, **Aufgaben**, **Bewertung** und **Wissensdatenbank**) mit einer dauerhaft sichtbaren **Projekteigenschaften**-Seitenleiste für Kernfelder, Team und Verknüpfungen.
+Gehen Sie zu **Portfolio > Projekte** und öffnen Sie Ihr neu erstelltes Projekt. Der Projekt-Arbeitsbereich hat sieben Tabs (**Zusammenfassung**, **Aktivität**, **Zeitplan**, **Fortschritt**, **Aufgaben**, **Bewertung** und **Wissensdatenbank**) mit einer dauerhaft sichtbaren **Projekteigenschaften**-Seitenleiste für Kernfelder, Team und Beziehungen.
 
 ### Seitenleiste: Ihre Personen und Kernstruktur zuweisen
 
@@ -180,7 +180,7 @@ Verwenden Sie die **Projekteigenschaften**-Seitenleiste, um die Kernrollen einzu
 
     Ohne Team-, Verfügbarkeits- und Fähigkeitsdaten kann der Roadmap-Generator keine Kapazität berechnen, und Ihre Planung fliegt blind. Siehe die [Mitwirkende-Referenz](../portfolio-team-members.md).
 
-Die gleiche Seitenleiste hält auch **Kerneigenschaften** und **Verknüpfungen** sichtbar, während Sie arbeiten, sodass Sie keine separaten Team- oder Verknüpfungen-Tabs mehr benötigen.
+Die gleiche Seitenleiste hält auch **Kerneigenschaften** und **Beziehungen** sichtbar, während Sie arbeiten, sodass Sie keine separaten Team- oder Beziehungen-Tabs mehr benötigen.
 
 ### Zusammenfassungs-Tab: Zweck und Projekt-Cockpit
 

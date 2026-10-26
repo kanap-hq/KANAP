@@ -320,7 +320,7 @@ Der Reiter ist in vier Blöcke gegliedert, in der Reihenfolge einer Business-Imp
 - Die **Wiederherstellungswelle** bezeichnet die Reihenfolge der Wiederherstellung, keine Dauer und keinen Schweregrad.
 - Das **RTO** ist das Ziel für die Wiederherstellungszeit. Das **RPO** ist der zulässige Datenverlust und darf null sein. Erreicht das RTO die maximal tolerierbare Ausfallzeit, die auf der gewählten Geschäftsstufe definiert ist, zeigt KANAP einen Hinweis, behält aber beide Werte.
 - Unter der Welle listet KANAP die Schnittstellen auf, die diese Anwendung mit einer Anwendung in einer **späteren** Welle verbinden („Austausch mit CRM, geplant in V3"), mit einem Link zu jeder Schnittstelle. Beide Anwendungen müssen laufen, damit der Fluss funktioniert; der Verantwortliche des Wiederherstellungsplans entscheidet. Außer Betrieb genommene Schnittstellen werden ignoriert, und Benutzer mit eingeschränktem Bereich als Fachbereichs-Mitwirkender sehen diese Liste nicht.
-- **Letzter Wiederherstellungstest** enthält das Datum des letzten Tests. Ein Link aus diesem Bereich verwendet die einzige **Wissensdatenbank** im Reiter Übersicht und erzeugt keinen doppelten Datensatz. Ältere URL-Links bleiben unter Verknüpfungen verfügbar.
+- **Letzter Wiederherstellungstest** enthält das Datum des letzten Tests. Ein Link aus diesem Bereich verwendet die einzige **Wissensdatenbank** im Reiter Übersicht und erzeugt keinen doppelten Datensatz. Ältere URL-Links bleiben unter Beziehungen verfügbar.
 
 Zwei dezente Hinweise können erscheinen: Daten auf der höchsten Vertraulichkeitsstufe in Kombination mit der niedrigsten Cyber-Kritikalität sowie eine Anwendung auf der kritischsten Geschäftsstufe ohne Wiederherstellungstest in den letzten zwölf Monaten. Sie blockieren nie etwas.
 
@@ -329,9 +329,9 @@ Zwei dezente Hinweise können erscheinen: Daten auf der höchsten Vertraulichkei
 - Das Review ist ein Zeitstempel: **Als geprüft markieren** hält fest, wer die Klassifizierung wann geprüft hat. Die Aktion steht zur Verfügung, sobald Geschäftskritikalität, Cyberkritikalität, Datenvertraulichkeit, Wiederanlaufwelle und Begründung vorhanden sind.
 - Prüfdatum und Prüfer bleiben danach sichtbar. Ändert sich nach dem Review ein Klassifizierungswert, eine Wiederanlaufreferenz oder die Datenresidenz, zeigt der Reiter **Seit der Prüfung geändert** und die Liste **Erneut prüfen**. Eine Änderung von Name oder Herausgeber hat keine Auswirkung. Eine Änderung des Katalogs in den Einstellungen macht ein Review nie ungültig.
 
-### Verknüpfungen
+### Beziehungen
 
-Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben und Vorfälle, jeweils in einer eigenen Tabelle, danach ihre Links und Dateien. Die Technologien stehen im Reiter [Betrieb](#operations), die Geschäftsprozesse in der [Eigenschaftsleiste](#eigenschaftsleiste-rechtes-panel). Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Anfragen und Vorfälle sowie die Links und Dateien. Aufgaben werden nicht gezählt.
+Der Reiter Beziehungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben und Vorfälle, jeweils in einer eigenen Tabelle, danach ihre Links und Dateien. Die Technologien stehen im Reiter [Betrieb](#operations), die Geschäftsprozesse in der [Eigenschaftsleiste](#eigenschaftsleiste-rechtes-panel). Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Anfragen und Vorfälle sowie die Links und Dateien. Aufgaben werden nicht gezählt.
 
 **Komponenten** (nur wenn „Kann Unteranwendungen haben" aktiviert ist): eine Tabelle, die die Unteranwendungen dieser Suite mit ihrem Lebenszyklus und ihrer Kritikalität auflistet. Klicken Sie auf eine Zeile, um den Arbeitsbereich der Unteranwendung zu öffnen.
 
@@ -435,7 +435,7 @@ Klassifizierungs- und Kontinuitätswerte werden kopiert, die neue Version beginn
 | Unternehmen (Zielgruppe) | Ein |
 | Abteilungen | Ein |
 | Datenhaltung | Ein |
-| Verknüpfungen | Ein |
+| Links | Ein |
 | Supportkontakte | Ein |
 | Budgetzeilen (OPEX + CAPEX, gepaart) | Ein |
 | Verträge | Ein |
@@ -485,15 +485,15 @@ Verwenden Sie dies, wenn Sie ein unabhängiges Duplikat einer Anwendung erstelle
 | **Lebenszyklus** | Erhalten | Auf Vorgeschlagen zurückgesetzt |
 | **Name** | „(Kopie)"-Suffix, nummeriert, wenn der Name vergeben ist | Vom Benutzer angegeben, muss frei sein |
 
-**Verknüpfungen**:
+**Beziehungen**:
 
-| Verknüpfung | Element kopieren | Neue Version |
+| Beziehung | Element kopieren | Neue Version |
 |----------|-----------|--------------------|
 | Verantwortliche (Business und IT) | Ja | Optional (Standard: ja) |
 | Unternehmen (Zielgruppe) | Ja | Optional (Standard: ja) |
 | Abteilungen | Ja | Optional (Standard: ja) |
 | Datenhaltung | Ja | Optional (Standard: ja) |
-| Verknüpfungen | Ja | Optional (Standard: ja) |
+| Links | Ja | Optional (Standard: ja) |
 | Supportkontakte | Ja | Optional (Standard: ja) |
 | Geschäftsprozesse | Nein | Ja |
 | Suites (Mitgliedschaft) | Ja | Nein |
@@ -718,9 +718,9 @@ Custom ERP;lob;;Moderate;Active;2018-03-20;false
 
 - **Beginnen Sie mit kritischen Apps**: Dokumentieren Sie zuerst Ihre geschäftskritischen Anwendungen, dann arbeiten Sie die Kritikalitätsstufen ab.
 - **Suites zum Gruppieren verwenden**: Aktivieren Sie „Kann Unteranwendungen haben" im Reiter Betrieb, um eine Anwendung als Suite zu markieren, die verwandte Komponenten gruppiert (z. B. SAP-Module unter einer SAP-Suite).
-- **Frühzeitig mit Ausgaben verknüpfen**: Verbinden Sie OPEX, CAPEX und Verträge im Reiter Verknüpfungen, um das vollständige Kostenbild für jede Anwendung zu sehen.
+- **Frühzeitig mit Ausgaben verknüpfen**: Verbinden Sie OPEX, CAPEX und Verträge im Reiter Beziehungen, um das vollständige Kostenbild für jede Anwendung zu sehen.
 - **Bereitstellungen aktuell halten**: Der Reiter Bereitstellungen steuert die Umgebungs-Chips in der Liste. Halten Sie ihn für genaue Sichtbarkeit aktuell.
 - **Dokumentieren Sie die Zielgruppe**: Legen Sie Unternehmens- und Abteilungs-Zielgruppen in der Eigenschaftsleiste fest; die Benutzeranzahl wird dann automatisch abgeleitet und in Berichten verwendet.
 - **Kategorie-Filterung nutzen**: Verwenden Sie den Kategorie-Spaltenfilter, um sich auf bestimmte Anwendungstypen zu konzentrieren (z. B. nur Line-of-business-Apps anzeigen oder Produktivitätswerkzeuge ausschließen).
 - **Wissensdatenbank frühzeitig anhängen**: Verknüpfen Sie Runbooks und Architekturdokumente im Reiter Übersicht, damit das Team weiß, wo es bei Vorfällen nachschlagen muss.
-- **Aufgaben von beiden Seiten verknüpfen**: Fügen Sie eine Aufgabe unter Verknüpfungen > Aufgaben hinzu oder setzen Sie das Feld App / Dienst auf der Aufgabe selbst; beide zeigen dieselbe Verknüpfung.
+- **Aufgaben von beiden Seiten verknüpfen**: Fügen Sie eine Aufgabe unter Beziehungen > Aufgaben hinzu oder setzen Sie das Feld App / Dienst auf der Aufgabe selbst; beide zeigen dieselbe Verknüpfung.

@@ -46,7 +46,7 @@ Sie können Spalten auch über die Spaltenauswahl anzeigen, ausblenden und umord
 
 ## Der Standort-Arbeitsbereich
 
-Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Er hat drei Reiter: **Übersicht**, **Kontakte & Support** und **Verknüpfungen**. Die Reiter Kontakte & Support und Verknüpfungen werden nach dem erstmaligen Speichern des Standorts verfügbar.
+Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Er hat drei Reiter: **Übersicht**, **Kontakte & Support** und **Beziehungen**. Die Reiter Kontakte & Support und Beziehungen werden nach dem erstmaligen Speichern des Standorts verfügbar.
 
 ### Übersicht
 
@@ -83,7 +83,7 @@ Jeder Unter-Standort hat:
 
 Unter-Standorte sind verfügbar, sobald der Standort existiert (nachdem Sie auf **Erstellen** geklickt haben). Jede Zeile wird einzeln gespeichert, wenn Sie das Feld verlassen, und das Löschen eines Unter-Standorts muss zuerst bestätigt werden.
 
-Assets können einem bestimmten Unter-Standort innerhalb eines Standorts zugewiesen werden, um genau zu verfolgen, wo Hardware steht. Der Reiter Verknüpfungen zeigt den Unter-Standort jedes Assets, das einen hat.
+Assets können einem bestimmten Unter-Standort innerhalb eines Standorts zugewiesen werden, um genau zu verfolgen, wo Hardware steht. Der Reiter Beziehungen zeigt den Unter-Standort jedes Assets, das einen hat.
 
 ---
 
@@ -101,9 +101,9 @@ Dieser Reiter organisiert die Personen und Referenzen, die mit einem Standort ve
 
 ---
 
-### Verknüpfungen
+### Beziehungen
 
-Der Reiter Verknüpfungen zeigt die Assets an diesem Standort und die Anwendungen, die darauf laufen, danach die Weblinks des Standorts. Klicken Sie auf eine Zeile, um das Asset oder die Anwendung zu öffnen. Das Badge des Reiters zählt die Assets und Anwendungen, die Sie sehen dürfen, und die Weblinks.
+Der Reiter Beziehungen zeigt die Assets an diesem Standort und die Anwendungen, die darauf laufen, danach die Weblinks des Standorts. Klicken Sie auf eine Zeile, um das Asset oder die Anwendung zu öffnen. Das Badge des Reiters zählt die Assets und Anwendungen, die Sie sehen dürfen, und die Weblinks.
 
 | Abschnitt | Spalten |
 |---|---|

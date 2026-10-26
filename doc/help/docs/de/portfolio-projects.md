@@ -14,7 +14,7 @@ Für portfolio-weite Sequenzierung und Roadmap-Arbeit verwenden Sie [Portfolio-P
 ## Berechtigungen
 
 - `portfolio_projects:reader`: die Liste öffnen und Projekt-Arbeitsbereiche anzeigen
-- `portfolio_projects:contributor`: das verwaltete Dokument **Zweck** aktualisieren, Zeit auf dem Projekt erfassen (Projekt-Overhead-Einträge und Einträge auf Projektaufgaben) und im Reiter **Verknüpfungen** Abhängigkeiten, verknüpfte Datensätze, Links und Dateien pflegen
+- `portfolio_projects:contributor`: das verwaltete Dokument **Zweck** aktualisieren, Zeit auf dem Projekt erfassen (Projekt-Overhead-Einträge und Einträge auf Projektaufgaben) und im Reiter **Beziehungen** Abhängigkeiten, verknüpfte Datensätze, Links und Dateien pflegen
 - `portfolio_projects:member`: Projekte erstellen und Projektdaten, Status, Team, Beziehungen, Zeitleiste, Fortschritt, Aufgaben, Bewertung, Kommentare und Entscheidungen verwalten
 - `portfolio_projects:admin`: enthält die Member-Funktionen und kann auch CSV importieren/exportieren, Prioritäts-Überschreibungen speichern und Projekt-Overhead-Zeiteinträge anderer Benutzer pflegen
 - Die Anzeige der Wissensdatenbank erfordert auch Wissensdatenbank-Zugriff
@@ -85,7 +85,7 @@ Verwenden Sie **Schnellstart** für Arbeit, die wirklich direkt in die Lieferung
 
 Der Projekt-Arbeitsbereich hat zwei Schichten:
 
-- Den **Hauptinhaltsbereich** für die operativen Reiter: **Zusammenfassung**, **Aufgaben**, **Zeitleiste**, **Fortschritt**, **Bewertung**, **Verknüpfungen** und **Wissensdatenbank**
+- Den **Hauptinhaltsbereich** für die operativen Reiter: **Zusammenfassung**, **Aufgaben**, **Zeitleiste**, **Fortschritt**, **Bewertung**, **Beziehungen** und **Wissensdatenbank**
 - Eine persistente **Eigenschaftsleiste** am rechten Rand für Kerneigenschaften, Teamzuweisung und Quell-Anfragen
 
 Öffnen oder schließen Sie die Eigenschaftsleiste mit der vertikalen Registerkarte am rechten Rand.
@@ -150,7 +150,7 @@ Wenn Leiter und Mitwirkende falsch sind, ist auch Ihre Aufwandsplanung falsch.
 
 Eine schreibgeschützte Liste der Anfragenaufzeichnungen, die das Projekt erzeugt haben. Klicken Sie auf einen Eintrag, um zum Quell-Anfragen-Arbeitsbereich zu navigieren.
 
-Dieselben Anfragen erscheinen auch im Reiter **Verknüpfungen**, zusammen mit den Abhängigkeiten, den verknüpften Budgetzeilen, Anwendungen, Assets und Technologien sowie den Links und Dateien des Projekts.
+Dieselben Anfragen erscheinen auch im Reiter **Beziehungen**, zusammen mit den Abhängigkeiten, den verknüpften Budgetzeilen, Anwendungen, Assets und Technologien sowie den Links und Dateien des Projekts.
 
 ## Zusammenfassung
 
@@ -307,9 +307,9 @@ Der resultierende Prioritätswert ist außerhalb dieses Reiters wichtig:
 
 Wenn die Bewertung von der Lieferrealität abdriftet, werden Portfolio-Diskussionen schwieriger als nötig.
 
-## Verknüpfungen
+## Beziehungen
 
-Der Reiter **Verknüpfungen** bringt die Verknüpfungen zusammen, die erklären, wie das Projekt in den Rest des Portfolios passt: zuerst die Abhängigkeiten, dann eine Tabelle je Typ verknüpfter Datensätze, dann die Links und Dateien. Das Reiter-Badge zählt die Abhängigkeiten, die verknüpften Datensätze, die Sie sehen, die Weblinks und die Dateien.
+Der Reiter **Beziehungen** bringt die Verknüpfungen zusammen, die erklären, wie das Projekt in den Rest des Portfolios passt: zuerst die Abhängigkeiten, dann eine Tabelle je Typ verknüpfter Datensätze, dann die Links und Dateien. Das Reiter-Badge zählt die Abhängigkeiten, die verknüpften Datensätze, die Sie sehen, die Weblinks und die Dateien.
 
 ### Abhängigkeiten
 

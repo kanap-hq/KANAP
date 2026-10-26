@@ -142,10 +142,10 @@ Zuordnungen speisen die Berichte zur Leistungsverrechnung, für OPEX- und CAPEX-
 
 | Verknüpfung | Wo sie angelegt wird | In einer Datei |
 |---|---|---|
-| Projekte | Der Tab **Verknüpfungen** der Budgetzeile oder des Projekts | Die Budgetdatei enthält ein Projekt pro Budgetzeile in `project`. Die Verknüpfungen des Tabs **Verknüpfungen** sind nicht in der Datei. Die Listen zeigen beides |
-| Anfragen | Der Tab **Verknüpfungen** der Anfrage | Nein |
-| Anwendungen | Der Tab **Verknüpfungen** der Budgetzeile oder der Anwendung | Nein |
-| Assets | Der Tab **Verknüpfungen** des Assets | Nein |
+| Projekte | Der Tab **Verknüpfungen** der Budgetzeile oder der Tab **Beziehungen** des Projekts | Die Budgetdatei enthält ein Projekt pro Budgetzeile in `project`. Die Verknüpfungen des Tabs **Verknüpfungen** sind nicht in der Datei. Die Listen zeigen beides |
+| Anfragen | Der Tab **Beziehungen** der Anfrage | Nein |
+| Anwendungen | Der Tab **Verknüpfungen** der Budgetzeile oder der Tab **Beziehungen** der Anwendung | Nein |
+| Assets | Der Tab **Beziehungen** des Assets | Nein |
 | Verträge | Der Tab **Verknüpfungen** der Budgetzeile oder des Vertrags | Nein |
 | Kontakte, Websites, Anhänge | Der Tab **Verknüpfungen** der Budgetzeile | Nein |
 | Aufgaben | Der Tab **Übersicht** der Budgetzeile | Nein |

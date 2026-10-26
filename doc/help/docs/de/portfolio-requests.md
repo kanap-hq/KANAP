@@ -12,7 +12,7 @@ Portfolio-Anfragen sind die Erfassungsebene für vorgeschlagene Arbeit. Eine Anf
 | Berechtigung | Was sie erlaubt |
 | --- | --- |
 | `portfolio_requests:reader` | Die Anfragenliste öffnen und Anfragen-Arbeitsbereiche anzeigen |
-| `portfolio_requests:contributor` | Budgetzeilen, Anwendungen, Assets und Geschäftsprozesse im Reiter **Verknüpfungen** verknüpfen und lösen |
+| `portfolio_requests:contributor` | Budgetzeilen, Anwendungen, Assets und Geschäftsprozesse im Reiter **Beziehungen** verknüpfen und lösen |
 | `portfolio_requests:member` | Anfragen erstellen, Anfragendaten aktualisieren, die verwalteten Dokumente (Zweck, Risiken & Mitigationen) bearbeiten, Team und Beziehungen pflegen, Kommentare und Entscheidungen hinzufügen, Status ändern, Analyseempfehlungen einreichen und Bewertung bearbeiten |
 | `portfolio_requests:admin` | Anfragen löschen, CSV-Import/-Export verwenden und Prioritäts-Überschreibungen speichern |
 
@@ -71,7 +71,7 @@ Das Standardraster hebt die Felder hervor, die während der Erfassung und Überp
 
 Der Arbeitsbereich verwendet ein Split-Modell:
 
-- Der Hauptbereich enthält die operativen Reiter: **Zusammenfassung**, **Analyse**, **Bewertung**, **Verknüpfungen** und **Wissensdatenbank**.
+- Der Hauptbereich enthält die operativen Reiter: **Zusammenfassung**, **Analyse**, **Bewertung**, **Beziehungen** und **Wissensdatenbank**.
 - Eine persistente **Eigenschaftsleiste** am rechten Rand enthält stabile Anfragen-Metadaten, Teamzuweisung und resultierende Projekte. Öffnen oder schließen Sie sie mit der vertikalen Registerkarte am rechten Rand.
 
 Dies ist wichtig, weil nicht alles auf die gleiche Weise gespeichert wird:
@@ -127,9 +127,9 @@ Diese Zuweisungen treiben die geteilte Sichtbarkeit an und machen klar, wer vora
 
 Eine schreibgeschützte Liste der Projekte, die nach der Konvertierung aus dieser Anfrage erstellt wurden. Klicken Sie auf einen Eintrag, um zum Projekt-Arbeitsbereich zu navigieren.
 
-Dieselben Projekte erscheinen auch im Reiter **Verknüpfungen**, zusammen mit den Abhängigkeiten, den verknüpften Budgetzeilen, Anwendungen, Assets und Geschäftsprozessen sowie den Links und Dateien der Anfrage.
+Dieselben Projekte erscheinen auch im Reiter **Beziehungen**, zusammen mit den Abhängigkeiten, den verknüpften Budgetzeilen, Anwendungen, Assets und Geschäftsprozessen sowie den Links und Dateien der Anfrage.
 
-Ältere Lesezeichen können noch auf `overview`, `team` oder `relations` verweisen. Der aktuelle Arbeitsbereich platziert diesen Inhalt unter **Zusammenfassung**, der Eigenschaftsleiste und dem Reiter **Verknüpfungen**.
+Ältere Lesezeichen können noch auf `overview`, `team` oder `relations` verweisen. Der aktuelle Arbeitsbereich platziert diesen Inhalt unter **Zusammenfassung**, der Eigenschaftsleiste und dem Reiter **Beziehungen**.
 
 ## Zusammenfassung
 
@@ -249,9 +249,9 @@ Wo durch Portfolio-Einstellungen aktiviert, können verbindliche Bypass-Regeln d
 
 Sobald eine Anfrage **Konvertiert** ist, wird die Bewertung schreibgeschützt. Zu diesem Zeitpunkt hat die Anfrage ihre Aufgabe als Erfassungs- und Priorisierungsdatensatz bereits erledigt.
 
-## Verknüpfungen
+## Beziehungen
 
-Der Reiter **Verknüpfungen** bringt die Verknüpfungen zusammen, die erklären, wie sich die Anfrage mit dem Rest des Portfolios verbindet: zuerst die Abhängigkeiten, dann eine Tabelle je Typ verknüpfter Datensätze, dann die Links und Dateien. Das Reiter-Badge zählt die Abhängigkeiten, die verknüpften Datensätze, die Sie sehen, die Weblinks und die Dateien.
+Der Reiter **Beziehungen** bringt die Verknüpfungen zusammen, die erklären, wie sich die Anfrage mit dem Rest des Portfolios verbindet: zuerst die Abhängigkeiten, dann eine Tabelle je Typ verknüpfter Datensätze, dann die Links und Dateien. Das Reiter-Badge zählt die Abhängigkeiten, die verknüpften Datensätze, die Sie sehen, die Weblinks und die Dateien.
 
 ### Abhängigkeiten
 

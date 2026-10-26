@@ -10,124 +10,124 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 
 ## Fast Track Guides
 
-- [Getting Started: Your First 10 Minutes in KANAP](fast-track/getting-started.md) - First-day onboarding, profile setup, dashboard, and core concepts
-- [Portfolio Fast Track: From Request to Delivery](fast-track/index.md) - Submit, analyze, score, convert, and deliver initiatives
-- [IT Ops Fast Track: From Application to Server](fast-track/apps-and-assets.md) - Document an app, its environments, and hosting assets
-- [Task Types Fast Track: Run, Build & Tasks](fast-track/task-types.md) - Understand the difference between incidents, problems, requests, projects, bugs, and tasks
+- [Getting Started: Your First 10 Minutes in KANAP](fast-track/getting-started.md): First-day onboarding, profile setup, dashboard, and core concepts
+- [Portfolio Fast Track: From Request to Delivery](fast-track/index.md): Submit, analyze, score, convert, and deliver initiatives
+- [IT Ops Fast Track: From Application to Server](fast-track/apps-and-assets.md): Document an app, its environments, and hosting assets
+- [Task Types Fast Track: Run, Build & Tasks](fast-track/task-types.md): Understand the difference between incidents, problems, requests, projects, bugs, and tasks
 
 ## Modules
 
 ### Dashboard
 
-- [Dashboard](my-dashboard.md) - Personal overview with configurable tiles (click the KANAP logo)
+- [Dashboard](my-dashboard.md): Personal overview with configurable tiles (click the KANAP logo)
 
 ### Portfolio Management
 
-- [Tasks](tasks.md) - Track action items and follow-ups
-- [Requests](portfolio-requests.md) - Capture and evaluate incoming initiatives
-- [Projects](portfolio-projects.md) - Manage approved projects end-to-end
-- [Planning](portfolio-planning.md) - Build timeline scenarios and generate roadmap schedules
-- [Contributors](portfolio-team-members.md) - Track skills, teams, and capacity
-- [Reporting](portfolio-reporting.md) - Capacity and workload reporting
-- [Settings](portfolio-settings.md) - Configure criteria, teams, and scoring
+- [Tasks](tasks.md): Track action items and follow-ups
+- [Requests](portfolio-requests.md): Capture and evaluate incoming initiatives
+- [Projects](portfolio-projects.md): Manage approved projects end-to-end
+- [Planning](portfolio-planning.md): Build timeline scenarios and generate roadmap schedules
+- [Contributors](portfolio-team-members.md): Track skills, teams, and capacity
+- [Reporting](portfolio-reporting.md): Capacity and workload reporting
+- [Settings](portfolio-settings.md): Configure criteria, teams, and scoring
 
 ### IT Landscape
 
 **Applications**
 
-- [Applications](applications.md) - Document your application landscape
-- [Interfaces](interfaces.md) - Map data flows between applications
-- [Interface Map](interface-map.md) - Visualize interface relationships
+- [Applications](applications.md): Document your application landscape
+- [Interfaces](interfaces.md): Map data flows between applications
+- [Interface Map](interface-map.md): Visualize interface relationships
 
 **Infrastructure**
 
-- [Assets](assets.md) - Manage infrastructure inventory (servers, VMs, containers, cloud instances)
-- [Connections](connections.md) - Track network and system connections
-- [Connection Map](connection-map.md) - Visualize connection topology
-- [Administration zones](administration-view.md) - See who administers what: zones, control points, domains and domain controllers
+- [Assets](assets.md): Manage infrastructure inventory (servers, VMs, containers, cloud instances)
+- [Connections](connections.md): Track network and system connections
+- [Connection Map](connection-map.md): Visualize connection topology
+- [Administration zones](administration-view.md): See who administers what: zones, control points, domains and domain controllers
 
 **Reference data**
 
-- [Locations](locations.md) - Track datacenters and cloud regions
-- [Technologies](technologies.md) - Track the products your applications run on, their versions and their end of support
+- [Locations](locations.md): Track datacenters and cloud regions
+- [Technologies](technologies.md): Track the products your applications run on, their versions and their end of support
 
 **Operations**
 
-- [Incidents](incidents.md) - Record incidents and what they affect
-- [End of support](end-of-support.md) - See what reaches its end of support and what it touches
-- [Vulnerabilities](vulnerabilities.md) - Review the published vulnerabilities of the technologies in use
+- [Incidents](incidents.md): Record incidents and what they affect
+- [End of support](end-of-support.md): See what reaches its end of support and what it touches
+- [Vulnerabilities](vulnerabilities.md): Review the published vulnerabilities of the technologies in use
 
 **Settings**
 
-- [IT Landscape Settings](it-ops-settings.md) - Configure dropdown values and catalogs
-- [Netbox synchronisation](netbox.md) - Keep your assets in step with your Netbox inventory, from the **Netbox** tab of the settings
+- [IT Landscape Settings](it-ops-settings.md): Configure dropdown values and catalogs
+- [Netbox synchronisation](netbox.md): Keep your assets in step with your Netbox inventory, from the **Netbox** tab of the settings
 
 ### Knowledge
 
-- [Knowledge](knowledge.md) - Create, govern, relate, review, and export working documentation
+- [Knowledge](knowledge.md): Create, govern, relate, review, and export working documentation
 
 ### Budget Management
 
-- [Budget lines](budget-lines.md) - Plan and track OPEX and CAPEX lines, their budgets and allocations
-- [Contracts](contracts.md) - Manage vendor contracts and renewals
-- [Budget Administration](budget-operations.md) - Budget settings, freeze, copy, and reset operations
-- [Currencies](currencies.md) - Reporting and default currencies, FX rates
-- [Freeze master data and copy yearly metrics](master-data-operations.md) - Lock and roll forward company and department metrics
-- [Reports](reports.md) - Generate budget and chargeback reports
-- [Budget data model](budget-data-model.md) - Objects, identifiers and files of the budget, for a migration or a BI tool
+- [Budget lines](budget-lines.md): Plan and track OPEX and CAPEX lines, their budgets and allocations
+- [Contracts](contracts.md): Manage vendor contracts and renewals
+- [Budget Administration](budget-operations.md): Budget settings, freeze, copy, and reset operations
+- [Currencies](currencies.md): Reporting and default currencies, FX rates
+- [Freeze master data and copy yearly metrics](master-data-operations.md): Lock and roll forward company and department metrics
+- [Reports](reports.md): Generate budget and chargeback reports
+- [Budget data model](budget-data-model.md): Objects, identifiers and files of the budget, for a migration or a BI tool
 
 ### Master Data
 
 **Organization**
 
-- [Companies](companies.md) - Manage company entities
-- [Departments](departments.md) - Organize by department structure
-- [Cost centers](cost-centers.md) - Say who owns each budget line
+- [Companies](companies.md): Manage company entities
+- [Departments](departments.md): Organize by department structure
+- [Cost centers](cost-centers.md): Say who owns each budget line
 
 **External Parties**
 
-- [Suppliers](suppliers.md) - Manage vendor relationships
-- [Contacts](contacts.md) - Track people and stakeholders
+- [Suppliers](suppliers.md): Manage vendor relationships
+- [Contacts](contacts.md): Track people and stakeholders
 
 **Finance**
 
-- [Chart of Accounts](chart-of-accounts.md) - Configure financial accounts
-- [Working-day calendars](working-day-calendars.md) - Working days of each month, from a country's public holidays or entered by hand, for lines priced per day
-- [Analytics dimensions](analytics.md) - Set up reporting dimensions
+- [Chart of Accounts](chart-of-accounts.md): Configure financial accounts
+- [Working-day calendars](working-day-calendars.md): Working days of each month, from a country's public holidays or entered by hand, for lines priced per day
+- [Analytics dimensions](analytics.md): Set up reporting dimensions
 
 **Classification**
 
-- [Business Processes](business-processes.md) - Document business process hierarchy
+- [Business Processes](business-processes.md): Document business process hierarchy
 
 ### Plaid
 
-- [Plaid](ai-assistant.md) - Ask questions in plain language across your KANAP data
+- [Plaid](ai-assistant.md): Ask questions in plain language across your KANAP data
 
 ### AI Agents
 
-- [Overview](agents-overview.md) - Supervise the agents that watch your service desk
-- [Agent workspace](agents-workspace.md) - Monitor, tune, and configure a single agent
-- [Approvals](agents-approvals.md) - Review and approve proposed ticket replies and updates
-- [Activity](agents-activity.md) - The audit timeline of everything agents did
-- [Shared context](agents-shared-context.md) - Reusable background guidance for your agents
+- [Overview](agents-overview.md): Supervise the agents that watch your service desk
+- [Agent workspace](agents-workspace.md): Monitor, tune, and configure a single agent
+- [Approvals](agents-approvals.md): Review and approve proposed ticket replies and updates
+- [Activity](agents-activity.md): The audit timeline of everything agents did
+- [Shared context](agents-shared-context.md): Reusable background guidance for your agents
 
 ### Administration
 
-- [Admin & Users](admin.md) - Manage users, roles, authentication, and audit logs
-- [Data access](data-access.md) - Limit a person to the budget and contracts of some companies or cost centers
-- [Branding](branding.md) - Customize your tenant logo and light/dark primary colors
-- [Sample data](sample-data.md) - Explore KANAP with a fictional company, then erase it and start clean
-- [Audit Log](admin.md#audit-log) - Review data changes, sign-ins and exports with filters, detail view and CSV export
-- [AI models](ai-models.md) - Register the AI models your organization uses, with their prices, and set the default
-- [Plaid Settings](ai-settings.md) - Choose the model Plaid uses, plus chat features, retention, and MCP keys
-- [Usage & costs](ai-usage.md) - AI usage and real costs across chat and agents, by agent and by model
-- [Integrations](integrations.md) - Connect GLPI for ticket import and for agents
-- [Scheduled Tasks](scheduled-tasks.md) - Review and manage recurring background jobs
-- [Budget management overview](operations-dashboard.md) - OPEX and CAPEX snapshots, deadlines and quick actions
+- [Admin & Users](admin.md): Manage users, roles, authentication, and audit logs
+- [Data access](data-access.md): Limit a person to the budget and contracts of some companies or cost centers
+- [Branding](branding.md): Customize your tenant logo and light/dark primary colors
+- [Sample data](sample-data.md): Explore KANAP with a fictional company, then erase it and start clean
+- [Audit Log](admin.md#audit-log): Review data changes, sign-ins and exports with filters, detail view and CSV export
+- [AI models](ai-models.md): Register the AI models your organization uses, with their prices, and set the default
+- [Plaid Settings](ai-settings.md): Choose the model Plaid uses, plus chat features, retention, and MCP keys
+- [Usage & costs](ai-usage.md): AI usage and real costs across chat and agents, by agent and by model
+- [Integrations](integrations.md): Connect GLPI for ticket import and for agents
+- [Scheduled Tasks](scheduled-tasks.md): Review and manage recurring background jobs
+- [Budget management overview](operations-dashboard.md): OPEX and CAPEX snapshots, deadlines and quick actions
 
 ### Deployment & Operations
 
-- [On-Premise Deployment](on-premise/index.md) - Installation, configuration, operations, SMTP/Resend email setup, and Microsoft Entra SSO for single-tenant deployments
+- [On-Premise Deployment](on-premise/index.md): Installation, configuration, operations, SMTP/Resend email setup, and Microsoft Entra SSO for single-tenant deployments
 
 ---
 

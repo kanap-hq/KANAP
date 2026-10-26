@@ -366,7 +366,7 @@ Eine große Datei braucht Zeit zum Laden und hält die Verknüpfungen ihrer Tech
 
 - **Anwendungen**: Der Abschnitt **Technologien** oben im Reiter Betrieb listet, wovon eine Anwendung abhängt. Siehe [Anwendungen](applications.md#operations).
 - **Assets**: Der Abschnitt **Technologien** im Reiter Betrieb eines Assets listet, was der Server trägt, sein Betriebssystem zuerst. Siehe [Assets](assets.md#operations).
-- **Verträge**, **Budgetzeilen** und **Vorfälle**: ein Feld **Technologien** in ihrem Reiter Verknüpfungen bzw. Beziehungen, für Benutzer, die die Infrastruktur lesen dürfen.
+- **Verträge**, **Budgetzeilen** und **Vorfälle**: ein Feld **Technologien** im Reiter **Verknüpfungen** der Verträge und Budgetzeilen und im Reiter **Beziehungen** der Vorfälle, für Benutzer, die die Infrastruktur lesen dürfen.
 - Bericht **Supportende**: die Versionen, die ihr Supportende erreichen, Betriebssysteme eingeschlossen, und was sie betreffen. Siehe [Supportende](end-of-support.md).
 - **Schwachstellen**: die bekannten Schwachstellen der Versionen im Einsatz und die Server und Anwendungen, die sie erreichen. Siehe [Schwachstellen](vulnerabilities.md).
 - **Administrationszonen**: die Verzeichnisdienste mit ihrer Zone und die Server, die eine Verzeichnistechnologie außerhalb der sensibelsten Zone tragen. Siehe [Administrationszonen](administration-view.md).

@@ -24,10 +24,10 @@ The page has two tabs:
 
 On the **Lists** tab, the **Classifications and continuity** editor sits at the top. Below it, lists are grouped into four collapsible sections:
 
-1. **Locations** - Lists used when creating or editing locations.
-2. **Servers & connections** - Lists used for servers, connections, and related risk/endpoint data.
-3. **Apps, services & interfaces** - Lists used across applications, app instances, interfaces, and bindings.
-4. **Incidents** - Lists used by the incident register.
+1. **Locations**: Lists used when creating or editing locations.
+2. **Servers & connections**: Lists used for servers, connections, and related risk/endpoint data.
+3. **Apps, services & interfaces**: Lists used across applications, app instances, interfaces, and bindings.
+4. **Incidents**: Lists used by the incident register.
 
 The lists of the technologies are in two sections: **Technology families** and **Administration zones** under **Servers & connections**, **Hosting types** under **Locations**.
 
@@ -37,7 +37,7 @@ Within a section, lists are sorted by name. Each list appears as an expandable p
 
 Each list has its own controls at the top:
 
-- **Add item** - Inserts a new row at the top of the list, focused and ready to type. Its name field shows an example for that list.
+- **Add item**: Inserts a new row at the top of the list, focused and ready to type. Its name field shows an example for that list.
 - Edits save automatically about a second and a half after your last change, once every row is valid. A saving indicator shows next to the list.
 
 For long lists (more than 25 rows), the table virtualizes rows, showing about 20 at a time with smooth scrolling and sticky headers.
@@ -145,7 +145,7 @@ A two-level catalog (category and entry) of connection protocols, with typical p
 **Where used**:
 - Connections workspace → **Connection Type** selector
 
-The **Typical ports** field is free text - you can enter single ports (`443`), lists (`80, 443`), ranges (`9101-9103`), or placeholders like `multiple` or `specify`.
+The **Typical ports** field is free text: you can enter single ports (`443`), lists (`80, 443`), ranges (`9101-9103`), or placeholders like `multiple` or `specify`.
 
 Default categories include: Application, Authentication, Backup, Database, Email, File Sharing, File Transfer, Messaging, Monitoring, Network Services, Remote Access, Replication, Storage, VPN / Tunnel, Generic.
 
@@ -167,8 +167,8 @@ Hover the **Forest**, **Number of accounts** and **Number of computers** headers
 - **IT Landscape > Administration zones**: domains grouped by forest, with their trusts, counts and domain controllers. See [Administration zones](administration-view.md#directory-services-and-domains).
 
 **System entries** (cannot be modified or deleted):
-- **Workgroup** - For standalone assets not joined to a domain
-- **N/A** - For asset types where domain membership doesn't apply (e.g., network devices, racks)
+- **Workgroup**: For standalone assets not joined to a domain
+- **N/A**: For asset types where domain membership doesn't apply (e.g., network devices, racks)
 
 **Auto-fill behavior**: When adding a new domain, the DNS suffix auto-fills from the name you enter until you edit it yourself.
 
@@ -399,7 +399,7 @@ Categories used to classify entries in the incident register.
 
 ## How changes affect existing data
 
-- **Existing records keep their value** - Renaming only changes what users see, not the underlying data.
+- **Existing records keep their value**: Renaming only changes what users see, not the underlying data.
 - **Values marked No longer offered**:
   - Remain valid for records that already use them.
   - Are hidden from dropdowns when creating new records.
@@ -441,8 +441,8 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 
 ## Tips
 
-- **Align names with your terminology** - Review the defaults and rename values to match how your organization talks about these concepts. Records keep their link to the value; only the name changes.
-- **Retire gradually** - When transitioning away from a value, mark it **No longer offered** rather than removing it. This keeps historical data intact while steering users toward new options.
-- **Coordinate data classes with security** - Changes to data classes should align with your information security policies. Discuss with compliance before adding or renaming classification levels.
-- **Use typical ports as documentation** - The **Typical ports** field of connection types is informational. Fill it in to help users understand what ports each connection type commonly uses.
-- **Tune map readability with tiers** - Keep the graph tiers of entities and server roles aligned with your architecture layers (edge, app, data) for clearer Connection Map layouts.
+- **Align names with your terminology**: Review the defaults and rename values to match how your organization talks about these concepts. Records keep their link to the value; only the name changes.
+- **Retire gradually**: When transitioning away from a value, mark it **No longer offered** rather than removing it. This keeps historical data intact while steering users toward new options.
+- **Coordinate data classes with security**: Changes to data classes should align with your information security policies. Discuss with compliance before adding or renaming classification levels.
+- **Use typical ports as documentation**: The **Typical ports** field of connection types is informational. Fill it in to help users understand what ports each connection type commonly uses.
+- **Tune map readability with tiers**: Keep the graph tiers of entities and server roles aligned with your architecture layers (edge, app, data) for clearer Connection Map layouts.

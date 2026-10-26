@@ -24,10 +24,10 @@ La página tiene dos pestañas:
 
 En la pestaña **Listas**, el editor **Clasificaciones y continuidad** está en la parte superior. Debajo, las listas se agrupan en cuatro secciones plegables:
 
-1. **Ubicaciones** - Listas utilizadas al crear o editar ubicaciones.
-2. **Servidores y conexiones** - Listas utilizadas para servidores, conexiones y datos de riesgo/endpoint relacionados.
-3. **Aplicaciones, servicios e interfaces** - Listas utilizadas en aplicaciones, instancias de aplicación, interfaces y enlaces.
-4. **Incidentes** - Listas utilizadas por el registro de incidentes.
+1. **Ubicaciones**: Listas utilizadas al crear o editar ubicaciones.
+2. **Servidores y conexiones**: Listas utilizadas para servidores, conexiones y datos de riesgo/endpoint relacionados.
+3. **Aplicaciones, servicios e interfaces**: Listas utilizadas en aplicaciones, instancias de aplicación, interfaces y enlaces.
+4. **Incidentes**: Listas utilizadas por el registro de incidentes.
 
 Las listas de las tecnologías están en dos secciones: **Familias de tecnologías** y **Zonas de administración** en **Servidores y conexiones**, **Tipos de alojamiento** en **Ubicaciones**. Otras pantallas llaman a esta página los ajustes de TI.
 
@@ -37,7 +37,7 @@ Dentro de una sección, las listas se ordenan por nombre. Cada lista aparece com
 
 Cada lista tiene sus propios controles en la parte superior:
 
-- **Agregar elemento** - Inserta una nueva fila en la parte superior de la lista, enfocada y lista para escribir. Su campo de nombre muestra un ejemplo propio de esa lista.
+- **Agregar elemento**: Inserta una nueva fila en la parte superior de la lista, enfocada y lista para escribir. Su campo de nombre muestra un ejemplo propio de esa lista.
 - Las ediciones se guardan automáticamente alrededor de un segundo y medio después de su último cambio, una vez que todas las filas son válidas. Un indicador de guardado se muestra junto a la lista.
 
 Para listas largas (más de 25 filas), la tabla virtualiza filas, mostrando unas 20 a la vez con desplazamiento suave y encabezados fijos.
@@ -145,7 +145,7 @@ Un catálogo de dos niveles (categoría y entrada) de protocolos de conexión, c
 **Dónde se usa**:
 - Espacio de trabajo de Conexiones → selector de **Tipo de conexión**
 
-El campo **Puertos típicos** es texto libre - puede introducir puertos individuales (`443`), listas (`80, 443`), rangos (`9101-9103`) o marcadores de posición como `multiple` o `specify`.
+El campo **Puertos típicos** es texto libre: puede introducir puertos individuales (`443`), listas (`80, 443`), rangos (`9101-9103`) o marcadores de posición como `multiple` o `specify`.
 
 Las categorías predeterminadas incluyen: Aplicación, Autenticación, Respaldo, Base de datos, Correo, Compartir archivos, Transferencia de archivos, Mensajería, Monitorización, Servicios de red, Acceso remoto, Replicación, Almacenamiento, VPN / Túnel, Genérico.
 
@@ -167,8 +167,8 @@ Pase el cursor sobre los encabezados **Bosque**, **Número de cuentas** y **Núm
 - **Panorama IT > Zonas de administración**: dominios agrupados por bosque, con sus confianzas, recuentos y controladores de dominio. Consulte [Zonas de administración](administration-view.md#servicios-de-directorio-y-dominios).
 
 **Entradas del sistema** (no pueden modificarse ni eliminarse):
-- **Workgroup** - Para activos independientes no unidos a un dominio
-- **N/A** - Para tipos de activo donde la pertenencia a dominio no aplica (p. ej., dispositivos de red, racks)
+- **Workgroup**: Para activos independientes no unidos a un dominio
+- **N/A**: Para tipos de activo donde la pertenencia a dominio no aplica (p. ej., dispositivos de red, racks)
 
 **Comportamiento de auto-relleno**: Al añadir un nuevo dominio, el sufijo DNS se auto-rellena a partir del nombre que introduzca hasta que usted lo edite.
 
@@ -399,7 +399,7 @@ Categorías utilizadas para clasificar las entradas del registro de incidentes.
 
 ## Cómo afectan los cambios a los datos existentes
 
-- **Los registros existentes conservan su valor** - Renombrar solo cambia lo que ven los usuarios, no los datos subyacentes.
+- **Los registros existentes conservan su valor**: Renombrar solo cambia lo que ven los usuarios, no los datos subyacentes.
 - **Valores marcados como Dejar de proponer**:
   - Permanecen válidos para registros que ya los utilizan.
   - Se ocultan de los desplegables al crear nuevos registros.
@@ -441,8 +441,8 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 
 ## Consejos
 
-- **Alinee los nombres con su terminología** - Revise los valores predeterminados y renombre los valores para que coincidan con cómo su organización habla de estos conceptos. Los registros conservan su vínculo con el valor; solo cambia el nombre.
-- **Retire gradualmente** - Al dejar de usar un valor, márquelo como **Dejar de proponer** en lugar de eliminarlo. Esto mantiene los datos históricos intactos mientras dirige a los usuarios hacia nuevas opciones.
-- **Coordine las Clases de datos con seguridad** - Los cambios en las Clases de datos deben alinearse con sus políticas de seguridad de la información. Consulte con conformidad antes de añadir o renombrar niveles de clasificación.
-- **Use los puertos típicos como documentación** - El campo **Puertos típicos** de los tipos de conexión es informativo. Complételo para ayudar a los usuarios a entender qué puertos usa comúnmente cada tipo de conexión.
-- **Ajuste la legibilidad del mapa con niveles** - Mantenga los niveles del grafo de las entidades y los roles de servidor alineados con sus capas de arquitectura (borde, aplicación, datos) para diseños más claros del Mapa de conexiones.
+- **Alinee los nombres con su terminología**: Revise los valores predeterminados y renombre los valores para que coincidan con cómo su organización habla de estos conceptos. Los registros conservan su vínculo con el valor; solo cambia el nombre.
+- **Retire gradualmente**: Al dejar de usar un valor, márquelo como **Dejar de proponer** en lugar de eliminarlo. Esto mantiene los datos históricos intactos mientras dirige a los usuarios hacia nuevas opciones.
+- **Coordine las Clases de datos con seguridad**: Los cambios en las Clases de datos deben alinearse con sus políticas de seguridad de la información. Consulte con conformidad antes de añadir o renombrar niveles de clasificación.
+- **Use los puertos típicos como documentación**: El campo **Puertos típicos** de los tipos de conexión es informativo. Complételo para ayudar a los usuarios a entender qué puertos usa comúnmente cada tipo de conexión.
+- **Ajuste la legibilidad del mapa con niveles**: Mantenga los niveles del grafo de las entidades y los roles de servidor alineados con sus capas de arquitectura (borde, aplicación, datos) para diseños más claros del Mapa de conexiones.
