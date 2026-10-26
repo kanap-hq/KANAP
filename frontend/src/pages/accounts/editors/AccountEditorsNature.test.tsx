@@ -15,6 +15,10 @@ vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: 
 
 import api from '../../../api';
 import { accountFormSchema } from '../../forms/AccountForm';
+import enMasterData from '../../../locales/en/master-data.json';
+import frMasterData from '../../../locales/fr/master-data.json';
+import deMasterData from '../../../locales/de/master-data.json';
+import esMasterData from '../../../locales/es/master-data.json';
 import AccountCreateEditor, { type AccountCreateEditorHandle } from './AccountCreateEditor';
 import AccountOverviewEditor, { type AccountOverviewEditorHandle } from './AccountOverviewEditor';
 
@@ -164,5 +168,50 @@ describe('platform admin template account editors: Used for', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(BASE, expect.objectContaining({
       account_number: 6100, account_name: 'Software subscriptions', nature: 'opex',
     })));
+  });
+});
+
+const CHART_REQUIRED_KEY = 'master-data:formSchemas.account.chartOfAccountsRequired';
+
+describe('account editors: chart of accounts is required', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.history.replaceState(null, '', '/');
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `${BASE}/2050`) return { data: { ...TEMPLATE_ACCOUNT, coa_id: '' } };
+      if (url === '/chart-of-accounts') return { data: { items: CHARTS } };
+      return { data: {} };
+    });
+    mocked.patch.mockResolvedValue({ data: {} });
+    mocked.post.mockResolvedValue({ data: { account_number: 6100 } });
+  });
+
+  it('keeps the message in the locale files, in each language', () => {
+    expect(enMasterData.formSchemas.account.chartOfAccountsRequired).toBe('Chart of accounts is required');
+    expect(frMasterData.formSchemas.account.chartOfAccountsRequired).toBe('Le plan comptable est requis');
+    expect(deMasterData.formSchemas.account.chartOfAccountsRequired).toBe('Kontenplan ist erforderlich');
+    expect(esMasterData.formSchemas.account.chartOfAccountsRequired).toBe('El plan de cuentas es obligatorio');
+  });
+
+  it('shows the locale message when a new account has no chart', async () => {
+    const ref = React.createRef<AccountCreateEditorHandle>();
+    wrap(<AccountCreateEditor ref={ref} basePath={BASE} />);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/chart-of-accounts', expect.anything()));
+    fireEvent.change(screen.getByLabelText(/^Account Number/), { target: { value: '6100' } });
+    fireEvent.change(screen.getByLabelText(/^Account Name/), { target: { value: 'Cash' } });
+    await ref.current!.save().catch(() => undefined);
+    expect(await screen.findByText(CHART_REQUIRED_KEY)).toBeInTheDocument();
+    expect(screen.queryByText('Chart of Accounts is required')).not.toBeInTheDocument();
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('shows the locale message when an existing account has no chart', async () => {
+    const ref = React.createRef<AccountOverviewEditorHandle>();
+    wrap(<AccountOverviewEditor ref={ref} id="2050" basePath={BASE} />);
+    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex'));
+    await ref.current!.save().catch(() => undefined);
+    expect(await screen.findByText(CHART_REQUIRED_KEY)).toBeInTheDocument();
+    expect(screen.queryByText('Chart of Accounts is required')).not.toBeInTheDocument();
+    expect(mocked.patch).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
-import React, { forwardRef, useEffect, useImperativeHandle } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Stack, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Alert, Stack, TextField, FormControl, FormHelperText, InputLabel, Select, MenuItem } from '@mui/material';
 import { Controller } from 'react-hook-form';
 import api from '../../../api';
 import useZodForm from '../../../hooks/useZodForm';
@@ -38,10 +38,6 @@ const DEFAULT_VALUES: AccountCreateFormValues = {
   coa_id: '',
 };
 
-const accountCreateFormSchema = accountFormSchema.extend({
-  coa_id: z.string().min(1, 'Chart of Accounts is required'),
-});
-
 function normalizeEmptyToNull<T extends Record<string, any>>(obj: T): T {
   const out: any = Array.isArray(obj) ? [] : {};
   Object.entries(obj).forEach(([k, v]) => {
@@ -65,9 +61,15 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
   const [saving, setSaving] = React.useState(false);
   const { t } = useTranslation(['master-data', 'common']);
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const schema = useMemo(
+    () => accountFormSchema.extend({
+      coa_id: z.string().min(1, t('master-data:formSchemas.account.chartOfAccountsRequired')),
+    }),
+    [t],
+  );
 
   const form = useZodForm<AccountCreateFormValues>({
-    schema: accountCreateFormSchema,
+    schema,
     defaultValues: DEFAULT_VALUES,
   });
   const { register, control, formState, handleSubmit, setValue, watch, reset } = form;
@@ -141,19 +143,19 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
   return (
     <Stack spacing={2}>
       {!!serverError && <Alert severity="error">{serverError}</Alert>}
-      <FormControl fullWidth>
+      <FormControl fullWidth error={!!err.coa_id}>
         <InputLabel id="coa-select-label" required>Chart of Accounts</InputLabel>
         <Controller
           control={control}
           name="coa_id"
-          rules={{ required: 'Chart of Accounts is required' }}
+          rules={{ required: t('master-data:formSchemas.account.chartOfAccountsRequired') }}
           render={({ field }) => (
             <Select
               labelId="coa-select-label"
               label="Chart of Accounts"
               value={field.value ?? ''}
               onChange={(e) => field.onChange(e.target.value)}
-              error={!!(err as any).coa_id}
+              error={!!err.coa_id}
             >
               <MenuItem value="" disabled>
                 {loadingCoas ? 'Loading…' : 'Select a CoA'}
@@ -164,6 +166,7 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
             </Select>
           )}
         />
+        {err.coa_id?.message && <FormHelperText>{err.coa_id.message as string}</FormHelperText>}
       </FormControl>
       {loadError && <Alert severity="error">{loadError}</Alert>}
 

@@ -1111,7 +1111,8 @@
     "account": {
       "accountNumberRequired": "Account number is required",
       "accountNumberTooLong": "Use at most {{max}} digits",
-      "accountNameRequired": "Account name is required"
+      "accountNameRequired": "Account name is required",
+      "chartOfAccountsRequired": "Chart of accounts is required"
     }
   }
 }

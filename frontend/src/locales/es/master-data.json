@@ -1111,7 +1111,8 @@
     "account": {
       "accountNumberRequired": "El número de cuenta es obligatorio",
       "accountNumberTooLong": "Utilice como máximo {{max}} dígitos",
-      "accountNameRequired": "El nombre de la cuenta es obligatorio"
+      "accountNameRequired": "El nombre de la cuenta es obligatorio",
+      "chartOfAccountsRequired": "El plan de cuentas es obligatorio"
     }
   }
 }
