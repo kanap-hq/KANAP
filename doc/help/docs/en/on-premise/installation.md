@@ -261,3 +261,46 @@ server {
 5. Invite additional users (if email is configured)
 
 **About the administrator account.** KANAP creates it at the first start from `ADMIN_EMAIL` and `ADMIN_PASSWORD`, and only then. Changing those two lines later changes nothing while an active administrator exists: change the password in the application. If no active administrator remains, the next start restores the `ADMIN_EMAIL` account as an enabled administrator and keeps its existing password. `ADMIN_PASSWORD` must be a value of your own, 12 characters or more: `openssl rand -base64 18` generates one. An example value or a shorter one makes the API print a `[SECURITY]` warning at each start until the account's password is changed. See [Configuration](configuration.md#required-admin-credentials).
+
+## Optional: data-scoped access { #optional-data-scoped-access }
+
+[Data access](../data-access.md) limits a person to part of the budget and the contracts, by company or by cost center. Without this step, everyone works with all data, as in earlier versions, and **Limited to** stays greyed out in the user window. Skip it if nobody needs to be limited.
+
+The step creates a PostgreSQL role, `kanap_data_limited`, that KANAP takes for the requests of limited people. It runs once per PostgreSQL server, by a superuser or a role with `CREATEROLE`. It gives the application role the right to take the role without inheriting its rights. KANAP then sets the permissions and access rules of that role in its database by itself, at each start and each upgrade.
+
+**1. Run the script.** It is in the repository. Pass the application role of `DATABASE_URL` as `app_role`. With the [installation example](installation-example.md) (role and database `kanap`, PostgreSQL on the server):
+
+```bash
+cd /opt/kanap
+sudo -u postgres psql -X -v ON_ERROR_STOP=1 -v app_role=kanap -v mode=install \
+  -f /opt/kanap/infra/scripts/data-access-role.sql -d kanap
+```
+
+With a managed PostgreSQL service, run the same `psql` command with the administrator account of the service, from any machine that reaches the database.
+
+The script ends with a `data-access-role: final state` table. On PostgreSQL 16 and later it reads `limited_role_exists` = `t`, `app_is_member` = `t`, `membership_inherit` = `false`, `membership_set` = `true` and `app_inherits_limited` = `f`. Running it again changes nothing.
+
+On PostgreSQL 15, the script also makes the application role stop inheriting the rights of other roles, and it must run on each database that role owns. The header of the script explains it and gives the loop to use.
+
+**2. Restart the API,** at a quiet time: at its start it sets the permissions and access rules of the role.
+
+```bash
+cd /opt/kanap
+docker compose -f infra/compose.onprem.yml restart api
+docker compose -f infra/compose.onprem.yml logs api | grep DATA-ACCESS
+```
+
+The log reads `[DATA-ACCESS] data-scoped access available`. When it lists what is missing instead, read the lines above it. When the API waited too long for a table in use, it says so and tries again at its next start: restart it again a little later.
+
+**Remove it.** First give **All data** back to the limited people (**Admin > Data access** lists them): while the role is missing, they are refused. Then run the script with `mode=uninstall`, as a superuser, and restart the API:
+
+```bash
+cd /opt/kanap
+sudo -u postgres psql -X -v ON_ERROR_STOP=1 -v app_role=kanap -v mode=uninstall \
+  -f /opt/kanap/infra/scripts/data-access-role.sql -d kanap
+docker compose -f infra/compose.onprem.yml restart api
+```
+
+The script removes the permissions and access rules of the role in the database, then the role itself. When other databases on the server still hold something for the role, it names them: run it on each of them.
+
+A database restore can need the step again: see [Restore](operations.md#restore).
