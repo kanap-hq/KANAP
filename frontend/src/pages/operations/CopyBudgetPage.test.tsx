@@ -264,7 +264,11 @@ describe('CopyBudgetPage', () => {
     expect(cell(licences, 'amountsStatus')).toBe('operations.copyBudget.status.toCopy');
     expect(cell(servers, 'amountsStatus')).toBe('operations.copyBudget.status.destinationFilled');
     // An automatic allocation counts as empty: the preview says its method is replaced.
-    expect(cell(licences, 'allocationsStatus')).toBe('operations.copyBudget.status.replaces {"method":"IT users"}');
+    expect(cell(licences, 'allocationSource')).toBe('ops:opex.allocations.headcount');
+    expect(cell(licences, 'allocationCurrent')).toBe('ops:opex.allocations.itUsers');
+    expect(cell(licences, 'allocationAfter')).toBe('ops:opex.allocations.headcount');
+    expect(cell(servers, 'allocationSource')).toBe('ops:opex.allocations.manualByPct');
+    expect(cell(licences, 'allocationsStatus')).toBe('operations.copyBudget.status.replaces {"method":"ops:opex.allocations.itUsers"}');
     expect(cell(servers, 'allocationsStatus')).toBe(`operations.copyBudget.status.destinationAllocation {"year":${Y + 1}}`);
     expect(cell(servers, 'afterValue')).toBe('300');
     expect(screen.getByText(`operations.copyBudget.methodsReplaced {"count":1,"year":${Y + 1}}`)).toBeInTheDocument();
