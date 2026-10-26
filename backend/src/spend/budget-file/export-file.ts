@@ -1,5 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
-import { CsvLanguage, formatCsvAmount, formatCsvDate, formatCsvEndOfValidity, writeCsv } from '../../common/csv-sheet';
+import { CsvLanguage, formatCsvAmount, formatCsvDate, writeCsv } from '../../common/csv-sheet';
 import { ExportFileFormat, writeXlsx, XLSX_CONTENT_TYPE, XlsxCell } from '../../common/xlsx';
 import { assertBudgetYearsWithinBounds } from '../budget-list/budget-list.service';
 import { exportHeaders, FILE_COLUMNS, isFileColumn, measureOfColumn } from './columns';
@@ -168,9 +168,6 @@ function writeAmount(
 function yearTotal(months: Array<{ cents: bigint | null }>): bigint {
   return months.reduce((sum, month) => sum + (month.cents ?? 0n), 0n);
 }
-
-/** An end of validity is written as its calendar day (`formatCsvEndOfValidity`). */
-export const formatEnd = formatCsvEndOfValidity;
 
 /** The day `formatCsvEndOfValidity` writes: the UTC day of the stored instant. Empty when there is none. */
 function endOfValidityCell(iso: string | null): XlsxCell {
