@@ -79,6 +79,46 @@ type ViewData = Pick<DailyRate, 'sortColumn' | 'detached' | 'noDetail' | 'monthl
 const money = (value: unknown) => (value == null ? '' : formatAmount(value));
 
 /**
+ * Domain of the value axis. `formatAmount` rounds to a whole number, and AG Charts turns a series
+ * that never rises above zero into the domain 0..1 with fractional ticks, so the axis reads
+ * "0 0 0 1 1 1". A series that stays at zero keeps a single 0 tick (the axis minimum has to stay
+ * strictly below its maximum, so the domain stays 0..1). Any other series uses a 1-2-5 step of at
+ * least 1: two ticks then never round to the same label.
+ */
+function wholeAmountAxis(values: readonly unknown[]): { min: number; max: number; nice: false; tick: { values: number[] } } {
+  let low = 0;
+  let high = 0;
+  for (const value of values) {
+    if (value == null || value === '') continue;
+    const n = Number(value);
+    if (!Number.isFinite(n)) continue;
+    if (n < low) low = n;
+    if (n > high) high = n;
+  }
+  if (high === 0 && low === 0) return { min: 0, max: 1, nice: false, tick: { values: [0] } };
+  const step = wholeAmountStep(high - low);
+  const start = Math.floor(low / step) * step;
+  const stop = Math.ceil(high / step) * step;
+  const count = Math.round((stop - start) / step);
+  return {
+    min: start,
+    max: stop,
+    nice: false,
+    tick: { values: Array.from({ length: count + 1 }, (_, index) => start + index * step) },
+  };
+}
+
+/** A 1-2-5 step across about five intervals, never below 1 (the rounding of `formatAmount`). */
+function wholeAmountStep(span: number): number {
+  const raw = span / 5;
+  const power = 10 ** Math.floor(Math.log10(raw));
+  const scaled = raw / power;
+  const multiplier = scaled <= 1 ? 1 : scaled <= 2 ? 2 : scaled <= 5 ? 5 : 10;
+  const step = multiplier * power;
+  return step >= 1 ? step : 1;
+}
+
+/**
  * Days grouped like the amounts next to them (`formatAmount`: a space between thousands), with only the
  * decimals the value needs, two at most (`1 341.7`); blank when there are none.
  */
@@ -222,6 +262,7 @@ export default function CostPerFteReport() {
   ], [data, t]);
   const chartOptions = useMemo(() => {
     const labelOf = new Map(chartCategories.map((category) => [category.key, category.label]));
+    const valueAxis = wholeAmountAxis(chartCategories.flatMap((category) => category.cells.map((cell) => cell?.[ratioKind])));
     return {
       title: { text: chartTitle },
       data: chartCategories.map((category) => ({
@@ -237,6 +278,7 @@ export default function CostPerFteReport() {
           position: 'bottom',
           title: { text: valueHeaders[ratioKind] },
           label: { formatter: ({ value }: { value: number }) => money(value) },
+          ...valueAxis,
         },
       ],
       series: columns.map((column, index) => ({
