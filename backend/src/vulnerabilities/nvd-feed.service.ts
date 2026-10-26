@@ -240,6 +240,22 @@ export class NvdFeedService implements OnModuleInit {
    * match is running for them: the rows are written only when the match commits.
    */
   private readonly matchingNow = new Map<string, Set<string>>();
+  /**
+   * Products whose on-demand collection has not finished. A record that carries one stays pending
+   * through that collection, including a retry of a product whose previous attempt failed.
+   */
+  private readonly demandOpen = new Set<string>();
+  /**
+   * Products the scheduled run has started and not matched yet. Cleared when `run` ends, after the
+   * match. A direct `collect` (the specs) may leave some: that instance does not serve the records.
+   */
+  private readonly scheduledOpen = new Set<string>();
+  /**
+   * Products taken out of `rematchProducts` whose follow-up match has not finished. The collection
+   * has already set `last_success_at`: without this set the record would say nothing is to review
+   * for the moment between the two.
+   */
+  private readonly rematchActive = new Set<string>();
   private draining = false;
   /** How long the queue waits between two reads of the transactions' status. */
   drainDelayMs = 200;
@@ -307,6 +323,15 @@ export class NvdFeedService implements OnModuleInit {
   /** The scheduled run: collect the NVD, then CVE.org, match every tenant, stamp the signals, then tell the owners what is new. */
   async run(runtime: FeedRuntime = defaultRuntime()): Promise<FeedSummary> {
     this.raisedCves = new Set();
+    try {
+      return await this.runOnce(runtime);
+    } finally {
+      // The match inside `runOnce` has committed (or the run failed): these products are no longer in progress.
+      this.scheduledOpen.clear();
+    }
+  }
+
+  private async runOnce(runtime: FeedRuntime): Promise<FeedSummary> {
     await this.markNvdAttempt();
     // The rows detected from now on, whatever writes them, are this run's news (notifications).
     const [{ started }]: Array<{ started: Date }> = await this.dataSource.query(`SELECT clock_timestamp() AS started`);
@@ -441,6 +466,15 @@ export class NvdFeedService implements OnModuleInit {
     return Array.from(ids);
   }
 
+  /**
+   * CPE products whose first collection, or the match that follows it, has not finished. The
+   * record's vulnerabilities route stays pending for a link that carries one (`VulnerabilityReachService`),
+   * including after `last_success_at` is set and before that match commits.
+   */
+  productsAwaitingCollection(): string[] {
+    return Array.from(new Set([...this.demandOpen, ...this.scheduledOpen, ...this.rematchProducts, ...this.rematchActive]));
+  }
+
   /** Keeps a technology visible as pending from the moment it leaves the queue until its match ends. */
   private markMatching(tenantId: string, technologyId: string): void {
     const ids = this.matchingNow.get(tenantId) ?? new Set<string>();
@@ -485,8 +519,21 @@ export class NvdFeedService implements OnModuleInit {
           || (status.get(item.txid) === 'in progress' && Date.now() - item.queuedAt < 10 * 60_000));
         for (const item of ready) {
           try {
-            await withTenant(this.dataSource, item.tenantId, (mg) => this.matcher.matchTenant(mg, item.tenantId, item.technologyId));
-            const fresh = await this.neverCollected(item.products);
+            // A link or a version change names no product. The technology's own products still
+            // need their first collection: the match above ran against a cache that does not have
+            // them yet, and the record stays pending until that collection and its match finish.
+            let products = item.products;
+            await withTenant(this.dataSource, item.tenantId, async (mg) => {
+              await this.matcher.matchTenant(mg, item.tenantId, item.technologyId);
+              if (products.length === 0) {
+                const [row]: Array<{ cpe_products: string[] | null }> = await mg.query(
+                  `SELECT cpe_products FROM technologies WHERE tenant_id = $1 AND id = $2`,
+                  [item.tenantId, item.technologyId],
+                );
+                products = Array.isArray(row?.cpe_products) ? row.cpe_products : [];
+              }
+            });
+            const fresh = await this.neverCollected(products);
             if (fresh.length > 0) void this.collectNew(item.tenantId, fresh);
           } catch (error: any) {
             this.logger.warn(`[${NVD_FEED_TASK_NAME}] matching of technology ${item.technologyId} after a change: ${String(error?.message ?? error).slice(0, 300)}`);
@@ -591,30 +638,47 @@ export class NvdFeedService implements OnModuleInit {
     const allowed = wanted.slice(0, this.takeOnDemandQuota(tenantId, wanted.length));
     const summary: FeedSummary = { products: allowed.length, requests: 0, cves: 0, failed_products: [], errors: [], tenants_matched: 0, rows_added: 0, rows_removed: 0 };
     const collected: string[] = [];
-    for (const product of allowed) {
-      let serviceDown = false;
-      let done = false;
-      await this.withProductLock(product, true, async () => {
-        // Collected by a run or by another request while this one waited.
-        if ((await this.neverCollected([product])).length === 0) {
-          done = true;
-          return;
-        }
+    // Open before the first request: a record read during the collection says the search is running,
+    // and a throw cannot leave a product open (the finally drops the ones this call started).
+    for (const product of allowed) this.demandOpen.add(product);
+    try {
+      for (const product of allowed) {
+        let serviceDown = false;
+        let done = false;
+        let failed = false;
         try {
-          await this.collectProduct(product, runtime, summary);
-          done = true;
+          await this.withProductLock(product, true, async () => {
+            // Collected by a run or by another request while this one waited.
+            if ((await this.neverCollected([product])).length === 0) {
+              done = true;
+              return;
+            }
+            try {
+              await this.collectProduct(product, runtime, summary);
+              done = true;
+            } catch (error: any) {
+              failed = true;
+              await this.recordFailure(product, error);
+              serviceDown = serviceFailure(error);
+              this.logger.warn(`[${NVD_FEED_TASK_NAME}] ${product} on demand: ${String(error?.message ?? error).slice(0, 300)}`);
+            }
+          });
         } catch (error: any) {
-          await this.recordFailure(product, error);
-          serviceDown = serviceFailure(error);
+          failed = true;
           this.logger.warn(`[${NVD_FEED_TASK_NAME}] ${product} on demand: ${String(error?.message ?? error).slice(0, 300)}`);
         }
-      });
-      if (done) collected.push(product);
-      if (serviceDown) break;
+        // A failure is no longer "in progress": the record says the search could not be completed.
+        // A success stays open until `noteRematch` (below) hands it to the follow-up match.
+        if (failed || !done) this.demandOpen.delete(product);
+        if (done) collected.push(product);
+        if (serviceDown) break;
+      }
+      // The CVE just cached take the signals already downloaded before the rematch reads them.
+      await this.applyKnownSignals();
+      this.noteRematch(tenantId, collected);
+    } finally {
+      for (const product of allowed) this.demandOpen.delete(product);
     }
-    // The CVE just cached take the signals already downloaded before the rematch reads them.
-    await this.applyKnownSignals();
-    this.noteRematch(tenantId, collected);
   }
 
   /** Remembers a workspace, and products whose first collection succeeded, for `flushRematch`. */
@@ -636,20 +700,26 @@ export class NvdFeedService implements OnModuleInit {
     const requesters = Array.from(this.rematchTenants);
     this.rematchProducts.clear();
     this.rematchTenants.clear();
-    if (products.length === 0) return;
-    let carriers: string[] = [];
+    // Moved before the first await: a record read during the match still sees the products.
+    for (const product of products) this.rematchActive.add(product);
     try {
-      carriers = await this.tenantsCarrying(products);
-    } catch (error: any) {
-      this.logger.warn(`[${NVD_FEED_TASK_NAME}] workspaces carrying a product just collected: ${String(error?.message ?? error).slice(0, 300)}`);
-    }
-    const tenants = Array.from(new Set([...requesters, ...carriers])).sort();
-    for (const tenantId of tenants) {
+      if (products.length === 0) return;
+      let carriers: string[] = [];
       try {
-        await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
+        carriers = await this.tenantsCarrying(products);
       } catch (error: any) {
-        this.logger.warn(`[${NVD_FEED_TASK_NAME}] matching of tenant ${tenantId} after a first collection: ${String(error?.message ?? error).slice(0, 300)}`);
+        this.logger.warn(`[${NVD_FEED_TASK_NAME}] workspaces carrying a product just collected: ${String(error?.message ?? error).slice(0, 300)}`);
       }
+      const tenants = Array.from(new Set([...requesters, ...carriers])).sort();
+      for (const tenantId of tenants) {
+        try {
+          await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
+        } catch (error: any) {
+          this.logger.warn(`[${NVD_FEED_TASK_NAME}] matching of tenant ${tenantId} after a first collection: ${String(error?.message ?? error).slice(0, 300)}`);
+        }
+      }
+    } finally {
+      for (const product of products) this.rematchActive.delete(product);
     }
   }
 
@@ -743,11 +813,18 @@ export class NvdFeedService implements OnModuleInit {
         continue;
       }
       try {
+        // Open for the attempt: a product whose previous attempt failed stays "searching" while
+        // this one runs, instead of the record saying the search could not be completed.
+        this.scheduledOpen.add(product);
         // Under the product's lock: a collection on demand of the same product is not run twice.
         const done = await this.withProductLock(product, false, () => this.collectProduct(product, runtime, summary));
-        if (!done) continue; // being collected on demand right now
+        if (!done) {
+          this.scheduledOpen.delete(product); // being collected on demand right now
+          continue;
+        }
         failedInARow = 0;
       } catch (error: any) {
+        this.scheduledOpen.delete(product);
         failedInARow = serviceFailure(error) ? failedInARow + 1 : 0;
         const message = String(error?.message ?? error).slice(0, 500);
         summary.failed_products.push(product);
