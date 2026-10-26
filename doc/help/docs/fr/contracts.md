@@ -278,7 +278,7 @@ Chaque jour à 07:30 UTC, KANAP crée une tâche pour chaque contrat qui attend 
 - **Décider du renouvellement de** le contrat, à échéance de la date limite de résiliation, pour un contrat à reconduction tacite
 - **Décider de renouveler ou de laisser finir** le contrat, à échéance de sa fin, pour un contrat sans reconduction
 
-La tâche est assignée au responsable du contrat, dans sa langue, avec l'e-mail d'assignation habituel. Il y a une tâche par contrat et par terme. Une tâche supprimée n'est pas recréée pour ce terme. Un contrat sans responsable ne reçoit pas de tâche tant qu'aucun n'est renseigné.
+La tâche est assignée au responsable du contrat, avec l'e-mail d'assignation habituel. Son texte est dans la langue du responsable, ou dans la langue de l'espace de travail lorsque le responsable n'en a pas choisi. Il y a une tâche par contrat et par terme. Une tâche supprimée n'est pas recréée pour ce terme. Un contrat sans responsable ne reçoit pas de tâche tant qu'aucun n'est renseigné.
 
 L'encart de décision et la tâche restent alignés : une décision prise dans l'encart ferme la tâche, avec la justification en commentaire.
 

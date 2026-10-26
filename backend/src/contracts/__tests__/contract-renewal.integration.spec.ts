@@ -30,7 +30,8 @@ import { addDaysYmd, addMonthsYmd } from '../contract-terms';
 // Lot CR2: a renewal decided leaves "to decide" (list state, filter, count, contract) for the term
 // decided, and comes back with its undoing; a contract already renewed keeps its renewal (an edit,
 // an import) and ends with its current term through `stopRenewal`. Everything is seeded relative
-// to today, on an empty database.
+// to today, on an empty database. The task is in the owner's language, or in the tenant's
+// (`metadata.language`) when the owner never chose one.
 
 const TODAY = utcDateYmd(new Date());
 
@@ -143,6 +144,46 @@ async function testDailyRun() {
     // An owner given later: the task comes on the next run while the deadline has not passed.
     await runner.query(`UPDATE contracts SET owner_user_id = $2 WHERE id = $1`, [ids.noOwner, ownerId]);
     assert.deepEqual((await renewal.runForTenant(runner.manager, tenantId)).created.map((c) => c.contract_id), [ids.noOwner], 'created on the first run after');
+  });
+}
+
+async function testOwnerLanguage() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, ownerId, ids } = await seed(runner, 'renewal-lang');
+    await runner.query(`UPDATE tenants SET metadata = COALESCE(metadata, '{}'::jsonb) || '{"language":"fr"}'::jsonb WHERE id = $1`, [tenantId]);
+    const englishOwner = await seedUser(runner, tenantId, `renewal-lang-en-${tenantId.slice(0, 8)}@example.com`);
+    await runner.query(`UPDATE users SET locale = 'en' WHERE tenant_id = $1 AND id = $2`, [tenantId, englishOwner]);
+    const [kept] = await runner.query(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, owner_user_id, start_date, duration_months, notice_period_months,
+                              auto_renewal, yearly_amount_at_signature, currency, status)
+       SELECT tenant_id, 'Keep English', company_id, supplier_id, $2, start_date, duration_months, notice_period_months,
+              auto_renewal, yearly_amount_at_signature, currency, status
+         FROM contracts WHERE tenant_id = $3 AND id = $1 RETURNING id`,
+      [ids.decide, englishOwner, tenantId],
+    );
+    const [unset] = await runner.query(`SELECT locale FROM users WHERE tenant_id = $1 AND id = $2`, [tenantId, ownerId]);
+    assert.equal(unset.locale, null, 'the owner never chose a language');
+
+    const { renewal } = services(runner);
+    await renewal.runForTenant(runner.manager, tenantId);
+    const [french] = await decisionTasks(runner, ids.decide);
+    assert.equal(french.title, 'Décider du renouvellement de Decide soon', 'the tenant language when the owner has none');
+    const [endTask] = await decisionTasks(runner, ids.noRenewal);
+    assert.equal(endTask.title, 'Décider de renouveler ou de laisser finir No renewal', 'an end task uses the same language');
+    const [english] = await decisionTasks(runner, kept.id);
+    assert.equal(english.title, 'Decide on the renewal of Keep English', 'an owner who chose English keeps English');
+    assert.equal(english.assignee_user_id, englishOwner);
+
+    // Turning the renewal off rewrites the open task: still the tenant language, comment included.
+    await renewal.stopRenewal(ids.decide, {}, ownerId, { manager: runner.manager });
+    const [adapted] = await decisionTasks(runner, ids.decide);
+    assert.equal(adapted.id, french.id, 'the same task');
+    assert.equal(adapted.title, 'Décider de renouveler ou de laisser finir Decide soon');
+    const [comment] = await runner.query(
+      `SELECT content FROM portfolio_activities WHERE task_id = $1 AND type = 'comment' ORDER BY created_at DESC LIMIT 1`,
+      [adapted.id],
+    );
+    assert.match(comment.content, /^Reconduction tacite désactivée : le contrat prendra fin le \d{2}\/\d{2}\/\d{4}, sauf renouvellement\.$/);
   });
 }
 
@@ -563,6 +604,7 @@ async function testTenantIsolation() {
 
 runSpecs('contract-renewal.integration', [
   ['daily run', testDailyRun],
+  ['owner language', testOwnerLanguage],
   ['window setting', testWindowSetting],
   ['actions', testActions],
   ['a renewal decided leaves "to decide"', testConfirmedRenewalLeavesToDecide],
