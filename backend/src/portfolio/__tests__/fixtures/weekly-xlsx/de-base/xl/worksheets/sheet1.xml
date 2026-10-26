@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <cols><col min="6" max="6" width="12" customWidth="1"/></cols>
+  <sheetData>
+    <row r="1"><c r="A1" t="inlineStr"><is><t xml:space="preserve">Event</t></is></c><c r="B1" t="inlineStr"><is><t xml:space="preserve">Reference</t></is></c><c r="C1" t="inlineStr"><is><t xml:space="preserve">Name</t></is></c><c r="D1" t="inlineStr"><is><t xml:space="preserve">Days</t></is></c><c r="E1" t="inlineStr"><is><t xml:space="preserve">Cost</t></is></c><c r="F1" t="inlineStr"><is><t xml:space="preserve">Due</t></is></c><c r="G1" t="inlineStr"><is><t xml:space="preserve">Notes</t></is></c></row>
+    <row r="2"><c r="A2" t="inlineStr"><is><t xml:space="preserve">Created</t></is></c><c r="B2" t="inlineStr"><is><t xml:space="preserve">REQ-1</t></is></c><c r="C2" t="inlineStr"><is><t xml:space="preserve">Café &amp; &lt;crème&gt; &quot;brûlée&quot;</t></is></c><c r="D2"><v>3</v></c><c r="E2"><v>1.5</v></c><c r="F2" s="1"><v>46280</v></c><c r="G2" t="inlineStr"><is><t xml:space="preserve">plain</t></is></c></row>
+    <row r="3"><c r="A3" t="inlineStr"><is><t xml:space="preserve">Closed</t></is></c><c r="B3" t="inlineStr"><is><t xml:space="preserve">REQ-2</t></is></c><c r="C3" t="inlineStr"><is><t xml:space="preserve">L&apos;été à Noël</t></is></c><c r="D3"><v>0</v></c><c r="E3"><v>0.30000000000000004</v></c><c r="G3" t="inlineStr"><is><t xml:space="preserve">two
+lines</t></is></c></row>
+    <row r="4"><c r="A4" t="inlineStr"><is><t xml:space="preserve">Modified</t></is></c><c r="C4" t="inlineStr"><is><t xml:space="preserve">Empty reference</t></is></c><c r="D4"><v>-4</v></c><c r="E4"><v>1000000</v></c><c r="F4" s="1"><v>46023</v></c></row>
+    <row r="5"><c r="A5" t="inlineStr"><is><t xml:space="preserve">Created</t></is></c><c r="B5" t="inlineStr"><is><t xml:space="preserve">REQ-4</t></is></c><c r="C5" t="inlineStr"><is><t xml:space="preserve">  leading and trailing  </t></is></c><c r="D5"><v>12</v></c><c r="E5"><v>1e+21</v></c><c r="F5" s="1"><v>36525</v></c></row>
+  </sheetData>
+  <hyperlinks><hyperlink ref="B2" r:id="rId1"/><hyperlink ref="B4" r:id="rId2"/><hyperlink ref="B5" r:id="rId3"/></hyperlinks>
+</worksheet>
