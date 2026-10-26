@@ -119,4 +119,12 @@ describe('TaskDetailHeader breadcrumbs', () => {
     fireEvent.click(screen.getByRole('link', { name: 'SAP Cheddar Migration' }));
     expect(onParentClick).toHaveBeenCalledWith('/portfolio/projects/prj-1/summary');
   });
+
+  it('makes the title a button that opens on Enter', () => {
+    renderHeader([originCrumb]);
+    const title = screen.getByRole('button', { name: 'common:buttons.editTitle' });
+    expect(title).toHaveTextContent('SAP Cheddar vendor selection');
+    fireEvent.keyDown(title, { key: 'Enter' });
+    expect(screen.getByRole('textbox', { name: 'common:buttons.editTitle' })).toHaveValue('SAP Cheddar vendor selection');
+  });
 });

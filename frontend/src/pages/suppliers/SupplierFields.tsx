@@ -4,7 +4,7 @@ import { Box, FormHelperText, TextField, Typography } from '@mui/material';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { PropertyRow } from '../../components/design';
-import { taskDetailTypography } from '../tasks/theme/taskDetailTokens';
+import { EditableTitleDisplay } from '../../components/workspace/EditableTitle';
 
 export const sectionLabelSx = { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 1 } as const;
 
@@ -39,23 +39,17 @@ export function SupplierNameTitle({
   if (!editing) {
     return (
       <>
-        <Typography
-          component="span"
-          onClick={canEdit ? () => {
+        <EditableTitleDisplay
+          canEdit={canEdit}
+          placeholder={!name}
+          onEdit={() => {
             setDraft(name);
             openRef.current = true;
             setEditing(true);
-          } : undefined}
-          sx={(theme) => ({
-            ...taskDetailTypography.title,
-            display: 'inline',
-            color: name ? 'inherit' : theme.palette.kanap.text.tertiary,
-            cursor: canEdit ? 'text' : 'default',
-            '&:hover': canEdit ? { opacity: 0.85 } : undefined,
-          })}
+          }}
         >
           {name || fallback}
-        </Typography>
+        </EditableTitleDisplay>
         {helper}
       </>
     );
