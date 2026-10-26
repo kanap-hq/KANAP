@@ -588,7 +588,7 @@ KANAP limita las solicitudes de inicio de sesión repetidas:
 
 Los límites por dirección son altos porque el personal de una misma organización suele acceder a KANAP desde la misma dirección de salida. Cuando se alcanza un límite por dirección, la persona espera un minuto y vuelve a intentarlo. Detrás de un proxy inverso, KANAP cuenta la dirección IP de cada persona, siempre que el proxy la transmita.
 
-Los inicios de sesión y los inicios de sesión fallidos aparecen en el [Registro de auditoría](#registro-de-auditoria). Cuando 5 intentos fallidos bloquean una cuenta desde una dirección, se registra un inicio de sesión fallido con el motivo **Demasiados intentos de inicio de sesión**. Los intentos rechazados durante los 15 minutos siguientes no se registran, como tampoco las solicitudes bloqueadas por un límite por dirección.
+Los inicios de sesión y los inicios de sesión fallidos aparecen en el [Registro de auditoría](#registro-de-auditoria). Cuando 5 intentos fallidos bloquean una cuenta desde una dirección, se registra un inicio de sesión fallido con el motivo **Demasiados intentos de inicio de sesión**. Restablecer la contraseña con **Contraseña olvidada** levanta el bloqueo de inmediato. Los intentos rechazados durante los 15 minutos siguientes no se registran, como tampoco las solicitudes bloqueadas por un límite por dirección.
 
 ---
 

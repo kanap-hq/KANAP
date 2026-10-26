@@ -588,7 +588,7 @@ KANAP limits repeated sign-in requests:
 
 The limits per address are high because the staff of one organization often reach KANAP from the same outbound address. Once a limit per address is reached, the person waits a minute and tries again. Behind a reverse proxy, KANAP counts each person's own IP address, as long as the proxy passes it on.
 
-Sign-ins and failed sign-ins appear in the [Audit Log](#audit-log). When 5 failed attempts block an account from an address, one failed sign-in with the reason **Too many sign-in attempts** is recorded. The attempts refused during the 15 minutes that follow are not recorded, nor are requests stopped by a limit per address.
+Sign-ins and failed sign-ins appear in the [Audit Log](#audit-log). When 5 failed attempts block an account from an address, one failed sign-in with the reason **Too many sign-in attempts** is recorded. Resetting the password with **Forgot password** lifts the block at once. The attempts refused during the 15 minutes that follow are not recorded, nor are requests stopped by a limit per address.
 
 ---
 
