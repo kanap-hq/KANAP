@@ -4,6 +4,13 @@ import { EntityManager, Repository } from 'typeorm';
 import { DepartmentMetric } from './department-metric.entity';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
+import { parseCompanyYear } from '../companies/company-year';
+
+/** A missing year stays "year is required". Any other value must be four digits, 1900 to 2999. */
+function requireMetricYear(year: number): void {
+  if (!Number.isInteger(year)) throw new BadRequestException('year is required');
+  parseCompanyYear(year);
+}
 
 @Injectable()
 export class DepartmentMetricsService {
@@ -14,7 +21,7 @@ export class DepartmentMetricsService {
   ) {}
 
   async getForDepartment(departmentId: string, year: number, opts?: { manager?: EntityManager }) {
-    if (!Number.isInteger(year)) throw new BadRequestException('year is required');
+    requireMetricYear(year);
     const repo = opts?.manager ? opts.manager.getRepository(DepartmentMetric) : this.repo;
     return repo.findOne({ where: { department_id: departmentId, fiscal_year: year } as any });
   }
@@ -26,7 +33,7 @@ export class DepartmentMetricsService {
     userId?: string,
     opts?: { manager?: EntityManager; audit?: AuditSourceOptions },
   ) {
-    if (!Number.isInteger(year)) throw new BadRequestException('year is required');
+    requireMetricYear(year);
     const hc = Number(body.headcount);
     if (!Number.isInteger(hc) || hc < 0) throw new BadRequestException('headcount is required and must be a non-negative integer');
     await this.freeze.assertNotFrozen({ scope: 'departments', year }, opts);
