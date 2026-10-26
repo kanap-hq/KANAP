@@ -450,7 +450,7 @@ La page [Vulnérabilités](../vulnerabilities.md), ses notifications par e-mail,
 | `VULNERABILITY_FEED_ENABLED` | Active les vulnérabilités. | `false` sur site |
 | `NVD_API_BASE_URL` | Adresse d'un miroir de l'API CVE 2.0 de la NVD, quand le serveur ne peut pas joindre la NVD. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
 | `NVD_API_KEY` | Clé facultative qui fait passer la cadence de 5 à 50 requêtes par 30 secondes : la première lecture se termine plus vite. Demandez-la gratuitement sur le [site de la NVD](https://nvd.nist.gov/developers/request-an-api-key). | *non définie* |
-| `KEV_FEED_URL` | Adresse d'un miroir du catalogue CISA des vulnérabilités exploitées connues. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
+| `KEV_FEED_URL` | Adresse d'un miroir du catalogue CISA des vulnérabilités exploitées connues. Par défaut, c'est le miroir GitHub de la CISA, car `www.cisa.gov` refuse les adresses de centres de données. | `https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json` |
 | `EPSS_FEED_URL` | Adresse d'un miroir des scores EPSS du jour. L'EPSS est décrit sur [FIRST](https://www.first.org/epss). | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
 | `EUVD_BASE_URL` | Adresse d'un miroir de la base européenne des vulnérabilités de l'ENISA (catalogue européen et correspondance EUVD). | `https://euvdservices.enisa.europa.eu` |
 | `CVE_LIST_FEED_ENABLED` | Désactive la seule liste CVE.org (`false`), pendant que les autres sources continuent. | La valeur de `VULNERABILITY_FEED_ENABLED` |
@@ -460,11 +460,11 @@ La page [Vulnérabilités](../vulnerabilities.md), ses notifications par e-mail,
 
 Remarques :
 
-- L'API a besoin d'un accès HTTPS sortant, port 443, vers `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` et `euvdservices.enisa.europa.eu`, ou vers vos miroirs (voir [Règles de pare-feu](#regles-de-pare-feu)).
+- L'API a besoin d'un accès HTTPS sortant, port 443, vers `services.nvd.nist.gov`, `raw.githubusercontent.com`, `epss.empiricalsecurity.com` et `euvdservices.enisa.europa.eu`, ou vers vos miroirs (voir [Règles de pare-feu](#regles-de-pare-feu)).
 - Sans miroir, la liste CVE.org vient des releases GitHub : l'export complet à la première lecture (environ 640 Mo, lus en une minute environ), puis les changements du jour, de 0,5 à 13 Mo par jour. L'API a besoin d'un accès HTTPS sortant, port 443, vers `api.github.com`, `github.com` et `release-assets.githubusercontent.com`.
 - La liste CVE.org occupe environ 700 Mo de plus dans la base. Pendant la première lecture, le conteneur `api` a besoin d'environ 1,4 Go d'espace disque temporaire.
 - Un serveur sans accès réseau lit la liste depuis un fichier : indiquez son chemin dans `CVE_LIST_EXPORT_URL`, et déposez-y un nouvel export à la fréquence de votre choix. Les données sont aussi fraîches que le dernier fichier déposé.
-- Une adresse de miroir vide garde l'adresse publique. Une source que le serveur ne joint pas laisse ses colonnes en l'état et est nommée dans le résumé de la tâche. Les autres sources continuent.
+- Une adresse de miroir vide garde l'adresse par défaut. Une source que le serveur ne joint pas laisse ses colonnes en l'état et est nommée dans le résumé de la tâche. Les autres sources continuent.
 - Les notifications par e-mail demandent aussi que l'envoi d'e-mails soit configuré (Resend ou SMTP).
 - Redémarrez l'API après avoir changé ces valeurs.
 
@@ -675,7 +675,7 @@ Nécessaire uniquement si la fonction correspondante est activée.
 | `claude.ai` | 443 | Lit la description de Claude, Claude Desktop ou Claude Code quand un utilisateur le connecte via MCP sans clé | Si `AI_MCP_ENABLED=true` et que des utilisateurs se connectent via OAuth (inutile pour les clés API) |
 | `chatgpt.com`, `grok.com` | 443 | Lit la description de ChatGPT ou de Grok quand un utilisateur le connecte via MCP sans clé | Comme pour `claude.ai` |
 | `services.nvd.nist.gov`, ou votre miroir | 443 | Vulnérabilités publiées (NVD) | Si `VULNERABILITY_FEED_ENABLED=true` |
-| `www.cisa.gov`, ou votre miroir | 443 | Catalogue CISA des vulnérabilités exploitées connues | Si `VULNERABILITY_FEED_ENABLED=true` |
+| `raw.githubusercontent.com`, ou votre miroir | 443 | Catalogue CISA des vulnérabilités exploitées connues (miroir GitHub de la CISA) | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `epss.empiricalsecurity.com`, ou votre miroir | 443 | Scores EPSS du jour | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `euvdservices.enisa.europa.eu`, ou votre miroir | 443 | Base européenne des vulnérabilités (ENISA) : catalogue européen et identifiants EUVD | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `api.github.com`, `github.com`, `release-assets.githubusercontent.com` | 443 | La liste CVE.org (fiches rédigées par les éditeurs) | Si `VULNERABILITY_FEED_ENABLED=true`, sauf si `CVE_LIST_FEED_ENABLED=false` ou si `CVE_LIST_EXPORT_URL` désigne un miroir |

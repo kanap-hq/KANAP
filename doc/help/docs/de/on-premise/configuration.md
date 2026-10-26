@@ -450,7 +450,7 @@ Die Seite [Schwachstellen](../vulnerabilities.md), ihre E-Mail-Benachrichtigunge
 | `VULNERABILITY_FEED_ENABLED` | Schaltet die Schwachstellen ein. | `false` On-Premise |
 | `NVD_API_BASE_URL` | Adresse eines Spiegels der CVE API 2.0 der NVD, wenn der Server die NVD nicht erreicht. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
 | `NVD_API_KEY` | Optionaler Schlüssel, der die Rate von 5 auf 50 Anfragen pro 30 Sekunden anhebt, sodass das erste Einlesen schneller fertig ist. Beantragen Sie ihn kostenlos auf der [Website der NVD](https://nvd.nist.gov/developers/request-an-api-key). | *nicht gesetzt* |
-| `KEV_FEED_URL` | Adresse eines Spiegels des CISA-Katalogs bekannter ausgenutzter Schwachstellen. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
+| `KEV_FEED_URL` | Adresse eines Spiegels des CISA-Katalogs bekannter ausgenutzter Schwachstellen. Standard ist der GitHub-Spiegel der CISA, weil `www.cisa.gov` Adressen von Rechenzentren abweist. | `https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json` |
 | `EPSS_FEED_URL` | Adresse eines Spiegels der täglichen EPSS-Werte. EPSS ist bei [FIRST](https://www.first.org/epss) beschrieben. | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
 | `EUVD_BASE_URL` | Adresse eines Spiegels der europäischen Schwachstellendatenbank der ENISA (europäischer Katalog und EUVD-Zuordnung). | `https://euvdservices.enisa.europa.eu` |
 | `CVE_LIST_FEED_ENABLED` | Schaltet nur die CVE.org-Liste aus (`false`), während die anderen Quellen weiterlaufen. | Der Wert von `VULNERABILITY_FEED_ENABLED` |
@@ -460,11 +460,11 @@ Die Seite [Schwachstellen](../vulnerabilities.md), ihre E-Mail-Benachrichtigunge
 
 Hinweise:
 
-- Die API braucht ausgehenden HTTPS-Zugriff, Port 443, auf `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` und `euvdservices.enisa.europa.eu`, oder auf Ihre Spiegel (siehe [Firewall-Regeln](#firewall-regeln)).
+- Die API braucht ausgehenden HTTPS-Zugriff, Port 443, auf `services.nvd.nist.gov`, `raw.githubusercontent.com`, `epss.empiricalsecurity.com` und `euvdservices.enisa.europa.eu`, oder auf Ihre Spiegel (siehe [Firewall-Regeln](#firewall-regeln)).
 - Ohne Spiegel kommt die CVE.org-Liste aus den GitHub-Releases: beim ersten Lesen der vollständige Export (etwa 640 MB, in etwa einer Minute gelesen), danach die täglichen Änderungen, 0,5 bis 13 MB pro Tag. Die API braucht ausgehenden HTTPS-Zugriff, Port 443, auf `api.github.com`, `github.com` und `release-assets.githubusercontent.com`.
 - Die CVE.org-Liste belegt etwa 700 MB zusätzlich in der Datenbank. Während des ersten Lesens braucht der Container `api` etwa 1,4 GB temporären Speicherplatz.
 - Ein Server ohne Netzzugang liest die Liste aus einer Datei: Tragen Sie ihren Pfad in `CVE_LIST_EXPORT_URL` ein und legen Sie dort so oft Sie möchten einen neuen Export ab. Die Daten sind so aktuell wie die zuletzt abgelegte Datei.
-- Eine leere Spiegeladresse behält die öffentliche Adresse. Eine Quelle, die der Server nicht erreicht, lässt ihre Spalten unverändert und wird in der Zusammenfassung der Aufgabe genannt. Die anderen Quellen laufen weiter.
+- Eine leere Spiegeladresse behält die Standardadresse. Eine Quelle, die der Server nicht erreicht, lässt ihre Spalten unverändert und wird in der Zusammenfassung der Aufgabe genannt. Die anderen Quellen laufen weiter.
 - Die E-Mail-Benachrichtigungen setzen außerdem einen eingerichteten E-Mail-Versand voraus (Resend oder SMTP).
 - Starten Sie die API nach einer Änderung dieser Werte neu.
 
@@ -675,7 +675,7 @@ Nur erforderlich, wenn die entsprechende Funktion aktiviert ist.
 | `claude.ai` | 443 | Liest die Beschreibung von Claude, Claude Desktop oder Claude Code, wenn ein Benutzer es ohne Schlüssel über MCP verbindet | Wenn `AI_MCP_ENABLED=true` und Benutzer sich über OAuth verbinden (für API-Schlüssel nicht nötig) |
 | `chatgpt.com`, `grok.com` | 443 | Liest die Beschreibung von ChatGPT oder Grok, wenn ein Benutzer es ohne Schlüssel über MCP verbindet | Wie bei `claude.ai` |
 | `services.nvd.nist.gov` oder Ihr Spiegel | 443 | Veröffentlichte Schwachstellen (NVD) | Wenn `VULNERABILITY_FEED_ENABLED=true` |
-| `www.cisa.gov` oder Ihr Spiegel | 443 | CISA-Katalog bekannter ausgenutzter Schwachstellen | Wenn `VULNERABILITY_FEED_ENABLED=true` |
+| `raw.githubusercontent.com` oder Ihr Spiegel | 443 | CISA-Katalog bekannter ausgenutzter Schwachstellen (GitHub-Spiegel der CISA) | Wenn `VULNERABILITY_FEED_ENABLED=true` |
 | `epss.empiricalsecurity.com` oder Ihr Spiegel | 443 | Tägliche EPSS-Werte | Wenn `VULNERABILITY_FEED_ENABLED=true` |
 | `euvdservices.enisa.europa.eu` oder Ihr Spiegel | 443 | Europäische Schwachstellendatenbank (ENISA): europäischer Katalog und EUVD-Kennungen | Wenn `VULNERABILITY_FEED_ENABLED=true` |
 | `api.github.com`, `github.com`, `release-assets.githubusercontent.com` | 443 | Die CVE.org-Liste (von den Herstellern geschriebene Einträge) | Wenn `VULNERABILITY_FEED_ENABLED=true`, außer bei `CVE_LIST_FEED_ENABLED=false` oder wenn `CVE_LIST_EXPORT_URL` einen Spiegel nennt |
