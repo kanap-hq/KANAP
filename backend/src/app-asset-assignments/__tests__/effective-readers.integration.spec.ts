@@ -115,6 +115,7 @@ function assistant(): AiEntityService {
     {
       listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
       canReadKnowledge: async () => true,
+      canReadEntityType: async () => true,
       assertEntityTypeReadAccess: async () => undefined,
     } as any,
   );
