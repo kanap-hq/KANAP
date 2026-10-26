@@ -142,7 +142,7 @@ When you select a node or edge, a side panel opens on the right with details.
 - **Servers**: Servers hosting this app, grouped by environment. A cluster comes first, with a cluster icon and its members under it. Click a server name to open its workspace.
 - **Business owners** and **IT owners**: Responsible contacts
 - **Support information**: Support contacts with their roles. Click a contact name to navigate to the application's Technical tab.
-- **Edit application**: Opens the application workspace
+- **Open application**: Opens the application workspace
 
 ### Interface panel
 
@@ -153,7 +153,7 @@ For the selected interface and the current environment:
 - **Infra connections**: Infrastructure connections linked to this interface for the current environment. Each card shows source, destination, protocols, and the binding's environment / leg type. From the card you can:
   - Click **Edit** to open the connection workspace
   - Click **View in Connection Map** to jump to the infrastructure topology, pre-focused on the connection
-- **Edit interface**: Opens the interface workspace
+- **Open interface**: Opens the interface workspace
 
 ---
 

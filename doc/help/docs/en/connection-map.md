@@ -119,7 +119,7 @@ Click a server or cluster node to highlight its connections and open a detail pa
 
 - **Server type**, **Server location**, **Operating system**, **Network segment**, **IP address**
 - **Assigned applications**: Apps running on this server, grouped by environment. On a member, an app assigned to its cluster shows "via" the cluster's name. Click an app name to open it.
-- **Edit server** or **View cluster** button to open the workspace. **View cluster** opens the cluster on its **Operations** tab, where its members are managed
+- **Open server** or **View cluster** button to open the workspace. **View cluster** opens the cluster on its **Operations** tab, where its members are managed
 
 Click an entity node to see its type and environment.
 
@@ -129,7 +129,7 @@ Click a connection edge to see:
 
 - **Purpose**, **Protocols**, **Typical ports**, **Criticality**
 - **Topology**: Server to server or Multi-server
-- **Edit connection** button to open the connection workspace
+- **Open connection** button to open the connection workspace
 - **Linked interfaces** section showing which application interfaces use this connection. Each linked interface card shows the leg type, environment, pattern, and source/target endpoints. From there you can:
   - Click **Open interface** to view the interface
   - Click **View in Interface Map** to jump to the interface in context

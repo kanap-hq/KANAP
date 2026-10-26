@@ -119,7 +119,7 @@ Klicken Sie auf einen Server- oder Cluster-Knoten, um seine Verbindungen hervorz
 
 - **Server-Typ**, **Server-Standort**, **Betriebssystem**, **Netzwerksegment**, **IP-Adresse**
 - **Zugewiesene Anwendungen**: Apps, die auf diesem Server laufen, gruppiert nach Umgebung. Bei einem Mitglied zeigt eine seinem Cluster zugeordnete App „über“ und den Namen des Clusters. Klicken Sie auf einen App-Namen, um sie zu öffnen.
-- Schaltfläche **Server bearbeiten** oder **Cluster anzeigen**, um den Arbeitsbereich zu öffnen. **Cluster anzeigen** öffnet den Cluster auf seinem Reiter **Betrieb**, wo seine Mitglieder verwaltet werden
+- Schaltfläche **Server öffnen** oder **Cluster anzeigen**, um den Arbeitsbereich zu öffnen. **Cluster anzeigen** öffnet den Cluster auf seinem Reiter **Betrieb**, wo seine Mitglieder verwaltet werden
 
 Klicken Sie auf einen Entitätsknoten, um seinen Typ und seine Umgebung zu sehen.
 
@@ -129,7 +129,7 @@ Klicken Sie auf eine Verbindungskante, um Folgendes zu sehen:
 
 - **Zweck**, **Protokolle**, **Typische Ports**, **Kritikalität**
 - **Topologie**: Server zu Server oder Multi-Server
-- Schaltfläche **Verbindung bearbeiten**, um den Verbindungs-Arbeitsbereich zu öffnen
+- Schaltfläche **Verbindung öffnen**, um den Verbindungs-Arbeitsbereich zu öffnen
 - Bereich **Verknüpfte Schnittstellen**, der zeigt, welche Anwendungsschnittstellen diese Verbindung verwenden. Jede verknüpfte Schnittstellen-Karte zeigt den Leg-Typ, die Umgebung, das Muster sowie Quell-/Zielendpunkte. Von dort aus können Sie:
   - Auf **Schnittstelle öffnen** klicken, um die Schnittstelle anzuzeigen
   - Auf **In Schnittstellenkarte anzeigen** klicken, um zur Schnittstelle im Kontext zu springen

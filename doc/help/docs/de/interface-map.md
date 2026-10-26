@@ -142,7 +142,7 @@ Wenn Sie einen Knoten oder eine Kante auswählen, öffnet sich ein Seitenpanel a
 - **Server**: Server, die diese App hosten, gruppiert nach Umgebung. Ein Cluster steht zuerst, mit einem Cluster-Symbol und seinen Mitgliedern darunter. Klicken Sie auf einen Servernamen, um seinen Arbeitsbereich zu öffnen.
 - **Business-Verantwortliche** und **IT-Verantwortliche**: Verantwortliche Kontakte
 - **Support-Informationen**: Support-Kontakte mit ihren Rollen. Klicken Sie auf einen Kontaktnamen, um zum Reiter Technisch der Anwendung zu navigieren.
-- **Anwendung bearbeiten**: Öffnet den Anwendungs-Arbeitsbereich
+- **Anwendung öffnen**: Öffnet den Anwendungs-Arbeitsbereich
 
 ### Schnittstellen-Panel
 
@@ -153,7 +153,7 @@ Für die ausgewählte Schnittstelle und die aktuelle Umgebung:
 - **Infra-Verbindungen**: Infrastrukturverbindungen, die für die aktuelle Umgebung mit dieser Schnittstelle verknüpft sind. Jede Karte zeigt Quelle, Ziel, Protokolle und die Umgebung / den Leg-Typ der Bindung. Von der Karte aus können Sie:
   - Auf **Bearbeiten** klicken, um den Verbindungs-Arbeitsbereich zu öffnen
   - Auf **In Verbindungskarte anzeigen** klicken, um zur Infrastrukturtopologie zu springen, vorab fokussiert auf die Verbindung
-- **Schnittstelle bearbeiten**: Öffnet den Schnittstellen-Arbeitsbereich
+- **Schnittstelle öffnen**: Öffnet den Schnittstellen-Arbeitsbereich
 
 ---
 

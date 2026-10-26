@@ -142,7 +142,7 @@ Cuando selecciona un nodo o una arista, se abre un panel lateral a la derecha co
 - **Servidores**: Servidores que alojan esta app, agrupados por entorno. Un clúster va primero, con un icono de clúster y sus miembros debajo. Haga clic en el nombre de un servidor para abrir su espacio de trabajo.
 - **Responsables de negocio** y **Responsables IT**: Contactos responsables
 - **Información de soporte**: Contactos de soporte con sus roles. Haga clic en el nombre de un contacto para navegar a la pestaña Técnico de la aplicación.
-- **Editar aplicación**: Abre el espacio de trabajo de la aplicación
+- **Abrir aplicación**: Abre el espacio de trabajo de la aplicación
 
 ### Panel de interfaz
 
@@ -153,7 +153,7 @@ Para la interfaz seleccionada y el entorno actual:
 - **Conexiones de infra**: Conexiones de infraestructura vinculadas a esta interfaz para el entorno actual. Cada tarjeta muestra origen, destino, protocolos y el entorno / tipo de tramo del enlace. Desde la tarjeta puede:
   - Hacer clic en **Editar** para abrir el espacio de trabajo de la conexión
   - Hacer clic en **Ver en el Mapa de conexiones** para saltar a la topología de infraestructura, prefocalizada en la conexión
-- **Editar interfaz**: Abre el espacio de trabajo de la interfaz
+- **Abrir interfaz**: Abre el espacio de trabajo de la interfaz
 
 ---
 

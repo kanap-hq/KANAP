@@ -5,6 +5,10 @@ import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import en from '../../locales/en/it.json';
+import fr from '../../locales/fr/it.json';
+import de from '../../locales/de/it.json';
+import es from '../../locales/es/it.json';
 import ConnectionMapPage from './ConnectionMapPage';
 
 const get = vi.hoisted(() => vi.fn());
@@ -101,7 +105,7 @@ describe('ConnectionMapPage node panel', () => {
   it('keeps the overview for a server', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'node QA-VM1' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'pages.connectionMap.editServer' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'pages.connectionMap.openServer' }));
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/it/assets/srv-1/overview'));
   });
 
@@ -122,5 +126,48 @@ describe('ConnectionMapPage node panel', () => {
     expect(line.textContent).toBe('CheeseTrackcomponents.clusterAssignment.via QA-CL-A');
     expect(screen.getAllByText('components.clusterAssignment.via').length).toBe(1);
     expect(line.querySelector('a')?.getAttribute('href')).toBe('/it/assets/cl-1/overview');
+  });
+});
+
+describe('map panel open labels', () => {
+  const maps = [en, fr, de, es];
+
+  it('says Open for the four panel buttons, in every language, and keeps View cluster', () => {
+    expect(maps.map((locale) => locale.pages.connectionMap.openServer)).toEqual([
+      'Open server',
+      'Ouvrir le serveur',
+      'Server öffnen',
+      'Abrir servidor',
+    ]);
+    expect(maps.map((locale) => locale.pages.connectionMap.openConnection)).toEqual([
+      'Open connection',
+      'Ouvrir la connexion',
+      'Verbindung öffnen',
+      'Abrir conexión',
+    ]);
+    expect(maps.map((locale) => locale.pages.interfaceMap.openApplication)).toEqual([
+      'Open application',
+      "Ouvrir l'application",
+      'Anwendung öffnen',
+      'Abrir aplicación',
+    ]);
+    expect(maps.map((locale) => locale.pages.interfaceMap.openInterface)).toEqual([
+      'Open interface',
+      "Ouvrir l'interface",
+      'Schnittstelle öffnen',
+      'Abrir interfaz',
+    ]);
+    expect(maps.map((locale) => locale.pages.connectionMap.viewCluster)).toEqual([
+      'View cluster',
+      'Voir le cluster',
+      'Cluster anzeigen',
+      'Ver clúster',
+    ]);
+    for (const locale of maps) {
+      expect(locale.pages.connectionMap).not.toHaveProperty('editServer');
+      expect(locale.pages.connectionMap).not.toHaveProperty('editConnection');
+      expect(locale.pages.interfaceMap).not.toHaveProperty('editApplication');
+      expect(locale.pages.interfaceMap).not.toHaveProperty('editInterface');
+    }
   });
 });
