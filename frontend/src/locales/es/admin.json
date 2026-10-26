@@ -32,7 +32,7 @@
       "labelPlaceholder": "Ej.: Cliente MCP de escritorio"
     },
     "glpi": {
-      "description": "Configure credenciales GLPI por tenant para que Plaid pueda importar tickets GLPI seleccionados como tareas de KANAP después de la confirmación del usuario.",
+      "description": "Configure credenciales GLPI de este espacio de trabajo para que Plaid pueda importar tickets GLPI seleccionados como tareas de KANAP después de la confirmación del usuario.",
       "fields": {
         "appToken": "Token de aplicación",
         "enabled": "Habilitar importación de tickets GLPI",

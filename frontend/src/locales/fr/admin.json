@@ -32,7 +32,7 @@
       "labelPlaceholder": "Ex. : Client MCP de bureau"
     },
     "glpi": {
-      "description": "Configurez des identifiants GLPI propres au tenant pour que Plaid puisse importer des tickets GLPI sélectionnés en tâches KANAP après confirmation de l'utilisateur.",
+      "description": "Configurez des identifiants GLPI propres à l'espace de travail pour que Plaid puisse importer des tickets GLPI sélectionnés en tâches KANAP après confirmation de l'utilisateur.",
       "fields": {
         "appToken": "Jeton d'application",
         "enabled": "Activer l'import de tickets GLPI",
@@ -137,7 +137,7 @@
       },
       "builtinUsage": {
         "cta": "Utilisez vos propres clés API pour une utilisation illimitée.",
-        "description": "L'utilisation intégrée est partagée entre le chat et les agents de ce tenant.",
+        "description": "L'utilisation intégrée est partagée entre le chat et les agents de cet espace de travail.",
         "loadFailed": "Impossible de charger l'utilisation intégrée.",
         "reset": "Réinitialisation le {{date}}.",
         "summary": "{{count}} / {{limit}} messages utilisés ce mois-ci",

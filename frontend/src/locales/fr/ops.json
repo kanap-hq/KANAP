@@ -925,7 +925,7 @@
       "allowedCurrencies": "Devises autorisées",
       "allowedCurrenciesHelp": "Liste optionnelle séparée par des virgules (ex. EUR, USD, GBP)",
       "forceFxSync": "Forcer la synchronisation des taux de change",
-      "fxRatesTitle": "Dernières captures de taux de change (par exercice fiscal, base devise de reporting du tenant)",
+      "fxRatesTitle": "Dernières captures de taux de change (par exercice fiscal, base devise de reporting de l'espace de travail)",
       "loadingRates": "Chargement des taux de change…",
       "loadRatesError": "Impossible de charger l'historique des taux de change.",
       "noRatesYet": "Aucune capture de taux de change disponible.",

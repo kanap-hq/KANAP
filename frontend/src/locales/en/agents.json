@@ -47,7 +47,7 @@
     "dialogTitle": "Pause this agent",
     "dialogDescription": "This holds the agent's checks and any pending writes until you lift the pause. Other agents keep running.",
     "dialogTitleTenant": "Pause all agents",
-    "dialogDescriptionTenant": "This holds every agent's checks and any pending writes for this tenant until you lift the pause.",
+    "dialogDescriptionTenant": "This holds every agent's checks and any pending writes for this workspace until you lift the pause.",
     "managedForAll": "Paused for all agents",
     "reasonLabel": "Reason",
     "reasonPlaceholder": "e.g. Investigating unexpected ticket replies"
@@ -115,7 +115,7 @@
     "acceptance": "Acceptance",
     "dismissed": "Dismissed",
     "fleet": "Fleet",
-    "empty": "No agents are available for this tenant.",
+    "empty": "No agents are available for this workspace.",
     "noDescription": "No description.",
     "pendingCount": "{{count}} pending",
     "failedCount": "{{count}} failed",
@@ -325,7 +325,7 @@
   "workspace": {
     "back": "Back to agents",
     "notFound": "Agent not found",
-    "notFoundBody": "This agent is not available in the current tenant.",
+    "notFoundBody": "This agent is not available in the current workspace.",
     "tabs": {
       "monitor": "Monitor",
       "approvals": "Approvals",

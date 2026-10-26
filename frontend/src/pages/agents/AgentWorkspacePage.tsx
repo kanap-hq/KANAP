@@ -27,6 +27,8 @@ import {
   type AiAgentKanapDataSources,
   type AiSharedContextProfile,
 } from '../../ai/aiApi';
+import { formatEuro } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
 import { useAuth } from '../../auth/AuthContext';
 import { useFeatures } from '../../config/FeaturesContext';
 import useAutosave, { useAutosaveQueue, useAutosaveRegistry, type AutosaveQueue, type AutosaveRegistry } from '../../hooks/useAutosave';
@@ -1144,6 +1146,7 @@ function MonitorTab({ agentKey }: { agentKey: string }) {
  */
 function AgentTrendCharts({ days }: { days: AiAgentControlEvaluationDailyResult['days'] }) {
   const { t } = useTranslation(['agents']);
+  const locale = useLocale();
   const theme = useTheme();
   const dark = theme.palette.mode === 'dark';
   const window = React.useMemo(() => days.slice(-14), [days]);
@@ -1203,12 +1206,12 @@ function AgentTrendCharts({ days }: { days: AiAgentControlEvaluationDailyResult[
       ],
       axes: [
         { type: 'category', position: 'bottom' },
-        { type: 'number', position: 'left', label: { formatter: (p: { value: number }) => `${p.value.toFixed(2)} EUR` } },
+        { type: 'number', position: 'left', label: { formatter: (p: { value: number }) => formatEuro(p.value, locale) } },
       ],
       legend: { enabled: false },
       padding: { top: 8, right: 12, bottom: 4, left: 4 },
     };
-  }, [dark, t, theme, window]);
+  }, [dark, locale, t, theme, window]);
 
   if (window.length === 0) {
     return <EmptyState>{t('performance.noTrendData')}</EmptyState>;
@@ -1382,6 +1385,7 @@ function AgentAutonomySection({ definition }: { definition: AiAgentControlAgentD
 
 function PerformanceTab({ agentKey }: { agentKey: string }) {
   const { t } = useTranslation(['agents']);
+  const locale = useLocale();
   const data = useAgentControlData();
   const definition = data.queueQuery.data?.definitions.find((item) => item.agent_key === agentKey) ?? null;
   const summary = resolveAgentSummary(data.queueQuery.data, agentKey);
@@ -1400,7 +1404,7 @@ function PerformanceTab({ agentKey }: { agentKey: string }) {
         <MetricBlock label={t('performance.dismissed')} value={formatPercent(summary?.evaluation.dismissRate)} />
         <MetricBlock label={t('performance.latency')} value={summary?.evaluation.medianApprovalLatencySeconds == null ? t('common.notSet') : `${Math.round(summary.evaluation.medianApprovalLatencySeconds / 60)} min`} />
         <MetricBlock label={t('performance.kbHitRate')} value={formatPercent(summary?.evaluation.kbHitRate)} />
-        <MetricBlock label={t('performance.costPerTicket')} value={summary?.evaluation.costPerTicketEur == null ? t('common.notSet') : `${summary.evaluation.costPerTicketEur.toFixed(4)} EUR`} />
+        <MetricBlock label={t('performance.costPerTicket')} value={summary?.evaluation.costPerTicketEur == null ? t('common.notSet') : formatEuro(summary.evaluation.costPerTicketEur, locale, 4)} />
         <MetricBlock label={t('performance.runsPerTicket')} value={formatNumber(summary?.evaluation.runsPerTicket, 2)} />
       </Box>
       <AgentTrendCharts days={daily} />
@@ -1509,6 +1513,7 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
   saveQueue: AutosaveQueue;
 }) {
   const { t } = useTranslation(['agents']);
+  const locale = useLocale();
   const data = useAgentControlData();
   const queryClient = useQueryClient();
   // Freshest known definition, used by every debounced save thunk: the backend
@@ -2487,7 +2492,7 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
             <SettingsField
               label={t('settings.dailyCost')}
               info={t('settings.dailyCostInfo')}
-              hint={dailyUsage ? <CapUsage>{t('settings.usageToday', { value: `${(dailyUsage.estimatedCostEur ?? 0).toFixed(4)} EUR` })}</CapUsage> : undefined}
+              hint={dailyUsage ? <CapUsage>{t('settings.usageToday', { value: formatEuro(dailyUsage.estimatedCostEur ?? 0, locale, 4) })}</CapUsage> : undefined}
             >
               <TextField size="small" value={form.dailyCost} onChange={(event) => update('dailyCost', event.target.value)} />
             </SettingsField>

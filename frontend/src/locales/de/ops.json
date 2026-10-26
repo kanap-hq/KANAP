@@ -925,7 +925,7 @@
       "allowedCurrencies": "Erlaubte Währungen",
       "allowedCurrenciesHelp": "Optionale kommagetrennte Liste (z. B. EUR, USD, GBP)",
       "forceFxSync": "Wechselkurssynchronisierung erzwingen",
-      "fxRatesTitle": "Neueste Wechselkurs-Snapshots (pro Geschäftsjahr, Basis Reporting-Währung des Mandanten)",
+      "fxRatesTitle": "Neueste Wechselkurs-Snapshots (pro Geschäftsjahr, Basis Reporting-Währung des Arbeitsbereichs)",
       "loadingRates": "Wechselkurse werden geladen…",
       "loadRatesError": "Wechselkurshistorie konnte nicht geladen werden.",
       "noRatesYet": "Noch keine Wechselkurs-Snapshots vorhanden.",
