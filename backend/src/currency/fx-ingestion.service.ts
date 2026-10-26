@@ -21,6 +21,12 @@ const ANNUAL_DATASET_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 /** How long a forced sync waits for the fetch before answering that it is still running. */
 export const MANUAL_REFRESH_WAIT_MS = 20_000;
 
+/**
+ * How long a settings save holds its refresh so the follow-up request can read
+ * the pairs already stored. Past that, the run starts on its own.
+ */
+const RATE_SNAPSHOT_HOLD_MS = 15_000;
+
 /** A usable cross rate: finite and strictly positive. */
 function isUsableRate(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -138,6 +144,8 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
   private readonly manualCooldownMs = 2 * 60 * 1000;
   private manualInProgress = 0;
   private readonly refreshQueues = new Map<string, TenantRefreshQueue>();
+  /** One hold per tenant: the settings refresh waits until the follow-up has snapshotted. */
+  private readonly snapshotHolds = new Map<string, { promise: Promise<void>; release: () => void }>();
   private readonly loginAutoIntervalMs: number;
   private readonly loginAutoLabel = 'login-auto';
   /** Per `tenant:year`: when a missing rate last queued a refresh of that year. */
@@ -263,6 +271,41 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
   /** Whether a refresh of the tenant is running or waiting. */
   hasQueuedRefresh(tenantId: string): boolean {
     return this.refreshQueues.has(tenantId);
+  }
+
+  /**
+   * Holds the refresh a settings save just queued. The follow-up
+   * `POST /currency/rates/refresh` reads the pairs already stored, then releases
+   * the hold, so its count is the rates that run brings in. A second save joins
+   * the same hold. Without a follow-up, the hold ends on its own and the run
+   * still starts. The timer does not keep the process alive.
+   */
+  holdForRateSnapshot(tenantId: string, timeoutMs = RATE_SNAPSHOT_HOLD_MS): Promise<void> {
+    const existing = this.snapshotHolds.get(tenantId);
+    if (existing) return existing.promise;
+    let release: () => void = () => undefined;
+    const promise = new Promise<void>((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(finish, timeoutMs);
+      if (typeof timer.unref === 'function') timer.unref();
+      release = finish;
+    });
+    this.snapshotHolds.set(tenantId, { promise, release });
+    void promise.finally(() => {
+      if (this.snapshotHolds.get(tenantId)?.promise === promise) this.snapshotHolds.delete(tenantId);
+    });
+    return promise;
+  }
+
+  /** Lets a held settings refresh start, once the follow-up has read the stored pairs. */
+  releaseRateSnapshot(tenantId: string): void {
+    this.snapshotHolds.get(tenantId)?.release();
   }
 
   private enqueueRefresh(

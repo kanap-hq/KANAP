@@ -964,6 +964,8 @@
       "frozenVersionsKept_other": "The {{count}} frozen versions of {{year}} keep the rate from when they were frozen.",
       "syncFetched_one": "{{count}} rate fetched.",
       "syncFetched_other": "{{count}} rates fetched.",
+      "syncUpToDate": "Exchange rates are up to date.",
+      "syncNoneFetched": "No new rate was fetched.",
       "syncStillMissing": "Still missing: {{pairs}}.",
       "syncContinues": "Synchronisation continues in the background.",
       "syncSourceUnreachable": "The exchange rate source did not respond. Try again later, or enter the missing rates.",

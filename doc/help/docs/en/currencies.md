@@ -89,6 +89,7 @@ The **Force FX rates sync** button fetches the rates at once for the previous, c
 **What happens**:
   - The button stays busy while KANAP fetches the rates, for up to 20 seconds
   - A message above the table then gives the result: the number of rates fetched, for example **12 rates fetched.**, followed by the pairs still without a rate, for example **Still missing: BRL 2026.**, or by **Every currency in use has a rate.**
+  - When the fetch brings in no new rate and every currency in use already has one, the message says **Exchange rates are up to date.** When some pairs are still missing, it says **No new rate was fetched.** and names them.
   - When the sources did not answer, the message says so, and the rates already stored stay in place
   - When the fetch takes longer, the message reads **Synchronisation continues in the background.** The table and the missing rates block update once it ends
   - When a refresh is already running, KANAP adds your years to it, so no request is lost
