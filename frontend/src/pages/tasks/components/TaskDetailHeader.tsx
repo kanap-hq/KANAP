@@ -16,6 +16,7 @@ import TaskMetadataBar from './TaskMetadataBar';
 import SendLinkButton from '../../../components/workspace/SendLinkButton';
 import type { TaskCrumb } from '../taskWorkspaceOrigin';
 import DeleteIconButton from '../../../components/workspace/DeleteIconButton';
+import EditableTitle from '../../../components/workspace/EditableTitle';
 
 function isModifiedClick(event: React.MouseEvent) {
   return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
@@ -64,84 +65,6 @@ interface TaskDetailHeaderProps {
   crumbs: TaskCrumb[];
   onOriginClick: () => void;
   onParentClick: (href: string) => void;
-}
-
-/* ------------------------------------------------------------------ */
-/*  EditableTitle                                                      */
-/* ------------------------------------------------------------------ */
-
-function EditableTitle({
-  value,
-  canEdit,
-  onChange,
-  onSave,
-}: {
-  value: string;
-  canEdit: boolean;
-  onChange: (v: string) => void;
-  onSave: (v: string) => void;
-}) {
-  const { t } = useTranslation('portfolio');
-  const [editing, setEditing] = React.useState(false);
-  const [draft, setDraft] = React.useState(value);
-
-  React.useEffect(() => {
-    if (!editing) setDraft(value);
-  }, [value, editing]);
-
-  if (!canEdit) {
-    return (
-      <Typography component="span" sx={{ ...taskDetailTypography.title, display: 'inline' }}>
-        {value || t('workspace.task.title.untitled')}
-      </Typography>
-    );
-  }
-
-  if (!editing) {
-    return (
-      <Typography
-        component="span"
-        onClick={() => { setDraft(value); setEditing(true); }}
-        sx={{ ...taskDetailTypography.title, display: 'inline', cursor: 'text', '&:hover': { opacity: 0.8 } }}
-      >
-        {value || t('workspace.task.title.untitled')}
-      </Typography>
-    );
-  }
-
-  return (
-    <Box
-      component="input"
-      value={draft}
-      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDraft(e.target.value)}
-      onBlur={() => {
-        const trimmed = draft.trim();
-        if (trimmed && trimmed !== value) { onChange(trimmed); onSave(trimmed); }
-        setEditing(false);
-      }}
-      onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const trimmed = draft.trim();
-          if (trimmed && trimmed !== value) { onChange(trimmed); onSave(trimmed); }
-          setEditing(false);
-        }
-        if (e.key === 'Escape') { setDraft(value); setEditing(false); }
-      }}
-      autoFocus
-      sx={(theme) => ({
-        font: 'inherit',
-        color: 'inherit',
-        bgcolor: 'transparent',
-        border: 'none',
-        borderBottom: `1px solid ${theme.palette.kanap.border.default}`,
-        outline: 'none',
-        p: 0,
-        m: 0,
-        width: '100%',
-      })}
-    />
-  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -298,7 +221,15 @@ export default function TaskDetailHeader({
                 </Box>
               )}
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <EditableTitle value={title} canEdit={canManage} onChange={onTitleChange} onSave={onTitleSave} />
+                <EditableTitle
+                  value={title}
+                  fallback={t('portfolio:workspace.task.title.untitled')}
+                  canEdit={canManage}
+                  onSave={(next) => {
+                    onTitleChange(next);
+                    onTitleSave(next);
+                  }}
+                />
               </Box>
             </Box>
 

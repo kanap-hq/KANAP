@@ -15,6 +15,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
+import EditableTitle from '../../../components/workspace/EditableTitle';
 import { taskDetailTokens, taskDetailTypography } from '../../tasks/theme/taskDetailTokens';
 import WorkspaceTabs, { type WorkspaceTab } from './WorkspaceTabs';
 
@@ -159,123 +160,6 @@ function NavChip({ nav }: { nav: PortfolioDetailWorkspaceNav }) {
         <ChevronRightIcon sx={{ fontSize: 16 }} />
       </IconButton>
     </Box>
-  );
-}
-
-function EditableTitle({
-  canEdit,
-  fallback,
-  maxLength,
-  onSave,
-  requiredMessage,
-  value,
-}: {
-  canEdit: boolean;
-  fallback: string;
-  maxLength?: number;
-  onSave?: (nextTitle: string) => void;
-  requiredMessage?: string;
-  value: string;
-}) {
-  const [editing, setEditing] = React.useState(false);
-  const [draft, setDraft] = React.useState(value);
-  const [emptyError, setEmptyError] = React.useState(false);
-  const inputRef = React.useRef<HTMLInputElement | null>(null);
-
-  React.useEffect(() => {
-    if (!editing) setDraft(value);
-  }, [editing, value]);
-
-  const displayValue = value || fallback;
-  const isFallback = !value;
-
-  const commit = React.useCallback(() => {
-    const trimmed = draft.trim();
-    if (!trimmed && requiredMessage) {
-      // An empty title is refused out loud: the message shows and the field stays open.
-      setEmptyError(true);
-      requestAnimationFrame(() => inputRef.current?.focus());
-      return;
-    }
-    if (trimmed && trimmed !== value) {
-      onSave?.(trimmed);
-    }
-    setEmptyError(false);
-    setEditing(false);
-  }, [draft, onSave, requiredMessage, value]);
-
-  if (!canEdit) {
-    return (
-      <Typography
-        component="span"
-        sx={(theme) => ({
-          ...taskDetailTypography.title,
-          display: 'inline',
-          color: isFallback ? theme.palette.kanap.text.tertiary : 'inherit',
-        })}
-      >
-        {displayValue}
-      </Typography>
-    );
-  }
-
-  if (!editing) {
-    return (
-      <Typography
-        component="span"
-        onClick={() => {
-          setDraft(value);
-          setEditing(true);
-        }}
-        sx={(theme) => ({
-          ...taskDetailTypography.title,
-          display: 'inline',
-          color: isFallback ? theme.palette.kanap.text.tertiary : 'inherit',
-          cursor: 'text',
-          '&:hover': { opacity: 0.85 },
-        })}
-      >
-        {displayValue}
-      </Typography>
-    );
-  }
-
-  return (
-    <>
-    <Box
-      component="input"
-      ref={inputRef}
-      value={draft}
-      aria-invalid={emptyError || undefined}
-      {...(maxLength ? { maxLength } : {})}
-      onChange={(event: React.ChangeEvent<HTMLInputElement>) => { setDraft(event.target.value); setEmptyError(false); }}
-      onBlur={commit}
-      onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          commit();
-        }
-        if (event.key === 'Escape') {
-          setDraft(value);
-          setEmptyError(false);
-          setEditing(false);
-        }
-      }}
-      autoFocus
-      sx={(theme) => ({
-        font: 'inherit',
-        color: 'inherit',
-        bgcolor: 'transparent',
-        border: 'none',
-        borderBottom: `1px solid ${theme.palette.kanap.border.default}`,
-        outline: 'none',
-        p: 0,
-        m: 0,
-        width: '100%',
-      })}
-    />
-    {emptyError && requiredMessage && <FormHelperText error role="alert" sx={{ mt: 0.5 }}>{requiredMessage}</FormHelperText>}
-    </>
   );
 }
 
