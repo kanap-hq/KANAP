@@ -66,16 +66,25 @@ export default function AdminStandardAccountWorkspacePage() {
     setDirty(false);
   };
 
+  // Previous/next keep the two answers from #825. Close also offers Stay.
+  const confirmDirtyLeave = async (withStay = false): Promise<boolean> => {
+    if (!dirty) return true;
+    const labels = unsavedConfirm(t, 'saveAndLeave');
+    const outcome = withStay
+      ? await dialogs.confirmOutcome({ ...labels, stayLabel: t('common:unsaved.leaveWithoutSaving.cancel') })
+      : ((await dialogs.confirm(labels)) ? 'confirm' : 'cancel');
+    if (outcome === 'stay') return false;
+    if (outcome === 'confirm') {
+      try { await handleSave(); } catch { return false; }
+    } else {
+      handleReset();
+    }
+    return true;
+  };
+
   const confirmAndNavigate = async (targetId: string | null) => {
     if (!targetId) return;
-    if (dirty) {
-      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndLeave'));
-      if (proceed) {
-        try { await handleSave(); } catch { return; }
-      } else {
-        handleReset();
-      }
-    }
+    if (!(await confirmDirtyLeave())) return;
     navigate(`/admin/standard-accounts/${templateId}/${targetId}/${routeTab}?${searchParams.toString()}`);
   };
 
@@ -104,6 +113,16 @@ export default function AdminStandardAccountWorkspacePage() {
     return sp;
   }, [filters, q, sort]);
 
+  const closeToList = () => {
+    const qs = listContextParams.toString();
+    navigate(`/admin/standard-accounts${qs ? `?${qs}` : ''}`);
+  };
+
+  const handleClose = async () => {
+    if (!(await confirmDirtyLeave(true))) return;
+    closeToList();
+  };
+
   return (
     <Box sx={{ p: 2 }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
@@ -123,10 +142,7 @@ export default function AdminStandardAccountWorkspacePage() {
           <IconButton
             aria-label={t('common:buttons.close')}
             title={t('common:buttons.close')}
-            onClick={() => {
-              const qs = listContextParams.toString();
-              navigate(`/admin/standard-accounts${qs ? `?${qs}` : ''}`);
-            }}
+            onClick={() => { void handleClose(); }}
           >
             <CloseIcon />
           </IconButton>

@@ -270,6 +270,8 @@ export default function TaskWorkspacePage() {
   // Description autosave
   const [descSaveStatus, setDescSaveStatus] = React.useState<'idle' | 'saving' | 'saved'>('idle');
   const descAutosaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bumped when close is cancelled, so the effect below restarts a timer that close had cleared.
+  const [descriptionAutosaveNonce, setDescriptionAutosaveNonce] = React.useState(0);
   const savedDescriptionRef = React.useRef('');
   const descSavingRef = React.useRef(false);
   const pendingDescriptionFocusRef = React.useRef(false);
@@ -1125,7 +1127,7 @@ export default function TaskWorkspacePage() {
     descAutosaveTimerRef.current = timer;
 
     return () => clearTimeout(timer);
-  }, [description, isCreate, initialized, task, canManageCurrentTask, handleDescriptionAutosave]);
+  }, [description, descriptionAutosaveNonce, isCreate, initialized, task, canManageCurrentTask, handleDescriptionAutosave]);
 
   const handleSave = async () => {
     if (!task || saving || !canManageCurrentTask) return;
@@ -1230,7 +1232,37 @@ export default function TaskWorkspacePage() {
   };
 
   const handleBack = async () => {
+    // Close and back ask before leaving a saved task. A new task has nothing to keep.
+    // Clearing the debounce does not re-run the effect that owns it, so Stay starts it again.
+    const resumeDescriptionAutosave = descAutosaveTimerRef.current != null;
+    if (descAutosaveTimerRef.current) {
+      clearTimeout(descAutosaveTimerRef.current);
+      descAutosaveTimerRef.current = null;
+    }
     await waitForSidebarSaves();
+    if (!isCreate && dirty) {
+      const outcome = await dialogs.confirmOutcome({
+        ...unsavedConfirm(t, 'saveAndLeave'),
+        stayLabel: t('common:unsaved.leaveWithoutSaving.cancel'),
+      });
+      if (outcome === 'stay') {
+        if (resumeDescriptionAutosave) setDescriptionAutosaveNonce((n) => n + 1);
+        return;
+      }
+      if (outcome === 'confirm') {
+        setSaving(true);
+        try { await handleSave(); } catch { setSaving(false); return; }
+        setSaving(false);
+      } else {
+        if (task) {
+          setTitle(task.title || '');
+          setDescription(task.description || '');
+          setForm(buildTaskFormFromTask(task));
+        }
+        resetClassificationTouched();
+        setDirty(false);
+      }
+    }
     navigate(originPath);
   };
 

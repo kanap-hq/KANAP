@@ -1,7 +1,9 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { KanapDialogProvider } from '../../components/design';
+import { createAppTheme } from '../../config/ThemeContext';
 import api from '../../api';
 import TaskWorkspacePage from './TaskWorkspacePage';
 
@@ -141,8 +143,20 @@ vi.mock('./components/TaskSidebar', () => ({
   default: () => <div data-testid="task-sidebar" />,
 }));
 
+const navigateMock = vi.hoisted(() => vi.fn());
+
+vi.mock('react-router-dom', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router-dom')>()),
+  useNavigate: () => navigateMock,
+}));
+
 vi.mock('./components/TaskDetailHeader', () => ({
-  default: () => <div data-testid="task-detail-header" />,
+  default: ({ onClose, onOriginClick }: { onClose?: () => void; onOriginClick?: () => void }) => (
+    <div data-testid="task-detail-header">
+      <button type="button" onClick={() => onClose?.()}>close-task</button>
+      <button type="button" onClick={() => onOriginClick?.()}>back-task</button>
+    </div>
+  ),
 }));
 
 vi.mock('./components/TaskPropertiesDrawer', () => ({
@@ -238,13 +252,15 @@ function renderCreatePage() {
 
 function renderEditPage(initialEntry = '/portfolio/tasks/task-1/overview') {
   return render(
-    <KanapDialogProvider>
-      <MemoryRouter initialEntries={[initialEntry]}>
-        <Routes>
-          <Route path="/portfolio/tasks/:id/:tab" element={<TaskWorkspacePage />} />
-        </Routes>
-      </MemoryRouter>
-    </KanapDialogProvider>,
+    <ThemeProvider theme={createAppTheme('light')}>
+      <KanapDialogProvider>
+        <MemoryRouter initialEntries={[initialEntry]}>
+          <Routes>
+            <Route path="/portfolio/tasks/:id/:tab" element={<TaskWorkspacePage />} />
+          </Routes>
+        </MemoryRouter>
+      </KanapDialogProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -445,5 +461,93 @@ describe('TaskWorkspacePage relation changes', () => {
     expect(screen.queryByText('portfolio:workspace.task.messages.loading__0')).not.toBeInTheDocument();
     fireEvent.click(await screen.findByText('Move to project B'));
     expect(api.patch).not.toHaveBeenCalled();
+  });
+});
+
+describe('TaskWorkspacePage unsaved close', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    translationMock.reset();
+    taskQueryMock.task = makeTask();
+    taskQueryMock.isLoading = false;
+    taskQueryMock.refetch.mockReset();
+    taskQueryMock.refetch.mockResolvedValue(undefined);
+    vi.mocked(api.patch).mockResolvedValue({ data: {} } as any);
+
+    const localStorageMock = createLocalStorageMock();
+    vi.stubGlobal('localStorage', localStorageMock);
+    Object.defineProperty(window, 'localStorage', {
+      value: localStorageMock,
+      configurable: true,
+    });
+
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+
+  async function dirtyDescription() {
+    renderEditPage();
+    const field = await screen.findByLabelText('Task description');
+    fireEvent.change(field, { target: { value: 'Updated description' } });
+    return field;
+  }
+
+  it('closes a clean task without asking', async () => {
+    renderEditPage();
+    await screen.findByLabelText('Task description');
+    fireEvent.click(screen.getByRole('button', { name: 'close-task' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks'));
+  });
+
+  it('asks before closing a dirty task, and Stay keeps the description and its autosave', async () => {
+    const field = await dirtyDescription();
+    fireEvent.click(screen.getByRole('button', { name: 'close-task' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:unsaved.saveAndLeave.message__0')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.confirm__0' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.cancel__0' })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel__0' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(field).toHaveValue('Updated description');
+    expect(api.patch).not.toHaveBeenCalled();
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      '/portfolio/projects/project-a/tasks/task-1',
+      { description: 'Updated description' },
+    ), { timeout: 4000 });
+  });
+
+  it('asks the same question from the back link, and leaving drops the description', async () => {
+    const field = await dirtyDescription();
+    fireEvent.click(screen.getByRole('button', { name: 'back-task' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.cancel__0' }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks'));
+    expect(field).toHaveValue('');
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it('saves and then closes', async () => {
+    await dirtyDescription();
+    fireEvent.click(screen.getByRole('button', { name: 'close-task' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.confirm__0' }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      '/portfolio/projects/project-a/tasks/task-1',
+      expect.objectContaining({ title: 'Move me', description: 'Updated description' }),
+    ));
+    expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks');
   });
 });

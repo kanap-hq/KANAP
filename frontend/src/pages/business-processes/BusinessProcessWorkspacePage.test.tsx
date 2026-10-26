@@ -8,6 +8,10 @@ import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 
 const navigateMock = vi.hoisted(() => vi.fn());
+const editor = vi.hoisted(() => ({
+  save: vi.fn(async () => undefined),
+  reset: vi.fn(),
+}));
 const auth = vi.hoisted(() => ({ canAdmin: true }));
 const navState = vi.hoisted(() => ({
   total: 0,
@@ -37,9 +41,19 @@ vi.mock('../../hooks/useBusinessProcessNav', () => ({
 }));
 // The editors and the applications section load their own data: the tests are about the header.
 vi.mock('./editors/BusinessProcessOverviewEditor', () => ({
-  default: React.forwardRef(({ onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void }, _ref: React.ForwardedRef<unknown>) => (
-    <button type="button" onClick={() => onDirtyChange?.(true)}>mark-dirty</button>
-  )),
+  default: React.forwardRef((
+    { onDirtyChange }: { onDirtyChange?: (dirty: boolean) => void },
+    ref: React.ForwardedRef<{ save: () => Promise<void>; reset: () => void }>,
+  ) => {
+    React.useImperativeHandle(ref, () => ({
+      save: editor.save,
+      reset: () => {
+        editor.reset();
+        onDirtyChange?.(false);
+      },
+    }));
+    return <button type="button" onClick={() => onDirtyChange?.(true)}>mark-dirty</button>;
+  }),
 }));
 vi.mock('./editors/BusinessProcessCreateEditor', () => ({ default: React.forwardRef(() => null) }));
 vi.mock('./BusinessProcessApplicationsSection', () => ({ default: () => null }));
@@ -139,7 +153,61 @@ describe('BusinessProcessWorkspacePage', () => {
     expect(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.cancel' })).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: 'common:buttons.continue' })).toBeNull();
     expect(within(dialog).queryByRole('button', { name: 'common:buttons.cancel' })).toBeNull();
+    expect(within(dialog).queryByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel' })).toBeNull();
     fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.cancel' }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/business-processes/bp-2/overview?'));
+  });
+
+  it('closes a clean process without asking', async () => {
+    renderAt('/master-data/business-processes/bp-1/overview?sort=name%3Aasc');
+    await screen.findByText('Order to cash');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/business-processes?sort=name%3Aasc'));
+  });
+
+  async function closeDirtyProcess() {
+    renderAt('/master-data/business-processes/bp-1/overview?sort=name%3Aasc');
+    await screen.findByText('Order to cash');
+    fireEvent.click(screen.getByRole('button', { name: 'mark-dirty' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.close' }));
+    return screen.findByRole('dialog');
+  }
+
+  it('asks before closing a dirty process, and Stay keeps the edit', async () => {
+    const dialog = await closeDirtyProcess();
+    expect(within(dialog).getByText('common:unsaved.saveAndLeave.message')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.confirm' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.cancel' })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(editor.save).not.toHaveBeenCalled();
+    expect(editor.reset).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'common:buttons.save' })).toBeEnabled();
+  });
+
+  it('stays when the close question is dismissed', async () => {
+    const dialog = await closeDirtyProcess();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'labels.closeDialog' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'common:buttons.save' })).toBeEnabled();
+  });
+
+  it('drops the edit and closes when leaving without saving', async () => {
+    const dialog = await closeDirtyProcess();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.cancel' }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/business-processes?sort=name%3Aasc'));
+    expect(editor.reset).toHaveBeenCalled();
+    expect(editor.save).not.toHaveBeenCalled();
+  });
+
+  it('saves and then closes', async () => {
+    const dialog = await closeDirtyProcess();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.confirm' }));
+    await waitFor(() => expect(editor.save).toHaveBeenCalled());
+    expect(navigateMock).toHaveBeenCalledWith('/master-data/business-processes?sort=name%3Aasc');
+    expect(editor.reset).not.toHaveBeenCalled();
   });
 });

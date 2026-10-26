@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, TextField, Typography } from '@mui/material';
+import { Box, Button, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import KanapDialog from './KanapDialog';
 
@@ -14,7 +14,15 @@ type SharedDialogOptions = {
 };
 
 export type KanapAlertOptions = Omit<SharedDialogOptions, 'cancelLabel'>;
-export type KanapConfirmOptions = SharedDialogOptions;
+export type KanapConfirmOutcome = 'confirm' | 'cancel' | 'stay';
+export type KanapConfirmOptions = SharedDialogOptions & {
+  /**
+   * When set, this button and closing the dialog keep the caller in place
+   * (`stay`). The cancel label becomes the middle button (`cancel`).
+   * `confirm()` ignores it and still answers true or false.
+   */
+  stayLabel?: string;
+};
 export type KanapPromptOptions = {
   title?: string;
   message?: React.ReactNode;
@@ -36,7 +44,7 @@ type DialogRequest =
   | {
       type: 'confirm';
       options: KanapConfirmOptions;
-      resolve: (value: boolean) => void;
+      resolve: (value: KanapConfirmOutcome) => void;
     }
   | {
       type: 'prompt';
@@ -47,6 +55,8 @@ type DialogRequest =
 type KanapDialogApi = {
   alert: (options: KanapAlertOptions | string) => Promise<void>;
   confirm: (options: KanapConfirmOptions | string) => Promise<boolean>;
+  /** `confirm` runs the main action, `cancel` the other one, `stay` keeps the caller in place. */
+  confirmOutcome: (options: KanapConfirmOptions | string) => Promise<KanapConfirmOutcome>;
   prompt: (options: KanapPromptOptions | string) => Promise<string | null>;
 };
 
@@ -116,6 +126,15 @@ export function KanapDialogProvider({ children }: { children: React.ReactNode })
     },
     confirm(options) {
       return new Promise<boolean>((resolve) => {
+        enqueue({
+          type: 'confirm',
+          options: normalizeConfirmOptions(options),
+          resolve: (outcome) => resolve(outcome === 'confirm'),
+        });
+      });
+    },
+    confirmOutcome(options) {
+      return new Promise<KanapConfirmOutcome>((resolve) => {
         enqueue({ type: 'confirm', options: normalizeConfirmOptions(options), resolve });
       });
     },
@@ -130,7 +149,7 @@ export function KanapDialogProvider({ children }: { children: React.ReactNode })
     if (!activeRef.current) return;
     const current = activeRef.current;
     if (current.type === 'alert') current.resolve();
-    if (current.type === 'confirm') current.resolve(false);
+    if (current.type === 'confirm') current.resolve(current.options.stayLabel ? 'stay' : 'cancel');
     if (current.type === 'prompt') current.resolve(null);
     showNext();
   }, [showNext]);
@@ -144,7 +163,7 @@ export function KanapDialogProvider({ children }: { children: React.ReactNode })
       return;
     }
     if (current.type === 'confirm') {
-      current.resolve(true);
+      current.resolve('confirm');
       showNext();
       return;
     }
@@ -158,6 +177,9 @@ export function KanapDialogProvider({ children }: { children: React.ReactNode })
     current.resolve(promptValue);
     showNext();
   }, [promptValue, showNext, t]);
+
+  const confirmStayLabel = active?.type === 'confirm' ? active.options.stayLabel : undefined;
+  const discardLabel = active?.type === 'confirm' ? active.options.cancelLabel : undefined;
 
   const title = active?.type === 'alert'
     ? active.options.title ?? t('systemDialogs.noticeTitle')
@@ -176,7 +198,22 @@ export function KanapDialogProvider({ children }: { children: React.ReactNode })
           onClose={handleClose}
           onSave={handleSave}
           showCancel={active.type !== 'alert'}
-          cancelLabel={active.type === 'alert' ? t('buttons.cancel') : active.options.cancelLabel ?? t('buttons.cancel')}
+          cancelLabel={
+            active.type === 'alert'
+              ? t('buttons.cancel')
+              : (confirmStayLabel ?? active.options.cancelLabel ?? t('buttons.cancel'))
+          }
+          secondaryActions={active.type === 'confirm' && confirmStayLabel ? (
+            <Button variant="action" onClick={() => {
+              const current = activeRef.current;
+              if (current?.type !== 'confirm') return;
+              current.resolve('cancel');
+              showNext();
+            }}
+            >
+              {discardLabel ?? t('buttons.cancel')}
+            </Button>
+          ) : undefined}
           saveLabel={
             active.options.confirmLabel
             ?? (active.type === 'alert' ? t('buttons.close') : t('buttons.continue'))
