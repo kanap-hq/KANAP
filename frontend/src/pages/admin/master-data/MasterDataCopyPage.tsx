@@ -54,7 +54,7 @@ function metricLabel(metric: MasterDataMetric, t: any) {
   return entry ? t(entry.labelKey) : metric;
 }
 
-/** A copy row's name. A department with no name is worded from the locale files. */
+/** A copy row's name. A company or department with no name is worded from the locale files. */
 export function copyEntityLabel(
   t: (key: string) => string,
   row: { entityType?: string | null; entityName?: string | null } | null | undefined,
@@ -62,7 +62,19 @@ export function copyEntityLabel(
   const name = row?.entityName?.trim() ?? '';
   if (name) return name;
   if (row?.entityType === 'department') return t('ops:reports.shared.unknownDepartment');
+  if (row?.entityType === 'company') return t('ops:reports.shared.unknownCompany');
   return '';
+}
+
+const COPY_STATUS_KEYS: Record<string, string> = {
+  no_data_for_source_year: 'admin.copy.status.noDataForSourceYear',
+  failed_to_copy_metrics: 'admin.copy.status.failedToCopyMetrics',
+};
+
+/** The status of a skipped copy row, worded from the locale files. */
+export function copyStatusLabel(t: (key: string) => string, reason: string | null | undefined): string {
+  const key = reason ? COPY_STATUS_KEYS[reason] : undefined;
+  return t(key ?? 'admin.copy.status.skipped');
 }
 
 function formatValue(value: number | null, locale: string, metric: MasterDataMetric) {
@@ -187,9 +199,7 @@ export default function MasterDataCopyPage() {
       flex: 1,
       minWidth: 200,
       valueGetter: (params) => {
-        if (params.data?.skipped) {
-          return params.data.reason ?? t('admin.copy.status.skipped');
-        }
+        if (params.data?.skipped) return copyStatusLabel(t, params.data.reason);
         return t('admin.copy.status.readyToCopy');
       },
       cellStyle: (params) => params.data?.skipped ? { color: theme.palette.warning.dark } : { color: theme.palette.success.dark },

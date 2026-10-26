@@ -15,20 +15,21 @@ export type MasterDataCopyRequest = {
 export type MasterDataCopyResultItem = {
   entityType: 'company' | 'department';
   entityId: string;
-  /** Null when a department has no name: the copy screen words it. */
+  /** Null when a company or department has no name: the copy screen words it. */
   entityName: string | null;
   metric: MasterDataMetric;
   sourceValue: number | null;
   destinationValue: number | null;
   newValue: number | null;
   skipped: boolean;
-  reason?: string;
+  /** Skip code. The copy screen words it. Absent when the row will be copied. */
+  reason?: 'no_data_for_source_year' | 'failed_to_copy_metrics';
 };
 
 export type MasterDataCopyError = {
   entityType: 'company' | 'department';
   entityId: string;
-  /** Null when a department has no name: the copy screen words it. */
+  /** Null when a company or department has no name: the copy screen words it. */
   entityName: string | null;
   message: string;
 };
