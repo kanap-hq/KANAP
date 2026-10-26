@@ -505,53 +505,151 @@ See `doc/features/patterns/backend-patterns.md` for usage examples.
 
 See also: `doc/frontend-architecture.md` for detailed UI guidelines.
 
-### Data-scoped access (foundations)
+### Data-scoped access
 
-Data-scoped access limits a person to some companies and cost centres in the budget block (spec:
-`planning/data-scoped-access/spec.md`). The database enforces it with restrictive RLS
-policies that target one role only, so nothing changes for anyone else.
+Data-scoped access limits a person to some companies and cost centres in the budget block: budget
+lines of both natures, contracts, and every path that reads them. The database enforces it with
+restrictive RLS policies that target one role only, so nothing changes for anyone else.
 
+- **The model.** `users.data_access_mode` holds `all` (the default) or `limited`. A limited person
+  has nodes in `user_data_access_nodes`: a company, a cost centre (a group or a leaf) or everything,
+  each with `read` or `edit`. Reading follows the union of the nodes: a company reads the lines it
+  pays and the lines charged to its own cost centres; a group reads its sub-groups and their cost
+  centres, whatever their company; a cost centre reads the lines charged to it; everything reads
+  all. A contract is read through its company, its place in the tree or one of its budget lines.
+  Participations always open their object: IT or business owner of a line, contract owner, task
+  assignee or owner (edit), task follower (read). An Administrator sees everything, cannot be
+  limited, and is matched by role name as in `auth/business-contributor-scope.ts`.
+- **Placement.** An edit node permits placing an object whose company or cost centre it covers. A
+  line's paying company must be an edit company, or the company of its cost centre when that centre
+  is covered in edit; a contract's company must be an edit company, or the company of one of the
+  nodes covered in edit when its place in the tree is covered in edit. The rule holds on creation
+  and on any change of company or place; a participation never permits placing or deleting.
+  `data_access_placable_line(company, cost_centre)` and
+  `data_access_placable_contract(company, place)` are the only definitions, called by the policies,
+  the placement triggers, the write checks and the budget file preflight.
 - **The role.** `kanap_data_limited` is `NOLOGIN`. The application role may take it (`SET ROLE`)
   but never inherits it: otherwise its policies would apply to every request. PostgreSQL 16 and
   later: `GRANT ... WITH INHERIT FALSE, SET TRUE`. PostgreSQL 15: the application role becomes
   `NOINHERIT` and gets `USAGE, CREATE` on `public` directly in each database it owns.
 - **The role script.** `infra/scripts/data-access-role.sql` (`mode=install` or `mode=uninstall`)
   is the only step that needs a superuser or a `CREATEROLE` role. It is idempotent and runs before
-  or after the migrations. Dev (PostgreSQL 15): run it with `-v include_template1=on` on every
-  database the application role owns, then once more to apply `NOINHERIT` (loop in the script
-  header); new dev volumes get it from `infra/db-init/`. The option also grants on `template1`, so
-  the databases created later (lane copies, test databases) let the application role create in
-  `public`. By default the script requires and grants only the databases the application role owns:
-  on a PostgreSQL 15 server shared with other applications, a grant on `template1` would reach their
-  future databases too. CI: one step before the migrations. QA and prod: the
-  operator runs it once per server after the deploy, then restarts the API. On-premise: optional;
-  without it, nobody can be limited.
-- **Grants and policies.** The application sets them itself, in each database:
-  `data_access_sync_policies()` grants the role its table rights and recreates its policies from
-  `data_access_expected_policies()`, the single list of expected policies. Each migration that
-  changes the list calls it. Without the role, it does nothing.
-- **Startup.** The lead process (`data-access/data-access-availability.ts`, called from `main.ts`)
-  runs the sync when the role exists and a grant or a policy is missing, with a 5 s lock timeout.
-  A failure is logged and retried at the next start. It then checks the availability (role,
-  membership, inheritance, `CREATE` on `public` on PostgreSQL 15, policies, grants) and logs one
-  `[DATA-ACCESS]` line. Every process keeps the result for a minute. `GET /auth/me` returns it in
-  `dataAccess`, with the person's mode and nodes. The check is informative only.
-- **Per transaction.** `data_access_apply(user)` sets nine `app.da_*` settings and takes the role
-  with `set_config(..., true)`, so both end with the transaction and a pooled connection carries
-  nothing. `applyDataAccess()` (`data-access/data-access.ts`) calls it from these call points only:
+  or after the migrations. CI runs it once before the migrations. QA and prod: the operator runs it
+  once per server after the deploy, then restarts the API. On-premise: optional; without it, nobody
+  can be limited. Dev (PostgreSQL 15): run it with `-v include_template1=on` on every database the
+  application role owns, then once more to apply `NOINHERIT` (loop in the script header); new dev
+  volumes get it from `infra/db-init/`. The option also grants on `template1`, so the databases
+  created later (lane copies, test databases) let the application role create in `public`. By
+  default the script requires and grants only the databases the application role owns: on a
+  PostgreSQL 15 server shared with other applications, a grant on `template1` would reach their
+  future databases too.
+- **The policy set.** `data_access_expected_policies()` returns `(policy_name, table_name, command,
+  fingerprint)`, the fingerprint being the md5 of the command and of the two policy texts.
+  `data_access_sync_policies()` grants the role its rights on the tables and sequences the
+  application role owns and recreates a policy only when it is missing or different: it compares
+  the `COMMENT ON POLICY`
+  `kda:<fingerprint>:<md5 of the deparsed expressions>`. A healthy database therefore starts without
+  policy DDL and its exclusive table locks. A migration that changes the set redefines both
+  functions with the complete list and calls the sync. Without the role, the sync does nothing. When
+  the application role inherits the limited role, the sync drops every policy on the role and
+  creates none (a warning): without that, the policies would apply to every request, migrations
+  included. Limited persons are then refused (`KDA01`); unscoped persons are served.
+- **The policies.** Restrictive, named `<table>_data_access_<command>`, `TO kanap_data_limited`,
+  next to the tenant policies. Each starts with the context guard
+  `(SELECT 1 WHERE current_setting('app.da_mode', true) = 'limited') IS NOT NULL`: the role taken
+  without `data_access_apply` refuses everything. The subquery matters: a bare equality without
+  statistics is estimated at 0.5% of the rows of every scoped table and turns the plans into nested
+  loops, where the subquery is estimated at 99.5%. `read_all` (and `edit_all` for writes) is tested
+  first, so Everything costs little. A child table's policy is a correlated `EXISTS` on its line,
+  contract or task; deeper paths are cut by `SECURITY DEFINER` functions
+  (`data_access_task_visible`, `data_access_contract_visible`,
+  `data_access_searchable_task_ids`, `data_access_visible_contract_ids`) that read without policies
+  and apply the same predicates. `DELETE` is refused on lines and contracts (reserved operations);
+  children are deleted with their parent. Contract attachments and document links read only when
+  the contract is directly readable, never through one of its lines.
+- **Triggers.** `spend_items_data_access_placement`, `contracts_data_access_placement` and
+  `tasks_data_access_placement` (`BEFORE UPDATE OF` the company and place columns, or the task's
+  object) refuse, in mode `limited`, a new company or place that is not placable: the policies see
+  only the new row, so an owner could otherwise move their line or contract out of the access and
+  keep it. `spend_items_data_access_contract_link` and
+  `contract_spend_items_data_access_link` (`BEFORE INSERT OR UPDATE`) require a readable contract
+  and a modifiable line when a contract is linked to a line or a line to a contract; they run before
+  the foreign key check and answer the same for a hidden and a missing object, so the key is no
+  existence oracle. Outside mode `limited`, they do nothing.
+- **The context.** `data_access_apply(user)` (`SECURITY INVOKER`) reads the person and the nodes,
+  unfolds the tree, and sets nine transaction-local settings with `set_config(..., true)`:
+  `app.da_mode`, `app.da_user`, `app.da_read_all`, `app.da_edit_all`, `app.da_read_companies`,
+  `app.da_edit_companies`, `app.da_read_nodes`, `app.da_edit_nodes`,
+  `app.da_edit_node_companies`. It then sets `jit = off` and takes the role
+  (`set_config('role', 'kanap_data_limited', true)`); a second call in the same transaction
+  re-reads the person and replaces the access (the preview uses it). `data_access_ctx()` exposes the
+  settings as JSON for the list engine's "editable" column; the policies read them directly.
+  `applyDataAccess()` (`data-access/data-access.ts`) calls it from these call points only:
   `TenantInterceptor`, the reconnection in `createTenantQueryRunner`,
   `AiTenantExecutionService.runWithContext`, and the public routes of the inline attachments. A
-  limited person cannot run without a transaction (`{ transaction: false }` is refused).
-- **Fail closed.** For a limited person, `data_access_apply` refuses when the role is missing,
-  inherited or cannot be taken, or when an expected policy is missing: SQLSTATE `KDA01`, answered
-  503 `DATA_ACCESS_UNAVAILABLE`. A person outside the tenant gets `KDA02`, answered 401. Persons in
-  mode `all` and Administrators are never affected.
-- **Inventories.** `data-access/__tests__/data-access-inventory.spec.ts` checks the call points and
-  the role changes, and that every path outside the interceptor (`@SkipTenantTransaction()`,
-  `{ transaction: false }`, `tenantExecutor.run(`, `withTenantExecution(`, `withTenant(`) is
-  classified in `data-access/data-access-paths.inventory.ts`, with the number of call sites per
-  member and, for a controller marked as a whole, its route methods: a second call or a new route
-  fails the spec until someone classifies it.
+  limited person cannot run without a transaction (`{ transaction: false }` is refused), and the
+  access is never set at session level. No other code changes the role (`SET ROLE`, `RESET ROLE`,
+  `set_config('role', ...)`); a spec checks it.
+- **Fail closed.** For a limited person, `data_access_apply` refuses when the person is not in the
+  tenant (`KDA02`, answered 401 `INVALID_TOKEN`), and when the role is missing, inherited, cannot
+  be taken or an expected policy is missing (`KDA01`, answered 503 `DATA_ACCESS_UNAVAILABLE`).
+  Persons in mode `all` and Administrators never take the role. The availability check is
+  informative; `data_access_apply` decides per transaction.
+- **Startup.** The lead process (`data-access/data-access-availability.ts`, called from `main.ts`)
+  runs the sync when the role exists and a grant or an expected policy is missing or different, or
+  the role is inherited, with a 5 s `lock_timeout`; a failure is logged and retried at the next
+  start. It then checks the availability (role, membership, inheritance, `CREATE` on `public` on
+  PostgreSQL 15, policies and their fingerprints, grants and `EXECUTE` on the disclosures) and logs
+  one `[DATA-ACCESS]` line. Every process caches the result for a minute; `GET /auth/me` returns it
+  in `dataAccess`, with the person's mode and nodes. The check is informative only.
+- **Controlled disclosures.** Three `SECURITY DEFINER` functions and one utility look beyond the
+  access and return only what the model allows. The functions are tenant-filtered, refuse the
+  limited role without context and check that the starting object is visible:
+  - `data_access_hidden_count(type, id)` counts the lines or contracts linked to a visible object
+    that the person cannot read, and the closed documents of a contract opened through a line;
+  - `data_access_reference(type, id)` returns the reference of a linked line, never a contract
+    (contracts have none);
+  - `data_access_can_read(person, type, id)` tells whether another person can read a line, a task
+    or a contract; notifications and "Send the link" use it;
+  - `withFullDataAccess(manager, read)` opens a savepoint, makes it read only, leaves the limited
+    role (`RESET ROLE`), runs `read`, rolls back to the savepoint (which restores the role) and
+    checks the role came back; only the chargeback report (`spend/chargeback-report.service.ts`)
+    and the contract coverage (`contracts/contract-budget.ts`) call it, and a spec checks those two
+    callers.
+- **Reserved operations.** A limited person cannot run the operations reserved to unscoped persons
+  (tenant settings, bulk line operations, deletes of a line or a contract, user and role
+  administration, audit log, organisation data, updates and deletes of suppliers and shared
+  contacts, imports that update existing records, agent screens). One guard, two entry points:
+  `@ReservedToUnscopedDataAccess()` on a route (refused by the tenant interceptor after it applied
+  the access) and `assertUnscopedDataAccess()` for the paths outside the interceptor (Plaid writes,
+  `runWithContext`); both answer 403 `DATA_ACCESS_LIMITED`.
+  `data-access-reserved.inventory.ts` classifies every route of the controllers that hold a reserved
+  operation as reserved or allowed with a reason, `data-access-paths.inventory.ts` classifies every
+  path outside the interceptor transaction, `data-access-tables.inventory.ts` lists every table,
+  view and function the access rules reach (the specs compare the catalog both ways), and
+  `data-access-writes.inventory.ts` lists the TypeORM saves that rely on the write checks. A new
+  route, path, table or save fails a spec until it is classified.
+- **Administration.** `GET /users/:id/data-access`, `PUT /users/:id/data-access`,
+  `POST /users/:id/data-access/preview`, `GET /companies/:id/data-access`,
+  `GET /cost-centers/:id/data-access`, `GET /data-access`, `GET /data-access/export` and
+  `POST /data-access/import?dryRun=` are reserved to unscoped persons who administer users (403
+  `DATA_ACCESS_LIMITED` otherwise); `GET /data-access/placement-options` and `GET /auth/me` are open
+  to the person. The preview follows the real path: in a savepoint it writes the proposed mode and
+  nodes into `users` and `user_data_access_nodes`, applies the target's access with
+  `data_access_apply`, counts lines (both natures) and contracts under the policies, rolls back to
+  the savepoint, applies the caller again (which also resets the mode kept in memory for the
+  transaction), and checks that the limited role and the settings are gone; a mismatch fails the
+  request. Nothing is written.
+- **Coverage.** The policies cover `spend_items` and the tables that follow a line (versions,
+  amounts, allocations, round inputs and their lines, totals, analytics values, contacts, links,
+  attachments, legacy tasks); `contracts` and the tables that follow it (contacts, compliance items,
+  attachments, links, legacy tasks); the tables linking another object to a line (applications,
+  assets, technologies, projects, requests) and to a contract (applications, assets, technologies);
+  the tasks of a line or a contract and their elements, the link from a knowledge document to a
+  task; and `search_index` for the entries of lines, contracts and their tasks.
+  `contract_spend_items` has no policy (the contract policy cites it; the service checks its
+  writes). `data_access_expected_policies()` is the list, and
+  `SELECT DISTINCT table_name FROM data_access_expected_policies() ORDER BY 1;` names the tables.
 - **Uninstall.** A lot's `down()` removes its policies through the sync. The script's
   `mode=uninstall` runs `DROP OWNED BY kanap_data_limited` in each database, then `DROP ROLE`, then
   `ALTER ROLE <app> INHERIT` on PostgreSQL 15. The direct grant on `public` stays.
