@@ -285,7 +285,7 @@ Las versiones que ningún servidor ni ninguna aplicación usa no tienen fila. Se
 
 Cuando la tecnología o algunas de sus versiones están fuera de las alertas, una línea al principio de la sección lo indica: **Excluida de las alertas**, **Excluida de las alertas, excepto 2 versiones** o **3 versiones excluidas de las alertas**. Con `infrastructure:member`, **Cambiar** junto a ella abre la tabla de versiones de la pestaña Resumen, donde están los interruptores. Consulte [Alertas de vulnerabilidad](#alertas-de-vulnerabilidad).
 
-KANAP vuelve a cotejar la tecnología en cuanto cambian sus identificadores, nombres CVE.org, versiones, servidores o aplicaciones. Tras un nuevo identificador de producto CPE, la sección indica «Búsqueda de vulnerabilidades en curso…» mientras KANAP lee ese producto en la NVD. **Actualizar** (`infrastructure:member`) lanza la comparación a mano.
+KANAP vuelve a cotejar la tecnología en cuanto cambian sus identificadores, nombres CVE.org, versiones, servidores o aplicaciones. Tras un nuevo identificador de producto CPE, la sección indica «Búsqueda de vulnerabilidades en curso…» mientras KANAP lee ese producto en la NVD. Cuando esa lectura no se puede completar, la sección lo dice. **Actualizar** (`infrastructure:member`) lanza la comparación a mano.
 
 ### Relaciones
 

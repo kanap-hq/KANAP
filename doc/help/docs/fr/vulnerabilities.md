@@ -32,7 +32,7 @@ Certaines vulnérabilités ne s'appliquent que lorsque deux produits tournent en
 
 Une ligne existe dès qu'une des deux sources la rapproche. Quand la NVD et l'éditeur ne disent pas la même chose, la ligne reste. La colonne **Source** de la liste indique les sources qui l'ont rapprochée. Quand la NVD n'a pas encore noté une vulnérabilité, KANAP affiche le score et la sévérité de la fiche de l'éditeur. Une vulnérabilité rejetée par CVE.org ou par la NVD ne rapproche plus.
 
-Les changements comptent tout de suite. Quand vous ajoutez une technologie ou un identifiant CPE produit, KANAP cherche aussitôt ce produit dans la NVD ; la section **Vulnérabilités** de la technologie indique « Recherche des vulnérabilités en cours… » jusqu'à la fin de la recherche. Quand un nom CVE.org, une version, un serveur ou une application d'une technologie change, KANAP rapproche à nouveau la technologie dès que le changement est enregistré. **Actualiser**, dans la section **Vulnérabilités** de la technologie, fait la même chose à la main.
+Les changements comptent tout de suite. Quand vous ajoutez une technologie ou un identifiant CPE produit, KANAP cherche aussitôt ce produit dans la NVD ; la section **Vulnérabilités** de la technologie indique « Recherche des vulnérabilités en cours… » jusqu'à la fin de la recherche. Quand la recherche ne peut pas aboutir, la section le dit. Quand un nom CVE.org, une version, un serveur ou une application d'une technologie change, KANAP rapproche à nouveau la technologie dès que le changement est enregistré. **Actualiser**, dans la section **Vulnérabilités** de la technologie, fait la même chose à la main.
 
 ## Alertes
 

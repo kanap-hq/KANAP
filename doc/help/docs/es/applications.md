@@ -279,7 +279,7 @@ Para añadir, cambiar o quitar una tecnología declarada, y para registrarla en 
 | **Crít.**, **Alta**, **Media**, **Baja**, **S. eval.** | Una columna por gravedad (Crítica, Alta, Media, Baja, Sin evaluar, el nombre completo en una información emergente del encabezado): las vulnerabilidades aún por revisar. Una vulnerabilidad calificada **Ninguna** cuenta con **Baja** |
 | **Total** | Las vulnerabilidades distintas aún por revisar en esta línea |
 
-**Ver** abre la página [Vulnerabilidades](vulnerabilities.md) filtrada por la aplicación y la tecnología. Cuando no queda nada por revisar, la sección lo dice en una línea. Mientras el cotejo de una tecnología recién registrada en esta aplicación, o en uno de sus servidores de despliegue, sigue en curso, la sección muestra «Búsqueda de vulnerabilidades en curso…» y se completa sola. Una aplicación desactivada no tiene sección.
+**Ver** abre la página [Vulnerabilidades](vulnerabilities.md) filtrada por la aplicación y la tecnología. Cuando no queda nada por revisar, la sección lo dice en una línea. Mientras la primera lectura de un producto en la NVD, o el cotejo de una tecnología recién registrada en esta aplicación o en uno de sus servidores de despliegue, sigue en curso, la sección muestra «Búsqueda de vulnerabilidades en curso…» y se completa sola. Cuando la búsqueda no se puede completar, la sección lo dice. Una aplicación desactivada no tiene sección.
 
 La sección solo cuenta vínculos directos. Una tecnología que la sección **Tecnologías** muestra a través del host de una máquina virtual no cuenta aquí: cuenta en el host. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts).
 

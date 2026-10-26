@@ -260,7 +260,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'technologies/catalog/technology-catalog-sync.service.ts', member: 'adoptedKeys', site: 'with_tenant', class: 'system', reason: 'scheduled technology catalog sync, per tenant (technologies)' },
   { file: 'technologies/catalog/technology-catalog-sync.service.ts', member: 'run', site: 'with_tenant', class: 'system', reason: 'scheduled technology catalog sync, per tenant (technologies)' },
   { file: 'vulnerabilities/nvd-feed.service.ts', member: 'followedProducts', site: 'with_tenant', class: 'system', reason: 'vulnerability feed: followed products (technologies)' },
-  { file: 'vulnerabilities/nvd-feed.service.ts', member: 'run', site: 'with_tenant', class: 'system', reason: 'scheduled vulnerability feed: matching and digests to the people who follow the technologies', count: 2 },
+  { file: 'vulnerabilities/nvd-feed.service.ts', member: 'runOnce', site: 'with_tenant', class: 'system', reason: 'scheduled vulnerability feed: matching and digests to the people who follow the technologies', count: 2 },
   { file: 'vulnerabilities/nvd-feed.service.ts', member: 'drain', site: 'with_tenant', class: 'system', reason: 'detached rematch queued after a technology change (vulnerability and technology tables)' },
   { file: 'vulnerabilities/nvd-feed.service.ts', member: 'flushRematch', site: 'with_tenant', class: 'system', reason: 'detached rematch of the tenants carrying changed products (vulnerability and technology tables)' },
   { file: 'vulnerabilities/nvd-feed.service.ts', member: 'tenantsCarrying', site: 'with_tenant', class: 'system', reason: 'vulnerability feed: which tenants carry a product (technologies)' },

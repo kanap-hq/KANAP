@@ -47,15 +47,21 @@ export type ReachVulnerabilities = {
   member_totals?: { open: number; severe: number; exploited_severe: number; critical?: number } | null;
   /**
    * True while a match is queued or running for a technology of this record that has CPE
-   * identifiers. The section then says the search is in progress instead of that nothing is to review.
+   * identifiers, or while a linked product's first collection from the NVD has not finished.
+   * The section then says the search is in progress instead of that nothing is to review.
    */
   pending?: boolean;
+  /**
+   * True when that collection failed and nothing is still running. The section then says the
+   * search could not be completed. Absent means false.
+   */
+  search_failed?: boolean;
 };
 
 /** How often a record reads its vulnerabilities again while `pending` is true. */
 export const REACH_VULNERABILITIES_POLL_MS = 1_000;
 
-/** Refetch while a match is queued for this record, and stop once the answer is no longer pending. */
+/** Refetch while the search is still pending, and stop once the answer is no longer pending. */
 export function reachVulnerabilitiesRefetchMs(data: ReachVulnerabilities | undefined): number | false {
   return data?.pending ? REACH_VULNERABILITIES_POLL_MS : false;
 }
@@ -205,8 +211,10 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
   const carried = kind === 'asset' ? data.indirect ?? [] : [];
   const indirect = carried.filter((row) => !row.through_host);
   const platform = carried.filter((row) => row.through_host);
-  // A match still running, and nothing to show yet: say so, instead of the empty line.
+  // A search still running, and nothing to show yet: say so, instead of the empty line.
+  // A failed collection says the search could not be completed, and only while that line would be empty.
   const showPending = data.pending === true && data.rows.length === 0 && indirect.length === 0;
+  const showFailed = !showPending && data.search_failed === true && data.rows.length === 0 && indirect.length === 0;
   const platformFold = platform.length > 0
     ? { label: t('pages.vulnerabilities.reach.platform', { count: platform.length }), rows: platform }
     : undefined;
@@ -235,7 +243,9 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
           <RelationsEmpty>
             {showPending
               ? <span role="status" data-testid="reach-vulnerabilities-pending">{t('pages.vulnerabilities.section.searching')}</span>
-              : t(`pages.vulnerabilities.reach.empty.${kind}`)}
+              : showFailed
+                ? <span role="status" data-testid="reach-vulnerabilities-failed">{t('pages.vulnerabilities.section.searchFailed')}</span>
+                : t(`pages.vulnerabilities.reach.empty.${kind}`)}
           </RelationsEmpty>
         )) : (
           <RelationsTable columns={directColumns} rows={data.rows} rowKey={rowKey} ariaLabel={title} />

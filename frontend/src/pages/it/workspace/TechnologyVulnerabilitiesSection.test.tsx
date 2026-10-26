@@ -214,6 +214,30 @@ describe('TechnologyVulnerabilitiesSection', () => {
     expect(screen.queryByRole('link', { name: 'See everything on the Vulnerabilities page' })).toBeNull();
   });
 
+  it('says the search could not be completed when the product collection failed', async () => {
+    getMock.mockResolvedValue({
+      data: summary({ collecting: false, products: [{ product: 'a:apache:tomcat', status: 'failed' }], versions: [], cves: 0 }),
+    } as any);
+    renderSection(true);
+    expect((await screen.findByTestId('technology-vulnerabilities-failed')).textContent).toBe('The search for vulnerabilities could not be completed.');
+    expect(screen.queryByText('No known vulnerability concerns this technology.')).toBeNull();
+    expect(screen.queryByText('Searching for vulnerabilities…')).toBeNull();
+  });
+
+  it('keeps searching when one product is still pending and another has failed', async () => {
+    getMock.mockResolvedValue({
+      data: summary({
+        collecting: true,
+        products: [{ product: 'a:apache:tomcat', status: 'pending' }, { product: 'a:apache:httpd', status: 'failed' }],
+        versions: [],
+        cves: 0,
+      }),
+    } as any);
+    renderSection(true);
+    expect(await screen.findByText('Searching for vulnerabilities…')).toBeTruthy();
+    expect(screen.queryByTestId('technology-vulnerabilities-failed')).toBeNull();
+  });
+
   it('says in one line that nothing concerns the technology', async () => {
     getMock.mockResolvedValue({ data: summary({ versions: [], cves: 0 }) } as any);
     renderSection(true);

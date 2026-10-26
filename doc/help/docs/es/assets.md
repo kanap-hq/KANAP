@@ -264,7 +264,7 @@ Cuando se siguen las vulnerabilidades, la última sección de la pestaña lista 
 | **Crít.**, **Alta**, **Media**, **Baja**, **S. eval.** | Una columna por gravedad (Crítica, Alta, Media, Baja, Sin evaluar, el nombre completo en una información emergente del encabezado): las vulnerabilidades aún por revisar. Una vulnerabilidad calificada **Ninguna** cuenta con **Baja** |
 | **Total** | Las vulnerabilidades distintas aún por revisar en esta línea |
 
-**Ver** abre la página [Vulnerabilidades](vulnerabilities.md) filtrada por el activo y la tecnología. Cuando no queda nada por revisar, la sección lo dice en una línea. Mientras el cotejo de una tecnología recién registrada en este activo sigue en curso, la sección muestra «Búsqueda de vulnerabilidades en curso…» y se completa sola. Un activo retirado no tiene sección.
+**Ver** abre la página [Vulnerabilidades](vulnerabilities.md) filtrada por el activo y la tecnología. Cuando no queda nada por revisar, la sección lo dice en una línea. Mientras la primera lectura de un producto en la NVD, o el cotejo de una tecnología recién registrada en este activo, sigue en curso, la sección muestra «Búsqueda de vulnerabilidades en curso…» y se completa sola. Cuando la búsqueda no se puede completar, la sección lo dice. Un activo retirado no tiene sección.
 
 En un **clúster**, **En sus miembros** lista aparte las tecnologías de sus miembros, una línea por tecnología y versión, con los miembros que la llevan en la columna **Activo**. Un clúster cuenta las vulnerabilidades de sus miembros en servicio con las suyas: el número de la sección, la insignia del encabezado (su información emergente dice "miembros incluidos") y la columna de la lista. El **Ver** de una línea abre la página en el miembro que la lleva.
 

@@ -550,6 +550,7 @@
         "title": "Vulnerabilidades",
         "empty": "Ninguna vulnerabilidad conocida afecta a esta tecnología.",
         "searching": "Búsqueda de vulnerabilidades en curso…",
+        "searchFailed": "La búsqueda de vulnerabilidades no se ha podido completar.",
         "loadFailed": "No se pudieron cargar las vulnerabilidades.",
         "rematch": "Actualizar",
         "rematched": "Cotejo rehecho: {{added}} nuevas, {{removed}} retiradas.",

@@ -32,7 +32,7 @@ Some vulnerabilities only apply when two products run together, for example Tomc
 
 A row exists as soon as one of the two sources matches it. When the NVD and the publisher disagree, the row stays. The **Source** column of the list says which sources matched it. When the NVD has not scored a vulnerability yet, KANAP shows the score and the severity of the publisher's record. A vulnerability that CVE.org or the NVD rejects no longer matches.
 
-Changes count at once. When you add a technology or a CPE product identifier, KANAP searches the NVD for that product right away; the technology's **Vulnerabilities** section says "Searching for vulnerabilities…" until the search ends. When a CVE.org name, a version, a server or an application of a technology changes, KANAP matches the technology again as soon as the change is saved. **Refresh**, in the technology's **Vulnerabilities** section, does the same by hand.
+Changes count at once. When you add a technology or a CPE product identifier, KANAP searches the NVD for that product right away; the technology's **Vulnerabilities** section says "Searching for vulnerabilities…" until the search ends. When the search cannot be completed, the section says so. When a CVE.org name, a version, a server or an application of a technology changes, KANAP matches the technology again as soon as the change is saved. **Refresh**, in the technology's **Vulnerabilities** section, does the same by hand.
 
 ## Alerts
 
