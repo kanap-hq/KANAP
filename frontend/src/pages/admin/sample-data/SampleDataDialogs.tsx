@@ -1,8 +1,10 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
 import { alpha, type Theme } from '@mui/material/styles';
 import WarningAmberRoundedIcon from '@mui/icons-material/WarningAmberRounded';
 import { useTranslation } from 'react-i18next';
+import { api } from '../../../api/client';
 import { KanapDialog } from '../../../components/design';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { getPillBg } from '../../../utils/statusColors';
@@ -20,7 +22,7 @@ const irreversibleWarningSx = (theme: Theme) => ({
 });
 
 /**
- * "Step 3 of 19: companies" for a running load; null for a step this build does not know (or none
+ * "Step 3 of 21: companies" for a running load; null for a step this build does not know (or none
  * yet), never the technical name.
  */
 export function useStepLabel() {
@@ -36,6 +38,24 @@ export function useStepLabel() {
   }, [t]);
 }
 
+type CompanyPage = { items: Array<{ name?: string | null }>; total: number };
+
+/**
+ * The name of the single company still in the workspace: the starting company, named after the
+ * organisation. The companies list, while the dialog is open. Empty when that list does not hold
+ * exactly one company.
+ */
+function useStartingCompanyName(enabled: boolean): string {
+  const query = useQuery({
+    queryKey: ['companies', 'sample-data-load'],
+    queryFn: () => api.get<CompanyPage>('/companies', { params: { page: 1, limit: 2 } }),
+    enabled,
+    retry: false,
+  });
+  if (query.data?.total !== 1) return '';
+  return query.data.items[0]?.name?.trim() ?? '';
+}
+
 /** The confirmation of a load: what the data set holds. Opened by the page and the home banner. */
 export function LoadSampleDataDialog({ open, loading, error, onClose, onConfirm }: {
   open: boolean;
@@ -45,6 +65,7 @@ export function LoadSampleDataDialog({ open, loading, error, onClose, onConfirm 
   onConfirm: () => void;
 }) {
   const { t } = useTranslation(['admin', 'errors', 'nav']);
+  const startingCompany = useStartingCompanyName(open);
   // Where the page is, as the navigation names it in this language.
   const path = `${t('nav:workspaces.admin')} › ${t('nav:sidebar.admin.sampleData')}`;
   return (
@@ -65,6 +86,9 @@ export function LoadSampleDataDialog({ open, loading, error, onClose, onConfirm 
           <Typography component="li" variant="body2">{t('sampleData.loadDialog.landscape')}</Typography>
           <Typography component="li" variant="body2">{t('sampleData.loadDialog.business')}</Typography>
         </Box>
+        {startingCompany ? (
+          <Typography variant="body2">{t('sampleData.loadDialog.startingCompany', { name: startingCompany })}</Typography>
+        ) : null}
         <Typography variant="body2" color="text.secondary">{t('sampleData.loadDialog.duration', { path })}</Typography>
       </Stack>
     </KanapDialog>

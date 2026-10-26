@@ -1744,7 +1744,8 @@
       "users": "18 usuarios ficticios, que no pueden iniciar sesión",
       "landscape": "Las aplicaciones y su panorama: instancias, interfaces y conexiones",
       "business": "Los contratos, el presupuesto del año en curso, los proyectos y las tareas",
-      "duration": "La carga tarda menos de un minuto. Puede borrarlo todo más tarde desde {{path}}."
+      "startingCompany": "La empresa inicial «{{name}}» se sustituye por las empresas de ejemplo.",
+      "duration": "La carga tarda unos dos minutos. Puede borrarlo todo más tarde desde {{path}}."
     },
     "resetDialog": {
       "title": "Borrar todo y empezar de cero",

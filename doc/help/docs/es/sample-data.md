@@ -21,7 +21,7 @@ El conjunto describe Fromage & Co, una quesería ficticia:
 - **Contratos, el presupuesto del año en curso, proyectos y tareas**
 - **Líneas presupuestarias clasificadas según las [dimensiones recomendadas](analytics.md#dimensiones-recomendadas)**: cada línea tiene un tipo de coste y un dominio TI, las líneas CAPEX y las líneas build tienen un motivo, y las líneas CAPEX una prioridad. El conjunto añade también **Recurrencia**, en el idioma del espacio de trabajo, y dos dimensiones propias, **Business domain** y **Budget reference**, cuyos nombres y valores se quedan en inglés
 
-Las fechas siguen el año en curso, de modo que el presupuesto siempre parece actualizado. La carga tarda menos de un minuto.
+Las fechas siguen el año en curso, de modo que el presupuesto siempre parece actualizado. La carga tarda unos dos minutos.
 
 Los usuarios ficticios no tienen contraseña ni acceso. Sirven para que los responsables, las personas asignadas y los equipos de proyecto resulten realistas. KANAP no les envía ningún correo, y el borrado los elimina.
 
@@ -42,7 +42,7 @@ Lo que un espacio de trabajo nuevo crea por usted (su primera empresa, el plan d
 2. Haga clic en **Cargar datos de ejemplo**.
 3. Lea el resumen del cuadro de diálogo y confirme con **Cargar datos de ejemplo**.
 
-La página sigue la carga paso a paso (por ejemplo, «Paso 4 de 19: planes de cuentas») y el estado cambia a **Cargados** al terminar. La franja de estado muestra entonces cuándo se cargaron los datos y quién lo hizo. Todo lo que ve en KANAP se actualiza con los nuevos datos.
+La página sigue la carga paso a paso (por ejemplo, «Paso 4 de 21: planes de cuentas») y el estado cambia a **Cargados** al terminar. La franja de estado muestra entonces cuándo se cargaron los datos y quién lo hizo. Todo lo que ve en KANAP se actualiza con los nuevos datos.
 
 **Si la carga no es posible**, la página no muestra el botón **Cargar datos de ejemplo**. Indica el motivo:
 

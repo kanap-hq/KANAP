@@ -87,7 +87,12 @@ describe('SampleDataPage', () => {
   });
 
   it('offers the load in an empty workspace and describes the data set before loading', async () => {
-    (apiClient.get as any).mockResolvedValue(BASE);
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === '/companies') {
+        return Promise.resolve({ items: [{ name: 'Northwind Trading' }], total: 1, page: 1, limit: 2 });
+      }
+      return Promise.resolve(BASE);
+    });
     (apiClient.post as any).mockResolvedValue({ ...BASE, status: 'loading' });
     renderPage();
 
@@ -100,10 +105,28 @@ describe('SampleDataPage', () => {
     expect(within(dialog).getByText('18 fictional users, who cannot sign in')).toBeInTheDocument();
     expect(within(dialog).getByText(/instances, interfaces and connections/)).toBeInTheDocument();
     expect(within(dialog).getByText(/budget of the current year/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/less than a minute\. You can erase everything later from Admin › Sample data\./)).toBeInTheDocument();
+    expect(await within(dialog).findByText('The starting company "Northwind Trading" is replaced by the sample companies.')).toBeInTheDocument();
+    expect(within(dialog).getByText(/about two minutes\. You can erase everything later from Admin › Sample data\./)).toBeInTheDocument();
+    expect(apiClient.get).toHaveBeenCalledWith('/companies', { params: { page: 1, limit: 2 } });
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Load sample data' }));
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/admin/sample-data/load'));
+  });
+
+  it('does not name a starting company when the workspace has none', async () => {
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === '/companies') return Promise.resolve({ items: [], total: 0, page: 1, limit: 2 });
+      return Promise.resolve(BASE);
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Load sample data' }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(apiClient.get).toHaveBeenCalledWith('/companies', { params: { page: 1, limit: 2 } }));
+    // The list has answered: an empty page never grows a replacement line.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(within(dialog).queryByText(/replaced by the sample companies/)).not.toBeInTheDocument();
+    expect(within(dialog).getByText(/about two minutes/)).toBeInTheDocument();
   });
 
   it.each([
@@ -287,7 +310,11 @@ describe('SampleDataPage', () => {
     const dialog = await screen.findByRole('dialog');
     fireEvent.click(within(dialog).getByRole('button', { name: 'Load sample data' }));
     expect(await within(dialog).findByText(/status changed in the meantime/)).toBeInTheDocument();
-    await waitFor(() => expect(apiClient.get).toHaveBeenCalledTimes(2));
+    // The overview is read again. Opening the dialog also reads the companies list.
+    await waitFor(() => {
+      const calls = (apiClient.get as any).mock.calls as unknown[][];
+      expect(calls.filter((call) => call[0] === '/admin/sample-data')).toHaveLength(2);
+    });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Load sample data' }));
     expect(await within(dialog).findByText('Too many attempts. Wait a few minutes and try again.')).toBeInTheDocument();
   });

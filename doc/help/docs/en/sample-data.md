@@ -21,7 +21,7 @@ The set describes Fromage & Co, a fictional cheese maker:
 - **Contracts, the budget of the current year, projects and tasks**
 - **Budget lines classified on the [recommended dimensions](analytics.md#recommended-dimensions)**: every line has a cost pool and an IT tower, CAPEX lines and build lines have a purpose, and CAPEX lines have a priority. The set also adds **Recurrence**, in the workspace's language, and two dimensions of its own, **Business domain** and **Budget reference**, whose names and values stay in English
 
-Dates follow the current year, so the budget always looks up to date. Loading takes less than a minute.
+Dates follow the current year, so the budget always looks up to date. Loading takes about two minutes.
 
 The fictional users have no password and no access. They exist so that owners, assignees and project teams look realistic. KANAP sends them no e-mail, and the erase step removes them.
 
@@ -42,7 +42,7 @@ What a new workspace creates for you (its first company, the default chart of ac
 2. Click **Load sample data**.
 3. Read the summary in the dialog and confirm with **Load sample data**.
 
-The page follows the load step by step (for example "Step 4 of 19: charts of accounts") and the status changes to **Loaded** when it finishes. The status strip then shows when the data was loaded and by whom. Everything you see in KANAP refreshes with the new data.
+The page follows the load step by step (for example "Step 4 of 21: charts of accounts") and the status changes to **Loaded** when it finishes. The status strip then shows when the data was loaded and by whom. Everything you see in KANAP refreshes with the new data.
 
 **If a load is not possible**, the page shows no **Load sample data** button. It says why:
 
