@@ -127,11 +127,14 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
   const { searchParams, withContext } = useListContext();
 
   const detailKey = React.useMemo(() => ['contracts', id] as const, [id]);
+  // Set once the contract is deleted: the page leaves without loading it again.
+  const [deletedId, setDeletedId] = React.useState<string | null>(null);
   const { data, error: loadError, isPlaceholderData } = useQuery({
     queryKey: detailKey,
     queryFn: async () => (await api.get<ContractDetail>(`/contracts/${id}`)).data,
     // The previous contract stays on screen while the next one loads (prev / next).
     placeholderData: (previous) => previous,
+    enabled: deletedId !== id,
   });
   // While the shown contract is the previous one, nothing is written: an edit could land on the wrong one.
   const stale = isPlaceholderData;
@@ -395,7 +398,7 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
                 contractId={shownData.id}
                 contractName={shownData.name || t('contracts.workspace.contract')}
                 beforeDelete={() => registry.flushAll()}
-                onDeleted={() => navigate(withContext(LIST_PATH))}
+                onDeleted={() => { setDeletedId(id); navigate(withContext(LIST_PATH)); }}
                 onError={setSaveError}
               />
             )}
