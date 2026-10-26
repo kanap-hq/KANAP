@@ -215,7 +215,7 @@ export default function EditableTitle({
   const externalMessage = error && !(editing && draft.trim()) ? error : null;
   const message = ownMessage || externalMessage;
   const messageNode = message
-    ? <FormHelperText error role="alert" sx={{ mt: 0.5 }}>{message}</FormHelperText>
+    ? <FormHelperText error role={ownMessage ? 'alert' : undefined} sx={{ mt: 0.5 }}>{message}</FormHelperText>
     : null;
 
   if (!editing) {

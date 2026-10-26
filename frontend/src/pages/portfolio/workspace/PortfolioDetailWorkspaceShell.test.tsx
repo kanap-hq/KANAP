@@ -200,17 +200,17 @@ describe('PortfolioDetailWorkspaceShell Escape', () => {
       titleError: 'Title is required',
       onTitleDraftChange,
     });
-    expect(screen.getByRole('alert')).toHaveTextContent('Title is required');
+    expect(screen.getByText('Title is required')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.editTitle' }));
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'Out' } });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Title is required')).toBeNull();
     expect(onTitleDraftChange).toHaveBeenLastCalledWith('Out');
 
     // The refusal is still the parent's until the parent drops it: an emptied draft shows it again.
     fireEvent.change(input, { target: { value: '' } });
-    expect(screen.getByRole('alert')).toHaveTextContent('Title is required');
+    expect(screen.getByText('Title is required')).toBeInTheDocument();
   });
 
   it('keeps a cleared title error away until an empty title is committed or Create is clicked', () => {
@@ -221,27 +221,27 @@ describe('PortfolioDetailWorkspaceShell Escape', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Title is required');
+    expect(screen.getByText('Title is required')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.editTitle' }));
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: 'Out' } });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Title is required')).toBeNull();
 
     fireEvent.change(input, { target: { value: '' } });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Title is required')).toBeNull();
 
     fireEvent.keyDown(input, { key: 'Enter' });
-    expect(screen.getByRole('alert')).toHaveTextContent('Title is required');
+    expect(screen.getByText('Title is required')).toBeInTheDocument();
     expect(screen.getByRole('textbox')).toHaveValue('');
 
     fireEvent.change(input, { target: { value: 'Out' } });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Title is required')).toBeNull();
     fireEvent.keyDown(input, { key: 'Escape' });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Title is required')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Title is required');
+    expect(screen.getByText('Title is required')).toBeInTheDocument();
   });
 });
 
