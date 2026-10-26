@@ -418,6 +418,7 @@ docker compose -f infra/compose.onprem.yml up -d --wait
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
 [on-prem] Created default subscription (On-Prem)
+[DATA-ACCESS] data-scoped access not installed (no kanap_data_limited role): nobody can be limited
 ... WARN [EmailService] No outbound email transport configured; email sending is disabled.
 ... Nest application successfully started
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
@@ -427,7 +428,7 @@ Die Zahl der Migrationen hängt von der Version ab, die Pool-Werte von Ihrem Pos
 
 Der Block lässt die Migrationszeilen weg: Auf `Running migrations...` folgen etwa 40 Zeilen, die mit `[Migration]` oder `[migration:` beginnen. Sie dienen der Information. Auf einer neuen Datenbank melden einige davon Änderungen an mitgelieferten Referenzdaten oder nennen eine Mandanten-ID, die nicht Ihre ist: KANAP führt einen Systemmandanten für Plattformfunktionen. Sie erfordern keine Maßnahme. `...` steht für das Präfix `[Nest]` mit Prozess-ID und Uhrzeit sowie für die Quelle in Klammern (zum Beispiel `LOG [NestApplication]`). Einige dieser Zeilen enden mit einer Dauer wie `+0ms`. Die letzte Zeile der gefilterten Ausgabe ist `[DB] pool budget ...`. Eine in eine Datei gespeicherte Protokollausgabe kann Farbcodes wie `[33m` enthalten.
 
-Bis Sie E-Mail konfigurieren, ist die `EmailService`-Warnung erwartet und erfordert keine Maßnahme. Eine Warnung `[SECURITY]`, `[CONFIG]`, `[CORS]` oder `[ENV] APP_ENV is not set` bedeutet, dass eine Einstellung Aufmerksamkeit braucht: Die [Konfiguration](configuration.md#was-das-api-protokoll-beim-start-zeigt) erklärt jede Zeile.
+Bis Sie E-Mail konfigurieren, ist die `EmailService`-Warnung erwartet und erfordert keine Maßnahme. Auch die Zeile `[DATA-ACCESS]` ist erwartet: Schritt 10 erklärt sie. Eine Warnung `[SECURITY]`, `[CONFIG]`, `[CORS]` oder `[ENV] APP_ENV is not set` bedeutet, dass eine Einstellung Aufmerksamkeit braucht: Die [Konfiguration](configuration.md#was-das-api-protokoll-beim-start-zeigt) erklärt jede Zeile.
 
 ---
 
@@ -640,6 +641,8 @@ docker compose -f infra/compose.onprem.yml logs api | grep 'PutObject fallback' 
 3. Ändern Sie das Passwort direkt nach dieser ersten Anmeldung in Ihrem Profil. KANAP liest den Wert aus `.env` nur beim ersten Start.
 4. Fügen Sie unter **Administration → Branding** Ihr Logo und Ihre Farben hinzu (optional).
 5. Laden Sie weitere Benutzer ein (wenn E-Mail konfiguriert ist).
+
+**Optional: Datenzugriff nach Bereich.** Wenn manche Personen nur einen Teil des Budgets und der Verträge sehen dürfen, führen Sie den einmaligen Schritt [Datenzugriff nach Bereich](installation.md#optional-data-scoped-access) aus. Mit diesem Leitfaden heißen die Anwendungsrolle und die Datenbank beide `kanap`: Seine Befehle verwenden sie unverändert. Überspringen Sie ihn, wenn niemand begrenzt werden muss.
 
 Die Installation ist abgeschlossen. `~/kanap-install.env` hat seinen Zweck erfüllt: Jeder Wert steht jetzt in `/opt/kanap/.env`, `/etc/default/rustfs` und in der PostgreSQL-Rolle. Löschen Sie die Datei:
 

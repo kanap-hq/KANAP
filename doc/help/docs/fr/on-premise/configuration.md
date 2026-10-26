@@ -108,7 +108,7 @@ docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^
 
 Le filtre garde les lignes ci-dessous et laisse de côté les détails du framework. Sans lui, `docker compose -f infra/compose.onprem.yml logs api` affiche tout.
 
-**Ordre.** Les lignes que KANAP écrit lui-même (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`) viennent en premier. Les lignes du framework (`Starting Nest application...`, e-mail, tâches planifiées, `Nest application successfully started`) suivent. La ligne `[DB] pool budget` vient en dernier.
+**Ordre.** Les lignes que KANAP écrit lui-même (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`, `[DATA-ACCESS]`) viennent en premier. Les lignes du framework (`Starting Nest application...`, e-mail, tâches planifiées, `Nest application successfully started`) suivent. La ligne `[DB] pool budget` vient en dernier.
 
 **Un premier démarrage sans problème** de l'[exemple d'installation](installation-example.md#7-construire-et-demarrer) affiche ces lignes, dans cet ordre (la première ligne `[SECRETS]` est raccourcie ici) :
 
@@ -126,12 +126,15 @@ Le filtre garde les lignes ci-dessous et laisse de côté les détails du framew
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
 [on-prem] Created default subscription (On-Prem)
+[DATA-ACCESS] data-scoped access not installed (no kanap_data_limited role): nobody can be limited
 ... WARN [EmailService] No outbound email transport configured; email sending is disabled.
 ... Nest application successfully started
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
 ```
 
 Le bloc omet les lignes des migrations : environ 40 lignes qui commencent par `[Migration]` ou `[migration:` suivent `Running migrations...`. Elles sont informatives. Sur une base neuve, certaines signalent des modifications des données de référence intégrées ou citent un identifiant de tenant qui n'est pas le vôtre : KANAP conserve un tenant système pour les fonctions de la plateforme. Elles ne demandent aucune action. `...` remplace le préfixe `[Nest]` avec l'identifiant du processus et l'heure, ainsi que la source entre crochets (par exemple `LOG [NestApplication]`). Certaines de ces lignes se terminent par une durée comme `+0ms`. La dernière ligne de la sortie filtrée est `[DB] pool budget ...`. Un journal enregistré dans un fichier peut contenir des codes de couleur comme `[33m`.
+
+La ligne `[DATA-ACCESS]` est normale quand personne n'est limité à une partie des données. Après l'étape facultative de l'[accès aux données par périmètre](installation.md#optional-data-scoped-access), elle indique `data-scoped access available`. Une ligne `data-scoped access unavailable, missing: ...` signale une étape incomplète : relancez-la, puis redémarrez l'API. D'ici là, les personnes limitées sont refusées.
 
 Le nombre de migrations change d'une version à l'autre. Aux démarrages suivants, il vaut `0 executed` (ou le nombre de nouvelles migrations après une mise à jour), et les quatre lignes de création `[on-prem]` laissent la place à `Administrator account ... left unchanged`. La ligne de l'e-mail dépend de vos paramètres : avec un transport d'e-mail, elle indique `LOG [EmailService] Email transport selected: ...` à la place de l'avertissement.
 

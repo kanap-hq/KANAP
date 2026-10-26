@@ -418,6 +418,7 @@ docker compose -f infra/compose.onprem.yml up -d --wait
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
 [on-prem] Created default subscription (On-Prem)
+[DATA-ACCESS] data-scoped access not installed (no kanap_data_limited role): nobody can be limited
 ... WARN [EmailService] No outbound email transport configured; email sending is disabled.
 ... Nest application successfully started
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
@@ -427,7 +428,7 @@ Le nombre de migrations dépend de la version, et les chiffres du pool dépenden
 
 Le bloc omet les lignes des migrations : environ 40 lignes qui commencent par `[Migration]` ou `[migration:` suivent `Running migrations...`. Elles sont informatives. Sur une base neuve, certaines signalent des modifications des données de référence intégrées ou citent un identifiant de tenant qui n'est pas le vôtre : KANAP conserve un tenant système pour les fonctions de la plateforme. Elles ne demandent aucune action. `...` remplace le préfixe `[Nest]` avec l'identifiant du processus et l'heure, ainsi que la source entre crochets (par exemple `LOG [NestApplication]`). Certaines de ces lignes se terminent par une durée comme `+0ms`. La dernière ligne de la sortie filtrée est `[DB] pool budget ...`. Un journal enregistré dans un fichier peut contenir des codes de couleur comme `[33m`.
 
-Tant que vous n'avez pas configuré l'e-mail, l'avertissement `EmailService` est attendu et ne demande aucune action. Un avertissement `[SECURITY]`, `[CONFIG]`, `[CORS]` ou `[ENV] APP_ENV is not set` signale un paramètre à revoir : [Configuration](configuration.md#ce-que-le-journal-de-lapi-affiche-au-demarrage) explique chaque ligne.
+Tant que vous n'avez pas configuré l'e-mail, l'avertissement `EmailService` est attendu et ne demande aucune action. La ligne `[DATA-ACCESS]` est attendue elle aussi : l'étape 10 l'explique. Un avertissement `[SECURITY]`, `[CONFIG]`, `[CORS]` ou `[ENV] APP_ENV is not set` signale un paramètre à revoir : [Configuration](configuration.md#ce-que-le-journal-de-lapi-affiche-au-demarrage) explique chaque ligne.
 
 ---
 
@@ -640,6 +641,8 @@ docker compose -f infra/compose.onprem.yml logs api | grep 'PutObject fallback' 
 3. Changez le mot de passe dans votre profil juste après cette première connexion. KANAP lit la valeur de `.env` au premier démarrage uniquement.
 4. Ajoutez votre logo et vos couleurs dans **Administration → Personnalisation** (facultatif).
 5. Invitez d'autres utilisateurs (si l'e-mail est configuré).
+
+**Facultatif : accès aux données par périmètre.** Si certaines personnes ne doivent voir qu'une partie du budget et des contrats, exécutez l'étape unique de l'[accès aux données par périmètre](installation.md#optional-data-scoped-access). Avec ce guide, le rôle applicatif et la base s'appellent tous deux `kanap` : ses commandes les utilisent telles quelles. Ignorez-la si personne ne doit être limité.
 
 L'installation est terminée. `~/kanap-install.env` a rempli son rôle : chaque valeur se trouve désormais dans `/opt/kanap/.env`, `/etc/default/rustfs` et le rôle PostgreSQL. Supprimez le fichier :
 
