@@ -79,7 +79,12 @@ describe('SampleDataBanner', () => {
   });
 
   it('shows one line to an administrator of an empty workspace, and loads through the same dialog', async () => {
-    (apiClient.get as any).mockResolvedValue(EMPTY);
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === '/companies') {
+        return Promise.resolve({ items: [{ name: 'Northwind Trading' }], total: 1, page: 1, limit: 2 });
+      }
+      return Promise.resolve(EMPTY);
+    });
     (apiClient.post as any).mockResolvedValue({ ...EMPTY, status: 'loading' });
     renderBanner();
 
@@ -92,6 +97,8 @@ describe('SampleDataBanner', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Load' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/Fromage & Co, a fictional cheese maker/)).toBeInTheDocument();
+    expect(await within(dialog).findByText('The starting company "Northwind Trading" is replaced by the sample companies.')).toBeInTheDocument();
+    expect(within(dialog).getByText(/about two minutes/)).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Load sample data' }));
     await waitFor(() => expect(apiClient.post).toHaveBeenCalledWith('/admin/sample-data/load'));
   });

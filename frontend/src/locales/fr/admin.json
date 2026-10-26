@@ -1742,7 +1742,8 @@
       "users": "18 utilisateurs fictifs, qui ne peuvent pas se connecter",
       "landscape": "Les applications et leur cartographie : instances, interfaces et connexions",
       "business": "Les contrats, le budget de l'année en cours, les projets et les tâches",
-      "duration": "Le chargement prend moins d'une minute. Vous pourrez tout effacer ensuite depuis {{path}}."
+      "startingCompany": "La société de départ « {{name}} » est remplacée par les sociétés d'exemple.",
+      "duration": "Le chargement prend environ deux minutes. Vous pourrez tout effacer ensuite depuis {{path}}."
     },
     "resetDialog": {
       "title": "Tout effacer et repartir de zéro",

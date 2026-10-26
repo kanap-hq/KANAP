@@ -21,7 +21,7 @@ Der Datensatz beschreibt Fromage & Co, einen fiktiven Käsehersteller:
 - **Verträge, das Budget des laufenden Jahres, Projekte und Aufgaben**
 - **Budgetzeilen, nach den [empfohlenen Dimensionen](analytics.md#empfohlene-dimensionen) klassifiziert**: Jede Zeile hat eine Kostenart und einen IT-Bereich, CAPEX-Zeilen und Build-Zeilen haben einen Zweck, und CAPEX-Zeilen eine Priorität. Der Satz fügt außerdem **Wiederkehr** in der Sprache des Arbeitsbereichs hinzu, und zwei eigene Dimensionen, **Business domain** und **Budget reference**, deren Namen und Werte englisch bleiben
 
-Die Daten richten sich nach dem laufenden Jahr, sodass das Budget immer aktuell wirkt. Das Laden dauert weniger als eine Minute.
+Die Daten richten sich nach dem laufenden Jahr, sodass das Budget immer aktuell wirkt. Das Laden dauert etwa zwei Minuten.
 
 Die fiktiven Benutzer haben weder ein Passwort noch Zugriff. Sie sorgen dafür, dass Verantwortliche, Zuständige und Projektteams realistisch aussehen. KANAP sendet ihnen keine E-Mails, und das Löschen entfernt sie.
 
@@ -42,7 +42,7 @@ Was ein neuer Arbeitsbereich selbst anlegt (sein erstes Unternehmen, der Standar
 2. Klicken Sie auf **Beispieldaten laden**.
 3. Lesen Sie die Zusammenfassung im Dialog und bestätigen Sie mit **Beispieldaten laden**.
 
-Die Seite zeigt den Ladevorgang Schritt für Schritt (zum Beispiel „Schritt 4 von 19: Kontenpläne“), und der Status wechselt am Ende zu **Geladen**. Die Statusleiste zeigt dann, wann die Daten geladen wurden und von wem. Alles, was Sie in KANAP sehen, wird mit den neuen Daten aktualisiert.
+Die Seite zeigt den Ladevorgang Schritt für Schritt (zum Beispiel „Schritt 4 von 21: Kontenpläne“), und der Status wechselt am Ende zu **Geladen**. Die Statusleiste zeigt dann, wann die Daten geladen wurden und von wem. Alles, was Sie in KANAP sehen, wird mit den neuen Daten aktualisiert.
 
 **Wenn das Laden nicht möglich ist**, zeigt die Seite die Schaltfläche **Beispieldaten laden** nicht an. Eine Zeile nennt den Grund:
 
