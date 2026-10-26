@@ -4,7 +4,7 @@ const content: FeatureContent = {
   meta: {
     title: 'Plaid, KI-Assistent für IT-Governance',
     description:
-      'Fragen Sie Plaid zu Ihren IT-Daten. Dokumente erstellen, Aufgaben aktualisieren, KANAP mit zwei Klicks zu Claude hinzufügen. Nutzung in Hosted Cloud enthalten. Open Source.',
+      'Fragen Sie Plaid zu Ihren IT-Daten. Dokumente erstellen, Aufgaben aktualisieren, KANAP mit einem Klick zu Claude hinzufügen. Nutzung in Hosted Cloud enthalten. Open Source.',
   },
   header: {
     eyebrow: 'Plaid · KI-Assistent',
@@ -21,7 +21,7 @@ const content: FeatureContent = {
         'Aggregationen und Statistiken',
         'Volltextsuche in der Wissensdatenbank',
       ],
-      shotAlt: 'Plaid beantwortet eine modulübergreifende Abfrage',
+      shotAlt: 'Plaid antwortet mit einer Tabelle: die Verträge, über die in 90 Tagen zu entscheiden ist, und die Anwendungen, die sie abdecken',
     },
     {
       title: 'Aktionen mit Vorschau',
@@ -32,10 +32,10 @@ const content: FeatureContent = {
         'Aufgaben aktualisieren: Status, Zuweisungen, Kommentare',
         'Änderungen vor der Anwendung in der Vorschau sehen',
       ],
-      shotAlt: 'Plaid zeigt eine Vorschau von Aufgabenänderungen',
+      shotAlt: 'Plaid bereitet zwei Änderungen an einer Aufgabe als Vorschau vor, mit Genehmigen und Ablehnen',
     },
     {
-      title: 'KANAP mit zwei Klicks zu Claude hinzufügen',
+      title: 'KANAP mit einem Klick zu Claude hinzufügen',
       body: 'Fügen Sie Ihre KANAP-Adresse in Claude als benutzerdefinierten Konnektor ein, melden Sie sich an, klicken Sie auf Zulassen. Claude antwortet dann aus Ihrem Budget, Ihren Anwendungen, Projekten und Dokumenten. Es gibt keinen Schlüssel zu erstellen oder zu kopieren. Das funktioniert in Claude, Claude Desktop und Claude Code.',
       bullets: [
         'Jede Person meldet sich mit ihrem eigenen KANAP-Konto an',
@@ -43,7 +43,7 @@ const content: FeatureContent = {
         'Jeder Benutzer sieht seine verbundenen Apps und trennt sie mit einem Klick',
         'API-Schlüssel bleiben für Skripte und andere MCP-Clients verfügbar',
       ],
-      shotAlt: 'Einstellungen der MCP API-Schlüssel',
+      shotAlt: 'Claude antwortet aus den KANAP-Daten: externe FTE und durchschnittlicher Tagessatz je Lieferant, als Diagramme',
     },
     {
       title: 'Volle Kontrolle & Compliance',
@@ -55,7 +55,7 @@ const content: FeatureContent = {
         'Vorschau und Bestätigung für alle Schreiboperationen',
         'Nur-Lese-Zugriff über Rollen für vorsichtige Rollouts',
       ],
-      shotAlt: 'Plaid-Admin-Steuerung mit Berechtigungsmatrix',
+      shotAlt: 'Plaid-Einstellungen: Chat und MCP aktiv, enthaltenes Modell und Verarbeitungsort bestätigt, Nutzung des Monats',
     },
   ],
   more: {

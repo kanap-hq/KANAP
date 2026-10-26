@@ -165,6 +165,29 @@ const waitForReport = (page) =>
     .catch(() => console.warn('report still empty'));
 
 // Open a contract from the list by its name (contracts have no business reference, their address carries a UUID).
+// Plaid feature page: ask Plaid a question in a fresh conversation, list of conversations folded,
+// and wait for the answer to end. Each run writes a new conversation on the tenant.
+const askPlaid = async (page, question, done) => {
+  await page.waitForSelector('textarea', { timeout: 30000 });
+  const toggle = await page.$('main button:has(svg[data-testid="MenuIcon"])');
+  if (toggle && (await page.evaluate(() => /New conversation/.test(document.querySelector('main')?.innerText || '')))) {
+    await toggle.click();
+    await sleep(600);
+  }
+  await page.type('textarea', question);
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelector('button[aria-label="Stop generating"]'), { timeout: 30000 }).catch(() => {});
+  await page.waitForFunction(() => !document.querySelector('button[aria-label="Stop generating"]'), { timeout: 240000 });
+  if (done) await page.waitForFunction(done, { timeout: 60000 }).catch(() => console.warn('expected answer not seen'));
+  await sleep(1500);
+  // Bring the question to the top of the conversation, the answer below it.
+  await page.evaluate(() => {
+    const you = [...document.querySelectorAll('main *')].filter((n) => !n.children.length && n.textContent?.trim() === 'You').pop();
+    you?.scrollIntoView({ block: 'start' });
+  });
+  await sleep(600);
+};
+
 const openContract = async (page, name) => {
   await page.waitForFunction((n) => document.querySelector('main')?.innerText.includes(n), { timeout: 30000 }, name);
   const [cell] = await page.$$(`xpath/.//main//*[normalize-space(text())="${name}"]`);
@@ -212,6 +235,29 @@ const PAGES = {
   },
   'feature-incidents-relations': {
     frame: 1440, path: '/it/incidents/INC-22/relations', waitFor: 'main' },
+  // Plaid feature page (2026-10-26): a question across contracts and applications, answered from live data.
+  'feature-plaid-query': {
+    frame: 1920,
+    path: '/ai',
+    waitFor: 'main',
+    async prepare(page) {
+      await askPlaid(page, 'Which contracts must be decided in the next 90 days, and which applications do they cover? Answer in one message, with a table.', () => /SAP Maintenance/.test(document.querySelector('main')?.innerText || ''));
+    },
+  },
+  // Plaid feature page: a write prepared as a preview (nothing approved).
+  'feature-plaid-preview': {
+    frame: 1440,
+    path: '/ai',
+    waitFor: 'main',
+    async prepare(page) {
+      await askPlaid(page, 'Move task T-30 to in progress and add the comment: Call with SAP on 5 November to discuss the 2027 price. Show me the preview first.', () => /pending/i.test(document.querySelector('main')?.innerText || ''));
+// The preview stays open in the side panel, with its fields and its pending state.
+      await sleep(800);
+    },
+  },
+  // Plaid feature page: the Claude section uses a screenshot of Claude itself (claude.ai, taken by the maintainer).
+  // Plaid feature page: Admin > Plaid, provider status, included model and its processing location, monthly usage, feature switches.
+  'feature-plaid-admin': { frame: 1440, path: '/admin/ai', waitFor: 'main' },
   // Contracts feature page: list with the 2026 commitment, budget and gap. Read-only.
   'feature-contracts-list': {
     frame: 1920,
