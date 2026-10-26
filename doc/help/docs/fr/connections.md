@@ -85,7 +85,7 @@ L'onglet [Réseau](assets.md#network) de chaque membre liste les connexions de s
 
 Cliquez sur une ligne pour ouvrir l'espace de travail. Il a deux onglets : **Vue d'ensemble** et **Chemin**. Le panneau des propriétés, à droite, porte **Cycle de vie**, **Topologie**, **Mode de risque**, **Criticité**, **Classification des données**, **Contient des PII** et **Créé le**. Les modifications s'enregistrent automatiquement.
 
-**Supprimer**, une icône de corbeille dans l'en-tête, supprime la connexion après confirmation (`infrastructure:member`). La confirmation compte les liaisons d'interfaces dont elle est détachée. Les interfaces elles-mêmes restent.
+**Supprimer**, une icône de corbeille dans l'en-tête, supprime la connexion après confirmation (`infrastructure:member`). La confirmation compte les sauts supprimés avec elle et les liaisons d'interfaces dont elle est détachée. Les interfaces elles-mêmes restent.
 
 ### Vue d'ensemble
 
