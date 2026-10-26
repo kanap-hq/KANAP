@@ -1502,6 +1502,7 @@
     },
     "url": "URL",
     "newLink": "Nuevo enlace",
+    "saveFailed": "No se pudo guardar el enlace.",
     "editLink": "Editar enlace",
     "editLinkNamed": "Editar {{name}}",
     "removeNamed": "Eliminar {{name}}",

@@ -77,6 +77,7 @@ export class AssetsController {
   @RequireLevel('infrastructure', 'admin')
   @Get('export')
   async exportCsv(
+    @Query() query: Record<string, unknown>,
     @Query('language') languageRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('fields') fields: string | undefined,
@@ -100,6 +101,7 @@ export class AssetsController {
       environment,
       kind,
       status,
+      query,
     });
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -148,8 +150,8 @@ export class AssetsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get()
-  list(@Query() query: any, @Req() req: any) {
-    return this.svc.list(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
+  async list(@Query() query: any, @Req() req: any) {
+    return this.svc.list(query, await this.listCall(req, query));
   }
 
   @UseGuards(PermissionGuard)
@@ -162,8 +164,15 @@ export class AssetsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get('ids')
-  listIds(@Query() query: any, @Req() req: any) {
-    return this.svc.listIds(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
+  async listIds(@Query() query: any, @Req() req: any) {
+    return this.svc.listIds(query, await this.listCall(req, query));
+  }
+
+  /** The list call: the screen's language (the user's own when the screen sends none) sorts the catalog columns. */
+  private async listCall(req: any, query: { language?: unknown }) {
+    const tenantId = req?.tenant?.id as string | undefined;
+    const language = await languageOf(req?.queryRunner?.manager, tenantId ?? '', req?.user?.sub ?? null, query?.language);
+    return { manager: req?.queryRunner?.manager, tenantId, language };
   }
 
   @UseGuards(PermissionGuard)
@@ -361,7 +370,7 @@ export class AssetsController {
    * The Relations tab in one round trip (`asset-relations-tab.service.ts`): the relations between
    * assets in four directions, budget lines, contracts, projects, tasks and incidents (each null
    * without the read of its module), and the badge counts (`counts.total` leaves out `counts.assets`,
-   * which feeds the Dependencies badge). `:id` is a uuid or `AST-n`.
+   * which feeds the Dependencies badge). `:id` is a uuid or `AST-n` (a suffix after the reference is ignored).
    * `GET :id/relations` keeps its shape for its other callers.
    */
   @UseGuards(PermissionGuard)

@@ -16,30 +16,36 @@ import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
 import { useTranslation } from 'react-i18next';
 import { CsvImportResult } from './csv.types';
+import { csvFieldLabel } from './csvLabels';
 import { csvMessageColumn, csvMessageText, type CsvReportMessage } from './csvMessage';
 
 /** One error or warning: its row, the sentence, then its column when the sentence does not name it. */
-function ReportLine({ item }: { item: CsvReportMessage }) {
+function ReportLine({ item, entity }: { item: CsvReportMessage; entity: string }) {
   const { t } = useTranslation('common');
   const text = csvMessageText(item, t);
   const column = csvMessageColumn(item, text);
+  // The report names the column by its file header. The screen uses the same label as the export.
+  const columnLabel = column ? csvFieldLabel(t, entity, { csvColumn: column, label: column }) : null;
   return (
     <Typography variant="body2">
       {item.row > 0 && <><strong>{t('csv.rowPrefix', { row: item.row })}</strong>{' '}</>}
       {text}
-      {column && <Typography component="span" color="text.secondary"> ({column})</Typography>}
+      {columnLabel && <Typography component="span" color="text.secondary"> ({columnLabel})</Typography>}
     </Typography>
   );
 }
 
 interface CsvValidationResultsProps {
   result: CsvImportResult;
+  /** The list the file belongs to (`assets`), so a column is named as in the export dialog. */
+  entity?: string;
   maxErrors?: number;
   maxWarnings?: number;
 }
 
 export function CsvValidationResults({
   result,
+  entity = '',
   maxErrors = 10,
   maxWarnings = 5,
 }: CsvValidationResultsProps) {
@@ -113,7 +119,7 @@ export function CsvValidationResults({
                 <ListItemText
                   disableTypography
                   primary={
-                    <ReportLine item={err} />
+                    <ReportLine item={err} entity={entity} />
                   }
                 />
               </ListItem>
@@ -146,7 +152,7 @@ export function CsvValidationResults({
                 <ListItemText
                   disableTypography
                   primary={
-                    <ReportLine item={warn} />
+                    <ReportLine item={warn} entity={entity} />
                   }
                 />
               </ListItem>

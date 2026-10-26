@@ -1442,6 +1442,22 @@ function batchRow(id: number, overrides: Partial<NetboxPlanRow> = {}): NetboxPla
   assert.deepEqual(batch.rows.map((entry) => entry.external_id), ['1000']);
   assert.equal(batch.remaining, 0);
   assert.deepEqual(batch.skipped_by_reason, { unmapped_role: 600, unmapped_site: 1, ignored: 1 });
+  assert.equal(batch.skipped_names.unmapped_role.length, 20);
+  assert.equal(batch.skipped_names.unmapped_role[0], 'object-1');
+  assert.equal(batch.skipped_names.unmapped_role[19], 'object-20');
+  assert.deepEqual(batch.skipped_names.unmapped_site, ['object-901']);
+  assert.deepEqual(batch.skipped_names.ignored, ['object-902']);
+}
+
+// A skipped object with no name is still named in the sample, as an empty string.
+{
+  const batch = buildReviewBatch([
+    batchRow(1, { action: 'skipped', skip_reason: 'unnamed', external_name: '  ' }),
+    batchRow(2, { action: 'skipped', skip_reason: 'unnamed', external_name: null }),
+  ], 500);
+  assert.deepEqual(batch.rows, []);
+  assert.deepEqual(batch.skipped_by_reason, { unnamed: 2 });
+  assert.deepEqual(batch.skipped_names, { unnamed: ['', ''] });
 }
 
 // Order inside a batch: what the person settled, then creations, then updates,
@@ -1460,6 +1476,7 @@ function batchRow(id: number, overrides: Partial<NetboxPlanRow> = {}): NetboxPla
   const batch = buildReviewBatch(rows, 500);
   assert.deepEqual(batch.rows.map((entry) => entry.external_id), ['5', '3', '6', '2', '4', '1']);
   assert.deepEqual(batch.skipped_by_reason, {});
+  assert.deepEqual(batch.skipped_names, {});
 }
 
 // What does not fit is counted as remaining, and only writes count: an

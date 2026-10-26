@@ -1621,7 +1621,7 @@
       "title": "Inventaire Netbox",
       "description": "Reprenez l'inventaire Netbox dans les actifs KANAP. Netbox reste la référence pour les équipements qu'il décrit.",
       "status": {
-        "connected": "Connecté",
+        "connected": "Configuré",
         "disabled": "Désactivé",
         "notConfigured": "Non configuré"
       },
@@ -1654,8 +1654,12 @@
         "saveFailed": "Les paramètres n'ont pas pu être enregistrés.",
         "loadFailed": "Les paramètres Netbox n'ont pas pu être chargés.",
         "testSuccess": "Connexion établie avec Netbox {{version}}.",
+        "testSuccessPlain": "Connexion établie avec Netbox.",
         "testFailed": "La connexion à Netbox a échoué.",
-        "nextStep": "Netbox est connecté."
+        "nextStep": "Netbox est configuré.",
+        "lastTestOk": "Dernier test réussi le {{date}}",
+        "lastTestFailed": "Dernier test échoué le {{date}}",
+        "lastTestSession": "Ce résultat vaut pour cette session."
       },
       "actions": {
         "save": "Enregistrer les paramètres",

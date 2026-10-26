@@ -18,7 +18,7 @@ vi.mock('../../api', () => ({ default: { get, patch: vi.fn(), post, delete: del 
 const auth = vi.hoisted(() => ({ assign: true }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
-    hasLevel: (resource: string, level: string) => (resource === 'infrastructure' && level !== 'admin') || (resource === 'applications' && auth.assign),
+    hasLevel: (resource: string, level: string) => (resource === 'infrastructure' && level !== 'admin') || (resource === 'applications' && (level === 'reader' || auth.assign)),
   }),
 }));
 const enumOptions = vi.hoisted(() => ({

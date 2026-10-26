@@ -156,7 +156,7 @@ async function testSummary() {
     assert.equal(view.without_zone.asset_count, 7);
     assert.deepEqual(view.controls.map((control) => [control.key, control.count]), [
       ['assets_without_zone', 7],
-      ['domain_controllers_outside', 1],
+      ['domain_controllers_outside', 2],
       ['directory_assets_outside', 2],
       ['trust_raised', 0],
       ['applications_on_most_sensitive', 0],
@@ -185,7 +185,7 @@ async function testSummary() {
     assert.deepEqual(listed.items.map((item) => item.name).sort(), ['app1', 'dc-disabled', 'dc1', 'dc2', 'fw1', 'host1', 'lab-old', 'vm1']);
     assert.equal(listed.items.some((item) => item.name === 'vm-retired' || item.name === 'fw-old' || item.name === 'dc-old'), false);
     assert.deepEqual(named(listed.items, 'dc1').findings, ['assets_without_zone', 'domain_controllers_outside', 'directory_assets_outside']);
-    assert.deepEqual(named(listed.items, 'dc2').findings, ['assets_without_zone', 'directory_assets_outside']);
+    assert.deepEqual(named(listed.items, 'dc2').findings, ['assets_without_zone', 'domain_controllers_outside', 'directory_assets_outside']);
     assert.deepEqual(named(listed.items, 'fw1').findings, []);
     assert.equal(named(listed.items, 'fw1').zone, 'tier_0');
 
@@ -305,6 +305,9 @@ async function testControls() {
     await installed(runner, a, dirHome, ad);
     await installed(runner, a, dirAway, ad);
     await installed(runner, a, dirBlank, ad);
+    const dirStray = await place('dir-stray', 'tier_1');
+    await runner.query(`UPDATE assets SET domain = 'stray' WHERE tenant_id = $1 AND id = $2`, [a, dirStray]);
+    await installed(runner, a, dirStray, ad);
     const retiredDir = await technology(runner, a, 2, 'Retired directory', 'directory');
     await runner.query(`UPDATE technologies SET lifecycle = 'retired', admin_zone = 'tier_0' WHERE tenant_id = $1 AND id = $2`, [a, retiredDir]);
     const oldDir = await place('old-dir', 'tier_1');
@@ -374,6 +377,12 @@ async function testControls() {
     await place('ghost-box', 'ghost');
     const goneDir = await technology(runner, a, 4, 'Gone directory', 'directory');
     await runner.query(`UPDATE technologies SET admin_zone = 'gone' WHERE tenant_id = $1 AND id = $2`, [a, goneDir]);
+    // The controllers belong to a domain of the catalog, except dir-blank (no domain) and dir-stray
+    // (a domain the catalog does not list): those two count only as directory services.
+    await runner.query(
+      `UPDATE assets SET domain = 'corp' WHERE tenant_id = $1 AND name IN ('dc-home', 'dc-away', 'dc-blank', 'dc-retired', 'dc-off', 'dir-home', 'dir-away')`,
+      [a],
+    );
 
     const b = await seedTenant(runner, 'adm-e');
     const foreign = await asset(runner, b, 'foreign-dc');
@@ -387,7 +396,7 @@ async function testControls() {
       { code: 'old', label: 'Old zone', deprecated: true },
     ];
     const settings = new Map<string, Settings>([
-      [a, { adminZones: catalog, domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }],
+      [a, { adminZones: catalog, domains: DOMAINS, technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }],
       [b, { adminZones: catalog, domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }],
     ]);
     const svc = service(settings);
@@ -407,8 +416,8 @@ async function testControls() {
     assert.equal(view.zones.find((zone) => zone.code === 'tier_1')?.hosted_application_count, 2);
     assert.equal(view.without_zone.asset_count, 5);
     assert.equal(countOf(view, 'assets_without_zone'), 5);
-    assert.equal(countOf(view, 'domain_controllers_outside'), 2);
-    assert.equal(countOf(view, 'directory_assets_outside'), 2);
+    assert.equal(countOf(view, 'domain_controllers_outside'), 3, 'the controllers the domains section lists, outside the zone');
+    assert.equal(countOf(view, 'directory_assets_outside'), 3);
     assert.equal(countOf(view, 'trust_raised'), 3, 'host runs guest and guest3, host-b runs guest, esx1 is a member of vsphere and vsphere2: three assets, five pairs');
     assert.equal(countOf(view, 'applications_on_most_sensitive'), 3, 'Portal on guest and node, Extra on guest, App dc-home on dc-home: three assets');
     for (const control of view.controls) {
@@ -426,8 +435,9 @@ async function testControls() {
     assert.deepEqual(row('dc-blank').findings, ['assets_without_zone', 'domain_controllers_outside']);
     assert.deepEqual(row('dc-off').findings, [], 'a disabled application and instance do not make a controller');
     assert.deepEqual(row('dir-home').findings, []);
-    assert.deepEqual(row('dir-away').findings, ['directory_assets_outside']);
-    assert.deepEqual(row('dir-blank').findings, ['assets_without_zone', 'directory_assets_outside']);
+    assert.deepEqual(row('dir-away').findings, ['domain_controllers_outside', 'directory_assets_outside']);
+    assert.deepEqual(row('dir-blank').findings, ['assets_without_zone', 'directory_assets_outside'], 'a directory server with no domain is a directory service only');
+    assert.deepEqual(row('dir-stray').findings, ['directory_assets_outside'], 'a domain outside the catalog is not listed, so not counted');
     assert.deepEqual(row('old-dir').technologies.items.map((item) => item.name), ['Retired directory']);
     assert.deepEqual(row('old-dir').findings, [], 'a retired directory technology does not count');
     assert.deepEqual(row('plain').findings, []);
@@ -471,9 +481,15 @@ async function testControls() {
     assert.deepEqual(apps.items.map((item) => item.name), ['dc-home', 'guest', 'node']);
     assert.equal(apps.total, 3, 'three assets, four application rows');
     const controllers = await svc.assets({ filters: setFilter('control', ['domain_controllers_outside']) }, opts);
-    assert.deepEqual(controllers.items.map((item) => item.name), ['dc-away', 'dc-blank']);
+    assert.deepEqual(controllers.items.map((item) => item.name), ['dc-away', 'dc-blank', 'dir-away']);
+    const corp = (await svc.directories(opts)).forests.flatMap((forest) => forest.domains).find((domain) => domain.code === 'corp');
+    assert.deepEqual(
+      corp?.domain_controllers.map((item) => item.name).filter((name) => ['dc-away', 'dc-blank', 'dir-away'].includes(name)),
+      ['dc-away', 'dc-blank', 'dir-away'],
+      'the counted controllers are listed under their domain',
+    );
     const directories = await svc.assets({ filters: setFilter('control', ['directory_assets_outside']) }, opts);
-    assert.deepEqual(directories.items.map((item) => item.name), ['dir-away', 'dir-blank']);
+    assert.deepEqual(directories.items.map((item) => item.name), ['dir-away', 'dir-blank', 'dir-stray']);
     const bareRows = await svc.assets({ filters: setFilter('control', ['assets_without_zone']) }, opts);
     assert.deepEqual(bareRows.items.map((item) => item.name), ['bare', 'dc-blank', 'dir-blank', 'gap', 'loose']);
     assert.equal(row('old-box').zone, 'old');
@@ -628,7 +644,7 @@ async function testZoneSort() {
     assert.deepEqual({ total: page.total, names: page.items.map((item) => item.name) }, { total: 4, names: ['s1', 'e1'] }, 'the count does not bind the catalog');
     const file = await svc.csv({ sort: 'zone:ASC', language: 'en' }, opts);
     const zones = file.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/).slice(1).map((line) => line.split(',')[0]);
-    assert.deepEqual(zones, ['Core', 'Core', 'Servers', 'Retired zone', 'Endpoints', 'aa_unknown', 'zz_unknown', '', ''], 'the export follows the same order');
+    assert.deepEqual(zones, ['Core', 'Core', 'Servers', 'Retired zone', 'Endpoints', 'aa_unknown', 'zz_unknown', 'No zone', 'No zone'], 'the export follows the same order');
   });
 }
 
@@ -833,7 +849,8 @@ async function testExport() {
     const retired = await asset(runner, a, 'gone-export');
     await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [a, retired]);
     const settings = new Map<string, Settings>([[a, {
-      adminZones: ZONES, domains: DOMAINS, technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES, serverKinds: [{ code: 'vm', label: 'Virtual machine' }],
+      adminZones: ZONES, domains: DOMAINS, technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES,
+      serverKinds: [{ code: 'vm', label: 'Virtual machine' }, { code: 'virtual_machine', label: 'Virtual Machine' }],
     }]]);
     const svc = service(settings);
     const opts = { manager: runner.manager, tenantId: a };
@@ -870,6 +887,20 @@ async function testExport() {
       'What runs an asset is in a less sensitive zone',
       `Runs ${row.reference} guest (Tier 0); Member of cluster ${peers.items[0].reference} vsphere (Tier 0)`,
     ].join(','), 'the asset to raise names what it runs and the cluster it carries');
+    await asset(runner, a, 'zone-vide');
+    const french = await svc.csv({ q: 'zone-vide', language: 'fr' }, opts);
+    const frenchLines = french.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+    assert.equal(frenchLines[0], 'Zone;Référence;Nom;Type;Technologies;Applications;Contrôles;Dépendance');
+    assert.equal(frenchLines[1].startsWith('Sans zone;'), true, frenchLines[1]);
+    assert.equal(frenchLines[1].includes("Actifs sans zone d'administration"), true, frenchLines[1]);
+    assert.equal(frenchLines[1].includes('Assets without an administration zone'), false);
+    // A shipped type follows the file's language, as on the screen; a type the tenant typed stays as it is.
+    const shipped = await asset(runner, a, 'shipped-kind');
+    await runner.query(`UPDATE assets SET kind = 'virtual_machine' WHERE tenant_id = $1 AND id = $2`, [a, shipped]);
+    const frenchShipped = (await svc.csv({ q: 'shipped-kind', language: 'fr' }, opts)).content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+    assert.equal(frenchShipped[1].includes(';Machine virtuelle;'), true, frenchShipped[1]);
+    const frenchTyped = (await svc.csv({ q: 'zone-vide', language: 'fr' }, opts)).content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+    assert.equal(frenchTyped[1].includes(';Virtual machine;'), true, frenchTyped[1]);
     const formula = await svc.csv({ q: '=cmd', language: 'en' }, opts);
     assert.ok(formula.content.includes("'=cmd"), formula.content);
     const all = await svc.csv({ language: 'en' }, opts);
@@ -884,6 +915,19 @@ async function testExport() {
     assert.equal(domainLines[0], 'Domain,DNS suffix,Forest,Trusts,Trusts declared by other domains,Number of accounts,Number of computers,Domain controllers,Domain controller servers');
     assert.equal(domainLines[1], 'Corp,corp.example.com,corp.example.com,Lab (two-way),,1200,300,2,"dc1, dc2"');
     assert.equal(domainLines[2], 'Lab,lab.example.com,,,"Corp (two-way), Partner (incoming)",,,0,');
+    const domainsFr = await service(s.settings).csv({ list: 'domains', language: 'fr' }, { manager: runner.manager, tenantId: s.a });
+    const frHeader = domainsFr.content.replace(/^\uFEFF/, '').split(/\r?\n/)[0];
+    assert.equal(frHeader, [
+      'Domaine', 'Suffixe DNS', 'Forêt', 'Approbations', "Approbations déclarées par d'autres domaines",
+      'Nombre de comptes', "Nombre d'ordinateurs", 'Contrôleurs de domaine', 'Serveurs contrôleurs de domaine',
+    ].join(';'));
+    const frLines = domainsFr.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+    assert.ok(frLines[2].includes('Corp (bidirectionnelle), Partner (entrante)'), frLines[2]);
+    const assetsDe = await svc.csv({ language: 'de' }, opts);
+    assert.equal(
+      assetsDe.content.replace(/^\uFEFF/, '').split(/\r?\n/)[0],
+      ['Zone', 'Referenz', 'Name', 'Typ', 'Technologien', 'Anwendungen', 'Kontrollen', 'Abhängigkeit'].join(';'),
+    );
   });
 }
 

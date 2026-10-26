@@ -7,13 +7,15 @@ Assets dokumentieren Ihr Infrastrukturinventar: physische Server, virtuelle Masc
 Navigieren Sie zu **IT-Landschaft > Assets**, um Ihr Asset-Inventar zu sehen. Klicken Sie auf **Asset hinzufügen**, um Ihren ersten Eintrag zu erstellen.
 
 **Pflichtfelder**:
-- **Name**: Ein eindeutiger Asset-Name oder Hostname
-- **Asset-Typ**: Webserver, virtuelle Maschine, physischer Server, Container usw. (konfigurierbar in **IT-Landschaft > Einstellungen**)
+- **Name**: Der Asset-Name oder Hostname, höchstens 200 Zeichen
+- **Asset-Typ**: Webserver, virtuelle Maschine, physischer Server, Container usw. (konfigurierbar in **IT-Landschaft > Einstellungen**). Kein Typ ist vorausgewählt: **Erstellen** bleibt nicht verfügbar, bis Sie einen wählen
 - **Standort**: Wo das Asset gehostet wird (bestimmt Anbieter, Hosting-Typ und Land)
 
 **Dringend empfohlen**:
 - **Lebenszyklus**: Aktueller Status (Aktiv, Veraltet, Außer Betrieb usw.)
 - **Umgebung**: Zu welcher Umgebung dieses Asset gehört (Prod, Pre-prod, QA, Test, Dev, Sandbox)
+
+**Eindeutige Namen**: Zwei Assets können weder denselben Namen noch denselben FQDN haben. Groß- und Kleinschreibung sowie Leerzeichen am Anfang oder Ende zählen nicht. KANAP lehnt das Duplikat ab und nennt das Asset, das den Wert bereits hat (`AST-12`). Früher erfasste Duplikate bleiben bearbeitbar, solange Sie diesen Wert nicht ändern.
 
 **Tipp**: Verwenden Sie konsistente Namenskonventionen, die Umgebungs- und Rolleninformationen enthalten (z. B. `prod-web-01`, `dev-db-master`). Beim Erstellen eines neuen Assets wird der Hostname automatisch aus dem eingegebenen Namen abgeleitet.
 
@@ -32,7 +34,7 @@ Die Asset-Liste bietet Ihnen eine filter- und sortierbare Übersicht über jedes
 
 | Spalte | Was sie zeigt |
 |--------|---------------|
-| **#** | Asset-Referenz (z. B. `AST-123`), in Festbreitenschrift |
+| **#** | Asset-Referenz (z. B. `AST-123`), in Festbreitenschrift. Wird nach Nummer sortiert |
 | **Name** | Asset-Name (klicken, um den Arbeitsbereich zu öffnen) |
 | **Zu prüfende Schwachstellen** | Die noch zu prüfenden Schwachstellen der auf dem Asset erfassten Technologien, dann in Orange die Zahl der kritischen oder hohen (`5 · 2`). Leer für ein außer Betrieb genommenes Asset oder wenn keine mehr offen ist. Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf das Asset. Vorhanden, wenn Schwachstellen verfolgt werden |
 | **Asset-Typ** | Der Typ des Assets (z. B. Virtuelle Maschine, Physischer Server) |
@@ -41,7 +43,7 @@ Die Asset-Liste bietet Ihnen eine filter- und sortierbare Übersicht über jedes
 | **Standort** | Wo das Asset gehostet wird |
 | **Hosting** | Hosting-Typ (vom Standort abgeleitet) |
 | **OS** | Betriebssystem: die als Betriebssystem des Servers markierte Technologie, mit ihrer Version |
-| **Netzwerkzone** | Netzwerksegment (vom Subnetz abgeleitet) |
+| **Netzwerkzone** | Die Netzwerkzone des Subnetzes der ersten IP-Adresse. Ein Subnetz, das dem Standort des Assets zugeordnet ist, hat Vorrang vor einem Subnetz desselben Bereichs ohne Standort |
 | **Lebenszyklus** | Aktueller Lebenszyklus-Status |
 | **Zuweisungen** | Anzahl der Anwendungszuweisungen, einschließlich der von seinen Clustern geerbten |
 | **Erstellt** | Wann der Datensatz erstellt wurde |
@@ -74,11 +76,13 @@ Die meisten Spalten unterstützen Kontrollkästchen-Set-Filter für die schnelle
 
 Die Sortierung nach **Zu prüfende Schwachstellen** ordnet die Assets nach ihren kritischen oder hohen Schwachstellen, dann nach ihrer Gesamtzahl. Außer Betrieb genommene Assets stehen zuletzt. Die Spalte zählt nur direkte Verknüpfungen: Eine virtuelle Maschine zählt die Schwachstellen ihres Hosts nicht. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts).
 
+**Die Schnellsuche** durchsucht Name, Referenz, Hostname, FQDN, IP-Adressen, Cluster, Standort, Unterstandort und Betriebssystem.
+
 **Tipp**: Kombinieren Sie Filter über Spalten hinweg, um die Ergebnisse einzugrenzen. Filtern Sie zum Beispiel nach Umgebung = „Prod" und Lebenszyklus = „Aktiv", um nur aktive Produktions-Assets zu sehen.
 
 **Aktionen**:
 - **Asset hinzufügen**: öffnet ein Menü (`infrastructure:member`). **Asset hinzufügen** legt ein Asset an; **Cluster hinzufügen** legt eines mit bereits eingeschaltetem Schalter **Cluster** an
-- **CSV importieren** / **CSV exportieren**: Massenoperationen (`infrastructure:admin`)
+- **CSV importieren** / **CSV exportieren**: Massenoperationen (`infrastructure:admin`). Der Export enthält die Assets, die die Liste zeigt. Siehe [Exportoptionen](#export-options)
 - **Asset löschen** (ausgewählte Zeilen): Ausgewählte Assets entfernen (`infrastructure:admin`). Ein Asset, das noch Anwendungen zugeordnet oder mit Verbindungen verknüpft ist, kann nicht gelöscht werden: Entfernen Sie es zuerst daraus. Eine Zuordnung, die das Asset nur von seinem Cluster erbt, hindert nicht daran. Vor dem Löschen nennt die Bestätigung die behaltenen Assets mit dem Grund, und was die anderen mitnehmen (siehe [Einen Cluster oder ein Mitglied löschen](#deleting-a-cluster-or-a-member))
 
 ---
@@ -138,6 +142,8 @@ Bevor Sie ein Asset löschen, sagt die Bestätigung, was mit ihm verschwindet: d
 
 Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat eine **Kopfzeile** mit schnellen Metadaten, eine **Eigenschaftsleiste** auf der rechten Seite (die Identitätskarte des Assets, immer sichtbar) und einen **Inhaltsbereich** in der Mitte, der mit jedem Reiter wechselt.
 
+Eine Adresse, die kein Asset bezeichnet, öffnet eine Seite **Asset nicht gefunden** mit einem Link zurück zur Liste.
+
 Die Reiter sind **Übersicht**, **Betrieb**, **Netzwerk**, **Hardware** (nur physische Asset-Typen), **Abhängigkeiten** und **Beziehungen**. Wenn Sie ein Asset erstellen, sind **Übersicht** und **Netzwerk** geöffnet. Die anderen Reiter öffnen sich, sobald Sie auf **Erstellen** klicken.
 
 ### Kopfzeile
@@ -159,12 +165,12 @@ Die Leiste zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen 
 - **Asset-Typ** (erforderlich)
 - **Cluster**: Schalten Sie ihn ein, um das Asset als Cluster zu markieren. Die Änderung wird sofort gespeichert und entfernt nichts. Sie wird für einen Cluster mit Mitgliedern und für ein Mitglied eines Clusters abgelehnt. Siehe [Cluster](#cluster)
 - **Umgebung**: Prod, Pre-prod, QA, Test, Dev, Sandbox
-- **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört, zum Beispiel Tier 0 für einen Domänencontroller und den Hypervisor, auf dem er läuft. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Zonen. Das Asset erscheint dann in dieser Zone auf der Seite [Administrationszonen](administration-view.md)
+- **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört, zum Beispiel Tier 0 für einen Domänencontroller und den Hypervisor, auf dem er läuft. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Zonen oder **Keine Zone**. Das Asset erscheint dann in dieser Zone auf der Seite [Administrationszonen](administration-view.md)
 
 **Standort**:
 - **Standort** (erforderlich)
 - **Unterstandort** (wenn der Standort definierte Unterstandorte hat)
-- **Hosting-Typ**, **Betreiberunternehmen** oder **Cloud-Anbieter**, **Land**, **Stadt**: schreibgeschützt, vom Standort abgeleitet
+- **Hosting-Typ**, **Betreiberunternehmen** oder **Cloud-Anbieter**, **Land**, **Stadt**: schreibgeschützt, vom Standort abgeleitet. Sie folgen, wenn Sie den Standort ändern
 
 **Lebenszyklus**:
 - **Lebenszyklus**: Aktiv, Veraltet, Außer Betrieb usw. (konfigurierbar in den Einstellungen)
@@ -216,7 +222,7 @@ Der Reiter Betrieb zeigt den Cluster des Assets und was darauf läuft: die Anwen
 | **Seit** | Datum, an dem der Server zugeordnet wurde |
 | **Notizen** | Freitext-Notizen |
 
-Klicken Sie auf **Zuordnung hinzufügen**, um dieses Asset einer Anwendungs-Bereitstellung zuzuordnen (`applications:member`). Wählen Sie die Anwendung, dann die Umgebung (die Anwendung muss bereits eine Bereitstellung in dieser Umgebung haben), dann die Rolle und optional Datum und Notizen. Bei einem Mitglied eines Clusters fragt KANAP zuerst, ob dem Cluster oder nur diesem Server zugeordnet wird. Siehe [Anwendungen auf einem Cluster](#applications-on-a-cluster). Der Stift am Ende einer Zeile öffnet die Anwendung: Die Zuordnung wird in ihrem Reiter **Bereitstellungen** bearbeitet. Das Papierkorbsymbol entfernt die Zuordnung nach einer Bestätigung. **Zuordnung hinzufügen** ist nicht verfügbar, solange in **IT-Landschaft > Einstellungen** keine Serverrolle eingerichtet ist.
+Klicken Sie auf **Zuordnung hinzufügen**, um dieses Asset einer Anwendungs-Bereitstellung zuzuordnen. Wählen Sie die Anwendung, dann die Umgebung (die Anwendung muss bereits eine Bereitstellung in dieser Umgebung haben), dann die Rolle und optional Datum und Notizen. Bei einem Mitglied eines Clusters fragt KANAP zuerst, ob dem Cluster oder nur diesem Server zugeordnet wird. Siehe [Anwendungen auf einem Cluster](#applications-on-a-cluster). Der Stift am Ende einer Zeile öffnet die Anwendung: Die Zuordnung wird in ihrem Reiter **Bereitstellungen** bearbeitet. Das Papierkorbsymbol entfernt die Zuordnung nach einer Bestätigung. **Zuordnung hinzufügen** ist nicht verfügbar, solange in **IT-Landschaft > Einstellungen** keine Serverrolle eingerichtet ist. Diese Befehle erfordern `infrastructure:member` und `applications:member`. Ohne beide ist die Tabelle schreibgeschützt.
 
 Bei einem Mitglied zeigt eine dem Cluster zugeordnete Anwendung „über“ und den Namen des Clusters, ohne Stift und Papierkorb: Ändern Sie sie am Cluster.
 
@@ -284,7 +290,7 @@ Assets unterstützen mehrere IP-Adressen, jede mit ihrer eigenen Netzwerkkonfigu
 
 - Klicken Sie auf **IP-Adresse hinzufügen**, um einen neuen Eintrag hinzuzufügen.
 - **Typ**: Der Zweck der IP-Adresse (Host, IPMI, Management, iSCSI oder benutzerdefinierte Typen aus den Einstellungen)
-- **IP-Adresse**: Die Adresse selbst
+- **IP-Adresse**: Die Adresse selbst. Eine fehlerhafte Adresse wird abgelehnt, mit der Meldung unter dem Feld
 - **Subnetz**: Netzwerk-Subnetz aus der konfigurierten Liste (gefiltert nach Standort des Assets)
 - **Netzwerkzone**: Automatisch aus dem ausgewählten Subnetz abgeleitet (schreibgeschützt)
 - **VLAN**: Automatisch aus dem ausgewählten Subnetz abgeleitet (schreibgeschützt)
@@ -337,7 +343,7 @@ Jede Tabelle zeigt Referenz (`AST-12`), Name, Typ, Umgebung und Status. Ein ausg
 
 Bei einem Cluster endet **Hängt ab von** mit einer eingeklappten Zeile, **Durch Mitglieder (n)**. Sie listet die Assets auf, von denen die Mitglieder des Clusters in Betrieb abhängen, mit diesen Mitgliedern in der Spalte **Über**. Diese Zeilen sind schreibgeschützt und zählen nicht im Badge des Reiters.
 
-Mit `infrastructure:member` öffnet **Hinzufügen** rechts neben einem Abschnitt eine Suche nach einem Asset. Wählen Sie ein Ergebnis: Die Beziehung wird sofort gespeichert. Um eine Beziehung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Leser sehen die Tabellen schreibgeschützt. Eine Beziehung **Enthält** von einem Mitglied eines Clusters fragt zuerst, wo das Asset platziert wird: siehe [Virtuelle Maschinen auf einem Cluster](#virtual-machines-on-a-cluster).
+Mit `infrastructure:member` öffnet **Hinzufügen** rechts neben einem Abschnitt eine Suche nach einem Asset. Wählen Sie ein Ergebnis: Die Beziehung wird sofort gespeichert. Um eine Beziehung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Eine Meldung bestätigt es und bietet **Rückgängig** an. Leser sehen die Tabellen schreibgeschützt. Eine Beziehung **Enthält** von einem Mitglied eines Clusters fragt zuerst, wo das Asset platziert wird: siehe [Virtuelle Maschinen auf einem Cluster](#virtual-machines-on-a-cluster).
 
 ---
 
@@ -359,14 +365,14 @@ Sie sehen nur die Abschnitte der Module, die Sie lesen dürfen: Budget, Verträg
 
 Orange Daten verlangen Aufmerksamkeit: ein Vertrag, dessen Verlängerungsentscheidung in Ihr Entscheidungsfenster für Verträge fällt, oder eine offene Aufgabe nach ihrer Fälligkeit. Eine deaktivierte Budgetzeile oder ein deaktivierter Vertrag bleibt mit ausgegrautem Namen aufgeführt. Ab zwei Zeilen enden Budgetzeilen und Verträge mit einer Summenzeile. Die Summe der Budgetzeilen steht in der Berichtswährung und lässt eine Zeile aus, deren Währung für das Jahr keinen Wechselkurs hat: Ein einzeiliger Hinweis unter der Tabelle nennt sie. Verträge erhalten eine Summe je Währung, ohne die deaktivierten Verträge.
 
-**Verknüpfungen hinzufügen und entfernen** (`infrastructure:member`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Das Verknüpfen erfordert auch Leserechte auf das Zielmodul, daher fehlt **Hinzufügen** in einem Abschnitt, den Sie nicht lesen dürfen. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Leser sehen die Tabellen schreibgeschützt.
+**Verknüpfungen hinzufügen und entfernen** (`infrastructure:member`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Das Verknüpfen erfordert auch Leserechte auf das Zielmodul, daher fehlt **Hinzufügen** in einem Abschnitt, den Sie nicht lesen dürfen. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Eine Meldung bestätigt es und bietet **Rückgängig** an. Das Entfernen einer Verknüpfung löscht nichts anderes. Leser sehen die Tabellen schreibgeschützt.
 
 - Eine Aufgabe, die Sie hier verknüpfen oder lösen, erscheint auch in der Aktivität der Aufgabe.
 - Das Verknüpfen oder Lösen eines Vorfalls erfordert zusätzlich `incidents:contributor` und wird im Journal des Vorfalls festgehalten. Ein geschlossener oder abgebrochener Vorfall kann weder verknüpft noch gelöst werden: Öffnen Sie ihn zuerst wieder.
 
 **Links und Dateien**: die Weblinks des Assets (Lieferantenportale, Monitoring-Dashboards, Dokumentation) und seine Dateien (Konfigurationsdateien, Diagramme, Lieferantendokumente), je eine Zeile mit Name, der Domain des Links oder der Größe der Datei und dem Datum, an dem sie hinzugefügt wurden. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen, oder auf eine Datei, um sie herunterzuladen. Mit `infrastructure:member`:
 
-- **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
+- **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Eine Adresse ohne `http://` oder `https://` erhält `https://`. Jedes andere Schema wird abgelehnt. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
 - **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen.
 - Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
 
@@ -384,7 +390,11 @@ Aus der Asset-Liste:
 
 **Erforderliche Berechtigungen**: `infrastructure:admin` für Import-/Export-Operationen.
 
-### Exportoptionen
+### Exportoptionen { #export-options }
+
+**Inhalt der Datei**: die Assets, die die Liste zeigt. Der Export folgt den Spaltenfiltern und der Schnellsuche. Der Dialog nennt die Zahl der Assets in der Datei. Sie können auch das ganze Verzeichnis exportieren.
+
+Die Spalten für Asset-Typ, Lebenszyklus, Domäne, Administrationszone und IP-Adresstyp enthalten die Bezeichnungen des Bildschirms, in der Sprache des Bildschirms.
 
 | Option | Beschreibung |
 |--------|-------------|
@@ -411,6 +421,19 @@ Aus der Asset-Liste:
 
 4. **Änderungen anwenden**: Wenn die Validierung erfolgreich ist, klicken Sie auf **Importieren**, um Änderungen zu übernehmen.
 
+### Was Preflight ablehnt
+
+Preflight meldet einen Fehler in der Zeile, und nichts wird geladen, bei:
+
+- einem Hostnamen, der die Regel des Reiters Netzwerk verletzt;
+- einer fehlerhaften IP-Adresse;
+- einem Asset-Typ, einer Domäne, einem Lebenszyklus, einer Administrationszone oder einem IP-Adresstyp, der zu nichts in **IT-Landschaft > Einstellungen** passt;
+- einem Datum, das es im Kalender nicht gibt, etwa `31/02/2025`, oder einem in Worten geschriebenen Datum. Die zulässigen Datumsformen stehen unter [CSV-Dateien](csv-files.md);
+- einem belegten IP-Adressplatz, während ein früherer leer ist, zum Beispiel `ip_2_address` ohne `ip_1_address`;
+- einem Namen oder FQDN, den bereits ein anderes Asset hat.
+
+Bei einem bestehenden Asset werden Hostname und IP-Adressen nur erneut geprüft, wenn die Datei sie ändert.
+
 ### Feldreferenz
 
 **Kernfelder**:
@@ -419,7 +442,7 @@ Aus der Asset-Liste:
 |------------|-------------|----------|-------|
 | `id` | Asset-UUID | Nein | Für Updates; bei neuen Assets leer lassen |
 | `name` | Asset-Name | Ja | Wird als eindeutige Kennung für den Abgleich verwendet |
-| `location_code` | Standortcode | Ja | Muss mit einem vorhandenen Standortcode übereinstimmen |
+| `location_reference` | Standortcode | Ja | Der **Code** eines vorhandenen Standorts |
 | `kind` | Asset-Typ | Ja | Akzeptiert Code oder Bezeichnung (z. B. `vm` oder `Virtual Machine`) |
 | `environment` | Umgebung | Ja | `prod`, `pre_prod`, `qa`, `test`, `dev`, `sandbox` |
 | `status` | Lebenszyklus-Status | Nein | Akzeptiert Code oder Bezeichnung (z. B. `active` oder `Active`) |
@@ -445,7 +468,7 @@ Aus der Asset-Liste:
 
 ### Akzeptanz von Bezeichnungen und Codes
 
-Für Felder, die in **IT-Landschaft > Einstellungen** konfiguriert sind, können Sie entweder den internen Code oder die Anzeigebezeichnung verwenden:
+Für Felder, die in **IT-Landschaft > Einstellungen** konfiguriert sind, können Sie entweder den internen Code oder die auf dem Bildschirm angezeigte Bezeichnung verwenden, auf Englisch, Französisch, Deutsch oder Spanisch:
 
 | Feld | Beispiel-Codes | Beispiel-Bezeichnungen |
 |-------|---------------|----------------|
@@ -455,7 +478,7 @@ Für Felder, die in **IT-Landschaft > Einstellungen** konfiguriert sind, können
 | Administrationszone (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (Vertrauenskern)`, `Tier 1 (Server und Anwendungen)` |
 | IP-Adresstyp | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
-Das System normalisiert Werte automatisch beim Import, sodass `Virtual Machine`, `virtual machine` und `vm` alle zum gleichen Asset-Typ aufgelöst werden. Ein Wert, der auf mehrere Einträge passt, wird abgelehnt statt erraten. Der CSV-Export schreibt für diese Spalten Namen, sodass eine exportierte Datei unverändert wieder importiert werden kann.
+Das System normalisiert Werte automatisch beim Import, sodass `Virtual Machine`, `virtual machine` und `vm` alle zum gleichen Asset-Typ aufgelöst werden. Ein Wert, der auf mehrere Einträge passt, wird abgelehnt statt erraten. Der CSV-Export schreibt für diese Spalten Namen, in der Sprache des Bildschirms, sodass eine exportierte Datei unverändert wieder importiert werden kann.
 
 **Betriebssystem**: Die Spalte `operating_system` enthält den Namen der Technologie, gefolgt von ihrer Version, so wie der Export sie schreibt (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Beim Import sucht KANAP die Technologie unter Ihren Technologien, dann im Katalog, und erfasst die Version. Eine Technologie oder Version, die es nicht findet, wird angelegt: Prüfen Sie also vorher die Schreibweise. Der Wert wird zum Betriebssystem des Servers.
 
@@ -478,14 +501,14 @@ Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der A
 ### Abgeleitete Felder
 
 Einige Felder werden berechnet und können nicht importiert werden:
-- **Anbieter**: Automatisch vom Standort des Assets abgeleitet
+- **Anbieter**: Automatisch vom Standort des Assets abgeleitet und aktualisiert, wenn sich der Standort ändert
 - **FQDN**: Aus Hostname + Domäne berechnet
 - **Schwachstellen**: `vulnerabilities_to_review` (die noch zu prüfenden Schwachstellen) und `severe_vulnerabilities` (die kritischen oder hohen davon), gezählt wie in der Spalte der Liste. Nur Export: Der Import ignoriert sie. Leer für ein außer Betrieb genommenes Asset. Fehlen in der Datei, wenn Schwachstellen nicht verfolgt werden
 
 ### Einschränkungen
 
 - **Maximal 4 IP-Adressen**: Assets unterstützen bis zu 4 IP-Adresseinträge per CSV
-- **Standort erforderlich**: Jedes Asset muss einen gültigen Standortcode haben
+- **Standort erforderlich**: Jedes Asset muss den Code eines vorhandenen Standorts haben
 - **Verknüpfungen nicht enthalten**: Anwendungszuweisungen, Verbindungen, Finanzverknüpfungen, Projekte, Aufgaben und Anhänge müssen im Arbeitsbereich verwaltet werden
 
 ### Fehlerbehebung
@@ -499,7 +522,7 @@ Einige Felder werden berechnet und können nicht importiert werden:
 ### Beispiel-CSV
 
 ```csv
-name;location_code;kind;environment;status;hostname;domain;ip_1_type;ip_1_address
+name;location_reference;kind;environment;status;hostname;domain;ip_1_type;ip_1_address
 PROD-WEB-01;NYC-DC1;Virtual Machine;prod;Active;prodweb01;corp;Host IP;10.0.1.10
 PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 ```

@@ -83,13 +83,8 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
   const saveLink = async (link: LinksAndFilesLink | null, draft: LinkDraft) => {
     setError(null);
     const body = { description: draft.name, url: draft.url };
-    try {
-      if (link) await api.patch(`/applications/${id}/links/${link.id}`, body);
-      else await api.post(`/applications/${id}/links`, body);
-    } catch (e) {
-      failed(e);
-      throw e;
-    }
+    if (link) await api.patch(`/applications/${id}/links/${link.id}`, body);
+    else await api.post(`/applications/${id}/links`, body);
     feedback.info(t(link ? 'workspace.application.relations.feedback.linkUpdated' : 'workspace.application.relations.feedback.linkAdded'));
     await refresh(linksKey);
   };

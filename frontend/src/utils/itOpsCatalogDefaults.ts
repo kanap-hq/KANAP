@@ -190,6 +190,18 @@ const SHIPPED_LABELS: Record<string, Record<string, string>> = {
   },
 };
 
+/** The code of a shipped label, matched without case. Null when the text is a tenant's own. */
+export function shippedCodeForLabel(list: string, label: string): string | null {
+  const table = SHIPPED_LABELS[list];
+  if (!table) return null;
+  const wanted = label.trim().toLowerCase();
+  if (!wanted) return null;
+  for (const [code, text] of Object.entries(table)) {
+    if (code.toLowerCase() === wanted || text.toLowerCase() === wanted) return code;
+  }
+  return null;
+}
+
 /**
  * Labels a tenant may still store after a shipped rename. Shown and accepted on import while the
  * stored label equals `source`. Kept out of `SHIPPED_LABELS`, so a new tenant does not receive them.

@@ -33,6 +33,8 @@ export const IMPACT_ROWS_SHOWN = 50;
 
 type Props = {
   assetId: string;
+  /** A physical server keeps the "server" sentences. Every other kind says "asset". */
+  isServer?: boolean;
 };
 
 const camel = (value: string) => value.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
@@ -41,7 +43,7 @@ const camel = (value: string) => value.replace(/_([a-z])/g, (_, c: string) => c.
  * "If this server goes down" (lot T5): what falls with the asset, in dense read-only tables. Empty
  * tables are left out; when nothing else falls, one tertiary line says so.
  */
-export default function AssetImpactSection({ assetId }: Props) {
+export default function AssetImpactSection({ assetId, isServer = true }: Props) {
   const { t } = useTranslation('it');
   const theme = useTheme();
   const { labelFor } = useItOpsEnumOptions();
@@ -55,6 +57,10 @@ export default function AssetImpactSection({ assetId }: Props) {
   });
 
   const k = (key: string) => `workspace.asset.impact.${key}`;
+  // A physical server keeps "this server". Every other kind uses the asset sentence of the same shape.
+  const viaKey = (serverKey: string) => (
+    isServer ? serverKey : serverKey.replace('ThisServer', 'ThisAsset').replace('thisServer', 'thisAsset')
+  );
   /**
    * The names of a capped `via`, then how many the server left out. When the server itself is in
    * the list, it comes first through a whole-sentence key, so each language words it right.
@@ -67,18 +73,19 @@ export default function AssetImpactSection({ assetId }: Props) {
       row.via_total > row.via.length ? t(k('more'), { count: row.via_total - row.via.length }) : '',
     ].filter(Boolean).join(', ');
     if (!self) return prefix ? t(k('via.on'), { name: others }) : others;
-    if (prefix) return others ? t(k('via.onThisServerAnd'), { name: others }) : t(k('via.onThisServer'));
-    return others ? t(k('via.thisServerAnd'), { name: others }) : t(k('via.thisServer'));
+    if (prefix) return others ? t(k(viaKey('via.onThisServerAnd')), { name: others }) : t(k(viaKey('via.onThisServer')));
+    return others ? t(k(viaKey('via.thisServerAnd')), { name: others }) : t(k(viaKey('via.thisServer')));
   };
   const environment = (value: string) => t(`enums.environment.${camel(value)}`, { defaultValue: value });
   const criticality = (value: string | null) =>
     value ? classification?.businessCriticalityLevels.find((item) => item.code === value)?.label ?? t(`enums.criticality.${camel(value)}`, { defaultValue: value }) : '';
 
+  const title = t(k(isServer ? 'title' : 'titleAsset'));
   if (!isSuccess && !isError) return null;
   if (isError || !data) {
     return (
-      <Box component="section" aria-label={t(k('title'))}>
-        <Title>{t(k('title'))}</Title>
+      <Box component="section" aria-label={title}>
+        <Title>{title}</Title>
         <RelationsEmpty>{t(k('loadFailed'))}</RelationsEmpty>
       </Box>
     );
@@ -111,7 +118,7 @@ export default function AssetImpactSection({ assetId }: Props) {
     const parent = row.via[row.via.length - 1];
     if (!parent) return '';
     const relation = row.relation === 'depends_on' ? 'dependsOn' : row.relation === 'member' ? 'member' : 'contains';
-    if (parent.id === assetId) return t(k(`via.${relation}ThisServer`));
+    if (parent.id === assetId) return t(k(viaKey(`via.${relation}ThisServer`)));
     return t(k(`via.${relation}`), { name: parent.name });
   };
   const path = (row: ImpactAsset) => [...row.via.map((ref) => ref.name), row.name].join(' › ');
@@ -121,13 +128,13 @@ export default function AssetImpactSection({ assetId }: Props) {
     { key: 'name', header: t(k('columns.name')), render: (row) => row.name },
     { key: 'environment', header: t(k('columns.environment')), width: 130, hideOrder: 2, render: (row) => row.environments.map(environment).join(', ') },
     { key: 'criticality', header: t(k('columns.criticality')), width: 130, render: (row) => criticality(row.criticality) },
-    { key: 'via', header: t(k('columns.via')), width: 200, hideOrder: 1, render: (row) => <span title={viaNames(row)}>{viaNames(row, 'on')}</span> },
+    { key: 'via', header: t(k('columns.via')), width: 200, hideOrder: 1, wrap: true, render: (row) => <span title={viaNames(row)}>{viaNames(row, 'on')}</span> },
   ];
   const assetColumns: Array<RelationsColumn<ImpactAsset>> = [
     { key: 'ref', header: t(k('columns.reference')), width: 72, render: (row) => <RelationRef>{row.reference}</RelationRef> },
     { key: 'name', header: t(k('columns.name')), render: (row) => row.name },
     { key: 'type', header: t(k('columns.type')), width: 130, render: (row) => labelFor('serverKind', row.kind) || row.kind },
-    { key: 'via', header: t(k('columns.via')), width: 240, hideOrder: 1, render: (row) => <span title={path(row)}>{assetVia(row)}</span> },
+    { key: 'via', header: t(k('columns.via')), width: 240, hideOrder: 1, wrap: true, render: (row) => <span title={path(row)}>{assetVia(row)}</span> },
   ];
   const clusterColumns: Array<RelationsColumn<ImpactCluster>> = [
     { key: 'ref', header: t(k('columns.reference')), width: 72, render: (row) => <RelationRef>{row.reference}</RelationRef> },
@@ -146,18 +153,20 @@ export default function AssetImpactSection({ assetId }: Props) {
         </Box>
       ),
     },
-    { key: 'via', header: t(k('columns.via')), width: 200, hideOrder: 1, render: (row) => viaNames(row) },
+    { key: 'via', header: t(k('columns.via')), width: 200, hideOrder: 1, wrap: true, render: (row) => viaNames(row) },
   ];
   const processColumns: Array<RelationsColumn<ImpactProcess>> = [
     { key: 'name', header: t(k('columns.name')), render: (row) => row.name },
-    { key: 'via', header: t(k('columns.via')), width: 280, render: (row) => <span title={viaNames(row)}>{viaNames(row)}</span> },
+    { key: 'via', header: t(k('columns.via')), width: 280, wrap: true, render: (row) => <span title={viaNames(row)}>{viaNames(row)}</span> },
   ];
 
   return (
-    <Box component="section" aria-label={t(k('title'))}>
-      <Title>{t(k('title'))}</Title>
+    <Box component="section" aria-label={title}>
+      <Title>{title}</Title>
       {summary.length === 0 ? (
-        <RelationsEmpty>{t(k(data.applications === null ? 'emptyInfrastructure' : 'empty'))}</RelationsEmpty>
+        <RelationsEmpty>{t(k(data.applications === null
+          ? (isServer ? 'emptyInfrastructure' : 'emptyInfrastructureAsset')
+          : (isServer ? 'empty' : 'emptyAsset')))}</RelationsEmpty>
       ) : (
         <Stack spacing={2.5}>
           <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{summary.join(' · ')}</Typography>

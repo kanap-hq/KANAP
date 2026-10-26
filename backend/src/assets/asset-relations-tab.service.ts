@@ -17,8 +17,9 @@ import {
   type RelatedIncident,
   type RelatedProject,
 } from '../common/relations/related-objects';
-import { parseTargetId, UUID_RE } from '../common/relations/relation-target';
+import { parseTargetId } from '../common/relations/relation-target';
 import { hiddenContractCount } from '../data-access/hidden-links';
+import { resolveAssetId } from './asset-identifier';
 import { FxRateService } from '../currency/fx-rate.service';
 import { taskIncidentVisibilitySql, type IncidentViewer } from '../incidents/incident-visibility';
 import { IncidentRelationsService } from '../incidents/services/incident-relations.service';
@@ -181,23 +182,14 @@ export function assetRelationKindOrThrow(value: string): AssetRelationKind {
   return value as AssetRelationKind;
 }
 
-/** The asset in the tenant, by uuid or by its reference (`AST-n`). 404 otherwise. */
+/** The asset in the tenant, by uuid or by its reference (`AST-n`, a suffix ignored). 404 otherwise. */
 async function loadAsset(mg: EntityManager, tenantId: string, ref: string): Promise<AssetRow> {
-  const value = String(ref || '').trim();
-  let rows: AssetRow[] = [];
-  if (UUID_RE.test(value)) {
-    rows = await mg.query(
-      `SELECT id, tenant_id, COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND id = $2`,
-      [tenantId, value.toLowerCase()],
-    );
-  } else if (/^AST-\d+$/i.test(value)) {
-    rows = await mg.query(
-      `SELECT id, tenant_id, COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND asset_reference = $2`,
-      [tenantId, value.toUpperCase()],
-    );
-  }
-  if (!rows[0]) throw new NotFoundException(ASSET_NOT_FOUND);
-  return rows[0];
+  const id = await resolveAssetId(mg, ref, tenantId);
+  const rows: Array<{ is_cluster: boolean }> = await mg.query(
+    `SELECT COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND id = $2`,
+    [tenantId, id],
+  );
+  return { id, tenant_id: tenantId, is_cluster: !!rows[0]?.is_cluster };
 }
 
 async function lockAsset(mg: EntityManager, asset: AssetRow): Promise<void> {

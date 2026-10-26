@@ -15,6 +15,7 @@ import { joinNames } from '../../working-day-calendars/workingDayCalendarFields'
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { getDotColor } from '../../../utils/statusColors';
 import AssetImpactSection from '../editors/AssetImpactSection';
+import { useApplicationFeedback } from '../applicationFeedback';
 import usePlacementQuestion from '../components/usePlacementQuestion';
 import { ASSET_DIRECTIONS, assetRelationsKey, type AssetDirection, type AssetRelationsData } from './assetRelationsData';
 
@@ -45,8 +46,16 @@ const DIRECTION_KEY: Record<AssetDirection, string> = {
  * infrastructure member adds from a server search and unlinks on hover, each saved at once; the
  * relations and the impact of every asset are read again after each change.
  */
-export default function AssetDependenciesTab({ assetId }: { assetId: string }) {
+export default function AssetDependenciesTab({
+  assetId,
+  isServer = false,
+}: {
+  assetId: string;
+  /** Physical servers keep the "server" sentences in the impact. */
+  isServer?: boolean;
+}) {
   const { t } = useTranslation(['it', 'common']);
+  const feedback = useApplicationFeedback();
   const { hasLevel } = useAuth();
   const queryClient = useQueryClient();
   const labels = useRelationLabels();
@@ -122,8 +131,13 @@ export default function AssetDependenciesTab({ assetId }: { assetId: string }) {
     refreshAssets();
   };
   const onUnlink = async (kind: string, targetId: string) => {
-    await unlink(kind, targetId);
+    const name = data?.assets[kind as AssetDirection]?.find((row) => row.id === targetId)?.name ?? '';
+    if (!(await unlink(kind, targetId))) return;
     refreshAssets();
+    feedback.undo(t('workspace.asset.relations.feedback.unlinked', { name }), async () => {
+      await link(kind, targetId);
+      refreshAssets();
+    });
   };
 
   const sections = ASSET_DIRECTIONS.map((direction): SectionSpec<AssetRelationRow> => {
@@ -204,7 +218,7 @@ export default function AssetDependenciesTab({ assetId }: { assetId: string }) {
     <Stack spacing={3}>
       {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
-      <AssetImpactSection assetId={assetId} />
+      <AssetImpactSection assetId={assetId} isServer={isServer} />
 
       <RelationSections
         sections={sections}

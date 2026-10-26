@@ -134,6 +134,11 @@ export type ServerDataGridProps<T> = {
    */
   filteredColumnsAfter?: string;
   columnPreferencesKey?: string; // localStorage key for persistence
+  /**
+   * Version of this grid's saved layout. A layout stored as a bare list, or under an older
+   * version, is dropped once and the default layout returns. Grids that omit it keep the bare list.
+   */
+  columnLayoutVersion?: number;
   onColumnStateChange?: (columnState: ColumnState[]) => void; // callback for external state management
   onCellClicked?: (event: any) => void; // optional cell click handler
   onGridApiReady?: (gridApi: any) => void; // callback to provide grid API reference to parent
@@ -393,6 +398,18 @@ export const DATE_COLUMN_FILTER_TWO_CONDITIONS = {
   filterParams: { ...DATE_FILTER_PARAMS, suppressAndOrCondition: false, maxNumConditions: 2 },
 } as const;
 
+/**
+ * The saved layout a grid should apply. Without a version, the bare list every grid stored.
+ * With one, only `{ v, columns }` of that version: a bare list or an older version is dropped.
+ */
+function readSavedColumnState(raw: string, version: number | undefined): ColumnState[] | null {
+  const parsed = JSON.parse(raw) as unknown;
+  if (version == null) return Array.isArray(parsed) ? parsed as ColumnState[] : null;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  const stored = parsed as { v?: unknown; columns?: unknown };
+  return stored.v === version && Array.isArray(stored.columns) ? stored.columns as ColumnState[] : null;
+}
+
 // Column state management hook
 function useColumnState(
   key: string | undefined,
@@ -401,6 +418,7 @@ function useColumnState(
   defaultHiddenColumns: string[] = [],
   tenantSlug?: string,
   userId?: string,
+  layoutVersion?: number,
 ) {
   const legacyKey = key ? `grid-columns-${key}` : null;
   const scopedKey = key && tenantSlug && userId
@@ -445,7 +463,12 @@ function useColumnState(
       const saved = localStorage.getItem(storageKey);
       if (!saved) return getDefaultColumnState();
 
-      const savedState = JSON.parse(saved) as ColumnState[];
+      const savedState = readSavedColumnState(saved, layoutVersion);
+      if (!savedState) {
+        // An older layout is ignored once: the key goes, and the default layout returns.
+        if (layoutVersion != null) localStorage.removeItem(storageKey);
+        return getDefaultColumnState();
+      }
       const defaultState = getDefaultColumnState();
 
       // Helper to compute hide respecting required columns
@@ -469,18 +492,19 @@ function useColumnState(
       console.warn('Failed to load column state from localStorage:', e);
       return getDefaultColumnState();
     }
-  }, [getStorageKey, getDefaultColumnState, columns, requiredColumns]);
+  }, [getStorageKey, getDefaultColumnState, columns, requiredColumns, layoutVersion]);
 
   const saveColumnState = useCallback((state: ColumnState[]) => {
     const storageKey = getStorageKey();
     if (!storageKey) return;
     
     try {
-      localStorage.setItem(storageKey, JSON.stringify(state));
+      const payload = layoutVersion == null ? state : { v: layoutVersion, columns: state };
+      localStorage.setItem(storageKey, JSON.stringify(payload));
     } catch (e) {
       console.warn('Failed to save column state to localStorage:', e);
     }
-  }, [getStorageKey]);
+  }, [getStorageKey, layoutVersion]);
 
   const resetColumnState = useCallback(() => {
     const storageKey = getStorageKey();
@@ -523,6 +547,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   showFilteredColumns = false,
   filteredColumnsAfter,
   columnPreferencesKey,
+  columnLayoutVersion,
   onColumnStateChange,
   onCellClicked,
   onGridApiReady,
@@ -739,7 +764,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const pageParamsChangedRef = useRef<() => void>(() => undefined);
 
   // Column state management
-  const columnStateManager = useColumnState(columnPreferencesKey, columns, requiredColumns, defaultHiddenColumns, tenantSlug ?? undefined, profile?.id);
+  const columnStateManager = useColumnState(columnPreferencesKey, columns, requiredColumns, defaultHiddenColumns, tenantSlug ?? undefined, profile?.id, columnLayoutVersion);
   const [currentColumnState, setCurrentColumnState] = useState<ColumnState[]>(() => columnStateManager.loadColumnState());
   // Columns shown for this visit only, because a link's filter narrows them (`showFilteredColumns`):
   // the saved layout keeps them hidden until the user shows one in the chooser.

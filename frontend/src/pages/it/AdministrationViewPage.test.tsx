@@ -235,6 +235,7 @@ describe('AdministrationViewPage', () => {
     renderPage();
     const band = await screen.findByRole('group', { name: 'Administration zones' });
     const rows = within(band).getAllByRole('button');
+    expect(screen.getByText('Choose a zone to filter the asset list.')).toBeTruthy();
     expect(rows.map((row) => row.textContent)).toEqual([
       'Niveau 0Identity coreAdministrator groupDomain adminsVirtual machine: 3, Physical server: 1·2 applications·1 directory service',
       'Tier 1No asset in this zone.',
@@ -244,6 +245,8 @@ describe('AdministrationViewPage', () => {
     // The description sits under the name, in the zone's first cell, in tertiary text.
     const description = within(rows[0]).getByTestId('zone-description');
     expect(description.previousElementSibling?.textContent).toBe('Niveau 0');
+    expect(rows[0].getAttribute('title')).toBe('Show the assets in Niveau 0.');
+    expect(rows[3].getAttribute('title')).toBe('Show the assets in No zone.');
     expect(getComputedStyle(description).fontSize).toBe('12px');
   });
 
@@ -262,6 +265,55 @@ describe('AdministrationViewPage', () => {
     fireEvent.click(zoneRow('No zone'));
     expect(api.setFilterModel).toHaveBeenLastCalledWith({});
     expect(zoneRow('No zone').getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('writes zone names in the address and sends catalog codes to the grid', async () => {
+    getMock.mockImplementation(async (url: string) => {
+      if (url === ENDPOINT) return {
+        data: {
+          ...SUMMARY,
+          zones: [
+            ...SUMMARY.zones,
+            {
+              code: 'tiens_1', label: 'Palier 1', description: null, admin_group: null, deprecated: false, unknown: false,
+              asset_counts: [], hosted_application_count: 0, directory_services: [],
+            },
+          ],
+        },
+      } as any;
+      if (url === `${ENDPOINT}/directories`) return { data: DIRECTORIES } as any;
+      throw new Error(`unexpected ${url}`);
+    });
+    const filters = JSON.stringify({ zone: { filterType: 'set', values: ['tiens_1', null] } });
+    renderPage(`/it/administration?filters=${encodeURIComponent(filters)}`);
+    await screen.findByRole('group', { name: 'Administration zones' });
+    await waitFor(() => {
+      const parsed = JSON.parse(new URLSearchParams(address.search).get('filters') || '{}');
+      expect(parsed.zone.values).toEqual(['Palier 1', null]);
+    });
+    expect(address.search).not.toContain('tiens_1');
+    const api = gridApi();
+    api.setFilterModel({ zone: { filterType: 'set', values: ['Palier 1', null] } });
+    expect(api.setFilterModel).toHaveBeenLastCalledWith({ zone: { filterType: 'set', values: ['tiens_1', null] } });
+    api.setFilterModel({ zone: { filterType: 'set', values: ['not-a-zone'] } });
+    expect(api.setFilterModel).toHaveBeenLastCalledWith({ zone: { filterType: 'set', values: ['not-a-zone'] } });
+  });
+
+  it('starts the grid on the zone code of a link that names the zone, once the zones are known', async () => {
+    let answer: (value: unknown) => void = () => undefined;
+    getMock.mockImplementation(async (url: string) => {
+      if (url === ENDPOINT) return new Promise((resolve) => { answer = resolve; }) as any;
+      if (url === `${ENDPOINT}/directories`) return { data: DIRECTORIES } as any;
+      throw new Error(`unexpected ${url}`);
+    });
+    const filters = JSON.stringify({ zone: { filterType: 'set', values: ['Tier 1'] } });
+    renderPage(`/it/administration?filters=${encodeURIComponent(filters)}`);
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith(ENDPOINT));
+    expect(grid.props).toBeNull();
+    await act(async () => { answer({ data: SUMMARY }); });
+    await screen.findByRole('group', { name: 'Administration zones' });
+    await waitFor(() => expect(grid.props).not.toBeNull());
+    expect(grid.props!.initialState).toEqual({ filter: { filterModel: { zone: { filterType: 'set', values: ['tier_1'] } } } });
   });
 
   it('shows one toggle per control with its count; one filters the list at a time, again to clear', async () => {
@@ -329,7 +381,7 @@ describe('AdministrationViewPage', () => {
   it('draws the cells: reference link, zone, names with +n and their list, controls with the trust explained', async () => {
     renderPage();
     await screen.findByRole('group', { name: 'Administration zones' });
-    expect(within(cell('reference', ROW)).getByRole('link', { name: 'AST-6' }).getAttribute('href')).toBe('/it/assets/asset-host');
+    expect(within(cell('reference', ROW)).getByRole('link', { name: 'AST-6' }).getAttribute('href')).toBe('/it/assets/AST-6');
     // The zone cells read the zones of the summary: no zone in quiet text.
     expect(cell('zone', ROW).textContent).toBe('Tier 1');
     expect(cell('zone', ROW_BARE).textContent).toBe('No zone');
@@ -342,8 +394,34 @@ describe('AdministrationViewPage', () => {
     expect(within(cell('applications', ROW)).getByRole('link', { name: 'Portal' }).getAttribute('href')).toBe('/it/applications/APP-3');
     expect(cell('control', ROW).textContent).toBe('Less sensitive host');
     expect(cell('control', ROW_BARE).textContent).toBe('Without a zone');
+    expect(column('control').wrapText).toBeUndefined();
+    expect(column('control').autoHeight).toBeUndefined();
     fireEvent.mouseOver(within(cell('control', ROW)).getByText('Less sensitive host'));
     expect((await screen.findByRole('tooltip')).textContent).toBe('Runs AST-7 dc1 (Niveau 0)Member of cluster AST-5 vsphere (Niveau 0)');
+  });
+
+  it('counts three controls on one line and names each in the tooltip', async () => {
+    const many: AdministrationAssetRow = {
+      ...ROW,
+      id: 'asset-many',
+      reference: 'PAR-AD-01',
+      name: 'ad',
+      findings: ['assets_without_zone', 'domain_controllers_outside', 'trust_raised'],
+    };
+    grid.rows = [many];
+    renderPage();
+    await screen.findByRole('group', { name: 'Administration zones' });
+    const control = cell('control', many);
+    expect(control.textContent).toBe('3 controls');
+    expect(control.querySelectorAll('[data-finding]')).toHaveLength(0);
+    expect(control.querySelector('[data-finding-count]')?.getAttribute('data-finding-count')).toBe('3');
+    fireEvent.mouseOver(within(control).getByText('3 controls'));
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip.textContent).toContain('Without a zone');
+    expect(tooltip.textContent).toContain('Domain controller outside');
+    expect(tooltip.textContent).toContain('Less sensitive host');
+    expect(tooltip.textContent).toContain('Runs AST-7 dc1 (Niveau 0)');
+    expect(tooltip.textContent).toContain('Member of cluster AST-5 vsphere (Niveau 0)');
   });
 
   it('opens the asset on a click in its row, and leaves a link in a cell to open its own page', async () => {
@@ -355,7 +433,7 @@ describe('AdministrationViewPage', () => {
     click('reference', within(cell('reference', ROW)).getByRole('link', { name: 'AST-6' }));
     expect(navigate).not.toHaveBeenCalled();
     click('applications', cell('applications', ROW));
-    expect(navigate).toHaveBeenCalledWith('/it/assets/asset-host');
+    expect(navigate).toHaveBeenCalledWith('/it/assets/AST-6');
   });
 
   it('assigns a zone to the ticked assets after a dry-run count, then reloads the band, the toggles and the grid', async () => {
@@ -495,7 +573,7 @@ describe('AdministrationViewPage', () => {
     expect(corpRow).toContain('Labo (two-way)');
     expect(corpRow).toContain('1,200');
     expect(corpRow).toContain('300');
-    expect(within(corp).getByRole('link', { name: 'dc1' }).getAttribute('href')).toBe('/it/assets/asset-dc1');
+    expect(within(corp).getByRole('link', { name: 'dc1' }).getAttribute('href')).toBe('/it/assets/AST-7');
     const lab = screen.getByRole('table', { name: 'No forest' });
     expect(within(lab).getAllByRole('row')[1].textContent).toContain('Corp (two-way, declared on that domain)');
   });

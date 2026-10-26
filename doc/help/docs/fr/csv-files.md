@@ -19,7 +19,9 @@ Chaque page de données de référence dispose de **Exporter CSV** et **Importer
 | Espagnol | `;` | `12280,50` | `01/03/2027` | `sí`, `no` |
 | Allemand | `;` | `12280,50` | `01.03.2027` | `ja`, `nein` |
 
-Une date que le fichier ne peut pas trancher seul, comme `01/03/2027`, est lue dans l'ordre de la langue d'affichage de l'écran : jour d'abord en français, en allemand et en espagnol, mois d'abord en anglais. La vérification indique comment elle a lu le fichier, avec un bouton pour changer la lecture. Une date dont le jour est supérieur à 12 tranche la question seule, et le fichier ne porte aucune trace de la langue dans laquelle il a été exporté.
+**Les dates** s'écrivent l'année d'abord (`2027-03-01`, `2027/03/01` ou `2027.03.01`), ou avec le jour et le mois avant l'année (`01/03/2027`, `01.03.2027`). Une date écrite en toutes lettres, comme `Mar 1 2027`, est refusée, de même qu'un jour absent du calendrier, comme `31/02/2027`.
+
+Sur les pages des données de référence, une date que le fichier ne peut pas trancher seul, comme `01/03/2027`, est lue dans l'ordre de la langue d'affichage de l'écran : jour d'abord en français, en allemand et en espagnol, mois d'abord en anglais. La vérification indique comment elle a lu le fichier, avec un bouton pour changer la lecture. Une date dont le jour est supérieur à 12 tranche la question seule, et le fichier ne porte aucune trace de la langue dans laquelle il a été exporté. Les fichiers des applications, des actifs, des incidents, des projets, des demandes et des tâches lisent toujours une telle date le jour d'abord.
 
 Un import lit oui ou non dans chacune de ces langues, ainsi que les `true`, `false`, `1` et `0` des fichiers plus anciens. Les fichiers des applications, des actifs, des incidents, des projets, des demandes et des tâches suivent le même tableau, tout comme les fichiers de liens de la liste des technologies. Voir [Technologies](technologies.md#importer-et-exporter-les-liens).
 

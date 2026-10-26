@@ -11,6 +11,7 @@ import { PortfolioProject } from '../../portfolio/portfolio-project.entity';
 import { AuditService } from '../../audit/audit.service';
 import { StorageService } from '../../common/storage/storage.service';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
+import { assertWebLinkUrl } from '../../common/web-link-url';
 import { validateUploadedFile } from '../../common/upload-validation';
 import { fixMulterFilename } from '../../common/upload';
 
@@ -56,13 +57,14 @@ export class AssetsAttachmentsService extends AssetsBaseService {
     const asset = await this.ensureAsset(assetId, mg, tenantId);
     const repo = mg.getRepository(AssetLink);
 
+    const url = assertWebLinkUrl(body.url);
+    if (!url) throw new BadRequestException('url is required');
     const entity = repo.create({
       tenant_id: asset.tenant_id,
       asset_id: assetId,
       description: body.description ?? null,
-      url: String(body.url || '').trim(),
+      url,
     });
-    if (!entity.url) throw new BadRequestException('url is required');
 
     const saved = await repo.save(entity);
     await this.audit.log(
@@ -85,7 +87,7 @@ export class AssetsAttachmentsService extends AssetsBaseService {
 
     const before = { ...existing };
     if (body.description !== undefined) existing.description = body.description as any;
-    if (body.url !== undefined) existing.url = String(body.url || '').trim();
+    if (body.url !== undefined) existing.url = assertWebLinkUrl(body.url);
 
     const saved = await repo.save(existing);
     await this.audit.log(

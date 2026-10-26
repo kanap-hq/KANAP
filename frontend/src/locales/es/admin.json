@@ -1621,7 +1621,7 @@
       "title": "Inventario de Netbox",
       "description": "Incorpora tu inventario de Netbox a los activos de KANAP. Netbox sigue siendo la referencia para los equipos que describe.",
       "status": {
-        "connected": "Conectado",
+        "connected": "Configurado",
         "disabled": "Desactivado",
         "notConfigured": "Sin configurar"
       },
@@ -1654,8 +1654,12 @@
         "saveFailed": "No se ha podido guardar la configuración.",
         "loadFailed": "No se ha podido cargar la configuración de Netbox.",
         "testSuccess": "Conexión establecida con Netbox {{version}}.",
+        "testSuccessPlain": "Conexión establecida con Netbox.",
         "testFailed": "La conexión con Netbox ha fallado.",
-        "nextStep": "Netbox está conectado."
+        "nextStep": "Netbox está configurado.",
+        "lastTestOk": "Última prueba correcta el {{date}}",
+        "lastTestFailed": "Última prueba fallida el {{date}}",
+        "lastTestSession": "Este resultado vale solo para esta sesión."
       },
       "actions": {
         "save": "Guardar configuración",

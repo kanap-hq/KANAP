@@ -24,7 +24,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import CloseIcon from '@mui/icons-material/Close';
 import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import api from '../../api';
@@ -63,6 +63,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { joinNames } from '../working-day-calendars/workingDayCalendarFields';
 
 import { useTranslation } from 'react-i18next';
+import { screenLanguage } from '../../components/csv/readings';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { assetDeleteCheck } from '../../utils/deleteCheck';
 import { deleteFailureReason } from '../../utils/deleteRefusal';
@@ -76,6 +77,7 @@ import { getDotColor, LIFECYCLE_COLORS } from '../../utils/statusColors';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
+import { RelationsEmpty } from '../../components/workspace/RelationsTable';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import type { AssetExternalLink } from '../../api/endpoints/assets';
 import { isNetboxAttentionStatus } from '../../api/endpoints/netbox';
@@ -83,6 +85,7 @@ import { NETBOX_LOCKABLE_ASSET_FIELDS, NetboxLockableField, netboxFieldLock } fr
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 import InfoHint from '../../components/workspace/InfoHint';
+import { ApplicationFeedbackProvider, type ApplicationFeedback } from './applicationFeedback';
 const MarkdownEditor = React.lazy(() => import('../../components/MarkdownEditor'));
 type IpAddressEntry = { type: string; ip: string; subnet_cidr: string | null };
 
@@ -199,6 +202,8 @@ const legacyTabTarget = (key: string | undefined): TabKey | null => (
 const PHYSICAL_ONLY_TABS: ReadonlySet<string> = new Set<TabKey>(['hardware']);
 /** Tabs that need a saved asset: a creation falls back to the overview. */
 const CREATE_DISABLED_TABS: ReadonlySet<string> = new Set<TabKey>(['operations', 'hardware', 'dependencies', 'relations']);
+/** A name longer than this wraps the title over the tabs. The column itself is unbounded. */
+const ASSET_NAME_MAX = 200;
 
 const MEMBER_OPTIONS_LIMIT = 50;
 /** The last row of a full candidate list: not a choice, it asks to narrow the search. */
@@ -216,7 +221,17 @@ const ENV_OPTION_KEYS = [
 function humanize(value: string | null | undefined, emptyLabel: string) {
   const text = String(value || '').trim();
   if (!text) return emptyLabel;
-  return text.replace(/_/g, ' ').replace(/\b\w/g, (match) => match.toUpperCase());
+  // Only the start of the text and the letter after a space. A word boundary also
+  // sits after an accent, which turned the catalog label "Obsolète" into "ObsolèTe".
+  return text.replace(/_/g, ' ').replace(/(^|\s)(\w)/g, (_, lead: string, ch: string) => `${lead}${ch.toUpperCase()}`);
+}
+
+/** The lifecycle pill shows the catalog label unchanged. A code the catalog does not know is spaced. */
+export function lifecyclePillLabel(catalogLabel: string, code: string | null | undefined, emptyLabel: string) {
+  const catalog = catalogLabel.trim();
+  const raw = String(code || '').trim();
+  if (catalog && catalog !== raw) return catalog;
+  return humanize(raw, emptyLabel);
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -244,7 +259,12 @@ const contentFieldSx = {
   },
 } as const;
 
+/** A tab fills the content column and wraps, so a 1280px window with the drawer open does not scroll sideways. */
+const tabContentSx = { minWidth: 0, width: '100%', maxWidth: '100%' } as const;
+
 const denseTableSx = {
+  width: '100%',
+  tableLayout: 'fixed',
   '& th': {
     fontSize: 12,
     fontWeight: 500,
@@ -252,6 +272,8 @@ const denseTableSx = {
     borderColor: 'kanap.border.default',
     color: 'kanap.text.tertiary',
     py: 0.75,
+    whiteSpace: 'normal',
+    overflowWrap: 'anywhere',
   },
   '& td': {
     fontSize: 13,
@@ -259,6 +281,8 @@ const denseTableSx = {
     borderColor: 'kanap.border.soft',
     color: 'kanap.text.primary',
     py: 0.75,
+    whiteSpace: 'normal',
+    overflowWrap: 'anywhere',
   },
   '& tbody tr:hover': {
     bgcolor: 'kanap.bg.hover',
@@ -280,14 +304,76 @@ const denseTableSx = {
   },
 } as const;
 
+/**
+ * A banner reporter for one panel: a message is shown and remembered; `null` (a successful save)
+ * clears the banner only while it still shows that panel's message.
+ */
+function useOwnedBannerError(setError: React.Dispatch<React.SetStateAction<string | null>>) {
+  const owned = React.useRef<string | null>(null);
+  return React.useCallback((message: string | null) => {
+    if (message) {
+      owned.current = message;
+      setError(message);
+      return;
+    }
+    const last = owned.current;
+    owned.current = null;
+    if (last) setError((current) => (current === last ? null : current));
+  }, [setError]);
+}
+
+type AssetLoadResult =
+  | { ok: true; data: AssetRecord }
+  | { ok: false; status: number; error: unknown };
+
+// One read in flight per address. A 404 is kept until the fiche leaves that address, so a second
+// mount (the tab in the address, or a new translation function) does not ask again.
+const assetLoadInflight = new Map<string, Promise<AssetLoadResult>>();
+const assetLoadNotFound = new Map<string, AssetLoadResult>();
+
+function loadAssetRecord(url: string, fresh = false): Promise<AssetLoadResult> {
+  if (fresh) {
+    assetLoadNotFound.delete(url);
+    assetLoadInflight.delete(url);
+  } else {
+    const missed = assetLoadNotFound.get(url);
+    if (missed) return Promise.resolve(missed);
+    const pending = assetLoadInflight.get(url);
+    if (pending) return pending;
+  }
+  const pending = api.get<AssetRecord>(url).then(
+    (res) => ({ ok: true as const, data: res.data }),
+    (error: unknown) => ({
+      ok: false as const,
+      status: Number((error as { response?: { status?: number } } | null)?.response?.status) || 0,
+      error,
+    }),
+  );
+  assetLoadInflight.set(url, pending);
+  void pending.finally(() => {
+    if (assetLoadInflight.get(url) === pending) assetLoadInflight.delete(url);
+  });
+  return pending;
+}
+
 export default function AssetWorkspacePage() {
-  const { t } = useTranslation(['it', 'common', 'errors']);
+  const routeId = String(useParams().id || '');
+  // A new asset in the address remounts the fiche. Timers, fields and a response
+  // still in flight stay with the asset that was on screen, so they cannot paint
+  // over the next one or be saved onto it.
+  return <AssetWorkspaceRoute key={routeId} />;
+}
+
+function AssetWorkspaceRoute() {
+  const { t, i18n } = useTranslation(['it', 'common', 'errors']);
   const notSetLabel = t('common:selects.notSet');
   const ENV_OPTIONS = ENV_OPTION_KEYS.map((option) => ({ value: option.value, label: t(option.labelKey) }));
   const environmentLabel = (value: string | null | undefined) =>
     ENV_OPTIONS.find((option) => option.value === value)?.label || value || notSetLabel;
   const locale = useLocale();
   const dialogs = useKanapDialogs();
+  // The feedback snackbar is rendered by this route, so the route itself reaches it through the ref.
+  const feedbackRef = React.useRef<ApplicationFeedback>({ error: () => undefined, undo: () => undefined, info: () => undefined });
   const { hasLevel } = useAuth();
   const theme = useTheme();
   const params = useParams();
@@ -306,11 +392,22 @@ export default function AssetWorkspacePage() {
   const canManage = hasLevel('infrastructure', 'member');
   const canDelete = hasLevel('infrastructure', 'admin');
   // Assignments belong to the applications module: a reader sees them, inherited ones included, and changes none.
-  const canAssign = hasLevel('applications', 'member');
+  // Changing one also changes the server, so it needs the member level on the infrastructure too.
+  const canReadApplications = hasLevel('applications', 'reader');
+  const canAssignApplications = canManage && hasLevel('applications', 'member');
 
   const notesSaveTimerRef = React.useRef<number | null>(null);
+  // The description typed but not yet sent, and the asset it belongs to.
+  const pendingNotesRef = React.useRef<{ assetId: string; value: string } | null>(null);
+  // The asset the screen is showing. A response or a write for any other asset is dropped:
+  // moving to the next asset must not paint the previous one, nor save onto the next one.
+  const shownAssetIdRef = React.useRef<string | null>(null);
+  const dataRef = React.useRef<AssetRecord | null>(null);
+  const routeIdRef = React.useRef(routeId);
+  routeIdRef.current = routeId;
 
   const [data, setData] = React.useState<AssetRecord | null>(null);
+  dataRef.current = data;
   // Netbox owns the inventory fields it feeds; KANAP keeps the business layer editable.
   const netboxLink = React.useMemo(
     () => (data?.external_links || []).find((link) => link.source === 'netbox') || null,
@@ -338,6 +435,12 @@ export default function AssetWorkspacePage() {
     return t('pages.netbox.time.daysAgo', { count: Math.floor(hours / 24) });
   }, [netboxLink?.last_synced_at, t]);
   const [error, setError] = React.useState<string | null>(null);
+  // The HTTP status of the last failed read of the asset (0 without a response), null once read.
+  const [loadFailure, setLoadFailure] = React.useState<number | null>(null);
+  // A support or hardware save that runs after the panel has left reports here. While the panel
+  // is on screen it shows the failure itself. A later success clears only that panel's message.
+  const supportSaveError = useOwnedBannerError(setError);
+  const hardwareSaveError = useOwnedBannerError(setError);
   const [dirty, setDirty] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [assignments, setAssignments] = React.useState<AssignmentRow[]>([]);
@@ -387,19 +490,43 @@ export default function AssetWorkspacePage() {
     [byField.serverRole, t],
   );
 
-  const load = React.useCallback(async () => {
+  // `t` changes when a namespace arrives. A missing asset must not be read again for that.
+  const tRef = React.useRef(t);
+  tRef.current = t;
+  const load = React.useCallback(async (fresh = false) => {
     if (isCreate) return;
+    const requestedRoute = routeId;
+    const url = assetReferenceRoute ? `/assets/by-ref/${routeId}` : `/assets/${routeId}`;
     setError(null);
-    try {
-      const res = await api.get<AssetRecord>(assetReferenceRoute ? `/assets/by-ref/${routeId}` : `/assets/${routeId}`);
-      setData(res.data as any);
-      setCanonicalAssetId(res.data.id);
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.loadAssetFailed')));
+    setLoadFailure(null);
+    const result = await loadAssetRecord(url, fresh);
+    // The person already moved on: this response belongs to an asset the screen no longer shows.
+    if (routeIdRef.current !== requestedRoute) return;
+    if (result.ok) {
+      shownAssetIdRef.current = result.data.id;
+      setData(result.data);
+      setCanonicalAssetId(result.data.id);
+      return;
     }
-  }, [assetReferenceRoute, isCreate, routeId, t]);
+    if (result.status === 404) assetLoadNotFound.set(url, result);
+    const translate = tRef.current;
+    setLoadFailure(result.status);
+    setError(getApiErrorMessage(result.error, translate, translate('messages.loadAssetFailed')));
+  }, [assetReferenceRoute, isCreate, routeId]);
 
-  React.useEffect(() => { void load(); }, [load]);
+  React.useEffect(() => {
+    const url = assetReferenceRoute ? `/assets/by-ref/${routeId}` : `/assets/${routeId}`;
+    let active = true;
+    void load().finally(() => {
+      // Leaving the address, including a strict-mode remount's first pass, forgets the 404.
+      // The pass that stays on screen records it again.
+      if (!active) assetLoadNotFound.delete(url);
+    });
+    return () => {
+      active = false;
+      assetLoadNotFound.delete(url);
+    };
+  }, [assetReferenceRoute, load, routeId]);
 
   React.useEffect(() => {
     if (isCreate || !data?.asset_reference) return;
@@ -433,6 +560,11 @@ export default function AssetWorkspacePage() {
 
   const refreshAssignments = React.useCallback(async () => {
     if (isCreate || !id) return;
+    if (!canReadApplications) {
+      setAssignments([]);
+      setAssignmentsError(null);
+      return;
+    }
     setAssignmentsError(null);
     try {
       const [rows, sets] = await Promise.all([
@@ -444,7 +576,7 @@ export default function AssetWorkspacePage() {
     } catch (e: any) {
       setAssignmentsError(getApiErrorMessage(e, t, t('messages.loadAssignmentsFailed')));
     }
-  }, [id, isCreate]);
+  }, [id, isCreate, canReadApplications, t]);
 
   React.useEffect(() => { void refreshAssignments(); }, [refreshAssignments]);
 
@@ -454,6 +586,9 @@ export default function AssetWorkspacePage() {
   const [environment, setEnvironment] = React.useState('prod');
   const [hostname, setHostname] = React.useState('');
   const [ipAddresses, setIpAddresses] = React.useState<IpAddressEntry[]>([]);
+  // The refused address stays in the field: a failed save reloads the asset and would otherwise wipe it.
+  const [ipFieldError, setIpFieldError] = React.useState<{ index: number; message: string } | null>(null);
+  const keepLocalIps = React.useRef(false);
   // A new cluster (`?cluster=1` from the assets list) opens the creation with the switch on.
   const [isCluster, setIsCluster] = React.useState(() => isCreate && searchParams.get('cluster') === '1');
   // True while the Cluster switch is saved: the cluster lists wait for the server to agree.
@@ -597,6 +732,8 @@ export default function AssetWorkspacePage() {
     const assetType = (settings?.serverKinds || []).find((o) => o.code === assetKind);
     return assetType?.is_physical ?? false;
   }, [data?.kind, kind, settings?.serverKinds]);
+  // A switch, a firewall or a virtual machine is an asset. Only a physical server is a server.
+  const isPhysicalServer = (kind || data?.kind || '') === 'physical_server';
 
   // Redirect to valid tab if current tab is not available for this asset type
   React.useEffect(() => {
@@ -671,6 +808,16 @@ export default function AssetWorkspacePage() {
   const hostnameRequired = domain && domain !== 'workgroup' && domain !== 'n-a';
   // A host name may carry several dot-separated parts, so `dl3.robot-15ms.ie2000` is fine.
   const hostnameMalformed = !!hostname.trim() && !isValidHostname(hostname.trim());
+  // A creation banner names the problem that blocked the last attempt. Once that problem is gone, the
+  // banner goes with it. A host name problem stays under the field, so it never uses this banner.
+  React.useEffect(() => {
+    if (!error) return;
+    const gone =
+      (error === t('messages.locationRequired') && !!locationId)
+      || (error === t('messages.assetTypeRequired') && !!kind)
+      || (error === t('messages.providerRequired') && !!provider);
+    if (gone) setError(null);
+  }, [error, kind, locationId, provider, t]);
 
   const networkSegmentOptions = React.useMemo(
     () => (byField.networkSegment || []).map((o) => ({
@@ -706,15 +853,6 @@ export default function AssetWorkspacePage() {
 
   React.useEffect(() => {
     if (!isCreate) return;
-    if (kind) return;
-    const defaults = byField.serverKind || [];
-    if (defaults.length > 0) {
-      setKind(defaults[0].code);
-    }
-  }, [isCreate, kind, byField.serverKind]);
-
-  React.useEffect(() => {
-    if (!isCreate) return;
     if (provider) return;
     if (!fallbackProviderCode) return;
     setProvider(fallbackProviderCode);
@@ -730,7 +868,17 @@ export default function AssetWorkspacePage() {
     setDomain(data.domain || '');
     setAdminZone(data.admin_zone || '');
     setAliases(data.aliases || []);
-    setIpAddresses(data.ip_addresses || []);
+    if (keepLocalIps.current) {
+      keepLocalIps.current = false;
+    } else {
+      // A row with no address is still being filled. A save of the others must not drop it.
+      setIpAddresses((prev) => {
+        const drafts = prev.filter((entry) => !(entry.ip || '').trim());
+        const saved = data.ip_addresses || [];
+        return drafts.length > 0 ? [...saved, ...drafts] : saved;
+      });
+      setIpFieldError(null);
+    }
     setIsCluster(!!data.is_cluster);
     setStatus((data.status as 'enabled' | 'disabled') || 'enabled');
     setGoLiveDate(data.go_live_date || '');
@@ -852,9 +1000,8 @@ export default function AssetWorkspacePage() {
       setError(t('messages.providerRequired'));
       return;
     }
-    if (hostnameMalformed) {
-      setError(t('workspace.asset.technical.hostnameInvalid'));
-      // The host name sits in the Network tab: show it where it can be fixed.
+    if (hostnameMalformed || (hostnameRequired && !hostname.trim())) {
+      // The host name field already states the problem. Open the Network tab so it is on screen.
       if (isCreate && validTab !== 'network') handleTabChange('network');
       return;
     }
@@ -896,17 +1043,36 @@ export default function AssetWorkspacePage() {
     }
   };
 
+  const [assignMessage, setAssignMessage] = React.useState<string | null>(null);
+
   const handleRemoveAssignment = async (assignment: AssignmentRow) => {
+    const name = assignment.application?.name || '';
     if (!(await dialogs.confirm({
-      message: t('confirmations.removeAssignment'),
+      message: t('confirmations.removeAssignment', { name }),
       confirmLabel: t('common:buttons.remove'),
       intent: 'danger',
     }))) return;
     try {
       await api.delete(`/app-instances/${assignment.app_instance_id}/assets/${assignment.id}`);
+      setAssignMessage(null);
       await refreshAssignments();
       // The impact reads the applications the asset hosts.
       void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
+      feedbackRef.current.undo(t('workspace.asset.assignments.removed', { name }), async () => {
+        try {
+          await api.post(`/app-instances/${assignment.app_instance_id}/assets`, {
+            server_id: id,
+            role: assignment.role,
+            since_date: assignment.since_date,
+            notes: assignment.notes,
+          });
+          await refreshAssignments();
+          void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
+        } catch (err) {
+          // The snackbar swallows a rejected undo, so the refusal is shown on the page.
+          feedbackRef.current.error(getApiErrorMessage(err, t, t('messages.restoreFailed')));
+        }
+      });
     } catch (e: any) {
       setAssignmentsError(getApiErrorMessage(e, t, t('messages.removeServerFailed')));
     }
@@ -923,23 +1089,41 @@ export default function AssetWorkspacePage() {
   const [assignSince, setAssignSince] = React.useState<string>('');
   const [assignNotes, setAssignNotes] = React.useState<string>('');
   const [assignError, setAssignError] = React.useState<string | null>(null);
-  const [assignMessage, setAssignMessage] = React.useState<string | null>(null);
+  const [instancesLoading, setInstancesLoading] = React.useState(false);
+  const appInstancesRef = React.useRef(appInstances);
+  appInstancesRef.current = appInstances;
+  const assignAppRequest = React.useRef(0);
 
-  const loadAppInstances = React.useCallback(async (appId: string) => {
-    if (appInstances[appId]) return;
+  // The green line closes on its own, and a removal clears it at once.
+  React.useEffect(() => {
+    if (!assignMessage) return undefined;
+    const timer = window.setTimeout(() => setAssignMessage(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [assignMessage]);
+
+  const loadAppInstances = React.useCallback(async (appId: string): Promise<ApplicationInstance[]> => {
+    const cached = appInstancesRef.current[appId];
+    if (cached) return cached;
+    setInstancesLoading(true);
     try {
       const res = await api.get(`/applications/${appId}`, { params: { include: 'instances' } });
       const instances: ApplicationInstance[] = (res.data?.instances || []).map((i: any) => ({
         id: i.id,
         environment: i.environment,
       }));
-      setAppInstances((prev) => ({ ...prev, [appId]: instances }));
+      appInstancesRef.current = { ...appInstancesRef.current, [appId]: instances };
+      setAppInstances(appInstancesRef.current);
       setAppNames((prev) => ({ ...prev, [appId]: String(res.data?.name || '') }));
+      return instances;
     } catch (e: any) {
       setAssignError(getApiErrorMessage(e, t, t('messages.loadAppInstancesFailed')));
-      setAppInstances((prev) => ({ ...prev, [appId]: [] }));
+      appInstancesRef.current = { ...appInstancesRef.current, [appId]: [] };
+      setAppInstances(appInstancesRef.current);
+      return [];
+    } finally {
+      setInstancesLoading(false);
     }
-  }, [appInstances]);
+  }, [t]);
 
   const openAssignDialog = () => {
     setAssignDialogOpen(true);
@@ -954,13 +1138,14 @@ export default function AssetWorkspacePage() {
   };
 
   const onSelectApplication = async (appId: string | null) => {
+    const request = ++assignAppRequest.current;
     setSelectedAppId(appId);
     setInstanceId(null);
-    if (appId) {
-      await loadAppInstances(appId);
-      const list = appInstances[appId] || [];
-      if (list.length === 1) setInstanceId(list[0].id);
-    }
+    if (!appId) return;
+    const list = await loadAppInstances(appId);
+    // A later choice of application wins. The list just read is used, not the state from before the request.
+    if (assignAppRequest.current !== request) return;
+    if (list.length === 1) setInstanceId(list[0].id);
   };
 
   const handleAssignSave = async () => {
@@ -969,7 +1154,7 @@ export default function AssetWorkspacePage() {
       setAssignError(t('workspace.asset.assignments.applicationRequired'));
       return;
     }
-    const instances = appInstances[selectedAppId] || [];
+    const instances = appInstancesRef.current[selectedAppId] || [];
     if (!instanceId || !instances.some((i) => i.id === instanceId)) {
       setAssignError(t('workspace.asset.assignments.environmentRequired'));
       return;
@@ -1223,7 +1408,13 @@ export default function AssetWorkspacePage() {
   const sort = searchParams.get('sort') || 'created_at:DESC';
   const q = searchParams.get('q') || '';
   const filters = searchParams.get('filters') || '';
-  const nav = useAssetNav({ id, sort, q, filters });
+  const nav = useAssetNav({
+    id,
+    sort,
+    q,
+    filters,
+    extraParams: { language: screenLanguage(i18n.resolvedLanguage || i18n.language) },
+  });
   const { total, index, hasPrev, hasNext, prevId, nextId } = isCreate
     ? { total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null as any, nextId: null as any }
     : nav;
@@ -1288,16 +1479,20 @@ export default function AssetWorkspacePage() {
   };
 
   // Autosaves run one at a time, in the order they were made: a field changed while another saves
-  // waits for it, and keeps its new value while that first answer arrives (`pendingPatches`).
+  // waits for it, and keeps its new value while that first answer arrives (`pendingPatches`). Each
+  // save keeps the asset it was made on: the fiche remounts per asset, so a queue left behind
+  // finishes on its own asset and never paints or writes the next one.
   const saveTail = React.useRef<Promise<unknown> | null>(null);
   const pendingPatches = React.useRef<Array<{ patch: Record<string, unknown> }>>([]);
 
   const patchAsset = React.useCallback(async (patch: Partial<AssetRecord> & { sub_location_id?: string | null }) => {
     if (isCreate) {
       setDirty(true);
-      return;
+      return false;
     }
-    if (!id) return;
+    // Writes go to the asset on screen, never to whichever id the address resolved to afterwards.
+    const targetId = shownAssetIdRef.current;
+    if (!targetId || dataRef.current?.id !== targetId) return false;
     let safePatch = patch;
     if (netboxManaged) {
       safePatch = Object.fromEntries(
@@ -1306,33 +1501,42 @@ export default function AssetWorkspacePage() {
           && netboxOwns(key as NetboxLockableField)
         )),
       ) as typeof patch;
-      if (Object.keys(safePatch).length === 0) return;
+      if (Object.keys(safePatch).length === 0) return false;
     }
     setSaving(true);
     setError(null);
-    setData((prev) => (prev ? ({ ...prev, ...safePatch } as AssetRecord) : prev));
+    setData((prev) => (prev && prev.id === targetId ? ({ ...prev, ...safePatch } as AssetRecord) : prev));
     const entry = { patch: safePatch as Record<string, unknown> };
     pendingPatches.current.push(entry);
     const settle = () => {
       pendingPatches.current = pendingPatches.current.filter((pending) => pending !== entry);
-      if (pendingPatches.current.length === 0) setSaving(false);
+      if (pendingPatches.current.length === 0 && shownAssetIdRef.current === targetId) setSaving(false);
     };
-    const run = async () => {
+    const run = async (): Promise<boolean> => {
       try {
-        const res = await api.patch(`/assets/${id}`, safePatch);
+        const res = await api.patch(`/assets/${targetId}`, safePatch);
         settle();
+        const returned = res.data as AssetRecord | undefined;
+        // A response for an asset the screen no longer shows must not replace the fiche.
+        if (shownAssetIdRef.current !== targetId || (returned?.id && returned.id !== targetId)) return false;
         // The changes still waiting for their own save stay shown over this answer.
         const waiting = Object.assign({}, ...pendingPatches.current.map((pending) => pending.patch));
-        setData({ ...(res.data as AssetRecord), ...waiting } as AssetRecord);
+        setData({ ...(returned as AssetRecord), ...waiting } as AssetRecord);
         if (pendingPatches.current.length === 0) setDirty(false);
         // Retiring an asset, or bringing it back, changes what it counts.
         if ('status' in safePatch) void queryClient.invalidateQueries({ queryKey: assetVulnerabilitiesKey });
+        return true;
       } catch (e: any) {
         settle();
+        // The screen moved on: the failure belongs to the asset we left, not the one now shown.
+        if (shownAssetIdRef.current !== targetId) return false;
         const message = getApiErrorMessage(e, t, t('messages.saveAssetFailed'));
-        // The read clears the error: the refusal shows once the asset is back to what the server holds.
+        // load() clears the banner before it reads the asset back. Put the refusal back afterwards,
+        // unless the field that was saved already shows it (an IP address).
+        const shownOnField = Object.prototype.hasOwnProperty.call(safePatch, 'ip_addresses');
         await load();
-        setError(message);
+        if (shownAssetIdRef.current !== targetId) return false;
+        if (!shownOnField) setError(message);
         throw e;
       }
     };
@@ -1344,7 +1548,13 @@ export default function AssetWorkspacePage() {
       if (saveTail.current === tail) saveTail.current = null;
     });
     return result;
-  }, [assetVulnerabilitiesKey, id, isCreate, load, netboxManaged, netboxOwns, queryClient, t]);
+  }, [assetVulnerabilitiesKey, isCreate, load, netboxManaged, netboxOwns, queryClient, t]);
+
+  // A field saves on blur. The banner already shows a refusal; the rejected promise must not
+  // reach the console (a host name that duplicates another FQDN answers 409).
+  const savePatch = React.useCallback((patch: Parameters<typeof patchAsset>[0]) => {
+    void patchAsset(patch).catch(() => undefined);
+  }, [patchAsset]);
 
   const handleNotesChange = React.useCallback((value: string) => {
     setNotes(value);
@@ -1352,21 +1562,34 @@ export default function AssetWorkspacePage() {
       setDirty(true);
       return;
     }
+    const assetId = shownAssetIdRef.current;
+    if (!assetId) return;
+    pendingNotesRef.current = { assetId, value };
     if (notesSaveTimerRef.current != null) {
       window.clearTimeout(notesSaveTimerRef.current);
     }
     notesSaveTimerRef.current = window.setTimeout(() => {
       notesSaveTimerRef.current = null;
-      if ((value || '') !== (data?.notes || '')) {
-        void patchAsset({ notes: value || null });
-      }
+      const pending = pendingNotesRef.current;
+      pendingNotesRef.current = null;
+      // The screen moved on: the route change saves this description on the asset it was typed on.
+      if (!pending || shownAssetIdRef.current !== pending.assetId) return;
+      if ((pending.value || '') === (dataRef.current?.notes || '')) return;
+      savePatch({ notes: pending.value || null });
     }, 900);
-  }, [data?.notes, isCreate, patchAsset]);
+  }, [isCreate, savePatch]);
 
   React.useEffect(() => () => {
     if (notesSaveTimerRef.current != null) {
       window.clearTimeout(notesSaveTimerRef.current);
+      notesSaveTimerRef.current = null;
     }
+    const pending = pendingNotesRef.current;
+    pendingNotesRef.current = null;
+    if (!pending) return;
+    const saved = dataRef.current?.id === pending.assetId ? (dataRef.current.notes || '') : '';
+    if ((pending.value || '') === saved) return;
+    void api.patch(`/assets/${pending.assetId}`, { notes: pending.value || null }).catch(() => undefined);
   }, []);
 
   const confirmAndNavigate = React.useCallback(async (targetId: string | null) => {
@@ -1409,8 +1632,9 @@ export default function AssetWorkspacePage() {
     {
       key: 'dependencies',
       label: t('workspace.asset.tabs.dependencies'),
-      // Relations between assets: the one thing the tab shows.
-      badge: relationCounts?.assets ?? 0,
+      // Relations between assets: the one thing the tab shows. Nothing while the shared read is in
+      // flight: 0 would flash before the real count.
+      badge: assetRelationsQuery.data ? (relationCounts?.assets ?? 0) : undefined,
       disabled: isCreate,
     },
     { key: 'relations', label: t('workspace.asset.tabs.relations'), badge: assetRelationsBadge(assetRelationsQuery.data) ?? 0, disabled: isCreate },
@@ -1431,7 +1655,7 @@ export default function AssetWorkspacePage() {
     if (isCreate) {
       setDirty(true);
     } else if (nextValue) {
-      void patchAsset({ kind: nextValue });
+      savePatch({ kind: nextValue });
     }
   };
 
@@ -1447,7 +1671,7 @@ export default function AssetWorkspacePage() {
     if (isCreate) {
       setDirty(true);
     } else {
-      void patchAsset({ location_id: nextValue, sub_location_id: null });
+      savePatch({ location_id: nextValue, sub_location_id: null });
     }
   };
 
@@ -1456,16 +1680,38 @@ export default function AssetWorkspacePage() {
       setDirty(true);
       return;
     }
-    void patchAsset({ [key]: value } as Partial<AssetRecord>);
+    savePatch({ [key]: value } as Partial<AssetRecord>);
   };
 
   const persistIpAddresses = (nextEntries: IpAddressEntry[]) => {
-    const clean = nextEntries.filter((entry) => entry.ip.trim());
+    const clean = nextEntries.filter((entry) => entry.ip.trim()).map((entry) => ({ ...entry, ip: entry.ip.trim() }));
     if (isCreate) {
       setDirty(true);
-    } else {
-      void patchAsset({ ip_addresses: clean.length > 0 ? clean : null });
+      return;
     }
+    // Choosing a type or a subnet on an empty row writes nothing: the row would otherwise
+    // be dropped, because only rows with an address are stored.
+    const savedKey = JSON.stringify((dataRef.current?.ip_addresses || []).map((entry) => ({
+      type: entry.type, ip: (entry.ip || '').trim(), subnet_cidr: entry.subnet_cidr || null,
+    })));
+    const nextKey = JSON.stringify(clean.map((entry) => ({
+      type: entry.type, ip: entry.ip, subnet_cidr: entry.subnet_cidr || null,
+    })));
+    if (savedKey === nextKey) return;
+    void patchAsset({ ip_addresses: clean.length > 0 ? clean : null }).then(() => {
+      setIpFieldError(null);
+    }).catch((e: unknown) => {
+      keepLocalIps.current = true;
+      setIpAddresses(nextEntries);
+      const value = (e as { response?: { data?: { params?: { value?: unknown } } } })?.response?.data?.params?.value;
+      const index = typeof value === 'string'
+        ? nextEntries.findIndex((entry) => entry.ip.trim() === value)
+        : -1;
+      setIpFieldError({
+        index: index >= 0 ? index : 0,
+        message: getApiErrorMessage(e, t, t('messages.saveAssetFailed')),
+      });
+    });
   };
 
   const lifecycleMetadataOptions = lifecycleOptions.map((option) => ({
@@ -1575,17 +1821,21 @@ export default function AssetWorkspacePage() {
                     return;
                   }
                   setClusterSwitchSaving(true);
+                  const targetId = shownAssetIdRef.current;
                   void (async () => {
+                    let sent = false;
                     try {
                       // A refusal (members left, a membership) shows as the page's error, and the switch goes back.
-                      await patchAsset({ is_cluster: next });
+                      sent = await patchAsset({ is_cluster: next });
                     } catch {
                       return;
                     } finally {
                       setClusterSwitchSaving(false);
                     }
+                    // The screen moved on: the impact of another asset is not this one's.
+                    if (!sent || !targetId || shownAssetIdRef.current !== targetId) return;
                     // The impact reads the members of a cluster.
-                    void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
+                    void queryClient.invalidateQueries({ queryKey: ['asset-impact', targetId] });
                   })();
                 }}
                 disabled={!canManage}
@@ -1626,9 +1876,9 @@ export default function AssetWorkspacePage() {
             sx={drawerSelectSx}
             renderValue={(value) => (value
               ? adminZoneOptions.find((opt) => opt.value === value)?.label ?? String(value)
-              : <Box component="span" sx={(muiTheme) => ({ color: muiTheme.palette.kanap.text.tertiary })}>{t('common:labels.none')}</Box>)}
+              : <Box component="span" sx={(muiTheme) => ({ color: muiTheme.palette.kanap.text.tertiary })}>{t('pages.administrationView.noZone')}</Box>)}
           >
-            <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
+            <MenuItem value="" sx={drawerMenuItemSx}>{t('pages.administrationView.noZone')}</MenuItem>
             {adminZoneOptions.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
           </Select>
         </PropertyRow>
@@ -1659,7 +1909,7 @@ export default function AssetWorkspacePage() {
                 const next = val?.id || null;
                 setSubLocationId(next);
                 if (isCreate) setDirty(true);
-                else void patchAsset({ sub_location_id: next });
+                else savePatch({ sub_location_id: next });
               }}
               loading={subLocationLoading}
               disabled={!canManage || !locationId}
@@ -1807,8 +2057,38 @@ export default function AssetWorkspacePage() {
     </>
   );
 
+  // An asset that could not be read is a screen of its own: an empty editable fiche stays hidden.
+  // Only a 404 is "not found" (the English refusal stays hidden); any other failure says what
+  // went wrong and offers to read the asset again.
+  if (!isCreate && !data && loadFailure !== null) {
+    const qs = listContextParams.toString();
+    const notFound = loadFailure === 404;
+    return (
+      <Box sx={{ p: 2 }}>
+        {notFound ? (
+          <Alert severity="error">{t('workspace.asset.notFound')}</Alert>
+        ) : (
+          <Alert
+            severity="error"
+            action={<Button color="inherit" size="small" onClick={() => { void load(true); }}>{t('common:buttons.retry')}</Button>}
+          >
+            {error || t('messages.loadAssetFailed')}
+          </Alert>
+        )}
+        <MuiLink
+          component={RouterLink}
+          to={`/it/assets${qs ? `?${qs}` : ''}`}
+          sx={{ display: 'inline-block', mt: 2, fontSize: 13, fontWeight: 400, color: 'kanap.teal' }}
+        >
+          {t('workspace.asset.backToList')}
+        </MuiLink>
+      </Box>
+    );
+  }
+
   return (
-    <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+    <ApplicationFeedbackProvider onError={setError} capture={feedbackRef}>
+    <Box sx={{ height: '100%', minHeight: 0, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
       {error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{error}</Alert>}
       <PortfolioDetailWorkspaceShell
         activeTab={validTab}
@@ -1823,12 +2103,13 @@ export default function AssetWorkspacePage() {
         // While the asset loads, an empty title keeps its line: "Untitled" is for a loaded asset without a name.
         titleFallback={isCreate ? t('workspace.asset.newAsset') : assetLoading ? '\u00A0' : t('workspace.asset.untitled')}
         canEditTitle={canEditNetboxField('name') && !assetLoading}
+        titleMaxLength={ASSET_NAME_MAX}
         onTitleSave={(value) => {
-          const next = value.trim();
+          const next = value.trim().slice(0, ASSET_NAME_MAX);
           if (!next) return;
           setName(next);
           if (isCreate) setDirty(true);
-          else void patchAsset({ name: next });
+          else savePatch({ name: next });
         }}
         isCreate={isCreate}
         nav={!isCreate && total > 0 ? {
@@ -1846,12 +2127,12 @@ export default function AssetWorkspacePage() {
           <PendingMetadata pending={metadataPending}>
             <PortfolioStatusMetadata
               value={status || 'active'}
-              label={humanize(labelFor('lifecycleStatus', status) || status, notSetLabel)}
+              label={lifecyclePillLabel(labelFor('lifecycleStatus', status), status, notSetLabel)}
               color={getDotColor(LIFECYCLE_COLORS[status] || 'default', theme.palette.mode)}
               options={lifecycleMetadataOptions}
               onChange={(value) => {
                 setStatus(value);
-                void patchAsset({ status: value });
+                savePatch({ status: value });
               }}
               disabled={!canEditNetboxField('status')}
             />
@@ -1862,7 +2143,7 @@ export default function AssetWorkspacePage() {
               options={environmentMetadataOptions}
               onChange={(value) => {
                 setEnvironment(value);
-                void patchAsset({ environment: value });
+                savePatch({ environment: value });
               }}
               disabled={!canManage}
             />
@@ -1959,7 +2240,7 @@ export default function AssetWorkspacePage() {
         properties={properties}
       >
           {validTab === 'overview' && (
-            <Stack spacing={3.5}>
+            <Stack spacing={3.5} sx={tabContentSx}>
               {!isCreate && netboxLink ? (
                 <Stack
                   direction="row"
@@ -2020,56 +2301,14 @@ export default function AssetWorkspacePage() {
                   <PropertyRow label={t('workspace.asset.overview.name')} required valueSx={{ maxWidth: 520 }}>
                     <TextField
                       value={name}
-                      onChange={(e) => { setName(e.target.value); setDirty(true); }}
+                      onChange={(e) => { setName(e.target.value.slice(0, ASSET_NAME_MAX)); setDirty(true); }}
                       placeholder={t('workspace.asset.overview.namePlaceholder')}
                       required
                       size="small"
                       variant="standard"
                       sx={contentFieldSx}
+                      inputProps={{ maxLength: ASSET_NAME_MAX }}
                     />
-                  </PropertyRow>
-                  <Autocomplete
-                    options={kindOptions.filter((opt) => !opt.deprecated || opt.value === kind)}
-                    value={kind ? kindOptions.find((opt) => opt.value === kind) || { value: kind, label: kind, deprecated: false } : null}
-                    onChange={(_, val) => updateAssetType(val?.value || '')}
-                    getOptionLabel={(opt) => opt.label}
-                    isOptionEqualToValue={(opt, val) => opt.value === val.value}
-                    openOnFocus
-                    renderInput={(params) => (
-                      <PropertyRow label={t('workspace.asset.overview.assetType')} required valueSx={{ maxWidth: 520 }}>
-                        <TextField
-                          {...params}
-                          required
-                          placeholder={t('workspace.asset.overview.searchAssetTypes')}
-                          size="small"
-                          variant="standard"
-                          sx={contentFieldSx}
-                        />
-                      </PropertyRow>
-                    )}
-                  />
-                  <PropertyRow label={t('workspace.asset.overview.location')} required valueSx={{ maxWidth: 520 }}>
-                    <LocationSelect
-                      value={locationId}
-                      onChange={updateLocation}
-                      label={t('workspace.asset.overview.location')}
-                      required
-                      size="small"
-                      hideLabel
-                      textFieldSx={contentFieldSx}
-                    />
-                  </PropertyRow>
-                  <PropertyRow label={t('workspace.asset.technical.environment')} valueSx={{ maxWidth: 260 }}>
-                    <TextField
-                      select
-                      value={environment}
-                      onChange={(e) => { setEnvironment(e.target.value); setDirty(true); }}
-                      size="small"
-                      variant="standard"
-                      sx={contentFieldSx}
-                    >
-                      {ENV_OPTIONS.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
-                    </TextField>
                   </PropertyRow>
                 </Stack>
               ) : null}
@@ -2079,6 +2318,7 @@ export default function AssetWorkspacePage() {
                 </Box>
                 <React.Suspense fallback={<Box sx={(muiTheme) => ({ minHeight: 154, maxWidth: 900, border: `1px solid ${muiTheme.palette.kanap.border.default}`, borderRadius: '8px', bgcolor: muiTheme.palette.kanap.bg.composer })} />}>
                   <MarkdownEditor
+                    key={isCreate ? 'new' : (data?.id || routeId)}
                     value={notes}
                     onChange={handleNotesChange}
                     placeholder={t('workspace.asset.overview.descriptionPlaceholder')}
@@ -2095,7 +2335,7 @@ export default function AssetWorkspacePage() {
                   <Box sx={{ mb: 1 }}>
                     <SectionLabel>{t('workspace.asset.support.title')}</SectionLabel>
                   </Box>
-                  <SupportInfoPanel key={id} assetId={id} />
+                  <SupportInfoPanel key={id} assetId={id} onSaveError={supportSaveError} />
                 </Box>
               )}
               {!isCreate && (
@@ -2111,15 +2351,15 @@ export default function AssetWorkspacePage() {
             </Stack>
           )}
           {validTab === 'operations' && (
-            <Stack spacing={3.5}>
+            <Stack spacing={3.5} sx={tabContentSx}>
               {!isCreate && clusterSection}
               {!isCreate && (
                 <Box>
-                  {assignmentsError && <Alert severity="error" sx={{ mb: 2 }}>{assignmentsError}</Alert>}
-                  {assignMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setAssignMessage(null)}>{assignMessage}</Alert>}
+                  {canReadApplications && assignmentsError && <Alert severity="error" sx={{ mb: 2 }}>{assignmentsError}</Alert>}
+                  {canReadApplications && assignMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setAssignMessage(null)}>{assignMessage}</Alert>}
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                     <SectionLabel>{t('workspace.asset.operations.hostedApplications')}</SectionLabel>
-                    {canAssign && (
+                    {canAssignApplications && (
                       <Button
                         variant="action"
                         size="small"
@@ -2131,95 +2371,103 @@ export default function AssetWorkspacePage() {
                       </Button>
                     )}
                   </Stack>
-                  <Table size="small" sx={denseTableSx}>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>{t('workspace.asset.assignments.application')}</TableCell>
-                        <TableCell>{t('workspace.asset.assignments.environment')}</TableCell>
-                        <TableCell>{t('workspace.asset.assignments.role')}</TableCell>
-                        <TableCell>{t('workspace.asset.assignments.since')}</TableCell>
-                        <TableCell>{t('workspace.asset.assignments.notes')}</TableCell>
-                        {canAssign && <TableCell align="right">{t('workspace.asset.assignments.actions')}</TableCell>}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {assignments.length === 0 && (
+                  {canReadApplications ? (
+                    <>
+                    <Table size="small" sx={denseTableSx}>
+                      <TableHead>
                         <TableRow>
-                          <TableCell colSpan={canAssign ? 6 : 5}>
-                            <Typography variant="body2" color="text.secondary">{t('workspace.asset.assignments.noAssignments')}</Typography>
-                          </TableCell>
+                          <TableCell>{t('workspace.asset.assignments.application')}</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.environment')}</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.role')}</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.since')}</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.notes')}</TableCell>
+                          {canAssignApplications && <TableCell align="right">{t('workspace.asset.assignments.actions')}</TableCell>}
                         </TableRow>
-                      )}
-                      {assignments.map((assignment) => (
-                        <TableRow key={`${assignment.id}|${assignment.inherited ? 'via' : 'own'}`}>
-                          <TableCell>
-                            <Button size="small" onClick={() => navigate(`/it/applications/${assignment.application.id}/deployments`)}>
-                              {assignment.application.name}
-                            </Button>
-                            {assignment.inherited && (assignment.via_clusters?.length ?? 0) > 0 && (
-                              <Box component="span" sx={(muiTheme) => ({ ml: 0.5, fontSize: 12, color: muiTheme.palette.kanap.text.tertiary })}>
-                                {t('components.clusterAssignment.via')} <ViaAssetNames assets={assignment.via_clusters ?? []} />
-                              </Box>
+                      </TableHead>
+                      <TableBody>
+                        {assignments.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={canAssignApplications ? 6 : 5}>
+                              <Typography variant="body2" color="text.secondary">{t('workspace.asset.assignments.noAssignments')}</Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {assignments.map((assignment) => (
+                          <TableRow key={`${assignment.id}|${assignment.inherited ? 'via' : 'own'}`}>
+                            <TableCell>
+                              <Button size="small" onClick={() => navigate(`/it/applications/${assignment.application.id}/deployments`)}>
+                                {assignment.application.name}
+                              </Button>
+                              {assignment.inherited && (assignment.via_clusters?.length ?? 0) > 0 && (
+                                <Box component="span" sx={(muiTheme) => ({ ml: 0.5, fontSize: 12, color: muiTheme.palette.kanap.text.tertiary })}>
+                                  {t('components.clusterAssignment.via')} <ViaAssetNames assets={assignment.via_clusters ?? []} />
+                                </Box>
+                              )}
+                            </TableCell>
+                            <TableCell>{environmentLabel(assignment.environment)}</TableCell>
+                            <TableCell>{labelFor('serverRole', assignment.role) || assignment.role}</TableCell>
+                            <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : DASH}</TableCell>
+                            <TableCell>{assignment.notes || DASH}</TableCell>
+                            {canAssignApplications && (
+                            <TableCell align="right">
+                              {!assignment.inherited && (
+                              <>
+                              <Tooltip title={t('workspace.asset.assignments.editAssignment')}>
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    aria-label={t('workspace.asset.assignments.editAssignment')}
+                                    onClick={() => navigate(`/it/applications/${assignment.application.id}/deployments`)}
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                              <Tooltip title={t('workspace.asset.assignments.removeAssignment')}>
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    aria-label={t('workspace.asset.assignments.removeAssignment')}
+                                    onClick={() => void handleRemoveAssignment(assignment)}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                              </>
+                              )}
+                            </TableCell>
                             )}
-                          </TableCell>
-                          <TableCell>{environmentLabel(assignment.environment)}</TableCell>
-                          <TableCell>{labelFor('serverRole', assignment.role) || assignment.role}</TableCell>
-                          <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : DASH}</TableCell>
-                          <TableCell>{assignment.notes || DASH}</TableCell>
-                          {canAssign && (
-                          <TableCell align="right">
-                            {!assignment.inherited && (
-                            <>
-                            <Tooltip title={t('workspace.asset.assignments.editAssignment')}>
-                              <span>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => navigate(`/it/applications/${assignment.application.id}/deployments`)}
-                                >
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                            <Tooltip title={t('workspace.asset.assignments.removeAssignment')}>
-                              <span>
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={() => void handleRemoveAssignment(assignment)}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
-                            </>
-                            )}
-                          </TableCell>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {canAssign && isCluster && groupable.map((set) => {
-                    const names = set.member_ids.map((memberId) => clusterMembers.find((member) => member.id === memberId)?.name).filter(Boolean).join(', ');
-                    const subject = `${set.application_name} (${environmentLabel(set.environment)}, ${labelFor('serverRole', set.role) || set.role})`;
-                    return (
-                      <ClusterGroupLine
-                        key={`${set.app_instance_id}|${set.role}`}
-                        text={t('components.clusterAssignment.groupLine', { subject, members: names })}
-                        actionLabel={t('components.clusterAssignment.assignToCluster')}
-                        onAssign={() => void assignGroupToCluster(set, set.application_name)}
-                      />
-                    );
-                  })}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {canAssignApplications && isCluster && groupable.map((set) => {
+                      const names = set.member_ids.map((memberId) => clusterMembers.find((member) => member.id === memberId)?.name).filter(Boolean).join(', ');
+                      const subject = `${set.application_name} (${environmentLabel(set.environment)}, ${labelFor('serverRole', set.role) || set.role})`;
+                      return (
+                        <ClusterGroupLine
+                          key={`${set.app_instance_id}|${set.role}`}
+                          text={t('components.clusterAssignment.groupLine', { subject, members: names })}
+                          actionLabel={t('components.clusterAssignment.assignToCluster')}
+                          onAssign={() => void assignGroupToCluster(set, set.application_name)}
+                        />
+                      );
+                    })}
+                    </>
+                  ) : (
+                    <RelationsEmpty>{t('workspace.asset.assignments.noApplicationAccess')}</RelationsEmpty>
+                  )}
                 </Box>
               )}
               {!isCreate && id && (
-                <Box sx={{ maxWidth: 900 }}>
-                  <AssetTechnologiesSection assetId={id} canManage={canManage} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
+                <Box sx={{ width: '100%', maxWidth: 900, minWidth: 0 }}>
+                  <AssetTechnologiesSection assetId={id} canManage={canManage} isServer={isPhysicalServer} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
                 </Box>
               )}
               {reachVulnerabilities && id && (
-                <Box sx={{ maxWidth: 900 }}>
+                <Box sx={{ width: '100%', maxWidth: 900, minWidth: 0 }}>
                   <ReachVulnerabilitiesSection
                     data={reachVulnerabilities}
                     kind="asset"
@@ -2231,7 +2479,7 @@ export default function AssetWorkspacePage() {
             </Stack>
           )}
           {validTab === 'network' && (
-            <Stack spacing={3.5}>
+            <Stack spacing={3.5} sx={tabContentSx}>
               {netboxManaged ? (
                 <Typography variant="caption" sx={{ display: 'block', color: 'kanap.text.tertiary' }}>
                   {t('pages.netbox.assetSource.managedFields')}
@@ -2258,7 +2506,7 @@ export default function AssetWorkspacePage() {
                           : null;
                         setHostname(next);
                         if (hostnameMalformed) return;
-                        if (!isCreate && (next || '') !== (data?.hostname || '')) void patchAsset({ hostname: next || null, fqdn: nextFqdn });
+                        if (!isCreate && (next || '') !== (data?.hostname || '')) savePatch({ hostname: next || null, fqdn: nextFqdn });
                       }}
                       error={(!!hostnameRequired && !hostname) || hostnameMalformed}
                       helperText={
@@ -2283,7 +2531,7 @@ export default function AssetWorkspacePage() {
                         const next = e.target.value;
                         setDomain(next);
                         if (isCreate) setDirty(true);
-                        else void patchAsset({ domain: next || null });
+                        else savePatch({ domain: next || null });
                       }}
                       size="small"
                       variant="standard"
@@ -2319,7 +2567,7 @@ export default function AssetWorkspacePage() {
                       const next = newValue.map((v) => String(v).trim().toLowerCase()).filter(Boolean);
                       setAliases(next);
                       if (isCreate) setDirty(true);
-                      else void patchAsset({ aliases: next.length > 0 ? next : null });
+                      else savePatch({ aliases: next.length > 0 ? next : null });
                     }}
                     renderTags={(value, getTagProps) =>
                       value.map((option, index) => (
@@ -2380,8 +2628,8 @@ export default function AssetWorkspacePage() {
                           maxWidth: 760,
                         })}
                       >
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} alignItems={{ xs: 'stretch', sm: 'flex-end' }} sx={{ mb: 1.5 }}>
-                          <PropertyRow label={t('workspace.asset.technical.type')} valueSx={{ minWidth: { xs: '100%', sm: 130 } }}>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} useFlexGap flexWrap="wrap" alignItems={{ xs: 'stretch', sm: 'flex-end' }} sx={{ mb: 1.5 }}>
+                          <PropertyRow label={t('workspace.asset.technical.type')} sx={{ flex: '1 1 140px', minWidth: 0, maxWidth: '100%' }} valueSx={{ minWidth: 0, width: '100%', maxWidth: '100%' }}>
                             <TextField
                               select
                               value={entry.type}
@@ -2400,10 +2648,11 @@ export default function AssetWorkspacePage() {
                               ))}
                             </TextField>
                           </PropertyRow>
-                          <PropertyRow label={t('workspace.asset.technical.ipAddress')} valueSx={{ flex: 1, minWidth: { xs: '100%', sm: 220 } }}>
+                          <PropertyRow label={t('workspace.asset.technical.ipAddress')} sx={{ flex: '2 1 180px', minWidth: 0, maxWidth: '100%' }} valueSx={{ minWidth: 0, width: '100%', maxWidth: '100%' }}>
                             <TextField
                               value={entry.ip}
                               onChange={(e) => {
+                                if (ipFieldError?.index === idx) setIpFieldError(null);
                                 const next = ipAddresses.map((x, i) => (i === idx ? { ...x, ip: e.target.value } : x));
                                 setIpAddresses(next);
                                 if (isCreate) setDirty(true);
@@ -2418,6 +2667,8 @@ export default function AssetWorkspacePage() {
                               size="small"
                               variant="standard"
                               sx={contentFieldSx}
+                              error={ipFieldError?.index === idx}
+                              helperText={ipFieldError?.index === idx ? ipFieldError.message : undefined}
                               disabled={!canEditNetboxField('ip_addresses')}
                             />
                           </PropertyRow>
@@ -2434,8 +2685,8 @@ export default function AssetWorkspacePage() {
                             <DeleteIcon fontSize="small" />
                           </IconButton>
                         </Stack>
-                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
-                          <PropertyRow label={t('workspace.asset.technical.subnet')} valueSx={{ minWidth: { xs: '100%', sm: 220 } }}>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} useFlexGap flexWrap="wrap" alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
+                          <PropertyRow label={t('workspace.asset.technical.subnet')} sx={{ flex: '2 1 180px', minWidth: 0, maxWidth: '100%' }} valueSx={{ minWidth: 0, width: '100%', maxWidth: '100%' }}>
                             <TextField
                               select
                               value={entry.subnet_cidr || ''}
@@ -2459,7 +2710,7 @@ export default function AssetWorkspacePage() {
                               ))}
                             </TextField>
                           </PropertyRow>
-                          <PropertyRow label={t('workspace.asset.technical.networkZone')} valueSx={{ minWidth: { xs: '100%', sm: 150 } }}>
+                          <PropertyRow label={t('workspace.asset.technical.networkZone')} sx={{ flex: '1 1 120px', minWidth: 0, maxWidth: '100%' }} valueSx={{ minWidth: 0, width: '100%', maxWidth: '100%' }}>
                             <TextField
                               value={selectedSubnet ? (labelFor('networkSegment', selectedSubnet.network_zone) || selectedSubnet.network_zone || '-') : '-'}
                               size="small"
@@ -2468,7 +2719,7 @@ export default function AssetWorkspacePage() {
                               InputProps={{ readOnly: true }}
                             />
                           </PropertyRow>
-                          <PropertyRow label={t('workspace.asset.technical.vlan')} valueSx={{ minWidth: { xs: '100%', sm: 90 } }}>
+                          <PropertyRow label={t('workspace.asset.technical.vlan')} sx={{ flex: '1 1 80px', minWidth: 0, maxWidth: '100%' }} valueSx={{ minWidth: 0, width: '100%', maxWidth: '100%' }}>
                             <TextField
                               value={selectedSubnet?.vlan_number ?? '-'}
                               size="small"
@@ -2499,10 +2750,19 @@ export default function AssetWorkspacePage() {
               assetId={id}
               netboxManaged={netboxManaged}
               netboxOwns={netboxOwns}
+              onSaveError={hardwareSaveError}
             />
           )}
-          {validTab === 'dependencies' && !isCreate && !!id && <AssetDependenciesTab assetId={id} />}
-          {validTab === 'relations' && !isCreate && !!id && <AssetRelationsTab assetId={id} />}
+          {validTab === 'dependencies' && !isCreate && !!id && (
+            <Box sx={tabContentSx}>
+              <AssetDependenciesTab assetId={id} isServer={isPhysicalServer} />
+            </Box>
+          )}
+          {validTab === 'relations' && !isCreate && !!id && (
+            <Box sx={tabContentSx}>
+              <AssetRelationsTab assetId={id} />
+            </Box>
+          )}
       </PortfolioDetailWorkspaceShell>
       <KanapDialog
         open={memberDialogOpen}
@@ -2602,7 +2862,7 @@ export default function AssetWorkspacePage() {
         onClose={() => setAssignDialogOpen(false)}
         onSave={handleAssignSave}
         saveLabel={t('workspace.asset.assignments.assign')}
-        saveDisabled={assigning || serverRoleOptions.length === 0}
+        saveDisabled={assigning || serverRoleOptions.length === 0 || !selectedAppId || !instanceId || !assignRole}
         saveLoading={assigning}
         sx={{ maxWidth: 560 }}
       >
@@ -2617,27 +2877,35 @@ export default function AssetWorkspacePage() {
                 textFieldSx={drawerFieldValueSx}
               />
             </PropertyRow>
-            <PropertyRow label={t('workspace.asset.assignments.environment')} required>
+            <PropertyRow label={t('workspace.asset.assignments.environment')} required valueSx={{ width: '100%', maxWidth: '100%' }}>
               <TextField
                 select
+                fullWidth
                 value={instanceId || ''}
                 onChange={(e) => setInstanceId(e.target.value)}
-                disabled={!selectedAppId}
+                disabled={!selectedAppId || instancesLoading}
                 required
                 variant="standard"
                 sx={drawerFieldValueSx}
                 SelectProps={{
                   displayEmpty: true,
-                  renderValue: (value) => {
-                    if (value) return environmentLabel((selectedAppId ? appInstances[selectedAppId] : undefined)?.find((inst) => inst.id === value)?.environment);
-                    return selectedAppId ? '' : <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('workspace.asset.assignments.selectAppForEnv')}</Box>;
+                  renderValue: (selected) => {
+                    const value = String(selected ?? '');
+                    const list = selectedAppId ? appInstances[selectedAppId] || [] : [];
+                    const inst = list.find((item) => item.id === value);
+                    if (inst) return environmentLabel(inst.environment);
+                    return (
+                      <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>
+                        {selectedAppId ? t('workspace.asset.assignments.chooseEnvironment') : t('workspace.asset.assignments.selectAppForEnv')}
+                      </Box>
+                    );
                   },
                 }}
               >
                 {(selectedAppId ? appInstances[selectedAppId] || [] : []).map((inst) => (
                   <MenuItem key={inst.id} value={inst.id} sx={drawerMenuItemSx}>{environmentLabel(inst.environment)}</MenuItem>
                 ))}
-                {selectedAppId && (appInstances[selectedAppId] || []).length === 0 && (
+                {selectedAppId && !instancesLoading && (appInstances[selectedAppId] || []).length === 0 && (
                   <MenuItem value="" disabled sx={drawerMenuItemSx}>{t('workspace.asset.assignments.noInstances')}</MenuItem>
                 )}
               </TextField>
@@ -2680,5 +2948,6 @@ export default function AssetWorkspacePage() {
           </Stack>
       </KanapDialog>
     </Box>
+    </ApplicationFeedbackProvider>
   );
 }

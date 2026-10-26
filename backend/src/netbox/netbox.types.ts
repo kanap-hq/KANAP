@@ -20,7 +20,8 @@ export type NetboxApiErrorCode =
   | 'rate_limited'
   | 'provider_unavailable'
   | 'invalid_response'
-  | 'tls_untrusted';
+  | 'tls_untrusted'
+  | 'dns';
 
 /**
  * Structured transport error carrying a normalized code so callers never have

@@ -26,6 +26,14 @@ describe('csv labels', () => {
     expect(csvPresetLabel(t, 'applications', { name: 'enrichment', label: 'Data Enrichment' })).toBe('Enrichissement des données');
   });
 
+  it('names the asset export in French, including the site and the enrichment preset', () => {
+    expect(fr.csv.fields.assets.location_reference).toBe('Site');
+    expect(fr.csv.fields.assets.hostname).toBe('Nom d’hôte');
+    expect(fr.csv.fields.assets.ip_1_address).toBe('Adresse IP 1');
+    expect(fr.csv.groups.ip_addresses).toBe('Adresses IP');
+    expect(fr.csv.presets.assets.enrichment).toBe('Enrichissement des données');
+  });
+
   it('falls back to the server label, without the __CLEAR__ hint, whatever t does with a missing key', () => {
     for (const translate of [t, keyOnly]) {
       expect(csvFieldLabel(translate, 'applications', { csvColumn: 'cyber_criticality', label: 'cyber_criticality (__CLEAR__ to clear)' })).toBe('cyber_criticality');

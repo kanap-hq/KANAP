@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
+import { webLinkUrlsOf } from '../common/web-link-url';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, ILike, In, IsNull, Repository, SelectQueryBuilder } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -2178,14 +2179,15 @@ export class PortfolioRequestsService {
 
     const request = await this.getRequestOrThrow(requestId, mg);
 
+    // Every address is checked before the old links go: a refused one changes nothing.
+    const checked = webLinkUrlsOf(urls);
     await repo.delete({ request_id: requestId });
 
-    const toInsert = (urls || [])
-      .filter((u) => u.url && String(u.url).trim())
+    const toInsert = checked
       .map((u) => repo.create({
         tenant_id: request.tenant_id,
         request_id: requestId,
-        url: String(u.url).trim(),
+        url: u.url,
         label: u.label ? String(u.label).trim() : null,
       }));
 

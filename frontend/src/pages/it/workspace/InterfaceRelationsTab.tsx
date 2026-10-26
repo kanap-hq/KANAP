@@ -90,13 +90,8 @@ export default function InterfaceRelationsTab({
   const saveLink = async (linkRow: LinksAndFilesLink | null, draft: LinkDraft) => {
     setError(null);
     const body = { description: draft.name, url: draft.url };
-    try {
-      if (linkRow) await api.patch(`${base}/links/${linkRow.id}`, body);
-      else await api.post(`${base}/links`, body);
-    } catch (e) {
-      failed(e);
-      throw e;
-    }
+    if (linkRow) await api.patch(`${base}/links/${linkRow.id}`, body);
+    else await api.post(`${base}/links`, body);
     await queryClient.invalidateQueries({ queryKey: linksKey });
   };
 

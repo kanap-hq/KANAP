@@ -50,7 +50,7 @@ function Location() {
   return <div data-testid="location">{useLocation().pathname}</div>;
 }
 
-function renderSection(items: AssetTechnologyRow[] = ROWS, canManage = true) {
+function renderSection(items: AssetTechnologyRow[] = ROWS, canManage = true, isServer = true) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/assets/asset-1/technologies') return { data: { items } } as never;
     if (url === '/technologies/lookup') return { data: { items: [{ id: 'tomcat', name: 'Tomcat', reference: 'TEC-5', editor: 'Apache' }] } } as never;
@@ -62,7 +62,7 @@ function renderSection(items: AssetTechnologyRow[] = ROWS, canManage = true) {
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter initialEntries={['/it/assets/AST-1/operations']}>
           <Routes>
-            <Route path="*" element={<><AssetTechnologiesSection assetId="asset-1" canManage={canManage} /><Location /></>} />
+            <Route path="*" element={<><AssetTechnologiesSection assetId="asset-1" canManage={canManage} isServer={isServer} /><Location /></>} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -205,6 +205,11 @@ describe('AssetTechnologiesSection', () => {
     expect(await screen.findByText(`${K}.empty`)).toBeTruthy();
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.queryByText(`${K}.add`)).toBeNull();
+  });
+
+  it('says asset when nothing is recorded on a machine that is not a server', async () => {
+    renderSection([], false, false);
+    expect(await screen.findByText(`${K}.emptyAsset`)).toBeTruthy();
   });
 
   it('edits the version of an installed row from the pencil and skips carried rows', async () => {

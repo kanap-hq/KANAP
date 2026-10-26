@@ -3,7 +3,7 @@ import { Box, Button, Link, Menu, MenuItem, Stack, useTheme } from '@mui/materia
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
+import ServerDataGrid, { DATE_COLUMN_FILTER, EnhancedColDef, type ListRequest } from '../../components/ServerDataGrid';
 import { ICellRendererParams } from 'ag-grid-community';
 import { LinkCellRenderer, wholeCellLinkSx } from '../../components/grid/renderers';
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
@@ -18,6 +18,7 @@ import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 
 import { useTranslation } from 'react-i18next';
+import { screenLanguage } from '../../components/csv/readings';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
@@ -82,8 +83,12 @@ const CLUSTER_FILTER_IS_CLUSTER = '__cluster__';
 const ENV_ORDER = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'];
 
 export default function AssetsPage() {
-  const { t } = useTranslation(['it', 'common']);
+  const { t, i18n } = useTranslation(['it', 'common']);
   const locale = useLocale();
+  const listLanguage = useMemo(
+    () => ({ language: screenLanguage(i18n.resolvedLanguage || i18n.language) }),
+    [i18n.language, i18n.resolvedLanguage],
+  );
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -94,6 +99,8 @@ export default function AssetsPage() {
   const [selectedRows, setSelectedRows] = useState<AssetRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
+  const listRequestRef = useRef<ListRequest | null>(null);
+  const [exportScope, setExportScope] = useState<{ params: Record<string, unknown>; summary: string }>({ params: {}, summary: '' });
   const [importOpen, setImportOpen] = useState(false);
   const [addMenu, setAddMenu] = useState<HTMLElement | null>(null);
   const { labelFor } = useItOpsEnumOptions();
@@ -300,7 +307,7 @@ export default function AssetsPage() {
     {
       field: 'asset_reference',
       headerName: '#',
-      width: 90,
+      width: 80,
       valueGetter: (p) => p.data?.asset_reference || '',
       cellStyle: {
         fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
@@ -315,13 +322,13 @@ export default function AssetsPage() {
       },
       cellRenderer: ClickToWorkspace,
     },
-    { headerName: t('common.name'), field: 'name', minWidth: 180, cellRenderer: ClickToWorkspace },
+    { headerName: t('common.name'), field: 'name', flex: 1, minWidth: 150, cellRenderer: ClickToWorkspace },
     // Hidden while the vulnerability feed is off: the counts are null then.
     ...(vulnerabilityFeed
       ? [{
         headerName: t('pages.technologies.columns.vulnerabilitiesShort'),
         field: VULNERABILITIES_FIELD as keyof AssetRow,
-        width: 140,
+        width: 130,
         headerTooltip: t('pages.technologies.columns.vulnerabilities'),
         filter: CheckboxSetFilter,
         floatingFilterComponent: CheckboxSetFloatingFilter,
@@ -332,7 +339,7 @@ export default function AssetsPage() {
     {
       headerName: t('pages.assets.columns.assetType'),
       field: 'kind',
-      width: 140,
+      width: 110,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -345,7 +352,7 @@ export default function AssetsPage() {
     {
       headerName: t('pages.assets.columns.cluster'),
       field: 'cluster',
-      width: 160,
+      width: 120,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -362,7 +369,7 @@ export default function AssetsPage() {
     {
       headerName: t('pages.assets.columns.environment'),
       field: 'environment',
-      width: 130,
+      width: 110,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -375,7 +382,7 @@ export default function AssetsPage() {
     {
       headerName: t('pages.assets.columns.location'),
       field: 'location_name',
-      width: 160,
+      width: 130,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -387,8 +394,9 @@ export default function AssetsPage() {
     {
       headerName: t('pages.assets.columns.subLocation'),
       field: 'sub_location_name',
-      width: 160,
-      hide: true,
+      width: 140,
+      defaultHidden: true,
+      initialHide: true,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -400,7 +408,7 @@ export default function AssetsPage() {
     {
       headerName: t('pages.assets.columns.hosting'),
       field: 'hosting_type',
-      width: 140,
+      width: 110,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -413,7 +421,7 @@ export default function AssetsPage() {
     {
       headerName: t('pages.assets.columns.os'),
       field: 'operating_system',
-      width: 140,
+      width: 110,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -426,7 +434,7 @@ export default function AssetsPage() {
     {
       headerName: t('pages.assets.columns.networkZone'),
       field: 'network_segment',
-      width: 160,
+      width: 120,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -439,8 +447,9 @@ export default function AssetsPage() {
     {
       headerName: t('pages.assets.columns.adminZone'),
       field: 'admin_zone',
-      width: 180,
-      hide: true,
+      width: 150,
+      defaultHidden: true,
+      initialHide: true,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -453,7 +462,7 @@ export default function AssetsPage() {
     {
       headerName: t('common.lifecycle'),
       field: 'status',
-      width: 140,
+      width: 110,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
@@ -466,31 +475,34 @@ export default function AssetsPage() {
     {
       headerName: t('pages.assets.columns.goLive'),
       field: 'go_live_date',
-      filter: 'agDateColumnFilter',
-      width: 120,
-      hide: true,
+      // The date menu, not the text box: a typed date in that box never became a date filter.
+      ...DATE_COLUMN_FILTER,
+      width: 170,
+      defaultHidden: true,
+      initialHide: true,
       valueFormatter: (p: any) => formatShortDate(p.value as string | null, locale, { year: 'always' }),
       cellRenderer: ClickToWorkspace,
     },
     {
       headerName: t('pages.assets.columns.endOfLife'),
       field: 'end_of_life_date',
-      filter: 'agDateColumnFilter',
-      width: 120,
-      hide: true,
+      ...DATE_COLUMN_FILTER,
+      width: 170,
+      defaultHidden: true,
+      initialHide: true,
       valueFormatter: (p: any) => formatShortDate(p.value as string | null, locale, { year: 'always' }),
       cellRenderer: ClickToWorkspace,
     },
     {
       headerName: t('pages.assets.columns.assignments'),
       field: 'assignments_count',
-      width: 140,
+      width: 100,
       sortable: false,
       filter: false,
       valueFormatter: (p) => countValueFormatter({ value: p.value ?? 0 }),
       cellRenderer: ClickToWorkspace,
     },
-    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, filter: 'agDateColumnFilter', valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToWorkspace },
+    { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 160, ...DATE_COLUMN_FILTER, valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToWorkspace },
   ], [ClickToWorkspace, ClusterCell, EnvironmentCell, envLabel, envLabelMap, getAssetFilterValues, labelFor, lifecycleLabel, t, vulnerabilityFeed]);
 
   // A new cluster opens the creation with the Cluster switch already on.
@@ -500,6 +512,21 @@ export default function AssetsPage() {
     if (cluster) sp.set('cluster', '1');
     navigate(`/it/assets/new/overview?${sp.toString()}`);
   };
+
+  // The export holds what the list shows: its filters, quick search and scope.
+  const openExport = useCallback(() => {
+    const request = listRequestRef.current;
+    const params = { ...(request?.params ?? {}) };
+    let summary = '';
+    if (request) {
+      const filtered = !!params.q || (typeof params.filters === 'string' && params.filters !== '{}' && params.filters !== '');
+      summary = filtered
+        ? t('pages.assets.exportScope', { count: request.total })
+        : t('pages.assets.exportScopeAll', { count: request.total });
+    }
+    setExportScope({ params, summary });
+    setExportOpen(true);
+  }, [t]);
 
   const actions = (
     <Stack direction="row" spacing={1}>
@@ -514,13 +541,14 @@ export default function AssetsPage() {
         </Button>
       )}
       {hasLevel('infrastructure', 'admin') && <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.assets.importCsv')}</Button>}
-      {hasLevel('infrastructure', 'admin') && <Button variant="action" onClick={() => setExportOpen(true)}>{t('pages.assets.exportCsv')}</Button>}
+      {hasLevel('infrastructure', 'admin') && <Button variant="action" onClick={openExport}>{t('pages.assets.exportCsv')}</Button>}
       {hasLevel('infrastructure', 'admin') && (
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/assets/bulk"
           getItemId={(row) => row.id}
-          getItemName={(row) => row.name}
+          // The reference tells apart assets that share a name.
+          getItemName={(row) => (row.asset_reference ? `${row.asset_reference} ${row.name}` : row.name)}
           gridApi={gridApiRef.current}
           // Asked on click: those still in use are kept, with what uses them.
           checkDelete={(ids) => assetsDeleteCheck(ids, t, locale)}
@@ -528,6 +556,10 @@ export default function AssetsPage() {
             toDelete: (count) => t('pages.assets.delete.toDelete', { count }),
             kept: (count) => t('pages.assets.delete.kept', { count }),
             deleted: (count) => t('pages.assets.delete.deleted', { count }),
+            title: (count) => t('pages.assets.delete.title', { count }),
+            titleCountsDeleted: true,
+            keptDone: (count) => t('pages.assets.delete.keptDone', { count }),
+            keptReason: ({ usages, count }) => t('pages.assets.delete.keptReason', { usages, count }),
           }}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
         />
@@ -549,6 +581,8 @@ export default function AssetsPage() {
         enableColumnChooser
         enableSearch
         columnPreferencesKey="it-assets"
+        columnLayoutVersion={1}
+        extraParams={listLanguage}
         enableRowSelection={hasLevel('infrastructure', 'admin')}
         onSelectionChanged={setSelectedRows}
         onGridApiReady={(api) => { gridApiRef.current = api; }}
@@ -557,6 +591,7 @@ export default function AssetsPage() {
         onQueryStateChange={(state) => {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
         }}
+        onListRequestChange={(request) => { listRequestRef.current = request; }}
       />
       )}
       <Menu
@@ -574,6 +609,8 @@ export default function AssetsPage() {
         onClose={() => setExportOpen(false)}
         endpoint="/assets"
         title={t('pages.assets.exportTitle')}
+        params={exportScope.params}
+        scopeSummary={exportScope.summary}
         presets={[{ name: 'enrichment', label: t('pages.assets.dataEnrichment') }]}
       />
       <CsvImportDialogV2

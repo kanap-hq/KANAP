@@ -223,7 +223,7 @@ L'onglet Déploiements documente où l'application s'exécute réellement : un b
 | **Hébergement** | Dérivé du site de l'actif |
 | **Depuis** | Date à laquelle le serveur a été assigné à ce déploiement |
 
-Cliquez sur **Ajouter un serveur** dans l'en-tête du déploiement pour rattacher un actif. Le sélecteur liste les clusters avec leurs membres sous leur nom. L'affectation d'un cluster s'étend à ses membres en service : ils s'affichent sous la ligne du cluster, sans actions. Modifiez l'affectation sur le cluster. Quand vous choisissez un membre d'un cluster, KANAP demande s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](assets.md#applications-on-a-cluster).
+Cliquez sur **Ajouter un serveur** dans l'en-tête du déploiement pour rattacher un actif. Le sélecteur liste les clusters avec leurs membres sous leur nom. L'affectation d'un cluster s'étend à ses membres en service : ils s'affichent sous la ligne du cluster, sans actions. Modifiez l'affectation sur le cluster. Quand vous choisissez un membre d'un cluster, KANAP demande s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](assets.md#applications-on-a-cluster). Ajouter, modifier ou retirer un serveur demande `applications:member` et `infrastructure:member`.
 
 Quand l'application est affectée directement à chaque membre en service d'un cluster, une ligne sous le tableau les nomme, avec un bouton pour affecter l'application au cluster (**Affecter à** et son nom). Après une confirmation, le cluster prend l'affectation et les affectations propres des membres sont retirées. L'application reste alors disponible tant qu'un membre tient.
 

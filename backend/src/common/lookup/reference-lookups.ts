@@ -156,6 +156,17 @@ export async function lookupReference(call: LookupCall, spec: LookupSpec, query:
   return lookup(call, spec, parseLookupRequest(query));
 }
 
+/**
+ * Contracts. `supplier_id` limits the search to that vendor. Hydration by `ids`
+ * ignores the scope, so a contract already chosen still shows its name.
+ */
+export async function lookupContracts(call: LookupCall, query: any) {
+  const request = parseLookupRequest(query);
+  const supplierId = optionalUuid(query?.supplier_id ?? query?.supplierId, 'supplier_id');
+  if (supplierId) request.scope = [(bind: Bind) => `t.supplier_id = ${bind(supplierId, 'uuid')}`];
+  return lookup(call, CONTRACT_LOOKUP, request);
+}
+
 /** Departments, of one company when `company_id` is given. */
 export async function lookupDepartments(call: LookupCall, query: any) {
   const request = parseLookupRequest(query);

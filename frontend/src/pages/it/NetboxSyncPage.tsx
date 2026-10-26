@@ -27,6 +27,8 @@ import { metricStripSx } from '../../theme/stripSx';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { catalogDiffLabel } from '../../utils/catalogDiffLabel';
+import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { getDotColor } from '../../utils/statusColors';
 import AssetPickerPopover from './netbox/AssetPickerPopover';
 import {
@@ -100,8 +102,16 @@ function netboxErrorText(error: unknown, t: TFunction, fallback: string): string
  */
 function useNoticeText() {
   const { t } = useTranslation('it');
-  return React.useCallback((notice: NetboxNotice | null | undefined): string => {
+  return React.useCallback((notice: NetboxNotice | null | undefined, options?: { preview?: boolean }): string => {
     if (!notice) return '';
+    // The records list says what already happened. The preview says what will happen.
+    if (options?.preview) {
+      const previewText = t(`pages.netbox.previewNotices.${notice.code}`, {
+        ...notice.params,
+        defaultValue: '',
+      });
+      if (previewText) return previewText;
+    }
     const key = `pages.netbox.notices.${notice.code}`;
     if (notice.code === 'netbox_status_attention') {
       // The sentence takes the translated mid-sentence label, not the raw value.
@@ -359,7 +369,7 @@ function PreviewRow({ row, decision, linkLabel, onOpenMenu, onUndo, showDiffs, s
   showDiffs: boolean;
   showNotices: boolean;
 }) {
-  const { t } = useTranslation('it');
+  const { t } = useTranslation(['it', 'common']);
   const noticeText = useNoticeText();
 
   const fieldLabel = (field: string) => (
@@ -402,7 +412,7 @@ function PreviewRow({ row, decision, linkLabel, onOpenMenu, onUndo, showDiffs, s
         ) : null}
         {notices.map((warning) => (
           <Typography key={warning.code} variant="caption" color="text.secondary" component="div">
-            {noticeText(warning)}
+            {noticeText(warning, { preview: true })}
           </Typography>
         ))}
         {row.candidates.length > 0 ? (
@@ -417,7 +427,7 @@ function PreviewRow({ row, decision, linkLabel, onOpenMenu, onUndo, showDiffs, s
           <Stack sx={{ pl: 1.5 }}>
             {row.diffs.map((diff) => (
               <Typography key={diff.field} variant="caption" color="text.secondary">
-                {fieldLabel(diff.field)}: {diff.before || t('pages.netbox.preview.empty')} → {diff.after || t('pages.netbox.preview.empty')}
+                {fieldLabel(diff.field)}: {catalogDiffLabel(diff.field, diff.before, t) || t('pages.netbox.preview.empty')} → {catalogDiffLabel(diff.field, diff.after, t) || t('pages.netbox.preview.empty')}
               </Typography>
             ))}
           </Stack>
@@ -510,7 +520,7 @@ function SubLocationsSection({ view }: { view: NetboxSubLocationsView }) {
   const { t } = useTranslation('it');
 
   if (!view.available) {
-    return <Alert severity="info">{t('pages.netbox.notices.locations_unavailable')}</Alert>;
+    return <Alert severity="info">{t('pages.netbox.previewNotices.locations_unavailable')}</Alert>;
   }
   if (view.changes.length === 0) return null;
 
@@ -557,6 +567,15 @@ function SubLocationsSection({ view }: { view: NetboxSubLocationsView }) {
  * in the dialog, travels with each re-preview so the plan reflects it, and is only
  * written when the run is applied.
  */
+function previewFailureText(preview: NetboxPreviewResult, t: TFunction): string {
+  const fallback = preview.message || t('pages.netbox.messages.previewFailed');
+  if (preview.code) {
+    const translated = t(`errors:${preview.code}`, { defaultValue: fallback });
+    if (typeof translated === 'string' && translated.trim()) return translated;
+  }
+  return fallback;
+}
+
 function PreviewDialog({ open, preview, applying, onClose, onApply, onPreviewResult, onOpenMappings }: {
   open: boolean;
   preview: NetboxPreviewResult | null;
@@ -566,7 +585,7 @@ function PreviewDialog({ open, preview, applying, onClose, onApply, onPreviewRes
   onPreviewResult: (result: NetboxPreviewResult) => void;
   onOpenMappings: () => void;
 }) {
-  const { t } = useTranslation(['it', 'common']);
+  const { t } = useTranslation(['it', 'common', 'errors']);
   const noticeText = useNoticeText();
 
   const [decisions, setDecisions] = React.useState<NetboxDecision[]>([]);
@@ -691,7 +710,7 @@ function PreviewDialog({ open, preview, applying, onClose, onApply, onPreviewRes
   const warnings = Array.from(new Set(
     [...(preview?.notices ?? []), ...rows.flatMap((row) => row.warnings)]
       .filter((warning) => !DECISION_NOTICE_CODES.includes(warning.code))
-      .map(noticeText)
+      .map((warning) => noticeText(warning, { preview: true }))
       .filter(Boolean),
   ));
   // Out-of-scope objects are counted by the server and never listed: they
@@ -701,6 +720,7 @@ function PreviewDialog({ open, preview, applying, onClose, onApply, onPreviewRes
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
+  const skippedNames = preview?.skipped_names;
   const skippedTotal = Object.values(skippedByReason).reduce((sum, count) => sum + count, 0);
 
   // One preview is one batch. Applying writes only what is listed here; what
@@ -778,7 +798,9 @@ function PreviewDialog({ open, preview, applying, onClose, onApply, onPreviewRes
         saveDisabled={!preview?.ok || busy || nothingMatched || serverTooOld}
         sx={[{ maxWidth: 880 }, previewClassSx]}
       >
-        {!preview ? null : nothingMatched ? (
+        {!preview ? null : !preview.ok ? (
+          <Alert severity="error">{previewFailureText(preview, t)}</Alert>
+        ) : nothingMatched ? (
           <Alert
             severity="warning"
             action={(
@@ -791,7 +813,13 @@ function PreviewDialog({ open, preview, applying, onClose, onApply, onPreviewRes
           </Alert>
         ) : (
           <Stack spacing={1.5}>
-            {preview.message ? <Alert severity={preview.ok ? 'info' : 'error'}>{preview.message}</Alert> : null}
+            {preview.message ? (
+              <Alert severity="info">
+                {preview.code
+                  ? t(`pages.netbox.previewNotices.${preview.code}`, { defaultValue: preview.message })
+                  : preview.message}
+              </Alert>
+            ) : null}
             {decisionError ? (
               <Alert severity="error" onClose={() => setDecisionError(null)}>{decisionError}</Alert>
             ) : null}
@@ -878,12 +906,28 @@ function PreviewDialog({ open, preview, applying, onClose, onApply, onPreviewRes
               {skippedTotal > 0 ? (
                 <Box>
                   <Box className="kanap-subhead">{t('pages.netbox.preview.sections.skipped', { n: skippedTotal })}</Box>
-                  <Stack>
-                    {Object.entries(skippedByReason).map(([reason, count]) => (
-                      <Typography key={reason} variant="body2" color="text.secondary">
-                        {t(`pages.netbox.skipReason.${reason}`)} · {count}
-                      </Typography>
-                    ))}
+                  <Stack spacing={0.75}>
+                    {Object.entries(skippedByReason).map(([reason, count]) => {
+                      const names = skippedNames?.[reason] ?? [];
+                      const more = count - names.length;
+                      return (
+                        <Box key={reason}>
+                          <Typography variant="body2" color="text.secondary">
+                            {t(`pages.netbox.skipReason.${reason}`)} · {count}
+                          </Typography>
+                          {names.map((name, index) => (
+                            <Typography key={`${reason}-${index}`} variant="body2" sx={{ pl: 1.5 }}>
+                              {name.trim() ? name : t('pages.netbox.records.unnamed')}
+                            </Typography>
+                          ))}
+                          {names.length > 0 && more > 0 ? (
+                            <Typography variant="body2" color="text.secondary" sx={{ pl: 1.5 }}>
+                              {t('pages.netbox.preview.skippedMore', { count: more })}
+                            </Typography>
+                          ) : null}
+                        </Box>
+                      );
+                    })}
                   </Stack>
                 </Box>
               ) : null}
@@ -978,6 +1022,12 @@ const RESERVED_ROLE_LABEL_KEYS: Record<string, string> = {
 /** Netbox roles and sites decide what is imported at all, so the mapping form lives next to the records. */
 function MappingsSection({ onError }: { onError: (message: string) => void }) {
   const { t } = useTranslation(['it', 'common']);
+  const { labelFor } = useItOpsEnumOptions();
+  // The mapping endpoint returns the stored catalog label. The screen prefers the localized name.
+  const assetKindLabel = (kind: { code: string; label: string }) => {
+    const localized = labelFor('serverKind', kind.code);
+    return localized && localized !== kind.code ? localized : kind.label;
+  };
   const queryClient = useQueryClient();
   const optionsQuery = useQuery({
     queryKey: ['netbox-mapping-options'],
@@ -1129,7 +1179,7 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
                     >
                       <MenuItem value="" sx={drawerMenuItemSx}>{t('pages.netbox.mappings.doNotImport')}</MenuItem>
                       {data.asset_kinds.map((kind) => (
-                        <MenuItem key={kind.code} value={kind.code} sx={drawerMenuItemSx}>{kind.label}</MenuItem>
+                        <MenuItem key={kind.code} value={kind.code} sx={drawerMenuItemSx}>{assetKindLabel(kind)}</MenuItem>
                       ))}
                     </TextField>
                     {suggestion(role.slug, roleMap, data.role_map) ? (

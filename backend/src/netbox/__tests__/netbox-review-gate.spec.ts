@@ -1,6 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
-import { NetboxConfigService, NetboxSyncStateView } from '../netbox-config.service';
+import { NetboxConfigService, NetboxSyncStateView, readLastConnectionTest } from '../netbox-config.service';
 import { parseNetboxReviewed } from '../netbox-sync.service';
 
 // A manual run writes only what its preview listed, in batches. Two things
@@ -32,6 +32,17 @@ for (const raw of [
 ]) {
   assert.throws(() => parseNetboxReviewed(raw), BadRequestException);
 }
+
+// --- the last connection test, kept in the existing configuration -----------
+
+assert.equal(readLastConnectionTest(null), null);
+assert.equal(readLastConnectionTest({}), null);
+assert.deepEqual(
+  readLastConnectionTest({ last_connection_test: { ok: true, tested_at: '2026-10-24T10:00:00.000Z' } }),
+  { ok: true, tested_at: '2026-10-24T10:00:00.000Z' },
+);
+assert.equal(readLastConnectionTest({ last_connection_test: { ok: 'yes', tested_at: '2026-10-24T10:00:00.000Z' } }), null);
+assert.equal(readLastConnectionTest({ last_connection_test: { ok: false, tested_at: 'not-a-date' } }), null);
 
 // --- the hourly run holds while a batch is waiting --------------------------
 

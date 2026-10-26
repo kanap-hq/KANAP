@@ -175,6 +175,61 @@ async function testDateParsing() {
   assert.equal(result.inserted, 3);
 }
 
+/** A day that is not on the calendar is a row error, in ISO and in European form. A leap day stays valid. */
+async function testImpossibleCalendarDates() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const config = createTestConfig();
+  const csv = `id;title;status;due_date
+;Leap;open;29/02/2024
+;Euro;open;02/09/2026
+;Dot;open;02.09.2026
+;Iso;open;2026-09-02
+;Feb31;open;31/02/2025
+;IsoFeb31;open;2025-02-31
+;LeapNo;open;29/02/2025
+;Month;open;2025-13-01
+;SlashFeb31;open;2025/02/31
+;Short;open;2025-2-3
+;Words;open;Feb 3 2025`;
+
+  const result = await service.import(config, createMockFile(csv), { ...defaultParams, dryRun: true }, {
+    manager: createMockManager({ tasks: [] }),
+    tenantId: 't1',
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(
+    result.errors.map((e) => ({ row: e.row, column: e.column, code: e.code, value: e.params?.value })),
+    [
+      { row: 6, column: 'due_date', code: 'CSV_DATE_INVALID', value: '31/02/2025' },
+      { row: 7, column: 'due_date', code: 'CSV_DATE_INVALID', value: '2025-02-31' },
+      { row: 8, column: 'due_date', code: 'CSV_DATE_INVALID', value: '29/02/2025' },
+      { row: 9, column: 'due_date', code: 'CSV_DATE_INVALID', value: '2025-13-01' },
+      { row: 10, column: 'due_date', code: 'CSV_DATE_INVALID', value: '2025/02/31' },
+      { row: 12, column: 'due_date', code: 'CSV_DATE_INVALID', value: 'Feb 3 2025' },
+    ],
+  );
+
+  // The day is read from its components, with no time zone: nothing shifts by a day.
+  const parseDate = (value: string) => (service as any).parseDate(value, 'due_date');
+  assert.equal(parseDate('2025-2-3'), '2025-02-03');
+  assert.equal(parseDate('2025/02/03'), '2025-02-03');
+  assert.equal(parseDate('2025.2.3'), '2025-02-03');
+  assert.equal(parseDate('2026-09-02T23:30:00+02:00'), '2026-09-02');
+  assert.equal(parseDate('2026-09-02T00:30:00-05:00'), '2026-09-02');
+  assert.equal(parseDate('3/2/2025'), '2025-02-03');
+  assert.throws(() => parseDate('2025-02/03'));
+  assert.throws(() => parseDate('2025-02-031'));
+
+  const loaded = await service.import(config, createMockFile('id;title;status;due_date\n;Feb31;open;31/02/2025'), defaultParams, {
+    manager: createMockManager({ tasks: [] }),
+    tenantId: 't1',
+  });
+  assert.equal(loaded.ok, false);
+  assert.equal(loaded.inserted, 0);
+  assert.deepEqual(loaded.errors.map((e) => e.code), ['CSV_DATE_INVALID']);
+}
+
 async function testNumberParsing() {
   const resolver = new CsvResolverService();
   const validators = new CsvJsonValidators();
@@ -794,6 +849,7 @@ Task;16/10/2026 14:30;;;16/10/2026 15:00`;
   await testMissingRequiredFieldError();
   await testInvalidEnumError();
   await testDateParsing();
+  await testImpossibleCalendarDates();
   await testNumberParsing();
   await testIdentityResolutionById();
   await testIdentityResolutionByUpsertKey();

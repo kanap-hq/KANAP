@@ -14,6 +14,7 @@ import { InterfaceBinding } from '../../interface-bindings/interface-binding.ent
 import { InterfaceConnectionLink } from '../../interface-connection-links/interface-connection-link.entity';
 import { Application } from '../../applications/application.entity';
 import { AuditService } from '../../audit/audit.service';
+import { assertWebLinkUrl } from '../../common/web-link-url';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { normalizeBindingLifecycle } from '../../interface-bindings/interface-bindings.service';
 import {
@@ -666,17 +667,18 @@ export class InterfaceBindingsManagementService extends InterfacesBaseService {
       url: item.url,
     }));
 
-    if (existing.length > 0) {
-      await repo.delete({ id: In(existing.map((item) => item.id)) as any });
-    }
-
+    // Every address is checked before the old links go: a refused one changes nothing.
     const normalized = (links || [])
       .map((item) => ({
         kind: String(item.kind || 'functional').trim() || 'functional',
         description: item.description == null ? null : String(item.description).trim() || null,
-        url: String(item.url || '').trim(),
+        url: assertWebLinkUrl(item.url),
       }))
       .filter((item) => item.url);
+
+    if (existing.length > 0) {
+      await repo.delete({ id: In(existing.map((item) => item.id)) as any });
+    }
 
     let saved: InterfaceLink[] = [];
     if (normalized.length > 0) {
@@ -722,7 +724,7 @@ export class InterfaceBindingsManagementService extends InterfacesBaseService {
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(InterfaceLink);
-    const url = String(body.url || '').trim();
+    const url = assertWebLinkUrl(body.url);
     if (!url) throw new BadRequestException('url is required');
     const kind = String(body.kind || 'functional').trim() || 'functional';
     const entity = repo.create({
@@ -762,7 +764,7 @@ export class InterfaceBindingsManagementService extends InterfacesBaseService {
         body.description === null || body.description === undefined ? null : String(body.description);
     }
     if (body.url !== undefined) {
-      const url = String(body.url || '').trim();
+      const url = assertWebLinkUrl(body.url);
       if (!url) throw new BadRequestException('url is required');
       existing.url = url;
     }

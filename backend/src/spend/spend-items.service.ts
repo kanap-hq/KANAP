@@ -19,6 +19,7 @@ import { FxRateService } from '../currency/fx-rate.service';
 import { extractStatusFilterFromAgModel } from '../common/status-filter';
 import { applyDisabledAtWhere, LifecycleScope, resolveEndOfValidityAlias, resolveLifecycleState, StatusState } from '../common/status';
 import { SpendItemUpsertDto } from './dto/spend-item.dto';
+import { assertWebLinkUrl } from '../common/web-link-url';
 import { SpendLink } from './spend-link.entity';
 import { SpendAttachment } from './spend-attachment.entity';
 import * as path from 'path';
@@ -677,12 +678,12 @@ export class SpendItemsService {
   async createLink(itemId: string, body: Partial<SpendLink>, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(SpendLink);
-    // The OPEX route requires the url; the CAPEX one stored it trimmed, empty when missing (as before).
-    if (this.nature === 'opex' && !body?.url) throw new BadRequestException('url is required');
+    // The OPEX route requires the url; the CAPEX one stores it trimmed, empty when missing (as before).
+    const url = assertWebLinkUrl(body?.url);
+    if (this.nature === 'opex' && !url) throw new BadRequestException('url is required');
     const line = await this.findItem(itemId, mg);
     // A line the person reads only: a clear 403 before the policy refuses the insert.
     await assertLinesEditable(mg, [line.id]);
-    const url = this.nature === 'opex' ? body.url : String(body?.url || '').trim();
     const entity = repo.create({ tenant_id: line.tenant_id, spend_item_id: line.id, url, description: (body?.description ?? null) as any } as any);
     const saved = await repo.save(entity as any);
     const shown = presentChild(this.nature, saved as any);
@@ -707,12 +708,16 @@ export class SpendItemsService {
     // Only the link's own fields the body supplies: the line and the tenant it belongs to stay as stored.
     const set: Partial<SpendLink> = {};
     if (this.nature === 'opex') {
-      if (body.url !== undefined) set.url = body.url;
+      if (body.url !== undefined) {
+        const url = assertWebLinkUrl(body.url);
+        if (!url) throw new BadRequestException('url is required');
+        set.url = url;
+      }
       if (body.description !== undefined) set.description = body.description;
     } else {
-      // A description sent empty clears it; the url is stored trimmed (the CAPEX route of before).
+      // A description sent empty clears it; the url is stored trimmed, empty when missing (the CAPEX route of before).
       if (body?.description !== undefined) set.description = body.description ?? null;
-      if (body?.url !== undefined) set.url = String(body.url || '').trim();
+      if (body?.url !== undefined) set.url = assertWebLinkUrl(body.url);
     }
     if (Object.keys(set).length > 0) await repo.update(where, set);
     const saved = (await repo.findOne({ where })) ?? before;

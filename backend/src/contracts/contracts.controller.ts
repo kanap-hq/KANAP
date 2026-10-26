@@ -9,7 +9,7 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { CONTRACT_LOOKUP_ACCESS, CONTRACT_LOOKUP_READERS, assertLookupSearch } from '../common/lookup/lookup-requirements';
-import { CONTRACT_LOOKUP, lookupReference } from '../common/lookup/reference-lookups';
+import { lookupContracts } from '../common/lookup/reference-lookups';
 import { ContractUpsertDto } from './dto/contract.dto';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { ShareRateLimit } from '../notifications/share-rate-limit';
@@ -67,7 +67,7 @@ export class ContractsController {
   lookup(@Query() query: any, @Tenant() ctx: TenantRequest) {
     // A role that only reads a picking page gets the chosen labels (`ids`), not the list.
     assertLookupSearch(CONTRACT_LOOKUP_ACCESS, ctx, query);
-    return lookupReference({ manager: ctx.manager, tenantId: ctx.tenantId }, CONTRACT_LOOKUP, query);
+    return lookupContracts({ manager: ctx.manager, tenantId: ctx.tenantId }, query);
   }
 
   // Export route before :id

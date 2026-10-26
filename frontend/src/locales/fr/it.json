@@ -176,6 +176,9 @@
       "exportCsv": "Exporter CSV",
       "exportTitle": "Exporter les actifs",
       "importTitle": "Importer les actifs",
+      "exportScope_one": "{{count}} actif, selon les filtres de la liste.",
+      "exportScope_other": "{{count}} actifs, selon les filtres de la liste.",
+      "exportScopeAll": "Tous les actifs ({{count}}).",
       "dataEnrichment": "Enrichissement des données",
       "columns": {
         "name": "Nom",
@@ -207,7 +210,13 @@
         "kept_one": "{{count}} actif ne peut pas être supprimé et est conservé :",
         "kept_other": "{{count}} actifs ne peuvent pas être supprimés et sont conservés :",
         "deleted_one": "{{count}} actif supprimé",
-        "deleted_other": "{{count}} actifs supprimés"
+        "deleted_other": "{{count}} actifs supprimés",
+        "title_one": "Supprimer {{count}} actif",
+        "title_other": "Supprimer {{count}} actifs",
+        "keptDone_one": "{{count}} actif conservé",
+        "keptDone_other": "{{count}} actifs conservés",
+        "keptReason_one": "Conservé : {{usages}} l’utilise.",
+        "keptReason_other": "Conservé : {{usages}} l’utilisent."
       }
     },
     "technologies": {
@@ -826,6 +835,8 @@
       "noZones": "Aucune zone d'administration définie pour l'instant.",
       "openSettings": "Les définir dans les réglages IT",
       "noZone": "Sans zone",
+      "filterZonesHint": "Choisissez une zone pour filtrer la liste des actifs.",
+      "filterZone": "Afficher les actifs de {{name}}.",
       "unknownZone": "Zone inconnue ({{code}})",
       "kindCount": "{{kind}} : {{count}}",
       "assetCount_one": "{{count}} actif",
@@ -855,6 +866,8 @@
         "domainControllers": "Contrôleurs de domaine"
       },
       "controls": "Points de contrôle",
+      "controlsCount_one": "{{count}} contrôle",
+      "controlsCount_other": "{{count}} contrôles",
       "controlsHint": "La zone la plus sensible est {{zone}}.",
       "controlsNoCatalog": "Ajoutez une zone d'administration dans les réglages IT pour lancer les autres contrôles.",
       "controlsList": {
@@ -908,7 +921,7 @@
         "title": "Affecter à une zone",
         "zone": "Zone",
         "save": "Affecter",
-        "scopeSelected_one": "L'actif sélectionné.",
+        "scopeSelected_one": "Cette affectation porte sur l'actif sélectionné.",
         "scopeSelected_other": "Les {{count}} actifs sélectionnés.",
         "scopeAll": "Tous les actifs du filtre actuel.",
         "scopeAllBut_one": "Tous les actifs du filtre actuel sauf {{count}}.",
@@ -1293,10 +1306,10 @@
         },
         "subLocations": {
           "create": "Nouveau",
-          "adopt": "Existant, désormais lié à Netbox",
-          "rename": "Renommé",
-          "update": "Description mise à jour",
-          "conflict": "Nom déjà utilisé, laissé inchangé",
+          "adopt": "Existant, sera lié à Netbox",
+          "rename": "Sera renommé",
+          "update": "La description sera mise à jour",
+          "conflict": "Nom déjà utilisé, sera laissé inchangé",
           "assets_one": "{{count}} actif",
           "assets_other": "{{count}} actifs"
         },
@@ -1305,6 +1318,7 @@
         "filterPlaceholder": "ex. : par-esx",
         "candidates": "Suggestions :",
         "alreadyIdentical": "Rien à changer sur cet actif.",
+        "skippedMore": "Et {{count}} de plus",
         "acceptSingle_one": "Lier l'objet qui n'a qu'une seule suggestion",
         "acceptSingle_other": "Lier les {{count}} objets qui n'ont qu'une seule suggestion",
         "decided": {
@@ -1315,9 +1329,9 @@
         "actions": {
           "undo": "Annuler ce choix",
           "decide": "Décider",
-          "change": "Corriger",
+          "change": "Lier à la place",
           "decideFor": "Décider pour {{name}}",
-          "changeFor": "Corriger la proposition pour {{name}}",
+          "changeFor": "Lier à la place pour {{name}}",
           "undoFor": "Annuler ce choix pour {{name}}"
         },
         "menu": {
@@ -1473,6 +1487,24 @@
         "cluster_not_mapped": "Le cluster Netbox « {{value}} » n'a pas de correspondance avec un cluster KANAP, ses machines virtuelles n'ont donc été rattachées à aucun.",
         "cluster_match_invalid": "Le cluster Netbox « {{value}} » correspond à un actif supprimé, retiré ou qui n'est plus un cluster, ses machines virtuelles n'y ont donc pas été rattachées.",
         "cluster_other_present": "KANAP place aussi la machine virtuelle « {{name}} » dans {{value}}. Cette relation a été conservée : retirez-la à la main si elle n'est plus à jour."
+      },
+      "previewNotices": {
+        "os_not_in_catalog": "Le système d'exploitation « {{value}} » ne figure pas dans votre catalogue, la valeur sera laissée inchangée.",
+        "domain_not_in_catalog": "Le domaine « {{value}} » ne figure pas dans votre catalogue, la valeur sera laissée inchangée.",
+        "hostname_invalid": "« {{value}} » ne peut pas servir de nom d'hôte, le nom d'hôte sera laissé inchangé.",
+        "ipv6_skipped": "L'adresse principale est une adresse IPv6, qui ne sera pas importée.",
+        "ip_conflict_skipped": "L'adresse {{value}} est déjà utilisée par un autre actif, elle sera laissée de côté.",
+        "subnet_not_in_catalog": "Le sous-réseau {{value}} ne figure pas dans votre catalogue, l'adresse sera enregistrée sans lui.",
+        "fetch_incomplete": "Netbox a renvoyé plus de pages que prévu. Certains objets ne seront pas examinés.",
+        "os_ambiguous": "Le système d'exploitation « {{value}} » correspond à plusieurs entrées de votre catalogue, la valeur sera laissée inchangée.",
+        "status_not_mapped": "Le statut Netbox « {{value}} » n'a pas d'équivalent dans KANAP, le cycle de vie sera laissé inchangé.",
+        "lifecycle_not_in_catalog": "Le cycle de vie « {{value}} » ne figure pas dans votre catalogue, la valeur sera laissée inchangée.",
+        "no_ip_address_type": "Aucun type d'adresse IP n'est défini dans les paramètres IT, l'adresse ne sera pas importée.",
+        "sub_location_name_taken": "Un sous-site nommé « {{value}} » existe déjà à ce site pour un autre emplacement Netbox. Le sous-site sera laissé inchangé.",
+        "locations_unavailable": "Netbox n'a pas renvoyé ses emplacements. Les sous-sites seront laissés inchangés.",
+        "cluster_not_mapped": "Le cluster Netbox « {{value}} » n'a pas de correspondance avec un cluster KANAP, ses machines virtuelles ne seront rattachées à aucun.",
+        "cluster_match_invalid": "Le cluster Netbox « {{value}} » correspond à un actif supprimé, retiré ou qui n'est plus un cluster, ses machines virtuelles ne lui seront pas rattachées.",
+        "cluster_other_present": "KANAP place aussi la machine virtuelle « {{name}} » dans {{value}}. Cette relation sera conservée : retirez-la à la main si elle n'est plus à jour."
       },
       "netboxStatus": {
         "active": "Actif",
@@ -2112,8 +2144,8 @@
           "status": "Statut",
           "operatingSystem": "Système d'exploitation"
         },
-        "hostnamePlaceholder": "ex. : server1",
-        "aliasesExamplePlaceholder": "ex. : server1, srv1",
+        "hostnamePlaceholder": "ex. : srv-paris-01",
+        "aliasesExamplePlaceholder": "ex. : srv-paris-01, srv-paris-02",
         "ipAddressPlaceholder": "ex. : 10.12.34.56",
         "removeIpAddress": "Retirer l'adresse IP"
       },
@@ -2123,6 +2155,7 @@
         "search": "Rechercher des technologies",
         "empty": "Aucune technologie sur ce serveur.",
         "platform": "Plateforme sous-jacente ({{count}})",
+        "emptyAsset": "Aucune technologie sur cet actif.",
         "operatingSystem": "Système d'exploitation",
         "edit": "Modifier",
         "editNamed": "Modifier {{name}}",
@@ -2142,7 +2175,9 @@
       "assignments": {
         "addAssignment": "Ajouter une affectation",
         "noAssignments": "Aucune affectation pour le moment.",
+        "noApplicationAccess": "Vous n'avez pas accès aux applications.",
         "assignmentAdded": "Affectation ajoutée",
+        "removed": "{{name}} retiré.",
         "application": "Application",
         "environment": "Environnement",
         "role": "Rôle",
@@ -2156,6 +2191,7 @@
         "environmentRequired": "L'environnement (instance) est requis",
         "roleRequired": "Le rôle est requis",
         "selectAppForEnv": "Sélectionnez une application pour choisir un environnement.",
+        "chooseEnvironment": "Choisissez un environnement.",
         "noInstances": "Aucune instance pour cette application",
         "noServerRoles": "Aucun rôle serveur configuré ; mettez à jour les paramètres de la cartographie SI.",
         "assign": "Affecter"
@@ -2190,6 +2226,8 @@
       },
       "newAsset": "Nouvel actif",
       "untitled": "Actif sans nom",
+      "notFound": "Actif introuvable.",
+      "backToList": "Retour à la liste",
       "previous": "Actif précédent",
       "next": "Actif suivant",
       "deleteConfirm": "Supprimer l'actif « {{name}} » ?",
@@ -2220,9 +2258,12 @@
         "notesPlaceholder": "ex. : alimentation remplacée sous garantie"
       },
       "impact": {
-        "title": "Si cet actif tombe",
-        "empty": "Aucun autre élément ne dépend de cet actif.",
-        "emptyInfrastructure": "Aucune autre infrastructure ne dépend de cet actif.",
+        "title": "Si ce serveur tombe",
+        "titleAsset": "Si cet actif tombe",
+        "empty": "Aucun autre élément ne dépend de ce serveur.",
+        "emptyAsset": "Aucun autre élément ne dépend de cet actif.",
+        "emptyInfrastructure": "Aucune autre infrastructure ne dépend de ce serveur.",
+        "emptyInfrastructureAsset": "Aucune autre infrastructure ne dépend de cet actif.",
         "loadFailed": "L'impact n'a pas pu être chargé.",
         "more_one": "et {{count}} autre",
         "more_other": "et {{count}} autres",
@@ -2255,16 +2296,23 @@
         },
         "via": {
           "contains": "Dans {{name}}",
-          "containsThisServer": "Dans cet actif",
+          "containsThisServer": "Dans ce serveur",
+          "containsThisAsset": "Dans cet actif",
           "dependsOn": "Dépend de {{name}}",
-          "dependsOnThisServer": "Dépend de cet actif",
+          "dependsOnThisServer": "Dépend de ce serveur",
+          "dependsOnThisAsset": "Dépend de cet actif",
           "member": "Membre de {{name}}",
           "memberThisServer": "Membre de ce cluster",
+          "memberThisAsset": "Membre de ce cluster",
           "on": "Sur {{name}}",
-          "onThisServer": "Sur cet actif",
-          "onThisServerAnd": "Sur cet actif, {{name}}",
-          "thisServer": "Cet actif",
-          "thisServerAnd": "Cet actif, {{name}}"
+          "onThisServer": "Sur ce serveur",
+          "onThisAsset": "Sur cet actif",
+          "onThisServerAnd": "Sur ce serveur, {{name}}",
+          "onThisAssetAnd": "Sur cet actif, {{name}}",
+          "thisServer": "Ce serveur",
+          "thisAsset": "Cet actif",
+          "thisServerAnd": "Ce serveur, {{name}}",
+          "thisAssetAnd": "Cet actif, {{name}}"
         },
         "state": {
           "down": "Tombé",
@@ -2304,6 +2352,9 @@
           "dependedOnBy": "Aucun actif ne dépend de celui-ci."
         },
         "containsHint": "Actifs hébergés par celui-ci, par exemple des VM.",
+        "feedback": {
+          "unlinked": "{{name}} délié."
+        },
         "alsoContainedBy": "Aussi contenu dans {{names}}",
         "via": "Via",
         "placementReplaced": "{{cluster}} remplace le lien entre {{hosts}} et {{asset}}.",
@@ -3329,7 +3380,7 @@
     "unsavedLeave": "Vous avez des modifications non enregistrées. Voulez-vous quitter sans enregistrer ?",
     "unsavedLeaveTab": "Vous avez des modifications non enregistrées. Quitter cet onglet ?",
     "unsavedContinue": "Vous avez des modifications non enregistrées. Continuer sans enregistrer ?",
-    "removeAssignment": "Retirer cette affectation ?",
+    "removeAssignment": "Retirer l'affectation de {{name}} ?",
     "deleteInstance": "Supprimer l'instance {{env}} ?",
     "deleteLocation": "Supprimer le site ?",
     "removeBinding": "Retirer cette liaison ?",

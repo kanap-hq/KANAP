@@ -22,6 +22,7 @@ import { randomUUID } from 'crypto';
 import { validate as isUuid } from 'uuid';
 import { ContractContactsService } from './contract-contacts.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { assertWebLinkUrl } from '../common/web-link-url';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import {
@@ -1027,10 +1028,11 @@ export class ContractsService {
   async createUrl(contractId: string, body: Partial<ContractLink>, userId?: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const urlsRepo = mg.getRepository(ContractLink);
-    if (!body.url) throw new BadRequestException('url is required');
+    const url = assertWebLinkUrl(body.url);
+    if (!url) throw new BadRequestException('url is required');
     const contract = await this.findContract(contractId, mg);
     await assertContractsEditable(mg, [contract.id]);
-    const entity = urlsRepo.create({ tenant_id: contract.tenant_id, contract_id: contract.id, url: body.url, description: body.description ?? null });
+    const entity = urlsRepo.create({ tenant_id: contract.tenant_id, contract_id: contract.id, url, description: body.description ?? null });
     const saved = await urlsRepo.save(entity);
     await this.audit.log({ table: 'contract_links', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
     return saved;
@@ -1043,7 +1045,11 @@ export class ContractsService {
     await assertContractsEditable(mg, [existing.contract_id]);
     // Only the link's own fields: the contract and the tenant it belongs to stay as resolved above.
     const next = { ...existing } as ContractLink;
-    if (body?.url !== undefined) next.url = body.url;
+    if (body?.url !== undefined) {
+      const url = assertWebLinkUrl(body.url);
+      if (!url) throw new BadRequestException('url is required');
+      next.url = url;
+    }
     if (body?.description !== undefined) next.description = body.description;
     const saved = await urlsRepo.save(next);
     await this.audit.log({ table: 'contract_links', recordId: saved.id, action: 'update', before: existing, after: saved, userId }, { manager: mg });

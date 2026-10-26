@@ -27,6 +27,16 @@ vi.mock('../../api/client', () => {
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: () => true }),
 }));
+const enumLabels = vi.hoisted(() => ({ serverKind: {} as Record<string, string> }));
+const enumOptions = vi.hoisted(() => {
+  const labelFor = (field: string, code?: string | null) => {
+    if (!code) return '';
+    if (field === 'serverKind' && enumLabels.serverKind[code]) return enumLabels.serverKind[code];
+    return code;
+  };
+  return { settings: null, byField: {}, labelFor, entityName: () => '' };
+});
+vi.mock('../../hooks/useItOpsEnumOptions', () => ({ default: () => enumOptions }));
 
 vi.mock('../../components/PageHeader', () => ({
   default: ({ title }: { title: string }) => <div>{title}</div>,
@@ -176,6 +186,7 @@ function renderPage(initialPath = '/it/settings?tab=netbox') {
 
 describe('NetboxSyncPage', () => {
   beforeEach(() => {
+    enumLabels.serverKind = {};
     vi.clearAllMocks();
     (apiClient.get as any).mockImplementation((url: string, config?: any) => {
       if (url === '/netbox/status') return Promise.resolve(STATUS);
@@ -298,8 +309,30 @@ describe('NetboxSyncPage', () => {
     expect(screen.getByText('1 device')).toBeInTheDocument();
     // A site can hold both.
     expect(screen.getByText('4 devices · 2 virtual machines')).toBeInTheDocument();
+    // No catalog loaded: the select keeps the label the mapping endpoint sent.
+    expect(screen.getByRole('combobox', { name: 'Virtual machines' })).toHaveTextContent('Virtual machine');
     // An unsaved label match is flagged as a suggestion.
     expect(screen.getByText('Suggested')).toBeInTheDocument();
+  });
+
+  it('shows the asset type in the catalog language, not the stored English label', async () => {
+    enumLabels.serverKind = { virtual_machine: 'Machine virtuelle', network_switch: 'Commutateur' };
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === '/netbox/status') return Promise.resolve(STATUS);
+      if (url === '/netbox/mapping-options') return Promise.resolve(MAPPING_OPTIONS);
+      if (url === '/netbox/records') return Promise.resolve({ items: [], total: 0 });
+      throw new Error(`Unexpected GET ${url}`);
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByText('Mappings'));
+
+    const select = await screen.findByRole('combobox', { name: 'Virtual machines' });
+    expect(select).toHaveTextContent('Machine virtuelle');
+    expect(select).not.toHaveTextContent('Virtual machine');
+    fireEvent.mouseDown(select);
+    expect(await screen.findByRole('option', { name: 'Machine virtuelle' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Commutateur' })).toBeInTheDocument();
   });
 
   it('says that suggestions are not saved, and offers to save them from the top', async () => {
@@ -578,10 +611,10 @@ describe('NetboxSyncPage', () => {
     expect(screen.getByText('new-app-01')).toBeInTheDocument();
     expect(screen.getByText(/^Cluster: .+ → GOU-VSPHERE-CL01$/)).toBeInTheDocument();
     expect(screen.getByText(
-      'The Netbox cluster "Parma vSphere" is not matched with a KANAP cluster, so its virtual machines were not attached to one.',
+      'The Netbox cluster "Parma vSphere" is not matched with a KANAP cluster, so its virtual machines will not be attached to one.',
     )).toBeInTheDocument();
     expect(screen.getByText(
-      'KANAP also places the virtual machine "par-app-01" in GOU-VSPHERE-CL01. That relation was kept: remove it by hand if it is out of date.',
+      'KANAP also places the virtual machine "par-app-01" in GOU-VSPHERE-CL01. That relation will be kept: remove it by hand if it is out of date.',
     )).toBeInTheDocument();
   });
 
@@ -637,6 +670,36 @@ describe('NetboxSyncPage', () => {
     expect(await screen.findByText('Netbox roles')).toBeInTheDocument();
   });
 
+  it('shows only the translated error when the preview cannot be read', async () => {
+    (apiClient.post as any).mockImplementation((url: string) => {
+      if (url === '/netbox/sync/preview') {
+        return Promise.resolve({
+          ok: false,
+          code: 'netbox_unreachable',
+          message: 'connect ECONNREFUSED 172.18.0.9:8999',
+          counts: { create: 0, update: 0, unchanged: 0, ambiguous: 0, skipped: 0, missing: 0, error: 0 },
+          rows: [],
+          rows_truncated: false,
+          batch: { listed: 0, remaining: 0 },
+          missing: [],
+          saved_matches: { roles: 1, sites: 1 },
+          sub_locations: { available: true, changes: [] },
+        });
+      }
+      if (url === '/netbox/sync') return Promise.resolve(STATUS);
+      throw new Error(`Unexpected POST ${url}`);
+    });
+
+    await openPreview();
+
+    expect(await screen.findByText('KANAP could not reach the Netbox server.')).toBeInTheDocument();
+    expect(screen.queryByText(/ECONNREFUSED/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/172\.18/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nothing to create or update/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/0 to create/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+  });
+
   it('groups the preview by what will happen and shows the field diffs', async () => {
     renderPage();
     await screen.findByText('par-esx-01');
@@ -651,7 +714,7 @@ describe('NetboxSyncPage', () => {
     expect(screen.getByText('Role not mapped · 1')).toBeInTheDocument();
     expect(screen.getByText('Warnings')).toBeInTheDocument();
     // Notice translated by code, with its params interpolated.
-    expect(screen.getByText('The operating system "Photon OS" is not in your catalogue, so it was left unchanged.')).toBeInTheDocument();
+    expect(screen.getByText('The operating system "Photon OS" is not in your catalogue, so it will be left unchanged.')).toBeInTheDocument();
   });
 
   it('offers no choice on an object an earlier run already linked, and says how a first match was made', async () => {
@@ -674,10 +737,10 @@ describe('NetboxSyncPage', () => {
 
     // Already linked: the change is shown, nothing to decide.
     expect(screen.getByText('Operating system: Ubuntu 22.04 LTS → NixOS 25.05')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Correct the proposal for par-web-01')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Link instead for par-web-01')).not.toBeInTheDocument();
     // First match by serial number: said so, and open to correction.
     expect(screen.getByText('Recognised by its serial number.')).toBeInTheDocument();
-    expect(screen.getByLabelText('Correct the proposal for par-esx-02')).toBeInTheDocument();
+    expect(screen.getByLabelText('Link instead for par-esx-02')).toBeInTheDocument();
     expect(screen.getByText('Nothing is changed yet. These values are written when you press Apply.')).toBeInTheDocument();
   });
 
@@ -744,7 +807,7 @@ describe('NetboxSyncPage', () => {
   it('sends the decision taken on a new object in the next preview', async () => {
     await openPreview();
 
-    fireEvent.click(screen.getByLabelText('Correct the proposal for par-sw-02'));
+    fireEvent.click(screen.getByLabelText('Link instead for par-sw-02'));
     fireEvent.click(screen.getByRole('menuitem', { name: /Do not import this object/ }));
 
     // Shown at once, before the new plan comes back.
@@ -775,7 +838,7 @@ describe('NetboxSyncPage', () => {
   it('undoing a decision takes it out of the next preview', async () => {
     await openPreview();
 
-    fireEvent.click(screen.getByLabelText('Correct the proposal for par-sw-02'));
+    fireEvent.click(screen.getByLabelText('Link instead for par-sw-02'));
     fireEvent.click(screen.getByRole('menuitem', { name: /Do not import this object/ }));
     await waitFor(() => expect(previewCalls()).toHaveLength(2), { timeout: 3000 });
 
@@ -789,7 +852,7 @@ describe('NetboxSyncPage', () => {
   it('applies the run with the decisions taken in the dialog', async () => {
     await openPreview();
 
-    fireEvent.click(screen.getByLabelText('Correct the proposal for par-sw-02'));
+    fireEvent.click(screen.getByLabelText('Link instead for par-sw-02'));
     fireEvent.click(screen.getByRole('menuitem', { name: /Do not import this object/ }));
     await waitFor(() => expect(previewCalls()).toHaveLength(2), { timeout: 3000 });
 
@@ -826,6 +889,7 @@ describe('NetboxSyncPage', () => {
     // Out-of-scope objects come as counts from the server, not as rows.
     expect(screen.getByText('Skipped (600)')).toBeInTheDocument();
     expect(screen.getByText('Role not mapped · 600')).toBeInTheDocument();
+    expect(screen.queryByText('And 600 more')).not.toBeInTheDocument();
     expect(screen.queryByText(/Everything is applied/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Apply this batch' }));
@@ -834,6 +898,29 @@ describe('NetboxSyncPage', () => {
       decisions: [],
       reviewed: PREVIEW.rows.map((row) => ({ external_type: row.external_type, external_id: row.external_id })),
     }));
+  });
+
+  it('names the skipped objects and says how many the sample leaves out', async () => {
+    (apiClient.post as any).mockImplementation((url: string) => {
+      if (url === '/netbox/sync/preview') {
+        return Promise.resolve({
+          ...PREVIEW,
+          counts: { ...PREVIEW.counts, skipped: 4 },
+          skipped_by_reason: { unmapped_site: 3, unnamed: 1 },
+          skipped_names: { unmapped_site: ['par-pdu-01', ''], unnamed: [''] },
+        });
+      }
+      if (url === '/netbox/sync') return Promise.resolve(STATUS);
+      throw new Error(`Unexpected POST ${url}`);
+    });
+
+    await openPreview();
+
+    expect(screen.getByText('Site not mapped · 3')).toBeInTheDocument();
+    expect(screen.getByText('par-pdu-01')).toBeInTheDocument();
+    expect(screen.getByText('And 1 more')).toBeInTheDocument();
+    expect(screen.getByText('No name in Netbox · 1')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getAllByText('Without a name')).toHaveLength(2);
   });
 
   it('refuses to apply against a server that would ignore the reviewed list', async () => {
@@ -916,7 +1003,7 @@ describe('NetboxSyncPage', () => {
 
     await openPreview();
 
-    fireEvent.click(screen.getByLabelText('Correct the proposal for par-sw-02'));
+    fireEvent.click(screen.getByLabelText('Link instead for par-sw-02'));
     fireEvent.click(screen.getByRole('menuitem', { name: /Link to an existing asset/ }));
 
     const search = await screen.findByLabelText('Search for an asset');
@@ -1000,8 +1087,8 @@ describe('NetboxSyncPage', () => {
     expect(screen.getByText('New')).toBeInTheDocument();
     // A rename reads as one shared row changing, not as every asset moving.
     expect(screen.getByText('Salle A → Salle B')).toBeInTheDocument();
-    expect(screen.getByText('Renamed')).toBeInTheDocument();
-    expect(screen.getByText('Name already used, left unchanged')).toBeInTheDocument();
+    expect(screen.getByText('Will be renamed')).toBeInTheDocument();
+    expect(screen.getByText('Name already used, will be left unchanged')).toBeInTheDocument();
     expect(screen.getByText('12 assets')).toBeInTheDocument();
     // A shared row nobody ends up in shows no count at all.
     expect(screen.queryByText('0 assets')).not.toBeInTheDocument();
@@ -1027,7 +1114,7 @@ describe('NetboxSyncPage', () => {
 
     await openPreview();
 
-    expect(await screen.findByText('Netbox did not return its locations. Sub-locations were left unchanged in this run.'))
+    expect(await screen.findByText('Netbox did not return its locations. Sub-locations will be left unchanged.'))
       .toBeInTheDocument();
     // The equipment plan is untouched by it.
     expect(screen.getByText('To create (1)')).toBeInTheDocument();

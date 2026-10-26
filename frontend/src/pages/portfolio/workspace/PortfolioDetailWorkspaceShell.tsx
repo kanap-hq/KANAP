@@ -298,8 +298,8 @@ export default function PortfolioDetailWorkspaceShell({
   }, [forceDrawerOpen, isCreate, nav, onBack, onSaveShortcut]);
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ flexShrink: 0 }}>
+    <Box sx={{ height: '100%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flexShrink: 0, minWidth: 0 }}>
         <Box
           component="header"
           sx={(theme) => ({
@@ -459,6 +459,7 @@ export default function PortfolioDetailWorkspaceShell({
           flexDirection: isMobile ? 'column' : 'row',
           overflow: 'visible',
           position: 'relative',
+          minWidth: 0,
           minHeight: 380,
         }}
       >

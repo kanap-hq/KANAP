@@ -9,6 +9,7 @@ import { displayName } from '../../display-name';
 import {
   lookupAccounts,
   lookupAnalyticsValues,
+  lookupContracts,
   lookupDepartments,
   lookupReference,
   SUPPLIER_LOOKUP,
@@ -287,6 +288,24 @@ async function testScopes() {
 
     await runner.query(`INSERT INTO departments (tenant_id, company_id, name) VALUES ($1, $2, 'Finance A'), ($1, $3, 'Finance B')`, [tenantId, companyA, companyNoChart]);
     assert.deepEqual(names(await lookupDepartments(call, { company_id: companyA, q: 'fin' })), ['Finance A'], "one company's departments");
+
+    const supplierA = await one(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Cisco') RETURNING id`, [tenantId]);
+    const supplierB = await one(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Fortinet') RETURNING id`, [tenantId]);
+    const ciscoCare = await one(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES ($1, 'Cisco Care', $2, $3, '2026-01-01') RETURNING id`,
+      [tenantId, companyA, supplierA],
+    );
+    const fortiCare = await one(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES ($1, 'FortiCare', $2, $3, '2026-01-01') RETURNING id`,
+      [tenantId, companyA, supplierB],
+    );
+    assert.deepEqual(names(await lookupContracts(call, { supplier_id: supplierA, q: 'care' })), ['Cisco Care'], "one vendor's contracts");
+    assert.deepEqual(
+      names(await lookupContracts(call, { supplier_id: supplierA, ids: `${ciscoCare},${fortiCare}` })).sort(),
+      ['Cisco Care', 'FortiCare'],
+      'ids hydrate a contract of another vendor',
+    );
+    await assert.rejects(() => lookupContracts(call, { supplier_id: 'nope' }), /supplier_id must be a uuid/);
 
     const axis1 = await one(`INSERT INTO analytics_axes (tenant_id, code, name) VALUES ($1, 'lk1', 'Axis 1') RETURNING id`, [tenantId]);
     const axis2 = await one(`INSERT INTO analytics_axes (tenant_id, code, name) VALUES ($1, 'lk2', 'Axis 2') RETURNING id`, [tenantId]);

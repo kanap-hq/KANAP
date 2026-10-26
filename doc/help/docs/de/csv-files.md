@@ -19,7 +19,9 @@ Jede Stammdatenseite hat **CSV exportieren** und **CSV importieren** in ihrer Sy
 | Spanisch | `;` | `12280,50` | `01/03/2027` | `sí`, `no` |
 | Deutsch | `;` | `12280,50` | `01.03.2027` | `ja`, `nein` |
 
-Ein Datum, das die Datei nicht selbst entscheiden kann, zum Beispiel `01/03/2027`, wird in der Reihenfolge der Sprache gelesen, in der die Oberfläche angezeigt wird: Tag zuerst auf Französisch, Deutsch und Spanisch, Monat zuerst auf Englisch. Die Prüfung sagt, wie sie die Datei gelesen hat, mit einer Schaltfläche zum Ändern der Lesart. Ein Datum mit einem Tag über 12 entscheidet die Frage selbst, und die Datei trägt keinen Hinweis auf die Sprache, in der sie exportiert wurde.
+**Datumsangaben** werden mit dem Jahr zuerst geschrieben (`2027-03-01`, `2027/03/01` oder `2027.03.01`) oder mit Tag und Monat vor dem Jahr (`01/03/2027`, `01.03.2027`). Ein in Worten geschriebenes Datum wie `Mar 1 2027` wird abgelehnt, ebenso ein Tag, den es im Kalender nicht gibt, wie `31/02/2027`.
+
+Auf den Stammdatenseiten wird ein Datum, das die Datei nicht selbst entscheiden kann, zum Beispiel `01/03/2027`, in der Reihenfolge der Sprache gelesen, in der die Oberfläche angezeigt wird: Tag zuerst auf Französisch, Deutsch und Spanisch, Monat zuerst auf Englisch. Die Prüfung sagt, wie sie die Datei gelesen hat, mit einer Schaltfläche zum Ändern der Lesart. Ein Datum mit einem Tag über 12 entscheidet die Frage selbst, und die Datei trägt keinen Hinweis auf die Sprache, in der sie exportiert wurde. Die Dateien der Anwendungen, Assets, Incidents, Projekte, Anfragen und Aufgaben lesen ein solches Datum immer mit dem Tag zuerst.
 
 Ein Import liest Ja oder Nein in jeder dieser Sprachen sowie `true`, `false`, `1` und `0` älterer Dateien. Die Dateien der Anwendungen, Assets, Incidents, Projekte, Anfragen und Aufgaben folgen derselben Tabelle, ebenso die Verknüpfungsdateien der Technologieliste. Siehe [Technologien](technologies.md#verknupfungen-importieren-und-exportieren).
 

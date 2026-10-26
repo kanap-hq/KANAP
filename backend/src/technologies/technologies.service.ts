@@ -14,6 +14,7 @@ import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
 import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, isCloudHostingType, resolveHostingType } from './hosting-type';
 import { normalizeCveNames, sortCveNames } from '../vulnerabilities/cve-affected-rules';
+import { assertWebLinkUrl } from '../common/web-link-url';
 import { defaultVulnerabilityAlerts } from '../vulnerabilities/vulnerability-alerts';
 import { SERVICE_PACK_PRODUCTS, servicePackLabelsOf } from '../vulnerabilities/vulnerability-rules';
 import { countingRowSql, rowJoinsSql, severeSql, vulnerabilityCountsEnabled } from '../vulnerabilities/vulnerability-reach-counts';
@@ -81,19 +82,11 @@ function cveNamesOf(input: unknown): ReturnType<typeof sortCveNames> {
   }
 }
 
-/** A scheme before the address (`javascript:`, `ftp:`), not a port after a host (`intranet:8080`). */
-const URL_SCHEME_RE = /^([a-z][a-z0-9+.-]*):(?!\d)/i;
-
-/**
- * The address of a web link: trimmed, required, and http or https when it names a scheme (400
- * otherwise). An address without one (`www.vmware.com/support`) opens as https, as the screens do.
- */
+/** The address of a web link: trimmed, required, and http or https (400 otherwise). */
 export function webLinkUrl(value: unknown): string {
   const url = optionalText(value, 'URL', LINK_URL_MAX);
   if (!url) throw new BadRequestException('url is required');
-  const scheme = URL_SCHEME_RE.exec(url)?.[1]?.toLowerCase();
-  if (scheme && scheme !== 'http' && scheme !== 'https') throw new BadRequestException('A web link must be an http or https address.');
-  return url;
+  return assertWebLinkUrl(url);
 }
 
 /** Columns the list grid filters with a set filter. */

@@ -80,6 +80,8 @@ export interface NetboxIntegrationView {
   default_environment: NetboxEnvironment;
   secret_writable: boolean;
   updated_at: string | null;
+  /** Absent on a payload from an older server. */
+  last_test?: { ok: boolean; tested_at: string } | null;
 }
 
 /** Partial: omitted keys keep their stored value. */
@@ -105,7 +107,12 @@ export interface NetboxTestInput {
 export interface NetboxTestResult {
   ok: boolean;
   message: string;
+  /** Stable code the screen translates (`errors:<code>`). Absent on a success. */
+  code?: string;
   netbox_version?: string;
+  /** When the test ran, and whether it was written on the saved configuration. */
+  tested_at?: string;
+  persisted?: boolean;
 }
 
 export interface NetboxMappingEntry {
@@ -239,6 +246,8 @@ export interface NetboxSyncCounts {
 
 export interface NetboxPreviewResult {
   ok: boolean;
+  /** Failure code (`errors:<code>`), or `fetch_incomplete` on a partial read. */
+  code?: string | null;
   message: string | null;
   counts: NetboxSyncCounts;
   /** `unchanged` rows are omitted; capped at 500. */
@@ -248,6 +257,8 @@ export interface NetboxPreviewResult {
   batch?: { listed: number; remaining: number };
   /** Out-of-scope objects by reason. They are counted, never listed. */
   skipped_by_reason?: Record<string, number>;
+  /** The first names for each reason. An empty string has no name. Absent on an older payload. */
+  skipped_names?: Record<string, string[]>;
   missing: NetboxRecordRow[];
   /**
    * Changes to the shared sub-locations, listed once each rather than once per

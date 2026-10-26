@@ -5,6 +5,7 @@ import { QueryRunner } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { assetCsvConfig } from '../asset-csv.config';
 import { AssetsCsvService } from '../assets-csv.service';
+import { AssetsListService } from '../services/assets-list.service';
 import { CsvExportService } from '../../common/csv/csv-export.service';
 import { CsvImportService } from '../../common/csv/csv-import.service';
 import { CsvResolverService } from '../../common/csv/csv-resolver.service';
@@ -102,6 +103,7 @@ async function testExport() {
       importer,
       itOps as any,
       operatingSystems,
+      new AssetsListService(runner.manager.getRepository(Asset)),
     );
     const exported = await service.export({ manager: runner.manager, tenantId, language: 'fr', scope: 'data', fields: ['name', 'cluster'] });
     const lines = exported.content.replace(/^﻿/, '').trim().split(/\r?\n/);

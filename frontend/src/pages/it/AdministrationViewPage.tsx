@@ -224,10 +224,16 @@ function SelectAllHeader() {
   );
 }
 
+/** The asset opens on its business reference. The id is only a fallback when the reference is missing. */
+function assetHref(row: { id: string; reference?: string | null }): string {
+  const reference = row.reference?.trim();
+  return `/it/assets/${reference || row.id}`;
+}
+
 function ReferenceCell({ data }: ICellRendererParams<AdministrationAssetRow>) {
   if (!data) return null;
   return (
-    <MLink component={RouterLink} to={`/it/assets/${data.id}`} underline="hover" onClick={(event: React.MouseEvent) => event.stopPropagation()} sx={cellLinkSx}>
+    <MLink component={RouterLink} to={assetHref(data)} underline="hover" onClick={(event: React.MouseEvent) => event.stopPropagation()} sx={cellLinkSx}>
       <RelationRef>{data.reference ?? data.name}</RelationRef>
     </MLink>
   );
@@ -299,9 +305,27 @@ function ApplicationsCell({ data }: ICellRendererParams<AdministrationAssetRow>)
   );
 }
 
+/** What a control's tooltip says: the trust finding names the assets and their zones, the others their title. */
+function controlTooltip(key: ControlKey, data: AdministrationAssetRow, t: (key: string, options?: Record<string, unknown>) => string, zoneName: (zone: string | null) => string) {
+  const peers = key === 'trust_raised' ? data.trust_peers : null;
+  if (peers && peers.items.length) {
+    return (
+      <>
+        {peers.items.map((peer, index) => (
+          <Box key={index}>
+            {t(`pages.administrationView.trustPeer.${peer.relation}`, { asset: peer.reference ? `${peer.reference} ${peer.name}` : peer.name, zone: zoneName(peer.zone) })}
+          </Box>
+        ))}
+        {peers.total > peers.items.length && <Box>{t('pages.administrationView.moreItems', { count: peers.total - peers.items.length })}</Box>}
+      </>
+    );
+  }
+  return t(`pages.administrationView.controlsList.${CONTROL_LOCALE[key]}.title`);
+}
+
 /**
- * The controls an asset raises, short, each a dot and its name. The trust finding's tooltip names
- * what the asset runs, or its cluster, with that asset's zone.
+ * The controls an asset raises. One control is a dot and its short name, on the compact row.
+ * Several would overflow that row, so the cell counts them and the tooltip names each one.
  */
 function ControlsCell({ data }: ICellRendererParams<AdministrationAssetRow>) {
   const { t } = useTranslation('it');
@@ -309,33 +333,35 @@ function ControlsCell({ data }: ICellRendererParams<AdministrationAssetRow>) {
   const zoneName = useContext(ZoneNameContext);
   if (!data || !data.findings.length) return null;
   const color = getDotColor('warning', theme.palette.mode);
+  if (data.findings.length === 1) {
+    const key = data.findings[0];
+    return (
+      <Tooltip title={controlTooltip(key, data, t, zoneName)}>
+        <Box component="span" data-findings="controls" data-finding={key} sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '100%', minWidth: 0 }}>
+          <StatusDot color={color} />
+          <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {t(`pages.administrationView.controlsList.${CONTROL_LOCALE[key]}.short`)}
+          </Box>
+        </Box>
+      </Tooltip>
+    );
+  }
   return (
-    <Box component="span" sx={{ display: 'inline-flex', flexWrap: 'nowrap', gap: 1.25, overflow: 'hidden' }}>
-      {data.findings.map((key) => {
-        const base = `pages.administrationView.controlsList.${CONTROL_LOCALE[key]}`;
-        const peers = key === 'trust_raised' ? data.trust_peers : null;
-        const tooltip = peers && peers.items.length
-          ? (
-            <>
-              {peers.items.map((peer, index) => (
-                <Box key={index}>
-                  {t(`pages.administrationView.trustPeer.${peer.relation}`, { asset: peer.reference ? `${peer.reference} ${peer.name}` : peer.name, zone: zoneName(peer.zone) })}
-                </Box>
-              ))}
-              {peers.total > peers.items.length && <Box>{t('pages.administrationView.moreItems', { count: peers.total - peers.items.length })}</Box>}
-            </>
-          )
-          : t(`${base}.title`);
-        return (
-          <Tooltip key={key} title={tooltip}>
-            <Box component="span" data-finding={key} sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-              <StatusDot color={color} />
-              {t(`${base}.short`)}
-            </Box>
-          </Tooltip>
-        );
-      })}
-    </Box>
+    <Tooltip title={(
+      <>
+        {data.findings.map((key) => (
+          <Box key={key}>
+            <Box>{t(`pages.administrationView.controlsList.${CONTROL_LOCALE[key]}.short`)}</Box>
+            {controlTooltip(key, data, t, zoneName)}
+          </Box>
+        ))}
+      </>
+    )}>
+      <Box component="span" data-findings="controls" data-finding-count={data.findings.length} sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', maxWidth: '100%' }}>
+        <StatusDot color={color} />
+        {t('pages.administrationView.controlsCount', { count: data.findings.length })}
+      </Box>
+    </Tooltip>
   );
 }
 
@@ -473,6 +499,7 @@ function ZoneRow({ name, description, adminGroup, counts, selected, onSelect }: 
       component="button"
       type="button"
       aria-pressed={selected}
+      title={t('pages.administrationView.filterZone', { name })}
       onClick={onSelect}
       sx={{
         display: 'grid',
@@ -548,11 +575,13 @@ function ZoneBand({ summary, selected, onSelect }: {
     );
   };
   return (
-    <Box
-      role="group"
-      aria-label={t('pages.administrationView.zones')}
-      sx={{ border: '1px solid', borderColor: 'kanap.border.default', borderRadius: 1, overflow: 'hidden' }}
-    >
+    <Box>
+      <Typography sx={{ fontSize: 12, ...quietSx, mb: 0.75 }}>{t('pages.administrationView.filterZonesHint')}</Typography>
+      <Box
+        role="group"
+        aria-label={t('pages.administrationView.zones')}
+        sx={{ border: '1px solid', borderColor: 'kanap.border.default', borderRadius: 1, overflow: 'hidden' }}
+      >
       {summary.zones.map((zone) => (
         <ZoneRow
           key={zone.code}
@@ -574,6 +603,7 @@ function ZoneBand({ summary, selected, onSelect }: {
         selected={selected === null}
         onSelect={() => onSelect(null)}
       />
+      </Box>
     </Box>
   );
 }
@@ -689,7 +719,7 @@ function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => s
             {row.domain_controllers.map((server, index) => (
               <React.Fragment key={server.id}>
                 {index > 0 && ', '}
-                <RecordLink to={`/it/assets/${server.id}`}>{server.name}</RecordLink>
+                <RecordLink to={`/it/assets/${server.reference || server.id}`}>{server.name}</RecordLink>
               </React.Fragment>
             ))}
           </>
@@ -777,6 +807,73 @@ export default function AdministrationViewPage() {
   const data = Array.isArray(summary.data?.zones) ? summary.data : undefined;
   const zones = useMemo(() => data?.zones ?? [], [data]);
   const zoneName = useCallback((code: string | null) => zoneNameOf(code, zones), [zoneNameOf, zones]);
+  const zonesRef = useRef(zones);
+  zonesRef.current = zones;
+  const zoneNameRef = useRef(zoneName);
+  zoneNameRef.current = zoneName;
+  // The grid filters by the catalog code. The address shows the name, so a link never carries a code such as tiens_1.
+  const zoneFilterAsCodes = useCallback((model: Record<string, any> | null | undefined) => {
+    const zone = model?.zone;
+    const values = zone?.values;
+    if (!model || !zone || !Array.isArray(values) || zonesRef.current.length === 0) return null;
+    let changed = false;
+    const next = values.map((value: unknown) => {
+      if (typeof value !== 'string' || zonesRef.current.some((zone) => zone.code === value)) return value;
+      const match = zonesRef.current.find((zone) => zoneNameRef.current(zone.code) === value);
+      if (!match) return value;
+      changed = true;
+      return match.code;
+    });
+    return changed ? { ...model, zone: { ...model.zone, values: next } } : null;
+  }, []);
+  // A zone filter in the address names the zone, and the grid must start on its code. While the
+  // zones are unknown the grid waits, so its first request never sends a zone name to the API.
+  const addressZoneFilter = useMemo(() => {
+    const raw = searchParams.get('filters');
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return parsed?.zone && Array.isArray(parsed.zone.values) ? parsed as Record<string, any> : null;
+    } catch {
+      return null;
+    }
+  }, [searchParams]);
+  const gridCanStart = !addressZoneFilter || !!data || summary.isError;
+  const gridInitialState = useMemo(
+    () => (addressZoneFilter && zones.length > 0
+      ? { filter: { filterModel: zoneFilterAsCodes(addressZoneFilter) ?? addressZoneFilter } }
+      : undefined),
+    [addressZoneFilter, zoneFilterAsCodes, zones],
+  );
+  useEffect(() => {
+    const grid = gridApiRef.current;
+    if (!grid?.getFilterModel) return;
+    const fixed = zoneFilterAsCodes(grid.getFilterModel());
+    if (fixed) grid.setFilterModel(fixed);
+  }, [zoneFilterAsCodes, zones]);
+  useEffect(() => {
+    if (zones.length === 0) return;
+    const raw = searchParams.get('filters');
+    if (!raw) return;
+    let parsed: Record<string, any>;
+    try { parsed = JSON.parse(raw); } catch { return; }
+    const model = parsed?.zone;
+    if (!model || !Array.isArray(model.values)) return;
+    let changed = false;
+    const values = model.values.map((value: unknown) => {
+      if (typeof value !== 'string') return value;
+      const known = zones.find((zone) => zone.code === value);
+      if (!known) return value;
+      const label = zoneName(value);
+      if (!label || label === value) return value;
+      changed = true;
+      return label;
+    });
+    if (!changed) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('filters', JSON.stringify({ ...parsed, zone: { ...model, values } }));
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, zoneName, zones]);
   const directories = useDirectories();
   // Every asset that is not retired: the zones' counts and those without one.
   const assetCount = data
@@ -819,8 +916,6 @@ export default function AdministrationViewPage() {
   const kindValues = useCallback(async () => (byField.serverKind || [])
     .map((option) => ({ value: option.code, label: labelFor('serverKind', option.code) }))
     .sort((a, b) => a.label.localeCompare(b.label)), [byField, labelFor]);
-  const zonesRef = useRef(zones);
-  zonesRef.current = zones;
   const zoneValues = useCallback(async () => [
     ...zonesRef.current.map((zone) => ({ value: zone.code as string | null, label: zoneNameOf(zone.code, zonesRef.current) })),
     { value: null, label: t('pages.administrationView.noZone') },
@@ -888,7 +983,8 @@ export default function AdministrationViewPage() {
       headerName: t('pages.administrationView.columns.controls'),
       colId: 'control',
       field: 'findings',
-      width: 220,
+      width: 240,
+      minWidth: 180,
       sortable: false,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
@@ -983,7 +1079,7 @@ export default function AdministrationViewPage() {
             </Box>
           )}
           {/* The header of the box column: the box alone, centred, without the cell's padding. */}
-          {tab === 'assets' && (
+          {tab === 'assets' && gridCanStart && (
             <Box sx={{
               '& .ag-header-cell[col-id="select"]': { px: 0 },
               '& .ag-header-cell[col-id="select"] .ag-header-cell-comp-wrapper': { justifyContent: 'center' },
@@ -1001,15 +1097,24 @@ export default function AdministrationViewPage() {
                 columnPreferencesKey="it-administration-assets"
                 refreshKey={refreshKey}
                 enableSearch
+                initialState={gridInitialState}
                 onGridApiReady={(gridApi) => { gridApiRef.current = gridApi; }}
-                onQueryStateChange={(state) => setGridFilters(state.filterModel ?? {})}
+                onQueryStateChange={(state) => {
+                  const model = state.filterModel ?? {};
+                  const fixed = zoneFilterAsCodes(model);
+                  if (fixed) {
+                    gridApiRef.current?.setFilterModel(fixed);
+                    return;
+                  }
+                  setGridFilters(model);
+                }}
                 onCellClicked={(event: any) => {
                   if (!event?.data?.id) return;
                   const target = event.event?.target as HTMLElement | undefined;
                   // A link in a cell (the reference, an application) opens its own page.
                   if (target?.closest?.('a')) return;
                   if (event.column?.getColId?.() !== SELECTION_COLUMN) {
-                    navigate(`/it/assets/${event.data.id}`);
+                    navigate(assetHref(event.data));
                     return;
                   }
                   // A click in the selection cell beside the box ticks it too; the box ticks itself.

@@ -1621,7 +1621,7 @@
       "title": "Netbox inventory",
       "description": "Bring your Netbox inventory into KANAP assets. Netbox stays the reference for the equipment it describes.",
       "status": {
-        "connected": "Connected",
+        "connected": "Configured",
         "disabled": "Disabled",
         "notConfigured": "Not configured"
       },
@@ -1654,8 +1654,12 @@
         "saveFailed": "The settings could not be saved.",
         "loadFailed": "The Netbox settings could not be loaded.",
         "testSuccess": "Connected to Netbox {{version}}.",
+        "testSuccessPlain": "Connected to Netbox.",
         "testFailed": "The connection to Netbox failed.",
-        "nextStep": "Netbox is connected."
+        "nextStep": "Netbox is configured.",
+        "lastTestOk": "Last test succeeded on {{date}}",
+        "lastTestFailed": "Last test failed on {{date}}",
+        "lastTestSession": "This result is kept for this session only."
       },
       "actions": {
         "save": "Save settings",

@@ -438,6 +438,17 @@ assert.equal(netboxAuthorizationHeader('  padded  '), 'Token padded');
     const error = await expectError(client.listDevices(connection));
     assert.equal(error.errorCode, 'provider_unavailable');
     assert.doesNotMatch(error.message, new RegExp(SECRET_TOKEN));
+    assert.doesNotMatch(error.message, /ECONNREFUSED/);
+  }
+
+  {
+    const { client, connection } = createClient(() => {
+      throw Object.assign(new Error('getaddrinfo ENOTFOUND netbox.internal'), { code: 'ENOTFOUND' });
+    });
+    const error = await expectError(client.listDevices(connection));
+    assert.equal(error.errorCode, 'dns');
+    assert.doesNotMatch(error.message, /ENOTFOUND/);
+    assert.doesNotMatch(error.message, /netbox\.internal/);
   }
 
   assert.equal(sanitizeNetboxText(`Token ${SECRET_TOKEN}`, SECRET_TOKEN), 'Token ***');

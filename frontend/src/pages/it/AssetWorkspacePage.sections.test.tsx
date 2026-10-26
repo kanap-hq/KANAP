@@ -14,25 +14,30 @@ const get = vi.hoisted(() => vi.fn());
 const patch = vi.hoisted(() => vi.fn());
 const post = vi.hoisted(() => vi.fn());
 const del = vi.hoisted(() => vi.fn());
-const t = vi.hoisted(() => (key: string) => key);
+const i18nMock = vi.hoisted(() => ({ t: (key: string) => key }));
+const auth = vi.hoisted(() => {
+  const ranks: Record<string, number> = { reader: 1, contributor: 2, member: 3, manager: 3, admin: 4 };
+  const grants: Record<string, string | null> = { infrastructure: 'member', applications: 'member' };
+  return {
+    grants,
+    hasLevel(resource: string, level: string) {
+      return (ranks[grants[resource] ?? ''] ?? 0) >= (ranks[level] ?? 99);
+    },
+  };
+});
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => ({
-    t,
+    t: i18nMock.t,
     i18n: { language: 'en', resolvedLanguage: 'en' },
   }),
 }));
 const features = vi.hoisted(() => ({ vulnerabilityFeed: false }));
 vi.mock('../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features } }) }));
 vi.mock('../../api', () => ({ default: { get, patch, post, delete: del } }));
-// What the person may do on infrastructure: nothing (a reader), 'member' (edits) or 'admin' (also deletes).
-const auth = vi.hoisted(() => ({ level: 'member' as 'reader' | 'member' | 'admin' }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({
-    hasLevel: (resource: string, level: string) => resource === 'infrastructure'
-      && ((level === 'member' && auth.level !== 'reader') || (level === 'admin' && auth.level === 'admin')),
-  }),
+  useAuth: () => ({ hasLevel: (resource: string, level: string) => auth.hasLevel(resource, level) }),
 }));
 // One object for every render, as the real hook memoises it: a fresh one would re-run the location effects forever.
 const enumOptions = vi.hoisted(() => ({
@@ -42,7 +47,7 @@ const enumOptions = vi.hoisted(() => ({
       { code: 'virtual_machine', label: 'Virtual machine', is_physical: false },
       { code: 'physical_server', label: 'Physical server', is_physical: true },
     ],
-    domains: [],
+    domains: [] as Array<{ code: string; label: string; dns_suffix?: string | null }>,
     subnets: [],
   },
   byField: {
@@ -51,7 +56,7 @@ const enumOptions = vi.hoisted(() => ({
     lifecycleStatus: [{ code: 'active', label: 'Active' }],
     serverRole: [],
     serverProvider: [{ code: 'on_prem', label: 'On premises' }],
-    ipAddressType: [],
+    ipAddressType: [] as Array<{ code: string; label: string }>,
   },
   labelFor: (_field: string, code: string) => code,
 }));
@@ -86,7 +91,7 @@ const ASSET = {
   admin_zone: '',
   fqdn: 'dc1',
   aliases: [],
-  ip_addresses: [],
+  ip_addresses: [] as Array<{ type: string; ip: string; subnet_cidr: string | null }>,
   is_cluster: false,
   status: 'active',
   go_live_date: null,
@@ -105,37 +110,62 @@ const REACH = {
 };
 
 // What the relations read and the cluster lists answer; each test sets them.
-const wire = vi.hoisted(() => ({ counts: { assets: 0, total: 0 } as Record<string, number>, members: [] as unknown[], clusters: [] as unknown[], candidates: [] as unknown[] }));
+const wire = vi.hoisted(() => ({
+  counts: { assets: 0, total: 0 } as Record<string, number>,
+  members: [] as unknown[],
+  clusters: [] as unknown[],
+  candidates: [] as unknown[],
+  assignments: [] as unknown[],
+  pauseRelations: null as Promise<void> | null,
+}));
+
+let rendered: { rerender: (ui: React.ReactElement) => void; ui: React.ReactElement } | null = null;
 
 function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | (() => Promise<unknown>) = ASSET) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   get.mockImplementation(async (url: string) => {
+    if (url === '/assets/by-ref/AST-500') {
+      const failed: any = new Error('Request failed with status code 500');
+      failed.response = { status: 500, data: { message: 'Database unavailable' } };
+      throw failed;
+    }
+    if (url === '/assets/by-ref/AST-999') {
+      const missing = new Error('Asset not found') as Error & { response?: unknown };
+      missing.response = { status: 404, data: { message: 'Asset not found' } };
+      throw missing;
+    }
     if (url === '/assets/asset-1' || url === '/assets/by-ref/AST-1') return typeof asset === 'function' ? asset() : { data: asset };
     if (url === VULNERABILITIES_URL) return typeof reach === 'function' ? reach() : { data: reach };
     if (url === '/assets/asset-2' || url === '/assets/by-ref/AST-2') return { data: { ...ASSET, id: 'asset-2', asset_reference: 'AST-2', is_cluster: false } };
     if (url === '/locations') return { data: { items: [] } };
     if (url === '/locations/loc-1') return { data: { id: 'loc-1', location_reference: 'LOC-1', name: 'Paris', hosting_type: 'on_prem' } };
     if (url.endsWith('/sub-items')) return { data: [] };
-    if (url.endsWith('/assignments')) return { data: { items: [], groupable: [] } };
-    if (url === '/assets/asset-1/relations-tab') return { data: { counts: wire.counts } };
+    if (url.endsWith('/assignments')) return { data: wire.assignments };
+    if (url === '/assets/asset-1/relations-tab') {
+      if (wire.pauseRelations) await wire.pauseRelations;
+      return { data: { counts: wire.counts } };
+    }
     if (url === '/assets') return { data: { items: wire.candidates } };
     if (url.endsWith('/members')) return { data: { items: wire.members } };
     if (url.endsWith('/clusters')) return { data: { items: wire.clusters } };
     return { data: { items: [], outgoing: [], incoming: [] } };
   });
-  render(
+  const ui = (
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={queryClient}>
         <KanapDialogProvider>
           <MemoryRouter initialEntries={[path]}>
             <Routes>
+              <Route path="/it/assets" element={<LocationProbe />} />
               <Route path="/it/assets/:id/:tab" element={<><AssetWorkspacePage /><LocationProbe /></>} />
             </Routes>
           </MemoryRouter>
         </KanapDialogProvider>
       </QueryClientProvider>
-    </ThemeProvider>,
+    </ThemeProvider>
   );
+  const view = render(ui);
+  rendered = { rerender: view.rerender, ui };
   return queryClient;
 }
 
@@ -144,6 +174,7 @@ function LocationProbe() {
   return (
     <>
       <div data-testid="location">{useLocation().pathname}</div>
+      <div data-testid="search">{useLocation().search}</div>
       <button type="button" data-testid="go-asset-2" onClick={() => navigate('/it/assets/asset-2/operations')}>go</button>
       <button type="button" data-testid="go-asset-1" onClick={() => navigate('/it/assets/asset-1/operations')}>back</button>
     </>
@@ -163,6 +194,7 @@ const follows = (first: Element, second: Element) =>
 
 describe('Asset workspace: section placement', () => {
   beforeEach(() => {
+    i18nMock.t = (key: string) => key;
     get.mockReset();
     patch.mockReset();
     post.mockReset();
@@ -171,8 +203,13 @@ describe('Asset workspace: section placement', () => {
     wire.members = [];
     wire.clusters = [];
     wire.candidates = [];
-    auth.level = 'member';
+    wire.assignments = [];
+    wire.pauseRelations = null;
+    auth.grants.infrastructure = 'member';
+    auth.grants.applications = 'member';
     features.vulnerabilityFeed = false;
+    enumOptions.byField.ipAddressType = [];
+    enumOptions.settings.domains = [];
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: false,
       media: query,
@@ -230,6 +267,145 @@ describe('Asset workspace: section placement', () => {
     expect(screen.queryByText('workspace.asset.technical.identity')).toBeNull();
   });
 
+  const hostedAssignment = {
+    id: 'asg-1',
+    app_instance_id: 'inst-1',
+    role: 'domain_controller',
+    since_date: null,
+    notes: null,
+    application: { id: 'app-1', name: 'Payroll' },
+    environment: 'prod',
+  };
+
+  const assignmentGets = () => get.mock.calls.filter(([url]) => String(url).endsWith('/assignments'));
+
+  it('shows add, edit and remove when the user can write infrastructure and applications', async () => {
+    wire.assignments = [hostedAssignment];
+    renderAt('/it/assets/asset-1/operations');
+    expect(await screen.findByRole('button', { name: 'Payroll' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'workspace.asset.assignments.addAssignment' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'workspace.asset.assignments.editAssignment' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'workspace.asset.assignments.removeAssignment' })).toBeInTheDocument();
+    expect(assignmentGets().length).toBeGreaterThan(0);
+  });
+
+  it('hides assignment commands for a reader, and still loads the list', async () => {
+    auth.grants.infrastructure = 'reader';
+    auth.grants.applications = 'reader';
+    wire.assignments = [hostedAssignment];
+    renderAt('/it/assets/asset-1/operations');
+    expect(await screen.findByRole('button', { name: 'Payroll' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'workspace.asset.assignments.addAssignment' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'workspace.asset.assignments.editAssignment' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'workspace.asset.assignments.removeAssignment' })).toBeNull();
+    expect(screen.queryByText('workspace.asset.assignments.actions')).toBeNull();
+    expect(assignmentGets().length).toBeGreaterThan(0);
+  });
+
+  it('names the application when removing an assignment and offers to put it back', async () => {
+    i18nMock.t = (key: string, opts?: { name?: string }) => (opts?.name ? `${key}(${opts.name})` : key);
+    wire.assignments = [hostedAssignment];
+    del.mockResolvedValue({ data: {} });
+    post.mockResolvedValue({ data: {} });
+    renderAt('/it/assets/asset-1/operations');
+    fireEvent.click(await screen.findByRole('button', { name: 'workspace.asset.assignments.removeAssignment' }));
+    expect(await screen.findByText('confirmations.removeAssignment(Payroll)')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.remove' }));
+    await waitFor(() => expect(del).toHaveBeenCalledWith('/app-instances/inst-1/assets/asg-1'));
+    expect(await screen.findByText('workspace.asset.assignments.removed(Payroll)')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/app-instances/inst-1/assets', {
+      server_id: 'asset-1',
+      role: 'domain_controller',
+      since_date: null,
+      notes: null,
+    }));
+  });
+
+  it('shows a failed restore of an assignment on the page', async () => {
+    i18nMock.t = (key: string, opts?: { name?: string }) => (opts?.name ? `${key}(${opts.name})` : key);
+    wire.assignments = [hostedAssignment];
+    del.mockResolvedValue({ data: {} });
+    const refused = new Error('Request failed') as Error & { response?: unknown };
+    refused.response = { status: 409, data: { message: 'Assignment already exists.' } };
+    post.mockRejectedValue(refused);
+    renderAt('/it/assets/asset-1/operations');
+    fireEvent.click(await screen.findByRole('button', { name: 'workspace.asset.assignments.removeAssignment' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.remove' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.undo.undo' }));
+    expect(await screen.findByText('Assignment already exists.')).toBeInTheDocument();
+  });
+
+  it('hides assignment commands when infrastructure is read-only even with application write access', async () => {
+    auth.grants.infrastructure = 'reader';
+    auth.grants.applications = 'member';
+    wire.assignments = [hostedAssignment];
+    renderAt('/it/assets/asset-1/operations');
+    expect(await screen.findByRole('button', { name: 'Payroll' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'workspace.asset.assignments.addAssignment' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'workspace.asset.assignments.removeAssignment' })).toBeNull();
+  });
+
+  it('does not load assignments and shows a short line without application read access', async () => {
+    auth.grants.applications = null;
+    renderAt('/it/assets/asset-1/operations');
+    expect(await screen.findByText('workspace.asset.assignments.noApplicationAccess')).toBeInTheDocument();
+    expect(screen.getByText('workspace.asset.operations.hostedApplications')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'workspace.asset.assignments.addAssignment' })).toBeNull();
+    expect(screen.queryByText('workspace.asset.assignments.noAssignments')).toBeNull();
+    expect(assignmentGets()).toEqual([]);
+  });
+
+  it('shows the translated refusal on a malformed IP address and keeps the typed value', async () => {
+    patch.mockRejectedValue({
+      response: {
+        status: 400,
+        data: {
+          code: 'asset_ip_invalid',
+          message: '"999.999.1.1" is not a valid IP address.',
+          params: { value: '999.999.1.1' },
+        },
+      },
+    });
+    const previousTypes = enumOptions.byField.ipAddressType;
+    enumOptions.byField.ipAddressType = [{ code: 'host', label: 'Host' }];
+    renderAt('/it/assets/asset-1/network', REACH, {
+      ...ASSET,
+      ip_addresses: [{ type: 'host', ip: '10.0.0.1', subnet_cidr: null }],
+    });
+    const field = await screen.findByDisplayValue('10.0.0.1');
+    fireEvent.change(field, { target: { value: '999.999.1.1' } });
+    fireEvent.blur(field);
+    await waitFor(() => expect(screen.getAllByText('errors:asset_ip_invalid')).toHaveLength(1));
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByDisplayValue('999.999.1.1')).toBeInTheDocument();
+  });
+
+  it('shows a refused host name on the banner without an unhandled rejection', async () => {
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown) => { unhandled.push(reason); };
+    const nodeProcess = (globalThis as unknown as { process: {
+      on(event: 'unhandledRejection', listener: (reason: unknown) => void): void;
+      off(event: 'unhandledRejection', listener: (reason: unknown) => void): void;
+    } }).process;
+    nodeProcess.on('unhandledRejection', onUnhandled);
+    try {
+      const conflict = new Error('Request failed with status code 409') as Error & { response?: unknown };
+      conflict.response = { status: 409, data: { message: 'This name is already in use.' } };
+      patch.mockRejectedValue(conflict);
+      renderAt('/it/assets/asset-1/network');
+      const field = await screen.findByPlaceholderText('workspace.asset.technical.hostnamePlaceholder');
+      await waitFor(() => expect(field).toHaveValue('dc1'));
+      fireEvent.change(field, { target: { value: 'taken-host' } });
+      fireEvent.blur(field);
+      await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('This name is already in use.'));
+      await new Promise((resolve) => { setTimeout(resolve, 30); });
+      expect(unhandled).toEqual([]);
+    } finally {
+      nodeProcess.off('unhandledRejection', onUnhandled);
+    }
+  });
+
   it('lists identity, IP addresses, then connections in the network tab', async () => {
     renderAt('/it/assets/asset-1/network');
     await waitFor(() => expect(screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder')).toHaveValue('dc1'));
@@ -273,6 +449,35 @@ describe('Asset workspace: section placement', () => {
     expect(screen.queryByText('workspace.asset.connections.title')).toBeNull();
     expect(screen.queryByText('technologies-section')).toBeNull();
     expect(currentPath()).toBe('/it/assets/new/network');
+  });
+
+  it('shows a not-found screen, and no editable asset, when the reference is unknown', async () => {
+    renderAt('/it/assets/AST-999/overview?q=nyc');
+    expect(await screen.findByText('workspace.asset.notFound')).toBeInTheDocument();
+    const reads = () => get.mock.calls.filter(([url]) => url === '/assets/by-ref/AST-999').length;
+    expect(reads()).toBe(1);
+    // A new translation function used to read the missing asset again.
+    i18nMock.t = (key: string) => key;
+    rendered?.rerender(rendered.ui);
+    await new Promise((resolve) => { setTimeout(resolve, 30); });
+    expect(reads()).toBe(1);
+    expect(screen.queryByText('Asset not found')).toBeNull();
+    expect(screen.queryByText('workspace.asset.untitled')).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    fireEvent.click(screen.getByRole('link', { name: 'workspace.asset.backToList' }));
+    await waitFor(() => expect(currentPath()).toBe('/it/assets'));
+    expect(screen.getByTestId('search').textContent).toBe('?q=nyc');
+  });
+
+  it('shows the error and a retry, not the not-found screen, when the asset cannot be read', async () => {
+    renderAt('/it/assets/AST-500/overview');
+    const retry = await screen.findByRole('button', { name: 'common:buttons.retry' });
+    expect(screen.queryByText('workspace.asset.notFound')).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    const reads = () => get.mock.calls.filter(([url]) => url === '/assets/by-ref/AST-500').length;
+    const before = reads();
+    fireEvent.click(retry);
+    await waitFor(() => expect(reads()).toBe(before + 1));
   });
 
   it('shows no untitled title while the asset loads, and shows it for a loaded asset without a name', async () => {
@@ -383,7 +588,7 @@ describe('Asset workspace: section placement', () => {
     });
 
     it('tells a reader, on the greyed switch, that the role does not allow editing', async () => {
-      auth.level = 'reader';
+      auth.grants.infrastructure = 'reader';
       renderAt('/it/assets/asset-1/overview');
       const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
       expect(toggle).toBeDisabled();
@@ -518,7 +723,7 @@ describe('Asset workspace: section placement', () => {
     });
 
     it('greys the members button for a reader, with the reason in a tooltip', async () => {
-      auth.level = 'reader';
+      auth.grants.infrastructure = 'reader';
       renderAt('/it/assets/asset-1/operations', REACH, { ...ASSET, is_cluster: true });
       const button = await screen.findByRole('button', { name: 'workspace.asset.technical.addMembers' });
       expect(button).toBeDisabled();
@@ -649,7 +854,7 @@ describe('Asset workspace: section placement', () => {
 
   describe('deleting an asset', () => {
     async function clickDelete() {
-      auth.level = 'admin';
+      auth.grants.infrastructure = 'admin';
       renderAt('/it/assets/asset-1/overview');
       fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
     }
@@ -688,6 +893,19 @@ describe('Asset workspace: section placement', () => {
 
   describe('dependencies and relations tabs', () => {
     const tabText = (name: string) => screen.getByRole('tab', { name: new RegExp(`workspace.asset.tabs.${name}`) }).textContent;
+
+    it('shows nothing on the Dependencies badge while the shared read is in flight', async () => {
+      let release: () => void = () => undefined;
+      wire.pauseRelations = new Promise<void>((resolve) => { release = resolve; });
+      wire.counts = { assets: 3, total: 4 };
+      renderAt('/it/assets/asset-1/overview');
+      await screen.findByText('support-panel');
+      expect(screen.getByRole('tab', { name: /^workspace\.asset\.tabs\.dependencies$/ }).textContent)
+        .toBe('workspace.asset.tabs.dependencies');
+      release();
+      await waitFor(() => expect(screen.getByRole('tab', { name: /workspace\.asset\.tabs\.dependencies/ }).textContent)
+        .toBe('workspace.asset.tabs.dependencies3'));
+    });
 
     it('puts Dependencies just before Relations and counts each from the one shared read', async () => {
       wire.counts = { assets: 3, total: 12 };
@@ -796,11 +1014,17 @@ describe('Asset workspace: section placement', () => {
   });
 
   describe('creating an asset', () => {
+    const chooseAssetType = async (label = 'Virtual machine') => {
+      fireEvent.mouseDown(screen.getByPlaceholderText('workspace.asset.overview.searchAssetTypes'));
+      fireEvent.click(await screen.findByRole('option', { name: label }));
+    };
     const startCreation = async () => {
       renderAt('/it/assets/new/overview');
-      fireEvent.change(await screen.findByPlaceholderText('workspace.asset.overview.namePlaceholder'), { target: { value: 'web 1' } });
+      const name = await screen.findByPlaceholderText('workspace.asset.overview.namePlaceholder');
+      fireEvent.change(name, { target: { value: 'web 1' } });
       fireEvent.click(screen.getAllByText('pick-location')[0]);
       await waitFor(() => expect(get).toHaveBeenCalledWith('/locations/loc-1'));
+      await chooseAssetType();
       fireEvent.click(screen.getByRole('tab', { name: /workspace.asset.tabs.network/ }));
       await waitFor(() => expect(currentPath()).toBe('/it/assets/new/network'));
       return screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder');
@@ -826,7 +1050,65 @@ describe('Asset workspace: section placement', () => {
       fireEvent.change(hostname, { target: { value: 'web 01!' } });
       await create();
       await waitFor(() => expect(currentPath()).toBe('/it/assets/new/network'));
-      expect(screen.getAllByText('workspace.asset.technical.hostnameInvalid').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('workspace.asset.technical.hostnameInvalid')).toHaveLength(1);
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(post).not.toHaveBeenCalled();
+    });
+
+    it('leaves Create disabled until an asset type is chosen', async () => {
+      renderAt('/it/assets/new/overview');
+      fireEvent.change(await screen.findByPlaceholderText('workspace.asset.overview.namePlaceholder'), { target: { value: 'web 1' } });
+      fireEvent.click(screen.getAllByText('pick-location')[0]);
+      await waitFor(() => expect(get).toHaveBeenCalledWith('/locations/loc-1'));
+      const button = screen.getByRole('button', { name: 'common:buttons.create' });
+      expect(button).toBeDisabled();
+      expect(screen.queryByDisplayValue('Virtual machine')).toBeNull();
+      await chooseAssetType();
+      await waitFor(() => expect(button).toBeEnabled());
+    });
+
+    it('shows type, environment and site once, in the properties', async () => {
+      renderAt('/it/assets/new/overview');
+      await screen.findByText('workspace.asset.overview.basics');
+      expect(screen.getAllByText('workspace.asset.overview.assetType')).toHaveLength(1);
+      expect(screen.getAllByText('workspace.asset.technical.environment')).toHaveLength(1);
+      expect(screen.getAllByText('workspace.asset.overview.location')).toHaveLength(1);
+    });
+
+    it('stops a name at 200 characters, in the field and in the title', async () => {
+      renderAt('/it/assets/new/overview');
+      const field = await screen.findByPlaceholderText('workspace.asset.overview.namePlaceholder');
+      expect(field).toHaveAttribute('maxlength', '200');
+      fireEvent.change(field, { target: { value: 'n'.repeat(313) } });
+      expect(field).toHaveValue('n'.repeat(200));
+      fireEvent.click(screen.getByText('n'.repeat(200)));
+      const title = screen.getAllByRole('textbox').find((node) => node !== field && node.getAttribute('maxlength') === '200');
+      expect(title).toBeTruthy();
+    });
+
+    it('shows a host name problem under the field, and only there', async () => {
+      enumOptions.settings.domains = [{ code: 'corp', label: 'Corp', dns_suffix: 'corp.example' }];
+      const hostname = await startCreation();
+      fireEvent.change(hostname, { target: { value: 'qa c4!' } });
+      await create();
+      await waitFor(() => expect(currentPath()).toBe('/it/assets/new/network'));
+      expect(screen.getAllByText('workspace.asset.technical.hostnameInvalid')).toHaveLength(1);
+      expect(screen.queryByRole('alert')).toBeNull();
+      // The network tab remounts its field when Create sends us back to it.
+      const hostnameField = screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder');
+      fireEvent.change(hostnameField, { target: { value: '' } });
+      await waitFor(() => expect(screen.queryByText('workspace.asset.technical.hostnameInvalid')).toBeNull());
+      const domainLabel = screen.getByText('workspace.asset.technical.domain');
+      const domainBox = domainLabel.parentElement?.querySelector('[role="combobox"]');
+      expect(domainBox).toBeTruthy();
+      fireEvent.mouseDown(domainBox as HTMLElement);
+      fireEvent.click(await screen.findByRole('option', { name: 'Corp' }));
+      expect(screen.getAllByText('workspace.asset.technical.hostnameRequired')).toHaveLength(1);
+      expect(screen.queryByRole('alert')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+      expect(screen.getAllByText('workspace.asset.technical.hostnameRequired')).toHaveLength(1);
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.queryByText('workspace.asset.technical.hostnameInvalid')).toBeNull();
       expect(post).not.toHaveBeenCalled();
     });
   });
@@ -977,7 +1259,8 @@ describe('Asset workspace: section placement', () => {
 describe('Asset creation: leaving with unsaved changes', () => {
   beforeEach(() => {
     get.mockReset();
-    auth.level = 'member';
+    auth.grants.infrastructure = 'member';
+    auth.grants.applications = 'member';
     features.vulnerabilityFeed = false;
   });
 
@@ -1007,7 +1290,8 @@ describe('Asset creation: leaving with unsaved changes', () => {
     await typeName();
     fireEvent.click(screen.getByRole('button', { name: 'pages.assets.title' }));
     fireEvent.click(await screen.findByRole('button', { name: 'common:unsaved.leaveWithoutSaving.confirm' }));
-    await waitFor(() => expect(screen.queryByTestId('location')).toBeNull());
+    // The list route keeps a location probe: leaving lands on it.
+    await waitFor(() => expect(currentPath()).toBe('/it/assets'));
   });
 
   it('asks the same question before a menu link leaves', async () => {

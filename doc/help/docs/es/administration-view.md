@@ -49,7 +49,7 @@ La zona más sensible es la primera zona de la configuración que no está marca
 | Punto de control | Activos que lista |
 |---|---|
 | **Sin zona asignada** | Los activos que no tienen zona |
-| **Controlador de dominio fuera** | Los activos asignados con el rol de servidor **Controlador de dominio** a una aplicación en servicio, cuando su zona no es la más sensible |
+| **Controlador de dominio fuera** | Los controladores de dominio que lista la pestaña **Directorios y dominios**, cuando su zona no es la más sensible. Un servidor de directorio sin dominio, o con un dominio que falta en la configuración, solo cuenta en **Servicio de directorio fuera** |
 | **Servicio de directorio fuera** | Los activos con una tecnología de directorio instalada, como Active Directory, cuando su zona no es la más sensible |
 | **Host menos sensible** | Los activos que hay que elevar: un host que ejecuta un activo de una zona más sensible (un host tier 1 que ejecuta una máquina virtual tier 0, por ejemplo), o el miembro de un clúster de una zona más sensible (un host ESX tier 1 en un clúster tier 0, por ejemplo) |
 | **Aplicación alojada** | Los activos de la zona más sensible que alojan una aplicación en servicio. Revise si cada aplicación debe estar ahí |
@@ -95,7 +95,7 @@ Si entran activos en el filtro entre el recuento y la confirmación, KANAP recha
 | **Sufijo DNS** | El sufijo de los nombres de sus equipos |
 | **Confianzas** | Los dominios con los que tiene una confianza, y la dirección de cada una |
 | **Cuentas**, **Equipos** | Los números registrados en la configuración. Un guion significa que no hay ninguno registrado |
-| **Controladores de dominio** | Cuántos servidores deduce KANAP como controladores del dominio, y después sus nombres |
+| **Controladores de dominio** | Cuántos servidores deduce KANAP como controladores del dominio, y después sus nombres. Haga clic en un nombre para abrir el activo |
 
 **Confianzas** también lista, en gris, las confianzas declaradas en otro dominio hacia este, con la dirección vista desde este dominio: una confianza saliente de A hacia B se lee como entrante en B. Las direcciones significan:
 

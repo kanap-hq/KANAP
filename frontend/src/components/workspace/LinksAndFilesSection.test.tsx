@@ -54,11 +54,20 @@ describe('LinksAndFilesSection', () => {
     expect(screen.getByText('3')).toBeTruthy();
   });
 
-  it('opens a link in a new tab and a file through its callback', () => {
-    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+  it('opens a web link through a real link, and a file through its callback', () => {
     const handlers = renderSection();
-    fireEvent.click(screen.getByText('Vendor portal'));
-    expect(open).toHaveBeenCalledWith('https://portal.talend.com/login', '_blank', 'noopener,noreferrer');
+    const name = screen.getByRole('link', { name: 'Vendor portal' });
+    expect(name).toHaveAttribute('href', 'https://portal.talend.com/login');
+    expect(name).toHaveAttribute('target', '_blank');
+    expect(name).toHaveAttribute('rel', 'noopener noreferrer');
+    const address = screen.getByRole('link', { name: 'portal.talend.com' });
+    expect(address).toHaveAttribute('href', 'https://portal.talend.com/login');
+    expect(address).toHaveAttribute('target', '_blank');
+    expect(address).toHaveAttribute('rel', 'noopener noreferrer');
+    // A stored address without a scheme, and one that is not http, still open as https.
+    const plain = screen.getAllByRole('link', { name: 'status.talend.com' });
+    expect(plain).toHaveLength(2);
+    plain.forEach((link) => expect(link).toHaveAttribute('href', 'https://status.talend.com'));
     fireEvent.click(screen.getByText('Architecture.pdf'));
     expect(handlers.onOpenFile).toHaveBeenCalledWith(FILES[0]);
   });
@@ -70,6 +79,20 @@ describe('LinksAndFilesSection', () => {
     fireEvent.change(screen.getByRole('textbox', { name: 'linksAndFiles.url' }), { target: { value: 'https://talend.com/notes' } });
     fireEvent.click(screen.getByRole('button', { name: 'buttons.add' }));
     await waitFor(() => expect(handlers.onAddLink).toHaveBeenCalledWith({ name: 'Release notes', url: 'https://talend.com/notes' }));
+  });
+
+  it('shows a refused link inside the dialog and keeps it open', async () => {
+    renderSection({
+      onAddLink: vi.fn().mockRejectedValue({
+        response: { status: 400, data: { message: '« javascript:alert(1) » is not an http or https address.' } },
+      }),
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.addLink' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'linksAndFiles.url' }), { target: { value: 'javascript:alert(1)' } });
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.add' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('« javascript:alert(1) » is not an http or https address.');
+    expect(within(dialog).getByRole('heading', { name: 'linksAndFiles.newLink' })).toBeTruthy();
   });
 
   it('edits a link from its hover action, with its values filled in', async () => {
@@ -115,13 +138,11 @@ describe('LinksAndFilesSection', () => {
   });
 
   it('gives readers the table and the opening only', () => {
-    const open = vi.spyOn(window, 'open').mockReturnValue(null);
     renderSection({ canEdit: false });
     expect(screen.queryByRole('button', { name: 'linksAndFiles.addLink' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'linksAndFiles.attachFile' })).toBeNull();
     expect(screen.queryByRole('button', { name: /removeNamed|editLinkNamed/ })).toBeNull();
-    fireEvent.click(screen.getByText('Vendor portal'));
-    expect(open).toHaveBeenCalled();
+    expect(screen.getByRole('link', { name: 'Vendor portal' })).toHaveAttribute('href', 'https://portal.talend.com/login');
   });
 
   it('reads the domain of a URL, with or without its scheme', () => {

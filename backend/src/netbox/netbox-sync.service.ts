@@ -36,6 +36,7 @@ import {
   suggestOperatingSystem,
 } from './netbox-mapper';
 import { ExistingAsset } from './netbox-matcher';
+import { netboxBadRequest, netboxFailureOf } from './netbox-errors';
 import { NetboxNotice, netboxNotice, netboxNoticeFromStore, primaryNotice } from './netbox-notice';
 import {
   ExistingLink,
@@ -183,6 +184,8 @@ export type NetboxRecordRow = {
 
 export type NetboxPreviewResult = {
   ok: boolean;
+  /** A stable code the screen translates. Set on a failure, and on a partial read. */
+  code?: string | null;
   message: string | null;
   counts: NetboxSyncCounts;
   rows: NetboxPlanRow[];
@@ -194,6 +197,8 @@ export type NetboxPreviewResult = {
   batch: { listed: number; remaining: number };
   /** Out-of-scope objects by reason; they are counted, never listed. */
   skipped_by_reason: Record<string, number>;
+  /** The first names for each skip reason. Absent names are empty strings. */
+  skipped_names: Record<string, string[]>;
   missing: NetboxRecordRow[];
   /**
    * How many role and site matches are SAVED. The Mappings tab pre-fills its
@@ -342,11 +347,20 @@ export function objectFailureNotice(error: unknown): NetboxNotice {
   return netboxNotice('save_failed');
 }
 
-/** A name another record already has (409 `duplicate`, `common/duplicate-name.ts`): its message reads plainly. */
-function isDuplicateNameRefusal(error: unknown): error is ConflictException {
-  if (!(error instanceof ConflictException)) return false;
+/** The `code` of a refusal from the services (`{ code, message }`), when it carries one. */
+function refusalCode(error: unknown): string | null {
+  if (!(error instanceof BadRequestException) && !(error instanceof ConflictException)) return null;
   const response = error.getResponse();
-  return typeof response === 'object' && response !== null && (response as { code?: unknown }).code === 'duplicate';
+  const code = typeof response === 'object' && response !== null ? (response as { code?: unknown }).code : null;
+  return typeof code === 'string' ? code : null;
+}
+
+/** Names another record already holds: 409 `duplicate` (`common/duplicate-name.ts`), or an asset's name or FQDN. */
+const DUPLICATE_NAME_CODES = new Set(['duplicate', 'asset_name_taken', 'asset_fqdn_taken']);
+
+/** A name another record already has: its message reads plainly. */
+function isDuplicateNameRefusal(error: unknown): error is ConflictException {
+  return error instanceof ConflictException && DUPLICATE_NAME_CODES.has(refusalCode(error) ?? '');
 }
 
 /** The locations service refusing a name another sub-location already holds. */
@@ -355,9 +369,9 @@ function isSubLocationNameRejection(error: unknown): boolean {
     && /already exists at this location/i.test(httpExceptionMessage(error) ?? '');
 }
 
-function isDuplicateIpRejection(error: unknown): boolean {
-  return error instanceof BadRequestException
-    && /ip address/i.test(httpExceptionMessage(error) ?? '');
+/** An IP address another asset already holds in the same subnet. A malformed address is not one. */
+export function isDuplicateIpRejection(error: unknown): boolean {
+  return error instanceof BadRequestException && refusalCode(error) === 'asset_ip_taken';
 }
 
 /** Every Location by id, which is how the walk up to the top level finds a parent. */
@@ -548,16 +562,20 @@ export class NetboxSyncService {
     manager: EntityManager,
     tenantId: string,
     input: { base_url?: unknown; api_token?: unknown; insecure_tls?: unknown; request_timeout_seconds?: unknown },
-  ): Promise<{ ok: boolean; message: string; netbox_version?: string }> {
+  ): Promise<{ ok: boolean; code?: string; message: string; netbox_version?: string }> {
     const config = await this.config.getConfig(manager, tenantId);
     const baseUrlRaw = typeof input.base_url === 'string' && input.base_url.trim() ? input.base_url.trim() : null;
     const tokenRaw = typeof input.api_token === 'string' && input.api_token.trim() ? input.api_token.trim() : null;
     const timeoutRaw = Number(input.request_timeout_seconds);
+    // The outcome is kept on the configuration only when the test used the
+    // saved address and token, not values typed in the dialog and not saved.
+    let testsStoredValues = !!config && !tokenRaw && !baseUrlRaw;
 
     let connection;
     try {
       const baseUrl = baseUrlRaw ? normalizeNetboxAddress(baseUrlRaw) : null;
       if (baseUrl) assertPublicHttpUrl(baseUrl); // SSRF: blocks internal targets in cloud, no-op on-prem
+      if (baseUrl && config && !tokenRaw && baseUrl === (config.base_url ?? null)) testsStoredValues = true;
       connection = this.config.buildConnection(config, {
         baseUrl,
         token: tokenRaw,
@@ -565,19 +583,55 @@ export class NetboxSyncService {
         timeoutSeconds: Number.isFinite(timeoutRaw) && timeoutRaw > 0 ? timeoutRaw : undefined,
       });
     } catch (error) {
-      return { ok: false, message: plainErrorMessage(error) };
+      return this.finishConnectionTest(manager, tenantId, testsStoredValues ? config : null, this.connectionFailure(tenantId, 'connection test', error));
     }
 
     try {
       const version = await this.client.getVersion(connection);
-      return {
+      return this.finishConnectionTest(manager, tenantId, testsStoredValues ? config : null, {
         ok: true,
         ...(version ? { netbox_version: version } : {}),
         message: version ? `Connected to Netbox ${version}.` : 'Connected to Netbox.',
-      };
+      });
     } catch (error) {
-      return { ok: false, message: plainErrorMessage(error) };
+      return this.finishConnectionTest(manager, tenantId, testsStoredValues ? config : null, this.connectionFailure(tenantId, 'connection test', error));
     }
+  }
+
+  /**
+   * Writes the test outcome next to the saved address when a configuration
+   * exists. A failed write still returns the outcome: the card can show it
+   * for this session.
+   */
+  private async finishConnectionTest(
+    manager: EntityManager,
+    tenantId: string,
+    config: AiAdapterConfig | null,
+    result: { ok: boolean; code?: string; message: string; netbox_version?: string },
+  ): Promise<{ ok: boolean; code?: string; message: string; netbox_version?: string; tested_at: string; persisted: boolean }> {
+    const testedAt = new Date().toISOString();
+    let persisted = false;
+    if (config) {
+      try {
+        persisted = await this.config.recordConnectionTest(manager, config, { ok: result.ok, tested_at: testedAt });
+      } catch (error) {
+        this.logger.warn(`Netbox last test could not be saved for tenant ${tenantId}: ${plainErrorMessage(error)}`);
+      }
+    }
+    return { ...result, tested_at: testedAt, persisted };
+  }
+
+  /** A connection problem as a code and a sentence the screen can translate. */
+  private connectionFailure(
+    tenantId: string,
+    action: string,
+    error: unknown,
+  ): { ok: false; code: string; message: string } {
+    const failure = netboxFailureOf(error);
+    if (failure.detail) {
+      this.logger.warn(`Netbox ${action} failed for tenant ${tenantId}: ${failure.detail}`);
+    }
+    return { ok: false, code: failure.code, message: failure.message };
   }
 
   /**
@@ -624,7 +678,11 @@ export class NetboxSyncService {
         }),
       ]);
     } catch (error) {
-      throw new BadRequestException(plainErrorMessage(error));
+      const failure = netboxFailureOf(error);
+      if (failure.detail) {
+        this.logger.warn(`Netbox mapping options failed for tenant ${tenantId}: ${failure.detail}`);
+      }
+      throw netboxBadRequest(failure.code);
     }
 
     // Every virtual machine is matched through one reserved entry, listed
@@ -971,14 +1029,17 @@ export class NetboxSyncService {
         this.previewInventory.set(tenantId, { at: Date.now(), baseUrl, fetched });
       }
     } catch (error) {
+      const failure = this.connectionFailure(tenantId, 'preview', error);
       return {
         ok: false,
-        message: plainErrorMessage(error),
+        code: failure.code,
+        message: failure.message,
         counts: { create: 0, update: 0, unchanged: 0, ambiguous: 0, skipped: 0, missing: 0, error: 0 },
         rows: [],
         rows_truncated: false,
         batch: { listed: 0, remaining: 0 },
         skipped_by_reason: {},
+        skipped_names: {},
         missing: [],
         saved_matches: savedMatches,
         // Nothing was read, so nothing is known about the sub-locations either.
@@ -1018,12 +1079,14 @@ export class NetboxSyncService {
     return {
       ok: true,
       // A partial inventory is worth saying out loud before anyone applies it.
+      code: fetched.complete ? null : 'fetch_incomplete',
       message: fetched.complete ? null : netboxNotice('fetch_incomplete').text,
       counts: plan.counts,
       rows: batch.rows,
       rows_truncated: batch.remaining > 0,
       batch: { listed: batch.rows.length, remaining: batch.remaining },
       skipped_by_reason: batch.skipped_by_reason,
+      skipped_names: batch.skipped_names,
       missing: missingRows,
       saved_matches: savedMatches,
       sub_locations: {
@@ -1902,7 +1965,11 @@ export class NetboxSyncService {
         ? await this.client.getDevice(connection, record.external_id)
         : await this.client.getVirtualMachine(connection, record.external_id);
     } catch (error) {
-      throw new BadRequestException(plainErrorMessage(error));
+      const failure = netboxFailureOf(error);
+      if (failure.detail) {
+        this.logger.warn(`Netbox object ${record.external_id} could not be read: ${failure.detail}`);
+      }
+      throw netboxBadRequest(failure.code);
     }
     // Same isolated read as a full run: resolving one object must place it in
     // the same sub-location the next run would. Unavailable locations are not

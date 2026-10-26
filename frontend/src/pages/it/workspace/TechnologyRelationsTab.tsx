@@ -117,13 +117,8 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
   const saveLink = async (linkRow: LinksAndFilesLink | null, draft: LinkDraft) => {
     setError(null);
     const body = { description: draft.name, url: draft.url };
-    try {
-      if (linkRow) await api.patch(`/technologies/${id}/links/${linkRow.id}`, body);
-      else await api.post(`/technologies/${id}/links`, body);
-    } catch (e) {
-      failed(e);
-      throw e;
-    }
+    if (linkRow) await api.patch(`/technologies/${id}/links/${linkRow.id}`, body);
+    else await api.post(`/technologies/${id}/links`, body);
     await refreshList(linksKey);
   };
 

@@ -44,6 +44,8 @@ const PAGE = 30;
 type Props = {
   assetId: string;
   canManage: boolean;
+  /** A physical server keeps "on this server". Every other kind says "on this asset". */
+  isServer?: boolean;
   /** The section title of the page around it (the asset's Technical tab), so it reads like its neighbours. */
   heading?: (title: string) => React.ReactNode;
 };
@@ -55,7 +57,7 @@ type Props = {
  * system leads the list. Managers add a technology then its version, and change a version from
  * the version or from Edit. Each change is saved at once. One line when empty.
  */
-export default function AssetTechnologiesSection({ assetId, canManage, heading }: Props) {
+export default function AssetTechnologiesSection({ assetId, canManage, isServer = true, heading }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { labelFor } = useItOpsEnumOptions();
   const theme = useTheme();
@@ -250,7 +252,9 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
             onClose={() => setVersionEdit(null)}
           />
         )}
-        {data && rows.length === 0 && <RelationsEmpty>{t('workspace.asset.technologies.empty')}</RelationsEmpty>}
+        {data && rows.length === 0 && (
+          <RelationsEmpty>{t(isServer ? 'workspace.asset.technologies.empty' : 'workspace.asset.technologies.emptyAsset')}</RelationsEmpty>
+        )}
         {items.length > 0 && (
           <RelationsTable
             ariaLabel={title}

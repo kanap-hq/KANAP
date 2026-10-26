@@ -223,7 +223,7 @@ La pestaña Despliegues documenta dónde se ejecuta realmente la aplicación: un
 | **Alojamiento** | Derivado de la ubicación del activo |
 | **Desde** | Fecha en que se asignó el servidor a este despliegue |
 
-Haga clic en **Añadir servidor** en el encabezado del despliegue para vincular un activo. El selector lista los clústeres con sus miembros bajo su nombre. La asignación de un clúster llega a sus miembros en servicio: aparecen bajo la fila del clúster, sin acciones. Modifique la asignación en el clúster. Cuando elige un miembro de un clúster, KANAP pregunta si asignar el clúster o solo este servidor. Consulte [Aplicaciones en un clúster](assets.md#applications-on-a-cluster).
+Haga clic en **Añadir servidor** en el encabezado del despliegue para vincular un activo. El selector lista los clústeres con sus miembros bajo su nombre. La asignación de un clúster llega a sus miembros en servicio: aparecen bajo la fila del clúster, sin acciones. Modifique la asignación en el clúster. Cuando elige un miembro de un clúster, KANAP pregunta si asignar el clúster o solo este servidor. Consulte [Aplicaciones en un clúster](assets.md#applications-on-a-cluster). Añadir, cambiar o quitar un servidor requiere `applications:member` e `infrastructure:member`.
 
 Cuando la aplicación está asignada directamente a cada miembro en servicio de un clúster, una línea bajo la tabla los nombra, con un botón para asignar la aplicación al clúster (**Asignar a** y su nombre). Tras una confirmación, el clúster toma la asignación y se quitan las asignaciones propias de los miembros. La aplicación sigue entonces disponible mientras un miembro siga activo.
 
