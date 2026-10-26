@@ -63,6 +63,7 @@ vi.mock('./editors/ApplicationCreateEditor', async () => {
         props.onNameChange?.(name);
         props.onDirtyChange?.(true);
       },
+      dismissNameError: () => undefined,
     }));
     return (
       <>

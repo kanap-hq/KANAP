@@ -137,8 +137,12 @@ export function EditableTitleDisplay({
 
 export type EditableTitleProps = {
   canEdit: boolean;
+  /** A refusal shown under the title. Hidden while a non-empty replacement is being typed. */
+  error?: string | null;
   fallback: string;
   maxLength?: number;
+  /** Fired on each keystroke, so the caller can drop a refusal that the draft has answered. */
+  onDraftChange?: (draft: string) => void;
   onSave?: (nextTitle: string) => void;
   requiredMessage?: string;
   value: string;
@@ -147,8 +151,10 @@ export type EditableTitleProps = {
 /** Click-to-edit record title used by the workspace shell and the task header. */
 export default function EditableTitle({
   canEdit,
+  error,
   fallback,
   maxLength,
+  onDraftChange,
   onSave,
   requiredMessage,
   value,
@@ -204,16 +210,27 @@ export default function EditableTitle({
     setEditing(false);
   };
 
+  // The field's own empty-commit message wins, so a refusal left over from Create is not repeated under it.
+  const ownMessage = editing && emptyError && requiredMessage ? requiredMessage : null;
+  const externalMessage = error && !(editing && draft.trim()) ? error : null;
+  const message = ownMessage || externalMessage;
+  const messageNode = message
+    ? <FormHelperText error role={ownMessage ? 'alert' : undefined} sx={{ mt: 0.5 }}>{message}</FormHelperText>
+    : null;
+
   if (!editing) {
     return (
-      <EditableTitleDisplay
-        canEdit={canEdit}
-        placeholder={!value}
-        onEdit={open}
-        buttonRef={buttonRef}
-      >
-        {value || fallback}
-      </EditableTitleDisplay>
+      <>
+        <EditableTitleDisplay
+          canEdit={canEdit}
+          placeholder={!value}
+          onEdit={open}
+          buttonRef={buttonRef}
+        >
+          {value || fallback}
+        </EditableTitleDisplay>
+        {messageNode}
+      </>
     );
   }
 
@@ -227,8 +244,10 @@ export default function EditableTitle({
         aria-invalid={emptyError || undefined}
         {...(maxLength ? { maxLength } : {})}
         onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-          setDraft(event.target.value);
+          const next = event.target.value;
+          setDraft(next);
           setEmptyError(false);
+          onDraftChange?.(next);
         }}
         onBlur={() => finish(false)}
         onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -254,9 +273,7 @@ export default function EditableTitle({
           width: '100%',
         })}
       />
-      {emptyError && requiredMessage && (
-        <FormHelperText error role="alert" sx={{ mt: 0.5 }}>{requiredMessage}</FormHelperText>
-      )}
+      {messageNode}
     </>
   );
 }

@@ -1691,6 +1691,7 @@ export default function ApplicationWorkspacePage() {
           }
           void patchApplication({ name: value });
         }}
+        onTitleDraftChange={isCreate ? (draft) => { if (draft.trim()) createRef.current?.dismissNameError(); } : undefined}
         titleRequiredMessage={t('messages.nameRequired')}
         titleMaxLength={APPLICATION_NAME_MAX}
         isCreate={isCreate}

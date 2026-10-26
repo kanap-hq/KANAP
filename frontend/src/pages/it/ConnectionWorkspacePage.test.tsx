@@ -29,6 +29,8 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
     <div>
       <nav>{props.tabs.map((tab: any) => <span key={tab.key}>{tab.label}</span>)}</nav>
       <h1>{props.title || props.titleFallback}</h1>
+      <input aria-label="title" defaultValue={props.title} onChange={(event) => props.onTitleDraftChange?.(event.target.value)} />
+      {props.titleError ? <div role="alert">{props.titleError}</div> : null}
       <div>{props.actions}</div>
       <aside>{props.properties}</aside>
       <main>{props.children}</main>
@@ -90,6 +92,32 @@ describe('ConnectionWorkspacePage (create)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: c.create }));
     expect(screen.getByText(c.nameRequired)).toBeInTheDocument();
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('drops the name error while the header title is typed', async () => {
+    await i18n.changeLanguage('en');
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter initialEntries={['/it/connections/new/overview']}>
+          <Routes>
+            <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Name is required.');
+
+    fireEvent.change(screen.getByLabelText('title'), { target: { value: 'App to DB' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('title'), { target: { value: ' ' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Name is required.');
     expect(post).not.toHaveBeenCalled();
   });
 });

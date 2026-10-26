@@ -117,7 +117,7 @@ vi.mock('./workspace/IncidentJournalTab', () => ({
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
   default: (props: any) => {
     shellProps.current = props;
-    const { children, actions, onBack, onTabChange, onSaveShortcut, nav, tabs, title, canEditTitle, onTitleSave, titleError, properties } = props;
+    const { children, actions, onBack, onTabChange, onSaveShortcut, nav, tabs, title, canEditTitle, onTitleSave, onTitleDraftChange, titleError, properties } = props;
     return (
       <div>
         {tabs?.map((tab: any) => <span key={tab.key} data-testid={`tab-${tab.key}`}>{tab.badge ?? ''}</span>)}
@@ -126,7 +126,12 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
         <button type="button" onClick={() => onSaveShortcut?.()}>shell-save-shortcut</button>
         <button type="button" onClick={() => nav?.onNext?.()}>shell-next</button>
         {canEditTitle ? (
-          <input aria-label="shell-title" defaultValue={title} onBlur={(event) => onTitleSave?.(event.target.value)} />
+          <input
+            aria-label="shell-title"
+            defaultValue={title}
+            onChange={(event) => onTitleDraftChange?.(event.target.value)}
+            onBlur={(event) => onTitleSave?.(event.target.value)}
+          />
         ) : null}
         {titleError ? <div role="alert">{titleError}</div> : null}
         <div>{properties}</div>
@@ -248,6 +253,24 @@ describe('IncidentWorkspacePage — new incident title', () => {
 
     expect(screen.queryByText('workspace.incident.create.titleRequired')).toBeNull();
     expect(screen.getByRole('alert')).toHaveTextContent('workspace.incident.create.severityRequired');
+    expect(incidentsApi.create).not.toHaveBeenCalled();
+  });
+
+  it('drops the title error as soon as a title is typed, and brings it back on Create', () => {
+    renderNewIncident();
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('workspace.incident.create.titleRequired');
+
+    const title = screen.getByLabelText('shell-title');
+    fireEvent.change(title, { target: { value: 'M' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    fireEvent.change(title, { target: { value: '' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('workspace.incident.create.titleRequired');
     expect(incidentsApi.create).not.toHaveBeenCalled();
   });
 

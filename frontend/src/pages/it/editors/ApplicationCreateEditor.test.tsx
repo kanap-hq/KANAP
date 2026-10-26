@@ -94,6 +94,8 @@ describe('ApplicationCreateEditor', () => {
     await act(async () => { await ref.current?.save(); });
     expect(screen.getByText(c.nameRequired)).toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
+    await act(async () => { ref.current?.dismissNameError(); });
+    expect(screen.queryByText(c.nameRequired)).toBeNull();
   });
 
   it('posts the header name with the same payload', async () => {

@@ -20,6 +20,8 @@ export type ApplicationCreateEditorHandle = {
   reset: () => void;
   /** The header writes the application name here. */
   setName: (name: string) => void;
+  /** Drops the "name is required" refusal once the header holds a name. */
+  dismissNameError: () => void;
 };
 
 type Props = {
@@ -96,12 +98,17 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
 
   const markDirty = React.useCallback(() => setDirty(true), []);
 
+  const dismissNameError = React.useCallback(() => {
+    setServerError((current) => (current === t('validation.nameRequired') ? null : current));
+  }, [t]);
+
   const setNameValue = React.useCallback((next: string) => {
     nameRef.current = next;
     setName(next);
     onNameChange?.(next);
+    if (next.trim()) dismissNameError();
     markDirty();
-  }, [markDirty, onNameChange]);
+  }, [dismissNameError, markDirty, onNameChange]);
 
   const reset = React.useCallback(() => {
     nameRef.current = '';
@@ -169,7 +176,13 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
     }
   }, [saving, supplierId, description, category, editor, retiredDate, lifecycle, criticality, cyberCriticality, recoveryWave, dataClass, version, goLiveDate, endOfSupportDate, isSuite, t]);
 
-  useImperativeHandle(ref, () => ({ isDirty: () => dirty, save, reset, setName: setNameValue }), [dirty, save, reset, setNameValue]);
+  useImperativeHandle(ref, () => ({
+    isDirty: () => dirty,
+    save,
+    reset,
+    setName: setNameValue,
+    dismissNameError,
+  }), [dirty, dismissNameError, save, reset, setNameValue]);
 
   const levelOptions = (items: Array<{ code: string; label: string; deprecated?: boolean }> | undefined) => (
     (items || []).filter((item) => !item.deprecated).map((item) => ({ label: item.label, value: item.code }))

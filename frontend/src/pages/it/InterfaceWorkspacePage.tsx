@@ -168,6 +168,7 @@ export default function InterfaceWorkspacePage() {
   const [mappingDirty, setMappingDirty] = React.useState(false);
   const [mappingActivated, setMappingActivated] = React.useState(() => rawRouteTab === 'data-mapping' || rawRouteTab === 'mapping');
   const [error, setError] = React.useState<string | null>(null);
+  const [createTitleError, setCreateTitleError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [discardCreateOpen, setDiscardCreateOpen] = React.useState(false);
@@ -308,6 +309,7 @@ export default function InterfaceWorkspacePage() {
   const persistPatch = React.useCallback(async (patch: Partial<InterfaceDetail>) => {
     if (isCreate) {
       applyLocalPatch(patch, { markCreateDirty: true });
+      if (patch.name !== undefined && String(patch.name).trim()) setCreateTitleError(null);
       return;
     }
     if (!canManage) {
@@ -509,9 +511,10 @@ export default function InterfaceWorkspacePage() {
       const current = getCurrentState();
       const payload = buildCreatePayload(current);
       if (!payload.name) {
-        setError(t('messages.nameRequired'));
+        setCreateTitleError(t('messages.nameRequired'));
         return;
       }
+      setCreateTitleError(null);
       if (!payload.source_application_id || !payload.target_application_id) {
         setError(t('workspace.interface.create.applicationsRequired'));
         return;
@@ -689,6 +692,9 @@ export default function InterfaceWorkspacePage() {
         titleFallback={isCreate ? t('workspace.interface.newTitle') : t('workspace.interface.untitled')}
         canEditTitle={canManage}
         onTitleSave={handleTitleSave}
+        onTitleDraftChange={isCreate ? (draft) => { if (draft.trim()) setCreateTitleError(null); } : undefined}
+        titleRequiredMessage={isCreate && canManage ? t('messages.nameRequired') : undefined}
+        titleError={isCreate ? createTitleError : null}
         isCreate={isCreate}
         metadata={metadata}
         actions={actions}
