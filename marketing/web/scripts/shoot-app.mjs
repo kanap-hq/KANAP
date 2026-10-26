@@ -1014,6 +1014,63 @@ const PAGES = {
       await sleep(1000);
     },
   },
+  // Incidents article (2026-10-26): journal tab of INC-28 (critical, resolved), dated notes plus severity and status changes. Read-only.
+  'incidents-journal-2026-10-26': {
+    frame: 1600,
+    path: '/it/incidents/INC-28/journal',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /severity|Severity/.test(document.querySelector('main')?.innerText || '') && /database/i.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+      // Scroll the note composer out of the way so the dated entries (status change down to severity change) fill the frame.
+      await page.evaluate(() => {
+        const t = [...document.querySelectorAll('*')].find((n) => !n.children.length && n.textContent?.trim() === 'Status: In progress \u2192 Resolved');
+        if (!t) return;
+        let el = t.parentElement;
+        while (el && el.scrollHeight <= el.clientHeight + 2) el = el.parentElement;
+        if (!el) return;
+        const top = t.getBoundingClientRect().top;
+        const anchor = [...document.querySelectorAll('[role=tab],a,button')].find((n) => /^Journal/.test(n.textContent?.trim() || ''));
+        const stop = (anchor?.getBoundingClientRect().bottom || 200) + 40;
+        el.scrollBy(0, top - stop - 30);
+      });
+      await sleep(700);
+    },
+  },
+  // Incidents article (2026-10-26, retaken after the relations tables were resized): relations tab of INC-28, linked assets, applications, technologies and suggestions. Read-only.
+  'incidents-relations-2026-10-26': {
+    frame: 1600,
+    path: '/it/incidents/INC-28/relations',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /QualityLab LIMS/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
+  // Incidents article (2026-10-26): overview tab of INC-28, description and incident review. Read-only.
+  'incidents-review-2026-10-26': {
+    frame: 1920,
+    path: '/it/incidents/INC-28/overview',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /Root cause/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1500);
+    },
+  },
+  // Incidents article (2026-10-26): register filtered on Critical and Major, Resolved and Closed (leaves out the open test incident INC-43). Read-only; set filters separately (they persist).
+  'incidents-register-2026-10-26': {
+    frame: 1920,
+    path: '/it/incidents?filters=%7B%22severity%22%3A%7B%22filterType%22%3A%22set%22%2C%22values%22%3A%5B%22critical%22%2C%22major%22%5D%7D%2C%22status%22%3A%7B%22filterType%22%3A%22set%22%2C%22values%22%3A%5B%22resolved%22%2C%22closed%22%5D%7D%7D',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await page.waitForFunction(() => /Total \(\d+\)/.test(document.body.innerText), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
 };
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
