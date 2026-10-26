@@ -22,9 +22,10 @@ import { withFullDataAccess } from '../data-access/full-data-access';
 export const DATA_ACCESS_CHARGEBACK_COMPANY_MESSAGE = 'The chargeback of this company is outside your data access.';
 
 /**
- * Why a line's allocation could not be recomputed. A code the screen translates, or `text` for a
- * calculator message this report does not recognise (shown as written). The codes match the
- * calculator's `error` strings (`allocation-calculator.service.ts`, `allocation-distribution.ts`).
+ * Why a line's allocation could not be recomputed. A code the screen translates.
+ * `text` is only the safety net for a calculator message this report does not recognise
+ * (shown as written). Every message the calculator stores in `error` today has a code;
+ * `chargeback-warnings.spec.ts` lists them.
  */
 export type ChargebackAllocationReason =
   | { code: 'select_company' }
