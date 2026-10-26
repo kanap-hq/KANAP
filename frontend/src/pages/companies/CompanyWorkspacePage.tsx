@@ -22,7 +22,7 @@ import {
   normalizeStatus,
 } from '../../constants/status';
 import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
-import { taskDetailTypography } from '../tasks/theme/taskDetailTokens';
+import { EditableTitleDisplay } from '../../components/workspace/EditableTitle';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 import { useCoaList } from '../coa/useCoaList';
@@ -517,23 +517,17 @@ function CompanyNameTitle({
   if (!editing) {
     return (
       <>
-        <Typography
-          component="span"
-          onClick={canEdit ? () => {
+        <EditableTitleDisplay
+          canEdit={canEdit}
+          placeholder={!shown}
+          onEdit={() => {
             setDraft(shown);
             openRef.current = true;
             setEditing(true);
-          } : undefined}
-          sx={(theme) => ({
-            ...taskDetailTypography.title,
-            display: 'inline',
-            color: shown ? 'inherit' : theme.palette.kanap.text.tertiary,
-            cursor: canEdit ? 'text' : 'default',
-            '&:hover': canEdit ? { opacity: 0.85 } : undefined,
-          })}
+          }}
         >
           {shown || fallback}
-        </Typography>
+        </EditableTitleDisplay>
         {helper}
       </>
     );
