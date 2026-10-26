@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../../components/PageHeader';
+import EditableTitle from '../../components/workspace/EditableTitle';
 import ChartCard from '../../components/reports/ChartCard';
 import AgentControlBar from '../../components/agents/AgentControlBar';
 import AgentStatusStrip from '../../components/agents/AgentStatusStrip';
@@ -539,77 +540,6 @@ function InstructionsReferencePanel({ statuses, routingEnabled, classificationEn
   );
 }
 
-function AgentInlineTitle({
-  canEdit,
-  value,
-  onSave,
-}: {
-  canEdit: boolean;
-  value: string;
-  onSave: (next: string) => void;
-}) {
-  const [editing, setEditing] = React.useState(false);
-  const [draft, setDraft] = React.useState(value);
-  React.useEffect(() => {
-    if (!editing) setDraft(value);
-  }, [editing, value]);
-  const commit = () => {
-    const trimmed = draft.trim();
-    if (trimmed && trimmed !== value) onSave(trimmed);
-    setDraft(trimmed || value);
-    setEditing(false);
-  };
-  if (!canEdit || !editing) {
-    return (
-      <Typography
-        variant="h5"
-        component="span"
-        onClick={canEdit ? () => { setDraft(value); setEditing(true); } : undefined}
-        sx={{
-          cursor: canEdit ? 'text' : 'default',
-          '&:hover': canEdit ? { opacity: 0.85 } : undefined,
-        }}
-      >
-        {value}
-      </Typography>
-    );
-  }
-  return (
-    <Box
-      component="input"
-      value={draft}
-      aria-label={value}
-      onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft(event.target.value)}
-      onBlur={commit}
-      onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          commit();
-        }
-        if (event.key === 'Escape') {
-          setDraft(value);
-          setEditing(false);
-        }
-      }}
-      autoFocus
-      sx={(theme) => ({
-        font: 'inherit',
-        fontSize: 'inherit',
-        fontWeight: 500,
-        color: 'inherit',
-        bgcolor: 'transparent',
-        border: 'none',
-        borderBottom: `1px solid ${theme.palette.kanap.border.default}`,
-        outline: 'none',
-        p: 0,
-        m: 0,
-        width: '100%',
-        minWidth: 160,
-      })}
-    />
-  );
-}
-
 function AgentInlineDescription({
   canEdit,
   value,
@@ -623,45 +553,124 @@ function AgentInlineDescription({
   placeholder: string;
   onSave: (next: string) => void;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(value);
+  const buttonRef = React.useRef<HTMLButtonElement | null>(null);
+  // Escape and the blur that follows both end the edit: only the first one counts.
+  const closing = React.useRef(false);
+  const pendingFocus = React.useRef(false);
   React.useEffect(() => {
     if (!editing) setDraft(value);
   }, [editing, value]);
-  const commit = () => {
+  React.useEffect(() => {
+    if (editing || !pendingFocus.current) return;
+    pendingFocus.current = false;
+    buttonRef.current?.focus();
+  }, [editing]);
+  const open = () => {
+    closing.current = false;
+    pendingFocus.current = false;
+    setDraft(value);
+    setEditing(true);
+  };
+  const commit = (focusButton: boolean) => {
+    if (closing.current) return;
     const trimmed = draft.trim();
     if (trimmed !== value) onSave(trimmed);
+    closing.current = true;
+    pendingFocus.current = focusButton;
+    setEditing(false);
+  };
+  const cancel = () => {
+    closing.current = true;
+    pendingFocus.current = true;
+    setDraft(value);
     setEditing(false);
   };
   const display = value || (canEdit ? placeholder : fallback);
-  if (!canEdit || !editing) {
+  const label = t('common:buttons.editDescription');
+  if (!canEdit) {
     return (
       <Typography
         variant="body2"
-        onClick={canEdit ? () => { setDraft(value); setEditing(true); } : undefined}
         sx={(theme) => ({
           mb: 2,
           color: value ? 'text.secondary' : theme.palette.kanap.text.tertiary,
-          cursor: canEdit ? 'text' : 'default',
-          '&:hover': canEdit ? { opacity: 0.85 } : undefined,
         })}
       >
         {display}
       </Typography>
     );
   }
+  if (!editing) {
+    return (
+      <Box
+        component="button"
+        type="button"
+        ref={buttonRef}
+        aria-label={label}
+        onClick={open}
+        onKeyDown={(event: React.KeyboardEvent<HTMLButtonElement>) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            open();
+          } else if (event.key === ' ') {
+            // Space activates on keyup, like a button: opening on keydown would type the space into the field.
+            event.preventDefault();
+          }
+        }}
+        onKeyUp={(event: React.KeyboardEvent<HTMLButtonElement>) => {
+          if (event.key === ' ') {
+            event.preventDefault();
+            open();
+          }
+        }}
+        sx={(theme) => ({
+          display: 'inline-block',
+          maxWidth: '100%',
+          boxSizing: 'border-box',
+          mb: 2,
+          px: '4px',
+          py: '1px',
+          mx: '-4px',
+          textAlign: 'left',
+          whiteSpace: 'normal',
+          overflowWrap: 'anywhere',
+          fontFamily: 'inherit',
+          fontSize: theme.typography.body2.fontSize,
+          fontWeight: theme.typography.body2.fontWeight ?? 400,
+          lineHeight: theme.typography.body2.lineHeight ?? 1.43,
+          color: value ? theme.palette.text.secondary : theme.palette.kanap.text.tertiary,
+          cursor: 'text',
+          appearance: 'none',
+          bgcolor: 'transparent',
+          border: 0,
+          borderRadius: '4px',
+          outline: 'none',
+          transition: 'background-color 120ms ease',
+          '&:hover, &:focus': {
+            bgcolor: theme.palette.kanap.bg.hover,
+            outline: 'none',
+          },
+        })}
+      >
+        {display}
+      </Box>
+    );
+  }
   return (
     <Box
       component="textarea"
       value={draft}
-      aria-label={placeholder}
+      aria-label={label}
       placeholder={placeholder}
       onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setDraft(event.target.value)}
-      onBlur={commit}
+      onBlur={() => commit(false)}
       onKeyDown={(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (event.key === 'Escape') {
-          setDraft(value);
-          setEditing(false);
+          event.preventDefault();
+          cancel();
         }
       }}
       autoFocus
@@ -669,9 +678,10 @@ function AgentInlineDescription({
       sx={(theme) => ({
         display: 'block',
         width: '100%',
-        font: 'inherit',
-        fontSize: 14,
-        lineHeight: 1.43,
+        fontFamily: 'inherit',
+        fontSize: theme.typography.body2.fontSize,
+        fontWeight: theme.typography.body2.fontWeight ?? 400,
+        lineHeight: theme.typography.body2.lineHeight ?? 1.43,
         color: theme.palette.kanap.text.secondary,
         bgcolor: 'transparent',
         border: 'none',
@@ -2719,6 +2729,7 @@ function SettingsTab({ definition, autosaveRegistry, saveQueue }: {
 
 export default function AgentWorkspacePage() {
   const { t } = useTranslation(['agents']);
+  const theme = useTheme();
   const { agentKey } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -2819,9 +2830,17 @@ export default function AgentWorkspacePage() {
       <PageHeader
         title={definition.name}
         titleContent={(
-          <AgentInlineTitle
+          // Page headers are h5. The shared editor defaults to the workspace title size.
+          <EditableTitle
             canEdit={canAdmin}
             value={definition.name}
+            fallback={definition.agent_key}
+            typography={{
+              fontSize: theme.typography.h5.fontSize ?? '1.25rem',
+              fontWeight: theme.typography.h5.fontWeight ?? 500,
+              lineHeight: theme.typography.h5.lineHeight,
+              letterSpacing: theme.typography.h5.letterSpacing,
+            }}
             onSave={(name) => { void persistHeaderField({ name }); }}
           />
         )}

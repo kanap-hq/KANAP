@@ -101,6 +101,13 @@ describe('EditableTitle', () => {
     expect(title).toHaveStyle({ backgroundColor: 'rgba(0, 0, 0, 0.04)' });
   });
 
+  it('keeps a caller-supplied title size', () => {
+    renderTitle({ typography: { fontSize: '1.25rem', fontWeight: 500, lineHeight: 1.334 } });
+    const title = screen.getByRole('button', { name: LABEL });
+    expect(getComputedStyle(title).fontSize).toBe('20px');
+    expect(getComputedStyle(title).fontWeight).toBe('500');
+  });
+
   it('draws no cue when the title cannot be edited', () => {
     const { container } = renderTitle({ canEdit: false, value: '' });
     expect(screen.queryByRole('button', { name: LABEL })).toBeNull();
