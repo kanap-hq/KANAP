@@ -175,12 +175,11 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
     (items || []).filter((item) => !item.deprecated).map((item) => ({ label: item.label, value: item.code }))
   );
 
+  // Shared rows follow the record drawer. Lifecycle and classification follow
+  // them, in the header and compliance order. The suite checkbox stays last.
   const properties = (
     <>
       <PropertyGroup>
-        <PropertyRow label={t('workspace.application.overview.supplier')}>
-          <SupplierSelect value={supplierId} onChange={(v) => { setSupplierId(v); markDirty(); }} hideLabel label={t('workspace.application.overview.supplier')} textFieldSx={drawerFieldValueSx} />
-        </PropertyRow>
         <PropertyRow label={t('workspace.application.overview.category')} required>
           <EnumAutocomplete
             label={t('workspace.application.overview.category')}
@@ -192,23 +191,11 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
             textFieldSx={drawerFieldValueSx}
           />
         </PropertyRow>
+        <PropertyRow label={t('workspace.application.overview.supplier')}>
+          <SupplierSelect value={supplierId} onChange={(v) => { setSupplierId(v); markDirty(); }} hideLabel label={t('workspace.application.overview.supplier')} textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
         <PropertyRow label={t('workspace.application.overview.publisher')}>
           <TextField value={editor} onChange={(e) => { setEditor(e.target.value); markDirty(); }} fullWidth variant="standard" sx={drawerFieldValueSx} />
-        </PropertyRow>
-        <PropertyRow label={classificationText('Business criticality')}>
-          <EnumAutocomplete label={classificationText('Business criticality')} value={criticality || ''} onChange={(v) => { setCriticality(v || null); markDirty(); }} options={levelOptions(classificationCatalog?.businessCriticalityLevels)} hideLabel textFieldSx={drawerFieldValueSx} />
-        </PropertyRow>
-        <PropertyRow label={classificationText('Cyber criticality')}>
-          <EnumAutocomplete label={classificationText('Cyber criticality')} value={cyberCriticality || ''} onChange={(v) => { setCyberCriticality(v || null); markDirty(); }} options={levelOptions(classificationCatalog?.cyberCriticalityLevels)} hideLabel textFieldSx={drawerFieldValueSx} />
-        </PropertyRow>
-        <PropertyRow label={classificationText('Data confidentiality')}>
-          <EnumAutocomplete label={classificationText('Data confidentiality')} value={dataClass || ''} onChange={(v) => { setDataClass(v || null); markDirty(); }} options={levelOptions(classificationCatalog?.dataClasses)} hideLabel textFieldSx={drawerFieldValueSx} />
-        </PropertyRow>
-        <PropertyRow label={classificationText('Recovery wave')}>
-          <EnumAutocomplete label={classificationText('Recovery wave')} value={recoveryWave || ''} onChange={(v) => { setRecoveryWave(v || null); markDirty(); }} options={(classificationCatalog?.recoveryWaves || []).filter((item) => !item.deprecated).sort((a, b) => a.order - b.order).map((item) => ({ label: item.label, value: item.code }))} hideLabel textFieldSx={drawerFieldValueSx} />
-        </PropertyRow>
-        <PropertyRow label={t('workspace.application.overview.lifecycle')} required>
-          <EnumAutocomplete label={t('workspace.application.overview.lifecycle')} value={lifecycle} onChange={(v) => { setLifecycle(v as any); markDirty(); }} options={lifecycleOptions} required hideLabel textFieldSx={drawerFieldValueSx} />
         </PropertyRow>
       </PropertyGroup>
       <PropertyGroup>
@@ -223,7 +210,7 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
             sx={drawerFieldValueSx}
           />
         </PropertyRow>
-        <PropertyRow label={t('workspace.application.meta.goLive')}>
+        <PropertyRow label={t('workspace.application.overview.goLiveDate')}>
           <DateEUField label="" valueYmd={goLiveDate} onChangeYmd={(v) => { setGoLiveDate(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
         </PropertyRow>
         <PropertyRow label={t('workspace.application.overview.endOfSupport')}>
@@ -231,6 +218,23 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
         </PropertyRow>
         <PropertyRow label={t('workspace.application.overview.retiredDate')}>
           <DateEUField label="" valueYmd={retiredDate} onChangeYmd={(v) => { setRetiredDate(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+      </PropertyGroup>
+      <PropertyGroup>
+        <PropertyRow label={t('workspace.application.overview.lifecycle')} required>
+          <EnumAutocomplete label={t('workspace.application.overview.lifecycle')} value={lifecycle} onChange={(v) => { setLifecycle(v as any); markDirty(); }} options={lifecycleOptions} required hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+        <PropertyRow label={classificationText('Business criticality')}>
+          <EnumAutocomplete label={classificationText('Business criticality')} value={criticality || ''} onChange={(v) => { setCriticality(v || null); markDirty(); }} options={levelOptions(classificationCatalog?.businessCriticalityLevels)} hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+        <PropertyRow label={classificationText('Cyber criticality')}>
+          <EnumAutocomplete label={classificationText('Cyber criticality')} value={cyberCriticality || ''} onChange={(v) => { setCyberCriticality(v || null); markDirty(); }} options={levelOptions(classificationCatalog?.cyberCriticalityLevels)} hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+        <PropertyRow label={classificationText('Data confidentiality')}>
+          <EnumAutocomplete label={classificationText('Data confidentiality')} value={dataClass || ''} onChange={(v) => { setDataClass(v || null); markDirty(); }} options={levelOptions(classificationCatalog?.dataClasses)} hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+        <PropertyRow label={classificationText('Recovery wave')}>
+          <EnumAutocomplete label={classificationText('Recovery wave')} value={recoveryWave || ''} onChange={(v) => { setRecoveryWave(v || null); markDirty(); }} options={(classificationCatalog?.recoveryWaves || []).filter((item) => !item.deprecated).sort((a, b) => a.order - b.order).map((item) => ({ label: item.label, value: item.code }))} hideLabel textFieldSx={drawerFieldValueSx} />
         </PropertyRow>
       </PropertyGroup>
       <PropertyGroup>
