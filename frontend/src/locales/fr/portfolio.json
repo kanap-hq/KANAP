@@ -932,6 +932,7 @@
   },
   "tasks": {
     "title": "Tâches",
+    "empty": "Aucune tâche pour l'instant.",
     "entityName": "tâches",
     "columns": {
       "taskTitle": "Titre de la tâche",
@@ -978,6 +979,7 @@
   },
   "projects": {
     "title": "Projets du portefeuille",
+    "empty": "Aucun projet pour l'instant.",
     "backToList": "Retour aux projets",
     "columns": {
       "projectName": "Nom du projet",
@@ -1007,6 +1009,7 @@
   },
   "requests": {
     "title": "Demandes du portefeuille",
+    "empty": "Aucune demande pour l'instant.",
     "backToList": "Retour aux demandes",
     "columns": {
       "requestName": "Nom de la demande",

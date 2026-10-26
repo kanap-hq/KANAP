@@ -625,16 +625,14 @@ export default function TasksPage() {
     },
   ], [clickableCellRenderer, contextLabelMap, getTaskFilterValues, locale, renderPriorityCell, renderStatusCell, renderTypeCell, statusLabelMap, t, taskTypeLabelMap, typeLabel]);
 
+  const openNewTask = () => {
+    const sp = buildWorkspaceSearch();
+    navigate(`/portfolio/tasks/new/overview?${sp.toString()}`);
+  };
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
-        <Button
-          variant="action-primary"
-          onClick={() => {
-            const sp = buildWorkspaceSearch();
-            navigate(`/portfolio/tasks/new/overview?${sp.toString()}`);
-          }}
-        >
+        <Button variant="action-primary" onClick={openNewTask}>
           {t('tasks.actions.new')}
         </Button>
       )}
@@ -687,6 +685,16 @@ export default function TasksPage() {
           onQueryStateChange={(state) => {
             lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
           }}
+          emptyState={(
+            <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="tasks-empty">
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('tasks.empty')}</Typography>
+              {canCreate && (
+                <Button variant="contained" size="small" onClick={openNewTask}>
+                  {t('tasks.actions.new')}
+                </Button>
+              )}
+            </Stack>
+          )}
           extraParams={extraParams}
           toolbarExtras={taskScopeToolbar}
         />

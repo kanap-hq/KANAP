@@ -932,6 +932,7 @@
   },
   "tasks": {
     "title": "Tareas",
+    "empty": "Todavía no hay tareas.",
     "entityName": "tareas",
     "columns": {
       "taskTitle": "Título de la tarea",
@@ -978,6 +979,7 @@
   },
   "projects": {
     "title": "Proyectos del portafolio",
+    "empty": "Todavía no hay proyectos.",
     "backToList": "Volver a proyectos",
     "columns": {
       "projectName": "Nombre del proyecto",
@@ -1007,6 +1009,7 @@
   },
   "requests": {
     "title": "Solicitudes del portafolio",
+    "empty": "Todavía no hay solicitudes.",
     "backToList": "Volver a solicitudes",
     "columns": {
       "requestName": "Nombre de la solicitud",

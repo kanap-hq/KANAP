@@ -458,16 +458,14 @@ export default function RequestsPage() {
     return <ForbiddenPage />;
   }
 
+  const openNewRequest = () => {
+    const sp = buildWorkspaceSearch();
+    navigate(`/portfolio/requests/new/summary?${sp.toString()}`);
+  };
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
-        <Button
-          variant="action-primary"
-          onClick={() => {
-            const sp = buildWorkspaceSearch();
-            navigate(`/portfolio/requests/new/summary?${sp.toString()}`);
-          }}
-        >
+        <Button variant="action-primary" onClick={openNewRequest}>
           {t('requests.actions.new')}
         </Button>
       )}
@@ -498,6 +496,16 @@ export default function RequestsPage() {
           onQueryStateChange={(state) => {
             lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
           }}
+          emptyState={(
+            <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="requests-empty">
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('requests.empty')}</Typography>
+              {canCreate && (
+                <Button variant="contained" size="small" onClick={openNewRequest}>
+                  {t('requests.actions.new')}
+                </Button>
+              )}
+            </Stack>
+          )}
           toolbarExtras={requestScopeToolbar}
         />
       )}
