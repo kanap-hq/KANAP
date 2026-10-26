@@ -820,7 +820,7 @@ export default function ConnectionMapPage() {
               <div>
                 <div style={{ fontWeight: 500 }}>{option.name}</div>
                 <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>
-                  {option.lifecycle} · {option.environments.map((e) => e.toUpperCase()).join(', ')}
+                  {labelFor('lifecycleStatus', option.lifecycle)} · {option.environments.map((e) => e.toUpperCase()).join(', ')}
                 </div>
               </div>
             </li>
@@ -1393,7 +1393,7 @@ export default function ConnectionMapPage() {
                               <Typography variant="caption" color="text.secondary">
                                 {t('pages.connectionMap.interfaceLeg', { leg: legTypeLabel(t, link.leg_type), env: link.environment.toUpperCase() })}
                               </Typography>
-                              <Typography variant="body2">{t('pages.connectionMap.patternValue', { value: link.pattern || '—' })}</Typography>
+                              <Typography variant="body2">{t('pages.connectionMap.patternValue', { value: link.pattern ? labelFor('interfacePattern', link.pattern) : '—' })}</Typography>
                               <Typography variant="body2">{t('pages.maps.sourceEndpoint', { value: link.source_endpoint || '—' })}</Typography>
                               <Typography variant="body2">{t('pages.maps.targetEndpoint', { value: link.target_endpoint || '—' })}</Typography>
                             </Stack>
