@@ -711,6 +711,16 @@ export const DOCUMENT_RELATION_MODULES: Record<string, LinkedModule> = {
   incidents: 'incidents',
 };
 
+/** The families among `families` whose module the person does not read: a document leaves them out for them. */
+export function unreadableRelationFamilies(families: string[], reads: LinkedReads): string[] {
+  return families.filter((family) => {
+    const module = DOCUMENT_RELATION_MODULES[family];
+    return !!module && !reads[module];
+  });
+}
+
+const RELATION_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** The participation resource of each family a Business Contributor reads inside their participation. */
 const KNOWLEDGE_SOURCE_SCOPES = {
   projects: 'portfolio_projects',
@@ -5690,6 +5700,51 @@ export class KnowledgeService {
     }
 
     return { ok: true };
+  }
+
+  /**
+   * A write of a document's links (`writes`: each family the request sets, even empty, with its ids)
+   * touches only the families the person reads, as `get` shows them: another family would be
+   * replaced unseen. A family left out of the request stays as it is. A Business Contributor adds
+   * only records inside their participation (`remove`: the ids leave, nothing is added).
+   */
+  async assertRelationWriteAllowed(
+    documentId: string,
+    writes: Partial<Record<RelationEntityType, string[]>>,
+    manager: EntityManager,
+    userId: string | null,
+    mode: 'set' | 'remove' = 'set',
+  ): Promise<void> {
+    const families = Object.keys(writes) as RelationEntityType[];
+    if (families.length === 0) return;
+    const reads = await loadLinkedReads(manager, userId);
+    const refused = unreadableRelationFamilies(families, reads);
+    if (refused.length > 0) {
+      throw new ForbiddenException(`You cannot change the ${refused.join(', ')} linked to this document: you do not read that module.`);
+    }
+    if (mode === 'remove' || !userId) return;
+    for (const family of families) {
+      const resource = KNOWLEDGE_SOURCE_SCOPES[family as keyof typeof KNOWLEDGE_SOURCE_SCOPES];
+      const map = RELATION_TABLE_MAP[family];
+      // A malformed id fails the write's own check (`assertTenantScopedIdsExist`).
+      const ids = dedupeStrings(writes[family] ?? []).filter((id) => RELATION_ID_RE.test(id));
+      if (!resource || !map || ids.length === 0) continue;
+      const scope = await resolveBusinessContributorScopeForUser({ manager, userId }, resource, 'reader');
+      if (!scope) continue;
+      const linked: Array<{ id: string }> = await manager.query(
+        `SELECT ${map.idColumn}::text AS id
+         FROM ${map.table}
+         WHERE document_id = $1
+           AND tenant_id = app_current_tenant()`,
+        [documentId],
+      );
+      const current = new Set(linked.map((row) => row.id));
+      const added = ids.filter((id) => !current.has(id));
+      const visible = await idsInScope(manager, family as keyof typeof KNOWLEDGE_SOURCE_SCOPES, added, scope);
+      if (added.some((id) => !visible.has(id))) {
+        throw new ForbiddenException(`You can only link ${family} you take part in to this document.`);
+      }
+    }
   }
 
   async replaceDocumentRelationsByEntity(

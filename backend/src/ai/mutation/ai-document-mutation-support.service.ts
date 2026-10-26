@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { loadLinkedReads } from '../../common/relations/linked-reads';
 import { validate as isUuid } from 'uuid';
 import { incidentVisibilitySql, resolveIncidentViewer } from '../../incidents/incident-visibility';
-import { DOCUMENT_RELATION_MODULES, KnowledgeService, RelationEntityType } from '../../knowledge/knowledge.service';
+import { DOCUMENT_RELATION_MODULES, KnowledgeService, RelationEntityType, unreadableRelationFamilies } from '../../knowledge/knowledge.service';
 import {
   documentIncidentVisibilitySql,
 } from '../../knowledge/document-entity-visibility';
@@ -865,8 +865,7 @@ export class AiDocumentMutationSupportService {
     const families = AI_DOCUMENT_RELATION_ENTITY_TYPES.filter((entityType) =>
       (requestedRelations?.[entityType] || []).length > 0 && DOCUMENT_RELATION_MODULES[entityType]);
     if (families.length === 0) return;
-    const reads = await loadLinkedReads(context.manager, context.userId, context.tenantId);
-    const refused = families.filter((entityType) => !reads[DOCUMENT_RELATION_MODULES[entityType]]);
+    const refused = unreadableRelationFamilies(families, await loadLinkedReads(context.manager, context.userId, context.tenantId));
     if (refused.length > 0) {
       throw new ForbiddenException(`You cannot link ${refused.join(', ')} to a document: you do not read that module.`);
     }

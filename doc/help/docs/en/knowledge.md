@@ -317,7 +317,7 @@ Knowledge documents can be related directly to:
 
 Relations are not just tags. They control where the document appears elsewhere in KANAP and how users discover it from operational workspaces.
 
-Each type of relation shows only to people who can read its module: applications need the applications, assets the infrastructure, projects the projects, requests the requests, tasks the tasks. A type you cannot read is absent from the document, in Plaid too, and saving the document leaves its links untouched.
+Each type of relation shows only to people who can read its module: applications need the applications, assets the infrastructure, projects the projects, requests the requests, tasks the tasks. A type you cannot read is absent from the document, in Plaid too, and saving the document leaves its links untouched. A Business Contributor adds only the projects, requests, applications and tasks they take part in.
 
 Consequences of adding relations:
 - the document becomes easier to find from the linked object
