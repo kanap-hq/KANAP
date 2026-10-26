@@ -10,6 +10,7 @@ import { IntegratedDocumentsService } from '../../knowledge/integrated-documents
 import { parsePagination, Sort } from '../../common/pagination';
 import { parseCreateIncident, parseListIncidentsQuery, parseUpdateIncident, UpdateIncidentDto } from '../dto';
 import { IncidentsBaseService, ServiceOpts, incidentRef, userNameSql } from './incidents-base.service';
+import { unreadableLinkChangeFamilies } from './incident-entries.service';
 import { IncidentViewer, incidentVisibilitySql, isFrozenIncidentStatus } from '../incident-visibility';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import { binder } from '../../common/relations/related-objects';
@@ -463,7 +464,10 @@ export class IncidentsService extends IncidentsBaseService {
          ${OWNER_NAME} AS owner_name,
          ${REPORTER_NAME} AS reporter_name,
          ${COUNT_COLUMNS},
-         (SELECT COUNT(*) FROM incident_entries e WHERE e.incident_id = i.id AND e.tenant_id = i.tenant_id)::int AS entry_count,
+         -- The entries the journal shows: it leaves out a link change of an unread module.
+         (SELECT COUNT(*) FROM incident_entries e
+           WHERE e.incident_id = i.id AND e.tenant_id = i.tenant_id
+             AND NOT (e.kind = 'link_change' AND COALESCE(e.changed_fields ?| $3::text[], false)))::int AS entry_count,
          (SELECT COUNT(*) FROM incident_technologies it WHERE it.incident_id = i.id AND it.tenant_id = i.tenant_id)::int AS technology_count,
          -- What the Documents tab lists: the incident's own review is hidden from it.
          (SELECT COUNT(*) FROM document_incidents di
@@ -479,7 +483,7 @@ export class IncidentsService extends IncidentsBaseService {
          (SELECT COUNT(*) FROM incident_attachments att WHERE att.incident_id = i.id AND att.tenant_id = i.tenant_id AND att.deleted_at IS NULL)::int AS attachment_count
        ${BASE_FROM}
        WHERE i.id = $1 AND i.tenant_id = $2`,
-      [id, tenantId],
+      [id, tenantId, unreadableLinkChangeFamilies(opts)],
     );
     const { entry_count, technology_count, document_count, attachment_count, ...incident } = row;
     const applicationCount = !opts?.applications

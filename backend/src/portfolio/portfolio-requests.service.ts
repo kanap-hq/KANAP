@@ -22,7 +22,6 @@ import { PortfolioRequestOpex } from './portfolio-request-opex.entity';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, OPEX_ITEMS_NOT_FOUND } from './project-budget-links.util';
 import { assertNoHiddenLines, hiddenLineCount } from '../data-access/hidden-links';
 import { activityBudgetLines, budgetLineActivitiesForReader } from './budget-line-activity';
-import { countRelatedBudgetLines, type RelationLinkTable } from '../common/relations/related-objects';
 import { PortfolioRequestBusinessProcess } from './portfolio-request-business-process.entity';
 import { PortfolioRequestDependency } from './portfolio-request-dependency.entity';
 import { PortfolioProjectDependency } from './portfolio-project-dependency.entity';
@@ -269,9 +268,6 @@ export async function convertedRequestPurpose(
     ? await normalizeMarkdownRichText(purposeOverride)
     : await normalizeMarkdownRichText(taskDescription, { fieldName: 'purpose', enforceSizeLimit: false });
 }
-
-/** The request's links to budget lines, both natures (lot Z1). */
-const REQUEST_BUDGET_LINES: RelationLinkTable = { links: 'portfolio_request_opex', owner: 'request_id', target: 'opex_id' };
 
 /**
  * The request lists' column filters (the list, its ids and its filter values): one map, so the
@@ -1059,7 +1055,8 @@ export class PortfolioRequestsService {
     if ((wantsCapex || wantsOpex) && opts?.readsBudget !== true) {
       if (wantsCapex) result.capex_items = null;
       if (wantsOpex) result.opex_items = null;
-      result.budget_lines_hidden = await countRelatedBudgetLines(mg, REQUEST_BUDGET_LINES, 'request', request.tenant_id, id);
+      // Without the budget right, the family is not counted either.
+      result.budget_lines_hidden = 0;
     } else if (wantsCapex || wantsOpex) {
       result.budget_lines_hidden = await hiddenLineCount(mg, 'request', id);
       if (wantsCapex) {

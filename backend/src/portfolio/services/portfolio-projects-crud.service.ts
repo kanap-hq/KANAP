@@ -28,11 +28,7 @@ import { IntegratedDocumentsService } from '../../knowledge/integrated-documents
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { activityBudgetLines, budgetLineActivitiesForReader } from '../budget-line-activity';
 import { hiddenLineCount } from '../../data-access/hidden-links';
-import { countRelatedBudgetLines, type RelationLinkTable } from '../../common/relations/related-objects';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
-
-/** The project's links to budget lines, both natures (lot Z1). */
-const PROJECT_BUDGET_LINES: RelationLinkTable = { links: 'portfolio_project_opex', owner: 'project_id', target: 'opex_id' };
 
 /**
  * Service for core CRUD operations on portfolio projects.
@@ -283,7 +279,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     if ((wantsCapex || wantsOpex) && opts?.readsBudget !== true) {
       if (wantsCapex) result.capex_items = null;
       if (wantsOpex) result.opex_items = null;
-      result.budget_lines_hidden = await countRelatedBudgetLines(mg, PROJECT_BUDGET_LINES, 'project', project.tenant_id, id);
+      // Without the budget right, the family is not counted either.
+      result.budget_lines_hidden = 0;
     } else if (wantsCapex || wantsOpex) {
       result.budget_lines_hidden = await hiddenLineCount(mg, 'project', id);
       if (wantsCapex) {

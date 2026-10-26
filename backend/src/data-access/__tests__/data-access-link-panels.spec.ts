@@ -180,16 +180,17 @@ async function testPanels(runner: QueryRunner, s: Seed, o: Objects): Promise<voi
     for (const owner of OWNERS) {
       assert.deepEqual(await panel(m, s, owner, o[owner].both, true), { ids: [L1], hidden: 1 }, `rita, ${owner}: L1 listed, L5 counted`);
       assert.deepEqual(await panel(m, s, owner, o[owner].one, true), { ids: [L1], hidden: 0 }, `rita, ${owner} twin: nothing hidden`);
-      assert.deepEqual(await panel(m, s, owner, o[owner].both, false), { ids: null, hidden: 2 }, `rita without the budget right, ${owner}: count only`);
+      // Without the budget right, no line and no count (2026-10-26: no counter of a hidden family).
+      assert.deepEqual(await panel(m, s, owner, o[owner].both, false), { ids: null, hidden: 0 }, `rita without the budget right, ${owner}: nothing`);
     }
   });
   await as(runner, s.persons.ulla, async (m) => {
     for (const owner of OWNERS) {
       assert.deepEqual(await panel(m, s, owner, o[owner].both, true), { ids: both, hidden: 0 }, `ulla, ${owner}: both listed`);
-      assert.deepEqual(await panel(m, s, owner, o[owner].both, false), { ids: null, hidden: 2 }, `ulla without the budget right, ${owner}: count only, no names`);
+      assert.deepEqual(await panel(m, s, owner, o[owner].both, false), { ids: null, hidden: 0 }, `ulla without the budget right, ${owner}: nothing`);
     }
   });
-  console.log('  panels: visible lines then the hidden count (limited), all lines (unscoped), count only without the budget right: OK');
+  console.log('  panels: visible lines then the hidden count (limited), all lines (unscoped), nothing without the budget right: OK');
 }
 
 /** The Relations badge of an application counts the budget lines its tab shows: listed and counted. */
@@ -199,7 +200,7 @@ async function testApplicationBadge(runner: QueryRunner, s: Seed, o: Objects): P
     .then((c) => ({ listed: c.opex + c.capex, hidden: c.budget_lines_hidden, rest: c.total - c.opex - c.capex - c.budget_lines_hidden }));
   await as(runner, s.persons.rita, async (m) => {
     assert.deepEqual(await budget(m, true), { listed: 1, hidden: 1, rest: 0 }, 'rita: L1 listed, L5 counted, both in the badge');
-    assert.deepEqual(await budget(m, false), { listed: 0, hidden: 2, rest: 0 }, 'rita without the budget right: the two lines counted');
+    assert.deepEqual(await budget(m, false), { listed: 0, hidden: 0, rest: 0 }, 'rita without the budget right: no line counted');
   });
   await as(runner, s.persons.ulla, async (m) => {
     assert.deepEqual(await budget(m, true), { listed: 2, hidden: 0, rest: 0 }, 'ulla: both listed');

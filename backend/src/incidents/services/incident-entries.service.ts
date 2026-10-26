@@ -21,6 +21,11 @@ const LINK_CHANGE_READS: Record<string, 'technologies' | 'applications'> = {
   applications: 'applications',
 };
 
+/** The families whose link changes the reader does not see: `counts.entries` leaves them out too. */
+export function unreadableLinkChangeFamilies(opts?: ServiceOpts): string[] {
+  return Object.keys(LINK_CHANGE_READS).filter((family) => opts?.[LINK_CHANGE_READS[family]] !== true);
+}
+
 /**
  * Whether the reader may see a journal entry. A link change names linked records (`Assets linked:
  * AST-50`): it shows only to a reader of their module, as the Relations tab. Notes and the other
