@@ -849,7 +849,8 @@ async function testExport() {
     const retired = await asset(runner, a, 'gone-export');
     await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [a, retired]);
     const settings = new Map<string, Settings>([[a, {
-      adminZones: ZONES, domains: DOMAINS, technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES,
+      adminZones: [...ZONES, { code: 'tier_2', label: 'Tier 2 (workstations)' }],
+      domains: DOMAINS, technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES,
       serverKinds: [{ code: 'vm', label: 'Virtual machine' }, { code: 'virtual_machine', label: 'Virtual Machine' }],
     }]]);
     const svc = service(settings);
@@ -887,6 +888,19 @@ async function testExport() {
       'What runs an asset is in a less sensitive zone',
       `Runs ${row.reference} guest (Tier 0); Member of cluster ${peers.items[0].reference} vsphere (Tier 0)`,
     ].join(','), 'the asset to raise names what it runs and the cluster it carries');
+    const relationLabels = {
+      fr: ['Fait tourner', 'Membre du cluster'],
+      de: ['Betreibt', 'Mitglied des Clusters'],
+      es: ['Ejecuta', 'Miembro del clúster'],
+    } as const;
+    for (const language of ['fr', 'de', 'es'] as const) {
+      const translated = (await svc.csv({ q: 'host', language }, opts)).content;
+      const [runs, member] = relationLabels[language];
+      assert.ok(translated.includes(`${runs} ${row.reference} guest (Tier 0)`), `${language} ${translated}`);
+      assert.ok(translated.includes(`${member} ${peers.items[0].reference} vsphere (Tier 0)`), `${language} ${translated}`);
+      assert.equal(translated.includes('Runs '), false, language);
+      assert.equal(translated.includes('Member of cluster'), false, language);
+    }
     await asset(runner, a, 'zone-vide');
     const french = await svc.csv({ q: 'zone-vide', language: 'fr' }, opts);
     const frenchLines = french.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
@@ -894,6 +908,21 @@ async function testExport() {
     assert.equal(frenchLines[1].startsWith('Sans zone;'), true, frenchLines[1]);
     assert.equal(frenchLines[1].includes("Actifs sans zone d'administration"), true, frenchLines[1]);
     assert.equal(frenchLines[1].includes('Assets without an administration zone'), false);
+    assert.ok((await svc.csv({ q: 'zone-vide', language: 'de' }, opts)).content.includes('Keine Zone'));
+    assert.ok((await svc.csv({ q: 'zone-vide', language: 'es' }, opts)).content.includes('Sin zona'));
+    const poste = await asset(runner, a, 'poste');
+    await runner.query(`UPDATE assets SET admin_zone = 'tier_2' WHERE tenant_id = $1 AND id = $2`, [a, poste]);
+    const zoneLabels = {
+      en: 'Tier 2 (workstations)',
+      fr: 'Tier 2 (postes de travail)',
+      de: 'Tier 2 (Arbeitsplätze)',
+      es: 'Tier 2 (puestos de trabajo)',
+    } as const;
+    for (const language of ['en', 'fr', 'de', 'es'] as const) {
+      const zoneFile = (await svc.csv({ q: 'poste', language }, opts)).content;
+      assert.ok(zoneFile.includes(zoneLabels[language]), `${language} ${zoneFile}`);
+      if (language !== 'en') assert.equal(zoneFile.includes(zoneLabels.en), false, language);
+    }
     // A shipped type follows the file's language, as on the screen; a type the tenant typed stays as it is.
     const shipped = await asset(runner, a, 'shipped-kind');
     await runner.query(`UPDATE assets SET kind = 'virtual_machine' WHERE tenant_id = $1 AND id = $2`, [a, shipped]);

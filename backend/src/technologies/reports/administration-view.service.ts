@@ -128,8 +128,13 @@ const TRUST_DIRECTION_LABELS: Record<CsvLanguage, Record<DomainTrustDirection, s
   es: { two_way: 'bidireccional', outgoing: 'saliente', incoming: 'entrante' },
 };
 
-/** English relation names in the export. The screen uses the same words, translated. */
-const TRUST_RELATION_LABEL = { contains: 'Runs', cluster: 'Member of cluster' } as const;
+/** A trust peer in the asset export, in the words of the screen (`pages.administrationView.trustPeer`). */
+const TRUST_RELATION_LABEL: Record<CsvLanguage, Record<'contains' | 'cluster', string>> = {
+  en: { contains: 'Runs', cluster: 'Member of cluster' },
+  fr: { contains: 'Fait tourner', cluster: 'Membre du cluster' },
+  de: { contains: 'Betreibt', cluster: 'Mitglied des Clusters' },
+  es: { contains: 'Ejecuta', cluster: 'Miembro del clúster' },
+};
 
 /** Sortable fields. `zone` sorts in catalog order, `kind` by the label of its catalog, see `orderOf`. */
 const SORTS: Record<string, string> = {
@@ -1013,6 +1018,7 @@ export class AdministrationViewService {
     const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, query.language);
     const headers = ASSET_CSV_HEADERS[language] ?? ASSET_CSV_HEADERS.en;
     const controlTitles = CONTROL_TITLES_BY_LANGUAGE[language] ?? CONTROL_TITLES_BY_LANGUAGE.en;
+    const relations = TRUST_RELATION_LABEL[language] ?? TRUST_RELATION_LABEL.en;
     // Shipped values in the file's language, as the screen shows them; a label the tenant typed stays as it is.
     const zoneLabel = (code: string | null) => {
       if (!code) return NO_ZONE_LABEL[language];
@@ -1033,7 +1039,7 @@ export class AdministrationViewService {
       item.findings.map((key) => controlTitles[key]).join('; '),
       item.trust_peers.items.map((link) => {
         const who = [link.reference, link.name].filter(Boolean).join(' ');
-        return `${TRUST_RELATION_LABEL[link.relation]} ${who} (${zoneLabel(link.zone)})`.trim();
+        return `${relations[link.relation]} ${who} (${zoneLabel(link.zone)})`.trim();
       }).join('; '),
     ]);
     return { filename: 'administration_view_assets.csv', content: writeCsv({ language, headers, rows: lines }) };
