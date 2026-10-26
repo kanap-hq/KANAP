@@ -141,7 +141,7 @@ Bei einer Kostenstelle oder Gruppe:
 - **Direkter Zugriff**: die Personen mit einem Knoten auf dieser Kostenstelle oder Gruppe. **Hinzufügen** gibt einer Person diesen Knoten mit Lesen oder Bearbeiten.
 - **Geerbter Zugriff**: die Personen, die sie über eine übergeordnete Gruppe, das Unternehmen der Kostenstelle oder **Alles** erreichen. Die Spalte **Über** verlinkt auf den Knoten, der den Zugriff gibt. Ändern Sie einen geerbten Zugriff auf diesem Knoten.
 
-Änderungen auf diesen Reitern werden sofort gespeichert. Eine Person mit allen Daten hinzuzufügen, begrenzt sie auf diesen einen Knoten: Prüfen Sie ihre anderen Knoten im Benutzerfenster.
+Änderungen auf diesen Reitern werden sofort gespeichert. Hat die hinzugefügte Person alle Daten, weist eine Bestätigung darauf hin, dass ihr Zugriff auf diesen einen Knoten begrenzt wird. **Abbrechen** lässt ihn unverändert.
 
 ## Import und Export
 

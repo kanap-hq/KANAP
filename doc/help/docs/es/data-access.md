@@ -141,7 +141,7 @@ En un centro de coste o un grupo:
 - **Acceso directo**: las personas con un nodo en este centro o grupo. **Añadir** da este nodo a una persona en Lectura o en Edición.
 - **Acceso heredado**: las personas que llegan a él mediante un grupo padre, la empresa del centro, o **Todo**. La columna **Mediante** enlaza al nodo que da el acceso. Cambie un acceso heredado en ese nodo.
 
-Los cambios en estas pestañas se guardan al momento. Añadir a una persona con todos los datos la limita a ese único nodo: revise sus otros nodos en la ventana del usuario.
+Los cambios en estas pestañas se guardan al momento. Si la persona añadida tiene todos los datos, una confirmación indica que su acceso pasará a ese único nodo. **Cancelar** lo deja como estaba.
 
 ## Importación y exportación
 

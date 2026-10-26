@@ -141,7 +141,7 @@ Sur un centre de coûts ou un groupe :
 - **Accès direct** : les personnes qui ont un nœud sur ce centre ou ce groupe. **Ajouter** donne ce nœud à une personne en Lecture ou en Saisie.
 - **Accès hérité** : les personnes qui l'atteignent par un groupe parent, la société du centre, ou **Tout**. La colonne **Par** renvoie au nœud qui donne l'accès. Modifiez un accès hérité sur ce nœud.
 
-Les changements de ces onglets s'enregistrent aussitôt. Ajouter une personne qui a toutes les données la limite à ce seul nœud : vérifiez ses autres nœuds dans la fenêtre de l'utilisateur.
+Les changements de ces onglets s'enregistrent aussitôt. Quand la personne ajoutée a toutes les données, une confirmation indique que son accès passera à ce seul nœud. **Annuler** le laisse tel quel.
 
 ## Import et export
 

@@ -141,7 +141,7 @@ On a cost center or a group:
 - **Direct access**: the people with a node on this center or group. **Add** gives a person this node in Read or Edit.
 - **Inherited access**: the people who reach it through a parent group, the company of the center, or **Everything**. The **Via** column links to the node that gives it. Change an inherited access on that node.
 
-Changes on these tabs save at once. Adding a person who has all data limits them to this one node: check their other nodes in the user window.
+Changes on these tabs save at once. When the person you add has all data, a confirmation says that their access will change to this node only. **Cancel** leaves it as it was.
 
 ## Import and export
 
