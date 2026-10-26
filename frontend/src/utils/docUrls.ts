@@ -93,6 +93,7 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/master-data\/working-day-calendars/, 'working-day-calendars'],
 
   // Admin
+  [/^\/admin\/data-access/, 'data-access'],
   [/^\/admin\/users/, 'admin'],
   [/^\/admin\/roles/, 'admin'],
   [/^\/admin\/audit-logs/, 'admin'],
