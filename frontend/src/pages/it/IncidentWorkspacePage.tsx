@@ -724,6 +724,7 @@ export function IncidentWorkspacePage() {
         titleFallback={isCreate ? t('workspace.incident.newTitle') : t('workspace.incident.untitled')}
         canEditTitle={isCreate ? canEdit : editable}
         onTitleSave={handleTitleSave}
+        onTitleDraftChange={isCreate ? (draft) => { if (draft.trim()) setCreateTitleError(null); } : undefined}
         titleRequiredMessage={isCreate && canEdit ? t('workspace.incident.create.titleRequired') : undefined}
         titleError={isCreate ? createTitleError : null}
         isCreate={isCreate}

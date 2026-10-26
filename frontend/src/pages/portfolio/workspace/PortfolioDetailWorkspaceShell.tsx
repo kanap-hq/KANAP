@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   Box,
-  FormHelperText,
   IconButton,
   Stack,
   Typography,
@@ -55,6 +54,8 @@ type PortfolioDetailWorkspaceShellProps = {
   onSaveShortcut?: () => void;
   onTabChange: (nextTab: string) => void;
   onTitleSave?: (nextTitle: string) => void;
+  /** Fired on each keystroke in the title, so the page can drop a refusal the draft has answered. */
+  onTitleDraftChange?: (draft: string) => void;
   /** The longest title the record accepts (the input stops there). */
   titleMaxLength?: number;
   /** Omitted (e.g. on a create page), the shell draws no Properties tab and no drawer. */
@@ -183,6 +184,7 @@ export default function PortfolioDetailWorkspaceShell({
   onSaveShortcut,
   onTabChange,
   onTitleSave,
+  onTitleDraftChange,
   titleMaxLength,
   titleRequiredMessage,
   properties,
@@ -401,9 +403,10 @@ export default function PortfolioDetailWorkspaceShell({
                         canEdit={canEditTitle}
                         maxLength={titleMaxLength}
                         onSave={onTitleSave}
+                        onDraftChange={onTitleDraftChange}
                         requiredMessage={titleRequiredMessage}
+                        error={titleError}
                       />
-                      {titleError && <FormHelperText error sx={{ mt: 0.5 }}>{titleError}</FormHelperText>}
                     </>
                   )}
                 </Box>

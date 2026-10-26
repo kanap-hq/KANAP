@@ -190,4 +190,85 @@ describe('PortfolioDetailWorkspaceShell Escape', () => {
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(onTitleSave).toHaveBeenCalledWith('New title');
   });
+
+  it('hides a title error while a non-empty title is typed', () => {
+    const onTitleDraftChange = vi.fn();
+    renderShell({
+      canEditTitle: true,
+      title: '',
+      titleFallback: 'New incident',
+      titleError: 'Title is required',
+      onTitleDraftChange,
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('Title is required');
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.editTitle' }));
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'Out' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(onTitleDraftChange).toHaveBeenLastCalledWith('Out');
+
+    // The refusal is still the parent's until the parent drops it: an emptied draft shows it again.
+    fireEvent.change(input, { target: { value: '' } });
+    expect(screen.getByRole('alert')).toHaveTextContent('Title is required');
+  });
+
+  it('keeps a cleared title error away until an empty title is committed or Create is clicked', () => {
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <CreateTitleHarness />
+      </ThemeProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Title is required');
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.editTitle' }));
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'Out' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    fireEvent.change(input, { target: { value: '' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(screen.getByRole('alert')).toHaveTextContent('Title is required');
+    expect(screen.getByRole('textbox')).toHaveValue('');
+
+    fireEvent.change(input, { target: { value: 'Out' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Title is required');
+  });
 });
+
+/** The new-incident contract: the page drops the refusal once the draft names the record. */
+function CreateTitleHarness() {
+  const [title, setTitle] = React.useState('');
+  const [titleError, setTitleError] = React.useState<string | null>(null);
+  return (
+    <>
+      <button type="button" onClick={() => setTitleError(title.trim() ? null : 'Title is required')}>Create</button>
+      <PortfolioDetailWorkspaceShell
+        activeTab="overview"
+        tabs={[{ key: 'overview', label: 'Overview' }]}
+        onTabChange={() => undefined}
+        drawerStorageKey="kanap.test.titleError"
+        backLabel="Back"
+        onBack={() => undefined}
+        title={title}
+        titleFallback="New incident"
+        canEditTitle
+        titleError={titleError}
+        titleRequiredMessage="Title is required"
+        onTitleDraftChange={(draft) => { if (draft.trim()) setTitleError(null); }}
+        onTitleSave={(next) => { setTitle(next); setTitleError(null); }}
+      >
+        <div>content</div>
+      </PortfolioDetailWorkspaceShell>
+    </>
+  );
+}

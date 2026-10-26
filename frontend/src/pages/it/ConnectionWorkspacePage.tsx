@@ -183,6 +183,7 @@ export default function ConnectionWorkspacePage() {
   const [createForm, setCreateForm] = React.useState<CreateConnectionForm>(() => createInitialForm());
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
+  const [createTitleError, setCreateTitleError] = React.useState<string | null>(null);
   const [absorbed, setAbsorbed] = React.useState<AbsorbedAsset[] | null>(null);
   const { choose, questionDialog } = useClusterConnectionQuestion();
 
@@ -232,6 +233,7 @@ export default function ConnectionWorkspacePage() {
   const patchCreateForm = React.useCallback((patch: Partial<CreateConnectionForm>) => {
     setCreateForm((prev) => ({ ...prev, ...patch }));
     setCreateError(null);
+    if (patch.name !== undefined && patch.name.trim()) setCreateTitleError(null);
   }, []);
   const connectionId = React.useMemo(() => {
     if (isCreate) return '';
@@ -544,6 +546,12 @@ export default function ConnectionWorkspacePage() {
 
   const handleCreate = async () => {
     if (!canManage) return;
+    if (!createForm.name.trim()) {
+      setCreateTitleError(t('messages.nameRequired'));
+      setCreateError(null);
+      return;
+    }
+    setCreateTitleError(null);
     const validationMessage = getCreateValidationMessage(createForm, t);
     if (validationMessage) {
       setCreateError(validationMessage);
@@ -866,6 +874,9 @@ export default function ConnectionWorkspacePage() {
         titleFallback={isCreate ? t('workspace.connection.newTitle') : t('workspace.connection.untitled')}
         canEditTitle={canManage}
         onTitleSave={handleTitleSave}
+        onTitleDraftChange={isCreate ? (draft) => { if (draft.trim()) setCreateTitleError(null); } : undefined}
+        titleRequiredMessage={isCreate && canManage ? t('messages.nameRequired') : undefined}
+        titleError={isCreate ? createTitleError : null}
         isCreate={isCreate}
         nav={!isCreate && total > 0 ? {
           currentIndex: index + 1,
