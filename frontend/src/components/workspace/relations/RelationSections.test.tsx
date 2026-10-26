@@ -81,6 +81,29 @@ describe('RelationSections', () => {
     expect(screen.queryByRole('option')).toBeNull();
   });
 
+  it('opens the picker under the Add button, on its left edge', async () => {
+    // The Add button sits just after the section title, to the right of the 220px side menu.
+    // The panel's top-left meets the button (left 280px, bottom 112px) and grows into the content.
+    const previousWidth = window.innerWidth;
+    window.innerWidth = 1280;
+    try {
+      renderSections({});
+      const region = screen.getByRole('region', { name: 'Projects' });
+      const button = within(region).getByText('workspace.application.relations.add').closest('button') as HTMLButtonElement;
+      button.getBoundingClientRect = () => ({
+        top: 80, bottom: 112, left: 280, right: 440, width: 160, height: 32, x: 280, y: 80, toJSON: () => ({}),
+      }) as DOMRect;
+      fireEvent.click(button);
+      expect(await screen.findByRole('option', { name: /New project/ })).toBeTruthy();
+      const paper = document.querySelector('.MuiPopover-paper') as HTMLElement;
+      expect(paper.style.left).toBe('280px');
+      expect(paper.style.top).toBe('112px');
+      expect(getComputedStyle(paper).width).toBe('380px');
+    } finally {
+      window.innerWidth = previousWidth;
+    }
+  });
+
   it('shows the empty line when the section has no row', () => {
     renderSections({ rows: [] });
     expect(screen.getByText('No project.')).toBeTruthy();
