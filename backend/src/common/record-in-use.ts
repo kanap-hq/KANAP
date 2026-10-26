@@ -106,6 +106,8 @@ export class RecordInUseException extends ConflictException {
     readonly params?: RefusalParams,
     /** The records the sentence names besides the counts (an asset's applications), for the screen. */
     readonly applications?: string[],
+    /** The connections an asset delete refusal names (reference and name), at most five, for the screen. */
+    readonly connections?: string[],
   ) {
     super({
       statusCode: HttpStatus.CONFLICT,
@@ -115,6 +117,7 @@ export class RecordInUseException extends ConflictException {
       usages,
       ...(params ? { params } : {}),
       ...(applications && applications.length > 0 ? { applications } : {}),
+      ...(connections && connections.length > 0 ? { connections } : {}),
     });
   }
 }
@@ -148,6 +151,8 @@ export type DeleteRefusal = {
   usages: UsageCount[];
   params?: RefusalParams;
   applications?: string[];
+  /** Connections named on an asset refusal (reference and name), at most five. */
+  connections?: string[];
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -183,6 +188,7 @@ export async function refusalsFrom<R extends { id: string }>(
         usages: refusal.usages,
         ...(refusal.params ? { params: refusal.params } : {}),
         ...(refusal instanceof RecordInUseException && refusal.applications ? { applications: refusal.applications } : {}),
+        ...(refusal instanceof RecordInUseException && refusal.connections ? { connections: refusal.connections } : {}),
       });
     }
   }
@@ -224,13 +230,14 @@ export async function refusalsOf(
  * record gone meanwhile (`not_found`); a database refusal's mapped code (`in_use`, `retry`, ...)
  * with its English sentence as `reason`, in place of the driver's. Spread after `reason`.
  */
-export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[]; params?: RefusalParams; applications?: string[]; reason?: string } {
+export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[]; params?: RefusalParams; applications?: string[]; connections?: string[]; reason?: string } {
   if (error instanceof RecordInUseException || error instanceof DataAccessHiddenLinesException) {
     return {
       code: error.code,
       usages: error.usages,
       ...(error.params ? { params: error.params } : {}),
       ...(error instanceof RecordInUseException && error.applications ? { applications: error.applications } : {}),
+      ...(error instanceof RecordInUseException && error.connections ? { connections: error.connections } : {}),
     };
   }
   if (error instanceof NotFoundException) return { code: 'not_found' };
