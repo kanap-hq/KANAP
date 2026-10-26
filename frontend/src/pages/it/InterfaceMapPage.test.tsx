@@ -5,6 +5,10 @@ import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import en from '../../locales/en/it.json';
+import fr from '../../locales/fr/it.json';
+import de from '../../locales/de/it.json';
+import es from '../../locales/es/it.json';
 import InterfaceMapPage from './InterfaceMapPage';
 
 const get = vi.hoisted(() => vi.fn());
@@ -130,6 +134,7 @@ function renderPage(entry = '/it/interface-map', map: typeof MAP | typeof LINKED
             <Route path="/it/assets/:id/:tab" element={<Where />} />
             <Route path="/it/applications/:id/:tab" element={<Where />} />
             <Route path="/it/connection-map" element={<Where />} />
+            <Route path="/it/connections/:id/:tab" element={<Where />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -182,6 +187,31 @@ describe('InterfaceMapPage application panel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'node CheeseTrack' }));
     fireEvent.click(await screen.findByRole('button', { name: 'pages.interfaceMap.openApplication' }));
     expect(screen.getByTestId('where').textContent).toBe('/it/applications/app-1/overview');
+  });
+});
+
+describe('InterfaceMapPage connection card', () => {
+  const maps = [en, fr, de, es];
+
+  beforeEach(() => { get.mockReset(); });
+
+  it('says Open connection in the four languages, with the connection map wording', () => {
+    expect(maps.map((locale) => locale.pages.interfaceMap.openConnection)).toEqual([
+      'Open connection',
+      'Ouvrir la connexion',
+      'Verbindung öffnen',
+      'Abrir conexión',
+    ]);
+    expect(maps.map((locale) => locale.pages.interfaceMap.openConnection)).toEqual(
+      maps.map((locale) => locale.pages.connectionMap.openConnection),
+    );
+  });
+
+  it('opens the connection workspace from the card', async () => {
+    renderPage('/it/interface-map?environment=dev&focusInterfaceId=if-1', LINKED_MAP);
+    fireEvent.click(await screen.findByRole('button', { name: 'pages.interfaceMap.openConnection' }));
+    expect(screen.queryByRole('button', { name: 'common:buttons.edit' })).toBeNull();
+    expect(screen.getByTestId('where').textContent).toBe('/it/connections/CN-1/overview');
   });
 });
 

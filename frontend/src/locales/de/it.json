@@ -328,8 +328,8 @@
         "derivedNoInterfaces": "Abgeleitet (keine Schnittstellen verknüpft)",
         "manual": "Manuell"
       },
-      "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit dieser Verbindung werden entfernt.",
-      "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit diesen Verbindungen werden entfernt.",
+      "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Die Hops dieser Verbindung werden mit ihr gelöscht. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit dieser Verbindung werden entfernt.",
+      "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Die Hops jeder Verbindung werden mit ihr gelöscht. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit diesen Verbindungen werden entfernt.",
       "delete": {
         "toDelete_one": "{{count}} Verbindung wird gelöscht:",
         "toDelete_other": "{{count}} Verbindungen werden gelöscht:",
@@ -985,6 +985,7 @@
       "protocolsValue": "Protokolle: {{value}}",
       "bindingValue": "Bindung: {{env}} · {{leg}}",
       "viewInConnectionMap": "In der Verbindungskarte anzeigen",
+      "openConnection": "Verbindung öffnen",
       "openInterface": "Schnittstelle öffnen",
       "clusterEndpoint": "{{name}} (Cluster)"
     },

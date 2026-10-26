@@ -328,8 +328,8 @@
         "derivedNoInterfaces": "Dérivé (aucune interface liée)",
         "manual": "Manuel"
       },
-      "deleteWarning_one": "Cette action est irréversible. Ses serveurs, interfaces et documents sont conservés ; seuls leurs liens avec cette connexion sont supprimés.",
-      "deleteWarning_other": "Cette action est irréversible. Leurs serveurs, interfaces et documents sont conservés ; seuls leurs liens avec ces connexions sont supprimés.",
+      "deleteWarning_one": "Cette action est irréversible. Les sauts de cette connexion sont supprimés avec elle. Ses serveurs, interfaces et documents sont conservés ; seuls leurs liens avec cette connexion sont supprimés.",
+      "deleteWarning_other": "Cette action est irréversible. Les sauts de chaque connexion sont supprimés avec elle. Leurs serveurs, interfaces et documents sont conservés ; seuls leurs liens avec ces connexions sont supprimés.",
       "delete": {
         "toDelete_one": "{{count}} connexion sera supprimée :",
         "toDelete_other": "{{count}} connexions seront supprimées :",
@@ -985,6 +985,7 @@
       "protocolsValue": "Protocoles : {{value}}",
       "bindingValue": "Liaison : {{env}} · {{leg}}",
       "viewInConnectionMap": "Voir dans la carte des connexions",
+      "openConnection": "Ouvrir la connexion",
       "openInterface": "Ouvrir l'interface",
       "clusterEndpoint": "{{name}} (cluster)"
     },

@@ -157,6 +157,9 @@ describe('map panel open labels', () => {
       'Schnittstelle öffnen',
       'Abrir interfaz',
     ]);
+    expect(maps.map((locale) => locale.pages.interfaceMap.openConnection)).toEqual(
+      maps.map((locale) => locale.pages.connectionMap.openConnection),
+    );
     expect(maps.map((locale) => locale.pages.connectionMap.viewCluster)).toEqual([
       'View cluster',
       'Voir le cluster',
