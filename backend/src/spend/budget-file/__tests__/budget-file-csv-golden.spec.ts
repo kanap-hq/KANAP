@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { writeCsv, type CsvLanguage } from '../../../common/csv-sheet';
-import { buildBudgetExport } from '../export-file';
+import { budgetCsvRows, buildBudgetExport } from '../export-file';
 import type { FileDimension } from '../load';
 import { BudgetFileDetail, emptyMonths, StoredLine } from '../types';
 
@@ -106,7 +106,7 @@ function goldenCsv(language: CsvLanguage, detail: BudgetFileDetail): string {
     lines: GOLDEN_LINES,
     dimensions: GOLDEN_DIMENSIONS,
   });
-  return writeCsv({ language, headers: built.headers, rows: built.rows });
+  return writeCsv({ language, headers: built.headers, rows: budgetCsvRows(built.rows, language) });
 }
 
 const GOLDEN_SHA256: Record<string, string> = {
