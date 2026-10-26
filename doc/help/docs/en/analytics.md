@@ -143,7 +143,7 @@ Open it with **Edit** (**Open** if you can only read) in the selector bar, with 
 
 - **Header**: the name of the dimension. Click it to rename the dimension. **Prev** / **Next** move through the dimensions in order, and the close button returns to the page on this dimension
 - **Main area**: a usage line, then the **Description**. The usage line gives the number of values and of budget lines that hold one of them, OPEX and CAPEX together, for example "12 values · Used by 29 lines". **Used by 29 lines** is a link: it opens those lines in the budget lines list, in a new tab, enabled and disabled lines included. A dimension no line uses reads "Not used yet", and one with no values "No values yet." While the dimension is disabled, the count shows without a link
-- **Properties panel** on the right: **Name**, **Code**, **Used for**, **Required** and **Lifecycle**
+- **Properties panel** on the right: **Name**, **Code**, **Used for**, **Required**, **Open values** and **Lifecycle**
 
 **Autosave**: Every change saves on its own. There is no Save button. Text fields save when you leave them (in **Name** and **Code**, press Enter to save at once); the **Required** switch and the lifecycle save as soon as you change them. When a change is refused, the reason shows under the field that caused it, for example a duplicate code under **Code**. A name refused in the header shows at the top of the page.
 
@@ -156,6 +156,7 @@ Open it with **Edit** (**Open** if you can only read) in the selector bar, with 
 | **Description** | What the dimension is for, so teammates classify lines the same way |
 | **Used for** | **OPEX and CAPEX**, **OPEX only** or **CAPEX only**. Says which budget lines can have a value on this dimension. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions). Locked on the default dimension, with one line under it: "The default dimension applies to OPEX and CAPEX lines." |
 | **Required** | A switch. When it is on, every new line of the kinds the dimension is used for needs a value on it, and a line that holds a value cannot lose it. See [Required dimensions](#required-dimensions). The default dimension can be required too |
+| **Open values** | A switch, off by default. When it is on, anyone who can edit a line can add a value, from the line or the budget file. See [Open values](#open-values) |
 | **Lifecycle** | The status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle). Locked on the default dimension, with one line under it: "This dimension cannot be disabled or deleted: older files and AI questions use it." |
 
 ### Ordering dimensions
@@ -216,6 +217,12 @@ While the setting is on, lines under the switch help you complete the existing l
 
 - **Lines without a value**: for example "117 OPEX lines and 15 CAPEX lines have no value." Each kind of line has its own link, **Show OPEX lines** and **Show CAPEX lines** (**Show these lines** when only one kind is concerned). The link opens the lines in their list, in a new tab, enabled and disabled lines included.
 - **No value to choose**: when a kind of line the dimension is used for has no enabled value it can use, a warning says so, for example "No enabled value can be used on CAPEX lines. New CAPEX lines cannot be created." Add a value for that kind of line, or enable one. See [OPEX or CAPEX values](#opex-or-capex-values).
+
+### Open values
+
+A dimension with **Open values** on takes new values from the lines themselves: a budget reference, a project code, an order number. In the field of a line, typing a name that does not exist offers **Add “…”**, which creates the value. The budget file creates it the same way. Anyone who can edit the line does it, including people with limited [data access](data-access.md).
+
+On a dimension with the switch off, values are created on this page, and the budget file creates unknown values only for people with access to all data. The switch is shown to people who can edit dimensions and have access to all data.
 
 ### Deleting a dimension
 
@@ -325,7 +332,7 @@ In the **Properties** panel of an OPEX or CAPEX line, and when you create one, e
 - Pick a value, or clear the field to leave the line without a value on that dimension. The change saves at once.
 - A required dimension's field is marked with an asterisk. A new line cannot be created without a value on it, with the message "Cost pool is required". On a line that holds a value, the field offers no clear button: you can only pick another value. See [Required dimensions](#required-dimensions).
 - The field lists the enabled values of its dimension that are used for this kind of line. A disabled value, or a value used for the other kind of line only, stays shown on the lines that have it. See [OPEX or CAPEX values](#opex-or-capex-values).
-- The field cannot create a value. Create values on the Analytics dimensions page, or let an OPEX or CAPEX CSV import create them.
+- On a dimension with [open values](#open-values), the field offers **Add “…”** for a name that does not exist. On the other dimensions, the field cannot create a value: create values on the Analytics dimensions page, or let the budget file create them.
 - A value applies to the whole line, across all years.
 - If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."
 

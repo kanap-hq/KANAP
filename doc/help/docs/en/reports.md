@@ -9,6 +9,8 @@ Navigate to **Reporting** from the main menu to open the reports hub.
 - Path: **Reporting**
 - Permissions: `reporting:reader` (minimum)
 
+For a person with limited [data access](data-access.md), every report counts the lines they see, and shows no group total.
+
 ---
 
 ## Reports hub
@@ -211,6 +213,8 @@ Drill down into a single company's chargeback allocations across departments, bu
 - Separate **Export flows CSV** button
 
 **KPI table** (when enabled): Same columns as the Global chargeback KPI table, with a "Global totals" row at the bottom for comparison.
+
+**Limited data access**: a limited person opens the companies of their company nodes, or every company with **Everything**. The chargeback lines then show the share charged to the company, with the paying company, the allocation percentage and the departments; a line they do not otherwise see shows its reference without a link. The figures of the other companies and the global totals are left out, and a cost center node does not open this report. See [Data access](data-access.md#what-a-limited-person-sees).
 
 ### Export
 
