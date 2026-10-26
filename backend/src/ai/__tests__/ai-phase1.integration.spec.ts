@@ -2533,9 +2533,13 @@ async function testAiToolRegistryIsolationCoverageTracksRegisteredTools() {
       ),
     );
 
+    // An administrator of tenant A: a task names its project and phase only to a reader of projects
+    // (`withReadableTaskLinks`), and the tasks-phase case checks the phase.
+    const toolAdminId = randomUUID();
+    await seedUser(runner, tenantA, toolAdminId, `ai-tool-admin-${tenantA.slice(0, 8)}@example.com`, await seedRole(runner, tenantA, 'Administrator'));
     const tenantAContext = {
       tenantId: tenantA,
-      userId: 'ai-tool-admin',
+      userId: toolAdminId,
       isPlatformHost: false,
       surface: 'chat' as const,
       authMethod: 'jwt' as const,
@@ -3090,9 +3094,15 @@ async function testAiQueryLayerExplicitTenantPlumbingStaysIsolatedAcrossFamilies
       } as any,
     );
 
+    // An administrator of tenant A: a task names its project and phase only to a reader of projects
+    // (`withReadableTaskLinks`), and the cases below check the phase.
+    const tenantAAdminId = randomUUID();
+    const [{ tenant: sessionTenant }] = await runner.query(`SELECT current_setting('app.current_tenant', true) AS tenant`);
+    await seedUser(runner, tenantA, tenantAAdminId, `plumbing-admin-${tenantA.slice(0, 8)}@example.com`, await seedRole(runner, tenantA, 'Administrator'));
+    await setCurrentTenant(runner, sessionTenant);
     const tenantAContext = {
       tenantId: tenantA,
-      userId: randomUUID(),
+      userId: tenantAAdminId,
       isPlatformHost: false,
       surface: 'chat' as const,
       authMethod: 'jwt' as const,

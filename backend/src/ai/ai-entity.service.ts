@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException, Optional } 
 import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { bilingualDocumentTsQuerySql } from '../common/document-search-tsquery';
 import { resolveToUuid } from '../common/resolve-item-id';
+import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import {
   documentIncidentVisibilitySql,
@@ -1317,6 +1318,17 @@ export class AiEntityService {
     const accessScopeSql = appendParticipationScopeSql('tasks', 't', params, accessScope);
     // A task of an incident the reader cannot see never enters search (empty for incidents:admin).
     const incidentVisibilitySql = taskIncidentVisibilitySql('t', await resolveAiIncidentViewer(context), params);
+    // The name of the object a task belongs to matches only for a reader of its module, and a
+    // Business Contributor's project only inside their participation.
+    const relatedNameSql: string[] = [];
+    if (await this.canReadType(context, 'projects')) {
+      const projectScopeSql = appendParticipationScopeSql('projects', 'rel_proj', params, await resolveAiParticipationAccessScope(context, 'projects'));
+      relatedNameSql.push(`(COALESCE(rel_proj.name, '') ILIKE $3 ${projectScopeSql})`);
+    }
+    if (await this.canReadType(context, 'spend_items')) relatedNameSql.push(`COALESCE(rel_si.product_name, '') ILIKE $3`);
+    if (await this.canReadType(context, 'contracts')) relatedNameSql.push(`COALESCE(rel_ct.name, '') ILIKE $3`);
+    if (await this.canReadType(context, 'capex_items')) relatedNameSql.push(`COALESCE(rel_cx.product_name, '') ILIKE $3`);
+    if (await this.canReadType(context, 'incidents')) relatedNameSql.push(`COALESCE(${incidentRelatedTitleSql('rel_inc')}, '') ILIKE $3`);
     params.push(limit);
     const limitRef = `$${params.length}`;
     const rows = await context.manager.query<SearchRow[]>(
@@ -1364,11 +1376,7 @@ export class AiEntityService {
            OR COALESCE(co.name, '') ILIKE $3
            OR COALESCE(pc.name, '') ILIKE $3
            OR COALESCE(ps.name, '') ILIKE $3
-           OR COALESCE(rel_proj.name, '') ILIKE $3
-           OR COALESCE(rel_si.product_name, '') ILIKE $3
-           OR COALESCE(rel_ct.name, '') ILIKE $3
-           OR COALESCE(rel_cx.product_name, '') ILIKE $3
-           OR COALESCE(${incidentRelatedTitleSql('rel_inc')}, '') ILIKE $3
+           ${relatedNameSql.map((sql) => `OR ${sql}`).join('\n           ')}
            OR EXISTS (SELECT 1 FROM jsonb_array_elements_text(t.labels) AS lbl WHERE lbl ILIKE $3)
          )
        ORDER BY score DESC,
@@ -2082,6 +2090,7 @@ export class AiEntityService {
       `SELECT t.id, t.item_number, COALESCE(t.title, 'Untitled task') AS label, t.description AS summary, t.status, t.updated_at,
               tt.name AS task_type_name,
               t.related_object_type,
+              t.related_object_id,
               COALESCE(rel_proj.name, rel_si.product_name, rel_ct.name, rel_cx.product_name, ${incidentRelatedLabelSql('rel_inc')}) AS related_object_name,
               CONCAT_WS(' ', u_assign.first_name, u_assign.last_name) AS assignee_name,
               t.priority_level
@@ -2103,13 +2112,24 @@ export class AiEntityService {
     for (const type of new Set(rows.map((row) => String(row.related_object_type ?? '')))) {
       readsRelated.set(type, await this.canReadTaskRelated(context, type));
     }
+    // A Business Contributor's projects, inside their participation.
+    const projectsInScope = readsRelated.get('project')
+      ? await idsInScope(
+        context.manager,
+        'projects',
+        rows.filter((row) => row.related_object_type === 'project').map((row) => row.related_object_id),
+        await resolveAiParticipationAccessScope(context, 'projects'),
+      )
+      : new Set<string>();
+    const namesRelated = (row: any) => readsRelated.get(String(row.related_object_type ?? ''))
+      && (row.related_object_type !== 'project' || projectsInScope.has(String(row.related_object_id)));
     return rows.map((row) => ({
       ...toSummary('tasks', row),
       metadata: {
         task_type: row.task_type_name ?? null,
         related_to: row.related_object_type ?? null,
-        // The object's name only for a reader of its module.
-        related_object_name: readsRelated.get(String(row.related_object_type ?? '')) ? row.related_object_name ?? null : null,
+        // The object's name only for a reader of its module, inside their participation.
+        related_object_name: namesRelated(row) ? row.related_object_name ?? null : null,
         assignee: row.assignee_name || null,
         priority: row.priority_level ?? null,
       },
@@ -3743,8 +3763,7 @@ export class AiEntityService {
     const relatedGroups: AiEntityRelationshipGroupDto[] = [];
     const applicationAccessScope = await resolveAiParticipationAccessScope(context, 'applications');
     const taskApplicationParams: unknown[] = [taskId, tenantId];
-    const taskApplicationScopeSql = appendParticipationScopeSql('applications', 'a', taskApplicationParams, applicationAccessScope);
-    const [applicationRows, assetRows] = await Promise.all([
+    const [linkedApplicationRows, assetRows] = await Promise.all([
       manager.query<SearchRow[]>(
         `SELECT a.id,
                 a.sequential_id AS item_ref,
@@ -3756,7 +3775,6 @@ export class AiEntityService {
          JOIN applications a ON a.id = ta.application_id AND a.tenant_id = ta.tenant_id
          WHERE ta.task_id = $1
            AND ta.tenant_id = $2
-           ${taskApplicationScopeSql}
          ORDER BY a.name ASC`,
         taskApplicationParams,
       ),
@@ -3776,8 +3794,20 @@ export class AiEntityService {
       ),
     ]);
 
-    // The object the task belongs to, on its module's read: without it, no name, no project, no phase.
-    const readsRelated = await this.canReadTaskRelated(context, task.related_object_type);
+    // One application outside a Business Contributor's participation hides them all, as on the task
+    // page, where a save would replace the whole list.
+    const applicationsInScope = await idsInScope(manager, 'applications', linkedApplicationRows.map((row) => row.id), applicationAccessScope);
+    const applicationRows = linkedApplicationRows.every((row) => applicationsInScope.has(String(row.id))) ? linkedApplicationRows : [];
+
+    // The object the task belongs to, on its module's read and, for a project, inside the person's
+    // participation: without it, no name, no project, no phase.
+    const readsRelated = await this.canReadTaskRelated(context, task.related_object_type)
+      && (task.related_object_type !== 'project' || !task.related_object_id || (await idsInScope(
+        manager,
+        'projects',
+        [task.related_object_id],
+        await resolveAiParticipationAccessScope(context, 'projects'),
+      )).has(String(task.related_object_id)));
 
     if (applicationRows.length > 0) {
       relatedGroups.push({

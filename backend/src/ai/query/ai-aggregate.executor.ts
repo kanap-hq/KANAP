@@ -32,6 +32,7 @@ import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.ser
 import { PortfolioProjectsService } from '../../portfolio/services';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { TasksService } from '../../spend/tasks.service';
+import { loadLinkedReads } from '../../common/relations/linked-reads';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { UsersService } from '../../users/users.service';
 import { AiExecutionContextWithManager, AiQueryEntityType, AiQueryScope } from '../ai.types';
@@ -577,6 +578,13 @@ export class AiAggregateExecutor {
         tenantId: context.tenantId,
         accessScope,
         viewer: await resolveAiIncidentViewer(context),
+        // Name filters match only the linked records the caller sees, as in the list.
+        linkedReads: await loadLinkedReads(context.manager, context.userId, context.tenantId),
+        linkedScopes: {
+          projects: await resolveAiParticipationAccessScope(context, 'projects'),
+          requests: await resolveAiParticipationAccessScope(context, 'requests'),
+          applications: await resolveAiParticipationAccessScope(context, 'applications'),
+        },
       });
       const ids = result.ids || [];
       return {

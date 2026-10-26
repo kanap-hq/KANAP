@@ -22,7 +22,7 @@ import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.ser
 import { PortfolioProjectsService } from '../../portfolio/services';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { presentChildren } from '../../spend/budget-line-presentation';
-import { TasksService } from '../../spend/tasks.service';
+import { TaskLinkedScopes, TasksService } from '../../spend/tasks.service';
 import { AllocationCalculatorService } from '../../spend/allocation-calculator.service';
 import { describeAllocationWarning } from '../../spend/allocation-distribution';
 import type { SpendVersion } from '../../spend/spend-version.entity';
@@ -1401,6 +1401,7 @@ export class AiQueryExecutor {
         accessScope,
         viewer: await resolveAiIncidentViewer(context),
         linkedReads: await this.linkedReads(context),
+        linkedScopes: await this.taskLinkedScopes(context),
       });
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
@@ -2369,6 +2370,15 @@ export class AiQueryExecutor {
     };
   }
 
+  /** A Business Contributor's linked projects, requests and applications, inside their participation. */
+  private async taskLinkedScopes(context: AiExecutionContextWithManager): Promise<TaskLinkedScopes> {
+    return {
+      projects: await resolveAiParticipationAccessScope(context, 'projects'),
+      requests: await resolveAiParticipationAccessScope(context, 'requests'),
+      applications: await resolveAiParticipationAccessScope(context, 'applications'),
+    };
+  }
+
   /** The modules the caller reads, for the linked records of a task, a project or a request. */
   private linkedReads(context: AiExecutionContextWithManager): Promise<LinkedReads> {
     return loadLinkedReads(context.manager, context.userId, context.tenantId);
@@ -2425,6 +2435,7 @@ export class AiQueryExecutor {
         accessScope,
         viewer: await resolveAiIncidentViewer(context),
         linkedReads: await this.linkedReads(context),
+        linkedScopes: await this.taskLinkedScopes(context),
       });
       if (!row) throw new NotFoundException('Task not found.');
       return this.toDetailResult(this.mapTask(row), withoutHiddenLine(row));
@@ -3008,6 +3019,8 @@ export class AiQueryExecutor {
         tenantId: context.tenantId,
         accessScope,
         viewer: await resolveAiIncidentViewer(context),
+        linkedReads: await this.linkedReads(context),
+        linkedScopes: await this.taskLinkedScopes(context),
       }) as any;
     } else if (input.entity_type === 'projects') {
       raw = await this.projects.listFilterValues(query, {
