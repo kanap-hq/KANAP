@@ -723,6 +723,10 @@
       "nativeName": "Lokaler Name (Landessprache)",
       "description": "Beschreibung",
       "consolidationAccount": "Konsolidierungskonto",
+      "consolidationAccountNumber": "Konsolidierungskontonummer",
+      "consolidationAccountName": "Konsolidierungskontoname",
+      "consolidationAccountDescription": "Beschreibung des Konsolidierungskontos",
+      "selectChart": "Wählen Sie einen Kontenplan",
       "lifecycle": "Lebenszyklus",
       "loadCoAsError": "Fehler beim Laden der Kontenpläne"
     },

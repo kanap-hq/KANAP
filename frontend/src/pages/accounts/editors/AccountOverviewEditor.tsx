@@ -191,7 +191,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
         <Alert severity="info">{t('shared.messages.readOnlyAccess', { entity: t('accounts.entity') + 's' })}</Alert>
       )}
       <FormControl fullWidth error={!!err.coa_id}>
-        <InputLabel id="coa-select-label" required>Chart of Accounts</InputLabel>
+        <InputLabel id="coa-select-label" required>{t('accounts.fields.chartOfAccounts')}</InputLabel>
         <Controller
           control={control}
           name="coa_id"
@@ -199,14 +199,14 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
           render={({ field }) => (
             <Select
               labelId="coa-select-label"
-              label="Chart of Accounts"
+              label={t('accounts.fields.chartOfAccounts')}
               value={field.value ?? ''}
               onChange={(e) => field.onChange(e.target.value)}
               error={!!err.coa_id}
               disabled={disabled}
             >
               <MenuItem value="" disabled>
-                {loadingCoas ? 'Loading…' : 'Select a CoA'}
+                {loadingCoas ? t('common:selects.loading') : t('accounts.fields.selectChart')}
               </MenuItem>
               {coas.map((c) => (
                 <MenuItem key={c.id} value={c.id}>{c.label}</MenuItem>
@@ -218,7 +218,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
         {loadCoasError && <Alert severity="error" sx={{ mt: 1 }}>{loadCoasError}</Alert>}
       </FormControl>
       <TextField
-        label="Account Number"
+        label={t('accounts.fields.accountNumber')}
         required
         type="number"
         {...register('account_number', { valueAsNumber: true })}
@@ -228,7 +228,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
         InputLabelProps={{ shrink: true }}
       />
       <TextField
-        label="Account Name"
+        label={t('accounts.fields.accountName')}
         required
         {...register('account_name')}
         error={!!err.account_name}
@@ -237,7 +237,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
         InputLabelProps={{ shrink: true }}
       />
       <TextField
-        label="Native Name (local language)"
+        label={t('accounts.fields.nativeName')}
         {...register('native_name')}
         error={!!err.native_name}
         helperText={err.native_name?.message as string}
@@ -245,7 +245,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
         InputLabelProps={{ shrink: true }}
       />
       <TextField
-        label="Description"
+        label={t('accounts.fields.description')}
         {...register('description')}
         error={!!err.description}
         helperText={err.description?.message as string}
@@ -253,7 +253,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
         InputLabelProps={{ shrink: true }}
       />
       <TextField
-        label="Consolidation Account Number"
+        label={t('accounts.fields.consolidationAccountNumber')}
         type="number"
         {...register('consolidation_account_number', { valueAsNumber: true })}
         error={!!err.consolidation_account_number}
@@ -262,7 +262,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
         InputLabelProps={{ shrink: true }}
       />
       <TextField
-        label="Consolidation Account Name"
+        label={t('accounts.fields.consolidationAccountName')}
         {...register('consolidation_account_name')}
         error={!!err.consolidation_account_name}
         helperText={err.consolidation_account_name?.message as string}
@@ -270,7 +270,7 @@ export default forwardRef<AccountOverviewEditorHandle, Props>(function AccountOv
         InputLabelProps={{ shrink: true }}
       />
       <TextField
-        label="Consolidation Account Description"
+        label={t('accounts.fields.consolidationAccountDescription')}
         {...register('consolidation_account_description')}
         error={!!err.consolidation_account_description}
         helperText={err.consolidation_account_description?.message as string}
