@@ -969,7 +969,7 @@ export default function InterfaceMapPage() {
                             size="small"
                             onClick={() => navigate(`/it/applications/${selectedNode.id}/overview`)}
                           >
-                            {t('pages.interfaceMap.editApplication')}
+                            {t('pages.interfaceMap.openApplication')}
                           </Button>
                         </Box>
                       </Stack>
@@ -1144,7 +1144,7 @@ export default function InterfaceMapPage() {
                         navigate(`/it/interfaces/${selectedLink.interfaceReference || selectedLink.interfaceDbId}/overview`);
                       }}
                     >
-                      {t('pages.interfaceMap.editInterface')}
+                      {t('pages.interfaceMap.openInterface')}
                     </Button>
                   </Box>
                 </Stack>

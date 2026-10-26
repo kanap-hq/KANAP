@@ -1315,7 +1315,7 @@ export default function ConnectionMapPage() {
                               navigate(`/it/assets/${selectedNode.id}/${selectedNode.kind === 'cluster' ? 'operations' : 'overview'}`);
                             }}
                           >
-                            {selectedNode.kind === 'cluster' ? t('pages.connectionMap.viewCluster') : t('pages.connectionMap.editServer')}
+                            {selectedNode.kind === 'cluster' ? t('pages.connectionMap.viewCluster') : t('pages.connectionMap.openServer')}
                           </Button>
                         </Box>
                       </Stack>
@@ -1354,7 +1354,7 @@ export default function ConnectionMapPage() {
                         if (routeId) navigate(`/it/connections/${routeId}/overview`);
                       }}
                     >
-                      {t('pages.connectionMap.editConnection')}
+                      {t('pages.connectionMap.openConnection')}
                     </Button>
                   </Box>
 

@@ -128,6 +128,7 @@ function renderPage(entry = '/it/interface-map', map: typeof MAP | typeof LINKED
           <Routes>
             <Route path="/it/interface-map" element={<InterfaceMapPage />} />
             <Route path="/it/assets/:id/:tab" element={<Where />} />
+            <Route path="/it/applications/:id/:tab" element={<Where />} />
             <Route path="/it/connection-map" element={<Where />} />
           </Routes>
         </MemoryRouter>
@@ -174,6 +175,13 @@ describe('InterfaceMapPage application panel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'node CheeseTrack' }));
     fireEvent.click(await screen.findByRole('button', { name: 'PAR-SQL-02' }));
     expect(screen.getByTestId('where').textContent).toBe('/it/assets/sql-2/overview');
+  });
+
+  it('opens the application workspace from the panel', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'node CheeseTrack' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'pages.interfaceMap.openApplication' }));
+    expect(screen.getByTestId('where').textContent).toBe('/it/applications/app-1/overview');
   });
 });
 

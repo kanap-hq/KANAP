@@ -119,7 +119,7 @@ Cliquez sur un nœud serveur ou cluster pour mettre en évidence ses connexions 
 
 - **Type de serveur**, **Site du serveur**, **Système d'exploitation**, **Segment réseau**, **Adresse IP**
 - **Applications affectées** : Apps s'exécutant sur ce serveur, regroupées par environnement. Sur un membre, une app affectée à son cluster s'affiche « via » le nom du cluster. Cliquez sur un nom d'app pour l'ouvrir.
-- Bouton **Modifier le serveur** ou **Voir le cluster** pour ouvrir l'espace de travail. **Voir le cluster** ouvre le cluster sur son onglet **Exploitation**, où se gèrent ses membres
+- Bouton **Ouvrir le serveur** ou **Voir le cluster** pour ouvrir l'espace de travail. **Voir le cluster** ouvre le cluster sur son onglet **Exploitation**, où se gèrent ses membres
 
 Cliquez sur un nœud entité pour voir son type et son environnement.
 
@@ -129,7 +129,7 @@ Cliquez sur une arête de connexion pour voir :
 
 - **Objectif**, **Protocoles**, **Ports typiques**, **Criticité**
 - **Topologie** : Serveur à serveur ou Multi-serveur
-- Bouton **Modifier la connexion** pour ouvrir l'espace de travail de la connexion
+- Bouton **Ouvrir la connexion** pour ouvrir l'espace de travail de la connexion
 - Section **Interfaces liées** affichant quelles interfaces applicatives utilisent cette connexion. Chaque carte d'interface liée affiche le type de leg, l'environnement, le pattern et les points de terminaison source/cible. Depuis là, vous pouvez :
   - Cliquer sur **Ouvrir l'interface** pour consulter l'interface
   - Cliquer sur **Voir dans la Carte des interfaces** pour sauter à l'interface dans son contexte

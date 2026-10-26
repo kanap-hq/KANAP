@@ -119,7 +119,7 @@ Haga clic en un nodo de servidor o clúster para resaltar sus conexiones y abrir
 
 - **Tipo de servidor**, **Ubicación del servidor**, **Sistema operativo**, **Segmento de red**, **Dirección IP**
 - **Aplicaciones asignadas**: Apps que se ejecutan en este servidor, agrupadas por entorno. En un miembro, una app asignada a su clúster se muestra «vía» el nombre del clúster. Haga clic en el nombre de una app para abrirla.
-- Botón **Editar servidor** o **Ver clúster** para abrir el espacio de trabajo. **Ver clúster** abre el clúster en su pestaña **Operaciones**, donde se gestionan sus miembros
+- Botón **Abrir servidor** o **Ver clúster** para abrir el espacio de trabajo. **Ver clúster** abre el clúster en su pestaña **Operaciones**, donde se gestionan sus miembros
 
 Haga clic en un nodo de entidad para ver su tipo y entorno.
 
@@ -129,7 +129,7 @@ Haga clic en una arista de conexión para ver:
 
 - **Propósito**, **Protocolos**, **Puertos típicos**, **Criticidad**
 - **Topología**: Servidor a servidor o Multi-servidor
-- Botón **Editar conexión** para abrir el espacio de trabajo de la conexión
+- Botón **Abrir conexión** para abrir el espacio de trabajo de la conexión
 - Sección **Interfaces vinculadas** que muestra qué interfaces de aplicación utilizan esta conexión. Cada tarjeta de interfaz vinculada muestra el tipo de tramo, entorno, patrón y puntos finales de origen/destino. Desde ahí puede:
   - Hacer clic en **Abrir interfaz** para ver la interfaz
   - Hacer clic en **Ver en el Mapa de interfaces** para saltar a la interfaz en su contexto

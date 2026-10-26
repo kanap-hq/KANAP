@@ -142,7 +142,7 @@ Lorsque vous sélectionnez un nœud ou une arête, un panneau latéral s'ouvre s
 - **Serveurs** : Serveurs hébergeant cette app, regroupés par environnement. Un cluster vient en premier, avec une icône de cluster et ses membres sous lui. Cliquez sur un nom de serveur pour ouvrir son espace de travail.
 - **Responsables métier** et **Responsables IT** : Contacts responsables
 - **Informations de support** : Contacts de support avec leurs rôles. Cliquez sur un nom de contact pour naviguer vers l'onglet Technique de l'application.
-- **Modifier l'application** : Ouvre l'espace de travail de l'application
+- **Ouvrir l'application** : Ouvre l'espace de travail de l'application
 
 ### Panneau Interface
 
@@ -153,7 +153,7 @@ Pour l'interface sélectionnée et l'environnement courant :
 - **Connexions infra** : Connexions d'infrastructure liées à cette interface pour l'environnement courant. Chaque carte affiche source, destination, protocoles et l'environnement / type de leg de la liaison. Depuis la carte, vous pouvez :
   - Cliquer sur **Modifier** pour ouvrir l'espace de travail de la connexion
   - Cliquer sur **Voir dans la Carte des connexions** pour sauter à la topologie d'infrastructure, pré-focalisée sur la connexion
-- **Modifier l'interface** : Ouvre l'espace de travail de l'interface
+- **Ouvrir l'interface** : Ouvre l'espace de travail de l'interface
 
 ---
 

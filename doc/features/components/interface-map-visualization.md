@@ -142,7 +142,7 @@ To handle multiple interfaces between the same two applications without visual c
     -   For applications, the panel shows name, description, publisher, criticality, servers grouped by environment (items are `Server name`, environment conveyed by the group header), business owners, IT owners, and support contacts (click → Application workspace “Technical & Support” tab). Chips were removed to match the Connection Map styling.
     -   For interfaces, the panel summarizes criticality, route type, bindings count, middleware usage, environment-specific endpoints (source/target endpoints per leg), and linked infra connections for the current environment. Linked infra connections now show connection name/ID, source endpoint (server/cluster/entity), destination endpoint, protocol labels, and binding env/leg (chips removed).
 -   **Edit & Cross-Map Navigation:**
-    -   The panel exposes “Edit application” and “Edit interface” buttons that deep-link into the corresponding IT Landscape workspaces:
+    -   The panel exposes “Open application” and “Open interface” buttons that deep-link into the corresponding IT Landscape workspaces:
         -   Applications: `/it/applications/:id/overview`
         -   Interfaces: `/it/interfaces/:id/overview`
     -   For interfaces, each linked infra connection in the side panel provides:
