@@ -1111,7 +1111,8 @@
     "account": {
       "accountNumberRequired": "Le numéro de compte est requis",
       "accountNumberTooLong": "Utilisez au plus {{max}} chiffres",
-      "accountNameRequired": "Le nom du compte est requis"
+      "accountNameRequired": "Le nom du compte est requis",
+      "chartOfAccountsRequired": "Le plan comptable est requis"
     }
   }
 }
