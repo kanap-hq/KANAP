@@ -14,6 +14,7 @@ import { useKanapDialogs } from '../../design';
 import type { FreezeColumn } from '../../../services/freeze';
 import type { LinesSaveResult } from '../LinesPanel';
 import { forgetAllocationsYear } from '../allocationsCache';
+import { invalidateBudgetLists } from '../budgetFile';
 import type { FinanceModuleConfig } from '../config';
 import { patchYearlyTotalsCache } from '../yearlyTotals';
 import { AMOUNT_COLUMNS } from '../amountColumns';
@@ -804,6 +805,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       }));
       noteWrittenRef.current(year, res?.data, savedMonths);
       if (savedMonths.has(activeColRef.current)) followSavedTotal();
+      invalidateBudgetLists(queryClient);
       // Show what others changed meanwhile; what is typed since stays as typed.
       void loadRef.current({ quietSince: savedUpTo });
     } catch (e) {
@@ -1126,6 +1128,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
         col in compared || (!!stored && sumCents(stored[col]) === knownTotals[col])
       ))));
       forgetAllocationsYear(queryClient, config.itemsApi, id, year);
+      invalidateBudgetLists(queryClient);
       await loadRef.current({ quietSince: savedUpTo });
       return { status: 'saved', data: res?.data };
     } catch (e) {
@@ -1632,6 +1635,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
       keepWritten(res?.data, [col]);
       noteWrittenRef.current(year, res?.data, wholeColumns([col]));
       forgetAllocationsYear(queryClient, config.itemsApi, id, year);
+      invalidateBudgetLists(queryClient);
       return { status: 'restored' };
     } catch (e) {
       const conflict = budgetConflictsOf(e)?.find((c) => c.measure === col) ?? null;

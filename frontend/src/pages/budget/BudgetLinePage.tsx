@@ -42,6 +42,7 @@ import SendLinkButton from '../../components/workspace/SendLinkButton';
 import ChangeTypeDialog, { type ChangeTypeResult } from '../../components/finance/ChangeTypeDialog';
 import LineLineage, { type LineageLine } from '../../components/finance/LineLineage';
 import { budgetLinePath, openLineAfterTypeChange } from '../../components/finance/changeTypeNavigation';
+import { invalidateBudgetLists } from '../../components/finance/budgetFile';
 import { WorkspaceTabBoundary, retryableLazy } from '../../components/workspace/WorkspaceTabBoundary';
 import BudgetMetadataBar from './workspace/BudgetMetadataBar';
 import BudgetPropertiesDrawer, { RunBuild } from './workspace/BudgetPropertiesDrawer';
@@ -543,7 +544,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     {
       onSaved: async (lineId) => {
         await invalidateLine(lineId);
-        queryClient.invalidateQueries({ queryKey: ['budget-summary'] });
+        invalidateBudgetLists(queryClient);
       },
       // Refused for good: the screen shows the line's stored values again for those fields.
       onRefused: (lineId, patch) => {
@@ -920,7 +921,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       const res = await api.post('/budget-lines', payload);
       const newId = (res.data?.reference || (res.data?.item_number != null ? formatItemRef('budget', res.data.item_number) : res.data?.id)) as string | undefined;
       if (!newId) throw new Error(t(config.createFailed));
-      queryClient.invalidateQueries({ queryKey: ['budget-summary'] });
+      invalidateBudgetLists(queryClient);
       queryClient.invalidateQueries({ queryKey: [config.navQueryKey] });
       queryClient.invalidateQueries({ queryKey: ['budget-lines-summary-neighbors'] });
       const sp = buildListContextParams();

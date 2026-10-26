@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query';
 import type { AxiosResponse } from 'axios';
 import api from '../../api';
 import { withListContext } from '../../lib/listContext';
@@ -32,6 +33,16 @@ export const BUDGET_FILE_NAME = 'budget.csv';
 
 /** The list queries a load may change: a file may hold lines of both natures. */
 export const BUDGET_LIST_QUERY_KEYS = ['budget-lines-summary', 'spend-items-summary', 'capex-items-summary'] as const;
+
+/**
+ * Drop the cached budget lists. Dashboard tiles share these keys: the snapshot,
+ * the recent updates and the top lines all start with `budget-lines-summary`,
+ * and the snapshot stays fresh for five minutes. Call this once a line or its
+ * amounts are stored, so the overview shows them on the next visit.
+ */
+export function invalidateBudgetLists(queryClient: QueryClient): void {
+  for (const key of BUDGET_LIST_QUERY_KEYS) void queryClient.invalidateQueries({ queryKey: [key] });
+}
 
 export type BudgetFileLanguage = ScreenLanguage;
 
