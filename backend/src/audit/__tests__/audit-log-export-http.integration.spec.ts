@@ -261,7 +261,8 @@ async function main() {
     const [own, created, updated, login, failed] = rows;
     assert.match(own.date, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/, 'ISO 8601 date');
     assert.equal(own.user, 'Alice Admin');
-    assert.deepEqual(JSON.parse(own.after), { resource: 'audit-logs', path: '/audit-logs/export', format: 'csv', query: {}, ip: '127.0.0.1', user_agent: 'Export probe' });
+    // The format is added once the file is sent: the file holds the row as written before.
+    assert.deepEqual(JSON.parse(own.after), { resource: 'audit-logs', path: '/audit-logs/export', query: {}, ip: '127.0.0.1', user_agent: 'Export probe' });
     assert.equal(own.ip, '127.0.0.1', 'an export row fills the address column');
     assert.equal(own.user_agent, 'Export probe', 'an export row fills the agent column');
     assert.equal(created.user, 'Alice Admin');
@@ -440,7 +441,10 @@ async function main() {
     service.exportBatchSize = AUDIT_LOG_EXPORT_BATCH_ROWS;
     assert.equal(inTwos.length, inOne.length + 1);
     assert.equal(inTwos[0].table, 'export');
-    assert.deepEqual(inTwos.slice(1), inOne);
+    assert.deepEqual(inTwos.slice(2), inOne.slice(1));
+    // The first file's own export row, read back once that file was sent: its format added.
+    assert.deepEqual({ ...inTwos[1], after: '' }, { ...inOne[0], after: '' });
+    assert.deepEqual(JSON.parse(inTwos[1].after), { ...JSON.parse(inOne[0].after), format: 'csv' });
     console.log('ok - batches neither repeat nor skip a row, whatever the sort');
 
     // 11. The row limit inside a batch, and on its last row.
