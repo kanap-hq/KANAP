@@ -504,6 +504,7 @@ export class CompaniesService {
    * at the rates of the year's budget versions: the set the year is frozen at, else the live
    * rates (`yearRateSetId`). A currency without a rate is left out of `turnover` and named in
    * `turnover_fx_missing` (`companies` is how many companies of that currency had a turnover).
+   * `turnover` is null when no company has a turnover for the year. Entered zeros still total zero.
    * Each row of the list stays in the company's own currency.
    */
   async totals(
@@ -512,7 +513,7 @@ export class CompaniesService {
   ): Promise<{
     headcount: number;
     it_users: number;
-    turnover: number;
+    turnover: number | null;
     turnover_currency: string;
     turnover_fx_missing: Array<{ currency: string; year: number; companies: number }>;
     year: number;
@@ -614,7 +615,8 @@ export class CompaniesService {
       .select("NULLIF(UPPER(TRIM(c.base_currency)), '')", 'currency')
       .addSelect('SUM(COALESCE(m.headcount, 0))', 'headcount')
       .addSelect('SUM(COALESCE(m.it_users, 0))', 'it_users')
-      .addSelect('SUM(COALESCE(m.turnover, 0))', 'turnover')
+      // No COALESCE: SUM of an all-blank group is null, so a year with no turnover is not a zero.
+      .addSelect('SUM(m.turnover)', 'turnover')
       .addSelect('COUNT(*) FILTER (WHERE COALESCE(m.turnover, 0) <> 0)', 'companies')
       .where('c.tenant_id = :tenantId', { tenantId })
       .groupBy("NULLIF(UPPER(TRIM(c.base_currency)), '')");
@@ -658,7 +660,9 @@ export class CompaniesService {
     const round3 = (n: number) => Math.round(n * 1000) / 1000;
     const headcount = Math.round(rows.reduce((acc, row) => acc + toNum(row.headcount), 0));
     const it_users = Math.round(rows.reduce((acc, row) => acc + toNum(row.it_users), 0));
-    const groups = rows.filter((row) => toNum(row.turnover) !== 0);
+    // A blank group (SUM is null) is not a zero. An entered zero still counts as a turnover.
+    const entered = rows.filter((row) => row.turnover != null && row.turnover !== '');
+    const groups = entered.filter((row) => toNum(row.turnover) !== 0);
     const converted = await convertTurnovers({
       fxRates: this.fxRates,
       manager: repo.manager,
@@ -668,8 +672,12 @@ export class CompaniesService {
       // One entry per currency, keyed by its position.
       entries: groups.map((row, idx) => ({ companyId: String(idx), currency: row.currency ?? null, turnover: toNum(row.turnover) })),
     });
-    let turnover = 0;
-    converted.values.forEach((value) => { turnover += value ?? 0; });
+    let turnover: number | null = null;
+    if (entered.length > 0) {
+      let sum = 0;
+      converted.values.forEach((value) => { sum += value ?? 0; });
+      turnover = round3(sum);
+    }
     const turnover_fx_missing = converted.missing
       .map((item) => ({
         currency: item.currency,
@@ -681,7 +689,7 @@ export class CompaniesService {
     return {
       headcount,
       it_users,
-      turnover: round3(turnover),
+      turnover,
       turnover_currency: converted.reportingCurrency,
       turnover_fx_missing,
       year,

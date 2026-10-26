@@ -400,7 +400,8 @@ export default function CompaniesPage() {
         name: t('companies.pinnedTotal'),
         headcount_year: Number(totals.headcount || 0),
         it_users_year: Number(totals.it_users || 0),
-        turnover_year: Number(totals.turnover || 0),
+        // Null when the year has no turnover. `Number(x || 0)` would paint "0 M …".
+        turnover_year: totals.turnover == null ? null : Number(totals.turnover),
         turnover_currency: totals.turnover_currency ?? null,
         turnover_fx_missing: companyTurnoverFxMissing(totals.turnover_fx_missing),
       } as Partial<CompanyRow>;

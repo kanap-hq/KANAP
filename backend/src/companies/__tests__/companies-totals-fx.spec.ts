@@ -119,11 +119,50 @@ async function testMissingRateIsLeftOutAndNamed() {
   assert.deepEqual(totals.turnover_fx_missing, [{ currency: 'USD', year: 2027, companies: 1 }]);
 }
 
-async function testNoCompanyGivesZero() {
+async function testNoCompanyGivesNoTurnover() {
   const fx = fakeFx('EUR', {});
-  const { svc } = service([], fx);
+  const { svc, calls } = service([], fx);
   const totals = await svc.totals({ year: '2026' }, { tenantId: 't1' });
-  assert.deepEqual(totals, { headcount: 0, it_users: 0, turnover: 0, turnover_currency: 'EUR', turnover_fx_missing: [], year: 2026 });
+  assert.deepEqual(totals, { headcount: 0, it_users: 0, turnover: null, turnover_currency: 'EUR', turnover_fx_missing: [], year: 2026 });
+  // SUM without COALESCE: an all-blank year stays null instead of a zero total.
+  assert.ok(calls.some((c) => c.method === 'addSelect' && c.args[0] === 'SUM(m.turnover)' && c.args[1] === 'turnover'));
+}
+
+async function testYearWithNoTurnoverEnteredIsNull() {
+  const fx = fakeFx('EUR', {});
+  const { svc } = service([
+    { currency: 'EUR', headcount: '10', it_users: '4', turnover: null, companies: '0' },
+    { currency: 'USD', headcount: '3', it_users: '1', turnover: null, companies: '0' },
+  ], fx);
+  const totals = await svc.totals({ year: '2028' }, { tenantId: 't1' });
+  assert.equal(totals.turnover, null);
+  assert.equal(totals.headcount, 13);
+  assert.equal(totals.it_users, 5);
+  assert.equal(totals.turnover_currency, 'EUR');
+  assert.deepEqual(totals.turnover_fx_missing, []);
+  assert.deepEqual(fx.calls[0].lookups, []);
+}
+
+async function testEnteredZeroTurnoverStaysZero() {
+  const fx = fakeFx('EUR', {});
+  const { svc } = service([
+    { currency: 'EUR', headcount: '10', it_users: '4', turnover: '0', companies: '0' },
+  ], fx);
+  const totals = await svc.totals({ year: '2026' }, { tenantId: 't1' });
+  assert.equal(totals.turnover, 0);
+  assert.equal(totals.headcount, 10);
+}
+
+async function testBlankCurrencyDoesNotEraseAnother() {
+  const fx = fakeFx('EUR', { 'live:2026:USD': 0.9 });
+  const { svc } = service([
+    { currency: 'EUR', headcount: '10', it_users: '4', turnover: null, companies: '0' },
+    { currency: 'USD', headcount: '3', it_users: '1', turnover: '10', companies: '1' },
+  ], fx);
+  const totals = await svc.totals({ year: '2026' }, { tenantId: 't1' });
+  assert.equal(totals.turnover, 9);
+  assert.equal(totals.headcount, 13);
+  assert.deepEqual(fx.calls[0].lookups.map((l: any) => l.sourceCurrency), ['USD']);
 }
 
 async function testTenantIsRequired() {
@@ -136,7 +175,10 @@ Promise.resolve()
   .then(testFrozenYearConvertsAtItsRateSet)
   .then(testSameCurrencyIsNotConverted)
   .then(testMissingRateIsLeftOutAndNamed)
-  .then(testNoCompanyGivesZero)
+  .then(testNoCompanyGivesNoTurnover)
+  .then(testYearWithNoTurnoverEnteredIsNull)
+  .then(testEnteredZeroTurnoverStaysZero)
+  .then(testBlankCurrencyDoesNotEraseAnother)
   .then(testTenantIsRequired)
   .then(() => console.log('companies-totals-fx: ok'))
   .catch((err) => {
