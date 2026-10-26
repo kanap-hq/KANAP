@@ -83,7 +83,7 @@ Le tri sur **Vulnérabilités à traiter** classe les actifs par leurs vulnérab
 **Actions** :
 - **Ajouter un actif** : ouvre un menu (`infrastructure:member`). **Ajouter un actif** crée un actif ; **Ajouter un cluster** en crée un avec l'interrupteur **Cluster** déjà activé
 - **Import CSV** / **Export CSV** : Opérations en masse (`infrastructure:admin`). L'export contient les actifs que la liste affiche. Voir [Options d'export](#export-options)
-- **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé : retirez-le d'abord de ces éléments. Une affectation que l'actif hérite seulement de son cluster ne bloque pas. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison, et ce que les autres emportent avec eux (voir [Supprimer un cluster ou un membre](#deleting-a-cluster-or-a-member))
+- **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé. Le refus nomme les applications, et jusqu'à cinq connexions par leur référence et leur nom. Retirez d'abord l'actif de ces liens. Une affectation que l'actif hérite seulement de son cluster ne bloque pas. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison, et ce que les autres emportent avec eux (voir [Supprimer un cluster ou un membre](#deleting-a-cluster-or-a-member))
 
 ---
 

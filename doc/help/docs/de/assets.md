@@ -83,7 +83,7 @@ Die Sortierung nach **Zu prüfende Schwachstellen** ordnet die Assets nach ihren
 **Aktionen**:
 - **Asset hinzufügen**: öffnet ein Menü (`infrastructure:member`). **Asset hinzufügen** legt ein Asset an; **Cluster hinzufügen** legt eines mit bereits eingeschaltetem Schalter **Cluster** an
 - **CSV importieren** / **CSV exportieren**: Massenoperationen (`infrastructure:admin`). Der Export enthält die Assets, die die Liste zeigt. Siehe [Exportoptionen](#export-options)
-- **Asset löschen** (ausgewählte Zeilen): Ausgewählte Assets entfernen (`infrastructure:admin`). Ein Asset, das noch Anwendungen zugeordnet oder mit Verbindungen verknüpft ist, kann nicht gelöscht werden: Entfernen Sie es zuerst daraus. Eine Zuordnung, die das Asset nur von seinem Cluster erbt, hindert nicht daran. Vor dem Löschen nennt die Bestätigung die behaltenen Assets mit dem Grund, und was die anderen mitnehmen (siehe [Einen Cluster oder ein Mitglied löschen](#deleting-a-cluster-or-a-member))
+- **Asset löschen** (ausgewählte Zeilen): Ausgewählte Assets entfernen (`infrastructure:admin`). Ein Asset, das noch Anwendungen zugeordnet oder mit Verbindungen verknüpft ist, kann nicht gelöscht werden. Die Ablehnung nennt die Anwendungen und bis zu fünf Verbindungen mit Referenz und Name. Entfernen Sie das Asset zuerst daraus. Eine Zuordnung, die das Asset nur von seinem Cluster erbt, hindert nicht daran. Vor dem Löschen nennt die Bestätigung die behaltenen Assets mit dem Grund, und was die anderen mitnehmen (siehe [Einen Cluster oder ein Mitglied löschen](#deleting-a-cluster-or-a-member))
 
 ---
 
