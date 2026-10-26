@@ -25,7 +25,7 @@ const sectionLabelSx = {
  * The "Access" tab of a company (spec §7.2): who sees the whole company and who sees a part of it
  * through a cost center. Visible only to unscoped user administrators (the workspace hides it).
  */
-export default function CompanyAccessTab({ companyId }: { companyId: string }) {
+export default function CompanyAccessTab({ companyId, nodeLabel }: { companyId: string; nodeLabel: string }) {
   const { t } = useTranslation(['admin', 'common']);
   const queryClient = useQueryClient();
   const queryKey = React.useMemo(() => ['company-data-access', companyId] as const, [companyId]);
@@ -89,7 +89,12 @@ export default function CompanyAccessTab({ companyId }: { companyId: string }) {
         <Box sx={{ mt: 1.5 }}>
           <AccessPersonAdd
             busy={!!actions.pending}
-            onAdd={(personId, access) => actions.setNode(personId, companyNode, access)}
+            onAdd={(personId, access, personName) => actions.setNode(
+              personId,
+              companyNode,
+              access,
+              { personName, nodeName: nodeLabel },
+            )}
           />
         </Box>
       </Box>

@@ -1858,6 +1858,7 @@
       "direct": "Acceso directo",
       "inherited": "Acceso heredado",
       "addButton": "Añadir",
+      "confirmLimited": "El acceso de {{name}} pasará de Todos los datos a {{node}} solamente.",
       "remove": "Quitar el acceso de {{name}}",
       "saveFailed": "No se pudo actualizar el acceso.",
       "loadFailed": "No se pudo cargar el acceso."

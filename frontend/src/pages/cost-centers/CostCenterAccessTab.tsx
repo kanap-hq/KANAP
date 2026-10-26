@@ -25,10 +25,12 @@ type Props = {
   costCenterId: string;
   /** The company of the center: an access inherited from it links to the company's Access tab. */
   companyId?: string | null;
+  /** The center or group as the tab labels its nodes ("Infrastructure (INF)"). */
+  nodeLabel: string;
 };
 
 /** The "Access" tab of a cost center or group (spec §7.2): direct access, then what covers it. */
-export default function CostCenterAccessTab({ costCenterId, companyId = null }: Props) {
+export default function CostCenterAccessTab({ costCenterId, companyId = null, nodeLabel }: Props) {
   const { t } = useTranslation(['admin', 'common']);
   const queryClient = useQueryClient();
   const queryKey = React.useMemo(() => ['cost-center-data-access', costCenterId] as const, [costCenterId]);
@@ -97,7 +99,12 @@ export default function CostCenterAccessTab({ costCenterId, companyId = null }: 
         <Box sx={{ mt: 1.5 }}>
           <AccessPersonAdd
             busy={!!actions.pending}
-            onAdd={(personId, access) => actions.setNode(personId, centerNode, access)}
+            onAdd={(personId, access, personName) => actions.setNode(
+              personId,
+              centerNode,
+              access,
+              { personName, nodeName: nodeLabel },
+            )}
           />
         </Box>
       </Box>

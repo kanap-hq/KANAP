@@ -309,7 +309,11 @@ export default function CostCenterWorkspacePage() {
           </Stack>
         )}
         {data && tab === 'access' && canAdminDataAccess && (
-          <CostCenterAccessTab costCenterId={data.id} companyId={data.company_id} />
+          <CostCenterAccessTab
+            costCenterId={data.id}
+            companyId={data.company_id}
+            nodeLabel={data.code ? `${data.name} (${data.code})` : data.name}
+          />
         )}
       </PortfolioDetailWorkspaceShell>
     </Box>

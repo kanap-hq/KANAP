@@ -473,7 +473,7 @@ export default function CompanyWorkspacePage() {
           />
         )}
         {data && tab === 'access' && canAdminDataAccess && (
-          <CompanyAccessTab companyId={data.id} />
+          <CompanyAccessTab companyId={data.id} nodeLabel={data.name} />
         )}
       </PortfolioDetailWorkspaceShell>
     </Box>

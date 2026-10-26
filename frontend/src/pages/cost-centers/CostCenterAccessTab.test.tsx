@@ -1,10 +1,11 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 
 const t = vi.hoisted(() => (key: string, options?: Record<string, unknown>) => (
   options ? `${key}|${JSON.stringify(options)}` : key
@@ -18,8 +19,13 @@ vi.mock('react-i18next', () => ({
 }));
 vi.mock('../../api', () => ({ default: { get, put, post: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../components/fields/UserSelect', () => ({
-  default: (props: { onChange: (id: string | null) => void }) => (
-    <button type="button" onClick={() => props.onChange('u-2')}>pick person</button>
+  default: (props: { onChange: (id: string | null, user: { id: string; first_name: string; last_name: string } | null) => void }) => (
+    <button
+      type="button"
+      onClick={() => props.onChange('u-2', { id: 'u-2', first_name: 'Marta', last_name: 'Ruiz' })}
+    >
+      pick person
+    </button>
   ),
 }));
 
@@ -41,12 +47,24 @@ function renderTab() {
   return render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter>
-          <CostCenterAccessTab costCenterId="cc-1" companyId="co-1" />
-        </MemoryRouter>
+        <KanapDialogProvider>
+          <MemoryRouter>
+            <CostCenterAccessTab costCenterId="cc-1" companyId="co-1" nodeLabel="Infrastructure (INF)" />
+          </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
+}
+
+function pickPerson(access: 'read' | 'edit' = 'read') {
+  fireEvent.click(screen.getByRole('button', { name: 'pick person' }));
+  if (access === 'edit') {
+    fireEvent.mouseDown(screen.getByRole('combobox', {
+      name: 'admin:dataAccess.accessLabel|{"name":"admin:dataAccess.person"}',
+    }));
+    fireEvent.click(screen.getByRole('option', { name: 'admin:dataAccess.access.edit' }));
+  }
 }
 
 beforeEach(() => {
@@ -81,11 +99,7 @@ describe('CostCenterAccessTab', () => {
   it('adds a direct access with edit and removes it through the person’s own access', async () => {
     renderTab();
     await screen.findByText('Paul Martin');
-    fireEvent.click(screen.getByRole('button', { name: 'pick person' }));
-    fireEvent.mouseDown(screen.getByRole('combobox', {
-      name: 'admin:dataAccess.accessLabel|{"name":"admin:dataAccess.person"}',
-    }));
-    fireEvent.click(screen.getByRole('option', { name: 'admin:dataAccess.access.edit' }));
+    pickPerson('edit');
     fireEvent.click(screen.getByRole('button', { name: 'admin:dataAccess.accessTab.addButton' }));
     await waitFor(() => expect(put).toHaveBeenCalledWith('/users/u-2/data-access', {
       mode: 'limited',
@@ -96,6 +110,30 @@ describe('CostCenterAccessTab', () => {
     await waitFor(() => expect(put).toHaveBeenLastCalledWith('/users/u-1/data-access', {
       mode: 'limited',
       nodes: [],
+    }));
+  });
+
+  it('confirms before limiting a person who sees all data to this center only', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/cost-centers/cc-1/data-access') return { data: VIEW };
+      if (url === '/users/u-2/data-access') return { data: { mode: 'all', nodes: [], is_administrator: false } };
+      return { data: {} };
+    });
+    renderTab();
+    await screen.findByText('Paul Martin');
+    pickPerson('edit');
+    fireEvent.click(screen.getByRole('button', { name: 'admin:dataAccess.accessTab.addButton' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(
+      'admin:dataAccess.accessTab.confirmLimited|{"name":"Marta Ruiz","node":"Infrastructure (INF)"}',
+    )).toBeInTheDocument();
+    expect(put).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'admin:dataAccess.accessTab.addButton' }));
+    await waitFor(() => expect(put).toHaveBeenCalledWith('/users/u-2/data-access', {
+      mode: 'limited',
+      nodes: [{ type: 'cost_center', id: 'cc-1', access: 'edit' }],
     }));
   });
 
