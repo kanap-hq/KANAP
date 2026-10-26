@@ -77,6 +77,7 @@ Les liens au-dessus de la grille filtrent la liste en un clic. Cliquez à nouvea
 
 - **À décider sous n jours (n)** : les contrats à l'état **À décider**. Le nombre de jours est le délai de décision de votre espace de travail
 - **Sans ligne budgétaire (n)** et **Sous-budgétés (n)** : les contrats dont la couverture budgétaire de l'année choisie est dans cet état
+- **Sans centre de coûts** : les contrats sans **Centre de coûts ou groupe**. La colonne **Centre de coûts** (sélecteur de colonnes) montre ce champ
 
 Un point orange signale un lien dont le compteur n'est pas nul.
 
@@ -120,6 +121,8 @@ La ligne épinglée en bas indique **Total (n contrats)**. Elle additionne les m
 L'en-tête affiche le nom du contrat (cliquez dessus pour le renommer), **Précédent** / **Suivant** avec la position dans la liste, et une barre avec **Fournisseur**, **Société contractante**, **Responsable** et **Statut**. Le responsable et le statut se modifient sur place. Le fournisseur et la société ouvrent le panneau **Propriétés**.
 
 Le panneau **Propriétés**, à droite, contient tous les champs du contrat : les parties, **Début**, **Durée (mois)**, **Préavis (mois)**, **Reconduction tacite**, **Montant annuel**, **Devise**, **Facturation**, puis **Cycle de vie** (**Statut** et **Fin de validité**), **Créé** et **Mis à jour**. Ouvrez-le ou fermez-le avec son bouton ; KANAP retient votre choix.
+
+**Centre de coûts ou groupe** est facultatif. Il place le contrat sous un centre de coûts ou un groupe pour l'[accès aux données](data-access.md) : les personnes limitées à ce nœud, ou à un groupe au-dessus, voient le contrat, comme celles qui sont limitées à sa société.
 
 Chaque modification s'enregistre d'elle-même : listes et dates aussitôt, valeurs saisies et notes après une courte pause, le nom quand vous quittez le champ. « Enregistrement... » puis « Enregistré » s'affiche dans l'en-tête. Deux personnes qui modifient le même contrat ne sont pas averties : la dernière modification l'emporte.
 
@@ -179,6 +182,8 @@ Par exemple, un contrat de 350 000 par an reconduit chaque 1er juillet engage 35
 - **Sous-budgété** : les lignes liées portent moins que l'engagement
 - **Budget supérieur au contrat** : les lignes liées portent plus que l'engagement plus 10 %
 - **Couvert** : tous les autres cas
+
+Pour une personne dont l'accès aux données est limité, l'onglet liste les lignes liées qu'elle voit, puis le nombre des autres. La couverture compte toujours toutes les lignes liées, pour que le responsable du contrat voie la vraie couverture. Dans la liste, chaque rangée montre aussi cette couverture complète, tandis que la ligne de totaux compte les contrats visibles et **Lignes liées** compte les lignes visibles. Voir [Accès aux données](data-access.md#what-a-limited-person-sees).
 
 Quand une ligne liée n'a pas de taux de change pour une année, son montant s'affiche dans sa propre devise avec une petite marque orange, et le total et **Lignes liées** l'excluent. L'état de cette année indique **Inconnu : une ligne liée n'a pas de taux de change**. Un avertissement d'une ligne sous le tableau de couverture indique les lignes exclues, par exemple « 1 ligne sans taux de change exclue : USD 2026. » Voir [Taux manquant](currencies.md#mecanismes-de-conversion-reference-rapide) et [Taux manuels](currencies.md#taux-manuels).
 

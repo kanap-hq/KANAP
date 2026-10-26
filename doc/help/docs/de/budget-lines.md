@@ -702,6 +702,8 @@ Der Zugriff auf Budgetzeilen wird durch die Ressource Budget gesteuert, die für
 
 Das Einfrieren von Budgetspalten erfordert die Budgetadministration (`budget_ops:admin`).
 
+Der Datenzugriff kann eine Person auf die Zeilen bestimmter Unternehmen oder Kostenstellen begrenzen. Sie sieht dann diese Zeilen und die, auf denen sie benannt ist, eine mit Lesen sichtbare Zeile zeigt „Schreibgeschützt in Ihrem Zugriff“, und das Löschen von Zeilen sowie Massenvorgänge sind Personen mit Zugriff auf alle Daten vorbehalten. Siehe [Datenzugriff](data-access.md).
+
 Zusätzlich:
 
 - Aufgaben haben separate Berechtigungen (`tasks:member` zum Erstellen und Bearbeiten von Aufgaben an Budgetzeilen)

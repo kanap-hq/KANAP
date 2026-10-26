@@ -234,6 +234,8 @@ La dernière ligne indique `Database restored`. Si elle indique `Stopped`, rien 
 
 Lancez `pg_restore` en tant que `postgres` et sans `--no-owner`. Le dump enregistre le propriétaire de chaque objet (`kanap`) : la restauration rend donc les tables au rôle applicatif, avec leurs paramètres de sécurité au niveau des lignes. Avec `--no-owner`, les tables appartiendraient à `postgres` et l'API ne pourrait pas les utiliser. Le rôle `kanap` doit exister : sur un nouveau serveur, créez-le comme à l'[étape 4 de l'exemple d'installation](installation-example.md#4-postgresql) avant cette étape.
 
+**Accès aux données par périmètre.** Quand le serveur utilise l'[accès aux données par périmètre](installation.md#optional-data-scoped-access), son rôle `kanap_data_limited` doit lui aussi exister avant la restauration. Sur un nouveau serveur, lancez le script de cette section après avoir créé le rôle `kanap`, avec `-d postgres` puisque la base `kanap` n'existe pas encore. Une restauration sur un serveur sans ce rôle ne rétablit ni les règles d'accès ni les droits du rôle, et `pg_restore` signale des erreurs pour eux. Un dump fait avec `pg_dump --no-privileges` omet lui aussi les droits. Dans les deux cas, les personnes limitées sont refusées jusqu'à ce que vous relanciez le script et redémarriez l'API.
+
 **2. Restaurez les fichiers.** La copie remplace le contenu du bucket. La commande ne s'exécute que si la copie existe :
 
 ```bash

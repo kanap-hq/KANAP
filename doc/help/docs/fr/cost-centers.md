@@ -108,6 +108,7 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail.
 - **En-tête** : le code comme référence, avec un bouton de copie, et le nom. Cliquez sur le nom pour le renommer. **Précédent** / **Suivant** parcourent la liste dans son ordre et ses filtres actuels, et le bouton de fermeture ramène à la liste
 - **Zone principale** : une ligne comme « Utilisé par 3 lignes OPEX et 1 ligne CAPEX. » lorsque des lignes budgétaires utilisent l'élément, puis la **Description**
 - **Panneau Propriétés** à droite : **Code**, **Type**, **Groupe parent**, **Société** (centres de coûts uniquement), **Responsable budgétaire** et **Cycle de vie**
+- Onglet **Accès**, pour les personnes qui gèrent l'accès aux données : les personnes qui ont un accès direct au centre ou au groupe, et celles qui en héritent par un groupe parent, la société ou **Tout**. Voir [Accès aux données](data-access.md#the-access-tab-of-companies-and-cost-centers)
 
 **Enregistrement automatique** : chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton Enregistrer. Les champs texte s'enregistrent quand vous les quittez (appuyez sur Entrée dans **Code** pour enregistrer aussitôt) ; les listes et les interrupteurs s'enregistrent dès que vous choisissez une valeur. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné, par exemple un code en double sous **Code**. Un nom refusé s'affiche en haut de la page.
 

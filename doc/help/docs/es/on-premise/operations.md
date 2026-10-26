@@ -234,6 +234,8 @@ La última línea dice `Database restored`. Si dice `Stopped`, no se ejecutó na
 
 Ejecute `pg_restore` como `postgres` y sin `--no-owner`. El volcado registra el propietario de cada objeto (`kanap`), así que la restauración devuelve las tablas al rol de aplicación, con su configuración de seguridad a nivel de fila. Con `--no-owner`, las tablas pertenecerían a `postgres` y la API no podría usarlas. El rol `kanap` debe existir: en un servidor nuevo, créelo como en el [paso 4 del ejemplo de instalación](installation-example.md#4-postgresql) antes de este paso.
 
+**Acceso a los datos por ámbito.** Cuando el servidor usa el [acceso a los datos por ámbito](installation.md#optional-data-scoped-access), su rol `kanap_data_limited` también debe existir antes de la restauración. En un servidor nuevo, ejecute el script de esa sección después de crear el rol `kanap`, con `-d postgres`, ya que la base `kanap` aún no existe. Una restauración en un servidor sin ese rol no recupera ni las reglas de acceso ni los derechos del rol, y `pg_restore` muestra errores por ellos. Un volcado hecho con `pg_dump --no-privileges` también omite los derechos. En ambos casos, las personas limitadas se rechazan hasta que vuelva a ejecutar el script y reinicie la API.
+
 **2. Restaure los archivos.** La copia sustituye el contenido del bucket. El comando solo se ejecuta si la copia existe:
 
 ```bash

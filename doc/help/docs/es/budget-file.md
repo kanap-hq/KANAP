@@ -105,7 +105,7 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 - Cada fila se comprueba según su propio tipo: las dimensiones y los valores que puede tener, su cuenta, las columnas congeladas y la advertencia de duplicado. Una columna congelada para CAPEX rechaza un cambio solo en una línea CAPEX.
 - No hay otra clave. Una fila nueva que se parezca a una línea existente de su tipo, o a otra fila nueva del mismo tipo en el archivo, es una advertencia que puede ignorar.
 - Los proveedores se hacen coincidir por `supplier_erp_id` cuando está relleno, y si no por `supplier_name`. La carga crea un proveedor que el archivo nombra y que KANAP no tiene cuando **Crear los proveedores que faltan** está marcada. Sin esa opción, la verificación lista los que faltan y le pide crearlos en **Datos maestros > Proveedores**.
-- La carga crea un valor de dimensión que no existe y lo lista en la verificación. Las cuentas, los centros de coste, las empresas y los usuarios nunca se crean: un elemento desconocido es un error de fila que indica dónde añadirlo.
+- La carga crea un valor de dimensión que no existe y lo lista en la verificación. Las cuentas, los centros de coste, las empresas y los usuarios nunca se crean: un elemento desconocido es un error de fila que indica dónde añadirlo. Para una persona con el acceso a los datos limitado, solo en una dimensión con valores abiertos: vea [Acceso a los datos limitado](#limited-data-access).
 - Un valor, o `-`, en una dimensión que solo se usa para el otro tipo de línea es un error de fila en su celda `analytics:<code>`, por ejemplo "The Recurrence dimension is for CAPEX lines only. Leave it out." La exportación deja esa celda vacía: un valor oculto en una línea no se exporta, y una carga lo deja en su sitio. El ajuste está en [Dimensiones analíticas](analytics.md#dimensiones-opex-o-capex).
 - Un valor que se usa solo para el otro tipo de línea es un error de fila en su celda `analytics:<code>`, por ejemplo "Personal interno is for OPEX lines only. Pick a value for CAPEX lines." Una línea conserva el valor que ya tiene. Los valores que crea la carga se usan para OPEX y CAPEX. El ajuste está en [Dimensiones analíticas](analytics.md#valores-opex-o-capex).
 - Una línea nueva necesita un valor en cada dimensión obligatoria de su propio tipo, con el mensaje "The Tipo de coste dimension is required. Choose a value." en la celda `analytics:<code>`. Esto vale cuando la columna falta en el archivo, cuando la celda está vacía y cuando contiene `-`. Un valor que crea la carga cuenta. Una línea existente solo se rechaza por un `-` que borraría el valor que tiene: una celda vacía o una columna ausente la deja como está. El ajuste está en [Dimensiones analíticas](analytics.md#dimensiones-obligatorias).
@@ -129,6 +129,18 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 3. Haga clic en **Cargar**. La carga escribe todo o nada.
 
 Si una línea cambia entre la comprobación y la carga, la carga se detiene y le pide comprobar el archivo de nuevo. La verificación también indica cómo ha leído el archivo cuando una fecha o un importe podían leerse de dos maneras, con un botón para cambiar la lectura.
+
+## Acceso a los datos limitado { #limited-data-access }
+
+Una persona limitada a una parte del presupuesto usa el archivo dentro de su acceso, cuando su rol lo permite. Vea [Acceso a los datos](data-access.md).
+
+- La exportación contiene las líneas que ve.
+- Una fila que nombra una línea que no ve se trata como una línea que no existe. En un archivo procedente de una exportación, el mensaje es «BL-12 ya no está disponible desde la exportación.», el mismo que para una línea eliminada desde entonces.
+- Una línea que ve en Lectura se acepta cuando su fila no cambia. Un cambio se rechaza con «BL-12 es de solo lectura en su acceso.»
+- Una línea nueva, o una nueva empresa o un nuevo centro de coste en una línea, debe corresponder a uno de sus nodos en Edición. Si no, la fila se rechaza con «Esta empresa o este centro de coste no forma parte de su acceso.»
+- Un valor desconocido solo se crea en una dimensión con valores abiertos. En las demás dimensiones, es un error de fila.
+
+Estas filas aparecen entre los **Errores** de la comprobación, como cualquier otra fila rechazada.
 
 ## Excel y LibreOffice
 

@@ -11,6 +11,7 @@ Rendez-vous dans **Administration** depuis le menu principal pour accéder au hu
 - Utilisateurs et accès : `users:reader` pour consulter, `users:admin` pour gérer
 - Rôles : `users:reader` pour consulter, `users:admin` pour modifier
 - Journal d'audit : Nécessite `users:admin`
+- Accès aux données : Nécessite `users:admin` et l'accès à toutes les données (voir [Accès aux données](data-access.md))
 - Facturation : Nécessite le rôle admin facturation
 - Authentification : Nécessite `users:admin` (contrôlé par feature flag ; nécessite SSO activé)
 - Personnalisation : Nécessite `users:admin` (hôte tenant uniquement ; accessible depuis la barre latérale)
@@ -52,6 +53,8 @@ La page Journal d'audit conserve l'historique des modifications de données et d
 **Modifications de données** : créations, mises à jour, suppressions et désactivations d'enregistrements, avec l'utilisateur, l'heure et les valeurs avant et après.
 
 **Modifications de rôles** : création, renommage et suppression d'un rôle, et chaque changement de ses autorisations.
+
+**Changements d'accès aux données** (table **Accès aux données**) : le mode et les nœuds d'une personne avant et après, avec la source **Écran** ou **Import**. Voir [Accès aux données](data-access.md#audit-log).
 
 **Événements de connexion et de session** (table **Connexion et session**) :
 
@@ -164,6 +167,8 @@ Gérez qui peut accéder à KANAP et ce qu'ils peuvent faire.
 - **MFA activé** : Si l'authentification multi-facteur est active
 - **Créé** : Quand l'utilisateur a été créé
 
+Dès que l'accès aux données d'une personne est limité, une colonne **Accès** montre l'accès de chacun : **Toutes les données**, les noms de ses nœuds, ou **Aucun**. Voir [Accès aux données](data-access.md).
+
 **Valeurs de statut** :
 
 | Statut | Signification |
@@ -199,6 +204,7 @@ Actions de ligne, depuis le menu au bout de chaque ligne :
 | **Activer** / **Désactiver** | Activer ou désactiver le compte. La désactivation déconnecte la personne immédiatement. |
 | **Envoyer une invitation** | Envoyer une invitation de connexion par e-mail. Masqué pour les comptes Microsoft Entra. |
 | **Envoyer une réinitialisation de mot de passe** | Envoyer un lien de réinitialisation de mot de passe par e-mail. Affiché uniquement pour les comptes locaux activés. |
+| **Accès aux données** | Ouvre l'utilisateur sur l'onglet **Accès aux données**. Affiché aux personnes qui ont accès à toutes les données, sur les lignes des autres personnes. |
 | **Supprimer** | Supprimer définitivement l'utilisateur. Les enregistrements sur lesquels il a travaillé restent, sans lui. Vous ne pouvez pas supprimer votre propre compte. Pour bloquer l'accès d'une personne en gardant son compte, désactivez-le plutôt. |
 
 ### Fichier CSV des utilisateurs
@@ -235,6 +241,8 @@ Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux é
    - **Société** / **Département** : Affectation organisationnelle
    - **Activé** : Si l'utilisateur peut se connecter
 4. Cliquez sur **Enregistrer** ou **Enregistrer et inviter** pour envoyer l'e-mail de connexion
+
+Quand vous modifiez un utilisateur, la fenêtre a deux onglets : **Identité**, avec les champs ci-dessus et les rôles, et **Accès aux données**, qui limite la personne à une partie du budget et des contrats. Un seul **Enregistrer** écrit les deux. L'onglet **Accès aux données** est affiché aux personnes qui ont accès à toutes les données, sur les comptes des autres. Voir [Accès aux données](data-access.md).
 
 ### Assignation multi-rôles
 
