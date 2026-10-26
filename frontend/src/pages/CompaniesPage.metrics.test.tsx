@@ -8,8 +8,8 @@ import { createAppTheme } from '../config/ThemeContext';
 const grid = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
 const totalsPayload = vi.hoisted(() => ({
   current: {
-    headcount: 0,
-    it_users: 0,
+    headcount: 0 as number | null,
+    it_users: 0 as number | null,
     turnover: 332.5 as number | null,
     turnover_currency: null as string | null,
   },
@@ -89,6 +89,26 @@ describe('CompaniesPage metric cells', () => {
       expect(pinned?.it_users_year).toBe(2);
     });
     const pinned = grid.props?.pinnedBottomRowData?.[0];
+    expect(column('turnover_year')({
+      value: pinned?.turnover_year,
+      node: { rowPinned: 'bottom' },
+      data: pinned,
+    })).toBe('—');
+  });
+
+  it('shows a dash on every pinned total when the year has no metrics', async () => {
+    await i18n.changeLanguage('fr');
+    totalsPayload.current = { headcount: null, it_users: null, turnover: null, turnover_currency: 'EUR' };
+    renderPage();
+    await waitFor(() => {
+      const pinned = grid.props?.pinnedBottomRowData?.[0];
+      expect(pinned?.headcount_year).toBeNull();
+      expect(pinned?.it_users_year).toBeNull();
+      expect(pinned?.turnover_year).toBeNull();
+    });
+    const pinned = grid.props?.pinnedBottomRowData?.[0];
+    expect(column('headcount_year')({ value: pinned?.headcount_year })).toBe('—');
+    expect(column('it_users_year')({ value: pinned?.it_users_year })).toBe('—');
     expect(column('turnover_year')({
       value: pinned?.turnover_year,
       node: { rowPinned: 'bottom' },

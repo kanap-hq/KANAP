@@ -504,15 +504,16 @@ export class CompaniesService {
    * at the rates of the year's budget versions: the set the year is frozen at, else the live
    * rates (`yearRateSetId`). A currency without a rate is left out of `turnover` and named in
    * `turnover_fx_missing` (`companies` is how many companies of that currency had a turnover).
-   * `turnover` is null when no company has a turnover for the year. Entered zeros still total zero.
+   * `headcount`, `it_users` and `turnover` are null when no company has that figure for the year.
+   * Entered zeros still total zero.
    * Each row of the list stays in the company's own currency.
    */
   async totals(
     query: any,
     opts: { manager?: EntityManager; tenantId: string },
   ): Promise<{
-    headcount: number;
-    it_users: number;
+    headcount: number | null;
+    it_users: number | null;
     turnover: number | null;
     turnover_currency: string;
     turnover_fx_missing: Array<{ currency: string; year: number; companies: number }>;
@@ -613,9 +614,9 @@ export class CompaniesService {
     const qb = repo
       .createQueryBuilder('c')
       .select("NULLIF(UPPER(TRIM(c.base_currency)), '')", 'currency')
-      .addSelect('SUM(COALESCE(m.headcount, 0))', 'headcount')
-      .addSelect('SUM(COALESCE(m.it_users, 0))', 'it_users')
-      // No COALESCE: SUM of an all-blank group is null, so a year with no turnover is not a zero.
+      // No COALESCE: SUM of an all-blank group is null, so a year with no figure is not a zero.
+      .addSelect('SUM(m.headcount)', 'headcount')
+      .addSelect('SUM(m.it_users)', 'it_users')
       .addSelect('SUM(m.turnover)', 'turnover')
       .addSelect('COUNT(*) FILTER (WHERE COALESCE(m.turnover, 0) <> 0)', 'companies')
       .where('c.tenant_id = :tenantId', { tenantId })
@@ -658,9 +659,19 @@ export class CompaniesService {
       return Number.isFinite(n) ? n : 0;
     };
     const round3 = (n: number) => Math.round(n * 1000) / 1000;
-    const headcount = Math.round(rows.reduce((acc, row) => acc + toNum(row.headcount), 0));
-    const it_users = Math.round(rows.reduce((acc, row) => acc + toNum(row.it_users), 0));
-    // A blank group (SUM is null) is not a zero. An entered zero still counts as a turnover.
+    // A blank group (SUM is null) is not a zero. An entered zero still counts.
+    const sumEntered = (pick: (row: (typeof rows)[number]) => unknown): number | null => {
+      const present = rows.filter((row) => {
+        const value = pick(row);
+        return value != null && value !== '';
+      });
+      if (present.length === 0) return null;
+      return present.reduce((acc, row) => acc + toNum(pick(row)), 0);
+    };
+    const headcountSum = sumEntered((row) => row.headcount);
+    const itUsersSum = sumEntered((row) => row.it_users);
+    const headcount = headcountSum == null ? null : Math.round(headcountSum);
+    const it_users = itUsersSum == null ? null : Math.round(itUsersSum);
     const entered = rows.filter((row) => row.turnover != null && row.turnover !== '');
     const groups = entered.filter((row) => toNum(row.turnover) !== 0);
     const converted = await convertTurnovers({

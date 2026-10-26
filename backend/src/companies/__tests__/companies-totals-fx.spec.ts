@@ -123,9 +123,36 @@ async function testNoCompanyGivesNoTurnover() {
   const fx = fakeFx('EUR', {});
   const { svc, calls } = service([], fx);
   const totals = await svc.totals({ year: '2026' }, { tenantId: 't1' });
-  assert.deepEqual(totals, { headcount: 0, it_users: 0, turnover: null, turnover_currency: 'EUR', turnover_fx_missing: [], year: 2026 });
+  assert.deepEqual(totals, { headcount: null, it_users: null, turnover: null, turnover_currency: 'EUR', turnover_fx_missing: [], year: 2026 });
   // SUM without COALESCE: an all-blank year stays null instead of a zero total.
+  assert.ok(calls.some((c) => c.method === 'addSelect' && c.args[0] === 'SUM(m.headcount)' && c.args[1] === 'headcount'));
+  assert.ok(calls.some((c) => c.method === 'addSelect' && c.args[0] === 'SUM(m.it_users)' && c.args[1] === 'it_users'));
   assert.ok(calls.some((c) => c.method === 'addSelect' && c.args[0] === 'SUM(m.turnover)' && c.args[1] === 'turnover'));
+}
+
+async function testYearWithNoMetricsIsNull() {
+  const fx = fakeFx('EUR', {});
+  const { svc } = service([
+    { currency: 'EUR', headcount: null, it_users: null, turnover: null, companies: '0' },
+    { currency: 'USD', headcount: null, it_users: null, turnover: null, companies: '0' },
+  ], fx);
+  const totals = await svc.totals({ year: '2028' }, { tenantId: 't1' });
+  assert.equal(totals.headcount, null);
+  assert.equal(totals.it_users, null);
+  assert.equal(totals.turnover, null);
+}
+
+async function testEnteredZeroHeadcountStaysZero() {
+  const fx = fakeFx('EUR', {});
+  const { svc } = service([
+    { currency: 'EUR', headcount: null, it_users: null, turnover: null, companies: '0' },
+    { currency: 'USD', headcount: '0', it_users: '0', turnover: null, companies: '0' },
+  ], fx);
+  const totals = await svc.totals({ year: '2028' }, { tenantId: 't1' });
+  // EUR has nothing. USD entered zeros, which stay zero. Turnover was never entered.
+  assert.equal(totals.headcount, 0);
+  assert.equal(totals.it_users, 0);
+  assert.equal(totals.turnover, null);
 }
 
 async function testYearWithNoTurnoverEnteredIsNull() {
@@ -176,6 +203,8 @@ Promise.resolve()
   .then(testSameCurrencyIsNotConverted)
   .then(testMissingRateIsLeftOutAndNamed)
   .then(testNoCompanyGivesNoTurnover)
+  .then(testYearWithNoMetricsIsNull)
+  .then(testEnteredZeroHeadcountStaysZero)
   .then(testYearWithNoTurnoverEnteredIsNull)
   .then(testEnteredZeroTurnoverStaysZero)
   .then(testBlankCurrencyDoesNotEraseAnother)
