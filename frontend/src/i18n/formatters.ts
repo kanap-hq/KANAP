@@ -30,6 +30,21 @@ export function formatCurrency(
   }).format(value);
 }
 
+/**
+ * An amount in euro as the interface language writes money: 0,00 EUR in French,
+ * EUR 0.00 in English. `fractionDigits` keeps the two cents of a total, or the
+ * four decimals of a sub-cent agent estimate.
+ */
+export function formatEuro(value: number, locale: string, fractionDigits = 2): string {
+  const amount = Number.isFinite(value) ? value : 0;
+  return formatCurrency(amount, locale, 'EUR', {
+    currencyDisplay: 'code',
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+    useGrouping: 'always',
+  } as unknown as Intl.NumberFormatOptions);
+}
+
 // `useGrouping: 'always'` (ES2023) groups four-digit numbers too, so Spanish writes 7.486 like the
 // AG Grid pagination next to it, where Intl's default would write 7486.
 const COUNT_OPTIONS = { maximumFractionDigits: 0, useGrouping: 'always' } as unknown as Intl.NumberFormatOptions;

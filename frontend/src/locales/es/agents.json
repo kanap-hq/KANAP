@@ -115,7 +115,7 @@
     "acceptance": "Aceptación",
     "dismissed": "Descartadas",
     "fleet": "Flota",
-    "empty": "No hay agentes disponibles para este espacio.",
+    "empty": "No hay agentes disponibles para este espacio de trabajo.",
     "noDescription": "Sin descripción.",
     "pendingCount": "{{count}} pendientes",
     "failedCount": "{{count}} fallidos",
@@ -325,7 +325,7 @@
   "workspace": {
     "back": "Volver a agentes",
     "notFound": "Agente no encontrado",
-    "notFoundBody": "Este agente no está disponible en el espacio actual.",
+    "notFoundBody": "Este agente no está disponible en el espacio de trabajo actual.",
     "tabs": {
       "monitor": "Monitor",
       "approvals": "Aprobaciones",

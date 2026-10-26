@@ -1462,8 +1462,8 @@
   },
   "tenant": {
     "notFound": {
-      "title": "Tenant not found",
-      "message": "This tenant does not exist or is no longer available. You will be redirected to our website shortly.",
+      "title": "Workspace not found",
+      "message": "This workspace does not exist or is no longer available. You will be redirected to our website shortly.",
       "redirecting": "Redirecting to {{url}}"
     }
   },

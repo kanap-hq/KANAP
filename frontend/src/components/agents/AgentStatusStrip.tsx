@@ -3,6 +3,7 @@ import { Stack, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { formatNumber, LifecycleText, statusLabel } from './agentControlPrimitives';
 import { useAgentRunState } from './agentRunState';
+import { formatEuro } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 
 /**
@@ -76,7 +77,7 @@ export default function AgentStatusStrip({ agentKey }: { agentKey: string }) {
           />
           <StatusStripItem
             label={t('monitor.costToday')}
-            value={`${(state.daily.estimatedCostEur ?? 0).toFixed(4)} / ${state.daily.cap.maxCostEur ?? '-'} EUR`}
+            value={`${formatEuro(state.daily.estimatedCostEur ?? 0, locale, 4)} / ${state.daily.cap.maxCostEur == null ? '-' : formatEuro(state.daily.cap.maxCostEur, locale)}`}
           />
         </Stack>
       )}

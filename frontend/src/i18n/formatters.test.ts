@@ -1,7 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { formatCompactAmount, formatDecimal, formatPercentPoints, formatSharePercent, formatThousandsAmount } from './formatters';
+import { formatCompactAmount, formatDecimal, formatEuro, formatPercentPoints, formatSharePercent, formatThousandsAmount } from './formatters';
 
 const FR_GROUP = ' ';
+
+describe('formatEuro', () => {
+  it('writes euro amounts with the separators and currency placement of the language', () => {
+    expect(formatEuro(0, 'fr')).toBe('0,00\u00a0EUR');
+    expect(formatEuro(1.5, 'fr')).toBe('1,50\u00a0EUR');
+    expect(formatEuro(1234.5, 'fr')).toBe('1\u202f234,50\u00a0EUR');
+    expect(formatEuro(0.0012, 'fr', 4)).toBe('0,0012\u00a0EUR');
+    expect(formatEuro(1.5, 'en')).toBe('EUR\u00a01.50');
+    expect(formatEuro(1234.5, 'en')).toBe('EUR\u00a01,234.50');
+    expect(formatEuro(1234.5, 'de')).toBe('1.234,50\u00a0EUR');
+    expect(formatEuro(1234.5, 'es')).toBe('1.234,50\u00a0EUR');
+    expect(formatEuro(Number.NaN, 'en')).toBe('EUR\u00a00.00');
+  });
+});
 
 describe('formatDecimal', () => {
   it('writes a decimal with the separators of the language', () => {

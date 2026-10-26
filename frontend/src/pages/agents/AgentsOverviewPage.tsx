@@ -65,6 +65,7 @@ import {
 } from '../../components/agents/helpdeskTargeting';
 import { aiAgentControlApi } from '../../ai/aiApi';
 import { compactSelectMenuProps, drawerMenuItemSx, pageSelectSx } from '../../theme/formSx';
+import { formatEuro } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 import { helpdeskScopeFiltered } from '../../components/agents/agentRunState';
 import { useAgentControlData } from './useAgentControlData';
@@ -498,7 +499,7 @@ export default function AgentsOverviewPage() {
           <MetricBlock label={t('overview.dismissed')} value={formatPercent(fleetEvaluation?.dismissRate)} />
           <MetricBlock
             label={t('overview.cost')}
-            value={`${(overview?.cost?.today_eur ?? 0).toFixed(2)} / ${(overview?.cost?.last_7_days_eur ?? 0).toFixed(2)} EUR`}
+            value={`${formatEuro(overview?.cost?.today_eur ?? 0, locale)} / ${formatEuro(overview?.cost?.last_7_days_eur ?? 0, locale)}`}
           />
         </Stack>
 

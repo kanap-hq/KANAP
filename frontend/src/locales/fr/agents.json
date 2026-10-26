@@ -47,7 +47,7 @@
     "dialogTitle": "Mettre cet agent en pause",
     "dialogDescription": "Cela suspend les vérifications de l'agent et toute écriture en attente jusqu'à la levée de la pause. Les autres agents continuent de fonctionner.",
     "dialogTitleTenant": "Mettre tous les agents en pause",
-    "dialogDescriptionTenant": "Cela suspend les vérifications de tous les agents et toute écriture en attente pour ce tenant jusqu'à la levée de la pause.",
+    "dialogDescriptionTenant": "Cela suspend les vérifications de tous les agents et toute écriture en attente pour cet espace de travail jusqu'à la levée de la pause.",
     "managedForAll": "En pause pour tous les agents",
     "reasonLabel": "Motif",
     "reasonPlaceholder": "ex. Analyse de réponses inattendues aux tickets"
@@ -115,7 +115,7 @@
     "acceptance": "Acceptation",
     "dismissed": "Écartées",
     "fleet": "Parc d'agents",
-    "empty": "Aucun agent n'est disponible pour ce tenant.",
+    "empty": "Aucun agent n'est disponible pour cet espace de travail.",
     "noDescription": "Aucune description.",
     "pendingCount": "{{count}} en attente",
     "failedCount": "{{count}} en échec",
@@ -325,7 +325,7 @@
   "workspace": {
     "back": "Retour aux agents",
     "notFound": "Agent introuvable",
-    "notFoundBody": "Cet agent n'est pas disponible dans le tenant actuel.",
+    "notFoundBody": "Cet agent n'est pas disponible dans l'espace de travail actuel.",
     "tabs": {
       "monitor": "Suivi",
       "approvals": "Approbations",

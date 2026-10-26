@@ -19,6 +19,8 @@ import {
   type TicketWorkGroup,
 } from '../../components/agents/agentControlPrimitives';
 import { monitoringStatusSemanticColor } from '../../components/agents/monitoringTargeting';
+import { formatEuro } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
 import { getDotColor } from '../../utils/statusColors';
 
 // ---------------------------------------------------------------------------
@@ -319,6 +321,7 @@ export function AlertDossierBody({
   sourceUri?: string | null;
 }) {
   const { t, i18n } = useTranslation(['agents']);
+  const locale = useLocale();
   const [showRejected, setShowRejected] = React.useState(false);
   const alert = recordOf(diagnosis.alert);
   const kanapContext = recordOf(diagnosis.kanap_context);
@@ -466,7 +469,7 @@ export function AlertDossierBody({
         {diagnosis.synthesis.tokens != null && diagnosis.synthesis.tokens > 0 && (
           <Typography sx={(theme) => ({ fontSize: 11, color: theme.palette.kanap.text.tertiary })}>
             {`${new Intl.NumberFormat(i18n.language).format(diagnosis.synthesis.tokens)} tokens`}
-            {diagnosis.synthesis.cost_eur != null ? ` · ${diagnosis.synthesis.cost_eur.toFixed(4)} EUR` : ''}
+            {diagnosis.synthesis.cost_eur != null ? ` · ${formatEuro(diagnosis.synthesis.cost_eur, locale, 4)}` : ''}
           </Typography>
         )}
         <Box sx={{ flex: 1 }} />

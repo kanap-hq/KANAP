@@ -925,7 +925,7 @@
       "allowedCurrencies": "Allowed currencies",
       "allowedCurrenciesHelp": "Optional comma-separated list (e.g. EUR, USD, GBP)",
       "forceFxSync": "Force FX rates sync",
-      "fxRatesTitle": "Latest FX rate snapshots (per fiscal year, tenant reporting currency basis)",
+      "fxRatesTitle": "Latest FX rate snapshots (per fiscal year, workspace reporting currency basis)",
       "loadingRates": "Loading FX rates…",
       "loadRatesError": "Failed to load FX rate history.",
       "noRatesYet": "No FX rate snapshots captured yet.",

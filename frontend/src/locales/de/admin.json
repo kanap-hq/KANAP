@@ -32,7 +32,7 @@
       "labelPlaceholder": "z. B. Desktop MCP-Client"
     },
     "glpi": {
-      "description": "Konfigurieren Sie mandantenspezifische GLPI-Zugangsdaten, damit Plaid ausgewählte GLPI-Tickets nach Benutzerbestätigung als KANAP-Aufgaben importieren kann.",
+      "description": "Konfigurieren Sie die GLPI-Zugangsdaten dieses Arbeitsbereichs, damit Plaid ausgewählte GLPI-Tickets nach Benutzerbestätigung als KANAP-Aufgaben importieren kann.",
       "fields": {
         "appToken": "App-Token",
         "enabled": "GLPI-Ticketimport aktivieren",
@@ -137,7 +137,7 @@
       },
       "builtinUsage": {
         "cta": "Verwenden Sie Ihre eigenen API-Schlüssel für unbegrenzte Nutzung.",
-        "description": "Die integrierte Nutzung wird für diesen Mandanten von Chat und Agenten gemeinsam genutzt.",
+        "description": "Die integrierte Nutzung wird für diesen Arbeitsbereich von Chat und Agenten gemeinsam genutzt.",
         "loadFailed": "Die integrierte Nutzung konnte nicht geladen werden.",
         "reset": "Wird am {{date}} zurückgesetzt.",
         "summary": "{{count}} / {{limit}} Nachrichten in diesem Monat verwendet",

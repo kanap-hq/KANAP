@@ -10,7 +10,7 @@ Open an agent by clicking its card on [AI Agents: Overview](agents-overview.md).
 - **Path:** **AI Agents → Overview →** open an agent's card
 - **Route:** `/agents/:agentKey`
 - **Permission:** viewing needs the AI Agents Reader role (`ai_agents:reader`). Running a check, testing the agent, and deciding proposals need the contributor level (`ai_agents:contributor`). Changing the run mode, pausing the agent, and the **Settings** tab need the AI Agents Admin level (`ai_agents:admin`); the AI Settings admin (`ai_settings:admin`) unlocks all of it too.
-- **Availability:** the whole AI Agents area requires AI to be enabled on the instance. If you open a link to an agent that doesn't exist for your tenant, you'll see **Agent not found** ("This agent is not available in the current tenant.") with a way back to the fleet.
+- **Availability:** the whole AI Agents area requires AI to be enabled on the instance. If you open a link to an agent that doesn't exist in your workspace, you'll see **Agent not found** ("This agent is not available in the current workspace.") with a way back to the fleet.
 
 The tabs are **Monitor**, **Approvals**, **Performance & autonomy**, and **Settings**. Readers see the first three; only administrators see **Settings**.
 

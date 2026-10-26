@@ -32,7 +32,7 @@
       "labelPlaceholder": "e.g., desktop MCP client"
     },
     "glpi": {
-      "description": "Configure tenant-scoped GLPI credentials so Plaid can import selected GLPI tickets into KANAP tasks after user confirmation.",
+      "description": "Configure GLPI credentials for this workspace so Plaid can import selected GLPI tickets into KANAP tasks after user confirmation.",
       "fields": {
         "appToken": "App token",
         "enabled": "Enable GLPI ticket import",
@@ -137,7 +137,7 @@
       },
       "builtinUsage": {
         "cta": "Use your own API keys for unlimited usage.",
-        "description": "Built-in usage is shared by chat and agents for this tenant.",
+        "description": "Built-in usage is shared by chat and agents for this workspace.",
         "loadFailed": "Failed to load built-in usage.",
         "reset": "Resets on {{date}}.",
         "summary": "{{count}} / {{limit}} messages used this month",
