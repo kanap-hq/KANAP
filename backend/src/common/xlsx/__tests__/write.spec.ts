@@ -178,6 +178,12 @@ function validation() {
   assert.throws(() => one([['only one']]), /1 cells for 2 headers/, 'a short row throws');
   assert.throws(() => one([['a', 'b', 'c']]), /3 cells for 2 headers/, 'a long row throws');
   assert.throws(() => one([['a', 'b']], ['A', 'B'], { links: [] }), /1 rows and 0 links/);
+  // Excel's limits: no sheet, more rows than a sheet holds below its header, more columns than it has.
+  assert.throws(() => write([]), /at least one sheet/);
+  const fullRows = new Array(1_048_575).fill(['a']);
+  assert.throws(() => write([{ name: 'S', headers: ['A'], rows: [...fullRows, ['a']] }]), /1048576 rows, 1048575 at most/);
+  assert.throws(() => write([{ name: 'S', headers: Array.from({ length: 16_385 }, (_, i) => `H${i}`), rows: [] }]), /16385 columns, 16384 at most/);
+  assert.ok(sheetXml(write([{ name: 'S', headers: Array.from({ length: 16_384 }, (_, i) => `H${i}`), rows: [] }])).includes('<c r="XFD1"'), '16,384 columns fit');
 }
 
 function linksAndParts() {

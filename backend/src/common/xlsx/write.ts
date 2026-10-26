@@ -48,6 +48,9 @@ export interface XlsxWriteRequest {
 
 /** Excel's limit for the text of one cell. */
 export const XLSX_MAX_TEXT_LENGTH = 32_767;
+/** Excel's limits for a sheet: 1,048,576 rows, the header included, and 16,384 columns. */
+export const XLSX_MAX_DATA_ROWS = 1_048_575;
+export const XLSX_MAX_COLUMNS = 16_384;
 /** Excel's limit for the target of a link: a longer one is left out (the cell stays). */
 export const XLSX_MAX_LINK_LENGTH = 2_079;
 /** Excel's limit for the links of one sheet: the rows after it keep their cells, without link. */
@@ -161,6 +164,10 @@ interface BuiltSheet {
 function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string, language: CsvLanguage): BuiltSheet {
   const styled = (sheet.header ?? 'styled') === 'styled';
   const columns = sheet.headers.length;
+  if (columns > XLSX_MAX_COLUMNS) throw new Error(`xlsx: sheet "${name}" has ${columns} columns, ${XLSX_MAX_COLUMNS} at most`);
+  if (sheet.rows.length > XLSX_MAX_DATA_ROWS) {
+    throw new Error(`xlsx: sheet "${name}" has ${sheet.rows.length} rows, ${XLSX_MAX_DATA_ROWS} at most below the header`);
+  }
   const names: string[] = [];
   for (let column = 1; column <= columns; column += 1) names.push(columnNumberToName(column));
   if (sheet.links && sheet.links.length !== sheet.rows.length) {
@@ -310,9 +317,13 @@ function longestLine(value: string): number {
   return value.split(/\r?\n/).reduce((max, line) => Math.max(max, line.length), 0);
 }
 
-/** Writes a workbook: one sheet per entry, in order. A row whose length differs from the headers throws. */
+/**
+ * Writes a workbook: one sheet per entry, in order. Throws on no sheet, on a sheet over Excel's rows or columns,
+ * and on a row whose length differs from the headers.
+ */
 export function writeXlsx(request: XlsxWriteRequest): Buffer {
   const { language, sheets } = request;
+  if (!sheets || sheets.length === 0) throw new Error('xlsx: a workbook needs at least one sheet');
   const appBaseUrl = String(request.appBaseUrl || '').trim().replace(/\/$/, '');
   const taken = new Set<string>();
   const built = sheets.map((sheet) => buildSheet(sheet, sheetName(sheet.name, taken), appBaseUrl, language));
