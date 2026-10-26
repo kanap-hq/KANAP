@@ -1117,7 +1117,6 @@ export default function InterfaceMapPage() {
                                     if (link.connection.source_server_id) serverIds.add(link.connection.source_server_id);
                                     if (link.connection.destination_server_id) serverIds.add(link.connection.destination_server_id);
                                     const params = new URLSearchParams({
-                                      environment,
                                       lifecycles: link.connection.lifecycle || 'active',
                                       focusConnectionId: link.connection.id,
                                       depth: '1',

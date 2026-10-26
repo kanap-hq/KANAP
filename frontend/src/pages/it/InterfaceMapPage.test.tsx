@@ -48,13 +48,69 @@ const SERVERS = [
 
 let servers: typeof SERVERS = SERVERS;
 
+const CONNECTION_LINK = {
+  id: 'link-1',
+  binding_id: 'bind-1',
+  environment: 'dev',
+  leg_type: 'primary',
+  binding_status: 'active',
+  connection: {
+    id: 'conn-1',
+    connection_reference: 'CN-1',
+    name: 'Orders hop',
+    topology: 'server_to_server' as const,
+    lifecycle: 'planned',
+    criticality: 'high',
+    data_class: 'internal',
+    contains_pii: false,
+    risk_mode: 'manual' as const,
+    protocol_codes: [],
+    source_server_id: 'srv-a',
+    destination_server_id: 'srv-b',
+    source_server_name: 'PAR-WEB-01',
+    destination_server_name: 'PAR-SQL-01',
+    server_ids: ['srv-a', 'srv-b'],
+  },
+};
+
+const LINKED_MAP = {
+  ...MAP,
+  environment: 'dev',
+  nodes: [
+    MAP.nodes[0],
+    { ...MAP.nodes[0], id: 'app-2', name: 'Billing' },
+  ],
+  interfaces: [{
+    id: 'if-1',
+    interface_reference: 'IF-1',
+    name: 'Orders',
+    source_application_id: 'app-1',
+    target_application_id: 'app-2',
+    lifecycle: 'active',
+    criticality: 'high',
+    data_category: 'operational',
+    contains_pii: false,
+    integration_route_type: 'api',
+    bindings_count: 1,
+    has_middleware: false,
+    middleware_application_ids: [],
+  }],
+};
+
 function Where() {
-  return <div data-testid="where">{useLocation().pathname}</div>;
+  const location = useLocation();
+  return (
+    <>
+      <div data-testid="where">{location.pathname}</div>
+      <div data-testid="search">{location.search}</div>
+    </>
+  );
 }
 
-function renderPage() {
+function renderPage(entry = '/it/interface-map', map: typeof MAP | typeof LINKED_MAP = MAP) {
   get.mockImplementation(async (url: string) => {
-    if (url === '/interfaces/map') return { data: MAP };
+    if (url === '/interfaces/map') return { data: map };
+    if (url === '/interfaces/if-1/connection-links') return { data: { items: [CONNECTION_LINK] } };
     if (url === '/applications/app-1/map-summary') {
       return {
         data: {
@@ -68,11 +124,12 @@ function renderPage() {
   render(
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <MemoryRouter initialEntries={['/it/interface-map']}>
+        <MemoryRouter initialEntries={[entry]}>
           <Routes>
             <Route path="/it/interface-map" element={<InterfaceMapPage />} />
             <Route path="/it/assets/:id/:tab" element={<Where />} />
             <Route path="/it/applications/:id/:tab" element={<Where />} />
+            <Route path="/it/connection-map" element={<Where />} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -125,5 +182,22 @@ describe('InterfaceMapPage application panel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'node CheeseTrack' }));
     fireEvent.click(await screen.findByRole('button', { name: 'pages.interfaceMap.openApplication' }));
     expect(screen.getByTestId('where').textContent).toBe('/it/applications/app-1/overview');
+  });
+});
+
+describe('InterfaceMapPage connection map link', () => {
+  beforeEach(() => { get.mockReset(); });
+
+  it('opens the connection map without an environment parameter', async () => {
+    renderPage('/it/interface-map?environment=dev&focusInterfaceId=if-1', LINKED_MAP);
+    fireEvent.click(await screen.findByRole('button', { name: 'pages.interfaceMap.viewInConnectionMap' }));
+    expect(screen.getByTestId('where').textContent).toBe('/it/connection-map');
+    const params = new URLSearchParams(screen.getByTestId('search').textContent || '');
+    expect(params.has('environment')).toBe(false);
+    expect(params.get('lifecycles')).toBe('planned');
+    expect(params.get('focusConnectionId')).toBe('conn-1');
+    expect(params.get('depth')).toBe('1');
+    expect(params.get('rootIds')).toBe('srv-a,srv-b');
+    expect(get).toHaveBeenCalledWith('/interfaces/if-1/connection-links', { params: { environment: 'dev' } });
   });
 });
