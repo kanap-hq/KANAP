@@ -77,6 +77,7 @@ The links above the grid filter the list in one click. Click again to remove the
 
 - **To decide within n days (n)**: contracts in the **To decide** state. The number of days is the decision window of your workspace
 - **No budget line (n)** and **Under-budgeted (n)**: contracts whose budget coverage for the chosen year is in that state
+- **Without cost center**: contracts with no **Cost center or group**. The **Cost center** column (column chooser) shows the field
 
 An orange dot marks a link whose count is not zero.
 
@@ -120,6 +121,8 @@ The row pinned at the bottom reads **Total (n contracts)**. It sums the yearly a
 The header shows the contract name (click it to rename), **Previous** / **Next** with the position in the list, and a bar with **Supplier**, **Contracting company**, **Owner** and **Status**. The owner and the status change in place. Supplier and company open the **Properties** panel.
 
 The **Properties** panel on the right holds every field of the contract: the parties, **Start**, **Duration (months)**, **Notice (months)**, **Tacit renewal**, **Yearly amount**, **Currency**, **Billing**, then **Lifecycle** (**Status** and **End of validity**), **Created** and **Updated**. Open or close it with its button; KANAP remembers your choice.
+
+**Cost center or group** is optional. It places the contract under a cost center or a group for [data access](data-access.md): the people limited to that node, or to a group above it, see the contract as well as those limited to its company.
 
 Every change saves itself: lists and dates at once, typed values and notes after a short pause, the name when you leave the field. "Saving…" then "Saved" appears in the header. Two people editing the same contract are not warned: the last change wins.
 
@@ -179,6 +182,8 @@ For example, a contract of 350 000 a year that renews every 1 July commits 350 0
 - **Under-budgeted**: the linked lines hold less than the commitment
 - **Budget above the contract**: the linked lines hold more than the commitment plus 10%
 - **Covered**: anything else
+
+For a person with limited data access, the tab lists the linked lines they see, then a count of the others. The coverage still counts every linked line, so the owner of the contract sees the real coverage. In the list, each row shows that full coverage too, while the totals row counts the visible contracts and **Linked lines** counts the visible lines. See [Data access](data-access.md#what-a-limited-person-sees).
 
 When a linked line has no exchange rate for a year, its amount shows in its own currency with a small orange mark, and the total and **Linked lines** leave it out. The state of that year reads **Unknown: a linked line has no exchange rate**. A one-line warning under the coverage table names the lines left out, for example "Excluding 1 line with no exchange rate: USD 2026." See [Missing rate](currencies.md#conversion-mechanics-quick-reference) and [Manual rates](currencies.md#manual-rates).
 

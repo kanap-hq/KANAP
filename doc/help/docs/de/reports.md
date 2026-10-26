@@ -9,6 +9,8 @@ Navigieren Sie im Hauptmenü zu **Berichte**, um den Berichts-Hub zu öffnen.
 - Pfad: **Berichte**
 - Berechtigungen: `reporting:reader` (Minimum)
 
+Für eine Person mit begrenztem [Datenzugriff](data-access.md) zählt jeder Bericht die Zeilen, die sie sieht, ohne Gruppensumme.
+
 ---
 
 ## Berichts-Hub
@@ -211,6 +213,8 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 - Separate Schaltfläche **Flüsse als CSV exportieren**
 
 **KPI-Tabelle** (wenn aktiviert): Gleiche Spalten wie die KPI-Tabelle der Globalen Leistungsverrechnung, mit einer „Globale Summen"-Zeile unten zum Vergleich.
+
+**Begrenzter Datenzugriff**: Eine begrenzte Person öffnet die Unternehmen ihrer Unternehmensknoten, oder alle Unternehmen mit **Alles**. Die Verrechnungszeilen zeigen dann den dem Unternehmen verrechneten Anteil, mit dem zahlenden Unternehmen, dem Zuordnungsprozentsatz und den Abteilungen; eine Zeile, die sie sonst nicht sieht, zeigt ihre Referenz ohne Link. Die Zahlen der anderen Unternehmen und die Gesamtsummen entfallen, und ein Kostenstellenknoten öffnet diesen Bericht nicht. Siehe [Datenzugriff](data-access.md#what-a-limited-person-sees).
 
 ### Export
 

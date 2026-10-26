@@ -287,8 +287,8 @@
     "contract_other": "{{count}} Verträgen"
   },
   "dataAccess": {
-    "outside": "Dieses Element liegt außerhalb Ihres Datenzugriffs.",
-    "chargebackCompany": "Die Leistungsverrechnung dieses Unternehmens liegt außerhalb Ihres Datenzugriffs.",
+    "outside": "Dieses Element liegt außerhalb Ihres Zugriffs.",
+    "chargebackCompany": "Die Leistungsverrechnung dieses Unternehmens liegt außerhalb Ihres Zugriffs.",
     "readOnlyLine": "Diese Zeile ist in Ihrem Zugriff schreibgeschützt.",
     "placement": "Dieses Unternehmen oder diese Kostenstelle gehört nicht zu Ihrem Zugriff.",
     "reserved": "Diese Aktion ist Personen mit Zugriff auf alle Daten vorbehalten.",
@@ -300,9 +300,9 @@
   },
   "DATA_ACCESS_ADMINISTRATOR": "Administratoren sehen alle Daten.",
   "DATA_ACCESS_SELF": "Sie können Ihren eigenen Datenzugriff nicht ändern.",
-  "DATA_ACCESS_NODE_UNKNOWN": "Ein Knoten der Liste existiert in diesem Arbeitsbereich nicht.",
-  "DATA_ACCESS_NODE_ID_FORBIDDEN": "Der Knoten Alles hat keinen Knoten.",
-  "DATA_ACCESS_NODE_ID_REQUIRED": "Ein Unternehmen oder eine Kostenstelle ist erforderlich.",
-  "DATA_ACCESS_NODE_TYPE_INVALID": "Verwenden Sie Unternehmen, Kostenstelle oder alles.",
-  "DATA_ACCESS_ACCESS_INVALID": "Verwenden Sie Lesen oder Bearbeiten."
+  "DATA_ACCESS_NODE_UNKNOWN": "Ein Unternehmen oder eine Kostenstelle der Liste existiert in diesem Arbeitsbereich nicht.",
+  "DATA_ACCESS_NODE_ID_FORBIDDEN": "Alles deckt bereits alle Daten ab und benötigt weder ein Unternehmen noch eine Kostenstelle.",
+  "DATA_ACCESS_NODE_ID_REQUIRED": "Wählen Sie ein Unternehmen oder eine Kostenstelle.",
+  "DATA_ACCESS_NODE_TYPE_INVALID": "Wählen Sie ein Unternehmen, eine Kostenstelle oder die Option Alles.",
+  "DATA_ACCESS_ACCESS_INVALID": "Wählen Sie Lesen oder Bearbeiten."
 }

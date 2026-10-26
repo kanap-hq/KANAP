@@ -114,6 +114,7 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 ### Administración
 
 - [Usuarios](admin.md) - Gestión de usuarios, roles, autenticación y registros de auditoría
+- [Acceso a los datos](data-access.md) - Limitar a una persona al presupuesto y a los contratos de ciertas empresas o centros de coste
 - [Personalización](branding.md) - Personalización del logotipo del espacio de trabajo y colores primarios claro/oscuro
 - [Datos de ejemplo](sample-data.md) - Descubra KANAP con una empresa ficticia, bórrela después y empiece de cero
 - [Registro de auditoría](admin.md#registro-de-auditoria) - Revisión de los cambios de datos, los accesos y las exportaciones con filtros, vista detallada y exportación CSV

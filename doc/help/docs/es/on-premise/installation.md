@@ -261,3 +261,46 @@ server {
 5. Invite a más usuarios (si el correo está configurado)
 
 **Sobre la cuenta de administrador.** KANAP la crea en el primer arranque a partir de `ADMIN_EMAIL` y `ADMIN_PASSWORD`, y solo entonces. Cambiar esas dos líneas más tarde no cambia nada mientras exista un administrador activo: cambie la contraseña en la aplicación. Si no queda ningún administrador activo, el siguiente arranque restablece la cuenta `ADMIN_EMAIL` como administrador habilitado y conserva su contraseña actual. `ADMIN_PASSWORD` debe ser un valor propio de 12 caracteres o más: `openssl rand -base64 18` genera uno. Un valor de ejemplo o uno más corto hace que la API muestre una advertencia `[SECURITY]` en cada arranque hasta que se cambie la contraseña de la cuenta. Consulte [Configuración](configuration.md#obligatorio-credenciales-de-administrador).
+
+## Opcional: acceso a los datos por ámbito { #optional-data-scoped-access }
+
+El [acceso a los datos](../data-access.md) limita a una persona a una parte del presupuesto y de los contratos, por empresa o por centro de coste. Sin este paso, todos trabajan con todos los datos, como en las versiones anteriores, y **Limitado a** aparece en gris en la ventana del usuario. Omítalo si nadie debe estar limitado.
+
+El paso crea un rol de PostgreSQL, `kanap_data_limited`, que KANAP adopta para las peticiones de las personas limitadas. Se hace una vez por servidor PostgreSQL, por un superusuario o un rol con `CREATEROLE`. Da al rol de aplicación el derecho de adoptar ese rol sin heredar sus derechos. Después, KANAP establece por sí mismo los derechos y las reglas de acceso de ese rol en su base, en cada arranque y en cada actualización.
+
+**1. Ejecute el script.** Está en el repositorio. Pase el rol de aplicación de `DATABASE_URL` en `app_role`. Con el [ejemplo de instalación](installation-example.md) (rol y base `kanap`, PostgreSQL en el servidor):
+
+```bash
+cd /opt/kanap
+sudo -u postgres psql -X -v ON_ERROR_STOP=1 -v app_role=kanap -v mode=install \
+  -f /opt/kanap/infra/scripts/data-access-role.sql -d kanap
+```
+
+Con un servicio PostgreSQL gestionado, ejecute el mismo comando `psql` con la cuenta de administrador del servicio, desde una máquina que llegue a la base.
+
+El script termina con una tabla `data-access-role: final state`. En PostgreSQL 16 y posteriores muestra `limited_role_exists` = `t`, `app_is_member` = `t`, `membership_inherit` = `false`, `membership_set` = `true` y `app_inherits_limited` = `f`. Volver a ejecutarlo no cambia nada.
+
+En PostgreSQL 15, el script hace además que el rol de aplicación deje de heredar los derechos de otros roles, y debe ejecutarse en cada base que pertenece a ese rol. La cabecera del script lo explica y da el bucle que hay que usar.
+
+**2. Reinicie la API,** en un momento tranquilo: al arrancar, establece los derechos y las reglas de acceso del rol.
+
+```bash
+cd /opt/kanap
+docker compose -f infra/compose.onprem.yml restart api
+docker compose -f infra/compose.onprem.yml logs api | grep DATA-ACCESS
+```
+
+El registro muestra `[DATA-ACCESS] data-scoped access available`. Si en su lugar lista lo que falta, lea las líneas anteriores. Si la API esperó demasiado una tabla ocupada, lo indica y lo vuelve a intentar en su siguiente arranque: reiníciela de nuevo un poco más tarde.
+
+**Retirar la función.** Devuelva primero **Todos los datos** a las personas limitadas (**Administración > Acceso a los datos** las lista): mientras falte el rol, se rechazan. Después ejecute el script con `mode=uninstall`, como superusuario, y reinicie la API:
+
+```bash
+cd /opt/kanap
+sudo -u postgres psql -X -v ON_ERROR_STOP=1 -v app_role=kanap -v mode=uninstall \
+  -f /opt/kanap/infra/scripts/data-access-role.sql -d kanap
+docker compose -f infra/compose.onprem.yml restart api
+```
+
+El script retira los derechos y las reglas de acceso del rol en la base, y después el propio rol. Cuando otras bases del servidor aún conservan algo para ese rol, las nombra: ejecútelo en cada una.
+
+Una restauración de la base puede requerir repetir el paso: vea [Restauración](operations.md#restauracion).

@@ -79,7 +79,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 
 ## The company workspace
 
-Click any row in the list to open the company workspace. It has two tabs: **Overview** and **Details**.
+Click any row in the list to open the company workspace. It has two tabs: **Overview** and **Details**. People who manage data access also see an **Access** tab, with the people who see the whole company and those who see part of it. See [Data access](data-access.md#the-access-tab-of-companies-and-cost-centers).
 
 - **Header**: the company name. Click it to rename the company. The arrows with "N of M" move between companies in the list's order and filters without returning to the list. The back link, **Companies**, returns to the list with your search context intact
 - **Status**, under the name: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** disables the company at once: the end of validity becomes the current time

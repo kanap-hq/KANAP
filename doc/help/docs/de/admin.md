@@ -11,6 +11,7 @@ Navigieren Sie im Hauptmenü zu **Administration**, um den Administrationsbereic
 - Benutzer & Zugriff: `users:reader` zum Anzeigen, `users:admin` zum Verwalten
 - Rollen: `users:reader` zum Anzeigen, `users:admin` zum Bearbeiten
 - Audit-Protokoll: Erfordert `users:admin`
+- Datenzugriff: Erfordert `users:admin` und Zugriff auf alle Daten (siehe [Datenzugriff](data-access.md))
 - Abrechnung: Erfordert die Rolle Abrechnungsadministrator
 - Authentifizierung: Erfordert `users:admin` (Feature-Flag-gesteuert; erfordert aktiviertes SSO)
 - Branding: Erfordert `users:admin` (nur Mandanten-Host; über die Seitenleiste zugänglich)
@@ -52,6 +53,8 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 **Datenänderungen**: Erstellen, Aktualisieren, Löschen und Deaktivieren von Datensätzen, mit Benutzer, Zeitpunkt sowie den Werten vorher und nachher.
 
 **Rollenänderungen**: Erstellen, Umbenennen und Löschen einer Rolle sowie jede Änderung ihrer Berechtigungen.
+
+**Änderungen des Datenzugriffs** (Tabelle **Datenzugriff**): Modus und Knoten einer Person vorher und nachher, mit der Quelle **Bildschirm** oder **Import**. Siehe [Datenzugriff](data-access.md#audit-log).
 
 **Anmelde- und Sitzungsereignisse** (Tabelle **Anmeldung und Sitzung**):
 
@@ -164,6 +167,8 @@ Verwalten Sie, wer auf KANAP zugreifen kann und was die jeweiligen Personen tun 
 - **MFA aktiviert**: Ob Multi-Faktor-Authentifizierung aktiv ist
 - **Erstellt**: Wann der Benutzer erstellt wurde
 
+Sobald der Datenzugriff einer Person begrenzt ist, zeigt eine Spalte **Zugriff** den Zugriff jeder Person: **Alle Daten**, die Namen ihrer Knoten oder **Keine**. Siehe [Datenzugriff](data-access.md).
+
 **Statuswerte**:
 
 | Status | Bedeutung |
@@ -199,6 +204,7 @@ Zeilenaktionen über das Menü am Ende jeder Zeile:
 | **Aktivieren** / **Deaktivieren** | Schaltet das Konto ein oder aus. Beim Deaktivieren wird die Person sofort abgemeldet. |
 | **Einladung senden** | Sendet eine Anmeldeeinladung per E-Mail. Für Microsoft Entra-Konten ausgeblendet. |
 | **Passwort-Zurücksetzung senden** | Sendet einen Link zum Zurücksetzen des Passworts per E-Mail. Nur für aktive lokale Konten sichtbar. |
+| **Datenzugriff** | Öffnet den Benutzer auf dem Reiter **Datenzugriff**. Sichtbar für Personen mit Zugriff auf alle Daten, in den Zeilen anderer Personen. |
 | **Löschen** | Entfernt den Benutzer dauerhaft. Die Datensätze, an denen er gearbeitet hat, bleiben ohne ihn erhalten. Ihr eigenes Konto können Sie nicht löschen. Um den Zugang einer Person zu sperren und das Konto zu behalten, deaktivieren Sie es stattdessen. |
 
 ### CSV-Datei der Benutzer
@@ -235,6 +241,8 @@ Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die b
    - **Unternehmen** / **Abteilung**: Organisatorische Zuordnung
    - **Aktiviert**: Ob der Benutzer sich anmelden kann
 4. Klicken Sie auf **Speichern** oder **Speichern und einladen**, um die Anmelde-E-Mail zu senden
+
+Wenn Sie einen Benutzer bearbeiten, hat das Fenster zwei Reiter: **Identität**, mit den Feldern oben und den Rollen, und **Datenzugriff**, der die Person auf einen Teil des Budgets und der Verträge begrenzt. Ein einziges **Speichern** schreibt beide. Der Reiter **Datenzugriff** ist für Personen mit Zugriff auf alle Daten sichtbar, bei den Konten anderer. Siehe [Datenzugriff](data-access.md).
 
 ### Mehrfach-Rollenzuweisung
 

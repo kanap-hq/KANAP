@@ -143,7 +143,7 @@ Eine neue Dimension kommt in der Reihenfolge der Dimensionen an die letzte Stell
 
 - **Kopfzeile**: der Name der Dimension. Klicken Sie darauf, um die Dimension umzubenennen. **Zurück** / **Weiter** bewegen sich durch die Dimensionen in ihrer Reihenfolge, und die Schließen-Schaltfläche führt zur Seite mit dieser Dimension zurück
 - **Hauptbereich**: eine Nutzungszeile, dann die **Beschreibung**. Die Nutzungszeile nennt die Anzahl der Werte und der Budgetzeilen, die einen davon tragen, OPEX und CAPEX zusammen, zum Beispiel „12 Werte · Verwendet von 29 Zeilen“. **Verwendet von 29 Zeilen** ist ein Link: Er öffnet diese Zeilen in der Liste der Budgetzeilen, in einem neuen Tab, aktivierte und deaktivierte Zeilen eingeschlossen. Eine Dimension, die keine Zeile verwendet, zeigt „Noch nicht verwendet“, eine ohne Werte „Noch keine Werte.“ Solange die Dimension deaktiviert ist, erscheint die Anzahl ohne Link
-- **Bereich Eigenschaften** rechts: **Name**, **Code**, **Verwendet für**, **Erforderlich** und **Lebenszyklus**
+- **Bereich Eigenschaften** rechts: **Name**, **Code**, **Verwendet für**, **Erforderlich**, **Offene Werte** und **Lebenszyklus**
 
 **Automatisches Speichern**: Jede Änderung wird von selbst gespeichert. Es gibt keine Schaltfläche zum Speichern. Textfelder werden gespeichert, wenn Sie sie verlassen (drücken Sie in **Name** und **Code** Enter, um sofort zu speichern); der Schalter **Erforderlich** und der Lebenszyklus werden gespeichert, sobald Sie sie ändern. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, zum Beispiel ein doppelter Code unter **Code**. Ein in der Kopfzeile abgelehnter Name wird oben auf der Seite angezeigt.
 
@@ -156,6 +156,7 @@ Eine neue Dimension kommt in der Reihenfolge der Dimensionen an die letzte Stell
 | **Beschreibung** | Wofür die Dimension da ist, damit Teammitglieder Zeilen einheitlich klassifizieren |
 | **Verwendet für** | **OPEX und CAPEX**, **Nur OPEX** oder **Nur CAPEX**. Legt fest, welche Budgetzeilen einen Wert in dieser Dimension haben können. Siehe [OPEX- oder CAPEX-Dimensionen](#opex-oder-capex-dimensionen). Bei der Standarddimension gesperrt, mit einer Zeile darunter: „Die Standarddimension gilt für OPEX- und CAPEX-Zeilen.“ |
 | **Erforderlich** | Ein Schalter. Ist er eingeschaltet, braucht jede neue Zeile der Arten, für die die Dimension verwendet wird, einen Wert in ihr, und eine Zeile mit einem Wert kann ihn nicht mehr verlieren. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen). Auch die Standarddimension kann erforderlich sein |
+| **Offene Werte** | Ein Schalter, standardmäßig aus. Ist er eingeschaltet, kann jede Person, die eine Zeile bearbeiten kann, einen Wert hinzufügen, über die Zeile oder die Budgetdatei. Siehe [Offene Werte](#open-values) |
 | **Lebenszyklus** | Der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus). Bei der Standarddimension gesperrt, mit einer Zeile darunter: „Diese Dimension kann weder deaktiviert noch gelöscht werden: Ältere Dateien und Fragen an die KI verwenden sie.“ |
 
 ### Dimensionen ordnen
@@ -216,6 +217,12 @@ Solange die Einstellung eingeschaltet ist, helfen Ihnen Zeilen unter dem Schalte
 
 - **Zeilen ohne Wert**: zum Beispiel „117 OPEX-Zeilen und 15 CAPEX-Zeilen haben keinen Wert.“ Jede Zeilenart hat ihren eigenen Link, **OPEX-Zeilen anzeigen** und **CAPEX-Zeilen anzeigen** (**Diese Zeilen anzeigen**, wenn nur eine Art betroffen ist). Der Link öffnet die Zeilen in ihrer Liste, in einem neuen Tab, aktivierte und deaktivierte Zeilen eingeschlossen.
 - **Kein Wert zur Auswahl**: Hat eine Zeilenart, für die die Dimension verwendet wird, keinen aktivierten Wert, den sie verwenden kann, weist eine Warnung darauf hin, zum Beispiel „Kein aktivierter Wert ist für CAPEX-Zeilen verwendbar. Neue CAPEX-Zeilen können nicht angelegt werden.“ Fügen Sie einen Wert für diese Zeilenart hinzu, oder aktivieren Sie einen. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
+
+### Offene Werte { #open-values }
+
+Eine Dimension mit eingeschaltetem **Offene Werte** erhält neue Werte aus den Zeilen selbst: eine Budgetreferenz, einen Projektcode, eine Bestellnummer. Im Feld einer Zeile bietet die Eingabe eines nicht vorhandenen Namens **„…“ hinzufügen** an, das den Wert anlegt. Die Budgetdatei legt ihn auf dieselbe Weise an. Jede Person, die die Zeile bearbeiten kann, tut das, auch Personen mit begrenztem [Datenzugriff](data-access.md).
+
+Bei einer Dimension mit ausgeschaltetem Schalter werden Werte auf dieser Seite angelegt, und die Budgetdatei legt unbekannte Werte nur für Personen mit Zugriff auf alle Daten an. Der Schalter ist für Personen sichtbar, die Dimensionen bearbeiten können und Zugriff auf alle Daten haben.
 
 ### Eine Dimension löschen
 
@@ -325,7 +332,7 @@ Im Bereich **Eigenschaften** einer OPEX- oder CAPEX-Zeile, und wenn Sie eine ers
 - Wählen Sie einen Wert, oder leeren Sie das Feld, um die Zeile in dieser Dimension ohne Wert zu lassen. Die Änderung wird sofort gespeichert.
 - Das Feld einer erforderlichen Dimension ist mit einem Sternchen markiert. Eine neue Budgetzeile kann ohne Wert in ihr nicht angelegt werden, mit der Meldung „Kostenart ist erforderlich“. Bei einer Budgetzeile mit einem Wert hat das Feld keine Schaltfläche zum Leeren: Sie können nur einen anderen Wert wählen. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen).
 - Das Feld listet die aktivierten Werte seiner Dimension, die für diese Zeilenart verwendet werden. Ein deaktivierter Wert oder ein Wert, der nur für die andere Zeilenart gilt, bleibt auf den Zeilen sichtbar, die ihn haben. Siehe [OPEX- oder CAPEX-Werte](#opex-oder-capex-werte).
-- Das Feld kann keinen Wert erstellen. Erstellen Sie Werte auf der Seite Analysedimensionen, oder lassen Sie sie von einem OPEX- oder CAPEX-CSV-Import erstellen.
+- Bei einer Dimension mit [offenen Werten](#open-values) bietet das Feld **„…“ hinzufügen** für einen nicht vorhandenen Namen an. Bei den anderen Dimensionen kann das Feld keinen Wert anlegen: Legen Sie Werte auf der Seite Analysedimensionen an, oder lassen Sie sie von der Budgetdatei anlegen.
 - Ein Wert gilt für die ganze Zeile, über alle Jahre.
 - Können die Dimensionen nicht geladen werden, ersetzt eine Zeile diese Felder: „Die Dimensionen konnten nicht geladen werden.“
 

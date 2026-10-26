@@ -287,8 +287,8 @@
     "contract_other": "{{count}} contratos"
   },
   "dataAccess": {
-    "outside": "Este elemento está fuera de su acceso a los datos.",
-    "chargebackCompany": "El contracargo de esta empresa está fuera de su acceso a los datos.",
+    "outside": "Este elemento está fuera de su acceso.",
+    "chargebackCompany": "El contracargo de esta empresa está fuera de su acceso.",
     "readOnlyLine": "Esta línea es de solo lectura en su acceso.",
     "placement": "Esta empresa o este centro de coste no forma parte de su acceso.",
     "reserved": "Esta acción está reservada a las personas con acceso a todos los datos.",
@@ -300,9 +300,9 @@
   },
   "DATA_ACCESS_ADMINISTRATOR": "Los administradores ven todos los datos.",
   "DATA_ACCESS_SELF": "No puede cambiar su propio acceso a los datos.",
-  "DATA_ACCESS_NODE_UNKNOWN": "Un nodo de la lista no existe en este espacio de trabajo.",
-  "DATA_ACCESS_NODE_ID_FORBIDDEN": "El nodo Todo no lleva nodo.",
-  "DATA_ACCESS_NODE_ID_REQUIRED": "Se requiere una empresa o un centro de coste.",
-  "DATA_ACCESS_NODE_TYPE_INVALID": "Use empresa, centro de coste o todo.",
-  "DATA_ACCESS_ACCESS_INVALID": "Use lectura o edición."
+  "DATA_ACCESS_NODE_UNKNOWN": "Una empresa o un centro de coste de la lista no existe en este espacio de trabajo.",
+  "DATA_ACCESS_NODE_ID_FORBIDDEN": "Todo cubre ya todos los datos y no necesita empresa ni centro de coste.",
+  "DATA_ACCESS_NODE_ID_REQUIRED": "Elija una empresa o un centro de coste.",
+  "DATA_ACCESS_NODE_TYPE_INVALID": "Elija una empresa, un centro de coste o todo.",
+  "DATA_ACCESS_ACCESS_INVALID": "Elija lectura o edición."
 }

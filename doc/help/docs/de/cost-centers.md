@@ -108,6 +108,7 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen
 - **Kopfzeile**: der Code als Referenz, mit einer Kopierschaltfläche, und der Name. Klicken Sie auf den Namen, um ihn zu ändern. **Zurück** / **Weiter** bewegen sich durch die Liste in ihrer aktuellen Reihenfolge und mit ihren Filtern, und die Schließen-Schaltfläche führt zur Liste zurück
 - **Hauptbereich**: eine Zeile wie „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile.“, wenn Budgetzeilen das Element verwenden, dann die **Beschreibung**
 - **Bereich Eigenschaften** rechts: **Code**, **Typ**, **Übergeordnete Gruppe**, **Unternehmen** (nur Kostenstellen), **Budgetverantwortlicher** und **Lebenszyklus**
+- Tab **Zugriff**, für Personen, die den Datenzugriff verwalten: die Personen mit direktem Zugriff auf die Kostenstelle oder Gruppe und die, die ihn über eine übergeordnete Gruppe, das Unternehmen oder **Alles** erben. Siehe [Datenzugriff](data-access.md#the-access-tab-of-companies-and-cost-centers)
 
 **Automatisches Speichern**: Jede Änderung wird von selbst gespeichert. Es gibt keine Schaltfläche zum Speichern. Textfelder werden gespeichert, wenn Sie sie verlassen (drücken Sie Enter in **Code**, um sofort zu speichern); Auswahllisten und Schalter werden gespeichert, sobald Sie einen Wert wählen. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat, zum Beispiel ein doppelter Code unter **Code**. Ein abgelehnter Name wird oben auf der Seite angezeigt.
 

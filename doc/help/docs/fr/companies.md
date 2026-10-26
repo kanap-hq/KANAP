@@ -79,7 +79,7 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 
 ## L'espace de travail de la société
 
-Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail de la société. Il comporte deux onglets : **Vue d'ensemble** et **Détails**.
+Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail de la société. Il comporte deux onglets : **Vue d'ensemble** et **Détails**. Les personnes qui gèrent l'accès aux données voient aussi un onglet **Accès**, avec les personnes qui voient toute la société et celles qui en voient une partie. Voir [Accès aux données](data-access.md#the-access-tab-of-companies-and-cost-centers).
 
 - **En-tête** : le nom de la société. Cliquez dessus pour renommer la société. Les flèches avec « N sur M » permettent de passer d'une société à l'autre dans l'ordre et avec les filtres de la liste, sans revenir à la liste. Le lien de retour, **Sociétés**, ramène à la liste avec votre contexte de recherche intact
 - **Statut**, sous le nom : **Activé** ou **Désactivé**. Cliquez dessus pour le changer. Choisir **Désactivé** désactive la société aussitôt : la fin de validité devient l'heure actuelle

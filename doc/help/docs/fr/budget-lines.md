@@ -702,6 +702,8 @@ L'accès aux lignes budgétaires est contrôlé par la ressource Budget, qui cou
 
 Le gel des colonnes budgétaires relève de l'administration budgétaire (`budget_ops:admin`).
 
+L'accès aux données peut limiter une personne aux lignes de certaines sociétés ou de certains centres de coûts. Elle voit alors ces lignes et celles sur lesquelles elle est nommée, une ligne qu'elle voit en Lecture affiche « Lecture seule dans votre accès », et la suppression de lignes et les opérations en masse sont réservées aux personnes qui ont accès à toutes les données. Voir [Accès aux données](data-access.md).
+
 De plus :
 
 - Les tâches ont des autorisations séparées (`tasks:member` pour créer et modifier des tâches sur les lignes budgétaires)

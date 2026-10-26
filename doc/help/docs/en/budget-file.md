@@ -105,7 +105,7 @@ An absent column keeps every stored value of that column. A file holding only `i
 - Each row is checked against its own kind: the dimensions and values it may hold, its account, the frozen columns and the duplicate warning. A column frozen for CAPEX refuses a change on a CAPEX line only.
 - There is no other key. A new row that looks like an existing line of its kind, or like another new row of the same kind in the file, is a warning you can ignore.
 - Suppliers are matched by `supplier_erp_id` when it is filled, otherwise by `supplier_name`. A supplier the file names and KANAP does not have is created by the load when **Create missing suppliers** is ticked. Without it, the check lists them and asks you to create them in **Master data > Suppliers**.
-- A dimension value that does not exist is created by the load, and listed in the check. Accounts, cost centers, companies and users are never created: an unknown one is a row error naming where to add it.
+- A dimension value that does not exist is created by the load, and listed in the check. For a person with limited data access, only on a dimension with open values: see [Limited data access](#limited-data-access). Accounts, cost centers, companies and users are never created: an unknown one is a row error naming where to add it.
 - A value, or `-`, on a dimension used for the other kind of line only is a row error on its `analytics:<code>` cell, for example "The Recurrence dimension is for CAPEX lines only. Leave it out." The export leaves such a cell empty, so a value hidden on a line is not exported and a load leaves it in place. The setting is in [Analytics dimensions](analytics.md#opex-or-capex-dimensions).
 - A value used for the other kind of line only is a row error on its `analytics:<code>` cell, for example "Internal labor is for OPEX lines only. Pick a value for CAPEX lines." A line keeps the value it already holds. Values the load creates are used for OPEX and CAPEX. The setting is in [Analytics dimensions](analytics.md#opex-or-capex-values).
 - A new line needs a value on each required dimension of its own kind, with the message "The Cost pool dimension is required. Choose a value." on the `analytics:<code>` cell. This holds when the column is missing from the file, when the cell is empty and when it holds `-`. A value the load creates counts. An existing line is refused only for a `-` that would clear the value it holds: an empty cell or a missing column leaves it as it is. The setting is in [Analytics dimensions](analytics.md#required-dimensions).
@@ -129,6 +129,18 @@ An absent column keeps every stored value of that column. A file holding only `i
 3. Click **Load**. The load writes everything or nothing.
 
 If a line changed between the check and the load, the load stops and asks you to check the file again. The check also states how it read the file when a date or an amount could be read in two ways, with a button to switch the reading.
+
+## Limited data access
+
+A person limited to part of the budget uses the file within their access, when their role allows it. See [Data access](data-access.md).
+
+- The export holds the lines they see.
+- A row that names a line they do not see is treated like a line that does not exist. In a file from an export, the message is "BL-12 is no longer available since the export.", the same as for a line deleted since then.
+- A line they see in Read passes when its row is unchanged. A change is refused with "BL-12 is read only in your access."
+- A new line, or a new company or cost center on a line, must fit one of their Edit nodes. Otherwise the row is refused with "This company or cost center is not part of your access."
+- An unknown value is created only on a dimension with open values. On the other dimensions, it is a row error.
+
+These rows appear among the **Errors** of the check, like any other refused row.
 
 ## Excel and LibreOffice
 

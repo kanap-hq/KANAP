@@ -15,7 +15,7 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(refusal('This action is reserved to people with access to all data.'), fr, 'fallback'))
       .toBe('Cette action est réservée aux personnes qui ont accès à toutes les données.');
     expect(getApiErrorMessage(refusal('This item is outside your data access.'), i18n.getFixedT('de'), 'fallback'))
-      .toBe('Dieses Element liegt außerhalb Ihres Datenzugriffs.');
+      .toBe('Dieses Element liegt außerhalb Ihres Zugriffs.');
     expect(getApiErrorMessage(refusal('This task is read only in your access.'), i18n.getFixedT('es'), 'fallback'))
       .toBe('Esta tarea es de solo lectura en su acceso.');
     expect(getApiErrorMessage(refusal('BL-12 is read only in your access.'), fr, 'fallback')).toBe('BL-12 est en lecture seule dans votre accès.');
@@ -39,7 +39,7 @@ describe('getApiErrorMessage', () => {
       .toBe('Esta tecnología está vinculada a 3 líneas y 1 contrato fuera de su acceso.');
     // A sentence the screen does not know shows as the server wrote it, never the generic refusal.
     expect(getApiErrorMessage(refusal('Some new refusal.'), fr, 'fallback')).toBe('Some new refusal.');
-    expect(getApiErrorMessage(refusal(''), t, 'fallback')).toBe('This item is outside your data access.');
+    expect(getApiErrorMessage(refusal(''), t, 'fallback')).toBe('This item is outside your access.');
     expect(isDataAccessRefusal(refusal('x'))).toBe(true);
     expect(isDataAccessRefusal({ response: { status: 403, data: { code: 'NO_ACCESS' } } })).toBe(false);
     const unavailable = { response: { status: 503, data: { code: 'DATA_ACCESS_UNAVAILABLE', message: 'Data access is temporarily unavailable. Contact the person who runs KANAP.' } } };

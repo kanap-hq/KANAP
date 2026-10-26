@@ -36,8 +36,8 @@ describe('locale plurals', () => {
   it.each([
     ['en', 1, 1, 1, 'With this access: 1 budget line, 1 editable; 1 contract.'],
     ['en', 2, 1, 2, 'With this access: 2 budget lines, 1 editable; 2 contracts.'],
-    ['fr', 1, 1, 1, 'Avec cet accès : 1 ligne budgétaire, dont 1 en saisie ; 1 contrat.'],
-    ['fr', 2, 1, 2, 'Avec cet accès : 2 lignes budgétaires, dont 1 en saisie ; 2 contrats.'],
+    ['fr', 1, 1, 1, 'Avec cet accès : 1 ligne budgétaire, dont 1 modifiable ; 1 contrat.'],
+    ['fr', 2, 1, 2, 'Avec cet accès : 2 lignes budgétaires, dont 1 modifiable ; 2 contrats.'],
   ])('words the data access preview in %s for %i line(s)', (lng, lines, editable, contracts, expected) => {
     const t = i18n.getFixedT(lng);
     expect(previewText({ lines, editable_lines: editable, contracts }, t, lng)).toBe(expected);

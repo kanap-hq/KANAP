@@ -1,6 +1,6 @@
 {
   "files": {
-    "admin.md": "277f53f8789e51caa007f0a766bcfd76",
+    "admin.md": "7e86d2e9325810dd3fa0c67425384848",
 
     "administration-view.md": "a41bcba29100655954954f297cbc7c07",
 
@@ -22,7 +22,7 @@
 
     "ai-usage.md": "c5ef4c260ba0162a443ac7741a09d47f",
 
-    "analytics.md": "972ae6fb0adee3e00fccb6aeb415fae8",
+    "analytics.md": "cc0a334ebd06d4ea124cbba1fafeb799",
 
     "applications.md": "9f57efb5bb1b023f67dda9a8b93a81ad",
 
@@ -32,9 +32,9 @@
 
     "budget-data-model.md": "956ab98a403242aaed0cd276c5f8ec62",
 
-    "budget-file.md": "b385aff2c5fb6d934f48ecbd8085ed9a",
+    "budget-file.md": "416f349061348c745ae2357ad1f1edd8",
 
-    "budget-lines.md": "2784ab07999c687ad9a8445463a604fb",
+    "budget-lines.md": "77e11e88ed5e9d7e65b1a531734b7031",
 
     "budget-operations.md": "eb2f9b52b8b949a3c34c4f282be00219",
 
@@ -42,7 +42,7 @@
 
     "chart-of-accounts.md": "ae8b6d49fff322c2ed5e6b691ee51620",
 
-    "companies.md": "58e9e29032f193eb1b551d2046175264",
+    "companies.md": "a3f3c2b0ce6ab7ae9c2dcb8edcc194fa",
 
     "connected-apps.md": "a5ccbff16dcd15aa33c08505ca236702",
 
@@ -52,13 +52,15 @@
 
     "contacts.md": "9c6735247659addd9691f4b00323df1d",
 
-    "contracts.md": "d375db7b104083bf9816786a4274e448",
+    "contracts.md": "1700e82d6a621bd39e29dee0da87b08c",
 
-    "cost-centers.md": "0c03908dcc42933988dcf018781a4c9b",
+    "cost-centers.md": "8ea331bf7f8e877d723ce6b82eba1041",
 
     "csv-files.md": "9e9899c195967442210f9df9b15cdae6",
 
     "currencies.md": "8de455ec65c514b76c582744f9641cc0",
+
+    "data-access.md": "ae16355753e982b1917e8f160a312a82",
 
     "departments.md": "33aff6bbd5aad01108ec450d1ae9d8d8",
 
@@ -74,7 +76,7 @@
 
     "incidents.md": "6eba6ccebb4cee7067372b6ab386ac97",
 
-    "index.md": "0e373a2e900ef9e56612e46d664545ed",
+    "index.md": "5789442f86bee75d85e2b8b62742f46f",
 
     "integrations.md": "a85a5f58ba84582a323c330f8d611e2f",
 
@@ -102,9 +104,9 @@
 
     "on-premise/installation-example.md": "42243df1ab06cc13ce5780ed714f8d1c",
 
-    "on-premise/installation.md": "383933a1a34d0e3843043d11041dfadf",
+    "on-premise/installation.md": "24e88928e1a66178b05121d4f0ff3b07",
 
-    "on-premise/operations.md": "5ba32413632a1273ed76b005290a2e8b",
+    "on-premise/operations.md": "3d9cc072e0295c12d0d072fb94b7240f",
 
     "on-premise/sso-entra.md": "64c4ba1183a02398aa122dd70f0fd9ba",
 
@@ -122,7 +124,7 @@
 
     "portfolio-team-members.md": "8c2647222d5a66b773e420596a0e00ba",
 
-    "reports.md": "47f937202b0173f359a50599ddb2e27e",
+    "reports.md": "593a2974ca0c7bdd65cf76df7e1a25fa",
 
     "sample-data.md": "680d0dcb02bda54a2f82d64acf3eb3ba",
 
