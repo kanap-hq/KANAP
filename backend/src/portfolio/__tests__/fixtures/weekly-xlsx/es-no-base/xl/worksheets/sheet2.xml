@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <cols><col min="4" max="4" width="12" customWidth="1"/><col min="5" max="5" width="12" customWidth="1"/></cols>
+  <sheetData>
+    <row r="1"><c r="A1" t="inlineStr"><is><t xml:space="preserve">Event</t></is></c><c r="B1" t="inlineStr"><is><t xml:space="preserve">Reference</t></is></c><c r="C1" t="inlineStr"><is><t xml:space="preserve">Name</t></is></c><c r="D1" t="inlineStr"><is><t xml:space="preserve">Start</t></is></c><c r="E1" t="inlineStr"><is><t xml:space="preserve">End</t></is></c></row>
+    <row r="2"><c r="A2" t="inlineStr"><is><t xml:space="preserve">Created</t></is></c><c r="B2" t="inlineStr"><is><t xml:space="preserve">PRJ-1</t></is></c><c r="C2" t="inlineStr"><is><t xml:space="preserve">Ünïcode — dash “quotes” 日本語</t></is></c><c r="D2" s="1"><v>46082</v></c><c r="E2" s="1"><v>46142</v></c></row>
+    <row r="3"><c r="A3" t="inlineStr"><is><t xml:space="preserve">Closed</t></is></c><c r="B3" t="inlineStr"><is><t xml:space="preserve">PRJ-2</t></is></c><c r="C3" t="inlineStr"><is><t xml:space="preserve">No dates</t></is></c></row>
+  </sheetData>
+  <hyperlinks><hyperlink ref="B2" r:id="rId1"/><hyperlink ref="B3" r:id="rId2"/></hyperlinks>
+</worksheet>

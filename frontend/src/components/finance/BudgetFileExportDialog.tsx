@@ -12,6 +12,7 @@ import {
   defaultYearRange,
   exportBudgetFile,
   BUDGET_FILE_NAME,
+  BUDGET_XLSX_FILE_NAME,
   filenameFromDisposition,
   offerableYears,
   saveBlob,
@@ -19,6 +20,7 @@ import {
   yearsOfRange,
 } from './budgetFile';
 import { failureText } from './budgetFileText';
+import { ExportFormat, readExportFormat, writeExportFormat } from '../csv/exportFormat';
 
 export type BudgetFileColumnChoice = {
   key: FileColumnKey;
@@ -34,8 +36,9 @@ const monoSx = {
 
 /**
  * Export of a list's budget file: the lines on screen or all of them, the
- * years, the columns, and yearly totals or months. The file is written for the
- * language the screen is shown in.
+ * years, the columns, yearly totals or months, and CSV or Excel (the format
+ * last chosen in this browser). The file is written for the language the
+ * screen is shown in.
  */
 export default function BudgetFileExportDialog({
   open,
@@ -68,6 +71,7 @@ export default function BudgetFileExportDialog({
   const [selectedColumns, setSelectedColumns] = useState<FileColumnKey[]>([]);
   const [columnsTouched, setColumnsTouched] = useState(false);
   const [detail, setDetail] = useState<'yearly' | 'months'>('yearly');
+  const [format, setFormat] = useState<ExportFormat>(readExportFormat);
   const [allLines, setAllLines] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -83,6 +87,16 @@ export default function BudgetFileExportDialog({
     setRange(defaultYearRange(currentYear));
     setCurrentOnly(false);
   }, [open, currentYear]);
+
+  // Another export dialog may have changed the shared choice since.
+  useEffect(() => {
+    if (open) setFormat(readExportFormat());
+  }, [open]);
+
+  const chooseFormat = (next: ExportFormat) => {
+    setFormat(next);
+    writeExportFormat(next);
+  };
 
   useEffect(() => {
     if (!open || columnsTouched || !columnsReady) return;
@@ -118,9 +132,10 @@ export default function BudgetFileExportDialog({
         columns: columns.map((column) => column.key).filter((key) => selectedColumns.includes(key)),
         detail,
         all: allLines,
+        format,
       });
       const header = (response.headers?.['content-disposition'] ?? response.headers?.['Content-Disposition']) as string | undefined;
-      saveBlob(filenameFromDisposition(header, BUDGET_FILE_NAME), response.data);
+      saveBlob(filenameFromDisposition(header, format === 'xlsx' ? BUDGET_XLSX_FILE_NAME : BUDGET_FILE_NAME), response.data);
       onClose();
     } catch (err) {
       setError(failureText(await budgetFileFailure(err), t, 'export'));
@@ -222,7 +237,22 @@ export default function BudgetFileExportDialog({
           </Box>
         </Group>
 
-        <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t('operations.budgetFile.formatHint')}</Typography>
+        <Group label={t('operations.budgetFile.format')}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2.5 }}>
+            <ChoiceLine
+              control={<Radio size="small" checked={format === 'csv'} onChange={() => chooseFormat('csv')} value="csv" name="budget-file-format" sx={{ p: 0.25 }} />}
+              label={t('operations.budgetFile.formatCsv')}
+            />
+            <ChoiceLine
+              control={<Radio size="small" checked={format === 'xlsx'} onChange={() => chooseFormat('xlsx')} value="xlsx" name="budget-file-format" sx={{ p: 0.25 }} />}
+              label={t('operations.budgetFile.formatXlsx')}
+            />
+          </Box>
+        </Group>
+
+        {format === 'csv' && (
+          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t('operations.budgetFile.formatHint')}</Typography>
+        )}
         {error && <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.danger' }}>{error}</Typography>}
       </Box>
     </KanapDialog>

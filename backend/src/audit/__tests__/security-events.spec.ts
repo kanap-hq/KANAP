@@ -1,8 +1,9 @@
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { Controller, Get, Post } from '@nestjs/common';
-import { lastValueFrom, of } from 'rxjs';
-import { ExportEventsInterceptor } from '../export-events.interceptor';
+import { BadRequestException } from '@nestjs/common';
+import { defer, lastValueFrom, of, Subject } from 'rxjs';
+import { completeExport, ExportEventsInterceptor } from '../export-events.interceptor';
 import {
   AUDIT_EVENT_ACTIONS as SCREEN_ACTIONS,
   AUTH_EVENT_REASONS as SCREEN_REASONS,
@@ -13,10 +14,14 @@ import {
   AUTH_EVENT_REASONS,
   AUTH_EVENT_TABLE,
   authEventEntry,
+  EXPORT_QUERY_MAX_LENGTH,
   exportEventEntry,
+  exportFormatOfContentType,
+  exportQuery,
   exportResource,
   ExportRoute,
   exportRoutePath,
+  QUERY_AS_SENT,
   handlerRoutePaths,
   isExportRoutePath,
   joinRoutePath,
@@ -34,6 +39,11 @@ import { fileSigns, scanRoutes } from './controller-routes';
 //   ExportEventsInterceptor, which writes its row in the request's transaction
 //   before the handler runs, and writes nothing for other routes; the other
 //   routes that send a file send a stored file (attachment, inline image, logo);
+// - the row says the query (bounded, `ctx` as its id), never the body; one UPDATE
+//   in a savepoint adds the format the response is sent in (its Content-Type) and
+//   the row count: called by a handler that answers itself before it sends
+//   (completeExport), or run after a handler that returns a value, never after a
+//   response that has left; in the request transaction read again at that moment;
 // - the event writer never rejects, and writes nothing without a tenant.
 
 const request = (headers: Record<string, unknown> = {}, ip: unknown = '198.51.100.7') => ({ ip, headers });
@@ -263,19 +273,41 @@ function fakeContext(controller: object, handler: object, req: any) {
     getType: () => 'http',
     getClass: () => controller,
     getHandler: () => handler,
-    switchToHttp: () => ({ getRequest: () => req }),
+    switchToHttp: () => ({ getRequest: () => req, getResponse: () => req.res }),
   } as any;
 }
 
 function recordingRequest(extra: Record<string, unknown> = {}) {
   const inserted: any[] = [];
+  const updates: Array<{ sql: string; params: unknown[] }> = [];
   const order: string[] = [];
-  const manager = { getRepository: () => ({ insert: async (row: any) => { order.push('audit'); inserted.push(row); } }) };
-  const req = {
-    tenant: { id: 'tenant-1' }, user: { sub: 'user-9' }, path: '/chart-of-accounts/abc/accounts/export',
-    ip: '198.51.100.20', headers: { 'user-agent': 'Probe browser' }, queryRunner: { manager, isReleased: false }, ...extra,
+  const manager = {
+    getRepository: () => ({
+      insert: async (row: any) => {
+        order.push('audit');
+        inserted.push(row);
+        return { identifiers: [{ id: 'row-1' }] };
+      },
+    }),
+    query: async (sql: string, params: unknown[]) => {
+      const step = sql.startsWith('UPDATE') ? 'rows' : sql.split(' ')[0].toLowerCase();
+      order.push(step);
+      if (step === 'rows') {
+        updates.push({ sql, params });
+        if (failUpdate.value) throw new Error('update refused');
+      }
+      return [];
+    },
   };
-  return { req, inserted, order };
+  const failUpdate = { value: false };
+  const headers: Record<string, unknown> = {};
+  const res = { getHeader: (name: string) => headers[name.toLowerCase()], setHeader: (name: string, value: unknown) => { headers[name.toLowerCase()] = value; } };
+  const req: any = {
+    tenant: { id: 'tenant-1' }, user: { sub: 'user-9' }, path: '/chart-of-accounts/abc/accounts/export',
+    ip: '198.51.100.20', headers: { 'user-agent': 'Probe browser' }, queryRunner: { manager, isReleased: false }, res, ...extra,
+  };
+  (res as any).req = req;
+  return { req, res, inserted, updates, order, manager, failUpdate };
 }
 
 async function testInterceptorWritesTheExportBeforeTheHandler() {
@@ -290,9 +322,11 @@ async function testInterceptorWritesTheExportBeforeTheHandler() {
   assert.equal(inserted[0].action, 'export');
   assert.equal(inserted[0].user_id, 'user-9');
   assert.deepEqual(inserted[0].after_json, {
-    resource: 'chart-of-accounts/accounts', path: '/chart-of-accounts/abc/accounts/export', ip: '198.51.100.20', user_agent: 'Probe browser',
-  }, 'the address and agent as for sign-in events');
-  assert.deepEqual(exportEventEntry('/export', { path: '/export', user: { sub: 'user-9' } }).after, { resource: 'document', path: '/export', ip: null, user_agent: null });
+    resource: 'chart-of-accounts/accounts', path: '/chart-of-accounts/abc/accounts/export', query: {}, ip: '198.51.100.20', user_agent: 'Probe browser',
+  }, 'the address and agent as for sign-in events; no format before the handler');
+  assert.deepEqual(exportEventEntry('/export', { path: '/export', user: { sub: 'user-9' } }).after, {
+    resource: 'document', path: '/export', query: {}, ip: null, user_agent: null,
+  });
   const unchecked = exportEventEntry('/export', { path: '/export', ip: 'not-an-address', headers: { 'user-agent': `  ${'a'.repeat(300)}  ` } }).after;
   assert.equal(unchecked.ip, null, 'an address that is not a valid IP is left out');
   assert.equal(unchecked.user_agent, 'a'.repeat(200), 'the agent is cut like on sign-in events');
@@ -301,10 +335,12 @@ async function testInterceptorWritesTheExportBeforeTheHandler() {
 
   // A route marked `@ExportRoute()`: recorded under its own path.
   const marked = recordingRequest({ path: '/chart-of-accounts/abc/report' });
-  assert.equal(await lastValueFrom(interceptor.intercept(fakeContext(ChartProbe, ChartProbe.prototype.report, marked.req), { handle: () => of('pdf') })), 'pdf');
+  const pdf = { handle: () => defer(async () => { marked.res.setHeader('Content-Type', 'application/pdf'); return 'pdf'; }) };
+  assert.equal(await lastValueFrom(interceptor.intercept(fakeContext(ChartProbe, ChartProbe.prototype.report, marked.req), pdf)), 'pdf');
   assert.deepEqual(marked.inserted.map((row) => row.after_json), [
-    { resource: 'chart-of-accounts/report', path: '/chart-of-accounts/abc/report', ip: '198.51.100.20', user_agent: 'Probe browser' },
+    { resource: 'chart-of-accounts/report', path: '/chart-of-accounts/abc/report', query: {}, ip: '198.51.100.20', user_agent: 'Probe browser' },
   ]);
+  assert.deepEqual(marked.updates.map((update) => update.params), [['{"format":"pdf"}', 'row-1', 'tenant-1']], 'the format the response was sent in');
 
   // Another route: nothing written. No tenant transaction: nothing written, the handler still runs.
   const other = recordingRequest();
@@ -313,6 +349,164 @@ async function testInterceptorWritesTheExportBeforeTheHandler() {
   const noTransaction = recordingRequest({ queryRunner: undefined });
   assert.equal(await lastValueFrom(interceptor.intercept(fakeContext(DocumentExportProbe, DocumentExportProbe.prototype.exportDocument, noTransaction.req), { handle: () => of('doc') })), 'doc');
   assert.equal(noTransaction.inserted.length, 0);
+}
+
+function testExportFormat() {
+  assert.equal(exportFormatOfContentType('text/csv; charset=utf-8'), 'csv');
+  assert.equal(exportFormatOfContentType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'), 'xlsx');
+  assert.equal(exportFormatOfContentType('Application/PDF'), 'pdf', 'any case');
+  assert.equal(exportFormatOfContentType('application/vnd.openxmlformats-officedocument.wordprocessingml.document'), 'docx');
+  assert.equal(exportFormatOfContentType('application/vnd.oasis.opendocument.text'), 'odt');
+  assert.equal(exportFormatOfContentType('text/markdown; charset=utf-8'), 'markdown');
+  assert.equal(exportFormatOfContentType(['application/zip']), 'application/zip', 'another type: the bare media type');
+  assert.equal(exportFormatOfContentType(`application/${'x'.repeat(80)}; a=b`), `application/${'x'.repeat(28)}`, 'cut to 40 characters');
+  for (const none of [undefined, null, '', ' ; charset=utf-8', 42]) {
+    assert.equal(exportFormatOfContentType(none), undefined, `no format for ${String(none)}`);
+  }
+  // The body never reaches the row.
+  const document = exportEventEntry('/export', { path: '/export', body: { format: 'pdf', content: '# Secret plan', title: 'Plan' } } as any).after;
+  assert.equal(document.format, undefined, 'no format before the handler');
+  assert.ok(!JSON.stringify(document).includes('Secret plan') && !JSON.stringify(document).includes('Plan'), 'no body in the row');
+}
+
+function testExportQuery() {
+  assert.deepEqual(
+    exportQuery({ sort: 'name:ASC', columns: 'budget,actual', amountYears: ['2026', '2027'], all: 'true', format: 'xlsx', nested: { a: 1 }, empty: undefined }),
+    { all: 'true', amountYears: ['2026', '2027'], columns: 'budget,actual', format: 'xlsx', nested: '{"a":1}', sort: 'name:ASC' },
+  );
+  assert.deepEqual(Object.keys(exportQuery({ z: '1', a: '2', m: '3' })), ['a', 'm', 'z'], 'keys sorted');
+  assert.deepEqual(exportQuery(undefined), {});
+  assert.deepEqual(exportQuery('x=1'), {});
+
+  // A saved list context: the row keeps its id, not the filters ListContextInterceptor merged in.
+  const req: any = { path: '/suppliers/export', query: { filters: '{"status":"enabled"}', sort: 'name:ASC' } };
+  req[QUERY_AS_SENT] = { ctx: 'c0ffee00-1234-4abc-8def-000000000001', sort: 'name:ASC', format: 'xlsx' };
+  const withContext = exportEventEntry('/suppliers/export', req).after;
+  assert.deepEqual(withContext.query, { ctx: 'c0ffee00-1234-4abc-8def-000000000001', format: 'xlsx', sort: 'name:ASC' });
+  assert.equal(withContext.format, undefined, 'the format asked for is not the format sent');
+
+  // Bounded: the longest entries go first, the short ones stay, and the object says it was cut.
+  const long = exportQuery({ q: 'widget', filters: 'f'.repeat(1500), sort: 'name:ASC', search: 's'.repeat(900), ctx: 'abc' });
+  assert.deepEqual(long, { ctx: 'abc', q: 'widget', search: 's'.repeat(900), sort: 'name:ASC', truncated: true });
+  assert.ok(JSON.stringify(long).length <= EXPORT_QUERY_MAX_LENGTH);
+  const many = exportQuery(Object.fromEntries(Array.from({ length: 300 }, (_, index) => [`k${String(index).padStart(3, '0')}`, 'v'.repeat(index % 7)])));
+  assert.ok(JSON.stringify(many).length <= EXPORT_QUERY_MAX_LENGTH, 'many short values: still within the bound');
+  assert.equal(many.truncated, true);
+  assert.equal(many.k000, '', 'the shortest are kept');
+  assert.deepEqual(exportQuery({ ['k'.repeat(3000)]: '1' }), { truncated: true }, 'a key longer than the bound is dropped');
+  const exact = exportQuery({ a: 'x'.repeat(EXPORT_QUERY_MAX_LENGTH - 8) });
+  assert.equal(JSON.stringify(exact).length, EXPORT_QUERY_MAX_LENGTH, 'exactly at the bound: kept whole');
+  assert.equal(exact.truncated, undefined);
+}
+
+async function testRowCount() {
+  const interceptor = new ExportEventsInterceptor();
+  const context = (req: any) => fakeContext(ChartProbe, ChartProbe.prototype.exportAccounts, req);
+
+  // A handler that answers itself completes its row before sending: format and count, in the same
+  // transaction, now; the interceptor adds nothing after it.
+  const counted = recordingRequest();
+  const handler = {
+    handle: () => defer(async () => {
+      counted.order.push('handler');
+      counted.res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      await completeExport(counted.res, { rows: 42 });
+      await completeExport(counted.res, { rows: 7 });
+      counted.order.push('send');
+      return undefined;
+    }),
+  };
+  await lastValueFrom(interceptor.intercept(context(counted.req), handler), { defaultValue: undefined });
+  assert.deepEqual(counted.order, ['audit', 'handler', 'savepoint', 'rows', 'release', 'send'], 'one UPDATE in a savepoint, before the response');
+  assert.equal(counted.updates.length, 1, 'once per request');
+  assert.match(counted.updates[0].sql, /UPDATE audit_log SET after_json = coalesce\(after_json, '\{\}'::jsonb\) \|\| \$1::jsonb\s+WHERE id = \$2 AND tenant_id = \$3 AND table_name = 'export'/);
+  assert.deepEqual(counted.updates[0].params, ['{"format":"csv","rows":42}', 'row-1', 'tenant-1'], 'format and count together, its own row, scoped by tenant');
+
+  // A handler that returns a value: completed after it. The route ignores `?format=xlsx` and sends a CSV: the row says csv.
+  const asked = recordingRequest({ query: { format: 'xlsx' } });
+  const csv = { handle: () => defer(async () => { asked.res.setHeader('Content-Type', 'text/csv; charset=utf-8'); return 'file'; }) };
+  await lastValueFrom(interceptor.intercept(context(asked.req), csv));
+  assert.deepEqual(asked.updates.map((update) => update.params[0]), ['{"format":"csv"}'], 'what was sent, not what was asked');
+
+  // A handler that reports nothing: no rows on the row.
+  const silent = recordingRequest();
+  await lastValueFrom(interceptor.intercept(context(silent.req), { handle: () => of('file') }));
+  assert.deepEqual(silent.order, ['audit'], 'no Content-Type and no count: no update');
+  assert.equal(silent.updates.length, 0);
+
+  // A response that has left (a handler that answered itself without completing): no update, and
+  // no step at all: the chain completes in the same tick as the handler.
+  const sent = recordingRequest();
+  sent.res.setHeader('Content-Type', 'application/pdf');
+  const handled = new Subject<unknown>();
+  let completed = false;
+  const subscription = interceptor.intercept(context(sent.req), { handle: () => handled }).subscribe({ complete: () => { completed = true; } });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(sent.order, ['audit']);
+  (sent.res as any).headersSent = true;
+  handled.complete();
+  assert.equal(completed, true, 'no asynchronous step after a response that has left');
+  subscription.unsubscribe();
+  assert.deepEqual(sent.order, ['audit'], 'no update after a response that has left');
+
+  // A count that is not a whole number of rows is not recorded; zero rows is a count.
+  for (const count of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const odd = recordingRequest();
+    const reportOdd = { handle: () => defer(async () => { await completeExport(odd.res, { rows: count }); return undefined; }) };
+    await lastValueFrom(interceptor.intercept(context(odd.req), reportOdd), { defaultValue: undefined });
+    assert.deepEqual(odd.order, ['audit'], `no count for ${count}`);
+  }
+  const zero = recordingRequest();
+  const reportZero = { handle: () => defer(async () => { await completeExport(zero.res, { rows: 0 }); return undefined; }) };
+  await lastValueFrom(interceptor.intercept(context(zero.req), reportZero), { defaultValue: undefined });
+  assert.deepEqual(zero.updates.map((update) => update.params[0]), ['{"rows":0}'], 'zero rows is a count');
+  // Outside an export: nothing, no error.
+  await completeExport(null, { rows: 3 });
+  await completeExport({}, { rows: 3 });
+  const outside = recordingRequest();
+  await completeExport(outside.res, { rows: 3 });
+  assert.deepEqual(outside.order, [], 'a request without an export row');
+
+  // A refused export: the error goes on to TenantInterceptor, which rolls the row back; nothing after the handler.
+  const refused = recordingRequest();
+  const failing = {
+    handle: () => defer(async () => {
+      throw new BadRequestException('format must be csv or xlsx.');
+    }),
+  };
+  await assert.rejects(lastValueFrom(interceptor.intercept(context(refused.req), failing)), /format must be csv or xlsx/);
+  assert.deepEqual(refused.order, ['audit'], 'nothing after the failed handler');
+  assert.equal(refused.updates.length, 0);
+}
+
+async function testUpdateUsesTheTransactionOfTheMoment() {
+  const interceptor = new ExportEventsInterceptor();
+  const context = (req: any) => fakeContext(ChartProbe, ChartProbe.prototype.exportAccounts, req);
+  const reporting = (probe: ReturnType<typeof recordingRequest>, after?: () => void) => ({
+    handle: () => defer(async () => {
+      probe.res.setHeader('Content-Type', 'text/csv');
+      after?.();
+      return 'file';
+    }),
+  });
+
+  // The handler released the request transaction (work outside it): no update, no error.
+  const released = recordingRequest();
+  await lastValueFrom(interceptor.intercept(context(released.req), reporting(released, () => { released.req.queryRunner.isReleased = true; })));
+  assert.deepEqual(released.order, ['audit'], 'a released transaction is not used');
+
+  // The request holds another runner by then: the update goes to that one.
+  const first = recordingRequest();
+  const second = recordingRequest();
+  await lastValueFrom(interceptor.intercept(context(first.req), reporting(first, () => { first.req.queryRunner = second.req.queryRunner; })));
+  assert.deepEqual(first.order, ['audit']);
+  assert.deepEqual(second.order, ['savepoint', 'rows', 'release'], 'the runner is read again after the handler');
+
+  // A failed update is rolled back to its savepoint: the export row stays, the request goes on.
+  const failing = recordingRequest();
+  failing.failUpdate.value = true;
+  assert.equal(await lastValueFrom(interceptor.intercept(context(failing.req), reporting(failing))), 'file');
+  assert.deepEqual(failing.order, ['audit', 'savepoint', 'rows', 'rollback']);
 }
 
 async function testEventWriterNeverRejects() {
@@ -356,7 +550,11 @@ async function run() {
   testFileSignsAreFound();
   testEveryRouteThatSendsAFileIsRecorded();
   testTheAuditLogPageLabelsEveryEvent();
+  testExportFormat();
+  testExportQuery();
   await testInterceptorWritesTheExportBeforeTheHandler();
+  await testRowCount();
+  await testUpdateUsesTheTransactionOfTheMoment();
   await testEventWriterNeverRejects();
   console.log('security-events.spec: all assertions passed');
 }
