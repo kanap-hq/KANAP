@@ -124,6 +124,13 @@ const LINKED_COUNT_FIELDS: Partial<Record<AiQueryEntityType, Record<string, AiQu
   applications: { spend_count: 'spend_items', capex_count: 'capex_items', contracts_count: 'contracts' },
   tasks: { application: 'applications', asset: 'assets', project_name: 'projects' },
   incidents: { asset: 'assets', application: 'applications', asset_count: 'assets' },
+  documents: {
+    linked_application: 'applications',
+    linked_asset: 'assets',
+    linked_project: 'projects',
+    linked_request: 'requests',
+    linked_task: 'tasks',
+  },
 };
 
 /**
