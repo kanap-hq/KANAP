@@ -390,7 +390,8 @@ export default function ProjectPropertyPanel({
         </PropertyGroup>
       )}
 
-      {!isCreate && form?.id && (
+      {/* Null for a person who does not read requests: the row is not shown. */}
+      {!isCreate && form?.id && form?.source_requests !== null && (
         <PropertyGroup>
           <PropertyRow label={t('workspace.project.sections.sourceRequests')} valueSx={{ minHeight: 0 }}>
             {form?.source_requests?.length > 0 ? (
