@@ -1,6 +1,6 @@
 ---
 title: "Fast Track Cartographie SI : de l'application au serveur"
-description: Documentez votre paysage applicatif en quelques minutes. Un guide pratique de la création de l'application à l'assignation du serveur.
+description: Documentez votre paysage applicatif en quelques minutes. Un guide pratique de la création de l'application à l'affectation du serveur.
 ---
 
 # Fast Track Cartographie SI : de l'application au serveur
