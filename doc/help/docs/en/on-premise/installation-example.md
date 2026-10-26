@@ -418,6 +418,7 @@ docker compose -f infra/compose.onprem.yml up -d --wait
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
 [on-prem] Created default subscription (On-Prem)
+[DATA-ACCESS] data-scoped access not installed (no kanap_data_limited role): nobody can be limited
 ... WARN [EmailService] No outbound email transport configured; email sending is disabled.
 ... Nest application successfully started
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
@@ -427,7 +428,7 @@ The number of migrations depends on the version, and the pool figures on your Po
 
 The block leaves out the migration lines: about 40 lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: KANAP keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time, and for the source in brackets (for example `LOG [NestApplication]`). Some of these lines end with a duration such as `+0ms`. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
 
-Until you configure email, the `EmailService` warning is expected and needs no action. A `[SECURITY]`, `[CONFIG]`, `[CORS]` or `[ENV] APP_ENV is not set` warning means a setting needs attention: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains every line.
+Until you configure email, the `EmailService` warning is expected and needs no action. The `[DATA-ACCESS]` line is expected too: step 10 explains it. A `[SECURITY]`, `[CONFIG]`, `[CORS]` or `[ENV] APP_ENV is not set` warning means a setting needs attention: [Configuration](configuration.md#what-the-api-log-shows-at-start) explains every line.
 
 ---
 
@@ -640,6 +641,8 @@ docker compose -f infra/compose.onprem.yml logs api | grep 'PutObject fallback' 
 3. Change the password in your profile right after this first sign-in. KANAP reads the `.env` value at the first start only.
 4. Add your logo and colors in **Admin → Branding** (optional).
 5. Invite additional users (if email is configured).
+
+**Optional: data-scoped access.** If some people must see only part of the budget and the contracts, run the one-time step of [Data-scoped access](installation.md#optional-data-scoped-access). With this guide, the application role and the database are both `kanap`: its commands use them as written. Skip it if nobody needs to be limited.
 
 The installation is complete. `~/kanap-install.env` has done its job: every value now lives in `/opt/kanap/.env`, `/etc/default/rustfs` and the PostgreSQL role. Delete the file:
 

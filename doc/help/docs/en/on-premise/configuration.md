@@ -108,7 +108,7 @@ docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^
 
 The filter keeps the lines below and leaves out the framework details. Without it, `docker compose -f infra/compose.onprem.yml logs api` shows everything.
 
-**Order.** The lines that KANAP writes itself (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`) come first. The framework lines (`Starting Nest application...`, email, scheduled jobs, `Nest application successfully started`) follow. The `[DB] pool budget` line comes last.
+**Order.** The lines that KANAP writes itself (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`, `[DATA-ACCESS]`) come first. The framework lines (`Starting Nest application...`, email, scheduled jobs, `Nest application successfully started`) follow. The `[DB] pool budget` line comes last.
 
 **A clean first start** of the [installation example](installation-example.md#7-build-and-start) shows these lines, in this order (the first `[SECRETS]` line is shortened here):
 
@@ -126,12 +126,15 @@ The filter keeps the lines below and leaves out the framework details. Without i
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
 [on-prem] Created default subscription (On-Prem)
+[DATA-ACCESS] data-scoped access not installed (no kanap_data_limited role): nobody can be limited
 ... WARN [EmailService] No outbound email transport configured; email sending is disabled.
 ... Nest application successfully started
 [DB] pool budget: 1 process × 20 connections = 20 of 87 usable (...)
 ```
 
 The block leaves out the migration lines: about 40 lines that start with `[Migration]` or `[migration:` follow `Running migrations...`. They are informational. On a new database some of them report changes to built-in reference data or name a tenant id that is not yours: KANAP keeps a system tenant for platform features. They need no action. `...` stands for the `[Nest]` prefix with the process id and the time, and for the source in brackets (for example `LOG [NestApplication]`). Some of these lines end with a duration such as `+0ms`. The last line of the filtered output is `[DB] pool budget ...`. Log output saved to a file can contain colour codes such as `[33m`.
+
+The `[DATA-ACCESS]` line is normal when nobody is limited to part of the data. After the optional step of [Data-scoped access](installation.md#optional-data-scoped-access), it reads `data-scoped access available`. A line that reads `data-scoped access unavailable, missing: ...` means the step is incomplete: run it again, then restart the API. Limited people are refused until then.
 
 The number of migrations changes from version to version. On later starts it is `0 executed` (or the number of new migrations after an upgrade), and the four `[on-prem]` creation lines give way to `Administrator account ... left unchanged`. The email line depends on your settings: with an email transport it reads `LOG [EmailService] Email transport selected: ...` instead of the warning.
 
