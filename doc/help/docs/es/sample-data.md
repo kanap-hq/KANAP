@@ -44,9 +44,9 @@ Lo que un espacio de trabajo nuevo crea por usted (su primera empresa, el plan d
 
 La página sigue la carga paso a paso (por ejemplo, «Paso 4 de 19: planes de cuentas») y el estado cambia a **Cargados** al terminar. La franja de estado muestra entonces cuándo se cargaron los datos y quién lo hizo. Todo lo que ve en KANAP se actualiza con los nuevos datos.
 
-**Si la carga no es posible**, la página no muestra el botón **Cargar datos de ejemplo**. Una línea explica el motivo:
+**Si la carga no es posible**, la página no muestra el botón **Cargar datos de ejemplo**. Indica el motivo:
 
-- el espacio de trabajo ya contiene datos
+- el espacio de trabajo ya contiene datos. La página lista entonces cada tipo de objeto que impide la carga, con su número y un enlace a su lista, por ejemplo **Aplicaciones (4)**, **Proveedores (1)**. Quítelos para cargar los datos de ejemplo, o siga trabajando sin ellos.
 - la suscripción está congelada
 - el periodo de prueba ha terminado
 

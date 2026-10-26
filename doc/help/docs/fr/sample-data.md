@@ -44,9 +44,9 @@ Ce qu'un nouvel espace de travail crée pour vous (sa première société, le pl
 
 La page suit le chargement étape par étape (par exemple « Étape 4 sur 19 : plans comptables ») et le statut passe à **Chargées** à la fin. La bande de statut indique alors quand les données ont été chargées et par qui. Tout ce que vous voyez dans KANAP se rafraîchit avec les nouvelles données.
 
-**Si un chargement n'est pas possible**, la page n'affiche pas le bouton **Charger les données d'exemple**. Une ligne en explique la raison :
+**Si un chargement n'est pas possible**, la page n'affiche pas le bouton **Charger les données d'exemple**. Elle en indique la raison :
 
-- l'espace de travail contient déjà des données
+- l'espace de travail contient déjà des données. La page liste alors chaque type d'objet qui empêche le chargement, avec son nombre et un lien vers sa liste, par exemple **Applications (4)**, **Fournisseurs (1)**. Retirez-les pour charger les données d'exemple, ou continuez sans elles.
 - l'abonnement est gelé
 - la période d'essai est terminée
 

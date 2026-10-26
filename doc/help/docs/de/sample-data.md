@@ -44,9 +44,9 @@ Was ein neuer Arbeitsbereich selbst anlegt (sein erstes Unternehmen, der Standar
 
 Die Seite zeigt den Ladevorgang Schritt für Schritt (zum Beispiel „Schritt 4 von 19: Kontenpläne“), und der Status wechselt am Ende zu **Geladen**. Die Statusleiste zeigt dann, wann die Daten geladen wurden und von wem. Alles, was Sie in KANAP sehen, wird mit den neuen Daten aktualisiert.
 
-**Wenn das Laden nicht möglich ist**, zeigt die Seite die Schaltfläche **Beispieldaten laden** nicht an. Eine Zeile nennt den Grund:
+**Wenn das Laden nicht möglich ist**, zeigt die Seite die Schaltfläche **Beispieldaten laden** nicht an. Sie nennt den Grund:
 
-- Der Arbeitsbereich enthält bereits Daten.
+- Der Arbeitsbereich enthält bereits Daten. Die Seite listet dann jede Objektart auf, die dem Laden im Weg steht, mit ihrer Anzahl und einem Link zu ihrer Liste, zum Beispiel **Anwendungen (4)**, **Lieferanten (1)**. Entfernen Sie sie, um die Beispieldaten zu laden, oder arbeiten Sie ohne sie weiter.
 - Das Abonnement ist eingefroren.
 - Die Testphase ist beendet.
 
