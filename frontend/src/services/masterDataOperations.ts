@@ -15,7 +15,8 @@ export type MasterDataCopyRequest = {
 export type MasterDataCopyResultItem = {
   entityType: 'company' | 'department';
   entityId: string;
-  entityName: string;
+  /** Null when a department has no name: the copy screen words it. */
+  entityName: string | null;
   metric: MasterDataMetric;
   sourceValue: number | null;
   destinationValue: number | null;
@@ -27,7 +28,8 @@ export type MasterDataCopyResultItem = {
 export type MasterDataCopyError = {
   entityType: 'company' | 'department';
   entityId: string;
-  entityName: string;
+  /** Null when a department has no name: the copy screen words it. */
+  entityName: string | null;
   message: string;
 };
 
