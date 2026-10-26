@@ -57,7 +57,7 @@ function wrap(node: React.ReactNode) {
 const natureSelect = () => screen.getByRole('combobox', { name: 'accounts.fields.nature' });
 
 /** A required MUI label keeps its asterisk in the accessible name, so match the key as a prefix. */
-const labelled = (key: string) => screen.getByLabelText(new RegExp(`^${key.replace(/\./g, '\\.')}`));
+const labelled = (key: string) => screen.getByLabelText(new RegExp(`^${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
 
 const chartSelect = () => screen.getByRole('combobox', { name: /^accounts\.fields\.chartOfAccounts/ });
 
