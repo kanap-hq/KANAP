@@ -156,6 +156,11 @@ function renderReport(path = '/report') {
 }
 
 const gridRows = () => JSON.parse(screen.getByTestId('grid').textContent || '[]') as Array<Record<string, any>>;
+/** The value-axis labels, as the money formatter writes the ticks the chart was given. */
+const valueAxisLabels = () => {
+  const axis = chart.options.axes[1];
+  return (axis.tick.values as number[]).map((value) => axis.label.formatter({ value }));
+};
 /** The years and group keys of the last cost per FTE requests, one per pair. */
 const reportCalls = () => post.mock.calls.map(([, body]) => body).filter((body) => body.spec.measures[0]?.field?.startsWith('staff_cost_'));
 const askedYears = () => {
@@ -303,6 +308,27 @@ describe('Cost per FTE', () => {
     expect(tooltip.data.map((entry: any) => entry.label)).toEqual(['reports.filters.column', 'reports.costPerFte.costPerFte', 'reports.measure.fte', 'reports.costPerFte.staffCost']);
     expect(tooltip.data.slice(1).map((entry: any) => entry.value)).toEqual(['1 000', '12.00', '12 000']);
     expect(tooltip.data[0].value).toMatch(new RegExp(` ${Y - 1}$`));
+    const labels = valueAxisLabels();
+    expect(new Set(labels).size).toBe(labels.length);
+    expect(labels[0]).toBe('0');
+  });
+
+  it('labels a value axis of zeros and missing ratios once', async () => {
+    serverRows = [
+      line('z', ['cc0', 'Zero'], null, { staffFte: 0, cost: 0, fte: 0 }, { staffFte: 0, cost: 0, fte: 0 }),
+      line('m', ['cc1', 'Missing'], null, null, null),
+    ];
+    renderReport();
+    await waitFor(() => expect(gridRows().map((row) => row.group)).toEqual(['Zero']));
+    expect(gridRows()[0]).toMatchObject({ c0_fte: 0, c0_ratio: null, c1_fte: 0, c1_ratio: null });
+    expect(valueAxisLabels()).toEqual(['0']);
+  });
+
+  it('keeps distinct value axis labels when the cost per FTE is below 1', async () => {
+    serverRows = [line('z', ['cc0', 'Small'], null, { staffFte: 2, cost: 1, fte: 2 }, null)];
+    renderReport();
+    await waitFor(() => expect(gridRows()[0]?.c0_ratio).toBeCloseTo(0.5));
+    expect(valueAxisLabels()).toEqual(['0', '1']);
   });
 
   it('sorts and charts on this year when no group has staff last year', async () => {
@@ -415,6 +441,16 @@ describe('Daily rate', () => {
     expect(tooltip.data.map((entry: any) => entry.label)).toEqual(['reports.filters.column', 'reports.costPerFte.dailyRate', 'reports.costPerFte.days', 'reports.costPerFte.dayCost']);
     expect(tooltip.data.slice(1).map((entry: any) => entry.value)).toEqual(['500', '200', '100 000']);
     expect(tooltip.data[0].value).toMatch(new RegExp(` ${Y}$`));
+    const labels = valueAxisLabels();
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  it('labels a zero daily rate with a single 0', async () => {
+    serverRows = [line('z', ['cc0', 'Zero'], null, { staffFte: 0, cost: 0, fte: 0, days: 0, dayCost: 0 }, { staffFte: 0, cost: 0, fte: 0, days: 0, dayCost: 0 })];
+    renderReport('/report?view=rate');
+    await waitFor(() => expect(gridRows().map((row) => row.group)).toEqual(['Zero']));
+    expect(gridRows()[0]).toMatchObject({ c0_days: 0, c0_rate: null, c1_days: 0, c1_rate: null });
+    expect(valueAxisLabels()).toEqual(['0']);
   });
 
   it('flags the detached and undetailed FTE, and the staff cost priced per month, per pair', async () => {
