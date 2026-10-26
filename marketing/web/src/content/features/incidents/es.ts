@@ -43,7 +43,7 @@ const content: FeatureContent = {
         'Datos personales afectados, Requiere notificación a la autoridad, Notificado el, Partes informadas',
         'Informe PDF de un incidente, en el idioma de la pantalla',
         'El cierre bloquea todo: campos, revisión, diario, vínculos y archivos',
-        'Incidentes confidenciales visibles solo para los administradores del registro, el declarante y el responsable',
+        'Incidentes confidenciales visibles solo para los administradores del registro, el notificante y el responsable',
         'Los hechos que el artículo 33.5 del RGPD y NIS2 piden documentar',
       ],
       shotAlt: 'Incidente con datos personales afectados y la autoridad notificada el 11 de julio',
