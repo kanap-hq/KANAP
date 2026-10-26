@@ -151,7 +151,7 @@ Für die ausgewählte Schnittstelle und die aktuelle Umgebung:
 - **Kritikalität**, **Route**, **Anzahl der Bindungen**, **Via Middleware** (ja/nein)
 - **Endpunkte**: Für jede Bindung in der aktiven Umgebung wird Quell-App -> Ziel-App, Leg-Typ, Job-Name, Quellendpunkt und Zielendpunkt angezeigt
 - **Infra-Verbindungen**: Infrastrukturverbindungen, die für die aktuelle Umgebung mit dieser Schnittstelle verknüpft sind. Jede Karte zeigt Quelle, Ziel, Protokolle und die Umgebung / den Leg-Typ der Bindung. Von der Karte aus können Sie:
-  - Auf **Bearbeiten** klicken, um den Verbindungs-Arbeitsbereich zu öffnen
+  - Auf **Verbindung öffnen** klicken, um den Verbindungs-Arbeitsbereich zu öffnen
   - Auf **In Verbindungskarte anzeigen** klicken, um zur Infrastrukturtopologie zu springen, vorab fokussiert auf die Verbindung
 - **Schnittstelle öffnen**: Öffnet den Schnittstellen-Arbeitsbereich
 

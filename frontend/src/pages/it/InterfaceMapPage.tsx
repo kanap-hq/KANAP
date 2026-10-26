@@ -1106,7 +1106,7 @@ export default function InterfaceMapPage() {
                                     navigate(`/it/connections/${link.connection.connection_reference || link.connection.id}/overview`);
                                   }}
                                 >
-                                  {t('common:buttons.edit')}
+                                  {t('pages.interfaceMap.openConnection')}
                                 </Button>
                                 <Button
                                   size="small"

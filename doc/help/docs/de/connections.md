@@ -48,7 +48,7 @@ Die Liste gibt Ihnen einen filterbaren Überblick über jede Verbindung in Ihrem
 
 **Aktionen**:
   - **Verbindung hinzufügen**: Eine neue Verbindung erstellen (erfordert `infrastructure:member`)
-  - **Verbindung löschen**: Ausgewählte Verbindungen entfernen (erfordert `infrastructure:admin`). Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit der Verbindung werden entfernt. Um eine einzelne Verbindung zu löschen, öffnen Sie sie und verwenden Sie **Löschen** in ihrer Kopfzeile; dafür genügt `infrastructure:member` (siehe [Der Verbindungs-Arbeitsbereich](#der-verbindungs-arbeitsbereich)).
+  - **Verbindung löschen**: Ausgewählte Verbindungen entfernen (erfordert `infrastructure:admin`). Die Hops jeder gelöschten Verbindung werden mit ihr gelöscht. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit der Verbindung werden entfernt. Um eine einzelne Verbindung zu löschen, öffnen Sie sie und verwenden Sie **Löschen** in ihrer Kopfzeile; dafür genügt `infrastructure:member` (siehe [Der Verbindungs-Arbeitsbereich](#der-verbindungs-arbeitsbereich)).
 
 ---
 
