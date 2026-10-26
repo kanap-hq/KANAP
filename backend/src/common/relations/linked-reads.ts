@@ -26,7 +26,9 @@ export type LinkedModule = keyof typeof LINKED_MODULE_RESOURCES;
 export type LinkedReads = Record<LinkedModule, boolean>;
 
 const MODULES = Object.keys(LINKED_MODULE_RESOURCES) as LinkedModule[];
-const RESOURCES = Array.from(new Set(Object.values(LINKED_MODULE_RESOURCES)));
+/** The older names a role row may still carry (`permissions.service.ts` RESOURCE_ALIASES). */
+const RESOURCE_ALIASES: Record<string, string> = { opex: 'budget', capex: 'budget' };
+const RESOURCES = [...new Set(Object.values(LINKED_MODULE_RESOURCES)), ...Object.keys(RESOURCE_ALIASES)];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function readsFrom(canRead: (resource: string) => boolean): LinkedReads {
@@ -89,6 +91,8 @@ export async function loadLinkedReads(
   );
   if (rows.length === 0) return NO_LINKED_READS;
   if (rows.some((row) => row.is_administrator === true)) return readsFrom(() => true);
-  const granted = new Set(rows.map((row) => row.resource).filter((resource): resource is string => !!resource));
+  const granted = new Set(rows
+    .map((row) => (row.resource ? RESOURCE_ALIASES[row.resource] ?? row.resource : null))
+    .filter((resource): resource is string => !!resource));
   return readsFrom((resource) => granted.has(resource));
 }
