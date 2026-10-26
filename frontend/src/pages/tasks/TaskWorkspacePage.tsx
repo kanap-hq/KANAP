@@ -17,6 +17,7 @@ import { alpha } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import api from '../../api';
 import { useTaskNav } from '../../hooks/useTaskNav';
+import { useLeaveGuard } from '../../hooks/leaveGuard';
 import { useClassificationDefaults } from '../../hooks/useClassificationDefaults';
 import { useLocalizedTaskTypes } from '../../hooks/useLocalizedTaskTypes';
 import { useAuth } from '../../auth/AuthContext';
@@ -1231,27 +1232,42 @@ export default function TaskWorkspacePage() {
     }
   };
 
-  const handleBack = async () => {
-    // Close and back ask before leaving a saved task. A new task has nothing to keep.
-    // Clearing the debounce does not re-run the effect that owns it, so Stay starts it again.
-    const resumeDescriptionAutosave = descAutosaveTimerRef.current != null;
-    if (descAutosaveTimerRef.current) {
-      clearTimeout(descAutosaveTimerRef.current);
-      descAutosaveTimerRef.current = null;
-    }
-    await waitForSidebarSaves();
-    if (!isCreate && dirty) {
+  // Close, back, the parent breadcrumb, the project link and a menu link share one question.
+  // A saved task: Stay, Save and leave, Leave without saving. A new task with typed content:
+  // Stay, Leave without saving. The link guard and the clicked control can both ask, so one
+  // click keeps a single answer. Clearing the description debounce does not re-run the effect
+  // that owns it, so Stay starts it again.
+  const leaveInFlightRef = React.useRef<Promise<boolean> | null>(null);
+  const confirmUnsavedLeave = async (): Promise<boolean> => {
+    if (leaveInFlightRef.current) return leaveInFlightRef.current;
+    const run = (async (): Promise<boolean> => {
+      if (isCreate) {
+        if (!dirtyRef.current) return true;
+        const leave = await dialogs.confirm(unsavedConfirm(t, 'leaveWithoutSaving'));
+        if (!leave) return false;
+        dirtyRef.current = false;
+        setDirty(false);
+        return true;
+      }
+
+      const resumeDescriptionAutosave = descAutosaveTimerRef.current != null;
+      if (descAutosaveTimerRef.current) {
+        clearTimeout(descAutosaveTimerRef.current);
+        descAutosaveTimerRef.current = null;
+      }
+      await waitForSidebarSaves();
+      if (!dirtyRef.current) return true;
       const outcome = await dialogs.confirmOutcome({
         ...unsavedConfirm(t, 'saveAndLeave'),
         stayLabel: t('common:unsaved.leaveWithoutSaving.cancel'),
       });
       if (outcome === 'stay') {
         if (resumeDescriptionAutosave) setDescriptionAutosaveNonce((n) => n + 1);
-        return;
+        return false;
       }
       if (outcome === 'confirm') {
         setSaving(true);
-        try { await handleSave(); } catch { setSaving(false); return; }
+        try { await handleSave(); } catch { setSaving(false); return false; }
         setSaving(false);
       } else {
         if (task) {
@@ -1262,9 +1278,22 @@ export default function TaskWorkspacePage() {
         resetClassificationTouched();
         setDirty(false);
       }
+      // The ref updates in an effect, which is too late for the replayed click of a guarded link.
+      dirtyRef.current = false;
+      return true;
+    })();
+    leaveInFlightRef.current = run;
+    try {
+      return await run;
+    } finally {
+      if (leaveInFlightRef.current === run) leaveInFlightRef.current = null;
     }
+  };
+  const handleBack = async () => {
+    if (!(await confirmUnsavedLeave())) return;
     navigate(originPath);
   };
+  useLeaveGuard(() => dirtyRef.current, confirmUnsavedLeave);
 
   // Navigation for prev/next
   const sort = cleanedSearchParams.get('sort') || 'created_at:DESC';
@@ -1567,7 +1596,7 @@ export default function TaskWorkspacePage() {
         >
           <Stack direction="row" alignItems="center" justifyContent="space-between">
             <Stack direction="row" alignItems="center" spacing={1}>
-              <IconButton onClick={handleBack} size="small">
+              <IconButton onClick={handleBack} size="small" aria-label={t('common:buttons.back')}>
                 <ArrowBackIcon />
               </IconButton>
               <Typography variant="body2" color="text.secondary">
@@ -1603,7 +1632,11 @@ export default function TaskWorkspacePage() {
             <Box sx={titleBarSx}>
               <TextField
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setTitle(next);
+                  if (next !== '') setDirty(true);
+                }}
                 onKeyDown={(event) => {
                   if (event.key === 'Tab' && !event.shiftKey) {
                     event.preventDefault();
@@ -1757,7 +1790,10 @@ export default function TaskWorkspacePage() {
                   <MarkdownEditor
                     key={`task-description:${id || 'create'}:${descriptionResetNonce}`}
                     value={description}
-                    onChange={(val) => setDescription(val)}
+                    onChange={(val) => {
+                      setDescription(val);
+                      if (val !== '') setDirty(true);
+                    }}
                     placeholder={t('portfolio:workspace.task.description.placeholder')}
                     minRows={10}
                     maxRows={26}
@@ -1825,7 +1861,11 @@ export default function TaskWorkspacePage() {
         hasConvertedRequest={hasConvertedRequest}
         projectId={isProjectTask ? effectiveTask.related_object_id : null}
         projectName={isProjectTask ? (effectiveTask.related_object_name ?? null) : null}
-        onNavigateToProject={(pid) => navigate(buildProjectWorkspacePath(pid, 'activity'))}
+        onNavigateToProject={(pid) => {
+          void confirmUnsavedLeave().then((ok) => {
+            if (ok) navigate(buildProjectWorkspacePath(pid, 'activity'));
+          });
+        }}
         currentIndex={index}
         totalCount={total}
         hasPrev={hasPrev}
@@ -1850,7 +1890,11 @@ export default function TaskWorkspacePage() {
         }
         crumbs={taskCrumbs}
         onOriginClick={handleBack}
-        onParentClick={(href) => { void waitForSidebarSaves().then(() => navigate(href)); }}
+        onParentClick={(href) => {
+          void confirmUnsavedLeave().then((ok) => {
+            if (ok) navigate(href);
+          });
+        }}
       />
 
       {error && (
