@@ -101,7 +101,7 @@ async function seedShares(runner: QueryRunner, s: Seed): Promise<Shares> {
 }
 
 const UNSCOPED_ITEM_KEYS = [
-  'allocationMethod', 'allocationMethodLabel', 'amount', 'amountRaw', 'itemId', 'itemName', 'itemNumber', 'nature', 'sharePct', 'versionId',
+  'allocationMethod', 'amount', 'amountRaw', 'itemId', 'itemName', 'itemNumber', 'nature', 'sharePct', 'versionId',
 ].sort();
 
 async function testWindow(runner: QueryRunner, s: Seed): Promise<void> {
@@ -183,7 +183,10 @@ async function testChargeback(runner: QueryRunner, s: Seed, shares: Shares): Pro
   assert.equal(baselineEs.globalKpi!.amount, 700);
   assert.equal('dataAccessLimited' in baselineEs, false);
   for (const row of baselineEs.items) assert.deepEqual(Object.keys(row).sort(), UNSCOPED_ITEM_KEYS, 'unscoped: the item rows of before');
-  assert.ok(baselineEs.warnings.some((w) => typeof w === 'string' && w.includes('DA line L6')), 'unscoped: the warning on L6 (no paying company)');
+  assert.ok(
+    baselineEs.warnings.some((w) => w.code === 'missing_paying_company' && w.item.includes('DA line L6')),
+    'unscoped: the warning on L6 (no paying company)',
+  );
 
   // Marta, company ES: every share charged to ES, L1 without its id.
   const marta = await as(runner, p.marta, (m) => company(m, s.es));
@@ -207,10 +210,13 @@ async function testChargeback(runner: QueryRunner, s: Seed, shares: Shares): Pro
     { itemId: s.lines.L4, versionId: s.versions.L4, readable: true, amount: 50, pct: 50, payer: s.es, departments: [] },
   );
   assert.deepEqual(marta.departments.map((d) => [d.departmentId, d.amount]).sort(), [[null, 50], [shares.departmentEs, 40]].sort());
+  assert.equal(marta.departments.find((d) => d.departmentId === null)?.departmentName, null, 'common costs carry no label');
+  assert.equal(marta.departments.find((d) => d.departmentId === shares.departmentEs)?.departmentName, 'Finance ES');
   assert.deepEqual(marta.intercompany?.payables.map((r) => [r.payerId, r.amount]), [[s.fr, 40]], 'FR pays 40 charged to ES');
   assert.deepEqual(marta.intercompany?.receivables.map((r) => [r.consumerId, r.amount]), [[s.fr, 250]], 'ES pays 250 charged to FR (L3, L4, L5)');
   for (const w of marta.warnings) {
-    assert.ok(!(typeof w === 'string' && /DA line L(1|6|7) /.test(w)), `no warning names a line Marta cannot read: ${JSON.stringify(w)}`);
+    const named = 'item' in w ? w.item : '';
+    assert.ok(!/DA line L(1|6|7) /.test(named), `no warning names a line Marta cannot read: ${JSON.stringify(w)}`);
   }
   // The same shares as unscoped, line by line.
   const baselineRows = byLine(baselineEs, s);
@@ -249,7 +255,7 @@ async function testFxMissing(runner: QueryRunner, s: Seed): Promise<void> {
     const numbers = new Map<string, number>((await runner.query(
       `SELECT id::text, item_number FROM spend_items WHERE id = ANY($1::uuid[])`, [[s.lines.L1, s.lines.L7]],
     )).map((r: any) => [r.id, Number(r.item_number)] as const));
-    const fxMissing = (report: CompanyChargebackReportResponse) => report.warnings.find((w) => typeof w !== 'string' && w.code === 'amount_fx_missing');
+    const fxMissing = (report: CompanyChargebackReportResponse) => report.warnings.find((w) => w.code === 'amount_fx_missing');
 
     const ulla = await as(runner, p.ulla, (m) => company(m));
     assert.deepEqual((fxMissing(ulla) as any)?.items, [{ currency: 'USD', year: YEAR, lines: 3 }], 'unscoped: every line without a rate counts');

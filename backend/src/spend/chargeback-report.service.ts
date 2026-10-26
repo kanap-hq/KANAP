@@ -22,13 +22,89 @@ import { withFullDataAccess } from '../data-access/full-data-access';
 export const DATA_ACCESS_CHARGEBACK_COMPANY_MESSAGE = 'The chargeback of this company is outside your data access.';
 
 /**
- * A warning of the report: a sentence, or a structured warning the screen words in the user's
- * language (`TurnoverFxMissingWarning`, `AmountFxMissingWarning`).
+ * Why a line's allocation could not be recomputed. A code the screen translates, or `text` for a
+ * calculator message this report does not recognise (shown as written). The codes match the
+ * calculator's `error` strings (`allocation-calculator.service.ts`, `allocation-distribution.ts`).
  */
-export type ChargebackWarning = string | AllocationWarning;
+export type ChargebackAllocationReason =
+  | { code: 'select_company' }
+  | { code: 'select_department' }
+  | { code: 'no_enabled_companies' }
+  | { code: 'departments_not_found' }
+  | { code: 'provide_department_headcount' }
+  | { code: 'driver_sum_zero' }
+  | { code: 'companies_unavailable' }
+  | { code: 'turnover_rate' }
+  | { code: 'provide_driver'; driver: 'headcount' | 'it_users' | 'turnover' }
+  | { code: 'text'; text: string };
+
+/** A line whose allocation could not be recomputed: the stored split was kept, or the line was left out. */
+export type ChargebackAllocationFailureWarning = {
+  code: 'stored_allocation_used' | 'allocations_skipped';
+  item: string;
+  year: number;
+  reason: ChargebackAllocationReason;
+};
+
+/** A line with no paying company: its paid total is left out. */
+export type MissingPayingCompanyWarning = {
+  code: 'missing_paying_company';
+  item: string;
+  year: number;
+};
+
+/**
+ * A warning of the report: structured data the screen words in the user's language
+ * (`TurnoverFxMissingWarning`, `AmountFxMissingWarning`, and the allocation failures above).
+ */
+export type ChargebackWarning = AllocationWarning | ChargebackAllocationFailureWarning | MissingPayingCompanyWarning;
 
 function warningKey(warning: ChargebackWarning): string {
-  return typeof warning === 'string' ? warning : JSON.stringify(warning);
+  return JSON.stringify(warning);
+}
+
+const STORED_ALLOCATION_SUFFIX = ' (used stored allocation)';
+
+/** The calculator's English `error`, as a code. `text` keeps a message this report does not know. */
+export function allocationFailureReason(error: string): ChargebackAllocationReason {
+  const text = error.endsWith(STORED_ALLOCATION_SUFFIX) ? error.slice(0, -STORED_ALLOCATION_SUFFIX.length) : error;
+  switch (text) {
+    case 'Select at least one company for manual allocation.':
+      return { code: 'select_company' };
+    case 'Select at least one department for manual allocation.':
+      return { code: 'select_department' };
+    case 'No enabled companies for allocation distribution. Using last stored allocation.':
+    case 'No enabled companies for allocation distribution':
+    case 'No enabled companies for distribution':
+      return { code: 'no_enabled_companies' };
+    case 'Some departments could not be found for manual allocation.':
+      return { code: 'departments_not_found' };
+    case 'Provide headcount values for the selected departments.':
+      return { code: 'provide_department_headcount' };
+    case 'Allocation source values must sum to a positive amount.':
+      return { code: 'driver_sum_zero' };
+    case 'Some companies are not available for manual allocation.':
+      return { code: 'companies_unavailable' };
+    default:
+      break;
+  }
+  if (text.startsWith('No exchange rate from ')) return { code: 'turnover_rate' };
+  const provide = /^Provide (.+) values for the selected companies\.$/.exec(text);
+  if (provide) {
+    const driver = provide[1] === 'it users' ? 'it_users' : provide[1] === 'headcount' ? 'headcount' : provide[1] === 'turnover' ? 'turnover' : null;
+    if (driver) return { code: 'provide_driver', driver };
+  }
+  return { code: 'text', text };
+}
+
+/**
+ * The name of a department row. No department is the common-costs row (null): the screen words
+ * it. A department id with no name is a missing department, also null, told apart by the id.
+ */
+function departmentNameOf(departmentId: string | null, department: { name?: string | null } | undefined): string | null {
+  if (!departmentId) return null;
+  const name = department?.name?.trim();
+  return name ? name : null;
 }
 
 /**
@@ -100,15 +176,6 @@ type ComputeBaseOptions = {
   fxMissingChargedTo?: string;
 };
 
-const ALLOCATION_METHOD_LABELS: Record<ResolvedAllocationMethod, string> = {
-  headcount: 'Headcount',
-  it_users: 'IT users',
-  turnover: 'Turnover',
-  manual_company: 'Manual (company)',
-  manual_department: 'Manual (department)',
-  manual_pct: 'Manual (%)',
-};
-
 function toCurrency(n: number): number {
   if (!Number.isFinite(n)) return 0;
   return Math.round(n * 100) / 100;
@@ -152,7 +219,8 @@ type ChargebackComputationContext = {
 
 export type CompanyChargebackDepartmentRow = {
   departmentId: string | null;
-  departmentName: string;
+  /** The department's name. Null is common costs when `departmentId` is null, a missing department otherwise. */
+  departmentName: string | null;
   amount: number;
   amountRaw: number;
   sharePct: number | null;
@@ -170,8 +238,8 @@ export type CompanyChargebackItemRow = {
   /** The line's nature, null when the line is not read. */
   nature: BudgetNature | null;
   itemName: string;
+  /** The allocation method code (`headcount`, `manual_pct`, …). The screen translates it. */
   allocationMethod: ResolvedAllocationMethod;
-  allocationMethodLabel: string;
   amount: number;
   amountRaw: number;
   sharePct: number | null;
@@ -185,7 +253,8 @@ export type CompanyChargebackItemRow = {
   payingCompanyId?: string | null;
   payingCompanyName?: string | null;
   allocationPct?: number | null;
-  departments?: string[];
+  /** Department names the shares go down to. Null is a department that no longer exists. */
+  departments?: Array<string | null>;
 };
 
 export type CompanyChargebackReportResponse = {
@@ -319,7 +388,7 @@ export class ChargebackReportService {
           companyId,
           companyName,
           departmentId,
-          departmentName: departmentId ? (department?.name ?? 'Unknown department') : 'Common Costs',
+          departmentName: departmentNameOf(departmentId, department),
           amount: toCurrency(amount),
           amountRaw,
           headcount,
@@ -331,7 +400,7 @@ export class ChargebackReportService {
     detailed.sort((a, b) => {
       if (b.amount !== a.amount) return b.amount - a.amount;
       if (a.companyName !== b.companyName) return a.companyName.localeCompare(b.companyName);
-      return (a.departmentName ?? 'Common Costs').localeCompare(b.departmentName ?? 'Common Costs');
+      return (a.departmentName ?? '').localeCompare(b.departmentName ?? '');
     });
 
     const companies = Array.from(ctx.companyTotals.entries())
@@ -523,7 +592,7 @@ export class ChargebackReportService {
       const costPerUserDept = localHeadcount && localHeadcount > 0 ? amount / localHeadcount : null;
       departments.push({
         departmentId,
-        departmentName: departmentId ? (department?.name ?? 'Unknown department') : 'Common Costs',
+        departmentName: departmentNameOf(departmentId, department),
         amount: toCurrency(amount),
         amountRaw,
         sharePct: sharePct != null ? Math.round(sharePct * 100) / 100 : null,
@@ -534,7 +603,7 @@ export class ChargebackReportService {
 
     departments.sort((a, b) => {
       if (Math.abs((b.amount ?? 0) - (a.amount ?? 0)) > 0.0001) return b.amount - a.amount;
-      return a.departmentName.localeCompare(b.departmentName);
+      return (a.departmentName ?? '').localeCompare(b.departmentName ?? '');
     });
 
     const items: CompanyChargebackItemRow[] = [];
@@ -556,7 +625,6 @@ export class ChargebackReportService {
         nature: item?.nature ?? null,
         itemName: item?.product_name ?? 'Unknown item',
         allocationMethod: method,
-        allocationMethodLabel: ALLOCATION_METHOD_LABELS[method] ?? method,
         amount: toCurrency(amount),
         amountRaw,
         sharePct: sharePct != null ? Math.round(sharePct * 100) / 100 : null,
@@ -574,8 +642,8 @@ export class ChargebackReportService {
         row.payingCompanyName = payerId ? (ctx.companyById.get(payerId)?.name ?? null) : null;
         row.allocationPct = pct != null ? Math.round(pct * 100) / 100 : null;
         row.departments = [...departmentIds]
-          .map((id) => ctx.departmentById.get(id)?.name ?? 'Unknown department')
-          .sort((a, b) => a.localeCompare(b));
+          .map((id) => departmentNameOf(id, ctx.departmentById.get(id)))
+          .sort((a, b) => (a ?? '').localeCompare(b ?? ''));
       }
       items.push(row);
       itemsTotal += amount;
@@ -894,8 +962,12 @@ export class ChargebackReportService {
       const warns = warnsOnLine(version.spend_item_id);
       if (allocationInfo?.error && warns) {
         const itemLabel = item?.product_name?.trim() || item?.description?.trim() || version.spend_item_id;
-        const verb = shares.length > 0 ? 'Used stored allocation for' : 'Skipped allocations for';
-        recordWarning(`${verb} "${itemLabel}" (year ${version.budget_year}): ${allocationInfo.error}`);
+        recordWarning({
+          code: shares.length > 0 ? 'stored_allocation_used' : 'allocations_skipped',
+          item: itemLabel,
+          year: version.budget_year,
+          reason: allocationFailureReason(allocationInfo.error),
+        });
       }
       const versionTotalRaw = totalsByVersion.get(version.id) ?? 0;
       if (Math.abs(versionTotalRaw) < 0.0001) continue;
@@ -927,7 +999,7 @@ export class ChargebackReportService {
       if (!payerId) {
         if (warns) {
           const itemLabel = item?.product_name?.trim() || item?.description?.trim() || version.spend_item_id;
-          recordWarning(`Missing paying company for "${itemLabel}" (year ${version.budget_year}). Paid totals excluded for this item.`);
+          recordWarning({ code: 'missing_paying_company', item: itemLabel, year: version.budget_year });
         }
       } else {
         companyIds.add(payerId);
