@@ -723,6 +723,10 @@
       "nativeName": "Nombre local (idioma local)",
       "description": "Descripción",
       "consolidationAccount": "Cuenta de consolidación",
+      "consolidationAccountNumber": "Número de cuenta de consolidación",
+      "consolidationAccountName": "Nombre de la cuenta de consolidación",
+      "consolidationAccountDescription": "Descripción de la cuenta de consolidación",
+      "selectChart": "Elija un plan de cuentas",
       "lifecycle": "Ciclo de vida",
       "loadCoAsError": "Error al cargar los planes de cuentas"
     },

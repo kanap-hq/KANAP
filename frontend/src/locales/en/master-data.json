@@ -723,6 +723,10 @@
       "nativeName": "Native name (local language)",
       "description": "Description",
       "consolidationAccount": "Consolidation account",
+      "consolidationAccountNumber": "Consolidation account number",
+      "consolidationAccountName": "Consolidation account name",
+      "consolidationAccountDescription": "Consolidation account description",
+      "selectChart": "Select a chart of accounts",
       "lifecycle": "Lifecycle",
       "loadCoAsError": "Failed to load charts of accounts"
     },

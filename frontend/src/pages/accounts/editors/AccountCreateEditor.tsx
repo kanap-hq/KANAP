@@ -144,7 +144,7 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
     <Stack spacing={2}>
       {!!serverError && <Alert severity="error">{serverError}</Alert>}
       <FormControl fullWidth error={!!err.coa_id}>
-        <InputLabel id="coa-select-label" required>Chart of Accounts</InputLabel>
+        <InputLabel id="coa-select-label" required>{t('accounts.fields.chartOfAccounts')}</InputLabel>
         <Controller
           control={control}
           name="coa_id"
@@ -152,13 +152,13 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
           render={({ field }) => (
             <Select
               labelId="coa-select-label"
-              label="Chart of Accounts"
+              label={t('accounts.fields.chartOfAccounts')}
               value={field.value ?? ''}
               onChange={(e) => field.onChange(e.target.value)}
               error={!!err.coa_id}
             >
               <MenuItem value="" disabled>
-                {loadingCoas ? 'Loading…' : 'Select a CoA'}
+                {loadingCoas ? t('common:selects.loading') : t('accounts.fields.selectChart')}
               </MenuItem>
               {coas.map((c) => (
                 <MenuItem key={c.id} value={c.id}>{c.label}</MenuItem>
@@ -171,7 +171,7 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
       {loadError && <Alert severity="error">{loadError}</Alert>}
 
       <TextField
-        label="Account Number"
+        label={t('accounts.fields.accountNumber')}
         required
         type="number"
         {...register('account_number', { valueAsNumber: true })}
@@ -180,7 +180,7 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
         InputLabelProps={{ shrink: true }}
       />
       <TextField
-        label="Account Name"
+        label={t('accounts.fields.accountName')}
         required
         {...register('account_name')}
         error={!!err.account_name}
@@ -188,21 +188,21 @@ export default forwardRef<AccountCreateEditorHandle, Props>(function AccountCrea
         InputLabelProps={{ shrink: true }}
       />
       <TextField
-        label="Native Name (local language)"
+        label={t('accounts.fields.nativeName')}
         {...register('native_name')}
         error={!!err.native_name}
         helperText={err.native_name?.message as string}
         InputLabelProps={{ shrink: true }}
       />
-      <TextField label="Description" {...register('description')} InputLabelProps={{ shrink: true }} />
+      <TextField label={t('accounts.fields.description')} {...register('description')} InputLabelProps={{ shrink: true }} />
       <TextField
-        label="Consolidation Account Number"
+        label={t('accounts.fields.consolidationAccountNumber')}
         type="number"
         {...register('consolidation_account_number', { valueAsNumber: true })}
         InputLabelProps={{ shrink: true }}
       />
-      <TextField label="Consolidation Account Name" {...register('consolidation_account_name')} InputLabelProps={{ shrink: true }} />
-      <TextField label="Consolidation Account Description" {...register('consolidation_account_description')} InputLabelProps={{ shrink: true }} />
+      <TextField label={t('accounts.fields.consolidationAccountName')} {...register('consolidation_account_name')} InputLabelProps={{ shrink: true }} />
+      <TextField label={t('accounts.fields.consolidationAccountDescription')} {...register('consolidation_account_description')} InputLabelProps={{ shrink: true }} />
       <Controller
         control={control}
         name="nature"
