@@ -16,6 +16,8 @@ export type DeleteFailure = {
   params?: Record<string, string | number>;
   /** The applications an asset delete refusal names, in the server's order. */
   applications?: string[];
+  /** The connections an asset delete refusal names (reference and name), at most five, in the server's order. */
+  connections?: string[];
 };
 
 /** "2 contracts and 1 application", in the interface language. */
@@ -30,9 +32,15 @@ function usageList(usages: NonNullable<DeleteFailure['usages']>, t: TFunction, l
 
 /** The names a refusal carries (`applications`), at most three then "and 2 others". */
 const NAMED_USAGES = 3;
+/** Connections named on an asset refusal, then "and N more". The server sends at most this many. */
+const NAMED_CONNECTIONS = 5;
+
+function cleanNames(names: string[] | undefined): string[] {
+  return (names ?? []).map((name) => String(name ?? '')).filter(Boolean);
+}
 
 function applicationNames(applications: string[] | undefined, t: TFunction, language: string): string | null {
-  const names = (applications ?? []).map((name) => String(name ?? '')).filter(Boolean);
+  const names = cleanNames(applications);
   if (names.length === 0) return null;
   const shown = names.slice(0, NAMED_USAGES);
   const left = names.length - shown.length;
@@ -42,19 +50,47 @@ function applicationNames(applications: string[] | undefined, t: TFunction, lang
   );
 }
 
+/** Up to five connections, then "and N more" for those the server left out. */
+function connectionNames(connections: string[] | undefined, total: number, t: TFunction, language: string): string | null {
+  const names = cleanNames(connections);
+  if (names.length === 0) return null;
+  const shown = names.slice(0, NAMED_CONNECTIONS);
+  const left = Math.max(total, names.length) - shown.length;
+  if (left <= 0) return joinNames(shown, language);
+  return `${shown.join(', ')} ${t('common:delete.assetWarning.more', { count: left }) as string}`;
+}
+
+function namedUsage(
+  usage: { type: string; total: number },
+  applications: string[] | undefined,
+  connections: string[] | undefined,
+  t: TFunction,
+  language: string,
+): string {
+  const label = t(`common:delete.usages.${usage.type}`, { count: usage.total, defaultValue: `${usage.total} ${usage.type}` }) as string;
+  const names = usage.type === 'app_assignments'
+    ? applicationNames(applications, t, language)
+    : usage.type === 'connections'
+      ? connectionNames(connections, usage.total, t, language)
+      : null;
+  return names ? `${label} (${names})` : label;
+}
+
 /**
- * What uses a record, counted per kind, with the applications named when the server sends them
- * (`ASSET_IN_USE`: "1 application assignment (CheeseTrack)").
+ * What uses a record, counted per kind, with the applications and connections named when the
+ * server sends them (`ASSET_IN_USE`: "1 connection (CONN-4 · Paris to Gouda)").
  */
 export function refusalUsages(
   usages: DeleteFailure['usages'] | null | undefined,
   applications: string[] | undefined,
   t: TFunction,
   language: string,
+  connections?: string[],
 ): string {
-  const counts = usageList(usages ?? [], t, language);
-  const names = applicationNames(applications, t, language);
-  return names ? `${counts} (${names})` : counts;
+  return joinNames(
+    (usages ?? []).map((usage) => namedUsage(usage, applications, connections, t, language)),
+    language,
+  );
 }
 
 /**
@@ -88,7 +124,7 @@ export function deleteFailureReason(failure: DeleteFailure, t: TFunction, langua
   return t(`errors:${failure.code}`, {
     ...(failure.params ?? {}),
     ...usageTotal(failure.usages),
-    usages: refusalUsages(failure.usages, failure.applications, t, language),
+    usages: refusalUsages(failure.usages, failure.applications, t, language, failure.connections),
     defaultValue: reason,
   }) as string;
 }

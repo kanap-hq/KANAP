@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import DeleteConfirmDialog, { DeleteConfirmKept } from './DeleteConfirmDialog';
 import api from '../api';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
-import { deleteFailureReason, refusalCounts, usageTotal, type DeleteFailure } from '../utils/deleteRefusal';
+import { deleteFailureReason, refusalUsages, usageTotal, type DeleteFailure } from '../utils/deleteRefusal';
 import { joinNames } from '../pages/working-day-calendars/workingDayCalendarFields';
 import { KanapDialog } from './design';
 
@@ -246,7 +246,7 @@ export default function DeleteSelectedButton<T>({
       const refusal = refusedById.get(item.id)!;
       // What uses it, counted; a refusal without counts (a frozen column) in its own words.
       if (!refusal.usages?.length) return { ...item, reason: deleteFailureReason(refusal, t, language) };
-      const usages = refusalCounts(refusal, t, language);
+      const usages = refusalUsages(refusal.usages, refusal.applications, t, language, refusal.connections);
       const count = (usageTotal(refusal.usages) as { count?: number }).count ?? 0;
       return { ...item, reason: itemLabels?.keptReason?.({ name: item.name, usages, count }) ?? usages };
     });

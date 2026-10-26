@@ -273,6 +273,18 @@ describe('DeleteSelectedButton', () => {
       expect(dialog).toHaveTextContent('(1).');
     });
 
+    it('names the connection that keeps one asset, reference and name', async () => {
+      renderChecked([{ id: 'a', name: 'srv-01' }], async () => ({
+        refused: [{ id: 'a', name: 'srv-01', code: 'ASSET_IN_USE', usages: [{ type: 'connections', total: 1 }], connections: ['CONN-4 · Paris to Gouda'] }],
+      }), {
+        ...itemLabels,
+        keptReason: ({ usages }: { usages: string }) => `Kept: ${usages}.`,
+      });
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog).toHaveTextContent('Kept:');
+      expect(dialog).toHaveTextContent('CONN-4 · Paris to Gouda');
+    });
+
     it('shows a single refused item as the record does: the reason and Close only', async () => {
       const checkDelete = renderChecked([rows[1]], async () => ({ refused: [REFUSAL] }));
       const dialog = await screen.findByRole('dialog');
