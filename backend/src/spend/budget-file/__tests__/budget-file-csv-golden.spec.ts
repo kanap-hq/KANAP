@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { writeCsv, type CsvLanguage } from '../../../common/csv-sheet';
-import { budgetCsvRows, buildBudgetExport } from '../export-file';
+import type { CsvLanguage } from '../../../common/csv-sheet';
+import { buildBudgetExport, writeBudgetFile } from '../export-file';
 import type { FileDimension } from '../load';
 import { BudgetFileDetail, emptyMonths, StoredLine } from '../types';
 
@@ -106,7 +106,12 @@ function goldenCsv(language: CsvLanguage, detail: BudgetFileDetail): string {
     lines: GOLDEN_LINES,
     dimensions: GOLDEN_DIMENSIONS,
   });
-  return writeCsv({ language, headers: built.headers, rows: budgetCsvRows(built.rows, language) });
+  // The code path of the routes: the file, its name and its type.
+  const file = writeBudgetFile(built, language, 'csv');
+  assert.equal(file.filename, 'budget.csv');
+  assert.equal(file.contentType, 'text/csv; charset=utf-8');
+  assert.equal(typeof file.content, 'string');
+  return file.content as string;
 }
 
 const GOLDEN_SHA256: Record<string, string> = {
