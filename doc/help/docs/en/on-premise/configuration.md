@@ -450,7 +450,7 @@ The [Vulnerabilities](../vulnerabilities.md) page, its email notifications, the 
 | `VULNERABILITY_FEED_ENABLED` | Turns the vulnerabilities on. | `false` on-premise |
 | `NVD_API_BASE_URL` | Address of a mirror of the NVD CVE API 2.0, when the server cannot reach the NVD. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
 | `NVD_API_KEY` | Optional key that raises the request rate from 5 to 50 requests per 30 seconds, so the first reading finishes sooner. Request it free of charge on the [NVD website](https://nvd.nist.gov/developers/request-an-api-key). | *unset* |
-| `KEV_FEED_URL` | Address of a mirror of the CISA catalog of known exploited vulnerabilities. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
+| `KEV_FEED_URL` | Address of a mirror of the CISA catalog of known exploited vulnerabilities. The default is CISA's GitHub mirror, because `www.cisa.gov` refuses data-centre addresses. | `https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json` |
 | `EPSS_FEED_URL` | Address of a mirror of the daily EPSS scores. EPSS is described at [FIRST](https://www.first.org/epss). | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
 | `EUVD_BASE_URL` | Address of a mirror of ENISA's European vulnerability database (the European catalog and the EUVD mapping). | `https://euvdservices.enisa.europa.eu` |
 | `CVE_LIST_FEED_ENABLED` | Turns the CVE.org list off on its own (`false`), while the other sources keep running. | The value of `VULNERABILITY_FEED_ENABLED` |
@@ -460,11 +460,11 @@ The [Vulnerabilities](../vulnerabilities.md) page, its email notifications, the 
 
 Notes:
 
-- The API needs outbound HTTPS, port 443, to `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` and `euvdservices.enisa.europa.eu`, or to your mirrors (see [Firewall rules](#firewall-rules)).
+- The API needs outbound HTTPS, port 443, to `services.nvd.nist.gov`, `raw.githubusercontent.com`, `epss.empiricalsecurity.com` and `euvdservices.enisa.europa.eu`, or to your mirrors (see [Firewall rules](#firewall-rules)).
 - Without a mirror, the CVE.org list comes from the GitHub releases: the full export at the first reading (about 640 MB, read in about a minute), then the daily changes, from 0.5 to 13 MB a day. The API needs outbound HTTPS, port 443, to `api.github.com`, `github.com` and `release-assets.githubusercontent.com`.
 - The CVE.org list takes about 700 MB more in the database. During the first reading, the `api` container needs about 1.4 GB of temporary disk space.
 - A server without network access reads the list from a file: set `CVE_LIST_EXPORT_URL` to its path, and drop a new export there as often as you like. The data are as fresh as the last file dropped.
-- An empty mirror address keeps the public one. A source the server cannot reach leaves its columns as they are and is named in the summary of the task. The other sources continue.
+- An empty mirror address keeps the default one. A source the server cannot reach leaves its columns as they are and is named in the summary of the task. The other sources continue.
 - The email notifications also need email to be configured (Resend or SMTP).
 - Restart the API after changing these values.
 
@@ -675,7 +675,7 @@ Only required if the corresponding feature is enabled.
 | `claude.ai` | 443 | Reads the description of Claude, Claude Desktop or Claude Code when a user connects it over MCP without a key | If `AI_MCP_ENABLED=true` and users connect over OAuth (not needed for API keys) |
 | `chatgpt.com`, `grok.com` | 443 | Reads the description of ChatGPT or Grok when a user connects it over MCP without a key | Same as `claude.ai` |
 | `services.nvd.nist.gov`, or your mirror | 443 | Published vulnerabilities (NVD) | If `VULNERABILITY_FEED_ENABLED=true` |
-| `www.cisa.gov`, or your mirror | 443 | CISA catalog of known exploited vulnerabilities | If `VULNERABILITY_FEED_ENABLED=true` |
+| `raw.githubusercontent.com`, or your mirror | 443 | CISA catalog of known exploited vulnerabilities (CISA GitHub mirror) | If `VULNERABILITY_FEED_ENABLED=true` |
 | `epss.empiricalsecurity.com`, or your mirror | 443 | Daily EPSS scores | If `VULNERABILITY_FEED_ENABLED=true` |
 | `euvdservices.enisa.europa.eu`, or your mirror | 443 | European vulnerability database (ENISA): European catalog and EUVD identifiers | If `VULNERABILITY_FEED_ENABLED=true` |
 | `api.github.com`, `github.com`, `release-assets.githubusercontent.com` | 443 | The CVE.org list (records written by the publishers) | If `VULNERABILITY_FEED_ENABLED=true`, unless `CVE_LIST_FEED_ENABLED=false` or `CVE_LIST_EXPORT_URL` names a mirror |
