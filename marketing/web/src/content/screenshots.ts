@@ -1,7 +1,7 @@
 export const HOME_SCREENSHOT = '/screenshots/home-dashboard.png';
 
 export const HOME_HERO_SCREENSHOTS = {
-  main: '/screenshots/ai-conversation.png',
+  main: '/screenshots/feature-plaid-query-2026-10-26.png',
   map: '/screenshots/it-interface-map.png',
   budget: '/screenshots/budget-top-lines-2026-10-13.png',
 } as const;
@@ -10,7 +10,7 @@ export const FEATURE_HUB_SCREENSHOTS = [
   '/screenshots/budget-top-lines-2026-10-13.png',
   '/screenshots/it-interface-map.png',
   '/screenshots/portfolio-capacity.png',
-  '/screenshots/ai-conversation.png',
+  '/screenshots/feature-plaid-query-2026-10-26.png',
   '/screenshots/it-applications.png',
   '/screenshots/agent-queue.png',
 ] as const;
@@ -55,10 +55,10 @@ export const FEATURE_SCREENSHOTS = {
     '/screenshots/feature-incidents-relations-2026-10-26.png',
   ],
   ai: [
-    '/screenshots/ai-conversation.png',
-    '/screenshots/ai-preview.png',
-    '/screenshots/ai-integrations.png',
-    '/screenshots/ai-admin.png',
+    '/screenshots/feature-plaid-query-2026-10-26.png',
+    '/screenshots/feature-plaid-preview-2026-10-26.png',
+    '/screenshots/feature-plaid-claude-2026-10-26.png',
+    '/screenshots/feature-plaid-admin-2026-10-26.png',
   ],
 } as const;
 

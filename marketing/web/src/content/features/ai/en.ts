@@ -4,7 +4,7 @@ const content: FeatureContent = {
   meta: {
     title: 'Plaid, AI assistant for IT governance',
     description:
-      'Ask Plaid about your IT data. Create documents, update tasks, add KANAP to Claude in two clicks. Usage included on hosted cloud. Open source.',
+      'Ask Plaid about your IT data. Create documents, update tasks, add KANAP to Claude in one click. Usage included on hosted cloud. Open source.',
   },
   header: {
     eyebrow: 'Plaid · AI assistant',
@@ -21,7 +21,7 @@ const content: FeatureContent = {
         'Aggregations and statistics',
         'Knowledge base full-text search',
       ],
-      shotAlt: 'Plaid answering a cross-module query',
+      shotAlt: 'Plaid answers with a table: the contracts to decide within 90 days and the applications they cover',
     },
     {
       title: 'Take action with preview',
@@ -32,10 +32,10 @@ const content: FeatureContent = {
         'Update tasks: status, assignees, comments',
         'Preview changes before applying',
       ],
-      shotAlt: 'Plaid showing a preview of task updates',
+      shotAlt: 'Plaid prepares two changes to a task as previews, with Approve and Reject',
     },
     {
-      title: 'Add KANAP to Claude in two clicks',
+      title: 'Add KANAP to Claude in one click',
       body: 'Paste your KANAP address into Claude as a custom connector, sign in, click Allow. Claude then answers from your budget, applications, projects and documents. There is no key to create or copy. It works in Claude, Claude Desktop and Claude Code.',
       bullets: [
         'Each person signs in with their own KANAP account',
@@ -43,7 +43,7 @@ const content: FeatureContent = {
         'Every user sees their connected apps and disconnects them in one click',
         'API keys remain available for scripts and other MCP clients',
       ],
-      shotAlt: 'MCP API key settings',
+      shotAlt: 'Claude answers from KANAP data: external FTEs and average day rate by supplier, as charts',
     },
     {
       title: 'Full control & compliance',
@@ -55,7 +55,7 @@ const content: FeatureContent = {
         'Preview and confirmation for all write operations',
         'Read-only access through roles for cautious rollouts',
       ],
-      shotAlt: 'Plaid admin controls with permission matrix',
+      shotAlt: 'Plaid settings: chat and MCP on, included model and its processing location confirmed, usage this month',
     },
   ],
   more: {
