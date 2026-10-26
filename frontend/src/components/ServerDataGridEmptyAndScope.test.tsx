@@ -107,7 +107,7 @@ describe('ServerDataGrid', () => {
     it('shows nothing of the kind when the rows fail to load', async () => {
       get.mockRejectedValue(new Error('boom'));
       const view = render(<Grid />);
-      expect(await screen.findByText('boom')).toBeInTheDocument();
+      expect(await screen.findByText('common:messages.loadFailed')).toBeInTheDocument();
       expect(screen.queryByText('common:filters.noResults')).not.toBeInTheDocument();
       view.unmount();
     }, 20_000);
