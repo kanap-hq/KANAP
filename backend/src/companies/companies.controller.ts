@@ -1,6 +1,7 @@
 import { exportListQuery } from '../common/pagination';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
+import { parseCompanyYear } from './company-year';
 import { CompaniesDeleteService } from './companies-delete.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Response } from 'express';
@@ -74,7 +75,7 @@ export class CompaniesController {
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ) {
-    const year = Number.isFinite(Number(yearRaw)) ? Number(yearRaw) : undefined;
+    const year = parseCompanyYear(yearRaw);
     const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
     const { filename, content } = await this.svc.exportCsv(scope, { manager: ctx.manager, year, language, listQuery: exportListQuery(query) });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -121,7 +122,7 @@ export class CompaniesController {
     @Tenant() ctx: TenantRequest,
   ) {
     const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
-    const year = Number.isFinite(Number(yearRaw)) ? Number(yearRaw) : undefined;
+    const year = parseCompanyYear(yearRaw);
     const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
     const dateOrder = parseDateOrder(dateOrderRaw);
     const decimalMark = parseDecimalMark(decimalMarkRaw);
