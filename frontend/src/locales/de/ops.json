@@ -1481,7 +1481,7 @@
       "chartTitle": "Leistungsverrechnung nach Abteilung: {{name}}",
       "chartSubtitle": "{{metric}}-Totale",
       "chartFootnote": "Gesamt {{metric}}: {{total}}",
-      "noCompanyInAccess": "Kein Unternehmen gehört zu Ihrem Datenzugriff.",
+      "noCompanyInAccess": "Kein Unternehmen gehört zu Ihrem Zugriff.",
       "fxMissingHiddenLines_one": "Kein Wechselkurs für {{references}}: Der Anteil ist nicht in den Summen enthalten.",
       "fxMissingHiddenLines_other": "Kein Wechselkurs für {{references}}: Die Anteile sind nicht in den Summen enthalten."
     },

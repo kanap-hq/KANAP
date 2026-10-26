@@ -1803,7 +1803,7 @@
     "remove": "{{name}} entfernen",
     "addTheirCenters_one": "Eigene Kostenstelle hinzufügen ({{count}})",
     "addTheirCenters_other": "Eigene Kostenstellen hinzufügen ({{count}})",
-    "alwaysSees": "Diese Person sieht außerdem immer, wo sie benannt ist.",
+    "alwaysSees": "Diese Person sieht außerdem immer, wofür sie benannt ist.",
     "appliesTo": "Gilt für Budget und Verträge.",
     "preview": "Mit diesem Zugriff: {{lines}}{{editable}}; {{contracts}}.",
     "previewLines_one": "{{value}} Budgetzeile",

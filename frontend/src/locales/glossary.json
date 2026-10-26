@@ -139,5 +139,21 @@
     "ask first": { "fr": "demander d'abord", "de": "Zuerst fragen", "es": "preguntar primero", "note": "Default: agent proposes and waits for approval" },
     "emergency pause": { "fr": "pause d'urgence", "de": "Notfall-Pause", "es": "pausa de emergencia", "note": "Tenant-wide halt of all agents" },
     "acceptance": { "fr": "taux d'acceptation", "de": "Akzeptanzrate", "es": "tasa de aceptación", "note": "Share of proposals approved (performance metric)" }
+  },
+
+  "data_access": {
+    "_note": "Data-scoped access: the words of Administration > Data access and of the budget and contract screens",
+    "data access": { "fr": "accès aux données", "de": "Datenzugriff", "es": "acceso a los datos", "note": "Feature name (navigation, page title, audit log)" },
+    "all data": { "fr": "toutes les données", "de": "Alle Daten", "es": "todos los datos", "note": "Mode of a person with no scope; never 'everything', which is the node" },
+    "limited to": { "fr": "limité à", "de": "Begrenzt auf", "es": "limitado a", "note": "Mode of a person with nodes" },
+    "read": { "fr": "lecture", "de": "Lesen", "es": "lectura", "note": "Access level Read" },
+    "edit": { "fr": "saisie", "de": "Bearbeiten", "es": "edición", "note": "Access level Edit; French 'saisie', never 'écriture' or 'modification'" },
+    "everything": { "fr": "tout", "de": "Alles", "es": "todo", "note": "Node that covers all data, always distinct from All data" },
+    "none": { "fr": "aucun", "de": "Keine", "es": "ninguno", "note": "A limited person without a node" },
+    "outside your access": { "fr": "hors de votre accès", "de": "außerhalb Ihres Zugriffs", "es": "fuera de su acceso", "note": "Never 'hors de votre accès aux données' in a sentence" },
+    "cost center": { "fr": "centre de coûts", "de": "Kostenstelle", "es": "centro de coste", "note": "Node and master-data entity" },
+    "cost center group": { "fr": "groupe de centres", "de": "Kostenstellengruppe", "es": "grupo de centros", "note": "A node covering a group of cost centers" },
+    "open values": { "fr": "valeurs ouvertes", "de": "Offene Werte", "es": "valores abiertos", "note": "Analytics dimension setting; anyone who can edit a line may add a value" },
+    "read only": { "fr": "lecture seule", "de": "schreibgeschützt", "es": "solo lectura", "note": "A visible object the person may not edit" }
   }
 }

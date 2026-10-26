@@ -287,8 +287,8 @@
     "contract_other": "{{count}} contrats"
   },
   "dataAccess": {
-    "outside": "Cet élément est hors de votre accès aux données.",
-    "chargebackCompany": "La refacturation de cette société est hors de votre accès aux données.",
+    "outside": "Cet élément est hors de votre accès.",
+    "chargebackCompany": "La refacturation de cette société est hors de votre accès.",
     "readOnlyLine": "Cette ligne est en lecture seule dans votre accès.",
     "placement": "Cette société ou ce centre de coûts ne fait pas partie de votre accès.",
     "reserved": "Cette action est réservée aux personnes qui ont accès à toutes les données.",
@@ -300,9 +300,9 @@
   },
   "DATA_ACCESS_ADMINISTRATOR": "Les administrateurs voient toutes les données.",
   "DATA_ACCESS_SELF": "Vous ne pouvez pas modifier votre propre accès aux données.",
-  "DATA_ACCESS_NODE_UNKNOWN": "Un nœud de la liste n'existe pas dans cet espace de travail.",
-  "DATA_ACCESS_NODE_ID_FORBIDDEN": "Le nœud Tout ne prend pas de nœud.",
-  "DATA_ACCESS_NODE_ID_REQUIRED": "Une société ou un centre de coûts est requis.",
-  "DATA_ACCESS_NODE_TYPE_INVALID": "Utilisez société, centre de coûts ou tout.",
-  "DATA_ACCESS_ACCESS_INVALID": "Utilisez lecture ou saisie."
+  "DATA_ACCESS_NODE_UNKNOWN": "Une société ou un centre de coûts de la liste n'existe pas dans cet espace de travail.",
+  "DATA_ACCESS_NODE_ID_FORBIDDEN": "Tout couvre déjà toutes les données et ne prend ni société ni centre de coûts.",
+  "DATA_ACCESS_NODE_ID_REQUIRED": "Choisissez une société ou un centre de coûts.",
+  "DATA_ACCESS_NODE_TYPE_INVALID": "Choisissez une société, un centre de coûts ou tout.",
+  "DATA_ACCESS_ACCESS_INVALID": "Choisissez l'accès lecture ou saisie."
 }
