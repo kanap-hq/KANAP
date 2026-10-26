@@ -957,6 +957,50 @@ const PAGES = {
       await sleep(1000);
     },
   },
+  // Release 26.10.7 (2026-10-26): data access per person, and the hosted applications of a cluster. Read-only (nothing is saved).
+  'release-26-10-7-user-data-access': {
+    frame: 1280,
+    path: '/admin/users?q=luca.ferrari%40formaggio-supremo.it', // Edit user > Data access: Luca Ferrari limited to Formaggio Supremo SRL, Edit
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await sleep(1000);
+      await page.click('.ag-pinned-right-cols-container .ag-row button, .ag-center-cols-container .ag-row button[aria-label]');
+      await sleep(500);
+      await clickText(page, '[role="menuitem"]', 'Data access');
+      await page.waitForFunction(() => /With this access: \d+ budget lines/.test(document.querySelector('[role="dialog"]')?.innerText || ''), { timeout: 20000 });
+      await sleep(1500);
+    },
+  },
+  'release-26-10-7-admin-data-access': {
+    frame: 1280,
+    path: '/admin/data-access', // four limited people (Luca Ferrari, Jan Bakker, Ines Chevalier, Nadia Lemaire)
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Limited people: \d+/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1500);
+      // Local test account of the dev tenant (limited, set up for QA): leave its row out and the counter at the four people of the demo.
+      await page.evaluate(() => {
+        for (const b of document.querySelectorAll('main tbody tr')) {
+          if (/Claude/.test(b.innerText)) b.style.display = 'none';
+        }
+        for (const p of document.querySelectorAll('main p')) {
+          const m = /^Limited people: (\d+)$/.exec(p.textContent.trim());
+          if (m) p.textContent = `Limited people: ${Number(m[1]) - 1}`;
+        }
+      });
+      await sleep(500);
+    },
+  },
+  'release-26-10-7-cluster': {
+    frame: 1440,
+    path: '/it/assets/AST-52/operations', // PAR-SQL-CL01: members and hosted applications (CheeseTrack, Sage X3)
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Hosted applications/.test(document.querySelector('main')?.innerText || '') && /Sage X3/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1000);
+    },
+  },
   // Vulnerabilities article (2026-10-24): "Why this row" in the side panel of a Tomcat CVE found by both sources. Read-only.
   'vulnerabilities-why-this-row-2026-10-24': {
     path: '/it/vulnerabilities',
