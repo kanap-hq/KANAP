@@ -13,6 +13,14 @@ import { assertCanManageMasterDataScope, MasterDataAccess } from './master-data-
 const COMPANY_METRIC_KEYS = ['headcount', 'it_users', 'turnover'] as const;
 export type CompanyMetricKey = typeof COMPANY_METRIC_KEYS[number];
 
+/** Codes the copy screen words in the user's language. Never an English sentence. */
+export const COPY_SKIP_REASONS = {
+  noSourceData: 'no_data_for_source_year',
+  copyFailed: 'failed_to_copy_metrics',
+} as const;
+
+export type CopySkipReason = (typeof COPY_SKIP_REASONS)[keyof typeof COPY_SKIP_REASONS];
+
 type MasterDataCopyRequest = {
   sourceYear: number;
   destinationYear: number;
@@ -27,20 +35,21 @@ type MasterDataCopyRequest = {
 type MasterDataCopyResultItem = {
   entityType: 'company' | 'department';
   entityId: string;
-  /** A department with no row, or no name, is null: the screen words it. */
+  /** A company or department with no row, or no name, is null: the screen words it. */
   entityName: string | null;
   metric: CompanyMetricKey | 'headcount';
   sourceValue: number | null;
   destinationValue: number | null;
   newValue: number | null;
   skipped: boolean;
-  reason?: string;
+  /** Skip code from COPY_SKIP_REASONS. Absent when the row will be copied. */
+  reason?: CopySkipReason;
 };
 
 type MasterDataCopyError = {
   entityType: 'company' | 'department';
   entityId: string;
-  /** A department with no row, or no name, is null: the screen words it. */
+  /** A company or department with no row, or no name, is null: the screen words it. */
   entityName: string | null;
   message: string;
 };
@@ -89,6 +98,17 @@ export function departmentCopyName(
   if (!name) return null;
   const company = department?.company?.name?.trim();
   return company ? `${name} (${company})` : name;
+}
+
+/**
+ * The name of a company in a copy result. No company, or a blank name, is null:
+ * the screen words it in the user's language, as it does for a department.
+ */
+export function companyCopyName(
+  company: { name?: string | null } | null | undefined,
+): string | null {
+  const name = company?.name?.trim();
+  return name ? name : null;
 }
 
 @Injectable()
@@ -209,9 +229,9 @@ export class MasterDataOperationsService {
       const companyIds = Array.from(new Set([...sourceMap.keys(), ...destinationMap.keys()]));
       if (companyIds.length > 0) {
         const companies = await manager.getRepository(Company).find({ where: { id: In(companyIds) } });
-        const companyNameMap = new Map<string, string>();
+        const companyNameMap = new Map<string, string | null>();
         for (const company of companies) {
-          companyNameMap.set(company.id, company.name);
+          companyNameMap.set(company.id, companyCopyName(company));
         }
         const sortedIds = [...companyIds].sort((a, b) => {
           const nameA = (companyNameMap.get(a) ?? '').toLowerCase();
@@ -222,7 +242,7 @@ export class MasterDataOperationsService {
         });
 
         for (const companyId of sortedIds) {
-          const companyName = companyNameMap.get(companyId) ?? 'Unknown company';
+          const companyName = companyNameMap.get(companyId) ?? null;
           const source = sourceMap.get(companyId);
           const destination = destinationMap.get(companyId);
 
@@ -237,7 +257,7 @@ export class MasterDataOperationsService {
                 destinationValue: toNumber(getCompanyMetricValue(destination, metric)) ?? null,
                 newValue: null,
                 skipped: true,
-                reason: 'No data for source year',
+                reason: COPY_SKIP_REASONS.noSourceData,
               });
               skipped += 1;
             }
@@ -273,7 +293,7 @@ export class MasterDataOperationsService {
                   destinationValue: toNumber(getCompanyMetricValue(destination, metric)) ?? null,
                   newValue: null,
                   skipped: true,
-                  reason: 'Failed to copy metrics',
+                  reason: COPY_SKIP_REASONS.copyFailed,
                 });
                 skipped += 1;
               }
@@ -347,7 +367,7 @@ export class MasterDataOperationsService {
               destinationValue: toNumber(destination?.headcount) ?? null,
               newValue: null,
               skipped: true,
-              reason: 'No data for source year',
+              reason: COPY_SKIP_REASONS.noSourceData,
             });
             skipped += 1;
             continue;
@@ -371,7 +391,7 @@ export class MasterDataOperationsService {
                 destinationValue: toNumber(destination?.headcount) ?? null,
                 newValue: null,
                 skipped: true,
-                reason: 'Failed to copy metrics',
+                reason: COPY_SKIP_REASONS.copyFailed,
               });
               skipped += 1;
               continue;

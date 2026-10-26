@@ -1060,7 +1060,9 @@
       },
       "status": {
         "skipped": "Skipped",
-        "readyToCopy": "Ready to copy"
+        "readyToCopy": "Ready to copy",
+        "noDataForSourceYear": "No data for source year",
+        "failedToCopyMetrics": "Failed to copy metrics"
       },
       "frozenCompanies": "Company metrics for {{year}} are frozen. Unfreeze them before copying.",
       "frozenDepartments": "Department metrics for {{year}} are frozen. Unfreeze them before copying.",
