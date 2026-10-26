@@ -12,10 +12,12 @@ import type { AuditEntry } from './audit.service';
  *   hash or link, and no e-mail address (an attempt on an unknown address keeps its reason only).
  *   Kept AUTH_EVENT_RETENTION_DAYS days (cleanup/auth-event-retention.service.ts);
  * - exports: `table_name = 'export'`, `action = 'export'`, the person in `user_id`, and
- *   `after_json = { resource, path, format, query, ip, user_agent }`, plus `rows` when the handler
- *   reports how many rows it exported (`recordExportRows`) (export-events.interceptor.ts): every
- *   route whose path ends with `/export`, and the other routes that send a file the server
- *   produces, marked `@ExportRoute()`. Never the request body.
+ *   `after_json = { resource, path, query, ip, user_agent }`, plus, once the handler has finished,
+ *   `format` (the type of the file sent, exportFormatOfContentType) when the response has a
+ *   Content-Type, and `rows` when the handler reports how many rows it exported
+ *   (`recordExportRows`) (export-events.interceptor.ts): every route whose path ends with
+ *   `/export`, and the other routes that send a file the server produces, marked
+ *   `@ExportRoute()`. Never the request body.
  */
 
 export const AUTH_EVENT_TABLE = 'auth';
@@ -163,20 +165,6 @@ export const EXPORT_ROUTE_METADATA = 'kanap:export-route';
  */
 export const ExportRoute = (): MethodDecorator => SetMetadata(EXPORT_ROUTE_METADATA, true);
 
-export const EXPORT_FORMAT_METADATA = 'kanap:export-format';
-
-/**
- * The format of the file a route sends when the request names none (`pdf` for the PDF report of
- * an incident or a document): written on its export row. A route without it is recorded as `csv`.
- */
-export const ExportRouteFormat = (format: string): MethodDecorator => SetMetadata(EXPORT_FORMAT_METADATA, format);
-
-/** The format a controller method declares with `@ExportRouteFormat()`, if any. */
-export function declaredExportFormat(handler: object): string | undefined {
-  const format = Reflect.getMetadata(EXPORT_FORMAT_METADATA, handler);
-  return typeof format === 'string' && format ? format : undefined;
-}
-
 /**
  * The route pattern an export of this controller method is recorded under: its path ending with
  * `/export`, or its path when the method is marked `@ExportRoute()`. Undefined for other routes.
@@ -202,7 +190,8 @@ export function exportResource(path: string): string {
 
 /** The query of an export row is at most this long once serialised. */
 export const EXPORT_QUERY_MAX_LENGTH = 2_000;
-const EXPORT_FORMAT_MAX_LENGTH = 20;
+/** The format of an export row is at most this long. */
+export const EXPORT_FORMAT_MAX_LENGTH = 40;
 
 /**
  * Set by ListContextInterceptor before it merges a saved list context into the query: the query as
@@ -214,30 +203,29 @@ type ExportRequest = ({
   path?: unknown;
   user?: { sub?: unknown };
   query?: unknown;
-  body?: unknown;
   [QUERY_AS_SENT]?: unknown;
 } & NonNullable<RequestLike>) | null | undefined;
 
-function formatValue(raw: unknown): string | null {
-  if (typeof raw !== 'string') return null;
-  const value = raw.trim().toLowerCase().slice(0, EXPORT_FORMAT_MAX_LENGTH);
-  return value || null;
-}
+const FORMAT_OF_MEDIA_TYPE: Record<string, string> = {
+  'text/csv': 'csv',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.oasis.opendocument.text': 'odt',
+  'text/markdown': 'markdown',
+};
 
 /**
- * The format of an export: the `format` query, else the `format` field of the body (the document
- * exports, `POST /export` and `POST /knowledge/:idOrRef/export`, take it there), lower case, else
- * the format the route declares (`@ExportRouteFormat`), else `csv`.
+ * The format of an export, from the Content-Type of the response it sent: `csv`, `xlsx`, `pdf`,
+ * `docx`, `odt` or `markdown`, else the bare media type (no parameters, lower case, at most
+ * EXPORT_FORMAT_MAX_LENGTH characters). Undefined when the response has no Content-Type.
  */
-export function exportFormat(req: ExportRequest, declared?: string): string {
-  const query = req?.[QUERY_AS_SENT] ?? req?.query;
-  const body = req?.body;
-  return (
-    formatValue(query && typeof query === 'object' ? (query as Record<string, unknown>).format : undefined)
-    ?? formatValue(body && typeof body === 'object' ? (body as Record<string, unknown>).format : undefined)
-    ?? declared
-    ?? 'csv'
-  );
+export function exportFormatOfContentType(header: unknown): string | undefined {
+  const raw = Array.isArray(header) ? header[0] : header;
+  if (typeof raw !== 'string') return undefined;
+  const mediaType = raw.split(';')[0].trim().toLowerCase();
+  if (!mediaType) return undefined;
+  return FORMAT_OF_MEDIA_TYPE[mediaType] ?? mediaType.slice(0, EXPORT_FORMAT_MAX_LENGTH);
 }
 
 function queryValue(raw: unknown): string | string[] | undefined {
@@ -280,11 +268,11 @@ export function exportQuery(raw: unknown): Record<string, unknown> {
 }
 
 /**
- * The audit row of an export: the route's resource, the path asked for without its query
- * (500 characters at most), the format (exportFormat), the query (exportQuery), and the client
- * address and user agent (authEventDetails).
+ * The audit row of an export, written before its handler runs: the route's resource, the path
+ * asked for without its query (500 characters at most), the query (exportQuery), and the client
+ * address and user agent (authEventDetails). The format and the row count come after the handler.
  */
-export function exportEventEntry(routePath: string, req: ExportRequest, declaredFormat?: string): AuditEntry {
+export function exportEventEntry(routePath: string, req: ExportRequest): AuditEntry {
   const userId = typeof req?.user?.sub === 'string' && req.user.sub ? req.user.sub : null;
   const path = (typeof req?.path === 'string' && req.path ? req.path : routePath).slice(0, 500);
   return {
@@ -295,7 +283,6 @@ export function exportEventEntry(routePath: string, req: ExportRequest, declared
     after: {
       resource: exportResource(routePath),
       path,
-      format: exportFormat(req, declaredFormat),
       query: exportQuery(req?.[QUERY_AS_SENT] ?? req?.query),
       ...authEventDetails(req),
     },

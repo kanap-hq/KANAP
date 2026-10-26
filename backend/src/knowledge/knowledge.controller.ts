@@ -31,7 +31,6 @@ import { RateLimitGuard } from '../common/rate-limit.guard';
 import { resolveTenantAppBaseUrl } from '../common/url';
 import { StorageService } from '../common/storage/storage.service';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
-import { ExportRouteFormat } from '../audit/security-events';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { KnowledgeService, RelationEntityType } from './knowledge.service';
@@ -702,7 +701,6 @@ export class KnowledgeController {
   @UseGuards(PermissionGuard)
   @RequireLevel('knowledge', 'reader')
   @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
-  @ExportRouteFormat('pdf')
   @Post(':idOrRef/export')
   async exportDocument(
     @Param('idOrRef') idOrRef: string,

@@ -7,17 +7,17 @@ import { BadRequestException, CanActivate, Controller, Get, INestApplication, In
 import { NestFactory } from '@nestjs/core';
 import { Response } from 'express';
 import dataSource from '../../data-source';
-import { ExportRoute, ExportRouteFormat, recordExportRows } from '../security-events';
+import { ExportRoute, recordExportRows } from '../security-events';
 import { ListContextsService } from '../../common/list-context/list-contexts.service';
 import { useRequestPipeline } from '../../common/request-pipeline';
 
 // Exports in the audit log, over HTTP against the database, with the
 // production request pipeline (common/request-pipeline.ts): a route whose path
 // ends with `/export`, or a route marked `@ExportRoute()` (a generated report),
-// writes one `export` row (the person, the resource, the path, the format and
-// the query asked for, and the row count the handler reports) committed with the
-// request; an export that fails leaves no row, a refused one neither, and other
-// routes write nothing.
+// writes one `export` row (the person, the resource, the path and the query
+// asked for, then the format of the file sent, from its Content-Type, and the
+// row count the handler reports) committed with the request; an export that
+// fails leaves no row, a refused one neither, and other routes write nothing.
 //
 // A route that answers itself (`@Res()`, a download) sends its response before
 // TenantInterceptor commits, so its row becomes visible a moment after the
@@ -46,7 +46,6 @@ class ExportProbeController {
   }
 
   @ExportRoute()
-  @ExportRouteFormat('pdf')
   @Get(':id/report')
   report(@Res() res: Response) {
     res.setHeader('Content-Type', 'application/pdf');
@@ -153,20 +152,25 @@ async function main() {
     assert.equal(await call('GET', '/probe-items/list'), 200);
     assert.equal(await call('GET', '/probe-broken/export'), 400);
     assert.equal(await call('GET', '/probe-refused/export'), 403);
-    const row = (resource: string, path: string, format: string, query: Record<string, unknown>, rows?: number) => ({
+    const row = (resource: string, path: string, format: string | undefined, query: Record<string, unknown>, rows?: number) => ({
       table_name: 'export',
       action: 'export',
       record_id: null,
       user_id: userId,
       source: 'user',
       before_json: null,
-      after_json: { resource, path, format, query, ip: '127.0.0.1', user_agent: 'Export probe', ...(rows === undefined ? {} : { rows }) },
+      after_json: {
+        resource, path, query, ip: '127.0.0.1', user_agent: 'Export probe',
+        ...(format === undefined ? {} : { format }), ...(rows === undefined ? {} : { rows }),
+      },
     });
     // The CSV route answers itself (`@Res()`) and reports one row: the count is on its row, committed.
+    // It ignores `?format=XLSX`: the row says csv, the type of what it sent. A route that returns a
+    // value has no Content-Type when the handler finishes: no format.
     await expectExportRows(tenantId, [
       row('probe-items', '/probe-items/export', 'csv', { language: 'en', scope: 'data' }, 1),
-      row('probe-items', '/probe-items/export', 'xlsx', { ctx: contextId, format: 'XLSX' }, 1),
-      row('probe-items', '/probe-items/DOC-12/export', 'csv', {}),
+      row('probe-items', '/probe-items/export', 'csv', { ctx: contextId, format: 'XLSX' }, 1),
+      row('probe-items', '/probe-items/DOC-12/export', undefined, {}),
       row('probe-items/report', '/probe-items/INC-3/report', 'pdf', {}),
     ]);
   } finally {
