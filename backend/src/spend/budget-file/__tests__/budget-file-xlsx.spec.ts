@@ -1,5 +1,7 @@
 import * as assert from 'node:assert/strict';
-import { BadRequestException } from '@nestjs/common';
+import 'reflect-metadata';
+import { BadRequestException, Controller, Get } from '@nestjs/common';
+import { defer, lastValueFrom } from 'rxjs';
 import AdmZip = require('adm-zip');
 import { columnNumberToName } from '../../../common/xlsx/write';
 import { parseExportFormat, XLSX_CONTENT_TYPE } from '../../../common/xlsx';
@@ -7,7 +9,7 @@ import { writeCsv } from '../../../common/csv-sheet';
 import { budgetCsvRows, buildBudgetExport, exportListQuery, writeBudgetFile } from '../export-file';
 import { emptyMonths, StoredLine } from '../types';
 import { budgetFileBody } from '../send-export';
-import { reportedExportRows } from '../../../audit/security-events';
+import { ExportEventsInterceptor } from '../../../audit/export-events.interceptor';
 
 // The budget file in xlsx, without a database: the cells of `buildBudgetExport` written by the common
 // writer and read back from the sheet's XML (Excel export, lot 1, run B).
@@ -118,27 +120,65 @@ function testFormat() {
   console.log('  format: csv by default, xlsx in any case, anything else 400: OK');
 }
 
-function testRouteAnswer() {
+@Controller('spend-items')
+class BudgetFileProbe {
+  @Get('budget-file/export')
+  exportBudgetFile() {
+    return undefined;
+  }
+}
+
+async function testRouteAnswer() {
   const headers: Record<string, string> = {};
-  const req = {};
-  const res = { req, setHeader: (name: string, value: string) => { headers[name] = value; } } as any;
+  const queries: Array<{ sql: string; params?: unknown[] }> = [];
+  const manager = {
+    getRepository: () => ({ insert: async () => ({ identifiers: [{ id: 'row-1' }] }) }),
+    query: async (sql: string, params?: unknown[]) => { queries.push({ sql, params }); return []; },
+  };
+  const req: any = { tenant: { id: 'tenant-1' }, path: '/spend-items/budget-file/export', queryRunner: { manager, isReleased: false } };
+  const res = {
+    req,
+    setHeader: (name: string, value: string) => { headers[name] = value; },
+    getHeader: (name: string) => headers[Object.keys(headers).find((key) => key.toLowerCase() === name.toLowerCase()) ?? ''],
+  } as any;
+  req.res = res;
   const content = Buffer.from('xlsx');
-  const body = budgetFileBody(res, { filename: 'budget.xlsx', contentType: XLSX_CONTENT_TYPE, content, rows: 2, dataAccessLimited: true });
+  const context = {
+    getType: () => 'http',
+    getClass: () => BudgetFileProbe,
+    getHandler: () => BudgetFileProbe.prototype.exportBudgetFile,
+    switchToHttp: () => ({ getRequest: () => req, getResponse: () => res }),
+  } as any;
+  let body: unknown;
+  let queriesBeforeSend = -1;
+  const handler = {
+    handle: () => defer(async () => {
+      body = await budgetFileBody(res, { filename: 'budget.xlsx', contentType: XLSX_CONTENT_TYPE, content, rows: 2, dataAccessLimited: true });
+      queriesBeforeSend = queries.length;
+      return undefined;
+    }),
+  };
+  await lastValueFrom(new ExportEventsInterceptor().intercept(context, handler), { defaultValue: undefined });
   assert.equal(body, content);
   assert.equal(headers['Content-Type'], XLSX_CONTENT_TYPE);
   assert.match(headers['Content-Disposition'], /budget\.xlsx/);
   assert.equal(headers['X-Data-Access'], 'limited');
-  assert.equal(reportedExportRows(req), 2, 'the line count goes to the export row of the audit log');
-  console.log('  route answer: type, name, access header and the line count for the audit row: OK');
+  const update = queries.find((query) => query.sql.startsWith('UPDATE audit_log'));
+  assert.deepEqual(update?.params, ['{"format":"xlsx","rows":2}', 'row-1', 'tenant-1'], 'the format and line count go to the export row of the audit log');
+  assert.equal(queriesBeforeSend, queries.length, 'written before the body is sent, nothing after');
+  console.log('  route answer: type, name, access header, and the format and line count on the audit row before sending: OK');
 }
 
-function run() {
+async function run() {
   console.log('budget file xlsx');
   testWorkbook();
   testCsvBranch();
   testFormat();
-  testRouteAnswer();
+  await testRouteAnswer();
   console.log('budget-file-xlsx.spec: all assertions passed');
 }
 
-run();
+run().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -2,8 +2,8 @@ import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { Controller, Get, Post } from '@nestjs/common';
 import { BadRequestException } from '@nestjs/common';
-import { defer, lastValueFrom, of } from 'rxjs';
-import { ExportEventsInterceptor } from '../export-events.interceptor';
+import { defer, lastValueFrom, of, Subject } from 'rxjs';
+import { completeExport, ExportEventsInterceptor } from '../export-events.interceptor';
 import {
   AUDIT_EVENT_ACTIONS as SCREEN_ACTIONS,
   AUTH_EVENT_REASONS as SCREEN_REASONS,
@@ -22,8 +22,6 @@ import {
   ExportRoute,
   exportRoutePath,
   QUERY_AS_SENT,
-  recordExportRows,
-  reportedExportRows,
   handlerRoutePaths,
   isExportRoutePath,
   joinRoutePath,
@@ -41,10 +39,11 @@ import { fileSigns, scanRoutes } from './controller-routes';
 //   ExportEventsInterceptor, which writes its row in the request's transaction
 //   before the handler runs, and writes nothing for other routes; the other
 //   routes that send a file send a stored file (attachment, inline image, logo);
-// - the row says the query (bounded, `ctx` as its id), never the body; once the
-//   handler has finished, one UPDATE in a savepoint adds the format the response
-//   was sent in (its Content-Type) and the row count it reports (recordExportRows),
-//   in the request transaction read again at that moment;
+// - the row says the query (bounded, `ctx` as its id), never the body; one UPDATE
+//   in a savepoint adds the format the response is sent in (its Content-Type) and
+//   the row count: called by a handler that answers itself before it sends
+//   (completeExport), or run after a handler that returns a value, never after a
+//   response that has left; in the request transaction read again at that moment;
 // - the event writer never rejects, and writes nothing without a tenant.
 
 const request = (headers: Record<string, unknown> = {}, ip: unknown = '198.51.100.7') => ({ ip, headers });
@@ -307,6 +306,7 @@ function recordingRequest(extra: Record<string, unknown> = {}) {
     tenant: { id: 'tenant-1' }, user: { sub: 'user-9' }, path: '/chart-of-accounts/abc/accounts/export',
     ip: '198.51.100.20', headers: { 'user-agent': 'Probe browser' }, queryRunner: { manager, isReleased: false }, res, ...extra,
   };
+  (res as any).req = req;
   return { req, res, inserted, updates, order, manager, failUpdate };
 }
 
@@ -403,23 +403,26 @@ async function testRowCount() {
   const interceptor = new ExportEventsInterceptor();
   const context = (req: any) => fakeContext(ChartProbe, ChartProbe.prototype.exportAccounts, req);
 
-  // The handler reports its count: the interceptor writes it on its own row, after the handler, in the same transaction.
+  // A handler that answers itself completes its row before sending: format and count, in the same
+  // transaction, now; the interceptor adds nothing after it.
   const counted = recordingRequest();
   const handler = {
     handle: () => defer(async () => {
       counted.order.push('handler');
       counted.res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      recordExportRows(counted.req, 42);
+      await completeExport(counted.res, { rows: 42 });
+      await completeExport(counted.res, { rows: 7 });
+      counted.order.push('send');
       return undefined;
     }),
   };
   await lastValueFrom(interceptor.intercept(context(counted.req), handler), { defaultValue: undefined });
-  assert.deepEqual(counted.order, ['audit', 'handler', 'savepoint', 'rows', 'release'], 'one UPDATE in a savepoint');
-  assert.equal(counted.updates.length, 1);
+  assert.deepEqual(counted.order, ['audit', 'handler', 'savepoint', 'rows', 'release', 'send'], 'one UPDATE in a savepoint, before the response');
+  assert.equal(counted.updates.length, 1, 'once per request');
   assert.match(counted.updates[0].sql, /UPDATE audit_log SET after_json = coalesce\(after_json, '\{\}'::jsonb\) \|\| \$1::jsonb\s+WHERE id = \$2 AND tenant_id = \$3 AND table_name = 'export'/);
   assert.deepEqual(counted.updates[0].params, ['{"format":"csv","rows":42}', 'row-1', 'tenant-1'], 'format and count together, its own row, scoped by tenant');
 
-  // The route ignores `?format=xlsx` and sends a CSV: the row says csv.
+  // A handler that returns a value: completed after it. The route ignores `?format=xlsx` and sends a CSV: the row says csv.
   const asked = recordingRequest({ query: { format: 'xlsx' } });
   const csv = { handle: () => defer(async () => { asked.res.setHeader('Content-Type', 'text/csv; charset=utf-8'); return 'file'; }) };
   await lastValueFrom(interceptor.intercept(context(asked.req), csv));
@@ -431,19 +434,43 @@ async function testRowCount() {
   assert.deepEqual(silent.order, ['audit'], 'no Content-Type and no count: no update');
   assert.equal(silent.updates.length, 0);
 
-  // A count that is not a whole number of rows is not recorded.
-  const odd = recordingRequest();
-  for (const count of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) recordExportRows(odd.req, count);
-  assert.equal(reportedExportRows(odd.req), undefined);
-  recordExportRows(null, 3);
-  recordExportRows(odd.req, 0);
-  assert.equal(reportedExportRows(odd.req), 0, 'zero rows is a count');
+  // A response that has left (a handler that answered itself without completing): no update, and
+  // no step at all: the chain completes in the same tick as the handler.
+  const sent = recordingRequest();
+  sent.res.setHeader('Content-Type', 'application/pdf');
+  const handled = new Subject<unknown>();
+  let completed = false;
+  const subscription = interceptor.intercept(context(sent.req), { handle: () => handled }).subscribe({ complete: () => { completed = true; } });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(sent.order, ['audit']);
+  (sent.res as any).headersSent = true;
+  handled.complete();
+  assert.equal(completed, true, 'no asynchronous step after a response that has left');
+  subscription.unsubscribe();
+  assert.deepEqual(sent.order, ['audit'], 'no update after a response that has left');
 
-  // A refused export: the error goes on to TenantInterceptor, which rolls the row back; no count is written.
+  // A count that is not a whole number of rows is not recorded; zero rows is a count.
+  for (const count of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+    const odd = recordingRequest();
+    const reportOdd = { handle: () => defer(async () => { await completeExport(odd.res, { rows: count }); return undefined; }) };
+    await lastValueFrom(interceptor.intercept(context(odd.req), reportOdd), { defaultValue: undefined });
+    assert.deepEqual(odd.order, ['audit'], `no count for ${count}`);
+  }
+  const zero = recordingRequest();
+  const reportZero = { handle: () => defer(async () => { await completeExport(zero.res, { rows: 0 }); return undefined; }) };
+  await lastValueFrom(interceptor.intercept(context(zero.req), reportZero), { defaultValue: undefined });
+  assert.deepEqual(zero.updates.map((update) => update.params[0]), ['{"rows":0}'], 'zero rows is a count');
+  // Outside an export: nothing, no error.
+  await completeExport(null, { rows: 3 });
+  await completeExport({}, { rows: 3 });
+  const outside = recordingRequest();
+  await completeExport(outside.res, { rows: 3 });
+  assert.deepEqual(outside.order, [], 'a request without an export row');
+
+  // A refused export: the error goes on to TenantInterceptor, which rolls the row back; nothing after the handler.
   const refused = recordingRequest();
   const failing = {
     handle: () => defer(async () => {
-      recordExportRows(refused.req, 5);
       throw new BadRequestException('format must be csv or xlsx.');
     }),
   };
@@ -458,7 +485,6 @@ async function testUpdateUsesTheTransactionOfTheMoment() {
   const reporting = (probe: ReturnType<typeof recordingRequest>, after?: () => void) => ({
     handle: () => defer(async () => {
       probe.res.setHeader('Content-Type', 'text/csv');
-      recordExportRows(probe.req, 2);
       after?.();
       return 'file';
     }),

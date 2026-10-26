@@ -162,7 +162,7 @@ export class SpendItemsController {
       detail: query.detail,
       format,
     });
-    res.send(budgetFileBody(res, exported));
+    res.send(await budgetFileBody(res, exported));
   }
 
   @ReadOnlyRoute()

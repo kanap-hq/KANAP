@@ -128,7 +128,7 @@ export class BudgetLinesController {
       detail: query.detail,
       format,
     });
-    res.send(budgetFileBody(res, exported));
+    res.send(await budgetFileBody(res, exported));
   }
 
   // Which lines a delete would refuse (amounts in a frozen column), asked before the confirmation.

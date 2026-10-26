@@ -12,10 +12,10 @@ import type { AuditEntry } from './audit.service';
  *   hash or link, and no e-mail address (an attempt on an unknown address keeps its reason only).
  *   Kept AUTH_EVENT_RETENTION_DAYS days (cleanup/auth-event-retention.service.ts);
  * - exports: `table_name = 'export'`, `action = 'export'`, the person in `user_id`, and
- *   `after_json = { resource, path, query, ip, user_agent }`, plus, once the handler has finished,
- *   `format` (the type of the file sent, exportFormatOfContentType) when the response has a
- *   Content-Type, and `rows` when the handler reports how many rows it exported
- *   (`recordExportRows`) (export-events.interceptor.ts): every route whose path ends with
+ *   `after_json = { resource, path, query, ip, user_agent }`, plus `format` (the type of the file
+ *   sent, exportFormatOfContentType) when the response has a Content-Type, and `rows` when the
+ *   handler reports how many rows it exported (`completeExport`, before a `@Res()` handler
+ *   sends) (export-events.interceptor.ts): every route whose path ends with
  *   `/export`, and the other routes that send a file the server produces, marked
  *   `@ExportRoute()`. Never the request body.
  */
@@ -290,24 +290,4 @@ export function exportEventEntry(routePath: string, req: ExportRequest): AuditEn
     source: 'user',
     sourceRef: null,
   };
-}
-
-const EXPORT_ROWS = Symbol('kanap.exportRows');
-
-/**
- * Called by an export's handler once it knows how many rows it exported: ExportEventsInterceptor
- * writes the count on the request's export row (`after_json.rows`), in the request transaction,
- * after the handler. Rows are absent from the row of an export that does not call it.
- */
-export function recordExportRows(req: unknown, count: number): void {
-  if (!req || typeof req !== 'object') return;
-  if (!Number.isSafeInteger(count) || count < 0) return;
-  (req as { [EXPORT_ROWS]?: number })[EXPORT_ROWS] = count;
-}
-
-/** The count a handler reported with recordExportRows, if any. */
-export function reportedExportRows(req: unknown): number | undefined {
-  if (!req || typeof req !== 'object') return undefined;
-  const count = (req as { [EXPORT_ROWS]?: unknown })[EXPORT_ROWS];
-  return typeof count === 'number' ? count : undefined;
 }
