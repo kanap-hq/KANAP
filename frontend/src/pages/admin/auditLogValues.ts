@@ -81,6 +81,18 @@ const RECORD_ITEM_TYPES: Record<string, Parameters<typeof formatItemRef>[0]> = {
   technologies: 'technology',
 };
 
+/**
+ * Tables whose reference is a text column that already holds it (`APP-12`, `AST-31`).
+ * These tables have no `item_number`.
+ */
+const RECORD_TEXT_FIELDS: Record<string, string> = {
+  applications: 'sequential_id',
+  assets: 'asset_reference',
+  locations: 'location_reference',
+  connections: 'connection_reference',
+  interfaces: 'interface_reference',
+};
+
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -166,16 +178,26 @@ export function auditUserIds(fields: AuditFields): string[] {
   return Array.from(ids).sort();
 }
 
-/** The business reference of the audited record (T-4, PRJ-3…), when the table has one. */
+function storedTextRef(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  return text || null;
+}
+
+/** The business reference of the audited record (T-4, APP-12, AST-31…), when the payload has one. */
 export function auditRecordRef(row: AuditPayloadRow | null | undefined): string | null {
   if (!row) return null;
-  const type = RECORD_ITEM_TYPES[String(row.table_name || '')];
+  const table = String(row.table_name || '');
+  const type = RECORD_ITEM_TYPES[table];
+  const textField = RECORD_TEXT_FIELDS[table];
   for (const snapshot of [row.after_json, row.before_json]) {
     if (!isPlainObject(snapshot)) continue;
     const itemNumber = snapshot.item_number;
     if (type && (typeof itemNumber === 'number' || typeof itemNumber === 'string') && itemNumber !== '' && Number.isFinite(Number(itemNumber))) {
       return formatItemRef(type, Number(itemNumber));
     }
+    const ref = textField ? storedTextRef(snapshot[textField]) : null;
+    if (ref) return ref;
   }
   return null;
 }

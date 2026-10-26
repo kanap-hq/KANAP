@@ -201,6 +201,25 @@ describe('audit entry helpers', () => {
     expect(auditRecordRef({ table_name: 'suppliers', record_id: uuid, after_json: { name: 'Acme' } })).toBeNull();
   });
 
+  it('names an application and an asset by the reference stored on the payload', () => {
+    expect(auditRecordRef({ table_name: 'applications', record_id: uuid, after_json: { sequential_id: 'APP-12' } })).toBe('APP-12');
+    expect(auditRecordRef({ table_name: 'assets', record_id: uuid, before_json: { asset_reference: 'AST-31' } })).toBe('AST-31');
+    expect(auditRecordRef({ table_name: 'locations', record_id: uuid, after_json: { location_reference: 'LOC-4' } })).toBe('LOC-4');
+    expect(auditRecordRef({ table_name: 'connections', record_id: uuid, after_json: { connection_reference: 'CONN-2' } })).toBe('CONN-2');
+    expect(auditRecordRef({ table_name: 'interfaces', record_id: uuid, after_json: { interface_reference: 'INT-8' } })).toBe('INT-8');
+    expect(auditRecordRef({
+      table_name: 'applications',
+      before_json: { sequential_id: 'APP-1' },
+      after_json: { sequential_id: 'APP-12' },
+    })).toBe('APP-12');
+    expect(auditRecordRef({ table_name: 'applications', record_id: uuid, after_json: { sequential_id: '  ' } })).toBeNull();
+    expect(auditRecordRef({ table_name: 'assets', record_id: uuid, after_json: { name: 'db01' } })).toBeNull();
+    expect(auditRecordLabel({ table_name: 'applications', record_id: uuid, after_json: { sequential_id: 'APP-12' } }, t))
+      .toEqual({ text: 'APP-12' });
+    expect(auditRecordLabel({ table_name: 'assets', record_id: uuid, after_json: { asset_reference: 'AST-31' } }, t))
+      .toEqual({ text: 'AST-31' });
+  });
+
   it('shows an identifier label, with the id in the title, when the record has no business reference', () => {
     expect(auditRecordLabel({ table_name: 'suppliers', record_id: uuid, after_json: { name: 'Acme' } }, t))
       .toEqual({ text: 'Identifier', title: uuid });
