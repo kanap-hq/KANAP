@@ -550,6 +550,20 @@ function mutationPreviewDtosFromResult(result: unknown): AiMutationPreviewDto[] 
     : [];
 }
 
+function previewIndex(previews: AiMutationPreviewDto[] | undefined): Map<string, AiMutationPreviewDto> | null {
+  if (!previews) {
+    return null;
+  }
+  return new Map(previews.map((preview) => [preview.preview_id, preview]));
+}
+
+function shownPreview(
+  preview: AiMutationPreviewDto,
+  byId: Map<string, AiMutationPreviewDto> | null,
+): AiMutationPreviewDto {
+  return byId?.get(preview.preview_id) ?? preview;
+}
+
 type BulkTargetSet = {
   source: string;
   label: string | null;
@@ -2022,6 +2036,8 @@ export class AiChatOrchestratorService {
         if (approvalAction) {
           let previewResults: AiMutationPreviewDto[] = [];
           let followUpPreviews: AiMutationPreviewDto[] = [];
+          let modelPreviewResults: AiMutationPreviewDto[] = [];
+          let modelFollowUpPreviews: AiMutationPreviewDto[] = [];
           if (approvalAction.action === 'approve') {
             await this.approvals.approvePreviewsFromChat(
               { ...ctx, conversationId: convId! },
@@ -2040,8 +2056,13 @@ export class AiChatOrchestratorService {
               },
             );
             const execution = dispatched.output;
-            previewResults = execution.results;
-            followUpPreviews = execution.followUpPreviews;
+            const shownById = previewIndex(dispatched.previews);
+            // The model reads the redacted execution. The stream shows the
+            // previews taken before redaction, so the card keeps the user's label.
+            modelPreviewResults = execution.results;
+            modelFollowUpPreviews = execution.followUpPreviews;
+            previewResults = modelPreviewResults.map((preview) => shownPreview(preview, shownById));
+            followUpPreviews = modelFollowUpPreviews.map((preview) => shownPreview(preview, shownById));
           } else {
             await this.approvals.rejectPreviewsFromChat(
               { ...ctx, conversationId: convId! },
@@ -2051,6 +2072,7 @@ export class AiChatOrchestratorService {
               { ...ctx, conversationId: convId! },
               approvalAction.previewIds,
             );
+            modelPreviewResults = previewResults;
           }
 
           for (const previewResult of previewResults) streamEvents.push({
@@ -2144,7 +2166,7 @@ export class AiChatOrchestratorService {
               role: 'user',
               content: this.buildPostApprovalContinuationInstruction({
                 action: approvalAction.action,
-                previewResults,
+                previewResults: modelPreviewResults,
                 history: historyAfterApproval.map((msg) => ({ role: msg.role, content: msg.content })),
               }),
             });
@@ -2848,6 +2870,7 @@ export class AiChatOrchestratorService {
             let executionToolName = tc.name;
             let executionArgs: Record<string, unknown> = parsedArgs;
             let bulkAutoplan: { originalToolName: string; missingRefs: string[] } | null = null;
+            let userPreviews: AiMutationPreviewDto[] | null = null;
             if (
               requiresWritePreviewGuard
               && writePreviewToolNames.includes('prepare_mutation_plan')
@@ -2922,6 +2945,7 @@ export class AiChatOrchestratorService {
                   },
                 });
                 controlPlaneRunId = dispatched.run_id;
+                userPreviews = Array.isArray(dispatched.previews) ? dispatched.previews : null;
                 return dispatched.output;
               });
               if (bulkAutoplan && result && typeof result === 'object') {
@@ -2944,9 +2968,12 @@ export class AiChatOrchestratorService {
               });
               if (trace) yield trace;
             }
-            // The result is what the model reads and the user sees in the tool card: write its
-            // date-times in the user's zone, with an explicit offset, so neither reads UTC.
+            // `result` is what the model reads. Write its date-times in the user's
+            // zone, with an explicit offset, so the model does not quote UTC.
             result = formatToolResultDateTimes(result, timeZone);
+            const shownPreviews = userPreviews
+              ? formatToolResultDateTimes(userPreviews, timeZone) as AiMutationPreviewDto[]
+              : null;
             toolCallCountThisTurn++;
 
             yield {
@@ -2971,7 +2998,7 @@ export class AiChatOrchestratorService {
               };
             }
 
-            const mutationPreviews = mutationPreviewDtosFromResult(result);
+            const mutationPreviews = shownPreviews ?? mutationPreviewDtosFromResult(result);
             mutationPreviewCountThisTurn += mutationPreviews.length;
             const queryTargetSet = extractQueryBulkTargetSet(tc.name, parsedArgs, result);
             if (queryTargetSet) {

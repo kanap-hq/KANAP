@@ -16,6 +16,7 @@ function createOrchestrator(options?: {
   providerToolEvents?: any[];
   providerEventBatches?: any[][];
   toolResult?: any;
+  toolPreviews?: any[];
   toolResultsByName?: Record<string, any>;
   toolError?: string;
   providerContextWindow?: number | null;
@@ -284,6 +285,7 @@ function createOrchestrator(options?: {
           step_id: 'step-1',
           tool_execution_id: 'tool-1',
           output: options.toolResultsByName[input.capabilityName],
+          ...(options?.toolPreviews ? { previews: options.toolPreviews } : {}),
         };
       }
       return {
@@ -291,6 +293,7 @@ function createOrchestrator(options?: {
         step_id: 'step-1',
         tool_execution_id: 'tool-1',
         output: options?.toolResult ?? { items: [], total: 0 },
+        ...(options?.toolPreviews ? { previews: options.toolPreviews } : {}),
       };
     },
   };
@@ -845,6 +848,84 @@ async function testBatchPreviewToolResultEmitsEveryPreview() {
       && (event as any).context.injected.some((item: any) => item.kind === 'preview'),
   ) as any;
   assert.deepEqual(injectedPreviewContext.context.injected.map((item: any) => item.ref), ['T-1', 'T-2']);
+}
+
+async function testPreviewStreamKeepsTheRequestorEmailWhileTheModelSeesItRedacted() {
+  const redacted = {
+    preview_id: 'preview-1',
+    tool_name: 'create_task',
+    status: 'pending',
+    target: { entity_type: 'tasks', entity_id: null, ref: null, title: 'Install server' },
+    changes: { requestor: { from: null, to: '[REDACTED_EMAIL]' } },
+    requires_confirmation: true,
+    actions: ['approve', 'reject'],
+    summary: 'Create standalone task "Install server".',
+    error_message: null,
+    conversation_id: 'conv-1',
+    created_at: '2026-03-24T10:00:00.000Z',
+    expires_at: '2026-03-24T10:10:00.000Z',
+    approved_at: null,
+    rejected_at: null,
+    executed_at: null,
+  };
+  const shown = {
+    ...redacted,
+    changes: { requestor: { from: null, to: 'owner@example.com' } },
+  };
+  const { orchestrator, persistedMessages, recordedRequests } = createOrchestrator({
+    availableTools: [
+      {
+        name: 'create_task',
+        category: 'mutation',
+        description: 'Create a task.',
+        input_summary: {},
+        read_only: false,
+        surfaces: ['chat'],
+        write_preview: {
+          entity_type: 'tasks',
+          fields: ['title'],
+          reversible: false,
+          prompt_hint: 'For task creation, use create_task with a title.',
+        },
+      },
+    ],
+    providerEvents: [
+      { type: 'tool_call_start', id: 'tc-1', name: 'create_task' },
+      { type: 'tool_call_delta', id: 'tc-1', arguments: '{"title":"Install server"}' },
+      { type: 'tool_call_end', id: 'tc-1' },
+      { type: 'done', usage: { input_tokens: 10, output_tokens: 10 } },
+    ],
+    providerToolEvents: [
+      { type: 'text_delta', text: 'Preview ready.' },
+      { type: 'done', usage: { input_tokens: 20, output_tokens: 10 } },
+    ],
+    toolResult: redacted,
+    toolPreviews: [shown],
+  });
+
+  const events = await collectEvents(
+    orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: 'Create a task to install the server.',
+    }),
+  );
+
+  const preview = events.find((event) => event.type === 'preview') as any;
+  assert.equal(preview.changes.requestor.to, 'owner@example.com');
+  const toolResult = events.find((event) => event.type === 'tool_result') as any;
+  assert.equal(toolResult.result.changes.requestor.to, '[REDACTED_EMAIL]');
+  const toolMessage = persistedMessages.find((message) => message.role === 'tool');
+  assert.match(toolMessage.content, /\[REDACTED_EMAIL\]/);
+  assert.doesNotMatch(toolMessage.content, /owner@example.com/);
+  const modelToolMessage = recordedRequests[1].messages.find((message: any) => message.role === 'tool');
+  assert.match(modelToolMessage.content, /\[REDACTED_EMAIL\]/);
+  assert.doesNotMatch(modelToolMessage.content, /owner@example.com/);
 }
 
 async function testUnsafeWriteConfirmationWithoutPreviewIsRetriedAsToolCall() {
@@ -3090,6 +3171,7 @@ async function run() {
   await testPersistedDeepSeekReasoningContentIsReplayedOnSecondTurn();
   await testPersistedDeepSeekToolCallWithoutReasoningIsSkippedOnReplay();
   await testBatchPreviewToolResultEmitsEveryPreview();
+  await testPreviewStreamKeepsTheRequestorEmailWhileTheModelSeesItRedacted();
   await testUnsafeWriteConfirmationWithoutPreviewIsRetriedAsToolCall();
   await testRawPseudoToolCallTextIsRetriedAsRealToolCall();
   await testTaskMentionWriteKeepsTaskMutationTools();
