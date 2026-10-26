@@ -894,7 +894,7 @@ export default function ConnectionMapPage() {
                 sx={{ px: 2, pt: 1 }}
                 primary={params.group}
               />
-              {params.children}
+              <ul style={{ margin: 0, padding: 0 }}>{params.children}</ul>
             </li>
           )}
           value={nodeOptions.filter((opt) => rootNodeIds.includes(opt.id))}
@@ -918,7 +918,7 @@ export default function ConnectionMapPage() {
                 ))}
                 {overflow > 0 && (
                   <Chip
-                    label={`+${overflow} more`}
+                    label={t('pages.connectionMap.more', { count: overflow })}
                     size="small"
                     onClick={(e) => setServersPopoverAnchor(e.currentTarget)}
                     sx={{ cursor: 'pointer' }}
@@ -957,6 +957,7 @@ export default function ConnectionMapPage() {
                       <IconButton
                         edge="end"
                         size="small"
+                        aria-label={t('pages.connectionMap.removeServer', { name: opt.label })}
                         onClick={() => {
                           setRootNodeIds((prev) => prev.filter((id) => id !== opt.id));
                         }}
