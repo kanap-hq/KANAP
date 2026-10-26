@@ -4,9 +4,10 @@ import { CurrencyController } from '../currency.controller';
 
 /**
  * Saving the settings never waits for the fetch: it saves (currency rows in the
- * request transaction), queues the refresh to start after the response, and
- * answers the settings with the years queued. A reporting currency outside the
- * ISO list is refused before any read or write.
+ * request transaction), queues the refresh to start after the response and
+ * after the follow-up has read the pairs already stored, and answers the
+ * settings with the years queued. A reporting currency outside the ISO list is
+ * refused before any read or write.
  */
 
 type Settings = {
@@ -30,6 +31,8 @@ function harness(opts: { before: string; after: string }) {
   const ensured: string[][] = [];
   const queued: Array<{ years: number[]; opts: any }> = [];
   const years = [2019, 2024, 2025, 2026, 2027, 2028];
+  let releaseSnapshot: () => void = () => undefined;
+  const snapshotHold = new Promise<void>((resolve) => { releaseSnapshot = resolve; });
   const currency = {
     getSettings: async () => {
       order.push('read');
@@ -45,6 +48,7 @@ function harness(opts: { before: string; after: string }) {
     },
   };
   const fxIngestion = {
+    holdForRateSnapshot: () => snapshotHold,
     queueManualRefresh: async (_tenantId: string, calledYears: number[], callOpts: any) => {
       order.push('queue');
       queued.push({ years: calledYears, opts: callOpts });
@@ -64,7 +68,7 @@ function harness(opts: { before: string; after: string }) {
   const api = new CurrencyController(currency as any, fxIngestion as any, manualRates as any, { manager } as any);
   const res = new EventEmitter() as EventEmitter & { writableFinished?: boolean };
   const req = { tenant: { id: 'tenant-1' }, user: { sub: null }, queryRunner: { manager }, res };
-  return { api, req, res, order, ensured, queued, years };
+  return { api, req, res, order, ensured, queued, years, releaseSnapshot };
 }
 
 async function testUnchangedReportingCurrencyQueuesTheCurrentYear() {
@@ -80,7 +84,7 @@ async function testUnchangedReportingCurrencyQueuesTheCurrentYear() {
 }
 
 async function testChangedCurrencyQueuesEveryYearAfterTheResponse() {
-  const { api, req, res, order, ensured, queued, years } = harness({ before: 'EUR', after: 'CHF' });
+  const { api, req, res, order, ensured, queued, years, releaseSnapshot } = harness({ before: 'EUR', after: 'CHF' });
   const saved = await api.updateSettings({ reportingCurrency: 'chf' }, req);
   assert.equal(saved.reportingCurrency, 'CHF');
   assert.deepEqual(saved.refreshYears, years);
@@ -96,8 +100,11 @@ async function testChangedCurrencyQueuesEveryYearAfterTheResponse() {
   assert.equal(started, false, 'the run waits for the response (the commit)');
   res.emit('finish');
   await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(started, false, 'the run also waits until the follow-up has read the stored pairs');
+  releaseSnapshot();
+  await new Promise((resolve) => setImmediate(resolve));
   assert.equal(started, true);
-  console.log('ok - a new reporting currency queues every year in use, started once the save has committed');
+  console.log('ok - a new reporting currency queues every year in use, started once the save has committed and the pairs are counted');
 }
 
 async function testUnknownReportingCurrencyIsRefused() {
