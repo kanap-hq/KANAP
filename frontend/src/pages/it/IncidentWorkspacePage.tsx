@@ -13,7 +13,7 @@ import {
   type UpdateIncidentInput,
 } from '../../api/endpoints/incidents';
 import { useAuth } from '../../auth/AuthContext';
-import { PropertyRow, StatusDot, useKanapDialogs } from '../../components/design';
+import { StatusDot, useKanapDialogs } from '../../components/design';
 import EntityKnowledgePanel from '../../components/EntityKnowledgePanel';
 import type {
   IntegratedDocumentEditorHandle,
@@ -24,7 +24,7 @@ import { sendPatchBuffer, usePatchBuffer } from '../../hooks/patchBuffer';
 import { useIncidentItemNav } from '../../hooks/useModuleItemNav';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
-import { drawerFieldValueSx, drawerMenuItemSx } from '../../theme/formSx';
+import { drawerMenuItemSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { downloadBlob } from '../../utils/downloadBlob';
 import { formatItemRef } from '../../utils/item-ref';
@@ -132,6 +132,7 @@ export function IncidentWorkspacePage() {
   }));
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [createError, setCreateError] = React.useState<string | null>(null);
+  const [createTitleError, setCreateTitleError] = React.useState<string | null>(null);
   const [exportingPdf, setExportingPdf] = React.useState(false);
   // The incident review is an integrated document: its draft lives in the
   // editor, so every controlled transition has to drain it through this handle.
@@ -371,9 +372,15 @@ export function IncidentWorkspacePage() {
 
   const handleTitleSave = React.useCallback((next: string) => {
     const trimmed = next.trim();
-    if (!trimmed || !data || trimmed === data.title) return;
+    if (!trimmed) return;
+    if (isCreate) {
+      setCreateForm((previous) => ({ ...previous, title: trimmed }));
+      setCreateTitleError(null);
+      return;
+    }
+    if (!data || trimmed === data.title) return;
     void patchNow({ title: trimmed });
-  }, [data, patchNow]);
+  }, [data, isCreate, patchNow]);
 
   const handleConfidentiality = React.useCallback(async (confidential: boolean) => {
     if (!data || stale) return;
@@ -463,9 +470,11 @@ export function IncidentWorkspacePage() {
     const severity = createForm.severity;
     const detectedAt = createForm.detected_at;
     if (!title) {
-      setCreateError(t('workspace.incident.create.titleRequired'));
+      setCreateTitleError(t('workspace.incident.create.titleRequired'));
+      setCreateError(null);
       return;
     }
+    setCreateTitleError(null);
     if (!severity) {
       setCreateError(t('workspace.incident.create.severityRequired'));
       return;
@@ -713,8 +722,10 @@ export function IncidentWorkspacePage() {
         onCopyReference={!isCreate && reference ? () => { void navigator.clipboard?.writeText(reference); } : undefined}
         title={isCreate ? createForm.title : data?.title || ''}
         titleFallback={isCreate ? t('workspace.incident.newTitle') : t('workspace.incident.untitled')}
-        canEditTitle={editable}
+        canEditTitle={isCreate ? canEdit : editable}
         onTitleSave={handleTitleSave}
+        titleRequiredMessage={isCreate && canEdit ? t('workspace.incident.create.titleRequired') : undefined}
+        titleError={isCreate ? createTitleError : null}
         isCreate={isCreate}
         forceDrawerOpen={isCreate}
         onSaveShortcut={() => { void flushAll(); }}
@@ -734,21 +745,6 @@ export function IncidentWorkspacePage() {
       >
         {isCreate ? (
           <Box sx={{ maxWidth: 760, display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
-            {/* The TextField sizes to the value column: without `fullWidth` it kept the
-                browser's intrinsic ~160px input width, far too short for an incident title. */}
-            <PropertyRow label={t('workspace.incident.create.title')} required valueSx={{ maxWidth: 340 }}>
-              <TextField
-                value={createForm.title}
-                onChange={(event) => setCreateForm((previous) => ({ ...previous, title: event.target.value }))}
-                placeholder={t('workspace.incident.create.titlePlaceholder')}
-                required
-                fullWidth
-                size="small"
-                variant="standard"
-                sx={drawerFieldValueSx}
-                disabled={createSubmitting || !canEdit}
-              />
-            </PropertyRow>
             <Box>
               <Typography component="label" sx={incidentSectionLabelSx}>
                 {t('workspace.incident.create.description')}
