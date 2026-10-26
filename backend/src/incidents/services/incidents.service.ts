@@ -126,6 +126,20 @@ type IncidentWhere = {
   assetId?: string;
   applicationId?: string;
   viewer?: IncidentViewer;
+  /**
+   * False when the reader does not read the infrastructure, or applications: the search and the
+   * filters then never match the linked assets, or applications (`ServiceOpts`).
+   */
+  technologies?: boolean;
+  applications?: boolean;
+};
+
+/** The list fields that name or count another module's records, with the flag that reads it. */
+const LINKED_FIELD_READS: Record<string, 'technologies' | 'applications'> = {
+  linked_assets: 'technologies',
+  asset_count: 'technologies',
+  linked_applications: 'applications',
+  application_count: 'applications',
 };
 
 /**
@@ -162,6 +176,7 @@ export class IncidentsService extends IncidentsBaseService {
     const { page, limit, skip, sort, q, filters } = parsePagination(query, DEFAULT_SORT);
     const { where, params } = this.buildWhere({
       filters, q, tenantId, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
+      technologies: opts?.technologies, applications: opts?.applications,
     });
 
     const countRows: Array<{ count: number }> = await mg.query(`SELECT COUNT(*)::int AS count ${BASE_FROM} WHERE ${where}`, params);
@@ -188,6 +203,7 @@ export class IncidentsService extends IncidentsBaseService {
     const { sort, q, filters } = parsePagination(query, DEFAULT_SORT);
     const { where, params } = this.buildWhere({
       filters, q, tenantId, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
+      technologies: opts?.technologies, applications: opts?.applications,
     });
 
     const countRows: Array<{ count: number }> = await mg.query(`SELECT COUNT(*)::int AS count ${BASE_FROM} WHERE ${where}`, params);
@@ -216,6 +232,7 @@ export class IncidentsService extends IncidentsBaseService {
     const { sort, q, filters } = parsePagination(query, DEFAULT_SORT);
     const { where, params } = this.buildWhere({
       filters, q, tenantId, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
+      technologies: opts?.technologies, applications: opts?.applications,
     });
     return { where, params, orderBy: this.orderBy(sort, await textSortKey(mg)) };
   }
@@ -238,6 +255,7 @@ export class IncidentsService extends IncidentsBaseService {
     for (const field of fields) {
       const { where, params } = this.buildWhere({
         filters, q, tenantId, skipField: field, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
+        technologies: opts?.technologies, applications: opts?.applications,
       });
       const rows: Array<{ value: string | null }> = await mg.query(
         `SELECT DISTINCT ${FIELD_EXPRESSIONS[field]} AS value ${BASE_FROM}
@@ -265,6 +283,8 @@ export class IncidentsService extends IncidentsBaseService {
 
     for (const [field, model] of Object.entries(filters)) {
       if (field === input.skipField) continue;
+      // A filter on a module the reader does not read is ignored, as the column is empty for them.
+      if (LINKED_FIELD_READS[field] && input[LINKED_FIELD_READS[field]] === false) continue;
       const expression = FIELD_EXPRESSIONS[field];
       if (!expression || !model || typeof model !== 'object') continue;
 
@@ -322,7 +342,7 @@ export class IncidentsService extends IncidentsBaseService {
         i.title ILIKE $${idx}
         OR i.description ILIKE $${idx}
         OR ('INC-' || i.item_number::text) ILIKE $${idx}
-        OR EXISTS (
+        ${input.technologies === false ? '' : `OR EXISTS (
           SELECT 1 FROM incident_assets ia
           JOIN assets a ON a.id = ia.asset_id AND a.tenant_id = ia.tenant_id
           WHERE ia.incident_id = i.id AND ia.tenant_id = i.tenant_id
@@ -332,8 +352,8 @@ export class IncidentsService extends IncidentsBaseService {
               OR COALESCE(a.hostname, '') ILIKE $${idx}
               OR COALESCE(a.fqdn, '') ILIKE $${idx}
             )
-        )
-        OR EXISTS (
+        )`}
+        ${input.applications === false ? '' : `OR EXISTS (
           SELECT 1 FROM incident_applications iap
           JOIN applications app ON app.id = iap.application_id AND app.tenant_id = iap.tenant_id
           WHERE iap.incident_id = i.id AND iap.tenant_id = i.tenant_id
@@ -341,7 +361,7 @@ export class IncidentsService extends IncidentsBaseService {
               app.name ILIKE $${idx}
               OR COALESCE(app.sequential_id, '') ILIKE $${idx}
             )
-        )
+        )`}
       )`;
     }
 

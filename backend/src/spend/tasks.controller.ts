@@ -185,6 +185,7 @@ export class TasksController {
       tenantId: req?.tenant?.id,
       accessScope,
       viewer: incidentViewerFromRequest(req),
+      linkedReads: linkedReadsOfRequest(req),
     });
   }
 

@@ -120,7 +120,11 @@ function buildWhereConditions(
   tenantId: string,
   accessScope?: ParticipationAccessScope,
   viewer?: IncidentViewer | null,
+  linkedReads?: LinkedReads,
 ) {
+  // A search or a filter on the name of a linked record matches only in the modules the person
+  // reads: the list does not show the others, and a match would tell which task links them.
+  const readsModule = (module: LinkedModule) => !linkedReads || linkedReads[module];
   const params: any[] = [requireListTenant(tenantId)];
   const tenantParamRef = '$1';
   // Every condition below is appended as ` AND <atom>` or ` AND (<...>)`, so none widens this one.
@@ -341,13 +345,15 @@ function buildWhereConditions(
 
   if (!shouldSkip('related_object_name') && filters.related_object_name?.filter) {
     params.push(`%${filters.related_object_name.filter}%`);
-    whereConditions += ` AND (
-      (t.related_object_type = 'spend_item' AND si.product_name ILIKE $${params.length}) OR
-      (t.related_object_type = 'contract' AND c.name ILIKE $${params.length}) OR
-      (t.related_object_type = 'project' AND pp.name ILIKE $${params.length}) OR
-      (t.related_object_type = 'incident' AND ${incidentRelatedLabelSql('inc')} ILIKE $${params.length}) OR
-      (${TASK_HIDDEN_LINE_REFERENCE_SQL}) ILIKE $${params.length}
-    )`;
+    const p = `$${params.length}`;
+    const clauses = [
+      readsModule('budget') && `(t.related_object_type = 'spend_item' AND si.product_name ILIKE ${p})`,
+      readsModule('contracts') && `(t.related_object_type = 'contract' AND c.name ILIKE ${p})`,
+      readsModule('projects') && `(t.related_object_type = 'project' AND pp.name ILIKE ${p})`,
+      readsModule('incidents') && `(t.related_object_type = 'incident' AND ${incidentRelatedLabelSql('inc')} ILIKE ${p})`,
+      readsModule('budget') && `(${TASK_HIDDEN_LINE_REFERENCE_SQL}) ILIKE ${p}`,
+    ].filter(Boolean);
+    whereConditions += clauses.length > 0 ? ` AND (\n      ${clauses.join(' OR\n      ')}\n    )` : ' AND 1=0';
   }
 
   if (!shouldSkip('task_type_name') && filters.task_type_name) {
@@ -504,7 +510,7 @@ function buildWhereConditions(
     }
   }
 
-  if (!shouldSkip('project_name') && filters.project_name?.filter) {
+  if (!shouldSkip('project_name') && filters.project_name?.filter && readsModule('projects')) {
     params.push(`%${filters.project_name.filter}%`);
     whereConditions += ` AND pp.name ILIKE $${params.length}`;
   }
@@ -523,11 +529,11 @@ function buildWhereConditions(
     }
   }
 
-  if (!shouldSkip('application_name') && filters.application_name) {
+  if (!shouldSkip('application_name') && filters.application_name && readsModule('applications')) {
     applyRelationNameFilter(filters.application_name, 'task_applications', 'application_id', 'applications', 'name');
   }
 
-  if (!shouldSkip('asset_name') && filters.asset_name) {
+  if (!shouldSkip('asset_name') && filters.asset_name && readsModule('assets')) {
     applyRelationNameFilter(filters.asset_name, 'task_assets', 'asset_id', 'assets', 'name');
   }
 
@@ -545,6 +551,13 @@ function buildWhereConditions(
     whereConditions += ` AND t.description ILIKE $${params.length}`;
   }
 
+  // The quick search on the name of the object a task belongs to, in the modules the person reads.
+  const linkedNameSearch = (p: string) => [
+    readsModule('budget') && `si.product_name ILIKE ${p} OR`,
+    readsModule('contracts') && `c.name ILIKE ${p} OR`,
+    readsModule('projects') && `pp.name ILIKE ${p} OR`,
+  ].filter(Boolean).join(' ');
+
   // Apply quick search across multiple fields
   if (q) {
     // Check if query matches item ref pattern (T-123 or plain number)
@@ -556,9 +569,7 @@ function buildWhereConditions(
         t.item_number = $${params.length - 1} OR
         t.title ILIKE $${params.length} OR
         t.description ILIKE $${params.length} OR
-        si.product_name ILIKE $${params.length} OR
-        c.name ILIKE $${params.length} OR
-        pp.name ILIKE $${params.length} OR
+        ${linkedNameSearch(`$${params.length}`)}
         u.first_name ILIKE $${params.length} OR
         u.last_name ILIKE $${params.length} OR
         u.email ILIKE $${params.length} OR
@@ -571,9 +582,7 @@ function buildWhereConditions(
       whereConditions += ` AND (
         t.title ILIKE $${params.length} OR
         t.description ILIKE $${params.length} OR
-        si.product_name ILIKE $${params.length} OR
-        c.name ILIKE $${params.length} OR
-        pp.name ILIKE $${params.length} OR
+        ${linkedNameSearch(`$${params.length}`)}
         u.first_name ILIKE $${params.length} OR
         u.last_name ILIKE $${params.length} OR
         u.email ILIKE $${params.length} OR
@@ -866,7 +875,7 @@ export class TasksService {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const { page, limit, skip, sort, q, filters } = parsePagination(query);
-    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer);
+    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer, opts?.linkedReads);
 
     // Count total
     const countQuery = `
@@ -986,11 +995,11 @@ export class TasksService {
     return { items, total, page, limit };
   }
 
-  async listIds(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<{ ids: string[]; refs: string[]; total: number }> {
+  async listIds(query: any, opts: TaskReadOptions): Promise<{ ids: string[]; refs: string[]; total: number }> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const { sort, q, filters } = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
-    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer);
+    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer, opts?.linkedReads);
 
     const sortField = await taskSortKey(manager, sort.field);
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
@@ -1077,7 +1086,7 @@ export class TasksService {
     const results: Record<string, Array<string | null>> = {};
 
     for (const field of fields) {
-      const { whereConditions, params } = buildWhereConditions(query, filters, q, field, tenantId, opts?.accessScope, opts?.viewer);
+      const { whereConditions, params } = buildWhereConditions(query, filters, q, field, tenantId, opts?.accessScope, opts?.viewer, opts?.linkedReads);
       if (field === 'application_name' || field === 'asset_name') {
         const relation = field === 'application_name'
           ? { table: 'task_applications', column: 'application_id', target: 'applications' }
