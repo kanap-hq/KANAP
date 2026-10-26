@@ -262,6 +262,17 @@ describe('StatusLifecycleField', () => {
       expect(onDisabledAtChange).toHaveBeenCalledTimes(1);
     });
 
+    it('shows the invalid date message over a hint given by the caller', () => {
+      renderField({ status: STATUS_ENABLED, disabledAtHelperText: 'Custom hint' });
+      const input = screen.getByPlaceholderText(placeholder()) as HTMLInputElement;
+      const message = i18n.t('common:labels.dateInvalid');
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: '3206' } });
+      fireEvent.blur(input);
+      expect(screen.getByText(message)).toBeInTheDocument();
+      expect(screen.queryByText('Custom hint')).not.toBeInTheDocument();
+    });
+
     it('clears an end of validity emptied by hand on blur, and sends nothing when there was none', () => {
       const first = renderField({ status: STATUS_DISABLED, disabledAt: '2026-06-30T21:59:00.000Z' });
       const input = screen.getByPlaceholderText(placeholder());

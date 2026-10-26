@@ -219,8 +219,12 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     onStatusChange(deriveStatusFromDisabledAt(iso));
   };
 
-  // The caller's error and helper text win; otherwise an invalid blurred text shows its message.
+  // The caller's error and its text win; otherwise an invalid blurred text shows its message, over
+  // the caller's hint (budget lines and contracts pass one).
   const ownError = invalid && !focused;
+  const shownHelperText = disabledAtError && disabledAtHelperText
+    ? disabledAtHelperText
+    : ownError ? t('labels.dateInvalid') : disabledAtHelperText ?? t('lifecycleField.endOfValidityHint');
 
   return (
     <Stack spacing={1.5} alignItems="flex-start">
@@ -250,7 +254,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
             name={disabledAtName}
             inputRef={inputRef}
             error={disabledAtError || ownError}
-            helperText={disabledAtHelperText ?? (ownError ? t('labels.dateInvalid') : t('lifecycleField.endOfValidityHint'))}
+            helperText={shownHelperText}
             inputProps={{
               inputMode: 'numeric',
               onMouseDown: () => { mouseDownRef.current = true; },
