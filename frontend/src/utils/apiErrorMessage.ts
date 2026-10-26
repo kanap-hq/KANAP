@@ -129,8 +129,12 @@ export function isDataAccessRefusal(error: unknown): boolean {
 export function getApiErrorMessage(error: unknown, t: TFunction, fallback: string): string {
   const apiError = error as ApiErrorLike | null | undefined;
   const payload = apiError?.response?.data;
-  const message = stringifyErrorValue(payload?.message) || stringifyErrorValue(apiError?.message);
+  const payloadMessage = stringifyErrorValue(payload?.message);
   const status = apiError?.response?.status;
+  // Axios names every failure itself ("Network Error", "Request failed with status code 502").
+  // With no answer, or a 5xx, that sentence is not a message from the server.
+  const clientOnly = apiError?.response == null || (typeof status === 'number' && status >= 500);
+  const message = payloadMessage || (clientOnly ? '' : stringifyErrorValue(apiError?.message));
 
   const code = getApiErrorCode(apiError);
 
@@ -150,6 +154,12 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
     if (typeof translated === 'string' && translated.trim()) {
       return translated;
     }
+  }
+
+  // No answer, or a 5xx with no message and no code of its own: the screen's fallback.
+  // A coded 5xx (`DATA_ACCESS_UNAVAILABLE`, `MARKDOWN_UNAVAILABLE`) still says why, below.
+  if (clientOnly && !payloadMessage && !answerCode) {
+    return fallback;
   }
 
   if (code) {
