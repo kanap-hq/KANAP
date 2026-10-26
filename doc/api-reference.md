@@ -265,10 +265,11 @@ Public config: `GET /config/public` returns `features.sampleData` (`true` in mul
 
 ## Companies
 - GET `/companies?year=YYYY&status=enabled|disabled&page=1&limit=50&sort=name:ASC`
+  - `year` is optional. When present it is a four-digit year from 1900 to 2999. Any other value is a 400 (`Year must be a four-digit year from 1900 to 2999.`). `/companies/ids`, `/companies/totals`, `/companies/export` and `/companies/import` use the same rule. Totals, export and import take the current year when `year` is omitted.
   - Response item fields include (in addition to company fields):
-    - `headcount_year: number` (0 if missing)
-    - `it_users_year: number` (0 if missing)
-    - `turnover_year: number` (0 if missing)
+    - `headcount_year: number | null` (null when missing)
+    - `it_users_year: number | null` (null when missing)
+    - `turnover_year: number | null` (null when missing)
     - `metrics_frozen: boolean`
     - `metrics_frozen` reflects the `freeze-states` companies scope for that year
 - GET `/companies/totals?year=YYYY` uses the same filters as the list. `headcount`, `it_users` and `turnover` are null when no company has that figure for the year. Entered zeros still total zero. `headcount` and `it_users` otherwise sum every company. `turnover` sums the turnovers converted into the reporting currency (`turnover_currency`) at the year's rates (the rate set the year is frozen at, else the live rates). A currency without a rate is left out of `turnover` and named in `turnover_fx_missing: [{ currency, year, companies }]`, where `companies` is how many companies of that currency had a turnover. Each row of the list stays in the company's own currency.

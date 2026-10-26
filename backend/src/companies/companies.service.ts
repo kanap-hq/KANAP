@@ -4,6 +4,7 @@ import { Brackets, EntityManager, In, Repository, SelectQueryBuilder } from 'typ
 import { Company } from './company.entity';
 import { CompanyMetric } from './company-metric.entity';
 import { companyListMetric } from './company-list-metrics';
+import { companyYearPeriod, parseCompanyYear } from './company-year';
 import { Decimal } from '../common/decimal';
 import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { ChartOfAccounts } from '../accounts/chart-of-accounts.entity';
@@ -90,6 +91,7 @@ export class CompaniesService {
   }
 
   async list(query: any, opts?: { manager?: EntityManager; exportAll?: boolean }) {
+    const year = parseCompanyYear(query?.year);
     const repo = this.getRepo(opts?.manager);
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
       ? parseExportPagination(query)
@@ -100,7 +102,6 @@ export class CompaniesService {
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const year = query?.year ? Number(query.year) : undefined;
 
     const filterTargets: Record<string, CompanyFilterTarget> = {
       id: { expression: 'c.id', dataType: 'string' },
@@ -207,12 +208,7 @@ export class CompaniesService {
     };
 
     const qbBase = repo.createQueryBuilder('c');
-    const period = year
-      ? {
-          start: new Date(`${year}-01-01`),
-          end: new Date(`${year}-12-31T23:59:59.999Z`),
-        }
-      : undefined;
+    const period = year ? companyYearPeriod(year) : undefined;
     if (effectiveStatus) {
       applyStatusFilter(qbBase, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
@@ -302,6 +298,7 @@ export class CompaniesService {
   }
 
   async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; total: number }> {
+    const year = parseCompanyYear(query?.year);
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
     const { sort, status, q, filters } = parsed;
@@ -311,7 +308,6 @@ export class CompaniesService {
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const year = query?.year ? Number(query.year) : undefined;
 
     const filterTargets: Record<string, CompanyFilterTarget> = {
       id: { expression: 'c.id', dataType: 'string' },
@@ -418,12 +414,7 @@ export class CompaniesService {
     };
 
     const qb = repo.createQueryBuilder('c').select('c.id', 'id');
-    const period = year
-      ? {
-          start: new Date(`${year}-01-01`),
-          end: new Date(`${year}-12-31T23:59:59.999Z`),
-        }
-      : undefined;
+    const period = year ? companyYearPeriod(year) : undefined;
     if (effectiveStatus) {
       applyStatusFilter(qb, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
@@ -519,9 +510,10 @@ export class CompaniesService {
     turnover_fx_missing: Array<{ currency: string; year: number; companies: number }>;
     year: number;
   }> {
-    const repo = this.getRepo(opts?.manager);
+    const year = this.normalizeYear(parseCompanyYear(query?.year));
     const tenantId = opts?.tenantId;
     if (!tenantId) throw new BadRequestException('A tenant is required');
+    const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: 10000 });
     const { status, q, filters } = parsed;
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
@@ -530,8 +522,6 @@ export class CompaniesService {
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const inputYear = query?.year ? Number(query.year) : undefined;
-    const year = this.normalizeYear(inputYear);
 
     // Reuse the same filter targets used by list/listIds so filters/search match the grid
     const filterTargets: Record<string, CompanyFilterTarget> = {
@@ -623,10 +613,7 @@ export class CompaniesService {
       .groupBy("NULLIF(UPPER(TRIM(c.base_currency)), '')");
 
     // Apply lifecycle status for the year window
-    const period = {
-      start: new Date(`${year}-01-01`),
-      end: new Date(`${year}-12-31T23:59:59.999Z`),
-    };
+    const period = companyYearPeriod(year);
     if (effectiveStatus) {
       applyStatusFilter(qb, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
