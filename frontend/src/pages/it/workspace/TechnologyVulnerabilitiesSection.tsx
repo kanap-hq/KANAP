@@ -97,6 +97,8 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
   const data = query.data;
   const searching = Boolean(data?.collecting) || (data?.products ?? []).some((product) => product.status === 'pending');
   const versions = data?.versions ?? [];
+  // A product whose last collection failed, and no version to show: the empty line would say nothing is known.
+  const searchFailed = !searching && versions.length === 0 && (data?.products ?? []).some((product) => product.status === 'failed');
   // Only the versions in use get a line; the others are named once, under the table.
   const installed = versions.filter((row) => row.installed);
   const notInstalled = versions.filter((row) => !row.installed);
@@ -211,8 +213,14 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
           )}
         </Typography>
       )}
-      {searching && <RelationsEmpty>{t('pages.vulnerabilities.section.searching')}</RelationsEmpty>}
-      {data && versions.length === 0 && !searching && <RelationsEmpty>{t('pages.vulnerabilities.section.empty')}</RelationsEmpty>}
+      {searching && <RelationsEmpty><span role="status">{t('pages.vulnerabilities.section.searching')}</span></RelationsEmpty>}
+      {data && versions.length === 0 && !searching && (
+        <RelationsEmpty>
+          {searchFailed
+            ? <span role="status" data-testid="technology-vulnerabilities-failed">{t('pages.vulnerabilities.section.searchFailed')}</span>
+            : t('pages.vulnerabilities.section.empty')}
+        </RelationsEmpty>
+      )}
       {query.isError && <RelationsEmpty>{t('pages.vulnerabilities.section.loadFailed')}</RelationsEmpty>}
       {versions.length > 0 && (
         <>

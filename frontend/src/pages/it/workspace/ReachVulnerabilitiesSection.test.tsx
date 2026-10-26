@@ -330,10 +330,24 @@ describe('ReachVulnerabilitiesSection', () => {
     expect(screen.queryByTestId('reach-vulnerabilities-pending')).toBeNull();
   });
 
+  it('says the search could not be completed, and keeps searching while it is still pending', () => {
+    const { unmount } = renderSection({ data: { rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, search_failed: true } });
+    expect(screen.getByTestId('reach-vulnerabilities-failed').textContent).toBe('The search for vulnerabilities could not be completed.');
+    expect(screen.queryByText('No vulnerability to review on this asset.')).toBeNull();
+    expect(screen.queryByTestId('reach-vulnerabilities-pending')).toBeNull();
+    unmount();
+
+    renderSection({ data: { rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, pending: true, search_failed: true } });
+    expect(screen.getByTestId('reach-vulnerabilities-pending').textContent).toBe('Searching for vulnerabilities…');
+    expect(screen.queryByTestId('reach-vulnerabilities-failed')).toBeNull();
+  });
+
   it('refetches only while the answer is pending', () => {
     expect(reachVulnerabilitiesRefetchMs(undefined)).toBe(false);
     expect(reachVulnerabilitiesRefetchMs({ rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 } })).toBe(false);
     expect(reachVulnerabilitiesRefetchMs({ rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, pending: false })).toBe(false);
+    expect(reachVulnerabilitiesRefetchMs({ rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, search_failed: true })).toBe(false);
+    expect(reachVulnerabilitiesRefetchMs({ rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, pending: true, search_failed: true })).toBe(REACH_VULNERABILITIES_POLL_MS);
     expect(reachVulnerabilitiesRefetchMs({ rows: [], totals: { open: 0, severe: 0, exploited_severe: 0 }, pending: true })).toBe(REACH_VULNERABILITIES_POLL_MS);
   });
 });

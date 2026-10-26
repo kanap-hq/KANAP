@@ -1427,8 +1427,9 @@ function AssetWorkspaceRoute() {
   const relationCounts = assetRelationsQuery.data?.counts;
   // One query for the Vulnerabilities section and the severe badge. Its key sits under the asset's
   // technologies: every change of a technology link (`invalidateTechnologyLinks`), on this asset or on
-  // the host or cluster that carries technologies to it, reads it again. While a match is still
-  // queued, it reads again every second, and stops once the answer is no longer pending.
+  // the host or cluster that carries technologies to it, reads it again. While the search is still
+  // pending (a match, or the first collection of a linked product), it reads again every second,
+  // and stops once the answer is no longer pending.
   const { config: featuresConfig } = useFeatures();
   const vulnerabilityFeed = featuresConfig.features.vulnerabilityFeed === true;
   const assetVulnerabilitiesKey = React.useMemo(() => ['asset-technologies', id, 'vulnerabilities'] as const, [id]);

@@ -550,6 +550,7 @@
         "title": "Vulnerabilities",
         "empty": "No known vulnerability concerns this technology.",
         "searching": "Searching for vulnerabilities…",
+        "searchFailed": "The search for vulnerabilities could not be completed.",
         "loadFailed": "The vulnerabilities could not be loaded.",
         "rematch": "Refresh",
         "rematched": "Matched again: {{added}} new, {{removed}} removed.",

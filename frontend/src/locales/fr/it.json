@@ -550,6 +550,7 @@
         "title": "Vulnérabilités",
         "empty": "Aucune vulnérabilité connue ne concerne cette technologie.",
         "searching": "Recherche des vulnérabilités en cours…",
+        "searchFailed": "La recherche des vulnérabilités n'a pas pu aboutir.",
         "loadFailed": "Les vulnérabilités n'ont pas pu être chargées.",
         "rematch": "Actualiser",
         "rematched": "Rapprochement refait : {{added}} nouvelles, {{removed}} retirées.",

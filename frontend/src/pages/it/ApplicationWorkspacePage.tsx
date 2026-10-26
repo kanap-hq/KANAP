@@ -1490,8 +1490,9 @@ export default function ApplicationWorkspacePage() {
     enabled: !isCreate && !!app?.id,
   });
   // One read for the Operations section and the badge of the metadata bar. Technology link writes
-  // and CVE state changes invalidate every `vulnerabilities` query. While a match is still queued,
-  // it reads again every second, and stops once the answer is no longer pending.
+  // and CVE state changes invalidate every `vulnerabilities` query. While the search is still
+  // pending (a match, or the first collection of a linked product), it reads again every second,
+  // and stops once the answer is no longer pending.
   const vulnerabilitiesQuery = useQuery({
     queryKey: ['vulnerabilities', 'application', app?.id],
     queryFn: async () => (await api.get<ReachVulnerabilities>(`/applications/${app!.id}/vulnerabilities`)).data,

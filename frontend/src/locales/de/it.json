@@ -550,6 +550,7 @@
         "title": "Schwachstellen",
         "empty": "Keine bekannte Schwachstelle betrifft diese Technologie.",
         "searching": "Suche nach Schwachstellen läuft…",
+        "searchFailed": "Die Suche nach Schwachstellen konnte nicht abgeschlossen werden.",
         "loadFailed": "Die Schwachstellen konnten nicht geladen werden.",
         "rematch": "Aktualisieren",
         "rematched": "Erneut abgeglichen: {{added}} neu, {{removed}} entfernt.",
