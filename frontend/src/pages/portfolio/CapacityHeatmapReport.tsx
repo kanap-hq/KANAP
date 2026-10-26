@@ -415,12 +415,16 @@ export default function CapacityHeatmapReport() {
             }}
             getOptionLabel={(option) => option.name}
             isOptionEqualToValue={(option, value) => option.id === value.id}
-            renderOption={(props, option, { selected }) => (
-              <li {...props}>
-                <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
-                <ListItemText primary={option.name} primaryTypographyProps={{ fontSize: 13 }} />
-              </li>
-            )}
+            renderOption={(props, option, { selected }) => {
+              // React wants the key passed on its own, not spread with the other props.
+              const { key, ...optionProps } = props;
+              return (
+                <li key={key} {...optionProps}>
+                  <Checkbox size="small" checked={selected} sx={{ mr: 1 }} />
+                  <ListItemText primary={option.name} primaryTypographyProps={{ fontSize: 13 }} />
+                </li>
+              );
+            }}
             renderTags={() => []}
             renderInput={(params) => {
               const count = selectedTeamIds.length;
