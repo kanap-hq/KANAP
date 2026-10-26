@@ -335,6 +335,7 @@
     "columnY": "{{column}}, Y",
     "topIncreases": "Top increases",
     "columnYvsYminus1": "{{column}}, Y vs Y-1",
+    "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "No increases",
     "myBudget": {
       "title": "My budget",
