@@ -3,6 +3,7 @@ import api from '../../api';
 import { withListContext } from '../../lib/listContext';
 import { statusScopeParams } from '../../utils/statusScopeParams';
 import type { AmountReading, DateReading, ScreenLanguage } from '../csv/readings';
+import type { ExportFormat } from '../csv/exportFormat';
 
 // The reading helpers are shared with every other CSV import; they live in
 // `components/csv/readings.ts` and are re-exported here for this dialog.
@@ -29,6 +30,7 @@ export type BudgetFileExportScope = BudgetFileScope | 'all';
 
 /** The name of an exported file, from either list. */
 export const BUDGET_FILE_NAME = 'budget.csv';
+export const BUDGET_XLSX_FILE_NAME = 'budget.xlsx';
 
 /** The list queries a load may change: a file may hold lines of both natures. */
 export const BUDGET_LIST_QUERY_KEYS = ['budget-lines-summary', 'spend-items-summary', 'capex-items-summary'] as const;
@@ -250,6 +252,7 @@ export type ExportOptions = {
   columns: string[];
   detail: 'yearly' | 'months';
   all: boolean;
+  format?: ExportFormat;
 };
 
 /**
@@ -263,6 +266,7 @@ export function exportParams(list: BudgetListState | null, options: ExportOption
     columns: options.columns.join(','),
     detail: options.detail,
   };
+  if (options.format) params.format = options.format;
   if (list?.sort) params.sort = list.sort;
   if (options.all) {
     params.all = 'true';
