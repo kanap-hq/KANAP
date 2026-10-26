@@ -363,8 +363,28 @@ describe('getApiErrorMessage', () => {
     }
   });
 
-  it('keeps the server message without a code, then the fallback', () => {
-    expect(getApiErrorMessage({ response: { status: 500, data: { message: 'Server said' } } }, t, 'fallback')).toBe('Server said');
+  it('keeps a server message, and uses the screen fallback when the server sends none', () => {
+    const fallback = 'The import failed. Try again.';
+    expect(getApiErrorMessage({ response: { status: 500, data: { message: 'Server said' } } }, t, fallback)).toBe('Server said');
+    // A 500 that also carries the HTTP client's own sentence still keeps the server's message.
+    expect(getApiErrorMessage(
+      { message: 'Request failed with status code 500', code: 'ERR_BAD_RESPONSE', response: { status: 500, data: { message: 'Server said' } } },
+      t,
+      fallback,
+    )).toBe('Server said');
+    // No response: the API is unreachable.
+    expect(getApiErrorMessage({ message: 'Network Error', code: 'ERR_NETWORK' }, t, fallback)).toBe(fallback);
+    // A 502 with no body, and a gateway page that is not a message.
+    expect(getApiErrorMessage(
+      { message: 'Request failed with status code 502', code: 'ERR_BAD_RESPONSE', response: { status: 502, data: '' } },
+      t,
+      fallback,
+    )).toBe(fallback);
+    expect(getApiErrorMessage(
+      { message: 'Request failed with status code 502', code: 'ERR_BAD_RESPONSE', response: { status: 502, data: '<html><title>502 Bad Gateway</title></html>' } },
+      t,
+      fallback,
+    )).toBe(fallback);
     expect(getApiErrorMessage({}, t, 'fallback')).toBe('fallback');
   });
 });
