@@ -450,7 +450,7 @@ La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por cor
 | `VULNERABILITY_FEED_ENABLED` | Activa las vulnerabilidades. | `false` en local |
 | `NVD_API_BASE_URL` | Dirección de una réplica de la API CVE 2.0 de la NVD, cuando el servidor no puede alcanzar la NVD. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
 | `NVD_API_KEY` | Clave opcional que eleva el ritmo de 5 a 50 solicitudes por 30 segundos, de modo que la primera lectura termina antes. Solicítela gratis en el [sitio de la NVD](https://nvd.nist.gov/developers/request-an-api-key). | *sin definir* |
-| `KEV_FEED_URL` | Dirección de una réplica del catálogo de la CISA de vulnerabilidades explotadas conocidas. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
+| `KEV_FEED_URL` | Dirección de una réplica del catálogo de la CISA de vulnerabilidades explotadas conocidas. Por defecto es la réplica de la CISA en GitHub, porque `www.cisa.gov` rechaza las direcciones de centros de datos. | `https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json` |
 | `EPSS_FEED_URL` | Dirección de una réplica de las puntuaciones EPSS del día. EPSS se describe en [FIRST](https://www.first.org/epss). | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
 | `EUVD_BASE_URL` | Dirección de una réplica de la base europea de vulnerabilidades de la ENISA (catálogo europeo y correspondencia EUVD). | `https://euvdservices.enisa.europa.eu` |
 | `CVE_LIST_FEED_ENABLED` | Desactiva solo la lista CVE.org (`false`), mientras las demás fuentes siguen. | El valor de `VULNERABILITY_FEED_ENABLED` |
@@ -460,11 +460,11 @@ La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por cor
 
 Notas:
 
-- La API necesita acceso HTTPS saliente, puerto 443, a `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` y `euvdservices.enisa.europa.eu`, o a sus réplicas (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
+- La API necesita acceso HTTPS saliente, puerto 443, a `services.nvd.nist.gov`, `raw.githubusercontent.com`, `epss.empiricalsecurity.com` y `euvdservices.enisa.europa.eu`, o a sus réplicas (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
 - Sin réplica, la lista CVE.org procede de las releases de GitHub: la exportación completa en la primera lectura (unos 640 MB, leídos en aproximadamente un minuto), y después los cambios diarios, de 0,5 a 13 MB al día. La API necesita acceso HTTPS saliente, puerto 443, a `api.github.com`, `github.com` y `release-assets.githubusercontent.com`.
 - La lista CVE.org ocupa unos 700 MB más en la base de datos. Durante la primera lectura, el contenedor `api` necesita unos 1,4 GB de espacio temporal en disco.
 - Un servidor sin acceso a la red lee la lista desde un archivo: indique su ruta en `CVE_LIST_EXPORT_URL` y deposite allí una nueva exportación con la frecuencia que prefiera. Los datos están tan al día como el último archivo depositado.
-- Una dirección de réplica vacía conserva la dirección pública. Una fuente que el servidor no alcanza deja sus columnas como están y aparece en el resumen de la tarea. Las demás fuentes continúan.
+- Una dirección de réplica vacía conserva la dirección por defecto. Una fuente que el servidor no alcanza deja sus columnas como están y aparece en el resumen de la tarea. Las demás fuentes continúan.
 - Las notificaciones por correo requieren además que el envío de correo esté configurado (Resend o SMTP).
 - Reinicie la API después de cambiar estos valores.
 
@@ -675,7 +675,7 @@ Solo es necesario si la función correspondiente está activada.
 | `claude.ai` | 443 | Lee la descripción de Claude, Claude Desktop o Claude Code cuando un usuario lo conecta mediante MCP sin clave | Si `AI_MCP_ENABLED=true` y los usuarios se conectan mediante OAuth (no es necesario para las claves API) |
 | `chatgpt.com`, `grok.com` | 443 | Lee la descripción de ChatGPT o Grok cuando un usuario lo conecta mediante MCP sin clave | Igual que para `claude.ai` |
 | `services.nvd.nist.gov`, o su réplica | 443 | Vulnerabilidades publicadas (NVD) | Si `VULNERABILITY_FEED_ENABLED=true` |
-| `www.cisa.gov`, o su réplica | 443 | Catálogo de la CISA de vulnerabilidades explotadas conocidas | Si `VULNERABILITY_FEED_ENABLED=true` |
+| `raw.githubusercontent.com`, o su réplica | 443 | Catálogo de la CISA de vulnerabilidades explotadas conocidas (réplica de la CISA en GitHub) | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `epss.empiricalsecurity.com`, o su réplica | 443 | Puntuaciones EPSS del día | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `euvdservices.enisa.europa.eu`, o su réplica | 443 | Base europea de vulnerabilidades (ENISA): catálogo europeo e identificadores EUVD | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `api.github.com`, `github.com`, `release-assets.githubusercontent.com` | 443 | La lista CVE.org (fichas redactadas por los editores) | Si `VULNERABILITY_FEED_ENABLED=true`, salvo con `CVE_LIST_FEED_ENABLED=false` o si `CVE_LIST_EXPORT_URL` designa una réplica |
