@@ -272,7 +272,6 @@
       "source": "Quelle: {{value}}",
       "sourceRef": "Quellreferenz: {{value}}",
       "table": "Tabelle: {{value}}",
-      "tenant": "Mandant: {{value}}",
       "title": "Details des Audit-Eintrags",
       "user": "Benutzer: {{value}}",
       "value": "Wert"

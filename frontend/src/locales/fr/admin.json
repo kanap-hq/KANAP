@@ -272,7 +272,6 @@
       "source": "Source : {{value}}",
       "sourceRef": "Réf. source : {{value}}",
       "table": "Table : {{value}}",
-      "tenant": "Tenant : {{value}}",
       "title": "Détails de l'entrée d'audit",
       "user": "Utilisateur : {{value}}",
       "value": "Valeur"

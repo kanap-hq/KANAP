@@ -86,8 +86,8 @@ Los eventos de acceso y de sesión se eliminan después de **365 días**. Los ca
   - Acción
   - Origen (`user`, `system`, `webhook`)
 - Abrir cualquier fila para ver los detalles completos:
-  - Chips de metadatos (fecha, tabla, acción, origen, motivo o referencia de origen, espacio de trabajo, ID de registro, usuario)
-  - La referencia de negocio del registro en el encabezado (por ejemplo `PRJ-3`), cuando la tiene
+  - Chips de metadatos (fecha, tabla, acción, origen, motivo o referencia de origen, registro, usuario)
+  - La referencia de negocio del registro en el encabezado (por ejemplo `PRJ-3`, `APP-12`, `AST-31`, `LOC-4`, `CONN-2` o `INT-8`), cuando la entrada la incluye. Sin referencia, el encabezado muestra **Identificador** y conserva el id almacenado en una información emergente
   - Una tabla de los campos: **Campo**, **Antes** y **Después** para una modificación, **Campo** y **Valor** para cualquier otra entrada. Los nombres de los campos aparecen en su idioma cuando se conocen. Las fechas, los valores sí/no y las personas se muestran de forma legible; los demás identificadores aparecen como **Identificador**, con el valor en una información emergente. Los campos técnicos como `id`, `tenant_id` y `updated_at` se omiten
   - **Ver datos sin formato** muestra el JSON completo antes y después
 - Exportar el registro a CSV (véase más abajo)

@@ -272,7 +272,6 @@
       "source": "Source: {{value}}",
       "sourceRef": "Source ref: {{value}}",
       "table": "Table: {{value}}",
-      "tenant": "Tenant: {{value}}",
       "title": "Audit entry details",
       "user": "User: {{value}}",
       "value": "Value"

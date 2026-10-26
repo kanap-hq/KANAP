@@ -272,7 +272,6 @@
       "source": "Origen: {{value}}",
       "sourceRef": "Ref. de origen: {{value}}",
       "table": "Tabla: {{value}}",
-      "tenant": "Espacio de trabajo: {{value}}",
       "title": "Detalles de la entrada de auditoría",
       "user": "Usuario: {{value}}",
       "value": "Valor"

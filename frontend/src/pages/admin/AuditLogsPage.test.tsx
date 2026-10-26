@@ -340,11 +340,12 @@ describe('AuditLogsPage', () => {
     expect(screen.queryByText(id)).toBeNull();
   });
 
-  it('shows an identifier, not a record uuid, and keeps the tenant line', async () => {
+  it('shows an identifier, not a record uuid, and no tenant line', async () => {
     const id = '55555555-5555-4555-8555-555555555555';
     const entry = auditRow({
       table_name: 'suppliers',
       record_id: id,
+      tenant_id: '77777777-7777-4777-8777-777777777777',
       before_json: { status: 'draft' },
       after_json: { status: 'active' },
     });
@@ -353,7 +354,41 @@ describe('AuditLogsPage', () => {
     expect(screen.getByText('Record: Identifier')).toBeTruthy();
     expect(screen.queryByText(id)).toBeNull();
     expect(screen.getAllByTitle(id).length).toBeGreaterThan(0);
-    expect(screen.getByText('Tenant: t-1')).toBeTruthy();
+    expect(screen.queryByText(/Tenant:/)).toBeNull();
+    expect(screen.queryByText(entry.tenant_id)).toBeNull();
+  });
+
+  it('names an application and an asset by their stored reference', async () => {
+    const id = '66666666-6666-4666-8666-666666666666';
+    const application = auditRow({
+      table_name: 'applications',
+      record_id: id,
+      tenant_id: '77777777-7777-4777-8777-777777777777',
+      before_json: { name: 'Atlas' },
+      after_json: { name: 'Atlas', sequential_id: 'APP-12' },
+    });
+    await openDetail(application);
+    expect(screen.getByText('Record: APP-12')).toBeTruthy();
+    expect(screen.queryByText(id)).toBeNull();
+    expect(screen.queryByText(application.tenant_id)).toBeNull();
+
+    const assetId = '88888888-8888-4888-8888-888888888888';
+    const asset = auditRow({
+      id: 'a-asset',
+      table_name: 'assets',
+      record_id: assetId,
+      tenant_id: application.tenant_id,
+      before_json: { name: 'db01' },
+      after_json: { name: 'db01', asset_reference: 'AST-31' },
+    });
+    getMock.mockResolvedValue({ data: asset } as any);
+    act(() => {
+      grid.props?.onCellClicked({ data: asset });
+    });
+    expect(await screen.findByText('Record: AST-31')).toBeTruthy();
+    expect(screen.queryByText('Record: APP-12')).toBeNull();
+    expect(screen.queryByText(assetId)).toBeNull();
+    expect(screen.queryByText(/Tenant:/)).toBeNull();
   });
 
   it('shows the raw JSON directly when a payload is not an object', async () => {
