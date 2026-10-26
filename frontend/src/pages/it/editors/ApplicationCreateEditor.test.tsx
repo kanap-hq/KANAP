@@ -19,11 +19,54 @@ vi.mock('../../../hooks/useItOpsEnumOptions', () => {
 });
 
 const CASES = [
-  { lang: 'en', nameLabel: 'Name', labels: ['Description', 'Supplier', 'Category', 'Publisher', 'Lifecycle', 'Can have child apps', 'Go live', 'End of support', 'Retired date'], placeholder: 'e.g., 4.2.1, 2023, Q1 2024', nameRequired: 'Name is required' },
-  { lang: 'fr', nameLabel: 'Nom', labels: ['Description', 'Fournisseur', 'Catégorie', 'Éditeur', 'Cycle de vie', 'Peut contenir des applications enfants', 'Mise en service', 'Fin de support', 'Date de retrait'], placeholder: 'ex. : 4.2.1, 2023, T1 2024', nameRequired: 'Le nom est requis' },
-  { lang: 'de', nameLabel: 'Name', labels: ['Beschreibung', 'Lieferant', 'Kategorie', 'Herausgeber', 'Lebenszyklus', 'Kann untergeordnete Anwendungen haben', 'Inbetriebnahme', 'Ende des Supports', 'Außerbetriebnahmedatum'], placeholder: 'z. B. 4.2.1, 2023, Q1 2024', nameRequired: 'Name ist erforderlich' },
-  { lang: 'es', nameLabel: 'Nombre', labels: ['Descripción', 'Proveedor', 'Categoría', 'Editor', 'Ciclo de vida', 'Puede contener aplicaciones secundarias', 'Puesta en marcha', 'Fin de soporte', 'Fecha de retiro'], placeholder: 'p. ej., 4.2.1, 2023, T1 2024', nameRequired: 'El nombre es obligatorio' },
+  {
+    lang: 'en',
+    nameLabel: 'Name',
+    description: 'Description',
+    // Shared fields first, in the record drawer order, then lifecycle and the
+    // classification fields, then the suite checkbox.
+    order: ['Category', 'Supplier', 'Publisher', 'Version', 'Go live date', 'End of support', 'Retired date', 'Lifecycle', 'Business criticality', 'Cyber criticality', 'Data confidentiality', 'Recovery wave', 'Can have child apps'],
+    absent: 'Go live',
+    placeholder: 'e.g., 4.2.1, 2023, Q1 2024',
+    nameRequired: 'Name is required',
+  },
+  {
+    lang: 'fr',
+    nameLabel: 'Nom',
+    description: 'Description',
+    order: ['Catégorie', 'Fournisseur', 'Éditeur', 'Version', 'Date de mise en service', 'Fin de support', 'Date de retrait', 'Cycle de vie', 'Criticité business', 'Criticité cyber', 'Confidentialité des données', 'Vague de reprise', 'Peut contenir des applications enfants'],
+    absent: 'Mise en service',
+    placeholder: 'ex. : 4.2.1, 2023, T1 2024',
+    nameRequired: 'Le nom est requis',
+  },
+  {
+    lang: 'de',
+    nameLabel: 'Name',
+    description: 'Beschreibung',
+    order: ['Kategorie', 'Lieferant', 'Herausgeber', 'Version', 'Inbetriebnahmedatum', 'Ende des Supports', 'Außerbetriebnahmedatum', 'Lebenszyklus', 'Geschäftskritikalität', 'Cyberkritikalität', 'Datenvertraulichkeit', 'Wiederanlaufwelle', 'Kann untergeordnete Anwendungen haben'],
+    absent: 'Inbetriebnahme',
+    placeholder: 'z. B. 4.2.1, 2023, Q1 2024',
+    nameRequired: 'Name ist erforderlich',
+  },
+  {
+    lang: 'es',
+    nameLabel: 'Nombre',
+    description: 'Descripción',
+    order: ['Categoría', 'Proveedor', 'Editor', 'Versión', 'Fecha de puesta en marcha', 'Fin de soporte', 'Fecha de retiro', 'Ciclo de vida', 'Criticidad de negocio', 'Criticidad cibernética', 'Confidencialidad de los datos', 'Ola de recuperación', 'Puede contener aplicaciones secundarias'],
+    absent: 'Puesta en marcha',
+    placeholder: 'p. ej., 4.2.1, 2023, T1 2024',
+    nameRequired: 'El nombre es obligatorio',
+  },
 ];
+
+function assertLabelOrder(text: string, labels: string[]) {
+  let from = 0;
+  for (const label of labels) {
+    const index = text.indexOf(label, from);
+    expect(index, label).toBeGreaterThanOrEqual(from);
+    from = index + label.length;
+  }
+}
 
 describe('ApplicationCreateEditor', () => {
   afterEach(async () => {
@@ -40,7 +83,10 @@ describe('ApplicationCreateEditor', () => {
       </ThemeProvider>,
     );
 
-    for (const label of c.labels) expect(screen.getAllByText(label).length).toBeGreaterThan(0);
+    assertLabelOrder(document.body.textContent || '', c.order);
+    // The record drawer says "Go live date", not the header's shorter "Go live".
+    expect(screen.queryByText((content) => content === c.absent)).toBeNull();
+    expect(screen.getByText(c.description)).toBeInTheDocument();
     // The name is typed in the header, not as a field of the form.
     expect(screen.queryByText(c.nameLabel)).toBeNull();
     expect(screen.getByPlaceholderText(c.placeholder)).toBeInTheDocument();
@@ -97,10 +143,7 @@ describe('ApplicationCreateEditor', () => {
         <ApplicationCreateEditor presentation="split" propertiesHost={propertiesHost} bodyHost={bodyHost} />
       </ThemeProvider>,
     );
-    expect(propertiesHost.textContent).toContain('Supplier');
-    expect(propertiesHost.textContent).toContain('Category');
-    expect(propertiesHost.textContent).toContain('Lifecycle');
-    expect(propertiesHost.textContent).toContain('Can have child apps');
+    assertLabelOrder(propertiesHost.textContent || '', CASES[0].order);
     expect(propertiesHost.textContent).not.toContain('Description');
     expect(propertiesHost.textContent).not.toContain('Version information');
     expect(bodyHost.textContent).toContain('Description');
