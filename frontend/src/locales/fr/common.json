@@ -335,6 +335,7 @@
     "columnY": "{{column}}, A",
     "topIncreases": "Plus fortes hausses",
     "columnYvsYminus1": "{{column}}, A vs A-1",
+    "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "Aucune hausse",
     "myBudget": {
       "title": "Mon budget",
