@@ -1,33 +1,55 @@
 import { classificationText } from '../../../utils/applicationClassification';
 import React, { forwardRef, useImperativeHandle } from 'react';
-import { Alert, Box, Stack, TextField, Divider, Typography } from '@mui/material';
+import { createPortal } from 'react-dom';
+import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
 import SupplierSelect from '../../../components/fields/SupplierSelect';
 import EnumAutocomplete from '../../../components/fields/EnumAutocomplete';
 import DateEUField from '../../../components/fields/DateEUField';
 import api from '../../../api';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
-import { PropertyRow } from '../../../components/design';
-import { drawerFieldValueSx } from '../../../theme/formSx';
+import { PropertyGroup, PropertyRow } from '../../../components/design';
+import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../../theme/formSx';
 
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import useApplicationClassificationCatalog from '../../../hooks/useApplicationClassificationCatalog';
-import { APPLICATION_NAME_MAX } from '../applicationLimits';
+
 export type ApplicationCreateEditorHandle = {
   isDirty: () => boolean;
   save: () => Promise<string | null>;
   reset: () => void;
+  /** The header writes the application name here. */
+  setName: (name: string) => void;
 };
 
-type Props = { onDirtyChange?: (dirty: boolean) => void };
+type Props = {
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Keeps the header title in step with the draft name. */
+  onNameChange?: (name: string) => void;
+  /**
+   * `split` paints the drawer fields and the description into the two hosts the page
+   * gives the shell. `inline` stacks both, for the editor's own test.
+   */
+  presentation?: 'inline' | 'split';
+  propertiesHost?: HTMLElement | null;
+  bodyHost?: HTMLElement | null;
+};
 
-export default forwardRef<ApplicationCreateEditorHandle, Props>(function ApplicationCreateEditor({ onDirtyChange }, ref) {
+export default forwardRef<ApplicationCreateEditorHandle, Props>(function ApplicationCreateEditor({
+  onDirtyChange,
+  onNameChange,
+  presentation = 'inline',
+  propertiesHost = null,
+  bodyHost = null,
+}, ref) {
   const { t } = useTranslation(['it', 'common']);
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [dirty, setDirty] = React.useState(false);
 
   const [name, setName] = React.useState('');
+  const nameRef = React.useRef(name);
+  nameRef.current = name;
   const [supplierId, setSupplierId] = React.useState<string | null>(null);
   const [description, setDescription] = React.useState('');
   const [category, setCategory] = React.useState<string>('');
@@ -74,8 +96,17 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
 
   const markDirty = React.useCallback(() => setDirty(true), []);
 
+  const setNameValue = React.useCallback((next: string) => {
+    nameRef.current = next;
+    setName(next);
+    onNameChange?.(next);
+    markDirty();
+  }, [markDirty, onNameChange]);
+
   const reset = React.useCallback(() => {
+    nameRef.current = '';
     setName('');
+    onNameChange?.('');
     setSupplierId(null);
     setDescription('');
     setCategory(defaultCategory);
@@ -92,18 +123,19 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
     setEndOfSupportDate('');
     setServerError(null);
     setDirty(false);
-  }, [defaultCategory]);
+  }, [defaultCategory, onNameChange]);
 
   const save = React.useCallback(async () => {
     if (saving) return null;
     setSaving(true); setServerError(null);
+    const currentName = nameRef.current;
     try {
-      if (!String(name || '').trim()) {
+      if (!String(currentName || '').trim()) {
         setServerError(t('validation.nameRequired'));
         return null;
       }
       const payload = {
-        name: name.trim(),
+        name: currentName.trim(),
         supplier_id: supplierId,
         category: category || undefined,
         description: description || null,
@@ -135,88 +167,126 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
     } finally {
       setSaving(false);
     }
-  }, [saving, name, supplierId, description, category, editor, retiredDate, lifecycle, criticality, cyberCriticality, recoveryWave, dataClass, version, goLiveDate, endOfSupportDate, isSuite, t]);
+  }, [saving, supplierId, description, category, editor, retiredDate, lifecycle, criticality, cyberCriticality, recoveryWave, dataClass, version, goLiveDate, endOfSupportDate, isSuite, t]);
 
-  useImperativeHandle(ref, () => ({ isDirty: () => dirty, save, reset }), [dirty, save, reset]);
+  useImperativeHandle(ref, () => ({ isDirty: () => dirty, save, reset, setName: setNameValue }), [dirty, save, reset, setNameValue]);
+
+  const levelOptions = (items: Array<{ code: string; label: string; deprecated?: boolean }> | undefined) => (
+    (items || []).filter((item) => !item.deprecated).map((item) => ({ label: item.label, value: item.code }))
+  );
+
+  const properties = (
+    <>
+      <PropertyGroup>
+        <PropertyRow label={t('workspace.application.overview.supplier')}>
+          <SupplierSelect value={supplierId} onChange={(v) => { setSupplierId(v); markDirty(); }} hideLabel label={t('workspace.application.overview.supplier')} textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+        <PropertyRow label={t('workspace.application.overview.category')} required>
+          <EnumAutocomplete
+            label={t('workspace.application.overview.category')}
+            value={category}
+            onChange={(v) => { setCategory(v); markDirty(); }}
+            options={categoryOptions}
+            required
+            hideLabel
+            textFieldSx={drawerFieldValueSx}
+          />
+        </PropertyRow>
+        <PropertyRow label={t('workspace.application.overview.publisher')}>
+          <TextField value={editor} onChange={(e) => { setEditor(e.target.value); markDirty(); }} fullWidth variant="standard" sx={drawerFieldValueSx} />
+        </PropertyRow>
+        <PropertyRow label={classificationText('Business criticality')}>
+          <EnumAutocomplete label={classificationText('Business criticality')} value={criticality || ''} onChange={(v) => { setCriticality(v || null); markDirty(); }} options={levelOptions(classificationCatalog?.businessCriticalityLevels)} hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+        <PropertyRow label={classificationText('Cyber criticality')}>
+          <EnumAutocomplete label={classificationText('Cyber criticality')} value={cyberCriticality || ''} onChange={(v) => { setCyberCriticality(v || null); markDirty(); }} options={levelOptions(classificationCatalog?.cyberCriticalityLevels)} hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+        <PropertyRow label={classificationText('Data confidentiality')}>
+          <EnumAutocomplete label={classificationText('Data confidentiality')} value={dataClass || ''} onChange={(v) => { setDataClass(v || null); markDirty(); }} options={levelOptions(classificationCatalog?.dataClasses)} hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+        <PropertyRow label={classificationText('Recovery wave')}>
+          <EnumAutocomplete label={classificationText('Recovery wave')} value={recoveryWave || ''} onChange={(v) => { setRecoveryWave(v || null); markDirty(); }} options={(classificationCatalog?.recoveryWaves || []).filter((item) => !item.deprecated).sort((a, b) => a.order - b.order).map((item) => ({ label: item.label, value: item.code }))} hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+        <PropertyRow label={t('workspace.application.overview.lifecycle')} required>
+          <EnumAutocomplete label={t('workspace.application.overview.lifecycle')} value={lifecycle} onChange={(v) => { setLifecycle(v as any); markDirty(); }} options={lifecycleOptions} required hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+      </PropertyGroup>
+      <PropertyGroup>
+        <PropertyRow label={t('workspace.application.overview.version')}>
+          <TextField
+            value={version}
+            onChange={(e) => { setVersion(e.target.value); markDirty(); }}
+            fullWidth
+            placeholder={t('workspace.application.overview.versionPlaceholder')}
+            size="small"
+            variant="standard"
+            sx={drawerFieldValueSx}
+          />
+        </PropertyRow>
+        <PropertyRow label={t('workspace.application.meta.goLive')}>
+          <DateEUField label="" valueYmd={goLiveDate} onChangeYmd={(v) => { setGoLiveDate(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+        <PropertyRow label={t('workspace.application.overview.endOfSupport')}>
+          <DateEUField label="" valueYmd={endOfSupportDate} onChangeYmd={(v) => { setEndOfSupportDate(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+        <PropertyRow label={t('workspace.application.overview.retiredDate')}>
+          <DateEUField label="" valueYmd={retiredDate} onChangeYmd={(v) => { setRetiredDate(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
+        </PropertyRow>
+      </PropertyGroup>
+      <PropertyGroup>
+        <Box component="label" sx={(theme) => ({ display: 'flex', gap: '8px', alignItems: 'center', py: '5px', fontSize: 13, color: theme.palette.kanap.text.primary })}>
+          <input type="checkbox" checked={isSuite} onChange={(e) => { setIsSuite(e.target.checked); markDirty(); }} style={{ accentColor: 'var(--kanap-teal)' }} />
+          {t('workspace.application.overview.canHaveChildApps')}
+        </Box>
+      </PropertyGroup>
+    </>
+  );
+
+  const body = (
+    <Box>
+      {!!serverError && <Alert severity="error" sx={{ mb: 2 }}>{serverError}</Alert>}
+      <Box sx={{ mb: 1 }}>
+        <Typography
+          component="h2"
+          sx={(theme) => ({
+            m: 0,
+            fontSize: 14,
+            fontWeight: 500,
+            lineHeight: 1.4,
+            color: theme.palette.kanap.text.primary,
+          })}
+        >
+          {t('workspace.application.overview.description')}
+        </Typography>
+      </Box>
+      <TextField
+        value={description}
+        onChange={(e) => { setDescription(e.target.value); markDirty(); }}
+        placeholder={t('workspace.application.overview.descriptionPlaceholder')}
+        multiline
+        minRows={4}
+        maxRows={12}
+        fullWidth
+        variant="standard"
+        sx={longFormSurfaceFieldSx}
+        inputProps={{ 'aria-label': t('workspace.application.overview.description') }}
+      />
+    </Box>
+  );
+
+  if (presentation === 'split') {
+    return (
+      <>
+        {propertiesHost ? createPortal(properties, propertiesHost) : null}
+        {bodyHost ? createPortal(body, bodyHost) : null}
+      </>
+    );
+  }
 
   return (
     <Stack spacing={2}>
-      {!!serverError && <Alert severity="error">{serverError}</Alert>}
-      <PropertyRow label={t('common.name')} required>
-        <TextField value={name} onChange={(e) => { setName(e.target.value); markDirty(); }} required fullWidth variant="standard" sx={drawerFieldValueSx} inputProps={{ maxLength: APPLICATION_NAME_MAX }} />
-      </PropertyRow>
-      <PropertyRow label={t('workspace.application.overview.description')}>
-        <TextField value={description} onChange={(e) => { setDescription(e.target.value); markDirty(); }} fullWidth variant="standard" sx={drawerFieldValueSx} />
-      </PropertyRow>
-      <PropertyRow label={t('workspace.application.overview.supplier')}>
-        <SupplierSelect value={supplierId} onChange={(v) => { setSupplierId(v); markDirty(); }} hideLabel label={t('workspace.application.overview.supplier')} textFieldSx={drawerFieldValueSx} />
-      </PropertyRow>
-      <PropertyRow label={t('workspace.application.overview.category')} required>
-        <EnumAutocomplete
-          label={t('workspace.application.overview.category')}
-          value={category}
-          onChange={(v) => { setCategory(v); markDirty(); }}
-          options={categoryOptions}
-          required
-          hideLabel
-          textFieldSx={drawerFieldValueSx}
-        />
-      </PropertyRow>
-      <PropertyRow label={t('workspace.application.overview.publisher')}>
-        <TextField value={editor} onChange={(e) => { setEditor(e.target.value); markDirty(); }} fullWidth variant="standard" sx={drawerFieldValueSx} />
-      </PropertyRow>
-      <PropertyRow label={classificationText("Business criticality")}>
-        <EnumAutocomplete label={classificationText("Business criticality")} value={criticality || ''} onChange={(v) => { setCriticality(v || null); markDirty(); }} options={(classificationCatalog?.businessCriticalityLevels || []).filter((item) => !item.deprecated).map((item) => ({ label: item.label, value: item.code }))} hideLabel textFieldSx={drawerFieldValueSx} />
-      </PropertyRow>
-      <PropertyRow label={classificationText("Cyber criticality")}>
-        <EnumAutocomplete label={classificationText("Cyber criticality")} value={cyberCriticality || ''} onChange={(v) => { setCyberCriticality(v || null); markDirty(); }} options={(classificationCatalog?.cyberCriticalityLevels || []).filter((item) => !item.deprecated).map((item) => ({ label: item.label, value: item.code }))} hideLabel textFieldSx={drawerFieldValueSx} />
-      </PropertyRow>
-      <PropertyRow label={classificationText("Data confidentiality")}>
-        <EnumAutocomplete label={classificationText("Data confidentiality")} value={dataClass || ''} onChange={(v) => { setDataClass(v || null); markDirty(); }} options={(classificationCatalog?.dataClasses || []).filter((item) => !item.deprecated).map((item) => ({ label: item.label, value: item.code }))} hideLabel textFieldSx={drawerFieldValueSx} />
-      </PropertyRow>
-      <PropertyRow label={classificationText("Recovery wave")}>
-        <EnumAutocomplete label={classificationText("Recovery wave")} value={recoveryWave || ''} onChange={(v) => { setRecoveryWave(v || null); markDirty(); }} options={(classificationCatalog?.recoveryWaves || []).filter((item) => !item.deprecated).sort((a, b) => a.order - b.order).map((item) => ({ label: item.label, value: item.code }))} hideLabel textFieldSx={drawerFieldValueSx} />
-      </PropertyRow>
-      <PropertyRow label={t('workspace.application.overview.lifecycle')} required>
-        <EnumAutocomplete label={t('workspace.application.overview.lifecycle')} value={lifecycle} onChange={(v) => { setLifecycle(v as any); markDirty(); }} options={lifecycleOptions} required hideLabel textFieldSx={drawerFieldValueSx} />
-      </PropertyRow>
-      <Box component="label" sx={(theme) => ({ display: 'flex', gap: '8px', alignItems: 'center', fontSize: 13, color: theme.palette.kanap.text.primary })}>
-        <input type="checkbox" checked={isSuite} onChange={(e) => { setIsSuite(e.target.checked); markDirty(); }} style={{ accentColor: 'var(--kanap-teal)' }} />
-        {t('workspace.application.overview.canHaveChildApps')}
-      </Box>
-      <Divider sx={{ my: 1 }} />
-      <Typography
-        component="h2"
-        sx={(theme) => ({
-          m: 0,
-          fontSize: 14,
-          fontWeight: 500,
-          lineHeight: 1.4,
-          color: theme.palette.kanap.text.primary,
-        })}
-      >
-        {t('workspace.application.overview.versionInfo')}
-      </Typography>
-      <PropertyRow label={t('workspace.application.overview.version')}>
-        <TextField
-          value={version}
-          onChange={(e) => { setVersion(e.target.value); markDirty(); }}
-          fullWidth
-          placeholder={t('workspace.application.overview.versionPlaceholder')}
-          size="small"
-          variant="standard"
-          sx={drawerFieldValueSx}
-        />
-      </PropertyRow>
-      <PropertyRow label={t('workspace.application.meta.goLive')}>
-        <DateEUField label="" valueYmd={goLiveDate} onChangeYmd={(v) => { setGoLiveDate(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
-      </PropertyRow>
-      <PropertyRow label={t('workspace.application.overview.endOfSupport')}>
-        <DateEUField label="" valueYmd={endOfSupportDate} onChangeYmd={(v) => { setEndOfSupportDate(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
-      </PropertyRow>
-      <PropertyRow label={t('workspace.application.overview.retiredDate')}>
-        <DateEUField label="" valueYmd={retiredDate} onChangeYmd={(v) => { setRetiredDate(v); markDirty(); }} hideLabel textFieldSx={drawerFieldValueSx} />
-      </PropertyRow>
+      {properties}
+      {body}
     </Stack>
   );
 });
