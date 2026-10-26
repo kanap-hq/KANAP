@@ -285,7 +285,7 @@ The versions that no server and no application uses get no line. They are named 
 
 When the technology or some of its versions are out of the alerts, a line at the top of the section says so: **Excluded from alerts**, **Excluded from alerts, except 2 versions** or **3 versions excluded from alerts**. With `infrastructure:member`, **Change** next to it opens the versions table of the Overview tab, where the switches are. See [Vulnerability alerts](#vulnerability-alerts).
 
-KANAP matches the technology again as soon as its identifiers, CVE.org names, versions, servers or applications change. After a new CPE product identifier, the section says "Searching for vulnerabilities…" while KANAP reads that product from the NVD. **Refresh** (`infrastructure:member`) runs the comparison by hand.
+KANAP matches the technology again as soon as its identifiers, CVE.org names, versions, servers or applications change. After a new CPE product identifier, the section says "Searching for vulnerabilities…" while KANAP reads that product from the NVD. When that read cannot be completed, the section says so. **Refresh** (`infrastructure:member`) runs the comparison by hand.
 
 ### Relations
 

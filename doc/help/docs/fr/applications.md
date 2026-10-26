@@ -279,7 +279,7 @@ Pour ajouter, modifier ou retirer une technologie déclarée, et pour la renseig
 | **Crit.**, **Élev.**, **Moy.**, **Faible**, **N. éval.** | Une colonne par sévérité (Critique, Élevée, Moyenne, Faible, Non évaluée, le nom complet en infobulle sur l'en-tête) : les vulnérabilités encore à traiter. Une vulnérabilité notée **Aucune** compte avec **Faible** |
 | **Total** | Les vulnérabilités distinctes encore à traiter sur cette ligne |
 
-**Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'application et la technologie. Quand il ne reste rien à traiter, la section le dit en une ligne. Tant que le rapprochement d'une technologie qui vient d'être renseignée sur cette application, ou sur un de ses serveurs de déploiement, est en cours, la section affiche « Recherche des vulnérabilités en cours… » et se complète d'elle-même. Une application désactivée n'a pas de section.
+**Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'application et la technologie. Quand il ne reste rien à traiter, la section le dit en une ligne. Tant que la première lecture d'un produit dans la NVD, ou le rapprochement d'une technologie qui vient d'être renseignée sur cette application ou sur un de ses serveurs de déploiement, est en cours, la section affiche « Recherche des vulnérabilités en cours… » et se complète d'elle-même. Quand la recherche ne peut pas aboutir, la section le dit. Une application désactivée n'a pas de section.
 
 La section ne compte que les liens directs. Une technologie que la section **Technologies** montre par l'hôte d'une machine virtuelle ne compte pas ici : elle compte sur l'hôte. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts).
 

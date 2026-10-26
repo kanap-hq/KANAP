@@ -285,7 +285,7 @@ Versionen, die kein Server und keine Anwendung nutzt, erhalten keine Zeile. Sie 
 
 Sind die Technologie oder einige ihrer Versionen außerhalb der Warnungen, sagt es eine Zeile oben im Abschnitt: **Von den Warnungen ausgeschlossen**, **Von den Warnungen ausgeschlossen, außer 2 Versionen** oder **3 Versionen von den Warnungen ausgeschlossen**. Mit `infrastructure:member` öffnet **Ändern** daneben die Versionstabelle im Reiter Übersicht, wo die Schalter sind. Siehe [Warnungen zu Schwachstellen](#warnungen-zu-schwachstellen).
 
-KANAP gleicht die Technologie erneut ab, sobald sich ihre Kennungen, CVE.org-Namen, Versionen, Server oder Anwendungen ändern. Nach einer neuen CPE-Produktkennung zeigt der Abschnitt „Suche nach Schwachstellen läuft…“, während KANAP dieses Produkt aus der NVD liest. **Aktualisieren** (`infrastructure:member`) startet den Vergleich von Hand.
+KANAP gleicht die Technologie erneut ab, sobald sich ihre Kennungen, CVE.org-Namen, Versionen, Server oder Anwendungen ändern. Nach einer neuen CPE-Produktkennung zeigt der Abschnitt „Suche nach Schwachstellen läuft…“, während KANAP dieses Produkt aus der NVD liest. Wenn dieses Lesen nicht abgeschlossen werden kann, sagt der Abschnitt das. **Aktualisieren** (`infrastructure:member`) startet den Vergleich von Hand.
 
 ### Beziehungen
 

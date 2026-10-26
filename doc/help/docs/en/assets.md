@@ -264,7 +264,7 @@ When vulnerabilities are followed, the last section of the tab lists the vulnera
 | **Crit.**, **High**, **Med.**, **Low**, **N/R** | One column per severity (Critical, High, Medium, Low, Not rated, the full name in a tooltip on the header): the vulnerabilities still to review. A vulnerability rated **None** counts with **Low** |
 | **Total** | The distinct vulnerabilities still to review on this line |
 
-**See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the asset and the technology. When nothing is left to review, the section says so in one line. While the match of a technology just recorded on this asset is still running, the section says "Searching for vulnerabilities…" and fills in on its own. A retired asset has no section.
+**See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the asset and the technology. When nothing is left to review, the section says so in one line. While the first read of a product from the NVD, or the match of a technology just recorded on this asset, is still running, the section says "Searching for vulnerabilities…" and fills in on its own. When the search cannot be completed, the section says so. A retired asset has no section.
 
 On a **cluster**, **On its members** lists apart the technologies of its members, one line per technology and version, with the members that carry it in the **Asset** column. A cluster counts the vulnerabilities of its members in service with its own: the count of the section, the header badge (its tooltip says "members included") and the column of the list. The **See** of a line opens the page on the member that carries it.
 

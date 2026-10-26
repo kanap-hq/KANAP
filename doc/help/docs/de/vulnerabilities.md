@@ -32,7 +32,7 @@ Manche Schwachstellen gelten nur, wenn zwei Produkte zusammen laufen, zum Beispi
 
 Eine Zeile entsteht, sobald eine der beiden Quellen sie abgleicht. Wenn die NVD und der Hersteller Unterschiedliches angeben, bleibt die Zeile bestehen. Die Spalte **Quelle** der Liste zeigt, welche Quellen sie abgeglichen haben. Hat die NVD eine Schwachstelle noch nicht bewertet, zeigt KANAP den Score und den Schweregrad aus dem Eintrag des Herstellers. Eine Schwachstelle, die CVE.org oder die NVD zurückweist, wird nicht mehr abgeglichen.
 
-Änderungen zählen sofort. Wenn Sie eine Technologie oder eine CPE-Produktkennung hinzufügen, sucht KANAP dieses Produkt sofort in der NVD; der Abschnitt **Schwachstellen** der Technologie zeigt „Suche nach Schwachstellen läuft…“, bis die Suche endet. Wenn sich ein CVE.org-Name, eine Version, ein Server oder eine Anwendung einer Technologie ändert, gleicht KANAP die Technologie erneut ab, sobald die Änderung gespeichert ist. **Aktualisieren** im Abschnitt **Schwachstellen** der Technologie tut dasselbe von Hand.
+Änderungen zählen sofort. Wenn Sie eine Technologie oder eine CPE-Produktkennung hinzufügen, sucht KANAP dieses Produkt sofort in der NVD; der Abschnitt **Schwachstellen** der Technologie zeigt „Suche nach Schwachstellen läuft…“, bis die Suche endet. Wenn die Suche nicht abgeschlossen werden kann, sagt der Abschnitt das. Wenn sich ein CVE.org-Name, eine Version, ein Server oder eine Anwendung einer Technologie ändert, gleicht KANAP die Technologie erneut ab, sobald die Änderung gespeichert ist. **Aktualisieren** im Abschnitt **Schwachstellen** der Technologie tut dasselbe von Hand.
 
 ## Warnungen
 

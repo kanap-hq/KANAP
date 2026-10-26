@@ -285,7 +285,7 @@ Les versions qu'aucun serveur ni aucune application n'utilise n'ont pas de ligne
 
 Quand la technologie ou certaines de ses versions sont hors des alertes, une ligne en tête de la section le dit : **Exclue des alertes**, **Exclue des alertes, sauf 2 versions** ou **3 versions exclues des alertes**. Avec `infrastructure:member`, **Modifier** à côté ouvre la table des versions de l'onglet Aperçu, où se trouvent les interrupteurs. Voir [Alertes de vulnérabilité](#alertes-de-vulnerabilite).
 
-KANAP rapproche à nouveau la technologie dès que ses identifiants, ses noms CVE.org, ses versions, ses serveurs ou ses applications changent. Après un nouvel identifiant CPE produit, la section indique « Recherche des vulnérabilités en cours… » pendant que KANAP lit ce produit dans la NVD. **Actualiser** (`infrastructure:member`) lance la comparaison à la main.
+KANAP rapproche à nouveau la technologie dès que ses identifiants, ses noms CVE.org, ses versions, ses serveurs ou ses applications changent. Après un nouvel identifiant CPE produit, la section indique « Recherche des vulnérabilités en cours… » pendant que KANAP lit ce produit dans la NVD. Quand cette lecture ne peut pas aboutir, la section le dit. **Actualiser** (`infrastructure:member`) lance la comparaison à la main.
 
 ### Relations
 

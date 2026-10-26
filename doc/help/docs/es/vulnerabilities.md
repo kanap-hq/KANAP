@@ -32,7 +32,7 @@ Algunas vulnerabilidades solo se aplican cuando dos productos funcionan juntos, 
 
 Una fila existe en cuanto una de las dos fuentes la coteja. Cuando la NVD y el editor no dicen lo mismo, la fila se queda. La columna **Fuente** de la lista indica qué fuentes la cotejaron. Cuando la NVD aún no ha puntuado una vulnerabilidad, KANAP muestra la puntuación y la gravedad de la ficha del editor. Una vulnerabilidad que CVE.org o la NVD rechaza deja de cotejarse.
 
-Los cambios cuentan de inmediato. Cuando añade una tecnología o un identificador de producto CPE, KANAP busca enseguida ese producto en la NVD; la sección **Vulnerabilidades** de la tecnología indica «Búsqueda de vulnerabilidades en curso…» hasta que termina la búsqueda. Cuando cambia un nombre CVE.org, una versión, un servidor o una aplicación de una tecnología, KANAP vuelve a cotejar la tecnología en cuanto se guarda el cambio. **Actualizar**, en la sección **Vulnerabilidades** de la tecnología, hace lo mismo a mano.
+Los cambios cuentan de inmediato. Cuando añade una tecnología o un identificador de producto CPE, KANAP busca enseguida ese producto en la NVD; la sección **Vulnerabilidades** de la tecnología indica «Búsqueda de vulnerabilidades en curso…» hasta que termina la búsqueda. Cuando la búsqueda no se puede completar, la sección lo dice. Cuando cambia un nombre CVE.org, una versión, un servidor o una aplicación de una tecnología, KANAP vuelve a cotejar la tecnología en cuanto se guarda el cambio. **Actualizar**, en la sección **Vulnerabilidades** de la tecnología, hace lo mismo a mano.
 
 ## Alertas
 
