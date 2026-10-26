@@ -65,4 +65,18 @@ describe('UsersPage delete', () => {
       expect(text, lang).not.toMatch(/referen|désactiv|deaktivier|desactiv|disable/i);
     }
   });
+
+  it('names one recipient in the invitation confirmation, and the count when several', async () => {
+    for (const lang of ['en', 'fr', 'de', 'es']) {
+      const admin = (await import(`../locales/${lang}/admin.json`)).default as any;
+      const one: string = admin.users.messages.inviteConfirm_one;
+      const many: string = admin.users.messages.inviteConfirm_other;
+      expect(one, lang).toContain('{{email}}');
+      expect(one, lang).not.toContain('{{count}}');
+      expect(many, lang).toContain('{{count}}');
+      expect(many, lang).not.toContain('{{email}}');
+    }
+    const fr = (await import('../locales/fr/admin.json')).default as { users: { messages: { inviteConfirm_one: string } } };
+    expect(fr.users.messages.inviteConfirm_one).toBe('Envoyer une invitation à {{email}} ?');
+  });
 });

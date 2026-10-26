@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -300,5 +300,46 @@ describe('UserDialog save', () => {
     expect(onClose).toHaveBeenCalled();
     expect(patch).not.toHaveBeenCalled();
     expect(put).not.toHaveBeenCalled();
+  });
+});
+
+describe('UserDialog save and invite', () => {
+  const email = 'julie.martin@example.com';
+  const confirmText = `users.messages.inviteConfirm|{"count":1,"email":"${email}"}`;
+
+  async function askToInvite() {
+    renderDialog({ mode: 'create', userId: undefined, personName: undefined });
+    fireEvent.change(screen.getByRole('textbox', { name: 'userForm.fields.email' }), {
+      target: { value: email },
+    });
+    const invite = screen.getByRole('button', { name: 'users.dialogs.saveAndInvite' });
+    await waitFor(() => expect(invite).toBeEnabled());
+    fireEvent.click(invite);
+    const message = await screen.findByText(confirmText);
+    const dialog = message.closest('[role="dialog"]');
+    if (!dialog) throw new Error('confirmation dialog missing');
+    return dialog as HTMLElement;
+  }
+
+  it('asks before saving and sends nothing when cancelled', async () => {
+    const dialog = await askToInvite();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByText(confirmText)).not.toBeInTheDocument());
+    expect(post).not.toHaveBeenCalled();
+    expect(put).not.toHaveBeenCalled();
+    expect(screen.getByText('users.dialogs.newUser')).toBeInTheDocument();
+  });
+
+  it('creates the user and sends the invitation after confirmation', async () => {
+    post.mockImplementation(async (url: string) => (
+      url === '/users' ? { data: { id: 'new-1' } } : { data: {} }
+    ));
+    const dialog = await askToInvite();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'users.actions.sendInvite' }));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/users/new-1/invite'));
+    expect(post).toHaveBeenCalledWith('/users', expect.objectContaining({ email }));
+    const urls = post.mock.calls.map((call: unknown[]) => call[0]);
+    expect(urls.indexOf('/users')).toBeGreaterThanOrEqual(0);
+    expect(urls.indexOf('/users')).toBeLessThan(urls.indexOf('/users/new-1/invite'));
   });
 });

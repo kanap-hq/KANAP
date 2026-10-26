@@ -1485,6 +1485,8 @@
       "invitePartialFail_one": "Invited {{count}} user; {{failed}} failed",
       "invitePartialFail_other": "Invited {{count}} users; {{failed}} failed",
       "inviteFailed": "Failed to invite selected users",
+      "inviteConfirm_one": "Send an invitation to {{email}}?",
+      "inviteConfirm_other": "Send invitations to {{count}} users?",
       "disableConfirm": "{{name}} will lose access and be signed out immediately. Disable this account?",
       "deleteConfirm": "Delete {{name}}? This cannot be undone.",
       "inviteSentOne": "Invitation sent to {{email}}",
