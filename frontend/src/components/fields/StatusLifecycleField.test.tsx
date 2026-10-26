@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
@@ -223,6 +223,43 @@ describe('StatusLifecycleField', () => {
       fireEvent.blur(input);
       expect(onDisabledAtChange).not.toHaveBeenCalled();
       expect(onStatusChange).not.toHaveBeenCalled();
+    });
+
+    it('selects the whole date on keyboard focus, so typing replaces it, then sends once on blur', () => {
+      const { onDisabledAtChange } = renderField({ status: STATUS_ENABLED, disabledAt: '2027-12-31T12:00:00.000Z' });
+      const input = screen.getByPlaceholderText(placeholder()) as HTMLInputElement;
+      act(() => { input.focus(); });
+      expect(input.value).toBe('31/12/2027');
+      expect(input.selectionStart).toBe(0);
+      expect(input.selectionEnd).toBe(input.value.length);
+      // The selection is replaced by the first keystroke: the browser hands over the new digits only.
+      typeDigits(input, '01012031');
+      expect(input.value).toBe('01/01/2031');
+      fireEvent.blur(input);
+      expect(onDisabledAtChange).toHaveBeenCalledTimes(1);
+      expect(onDisabledAtChange).toHaveBeenCalledWith(new Date(2031, 0, 1, 23, 59, 0, 0).toISOString());
+    });
+
+    it('shows the invalid date message on blur for an invalid text, and hides it when typing again', () => {
+      const { onStatusChange, onDisabledAtChange } = renderField({ status: STATUS_ENABLED });
+      const input = screen.getByPlaceholderText(placeholder()) as HTMLInputElement;
+      const message = i18n.t('common:labels.dateInvalid');
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: '32132031' } });
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+      fireEvent.blur(input);
+      expect(screen.getByText(message)).toBeInTheDocument();
+      expect(screen.queryByText('Leave blank to keep active indefinitely.')).not.toBeInTheDocument();
+      expect(input).toHaveAttribute('aria-invalid', 'true');
+      expect(onDisabledAtChange).not.toHaveBeenCalled();
+      expect(onStatusChange).not.toHaveBeenCalled();
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: '17102031' } });
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+      fireEvent.blur(input);
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+      expect(screen.getByText('Leave blank to keep active indefinitely.')).toBeInTheDocument();
+      expect(onDisabledAtChange).toHaveBeenCalledTimes(1);
     });
 
     it('clears an end of validity emptied by hand on blur, and sends nothing when there was none', () => {

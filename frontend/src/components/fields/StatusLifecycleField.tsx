@@ -81,6 +81,11 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
   // Local text state to allow free typing (dd/mm/yyyy) without fighting controlled updates
   const [inputText, setInputText] = React.useState<string>('');
   const [focused, setFocused] = React.useState(false);
+  const [invalid, setInvalid] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const mouseDownRef = React.useRef(false);
+  const selectOnMouseUpRef = React.useRef(false);
+  const justFocusedRef = React.useRef(false);
   const locale = useLocale();
   // Typed dates follow the language: 31/12/2027, or 31.12.2027 in German.
   const sep = dateInputSeparator(locale);
@@ -109,6 +114,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
   // Typing only changes the text: the date is sent once, on Enter, blur or Ctrl+S.
   const handleDisabledAtTextChange = React.useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     sentTextRef.current = null;
+    setInvalid(false);
     setInputText(formatEuPartial(event.target.value, sep));
   }, [sep]);
 
@@ -137,10 +143,39 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     onStatusChange(deriveStatusFromDisabledAt(iso));
   }, [disabledAt, inputText, onDisabledAtChange, onStatusChange, sep]);
 
+  const handleDisabledAtFocus = () => {
+    setInvalid(false);
+    setFocused(true);
+    justFocusedRef.current = true;
+    // A click must select the edit text after the render; the browser would otherwise collapse
+    // that selection on mouse up. Keyboard focus needs no second selection.
+    selectOnMouseUpRef.current = mouseDownRef.current;
+    mouseDownRef.current = false;
+  };
+
   const handleDisabledAtBlur = React.useCallback(() => {
     setFocused(false);
+    selectOnMouseUpRef.current = false;
+    mouseDownRef.current = false;
+    // A non-empty text that is not a full valid date stays in place and shows the error.
+    setInvalid(inputText.trim() !== '' && !euDateToIsoEndOfDay(inputText));
     commitDisabledAt();
-  }, [commitDisabledAt]);
+  }, [commitDisabledAt, inputText]);
+
+  // Select the whole edit text on entering the field, so the first keystroke replaces the date.
+  // The selection waits for the render that swaps the display format for dd/mm/yyyy.
+  React.useLayoutEffect(() => {
+    if (!focused || !justFocusedRef.current) return;
+    justFocusedRef.current = false;
+    inputRef.current?.select();
+  }, [focused]);
+
+  const handleDisabledAtMouseUp = (event: React.MouseEvent<HTMLInputElement>) => {
+    if (!selectOnMouseUpRef.current) return;
+    selectOnMouseUpRef.current = false;
+    event.preventDefault();
+    event.currentTarget.select();
+  };
 
   const handleDisabledAtKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
     // Alt+Down opens the calendar from the keyboard; its button is out of the tab order.
@@ -155,6 +190,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
       event.preventDefault();
       event.stopPropagation();
       sentTextRef.current = null;
+      setInvalid(false);
       setInputText(isoToEuDate(disabledAt, sep));
     } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
       // The page's save shortcut listens on the window, after this handler: the date and what the
@@ -171,6 +207,7 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     setCalendarAnchor(dateFieldRef.current?.querySelector<HTMLElement>('.MuiInputBase-root') ?? null);
   };
   const onCalendarSelect = (yyyyMmDd: string) => {
+    setInvalid(false);
     if (!yyyyMmDd) { setInputText(''); onDisabledAtChange(null); onStatusChange(deriveStatusFromDisabledAt(null)); return; }
     const [y, m, d] = yyyyMmDd.split('-');
     const ddmmyyyy = `${d}${sep}${m}${sep}${y}`;
@@ -181,6 +218,9 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
     onDisabledAtChange(iso);
     onStatusChange(deriveStatusFromDisabledAt(iso));
   };
+
+  // The caller's error and helper text win; otherwise an invalid blurred text shows its message.
+  const ownError = invalid && !focused;
 
   return (
     <Stack spacing={1.5} alignItems="flex-start">
@@ -203,14 +243,19 @@ const StatusLifecycleField: React.FC<StatusLifecycleFieldProps> = ({
             placeholder={t('labels.datePlaceholder')}
             value={shownText}
             onChange={handleDisabledAtTextChange}
-            onFocus={() => setFocused(true)}
+            onFocus={handleDisabledAtFocus}
             onBlur={handleDisabledAtBlur}
             onKeyDown={handleDisabledAtKeyDown}
             disabled={disabled}
             name={disabledAtName}
-            error={disabledAtError}
-            helperText={disabledAtHelperText ?? t('lifecycleField.endOfValidityHint')}
-            inputProps={{ inputMode: 'numeric' }}
+            inputRef={inputRef}
+            error={disabledAtError || ownError}
+            helperText={disabledAtHelperText ?? (ownError ? t('labels.dateInvalid') : t('lifecycleField.endOfValidityHint'))}
+            inputProps={{
+              inputMode: 'numeric',
+              onMouseDown: () => { mouseDownRef.current = true; },
+              onMouseUp: handleDisabledAtMouseUp,
+            }}
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
