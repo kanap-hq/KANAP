@@ -1673,6 +1673,8 @@
     "title": "Données d'exemple",
     "intro": "Découvrez KANAP avec Fromage & Co, une fromagerie fictive. Les données d'exemple se chargent dans un espace de travail vide, et s'effacent ensuite depuis cette page.",
     "notEmpty": "Les données d'exemple ne se chargent que dans un espace de travail vide. Cet espace de travail contient déjà des données.",
+    "blockingLead": "Voici ce qui empêche le chargement :",
+    "blockingItem": "{{label}} ({{count}})",
     "loadRefusal": {
       "SUBSCRIPTION_FROZEN": "Les données d'exemple ne peuvent pas être chargées tant que l'abonnement est gelé.",
       "TRIAL_EXPIRED": "Les données d'exemple ne peuvent plus être chargées une fois la période d'essai terminée."

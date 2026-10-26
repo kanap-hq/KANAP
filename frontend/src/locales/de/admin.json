@@ -1673,6 +1673,8 @@
     "title": "Beispieldaten",
     "intro": "Entdecken Sie KANAP mit Fromage & Co, einer fiktiven Käserei. Beispieldaten lassen sich in einen leeren Arbeitsbereich laden und anschließend auf dieser Seite wieder löschen.",
     "notEmpty": "Beispieldaten lassen sich nur in einen leeren Arbeitsbereich laden. Dieser Arbeitsbereich enthält bereits Daten.",
+    "blockingLead": "Das steht dem Laden im Weg:",
+    "blockingItem": "{{label}} ({{count}})",
     "loadRefusal": {
       "SUBSCRIPTION_FROZEN": "Beispieldaten können nicht geladen werden, solange das Abonnement eingefroren ist.",
       "TRIAL_EXPIRED": "Beispieldaten können nach Ende des Testzeitraums nicht mehr geladen werden."
