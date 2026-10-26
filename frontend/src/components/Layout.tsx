@@ -56,6 +56,7 @@ import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
 import { useThemeMode } from '../config/ThemeContext';
 import { getDocUrl, RELEASES_URL } from '../utils/docUrls';
+import { formatUserName } from '../utils/userDisplay';
 import SubscriptionBanner from './SubscriptionBanner';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
@@ -128,6 +129,10 @@ export default function Layout() {
   useInAppLinkGuard(navigate);
   const guardedLeave = useGuardedLeave();
   const { logout, token, hasLevel, claims, profile } = useAuth();
+  // Same fallback as the users list: an account with no name is shown by its email.
+  // That email is the display name, so the line under it stays hidden.
+  const accountLabel = formatUserName(profile);
+  const accountEmail = String(profile?.email ?? '').trim();
   const dataAccessLimited = useDataAccessLimited();
   const { isPlatformHost, tenantName, logoUrl, useLogoInDark } = useTenant();
   const { config } = useFeatures();
@@ -516,12 +521,16 @@ export default function Layout() {
               </IconButton>
               <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={closeMenu} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
                 <Box sx={{ px: 2, py: 1, minWidth: 200 }}>
-                  <Typography variant="subtitle2" fontWeight={500}>
-                    {[profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'User'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {profile?.email}
-                  </Typography>
+                  {accountLabel ? (
+                    <Typography variant="subtitle2" fontWeight={500}>
+                      {accountLabel}
+                    </Typography>
+                  ) : null}
+                  {accountEmail && accountEmail !== accountLabel ? (
+                    <Typography variant="caption" color="text.secondary">
+                      {accountEmail}
+                    </Typography>
+                  ) : null}
                 </Box>
                 <Divider sx={{ my: 0.5 }} />
                 <MenuItem onClick={() => { closeMenu(); void guardedLeave(() => navigate('/settings')); }}>{t('nav:userMenu.myProfile')}</MenuItem>
