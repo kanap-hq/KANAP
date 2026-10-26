@@ -141,7 +141,7 @@ View cost allocations across all companies with summary KPIs and intercompany fl
 
 - Company and department columns (grouped with bold subtotal rows per company)
 - Amount, share of total, headcount, and cost per user
-- Rows labelled "Common Costs" represent costs without a department assignment
+- Rows labelled "Common costs" represent costs without a department assignment
 
 **Intercompany flows table** (when enabled):
 
@@ -197,7 +197,7 @@ Drill down into a single company's chargeback allocations across departments, bu
 **Department totals** (when enabled):
 
 - Department name, amount, share of total, headcount, cost per user
-- "Common Costs" aggregates allocations without a specific department
+- "Common costs" aggregates allocations without a specific department
 - Horizontal bar chart alongside the table
 
 **Chargeback lines** (when enabled):
