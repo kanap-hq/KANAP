@@ -24,6 +24,16 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   9. GET /knowledge/:id: the linked families of the modules the reader reads.
 //  10. GET /incidents/:id/entries and the incident counts.
 //  11. GET /portfolio/projects/:id/applications|assets (and requests), project and request detail.
+// Follow-ups decided on 2026-10-26:
+//  12. A Business Contributor's task outside their participation: the project, its phase, the
+//      converted request and the applications read as an unreadable module (screen and Plaid),
+//      and the list's searches and name filters follow.
+//  13. Document link writes (`/knowledge/:id/relations/.../bulk-replace`): a family the person
+//      does not read is refused, a family left out stays, and a Business Contributor adds only
+//      records inside their participation.
+//  14. Counters of a hidden family: the incident journal badge counts the entries the journal
+//      shows; the Relations tab and badge of an application and a project count no budget line,
+//      business process or technology without the module's read.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -46,21 +56,25 @@ type Harness = {
   projectsController: any;
   requestsController: any;
   documentMutations: any;
+  tasksController: any;
+  knowledgeController: any;
 };
 
 /**
- * A: portfolio and tasks, no IT, no contracts. B: applications only. C: knowledge only.
+ * A: portfolio and tasks, no IT, no contracts. B: applications only. C: knowledge only (a writer).
  * D: incidents only. E: Business Contributor (projects, requests, tasks, applications, knowledge; no IT).
+ * K: knowledge writer and projects reader, no applications.
  * P: projects only. Q: requests only. U: users reader. Full: Administrator.
  */
-type Profile = 'a' | 'b' | 'c' | 'd' | 'e' | 'p' | 'q' | 'u' | 'full';
+type Profile = 'a' | 'b' | 'c' | 'd' | 'e' | 'k' | 'p' | 'q' | 'u' | 'full';
 
 const PERMISSIONS: Record<Exclude<Profile, 'full'>, Record<string, string>> = {
   a: { portfolio_projects: 'reader', portfolio_requests: 'reader', tasks: 'reader' },
   b: { applications: 'reader' },
-  c: { knowledge: 'reader' },
+  c: { knowledge: 'member' },
   d: { incidents: 'reader' },
-  e: { portfolio_projects: 'contributor', portfolio_requests: 'contributor', tasks: 'contributor', applications: 'reader', knowledge: 'reader' },
+  e: { portfolio_projects: 'contributor', portfolio_requests: 'contributor', tasks: 'contributor', applications: 'reader', knowledge: 'member' },
+  k: { knowledge: 'member', portfolio_projects: 'reader' },
   p: { portfolio_projects: 'reader' },
   q: { portfolio_requests: 'reader' },
   u: { users: 'reader' },
@@ -68,7 +82,7 @@ const PERMISSIONS: Record<Exclude<Profile, 'full'>, Record<string, string>> = {
 
 const ROLE_NAMES: Record<Profile, string> = {
   a: 'Portfolio and tasks', b: 'Applications only', c: 'Knowledge only', d: 'Incidents only',
-  e: 'Business Contributor', p: 'Projects only', q: 'Requests only', u: 'Users reader', full: 'Administrator',
+  e: 'Business Contributor', k: 'Knowledge and projects', p: 'Projects only', q: 'Requests only', u: 'Users reader', full: 'Administrator',
 };
 
 type Seed = {
@@ -82,6 +96,7 @@ type Seed = {
   request: string;
   projectTask: string;
   contractTask: string;
+  outsideTask: string;
   document: string;
   incident: string;
 };
@@ -93,6 +108,8 @@ const PROJECT = 'Main project';
 const DEPENDENCY = 'Dependency project';
 const REQUEST = 'Source request';
 const PROJECT_TASK = 'Project task';
+const PHASE = 'Dependency phase';
+const CONVERTED = 'Converted request';
 
 async function createHarness(): Promise<Harness> {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for linked-records-follow-rights.integration.spec.ts.');
@@ -108,6 +125,8 @@ async function createHarness(): Promise<Harness> {
   const { PortfolioProjectsController } = require('../../../portfolio/portfolio-projects.controller');
   const { PortfolioRequestsController } = require('../../../portfolio/portfolio-requests.controller');
   const { AiDocumentMutationSupportService } = require('../../../ai/mutation/ai-document-mutation-support.service');
+  const { TasksController } = require('../../../spend/tasks.controller');
+  const { KnowledgeController } = require('../../../knowledge/knowledge.controller');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   // The surface checks (tenant AI settings, provider, subscription) are not what this spec tests.
   app.get(AiPolicyService).assertSurfaceAccess = async () => undefined;
@@ -124,6 +143,8 @@ async function createHarness(): Promise<Harness> {
     projectsController: app.get(PortfolioProjectsController),
     requestsController: app.get(PortfolioRequestsController),
     documentMutations: app.get(AiDocumentMutationSupportService),
+    tasksController: app.get(TasksController),
+    knowledgeController: app.get(KnowledgeController),
   };
 }
 
@@ -182,12 +203,21 @@ async function seed(runner: QueryRunner): Promise<Seed> {
   await runner.query(`INSERT INTO application_projects (tenant_id, application_id, project_id) VALUES ($1, $2, $3)`, [tenantId, application, project]);
   await runner.query(`INSERT INTO asset_projects (tenant_id, asset_id, project_id) VALUES ($1, $2, $3)`, [tenantId, asset, project]);
 
-  const task = (itemNumber: number, title: string, type: string, related: string) => insertId(runner,
-    `INSERT INTO tasks (tenant_id, item_number, title, description, status, related_object_type, related_object_id, labels, owner_ids, viewer_ids, assignee_user_id)
-     VALUES ($1, $2, $3, '', 'open', $4, $5, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $6)`,
-    [tenantId, itemNumber, title, type, related, users.e]);
+  const phase = await insertId(runner,
+    `INSERT INTO portfolio_project_phases (tenant_id, project_id, name) VALUES ($1, $2, $3)`, [tenantId, dependency, PHASE]);
+  const task = (itemNumber: number, title: string, type: string, related: string, phaseId: string | null = null) => insertId(runner,
+    `INSERT INTO tasks (tenant_id, item_number, title, description, status, related_object_type, related_object_id, labels, owner_ids, viewer_ids, assignee_user_id, phase_id)
+     VALUES ($1, $2, $3, '', 'open', $4, $5, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb, $6, $7)`,
+    [tenantId, itemNumber, title, type, related, users.e, phaseId]);
   const projectTask = await task(1, PROJECT_TASK, 'project', project);
   const contractTask = await task(2, 'Contract task', 'contract', contract);
+  // E is assigned a task of the dependency project, outside their participation, converted into a
+  // request they do not take part in either.
+  const outsideTask = await task(3, 'Outside task', 'project', dependency, phase);
+  await runner.query(
+    `INSERT INTO portfolio_requests (tenant_id, item_number, name, status, criteria_values, feasibility_review, priority_override, origin_task_id)
+     VALUES ($1, 2, $2, 'approved', '{}'::jsonb, '{}'::jsonb, false, $3)`, [tenantId, CONVERTED, outsideTask]);
+  await runner.query(`INSERT INTO task_applications (tenant_id, task_id, application_id) VALUES ($1, $2, $3)`, [tenantId, outsideTask, application]);
   for (const taskId of [projectTask, contractTask]) {
     await runner.query(`INSERT INTO task_applications (tenant_id, task_id, application_id) VALUES ($1, $2, $3)`, [tenantId, taskId, application]);
     await runner.query(`INSERT INTO task_assets (tenant_id, task_id, asset_id) VALUES ($1, $2, $3)`, [tenantId, taskId, asset]);
@@ -220,7 +250,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
 
   return {
     tenantId, users, application, asset, contract, project, dependency, request,
-    projectTask, contractTask, document, incident,
+    projectTask, contractTask, outsideTask, document, incident,
   };
 }
 
@@ -507,6 +537,139 @@ async function testKnowledgeContextAndSearches(h: Harness, runner: QueryRunner, 
   assert.equal((await h.incidents.list({ q: ASSET }, { ...incidentOpts, technologies: true, applications: true })).total, 1, 'IT reader: the search matches the server');
 }
 
+// 12. A Business Contributor's task outside their participation (screen and Plaid).
+async function testTaskParticipation(h: Harness, runner: QueryRunner, s: Seed) {
+  const hidden = [DEPENDENCY, PHASE, CONVERTED, APP];
+  const eReq = rawRequest(runner, s, 'e');
+  const outside = await h.tasksController.getOne('T-3', eReq);
+  assert.equal(outside.related_object_type, 'project', 'E: the task keeps its own type');
+  assert.equal(outside.related_object_hidden, true, 'E: the project reads as unreadable');
+  assert.deepEqual([outside.related_object_id, outside.related_object_name], [null, null], 'E: no project id or name');
+  assert.equal(outside.phase_name, null, 'E: no phase');
+  assert.deepEqual([outside.converted_request_id, outside.converted_request_item_number], [null, null], 'E: no converted request');
+  assert.deepEqual([outside.applications, outside.application_ids], [null, null], 'E: no application field');
+  hasNot(outside, hidden, 'E, task page outside their participation');
+  const inside = await h.tasksController.getOne('T-1', eReq);
+  assert.equal(inside.related_object_name, PROJECT, 'E: the project they take part in');
+  assert.equal(inside.applications, null, 'E: an application outside their participation hides the field');
+
+  const list = await h.tasksController.list({}, eReq);
+  hasNot(list, hidden, 'E, tasks list');
+  const listed = list.items.find((item: any) => item.id === s.outsideTask);
+  assert.deepEqual([listed.project_name, listed.phase_name], [null, null], 'E: the list names neither the project nor its phase');
+  has(list, [PROJECT], 'E, tasks list');
+  const text = (field: string, filter: string) => ({ filters: { [field]: { filterType: 'text', type: 'contains', filter } } });
+  const searches: Array<[string, any]> = [
+    ['search', { q: DEPENDENCY }],
+    ['project filter', text('project_name', DEPENDENCY)],
+    ['related filter', text('related_object_name', DEPENDENCY)],
+    ['phase filter', text('phase_name', PHASE)],
+    ['application filter', text('application_name', APP)],
+  ];
+  for (const [label, query] of searches) {
+    assert.equal((await h.tasksController.list(query, eReq)).total, 0, `E: the ${label} matches nothing outside their participation`);
+    assert.ok((await h.tasksController.list(query, rawRequest(runner, s, 'full'))).total > 0, `full: the ${label} matches`);
+  }
+  assert.equal((await h.tasksController.listIds({ q: DEPENDENCY }, eReq)).total, 0, 'E: nor the navigation ids');
+  const values = await h.tasksController.listFilterValues({ fields: 'phase_name,application_name,project_stream_name' }, eReq);
+  hasNot(values, [PHASE, APP], 'E, filter values');
+  const fullOutside = await h.tasksController.getOne('T-3', rawRequest(runner, s, 'full'));
+  assert.deepEqual([fullOutside.related_object_name, fullOutside.phase_name, fullOutside.converted_request_item_number], [DEPENDENCY, PHASE, 2], 'full: the project, its phase, the request');
+  assert.equal(fullOutside.applications.length, 1, 'full: the application');
+  has(await h.tasksController.listFilterValues({ fields: 'phase_name,application_name' }, rawRequest(runner, s, 'full')), [PHASE, APP], 'full, filter values');
+
+  // Plaid and MCP: the task's context, the lists, the detail and the search.
+  for (const surface of ['chat', 'mcp'] as const) {
+    const context = await h.entities.getEntityContext(ctx(runner, s, 'e', surface), { entity_type: 'tasks', entity_id: 'T-3' });
+    assert.equal(context.entity.metadata.related_object_name, null, `E (${surface}): no project name`);
+    assert.equal(context.entity.metadata.phase, null, `E (${surface}): no phase`);
+    assert.deepEqual(relations(context), [], `E (${surface}): no project, request or application`);
+    hasNot(context, hidden, `E (${surface}), task context`);
+  }
+  const eInside = await h.entities.getEntityContext(ctx(runner, s, 'e'), { entity_type: 'tasks', entity_id: 'T-1' });
+  assert.equal(eInside.entity.metadata.related_object_name, PROJECT, 'E: the project they take part in');
+  hasNot(await h.entities.listEntities(ctx(runner, s, 'e'), { entity_type: 'tasks' }), [DEPENDENCY], 'E, tasks list (entity service)');
+  hasNot(await h.executor.execute(ctx(runner, s, 'e'), { entity_type: 'tasks' }), hidden, 'E, query_entities(tasks)');
+  hasNot(await h.executor.executeDetail(ctx(runner, s, 'e'), { entity_type: 'tasks', entity_id: 'T-3' }), hidden, 'E, get_entity_detail(tasks)');
+  const eFiltered = await h.executor.execute(ctx(runner, s, 'e'), { entity_type: 'tasks', filters: { project_name: { op: 'contains', value: DEPENDENCY } } });
+  assert.equal(eFiltered.total, 0, 'E: query_entities does not match the project outside their participation');
+  // The per-type search (`searchTasks`), called directly: the dispatcher swallows its errors.
+  assert.equal((await h.entities.searchTasks(ctx(runner, s, 'e'), DEPENDENCY, 10)).items.length, 0, 'E: the task search does not match the project');
+  assert.equal((await h.entities.searchTasks(ctx(runner, s, 'full'), DEPENDENCY, 10)).items.length, 1, 'full: the task search matches the project');
+  const full = await h.entities.getEntityContext(ctx(runner, s, 'full'), { entity_type: 'tasks', entity_id: 'T-3' });
+  assert.equal(full.entity.metadata.related_object_name, DEPENDENCY, 'full: the project name');
+  assert.deepEqual(relations(full), ['converted_request', 'linked_applications', 'related_project'], 'full: the project, the request, the application');
+}
+
+const linkCount = async (runner: QueryRunner, table: string, documentId: string) =>
+  Number((await runner.query(`SELECT count(*)::int AS n FROM ${table} WHERE document_id = $1`, [documentId]))[0].n);
+
+// 13. Document link writes through the API.
+async function testDocumentLinkWrites(h: Harness, runner: QueryRunner, s: Seed) {
+  const write = (profile: Profile, body: any) => h.knowledgeController.bulkReplaceRelationSets('DOC-1', body, tenantRequest(runner, s, profile));
+  const family = (profile: Profile, entity: string, ids: string[]) =>
+    h.knowledgeController.bulkReplaceGenericRelations('DOC-1', entity, { ids }, tenantRequest(runner, s, profile));
+
+  // C reads no linked module: every family is refused, even an empty one, which would clear it.
+  await rejects(runner, () => write('c', { applications: [] }), /cannot change the applications linked to this document/, 'C: no application write');
+  await rejects(runner, () => family('c', 'projects', [s.project]), /cannot change the projects linked/, 'C: no project write');
+  await rejects(runner, () => h.knowledgeController.bulkReplaceApplicationRelations('DOC-1', { application_ids: [] }, tenantRequest(runner, s, 'c')), /cannot change the applications/, 'C: nor through the family route');
+  assert.equal(await linkCount(runner, 'document_applications', s.document), 1, 'C: the application link stays');
+
+  // K reads projects, not applications: a family left out stays, an unread one is refused whole.
+  await rejects(runner, () => write('k', { projects: [], applications: [] }), /cannot change the applications/, 'K: no application write');
+  assert.equal(await linkCount(runner, 'document_projects', s.document), 1, 'K: a refused write changes nothing');
+  await write('k', { projects: [s.project, s.dependency] });
+  assert.equal(await linkCount(runner, 'document_projects', s.document), 2, 'K: the projects are replaced');
+  assert.equal(await linkCount(runner, 'document_applications', s.document), 1, 'K: the applications, left out, stay');
+  await write('k', { relations: { projects: [s.project] } });
+  assert.equal(await linkCount(runner, 'document_projects', s.document), 1, 'K: the wrapped form too');
+
+  // E adds only the records they take part in; a link already there may stay.
+  await rejects(runner, () => write('e', { projects: [s.project, s.dependency] }), /only link projects you take part in/, 'E: no project outside their participation');
+  await write('full', { requests: [] });
+  await rejects(runner, () => family('e', 'requests', [s.request]), /only link requests you take part in/, 'E: no request outside their participation');
+  await write('e', { projects: [s.project], applications: [s.application] });
+  assert.equal(await linkCount(runner, 'document_applications', s.document), 1, 'E: the application already linked stays');
+  await rejects(runner, () => write('e', { assets: [] }), /cannot change the assets/, 'E: no infrastructure write');
+
+  await write('full', { projects: [s.project, s.dependency] });
+  assert.equal(await linkCount(runner, 'document_projects', s.document), 2, 'full: any project');
+}
+
+// 14. No counter for a hidden family.
+async function testHiddenFamilyCounters(h: Harness, runner: QueryRunner, s: Seed) {
+  const viewer = { userId: s.users.d, isAdmin: false, canReadIncidents: true, canContributeIncidents: false };
+  const entries = async (technologies: boolean, applications: boolean) =>
+    (await h.incidents.get(s.incident, { manager: runner.manager, tenantId: s.tenantId, viewer, technologies, applications })).counts.entries;
+  assert.equal(await entries(false, false), 1, 'D: the journal badge counts the note only, as the journal shows');
+  assert.equal(await entries(false, true), 2, 'applications reader: the application link change too');
+  assert.equal(await entries(true, true), 3, 'IT reader: every entry');
+
+  // A budget line and a business process linked to the application and the project.
+  const line = await insertId(runner,
+    `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number, nature) VALUES ($1, 'Hidden line', 'EUR', '2026-01-01', 1, 'opex')`,
+    [s.tenantId]);
+  await runner.query(`INSERT INTO application_spend_items (tenant_id, application_id, spend_item_id) VALUES ($1, $2, $3)`, [s.tenantId, s.application, line]);
+  await runner.query(`INSERT INTO portfolio_project_opex (tenant_id, project_id, opex_id) VALUES ($1, $2, $3)`, [s.tenantId, s.project, line]);
+  const process = await insertId(runner, `INSERT INTO business_processes (tenant_id, name) VALUES ($1, 'Hidden process')`, [s.tenantId]);
+  await runner.query(`INSERT INTO application_business_processes (tenant_id, application_id, business_process_id) VALUES ($1, $2, $3)`, [s.tenantId, s.application, process]);
+
+  const { ApplicationsController } = require('../../../applications/applications.controller');
+  const applications = h.app.get(ApplicationsController);
+  const b = await applications.relationCounts('APP-1', tenantRequest(runner, s, 'b'));
+  assert.deepEqual([b.budget_lines_hidden, b.processes, b.technologies, b.total], [0, 0, 0, 0], 'B: no budget line, process or technology counted');
+  const bTab = await applications.getRelations('APP-1', tenantRequest(runner, s, 'b'));
+  assert.deepEqual([bTab.budget_lines, bTab.budget_lines_hidden], [null, 0], 'B: the Relations tab neither lists nor counts the budget lines');
+  const full = await applications.relationCounts('APP-1', tenantRequest(runner, s, 'full'));
+  assert.deepEqual([full.opex, full.processes], [1, 1], 'full: the line and the process');
+
+  const aProject = await h.projectsController.get('PRJ-1', { include: 'financials' }, tenantRequest(runner, s, 'a'));
+  assert.deepEqual([aProject.opex_items, aProject.budget_lines_hidden], [null, 0], 'A: the project counts no budget line');
+  const fullProject = await h.projectsController.get('PRJ-1', { include: 'financials' }, tenantRequest(runner, s, 'full'));
+  assert.equal(fullProject.opex_items.length, 1, 'full: the project lists the line');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -526,6 +689,9 @@ async function run() {
       await testPortfolioRoutes(harness, runner, s);
       await testDeploymentsException(harness, runner, s);
       await testKnowledgeContextAndSearches(harness, runner, s);
+      await testTaskParticipation(harness, runner, s);
+      await testDocumentLinkWrites(harness, runner, s);
+      await testHiddenFamilyCounters(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
