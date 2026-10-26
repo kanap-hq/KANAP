@@ -79,11 +79,13 @@ const TARGETS: NetboxClusterAsset[] = [
 function context(
   map: Record<string, string>,
   containers: Record<string, Array<{ id: string; name: string }>> = {},
+  hosts: Record<string, Array<{ id: string; name: string; cluster_id: string }>> = {},
 ): NetboxClusterContext {
   return {
     map,
     targets: new Map(TARGETS.map((target) => [target.id, target])),
     containers: new Map(Object.entries(containers)),
+    hosts: new Map(Object.entries(hosts)),
   };
 }
 
@@ -139,6 +141,40 @@ function plan(objects: ReturnType<typeof vm>[], assets: ExistingAsset[], cluster
   assert.equal(both.target, null);
   assert.equal(both.diff, null);
   assert.equal(both.warnings[0]?.code, 'cluster_other_present');
+
+  // A member host of the matched cluster carries the machine: the cluster
+  // replaces it, and the preview says so as a placement (R1).
+  const host = '11111111-1111-4111-8111-111111111111';
+  const host2 = '22222222-2222-4222-8222-222222222222';
+  const placed = planClusterAttachment(machine, 'vm-1', context({ 7: PARIS }, {}, {
+    'vm-1': [{ id: host, name: 'par-esx-01', cluster_id: PARIS }],
+  }));
+  assert.deepEqual(placed.target, { assetId: PARIS, netboxName: 'Paris vSphere' });
+  assert.deepEqual(placed.diff, { field: 'placement', before: 'par-esx-01', after: 'PAR-VSPHERE-CL01' });
+  assert.deepEqual(placed.warnings, []);
+  // Two member hosts in Netbox order: both names.
+  const twoHosts = planClusterAttachment(machine, 'vm-1', context({ 7: PARIS }, {}, {
+    'vm-1': [
+      { id: host, name: 'par-esx-01', cluster_id: PARIS },
+      { id: host2, name: 'par-esx-02', cluster_id: PARIS },
+    ],
+  }));
+  assert.equal(twoHosts.diff?.before, 'par-esx-01, par-esx-02');
+  assert.equal(twoHosts.diff?.field, 'placement');
+  // A host of another cluster replaces nothing: the cluster diff stays.
+  const foreignHost = planClusterAttachment(machine, 'vm-1', context({ 7: PARIS }, {}, {
+    'vm-1': [{ id: host, name: 'par-esx-01', cluster_id: GOUDA }],
+  }));
+  assert.deepEqual(foreignHost.diff, { field: 'cluster', before: null, after: 'PAR-VSPHERE-CL01' });
+  // Already in the cluster: nothing to add, and the host link is left alone.
+  const presentWithHost = planClusterAttachment(machine, 'vm-1', context(
+    { 7: PARIS },
+    { 'vm-1': [{ id: PARIS, name: 'PAR-VSPHERE-CL01' }] },
+    { 'vm-1': [{ id: host, name: 'par-esx-01', cluster_id: PARIS }] },
+  ));
+  assert.equal(presentWithHost.target, null);
+  assert.equal(presentWithHost.diff, null);
+  assert.deepEqual(presentWithHost.warnings, []);
 
   // A machine this run creates: the relation follows the creation, and the
   // preview shows the cluster it joins.

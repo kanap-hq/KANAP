@@ -7,6 +7,8 @@
       "exportCsv": "Exporter CSV",
       "importTitle": "Importer les incidents",
       "exportTitle": "Exporter les incidents",
+      "exportScope_one": "Export filtré : {{count}} incident",
+      "exportScope_other": "Export filtré : {{count}} incidents",
       "columns": {
         "reference": "Réf.",
         "title": "Titre",
@@ -21,7 +23,10 @@
         "applications": "Applications",
         "tasks": "Tâches",
         "created": "Créé le",
-        "access": "Accès"
+        "access": "Accès",
+        "personalData": "Données personnelles",
+        "authorityRequired": "Notification requise",
+        "authorityNotified": "Notifié le"
       },
       "filters": {
         "noCategory": "(Aucune catégorie)",
@@ -118,8 +123,10 @@
         "kept_other": "{{count}} applications ne peuvent pas être supprimées et sont conservées :",
         "deleted_one": "{{count}} application supprimée",
         "deleted_other": "{{count}} applications supprimées",
-        "warningCounted_one": "Sont supprimés avec elle : {{removed}} et ses liens vers d’autres éléments. Cette action est irréversible.",
-        "warningCounted_other": "Sont supprimés avec elles : {{removed}} et leurs liens vers d’autres éléments. Cette action est irréversible.",
+        "warningCounted_one": "Sont supprimés avec elle : {{removed}}. Cette action est irréversible.",
+        "warningCounted_other": "Sont supprimés avec elles : {{removed}}. Cette action est irréversible.",
+        "links_one": "ses liens vers d'autres éléments",
+        "links_other": "leurs liens vers d'autres éléments",
         "title_one": "Supprimer {{count}} application",
         "title_other": "Supprimer {{count}} applications",
         "keptDone_one": "{{count}} application conservée",
@@ -164,6 +171,7 @@
     "assets": {
       "title": "Actifs",
       "addAsset": "Ajouter un actif",
+      "addCluster": "Ajouter un cluster",
       "importCsv": "Importer CSV",
       "exportCsv": "Exporter CSV",
       "exportTitle": "Exporter les actifs",
@@ -188,6 +196,7 @@
       },
       "filters": {
         "noCluster": "(Aucun cluster)",
+        "isCluster": "(Est un cluster)",
         "noLocation": "(Aucun site)",
         "noSubLocation": "(Aucun sous-site)",
         "blank": "(Vide)"
@@ -681,9 +690,9 @@
           "application": "Aucune vulnérabilité à traiter sur cette application."
         },
         "indirect": {
-          "title": "Par un autre actif",
-          "hint": "Non comptées : ces technologies sont installées sur un autre actif (un hôte, un cluster)."
+          "title": "Sur ses membres"
         },
+        "platform": "Plateforme sous-jacente ({{count}})",
         "countLink_one": "Voir la vulnérabilité à traiter dans la page Vulnérabilités",
         "countLink_other": "Voir les {{count}} vulnérabilités à traiter dans la page Vulnérabilités"
       },
@@ -692,6 +701,8 @@
         "label_other": "{{count}} graves",
         "hint_one": "{{count}} vulnérabilité critique ou élevée à traiter",
         "hint_other": "{{count}} vulnérabilités critiques ou élevées à traiter",
+        "hintMembers_one": "{{count}} vulnérabilité critique ou élevée à traiter, membres compris",
+        "hintMembers_other": "{{count}} vulnérabilités critiques ou élevées à traiter, membres compris",
         "exploited_one": "{{count}} connue comme exploitée",
         "exploited_other": "{{count}} connues comme exploitées"
       },
@@ -786,7 +797,6 @@
       "noApplications": "Aucune application affectée.",
       "viewCluster": "Voir le cluster",
       "editServer": "Modifier le serveur",
-      "clusterHint": "Nœud de cluster : gérez les membres dans l'espace Serveurs.",
       "purpose": "Objet :",
       "typicalPorts": "Ports usuels :",
       "topology": "Topologie :",
@@ -800,7 +810,9 @@
         "entity": "Entités",
         "cluster": "Clusters",
         "server": "Serveurs"
-      }
+      },
+      "hiddenMembers_one": "{{count}} membre de plus",
+      "hiddenMembers_other": "{{count}} membres de plus"
     },
     "administrationView": {
       "tabs": {
@@ -1354,7 +1366,8 @@
         "model": "Modèle",
         "rack_location": "Emplacement en baie",
         "rack_unit": "Unité de baie",
-        "cluster": "Cluster"
+        "cluster": "Cluster",
+        "placement": "Placement"
       },
       "mappings": {
         "intro": "Seuls les rôles et les sites mis en correspondance sont importés. Tout ce qui reste sur « Ne pas importer » est laissé de côté.",
@@ -1448,6 +1461,7 @@
         "save_failed": "Cet objet n'a pas pu être enregistré. Les détails figurent dans le journal du serveur.",
         "validation_failed": "Cet objet a été refusé :",
         "os_ambiguous": "Le système d'exploitation « {{value}} » correspond à plusieurs entrées de votre catalogue, la valeur n'a pas été modifiée.",
+        "os_cluster_with_members": "Cet actif est un cluster avec des membres, le système d'exploitation « {{value}} » n'a donc pas été repris.",
         "status_not_mapped": "Le statut Netbox « {{value}} » n'a pas d'équivalent dans KANAP, le cycle de vie n'a pas été modifié.",
         "lifecycle_not_in_catalog": "Le cycle de vie « {{value}} » ne figure pas dans votre catalogue, la valeur n'a pas été modifiée.",
         "no_ip_address_type": "Aucun type d'adresse IP n'est défini dans les paramètres IT, l'adresse n'a pas été importée.",
@@ -1513,8 +1527,7 @@
         "overview": "Vue d'ensemble",
         "journal": "Journal",
         "relations": "Relations",
-        "documents": "Documents",
-        "attachments": "Pièces jointes"
+        "documents": "Documents"
       },
       "actions": {
         "changeStatus": "Changer le statut",
@@ -1554,8 +1567,6 @@
         "minutes": "{{count}} min"
       },
       "create": {
-        "title": "Titre",
-        "titlePlaceholder": "ex. service de messagerie indisponible sur le site de Lyon",
         "description": "Description",
         "titleRequired": "Le titre est obligatoire.",
         "severityRequired": "La gravité est obligatoire.",
@@ -1573,6 +1584,7 @@
         "placeholder": "Ajouter une note au journal",
         "add": "Ajouter",
         "empty": "Aucune entrée pour l'instant.",
+        "recordedAt": "enregistrée le {{date}}",
         "systemAuthor": "Système",
         "unknownAuthor": "Inconnu",
         "kinds": {
@@ -1751,7 +1763,10 @@
         "inbound": "Entrantes ({{count}})",
         "outbound": "Sortantes ({{count}})",
         "routed": "Relayées ({{count}})",
-        "viaNames": "via {{names}}"
+        "viaNames": "via {{names}}",
+        "unbound": "Sans environnement",
+        "unboundHint": "Liée à aucun environnement. Ajoutez une liaison dans la fiche de l'interface.",
+        "loadFailed": "Les interfaces n'ont pas pu être chargées."
       },
       "deployments": {
         "addDeployment": "Ajouter un déploiement",
@@ -1763,23 +1778,24 @@
         "deleteAria": "Supprimer le déploiement {{env}}",
         "deleteConfirm": "Supprimer le déploiement {{env}} ?",
         "since": "Depuis",
-        "newServerAssignment": "Nouvelle affectation serveur",
-        "editServerAssignment": "Modifier l'affectation serveur",
-        "removeServerAssignment": "Retirer l'affectation serveur",
-        "editAssignmentAria": "Modifier l'affectation de {{name}}",
-        "removeAssignmentAria": "Retirer l'affectation de {{name}}",
-        "removeAssignmentConfirm": "Retirer cette affectation serveur ?",
+        "newServerAssignment": "Ajouter un serveur",
+        "editServerAssignment": "Modifier le serveur",
+        "removeServerAssignment": "Retirer le serveur",
+        "editAssignmentAria": "Modifier {{name}}",
+        "removeAssignmentAria": "Retirer {{name}}",
+        "removeAssignmentConfirm": "Retirer ce serveur du déploiement ?",
         "created": "Déploiement créé",
         "updated": "Déploiement mis à jour",
         "removed": "Déploiement supprimé",
-        "assignmentUpdated": "Affectation serveur mise à jour",
-        "assignmentRemoved": "Affectation serveur retirée",
-        "loadAssignmentsFailed": "Échec du chargement des affectations serveur",
+        "assignmentUpdated": "Serveur mis à jour",
+        "assignmentRemoved": "Serveur retiré",
+        "loadAssignmentsFailed": "Échec du chargement des serveurs",
         "updateFailed": "Échec de la mise à jour du déploiement",
         "saveFailed": "Échec de l'enregistrement du déploiement",
         "removeFailed": "Échec de la suppression du déploiement",
-        "saveAssignmentFailed": "Échec de l'enregistrement de l'affectation serveur",
-        "removeAssignmentFailed": "Échec du retrait de l'affectation serveur"
+        "saveAssignmentFailed": "Échec de l'enregistrement du serveur",
+        "removeAssignmentFailed": "Échec du retrait du serveur",
+        "baseUrlHelp": "L'adresse que l'on ouvre pour atteindre ce déploiement, par exemple https://app.example.com."
       },
       "relations": {
         "noChildApps": "Aucune application enfant liée pour le moment.",
@@ -1788,7 +1804,7 @@
         "deleteUrl": "Supprimer l'URL",
         "uploadingFiles_one": "Téléversement de {{count}} fichier…",
         "uploadingFiles_other": "Téléversement de {{count}} fichiers…",
-        "deleteAttachment": "Supprimer la pièce jointe « {{name}} » ?",
+        "deleteAttachment": "Supprimer le fichier « {{name}} » ?",
         "sections": {
           "budgetLines": "Lignes budgétaires",
           "contracts": "Contrats",
@@ -1800,7 +1816,7 @@
           "applications": "Applications",
           "assets": "Actifs",
           "processes": "Processus métier",
-          "related": "Apparentés"
+          "related": "Suggestions"
         },
         "empty": {
           "budgetLines": "Aucune ligne budgétaire liée.",
@@ -1890,6 +1906,8 @@
         "suggestions_one": "{{count}} suggestion",
         "suggestions_other": "{{count}} suggestions",
         "total": "Total",
+        "disabledNotCounted_one": "{{count}} ligne désactivée non comptée",
+        "disabledNotCounted_other": "{{count}} lignes désactivées non comptées",
         "technologyServers": {
           "proposal": "Renseigner aussi {{technology}} {{version}} sur",
           "proposalUnknown": "Renseigner aussi {{technology}} (version inconnue) sur",
@@ -1900,6 +1918,33 @@
           "action": "Renseigner sur un serveur",
           "actionNamed": "Renseigner {{name}} sur un serveur",
           "changeVersion": "Modifier la version de {{name}}"
+        },
+        "loadFailed": "Les relations n'ont pas pu être chargées.",
+        "feedback": {
+          "linked": "{{name}} lié.",
+          "unlinked": "{{name}} délié.",
+          "linkAdded": "Lien ajouté.",
+          "linkUpdated": "Lien modifié.",
+          "linkRemoved": "Lien supprimé.",
+          "fileAttached_one": "Fichier joint.",
+          "fileAttached_other": "{{count}} fichiers joints.",
+          "fileDeleted": "Fichier supprimé."
+        },
+        "outside": {
+          "and_one": "et {{count}} ligne hors de votre accès",
+          "and_other": "et {{count}} lignes hors de votre accès",
+          "only_one": "{{count}} ligne hors de votre accès",
+          "only_other": "{{count}} lignes hors de votre accès",
+          "count_one": "{{count}} ligne budgétaire",
+          "count_other": "{{count}} lignes budgétaires"
+        },
+        "outside_contracts": {
+          "and_one": "et {{count}} contrat hors de votre accès",
+          "and_other": "et {{count}} contrats hors de votre accès",
+          "only_one": "{{count}} contrat hors de votre accès",
+          "only_other": "{{count}} contrats hors de votre accès",
+          "count_one": "{{count}} contrat",
+          "count_other": "{{count}} contrats"
         }
       },
       "untitled": "Application sans nom",
@@ -1911,7 +1956,7 @@
         "goLive": "Mise en service"
       },
       "deleteMessage": "Cette action supprime définitivement {{name}}, avec ses liens vers d’autres éléments. Elle est irréversible.",
-      "deleteMessageWithDeployments": "Cette action supprime définitivement {{name}}, avec {{deployments}} et ses liens vers d’autres éléments. Elle est irréversible.",
+      "deleteMessageWithRemoved": "Cette action supprime définitivement {{name}}, avec {{removed}}. Elle est irréversible.",
       "convert": {
         "action": "Convertir en technologie",
         "title": "Convertir {{name}} en technologie",
@@ -2013,7 +2058,6 @@
         "assetType": "Type d'actif",
         "startTyping": "Commencez à saisir pour rechercher",
         "isCluster": "Ce serveur représente un cluster",
-        "clusterInfo": "Les actifs de cluster peuvent être des endpoints dans les connexions. Affectez les instances d'application aux hôtes membres.",
         "location": "Site",
         "subLocation": "Sous-site",
         "selectSubLocation": "Sélectionnez un sous-site",
@@ -2039,11 +2083,9 @@
         "environment": "Environnement",
         "members": "Membres",
         "editMembers": "Modifier les membres",
+        "addMembers": "Ajouter des membres",
         "loadingMembers": "Chargement des membres…",
-        "noMembers": "Aucun membre ajouté pour le moment.",
         "clusterMembership": "Appartenance au cluster",
-        "loadingClusters": "Chargement des clusters…",
-        "notInCluster": "Ne fait partie d'aucun cluster.",
         "identity": "Identité",
         "hostname": "Nom d'hôte",
         "hostnameRequired": "Le nom d'hôte est requis lorsqu'un domaine est sélectionné",
@@ -2080,6 +2122,7 @@
         "add": "Ajouter",
         "search": "Rechercher des technologies",
         "empty": "Aucune technologie sur ce serveur.",
+        "platform": "Plateforme sous-jacente ({{count}})",
         "operatingSystem": "Système d'exploitation",
         "edit": "Modifier",
         "editNamed": "Modifier {{name}}",
@@ -2093,12 +2136,11 @@
           "family": "Famille",
           "version": "Version",
           "via": "Via",
-          "viaHint": "Serveur sur lequel la technologie est installée, pour une ligne déduite"
+          "viaHint": "Actif sur lequel la technologie est installée, pour une ligne déduite"
         }
       },
       "assignments": {
         "addAssignment": "Ajouter une affectation",
-        "clusterCannotHost": "Les actifs de cluster ne peuvent pas héberger d'affectations d'applications. Affectez les hôtes membres.",
         "noAssignments": "Aucune affectation pour le moment.",
         "assignmentAdded": "Affectation ajoutée",
         "application": "Application",
@@ -2133,11 +2175,18 @@
       },
       "editMembersDialog": {
         "title": "Modifier les membres",
-        "memberServers": "Serveurs membres",
-        "searchServers": "Rechercher des serveurs",
-        "membersHint": "Les membres doivent être des serveurs non-cluster.",
-        "clusterOption": "Cluster : {{name}}",
-        "clusterTag": "cluster"
+        "memberServers": "Membres",
+        "searchServers": "Rechercher des membres",
+        "narrowSearch": "Affinez la recherche",
+        "removeOsTitle": "Retirer le système d'exploitation ?",
+        "removeOsMessage": "Un cluster avec des membres n'a pas de système d'exploitation : {{os}} sera retiré.",
+        "removeOsConfirm": "Retirer et enregistrer",
+        "removeMembersTitle": "Retirer des membres ?",
+        "removeMemberLine": "{{member}} n'hébergera plus {{applications}}.",
+        "removeAnyway": "Retirer quand même",
+        "andOthers_one": "{{count}} autre",
+        "andOthers_other": "{{count}} autres",
+        "differentEnvironment": "Environnement différent du cluster"
       },
       "newAsset": "Nouvel actif",
       "untitled": "Actif sans nom",
@@ -2151,6 +2200,11 @@
         "goLive": "Mise en service",
         "editGoLive": "Modifier la mise en service"
       },
+      "clusterSwitch": {
+        "hint": "Un cluster regroupe des serveurs membres.",
+        "membersHint": "Serveurs qui forment ce cluster."
+      },
+      "readOnlyRole": "Votre rôle ne permet pas de modifier.",
       "hardware": {
         "serialNumber": "Numéro de série",
         "serialNumberPlaceholder": "ex. : SN-000123",
@@ -2166,9 +2220,9 @@
         "notesPlaceholder": "ex. : alimentation remplacée sous garantie"
       },
       "impact": {
-        "title": "Si ce serveur tombe",
-        "empty": "Aucun autre élément ne dépend de ce serveur.",
-        "emptyInfrastructure": "Aucune autre infrastructure ne dépend de ce serveur.",
+        "title": "Si cet actif tombe",
+        "empty": "Aucun autre élément ne dépend de cet actif.",
+        "emptyInfrastructure": "Aucune autre infrastructure ne dépend de cet actif.",
         "loadFailed": "L'impact n'a pas pu être chargé.",
         "more_one": "et {{count}} autre",
         "more_other": "et {{count}} autres",
@@ -2201,19 +2255,23 @@
         },
         "via": {
           "contains": "Dans {{name}}",
-          "containsThisServer": "Dans ce serveur",
+          "containsThisServer": "Dans cet actif",
           "dependsOn": "Dépend de {{name}}",
-          "dependsOnThisServer": "Dépend de ce serveur",
+          "dependsOnThisServer": "Dépend de cet actif",
+          "member": "Membre de {{name}}",
+          "memberThisServer": "Membre de ce cluster",
           "on": "Sur {{name}}",
-          "onThisServer": "Sur ce serveur",
-          "onThisServerAnd": "Sur ce serveur, {{name}}",
-          "thisServer": "Ce serveur",
-          "thisServerAnd": "Ce serveur, {{name}}"
+          "onThisServer": "Sur cet actif",
+          "onThisServerAnd": "Sur cet actif, {{name}}",
+          "thisServer": "Cet actif",
+          "thisServerAnd": "Cet actif, {{name}}"
         },
         "state": {
           "down": "Tombé",
           "degraded_one": "Dégradé, {{count}} membre tombé sur {{members}}",
-          "degraded_other": "Dégradé, {{count}} membres tombés sur {{members}}"
+          "degraded_other": "Dégradé, {{count}} membres tombés sur {{members}}",
+          "degradedHint_one": "{{count}} membre sur {{members}} tient encore",
+          "degradedHint_other": "{{count}} membres sur {{members}} tiennent encore"
         }
       },
       "support": {
@@ -2237,13 +2295,19 @@
         "contains": "Contient",
         "containedBy": "Contenu dans",
         "dependedOnBy": "Requis par",
+        "throughMembers": "Par les membres ({{count}})",
         "deleteAttachmentConfirm": "Supprimer la pièce jointe « {{name}} » ?",
         "empty": {
           "contains": "Ne contient aucun actif.",
           "containedBy": "Contenu dans aucun actif.",
           "dependsOn": "Ne dépend d'aucun actif.",
           "dependedOnBy": "Aucun actif ne dépend de celui-ci."
-        }
+        },
+        "containsHint": "Actifs hébergés par celui-ci, par exemple des VM.",
+        "alsoContainedBy": "Aussi contenu dans {{names}}",
+        "via": "Via",
+        "placementReplaced": "{{cluster}} remplace le lien entre {{hosts}} et {{asset}}.",
+        "placementLinked": "Lien posé sur {{cluster}}."
       }
     },
     "technology": {
@@ -2326,7 +2390,7 @@
         "addSuggestion": "Ajouter {{vendor}} · {{product}}",
         "seeMore_one": "Voir l’autre",
         "seeMore_other": "Voir les {{count}} autres",
-        "suggestionsFailed": "Les suggestions n’ont pas pu être chargées.",
+        "suggestionsFailed": "Les suggestions n'ont pas pu être chargées.",
         "hint": "Tapez une partie du nom du produit : la liste propose les noms exacts que les éditeurs écrivent dans leurs fiches, avec leur nombre de vulnérabilités. Un nom doit être identique à celui de la fiche, dans sa section Product status sur",
         "site": "cve.org",
         "versionHint": "Une version limite le nom aux versions de la technologie dont le libellé commence par elle, ex. 2019."
@@ -2405,6 +2469,7 @@
         "add": "Ajouter",
         "search": "Rechercher des serveurs",
         "empty": "Aucun serveur ne porte cette technologie.",
+        "hosted": "Actifs hébergés ({{count}})",
         "total": "Total",
         "serverCount_one": "{{count}} serveur",
         "serverCount_other": "{{count}} serveurs",
@@ -2470,6 +2535,8 @@
     "connection": {
       "title": "Connexion",
       "newTitle": "Nouvelle connexion",
+      "absorbed_one": "{{names}} a été retiré de la liste : il est couvert par {{clusters}}.",
+      "absorbed_other": "{{names}} ont été retirés de la liste : ils sont couverts par {{clusters}}.",
       "tabs": {
         "overview": "Vue d'ensemble",
         "layers": "Couches",
@@ -2485,12 +2552,9 @@
         "connectionType": "Type de connexion",
         "selectSource": "Sélectionnez une entité ou un serveur source",
         "selectDestination": "Sélectionnez une entité ou un serveur de destination",
-        "sourceClusterHint": "L'endpoint source est un cluster. Les hôtes membres sont listés dans l'espace serveurs.",
-        "destinationClusterHint": "L'endpoint de destination est un cluster. Les hôtes membres sont listés dans l'espace serveurs.",
         "connectedServers": "Serveurs connectés",
         "searchSelectServers": "Rechercher et sélectionner des serveurs",
         "selectTwoServers": "Sélectionnez au moins deux serveurs.",
-        "multiClusterHint": "Un ou plusieurs endpoints sélectionnés sont des clusters. Leurs hôtes membres sont gérés dans l'espace serveurs.",
         "protocols": "Protocoles",
         "protocolsPlaceholder": "Sélectionnez les protocoles (à partir des types de connexion)",
         "typicalPorts": "Ports courants",
@@ -2884,17 +2948,17 @@
           "certificate": "Certificat",
           "none": "Aucune"
         },
-        "selectInstances": "Sélectionnez les instances source et cible.",
+        "selectInstances": "Sélectionnez les déploiements source et cible.",
         "triggerLine": "Déclencheur : {{value}}",
         "patternLine": "Modèle : {{value}}",
         "formatLine": "Format : {{value}}",
         "jobNameLine": "Nom du job : {{value}}",
-        "missingInstance_one": "Aucune instance {{roles}} n'est disponible pour {{env}}. Créez le déploiement manquant avant d'ajouter cette liaison.",
-        "missingInstance_other": "Aucune instance {{roles}} n'est disponible pour {{env}}. Créez les déploiements manquants avant d'ajouter cette liaison.",
-        "sourceInstance": "Instance source",
-        "targetInstance": "Instance cible",
-        "sourceInstanceLabel": "Instance source :",
-        "targetInstanceLabel": "Instance cible :",
+        "missingInstance_one": "Aucun déploiement {{roles}} n'est disponible pour {{env}}. Créez le déploiement manquant avant d'ajouter cette liaison.",
+        "missingInstance_other": "Aucun déploiement {{roles}} n'est disponible pour {{env}}. Créez les déploiements manquants avant d'ajouter cette liaison.",
+        "sourceInstance": "Déploiement source",
+        "targetInstance": "Déploiement cible",
+        "sourceInstanceLabel": "Déploiement source :",
+        "targetInstanceLabel": "Déploiement cible :",
         "integrationTool": "Outil d'intégration",
         "status": "Statut",
         "statusLine": "Statut : {{value}}",
@@ -2945,12 +3009,12 @@
         "manageConnections": "Gérer les connexions d'infrastructure",
         "manageConnectionButton": "Gérer les connexions",
         "title": "Environnements et liaisons",
-        "intro": "Pour chaque environnement, indiquez les instances reliées sur chaque tronçon de l'interface.",
+        "intro": "Pour chaque environnement, indiquez les déploiements reliés sur chaque tronçon de l'interface.",
         "routeViaMiddleware": "Type de route : via middleware. Tronçons : {{legs}}.",
         "routeDirect": "Type de route : directe. Un seul tronçon entre la source et la cible.",
         "addEnvironment": "Ajouter un environnement",
         "loadingBindings": "Chargement des liaisons…",
-        "noEnvironments": "Aucun environnement n'est encore défini. Cliquez sur « Ajouter un environnement » pour documenter les liaisons. Chaque environnement doit avoir des instances d'application, créées dans l'espace Applications, avant de pouvoir ajouter des liaisons.",
+        "noEnvironments": "Aucun environnement n'est encore défini. Cliquez sur « Ajouter un environnement » pour documenter les liaisons. Chaque environnement doit avoir des déploiements d'application, créés dans l'espace Applications, avant de pouvoir ajouter des liaisons.",
         "environmentLine": "Environnement : {{env}}",
         "technicalTemplate": "Modèle technique",
         "bindingIn": "Liaison en {{env}}",
@@ -3101,7 +3165,7 @@
       "addAssignment": "Ajouter une affectation",
       "noServersAssigned": "Aucun serveur affecté.",
       "assignmentUpdated": "Affectation mise à jour",
-      "serverAssigned": "Serveur affecté",
+      "serverAssigned": "Serveur ajouté",
       "assignmentRemoved": "Affectation supprimée",
       "addFirstInstance": "Ajoutez d'abord une instance pour gérer les affectations serveur.",
       "addServerTo": "Ajouter un serveur à {{env}}",
@@ -3163,6 +3227,43 @@
     },
     "versionTimeline": {
       "title": "Historique des versions"
+    },
+    "clusterAssignment": {
+      "title": "Affecter au cluster ?",
+      "inCluster_one": "{{server}} fait partie de {{cluster}}. Son seul membre hébergera {{subject}}.",
+      "inCluster_other": "{{server}} fait partie de {{cluster}}. Ses {{count}} membres hébergeront {{subject}}.",
+      "inClusters": "{{server}} fait partie de plusieurs clusters.",
+      "memberCount_one": "{{count}} membre",
+      "memberCount_other": "{{count}} membres",
+      "assignToCluster": "Affecter au cluster",
+      "assignedToCluster": "Affecté au cluster",
+      "serverOnly": "Ce serveur seulement",
+      "moveTitle": "Déplacer l'affectation ?",
+      "moveLine_one": "{{members}} n'hébergera plus {{application}}.",
+      "moveLine_other": "{{members}} n'hébergeront plus {{application}}.",
+      "moveAnyway": "Déplacer quand même",
+      "absorbed_one": "L'affectation directe de {{names}} sera remplacée.",
+      "absorbed_other": "Les affectations directes de {{names}} seront remplacées.",
+      "via": "via",
+      "inheritedFrom": "Via {{cluster}}",
+      "groupLine": "{{subject}} sur {{members}}",
+      "groupAssignTo": "Affecter à {{cluster}}",
+      "groupConfirm": "{{application}} restera disponible tant qu'un membre tient.",
+      "thisApplication": "L'application"
+    },
+    "clusterConnection": {
+      "title": "Raccorder au cluster ?",
+      "inCluster_one": "{{server}} fait partie de {{cluster}}. La connexion vaudra pour son seul membre.",
+      "inCluster_other": "{{server}} fait partie de {{cluster}}. La connexion vaudra pour ses {{count}} membres.",
+      "connectToCluster": "Raccorder au cluster"
+    },
+    "clusterPlacement": {
+      "title": "Placer dans le cluster ?",
+      "inCluster_one": "{{host}} est le seul hôte de {{cluster}}.",
+      "inCluster_other": "{{host}} fait partie de {{cluster}}. Dans le cluster, l'actif peut tourner sur n'importe lequel de ses {{count}} hôtes.",
+      "inClusters": "{{host}} fait partie de plusieurs clusters.",
+      "placeInCluster": "Placer dans le cluster",
+      "hostOnly": "Cet hôte seulement"
     }
   },
   "enums": {
@@ -3224,7 +3325,6 @@
     }
   },
   "confirmations": {
-    "unsavedSaveBeforeNav": "Vous avez des modifications non enregistrées. Enregistrer avant de naviguer ?",
     "unsavedSave": "Vous avez des modifications non enregistrées. Voulez-vous les enregistrer ?",
     "unsavedLeave": "Vous avez des modifications non enregistrées. Voulez-vous quitter sans enregistrer ?",
     "unsavedLeaveTab": "Vous avez des modifications non enregistrées. Quitter cet onglet ?",

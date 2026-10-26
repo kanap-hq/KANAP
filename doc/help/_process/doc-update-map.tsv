@@ -98,6 +98,15 @@ admin.md	frontend/src/pages/admin/AuditLogsPage.tsx
 admin.md	frontend/src/pages/admin/BillingCenter.tsx
 admin.md	frontend/src/pages/admin/AdminAuthPage.tsx
 admin.md	frontend/src/pages/settings/NotificationsTab.tsx
+data-access.md	frontend/src/pages/admin/DataAccessPage.tsx
+data-access.md	frontend/src/components/dataAccess/**/*.tsx
+data-access.md	frontend/src/components/dataAccess/**/*.ts
+data-access.md	frontend/src/pages/users/UserDialog.tsx
+data-access.md	frontend/src/pages/companies/CompanyAccessTab.tsx
+data-access.md	frontend/src/pages/cost-centers/CostCenterAccessTab.tsx
+data-access.md	frontend/src/auth/dataAccess.ts
+data-access.md	infra/scripts/data-access-role.sql
+on-premise/installation.md	infra/scripts/data-access-role.sql
 branding.md	frontend/src/pages/admin/AdminBrandingPage.tsx
 sample-data.md	frontend/src/pages/admin/SampleDataPage.tsx
 sample-data.md	frontend/src/pages/admin/sample-data/*.tsx

@@ -109,6 +109,8 @@ async function testAssets() {
 
     assert.deepEqual(await svc.deleteCheck([free, used, 'nope', randomUUID()], t, { manager: runner.manager }), {
       refused: [{ id: used, name: 'par-fw-01', code: 'ASSET_IN_USE', usages: [{ type: 'connections', total: 2 }] }],
+      // Nothing the cascade would remove (memberships, relations): no warning.
+      warnings: [],
     });
     assert.equal(await count(runner, 'assets', [free, used]), 2, 'the check deletes nothing');
 

@@ -44,7 +44,7 @@ export function useRelations<TData extends object>({
   const queryClient = useQueryClient();
   const [error, setError] = React.useState<string | null>(null);
 
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey,
     queryFn: async () => (await api.get<TData>(readPath ?? path)).data,
   });
@@ -72,8 +72,9 @@ export function useRelations<TData extends object>({
     setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
   }, [t]);
 
-  const link = React.useCallback(async (kind: string, targetId: string) => {
+  const link = React.useCallback(async (kind: string, targetId: string): Promise<boolean> => {
     setError(null);
+    let saved = true;
     if (dropLinkedSuggestion) {
       queryClient.setQueryData<TData>(queryKey, (prev) => {
         if (!prev) return prev;
@@ -86,12 +87,14 @@ export function useRelations<TData extends object>({
       await api.post(`${path}/${kind}`, { id: targetId });
       refreshTarget(kind, targetId);
     } catch (e) {
+      saved = false;
       failed(e);
     }
     await refresh();
+    return saved;
   }, [dropLinkedSuggestion, failed, path, queryClient, queryKey, refresh, refreshTarget]);
 
-  const unlink = React.useCallback(async (kind: string, targetId: string) => {
+  const unlink = React.useCallback(async (kind: string, targetId: string): Promise<boolean> => {
     setError(null);
     const previous = queryClient.getQueryData<TData>(queryKey);
     queryClient.setQueryData<TData>(queryKey, (prev) => {
@@ -108,11 +111,16 @@ export function useRelations<TData extends object>({
     } catch (e) {
       if (previous) queryClient.setQueryData(queryKey, previous);
       failed(e);
-      return;
+      return false;
     }
     refreshTarget(kind, targetId);
     await refresh();
+    return true;
   }, [failed, groupOf, path, queryClient, queryKey, refresh, refreshTarget]);
 
-  return { data, error, setError, link, unlink, refresh };
+  /** The read failed and nothing is shown yet: the tab says so, with a way to try again. */
+  const loadError = isError && !data;
+  const reload = React.useCallback(() => { void refetch(); }, [refetch]);
+
+  return { data, error, setError, link, unlink, refresh, loadError, reload };
 }

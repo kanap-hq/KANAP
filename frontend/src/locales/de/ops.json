@@ -375,10 +375,13 @@
     "exportCsv": "CSV exportieren",
     "exportTitle": "Verträge exportieren",
     "importTitle": "Verträge importieren",
+    "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff",
+    "outsideYourAccess": "Vertrag außerhalb Ihres Zugriffs",
     "columns": {
       "contract": "Vertrag",
       "supplier": "Lieferant",
       "company": "Unternehmen",
+      "costCenter": "Kostenstelle",
       "start": "Beginn",
       "durationMonths": "Laufzeit (M)",
       "autoRenewal": "Auto-Verlängerung",
@@ -400,6 +403,7 @@
     },
     "list": {
       "toDecide": "Innerhalb von {{days}} Tagen zu entscheiden ({{count}})",
+      "withoutCostCenter": "Ohne Kostenstelle",
       "dueIn_one": "in {{count}} Tag",
       "dueIn_other": "in {{count}} Tagen",
       "dueToday": "heute",
@@ -445,6 +449,7 @@
       "name": "Vertragsname",
       "supplier": "Lieferant",
       "company": "Vertragsunternehmen",
+      "costCenter": "Kostenstelle oder Gruppe",
       "owner": "Verantwortlicher",
       "status": "Status",
       "startDate": "Beginn",
@@ -494,6 +499,10 @@
       "currencyRequired": "Wählen Sie eine Währung.",
       "invalidMonths": "Geben Sie eine ganze Zahl von Monaten ein.",
       "invalidAmount": "Geben Sie einen Betrag mit höchstens zwei Dezimalstellen ein."
+    },
+    "relations": {
+      "closedDocuments_one": "{{count}} Anhang, nur für Personen sichtbar, die diesen Vertrag sehen",
+      "closedDocuments_other": "{{count}} Anhänge, nur für Personen sichtbar, die diesen Vertrag sehen"
     },
     "deadlines": {
       "title": "Fristen",
@@ -955,6 +964,8 @@
       "frozenVersionsKept_other": "Die {{count}} eingefrorenen Versionen von {{year}} behalten den Kurs ihres Einfrierens.",
       "syncFetched_one": "{{count}} Kurs abgerufen.",
       "syncFetched_other": "{{count}} Kurse abgerufen.",
+      "syncUpToDate": "Die Wechselkurse sind aktuell.",
+      "syncNoneFetched": "Es wurde kein neuer Kurs abgerufen.",
       "syncStillMissing": "Weiterhin fehlend: {{pairs}}.",
       "syncContinues": "Die Synchronisierung läuft im Hintergrund weiter.",
       "syncSourceUnreachable": "Die Wechselkursquelle hat nicht geantwortet. Versuchen Sie es später erneut, oder geben Sie die fehlenden Kurse ein.",
@@ -1058,7 +1069,7 @@
       "suppliersMissing_one": "{{count}} Lieferant existiert nicht. Legen Sie ihn unter Stammdaten > Lieferanten an oder aktivieren Sie Fehlende Lieferanten anlegen.",
       "suppliersMissingNoCreate": "{{count}} Lieferanten existieren nicht. Sie müssen zuerst unter Stammdaten > Lieferanten angelegt werden.",
       "suppliersMissingNoCreate_one": "{{count}} Lieferant existiert nicht. Er muss zuerst unter Stammdaten > Lieferanten angelegt werden.",
-      "deletedLine": "Zeile {{line}}: {{ref}} wurde nach dem Export der Datei gelöscht.",
+      "deletedLine": "Zeile {{line}}: {{ref}} ist seit dem Export nicht mehr verfügbar.",
       "changesTitle": "Änderungen",
       "toCreate": "{{count}} neu anzulegen",
       "toUpdate": "{{count}} zu aktualisieren",
@@ -1088,7 +1099,9 @@
       "oldLayout": "Diese Datei stammt aus einer früheren Version von KANAP. Exportieren Sie eine neue Datei aus dieser Liste, übertragen Sie Ihre Änderungen hinein und importieren Sie sie erneut.",
       "exportFailed": "Die Datei konnte nicht exportiert werden. Versuchen Sie es erneut.",
       "checkFailed": "Die Datei konnte nicht geprüft werden. Versuchen Sie es erneut.",
-      "loadFailed": "Die Datei konnte nicht geladen werden. Versuchen Sie es erneut."
+      "loadFailed": "Die Datei konnte nicht geladen werden. Versuchen Sie es erneut.",
+      "dimensionValuesCreated": "{{dimension}}, werden angelegt: {{names}}",
+      "dimensionValuesRefused": "{{dimension}}, abgelehnt: {{names}}"
     },
     "budgetAdminOnly": "Sie benötigen Budgetadministrator-Rechte, um diese Seite zu verwenden.",
     "budgetColumnsSettings": {
@@ -1207,6 +1220,8 @@
       "follows": "Folgt auf <link>{{reference}}</link> ({{type}})",
       "replacedBy": "Ersetzt durch <link>{{reference}}</link> ({{type}}) ab {{year}}",
       "replacedByNoYear": "Ersetzt durch <link>{{reference}}</link> ({{type}})",
+      "followsHidden": "Folgt auf {{reference}}",
+      "replacedByHidden": "Ersetzt durch {{reference}}",
       "type": {
         "opex": "OPEX-Zeile",
         "capex": "CAPEX-Zeile"
@@ -1295,6 +1310,22 @@
       "printedOn": "Gedruckt am {{date}}",
       "share": "Anteil",
       "unknownCompany": "Unbekanntes Unternehmen",
+      "unknownDepartment": "Unbekannte Abteilung",
+      "allocationMethodDefault": "Standard",
+      "chargebackWarnings": {
+        "storedAllocationUsed": "Gespeicherte Zuordnung verwendet für „{{item}}“ (Jahr {{year}}): {{reason}}",
+        "allocationsSkipped": "Zuordnungen übersprungen für „{{item}}“ (Jahr {{year}}): {{reason}}",
+        "missingPayingCompany": "Zahlendes Unternehmen fehlt für „{{item}}“ (Jahr {{year}}). Die bezahlten Summen lassen diese Zeile aus.",
+        "selectCompany": "Wählen Sie mindestens ein Unternehmen für die manuelle Zuordnung aus.",
+        "selectDepartment": "Wählen Sie mindestens eine Abteilung für die manuelle Zuordnung aus.",
+        "noEnabledCompanies": "Keine aktiven Unternehmen für die Zuordnung.",
+        "departmentsNotFound": "Einige Abteilungen wurden für die manuelle Zuordnung nicht gefunden.",
+        "provideDepartmentHeadcount": "Geben Sie eine Mitarbeiterzahl für die ausgewählten Abteilungen an.",
+        "driverSumZero": "Die Summe der Treiberwerte muss positiv sein.",
+        "companiesUnavailable": "Einige Unternehmen sind für die manuelle Zuordnung nicht verfügbar.",
+        "turnoverRate": "Kein Wechselkurs für den Umsatz der ausgewählten Unternehmen.",
+        "provideDriver": "Geben Sie {{driver}} für die ausgewählten Unternehmen an."
+      },
       "unnamedAccount": "Unbenanntes Konto",
       "exportTableCsv": "Tabelle als CSV exportieren",
       "exportChartPng": "Diagramm als PNG exportieren",
@@ -1385,6 +1416,7 @@
       "itCostsPerItUser": "IT-Kosten pro IT-Benutzer",
       "item": "Zeile",
       "allocationMethod": "Zuordnungsmethode",
+      "allocationPct": "Zuordnung",
       "receivables": "Forderungen",
       "payables": "Verbindlichkeiten",
       "net": "Netto",
@@ -1448,7 +1480,10 @@
       "chargebackKpis": "KPIs der Leistungsverrechnung",
       "chartTitle": "Leistungsverrechnung nach Abteilung: {{name}}",
       "chartSubtitle": "{{metric}}-Totale",
-      "chartFootnote": "Gesamt {{metric}}: {{total}}"
+      "chartFootnote": "Gesamt {{metric}}: {{total}}",
+      "noCompanyInAccess": "Kein Unternehmen gehört zu Ihrem Zugriff.",
+      "fxMissingHiddenLines_one": "Kein Wechselkurs für {{references}}: Der Anteil ist nicht in den Summen enthalten.",
+      "fxMissingHiddenLines_other": "Kein Wechselkurs für {{references}}: Die Anteile sind nicht in den Summen enthalten."
     },
     "topOpex": {
       "title": "Top-Zeilen",
@@ -1853,6 +1888,7 @@
       "kept_other": "{{count}} Budgetzeilen können nicht gelöscht werden und bleiben erhalten:",
       "deleted_one": "{{count}} Budgetzeile gelöscht",
       "deleted_other": "{{count}} Budgetzeilen gelöscht"
-    }
+    },
+    "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff"
   }
 }

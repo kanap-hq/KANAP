@@ -105,6 +105,10 @@ interface TaskData {
   related_object_type: string | null;
   related_object_id: string | null;
   related_object_name: string | null;
+  /** A budget line the person cannot read: its reference alone, without a link. */
+  related_object_hidden?: boolean;
+  /** A contract that has no reference: "Contract outside your access" instead. */
+  related_object_hidden_kind?: 'contract' | null;
   phase_id: string | null;
   phase_name: string | null;
   // Classification fields
@@ -155,6 +159,7 @@ export default function TaskSidebar({
 
   const isProjectTask = task.related_object_type === 'project';
   const isStandalone = !task.related_object_type;
+  const hiddenContract = task.related_object_hidden === true && task.related_object_hidden_kind === 'contract';
   const canEditClassification = isStandalone || isProjectTask;
   const canManageStandaloneEntries = hasLevel('tasks', 'member');
   const canManageProjectEntries = hasLevel('portfolio_projects', 'contributor');
@@ -279,7 +284,7 @@ export default function TaskSidebar({
         </AccordionSummary>
         <AccordionDetails sx={{ pt: 0 }}>
           <Stack spacing={1.25} sx={compactFieldSx}>
-            {onRelationChange && !readOnly ? (
+            {onRelationChange && !readOnly && !hiddenContract ? (
               <RelatedObjectSelect
                 relationType={task.related_object_type as RelatedObjectType}
                 relationId={task.related_object_id || null}
@@ -318,6 +323,15 @@ export default function TaskSidebar({
                       : relatedTypeLabels.unknown}
                   </Typography>
                   <Typography component="span"> : </Typography>
+                  {hiddenContract ? (
+                    <Typography component="span" sx={{ color: 'text.primary' }}>
+                      {t('ops:contracts.outsideYourAccess')}
+                    </Typography>
+                  ) : task.related_object_hidden ? (
+                    <Typography component="span" sx={{ color: 'text.primary' }}>
+                      {task.related_object_name}
+                    </Typography>
+                  ) : (
                   <Typography
                     component={Link}
                     to={isProjectTask ? (projectWorkspaceLink || `/portfolio/projects/${task.related_object_id}`) :
@@ -330,6 +344,7 @@ export default function TaskSidebar({
                   >
                     {task.related_object_name || t('workspace.task.sidebar.values.unknown')}
                   </Typography>
+                  )}
                 </Box>
               </PropertyRow>
             )}

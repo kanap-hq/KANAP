@@ -7,6 +7,7 @@ import { endOfValidityFromDate, isActiveAt } from '../../common/status';
 import type { BudgetNature } from '../budget-nature';
 import { firstAmountYear, interpretBudgetFile, InterpretedRow, FieldCell, ItemNumberCell } from './interpret';
 import { tokenError } from './token';
+import { DATA_ACCESS_LEAVES_ACCESS_MESSAGE, DATA_ACCESS_PLACEMENT_MESSAGE } from '../../data-access/line-write-checks';
 import {
   BudgetCatalog,
   BudgetFileAmountChange,
@@ -102,6 +103,57 @@ export interface PreflightInput {
   currentYear: number;
   /** File column name (`budget`) to the tenant's label. */
   labels: Record<string, string>;
+  /** A limited person's access (planning/data-scoped-access spec §4.2); absent for an unscoped person. */
+  access?: BudgetFileAccess;
+}
+
+/** A line's place and owners, as the SQL functions of data-scoped access take them. */
+export interface LinePlace {
+  companyId: string | null;
+  costCenterId: string | null;
+  ownerItId: string | null;
+  ownerBusinessId: string | null;
+}
+
+/**
+ * What the file may do for a limited person, from the SQL functions of the database
+ * (`budget-file/access.ts`): the plan itself reads nothing. `editable`: the stored lines the
+ * person may modify (`data_access_line_editable`). `places`: per place, whether a line may be
+ * placed there (`data_access_placable_line`) and stays modifiable with these owners. A place the
+ * plan needs and `places` lacks goes to `wanted` and passes; the caller answers `wanted` and plans
+ * again.
+ */
+export interface BudgetFileAccess {
+  editable: ReadonlySet<string>;
+  places: Map<string, { placable: boolean; editable: boolean }>;
+  wanted: Map<string, LinePlace>;
+}
+
+export function placeKey(place: LinePlace): string {
+  return [place.companyId, place.costCenterId, place.ownerItId, place.ownerBusinessId].map((id) => id ?? '').join('|');
+}
+
+function placeAnswer(access: BudgetFileAccess, place: LinePlace): { placable: boolean; editable: boolean } {
+  const key = placeKey(place);
+  const known = access.places.get(key);
+  if (known) return known;
+  access.wanted.set(key, place);
+  return { placable: true, editable: true };
+}
+
+/** A line readable but not modifiable by a limited person: refused when the file changes it. */
+export function readOnlyLineMessage(ref: string): string {
+  return `${ref} is read only in your access.`;
+}
+
+/** A number the file names that has no line the person can read: deleted, or out of their access. */
+export function noLongerAvailableMessage(ref: string): string {
+  return `${ref} is no longer available since the export.`;
+}
+
+/** An unknown value of a closed-list dimension, for a limited person. */
+export function closedDimensionValueMessage(name: string, code: string): string {
+  return `Value '${name}' is not in the list of ${code}. Pick an existing value.`;
 }
 
 interface SupplierCreate {
@@ -114,6 +166,7 @@ interface Bag {
   missing: Map<string, Set<string>>;
   suppliers: Map<string, SupplierCreate>;
   dimensions: Map<string, Map<string, string>>;
+  refusedDimensions: Map<string, Map<string, string>>;
   duplicates: Array<{ line: number; message: string }>;
   supplierNames: Array<{ line: number; message: string }>;
   costCenterCompanies: CostCenterCompanyWarning[];
@@ -243,7 +296,8 @@ function resolveRow(
   } else if (!matched) {
     const ref = row.itemNumber.ref;
     if (row.token.kind === 'ok') {
-      fail('item_number', `${ref} was deleted since the export.`);
+      // Deleted, or out of the person's access: the same neutral answer (spec §4.2).
+      fail('item_number', noLongerAvailableMessage(ref));
       bag.deleted.push({ line: row.line, itemNumber: ref });
     } else {
       fail('item_number', `item_number '${row.itemNumber.raw}' does not match a line.`);
@@ -287,6 +341,7 @@ function resolveRow(
   if (live && updatesLine && !company.id && !costCenter?.companyId && !blocked('company_name') && !blocked('cost_center_code')) {
     fail('company_name', 'company_name is required.');
   }
+  if (input.access && (creating || live)) checkAccess(input.access, row, live, creating, changes, draft, errors.length > 0, fail);
 
   if (creating && row.fields.name?.kind === 'value') {
     const hint = duplicateHint(nature, row, supplier, input.names, newKeys);
@@ -302,6 +357,7 @@ function resolveRow(
       itemNumber: live.itemNumber,
       rowVersion: live.rowVersion,
       years: live.versions.map((version) => ({ year: version.year, versionId: version.id, budgetRev: version.budgetRev })),
+      ...(input.access ? { editable: input.access.editable.has(live.id) } : {}),
     });
   }
 
@@ -319,6 +375,50 @@ function resolveRow(
     return;
   }
   bag.unchanged += 1;
+}
+
+/**
+ * A limited person's row (planning/data-scoped-access spec §4.2), with the rules of the line write
+ * gate (`resolveItemWrite`) and its SQL functions:
+ * - a stored line they read but may not modify passes unchanged, and is refused when the file
+ *   changes it;
+ * - a new line, or a new company or cost center, needs a place they may place a line in, owner or
+ *   not;
+ * - a change of owners must leave the line modifiable by them.
+ * The place checks wait for a row without other errors: its values are then the ones written.
+ */
+function checkAccess(
+  access: BudgetFileAccess,
+  row: InterpretedRow,
+  live: StoredLine | null,
+  creating: boolean,
+  changes: string[],
+  draft: LineDraft,
+  hasErrors: boolean,
+  fail: (column: string | null, message: string) => void,
+): void {
+  if (live && !access.editable.has(live.id)) {
+    const ref = row.itemNumber.kind === 'number' ? row.itemNumber.ref : lineRef(live.itemNumber);
+    if (changes.length > 0) fail('item_number', readOnlyLineMessage(ref));
+    return;
+  }
+  if (hasErrors || (live && changes.length === 0)) return;
+  const has = (key: string) => Object.prototype.hasOwnProperty.call(draft.body, key);
+  const value = (key: string, stored: string | null | undefined) => (has(key) ? (draft.body[key] as string | null) ?? null : stored ?? null);
+  const place: LinePlace = {
+    companyId: value('paying_company_id', live?.companyId),
+    costCenterId: value('cost_center_id', live?.costCenterId),
+    ownerItId: value('owner_it_id', live?.ownerItId),
+    ownerBusinessId: value('owner_business_id', live?.ownerBusinessId),
+  };
+  const moved = creating || place.companyId !== (live?.companyId ?? null) || place.costCenterId !== (live?.costCenterId ?? null);
+  const answer = placeAnswer(access, place);
+  if (moved && !answer.placable) {
+    const centre = row.fields.cost_center_code?.kind;
+    fail(centre === 'value' || centre === 'clear' ? 'cost_center_code' : 'company_name', DATA_ACCESS_PLACEMENT_MESSAGE);
+    return;
+  }
+  if (live && !answer.editable) fail(has('owner_it_id') ? 'owner_it_email' : 'owner_business_email', DATA_ACCESS_LEAVES_ACCESS_MESSAGE);
 }
 
 function toPlan(
@@ -873,6 +973,14 @@ function resolveAnalytics(
     }
     try {
       const name = normalizeAnalyticsName(cell.text);
+      if (input.access && !dimension.openValues) {
+        // A closed list gets values from the dimension page only (spec §3.5, §4.2).
+        const refused = bag.refusedDimensions.get(code) ?? new Map<string, string>();
+        refused.set(name.toLowerCase(), name);
+        bag.refusedDimensions.set(code, refused);
+        fail(column, closedDimensionValueMessage(name, code));
+        continue;
+      }
       const listed = bag.dimensions.get(code) ?? new Map<string, string>();
       listed.set(name.toLowerCase(), name);
       bag.dimensions.set(code, listed);
@@ -1117,6 +1225,7 @@ function emptyBag(): Bag {
     missing: new Map(),
     suppliers: new Map(),
     dimensions: new Map(),
+    refusedDimensions: new Map(),
     duplicates: [],
     supplierNames: [],
     costCenterCompanies: [],
@@ -1178,17 +1287,23 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
       costCenterCompanies: bag.costCenterCompanies.slice(0, PREFLIGHT_LIST_LIMIT),
     },
     creates: {
-      dimensionValues: [...bag.dimensions.entries()].map(([dimension, names]) => ({
-        dimension,
-        names: [...names.values()].slice(0, PREFLIGHT_LIST_LIMIT),
-      })),
+      dimensionValues: namesByDimension(bag.dimensions),
       suppliers: input.createSuppliers && input.canCreateSuppliers
         ? [...bag.suppliers.values()].slice(0, PREFLIGHT_LIST_LIMIT)
         : [],
+      ...(input.access ? { refusedDimensionValues: namesByDimension(bag.refusedDimensions) } : {}),
     },
     supplierMessage: supplierNote,
     snapshot: { lines: bag.snapshot },
+    ...(input.access ? { dataAccessLimited: true as const } : {}),
   };
+}
+
+function namesByDimension(byCode: Map<string, Map<string, string>>): Array<{ dimension: string; names: string[] }> {
+  return [...byCode.entries()].map(([dimension, names]) => ({
+    dimension,
+    names: [...names.values()].slice(0, PREFLIGHT_LIST_LIMIT),
+  }));
 }
 
 export function blankPreflightInput(scope: BudgetFileScope, read: CsvReadResult, currentYear: number): PreflightInput {

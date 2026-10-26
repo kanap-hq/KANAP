@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { bilingualDocumentTsQuerySql } from '../common/document-search-tsquery';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -20,7 +21,7 @@ import {
   AiKnowledgeContextDto,
   AiSearchEntityType,
 } from './ai.types';
-import { incidentRelatedLabelSql, incidentRelatedTitleSql, incidentVisibilitySql, resolveIncidentViewer } from '../incidents/incident-visibility';
+import { incidentRelatedLabelSql, incidentRelatedTitleSql, incidentVisibilitySql, resolveIncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { budgetLineReference } from '../spend/budget-nature';
 import { operatingSystemLabelSql } from '../technologies/operating-system-codes';
 import { TechnologyLinksService } from '../technologies/technology-links.service';
@@ -32,6 +33,7 @@ import {
   participantConditionForAiEntity,
   ParticipationScopedAiEntityType,
   resolveAiDocumentIncidentViewer,
+  resolveAiIncidentViewer,
   resolveAiParticipationAccessScope,
 } from './query/ai-query-scope.util';
 import { resolveAiApplicationsReach } from './query/ai-technologies.query';
@@ -1304,6 +1306,8 @@ export class AiEntityService {
     const params: unknown[] = [ref, numericPrefix, like, context.tenantId];
     const accessScope = await resolveAiParticipationAccessScope(context, 'tasks');
     const accessScopeSql = appendParticipationScopeSql('tasks', 't', params, accessScope);
+    // A task of an incident the reader cannot see never enters search (empty for incidents:admin).
+    const incidentVisibilitySql = taskIncidentVisibilitySql('t', await resolveAiIncidentViewer(context), params);
     params.push(limit);
     const limitRef = `$${params.length}`;
     const rows = await context.manager.query<SearchRow[]>(
@@ -1336,6 +1340,7 @@ export class AiEntityService {
        LEFT JOIN incidents rel_inc ON rel_inc.id = t.related_object_id AND t.related_object_type = 'incident' AND rel_inc.tenant_id = $4
        WHERE t.tenant_id = $4
          ${accessScopeSql}
+         ${incidentVisibilitySql}
          AND (
            ($1::int IS NOT NULL AND t.item_number = $1)
            OR ($2::text IS NOT NULL AND t.item_number::text LIKE $2 || '%')
@@ -2062,6 +2067,8 @@ export class AiEntityService {
     const params: unknown[] = [context.tenantId];
     const accessScope = await resolveAiParticipationAccessScope(context, 'tasks');
     const accessScopeSql = appendParticipationScopeSql('tasks', 't', params, accessScope);
+    // A task of an incident the reader cannot see is not listed (empty for incidents:admin).
+    const incidentVisibilitySql = taskIncidentVisibilitySql('t', await resolveAiIncidentViewer(context), params);
     const rows = await context.manager.query<any[]>(
       `SELECT t.id, t.item_number, COALESCE(t.title, 'Untitled task') AS label, t.description AS summary, t.status, t.updated_at,
               tt.name AS task_type_name,
@@ -2079,6 +2086,7 @@ export class AiEntityService {
        LEFT JOIN incidents rel_inc ON rel_inc.id = t.related_object_id AND t.related_object_type = 'incident' AND rel_inc.tenant_id = $1
        WHERE t.tenant_id = $1
        ${accessScopeSql}
+       ${incidentVisibilitySql}
        ORDER BY t.updated_at DESC, t.created_at DESC`,
       params,
     );
@@ -2280,7 +2288,7 @@ export class AiEntityService {
     }
 
     if (entityTypes.includes('incidents')) {
-      const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
+      const viewer = await resolveAiIncidentViewer(context);
       if (!viewer.isAdmin) {
         const userRef = viewer.userId ? push(viewer.userId) : null;
         const ownerClause = userRef
@@ -2291,6 +2299,24 @@ export class AiEntityService {
           WHERE i_acl.id = search_index.entity_id
             AND i_acl.tenant_id = search_index.tenant_id
             AND (i_acl.confidential = false ${ownerClause})
+        ))`);
+      }
+    }
+
+    // A task of an incident the viewer cannot see is not searchable (the query-time
+    // twin of the task list's predicate, on the same indexed row).
+    if (entityTypes.includes('tasks')) {
+      const incidentVisibilitySql = taskIncidentVisibilitySql(
+        't_acl',
+        await resolveAiIncidentViewer(context),
+        params,
+      );
+      if (incidentVisibilitySql) {
+        scopeClauses.push(`AND (search_index.entity_type <> 'tasks' OR EXISTS (
+          SELECT 1 FROM tasks t_acl
+          WHERE t_acl.id = search_index.entity_id
+            AND t_acl.tenant_id = search_index.tenant_id
+            ${incidentVisibilitySql}
         ))`);
       }
     }
@@ -2869,7 +2895,9 @@ export class AiEntityService {
       manager.query<SearchRow[]>(
         `SELECT a.id, a.asset_reference AS item_ref, NULL::int AS item_number, a.name AS label, COALESCE(a.fqdn, a.hostname, a.notes) AS summary, a.status, a.updated_at
          FROM app_instances ai
-         JOIN app_asset_assignments aaa ON aaa.app_instance_id = ai.id AND aaa.tenant_id = $2 AND aaa.tenant_id = ai.tenant_id
+         -- The servers the application runs on (effective: a cluster and its members in service).
+         JOIN (${effectiveAssignmentsSql({ tenant: '$2', applications: 'ARRAY[$1::uuid]' })}) aaa
+           ON aaa.app_instance_id = ai.id AND aaa.tenant_id = $2 AND aaa.tenant_id = ai.tenant_id
          JOIN assets a ON a.id = aaa.asset_id AND a.tenant_id = $2 AND a.tenant_id = aaa.tenant_id
          WHERE ai.application_id = $1
            AND ai.tenant_id = $2
@@ -2987,7 +3015,8 @@ export class AiEntityService {
       ),
       manager.query<SearchRow[]>(
         `SELECT a.id, a.sequential_id AS item_ref, NULL::int AS item_number, a.name AS label, a.description AS summary, a.status, a.updated_at
-         FROM app_asset_assignments aaa
+         -- The applications running on the asset (effective: a member runs what its clusters carry).
+         FROM (${effectiveAssignmentsSql({ tenant: '$2', assets: 'ARRAY[$1::uuid]' })}) aaa
          JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = $2 AND ai.tenant_id = aaa.tenant_id
          JOIN applications a ON a.id = ai.application_id AND a.tenant_id = $2 AND a.tenant_id = ai.tenant_id
          WHERE aaa.asset_id = $1
@@ -3235,6 +3264,8 @@ export class AiEntityService {
     const requestAccessScope = await resolveAiParticipationAccessScope(context, 'requests');
     const requestRootParams: unknown[] = [requestId, tenantId];
     const requestRootScopeSql = appendParticipationScopeSql('requests', 'r', requestRootParams, requestAccessScope);
+    // A hidden origin task is no origin task: the request stays, its reference disappears.
+    const originTaskVisibility = taskIncidentVisibilitySql('ot', await resolveAiIncidentViewer(context), requestRootParams);
     const requests = await manager.query<any[]>(
       `SELECT r.id,
               r.item_number,
@@ -3253,7 +3284,7 @@ export class AiEntityService {
               ${buildUserNameSql('u_il')} AS it_lead_name,
               CASE WHEN ot.id IS NOT NULL THEN CONCAT('T-', ot.item_number, ' ', COALESCE(ot.title, 'Untitled task')) ELSE NULL END AS origin_task_ref
        FROM portfolio_requests r
-       LEFT JOIN tasks ot ON ot.id = r.origin_task_id AND ot.tenant_id = $2
+       LEFT JOIN tasks ot ON ot.id = r.origin_task_id AND ot.tenant_id = $2 ${originTaskVisibility}
        LEFT JOIN users u_req ON u_req.id = r.requestor_id AND u_req.tenant_id = r.tenant_id
        LEFT JOIN users u_bl ON u_bl.id = r.business_lead_id AND u_bl.tenant_id = r.tenant_id
        LEFT JOIN users u_il ON u_il.id = r.it_lead_id AND u_il.tenant_id = r.tenant_id
@@ -3599,6 +3630,8 @@ export class AiEntityService {
     const taskAccessScope = await resolveAiParticipationAccessScope(context, 'tasks');
     const taskRootParams: unknown[] = [taskId, tenantId];
     const taskRootScopeSql = appendParticipationScopeSql('tasks', 't', taskRootParams, taskAccessScope);
+    // The task of an incident the reader cannot see reads as missing.
+    const taskIncidentSql = taskIncidentVisibilitySql('t', await resolveAiIncidentViewer(context), taskRootParams);
     const requestAccessScope = await resolveAiParticipationAccessScope(context, 'requests');
     const convertedRequestScopeSql = appendParticipationScopeSql('requests', 'pr', taskRootParams, requestAccessScope);
     const tasks = await manager.query<any[]>(
@@ -3643,6 +3676,7 @@ export class AiEntityService {
        WHERE t.id = $1
          AND t.tenant_id = $2
          ${taskRootScopeSql}
+         ${taskIncidentSql}
        LIMIT 1`,
       taskRootParams,
     );
@@ -3823,6 +3857,7 @@ export class AiEntityService {
     );
 
     const accessScope = await resolveAiParticipationAccessScope(context, entityType);
+    const taskIncidentViewer = entityType === 'tasks' ? await resolveAiIncidentViewer(context) : null;
     const rows = entityType === 'projects'
       ? await (() => {
         const params: unknown[] = [resolvedId, context.tenantId];
@@ -3842,6 +3877,7 @@ export class AiEntityService {
       : await (() => {
         const params: unknown[] = [resolvedId, context.tenantId];
         const scopeSql = appendParticipationScopeSql('tasks', 't', params, accessScope);
+        const incidentSql = taskIncidentVisibilitySql('t', taskIncidentViewer, params);
         return context.manager.query<EntityCommentTargetRow[]>(
           `SELECT t.id,
                   t.item_number,
@@ -3850,6 +3886,7 @@ export class AiEntityService {
            WHERE t.id = $1
              AND t.tenant_id = $2
              ${scopeSql}
+             ${incidentSql}
            LIMIT 1`,
           params,
         );

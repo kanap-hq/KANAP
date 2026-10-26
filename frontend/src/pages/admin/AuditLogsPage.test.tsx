@@ -82,6 +82,25 @@ function csvResponse(headers: Record<string, string> = {}) {
   };
 }
 
+function auditRow(overrides: Record<string, any> = {}) {
+  return {
+    id: 'a-1', tenant_id: 't-1', table_name: 'suppliers', record_id: null, action: 'update',
+    before_json: null, after_json: null, user_id: null, user_email: null, user_name: null,
+    source: 'user', source_ref: null, created_at: '2026-10-16T07:19:02Z', ...overrides,
+  };
+}
+
+async function openDetail(entry: Record<string, any>) {
+  getMock.mockResolvedValue({ data: entry } as any);
+  renderPage();
+  act(() => {
+    grid.props?.onCellClicked({ data: entry });
+  });
+  const dialog = await screen.findByRole('dialog');
+  await screen.findByText(/^Date: /);
+  return dialog;
+}
+
 describe('AuditLogsPage', () => {
   beforeEach(async () => {
     auth.admin = true;
@@ -198,6 +217,156 @@ describe('AuditLogsPage', () => {
     });
     expect(await screen.findByText('Source : Import du fichier budgétaire')).toBeTruthy();
     expect(screen.getByText(`Date : ${listDate}`)).toBeTruthy();
+  });
+
+  it('shows the changed fields in a table and the raw JSON only on demand', async () => {
+    const entry = auditRow({
+      before_json: { status: 'draft', go_live_date: null, mfa_supported: false, name: 'Same name' },
+      after_json: { status: 'active', go_live_date: '2020-11-01', mfa_supported: true, name: 'Same name' },
+    });
+    await openDetail(entry);
+
+    expect(screen.getByRole('columnheader', { name: 'Field' })).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: 'Before' })).toBeTruthy();
+    expect(screen.getByRole('columnheader', { name: 'After' })).toBeTruthy();
+    expect(screen.getByText('Status')).toBeTruthy();
+    expect(screen.getByText('Go-live date')).toBeTruthy();
+    expect(screen.getByText('MFA supported')).toBeTruthy();
+    expect(screen.getByText('draft')).toBeTruthy();
+    expect(screen.getByText('active')).toBeTruthy();
+    expect(screen.getByText('1 Nov 2020')).toBeTruthy();
+    expect(screen.getByText('No')).toBeTruthy();
+    expect(screen.getByText('Yes')).toBeTruthy();
+    expect(screen.queryByText('Name')).toBeNull();
+    expect(document.querySelector('pre')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'View raw data' }));
+    const pre = document.querySelector('pre');
+    expect(pre?.textContent).toContain('"status": "draft"');
+    expect(screen.getByRole('button', { name: 'Hide raw data' })).toBeTruthy();
+  });
+
+  it('shows one value column for a create, without the technical id fields', async () => {
+    const entry = auditRow({
+      action: 'create',
+      after_json: {
+        id: '11111111-1111-4111-8111-111111111111',
+        tenant_id: '22222222-2222-4222-8222-222222222222',
+        name: 'Acme',
+        status: 'active',
+        created_at: '2026-10-16T07:19:02Z',
+        updated_at: '2026-10-16T07:19:02Z',
+      },
+    });
+    await openDetail(entry);
+
+    expect(screen.getByRole('columnheader', { name: 'Value' })).toBeTruthy();
+    expect(screen.queryByRole('columnheader', { name: 'Before' })).toBeNull();
+    expect(screen.getByText('Name')).toBeTruthy();
+    expect(screen.getByText('Created on')).toBeTruthy();
+    expect(screen.queryByText('id')).toBeNull();
+    expect(screen.queryByText('tenant_id')).toBeNull();
+    expect(screen.queryByText('updated_at')).toBeNull();
+  });
+
+  it('shows an unknown field under its stored name', async () => {
+    const entry = auditRow({
+      before_json: { foo_bar: 'before' },
+      after_json: { foo_bar: 'after' },
+    });
+    await openDetail(entry);
+    expect(screen.getByText('foo_bar')).toBeTruthy();
+  });
+
+  it('never shows an id without a readable neighbour', async () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    const entry = auditRow({
+      before_json: { company_id: null },
+      after_json: { company_id: id },
+    });
+    await openDetail(entry);
+
+    expect(screen.getByText('Identifier')).toBeTruthy();
+    expect(screen.queryByText(id)).toBeNull();
+    expect(screen.getAllByTitle(id).length).toBeGreaterThan(0);
+  });
+
+  it('names the people of its fields with one grouped lookup', async () => {
+    const previousOwner = '22222222-2222-4222-8222-222222222222';
+    const nextOwner = '44444444-4444-4444-8444-444444444444';
+    const entry = auditRow({
+      before_json: { owner_user_id: previousOwner },
+      after_json: { owner_user_id: nextOwner },
+    });
+    getMock.mockImplementation(async (url: string) => {
+      if (url === '/users/lookup') {
+        return {
+          data: {
+            items: [
+              { id: previousOwner, first_name: 'Alice', last_name: 'Martin' },
+              { id: nextOwner, first_name: 'Bob', last_name: 'Durand' },
+            ],
+            has_more: false,
+          },
+        };
+      }
+      return { data: entry };
+    });
+    renderPage();
+    act(() => {
+      grid.props?.onCellClicked({ data: entry });
+    });
+
+    expect(await screen.findByText('Alice Martin')).toBeTruthy();
+    expect(await screen.findByText('Bob Durand')).toBeTruthy();
+    const lookups = getMock.mock.calls.filter(([url]) => url === '/users/lookup');
+    expect(lookups).toHaveLength(1);
+    expect(lookups[0][1]?.params).toEqual({ ids: [previousOwner, nextOwner].sort().join(',') });
+    expect(screen.queryByText(previousOwner)).toBeNull();
+    expect(screen.queryByText(nextOwner)).toBeNull();
+  });
+
+  it('names the record with its item number when the table has one', async () => {
+    const id = '33333333-3333-4333-8333-333333333333';
+    const entry = auditRow({
+      table_name: 'tasks',
+      record_id: id,
+      before_json: { status: 'draft' },
+      after_json: { status: 'active', item_number: 4 },
+    });
+    await openDetail(entry);
+
+    expect(screen.getByText('Record: T-4')).toBeTruthy();
+    expect(screen.queryByText(id)).toBeNull();
+  });
+
+  it('shows an identifier, not a record uuid, and keeps the tenant line', async () => {
+    const id = '55555555-5555-4555-8555-555555555555';
+    const entry = auditRow({
+      table_name: 'suppliers',
+      record_id: id,
+      before_json: { status: 'draft' },
+      after_json: { status: 'active' },
+    });
+    await openDetail(entry);
+
+    expect(screen.getByText('Record: Identifier')).toBeTruthy();
+    expect(screen.queryByText(id)).toBeNull();
+    expect(screen.getAllByTitle(id).length).toBeGreaterThan(0);
+    expect(screen.getByText('Tenant: t-1')).toBeTruthy();
+  });
+
+  it('shows the raw JSON directly when a payload is not an object', async () => {
+    const entry = auditRow({
+      action: 'update',
+      before_json: ['before'],
+      after_json: ['after'],
+    });
+    await openDetail(entry);
+
+    expect(screen.queryByRole('columnheader', { name: 'Field' })).toBeNull();
+    expect(document.querySelector('pre')?.textContent).toContain('"before"');
+    expect(screen.queryByRole('button', { name: 'View raw data' })).toBeNull();
   });
 
   it('closes the detail with Escape and with the close button', async () => {

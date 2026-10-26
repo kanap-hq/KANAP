@@ -1,7 +1,8 @@
 import { ConflictException, HttpStatus, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { DataAccessHiddenLinesException } from '../data-access/hidden-links';
 import { mapDatabaseError } from './filters/database-error.mapping';
-import { readUsages, type UsageQuery, type UsageType } from './record-usages';
+import { readUsages, type UsageCaller, type UsageQuery, type UsageType } from './record-usages';
 
 /**
  * What still uses or holds a record, counted per kind: the groups of its usages, or what a record
@@ -25,6 +26,7 @@ export type RefusalKind =
   | 'server_assignments'
   | 'business_processes'
   | 'documents'
+  | 'descriptions'
   | 'sub_folders'
   | 'app_instances'
   | 'incidents'
@@ -50,6 +52,7 @@ const ENGLISH: Record<RefusalKind, [string, string]> = {
   requests: ['request', 'requests'],
   team_members: ['team member', 'team members'],
   suppliers: ['supplier', 'suppliers'],
+  data_access: ['data access', 'data access'],
   compliance_requirements: ['recorded compliance requirement', 'recorded compliance requirements'],
   regulatory_records: ['regulatory reporting record', 'regulatory reporting records'],
   opex_lines: ['OPEX line', 'OPEX lines'],
@@ -65,6 +68,7 @@ const ENGLISH: Record<RefusalKind, [string, string]> = {
   server_assignments: ['server assignment', 'server assignments'],
   business_processes: ['business process', 'business processes'],
   documents: ['document', 'documents'],
+  descriptions: ['description', 'descriptions'],
   technologies: ['technology', 'technologies'],
   sub_folders: ['subfolder', 'subfolders'],
   app_instances: ['deployment', 'deployments'],
@@ -81,7 +85,9 @@ export function lineUsages(usage: { opex: number; capex: number } | undefined): 
 }
 
 export function englishList(usages: readonly UsageCount[]): string {
-  const parts = usages.map(({ type, total }) => `${total} ${ENGLISH[type][total === 1 ? 0 : 1]}`);
+  const parts = usages.map(({ type, total }) => type === 'data_access'
+    ? `the data access of ${total} ${total === 1 ? 'person' : 'people'}`
+    : `${total} ${ENGLISH[type][total === 1 ? 0 : 1]}`);
   return parts.length <= 1 ? parts.join('') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
@@ -98,6 +104,8 @@ export class RecordInUseException extends ConflictException {
     readonly usages: UsageCount[],
     message = `Cannot delete ${entity} "${name}": it is used by ${englishList(usages)}. Disable it instead.`,
     readonly params?: RefusalParams,
+    /** The records the sentence names besides the counts (an asset's applications), for the screen. */
+    readonly applications?: string[],
   ) {
     super({
       statusCode: HttpStatus.CONFLICT,
@@ -106,6 +114,7 @@ export class RecordInUseException extends ConflictException {
       message,
       usages,
       ...(params ? { params } : {}),
+      ...(applications && applications.length > 0 ? { applications } : {}),
     });
   }
 }
@@ -132,7 +141,14 @@ export async function assertNotInUse(
 }
 
 /** A record a delete would refuse, as a check before the delete lists it (`refusalsOf`). */
-export type DeleteRefusal = { id: string; name: string; code: string; usages: UsageCount[]; params?: RefusalParams };
+export type DeleteRefusal = {
+  id: string;
+  name: string;
+  code: string;
+  usages: UsageCount[];
+  params?: RefusalParams;
+  applications?: string[];
+};
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -151,7 +167,7 @@ export async function refusalsFrom<R extends { id: string }>(
   ids: readonly string[],
   rows: readonly R[],
   nameOf: (row: R) => string,
-  refusalOf: (row: R) => Promise<RecordInUseException | null>,
+  refusalOf: (row: R) => Promise<RecordInUseException | DataAccessHiddenLinesException | null>,
 ): Promise<{ refused: DeleteRefusal[] }> {
   const byId = new Map(rows.map((row) => [String(row.id).toLowerCase(), row]));
   const refused: DeleteRefusal[] = [];
@@ -160,7 +176,14 @@ export async function refusalsFrom<R extends { id: string }>(
     if (!row) continue;
     const refusal = await refusalOf(row);
     if (refusal) {
-      refused.push({ id: row.id, name: nameOf(row), code: refusal.code, usages: refusal.usages, ...(refusal.params ? { params: refusal.params } : {}) });
+      refused.push({
+        id: row.id,
+        name: nameOf(row),
+        code: refusal.code,
+        usages: refusal.usages,
+        ...(refusal.params ? { params: refusal.params } : {}),
+        ...(refusal instanceof RecordInUseException && refusal.applications ? { applications: refusal.applications } : {}),
+      });
     }
   }
   return { refused };
@@ -177,6 +200,7 @@ export async function refusalsOf(
   ids: readonly string[],
   queries: readonly UsageQuery[],
   code: string,
+  caller: UsageCaller = { isAdmin: true },
 ): Promise<{ refused: DeleteRefusal[] }> {
   const wanted = checkIds(ids);
   if (wanted.length === 0) return { refused: [] };
@@ -189,7 +213,7 @@ export async function refusalsOf(
   for (const id of wanted) {
     const row = byId.get(id);
     if (!row) continue;
-    const { groups } = await readUsages(manager, row.tenant_id, row.id, { isAdmin: true }, queries);
+    const { groups } = await readUsages(manager, row.tenant_id, row.id, caller, queries);
     if (groups.length > 0) refused.push({ id: row.id, name: row.name, code, usages: groups.map((g) => ({ type: g.type, total: g.total })) });
   }
   return { refused };
@@ -200,9 +224,14 @@ export async function refusalsOf(
  * record gone meanwhile (`not_found`); a database refusal's mapped code (`in_use`, `retry`, ...)
  * with its English sentence as `reason`, in place of the driver's. Spread after `reason`.
  */
-export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[]; params?: RefusalParams; reason?: string } {
-  if (error instanceof RecordInUseException) {
-    return { code: error.code, usages: error.usages, ...(error.params ? { params: error.params } : {}) };
+export function refusalDetails(error: unknown): { code?: string; usages?: UsageCount[]; params?: RefusalParams; applications?: string[]; reason?: string } {
+  if (error instanceof RecordInUseException || error instanceof DataAccessHiddenLinesException) {
+    return {
+      code: error.code,
+      usages: error.usages,
+      ...(error.params ? { params: error.params } : {}),
+      ...(error instanceof RecordInUseException && error.applications ? { applications: error.applications } : {}),
+    };
   }
   if (error instanceof NotFoundException) return { code: 'not_found' };
   const mapped = mapDatabaseError(error);

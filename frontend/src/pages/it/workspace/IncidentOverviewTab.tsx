@@ -6,6 +6,7 @@ import IntegratedDocumentEditor, {
   type IntegratedDocumentEditorHandle,
   type IntegratedDocumentSaveStatus,
 } from '../../../components/IntegratedDocumentEditor';
+import IncidentAttachmentsSection from './IncidentAttachmentsSection';
 import { incidentComposerSx, incidentSectionLabelSx } from './incidentWorkspace';
 
 type Props = {
@@ -19,6 +20,9 @@ type Props = {
   reviewEditorRef: React.RefObject<IntegratedDocumentEditorHandle>;
   onReviewSaveStateChange: (status: IntegratedDocumentSaveStatus, error: string | null) => void;
   onPatchDebounced: (patch: Partial<Incident>) => void;
+  /** Same right as the old Attachments tab: upload and delete need the incident to be editable. */
+  canManageAttachments: boolean;
+  onAttachmentsCountChange: (count: number) => void;
   /**
    * Bumped by the page when it reloaded the incident after a refused save or a
    * discard: the description shows the incident's value again (the stored one,
@@ -45,6 +49,8 @@ export default function IncidentOverviewTab({
   reviewEditorRef,
   onReviewSaveStateChange,
   onPatchDebounced,
+  canManageAttachments,
+  onAttachmentsCountChange,
   descriptionResync = 0,
 }: Props) {
   const { t } = useTranslation('it');
@@ -106,6 +112,12 @@ export default function IncidentOverviewTab({
           onSaveStateChange={onReviewSaveStateChange}
         />
       </Box>
+
+      <IncidentAttachmentsSection
+        incidentId={incident.id}
+        canManage={canManageAttachments}
+        onCountChange={onAttachmentsCountChange}
+      />
     </Stack>
   );
 }

@@ -33,6 +33,19 @@ import { natureAnd, type BudgetNature } from '../budget-nature';
 import { presentLine, presentNativeLine, selectLineColumns } from '../budget-line-presentation';
 import { fxKeyCurrency, fxSetKeySql, fxTableSql, FxTable, lineCurrencySql, RequestFxRates } from './budget-fx-table';
 import { BudgetListRuntime, loadBudgetRuntime, mergeNeeds, RuntimeNeeds } from './budget-list.runtime';
+import { isLimitedTransaction, lineEditableSql } from '../../data-access/line-write-checks';
+
+/**
+ * Data-scoped access (spec §6.7, "Moteur de liste"): in a limited transaction, the answers say they
+ * are calculated on the person's access (`dataAccessLimited: true`), and the rows of the list say
+ * whether the person may modify each line (`editable`, the same SQL function as the policies).
+ * Neither is added for an unscoped person: no column, no query (the mode comes from the runner).
+ */
+export type DataAccessLimitedFlag = { dataAccessLimited?: true };
+
+async function limitedFlag(manager: EntityManager): Promise<DataAccessLimitedFlag> {
+  return (await isLimitedTransaction(manager)) ? { dataAccessLimited: true } : {};
+}
 
 /**
  * The OPEX and CAPEX list endpoints on the SQL list engine
@@ -227,8 +240,8 @@ export async function budgetListPageIds(
   deps: SummaryDeps,
   query: any,
   manager: EntityManager,
-  opts: { allocationLabels?: boolean; fxRates?: RequestFxRates; rowsFollow?: boolean } = {},
-): Promise<{ ids: string[]; total: number; labels: Map<string, string>; req: BudgetRequest; fxRates: RequestFxRates }> {
+  opts: { allocationLabels?: boolean; fxRates?: RequestFxRates; rowsFollow?: boolean; editable?: boolean } = {},
+): Promise<{ ids: string[]; total: number; labels: Map<string, string>; editable: Map<string, boolean> | null; req: BudgetRequest; fxRates: RequestFxRates }> {
   const req = await readRequest(query, manager);
   const fxRates = opts.fxRates ?? new RequestFxRates(deps.fxRates);
   const state = stateOf(req, windowScope(req));
@@ -240,6 +253,7 @@ export async function budgetListPageIds(
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
   const extra = opts.allocationLabels ? [{ name: 'allocation_label', field: fieldOf(stmt, config, 'allocation_method_label') }] : [];
+  if (opts.editable) extra.push({ name: 'editable', field: { kind: 'unknown', sql: lineEditableSql(`${config.alias}.`), joins: [] } });
   const rows = await run(manager, stmt, pageSql(stmt, config, state, extra));
   let total = rows.length ? Number(rows[0].total) : 0;
   if (!rows.length && state.skip > 0) {
@@ -248,7 +262,8 @@ export async function budgetListPageIds(
     total = Number(count?.total ?? 0);
   }
   const labels = new Map<string, string>(rows.map((row: any) => [row.id, row.allocation_label ?? '']));
-  return { ids: rows.map((row: any) => row.id), total, labels, req, fxRates };
+  const editable = opts.editable ? new Map<string, boolean>(rows.map((row: any) => [row.id, row.editable === true])) : null;
+  return { ids: rows.map((row: any) => row.id), total, labels, editable, req, fxRates };
 }
 
 /** One page of the list: the statement picks the lines, the builder draws them. */
@@ -258,9 +273,10 @@ export async function budgetListSummary(
   query: any,
   manager: EntityManager,
   options: BudgetListRowOptions = {},
-): Promise<{ items: BudgetSummaryRow[]; total: number; page: number; limit: number }> {
+): Promise<{ items: BudgetSummaryRow[]; total: number; page: number; limit: number } & DataAccessLimitedFlag> {
   const grid = String(query?.shape ?? '') === 'grid';
-  const page = await budgetListPageIds(scope, deps, query, manager, { allocationLabels: grid, rowsFollow: true });
+  const flag = await limitedFlag(manager);
+  const page = await budgetListPageIds(scope, deps, query, manager, { allocationLabels: grid, rowsFollow: true, editable: !!flag.dataAccessLimited });
   const { req } = page;
   const items = await itemsInOrder(scope, manager, req.tenantId, page.ids);
   const rows = await buildBudgetSummaryRows(scope, { ...deps, fxRates: page.fxRates }, manager, req.tenantId, items, {
@@ -272,7 +288,8 @@ export async function budgetListSummary(
       ? { shape: 'grid' as const, fteKeys: parseFteKeys(query?.fte, req.currentYear).map((fte) => fte.key), allocationLabels: page.labels }
       : {}),
   });
-  return { items: rows, total: page.total, page: req.request.page, limit: req.request.limit };
+  if (page.editable) for (const row of rows) row.editable = page.editable.get(row.id) === true;
+  return { items: rows, total: page.total, page: req.request.page, limit: req.request.limit, ...flag };
 }
 
 /** The ordered ids of every line of the list (workspace navigation). Without a status: the Enabled lines. */
@@ -455,7 +472,8 @@ export async function budgetListTotals(
   deps: SummaryDeps,
   query: any,
   manager: EntityManager,
-): Promise<SummaryTotals> {
+): Promise<SummaryTotals & DataAccessLimitedFlag> {
+  const flag = await limitedFlag(manager);
   const req = await readRequest(query, manager);
   const state = stateOf(req, 'active');
   const Y = req.currentYear;
@@ -520,7 +538,7 @@ export async function budgetListTotals(
     amountsByKey[amount.key] = Number(formatCents(centsByYear.get(amount.year)?.[amount.measure] ?? 0n));
   }
   amountsByKey.reportingCurrency = fx.reportingCurrency;
-  const result: SummaryTotals = Object.assign(amountsByKey, { fxMissing: readFxMissing(row.fx_missing) });
+  const result: SummaryTotals = Object.assign(amountsByKey, { fxMissing: readFxMissing(row.fx_missing) }, flag as Record<string, never>);
   if (!fteKeys.length) return result;
 
   const fteByKey = new Map((row.fte as Array<{ key: string; total: string | null; unknown: number; lines: number }>).map((entry) => [entry.key, entry]));
@@ -578,8 +596,9 @@ export async function budgetListAggregate(
   query: any,
   spec: AggregateSpec,
   manager: EntityManager,
-): Promise<BudgetListAggregate> {
+): Promise<BudgetListAggregate & DataAccessLimitedFlag> {
   validateAggregateSpec(spec);
+  const flag = await limitedFlag(manager);
   const req = await readRequest(query, manager);
   const specKeys = [...spec.groupBy, ...spec.measures.flatMap((measure) => [measure.field, ...(measure.minus ? [measure.minus] : [])])];
   assertBudgetYearsWithinBounds([...req.years, ...yearsNamedByFields(specKeys)], req.currentYear);
@@ -611,6 +630,7 @@ export async function budgetListAggregate(
     // Amounts in the lines' own currencies (`local_…`) are in no one currency.
     reportingCurrency: money.some((isMoney, i) => isMoney && !resolveLocalAmountField(spec.measures[i].field)) ? rt.fx?.reportingCurrency ?? null : null,
     fxMissing,
+    ...flag,
   };
 }
 

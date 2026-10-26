@@ -260,18 +260,22 @@
       "action": "Acción: {{value}}",
       "after": "Después",
       "before": "Antes",
-      "changedFields": "Campos modificados",
       "date": "Fecha: {{value}}",
       "exported": "Exportado: {{value}}",
-      "noFieldChanges": "Sin cambios a nivel de claves",
+      "field": "Campo",
+      "fields": "Campos",
+      "hideRawData": "Ocultar datos sin formato",
+      "noFieldChanges": "Ningún campo modificado",
+      "rawData": "Ver datos sin formato",
       "reason": "Motivo: {{value}}",
-      "recordId": "ID del registro: {{value}}",
+      "record": "Registro: {{value}}",
       "source": "Origen: {{value}}",
       "sourceRef": "Ref. de origen: {{value}}",
       "table": "Tabla: {{value}}",
       "tenant": "Espacio de trabajo: {{value}}",
       "title": "Detalles de la entrada de auditoría",
-      "user": "Usuario: {{value}}"
+      "user": "Usuario: {{value}}",
+      "value": "Valor"
     },
     "export": {
       "button": "Exportar CSV",
@@ -296,6 +300,7 @@
       "contracts": "Contratos",
       "contractComplianceRegister": "Registro de conformidad de los contratos",
       "costCenters": "Centros de coste",
+      "dataAccess": "Acceso a los datos",
       "departments": "Departamentos",
       "document": "Documento",
       "endOfSupportReport": "Informe de fin de soporte",
@@ -314,6 +319,99 @@
       "vulnerabilities": "Vulnerabilidades",
       "weeklyReport": "Informe semanal",
       "workingDayCalendars": "Calendarios laborales"
+    },
+    "fields": {
+      "access_methods": "Modos de acceso",
+      "amount": "Importe",
+      "business_lead_id": "Responsable de negocio",
+      "category": "Categoría",
+      "classification_justification": "Justificación de la clasificación",
+      "classification_review": "Revisión de clasificaciones",
+      "classification_revision": "Revisión de la clasificación",
+      "closed_at": "Cerrado el",
+      "company_id": "Empresa",
+      "confidential": "Confidencial",
+      "contains_pii": "Contiene datos personales",
+      "content_markdown": "Contenido",
+      "created_at": "Fecha de creación",
+      "created_by": "Creado por",
+      "created_by_user_id": "Creado por",
+      "creator_id": "Creador",
+      "criticality": "Criticidad",
+      "currency": "Moneda",
+      "cyber_criticality": "Criticidad cibernética",
+      "data_class": "Confidencialidad de los datos",
+      "description": "Descripción",
+      "detected_at": "Detectado el",
+      "disabled_at": "Desactivado el",
+      "due_date": "Fecha de vencimiento",
+      "editor": "Editor",
+      "email": "Correo",
+      "end_date": "Fecha de fin",
+      "end_of_support_date": "Fecha de fin de soporte",
+      "environment": "Entorno",
+      "etl_enabled": "Integración de datos / ETL",
+      "expires_at": "Caduca el",
+      "external_facing": "Acceso externo",
+      "first_name": "Nombre",
+      "fte": "ETC",
+      "go_live_date": "Fecha de puesta en servicio",
+      "hosting_model": "Alojamiento",
+      "ip": "Dirección IP",
+      "is_suite": "Puede incluir otras aplicaciones",
+      "it_lead_id": "Responsable IT",
+      "item_number": "Número de referencia",
+      "label": "Etiqueta",
+      "last_dr_test": "Última prueba de recuperación",
+      "last_name": "Apellido",
+      "licensing": "Licencias",
+      "lifecycle": "Ciclo de vida",
+      "method": "Método",
+      "mfa_supported": "MFA compatible",
+      "mode": "Modo",
+      "name": "Nombre",
+      "nodes": "Nodos",
+      "notes": "Notas",
+      "operation": "Operación",
+      "owner_user_id": "Responsable",
+      "period_end": "Fin del periodo",
+      "period_start": "Inicio del periodo",
+      "personal_data_affected": "Datos personales afectados",
+      "planned_end": "Fin planificado",
+      "planned_start": "Inicio planificado",
+      "predecessor_id": "Predecesor",
+      "priority": "Prioridad",
+      "purpose": "Objetivo",
+      "recovery_wave": "Ola de recuperación",
+      "reporter_user_id": "Notificante",
+      "resolved_at": "Resuelto el",
+      "retired_date": "Fecha de retirada",
+      "revocation_reason": "Motivo de revocación",
+      "revoked_by_user_id": "Revocado por",
+      "role_id": "Rol",
+      "rpo_minutes": "Objetivo de punto de recuperación (minutos)",
+      "rto_minutes": "Objetivo de tiempo de recuperación (minutos)",
+      "sequential_id": "Referencia",
+      "severity": "Gravedad",
+      "source": "Origen",
+      "sso_enabled": "SSO activado",
+      "start_date": "Fecha de inicio",
+      "started_at": "Iniciado el",
+      "status": "Estado",
+      "supplier_id": "Proveedor",
+      "support_notes": "Notas de soporte",
+      "title": "Título",
+      "type": "Tipo",
+      "updated_by": "Actualizado por",
+      "url": "URL",
+      "user_agent": "Navegador",
+      "user_id": "Usuario",
+      "users_mode": "Modo de cálculo de usuarios",
+      "users_override": "Número de usuarios (manual)",
+      "users_year": "Año de los usuarios",
+      "version": "Versión",
+      "version_id": "Versión",
+      "year": "Año"
     },
     "messages": {
       "loadDetailsFailed": "No se pudieron cargar los detalles de la entrada de auditoría."
@@ -342,6 +440,8 @@
     "sources": {
       "ai_chat": "Chat de IA",
       "budget_file": "Importación del archivo de presupuesto",
+      "import": "Importación",
+      "screen": "Pantalla",
       "system": "Sistema",
       "user": "Usuario",
       "webhook": "Webhook"
@@ -525,6 +625,7 @@
       "tenants": "Espacios de trabajo",
       "tenants_admin": "Administración de espacios de trabajo",
       "tenants_plan": "Planes de espacios de trabajo",
+      "user_data_access": "Acceso a los datos",
       "user_roles": "Roles de usuarios",
       "users": "Usuarios",
       "vulnerability_notifications": "Correos de vulnerabilidades enviados",
@@ -532,8 +633,20 @@
     },
     "title": "Registro de auditoría",
     "values": {
+      "identifier": "Identificador",
+      "no": "No",
       "unknownAccount": "Cuenta desconocida",
-      "unknownUser": "Desconocido ({{id}}…)"
+      "unknownUser": "Desconocido ({{id}}…)",
+      "yes": "Sí"
+    },
+    "dataAccess": {
+      "allData": "Todos los datos",
+      "limitedTo": "Limitado a",
+      "everything": "Todo",
+      "read": "Lectura",
+      "edit": "Edición",
+      "node": "{{name}} ({{access}})",
+      "noNodes": "Ningún nodo"
     }
   },
   "auth": {
@@ -775,10 +888,6 @@
       "yes": "Sí"
     },
     "title": "Plantillas de plan de cuentas (Admin plataforma)"
-  },
-  "confirmations": {
-    "unsavedNavigate": "Tiene cambios sin guardar. ¿Desea guardar antes de navegar?",
-    "unsavedSwitchTab": "Tiene cambios sin guardar. ¿Desea guardar antes de cambiar de pestaña?"
   },
   "platformAi": {
     "actions": {
@@ -1337,7 +1446,8 @@
       "sendInvite": "Enviar invitación",
       "sendReset": "Enviar restablecimiento de contraseña",
       "delete": "Eliminar",
-      "disableSelected": "Desactivar ({{count}})"
+      "disableSelected": "Desactivar ({{count}})",
+      "dataAccess": "Acceso a los datos"
     },
     "columns": {
       "lastName": "Apellido",
@@ -1354,7 +1464,8 @@
       "status": "Estado",
       "accountType": "Tipo de cuenta",
       "roles": "Roles",
-      "lastLogin": "Último inicio de sesión"
+      "lastLogin": "Último inicio de sesión",
+      "dataAccess": "Acceso"
     },
     "mfaValues": {
       "yes": "Sí",
@@ -1363,10 +1474,11 @@
     "dialogs": {
       "newUser": "Nuevo usuario",
       "editUser": "Editar usuario",
-      "saveAndInvite": "Guardar e invitar",
-      "saving": "Guardando…"
+      "identity": "Identidad",
+      "saveAndInvite": "Guardar e invitar"
     },
     "messages": {
+      "loadFailed": "No se pudo cargar el usuario.",
       "emailUnique": "El correo electrónico debe ser único.",
       "inviteSuccess_one": "{{count}} usuario invitado",
       "inviteSuccess_other": "{{count}} usuarios invitados",
@@ -1604,6 +1716,8 @@
       "tasks": "tareas",
       "application-links": "vínculos de las aplicaciones",
       "landscape": "instancias, interfaces y conexiones",
+      "incident-tasks": "tareas correctivas",
+      "incident-journal": "diario de incidentes",
       "budget-links": "vínculos presupuestarios",
       "portfolio-teams": "equipos y fases de los proyectos",
       "allocations": "asignaciones entre empresas",
@@ -1658,5 +1772,98 @@
       "resetFailed": "No se pudo borrar el contenido del espacio de trabajo. No se ha modificado nada.",
       "dismissFailed": "No se pudo ocultar este mensaje."
     }
+  },
+  "dataAccess": {
+    "title": "Acceso a los datos",
+    "allData": "Todos los datos",
+    "limitedTo": "Limitado a",
+    "none": "Ninguno",
+    "access": {
+      "read": "Lectura",
+      "edit": "Edición"
+    },
+    "accessLabel": "Acceso a {{name}}",
+    "types": {
+      "everything": "Todo",
+      "company": "Empresa",
+      "costCenterGroup": "Grupo de centros",
+      "costCenter": "Centro de coste"
+    },
+    "add": "Añadir",
+    "sections": {
+      "companies": "Empresas",
+      "costCenters": "Centros de coste",
+      "everything": "Todo"
+    },
+    "placeholders": {
+      "company": "Buscar una empresa",
+      "costCenter": "Buscar un centro de coste",
+      "person": "Buscar una persona"
+    },
+    "remove": "Quitar {{name}}",
+    "addTheirCenters_one": "Añadir su centro ({{count}})",
+    "addTheirCenters_other": "Añadir sus centros ({{count}})",
+    "alwaysSees": "Esta persona también ve siempre aquello en lo que está nombrada.",
+    "appliesTo": "Se aplica al presupuesto y a los contratos.",
+    "preview": "Con este acceso: {{lines}}{{editable}}; {{contracts}}.",
+    "previewLines_one": "{{value}} línea presupuestaria",
+    "previewLines_other": "{{value}} líneas presupuestarias",
+    "previewEditable_one": ", {{value}} editable",
+    "previewEditable_other": ", {{value}} editables",
+    "previewContracts_one": "{{value}} contrato",
+    "previewContracts_other": "{{value}} contratos",
+    "modified": "Modificado por {{name}} el {{date}}.",
+    "confirmAll": "{{name}} verá todos los datos del presupuesto y de los contratos.",
+    "administratorsSeeAll": "Los administradores ven todos los datos.",
+    "unavailable": "Limitar el acceso a los datos requiere un paso único en la base de datos, realizado por la persona que administra KANAP.",
+    "guide": "Abrir la guía",
+    "missing": "Falta: {{items}}.",
+    "missingParts": {
+      "role": "el rol limitado",
+      "membership": "el permiso para usarlo",
+      "inheritance": "la separación de roles",
+      "schemaCreate": "un permiso de base de datos",
+      "policies": "las reglas de acceso",
+      "grants": "los permisos sobre las tablas"
+    },
+    "saveFailed": "No se pudo guardar el acceso a los datos.",
+    "loadFailed": "No se pudo cargar el acceso a los datos.",
+    "counters": {
+      "limited_one": "Persona limitada: {{value}}",
+      "limited_other": "Personas limitadas: {{value}}",
+      "withoutCompany_one": "Línea presupuestaria sin empresa: {{value}}",
+      "withoutCompany_other": "Líneas presupuestarias sin empresa: {{value}}"
+    },
+    "filters": {
+      "name": "Buscar un nombre",
+      "node": "Quién tiene acceso a…",
+      "clearNode": "Borrar el filtro de nodo"
+    },
+    "columns": {
+      "person": "Persona",
+      "roles": "Roles",
+      "nodes": "Nodos",
+      "lastChange": "Última modificación",
+      "access": "Acceso",
+      "via": "Vía",
+      "actions": "Acciones"
+    },
+    "person": "Persona",
+    "empty": "Ninguna persona limitada.",
+    "exportTitle": "Exportar el acceso a los datos",
+    "importTitle": "Importar el acceso a los datos",
+    "accessTab": {
+      "full": "Ven toda la empresa",
+      "partial": "Ven una parte",
+      "direct": "Acceso directo",
+      "inherited": "Acceso heredado",
+      "addButton": "Añadir",
+      "confirmLimited": "El acceso de {{name}} pasará de Todos los datos a {{node}} solamente.",
+      "remove": "Quitar el acceso de {{name}}",
+      "saveFailed": "No se pudo actualizar el acceso.",
+      "loadFailed": "No se pudo cargar el acceso."
+    },
+    "importCsv": "Importar CSV",
+    "exportCsv": "Exportar CSV"
   }
 }

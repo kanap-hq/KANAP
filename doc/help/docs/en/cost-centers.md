@@ -108,6 +108,7 @@ Click any row in the list to open the workspace.
 - **Header**: the code as reference, with a copy button, and the name. Click the name to rename it. **Prev** / **Next** move through the list in its current order and filters, and the close button returns to the list
 - **Main area**: a line such as "Used by 3 OPEX lines and 1 CAPEX line." when budget lines use the node, then the **Description**
 - **Properties panel** on the right: **Code**, **Type**, **Parent group**, **Company** (cost centers only), **Budget holder** and **Lifecycle**
+- **Access** tab, for people who manage data access: the people with a direct access to the center or group, and those who inherit it from a parent group, the company or **Everything**. See [Data access](data-access.md#the-access-tab-of-companies-and-cost-centers)
 
 **Autosave**: Every change saves on its own. There is no Save button. Text fields save when you leave them (press Enter in **Code** to save at once); lists and switches save as soon as you pick a value. You can keep working while a change saves. When a change is refused, the reason shows under the field that caused it, for example a duplicate code under **Code**. A refused name shows at the top of the page.
 

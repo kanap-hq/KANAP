@@ -42,7 +42,10 @@ export type ReportLabels = {
   linkedObjects: string;
   assets: string;
   applications: string;
+  technologies: string;
   tasks: string;
+  taskAssignee: string;
+  taskDue: string;
   documents: string;
   compliance: string;
   personalData: string;
@@ -91,7 +94,14 @@ export type IncidentReportEntry = {
 };
 
 export type IncidentReportLinked = { name?: string | null; reference?: string | null };
-export type IncidentReportTask = { item_number?: number | string | null; title?: string | null; status?: string | null };
+export type IncidentReportTask = {
+  item_number?: number | string | null;
+  title?: string | null;
+  status?: string | null;
+  /** Resolved by `IncidentRecordService.load` from the tasks' assignee. */
+  assignee_name?: string | null;
+  due_date?: Date | string | null;
+};
 export type IncidentReportDocument = { item_number?: number | string | null; title?: string | null };
 export type IncidentReportAttachment = {
   original_filename?: string | null;
@@ -110,9 +120,10 @@ export type IncidentReportRecord = {
   incident: IncidentReportIncident;
   review?: IncidentReportReview | null;
   entries?: IncidentReportEntry[];
-  assets?: IncidentReportLinked[];
-  applications?: IncidentReportLinked[];
-  tasks?: IncidentReportTask[];
+  assets?: IncidentReportLinked[] | null;
+  applications?: IncidentReportLinked[] | null;
+  technologies?: IncidentReportLinked[] | null;
+  tasks?: IncidentReportTask[] | null;
   documents?: { access?: string; items?: IncidentReportDocument[] } | IncidentReportDocument[];
   attachments?: IncidentReportAttachment[];
   categoryLabel?: string | null;
@@ -163,7 +174,10 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     linkedObjects: 'Linked objects',
     assets: 'Assets',
     applications: 'Applications',
+    technologies: 'Technologies',
     tasks: 'Tasks',
+    taskAssignee: 'Assignee',
+    taskDue: 'Due {date}',
     documents: 'Documents',
     compliance: 'Compliance',
     personalData: 'Personal data affected',
@@ -222,7 +236,10 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     linkedObjects: 'Objets liés',
     assets: 'Actifs',
     applications: 'Applications',
+    technologies: 'Technologies',
     tasks: 'Tâches',
+    taskAssignee: 'Assigné à',
+    taskDue: 'Échéance {date}',
     documents: 'Documents',
     compliance: 'Conformité',
     personalData: 'Données personnelles concernées',
@@ -257,7 +274,7 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     closed: 'Geschlossen',
     properties: 'Eigenschaften',
     category: 'Kategorie',
-    reporter: 'Meldende Person',
+    reporter: 'Melder',
     owner: 'Verantwortlicher',
     externalRef: 'Externe Referenz',
     created: 'Erstellt',
@@ -281,7 +298,10 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     linkedObjects: 'Verknüpfte Objekte',
     assets: 'Assets',
     applications: 'Anwendungen',
+    technologies: 'Technologien',
     tasks: 'Aufgaben',
+    taskAssignee: 'Zugewiesen an',
+    taskDue: 'Fällig am {date}',
     documents: 'Dokumente',
     compliance: 'Compliance',
     personalData: 'Personenbezogene Daten betroffen',
@@ -316,14 +336,14 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     closed: 'Cerrado',
     properties: 'Propiedades',
     category: 'Categoría',
-    reporter: 'Declarante',
+    reporter: 'Notificante',
     owner: 'Responsable',
     externalRef: 'Referencia externa',
     created: 'Creado',
     updated: 'Actualizado',
     description: 'Descripción',
     reviewVersion: 'Revisión del incidente versión {version}',
-    journal: 'Registro',
+    journal: 'Diario',
     occurredAt: 'Ocurrido el',
     recordedAt: 'Registrado el',
     author: 'Autor',
@@ -340,7 +360,10 @@ const LABELS: Record<ReportLang, ReportLabels> = {
     linkedObjects: 'Objetos vinculados',
     assets: 'Activos',
     applications: 'Aplicaciones',
+    technologies: 'Tecnologías',
     tasks: 'Tareas',
+    taskAssignee: 'Asignada a',
+    taskDue: 'Vence el {date}',
     documents: 'Documentos',
     compliance: 'Conformidad',
     personalData: 'Datos personales afectados',
@@ -448,6 +471,27 @@ export function formatDateTime(
     minute: '2-digit',
     timeZone: normalizeReportTimeZone(timeZone),
     timeZoneName: 'short',
+  }).format(date);
+}
+
+/**
+ * A calendar date without a time (`tasks.due_date` is a `date` column). The date part is read
+ * as YYYY-MM-DD and formatted in UTC, so the time zone of the reader never shifts it by a day.
+ * A full timestamp is still formatted as its UTC calendar date.
+ */
+function formatDateOnly(value: Date | string | null | undefined, lang: ReportLang): string | null {
+  const raw = String(value ?? '').trim();
+  if (!raw) return null;
+  const calendar = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const date = calendar
+    ? new Date(Date.UTC(Number(calendar[1]), Number(calendar[2]) - 1, Number(calendar[3])))
+    : toDate(value);
+  if (!date || Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(DATE_LOCALES[lang], {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
   }).format(date);
 }
 
@@ -585,11 +629,26 @@ function bulletList(items: string[]): string {
   return items.map((item) => `- ${item}`).join('\n');
 }
 
-function table(headers: string[], rows: string[][]): string {
+/**
+ * Relative widths of the journal table, in Pandoc's order: occurrence, recording, author,
+ * kind, content. Pandoc's GFM reader turns them into default-width columns in its JSON AST,
+ * so the table helper also writes a raw HTML marker that `DocumentExportService` reads back
+ * before the Typst pass. The content column gets 10 units against 3 for the others, instead
+ * of the one fifth that hyphenated every entry.
+ */
+const JOURNAL_COLUMN_WEIGHTS = [3, 3, 3, 3, 10];
+
+function table(headers: string[], rows: string[][], weights?: number[]): string {
   const head = `| ${headers.map((h) => escapeMd(h, true)).join(' | ')} |`;
-  const sep = `| ${headers.map(() => '---').join(' | ')} |`;
+  const sep = `| ${headers.map((_, index) => {
+    const weight = Math.max(1, Math.round(weights?.[index] ?? 1));
+    return '-'.repeat(Math.max(3, weight * 3));
+  }).join(' | ')} |`;
   const body = rows.map((row) => `| ${row.map((cell) => escapeMd(cell, true)).join(' | ')} |`);
-  return [head, sep, ...body].join('\n');
+  // Pandoc's GFM reader does not keep the separator widths through its JSON AST; the
+  // marker carries them past that boundary. It is an HTML comment, invisible in the PDF.
+  const marker = weights ? `<!-- kanap:table-widths=${weights.join(',')} -->\n` : '';
+  return [`${marker}${head}`, sep, ...body].join('\n');
 }
 
 export function buildMarkdown(
@@ -659,12 +718,14 @@ export function buildMarkdown(
       `${heading(2, labels.journal)}\n\n${table(
         [labels.occurredAt, labels.recordedAt, labels.author, labels.kindHeader, labels.content],
         rows,
+        JOURNAL_COLUMN_WEIGHTS,
       )}`,
     );
   }
 
   const assets = (record.assets || []).filter((item) => hasText(item.name) || hasText(item.reference));
   const applications = (record.applications || []).filter((item) => hasText(item.name) || hasText(item.reference));
+  const technologies = (record.technologies || []).filter((item) => hasText(item.name) || hasText(item.reference));
   const tasks = (record.tasks || []).filter((item) => item.item_number != null || hasText(item.title));
   const documents = documentItems(record.documents).filter((item) => item.item_number != null || hasText(item.title));
   const linkedParts: string[] = [];
@@ -674,10 +735,18 @@ export function buildMarkdown(
   if (applications.length) {
     linkedParts.push(`${heading(3, labels.applications)}\n\n${bulletList(applications.map(linkedLine))}`);
   }
+  if (technologies.length) {
+    linkedParts.push(`${heading(3, labels.technologies)}\n\n${bulletList(technologies.map(linkedLine))}`);
+  }
   if (tasks.length) {
     linkedParts.push(`${heading(3, labels.tasks)}\n\n${bulletList(tasks.map((task) => {
       const refPart = task.item_number != null ? `T-${Number(task.item_number)}` : '';
-      const bits = [refPart, task.title, lookup(labels.taskStatus, task.status)].filter(hasText).map((bit) => escapeMd(bit));
+      const assignee = hasText(task.assignee_name) ? `${labels.taskAssignee}: ${task.assignee_name}` : '';
+      const dueDate = formatDateOnly(task.due_date, lang);
+      const due = dueDate ? labels.taskDue.replace('{date}', dueDate) : '';
+      const bits = [refPart, task.title, lookup(labels.taskStatus, task.status), assignee, due]
+        .filter(hasText)
+        .map((bit) => escapeMd(bit));
       return bits.join(' · ');
     }))}`);
   }
@@ -761,6 +830,10 @@ export class IncidentReportService {
       tenantId: opts.tenantId,
       userId: opts.userId ?? null,
       viewer: opts.viewer,
+      technologies: opts.technologies,
+      applications: opts.applications,
+      applicationScope: opts.applicationScope,
+      tasks: opts.tasks,
     });
     const settings = await this.itOps.getSettings(String(opts.tenantId), { manager: opts.manager });
     const markdown = buildMarkdown(

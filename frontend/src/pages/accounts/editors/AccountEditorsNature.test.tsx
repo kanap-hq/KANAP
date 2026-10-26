@@ -15,6 +15,10 @@ vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: 
 
 import api from '../../../api';
 import { accountFormSchema } from '../../forms/AccountForm';
+import enMasterData from '../../../locales/en/master-data.json';
+import frMasterData from '../../../locales/fr/master-data.json';
+import deMasterData from '../../../locales/de/master-data.json';
+import esMasterData from '../../../locales/es/master-data.json';
 import AccountCreateEditor, { type AccountCreateEditorHandle } from './AccountCreateEditor';
 import AccountOverviewEditor, { type AccountOverviewEditorHandle } from './AccountOverviewEditor';
 
@@ -51,6 +55,11 @@ function wrap(node: React.ReactNode) {
 
 /** The "Used for" select of the legacy admin form (a labelled MUI select). */
 const natureSelect = () => screen.getByRole('combobox', { name: 'accounts.fields.nature' });
+
+/** A required MUI label keeps its asterisk in the accessible name, so match the key as a prefix. */
+const labelled = (key: string) => screen.getByLabelText(new RegExp(`^${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+
+const chartSelect = () => screen.getByRole('combobox', { name: /^accounts\.fields\.chartOfAccounts/ });
 
 async function pickNature(label: string) {
   fireEvent.mouseDown(natureSelect());
@@ -157,12 +166,171 @@ describe('platform admin template account editors: Used for', () => {
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/chart-of-accounts', expect.anything()));
     // OPEX and CAPEX until a choice is made.
     expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.both');
-    fireEvent.change(screen.getByLabelText(/^Account Number/), { target: { value: '6100' } });
-    fireEvent.change(screen.getByLabelText(/^Account Name/), { target: { value: 'Software subscriptions' } });
+    fireEvent.change(labelled('accounts.fields.accountNumber'), { target: { value: '6100' } });
+    fireEvent.change(labelled('accounts.fields.accountName'), { target: { value: 'Software subscriptions' } });
     await pickNature('master-data:shared.lineTypeUsage.opex');
     await ref.current!.save().catch(() => undefined);
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(BASE, expect.objectContaining({
       account_number: 6100, account_name: 'Software subscriptions', nature: 'opex',
     })));
+  });
+});
+
+const CHART_REQUIRED_KEY = 'master-data:formSchemas.account.chartOfAccountsRequired';
+
+describe('account editors: chart of accounts is required', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.history.replaceState(null, '', '/');
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `${BASE}/2050`) return { data: { ...TEMPLATE_ACCOUNT, coa_id: '' } };
+      if (url === '/chart-of-accounts') return { data: { items: CHARTS } };
+      return { data: {} };
+    });
+    mocked.patch.mockResolvedValue({ data: {} });
+    mocked.post.mockResolvedValue({ data: { account_number: 6100 } });
+  });
+
+  it('keeps the message in the locale files, in each language', () => {
+    expect(enMasterData.formSchemas.account.chartOfAccountsRequired).toBe('Chart of accounts is required');
+    expect(frMasterData.formSchemas.account.chartOfAccountsRequired).toBe('Le plan comptable est requis');
+    expect(deMasterData.formSchemas.account.chartOfAccountsRequired).toBe('Kontenplan ist erforderlich');
+    expect(esMasterData.formSchemas.account.chartOfAccountsRequired).toBe('El plan de cuentas es obligatorio');
+  });
+
+  it('shows the locale message when a new account has no chart', async () => {
+    const ref = React.createRef<AccountCreateEditorHandle>();
+    wrap(<AccountCreateEditor ref={ref} basePath={BASE} />);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/chart-of-accounts', expect.anything()));
+    fireEvent.change(labelled('accounts.fields.accountNumber'), { target: { value: '6100' } });
+    fireEvent.change(labelled('accounts.fields.accountName'), { target: { value: 'Cash' } });
+    await ref.current!.save().catch(() => undefined);
+    expect(await screen.findByText(CHART_REQUIRED_KEY)).toBeInTheDocument();
+    expect(screen.queryByText('Chart of Accounts is required')).not.toBeInTheDocument();
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('shows the locale message when an existing account has no chart', async () => {
+    const ref = React.createRef<AccountOverviewEditorHandle>();
+    wrap(<AccountOverviewEditor ref={ref} id="2050" basePath={BASE} />);
+    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex'));
+    await ref.current!.save().catch(() => undefined);
+    expect(await screen.findByText(CHART_REQUIRED_KEY)).toBeInTheDocument();
+    expect(screen.queryByText('Chart of Accounts is required')).not.toBeInTheDocument();
+    expect(mocked.patch).not.toHaveBeenCalled();
+  });
+});
+
+/** Labels the two platform editors used to hard-code in English. */
+const HARD_CODED_LABELS = [
+  'Chart of Accounts',
+  'Account Number',
+  'Account Name',
+  'Native Name (local language)',
+  'Consolidation Account Number',
+  'Consolidation Account Name',
+  'Consolidation Account Description',
+  'Select a CoA',
+  'Loading…',
+];
+
+const FIELD_LABELS = {
+  en: {
+    chartOfAccounts: 'Chart of accounts',
+    accountNumber: 'Account number',
+    accountName: 'Account name',
+    nativeName: 'Native name (local language)',
+    description: 'Description',
+    consolidationAccountNumber: 'Consolidation account number',
+    consolidationAccountName: 'Consolidation account name',
+    consolidationAccountDescription: 'Consolidation account description',
+    selectChart: 'Select a chart of accounts',
+  },
+  fr: {
+    chartOfAccounts: 'Plan comptable',
+    accountNumber: 'Numéro de compte',
+    accountName: 'Nom du compte',
+    nativeName: 'Nom local (langue locale)',
+    description: 'Description',
+    consolidationAccountNumber: 'Numéro de compte de consolidation',
+    consolidationAccountName: 'Nom du compte de consolidation',
+    consolidationAccountDescription: 'Description du compte de consolidation',
+    selectChart: 'Choisissez un plan comptable',
+  },
+  de: {
+    chartOfAccounts: 'Kontenplan',
+    accountNumber: 'Kontonummer',
+    accountName: 'Kontoname',
+    nativeName: 'Lokaler Name (Landessprache)',
+    description: 'Beschreibung',
+    consolidationAccountNumber: 'Konsolidierungskontonummer',
+    consolidationAccountName: 'Konsolidierungskontoname',
+    consolidationAccountDescription: 'Beschreibung des Konsolidierungskontos',
+    selectChart: 'Wählen Sie einen Kontenplan',
+  },
+  es: {
+    chartOfAccounts: 'Plan de cuentas',
+    accountNumber: 'Número de cuenta',
+    accountName: 'Nombre de la cuenta',
+    nativeName: 'Nombre local (idioma local)',
+    description: 'Descripción',
+    consolidationAccountNumber: 'Número de cuenta de consolidación',
+    consolidationAccountName: 'Nombre de la cuenta de consolidación',
+    consolidationAccountDescription: 'Descripción de la cuenta de consolidación',
+    selectChart: 'Elija un plan de cuentas',
+  },
+} as const;
+
+function expectNoHardCodedLabel() {
+  for (const label of HARD_CODED_LABELS) {
+    expect(screen.queryByText(label)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
+  }
+}
+
+describe('platform admin template account editors: labels', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.history.replaceState(null, '', '/');
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === `${BASE}/2050`) return { data: TEMPLATE_ACCOUNT };
+      if (url === '/chart-of-accounts') return { data: { items: CHARTS } };
+      return { data: {} };
+    });
+  });
+
+  it('keeps the labels in the locale files, in each language', () => {
+    const packs = { en: enMasterData, fr: frMasterData, de: deMasterData, es: esMasterData };
+    for (const code of ['en', 'fr', 'de', 'es'] as const) {
+      expect(packs[code].accounts.fields).toMatchObject(FIELD_LABELS[code]);
+    }
+  });
+
+  it('shows locale keys on a new account, with no English label left', async () => {
+    wrap(<AccountCreateEditor basePath={BASE} />);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/chart-of-accounts', expect.anything()));
+    fireEvent.mouseDown(chartSelect());
+    expect(await screen.findByRole('option', { name: 'accounts.fields.selectChart' })).toBeInTheDocument();
+    expect(labelled('accounts.fields.accountNumber')).toBeInTheDocument();
+    expect(labelled('accounts.fields.accountName')).toBeInTheDocument();
+    expect(labelled('accounts.fields.nativeName')).toBeInTheDocument();
+    expect(labelled('accounts.fields.description')).toBeInTheDocument();
+    expect(labelled('accounts.fields.consolidationAccountNumber')).toBeInTheDocument();
+    expect(labelled('accounts.fields.consolidationAccountName')).toBeInTheDocument();
+    expect(labelled('accounts.fields.consolidationAccountDescription')).toBeInTheDocument();
+    expectNoHardCodedLabel();
+  });
+
+  it('shows the same keys on an existing account', async () => {
+    wrap(<AccountOverviewEditor id="2050" basePath={BASE} />);
+    await waitFor(() => expect(natureSelect()).toHaveTextContent('master-data:shared.lineTypeUsage.capex'));
+    expect(chartSelect()).toHaveTextContent('IFRS · Group chart');
+    expect(labelled('accounts.fields.accountNumber')).toHaveValue(2050);
+    expect(labelled('accounts.fields.accountName')).toHaveValue('Software licences');
+    expect(labelled('accounts.fields.consolidationAccountNumber')).toHaveValue(1200);
+    expect(labelled('accounts.fields.consolidationAccountName')).toHaveValue('Software');
+    fireEvent.mouseDown(chartSelect());
+    expect(within(await screen.findByRole('listbox')).getByRole('option', { name: 'accounts.fields.selectChart' })).toBeInTheDocument();
+    expectNoHardCodedLabel();
   });
 });

@@ -63,7 +63,7 @@ The first command prints the version of the checkout. The second one answers wit
 ```bash
 cd /opt/kanap
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ```
 
@@ -233,6 +233,8 @@ sudo test -s "$DUMP" \
 The last line reads `Database restored`. When it reads `Stopped`, nothing after the failed command ran.
 
 Run `pg_restore` as `postgres` and without `--no-owner`. The dump records the owner of every object (`kanap`), so the restore gives the tables back to the application role, with their row-level security settings. With `--no-owner` the tables would belong to `postgres` and the API could not use them. The `kanap` role must exist: on a new server, create it as in [step 4 of the installation example](installation-example.md#4-postgresql) before this step.
+
+**Data-scoped access.** When the server uses [data-scoped access](installation.md#optional-data-scoped-access), its role `kanap_data_limited` must exist before the restore too. On a new server, run the script of that section after creating the `kanap` role, with `-d postgres` since the `kanap` database does not exist yet. A restore on a server without that role brings back neither the access rules nor the permissions of the role, and `pg_restore` reports errors for them. A dump made with `pg_dump --no-privileges` also leaves the permissions out. In both cases limited people are refused until you run the script again and restart the API.
 
 **2. Restore the files.** The copy replaces the content of the bucket. The command runs only if the copy exists:
 

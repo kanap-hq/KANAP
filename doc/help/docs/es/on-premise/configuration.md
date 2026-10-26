@@ -18,7 +18,7 @@ docker compose -f infra/compose.onprem.yml up -d api
 |----------|-------------|---------|
 | `DEPLOYMENT_MODE` | **Debe ser `single-tenant`** en los despliegues on-premise | `single-tenant` |
 
-Escriba el valor exactamente. Un valor mal escrito (`single_tenant`) arranca KANAP en modo nube sin ninguna advertencia.
+Escriba `single-tenant` o `multi-tenant`. Deje la variable sin definir para multi-tenant, el valor predeterminado de la nube. Cualquier otro valor, incluido un error como `single_tenant`, detiene la API al arrancar. El mensaje nombra los valores aceptados.
 
 ## Opcional: identidad del espacio de trabajo
 
@@ -95,7 +95,7 @@ Si faltan a la vez `CORS_ORIGINS` y la dirección de la aplicación (`APP_BASE_U
 
 Defina `APP_ENV=production` cuando los usuarios accedan a KANAP por HTTPS, que es la configuración documentada. Si `NODE_ENV` está definido y `APP_ENV` no, KANAP lee `NODE_ENV` en su lugar.
 
-**Comprobaciones al arrancar.** La API se niega a arrancar si `JWT_SECRET` o `DATABASE_URL` falta o está vacío y, con `APP_ENV=production`, si falta `APP_BASE_URL` o `CORS_ORIGINS`. También se niega a funcionar si el rol de PostgreSQL de `DATABASE_URL` es `SUPERUSER` o `BYPASSRLS`. Esta última comprobación se hace después de las migraciones, así que las migraciones ya se han ejecutado con ese rol cuando aparece el mensaje.
+**Comprobaciones al arrancar.** La API se niega a arrancar si `DEPLOYMENT_MODE` tiene un valor distinto de `single-tenant`, `multi-tenant` o sin definir, si `JWT_SECRET` o `DATABASE_URL` falta o está vacío y, con `APP_ENV=production`, si falta `APP_BASE_URL` o `CORS_ORIGINS`. También se niega a funcionar si el rol de PostgreSQL de `DATABASE_URL` es `SUPERUSER` o `BYPASSRLS`. Esta última comprobación se hace después de las migraciones, así que las migraciones ya se han ejecutado con ese rol cuando aparece el mensaje.
 
 ## Qué muestra el registro de la API al arrancar
 
@@ -103,7 +103,7 @@ Lea el registro de la API después de cada arranque y de cada cambio en `.env`:
 
 ```bash
 cd /opt/kanap
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 ```
 
 El filtro conserva las líneas siguientes y omite los detalles del framework. Sin él, `docker compose -f infra/compose.onprem.yml logs api` lo muestra todo.
@@ -122,7 +122,6 @@ El filtro conserva las líneas siguientes y omite los detalles del framework. Si
 [RATE-LIMIT] Client address: taken from X-Forwarded-For behind 1 trusted proxy (RATE_LIMIT_TRUST_PROXY=true)
 [CORS] Configured 1 origin pattern(s)
 [DB] Connected as PostgreSQL role "kanap" with native RLS enforcement
-Admin seeding disabled (set SEED_ADMIN=true to enable)
 [on-prem] Default chart of accounts created
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
@@ -154,7 +153,6 @@ El número de migraciones cambia de una versión a otra. En los arranques siguie
 | `[CORS] CORS_ORIGINS and APP_BASE_URL are not set: browsers are still allowed from every origin in this version; ...` | Defina ambos. Una versión posterior solo permitirá las direcciones configuradas. |
 | `[CORS] CORS_ORIGINS entry ... is a pattern: it is still accepted in this version. ...` | Sustituya el patrón por la dirección exacta. |
 | `[DB] Connected as PostgreSQL role "kanap" with native RLS enforcement` | Informativa. La API usa el rol de aplicación. |
-| `Admin seeding disabled (set SEED_ADMIN=true to enable)` | Esperada on-premise. No hay nada que hacer: el administrador se crea a partir de `ADMIN_EMAIL` y `ADMIN_PASSWORD`. |
 | `[on-prem] Default chart of accounts created`, `[on-prem] Created tenant '...'`, `[on-prem] Created administrator account ...`, `[on-prem] Created default subscription (On-Prem)` | Solo en el primer arranque. |
 | `[on-prem] Administrator account ... left unchanged: the workspace has an active administrator` | Arranques siguientes. No hay nada que hacer. |
 | `[on-prem] Restored ... as an enabled administrator: the workspace had no active administrator (password unchanged)` | Una advertencia. No quedaba ningún administrador activo, así que KANAP restableció la cuenta `ADMIN_EMAIL`. |
@@ -452,7 +450,7 @@ La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por cor
 | `VULNERABILITY_FEED_ENABLED` | Activa las vulnerabilidades. | `false` en local |
 | `NVD_API_BASE_URL` | Dirección de una réplica de la API CVE 2.0 de la NVD, cuando el servidor no puede alcanzar la NVD. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
 | `NVD_API_KEY` | Clave opcional que eleva el ritmo de 5 a 50 solicitudes por 30 segundos, de modo que la primera lectura termina antes. Solicítela gratis en el [sitio de la NVD](https://nvd.nist.gov/developers/request-an-api-key). | *sin definir* |
-| `KEV_FEED_URL` | Dirección de una réplica del catálogo de la CISA de vulnerabilidades explotadas conocidas. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
+| `KEV_FEED_URL` | Dirección de una réplica del catálogo de la CISA de vulnerabilidades explotadas conocidas. Por defecto es la réplica de la CISA en GitHub, porque `www.cisa.gov` rechaza las direcciones de centros de datos. | `https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json` |
 | `EPSS_FEED_URL` | Dirección de una réplica de las puntuaciones EPSS del día. EPSS se describe en [FIRST](https://www.first.org/epss). | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
 | `EUVD_BASE_URL` | Dirección de una réplica de la base europea de vulnerabilidades de la ENISA (catálogo europeo y correspondencia EUVD). | `https://euvdservices.enisa.europa.eu` |
 | `CVE_LIST_FEED_ENABLED` | Desactiva solo la lista CVE.org (`false`), mientras las demás fuentes siguen. | El valor de `VULNERABILITY_FEED_ENABLED` |
@@ -462,11 +460,11 @@ La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por cor
 
 Notas:
 
-- La API necesita acceso HTTPS saliente, puerto 443, a `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` y `euvdservices.enisa.europa.eu`, o a sus réplicas (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
+- La API necesita acceso HTTPS saliente, puerto 443, a `services.nvd.nist.gov`, `raw.githubusercontent.com`, `epss.empiricalsecurity.com` y `euvdservices.enisa.europa.eu`, o a sus réplicas (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
 - Sin réplica, la lista CVE.org procede de las releases de GitHub: la exportación completa en la primera lectura (unos 640 MB, leídos en aproximadamente un minuto), y después los cambios diarios, de 0,5 a 13 MB al día. La API necesita acceso HTTPS saliente, puerto 443, a `api.github.com`, `github.com` y `release-assets.githubusercontent.com`.
 - La lista CVE.org ocupa unos 700 MB más en la base de datos. Durante la primera lectura, el contenedor `api` necesita unos 1,4 GB de espacio temporal en disco.
 - Un servidor sin acceso a la red lee la lista desde un archivo: indique su ruta en `CVE_LIST_EXPORT_URL` y deposite allí una nueva exportación con la frecuencia que prefiera. Los datos están tan al día como el último archivo depositado.
-- Una dirección de réplica vacía conserva la dirección pública. Una fuente que el servidor no alcanza deja sus columnas como están y aparece en el resumen de la tarea. Las demás fuentes continúan.
+- Una dirección de réplica vacía conserva la dirección por defecto. Una fuente que el servidor no alcanza deja sus columnas como están y aparece en el resumen de la tarea. Las demás fuentes continúan.
 - Las notificaciones por correo requieren además que el envío de correo esté configurado (Resend o SMTP).
 - Reinicie la API después de cambiar estos valores.
 
@@ -501,7 +499,7 @@ Notas:
 | `APP_URL` | Solo multi-tenant (nube). **No se necesita on-premise**: se usa `APP_BASE_URL`. | *sin definir* |
 | `EMAIL_OVERRIDE` | Redirige todos los correos a esta dirección (solo desarrollo/QA, **nunca en producción**) | *sin definir* |
 
-**Dirección del cliente.** Con la configuración documentada (nginx en el mismo servidor, puerto de la API vinculado a `127.0.0.1`), defina `RATE_LIMIT_TRUST_PROXY=true`. El proxy debe enviar `X-Forwarded-For`; el ejemplo de nginx lo hace. Defina `false` cuando no haya nada delante de la API. Un valor incorrecto da a todos los usuarios la misma dirección: las 60 solicitudes de inicio de sesión con contraseña por minuto se comparten entre todos, y 5 intentos fallidos en una cuenta la bloquean para todos durante 15 minutos.
+**Dirección del cliente.** Con la configuración documentada (nginx en el mismo servidor, puerto de la API vinculado a `127.0.0.1`), defina `RATE_LIMIT_TRUST_PROXY=true`. El proxy debe enviar `X-Forwarded-For`; el ejemplo de nginx lo hace. Defina `false` cuando no haya nada delante de la API. Un valor incorrecto da a todos los usuarios la misma dirección: las 60 solicitudes de inicio de sesión con contraseña y las 120 renovaciones de sesión por minuto se comparten entre todos, y 5 intentos fallidos en una cuenta la bloquean para todos durante 15 minutos.
 
 ## Opcional: capacidad y rendimiento
 
@@ -677,7 +675,7 @@ Solo es necesario si la función correspondiente está activada.
 | `claude.ai` | 443 | Lee la descripción de Claude, Claude Desktop o Claude Code cuando un usuario lo conecta mediante MCP sin clave | Si `AI_MCP_ENABLED=true` y los usuarios se conectan mediante OAuth (no es necesario para las claves API) |
 | `chatgpt.com`, `grok.com` | 443 | Lee la descripción de ChatGPT o Grok cuando un usuario lo conecta mediante MCP sin clave | Igual que para `claude.ai` |
 | `services.nvd.nist.gov`, o su réplica | 443 | Vulnerabilidades publicadas (NVD) | Si `VULNERABILITY_FEED_ENABLED=true` |
-| `www.cisa.gov`, o su réplica | 443 | Catálogo de la CISA de vulnerabilidades explotadas conocidas | Si `VULNERABILITY_FEED_ENABLED=true` |
+| `raw.githubusercontent.com`, o su réplica | 443 | Catálogo de la CISA de vulnerabilidades explotadas conocidas (réplica de la CISA en GitHub) | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `epss.empiricalsecurity.com`, o su réplica | 443 | Puntuaciones EPSS del día | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `euvdservices.enisa.europa.eu`, o su réplica | 443 | Base europea de vulnerabilidades (ENISA): catálogo europeo e identificadores EUVD | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `api.github.com`, `github.com`, `release-assets.githubusercontent.com` | 443 | La lista CVE.org (fichas redactadas por los editores) | Si `VULNERABILITY_FEED_ENABLED=true`, salvo con `CVE_LIST_FEED_ENABLED=false` o si `CVE_LIST_EXPORT_URL` designa una réplica |

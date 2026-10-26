@@ -8,6 +8,7 @@ import { AiProviderTestService } from './ai-provider-test.service';
 import { AiSecretCipherService } from './ai-secret-cipher.service';
 import { CreateAiModelConfigDto, UpdateAiModelConfigDto } from './dto/ai-model-config.dto';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 type AiModelConfigsRequest = {
   tenant?: { id?: string };
@@ -76,6 +77,7 @@ export class AiModelConfigsController {
     );
   }
 
+  @ReservedToUnscopedDataAccess()
   @Post()
   async create(@Body() body: CreateAiModelConfigDto, @Req() req: AiModelConfigsRequest) {
     const context = this.buildContext(req);
@@ -95,6 +97,7 @@ export class AiModelConfigsController {
     );
   }
 
+  @ReservedToUnscopedDataAccess()
   @Patch(':id')
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -118,6 +121,7 @@ export class AiModelConfigsController {
     );
   }
 
+  @ReservedToUnscopedDataAccess()
   @Delete(':id')
   async archive(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: AiModelConfigsRequest) {
     const context = this.buildContext(req);
@@ -137,6 +141,7 @@ export class AiModelConfigsController {
     );
   }
 
+  @ReservedToUnscopedDataAccess()
   @Post(':id/restore')
   async restore(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: AiModelConfigsRequest) {
     const context = this.buildContext(req);
@@ -156,6 +161,7 @@ export class AiModelConfigsController {
     );
   }
 
+  @ReservedToUnscopedDataAccess()
   @Post(':id/set-default')
   async setDefault(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: AiModelConfigsRequest) {
     const context = this.buildContext(req);
@@ -175,6 +181,7 @@ export class AiModelConfigsController {
     );
   }
 
+  @ReservedToUnscopedDataAccess()
   @Post(':id/clear-default')
   async clearDefault(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: AiModelConfigsRequest) {
     const context = this.buildContext(req);
@@ -196,6 +203,7 @@ export class AiModelConfigsController {
 
   // Connection test for a stored registry entry: decrypts the saved key
   // server-side and runs the same one-shot probe as the ad-hoc settings test.
+  @ReservedToUnscopedDataAccess()
   @Post(':id/test')
   async test(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: AiModelConfigsRequest) {
     const context = this.buildContext(req);

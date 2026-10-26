@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDataBanner from './SampleDataBanner';
+import { SAMPLE_DATA_STEPS } from './useSampleData';
 import { createAppTheme } from '../../../config/ThemeContext';
 import { api as apiClient } from '../../../api/client';
 
@@ -112,7 +113,9 @@ describe('SampleDataBanner', () => {
     (apiClient.get as any).mockResolvedValue({ ...EMPTY, status: 'loading', step: 'landscape', can_load: false });
     renderBanner();
 
-    expect(await screen.findByText(/Loading sample data\. Step 15 of 19: instances, interfaces and connections\./)).toBeInTheDocument();
+    expect(await screen.findByText(new RegExp(
+      `Loading sample data\\. Step 15 of ${SAMPLE_DATA_STEPS.length}: instances, interfaces and connections\\.`,
+    ))).toBeInTheDocument();
     expect(screen.getByText(/erased if the load fails/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Hide' })).not.toBeInTheDocument();
   });

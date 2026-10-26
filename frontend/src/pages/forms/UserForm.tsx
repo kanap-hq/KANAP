@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Stack, TextField, Typography } from '@mui/material';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo } from 'react';
+import { Box, Stack, TextField, Typography } from '@mui/material';
 import { Controller } from 'react-hook-form';
 import { z } from 'zod';
 import type { TFunction } from 'i18next';
@@ -10,6 +10,7 @@ import CompanySelect from '../../components/fields/CompanySelect';
 import DepartmentSelect from '../../components/fields/DepartmentSelect';
 import MultiRoleSelect from '../../components/fields/MultiRoleSelect';
 import StatusSwitch from '../../components/fields/StatusSwitch';
+import { PropertyRow } from '../../components/design';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
 
@@ -56,6 +57,12 @@ export type UserInput = {
   external_auth_provider?: string | null;
 };
 
+export type UserFormIntent = 'save' | 'save-invite';
+export type UserFormHandle = {
+  /** Validates and submits the identity; false when it is invalid or the save was refused. */
+  submit: (intent: UserFormIntent) => Promise<boolean>;
+};
+
 function normalizeEmptyToNull<T extends Record<string, any>>(obj: T): T {
   const out: any = Array.isArray(obj) ? [] : {};
   Object.entries(obj).forEach(([k, v]) => {
@@ -66,21 +73,35 @@ function normalizeEmptyToNull<T extends Record<string, any>>(obj: T): T {
   return out;
 }
 
-export default function UserForm({
+/** The dialog's fields fill their column: the two-column rows and the full-width rows stay aligned. */
+const fieldValueSx = { maxWidth: 'none' } as const;
+
+/** First and last name, business and mobile phone: side by side on a desktop, stacked on a phone. */
+const twoColumnsSx = {
+  display: 'grid',
+  gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' },
+  columnGap: 1.5,
+  rowGap: 0.5,
+} as const;
+
+/**
+ * The identity of a user (spec §7.4): every directory field with its own validation, the roles,
+ * the company and department, and the enabled switch. Rendered inside the user dialog's form, so it
+ * takes no `<form>` of its own and submits through `UserFormHandle.submit`.
+ */
+const UserForm = forwardRef<UserFormHandle, {
+  defaultValues?: Partial<UserInput> | Partial<UserFormValues>;
+  onSubmit: (data: UserInput, intent: UserFormIntent) => boolean | Promise<boolean>;
+  serverError?: unknown;
+  onStateChange?: (s: { isDirty: boolean; isValid: boolean; isSubmitting: boolean }) => void;
+  managedByEntra?: boolean;
+}>(function UserForm({
   defaultValues,
   onSubmit,
   serverError,
-  formId,
   onStateChange,
   managedByEntra = false,
-}: {
-  defaultValues?: Partial<UserInput> | Partial<UserFormValues>;
-  onSubmit: (data: UserInput) => void | Promise<void>;
-  serverError?: unknown;
-  formId: string;
-  onStateChange?: (s: { isDirty: boolean; isValid: boolean; isSubmitting: boolean }) => void;
-  managedByEntra?: boolean;
-}) {
+}, ref) {
   const { t } = useTranslation(['admin', 'validation']);
   const locale = useLocale();
   const syncedAt = (defaultValues as any)?.external_synced_at as string | null | undefined;
@@ -106,7 +127,6 @@ export default function UserForm({
   const schema = useMemo(() => createUserFormSchema(t), [t]);
   const methods = useZodForm<UserFormValues>({ schema, defaultValues: resolvedDefaults as any });
   const { register, handleSubmit, formState, watch, control, reset, trigger } = methods;
-  const emailRef = useRef<HTMLInputElement>(null);
 
   // Reset form when defaults change (e.g., when selecting another user)
   useEffect(() => {
@@ -114,88 +134,157 @@ export default function UserForm({
     void trigger();
   }, [reset, resolvedDefaults, trigger]);
 
-  // Focus email field after modal opens (delay to allow Dialog focus trap to settle)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      emailRef.current?.focus();
-    }, 50);
-    return () => clearTimeout(timer);
-  }, []);
-
   useEffect(() => {
     onStateChange?.({ isDirty: formState.isDirty, isValid: formState.isValid, isSubmitting: formState.isSubmitting });
   }, [formState.isDirty, formState.isValid, formState.isSubmitting, onStateChange]);
 
   const submit = useMemo(
-    () =>
-      handleSubmit((values) => {
+    () => (intent: UserFormIntent) => new Promise<boolean>((resolve) => {
+      void handleSubmit(async (values) => {
         const payload = normalizeEmptyToNull({
           ...values,
           status: values.status ? 'enabled' : 'disabled',
         });
-        return onSubmit(payload as UserInput);
-      }),
-    [handleSubmit, onSubmit]
+        let ok = false;
+        try {
+          ok = (await onSubmit(payload as UserInput, intent)) !== false;
+          if (ok) reset(values);
+        } finally {
+          resolve(ok);
+        }
+      }, () => resolve(false))();
+    }),
+    [handleSubmit, onSubmit, reset],
   );
+  useImperativeHandle(ref, () => ({ submit }), [submit]);
 
   const err = formState.errors as any;
   const selectedCompanyId = watch('company_id') as string | null | undefined;
 
   return (
-    <form id={formId} onSubmit={submit} noValidate autoComplete="off">
+    <Box>
       <FormErrorAlert error={serverError} />
-      <Stack spacing={2}>
+      <Stack spacing={1.5}>
         {managedByEntra && (
           <Typography variant="caption" color="text.secondary">
             {t('userForm.entraManagedHint')}
             {syncedAt ? ` ${t('userForm.entraSyncedAt', { date: formatShortDateTime(syncedAt, locale) })}` : ''}
           </Typography>
         )}
-        <TextField label={t('userForm.fields.email')} required {...register('email')} error={!!err.email} helperText={err.email?.message as string} autoComplete="email" InputLabelProps={{ shrink: true }} inputRef={emailRef} disabled={managedByEntra} />
-        <TextField label={t('userForm.fields.firstName')} {...register('first_name')} autoComplete="off" disabled={managedByEntra} />
-        <TextField label={t('userForm.fields.lastName')} {...register('last_name')} autoComplete="off" disabled={managedByEntra} />
-        <TextField label={t('userForm.fields.jobTitle')} {...register('job_title')} autoComplete="organization-title" InputLabelProps={{ shrink: true }} disabled={managedByEntra} />
-        <TextField label={t('userForm.fields.businessPhone')} {...register('business_phone')} autoComplete="tel" InputLabelProps={{ shrink: true }} disabled={managedByEntra} />
-        <TextField label={t('userForm.fields.mobilePhone')} {...register('mobile_phone')} autoComplete="tel-national" InputLabelProps={{ shrink: true }} disabled={managedByEntra} />
-        <Controller
-          control={control}
-          name="role_ids"
-          render={({ field }) => (
-            <MultiRoleSelect
-              label={t('userForm.fields.roles')}
-              value={field.value ?? []}
-              onChange={(v) => field.onChange(v)}
-              error={!!err.role_ids}
-              helperText={(err.role_ids?.message as string)
-                || (((field.value ?? []) as string[]).length === 0 ? t('userForm.fields.rolesEmptyHint') : '')}
+        <PropertyRow label={t('userForm.fields.email')} required valueSx={fieldValueSx}>
+          <TextField
+            variant="standard"
+            fullWidth
+            {...register('email')}
+            error={!!err.email}
+            helperText={err.email?.message as string}
+            autoComplete="email"
+            inputProps={{ 'aria-label': t('userForm.fields.email'), 'aria-required': true }}
+            disabled={managedByEntra}
+          />
+        </PropertyRow>
+        <Box sx={twoColumnsSx}>
+          <PropertyRow label={t('userForm.fields.firstName')} valueSx={fieldValueSx}>
+            <TextField
+              variant="standard"
+              fullWidth
+              {...register('first_name')}
+              autoComplete="off"
+              inputProps={{ 'aria-label': t('userForm.fields.firstName') }}
+              disabled={managedByEntra}
             />
-          )}
-        />
-        <Controller
-          control={control}
-          name="company_id"
-          render={({ field }) => (
-            <CompanySelect
-              label={t('userForm.fields.companyOptional')}
-              value={field.value as any}
-              onChange={(v) => field.onChange(v)}
-              helperText=""
+          </PropertyRow>
+          <PropertyRow label={t('userForm.fields.lastName')} valueSx={fieldValueSx}>
+            <TextField
+              variant="standard"
+              fullWidth
+              {...register('last_name')}
+              autoComplete="off"
+              inputProps={{ 'aria-label': t('userForm.fields.lastName') }}
+              disabled={managedByEntra}
             />
-          )}
-        />
-        <Controller
-          control={control}
-          name="department_id"
-          render={({ field }) => (
-            <DepartmentSelect
-              label={t('userForm.fields.departmentOptional')}
-              companyId={selectedCompanyId || undefined}
-              value={field.value as any}
-              onChange={(v) => field.onChange(v)}
-              helperText=""
+          </PropertyRow>
+        </Box>
+        <PropertyRow label={t('userForm.fields.jobTitle')} valueSx={fieldValueSx}>
+          <TextField
+            variant="standard"
+            fullWidth
+            {...register('job_title')}
+            autoComplete="organization-title"
+            inputProps={{ 'aria-label': t('userForm.fields.jobTitle') }}
+            disabled={managedByEntra}
+          />
+        </PropertyRow>
+        <Box sx={twoColumnsSx}>
+          <PropertyRow label={t('userForm.fields.businessPhone')} valueSx={fieldValueSx}>
+            <TextField
+              variant="standard"
+              fullWidth
+              {...register('business_phone')}
+              autoComplete="tel"
+              inputProps={{ 'aria-label': t('userForm.fields.businessPhone') }}
+              disabled={managedByEntra}
             />
-          )}
-        />
+          </PropertyRow>
+          <PropertyRow label={t('userForm.fields.mobilePhone')} valueSx={fieldValueSx}>
+            <TextField
+              variant="standard"
+              fullWidth
+              {...register('mobile_phone')}
+              autoComplete="tel-national"
+              inputProps={{ 'aria-label': t('userForm.fields.mobilePhone') }}
+              disabled={managedByEntra}
+            />
+          </PropertyRow>
+        </Box>
+        <PropertyRow label={t('userForm.fields.roles')} valueSx={fieldValueSx}>
+          <Controller
+            control={control}
+            name="role_ids"
+            render={({ field }) => (
+              <MultiRoleSelect
+                hideLabel
+                label={t('userForm.fields.roles')}
+                value={field.value ?? []}
+                onChange={(v) => field.onChange(v)}
+                error={!!err.role_ids}
+                helperText={(err.role_ids?.message as string)
+                  || (((field.value ?? []) as string[]).length === 0 ? t('userForm.fields.rolesEmptyHint') : '')}
+              />
+            )}
+          />
+        </PropertyRow>
+        <PropertyRow label={t('userForm.fields.companyOptional')} valueSx={fieldValueSx}>
+          <Controller
+            control={control}
+            name="company_id"
+            render={({ field }) => (
+              <CompanySelect
+                hideLabel
+                label={t('userForm.fields.companyOptional')}
+                value={field.value as any}
+                onChange={(v) => field.onChange(v)}
+                helperText=""
+              />
+            )}
+          />
+        </PropertyRow>
+        <PropertyRow label={t('userForm.fields.departmentOptional')} valueSx={fieldValueSx}>
+          <Controller
+            control={control}
+            name="department_id"
+            render={({ field }) => (
+              <DepartmentSelect
+                hideLabel
+                label={t('userForm.fields.departmentOptional')}
+                companyId={selectedCompanyId || undefined}
+                value={field.value as any}
+                onChange={(v) => field.onChange(v)}
+                helperText=""
+              />
+            )}
+          />
+        </PropertyRow>
         <Controller
           control={control}
           name="status"
@@ -212,6 +301,8 @@ export default function UserForm({
           )}
         />
       </Stack>
-    </form>
+    </Box>
   );
-}
+});
+
+export default UserForm;

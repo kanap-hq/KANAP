@@ -15,6 +15,7 @@ import { applyStatusFilter, extractStatusFilterFromAgModel } from '../common/sta
 import { ContractUpsertDto } from './dto/contract.dto';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
+import { displayName } from '../common/display-name';
 import { TasksUnifiedService } from '../tasks/tasks-unified.service';
 import { StorageService } from '../common/storage/storage.service';
 import { randomUUID } from 'crypto';
@@ -53,15 +54,14 @@ import {
 } from './contract-relations';
 import {
   contractBudgetCurrentYear,
-  contractBudgetParams,
-  contractBudgetSql,
+  contractBudgetRowsParams,
+  contractBudgetRowsSql,
   contractBudgetYears,
   contractFxRates,
   contractLinesFxMissing,
-  loadContractBudgetInputs,
   parseContractBudgetSelection,
-  readContractBudgetRows,
-  type ContractBudgetInputs,
+  readContractBudgetCoverage,
+  type ContractBudgetCoverage,
   type ContractBudgetRow,
   type ContractBudgetState,
 } from './contract-budget';
@@ -96,6 +96,15 @@ import {
 } from '../common/csv-sheet';
 import { Decimal } from '../common/decimal';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
+import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
+import {
+  assertContractPlacement,
+  assertContractReadable,
+  assertContractsEditable,
+  contractEditableField,
+  contractEditableFields,
+} from '../data-access/contract-write-checks';
+import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-write-checks';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -140,6 +149,8 @@ function importRowUnchanged(stored: Contract, next: Partial<Record<keyof Contrac
 type ListItem = Contract & ContractTermFields & {
   supplier?: { id: string; name: string } | null;
   company?: { id: string; name: string } | null;
+  /** The name of the group or cost center the contract is attached to, or null. */
+  cost_center_name?: string | null;
   /** Links to budget lines of both natures. */
   linked_lines_count?: number;
   latest_task?: { id: string; status?: string; description?: string; created_at?: Date } | null;
@@ -155,12 +166,14 @@ type ListItem = Contract & ContractTermFields & {
   budget_state?: ContractBudgetState | null;
   /** What the compliance register expects of the contract and what is missing (`contract-compliance.ts`). */
   compliance?: ComplianceSummary;
+  /** A limited person: whether they may modify the contract (absent when unscoped). */
+  editable?: boolean;
 };
 
 /** Who reads a list: the budget figures need the right to read the budget too. */
 type ListReadOptions = { manager?: EntityManager; budgetAccess?: boolean };
 /** The list columns that sort alphabetically. */
-const CONTRACT_TEXT_SORTS = new Set(['name', 'company_name', 'supplier_name', 'currency', 'billing_frequency']);
+const CONTRACT_TEXT_SORTS = new Set(['name', 'company_name', 'supplier_name', 'cost_center_name', 'currency', 'billing_frequency']);
 
 /** A contract link `l` to an OPEX line (`spend/budget-nature.ts`): the OPEX side lists, counts and replaces those only. */
 const OPEX_LINK = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex');
@@ -168,13 +181,20 @@ const CAPEX_LINK = linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex');
 /** A contract link `l` to a budget line of either nature: the list counts both. */
 const ANY_LINE_LINK = ` AND EXISTS (SELECT 1 FROM ${BUDGET_LINE_TABLE} nl WHERE nl.tenant_id = l.tenant_id AND nl.id = l.spend_item_id${naturesAnd('nl', BUDGET_NATURES)})`;
 
+/** UUIDs name the same row whatever their case: an upper-case id is not a move. */
+function sameUuid(a: string | null | undefined, b: string | null | undefined): boolean {
+  const left = a == null || a === '' ? null : String(a).toLowerCase();
+  const right = b == null || b === '' ? null : String(b).toLowerCase();
+  return left === right;
+}
+
 /** The list's order without a valid `sort`: the next due date first (`contract-terms.ts`). */
 const DEFAULT_LIST_SORT: Sort = { field: 'next_due_date', direction: 'ASC' };
 /**
  * The sort fields ordered through a selected alias: the ones computed from the contract terms, and
  * the joined names (the paginated query cannot order on a column of a join it does not select).
  */
-const ALIAS_SORT_FIELDS = new Set(['end_date', 'cancellation_deadline', 'next_due_date', 'company_name', 'supplier_name']);
+const ALIAS_SORT_FIELDS = new Set(['end_date', 'cancellation_deadline', 'next_due_date', 'company_name', 'supplier_name', 'cost_center_name']);
 /** The budget figures of the list (`contract-budget.ts`, joined as `cb`), in units of the reporting currency. */
 const BUDGET_FIELDS: Record<string, string> = {
   budget_committed: '(cb.committed::numeric / 100)',
@@ -258,6 +278,8 @@ export class ContractsService {
       updated_at: { expression: 'c.updated_at', textExpression: 'CAST(c.updated_at AS TEXT)', dataType: 'string' },
       company_name: { expression: 'comp.name', dataType: 'string' },
       supplier_name: { expression: 'sup.name', dataType: 'string' },
+      cost_center_id: { expression: 'c.cost_center_id', dataType: 'string' },
+      cost_center_name: { expression: 'ccn.name', dataType: 'string' },
       // The budget lines linked to the contract, of both natures, as the list counts them.
       linked_lines_count: {
         expression: `(SELECT COUNT(*) FROM contract_spend_items l WHERE l.tenant_id = c.tenant_id AND l.contract_id = c.id${ANY_LINE_LINK})`,
@@ -286,7 +308,7 @@ export class ContractsService {
   private listQuery(
     mg: EntityManager,
     query: any,
-    opts: { windowDays: number; exportAll?: boolean; omitFilters?: string[]; budget?: ContractBudgetInputs | null; compliance?: ContractComplianceInputs | null },
+    opts: { windowDays: number; exportAll?: boolean; omitFilters?: string[]; budget?: ContractBudgetCoverage | null; compliance?: ContractComplianceInputs | null },
   ) {
     const repo = mg.getRepository(Contract);
     const parsed = opts.exportAll
@@ -324,12 +346,14 @@ export class ContractsService {
       .createQueryBuilder('c')
       .leftJoin('companies', 'comp', 'comp.id = c.company_id AND comp.tenant_id = c.tenant_id')
       .leftJoin('suppliers', 'sup', 'sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id')
+      .leftJoin('cost_centers', 'ccn', 'ccn.id = c.cost_center_id AND ccn.tenant_id = c.tenant_id')
       .where('c.tenant_id = app_current_tenant()');
     if (budget) {
-      // One row per contract of the tenant for the one year asked for, computed once.
-      qb.addCommonTableExpression(contractBudgetSql({ contractIds: null }), 'cb', { materialized: true })
+      // One row per contract read, for the one year asked: the aggregates `readContractBudgetCoverage`
+      // computed outside the window when the person is limited, never a linked line.
+      qb.addCommonTableExpression(contractBudgetRowsSql(budget.rows), 'cb', { materialized: true })
         .leftJoin('cb', 'cb', 'cb.contract_id = c.id')
-        .setParameters(contractBudgetParams(budget));
+        .setParameters(contractBudgetRowsParams(budget.rows));
     }
     if (compliance) {
       // One row per contract of the tenant, computed once.
@@ -370,6 +394,8 @@ export class ContractsService {
       status: 'c.status',
       company_name: 'comp.name',
       supplier_name: 'sup.name',
+      cost_center_id: 'c.cost_center_id',
+      cost_center_name: 'ccn.name',
       start_date: 'c.start_date',
       end_date: filterTargets.end_date.expression,
       cancellation_deadline: filterTargets.cancellation_deadline.expression,
@@ -405,15 +431,32 @@ export class ContractsService {
 
   /**
    * The budget figures a list request asks for: its `budget_year` and `budget_column`, when the
-   * caller may read the budget (otherwise they are ignored). Their inputs cover every contract of
-   * the tenant, so the list can sort and filter on them.
+   * caller may read the budget (otherwise they are ignored). The contracts the list can show are
+   * read first, under the person's access (spec §5.4): a limited person's coverage comes from the
+   * window of `readContractBudgetCoverage`, which returns the per-contract aggregates only. An
+   * unscoped person reads every contract, as before.
    */
-  private async listBudgetInputs(mg: EntityManager, query: any, opts?: ListReadOptions): Promise<ContractBudgetInputs | null> {
+  private async listBudgetInputs(
+    mg: EntityManager,
+    query: any,
+    opts?: ListReadOptions & { offerYears?: boolean },
+  ): Promise<ContractBudgetCoverage | null> {
     if (!opts?.budgetAccess) return null;
     const selection = parseContractBudgetSelection(query, contractBudgetCurrentYear());
     if (!selection) return null;
     const tenantId = await this.sessionTenantId(mg);
-    return loadContractBudgetInputs({ fxRates: this.fxRates }, mg, tenantId, [selection.year], selection.column);
+    const contractIds: string[] | null = (await isLimitedTransaction(mg))
+      ? (await mg.query(`SELECT id FROM contracts WHERE tenant_id = app_current_tenant()`)).map((row: { id: string }) => row.id)
+      : null;
+    return readContractBudgetCoverage(
+      { fxRates: this.fxRates },
+      mg,
+      tenantId,
+      [selection.year],
+      selection.column,
+      contractIds,
+      opts?.offerYears ? { offerYears: { currentYear: contractBudgetCurrentYear() } } : undefined,
+    );
   }
 
   private async sessionTenantId(mg: EntityManager): Promise<string> {
@@ -439,12 +482,15 @@ export class ContractsService {
     // augment supplier/company names, linked count, and derived dates
     const supplierIds = Array.from(new Set(items.map(i => i.supplier_id).filter(Boolean))) as string[];
     const companyIds = Array.from(new Set(items.map(i => i.company_id).filter(Boolean))) as string[];
-    const [suppliers, companies] = await Promise.all([
+    const centreIds = Array.from(new Set(items.map(i => i.cost_center_id).filter(Boolean))) as string[];
+    const [suppliers, companies, centres] = await Promise.all([
       supplierIds.length ? mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [supplierIds]) : [],
       companyIds.length ? mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [companyIds]) : [],
+      centreIds.length ? mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [centreIds]) : [],
     ]);
     const sById = new Map<string, any>(suppliers.map((r: any) => [r.id, r]));
     const cById = new Map<string, any>(companies.map((r: any) => [r.id, r]));
+    const nById = new Map<string, any>(centres.map((r: any) => [r.id, r]));
 
     const contractIds = items.map(i => i.id);
     // The budget lines of both natures (spend/budget-nature.ts).
@@ -466,10 +512,12 @@ export class ContractsService {
       : [];
     const latestById = new Map(latestTasks.map(t => [t.related_object_id, t]));
 
-    // The page's budget figures, from the same statement the list sorted and filtered on.
+    // The page's budget figures, from the aggregates the coverage computed (spec §5.4: the same
+    // figures the list sorted and filtered on, over every linked line of each visible contract).
+    const pageIds = new Set(contractIds);
     const budgetById = new Map<string, ContractBudgetRow>(
       budget && contractIds.length
-        ? (await readContractBudgetRows(mg, { ...budget, contractIds })).map((row) => [row.contract_id, row])
+        ? budget.rows.filter((row) => pageIds.has(row.contract_id)).map((row) => [row.contract_id, row])
         : [],
     );
     // The page's compliance summaries, by batch of ids (`contract-compliance.ts`).
@@ -477,15 +525,20 @@ export class ContractsService {
     // The decisions recorded for the page's contracts: a contract renewed, or left to end, is not to decide.
     const decisions = await readRenewalDecisions(mg, contractIds);
 
+    // `editable` for a limited person, by the same SQL function as the UPDATE policy; nothing for
+    // an unscoped one (the key stays absent).
+    const editableById = await contractEditableFields(mg, contractIds);
     const enriched: ListItem[] = items.map((i) => {
       const figures = budgetById.get(i.id);
       return {
         ...i,
+        ...(editableById.has(i.id) ? { editable: editableById.get(i.id) === true } : {}),
         ...contractTermFields(i, today, { decisionWindowDays: windowDays, renewalDecision: renewalDecisionOf(decisions, i.id) }),
         // From the end of validity, like the filter: the stored status stays enabled once the date passes.
         status: deriveStatusFromDisabledAt(i.disabled_at),
         supplier: i.supplier_id ? { id: i.supplier_id, name: sById.get(i.supplier_id)?.name ?? '' } : null,
         company: i.company_id ? { id: i.company_id, name: cById.get(i.company_id)?.name ?? '' } : null,
+        cost_center_name: i.cost_center_id ? nById.get(i.cost_center_id)?.name ?? '' : null,
         linked_lines_count: countById.get(i.id) ?? 0,
         latest_task: latestById.get(i.id) ? {
           id: latestById.get(i.id)!.id,
@@ -527,7 +580,9 @@ export class ContractsService {
    */
   async totals(query: any, opts?: ListReadOptions & { tenantId?: string }) {
     const mg = opts?.manager ?? this.repo.manager;
-    const budget = await this.listBudgetInputs(mg, query, opts);
+    // The selector's years are read in the coverage window too: the previous year may hold only a
+    // hidden line's budget (spec §5.4).
+    const budget = await this.listBudgetInputs(mg, query, { ...opts, offerYears: true });
     const compliance = await loadContractComplianceInputs(mg);
     const windowDays = await readDecisionWindowDays(mg, opts?.tenantId);
     const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
@@ -576,7 +631,7 @@ export class ContractsService {
   }
 
   /** The `budget` part of the totals (see `totals`). */
-  private async budgetTotals(mg: EntityManager, query: any, budget: ContractBudgetInputs, compliance: ContractComplianceInputs, windowDays: number) {
+  private async budgetTotals(mg: EntityManager, query: any, budget: ContractBudgetCoverage, compliance: ContractComplianceInputs, windowDays: number) {
     const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
     const sums: { committed: string | null; linked: string | null; gap: string | null } = await qb
       .clone()
@@ -599,18 +654,23 @@ export class ContractsService {
       .getRawOne() ?? { no_line: '0', under: '0' };
     const units = (cents: string | null) => (cents == null ? 0 : Math.round(Number(cents)) / 100);
     const [year] = budget.years;
-    // The linked lines without a rate of the contracts in scope (the list's request), each line once.
-    let linkedFxMissing: ReturnType<typeof contractLinesFxMissing> = [];
-    if (budget.lineFxMissing.size > 0) {
-      const incomplete: Array<{ id: string }> = await qb.clone().select('c.id', 'id').andWhere('cb.linked_fx_missing').getRawMany();
-      if (incomplete.length > 0) {
-        const links: Array<{ id: string }> = await mg.query(
-          `SELECT DISTINCT l.spend_item_id AS id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = ANY($2::uuid[])`,
-          [budget.tenantId, incomplete.map((row) => row.id)],
-        );
-        linkedFxMissing = contractLinesFxMissing(budget, links.map((row) => row.id), [year]);
+    // The linked lines without a rate of the contracts in scope (the list's request), counted by
+    // currency and year. The counts are the per-contract aggregates the window returned: a limited
+    // person never gets the id or the amount of a line they cannot read.
+    const missing = new Map<string, { currency: string; year: number; lines: number }>();
+    const incomplete: Array<{ id: string }> = budget.fxMissingByContract.size > 0
+      ? await qb.clone().select('c.id', 'id').andWhere('cb.linked_fx_missing').getRawMany()
+      : [];
+    for (const row of incomplete) {
+      for (const pair of budget.fxMissingByContract.get(row.id) ?? []) {
+        if (pair.year !== year) continue;
+        const key = `${pair.currency}:${pair.year}`;
+        const entry = missing.get(key) ?? { currency: pair.currency, year: pair.year, lines: 0 };
+        entry.lines += pair.lines;
+        missing.set(key, entry);
       }
     }
+    const linkedFxMissing = Array.from(missing.values()).sort((a, b) => a.currency.localeCompare(b.currency) || a.year - b.year);
     return {
       year,
       column: budget.column,
@@ -622,7 +682,7 @@ export class ContractsService {
       excluded: excluded.map((entry) => ({ currency: entry.currency, count: Number(entry.count) })),
       no_line_count: Number(counts.no_line),
       under_count: Number(counts.under),
-      years: await contractBudgetYears(mg, budget.tenantId, contractBudgetCurrentYear(), year),
+      years: budget.offerYears ?? await contractBudgetYears(mg, budget.tenantId, contractBudgetCurrentYear(), year),
     };
   }
 
@@ -652,27 +712,39 @@ export class ContractsService {
          ORDER BY created_at DESC LIMIT 1`, [tenantId, id]);
     const latest_task = latestTaskRows?.[0] ?? null;
     // The names the page's header shows, read with the contract (no request per picker).
-    const [names]: Array<{ supplier_name: string | null; company_name: string | null; owner_name: string | null }> = await mg.query(
-      `SELECT sup.name AS supplier_name, comp.name AS company_name,
+    const [names]: Array<{ supplier_name: string | null; company_name: string | null; cost_center_name: string | null; owner_name: string | null }> = await mg.query(
+      `SELECT sup.name AS supplier_name, comp.name AS company_name, cc.name AS cost_center_name,
               NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS owner_name
          FROM contracts c
          LEFT JOIN suppliers sup ON sup.tenant_id = c.tenant_id AND sup.id = c.supplier_id
          LEFT JOIN companies comp ON comp.tenant_id = c.tenant_id AND comp.id = c.company_id
+         LEFT JOIN cost_centers cc ON cc.tenant_id = c.tenant_id AND cc.id = c.cost_center_id
          LEFT JOIN users u ON u.tenant_id = c.tenant_id AND u.id = c.owner_user_id
         WHERE c.tenant_id = $1 AND c.id = $2`,
       [tenantId, id],
     );
+    // A contract read through one of its lines (spec §5.4 "Exception"): its attachments and
+    // document links stay closed (so `links` and `attachments` are empty above), and this count,
+    // from `data_access_hidden_count` (lot 5, run 5A), gives their number. 0 when the contract is
+    // directly readable, absent for an unscoped person.
+    const limited = await isLimitedTransaction(mg);
+    const closedDocuments = limited
+      ? Number((await mg.query(`SELECT coalesce(data_access_hidden_count('contract_document', $1), 0) AS n`, [found.id]))[0]?.n ?? 0)
+      : null;
     return {
       ...found,
+      ...(await contractEditableField(mg, found.id)),
       ...terms,
       // The tenant's decision window: the page draws it on the timeline (`contract-settings.service.ts`).
       decision_window_days: windowDays,
       supplier_name: names?.supplier_name ?? null,
       company_name: names?.company_name ?? null,
+      cost_center_name: names?.cost_center_name ?? null,
       owner_name: names?.owner_name ?? null,
       linked_spend_items: spendItems,
       links,
       attachments,
+      ...(closedDocuments !== null ? { closed_documents_count: closedDocuments } : {}),
       latest_task,
     };
   }
@@ -720,6 +792,19 @@ export class ContractsService {
         if (!found.has(`${w.table}:${w.id}`)) throw new BadRequestException(`${w.label} not found.`);
       }
     }
+    // The contract's place in the tree (spec §3.3): a group or a cost center of the tenant, active;
+    // a node of another tenant or inactive is a 400, before the placement check.
+    const place = input['cost_center_id'];
+    if (place != null && place !== '') {
+      if (typeof place !== 'string' || !isUuid(place)) throw new BadRequestException('Cost center not found.');
+      const [node]: Array<{ id: string; status: string }> = await mg.query(
+        `SELECT id, status::text AS status FROM cost_centers WHERE tenant_id = app_current_tenant() AND id = $1::uuid`,
+        [place.toLowerCase()],
+      );
+      if (!node) throw new BadRequestException('Cost center not found.');
+      if (node.status !== 'enabled') throw new BadRequestException('This cost center is disabled.');
+      input['cost_center_id'] = place.toLowerCase();
+    }
     return input as ContractUpsertDto;
   }
 
@@ -729,6 +814,9 @@ export class ContractsService {
     if (!rawBody?.name) throw new BadRequestException('name is required');
     this.validateInput(rawBody);
     const body = await this.writableBody(mg, rawBody);
+    // A new contract goes where the person may place it (spec §2.3): the clear refusal comes
+    // before the INSERT policy, which would answer 42501.
+    await assertContractPlacement(mg, body.company_id ?? null, body.cost_center_id ?? null);
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     const lifecycle = resolveLifecycleState({ nextStatus: statusInput, nextDisabledAt: disabled_at });
     const toCreate: DeepPartial<Contract> = {
@@ -750,7 +838,7 @@ export class ContractsService {
     const entity = repo.create(toCreate);
     const saved = await repo.save(entity);
     await this.audit.log({ table: 'contracts', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
-    return saved;
+    return { ...saved, ...(await contractEditableField(mg, saved.id)) };
   }
 
   async update(id: string, rawBody: ContractUpsertDto, userId?: string, opts?: { manager?: EntityManager }) {
@@ -758,8 +846,17 @@ export class ContractsService {
     const repo = mg.getRepository(Contract);
     const existing = await repo.findOne({ where: { id, tenant_id: sessionTenant() } });
     if (!existing) throw new NotFoundException('Contract not found');
+    // A contract read but not modifiable (an owner out of the edit nodes, a contract opened
+    // through a visible line): the clear 403 before the UPDATE policy would touch no row.
+    await assertContractsEditable(mg, [id]);
     this.validateInput({ ...existing, ...rawBody });
     const body = await this.writableBody(mg, rawBody);
+    // An owner edits a field, never the place: a change of company or place must be placable.
+    const nextCompany = body.company_id !== undefined ? body.company_id : existing.company_id;
+    const nextPlace = body.cost_center_id !== undefined ? body.cost_center_id : existing.cost_center_id;
+    const movesCompany = body.company_id !== undefined && !sameUuid(body.company_id, existing.company_id);
+    const movesPlace = body.cost_center_id !== undefined && !sameUuid(body.cost_center_id, existing.cost_center_id);
+    if (movesCompany || movesPlace) await assertContractPlacement(mg, nextCompany ?? null, nextPlace ?? null);
     const before = { ...existing };
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     Object.assign(existing, rest);
@@ -810,7 +907,7 @@ export class ContractsService {
       }
     }
 
-    return saved;
+    return { ...saved, ...(await contractEditableField(mg, saved.id)) };
   }
 
   /** The contract of the session tenant, or a 404. */
@@ -850,24 +947,61 @@ export class ContractsService {
     return { items };
   }
 
+  /**
+   * The lines *added* to a contract link: the ids the person reads, of the expected nature; a
+   * limited person gets the 404 of a missing line for a hidden one, and 403 for a read-only line.
+   * A line that stays linked is not checked again: replacing the set never rewrites it.
+   */
+  private async assertLinableItems(mg: EntityManager, nature: 'opex' | 'capex', tenantId: string, ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const rows: Array<{ id: string }> = await mg.query(
+      `SELECT id FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND nature = $3`,
+      [tenantId, ids, nature],
+    );
+    if (rows.length !== ids.length) {
+      if (await isLimitedTransaction(mg)) {
+        throw new NotFoundException(nature === 'opex' ? 'Spend item not found.' : 'CAPEX item not found.');
+      }
+      throw new BadRequestException(nature === 'opex' ? 'One or more spend items not found.' : 'One or more CAPEX items not found.');
+    }
+    await assertLinesEditable(mg, ids);
+  }
+
   async bulkReplaceLinkedSpendItems(contractId: string, spendItemIds: string[], opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(ContractSpendItem);
     const contract = await this.findContract(contractId, mg);
+    await assertContractsEditable(mg, [contract.id]);
     const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((spendItemIds || []).filter(Boolean)));
-    await this.assertIdsInTenant(mg, 'opex', tenantId, uniqueIds, 'One or more spend items not found.');
     // The contract's links to OPEX lines only: a link to a line of another nature is kept as it is.
     const existing: Array<{ id: string; spend_item_id: string }> = await mg.query(
       `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2${OPEX_LINK}`,
       [tenantId, contract.id],
     );
-    const toDelete = existing.filter(e => !uniqueIds.includes(e.spend_item_id));
     const existingSet = new Set(existing.map(e => e.spend_item_id));
-    const toInsert = uniqueIds.filter(id => !existingSet.has(id)).map(id => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
-    if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
+    const added = uniqueIds.filter(id => !existingSet.has(id));
+    const removedLinks = existing.filter((e) => !uniqueIds.includes(e.spend_item_id)).map((e) => e.spend_item_id);
+    // Only the lines added need a readable, modifiable line: one that stays linked is not rewritten.
+    await this.assertLinableItems(mg, 'opex', tenantId, added);
+    // Deleting a link is a write on its line too: a read-only line refuses it (the link trigger).
+    await assertLinesEditable(mg, removedLinks);
+    const toInsert = added.map(id => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
+    // Only the links to the lines the person reads are deleted: the join on spend_items is
+    // filtered by the line policy (spec §6.4); the naive DELETE would remove the hidden links too.
+    const [removed]: Array<{ n: number }> = await mg.query(
+      `WITH removed AS (
+         DELETE FROM contract_spend_items l
+          USING spend_items i
+          WHERE l.tenant_id = $1 AND l.contract_id = $2
+            AND i.tenant_id = l.tenant_id AND i.id = l.spend_item_id AND i.nature = 'opex'
+            AND NOT (l.spend_item_id = ANY($3::uuid[]))
+          RETURNING 1
+       ) SELECT count(*)::int AS n FROM removed`,
+      [tenantId, contract.id, uniqueIds],
+    );
     if (toInsert.length > 0) await repo.save(toInsert);
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added: toInsert.length, removed: Number(removed?.n ?? 0) };
   }
 
   // Tasks (latest update pattern)
@@ -895,6 +1029,7 @@ export class ContractsService {
     const urlsRepo = mg.getRepository(ContractLink);
     if (!body.url) throw new BadRequestException('url is required');
     const contract = await this.findContract(contractId, mg);
+    await assertContractsEditable(mg, [contract.id]);
     const entity = urlsRepo.create({ tenant_id: contract.tenant_id, contract_id: contract.id, url: body.url, description: body.description ?? null });
     const saved = await urlsRepo.save(entity);
     await this.audit.log({ table: 'contract_links', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
@@ -905,6 +1040,7 @@ export class ContractsService {
     const urlsRepo = mg.getRepository(ContractLink);
     const existing = await urlsRepo.findOne({ where: { id: linkId, contract_id: contractId, tenant_id: sessionTenant() } });
     if (!existing) throw new NotFoundException('Link not found');
+    await assertContractsEditable(mg, [existing.contract_id]);
     // Only the link's own fields: the contract and the tenant it belongs to stay as resolved above.
     const next = { ...existing } as ContractLink;
     if (body?.url !== undefined) next.url = body.url;
@@ -918,6 +1054,7 @@ export class ContractsService {
     const urlsRepo = mg.getRepository(ContractLink);
     const existing = await urlsRepo.findOne({ where: { id: linkId, contract_id: contractId, tenant_id: sessionTenant() } });
     if (!existing) throw new NotFoundException('Link not found');
+    await assertContractsEditable(mg, [existing.contract_id]);
     await urlsRepo.delete({ id: existing.id, contract_id: existing.contract_id, tenant_id: existing.tenant_id });
     await this.audit.log({ table: 'contract_links', recordId: existing.id, action: 'update', before: existing, after: null, userId }, { manager: mg });
     return { ok: true };
@@ -946,7 +1083,7 @@ export class ContractsService {
       .split(',')
       .map((field) => field.trim())
       .filter(Boolean);
-    const allowed = new Set(['currency', 'company_name', 'supplier_name']);
+    const allowed = new Set(['currency', 'company_name', 'supplier_name', 'cost_center_name']);
     const fields = rawFields.filter((field) => allowed.has(field));
     if (fields.length === 0) return {};
 
@@ -1001,6 +1138,7 @@ export class ContractsService {
     const attachRepo = mg.getRepository(ContractAttachment);
     if (!file) throw new BadRequestException('No file uploaded');
     const contract = await this.findContract(contractId, mg);
+    await assertContractsEditable(mg, [contract.id]);
     const tenant_id = contract.tenant_id;
     const id = randomUUID();
     const now = new Date();
@@ -1046,6 +1184,7 @@ export class ContractsService {
     const attachRepo = mg.getRepository(ContractAttachment);
     const found = await attachRepo.findOne({ where: { id: attachmentId, tenant_id: sessionTenant() } });
     if (!found) throw new NotFoundException('Attachment not found');
+    await assertContractsEditable(mg, [found.contract_id]);
     try { await this.storage.deleteObject(found.storage_path); } catch {}
     await attachRepo.delete({ id: found.id, tenant_id: found.tenant_id });
     await this.audit.log({ table: 'contract_attachments', recordId: found.id, action: 'update', before: found, after: null, userId }, { manager: mg });
@@ -1055,7 +1194,7 @@ export class ContractsService {
   // CSV
   private csvHeaders(): string[] {
     return [
-      'name','company_name','supplier_name','start_date','duration_months','auto_renewal','notice_period_months','yearly_amount_at_signature','currency','billing_frequency','status','owner_email','notes'
+      'name','company_name','supplier_name','cost_center','start_date','duration_months','auto_renewal','notice_period_months','yearly_amount_at_signature','currency','billing_frequency','status','owner_email','notes'
     ];
   }
   /**
@@ -1092,14 +1231,17 @@ export class ContractsService {
       if (items.length) {
         const sIds = Array.from(new Set(items.map(i => i.supplier_id)));
         const cIds = Array.from(new Set(items.map(i => i.company_id)));
+        const nIds = Array.from(new Set(items.map(i => i.cost_center_id).filter(Boolean)));
         const uIds = Array.from(new Set(items.map(i => i.owner_user_id).filter(Boolean)));
-        const [sRows, cRows, uRows] = await Promise.all([
+        const [sRows, cRows, nRows, uRows] = await Promise.all([
           mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [sIds]),
           mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [cIds]),
+          nIds.length ? mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [nIds]) : Promise.resolve([]),
           uIds.length ? mg.query(`SELECT id, email FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [uIds]) : Promise.resolve([]),
         ]);
         const sMap = new Map<string, any>(sRows.map((r: any) => [r.id, r]));
         const cMap = new Map<string, any>(cRows.map((r: any) => [r.id, r]));
+        const nMap = new Map<string, any>(nRows.map((r: any) => [r.id, r]));
         const uMap = new Map<string, any>(uRows.map((r: any) => [r.id, r]));
         for (const it of items) {
           const start = isoDate(it.start_date);
@@ -1107,6 +1249,7 @@ export class ContractsService {
             it.name,
             cMap.get(it.company_id)?.name ?? '',
             sMap.get(it.supplier_id)?.name ?? '',
+            it.cost_center_id ? (nMap.get(it.cost_center_id)?.name ?? '') : '',
             start ? formatCsvDate(start, language) : '',
             String(it.duration_months ?? ''),
             formatCsvBoolean(!!it.auto_renewal, language),
@@ -1157,6 +1300,8 @@ export class ContractsService {
       file: buf as Buffer,
       fields: this.csvHeaders(),
       dateFields: ['start_date'],
+      // Older files have no place column: a row without it keeps the stored place.
+      optional: ['cost_center'],
       language: readLanguage,
       dateOrder,
       decimalMark,
@@ -1173,11 +1318,14 @@ export class ContractsService {
     const allCompanies = await mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant()`);
     const allSuppliers = await mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant()`);
     const allUsers = await mg.query(`SELECT id, email FROM users WHERE tenant_id = app_current_tenant()`);
+    const allNodes = await mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND status = 'enabled'`);
     const cByName = new Map<string, any>(allCompanies.map((r: any) => [r.name, r]));
     const sByName = new Map<string, any>(allSuppliers.map((r: any) => [r.name, r]));
     const uByEmail = new Map<string, any>(allUsers.map((r: any) => [r.email.toLowerCase(), r]));
+    const nByName = new Map<string, any>(allNodes.map((r: any) => [r.name, r]));
+    const hasPlaceColumn = read.present.includes('cost_center');
 
-    const norm: Array<ContractUpsertDto & { line: number; supplier_name: string; company_name: string; owner_email?: string | null }> = [];
+    const norm: Array<ContractUpsertDto & { line: number; supplier_name: string; company_name: string; owner_email?: string | null; cost_center_name?: string | null }> = [];
     for (const r of rows) {
       const line = r.line;
       const problems = rowProblemErrors(r);
@@ -1217,6 +1365,7 @@ export class ContractsService {
       const status = statusRaw === 'disabled' ? 'disabled' : statusRaw ? 'enabled' : null;
       const owner_email = cellOf(r, 'owner_email') || null;
       const notes = cellOf(r, 'notes') || null;
+      const cost_center_name = cellOf(r, 'cost_center') || null;
       // Coded on their column (`errors:CSV_*`): the dialog words them in the interface language.
       if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
       if (!company_name) errors.push(rowError(line, 'company_name', 'CSV_VALUE_REQUIRED', 'company_name is required'));
@@ -1224,12 +1373,13 @@ export class ContractsService {
       if (!supplier_name) errors.push(rowError(line, 'supplier_name', 'CSV_VALUE_REQUIRED', 'supplier_name is required'));
       else if (!sByName.has(supplier_name)) errors.push(rowError(line, 'supplier_name', 'CSV_REFERENCE_NOT_FOUND', `supplier '${supplier_name}' not found`, { value: supplier_name }));
       if (owner_email && !uByEmail.has(owner_email.toLowerCase())) errors.push(rowError(line, 'owner_email', 'CSV_REFERENCE_NOT_FOUND', `user '${owner_email}' not found`, { value: owner_email }));
+      if (cost_center_name && !nByName.has(cost_center_name)) errors.push(rowError(line, 'cost_center', 'CSV_REFERENCE_NOT_FOUND', `cost center '${cost_center_name}' not found`, { value: cost_center_name }));
       if (!start_date) errors.push(rowError(line, 'start_date', 'CSV_VALUE_REQUIRED', 'start_date is required'));
       if (currency && currency.length !== 3) errors.push(rowError(line, 'currency', 'CSV_CURRENCY_INVALID', 'currency must be 3 letters', { value: currency }));
       if (!BILLING_FREQUENCIES.includes(billing_frequency)) {
         errors.push(rowError(line, 'billing_frequency', 'CSV_ENUM_INVALID', 'billing_frequency invalid', { value: billing_frequency, allowed: BILLING_FREQUENCIES.join(', ') }));
       }
-      norm.push({ line, name, company_name, supplier_name, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
+      norm.push({ line, name, company_name, supplier_name, cost_center_name, start_date, duration_months, auto_renewal, notice_period_months, yearly_amount_at_signature, currency, billing_frequency, status, owner_email, notes } as any);
     }
     if (errors.length > 0) return { ok: false, dryRun, total: rows.length, inserted: 0, updated: 0, unchanged: 0, errors, ...report };
 
@@ -1254,6 +1404,9 @@ export class ContractsService {
       if (!exists) inserted += 1;
       else if (importRowUnchanged(exists, {
         company_id: cByName.get(item.company_name)?.id,
+        ...(hasPlaceColumn && (item.cost_center_name || (exists.cost_center_id ?? null) !== null)
+          ? { cost_center_id: item.cost_center_name ? nByName.get(item.cost_center_name)?.id ?? null : null }
+          : {}),
         owner_user_id: item.owner_email ? uByEmail.get(item.owner_email.toLowerCase())?.id : null,
         start_date: item.start_date,
         duration_months: item.duration_months,
@@ -1293,6 +1446,9 @@ export class ContractsService {
         name: item.name as any,
         company_id: company.id,
         supplier_id: supplier.id,
+        ...(hasPlaceColumn && (item.cost_center_name || (exists?.cost_center_id ?? null) !== null)
+          ? { cost_center_id: item.cost_center_name ? nByName.get(item.cost_center_name)?.id ?? null : null }
+          : {}),
         owner_user_id: owner?.id ?? null,
         start_date: item.start_date as any,
         duration_months: item.duration_months as any,
@@ -1336,16 +1492,35 @@ export class ContractsService {
       [spendItemId],
     );
     if (!spend) throw new NotFoundException('Spend item not found.');
+    await assertLinesEditable(mg, [spend.id]);
     const tenantId = spend.tenant_id;
     const uniqueIds = Array.from(new Set((contractIds || []).filter(Boolean)));
+    // A hidden contract gets the same 404 as a missing one; an unscoped person keeps the 400.
+    for (const id of uniqueIds) await assertContractReadable(mg, id);
     await this.assertIdsInTenant(mg, 'contracts', tenantId, uniqueIds, 'One or more contracts not found.');
-    const existing = await repo.find({ where: { tenant_id: tenantId, spend_item_id: spend.id } });
-    const toDelete = existing.filter(e => !uniqueIds.includes(e.contract_id));
+    // The links to contracts the person reads only: the join is filtered by the contract policy,
+    // so a link to a hidden contract stays (spec §5.4).
+    const existing: Array<{ id: string; contract_id: string }> = await mg.query(
+      `SELECT l.id, l.contract_id FROM contract_spend_items l
+         JOIN contracts c ON c.tenant_id = l.tenant_id AND c.id = l.contract_id
+        WHERE l.tenant_id = $1 AND l.spend_item_id = $2`,
+      [tenantId, spend.id],
+    );
     const existingSet = new Set(existing.map(e => e.contract_id));
     const toInsert = uniqueIds.filter(id => !existingSet.has(id)).map(id => repo.create({ tenant_id: tenantId, contract_id: id, spend_item_id: spend.id }));
-    if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
+    const [removed]: Array<{ n: number }> = await mg.query(
+      `WITH removed AS (
+         DELETE FROM contract_spend_items l
+          USING contracts c
+          WHERE l.tenant_id = $1 AND l.spend_item_id = $2
+            AND c.tenant_id = l.tenant_id AND c.id = l.contract_id
+            AND NOT (l.contract_id = ANY($3::uuid[]))
+          RETURNING 1
+       ) SELECT count(*)::int AS n FROM removed`,
+      [tenantId, spend.id, uniqueIds],
+    );
     if (toInsert.length > 0) await repo.save(toInsert);
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added: toInsert.length, removed: Number(removed?.n ?? 0) };
   }
 
   // Symmetric linking from CAPEX side: the CAPEX lines share `contract_spend_items` since lot Z1.
@@ -1373,18 +1548,36 @@ export class ContractsService {
       [capexItemId],
     );
     if (!capex) throw new NotFoundException('CAPEX item not found.');
+    await assertLinesEditable(mg, [capex.id]);
     const tenantId = capex.tenant_id;
     const uniqueIds = Array.from(new Set((contractIds || []).filter(Boolean)));
+    // A hidden contract gets the same 404 as a missing one; an unscoped person keeps the 400.
+    for (const id of uniqueIds) await assertContractReadable(mg, id);
     await this.assertIdsInTenant(mg, 'contracts', tenantId, uniqueIds, 'One or more contracts not found.');
-    const existing = await linksRepo.find({ where: { tenant_id: tenantId, spend_item_id: capex.id } });
-    const toDelete = existing.filter((e) => !uniqueIds.includes(e.contract_id));
+    // The links to contracts the person reads only (the join is filtered by the contract policy).
+    const existing: Array<{ id: string; contract_id: string }> = await mg.query(
+      `SELECT l.id, l.contract_id FROM contract_spend_items l
+         JOIN contracts c ON c.tenant_id = l.tenant_id AND c.id = l.contract_id
+        WHERE l.tenant_id = $1 AND l.spend_item_id = $2`,
+      [tenantId, capex.id],
+    );
     const existingSet = new Set(existing.map((e) => e.contract_id));
     const toInsert = uniqueIds
       .filter((id) => !existingSet.has(id))
       .map((id) => linksRepo.create({ tenant_id: tenantId, contract_id: id, spend_item_id: capex.id }));
-    if (toDelete.length > 0) await linksRepo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
+    const [removed]: Array<{ n: number }> = await mg.query(
+      `WITH removed AS (
+         DELETE FROM contract_spend_items l
+          USING contracts c
+          WHERE l.tenant_id = $1 AND l.spend_item_id = $2
+            AND c.tenant_id = l.tenant_id AND c.id = l.contract_id
+            AND NOT (l.contract_id = ANY($3::uuid[]))
+          RETURNING 1
+       ) SELECT count(*)::int AS n FROM removed`,
+      [tenantId, capex.id, uniqueIds],
+    );
     if (toInsert.length > 0) await linksRepo.save(toInsert);
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added: toInsert.length, removed: Number(removed?.n ?? 0) };
   }
 
   // Inverse links from Contract side: the contract's CAPEX lines, their title as `description`.
@@ -1404,27 +1597,43 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(ContractSpendItem);
     const contract = await this.findContract(contractId, mg);
+    await assertContractsEditable(mg, [contract.id]);
     const tenantId = contract.tenant_id;
     const uniqueIds = Array.from(new Set((capexItemIds || []).filter(Boolean)));
-    await this.assertIdsInTenant(mg, 'capex', tenantId, uniqueIds, 'One or more CAPEX items not found.');
     // The contract's links to CAPEX lines only: a link to an OPEX line is kept as it is.
     const existing: Array<{ id: string; spend_item_id: string }> = await mg.query(
       `SELECT l.id, l.spend_item_id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2${CAPEX_LINK}`,
       [tenantId, contract.id],
     );
-    const toDelete = existing.filter((e) => !uniqueIds.includes(e.spend_item_id));
     const existingSet = new Set(existing.map((e) => e.spend_item_id));
-    const toInsert = uniqueIds.filter((id) => !existingSet.has(id)).map((id) => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
-    if (toDelete.length > 0) await repo.delete({ tenant_id: tenantId, id: In(toDelete.map((e) => e.id)) });
+    const added = uniqueIds.filter((id) => !existingSet.has(id));
+    const removedLinks = existing.filter((e) => !uniqueIds.includes(e.spend_item_id)).map((e) => e.spend_item_id);
+    // Only the lines added need a readable, modifiable line: one that stays linked is not rewritten.
+    await this.assertLinableItems(mg, 'capex', tenantId, added);
+    // Deleting a link is a write on its line too: a read-only line refuses it (the link trigger).
+    await assertLinesEditable(mg, removedLinks);
+    const toInsert = added.map((id) => repo.create({ tenant_id: tenantId, contract_id: contract.id, spend_item_id: id }));
+    // Only the links to the lines the person reads are deleted (the join is filtered by the line policy).
+    const [removed]: Array<{ n: number }> = await mg.query(
+      `WITH removed AS (
+         DELETE FROM contract_spend_items l
+          USING spend_items i
+          WHERE l.tenant_id = $1 AND l.contract_id = $2
+            AND i.tenant_id = l.tenant_id AND i.id = l.spend_item_id AND i.nature = 'capex'
+            AND NOT (l.spend_item_id = ANY($3::uuid[]))
+          RETURNING 1
+       ) SELECT count(*)::int AS n FROM removed`,
+      [tenantId, contract.id, uniqueIds],
+    );
     if (toInsert.length > 0) await repo.save(toInsert);
-    return { ok: true, added: toInsert.length, removed: toDelete.length };
+    return { ok: true, added: toInsert.length, removed: Number(removed?.n ?? 0) };
   }
 
   // Relations from the contract's side (`contract-relations.ts`): budget lines of both natures,
   // applications, assets, and the counts of the page's tabs.
-  async listBudgetLines(contractId: string, opts?: { manager?: EntityManager }) {
+  async listBudgetLines(contractId: string, opts?: { manager?: EntityManager; budgetAccess?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
-    return listContractBudgetLines(mg, await this.findContract(contractId, mg));
+    return listContractBudgetLines(mg, await this.findContract(contractId, mg), opts?.budgetAccess !== false);
   }
 
   /**
@@ -1443,25 +1652,36 @@ export class ContractsService {
     const currentYear = contractBudgetCurrentYear();
     const selection = parseContractBudgetSelection(query, currentYear, { year: 'year', column: 'column' });
     if (!selection) throw new BadRequestException('year and column are required.');
-    const years = await contractBudgetYears(mg, contract.tenant_id, currentYear, selection.year);
-    const inputs = await loadContractBudgetInputs({ fxRates: this.fxRates }, mg, contract.tenant_id, years, selection.column, [contract.id]);
-    const rows = await readContractBudgetRows(mg, inputs);
+    // The lines the person reads, then the coverage of the contract on every one of its lines:
+    // the coverage inputs run in the window (`readContractBudgetCoverage`), which returns the
+    // per-contract aggregates and the amounts of these lines alone (spec §5.4, §6.6).
     const { items } = await listContractBudgetLines(mg, contract);
+    const coverage = await readContractBudgetCoverage(
+      { fxRates: this.fxRates },
+      mg,
+      contract.tenant_id,
+      [selection.year],
+      selection.column,
+      [contract.id],
+      { visibleLineIds: items.map((line) => line.id), offerYears: { currentYear, extra: selection.year }, coverOfferedYears: true },
+    );
+    const lineAmounts = coverage.lineAmounts ?? new Map();
+    const lineFxMissing = coverage.lineFxMissing ?? new Map();
     return {
       year: selection.year,
       column: selection.column,
-      reporting_currency: inputs.reportingCurrency,
+      reporting_currency: coverage.reportingCurrency,
       currency: String(contract.currency || 'EUR').trim().toUpperCase() || 'EUR',
       lines: items.map((line) => {
-        const cents = inputs.lineAmounts.get(line.id)?.get(selection.year);
+        const cents = lineAmounts.get(line.id)?.get(selection.year);
         if (cents === null) {
-          const missing = inputs.lineFxMissing.get(line.id)!;
+          const missing = lineFxMissing.get(line.id)!;
           return { id: line.id, amount: null, fx_missing: { currency: missing.currency, amount: centsToNumber(missing.local.get(selection.year)!) } };
         }
         return { id: line.id, amount: centsToNumber(cents ?? 0n) };
       }),
-      lines_fx_missing: contractLinesFxMissing(inputs, items.map((line) => line.id)),
-      years: rows.map(({ contract_id: _contract, ...row }) => row),
+      lines_fx_missing: contractLinesFxMissing({ lineFxMissing }, items.map((line) => line.id)),
+      years: coverage.rows.map(({ contract_id: _contract, ...row }) => row),
     };
   }
 
@@ -1500,6 +1720,7 @@ export class ContractsService {
     const mg = opts?.manager ?? this.repo.manager;
     return setContractRelation({ manager: mg, audit: this.audit }, kind, targetId, add, userId ?? null, async () => {
       const contract = await this.findContract(contractId, mg);
+      await assertContractsEditable(mg, [contract.id]);
       return { id: contract.id, tenantId: contract.tenant_id };
     });
   }
@@ -1521,6 +1742,7 @@ export class ContractsService {
   async updateCompliance(contractId: string, requirement: string, body: ComplianceItemPatch, userId?: string | null, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const contract = await this.findContract(contractId, mg);
+    await assertContractsEditable(mg, [contract.id]);
     await updateContractComplianceItem({ manager: mg, audit: this.audit }, contract, requirement, body, userId ?? null);
     return contractComplianceView(mg, await loadContractComplianceInputs(mg), contract);
   }
@@ -1568,9 +1790,7 @@ export class ContractsService {
       'SELECT first_name, last_name FROM users WHERE tenant_id = $1 AND id = $2',
       [tenantId, userId],
     );
-    const senderName = senderRows.length > 0
-      ? `${senderRows[0].first_name || ''} ${senderRows[0].last_name || ''}`.trim() || 'Someone'
-      : 'Someone';
+    const senderName = displayName(senderRows[0], 'Someone');
     const validIds = userIds.filter((id) => isUuid(String(id)));
     const recipients = validIds.length > 0
       ? await mg.query(
@@ -1595,6 +1815,10 @@ export class ContractsService {
         // No request manager: the send outlives the request (a contract link needs no lookup).
       });
     }
-    return { ok: true };
+    // The chosen persons who cannot open the contract: the screen warns the sender (spec §5.6). No
+    // list at all when the contract carries lines the sender does not see: it would tell where they
+    // sit, so the answer is the same as when everyone can open it.
+    const cannotOpen = await shareRecipientsWhoCannotOpen(mg, 'contract', contract.id, recipients);
+    return cannotOpen ? { ok: true, cannot_open: cannotOpen } : { ok: true };
   }
 }

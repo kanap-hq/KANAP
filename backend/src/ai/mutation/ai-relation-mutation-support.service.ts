@@ -1,8 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AuditService } from '../../audit/audit.service';
 import { lockBudgetLine } from '../../spend/budget-locks';
+import { assertLinesEditable } from '../../data-access/line-write-checks';
+import { assertContractReadable, assertContractsEditable } from '../../data-access/contract-write-checks';
+import { AiPolicyService } from '../ai-policy.service';
 import { auditTableOf } from '../../spend/budget-nature';
 import {
   applicationParticipantCondition,
@@ -18,6 +21,22 @@ import {
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
+import { assertClusterMemberCandidates, clusterOsWithMembersRefusal, lockClusterForMembers } from '../../assets/asset-rules';
+import {
+  assignmentInheritedRefusal,
+  inheritedClustersOf,
+  inheritingMembersOf,
+  lockAssignmentClusters,
+  mergeAbsorbed,
+  normalizeServerRole,
+} from '../../app-asset-assignments/cluster-assignment-rules';
+import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import {
+  assertNotPlacedByCluster,
+  hostLinksToReplace,
+  replaceHostLinks,
+  type ReplacedHostLink,
+} from '../../assets/placement-rules';
 
 export const AI_RELATION_ENTITY_TYPES = [
   'applications',
@@ -232,6 +251,11 @@ function itemListLabel(items: RelationItem[]): string | null {
   return items.map((item) => item.label).join(', ');
 }
 
+/** The host/asset pairs of a placement list, in a stable form for the execution comparison. */
+function replacedHostLinkSignature(links: ReplacedHostLink[]): string {
+  return links.map((link) => `${link.host_id}:${link.asset_id}`).sort().join('|');
+}
+
 function objectValue(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return value as Record<string, unknown>;
@@ -243,7 +267,19 @@ export class AiRelationMutationSupportService {
     private readonly audit: AuditService,
     private readonly supplierContacts: SupplierContactsService,
     private readonly taskSupport: AiTaskMutationSupportService,
+    private readonly itOpsSettings: ItOpsSettingsService,
+    @Optional() private readonly policy?: AiPolicyService,
   ) {}
+
+  /**
+   * A Plaid write of a contract's budget lines needs the budget reader level besides the
+   * contracts member level, for everyone (spec §4.3, lot 5).
+   */
+  private async assertContractLineBudgetRead(context: AiExecutionContextWithManager, config: RelationConfig): Promise<void> {
+    if (config.kind !== 'simple' || config.sourceEntity !== 'contracts') return;
+    if (config.relation !== 'spend_items' && config.relation !== 'capex_items') return;
+    await this.policy?.assertBusinessPermission(context, 'budget', 'reader', context.manager);
+  }
 
   getSupportedRelationDescriptions(): string[] {
     const byEntity = new Map<string, string[]>();
@@ -261,11 +297,15 @@ export class AiRelationMutationSupportService {
   ): Promise<AiPreparedMutationPreview> {
     const config = getRelationConfig(input.entity_type, input.relation);
     const target = await this.resolveSource(context, config.sourceEntity, input.ref);
+    await this.assertContractLineBudgetRead(context, config);
     const currentItems = await this.loadRelationItems(context, config, target.id);
-    const nextItems = await this.computeNextItems(context, config, target.id, currentItems, input);
-    if (relationItemSignature(currentItems) === relationItemSignature(nextItems)) {
+    const askedItems = await this.computeNextItems(context, config, target.id, currentItems, input);
+    if (relationItemSignature(currentItems) === relationItemSignature(askedItems)) {
       throw new BadRequestException(`${config.label} already has the requested links.`);
     }
+    await this.assertClusterMemberAdds(context, config, target.id, currentItems, askedItems);
+    const nextItems = await this.applyAssignmentRules(context, config, currentItems, askedItems);
+    const replaced = await this.applyPlacementRules(context, config, target.id, currentItems, nextItems);
     return {
       targetEntityType: config.sourceEntity,
       targetEntityId: target.id,
@@ -276,6 +316,7 @@ export class AiRelationMutationSupportService {
         relation_label: config.label,
         next_items: nextItems,
         source_preview_id: null,
+        ...(replaced.length > 0 ? { replaced_host_links: replaced } : {}),
       },
       currentValues: {
         target_ref: target.ref,
@@ -292,11 +333,14 @@ export class AiRelationMutationSupportService {
     const config = getRelationConfig(preview.target_entity_type || preview.mutation_input?.entity_type, preview.mutation_input?.relation);
     if (!preview.target_entity_id) throw new BadRequestException('Original preview is missing the target record.');
     const target = await this.resolveSource(context, config.sourceEntity, preview.target_entity_id);
+    await this.assertContractLineBudgetRead(context, config);
     const currentItems = await this.loadRelationItems(context, config, target.id);
-    const previousItems = this.coerceRelationItems(preview.current_values?.items, 'current_values.items');
-    if (relationItemSignature(currentItems) === relationItemSignature(previousItems)) {
+    const originalItems = this.coerceRelationItems(preview.current_values?.items, 'current_values.items');
+    if (relationItemSignature(currentItems) === relationItemSignature(originalItems)) {
       throw new BadRequestException(`${config.label} already matches the original values.`);
     }
+    const previousItems = await this.applyAssignmentRules(context, config, currentItems, originalItems);
+    const replaced = await this.applyPlacementRules(context, config, target.id, currentItems, previousItems);
     return {
       targetEntityType: config.sourceEntity,
       targetEntityId: target.id,
@@ -307,6 +351,7 @@ export class AiRelationMutationSupportService {
         relation_label: config.label,
         next_items: previousItems,
         source_preview_id: preview.id,
+        ...(replaced.length > 0 ? { replaced_host_links: replaced } : {}),
       },
       currentValues: {
         target_ref: target.ref,
@@ -347,6 +392,16 @@ export class AiRelationMutationSupportService {
         format: 'text',
       },
     };
+    // R1: the host links the cluster's write replaces, shown as one text change.
+    const replaced = this.coerceReplacedHostLinks(preview.mutation_input?.replaced_host_links);
+    if (replaced.length > 0) {
+      changes.replaced_host_links = {
+        label: 'Host links replaced',
+        from: replaced.map((link) => `${link.host_name} contains ${link.asset_name}`).join(', '),
+        to: null,
+        format: 'text',
+      };
+    }
     return {
       target: {
         entity_type: config.sourceEntity,
@@ -362,6 +417,7 @@ export class AiRelationMutationSupportService {
   async executePreview(context: AiExecutionContextWithManager, preview: AiMutationPreview): Promise<void> {
     const config = getRelationConfig(preview.target_entity_type || preview.mutation_input?.entity_type, preview.mutation_input?.relation);
     if (!preview.target_entity_id) throw new BadRequestException('Preview is missing the target record.');
+    await this.assertContractLineBudgetRead(context, config);
     const expectedItems = this.coerceRelationItems(preview.current_values?.items, 'current_values.items');
     const nextItems = this.coerceRelationItems(preview.mutation_input?.next_items, 'mutation_input.next_items');
     // An OPEX or CAPEX line is locked before its relations are compared and replaced (lock
@@ -372,12 +428,41 @@ export class AiRelationMutationSupportService {
         throw new NotFoundException(`${config.label}: the line was not found.`);
       }
     }
+    // A cluster's members follow the rules of the members endpoint; the cluster row is locked first.
+    await this.assertClusterMemberAdds(context, config, preview.target_entity_id, expectedItems, nextItems);
+    // Assignments: the clusters are locked and the cluster rules checked again before the rows are
+    // compared; an absorption that would now differ from the preview is a change since the preview.
+    const checkedItems = await this.applyAssignmentRules(context, config, expectedItems, nextItems);
+    // Placement: the same locks and the same read as the preview. A member that joined a cluster,
+    // or a host link that appeared or disappeared, makes the replacement differ from what the
+    // person saw: nothing is written. The relations of an asset are read below, after its locks.
+    const placement = await this.applyPlacementRules(context, config, preview.target_entity_id, expectedItems, nextItems);
+    if (replacedHostLinkSignature(placement)
+      !== replacedHostLinkSignature(this.coerceReplacedHostLinks(preview.mutation_input?.replaced_host_links))) {
+      throw new ConflictException(`${config.label} changed after the preview was created.`);
+    }
     const liveItems = await this.loadRelationItems(context, config, preview.target_entity_id);
-    if (relationItemSignature(liveItems) !== relationItemSignature(expectedItems)) {
+    if (
+      relationItemSignature(liveItems) !== relationItemSignature(expectedItems)
+      || relationItemSignature(checkedItems) !== relationItemSignature(nextItems)
+    ) {
       throw new ConflictException(`${config.label} changed after the preview was created.`);
     }
     const audit = buildAiMutationAudit(preview);
     await this.replaceRelationItems(context, config, preview.target_entity_id, nextItems, audit);
+    // R1: the host links the cluster replaces, removed after the cluster's own relations are in
+    // place, with the preview's audit source.
+    if (placement.length > 0) {
+      await replaceHostLinks(
+        context.manager,
+        this.audit,
+        context.tenantId,
+        { id: preview.target_entity_id, name: placement[0].cluster_name },
+        Array.from(new Set(placement.map((link) => link.asset_id))),
+        context.userId,
+        { source: audit.source, sourceRef: audit.sourceRef },
+      );
+    }
     await this.audit.log(
       {
         table: this.auditTableName(config),
@@ -391,6 +476,164 @@ export class AiRelationMutationSupportService {
       },
       { manager: context.manager },
     );
+  }
+
+  /**
+   * The members added to a cluster obey the rules of `AssetsCrudService.replaceClusterMembers`
+   * (`assets/asset-rules.ts`): the asset is a cluster, each member exists, is no cluster and is not
+   * the cluster itself, and a cluster that carries an operating system gets no member
+   * (`cluster_os_with_members`: the assistant has no removal flag). Removing members is always allowed.
+   */
+  private async assertClusterMemberAdds(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    clusterId: string,
+    currentItems: RelationItem[],
+    nextItems: RelationItem[],
+  ): Promise<void> {
+    if (config.sourceEntity !== 'assets' || config.relation !== 'cluster_members') return;
+    const current = new Set(currentItems.map((item) => item.key.toLowerCase()));
+    const added = Array.from(new Set(nextItems.map((item) => item.key.toLowerCase()))).filter((id) => !current.has(id));
+    if (added.length === 0) return;
+    const cluster = await lockClusterForMembers(context.manager, context.tenantId, clusterId);
+    if (!cluster) throw new NotFoundException('Asset not found');
+    if (!cluster.isCluster) throw new BadRequestException('Asset is not a cluster');
+    await assertClusterMemberCandidates(context.manager, context.tenantId, clusterId, added);
+    if (cluster.os) throw clusterOsWithMembersRefusal(cluster.os);
+  }
+
+  /**
+   * The rules of `AppAssetAssignmentsService` (`app-asset-assignments/cluster-assignment-rules.ts`)
+   * for the server rows the assistant adds to an application (the items not in `currentItems`):
+   * - the role comes from the server roles catalog (`assignment_role_invalid`);
+   * - a row added to a cluster absorbs the next items of the same deployment and role on its
+   *   members (A4): they leave the list, so their rows are deleted, and the cluster's row takes the
+   *   earliest date and their notes after its own. A cluster's row the request names again (an
+   *   item with no stored `id`) absorbs the same way, keeping its stored date and notes unless the
+   *   request gives others, as the service's create does;
+   * - a row added to a member, for a deployment and role one of its clusters carries in the next
+   *   items, is refused (A3, `assignment_inherited`).
+   * The clusters are locked first (`lockAssignmentClusters`). Returns the next items; the other
+   * relations pass unchanged.
+   */
+  private async applyAssignmentRules(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    currentItems: RelationItem[],
+    nextItems: RelationItem[],
+  ): Promise<RelationItem[]> {
+    if (config.kind !== 'app_asset_assignments') return nextItems;
+    const currentByKey = new Map(currentItems.map((item) => [item.key, item]));
+    const added = nextItems.filter((item) => !currentByKey.has(item.key));
+    // Named again by the request: resolved from its input, so without the stored row's id.
+    const named = nextItems.filter((item) => currentByKey.has(item.key) && !item.payload.id);
+    const touched = [...added, ...named];
+    if (touched.length === 0) return nextItems;
+    const settings = await this.itOpsSettings.getSettingsForWrite(context.tenantId, context.manager);
+    for (const item of touched) normalizeServerRole(item.payload.role, settings.serverRoles);
+    const assetOf = (item: RelationItem) => String(item.payload.asset_id);
+    const sameSlot = (a: RelationItem, b: RelationItem) =>
+      a.payload.app_instance_id === b.payload.app_instance_id && a.payload.role === b.payload.role;
+    await lockAssignmentClusters(context.manager, context.tenantId, touched.map(assetOf));
+    const clusterRows: Array<{ id: string }> = await context.manager.query(
+      `SELECT id FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND COALESCE(is_cluster, false)`,
+      [context.tenantId, Array.from(new Set(touched.map(assetOf)))],
+    );
+    const clusters = new Set(clusterRows.map((row) => row.id));
+    const clusterAdds = touched.filter((item) => clusters.has(assetOf(item)));
+    const members = await inheritingMembersOf(context.manager, context.tenantId, clusterAdds.map(assetOf));
+    let next = nextItems;
+    for (const item of clusterAdds) {
+      const memberIds = new Set((members.get(assetOf(item)) ?? []).map((member) => member.id));
+      const absorbed = next.filter((other) => memberIds.has(assetOf(other)) && sameSlot(other, item));
+      if (absorbed.length === 0) continue;
+      const stored = currentByKey.get(item.key)?.payload;
+      const own = stored
+        ? { since_date: item.payload.since_date ?? stored.since_date, notes: item.payload.notes ?? stored.notes }
+        : item.payload;
+      const merged = mergeAbsorbed(own, absorbed.map((other) => other.payload));
+      next = next
+        .filter((other) => !absorbed.includes(other))
+        .map((other) => (other.key === item.key
+          ? { ...other, payload: { ...other.payload, since_date: merged.since_date, notes: merged.notes } }
+          : other));
+    }
+    const memberAdds = added.filter((item) => !clusters.has(assetOf(item)) && next.some((other) => other.key === item.key));
+    const inherited = await inheritedClustersOf(context.manager, context.tenantId, memberAdds.map(assetOf));
+    for (const item of memberAdds) {
+      const carrying = (inherited.get(assetOf(item)) ?? [])
+        .find((cluster) => next.some((other) => assetOf(other) === cluster.id && sameSlot(other, item)));
+      if (carrying) throw assignmentInheritedRefusal(carrying.name);
+    }
+    return next;
+  }
+
+  /**
+   * The placement rules of `assets/placement-rules.ts` for the `contains` items the assistant adds
+   * to an asset (the items whose key is not in `currentItems`):
+   * - the locks of `AssetsRelationsService.bulkReplaceRelations`, in its order: the clusters the
+   *   source decides on (`lockAssignmentClusters`) when `nextItems` carries a `contains`, kept or
+   *   added, then the source asset, always. The execution reads the relations again after them: a
+   *   cluster absorbing one of the source's links at the same time either committed before that
+   *   read, which then differs from the preview, or waits for this replacement to commit and
+   *   absorbs what it wrote;
+   * - the source is read in its own statement, after the locks;
+   * - a host member of a cluster in service that already contains an added asset is refused
+   *   (`placement_inherited`), at the preview as at execution;
+   * - a cluster absorbs the links its members hold towards the added assets, returned so that the
+   *   preview can show them and the execution remove them.
+   * The other relation kinds pass unchanged.
+   */
+  private async applyPlacementRules(
+    context: AiExecutionContextWithManager,
+    config: RelationConfig,
+    assetId: string,
+    currentItems: RelationItem[],
+    nextItems: RelationItem[],
+  ): Promise<ReplacedHostLink[]> {
+    if (config.kind !== 'asset_relations') return [];
+    if (nextItems.some((item) => item.payload.relation_type === 'contains')) {
+      await lockAssignmentClusters(context.manager, context.tenantId, [assetId]);
+    }
+    const locked = await context.manager.query(
+      `SELECT id FROM assets WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+      [context.tenantId, assetId],
+    );
+    if (locked.length === 0) throw new NotFoundException(`${config.label}: the asset was not found.`);
+    const currentKeys = new Set(currentItems.map((item) => item.key));
+    const addedIds = Array.from(new Set(
+      nextItems
+        .filter((item) => !currentKeys.has(item.key) && item.payload.relation_type === 'contains')
+        .map((item) => String(item.payload.related_asset_id || '')),
+    )).filter((id) => id);
+    if (addedIds.length === 0) return [];
+    const rows: Array<{ is_cluster: boolean; name: string }> = await context.manager.query(
+      `SELECT is_cluster, name FROM assets WHERE tenant_id = $1 AND id = $2`,
+      [context.tenantId, assetId],
+    );
+    if (rows[0]?.is_cluster === true) {
+      return hostLinksToReplace(context.manager, context.tenantId, { id: assetId, name: rows[0].name }, addedIds);
+    }
+    await assertNotPlacedByCluster(context.manager, context.tenantId, assetId, addedIds);
+    return [];
+  }
+
+  /** The `replaced_host_links` a preview stored, read defensively (a stored preview may be old). */
+  private coerceReplacedHostLinks(value: unknown): ReplacedHostLink[] {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((raw) => {
+        const record = objectValue(raw);
+        return {
+          host_id: String(record.host_id || ''),
+          host_name: String(record.host_name || ''),
+          asset_id: String(record.asset_id || ''),
+          asset_name: String(record.asset_name || ''),
+          cluster_id: String(record.cluster_id || ''),
+          cluster_name: String(record.cluster_name || ''),
+        };
+      })
+      .filter((link) => link.host_id && link.asset_id);
   }
 
   private coerceRelationItems(value: unknown, fieldName: string): RelationItem[] {
@@ -644,7 +887,8 @@ export class AiRelationMutationSupportService {
     const assetRef = textOrNull(item.asset_ref ?? item.asset_id ?? item.server_ref ?? item.server_id ?? item.ref);
     if (!assetRef) throw new BadRequestException('Asset reference is required.');
     const asset = await this.resolveReference(context, 'assets', assetRef);
-    const role = normalizeKey(String(item.role ?? ''));
+    // As the service (`normalizeServerRole`): catalog codes keep their hyphens (`domain-controller`).
+    const role = String(item.role ?? '').trim().toLowerCase();
     if (!role) throw new BadRequestException('Asset assignment role is required.');
     const key = `${instances[0].id}:${asset.id}:${role}`;
     const existing = currentItems.find((candidate) => candidate.key === key);
@@ -986,7 +1230,7 @@ export class AiRelationMutationSupportService {
         await this.replaceSubLocations(context, sourceId, nextItems);
         return;
       case 'app_asset_assignments':
-        await this.replaceAppAssetAssignments(context, sourceId, nextItems);
+        await this.replaceAppAssetAssignments(context, sourceId, nextItems, audit);
         return;
       default:
         throw new BadRequestException(`Unsupported relation kind ${(config as any).kind}.`);
@@ -994,6 +1238,74 @@ export class AiRelationMutationSupportService {
   }
 
   private async replaceSimpleRelation(context: AiExecutionContextWithManager, config: SimpleRelationConfig, sourceId: string, nextItems: RelationItem[]): Promise<void> {
+    const targetIds = Array.from(new Set(nextItems
+      .map((item) => item.payload[config.targetColumn])
+      .filter((value): value is string => typeof value === 'string' && value !== '')
+      .map((value) => value.toLowerCase())));
+    // `contract_spend_items` has no data-access policy (spec §6.4): its writes are checked here,
+    // and a replacement deletes only the links to the rows the person reads, through a JOIN on
+    // the scoped table (a naive DELETE would remove the hidden links too). Only the targets added
+    // are checked and inserted: a link that stays linked is never rewritten, so the link trigger
+    // never sees it.
+    if (config.table === 'contract_spend_items') {
+      let added: string[] = [];
+      if (config.sourceEntity === 'contracts') {
+        await assertContractsEditable(context.manager, [sourceId]);
+        const nature = config.relation === 'capex_items' ? 'capex' : 'opex';
+        const lines: Array<{ id: string }> = await context.manager.query(
+          `SELECT id FROM spend_items WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND nature = $3`,
+          [context.tenantId, targetIds, nature],
+        );
+        if (lines.length !== targetIds.length) {
+          throw new NotFoundException(nature === 'opex' ? 'Spend item not found.' : 'CAPEX item not found.');
+        }
+        const existing: Array<{ id: string }> = await context.manager.query(
+          `SELECT l.spend_item_id AS id FROM contract_spend_items l
+             JOIN spend_items i ON i.tenant_id = l.tenant_id AND i.id = l.spend_item_id AND i.nature = $3
+            WHERE l.tenant_id = $1 AND l.contract_id = $2`,
+          [context.tenantId, sourceId, nature],
+        );
+        const existingSet = new Set(existing.map((row) => row.id));
+        added = targetIds.filter((id) => !existingSet.has(id));
+        await assertLinesEditable(context.manager, added);
+        await assertLinesEditable(
+          context.manager,
+          existing.map((row) => row.id).filter((id) => !targetIds.includes(id)),
+        );
+        await context.manager.query(
+          `DELETE FROM contract_spend_items l USING spend_items i
+            WHERE l.tenant_id = $1 AND l.contract_id = $2
+              AND i.tenant_id = l.tenant_id AND i.id = l.spend_item_id AND i.nature = $3
+              AND NOT (l.spend_item_id = ANY($4::uuid[]))`,
+          [context.tenantId, sourceId, nature, targetIds],
+        );
+      } else {
+        await assertLinesEditable(context.manager, [sourceId]);
+        const existing: Array<{ id: string }> = await context.manager.query(
+          `SELECT l.contract_id AS id FROM contract_spend_items l
+             JOIN contracts c ON c.tenant_id = l.tenant_id AND c.id = l.contract_id
+            WHERE l.tenant_id = $1 AND l.spend_item_id = $2`,
+          [context.tenantId, sourceId],
+        );
+        const existingSet = new Set(existing.map((row) => row.id));
+        added = targetIds.filter((id) => !existingSet.has(id));
+        for (const targetId of added) await assertContractReadable(context.manager, targetId);
+        await context.manager.query(
+          `DELETE FROM contract_spend_items l USING contracts c
+            WHERE l.tenant_id = $1 AND l.spend_item_id = $2
+              AND c.tenant_id = l.tenant_id AND c.id = l.contract_id
+              AND NOT (l.contract_id = ANY($3::uuid[]))`,
+          [context.tenantId, sourceId, targetIds],
+        );
+      }
+      for (const targetId of added) {
+        await context.manager.query(
+          `INSERT INTO contract_spend_items (tenant_id, ${config.sourceColumn}, ${config.targetColumn}) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+          [context.tenantId, sourceId, targetId],
+        );
+      }
+      return;
+    }
     // A target with a predicate (OPEX or CAPEX lines): only the links to such targets are replaced,
     // a link to a line of the other nature stays.
     const target = this.targetSql(config.target);
@@ -1096,6 +1408,7 @@ export class AiRelationMutationSupportService {
     }
   }
 
+  /** The source asset is already locked (`applyPlacementRules`), as the relations were read again. */
   private async replaceAssetRelations(context: AiExecutionContextWithManager, assetId: string, nextItems: RelationItem[]): Promise<void> {
     await context.manager.query(`DELETE FROM asset_relations WHERE tenant_id = $1 AND asset_id = $2`, [context.tenantId, assetId]);
     for (const item of nextItems) {
@@ -1169,13 +1482,37 @@ export class AiRelationMutationSupportService {
     }
   }
 
-  private async replaceAppAssetAssignments(context: AiExecutionContextWithManager, applicationId: string, nextItems: RelationItem[]): Promise<void> {
+  /** Each deleted row (removed, or absorbed by its cluster's row) is audited as the service audits a deletion. */
+  private async replaceAppAssetAssignments(
+    context: AiExecutionContextWithManager,
+    applicationId: string,
+    nextItems: RelationItem[],
+    audit: AiMutationAuditOptions,
+  ): Promise<void> {
     const current = await this.loadAppAssetAssignments(context, applicationId);
     const currentKeys = new Set(current.map((item) => item.key));
     const nextKeys = new Set(nextItems.map((item) => item.key));
     for (const item of current) {
       if (!nextKeys.has(item.key)) {
-        await context.manager.query(`DELETE FROM app_asset_assignments WHERE tenant_id = $1 AND id = $2`, [context.tenantId, item.payload.id]);
+        const deleted: Array<Record<string, unknown>> = await context.manager.query(
+          `WITH gone AS (DELETE FROM app_asset_assignments WHERE tenant_id = $1 AND id = $2 RETURNING *) SELECT * FROM gone`,
+          [context.tenantId, item.payload.id],
+        );
+        for (const row of deleted) {
+          await this.audit.log(
+            {
+              table: 'app_asset_assignments',
+              recordId: String(row.id),
+              action: 'delete',
+              before: row,
+              after: null,
+              userId: context.userId,
+              source: audit.source,
+              sourceRef: audit.sourceRef,
+            },
+            { manager: context.manager },
+          );
+        }
       }
     }
     for (const item of nextItems) {

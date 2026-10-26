@@ -32,6 +32,11 @@ describe('getDocUrl', () => {
     expect(getDocUrl('/it/netbox', undefined, '?state=missing')).toBe('https://doc.kanap.net/netbox/');
   });
 
+  it('opens the data access manual from the administration page', () => {
+    expect(getDocUrl('/admin/data-access')).toBe('https://doc.kanap.net/data-access/');
+    expect(getDocUrl('/admin/data-access', 'fr')).toBe('https://doc.kanap.net/fr/data-access/');
+  });
+
   it('keeps the overview and falls back to the docs home', () => {
     expect(getDocUrl('/ops')).toBe('https://doc.kanap.net/operations-dashboard/');
     expect(getDocUrl('/ops/budgets')).toBe('https://doc.kanap.net/');

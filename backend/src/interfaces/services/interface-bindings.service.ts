@@ -21,6 +21,7 @@ import {
   ServiceOpts,
 } from './interfaces-base.service';
 import { readInterfaceRelations, setInterfaceRelation, type InterfaceRelationsDeps } from '../interface-relations';
+import { effectiveConnectionAssetsSql } from '../../connections/effective-connection-assets';
 
 /**
  * Service for managing interface bindings and related operations.
@@ -315,35 +316,22 @@ export class InterfaceBindingsManagementService extends InterfacesBaseService {
       },
     }));
 
-    // Collect server ids involved in each connection (source/destination, multi-server, legs)
-    const serverIdsByConnection = new Map<string, Set<string>>();
-    const addServer = (connId: string, sid?: string | null) => {
-      if (!sid) return;
-      if (!serverIdsByConnection.has(connId)) serverIdsByConnection.set(connId, new Set());
-      serverIdsByConnection.get(connId)!.add(sid);
-    };
-
-    for (const row of rows) {
-      addServer(row.connection_id, row.source_asset_id);
-      addServer(row.connection_id, row.destination_asset_id);
-    }
-
+    // The servers of each connection through the effective definition: its named places (the
+    // endpoints, its multi-server list, the equipment of its hops) and the members of the clusters
+    // it names.
     const connIds = Array.from(new Set(rows.map((r) => r.connection_id))).filter(Boolean);
+    const serverIdsByConnection = new Map<string, Set<string>>();
     if (connIds.length > 0) {
-      const csRows: Array<{ connection_id: string; asset_id: string }> = await mg.query(
-        `SELECT connection_id, asset_id FROM connection_servers WHERE connection_id = ANY($1::uuid[])`,
-        [connIds],
+      const serverRows: Array<{ connection_id: string; asset_id: string }> = await mg.query(
+        `SELECT DISTINCT e.connection_id, e.asset_id
+           FROM (${effectiveConnectionAssetsSql({ tenant: '$1', connections: '$2' })}) e
+          ORDER BY e.connection_id, e.asset_id`,
+        [tenantId, connIds],
       );
-      csRows.forEach((r) => addServer(r.connection_id, r.asset_id));
-
-      // A leg names one piece of equipment the connection passes through (migration 1850300000000).
-      const legRows: Array<{ connection_id: string; equipment_asset_id: string | null }> = await mg.query(
-        `SELECT connection_id, equipment_asset_id
-         FROM connection_legs
-         WHERE connection_id = ANY($1::uuid[])`,
-        [connIds],
-      );
-      legRows.forEach((r) => addServer(r.connection_id, r.equipment_asset_id));
+      for (const row of serverRows) {
+        if (!serverIdsByConnection.has(row.connection_id)) serverIdsByConnection.set(row.connection_id, new Set());
+        serverIdsByConnection.get(row.connection_id)!.add(row.asset_id);
+      }
     }
 
     items.forEach((item) => {

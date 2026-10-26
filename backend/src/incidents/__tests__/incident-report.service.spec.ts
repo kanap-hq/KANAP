@@ -88,7 +88,14 @@ function fixture(overrides: Partial<IncidentReportRecord> = {}): IncidentReportR
     ],
     assets: [],
     applications: [],
-    tasks: [{ item_number: 28, title: 'Restore mail flow', status: 'open' }],
+    technologies: [],
+    tasks: [{
+      item_number: 28,
+      title: 'Restore mail flow',
+      status: 'open',
+      assignee_name: 'Ada Martin',
+      due_date: '2026-03-20',
+    }],
     documents: { access: 'granted', items: [] },
     attachments: [
       { original_filename: 'screenshot | #1.png', size: 2048, uploaded_at: '2026-03-10T09:15:00.000Z' },
@@ -158,6 +165,7 @@ function testEmptySectionsOmitted() {
   const markdown = buildMarkdown(fixture(), 'en', labels);
   assert.equal(markdown.includes(`### ${labels.assets}`), false);
   assert.equal(markdown.includes(`### ${labels.applications}`), false);
+  assert.equal(markdown.includes(`### ${labels.technologies}`), false);
   assert.equal(markdown.includes(`### ${labels.documents}`), false);
   assert.ok(markdown.includes(`### ${labels.tasks}`));
   assert.ok(markdown.includes('T-28 · Restore mail flow · Open'));
@@ -185,6 +193,74 @@ function testEmptySectionsOmitted() {
   assert.equal(empty.includes(`## ${labels.linkedObjects}`), false);
   assert.equal(empty.includes(`## ${labels.compliance}`), false);
   assert.equal(empty.includes(`## ${labels.attachments}`), false);
+}
+
+function testLinkedTechnologiesAndTaskFollowUp() {
+  const labels = labelsFor('en');
+  const markdown = buildMarkdown(fixture({
+    assets: [{ reference: 'AST-1', name: 'Alpha srv' }],
+    applications: [{ reference: 'APP-1', name: 'Alpha app' }],
+    technologies: [{ reference: 'TEC-7', name: 'PostgreSQL' }],
+    tasks: [{
+      item_number: 28,
+      title: 'Restore mail flow',
+      status: 'open',
+      assignee_name: 'Ada Martin',
+      due_date: '2026-03-20',
+    }],
+  }), 'en', labels);
+
+  // The three linked sections keep the Relations tab's order: assets, applications, technologies.
+  const assets = markdown.indexOf(`### ${labels.assets}`);
+  const applications = markdown.indexOf(`### ${labels.applications}`);
+  const technologies = markdown.indexOf(`### ${labels.technologies}`);
+  const tasks = markdown.indexOf(`### ${labels.tasks}`);
+  assert.ok(assets >= 0 && applications > assets && technologies > applications && tasks > technologies);
+  assert.ok(markdown.includes('TEC-7 · PostgreSQL'));
+  assert.ok(markdown.includes('T-28 · Restore mail flow · Open · Assignee: Ada Martin · Due 20 Mar 2026'));
+
+  // A task without an assignee or a due date keeps its former line.
+  const bare = buildMarkdown(fixture({
+    tasks: [{ item_number: 29, title: 'Archive logs', status: 'done' }],
+  }), 'en', labels);
+  assert.ok(bare.includes('T-29 · Archive logs · Done'));
+  assert.equal(bare.includes('Assignee:'), false);
+  assert.equal(bare.includes('Due:'), false);
+
+  // No linked technology, or none the caller may read (null): the subsection is absent.
+  const none = buildMarkdown(fixture({ technologies: null }), 'en', labels);
+  assert.equal(none.includes(`### ${labels.technologies}`), false);
+}
+
+/** The labels table of the PDF carries the new subsection in the four report languages. */
+function testTechnologyAndTaskLabelsInFourLanguages() {
+  const expected: Record<string, { technologies: string; assignee: string; due: string }> = {
+    en: { technologies: 'Technologies', assignee: 'Assignee', due: 'Due' },
+    fr: { technologies: 'Technologies', assignee: 'Assigné à', due: 'Échéance' },
+    de: { technologies: 'Technologien', assignee: 'Zugewiesen an', due: 'Fällig am' },
+    es: { technologies: 'Tecnologías', assignee: 'Asignada a', due: 'Vence el' },
+  };
+  for (const [lang, labels] of Object.entries(expected)) {
+    const markdown = buildMarkdown(fixture({
+      technologies: [{ reference: 'TEC-7', name: 'PostgreSQL' }],
+    }), lang as any, labelsFor(lang as any));
+    assert.ok(markdown.includes(`### ${labels.technologies}`), `${lang}: technology heading`);
+    assert.ok(markdown.includes('TEC-7 · PostgreSQL'), `${lang}: technology line`);
+    assert.ok(markdown.includes(`${labels.assignee}: Ada Martin`), `${lang}: assignee label`);
+    assert.ok(markdown.includes(`${labels.due} `), `${lang}: due label`);
+  }
+}
+
+/** The journal's content column gets a wider share than the four short columns. */
+function testJournalContentColumnIsWidest() {
+  const markdown = buildMarkdown(fixture(), 'en', labelsFor('en'));
+  const journal = markdown.slice(markdown.indexOf('## Journal'));
+  assert.ok(journal.includes('<!-- kanap:table-widths=3,3,3,3,10 -->'), 'the exporter carries the widths past Pandoc');
+  const separator = journal.split('\n').find((line) => /^\| -+ \|/.test(line));
+  assert.ok(separator, 'journal separator row');
+  const widths = separator!.split('|').slice(1, -1).map((cell) => cell.trim().length);
+  assert.equal(widths.length, 5);
+  assert.ok(widths[4] >= widths[0] * 3, `content column ${widths[4]} against ${widths[0]}`);
 }
 
 function testMarkdownEscaping() {
@@ -250,6 +326,26 @@ function testRestrictedDocumentsOmitted() {
   );
   assert.equal(markdown.includes('Secret post-mortem'), false);
   assert.equal(markdown.includes('DOC-9'), false);
+}
+
+/** Spanish and German reports use the same reporter and journal words as the workspace. */
+function testReporterAndJournalWords() {
+  const es = labelsFor('es');
+  assert.equal(es.reporter, 'Notificante');
+  assert.equal(es.journal, 'Diario');
+  const esMarkdown = buildMarkdown(fixture(), 'es', es);
+  assert.ok(esMarkdown.includes('- **Notificante:** Thomas Berger'));
+  assert.ok(esMarkdown.includes('## Diario'));
+  assert.equal(esMarkdown.includes('Declarante'), false);
+  assert.equal(esMarkdown.includes('## Registro'), false);
+
+  const de = labelsFor('de');
+  assert.equal(de.reporter, 'Melder');
+  assert.equal(de.journal, 'Verlauf');
+  const deMarkdown = buildMarkdown(fixture(), 'de', de);
+  assert.ok(deMarkdown.includes('- **Melder:** Thomas Berger'));
+  assert.ok(deMarkdown.includes('## Verlauf'));
+  assert.equal(deMarkdown.includes('Meldende'), false);
 }
 
 function testFrenchChangeLabels() {
@@ -432,6 +528,28 @@ async function testExportPdfForwardsViewerAndCookie() {
   // No cookie on the request: no forged header.
   await service.exportPdf(UUID, 'en', { manager: {} as any, tenantId: 'tenant-1', userId: 'u1', viewer });
   assert.equal(exportCalls[1][3], undefined);
+
+  // The reader's module rights and application scope reach the record loader.
+  await service.exportPdf(UUID, 'en', {
+    manager: {} as any,
+    tenantId: 'tenant-1',
+    userId: 'u1',
+    viewer,
+    technologies: true,
+    applications: false,
+    tasks: true,
+    applicationScope: { userId: 'u1' },
+  });
+  assert.deepEqual(captured[2], {
+    manager: {},
+    tenantId: 'tenant-1',
+    userId: 'u1',
+    viewer,
+    technologies: true,
+    applications: false,
+    applicationScope: { userId: 'u1' },
+    tasks: true,
+  });
 }
 
 async function run() {
@@ -440,10 +558,14 @@ async function run() {
   testSectionOrder();
   testJournalChronologicalAndChangeRendering();
   testEmptySectionsOmitted();
+  testLinkedTechnologiesAndTaskFollowUp();
+  testTechnologyAndTaskLabelsInFourLanguages();
+  testJournalContentColumnIsWidest();
   testMarkdownEscaping();
   testMarkdownLinkAndFenceEscaping();
   testReportTimestampsUseTimezone();
   testRestrictedDocumentsOmitted();
+  testReporterAndJournalWords();
   testFrenchChangeLabels();
   testSystemEntriesInReportLanguage();
   testLinkChangeUsesContentOnly();

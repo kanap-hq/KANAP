@@ -107,7 +107,7 @@ Une cellule sans valeur affiche un tiret.
 - **Suites** : Suites parentes auxquelles cette application appartient
 - **Fournisseur** : Nom du fournisseur lié
 - **Responsables métier** / **Responsables IT** : Responsables assignés (tronqués, survolez ou cliquez pour tout voir)
-- **Hébergement** : Dérivé des sites des serveurs assignés aux déploiements de l'app
+- **Hébergement** : Dérivé des sites des serveurs assignés aux déploiements de l'app. Une application sur un cluster prend aussi les sites de ses membres
 - **Exposition externe** : Si l'app est accessible depuis Internet
 - **SSO activé** / **MFA activé** : Fonctionnalités d'authentification
 - **Intégration de données / ETL** : Si l'app participe à des intégrations de données
@@ -223,7 +223,9 @@ L'onglet Déploiements documente où l'application s'exécute réellement : un b
 | **Hébergement** | Dérivé du site de l'actif |
 | **Depuis** | Date à laquelle le serveur a été assigné à ce déploiement |
 
-Cliquez sur **Ajouter un serveur** dans l'en-tête du déploiement pour rattacher un actif. Les actifs cluster sont exclus : assignez plutôt les hôtes membres du cluster.
+Cliquez sur **Ajouter un serveur** dans l'en-tête du déploiement pour rattacher un actif. Le sélecteur liste les clusters avec leurs membres sous leur nom. L'affectation d'un cluster s'étend à ses membres en service : ils s'affichent sous la ligne du cluster, sans actions. Modifiez l'affectation sur le cluster. Quand vous choisissez un membre d'un cluster, KANAP demande s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](assets.md#applications-on-a-cluster).
+
+Quand l'application est affectée directement à chaque membre en service d'un cluster, une ligne sous le tableau les nomme, avec un bouton pour affecter l'application au cluster (**Affecter à** et son nom). Après une confirmation, le cluster prend l'affectation et les affectations propres des membres sont retirées. L'application reste alors disponible tant qu'un membre tient.
 
 **Conseil** : Documentez les serveurs dans **Cartographie SI > Actifs** d'abord, puis liez-les ici. L'onglet Exploitation de l'actif affiche les mêmes affectations dans le sens inverse, sous **Applications hébergées**.
 
@@ -258,7 +260,7 @@ L'onglet Exploitation regroupe, dans cet ordre, la façon dont les utilisateurs 
 **Technologies** liste ce dont l'application dépend, selon deux sources indiquées dans la colonne **Lien**. Colonnes : référence (`TEC-4`), nom, famille, versions, lien, serveurs par lesquels elle arrive (**Via**), fin du support standard.
 
 - **Déclarée** : quelqu'un a lié la technologie à l'application, par exemple Entra ID pour une application qui connecte ses utilisateurs par ce service.
-- **Hébergée** : un serveur de l'un de ses déploiements porte la technologie. **Via** nomme le serveur, et l'hôte quand la technologie tourne sur l'hôte d'une machine virtuelle. Les déploiements désactivés ne comptent pas.
+- **Hébergée** : un serveur de l'un de ses déploiements porte la technologie, y compris un membre d'un cluster auquel elle est affectée. **Via** nomme le serveur, et l'hôte quand la technologie tourne sur l'hôte d'une machine virtuelle. Les déploiements désactivés ne comptent pas.
 
 Une technologie peut être les deux. Un tiret dans la colonne des versions signifie que la version n'est pas connue. La fin du support standard passe en orange une fois dépassée. La section demande `infrastructure:reader`.
 
@@ -277,7 +279,7 @@ Pour ajouter, modifier ou retirer une technologie déclarée, et pour la renseig
 | **Crit.**, **Élev.**, **Moy.**, **Faible**, **N. éval.** | Une colonne par sévérité (Critique, Élevée, Moyenne, Faible, Non évaluée, le nom complet en infobulle sur l'en-tête) : les vulnérabilités encore à traiter. Une vulnérabilité notée **Aucune** compte avec **Faible** |
 | **Total** | Les vulnérabilités distinctes encore à traiter sur cette ligne |
 
-**Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'application et la technologie. Quand il ne reste rien à traiter, la section le dit en une ligne. Une application désactivée n'a pas de section.
+**Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'application et la technologie. Quand il ne reste rien à traiter, la section le dit en une ligne. Tant que le rapprochement d'une technologie qui vient d'être renseignée sur cette application, ou sur un de ses serveurs de déploiement, est en cours, la section affiche « Recherche des vulnérabilités en cours… » et se complète d'elle-même. Une application désactivée n'a pas de section.
 
 La section ne compte que les liens directs. Une technologie que la section **Technologies** montre par l'hôte d'une machine virtuelle ne compte pas ici : elle compte sur l'hôte. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts).
 
@@ -378,7 +380,7 @@ Il faut `applications:admin` et `infrastructure:member`.
 
 La fenêtre vérifie d'abord ce que la conversion change. Choisissez une **Famille**, puis lisez les trois listes :
 
-- **Passe à la technologie** : responsables, contacts de support, contrats, lignes budgétaires, projets, liens web, documents, incidents, et les serveurs de ses déploiements actifs. Chaque serveur devient un serveur qui porte la technologie, avec une version inconnue. Les liens des modules que vous ne pouvez pas lire passent aussi.
+- **Passe à la technologie** : responsables, contacts de support, contrats, lignes budgétaires, projets, liens web, documents, incidents, et les serveurs de ses déploiements actifs. Chaque serveur devient un serveur qui porte la technologie, avec une version inconnue. Un cluster donne ses membres en service. Les liens des modules que vous ne pouvez pas lire passent aussi.
 - **Conservé, sans son lien avec l’application** : les documents gérés restent dans leur bibliothèque, parmi les documents non classés.
 - **Perdu avec l’application** : déploiements et environnements, appartenance à une suite, prédécesseur et successeurs, résidence des données, sociétés et départements utilisateurs, liens de connaissance, tâches et demandes liées, processus métier, technologies dont elle dépend, et les champs propres aux applications (utilisateurs, modes d'accès, SSO, MFA, données personnelles). Sa référence `APP` disparaît aussi.
 

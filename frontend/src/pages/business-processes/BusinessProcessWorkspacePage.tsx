@@ -11,7 +11,7 @@ import BusinessProcessOverviewEditor, { BusinessProcessOverviewEditorHandle } fr
 import BusinessProcessCreateEditor, { BusinessProcessCreateEditorHandle } from './editors/BusinessProcessCreateEditor';
 import BusinessProcessCategoryManagerDialog from './BusinessProcessCategoryManagerDialog';
 import BusinessProcessApplicationsSection from './BusinessProcessApplicationsSection';
-import { useKanapDialogs } from '../../components/design';
+import { unsavedConfirm, useKanapDialogs } from '../../components/design';
 import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 
 type TabKey = 'overview';
@@ -88,20 +88,29 @@ export default function BusinessProcessWorkspacePage() {
     setDirty(false);
   };
 
+  // Previous/next keep the two answers from #825. Close also offers Stay.
+  const confirmDirtyLeave = async (withStay = false): Promise<boolean> => {
+    if (!dirty) return true;
+    const labels = unsavedConfirm(t, 'saveAndLeave');
+    const outcome = withStay
+      ? await dialogs.confirmOutcome({ ...labels, stayLabel: t('common:unsaved.leaveWithoutSaving.cancel') })
+      : ((await dialogs.confirm(labels)) ? 'confirm' : 'cancel');
+    if (outcome === 'stay') return false;
+    if (outcome === 'confirm') {
+      try {
+        await handleSave();
+      } catch {
+        return false;
+      }
+    } else {
+      handleReset();
+    }
+    return true;
+  };
+
   const confirmAndNavigate = async (targetId: string | null) => {
     if (!targetId) return;
-    if (dirty) {
-      const proceed = await dialogs.confirm(t('shared.workspace.unsavedNavigate'));
-      if (proceed) {
-        try {
-          await handleSave();
-        } catch {
-          return;
-        }
-      } else {
-        handleReset();
-      }
-    }
+    if (!(await confirmDirtyLeave())) return;
     navigate(`/master-data/business-processes/${targetId}/${routeTab}?${searchParams.toString()}`);
   };
 
@@ -115,7 +124,7 @@ export default function BusinessProcessWorkspacePage() {
   const onTabChange = async (_: React.SyntheticEvent, nextValue: TabKey) => {
     if (isCreate && nextValue !== 'overview') return;
     if (dirty) {
-      const proceed = await dialogs.confirm(t('shared.workspace.unsavedSwitchTab'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndSwitch'));
       if (proceed) {
         void handleSave().then(() =>
           navigate(`/master-data/business-processes/${id}/${nextValue}?${searchParams.toString()}`),
@@ -142,6 +151,11 @@ export default function BusinessProcessWorkspacePage() {
   const closeToList = () => {
     const qs = listContextParams.toString();
     navigate(`/master-data/business-processes${qs ? `?${qs}` : ''}`);
+  };
+
+  const handleClose = async () => {
+    if (!(await confirmDirtyLeave(true))) return;
+    closeToList();
   };
 
   return (
@@ -181,7 +195,7 @@ export default function BusinessProcessWorkspacePage() {
           <IconButton
             aria-label={t('common:buttons.close')}
             title={t('common:buttons.close')}
-            onClick={closeToList}
+            onClick={() => { void handleClose(); }}
           >
             <CloseIcon />
           </IconButton>

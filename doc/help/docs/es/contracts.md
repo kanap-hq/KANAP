@@ -77,6 +77,7 @@ Los enlaces sobre la tabla filtran la lista con un clic. Haga clic de nuevo para
 
 - **Por decidir en n días (n)**: los contratos en situación **Por decidir**. El número de días es el plazo de decisión de su espacio de trabajo
 - **Sin línea presupuestaria (n)** e **Infrapresupuestados (n)**: los contratos cuya cobertura presupuestaria del año elegido está en esa situación
+- **Sin centro de coste**: los contratos sin **Centro de coste o grupo**. La columna **Centro de coste** (selector de columnas) muestra el campo
 
 Un punto naranja señala un enlace cuyo contador no es cero.
 
@@ -120,6 +121,8 @@ La fila fijada abajo dice **Total (n contratos)**. Suma los importes anuales de 
 El encabezado muestra el nombre del contrato (haga clic para cambiarlo), **Anterior** / **Siguiente** con la posición en la lista, y una barra con **Proveedor**, **Empresa contratante**, **Responsable** y **Estado**. El responsable y el estado se cambian ahí mismo. El proveedor y la empresa abren el panel **Propiedades**.
 
 El panel **Propiedades**, a la derecha, contiene todos los campos del contrato: las partes, **Inicio**, **Duración (meses)**, **Preaviso (meses)**, **Renovación tácita**, **Importe anual**, **Moneda**, **Facturación**, luego **Ciclo de vida** (**Estado** y **Fin de validez**), **Creado** y **Actualizado**. Ábralo o ciérrelo con su botón; KANAP recuerda su elección.
+
+**Centro de coste o grupo** es opcional. Sitúa el contrato bajo un centro de coste o un grupo para el [acceso a los datos](data-access.md): las personas limitadas a ese nodo, o a un grupo superior, ven el contrato, igual que las limitadas a su empresa.
 
 Cada cambio se guarda solo: listas y fechas al instante, valores escritos y notas tras una breve pausa, el nombre al salir del campo. «Guardando...» y después «Guardado» aparece en el encabezado. Dos personas que editan el mismo contrato no reciben aviso: prevalece el último cambio.
 
@@ -179,6 +182,8 @@ Por ejemplo, un contrato de 350 000 al año que se renueva cada 1 de julio compr
 - **Infrapresupuestado**: las líneas vinculadas suman menos que el compromiso
 - **Presupuesto superior al contrato**: las líneas vinculadas suman más que el compromiso más un 10 %
 - **Cubierto**: cualquier otro caso
+
+Para una persona con el acceso a los datos limitado, la pestaña lista las líneas vinculadas que ve y después el número de las demás. La cobertura sigue contando todas las líneas vinculadas, para que el responsable del contrato vea la cobertura real. En la lista, cada fila muestra también esa cobertura completa, mientras que la fila de totales cuenta los contratos visibles y **Líneas vinculadas** cuenta las líneas visibles. Vea [Acceso a los datos](data-access.md#what-a-limited-person-sees).
 
 Cuando una línea vinculada no tiene tipo de cambio para un año, su importe se muestra en su propia moneda con una pequeña marca naranja, y el total y **Líneas vinculadas** la excluyen. La situación de ese año indica **Desconocido: una línea vinculada no tiene tipo de cambio**. Un aviso de una línea bajo la tabla de cobertura indica las líneas excluidas, por ejemplo «Se excluye 1 línea sin tipo de cambio: USD 2026.» Vea [Tasa faltante](currencies.md#mecanicas-de-conversion-referencia-rapida) y [Tipos manuales](currencies.md#tipos-manuales).
 

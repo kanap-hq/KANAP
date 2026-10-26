@@ -2,7 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/com
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { textSortKey, type TextSortKey } from '../../common/list-sort';
-import { Incident, IncidentStatus } from '../incident.entity';
+import { Incident, INCIDENT_STATUS_RANK, IncidentStatus } from '../incident.entity';
 import { IncidentChangedFields } from '../incident-entry.entity';
 import { AuditService } from '../../audit/audit.service';
 import { ItemNumberService } from '../../common/item-number.service';
@@ -17,16 +17,16 @@ import { assertSetFilterModes } from '../../common/ag-grid-filtering';
 
 const DEFAULT_SORT: Sort = { field: 'detected_at', direction: 'DESC' };
 
-/** Forward-only lifecycle. Backward moves go through reopen; cancelled only through cancel. */
-const STATUS_RANK: Record<IncidentStatus, number> = { open: 0, in_progress: 1, resolved: 2, closed: 3, cancelled: 4 };
-
 const OWNER_NAME = userNameSql('o');
 const REPORTER_NAME = userNameSql('r');
 
-const BASE_FROM = `
+/** The list's FROM clause: the export runs the same WHERE and ORDER BY, so it needs the same joins. */
+export const INCIDENT_LIST_FROM = `
   FROM incidents i
   LEFT JOIN users o ON o.id = i.owner_user_id AND o.tenant_id = i.tenant_id
   LEFT JOIN users r ON r.id = i.reporter_user_id AND r.tenant_id = i.tenant_id`;
+
+const BASE_FROM = INCIDENT_LIST_FROM;
 
 const COUNT_EXPRESSIONS: Record<string, string> = {
   asset_count: `(SELECT COUNT(*) FROM incident_assets ia WHERE ia.incident_id = i.id AND ia.tenant_id = i.tenant_id)::int`,
@@ -38,7 +38,8 @@ const COUNT_COLUMNS = Object.entries(COUNT_EXPRESSIONS).map(([name, sql]) => `${
 
 const ROW_COLUMNS = `
   i.id, i.item_number, i.title, i.category, i.severity, i.status, i.confidential,
-  i.started_at, i.detected_at, i.resolved_at, i.closed_at,
+  i.started_at, i.detected_at, i.resolved_at, i.closed_at, i.authority_notified_at,
+  i.personal_data_affected, i.authority_notification_required,
   i.owner_user_id, ${OWNER_NAME} AS owner_name,
   i.reporter_user_id, ${REPORTER_NAME} AS reporter_name,
   ${COUNT_COLUMNS},
@@ -55,6 +56,7 @@ const FIELD_EXPRESSIONS: Record<string, string> = {
   detected_at: 'i.detected_at',
   resolved_at: 'i.resolved_at',
   closed_at: 'i.closed_at',
+  authority_notified_at: 'i.authority_notified_at',
   owner_name: OWNER_NAME,
   reporter_name: REPORTER_NAME,
   source_ref: 'i.source_ref',
@@ -75,7 +77,7 @@ const FIELD_EXPRESSIONS: Record<string, string> = {
 };
 
 const INCIDENT_TEXT_SORTS = new Set(['title', 'owner_name', 'reporter_name', 'source_ref', 'linked_assets', 'linked_applications']);
-const DATE_FIELDS = new Set(['started_at', 'detected_at', 'resolved_at', 'closed_at', 'created_at', 'updated_at']);
+const DATE_FIELDS = new Set(['started_at', 'detected_at', 'resolved_at', 'closed_at', 'authority_notified_at', 'created_at', 'updated_at']);
 const NUMBER_FIELDS = new Set(Object.keys(COUNT_EXPRESSIONS));
 const BOOLEAN_FILTER_FIELDS = new Set<string>(['personal_data_affected', 'authority_notification_required', 'confidential']);
 
@@ -190,6 +192,22 @@ export class IncidentsService extends IncidentsBaseService {
       [...params, limit],
     );
     return { ids: rows.map((r) => r.id), refs: rows.map((r) => incidentRef(r.item_number)), total };
+  }
+
+  /**
+   * The list's WHERE, bound parameters and ORDER BY for the CSV export: the same column filters,
+   * search, extra scoping and visibility predicate (`buildWhere`), and the same sort. One builder
+   * for both means no filter sent to the export can widen what the list shows.
+   */
+  async exportQuery(query: any, opts?: ServiceOpts): Promise<{ where: string; params: any[]; orderBy: string }> {
+    const mg = this.getManager(opts);
+    const tenantId = this.ensureTenantId(opts?.tenantId);
+    const { asset_id, application_id } = parseListIncidentsQuery(query);
+    const { sort, q, filters } = parsePagination(query, DEFAULT_SORT);
+    const { where, params } = this.buildWhere({
+      filters, q, tenantId, assetId: asset_id, applicationId: application_id, viewer: opts?.viewer,
+    });
+    return { where, params, orderBy: this.orderBy(sort, await textSortKey(mg)) };
   }
 
   /**
@@ -562,7 +580,7 @@ export class IncidentsService extends IncidentsBaseService {
     const incident = await this.lockVisibleIncident(mg, id, tenantId, opts?.viewer);
     this.assertEditable(incident);
 
-    if (dto.status !== undefined && dto.status !== incident.status && STATUS_RANK[dto.status] < STATUS_RANK[incident.status]) {
+    if (dto.status !== undefined && dto.status !== incident.status && INCIDENT_STATUS_RANK[dto.status] < INCIDENT_STATUS_RANK[incident.status]) {
       throw new BadRequestException('Status cannot move backwards. Use Reopen instead.');
     }
     await this.ensureUsers([dto.reporter_user_id, dto.owner_user_id], mg, tenantId);

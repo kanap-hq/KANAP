@@ -41,6 +41,14 @@ export function parseCookieValue(header: string | undefined, name: string): stri
   return undefined;
 }
 
+/** The refresh token of a request: the cookie, else `refresh_token` in the body. */
+export function refreshTokenOf(req: any, body?: { refresh_token?: unknown }): string | undefined {
+  const cookieToken = parseCookieValue(req?.headers?.cookie as string | undefined, REFRESH_TOKEN_COOKIE_NAME);
+  if (cookieToken && cookieToken.trim() !== '') return cookieToken;
+  const bodyToken = typeof body?.refresh_token === 'string' ? body.refresh_token.trim() : '';
+  return bodyToken !== '' ? bodyToken : undefined;
+}
+
 export function setRefreshTokenCookie(
   res: Response,
   token: string,

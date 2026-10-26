@@ -9,9 +9,10 @@ type Props = {
   canManage: boolean;
   defaultProtocolCodes: string[];
   protocols?: ConnectionProtocol[];
-  assetMap: Record<string, { name: string; reference?: string | null }>;
   sourceLabel: string;
   destinationLabel: string;
+  sourceIsCluster?: boolean;
+  destinationIsCluster?: boolean;
   onChange: (next: ConnectionPathHop[]) => void;
 };
 

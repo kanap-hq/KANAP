@@ -205,11 +205,11 @@ La pestaña **Red** está abierta mientras crea el activo. Complete:
 
 Haga clic en **Crear** para desbloquear el espacio de trabajo completo. La pestaña **Vista general** gana entonces una sección **Soporte** para el contrato de soporte del proveedor y sus contactos. Para tipos de activos físicos, una pestaña **Hardware** hace seguimiento de los números de serie y los detalles del fabricante.
 
-### Pestaña Operación
+### Pestaña Operaciones
 
-Vaya a la pestaña **Operación** para añadir las **Tecnologías** que lleva el servidor, con sus versiones. Añada Windows Server, Ubuntu u otra tecnología de la familia **Sistema operativo**: pasa a ser el sistema operativo del servidor.
+Vaya a la pestaña **Operaciones** para añadir las **Tecnologías** que lleva el servidor, con sus versiones. Añada Windows Server, Ubuntu u otra tecnología de la familia **Sistema operativo**: pasa a ser el sistema operativo del servidor.
 
-Si este activo es un clúster, active el conmutador **Clúster** en el panel **Propiedades** y luego añada sus servidores miembros con **Editar miembros** en la pestaña **Dependencias**.
+Si este activo es un clúster, active el conmutador **Clúster** en el panel **Propiedades** y luego añada sus servidores miembros con **Añadir miembros** en la parte superior de la pestaña **Operaciones**. Una aplicación que se ejecuta en cada miembro se asigna al clúster: consulte [Aplicaciones en un clúster](../assets.md#applications-on-a-cluster).
 
 ---
 
@@ -230,7 +230,7 @@ Hay **dos formas** de crear esta asignación:
 ### Desde el lado del activo
 
 1. Abra su activo
-2. En la pestaña **Operación**, localice la sección **Aplicaciones alojadas**
+2. En la pestaña **Operaciones**, localice la sección **Aplicaciones alojadas**
 3. Haga clic en **Añadir asignación**
 4. Complete los campos de la asignación:
 
@@ -299,7 +299,7 @@ Luego utilice el [Mapa de interfaces](../interface-map.md) para visualizar el fl
 | Añadir información de conformidad | Abrir app > pestaña Conformidad |
 | Crear un servidor | Panorama IT > Activos > Añadir activo |
 | Vincular servidor a app (desde la app) | Abrir app > pestaña Despliegues > Agregar servidor |
-| Vincular servidor a app (desde el activo) | Abrir activo > pestaña Operación > Aplicaciones alojadas > Añadir asignación |
+| Vincular servidor a app (desde el activo) | Abrir activo > pestaña Operaciones > Aplicaciones alojadas > Añadir asignación |
 | Ver conexiones del servidor | Abrir activo > pestaña Red > Conexiones |
 | Ver mapa de conexiones | Panorama IT > Mapa de conexiones |
 | Ver mapa de interfaces | Panorama IT > Mapa de interfaces |

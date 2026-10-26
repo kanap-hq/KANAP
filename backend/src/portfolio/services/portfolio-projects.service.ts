@@ -24,6 +24,8 @@ export interface ServiceOpts {
   userId?: string | null;
   tenantId?: string;
   accessScope?: ParticipationAccessScope;
+  /** The reader holds the budget right (see the base service's options). */
+  readsBudget?: boolean;
 }
 
 /**

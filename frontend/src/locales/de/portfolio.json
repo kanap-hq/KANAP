@@ -252,10 +252,6 @@
       "actions": {
         "copyReference": "Referenz kopieren"
       },
-      "confirmations": {
-        "unsavedNavigate": "Sie haben ungespeicherte Änderungen. Vor dem Verlassen speichern?",
-        "unsavedSwitchTabs": "Sie haben ungespeicherte Änderungen. Vor dem Tab-Wechsel speichern?"
-      },
       "loadingTabs": {
         "activity": "Aktivität",
         "knowledge": "Wissen",
@@ -583,11 +579,6 @@
         "submitNewRecommendation": "Neue Empfehlung einreichen",
         "submitRecommendation": "Empfehlung einreichen"
       },
-      "confirmations": {
-        "unsavedNavigate": "Sie haben ungespeicherte Änderungen. Vor dem Verlassen speichern?",
-        "unsavedRecommendation": "Sie haben eine ungespeicherte Empfehlung. Verwerfen?",
-        "unsavedSwitchTabs": "Sie haben ungespeicherte Änderungen. Vor dem Tab-Wechsel speichern?"
-      },
       "deleteDialog": {
         "message": "Diese Anfrage löschen? Dies kann nicht rückgängig gemacht werden.",
         "title": "Anfrage löschen"
@@ -744,8 +735,7 @@
         "relatedItem": "Verknüpftes Element"
       },
       "confirmations": {
-        "deleteTask": "Möchten Sie diese Aufgabe wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
-        "unsavedNavigate": "Sie haben ungespeicherte Änderungen. Vor dem Verlassen speichern?"
+        "deleteTask": "Möchten Sie diese Aufgabe wirklich löschen? Dies kann nicht rückgängig gemacht werden."
       },
       "description": {
         "label": "Beschreibung",
@@ -856,7 +846,8 @@
         "notFound": "Aufgabe nicht gefunden",
         "relatedItemRequired": "Bitte wählen Sie ein verknüpftes Element aus",
         "saveFailed": "Aufgabe konnte nicht gespeichert werden",
-        "titleRequired": "Titel ist erforderlich"
+        "titleRequired": "Titel ist erforderlich",
+        "stillFollowing": "Sie folgen dieser Aufgabe weiterhin."
       },
       "sidebar": {
         "fields": {
@@ -896,6 +887,7 @@
           "assigneeMissing": "Zuständiger fehlt",
           "noClassification": "Keine Klassifizierung festgelegt.",
           "projectLevel": "Projektebene",
+          "requestorMissing": "Antragsteller fehlt",
           "standaloneTask": "Eigenständige Aufgabe",
           "unknown": "Unbekannt",
           "relatedTypes": {

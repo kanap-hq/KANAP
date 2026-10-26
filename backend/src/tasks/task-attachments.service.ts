@@ -13,6 +13,7 @@ import { DocumentImportService, ImportedDocumentResult } from '../common/documen
 import { extractInlineImageUrls } from '../common/content-image-urls';
 import { ImportExecutionOptions, readUploadedFileBuffer } from '../common/import-connection';
 import { assertMarkdownSize } from '../common/markdown-limits';
+import { assertTaskModifiable } from './task-data-access';
 
 @Injectable()
 export class TaskAttachmentsService {
@@ -47,6 +48,8 @@ export class TaskAttachmentsService {
     const attachRepo = mg.getRepository(TaskAttachment);
 
     if (!file) throw new BadRequestException('No file uploaded');
+    // Before the file is stored: a refused row would leave it behind.
+    await assertTaskModifiable(mg, taskId);
 
     const [{ tenant_id }] = await mg.query(`SELECT app_current_tenant() AS tenant_id`);
     const id = randomUUID();
@@ -173,6 +176,8 @@ export class TaskAttachmentsService {
     const attachRepo = mg.getRepository(TaskAttachment);
     const oldUrls = extractInlineImageUrls(oldContent);
     const newUrls = new Set(extractInlineImageUrls(newContent));
+    // Before any stored file is deleted: a refused row would stay, pointing at nothing.
+    if (oldUrls.some((url) => !newUrls.has(url))) await assertTaskModifiable(mg, taskId);
 
     for (const url of oldUrls) {
       if (newUrls.has(url)) {
@@ -218,6 +223,8 @@ export class TaskAttachmentsService {
     const attachRepo = mg.getRepository(TaskAttachment);
     const found = await attachRepo.findOne({ where: { id: attachmentId } });
     if (!found) throw new NotFoundException('Attachment not found');
+    // Before the stored file is deleted: a refused row would stay, pointing at nothing.
+    await assertTaskModifiable(mg, found.task_id);
 
     const refs = await mg.query<Array<{ exists: number }>>(
       `SELECT 1 AS exists

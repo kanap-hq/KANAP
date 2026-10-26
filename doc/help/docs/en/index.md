@@ -114,6 +114,7 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 ### Administration
 
 - [Admin & Users](admin.md) - Manage users, roles, authentication, and audit logs
+- [Data access](data-access.md) - Limit a person to the budget and contracts of some companies or cost centers
 - [Branding](branding.md) - Customize your tenant logo and light/dark primary colors
 - [Sample data](sample-data.md) - Explore KANAP with a fictional company, then erase it and start clean
 - [Audit Log](admin.md#audit-log) - Review data changes, sign-ins and exports with filters, detail view and CSV export

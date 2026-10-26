@@ -61,6 +61,9 @@ export interface StoredLine {
   analytics: Record<string, string>;
   ownerItEmail: string | null;
   ownerBusinessEmail: string | null;
+  /** The owners' ids: whether a limited person stays responsible after the file's change. */
+  ownerItId?: string | null;
+  ownerBusinessId?: string | null;
   projectNumber: number | null;
   currency: string;
   /** `YYYY-MM-DD`. */
@@ -141,6 +144,11 @@ export interface CatalogDimension {
   required: boolean;
   /** The dimension's own name: null for the unnamed default (`name` then holds its code). */
   axisName: string | null;
+  /**
+   * Open values (planning/data-scoped-access spec §3.5): an unknown value is created for anyone;
+   * on a closed list it is refused to a limited person and created for an unscoped one.
+   */
+  openValues?: boolean;
   values: CatalogValue[];
 }
 
@@ -197,6 +205,11 @@ export interface BudgetFileSnapshotLine {
   itemNumber: number;
   rowVersion: number;
   years: Array<{ year: number; versionId: string; budgetRev: number }>;
+  /**
+   * For a limited person only: whether the person may modify the line. The load compares it with
+   * the preflight's, so an access changed in between asks for a new preflight.
+   */
+  editable?: boolean;
 }
 
 export interface CostCenterCompanyWarning {
@@ -252,9 +265,16 @@ export interface BudgetFileReport {
   creates: {
     dimensionValues: Array<{ dimension: string; names: string[] }>;
     suppliers: Array<{ name: string; erpId: string | null }>;
+    /**
+     * For a limited person only: unknown values of a closed-list dimension, refused (each row has
+     * its error); `dimensionValues` lists the ones the load will create.
+     */
+    refusedDimensionValues?: Array<{ dimension: string; names: string[] }>;
   };
   supplierMessage: string | null;
   snapshot: { lines: BudgetFileSnapshotLine[] };
+  /** For a limited person only: the check ran on the person's access ("Calculated on your access"). */
+  dataAccessLimited?: true;
 }
 
 export const AMOUNT_MEASURE_LIST: readonly AmountMeasure[] = AMOUNT_MEASURES;

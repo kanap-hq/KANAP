@@ -345,8 +345,9 @@ async function testLinksActivityAndAudit() {
       { ok: true, changed: true },
     );
     assert.deepEqual(await activities(runner, seed.requestId), [
-      { opex_items: [['Opex licence'], ['Opex licence', 'Opex spare']] },
-      { capex_items: [['Capex server'], ['Capex extra', 'Capex server']] },
+      // Each side stores the lines with their ids, so the history can be read per reader.
+      { opex_items: [[{ id: seed.lines.opex, label: 'Opex licence' }], [{ id: seed.lines.opex, label: 'Opex licence' }, { id: seed.lines.spare, label: 'Opex spare' }]] },
+      { capex_items: [[{ id: seed.lines.capex, label: 'Capex server' }], [{ id: seed.lines.extra, label: 'Capex extra' }, { id: seed.lines.capex, label: 'Capex server' }]] },
     ]);
     assert.deepEqual(
       await http.unlinkRelation(seed.requestId, 'budget_lines', seed.lines.opex, writer),

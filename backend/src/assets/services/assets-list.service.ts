@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
-import { textSortKey } from '../../common/list-sort';
+import { textSortKey, type TextSortKey } from '../../common/list-sort';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { parsePagination, Sort } from '../../common/pagination';
 import { operatingSystemLabelSql } from '../../technologies/operating-system-codes';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
+import { clusterMembershipsOf, clusterNamesText, realClusterMembershipSql } from '../asset-rules';
 import { assertSetFilterModes, bindPositional, compileAgFilterCondition, createParamNameGenerator } from '../../common/ag-grid-filtering';
 import { assetCountsForTenantSql, assetVulnerabilityCounts, vulnerabilityCountsEnabled } from '../../vulnerabilities/vulnerability-reach-counts';
+import { effectiveAssignmentsSql, ViaCluster } from '../../app-asset-assignments/effective-assignments';
 import {
   VULNERABILITIES_LIST_FIELD,
   vulnerabilityFilterPredicateSql,
@@ -19,7 +21,53 @@ import {
 const ASSET_OS_LABEL = operatingSystemLabelSql('a');
 
 /** The asset list columns that sort alphabetically. */
-const ASSET_TEXT_SORTS = new Set(['name', 'asset_reference', 'provider', 'region', 'zone', 'hostname', 'fqdn', 'operating_system', 'location_name', 'sub_location_name', 'cluster']);
+const ASSET_TEXT_SORTS = new Set(['name', 'asset_reference', 'provider', 'region', 'zone', 'hostname', 'fqdn', 'operating_system', 'location_name', 'sub_location_name']);
+
+/**
+ * The value of the Cluster filter that keeps the clusters themselves. `null` keeps the plain
+ * assets that are members of no cluster; any other value is a cluster's name.
+ */
+export const CLUSTER_FILTER_IS_CLUSTER = '__cluster__';
+
+/**
+ * The sort value of the Cluster column, one per asset: the first name of its clusters. A cluster
+ * and an asset of no cluster have none (they sort with the blanks).
+ */
+function clusterSortValue(key: TextSortKey): string {
+  return key(`(SELECT min(${key('c.name')})
+      FROM asset_cluster_members m
+      JOIN assets c ON c.tenant_id = m.tenant_id AND c.id = m.cluster_id AND c.is_cluster
+     WHERE m.tenant_id = a.tenant_id AND m.asset_id = a.id AND NOT COALESCE(a.is_cluster, false))`);
+}
+
+/** The sort value of a list column: text alphabetically (case and accents ignored), else as stored. */
+async function assetSortField(mg: any, sortFieldMap: Record<string, string>, field: string): Promise<string> {
+  if (field === 'cluster') return clusterSortValue(await textSortKey(mg));
+  return ASSET_TEXT_SORTS.has(field) && sortFieldMap[field]
+    ? (await textSortKey(mg))(sortFieldMap[field])
+    : sortFieldMap[field] || 'a.created_at';
+}
+
+/**
+ * The Cluster set filter: the members of the named clusters, the clusters themselves
+ * (`CLUSTER_FILTER_IS_CLUSTER`) and the plain assets of no cluster (`null`), joined by OR.
+ */
+function clusterSetPredicate(values: unknown[], params: any[]): string {
+  const clauses: string[] = [];
+  const names = values.filter((v) => v !== null && v !== undefined && v !== CLUSTER_FILTER_IS_CLUSTER);
+  if (names.length > 0) {
+    const placeholders = names.map((name) => {
+      params.push(String(name));
+      return `$${params.length}`;
+    });
+    clauses.push(realClusterMembershipSql('a', `c.name IN (${placeholders.join(', ')})`));
+  }
+  if (values.includes(CLUSTER_FILTER_IS_CLUSTER)) clauses.push('COALESCE(a.is_cluster, false)');
+  if (values.some((v) => v === null || v === undefined)) {
+    clauses.push(`(NOT COALESCE(a.is_cluster, false) AND NOT ${realClusterMembershipSql('a')})`);
+  }
+  return clauses.length > 0 ? `(${clauses.join(' OR ')})` : '1=0';
+}
 
 /**
  * The vulnerability counts of the asset `a` (shared module), as `vc.open` and `vc.severe`, for the
@@ -41,12 +89,15 @@ function listSort(sort: Sort, sortField: string): { value: string; orderBy: stri
   return { value: sortField, orderBy: `${sortField} ${sort.direction}`, orderByValue: (value) => `${value} ${sort.direction}`, joinsVulnerabilities: false };
 }
 
-/** The joins of the list's rows, after `FROM assets a`. A member of two clusters repeats. */
+/**
+ * The joins of the list's rows, after `FROM assets a`. A member of two clusters repeats (the rows
+ * are distinct by id and sort value, one per asset); only real clusters join.
+ */
 const LIST_JOINS = `
       LEFT JOIN locations l ON l.id = a.location_id AND l.tenant_id = a.tenant_id
       LEFT JOIN location_sub_items sl ON sl.id = a.sub_location_id AND sl.tenant_id = a.tenant_id
       LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id
-      LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id`;
+      LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id AND cluster_asset.is_cluster`;
 
 /**
  * The ordered rows of the list and their total in one statement: the distinct `(id, sort value)`
@@ -114,12 +165,9 @@ export class AssetsListService extends AssetsBaseService {
       location_name: 'l.name',
       hosting_type: 'l.hosting_type',
       sub_location_name: 'sl.name',
-      cluster: 'cluster_asset.name',
     };
     // Text alphabetically, case and accents ignored; the id breaks ties.
-    const sortField = ASSET_TEXT_SORTS.has(sort.field) && sortFieldMap[sort.field]
-      ? (await textSortKey(mg))(sortFieldMap[sort.field])
-      : sortFieldMap[sort.field] || 'a.created_at';
+    const sortField = await assetSortField(mg, sortFieldMap, sort.field);
     const ordering = listSort(sort, sortField);
     const vulnerabilityJoin = joinsVulnerabilities || ordering.joinsVulnerabilities ? vulnerabilityCountsJoin(tenantParam) : '';
 
@@ -152,7 +200,7 @@ export class AssetsListService extends AssetsBaseService {
       SELECT
         a.id, a.tenant_id, a.name, a.asset_reference, a.kind, a.provider, a.environment,
         a.region, a.zone, a.hostname, a.domain, a.admin_zone, a.fqdn, a.aliases,
-        a.ip_addresses, a.cluster, a.is_cluster, ${ASSET_OS_LABEL} AS operating_system,
+        a.ip_addresses, a.is_cluster, ${ASSET_OS_LABEL} AS operating_system,
         a.location_id, a.sub_location_id, a.status, a.notes, a.created_at, a.updated_at,
         a.go_live_date::text AS go_live_date, a.end_of_life_date::text AS end_of_life_date,
         l.name AS location_name,
@@ -172,6 +220,10 @@ export class AssetsListService extends AssetsBaseService {
 
     // Enrich with cluster names and assignment counts
     await this.enrichListItems(items, ids, mg, tenantId, joinedCounts);
+    // `include=member_names`: the server picker shows who a cluster's assignment reaches.
+    if (String(query?.include ?? '').split(',').map((part) => part.trim()).includes('member_names')) {
+      await this.attachMemberNames(items, mg, tenantId);
+    }
 
     return { items, total, page, limit };
   }
@@ -220,12 +272,9 @@ export class AssetsListService extends AssetsBaseService {
       location_name: 'l.name',
       hosting_type: 'l.hosting_type',
       sub_location_name: 'sl.name',
-      cluster: 'cluster_asset.name',
     };
     // Text alphabetically, case and accents ignored; the id breaks ties.
-    const sortField = ASSET_TEXT_SORTS.has(sort.field) && sortFieldMap[sort.field]
-      ? (await textSortKey(mg))(sortFieldMap[sort.field])
-      : sortFieldMap[sort.field] || 'a.created_at';
+    const sortField = await assetSortField(mg, sortFieldMap, sort.field);
     const ordering = listSort(sort, sortField);
     const vulnerabilityJoin = joinsVulnerabilities || ordering.joinsVulnerabilities ? vulnerabilityCountsJoin(tenantParam) : '';
 
@@ -241,6 +290,25 @@ export class AssetsListService extends AssetsBaseService {
     return { ids, refs, total };
   }
 
+  /** `member_names` on each cluster of `items`: its members by name, in one read. */
+  private async attachMemberNames(items: any[], mg: EntityManager, tenantId: string): Promise<void> {
+    const clusterIds = items.filter((item) => item.is_cluster).map((item) => item.id);
+    if (clusterIds.length === 0) return;
+    const rows: Array<{ cluster_id: string; name: string }> = await mg.query(
+      `SELECT m.cluster_id, a.name
+         FROM asset_cluster_members m
+         JOIN assets a ON a.tenant_id = m.tenant_id AND a.id = m.asset_id
+        WHERE m.tenant_id = $1 AND m.cluster_id = ANY($2::uuid[])
+        ORDER BY m.cluster_id, a.name, a.id`,
+      [tenantId, clusterIds],
+    );
+    const byCluster = new Map<string, string[]>();
+    for (const row of rows) byCluster.set(row.cluster_id, [...(byCluster.get(row.cluster_id) ?? []), row.name]);
+    for (const item of items) {
+      if (item.is_cluster) item.member_names = byCluster.get(item.id) ?? [];
+    }
+  }
+
   /**
    * Enrich list items with assignment counts, location info, and cluster names.
    */
@@ -251,9 +319,9 @@ export class AssetsListService extends AssetsBaseService {
     tenantId: string,
     joinedCounts: Map<string, { open: number | null; severe: number | null }> | null,
   ): Promise<void> {
-    // Get assignment counts
+    // Get assignment counts: effective, a member counting what its clusters carry.
     const assignmentRows: Array<{ asset_id: string; c: string }> = await mg.query(
-      `SELECT asset_id, COUNT(*)::text as c FROM app_asset_assignments WHERE asset_id = ANY($1) AND tenant_id = $2 GROUP BY asset_id`,
+      `SELECT e.asset_id, COUNT(*)::text as c FROM (${effectiveAssignmentsSql({ tenant: '$2', assets: '$1' })}) e GROUP BY e.asset_id`,
       [ids, tenantId],
     );
     const assignmentMap = Object.fromEntries(assignmentRows.map((r) => [r.asset_id, Number(r.c)]));
@@ -285,27 +353,10 @@ export class AssetsListService extends AssetsBaseService {
       (item as any).sub_location_name = loc?.sub_location_name ?? null;
     }
 
-    // Populate cluster names for member assets
-    const memberRows: Array<{ asset_id: string; cluster_name: string }> = await mg.query(
-      `SELECT acm.asset_id, c.name AS cluster_name
-       FROM asset_cluster_members acm
-       JOIN assets c ON c.id = acm.cluster_id
-       WHERE acm.asset_id = ANY($1) AND acm.tenant_id = $2 AND c.tenant_id = $2`,
-      [ids, tenantId],
-    );
-    if (memberRows.length > 0) {
-      const clusterMap = new Map<string, string[]>();
-      for (const row of memberRows) {
-        const list = clusterMap.get(row.asset_id) || [];
-        if (row.cluster_name) list.push(row.cluster_name);
-        clusterMap.set(row.asset_id, list);
-      }
-      for (const item of items) {
-        const names = clusterMap.get(item.id);
-        if (names && names.length > 0) {
-          (item as any).cluster = names.join(', ');
-        }
-      }
+    // The names of the asset's real clusters, by name; never the legacy `assets.cluster` text.
+    const memberships = await clusterMembershipsOf(mg, tenantId, ids);
+    for (const item of items) {
+      (item as any).cluster = clusterNamesText(memberships.get(item.id));
     }
   }
 
@@ -349,22 +400,38 @@ export class AssetsListService extends AssetsBaseService {
     for (const field of fields) {
       const expression = FILTER_VALUE_FIELDS[field];
       const { whereConditions, params, joinsVulnerabilities, tenantParam } = this.buildFilterWhereConditions(filters, q, field, tenantId);
-
-      // For cluster field, we need a different join strategy
-      const clusterJoin = field === 'cluster'
-        ? `LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id
-           LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id`
-        : `LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id
-           LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id`;
-
-      const distinctQuery = `
-        SELECT DISTINCT ${expression} as value
+      const keptRows = `
         FROM assets a
-        LEFT JOIN locations l ON l.id = a.location_id AND l.tenant_id = a.tenant_id
-        LEFT JOIN location_sub_items sl ON sl.id = a.sub_location_id AND sl.tenant_id = a.tenant_id
-        ${clusterJoin}
+        ${LIST_JOINS}
         ${joinsVulnerabilities ? vulnerabilityCountsJoin(tenantParam) : ''}
-        WHERE ${whereConditions}
+        WHERE ${whereConditions}`;
+
+      // The Cluster column: the names of the real clusters the kept assets belong to, then
+      // `CLUSTER_FILTER_IS_CLUSTER` when a cluster is kept, then null for a plain asset of no cluster.
+      const distinctQuery = field === 'cluster'
+        ? `
+        WITH kept AS MATERIALIZED (SELECT DISTINCT a.id, a.tenant_id, COALESCE(a.is_cluster, false) AS is_cluster ${keptRows})
+        SELECT value FROM (
+          SELECT DISTINCT c.name AS value, 0 AS bucket
+            FROM kept k
+            JOIN asset_cluster_members m ON m.tenant_id = k.tenant_id AND m.asset_id = k.id
+            JOIN assets c ON c.tenant_id = m.tenant_id AND c.id = m.cluster_id AND c.is_cluster
+           WHERE NOT k.is_cluster
+          UNION
+          SELECT '${CLUSTER_FILTER_IS_CLUSTER}', 1 FROM kept k WHERE k.is_cluster
+          UNION
+          SELECT NULL, 2 FROM kept k
+           WHERE NOT k.is_cluster
+             AND NOT EXISTS (
+               SELECT 1 FROM asset_cluster_members m
+                 JOIN assets c ON c.tenant_id = m.tenant_id AND c.id = m.cluster_id AND c.is_cluster
+                WHERE m.tenant_id = k.tenant_id AND m.asset_id = k.id)
+        ) v
+        ORDER BY bucket, value ASC
+      `
+        : `
+        SELECT DISTINCT ${expression} as value
+        ${keptRows}
         ORDER BY value ASC NULLS LAST
       `;
 
@@ -423,9 +490,9 @@ export class AssetsListService extends AssetsBaseService {
     };
     const nextDateParam = createParamNameGenerator('asset_date_');
 
-    // Number filters: the assignment count the list shows (`enrichListItems`).
+    // Number filters: the assignment count the list shows (`enrichListItems`), effective.
     const numberExpressions: Record<string, string> = {
-      assignments_count: '(SELECT COUNT(*) FROM app_asset_assignments aaa WHERE aaa.asset_id = a.id AND aaa.tenant_id = a.tenant_id)',
+      assignments_count: `(SELECT COUNT(*) FROM (${effectiveAssignmentsSql({ tenant: 'a.tenant_id', assets: 'ARRAY[a.id]' })}) aaa)`,
     };
     const numberOperators: Record<string, string> = {
       equals: '=', notEqual: '<>', greaterThan: '>', greaterThanOrEqual: '>=', lessThan: '<', lessThanOrEqual: '<=',
@@ -464,6 +531,10 @@ export class AssetsListService extends AssetsBaseService {
       }
       const expression = fieldExpressions[field];
       if (!expression) continue;
+      if (field === 'cluster' && model?.filterType === 'set' && Array.isArray(model.values)) {
+        whereConditions += ` AND ${clusterSetPredicate(model.values, params)}`;
+        continue;
+      }
 
       if (model && model.filterType === 'set' && Array.isArray(model.values)) {
         if (model.values.length === 0) {
@@ -552,14 +623,13 @@ export class AssetsListService extends AssetsBaseService {
       location_name = locRows[0]?.name || null;
     }
 
-    const assignedRows: Array<{ app_id: string; app_name: string; environment: string }> = await mg.query(
-      `SELECT a.id AS app_id, a.name AS app_name, ai.environment
-       FROM app_asset_assignments aaa
-       JOIN app_instances ai ON ai.id = aaa.app_instance_id
-       JOIN applications a ON a.id = ai.application_id
-       WHERE aaa.asset_id = $1
-         AND a.tenant_id = $2
-       ORDER BY array_position(ARRAY['prod','pre_prod','qa','test','dev','sandbox'], ai.environment), a.name ASC`,
+    // Effective: a member lists what its clusters carry too (`inherited`, `via_clusters`).
+    const assignedRows: Array<{ app_id: string; app_name: string; environment: string; inherited: boolean; via_clusters: ViaCluster[] }> = await mg.query(
+      `SELECT a.id AS app_id, a.name AS app_name, ai.environment, e.inherited, e.via_clusters
+       FROM (${effectiveAssignmentsSql({ tenant: '$2', assets: 'ARRAY[$1::uuid]' })}) e
+       JOIN app_instances ai ON ai.id = e.app_instance_id AND ai.tenant_id = e.tenant_id
+       JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
+       ORDER BY array_position(ARRAY['prod','pre_prod','qa','test','dev','sandbox'], ai.environment), a.name ASC, e.inherited`,
       [id, asset.tenant_id],
     );
 
@@ -567,6 +637,8 @@ export class AssetsListService extends AssetsBaseService {
       id: row.app_id,
       name: row.app_name,
       environment: row.environment,
+      inherited: !!row.inherited,
+      via_clusters: row.via_clusters ?? [],
     }));
 
     return {

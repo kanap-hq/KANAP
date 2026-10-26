@@ -520,7 +520,7 @@ async function testCountsAndPeriphery() {
     await assertInvisible(runner, w, 'account OPEX line count', async () => (await accountCounts()).opex);
     const centers = new CostCentersService(audit);
     const centerUsage = async () => [...(await centers.countUsage(ctx, [w.costCenterId])).values()];
-    assert.deepEqual(await centerUsage(), [{ opex: 1, capex: 1 }], 'cost center counts: the CAPEX line counts as CAPEX');
+    assert.deepEqual(await centerUsage(), [{ opex: 1, capex: 1, contracts: 0 }], 'cost center counts: the CAPEX line counts as CAPEX');
     await assertInvisible(runner, w, 'cost center OPEX counts', async () => ({ detail: (await centers.get(w.costCenterId, ctx)).opex_count, usage: (await centerUsage()).map((u) => u.opex) }));
     await assertInvisible(runner, w, 'dimension counts', async () => {
       const axis = await new AnalyticsAxesService(audit).get(w.axisId, ctx);
@@ -653,7 +653,7 @@ async function testAi() {
     const context: any = { manager: runner.manager, tenantId: w.tenantId, userId: w.budgetUser, isPlatformHost: false, surface: 'chat', authMethod: 'jwt' };
     const fin: any = new AiFinancialPlanMutationSupportService(audit, none, none, none, none, none, none);
     const task: any = new AiTaskMutationSupportService();
-    const rel: any = new AiRelationMutationSupportService(audit, none, task);
+    const rel: any = new AiRelationMutationSupportService(audit, none, task, undefined as any);
     const biz: any = new (AiBusinessRecordMutationSupportService as any)(...Array.from({ length: 20 }, (_, i) => (i === 2 ? audit : undefined)));
     const aggregate: any = new (AiAggregateExecutor as any)();
     const appSpendItems = {

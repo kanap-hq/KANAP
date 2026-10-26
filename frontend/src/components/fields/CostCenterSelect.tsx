@@ -17,8 +17,10 @@ import { drawerAutocompleteListboxSx } from '../../theme/formSx';
  *   A disabled cost center stays pickable when it is the current value.
  * - `all`: every node, groups and disabled nodes included (report filters).
  * - `groups`: groups only, disabled ones included (a node's parent).
+ * - `contract_places`: enabled groups and cost centers (a contract's place in the tree); a disabled
+ *   node stays pickable when it is the current value.
  */
-export type CostCenterSelectable = 'cost_centers' | 'all' | 'groups';
+export type CostCenterSelectable = 'cost_centers' | 'all' | 'groups' | 'contract_places';
 
 export type CostCenterSelectProps = {
   label?: string;
@@ -37,6 +39,12 @@ export type CostCenterSelectProps = {
   companyId?: string | null;
   /** Nodes left out of the list (e.g. a node's own subtree when picking its parent). */
   excludeIds?: ReadonlySet<string> | string[];
+  /**
+   * With `cost_centers` or `contract_places`: only the nodes it accepts are listed, with the groups
+   * above them (a limited data access, `usePlacementOptions`). The current value stays listed.
+   * Absent: every one.
+   */
+  isAllowed?: ((node: CostCenterNode) => boolean) | null;
   disabled?: boolean;
   error?: boolean;
   helperText?: React.ReactNode;
@@ -122,6 +130,7 @@ export default function CostCenterSelect({
   selectable = 'cost_centers',
   companyId,
   excludeIds,
+  isAllowed,
   disabled,
   error,
   helperText,
@@ -150,7 +159,7 @@ export default function CostCenterSelect({
   }, [excludeIds]);
 
   const byCompany = selectable === 'cost_centers' && !!companyId;
-  const options = React.useMemo(() => {
+  const listed = React.useMemo(() => {
     const list = excluded ? tree.nodes.filter((node) => !excluded.has(node.id)) : tree.nodes;
     // Parent picking only needs the groups; their tree order and depth stay meaningful.
     if (selectable === 'groups') return list.filter((node) => node.kind === 'group');
@@ -164,15 +173,31 @@ export default function CostCenterSelect({
     }
     return list.filter((node) => keep.has(node.id));
   }, [byCompany, companyId, excluded, selectable, tree.nodes, value]);
+  // A limited data access: the nodes it accepts (and the current value), with their groups above.
+  const options = React.useMemo(() => {
+    if (!isAllowed || (selectable !== 'cost_centers' && selectable !== 'contract_places')) return listed;
+    const keep = new Set<string>();
+    for (const node of listed) {
+      if (selectable === 'cost_centers' && node.kind !== 'cost_center') continue;
+      if (!isAllowed(node) && node.id !== value) continue;
+      for (const id of node.path_ids) keep.add(id);
+      keep.add(node.id);
+    }
+    return listed.filter((node) => keep.has(node.id));
+  }, [isAllowed, listed, selectable, value]);
 
   const isPickable = React.useCallback(
     (node: CostCenterNode) => {
       if (selectable === 'all') return true;
       if (selectable === 'groups') return node.kind === 'group';
+      if (selectable === 'contract_places') {
+        // The groups above an allowed node are shown for navigation only.
+        return node.id === value || (node.status === 'enabled' && (!isAllowed || isAllowed(node)));
+      }
       if (node.kind !== 'cost_center') return false;
       return node.status === 'enabled' || node.id === value;
     },
-    [selectable, value],
+    [isAllowed, selectable, value],
   );
 
   // The detail's node first (read with the line, fresher than a tree up to 5 minutes old), else the

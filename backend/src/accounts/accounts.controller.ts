@@ -16,6 +16,7 @@ import { Tenant, TenantRequest } from '../common/decorators';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { EntityManager } from 'typeorm';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('accounts')
@@ -67,6 +68,7 @@ export class AccountsController {
   @RequireLevel('accounts', 'reader')
   @Get(':id')
   get(@Param('id') id: string, @Tenant() ctx: TenantRequest) { return this.svc.getWithConsolidationStatus(id, { manager: ctx.manager }); }
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Post()
@@ -75,11 +77,13 @@ export class AccountsController {
     if (!payload.coa_id && coaId) (payload as any).coa_id = coaId;
     return this.svc.create(payload, ctx.userId || undefined, { manager: ctx.manager });
   }
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: AccountUpsertDto, @Tenant() ctx: TenantRequest) { return this.svc.update(id, body, ctx.userId || undefined, { manager: ctx.manager }); }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -110,6 +114,7 @@ export class AccountsController {
   }
 
   // What a delete of `ids` would refuse, asked before the confirmation.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'admin')
   @Post('delete-check')
@@ -117,6 +122,7 @@ export class AccountsController {
     return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'admin')
   @Delete('bulk')
@@ -124,6 +130,7 @@ export class AccountsController {
     return this.deleteSvc.bulkDelete(body.ids, ctx.userId || null, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'admin')
   @Delete(':id')

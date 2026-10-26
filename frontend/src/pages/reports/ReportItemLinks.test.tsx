@@ -190,6 +190,42 @@ describe('Company chargeback report item links', () => {
   });
 });
 
+describe('Company chargeback of a limited person', () => {
+  it('names a line the person cannot read by its reference and label, without a link', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/reports/chargeback/company') {
+        return {
+          data: {
+            year: Y,
+            metric: 'budget',
+            total: 90,
+            totalRaw: 90,
+            company: { id: 'co-1', name: 'Fromage SA', total: 90, totalRaw: 90, headcount: null, itUsers: null, turnover: null, turnoverRaw: null, costPerUser: null, costPerUserRaw: null, costPerItUser: null, costPerItUserRaw: null, costVsTurnoverPct: null },
+            departments: [],
+            items: [
+              { versionId: 'v1', itemId: null, itemNumber: 12, nature: 'opex', itemName: 'Hidden line', allocationMethod: 'manual_pct', allocationMethodLabel: 'Manual (%)', amount: 40, amountRaw: 40, sharePct: 44.44, readable: false, payingCompanyName: 'Fromage FR', allocationPct: 40, departments: ['Finance'] },
+              { versionId: 'v2', itemId: 'o2', itemNumber: 13, nature: 'opex', itemName: 'Own line', allocationMethod: 'manual_pct', allocationMethodLabel: 'Manual (%)', amount: 50, amountRaw: 50, sharePct: 55.56, readable: true, payingCompanyName: 'Fromage SA', allocationPct: 50, departments: [] },
+            ],
+            itemsTotal: 90,
+            itemsTotalRaw: 90,
+            kpis: [],
+            globalKpi: null,
+            dataAccessLimited: true,
+          },
+        };
+      }
+      return { data: { items: [], total: 0 } };
+    });
+    renderReport(<CompanyChargebackReport />);
+    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    const grid = await screen.findByTestId('grid-itemName');
+    expect(within(grid).getByText('BL-12 · Hidden line').closest('a')).toBeNull();
+    expectNewTabLink(grid, 'Own line', '/ops/budget/BL-13');
+    expect(within(grid).getAllByRole('link')).toHaveLength(1);
+    expect(screen.queryByText('reports.companyChargeback.globalTotals')).toBeNull();
+  });
+});
+
 describe.each([['Top items', TopOpexReport], ['Variation', OpexDeltaReport]])('%s All item links', (_name, Report) => {
   it('links both natures to their native BL references', async () => {
     renderReport(<Report />, '/report');

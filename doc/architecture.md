@@ -5,7 +5,7 @@ Metadata
 - Audience: Engineers, architects, product, operations
 - Status: current
 - Owner: TBD
-- Last Updated: 2026-10-02
+- Last Updated: 2026-10-25
 
 ## Summary
 KANAP is a NestJS API, a Vite/React single-page app and an Astro marketing site in front of one PostgreSQL 15 database. The same code base ships in two deployment modes selected at runtime: `multi-tenant` (the cloud SaaS, one shared database with row-level security per tenant) and `single-tenant` (on-premise, one tenant, no platform layer). See [Deployment Modes](#deployment-modes).
@@ -16,14 +16,14 @@ Production topology layers Cloudflare in front of a host Nginx front door for ro
 Goals, constraints, assumptions, and relevant background for architectural choices.
 
 ## Deployment Modes
-- `DEPLOYMENT_MODE=single-tenant` selects on-premise mode; any other value (or unset) is `multi-tenant`. Flags are computed once in `backend/src/config/features.ts` and are the single source of truth:
+- `DEPLOYMENT_MODE=single-tenant` selects on-premise mode. `multi-tenant`, or leaving the variable unset, selects cloud mode. Any other value stops the API at start and the message names the accepted values. Flags are computed once in `backend/src/config/features.ts` (`parseDeploymentMode` in `backend/src/common/deployment-mode.ts`) and are the single source of truth:
   - `SINGLE_TENANT`, `DEPLOYMENT_MODE`
   - `STRIPE_BILLING` (multi-tenant only, needs `STRIPE_SECRET_KEY`)
   - `ENTRA_SSO` (`ENTRA_CLIENT_ID` present)
   - `EMAIL_ENABLED` (a transport is configured, see Notifications)
   - `AI_CHAT_ENABLED`, `AI_MCP_ENABLED`, `AI_SETTINGS_ENABLED` (booleans), `AI_WEB_SEARCH_READY` (`BRAVE_SEARCH_API_KEY` present)
   - `TECHNOLOGY_CATALOG_SYNC_ENABLED` (the living catalog of technologies reads endoflife.date; env value when set, otherwise true in the cloud and false on-premise; `ENDOFLIFE_API_BASE_URL` optional)
-  - `VULNERABILITY_FEED_ENABLED` (the NVD feed and the exploitation signals, one switch; env value when set, otherwise true in the cloud and false on-premise; `NVD_API_KEY` and `NVD_API_BASE_URL` optional; `KEV_FEED_URL`, `EPSS_FEED_URL` and `EUVD_BASE_URL` optional, an empty value keeps the public address)
+  - `VULNERABILITY_FEED_ENABLED` (the NVD feed and the exploitation signals, one switch; env value when set, otherwise true in the cloud and false on-premise; `NVD_API_KEY` and `NVD_API_BASE_URL` optional; `KEV_FEED_URL`, `EPSS_FEED_URL` and `EUVD_BASE_URL` optional, an empty value keeps the default address)
 - Backend gates live in `backend/src/common/feature-gates.ts` (`throwFeatureDisabled()`, `MultiTenantOnlyGuard`, `throwNotAvailableInMode()`). The SPA reads the same flags through `GET /api/config/public` and the `useFeatures()` hook (`frontend/src/config/FeaturesContext.tsx`) to hide routes and navigation.
 - Single-tenant consequences: Host-header tenant resolution is skipped and `DEFAULT_TENANT_SLUG` (default `default`) is used; the tenant, its administrator and a local subscription are auto-provisioned on first boot (`backend/src/main.ts`), the tenant with the default global chart of accounts as at cloud activation (`tenants/single-tenant-provisioning.ts`, only when it creates the tenant); trial signup endpoints, the platform console and Stripe are off; SMTP email is accepted.
 - Compose files: `infra/docker-compose.yml` (dev, with `db`), `infra/compose.qa.yml` / `infra/compose.prod.yml` (cloud), `infra/compose.onprem.yml` (api + web only, loopback ports 8080/8081).
@@ -119,8 +119,9 @@ Why not several containers behind nginx: an on-premise customer runs one compose
 | Ops metrics | `OpsMetricsStore`, `DbMetricsService` | Per process: the snapshot showed the process that answered | Each process publishes a summary every 15 s to `ops_process_metrics` when N > 1; the snapshot lists and adds them up (see Supervision) |
 | Liveness route `/health` | tenancy middleware, `TenantInitGuard` | | Never looked up and `@Public()`: no tenant lookup and no tenant transaction, so polling it costs no connection and a saturated pool does not make the API look dead (it used to take two connections per call in single-tenant mode, and answer 503 under saturation) |
 | Event notification dedupe (5 minutes per recipient, item and trigger) | `NotificationsService` | In-memory map: two quick changes answered by two processes both mailed | Claimed in the database, `notification_dedupe` (tenant-scoped, RLS forced), one upsert per claim, committed before the email goes out. If the claim fails the process falls back to its in-memory window. Expiration warnings were already deduplicated in the database (`audit_log` rows under an advisory lock); the weekly review runs once per tick and stamps `weekly_review_last_sent_at`; share notifications have no dedupe, as before |
-| HTTP rate limits (login 60/min, sign-in with Microsoft 60/min, refresh, password reset, provisioning exchange, public forms, exports and imports, saved list filters) | `RateLimitGuard`, `ThrottlerModule` | In-memory counts: N processes, N times the budget | One `ThrottlerModule`, in `app.module.ts`: no other module imports its own (it would give its routes a separate in-memory counter, as `AuthModule` once did for the sign-in routes; `auth-rate-limit-processes.integration.spec.ts`). One process: in memory, unchanged. Several: `rate_limit_hits` (UNLOGGED, keys are SHA-256 hashes), one upsert per hit on a second pool connection, outside the request's transaction (a refused login rolls the request back, a count written inside it would be lost): a rate-limited request holds two connections for a moment, hence `DB_POOL_MAX` ≥ 2. Fixed window: at a window boundary up to twice the limit can pass within seconds (the in-memory counter expires each hit on its own). When the database does not answer within 1.5 s (pool exhausted, database down) the hit is counted in the process's memory, with one warning a minute: the limit then holds per process |
+| HTTP rate limits (login 60/min, sign-in with Microsoft 60/min, refresh 120/min per address and tenant, password reset, provisioning exchange, public forms, exports and imports, saved list filters) | `RateLimitGuard`, `ThrottlerModule` | In-memory counts: N processes, N times the budget | One `ThrottlerModule`, in `app.module.ts`: no other module imports its own (it would give its routes a separate in-memory counter, as `AuthModule` once did for the sign-in routes; `auth-rate-limit-processes.integration.spec.ts`). One process: in memory, unchanged. Several: `rate_limit_hits` (UNLOGGED, keys are SHA-256 hashes), one upsert per hit on a second pool connection, outside the request's transaction (a refused login rolls the request back, a count written inside it would be lost): a rate-limited request holds two connections for a moment, hence `DB_POOL_MAX` ≥ 2. Fixed window: at a window boundary up to twice the limit can pass within seconds (the in-memory counter expires each hit on its own). When the database does not answer within 1.5 s (pool exhausted, database down) the hit is counted in the process's memory, with one warning a minute: the limit then holds per process |
 | Password sign-in attempts per account and client address (5 refused in 15 min, then 15 min refused; fixed windows, as for the other HTTP limits) | `LoginAttemptLimit` (`auth/login-attempt-limit.ts`) | In memory | One process: in memory (`MemoryHitCounter`). Several: `rate_limit_hits` with the same upsert (`DatabaseHitCounter`), keys are SHA-256 hashes of tenant, client address and the identifier typed. The attempt counts when it starts, before the password check, so attempts at the same moment cannot pass the limit together; an attempt that ends in an error other than a refusal (server error, database unavailable) is taken back afterwards in one statement (`release`, same window, key not blocked), the earlier refusals stay counted. The fifth refusal blocks the pair for 15 minutes (`block`) and writes one `login_failed` event with the reason `too_many_attempts`; the attempts refused during the block write nothing. A success clears the pair (`clear`). Same 1.5 s fallback to the process's memory; a block goes to memory only when the database does not take it |
+| Session renewals per refresh token (30 a minute, then refused for the next 60 seconds; fixed window) | `RefreshSessionRateLimitGuard` (`auth/refresh-session-limit.ts`) | In memory: with several processes, each process counts on its own | One process: in memory (`MemoryHitCounter`). Several: `rate_limit_hits` with the same upsert (`DatabaseHitCounter`), keys are SHA-256 hashes of tenant and refresh token: the token is never stored in clear. Runs after the origin check and before the address limit of `POST /auth/refresh` (per address and tenant, `TenantRateLimitGuard`): a renewal it refuses does not count against the address, so a client that loops does not take the budget of its neighbours. A request without a token is not counted here. Same 1.5 s fallback to the process's memory |
 | Built-in AI rate limits (per tenant per minute, per user per hour) | `AiBuiltinRateLimiter` | In memory | Accepted per process: the built-in model is a cloud feature (cloud runs one process), and the monthly quota that bounds the cost is reserved in the database (`ai_builtin_usage`) for every message. With N processes the per-minute and per-hour bursts are N times higher |
 | MCP API key rate limit | `AiMcpRateLimiter` | In memory | Accepted per process: it protects each process from a runaway client; the total is N times the configured limit |
 | Email queue and pacing (700 ms between messages for Resend) | `EmailService` | One queue | Accepted per process: N processes send up to N times faster; Resend `429` answers are retried with backoff. SMTP (on-premise) has no such limit. A stop waits for the queue to empty, within the drain time (see Stop under Environments); emails still queued at the deadline, or when a process is killed, are lost, logged |
@@ -188,7 +189,7 @@ PostgreSQL ran on its defaults (128 MB shared buffers, 4 MB work memory; the ste
 
 ### Applications Portfolio (IT Landscape)
 - Backend: `ApplicationsModule` provides CRUD and sub-resources; all tables are RLS-protected.
-- Data model: `applications` (with `is_suite`), `application_owners`, `application_companies`, `application_departments`, `application_links` (`purpose` in `general|recovery_plan|recovery_test`), `application_attachments`, `application_data_residency`, `application_suites` (parent/child), `application_support_contacts`, and link tables to projects, contracts, spend items and capex items. `app_instances` and `app_asset_assignments` place applications on assets.
+- Data model: `applications` (with `is_suite`), `application_owners`, `application_companies`, `application_departments`, `application_links` (`purpose` in `general|recovery_plan|recovery_test`), `application_attachments`, `application_data_residency`, `application_suites` (parent/child), `application_support_contacts`, and link tables to projects, contracts, spend items and capex items. `app_instances` and `app_asset_assignments` place applications on assets. An assignment may sit on a cluster; its members in service inherit it when read, through `effectiveAssignmentsSql` (see `doc/features/components/server-clusters.md`).
 - Classification (v1): `applications` carries `criticality` (nullable, catalog-driven), `cyber_criticality`, `recovery_wave`, `rto_minutes`, `rpo_minutes`, `classification_justification`, `classification_revision` and a `classification_review` jsonb. Catalogs are per tenant in `tenants.metadata.it_ops` (`backend/src/it-ops-settings/classification-catalog.ts`). A trigger bumps `classification_revision` when linked references (links, data residency) change.
 - Derived metric: total users computed from audience with preference for company IT users and department headcount; de-duplicates company vs department.
 - Purge: `AdminTenantsService` deletes all `application_*` rows and the matching S3 objects during tenant deletion.
@@ -202,7 +203,7 @@ PostgreSQL ran on its defaults (128 MB shared buffers, 4 MB work memory; the ste
   - Living catalog: the shipped file with the cached cycles merged in (new cycles added, new dates on the shipped versions, which keep their label, `cpe_version` and build prefixes). A cached product counts only while the gate is on, when it was read after the day the shipped file was built (`source.retrieved_on`), and when it was read in the last 7 days; cached versions are checked again when read, so an adoption never fails on the cache.
   - Sync, in both modes and tenant by tenant (one transaction each, the technologies locked `FOR UPDATE`, each technology under a savepoint when the batch fails): each technology with a `catalog_key` receives the versions and the CPE identifiers it was never offered (with their dates and `technology_versions.catalog_key`, the provenance the record shows). An identifier is removed when `catalog_state.shipped_cpe` (the identifiers the shipped file listed at the previous pass, lower case) contains it, the shipped file no longer lists it, `catalog_state.cpe_written` contains it, and the technology still holds it (without case). `cpe_written` is what the catalog itself wrote and the tenant still holds, recalculated each pass as that intersection plus the identifiers added on the pass. A state without `cpe_written` withdraws nothing until the catalog writes one. An identifier the tenant typed before the catalog offered it, or already held on a technology that is adopted afterwards, never enters `cpe_written`. A state written before `shipped_cpe` withdraws nothing on this pass and records the shipped file's current identifiers. After the sync, `cpe_products` keeps an identifier the cache added (a release product) while the cache omits it, so a missing cache neither removes it nor offers it again, and keeps an identifier the tenant removed until the shipped file has been seen to drop it. An identifier the shipped file withdrew leaves that list, so a later offer adds it again. An identifier the tenant added, absent from the state, stays. A shipped file that lists no identifier, and whose entry is not marked `noCpe`, withdraws nothing: the pass logs it and keeps the previous `shipped_cpe`. An empty description the catalog never filled receives the catalog's short description in the tenant's language (`tenants.metadata.language`; without one, the language most of its enabled users chose in `users.locale`; else English), remembered in `catalog_state.description`, and `catalog_state.description_language` records that language. While the technology still holds that text, the same characters, a new description in that language replaces it, and `catalog_state.description` and the audit move only when that replacement is applied. A change of the tenant's language rewrites nothing. A state without `description_language` takes the language whose catalog text equals the remembered description, and is not rewritten when none does. A description the tenant changed stays. A description the catalog withdraws leaves the text in place. A version typed before with the same label (without case) and no `catalog_key` is attached instead, its empty values filled. On a version of the catalog, the end of standard support, the end of extended support and `cpe_version` follow the catalog while they still hold the value the catalog last wrote; an empty `cpe_version` is always completed; a date withdrawn upstream never erases one; a catalog date that would contradict the other date is the only value not applied (logged). `technologies.catalog_state` keeps the identifiers the catalog currently offers and, per version key, the values it last wrote: a value the tenant changed, a version or an identifier the tenant deleted stay as the tenant left them. One field of memory per technology was chosen over a provenance column per field: it also remembers deleted versions, which a column on the version row cannot. A technology without a usable state (adopted before C4, or an unreadable one) starts from the shipped file and what it holds of the catalog, all counted as offered; its empty values are completed, and nothing is removed on that pass (the state cannot tell an identifier the shipped catalog withdrew from one the tenant added). Version writes compare and set against the values read. One audit row per technology changed (`system`, `technology-catalog`) names the versions added, updated and attached, the identifiers added and removed (`cpe_products_added`, `cpe_products_removed`) and whether a description was filled or updated (`description_filled`, `description_updated`). The scheduled task summary counts the identifiers removed (`cpe_removed`) and the descriptions replaced (`descriptions_updated`). A technology whose identifiers changed is matched again with the vulnerability cache once the transaction commits, the same way as a manual edit, so the rows of a removed product disappear. A run with any failure (a product not read, a technology not synced) ends as a failed run in the scheduled tasks, once everything else is done.
   - Off, the run syncs the shipped file only: a new KANAP version brings its new versions, identifiers, dates and `cpe_version`, and withdraws or replaces an identifier `shipped_cpe` listed and the shipped file no longer lists, at its first start, without a migration. A shipped file that lists no identifier without `noCpe` withdraws nothing. `build_prefixes` still change only on a version the sync creates or attaches. Migration `1854300000000` stays for the installations it already ran on.
-- Deductions, never stored (`technology-reach.service.ts`): an asset carries what it `contains`, and a cluster member carries its cluster; a technology installed on an asset reaches what that asset carries, at most three edges away, with a cycle guard per path, keeping the asset it is installed on (`via`) and the link's version. The applications of a technology are those with an instance assigned to a reached asset, plus those that declare it, disabled applications and instances left out (`inServiceSql`, one rule for every deduction); they show only to a caller who reads applications, within a Business Contributor's scope; the technologies of an application or an asset are read the other way. Static SQL over batches of ids, `tenant_id` on every table and join. The planner cannot estimate the recursive CTE and would JIT-compile it (about 300 ms): each deduction runs with `jit` off for its statement. On a tenant of 16 450 assets and 50 078 installed links, a tab answers in at most 50 ms and the list counters of 100 technologies in 64 ms.
+- Deductions, never stored (`technology-reach.service.ts`): an asset carries what it `contains`, and a cluster member carries its cluster; a technology installed on an asset reaches what that asset carries, at most three edges away, with a cycle guard per path, keeping the asset it is installed on (`via`) and the link's version. The applications of a technology are those with an instance assigned to a reached asset (effective assignments: a cluster's members included), plus those that declare it, disabled applications and instances left out (`inServiceSql`, one rule for every deduction); they show only to a caller who reads applications, within a Business Contributor's scope; the technologies of an application or an asset are read the other way. Static SQL over batches of ids, `tenant_id` on every table and join. The planner cannot estimate the recursive CTE and would JIT-compile it (about 300 ms): each deduction runs with `jit` off for its statement. On a tenant of 16 450 assets and 50 078 installed links, a tab answers in at most 50 ms and the list counters of 100 technologies in 64 ms.
 - Search: `search_index` type `technologies` (migration `1854200000000`).
 
 ### Assets, Connections & Map
@@ -504,53 +505,151 @@ See `doc/features/patterns/backend-patterns.md` for usage examples.
 
 See also: `doc/frontend-architecture.md` for detailed UI guidelines.
 
-### Data-scoped access (foundations)
+### Data-scoped access
 
-Data-scoped access limits a person to some companies and cost centres in the budget block (spec:
-`planning/data-scoped-access/spec.md`). The database enforces it with restrictive RLS
-policies that target one role only, so nothing changes for anyone else.
+Data-scoped access limits a person to some companies and cost centres in the budget block: budget
+lines of both natures, contracts, and every path that reads them. The database enforces it with
+restrictive RLS policies that target one role only, so nothing changes for anyone else.
 
+- **The model.** `users.data_access_mode` holds `all` (the default) or `limited`. A limited person
+  has nodes in `user_data_access_nodes`: a company, a cost centre (a group or a leaf) or everything,
+  each with `read` or `edit`. Reading follows the union of the nodes: a company reads the lines it
+  pays and the lines charged to its own cost centres; a group reads its sub-groups and their cost
+  centres, whatever their company; a cost centre reads the lines charged to it; everything reads
+  all. A contract is read through its company, its place in the tree or one of its budget lines.
+  Participations always open their object: IT or business owner of a line, contract owner, task
+  assignee or owner (edit), task follower (read). An Administrator sees everything, cannot be
+  limited, and is matched by role name as in `auth/business-contributor-scope.ts`.
+- **Placement.** An edit node permits placing an object whose company or cost centre it covers. A
+  line's paying company must be an edit company, or the company of its cost centre when that centre
+  is covered in edit; a contract's company must be an edit company, or the company of one of the
+  nodes covered in edit when its place in the tree is covered in edit. The rule holds on creation
+  and on any change of company or place; a participation never permits placing or deleting.
+  `data_access_placable_line(company, cost_centre)` and
+  `data_access_placable_contract(company, place)` are the only definitions, called by the policies,
+  the placement triggers, the write checks and the budget file preflight.
 - **The role.** `kanap_data_limited` is `NOLOGIN`. The application role may take it (`SET ROLE`)
   but never inherits it: otherwise its policies would apply to every request. PostgreSQL 16 and
   later: `GRANT ... WITH INHERIT FALSE, SET TRUE`. PostgreSQL 15: the application role becomes
   `NOINHERIT` and gets `USAGE, CREATE` on `public` directly in each database it owns.
 - **The role script.** `infra/scripts/data-access-role.sql` (`mode=install` or `mode=uninstall`)
   is the only step that needs a superuser or a `CREATEROLE` role. It is idempotent and runs before
-  or after the migrations. Dev (PostgreSQL 15): run it with `-v include_template1=on` on every
-  database the application role owns, then once more to apply `NOINHERIT` (loop in the script
-  header); new dev volumes get it from `infra/db-init/`. The option also grants on `template1`, so
-  the databases created later (lane copies, test databases) let the application role create in
-  `public`. By default the script requires and grants only the databases the application role owns:
-  on a PostgreSQL 15 server shared with other applications, a grant on `template1` would reach their
-  future databases too. CI: one step before the migrations. QA and prod: the
-  operator runs it once per server after the deploy, then restarts the API. On-premise: optional;
-  without it, nobody can be limited.
-- **Grants and policies.** The application sets them itself, in each database:
-  `data_access_sync_policies()` grants the role its table rights and recreates its policies from
-  `data_access_expected_policies()`, the single list of expected policies. Each migration that
-  changes the list calls it. Without the role, it does nothing.
-- **Startup.** The lead process (`data-access/data-access-availability.ts`, called from `main.ts`)
-  runs the sync when the role exists and a grant or a policy is missing, with a 5 s lock timeout.
-  A failure is logged and retried at the next start. It then checks the availability (role,
-  membership, inheritance, `CREATE` on `public` on PostgreSQL 15, policies, grants) and logs one
-  `[DATA-ACCESS]` line. Every process keeps the result for a minute. `GET /auth/me` returns it in
-  `dataAccess`, with the person's mode and nodes. The check is informative only.
-- **Per transaction.** `data_access_apply(user)` sets nine `app.da_*` settings and takes the role
-  with `set_config(..., true)`, so both end with the transaction and a pooled connection carries
-  nothing. `applyDataAccess()` (`data-access/data-access.ts`) calls it from these call points only:
+  or after the migrations. CI runs it once before the migrations. QA and prod: the operator runs it
+  once per server after the deploy, then restarts the API. On-premise: optional; without it, nobody
+  can be limited. Dev (PostgreSQL 15): run it with `-v include_template1=on` on every database the
+  application role owns, then once more to apply `NOINHERIT` (loop in the script header); new dev
+  volumes get it from `infra/db-init/`. The option also grants on `template1`, so the databases
+  created later (lane copies, test databases) let the application role create in `public`. By
+  default the script requires and grants only the databases the application role owns: on a
+  PostgreSQL 15 server shared with other applications, a grant on `template1` would reach their
+  future databases too.
+- **The policy set.** `data_access_expected_policies()` returns `(policy_name, table_name, command,
+  fingerprint)`, the fingerprint being the md5 of the command and of the two policy texts.
+  `data_access_sync_policies()` grants the role its rights on the tables and sequences the
+  application role owns and recreates a policy only when it is missing or different: it compares
+  the `COMMENT ON POLICY`
+  `kda:<fingerprint>:<md5 of the deparsed expressions>`. A healthy database therefore starts without
+  policy DDL and its exclusive table locks. A migration that changes the set redefines both
+  functions with the complete list and calls the sync. Without the role, the sync does nothing. When
+  the application role inherits the limited role, the sync drops every policy on the role and
+  creates none (a warning): without that, the policies would apply to every request, migrations
+  included. Limited persons are then refused (`KDA01`); unscoped persons are served.
+- **The policies.** Restrictive, named `<table>_data_access_<command>`, `TO kanap_data_limited`,
+  next to the tenant policies. Each starts with the context guard
+  `(SELECT 1 WHERE current_setting('app.da_mode', true) = 'limited') IS NOT NULL`: the role taken
+  without `data_access_apply` refuses everything. The subquery matters: a bare equality without
+  statistics is estimated at 0.5% of the rows of every scoped table and turns the plans into nested
+  loops, where the subquery is estimated at 99.5%. `read_all` (and `edit_all` for writes) is tested
+  first, so Everything costs little. A child table's policy is a correlated `EXISTS` on its line,
+  contract or task; deeper paths are cut by `SECURITY DEFINER` functions
+  (`data_access_task_visible`, `data_access_contract_visible`,
+  `data_access_searchable_task_ids`, `data_access_visible_contract_ids`) that read without policies
+  and apply the same predicates. `DELETE` is refused on lines and contracts (reserved operations);
+  children are deleted with their parent. Contract attachments and document links read only when
+  the contract is directly readable, never through one of its lines.
+- **Triggers.** `spend_items_data_access_placement`, `contracts_data_access_placement` and
+  `tasks_data_access_placement` (`BEFORE UPDATE OF` the company and place columns, or the task's
+  object) refuse, in mode `limited`, a new company or place that is not placable: the policies see
+  only the new row, so an owner could otherwise move their line or contract out of the access and
+  keep it. `spend_items_data_access_contract_link` and
+  `contract_spend_items_data_access_link` (`BEFORE INSERT OR UPDATE`) require a readable contract
+  and a modifiable line when a contract is linked to a line or a line to a contract; they run before
+  the foreign key check and answer the same for a hidden and a missing object, so the key is no
+  existence oracle. Outside mode `limited`, they do nothing.
+- **The context.** `data_access_apply(user)` (`SECURITY INVOKER`) reads the person and the nodes,
+  unfolds the tree, and sets nine transaction-local settings with `set_config(..., true)`:
+  `app.da_mode`, `app.da_user`, `app.da_read_all`, `app.da_edit_all`, `app.da_read_companies`,
+  `app.da_edit_companies`, `app.da_read_nodes`, `app.da_edit_nodes`,
+  `app.da_edit_node_companies`. It then sets `jit = off` and takes the role
+  (`set_config('role', 'kanap_data_limited', true)`); a second call in the same transaction
+  re-reads the person and replaces the access (the preview uses it). `data_access_ctx()` exposes the
+  settings as JSON for the list engine's "editable" column; the policies read them directly.
+  `applyDataAccess()` (`data-access/data-access.ts`) calls it from these call points only:
   `TenantInterceptor`, the reconnection in `createTenantQueryRunner`,
   `AiTenantExecutionService.runWithContext`, and the public routes of the inline attachments. A
-  limited person cannot run without a transaction (`{ transaction: false }` is refused).
-- **Fail closed.** For a limited person, `data_access_apply` refuses when the role is missing,
-  inherited or cannot be taken, or when an expected policy is missing: SQLSTATE `KDA01`, answered
-  503 `DATA_ACCESS_UNAVAILABLE`. A person outside the tenant gets `KDA02`, answered 401. Persons in
-  mode `all` and Administrators are never affected.
-- **Inventories.** `data-access/__tests__/data-access-inventory.spec.ts` checks the call points and
-  the role changes, and that every path outside the interceptor (`@SkipTenantTransaction()`,
-  `{ transaction: false }`, `tenantExecutor.run(`, `withTenantExecution(`, `withTenant(`) is
-  classified in `data-access/data-access-paths.inventory.ts`, with the number of call sites per
-  member and, for a controller marked as a whole, its route methods: a second call or a new route
-  fails the spec until someone classifies it.
+  limited person cannot run without a transaction (`{ transaction: false }` is refused), and the
+  access is never set at session level. No other code changes the role (`SET ROLE`, `RESET ROLE`,
+  `set_config('role', ...)`); a spec checks it.
+- **Fail closed.** For a limited person, `data_access_apply` refuses when the person is not in the
+  tenant (`KDA02`, answered 401 `INVALID_TOKEN`), and when the role is missing, inherited, cannot
+  be taken or an expected policy is missing (`KDA01`, answered 503 `DATA_ACCESS_UNAVAILABLE`).
+  Persons in mode `all` and Administrators never take the role. The availability check is
+  informative; `data_access_apply` decides per transaction.
+- **Startup.** The lead process (`data-access/data-access-availability.ts`, called from `main.ts`)
+  runs the sync when the role exists and a grant or an expected policy is missing or different, or
+  the role is inherited, with a 5 s `lock_timeout`; a failure is logged and retried at the next
+  start. It then checks the availability (role, membership, inheritance, `CREATE` on `public` on
+  PostgreSQL 15, policies and their fingerprints, grants and `EXECUTE` on the disclosures) and logs
+  one `[DATA-ACCESS]` line. Every process caches the result for a minute; `GET /auth/me` returns it
+  in `dataAccess`, with the person's mode and nodes. The check is informative only.
+- **Controlled disclosures.** Three `SECURITY DEFINER` functions and one utility look beyond the
+  access and return only what the model allows. The functions are tenant-filtered, refuse the
+  limited role without context and check that the starting object is visible:
+  - `data_access_hidden_count(type, id)` counts the lines or contracts linked to a visible object
+    that the person cannot read, and the closed documents of a contract opened through a line;
+  - `data_access_reference(type, id)` returns the reference of a linked line, never a contract
+    (contracts have none);
+  - `data_access_can_read(person, type, id)` tells whether another person can read a line, a task
+    or a contract; notifications and "Send the link" use it;
+  - `withFullDataAccess(manager, read)` opens a savepoint, makes it read only, leaves the limited
+    role (`RESET ROLE`), runs `read`, rolls back to the savepoint (which restores the role) and
+    checks the role came back; only the chargeback report (`spend/chargeback-report.service.ts`)
+    and the contract coverage (`contracts/contract-budget.ts`) call it, and a spec checks those two
+    callers.
+- **Reserved operations.** A limited person cannot run the operations reserved to unscoped persons
+  (tenant settings, bulk line operations, deletes of a line or a contract, user and role
+  administration, audit log, organisation data, updates and deletes of suppliers and shared
+  contacts, imports that update existing records, agent screens). One guard, two entry points:
+  `@ReservedToUnscopedDataAccess()` on a route (refused by the tenant interceptor after it applied
+  the access) and `assertUnscopedDataAccess()` for the paths outside the interceptor (Plaid writes,
+  `runWithContext`); both answer 403 `DATA_ACCESS_LIMITED`.
+  `data-access-reserved.inventory.ts` classifies every route of the controllers that hold a reserved
+  operation as reserved or allowed with a reason, `data-access-paths.inventory.ts` classifies every
+  path outside the interceptor transaction, `data-access-tables.inventory.ts` lists every table,
+  view and function the access rules reach (the specs compare the catalog both ways), and
+  `data-access-writes.inventory.ts` lists the TypeORM saves that rely on the write checks. A new
+  route, path, table or save fails a spec until it is classified.
+- **Administration.** `GET /users/:id/data-access`, `PUT /users/:id/data-access`,
+  `POST /users/:id/data-access/preview`, `GET /companies/:id/data-access`,
+  `GET /cost-centers/:id/data-access`, `GET /data-access`, `GET /data-access/export` and
+  `POST /data-access/import?dryRun=` are reserved to unscoped persons who administer users (403
+  `DATA_ACCESS_LIMITED` otherwise); `GET /data-access/placement-options` and `GET /auth/me` are open
+  to the person. The preview follows the real path: in a savepoint it writes the proposed mode and
+  nodes into `users` and `user_data_access_nodes`, applies the target's access with
+  `data_access_apply`, counts lines (both natures) and contracts under the policies, rolls back to
+  the savepoint, applies the caller again (which also resets the mode kept in memory for the
+  transaction), and checks that the limited role and the settings are gone; a mismatch fails the
+  request. Nothing is written.
+- **Coverage.** The policies cover `spend_items` and the tables that follow a line (versions,
+  amounts, allocations, round inputs and their lines, totals, analytics values, contacts, links,
+  attachments, legacy tasks); `contracts` and the tables that follow it (contacts, compliance items,
+  attachments, links, legacy tasks); the tables linking another object to a line (applications,
+  assets, technologies, projects, requests) and to a contract (applications, assets, technologies);
+  the tasks of a line or a contract and their elements, the link from a knowledge document to a
+  task; and `search_index` for the entries of lines, contracts and their tasks.
+  `contract_spend_items` has no policy (the contract policy cites it; the service checks its
+  writes). `data_access_expected_policies()` is the list, and
+  `SELECT DISTINCT table_name FROM data_access_expected_policies() ORDER BY 1;` names the tables.
 - **Uninstall.** A lot's `down()` removes its policies through the sync. The script's
   `mode=uninstall` runs `DROP OWNED BY kanap_data_limited` in each database, then `DROP ROLE`, then
   `ALTER ROLE <app> INHERIT` on PostgreSQL 15. The direct grant on `public` stays.

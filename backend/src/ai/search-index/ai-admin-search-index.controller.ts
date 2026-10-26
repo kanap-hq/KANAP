@@ -6,7 +6,9 @@ import { AiPolicyService } from '../ai-policy.service';
 import { AiTenantExecutionService } from '../execution/ai-tenant-execution.service';
 import { AiExecutionContext } from '../ai.types';
 import { AiSearchIndexService } from './ai-search-index.service';
+import { ReservedToUnscopedDataAccess } from '../../data-access/reserved-operations';
 
+@ReservedToUnscopedDataAccess()
 @Controller('ai/admin')
 @UseGuards(JwtAuthGuard)
 @SkipTenantTransaction()

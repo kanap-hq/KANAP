@@ -20,6 +20,7 @@ export default function CompanySelect({
   required,
   size = 'medium',
   excludeCompanyIds,
+  allowedCompanyIds,
   hideLabel = false,
   textFieldSx,
   disableClearable = false,
@@ -27,7 +28,7 @@ export default function CompanySelect({
 }: {
   label?: string;
   value: string | null | undefined;
-  onChange: (v: string | null) => void;
+  onChange: (v: string | null, company?: CompanyOption | null) => void;
   disabled?: boolean;
   error?: boolean;
   helperText?: React.ReactNode;
@@ -35,6 +36,8 @@ export default function CompanySelect({
   required?: boolean;
   size?: 'small' | 'medium';
   excludeCompanyIds?: string[];
+  /** Only these companies are offered (a limited data access); the current one stays visible. Absent: all. */
+  allowedCompanyIds?: ReadonlySet<string> | null;
   hideLabel?: boolean;
   textFieldSx?: SxProps<Theme>;
   disableClearable?: boolean;
@@ -54,8 +57,8 @@ export default function CompanySelect({
   const excluded = React.useMemo(() => new Set(excludeCompanyIds ?? []), [excludeCompanyIds]);
   // An excluded company is not offered, but the current one stays visible.
   const options = React.useMemo(
-    () => (excluded.size === 0 ? picker.options : picker.options.filter((c) => !excluded.has(c.id) || c.id === value)),
-    [excluded, picker.options, value],
+    () => picker.options.filter((c) => c.id === value || (!excluded.has(c.id) && (!allowedCompanyIds || allowedCompanyIds.has(c.id)))),
+    [allowedCompanyIds, excluded, picker.options, value],
   );
   const selected = value ? picker.selected[0] ?? null : null;
 
@@ -67,7 +70,7 @@ export default function CompanySelect({
         value={selected}
         onChange={(_, v) => {
           picker.remember([v]);
-          onChange(v?.id || null);
+          onChange(v?.id || null, v ?? null);
         }}
         getOptionLabel={(o) => picker.label(o, (c) => c.name ?? '')}
         disableClearable={disableClearable}

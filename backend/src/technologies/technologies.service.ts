@@ -589,7 +589,13 @@ export class TechnologiesService {
     return { items: await this.listVersionsOf(opts.manager, opts.tenantId, row.id) };
   }
 
-  /** The versions, newest first (`version-order.ts`), with how many servers and applications name each one directly. */
+  /**
+   * The versions, newest first (`version-order.ts`), with how many servers and applications name
+   * each one directly (`servers`, `applications`: every link, retired assets included, what the
+   * deletion of a version touches), and `server_count`, the servers of the version as the list
+   * and the record count them (`TechnologyReachService.serversOfTechnologies`: in service, the
+   * version installed on them, clusters excluded).
+   */
   private async listVersionsOf(mg: EntityManager, tenantId: string, technologyId: string) {
     const rows: Array<TechnologyVersionRow & { servers: number; applications: number }> = await mg.query(
       `SELECT ${VERSION_COLUMNS},
@@ -601,8 +607,14 @@ export class TechnologiesService {
         ORDER BY v.id`,
       [tenantId, technologyId],
     );
+    const servers = new Map<string, Set<string>>();
+    for (const row of await this.reach.serversOfTechnologies(mg, tenantId, [technologyId])) {
+      if (!row.technology_version_id) continue;
+      if (!servers.has(row.technology_version_id)) servers.set(row.technology_version_id, new Set());
+      servers.get(row.technology_version_id)!.add(row.asset_id);
+    }
     // Newest number first, labels without a number last: one technology has few versions.
-    return sortVersions(rows);
+    return sortVersions(rows.map((row) => ({ ...row, server_count: servers.get(row.id)?.size ?? 0 })));
   }
 
   async createVersion(idOrRef: string, body: VersionInput, opts: Opts) {

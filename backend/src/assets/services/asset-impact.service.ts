@@ -27,13 +27,16 @@ export type ImpactAsset = {
   kind: string;
   /** Edges from the server on the shortest path. */
   depth: number;
-  /** The last edge of that path: the asset is contained in its parent, or depends on it. Null for the server. */
-  relation: 'contains' | 'depends_on' | null;
+  /**
+   * The last edge of that path: the asset is contained in its parent, depends on it, or is a member
+   * of it (a cluster that fell, so every member falls). Null for the server.
+   */
+  relation: 'contains' | 'depends_on' | 'member' | null;
   /** The fallen assets from the server to the parent, in order (empty for the server). */
   via: ImpactRef[];
 };
 
-/** A cluster with a fallen member: degraded while a member stands, down when none does. */
+/** A cluster with a fallen member, not fallen itself: degraded while a member stands, down when none does. */
 export type ImpactCluster = {
   id: string;
   reference: string | null;
@@ -41,6 +44,8 @@ export type ImpactCluster = {
   state: 'degraded' | 'down';
   members: number;
   fallen_members: number;
+  /** Applications assigned to the cluster itself; null when the caller cannot read applications. */
+  applications: number | null;
   /** The fallen members. */
   via: ImpactRef[];
   via_total: number;
@@ -98,6 +103,12 @@ export type ImpactContext = {
   processes: boolean;
 };
 
+/** A state of the walk: an asset, the edges of each kind used to reach it, and the path. */
+type WalkState = { asset: string; contains: number; depends: number; path: string[] };
+/** What the walks found: the first path to each asset, the states expanded, the clusters gone down with their members. */
+type Walk = { first: Map<string, { relation: ImpactAsset['relation']; state: WalkState }>; seen: Set<string>; downClusters: Set<string> };
+const stateKey = (state: WalkState) => `${state.asset}|${state.contains}|${state.depends}`;
+
 /**
  * "If this server goes down, what goes down with it?" (lot T5). Edges along which a failure spreads:
  * a container takes what it contains (`contains`, downwards), and an asset takes what depends on it
@@ -106,9 +117,14 @@ export type ImpactContext = {
  * "contains, then depends_on, same bounds" holds, and a storage array also takes the VMs of the
  * hosts that depend on it.
  *
- * A cluster is not reached through the graph: it is degraded while one of its members stands, and
- * down when every member fell; the applications assigned to a cluster that is down fall with it.
- * Applications and instances out of service are left out (`inServiceSql`). A retired asset is never
+ * A cluster that falls (the server itself, or an asset reached by those edges) takes all its members
+ * in service (`member`, an edge counted in neither bound). A fallen member does not take its cluster:
+ * the cluster is degraded while one of its members stands, and down when every member fell. A
+ * cluster down takes what it contains (the walk starts again from it, `via` ending with the
+ * cluster, until no new cluster goes down, at most `MAX_DEPTH` rounds) and the applications
+ * assigned to it; a degraded cluster takes nothing. Its members already fell: it does not take
+ * them again. The server's own row is the cluster when the server is one; `clusters` lists the
+ * others. Applications and instances out of service are left out (`inServiceSql`). A retired asset is never
  * crossed: it does not fall, takes nothing with it, and counts for no cluster; a retired server is
  * listed alone at depth 0. Every statement is static
  * SQL with `tenant_id` on each table besides RLS, over a batch of ids. Each list keeps its first `IMPACT_ROW_LIMIT` rows
@@ -119,13 +135,12 @@ export class AssetImpactService {
   async impactOf(assetId: string, ctx: ImpactContext): Promise<AssetImpact> {
     const { manager: mg, tenantId } = ctx;
     if (!UUID_RE.test(String(assetId || ''))) throw new NotFoundException('Asset not found');
-    const assets = await this.fallenAssets(mg, tenantId, assetId);
+    const { assets, clusters } = await this.fallenAssets(mg, tenantId, assetId);
     const server = assets.find((row) => row.depth === 0);
     if (!server) throw new NotFoundException('Asset not found');
     const names = new Map(assets.map((row) => [row.id, row.name]));
     const ref = (id: string): ImpactRef => ({ id, name: names.get(id) ?? '' });
 
-    const clusters = await this.clustersOf(mg, tenantId, assets.map((row) => row.id));
     for (const cluster of clusters) if (cluster.state === 'down') names.set(cluster.id, cluster.name);
     const fallen = [...assets.map((row) => row.id), ...clusters.filter((c) => c.state === 'down').map((c) => c.id)];
     const rank = new Map(fallen.map((id, index) => [id, index]));
@@ -133,6 +148,11 @@ export class AssetImpactService {
     const applications = ctx.applications ? await this.applicationsOf(mg, tenantId, fallen, ctx.applications.scope, ref, rank) : null;
     const technologies = await this.technologiesOf(mg, tenantId, fallen, ref);
     const processes = ctx.processes && applications ? await this.processesOf(mg, tenantId, applications) : null;
+    // What a cluster carries itself, so a member's page can say the applications stay up while it is degraded.
+    if (ctx.applications && clusters.length > 0) {
+      const onClusters = await this.applicationsOf(mg, tenantId, clusters.map((c) => c.id), ctx.applications.scope, ref, new Map());
+      for (const cluster of clusters) cluster.applications = onClusters.filter((app) => app.via.some((via) => via.id === cluster.id)).length;
+    }
 
     const cap = <T extends { via: ImpactRef[]; via_total: number }>(rows: T[]) =>
       rows.slice(0, IMPACT_ROW_LIMIT).map((row) => ({ ...row, via: row.via.slice(0, IMPACT_VIA_LIMIT), via_total: row.via.length }));
@@ -154,24 +174,76 @@ export class AssetImpactService {
   }
 
   /**
-   * The server and every asset that falls with it, each once with its shortest path. A breadth-first
-   * walk, one statement per level for the whole frontier (at most `2 * MAX_DEPTH` levels): a state is
-   * an asset with the number of edges of each kind used to reach it, and each state is expanded once.
-   * Enumerating every path in one recursive statement took 2.3 s on a dense `depends_on` mesh of three
-   * layers of 100 assets; the walk visits each state once.
+   * The server and every asset that falls with it, each once with its shortest path, and the
+   * clusters with a fallen member. A breadth-first walk (`walk`), then, while a cluster goes down
+   * with all its members, a new walk from it (at most `MAX_DEPTH` rounds). A cluster down is not an
+   * asset row: it is in `clusters`, and named in the `via` of what it takes.
    */
-  private async fallenAssets(mg: EntityManager, tenantId: string, assetId: string): Promise<ImpactAsset[]> {
-    type State = { asset: string; contains: number; depends: number; path: string[] };
+  private async fallenAssets(mg: EntityManager, tenantId: string, assetId: string): Promise<{ assets: ImpactAsset[]; clusters: ImpactCluster[] }> {
     const servers: Array<{ id: string; in_service: boolean }> = await mg.query(
       `SELECT a.id, ${assetInService('a')} AS in_service FROM assets a WHERE a.tenant_id = $1 AND a.id = $2`,
       [tenantId, assetId],
     );
-    if (!servers[0]) return [];
-    const first = new Map<string, { relation: ImpactAsset['relation']; path: string[] }>([[assetId, { relation: null, path: [assetId] }]]);
-    const seen = new Set<string>([`${assetId}|0|0`]);
-    let frontier: State[] = servers[0].in_service ? [{ asset: assetId, contains: 0, depends: 0, path: [assetId] }] : [];
+    if (!servers[0]) return { assets: [], clusters: [] };
+    const start: WalkState = { asset: assetId, contains: 0, depends: 0, path: [assetId] };
+    const walk: Walk = { first: new Map([[assetId, { relation: null, state: start }]]), seen: new Set([stateKey(start)]), downClusters: new Set() };
+    if (servers[0].in_service) await this.walk(mg, tenantId, [start], walk);
+    const walked = () => Array.from(walk.first.keys()).filter((id) => !walk.downClusters.has(id));
+    let clusters = await this.clustersOf(mg, tenantId, walked());
+    for (let round = 0; round < MAX_DEPTH; round++) {
+      const fresh = clusters.filter((cluster) => cluster.state === 'down' && !walk.first.has(cluster.id));
+      if (fresh.length === 0) break;
+      const seeds: WalkState[] = [];
+      for (const cluster of fresh) {
+        // From its nearest fallen member (by path, then by name): the cluster went down with it.
+        const nearest = cluster.via
+          .map((member) => walk.first.get(member.id)?.state)
+          .filter((state): state is WalkState => !!state)
+          .reduce<WalkState | null>((best, state) => (!best || state.path.length < best.path.length ? state : best), null);
+        if (!nearest) continue;
+        const state: WalkState = { asset: cluster.id, contains: nearest.contains, depends: nearest.depends, path: [...nearest.path, cluster.id] };
+        walk.first.set(cluster.id, { relation: 'member', state });
+        walk.downClusters.add(cluster.id);
+        walk.seen.add(stateKey(state));
+        seeds.push(state);
+      }
+      await this.walk(mg, tenantId, seeds, walk);
+      clusters = await this.clustersOf(mg, tenantId, walked());
+    }
+    const rows: Array<{ id: string; reference: string | null; name: string; kind: string }> = await mg.query(
+      `SELECT a.id, a.asset_reference AS reference, a.name, a.kind FROM assets a WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[])`,
+      [tenantId, Array.from(walk.first.keys())],
+    );
+    const names = new Map(rows.map((row) => [row.id, row.name]));
+    const assets = rows
+      .filter((row) => !walk.downClusters.has(row.id))
+      .map((row) => {
+        const { relation, state } = walk.first.get(row.id)!;
+        return {
+          id: row.id,
+          reference: row.reference ?? null,
+          name: row.name,
+          kind: row.kind,
+          depth: state.path.length - 1,
+          relation,
+          via: state.path.slice(0, -1).map((id) => ({ id, name: names.get(id) ?? '' })),
+        };
+      })
+      .sort((a, b) => a.depth - b.depth || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+    return { assets, clusters };
+  }
+
+  /**
+   * One breadth-first walk from `frontier`, one statement per level for the whole frontier (at most
+   * `2 * MAX_DEPTH` levels, the `member` edges aside): a state is an asset with the number of edges
+   * of each kind used to reach it, and each state is expanded once. Records in `walk.first` the
+   * first path to each asset. Enumerating every path in one recursive statement took 2.3 s on a
+   * dense `depends_on` mesh of three layers of 100 assets; the walk visits each state once.
+   */
+  private async walk(mg: EntityManager, tenantId: string, initial: WalkState[], walk: Walk): Promise<void> {
+    let frontier = initial;
     while (frontier.length > 0) {
-      const edges: Array<{ cause: string; fallen: string; relation: 'contains' | 'depends_on' }> = await mg.query(
+      const edges: Array<{ cause: string; fallen: string; relation: 'contains' | 'depends_on' | 'member' }> = await mg.query(
         `SELECT r.asset_id AS cause, r.related_asset_id AS fallen, r.relation_type AS relation
            FROM asset_relations r
            JOIN assets f ON f.tenant_id = $1 AND f.id = r.related_asset_id AND ${assetInService('f')}
@@ -181,46 +253,33 @@ export class AssetImpactService {
            FROM asset_relations r
            JOIN assets f ON f.tenant_id = $1 AND f.id = r.asset_id AND ${assetInService('f')}
           WHERE r.tenant_id = $1 AND r.relation_type = 'depends_on' AND r.related_asset_id = ANY($2::uuid[])
+         UNION ALL
+         SELECT m.cluster_id, m.asset_id, 'member'
+           FROM asset_cluster_members m
+           JOIN assets f ON f.tenant_id = $1 AND f.id = m.asset_id AND ${assetInService('f')}
+          WHERE m.tenant_id = $1 AND m.cluster_id = ANY($2::uuid[])
          ORDER BY 1, 2, 3`,
         [tenantId, Array.from(new Set(frontier.map((state) => state.asset)))],
       );
       const byCause = new Map<string, typeof edges>();
       for (const edge of edges) byCause.set(edge.cause, [...(byCause.get(edge.cause) ?? []), edge]);
-      const next: State[] = [];
+      const next: WalkState[] = [];
       for (const state of frontier) {
         for (const edge of byCause.get(state.asset) ?? []) {
+          // A cluster down went down with its members: it does not take them again.
+          if (edge.relation === 'member' && walk.downClusters.has(edge.cause)) continue;
           const contains = state.contains + (edge.relation === 'contains' ? 1 : 0);
           const depends = state.depends + (edge.relation === 'depends_on' ? 1 : 0);
           if (contains > MAX_DEPTH || depends > MAX_DEPTH || state.path.includes(edge.fallen)) continue;
-          const key = `${edge.fallen}|${contains}|${depends}`;
-          if (seen.has(key)) continue;
-          seen.add(key);
-          const path = [...state.path, edge.fallen];
-          if (!first.has(edge.fallen)) first.set(edge.fallen, { relation: edge.relation, path });
-          next.push({ asset: edge.fallen, contains, depends, path });
+          const reached: WalkState = { asset: edge.fallen, contains, depends, path: [...state.path, edge.fallen] };
+          if (walk.seen.has(stateKey(reached))) continue;
+          walk.seen.add(stateKey(reached));
+          if (!walk.first.has(edge.fallen)) walk.first.set(edge.fallen, { relation: edge.relation, state: reached });
+          next.push(reached);
         }
       }
       frontier = next;
     }
-    const rows: Array<{ id: string; reference: string | null; name: string; kind: string }> = await mg.query(
-      `SELECT a.id, a.asset_reference AS reference, a.name, a.kind FROM assets a WHERE a.tenant_id = $1 AND a.id = ANY($2::uuid[])`,
-      [tenantId, Array.from(first.keys())],
-    );
-    const names = new Map(rows.map((row) => [row.id, row.name]));
-    return rows
-      .map((row) => {
-        const { relation, path } = first.get(row.id)!;
-        return {
-          id: row.id,
-          reference: row.reference ?? null,
-          name: row.name,
-          kind: row.kind,
-          depth: path.length - 1,
-          relation,
-          via: path.slice(0, -1).map((id) => ({ id, name: names.get(id) ?? '' })),
-        };
-      })
-      .sort((a, b) => a.depth - b.depth || a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
   }
 
   /**
@@ -250,6 +309,7 @@ export class AssetImpactService {
       state: row.fallen.length >= Number(row.members) ? 'down' : 'degraded',
       members: Number(row.members),
       fallen_members: row.fallen.length,
+      applications: null,
       via: row.fallen,
       via_total: row.fallen.length,
     }));

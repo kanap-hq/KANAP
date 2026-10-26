@@ -46,6 +46,14 @@ export class AnalyticsAxis {
   @Column('boolean', { default: false })
   required!: boolean;
 
+  /**
+   * Open values (spec §3.5 of planning/data-scoped-access): anyone who may modify a line adds a
+   * value from the line's picker or the budget file. Closed (false), values come from the
+   * dimension page only.
+   */
+  @Column('boolean', { default: false })
+  open_values!: boolean;
+
   @Column({
     type: 'enum',
     enum: StatusState,

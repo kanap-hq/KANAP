@@ -34,6 +34,7 @@ import {
 } from './contract-renewal';
 import { readDecisionWindowDays } from './contract-settings.service';
 import { addDaysYmd, computeContractTerms, contractCommitment, contractTermsSql } from './contract-terms';
+import { assertContractsEditable } from '../data-access/contract-write-checks';
 
 export const CONTRACT_RENEWAL_TASK_NAME = 'contract-renewal-tasks';
 
@@ -311,6 +312,7 @@ export class ContractRenewalService implements OnModuleInit {
   async act(id: string, action: RenewalAction, body: { reason?: unknown; end_date?: unknown } | null | undefined, userId: string | null, opts?: Opts): Promise<ContractRenewalView> {
     const mg = opts?.manager ?? this.dataSource.manager;
     const contract = await this.findContract(mg, id, true);
+    await assertContractsEditable(mg, [contract.id]);
     const tenantId = contract.tenant_id;
     const windowDays = await readDecisionWindowDays(mg, tenantId);
     const today = utcDateYmd(new Date());
@@ -390,6 +392,7 @@ export class ContractRenewalService implements OnModuleInit {
   async stopRenewal(id: string, body: { end_date?: unknown } | null | undefined, userId: string | null, opts?: Opts): Promise<ContractRenewalView> {
     const mg = opts?.manager ?? this.dataSource.manager;
     const contract = await this.findContract(mg, id, true);
+    await assertContractsEditable(mg, [contract.id]);
     const tenantId = contract.tenant_id;
     const windowDays = await readDecisionWindowDays(mg, tenantId);
     const today = utcDateYmd(new Date());
@@ -449,6 +452,7 @@ export class ContractRenewalService implements OnModuleInit {
   async resumeRenewal(id: string, userId: string | null, opts?: Opts): Promise<ContractRenewalView> {
     const mg = opts?.manager ?? this.dataSource.manager;
     const contract = await this.findContract(mg, id, true);
+    await assertContractsEditable(mg, [contract.id]);
     const tenantId = contract.tenant_id;
     if (contract.auto_renewal) throw new ConflictException('The tacit renewal of this contract is already on.');
     if (!contract.disabled_at) throw new ConflictException('This contract has no end of validity: turn its tacit renewal on instead.');

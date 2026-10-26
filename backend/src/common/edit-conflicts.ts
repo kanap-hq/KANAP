@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, HttpStatus } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
+import { displayName as joinPersonName } from './display-name';
 
 /**
  * Field-level edit conflicts of a PATCH (plan planning/perf-scale, lot 3C,
@@ -268,7 +269,7 @@ export function authorAt(
 
 /** A user's name as the screens show who changed something: first and last name, '' when they have none (never the e-mail). */
 export function displayName(user: { first_name?: string | null; last_name?: string | null }): string {
-  return [user.first_name, user.last_name].map((part) => (part ?? '').trim()).filter(Boolean).join(' ');
+  return joinPersonName(user);
 }
 
 export class EditConflictException extends ConflictException {

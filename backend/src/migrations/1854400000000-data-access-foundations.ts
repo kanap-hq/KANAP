@@ -230,7 +230,10 @@ export class DataAccessFoundations1854400000000 implements MigrationInterface {
 async function createFunctions(queryRunner: QueryRunner): Promise<void> {
   // The single source of the data-access policies the database must hold: (policy, table,
   // command), command one of SELECT, INSERT, UPDATE, DELETE, ALL. Empty until lot 2, which
-  // replaces it (CREATE OR REPLACE, same signature) and calls the sync.
+  // replaces it (CREATE OR REPLACE, same signature) and calls the sync. A later lot adds a
+  // column to the return type (fingerprint, lot 5): DROP first, a rerun of this migration after
+  // it must not fail on the changed row type.
+  await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_expected_policies()`);
   await queryRunner.query(`
     CREATE OR REPLACE FUNCTION data_access_expected_policies()
     RETURNS TABLE (policy_name text, table_name text, command text)

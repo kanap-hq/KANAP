@@ -1005,6 +1005,17 @@ async function ensureLocations() {
   return locationIdByFixtureCode;
 }
 
+// Notes this fixture wrote before lot C3, replaced on a tenant loaded by an older fixture. A note
+// someone edited by hand is never overwritten. The cluster note was written with two hosts before
+// lot C3 and with the third host after the upgrade; both values are the fixture's own.
+const REPLACED_ASSET_NOTES = {
+  'PAR-VSPHERE-CL01': [
+    'vSphere cluster of PAR-ESX-01 and PAR-ESX-02 — HA and DRS',
+    'vSphere cluster of PAR-ESX-01, PAR-ESX-02 and PAR-ESX-05 — HA and DRS',
+  ],
+  'PAR-SAN-01': ['NetApp FAS2750 — 50TB usable, primary SAN for all VMs'],
+};
+
 // Assets are created through POST /assets (the CSV import resolves locations by
 // their server-generated reference, which a fixture cannot know upfront).
 async function ensureAssets(locationIdByFixtureCode) {
@@ -1021,7 +1032,8 @@ async function ensureAssets(locationIdByFixtureCode) {
   const kindCodes = codeByLabel(settings.serverKinds);
   const locations = await getAll('/locations?limit=500');
   const locationById = new Map(locations.map((item) => [item.id, item]));
-  const existing = new Set((await getAll('/assets?limit=1000')).map((item) => item.name));
+  const existingAssets = await getAll('/assets?limit=1000');
+  const existing = new Set(existingAssets.map((item) => item.name));
   // CSV hostnames are FQDNs; the API wants a bare hostname + a domain code.
   const domainBySuffix = new Map((settings.domains ?? []).filter((d) => d.dns_suffix).map((d) => [lower(d.dns_suffix), d.code]));
   const splitFqdn = (value) => {
@@ -1033,7 +1045,26 @@ async function ensureAssets(locationIdByFixtureCode) {
   };
 
   for (const row of readCsv('18-assets.csv')) {
-    if (existing.has(row.name)) continue;
+    if (existing.has(row.name)) {
+      const asset = existingAssets.find((item) => item.name === row.name);
+      const replaced = REPLACED_ASSET_NOTES[row.name];
+      if (asset && replaced) {
+        const current = await apiGet(`/assets/${asset.id}`);
+        if (replaced.includes(current?.notes)) {
+          await apiPatch(`/assets/${asset.id}`, { notes: row.notes || null });
+          ok(`Replaced the notes of '${row.name}'`);
+        }
+      }
+      // Older fixtures marked the firewalls PAR-FW-01 and PAR-FW-02 as clusters (with no member):
+      // an asset the file no longer calls a cluster becomes a plain asset again, unless someone
+      // gave it members since (the server refuses the switch then).
+      if (asset?.is_cluster && !boolValue(row.is_cluster)) {
+        const members = items(await apiGet(`/assets/${asset.id}/members`));
+        if (members.length > 0) warn(`'${row.name}' has members; it stays a cluster`);
+        else await apiPatch(`/assets/${asset.id}`, { is_cluster: false });
+      }
+      continue;
+    }
     const locationId = locationIdByFixtureCode.get(row.location_code);
     if (!locationId) {
       warn(`Unknown location code '${row.location_code}' for asset '${row.name}'`);
@@ -1257,12 +1288,26 @@ async function ensureConnections() {
   info('Ensuring connections');
   const refToId = new Map();
   for (const row of readCsv('23-connections.csv')) {
+    // A connection between two assets names them (the Veeam backup of the vSphere cluster); the four
+    // site-to-site links keep their entity codes.
+    const sourceAssetId = row.source_asset_name ? await assetIdByName(row.source_asset_name) : '';
+    const destinationAssetId = row.destination_asset_name ? await assetIdByName(row.destination_asset_name) : '';
+    if (row.source_asset_name && !sourceAssetId) {
+      warn(`Asset '${row.source_asset_name}' not found for connection '${row.name}'`);
+      continue;
+    }
+    if (row.destination_asset_name && !destinationAssetId) {
+      warn(`Asset '${row.destination_asset_name}' not found for connection '${row.name}'`);
+      continue;
+    }
     const body = {
       name: row.name,
       description: row.description || null,
       topology: lower(row.topology) || 'server_to_server',
-      source_entity_code: lower(row.source_entity_code),
-      destination_entity_code: lower(row.destination_entity_code),
+      source_entity_code: sourceAssetId ? null : lower(row.source_entity_code),
+      destination_entity_code: destinationAssetId ? null : lower(row.destination_entity_code),
+      ...(sourceAssetId ? { source_asset_id: sourceAssetId } : {}),
+      ...(destinationAssetId ? { destination_asset_id: destinationAssetId } : {}),
       protocol_codes: splitList(row.protocol_codes).map(lower),
       lifecycle: lower(row.lifecycle) || 'active',
       criticality: lower(row.criticality) || 'medium',
@@ -1976,28 +2021,52 @@ async function runImports() {
 // ── Technologies (lot S) ──────────────────────────────────────────────────────
 //
 // The examples of the technology layer: two domain controllers carry Active Directory; Entra ID is
-// subscribed and declared by several applications; two ESXi hosts in a vSphere cluster contain
-// the VMs; a SQL Server cluster runs two versions; the application server carries Tomcat and a SQL
-// Server Express; the RDS database carries PostgreSQL. With the hosting of applications on these
+// subscribed and declared by several applications; a vSphere cluster of three ESXi hosts contains the
+// VMs, which belong to the cluster and can move between its hosts; its hosts depend on the shared
+// storage array; a SQL Server cluster runs two versions; the application server carries Tomcat and a
+// SQL Server Express; the RDS database carries PostgreSQL. With the hosting of applications on these
 // servers, business processes linked to applications, an unknown version (Active Directory) and
 // versions past their end of support (PostgreSQL 13, SQL Server 2017). The demo stories on top:
 // the cave edge node and gateways carry CaveGuard and its dashboard; the IT tools (PRTG, Veeam,
-// vSphere) run on their own servers, Veeam on the backup SAN that reaches end of life; the two aging
-// hosts carry Talend and the S/4HANA QA server; S/4HANA prod and QA run on separate servers.
-// Every step is idempotent.
+// vSphere) run on their own servers, Veeam on the backup SAN that reaches end of life; a Veeam
+// connection backs up the vSphere cluster; the two aging hosts carry Talend and the S/4HANA QA
+// server; S/4HANA prod and QA run on separate servers.
+// An application on a cluster is assigned to the cluster, and its members inherit it.
+// Every step is idempotent, and brings a tenant built by an older fixture to the same state.
 
 const ASSET_CLUSTERS = {
-  'PAR-VSPHERE-CL01': ['PAR-ESX-01', 'PAR-ESX-02'],
+  'PAR-VSPHERE-CL01': ['PAR-ESX-01', 'PAR-ESX-02', 'PAR-ESX-05'],
   'PAR-SQL-CL01': ['PAR-SQL-01', 'PAR-SQL-02'],
 };
 
+/**
+ * Each content sits in one container. A container visited here loses its `contains` relations to an
+ * asset the map puts in another container: PAR-ESX-01 and PAR-ESX-02 held the VMs of the vSphere
+ * cluster in older fixtures, and now contain nothing; PAR-ESX-05 joins the cluster with no VM of its
+ * own. The cluster contains the VMs, and the two aging hosts keep their isolated server.
+ */
 const ASSET_CONTAINS = {
-  'PAR-ESX-01': ['PAR-ERP-01', 'PAR-ERP-02', 'PAR-AD-01', 'PAR-SQL-01', 'PAR-VCENTER-01'],
-  'PAR-ESX-02': ['PAR-DB-01', 'PAR-APP-01', 'PAR-WEB-01', 'PAR-AD-02', 'PAR-SQL-02'],
-  'PAR-VSPHERE-CL01': ['PAR-MON-01', 'PAR-BKP-01'],
+  'PAR-VSPHERE-CL01': [
+    'PAR-ERP-01', 'PAR-ERP-02', 'PAR-AD-01', 'PAR-SQL-01', 'PAR-VCENTER-01',
+    'PAR-DB-01', 'PAR-APP-01', 'PAR-WEB-01', 'PAR-AD-02', 'PAR-SQL-02',
+    'PAR-MON-01', 'PAR-BKP-01',
+  ],
+  'PAR-ESX-01': [],
+  'PAR-ESX-02': [],
+  'PAR-ESX-05': [],
   // The aging hosts, scheduled for the DC refresh.
   'PAR-ESX-03': ['PAR-ETL-01'],
   'PAR-ESX-04': ['PAR-ERP-QA-01'],
+};
+
+/**
+ * The storage each host depends on (`asset_id` the host, `related_asset_id` the array). The two
+ * aging hosts keep local storage: they depend on no array.
+ */
+const ASSET_DEPENDS_ON = {
+  'PAR-ESX-01': ['PAR-SAN-01'],
+  'PAR-ESX-02': ['PAR-SAN-01'],
+  'PAR-ESX-05': ['PAR-SAN-01'],
 };
 
 /** [application, environment, server, role]: the instances of 20-app-instances.csv on their servers. */
@@ -2009,14 +2078,14 @@ const APP_SERVERS = [
   ['Fromage B2B Portal', 'prod', 'PAR-APP-01', 'app'],
   ['Fromage B2B Portal', 'prod', 'PAR-DB-01', 'db'],
   ['QualityLab LIMS', 'prod', 'PAR-APP-01', 'app'],
+  ['La Boutique du Fromage', 'prod', 'AWS-EC2-BOUTIQUE', 'web'],
   ['La Boutique du Fromage', 'prod', 'AWS-RDS-BOUTIQUE', 'db'],
-  // An instance cannot be assigned to a cluster asset (AWS-EC2-BOUTIQUE is one): the databases name both nodes.
-  ['CheeseTrack', 'prod', 'PAR-SQL-01', 'db'],
-  ['CheeseTrack', 'prod', 'PAR-SQL-02', 'db'],
+  // On a cluster, the row of the cluster replaces those of its members (an older fixture's rows on
+  // PAR-SQL-01, PAR-SQL-02, PAR-ESX-01 and PAR-ESX-02 are deleted when it is written).
+  ['CheeseTrack', 'prod', 'PAR-SQL-CL01', 'db'],
   ['Sage X3', 'prod', 'GOU-SAGE-01', 'app'],
   ['Sage X3', 'prod', 'PRM-SAGE-01', 'app'],
-  ['Sage X3', 'prod', 'PAR-SQL-01', 'db'],
-  ['Sage X3', 'prod', 'PAR-SQL-02', 'db'],
+  ['Sage X3', 'prod', 'PAR-SQL-CL01', 'db'],
   ['CaveGuard IoT', 'prod', 'CAVE-EDGE-01', 'app'],
   ['CaveGuard IoT', 'prod', 'CAVE-GW-01', 'proxy'],
   ['CaveGuard IoT', 'prod', 'CAVE-GW-02', 'proxy'],
@@ -2026,8 +2095,7 @@ const APP_SERVERS = [
   ['Veeam Backup & Replication', 'prod', 'PAR-BKP-01', 'backup'],
   ['Veeam Backup & Replication', 'prod', 'PAR-SAN-02', 'backup'],
   ['VMware vSphere', 'prod', 'PAR-VCENTER-01', 'app'],
-  ['VMware vSphere', 'prod', 'PAR-ESX-01', 'virtualization'],
-  ['VMware vSphere', 'prod', 'PAR-ESX-02', 'virtualization'],
+  ['VMware vSphere', 'prod', 'PAR-VSPHERE-CL01', 'virtualization'],
   ['VMware vSphere', 'prod', 'PAR-ESX-03', 'virtualization'],
   ['VMware vSphere', 'prod', 'PAR-ESX-04', 'virtualization'],
 ];
@@ -2052,7 +2120,7 @@ const TECHNOLOGIES = [
   },
   {
     catalog: 'vsphere',
-    installed: [['PAR-ESX-01', '8.0', null], ['PAR-ESX-02', '8.0', null], ['PAR-VCENTER-01', '8.0', 'vCenter Server']],
+    installed: [['PAR-VCENTER-01', '8.0', 'vCenter Server']],
     contracts: ['Broadcom VMware ELA'],
     owners: [['marc.petit@fromage-co.example', 'it']],
   },
@@ -2069,6 +2137,12 @@ const TECHNOLOGIES = [
   { catalog: 'veeam-backup-and-replication', installed: [['PAR-BKP-01', '12', null]] },
 ];
 
+// Installations an older fixture wrote and the list above no longer declares, removed when the
+// setup runs again: an installation someone added by hand stays.
+const REMOVED_INSTALLATIONS = {
+  vsphere: ['PAR-ESX-01', 'PAR-ESX-02', 'PAR-ESX-05'],
+};
+
 const PROCESS_APPLICATIONS = {
   'Order-to-Cash': ['SAP S/4HANA', 'La Boutique du Fromage', 'Salesforce Sales Cloud', 'Fromage B2B Portal'],
   'Procure-to-Pay': ['SAP S/4HANA', 'Coupa Procurement'],
@@ -2077,31 +2151,50 @@ const PROCESS_APPLICATIONS = {
 };
 
 async function ensureAssetGraph() {
-  info('Linking assets: clusters and contained VMs');
+  info('Linking assets: clusters, contained VMs and storage dependencies');
   const assets = await getAll('/assets?limit=1000');
   const idOf = (name) => assets.find((item) => item.name === name)?.id ?? '';
   for (const [cluster, members] of Object.entries(ASSET_CLUSTERS)) {
     const clusterId = idOf(cluster);
-    const memberIds = members.map(idOf).filter(Boolean);
-    if (!clusterId || memberIds.length !== members.length) {
+    const memberIds = members.map(idOf);
+    if (!clusterId || memberIds.some((id) => !id)) {
       warn(`Cluster '${cluster}' or one of its members is missing`);
       continue;
     }
-    await apiPost(`/assets/${clusterId}/members`, { asset_ids: memberIds });
+    // The route replaces every membership row and writes an audit entry on each pass: write only
+    // when the set of members differs.
+    const current = new Set(items(await apiGet(`/assets/${clusterId}/members`)).map((item) => item.id));
+    const wanted = new Set(memberIds);
+    if (current.size === wanted.size && [...wanted].every((id) => current.has(id))) continue;
+    await apiPost(`/assets/${clusterId}/members`, { asset_ids: [...wanted] });
   }
+  const containerOf = new Map();
   for (const [container, contents] of Object.entries(ASSET_CONTAINS)) {
+    for (const name of contents) containerOf.set(idOf(name), container);
+  }
+  containerOf.delete('');
+  // The cluster comes before its hosts (`ASSET_CONTAINS` order): a host's `contains` is refused once
+  // the cluster holds the VM, and the cluster's write absorbs the host links of older fixtures.
+  const containers = [...new Set([...Object.keys(ASSET_CONTAINS), ...Object.keys(ASSET_DEPENDS_ON)])];
+  for (const container of containers) {
     const containerId = idOf(container);
     if (!containerId) {
       warn(`Asset '${container}' not found`);
       continue;
     }
-    // The relations already there (`outgoing`) are kept: the route replaces the whole set.
+    // The relations already there stay, except a `contains` of an asset placed in another container:
+    // the route replaces the whole set.
     const current = (await apiGet(`/assets/${containerId}/relations`))?.outgoing ?? [];
+    const currentKeys = new Set();
     const relations = new Map();
     for (const relation of current) {
-      if (relation?.related_asset_id && relation?.relation_type) relations.set(`${relation.relation_type}:${relation.related_asset_id}`, relation);
+      if (!relation?.related_asset_id || !relation?.relation_type) continue;
+      currentKeys.add(`${relation.relation_type}:${relation.related_asset_id}`);
+      const placedIn = containerOf.get(relation.related_asset_id);
+      if (relation.relation_type === 'contains' && placedIn && placedIn !== container) continue;
+      relations.set(`${relation.relation_type}:${relation.related_asset_id}`, relation);
     }
-    for (const name of contents) {
+    for (const name of ASSET_CONTAINS[container] ?? []) {
       const id = idOf(name);
       if (!id) {
         warn(`Asset '${name}' not found`);
@@ -2109,6 +2202,17 @@ async function ensureAssetGraph() {
       }
       relations.set(`contains:${id}`, { related_asset_id: id, relation_type: 'contains' });
     }
+    for (const name of ASSET_DEPENDS_ON[container] ?? []) {
+      const id = idOf(name);
+      if (!id) {
+        warn(`Asset '${name}' not found`);
+        continue;
+      }
+      relations.set(`depends_on:${id}`, { related_asset_id: id, relation_type: 'depends_on' });
+    }
+    // The route replaces every relation and writes an audit entry on each pass: write only when
+    // the set of `type:id` keys differs.
+    if (relations.size === currentKeys.size && [...relations.keys()].every((key) => currentKeys.has(key))) continue;
     await apiPost(`/assets/${containerId}/relations`, {
       relations: [...relations.values()].map((r) => ({ related_asset_id: r.related_asset_id, relation_type: r.relation_type, notes: r.notes ?? undefined })),
     });
@@ -2144,13 +2248,21 @@ async function ensureTechnologies() {
       warn(`Catalog entry '${spec.catalog}' could not be adopted`);
       continue;
     }
-    for (const [server, version, notes] of spec.installed ?? []) {
+    const installed = spec.installed ?? [];
+    for (const [server, version, notes] of installed) {
       const id = assetId(server);
       if (!id) {
         warn(`Asset '${server}' not found for '${spec.catalog}'`);
         continue;
       }
       await apiPost(`/technologies/${technologyId}/assets`, { asset_id: id, version_label: version ?? undefined, notes: notes ?? undefined });
+    }
+    // A technology carried from another server is another row (`kind: carried`).
+    const removed = new Set(REMOVED_INSTALLATIONS[spec.catalog] ?? []);
+    for (const row of removed.size ? items(await apiGet(`/technologies/${technologyId}/assets`)) : []) {
+      if (row.kind !== 'installed' || !row.link_id || !removed.has(row.asset_name)) continue;
+      await apiDelete(`/technologies/${technologyId}/assets/${row.link_id}`);
+      ok(`Removed the installation of '${spec.catalog}' on '${row.asset_name}'`);
     }
     if (spec.declaredBy?.length) {
       const ids = await appIdsFromNames(spec.declaredBy);
@@ -2182,7 +2294,10 @@ async function ensureTechnologies() {
 // The register of 31-incidents.csv, tied to the landscape: the cave gateway, the B2B portal
 // database (PostgreSQL 13), the backup SAN near its end of life, the SQL Server cluster, the LIMS
 // on SQL Server Express. One confidential incident, one with personal data notified to the
-// authority, two with an incident review.
+// authority, six with an incident review (five closed, the LIMS still in progress).
+// 32-incident-journal.csv adds the human timeline of the B2B portal, the SAP close and the LIMS;
+// 19b-incident-tasks.csv links the corrective tasks of the B2B portal, the phishing campaign and
+// the SAP close.
 
 /** The incidents of 31-incidents.csv (by title) and what they affected. */
 const INCIDENT_LINKS = {
@@ -2206,7 +2321,6 @@ const INCIDENT_LINKS = {
   },
   'Order confirmations sent to the wrong customers': {
     applications: ['La Boutique du Fromage'],
-    assets: ['AWS-ECS-API'],
   },
   'Veeam backup jobs failing on the backup SAN': {
     applications: ['Veeam Backup & Replication'],
@@ -2308,6 +2422,32 @@ async function ensureIncidents() {
   ok(`Imported and linked ${rows.length} incident(s)`);
 }
 
+/**
+ * Imports the human timeline of 32-incident-journal.csv. The server route takes the author and
+ * the event time from each row, so the entries are signed by the incident people and backdated
+ * to the facts; `created_at` stays the load time. A row already there is skipped, so a re-run
+ * adds nothing. The route only accepts the file while the tenant's sample data is loading: a
+ * manual run on the dev stack gets a 409 `SAMPLE_DATA_LOAD_ONLY` and continues without the
+ * journal, which the lead then completes by hand.
+ */
+async function importIncidentJournal() {
+  const name = '32-incident-journal.csv';
+  info(`Importing ${name}`);
+  try {
+    const result = await uploadCsv('/incidents/import-journal', name);
+    if (result?.ok === false) throw new Error(`${name} import returned ok=false:\n${JSON.stringify(result, null, 2)}`);
+    const imported = Number(result?.imported ?? 0);
+    const skipped = Number(result?.skipped ?? 0);
+    ok(`Imported ${imported} journal entr${imported === 1 ? 'y' : 'ies'} (${skipped} already there)`);
+  } catch (error) {
+    if (error?.status === 409 && error?.payload?.code === 'SAMPLE_DATA_LOAD_ONLY') {
+      info(`Skipped ${name}: the journal is imported only while the sample data of the tenant loads.`);
+      return;
+    }
+    throw error;
+  }
+}
+
 async function linkProcessesToApplications() {
   info('Linking business processes to applications');
   const processes = await getAll('/business-processes?limit=500');
@@ -2341,6 +2481,10 @@ async function runRelations() {
   await ensureTechnologies();
   await linkProcessesToApplications();
   await ensureIncidents();
+  step('incident-tasks');
+  await importCsv('19b-incident-tasks.csv', '/tasks/import');
+  step('incident-journal');
+  await importIncidentJournal();
   step('budget-links');
   await linkContractsToSpend();
   await linkSpendToApps();

@@ -17,6 +17,7 @@ import { PortfolioCriteriaService } from '../portfolio-criteria.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../../notifications/share-recipients';
+import { displayName } from '../../common/display-name';
 import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { computeAutoAllocations } from '../utils/allocation-utils';
 import { formatItemLabel } from '../utils/activity-labels';
@@ -24,7 +25,13 @@ import { detectChanges, PROJECT_TRACKED_FIELDS, resolveDisplayNames } from '../.
 import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
+import { activityBudgetLines, budgetLineActivitiesForReader } from '../budget-line-activity';
+import { hiddenLineCount } from '../../data-access/hidden-links';
+import { countRelatedBudgetLines, type RelationLinkTable } from '../../common/relations/related-objects';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
+
+/** The project's links to budget lines, both natures (lot Z1). */
+const PROJECT_BUDGET_LINES: RelationLinkTable = { links: 'portfolio_project_opex', owner: 'project_id', target: 'opex_id' };
 
 /**
  * Service for core CRUD operations on portfolio projects.
@@ -66,36 +73,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     return userIds.map((id) => byId.get(id) ?? id).sort((a, b) => a.localeCompare(b));
   }
 
-  private async resolveCapexLabelsByIds(mg: EntityManager, capexIds: string[]): Promise<string[]> {
-    if (capexIds.length === 0) return [];
-    // A CAPEX line's title is its `product_name` (lot Z1).
-    const rows = await mg.query<Array<{ id: string; description: string | null }>>(
-      `SELECT id, product_name AS description
-       FROM spend_items
-       WHERE id = ANY($1::uuid[]) AND nature = 'capex'`,
-      [capexIds],
-    );
-    const byId = new Map<string, string>();
-    for (const row of rows) {
-      byId.set(row.id, row.description || row.id);
-    }
-    return capexIds.map((id) => byId.get(id) ?? id).sort((a, b) => a.localeCompare(b));
-  }
 
-  private async resolveOpexLabelsByIds(mg: EntityManager, opexIds: string[]): Promise<string[]> {
-    if (opexIds.length === 0) return [];
-    const rows = await mg.query<Array<{ id: string; product_name: string | null; description: string | null }>>(
-      `SELECT id, product_name, description
-       FROM spend_items
-       WHERE id = ANY($1::uuid[]) AND nature = 'opex'`,
-      [opexIds],
-    );
-    const byId = new Map<string, string>();
-    for (const row of rows) {
-      byId.set(row.id, row.product_name || row.description || row.id);
-    }
-    return opexIds.map((id) => byId.get(id) ?? id).sort((a, b) => a.localeCompare(b));
-  }
 
   /**
    * Get a single project by ID with optional related data.
@@ -237,7 +215,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
 
     // Load activity history
     if (include.has('activities')) {
-      result.activities = await mg.query(
+      const activities = await mg.query(
         `SELECT a.*, u.email, u.first_name, u.last_name
          FROM portfolio_activities a
          LEFT JOIN users u ON u.id = a.author_id
@@ -246,6 +224,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
          ORDER BY a.created_at DESC, a.id`,
         [id]
       );
+      // Budget lines in the history: named only as far as the reader may read them.
+      result.activities = await budgetLineActivitiesForReader(mg, activities, opts?.readsBudget === true);
       const creators = await resolveRecordCreators(mg, 'portfolio_projects', [id]);
       result.created_by_name = creators.get(id) ?? null;
     }
@@ -287,30 +267,38 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       );
     }
 
-    // Load CAPEX items
-    if (include.has('capex') || include.has('financials')) {
-      result.capex_items = await mg.query(
-        `SELECT c.id, c.product_name AS description, c.item_number, c.currency, c.status,
-                sup.name as supplier_name
-         FROM portfolio_project_opex pc
-         JOIN spend_items c ON c.id = pc.opex_id AND c.nature = 'capex'
-         LEFT JOIN suppliers sup ON sup.id = c.supplier_id
-         WHERE pc.project_id = $1`,
-        [id]
-      );
-    }
-
-    // Load OPEX items
-    if (include.has('opex') || include.has('financials')) {
-      result.opex_items = await mg.query(
-        `SELECT s.id, s.product_name, s.item_number, s.description, s.currency, s.status,
-                sup.name as supplier_name
-         FROM portfolio_project_opex po
-         JOIN spend_items s ON s.id = po.opex_id AND s.nature = 'opex'
-         LEFT JOIN suppliers sup ON sup.id = s.supplier_id
-         WHERE po.project_id = $1`,
-        [id]
-      );
+    // Budget lines: listed for a reader with the budget right (the lines they can read, the others
+    // counted), counted only without it, as the Relations tab (spec §5.4).
+    const wantsCapex = include.has('capex') || include.has('financials');
+    const wantsOpex = include.has('opex') || include.has('financials');
+    if ((wantsCapex || wantsOpex) && opts?.readsBudget !== true) {
+      if (wantsCapex) result.capex_items = null;
+      if (wantsOpex) result.opex_items = null;
+      result.budget_lines_hidden = await countRelatedBudgetLines(mg, PROJECT_BUDGET_LINES, 'project', project.tenant_id, id);
+    } else if (wantsCapex || wantsOpex) {
+      result.budget_lines_hidden = await hiddenLineCount(mg, 'project', id);
+      if (wantsCapex) {
+        result.capex_items = await mg.query(
+          `SELECT c.id, c.product_name AS description, c.item_number, c.currency, c.status,
+                  sup.name as supplier_name
+           FROM portfolio_project_opex pc
+           JOIN spend_items c ON c.id = pc.opex_id AND c.nature = 'capex'
+           LEFT JOIN suppliers sup ON sup.id = c.supplier_id
+           WHERE pc.project_id = $1`,
+          [id]
+        );
+      }
+      if (wantsOpex) {
+        result.opex_items = await mg.query(
+          `SELECT s.id, s.product_name, s.item_number, s.description, s.currency, s.status,
+                  sup.name as supplier_name
+           FROM portfolio_project_opex po
+           JOIN spend_items s ON s.id = po.opex_id AND s.nature = 'opex'
+           LEFT JOIN suppliers sup ON sup.id = s.supplier_id
+           WHERE po.project_id = $1`,
+          [id]
+        );
+      }
     }
 
     return result;
@@ -925,8 +913,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const afterSorted = [...afterIds].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
       const [beforeLabels, afterLabels] = await Promise.all([
-        this.resolveCapexLabelsByIds(mg, beforeSorted),
-        this.resolveCapexLabelsByIds(mg, afterSorted),
+        activityBudgetLines(mg, 'capex', beforeSorted),
+        activityBudgetLines(mg, 'capex', afterSorted),
       ]);
       await this.logActivity(mg, {
         project_id: projectId,
@@ -980,8 +968,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const afterSorted = [...afterIds].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
       const [beforeLabels, afterLabels] = await Promise.all([
-        this.resolveOpexLabelsByIds(mg, beforeSorted),
-        this.resolveOpexLabelsByIds(mg, afterSorted),
+        activityBudgetLines(mg, 'opex', beforeSorted),
+        activityBudgetLines(mg, 'opex', afterSorted),
       ]);
       await this.logActivity(mg, {
         project_id: projectId,
@@ -1384,9 +1372,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
       'SELECT first_name, last_name FROM users WHERE id = $1',
       [userId],
     );
-    const senderName = senderRows.length > 0
-      ? `${senderRows[0].first_name} ${senderRows[0].last_name}`.trim() || 'Someone'
-      : 'Someone';
+    const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
       ? await mg.query(

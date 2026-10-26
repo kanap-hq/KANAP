@@ -209,7 +209,7 @@ Klicken Sie auf **Erstellen**, um den vollständigen Arbeitsbereich freizuschalt
 
 Gehen Sie zum Tab **Betrieb**, um die **Technologien** hinzuzufügen, die der Server trägt, mit ihren Versionen. Fügen Sie Windows Server, Ubuntu oder eine andere Technologie der Familie **Betriebssystem** hinzu: Sie wird zum Betriebssystem des Servers.
 
-Wenn dieses Asset ein Cluster ist, schalten Sie im Bereich **Eigenschaften** den Schalter **Cluster** ein und fügen Sie dann seine Mitgliedsserver mit **Mitglieder bearbeiten** im Tab **Abhängigkeiten** hinzu.
+Wenn dieses Asset ein Cluster ist, schalten Sie im Bereich **Eigenschaften** den Schalter **Cluster** ein und fügen Sie dann seine Mitgliedsserver mit **Mitglieder hinzufügen** oben im Tab **Betrieb** hinzu. Eine Anwendung, die auf jedem Mitglied läuft, wird dem Cluster zugeordnet: siehe [Anwendungen auf einem Cluster](../assets.md#applications-on-a-cluster).
 
 ---
 

@@ -24,6 +24,7 @@ import CreditCardIcon from '@mui/icons-material/CreditCard';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import SecurityIcon from '@mui/icons-material/Security';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import LanIcon from '@mui/icons-material/Lan';
 import InsightsIcon from '@mui/icons-material/Insights';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -45,6 +46,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ExtensionIcon from '@mui/icons-material/Extension';
 import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
 import { useAuth } from '../auth/AuthContext';
+import { useDataAccessLimited } from '../auth/dataAccess';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
@@ -126,6 +128,7 @@ export default function Layout() {
   useInAppLinkGuard(navigate);
   const guardedLeave = useGuardedLeave();
   const { logout, token, hasLevel, claims, profile } = useAuth();
+  const dataAccessLimited = useDataAccessLimited();
   const { isPlatformHost, tenantName, logoUrl, useLogoInDark } = useTenant();
   const { config } = useFeatures();
   const { mode, resolvedMode, setMode } = useThemeMode();
@@ -248,6 +251,7 @@ export default function Layout() {
   const tenantAdminNav: NavEntry[] = [
     { to: '/admin/users', label: t('nav:sidebar.admin.users'), icon: <PeopleIcon />, resource: 'users', level: 'admin' },
     { to: '/admin/roles', label: t('nav:sidebar.admin.roles'), icon: <SecurityIcon />, resource: 'users', level: 'admin' },
+    { to: '/admin/data-access', label: t('nav:sidebar.admin.dataAccess'), icon: <LockOutlinedIcon />, resource: 'users', level: 'admin' },
     { to: '/admin/audit-logs', label: t('nav:sidebar.admin.auditLog'), icon: <HistoryIcon />, resource: 'users', level: 'admin' },
     { to: '/admin/billing', label: t('nav:sidebar.admin.billing'), icon: <CreditCardIcon />, resource: 'billing' },
     { to: '/admin/auth', label: t('nav:sidebar.admin.authentication'), icon: <AdminPanelSettingsIcon />, resource: 'users', level: 'admin' },
@@ -573,7 +577,7 @@ export default function Layout() {
                 if (entry.to === '/admin/auth' && !config.features.sso) return false;
                 if (entry.to === '/admin/integrations') return canShowIntegrations;
               // Administration shows only when one of its pages can be used.
-              if (entry.to === '/ops/operations') return canUseAnyOperation(hasLevel);
+              if (entry.to === '/ops/operations') return canUseAnyOperation(hasLevel, dataAccessLimited);
                 if (aiAdminRoutes.includes(entry.to) && !aiSettingsAvailable) return false;
                 return true;
               });
@@ -606,10 +610,12 @@ export default function Layout() {
               if (!isNavItem(entry)) return true;
               if (entry.to === '/admin/integrations') return canShowIntegrations;
               // Administration shows only when one of its pages can be used.
-              if (entry.to === '/ops/operations') return canUseAnyOperation(hasLevel);
+              if (entry.to === '/ops/operations') return canUseAnyOperation(hasLevel, dataAccessLimited);
               if (['/admin/ai', '/admin/ai-models', '/admin/ai-usage'].includes(entry.to)) {
                 return aiCapabilities.data?.surfaces.settings.available === true;
               }
+              // A limited person sees none of the data-access administration, even a global admin.
+              if (entry.to === '/admin/data-access' && dataAccessLimited) return false;
               const grants = itemGrants(entry);
               return grants.length === 0 || grants.some((grant) => hasLevel(grant.resource, grant.level ?? 'reader'));
             });

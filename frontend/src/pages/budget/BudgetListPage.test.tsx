@@ -11,8 +11,12 @@ vi.mock('react-i18next', () => {
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../tenant/TenantContext', () => ({ useTenant: () => ({ tenantSlug: 'test' }) }));
-const auth = vi.hoisted(() => ({ level: 'admin' }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'u-1' }, hasLevel: (_resource: string, level: string) => ['reader', 'member', 'manager', 'admin'].indexOf(level) <= ['reader', 'member', 'manager', 'admin'].indexOf(auth.level) }) }));
+const auth = vi.hoisted(() => ({ level: 'admin', limited: false }));
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({
+  profile: { id: 'u-1' },
+  hasLevel: (_resource: string, level: string) => ['reader', 'member', 'manager', 'admin'].indexOf(level) <= ['reader', 'member', 'manager', 'admin'].indexOf(auth.level),
+  dataAccess: auth.limited ? { available: true, mode: 'limited', nodes: [], modules: ['budget'] } : null,
+}) }));
 const header = vi.hoisted(() => ({ props: null as any }));
 vi.mock('../../components/PageHeader', () => ({ default: (props: any) => { header.props = props; return props.actions ?? null; } }));
 vi.mock('../../components/csv/CsvExportDialog', () => ({ default: () => null }));
@@ -119,6 +123,8 @@ type GridProps = {
   onQueryStateChange: (state: { sort: string; filterModel: Record<string, unknown>; q: string; statusScope: string }) => void;
   onGridApiReady: (api: unknown) => void;
   setFilterExcludeMode: boolean;
+  enableRowSelection?: boolean;
+  footer?: React.ReactNode;
   pageParams: (state: any) => any;
   endpoint: string;
   queryKey: string;
@@ -162,6 +168,7 @@ describe('BudgetListPage', () => {
     const values = new Map<string, string>();
     vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key), clear: () => values.clear() });
     auth.level = 'admin';
+    auth.limited = false;
     dialogs.bulk = dialogs.import = dialogs.export = null;
     grid.mockReset();
     get.mockReset();
@@ -678,6 +685,20 @@ describe('BudgetListPage', () => {
     expect(column('latest_task_text')?.defaultHidden).toBeFalsy();
   });
 
+  it('shows a contract outside the access by its label alone, without a link', async () => {
+    await renderPage();
+    const contract = column('contract_name')!;
+    expect(contract.valueGetter?.({ data: { contract_hidden: true, latest_contract_name: null, latest_contract_id: null } }))
+      .toBe('contracts.outsideYourAccess');
+    const { container } = render(
+      <MemoryRouter>
+        {contract.cellRenderer!({ data: { id: 'b-1', contract_hidden: true }, value: 'contracts.outsideYourAccess' })}
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('contracts.outsideYourAccess')).toBeInTheDocument();
+    expect(container.querySelector('a')).toBeNull();
+  });
+
   it('filters the allocation column with the values the server lists', async () => {
     await renderPage();
     const allocation = column('allocation_label');
@@ -901,6 +922,27 @@ describe('BudgetListPage', () => {
     await waitFor(() => expect(get.mock.calls.filter(([u]) => u === '/budget-lines/summary/totals').length).toBe(before + 1));
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', q: '', statusScope: 'enabled', filterModel: {} }));
     expect(dialogs.import.scope).toBe('opex');
+  });
+
+  it('a limited person: no bulk delete or selection, file actions kept', async () => {
+    auth.limited = true;
+    get.mockImplementation(async (url: string) => {
+      if (url === '/users') return { data: { items: [] } };
+      if (url === '/budget-columns') return { data: columnsSetting };
+      return { data: { yPlus2Budget: 80, reportingCurrency: 'X', dataAccessLimited: true } };
+    });
+    await renderPage();
+    expect(dialogs.bulk).toBeNull();
+    expect(lastProps().enableRowSelection).toBe(false);
+    expect(screen.getByRole('button', { name: 'opex.importCsv' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'opex.exportCsv' })).toBeInTheDocument();
+  });
+
+  it('an unscoped administrator keeps bulk delete', async () => {
+    await renderPage();
+    expect(dialogs.bulk).not.toBeNull();
+    expect(lastProps().enableRowSelection).toBe(true);
+    expect(lastProps().footer).toBeUndefined();
   });
 
   it('keeps create, file actions and selection behind their existing budget permissions', async () => {

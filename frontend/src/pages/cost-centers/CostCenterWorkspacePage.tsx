@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
+import { useDataAccessAdmin } from '../../auth/dataAccess';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { PropertyRow, useKanapDialogs } from '../../components/design';
 import CostCenterSelect from '../../components/fields/CostCenterSelect';
@@ -33,6 +34,7 @@ import {
   type CostCenterField,
 } from './costCenterFields';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
+import CostCenterAccessTab from './CostCenterAccessTab';
 
 const LIST_PATH = '/master-data/cost-centers';
 const EMPTY_SET: ReadonlySet<string> = new Set();
@@ -42,12 +44,16 @@ const CREATE_FIELDS: ReadonlySet<CostCenterField> = new Set<CostCenterField>([
 ]);
 const UNAVAILABLE_FOR_PARENT: CostCenterKind[] = ['cost_center'];
 
+type TabKey = 'overview' | 'access';
+const TAB_KEYS: TabKey[] = ['overview', 'access'];
+
 type FieldErrors = Partial<Record<CostCenterField, string>>;
 
 export default function CostCenterWorkspacePage() {
   const { t } = useTranslation(['master-data', 'common']);
   const dialogs = useKanapDialogs();
   const { hasLevel } = useAuth();
+  const canAdminDataAccess = useDataAccessAdmin();
   const navigate = useNavigate();
   const params = useParams();
   const [searchParams] = useSearchParams();
@@ -56,6 +62,10 @@ export default function CostCenterWorkspacePage() {
 
   const id = String(params.id || '');
   const isCreate = id === 'new';
+  const rawTab = (params.tab as TabKey) || 'overview';
+  const tab: TabKey = TAB_KEYS.includes(rawTab) && !(rawTab === 'access' && !canAdminDataAccess)
+    ? rawTab
+    : 'overview';
   const canEdit = hasLevel('cost_centers', 'member');
   const canDelete = hasLevel('cost_centers', 'admin');
 
@@ -102,10 +112,10 @@ export default function CostCenterWorkspacePage() {
   });
 
   const goTo = React.useCallback(
-    (targetId: string | null) => {
-      if (targetId) navigate(`${LIST_PATH}/${targetId}/overview${listContext ? `?${listContext}` : ''}`);
+    (targetId: string | null, nextTab: TabKey = tab) => {
+      if (targetId) navigate(`${LIST_PATH}/${targetId}/${nextTab}${listContext ? `?${listContext}` : ''}`);
     },
-    [listContext, navigate],
+    [listContext, navigate, tab],
   );
 
   const handleClose = React.useCallback(() => {
@@ -226,9 +236,12 @@ export default function CostCenterWorkspacePage() {
         </Alert>
       )}
       <PortfolioDetailWorkspaceShell
-        activeTab="overview"
-        tabs={[{ key: 'overview', label: t('shared.labels.overview') }]}
-        onTabChange={() => undefined}
+        activeTab={tab}
+        tabs={[
+          { key: 'overview', label: t('shared.labels.overview') },
+          ...(canAdminDataAccess ? [{ key: 'access', label: t('shared.labels.access') }] : []),
+        ]}
+        onTabChange={(next) => goTo(id, next as TabKey)}
         drawerStorageKey="kanap.costCenters.drawerOpen"
         backLabel={t('costCenters.title')}
         onBack={handleClose}
@@ -279,7 +292,7 @@ export default function CostCenterWorkspacePage() {
           />
         ) : <Box />}
       >
-        {data && (
+        {data && tab === 'overview' && (
           <Stack spacing={2.5} sx={{ maxWidth: 900 }}>
             {(canDelete ? deleteBlock ?? usage : usage) && (
               <Typography data-testid="cost-center-usage" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
@@ -294,6 +307,13 @@ export default function CostCenterWorkspacePage() {
               onCommit={(description) => void patch({ description }, 'description')}
             />
           </Stack>
+        )}
+        {data && tab === 'access' && canAdminDataAccess && (
+          <CostCenterAccessTab
+            costCenterId={data.id}
+            companyId={data.company_id}
+            nodeLabel={data.code ? `${data.name} (${data.code})` : data.name}
+          />
         )}
       </PortfolioDetailWorkspaceShell>
     </Box>

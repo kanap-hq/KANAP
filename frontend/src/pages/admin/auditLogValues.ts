@@ -1,0 +1,332 @@
+import { DASH } from '../../components/workspace/relations/helpers';
+import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
+import { formatItemRef } from '../../utils/item-ref';
+import type { Translate } from './auditLogLabels';
+
+/**
+ * The readable face of an audit entry: the field rows the detail dialog shows, the reference of
+ * the record it names, and the display text of a field value. Pure helpers, tested alone.
+ */
+
+export type AuditPayloadRow = {
+  action?: string | null;
+  table_name?: string | null;
+  record_id?: string | null;
+  before_json?: any;
+  after_json?: any;
+};
+
+export type AuditFieldRow = {
+  key: string;
+  before?: unknown;
+  after?: unknown;
+  value?: unknown;
+};
+
+export type AuditFields = {
+  /** `change`: one row per changed field, two value columns. `single`: one value column. */
+  mode: 'change' | 'single';
+  rows: AuditFieldRow[];
+};
+
+/** The text of a value cell, its full value for a tooltip, and whether it is a secondary label. */
+export type AuditValue = {
+  text: string;
+  title?: string;
+  secondary?: boolean;
+};
+
+export type AuditValueContext = {
+  locale: string;
+  t: Translate;
+  /** The payload around the value, to read a neighbouring label (`supplier_name` for `supplier_id`). */
+  snapshot?: unknown;
+  /** The names of the users the dialog read in one lookup. */
+  users?: ReadonlyMap<string, string>;
+};
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const MIDNIGHT_UTC_PATTERN = /^\d{4}-\d{2}-\d{2}T00:00:00(?:\.\d+)?(?:Z|\+00:00)$/i;
+const JSON_MAX_LENGTH = 120;
+
+/** Fields that hold a person: resolved through the user lookup, never shown as an id. */
+const USER_ID_FIELDS = new Set([
+  'user_id',
+  'updated_by',
+  'owner_user_id',
+  'created_by',
+  'created_by_user_id',
+  'creator_id',
+  'reporter_user_id',
+  'requestor_id',
+  'revoked_by_user_id',
+]);
+
+/** Noise that stays in the raw JSON (created_at stays in a create, where it is the record's date). */
+const OMITTED_FIELDS = new Set(['id', 'tenant_id', 'updated_at']);
+/** Derived or internal columns the table never shows; the raw JSON keeps them. */
+const NOISE_FIELDS = new Set(['search_vector', 'content_plain']);
+
+/** Tables whose record is named by `item_number`, and the reference prefix of each. */
+const RECORD_ITEM_TYPES: Record<string, Parameters<typeof formatItemRef>[0]> = {
+  documents: 'document',
+  incidents: 'incident',
+  portfolio_projects: 'project',
+  portfolio_requests: 'request',
+  portfolio_team_member_configs: 'contributor',
+  spend_items: 'budget',
+  tasks: 'task',
+  technologies: 'technology',
+};
+
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function omitted(key: string, action: string): boolean {
+  if (OMITTED_FIELDS.has(key) || NOISE_FIELDS.has(key) || key.startsWith('__')) return true;
+  return key === 'created_at' && action !== 'create';
+}
+
+function isEmptyValue(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === 'string') return value.trim() === '';
+  return Array.isArray(value) && value.length === 0;
+}
+
+function isYearField(field: string): boolean {
+  return field === 'year' || field.endsWith('_year');
+}
+
+function changedKeys(before: Record<string, unknown>, after: Record<string, unknown>): string[] {
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  return Array.from(keys).filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]));
+}
+
+/** A payload that is not an object (an array, a string…) cannot be read as fields. */
+export function auditHasNonObjectPayload(row: AuditPayloadRow | null | undefined): boolean {
+  if (!row) return false;
+  return (row.before_json != null && !isPlainObject(row.before_json))
+    || (row.after_json != null && !isPlainObject(row.after_json));
+}
+
+/** The rows of the field table: the changed keys of an update, else the fields of the one side present. */
+export function auditFields(row: AuditPayloadRow | null | undefined): AuditFields {
+  if (!row) return { mode: 'single', rows: [] };
+  const action = String(row.action || '').toLowerCase();
+  const before = isPlainObject(row.before_json) ? row.before_json : {};
+  const after = isPlainObject(row.after_json) ? row.after_json : {};
+
+  if (action === 'update') {
+    return {
+      mode: 'change',
+      rows: changedKeys(before, after)
+        .filter((key) => !omitted(key, action))
+        .filter((key) => !isEmptyValue(before[key]) || !isEmptyValue(after[key]))
+        .map((key) => ({ key, before: before[key], after: after[key] })),
+    };
+  }
+
+  const source = action === 'delete'
+    ? before
+    : (Object.keys(after).length > 0 ? after : before);
+  return {
+    mode: 'single',
+    rows: Object.keys(source)
+      .filter((key) => !omitted(key, action))
+      .map((key) => ({ key, value: source[key] })),
+  };
+}
+
+/** The payload the detail reads around a value: the after side wins, the before side fills what it no longer holds. */
+export function auditSnapshot(row: AuditPayloadRow | null | undefined): Record<string, unknown> {
+  const before = isPlainObject(row?.before_json) ? row.before_json : {};
+  const after = isPlainObject(row?.after_json) ? row.after_json : {};
+  return { ...before, ...after };
+}
+
+export function isUserIdField(field: string): boolean {
+  return USER_ID_FIELDS.has(field) || field.endsWith('_user_id');
+}
+
+export function isUserIdValue(field: string, value: unknown): value is string {
+  return isUserIdField(field) && typeof value === 'string' && value.trim() !== '';
+}
+
+/** The people named by the field rows, for the one lookup of the dialog. */
+export function auditUserIds(fields: AuditFields): string[] {
+  const ids = new Set<string>();
+  for (const row of fields.rows) {
+    for (const value of [row.before, row.after, row.value]) {
+      if (isUserIdValue(row.key, value)) ids.add(value.trim());
+    }
+  }
+  return Array.from(ids).sort();
+}
+
+/** The business reference of the audited record (T-4, PRJ-3…), when the table has one. */
+export function auditRecordRef(row: AuditPayloadRow | null | undefined): string | null {
+  if (!row) return null;
+  const type = RECORD_ITEM_TYPES[String(row.table_name || '')];
+  for (const snapshot of [row.after_json, row.before_json]) {
+    if (!isPlainObject(snapshot)) continue;
+    const itemNumber = snapshot.item_number;
+    if (type && (typeof itemNumber === 'number' || typeof itemNumber === 'string') && itemNumber !== '' && Number.isFinite(Number(itemNumber))) {
+      return formatItemRef(type, Number(itemNumber));
+    }
+  }
+  return null;
+}
+
+/** The record header: the business reference, else the identifier label with the stored id in the title. */
+export function auditRecordLabel(
+  row: AuditPayloadRow | null | undefined,
+  t: Translate,
+): { text: string; title?: string } | null {
+  if (!row) return null;
+  const ref = auditRecordRef(row);
+  if (ref) return { text: ref };
+  if (!row.record_id) return null;
+  return { text: t('auditLogs.values.identifier'), title: row.record_id };
+}
+
+function identifier(context: AuditValueContext, id: string): AuditValue {
+  return { text: context.t('auditLogs.values.identifier'), title: id, secondary: true };
+}
+
+/** A readable neighbour of an id in the same payload (`supplier_id` → `supplier_name`), if any. */
+function neighbourName(snapshot: unknown, field: string): string | null {
+  if (!isPlainObject(snapshot) || !field.endsWith('_id')) return null;
+  const base = field.slice(0, -3);
+  for (const suffix of ['_name', '_label', '_title', '_ref', '_reference', '']) {
+    const value = snapshot[`${base}${suffix}`];
+    if (typeof value === 'string' && value.trim() && !UUID_PATTERN.test(value.trim())) return value.trim();
+  }
+  return null;
+}
+
+function dateText(value: string, locale: string): string | null {
+  if (DATE_ONLY_PATTERN.test(value)) return formatShortDate(value, locale, { year: 'always' }) || null;
+  // A UTC midnight is a date, not a time that shifts with the reader's timezone.
+  if (MIDNIGHT_UTC_PATTERN.test(value)) {
+    return formatShortDate(value.slice(0, 10), locale, { year: 'always' }) || null;
+  }
+  if (DATE_TIME_PATTERN.test(value)) return formatShortDateTime(value, locale) || null;
+  return null;
+}
+
+function scalarText(value: unknown, context: AuditValueContext): string {
+  if (value === null || value === undefined) return DASH;
+  if (typeof value === 'boolean') {
+    return context.t(value ? 'auditLogs.values.yes' : 'auditLogs.values.no');
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value.toLocaleString(context.locale) : String(value);
+  }
+  if (typeof value === 'string') {
+    const text = value.trim();
+    if (!text) return DASH;
+    return dateText(text, context.locale) ?? value;
+  }
+  return String(value);
+}
+
+function compactJson(value: unknown): string {
+  try {
+    const text = JSON.stringify(value);
+    return typeof text === 'string' ? text : String(value);
+  } catch {
+    return String(value);
+  }
+}
+
+function jsonValue(value: unknown): AuditValue {
+  const text = compactJson(value);
+  if (text.length <= JSON_MAX_LENGTH) return { text };
+  return { text: `${text.slice(0, JSON_MAX_LENGTH - 1)}…`, title: text };
+}
+
+/** The before/after of a `user_data_access` entry: `{ mode, nodes: [{ type, name, code, access }] }`. */
+function isDataAccessSnapshot(snapshot: unknown): snapshot is { mode?: unknown; nodes?: unknown } {
+  return isPlainObject(snapshot)
+    && (snapshot.mode === 'all' || snapshot.mode === 'limited')
+    && Array.isArray(snapshot.nodes);
+}
+
+function dataAccessModeText(value: unknown, context: AuditValueContext): AuditValue | null {
+  if (value === 'all') return { text: context.t('auditLogs.dataAccess.allData') };
+  if (value === 'limited') return { text: context.t('auditLogs.dataAccess.limitedTo') };
+  return null;
+}
+
+function dataAccessNodeText(value: unknown, context: AuditValueContext): string | null {
+  if (!isPlainObject(value)) return null;
+  const access = value.access === 'edit'
+    ? context.t('auditLogs.dataAccess.edit')
+    : context.t('auditLogs.dataAccess.read');
+  if (value.type === 'all') {
+    return context.t('auditLogs.dataAccess.node', {
+      name: context.t('auditLogs.dataAccess.everything'),
+      access,
+    });
+  }
+  const name = typeof value.name === 'string' && value.name.trim()
+    ? value.name
+    : (typeof value.code === 'string' ? value.code : '');
+  if (!name) return null;
+  return context.t('auditLogs.dataAccess.node', { name, access });
+}
+
+function dataAccessNodesText(value: unknown[], context: AuditValueContext): AuditValue {
+  const texts = value.map((node) => dataAccessNodeText(node, context)).filter((text): text is string => !!text);
+  if (texts.length === 0) return { text: context.t('auditLogs.dataAccess.noNodes') };
+  return { text: texts.join(', ') };
+}
+
+/**
+ * The text of a value cell: empty marker, yes/no, short dates, locale numbers, scalar lists,
+ * one-line JSON for objects, the name of a person or a readable neighbour instead of an id.
+ */
+export function formatAuditValue(value: unknown, field: string, context: AuditValueContext): AuditValue {
+  if (value === null || value === undefined) return { text: DASH };
+  if (field === 'mode' && isDataAccessSnapshot(context.snapshot)) {
+    const mode = dataAccessModeText(value, context);
+    if (mode) return mode;
+  }
+  if (field === 'nodes' && Array.isArray(value) && isDataAccessSnapshot(context.snapshot)) {
+    return dataAccessNodesText(value, context);
+  }
+  if (typeof value === 'boolean') return { text: context.t(value ? 'auditLogs.values.yes' : 'auditLogs.values.no') };
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return { text: String(value) };
+    // A year is a label, not a quantity: 2026, never 2,026.
+    return { text: isYearField(field) ? String(value) : value.toLocaleString(context.locale) };
+  }
+  if (typeof value === 'string') {
+    const text = value.trim();
+    if (!text) return { text: DASH };
+    if (isUserIdField(field)) {
+      const neighbour = neighbourName(context.snapshot, field);
+      if (neighbour) return { text: neighbour };
+      const name = context.users?.get(text);
+      return name ? { text: name } : identifier(context, text);
+    }
+    const date = dateText(text, context.locale);
+    if (date) return { text: date };
+    if (UUID_PATTERN.test(text)) {
+      const neighbour = neighbourName(context.snapshot, field);
+      return neighbour ? { text: neighbour } : identifier(context, text);
+    }
+    return { text: value };
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return { text: DASH };
+    const scalars = value.every((item) => item === null || item === undefined || ['string', 'number', 'boolean'].includes(typeof item));
+    if (scalars) return { text: value.map((item) => scalarText(item, context)).join(', ') };
+    return jsonValue(value);
+  }
+  if (typeof value === 'object') return jsonValue(value);
+  return { text: String(value) };
+}

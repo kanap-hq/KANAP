@@ -16,7 +16,8 @@ import { Incident } from '../incident.entity';
  * What deleting incidents removes, for the confirmation, counted over the `incidents` that can go.
  * Removed with them: their review documents, tasks, timeline entries and attachments. Linked
  * objects that stay and only lose the link: applications, assets and Knowledge documents.
- * `blocked`: the incidents refused for their regulatory reporting data (`refused`, in the order asked).
+ * `blocked`: the incidents refused for their regulatory reporting data or their closed/cancelled
+ * status (`refused`, in the order asked).
  */
 export type IncidentDeleteImpact = {
   incidents: number;
@@ -34,6 +35,15 @@ export type IncidentDeleteImpact = {
 /** The refusal's code, worded by the screens (`errors:INCIDENT_HAS_REGULATORY_RECORDS`). */
 export const INCIDENT_HAS_REGULATORY_RECORDS = 'INCIDENT_HAS_REGULATORY_RECORDS';
 
+/** A closed or cancelled incident keeps its number: the register's continuity needs it. */
+export const INCIDENT_CLOSED_OR_CANCELLED = 'INCIDENT_CLOSED_OR_CANCELLED';
+
+/** The statuses whose incidents cannot be deleted, either side of the lifecycle (SQL literal). */
+const FROZEN_STATUSES = `('closed', 'cancelled')`;
+
+const isFrozenStatus = (status: string | null | undefined): boolean =>
+  status === 'closed' || status === 'cancelled';
+
 /**
  * The regulatory reporting fields an incident holds, counted: personal data affected, authority
  * notification required, a notification date, notified parties. Any of them makes the incident
@@ -47,10 +57,11 @@ const regulatoryCount = (alias = '') =>
 const SOURCE_TYPE = 'incidents';
 
 /**
- * Deletes incidents (incident administrators only, checked by the routes). An incident holding
- * regulatory reporting data is refused (`RecordInUseException`, 409,
- * `INCIDENT_HAS_REGULATORY_RECORDS`): it is cancelled or closed instead. What belongs to the
- * incident goes with it: its review document (and any other managed document, through
+ * Deletes incidents (incident administrators only, checked by the routes). An incident that holds
+ * regulatory reporting data (`INCIDENT_HAS_REGULATORY_RECORDS`) or is closed/cancelled
+ * (`INCIDENT_CLOSED_OR_CANCELLED`) is refused with a 409: it stays in the register. Only an open,
+ * in-progress or resolved draft can go, the case of a duplicate entered by mistake. What belongs to
+ * the incident goes with it: its review document (and any other managed document, through
  * `deleteForEntity`), its tasks, then the row, whose timeline entries, attachment rows and links to
  * applications, assets and Knowledge documents cascade (the documents stay). The search entry goes
  * with the row (trigger). Attachment files go last, once no attachment row of the tenant uses them.
@@ -72,11 +83,14 @@ export class IncidentsDeleteService {
     const tenantId = await currentTenantId(manager);
     const wanted = Array.from(new Set((ids || []).map((id) => String(id || '').trim().toLowerCase()).filter((id) => isUuid(id))));
     const [row]: Array<Record<Exclude<keyof IncidentDeleteImpact, 'refused'>, number>> = await manager.query(
-      `WITH asked AS (SELECT id, ${regulatoryCount()} AS recorded FROM incidents WHERE tenant_id = $1 AND id = ANY($2::uuid[])),
-       i AS (SELECT id FROM asked WHERE recorded = 0)
+      `WITH asked AS (
+         SELECT id, status, ${regulatoryCount()} AS recorded
+         FROM incidents WHERE tenant_id = $1 AND id = ANY($2::uuid[])
+       ),
+       i AS (SELECT id FROM asked WHERE recorded = 0 AND status NOT IN ${FROZEN_STATUSES})
        SELECT
          (SELECT count(*)::int FROM i) AS incidents,
-         (SELECT count(*)::int FROM asked WHERE recorded > 0) AS blocked,
+         (SELECT count(*)::int FROM asked WHERE recorded > 0 OR status IN ${FROZEN_STATUSES}) AS blocked,
          (SELECT count(*)::int FROM integrated_document_bindings
            WHERE tenant_id = $1 AND source_entity_type = '${SOURCE_TYPE}' AND source_entity_id IN (SELECT id FROM i)) AS review_documents,
          (SELECT count(*)::int FROM tasks WHERE tenant_id = $1 AND related_object_type = 'incident' AND related_object_id IN (SELECT id FROM i)) AS tasks,
@@ -96,23 +110,42 @@ export class IncidentsDeleteService {
     return { ...row, refused: await this.refusedIncidents(manager, tenantId, wanted) };
   }
 
-  /** The asked incidents holding regulatory reporting data, with the number of fields set. */
+  /** The asked incidents refused for regulatory reporting data or a closed/cancelled status. */
   private async refusedIncidents(manager: EntityManager, tenantId: string, ids: string[]): Promise<DeleteRefusal[]> {
     if (ids.length === 0) return [];
-    const rows: Array<{ id: string; item_number: number; title: string; total: number }> = await manager.query(
-      `SELECT id, item_number, title, ${regulatoryCount()} AS total
+    const rows: Array<{ id: string; item_number: number; title: string; status: string; total: number }> = await manager.query(
+      `SELECT id, item_number, title, status, ${regulatoryCount()} AS total
          FROM incidents WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
       [tenantId, ids],
     );
-    const byId = new Map(rows.filter((row) => row.total > 0).map((row) => [row.id, row]));
+    const byId = new Map(
+      rows
+        .filter((row) => row.total > 0 || isFrozenStatus(row.status))
+        .map((row) => [row.id, row]),
+    );
     return ids.flatMap((id) => {
       const row = byId.get(id);
       return row ? [this.refusalOf(row).details(id)] : [];
     });
   }
 
-  private refusalOf(row: { item_number: number; title: string; total: number }) {
+  private refusalOf(row: { item_number: number; title: string; status: string; total: number }) {
     const name = `INC-${row.item_number} ${row.title}`;
+    if (isFrozenStatus(row.status)) {
+      // A cancellation keeps the number, and a closed record is audit evidence: both stay.
+      return {
+        exception: () => new RecordInUseException(
+          INCIDENT_CLOSED_OR_CANCELLED,
+          'incident',
+          name,
+          [],
+          `Cannot delete incident "${name}": it is ${row.status}: it stays in the register.`,
+        ),
+        details: (id: string): DeleteRefusal => ({
+          id, name, code: INCIDENT_CLOSED_OR_CANCELLED, usages: [],
+        }),
+      };
+    }
     const usages = [{ type: 'regulatory_records' as const, total: row.total }];
     return {
       exception: () => new RecordInUseException(
@@ -161,16 +194,21 @@ export class IncidentsDeleteService {
   private async deleteOne(id: string, manager: EntityManager, userId: string | null): Promise<string[]> {
     const tenantId = await currentTenantId(manager);
     if (!isUuid(String(id))) throw new NotFoundException('Incident not found.');
-    const locked: Array<{ total: number }> = await manager.query(
-      `SELECT ${regulatoryCount()} AS total FROM incidents WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+    const locked: Array<{ status: string; total: number }> = await manager.query(
+      `SELECT status, ${regulatoryCount()} AS total FROM incidents WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
       [tenantId, id],
     );
     if (locked.length === 0) throw new NotFoundException('Incident not found.');
     const incident = await manager.getRepository(Incident).findOne({ where: { id, tenant_id: tenantId } as any });
     if (!incident) throw new NotFoundException('Incident not found.');
-    // Regulatory reporting data is audit evidence: the incident is cancelled or closed, not deleted.
-    if (locked[0].total > 0) {
-      throw this.refusalOf({ item_number: incident.item_number, title: incident.title, total: locked[0].total }).exception();
+    // Closed or cancelled incidents keep their number; regulatory reporting data is audit evidence.
+    if (isFrozenStatus(locked[0].status) || locked[0].total > 0) {
+      throw this.refusalOf({
+        item_number: incident.item_number,
+        title: incident.title,
+        status: locked[0].status,
+        total: locked[0].total,
+      }).exception();
     }
 
     const attachments: Array<{ storage_path: string }> = await manager.query(

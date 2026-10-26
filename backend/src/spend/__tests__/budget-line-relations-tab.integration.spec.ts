@@ -318,7 +318,7 @@ async function testPayload() {
     const reader = ctx(runner, seed, ALL);
     const res = await http.relations(seed.opexId, reader);
 
-    assert.deepEqual(Object.keys(res).sort(), ['applications', 'assets', 'contracts', 'projects', 'suggestions', 'technologies']);
+    assert.deepEqual(Object.keys(res).sort(), ['applications', 'assets', 'contracts', 'contracts_hidden', 'projects', 'suggestions', 'technologies']);
     assert.deepEqual(res.projects, [
       { id: seed.projects.alpha.id, item_number: 3, name: 'Alpha project', status: 'in_progress', planned_end: '2026-06-01' },
       { id: seed.projects.zulu.id, item_number: 4, name: 'Zulu project', status: 'planned', planned_end: null },

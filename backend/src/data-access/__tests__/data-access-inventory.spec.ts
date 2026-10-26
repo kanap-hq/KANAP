@@ -14,7 +14,9 @@ import {
  * 1. `data_access_apply` is called once, from `data-access/data-access.ts`, and `applyDataAccess`
  *    only from the call points of spec §6.3: a new call site is added here on purpose.
  * 2. Role changes (`SET ROLE`, `RESET ROLE`, `set_config('role'`) appear only in the foundations
- *    migration (inside `data_access_apply`) and in the data-access specs.
+ *    migration (inside `data_access_apply`), in `withFullDataAccess` (`data-access/full-data-access.ts`)
+ *    and in the data-access specs; `withFullDataAccess` is called from the chargeback report and
+ *    from the contract coverage (spec §6.6, §10.3 "Divulgations"), and nowhere else.
  * 3. Every path outside the tenant interceptor (`@SkipTenantTransaction()`, `{ transaction: false }`,
  *    `tenantExecutor.run(`, `withTenantExecution(`, `withTenant(`) is classified in
  *    `data-access/data-access-paths.inventory.ts`, and the inventory names no site that is gone.
@@ -82,6 +84,8 @@ const APPLY_CALLS: Record<string, number> = {
   'ai/execution/ai-tenant-execution.service.ts': 1,
   // canAccessInlineAttachment (option applyDataAccess) and the knowledge inline route.
   'knowledge/knowledge.service.ts': 2,
+  // The admin preview: the target's proposed access, then the caller's again (spec §8).
+  'data-access/data-access-admin.service.ts': 2,
 };
 
 /** The inline-attachment routes that ask canAccessInlineAttachment to apply the access. */
@@ -122,7 +126,22 @@ const ROLE_CHANGE_ALLOWED = new Set([
   'src/migrations/1854400000000-data-access-foundations.ts',
   // The availability check tries SET LOCAL ROLE in a rolled-back transaction (spec §6.2).
   'src/data-access/data-access-availability.ts',
+  // withFullDataAccess leaves the limited role for one read-only window (spec §6.6).
+  'src/data-access/full-data-access.ts',
 ]);
+
+/**
+ * `withFullDataAccess(` calls per file, outside its definition (spec §6.6, §10.3 "Divulgations"):
+ * the chargeback report, and the contract coverage (page and list, through
+ * `readContractBudgetCoverage`).
+ */
+const FULL_DATA_ACCESS_CALLS: Record<string, number> = {
+  'spend/chargeback-report.service.ts': 1,
+  'contracts/contract-budget.ts': 1,
+};
+
+/** A reference to the full-data-access module, whatever the binding it makes. */
+const FULL_DATA_ACCESS_IMPORT = /(?:\bfrom|\brequire\s*\(|\bimport\s*\()\s*['"`][^'"`]*\/full-data-access(?:\.[jt]s)?['"`]/;
 
 function testRoleChanges(): void {
   const root = backendPath();
@@ -134,8 +153,25 @@ function testRoleChanges(): void {
     if (rel.startsWith('src/data-access/__tests__/')) return false;
     return ROLE_CHANGE.test(fs.readFileSync(path.join(root, rel), 'utf8'));
   });
-  assert.deepEqual(found.sort(), [...ROLE_CHANGE_ALLOWED].sort(), 'role changes only in data_access_apply (and the data-access specs)');
-  console.log('  role changes: OK');
+  assert.deepEqual(found.sort(), [...ROLE_CHANGE_ALLOWED].sort(), 'role changes only in data_access_apply and withFullDataAccess (and the data-access specs)');
+
+  const calls: Record<string, number> = {};
+  for (const rel of sourceFiles()) {
+    if (rel.startsWith('migrations/')) continue;
+    const code = codeOf(fs.readFileSync(path.join(SRC, rel), 'utf8'));
+    const n = count(code, /\bwithFullDataAccess\s*(?:<[^()]*>)?\s*\(/) - count(code, /\bfunction\s+withFullDataAccess\s*(?:<[^()]*>)?\s*\(/);
+    if (n) calls[rel] = n;
+  }
+  assert.deepEqual(calls, FULL_DATA_ACCESS_CALLS, 'withFullDataAccess is called from the chargeback report and the contract coverage only');
+
+  // An import under another name, or a re-export, would escape the count above: the module itself
+  // is imported by the same two files only (any form: import, export from, require, import()).
+  const importers = sourceFiles().filter((rel) => {
+    if (rel === 'data-access/full-data-access.ts' || rel.startsWith('migrations/')) return false;
+    return FULL_DATA_ACCESS_IMPORT.test(codeOf(fs.readFileSync(path.join(SRC, rel), 'utf8')));
+  });
+  assert.deepEqual(importers, Object.keys(FULL_DATA_ACCESS_CALLS).sort(), 'full-data-access is imported by the chargeback report and the contract coverage only');
+  console.log('  role changes, withFullDataAccess called and imported from the chargeback report and the contract coverage only: OK');
 }
 
 // ---------------------------------------------------------------------------------------------

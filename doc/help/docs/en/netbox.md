@@ -70,13 +70,15 @@ This table is not a filter. A platform left on **No match** never keeps anything
 
 Netbox grants read access per object type, so a token allowed to read devices, roles and sites can still be refused the platforms. The roles and the sites keep working and the import is unaffected. Only this section is empty, and it says why.
 
-### Clusters
+### Clusters { #clusters }
 
 The **Clusters** section matches each Netbox cluster with a KANAP cluster: an asset marked as a cluster, in service. Each row shows how many virtual machines the Netbox cluster holds. A KANAP cluster with the same name is suggested, and as elsewhere a suggestion counts only once you press **Save mappings**.
 
 At the next run, each virtual machine of a matched cluster is added to the **Contains** relations of its KANAP cluster. A technology installed on the cluster then reaches the machine and the applications hosted on it. A machine whose only change is its cluster shows under **To update**, with a **Cluster** line. A machine the run creates joins its cluster at once.
 
-The import only adds:
+When a member host of the matched cluster contains the machine today, attaching it to the cluster replaces the host's link. The preview shows it on the machine's row, with a **Placement** line from the host to the cluster. See [Virtual machines on a cluster](assets.md#virtual-machines-on-a-cluster).
+
+Apart from that, the import only adds:
 
 - A machine already in another KANAP cluster stays there. The preview says so on the machine's row, so you can remove that relation by hand if it is out of date.
 - Changing a match adds the machines to the new cluster and keeps them in the old one.

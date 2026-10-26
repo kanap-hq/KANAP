@@ -389,7 +389,7 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml build --pull
 docker compose -f infra/compose.onprem.yml up -d --wait
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 ```
 
 Bricht der Build mit `signal: killed` ab, hatte der Server nicht genug Arbeitsspeicher. `sudo dmesg | grep -i oom` bestätigt das. Prüfen Sie den freien Speicher mit `free -m` und beenden Sie andere Dienste, die ihn belegen. Prüfen Sie, dass PostgreSQL und der Speicher noch laufen (`pg_lsclusters`, `systemctl status --no-pager rustfs`). Starten Sie dann Docker neu, was die Reste des abgebrochenen Builds beendet, bauen Sie die beiden Images nacheinander, was weniger Speicher braucht, und starten Sie KANAP:
@@ -414,7 +414,6 @@ docker compose -f infra/compose.onprem.yml up -d --wait
 [RATE-LIMIT] Client address: taken from X-Forwarded-For behind 1 trusted proxy (RATE_LIMIT_TRUST_PROXY=true)
 [CORS] Configured 1 origin pattern(s)
 [DB] Connected as PostgreSQL role "kanap" with native RLS enforcement
-Admin seeding disabled (set SEED_ADMIN=true to enable)
 [on-prem] Default chart of accounts created
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
@@ -428,7 +427,7 @@ Die Zahl der Migrationen hängt von der Version ab, die Pool-Werte von Ihrem Pos
 
 Der Block lässt die Migrationszeilen weg: Auf `Running migrations...` folgen etwa 40 Zeilen, die mit `[Migration]` oder `[migration:` beginnen. Sie dienen der Information. Auf einer neuen Datenbank melden einige davon Änderungen an mitgelieferten Referenzdaten oder nennen eine Mandanten-ID, die nicht Ihre ist: KANAP führt einen Systemmandanten für Plattformfunktionen. Sie erfordern keine Maßnahme. `...` steht für das Präfix `[Nest]` mit Prozess-ID und Uhrzeit sowie für die Quelle in Klammern (zum Beispiel `LOG [NestApplication]`). Einige dieser Zeilen enden mit einer Dauer wie `+0ms`. Die letzte Zeile der gefilterten Ausgabe ist `[DB] pool budget ...`. Eine in eine Datei gespeicherte Protokollausgabe kann Farbcodes wie `[33m` enthalten.
 
-Zwei Zeilen sind erwartet und erfordern keine Maßnahme: `Admin seeding disabled ...` und, bis Sie E-Mail konfigurieren, die `EmailService`-Warnung. Eine Warnung `[SECURITY]`, `[CONFIG]`, `[CORS]` oder `[ENV] APP_ENV is not set` bedeutet, dass eine Einstellung Aufmerksamkeit braucht: Die [Konfiguration](configuration.md#was-das-api-protokoll-beim-start-zeigt) erklärt jede Zeile.
+Bis Sie E-Mail konfigurieren, ist die `EmailService`-Warnung erwartet und erfordert keine Maßnahme. Eine Warnung `[SECURITY]`, `[CONFIG]`, `[CORS]` oder `[ENV] APP_ENV is not set` bedeutet, dass eine Einstellung Aufmerksamkeit braucht: Die [Konfiguration](configuration.md#was-das-api-protokoll-beim-start-zeigt) erklärt jede Zeile.
 
 ---
 

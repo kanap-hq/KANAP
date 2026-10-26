@@ -14,7 +14,7 @@ This document describes the technical design for on-premise deployments. User-fa
 
 ## Works Out of the Box
 
-- **Database & RLS:** PostgreSQL 16 with Row-Level Security works unchanged when `DATABASE_URL` uses a dedicated application role; startup fails instead of running with a role that can bypass RLS
+- **Database & RLS:** PostgreSQL 15 and later (16 in CI, 16 and 18 tested on-premise) work with Row-Level Security unchanged when `DATABASE_URL` uses a dedicated application role; startup fails instead of running with a role that can bypass RLS
 - **Database requirement, list engine:** PostgreSQL must provide the ICU collation `und-x-icu` (a build with ICU: the official, PGDG and Alpine images are) and the function `public.unaccent(text)` (the `unaccent` extension in schema `public`; the migrations create it when the extension files are installed). The OPEX and CAPEX lists sort, filter and search in SQL with them. Check before deploying, as the application role: `SELECT EXISTS (SELECT 1 FROM pg_collation WHERE collname = 'und-x-icu' AND collprovider = 'i') AS icu, to_regprocedure('public.unaccent(text)') IS NOT NULL AS unaccent;` must return `true, true`. Without either, the API still starts, logs `List engine disabled: missing …` once at startup, and the OPEX and CAPEX list endpoints answer 503 with the same requirement. The database sorts with its own ICU library and the API joins the project names of a line with Node's: both use the root collation, so they agree except on characters one ICU version knows and the other does not
 - **Database requirement, analytics values:** the values of a dimension sort by their position, then by name with the same ICU collation: the values list, its CSV export, the reorder and the value pickers need it like the OPEX and CAPEX lists. Without it the migration that numbers the existing values still runs (it falls back to `lower(name), name`) and the API starts, but those endpoints fail
 - **Storage:** S3-compatible storage via AWS SDK v3 S3 client (`S3_ENDPOINT`). Any S3-compatible store works; tested with RustFS (the store of the on-premise installation example, since MinIO stopped publishing binaries and images), Garage, MinIO, AWS S3, Cloudflare R2 and Hetzner Object Storage
@@ -33,6 +33,7 @@ This document describes the technical design for on-premise deployments. User-fa
 |-------|-------------|----------|
 | `multi-tenant` (or unset) | Cloud mode: subdomain-based tenant resolution | SaaS |
 | `single-tenant` | On-prem mode: fixed tenant, no subdomain parsing | Customer self-hosted |
+| any other value | The API refuses to start. The message names the accepted values. | |
 
 **Effects:**
 - Tenant resolution (routing)
@@ -43,14 +44,14 @@ This document describes the technical design for on-premise deployments. User-fa
 
 ## Feature Flags
 
-Single source of truth: `backend/src/config/features.ts`
+Single source of truth: `backend/src/config/features.ts`. `parseDeploymentMode` (`backend/src/common/deployment-mode.ts`) accepts `single-tenant`, `multi-tenant` and unset, and throws on any other value when the module loads. `validateStartupEnv` repeats that check.
 
 ```typescript
-const deploymentMode = (process.env.DEPLOYMENT_MODE || '').trim().toLowerCase();
+const deploymentMode = parseDeploymentMode(process.env.DEPLOYMENT_MODE);
 const isSingleTenant = deploymentMode === 'single-tenant';
 
 export const Features = {
-  DEPLOYMENT_MODE: isSingleTenant ? ('single-tenant' as const) : ('multi-tenant' as const),
+  DEPLOYMENT_MODE: deploymentMode,
   SINGLE_TENANT: isSingleTenant,
   STRIPE_BILLING: !isSingleTenant && !!process.env.STRIPE_SECRET_KEY,
   ENTRA_SSO: !!process.env.ENTRA_CLIENT_ID,
@@ -395,7 +396,7 @@ The living catalog reads the release cycles of endoflife.date (`https://endoflif
 
 #### Vulnerabilities (`Features.VULNERABILITY_FEED_ENABLED`)
 
-The NVD feed needs the way out to the NVD (`https://services.nvd.nist.gov`) or to a mirror (`NVD_API_BASE_URL`). `VULNERABILITY_FEED_ENABLED` is true by default in the cloud and false by default on-premise; set either way, it wins. `NVD_API_KEY` is optional (more requests per 30 seconds). The same switch runs the exploitation signals (`vulnerability-signals`, minute 50 of every sixth hour): the CISA catalog (`KEV_FEED_URL`, default `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json`), the EU catalog and the EUVD mapping (`EUVD_BASE_URL`, default `https://euvdservices.enisa.europa.eu`; a mirror serves `/api/kev/dump` and `/api/dump/cve-euvd-mapping` under it) and the EPSS scores (`EPSS_FEED_URL`, default `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz`, gzip or plain CSV; see EPSS at https://www.first.org/epss). An empty variable keeps the public address. Outbound HTTPS, port 443: `www.cisa.gov`, `euvdservices.enisa.europa.eu`, `epss.empiricalsecurity.com`. A source that cannot be reached leaves its columns as they are and is named in the task summary. The other sources and the NVD collection continue. The European record is ENISA's European vulnerability database. Off, the frontend shows none of it: no IT › Vulnerabilities page or navigation entry, no "Vulnerabilities to review" column in the technologies, assets and applications lists, no vulnerabilities section or severe badge on an asset or application record, no Vulnerabilities dashboard tile, no Technologies group in the notification preferences, and no email to the IT owners. With the feed on and email off (`EMAIL_ENABLED`), the run claims and sends nothing. With the feed on, the email lists critical or high CVE and, at any severity, CVE known to be exploited.
+The NVD feed needs the way out to the NVD (`https://services.nvd.nist.gov`) or to a mirror (`NVD_API_BASE_URL`). `VULNERABILITY_FEED_ENABLED` is true by default in the cloud and false by default on-premise; set either way, it wins. `NVD_API_KEY` is optional (more requests per 30 seconds). The same switch runs the exploitation signals (`vulnerability-signals`, minute 50 of every sixth hour): the CISA catalog (`KEV_FEED_URL`, default CISA's GitHub mirror `https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json`; `www.cisa.gov` answers 403 to data-centre addresses), the EU catalog and the EUVD mapping (`EUVD_BASE_URL`, default `https://euvdservices.enisa.europa.eu`; a mirror serves `/api/kev/dump` and `/api/dump/cve-euvd-mapping` under it) and the EPSS scores (`EPSS_FEED_URL`, default `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz`, gzip or plain CSV; see EPSS at https://www.first.org/epss). An empty variable keeps the default address. Outbound HTTPS, port 443: `raw.githubusercontent.com`, `euvdservices.enisa.europa.eu`, `epss.empiricalsecurity.com`. A source that cannot be reached leaves its columns as they are and is named in the task summary. The other sources and the NVD collection continue. The European record is ENISA's European vulnerability database. Off, the frontend shows none of it: no IT › Vulnerabilities page or navigation entry, no "Vulnerabilities to review" column in the technologies, assets and applications lists, no vulnerabilities section or severe badge on an asset or application record, no Vulnerabilities dashboard tile, no Technologies group in the notification preferences, and no email to the IT owners. With the feed on and email off (`EMAIL_ENABLED`), the run claims and sends nothing. With the feed on, the email lists critical or high CVE and, at any severity, CVE known to be exploited.
 
 | File | Line | What | Behavior |
 |------|------|------|----------|

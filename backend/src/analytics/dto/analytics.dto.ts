@@ -34,6 +34,11 @@ export class AnalyticsAxisCreateDto extends StatusLifecycleDto {
   @IsOptional()
   @IsBoolean()
   required?: boolean;
+
+  /** Anyone who may modify a line adds a value from the line or the budget file; absent leaves it unchanged. */
+  @IsOptional()
+  @IsBoolean()
+  open_values?: boolean;
 }
 
 export class AnalyticsAxisUpdateDto extends StatusLifecycleDto {
@@ -64,6 +69,11 @@ export class AnalyticsAxisUpdateDto extends StatusLifecycleDto {
   @IsOptional()
   @IsBoolean()
   required?: boolean;
+
+  /** Anyone who may modify a line adds a value from the line or the budget file; absent leaves it unchanged. */
+  @IsOptional()
+  @IsBoolean()
+  open_values?: boolean;
 }
 
 /** The order of the dimensions; the service checks the ids (they must be the tenant's dimensions). */
@@ -90,6 +100,30 @@ export class AnalyticsCategoryCreateDto extends StatusLifecycleDto {
   @IsOptional()
   @IsIn(AXIS_APPLIES_TO)
   applies_to?: AxisAppliesTo | null;
+}
+
+/**
+ * The line picker's value (`POST /analytics-categories/from-line`): a dimension with open values,
+ * the name, and the line it goes on, or the place of a line being created.
+ */
+export class AnalyticsCategoryFromLineDto {
+  @IsUUID()
+  axis_id!: string;
+
+  @IsString()
+  name!: string;
+
+  @IsOptional()
+  @IsUUID()
+  line_id?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  paying_company_id?: string | null;
+
+  @IsOptional()
+  @IsUUID()
+  cost_center_id?: string | null;
 }
 
 export class AnalyticsCategoryUpdateDto extends StatusLifecycleDto {

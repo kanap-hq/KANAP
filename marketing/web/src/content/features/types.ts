@@ -9,6 +9,8 @@ export const FEATURE_SLUGS = [
   'portfolio',
   'it-landscape',
   'knowledge',
+  'contracts',
+  'incidents',
   'ai',
   'agents',
 ] as const;
@@ -81,7 +83,7 @@ export interface AgentsContent extends FeatureContent {
 /** Hub page (features landing) — role-based scenarios. */
 
 export interface PersonaModuleRef {
-  /** Feature slug (`budget` | `it-landscape` | `portfolio` | `knowledge` | `ai`). */
+  /** Feature slug (`budget` | `it-landscape` | `portfolio` | `knowledge` | `contracts` | `incidents` | `ai`). */
   slug: string;
   label: string;
 }

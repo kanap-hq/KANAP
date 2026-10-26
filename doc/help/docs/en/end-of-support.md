@@ -34,10 +34,12 @@ Retired assets, disabled applications and versions nobody uses are left out.
 
 **What an item touches**: click a row to unfold the servers and the applications behind its counts. Each name opens its record.
 
-- A technology version touches the servers that carry it (including the virtual machines inside a host that carries it) and the applications hosted on them or that declare it.
-- An operating system touches the servers that run that version, what they contain, and the applications deployed on all of them. Its row opens the technology.
-- A piece of hardware touches its servers, what they contain, and the applications deployed on all of them.
-- An application touches the servers it is deployed on.
+- A technology version touches the servers it is installed on, and the applications that declare it or are hosted on a server that carries it (including the virtual machines inside such a server).
+- An operating system touches the servers that run that version, and the applications deployed on them and on what they contain. Its row opens the technology.
+- A piece of hardware touches its servers, what they contain, and the applications deployed on all of them. The hardware itself is not one of its servers.
+- An application touches the servers it is deployed on. On a cluster, these are the cluster and its members in service.
+
+The servers of a technology or an operating system are counted as in the **Servers** column of the [technologies list](technologies.md): the servers in service it is installed on, clusters excluded. The servers of a piece of hardware are the assets it carries, clusters excluded. The applications of a cluster still count.
 
 ## Missing data
 

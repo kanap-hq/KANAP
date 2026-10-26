@@ -27,7 +27,8 @@ type MasterDataCopyRequest = {
 type MasterDataCopyResultItem = {
   entityType: 'company' | 'department';
   entityId: string;
-  entityName: string;
+  /** A department with no row, or no name, is null: the screen words it. */
+  entityName: string | null;
   metric: CompanyMetricKey | 'headcount';
   sourceValue: number | null;
   destinationValue: number | null;
@@ -39,7 +40,8 @@ type MasterDataCopyResultItem = {
 type MasterDataCopyError = {
   entityType: 'company' | 'department';
   entityId: string;
-  entityName: string;
+  /** A department with no row, or no name, is null: the screen words it. */
+  entityName: string | null;
   message: string;
 };
 
@@ -74,6 +76,19 @@ function getCompanyMetricValue(row: CompanyMetric | undefined, metric: CompanyMe
   if (metric === 'headcount') return row.headcount;
   if (metric === 'it_users') return row.it_users;
   return row.turnover;
+}
+
+/**
+ * The name of a department in a copy result. No department, or a blank name, is null:
+ * the screen words it in the user's language, as the chargeback report does.
+ */
+export function departmentCopyName(
+  department: { name?: string | null; company?: { name?: string | null } | null } | null | undefined,
+): string | null {
+  const name = department?.name?.trim();
+  if (!name) return null;
+  const company = department?.company?.name?.trim();
+  return company ? `${name} (${company})` : name;
 }
 
 @Injectable()
@@ -306,8 +321,8 @@ export class MasterDataOperationsService {
         });
         const departmentNameMap = new Map<string, string>();
         for (const dept of departments) {
-          const label = dept.company ? `${dept.name} (${dept.company.name})` : dept.name;
-          departmentNameMap.set(dept.id, label);
+          const label = departmentCopyName(dept);
+          if (label) departmentNameMap.set(dept.id, label);
         }
         const sortedIds = [...departmentIds].sort((a, b) => {
           const nameA = (departmentNameMap.get(a) ?? '').toLowerCase();
@@ -318,7 +333,7 @@ export class MasterDataOperationsService {
         });
 
         for (const departmentId of sortedIds) {
-          const deptName = departmentNameMap.get(departmentId) ?? 'Unknown department';
+          const deptName = departmentNameMap.get(departmentId) ?? null;
           const source = sourceMap.get(departmentId);
           const destination = destinationMap.get(departmentId);
 

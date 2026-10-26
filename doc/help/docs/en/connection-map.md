@@ -27,7 +27,7 @@ The map uses a force-directed graph layout where:
 | **Clusters** | Rounded rectangle, dashed border | Cyan | Groups of servers acting as a single logical unit |
 | **Entities** | Pill / stadium shape | Orange | Logical endpoints (external systems, SaaS services) |
 
-Cluster members appear as separate server nodes with dashed indicator lines connecting them to their parent cluster node.
+A cluster brings its members in service: each one is a server node, tied to the cluster by a dashed line. See [Cluster visualization](#cluster-visualization).
 
 ---
 
@@ -43,7 +43,7 @@ Find servers via the applications that run on them:
 
 1. Select one or more applications from the **Applications** dropdown
 2. Pick environments in the **App Env** dropdown (only environments where the selected apps have assigned servers appear)
-3. The matching servers are automatically added to the **Servers** filter
+3. The matching servers are automatically added to the **Servers** filter. An application assigned to a cluster brings the cluster and its members
 
 This is useful when you want to see the infrastructure connections for an application without knowing which servers it runs on.
 
@@ -87,7 +87,7 @@ When enabled (default), the map keeps its force layout but adds vertical tier gu
 - **Servers** use the role assignments configured in IT Landscape settings
 - **Entities** use their configured **Graph Tier** (default Top)
 - **Unassigned servers** fall back to Center
-- **Clusters** inherit the highest-priority tier from their members
+- **Clusters** use the roles assigned to them, or else the highest-priority tier of their members. A member also takes the roles of its cluster
 
 Use this toggle when you want a topology view that reads like architecture tiers (edge-facing components at the top, data stores at the bottom). The setting is session-only and resets when you reload the page.
 
@@ -118,8 +118,8 @@ You can also zoom with the mouse wheel and pan by clicking and dragging the back
 Click a server or cluster node to highlight its connections and open a detail panel showing:
 
 - **Server type**, **Server location**, **Operating system**, **Network segment**, **IP address**
-- **Assigned applications**: Apps running on this server, grouped by environment. Click an app name to open it.
-- **Edit server** or **View cluster** button to open the workspace
+- **Assigned applications**: Apps running on this server, grouped by environment. On a member, an app assigned to its cluster shows "via" the cluster's name. Click an app name to open it.
+- **Edit server** or **View cluster** button to open the workspace. **View cluster** opens the cluster on its **Operations** tab, where its members are managed
 
 Click an entity node to see its type and environment.
 
@@ -155,13 +155,14 @@ The map supports URL parameters for sharing specific views:
 
 ---
 
-## Cluster visualization
+## Cluster visualization { #cluster-visualization }
 
 Clusters appear as distinct nodes with a dashed cyan border:
 
-- Cluster members appear as separate nodes connected to their parent cluster by dashed indicator lines
-- When filtering with depth=0, both the selected member servers and their parent clusters are shown
-- Member servers keep their individual server-to-server connections in addition to the cluster's own connections
+- A cluster on the map shows its members in service, tied to it by dashed lines, even when no connection names them. A connection on the cluster applies to each of them. See [Connections on a cluster](connections.md#connections-on-a-cluster)
+- Beyond ten members, the members no connection names are folded. The cluster shows **+N** after its environment, and its tooltip gives the number of hidden members. A member you picked in **Servers** always shows
+- A member picked in **Servers** brings the connections of its clusters: its clusters count as picked too
+- Members keep their own connections in addition to the cluster's
 
 ---
 

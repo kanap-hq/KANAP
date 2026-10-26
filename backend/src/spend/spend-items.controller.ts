@@ -10,6 +10,7 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ReadOnlyRoute, RequireLevel } from '../auth/require-level.decorator';
 import { StorageService } from '../common/storage/storage.service';
 import { contentDisposition } from '../common/content-disposition';
+import { DATA_ACCESS_HEADER } from '../data-access/data-access';
 import { SpendItemContactsService } from './spend-item-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
@@ -33,6 +34,7 @@ import { exportListQuery } from './budget-file/export-file';
 import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
 import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('spend-items')
@@ -147,7 +149,7 @@ export class SpendItemsController {
   ): Promise<void> {
     const listQuery = exportListQuery(query, query.all === 'true' || query.all === '1');
     const { ids } = await this.svc.summaryIds(listQuery, { manager: ctx.manager, access: budgetListAccess(ctx) });
-    const { filename, content } = await this.budgetFile.exportFile('opex', ids, {
+    const { filename, content, dataAccessLimited } = await this.budgetFile.exportFile('opex', ids, {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
@@ -159,6 +161,8 @@ export class SpendItemsController {
     });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
+    // A limited person's file holds the lines of their access: the dialog says "Calculated on your access".
+    if (dataAccessLimited) res.setHeader(DATA_ACCESS_HEADER, 'limited');
     res.send(content);
   }
 
@@ -575,6 +579,7 @@ export class SpendItemsController {
     return this.svc.update(id, body as Record<string, unknown>, ctx.userId || undefined, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -595,6 +600,7 @@ export class SpendItemsController {
     return this.svc.copyBudgetColumn(body, ctx.userId || null, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -611,6 +617,7 @@ export class SpendItemsController {
     return this.svc.copyAllocations(body, ctx.userId || null, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -625,6 +632,7 @@ export class SpendItemsController {
     return this.svc.clearBudgetColumn(body, ctx.userId || null, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -636,6 +644,7 @@ export class SpendItemsController {
     return this.deleteSvc.bulkDelete(body.ids, ctx.userId || null, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @Delete(':id')

@@ -369,7 +369,7 @@ export class UsersService {
     return result;
   }
 
-  async list(query: any, opts?: { manager?: EntityManager; adminView?: boolean; exportAll?: boolean }) {
+  async list(query: any, opts?: { manager?: EntityManager; adminView?: boolean; exportAll?: boolean; dataAccessView?: boolean }) {
     const repo = this.getRepo(opts?.manager);
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll ? parseExportPagination(query) : parsePagination(query);
     const allowedSortFields = [
@@ -429,6 +429,11 @@ export class UsersService {
     let rolesByUser: Map<string, Array<{ id: string; name: string | null }>> | undefined;
     let rolesWithPerms: Set<string> | undefined;
     let adminRoleIds: Set<string> | undefined;
+    let dataAccessByUser: Map<string, {
+      mode: 'all' | 'limited';
+      nodes: Array<{ type: 'all' | 'company' | 'cost_center'; name: string | null }>;
+    }> | undefined;
+    let dataAccessAnyLimited: boolean | undefined;
     if (opts?.adminView && items.length > 0) {
       const mg = opts?.manager ?? repo.manager;
       const userRoles = await mg.getRepository(UserRole).find({
@@ -450,6 +455,52 @@ export class UsersService {
         rolesByUser.set(ur.user_id, list);
         if ((ur.role?.role_name ?? '').toLowerCase() === 'administrator') adminRoleIds.add(ur.role_id);
       }
+      if (opts?.dataAccessView) {
+        // The access column (spec §7.4): modes and node names for the page, in two queries.
+        const pageIds = items.map((u) => u.id);
+        const modes: Array<{ id: string; data_access_mode: string }> = await mg.query(
+          `SELECT id, data_access_mode FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
+          [pageIds],
+        );
+        const modeById = new Map(modes.map((row) => [row.id, row.data_access_mode]));
+        const nodeRows: Array<{
+          user_id: string;
+          node_type: string;
+          company_name: string | null;
+          cost_center_code: string | null;
+          cost_center_name: string | null;
+        }> = await mg.query(
+          `SELECT n.user_id, n.node_type, co.name AS company_name,
+                  cc.code AS cost_center_code, cc.name AS cost_center_name
+             FROM user_data_access_nodes n
+             LEFT JOIN companies co ON co.tenant_id = n.tenant_id AND co.id = n.company_id
+             LEFT JOIN cost_centers cc ON cc.tenant_id = n.tenant_id AND cc.id = n.cost_center_id
+            WHERE n.tenant_id = app_current_tenant() AND n.user_id = ANY($1::uuid[])
+            ORDER BY CASE n.node_type WHEN 'all' THEN 0 WHEN 'company' THEN 1 ELSE 2 END,
+                     lower(co.name), lower(cc.code), n.id`,
+          [pageIds],
+        );
+        const names = new Map<string, Array<{ type: 'all' | 'company' | 'cost_center'; name: string | null }>>();
+        for (const row of nodeRows) {
+          const list = names.get(row.user_id) ?? [];
+          // The server sends the node type and its name, never a label: the screen writes
+          // "Everything" for an `all` node (spec §7.4). `name` is null for `all`.
+          if (row.node_type === 'company') list.push({ type: 'company', name: row.company_name ?? null });
+          else if (row.node_type === 'cost_center') list.push({ type: 'cost_center', name: row.cost_center_name ?? row.cost_center_code ?? null });
+          else list.push({ type: 'all', name: null });
+          names.set(row.user_id, list);
+        }
+        dataAccessByUser = new Map();
+        for (const u of items) {
+          const roles = rolesByUser?.get(u.id)
+            ?? (u.role_id ? [{ id: u.role_id, name: u.role?.role_name ?? null }] : []);
+          const isAdministrator = adminRoleIds?.has(u.role_id)
+            || roles.some((role) => adminRoleIds?.has(role.id)
+              || (role.name ?? '').trim().toLowerCase() === 'administrator');
+          const limited = modeById.get(u.id) === 'limited' && !isAdministrator;
+          dataAccessByUser.set(u.id, { mode: limited ? 'limited' : 'all', nodes: limited ? names.get(u.id) ?? [] : [] });
+        }
+      }
       const permRows: Array<{ role_id: string }> = allRoleIds.size > 0
         ? await mg.getRepository(RolePermission)
             .createQueryBuilder('rp')
@@ -460,6 +511,27 @@ export class UsersService {
       rolesWithPerms = new Set(permRows.map((r) => r.role_id));
     }
 
+    if (opts?.dataAccessView) {
+      const mg = opts?.manager ?? repo.manager;
+      const [anyLimited]: Array<{ any_limited: boolean }> = await mg.query(
+        `SELECT EXISTS (
+           SELECT 1 FROM users u
+            WHERE u.tenant_id = app_current_tenant()
+              AND u.data_access_mode = 'limited'
+              AND NOT EXISTS (
+                SELECT 1
+                FROM (
+                  SELECT u.role_id
+                  UNION
+                  SELECT ur.role_id FROM user_roles ur WHERE ur.user_id = u.id AND ur.tenant_id = u.tenant_id
+                ) assigned
+                JOIN roles r ON r.id = assigned.role_id AND r.tenant_id = u.tenant_id
+                WHERE lower(trim(r.role_name)) = 'administrator'
+              )
+         ) AS any_limited`,
+      );
+      dataAccessAnyLimited = anyLimited?.any_limited === true;
+    }
     const safe = items.map(u => {
       if (opts?.adminView) {
         const roles = rolesByUser?.get(u.id)
@@ -469,7 +541,15 @@ export class UsersService {
         const hasAccess = Array.from(accessRoleIds).some(
           (rid) => adminRoleIds?.has(rid) || rolesWithPerms?.has(rid),
         );
-        return { ...u, password_hash: undefined, roles, pending_access: u.status === 'enabled' && !hasAccess };
+        return {
+          ...u,
+          password_hash: undefined,
+          roles,
+          pending_access: u.status === 'enabled' && !hasAccess,
+          ...(opts?.dataAccessView && dataAccessByUser
+            ? { data_access: dataAccessByUser.get(u.id) ?? { mode: 'all', nodes: [] } }
+            : {}),
+        };
       }
       return {
         id: u.id,
@@ -479,7 +559,9 @@ export class UsersService {
         status: u.status,
       };
     });
-    return { items: safe, total, page, limit };
+    const result: any = { items: safe, total, page, limit };
+    if (opts?.dataAccessView) result.data_access_any_limited = dataAccessAnyLimited === true;
+    return result;
   }
 
   findByEmail(email: string, opts?: { manager?: EntityManager }) {

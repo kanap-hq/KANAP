@@ -130,5 +130,4 @@ describe('BudgetFileExportDialog', () => {
     expect(get.mock.calls[0][0]).toBe('/budget-lines/budget-file/export');
     expect(get.mock.calls[0][1].params).toMatchObject({ filters, sort: 'product_name:ASC', includeDisabled: '1' });
   });
-
 });

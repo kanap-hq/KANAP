@@ -22,6 +22,7 @@ import {
 import { parseTargetId } from '../common/relations/relation-target';
 import { resolveBudgetLine } from '../common/resolve-item-id';
 import { auditTableOf, linkedLineOf, natureAnd, naturesAnd, BUDGET_NATURES, type BudgetNature } from './budget-nature';
+import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-write-checks';
 
 /**
  * The Relations tab of a budget line (OPEX or CAPEX, one table). One round trip lists every
@@ -76,6 +77,8 @@ export type BudgetLineRelations = {
   applications: RelatedApplication[] | null;
   technologies: RelatedTechnology[] | null;
   contracts: RelatedContract[] | null;
+  /** The linked contracts the contracts policy hides from a limited person (spec §5.4). */
+  contracts_hidden: number;
   assets: RelatedAsset[] | null;
   suggestions: BudgetLineSuggestion[];
 };
@@ -182,11 +185,29 @@ export async function readBudgetLineRelations(
   const contracts = access.contracts
     ? await listRelatedContracts(manager, CONTRACTS, line.tenant_id, line.id)
     : null;
+  const contractsHidden = access.contracts ? await hiddenLineContractCount(manager, line.tenant_id, line.id) : 0;
   const assets = access.assets
     ? await listRelatedAssets(manager, ASSETS, line.tenant_id, line.id)
     : null;
   const suggestions = await lineSuggestions(manager, line, ctx);
-  return { projects, applications, technologies, contracts, assets, suggestions };
+  return { projects, applications, technologies, contracts, contracts_hidden: contractsHidden, assets, suggestions };
+}
+
+/**
+ * The contracts linked through `contract_spend_items` that a limited person cannot read (spec §5.4
+ * "liste de liens", "et N contrats hors de votre accès"). The link table has no policy, so the
+ * count is the links whose contract the contract policy hides; 0 without a query when unscoped.
+ */
+async function hiddenLineContractCount(manager: EntityManager, tenantId: string, lineId: string): Promise<number> {
+  if (!(await isLimitedTransaction(manager))) return 0;
+  const [row]: Array<{ n: number }> = await manager.query(
+    `SELECT count(DISTINCT l.contract_id)::int AS n
+       FROM contract_spend_items l
+      WHERE l.tenant_id = $1 AND l.spend_item_id = $2
+        AND NOT EXISTS (SELECT 1 FROM contracts c WHERE c.tenant_id = l.tenant_id AND c.id = l.contract_id)`,
+    [tenantId, lineId],
+  );
+  return Number(row?.n ?? 0);
 }
 
 /**
@@ -363,7 +384,11 @@ async function setAssetLink(
     `SELECT 1 FROM spend_items WHERE tenant_id = $1 AND id = $2${natureAnd(null, line.nature)} FOR NO KEY UPDATE`,
     [line.tenant_id, line.id],
   );
-  if (locked.length === 0) throw new NotFoundException(LINE_NOT_FOUND);
+  if (locked.length === 0) {
+    // A readable line the person may not modify takes no lock: the clear 403, else absent.
+    await assertLinesEditable(deps.manager, [line.id]);
+    throw new NotFoundException(LINE_NOT_FOUND);
+  }
   const exists: unknown[] = await deps.manager.query(
     `SELECT 1 FROM assets WHERE tenant_id = $1 AND id = $2`,
     [line.tenant_id, assetId],

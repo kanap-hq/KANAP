@@ -25,6 +25,7 @@ import { Tenant, TenantBranding } from '../../tenants/tenant.entity';
 import { StorageService } from '../../common/storage/storage.service';
 import { fixMulterFilename, inlineImageMulterOptions } from '../../common/upload';
 import { validateUploadedFile } from '../../common/upload-validation';
+import { ReservedToUnscopedDataAccess } from '../../data-access/reserved-operations';
 
 class UpdateBrandingSettingsDto {
   @IsOptional()
@@ -44,6 +45,7 @@ class UpdateBrandingSettingsDto {
   use_logo_in_dark?: boolean;
 }
 
+@ReservedToUnscopedDataAccess()
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('admin/branding')
 export class AdminBrandingController {

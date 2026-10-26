@@ -6,6 +6,7 @@ import { Task, TaskStatus, TASK_STATUSES } from './task.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { TaskTimeEntriesService } from './task-time-entries.service';
 import { AuditService } from '../audit/audit.service';
+import { displayName } from '../common/display-name';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { writeTaskColumns } from './task-column-write';
 
@@ -128,6 +129,12 @@ export class TaskActivitiesService {
   ): Promise<TaskActivityItem[]> {
     const mg = opts?.manager ?? this.activityRepo.manager;
 
+    // The history of a task the person can read only (spec §5.6): the task first, under the
+    // person's access (the tasks policy hides a task of a line or contract out of access), the same
+    // 404 for a hidden task and an unknown id. `portfolio_activities` itself carries no policy.
+    const visible = await mg.query(`SELECT 1 FROM tasks WHERE id = $1 AND tenant_id = app_current_tenant()`, [taskId]);
+    if (visible.length === 0) throw new NotFoundException('Task not found');
+
     const rows = await mg.query<Array<{
       id: string;
       type: ActivityType;
@@ -202,7 +209,7 @@ export class TaskActivitiesService {
     // Fire-and-forget notification for comments
     if (dto.type === 'comment' && normalizedContent && userId) {
       const author = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
-      const authorName = author.length > 0 ? `${author[0].first_name} ${author[0].last_name}`.trim() || 'Someone' : 'Someone';
+      const authorName = displayName(author[0], 'Someone');
       const recipients = await this.notifications.getTaskRecipients(taskId, mg);
       this.notifyCommentSafely({
         itemType: 'task',
@@ -374,9 +381,7 @@ export class TaskActivitiesService {
     if (tenantId && userId && (hasStatusChange || hasComment)) {
       const recipients = await this.notifications.getTaskRecipients(taskId, mg);
       const author = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
-      const authorName = author.length > 0
-        ? `${author[0].first_name} ${author[0].last_name}`.trim() || 'Someone'
-        : 'Someone';
+      const authorName = displayName(author[0], 'Someone');
 
       this.notifyUnifiedActionSafely({
         taskId,

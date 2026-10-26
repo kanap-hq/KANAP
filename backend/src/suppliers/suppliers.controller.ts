@@ -18,6 +18,7 @@ import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import { readSupplierUsages } from './supplier-usages';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('suppliers')
@@ -73,11 +74,13 @@ export class SuppliersController {
   @RequireLevel('suppliers', 'member')
   @Post()
   create(@Body() body: SupplierUpsertDto, @Req() req: any) { return this.svc.create(body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: SupplierUpsertDto, @Req() req: any) { return this.svc.update(id, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -107,6 +110,7 @@ export class SuppliersController {
   }
 
   // What a delete of `ids` would refuse, asked before the confirmation.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'admin')
   @Post('delete-check')
@@ -114,6 +118,7 @@ export class SuppliersController {
     return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'admin')
   @Delete('bulk')
@@ -121,6 +126,7 @@ export class SuppliersController {
     return this.deleteSvc.bulkDelete(body.ids, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'admin')
   @Delete(':id')
@@ -145,6 +151,7 @@ export class SuppliersController {
     return this.links.listForSupplier(id, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
   @Post(':id/contacts')
@@ -160,6 +167,7 @@ export class SuppliersController {
     );
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('suppliers', 'member')
   @Delete(':id/contacts/:linkId')

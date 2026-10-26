@@ -941,7 +941,7 @@ export async function prepareRecoveredContent(content: string | null | undefined
  * The specification document of an interface from its stored texts. When the
  * workers cannot build it in time, the texts are shown as a plain-text code block.
  */
-export async function interfaceSpecificationMarkdown(row: InterfaceSpecificationSource): Promise<string> {
+export async function interfaceSpecificationMarkdown(row: InterfaceSpecificationSource, language?: string | null): Promise<string> {
   const source: InterfaceSpecificationSource = {
     business_purpose: row.business_purpose,
     overview_notes: row.overview_notes,
@@ -956,10 +956,10 @@ export async function interfaceSpecificationMarkdown(row: InterfaceSpecification
     security_controls_summary: row.security_controls_summary,
   };
   try {
-    return await submit('interfaceSpecification', [source], { fieldName: 'specification' });
+    return await submit('interfaceSpecification', [source, language ?? null], { fieldName: 'specification' });
   } catch (error) {
     if (!isMarkdownTooComplex(error)) throw error;
-    const plain = buildInterfaceSpecificationMarkdown(source, (text) => text);
+    const plain = buildInterfaceSpecificationMarkdown(source, (text) => text, language);
     return plain ? markdownCodeBlock(plain) : plain;
   }
 }

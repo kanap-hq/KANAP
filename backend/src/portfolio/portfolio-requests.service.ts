@@ -18,6 +18,9 @@ import { PortfolioRequestUrl } from './portfolio-request-url.entity';
 import { PortfolioRequestAttachment } from './portfolio-request-attachment.entity';
 import { PortfolioRequestOpex } from './portfolio-request-opex.entity';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, OPEX_ITEMS_NOT_FOUND } from './project-budget-links.util';
+import { assertNoHiddenLines, hiddenLineCount } from '../data-access/hidden-links';
+import { activityBudgetLines, budgetLineActivitiesForReader } from './budget-line-activity';
+import { countRelatedBudgetLines, type RelationLinkTable } from '../common/relations/related-objects';
 import { PortfolioRequestBusinessProcess } from './portfolio-request-business-process.entity';
 import { PortfolioRequestDependency } from './portfolio-request-dependency.entity';
 import { PortfolioProjectDependency } from './portfolio-project-dependency.entity';
@@ -25,11 +28,13 @@ import { PortfolioProject } from './portfolio-project.entity';
 import { PortfolioActivity } from './portfolio-activity.entity';
 import { AuditService } from '../audit/audit.service';
 import { resolveRecordCreators } from '../audit/record-creator.util';
+import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { ItemNumberService } from '../common/item-number.service';
 import { StorageService } from '../common/storage/storage.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
+import { displayName } from '../common/display-name';
 import { parsePagination } from '../common/pagination';
 import {
   compileAgFilterCondition,
@@ -262,6 +267,9 @@ export async function convertedRequestPurpose(
     ? await normalizeMarkdownRichText(purposeOverride)
     : await normalizeMarkdownRichText(taskDescription, { fieldName: 'purpose', enforceSizeLimit: false });
 }
+
+/** The request's links to budget lines, both natures (lot Z1). */
+const REQUEST_BUDGET_LINES: RelationLinkTable = { links: 'portfolio_request_opex', owner: 'request_id', target: 'opex_id' };
 
 /**
  * The request lists' column filters (the list, its ids and its filter values): one map, so the
@@ -870,7 +878,11 @@ export class PortfolioRequestsService {
     if (rows.length === 0) throw new NotFoundException('Request not found');
   }
 
-  async get(id: string, query: any, opts?: { manager?: EntityManager; accessScope?: ParticipationAccessScope }) {
+  /**
+   * `readsBudget`: the reader holds the budget right; without it the budget lines are counted, never
+   * named (data-scoped access, spec §5.4).
+   */
+  async get(id: string, query: any, opts?: { manager?: EntityManager; accessScope?: ParticipationAccessScope; readsBudget?: boolean; viewer?: IncidentViewer | null }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioRequest);
 
@@ -944,6 +956,8 @@ export class PortfolioRequestsService {
     }
 
     if (include.has('origin_task') && request.origin_task_id) {
+      const originTaskParams: unknown[] = [request.origin_task_id];
+      const originTaskVisibility = taskIncidentVisibilitySql('t', opts?.viewer, originTaskParams);
       const originTasks = await mg.query<Array<{
         id: string;
         item_number: number | null;
@@ -955,8 +969,9 @@ export class PortfolioRequestsService {
          FROM tasks t
          LEFT JOIN portfolio_task_types tt ON tt.id = t.task_type_id
          WHERE t.id = $1
+           ${originTaskVisibility}
          LIMIT 1`,
-        [request.origin_task_id],
+        originTaskParams,
       );
       result.origin_task = originTasks[0] || null;
     }
@@ -1011,30 +1026,38 @@ export class PortfolioRequestsService {
       }));
     }
 
-    // Load CAPEX items
-    if (include.has('financials') || include.has('capex')) {
-      result.capex_items = await mg.query(
-        `SELECT c.id, c.product_name AS description, c.item_number, c.currency, c.status,
-                sup.name as supplier_name
-         FROM portfolio_request_opex rc
-         JOIN spend_items c ON c.id = rc.opex_id AND c.nature = 'capex'
-         LEFT JOIN suppliers sup ON sup.id = c.supplier_id
-         WHERE rc.request_id = $1`,
-        [id]
-      );
-    }
-
-    // Load OPEX items
-    if (include.has('financials') || include.has('opex')) {
-      result.opex_items = await mg.query(
-        `SELECT s.id, s.product_name, s.item_number, s.description, s.currency, s.status,
-                sup.name as supplier_name
-         FROM portfolio_request_opex ro
-         JOIN spend_items s ON s.id = ro.opex_id AND s.nature = 'opex'
-         LEFT JOIN suppliers sup ON sup.id = s.supplier_id
-         WHERE ro.request_id = $1`,
-        [id]
-      );
+    // Budget lines: listed for a reader with the budget right (the lines they can read, the others
+    // counted), counted only without it, as the Relations tab (spec §5.4).
+    const wantsCapex = include.has('capex') || include.has('financials');
+    const wantsOpex = include.has('opex') || include.has('financials');
+    if ((wantsCapex || wantsOpex) && opts?.readsBudget !== true) {
+      if (wantsCapex) result.capex_items = null;
+      if (wantsOpex) result.opex_items = null;
+      result.budget_lines_hidden = await countRelatedBudgetLines(mg, REQUEST_BUDGET_LINES, 'request', request.tenant_id, id);
+    } else if (wantsCapex || wantsOpex) {
+      result.budget_lines_hidden = await hiddenLineCount(mg, 'request', id);
+      if (wantsCapex) {
+        result.capex_items = await mg.query(
+          `SELECT c.id, c.product_name AS description, c.item_number, c.currency, c.status,
+                  sup.name as supplier_name
+           FROM portfolio_request_opex rc
+           JOIN spend_items c ON c.id = rc.opex_id AND c.nature = 'capex'
+           LEFT JOIN suppliers sup ON sup.id = c.supplier_id
+           WHERE rc.request_id = $1`,
+          [id]
+        );
+      }
+      if (wantsOpex) {
+        result.opex_items = await mg.query(
+          `SELECT s.id, s.product_name, s.item_number, s.description, s.currency, s.status,
+                  sup.name as supplier_name
+           FROM portfolio_request_opex ro
+           JOIN spend_items s ON s.id = ro.opex_id AND s.nature = 'opex'
+           LEFT JOIN suppliers sup ON sup.id = s.supplier_id
+           WHERE ro.request_id = $1`,
+          [id]
+        );
+      }
     }
 
     // Load business processes
@@ -1051,7 +1074,7 @@ export class PortfolioRequestsService {
 
     // Load activity history
     if (include.has('activities')) {
-      result.activities = await mg.query(
+      const activities = await mg.query(
         `SELECT a.*, u.email, u.first_name, u.last_name
          FROM portfolio_activities a
          LEFT JOIN users u ON u.id = a.author_id
@@ -1060,6 +1083,8 @@ export class PortfolioRequestsService {
          ORDER BY a.created_at DESC, a.id`,
         [id]
       );
+      // Budget lines in the history: named only as far as the reader may read them.
+      result.activities = await budgetLineActivitiesForReader(mg, activities, opts?.readsBudget === true);
       const creators = await resolveRecordCreators(mg, 'portfolio_requests', [id]);
       result.created_by_name = creators.get(id) ?? null;
     }
@@ -1173,7 +1198,7 @@ export class PortfolioRequestsService {
     overrides: ConvertFromTaskOverrides,
     tenantId: string,
     userId: string | null,
-    opts?: { manager?: EntityManager },
+    opts?: { manager?: EntityManager; viewer?: IncidentViewer | null },
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const requestRepo = mg.getRepository(PortfolioRequest);
@@ -1183,8 +1208,19 @@ export class PortfolioRequestsService {
 
     if (!tenantId) throw new BadRequestException('Tenant context is required');
 
-    const task = await taskRepo.findOne({ where: { id: taskId } });
-    if (!task || task.tenant_id !== tenantId) {
+    const taskParams: unknown[] = [taskId, tenantId];
+    const taskVisibility = taskIncidentVisibilitySql('t', opts?.viewer, taskParams);
+    const taskRows = await mg.query(
+      `SELECT t.*
+       FROM tasks t
+       WHERE t.id = $1
+         AND t.tenant_id = $2
+         ${taskVisibility}
+       LIMIT 1`,
+      taskParams,
+    );
+    const task = taskRows[0] ? taskRepo.create(taskRows[0] as Partial<Task>) : null;
+    if (!task) {
       throw new NotFoundException('Task not found');
     }
 
@@ -1883,8 +1919,8 @@ export class PortfolioRequestsService {
     const afterSorted = [...afterIds].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
       const [beforeLabels, afterLabels] = await Promise.all([
-        this.resolveCapexLabelsByIds(mg, beforeSorted),
-        this.resolveCapexLabelsByIds(mg, afterSorted),
+        activityBudgetLines(mg, 'capex', beforeSorted),
+        activityBudgetLines(mg, 'capex', afterSorted),
       ]);
       await this.logActivity(mg, {
         request_id: requestId,
@@ -1939,8 +1975,8 @@ export class PortfolioRequestsService {
     const afterSorted = [...afterIds].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
       const [beforeLabels, afterLabels] = await Promise.all([
-        this.resolveOpexLabelsByIds(mg, beforeSorted),
-        this.resolveOpexLabelsByIds(mg, afterSorted),
+        activityBudgetLines(mg, 'opex', beforeSorted),
+        activityBudgetLines(mg, 'opex', afterSorted),
       ]);
       await this.logActivity(mg, {
         request_id: requestId,
@@ -2245,9 +2281,7 @@ export class PortfolioRequestsService {
         `SELECT first_name, last_name FROM users WHERE id = $1`,
         [userId]
       );
-      const authorName = authorData.length > 0
-        ? `${authorData[0].first_name || ''} ${authorData[0].last_name || ''}`.trim() || 'Unknown'
-        : 'Unknown';
+      const authorName = displayName(authorData[0], 'Unknown');
 
       const recipients = await this.notifications.getRequestRecipients(requestId, mg);
       this.notifications.notifyComment({
@@ -2323,21 +2357,6 @@ export class PortfolioRequestsService {
     return userIds.map((id) => byId.get(id) ?? id).sort((a, b) => a.localeCompare(b));
   }
 
-  private async resolveCapexLabelsByIds(mg: EntityManager, capexIds: string[]): Promise<string[]> {
-    if (capexIds.length === 0) return [];
-    // A CAPEX line's title is its `product_name` (lot Z1).
-    const rows = await mg.query<Array<{ id: string; description: string | null }>>(
-      `SELECT id, product_name AS description
-       FROM spend_items
-       WHERE id = ANY($1::uuid[]) AND nature = 'capex'`,
-      [capexIds],
-    );
-    const byId = new Map<string, string>();
-    for (const row of rows) {
-      byId.set(row.id, row.description || row.id);
-    }
-    return capexIds.map((id) => byId.get(id) ?? id).sort((a, b) => a.localeCompare(b));
-  }
 
   private async resolveApplicationLabelsByIds(mg: EntityManager, applicationIds: string[]): Promise<string[]> {
     if (applicationIds.length === 0) return [];
@@ -2369,20 +2388,6 @@ export class PortfolioRequestsService {
     return assetIds.map((id) => byId.get(id) ?? id).sort((a, b) => a.localeCompare(b));
   }
 
-  private async resolveOpexLabelsByIds(mg: EntityManager, opexIds: string[]): Promise<string[]> {
-    if (opexIds.length === 0) return [];
-    const rows = await mg.query<Array<{ id: string; product_name: string | null; description: string | null }>>(
-      `SELECT id, product_name, description
-       FROM spend_items
-       WHERE id = ANY($1::uuid[]) AND nature = 'opex'`,
-      [opexIds],
-    );
-    const byId = new Map<string, string>();
-    for (const row of rows) {
-      byId.set(row.id, row.product_name || row.description || row.id);
-    }
-    return opexIds.map((id) => byId.get(id) ?? id).sort((a, b) => a.localeCompare(b));
-  }
 
   private async resolveDependencyTargetLabel(
     targetType: 'request' | 'project',
@@ -2768,6 +2773,8 @@ export class PortfolioRequestsService {
       throw new RecordInUseException('REQUEST_CONVERTED', 'request', request.name, [],
         'Converted requests cannot be deleted: the project keeps them as its origin.');
     }
+    // Its cascade would drop links to lines the person cannot read (spec §5.4).
+    await assertNoHiddenLines(mg, 'request', request.id);
 
     await this.integratedDocuments.deleteForEntity('requests', id, userId, { manager: mg });
 
@@ -2829,9 +2836,7 @@ export class PortfolioRequestsService {
       'SELECT first_name, last_name FROM users WHERE id = $1',
       [userId],
     );
-    const senderName = senderRows.length > 0
-      ? `${senderRows[0].first_name} ${senderRows[0].last_name}`.trim() || 'Someone'
-      : 'Someone';
+    const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
       ? await mg.query(

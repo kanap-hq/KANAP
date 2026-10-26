@@ -2,6 +2,8 @@ import { BadRequestException, ForbiddenException, NotFoundException } from '@nes
 import type { EntityManager } from 'typeorm';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
+import { assertLinesEditable, DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE, isLimitedTransaction } from '../../data-access/line-write-checks';
+import { auditedLinkSet, hiddenLineCount, type HiddenLineOwner } from '../../data-access/hidden-links';
 import { binder } from './related-objects';
 import { parseTargetId } from './relation-target';
 
@@ -13,6 +15,15 @@ import { parseTargetId } from './relation-target';
 export type OwnedRelationKind = 'budget_lines' | 'contracts' | 'projects' | 'applications' | 'assets' | 'technologies' | 'processes';
 
 /** Existence of an application, an asset, a technology or a business process. The table names come only from here. */
+/** The owners whose hidden lines `data_access_hidden_count` counts, by their table. */
+const HIDDEN_LINE_OWNERS: Record<string, HiddenLineOwner> = {
+  applications: 'application',
+  assets: 'asset',
+  technologies: 'technology',
+  portfolio_projects: 'project',
+  portfolio_requests: 'request',
+};
+
 const ROW_TARGETS = {
   applications: 'applications',
   assets: 'assets',
@@ -38,7 +49,7 @@ export type OwnedRelationLink = {
 
 export type OwnedLinkAudit = {
   log: (
-    entry: { table: string; recordId: string; action: 'update'; before: string[]; after: string[]; userId: string | null },
+    entry: { table: string; recordId: string; action: 'update'; before: unknown; after: unknown; userId: string | null },
     opts: { manager: EntityManager },
   ) => Promise<unknown>;
 };
@@ -69,7 +80,8 @@ export async function assertProjectVisible(
  * business process the owner holds.
  *
  * (1) `allowed` false → 403. (2) A bad target id → 400, before the owner is read.
- * (3) `loadOwner`, then the owner row locked FOR NO KEY UPDATE. (5) A budget line's nature,
+ * (3) `loadOwner`, then the owner row locked FOR NO KEY UPDATE (a budget line read but not
+ * modifiable: 403). (5) A budget line's nature,
  * or 400. (6) A contract's existence. (7) A project's visibility. An application, an asset, a
  * technology or a business process exists in the tenant, or 400 with `notFound`. (8) The stored set
  * (a budget line: the links of that nature only). (9) Linking what is linked, or unlinking
@@ -107,7 +119,12 @@ export async function setOwnedLink(args: {
     `SELECT 1 FROM ${args.owner.table} WHERE tenant_id = $1 AND ${args.owner.idColumn} = $2 FOR NO KEY UPDATE`,
     [tenantId, loaded.id],
   );
-  if (locked.length === 0) throw new NotFoundException(args.ownerNotFound);
+  if (locked.length === 0) {
+    // The lock passes the UPDATE policy: a budget line the person reads but may not modify takes
+    // none. The clear 403 for it (a plain read), else absent (data-scoped access, spec §6.7).
+    if (args.owner.table === 'spend_items') await assertLinesEditable(args.manager, [loaded.id]);
+    throw new NotFoundException(args.ownerNotFound);
+  }
 
   let nature: BudgetNature | undefined;
   if (args.kind === 'budget_lines') {
@@ -119,7 +136,11 @@ export async function setOwnedLink(args: {
     nature = lines[0].nature;
   } else if (args.kind === 'contracts') {
     const rows: unknown[] = await args.manager.query(`SELECT 1 FROM contracts WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
-    if (rows.length === 0) throw new BadRequestException(args.link.notFound);
+    if (rows.length === 0) {
+      // A hidden contract answers as a missing one for a limited person; unscoped persons keep the 400.
+      if (await isLimitedTransaction(args.manager)) throw new NotFoundException(DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE);
+      throw new BadRequestException(args.link.notFound);
+    }
   } else if (args.kind === 'projects') {
     await assertProjectVisible(args.manager, tenantId, id, args.projectScope, args.link.notFound);
   } else {
@@ -151,8 +172,11 @@ export async function setOwnedLink(args: {
   const auditTable = typeof args.link.auditTable === 'function'
     ? args.link.auditTable(nature as BudgetNature)
     : (args.link.auditTable ?? args.link.table);
+  // The lines a limited person cannot read stay linked: the audit row says how many (spec §6.6).
+  const hiddenOwner = args.kind === 'budget_lines' ? HIDDEN_LINE_OWNERS[args.owner.table] : undefined;
+  const hidden = hiddenOwner ? await hiddenLineCount(args.manager, hiddenOwner, loaded.id) : 0;
   await args.audit.log(
-    { table: auditTable, recordId: loaded.id, action: 'update', before, after, userId: args.userId },
+    { table: auditTable, recordId: loaded.id, action: 'update', before: auditedLinkSet(before, hidden), after: auditedLinkSet(after, hidden), userId: args.userId },
     { manager: args.manager },
   );
   return { ok: true, changed: true };

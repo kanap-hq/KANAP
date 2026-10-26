@@ -1,10 +1,11 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Autocomplete, Box, FormHelperText, Menu, MenuItem, Select, TextField, Typography } from '@mui/material';
+import { Autocomplete, Box, FormHelperText, Menu, MenuItem, Select, TextField } from '@mui/material';
 import { DIAL_CODES } from '../../constants/dialCodes';
 import { combineDialCode, normalizeDialCode, splitPhone } from '../../lib/phoneUtils';
 import { drawerAutocompleteListboxSx, drawerMenuItemSx, drawerSelectSx, selectKeepsFocus } from '../../theme/formSx';
-import { metaItemSx, taskDetailTypography } from '../tasks/theme/taskDetailTokens';
+import { metaItemSx } from '../tasks/theme/taskDetailTokens';
+import { EditableTitleDisplay } from '../../components/workspace/EditableTitle';
 import { CONTACT_ROLES, type ContactRole } from './contactModel';
 
 // A dial code shared by several countries is listed once.
@@ -187,26 +188,22 @@ export function ContactNameTitle({
   const openRef = React.useRef(false);
   const name = [firstName, lastName].map((part) => (part ?? '').trim()).filter(Boolean).join(' ');
 
+  const showingPlaceholder = !name && fallback === t('contacts.contactFallback');
   if (!editing) {
     return (
-      <Typography
-        component="span"
-        onClick={canEdit ? () => {
+      <EditableTitleDisplay
+        canEdit={canEdit}
+        placeholder={showingPlaceholder}
+        muted={!name && !showingPlaceholder}
+        onEdit={() => {
           setFirst(firstName ?? '');
           setLast(lastName ?? '');
           openRef.current = true;
           setEditing(true);
-        } : undefined}
-        sx={(theme) => ({
-          ...taskDetailTypography.title,
-          display: 'inline',
-          color: name ? 'inherit' : theme.palette.kanap.text.secondary,
-          cursor: canEdit ? 'text' : 'default',
-          '&:hover': canEdit ? { opacity: 0.85 } : undefined,
-        })}
+        }}
       >
         {name || fallback}
-      </Typography>
+      </EditableTitleDisplay>
     );
   }
 

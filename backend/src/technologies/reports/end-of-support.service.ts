@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import { languageOf, writeCsv } from '../../common/csv-sheet';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
@@ -14,9 +15,12 @@ import { versionInUseSql, versionSupportSql } from './version-support';
  * The "End of support" report (lot T4 of planning/cartographie-technologies): what reaches or has
  * reached its end of support within a horizon, what it touches, and the missing data that keeps the
  * report from answering. Servers and applications touched by a technology version come from the
- * deductions of `TechnologyReachService`; an operating system or a piece of hardware touches its
- * assets and what they carry (`assetsCarriedBy`), then the applications assigned to them; an
- * application touches the servers it is assigned to. Retired assets take no part.
+ * deductions of `TechnologyReachService`, its servers are those it is installed on
+ * (`serversOfTechnologies`); an operating system or a piece of hardware touches its
+ * assets and what they carry (`assetsCarriedBy`), then the applications that run on them; an
+ * application touches the servers it runs on. Where an application runs is its effective
+ * assignments (`effectiveAssignmentsSql`): on a cluster, the cluster and its members in service.
+ * Retired assets take no part.
  *
  * Every statement is static SQL, carries `tenant_id` on every table and join besides RLS, and
  * reads a batch (`= ANY($n)`), never a query per row. Applications show only to a caller who reads
@@ -88,6 +92,8 @@ export type GapRow = {
 type Candidate = Omit<DeadlineRow, 'server_count' | 'servers' | 'application_count' | 'applications'> & {
   serverIds: string[];
   applicationIds: string[];
+  /** An operating system: the assets it reaches (installed or carried), whose applications it touches. */
+  touchedIds?: string[];
 };
 
 export type ReportWindow = { today: string; until: string };
@@ -155,23 +161,34 @@ export class EndOfSupportService {
     // a host), then the applications assigned to all of them.
     const named = candidates.filter((c) => c.type === 'operating_system' || c.type === 'hardware');
     if (named.length) {
+      const touched = (c: Candidate) => c.touchedIds ?? c.serverIds;
       const carried = new Map<string, string[]>();
-      for (const row of await this.reach.assetsCarriedBy(mg, tenantId, named.flatMap((c) => c.serverIds))) {
+      for (const row of await this.reach.assetsCarriedBy(mg, tenantId, named.flatMap(touched))) {
         if (!carried.has(row.asset_id)) carried.set(row.asset_id, []);
         carried.get(row.asset_id)!.push(row.carried_id);
       }
-      for (const c of named) c.serverIds = Array.from(new Set([...c.serverIds, ...c.serverIds.flatMap((id) => carried.get(id) ?? [])]));
+      for (const c of named) {
+        c.touchedIds = Array.from(new Set([...touched(c), ...touched(c).flatMap((id) => carried.get(id) ?? [])]));
+        // A piece of hardware has no installation: its servers are the assets it carries.
+        if (c.type === 'hardware') c.serverIds = c.touchedIds;
+      }
       if (applications) {
-        const hosted = await this.applicationsOnAssets(mg, tenantId, named.flatMap((c) => c.serverIds));
-        for (const c of named) c.applicationIds = Array.from(new Set(c.serverIds.flatMap((id) => hosted.get(id) ?? [])));
+        const hosted = await this.applicationsOnAssets(mg, tenantId, named.flatMap(touched));
+        for (const c of named) c.applicationIds = Array.from(new Set(touched(c).flatMap((id) => hosted.get(id) ?? [])));
       }
     }
 
+    // The servers of a version or an operating system are those of the list and the record
+    // (`TechnologyReachService.serversOfTechnologies`, decision of 2026-10-24): in service, the
+    // version installed on them, clusters excluded; the applications above still went through the
+    // graph. Those of a piece of hardware: the assets it carries, clusters excluded, never itself
+    // (K2-7). An application keeps the servers it is assigned to.
     const servers = await this.assetNames(mg, tenantId, candidates.flatMap((c) => c.serverIds));
     const apps = applications ? await this.visibleApplications(mg, tenantId, candidates.flatMap((c) => c.applicationIds), applications) : null;
     const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' });
-    const items: DeadlineRow[] = candidates.map(({ serverIds, applicationIds, ...row }) => {
-      const serverRefs = Array.from(new Set(serverIds)).flatMap((id) => (servers.has(id) ? [{ id, name: servers.get(id)! }] : [])).sort(byName);
+    const items: DeadlineRow[] = candidates.map(({ serverIds, applicationIds, touchedIds: _touched, ...row }) => {
+      const counts = (id: string) => row.type === 'application' || (!servers.get(id)!.is_cluster && id !== row.item_id);
+      const serverRefs = Array.from(new Set(serverIds)).flatMap((id) => (servers.has(id) && counts(id) ? [{ id, name: servers.get(id)!.name }] : [])).sort(byName);
       const appRefs = apps ? Array.from(new Set(applicationIds)).flatMap((id) => (apps.has(id) ? [apps.get(id)!] : [])).sort(byName) : null;
       return { ...row, server_count: serverRefs.length, servers: serverRefs, application_count: appRefs ? appRefs.length : null, applications: appRefs };
     });
@@ -206,6 +223,8 @@ export class EndOfSupportService {
       const rows: Array<{ id: string; name: string; sequential_id: string | null }> = await mg.query(
         `SELECT ap.id, ap.name, ap.sequential_id FROM applications ap
           WHERE ap.tenant_id = $1 AND ${inServiceSql('ap')} AND ap.hosting_model IN ('on_premise', 'private_cloud') ${scope}
+            -- The stored rows: an instance has an effective server exactly when it has a stored
+            -- row (a member inherits only what its cluster carries), so this reads them directly.
             AND NOT EXISTS (
               SELECT 1 FROM app_instances i
                 JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.app_instance_id = i.id
@@ -246,16 +265,15 @@ export class EndOfSupportService {
     );
     items.push(...untyped.map((r) => subject('technology_without_hosting_type', 'technology', r.id, r.name, technologyReference(r.item_number))));
 
-    // Servers with a database role: a technology of the database family installed on them or carried to them.
+    // Servers with a database role (effective: the members of a cluster that holds it too): a
+    // technology of the database family installed on them or carried to them.
     const dbServers: Array<{ id: string; name: string }> = await mg.query(
-      `SELECT a.id, a.name FROM assets a
-        WHERE a.tenant_id = $1 AND ${assetInServiceSql('a')}
-          AND EXISTS (
-            SELECT 1 FROM app_asset_assignments x
-              JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
-              JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
-             WHERE x.tenant_id = $1 AND x.asset_id = a.id AND x.role = 'db'
-          )`,
+      `SELECT DISTINCT a.id, a.name
+         FROM (${effectiveAssignmentsSql({ tenant: '$1' })}) x
+         JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
+         JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
+         JOIN assets a ON a.tenant_id = $1 AND a.id = x.asset_id AND ${assetInServiceSql('a')}
+        WHERE x.role = 'db'`,
       [tenantId],
     );
     if (dbServers.length) {
@@ -386,7 +404,10 @@ export class EndOfSupportService {
     }));
     if (kept.length === 0) return [];
     const techIds = Array.from(new Set(kept.map((k) => k.row.technology_id)));
-    const assets = await this.reach.assetsOfTechnologies(mg, tenantId, techIds);
+    const servers = await this.reach.serversOfTechnologies(mg, tenantId, techIds);
+    // The assets an operating system reaches, whose applications it touches.
+    const osIds = Array.from(new Set(kept.filter((k) => k.row.family === 'operating_system').map((k) => k.row.technology_id)));
+    const assets = await this.reach.assetsOfTechnologies(mg, tenantId, osIds);
     const apps = await this.reach.applicationsOfTechnologies(mg, tenantId, techIds);
     const group = (pairs: Array<[string | null, string]>) => {
       const out = new Map<string, Set<string>>();
@@ -397,7 +418,8 @@ export class EndOfSupportService {
       }
       return out;
     };
-    const serversByVersion = group(assets.map((a) => [a.technology_version_id, a.asset_id]));
+    const serversByVersion = group(servers.map((a) => [a.technology_version_id, a.asset_id]));
+    const touchedByVersion = group(assets.map((a) => [a.technology_version_id, a.asset_id]));
     const appsByVersion = group(apps.map((a) => [a.technology_version_id, a.application_id]));
     return kept.map(({ row, support }) => {
       const type = row.family === 'operating_system' ? 'operating_system' as const : 'technology' as const;
@@ -416,6 +438,7 @@ export class EndOfSupportService {
       state: support.state,
       serverIds: Array.from(serversByVersion.get(row.version_id) ?? []),
       applicationIds: Array.from(appsByVersion.get(row.version_id) ?? []),
+      ...(type === 'operating_system' ? { touchedIds: Array.from(touchedByVersion.get(row.version_id) ?? []) } : {}),
       };
     });
   }
@@ -434,7 +457,7 @@ export class EndOfSupportService {
     const servers: Array<{ application_id: string; asset_id: string }> = await mg.query(
       `SELECT DISTINCT i.application_id, x.asset_id
          FROM app_instances i
-         JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.app_instance_id = i.id
+         JOIN (${effectiveAssignmentsSql({ tenant: '$1', applications: '$2' })}) x ON x.tenant_id = $1 AND x.app_instance_id = i.id
         WHERE i.tenant_id = $1 AND i.application_id = ANY($2::uuid[]) AND ${inServiceSql('i')}`,
       [tenantId, rows.map((r) => r.id)],
     );
@@ -493,17 +516,19 @@ export class EndOfSupportService {
     }));
   }
 
-  /** The applications in service assigned to each asset of `assetIds` (direct assignments). */
+  /**
+   * The applications in service that run on each asset of `assetIds` (effective assignments: a
+   * member runs what its clusters carry).
+   */
   private async applicationsOnAssets(mg: EntityManager, tenantId: string, assetIds: string[]): Promise<Map<string, string[]>> {
     const out = new Map<string, string[]>();
     const wanted = Array.from(new Set(assetIds));
     if (wanted.length === 0) return out;
     const rows: Array<{ asset_id: string; application_id: string }> = await mg.query(
       `SELECT DISTINCT x.asset_id, i.application_id
-         FROM app_asset_assignments x
+         FROM (${effectiveAssignmentsSql({ tenant: '$1', assets: '$2' })}) x
          JOIN app_instances i ON i.tenant_id = $1 AND i.id = x.app_instance_id
-         JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
-        WHERE x.tenant_id = $1 AND x.asset_id = ANY($2::uuid[])`,
+         JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}`,
       [tenantId, wanted],
     );
     for (const row of rows) {
@@ -513,14 +538,14 @@ export class EndOfSupportService {
     return out;
   }
 
-  private async assetNames(mg: EntityManager, tenantId: string, ids: string[]): Promise<Map<string, string>> {
+  private async assetNames(mg: EntityManager, tenantId: string, ids: string[]): Promise<Map<string, { name: string; is_cluster: boolean }>> {
     const wanted = Array.from(new Set(ids));
     if (wanted.length === 0) return new Map();
-    const rows: Array<{ id: string; name: string }> = await mg.query(
-      `SELECT id, name FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+    const rows: Array<{ id: string; name: string; is_cluster: boolean }> = await mg.query(
+      `SELECT id, name, COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
       [tenantId, wanted],
     );
-    return new Map(rows.map((row) => [row.id, row.name]));
+    return new Map(rows.map((row) => [row.id, { name: row.name, is_cluster: row.is_cluster }]));
   }
 
   /** The applications of `ids` the caller sees, with their name and reference. */

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDataPage from './SampleDataPage';
+import { SAMPLE_DATA_STEPS } from './sample-data/useSampleData';
 import { createAppTheme } from '../../config/ThemeContext';
 import { api as apiClient } from '../../api/client';
 
@@ -137,7 +138,7 @@ describe('SampleDataPage', () => {
     });
     renderPage();
 
-    expect(await screen.findByText('Step 4 of 19: charts of accounts')).toBeInTheDocument();
+    expect(await screen.findByText(`Step 4 of ${SAMPLE_DATA_STEPS.length}: charts of accounts`)).toBeInTheDocument();
     expect(screen.getByText(/erased if the load fails/)).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });

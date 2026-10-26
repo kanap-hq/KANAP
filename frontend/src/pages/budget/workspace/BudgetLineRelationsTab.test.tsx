@@ -127,7 +127,7 @@ function grantMember() {
   rights.contracts = 'reader';
 }
 
-function renderTab(nature: LineType, data: Relations, onRelationsChange = vi.fn()) {
+function renderTab(nature: LineType, data: Relations, onRelationsChange = vi.fn(), lineEditable?: boolean) {
   const itemsApi = BUDGET_NATURE_CONFIG[nature].itemsApi;
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/budget-lines/line-1/relations') return { data } as never;
@@ -171,7 +171,7 @@ function renderTab(nature: LineType, data: Relations, onRelationsChange = vi.fn(
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <MemoryRouter>
-            <BudgetLineRelationsTab lineId="line-1" nature={nature} onRelationsChange={onRelationsChange} />
+            <BudgetLineRelationsTab lineId="line-1" nature={nature} onRelationsChange={onRelationsChange} lineEditable={lineEditable} />
             <Location />
           </MemoryRouter>
         </KanapDialogProvider>
@@ -431,6 +431,17 @@ describe.each(['opex', 'capex'] as const)('BudgetLineRelationsTab %s', (nature) 
     expect(screen.getByTestId('location')).toHaveTextContent('/it/assets/AST-2/overview');
   });
 
+  it('gives a member on a line read only in their data access the tables without the write actions', async () => {
+    renderTab(nature, relations(), vi.fn(), false);
+    await screen.findByText('SAP S/4HANA');
+    expect(screen.queryByText('workspace.application.relations.add')).toBeNull();
+    expect(screen.queryByRole('button', { name: /relations\.remove/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /relations\.linkNamed/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'linksAndFiles.addLink' })).toBeNull();
+    expect(screen.queryByLabelText('linksAndFiles.attachFile')).toBeNull();
+    expect(screen.getByTestId('contacts')).toHaveAttribute('data-manage', 'no');
+  });
+
   it('gives a contributor the tables without the write actions', async () => {
     rights.budget = 'contributor';
     renderTab(nature, relations());
@@ -463,7 +474,7 @@ describe.each(['opex', 'capex'] as const)('BudgetLineRelationsTab %s', (nature) 
     fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(name=Vendor portal)' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith(`${itemsApi}/line-1/links/l-1`));
 
-    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(name=contract.pdf)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeFileNamed(name=contract.pdf)' }));
     expect(mocked.patch).not.toHaveBeenCalledWith(`${itemsApi}/attachments/a-1/delete`, {});
     expect(await screen.findByText('ops:confirmations.deleteAttachment(name=contract.pdf)')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));

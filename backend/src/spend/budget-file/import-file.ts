@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import type { FreezeService } from '../../freeze/freeze.service';
 import { loadAnalyticsAxes } from '../../analytics/analytics-axes.util';
@@ -12,7 +12,7 @@ import { annualSpreadFields, listRoundInputs, markRoundsManual, recordPayloadRou
 import { interpretBudgetFile, moneyText, readBudgetCsv } from './interpret';
 import { loadFileDimensions, loadPreflight } from './load';
 import { periodForYearlyTotal, wholeYearPeriod } from './period';
-import { planBudgetFile } from './preflight';
+import { planWithAccess } from './access';
 import {
   BudgetFileAmountChange,
   BudgetFileLinePlan,
@@ -112,10 +112,38 @@ interface AuditRow {
 }
 
 /**
+ * A write the person's access refused (planning/data-scoped-access spec §4.2): PostgreSQL's 42501,
+ * or the clear 403 of the write checks (`DATA_ACCESS_LIMITED`, a write that touched no row
+ * included). The checks ran before, so only an access changed meanwhile gets here.
+ */
+function isAccessRefusal(err: unknown): boolean {
+  const code = (err as any)?.driverError?.code ?? (err as any)?.code;
+  if (code === '42501') return true;
+  if (!(err instanceof ForbiddenException)) return false;
+  const response = err.getResponse();
+  return !!response && typeof response === 'object' && (response as { code?: unknown }).code === 'DATA_ACCESS_LIMITED';
+}
+
+/**
+ * A limited person's file refused at the load while the snapshot moved (spec §4.2): a line gone
+ * from their access, or no longer modifiable, since the preflight. Nothing is written; the answer
+ * is the stale preflight's 409, "run the preflight again". An unscoped person keeps the report.
+ */
+function assertFreshForLimited(prepared: Prepared, client: BudgetFileSnapshotLine[]): void {
+  if (prepared.limited && !sameSnapshot(client, prepared.report.snapshot.lines)) throw new ConflictException(PREFLIGHT_STALE);
+}
+
+/**
  * The load. One transaction, already open on `manager`. Takes the tenant bulk
  * lock, locks the target lines in id order, and writes nothing when a snapshot
  * counter differs. Line details go through the item services. Versions go
  * through `ensureBudgetVersion`. Amounts go through `writeAmountsPayload`.
+ *
+ * A limited person's file (planning/data-scoped-access spec §4.2) is checked again after the lock
+ * with the same rules as the preflight; the line lock (`FOR NO KEY UPDATE`, under the UPDATE
+ * policy) skips the lines they may not modify, which the plan leaves unwritten (unchanged) or
+ * refuses (changed). A write the access refuses anyway rolls the whole load back with the stale
+ * preflight's 409.
  */
 export async function importBudgetFile(input: {
   scope: BudgetFileScope;
@@ -135,7 +163,10 @@ export async function importBudgetFile(input: {
   freeze: BudgetFileFreeze;
 }): Promise<BudgetFileImportResult> {
   const first = await prepare(input);
-  if (!first.report.ok) return first.report;
+  if (!first.report.ok) {
+    assertFreshForLimited(first, input.snapshot.lines);
+    return first.report;
+  }
 
   await lockTenantBudgetOperations(input.manager, input.tenantId);
   const ids = new Set<string>();
@@ -145,10 +176,19 @@ export async function importBudgetFile(input: {
   await lockBudgetLinesOfBothNatures(input.manager, input.tenantId, ids);
 
   const second = await prepare(input);
-  if (!second.report.ok) return second.report;
+  if (!second.report.ok) {
+    assertFreshForLimited(second, input.snapshot.lines);
+    return second.report;
+  }
   if (!sameSnapshot(input.snapshot.lines, second.report.snapshot.lines)) throw new ConflictException(PREFLIGHT_STALE);
 
-  const written = await applyPlans(input, second.plans, second.stored);
+  let written: Awaited<ReturnType<typeof applyPlans>>;
+  try {
+    written = await applyPlans(input, second.plans, second.stored);
+  } catch (err) {
+    if (isAccessRefusal(err)) throw new ConflictException(PREFLIGHT_STALE);
+    throw err;
+  }
   return {
     ok: true,
     dryRun: false,
@@ -163,6 +203,8 @@ interface Prepared {
   report: BudgetFileReport;
   plans: BudgetFileLinePlan[];
   stored: Awaited<ReturnType<typeof loadPreflight>>['stored'];
+  /** The person's access is limited: the plan followed it. */
+  limited: boolean;
 }
 
 async function prepare(input: {
@@ -186,7 +228,7 @@ async function prepare(input: {
   });
   const numbers = interpretBudgetFile(read, input.scope).map((row) => row.itemNumber);
   const loaded = await loadPreflight(input.manager, input.tenantId, numbers, input.allowedCurrencies);
-  const planned = planBudgetFile({
+  const planned = await planWithAccess(input.manager, {
     scope: input.scope,
     read,
     catalog: loaded.catalog,
@@ -196,8 +238,9 @@ async function prepare(input: {
     canCreateSuppliers: input.canCreateSuppliers,
     currentYear: new Date().getFullYear(),
     labels: loaded.labels,
+    access: loaded.access,
   });
-  return { report: planned.report, plans: planned.plans, stored: loaded.stored };
+  return { report: planned.report, plans: planned.plans, stored: loaded.stored, limited: !!loaded.access };
 }
 
 function sameSnapshot(client: BudgetFileSnapshotLine[], fresh: BudgetFileSnapshotLine[]): boolean {
@@ -206,6 +249,8 @@ function sameSnapshot(client: BudgetFileSnapshotLine[], fresh: BudgetFileSnapsho
   for (const line of client) {
     const got = byId.get(line.id);
     if (!got || got.rowVersion !== line.rowVersion || got.years.length !== line.years.length) return false;
+    // A limited person's line that became read only (or modifiable) since the preflight.
+    if (got.editable !== undefined && line.editable !== undefined && got.editable !== line.editable) return false;
     const years = new Map(got.years.map((year) => [year.year, year]));
     for (const year of line.years) {
       const found = years.get(year.year);
@@ -248,7 +293,13 @@ function parseSnapshotLine(raw: unknown): BudgetFileSnapshotLine {
     }
     return { year: entry.year, versionId, budgetRev: entry.budgetRev };
   });
-  return { id, itemNumber: line.itemNumber, rowVersion: line.rowVersion, years };
+  return {
+    id,
+    itemNumber: line.itemNumber,
+    rowVersion: line.rowVersion,
+    years,
+    ...(typeof line.editable === 'boolean' ? { editable: line.editable } : {}),
+  };
 }
 
 async function applyPlans(

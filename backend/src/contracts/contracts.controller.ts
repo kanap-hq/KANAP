@@ -18,13 +18,14 @@ import { contentDisposition } from '../common/content-disposition';
 import { ContractContactsService } from './contract-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
-import { canReadContractBudget } from './contract-budget';
+import { assertContractBudgetRead, canReadContractBudget } from './contract-budget';
 import { canReadResource } from '../common/record-usages';
 import { resolveBusinessContributorScope } from '../auth/business-contributor-scope';
 import { contractRelationKindOrThrow } from './contract-relations';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import type { ComplianceItemPatch } from './contract-compliance';
 import { ContractsDeleteService } from './contracts-delete.service';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -120,6 +121,7 @@ export class ContractsController {
   }
 
   // What deleting the given contracts removes, for the confirmation; before ':id'.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @Post('delete-impact')
@@ -128,6 +130,7 @@ export class ContractsController {
   }
 
   // Bulk delete before ':id'.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @Delete('bulk')
@@ -135,6 +138,7 @@ export class ContractsController {
     return this.deleteSvc.bulkDelete(Array.isArray(body?.ids) ? body.ids : [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @Delete(':id')
@@ -169,12 +173,17 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/spend-items')
-  listLinked(@Param('id') id: string, @Req() req: any) { return this.svc.listLinkedSpendItems(id, { manager: req?.queryRunner?.manager }); }
+  async listLinked(@Param('id') id: string, @Req() req: any) {
+    const linked = await this.svc.listLinkedSpendItems(id, { manager: req?.queryRunner?.manager });
+    // The names of the lines go to the readers of the budget only (spec §5.4).
+    return canReadContractBudget(req) ? linked : { items: [] };
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Post(':id/spend-items/bulk-replace')
   bulkReplace(@Param('id') id: string, @Body() body: { spend_item_ids: string[] }, @Req() req: any) {
+    assertContractBudgetRead(req);
     return this.svc.bulkReplaceLinkedSpendItems(id, body?.spend_item_ids ?? [], { manager: req?.queryRunner?.manager });
   }
 
@@ -182,12 +191,16 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/capex-items')
-  listLinkedCapex(@Param('id') id: string, @Req() req: any) { return this.svc.listLinkedCapexItems(id, { manager: req?.queryRunner?.manager }); }
+  async listLinkedCapex(@Param('id') id: string, @Req() req: any) {
+    const linked = await this.svc.listLinkedCapexItems(id, { manager: req?.queryRunner?.manager });
+    return canReadContractBudget(req) ? linked : { items: [] };
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Post(':id/capex-items/bulk-replace')
   bulkReplaceCapex(@Param('id') id: string, @Body() body: { capex_item_ids: string[] }, @Req() req: any) {
+    assertContractBudgetRead(req);
     return this.svc.bulkReplaceLinkedCapexItems(id, body?.capex_item_ids ?? [], { manager: req?.queryRunner?.manager });
   }
 
@@ -202,7 +215,10 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/budget-lines')
-  listBudgetLines(@Param('id') id: string, @Req() req: any) { return this.svc.listBudgetLines(id, { manager: req?.queryRunner?.manager }); }
+  listBudgetLines(@Param('id') id: string, @Req() req: any) {
+    // Without the right to read the budget: the number of lines only, never their names (spec §5.4).
+    return this.svc.listBudgetLines(id, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req) });
+  }
 
   // The Budget tab's figures for a year and column; also needs the right to read the budget.
   @UseGuards(PermissionGuard)
@@ -216,6 +232,7 @@ export class ContractsController {
   @RequireLevel('contracts', 'member')
   @Post(':id/budget-lines/bulk-replace')
   bulkReplaceBudgetLines(@Param('id') id: string, @Body() body: { budget_line_ids: string[] }, @Req() req: any) {
+    assertContractBudgetRead(req);
     return this.svc.replaceRelations(id, 'budget_lines', body?.budget_line_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
@@ -382,6 +399,9 @@ export class ContractsController {
   @Delete(':id/links/:linkId')
   deleteUrl(@Param('id') id: string, @Param('linkId') linkId: string, @Req() req: any) { return this.svc.deleteUrl(id, linkId, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
 
+  // Updates existing contracts by a non-unique key (name and supplier): a hidden homonym would
+  // become a duplicate (spec §2.7). The export stays open: it follows the list.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)

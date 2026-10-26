@@ -643,6 +643,7 @@ export function useChat() {
         conversation_id: activeConversationId || undefined,
         attachment_ids: attachmentIds,
         truncate_from_message_id: truncateFromMessageId,
+        time_zone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         signal: controller.signal,
       });
 

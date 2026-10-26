@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import { joinNames } from '../pages/working-day-calendars/workingDayCalendarFields';
+import { dataAccessSentence } from './apiErrorMessage';
 
 /**
  * A failed item of a bulk delete. `code`: a refusal the interface translates (`errors:<code>`),
@@ -7,17 +8,53 @@ import { joinNames } from '../pages/working-day-calendars/workingDayCalendarFiel
  */
 export type DeleteFailure = {
   reason?: string;
+  /** The server's sentence, on a refusal answered as an error (403 `DATA_ACCESS_LIMITED`). */
+  message?: string;
   code?: string;
   usages?: Array<{ type: string; total: number }>;
   /** Values the sentence names besides the counts: a frozen column and its year. */
   params?: Record<string, string | number>;
+  /** The applications an asset delete refusal names, in the server's order. */
+  applications?: string[];
 };
 
 /** "2 contracts and 1 application", in the interface language. */
-function usageList(usages: NonNullable<DeleteFailure['usages']>, t: TFunction, language: string): string {
-  const parts = usages.map(({ type, total }) =>
+function usageLabels(usages: NonNullable<DeleteFailure['usages']>, t: TFunction): string[] {
+  return usages.map(({ type, total }) =>
     t(`common:delete.usages.${type}`, { count: total, defaultValue: `${total} ${type}` }) as string);
-  return joinNames(parts, language);
+}
+
+function usageList(usages: NonNullable<DeleteFailure['usages']>, t: TFunction, language: string): string {
+  return joinNames(usageLabels(usages, t), language);
+}
+
+/** The names a refusal carries (`applications`), at most three then "and 2 others". */
+const NAMED_USAGES = 3;
+
+function applicationNames(applications: string[] | undefined, t: TFunction, language: string): string | null {
+  const names = (applications ?? []).map((name) => String(name ?? '')).filter(Boolean);
+  if (names.length === 0) return null;
+  const shown = names.slice(0, NAMED_USAGES);
+  const left = names.length - shown.length;
+  return joinNames(
+    left > 0 ? [...shown, t('common:delete.usages.others', { count: left }) as string] : shown,
+    language,
+  );
+}
+
+/**
+ * What uses a record, counted per kind, with the applications named when the server sends them
+ * (`ASSET_IN_USE`: "1 application assignment (CheeseTrack)").
+ */
+export function refusalUsages(
+  usages: DeleteFailure['usages'] | null | undefined,
+  applications: string[] | undefined,
+  t: TFunction,
+  language: string,
+): string {
+  const counts = usageList(usages ?? [], t, language);
+  const names = applicationNames(applications, t, language);
+  return names ? `${counts} (${names})` : counts;
 }
 
 /**
@@ -34,14 +71,78 @@ export function refusalCounts(failure: DeleteFailure, t: TFunction, language: st
   return usageList(failure.usages ?? [], t, language);
 }
 
+/** What a delete removes, then its links, in one list: "its description, 2 deployments and its links". */
+export function removedWithLinks(usages: NonNullable<DeleteFailure['usages']>, links: string, t: TFunction, language: string): string {
+  return joinNames([...usageLabels(usages, t), links], language);
+}
+
 /** Why an item was not deleted, in the interface language when the server gave a code. */
 export function deleteFailureReason(failure: DeleteFailure, t: TFunction, language: string): string {
   const reason = failure.reason ?? '';
   if (!failure.code) return reason;
+  // A data access refusal carries its sentence, translated as every refusal of that code is.
+  if (failure.code === 'DATA_ACCESS_LIMITED') {
+    const sentence = failure.message ?? reason;
+    return dataAccessSentence(sentence, t as never) ?? sentence;
+  }
   return t(`errors:${failure.code}`, {
     ...(failure.params ?? {}),
     ...usageTotal(failure.usages),
-    usages: usageList(failure.usages ?? [], t, language),
+    usages: refusalUsages(failure.usages, failure.applications, t, language),
     defaultValue: reason,
   }) as string;
+}
+
+/**
+ * What the delete of an asset would take with it, as the delete check answers it
+ * (`POST /assets/delete-check`): the clusters it belongs to, the members it holds as a cluster, the
+ * applications it stops hosting through those clusters, and its relations (the first ones named,
+ * `relations_total` counts them all). A warning never refuses.
+ */
+export type AssetDeleteWarning = {
+  id: string;
+  name: string;
+  member_of: Array<{ id: string; name: string }>;
+  member_count: number;
+  stops_hosting: string[];
+  relations: Array<{ id: string; name: string; relation_type: string; direction: string }>;
+  relations_total: number;
+};
+
+/** The names a warning line lists before "and n more". */
+const WARNED_NAMES = 3;
+
+/** One short line per case of an asset's warning: its clusters, the applications it stops hosting, its members, its links. */
+export function assetDeleteWarningLines(warning: AssetDeleteWarning, t: TFunction, language: string): string[] {
+  const lines: string[] = [];
+  if (warning.member_of.length > 0) {
+    lines.push(t('common:delete.assetWarning.memberOf', {
+      count: warning.member_of.length,
+      names: joinNames(warning.member_of.map((cluster) => cluster.name), language),
+    }) as string);
+  }
+  const stopsHosting = warning.stops_hosting ?? [];
+  if (stopsHosting.length > 0) {
+    const shown = stopsHosting.slice(0, WARNED_NAMES);
+    const left = stopsHosting.length - shown.length;
+    const names = left > 0
+      ? `${shown.join(', ')} ${t('common:delete.assetWarning.more', { count: left }) as string}`
+      : joinNames(shown, language);
+    lines.push(t('common:delete.assetWarning.stopsHosting', { names }) as string);
+  }
+  if (warning.member_count > 0) {
+    lines.push(t('common:delete.assetWarning.hasMembers', { count: warning.member_count }) as string);
+  }
+  if (warning.relations_total > 0) {
+    const distinct = Array.from(new Set(warning.relations.map((relation) => relation.name)));
+    const shown = distinct.slice(0, WARNED_NAMES);
+    // The links to the names shown; the others (more names, or links past the ones listed) are counted.
+    const shownLinks = warning.relations.filter((relation) => shown.includes(relation.name)).length;
+    const left = warning.relations_total - shownLinks;
+    const names = left > 0
+      ? `${shown.join(', ')} ${t('common:delete.assetWarning.more', { count: left }) as string}`
+      : joinNames(shown, language);
+    lines.push(t('common:delete.assetWarning.links', { count: warning.relations_total, names }) as string);
+  }
+  return lines;
 }

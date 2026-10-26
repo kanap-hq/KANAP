@@ -45,6 +45,8 @@ export interface StoredAnalyticsAxis {
   is_default: boolean;
   applies_to: AxisAppliesTo | null;
   required: boolean;
+  /** Anyone who may modify a line adds a value (spec §3.5 of planning/data-scoped-access). */
+  open_values: boolean;
   status: StatusState;
   disabled_at: Date | null;
   created_at: Date;
@@ -58,6 +60,7 @@ export interface AnalyticsAxisValues {
   sort_order: number;
   applies_to: AxisAppliesTo | null;
   required: boolean;
+  open_values: boolean;
   status: StatusState;
   disabled_at: Date | null;
 }
@@ -82,6 +85,7 @@ export interface AnalyticsAxisInput {
   sort_order?: unknown;
   applies_to?: unknown;
   required?: unknown;
+  open_values?: unknown;
   status?: unknown;
   disabled_at?: unknown;
 }
@@ -164,12 +168,21 @@ export function normalizeAppliesTo(raw: unknown): AxisAppliesTo | null {
 
 /** Whether a new line must hold a value on the dimension. The DTO checks the shape; this covers other callers. */
 export function normalizeRequired(raw: unknown): boolean {
+  return normalizeFlag(raw, 'Required must be true or false.', 'required');
+}
+
+/** Whether anyone who may modify a line adds a value to the dimension (open values). */
+export function normalizeOpenValues(raw: unknown): boolean {
+  return normalizeFlag(raw, 'Open values must be true or false.', 'open_values');
+}
+
+function normalizeFlag(raw: unknown, message: string, field: string): boolean {
   if (raw == null) return false;
   if (typeof raw === 'boolean') return raw;
   const value = String(raw).trim().toLowerCase();
   if (value === 'true') return true;
   if (value === 'false' || value === '') return false;
-  throw analyticsRefusal('Required must be true or false.', 'required');
+  throw analyticsRefusal(message, field);
 }
 
 /**
@@ -193,6 +206,7 @@ function toRow(stored: StoredAnalyticsAxis): AnalyticsAxisRow {
     sort_order: Number(stored.sort_order ?? 0),
     applies_to: stored.applies_to ?? null,
     required: stored.required === true,
+    open_values: stored.open_values === true,
     status: isAxisActive(stored) ? 'enabled' : 'disabled',
   };
 }
@@ -204,6 +218,7 @@ function valuesEqual(stored: StoredAnalyticsAxis, next: AnalyticsAxisValues): bo
     && Number(stored.sort_order) === next.sort_order
     && (stored.applies_to ?? null) === next.applies_to
     && (stored.required === true) === next.required
+    && (stored.open_values === true) === next.open_values
     // From the stored end of validity: the stored status lags until the hourly sync once that date passes.
     && deriveStatusFromDisabledAt(stored.disabled_at) === next.status
     && sameInstant(stored.disabled_at, next.disabled_at);
@@ -309,6 +324,7 @@ export class AnalyticsAxesService {
       sort_order: sortOrder,
       applies_to: normalizeAppliesTo(body?.applies_to),
       required: normalizeRequired(body?.required),
+      open_values: normalizeOpenValues(body?.open_values),
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     };
@@ -350,6 +366,7 @@ export class AnalyticsAxesService {
       applies_to: appliesTo,
       // PATCH: absent (or null) keeps it.
       required: has('required') && body.required !== null ? normalizeRequired(body.required) : existing.required === true,
+      open_values: has('open_values') && body.open_values !== null ? normalizeOpenValues(body.open_values) : existing.open_values === true,
       status: lifecycle.status,
       disabled_at: lifecycle.disabled_at,
     };
@@ -655,21 +672,21 @@ export class AnalyticsAxesService {
         ? await ctx.manager.query(
           `UPDATE analytics_axes
               SET code = $3, name = $4, description = $5, sort_order = $6, status = $7, disabled_at = $8,
-                  applies_to = $9, required = $10, updated_at = now()
+                  applies_to = $9, required = $10, open_values = $11, updated_at = now()
             WHERE tenant_id = $1 AND id = $2
         RETURNING *`,
           [
             ctx.tenantId, existing.id, values.code, values.name, values.description, values.sort_order,
-            values.status, values.disabled_at, values.applies_to, values.required,
+            values.status, values.disabled_at, values.applies_to, values.required, values.open_values,
           ],
         )
         : await ctx.manager.query(
-          `INSERT INTO analytics_axes (tenant_id, code, name, description, sort_order, is_default, status, disabled_at, applies_to, required)
-           VALUES ($1, $2, $3, $4, $5, false, $6, $7, $8, $9)
+          `INSERT INTO analytics_axes (tenant_id, code, name, description, sort_order, is_default, status, disabled_at, applies_to, required, open_values)
+           VALUES ($1, $2, $3, $4, $5, false, $6, $7, $8, $9, $10)
         RETURNING *`,
           [
             ctx.tenantId, values.code, values.name, values.description, values.sort_order,
-            values.status, values.disabled_at, values.applies_to, values.required,
+            values.status, values.disabled_at, values.applies_to, values.required, values.open_values,
           ],
         );
       saved = firstReturnedRow<StoredAnalyticsAxis>(rows);

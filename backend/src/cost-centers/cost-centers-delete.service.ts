@@ -3,7 +3,7 @@ import { isUUID } from 'class-validator';
 import { AuditService } from '../audit/audit.service';
 import { BulkDeleteResult } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
-import { checkIds, lineUsages, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
+import { checkIds, lineUsages, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 import { costCenterLabel, loadCostCenterTree } from './cost-center-tree.util';
 import {
   CostCenterContext,
@@ -12,6 +12,14 @@ import {
   CostCenterUsage,
   validateCostCenterGraph,
 } from './cost-centers.service';
+
+/** The counts a refused delete names: the OPEX and CAPEX lines, then the contracts (spec §3.3). */
+function centerUsages(usage: CostCenterUsage | undefined): UsageCount[] {
+  const usages = lineUsages(usage);
+  if (usage && usage.contracts > 0) usages.push({ type: 'contracts', total: usage.contracts });
+  if (usage && (usage.dataAccess ?? 0) > 0) usages.push({ type: 'data_access', total: usage.dataAccess! });
+  return usages;
+}
 
 /**
  * The refusal of a node's delete from `graph`, or null: a group that holds nodes
@@ -31,7 +39,7 @@ export function costCenterDeleteRefusal(
   const children = Array.from(graph.values()).filter((other) => other.parent_id === node.id).length;
   return children > 0
     ? new RecordInUseException('COST_CENTER_HAS_NODES', 'cost center', node.name, [{ type: 'nodes', total: children }], message)
-    : new RecordInUseException('COST_CENTER_IN_USE', 'cost center', node.name, lineUsages(usage), message);
+    : new RecordInUseException('COST_CENTER_IN_USE', 'cost center', node.name, centerUsages(usage), message);
 }
 
 @Injectable()

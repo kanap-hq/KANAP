@@ -12,7 +12,8 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
-vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+const locale = vi.hoisted(() => ({ value: 'en' }));
+vi.mock('../../i18n/useLocale', () => ({ useLocale: () => locale.value }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('../../hooks/useBudgetColumns', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../hooks/useBudgetColumns')>();
@@ -24,7 +25,7 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../hooks/useAnalyticsAxes')>();
   return { ...actual, useAnalyticsAxes: () => actual.buildAnalyticsAxes([], ((key: string) => key) as never) };
 });
-const chart = vi.hoisted(() => ({ options: null as any }));
+const chart = vi.hoisted(() => ({ options: null as any, columns: null as any[] | null }));
 vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../components/reports/ReportLayout')>()),
   default: ({ title, subtitle, filters, actions, children }: { title: string; subtitle?: React.ReactNode; filters?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode }) => (
@@ -44,9 +45,10 @@ vi.mock('../../components/reports/ChartCard', () => ({
   }),
 }));
 vi.mock('../../components/reports/ReportGrid', () => ({
-  default: ({ rowData }: { rowData?: Array<{ name?: string; value?: number }> }) => (
-    <ul data-testid="grid">{(rowData ?? []).map((r, i) => <li key={i}>{`${r.name ?? ''}: ${r.value ?? ''}`}</li>)}</ul>
-  ),
+  default: ({ rowData, columnDefs }: { rowData?: Array<{ name?: string; value?: number }>; columnDefs?: any[] }) => {
+    chart.columns = columnDefs ?? null;
+    return <ul data-testid="grid">{(rowData ?? []).map((r, i) => <li key={i}>{`${r.name ?? ''}: ${r.value ?? ''}`}</li>)}</ul>;
+  },
 }));
 vi.mock('../../components/fields/CompanySelect', () => ({
   default: ({ onChange }: { onChange: (id: string | null) => void }) => (
@@ -54,6 +56,7 @@ vi.mock('../../components/fields/CompanySelect', () => ({
   ),
 }));
 
+import { formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
 import api from '../../api';
 import { fakeAggregate } from '../../test/fakeBudgetAggregate';
 import { setBudgetColumns } from './budgetColumnsTestState';
@@ -114,6 +117,9 @@ async function optionsOf(name: string, index = 0) {
 const combo = (name: string, index = 0) => screen.getAllByRole('combobox', { name })[index];
 
 beforeEach(() => {
+  locale.value = 'en';
+  chart.options = null;
+  chart.columns = null;
   setBudgetColumns();
   get.mockReset();
   get.mockImplementation(async () => ({ data: { items: [], total: 0 } }));
@@ -279,6 +285,12 @@ describe.each([
   });
 });
 
+function shareOf(tooltip: { data: Array<{ label: string; value: string }> }): string {
+  const share = tooltip.data.find((row) => row.label === 'reports.shared.share');
+  if (!share) throw new Error('share row missing');
+  return share.value;
+}
+
 describe('Chart tooltips', () => {
   it('escape the item name the chart puts in the tooltip title', async () => {
     const tagged = [{ id: 'o9', product_name: '<b>Bold</b> & co', versions: { y: slot(Y, { budget: 90 }) } }];
@@ -288,5 +300,53 @@ describe('Chart tooltips', () => {
     const pie = chart.options.series[0];
     const tooltip = pie.tooltip.renderer({ datum: { name: '<b>Bold</b> & co', value: 90 }, angleKey: 'value' });
     expect(tooltip.title).toBe('&lt;b&gt;Bold&lt;/b&gt; &amp; co');
+  });
+
+  it('writes a Top items share in the interface language', async () => {
+    locale.value = 'fr';
+    serverRows = [
+      { id: 'a', product_name: 'Small', versions: { y: slot(Y, { budget: 123 }) } },
+      { id: 'b', product_name: 'Large', versions: { y: slot(Y, { budget: 877 }) } },
+    ];
+    renderReport(<TopOpexReport />);
+    await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('123'));
+    const pie = chart.options.series[0];
+    const share = shareOf(pie.tooltip.renderer({ datum: { name: 'Small', value: 123 }, angleKey: 'value' }));
+    expect(share).toBe(formatPercentPoints(12.3, 'fr', 1));
+    expect(share).toContain('12,3');
+    expect(share).not.toContain('12.3');
+  });
+});
+
+describe('OPEX delta shares', () => {
+  const lines = [
+    { id: 'a', product_name: 'Small', versions: { yMinus1: slot(Y - 1, { budget: 1000 }), y: slot(Y, { budget: 1123 }) } },
+    { id: 'b', product_name: 'Large', versions: { yMinus1: slot(Y - 1, { budget: 1000 }), y: slot(Y, { budget: 1877 }) } },
+    { id: 'c', product_name: 'Down', versions: { yMinus1: slot(Y - 1, { budget: 200 }), y: slot(Y, { budget: 100 }) } },
+  ];
+
+  it('formats the column, the chart share and the summary in the interface language', async () => {
+    locale.value = 'fr';
+    serverRows = lines;
+    renderReport(<OpexDeltaReport />);
+    await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('Small'));
+    const column = chart.columns?.find((col) => col.field === 'pct_increase');
+    expect(column.valueFormatter({ value: 12.3 })).toBe(formatSharePercent(12.3, 'fr', 1));
+    expect(column.valueFormatter({ value: 12.3 })).toContain('12,3');
+    expect(column.valueFormatter({ value: null })).toBe('');
+    const bar = chart.options.series[0];
+    const share = shareOf(bar.tooltip.renderer({ datum: { name: 'Small', magnitude: 123, delta: 123, direction: 'increase' } }));
+    expect(share).toBe(formatPercentPoints(12.3, 'fr', 1));
+    expect(share).toContain('12,3');
+    const coverage = screen.getByText(/reports\.opexDelta\.coveragePct/).textContent ?? '';
+    expect(coverage).toContain('100,0');
+    expect(coverage).not.toContain('100.0');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'reports.opexDelta.both' }));
+    await waitFor(() => expect(screen.getByText(/reports\.opexDelta\.coverageSplit/)).toBeInTheDocument());
+    const split = screen.getByText(/reports\.opexDelta\.coverageSplit/).textContent ?? '';
+    const frenchPercent = formatPercentPoints(100, 'fr', 1);
+    expect(split).toContain(frenchPercent);
+    expect(split).not.toContain('100.0%');
   });
 });

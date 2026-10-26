@@ -7,6 +7,8 @@ import { IS_PUBLIC_KEY } from '../auth/public.decorator';
 import { SKIP_TENANT_TRANSACTION_KEY } from './skip-tenant-transaction.decorator';
 import { DatabaseConnectionError } from './filters/database-error.mapping';
 import { applyDataAccess } from '../data-access/data-access';
+import { assertUnscopedDataAccess, RESERVED_TO_UNSCOPED_DATA_ACCESS_KEY } from '../data-access/reserved-operations';
+import { withTenantExecution } from './tenant-runner';
 import { connectRequestRunner, rememberRequestDbTimeouts, resolveRequestDbTimeouts, startTenantTransaction } from './request-db-timeouts';
 
 @Injectable()
@@ -27,11 +29,24 @@ export class TenantInterceptor implements NestInterceptor {
       SKIP_TENANT_TRANSACTION_KEY,
       [context.getHandler(), context.getClass()],
     );
-    if (skipTenantTransaction) return next.handle();
+    const reserved = this.reflector.getAllAndOverride<boolean>(
+      RESERVED_TO_UNSCOPED_DATA_ACCESS_KEY,
+      [context.getHandler(), context.getClass()],
+    ) === true;
 
     const http = context.switchToHttp();
     const req: any = http.getRequest();
     const tenantId: string | undefined = req?.tenant?.id;
+
+    if (skipTenantTransaction) {
+      // A reserved route without the request transaction (spec §2.7): the person's mode is read in
+      // a short tenant transaction of its own, before the handler runs.
+      const userId = req?.user?.sub;
+      if (!reserved || !tenantId || typeof userId !== 'string' || !userId) return next.handle();
+      return from(withTenantExecution(this.dataSource, tenantId, (manager) => assertUnscopedDataAccess({ manager, userId })))
+        .pipe(mergeMap(() => next.handle()));
+    }
+
     if (!tenantId) return next.handle();
 
     // Reuse runner if a guard already created it; otherwise create here
@@ -90,8 +105,12 @@ export class TenantInterceptor implements NestInterceptor {
             '[TenantInterceptor] the request runner has no transaction: the data access of the person cannot be applied',
           );
         }
-        await applyDataAccess(runner, userId);
+        const mode = await applyDataAccess(runner, userId);
         req.dataAccessUserId = userId;
+        req.dataAccessMode = mode;
+        // An operation reserved to unscoped persons (spec §2.7, §6.7): refused here, after the
+        // guards, before the handler (rolled back and released below).
+        if (reserved) await assertUnscopedDataAccess({ req });
       }
       return true;
     })()).pipe(

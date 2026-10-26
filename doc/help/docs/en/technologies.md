@@ -14,13 +14,13 @@ KANAP describes your landscape in three boxes:
 
 A server carries technologies. An application is hosted on servers and depends on technologies.
 
-Create a technology when people do not work in the product itself, yet other applications fail or become exposed when it fails. Keep a record as an application when business users log in to it and use it for their work.
+Record an application for what you manage as a service, with its owners, criticality, contracts and costs. Record a technology for a product installed on your servers, followed through its versions, end of support dates and vulnerabilities. People rarely work in a technology itself, yet other applications fail or become exposed when it fails. One product can be both: see VMware vSphere below.
 
 A few examples:
 
 - **Entra ID**: a **SaaS** technology of the **Directory and identity** family, published by Microsoft. It runs on none of your servers. The applications that sign users in through it declare it.
 - **Active Directory**: an **On-prem** technology of the same family, carried by your domain controllers. The applications that use it declare it.
-- **vSphere**: an **On-prem** technology carried by the vCenter virtual machine and by the hosts.
+- **VMware vSphere**: an **On-prem** technology installed on the vCenter server, while the hosts carry ESXi and the virtualization service is tracked as an application.
 - **SQL Server**: one technology with one line per version in use (2016, 2019, 2022). Each server carries its own version, so the end of support report can name the servers still on an old one.
 - **Windows Server**: a technology of the **Operating system** family. Each server records its version, and that technology is the server's operating system. See [Operating systems](#operating-systems).
 - **A SaaS application**: no technology to record. The publisher maintains what it runs on.
@@ -86,7 +86,7 @@ Each row is one technology. Click a row to open it.
 | **Name** | The technology's name |
 | **Family** | Kind of technology |
 | **Publisher** | Who publishes it |
-| **Servers** | Assets that carry it, directly or because they sit inside an asset that carries it |
+| **Servers** | Assets in service it is installed on. Clusters are not counted, nor the virtual machines of a host that carries it. The **Servers** badge of the record and the [End of support](end-of-support.md) report give the same number |
 | **Applications** | Applications that declare it or are hosted on a server that carries it |
 | **Next end of support** | The earliest end of standard support to come among the versions in use. Shown in orange when it falls within the next 12 months |
 | **Vulnerabilities to review** | The known vulnerabilities still to review on the versions in use that are in the alerts. Shown in orange with the count of critical or high ones (`3 · 1 critical or high`). Click it to open the [Vulnerabilities](vulnerabilities.md) page on this technology. Present when vulnerabilities are followed |
@@ -149,7 +149,7 @@ A type marked **No longer offered** stays on the technologies that have it. A ty
 | **Out of support** | Every end date has passed |
 | **Date unknown** | No end date recorded |
 
-Support still runs on its end date. With a single date, that date is the end. **Add version** adds a line; hover a line to edit or delete it. Deleting a version used by servers or applications asks first: those links then show an unknown version.
+Support still runs on its end date. With a single date, that date is the end. **Add version** adds a line; hover a line to edit or delete it. Deleting a version used by servers or applications asks first, with the number of servers it is installed on and of applications: those links then show an unknown version.
 
 **Notes**: at the bottom of the tab, free text such as licensing terms or renewal dates.
 
@@ -208,20 +208,22 @@ The servers that carry the technology, one row per server and version:
 
 | Column | What it shows |
 |---|---|
-| **Ref**, **Server** | The server. Click the row to open it |
+| **Ref**, **Server** | The server. A cluster shows an icon before its name. Click the row to open it |
 | **Environment**, **Operating system** | Taken from the server |
 | **Version** | The version installed. A dash means the version is unknown |
-| **Via** | For a server that carries the technology through another one: the server or cluster it is installed on. The column shows only when the tab has such a row |
+| **Via** | For a server that carries the technology through another one: the assets it is installed on. The column shows only when the tab has such a row |
 | **Notes** | Free text about this installation, for example "cluster node" |
 
 A technology reaches a server in two ways:
 
 - **Installed**: someone linked the technology to this server. You can change the version and the notes in place, or remove the row.
-- **Through another server**: the technology is installed on the server or cluster this one runs in, for example SQL Server installed on a cluster and shown on each of its members. The row names that server under **Via**. It follows the installation: change or remove it on that server.
+- **Through another server**: for a cluster, the technology is installed on its members. For example, SQL Server installed on the nodes of a cluster shows on the cluster in one row per version, with the nodes that carry it under **Via**. It follows the installation: change or remove it on those servers.
+
+The servers that run inside a host carrying the technology, such as the virtual machines of an ESXi host, sit under a closed line at the end of the table, **Hosted assets (n)**. Click it to show them, with their host under **Via**.
 
 **Add** (`infrastructure:member`) opens a search for a server, then the version picker: choose a version, **Version unknown**, or type a new label and pick **Add version "…"** to create it. Each change saves at once.
 
-A retired server stays listed, greyed out and marked "retired", so you can remove its link. It counts nowhere: not in the badge, the total, the list counters or the reports. The **Total** row counts the servers in service, each once.
+A retired server stays listed, greyed out and marked "retired", so you can remove its link. It counts nowhere: not in the badge, the total, the list counters or the reports. The badge and the **Total** row count the servers in service the technology is installed on, each once. A cluster and a hosted asset are listed and not counted.
 
 ### Applications
 
@@ -273,7 +275,7 @@ A summary of the vulnerabilities, one line per installed version of the technolo
 | Column | What it shows |
 |---|---|
 | **Version** | The version. A version out of the alerts is greyed and says **Excluded from alerts**. **Version not recorded (potentially concerned)** groups the servers and applications that name no version; this line shows only when there are some |
-| **Servers** | How many servers in service have this version recorded on themselves. A server that runs inside another one is not counted. See [What KANAP counts](vulnerabilities.md#what-kanap-counts) |
+| **Servers** | How many servers in service have this version recorded on themselves. Clusters and the servers that run inside another one are not counted. See [What KANAP counts](vulnerabilities.md#what-kanap-counts) |
 | **Critical**, **High**, **Medium**, **Low**, **Not rated** | One column per severity: the vulnerabilities still to review. A vulnerability rated **None** counts with **Low**. A dot stands for none left. Hover a header for a reminder |
 | **Total** | The distinct vulnerabilities of this version, every state |
 
@@ -306,7 +308,7 @@ You can record that a server carries a technology from either side:
 - From the technology: **Servers** tab, **Add**, then choose the server and the version.
 - From the server: **Operations** tab of the asset, **Technologies** section, **Add**, then choose the technology and the version. See [Assets](assets.md#operations).
 
-Record the technology on the server where it is installed: the host for a hypervisor, each domain controller for Active Directory, the database server for SQL Server. The servers that run inside it, or the members of its cluster, then show it without further work. A cloud technology, such as Entra ID, runs on none of your servers: declare it on the applications instead.
+Record the technology on the server where it is installed: the host for a hypervisor, each domain controller for Active Directory, the database server for SQL Server. The servers that run inside it, and the cluster of those servers, then show it without further work. A cloud technology, such as Entra ID, runs on none of your servers: declare it on the applications instead.
 
 ---
 
@@ -339,7 +341,7 @@ Click **Import links** or **Export links** in the toolbar, then pick the file. T
 
 The `operating_system` column takes three values:
 
-- **yes**: the link becomes the server's operating system. The import refuses the row when the technology is not of the **Operating system** family, when the server is a cluster, or when the server already has another operating system.
+- **yes**: the link becomes the server's operating system. The import refuses the row when the technology is not of the **Operating system** family, when the server is a cluster that has members, or when the server already has another operating system.
 - **no**: the link is never marked.
 - **Empty**: a new link follows the rule of the server page. A technology of the **Operating system** family becomes the server's operating system when the server has none yet and is not a cluster. The preview says so on the row.
 

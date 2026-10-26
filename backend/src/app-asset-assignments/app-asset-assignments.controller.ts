@@ -10,21 +10,35 @@ import { resolveBusinessContributorScope } from '../auth/business-contributor-sc
 export class AppAssetAssignmentsController {
   constructor(private readonly svc: AppAssetAssignmentsService) {}
 
+  /** The request's manager and tenant: every query of the service names the tenant. */
+  private opts(req: any) {
+    return { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id ?? null };
+  }
+
   private async listForDeployment(instanceId: string, req: any) {
     const accessScope = await resolveBusinessContributorScope(req, 'applications', 'reader');
-    return this.svc.list(instanceId, { manager: req?.queryRunner?.manager, accessScope });
+    return this.svc.list(instanceId, { ...this.opts(req), accessScope });
   }
 
   private createForDeployment(instanceId: string, body: any, req: any) {
-    return this.svc.create(instanceId, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.svc.create(instanceId, body, req.user?.sub ?? null, this.opts(req));
   }
 
   private updateForDeployment(instanceId: string, assignmentId: string, body: any, req: any) {
-    return this.svc.update(instanceId, assignmentId, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.svc.update(instanceId, assignmentId, body, req.user?.sub ?? null, this.opts(req));
   }
 
   private deleteForDeployment(instanceId: string, assignmentId: string, req: any) {
-    return this.svc.delete(instanceId, assignmentId, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.svc.delete(instanceId, assignmentId, req.user?.sub ?? null, this.opts(req));
+  }
+
+  /** The servers of all the deployments of an application, in one call (the Deployments tab). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'reader')
+  @Get('applications/:applicationId/deployment-servers')
+  async listApplicationDeploymentServers(@Param('applicationId') applicationId: string, @Req() req: any) {
+    const accessScope = await resolveBusinessContributorScope(req, 'applications', 'reader');
+    return this.svc.listByApplication(applicationId, { ...this.opts(req), accessScope });
   }
 
   // New asset-based endpoints
@@ -96,10 +110,18 @@ export class AppAssetAssignmentsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'reader')
+  @Get('assets/:assetId/assignments/groupable')
+  async listGroupableByAsset(@Param('assetId') assetId: string, @Req() req: any) {
+    const accessScope = await resolveBusinessContributorScope(req, 'applications', 'reader');
+    return this.svc.listGroupableByAsset(assetId, { ...this.opts(req), accessScope });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'reader')
   @Get('assets/:assetId/assignments')
   async listByAsset(@Param('assetId') assetId: string, @Req() req: any) {
     const accessScope = await resolveBusinessContributorScope(req, 'applications', 'reader');
-    return this.svc.listByAsset(assetId, { manager: req?.queryRunner?.manager, accessScope });
+    return this.svc.listByAsset(assetId, { ...this.opts(req), accessScope });
   }
 
   @UseGuards(PermissionGuard)
@@ -184,7 +206,7 @@ export class AppAssetAssignmentsController {
   @Get('servers/:serverId/assignments')
   async listByServerLegacy(@Param('serverId') serverId: string, @Req() req: any) {
     const accessScope = await resolveBusinessContributorScope(req, 'applications', 'reader');
-    return this.svc.listByAsset(serverId, { manager: req?.queryRunner?.manager, accessScope });
+    return this.svc.listByAsset(serverId, { ...this.opts(req), accessScope });
   }
 
   @UseGuards(PermissionGuard)

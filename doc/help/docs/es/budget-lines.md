@@ -702,6 +702,8 @@ El acceso a las líneas presupuestarias se controla con el recurso Presupuesto, 
 
 Congelar columnas presupuestarias requiere la administración presupuestaria (`budget_ops:admin`).
 
+El acceso a los datos puede limitar a una persona a las líneas de ciertas empresas o centros de coste. Entonces ve esas líneas y aquellas en las que está nombrada, una línea que ve en Lectura muestra «Solo lectura en su acceso», y la eliminación de líneas y las operaciones en bloque quedan reservadas a las personas con acceso a todos los datos. Vea [Acceso a los datos](data-access.md).
+
 Adicionalmente:
 
 - Las tareas tienen permisos separados (`tasks:member` para crear y editar tareas en las líneas)

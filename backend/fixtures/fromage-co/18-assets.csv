@@ -3,7 +3,7 @@ PAR-ESX-01;PAR-DC1;Physical Server;prod;false;active;2023-06-01;;par-esx-01.from
 PAR-ESX-02;PAR-DC1;Physical Server;prod;false;active;2023-06-01;;par-esx-02.fromage-co.local;VMware ESXi 8.0;Dell PowerEdge R750 — 64 cores, 512GB RAM
 PAR-ESX-03;PAR-DC1;Physical Server;prod;false;active;2021-03-01;2026-12-31;par-esx-03.fromage-co.local;VMware ESXi 8.0;Dell PowerEdge R640 — 32 cores, 256GB RAM — aging, scheduled for DC refresh
 PAR-ESX-04;PAR-DC1;Physical Server;prod;false;active;2021-03-01;2026-12-31;par-esx-04.fromage-co.local;VMware ESXi 8.0;Dell PowerEdge R640 — 32 cores, 256GB RAM — aging, scheduled for DC refresh
-PAR-SAN-01;PAR-DC1;Storage;prod;false;active;2023-06-01;;par-san-01.fromage-co.local;;NetApp FAS2750 — 50TB usable, primary SAN for all VMs
+PAR-SAN-01;PAR-DC1;Storage;prod;false;active;2023-06-01;;par-san-01.fromage-co.local;;NetApp FAS2750 — 50TB usable, shared storage of the Paris vSphere cluster hosts
 PAR-SAN-02;PAR-DC1;Storage;prod;false;active;2021-03-01;2026-12-31;par-san-02.fromage-co.local;;NetApp FAS2720 — 20TB usable, backup target — end of life Dec 2026
 PAR-ERP-01;PAR-DC1;Virtual Machine;prod;false;active;2018-04-01;;par-erp-01.fromage-co.local;SUSE Linux Enterprise 15;SAP S/4HANA application server — 16 vCPU, 128GB RAM
 PAR-ERP-02;PAR-DC1;Virtual Machine;prod;false;active;2020-09-01;;par-erp-02.fromage-co.local;SUSE Linux Enterprise 15;SAP BW/4HANA server — 8 vCPU, 64GB RAM
@@ -13,8 +13,8 @@ PAR-WEB-01;PAR-DC1;Virtual Machine;prod;false;active;2021-06-01;;par-web-01.from
 PAR-MON-01;PAR-DC1;Virtual Machine;prod;false;active;2019-01-01;;par-mon-01.fromage-co.local;Windows Server 2022;PRTG Network Monitor — monitors all on-prem infrastructure
 PAR-BKP-01;PAR-DC1;Virtual Machine;prod;false;active;2019-03-01;;par-bkp-01.fromage-co.local;Windows Server 2022;Veeam Backup & Replication server — RPO 4h / RTO 8h
 PAR-AD-01;PAR-DC1;Virtual Machine;prod;false;active;2016-06-01;;par-ad-01.fromage-co.local;Windows Server 2022;Active Directory domain controller + DNS + DHCP
-PAR-FW-01;PAR-DC1;Firewall;prod;true;active;2021-01-01;;par-fw-01.fromage-co.local;FortiOS 7.4;FortiGate 200F — primary firewall, HA active-passive pair
-PAR-FW-02;PAR-DC1;Firewall;prod;true;active;2021-01-01;;par-fw-02.fromage-co.local;FortiOS 7.4;FortiGate 200F — secondary firewall, HA passive
+PAR-FW-01;PAR-DC1;Firewall;prod;false;active;2021-01-01;;par-fw-01.fromage-co.local;FortiOS 7.4;FortiGate 200F — primary firewall, HA active-passive pair
+PAR-FW-02;PAR-DC1;Firewall;prod;false;active;2021-01-01;;par-fw-02.fromage-co.local;FortiOS 7.4;FortiGate 200F — secondary firewall, HA passive
 GOU-ESX-01;GOU-DC1;Physical Server;prod;false;active;2022-09-01;;gou-esx-01.kaasmeester.local;VMware ESXi 8.0;Dell PowerEdge R650 — 32 cores, 256GB RAM — single host for Gouda site
 GOU-SAGE-01;GOU-DC1;Virtual Machine;prod;false;active;2020-01-01;;gou-sage-01.kaasmeester.local;Windows Server 2022;Sage X3 V12 — Dutch accounting and operations
 GOU-FW-01;GOU-DC1;Firewall;prod;false;active;2022-09-01;;gou-fw-01.kaasmeester.local;FortiOS 7.4;FortiGate 60F — site firewall with VPN to Paris DC
@@ -36,9 +36,10 @@ AWS-RDS-BOUTIQUE;AWS-EU;Cloud Database;prod;false;active;2025-06-15;;;Amazon RDS
 AWS-ECS-API;AWS-EU;Cloud Instance;dev;true;active;2025-09-01;;;Amazon Linux 2023;API microservices — ECS Fargate cluster for La Boutique backend
 PAR-AD-02;PAR-DC1;Virtual Machine;prod;false;active;2022-01-10;;par-ad-02.fromage-co.local;Windows Server 2022;Second Active Directory domain controller + DNS
 PAR-VCENTER-01;PAR-DC1;Virtual Machine;prod;false;active;2023-06-01;;par-vcenter-01.fromage-co.local;;vCenter Server appliance — manages the Paris vSphere cluster
-PAR-VSPHERE-CL01;PAR-DC1;Other;prod;true;active;2023-06-01;;;;vSphere cluster of PAR-ESX-01 and PAR-ESX-02 — HA and DRS
+PAR-VSPHERE-CL01;PAR-DC1;Other;prod;true;active;2023-06-01;;;;Paris vSphere cluster (HA and DRS), managed by PAR-VCENTER-01 — its VMs move between the hosts
 PAR-SQL-01;PAR-DC1;Virtual Machine;prod;false;active;2020-02-01;;par-sql-01.fromage-co.local;Windows Server 2022;SQL Server cluster node 1
 PAR-SQL-02;PAR-DC1;Virtual Machine;prod;false;active;2024-03-01;;par-sql-02.fromage-co.local;Windows Server 2022;SQL Server cluster node 2 — upgraded first, the other node follows
 PAR-SQL-CL01;PAR-DC1;Other;prod;true;active;2020-02-01;;;;SQL Server Always On cluster — CheeseTrack and Sage X3 databases
 PAR-ETL-01;PAR-DC1;Virtual Machine;prod;false;active;2022-09-01;;par-etl-01.fromage-co.local;Ubuntu 22.04 LTS;Talend runtime server — 8 vCPU, 32GB RAM — still on PAR-ESX-03, moves with the DC refresh
 PAR-ERP-QA-01;PAR-DC1;Virtual Machine;qa;false;active;2023-09-01;;par-erp-qa-01.fromage-co.local;SUSE Linux Enterprise 15;SAP S/4HANA QA application server — 8 vCPU, 64GB RAM — still on PAR-ESX-04, moves with the DC refresh
+PAR-ESX-05;PAR-DC1;Physical Server;prod;false;active;2025-09-01;;par-esx-05.fromage-co.local;VMware ESXi 8.0;Dell PowerEdge R750 — 64 cores, 512GB RAM — third host of the Paris vSphere cluster, added for N+1 capacity

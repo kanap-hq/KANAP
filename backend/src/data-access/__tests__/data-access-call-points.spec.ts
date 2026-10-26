@@ -115,8 +115,11 @@ class BreakAccessGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req: any = context.switchToHttp().getRequest();
     if (req.headers['x-da-break'] && req.queryRunner) {
+      // The live function has a fourth column (fingerprint, lot 5): replace it by a DROP then a
+      // CREATE, so the return type can change. The request's transaction is rolled back.
+      await req.queryRunner.query(`DROP FUNCTION IF EXISTS data_access_expected_policies()`);
       await req.queryRunner.query(`
-        CREATE OR REPLACE FUNCTION data_access_expected_policies()
+        CREATE FUNCTION data_access_expected_policies()
         RETURNS TABLE (policy_name text, table_name text, command text)
         LANGUAGE sql STABLE SET search_path = public, pg_temp
         AS $fn$ SELECT 'da_spec_missing_policy'::text, 'companies'::text, 'SELECT'::text $fn$`);

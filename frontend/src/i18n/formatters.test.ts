@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDecimal, formatPercentPoints, formatSharePercent } from './formatters';
+import { formatCompactAmount, formatDecimal, formatPercentPoints, formatSharePercent, formatThousandsAmount } from './formatters';
 
 const FR_GROUP = ' ';
 
@@ -16,6 +16,40 @@ describe('formatDecimal', () => {
   it('keeps a real zero and groups an integer', () => {
     expect(formatDecimal(0, 'fr')).toBe('0');
     expect(formatDecimal(1200, 'fr')).toBe(`1${FR_GROUP}200`);
+  });
+});
+
+describe('formatThousandsAmount', () => {
+  it('rounds to thousands and groups with the separators of the language', () => {
+    expect(formatThousandsAmount(7_846_000, 'en')).toBe('7,846k');
+    expect(formatThousandsAmount(7_846_000, 'fr')).toBe(`7${FR_GROUP}846\u00a0k`);
+    expect(formatThousandsAmount(7_846_000, 'de')).toBe('7.846\u00a0k');
+    expect(formatThousandsAmount(7_846_000, 'es')).toBe('7.846\u00a0k');
+    expect(formatThousandsAmount(12_000, 'en')).toBe('12k');
+    expect(formatThousandsAmount(12_000, 'fr')).toBe('12\u00a0k');
+    expect(formatThousandsAmount(400, 'en')).toBe('0k');
+    expect(formatThousandsAmount(-4_000, 'en')).toBe('-4k');
+    expect(formatThousandsAmount(-400, 'fr')).toBe('0\u00a0k');
+    expect(formatThousandsAmount(null, 'en')).toBe('0k');
+    expect(formatThousandsAmount('nope', 'en')).toBe('\u2014');
+  });
+});
+
+describe('formatCompactAmount', () => {
+  it('follows the interface language, with a lowercase k', () => {
+    expect(formatCompactAmount(340_100, 'en')).toBe('340.1k');
+    expect(formatCompactAmount(340_100, 'fr')).toBe('340,1\u00a0k');
+    expect(formatCompactAmount(340_100, 'de')).toBe('340,1\u00a0k');
+    expect(formatCompactAmount(340_100, 'es')).toBe('340,1\u00a0k');
+    expect(formatCompactAmount(2_000, 'en')).toBe('2k');
+    expect(formatCompactAmount(2_000, 'fr')).toBe('2\u00a0k');
+    expect(formatCompactAmount(300, 'en')).toBe('300');
+    expect(formatCompactAmount(300, 'fr')).toBe('300');
+    expect(formatCompactAmount(1_500_000, 'en')).toBe('1.5M');
+    expect(formatCompactAmount(1_500_000, 'fr')).toBe('1,5\u00a0M');
+    expect(formatCompactAmount(1_200_000_000, 'en')).toBe('1.2B');
+    expect(formatCompactAmount(null, 'en')).toBe('0');
+    expect(formatCompactAmount('nope', 'fr')).toBe('\u2014');
   });
 });
 

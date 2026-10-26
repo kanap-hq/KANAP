@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, FindOperator, ILike, In, Raw, Repository } from 'typeorm';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { Location } from './location.entity';
 import { LocationUserContact } from './location-user-contact.entity';
 import { LocationContactLink } from './location-contact.entity';
@@ -17,6 +18,7 @@ import { ExternalContact } from '../contacts/external-contact.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
+import { displayName } from '../common/display-name';
 import { sortedFindQuery } from '../common/list-sort';
 import { duplicateNameException } from '../common/duplicate-name';
 import {
@@ -522,9 +524,7 @@ export class LocationsService {
     const mg = opts?.manager ?? this.repo.manager;
     const location = await this.loadLocationOrThrow(locationId, opts?.manager);
     const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
-    const senderName = senderRows.length > 0
-      ? `${senderRows[0].first_name || ''} ${senderRows[0].last_name || ''}`.trim() || 'Someone'
-      : 'Someone';
+    const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
       ? await mg.query(
@@ -918,9 +918,13 @@ export class LocationsService {
         SELECT a.id, a.name,
           ARRAY_AGG(DISTINCT ai.environment ORDER BY ai.environment) AS environments
         FROM assets s
-        INNER JOIN app_asset_assignments asa ON asa.asset_id = s.id
-        INNER JOIN app_instances ai ON ai.id = asa.app_instance_id
-        INNER JOIN applications a ON a.id = ai.application_id
+        -- The deployments running on the assets here (effective: a member lists what its clusters carry).
+        INNER JOIN (${effectiveAssignmentsSql({
+          tenant: 'app_current_tenant()',
+          assets: 'ARRAY(SELECT ls.id FROM assets ls WHERE ls.tenant_id = app_current_tenant() AND ls.location_id = $1)',
+        })}) asa ON asa.asset_id = s.id AND asa.tenant_id = s.tenant_id
+        INNER JOIN app_instances ai ON ai.id = asa.app_instance_id AND ai.tenant_id = asa.tenant_id
+        INNER JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
         WHERE s.location_id = $1
         GROUP BY a.id, a.name
         ORDER BY a.name

@@ -18,7 +18,7 @@ docker compose -f infra/compose.onprem.yml up -d api
 |----------|-------------|---------|
 | `DEPLOYMENT_MODE` | **Must be `single-tenant`** for on-premise deployments | `single-tenant` |
 
-Write the value exactly. A misspelled value (`single_tenant`) starts KANAP in cloud mode without any warning.
+Write `single-tenant` or `multi-tenant`. Leave the variable unset for multi-tenant, the cloud default. Any other value, including a misspelling such as `single_tenant`, stops the API at start. The message names the accepted values.
 
 ## Optional: tenant identity
 
@@ -95,7 +95,7 @@ If `CORS_ORIGINS` and the application address (`APP_BASE_URL`) are both missing 
 
 Set `APP_ENV=production` when users reach KANAP over HTTPS, which is the documented setup. If `NODE_ENV` is set and `APP_ENV` is not, KANAP reads `NODE_ENV` instead.
 
-**Start-up checks.** The API refuses to start if `JWT_SECRET` or `DATABASE_URL` is missing or empty, and, with `APP_ENV=production`, if `APP_BASE_URL` or `CORS_ORIGINS` is missing. It also refuses to run if the PostgreSQL role from `DATABASE_URL` is `SUPERUSER` or `BYPASSRLS`. That last check runs after the migrations, so the migrations have already run with that role when the message appears.
+**Start-up checks.** The API refuses to start if `DEPLOYMENT_MODE` is any value other than `single-tenant`, `multi-tenant` or unset, if `JWT_SECRET` or `DATABASE_URL` is missing or empty, and, with `APP_ENV=production`, if `APP_BASE_URL` or `CORS_ORIGINS` is missing. It also refuses to run if the PostgreSQL role from `DATABASE_URL` is `SUPERUSER` or `BYPASSRLS`. That last check runs after the migrations, so the migrations have already run with that role when the message appears.
 
 ## What the API log shows at start
 
@@ -103,7 +103,7 @@ Read the API log after every start and after every change to `.env`:
 
 ```bash
 cd /opt/kanap
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 ```
 
 The filter keeps the lines below and leaves out the framework details. Without it, `docker compose -f infra/compose.onprem.yml logs api` shows everything.
@@ -122,7 +122,6 @@ The filter keeps the lines below and leaves out the framework details. Without i
 [RATE-LIMIT] Client address: taken from X-Forwarded-For behind 1 trusted proxy (RATE_LIMIT_TRUST_PROXY=true)
 [CORS] Configured 1 origin pattern(s)
 [DB] Connected as PostgreSQL role "kanap" with native RLS enforcement
-Admin seeding disabled (set SEED_ADMIN=true to enable)
 [on-prem] Default chart of accounts created
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
@@ -154,7 +153,6 @@ The number of migrations changes from version to version. On later starts it is 
 | `[CORS] CORS_ORIGINS and APP_BASE_URL are not set: browsers are still allowed from every origin in this version; ...` | Set both. A later version allows only the configured addresses. |
 | `[CORS] CORS_ORIGINS entry ... is a pattern: it is still accepted in this version. ...` | Replace the pattern with the exact address. |
 | `[DB] Connected as PostgreSQL role "kanap" with native RLS enforcement` | Informational. The API uses the application role. |
-| `Admin seeding disabled (set SEED_ADMIN=true to enable)` | Expected on-premise. Nothing to do: the administrator is created from `ADMIN_EMAIL` and `ADMIN_PASSWORD`. |
 | `[on-prem] Default chart of accounts created`, `[on-prem] Created tenant '...'`, `[on-prem] Created administrator account ...`, `[on-prem] Created default subscription (On-Prem)` | First start only. |
 | `[on-prem] Administrator account ... left unchanged: the workspace has an active administrator` | Later starts. Nothing to do. |
 | `[on-prem] Restored ... as an enabled administrator: the workspace had no active administrator (password unchanged)` | A warning. No active administrator was left, so KANAP restored the `ADMIN_EMAIL` account. |
@@ -452,7 +450,7 @@ The [Vulnerabilities](../vulnerabilities.md) page, its email notifications, the 
 | `VULNERABILITY_FEED_ENABLED` | Turns the vulnerabilities on. | `false` on-premise |
 | `NVD_API_BASE_URL` | Address of a mirror of the NVD CVE API 2.0, when the server cannot reach the NVD. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
 | `NVD_API_KEY` | Optional key that raises the request rate from 5 to 50 requests per 30 seconds, so the first reading finishes sooner. Request it free of charge on the [NVD website](https://nvd.nist.gov/developers/request-an-api-key). | *unset* |
-| `KEV_FEED_URL` | Address of a mirror of the CISA catalog of known exploited vulnerabilities. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
+| `KEV_FEED_URL` | Address of a mirror of the CISA catalog of known exploited vulnerabilities. The default is CISA's GitHub mirror, because `www.cisa.gov` refuses data-centre addresses. | `https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json` |
 | `EPSS_FEED_URL` | Address of a mirror of the daily EPSS scores. EPSS is described at [FIRST](https://www.first.org/epss). | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
 | `EUVD_BASE_URL` | Address of a mirror of ENISA's European vulnerability database (the European catalog and the EUVD mapping). | `https://euvdservices.enisa.europa.eu` |
 | `CVE_LIST_FEED_ENABLED` | Turns the CVE.org list off on its own (`false`), while the other sources keep running. | The value of `VULNERABILITY_FEED_ENABLED` |
@@ -462,11 +460,11 @@ The [Vulnerabilities](../vulnerabilities.md) page, its email notifications, the 
 
 Notes:
 
-- The API needs outbound HTTPS, port 443, to `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` and `euvdservices.enisa.europa.eu`, or to your mirrors (see [Firewall rules](#firewall-rules)).
+- The API needs outbound HTTPS, port 443, to `services.nvd.nist.gov`, `raw.githubusercontent.com`, `epss.empiricalsecurity.com` and `euvdservices.enisa.europa.eu`, or to your mirrors (see [Firewall rules](#firewall-rules)).
 - Without a mirror, the CVE.org list comes from the GitHub releases: the full export at the first reading (about 640 MB, read in about a minute), then the daily changes, from 0.5 to 13 MB a day. The API needs outbound HTTPS, port 443, to `api.github.com`, `github.com` and `release-assets.githubusercontent.com`.
 - The CVE.org list takes about 700 MB more in the database. During the first reading, the `api` container needs about 1.4 GB of temporary disk space.
 - A server without network access reads the list from a file: set `CVE_LIST_EXPORT_URL` to its path, and drop a new export there as often as you like. The data are as fresh as the last file dropped.
-- An empty mirror address keeps the public one. A source the server cannot reach leaves its columns as they are and is named in the summary of the task. The other sources continue.
+- An empty mirror address keeps the default one. A source the server cannot reach leaves its columns as they are and is named in the summary of the task. The other sources continue.
 - The email notifications also need email to be configured (Resend or SMTP).
 - Restart the API after changing these values.
 
@@ -501,7 +499,7 @@ Notes:
 | `APP_URL` | Multi-tenant (cloud) only. **Not needed on-premise**: `APP_BASE_URL` is used. | *unset* |
 | `EMAIL_OVERRIDE` | Redirect all emails to this address (dev/QA only, **never in production**) | *unset* |
 
-**Client address.** With the documented setup (nginx on the same server, API port bound to `127.0.0.1`), set `RATE_LIMIT_TRUST_PROXY=true`. The proxy must send `X-Forwarded-For`; the nginx example does. Set `false` when nothing sits in front of the API. A wrong value gives every user the same address: the 60 password sign-in requests per minute are then shared by everyone, and 5 failed attempts on one account block that account for everyone for 15 minutes.
+**Client address.** With the documented setup (nginx on the same server, API port bound to `127.0.0.1`), set `RATE_LIMIT_TRUST_PROXY=true`. The proxy must send `X-Forwarded-For`; the nginx example does. Set `false` when nothing sits in front of the API. A wrong value gives every user the same address: the 60 password sign-in requests and the 120 session renewals per minute are then shared by everyone, and 5 failed attempts on one account block that account for everyone for 15 minutes.
 
 ## Optional: capacity and performance
 
@@ -677,7 +675,7 @@ Only required if the corresponding feature is enabled.
 | `claude.ai` | 443 | Reads the description of Claude, Claude Desktop or Claude Code when a user connects it over MCP without a key | If `AI_MCP_ENABLED=true` and users connect over OAuth (not needed for API keys) |
 | `chatgpt.com`, `grok.com` | 443 | Reads the description of ChatGPT or Grok when a user connects it over MCP without a key | Same as `claude.ai` |
 | `services.nvd.nist.gov`, or your mirror | 443 | Published vulnerabilities (NVD) | If `VULNERABILITY_FEED_ENABLED=true` |
-| `www.cisa.gov`, or your mirror | 443 | CISA catalog of known exploited vulnerabilities | If `VULNERABILITY_FEED_ENABLED=true` |
+| `raw.githubusercontent.com`, or your mirror | 443 | CISA catalog of known exploited vulnerabilities (CISA GitHub mirror) | If `VULNERABILITY_FEED_ENABLED=true` |
 | `epss.empiricalsecurity.com`, or your mirror | 443 | Daily EPSS scores | If `VULNERABILITY_FEED_ENABLED=true` |
 | `euvdservices.enisa.europa.eu`, or your mirror | 443 | European vulnerability database (ENISA): European catalog and EUVD identifiers | If `VULNERABILITY_FEED_ENABLED=true` |
 | `api.github.com`, `github.com`, `release-assets.githubusercontent.com` | 443 | The CVE.org list (records written by the publishers) | If `VULNERABILITY_FEED_ENABLED=true`, unless `CVE_LIST_FEED_ENABLED=false` or `CVE_LIST_EXPORT_URL` names a mirror |

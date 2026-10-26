@@ -9,6 +9,8 @@ Navegue a **Informes** desde el menú principal para abrir el centro de informes
 - Ruta: **Informes**
 - Permisos: `reporting:reader` (mínimo)
 
+Para una persona con el [acceso a los datos](data-access.md) limitado, cada informe cuenta las líneas que ve, sin total del grupo.
+
 ---
 
 ## Centro de informes
@@ -211,6 +213,8 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 - Botón separado **Exportar flujos CSV**
 
 **Tabla de KPI** (cuando está habilitada): Mismas columnas que la tabla de KPI del Contracargo global, con una fila de "Totales globales" en la parte inferior para comparación.
+
+**Acceso a los datos limitado**: una persona limitada abre las empresas de sus nodos de empresa, o todas las empresas con **Todo**. Las líneas de contracargo muestran entonces la parte imputada a la empresa, con la empresa que paga, el porcentaje de asignación y los departamentos; una línea que no ve de otro modo muestra su referencia sin enlace. Las cifras de las demás empresas y los totales globales se omiten, y un nodo de centro de coste no abre este informe. Vea [Acceso a los datos](data-access.md#what-a-limited-person-sees).
 
 ### Exportar
 

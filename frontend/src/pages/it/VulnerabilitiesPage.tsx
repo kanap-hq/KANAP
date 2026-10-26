@@ -52,7 +52,7 @@ import {
   type VulnerabilityState,
   type VulnerabilityVersion,
 } from './vulnerabilities/vulnerabilityTypes';
-import { describeMatch, feedAges, nvdState, type FeedAge, type FeedSourceStatus } from './vulnerabilities/feedText';
+import { describeMatch, feedAges, groupMatchesByCpe, nvdState, type FeedAge, type FeedSourceStatus } from './vulnerabilities/feedText';
 
 const ENDPOINT = '/vulnerabilities';
 
@@ -468,7 +468,7 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
 
 /**
  * Under a version: the feeds that matched it, and "Why this row", closed by default, which lists
- * each criterion in plain words. Nothing on an answer that names no feed.
+ * each CPE once, with its distinct bounds. Nothing on an answer that names no feed.
  */
 function VersionMatches({ version, label }: { version: VulnerabilityVersion; label: string }) {
   const { t } = useTranslation('it');
@@ -476,6 +476,7 @@ function VersionMatches({ version, label }: { version: VulnerabilityVersion; lab
   const sources = version.match_sources ?? [];
   const matches = version.matches ?? [];
   if (sources.length === 0 && matches.length === 0) return null;
+  const shown = groupMatchesByCpe(matches);
   const listId = `why-${version.id}`;
   return (
     <Box sx={{ gridColumn: '1 / -1', minWidth: 0, mt: '-2px' }}>
@@ -498,7 +499,7 @@ function VersionMatches({ version, label }: { version: VulnerabilityVersion; lab
       </Box>
       {open && (
         <Box component="ul" id={listId} sx={{ ...listSx, mt: 0.5, fontSize: 12, color: 'kanap.text.secondary' }}>
-          {matches.map((match, index) => (
+          {shown.map((match, index) => (
             <li key={`${match.source}:${index}`}>{describeMatch(match, t)}</li>
           ))}
         </Box>

@@ -58,6 +58,7 @@ export default function BudgetFileExportDialog({
 }) {
   const { t, i18n } = useTranslation('ops');
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
+  // A limited person exports the lines of their access (the file has no header to say so).
   const currentYear = new Date().getFullYear();
   const years = offerableYears(currentYear);
   const [range, setRange] = useState(() => defaultYearRange(currentYear));

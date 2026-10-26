@@ -4,6 +4,7 @@ import { Brackets, EntityManager, In, Repository, SelectQueryBuilder } from 'typ
 import { Company } from './company.entity';
 import { CompanyMetric } from './company-metric.entity';
 import { companyListMetric } from './company-list-metrics';
+import { companyYearPeriod, parseCompanyYear } from './company-year';
 import { Decimal } from '../common/decimal';
 import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { ChartOfAccounts } from '../accounts/chart-of-accounts.entity';
@@ -90,6 +91,7 @@ export class CompaniesService {
   }
 
   async list(query: any, opts?: { manager?: EntityManager; exportAll?: boolean }) {
+    const year = parseCompanyYear(query?.year);
     const repo = this.getRepo(opts?.manager);
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
       ? parseExportPagination(query)
@@ -100,7 +102,6 @@ export class CompaniesService {
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const year = query?.year ? Number(query.year) : undefined;
 
     const filterTargets: Record<string, CompanyFilterTarget> = {
       id: { expression: 'c.id', dataType: 'string' },
@@ -207,12 +208,7 @@ export class CompaniesService {
     };
 
     const qbBase = repo.createQueryBuilder('c');
-    const period = year
-      ? {
-          start: new Date(`${year}-01-01`),
-          end: new Date(`${year}-12-31T23:59:59.999Z`),
-        }
-      : undefined;
+    const period = year ? companyYearPeriod(year) : undefined;
     if (effectiveStatus) {
       applyStatusFilter(qbBase, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
@@ -302,6 +298,7 @@ export class CompaniesService {
   }
 
   async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; total: number }> {
+    const year = parseCompanyYear(query?.year);
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
     const { sort, status, q, filters } = parsed;
@@ -311,7 +308,6 @@ export class CompaniesService {
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const year = query?.year ? Number(query.year) : undefined;
 
     const filterTargets: Record<string, CompanyFilterTarget> = {
       id: { expression: 'c.id', dataType: 'string' },
@@ -418,12 +414,7 @@ export class CompaniesService {
     };
 
     const qb = repo.createQueryBuilder('c').select('c.id', 'id');
-    const period = year
-      ? {
-          start: new Date(`${year}-01-01`),
-          end: new Date(`${year}-12-31T23:59:59.999Z`),
-        }
-      : undefined;
+    const period = year ? companyYearPeriod(year) : undefined;
     if (effectiveStatus) {
       applyStatusFilter(qb, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
@@ -504,22 +495,25 @@ export class CompaniesService {
    * at the rates of the year's budget versions: the set the year is frozen at, else the live
    * rates (`yearRateSetId`). A currency without a rate is left out of `turnover` and named in
    * `turnover_fx_missing` (`companies` is how many companies of that currency had a turnover).
+   * `headcount`, `it_users` and `turnover` are null when no company has that figure for the year.
+   * Entered zeros still total zero.
    * Each row of the list stays in the company's own currency.
    */
   async totals(
     query: any,
     opts: { manager?: EntityManager; tenantId: string },
   ): Promise<{
-    headcount: number;
-    it_users: number;
-    turnover: number;
+    headcount: number | null;
+    it_users: number | null;
+    turnover: number | null;
     turnover_currency: string;
     turnover_fx_missing: Array<{ currency: string; year: number; companies: number }>;
     year: number;
   }> {
-    const repo = this.getRepo(opts?.manager);
+    const year = this.normalizeYear(parseCompanyYear(query?.year));
     const tenantId = opts?.tenantId;
     if (!tenantId) throw new BadRequestException('A tenant is required');
+    const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: 10000 });
     const { status, q, filters } = parsed;
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
@@ -528,8 +522,6 @@ export class CompaniesService {
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const inputYear = query?.year ? Number(query.year) : undefined;
-    const year = this.normalizeYear(inputYear);
 
     // Reuse the same filter targets used by list/listIds so filters/search match the grid
     const filterTargets: Record<string, CompanyFilterTarget> = {
@@ -612,18 +604,16 @@ export class CompaniesService {
     const qb = repo
       .createQueryBuilder('c')
       .select("NULLIF(UPPER(TRIM(c.base_currency)), '')", 'currency')
-      .addSelect('SUM(COALESCE(m.headcount, 0))', 'headcount')
-      .addSelect('SUM(COALESCE(m.it_users, 0))', 'it_users')
-      .addSelect('SUM(COALESCE(m.turnover, 0))', 'turnover')
+      // No COALESCE: SUM of an all-blank group is null, so a year with no figure is not a zero.
+      .addSelect('SUM(m.headcount)', 'headcount')
+      .addSelect('SUM(m.it_users)', 'it_users')
+      .addSelect('SUM(m.turnover)', 'turnover')
       .addSelect('COUNT(*) FILTER (WHERE COALESCE(m.turnover, 0) <> 0)', 'companies')
       .where('c.tenant_id = :tenantId', { tenantId })
       .groupBy("NULLIF(UPPER(TRIM(c.base_currency)), '')");
 
     // Apply lifecycle status for the year window
-    const period = {
-      start: new Date(`${year}-01-01`),
-      end: new Date(`${year}-12-31T23:59:59.999Z`),
-    };
+    const period = companyYearPeriod(year);
     if (effectiveStatus) {
       applyStatusFilter(qb, { alias: 'c', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
@@ -656,9 +646,21 @@ export class CompaniesService {
       return Number.isFinite(n) ? n : 0;
     };
     const round3 = (n: number) => Math.round(n * 1000) / 1000;
-    const headcount = Math.round(rows.reduce((acc, row) => acc + toNum(row.headcount), 0));
-    const it_users = Math.round(rows.reduce((acc, row) => acc + toNum(row.it_users), 0));
-    const groups = rows.filter((row) => toNum(row.turnover) !== 0);
+    // A blank group (SUM is null) is not a zero. An entered zero still counts.
+    const sumEntered = (pick: (row: (typeof rows)[number]) => unknown): number | null => {
+      const present = rows.filter((row) => {
+        const value = pick(row);
+        return value != null && value !== '';
+      });
+      if (present.length === 0) return null;
+      return present.reduce((acc, row) => acc + toNum(pick(row)), 0);
+    };
+    const headcountSum = sumEntered((row) => row.headcount);
+    const itUsersSum = sumEntered((row) => row.it_users);
+    const headcount = headcountSum == null ? null : Math.round(headcountSum);
+    const it_users = itUsersSum == null ? null : Math.round(itUsersSum);
+    const entered = rows.filter((row) => row.turnover != null && row.turnover !== '');
+    const groups = entered.filter((row) => toNum(row.turnover) !== 0);
     const converted = await convertTurnovers({
       fxRates: this.fxRates,
       manager: repo.manager,
@@ -668,8 +670,12 @@ export class CompaniesService {
       // One entry per currency, keyed by its position.
       entries: groups.map((row, idx) => ({ companyId: String(idx), currency: row.currency ?? null, turnover: toNum(row.turnover) })),
     });
-    let turnover = 0;
-    converted.values.forEach((value) => { turnover += value ?? 0; });
+    let turnover: number | null = null;
+    if (entered.length > 0) {
+      let sum = 0;
+      converted.values.forEach((value) => { sum += value ?? 0; });
+      turnover = round3(sum);
+    }
     const turnover_fx_missing = converted.missing
       .map((item) => ({
         currency: item.currency,
@@ -681,7 +687,7 @@ export class CompaniesService {
     return {
       headcount,
       it_users,
-      turnover: round3(turnover),
+      turnover,
       turnover_currency: converted.reportingCurrency,
       turnover_fx_missing,
       year,

@@ -89,6 +89,7 @@ El botón **Forzar sincronización de tipos de cambio** recupera los tipos de in
 **Qué ocurre**:
   - El botón permanece ocupado mientras KANAP recupera los tipos, 20 segundos como máximo
   - Un mensaje encima de la tabla indica después el resultado: el número de tipos recuperados, por ejemplo **12 tipos recuperados.**, seguido de los pares que siguen sin tipo, por ejemplo **Siguen faltando: BRL 2026.**, o de **Cada moneda en uso tiene un tipo.**
+  - Cuando la recuperación no aporta ningún tipo nuevo y cada moneda en uso ya tiene un tipo, el mensaje dice **Los tipos de cambio están al día.** Cuando aún faltan pares, dice **No se ha recuperado ningún tipo nuevo.** y los nombra.
   - Si las fuentes no respondieron, el mensaje lo indica, y los tipos ya guardados se mantienen
   - Si la recuperación tarda más, el mensaje indica **La sincronización continúa en segundo plano.** La tabla y el bloque de tipos faltantes se actualizan cuando termina
   - Si ya hay una actualización en curso, KANAP le añade sus años, de modo que ninguna solicitud se pierde

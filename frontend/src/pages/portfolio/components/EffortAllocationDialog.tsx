@@ -18,14 +18,20 @@ import {
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { formatUserName } from '../../../utils/userDisplay';
 
 export interface EligibleUser {
   user_id: string;
   email: string;
-  first_name: string;
-  last_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
   is_lead: boolean;
   allocation_pct?: number;
+}
+
+/** Name shown on a row: first and last name when present, otherwise the e-mail. */
+function contributorLabel(user: Pick<EligibleUser, 'first_name' | 'last_name' | 'email'>): string {
+  return formatUserName(user) || '';
 }
 
 interface EffortAllocationDialogProps {
@@ -55,13 +61,13 @@ export default function EffortAllocationDialog({
   const initialAllocationsRef = React.useRef<Record<string, number>>({});
   const effortTypeLabel = t(`portfolio:dialogs.effortAllocation.effortTypes.${effortType}`);
 
-  // Sort users: lead first, then alphabetically
+  // Lead first, then by the same label the row shows.
   const sortedUsers = React.useMemo(() => {
     return [...eligibleUsers].sort((a, b) => {
       if (a.is_lead && !b.is_lead) return -1;
       if (!a.is_lead && b.is_lead) return 1;
-      const nameA = `${a.first_name} ${a.last_name}`.toLowerCase();
-      const nameB = `${b.first_name} ${b.last_name}`.toLowerCase();
+      const nameA = contributorLabel(a).toLowerCase();
+      const nameB = contributorLabel(b).toLowerCase();
       return nameA.localeCompare(nameB);
     });
   }, [eligibleUsers]);
@@ -266,7 +272,7 @@ export default function EffortAllocationDialog({
                   const md = estimatedEffort > 0
                     ? Math.round((pct / 100) * estimatedEffort * 10) / 10
                     : 0;
-                  const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+                  const displayName = contributorLabel(user);
 
                   return (
                     <TableRow key={user.user_id}>

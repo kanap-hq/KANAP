@@ -57,6 +57,11 @@ interface DashboardTileProps {
   title: string;
   /** What the tile reads (column, years), on a second line under a one-line title. */
   subtitle?: string;
+  /**
+   * Reporting currency of the amounts, once, after the subtitle. It stays visible when the
+   * subtitle line is cut short.
+   */
+  currency?: string;
   icon: string;
   isLoading?: boolean;
   /** Query failed: the tile shows a retry prompt instead of an empty state that would read as "nothing to do". */
@@ -70,6 +75,7 @@ interface DashboardTileProps {
 export default function DashboardTile({
   title,
   subtitle,
+  currency,
   icon,
   isLoading = false,
   isError = false,
@@ -80,6 +86,11 @@ export default function DashboardTile({
 }: DashboardTileProps) {
   const { t } = useTranslation('common');
   const IconComponent = TILE_ICONS[icon] || TaskIcon;
+  const hasSub = Boolean(subtitle || currency);
+  // The full second line, for the tooltip when the column name is cut. The currency itself does not shrink.
+  const subheaderLabel = subtitle && currency
+    ? t('dashboard.withCurrency', { context: subtitle, currency })
+    : subtitle || currency || '';
 
   return (
     <Card
@@ -92,18 +103,27 @@ export default function DashboardTile({
       <CardHeader
         avatar={<IconComponent sx={{ color: 'text.secondary' }} />}
         title={
-          <Typography variant="subtitle1" fontWeight={500} noWrap={!!subtitle} title={subtitle ? title : undefined}>
+          <Typography variant="subtitle1" fontWeight={500} noWrap={hasSub} title={hasSub ? title : undefined}>
             {title}
           </Typography>
         }
-        subheader={subtitle ? (
-          <Typography variant="body2" noWrap sx={{ color: 'kanap.text.secondary' }}>
-            {subtitle}
-          </Typography>
+        subheader={hasSub ? (
+          <Box title={subheaderLabel} sx={{ display: 'flex', minWidth: 0, alignItems: 'baseline' }}>
+            {subtitle && (
+              <Typography variant="body2" noWrap sx={{ minWidth: 0, color: 'kanap.text.secondary' }}>
+                {subtitle}
+              </Typography>
+            )}
+            {currency && (
+              <Typography component="span" variant="body2" sx={{ flexShrink: 0, color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>
+                {subtitle ? `\u00a0·\u00a0${currency}` : currency}
+              </Typography>
+            )}
+          </Box>
         ) : undefined}
         action={action}
         // With a subtitle, the icon, the title and the action share the first line.
-        sx={subtitle ? { pb: 0, alignItems: 'flex-start', '& .MuiCardHeader-content': { minWidth: 0 } } : { pb: 0 }}
+        sx={hasSub ? { pb: 0, alignItems: 'flex-start', '& .MuiCardHeader-content': { minWidth: 0 } } : { pb: 0 }}
       />
       <CardContent sx={{ flex: 1, pt: 1, minHeight }}>
         {isLoading ? (

@@ -5,13 +5,19 @@ import { describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 import { formatShortDateTime } from '../../../lib/dateFormat';
 import portfolioEn from '../../../locales/en/portfolio.json';
+import itEn from '../../../locales/en/it.json';
 import PortfolioHistory from './PortfolioHistory';
 
 function resolveKey(key: string, opts?: Record<string, unknown>): string | undefined {
+  const [source, path] = key.startsWith('it:') ? [itEn, key.slice(3)] : [portfolioEn, key];
   const read = (candidate: string) => candidate
     .split('.')
-    .reduce<any>((node, part) => (node == null ? undefined : node[part]), portfolioEn);
-  return read(key);
+    .reduce<any>((node, part) => (node == null ? undefined : node[part]), source);
+  if (typeof opts?.count === 'number') {
+    const plural = read(`${path}_${opts.count === 1 ? 'one' : 'other'}`);
+    if (typeof plural === 'string') return plural;
+  }
+  return read(path);
 }
 
 const translate = (key: string, opts?: Record<string, unknown>) => {
@@ -141,6 +147,30 @@ describe('PortfolioHistory', () => {
         activities: [documentActivity({ content: 'Imported from legacy project field' })],
       });
       expect(screen.getByText('Imported from legacy project field')).toBeInTheDocument();
+    });
+  });
+
+  describe('budget lines outside the access', () => {
+    const linesActivity = (changed: Record<string, [unknown, unknown]>) => ({
+      ...changeActivity,
+      id: 'a-lines',
+      changed_fields: changed,
+    });
+
+    it('names the readable lines and counts the others', () => {
+      renderHistory({ activities: [linesActivity({ opex_items: [['Licence'], { labels: ['Licence'], hidden: 1 }] })] });
+      expect(screen.getByText('OPEX lines: Licence → Licence and 1 line outside your access')).toBeInTheDocument();
+    });
+
+    it('counts every line for a reader who sees none of them', () => {
+      renderHistory({ activities: [linesActivity({ capex_items: [{ labels: [], hidden: 2 }, []] })] });
+      expect(screen.getByText(/2 lines outside your access/)).toBeInTheDocument();
+    });
+
+    it('gives the number of lines only without the budget right', () => {
+      renderHistory({ activities: [linesActivity({ opex_items: [{ labels: null, hidden: 1 }, { labels: null, hidden: 3 }] })] });
+      expect(screen.getByText('OPEX lines: 1 budget line → 3 budget lines')).toBeInTheDocument();
+      expect(screen.queryByText(/object Object/)).not.toBeInTheDocument();
     });
   });
 

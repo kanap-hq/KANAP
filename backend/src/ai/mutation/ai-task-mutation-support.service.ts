@@ -1,12 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { validate as isUuid } from 'uuid';
 import { RelatedType } from '../../tasks/tasks-unified.service';
 import { AiExecutionContextWithManager } from '../ai.types';
 import {
   participantConditionForAiEntity,
   ParticipationScopedAiEntityType,
+  resolveAiIncidentViewer,
   resolveAiParticipationAccessScope,
 } from '../query/ai-query-scope.util';
+import { taskIncidentVisibilitySql } from '../../incidents/incident-visibility';
 
 const TASK_REF_RE = /^T-(\d+)$/i;
 const PROJECT_REF_RE = /^(?:PRJ-|project\s+#?|prj\s+#?|#)?(\d+)$/i;
@@ -448,9 +451,11 @@ export class AiTaskMutationSupportService {
 
     let rows: any[] = [];
     const accessScope = await resolveAiParticipationAccessScope(context, 'tasks');
+    const viewer = await resolveAiIncidentViewer(context);
     if (isUuid(normalized)) {
       const params: unknown[] = [context.tenantId, normalized];
       const accessScopeSql = appendParticipationScopeSql('tasks', 't', params, accessScope);
+      const incidentSql = taskIncidentVisibilitySql('t', viewer, params);
       rows = await context.manager.query(
         `
         SELECT t.id,
@@ -466,6 +471,7 @@ export class AiTaskMutationSupportService {
         WHERE t.tenant_id = $1
           AND t.id = $2
           ${accessScopeSql}
+          ${incidentSql}
         LIMIT 1
         `,
         params,
@@ -477,6 +483,7 @@ export class AiTaskMutationSupportService {
       }
       const params: unknown[] = [context.tenantId, Number.parseInt(match[1], 10)];
       const accessScopeSql = appendParticipationScopeSql('tasks', 't', params, accessScope);
+      const incidentSql = taskIncidentVisibilitySql('t', viewer, params);
       rows = await context.manager.query(
         `
         SELECT t.id,
@@ -492,6 +499,7 @@ export class AiTaskMutationSupportService {
         WHERE t.tenant_id = $1
           AND t.item_number = $2
           ${accessScopeSql}
+          ${incidentSql}
         LIMIT 1
         `,
         params,
@@ -638,7 +646,22 @@ export class AiTaskMutationSupportService {
     throw new BadRequestException(this.buildUserAmbiguityMessage(normalized, candidates));
   }
 
+  /**
+   * The object a task is written on (create, GLPI import, relation change). A budget line the person
+   * reads but may not modify is refused when the preview is asked, with the 403 the routes give
+   * (lot 3), as the write's trigger would refuse it at the approval.
+   */
   async resolveCreateTarget(
+    context: AiExecutionContextWithManager,
+    relationType?: AiTaskCreateTargetMode | null,
+    relationRef?: string | null,
+  ): Promise<AiTaskCreateTarget> {
+    const target = await this.findCreateTarget(context, relationType, relationRef);
+    if (target.mode === 'spend_item' || target.mode === 'capex_item') await assertLinesEditable(context.manager, [target.id]);
+    return target;
+  }
+
+  private async findCreateTarget(
     context: AiExecutionContextWithManager,
     relationType?: AiTaskCreateTargetMode | null,
     relationRef?: string | null,

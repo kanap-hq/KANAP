@@ -13,6 +13,11 @@ export interface ServiceOpts {
   userId?: string | null;
   tenantId?: string;
   accessScope?: ParticipationAccessScope;
+  /**
+   * The reader holds the budget right. Without it, a project's budget lines are counted, never
+   * named (data-scoped access, spec §5.4). Absent means no.
+   */
+  readsBudget?: boolean;
 }
 
 /**

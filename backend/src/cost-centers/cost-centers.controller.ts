@@ -31,6 +31,7 @@ import { CostCentersDeleteService } from './cost-centers-delete.service';
 import { CostCenterContext, CostCentersService } from './cost-centers.service';
 import { CostCenterBulkDeleteDto, CostCenterCreateDto, CostCenterUpdateDto } from './dto/cost-center.dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 function context(ctx: TenantRequest): CostCenterContext {
   if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
@@ -42,6 +43,9 @@ export const TREE_READERS: RequireAnyLevelMeta = [
   { resource: 'cost_centers', level: 'reader' },
   { resource: 'budget', level: 'reader' },
   { resource: 'reporting', level: 'reader' },
+  // The data-access screens pick a company or a cost center to name on a person: a users
+  // administrator without any budget permission needs the tree and the company source.
+  { resource: 'users', level: 'admin' },
 ];
 
 @UseGuards(JwtAuthGuard, PermissionGuard)
@@ -108,18 +112,21 @@ export class CostCentersController {
     return this.svc.get(id, context(ctx));
   }
 
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('cost_centers', 'member')
   @Post()
   create(@Body() body: CostCenterCreateDto, @Tenant() ctx: TenantRequest) {
     return this.svc.create(body, context(ctx));
   }
 
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('cost_centers', 'member')
   @Patch(':id')
   update(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: CostCenterUpdateDto, @Tenant() ctx: TenantRequest) {
     return this.svc.update(id, body, context(ctx));
   }
 
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('cost_centers', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
@@ -148,18 +155,21 @@ export class CostCentersController {
   }
 
   // What a delete of `ids` would refuse, asked before the confirmation.
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('cost_centers', 'admin')
   @Post('delete-check')
   deleteCheck(@Body() body: { ids?: unknown }, @Tenant() ctx: TenantRequest) {
     return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], context(ctx));
   }
 
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('cost_centers', 'admin')
   @Delete('bulk')
   bulkDelete(@Body() body: CostCenterBulkDeleteDto, @Tenant() ctx: TenantRequest) {
     return this.deleteSvc.bulkDelete(body.ids, context(ctx));
   }
 
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('cost_centers', 'admin')
   @Delete(':id')
   delete(@Param('id', new ParseUUIDPipe()) id: string, @Tenant() ctx: TenantRequest) {

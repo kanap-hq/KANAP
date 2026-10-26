@@ -26,6 +26,7 @@
     "retry": "Erneut versuchen",
     "discard": "Verwerfen",
     "edit": "Bearbeiten",
+    "editTitle": "Titel bearbeiten",
     "clear": "Leeren",
     "continue": "Fortfahren",
     "selectAll": "Alle auswählen",
@@ -132,6 +133,7 @@
     "recommended": "Empfohlen",
     "openCalendar": "Kalender öffnen",
     "datePlaceholder": "TT.MM.JJJJ",
+    "dateInvalid": "Ungültiges Datum",
     "time": "Uhrzeit",
     "timePlaceholder": "hh:mm",
     "requiredTag": "(erforderlich)",
@@ -199,6 +201,8 @@
       "cost_centers_other": "{{count}} Kostenstellen",
       "departments_one": "{{count}} Abteilung",
       "departments_other": "{{count}} Abteilungen",
+      "data_access_one": "der Datenzugriff von {{count}} Person",
+      "data_access_other": "der Datenzugriff von {{count}} Personen",
       "users_one": "{{count}} Benutzer",
       "users_other": "{{count}} Benutzer",
       "locations_one": "{{count}} Standort",
@@ -237,12 +241,14 @@
       "contributors_other": "{{count}} Mitwirkende",
       "interface_bindings_one": "{{count}} Schnittstellenbindung",
       "interface_bindings_other": "{{count}} Schnittstellenbindungen",
-      "server_assignments_one": "{{count}} Serverzuordnung",
-      "server_assignments_other": "{{count}} Serverzuordnungen",
+      "server_assignments_one": "{{count}} Server",
+      "server_assignments_other": "{{count}} Server",
       "business_processes_one": "{{count}} Geschäftsprozess",
       "business_processes_other": "{{count}} Geschäftsprozesse",
       "documents_one": "{{count}} Dokument",
       "documents_other": "{{count}} Dokumente",
+      "descriptions_one": "ihre Beschreibung",
+      "descriptions_other": "{{count}} Beschreibungen",
       "sub_folders_one": "{{count}} Unterordner",
       "sub_folders_other": "{{count}} Unterordner",
       "app_instances_one": "{{count}} Bereitstellung",
@@ -250,7 +256,21 @@
       "incidents_one": "{{count}} Vorfall",
       "incidents_other": "{{count}} Vorfälle",
       "subnets_one": "{{count}} Subnetz",
-      "subnets_other": "{{count}} Subnetze"
+      "subnets_other": "{{count}} Subnetze",
+      "others_one": "{{count}} weiteres",
+      "others_other": "{{count}} weitere"
+    },
+    "anyway": "Trotzdem löschen",
+    "assetWarning": {
+      "memberOf_one": "Mitglied von {{names}}: Es verlässt diesen Cluster.",
+      "memberOf_other": "Mitglied von {{names}}: Es verlässt diese Cluster.",
+      "stopsHosting": "Es hostet {{names}} nicht mehr.",
+      "hasMembers_one": "Cluster mit {{count}} Mitglied: Es verliert seinen Cluster.",
+      "hasMembers_other": "Cluster mit {{count}} Mitgliedern: Sie verlieren ihren Cluster.",
+      "links_one": "{{count}} Verknüpfung wird entfernt: {{names}}.",
+      "links_other": "{{count}} Verknüpfungen werden entfernt: {{names}}.",
+      "more_one": "und {{count}} weitere",
+      "more_other": "und {{count}} weitere"
     }
   },
   "messages": {
@@ -316,6 +336,7 @@
     "columnY": "{{column}}, J",
     "topIncreases": "Stärkste Zuwächse",
     "columnYvsYminus1": "{{column}}, J vs J-1",
+    "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "Keine Zuwächse",
     "myBudget": {
       "title": "Mein Budget",
@@ -659,10 +680,34 @@
       "status": "Status",
       "owners": "Verantwortliche",
       "timestamps": "Zeitstempel",
-      "vulnerabilities": "Schwachstellen"
+      "vulnerabilities": "Schwachstellen",
+      "timeline": "Verlauf",
+      "people": "Personen",
+      "record": "Eintrag",
+      "source": "Quelle",
+      "basic": "Grunddaten",
+      "context": "Kontext",
+      "dates": "Daten",
+      "ip_addresses": "IP-Adressen",
+      "effort": "Aufwand",
+      "team": "Team",
+      "scoring": "Bewertung",
+      "analysis": "Analyse"
     },
     "presets": {
       "applications": {
+        "enrichment": "Datenanreicherung"
+      },
+      "assets": {
+        "enrichment": "Datenanreicherung"
+      },
+      "tasks": {
+        "enrichment": "Datenanreicherung"
+      },
+      "portfolio_projects": {
+        "enrichment": "Datenanreicherung"
+      },
+      "portfolio_requests": {
         "enrichment": "Datenanreicherung"
       }
     },
@@ -715,6 +760,147 @@
         "it_owner_email_3": "E-Mail IT-Verantwortliche/r 3",
         "business_owner_email_4": "E-Mail Fachverantwortliche/r 4",
         "it_owner_email_4": "E-Mail IT-Verantwortliche/r 4"
+      },
+      "incidents": {
+        "ref": "Ref.",
+        "title": "Titel",
+        "category": "Kategorie",
+        "severity": "Schweregrad",
+        "status": "Status",
+        "confidential": "Auf Registeradministratoren beschränkt",
+        "started_at": "Beginn",
+        "detected_at": "Erkannt",
+        "resolved_at": "Behoben",
+        "closed_at": "Geschlossen",
+        "reporter": "Melder",
+        "owner": "Verantwortlicher",
+        "description": "Beschreibung",
+        "review": "Vorfallsanalyse",
+        "source_ref": "Externe Referenz",
+        "personal_data_affected": "Personenbezogene Daten betroffen",
+        "authority_notification_required": "Meldung an Behörde erforderlich",
+        "authority_notified_at": "Gemeldet am",
+        "notified_parties": "Informierte Parteien"
+      },
+      "assets": {
+        "id": "ID",
+        "name": "Name",
+        "location_reference": "Standort",
+        "kind": "Asset-Typ",
+        "is_cluster": "Ist ein Cluster",
+        "status": "Lebenszyklus",
+        "go_live_date": "Inbetriebnahmedatum",
+        "end_of_life_date": "Datum Lebensende",
+        "notes": "Notizen",
+        "environment": "Umgebung",
+        "hostname": "Hostname",
+        "domain": "Domäne",
+        "admin_zone": "Administrationszone",
+        "aliases": "Aliase",
+        "operating_system": "Betriebssystem",
+        "cluster": "Cluster-Mitgliedschaft",
+        "ip_1_type": "IP-Typ 1",
+        "ip_1_address": "IP-Adresse 1",
+        "ip_1_subnet_cidr": "IP-Subnetz 1 (CIDR)",
+        "ip_2_type": "IP-Typ 2",
+        "ip_2_address": "IP-Adresse 2",
+        "ip_2_subnet_cidr": "IP-Subnetz 2 (CIDR)",
+        "ip_3_type": "IP-Typ 3",
+        "ip_3_address": "IP-Adresse 3",
+        "ip_3_subnet_cidr": "IP-Subnetz 3 (CIDR)",
+        "ip_4_type": "IP-Typ 4",
+        "ip_4_address": "IP-Adresse 4",
+        "ip_4_subnet_cidr": "IP-Subnetz 4 (CIDR)",
+        "vulnerabilities_to_review": "Zu prüfende Schwachstellen",
+        "severe_vulnerabilities": "Schwerwiegende Schwachstellen"
+      },
+      "tasks": {
+        "id": "ID",
+        "title": "Titel",
+        "description": "Beschreibung",
+        "task_type_name": "Aufgabentyp",
+        "related_object_type": "Typ des verknüpften Objekts",
+        "related_object_id": "ID des verknüpften Objekts",
+        "related_object_name": "Name des verknüpften Objekts",
+        "phase_name": "Phase",
+        "priority_level": "Priorität",
+        "category_name": "Kategorie",
+        "stream_name": "Stream",
+        "source_name": "Quelle",
+        "company_name": "Unternehmen",
+        "status": "Status",
+        "start_date": "Startdatum",
+        "due_date": "Fälligkeitsdatum",
+        "assignee_email": "E-Mail Zuständige/r",
+        "creator_email": "E-Mail Antragsteller/in",
+        "viewer_email_1": "E-Mail Beobachter/in 1",
+        "viewer_email_2": "E-Mail Beobachter/in 2",
+        "viewer_email_3": "E-Mail Beobachter/in 3",
+        "viewer_email_4": "E-Mail Beobachter/in 4",
+        "owner_email_1": "E-Mail Verantwortliche/r 1",
+        "owner_email_2": "E-Mail Verantwortliche/r 2",
+        "owner_email_3": "E-Mail Verantwortliche/r 3",
+        "owner_email_4": "E-Mail Verantwortliche/r 4",
+        "labels": "Labels"
+      },
+      "portfolio_projects": {
+        "id": "ID",
+        "name": "Name",
+        "status": "Status",
+        "purpose": "Zweck",
+        "origin": "Herkunft",
+        "source_name": "Quelle",
+        "category_name": "Kategorie",
+        "stream_name": "Stream",
+        "company_name": "Unternehmen",
+        "department_name": "Abteilung",
+        "planned_start": "Geplanter Start",
+        "planned_end": "Geplantes Ende",
+        "actual_start": "Tatsächlicher Beginn",
+        "actual_end": "Tatsächliches Ende",
+        "baseline_start_date": "Baseline-Start",
+        "baseline_end_date": "Baseline-Ende",
+        "execution_progress": "Fortschritt (%)",
+        "estimated_effort_it": "Geschätzter IT-Aufwand (PT)",
+        "estimated_effort_business": "Geschätzter Fachbereichs-Aufwand (PT)",
+        "actual_effort_it": "Tatsächlicher IT-Aufwand (PT)",
+        "actual_effort_business": "Tatsächlicher Fachbereichs-Aufwand (PT)",
+        "baseline_effort_it": "Baseline IT-Aufwand (PT)",
+        "baseline_effort_business": "Baseline Fachbereichs-Aufwand (PT)",
+        "business_sponsor_email": "E-Mail Fachbereichssponsor",
+        "business_lead_email": "E-Mail Fachbereichsleiter",
+        "it_sponsor_email": "E-Mail IT-Sponsor",
+        "it_lead_email": "E-Mail IT-Leiter",
+        "criteria_values": "Bewertungskriterien (JSON)",
+        "priority_score": "Prioritätsscore",
+        "priority_override": "Prioritätsüberschreibung",
+        "override_value": "Überschreibungswert",
+        "override_justification": "Begründung der Überschreibung"
+      },
+      "portfolio_requests": {
+        "id": "ID",
+        "name": "Name",
+        "status": "Status",
+        "purpose": "Zweck",
+        "source_name": "Quelle",
+        "category_name": "Kategorie",
+        "stream_name": "Stream",
+        "requestor_email": "E-Mail Antragsteller/in",
+        "company_name": "Unternehmen",
+        "department_name": "Abteilung",
+        "target_delivery_date": "Ziellieferdatum",
+        "current_situation": "Aktuelle Situation",
+        "expected_benefits": "Erwarteter Nutzen",
+        "risks": "Risiken",
+        "business_sponsor_email": "E-Mail Fachbereichssponsor",
+        "business_lead_email": "E-Mail Fachbereichsleiter",
+        "it_sponsor_email": "E-Mail IT-Sponsor",
+        "it_lead_email": "E-Mail IT-Leiter",
+        "criteria_values": "Bewertungskriterien (JSON)",
+        "priority_score": "Prioritätsscore",
+        "priority_override": "Prioritätsüberschreibung",
+        "override_value": "Überschreibungswert",
+        "override_justification": "Begründung der Überschreibung"
       }
     }
   },
@@ -729,6 +915,7 @@
     "noCategoriesFound": "Keine Kategorien gefunden",
     "noUsersFound": "Keine Benutzer gefunden",
     "noServersFound": "Keine Server gefunden",
+    "noMembers": "Keine Mitglieder festgelegt",
     "meSuffix": "(ich)",
     "selectBusinessProcesses": "Geschäftsprozesse auswählen",
     "selectCategories": "Kategorien auswählen",
@@ -767,7 +954,8 @@
     "departments": "Abteilungen",
     "allDepartments": "Alle Abteilungen",
     "newCategoryName": "Name der neuen Kategorie",
-    "removeNamed": "{{name}} entfernen"
+    "removeNamed": "{{name}} entfernen",
+    "chooseServer": "Server auswählen"
   },
   "documentEditor": {
     "expandDocument": "Dokument erweitern",
@@ -831,7 +1019,8 @@
     "copy": "Kopieren",
     "copiedToClipboard": "In die Zwischenablage kopiert",
     "orEmailSection": "Oder per E-Mail an jemanden senden",
-    "sendEmail": "E-Mail senden"
+    "sendEmail": "E-Mail senden",
+    "cannotOpen": "{{name}} kann dieses Element nicht öffnen."
   },
   "enumEditor": {
     "name": "Name",
@@ -940,7 +1129,8 @@
     "manuallyAdded": "Manuell hinzugefügt",
     "removeContact": "Kontakt entfernen",
     "insufficientPermission": "Unzureichende Berechtigung",
-    "syncFromSupplier": "Kontakte des Lieferanten übernehmen"
+    "syncFromSupplier": "Kontakte des Lieferanten übernehmen",
+    "saveFailed": "Die Kontakte konnten nicht gespeichert werden."
   },
   "export": {
     "button": "Exportieren",
@@ -979,6 +1169,28 @@
     "endOfValidity": "Ende der Gültigkeit",
     "endOfValidityHint": "Leer lassen, um unbegrenzt aktiv zu bleiben.",
     "activeUntil": "Aktiv bis {{date}}"
+  },
+  "unsaved": {
+    "saveAndLeave": {
+      "message": "Sie haben ungespeicherte Änderungen. Vor dem Verlassen speichern?",
+      "confirm": "Speichern und verlassen",
+      "cancel": "Ohne Speichern verlassen"
+    },
+    "leaveWithoutSaving": {
+      "message": "Sie haben ungespeicherte Änderungen. Ohne Speichern verlassen?",
+      "confirm": "Ohne Speichern verlassen",
+      "cancel": "Bleiben"
+    },
+    "saveAndSwitch": {
+      "message": "Sie haben ungespeicherte Änderungen. Vor dem Wechsel der Registerkarte speichern?",
+      "confirm": "Speichern und wechseln",
+      "cancel": "Ohne Speichern wechseln"
+    },
+    "saveAndContinue": {
+      "message": "Sie haben ungespeicherte Änderungen. Vor dem Fortfahren speichern?",
+      "confirm": "Speichern und fortfahren",
+      "cancel": "Bleiben"
+    }
   },
   "autosave": {
     "leaveTitle": "Änderungen nicht gespeichert",
@@ -1292,12 +1504,13 @@
     "newLink": "Neuer Link",
     "editLink": "Link bearbeiten",
     "editLinkNamed": "{{name}} bearbeiten",
-    "removeNamed": "{{name}} entfernen",
+    "removeNamed": "{{name}} löschen",
     "placeholders": {
       "name": "z. B. Herstellerportal",
       "url": "z. B. https://status.example.com"
     },
     "linksTitle": "Weblinks",
-    "linksEmpty": "Kein Weblink."
+    "linksEmpty": "Kein Weblink.",
+    "removeFileNamed": "Datei {{name}} löschen"
   }
 }

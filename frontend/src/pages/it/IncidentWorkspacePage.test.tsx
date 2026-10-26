@@ -5,11 +5,12 @@ import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../api';
-import { incidentsApi, type Incident } from '../../api/endpoints/incidents';
+import { incidentsApi, type Incident, type IncidentAttachment } from '../../api/endpoints/incidents';
 import { createAppTheme } from '../../config/ThemeContext';
 import IncidentWorkspacePage from './IncidentWorkspacePage';
 
 const navigateMock = vi.hoisted(() => vi.fn());
+const shellProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
 const dialogsMock = vi.hoisted(() => ({
   confirm: vi.fn(async () => true),
   prompt: vi.fn(async () => 'human error'),
@@ -26,11 +27,15 @@ vi.mock('../../api/endpoints/incidents', async (importOriginal) => {
     ...actual,
     incidentsApi: {
       get: vi.fn(),
+      create: vi.fn(),
       update: vi.fn(),
       cancel: vi.fn(),
       reopen: vi.fn(),
       setConfidentiality: vi.fn(),
       exportReport: vi.fn(),
+      listAttachments: vi.fn(async () => []),
+      uploadAttachment: vi.fn(),
+      deleteAttachment: vi.fn(),
     },
   };
 });
@@ -98,26 +103,38 @@ vi.mock('../../components/EntityKnowledgePanel', () => ({
   ),
 }));
 vi.mock('./workspace/IncidentMetadataBar', () => ({ default: () => null }));
-vi.mock('./workspace/IncidentPropertiesDrawer', () => ({ default: () => null }));
+vi.mock('./workspace/IncidentPropertiesDrawer', () => ({
+  default: ({ onChange, isCreate }: { onChange?: (patch: { severity?: string }) => void; isCreate?: boolean }) => (
+    isCreate ? <button type="button" onClick={() => onChange?.({ severity: 'major' })}>set-severity</button> : null
+  ),
+}));
 vi.mock('./workspace/IncidentRelationsTab', () => ({ default: () => null }));
-vi.mock('./workspace/IncidentAttachmentsTab', () => ({ default: () => null }));
 vi.mock('./workspace/IncidentJournalTab', () => ({
   default: () => null,
   incidentEntriesQueryKey: (id: string) => ['incident-entries', id],
 }));
 
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
-  default: ({ children, actions, onBack, onTabChange, onSaveShortcut, nav, tabs }: any) => (
-    <div>
-      {tabs?.map((tab: any) => <span key={tab.key} data-testid={`tab-${tab.key}`}>{tab.badge ?? ''}</span>)}
-      <button type="button" onClick={() => onBack?.()}>shell-back</button>
-      <button type="button" onClick={() => onTabChange?.('journal')}>shell-tab-journal</button>
-      <button type="button" onClick={() => onSaveShortcut?.()}>shell-save-shortcut</button>
-      <button type="button" onClick={() => nav?.onNext?.()}>shell-next</button>
-      <div>{actions}</div>
-      <div>{children}</div>
-    </div>
-  ),
+  default: (props: any) => {
+    shellProps.current = props;
+    const { children, actions, onBack, onTabChange, onSaveShortcut, nav, tabs, title, canEditTitle, onTitleSave, titleError, properties } = props;
+    return (
+      <div>
+        {tabs?.map((tab: any) => <span key={tab.key} data-testid={`tab-${tab.key}`}>{tab.badge ?? ''}</span>)}
+        <button type="button" onClick={() => onBack?.()}>shell-back</button>
+        <button type="button" onClick={() => onTabChange?.('journal')}>shell-tab-journal</button>
+        <button type="button" onClick={() => onSaveShortcut?.()}>shell-save-shortcut</button>
+        <button type="button" onClick={() => nav?.onNext?.()}>shell-next</button>
+        {canEditTitle ? (
+          <input aria-label="shell-title" defaultValue={title} onBlur={(event) => onTitleSave?.(event.target.value)} />
+        ) : null}
+        {titleError ? <div role="alert">{titleError}</div> : null}
+        <div>{properties}</div>
+        <div>{actions}</div>
+        <div>{children}</div>
+      </div>
+    );
+  },
 }));
 
 const theme = createAppTheme('light');
@@ -177,6 +194,115 @@ async function typeInReview(text: string) {
   fireEvent.change(editor, { target: { value: text } });
   return editor;
 }
+
+function renderNewIncident() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <ThemeProvider theme={theme}>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/it/incidents/new/overview']}>
+          <Routes>
+            <Route path="/it/incidents/:id/:tab" element={<IncidentWorkspacePage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>,
+  );
+}
+
+describe('IncidentWorkspacePage — new incident title', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authLevel.incidents = 'contributor';
+    shellProps.current = null;
+  });
+
+  it('types the title in the header and keeps the description in the body', () => {
+    renderNewIncident();
+
+    expect(screen.getByLabelText('shell-title')).toHaveValue('');
+    expect(shellProps.current).toMatchObject({
+      canEditTitle: true,
+      title: '',
+      titleFallback: 'workspace.incident.newTitle',
+      titleRequiredMessage: 'workspace.incident.create.titleRequired',
+    });
+    expect(screen.queryByText('workspace.incident.create.title')).toBeNull();
+    expect(screen.getByPlaceholderText('workspace.incident.overview.descriptionPlaceholder')).toBeInTheDocument();
+    expect(screen.getByText('set-severity')).toBeInTheDocument();
+  });
+
+  it('shows the required error in the header when creating without a title', () => {
+    renderNewIncident();
+
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('workspace.incident.create.titleRequired');
+    expect(screen.queryByText('workspace.incident.create.severityRequired')).toBeNull();
+    expect(incidentsApi.create).not.toHaveBeenCalled();
+
+    const title = screen.getByLabelText('shell-title');
+    fireEvent.change(title, { target: { value: 'Mail outage' } });
+    fireEvent.blur(title);
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+
+    expect(screen.queryByText('workspace.incident.create.titleRequired')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('workspace.incident.create.severityRequired');
+    expect(incidentsApi.create).not.toHaveBeenCalled();
+  });
+
+  it('creates the incident from the header title and the description', async () => {
+    vi.mocked(incidentsApi.create).mockResolvedValue({ ...incident, title: 'Mail outage', item_number: 4 });
+    renderNewIncident();
+
+    fireEvent.click(screen.getByText('set-severity'));
+    const title = screen.getByLabelText('shell-title');
+    fireEvent.change(title, { target: { value: '  Mail outage  ' } });
+    fireEvent.blur(title);
+    fireEvent.change(screen.getByPlaceholderText('workspace.incident.overview.descriptionPlaceholder'), {
+      target: { value: '  The Lyon office lost mail  ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+
+    await waitFor(() => expect(incidentsApi.create).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(incidentsApi.create).mock.calls[0][0]).toMatchObject({
+      title: 'Mail outage',
+      severity: 'major',
+      description: 'The Lyon office lost mail',
+    });
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/it/incidents/INC-4/overview', { replace: true }));
+  });
+
+  it('offers no header title to a reader', () => {
+    authLevel.incidents = 'reader';
+    renderNewIncident();
+
+    expect(screen.queryByLabelText('shell-title')).toBeNull();
+    expect(shellProps.current).toMatchObject({ canEditTitle: false, titleRequiredMessage: undefined });
+    expect(screen.getByRole('button', { name: 'common:buttons.create' })).toBeDisabled();
+  });
+
+  it('keeps an existing incident title on the loaded record', async () => {
+    authLevel.incidents = 'admin';
+    vi.mocked(incidentsApi.get).mockResolvedValue(incident);
+    vi.mocked(api.get).mockResolvedValue({
+      data: { id: 'doc-1', item_number: 12, item_ref: 'DOC-12', content_markdown: '', revision: 1, edit_lock: null },
+    } as any);
+    renderPage();
+
+    await screen.findByLabelText('workspace.incident.overview.review');
+    expect(screen.getByLabelText('shell-title')).toHaveValue('Router down');
+    expect(shellProps.current).toMatchObject({
+      canEditTitle: true,
+      title: 'Router down',
+      titleFallback: 'workspace.incident.untitled',
+      titleRequiredMessage: undefined,
+      titleError: null,
+    });
+    expect(screen.queryByText('workspace.incident.create.description')).toBeNull();
+    expect(screen.getByDisplayValue('Short summary')).toBeInTheDocument();
+  });
+});
 
 describe('IncidentWorkspacePage — review draft is flushed before every transition', () => {
   beforeEach(() => {
@@ -475,6 +601,19 @@ describe('IncidentWorkspacePage — delete', () => {
     expect(api.delete).not.toHaveBeenCalled();
   });
 
+  it('refuses a closed or cancelled incident before any confirmation', async () => {
+    vi.mocked(api.post).mockImplementation(async (url: string) => (url === '/incidents/delete-check'
+      ? { data: { ...impact, incidents: 0, blocked: 1, refused: [{ id: incident.id, name: 'INC-1', code: 'INCIDENT_CLOSED_OR_CANCELLED', usages: [] }] } }
+      : { data: {} }) as any);
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+
+    await waitFor(() => expect(dialogsMock.alert).toHaveBeenCalled());
+    expect((dialogsMock.alert.mock.calls[0] as any[])[0].message).toBe('errors:INCIDENT_CLOSED_OR_CANCELLED');
+    expect(dialogsMock.confirm).not.toHaveBeenCalled();
+    expect(api.delete).not.toHaveBeenCalled();
+  });
+
   it.each(['reader', 'contributor', 'member'])('offers no delete to an incident %s', async (level) => {
     authLevel.incidents = level;
     renderPage();
@@ -520,5 +659,77 @@ describe('IncidentWorkspacePage — Documents badge', () => {
     fireEvent.click(screen.getByText('knowledge-link-saved'));
     await waitFor(() => expect(screen.getByTestId('tab-documents')).toHaveTextContent(/^$/));
     expect(incidentsApi.get).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('IncidentWorkspacePage — attachments in the overview', () => {
+  const attachment: IncidentAttachment = {
+    id: 'att-1',
+    incident_id: 'inc-1',
+    original_filename: 'shot.png',
+    mime_type: 'image/png',
+    size: 2048,
+    uploaded_at: '2026-09-01T08:00:00.000Z',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authLevel.incidents = 'admin';
+    vi.mocked(incidentsApi.get).mockResolvedValue(incident);
+    vi.mocked(incidentsApi.listAttachments).mockResolvedValue([]);
+    vi.mocked(api.get).mockResolvedValue({
+      data: { id: 'doc-1', item_number: 12, item_ref: 'DOC-12', content_markdown: '## Description', revision: 1, edit_lock: null },
+    } as any);
+    vi.mocked(api.post).mockResolvedValue({ data: { lock_token: 'lock-1', expires_at: null } } as any);
+  });
+
+  it('no longer offers an attachments tab', async () => {
+    renderPage();
+
+    await screen.findByLabelText('workspace.incident.overview.review');
+    expect(screen.queryByTestId('tab-attachments')).toBeNull();
+    expect(screen.getByTestId('tab-overview')).toBeInTheDocument();
+  });
+
+  it('opens the overview from a former /attachments address', async () => {
+    renderPage('attachments');
+
+    expect(await screen.findByLabelText('workspace.incident.overview.review')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Short summary')).toBeInTheDocument();
+    expect(screen.queryByTestId('tab-attachments')).toBeNull();
+  });
+
+  it('shows the section to a contributor', async () => {
+    authLevel.incidents = 'contributor';
+    renderPage();
+
+    expect(await screen.findByText('workspace.task.attachments.title')).toBeInTheDocument();
+    expect(screen.getByText('workspace.task.actions.attachFiles')).toBeInTheDocument();
+  });
+
+  it('hides the empty section from a reader', async () => {
+    authLevel.incidents = 'reader';
+    renderPage();
+
+    await waitFor(() => expect(incidentsApi.listAttachments).toHaveBeenCalledWith('inc-1'));
+    expect(screen.queryByText('workspace.task.attachments.title')).toBeNull();
+  });
+
+  it('shows an existing attachment read-only to a reader', async () => {
+    authLevel.incidents = 'reader';
+    vi.mocked(incidentsApi.listAttachments).mockResolvedValue([attachment]);
+    renderPage();
+
+    expect(await screen.findByText('shot.png (2.0 KB)')).toBeInTheDocument();
+    expect(screen.queryByText('workspace.task.actions.attachFiles')).toBeNull();
+  });
+
+  it('keeps existing attachments read-only on a closed incident', async () => {
+    vi.mocked(incidentsApi.get).mockResolvedValue({ ...incident, status: 'closed', closed_at: '2026-09-02T00:00:00.000Z' });
+    vi.mocked(incidentsApi.listAttachments).mockResolvedValue([attachment]);
+    renderPage();
+
+    expect(await screen.findByText('shot.png (2.0 KB)')).toBeInTheDocument();
+    expect(screen.queryByText('workspace.task.actions.attachFiles')).toBeNull();
   });
 });

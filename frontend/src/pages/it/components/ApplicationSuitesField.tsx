@@ -10,7 +10,7 @@ import { drawerAutocompleteListboxSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { useApplicationFeedback } from '../applicationFeedback';
 
-type SuiteOption = { id: string; name: string };
+type SuiteOption = { id: string; name: string; reference?: string | null };
 
 type Props = {
   applicationId: string;
@@ -82,7 +82,7 @@ export default function ApplicationSuitesField({ applicationId, canManage, textF
             {current.map((suite) => (
               <PickedNameRow
                 key={suite.id}
-                href={`/it/applications/${suite.id}/overview`}
+                href={`/it/applications/${suite.reference || suite.id}/overview`}
                 onRemove={canManage ? () => { void remove(suite); } : undefined}
                 removeLabel={t('workspace.application.relations.remove', { name: suite.name })}
                 removeDisabled={saving}

@@ -11,6 +11,7 @@ Navigate to **Admin** from the main menu to access the administration hub.
 - Users & Access: `users:reader` to view, `users:admin` to manage
 - Roles: `users:reader` to view, `users:admin` to edit
 - Audit Log: Requires `users:admin`
+- Data access: Requires `users:admin` and access to all data (see [Data access](data-access.md))
 - Billing: Requires billing admin role
 - Authentication: Requires `users:admin` (feature-flagged; requires SSO enabled)
 - Branding: Requires `users:admin` (tenant host only; accessible from sidebar)
@@ -53,6 +54,8 @@ The Audit Log page keeps the history of data changes and of security events in y
 
 **Role changes**: creating, renaming and deleting a role, and every change to its permissions.
 
+**Data access changes** (table **Data access**): the mode and the nodes of a person before and after, with the source **Screen** or **Import**. See [Data access](data-access.md#audit-log).
+
 **Sign-in and session events** (table **Sign-in and session**):
 
 | Event | Recorded when |
@@ -66,7 +69,7 @@ The Audit Log page keeps the history of data changes and of security events in y
 
 **Exports** (table **Export**): CSV exports, documents and reports produced by the server. The row says what was exported and by whom. Exporting the audit log is recorded too.
 
-Sign-in, session and export rows also keep the **IP address** the request came from and the **browser** it used. Open the row to read them in the **After** panel. Behind a reverse proxy, this is the person's own IP address, as long as the proxy passes it on (on-premise: see the [reverse proxy example](on-premise/installation.md#reverse-proxy-example-nginx)).
+Sign-in, session and export rows also keep the **IP address** the request came from and the **browser** it used. Open the row to read them in the **IP address** and **Browser** rows of its table. Behind a reverse proxy, this is the person's own IP address, as long as the proxy passes it on (on-premise: see the [reverse proxy example](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Passwords, sign-in links and tokens are never written to the log. When someone tries to sign in with an email address that has no account, the row shows **Unknown account** and does not keep the address they typed.
 
@@ -84,8 +87,9 @@ Sign-in and session events are deleted after **365 days**. Data changes, role ch
   - Source (`user`, `system`, `webhook`)
 - Open any row to view full details:
   - Metadata chips (date, table, action, source, reason or source reference, tenant, record id, user)
-  - Changed fields summary
-  - Side-by-side **Before** and **After** JSON payloads
+  - The record's business reference in the header (for example `PRJ-3`), when it has one
+  - A table of the fields: **Field**, **Before** and **After** for an update, **Field** and **Value** for any other entry. Field names appear in your language when known. Dates, yes/no values and people are shown in readable form; other identifiers show as **Identifier**, with the value in a tooltip. Technical fields such as `id`, `tenant_id` and `updated_at` are left out
+  - **View raw data** shows the full JSON before and after
 - Export the log to CSV (see below)
 
 ### Columns
@@ -163,6 +167,8 @@ Manage who can access KANAP and what they can do.
 - **MFA enabled**: whether multi-factor authentication is active
 - **Created**: when the user was created
 
+Once someone's data access is limited, an **Access** column shows each person's access: **All data**, the names of their nodes, or **None**. See [Data access](data-access.md).
+
 **Status values**:
 
 | Status | Meaning |
@@ -198,6 +204,7 @@ Row actions, from the menu at the end of each row:
 | **Enable** / **Disable** | Switch the account on or off. Disabling signs the person out immediately. |
 | **Send invite** | Email a sign-in invitation. Hidden for Microsoft Entra accounts. |
 | **Send password reset** | Email a password reset link. Shown for enabled local accounts only. |
+| **Data access** | Open the user on the **Data access** tab. Shown to people with access to all data, on other people's rows. |
 | **Delete** | Remove the user permanently. The records the user worked on stay, without the user. You cannot delete your own account. To block a person's access and keep the account, disable it instead. |
 
 ### Users CSV
@@ -234,6 +241,8 @@ See [CSV files](csv-files.md) for the encoding, the separator and the two import
    - **Company** / **Department**: Organizational assignment
    - **Enabled**: Whether the user can log in
 4. Click **Save** or **Save and Invite** to send login email
+
+When you edit a user, the window has two tabs: **Identity**, with the fields above and the roles, and **Data access**, which limits the person to part of the budget and the contracts. One **Save** writes both. The **Data access** tab is shown to people with access to all data, on other people's accounts. See [Data access](data-access.md).
 
 ### Multi-Role Assignment
 

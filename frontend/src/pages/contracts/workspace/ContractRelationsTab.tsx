@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Stack } from '@mui/material';
+import { Alert, Stack, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
@@ -51,14 +51,19 @@ const SUGGESTION_KIND: Record<Suggestion['type'], 'applications' | 'assets'> = {
  * (`GET /contracts/:id/relations`), then suggestions, contacts, and links and files.
  * A row opens its record. Editors add from a server search and unlink on hover, each saved at once.
  * Technologies are absent when the caller cannot read the infrastructure (`technologies: null`).
+ * A contract opened through one of its lines (`closedDocumentsCount` above 0) shows the number of
+ * its attachments and documentary links instead of them: those detail other companies (spec §5.4).
  */
 export default function ContractRelationsTab({
   contractId,
   readOnly,
+  closedDocumentsCount = 0,
   onChanged,
 }: {
   contractId: string;
   readOnly: boolean;
+  /** The attachments and links a limited person cannot open; 0 when they are open. */
+  closedDocumentsCount?: number;
   /** The contract's detail and tab counts are read again. */
   onChanged: () => void;
 }) {
@@ -67,6 +72,7 @@ export default function ContractRelationsTab({
   const queryClient = useQueryClient();
   const labels = useRelationLabels();
   const canEdit = !readOnly;
+  const documentsClosed = closedDocumentsCount > 0;
   const [uploading, setUploading] = React.useState(0);
   const key = ['contract-relations', contractId] as const;
   const { data, error, setError, link, unlink } = useRelations<ContractRelationsData>({
@@ -81,10 +87,12 @@ export default function ContractRelationsTab({
   const linksQuery = useQuery({
     queryKey: linksKey,
     queryFn: async () => (await api.get<WebLinkRow[]>(`/contracts/${contractId}/links`)).data || [],
+    enabled: !documentsClosed,
   });
   const attachmentsQuery = useQuery({
     queryKey: attachmentsKey,
     queryFn: async () => (await api.get<AttachmentRow[]>(`/contracts/${contractId}/attachments`)).data || [],
+    enabled: !documentsClosed,
   });
 
   const failed = React.useCallback((e: unknown) => {
@@ -231,19 +239,25 @@ export default function ContractRelationsTab({
 
       <ItemContactsSection itemType="contracts" itemId={contractId} canManage={canEdit} syncFromSupplier onChanged={onChanged} />
 
-      <LinksAndFilesSection
-        links={links}
-        files={files}
-        loaded={linksQuery.isSuccess && attachmentsQuery.isSuccess}
-        canEdit={canEdit}
-        uploading={uploading}
-        onAddLink={(draft) => saveLink(null, draft)}
-        onEditLink={(linkRow, draft) => saveLink(linkRow, draft)}
-        onRemoveLink={(linkRow) => { void removeLink(linkRow); }}
-        onUploadFiles={(chosen) => { void uploadFiles(chosen); }}
-        onOpenFile={(file) => { void openFile(file); }}
-        onRemoveFile={(file) => { void removeFile(file); }}
-      />
+      {documentsClosed ? (
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
+          {t('ops:contracts.relations.closedDocuments', { count: closedDocumentsCount })}
+        </Typography>
+      ) : (
+        <LinksAndFilesSection
+          links={links}
+          files={files}
+          loaded={linksQuery.isSuccess && attachmentsQuery.isSuccess}
+          canEdit={canEdit}
+          uploading={uploading}
+          onAddLink={(draft) => saveLink(null, draft)}
+          onEditLink={(linkRow, draft) => saveLink(linkRow, draft)}
+          onRemoveLink={(linkRow) => { void removeLink(linkRow); }}
+          onUploadFiles={(chosen) => { void uploadFiles(chosen); }}
+          onOpenFile={(file) => { void openFile(file); }}
+          onRemoveFile={(file) => { void removeFile(file); }}
+        />
+      )}
     </Stack>
   );
 }

@@ -236,7 +236,11 @@ export interface ApplicationMapSummaryResponse {
   assigned_servers: Array<{
     id: string;
     name: string;
+    is_cluster: boolean;
     environment: string;
+    /** True on a server that gets the row through its clusters (`via_clusters`). */
+    inherited: boolean;
+    via_clusters: Array<{ id: string; name: string }>;
   }>;
   business_owners: Array<{
     owner_type: string;

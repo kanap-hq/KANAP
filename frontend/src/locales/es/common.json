@@ -26,6 +26,7 @@
     "retry": "Reintentar",
     "discard": "Descartar",
     "edit": "Editar",
+    "editTitle": "Editar el título",
     "clear": "Limpiar",
     "continue": "Continuar",
     "selectAll": "Seleccionar todo",
@@ -132,6 +133,7 @@
     "recommended": "Recomendado",
     "openCalendar": "Abrir calendario",
     "datePlaceholder": "dd/mm/aaaa",
+    "dateInvalid": "Fecha no válida",
     "time": "Hora",
     "timePlaceholder": "hh:mm",
     "requiredTag": "(obligatorio)",
@@ -199,6 +201,8 @@
       "cost_centers_other": "{{count}} centros de coste",
       "departments_one": "{{count}} departamento",
       "departments_other": "{{count}} departamentos",
+      "data_access_one": "el acceso a los datos de {{count}} persona",
+      "data_access_other": "el acceso a los datos de {{count}} personas",
       "users_one": "{{count}} usuario",
       "users_other": "{{count}} usuarios",
       "locations_one": "{{count}} ubicación",
@@ -237,12 +241,14 @@
       "contributors_other": "{{count}} colaboradores",
       "interface_bindings_one": "{{count}} enlace de interfaz",
       "interface_bindings_other": "{{count}} enlaces de interfaz",
-      "server_assignments_one": "{{count}} asignación de servidor",
-      "server_assignments_other": "{{count}} asignaciones de servidor",
+      "server_assignments_one": "{{count}} servidor",
+      "server_assignments_other": "{{count}} servidores",
       "business_processes_one": "{{count}} proceso de negocio",
       "business_processes_other": "{{count}} procesos de negocio",
       "documents_one": "{{count}} documento",
       "documents_other": "{{count}} documentos",
+      "descriptions_one": "su descripción",
+      "descriptions_other": "{{count}} descripciones",
       "sub_folders_one": "{{count}} subcarpeta",
       "sub_folders_other": "{{count}} subcarpetas",
       "app_instances_one": "{{count}} despliegue",
@@ -250,7 +256,21 @@
       "incidents_one": "{{count}} incidente",
       "incidents_other": "{{count}} incidentes",
       "subnets_one": "{{count}} subred",
-      "subnets_other": "{{count}} subredes"
+      "subnets_other": "{{count}} subredes",
+      "others_one": "{{count}} más",
+      "others_other": "{{count}} más"
+    },
+    "anyway": "Eliminar de todos modos",
+    "assetWarning": {
+      "memberOf_one": "Miembro de {{names}}: saldrá de este clúster.",
+      "memberOf_other": "Miembro de {{names}}: saldrá de estos clústeres.",
+      "stopsHosting": "Ya no alojará {{names}}.",
+      "hasMembers_one": "Clúster de {{count}} miembro: perderá su clúster.",
+      "hasMembers_other": "Clúster de {{count}} miembros: perderán su clúster.",
+      "links_one": "Se eliminará {{count}} vínculo: {{names}}.",
+      "links_other": "Se eliminarán {{count}} vínculos: {{names}}.",
+      "more_one": "y {{count}} más",
+      "more_other": "y {{count}} más"
     }
   },
   "messages": {
@@ -316,6 +336,7 @@
     "columnY": "{{column}}, A",
     "topIncreases": "Mayores incrementos",
     "columnYvsYminus1": "{{column}}, A vs A-1",
+    "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "Sin incrementos",
     "myBudget": {
       "title": "Mi presupuesto",
@@ -659,10 +680,34 @@
       "status": "Estado",
       "owners": "Responsables",
       "timestamps": "Fechas",
-      "vulnerabilities": "Vulnerabilidades"
+      "vulnerabilities": "Vulnerabilidades",
+      "timeline": "Cronología",
+      "people": "Personas",
+      "record": "Registro",
+      "source": "Origen",
+      "basic": "Datos básicos",
+      "context": "Contexto",
+      "dates": "Fechas",
+      "ip_addresses": "Direcciones IP",
+      "effort": "Esfuerzo",
+      "team": "Equipo",
+      "scoring": "Evaluación",
+      "analysis": "Análisis"
     },
     "presets": {
       "applications": {
+        "enrichment": "Enriquecimiento de datos"
+      },
+      "assets": {
+        "enrichment": "Enriquecimiento de datos"
+      },
+      "tasks": {
+        "enrichment": "Enriquecimiento de datos"
+      },
+      "portfolio_projects": {
+        "enrichment": "Enriquecimiento de datos"
+      },
+      "portfolio_requests": {
         "enrichment": "Enriquecimiento de datos"
       }
     },
@@ -715,6 +760,147 @@
         "it_owner_email_3": "Correo del responsable de TI 3",
         "business_owner_email_4": "Correo del responsable de negocio 4",
         "it_owner_email_4": "Correo del responsable de TI 4"
+      },
+      "incidents": {
+        "ref": "Ref.",
+        "title": "Título",
+        "category": "Categoría",
+        "severity": "Gravedad",
+        "status": "Estado",
+        "confidential": "Restringido a administradores del registro",
+        "started_at": "Inicio",
+        "detected_at": "Detectado",
+        "resolved_at": "Resuelto",
+        "closed_at": "Cerrado",
+        "reporter": "Notificante",
+        "owner": "Responsable",
+        "description": "Descripción",
+        "review": "Revisión de incidente",
+        "source_ref": "Referencia externa",
+        "personal_data_affected": "Datos personales afectados",
+        "authority_notification_required": "Requiere notificación a la autoridad",
+        "authority_notified_at": "Notificado el",
+        "notified_parties": "Partes informadas"
+      },
+      "assets": {
+        "id": "ID",
+        "name": "Nombre",
+        "location_reference": "Ubicación",
+        "kind": "Tipo de activo",
+        "is_cluster": "Es un clúster",
+        "status": "Ciclo de vida",
+        "go_live_date": "Fecha de puesta en marcha",
+        "end_of_life_date": "Fecha de fin de vida",
+        "notes": "Notas",
+        "environment": "Entorno",
+        "hostname": "Nombre de host",
+        "domain": "Dominio",
+        "admin_zone": "Zona de administración",
+        "aliases": "Alias",
+        "operating_system": "Sistema operativo",
+        "cluster": "Pertenencia al clúster",
+        "ip_1_type": "Tipo de IP 1",
+        "ip_1_address": "Dirección IP 1",
+        "ip_1_subnet_cidr": "Subred IP 1 (CIDR)",
+        "ip_2_type": "Tipo de IP 2",
+        "ip_2_address": "Dirección IP 2",
+        "ip_2_subnet_cidr": "Subred IP 2 (CIDR)",
+        "ip_3_type": "Tipo de IP 3",
+        "ip_3_address": "Dirección IP 3",
+        "ip_3_subnet_cidr": "Subred IP 3 (CIDR)",
+        "ip_4_type": "Tipo de IP 4",
+        "ip_4_address": "Dirección IP 4",
+        "ip_4_subnet_cidr": "Subred IP 4 (CIDR)",
+        "vulnerabilities_to_review": "Vulnerabilidades por revisar",
+        "severe_vulnerabilities": "Vulnerabilidades graves"
+      },
+      "tasks": {
+        "id": "ID",
+        "title": "Título",
+        "description": "Descripción",
+        "task_type_name": "Tipo de tarea",
+        "related_object_type": "Tipo de objeto relacionado",
+        "related_object_id": "ID del objeto relacionado",
+        "related_object_name": "Nombre del objeto relacionado",
+        "phase_name": "Fase",
+        "priority_level": "Prioridad",
+        "category_name": "Categoría",
+        "stream_name": "Línea",
+        "source_name": "Origen",
+        "company_name": "Empresa",
+        "status": "Estado",
+        "start_date": "Fecha de inicio",
+        "due_date": "Fecha de vencimiento",
+        "assignee_email": "Correo del asignado",
+        "creator_email": "Correo del solicitante",
+        "viewer_email_1": "Correo del observador 1",
+        "viewer_email_2": "Correo del observador 2",
+        "viewer_email_3": "Correo del observador 3",
+        "viewer_email_4": "Correo del observador 4",
+        "owner_email_1": "Correo del responsable 1",
+        "owner_email_2": "Correo del responsable 2",
+        "owner_email_3": "Correo del responsable 3",
+        "owner_email_4": "Correo del responsable 4",
+        "labels": "Etiquetas"
+      },
+      "portfolio_projects": {
+        "id": "ID",
+        "name": "Nombre",
+        "status": "Estado",
+        "purpose": "Objetivo",
+        "origin": "Procedencia",
+        "source_name": "Origen",
+        "category_name": "Categoría",
+        "stream_name": "Línea",
+        "company_name": "Empresa",
+        "department_name": "Departamento",
+        "planned_start": "Inicio planificado",
+        "planned_end": "Fin planificado",
+        "actual_start": "Inicio real",
+        "actual_end": "Fin real",
+        "baseline_start_date": "Inicio de línea base",
+        "baseline_end_date": "Fin de línea base",
+        "execution_progress": "Progreso (%)",
+        "estimated_effort_it": "Esfuerzo IT estimado (DP)",
+        "estimated_effort_business": "Esfuerzo de negocio estimado (DP)",
+        "actual_effort_it": "Esfuerzo IT real (DP)",
+        "actual_effort_business": "Esfuerzo de negocio real (DP)",
+        "baseline_effort_it": "Esfuerzo IT de línea base (DP)",
+        "baseline_effort_business": "Esfuerzo de negocio de línea base (DP)",
+        "business_sponsor_email": "Correo del patrocinador de negocio",
+        "business_lead_email": "Correo del responsable de negocio",
+        "it_sponsor_email": "Correo del patrocinador IT",
+        "it_lead_email": "Correo del responsable IT",
+        "criteria_values": "Criterios de evaluación (JSON)",
+        "priority_score": "Puntuación de prioridad",
+        "priority_override": "Sobrescritura de prioridad",
+        "override_value": "Valor de sobrescritura",
+        "override_justification": "Justificación de la sobrescritura"
+      },
+      "portfolio_requests": {
+        "id": "ID",
+        "name": "Nombre",
+        "status": "Estado",
+        "purpose": "Objetivo",
+        "source_name": "Origen",
+        "category_name": "Categoría",
+        "stream_name": "Línea",
+        "requestor_email": "Correo del solicitante",
+        "company_name": "Empresa",
+        "department_name": "Departamento",
+        "target_delivery_date": "Fecha de entrega objetivo",
+        "current_situation": "Situación actual",
+        "expected_benefits": "Beneficios esperados",
+        "risks": "Riesgos",
+        "business_sponsor_email": "Correo del patrocinador de negocio",
+        "business_lead_email": "Correo del responsable de negocio",
+        "it_sponsor_email": "Correo del patrocinador IT",
+        "it_lead_email": "Correo del responsable IT",
+        "criteria_values": "Criterios de evaluación (JSON)",
+        "priority_score": "Puntuación de prioridad",
+        "priority_override": "Sobrescritura de prioridad",
+        "override_value": "Valor de sobrescritura",
+        "override_justification": "Justificación de la sobrescritura"
       }
     }
   },
@@ -729,6 +915,7 @@
     "noCategoriesFound": "No se encontraron categorías",
     "noUsersFound": "No se encontraron usuarios",
     "noServersFound": "No se encontraron servidores",
+    "noMembers": "Ningún miembro declarado",
     "meSuffix": "(yo)",
     "selectBusinessProcesses": "Seleccionar procesos de negocio",
     "selectCategories": "Seleccionar categorías",
@@ -767,7 +954,8 @@
     "departments": "Departamentos",
     "allDepartments": "Todos los departamentos",
     "newCategoryName": "Nombre de la nueva categoría",
-    "removeNamed": "Quitar {{name}}"
+    "removeNamed": "Quitar {{name}}",
+    "chooseServer": "Elegir un servidor"
   },
   "documentEditor": {
     "expandDocument": "Expandir documento",
@@ -831,7 +1019,8 @@
     "copy": "Copiar",
     "copiedToClipboard": "Copiado al portapapeles",
     "orEmailSection": "O enviarlo por correo a alguien",
-    "sendEmail": "Enviar correo"
+    "sendEmail": "Enviar correo",
+    "cannotOpen": "{{name}} no podrá abrir este elemento."
   },
   "enumEditor": {
     "name": "Nombre",
@@ -940,7 +1129,8 @@
     "manuallyAdded": "Añadido manualmente",
     "removeContact": "Quitar contacto",
     "insufficientPermission": "Permiso insuficiente",
-    "syncFromSupplier": "Añadir los contactos del proveedor"
+    "syncFromSupplier": "Añadir los contactos del proveedor",
+    "saveFailed": "No se pudieron guardar los contactos."
   },
   "export": {
     "button": "Exportar",
@@ -979,6 +1169,28 @@
     "endOfValidity": "Fin de validez",
     "endOfValidityHint": "Dejar en blanco para permanecer activo indefinidamente.",
     "activeUntil": "Activo hasta el {{date}}"
+  },
+  "unsaved": {
+    "saveAndLeave": {
+      "message": "Tiene cambios sin guardar. ¿Guardar antes de salir?",
+      "confirm": "Guardar y salir",
+      "cancel": "Salir sin guardar"
+    },
+    "leaveWithoutSaving": {
+      "message": "Tiene cambios sin guardar. ¿Salir sin guardar?",
+      "confirm": "Salir sin guardar",
+      "cancel": "Quedarse"
+    },
+    "saveAndSwitch": {
+      "message": "Tiene cambios sin guardar. ¿Guardar antes de cambiar de pestaña?",
+      "confirm": "Guardar y cambiar de pestaña",
+      "cancel": "Cambiar de pestaña sin guardar"
+    },
+    "saveAndContinue": {
+      "message": "Tiene cambios sin guardar. ¿Guardar antes de continuar?",
+      "confirm": "Guardar y continuar",
+      "cancel": "Quedarse"
+    }
   },
   "autosave": {
     "leaveTitle": "Cambios sin guardar",
@@ -1292,12 +1504,13 @@
     "newLink": "Nuevo enlace",
     "editLink": "Editar enlace",
     "editLinkNamed": "Editar {{name}}",
-    "removeNamed": "Quitar {{name}}",
+    "removeNamed": "Eliminar {{name}}",
     "placeholders": {
       "name": "p. ej., Portal del proveedor",
       "url": "p. ej., https://status.example.com"
     },
     "linksTitle": "Enlaces web",
-    "linksEmpty": "Ningún enlace web."
+    "linksEmpty": "Ningún enlace web.",
+    "removeFileNamed": "Eliminar el archivo {{name}}"
   }
 }

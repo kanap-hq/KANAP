@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import * as dayjs from 'dayjs';
 import 'dayjs/locale/de';
 import 'dayjs/locale/es';
@@ -19,6 +19,7 @@ import { resolveEmailLocale } from '../i18n/email-i18n';
 import { calendarDaysUntil, isExpiryReminderDay, utcDateYmd } from './expiry-reminder-schedule';
 import { assertScopeNatures, natureAnd, type BudgetNature } from '../spend/budget-nature';
 import { contractTermsSql } from '../contracts/contract-terms';
+import { SCOPED_TASK_OBJECT_TYPES, tasksReadableBy } from '../data-access/can-read';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -31,6 +32,11 @@ const BUDGET_ITEM_TABLES: Record<'opex' | 'capex', { table: string; name: string
   capex: { table: 'spend_items', name: 'product_name', nature: 'capex' },
 };
 assertScopeNatures('scheduled-notifications', BUDGET_ITEM_TABLES, (t) => t.table);
+
+/** The person is the task's assignee or one of its owners (named on it); `user` is the SQL parameter. */
+const NAMED_ON_TASK = (user: string) => `(t.assignee_user_id IS NOT DISTINCT FROM ${user}::uuid OR t.owner_ids @> to_jsonb(${user}::text))`;
+
+type WeeklyTaskRow = { id: string; title: string; named: boolean; related_object_type: string | null };
 
 @Injectable()
 export class ScheduledNotificationsService implements OnModuleInit {
@@ -597,6 +603,59 @@ export class ScheduledNotificationsService implements OnModuleInit {
     }
   }
 
+  /**
+   * The weekly review's own tasks: those closed in the week (20) and the top active ones (10), of
+   * which the person is assignee, owner or creator. The creator is not named on the task (spec
+   * §2.5): a task of a budget line or a contract they only created is listed when they can read it
+   * (`data_access_can_read`, spec §5.6), checked for both lists in one statement.
+   */
+  async weeklyReviewTasks(
+    mg: Pick<EntityManager, 'query'>,
+    tenantId: string,
+    userId: string,
+    weekStart: string,
+    weekEnd: string,
+  ): Promise<{
+    tasksClosed: Array<{ id: string; title: string }>;
+    topTasks: Array<{ id: string; title: string; dueDate: string | Date | null; priority: string }>;
+  }> {
+    const closed: WeeklyTaskRow[] = await mg.query(
+      `SELECT t.id, t.title, t.related_object_type, ${NAMED_ON_TASK('$4')} AS named
+       FROM tasks t
+       WHERE t.tenant_id = $1
+         AND t.status = 'done'
+         AND t.updated_at >= $2
+         AND t.updated_at < $3
+         AND (${NAMED_ON_TASK('$4')} OR t.creator_id = $4)
+       ORDER BY t.updated_at DESC`,
+      [tenantId, weekStart, weekEnd, userId],
+    );
+    const active: Array<WeeklyTaskRow & { dueDate: string | Date | null; priority: string }> = await mg.query(
+      `SELECT t.id, t.title, t.due_date as "dueDate", t.priority_level as priority, t.related_object_type, ${NAMED_ON_TASK('$2')} AS named
+       FROM tasks t
+       WHERE t.tenant_id = $1
+         AND t.status = ANY($3)
+         AND (${NAMED_ON_TASK('$2')} OR t.creator_id = $2)
+       ORDER BY
+         CASE t.priority_level
+           WHEN 'blocker' THEN 1
+           WHEN 'high' THEN 2
+           WHEN 'normal' THEN 3
+           WHEN 'low' THEN 4
+           WHEN 'optional' THEN 5
+         END,
+         t.due_date NULLS LAST`,
+      [tenantId, userId, ACTIVE_TASK_STATUSES],
+    );
+    const toCheck = (row: WeeklyTaskRow) => !row.named && SCOPED_TASK_OBJECT_TYPES.includes(row.related_object_type ?? '');
+    const readable = await tasksReadableBy(mg, userId, [...closed, ...active].filter(toCheck).map((row) => row.id));
+    const listed = <T extends WeeklyTaskRow>(row: T) => !toCheck(row) || readable.has(String(row.id).toLowerCase());
+    return {
+      tasksClosed: closed.filter(listed).slice(0, 20).map((row) => ({ id: row.id, title: row.title })),
+      topTasks: active.filter(listed).slice(0, 10).map((row) => ({ id: row.id, title: row.title, dueDate: row.dueDate, priority: row.priority })),
+    };
+  }
+
   private async sendWeeklyReviewForUser(
     user: {
       user_id: string;
@@ -622,23 +681,8 @@ export class ScheduledNotificationsService implements OnModuleInit {
     // Set tenant context for RLS
     await mg.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
 
-    // Query 1: Tasks I closed last week
-    const tasksClosed = await mg.query(
-      `SELECT t.id, t.title
-       FROM tasks t
-       WHERE t.tenant_id = $1
-         AND t.status = 'done'
-         AND t.updated_at >= $2
-         AND t.updated_at < $3
-         AND (
-           t.assignee_user_id = $4
-           OR t.creator_id = $4
-           OR t.owner_ids @> to_jsonb($4::text)
-         )
-       ORDER BY t.updated_at DESC
-       LIMIT 20`,
-      [tenantId, weekStart, weekEnd, userId],
-    );
+    // Queries 1 and 4: tasks I closed last week, and my top priority tasks
+    const { tasksClosed, topTasks } = await this.weeklyReviewTasks(mg, tenantId, userId, weekStart, weekEnd);
 
     // Query 2: My projects with status changes
     const projectsWithChanges = await mg.query(
@@ -694,30 +738,6 @@ export class ScheduledNotificationsService implements OnModuleInit {
        ORDER BY t.updated_at DESC
        LIMIT 20`,
       [tenantId, weekStart, weekEnd, userId],
-    );
-
-    // Query 4: Top priority tasks
-    const topTasks = await mg.query(
-      `SELECT t.id, t.title, t.due_date as "dueDate", t.priority_level as priority
-       FROM tasks t
-       WHERE t.tenant_id = $1
-         AND t.status = ANY($3)
-         AND (
-           t.assignee_user_id = $2
-           OR t.creator_id = $2
-           OR t.owner_ids @> to_jsonb($2::text)
-         )
-       ORDER BY
-         CASE t.priority_level
-           WHEN 'blocker' THEN 1
-           WHEN 'high' THEN 2
-           WHEN 'normal' THEN 3
-           WHEN 'low' THEN 4
-           WHEN 'optional' THEN 5
-         END,
-         t.due_date NULLS LAST
-       LIMIT 10`,
-      [tenantId, userId, ACTIVE_TASK_STATUSES],
     );
 
     // Query 5: Top priority projects as lead

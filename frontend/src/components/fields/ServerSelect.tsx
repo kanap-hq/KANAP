@@ -2,19 +2,12 @@ import React from 'react';
 import { Autocomplete, Box, CircularProgress, TextField } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
-import OptionWithHint from './OptionWithHint';
+import { renderServerOption, type ServerOption } from './serverOptionRender';
 import api from '../../api';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
-export type ServerOption = {
-  id: string;
-  name: string;
-  environment: string;
-  kind: string;
-  provider: string;
-  is_cluster?: boolean;
-};
+export type { ServerOption };
 
 type ServerSelectProps = {
   label?: string;
@@ -42,7 +35,11 @@ function useServerOptions(search: string, opts?: { allowClusters?: boolean }) {
             q: search || undefined,
             limit: 50,
             sort: 'name:ASC',
-            is_cluster: opts?.allowClusters === false ? false : undefined,
+            include: 'member_names',
+            // The assets list reads this from its filter model (the grid's format), not from a plain parameter.
+            filters: opts?.allowClusters === false
+              ? JSON.stringify({ is_cluster: { filterType: 'set', values: ['false'] } })
+              : undefined,
           },
         });
         if (isMounted) setOptions(res.data.items || []);
@@ -79,7 +76,8 @@ const ServerSelect: React.FC<ServerSelectProps> = ({
 
   React.useEffect(() => {
     const match = options.find((opt) => opt.id === value) || null;
-    if (match) setSelectedOption(match);
+    // Keep the same object: a new one makes MUI reset the text to the chosen server while typing.
+    if (match) setSelectedOption((previous) => (previous && previous.id === match.id ? previous : match));
   }, [options, value]);
 
   React.useEffect(() => {
@@ -101,28 +99,28 @@ const ServerSelect: React.FC<ServerSelectProps> = ({
     return () => { isMounted = false; };
   }, [value, selectedOption]);
 
+  // The chosen server stays among the options, even when the current search no longer returns it.
+  const shownOptions = React.useMemo(
+    () => (selectedOption && !options.some((opt) => opt.id === selectedOption.id) ? [selectedOption, ...options] : options),
+    [options, selectedOption],
+  );
+
   const control = (
     <Autocomplete
-      options={options}
+      options={shownOptions}
       value={selectedOption}
+      isOptionEqualToValue={(option, current) => option.id === current.id}
       disabled={disabled}
       onChange={(_, newValue) => onChange(newValue?.id || null)}
       onInputChange={(_, v) => setInputValue(v)}
       getOptionLabel={(option) => (option.is_cluster ? `${t('selects.cluster')} ${option.name}` : option.name)}
-      renderOption={(props, option) => (
-        <OptionWithHint
-          key={option.id}
-          optionProps={props}
-          label={`${option.is_cluster ? `${t('selects.cluster')} ` : ''}${option.name}`}
-          hint={[option.environment?.toUpperCase(), option.kind, option.provider].filter(Boolean).join(' · ')}
-        />
-      )}
+      renderOption={(props, option) => renderServerOption(props, option, { noMembers: t('selects.noMembers') })}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
       renderInput={(params) => (
         <TextField
           {...params}
           required={required}
-          placeholder={placeholder ?? (naked ? t('selects.notSet') : undefined)}
+          placeholder={placeholder ?? (naked ? t('selects.chooseServer') : undefined)}
           helperText={helperText}
           variant="standard"
           sx={textFieldSx}

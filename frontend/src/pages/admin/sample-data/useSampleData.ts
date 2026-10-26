@@ -31,6 +31,8 @@ export const SAMPLE_DATA_STEPS = [
   'tasks',
   'application-links',
   'landscape',
+  'incident-tasks',
+  'incident-journal',
   'budget-links',
   'portfolio-teams',
   'allocations',

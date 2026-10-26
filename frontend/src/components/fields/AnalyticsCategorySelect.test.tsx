@@ -6,12 +6,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 
 const apiGet = vi.hoisted(() => vi.fn());
+const apiPost = vi.hoisted(() => vi.fn());
 const axesState = vi.hoisted(() => ({ list: [] as unknown[] }));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
 }));
-vi.mock('../../api', () => ({ default: { get: apiGet } }));
+vi.mock('../../api', () => ({ default: { get: apiGet, post: apiPost } }));
 vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../hooks/useAnalyticsAxes')>();
   return {
@@ -43,6 +44,7 @@ function renderSelect(props: Partial<React.ComponentProps<typeof AnalyticsCatego
 describe('AnalyticsCategorySelect', () => {
   beforeEach(() => {
     apiGet.mockReset();
+    apiPost.mockReset();
     axesState.list = [
       { id: 'ax-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, status: 'enabled', disabled_at: null },
       { id: 'ax-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, status: 'enabled', disabled_at: null },
@@ -180,5 +182,78 @@ describe('AnalyticsCategorySelect', () => {
     renderSelect({ label: 'Cost nature', hideLabel: true });
     expect(await screen.findByLabelText('Cost nature')).toBeInTheDocument();
     expect(screen.queryByText('Nature')).toBeNull();
+  });
+
+  describe('adding a value from the line', () => {
+    const openNature = (openValues: boolean) => {
+      axesState.list = [
+        { id: 'ax-default', code: 'default', name: null, description: null, sort_order: 0, is_default: true, status: 'enabled', disabled_at: null },
+        { id: 'ax-nature', code: 'nature', name: 'Nature', description: null, sort_order: 1, is_default: false, status: 'enabled', disabled_at: null, open_values: openValues },
+      ];
+    };
+    const typeInto = async (text: string) => {
+      const input = await screen.findByRole('combobox');
+      act(() => { input.focus(); });
+      fireEvent.mouseDown(input);
+      await screen.findAllByRole('option');
+      fireEvent.change(input, { target: { value: text } });
+      await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/analytics-categories/lookup', expect.objectContaining({
+        params: expect.objectContaining({ q: text }),
+      })));
+      return input;
+    };
+
+    it('offers Add on an open dimension, creates the value for the line and picks it', async () => {
+      openNature(true);
+      apiPost.mockResolvedValueOnce({ data: { id: 'v-new', axis_id: 'ax-nature', name: 'Gifts', description: null, status: 'enabled', created: true } });
+      const { onChange } = renderSelect({ newValueFor: { lineId: 'line-1' } });
+      await typeInto('Gifts');
+      fireEvent.click(await screen.findByRole('option', { name: 'analytics.addValue' }));
+      await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/analytics-categories/from-line', { axis_id: 'ax-nature', name: 'Gifts', line_id: 'line-1' }));
+      await waitFor(() => expect(onChange).toHaveBeenCalledWith('v-new'));
+    });
+
+    it('sends the place of a line being created', async () => {
+      openNature(true);
+      apiPost.mockResolvedValueOnce({ data: { id: 'v-new', axis_id: 'ax-nature', name: 'Gifts', description: null, status: 'enabled', created: true } });
+      renderSelect({ newValueFor: { payingCompanyId: 'co-1', costCenterId: null } });
+      await typeInto('Gifts');
+      fireEvent.click(await screen.findByRole('option', { name: 'analytics.addValue' }));
+      await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/analytics-categories/from-line', { axis_id: 'ax-nature', name: 'Gifts', paying_company_id: 'co-1' }));
+    });
+
+    it('offers no Add for a name a value already has, whatever its case', async () => {
+      openNature(true);
+      renderSelect({ newValueFor: { lineId: 'line-1' } });
+      await typeInto('licenses');
+      await screen.findByRole('option', { name: 'Licenses' });
+      expect(screen.queryByRole('option', { name: 'analytics.addValue' })).toBeNull();
+    });
+
+    it('offers no Add on a closed dimension, nor where the picker is not on an editable line', async () => {
+      openNature(false);
+      const first = renderSelect({ newValueFor: { lineId: 'line-1' } });
+      await typeInto('Gifts');
+      await screen.findByRole('option', { name: 'Licenses' });
+      expect(screen.queryByRole('option', { name: 'analytics.addValue' })).toBeNull();
+      cleanup();
+      openNature(true);
+      renderSelect();
+      await typeInto('Gifts');
+      await screen.findByRole('option', { name: 'Licenses' });
+      expect(screen.queryByRole('option', { name: 'analytics.addValue' })).toBeNull();
+      expect(apiPost).not.toHaveBeenCalled();
+      expect(first.onChange).not.toHaveBeenCalled();
+    });
+
+    it('shows a refusal for the access under the field and keeps the line as it was', async () => {
+      openNature(true);
+      apiPost.mockRejectedValueOnce({ response: { status: 403, data: { code: 'DATA_ACCESS_LIMITED', message: 'This line is read only in your access.' } } });
+      const { onChange } = renderSelect({ newValueFor: { lineId: 'line-1' } });
+      await typeInto('Gifts');
+      fireEvent.click(await screen.findByRole('option', { name: 'analytics.addValue' }));
+      expect(await screen.findByText('errors:dataAccess.readOnlyLine')).toBeInTheDocument();
+      expect(onChange).not.toHaveBeenCalled();
+    });
   });
 });

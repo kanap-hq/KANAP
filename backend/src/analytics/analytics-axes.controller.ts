@@ -8,6 +8,7 @@ import { AnalyticsAxesService } from './analytics-axes.service';
 import { isForced } from './analytics-forced-delete';
 import { ANALYTICS_READERS, analyticsContext } from './analytics-categories.controller';
 import { AnalyticsAxisCreateDto, AnalyticsAxisReorderDto, AnalyticsAxisUpdateDto, AnalyticsRecommendedDimensionsDto } from './dto/analytics.dto';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller('analytics-axes')
@@ -21,6 +22,7 @@ export class AnalyticsAxesController {
   }
 
   // The order of the dimensions (same permission as PATCH :id), before the `:id` routes.
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'member')
   @Post('reorder')
   reorder(@Body() body: AnalyticsAxisReorderDto, @Tenant() ctx: TenantRequest) {
@@ -34,6 +36,7 @@ export class AnalyticsAxesController {
     return this.svc.recommended(analyticsContext(ctx));
   }
 
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'admin')
   @Post('recommended')
   addRecommended(@Body() body: AnalyticsRecommendedDimensionsDto, @Tenant() ctx: TenantRequest) {
@@ -46,12 +49,14 @@ export class AnalyticsAxesController {
     return this.svc.get(id, analyticsContext(ctx));
   }
 
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'member')
   @Post()
   create(@Body() body: AnalyticsAxisCreateDto, @Tenant() ctx: TenantRequest) {
     return this.svc.create(body, analyticsContext(ctx));
   }
 
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'member')
   @Patch(':id')
   update(@Param('id', new ParseUUIDPipe()) id: string, @Body() body: AnalyticsAxisUpdateDto, @Tenant() ctx: TenantRequest) {
@@ -59,6 +64,7 @@ export class AnalyticsAxesController {
   }
 
   // `?force=true` deletes the dimension with its values; the lines lose their value on it.
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Delete(':id')

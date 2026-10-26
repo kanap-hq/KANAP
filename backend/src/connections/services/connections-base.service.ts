@@ -116,6 +116,38 @@ export interface ServiceOpts {
   manager?: EntityManager;
 }
 
+/** What the connection views show of an asset: its identity, where it runs, and whether it is a cluster. */
+export type AssetSummary = {
+  id: string;
+  name: string;
+  asset_reference: string | null;
+  environment: string | null;
+  kind: string | null;
+  provider: string | null;
+  is_cluster: boolean;
+};
+
+/** The asset summary every connection view returns, one shape whatever the source row. */
+export function assetSummary(asset: {
+  id: string;
+  name: string;
+  asset_reference?: string | null;
+  environment?: string | null;
+  kind?: string | null;
+  provider?: string | null;
+  is_cluster?: boolean | null;
+}): AssetSummary {
+  return {
+    id: asset.id,
+    name: asset.name,
+    asset_reference: asset.asset_reference ?? null,
+    environment: asset.environment ?? null,
+    kind: asset.kind ?? null,
+    provider: asset.provider ?? null,
+    is_cluster: !!asset.is_cluster,
+  };
+}
+
 /**
  * Base class with shared utilities for connection services.
  */
@@ -450,6 +482,42 @@ export abstract class ConnectionsBaseService {
     }
     await this.validateEntityCode(eid as string, tenantId, manager);
     return { equipment_asset_id: null, equipment_entity_code: eid };
+  }
+
+  /**
+   * Gives each hop the asset summary of its equipment, read in one batch in the given tenant.
+   * `equipment_asset` is null without an equipment asset (no equipment, or an entity instead).
+   */
+  protected async attachEquipmentAssets<T extends { equipment_asset_id: string | null }>(
+    legs: T[],
+    tenantId: string,
+    mg: EntityManager,
+  ): Promise<Array<T & { equipment_asset: AssetSummary | null }>> {
+    const ids = Array.from(
+      new Set(legs.map((leg) => leg.equipment_asset_id).filter((id): id is string => !!id)),
+    );
+    const byId = new Map<string, AssetSummary>();
+    if (ids.length > 0) {
+      const rows: Array<{
+        id: string;
+        name: string;
+        asset_reference: string | null;
+        environment: string | null;
+        kind: string | null;
+        provider: string | null;
+        is_cluster: boolean;
+      }> = await mg.query(
+        `SELECT id, name, asset_reference, environment, kind, provider, is_cluster
+           FROM assets
+          WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [tenantId, ids],
+      );
+      for (const row of rows) byId.set(row.id, assetSummary(row));
+    }
+    return legs.map((leg) => ({
+      ...leg,
+      equipment_asset: leg.equipment_asset_id ? byId.get(leg.equipment_asset_id) ?? null : null,
+    }));
   }
 
   /**

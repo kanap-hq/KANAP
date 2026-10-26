@@ -297,7 +297,7 @@ export class PortfolioProjectsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const { id, accessScope } = await this.resolveForAccess(idOrRef, ctx, 'reader');
-    return this.svc.get(id, query, { manager: ctx.manager, accessScope });
+    return this.svc.get(id, query, { manager: ctx.manager, accessScope, readsBudget: hasLevel(ctx, 'budget', 'reader') });
   }
 
   @UseGuards(PermissionGuard)

@@ -11,6 +11,7 @@ Rendez-vous dans **Administration** depuis le menu principal pour accéder au hu
 - Utilisateurs et accès : `users:reader` pour consulter, `users:admin` pour gérer
 - Rôles : `users:reader` pour consulter, `users:admin` pour modifier
 - Journal d'audit : Nécessite `users:admin`
+- Accès aux données : Nécessite `users:admin` et l'accès à toutes les données (voir [Accès aux données](data-access.md))
 - Facturation : Nécessite le rôle admin facturation
 - Authentification : Nécessite `users:admin` (contrôlé par feature flag ; nécessite SSO activé)
 - Personnalisation : Nécessite `users:admin` (hôte tenant uniquement ; accessible depuis la barre latérale)
@@ -53,6 +54,8 @@ La page Journal d'audit conserve l'historique des modifications de données et d
 
 **Modifications de rôles** : création, renommage et suppression d'un rôle, et chaque changement de ses autorisations.
 
+**Changements d'accès aux données** (table **Accès aux données**) : le mode et les nœuds d'une personne avant et après, avec la source **Écran** ou **Import**. Voir [Accès aux données](data-access.md#audit-log).
+
 **Événements de connexion et de session** (table **Connexion et session**) :
 
 | Événement | Enregistré quand |
@@ -66,7 +69,7 @@ La page Journal d'audit conserve l'historique des modifications de données et d
 
 **Exports** (table **Export**) : exports CSV, documents et rapports produits par le serveur. La ligne indique ce qui a été exporté et par qui. L'export du journal d'audit est lui aussi enregistré.
 
-Les lignes de connexion, de session et d'export conservent aussi l'**adresse IP** d'où venait la demande et le **navigateur** utilisé. Ouvrez la ligne pour les lire dans le panneau **Après**. Derrière un reverse proxy, c'est l'adresse IP de la personne elle-même, tant que le proxy la transmet (on-premise : voir l'[exemple de reverse proxy](on-premise/installation.md#reverse-proxy-example-nginx)).
+Les lignes de connexion, de session et d'export conservent aussi l'**adresse IP** d'où venait la demande et le **navigateur** utilisé. Ouvrez la ligne pour les lire dans les lignes **Adresse IP** et **Navigateur** de son tableau. Derrière un reverse proxy, c'est l'adresse IP de la personne elle-même, tant que le proxy la transmet (on-premise : voir l'[exemple de reverse proxy](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Les mots de passe, les liens de connexion et les jetons ne sont jamais écrits dans le journal. Quand quelqu'un tente de se connecter avec une adresse e-mail sans compte, la ligne affiche **Compte inconnu** et ne conserve pas l'adresse saisie.
 
@@ -84,8 +87,9 @@ Les événements de connexion et de session sont supprimés après **365 jours**
   - Source (`user`, `system`, `webhook`)
 - Ouvrir n'importe quelle ligne pour voir les détails complets :
   - Pastilles de métadonnées (date, table, action, source, motif ou référence source, tenant, id d'enregistrement, utilisateur)
-  - Résumé des champs modifiés
-  - Payloads JSON **Avant** et **Après** côte à côte
+  - La référence métier de l'enregistrement dans l'en-tête (par exemple `PRJ-3`), quand il en a une
+  - Un tableau des champs : **Champ**, **Avant** et **Après** pour une modification, **Champ** et **Valeur** pour toute autre entrée. Les noms des champs s'affichent dans votre langue quand ils sont connus. Les dates, les valeurs oui/non et les personnes s'affichent sous une forme lisible ; les autres identifiants s'affichent comme **Identifiant**, avec la valeur dans une infobulle. Les champs techniques comme `id`, `tenant_id` et `updated_at` sont omis
+  - **Voir les données brutes** affiche le JSON complet avant et après
 - Exporter le journal en CSV (voir ci-dessous)
 
 ### Colonnes
@@ -163,6 +167,8 @@ Gérez qui peut accéder à KANAP et ce qu'ils peuvent faire.
 - **MFA activé** : Si l'authentification multi-facteur est active
 - **Créé** : Quand l'utilisateur a été créé
 
+Dès que l'accès aux données d'une personne est limité, une colonne **Accès** montre l'accès de chacun : **Toutes les données**, les noms de ses nœuds, ou **Aucun**. Voir [Accès aux données](data-access.md).
+
 **Valeurs de statut** :
 
 | Statut | Signification |
@@ -198,6 +204,7 @@ Actions de ligne, depuis le menu au bout de chaque ligne :
 | **Activer** / **Désactiver** | Activer ou désactiver le compte. La désactivation déconnecte la personne immédiatement. |
 | **Envoyer une invitation** | Envoyer une invitation de connexion par e-mail. Masqué pour les comptes Microsoft Entra. |
 | **Envoyer une réinitialisation de mot de passe** | Envoyer un lien de réinitialisation de mot de passe par e-mail. Affiché uniquement pour les comptes locaux activés. |
+| **Accès aux données** | Ouvre l'utilisateur sur l'onglet **Accès aux données**. Affiché aux personnes qui ont accès à toutes les données, sur les lignes des autres personnes. |
 | **Supprimer** | Supprimer définitivement l'utilisateur. Les enregistrements sur lesquels il a travaillé restent, sans lui. Vous ne pouvez pas supprimer votre propre compte. Pour bloquer l'accès d'une personne en gardant son compte, désactivez-le plutôt. |
 
 ### Fichier CSV des utilisateurs
@@ -234,6 +241,8 @@ Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux é
    - **Société** / **Département** : Affectation organisationnelle
    - **Activé** : Si l'utilisateur peut se connecter
 4. Cliquez sur **Enregistrer** ou **Enregistrer et inviter** pour envoyer l'e-mail de connexion
+
+Quand vous modifiez un utilisateur, la fenêtre a deux onglets : **Identité**, avec les champs ci-dessus et les rôles, et **Accès aux données**, qui limite la personne à une partie du budget et des contrats. Un seul **Enregistrer** écrit les deux. L'onglet **Accès aux données** est affiché aux personnes qui ont accès à toutes les données, sur les comptes des autres. Voir [Accès aux données](data-access.md).
 
 ### Assignation multi-rôles
 

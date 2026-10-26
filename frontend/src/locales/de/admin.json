@@ -260,18 +260,22 @@
       "action": "Aktion: {{value}}",
       "after": "Nachher",
       "before": "Vorher",
-      "changedFields": "Geänderte Felder",
       "date": "Datum: {{value}}",
       "exported": "Exportiert: {{value}}",
-      "noFieldChanges": "Keine Änderungen auf Schlüsselebene",
+      "field": "Feld",
+      "fields": "Felder",
+      "hideRawData": "Rohdaten ausblenden",
+      "noFieldChanges": "Keine Felder geändert",
+      "rawData": "Rohdaten anzeigen",
       "reason": "Grund: {{value}}",
-      "recordId": "Datensatz-ID: {{value}}",
+      "record": "Datensatz: {{value}}",
       "source": "Quelle: {{value}}",
       "sourceRef": "Quellreferenz: {{value}}",
       "table": "Tabelle: {{value}}",
       "tenant": "Mandant: {{value}}",
       "title": "Details des Audit-Eintrags",
-      "user": "Benutzer: {{value}}"
+      "user": "Benutzer: {{value}}",
+      "value": "Wert"
     },
     "export": {
       "button": "CSV exportieren",
@@ -296,6 +300,7 @@
       "contracts": "Verträge",
       "contractComplianceRegister": "Konformitätsregister der Verträge",
       "costCenters": "Kostenstellen",
+      "dataAccess": "Datenzugriff",
       "departments": "Abteilungen",
       "document": "Dokument",
       "endOfSupportReport": "Bericht zum Supportende",
@@ -314,6 +319,99 @@
       "vulnerabilities": "Schwachstellen",
       "weeklyReport": "Wochenbericht",
       "workingDayCalendars": "Arbeitstagekalender"
+    },
+    "fields": {
+      "access_methods": "Zugriffsarten",
+      "amount": "Betrag",
+      "business_lead_id": "Fachbereichsleiter",
+      "category": "Kategorie",
+      "classification_justification": "Begründung der Einstufung",
+      "classification_review": "Überprüfung der Einstufung",
+      "classification_revision": "Revision der Einstufung",
+      "closed_at": "Geschlossen am",
+      "company_id": "Unternehmen",
+      "confidential": "Vertraulich",
+      "contains_pii": "Enthält personenbezogene Daten",
+      "content_markdown": "Inhalt",
+      "created_at": "Erstellt am",
+      "created_by": "Erstellt von",
+      "created_by_user_id": "Erstellt von",
+      "creator_id": "Ersteller",
+      "criticality": "Kritikalität",
+      "currency": "Währung",
+      "cyber_criticality": "Cyberkritikalität",
+      "data_class": "Datenvertraulichkeit",
+      "description": "Beschreibung",
+      "detected_at": "Erkannt am",
+      "disabled_at": "Deaktiviert am",
+      "due_date": "Fälligkeitsdatum",
+      "editor": "Herausgeber",
+      "email": "E-Mail",
+      "end_date": "Enddatum",
+      "end_of_support_date": "Datum des Supportendes",
+      "environment": "Umgebung",
+      "etl_enabled": "Datenintegration / ETL",
+      "expires_at": "Läuft ab am",
+      "external_facing": "Extern zugänglich",
+      "first_name": "Vorname",
+      "fte": "VZÄ",
+      "go_live_date": "Datum der Inbetriebnahme",
+      "hosting_model": "Hosting",
+      "ip": "IP-Adresse",
+      "is_suite": "Kann weitere Anwendungen enthalten",
+      "it_lead_id": "IT-Leiter",
+      "item_number": "Referenznummer",
+      "label": "Bezeichnung",
+      "last_dr_test": "Letzter Wiederanlauftest",
+      "last_name": "Nachname",
+      "licensing": "Lizenzierung",
+      "lifecycle": "Lebenszyklus",
+      "method": "Methode",
+      "mfa_supported": "MFA unterstützt",
+      "mode": "Modus",
+      "name": "Name",
+      "nodes": "Knoten",
+      "notes": "Notizen",
+      "operation": "Vorgang",
+      "owner_user_id": "Verantwortlicher",
+      "period_end": "Periodenende",
+      "period_start": "Periodenbeginn",
+      "personal_data_affected": "Personenbezogene Daten betroffen",
+      "planned_end": "Geplantes Ende",
+      "planned_start": "Geplanter Start",
+      "predecessor_id": "Vorgänger",
+      "priority": "Priorität",
+      "purpose": "Zweck",
+      "recovery_wave": "Wiederanlaufwelle",
+      "reporter_user_id": "Melder",
+      "resolved_at": "Behoben am",
+      "retired_date": "Datum der Außerbetriebnahme",
+      "revocation_reason": "Widerrufsgrund",
+      "revoked_by_user_id": "Widerrufen von",
+      "role_id": "Rolle",
+      "rpo_minutes": "Datenverlustziel (Minuten)",
+      "rto_minutes": "Wiederanlaufzeitziel (Minuten)",
+      "sequential_id": "Referenz",
+      "severity": "Schweregrad",
+      "source": "Quelle",
+      "sso_enabled": "SSO aktiviert",
+      "start_date": "Startdatum",
+      "started_at": "Gestartet am",
+      "status": "Status",
+      "supplier_id": "Lieferant",
+      "support_notes": "Support-Notizen",
+      "title": "Titel",
+      "type": "Typ",
+      "updated_by": "Aktualisiert von",
+      "url": "URL",
+      "user_agent": "Browser",
+      "user_id": "Benutzer",
+      "users_mode": "Berechnung der Benutzer",
+      "users_override": "Anzahl Benutzer (manuell)",
+      "users_year": "Jahr der Benutzer",
+      "version": "Version",
+      "version_id": "Version",
+      "year": "Jahr"
     },
     "messages": {
       "loadDetailsFailed": "Details des Audit-Eintrags konnten nicht geladen werden."
@@ -342,6 +440,8 @@
     "sources": {
       "ai_chat": "KI-Chat",
       "budget_file": "Import der Budgetdatei",
+      "import": "Import",
+      "screen": "Bildschirm",
       "system": "System",
       "user": "Benutzer",
       "webhook": "Webhook"
@@ -525,6 +625,7 @@
       "tenants": "Arbeitsbereiche",
       "tenants_admin": "Verwaltung der Arbeitsbereiche",
       "tenants_plan": "Tarife der Arbeitsbereiche",
+      "user_data_access": "Datenzugriff",
       "user_roles": "Benutzerrollen",
       "users": "Benutzer",
       "vulnerability_notifications": "Gesendete Schwachstellen-E-Mails",
@@ -532,8 +633,20 @@
     },
     "title": "Audit-Protokoll",
     "values": {
+      "identifier": "Kennung",
+      "no": "Nein",
       "unknownAccount": "Unbekanntes Konto",
-      "unknownUser": "Unbekannt ({{id}}…)"
+      "unknownUser": "Unbekannt ({{id}}…)",
+      "yes": "Ja"
+    },
+    "dataAccess": {
+      "allData": "Alle Daten",
+      "limitedTo": "Begrenzt auf",
+      "everything": "Alles",
+      "read": "Lesen",
+      "edit": "Bearbeiten",
+      "node": "{{name}} ({{access}})",
+      "noNodes": "Kein Knoten"
     }
   },
   "auth": {
@@ -775,10 +888,6 @@
       "yes": "Ja"
     },
     "title": "Kontenplanvorlagen (Plattform-Admin)"
-  },
-  "confirmations": {
-    "unsavedNavigate": "Sie haben ungespeicherte Änderungen. Vor dem Navigieren speichern?",
-    "unsavedSwitchTab": "Sie haben ungespeicherte Änderungen. Vor dem Wechsel der Registerkarte speichern?"
   },
   "platformAi": {
     "actions": {
@@ -1337,7 +1446,8 @@
       "sendInvite": "Einladung senden",
       "sendReset": "Passwort-Zurücksetzung senden",
       "delete": "Löschen",
-      "disableSelected": "Deaktivieren ({{count}})"
+      "disableSelected": "Deaktivieren ({{count}})",
+      "dataAccess": "Datenzugriff"
     },
     "columns": {
       "lastName": "Nachname",
@@ -1354,7 +1464,8 @@
       "status": "Status",
       "accountType": "Kontotyp",
       "roles": "Rollen",
-      "lastLogin": "Letzte Anmeldung"
+      "lastLogin": "Letzte Anmeldung",
+      "dataAccess": "Zugriff"
     },
     "mfaValues": {
       "yes": "Ja",
@@ -1363,10 +1474,11 @@
     "dialogs": {
       "newUser": "Neuer Benutzer",
       "editUser": "Benutzer bearbeiten",
-      "saveAndInvite": "Speichern und einladen",
-      "saving": "Wird gespeichert…"
+      "identity": "Identität",
+      "saveAndInvite": "Speichern und einladen"
     },
     "messages": {
+      "loadFailed": "Der Benutzer konnte nicht geladen werden.",
       "emailUnique": "Die E-Mail-Adresse muss eindeutig sein.",
       "inviteSuccess_one": "{{count}} Benutzer eingeladen",
       "inviteSuccess_other": "{{count}} Benutzer eingeladen",
@@ -1604,6 +1716,8 @@
       "tasks": "Aufgaben",
       "application-links": "Verknüpfungen der Anwendungen",
       "landscape": "Instanzen, Schnittstellen und Verbindungen",
+      "incident-tasks": "Korrekturmaßnahmen",
+      "incident-journal": "Vorfalljournal",
       "budget-links": "Budgetverknüpfungen",
       "portfolio-teams": "Projektteams und Phasen",
       "allocations": "Zuordnungen zu Unternehmen",
@@ -1658,5 +1772,98 @@
       "resetFailed": "Der Inhalt des Arbeitsbereichs konnte nicht gelöscht werden. Es wurde nichts geändert.",
       "dismissFailed": "Diese Meldung konnte nicht ausgeblendet werden."
     }
+  },
+  "dataAccess": {
+    "title": "Datenzugriff",
+    "allData": "Alle Daten",
+    "limitedTo": "Begrenzt auf",
+    "none": "Keine",
+    "access": {
+      "read": "Lesen",
+      "edit": "Bearbeiten"
+    },
+    "accessLabel": "Zugriff auf {{name}}",
+    "types": {
+      "everything": "Alles",
+      "company": "Unternehmen",
+      "costCenterGroup": "Kostenstellengruppe",
+      "costCenter": "Kostenstelle"
+    },
+    "add": "Hinzufügen",
+    "sections": {
+      "companies": "Unternehmen",
+      "costCenters": "Kostenstellen",
+      "everything": "Alles"
+    },
+    "placeholders": {
+      "company": "Unternehmen suchen",
+      "costCenter": "Kostenstelle suchen",
+      "person": "Person suchen"
+    },
+    "remove": "{{name}} entfernen",
+    "addTheirCenters_one": "Eigene Kostenstelle hinzufügen ({{count}})",
+    "addTheirCenters_other": "Eigene Kostenstellen hinzufügen ({{count}})",
+    "alwaysSees": "Diese Person sieht außerdem immer, wofür sie benannt ist.",
+    "appliesTo": "Gilt für Budget und Verträge.",
+    "preview": "Mit diesem Zugriff: {{lines}}{{editable}}; {{contracts}}.",
+    "previewLines_one": "{{value}} Budgetzeile",
+    "previewLines_other": "{{value}} Budgetzeilen",
+    "previewEditable_one": ", davon {{value}} bearbeitbar",
+    "previewEditable_other": ", davon {{value}} bearbeitbar",
+    "previewContracts_one": "{{value}} Vertrag",
+    "previewContracts_other": "{{value}} Verträge",
+    "modified": "Geändert von {{name}} am {{date}}.",
+    "confirmAll": "{{name}} sieht alle Budget- und Vertragsdaten.",
+    "administratorsSeeAll": "Administratoren sehen alle Daten.",
+    "unavailable": "Die Begrenzung des Datenzugriffs erfordert einen einmaligen Schritt auf der Datenbank, den die Person ausführt, die KANAP betreibt.",
+    "guide": "Leitfaden öffnen",
+    "missing": "Fehlt: {{items}}.",
+    "missingParts": {
+      "role": "die begrenzte Rolle",
+      "membership": "die Berechtigung, sie zu verwenden",
+      "inheritance": "die Rollentrennung",
+      "schemaCreate": "eine Datenbankberechtigung",
+      "policies": "die Zugriffsregeln",
+      "grants": "die Rechte an den Tabellen"
+    },
+    "saveFailed": "Der Datenzugriff konnte nicht gespeichert werden.",
+    "loadFailed": "Der Datenzugriff konnte nicht geladen werden.",
+    "counters": {
+      "limited_one": "Begrenzte Person: {{value}}",
+      "limited_other": "Begrenzte Personen: {{value}}",
+      "withoutCompany_one": "Budgetzeile ohne Unternehmen: {{value}}",
+      "withoutCompany_other": "Budgetzeilen ohne Unternehmen: {{value}}"
+    },
+    "filters": {
+      "name": "Namen suchen",
+      "node": "Wer hat Zugriff auf…",
+      "clearNode": "Knotenfilter löschen"
+    },
+    "columns": {
+      "person": "Person",
+      "roles": "Rollen",
+      "nodes": "Knoten",
+      "lastChange": "Letzte Änderung",
+      "access": "Zugriff",
+      "via": "Über",
+      "actions": "Aktionen"
+    },
+    "person": "Person",
+    "empty": "Keine begrenzte Person.",
+    "exportTitle": "Datenzugriff exportieren",
+    "importTitle": "Datenzugriff importieren",
+    "accessTab": {
+      "full": "Sehen das ganze Unternehmen",
+      "partial": "Sehen einen Teil davon",
+      "direct": "Direkter Zugriff",
+      "inherited": "Geerbter Zugriff",
+      "addButton": "Hinzufügen",
+      "confirmLimited": "Der Zugriff von {{name}} wird von „Alle Daten“ auf {{node}} beschränkt.",
+      "remove": "Zugriff von {{name}} entfernen",
+      "saveFailed": "Der Zugriff konnte nicht aktualisiert werden.",
+      "loadFailed": "Der Zugriff konnte nicht geladen werden."
+    },
+    "importCsv": "CSV importieren",
+    "exportCsv": "CSV exportieren"
   }
 }

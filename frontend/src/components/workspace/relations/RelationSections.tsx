@@ -14,13 +14,16 @@ type Props = {
   canEdit: boolean;
   /** Picker cache key prefix (`application`, `technology`), kept per object. */
   searchKeyPrefix: string;
-  onLink: (kind: string, targetId: string) => void;
+  /** `label` is the name the picker showed, for the message that follows. */
+  onLink: (kind: string, targetId: string, label?: string) => void;
   onUnlink: (kind: string, targetId: string) => void;
 };
 
 /**
  * The linked sections of a Relations tab: one dense table per kind, Add anchored to its button,
- * unlink on hover. A section whose rows are null (the caller cannot read the module) is left out.
+ * unlink on hover. A section whose rows are null (the caller cannot read the module) is left out,
+ * unless it counts linked rows (`outside`): then it shows that count alone, without names. The
+ * section's count is what it shows: the listed rows plus the counted ones.
  */
 export default function RelationSections({ sections, loaded, canEdit, searchKeyPrefix, onLink, onUnlink }: Props) {
   const { t } = useTranslation('it');
@@ -28,15 +31,27 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
 
   return (
     <>
-      {sections.filter((section) => section.rows !== null).map((section) => {
+      {sections.filter((section) => section.rows !== null || (section.outside?.count ?? 0) > 0).map((section) => {
+        const outsideCount = section.outside?.count ?? 0;
+        const outside = outsideCount > 0 ? section.outside!.text : null;
+        if (section.rows === null) {
+          return (
+            <RelationsSection key={section.kind} title={section.title} count={loaded ? outsideCount : undefined}>
+              <RelationsEmpty>{outside}</RelationsEmpty>
+            </RelationsSection>
+          );
+        }
         const rows = section.rows as AnyRow[];
+        const foldedRows = (section.folded?.rows ?? []) as AnyRow[];
+        const hasRows = rows.length > 0 || foldedRows.length > 0;
         const linkedIds = section.linkedIds ? section.linkedIds(rows) : new Set(rows.map((row) => row.id));
         const editable = canEdit && (section.editable ?? true);
         return (
           <RelationsSection
             key={section.kind}
             title={section.title}
-            count={loaded ? rows.length : undefined}
+            hint={section.hint}
+            count={loaded ? rows.length + outsideCount : undefined}
             onAdd={editable && loaded ? (anchor) => setAdding({ kind: section.kind, anchor }) : undefined}
             adding={adding?.kind === section.kind}
             addLabel={t('workspace.application.relations.add')}
@@ -49,19 +64,21 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
                 excludeIds={linkedIds}
                 placeholder={section.searchPlaceholder}
                 ariaLabel={section.searchPlaceholder}
-                onPick={(option) => { setAdding(null); onLink(section.kind, option.id); }}
+                onPick={(option) => { setAdding(null); onLink(section.kind, option.id, option.label); }}
                 onClose={() => setAdding(null)}
               />
             )}
-            {rows.length === 0 ? (
-              <RelationsEmpty>{section.empty}</RelationsEmpty>
+            {!hasRows ? (
+              <RelationsEmpty>{outside ?? section.empty}</RelationsEmpty>
             ) : (
               <RelationsTable
                 ariaLabel={section.title}
                 columns={section.columns}
                 rows={rows}
+                folded={section.folded}
                 rowKey={(row) => row.id}
                 rowHref={section.href}
+                linkRows
                 rowMuted={section.muted}
                 onRemove={editable ? (row) => { onUnlink(section.kind, row.id); } : undefined}
                 removeLabel={(row) => t('workspace.application.relations.remove', { name: section.label(row) })}
@@ -70,6 +87,7 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
               />
             )}
             {rows.length > 0 && section.notice?.(rows)}
+            {rows.length > 0 && outside && <RelationsEmpty>{outside}</RelationsEmpty>}
           </RelationsSection>
         );
       })}

@@ -54,11 +54,10 @@
       "contacts": "Contacts",
       "prev": "Préc.",
       "next": "Suiv.",
-      "enabled": "Activé"
+      "enabled": "Activé",
+      "access": "Accès"
     },
     "workspace": {
-      "unsavedNavigate": "Vous avez des modifications non enregistrées. Enregistrer avant de naviguer ?",
-      "unsavedSwitchTab": "Vous avez des modifications non enregistrées. Enregistrer avant de changer d'onglet ?",
       "itemCountOf": "{{entity}} {{current}} sur {{total}}"
     },
     "messages": {
@@ -724,6 +723,10 @@
       "nativeName": "Nom local (langue locale)",
       "description": "Description",
       "consolidationAccount": "Compte de consolidation",
+      "consolidationAccountNumber": "Numéro de compte de consolidation",
+      "consolidationAccountName": "Nom du compte de consolidation",
+      "consolidationAccountDescription": "Description du compte de consolidation",
+      "selectChart": "Choisissez un plan comptable",
       "lifecycle": "Cycle de vie",
       "loadCoAsError": "Échec du chargement des plans comptables"
     },
@@ -810,7 +813,8 @@
       "description": "Description",
       "dimension": "Dimension",
       "lifecycle": "Cycle de vie",
-      "required": "Obligatoire"
+      "required": "Obligatoire",
+      "openValues": "Valeurs ouvertes"
     },
     "hints": {
       "nameDefault": "Laissez vide pour afficher « {{label}} » dans la langue de chaque personne.",
@@ -822,7 +826,8 @@
       "valueDimensionAppliesTo": {
         "opex": "La dimension {{dimension}} est réservée aux lignes OPEX.",
         "capex": "La dimension {{dimension}} est réservée aux lignes CAPEX."
-      }
+      },
+      "openValues": "Toute personne qui peut modifier une ligne peut ajouter une valeur, depuis la ligne ou le fichier budget."
     },
     "placeholders": {
       "dimensionName": "ex. Nature",
@@ -918,7 +923,8 @@
       "nameRequired": "Saisissez un nom.",
       "codeRequired": "Saisissez un code.",
       "codeInvalid": "Utilisez des lettres minuscules, des chiffres, - ou _ (40 au maximum).",
-      "dimensionRequired": "Choisissez une dimension."
+      "dimensionRequired": "Choisissez une dimension.",
+      "valueAddFailed": "La valeur n'a pas pu être ajoutée."
     },
     "recommended": {
       "action": "Dimensions recommandées",
@@ -948,7 +954,8 @@
       "nothingCreated": "Rien n'a été ajouté : ces dimensions sont déjà présentes.",
       "failed": "Les dimensions n'ont pas pu être ajoutées.",
       "loadFailed": "Les dimensions recommandées n'ont pas pu être chargées."
-    }
+    },
+    "addValue": "Ajouter « {{value}} »"
   },
   "businessProcesses": {
     "title": "Processus métier",
@@ -1108,7 +1115,8 @@
     "account": {
       "accountNumberRequired": "Le numéro de compte est requis",
       "accountNumberTooLong": "Utilisez au plus {{max}} chiffres",
-      "accountNameRequired": "Le nom du compte est requis"
+      "accountNameRequired": "Le nom du compte est requis",
+      "chartOfAccountsRequired": "Le plan comptable est requis"
     }
   }
 }

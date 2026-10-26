@@ -104,10 +104,45 @@ describe('TechnologyServersTab', () => {
     const retired = screen.getByText(/PAR-DB-OLD/).closest('tr') as HTMLElement;
     expect(retired.textContent).toContain(`${S}.retiredShort`);
     expect(within(retired).getByRole('button', { name: `${S}.remove(name=PAR-DB-OLD)` })).toBeTruthy();
-    // Three servers in service: the two installed and the one carried.
-    expect(table.querySelector('tfoot')?.textContent).toContain(`${S}.serverCount(count=3)`);
+    // Two servers in service: the two it is installed on; a carried row counts nowhere.
+    expect(table.querySelector('tfoot')?.textContent).toContain(`${S}.serverCount(count=2)`);
     // The badge says the same number.
-    expect(countServers(ROWS)).toBe(3);
+    expect(countServers(ROWS)).toBe(2);
+  });
+
+  it('counts a server once whatever its versions, and leaves the carried rows and the clusters out of the count', () => {
+    const rows = [
+      row({ link_id: 'l-1', asset_id: 'h1', asset_name: 'ESX-01' }),
+      row({ link_id: 'l-2', asset_id: 'h2', asset_name: 'ESX-02' }),
+      row({ link_id: 'l-3', asset_id: 'h2', asset_name: 'ESX-02', technology_version_id: 'v8', version_label: '8.0' }),
+      row({ kind: 'carried', asset_id: 'vm', asset_name: 'VM-01', via_asset_id: 'h1', via_asset_name: 'ESX-01' }),
+      row({
+        kind: 'carried', asset_id: 'cl', asset_name: 'VSPHERE-CL', is_cluster: true, via_asset_id: 'h1', via_asset_name: 'ESX-01',
+        via_assets: [{ id: 'h1', name: 'ESX-01', reference: null }, { id: 'h2', name: 'ESX-02', reference: null }],
+      }),
+      row({ link_id: 'l-4', asset_id: 'cl2', asset_name: 'OTHER-CL', is_cluster: true }),
+    ];
+    expect(countServers(rows)).toBe(2);
+  });
+
+  it('folds the assets a host contains under one closed line, out of the total', async () => {
+    renderTab([
+      row({ link_id: 'l-1', asset_id: 'h1', asset_name: 'ESX-01', asset_reference: 'AST-1' }),
+      row({ link_id: 'l-2', asset_id: 'h2', asset_name: 'ESX-02', asset_reference: 'AST-2' }),
+      row({ kind: 'carried', asset_id: 'vm1', asset_name: 'VM-01', asset_reference: 'AST-5', via_asset_id: 'h1', via_asset_name: 'ESX-01', through_host: true }),
+      row({ kind: 'carried', asset_id: 'vm2', asset_name: 'VM-02', asset_reference: 'AST-6', via_asset_id: 'h2', via_asset_name: 'ESX-02', through_host: true }),
+      row({ kind: 'carried', asset_id: 'vm3', asset_name: 'VM-03', asset_reference: 'AST-7', via_asset_id: 'h2', via_asset_name: 'ESX-02', through_host: true }),
+    ]);
+    const table = await screen.findByRole('table', { name: `${S}.title` });
+    const fold = within(table).getByRole('button', { name: `${S}.hosted(count=3)` });
+    expect(fold.getAttribute('aria-expanded')).toBe('false');
+    expect(within(table).queryByText('VM-01')).toBeNull();
+    expect(table.querySelector('tfoot')?.textContent).toContain(`${S}.serverCount(count=2)`);
+    fireEvent.click(fold);
+    expect(fold.getAttribute('aria-expanded')).toBe('true');
+    const firstCells = [...table.querySelectorAll('tbody tr')].map((tr) => tr.querySelector('td')?.textContent);
+    expect(firstCells).toEqual(['AST-1', 'AST-2', `${S}.hosted(count=3)`, 'AST-5', 'AST-6', 'AST-7']);
+    expect(table.querySelector('tfoot')?.textContent).toContain(`${S}.serverCount(count=2)`);
   });
 
   it('removes a direct link and refuses to remove a deduced one', async () => {
@@ -214,6 +249,26 @@ describe('TechnologyServersTab', () => {
     renderTab();
     const table = await screen.findByRole('table', { name: `${S}.title` });
     expect(within(table).getByText(`${S}.columns.via`).getAttribute('title')).toBe(`${S}.columns.viaHint`);
+  });
+
+  it('marks a cluster row with the cluster icon, and lists every asset that carries its line in Via', async () => {
+    renderTab([
+      row({ link_id: 'l-1', asset_id: 'h1', asset_name: 'ESX-01', asset_reference: 'AST-1' }),
+      row({
+        kind: 'carried', asset_id: 'cl', asset_name: 'VSPHERE-CL', asset_reference: 'AST-9', is_cluster: true,
+        via_asset_id: 'h1', via_asset_name: 'ESX-01',
+        via_assets: [{ id: 'h1', name: 'ESX-01', reference: 'AST-1' }, { id: 'h2', name: 'ESX-02', reference: 'AST-2' }],
+      }),
+    ]);
+    const table = await screen.findByRole('table', { name: `${S}.title` });
+    const rows = within(table).getAllByRole('row');
+    const clusterRow = rows.find((tr) => tr.textContent?.includes('VSPHERE-CL'))!;
+    expect(within(clusterRow).getByRole('img', { name: 'pages.assets.columns.cluster' })).toBeTruthy();
+    const hosts = within(clusterRow).getAllByRole('link');
+    expect(hosts.map((link) => link.textContent)).toEqual(['ESX-01', 'ESX-02']);
+    expect(hosts.map((link) => link.getAttribute('href'))).toEqual(['/it/assets/h1/overview', '/it/assets/h2/overview']);
+    const hostRow = rows.find((tr) => tr.textContent?.includes('AST-1') && !tr.textContent?.includes('VSPHERE-CL'))!;
+    expect(within(hostRow).queryByRole('img')).toBeNull();
   });
 
   it('leaves the Via column out when every link is direct', async () => {

@@ -27,7 +27,7 @@ El mapa utiliza un diseño de grafo dirigido por fuerzas donde:
 | **Clústeres** | Rectángulo redondeado, borde discontinuo | Cian | Grupos de servidores que actúan como una única unidad lógica |
 | **Entidades** | Forma de píldora / estadio | Naranja | Puntos finales lógicos (sistemas externos, servicios SaaS) |
 
-Los miembros de clúster aparecen como nodos de servidor separados, con líneas indicadoras discontinuas que los conectan a su nodo de clúster padre.
+Un clúster trae sus miembros en servicio: cada uno es un nodo de servidor, unido al clúster por una línea discontinua. Consulte [Visualización de clústeres](#cluster-visualization).
 
 ---
 
@@ -43,7 +43,7 @@ Encuentre servidores a través de las aplicaciones que se ejecutan en ellos:
 
 1. Seleccione una o más aplicaciones del desplegable **Aplicaciones**
 2. Elija entornos en el desplegable **Entorno App** (solo aparecen los entornos donde las apps seleccionadas tienen servidores asignados)
-3. Los servidores coincidentes se añaden automáticamente al filtro **Servidores**
+3. Los servidores coincidentes se añaden automáticamente al filtro **Servidores**. Una aplicación asignada a un clúster aporta el clúster y sus miembros
 
 Esto es útil cuando desea ver las conexiones de infraestructura de una aplicación sin saber en qué servidores se ejecuta.
 
@@ -87,7 +87,7 @@ Cuando está activado (predeterminado), el mapa mantiene su diseño por fuerzas 
 - Los **Servidores** usan las asignaciones de rol configuradas en la configuración del Panorama IT
 - Las **Entidades** usan su **Nivel de grafo** configurado (predeterminado Superior)
 - Los **servidores no asignados** caen al Centro
-- Los **Clústeres** heredan el nivel de mayor prioridad de sus miembros
+- Los **Clústeres** usan los roles que tienen asignados, o si no el nivel de mayor prioridad de sus miembros. Un miembro toma también los roles de su clúster
 
 Use este conmutador cuando desee una vista de topología que se lea como niveles de arquitectura (componentes orientados al exterior arriba, almacenes de datos abajo). El ajuste es solo de sesión y se restablece al recargar la página.
 
@@ -118,8 +118,8 @@ También puede hacer zoom con la rueda del ratón y desplazarse haciendo clic y 
 Haga clic en un nodo de servidor o clúster para resaltar sus conexiones y abrir un panel de detalle que muestra:
 
 - **Tipo de servidor**, **Ubicación del servidor**, **Sistema operativo**, **Segmento de red**, **Dirección IP**
-- **Aplicaciones asignadas**: Apps que se ejecutan en este servidor, agrupadas por entorno. Haga clic en el nombre de una app para abrirla.
-- Botón **Editar servidor** o **Ver clúster** para abrir el espacio de trabajo
+- **Aplicaciones asignadas**: Apps que se ejecutan en este servidor, agrupadas por entorno. En un miembro, una app asignada a su clúster se muestra «vía» el nombre del clúster. Haga clic en el nombre de una app para abrirla.
+- Botón **Editar servidor** o **Ver clúster** para abrir el espacio de trabajo. **Ver clúster** abre el clúster en su pestaña **Operaciones**, donde se gestionan sus miembros
 
 Haga clic en un nodo de entidad para ver su tipo y entorno.
 
@@ -155,13 +155,14 @@ El mapa admite parámetros de URL para compartir vistas específicas:
 
 ---
 
-## Visualización de clústeres
+## Visualización de clústeres { #cluster-visualization }
 
 Los clústeres aparecen como nodos distintos con un borde cian discontinuo:
 
-- Los miembros del clúster aparecen como nodos separados conectados a su clúster padre mediante líneas indicadoras discontinuas
-- Cuando filtra con profundidad=0, se muestran tanto los servidores miembros seleccionados como sus clústeres padre
-- Los servidores miembros mantienen sus conexiones individuales servidor-a-servidor además de las conexiones propias del clúster
+- Un clúster en el mapa muestra sus miembros en servicio, unidos a él por líneas discontinuas, aunque ninguna conexión los nombre. Una conexión en el clúster vale para cada uno de ellos. Consulte [Conexiones en un clúster](connections.md#connections-on-a-cluster)
+- Por encima de diez miembros, los miembros que ninguna conexión nombra se pliegan. El clúster muestra **+N** después de su entorno, y su información emergente da el número de miembros ocultos. Un miembro elegido en **Servidores** siempre se muestra
+- Un miembro elegido en **Servidores** trae las conexiones de sus clústeres: sus clústeres también cuentan como elegidos
+- Los miembros conservan sus propias conexiones además de las del clúster
 
 ---
 

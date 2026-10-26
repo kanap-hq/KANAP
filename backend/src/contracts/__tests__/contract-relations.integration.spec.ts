@@ -82,7 +82,7 @@ async function testBudgetLinesOfBothNatures() {
     const svc = contracts(audit);
     const opts = { manager: runner.manager };
 
-    assert.deepEqual(await svc.listBudgetLines(a.contractId, opts), { items: [] });
+    assert.deepEqual(await svc.listBudgetLines(a.contractId, opts), { items: [], hidden: 0 });
     assert.deepEqual(await svc.replaceRelations(a.contractId, 'budget_lines', [a.capexId, a.opexId.toUpperCase()], 'user', opts), { ok: true, added: 2, removed: 0 });
     const { items } = await svc.listBudgetLines(a.contractId, opts);
     assert.deepEqual(items.map((line) => [line.id, line.nature, line.item_number]), [

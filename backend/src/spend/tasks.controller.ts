@@ -25,6 +25,7 @@ import { DataSource } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { Public } from '../auth/public.decorator';
 import { TasksService } from './tasks.service';
 import { TasksDeleteService } from '../tasks/tasks-delete.service';
@@ -49,6 +50,7 @@ import { projectParticipantCondition, resolveBusinessContributorScope } from '..
 import { PermissionLevel } from '../permissions/permissions.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { incidentViewerFromRequest, resolveIncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -77,7 +79,11 @@ export class TasksController {
 
   private async ensureTaskAccess(id: string, req: any, level: PermissionLevel = 'reader') {
     const accessScope = await this.taskAccessScope(req, level);
-    await this.svc.assertVisible(id, accessScope, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
+    await this.svc.assertVisible(id, accessScope, {
+      manager: req?.queryRunner?.manager,
+      tenantId: req?.tenant?.id,
+      viewer: incidentViewerFromRequest(req),
+    });
     return accessScope;
   }
 
@@ -154,7 +160,12 @@ export class TasksController {
   @Get()
   async list(@Query() query: any, @Req() req: any) {
     const accessScope = await this.taskAccessScope(req, 'reader');
-    return this.svc.listAllTasks(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, accessScope });
+    return this.svc.listAllTasks(query, {
+      manager: req?.queryRunner?.manager,
+      tenantId: req?.tenant?.id,
+      accessScope,
+      viewer: incidentViewerFromRequest(req),
+    });
   }
 
   @UseGuards(PermissionGuard)
@@ -162,7 +173,12 @@ export class TasksController {
   @Get('ids')
   async listIds(@Query() query: any, @Req() req: any) {
     const accessScope = await this.taskAccessScope(req, 'reader');
-    return this.svc.listIds(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, accessScope });
+    return this.svc.listIds(query, {
+      manager: req?.queryRunner?.manager,
+      tenantId: req?.tenant?.id,
+      accessScope,
+      viewer: incidentViewerFromRequest(req),
+    });
   }
 
   @UseGuards(PermissionGuard)
@@ -170,7 +186,12 @@ export class TasksController {
   @Get('filter-values')
   async listFilterValues(@Query() query: any, @Req() req: any) {
     const accessScope = await this.taskAccessScope(req, 'reader');
-    return this.svc.listFilterValues(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, accessScope });
+    return this.svc.listFilterValues(query, {
+      manager: req?.queryRunner?.manager,
+      tenantId: req?.tenant?.id,
+      accessScope,
+      viewer: incidentViewerFromRequest(req),
+    });
   }
 
   // ==================== CSV ====================
@@ -213,6 +234,7 @@ export class TasksController {
       preset,
       relatedObjectType,
       relatedObjectId,
+      viewer: incidentViewerFromRequest(req),
     });
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -221,8 +243,11 @@ export class TasksController {
   }
 
   /**
-   * Import tasks from CSV
+   * Import tasks from CSV. It updates existing tasks by their reference, whatever the person's
+   * access: reserved to unscoped persons, like the supplier and contact imports (spec §2.7 of
+   * planning/data-scoped-access).
    */
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('tasks', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -247,6 +272,7 @@ export class TasksController {
         manager: req?.queryRunner?.manager,
         tenantId,
         userId: req.user?.sub,
+        viewer: incidentViewerFromRequest(req),
       },
     );
   }
@@ -276,10 +302,15 @@ export class TasksController {
   async getOne(@Param('id') idOrRef: string, @Req() req: any) {
     const id = await this.resolve(idOrRef, req);
     const accessScope = await this.taskAccessScope(req, 'reader');
-    const res = await this.svc.getOne(id, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, accessScope });
+    const res = await this.svc.getOne(id, {
+      manager: req?.queryRunner?.manager,
+      tenantId: req?.tenant?.id,
+      accessScope,
+      viewer: incidentViewerFromRequest(req),
+    });
     if (!res) {
       const { NotFoundException } = await import('@nestjs/common');
-      throw new NotFoundException('Task not found');
+      throw new NotFoundException('Item not found');
     }
     return res;
   }
@@ -313,7 +344,10 @@ export class TasksController {
   @RequireLevel('tasks', 'admin')
   @Post('delete-check')
   deleteCheck(@Body() body: { ids?: unknown }, @Req() req: any) {
-    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: req?.queryRunner?.manager });
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], {
+      manager: req?.queryRunner?.manager,
+      viewer: incidentViewerFromRequest(req),
+    });
   }
 
   @UseGuards(PermissionGuard)
@@ -321,7 +355,10 @@ export class TasksController {
   @Delete('bulk')
   async bulkDelete(@Body() body: { ids: string[] }, @Req() req: any) {
     const ids = Array.isArray(body?.ids) ? body.ids : [];
-    return this.deleteSvc.bulkDelete(ids, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.deleteSvc.bulkDelete(ids, req.user?.sub ?? null, {
+      manager: req?.queryRunner?.manager,
+      viewer: incidentViewerFromRequest(req),
+    });
   }
 
   @UseGuards(PermissionGuard)
@@ -575,14 +612,25 @@ export class TasksController {
       await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
       // Require the caller to be an authenticated tenant user with >= reader on tasks; the
       // attachment is then read under the person's data access (spec §6.3).
-      const allowed = await this.knowledge.canAccessInlineAttachment(
+      const userId = await this.knowledge.inlineAttachmentViewer(
         runner.manager, tenantId, refreshToken, 'tasks', { applyDataAccess: true },
       );
-      // Only embedded images (source_field set) are served on this inline route.
-      const rows = allowed
+      // Only embedded images (source_field set) are served on this inline route, and
+      // only when the image's task is not one of a restricted incident this person cannot see.
+      const params: unknown[] = [tenantId, attachmentId];
+      const incidentViewer = userId ? await resolveIncidentViewer(runner.manager, userId, tenantId) : null;
+      const taskVisibility = userId ? taskIncidentVisibilitySql('t', incidentViewer, params) : '';
+      const rows = userId
         ? await runner.query(
-          `SELECT storage_path, mime_type, size FROM task_attachments WHERE tenant_id = $1 AND id = $2 AND source_field IS NOT NULL LIMIT 1`,
-          [tenantId, attachmentId],
+          `SELECT ta.storage_path, ta.mime_type, ta.size
+           FROM task_attachments ta
+           JOIN tasks t ON t.id = ta.task_id AND t.tenant_id = ta.tenant_id
+           WHERE ta.tenant_id = $1
+             AND ta.id = $2
+             AND ta.source_field IS NOT NULL
+             ${taskVisibility}
+           LIMIT 1`,
+          params,
         )
         : [];
       if (!rows.length) {

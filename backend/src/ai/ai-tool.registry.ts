@@ -21,6 +21,7 @@ import { AiSettings } from './ai-settings.entity';
 import { AiAdapterConfig } from './control-plane/providers/adapter-config.entity';
 import { parseCredentialRef } from './control-plane/providers/adapter-config.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
+import { dataAccessRefusalMessage } from '../common/filters/database-error.mapping';
 import {
   AI_CONTEXT_ENTITY_TYPES,
   AI_QUERY_ENTITY_TYPES,
@@ -598,7 +599,7 @@ export class AiToolRegistry {
               } catch (err: any) {
                 errors.push({
                   ref,
-                  message: err?.message || 'Preview creation failed.',
+                  message: dataAccessRefusalMessage(err) ?? (err?.message || 'Preview creation failed.'),
                 });
               }
             }

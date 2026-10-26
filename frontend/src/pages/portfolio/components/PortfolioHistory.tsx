@@ -111,6 +111,16 @@ const visibleChangeEntries = (changedFields: Record<string, [unknown, unknown]>)
       !(field === 'criteria_values' && (isPlainObject(oldVal) || isPlainObject(newVal))),
   );
 
+/**
+ * A side of a budget line change as the server shapes it for this reader: the lines they may read
+ * (or `null` without the budget right) and the number of the others.
+ */
+type HiddenLinesSide = { labels: string[] | null; hidden: number };
+
+const isHiddenLinesSide = (value: unknown): value is HiddenLinesSide =>
+  isPlainObject(value) && typeof (value as HiddenLinesSide).hidden === 'number'
+  && ((value as HiddenLinesSide).labels === null || Array.isArray((value as HiddenLinesSide).labels));
+
 const DOCUMENT_SLOTS: Record<string, 'purpose' | 'risks'> = {
   purpose: 'purpose',
   risks_mitigations: 'risks',
@@ -175,6 +185,12 @@ export default function PortfolioHistory({
 
   const formatFieldValue = (field: string, value: unknown): string => {
     if (value === null || value === undefined) return t('activity.history.values.empty');
+    if (isHiddenLinesSide(value)) {
+      // Budget lines outside the reader's access, or every line for a reader without the budget right.
+      const key = value.labels === null ? 'count' : value.labels.length === 0 ? 'only' : 'and';
+      const outside = t(`it:workspace.application.relations.outside.${key}`, { count: value.hidden });
+      return key === 'and' ? `${value.labels!.join(', ')} ${outside}` : outside;
+    }
     if (typeof value === 'boolean') return value ? t('activity.history.values.yes') : t('activity.history.values.no');
     if (Array.isArray(value)) {
       if (value.length === 0) return t('activity.history.values.empty');

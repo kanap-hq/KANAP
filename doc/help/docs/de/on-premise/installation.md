@@ -261,3 +261,46 @@ server {
 5. Laden Sie weitere Benutzer ein (wenn E-Mail konfiguriert ist)
 
 **Zum Administratorkonto.** KANAP legt es beim ersten Start aus `ADMIN_EMAIL` und `ADMIN_PASSWORD` an, und nur dann. Spätere Änderungen an diesen beiden Zeilen bewirken nichts, solange ein aktiver Administrator existiert: Ändern Sie das Passwort in der Anwendung. Bleibt kein aktiver Administrator übrig, stellt der nächste Start das Konto `ADMIN_EMAIL` als aktivierten Administrator wieder her und behält sein bestehendes Passwort. `ADMIN_PASSWORD` muss ein eigener Wert mit mindestens 12 Zeichen sein: `openssl rand -base64 18` erzeugt einen. Ein Beispielwert oder ein kürzerer Wert lässt die API bei jedem Start eine `[SECURITY]`-Warnung ausgeben, bis das Passwort des Kontos geändert ist. Siehe [Konfiguration](configuration.md#erforderlich-admin-zugangsdaten).
+
+## Optional: Datenzugriff nach Bereich { #optional-data-scoped-access }
+
+Der [Datenzugriff](../data-access.md) begrenzt eine Person auf einen Teil des Budgets und der Verträge, nach Unternehmen oder nach Kostenstelle. Ohne diesen Schritt arbeiten alle mit allen Daten, wie in früheren Versionen, und **Begrenzt auf** bleibt im Benutzerfenster ausgegraut. Überspringen Sie ihn, wenn niemand begrenzt werden muss.
+
+Der Schritt legt eine PostgreSQL-Rolle an, `kanap_data_limited`, die KANAP für die Anfragen begrenzter Personen annimmt. Er erfolgt einmal pro PostgreSQL-Server, durch einen Superuser oder eine Rolle mit `CREATEROLE`. Er gibt der Anwendungsrolle das Recht, diese Rolle anzunehmen, ohne ihre Rechte zu erben. KANAP setzt danach die Rechte und Zugriffsregeln dieser Rolle in seiner Datenbank selbst, bei jedem Start und jedem Upgrade.
+
+**1. Führen Sie das Skript aus.** Es liegt im Repository. Übergeben Sie die Anwendungsrolle aus `DATABASE_URL` als `app_role`. Mit dem [Installationsbeispiel](installation-example.md) (Rolle und Datenbank `kanap`, PostgreSQL auf dem Server):
+
+```bash
+cd /opt/kanap
+sudo -u postgres psql -X -v ON_ERROR_STOP=1 -v app_role=kanap -v mode=install \
+  -f /opt/kanap/infra/scripts/data-access-role.sql -d kanap
+```
+
+Bei einem verwalteten PostgreSQL-Dienst führen Sie denselben `psql`-Befehl mit dem Administratorkonto des Dienstes aus, von einem Rechner, der die Datenbank erreicht.
+
+Das Skript endet mit einer Tabelle `data-access-role: final state`. Unter PostgreSQL 16 und neuer zeigt sie `limited_role_exists` = `t`, `app_is_member` = `t`, `membership_inherit` = `false`, `membership_set` = `true` und `app_inherits_limited` = `f`. Ein erneuter Lauf ändert nichts.
+
+Unter PostgreSQL 15 sorgt das Skript außerdem dafür, dass die Anwendungsrolle die Rechte anderer Rollen nicht mehr erbt, und es muss auf jeder Datenbank laufen, die dieser Rolle gehört. Der Kopf des Skripts erklärt das und enthält die passende Schleife.
+
+**2. Starten Sie die API neu,** zu einer ruhigen Zeit: Bei ihrem Start setzt sie die Rechte und Zugriffsregeln der Rolle.
+
+```bash
+cd /opt/kanap
+docker compose -f infra/compose.onprem.yml restart api
+docker compose -f infra/compose.onprem.yml logs api | grep DATA-ACCESS
+```
+
+Das Protokoll zeigt `[DATA-ACCESS] data-scoped access available`. Listet es stattdessen auf, was fehlt, lesen Sie die Zeilen davor. Hat die API zu lange auf eine belegte Tabelle gewartet, meldet sie das und versucht es beim nächsten Start erneut: Starten Sie sie etwas später noch einmal neu.
+
+**Die Funktion entfernen.** Geben Sie den begrenzten Personen zuerst **Alle Daten** zurück (**Administration > Datenzugriff** listet sie auf): Solange die Rolle fehlt, werden sie abgewiesen. Führen Sie dann das Skript mit `mode=uninstall` als Superuser aus und starten Sie die API neu:
+
+```bash
+cd /opt/kanap
+sudo -u postgres psql -X -v ON_ERROR_STOP=1 -v app_role=kanap -v mode=uninstall \
+  -f /opt/kanap/infra/scripts/data-access-role.sql -d kanap
+docker compose -f infra/compose.onprem.yml restart api
+```
+
+Das Skript entfernt die Rechte und Zugriffsregeln der Rolle in der Datenbank, dann die Rolle selbst. Halten andere Datenbanken des Servers noch etwas für die Rolle, nennt es sie: Führen Sie es auf jeder davon aus.
+
+Eine Wiederherstellung der Datenbank kann den Schritt erneut erfordern: siehe [Wiederherstellen](operations.md#wiederherstellen).

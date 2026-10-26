@@ -77,6 +77,7 @@ Die Links über der Tabelle filtern die Liste mit einem Klick. Ein erneuter Klic
 
 - **Innerhalb von n Tagen zu entscheiden (n)**: die Verträge im Stand **Zu entscheiden**. Die Anzahl der Tage ist der Entscheidungszeitraum Ihres Arbeitsbereichs
 - **Ohne Budgetzeile (n)** und **Unterbudgetiert (n)**: die Verträge, deren Budgetdeckung im gewählten Jahr diesen Stand hat
+- **Ohne Kostenstelle**: Verträge ohne **Kostenstelle oder Gruppe**. Die Spalte **Kostenstelle** (Spaltenauswahl) zeigt das Feld
 
 Ein orangefarbener Punkt markiert einen Link, dessen Zähler nicht null ist.
 
@@ -120,6 +121,8 @@ Die unten angeheftete Zeile lautet **Gesamt (n Verträge)**. Sie summiert die Ja
 Die Kopfzeile zeigt den Vertragsnamen (zum Umbenennen anklicken), **Zurück** / **Weiter** mit der Position in der Liste und eine Leiste mit **Lieferant**, **Vertragsunternehmen**, **Verantwortlicher** und **Status**. Verantwortlicher und Status ändern Sie direkt dort. Lieferant und Unternehmen öffnen den Bereich **Eigenschaften**.
 
 Der Bereich **Eigenschaften** rechts enthält alle Felder des Vertrags: die Parteien, **Beginn**, **Laufzeit (Monate)**, **Kündigungsfrist (Monate)**, **Stillschweigende Verlängerung**, **Jahresbetrag**, **Währung**, **Abrechnung**, dann **Lebenszyklus** (**Status** und **Ende der Gültigkeit**), **Erstellt** und **Aktualisiert**. Öffnen oder schließen Sie ihn mit seiner Schaltfläche; KANAP merkt sich Ihre Wahl.
+
+**Kostenstelle oder Gruppe** ist optional. Das Feld ordnet den Vertrag für den [Datenzugriff](data-access.md) einer Kostenstelle oder Gruppe zu: Die auf diesen Knoten oder auf eine Gruppe darüber begrenzten Personen sehen den Vertrag, ebenso wie die auf sein Unternehmen begrenzten.
 
 Jede Änderung speichert sich selbst: Auswahllisten und Daten sofort, eingetippte Werte und Notizen nach einer kurzen Pause, der Name beim Verlassen des Felds. „Wird gespeichert...“ und dann „Gespeichert“ erscheint in der Kopfzeile. Zwei Personen, die denselben Vertrag bearbeiten, werden nicht gewarnt: Die letzte Änderung gilt.
 
@@ -179,6 +182,8 @@ Ein Vertrag über 350 000 pro Jahr, der sich jeden 1. Juli verlängert, verpflic
 - **Unterbudgetiert**: Die verknüpften Zeilen enthalten weniger als die Verpflichtung
 - **Budget über dem Vertrag**: Die verknüpften Zeilen enthalten mehr als die Verpflichtung plus 10 %
 - **Gedeckt**: alle anderen Fälle
+
+Für eine Person mit begrenztem Datenzugriff listet der Tab die verknüpften Zeilen, die sie sieht, und dann die Anzahl der anderen. Die Deckung zählt weiterhin alle verknüpften Zeilen, damit der Verantwortliche des Vertrags die tatsächliche Deckung sieht. In der Liste zeigt jede Zeile ebenfalls diese vollständige Deckung, während die Summenzeile die sichtbaren Verträge und **Verknüpfte Zeilen** die sichtbaren Zeilen zählt. Siehe [Datenzugriff](data-access.md#what-a-limited-person-sees).
 
 Hat eine verknüpfte Zeile für ein Jahr keinen Wechselkurs, erscheint ihr Betrag in ihrer eigenen Währung mit einer kleinen orangefarbenen Markierung, und die Summe sowie **Verknüpfte Zeilen** lassen sie aus. Der Stand dieses Jahres lautet **Unbekannt: eine verknüpfte Zeile hat keinen Wechselkurs**. Ein einzeiliger Hinweis unter der Deckungstabelle nennt die ausgelassenen Zeilen, zum Beispiel „1 Zeile ohne Wechselkurs ausgeschlossen: USD 2026.“ Siehe [Fehlender Kurs](currencies.md#umrechnungsmechanismen-kurzreferenz) und [Manuelle Kurse](currencies.md#manuelle-kurse).
 

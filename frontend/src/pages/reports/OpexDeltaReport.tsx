@@ -9,6 +9,8 @@ import ReportDataStatus from '../../components/reports/ReportDataStatus';
 import { itemHref, useReportScope } from './useReportScope';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { useTranslation } from 'react-i18next';
+import { formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
 import { isMetricKey, metricFileName, resolveMetric, shownMetricKeys } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { useBudgetColumns, type BudgetColumns } from '../../hooks/useBudgetColumns';
@@ -30,6 +32,7 @@ type Direction = 'increase' | 'decrease' | 'both';
 
 export default function OpexDeltaReport() {
   const { t } = useTranslation(["ops"]);
+  const locale = useLocale();
   const budgetColumns = useBudgetColumns();
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -179,8 +182,8 @@ export default function OpexDeltaReport() {
     { field: 'previous', headerName: sourceLabel, width: 200, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'current', headerName: destinationLabel, width: 200, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
     { field: 'delta', headerName: t('reports.columns.delta'), width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
-    { field: 'pct_increase', headerName: t('reports.columns.pctIncrease'), width: 140, type: 'rightAligned', valueFormatter: (p) => (p.value == null ? '' : `${Number(p.value).toFixed(1)}%`) },
-  ], [scope, sourceLabel, destinationLabel, formatNumber, t]);
+    { field: 'pct_increase', headerName: t('reports.columns.pctIncrease'), width: 140, type: 'rightAligned', valueFormatter: (p) => formatSharePercent(p.value, locale, 1) },
+  ], [scope, sourceLabel, destinationLabel, formatNumber, locale, t]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
@@ -292,7 +295,7 @@ export default function OpexDeltaReport() {
                   title: escapeTooltipText(datum.name),
                   data: [
                     { label: changeLabel, value: formatNumber(magnitude) },
-                    { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
+                    { label: t('reports.shared.share'), value: formatPercentPoints(pct, locale, 1) },
                   ],
                 };
               },
@@ -334,7 +337,7 @@ export default function OpexDeltaReport() {
                 title: escapeTooltipText(datum.name),
                 data: [
                   { label: changeLabel, value: formatNumber(datum.delta) },
-                  { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
+                  { label: t('reports.shared.share'), value: formatPercentPoints(pct, locale, 1) },
                 ],
               };
             },
@@ -342,7 +345,7 @@ export default function OpexDeltaReport() {
         },
       ],
     };
-  }, [chartData, totalMagnitude, chartTitleKey, countLabel, scopeLabel, sourceLabel, destinationLabel, chartType, selectionFootnote, modes.length, measureText, formatNumber, t]);
+  }, [chartData, totalMagnitude, chartTitleKey, countLabel, scopeLabel, sourceLabel, destinationLabel, chartType, selectionFootnote, modes.length, measureText, formatNumber, locale, t]);
 
   useEffect(() => {
     const api = gridApiRef.current;
@@ -371,17 +374,23 @@ export default function OpexDeltaReport() {
 
   const columnSelectDisabled = yearOptions.length === 0;
 
+  // `coveragePct` already includes the percent sign, so only the number follows the language.
+  const shareNumber = (value: number) => new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
+
   const coverageLabel = (() => {
     if (modes.length === 2) {
       const pieces: string[] = [];
-      if (increaseShare != null) pieces.push(t('reports.opexDelta.incValue', { value: `${increaseShare.toFixed(1)}%` }));
-      if (decreaseShare != null) pieces.push(t('reports.opexDelta.decValue', { value: `${decreaseShare.toFixed(1)}%` }));
+      if (increaseShare != null) pieces.push(t('reports.opexDelta.incValue', { value: formatPercentPoints(increaseShare, locale, 1) }));
+      if (decreaseShare != null) pieces.push(t('reports.opexDelta.decValue', { value: formatPercentPoints(decreaseShare, locale, 1) }));
       return pieces.length > 0 ? t('reports.opexDelta.coverageSplit', { detail: pieces.join(' · ') }) : t('reports.opexDelta.coverageNa');
     }
     if (modes[0] === 'increase') {
-      return increaseShare == null ? t('reports.opexDelta.coverageNa') : t('reports.opexDelta.coveragePct', { pct: increaseShare.toFixed(1) });
+      return increaseShare == null ? t('reports.opexDelta.coverageNa') : t('reports.opexDelta.coveragePct', { pct: shareNumber(increaseShare) });
     }
-    return decreaseShare == null ? t('reports.opexDelta.coverageNa') : t('reports.opexDelta.coveragePct', { pct: decreaseShare.toFixed(1) });
+    return decreaseShare == null ? t('reports.opexDelta.coverageNa') : t('reports.opexDelta.coveragePct', { pct: shareNumber(decreaseShare) });
   })();
 
   const modeSlug = modes.length === 0 ? 'mode' : modes.slice().sort().join('-');

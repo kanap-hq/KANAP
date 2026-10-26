@@ -261,3 +261,46 @@ server {
 5. Invitez d'autres utilisateurs (si l'e-mail est configuré)
 
 **À propos du compte administrateur.** KANAP le crée au premier démarrage à partir de `ADMIN_EMAIL` et `ADMIN_PASSWORD`, et uniquement à ce moment-là. Modifier ces deux lignes par la suite ne change rien tant qu'un administrateur actif existe : changez le mot de passe dans l'application. S'il ne reste aucun administrateur actif, le démarrage suivant rétablit le compte `ADMIN_EMAIL` comme administrateur activé et conserve son mot de passe existant. `ADMIN_PASSWORD` doit être une valeur qui vous est propre, de 12 caractères ou plus : `openssl rand -base64 18` en génère une. Une valeur d'exemple ou une valeur plus courte fait afficher à l'API un avertissement `[SECURITY]` à chaque démarrage, jusqu'à ce que le mot de passe du compte soit changé. Voir [Configuration](configuration.md#requis-identifiants-administrateur).
+
+## Facultatif : accès aux données par périmètre { #optional-data-scoped-access }
+
+L'[accès aux données](../data-access.md) limite une personne à une partie du budget et des contrats, par société ou par centre de coûts. Sans cette étape, tout le monde travaille avec toutes les données, comme dans les versions précédentes, et **Limité à** reste grisé dans la fenêtre de l'utilisateur. Passez-la si personne ne doit être limité.
+
+L'étape crée un rôle PostgreSQL, `kanap_data_limited`, que KANAP prend pour les requêtes des personnes limitées. Elle se fait une fois par serveur PostgreSQL, par un superutilisateur ou un rôle doté de `CREATEROLE`. Elle donne au rôle applicatif le droit de prendre ce rôle sans hériter de ses droits. KANAP pose ensuite lui-même les droits et les règles d'accès de ce rôle dans sa base, à chaque démarrage et à chaque mise à jour.
+
+**1. Lancez le script.** Il se trouve dans le dépôt. Passez le rôle applicatif de `DATABASE_URL` dans `app_role`. Avec l'[exemple d'installation](installation-example.md) (rôle et base `kanap`, PostgreSQL sur le serveur) :
+
+```bash
+cd /opt/kanap
+sudo -u postgres psql -X -v ON_ERROR_STOP=1 -v app_role=kanap -v mode=install \
+  -f /opt/kanap/infra/scripts/data-access-role.sql -d kanap
+```
+
+Avec un service PostgreSQL géré, lancez la même commande `psql` avec le compte administrateur du service, depuis une machine qui atteint la base.
+
+Le script se termine par un tableau `data-access-role: final state`. Sur PostgreSQL 16 et suivants, il affiche `limited_role_exists` = `t`, `app_is_member` = `t`, `membership_inherit` = `false`, `membership_set` = `true` et `app_inherits_limited` = `f`. Le relancer ne change rien.
+
+Sur PostgreSQL 15, le script fait aussi cesser l'héritage des droits des autres rôles par le rôle applicatif, et il doit tourner sur chaque base qui appartient à ce rôle. L'en-tête du script l'explique et donne la boucle à utiliser.
+
+**2. Redémarrez l'API,** à un moment calme : à son démarrage, elle pose les droits et les règles d'accès du rôle.
+
+```bash
+cd /opt/kanap
+docker compose -f infra/compose.onprem.yml restart api
+docker compose -f infra/compose.onprem.yml logs api | grep DATA-ACCESS
+```
+
+Le journal affiche `[DATA-ACCESS] data-scoped access available`. S'il liste à la place ce qui manque, lisez les lignes qui précèdent. Si l'API a attendu trop longtemps une table occupée, elle le signale et réessaie à son démarrage suivant : redémarrez-la de nouveau un peu plus tard.
+
+**Retirer la fonction.** Rendez d'abord **Toutes les données** aux personnes limitées (**Administration > Accès aux données** les liste) : tant que le rôle manque, elles sont refusées. Lancez ensuite le script avec `mode=uninstall`, en superutilisateur, puis redémarrez l'API :
+
+```bash
+cd /opt/kanap
+sudo -u postgres psql -X -v ON_ERROR_STOP=1 -v app_role=kanap -v mode=uninstall \
+  -f /opt/kanap/infra/scripts/data-access-role.sql -d kanap
+docker compose -f infra/compose.onprem.yml restart api
+```
+
+Le script retire les droits et les règles d'accès du rôle dans la base, puis le rôle lui-même. Quand d'autres bases du serveur gardent encore quelque chose pour ce rôle, il les nomme : lancez-le sur chacune.
+
+Une restauration de base peut demander de refaire l'étape : voir [Restauration](operations.md#restauration).

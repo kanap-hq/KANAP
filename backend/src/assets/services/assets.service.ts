@@ -92,8 +92,9 @@ export class AssetsService {
     tenantId: string,
     userId: string | null,
     opts?: ServiceOpts,
+    options?: { removeOperatingSystem?: unknown },
   ) {
-    return this.crudService.replaceClusterMembers(clusterId, assetIds, tenantId, userId, opts);
+    return this.crudService.replaceClusterMembers(clusterId, assetIds, tenantId, userId, opts, options);
   }
 
   // =========================================================================
@@ -185,6 +186,18 @@ export class AssetsService {
     opts?: ServiceOpts,
   ) {
     return this.relationsService.addRelation(assetId, relatedAssetId, relationType, tenantId, userId, opts);
+  }
+
+  /** `addRelation`, with the placement rules applied (clusters pass, lot C1b). */
+  addRelationWithPlacement(
+    assetId: string,
+    relatedAssetId: string,
+    relationType: 'contains' | 'depends_on',
+    tenantId: string,
+    userId: string | null,
+    opts?: ServiceOpts,
+  ) {
+    return this.relationsService.addRelationWithPlacement(assetId, relatedAssetId, relationType, tenantId, userId, opts);
   }
 
   // =========================================================================

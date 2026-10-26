@@ -10,6 +10,8 @@ import { importBudgetFile, BudgetFileAudit, BudgetFileFreeze, BudgetFileImportRe
 import { interpretBudgetFile, readBudgetCsv } from './interpret';
 import { loadExportLines, loadFileDimensions, loadPreflight } from './load';
 import { buildPreflight, changedSinceText } from './preflight';
+import { planWithAccess } from './access';
+import { isLimitedTransaction } from '../../data-access/line-write-checks';
 import { BudgetFileReport, BudgetFileExportScope, BudgetFileScope, emptyCatalog } from './types';
 
 const LEVEL_RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
@@ -61,7 +63,8 @@ export class BudgetFileService {
     const numbers = interpretBudgetFile(read, scope).map((row) => row.itemNumber);
     const settings = await this.currencySettings.getSettings(caller.tenantId, { manager });
     const loaded = await loadPreflight(manager, caller.tenantId, numbers, settings.allowedCurrencies);
-    const report = buildPreflight({
+    // A limited person's file follows the line rules, row by row (planning/data-scoped-access §4.2).
+    const { report } = await planWithAccess(manager, {
       scope,
       read,
       catalog: loaded.catalog,
@@ -71,6 +74,7 @@ export class BudgetFileService {
       canCreateSuppliers: options.canCreateSuppliers,
       currentYear,
       labels: loaded.labels,
+      access: loaded.access,
     });
     const natureOf = new Map(loaded.stored.map((line) => [line.id, line.nature]));
     await nameChanges(manager, natureOf, caller.tenantId, report);
@@ -82,7 +86,7 @@ export class BudgetFileService {
     ids: readonly string[],
     caller: BudgetFileCaller,
     options: { language: unknown; amountYears: unknown; columns: unknown; detail: unknown },
-  ): Promise<{ filename: string; content: string }> {
+  ): Promise<{ filename: string; content: string; dataAccessLimited: boolean }> {
     const manager = requireManager(caller.manager);
     const language = await languageOf(manager, caller.tenantId, caller.userId, options.language);
     const currentYear = new Date().getFullYear();
@@ -90,12 +94,18 @@ export class BudgetFileService {
     const columns = parseFileColumns(options.columns, shownFileColumns(settings.enabled));
     const years = parseAmountYears(options.amountYears, currentYear);
     const detail = parseDetail(options.detail);
-    // The lines of the source list (one nature or explicitly both), each with its nature cell.
+    // The lines of the source list (one nature or explicitly both), each with its nature cell, read
+    // under the person's policies: a limited person's file holds the lines they read, whole.
     const loaded = await loadExportLines(manager, scope, caller.tenantId, ids);
     const built = buildBudgetExport({
       language, years, columns, detail, lines: loaded.lines, dimensions: loaded.dimensions,
     });
-    return { filename: BUDGET_FILE_NAME, content: writeCsv({ language, headers: built.headers, rows: built.rows }) };
+    return {
+      filename: BUDGET_FILE_NAME,
+      content: writeCsv({ language, headers: built.headers, rows: built.rows }),
+      // The routes say it in the `X-Data-Access` header ("Calculated on your access").
+      dataAccessLimited: await isLimitedTransaction(manager),
+    };
   }
 
   /**

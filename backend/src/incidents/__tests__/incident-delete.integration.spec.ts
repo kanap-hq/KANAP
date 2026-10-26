@@ -12,6 +12,8 @@ import { assert, captureAudit, inRolledBackTransaction, runSpecs, seedTenant, se
 //   entries, attachments (rows, then files no other row uses), its search entry; the links to
 //   applications, assets and Knowledge documents go and those objects stay; an audit entry is written;
 // - each regulatory reporting field alone refuses the delete (409, INCIDENT_HAS_REGULATORY_RECORDS);
+// - a closed or cancelled incident refuses the delete too (409, INCIDENT_CLOSED_OR_CANCELLED), in
+//   the single delete, the bulk delete and the delete check: it keeps its number;
 // - the counts the confirmation shows, refused incidents apart; a bulk delete refuses those and
 //   deletes the others; another tenant's incident is not found;
 // - the deleted incident leaves "Recently viewed".
@@ -173,6 +175,53 @@ async function testBulkDelete() {
   });
 }
 
+async function testClosedAndCancelledRefuseTheDelete() {
+  for (const status of ['closed', 'cancelled'] as const) {
+    await inRolledBackTransaction(async (runner) => {
+      const tag = `incdel-${status}`;
+      const a = await seed(runner, tag);
+      await runner.query(`UPDATE incidents SET status = $1 WHERE id = $2`, [status, a.incidentId]);
+      const { svc, deleted, documentDeletes } = fakes();
+      const name = `INC-1 Outage ${tag}`;
+
+      // The check used by the screen: refused, and left out of what the delete would remove.
+      assert.deepEqual(await svc.deleteCheck([a.incidentId, a.otherId], { manager: runner.manager }), {
+        incidents: 1, blocked: 1, review_documents: 0, tasks: 0, entries: 1, attachments: 0,
+        applications: 1, assets: 1, documents: 1,
+        refused: [{ id: a.incidentId, name, code: 'INCIDENT_CLOSED_OR_CANCELLED', usages: [] }],
+      });
+
+      // The single delete: 409, the dedicated code, and nothing removed.
+      let refusal: unknown = null;
+      try {
+        await svc.delete(a.incidentId, { manager: runner.manager, userId: null });
+      } catch (err) {
+        refusal = err;
+      }
+      assert.ok(refusal instanceof RecordInUseException && refusal instanceof ConflictException, `${status}: a 409`);
+      const body = (refusal as ConflictException).getResponse() as Record<string, any>;
+      assert.equal(body.code, 'INCIDENT_CLOSED_OR_CANCELLED');
+      assert.deepEqual(body.usages, []);
+      assert.equal(body.message, `Cannot delete incident "${name}": it is ${status}: it stays in the register.`);
+      assert.equal(await exists(runner, 'incidents', a.incidentId), true, `${status}: kept`);
+      assert.equal(await exists(runner, 'tasks', a.taskId), true, `${status}: task kept`);
+      assert.deepEqual(documentDeletes, [], `${status}: review kept`);
+      assert.deepEqual(deleted, [], `${status}: files kept`);
+
+      // The bulk delete reports it per line, like regulatory incidents, and deletes the open one.
+      const result = await svc.bulkDelete([a.incidentId, a.otherId], null, { manager: runner.manager });
+      assert.deepEqual(result.deleted, [a.otherId]);
+      assert.equal(result.failed.length, 1);
+      assert.equal(result.failed[0].id, a.incidentId);
+      assert.equal((result.failed[0] as any).code, 'INCIDENT_CLOSED_OR_CANCELLED');
+      assert.deepEqual((result.failed[0] as any).usages, []);
+      assert.equal(result.failed[0].reason, `Cannot delete incident "${name}": it is ${status}: it stays in the register.`);
+      assert.equal(await exists(runner, 'incidents', a.incidentId), true);
+      assert.equal(await exists(runner, 'incidents', a.otherId), false);
+    });
+  }
+}
+
 async function testOtherTenantNotFound() {
   await inRolledBackTransaction(async (runner) => {
     const a = await seed(runner, 'incdel-a');
@@ -190,6 +239,7 @@ void runSpecs('incident-delete', [
   ['delete removes what belongs to the incident and keeps the linked objects', testDeleteRemovesWhatBelongs],
   ['impact counts', testImpactCounts],
   ['each regulatory field refuses the delete', testEachRegulatoryFieldRefuses],
+  ['a closed or cancelled incident refuses the delete', testClosedAndCancelledRefuseTheDelete],
   ['bulk delete refuses regulatory incidents and deletes the others', testBulkDelete],
   ['another tenant is not found', testOtherTenantNotFound],
 ]);

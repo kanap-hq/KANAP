@@ -52,7 +52,7 @@ import {
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { useTenant } from '../../tenant/TenantContext';
-import { StatusDot, useKanapDialogs } from '../../components/design';
+import { StatusDot, unsavedConfirm, useKanapDialogs } from '../../components/design';
 import { fieldResetSx } from '../../theme/formSx';
 import {
   PROJECT_ORIGIN_TABS,
@@ -102,6 +102,10 @@ interface TaskData {
   related_object_type: 'spend_item' | 'contract' | 'capex_item' | 'project' | 'incident' | null;
   related_object_id: string | null;
   related_object_name: string | null;
+  /** The task names a budget line the person cannot read: `related_object_name` is its reference alone, without a link. */
+  related_object_hidden?: boolean;
+  /** A contract outside the access: it has no reference, the screen shows "Contract outside your access". */
+  related_object_hidden_kind?: 'contract' | null;
   phase_id: string | null;
   phase_name: string | null;
   // Classification fields
@@ -246,6 +250,8 @@ export default function TaskWorkspacePage() {
   const [dirty, setDirty] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // Handed over a task whose line or contract the person cannot read: they stay an observer.
+  const [stillFollowing, setStillFollowing] = React.useState(false);
   const [initialized, setInitialized] = React.useState(false);
   const dirtyRef = React.useRef(false);
   const createInitKeyRef = React.useRef<string | null>(null);
@@ -264,6 +270,8 @@ export default function TaskWorkspacePage() {
   // Description autosave
   const [descSaveStatus, setDescSaveStatus] = React.useState<'idle' | 'saving' | 'saved'>('idle');
   const descAutosaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Bumped when close is cancelled, so the effect below restarts a timer that close had cleared.
+  const [descriptionAutosaveNonce, setDescriptionAutosaveNonce] = React.useState(0);
   const savedDescriptionRef = React.useRef('');
   const descSavingRef = React.useRef(false);
   const pendingDescriptionFocusRef = React.useRef(false);
@@ -441,6 +449,7 @@ export default function TaskWorkspacePage() {
 
   const linkedTask = liveTask || task;
   const linkedBudgetId = linkedTask && ['spend_item', 'capex_item'].includes(linkedTask.related_object_type ?? '')
+    && !linkedTask.related_object_hidden
     ? linkedTask.related_object_id : null;
   const { data: linkedBudgetLine } = useQuery({
     ...budgetLineDetailQuery(linkedBudgetId ?? ''),
@@ -474,7 +483,8 @@ export default function TaskWorkspacePage() {
     const type = relatedKindFromType(source?.related_object_type ?? null);
     const relatedId = source?.related_object_id;
     const relatedName = (source?.related_object_name ?? '').trim();
-    if (!type || !relatedId || !relatedName) return null;
+    // A line the person cannot read has no page to go back to.
+    if (!type || !relatedId || !relatedName || source?.related_object_hidden) return null;
     return { type, id: relatedId, name: relatedName };
   }, [displayedTask]);
   const originMatchesRelated = originMatchesParent(origin, breadcrumbParent);
@@ -930,11 +940,12 @@ export default function TaskWorkspacePage() {
     if (nextType === null && nextId !== null) {
       throw new Error(t('portfolio:workspace.task.messages.invalidStandaloneRelation'));
     }
-    if (nextType !== null && !nextId) {
+    const isRelationPatch = hasRelatedType || hasRelatedId;
+    // A line the person cannot read comes without its id: the task keeps it while the relation is untouched.
+    if (nextType !== null && !nextId && (isRelationPatch || !snapshot.related_object_hidden)) {
       throw new Error(t('portfolio:workspace.task.messages.relatedItemRequired'));
     }
 
-    const isRelationPatch = hasRelatedType || hasRelatedId;
     return {
       endpoint: isRelationPatch
         ? `/tasks/${snapshot.id}/move`
@@ -966,7 +977,8 @@ export default function TaskWorkspacePage() {
     sidebarSaveQueueRef.current = sidebarSaveQueueRef.current.then(async () => {
       try {
         const { endpoint, payload, nextType, nextId, isRelationPatch } = buildSidebarPatchRequest(snapshot, requestPatch);
-        await api.patch(endpoint, payload);
+        const res = await api.patch(endpoint, payload);
+        if ((res?.data as { stillFollowing?: unknown } | undefined)?.stillFollowing === true) setStillFollowing(true);
         pendingSidebarPatchCountRef.current = Math.max(0, pendingSidebarPatchCountRef.current - 1);
         if (isRelationPatch) {
           invalidateTaskRelationQueries(
@@ -1115,7 +1127,7 @@ export default function TaskWorkspacePage() {
     descAutosaveTimerRef.current = timer;
 
     return () => clearTimeout(timer);
-  }, [description, isCreate, initialized, task, canManageCurrentTask, handleDescriptionAutosave]);
+  }, [description, descriptionAutosaveNonce, isCreate, initialized, task, canManageCurrentTask, handleDescriptionAutosave]);
 
   const handleSave = async () => {
     if (!task || saving || !canManageCurrentTask) return;
@@ -1133,7 +1145,8 @@ export default function TaskWorkspacePage() {
       if (nextType === null && nextId !== null) {
         throw new Error(t('portfolio:workspace.task.messages.invalidStandaloneRelation'));
       }
-      if (nextType !== null && !nextId) {
+      // A line the person cannot read comes without its id: the task keeps it while the relation is untouched.
+      if (nextType !== null && !nextId && (relationChanged || !task.related_object_hidden)) {
         throw new Error(t('portfolio:workspace.task.messages.relatedItemRequired'));
       }
 
@@ -1219,7 +1232,37 @@ export default function TaskWorkspacePage() {
   };
 
   const handleBack = async () => {
+    // Close and back ask before leaving a saved task. A new task has nothing to keep.
+    // Clearing the debounce does not re-run the effect that owns it, so Stay starts it again.
+    const resumeDescriptionAutosave = descAutosaveTimerRef.current != null;
+    if (descAutosaveTimerRef.current) {
+      clearTimeout(descAutosaveTimerRef.current);
+      descAutosaveTimerRef.current = null;
+    }
     await waitForSidebarSaves();
+    if (!isCreate && dirty) {
+      const outcome = await dialogs.confirmOutcome({
+        ...unsavedConfirm(t, 'saveAndLeave'),
+        stayLabel: t('common:unsaved.leaveWithoutSaving.cancel'),
+      });
+      if (outcome === 'stay') {
+        if (resumeDescriptionAutosave) setDescriptionAutosaveNonce((n) => n + 1);
+        return;
+      }
+      if (outcome === 'confirm') {
+        setSaving(true);
+        try { await handleSave(); } catch { setSaving(false); return; }
+        setSaving(false);
+      } else {
+        if (task) {
+          setTitle(task.title || '');
+          setDescription(task.description || '');
+          setForm(buildTaskFormFromTask(task));
+        }
+        resetClassificationTouched();
+        setDirty(false);
+      }
+    }
     navigate(originPath);
   };
 
@@ -1287,7 +1330,7 @@ export default function TaskWorkspacePage() {
     }
     await waitForSidebarSaves();
     if (dirty) {
-      const proceed = await dialogs.confirm(t('portfolio:workspace.task.confirmations.unsavedNavigate'));
+      const proceed = await dialogs.confirm(unsavedConfirm(t, 'saveAndLeave'));
       if (proceed) {
         setSaving(true);
         try { await handleSave(); } catch { setSaving(false); return; }
@@ -1813,6 +1856,11 @@ export default function TaskWorkspacePage() {
       {error && (
         <Alert severity="error" onClose={() => setError(null)} sx={{ mx: 2, mt: 1 }}>
           {error}
+        </Alert>
+      )}
+      {stillFollowing && (
+        <Alert severity="info" onClose={() => setStillFollowing(false)} sx={{ mx: 2, mt: 1 }} data-testid="task-still-following">
+          {t('portfolio:workspace.task.messages.stillFollowing')}
         </Alert>
       )}
 

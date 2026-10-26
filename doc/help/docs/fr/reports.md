@@ -9,6 +9,8 @@ Rendez-vous dans **Rapports** depuis le menu principal pour ouvrir le hub de rap
 - Chemin : **Rapports**
 - Autorisations : `reporting:reader` (minimum)
 
+Pour une personne dont l'[accès aux données](data-access.md) est limité, chaque rapport compte les lignes qu'elle voit, sans total du groupe.
+
 ---
 
 ## Hub de rapports
@@ -211,6 +213,8 @@ Vue détaillée des ventilations de refacturation d'une société avec départem
 - Bouton séparé **Exporter les flux en CSV**
 
 **Tableau des KPI** (lorsque activé) : Mêmes colonnes que le tableau KPI de la refacturation globale, avec une ligne « Totaux globaux » en bas pour comparaison.
+
+**Accès aux données limité** : une personne limitée ouvre les sociétés de ses nœuds société, ou toutes les sociétés avec **Tout**. Les lignes de refacturation montrent alors la part refacturée à la société, avec la société qui paie, le pourcentage de ventilation et les départements ; une ligne qu'elle ne voit pas autrement affiche sa référence sans lien. Les chiffres des autres sociétés et les totaux globaux sont retirés, et un nœud centre de coûts n'ouvre pas ce rapport. Voir [Accès aux données](data-access.md#what-a-limited-person-sees).
 
 ### Export
 

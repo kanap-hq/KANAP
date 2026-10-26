@@ -17,13 +17,17 @@ import {
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 import { INCIDENT_REVIEW_SLOT } from '../knowledge/integrated-document.constants';
 import {
+  IMPORT_ENTRY_CONTENT,
   hasPendingIncidentReview,
   incidentCsvConfig,
   takePendingIncidentReview,
   takePreviousIncidentStatus,
   wasInsertedByImport,
 } from './incident-csv.config';
-import { INCIDENT_FROZEN_STATUSES, IncidentViewer, incidentVisibilitySql } from './incident-visibility';
+import { isReservedIncidentStatusMove } from './incident.entity';
+import { IncidentEntryKind } from './incident-entry.entity';
+import { INCIDENT_FROZEN_STATUSES, IncidentViewer } from './incident-visibility';
+import { INCIDENT_LIST_FROM, IncidentsService } from './services/incidents.service';
 
 /** Timestamps are read as UTC ISO; the config writes them in the exporting user's zone. */
 const isoUtc = (column: string) => `to_char(i.${column} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS ${column}`;
@@ -51,7 +55,7 @@ function newSavepointName(): string {
   return `incident_csv_import_${randomUUID().replace(/-/g, '')}`;
 }
 
-const IMPORT_REVIEW_CHANGE_NOTE = 'Imported from CSV';
+const IMPORT_REVIEW_CHANGE_NOTE = IMPORT_ENTRY_CONTENT;
 const IMPORT_REVIEW_ENTRY_CONTENT = 'Incident review imported from CSV';
 const CLOSURE_CHANGE_NOTES: Record<string, string> = {
   closed: 'Incident closed',
@@ -61,8 +65,10 @@ const CLOSURE_CHANGE_NOTES: Record<string, string> = {
 /**
  * CSV import/export for the incident register.
  *
- * Export writes the register in reference order (INC-1, INC-2, …); import
- * upserts on that reference (see incident-csv.config.ts).
+ * Export follows the list when it is given the list's query (filters, search,
+ * sort): the same `buildWhere` and visibility predicate, so the file holds what
+ * the list shows and nothing it hides. Import upserts on the reference (see
+ * incident-csv.config.ts).
  *
  * The `review` column is virtual: it lives in the `incidents:review` integrated
  * document. Export hydrates it in one batched query under the visibility SQL
@@ -77,6 +83,7 @@ export class IncidentsCsvService {
     private readonly importSvc: CsvImportService,
     private readonly integratedDocs: IntegratedDocumentsService,
     private readonly itOpsSettings: ItOpsSettingsService,
+    private readonly incidents: IncidentsService,
   ) {}
 
   async export(opts: {
@@ -89,17 +96,22 @@ export class IncidentsCsvService {
     viewer?: IncidentViewer;
     scope?: 'template' | 'data';
     fields?: string[];
+    /**
+     * The list's query (`filters`, `q`, `sort`, `asset_id`, `application_id`): the file then holds
+     * what the list shows, through the list's own WHERE builder and visibility predicate. Absent,
+     * the whole register the viewer may see.
+     */
+    query?: Record<string, unknown>;
   }): Promise<CsvExportResult> {
     const { manager, tenantId, viewer, scope, fields } = opts;
-    const params: unknown[] = [tenantId];
-    const visibility = incidentVisibilitySql('i', viewer, params);
-
-    const rows: Array<Record<string, any>> = scope === 'template'
-      ? []
-      : await manager.query(
-        `SELECT ${EXPORT_COLUMNS} FROM incidents i WHERE i.tenant_id = $1${visibility} ORDER BY i.item_number ASC`,
-        params,
+    let rows: Array<Record<string, any>> = [];
+    if (scope !== 'template') {
+      const listQuery = await this.incidents.exportQuery(opts.query ?? {}, { manager, tenantId, viewer });
+      rows = await manager.query(
+        `SELECT ${EXPORT_COLUMNS} ${INCIDENT_LIST_FROM} WHERE ${listQuery.where} ORDER BY ${listQuery.orderBy}`,
+        listQuery.params,
       );
+    }
 
     if (rows.length > 0 && (!fields || fields.includes(REVIEW_COLUMN))) {
       await this.hydrateReviews(rows, manager, tenantId);
@@ -250,22 +262,56 @@ export class IncidentsCsvService {
     }
 
     const nextStatus = String(entity.status ?? '');
+    const previous = previousStatus == null ? null : String(previousStatus);
+    if (!nextStatus || nextStatus === previous) return;
+
+    // A move Reopen or Cancel owns: an administrator's import journals it with
+    // the import reason. A cancellation also freezes the review, as Cancel does;
+    // a backwards move keeps the review as Reopen does.
+    if (previous != null && isReservedIncidentStatusMove(nextStatus, previous)) {
+      const snapshot = nextStatus === 'cancelled'
+        ? await this.snapshotReviewForStatus(entity, context, CLOSURE_CHANGE_NOTES.cancelled)
+        : null;
+      const changed: Record<string, { from: unknown; to: unknown }> = {
+        status: { from: previous, to: nextStatus },
+      };
+      if (snapshot) changed.review_version = { from: null, to: snapshot };
+      await this.addSystemEntry(
+        manager,
+        context,
+        entity.id,
+        IMPORT_ENTRY_CONTENT,
+        changed,
+        nextStatus === 'cancelled' ? 'status_change' : 'reopen',
+      );
+      return;
+    }
+
     if (
       !INCIDENT_FROZEN_STATUSES.has(nextStatus)
-      || INCIDENT_FROZEN_STATUSES.has(String(previousStatus ?? ''))
+      || INCIDENT_FROZEN_STATUSES.has(previous ?? '')
     ) return;
 
-    await manager.query(
+    const snapshot = await this.snapshotReviewForStatus(
+      entity,
+      context,
+      CLOSURE_CHANGE_NOTES[nextStatus] ?? 'Incident closed',
+    );
+    await this.addSystemEntry(manager, context, entity.id, null, {
+      status: { from: previous, to: nextStatus },
+      review_version: { from: null, to: snapshot },
+    });
+  }
+
+  /** Locks the incident row (§3.3), freezes the review, returns the version reference. */
+  private async snapshotReviewForStatus(entity: any, context: CsvImportContext, changeNote: string) {
+    await context.manager.query(
       'SELECT id FROM incidents WHERE id = $1 AND tenant_id = $2 FOR UPDATE',
       [entity.id, context.tenantId],
     );
-    const snapshot = await this.integratedDocs.snapshotReviewForIncidentTransition(entity.id, context.userId ?? null, {
-      manager,
-      changeNote: CLOSURE_CHANGE_NOTES[nextStatus] ?? 'Incident closed',
-    });
-    await this.addSystemEntry(manager, context, entity.id, null, {
-      status: { from: previousStatus, to: nextStatus },
-      review_version: { from: null, to: snapshot },
+    return this.integratedDocs.snapshotReviewForIncidentTransition(entity.id, context.userId ?? null, {
+      manager: context.manager,
+      changeNote,
     });
   }
 
@@ -275,11 +321,12 @@ export class IncidentsCsvService {
     incidentId: string,
     content: string | null,
     changedFields: Record<string, { from: unknown; to: unknown }>,
+    kind: IncidentEntryKind = 'system',
   ): Promise<void> {
     await manager.query(
       `INSERT INTO incident_entries (tenant_id, incident_id, kind, content, changed_fields, author_id)
-       VALUES ($1, $2, 'system', $3, $4::jsonb, $5)`,
-      [context.tenantId, incidentId, content, JSON.stringify(changedFields), context.userId ?? null],
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6)`,
+      [context.tenantId, incidentId, kind, content, JSON.stringify(changedFields), context.userId ?? null],
     );
   }
 

@@ -7,15 +7,12 @@ Verbindungen dokumentieren die Netzwerkpfade auf Infrastrukturebene zwischen Ser
 Navigieren Sie zu **IT-Landschaft > Verbindungen**, um Ihr Verbindungsverzeichnis zu sehen. Klicken Sie auf **Verbindung hinzufügen**, um Ihren ersten Eintrag zu erstellen.
 
 **Pflichtfelder**:
-  - **Verbindungs-ID**: Ein eindeutiger Identifikator (z. B. `CONN-WEB-DB-001`)
   - **Name**: Ein beschreibender Name
-  - **Verbindungstyp**: Server zu Server oder Multi-Server
-  - **Quelle** / **Ziel**: Eine Entität, ein Cluster oder ein Server an jedem Ende (für Server zu Server)
+  - **Topologie**: Server zu Server oder Multi-Server
+  - **Endpunkte**: Eine Quelle und ein Ziel (Server zu Server) oder mindestens zwei Server (Multi-Server)
   - **Protokolle**: Mindestens ein Netzwerkprotokoll
 
-**Dringend empfohlen**:
-  - **Zweck**: Warum diese Verbindung existiert
-  - **Lebenszyklus**: Aktueller Status
+KANAP gibt jeder Verbindung eine Referenz, zum Beispiel `CONN-12`.
 
 **Tipp**: Verbindungen können mit Schnittstellen-Bindungen verknüpft werden, um zu zeigen, welche Infrastruktur jede Anwendungsintegration unterstützt.
 
@@ -26,7 +23,7 @@ Navigieren Sie zu **IT-Landschaft > Verbindungen**, um Ihr Verbindungsverzeichni
 Die Liste gibt Ihnen einen filterbaren Überblick über jede Verbindung in Ihrem Verzeichnis.
 
 **Standardspalten**:
-  - **Verbindungs-ID**: Eindeutiger Identifikator (klicken, um Arbeitsbereich zu öffnen)
+  - **Referenz**: Die Referenz der Verbindung, zum Beispiel `CONN-12` (klicken, um Arbeitsbereich zu öffnen)
   - **Name**: Verbindungsname (klicken, um Arbeitsbereich zu öffnen)
   - **Topologie**: Server zu Server oder Multi-Server
   - **Quelle** / **Ziel**: Die verbundenen Endpunkte
@@ -36,7 +33,7 @@ Die Liste gibt Ihnen einen filterbaren Überblick über jede Verbindung in Ihrem
   - **PII**: Ob personenbezogene Daten über diese Verbindung übertragen werden
   - **Risiko**: Manuell oder Abgeleitet (zeigt die Anzahl verknüpfter Schnittstellen)
   - **Lebenszyklus**: Aktueller Status
-  - **Erstellt**: Wann der Datensatz erstellt wurde
+  - **Erstellt am**: Wann der Datensatz erstellt wurde
 
 **Zusätzliche Spalten** (über Spaltenauswahl):
   - **Server**: Anzahl der Server in einer Multi-Server-Verbindung
@@ -55,99 +52,70 @@ Die Liste gibt Ihnen einen filterbaren Überblick über jede Verbindung in Ihrem
 
 ---
 
-## Verbindungstypen
+## Verbindungstypen { #connection-types }
 
 ### Server zu Server
 
-Eine direkte Verbindung zwischen zwei bestimmten Endpunkten. Jede Seite kann ein Server, ein Cluster oder eine benannte Entität sein:
+Eine direkte Verbindung zwischen zwei Endpunkten. Jede Seite ist ein Server, ein Cluster oder eine Entität:
 
-- **Quelle**: Wo der Datenverkehr seinen Ursprung hat. Wählen Sie einen Server, Cluster oder eine Entität
-- **Ziel**: Wo der Datenverkehr endet. Gleiche Optionen
-- Sie können nicht sowohl einen Server als auch eine Entität für dieselbe Seite auswählen; wählen Sie eine der beiden Optionen
-
-Wenn ein Endpunkt ein Cluster ist, erinnert eine Notiz daran, dass Mitglieds-Hosts im Server-Arbeitsbereich verwaltet werden.
+- **Quelle**: Wo der Datenverkehr beginnt
+- **Ziel**: Wo der Datenverkehr endet
+- Eine Seite trägt genau einen Server, Cluster oder eine Entität
+- Quelle und Ziel können nicht dasselbe Asset sein
 
 ### Multi-Server
 
-Eine Verbindung mit mehreren Servern (z. B. lastverteilte Cluster oder Mesh-Topologien):
+Eine Verbindung zwischen mehreren Servern, etwa eine Replikation zwischen Knoten oder ein Mesh. Wählen Sie mindestens zwei Server oder Cluster.
 
-- Wählen Sie mindestens zwei Server aus dem Picker **Verbundene Server**
-- Verwenden Sie **Schichten**, um den Routing-Pfad zwischen ihnen zu definieren
+### Verbindungen auf einem Cluster { #connections-on-a-cluster }
+
+Eine Quelle, ein Ziel, ein Server einer Multi-Server-Verbindung oder das Gerät eines Hops kann ein Cluster sein. Die Verbindung gilt dann für die Mitglieder des Clusters in Betrieb. Ein später hinzugefügtes Mitglied erhält sie ebenfalls. Ein aus dem Cluster entferntes Mitglied verliert sie. Ein ausgemustertes Mitglied erhält nichts, und ein ausgemusterter Cluster gibt nichts weiter.
+
+Die Auswahlfelder kennzeichnen einen Cluster mit einem Symbol und listen seine Mitglieder unter seinem Namen.
+
+Wenn Sie einen Server wählen, der zu einem Cluster gehört, fragt KANAP **Mit dem Cluster verbinden?**. **Mit dem Cluster verbinden** setzt den Cluster auf die Verbindung, für alle seine Mitglieder. **Nur diesem Server** behält den Server. KANAP fragt nicht, wenn die andere Seite bereits dieser Cluster oder eines seiner Mitglieder ist: Die Verbindung bleibt auf dem Server.
+
+Eine Multi-Server-Liste, die einen Cluster und eines seiner Mitglieder enthält, behält nur den Cluster. Eine Meldung nennt die aus der Liste entfernten Mitglieder. Eine Liste muss mindestens zwei Server behalten.
+
+Der Reiter [Netzwerk](assets.md#network) jedes Mitglieds listet die Verbindungen seiner Cluster, und die [Verbindungskarte](connection-map.md) zeichnet die Mitglieder eines Clusters.
 
 ---
 
 ## Der Verbindungs-Arbeitsbereich
 
-Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Er hat vier Reiter: **Übersicht**, **Schichten**, **Kritikalität & Compliance** und **Verwandte Schnittstellen**.
+Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Er hat zwei Reiter: **Übersicht** und **Pfad**. Die Eigenschaftsleiste rechts enthält **Lebenszyklus**, **Topologie**, **Risikomodus**, **Kritikalität**, **Datenklasse**, **Enthält PII** und **Erstellt am**. Änderungen werden automatisch gespeichert.
 
-**Löschen**, ein Papierkorbsymbol in der Kopfzeile, löscht die Verbindung nach einer Bestätigung (`infrastructure:member`). Die Bestätigung zählt die Schnittstellen-Bindungen, von denen sie getrennt wird. Die Schnittstellen selbst bleiben.
+**Löschen**, ein Papierkorbsymbol in der Kopfzeile, löscht die Verbindung nach einer Bestätigung (`infrastructure:member`). Die Bestätigung zählt die Schnittstellen-Bindungen, von denen sie gelöst wird. Die Schnittstellen selbst bleiben.
 
 ### Übersicht
 
-Der Reiter Übersicht erfasst Identität und Topologie der Verbindung.
+- **Beschreibung**: Warum diese Verbindung existiert und was sie überträgt
+- **Endpunkte**: Quelle und Ziel oder die Server einer Multi-Server-Verbindung. Siehe [Verbindungstypen](#connection-types)
+- **Protokolle**: Ein oder mehrere Netzwerkprotokolle aus Ihren Verbindungstyp-Einstellungen, mit ihren typischen Ports
+- **Risikoableitung**: Im abgeleiteten Risikomodus die Schnittstellen, aus denen das Risiko stammt, mit ihrer Kritikalität, Datenklasse und PII
+- **Verknüpfte Schnittstellen**: Die mit dieser Verbindung verknüpften Schnittstellen-Bindungen. **Vorhandene verknüpfen** verknüpft eine weitere
 
-**Was Sie bearbeiten können**:
-  - **Verbindungs-ID**: Eindeutiger Identifikator
-  - **Name**: Anzeigename
-  - **Zweck**: Warum diese Verbindung existiert (Freitext)
-  - **Verbindungstyp**: Server zu Server oder Multi-Server
-  - **Quelle** / **Ziel**: Für Server zu Server: wählen Sie einen Server, Cluster oder eine Entität aus einem gruppierten Dropdown
-  - **Verbundene Server**: Für Multi-Server: suchen und wählen Sie zwei oder mehr Server
-  - **Protokolle**: Ein oder mehrere Netzwerkprotokolle (aus Ihren Verbindungstyp-Einstellungen)
-  - **Lebenszyklus**: Aktueller Status
-  - **Notizen**: Zusätzlicher Kontext
+### Pfad
 
-Wenn Sie Protokolle auswählen, zeigt das System deren typische Ports als Referenz an.
+Der Reiter Pfad dokumentiert den Netzwerkpfad der Verbindung, Hop für Hop: Reverse Proxys, Firewalls, Load Balancer. Erstellen Sie zuerst die Verbindung, um Hops hinzuzufügen.
 
----
+Jeder Hop hat:
 
-### Schichten
+  - Eine Funktion, zum Beispiel Firewall, Reverse Proxy oder Load Balancer
+  - **Gerät**: Ein Server, ein Cluster oder eine Entität, oder nichts, wenn das Gerät nicht dokumentiert ist. Ein Server, der zu einem Cluster gehört, löst dieselbe Frage aus wie ein Endpunkt. Siehe [Verbindungen auf einem Cluster](#connections-on-a-cluster)
+  - **Protokolle (überschrieben)** und **Port**: Wenn sie von der Verbindung abweichen
+  - **Notizen**
 
-Der Reiter Schichten ermöglicht es Ihnen, einen geordneten Netzwerkpfad von bis zu drei Sprüngen zu definieren, nützlich für die Dokumentation von Reverse Proxies, Firewalls oder zwischengeschaltetem Routing.
+**Hop hinzufügen** fügt einen Hop am Ende an. Die Pfeile ordnen die Hops neu, der Papierkorb entfernt einen. Jede Änderung wird sofort gespeichert.
 
-**Was jede Schicht erfasst**:
-  - **Reihenfolge**: Sequenznummer (1 bis 3)
-  - **Name**: Eine Bezeichnung für die Schicht (z. B. `direct`, `reverse_proxy`, `firewall`)
-  - **Quelle** / **Ziel**: Eine Entität, ein Cluster oder ein Server an jedem Ende des Sprungs
-  - **Protokolle**: Welche Protokolle auf dieser Schicht verwendet werden
-  - **Port-Override**: Benutzerdefinierter Port, wenn er vom Protokollstandard abweicht (automatisch befüllt, wenn Sie ein Protokoll auswählen)
-  - **Notizen**: Schichtspezifische Notizen
+### Risiko
 
-Schichten werden unabhängig vom Reiter Übersicht gespeichert. Verwenden Sie die Schaltfläche **Schichten speichern**, um Ihre Änderungen zu speichern.
+**Risikomodus**, in der Eigenschaftsleiste:
 
-**Tipp**: Sie müssen die Verbindung selbst speichern, bevor Sie Schichten hinzufügen können.
-
----
-
-### Kritikalität & Compliance
-
-Dieser Reiter steuert die Risikoklassifizierung und Datenschutzeinstellungen.
-
-**Risikomodus**:
   - **Manuell**: Sie legen Kritikalität, Datenklasse und PII direkt fest
-  - **Abgeleitet**: Werte werden aus verknüpften Schnittstellen-Bindungen aggregiert: der Reiter zeigt die effektiven Werte und listet jede beitragende Schnittstelle einmal auf, mit den Umgebungen, in denen sie gebunden ist
+  - **Abgeleitet**: Die Werte stammen aus den verknüpften Schnittstellen-Bindungen. Die Felder sind schreibgeschützt und zeigen die höchsten Werte der verknüpften Schnittstellen
 
-**Felder**:
-  - **Kritikalität**: eine Stufe der Geschäftskritikalität aus dem Katalog Ihrer Organisation, unter [Einstufungen und Kontinuität](it-ops-settings.md#einstufungen-und-kontinuitat). Die Standardstufen sind Kritisch, Hoch, Mittel und Niedrig
-  - **Datenklasse**: Aus den Datenklassifizierungseinstellungen Ihrer Organisation
-  - **Enthält PII**: Ob personenbezogene Daten über die Verbindung übertragen werden
-
-Wenn der Risikomodus auf Abgeleitet steht, werden die Felder Kritikalität, Datenklasse und PII schreibgeschützt und spiegeln die höchsten Werte aller verknüpften Schnittstellen wider.
-
----
-
-### Verwandte Schnittstellen
-
-Dieser Reiter zeigt, welche Schnittstellen-Bindungen mit dieser Verbindung verknüpft sind.
-
-**Was Sie sehen werden**:
-  - **Schnittstelle**: Name und Code, mit Kritikalitäts-/Datenklasse-/PII-Chips
-  - **Umgebung**: Bindungsumgebung und Schichttyp
-  - **Quell-Endpunkt** / **Ziel-Endpunkt**: Die Endpunkte der Bindung
-  - **Lebenszyklus**: Schnittstellen-Lebenszyklus-Status
-  - **Aktionen**: Eine Schaltfläche zur Navigation zum Schnittstellen-Arbeitsbereich
-
-Dieser Reiter ist schreibgeschützt. Um eine Schnittstellen-Bindung mit einer Verbindung zu verknüpfen, verwenden Sie den Schnittstellen-Arbeitsbereich oder die Verbindungskarte.
+**Kritikalität** verwendet die Stufen aus [Einstufungen und Kontinuität](it-ops-settings.md#einstufungen-und-kontinuitat). Die Standardstufen sind Kritisch, Hoch, Mittel und Niedrig. **Datenklasse** stammt aus Ihren Einstellungen zur Datenklassifizierung.
 
 ---
 

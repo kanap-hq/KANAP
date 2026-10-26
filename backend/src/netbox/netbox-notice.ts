@@ -20,6 +20,7 @@ export type NetboxNoticeCode =
   // --- values KANAP could not take over ---
   | 'os_not_in_catalog'
   | 'os_ambiguous'
+  | 'os_cluster_with_members'
   // No longer emitted: a name whose end is not a known DNS suffix is kept
   // whole as the host name. Records written by earlier builds still carry the
   // code, so it stays readable.
@@ -76,6 +77,8 @@ const TEXTS: Record<NetboxNoticeCode, (params: Record<string, string>) => string
     `The operating system "${p.value}" is not in the IT settings, so it was left unchanged.`,
   os_ambiguous: (p) =>
     `The operating system "${p.value}" matches more than one entry in the IT settings, so it was left unchanged.`,
+  os_cluster_with_members: (p) =>
+    `This asset is a cluster with members, so the operating system "${p.value}" was left out.`,
   domain_not_in_catalog: (p) =>
     `The domain "${p.value}" is not in the IT settings, so it was left unchanged.`,
   hostname_invalid: (p) =>
@@ -136,6 +139,7 @@ const NOTICE_PRIORITY: Record<NetboxNoticeCode, 1 | 2 | 3> = {
   netbox_status_attention: 2,
   os_not_in_catalog: 1,
   os_ambiguous: 1,
+  os_cluster_with_members: 1,
   domain_not_in_catalog: 1,
   hostname_invalid: 1,
   status_not_mapped: 1,

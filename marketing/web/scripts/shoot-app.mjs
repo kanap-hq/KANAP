@@ -14,8 +14,11 @@
  *   node scripts/shoot-app.mjs --inspect-fixed        # debug floating elements
  *
  * Output defaults to 2000x1050 CSS px at deviceScaleFactor 2 (4000x2100 PNG).
- * Site and blog standard (Fried, 2026-10-10): --width 1920 --height 1080 --scale 1
- * --lang en (1920 x 1080 PNG, English UI whatever the page language).
+ * Site and blog standard (Fried, 2026-10-10, frames 2026-10-25): --lang en and a
+ * 1920 x 1080 PNG, English UI whatever the page language. Each shot picks its frame
+ * (see FRAME_SET): the smallest window that still shows its whole subject (no
+ * column, section or text cut that the caption talks about) with KANAP's layout
+ * intact. Compare candidates with --frames 1920,1600,1440,1280, then set `frame`.
  *
  * Requirements:
  *   - chromium at /usr/bin/chromium (override with CHROMIUM_PATH)
@@ -40,6 +43,21 @@ const THEME = flag('theme', 'light');
 const WIDTH = Number(flag('width', 2000));
 const HEIGHT = Number(flag('height', 1050));
 const SCALE = Number(flag('scale', 2)); // 1 for the site standard: 1920 x 1080 window, 1920 px PNG
+// Frame (Fried, 2026-10-25): every site and blog shot is a 1920 x 1080 PNG, but each
+// shot picks the browser window that reads best: 1920, 1600, 1440 or 1280 CSS px
+// wide, zoomed to fill 1920 px. Never below 1280: KANAP switches to its compact
+// layout. A shot sets `frame: 1600` in its definition; --frame forces one for the
+// run; --frames 1920,1600,1280 shoots each candidate as name@1600.png to compare.
+const FRAME_SET = [1920, 1600, 1440, 1280];
+const FRAME = Number(flag('frame', 0));
+const FRAMES = (flag('frames', '') || '').split(',').map(Number).filter(Boolean);
+for (const f of [FRAME, ...FRAMES].filter(Boolean)) {
+  if (!FRAME_SET.includes(f)) {
+    console.error(`frame ${f} is not one of ${FRAME_SET.join(', ')}`);
+    process.exit(2);
+  }
+}
+const frameViewport = (frame) => ({ width: frame, height: Math.round((frame * 1080) / 1920), deviceScaleFactor: 1920 / frame });
 const EMAIL = process.env.APP_EMAIL;
 const PASSWORD = process.env.APP_PASSWORD;
 
@@ -63,6 +81,7 @@ if (!EMAIL || !PASSWORD) {
   process.exit(2);
 }
 
+const WHY_CVE = process.env.WHY_CVE || 'CVE-2026-34486'; // CVE opened by the vulnerabilities-why-this-row shot (short, clean "Why this row")
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Dashboard widgets load independently; wait until the last skeleton is gone.
@@ -145,8 +164,162 @@ const waitForReport = (page) =>
     .waitForFunction(() => document.querySelector('main table tbody tr, main .ag-row, main .ag-charts-wrapper canvas'), { timeout: 40000 })
     .catch(() => console.warn('report still empty'));
 
+// Open a contract from the list by its name (contracts have no business reference, their address carries a UUID).
+// Plaid feature page: ask Plaid a question in a fresh conversation, list of conversations folded,
+// and wait for the answer to end. Each run writes a new conversation on the tenant.
+const askPlaid = async (page, question, done) => {
+  await page.waitForSelector('textarea', { timeout: 30000 });
+  const toggle = await page.$('main button:has(svg[data-testid="MenuIcon"])');
+  if (toggle && (await page.evaluate(() => /New conversation/.test(document.querySelector('main')?.innerText || '')))) {
+    await toggle.click();
+    await sleep(600);
+  }
+  await page.type('textarea', question);
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelector('button[aria-label="Stop generating"]'), { timeout: 30000 }).catch(() => {});
+  await page.waitForFunction(() => !document.querySelector('button[aria-label="Stop generating"]'), { timeout: 240000 });
+  if (done) await page.waitForFunction(done, { timeout: 60000 }).catch(() => console.warn('expected answer not seen'));
+  await sleep(1500);
+  // Bring the question to the top of the conversation, the answer below it.
+  await page.evaluate(() => {
+    const you = [...document.querySelectorAll('main *')].filter((n) => !n.children.length && n.textContent?.trim() === 'You').pop();
+    you?.scrollIntoView({ block: 'start' });
+  });
+  await sleep(600);
+};
+
+const openContract = async (page, name) => {
+  await page.waitForFunction((n) => document.querySelector('main')?.innerText.includes(n), { timeout: 30000 }, name);
+  const [cell] = await page.$$(`xpath/.//main//*[normalize-space(text())="${name}"]`);
+  await cell.click();
+  await page.waitForFunction(() => location.pathname.includes('/overview'), { timeout: 20000 });
+  await page.waitForFunction(() => /Without a decision|Deadlines/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+  await sleep(1000);
+};
+
 const PAGES = {
   dashboard: { path: '/', waitFor: 'main', prepare: waitForWidgets },
+  // Incidents feature page (October 2026), fromage fixture on the local dev tenant (INC-20 to INC-29): INC-23 carries a filled review,
+  // INC-24 the personal data and authority notification, INC-22 the most links.
+  'feature-incidents-register': {
+    frame: 1920,
+    // Category filter: leaves out test incidents filed under "Other" on the shared dev tenant.
+    path: `/it/incidents?filters=${encodeURIComponent(JSON.stringify({ category: { filterType: 'set', values: ['infrastructure', 'application', 'data', 'supplier', 'security'] } }))}`,
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => document.querySelectorAll('main .ag-row, main table tbody tr').length > 3, { timeout: 30000 }).catch(() => {});
+    },
+  },
+  'feature-incidents-review': {
+    frame: 1920,
+    path: '/it/incidents/INC-23/overview',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Root cause'), { timeout: 30000 }).catch(() => {});
+    },
+  },
+  'feature-incidents-compliance': {
+    frame: 1280,
+    path: '/it/incidents/INC-24/relations',
+    waitFor: 'main',
+    async prepare(page) {
+      await openProperties(page);
+      await sleep(1000);
+      // Scroll the Properties panel down to its compliance fields.
+      await page.evaluate(() => {
+        for (const el of document.querySelectorAll('aside, aside *')) {
+          if (el.scrollHeight > el.clientHeight + 20 && getComputedStyle(el).overflowY !== 'visible') el.scrollTop = el.scrollHeight;
+        }
+      });
+    },
+  },
+  'feature-incidents-relations': {
+    frame: 1440, path: '/it/incidents/INC-22/relations', waitFor: 'main' },
+  // Plaid feature page (2026-10-26): a question across contracts and applications, answered from live data.
+  'feature-plaid-query': {
+    frame: 1920,
+    path: '/ai',
+    waitFor: 'main',
+    async prepare(page) {
+      await askPlaid(page, 'Which contracts must be decided in the next 90 days, and which applications do they cover? Answer in one message, with a table.', () => /SAP Maintenance/.test(document.querySelector('main')?.innerText || ''));
+    },
+  },
+  // Plaid feature page: a write prepared as a preview (nothing approved).
+  'feature-plaid-preview': {
+    frame: 1440,
+    path: '/ai',
+    waitFor: 'main',
+    async prepare(page) {
+      await askPlaid(page, 'Move task T-30 to in progress and add the comment: Call with SAP on 5 November to discuss the 2027 price. Show me the preview first.', () => /pending/i.test(document.querySelector('main')?.innerText || ''));
+// The preview stays open in the side panel, with its fields and its pending state.
+      await sleep(800);
+    },
+  },
+  // Plaid feature page: the Claude section uses a screenshot of Claude itself (claude.ai, taken by the maintainer).
+  // Plaid feature page: Admin > Plaid, provider status, included model and its processing location, monthly usage, feature switches.
+  'feature-plaid-admin': { frame: 1440, path: '/admin/ai', waitFor: 'main' },
+  // Contracts feature page: list with the 2026 commitment, budget and gap. Read-only.
+  'feature-contracts-list': {
+    frame: 1920,
+    path: '/ops/contracts',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await sleep(1000);
+      await (await page.$('.MuiSelect-select')).click();
+      await page.waitForSelector('li[role="option"]', { timeout: 10000 });
+      await sleep(400);
+      await clickText(page, 'li[role="option"]', String(new Date().getFullYear()));
+      await page.waitForFunction(() => /Committed \d{4}/.test(document.querySelector('main')?.innerText || ''), { timeout: 20000 }).catch(() => {});
+      await sleep(1500);
+    },
+  },
+  // Contracts feature page: SAP Maintenance & Support, deadlines and the renewal decision. Read-only.
+  'feature-contracts-overview': {
+    frame: 1440,
+    path: '/ops/contracts',
+    waitFor: 'main',
+    async prepare(page) {
+      await openContract(page, 'SAP Maintenance & Support');
+    },
+  },
+  // Contracts feature page: the same contract after "Terminate" (nothing confirmed: the panel is left open as is).
+  'feature-contracts-cancel': {
+    frame: 1920,
+    path: '/ops/contracts',
+    waitFor: 'main',
+    async prepare(page) {
+      await openContract(page, 'SAP Maintenance & Support');
+      await clickText(page, 'button', 'Terminate');
+      await page.waitForFunction(() => /lose this contract|will not renew/.test(document.querySelector('main')?.innerText || ''), { timeout: 20000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
+  // Contracts feature page: Budget tab of SAP Maintenance & Support (contracts have no business reference).
+  'feature-contracts-budget': {
+    frame: 1920,
+    path: '/ops/contracts',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('SAP Maintenance & Support'), { timeout: 30000 });
+      const [cell] = await page.$$('xpath/.//main//*[normalize-space(text())="SAP Maintenance & Support"]');
+      await cell.click();
+      await page.waitForFunction(() => location.pathname.includes('/overview'), { timeout: 20000 });
+      await page.goto(page.url().replace(/\/overview.*$/, '/budget'), { waitUntil: 'domcontentloaded' });
+      await page.waitForFunction(() => document.querySelector('main')?.innerText.includes('Commitment and coverage'), { timeout: 30000 }).catch(() => {});
+      // The current year: its linked lines carry amounts.
+      await clickText(page, 'main button, main [role="tab"]', String(new Date().getFullYear()));
+      await sleep(1500);
+      // Leave out floating development widgets in the bottom right corner.
+      await page.evaluate(() => {
+        for (const el of document.querySelectorAll('body *')) {
+          const cs = getComputedStyle(el);
+          const r = el.getBoundingClientRect();
+          if (cs.position === 'fixed' && r.width > 0 && r.width < 120 && r.bottom > innerHeight - 120 && r.right > innerWidth - 120) el.style.display = 'none';
+        }
+      });
+    },
+  },
   // Same dashboard, after opening a few records: "Recently viewed" is kept in
   // localStorage by each workspace page, so it is only filled within this browser
   // session. Refs (PRJ-6, T-2...) resolve in the URL; last visited shows first.
@@ -784,11 +957,125 @@ const PAGES = {
       await sleep(1000);
     },
   },
+  // Vulnerabilities article (2026-10-24): "Why this row" in the side panel of a Tomcat CVE found by both sources. Read-only.
+  'vulnerabilities-why-this-row-2026-10-24': {
+    path: '/it/vulnerabilities',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await sleep(1000);
+      const cell = (await page.$$(`xpath/.//div[@col-id="cve_id" and normalize-space(.)="${WHY_CVE}"]`))[0];
+      if (cell) await cell.click(); else console.warn(`${WHY_CVE} not found`);
+      await page.waitForFunction(() => document.body.innerText.includes('Why this row'), { timeout: 30000 });
+      await sleep(1000);
+      await clickText(page, 'button', 'Why this row');
+      await page.waitForSelector('ul[id^="why-"]', { timeout: 10000 }).catch(() => console.warn('why list not open'));
+      await sleep(1000);
+    },
+  },
+  // Vulnerabilities article (2026-10-24): "Exploited only" shortcut on the list. Read-only.
+  'vulnerabilities-exploited-only-2026-10-24': {
+    path: '/it/vulnerabilities?exploited=1',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await page.waitForFunction(() => /Total: [\d,]+ rows/.test(document.querySelector('.ag-floating-bottom')?.textContent || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
+  // Vulnerabilities article (2026-10-24): critical application (CheeseTrack), severe badge and Vulnerabilities section. Read-only.
+  'vulnerabilities-application-2026-10-24': {
+    path: '/it/applications/APP-36/operations',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Vulnerabilities\s*\d+/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1000);
+      await page.evaluate(() => {
+        const h = [...document.querySelectorAll('main h1,main h2,main h3,main h4,main h5,main h6,main p,main span,main div')]
+          .find((n) => !n.children.length && /^Vulnerabilities\s*\d+$/.test(n.textContent?.trim() || '')) ||
+          [...document.querySelectorAll('main *')].find((n) => /^Vulnerabilities\s*\d+$/.test(n.textContent?.trim() || ''));
+        h?.scrollIntoView({ block: 'center' });
+      });
+      await sleep(1000);
+    },
+  },
+  // Vulnerabilities article (2026-10-24): dashboard tile "Vulnerabilities in your estate". Read-only.
+  'vulnerabilities-dashboard-tile-2026-10-24': {
+    path: '/',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /Vulnerabilities in your estate/.test(document.body.innerText), { timeout: 30000 });
+      await sleep(1000);
+      await page.evaluate(() => {
+        const t = [...document.querySelectorAll('*')].find((n) => !n.children.length && n.textContent?.trim() === 'Vulnerabilities in your estate');
+        t?.scrollIntoView({ block: 'center' });
+      });
+      await sleep(1000);
+    },
+  },
+  // Incidents article (2026-10-26): journal tab of INC-28 (critical, resolved), dated notes plus severity and status changes. Read-only.
+  'incidents-journal-2026-10-26': {
+    frame: 1600,
+    path: '/it/incidents/INC-28/journal',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /severity|Severity/.test(document.querySelector('main')?.innerText || '') && /database/i.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+      // Scroll the note composer out of the way so the dated entries (status change down to severity change) fill the frame.
+      await page.evaluate(() => {
+        const t = [...document.querySelectorAll('*')].find((n) => !n.children.length && n.textContent?.trim() === 'Status: In progress \u2192 Resolved');
+        if (!t) return;
+        let el = t.parentElement;
+        while (el && el.scrollHeight <= el.clientHeight + 2) el = el.parentElement;
+        if (!el) return;
+        const top = t.getBoundingClientRect().top;
+        const anchor = [...document.querySelectorAll('[role=tab],a,button')].find((n) => /^Journal/.test(n.textContent?.trim() || ''));
+        const stop = (anchor?.getBoundingClientRect().bottom || 200) + 40;
+        el.scrollBy(0, top - stop - 30);
+      });
+      await sleep(700);
+    },
+  },
+  // Incidents article (2026-10-26, retaken after the relations tables were resized): relations tab of INC-28, linked assets, applications, technologies and suggestions. Read-only.
+  'incidents-relations-2026-10-26': {
+    frame: 1600,
+    path: '/it/incidents/INC-28/relations',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /QualityLab LIMS/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
+  // Incidents article (2026-10-26): overview tab of INC-28, description and incident review. Read-only.
+  'incidents-review-2026-10-26': {
+    frame: 1920,
+    path: '/it/incidents/INC-28/overview',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /Root cause/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1500);
+    },
+  },
+  // Incidents article (2026-10-26): register filtered on Critical and Major, Resolved and Closed (leaves out the open test incident INC-43). Read-only; set filters separately (they persist).
+  'incidents-register-2026-10-26': {
+    frame: 1920,
+    path: '/it/incidents?filters=%7B%22severity%22%3A%7B%22filterType%22%3A%22set%22%2C%22values%22%3A%5B%22critical%22%2C%22major%22%5D%7D%2C%22status%22%3A%7B%22filterType%22%3A%22set%22%2C%22values%22%3A%5B%22resolved%22%2C%22closed%22%5D%7D%7D',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await page.waitForFunction(() => /Total \(\d+\)/.test(document.body.innerText), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
 };
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
 // Flags that take a value, so their value is not read as a shot name.
-const VALUE_FLAGS = ['base', 'out', 'theme', 'width', 'height', 'scale', 'lang', 'staffing-item', 'hide', 'cols-off'];
+const VALUE_FLAGS = ['base', 'out', 'theme', 'width', 'height', 'scale', 'lang', 'staffing-item', 'hide', 'cols-off', 'frame', 'frames'];
 const positional = args.filter((a, i) => !a.startsWith('--') && !VALUE_FLAGS.includes(args[i - 1]?.slice(2)));
 // A positional starting with "/" is an ad-hoc path, saved as path-<slug>.png (for scouting).
 const adHoc = (p) => [`path-${p.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')}`, { path: p, waitFor: 'main' }];
@@ -920,20 +1207,26 @@ try {
     }
     // domcontentloaded + explicit wait: the SPA keeps polling, so networkidle0
     // never reliably settles.
-    await page.goto(`${BASE}${def.path}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForSelector(def.waitFor || 'main', { timeout: 20000 }).catch(() => {});
-    // Re-apply the theme + hide rules after a full navigation.
-    await page.evaluate((theme) => {
-      document.documentElement.setAttribute('data-theme', theme);
-      const style = document.createElement('style');
-      style.textContent = '.tsqd-open-btn-container{display:none!important}';
-      document.head.appendChild(style);
-    }, THEME);
-    if (def.prepare) await def.prepare(page);
-    await sleep(2500); // let charts and AG Grid settle
-    const out = `${OUT_DIR}/${name}.png`;
-    await page.screenshot({ path: out, fullPage: has('full') });
-    console.log(out);
+    // --frames shoots every candidate frame (name@1600.png...) to pick the most
+    // readable one; otherwise the shot's own frame, else the run's viewport.
+    const frames = FRAMES.length ? FRAMES : [FRAME || def.frame || 0];
+    for (const frame of frames) {
+      await page.setViewport(frame ? frameViewport(frame) : { width: WIDTH, height: HEIGHT, deviceScaleFactor: SCALE });
+      await page.goto(`${BASE}${def.path}`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.waitForSelector(def.waitFor || 'main', { timeout: 20000 }).catch(() => {});
+      // Re-apply the theme + hide rules after a full navigation.
+      await page.evaluate((theme) => {
+        document.documentElement.setAttribute('data-theme', theme);
+        const style = document.createElement('style');
+        style.textContent = '.tsqd-open-btn-container{display:none!important}';
+        document.head.appendChild(style);
+      }, THEME);
+      if (def.prepare) await def.prepare(page);
+      await sleep(2500); // let charts and AG Grid settle
+      const out = `${OUT_DIR}/${name}${FRAMES.length ? `@${frame}` : ''}.png`;
+      await page.screenshot({ path: out, fullPage: has('full') });
+      console.log(out);
+    }
   }
 } finally {
   await browser.close();

@@ -5,11 +5,15 @@ import {
   projectParticipantCondition,
   taskParticipantCondition,
 } from '../auth/business-contributor-scope';
+import { TASK_HIDDEN_CONTRACT_SQL, TASK_HIDDEN_LINE_REFERENCE_SQL } from '../spend/tasks.service';
+import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 
 interface ServiceOptions {
   manager?: EntityManager;
   /** Present for business contributors: restrict to projects/tasks they take part in (same rule as the lists). */
   accessScope?: ParticipationAccessScope;
+  /** A task of an incident the reader cannot see stays out of the dashboard (empty for incidents:admin). */
+  incidentViewer?: IncidentViewer | null;
 }
 
 export interface MyLeadershipProject {
@@ -79,6 +83,8 @@ export interface StaleTaskItem {
   relatedObjectType: string | null;
   relatedObjectId: string | null;
   relatedObjectName: string | null;
+  /** Set to `contract` when the task names a contract the person cannot read (no id, no name). */
+  relatedObjectHiddenKind?: 'contract';
 }
 
 export interface KnowledgeReviewItem {
@@ -489,6 +495,8 @@ export class DashboardDataService {
       params.push(opts.accessScope.userId);
       scopeSql += ` AND ${taskParticipantCondition('t', `$${params.length}`)}`;
     }
+    // A task of an incident the reader cannot see is absent from the stale tasks tile too.
+    scopeSql += taskIncidentVisibilitySql('t', opts?.incidentViewer, params);
 
     params.push(limit);
 
@@ -515,6 +523,8 @@ export class DashboardDataService {
           WHEN t.related_object_type = 'incident' THEN CASE WHEN inc.confidential THEN 'INC-' || inc.item_number::text ELSE 'INC-' || inc.item_number::text || ' · ' || inc.title END
           ELSE NULL
         END AS related_object_name,
+        ${TASK_HIDDEN_LINE_REFERENCE_SQL} AS related_object_reference,
+        ${TASK_HIDDEN_CONTRACT_SQL} AS related_object_contract_hidden,
         GREATEST(0, FLOOR(EXTRACT(EPOCH FROM (NOW() - t.updated_at)) / 86400))::int AS stale_days
       FROM tasks t
       LEFT JOIN users u ON u.id = t.assignee_user_id AND u.tenant_id = t.tenant_id
@@ -541,8 +551,11 @@ export class DashboardDataService {
       staleDays: Number(row.stale_days || 0),
       assigneeName: row.assignee_name || null,
       relatedObjectType: row.related_object_type || null,
-      relatedObjectId: row.related_object_id || null,
-      relatedObjectName: row.related_object_name || null,
+      // A line the person cannot read (data-scoped access): its reference alone, without its id.
+      // A contract: no name, no id, its kind for the label.
+      relatedObjectId: (row.related_object_contract_hidden || row.related_object_reference) ? null : row.related_object_id || null,
+      relatedObjectName: row.related_object_contract_hidden ? null : (row.related_object_reference || row.related_object_name || null),
+      ...(row.related_object_contract_hidden ? { relatedObjectHiddenKind: 'contract' as const } : {}),
     }));
   }
 

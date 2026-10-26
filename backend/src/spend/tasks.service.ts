@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Repository, EntityManager, DataSource } from 'typeorm';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
-import { incidentRelatedLabelSql } from '../incidents/incident-visibility';
+import { IncidentViewer, incidentRelatedLabelSql, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { textSortKey } from '../common/list-sort';
 import { resolveRecordCreators } from '../audit/record-creator.util';
 import { assertSetFilterModes, bindPositional, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type CompiledCondition } from '../common/ag-grid-filtering';
@@ -23,6 +23,18 @@ export interface TaskListItem {
   related_object_type: string | null;
   related_object_id: string | null;
   related_object_name: string | null;
+  /**
+   * Set (true) when the task names a budget line or a contract the person cannot read (data-scoped
+   * access, spec §5.4 "Champ simple"): `related_object_name` is then the line's reference alone
+   * (`BL-12`), or null for a contract, shown without a link. Absent otherwise.
+   */
+  related_object_hidden?: true;
+  /**
+   * The kind of hidden object, for the screen's label: `contract` shows "Contract outside your
+   * access" without a link (a contract has no business reference); absent for a hidden line, whose
+   * reference is its name.
+   */
+  related_object_hidden_kind?: 'contract';
   // Task type (FK to portfolio_task_types)
   task_type_id: string | null;
   task_type_name: string | null;
@@ -104,11 +116,14 @@ function buildWhereConditions(
   skipField: string | undefined,
   tenantId: string,
   accessScope?: ParticipationAccessScope,
+  viewer?: IncidentViewer | null,
 ) {
   const params: any[] = [requireListTenant(tenantId)];
   const tenantParamRef = '$1';
   // Every condition below is appended as ` AND <atom>` or ` AND (<...>)`, so none widens this one.
   let whereConditions = `t.tenant_id = ${tenantParamRef}`;
+  // A task of an incident the reader cannot see does not exist for them (empty for incidents:admin).
+  whereConditions += taskIncidentVisibilitySql('t', viewer, params);
   const filters: AgFilterModel = rawFilters && typeof rawFilters === 'object' ? rawFilters : {};
   assertSetFilterModes(filters);
 
@@ -327,7 +342,8 @@ function buildWhereConditions(
       (t.related_object_type = 'spend_item' AND si.product_name ILIKE $${params.length}) OR
       (t.related_object_type = 'contract' AND c.name ILIKE $${params.length}) OR
       (t.related_object_type = 'project' AND pp.name ILIKE $${params.length}) OR
-      (t.related_object_type = 'incident' AND ${incidentRelatedLabelSql('inc')} ILIKE $${params.length})
+      (t.related_object_type = 'incident' AND ${incidentRelatedLabelSql('inc')} ILIKE $${params.length}) OR
+      (${TASK_HIDDEN_LINE_REFERENCE_SQL}) ILIKE $${params.length}
     )`;
   }
 
@@ -678,6 +694,29 @@ const TASK_PRIORITY_SCORE_SQL = `CASE
 END`;
 
 /**
+ * The reference of the budget line a task names when the line join found nothing: under a limited
+ * access, a line the person cannot read (`data_access_reference`, SECURITY DEFINER, checks that the
+ * task is visible). NULL for every other task, and for an unscoped person's task whose line exists.
+ */
+export const TASK_HIDDEN_LINE_REFERENCE_SQL = `CASE
+          WHEN t.related_object_type IN ('spend_item', 'capex_item') AND t.related_object_id IS NOT NULL
+               AND si.id IS NULL AND ci.id IS NULL
+          THEN data_access_reference('task', t.id)
+        END`;
+
+/**
+ * Whether a task names a contract the person cannot read (spec §5.4 "Champ simple"): the contract
+ * join (`c`) is filtered by the contract policy, so under a limited access a null join on a
+ * contract task is a hidden contract. An unscoped person's dangling contract task (none today)
+ * keeps its old shape. The row shaping returns no id and no name, and the kind for the screen.
+ */
+export const TASK_HIDDEN_CONTRACT_SQL = `CASE
+          WHEN t.related_object_type = 'contract' AND t.related_object_id IS NOT NULL AND c.id IS NULL
+               AND (SELECT 1 WHERE current_setting('app.da_mode', true) = 'limited') IS NOT NULL
+          THEN true ELSE false
+        END`;
+
+/**
  * The sort keys of the tasks list and of its ids, spelled out as expressions over the joins both
  * queries share (an output alias cannot take a collation). `priority_score` is the computed
  * column both queries project.
@@ -692,7 +731,8 @@ const TASK_SORT_EXPRESSIONS: Record<string, string> = {
   start_date: 't.start_date',
   assignee_name: `COALESCE(u.first_name || ' ' || u.last_name, u.email)`,
   creator_name: `COALESCE(uc.first_name || ' ' || uc.last_name, uc.email)`,
-  related_object_name: `CASE
+  // A hidden line sorts by its reference (BL-n), the name the list shows.
+  related_object_name: `COALESCE(${TASK_HIDDEN_LINE_REFERENCE_SQL}, CASE
       WHEN t.related_object_type IS NULL THEN NULL
       WHEN t.related_object_type = 'spend_item' THEN si.product_name
       WHEN t.related_object_type = 'contract' THEN c.name
@@ -700,7 +740,7 @@ const TASK_SORT_EXPRESSIONS: Record<string, string> = {
       WHEN t.related_object_type = 'incident' THEN ${incidentRelatedLabelSql('inc')}
       WHEN t.related_object_type = 'project' THEN pp.name
       ELSE ''
-    END`,
+    END)`,
   related_object_type: 't.related_object_type',
   task_type_name: 'tt.name',
   phase_name: 'phase.name',
@@ -722,6 +762,20 @@ const TASK_TEXT_SORTS = new Set([
   'application_name', 'asset_name',
 ]);
 
+/**
+ * A row of the list or the detail: a hidden line shows as its reference (`related_object_hidden`),
+ * without its id (as Plaid, MCP and the export); a hidden contract shows no name, no id, and its
+ * kind (`contract`), so the screen can write "Contract outside your access" without a link.
+ */
+function withHiddenReference(row: TaskListItem & { related_object_reference?: string | null; related_object_contract_hidden?: boolean }): TaskListItem {
+  const { related_object_reference: reference, related_object_contract_hidden: contractHidden, ...task } = row;
+  if (contractHidden === true) {
+    return { ...task, related_object_id: null, related_object_name: null, related_object_hidden: true, related_object_hidden_kind: 'contract' };
+  }
+  if (!reference) return task;
+  return { ...task, related_object_id: null, related_object_name: reference, related_object_hidden: true };
+}
+
 /** The ORDER BY key of a task list field: text alphabetically, the creation date by default. */
 async function taskSortKey(manager: EntityManager, field: string): Promise<string> {
   const expr = TASK_SORT_EXPRESSIONS[field] ?? 't.created_at';
@@ -742,15 +796,15 @@ export class TasksService {
     return sessionTenant;
   }
 
-  async list(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope }) {
+  async list(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }) {
     return this.listAllTasks(query, opts);
   }
 
-  async listAllTasks(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope }): Promise<{ items: TaskListItem[]; total: number; page: number; limit: number }> {
+  async listAllTasks(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<{ items: TaskListItem[]; total: number; page: number; limit: number }> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const { page, limit, skip, sort, q, filters } = parsePagination(query);
-    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope);
+    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer);
 
     // Count total
     const countQuery = `
@@ -807,6 +861,8 @@ export class TasksService {
           WHEN t.related_object_type = 'project' THEN pp.name
           ELSE ''
         END as related_object_name,
+        ${TASK_HIDDEN_LINE_REFERENCE_SQL} AS related_object_reference,
+        ${TASK_HIDDEN_CONTRACT_SQL} AS related_object_contract_hidden,
         t.task_type_id,
         tt.name as task_type_name,
         tt.code as task_type_code,
@@ -860,16 +916,16 @@ export class TasksService {
       LIMIT ${limit} OFFSET ${skip}
     `;
 
-    const items = await manager.query(dataQuery, params);
+    const items: TaskListItem[] = (await manager.query(dataQuery, params)).map(withHiddenReference);
 
     return { items, total, page, limit };
   }
 
-  async listIds(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope }): Promise<{ ids: string[]; refs: string[]; total: number }> {
+  async listIds(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<{ ids: string[]; refs: string[]; total: number }> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const { sort, q, filters } = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
-    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope);
+    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer);
 
     const sortField = await taskSortKey(manager, sort.field);
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
@@ -928,7 +984,7 @@ export class TasksService {
     return { ids, refs, total };
   }
 
-  async listFilterValues(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope }): Promise<Record<string, Array<string | null>>> {
+  async listFilterValues(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<Record<string, Array<string | null>>> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const q = (query.q as string) || '';
@@ -952,7 +1008,7 @@ export class TasksService {
     const results: Record<string, Array<string | null>> = {};
 
     for (const field of fields) {
-      const { whereConditions, params } = buildWhereConditions(query, filters, q, field, tenantId, opts?.accessScope);
+      const { whereConditions, params } = buildWhereConditions(query, filters, q, field, tenantId, opts?.accessScope, opts?.viewer);
       if (field === 'application_name' || field === 'asset_name') {
         const relation = field === 'application_name'
           ? { table: 'task_applications', column: 'application_id', target: 'applications' }
@@ -1048,7 +1104,7 @@ export class TasksService {
   }
 
   /** `tenantId`: the request's tenant; without it, the session tenant of the manager. */
-  async getOne(id: string, opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope }): Promise<TaskListItem | null> {
+  async getOne(id: string, opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<TaskListItem | null> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = await this.resolveTenantId(manager, opts?.tenantId);
     const params: any[] = [id, tenantId];
@@ -1057,6 +1113,8 @@ export class TasksService {
       params.push(opts.accessScope.userId);
       accessWhere = ` AND ${taskParticipantCondition('t', `$${params.length}`)}`;
     }
+    // The detail answers like a missing task for a task of an incident the reader cannot see.
+    accessWhere += taskIncidentVisibilitySql('t', opts?.viewer, params);
     const dataQuery = `
       SELECT
         t.id,
@@ -1082,6 +1140,8 @@ export class TasksService {
           WHEN t.related_object_type = 'project' THEN pp.name
           ELSE ''
         END as related_object_name,
+        ${TASK_HIDDEN_LINE_REFERENCE_SQL} AS related_object_reference,
+        ${TASK_HIDDEN_CONTRACT_SQL} AS related_object_contract_hidden,
         t.task_type_id,
         tt.name as task_type_name,
         tt.code as task_type_code,
@@ -1130,7 +1190,7 @@ export class TasksService {
         ${accessWhere}
       LIMIT 1
     `;
-    const rows: TaskListItem[] = await manager.query(dataQuery, params);
+    const rows: TaskListItem[] = (await manager.query(dataQuery, params)).map(withHiddenReference);
     const task = rows[0];
     if (!task) return null;
 
@@ -1146,20 +1206,29 @@ export class TasksService {
   async assertVisible(
     id: string,
     accessScope: ParticipationAccessScope | undefined,
-    opts?: { manager?: EntityManager; tenantId?: string },
+    opts?: { manager?: EntityManager; tenantId?: string; viewer?: IncidentViewer | null },
   ): Promise<void> {
-    if (!accessScope) return;
+    // An unscoped registry admin reads every task: nothing to look up.
+    if (!accessScope && opts?.viewer?.isAdmin) return;
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = await this.resolveTenantId(manager, opts?.tenantId);
+    const params: any[] = [id, tenantId];
+    let accessWhere = '';
+    if (accessScope) {
+      params.push(accessScope.userId);
+      accessWhere = `AND ${taskParticipantCondition('t', `$${params.length}`)}`;
+    }
     const rows = await manager.query(
       `SELECT 1
        FROM tasks t
        WHERE t.id = $1
-         AND t.tenant_id = $3
-         AND ${taskParticipantCondition('t', '$2')}
+         AND t.tenant_id = $2
+         ${accessWhere}
+         ${taskIncidentVisibilitySql('t', opts?.viewer, params)}
        LIMIT 1`,
-      [id, accessScope.userId, tenantId],
+      params,
     );
-    if (rows.length === 0) throw new NotFoundException('Task not found');
+    // The same message a missing T-N gets from `resolveToUuid`: a hidden task is missing.
+    if (rows.length === 0) throw new NotFoundException('Item not found');
   }
 }

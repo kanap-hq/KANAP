@@ -17,6 +17,7 @@ import {
   normalizeMarkdownRichText,
   prepareRecoveredContent,
 } from '../common/markdown-worker';
+import { interfaceSpecificationLanguageOf } from './interface-specification-markdown';
 import { PermissionsService, PermissionLevel } from '../permissions/permissions.service';
 import { PortfolioActivity } from '../portfolio/portfolio-activity.entity';
 import { Document } from './document.entity';
@@ -25,6 +26,7 @@ import { IntegratedDocumentBinding } from './integrated-document-binding.entity'
 import {
   INCIDENT_REVIEW_SLOT,
   incidentReviewLanguage,
+  type IncidentReviewLanguage,
   integratedDocumentSlotLabel,
   integratedDocumentSlotLabels,
   incidentReviewTemplateMarkdown,
@@ -391,6 +393,17 @@ export class IntegratedDocumentsService {
       .find((label) => text.endsWith(` - ${label}`)) ?? definition.displayName;
   }
 
+  /** `users.locale` of the user who creates the document, as an interface language. English when there is no user or no locale. */
+  private async creatorLanguage(
+    userId: string | null | undefined,
+    manager: EntityManager,
+  ): Promise<IncidentReviewLanguage> {
+    const rows: Array<{ locale: string | null }> = userId
+      ? await manager.query(`SELECT locale FROM users WHERE id = $1 AND tenant_id = app_current_tenant()`, [userId])
+      : [];
+    return incidentReviewLanguage(rows[0]?.locale);
+  }
+
   /** The slot's name in the language of the user who creates the document (`users.locale`), English otherwise. */
   private async creatorSlotLabel(
     sourceEntityType: SourceScopedEntityType,
@@ -398,10 +411,10 @@ export class IntegratedDocumentsService {
     userId: string | null | undefined,
     manager: EntityManager,
   ): Promise<string> {
-    const rows: Array<{ locale: string | null }> = userId
-      ? await manager.query(`SELECT locale FROM users WHERE id = $1 AND tenant_id = app_current_tenant()`, [userId])
-      : [];
-    return integratedDocumentSlotLabel(this.getSlotDefinition(sourceEntityType, slotKey), incidentReviewLanguage(rows[0]?.locale));
+    return integratedDocumentSlotLabel(
+      this.getSlotDefinition(sourceEntityType, slotKey),
+      await this.creatorLanguage(userId, manager),
+    );
   }
 
   private getImportChangeNote(sourceEntityType: SourceScopedEntityType): string {
@@ -1003,6 +1016,7 @@ export class IntegratedDocumentsService {
     sourceEntityId: string,
     slotKey: IntegratedDocumentSlotKey,
     manager: EntityManager,
+    language?: IncidentReviewLanguage,
   ): Promise<RecoveredSlotContent> {
     if (sourceEntityType === 'applications') {
       const row = await this.loadApplicationBackfillRow(sourceEntityId, manager);
@@ -1016,7 +1030,7 @@ export class IntegratedDocumentsService {
     if (sourceEntityType === 'interfaces') {
       const row = await this.loadInterfaceBackfillRow(sourceEntityId, manager);
       return {
-        content: await interfaceSpecificationMarkdown(row),
+        content: await interfaceSpecificationMarkdown(row, language),
         source: 'legacy',
         unresolvedLegacyInlineAttachmentIds: [],
       };
@@ -2267,6 +2281,13 @@ export class IntegratedDocumentsService {
     });
   }
 
+  /**
+   * The specification of a new interface. Headings follow the creating user's
+   * language (`users.locale`), English when the user has none. A specification
+   * the caller already wrote is stored as it is. An interface that already has
+   * its document keeps that document: nothing here rewrites an existing one.
+   * The library template stays the English copy (a tenant has no language).
+   */
   async provisionForInterface(
     source: SourceDescriptor,
     body: {
@@ -2277,9 +2298,14 @@ export class IntegratedDocumentsService {
   ): Promise<void> {
     const manager = this.getManager(opts);
     const ownerUserId = await this.loadPreferredOwnerUserId('interfaces', source.id, manager);
-    const explicitContent = String(body?.specification || '').trim()
-      ? body?.specification
-      : (await this.loadRecoveredSlotContent('interfaces', source.id, 'specification', manager)).content;
+    const supplied = String(body?.specification || '').trim() ? body?.specification : null;
+    const explicitContent = supplied ?? (await this.loadRecoveredSlotContent(
+      'interfaces',
+      source.id,
+      'specification',
+      manager,
+      await this.creatorLanguage(userId, manager),
+    )).content;
     await this.ensureBoundDocument('interfaces', source, 'specification', explicitContent, userId, manager, {
       ownerUserId,
       useTemplateWhenBlank: false,
@@ -2314,10 +2340,7 @@ export class IntegratedDocumentsService {
   private async incidentReviewStart(userId: string | null | undefined, manager: EntityManager): Promise<string | null> {
     const slotSetting = await this.getSlotSetting('incidents', 'review', manager);
     if (!isIncidentReviewSystemTemplate(slotSetting.template_content_markdown)) return null;
-    const rows: Array<{ locale: string | null }> = userId
-      ? await manager.query(`SELECT locale FROM users WHERE id = $1 AND tenant_id = app_current_tenant()`, [userId])
-      : [];
-    return incidentReviewTemplateMarkdown(incidentReviewLanguage(rows[0]?.locale));
+    return incidentReviewTemplateMarkdown(await this.creatorLanguage(userId, manager));
   }
 
   /**
@@ -2832,7 +2855,18 @@ export class IntegratedDocumentsService {
     }
 
     const context = await this.loadSourceRecoveryContext(sourceEntityType, sourceEntityId, manager);
-    const recovered = await this.loadRecoveredSlotContent(sourceEntityType, sourceEntityId, slotKey, manager);
+    // A missing specification is written once, in the language of the user who opens it.
+    // A backfill has no user, so it stays on the English headings.
+    const recoveredLanguage = sourceEntityType === 'interfaces'
+      ? await this.creatorLanguage(actorUserId, manager)
+      : undefined;
+    const recovered = await this.loadRecoveredSlotContent(
+      sourceEntityType,
+      sourceEntityId,
+      slotKey,
+      manager,
+      recoveredLanguage,
+    );
 
     if (recovered.source === 'legacy') {
       await this.backfillSourceSlot(
@@ -3138,7 +3172,19 @@ export class IntegratedDocumentsService {
       return;
     }
 
-    const recovered = await this.loadRecoveredSlotContent(sourceEntityType, context.source.id, slotKey, manager);
+    // A specification is rebuilt in the language its headings still show, so a
+    // French document matches the French copy of the same fields. English when
+    // the first heading is not a shipped one.
+    const recoveredLanguage = sourceEntityType === 'interfaces'
+      ? interfaceSpecificationLanguageOf(document.content_markdown) ?? undefined
+      : undefined;
+    const recovered = await this.loadRecoveredSlotContent(
+      sourceEntityType,
+      context.source.id,
+      slotKey,
+      manager,
+      recoveredLanguage,
+    );
     const normalizedDocumentContent = await normalizeMarkdownRichText(document.content_markdown, {
       fieldName: 'content_markdown',
       enforceSizeLimit: false,

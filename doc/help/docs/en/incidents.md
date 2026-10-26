@@ -47,9 +47,9 @@ Navigate to **IT Landscape > Incidents** to see the register. Click **New incide
 
 These permissions also cover the incident review and the PDF export, so someone who works on incidents does not need any Knowledge permission to write the review. See [Overview](#overview).
 
-A restricted incident is hidden from everyone except register administrators, the reporter and the owner. On a stock tenant that means Administrator and IT Landscape Administrator, plus whoever logged or owns that record. Readers and contributors who are not the reporter or owner do not see it in the list, in search, in chat or in a CSV export. Opening it by reference returns the same “not found” as a missing number. Linked tasks keep the `INC-N` reference but drop the title. The incident review is covered by the same restriction, wherever it is reached from: Knowledge, search, the assistant, exports and the images pasted into it.
+A restricted incident is hidden from everyone except register administrators, the reporter and the owner. On a stock tenant that means Administrator and IT Landscape Administrator, plus whoever logged or owns that record. Readers and contributors who are not the reporter or owner do not see it in the list, in search, in chat or in a CSV export. Opening it by reference returns the same “not found” as a missing number. Its linked tasks are hidden from them too: in the task list, in search, on the dashboard, in Plaid and among linked records. The incident review is covered by the same restriction, wherever it is reached from: Knowledge, search, the assistant, exports and the images pasted into it.
 
-**Restrict to register administrators** is in the properties drawer, under Classification. A contributor can turn it on while they can still see the record; only an administrator can turn it off, including after the incident is closed. The change is written to the journal. The audit log, document relation chips and “recently viewed” still show the title to people who already have those screens.
+**Restrict to register administrators** is in the properties drawer, under Classification. A contributor can turn it on while they can still see the record; only an administrator can turn it off, including after the incident is closed. The change is written to the journal. The audit log shows the entries of a restricted incident, of its review and of its tasks only to people who can see the incident, and document relation chips leave its title out. Only the “recently viewed” list, kept in each person's browser, can still show the title to someone who opened the incident before it was restricted.
 
 ---
 
@@ -74,9 +74,9 @@ The list is the register itself: every incident, newest detection first.
 
 **Default sort**: **Detected** descending (most recent first).
 
-**Additional columns** (hidden by default, available via the column chooser): **Closed**, **Applications**, **Created**.
+**Additional columns** (hidden by default, available via the column chooser): **Closed**, **Applications**, **Created**, **Personal data**, **Notification required** and **Notified on**. **Personal data** and **Notification required** offer a yes/no filter.
 
-**Filtering**: Category, Severity, Status and Owner offer checkbox filters whose options are computed from the incidents currently in view, so you only see values that exist in the result set. Date columns offer date filters, including a range: filter **Detected** between two dates to produce a quarterly or yearly extract. The search box matches the title, the description, the reference (`INC-14`), and the names and references of linked assets and applications, so a search for a hostname such as `PAR-ESX-01` lists the incidents on that asset. Words that only appear in the incident review are found by the global search and by the assistant rather than by this box.
+**Filtering**: Category, Severity, Status and Owner offer checkbox filters whose options are computed from the incidents currently in view, so you only see values that exist in the result set. Date columns offer date filters, including a range: filter **Detected** between two dates to produce a quarterly or yearly extract. The search box matches the title, the description, the reference (`INC-14`), and the names and references of linked assets and applications, so a search for a hostname such as `PAR-ESX-01` lists the incidents on that asset. Words that only appear in the incident review are found by the global search and by the assistant rather than by this box. The global search, the `@` picker in Plaid and the MCP server also find an incident by the name, the `AST-N` reference, the hostname or the FQDN of its linked assets.
 
 **Tip**: combine Severity = Critical, Major with a **Detected** range to build the shortlist most steering committees and audits ask for.
 
@@ -124,7 +124,7 @@ The drawer stays visible on every tab and saves as you edit.
 
 ### Overview
 
-The Overview tells the story of the incident in two parts: a short description, then the incident review. Both save automatically as you type.
+The Overview tells the story of the incident in two parts: a short description, then the incident review. Both save automatically as you type. Attachments close the page.
 
 **Description** is one or two sentences on what happened, as observed. It is the summary that appears in the list, in search results and at the top of the PDF report.
 
@@ -142,11 +142,13 @@ Rewrite them, remove the ones you do not need, add your own. For a minor inciden
 
 The headings come in the language of the person who logs the incident (English, French, German or Spanish). A template your administrators have rewritten keeps its own words.
 
-The template is an ordinary Knowledge document, stored in the **Templates** library under the **Incident review** document type, so a knowledge administrator can rewrite it to match your own post-mortem format. A new template applies to the incidents logged afterwards and never rewrites a review that already exists.
+The template is an ordinary Knowledge document, stored in the **Templates** library under the **Incident review** document type. Anyone with `knowledge:admin` edits it like any other document of that library, to match your own post-mortem format. A new template applies to the incidents logged afterwards and never rewrites a review that already exists.
 
 Every save that changes the review keeps a version, so the text can be read back as it stood at any moment, including at the closure of the incident. See [Journal](#journal).
 
 The review is itself a Knowledge document, with its own `DOC-N` reference, filed in the **Incidents** folder of the **Managed Docs** library. Writing it from the incident and exporting the PDF use the incident permissions alone. Opening the same document directly in Knowledge also requires the Knowledge permissions for that library. Either way it stays tied to the incident: it is frozen when the incident is closed or cancelled, and hidden from anyone who cannot see a restricted incident.
+
+**Attachments** hold the files that back the record: screenshots, log extracts, mail exports, the supplier's incident report. With `incidents:contributor`, drag and drop files or click to select them. Click an attachment to download it. The section appears once the incident has a file, or when you can edit it. On a closed or cancelled incident the files stay readable, and adding or deleting them is possible again after reopening.
 
 ---
 
@@ -154,7 +156,7 @@ The review is itself a Knowledge document, with its own `DOC-N` reference, filed
 
 The journal is what makes this a register rather than a form. It lists everything that happened to the incident, most recent first, and **nothing in it can be edited or deleted**, by anyone, at any time.
 
-**Adding a note**: type it in the composer at the top and click **Add** (or press Ctrl+Enter). The date and time next to the button set the moment the note refers to. The time is typed on 24 hours (23:40). It defaults to now, and you can set it to the past: a note added on Tuesday can be recorded as having happened at 23:40 on Saturday, and it will sort into the timeline at that point. KANAP separately stores the moment the note was actually saved, and that timestamp is never editable, so backdating stays honest.
+**Adding a note**: type it in the composer at the top and click **Add** (or press Ctrl+Enter). The date and time next to the button set the moment the note refers to. The time is typed on 24 hours (23:40). It defaults to now, and you can set it to the past: a note added on Tuesday can be recorded as having happened at 23:40 on Saturday, and it will sort into the timeline at that point. KANAP separately stores the moment the note was actually saved, and nobody can change it, so backdating stays honest. When a note refers to a time earlier than its saving, its row also shows when it was recorded, for example "recorded 27 Oct, 10:12". The PDF report gives both times in two columns.
 
 **Automatic entries** appear alongside your notes:
 
@@ -196,7 +198,7 @@ You only see the sections of the modules you can read. Assets and technologies n
 
 **Tasks**: the follow-up work. Create a task directly from the incident, and it stays attached to it. The task shows "Incident · INC-14" in its own sidebar, and the incident's Tasks column counts it.
 
-Linking is done from the incident side only. A linked asset, application or technology shows the incident in a read-only **Incidents** section on its own Relations tab, so anyone looking at a server sees its history of trouble. Documents and attachments have their own tabs.
+A linked asset, application or technology shows the incident in an **Incidents** section on its own Relations tab, so anyone looking at a server sees its history of trouble. With `incidents:contributor`, you can also link an incident from there. Documents have their own tab.
 
 ---
 
@@ -205,12 +207,6 @@ Linking is done from the incident side only. A linked asset, application or tech
 Knowledge documents linked to this incident: the supplier's report, the procedure that was followed, the note the network team wrote. With `knowledge:member` you can create a document straight from this tab.
 
 The incident review is not listed here. It belongs to the incident itself and is edited on the Overview tab.
-
----
-
-### Attachments
-
-Drag and drop files or click to select them: screenshots, log extracts, mail exports, the supplier's incident report. Click an attachment to download it. Uploads and deletions stop once the incident is closed.
 
 ---
 
@@ -226,11 +222,11 @@ Closing locks the incident. Fields, the incident review, journal notes, links, a
 
 ### Deleting an incident
 
-**Delete** (`incidents:admin`) is a trash icon on the incident page, and on the list once you select rows. It removes a record that has no place in the register, such as a test entry. Other users see neither the button nor the selection.
+**Delete** (`incidents:admin`) is a trash icon on the incident page, and on the list once you select rows. It removes an incident logged by mistake, such as a duplicate or a test entry. Only an open, in progress or resolved incident can be deleted. A closed or cancelled incident stays in the register and keeps its `INC-N` number. Other users see neither the button nor the selection.
 
 Before anything is removed, a confirmation lists what goes with the incident: its incident review, its tasks, its journal entries and its attachments (the files too). It also lists the links that are removed: applications, assets and Knowledge documents stay, only their link to the incident goes. The deletion is recorded in the audit trail.
 
-An incident that holds regulatory reporting data cannot be deleted: **Personal data affected** or **Authority notification required** ticked, **Notified on** or **Parties informed** filled in. Such a record is audit evidence (NIS2 authority notification, and GDPR article 33(5), which requires every personal data breach to be documented). The confirmation says so before anything happens: cancel or close the incident instead. In a selection, those incidents are kept and the others are deleted.
+An incident that holds regulatory reporting data cannot be deleted: **Personal data affected** or **Authority notification required** ticked, **Notified on** or **Parties informed** filled in. Such a record is audit evidence (NIS2 authority notification, and GDPR article 33(5), which requires every personal data breach to be documented). The confirmation says so before anything happens: cancel or close the incident instead. In a selection, the incidents that cannot be deleted are kept and the others are deleted.
 
 ---
 
@@ -245,16 +241,20 @@ Deadlines and thresholds depend on your jurisdiction and sector. KANAP records t
 
 **What the register gives an auditor**:
 
-- A continuous, numbered sequence with no deletions and no gaps
+- A numbered sequence in which closed and cancelled incidents are never deleted
 - For each incident: when it started, when it was noticed, when it was resolved and closed, and who owned it
 - A journal that cannot be rewritten, with every status and severity change dated and attributed
 - The evidence itself, as attachments and linked documents
 - The incident review, with the root cause, the corrective actions and what was learned, kept version by version, and the follow-up tasks that prove the actions were carried out
 - Filtered views by period, severity, category or compliance flag, straight from the list
-- A CSV export of the register (**Export CSV** on the list), for auditors and for your own archive. Restricted incidents are omitted unless you are allowed to see them; the file includes a **Restricted to register administrators** column that can be imported
+- A CSV export of the register (**Export CSV** on the list), for auditors and for your own archive. It follows the filters, the search and the sort of the list, and when a filter is active the dialog shows how many incidents go into the file. Restricted incidents are omitted unless you are allowed to see them; the file includes a **Restricted to register administrators** column that can be imported
 - A PDF report of a single incident (**Export PDF** in the workspace), for the auditor who wants one record rather than the whole register
 
-**Importing an existing register**: **Import CSV** on the list takes a CSV file. Leave the reference column empty to create incidents (KANAP allocates the next INC numbers), or keep the INC-N reference to update the matching records. Each imported incident gets a journal entry saying it came from a file. Export first if you want the exact column layout.
+**Importing an existing register**: **Import CSV** on the list takes a CSV file. Leave the reference column empty to create incidents (KANAP allocates the next INC numbers), or keep the INC-N reference to update the matching records. Each imported incident gets a journal entry saying it came from a file. Export first, or download the empty template, if you want the exact column layout. The template ignores the filters of the list.
+
+The headers, the severity and the status are written in the language of the export. The import accepts headers and values in any of the four languages, and the technical codes too (`major`, `in_progress`).
+
+A status can move forward from a file. Taking it back, or cancelling an incident, needs `incidents:admin`: the journal then records a reopening or a cancellation with the reason "Imported from CSV". For a contributor, such a line is refused with a message.
 
 The file carries the short **Description** in one column and the whole **Incident review** in another, as formatted text. That single review column replaces the former Impact, Root cause, Corrective actions and Lessons learned columns. Headings, lists and links survive the round trip; pasted images do not, because they live in the document. An empty review cell leaves the existing text untouched.
 
@@ -274,11 +274,11 @@ The report follows the language of the interface (English, French, German or Spa
 2. The short description
 3. The incident review as it currently reads, with its formatting and its images
 4. The journal in chronological order, including the review versions the entries refer to
-5. Linked assets, applications, tasks and documents
+5. Linked assets, applications, technologies, tasks (with their assignee and due date) and documents
 6. The compliance fields
 7. The attachments (file name, size and date)
 
-Empty sections are left out, and a review still holding nothing but the untouched template headings counts as empty.
+Empty sections are left out, and a review still holding nothing but the untouched template headings counts as empty. Each linked section follows the reader's permissions: assets and technologies need a read of the infrastructure, applications a read of the applications (a Business Contributor sees the ones they take part in), and tasks a read of the tasks. A section you cannot read is absent.
 
 Export is a read. It works on a closed or cancelled incident; the record stays locked. The button is not shown on **New incident**.
 
@@ -294,7 +294,7 @@ Keep the list short. Categories are what you will group a year of incidents by, 
 
 ## Ask the assistant
 
-Plaid can query the register in chat, with the same permissions as the rest of the application. Ask it for a count ("How many critical incidents this quarter?"), a filtered list ("List of open incidents on PAR-ESX-01"), or a full record ("Summary of INC-2"). The last one includes the journal and the incident review, so a question can be answered from the root cause or the lessons learned. A restricted incident stays out of the answers, of the counts and of the sources, review included.
+Plaid can query the register in chat, with the same permissions as the rest of the application. Ask it for a count ("How many critical incidents this quarter?"), a filtered list ("List of open incidents on PAR-ESX-01"), or a full record ("Summary of INC-2"). The last one includes the journal and the incident review, so a question can be answered from the root cause or the lessons learned. Times are given in your own time zone. When Plaid reads an incident, the linked records follow the same permissions as the PDF report. A restricted incident stays out of the answers, of the counts and of the sources, review included.
 
 ---
 

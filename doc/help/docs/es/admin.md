@@ -11,6 +11,7 @@ Navegue a **Administración** desde el menú principal para acceder al centro de
 - Usuarios y acceso: `users:reader` para ver, `users:admin` para gestionar
 - Roles: `users:reader` para ver, `users:admin` para editar
 - Registro de auditoría: Requiere `users:admin`
+- Acceso a los datos: Requiere `users:admin` y acceso a todos los datos (vea [Acceso a los datos](data-access.md))
 - Facturación: Requiere el rol de administrador de facturación
 - Autenticación: Requiere `users:admin` (con flag de funcionalidad; requiere SSO habilitado)
 - Personalización: Requiere `users:admin` (solo host del espacio de trabajo; accesible desde la barra lateral)
@@ -53,6 +54,8 @@ La página de Registro de auditoría conserva el historial de los cambios de dat
 
 **Cambios de roles**: creación, cambio de nombre y eliminación de un rol, y cada cambio de sus permisos.
 
+**Cambios de acceso a los datos** (tabla **Acceso a los datos**): el modo y los nodos de una persona antes y después, con el origen **Pantalla** o **Importación**. Vea [Acceso a los datos](data-access.md#audit-log).
+
 **Eventos de acceso y de sesión** (tabla **Acceso y sesiones**):
 
 | Evento | Se registra cuando |
@@ -66,7 +69,7 @@ La página de Registro de auditoría conserva el historial de los cambios de dat
 
 **Exportaciones** (tabla **Exportación**): exportaciones CSV, documentos e informes que genera el servidor. La fila indica qué se exportó y quién lo hizo. La exportación del propio registro de auditoría también se registra.
 
-Las filas de acceso, de sesión y de exportación guardan además la **dirección IP** desde la que llegó la solicitud y el **navegador** utilizado. Abra la fila para leerlos en el panel **Después**. Detrás de un proxy inverso, es la dirección IP de la propia persona, siempre que el proxy la transmita (on-premise: consulte el [ejemplo de proxy inverso](on-premise/installation.md#reverse-proxy-example-nginx)).
+Las filas de acceso, de sesión y de exportación guardan además la **dirección IP** desde la que llegó la solicitud y el **navegador** utilizado. Abra la fila para leerlos en las filas **Dirección IP** y **Navegador** de su tabla. Detrás de un proxy inverso, es la dirección IP de la propia persona, siempre que el proxy la transmita (on-premise: consulte el [ejemplo de proxy inverso](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Las contraseñas, los enlaces de acceso y los tokens nunca se escriben en el registro. Cuando alguien intenta iniciar sesión con una dirección de correo electrónico que no tiene cuenta, la fila muestra **Cuenta desconocida** y no conserva la dirección escrita.
 
@@ -84,8 +87,9 @@ Los eventos de acceso y de sesión se eliminan después de **365 días**. Los ca
   - Origen (`user`, `system`, `webhook`)
 - Abrir cualquier fila para ver los detalles completos:
   - Chips de metadatos (fecha, tabla, acción, origen, motivo o referencia de origen, espacio de trabajo, ID de registro, usuario)
-  - Resumen de campos modificados
-  - Comparación lado a lado de los datos JSON **Antes** y **Después**
+  - La referencia de negocio del registro en el encabezado (por ejemplo `PRJ-3`), cuando la tiene
+  - Una tabla de los campos: **Campo**, **Antes** y **Después** para una modificación, **Campo** y **Valor** para cualquier otra entrada. Los nombres de los campos aparecen en su idioma cuando se conocen. Las fechas, los valores sí/no y las personas se muestran de forma legible; los demás identificadores aparecen como **Identificador**, con el valor en una información emergente. Los campos técnicos como `id`, `tenant_id` y `updated_at` se omiten
+  - **Ver datos sin formato** muestra el JSON completo antes y después
 - Exportar el registro a CSV (véase más abajo)
 
 ### Columnas
@@ -163,6 +167,8 @@ Gestione quién puede acceder a KANAP y qué puede hacer.
 - **MFA habilitado**: Si la autenticación multifactor está activa
 - **Creado**: Cuándo se creó el usuario
 
+En cuanto el acceso a los datos de alguien está limitado, una columna **Acceso** muestra el acceso de cada persona: **Todos los datos**, los nombres de sus nodos, o **Ninguno**. Vea [Acceso a los datos](data-access.md).
+
 **Valores de estado**:
 
 | Estado | Significado |
@@ -198,6 +204,7 @@ Acciones de fila, desde el menú al final de cada fila:
 | **Activar** / **Desactivar** | Activar o desactivar la cuenta. Al desactivarla se cierra la sesión de la persona de inmediato. |
 | **Enviar invitación** | Enviar por correo una invitación de inicio de sesión. Oculta para las cuentas de Microsoft Entra. |
 | **Enviar restablecimiento de contraseña** | Enviar por correo un enlace de restablecimiento de contraseña. Se muestra solo para cuentas locales activadas. |
+| **Acceso a los datos** | Abre el usuario en la pestaña **Acceso a los datos**. Se muestra a las personas con acceso a todos los datos, en las filas de otras personas. |
 | **Eliminar** | Eliminar el usuario permanentemente. Los registros en los que trabajó se conservan, sin él. No puede eliminar su propia cuenta. Para bloquear el acceso de una persona y conservar la cuenta, desactívela en su lugar. |
 
 ### Archivo CSV de usuarios
@@ -234,6 +241,8 @@ Consulte [Archivos CSV](csv-files.md) para la codificación, el separador y los 
    - **Empresa** / **Departamento**: Asignación organizacional
    - **Habilitado**: Si el usuario puede iniciar sesión
 4. Haga clic en **Guardar** o **Guardar e invitar** para enviar el correo de inicio de sesión
+
+Cuando modifica un usuario, la ventana tiene dos pestañas: **Identidad**, con los campos anteriores y los roles, y **Acceso a los datos**, que limita a la persona a una parte del presupuesto y de los contratos. Un solo **Guardar** escribe ambas. La pestaña **Acceso a los datos** se muestra a las personas con acceso a todos los datos, en las cuentas de los demás. Vea [Acceso a los datos](data-access.md).
 
 ### Asignación de múltiples roles
 

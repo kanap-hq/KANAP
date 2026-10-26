@@ -1,10 +1,11 @@
 import React from 'react';
-import { Alert, Box, Stack, Typography, useTheme } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Stack, Typography, useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import useBudgetColumns from '../../../hooks/useBudgetColumns';
+import { useApplicationFeedback } from '../applicationFeedback';
 import {
   DASH,
   RelationSections,
@@ -61,7 +62,11 @@ export type ApplicationRelationsData = {
   year: number;
   budget_column: { key: string; label: string };
   budget_lines: BudgetLineRow[] | null;
+  /** The linked lines `budget_lines` leaves out, counted: outside the caller's data access, or all without the budget right. */
+  budget_lines_hidden?: number;
   contracts: ContractRow[] | null;
+  /** The linked contracts `contracts` leaves out: outside the caller's data access. */
+  contracts_hidden?: number;
   projects: ProjectRow[] | null;
   requests: RequestRow[] | null;
   tasks: TaskRow[] | null;
@@ -107,7 +112,8 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
   const budgetColumns = useBudgetColumns();
   const key = applicationRelationsKey(id);
   const lang = i18n.language;
-  const { data, error, setError, link, unlink } = useRelations<ApplicationRelationsData>({
+  const feedback = useApplicationFeedback();
+  const { data, error, setError, link, unlink, loadError, reload } = useRelations<ApplicationRelationsData>({
     path: `/applications/${id}/relations`,
     queryKey: key,
     onChange: onRelationsChange,
@@ -121,8 +127,8 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
   const statusText = (group: 'request' | 'task', status: string | null) => (status ? t(`portfolio:statuses.${group}.${status}`, { defaultValue: status }) : DASH);
 
   const sections: Array<SectionSpec<any>> = [
-    budgetLinesSection({ t, rows: data ? data.budget_lines : [], year, columnLabel, currency: lineCurrency }),
-    contractsSection({ t, rows: data ? data.contracts : [], lang }),
+    budgetLinesSection({ t, rows: data ? data.budget_lines : [], year, columnLabel, currency: lineCurrency, hidden: data?.budget_lines_hidden }),
+    contractsSection({ t, rows: data ? data.contracts : [], lang, hidden: data?.contracts_hidden }),
     projectsSection({ t, rows: data ? data.projects : [], lang }),
     {
       kind: 'requests',
@@ -175,12 +181,30 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
   const suggestions = data?.suggestions ?? [];
   const also = data?.also;
 
+  const nameOf = (kind: string, targetId: string) => {
+    const section = sections.find((item) => item.kind === kind);
+    const row = (section?.rows as Array<{ id: string }> | null | undefined)?.find((item) => item.id === targetId);
+    return section && row ? section.label(row) : '';
+  };
+  const handleLink = async (kind: string, targetId: string, name?: string) => {
+    if (await link(kind, targetId)) {
+      feedback.info(t('workspace.application.relations.feedback.linked', { name: name || nameOf(kind, targetId) }));
+    }
+  };
+  // Unlinking stays immediate; the message offers to put the link back.
+  const handleUnlink = async (kind: string, targetId: string) => {
+    const name = nameOf(kind, targetId);
+    if (await unlink(kind, targetId)) {
+      feedback.undo(t('workspace.application.relations.feedback.unlinked', { name }), async () => { await link(kind, targetId); });
+    }
+  };
+
   const alsoParts: React.ReactNode[] = [];
   if (also?.assets) {
-    alsoParts.push(<Box key="assets" component={RouterLink} to={`/it/applications/${id}/deployments`}>{t('workspace.application.relations.also.assets', { count: also.assets })}</Box>);
+    alsoParts.push(<Box key="assets" component={RouterLink} to="../deployments" relative="path">{t('workspace.application.relations.also.assets', { count: also.assets })}</Box>);
   }
   if (also?.interfaces) {
-    alsoParts.push(<Box key="interfaces" component={RouterLink} to={`/it/applications/${id}/interfaces`}>{t('workspace.application.relations.also.interfaces', { count: also.interfaces })}</Box>);
+    alsoParts.push(<Box key="interfaces" component={RouterLink} to="../interfaces" relative="path">{t('workspace.application.relations.also.interfaces', { count: also.interfaces })}</Box>);
   }
   if (also?.documents) {
     alsoParts.push(onOpenKnowledge
@@ -192,21 +216,37 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
     <Stack spacing={3}>
       {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
+      {loadError && (
+        <Alert
+          severity="error"
+          action={<Button color="inherit" size="small" onClick={reload}>{t('common:buttons.retry')}</Button>}
+        >
+          {t('workspace.application.relations.loadFailed')}
+        </Alert>
+      )}
+      {!loadError && !data && (
+        <Box sx={{ display: 'flex', py: 2 }}>
+          <CircularProgress size={20} aria-label={t('common:selects.loadingEllipsis')} />
+        </Box>
+      )}
+
+      {data && (
       <RelationSections
         sections={sections}
-        loaded={!!data}
+        loaded
         canEdit={canEdit}
         searchKeyPrefix="application"
-        onLink={(kind, targetId) => { void link(kind, targetId); }}
-        onUnlink={(kind, targetId) => { void unlink(kind, targetId); }}
+        onLink={(kind, targetId, name) => { void handleLink(kind, targetId, name); }}
+        onUnlink={(kind, targetId) => { void handleUnlink(kind, targetId); }}
       />
+      )}
 
       <RelationSuggestions
         suggestions={suggestions}
         canEdit={canEdit}
         referenceOf={(row) => (row.type === 'budget_line' ? refOf('budget', row.item_number) : row.type === 'project' ? refOf('project', row.item_number) : null)}
         href={(row) => (row.type === 'contract' ? `/ops/contracts/${row.id}/overview` : pathOf(row.type === 'budget_line' ? 'budget' : 'project', row))}
-        onLink={(row) => { void link(SUGGESTION_KIND[row.type], row.id); }}
+        onLink={(row) => { void handleLink(SUGGESTION_KIND[row.type], row.id, row.name); }}
       />
 
       {alsoParts.length > 0 && (

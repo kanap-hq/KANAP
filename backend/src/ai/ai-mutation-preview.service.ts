@@ -23,7 +23,10 @@ import { AiPolicyService } from './ai-policy.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
 import { AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
-import { mapDatabaseError } from '../common/filters/database-error.mapping';
+import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
+import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
+import { assertLinesEditable } from '../data-access/line-write-checks';
+import { isReservedAiMutation } from './mutation/ai-mutation-reserved';
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
 const MAX_CONVERSATION_PREVIEWS = 50;
@@ -205,6 +208,35 @@ export class AiMutationPreviewService {
       rejected_at: toIso(preview.rejected_at),
       executed_at: toIso(preview.executed_at),
     };
+  }
+
+  /**
+   * A write reserved to unscoped persons (spec §2.7, §5.6: organisation data, closed-list dimension
+   * values, supplier and contact updates): refused to a limited person with 403
+   * `DATA_ACCESS_LIMITED`, as the matching route is (`ai/mutation/ai-mutation-reserved.ts`).
+   */
+  private async assertNotReservedForPerson(
+    context: AiExecutionContextWithManager,
+    toolName: string,
+    entityType: unknown,
+  ): Promise<void> {
+    if (!isReservedAiMutation(toolName, entityType)) return;
+    await assertUnscopedDataAccess({ manager: context.manager, userId: context.userId });
+  }
+
+  /**
+   * A preview of a write on a budget line (its fields, its relations, its versions and amounts)
+   * that the person reads but may not modify: refused when the preview is asked, with the 403
+   * `DATA_ACCESS_LIMITED` the routes give ("This line is read only in your access.", lot 3).
+   * Approval checks again, in the approver's access at that time (`lockBudgetLine`). A line out of
+   * read access never reaches here: its reference matched nothing, as a missing line.
+   */
+  private async assertTargetLineEditable(
+    context: AiExecutionContextWithManager,
+    prepared: Pick<AiPreparedMutationPreview, 'targetEntityType' | 'targetEntityId'>,
+  ): Promise<void> {
+    if (prepared.targetEntityType !== 'spend_items' && prepared.targetEntityType !== 'capex_items') return;
+    await assertLinesEditable(context.manager, [prepared.targetEntityId]);
   }
 
   private getOperationBusinessResource<TInput>(
@@ -422,9 +454,11 @@ export class AiMutationPreviewService {
       this.getOperationBusinessResource(operation, { input }),
       context.manager,
     );
+    await this.assertNotReservedForPerson(context, operation.toolName, (input as { entity_type?: unknown } | null)?.entity_type);
     await this.assertPendingCapacityAvailable(context, context.conversationId ?? null);
 
     const prepared = await operation.prepareCreatePreview(context, input);
+    await this.assertTargetLineEditable(context, prepared);
     const existing = await this.findEquivalentConversationPreview(context, operation.toolName, prepared);
     if (existing) {
       return this.toPreviewDto(existing);
@@ -609,7 +643,7 @@ export class AiMutationPreviewService {
         }
       } catch (error: any) {
         step.status = 'failed';
-        step.error_message = error?.message || 'Preview creation failed.';
+        step.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview creation failed.');
         step.updated_at = new Date();
         await stepRepo.save(step);
         errors.push({
@@ -895,7 +929,7 @@ export class AiMutationPreviewService {
           progressed = true;
         } catch (error: any) {
           step.status = 'failed';
-          step.error_message = error?.message || 'Preview creation failed.';
+          step.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview creation failed.');
           step.updated_at = new Date();
           await stepRepo.save(step);
           progressed = true;
@@ -967,7 +1001,7 @@ export class AiMutationPreviewService {
       }
       preview.status = 'failed';
       preview.approved_at = new Date();
-      preview.error_message = error?.message || 'Preview execution failed.';
+      preview.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview execution failed.');
       const saved = await repo.save(preview);
       const dto = this.toPreviewDto(saved);
       const followUps = await this.advanceMutationPlanAfterPreview(context, saved);
@@ -989,6 +1023,7 @@ export class AiMutationPreviewService {
       this.getOperationBusinessResource(operation, { preview }),
       context.manager,
     );
+    await this.assertNotReservedForPerson(context, preview.tool_name, preview.target_entity_type);
     this.assertConversationScope(preview, context.conversationId ?? null);
 
     if (preview.status !== 'pending') {
@@ -1048,6 +1083,7 @@ export class AiMutationPreviewService {
         this.getOperationBusinessResource(operation, { preview }),
         context.manager,
       );
+      await this.assertNotReservedForPerson(context, preview.tool_name, preview.target_entity_type);
       this.assertConversationScope(preview, context.conversationId ?? null);
 
       if (preview.status !== 'pending') {
@@ -1137,6 +1173,7 @@ export class AiMutationPreviewService {
       this.getOperationBusinessResource(operation, { preview: original }),
       context.manager,
     );
+    await this.assertNotReservedForPerson(context, original.tool_name, original.target_entity_type);
     this.assertConversationScope(original, context.conversationId ?? null);
 
     if (original.status !== 'executed') {
@@ -1149,6 +1186,7 @@ export class AiMutationPreviewService {
     await this.assertPendingCapacityAvailable(context, original.conversation_id ?? null);
 
     const prepared = await operation.prepareReversePreview(context, original);
+    await this.assertTargetLineEditable(context, prepared);
     const repo = this.getRepo(context.manager);
     const now = new Date();
     const expiresAt = new Date(now.getTime() + PREVIEW_TTL_MS);

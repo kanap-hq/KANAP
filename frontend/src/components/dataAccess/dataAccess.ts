@@ -1,0 +1,188 @@
+import type { TFunction } from 'i18next';
+import { formatCount } from '../../i18n/formatters';
+
+/**
+ * Types and display helpers of the data-access administration screens (spec §7.1 to §7.5).
+ * The routes return these shapes (run 6A report): the dialog, the "Access" tabs, the
+ * administration page and the users list column all read them here.
+ */
+
+export type DataAccessLevel = 'read' | 'edit';
+export type DataAccessNodeType = 'all' | 'company' | 'cost_center';
+
+export type AccessNode = {
+  type: DataAccessNodeType;
+  id: string | null;
+  name: string | null;
+  access: DataAccessLevel;
+  /** Cost center and group nodes: their code. */
+  code?: string | null;
+  /** Cost center nodes only. */
+  kind?: 'group' | 'cost_center' | null;
+};
+
+/** A node as the write routes take it. */
+export type AccessNodeInput = { type: DataAccessNodeType; id: string | null; access: DataAccessLevel };
+
+export type PersonAccess = {
+  mode: 'all' | 'limited';
+  nodes: AccessNode[];
+  updated_at: string | null;
+  updated_by_name: string | null;
+  is_administrator: boolean;
+  available: boolean;
+  budget_owner_centers: Array<{ id: string; code: string; name: string }>;
+};
+
+export type DataAccessPreview = { lines: number; editable_lines: number; contracts: number };
+
+/**
+ * The preview sentence, count by count: each part takes its `_one` / `_other` form in the language,
+ * so "1 budget line" and "1 contract" read in the singular.
+ */
+export function previewText(preview: DataAccessPreview, t: TFunction, locale: string): string {
+  const text = (key: string, options: Record<string, unknown>) => t(key, options) as string;
+  const value = (count: number) => formatCount(count, locale);
+  const lines = text('admin:dataAccess.previewLines', {
+    count: preview.lines,
+    value: value(preview.lines),
+  });
+  const editable = text('admin:dataAccess.previewEditable', {
+    count: preview.editable_lines,
+    value: value(preview.editable_lines),
+  });
+  const contracts = text('admin:dataAccess.previewContracts', {
+    count: preview.contracts,
+    value: value(preview.contracts),
+  });
+  return text('admin:dataAccess.preview', { lines, editable, contracts });
+}
+
+export type AccessVia = {
+  type: DataAccessNodeType;
+  id?: string;
+  code?: string | null;
+  name: string | null;
+};
+
+export type CompanyAccessView = {
+  full: Array<{ person: { id: string; name: string }; via: AccessVia; access: DataAccessLevel }>;
+  partial: Array<{ person: { id: string; name: string }; via: AccessVia; access: DataAccessLevel }>;
+};
+
+export type CostCenterAccessView = {
+  direct: Array<{ person: { id: string; name: string }; access: DataAccessLevel }>;
+  inherited: Array<{ person: { id: string; name: string }; via: AccessVia; access: DataAccessLevel }>;
+};
+
+export type DataAccessOverview = {
+  available: boolean;
+  missing: string[];
+  persons: Array<{
+    id: string;
+    name: string;
+    roles: string[];
+    nodes: AccessNode[];
+    updated_at: string | null;
+    updated_by_name: string | null;
+  }>;
+  counts: { limited_persons: number; lines_without_company: number };
+};
+
+/** The body of `PUT /users/:id/data-access` and of the preview route. */
+export function accessBody(mode: 'all' | 'limited', nodes: readonly AccessNode[]): {
+  mode: 'all' | 'limited';
+  nodes: AccessNodeInput[];
+} {
+  return {
+    mode,
+    nodes: mode === 'all'
+      ? []
+      : nodes.map((node) => ({ type: node.type, id: node.id, access: node.access })),
+  };
+}
+
+const TYPE_RANK: Record<DataAccessNodeType, number> = { all: 0, company: 1, cost_center: 2 };
+
+function nodeSortKey(node: AccessNode): string {
+  if (node.type === 'company') return (node.name ?? '').toLocaleLowerCase();
+  return (node.code ?? node.name ?? '').toLocaleLowerCase();
+}
+
+/** The order the routes return: everything, companies by name, cost centers by code. */
+export function sortAccessNodes(nodes: readonly AccessNode[]): AccessNode[] {
+  return [...nodes].sort((a, b) => {
+    const type = TYPE_RANK[a.type] - TYPE_RANK[b.type];
+    if (type !== 0) return type;
+    const byKey = nodeSortKey(a).localeCompare(nodeSortKey(b));
+    if (byKey !== 0) return byKey;
+    return String(a.id ?? '').localeCompare(String(b.id ?? ''));
+  });
+}
+
+/** "Everything", the label of an `all` node. */
+export function everythingLabel(t: TFunction): string {
+  return t('admin:dataAccess.types.everything');
+}
+
+/** The name a node shows in the dialog: names only, "Everything" for the all node. */
+export function accessNodeName(node: AccessNode, t: TFunction): string {
+  if (node.type === 'all') return everythingLabel(t);
+  return node.name || node.code || '';
+}
+
+/** The type column of the dialog: company, cost center group or cost center; empty for everything. */
+export function accessNodeTypeLabel(node: AccessNode, t: TFunction): string {
+  if (node.type === 'all') return '';
+  if (node.type === 'company') return t('admin:dataAccess.types.company');
+  return node.kind === 'group'
+    ? t('admin:dataAccess.types.costCenterGroup')
+    : t('admin:dataAccess.types.costCenter');
+}
+
+/** A node in a sentence or a list: the code of a cost center in parentheses ("Infrastructure (INF-ES)"). */
+export function accessNodeReference(node: AccessNode | AccessVia, t: TFunction): string {
+  if (node.type === 'all') return everythingLabel(t);
+  const name = node.name || node.code || '';
+  if (node.type === 'cost_center' && node.code && node.name) return `${node.name} (${node.code})`;
+  return name;
+}
+
+export function accessLevelLabel(access: DataAccessLevel, t: TFunction): string {
+  return t(`admin:dataAccess.access.${access}`);
+}
+
+/**
+ * The users list field (spec §7.4): the server sends the node type and its name, never a label;
+ * `name` is null for an `all` node.
+ */
+export type UsersListAccess = {
+  mode: 'all' | 'limited';
+  nodes: Array<{ type: DataAccessNodeType; name: string | null }>;
+};
+
+/**
+ * The users list column: "All data" for the mode, the node names ("Everything" for an `all` node)
+ * joined by commas, "None" for a limited person with no node.
+ */
+export function userAccessColumnText(dataAccess: UsersListAccess | null | undefined, t: TFunction): string {
+  if (!dataAccess) return '';
+  if (dataAccess.mode !== 'limited') return t('admin:dataAccess.allData');
+  if (dataAccess.nodes.length === 0) return t('admin:dataAccess.none');
+  return dataAccess.nodes
+    .map((node) => (node.type === 'all' ? everythingLabel(t) : node.name ?? ''))
+    .filter(Boolean)
+    .join(', ');
+}
+
+/** The plain words of what keeps the function unavailable (spec §7.3: no backend words). */
+export function missingPartsText(missing: readonly string[], t: TFunction): string {
+  const keyOf = (part: string) => {
+    switch (part) {
+      case 'schema_create': return 'schemaCreate';
+      default: return part;
+    }
+  };
+  const parts = missing.map((part) => t(`admin:dataAccess.missingParts.${keyOf(part)}`, { defaultValue: part }));
+  return t('admin:dataAccess.missing', { items: parts.join(', ') });
+}

@@ -41,7 +41,9 @@ export function searchRelationItems(
       params: { page: 1, limit: PAGE, sort: 'updated_at:DESC', ...(q ? { q } : {}) },
       signal,
     });
-    return (res.data?.items || []).map((row) => ({
+    // The page holds the most recently updated; it reads by reference, whatever the server's order.
+    const items = [...(res.data?.items || [])].sort((a, b) => (a.item_number ?? Infinity) - (b.item_number ?? Infinity));
+    return items.map((row) => ({
       id: row.id,
       label: labelOf(row),
       ref: refOf(type, row.item_number ?? null),
@@ -74,14 +76,22 @@ export function budgetLinesSection({
   year,
   columnLabel,
   currency,
+  hidden = 0,
 }: {
   t: TFunction;
   rows: BudgetLineRow[] | null;
   year: number;
   columnLabel: string;
   currency: string | null;
+  /**
+   * The linked lines `rows` leaves out (`budget_lines_hidden`): outside the caller's data access,
+   * or all of them when the caller cannot read the budget (`rows` null). Counted, never named.
+   */
+  hidden?: number;
 }): SectionSpec<BudgetLineRow> {
+  const outsideKey = rows === null ? 'count' : rows.length === 0 ? 'only' : 'and';
   return {
+    outside: { count: hidden, text: t(`workspace.application.relations.outside.${outsideKey}`, { count: hidden }) },
     kind: 'budget_lines',
     title: t('workspace.application.relations.sections.budgetLines'),
     empty: t('workspace.application.relations.empty.budgetLines'),
@@ -117,13 +127,29 @@ export function budgetLinesSection({
         hint: t(`ops:budget.${row.nature}`),
       }));
     },
+    // A disabled line stays listed, muted, and is left out of the total, which says so below it.
+    // No total when no line has an amount, counted or left out: a "0" would add nothing.
     totals: (lines) => {
-      const amounts = lines.map((row) => row.amount).filter((amount): amount is number => amount != null);
-      if (amounts.length === 0) return [];
-      return [{
+      if (!lines.some((row) => row.amount != null)) return [];
+      const disabled = lines.filter((row) => row.status === 'disabled').length;
+      const amounts = lines
+        .filter((row) => row.status !== 'disabled')
+        .map((row) => row.amount)
+        .filter((amount): amount is number => amount != null);
+      const total = {
         key: 'total',
         label: t('workspace.application.relations.total'),
         cells: { amount: formatAmount(amounts.reduce((sum, value) => sum + value, 0)) },
+      };
+      if (disabled === 0) return [total];
+      return [total, {
+        key: 'disabled',
+        label: (
+          <Box component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
+            {t('workspace.application.relations.disabledNotCounted', { count: disabled })}
+          </Box>
+        ),
+        cells: {},
       }];
     },
     notice: (lines) => <FxMissingNotice items={fxMissingOfLines(lines, year)} sx={{ mt: 0.75 }} />,
@@ -132,18 +158,23 @@ export function budgetLinesSection({
 
 /**
  * Contracts linked to the owner. Active contracts only (a disabled one has ended), one total per
- * currency: amounts in two currencies are never added up.
+ * currency: amounts in two currencies are never added up. `hidden` counts the linked contracts the
+ * caller does not see listed (`contracts_hidden`): outside their data access, never named.
  */
 export function contractsSection({
   t,
   rows,
   lang,
+  hidden = 0,
 }: {
   t: TFunction;
   rows: ContractRow[] | null;
   lang: string;
+  hidden?: number;
 }): SectionSpec<ContractRow> {
+  const outsideKey = rows === null ? 'count' : rows.length === 0 ? 'only' : 'and';
   return {
+    outside: { count: hidden, text: t(`workspace.application.relations.outside_contracts.${outsideKey}`, { count: hidden }) },
     kind: 'contracts',
     title: t('workspace.application.relations.sections.contracts'),
     empty: t('workspace.application.relations.empty.contracts'),
@@ -334,8 +365,8 @@ async function searchNamed(
   q: string,
   signal: AbortSignal | undefined,
   sorted: boolean,
-): Promise<Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null }>> {
-  const res = await api.get<{ items: Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null }> }>(endpoint, {
+): Promise<Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null; is_cluster?: boolean }>> {
+  const res = await api.get<{ items: Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null; is_cluster?: boolean }> }>(endpoint, {
     params: { page: 1, limit: PAGE, ...(sorted ? { sort: 'name:ASC' } : {}), ...(q ? { q } : {}) },
     signal,
   });
@@ -420,7 +451,12 @@ export function assetsSection({
     ],
     search: async (q, signal) => {
       const items = await searchNamed('/assets', q, signal, true);
-      return items.map((row) => ({ id: row.id, label: row.name, ref: row.asset_reference ?? null }));
+      // A cluster is named as the server pickers name it.
+      return items.map((row) => ({
+        id: row.id,
+        label: row.is_cluster ? `${t('common:selects.cluster')} ${row.name}` : row.name,
+        ref: row.asset_reference ?? null,
+      }));
     },
   };
 }

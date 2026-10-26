@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, IsNull, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { Task, TaskPriorityLevel } from './task.entity';
 import { TaskTimeEntry } from './task-time-entry.entity';
 import { AuditService } from '../audit/audit.service';
@@ -12,12 +12,22 @@ import { PortfolioProjectsService } from '../portfolio/services';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
+import { displayName } from '../common/display-name';
 import { TaskActivitiesService } from './task-activities.service';
 import { TaskAttachmentsService } from './task-attachments.service';
 import { detectChanges, resolveDisplayNames, TASK_TRACKED_FIELDS, FieldConfig } from '../common/change-detection';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
+import { assertTaskModifiable, prepareTaskWrite } from './task-data-access';
+import { assertLinesEditable } from '../data-access/line-write-checks';
+import { assertContractsEditable } from '../data-access/contract-write-checks';
 import { writeTaskColumns } from './task-column-write';
 import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
+import { shareRecipientsWhoCannotOpen } from '../data-access/can-read';
+import {
+  IncidentViewer,
+  taskIncidentVisibilityQueryBuilderClause,
+  taskIncidentVisibilitySql,
+} from '../incidents/incident-visibility';
 
 export type RelatedType = 'spend_item' | 'contract' | 'capex_item' | 'project' | 'incident' | null;
 type ProjectDefaults = {
@@ -161,6 +171,8 @@ export class TasksUnifiedService {
   }): Promise<void> {
     const tenantId = params.tenantId || await this.getTaskTenant(params.taskId, params.manager);
     const ids = this.normalizeLinkIds(params.ids, params.fieldName);
+    // Elements of a task: the task modifiable (policy of task_applications and task_assets).
+    await assertTaskModifiable(params.manager, params.taskId);
     await this.validateLinkedIds(params.targetTable, ids, tenantId, params.manager, params.fieldName);
 
     const existingRows: Array<{ id: string }> = await params.manager.query(
@@ -278,7 +290,7 @@ export class TasksUnifiedService {
   async listRelatedTasksForApplication(
     applicationId: string,
     query?: any,
-    opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope },
+    opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null },
   ) {
     return this.listRelatedTasksByLink({
       linkTable: 'task_applications',
@@ -292,7 +304,7 @@ export class TasksUnifiedService {
   async listRelatedTasksForAsset(
     assetId: string,
     query?: any,
-    opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope },
+    opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null },
   ) {
     return this.listRelatedTasksByLink({
       linkTable: 'task_assets',
@@ -459,7 +471,7 @@ export class TasksUnifiedService {
     targetColumn: 'application_id' | 'asset_id';
     targetId: string;
     query?: any;
-    opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope };
+    opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null };
   }) {
     const manager = params.opts?.manager ?? this.repo.manager;
     const tenantId = params.opts?.tenantId || await this.getTaskTenantContext(manager);
@@ -486,6 +498,8 @@ export class TasksUnifiedService {
         return `AND ${taskParticipantCondition('t', `$${baseParams.length}`)}`;
       })()
       : '';
+    // A task of an incident the reader cannot see is absent from the other record's tab too.
+    const incidentVisibilitySql = taskIncidentVisibilitySql('t', params.opts?.viewer, baseParams);
 
     const countRows: Array<{ count: number }> = await manager.query(
       `SELECT COUNT(*)::int AS count
@@ -493,7 +507,8 @@ export class TasksUnifiedService {
        JOIN tasks t ON t.id = rel.task_id AND t.tenant_id = rel.tenant_id
        WHERE rel.tenant_id = $1
          AND rel.${params.targetColumn} = $2
-         ${accessScopeSql}`,
+         ${accessScopeSql}
+         ${incidentVisibilitySql}`,
       baseParams,
     );
 
@@ -519,6 +534,7 @@ export class TasksUnifiedService {
        WHERE rel.tenant_id = $1
          AND rel.${params.targetColumn} = $2
          ${accessScopeSql}
+         ${incidentVisibilitySql}
        ORDER BY ${sortField} ${direction}, t.id ASC
        LIMIT $${baseParams.length + 1} OFFSET $${baseParams.length + 2}`,
       itemParams,
@@ -570,9 +586,7 @@ export class TasksUnifiedService {
     const assigner = userId
       ? await manager.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId])
       : [];
-    const assignerName = assigner.length > 0
-      ? `${assigner[0].first_name} ${assigner[0].last_name}`.trim() || 'Someone'
-      : 'Someone';
+    const assignerName = displayName(assigner[0], 'Someone');
 
     this.notifyTaskAssignedSafely({
       taskId: saved.id,
@@ -645,6 +659,11 @@ export class TasksUnifiedService {
     return id;
   }
 
+  /**
+   * The object a task is created on or moved to: it exists (a line of the type's nature), or 404.
+   * Callers check a line with `assertLinesEditable` first: the lock below passes the UPDATE policy
+   * of the lines, so a read-only line must answer 403 before it, and a hidden one 404 here.
+   */
   private async resolveTargetContext(
     target: { type: RelatedType; id: string | null },
     manager: EntityManager,
@@ -682,7 +701,8 @@ export class TasksUnifiedService {
     // `spend_items` (`spend/budget-nature.ts`), never a line of the other nature. `lock`: the line is
     // read FOR SHARE, so a change of its type (lot M, which holds it FOR NO KEY UPDATE and moves its
     // tasks to the other type) is waited for: the task is then refused for a line of the other
-    // nature (404) instead of being written with a type nobody reads.
+    // nature (404) instead of being written with a type nobody reads. Only a task created on the
+    // line or moved to it comes here: a task that keeps its object writes no relation.
     const tableByType: Record<'spend_item' | 'contract' | 'capex_item' | 'incident', { table: string; label: string; where?: string; lock?: string }> = {
       spend_item: { table: 'spend_items', label: 'Spend item', where: ` AND nature = 'opex'`, lock: ' FOR SHARE' },
       contract: { table: 'contracts', label: 'Contract' },
@@ -695,23 +715,31 @@ export class TasksUnifiedService {
     return { type: target.type, id: target.id };
   }
 
-  listForTarget(target: { type: RelatedType; id: string | null }, opts?: { manager?: EntityManager; tenantId?: string | null }) {
+  listForTarget(
+    target: { type: RelatedType; id: string | null },
+    opts?: { manager?: EntityManager; tenantId?: string | null; viewer?: IncidentViewer | null },
+  ) {
     const repo = (opts?.manager ?? this.repo.manager).getRepository(Task);
     // RLS already scopes the manager; the explicit tenant predicate is the
     // project-wide rule for every query (callers pass it when they have it).
-    const tenantScope = opts?.tenantId ? { tenant_id: opts.tenantId } : {};
+    const qb = repo.createQueryBuilder('t');
+    if (opts?.tenantId) qb.andWhere('t.tenant_id = :tenantId', { tenantId: opts.tenantId });
     if (target.type === null) {
-      // List standalone tasks
-      return repo.find({
-        // IsNull(): TypeORM drops a plain `null` from find options, which listed every task.
-        where: { ...tenantScope, related_object_type: IsNull() } as any,
-        order: { created_at: 'DESC' as any },
-      });
+      // List standalone tasks (IsNull: a plain null would match every task).
+      qb.andWhere('t.related_object_type IS NULL');
+    } else {
+      qb.andWhere('t.related_object_type = :relatedType', { relatedType: target.type })
+        .andWhere('t.related_object_id = :relatedId', { relatedId: target.id });
     }
-    return repo.find({
-      where: { ...tenantScope, related_object_type: target.type, related_object_id: target.id } as any,
-      order: { created_at: 'DESC' as any },
-    });
+    // Only an incident's own task list can hold a task of that incident: another
+    // target (contract, project, budget line) never needs the predicate.
+    if (target.type === 'incident') {
+      const incidentVisibility = taskIncidentVisibilityQueryBuilderClause('t', opts?.viewer);
+      if (incidentVisibility.clause) {
+        qb.andWhere(incidentVisibility.clause, incidentVisibility.params);
+      }
+    }
+    return qb.orderBy('t.created_at', 'DESC').getMany();
   }
 
   async createForTarget(target: { type: RelatedType; id: string | null; payload: TaskRelationPayload }, userId?: string, opts?: TaskMutationOptions) {
@@ -726,8 +754,19 @@ export class TasksUnifiedService {
     if (!payload?.title || !payload.title.toString().trim()) throw new BadRequestException('title required');
     // A task of a budget line: the line of the type's nature, read FOR SHARE until the task is saved,
     // so a change of the line's type (lot M) never leaves it with the type of before (see
-    // `resolveTargetContext`).
-    if (target.type === 'spend_item' || target.type === 'capex_item') await this.resolveTargetContext(target, manager);
+    // `resolveTargetContext`). A task names only a line the person may modify (the placement
+    // trigger of the tasks): a plain read first, so a read-only line answers the clear 403 and a
+    // hidden one 404, as the lock alone would answer both.
+    if (target.type === 'spend_item' || target.type === 'capex_item') {
+      await assertLinesEditable(manager, [target.id]);
+      await this.resolveTargetContext(target, manager);
+    }
+    // A task of a contract: the contract must be modifiable (the task's INSERT policy asks it);
+    // a hidden contract is 404 as a missing one, a read-only one the clear 403.
+    if (target.type === 'contract') {
+      await assertContractsEditable(manager, [target.id]);
+      await this.resolveTargetContext(target, manager);
+    }
 
     const isStandalone = target.type === null;
 
@@ -882,7 +921,9 @@ export class TasksUnifiedService {
     const { id: _id, related_object_type: _type, related_object_id: _relatedId, ...fields } = payload as Record<string, unknown>;
     void _id; void _type; void _relatedId;
     if (this.hasOwn(payload, 'description')) fields.description = normalizedDescription;
-    const saved = await writeTaskColumns(repo, existing, fields);
+    // Data-scoped access (`task-data-access.ts`): a read-only task refused, a handover keeps the person as observer.
+    const write = await prepareTaskWrite(manager, existing, fields);
+    const saved = await writeTaskColumns(repo, existing, write.changes);
     await this.audit.log({
       table: 'tasks',
       recordId: saved.id,
@@ -936,7 +977,7 @@ export class TasksUnifiedService {
       await this.setAssetLinks(saved.id, assetIds, { manager, tenantId, userId });
     }
 
-    return saved;
+    return write.stillFollowing ? Object.assign(saved, { stillFollowing: true as const }) : saved;
   }
 
   /**
@@ -967,26 +1008,34 @@ export class TasksUnifiedService {
       throw new BadRequestException('related_object_type and related_object_id must be provided together');
     }
 
-    const resolvedTarget = await this.resolveTargetContext(
-      hasRelatedType
-        ? {
-            type: (nextPayload.related_object_type ?? null) as RelatedType,
-            id: (nextPayload.related_object_id ?? null) as string | null,
-          }
-        : {
-            type: existing.related_object_type,
-            id: existing.related_object_id,
-          },
-      manager,
-    );
+    const requestedTarget = hasRelatedType
+      ? {
+          type: (nextPayload.related_object_type ?? null) as RelatedType,
+          id: (nextPayload.related_object_id ?? null) as string | null,
+        }
+      : { type: existing.related_object_type as RelatedType, id: existing.related_object_id };
+    const relationChanged =
+      requestedTarget.type !== existing.related_object_type ||
+      requestedTarget.id !== existing.related_object_id;
+
+    let resolvedTarget: { type: RelatedType; id: string | null; projectDefaults?: ProjectDefaults };
+    if (relationChanged) {
+      // A new object that is a line: one the person may modify (placement trigger of the tasks),
+      // read plainly before the lock (`resolveTargetContext`): read only 403, hidden 404.
+      if (requestedTarget.type === 'spend_item' || requestedTarget.type === 'capex_item') {
+        await assertLinesEditable(manager, [requestedTarget.id]);
+      }
+      resolvedTarget = await this.resolveTargetContext(requestedTarget, manager);
+    } else {
+      // The task keeps its object: no relation is written (`task-column-write.ts`), so nothing to
+      // look up or lock. Its assignee or owner may not read it, or only read it, and still updates
+      // or hands over the task (`prepareTaskWrite`, spec §6.8).
+      resolvedTarget = requestedTarget;
+    }
 
     if (this.hasOwn(nextPayload, 'description')) {
       nextPayload.description = await normalizeMarkdownRichText(nextPayload.description, { fieldName: 'description' }) as any;
     }
-
-    const relationChanged =
-      resolvedTarget.type !== existing.related_object_type ||
-      resolvedTarget.id !== existing.related_object_id;
 
     delete nextPayload.related_object_type;
     delete nextPayload.related_object_id;
@@ -1061,10 +1110,12 @@ export class TasksUnifiedService {
 
     // The fields the body changes, and the relation only when it moves, checked above under the
     // target's lock (`task-column-write.ts`): never the rest of the task read above.
-    const saved = await writeTaskColumns(repo, existing, {
+    // Data-scoped access (`task-data-access.ts`): a read-only task refused, a handover keeps the person as observer.
+    const write = await prepareTaskWrite(manager, existing, {
       ...nextPayload,
       ...(relationChanged ? { related_object_type: resolvedTarget.type, related_object_id: resolvedTarget.id } : {}),
     } as Record<string, unknown>);
+    const saved = await writeTaskColumns(repo, existing, write.changes);
     await this.audit.log({
       table: 'tasks',
       recordId: saved.id,
@@ -1132,7 +1183,7 @@ export class TasksUnifiedService {
       await this.setAssetLinks(saved.id, assetIds, { manager, tenantId, userId });
     }
 
-    return saved;
+    return write.stillFollowing ? Object.assign(saved, { stillFollowing: true as const }) : saved;
   }
 
   async moveTask(
@@ -1163,9 +1214,7 @@ export class TasksUnifiedService {
       'SELECT first_name, last_name FROM users WHERE id = $1',
       [userId],
     );
-    const senderName = senderRows.length > 0
-      ? `${senderRows[0].first_name} ${senderRows[0].last_name}`.trim() || 'Someone'
-      : 'Someone';
+    const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
       ? await manager.query(
@@ -1191,6 +1240,9 @@ export class TasksUnifiedService {
       });
     }
 
-    return { success: true };
+    // The chosen persons who cannot open the task: the screen warns the sender (spec §5.6). No list
+    // when the task's line is hidden to the sender.
+    const cannotOpen = await shareRecipientsWhoCannotOpen(manager, 'task', taskId, recipientRows);
+    return cannotOpen ? { success: true, cannot_open: cannotOpen } : { success: true };
   }
 }

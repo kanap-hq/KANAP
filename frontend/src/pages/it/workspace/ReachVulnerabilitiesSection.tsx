@@ -1,6 +1,7 @@
 import { Box, Link, Typography, useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
+import ViaAssetNames from '../../../components/workspace/ViaAssetNames';
 import { RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import { versionText } from '../vulnerabilities/vulnerabilityTypes';
 import { numberSx, openSeverityColumns, type VulnerabilityOpenCounts } from './vulnerabilityOpenColumns';
@@ -23,8 +24,12 @@ export type ReachVulnerabilityRow = {
   servers?: Array<{ id: string; name: string }>;
   /** Application: it declares this technology and version. */
   declared?: boolean;
-  /** Asset, indirect lines only: the asset that carries the technology. */
+  /** Asset, indirect lines only: the asset that carries the technology (the first of `via_assets`). */
   via?: { id: string; name: string; reference: string | null };
+  /** Asset, indirect lines only: every asset that carries the technology and version (a host, a cluster's members), by name. */
+  via_assets?: Array<{ id: string; name: string; reference: string | null }>;
+  /** Asset, indirect lines only: carried through the host that contains it only (its hypervisor), folded. */
+  through_host?: boolean;
 };
 
 /** The answer of the vulnerabilities route of an asset or an application. */
@@ -35,7 +40,25 @@ export type ReachVulnerabilities = {
   indirect?: ReachVulnerabilityRow[];
   /** Distinct CVE over the direct lines; null when the asset or application is out of service. */
   totals: { open: number; severe: number; exploited_severe: number } | null;
+  /**
+   * A cluster only: distinct CVE over its own direct links and those of its members in service,
+   * `critical` among them; null when retired.
+   */
+  member_totals?: { open: number; severe: number; exploited_severe: number; critical?: number } | null;
+  /**
+   * True while a match is queued or running for a technology of this record that has CPE
+   * identifiers. The section then says the search is in progress instead of that nothing is to review.
+   */
+  pending?: boolean;
 };
+
+/** How often a record reads its vulnerabilities again while `pending` is true. */
+export const REACH_VULNERABILITIES_POLL_MS = 1_000;
+
+/** Refetch while a match is queued for this record, and stop once the answer is no longer pending. */
+export function reachVulnerabilitiesRefetchMs(data: ReachVulnerabilities | undefined): number | false {
+  return data?.pending ? REACH_VULNERABILITIES_POLL_MS : false;
+}
 
 /** The anchor of the section. */
 export const REACH_VULNERABILITIES_ANCHOR = 'vulnerabilities';
@@ -60,15 +83,21 @@ type Props = {
 /** Wraps on the spaces only: a word is never cut in two. */
 const wordWrapSx = { overflowWrap: 'normal', wordBreak: 'normal' } as const;
 
-const rowKey = (row: ReachVulnerabilityRow) => `${row.technology.id}:${row.version_id ?? 'none'}:${row.via?.id ?? ''}`;
+/** The assets that carry an indirect line: `via_assets`, else the single `via`. */
+const viaOf = (row: ReachVulnerabilityRow) => (row.via_assets && row.via_assets.length > 0 ? row.via_assets : row.via ? [row.via] : []);
+
+const rowKey = (row: ReachVulnerabilityRow) => `${row.technology.id}:${row.version_id ?? 'none'}:${viaOf(row).map((asset) => asset.id).join('+')}`;
 
 /**
  * The vulnerabilities of an asset or an application: one line per technology and version in a
  * direct link, with the CVE to review in one column per severity (None counted with Low), the total,
  * and "See", which opens the Vulnerabilities page on the subject and the technology. An application
  * names the servers that carry each line, or says it is only declared. An asset may list apart the
- * technologies another asset carries (a host, a cluster): they are not counted.
+ * technologies its cluster's members carry: they are not counted. What only the host it runs on
+ * carries (the platform underneath) waits under one folded line, not counted either.
  * Pure: the caller fetches the data, and hides the section while the vulnerability feed is off.
+ * While `pending` is set and no line is ready, the empty line says the search is in progress.
+ * The caller refetches on `reachVulnerabilitiesRefetchMs` until `pending` is no longer set.
  */
 export default function ReachVulnerabilitiesSection({ data, kind, subjectReference, heading, onRecordOnServer }: Props) {
   const { t } = useTranslation('it');
@@ -131,9 +160,8 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
     key: 'via',
     header: t('pages.vulnerabilities.reach.via'),
     width: 150,
-    minWidth: 80,
     wrap: true,
-    render: (row) => (row.via ? t('pages.vulnerabilities.detail.via', { name: row.via.name }) : null),
+    render: (row) => <ViaAssetNames assets={viaOf(row)} />,
   };
 
   const counts = (see: (row: ReachVulnerabilityRow) => string): Array<RelationsColumn<ReachVulnerabilityRow>> => [
@@ -168,10 +196,24 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
   ];
 
   const directColumns = [...leading, ...(kind === 'application' ? [serversColumn] : []), ...counts(pageOf)];
-  const indirectColumns = [...leading, viaColumn, ...counts(indirectPageOf)];
-  const indirect = kind === 'asset' ? data.indirect ?? [] : [];
+  // Beside the "Through" column the table is tight: a long name is cut by the ellipsis, whole on hover,
+  // and the counts keep their fixed room.
+  const indirectLeading = leading.map((column) => (column.key === 'technology'
+    ? { ...column, wrap: false, render: (row: ReachVulnerabilityRow) => <span title={row.technology.name}>{row.technology.name}</span> }
+    : column));
+  const indirectColumns = [...indirectLeading, viaColumn, ...counts(indirectPageOf)];
+  const carried = kind === 'asset' ? data.indirect ?? [] : [];
+  const indirect = carried.filter((row) => !row.through_host);
+  const platform = carried.filter((row) => row.through_host);
+  // A match still running, and nothing to show yet: say so, instead of the empty line.
+  const showPending = data.pending === true && data.rows.length === 0 && indirect.length === 0;
+  const platformFold = platform.length > 0
+    ? { label: t('pages.vulnerabilities.reach.platform', { count: platform.length }), rows: platform }
+    : undefined;
   const title = t('pages.vulnerabilities.section.title');
-  const open = data.totals && data.totals.open > 0 ? data.totals.open : null;
+  // A cluster counts its members' vulnerabilities too (`member_totals`), as its column in the list does.
+  const shownTotals = data.member_totals ?? data.totals;
+  const open = shownTotals && shownTotals.open > 0 ? shownTotals.open : null;
   // The count after the title opens the Vulnerabilities page filtered on the record.
   const count = open == null ? undefined : (
     <Link
@@ -189,25 +231,33 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
   return (
     <Box id={REACH_VULNERABILITIES_ANCHOR} sx={{ scrollMarginTop: 16 }}>
       <RelationsSection title={title} heading={heading} count={count}>
-        {data.rows.length === 0 ? (
-          <RelationsEmpty>{t(`pages.vulnerabilities.reach.empty.${kind}`)}</RelationsEmpty>
-        ) : (
+        {data.rows.length === 0 ? (indirect.length === 0 && (
+          <RelationsEmpty>
+            {showPending
+              ? <span role="status" data-testid="reach-vulnerabilities-pending">{t('pages.vulnerabilities.section.searching')}</span>
+              : t(`pages.vulnerabilities.reach.empty.${kind}`)}
+          </RelationsEmpty>
+        )) : (
           <RelationsTable columns={directColumns} rows={data.rows} rowKey={rowKey} ariaLabel={title} />
         )}
+        {/* What a cluster's members carry: counted with the cluster (`member_totals`). What a host carries folds as the platform. */}
         {indirect.length > 0 && (
           <Box data-testid="reach-indirect" sx={{ mt: 2 }}>
-            <Typography component="h3" sx={{ m: 0, fontSize: 13, fontWeight: 500, color: 'kanap.text.secondary' }}>
+            <Typography component="h3" sx={{ m: 0, mb: 0.5, fontSize: 13, fontWeight: 500, color: 'kanap.text.secondary' }}>
               {t('pages.vulnerabilities.reach.indirect.title')}
-            </Typography>
-            <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 0.5 }}>
-              {t('pages.vulnerabilities.reach.indirect.hint')}
             </Typography>
             <RelationsTable
               columns={indirectColumns}
               rows={indirect}
               rowKey={rowKey}
+              folded={platformFold}
               ariaLabel={t('pages.vulnerabilities.reach.indirect.title')}
             />
+          </Box>
+        )}
+        {indirect.length === 0 && platformFold && (
+          <Box data-testid="reach-platform" sx={{ mt: 1 }}>
+            <RelationsTable columns={indirectColumns} rows={[]} rowKey={rowKey} folded={platformFold} ariaLabel={platformFold.label} />
           </Box>
         )}
       </RelationsSection>

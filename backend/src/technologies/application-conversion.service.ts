@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import * as path from 'path';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { ApplicationsDeleteService } from '../applications/applications-delete.service';
 import { AuditService } from '../audit/audit.service';
 import { StorageService } from '../common/storage/storage.service';
@@ -12,6 +13,10 @@ import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
 import { isActiveHostingType, resolveHostingType } from './hosting-type';
 import { TechnologiesService } from './technologies.service';
 import { UUID_RE } from './technology-rows';
+import { DataAccessLimitedException, isLimitedTransaction } from '../data-access/line-write-checks';
+
+export const CONVERSION_HIDDEN_LINES_MESSAGE =
+  'This application is linked to budget lines outside your access. Ask someone with access to them to convert it.';
 
 /** The modules whose counts the caller may read in the preview (`null` otherwise, as the Relations tab). */
 export type ConversionAccess = { contracts: boolean; budget_lines: boolean; projects: boolean; incidents: boolean };
@@ -105,6 +110,19 @@ const COUNTED_REFUSALS: ConversionRefusalReason[] = ['interfaces', 'middleware',
 const ACTIVE_INSTANCE = `i.status = 'enabled' AND (i.disabled_at IS NULL OR i.disabled_at > now())`;
 
 /**
+ * The servers of the application `$2` (tenant `$1`) the technology is installed on: the effective
+ * servers (`effectiveAssignmentsSql`) of its enabled instances (`active` true) or of the others,
+ * clusters excluded. An application on a cluster gives its members in service, as a technology's
+ * servers are the assets it is installed on, clusters excluded (`technology-reach.service.ts`). One
+ * row per server. The installation, the preview counts and the hosting type read this set.
+ */
+const conversionServersSql = (active: boolean) => `SELECT DISTINCT ex.asset_id
+    FROM (${effectiveAssignmentsSql({ tenant: '$1', applications: 'ARRAY[$2::uuid]' })}) ex
+    JOIN app_instances i ON i.tenant_id = $1 AND i.id = ex.app_instance_id
+    JOIN assets sa ON sa.tenant_id = $1 AND sa.id = ex.asset_id AND sa.is_cluster IS NOT TRUE
+   WHERE ${active ? ACTIVE_INSTANCE : `NOT (${ACTIVE_INSTANCE})`}`;
+
+/**
  * The support contacts the technology takes: one row per contact of the tenant (the composite key
  * of `technology_support_contacts` refuses another tenant's), the first role given kept, trimmed.
  * Parameters `$1` tenant, `$2` application.
@@ -123,8 +141,8 @@ const FULL_ACCESS: ConversionAccess = { contracts: true, budget_lines: true, pro
  * lists the refusals: interfaces, middleware or integration tool of a binding, a suite with
  * components, bindings on its instances, a technology of the same name, values the technology
  * cannot take, files missing from storage. The conversion runs in the caller's transaction: the
- * technology is created with the support notes, the governance links and support contacts are copied to it, the server assignments of its
- * enabled instances become installation links, the application is deleted by its own delete
+ * technology is created with the support notes, the governance links and support contacts are copied to it, the servers of its
+ * enabled instances (`conversionServersSql`: a cluster gives its members) become installation links, the application is deleted by its own delete
  * service, and its managed documents are released unfiled with their files. Files are copied
  * before; the caller settles them after the transaction (`settleFiles`).
  */
@@ -171,6 +189,12 @@ export class ApplicationConversionService {
         message: 'This application cannot be converted to a technology.',
         refusals: preview.refusals,
       });
+    }
+    // A limited person copies only the links to the lines they can read; the delete of the
+    // application below would drop the others. The count of hidden lines is a disclosure (spec §6.6).
+    if (await isLimitedTransaction(mg)) {
+      const [hidden] = await mg.query(`SELECT data_access_hidden_count('application', $1::uuid) AS n`, [app.id]);
+      if (Number(hidden?.n ?? 0) > 0) throw new DataAccessLimitedException(CONVERSION_HIDDEN_LINES_MESSAGE);
     }
     const reference = app.sequential_id || null;
     const files: ConversionFiles = { copies: [], originals: [] };
@@ -237,10 +261,8 @@ export class ApplicationConversionService {
         incidents: 0,
         servers: await moved(
           `INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id, notes, source)
-           SELECT DISTINCT $1::uuid, aa.asset_id, $3::uuid, NULL::uuid, $4::text, 'manual'
-             FROM app_asset_assignments aa
-             JOIN app_instances i ON i.tenant_id = aa.tenant_id AND i.id = aa.app_instance_id
-            WHERE aa.tenant_id = $1 AND i.application_id = $2 AND ${ACTIVE_INSTANCE}
+           SELECT $1::uuid, s.asset_id, $3::uuid, NULL::uuid, $4::text, 'manual'
+             FROM (${conversionServersSql(true)}) s
            ON CONFLICT ON CONSTRAINT asset_technologies_key DO NOTHING`,
           [`Converted from ${reference ?? app.name}`],
         ),
@@ -408,7 +430,7 @@ export class ApplicationConversionService {
   }
 
   /**
-   * The hosting type the technology takes. With servers (those of its enabled instances, which the
+   * The hosting type the technology takes. With servers (`conversionServersSql`, which the
    * technology will carry): the type of their sites the tenant's catalog has (the one with the most
    * servers), else on premises. Without: the application's hosting model when the catalog has it
    * (`on_premise` is `on_prem`; a deprecated field no screen shows, so it never overrides the
@@ -420,11 +442,9 @@ export class ApplicationConversionService {
     if (hasServers) {
       const sites: Array<{ code: string }> = await mg.query(
         `SELECT l.hosting_type AS code
-           FROM app_instances i
-           JOIN app_asset_assignments aa ON aa.tenant_id = $1 AND aa.app_instance_id = i.id
-           JOIN assets a ON a.tenant_id = $1 AND a.id = aa.asset_id
+           FROM (${conversionServersSql(true)}) s
+           JOIN assets a ON a.tenant_id = $1 AND a.id = s.asset_id
            JOIN locations l ON l.tenant_id = $1 AND l.id = a.location_id
-          WHERE i.tenant_id = $1 AND i.application_id = $2 AND ${ACTIVE_INSTANCE}
           GROUP BY l.hosting_type
           ORDER BY count(DISTINCT a.id) DESC, l.hosting_type`,
         [tenantId, app.id],
@@ -464,13 +484,8 @@ export class ApplicationConversionService {
          (SELECT count(DISTINCT l.incident_id)::int FROM incident_applications l
             JOIN incidents inc ON inc.tenant_id = l.tenant_id AND inc.id = l.incident_id
            WHERE l.tenant_id = $1 AND l.application_id = $2${visible}) AS incidents,
-         (SELECT count(DISTINCT aa.asset_id)::int FROM app_asset_assignments aa JOIN inst i ON i.id = aa.app_instance_id
-           WHERE aa.tenant_id = $1 AND ${ACTIVE_INSTANCE}) AS servers,
-         (SELECT count(DISTINCT aa.asset_id)::int FROM app_asset_assignments aa JOIN inst i ON i.id = aa.app_instance_id
-           WHERE aa.tenant_id = $1 AND NOT (${ACTIVE_INSTANCE})
-             AND NOT EXISTS (SELECT 1 FROM app_asset_assignments a2 JOIN inst i2 ON i2.id = a2.app_instance_id
-                              WHERE a2.tenant_id = $1 AND a2.asset_id = aa.asset_id
-                                AND i2.status = 'enabled' AND (i2.disabled_at IS NULL OR i2.disabled_at > now()))) AS disabled_instance_servers,
+         (SELECT count(*)::int FROM (${conversionServersSql(true)}) s) AS servers,
+         (SELECT count(*)::int FROM (${conversionServersSql(false)} EXCEPT ${conversionServersSql(true)}) s) AS disabled_instance_servers,
          (SELECT count(*)::int FROM inst) AS instances,
          (SELECT count(*)::int FROM application_suites s WHERE s.tenant_id = $1 AND s.application_id = $2) AS suites,
          (SELECT count(*)::int FROM applications p WHERE p.tenant_id = $1 AND p.id = $4) AS predecessor,

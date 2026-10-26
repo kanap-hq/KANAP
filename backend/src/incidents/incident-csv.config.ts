@@ -4,13 +4,85 @@ import {
   CsvFieldType,
   CsvImportContext,
 } from '../common/csv';
-import { formatCsvDateTime, instantInTimeZone } from '../common/csv-sheet';
+import { formatCsvDateTime, instantInTimeZone, type CsvLanguage } from '../common/csv-sheet';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { normalizeMarkdownRichText } from '../common/markdown-worker';
 import { findCatalogOption, requireImportCatalogs } from '../it-ops-settings/catalog-resolve';
 import { sameAsStoredWithDocuments } from '../knowledge/integrated-document-bodies';
-import { INCIDENT_SEVERITIES, INCIDENT_STATUSES } from './incident.entity';
+import { INCIDENT_SEVERITIES, INCIDENT_STATUSES, isReservedIncidentStatusMove } from './incident.entity';
 import { incidentVisibleToViewer, type IncidentViewer } from './incident-visibility';
+
+/**
+ * The headers of the register's file in each language. The export writes them, and the import
+ * accepts them as well as the technical columns (`ref`, `title`, ...), so a file exported in
+ * French reads back in French or in any other language.
+ */
+const INCIDENT_CSV_HEADERS: Record<string, Record<CsvLanguage, string>> = {
+  ref: { en: 'Ref', fr: 'Réf.', de: 'Ref.', es: 'Ref.' },
+  title: { en: 'Title', fr: 'Titre', de: 'Titel', es: 'Título' },
+  category: { en: 'Category', fr: 'Catégorie', de: 'Kategorie', es: 'Categoría' },
+  severity: { en: 'Severity', fr: 'Gravité', de: 'Schweregrad', es: 'Gravedad' },
+  status: { en: 'Status', fr: 'Statut', de: 'Status', es: 'Estado' },
+  confidential: {
+    en: 'Restricted to register administrators',
+    fr: 'Restreint aux administrateurs du registre',
+    de: 'Auf Registeradministratoren beschränkt',
+    es: 'Restringido a administradores del registro',
+  },
+  started_at: { en: 'Started', fr: 'Début', de: 'Beginn', es: 'Inicio' },
+  detected_at: { en: 'Detected', fr: 'Détecté', de: 'Erkannt', es: 'Detectado' },
+  resolved_at: { en: 'Resolved', fr: 'Résolu', de: 'Behoben', es: 'Resuelto' },
+  closed_at: { en: 'Closed', fr: 'Clôturé', de: 'Geschlossen', es: 'Cerrado' },
+  reporter: { en: 'Reporter', fr: 'Déclarant', de: 'Melder', es: 'Notificante' },
+  owner: { en: 'Owner', fr: 'Responsable', de: 'Verantwortlicher', es: 'Responsable' },
+  description: { en: 'Description', fr: 'Description', de: 'Beschreibung', es: 'Descripción' },
+  review: { en: 'Incident review', fr: "Revue d'incident", de: 'Vorfallsanalyse', es: 'Revisión de incidente' },
+  source_ref: { en: 'External reference', fr: 'Référence externe', de: 'Externe Referenz', es: 'Referencia externa' },
+  personal_data_affected: {
+    en: 'Personal data affected',
+    fr: 'Données personnelles concernées',
+    de: 'Personenbezogene Daten betroffen',
+    es: 'Datos personales afectados',
+  },
+  authority_notification_required: {
+    en: 'Authority notification required',
+    fr: 'Notification aux autorités requise',
+    de: 'Meldung an Behörde erforderlich',
+    es: 'Requiere notificación a la autoridad',
+  },
+  authority_notified_at: { en: 'Notified on', fr: 'Notifié le', de: 'Gemeldet am', es: 'Notificado el' },
+  notified_parties: { en: 'Parties informed', fr: 'Parties informées', de: 'Informierte Parteien', es: 'Partes informadas' },
+};
+
+/** The severity as the screen names it, in the language of the file. */
+const INCIDENT_SEVERITY_LABELS: Record<CsvLanguage, Record<string, string>> = {
+  en: { critical: 'Critical', major: 'Major', minor: 'Minor', low: 'Low' },
+  fr: { critical: 'Critique', major: 'Majeure', minor: 'Mineure', low: 'Faible' },
+  de: { critical: 'Kritisch', major: 'Hoch', minor: 'Mittel', low: 'Niedrig' },
+  es: { critical: 'Crítica', major: 'Alta', minor: 'Media', low: 'Baja' },
+};
+
+/** The status as the screen names it, in the language of the file. */
+const INCIDENT_STATUS_LABELS: Record<CsvLanguage, Record<string, string>> = {
+  en: { open: 'Open', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed', cancelled: 'Cancelled' },
+  fr: { open: 'Ouvert', in_progress: 'En cours', resolved: 'Résolu', closed: 'Clôturé', cancelled: 'Annulé' },
+  de: { open: 'Offen', in_progress: 'In Bearbeitung', resolved: 'Behoben', closed: 'Geschlossen', cancelled: 'Abgebrochen' },
+  es: { open: 'Abierto', in_progress: 'En curso', resolved: 'Resuelto', closed: 'Cerrado', cancelled: 'Cancelado' },
+};
+
+/** The code of a value written in any of the four languages, or null when no label matches. */
+function codeFromLabels(
+  value: string,
+  labels: Record<CsvLanguage, Record<string, string>>,
+): string | null {
+  const text = value.trim().toLowerCase().normalize('NFC');
+  for (const byCode of Object.values(labels)) {
+    for (const [code, label] of Object.entries(byCode)) {
+      if (label.toLowerCase().normalize('NFC') === text) return code;
+    }
+  }
+  return null;
+}
 
 /**
  * CSV configuration for the incident register.
@@ -32,7 +104,8 @@ import { incidentVisibleToViewer, type IncidentViewer } from './incident-visibil
 
 const REF_INPUT_RE = /^(?:INC[-\s]?)?(\d+)$/i;
 
-const IMPORT_ENTRY_CONTENT = 'Imported from CSV';
+/** Reason written on the entries an import creates (inserted rows, Reopen and Cancel moves). */
+export const IMPORT_ENTRY_CONTENT = 'Imported from CSV';
 
 /** Rows inserted by the current import, marked in beforeCommit, journalled in afterCommit. */
 const insertedByImport = new WeakSet<object>();
@@ -83,6 +156,14 @@ export function takePreviousIncidentStatus(entity: object): string | null {
 function incidentLabel(entity: any): string {
   return entity.item_number ? `INC-${entity.item_number}` : `"${entity.title ?? ''}"`;
 }
+
+/** The refusal of a status move only an administrator may make by import. */
+export function importStatusReservedMessage(label: string, from: string, to: string): string {
+  return `${label}: status cannot change from "${from}" to "${to}" through import. `
+    + 'Only a register administrator can do that; use Reopen or Cancel in the app instead.';
+}
+
+const IMPORT_STATUS_RESERVED_CODE = 'CSV_INCIDENT_STATUS_RESERVED';
 
 function importViewer(context: CsvImportContext): IncidentViewer {
   return context.viewer ?? { userId: context.userId ?? null, isAdmin: context.isAdmin === true };
@@ -138,8 +219,15 @@ function parseDateTime(value: string, column: string, timeZone = 'UTC'): Date | 
   return parsed;
 }
 
-/** Codes and labels both accepted: "In progress", "in progress" and "in_progress" all mean in_progress. */
-function parseCode(value: string, valid: readonly string[], column: string): string {
+/** Codes and labels both accepted: "In progress", "in progress", "in_progress" and "En cours" all mean in_progress. */
+function parseCode(
+  value: string,
+  valid: readonly string[],
+  column: string,
+  labels?: Record<CsvLanguage, Record<string, string>>,
+): string {
+  const fromLabel = labels ? codeFromLabels(value, labels) : null;
+  if (fromLabel) return fromLabel;
   const normalized = value.trim().toLowerCase().replace(/[\s-]+/g, '_');
   if (!valid.includes(normalized)) {
     throw new Error(`Invalid ${column}: "${value}". Valid values: ${valid.join(', ')}`);
@@ -222,6 +310,8 @@ export const incidentCsvConfig: CsvEntityConfig = {
   displayName: 'Incidents',
   // INC-N is the register's identity; the export writes it, the import matches on it.
   upsertKey: ['item_number'],
+  // Column headers in the file's language; the import accepts them as well as the technical names.
+  headerLabels: INCIDENT_CSV_HEADERS,
   fields: [
     // === IDENTITY ===
     {
@@ -265,7 +355,9 @@ export const incidentCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'Severity',
       group: 'Overview',
-      importTransformFn: (value: string) => parseCode(value, INCIDENT_SEVERITIES, 'severity'),
+      exportFn: (entity: any, context: CsvExportContext) =>
+        INCIDENT_SEVERITY_LABELS[context.language]?.[String(entity.severity)] ?? String(entity.severity ?? ''),
+      importTransformFn: (value: string) => parseCode(value, INCIDENT_SEVERITIES, 'severity', INCIDENT_SEVERITY_LABELS),
     },
     {
       csvColumn: 'status',
@@ -276,7 +368,9 @@ export const incidentCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'Status',
       group: 'Overview',
-      importTransformFn: (value: string) => parseCode(value, INCIDENT_STATUSES, 'status'),
+      exportFn: (entity: any, context: CsvExportContext) =>
+        INCIDENT_STATUS_LABELS[context.language]?.[String(entity.status)] ?? String(entity.status ?? ''),
+      importTransformFn: (value: string) => parseCode(value, INCIDENT_STATUSES, 'status', INCIDENT_STATUS_LABELS),
     },
     {
       csvColumn: 'confidential',
@@ -421,13 +515,32 @@ export const incidentCsvConfig: CsvEntityConfig = {
    * Blank cells a full replace emptied, by the rules of beforeCommit: a blank boolean is false,
    * a blank confidential flag keeps the stored one (a new row gets false there). Applied here
    * too, so the preflight's check of emptied columns sees the same values as the load.
+   *
+   * The forward-only lifecycle is checked here, on the matched stored row: a status that moves
+   * backwards, or to `cancelled`, is reserved to `incidents:admin` (Reopen or Cancel). A
+   * contributor gets a row error, with the INC-N reference, in both the preflight and the load.
    */
-  afterValidate: async (rows) => {
+  afterValidate: async (rows, context) => {
+    const viewer = importViewer(context);
     for (const row of rows) {
       for (const column of ['personal_data_affected', 'authority_notification_required']) {
         if (row.parsed[column] === null) row.parsed[column] = false;
       }
       if (row.parsed.confidential === null) delete row.parsed.confidential;
+
+      // insert_only skips the matched rows; they cannot move a stored status.
+      if (viewer.isAdmin || context.params.operation === 'insert_only' || row.isInsert || row.errors.length > 0) continue;
+      const previous = row.existingEntity?.status;
+      const next = row.parsed.status;
+      if (!isReservedIncidentStatusMove(next, previous)) continue;
+      const reference = incidentLabel(row.existingEntity);
+      row.errors.push({
+        row: row.rowNumber,
+        column: 'status',
+        message: importStatusReservedMessage(reference, previous, next),
+        code: IMPORT_STATUS_RESERVED_CODE,
+        params: { reference, from: String(previous), to: String(next) },
+      });
     }
   },
 
@@ -557,6 +670,11 @@ export const incidentCsvConfig: CsvEntityConfig = {
       }
       for (const entity of updateEntities) {
         const row = byId.get(entity.id);
+        // The authoritative check, on the locked pre-image: afterValidate saw the
+        // row before the lock, and another transaction may have closed it since.
+        if (row && !viewer.isAdmin && isReservedIncidentStatusMove(entity.status, row.status)) {
+          throw new Error(importStatusReservedMessage(incidentLabel(entity), row.status, String(entity.status)));
+        }
         if (entity.confidential == null) {
           entity.confidential = row?.confidential ?? false;
         }

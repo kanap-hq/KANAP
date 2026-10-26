@@ -117,11 +117,16 @@ export type BudgetFileReport = {
     ignoredCells: Array<{ line: number; column: string; message: string }>;
   };
   creates: {
+    /** Unknown values the load will create. */
     dimensionValues: Array<{ dimension: string; names: string[] }>;
+    /** Unknown values of a closed list, refused to a limited person (their rows are errors too). Limited only. */
+    refusedDimensionValues?: Array<{ dimension: string; names: string[] }>;
     suppliers: Array<{ name: string; erpId: string | null }>;
   };
   supplierMessage: string | null;
   snapshot: { lines: unknown[] };
+  /** The check followed a limited person's access, line by line. */
+  dataAccessLimited?: true;
 };
 
 export type BudgetFileLoad = {
@@ -164,6 +169,8 @@ export type BudgetFileFailure =
   | { kind: 'tooLarge' }
   | { kind: 'stale' }
   | { kind: 'forbidden' }
+  /** A refusal for the person's data access (403 `DATA_ACCESS_LIMITED`), by the server's sentence. */
+  | { kind: 'dataAccess'; text: string }
   | { kind: 'message'; text: string }
   | { kind: 'unknown' };
 
@@ -202,6 +209,7 @@ export async function budgetFileFailure(error: unknown): Promise<BudgetFileFailu
     return { kind: 'busy', seconds: Number.isFinite(seconds) && seconds > 0 ? seconds : null };
   }
   if (status === 409 && message === STALE_SENTENCE) return { kind: 'stale' };
+  if (status === 403 && code === 'DATA_ACCESS_LIMITED') return { kind: 'dataAccess', text: message };
   if (status === 401 || status === 403) return { kind: 'forbidden' };
   // A 400, 404, 409 or 422 carries a sentence written for the user (a frozen year, a missing file).
   if (message && status >= 400 && status < 500) return { kind: 'message', text: message };

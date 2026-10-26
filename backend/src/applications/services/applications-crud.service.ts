@@ -1,5 +1,7 @@
 import { TechnologyCpeEvents } from '../../technologies/technology-cpe-events';
 import { linkedLineOf } from '../../spend/budget-nature';
+import { countRelatedBudgetLines } from '../../common/relations/related-objects';
+import { hiddenLineCount } from '../../data-access/hidden-links';
 import { copyClassification } from './application-classification';
 import { classificationPatch, classificationReadState } from './application-classification';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, Optional } from '@nestjs/common';
@@ -23,6 +25,7 @@ import { validateUploadedFile } from '../../common/upload-validation';
 import { fixMulterFilename } from '../../common/upload';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../../notifications/share-recipients';
+import { displayName } from '../../common/display-name';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { projectParticipantCondition, requestParticipantCondition } from '../../auth/business-contributor-scope';
 import { buildDerivedUsersByApp } from './derived-users';
@@ -144,9 +147,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     if (!app) throw new NotFoundException('Application not found');
 
     const senderRows = await mg.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
-    const senderName = senderRows.length > 0
-      ? `${senderRows[0].first_name || ''} ${senderRows[0].last_name || ''}`.trim() || 'Someone'
-      : 'Someone';
+    const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
       ? await mg.query(
@@ -345,7 +346,11 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const mg = this.getManager(opts);
     const resolvedAppId = await this.resolveApplicationIdentifier(appId, mg);
     await this.assertVisible(resolvedAppId, opts?.accessScope, mg);
-    const projectCountSql = opts?.projectAccessScope
+    // Projects count only for a caller who reads them, within a Business Contributor's scope.
+    const readsProjects = opts?.readsProjects !== false;
+    const projectCountSql = !readsProjects
+      ? 'SELECT 0'
+      : opts?.projectAccessScope
       ? `SELECT COUNT(*)
          FROM application_projects l
          JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = l.tenant_id
@@ -353,7 +358,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
            AND l.tenant_id = app_current_tenant()
            AND ${projectParticipantCondition('p', '$2')}`
       : `SELECT COUNT(*) FROM application_projects l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()`;
-    const params: unknown[] = opts?.projectAccessScope ? [resolvedAppId, opts.projectAccessScope.userId] : [resolvedAppId];
+    const params: unknown[] = readsProjects && opts?.projectAccessScope ? [resolvedAppId, opts.projectAccessScope.userId] : [resolvedAppId];
     // Requests count only for a caller who reads them, within a Business Contributor's scope.
     const requestScope = opts?.requestsAccess?.scope;
     if (requestScope) params.push(requestScope.userId);
@@ -367,6 +372,9 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
              AND l.tenant_id = app_current_tenant()
              AND ${requestParticipantCondition('r', `$${params.length}`)}`
         : `SELECT COUNT(*) FROM portfolio_request_applications l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()`;
+    // Budget lines and contracts count only for a caller who reads them (the Relations tab hides them otherwise).
+    const readsBudget = opts?.readsBudget !== false;
+    const readsContracts = opts?.readsContracts !== false;
     const rows: Array<{
       opex_count: string | number;
       capex_count: string | number;
@@ -379,9 +387,9 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       attachments_count: string | number;
     }> = await mg.query(
       `SELECT
-         (SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')}) AS opex_count,
-         (SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')}) AS capex_count,
-         (SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS contracts_count,
+         (${readsBudget ? `SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')}` : 'SELECT 0'}) AS opex_count,
+         (${readsBudget ? `SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')}` : 'SELECT 0'}) AS capex_count,
+         (${readsContracts ? 'SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()' : 'SELECT 0'}) AS contracts_count,
          (${projectCountSql}) AS projects_count,
          (${requestCountSql}) AS requests_count,
          (SELECT COUNT(DISTINCT l.technology_id) FROM application_technologies l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS technologies_count,
@@ -401,6 +409,13 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       links_count: string | number;
       attachments_count: string | number;
     }> = rows[0] || {};
+    // The linked lines the Relations tab counts without listing them (`budget_lines_hidden`): those
+    // outside a limited person's data access, or every linked line without the budget right.
+    const budgetLinesHidden = readsBudget
+      ? await hiddenLineCount(mg, 'application', resolvedAppId)
+      : await countRelatedBudgetLines(
+        mg, { links: 'application_spend_items', owner: 'application_id' }, 'application', this.ensureTenantId(opts?.tenantId), resolvedAppId,
+      );
     const counts = {
       opex: Number(row.opex_count || 0),
       capex: Number(row.capex_count || 0),
@@ -413,11 +428,12 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       processes: Number(row.processes_count || 0),
       links: Number(row.links_count || 0),
       attachments: Number(row.attachments_count || 0),
+      budget_lines_hidden: budgetLinesHidden,
     };
     return {
       ...counts,
       // The badge counts requests and leaves tasks out (fried, 2026-10-21); the incidents are added by the page.
-      total: counts.opex + counts.capex + counts.contracts + counts.projects + counts.requests + counts.links + counts.attachments,
+      total: counts.opex + counts.capex + counts.budget_lines_hidden + counts.contracts + counts.projects + counts.requests + counts.links + counts.attachments,
     };
   }
 

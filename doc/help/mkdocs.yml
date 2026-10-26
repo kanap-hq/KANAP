@@ -148,6 +148,7 @@ plugins:
             Analytics dimensions: Dimensions analytiques
             Administration: Administration
             "Admin & Users": Utilisateurs
+            Data access: "Accès aux données"
             Branding: Personnalisation
             Sample data: Données d'exemple
             Master data freeze and metrics copy: Gel des données de référence et copie des indicateurs
@@ -234,6 +235,7 @@ plugins:
             Analytics dimensions: Analysedimensionen
             Administration: Administration
             "Admin & Users": Benutzer
+            Data access: Datenzugriff
             Branding: Branding
             Sample data: Beispieldaten
             Master data freeze and metrics copy: Stammdaten einfrieren und Kennzahlen kopieren
@@ -320,6 +322,7 @@ plugins:
             Analytics dimensions: Dimensiones analíticas
             Administration: Administración
             "Admin & Users": Usuarios
+            Data access: "Acceso a los datos"
             Branding: Personalización
             Sample data: Datos de ejemplo
             Master data freeze and metrics copy: Congelar datos maestros y copiar indicadores
@@ -429,6 +432,7 @@ nav:
 
   - Administration:
     - Admin & Users: admin.md
+    - Data access: data-access.md
     - Branding: branding.md
     - Sample data: sample-data.md
     - "AI models": ai-models.md

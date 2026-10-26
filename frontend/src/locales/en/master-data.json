@@ -54,11 +54,10 @@
       "contacts": "Contacts",
       "prev": "Prev",
       "next": "Next",
-      "enabled": "Enabled"
+      "enabled": "Enabled",
+      "access": "Access"
     },
     "workspace": {
-      "unsavedNavigate": "You have unsaved changes. Save before navigating?",
-      "unsavedSwitchTab": "You have unsaved changes. Save before switching tabs?",
       "itemCountOf": "{{entity}} {{current}} of {{total}}"
     },
     "messages": {
@@ -724,6 +723,10 @@
       "nativeName": "Native name (local language)",
       "description": "Description",
       "consolidationAccount": "Consolidation account",
+      "consolidationAccountNumber": "Consolidation account number",
+      "consolidationAccountName": "Consolidation account name",
+      "consolidationAccountDescription": "Consolidation account description",
+      "selectChart": "Select a chart of accounts",
       "lifecycle": "Lifecycle",
       "loadCoAsError": "Failed to load charts of accounts"
     },
@@ -810,7 +813,8 @@
       "description": "Description",
       "dimension": "Dimension",
       "lifecycle": "Lifecycle",
-      "required": "Required"
+      "required": "Required",
+      "openValues": "Open values"
     },
     "hints": {
       "nameDefault": "Leave empty to show \"{{label}}\" in each person's language.",
@@ -822,7 +826,8 @@
       "valueDimensionAppliesTo": {
         "opex": "The {{dimension}} dimension is for OPEX lines only.",
         "capex": "The {{dimension}} dimension is for CAPEX lines only."
-      }
+      },
+      "openValues": "Anyone who can edit a line can add a value, from the line or the budget file."
     },
     "placeholders": {
       "dimensionName": "e.g., Nature",
@@ -918,7 +923,8 @@
       "nameRequired": "Enter a name.",
       "codeRequired": "Enter a code.",
       "codeInvalid": "Use lowercase letters, digits, - or _ (40 at most).",
-      "dimensionRequired": "Choose a dimension."
+      "dimensionRequired": "Choose a dimension.",
+      "valueAddFailed": "The value could not be added."
     },
     "recommended": {
       "action": "Recommended dimensions",
@@ -948,7 +954,8 @@
       "nothingCreated": "Nothing added: these dimensions are already present.",
       "failed": "The dimensions could not be added.",
       "loadFailed": "The recommended dimensions could not be loaded."
-    }
+    },
+    "addValue": "Add “{{value}}”"
   },
   "businessProcesses": {
     "title": "Business processes",
@@ -1108,7 +1115,8 @@
     "account": {
       "accountNumberRequired": "Account number is required",
       "accountNumberTooLong": "Use at most {{max}} digits",
-      "accountNameRequired": "Account name is required"
+      "accountNameRequired": "Account name is required",
+      "chartOfAccountsRequired": "Chart of accounts is required"
     }
   }
 }

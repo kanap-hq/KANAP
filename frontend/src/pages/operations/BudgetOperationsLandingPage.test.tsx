@@ -9,12 +9,14 @@ const translation = vi.hoisted(() => ({ t: (key: string) => key, i18n: { languag
 vi.mock('react-i18next', () => ({ useTranslation: () => translation }));
 vi.mock('../../components/PageHeader', () => ({ default: ({ title }: { title: string }) => <h1>{title}</h1> }));
 const auth = vi.hoisted(() => ({
+  limited: false,
   grants: {} as Record<string, string>,
   rank: { reader: 1, member: 3, admin: 4 } as Record<string, number>,
 }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
     hasLevel: (resource: string, level: string) => (auth.rank[auth.grants[resource]] ?? 0) >= auth.rank[level],
+    dataAccess: auth.limited ? { available: true, mode: 'limited', nodes: [], modules: [] } : null,
   }),
 }));
 
@@ -39,6 +41,15 @@ const BUDGET_MEMBER = { budget: 'member', budget_ops: 'reader', companies: 'read
 describe('BudgetOperationsLandingPage', () => {
   beforeEach(() => {
     auth.grants = {};
+    auth.limited = false;
+  });
+
+  it('shows no tile to a budget administrator whose data access is limited: every operation is reserved', () => {
+    auth.grants = BUDGET_ADMIN;
+    auth.limited = true;
+    renderPage();
+
+    expect(screen.queryAllByRole('region')).toHaveLength(0);
   });
 
   it('shows every tile to a budget administrator, in two titled sections', () => {

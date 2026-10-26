@@ -18,7 +18,7 @@ docker compose -f infra/compose.onprem.yml up -d api
 |----------|-------------|---------|
 | `DEPLOYMENT_MODE` | **Muss `single-tenant` sein** für On-Premise-Bereitstellungen | `single-tenant` |
 
-Schreiben Sie den Wert exakt. Ein falsch geschriebener Wert (`single_tenant`) startet KANAP ohne jede Warnung im Cloud-Modus.
+Schreiben Sie `single-tenant` oder `multi-tenant`. Lassen Sie die Variable ungesetzt für multi-tenant, den Standard der Cloud. Jeder andere Wert, auch ein Tippfehler wie `single_tenant`, stoppt die API beim Start. Die Meldung nennt die akzeptierten Werte.
 
 ## Optional: Mandantenidentität
 
@@ -95,7 +95,7 @@ Fehlen `CORS_ORIGINS` und die Anwendungsadresse (`APP_BASE_URL`) beide und ist `
 
 Setzen Sie `APP_ENV=production`, wenn Benutzer KANAP über HTTPS erreichen, wie in der dokumentierten Einrichtung. Ist `NODE_ENV` gesetzt und `APP_ENV` nicht, liest KANAP stattdessen `NODE_ENV`.
 
-**Prüfungen beim Start.** Die API startet nicht, wenn `JWT_SECRET` oder `DATABASE_URL` fehlt oder leer ist, und mit `APP_ENV=production` auch nicht, wenn `APP_BASE_URL` oder `CORS_ORIGINS` fehlt. Sie verweigert außerdem den Betrieb, wenn die PostgreSQL-Rolle aus `DATABASE_URL` `SUPERUSER` oder `BYPASSRLS` ist. Diese letzte Prüfung läuft nach den Migrationen, die Migrationen sind also bereits mit dieser Rolle gelaufen, wenn die Meldung erscheint.
+**Prüfungen beim Start.** Die API startet nicht, wenn `DEPLOYMENT_MODE` einen anderen Wert als `single-tenant`, `multi-tenant` oder ungesetzt hat, wenn `JWT_SECRET` oder `DATABASE_URL` fehlt oder leer ist, und mit `APP_ENV=production` auch nicht, wenn `APP_BASE_URL` oder `CORS_ORIGINS` fehlt. Sie verweigert außerdem den Betrieb, wenn die PostgreSQL-Rolle aus `DATABASE_URL` `SUPERUSER` oder `BYPASSRLS` ist. Diese letzte Prüfung läuft nach den Migrationen, die Migrationen sind also bereits mit dieser Rolle gelaufen, wenn die Meldung erscheint.
 
 ## Was das API-Protokoll beim Start zeigt
 
@@ -103,7 +103,7 @@ Lesen Sie das API-Protokoll nach jedem Start und nach jeder Änderung an `.env`:
 
 ```bash
 cd /opt/kanap
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 ```
 
 Der Filter behält die unten aufgeführten Zeilen und lässt die Details des Frameworks weg. Ohne ihn zeigt `docker compose -f infra/compose.onprem.yml logs api` alles.
@@ -122,7 +122,6 @@ Der Filter behält die unten aufgeführten Zeilen und lässt die Details des Fra
 [RATE-LIMIT] Client address: taken from X-Forwarded-For behind 1 trusted proxy (RATE_LIMIT_TRUST_PROXY=true)
 [CORS] Configured 1 origin pattern(s)
 [DB] Connected as PostgreSQL role "kanap" with native RLS enforcement
-Admin seeding disabled (set SEED_ADMIN=true to enable)
 [on-prem] Default chart of accounts created
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
@@ -154,7 +153,6 @@ Die Zahl der Migrationen ändert sich von Version zu Version. Bei späteren Star
 | `[CORS] CORS_ORIGINS and APP_BASE_URL are not set: browsers are still allowed from every origin in this version; ...` | Setzen Sie beide. Eine spätere Version erlaubt nur die konfigurierten Adressen. |
 | `[CORS] CORS_ORIGINS entry ... is a pattern: it is still accepted in this version. ...` | Ersetzen Sie das Muster durch die genaue Adresse. |
 | `[DB] Connected as PostgreSQL role "kanap" with native RLS enforcement` | Zur Information. Die API verwendet die Anwendungsrolle. |
-| `Admin seeding disabled (set SEED_ADMIN=true to enable)` | On-Premise erwartet. Nichts zu tun: Der Administrator wird aus `ADMIN_EMAIL` und `ADMIN_PASSWORD` angelegt. |
 | `[on-prem] Default chart of accounts created`, `[on-prem] Created tenant '...'`, `[on-prem] Created administrator account ...`, `[on-prem] Created default subscription (On-Prem)` | Nur beim ersten Start. |
 | `[on-prem] Administrator account ... left unchanged: the workspace has an active administrator` | Spätere Starts. Nichts zu tun. |
 | `[on-prem] Restored ... as an enabled administrator: the workspace had no active administrator (password unchanged)` | Eine Warnung. Es war kein aktiver Administrator mehr vorhanden, daher hat KANAP das Konto `ADMIN_EMAIL` wiederhergestellt. |
@@ -452,7 +450,7 @@ Die Seite [Schwachstellen](../vulnerabilities.md), ihre E-Mail-Benachrichtigunge
 | `VULNERABILITY_FEED_ENABLED` | Schaltet die Schwachstellen ein. | `false` On-Premise |
 | `NVD_API_BASE_URL` | Adresse eines Spiegels der CVE API 2.0 der NVD, wenn der Server die NVD nicht erreicht. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
 | `NVD_API_KEY` | Optionaler Schlüssel, der die Rate von 5 auf 50 Anfragen pro 30 Sekunden anhebt, sodass das erste Einlesen schneller fertig ist. Beantragen Sie ihn kostenlos auf der [Website der NVD](https://nvd.nist.gov/developers/request-an-api-key). | *nicht gesetzt* |
-| `KEV_FEED_URL` | Adresse eines Spiegels des CISA-Katalogs bekannter ausgenutzter Schwachstellen. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
+| `KEV_FEED_URL` | Adresse eines Spiegels des CISA-Katalogs bekannter ausgenutzter Schwachstellen. Standard ist der GitHub-Spiegel der CISA, weil `www.cisa.gov` Adressen von Rechenzentren abweist. | `https://raw.githubusercontent.com/cisagov/kev-data/develop/known_exploited_vulnerabilities.json` |
 | `EPSS_FEED_URL` | Adresse eines Spiegels der täglichen EPSS-Werte. EPSS ist bei [FIRST](https://www.first.org/epss) beschrieben. | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
 | `EUVD_BASE_URL` | Adresse eines Spiegels der europäischen Schwachstellendatenbank der ENISA (europäischer Katalog und EUVD-Zuordnung). | `https://euvdservices.enisa.europa.eu` |
 | `CVE_LIST_FEED_ENABLED` | Schaltet nur die CVE.org-Liste aus (`false`), während die anderen Quellen weiterlaufen. | Der Wert von `VULNERABILITY_FEED_ENABLED` |
@@ -462,11 +460,11 @@ Die Seite [Schwachstellen](../vulnerabilities.md), ihre E-Mail-Benachrichtigunge
 
 Hinweise:
 
-- Die API braucht ausgehenden HTTPS-Zugriff, Port 443, auf `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` und `euvdservices.enisa.europa.eu`, oder auf Ihre Spiegel (siehe [Firewall-Regeln](#firewall-regeln)).
+- Die API braucht ausgehenden HTTPS-Zugriff, Port 443, auf `services.nvd.nist.gov`, `raw.githubusercontent.com`, `epss.empiricalsecurity.com` und `euvdservices.enisa.europa.eu`, oder auf Ihre Spiegel (siehe [Firewall-Regeln](#firewall-regeln)).
 - Ohne Spiegel kommt die CVE.org-Liste aus den GitHub-Releases: beim ersten Lesen der vollständige Export (etwa 640 MB, in etwa einer Minute gelesen), danach die täglichen Änderungen, 0,5 bis 13 MB pro Tag. Die API braucht ausgehenden HTTPS-Zugriff, Port 443, auf `api.github.com`, `github.com` und `release-assets.githubusercontent.com`.
 - Die CVE.org-Liste belegt etwa 700 MB zusätzlich in der Datenbank. Während des ersten Lesens braucht der Container `api` etwa 1,4 GB temporären Speicherplatz.
 - Ein Server ohne Netzzugang liest die Liste aus einer Datei: Tragen Sie ihren Pfad in `CVE_LIST_EXPORT_URL` ein und legen Sie dort so oft Sie möchten einen neuen Export ab. Die Daten sind so aktuell wie die zuletzt abgelegte Datei.
-- Eine leere Spiegeladresse behält die öffentliche Adresse. Eine Quelle, die der Server nicht erreicht, lässt ihre Spalten unverändert und wird in der Zusammenfassung der Aufgabe genannt. Die anderen Quellen laufen weiter.
+- Eine leere Spiegeladresse behält die Standardadresse. Eine Quelle, die der Server nicht erreicht, lässt ihre Spalten unverändert und wird in der Zusammenfassung der Aufgabe genannt. Die anderen Quellen laufen weiter.
 - Die E-Mail-Benachrichtigungen setzen außerdem einen eingerichteten E-Mail-Versand voraus (Resend oder SMTP).
 - Starten Sie die API nach einer Änderung dieser Werte neu.
 
@@ -501,7 +499,7 @@ Hinweise:
 | `APP_URL` | Nur Multi-Tenant (Cloud). **On-Premise nicht nötig**: `APP_BASE_URL` wird verwendet. | *nicht gesetzt* |
 | `EMAIL_OVERRIDE` | Leitet alle E-Mails an diese Adresse um (nur Entwicklung/QA, **niemals in der Produktion**) | *nicht gesetzt* |
 
-**Client-Adresse.** Mit der dokumentierten Einrichtung (nginx auf demselben Server, API-Port an `127.0.0.1` gebunden) setzen Sie `RATE_LIMIT_TRUST_PROXY=true`. Der Proxy muss `X-Forwarded-For` senden; das nginx-Beispiel tut das. Setzen Sie `false`, wenn nichts vor der API steht. Ein falscher Wert gibt allen Benutzern dieselbe Adresse: Die 60 Passwort-Anmeldeanfragen pro Minute teilen sich dann alle, und 5 Fehlversuche für ein Konto sperren dieses Konto 15 Minuten lang für alle.
+**Client-Adresse.** Mit der dokumentierten Einrichtung (nginx auf demselben Server, API-Port an `127.0.0.1` gebunden) setzen Sie `RATE_LIMIT_TRUST_PROXY=true`. Der Proxy muss `X-Forwarded-For` senden; das nginx-Beispiel tut das. Setzen Sie `false`, wenn nichts vor der API steht. Ein falscher Wert gibt allen Benutzern dieselbe Adresse: Die 60 Passwort-Anmeldeanfragen und die 120 Sitzungsaktualisierungen pro Minute teilen sich dann alle, und 5 Fehlversuche für ein Konto sperren dieses Konto 15 Minuten lang für alle.
 
 ## Optional: Kapazität und Leistung
 
@@ -677,7 +675,7 @@ Nur erforderlich, wenn die entsprechende Funktion aktiviert ist.
 | `claude.ai` | 443 | Liest die Beschreibung von Claude, Claude Desktop oder Claude Code, wenn ein Benutzer es ohne Schlüssel über MCP verbindet | Wenn `AI_MCP_ENABLED=true` und Benutzer sich über OAuth verbinden (für API-Schlüssel nicht nötig) |
 | `chatgpt.com`, `grok.com` | 443 | Liest die Beschreibung von ChatGPT oder Grok, wenn ein Benutzer es ohne Schlüssel über MCP verbindet | Wie bei `claude.ai` |
 | `services.nvd.nist.gov` oder Ihr Spiegel | 443 | Veröffentlichte Schwachstellen (NVD) | Wenn `VULNERABILITY_FEED_ENABLED=true` |
-| `www.cisa.gov` oder Ihr Spiegel | 443 | CISA-Katalog bekannter ausgenutzter Schwachstellen | Wenn `VULNERABILITY_FEED_ENABLED=true` |
+| `raw.githubusercontent.com` oder Ihr Spiegel | 443 | CISA-Katalog bekannter ausgenutzter Schwachstellen (GitHub-Spiegel der CISA) | Wenn `VULNERABILITY_FEED_ENABLED=true` |
 | `epss.empiricalsecurity.com` oder Ihr Spiegel | 443 | Tägliche EPSS-Werte | Wenn `VULNERABILITY_FEED_ENABLED=true` |
 | `euvdservices.enisa.europa.eu` oder Ihr Spiegel | 443 | Europäische Schwachstellendatenbank (ENISA): europäischer Katalog und EUVD-Kennungen | Wenn `VULNERABILITY_FEED_ENABLED=true` |
 | `api.github.com`, `github.com`, `release-assets.githubusercontent.com` | 443 | Die CVE.org-Liste (von den Herstellern geschriebene Einträge) | Wenn `VULNERABILITY_FEED_ENABLED=true`, außer bei `CVE_LIST_FEED_ENABLED=false` oder wenn `CVE_LIST_EXPORT_URL` einen Spiegel nennt |

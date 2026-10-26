@@ -43,6 +43,7 @@ import { getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { environmentLabel } from '../../../utils/applicationEnvironments';
 import { interfaceRouteIntro, legTypeLabel } from '../../../utils/interfaceLegType';
 const ENVIRONMENTS = ['prod', 'pre_prod', 'qa', 'test', 'dev', 'sandbox'] as const;
 // Set to false to restore the previous per-environment tables while evaluating the matrix workflow.
@@ -188,10 +189,6 @@ function getRoleLabel(t: TFunction, role: string, sourceName?: string | null, ta
   return role || '';
 }
 
-function formatEnvironment(value: string | null | undefined) {
-  return String(value || '').replace(/_/g, '-').toUpperCase();
-}
-
 const DEFAULT_AUTH_OPTIONS = [
   { code: 'service_account', labelKey: 'serviceAccount' },
   { code: 'oauth2', labelKey: 'oauth2' },
@@ -209,7 +206,7 @@ function formatInstanceOption(
 ) {
   const roleLabel = getRoleLabel(t, role, sourceName, targetName);
   const details = [instance.base_url, instance.region, instance.zone].filter(Boolean).join(' / ');
-  return [roleLabel, formatEnvironment(instance.environment), details || instance.id.slice(0, 8)]
+  return [roleLabel, environmentLabel(t, instance.environment), details || instance.id.slice(0, 8)]
     .filter(Boolean)
     .join(' - ');
 }
@@ -961,7 +958,7 @@ export default function InterfaceBindingsMatrix({
     let appLabel = t('it:workspace.interface.flow.middleware');
     if (inst.application_id === sourceApplicationId) appLabel = sourceApplicationName || t('it:workspace.interface.flow.source');
     else if (inst.application_id === targetApplicationId) appLabel = targetApplicationName || t('it:workspace.interface.flow.target');
-    const envLabel = formatEnvironment(inst.environment);
+    const envLabel = environmentLabel(t, inst.environment);
     return `${appLabel} · ${envLabel}`;
   }, [
     instancesById,
@@ -1035,7 +1032,7 @@ export default function InterfaceBindingsMatrix({
         {error && <Alert severity="error">{error}</Alert>}
         {missingBindingInstanceRoles.length > 0 && (
           <Alert severity="warning">
-            {t('it:workspace.interface.bindings.missingInstance', { count: missingBindingInstanceRoles.length, roles: missingBindingInstanceRoles.join(' / '), env: formatEnvironment(dialogState.environment) })}
+            {t('it:workspace.interface.bindings.missingInstance', { count: missingBindingInstanceRoles.length, roles: missingBindingInstanceRoles.join(' / '), env: environmentLabel(t, dialogState.environment) })}
           </Alert>
         )}
         <Box sx={gridSx}>
@@ -1289,7 +1286,7 @@ export default function InterfaceBindingsMatrix({
               bgcolor: theme.palette.kanap.bg.primary,
             })}
           >
-            {renderStatusDot(formatEnvironment(env), muiColor)}
+            {renderStatusDot(environmentLabel(t, env), muiColor)}
             <Typography sx={{ fontSize: 12, color: 'kanap.text.secondary' }}>
               {`${configuredCount}/${totalCount || 0}`}
             </Typography>
@@ -1474,7 +1471,7 @@ export default function InterfaceBindingsMatrix({
               <TableCell key={env} sx={{ width: 220, minWidth: 220 }}>
                 <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="space-between">
                   <Typography sx={{ fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary' }}>
-                    {formatEnvironment(env)}
+                    {environmentLabel(t, env)}
                   </Typography>
                   <Tooltip title={t('it:workspace.interface.bindings.deleteEnvironment')}>
                     <IconButton
@@ -1580,7 +1577,7 @@ export default function InterfaceBindingsMatrix({
                 textOverflow: 'ellipsis',
               }}
             >
-              {`${formatEnvironment(dialogState.environment)} · ${legTypeLabel(t, dialogState.leg.leg_type)}`}
+              {`${environmentLabel(t, dialogState.environment)} · ${legTypeLabel(t, dialogState.leg.leg_type)}`}
             </Typography>
             {autosaveStatusText && (
               <Typography
@@ -1695,7 +1692,7 @@ export default function InterfaceBindingsMatrix({
             </Stack>
           ) : (
             <Typography variant="body2" color="text.secondary">
-              {t('it:workspace.interface.bindings.noBindingForLeg', { env: env.toUpperCase() })}
+              {t('it:workspace.interface.bindings.noBindingForLeg', { env: environmentLabel(t, env) })}
             </Typography>
           )}
           {binding && (
@@ -1869,7 +1866,7 @@ export default function InterfaceBindingsMatrix({
               <Box key={env} sx={{ mb: 3 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                   <Typography variant="subtitle1">
-                    {t('it:workspace.interface.bindings.environmentLine', { env: env.toUpperCase() })}
+                    {t('it:workspace.interface.bindings.environmentLine', { env: environmentLabel(t, env) })}
                   </Typography>
                   <Button
                     size="small"
@@ -1891,7 +1888,7 @@ export default function InterfaceBindingsMatrix({
                     <TableRow>
                       <TableCell>{t('it:workspace.interface.flow.leg')}</TableCell>
                       <TableCell>{t('it:workspace.interface.bindings.technicalTemplate')}</TableCell>
-                      <TableCell>{t('it:workspace.interface.bindings.bindingIn', { env: env.toUpperCase() })}</TableCell>
+                      <TableCell>{t('it:workspace.interface.bindings.bindingIn', { env: environmentLabel(t, env) })}</TableCell>
                       <TableCell>{t('it:workspace.interface.bindings.connections')}</TableCell>
                       <TableCell align="right">{t('it:common.actions')}</TableCell>
                     </TableRow>
@@ -1930,7 +1927,7 @@ export default function InterfaceBindingsMatrix({
           {manageConnections && (
             <Stack spacing={2}>
               <Typography variant="subtitle2" color="text.secondary">
-                {t('it:workspace.interface.bindings.envLegLine', { env: manageConnections.binding.environment.toUpperCase(), leg: legTypeLabel(t, manageConnections.binding.leg_type) })}
+                {t('it:workspace.interface.bindings.envLegLine', { env: environmentLabel(t, manageConnections.binding.environment), leg: legTypeLabel(t, manageConnections.binding.leg_type) })}
               </Typography>
               {linksLoadingBindingId === manageConnections.binding.id && (
                 <Typography variant="body2" color="text.secondary">
@@ -2109,14 +2106,15 @@ export default function InterfaceBindingsMatrix({
       >
         <PropertyRow label={t('it:common.environment')} required>
           <Select
-            value={envDraft}
+            // Once added, the environment leaves the options while the dialog closes: keep the value among them.
+            value={selectableEnvs.includes(envDraft) ? envDraft : ''}
             onChange={(event) => setEnvDraft(event.target.value)}
             variant="standard"
             sx={drawerSelectSx}
           >
             {selectableEnvs.map((env) => (
               <MenuItem key={env} value={env} sx={drawerMenuItemSx}>
-                {formatEnvironment(env)}
+                {environmentLabel(t, env)}
               </MenuItem>
             ))}
           </Select>
@@ -2144,7 +2142,7 @@ export default function InterfaceBindingsMatrix({
       >
         <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
           {pendingDeleteEnvironment
-            ? t('it:workspace.interface.bindings.deleteEnvironmentMessage', { count: bindings.filter((binding) => binding.environment === pendingDeleteEnvironment).length, env: pendingDeleteEnvironment.toUpperCase() })
+            ? t('it:workspace.interface.bindings.deleteEnvironmentMessage', { count: bindings.filter((binding) => binding.environment === pendingDeleteEnvironment).length, env: environmentLabel(t, pendingDeleteEnvironment) })
             : t('it:workspace.interface.bindings.deleteEnvironmentFallback')}
         </Typography>
       </KanapDialog>

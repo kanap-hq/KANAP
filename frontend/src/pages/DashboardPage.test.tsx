@@ -18,7 +18,8 @@ vi.mock('../hooks/useBudgetColumns', async (importOriginal) => {
   return { ...actual, useBudgetColumns: () => state.mockedBudgetColumns(actual.resolveBudgetColumns) };
 });
 vi.mock('../api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }));
-vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+let interfaceLocale = 'en';
+vi.mock('../i18n/useLocale', () => ({ useLocale: () => interfaceLocale }));
 const readable: Record<string, boolean> = { budget: true };
 let budgetWriter = true;
 let contractsWriter = true;
@@ -34,12 +35,13 @@ vi.mock('../components/PageHeader', () => ({
   default: ({ actions }: { actions?: React.ReactNode }) => <header aria-label="page header">{actions}</header>,
 }));
 vi.mock('./workspace/tiles/DashboardTile', () => ({
-  default: ({ title, subtitle, action, children }: { title: string; subtitle?: string; action?: React.ReactNode; children?: React.ReactNode }) => (
-    <section aria-label={title}>{subtitle && <p data-testid="tile-subtitle">{subtitle}</p>}{action}{children}</section>
+  default: ({ title, subtitle, currency, action, children }: { title: string; subtitle?: string; currency?: string; action?: React.ReactNode; children?: React.ReactNode }) => (
+    <section aria-label={title}>{(subtitle || currency) && <p data-testid="tile-subtitle">{[subtitle, currency].filter(Boolean).join(' · ')}</p>}{action}{children}</section>
   ),
 }));
 
 import api from '../api';
+import { formatCompactAmount, formatThousandsAmount } from '../i18n/formatters';
 import DashboardPage from './DashboardPage';
 import { DEFAULT_BUDGET_TILES } from './workspace/hooks/useBudgetDashboardConfig';
 let savedDashboard = { tiles: DEFAULT_BUDGET_TILES };
@@ -85,6 +87,7 @@ describe('DashboardPage budget snapshot', () => {
     readable.budget = true;
     budgetWriter = true;
     contractsWriter = true;
+    interfaceLocale = 'en';
     storage.clear();
     post.mockReset();
     post.mockResolvedValue({ data: fakeAggregate([], { query: {}, spec: { groupBy: [], measures: [] } }) });
@@ -106,6 +109,8 @@ describe('DashboardPage budget snapshot', () => {
     await within(tile).findByText('A2');
     expect(screen.queryByRole('region', { name: 'dashboard.opexSnapshot' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'dashboard.capexSnapshot' })).not.toBeInTheDocument();
+    // No reporting currency in these totals: the tile does not invent one.
+    expect(within(tile).queryByTestId('tile-subtitle')).not.toBeInTheDocument();
     const headers = within(tile).getAllByRole('columnheader').map((h) => h.textContent);
     expect(headers).toEqual(['labels.year', 'ops:budget.type', 'A0', 'A1', 'A2', 'A3']);
     const rows = within(tile).getAllByRole('row').slice(1);
@@ -191,6 +196,22 @@ describe('DashboardPage budget snapshot', () => {
     expect(within(tile).getByRole('status')).not.toHaveTextContent('excludingSeveral');
   });
 
+  it('names the reporting currency once on the budget tile, from the combined totals', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/dashboard/budget-config') return { data: savedDashboard };
+      // Only the combined total names it. The two natures omit it: the tile still uses that one code.
+      if (url === '/budget-lines/summary/totals') return { data: { yBudget: 5000, reportingCurrency: 'SEK' } };
+      if (url.endsWith('/summary/totals')) return { data: { yBudget: 1000 } };
+      return { data: { items: [], total: 0 } };
+    });
+    renderPage();
+    const tile = await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
+    await waitFor(() => expect(subtitleOf(tile)).toBe('SEK'));
+    expect(tile.textContent?.match(/SEK/g)).toHaveLength(1);
+    expect(within(tile).getAllByRole('link').every((link) => !link.textContent?.includes('SEK'))).toBe(true);
+    expect(within(tile).getByText('5k')).toBeInTheDocument();
+  });
+
   it('shows a top item without an exchange rate in its own currency, marked, never as a reporting amount', async () => {
     const Y = new Date().getFullYear();
     const item = {
@@ -199,7 +220,7 @@ describe('DashboardPage budget snapshot', () => {
     };
     get.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
       if (url === '/dashboard/budget-config') return { data: savedDashboard };
-      if (url.endsWith('/summary/totals')) return { data: {} };
+      if (url.endsWith('/summary/totals')) return { data: { reportingCurrency: 'EUR' } };
       if (url === '/budget-lines/summary' && config?.params?.sort !== 'updated_at:DESC') return { data: { items: [item], total: 1, page: 1, limit: 5 } };
       return { data: { items: [], total: 0 } };
     });
@@ -208,6 +229,10 @@ describe('DashboardPage budget snapshot', () => {
     const link = await within(tile).findByRole('link', { name: /Tokyo hosting/ });
     expect(link).toHaveTextContent('ops:shared.fxMissing.localAmount');
     expect(within(link).getByRole('img', { name: 'shared.fxMissing.lineTooltip' })).toBeInTheDocument();
+    // The tile names the reporting currency once. The row keeps its own marked amount, without that code.
+    expect(subtitleOf(tile)).toBe('dashboard.columnY (ops:operations.budgetColumns.budget) · EUR');
+    expect(link.textContent).not.toContain('EUR');
+    expect(tile.textContent?.match(/EUR/g)).toHaveLength(1);
   });
 
   it('names a line the top list leaves out when its year has no exchange rate', async () => {
@@ -219,7 +244,7 @@ describe('DashboardPage budget snapshot', () => {
     get.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
       if (url === '/dashboard/budget-config') return { data: savedDashboard };
       if (url === '/budget-lines/summary/totals' && config?.params?.amounts) {
-        return { data: { fxMissing: [{ currency: 'ZAR', year: Y, lines: 1 }, { currency: 'JPY', year: Y + 2, lines: 3 }] } };
+        return { data: { reportingCurrency: 'EUR', fxMissing: [{ currency: 'ZAR', year: Y, lines: 1 }, { currency: 'JPY', year: Y + 2, lines: 3 }] } };
       }
       if (url.endsWith('/summary/totals')) return { data: {} };
       if (url === '/budget-lines/summary' && config?.params?.sort !== 'updated_at:DESC') {
@@ -230,6 +255,8 @@ describe('DashboardPage budget snapshot', () => {
     renderPage();
     const tile = await screen.findByRole('region', { name: TOP_ITEMS });
     expect(await within(tile).findByText('Ranked line')).toBeInTheDocument();
+    expect(subtitleOf(tile)).toBe('dashboard.columnY (ops:operations.budgetColumns.budget) · EUR');
+    expect(within(tile).getByRole('link', { name: /Ranked line/ }).textContent).not.toContain('EUR');
     const notice = await within(tile).findByRole('status');
     // One pair of this year: the other year on the totals answer stays off this tile.
     expect(notice).toHaveTextContent('shared.fxMissing.excluding');
@@ -248,7 +275,7 @@ describe('DashboardPage budget snapshot', () => {
   });
 });
 
-const compact = (n: number) => new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+const compact = (n: number) => formatCompactAmount(n, 'en');
 /** Y-1 and Y slots; column 3 holds the same amounts the other way round, so a tile reading the wrong column shows. */
 const budgetSlots = (previous: number, current: number) => ({
   yMinus1: { totals: { budget: previous, forecast: current } },
@@ -260,7 +287,7 @@ function mockBudgetEndpoints() {
   get.mockImplementation(async (url: string, config?: { params?: Record<string, any> }) => {
     if (url === '/dashboard/budget-config') return { data: savedDashboard };
     const params = config?.params ?? {};
-    if (url.endsWith('/summary/totals')) return { data: {} };
+    if (url.endsWith('/summary/totals')) return { data: { reportingCurrency: 'CHF' } };
     if (url === '/tasks') {
       // Seven open tasks; the five first by due date (one without, last).
       const items = [
@@ -315,7 +342,10 @@ function mockBudgetEndpoints() {
       { nature: 'opex', id: 'o5', item_number: 26, product_name: 'Opex trimmed', versions: budgetSlots(2000, 200), owner_business_name: 'Thomas Berger', cost_center_label: 'IT-2 · Workplace' },
       { nature: 'capex', id: 'c1', item_number: 22, product_name: 'Capex grows', description: 'Capex grows', versions: budgetSlots(0, 4000), owner_it_name: 'Marie Fontaine' },
     ].filter((row) => scope === 'all' || row.nature === scope);
-    return { data: fakeAggregate(items, body) };
+    const data = fakeAggregate(items, body);
+    // One code for every amount tile, distinct from a hardcoded euro, so the subtitle proves it reads the answer.
+    if (data.reportingCurrency) data.reportingCurrency = 'CHF';
+    return { data };
   });
 }
 
@@ -331,6 +361,7 @@ const subtitleOf = (tile: HTMLElement) => within(tile).getByTestId('tile-subtitl
 
 describe('DashboardPage budget tiles', () => {
   beforeEach(() => {
+    interfaceLocale = 'en';
     setBudgetColumns();
     get.mockReset();
     post.mockReset();
@@ -369,15 +400,25 @@ describe('DashboardPage budget tiles', () => {
     expect(within(screen.getByRole('region', { name: MY_BUDGET })).getByRole('tab', { name: 'operations.scope.all' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('names the tab tiles in one line and what they read on a second one', async () => {
+  it('names the tab tiles in one line and what they read on a second one, with the reporting currency once', async () => {
     renderPage();
     const column = 'ops:operations.budgetColumns.budget';
-    expect(subtitleOf(await screen.findByRole('region', { name: MY_BUDGET }))).toBe(`dashboard.columnY (${column})`);
-    expect(subtitleOf(screen.getByRole('region', { name: TOP_ITEMS }))).toBe(`dashboard.columnY (${column})`);
-    expect(subtitleOf(screen.getByRole('region', { name: TOP_INCREASES }))).toBe(`dashboard.columnYvsYminus1 (${column})`);
-    expect(subtitleOf(screen.getByRole('region', { name: BY_COST_CENTER }))).toBe(`dashboard.columnY (${column})`);
-    // The other tiles keep a title alone.
-    expect(within(screen.getByRole('region', { name: 'dashboard.dataHygiene' })).queryByTestId('tile-subtitle')).not.toBeInTheDocument();
+    const withCurrency = (key: string) => `${key} (${column}) · CHF`;
+    await waitFor(() => {
+      expect(subtitleOf(screen.getByRole('region', { name: MY_BUDGET }))).toBe(withCurrency('dashboard.columnY'));
+      expect(subtitleOf(screen.getByRole('region', { name: TOP_ITEMS }))).toBe(withCurrency('dashboard.columnY'));
+      expect(subtitleOf(screen.getByRole('region', { name: TOP_INCREASES }))).toBe(withCurrency('dashboard.columnYvsYminus1'));
+      expect(subtitleOf(screen.getByRole('region', { name: BY_COST_CENTER }))).toBe(withCurrency('dashboard.columnY'));
+      expect(subtitleOf(screen.getByRole('region', { name: 'dashboard.budgetSnapshot' }))).toBe('CHF');
+    });
+    // The code is the subtitle only: no row repeats it.
+    for (const name of [MY_BUDGET, TOP_ITEMS, TOP_INCREASES, BY_COST_CENTER, 'dashboard.budgetSnapshot']) {
+      expect(screen.getByRole('region', { name }).textContent?.match(/CHF/g)).toHaveLength(1);
+    }
+    // Counts, tasks, renewals and recent updates are not amounts.
+    for (const name of ['dashboard.dataHygiene', 'dashboard.myTasks', 'dashboard.nextRenewals', 'dashboard.recentUpdates']) {
+      expect(within(screen.getByRole('region', { name })).queryByTestId('tile-subtitle')).not.toBeInTheDocument();
+    }
   });
 
   it.each([
@@ -438,10 +479,12 @@ describe('DashboardPage budget tiles', () => {
     renderPage();
     const tile = await screen.findByRole('region', { name: TOP_INCREASES });
     expect(await within(tile).findByText('Opex grows')).toBeInTheDocument();
+    expect(compact(2000)).toBe('2k');
+    expect(compact(300)).toBe('300');
     expect(within(tile).getByText(`+${compact(2000)}`)).toBeInTheDocument();
     expect(within(tile).queryByText('Opex shrinks')).not.toBeInTheDocument();
     expect(within(tile).getByText('Capex grows')).toBeInTheDocument();
-    // A rise under a thousand keeps its value instead of reading "+0k".
+    // A rise under a thousand keeps its value (300).
     expect(within(tile).getByText(`+${compact(300)}`)).toBeInTheDocument();
     // One aggregate over the list's window (no years): Y minus Y-1 per line, the increases, the five largest.
     expect(aggregateCalls('/budget-lines/summary/aggregate')).toContainEqual({
@@ -459,6 +502,25 @@ describe('DashboardPage budget tiles', () => {
 
     fireEvent.click(within(tile).getByRole('tab', { name: 'operations.scope.capex' }));
     expect(await within(tile).findByText('Capex grows')).toBeInTheDocument();
+  });
+
+  it('formats the amounts in the interface language', async () => {
+    interfaceLocale = 'fr';
+    renderPage();
+    const increases = await screen.findByRole('region', { name: TOP_INCREASES });
+    expect(await within(increases).findByText('Opex grows')).toBeInTheDocument();
+    const increaseText = increases.textContent ?? '';
+    // French compact: a no-break space before k. The English forms stay absent.
+    expect(increaseText).toContain(`+${formatCompactAmount(2000, 'fr')}`);
+    expect(increaseText).toContain(`+${formatCompactAmount(300, 'fr')}`);
+    expect(increaseText).not.toContain('+2K');
+    expect(increaseText).not.toContain('+2k');
+    const mine = await screen.findByRole('region', { name: MY_BUDGET });
+    const itOwner = await within(mine).findByRole('link', { name: /roles\.itOwner/ });
+    // 3 400 rounds to 3 thousand. French writes a space before k.
+    const ownerText = itOwner.textContent ?? '';
+    expect(ownerText).toContain(formatThousandsAmount(3400, 'fr'));
+    expect(ownerText).not.toContain('3k');
   });
 
   it('opens each top increase on its line, by its reference', async () => {
@@ -581,7 +643,7 @@ describe('DashboardPage budget tiles', () => {
     setBudgetColumns({ labels: TENANT_NAMES, enabled: ALL_SHOWN, default_column: 'forecast' });
     renderPage();
     const tile = await screen.findByRole('region', { name: TOP_ITEMS });
-    expect(subtitleOf(tile)).toBe('dashboard.columnY (A2)');
+    await waitFor(() => expect(subtitleOf(tile)).toBe('dashboard.columnY (A2) · CHF'));
     expect(await within(tile).findByText('Opex top')).toBeInTheDocument();
     // Column 3 of Y holds the Y-1 amount of column 1 (0): 0k, not the 5k of column 1.
     expect(within(tile).getAllByText('0k')).toHaveLength(2);
@@ -593,7 +655,7 @@ describe('DashboardPage budget tiles', () => {
     setBudgetColumns({ labels: TENANT_NAMES, enabled: ALL_SHOWN, default_column: 'forecast' });
     renderPage();
     const tile = await screen.findByRole('region', { name: TOP_INCREASES });
-    expect(subtitleOf(tile)).toBe('dashboard.columnYvsYminus1 (A2)');
+    await waitFor(() => expect(subtitleOf(tile)).toBe('dashboard.columnYvsYminus1 (A2) · CHF'));
     // Column 3 runs the other way: only the line that shrinks on column 1 grows on it.
     expect(await within(tile).findByText('Opex shrinks')).toBeInTheDocument();
     expect(within(tile).queryByText('Opex grows')).not.toBeInTheDocument();

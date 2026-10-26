@@ -63,7 +63,7 @@ Der erste Befehl gibt die Version des Checkouts aus. Der zweite antwortet mit ei
 ```bash
 cd /opt/kanap
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ```
 
@@ -233,6 +233,8 @@ sudo test -s "$DUMP" \
 Die letzte Zeile lautet `Database restored`. Lautet sie `Stopped`, ist nach dem fehlgeschlagenen Befehl nichts mehr gelaufen.
 
 Führen Sie `pg_restore` als `postgres` und ohne `--no-owner` aus. Der Dump hält den Eigentümer jedes Objekts fest (`kanap`), daher gibt die Wiederherstellung die Tabellen mit ihren Einstellungen zur Sicherheit auf Zeilenebene an die Anwendungsrolle zurück. Mit `--no-owner` gehörten die Tabellen `postgres`, und die API könnte sie nicht verwenden. Die Rolle `kanap` muss existieren: Legen Sie sie auf einem neuen Server vor diesem Schritt wie in [Schritt 4 des Installationsbeispiels](installation-example.md#4-postgresql) an.
+
+**Datenzugriff nach Bereich.** Nutzt der Server den [Datenzugriff nach Bereich](installation.md#optional-data-scoped-access), muss auch seine Rolle `kanap_data_limited` vor der Wiederherstellung existieren. Auf einem neuen Server führen Sie das Skript dieses Abschnitts nach dem Anlegen der Rolle `kanap` aus, mit `-d postgres`, da die Datenbank `kanap` noch nicht existiert. Eine Wiederherstellung auf einem Server ohne diese Rolle bringt weder die Zugriffsregeln noch die Rechte der Rolle zurück, und `pg_restore` meldet Fehler dazu. Ein Dump mit `pg_dump --no-privileges` lässt die Rechte ebenfalls weg. In beiden Fällen werden begrenzte Personen abgewiesen, bis Sie das Skript erneut ausführen und die API neu starten.
 
 **2. Die Dateien wiederherstellen.** Die Kopie ersetzt den Inhalt des Buckets. Der Befehl läuft nur, wenn die Kopie existiert:
 

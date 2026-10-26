@@ -128,17 +128,33 @@ async function testTemplateHeadersRoundTripThroughImportValidation() {
       timeZone: 'Europe/Paris',
     });
     const headerLine = result.content.replace(/^﻿/, '').split('\n')[0].trim();
-    // A date-time column names its zone after its name (`detected_at (Europe/Paris)`); the import
-    // reads it by that name. Every other column keeps its plain name.
+    // A config may name a column in the file's language (`headerLabels`). The template then writes
+    // that name, and the import reads it as the column; the technical csvColumn stays accepted.
+    // Resolve each header to its canonical column, so the checks below hold for both forms.
+    const canonicalHeader = new Map<string, string>();
+    for (const f of config.fields) {
+      canonicalHeader.set(f.csvColumn, f.csvColumn);
+      const label = config.headerLabels?.[f.csvColumn]?.fr;
+      if (label) canonicalHeader.set(label, f.csvColumn);
+    }
+    // A date-time column names its zone after its header (`detected_at (Europe/Paris)`, or its
+    // translated name); the import reads it by the canonical column.
     const zoned = new Set(config.fields.filter((f) => f.zonedDateTime).map((f) => f.csvColumn));
     const headers = headerLine.split(';').map((h) => {
       const named = readTimeZoneHeader(h);
-      if (!named || !zoned.has(named.column)) return h;
-      assert.equal(named.zone, 'Europe/Paris', `${config.entityName}: ${h}`);
-      return named.column;
+      if (!named) {
+        const column = canonicalHeader.get(h);
+        assert.ok(column, `${config.entityName}: template header '${h}' is not an importable column`);
+        return column;
+      }
+      const column = canonicalHeader.get(named.column);
+      assert.ok(column, `${config.entityName}: template header '${h}' is not an importable column`);
+      if (zoned.has(column)) assert.equal(named.zone, 'Europe/Paris', `${config.entityName}: ${h}`);
+      return column;
     });
     for (const column of zoned) {
-      assert.ok(headerLine.split(';').includes(`${column} (Europe/Paris)`), `${config.entityName}: ${column} names its zone`);
+      const label = config.headerLabels?.[column]?.fr ?? column;
+      assert.ok(headerLine.split(';').includes(`${label} (Europe/Paris)`), `${config.entityName}: ${column} names its zone`);
     }
     const importable = new Set(
       config.fields.filter((f) => f.importable !== false).map((f) => f.csvColumn),

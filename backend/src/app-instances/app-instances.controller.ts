@@ -10,21 +10,26 @@ import { resolveBusinessContributorScope } from '../auth/business-contributor-sc
 export class AppInstancesController {
   constructor(private readonly svc: AppInstancesService) {}
 
+  /** The request's manager and tenant: every query of the service names the tenant. */
+  private opts(req: any) {
+    return { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id ?? null };
+  }
+
   private async listForApplication(applicationId: string, req: any) {
     const accessScope = await resolveBusinessContributorScope(req, 'applications', 'reader');
-    return this.svc.list(applicationId, { manager: req?.queryRunner?.manager, accessScope });
+    return this.svc.list(applicationId, { ...this.opts(req), accessScope });
   }
 
   private createForApplication(applicationId: string, body: any, req: any) {
-    return this.svc.create(applicationId, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.svc.create(applicationId, body, req.user?.sub ?? null, this.opts(req));
   }
 
   private updateDeployment(instanceId: string, body: any, req: any) {
-    return this.svc.update(instanceId, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.svc.update(instanceId, body, req.user?.sub ?? null, this.opts(req));
   }
 
   private deleteDeployment(instanceId: string, req: any) {
-    return this.svc.delete(instanceId, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    return this.svc.delete(instanceId, req.user?.sub ?? null, this.opts(req));
   }
 
   @UseGuards(PermissionGuard)

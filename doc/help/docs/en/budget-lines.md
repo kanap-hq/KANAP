@@ -702,6 +702,8 @@ Access to budget lines is controlled by the Budget resource, which covers OPEX a
 
 Freezing budget columns needs Budget administration (`budget_ops:admin`).
 
+Data access can limit a person to the lines of some companies or cost centers. They then see those lines and the lines they are named on, a line they see in Read shows "Read only in your access", and deleting lines and bulk operations are reserved to people with access to all data. See [Data access](data-access.md).
+
 Additionally:
 
 - Tasks have separate permissions (`tasks:member` to create and edit tasks on budget lines)

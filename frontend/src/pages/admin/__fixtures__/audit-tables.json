@@ -162,6 +162,7 @@
   "tenants",
   "tenants_admin",
   "tenants_plan",
+  "user_data_access",
   "user_roles",
   "users",
   "working_day_profiles"

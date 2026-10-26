@@ -51,6 +51,15 @@ let refreshFlight: { generation: number; promise: Promise<RefreshOutcome> } | nu
 // an older generation belongs to a session that no longer exists.
 let sessionGeneration = 0;
 const sessionEndedListeners = new Set<() => void>();
+export type RefreshFailure = {
+  /** The server answered 429 (too many attempts). */
+  rateLimited: boolean;
+  /** How long the refresh waits before its next attempt (0 after the last attempt of a flight). */
+  waitMs: number;
+};
+const refreshFailureListeners = new Set<(failure: RefreshFailure) => void>();
+// Ends the wait between two refresh attempts, so the next attempt starts now.
+let wakeRefreshWait: (() => void) | null = null;
 
 export function getSessionGeneration(): number {
   return sessionGeneration;
@@ -67,6 +76,35 @@ export function subscribeSessionEnded(listener: () => void): () => void {
   return () => {
     sessionEndedListeners.delete(listener);
   };
+}
+
+/**
+ * Notified each time a refresh attempt fails without ending the session (429, 408, 5xx, network
+ * error, timeout), with the wait before the next attempt: on a 429 the one Retry-After asks for
+ * (capped), else the backoff step. The refresh itself waits and tries again.
+ */
+export function subscribeRefreshFailure(listener: (failure: RefreshFailure) => void): () => void {
+  refreshFailureListeners.add(listener);
+  return () => {
+    refreshFailureListeners.delete(listener);
+  };
+}
+
+/** A refresh waiting between two attempts tries again now (the Retry button); otherwise nothing. */
+export function retryRefreshNow(): void {
+  wakeRefreshWait?.();
+}
+
+function waitBeforeNextAttempt(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const wake = () => {
+      clearTimeout(timer);
+      if (wakeRefreshWait === wake) wakeRefreshWait = null;
+      resolve();
+    };
+    const timer = setTimeout(wake, ms);
+    wakeRefreshWait = wake;
+  });
 }
 
 function clearAuthSession(): RefreshOutcome {
@@ -105,15 +143,18 @@ function refreshRefused(error: unknown): boolean {
   return status !== undefined && status >= 400 && status < 500 && status !== 408 && status !== 429;
 }
 
-// On a 429 the server's Retry-After (seconds or HTTP date, capped) when it sends one; otherwise
-// the backoff step.
-function retryDelayMs(error: unknown, attempt: number): number {
-  const backoff = REFRESH_RETRY_DELAYS_MS[attempt];
+// The wait a 429 asks for in Retry-After (seconds or HTTP date, capped), or null without one.
+function retryAfterMs(error: unknown): number | null {
   const response = (error as HttpErrorLike)?.response;
   const retryAfter = String(response?.headers?.['retry-after'] ?? '').trim();
-  if (response?.status !== 429 || !retryAfter) return backoff;
+  if (response?.status !== 429 || !retryAfter) return null;
   const ms = /^\d+$/.test(retryAfter) ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now();
-  return Number.isFinite(ms) ? Math.min(Math.max(ms, 0), MAX_RETRY_AFTER_MS) : backoff;
+  return Number.isFinite(ms) ? Math.min(Math.max(ms, 0), MAX_RETRY_AFTER_MS) : null;
+}
+
+// On a 429 the server's Retry-After when it sends one; otherwise the backoff step.
+function retryDelayMs(error: unknown, attempt: number): number {
+  return retryAfterMs(error) ?? REFRESH_RETRY_DELAYS_MS[attempt];
 }
 
 async function performTokenRefresh(generation: number, body?: { refresh_token?: string }): Promise<RefreshOutcome> {
@@ -142,10 +183,16 @@ async function performTokenRefresh(generation: number, body?: { refresh_token?: 
       if (refreshRefused(error)) {
         return clearAuthSession();
       }
-      if (attempt >= REFRESH_RETRY_DELAYS_MS.length) {
+      const lastAttempt = attempt >= REFRESH_RETRY_DELAYS_MS.length;
+      const failure: RefreshFailure = {
+        rateLimited: (error as HttpErrorLike)?.response?.status === 429,
+        waitMs: lastAttempt ? 0 : retryDelayMs(error, attempt),
+      };
+      refreshFailureListeners.forEach((listener) => listener(failure));
+      if (lastAttempt) {
         return { status: 'unavailable' };
       }
-      await new Promise((resolve) => setTimeout(resolve, retryDelayMs(error, attempt)));
+      await waitBeforeNextAttempt(failure.waitMs);
     }
   }
 }

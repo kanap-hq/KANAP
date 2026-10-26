@@ -143,7 +143,7 @@ Una dimensión nueva se coloca la última en el orden de las dimensiones. Despu�
 
 - **Encabezado**: el nombre de la dimensión. Haga clic en él para cambiar el nombre de la dimensión. **Ant.** / **Sig.** recorren las dimensiones en orden, y el botón de cierre vuelve a la página en esta dimensión
 - **Zona principal**: una línea de uso, y después la **Descripción**. La línea de uso da el número de valores y de líneas de presupuesto que tienen uno de ellos, OPEX y CAPEX juntas, por ejemplo «12 valores · Usada por 29 líneas». **Usada por 29 líneas** es un enlace: abre esas líneas en la lista de líneas presupuestarias, en una pestaña nueva, incluidas las líneas activadas y desactivadas. Una dimensión que ninguna línea usa indica «Aún sin usar», y una sin valores «Todavía no hay valores.» Mientras la dimensión esté desactivada, el recuento se muestra sin enlace
-- **Panel Propiedades** a la derecha: **Nombre**, **Código**, **Usada para**, **Obligatoria** y **Ciclo de vida**
+- **Panel Propiedades** a la derecha: **Nombre**, **Código**, **Usada para**, **Obligatoria**, **Valores abiertos** y **Ciclo de vida**
 
 **Guardado automático**: Cada cambio se guarda por sí solo. No hay botón Guardar. Los campos de texto se guardan al salir de ellos (en **Nombre** y **Código**, pulse Intro para guardar de inmediato); el interruptor **Obligatoria** y el ciclo de vida se guardan en cuanto los cambia. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó, por ejemplo un código duplicado bajo **Código**. Un nombre rechazado en el encabezado se muestra en la parte superior de la página.
 
@@ -156,6 +156,7 @@ Una dimensión nueva se coloca la última en el orden de las dimensiones. Despu�
 | **Descripción** | Para qué sirve la dimensión, de modo que sus compañeros clasifiquen las líneas de la misma manera |
 | **Usada para** | **OPEX y CAPEX**, **Solo OPEX** o **Solo CAPEX**. Indica qué líneas de presupuesto pueden tener un valor en esta dimensión. Consulte [Dimensiones OPEX o CAPEX](#dimensiones-opex-o-capex). Bloqueado en la dimensión por defecto, con una línea debajo: "La dimensión predeterminada se aplica a las líneas OPEX y CAPEX." |
 | **Obligatoria** | Un interruptor. Cuando está activado, cada línea nueva de los tipos para los que se usa la dimensión necesita un valor en ella, y una línea que tiene un valor no puede perderlo. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias). La dimensión por defecto también puede ser obligatoria |
+| **Valores abiertos** | Un interruptor, desactivado por defecto. Cuando está activado, cualquier persona que pueda editar una línea puede añadir un valor, desde la línea o el archivo de presupuesto. Vea [Valores abiertos](#open-values) |
 | **Ciclo de vida** | El interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida). Bloqueado en la dimensión por defecto, con una línea debajo: "Esta dimensión no se puede desactivar ni eliminar: los archivos antiguos y las preguntas a la IA la usan." |
 
 ### Ordenar las dimensiones
@@ -216,6 +217,12 @@ Mientras el ajuste está activado, unas líneas bajo el interruptor le ayudan a 
 
 - **Líneas sin valor**: por ejemplo "117 líneas OPEX y 15 líneas CAPEX no tienen valor." Cada tipo de línea tiene su propio enlace, **Mostrar las líneas OPEX** y **Mostrar las líneas CAPEX** (**Mostrar estas líneas** cuando solo afecta a un tipo). El enlace abre las líneas en su lista, en una pestaña nueva, con las líneas activadas y desactivadas.
 - **Ningún valor que elegir**: cuando un tipo de línea para el que se usa la dimensión no tiene ningún valor activado que pueda usar, un aviso lo indica, por ejemplo "Ningún valor activado se puede usar en líneas CAPEX. No se pueden crear nuevas líneas CAPEX." Añada un valor para ese tipo de línea, o active uno. Consulte [Valores OPEX o CAPEX](#valores-opex-o-capex).
+
+### Valores abiertos { #open-values }
+
+Una dimensión con **Valores abiertos** activado recibe valores nuevos desde las propias líneas: una referencia presupuestaria, un código de proyecto, un número de pedido. En el campo de una línea, escribir un nombre que no existe ofrece **Añadir «…»**, que crea el valor. El archivo de presupuesto lo crea del mismo modo. Lo hace cualquier persona que pueda editar la línea, incluidas las personas con el [acceso a los datos](data-access.md) limitado.
+
+En una dimensión con el interruptor desactivado, los valores se crean en esta página, y el archivo de presupuesto solo crea valores desconocidos para las personas con acceso a todos los datos. El interruptor se muestra a las personas que pueden editar las dimensiones y tienen acceso a todos los datos.
 
 ### Eliminar una dimensión
 
@@ -325,7 +332,7 @@ En el panel **Propiedades** de una línea OPEX o CAPEX, y al crear una, cada dim
 - Elija un valor, o vacíe el campo para dejar la línea sin valor en esa dimensión. El cambio se guarda de inmediato.
 - El campo de una dimensión obligatoria está marcado con un asterisco. No se puede crear una línea nueva sin valor en ella, con el mensaje "El campo Tipo de coste es obligatorio". En una línea que tiene un valor, el campo no tiene botón para vaciarlo: solo puede elegir otro valor. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias).
 - El campo lista los valores activados de su dimensión que se usan para este tipo de línea. Un valor desactivado, o un valor solo para el otro tipo de línea, sigue mostrándose en las líneas que lo tienen. Consulte [Valores OPEX o CAPEX](#valores-opex-o-capex).
-- El campo no puede crear un valor. Cree los valores en la página Dimensiones analíticas, o deje que los cree una importación CSV de OPEX o CAPEX.
+- En una dimensión con [valores abiertos](#open-values), el campo ofrece **Añadir «…»** para un nombre que no existe. En las demás dimensiones, el campo no puede crear un valor: cree los valores en la página Dimensiones analíticas, o deje que los cree el archivo de presupuesto.
 - Un valor se aplica a toda la línea, en todos los años.
 - Si las dimensiones no se pueden cargar, una línea sustituye a estos campos: "No se pudieron cargar las dimensiones."
 

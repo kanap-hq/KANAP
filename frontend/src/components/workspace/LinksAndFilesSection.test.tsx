@@ -88,7 +88,7 @@ describe('LinksAndFilesSection', () => {
     expect(remove.className).toContain('relations-remove');
     fireEvent.click(remove);
     expect(handlers.onRemoveLink).toHaveBeenCalledWith(LINKS[0]);
-    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(Architecture.pdf)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeFileNamed(Architecture.pdf)' }));
     expect(handlers.onRemoveFile).toHaveBeenCalledWith(FILES[0]);
   });
 

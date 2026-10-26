@@ -1,5 +1,6 @@
 import { naturesAnd } from '../spend/budget-nature';
 import { activeSql, type UsageQuery } from '../common/record-usages';
+import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 
 /**
  * The objects that keep a company from being deleted, read like a supplier's usages
@@ -35,6 +36,8 @@ export const COMPANY_USAGE_QUERIES: readonly UsageQuery[] = [
            ORDER BY r.fiscal_year, r.id
            LIMIT $3`,
   },
+  // The company delete routes are reserved to unscoped persons (`@ReservedToUnscopedDataAccess`);
+  // the count only ever runs for them, and a limited reader of the list sees visible contracts.
   {
     type: 'contracts',
     resource: 'contracts',
@@ -63,6 +66,20 @@ export const COMPANY_USAGE_QUERIES: readonly UsageQuery[] = [
             FROM departments d
            WHERE d.tenant_id = $1 AND d.company_id = $2
            ORDER BY active DESC, lower(d.name), d.id
+           LIMIT $3`,
+  },
+  {
+    // The company nodes of the data access (lot 6, spec §3.2): deleting the company would leave
+    // those persons with a node that points nowhere.
+    type: 'data_access',
+    resource: 'users',
+    sql: `SELECT n.user_id AS id, NULL::text AS reference,
+                 trim(concat_ws(' ', u.first_name, u.last_name)) AS name, NULL::text AS status,
+                 true AS active, count(*) OVER () AS total
+            FROM user_data_access_nodes n
+            JOIN users u ON u.tenant_id = n.tenant_id AND u.id = n.user_id
+           WHERE n.tenant_id = $1 AND n.node_type = 'company' AND n.company_id = $2
+           ORDER BY lower(u.last_name), lower(u.first_name), n.user_id
            LIMIT $3`,
   },
   {
@@ -147,3 +164,27 @@ export const COMPANY_USAGE_QUERIES: readonly UsageQuery[] = [
            LIMIT $3`,
   },
 ];
+
+
+/**
+ * The same groups for a reader: the tasks of a restricted incident the reader
+ * cannot see are absent from the company's usages. The delete enforcement keeps
+ * the full list above; only the read that lists usages asks for this variant.
+ */
+export function companyUsageQueries(viewer?: IncidentViewer | null): readonly UsageQuery[] {
+  if (viewer?.isAdmin) return COMPANY_USAGE_QUERIES;
+  const params: unknown[] = [null, null, null];
+  const visibility = taskIncidentVisibilitySql('t', viewer, params);
+  const tasksSql = `SELECT t.id, 'T-' || t.item_number::text AS reference, t.title AS name, t.status, true AS active,
+                 count(*) OVER () AS total
+            FROM tasks t
+           WHERE t.tenant_id = $1 AND t.company_id = $2
+             ${visibility}
+           ORDER BY t.item_number, t.id
+           LIMIT $3`;
+  return COMPANY_USAGE_QUERIES.map((query) => (
+    query.type === 'tasks'
+      ? { ...query, sql: tasksSql, viewerScoped: params.length > 3 }
+      : query
+  ));
+}

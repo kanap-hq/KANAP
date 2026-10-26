@@ -4,6 +4,8 @@ import api, {
   bumpSessionGeneration,
   getSessionGeneration,
   requestTokenRefreshOutcome,
+  retryRefreshNow,
+  subscribeRefreshFailure,
   subscribeSessionEnded,
   type RefreshOutcome,
 } from '../api';
@@ -18,6 +20,7 @@ import {
 import { getAccessToken, getAccessTokenExpiresAt, setAccessToken, subscribeAccessToken } from './accessTokenStore';
 import { changeAppLanguage, detectBrowserLocale, LANGUAGE_OVERRIDE_STORAGE_KEY, SupportedLocale } from '../i18n';
 import { clearUserClientState } from './userClientState';
+import { isDataAccessLimited, isReservedInLimitedAccess, type DataAccessProfile } from './dataAccess';
 
 type PermissionLevel = 'reader' | 'contributor' | 'member' | 'manager' | 'admin';
 type Claims = {
@@ -107,12 +110,21 @@ type AuthContextType = {
   isAuthenticating: boolean;
   /** At load the server could not be reached while this browser holds a session: retrying. */
   serverUnavailable: boolean;
+  /**
+   * The server keeps answering the refresh with 429 (too many attempts): two in a row, or one that
+   * asks for a wait over 3 s. Retrying after its wait; false again on any other answer.
+   */
+  refreshRateLimited: boolean;
+  /** A refresh waiting between two attempts (at load) tries again now. */
+  retryRefresh: () => void;
   /** The server ended the session (refused refresh, idle deadline): the login page says so. */
   sessionExpired: boolean;
   profile: Profile | null;
   claims: Claims | null;
   subscription: Subscription | null;
   tenantAuth: TenantAuth | null;
+  /** Null until `/auth/me` answers, and for a server that does not send it: read as unscoped. */
+  dataAccess: DataAccessProfile | null;
   login: (response: LoginResponse) => void;
   logout: () => void;
   refreshMe: () => Promise<void>;
@@ -144,6 +156,8 @@ function hasStoredSession(): boolean {
 
 // Pause between two refresh rounds (each with its own backoff) while the server is unreachable at load.
 const SERVER_RETRY_PAUSE_MS = 5_000;
+// A single 429 with a short wait says nothing: the next attempt usually goes through.
+const RATE_LIMIT_NOTICE_WAIT_MS = 3_000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
@@ -151,13 +165,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(() => getAccessTokenExpiresAt());
   const [isAuthenticating, setIsAuthenticating] = useState(true);
   const [serverUnavailable, setServerUnavailable] = useState(false);
+  const [refreshRateLimited, setRefreshRateLimited] = useState(false);
+  // Consecutive 429 answers to the refresh.
+  const rateLimitedInARowRef = useRef(0);
+  // Ends the pause between two refresh rounds at load (the Retry button).
+  const wakeBootstrapPauseRef = useRef<(() => void) | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [claims, setClaims] = useState<Claims | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [tenantAuth, setTenantAuth] = useState<TenantAuth | null>(null);
+  const [dataAccess, setDataAccess] = useState<DataAccessProfile | null>(null);
   // The user whose state this tab holds: another user behind a new token drops it.
   const stateUserIdRef = useRef<string | null>(null);
+
+  const clearRateLimited = useCallback(() => {
+    rateLimitedInARowRef.current = 0;
+    setRefreshRateLimited(false);
+  }, []);
 
   const clearUserState = useCallback(() => {
     stateUserIdRef.current = null;
@@ -178,6 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setClaims(null);
     setSubscription(null);
     setTenantAuth(null);
+    setDataAccess(null);
   }, [clearUserState]);
 
   const applyAccessToken = useCallback((accessToken: string, expiresIn: number, refreshExpiresIn?: number) => {
@@ -214,6 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setClaims(res.data?.claims ?? null);
       setSubscription(res.data?.subscription ?? null);
       setTenantAuth(res.data?.tenantAuth ?? null);
+      setDataAccess(res.data?.dataAccess ?? null);
     } catch (e: any) {
       // Log out only when the refresh behind this 401 ended the session (token cleared); an
       // unreachable server keeps it.
@@ -233,6 +260,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Unavailable: keep the session; the expiry timer and the 401 interceptor retry later.
       // Superseded: the session was cleared meanwhile; nothing to apply or clear.
       if (outcome.status === 'unavailable' || outcome.status === 'superseded') return outcome.status;
+      clearRateLimited();
       if (outcome.status === 'ended' || isIdleExpired()) {
         clearAuthState({ clearActivity: true });
         return 'ended';
@@ -245,7 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearAuthState({ clearActivity: true });
       return 'ended';
     }
-  }, [applyAccessToken, clearAuthState]);
+  }, [applyAccessToken, clearAuthState, clearRateLimited]);
 
   const login = useCallback((response: LoginResponse) => {
     if (!response?.access_token || !Number.isFinite(response?.expires_in)) {
@@ -260,6 +288,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setClaims(null);
     setSubscription(null);
     setTenantAuth(null);
+    setDataAccess(null);
     touchLastActivity();
     applyAccessToken(response.access_token, response.expires_in, response.refresh_expires_in);
     // refreshMe will be called by useEffect when token changes
@@ -274,6 +303,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(next.token);
       setTokenExpiresAt(next.expiresAt);
     });
+  }, []);
+
+  // The server rate limits the refresh: the loading screen says so after two 429 in a row, or one
+  // that asks for a long wait, until an attempt gets another answer.
+  useEffect(() => subscribeRefreshFailure(({ rateLimited, waitMs }) => {
+    if (!rateLimited) {
+      clearRateLimited();
+      return;
+    }
+    rateLimitedInARowRef.current += 1;
+    if (rateLimitedInARowRef.current >= 2 || waitMs > RATE_LIMIT_NOTICE_WAIT_MS) setRefreshRateLimited(true);
+  }), [clearRateLimited]);
+
+  const retryRefresh = useCallback(() => {
+    wakeBootstrapPauseRef.current?.();
+    retryRefreshNow();
   }, []);
 
   // A refresh ended the session, possibly from a request interceptor: drop the identity and
@@ -312,12 +357,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // keep trying instead of showing a login form that could not sign in either.
       while (status === 'unavailable' && hasStoredSession() && !cancelled) {
         setServerUnavailable(true);
-        await new Promise((resolve) => setTimeout(resolve, SERVER_RETRY_PAUSE_MS));
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, SERVER_RETRY_PAUSE_MS);
+          wakeBootstrapPauseRef.current = () => {
+            clearTimeout(timer);
+            resolve();
+          };
+        });
+        wakeBootstrapPauseRef.current = null;
         if (cancelled) return;
         status = await refreshAccessTokenInternal(legacyRefreshToken);
       }
       if (!cancelled) {
         setServerUnavailable(false);
+        clearRateLimited();
         setIsAuthenticating(false);
       }
     };
@@ -325,7 +378,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [clearAuthState, refreshAccessTokenInternal]);
+  }, [clearAuthState, clearRateLimited, refreshAccessTokenInternal]);
 
   useEffect(() => {
     // When token changes (e.g., reload with stored token), fetch /auth/me
@@ -357,6 +410,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const hasLevel = (resource: string, level: PermissionLevel) => {
     if (claims?.isGlobalAdmin || claims?.isPlatformAdmin) return true;
+    if (isDataAccessLimited(dataAccess) && isReservedInLimitedAccess(resource, level)) return false;
     const map = claims?.permissions || {};
     // Support both 'member' (new) and 'manager' (legacy) - backend uses 'member' since RBAC overhaul
     const rank = { reader: 1, contributor: 2, member: 3, manager: 3, admin: 4 } as const;
@@ -372,8 +426,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     : !!(claims.isGlobalAdmin || claims.isPlatformAdmin || Object.keys(claims.permissions || {}).length > 0);
 
   const value = useMemo(
-    () => ({ token, tokenExpiresAt, isAuthenticating, serverUnavailable, sessionExpired, profile, claims, subscription, tenantAuth, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess }),
-    [token, tokenExpiresAt, isAuthenticating, serverUnavailable, sessionExpired, profile, claims, subscription, tenantAuth, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess]
+    () => ({ token, tokenExpiresAt, isAuthenticating, serverUnavailable, refreshRateLimited, retryRefresh, sessionExpired, profile, claims, subscription, tenantAuth, dataAccess, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess }),
+    [token, tokenExpiresAt, isAuthenticating, serverUnavailable, refreshRateLimited, retryRefresh, sessionExpired, profile, claims, subscription, tenantAuth, dataAccess, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess]
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

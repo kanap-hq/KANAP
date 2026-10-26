@@ -33,10 +33,10 @@ export function proposeDimensionCode(name: string): string {
 }
 
 /** Fields a refusal can be attached to, so the error shows under the field that caused it. */
-export type AnalyticsField = 'name' | 'code' | 'description' | 'sort_order' | 'applies_to' | 'required' | 'axis_id' | 'disabled_at';
+export type AnalyticsField = 'name' | 'code' | 'description' | 'sort_order' | 'applies_to' | 'required' | 'open_values' | 'axis_id' | 'disabled_at';
 
 const REFUSAL_FIELDS: ReadonlySet<string> = new Set<AnalyticsField>([
-  'name', 'code', 'description', 'sort_order', 'applies_to', 'required', 'axis_id', 'disabled_at',
+  'name', 'code', 'description', 'sort_order', 'applies_to', 'required', 'open_values', 'axis_id', 'disabled_at',
 ]);
 
 /**

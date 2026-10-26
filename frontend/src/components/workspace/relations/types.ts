@@ -71,6 +71,10 @@ export type AssetRelationRow = {
   kind: string;
   environment: string;
   status: string;
+  /** The other containers in service holding it (`contains` only, R3). */
+  also_contained_by?: Array<{ id: string; name: string }>;
+  /** The members a cluster depends through (folded rows of `depends_on` only). */
+  via?: Array<{ id: string; name: string }>;
 };
 
 /** A technology linked to the owner. `reference` is already `TEC-n`. */
@@ -103,6 +107,8 @@ export type RelationTotal = { key: string; label: React.ReactNode; cells: Record
 export type SectionSpec<T extends AnyRow> = {
   kind: string;
   title: string;
+  /** One sentence in a tooltip after the title. */
+  hint?: string;
   empty: string;
   searchPlaceholder: string;
   rows: T[] | null;
@@ -121,6 +127,17 @@ export type SectionSpec<T extends AnyRow> = {
   totals?: (rows: T[]) => RelationTotal[];
   /** A line under the table (what its totals leave out). */
   notice?: (rows: T[]) => React.ReactNode;
+  /**
+   * Linked rows the caller does not see listed, counted (data access): `text` says it under the
+   * rows ("and 3 lines outside your access"), or alone when `rows` is null ("3 budget lines").
+   * Shown when `count` is above 0; a section with null rows shows only then.
+   */
+  outside?: { count: number; text: string };
+  /**
+   * Rows kept under one folded line at the end of the body, closed at first (the members behind
+   * a cluster's dependencies). They have no action of their own.
+   */
+  folded?: { label: React.ReactNode; rows: T[] };
 };
 
 /** An interface linked to the owner (upstream or downstream). `reference` is already `INT-n`. */

@@ -7,6 +7,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  CircularProgress,
   IconButton,
   LinearProgress,
   MenuItem,
@@ -24,10 +25,10 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
-import { KanapDialog, PropertyGroup, PropertyRow, StatusDot } from '../../components/design';
+import { KanapDialog, PropertyGroup, PropertyRow, StatusDot, unsavedConfirm, useKanapDialogs } from '../../components/design';
 import IntegratedDocumentEditor, { type IntegratedDocumentEditorHandle } from '../../components/IntegratedDocumentEditor';
 import DateEUField from '../../components/fields/DateEUField';
 import EntityKnowledgePanel from '../../components/EntityKnowledgePanel';
@@ -42,6 +43,7 @@ import ApplicationVersionLinks from './components/ApplicationVersionLinks';
 import DeferredTextField from './components/DeferredTextField';
 import ForbiddenPage from '../ForbiddenPage';
 import { ApplicationFeedbackProvider, useApplicationFeedback } from './applicationFeedback';
+import { compareEnvironments, environmentLabelKey } from '../../utils/applicationEnvironments';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useApplicationNav } from '../../hooks/useApplicationNav';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
@@ -56,7 +58,7 @@ import SendLinkButton from '../../components/workspace/SendLinkButton';
 import DeploymentsEditor from './components/DeploymentsEditor';
 import ApplicationRelationsPanel from './editors/ApplicationRelationsPanel';
 import ApplicationTechnologiesSection from './workspace/ApplicationTechnologiesSection';
-import ReachVulnerabilitiesSection, { type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
+import ReachVulnerabilitiesSection, { reachVulnerabilitiesRefetchMs, type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
 import VulnerabilitySevereBadge, { highestSevereOf } from './workspace/VulnerabilitySevereBadge';
 import PendingMetadata from './workspace/PendingMetadata';
 import { useFeatures } from '../../config/FeaturesContext';
@@ -70,6 +72,7 @@ import { useLocale } from '../../i18n/useLocale';
 import ApplicationClassificationPanel, { HelpLabel, HelpTip, type RecoveryDependency } from './components/ApplicationClassificationPanel';
 import ApplicationCriticalityMetadata from './components/ApplicationCriticalityMetadata';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
+import { useLeaveGuard } from '../../hooks/leaveGuard';
 
 type TabKey = 'overview' | 'deployments' | 'interfaces' | 'operations' | 'compliance' | 'relations';
 
@@ -151,11 +154,14 @@ type InterfaceMiniRow = {
   interface_reference?: string | null;
   interface_id?: string | null;
   name: string;
-  environment: string;
+  /** Null for an interface with no binding yet (listed for its source and target). */
+  environment: string | null;
   source_application_id?: string | null;
   source_application_name?: string | null;
+  source_application_reference?: string | null;
   target_application_id?: string | null;
   target_application_name?: string | null;
+  target_application_reference?: string | null;
   middleware_application_ids?: string[];
   middleware_application_names?: string[];
   via_middleware: boolean;
@@ -984,28 +990,44 @@ export function OverviewTab({
   );
 }
 
-function viaMiddlewareLabel(row: InterfaceMiniRow, t: TFunction) {
+/** The middleware of an interface row, without the open application itself (it does not route through itself). */
+function viaMiddlewareLabel(row: InterfaceMiniRow, appId: string, t: TFunction) {
   if (!row.via_middleware) return '—';
-  const names = (row.middleware_application_names || []).filter(Boolean);
-  return names.length > 0
-    ? t('workspace.application.interfaces.viaNames', { names: names.join(', ') })
-    : t('components.createVersion.viaMiddleware');
+  const ids = row.middleware_application_ids || [];
+  const all = (row.middleware_application_names || []).filter(Boolean);
+  const others = (row.middleware_application_names || [])
+    .map((name, index) => ({ name, id: ids[index] }))
+    .filter((item) => item.name && item.id !== appId)
+    .map((item) => item.name);
+  if (others.length > 0) return t('workspace.application.interfaces.viaNames', { names: others.join(', ') });
+  return all.length > 0 ? '—' : t('components.createVersion.viaMiddleware');
 }
+
+const interfaceLinkSx = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 1,
+  minWidth: 0,
+  color: 'inherit',
+  textDecoration: 'none',
+  '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2, borderRadius: '2px' },
+} as const;
 
 function InterfaceRowsTable({
   app,
   rows,
   direction,
-  onOpenInterface,
-  onOpenApplication,
+  interfaceHref,
+  applicationHref,
 }: {
   app: ApplicationDetail;
   rows: InterfaceMiniRow[];
   direction: 'inbound' | 'outbound' | 'routed';
-  onOpenInterface: (id: string) => void;
-  onOpenApplication: (id: string) => void;
+  interfaceHref: (id: string) => string;
+  applicationHref: (id: string) => string;
 }) {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { t } = useTranslation(['it', 'common']);
   const counterpartHeader = direction === 'inbound'
     ? t('workspace.application.interfaces.source')
@@ -1051,37 +1073,49 @@ function InterfaceRowsTable({
         )}
         {rows.map((row) => {
           const counterpartId = direction === 'inbound' ? row.source_application_id : direction === 'outbound' ? row.target_application_id : null;
+          // The link names the counterpart by its reference (APP-n), its id only when it has none.
+          const counterpartRef = direction === 'inbound' ? row.source_application_reference : direction === 'outbound' ? row.target_application_reference : null;
           const counterpartName = direction === 'inbound'
             ? row.source_application_name
             : direction === 'outbound'
               ? row.target_application_name
               : `${row.source_application_name || '—'} → ${row.target_application_name || '—'}`;
+          const via = viaMiddlewareLabel(row, app.id, t);
           return (
-            <TableRow key={`${direction}:${row.id}:${row.environment}`} onClick={() => onOpenInterface(row.interface_reference || row.id)}>
+            <TableRow
+              key={`${direction}:${row.id}:${row.environment}`}
+              onClick={(event) => {
+                // The links inside the row open their own page.
+                if ((event.target as HTMLElement).closest('a')) return;
+                navigate(interfaceHref(row.interface_reference || row.id));
+              }}
+            >
               <TableCell>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                <Box component={RouterLink} to={interfaceHref(row.interface_reference || row.id)} sx={interfaceLinkSx}>
                   {row.interface_reference && (
                     <Typography component="span" sx={(theme) => ({ fontFamily: MONO_FONT_FAMILY, fontSize: 12, color: theme.palette.kanap.text.secondary })}>
                       {row.interface_reference}
                     </Typography>
                   )}
                   <Typography component="span" sx={{ fontSize: 13 }} noWrap>{row.name}</Typography>
-                </Stack>
-              </TableCell>
-              <TableCell
-                onClick={(event) => {
-                  if (!counterpartId || counterpartId === app.id) return;
-                  event.stopPropagation();
-                  onOpenApplication(counterpartId);
-                }}
-              >
-                {counterpartName || '—'}
+                </Box>
               </TableCell>
               <TableCell>
-                {row.via_middleware ? (
+                {counterpartId && counterpartId !== app.id && counterpartName ? (
+                  <Box
+                    component={RouterLink}
+                    to={applicationHref(counterpartRef || counterpartId)}
+                    sx={{ ...interfaceLinkSx, display: 'inline-flex', '&:hover': { textDecoration: 'underline' } }}
+                  >
+                    {counterpartName}
+                  </Box>
+                ) : (counterpartName || '—')}
+              </TableCell>
+              <TableCell>
+                {via !== '—' ? (
                   <Box sx={(theme) => ({ display: 'inline-flex', alignItems: 'center', gap: '6px', color: theme.palette.kanap.text.primary })}>
                     <StatusDot color={theme.palette.kanap.text.secondary} />
-                    {viaMiddlewareLabel(row, t)}
+                    {via}
                   </Box>
                 ) : '—'}
               </TableCell>
@@ -1093,34 +1127,67 @@ function InterfaceRowsTable({
   );
 }
 
+/** The block of the interfaces that have no binding in any environment. */
+const UNBOUND_ENVIRONMENT = '__unbound__';
+
+/** Interfaces, not rows: the tab lists an interface once per environment it is bound in. */
+function distinctInterfaceCount(rows: Array<{ id: string }> | undefined): number {
+  return new Set((rows || []).map((row) => row.id)).size;
+}
+
 function InterfacesTab({
   app,
   rows,
   loading,
-  onOpenInterface,
-  onOpenApplication,
+  failed = false,
+  onRetry,
+  interfaceHref,
+  applicationHref,
 }: {
   app: ApplicationDetail;
   rows: InterfaceMiniRow[];
   loading: boolean;
-  onOpenInterface: (id: string) => void;
-  onOpenApplication: (id: string) => void;
+  /** The read failed: say so, with a way to try again, instead of an empty tab. */
+  failed?: boolean;
+  onRetry?: () => void;
+  interfaceHref: (id: string) => string;
+  applicationHref: (id: string) => string;
 }) {
   const { t } = useTranslation(['it', 'common']);
+  // One block per environment, then the interfaces without any binding in a last block.
   const grouped = React.useMemo(() => {
     const map = new Map<string, { inbound: InterfaceMiniRow[]; outbound: InterfaceMiniRow[]; routed: InterfaceMiniRow[] }>();
     rows.forEach((row) => {
-      const env = row.environment || 'unknown';
+      const env = row.environment || UNBOUND_ENVIRONMENT;
       const bucket = map.get(env) || { inbound: [], outbound: [], routed: [] };
       if (row.target_application_id === app.id) bucket.inbound.push(row);
       else if (row.source_application_id === app.id) bucket.outbound.push(row);
       else bucket.routed.push(row);
       map.set(env, bucket);
     });
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+    return Array.from(map.entries()).sort(([a], [b]) => {
+      if (a === UNBOUND_ENVIRONMENT || b === UNBOUND_ENVIRONMENT) return a === UNBOUND_ENVIRONMENT ? 1 : -1;
+      return compareEnvironments(a, b);
+    });
   }, [app.id, rows]);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', py: 2 }}>
+        <CircularProgress size={20} aria-label={t('common:selects.loadingEllipsis')} />
+      </Box>
+    );
+  }
+  if (failed && rows.length === 0) {
+    return (
+      <Alert
+        severity="error"
+        action={onRetry ? <Button color="inherit" size="small" onClick={onRetry}>{t('common:buttons.retry')}</Button> : undefined}
+      >
+        {t('workspace.application.interfaces.loadFailed')}
+      </Alert>
+    );
+  }
   if (rows.length === 0) {
     return (
       <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.tertiary })}>
@@ -1133,18 +1200,27 @@ function InterfacesTab({
     <Stack spacing={3}>
       {grouped.map(([environment, groups]) => (
         <Box key={environment}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
-            <Box sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 14, fontWeight: 500 }}>
-              {environment.toUpperCase()}
+          {environment === UNBOUND_ENVIRONMENT ? (
+            <Box sx={{ mb: 1.25 }}>
+              <SectionLabel>{t('workspace.application.interfaces.unbound')}</SectionLabel>
+              <Typography sx={(theme) => ({ mt: 0.25, fontSize: 12, color: theme.palette.kanap.text.tertiary })}>
+                {t('workspace.application.interfaces.unboundHint')}
+              </Typography>
             </Box>
-          </Box>
+          ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
+              <Box sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 14, fontWeight: 500 }}>
+                {environmentLabelKey(environment) ? t(environmentLabelKey(environment)!) : environment}
+              </Box>
+            </Box>
+          )}
           <Stack spacing={2}>
             {groups.inbound.length > 0 && (
               <Box>
                 <Box sx={{ mb: 0.75 }}>
                   <SectionLabel>{t('workspace.application.interfaces.inbound', { count: groups.inbound.length })}</SectionLabel>
                 </Box>
-                <InterfaceRowsTable app={app} rows={groups.inbound} direction="inbound" onOpenInterface={onOpenInterface} onOpenApplication={onOpenApplication} />
+                <InterfaceRowsTable app={app} rows={groups.inbound} direction="inbound" interfaceHref={interfaceHref} applicationHref={applicationHref} />
               </Box>
             )}
             {groups.outbound.length > 0 && (
@@ -1152,7 +1228,7 @@ function InterfacesTab({
                 <Box sx={{ mb: 0.75 }}>
                   <SectionLabel>{t('workspace.application.interfaces.outbound', { count: groups.outbound.length })}</SectionLabel>
                 </Box>
-                <InterfaceRowsTable app={app} rows={groups.outbound} direction="outbound" onOpenInterface={onOpenInterface} onOpenApplication={onOpenApplication} />
+                <InterfaceRowsTable app={app} rows={groups.outbound} direction="outbound" interfaceHref={interfaceHref} applicationHref={applicationHref} />
               </Box>
             )}
             {groups.routed.length > 0 && (
@@ -1160,7 +1236,7 @@ function InterfacesTab({
                 <Box sx={{ mb: 0.75 }}>
                   <SectionLabel>{t('workspace.application.interfaces.routed', { count: groups.routed.length })}</SectionLabel>
                 </Box>
-                <InterfaceRowsTable app={app} rows={groups.routed} direction="routed" onOpenInterface={onOpenInterface} onOpenApplication={onOpenApplication} />
+                <InterfaceRowsTable app={app} rows={groups.routed} direction="routed" interfaceHref={interfaceHref} applicationHref={applicationHref} />
               </Box>
             )}
           </Stack>
@@ -1368,9 +1444,13 @@ export default function ApplicationWorkspacePage() {
   const canCreateKnowledge = hasLevel('knowledge', 'member');
   const overviewEditorRef = React.useRef<IntegratedDocumentEditorHandle>(null);
   const createRef = React.useRef<ApplicationCreateEditorHandle>(null);
+  const dialogs = useKanapDialogs();
   const [versionDialogOpen, setVersionDialogOpen] = React.useState(false);
   const [savingCreate, setSavingCreate] = React.useState(false);
   const [createDirty, setCreateDirty] = React.useState(false);
+  const [createName, setCreateName] = React.useState('');
+  const [propertiesHost, setPropertiesHost] = React.useState<HTMLDivElement | null>(null);
+  const [bodyHost, setBodyHost] = React.useState<HTMLDivElement | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const feedbackRef = React.useRef<ReturnType<typeof useApplicationFeedback>>({ error: () => undefined, undo: () => undefined, info: () => undefined });
 
@@ -1410,11 +1490,13 @@ export default function ApplicationWorkspacePage() {
     enabled: !isCreate && !!app?.id,
   });
   // One read for the Operations section and the badge of the metadata bar. Technology link writes
-  // and CVE state changes invalidate every `vulnerabilities` query.
+  // and CVE state changes invalidate every `vulnerabilities` query. While a match is still queued,
+  // it reads again every second, and stops once the answer is no longer pending.
   const vulnerabilitiesQuery = useQuery({
     queryKey: ['vulnerabilities', 'application', app?.id],
     queryFn: async () => (await api.get<ReachVulnerabilities>(`/applications/${app!.id}/vulnerabilities`)).data,
     enabled: vulnerabilityFeed && !isCreate && !!app?.id,
+    refetchInterval: (query) => reachVulnerabilitiesRefetchMs(query.state.data),
   });
   // Out of service (`totals: null`): nothing counts, the section and the badge disappear.
   const vulnerabilities = vulnerabilityFeed && !isCreate && vulnerabilitiesQuery.data?.totals ? vulnerabilitiesQuery.data : null;
@@ -1440,10 +1522,18 @@ export default function ApplicationWorkspacePage() {
     window.history.replaceState(null, '', `/it/applications/${canonicalBase}/${routeTab}${qs ? `?${qs}` : ''}`);
   }, [app?.name, app?.sequential_id, isCreate, navigate, routeId, routeTab, searchParams]);
 
-  const closeWorkspace = React.useCallback(() => {
+  // True leaves and drops the draft. False stays. A menu link asks the same question.
+  const confirmLeaveCreate = React.useCallback(async () => {
+    if (!(isCreate && createDirty)) return true;
+    return dialogs.confirm(unsavedConfirm(t, 'leaveWithoutSaving'));
+  }, [createDirty, dialogs, isCreate, t]);
+  useLeaveGuard(() => isCreate && createDirty, confirmLeaveCreate);
+
+  const closeWorkspace = React.useCallback(async () => {
+    if (!(await confirmLeaveCreate())) return;
     const qs = listContextParams.toString();
     navigate(`/it/applications${qs ? `?${qs}` : ''}`);
-  }, [listContextParams, navigate]);
+  }, [confirmLeaveCreate, listContextParams, navigate]);
 
   const canonicalPathFor = React.useCallback((targetId: string, tab: TabKey = routeTab) => {
     const qs = listContextParams.toString();
@@ -1553,7 +1643,7 @@ export default function ApplicationWorkspacePage() {
   const appReference = app?.sequential_id || null;
   const deployments = app?.deployments || app?.instances || [];
   const deploymentCount = deployments.length;
-  const interfaceCount = interfacesQuery.data?.length || 0;
+  const interfaceCount = distinctInterfaceCount(interfacesQuery.data);
   const relationCount = (relationsCountQuery.data?.total ?? ((app?.links?.length || 0) + (app?.attachments?.length || 0)))
     + (incidentsCountQuery.data || 0);
   // The knowledge documents live in the Overview tab: open it and bring the section into view.
@@ -1589,13 +1679,21 @@ export default function ApplicationWorkspacePage() {
         onBack={closeWorkspace}
         itemReference={appReference}
         onCopyReference={appReference ? () => { void copyReference(appReference); } : undefined}
-        title={isCreate ? '' : app?.name || ''}
+        title={isCreate ? createName : app?.name || ''}
         titleFallback={isCreate ? t('workspace.application.newTitle') : t('workspace.application.untitled')}
-        canEditTitle={!isCreate && canManage}
+        canEditTitle={canManage}
         readOnly={!isCreate && !canManage}
-        onTitleSave={(value) => { void patchApplication({ name: value }); }}
+        onTitleSave={(value) => {
+          if (isCreate) {
+            createRef.current?.setName(value);
+            return;
+          }
+          void patchApplication({ name: value });
+        }}
         titleRequiredMessage={t('messages.nameRequired')}
         titleMaxLength={APPLICATION_NAME_MAX}
+        isCreate={isCreate}
+        forceDrawerOpen={isCreate}
         nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
@@ -1683,7 +1781,9 @@ export default function ApplicationWorkspacePage() {
             </IconButton>
           </>
         )}
-        properties={app ? (
+        properties={isCreate ? (
+          <Box ref={setPropertiesHost} />
+        ) : app ? (
           <ApplicationProperties
             app={app}
             canManage={canManage}
@@ -1692,9 +1792,17 @@ export default function ApplicationWorkspacePage() {
           />
         ) : <Box />}
       >
-        {isCreate && routeTab === 'overview' && (
-          <ApplicationCreateEditor ref={createRef} onDirtyChange={setCreateDirty} />
+        {isCreate && (
+          <ApplicationCreateEditor
+            ref={createRef}
+            onDirtyChange={setCreateDirty}
+            onNameChange={setCreateName}
+            presentation="split"
+            propertiesHost={propertiesHost}
+            bodyHost={bodyHost}
+          />
         )}
+        {isCreate && routeTab === 'overview' && <Box ref={setBodyHost} />}
 
         {!isCreate && app && routeTab === 'overview' && (
           <OverviewTab
@@ -1712,7 +1820,7 @@ export default function ApplicationWorkspacePage() {
         )}
 
         {!isCreate && app && routeTab === 'deployments' && (
-          <DeploymentsEditor applicationId={app.id} deployments={deployments as any} onRefresh={async () => { await appQuery.refetch(); }} readOnly={!canManage} />
+          <DeploymentsEditor applicationId={app.id} deployments={deployments as any} onRefresh={async () => { await appQuery.refetch(); }} readOnly={!canManage} applicationName={app.name} />
         )}
 
         {!isCreate && app && routeTab === 'interfaces' && (
@@ -1720,8 +1828,10 @@ export default function ApplicationWorkspacePage() {
             app={app}
             rows={interfacesQuery.data || []}
             loading={interfacesQuery.isLoading}
-            onOpenInterface={(id) => navigate(`/it/interfaces/${id}/overview`)}
-            onOpenApplication={(id) => navigate(canonicalPathFor(id, 'overview'))}
+            failed={interfacesQuery.isError}
+            onRetry={() => { void interfacesQuery.refetch(); }}
+            interfaceHref={(id) => `/it/interfaces/${id}/overview`}
+            applicationHref={(id) => canonicalPathFor(id, 'overview')}
           />
         )}
 

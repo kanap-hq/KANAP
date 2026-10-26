@@ -47,6 +47,48 @@ export function formatDecimal(value: number, locale: string, maximumFractionDigi
   } as unknown as Intl.NumberFormatOptions).format(value);
 }
 
+const EM_DASH = '\u2014';
+
+/** The gap before k, M or B: none in English (340.1k), a no-break space in French, German and Spanish (340,1 k). */
+function compactUnitGap(locale: string): string {
+  return locale.toLowerCase().split('-')[0] === 'en' ? '' : '\u00a0';
+}
+
+function finiteNumber(value: unknown): number | null {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * An overview amount in thousands of the interface language: 7,846k in English, 7 846 k in French.
+ * Rounded to the nearest thousand. An unreadable amount is an em dash.
+ */
+export function formatThousandsAmount(value: unknown, locale: string): string {
+  const n = finiteNumber(value);
+  if (n == null) return EM_DASH;
+  const thousands = Math.round(n / 1000);
+  return `${formatCount(thousands === 0 ? 0 : thousands, locale)}${compactUnitGap(locale)}k`;
+}
+
+const COMPACT_TIERS = [
+  { at: 1_000_000_000, unit: 'B' },
+  { at: 1_000_000, unit: 'M' },
+  { at: 1_000, unit: 'k' },
+] as const;
+
+/**
+ * A short amount for a change, in the interface language.
+ * Below one thousand the amount stays as it is (300). Above that, one decimal and a unit: 340.1k, 340,1 k, 1.5M.
+ */
+export function formatCompactAmount(value: unknown, locale: string): string {
+  const n = finiteNumber(value);
+  if (n == null) return EM_DASH;
+  const abs = Math.abs(n === 0 ? 0 : n);
+  const tier = COMPACT_TIERS.find((item) => abs >= item.at);
+  if (!tier) return formatDecimal(n === 0 ? 0 : n, locale, 1);
+  return `${formatDecimal(n / tier.at, locale, 1)}${compactUnitGap(locale)}${tier.unit}`;
+}
+
 /**
  * A ratio already written in percent points (4.95 means 4.95%, not 495%).
  * `fractionDigits` keeps the one or two decimals the report already showed.

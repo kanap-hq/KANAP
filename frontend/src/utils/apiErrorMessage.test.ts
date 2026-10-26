@@ -1,11 +1,52 @@
 import '../i18n';
 import i18n from 'i18next';
 import { describe, expect, it } from 'vitest';
-import { getApiErrorMessage, getDocumentSaveErrorMessage } from './apiErrorMessage';
+import { getApiErrorMessage, getDocumentSaveErrorMessage, isDataAccessRefusal } from './apiErrorMessage';
 
 const t = i18n.getFixedT('en');
 
 describe('getApiErrorMessage', () => {
+  it('words each refusal of a limited data access in the language of the screen', () => {
+    const refusal = (message: string) => ({ response: { status: 403, data: { statusCode: 403, error: 'Forbidden', code: 'DATA_ACCESS_LIMITED', message } } });
+    const fr = i18n.getFixedT('fr');
+    expect(getApiErrorMessage(refusal('This line is read only in your access.'), fr, 'fallback')).toBe('Cette ligne est en lecture seule dans votre accès.');
+    expect(getApiErrorMessage(refusal('This company or cost center is not part of your access.'), fr, 'fallback'))
+      .toBe('Cette société ou ce centre de coûts ne fait pas partie de votre accès.');
+    expect(getApiErrorMessage(refusal('This action is reserved to people with access to all data.'), fr, 'fallback'))
+      .toBe('Cette action est réservée aux personnes qui ont accès à toutes les données.');
+    expect(getApiErrorMessage(refusal('This item is outside your data access.'), i18n.getFixedT('de'), 'fallback'))
+      .toBe('Dieses Element liegt außerhalb Ihres Zugriffs.');
+    expect(getApiErrorMessage(refusal('This task is read only in your access.'), i18n.getFixedT('es'), 'fallback'))
+      .toBe('Esta tarea es de solo lectura en su acceso.');
+    expect(getApiErrorMessage(refusal('BL-12 is read only in your access.'), fr, 'fallback')).toBe('BL-12 est en lecture seule dans votre accès.');
+    // A refused delete of an object linked to lines outside the access, per object type.
+    expect(getApiErrorMessage(refusal('This application is linked to 3 lines outside your access.'), fr, 'fallback'))
+      .toBe('Cette application est liée à 3 lignes hors de votre accès.');
+    expect(getApiErrorMessage(refusal('This asset is linked to 1 line outside your access.'), t, 'fallback'))
+      .toBe('This asset is linked to 1 line outside your access.');
+    expect(getApiErrorMessage(refusal('This request is linked to 2 lines outside your access.'), i18n.getFixedT('de'), 'fallback'))
+      .toBe('Diese Anfrage ist mit 2 Zeilen außerhalb Ihres Zugriffs verknüpft.');
+    expect(getApiErrorMessage(refusal('This technology is linked to 2 lines outside your access.'), i18n.getFixedT('es'), 'fallback'))
+      .toBe('Esta tecnología está vinculada a 2 líneas fuera de su acceso.');
+    // Lot 5: contracts are counted too, alone or together with lines.
+    expect(getApiErrorMessage(refusal('This application is linked to 2 contracts outside your access.'), fr, 'fallback'))
+      .toBe('Cette application est liée à 2 contrats hors de votre accès.');
+    expect(getApiErrorMessage(refusal('This asset is linked to 1 contract outside your access.'), i18n.getFixedT('de'), 'fallback'))
+      .toBe('Dieses Asset ist mit 1 Vertrag außerhalb Ihres Zugriffs verknüpft.');
+    expect(getApiErrorMessage(refusal('This application is linked to 1 line and 2 contracts outside your access.'), fr, 'fallback'))
+      .toBe('Cette application est liée à 1 ligne et 2 contrats hors de votre accès.');
+    expect(getApiErrorMessage(refusal('This technology is linked to 3 lines and 1 contract outside your access.'), i18n.getFixedT('es'), 'fallback'))
+      .toBe('Esta tecnología está vinculada a 3 líneas y 1 contrato fuera de su acceso.');
+    // A sentence the screen does not know shows as the server wrote it, never the generic refusal.
+    expect(getApiErrorMessage(refusal('Some new refusal.'), fr, 'fallback')).toBe('Some new refusal.');
+    expect(getApiErrorMessage(refusal(''), t, 'fallback')).toBe('This item is outside your access.');
+    expect(isDataAccessRefusal(refusal('x'))).toBe(true);
+    expect(isDataAccessRefusal({ response: { status: 403, data: { code: 'NO_ACCESS' } } })).toBe(false);
+    const unavailable = { response: { status: 503, data: { code: 'DATA_ACCESS_UNAVAILABLE', message: 'Data access is temporarily unavailable. Contact the person who runs KANAP.' } } };
+    expect(getApiErrorMessage(unavailable, fr, 'fallback'))
+      .toBe("L'accès aux données est momentanément indisponible. Contactez la personne qui exploite KANAP.");
+  });
+
   it('words a refusal without a code as a missing right, in each language', () => {
     const forbidden = { response: { status: 403, data: { statusCode: 403, message: 'Forbidden resource', error: 'Forbidden' } } };
     expect(getApiErrorMessage(forbidden, t, 'fallback')).toBe('You do not have the rights for this action.');
@@ -54,6 +95,52 @@ describe('getApiErrorMessage', () => {
         const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', name: 'n', count: 2, max: 200, field: 'rto_minutes' } } } }, i18n.getFixedT(language), 'fallback');
         expect(text, `${code} in ${language}`).not.toBe('server words');
         expect(text).not.toMatch(/{{|rto_minutes/);
+      }
+    }
+  });
+
+  it('translates the deployment and server refusals, the environment by its name', () => {
+    const fr = i18n.getFixedT('fr');
+    const taken = { response: { status: 409, data: { code: 'deployment_environment_taken', message: 'Environment', params: { environment: 'pre_prod' } } } };
+    expect(getApiErrorMessage(taken, fr, 'fallback')).toBe('Cette application a déjà un déploiement Préproduction.');
+    expect(getApiErrorMessage(taken, t, 'fallback')).toBe('This application already has a Pre-production deployment.');
+    const duplicate = { response: { status: 409, data: { code: 'assignment_duplicate', message: 'Asset already assigned' } } };
+    expect(getApiErrorMessage(duplicate, fr, 'fallback')).toBe('Ce serveur a déjà ce rôle sur ce déploiement.');
+    const date = { response: { status: 400, data: { code: 'date_invalid', message: 'since_date', params: { field: 'since_date', value: 'x' } } } };
+    expect(getApiErrorMessage(date, fr, 'fallback')).toBe('La date « Depuis » n’est pas une date valide.');
+    const inUse = { response: { status: 409, data: { code: 'DEPLOYMENT_IN_USE', message: 'Cannot delete', usages: [{ type: 'server_assignments', total: 2 }] } } };
+    expect(getApiErrorMessage(inUse, t, 'fallback')).toMatch(/^This deployment still has 2 .+\. Remove them first\.$/);
+    const inherited = { response: { status: 409, data: { code: 'assignment_inherited', message: 'Already inherited', params: { cluster: 'ESX Paris' } } } };
+    expect(getApiErrorMessage(inherited, fr, 'fallback')).toBe('Déjà hébergée par ce serveur via ESX Paris.');
+    for (const code of ['assignment_duplicate', 'assignment_inherited', 'assignment_role_invalid', 'deployment_environment_taken', 'deployment_lifecycle_invalid', 'date_invalid']) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', environment: 'prod', field: 'since_date', cluster: 'ESX Paris' } } } }, i18n.getFixedT(language), 'fallback');
+        expect(text, `${code} in ${language}`).not.toBe('server words');
+        expect(text).not.toMatch(/{{|since_date|\bprod\b/);
+      }
+    }
+  });
+
+  it('translates the cluster refusals, with their values', () => {
+    const fr = i18n.getFixedT('fr');
+    const members = { response: { status: 400, data: { code: 'cluster_has_members', message: 'server words', params: { count: 3 } } } };
+    expect(getApiErrorMessage(members, fr, 'fallback')).toBe('Retirez d\'abord ses 3 membres.');
+    expect(getApiErrorMessage(members, t, 'fallback')).toBe('Remove its 3 members first.');
+    const member = { response: { status: 400, data: { code: 'cluster_switch_member', message: 'server words', params: { cluster: 'ESX-PAR' } } } };
+    expect(getApiErrorMessage(member, fr, 'fallback')).toBe('Membre de ESX-PAR : il ne peut pas devenir un cluster.');
+    const os = { response: { status: 400, data: { code: 'os_cluster_with_members', message: 'server words' } } };
+    expect(getApiErrorMessage(os, fr, 'fallback')).toBe('Ce cluster a des membres : pas de système d\'exploitation.');
+    const codes = [
+      'cluster_has_members', 'cluster_switch_member', 'cluster_member_self', 'cluster_member_is_cluster',
+      'cluster_member_not_found', 'cluster_os_with_members', 'os_cluster_with_members',
+      'CSV_CLUSTER_NOT_FOUND', 'CSV_CLUSTER_AMBIGUOUS', 'CSV_CLUSTER_NOT_A_CLUSTER',
+    ];
+    for (const code of codes) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const params = { count: 1, cluster: 'ESX-PAR', name: 'ESX-LYO', os: 'Ubuntu 22.04' };
+        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params } } }, i18n.getFixedT(language), 'fallback');
+        expect(text, `${code} in ${language}`).not.toBe('server words');
+        expect(text).not.toMatch(/{{|—/);
       }
     }
   });
@@ -134,6 +221,26 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(folder, t, 'fallback')).toBe('This folder still has 1 subfolder. Move or delete it first.');
     expect(getApiErrorMessage({ response: { status: 409, data: { code: 'USER_OWN_ACCOUNT', message: 'raw', usages: [] } } }, i18n.getFixedT('de'), 'fallback'))
       .toBe('Sie können Ihr eigenes Konto nicht löschen. Deaktivieren Sie es bei Bedarf.');
+  });
+
+  it('names the applications an asset delete refusal carries', () => {
+    const refused = {
+      response: {
+        status: 409,
+        data: {
+          code: 'ASSET_IN_USE',
+          message: 'Cannot delete asset "srv-01": has 1 application assignment(s): CheeseTrack (PROD)',
+          usages: [{ type: 'app_assignments', total: 1 }],
+          applications: ['CheeseTrack'],
+        },
+      },
+    };
+    expect(getApiErrorMessage(refused, t, 'fallback')).toBe(
+      'This asset is used by 1 application assignment (CheeseTrack). Remove it from there before deleting it.',
+    );
+    expect(getApiErrorMessage(refused, i18n.getFixedT('fr'), 'fallback')).toBe(
+      'Cet actif est utilisé par 1 affectation à une application (CheeseTrack). Retirez-le de cet élément avant de le supprimer.',
+    );
   });
 
   it('names the values a refusal carries (a frozen column and its year)', () => {

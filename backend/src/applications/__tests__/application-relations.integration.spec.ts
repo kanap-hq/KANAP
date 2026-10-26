@@ -1,6 +1,7 @@
 // @database-spec
 import 'dotenv/config';
 import * as assert from 'node:assert/strict';
+import { ApplicationsController } from '../applications.controller';
 import { ApplicationsCrudService } from '../services/applications-crud.service';
 import { context, inRolledBackTransaction, NO_ACCESS, relationsService, runSpecs, seedRelations, YEAR } from './application-relations.fixtures';
 
@@ -121,7 +122,7 @@ async function testBadgeCountsRequestsNotTasks() {
     const seed = await seedRelations(runner, 'badge');
     const crud = new ApplicationsCrudService(undefined as any, undefined as any, undefined as any, undefined as any, undefined as any);
     const sum = (c: Awaited<ReturnType<ApplicationsCrudService['relationCounts']>>) =>
-      c.opex + c.capex + c.contracts + c.projects + c.requests + c.links + c.attachments;
+      c.opex + c.capex + c.budget_lines_hidden + c.contracts + c.projects + c.requests + c.links + c.attachments;
 
     const all = await crud.relationCounts(seed.appId, { manager: runner.manager, requestsAccess: {} });
     assert.equal(all.requests, 2, 'both linked requests');
@@ -137,7 +138,49 @@ async function testBadgeCountsRequestsNotTasks() {
   });
 }
 
-runSpecs('application-relations.integration.spec', [testSections, testSuggestions, testHiddenWithoutReadAccess, testParticipationScopes, testBadgeCountsRequestsNotTasks])
+/**
+ * The badge follows the same rule as the tab (recette C1b n° 32): an IT Landscape Reader, who reads
+ * neither the budget, the contracts nor the portfolio, sees no section for them and counts none of them.
+ */
+async function testBadgeFollowsModuleRights() {
+  await inRolledBackTransaction(async (runner) => {
+    const seed = await seedRelations(runner, 'badge-rights');
+    const crud = new ApplicationsCrudService(undefined as any, undefined as any, undefined as any, undefined as any, undefined as any);
+    const all = await crud.relationCounts(seed.appId, { manager: runner.manager, requestsAccess: {} });
+    assert.ok(all.opex > 0 && all.contracts > 0 && all.projects > 0, 'the seed links budget lines, contracts and projects');
+
+    const controller = Object.create(ApplicationsController.prototype) as ApplicationsController;
+    Object.assign(controller, { svc: { relationCounts: (id: string, opts: any) => crud.relationCounts(id, opts) } });
+    const itLandscapeReader = {
+      applications: 'reader', infrastructure: 'reader', locations: 'reader', incidents: 'reader', settings: 'reader',
+      tasks: 'reader', users: 'reader', companies: 'reader', departments: 'reader', cost_centers: 'reader',
+      working_day_profiles: 'reader', suppliers: 'reader', contacts: 'reader',
+    };
+    const ctx = { tenantId: seed.tenantId, userId: seed.userId, userRoles: ['IT Landscape Reader'], isAdmin: false, permissions: itLandscapeReader, manager: runner.manager };
+    const reader = await controller.relationCounts(seed.appId, ctx as any);
+    assert.deepEqual(
+      [reader.opex, reader.capex, reader.contracts, reader.projects, reader.requests],
+      [0, 0, 0, 0, 0],
+      'no budget, contract, project or request counted',
+    );
+    // Without the budget right, the tab shows "N budget lines": the badge counts them too.
+    assert.equal(reader.budget_lines_hidden, all.opex + all.capex, 'every linked line counted, none named');
+    assert.equal(reader.total, reader.links + reader.attachments + reader.budget_lines_hidden);
+
+    const withRights = await controller.relationCounts(seed.appId, {
+      ...ctx,
+      permissions: { ...itLandscapeReader, budget: 'reader', contracts: 'reader', portfolio_projects: 'reader' },
+    } as any);
+    assert.deepEqual(
+      [withRights.opex, withRights.capex, withRights.contracts, withRights.projects],
+      [all.opex, all.capex, all.contracts, all.projects],
+      'counted with the read rights',
+    );
+    assert.equal(withRights.budget_lines_hidden, 0, 'nothing hidden with the budget right and no data access limit');
+  });
+}
+
+runSpecs('application-relations.integration.spec', [testSections, testSuggestions, testHiddenWithoutReadAccess, testParticipationScopes, testBadgeCountsRequestsNotTasks, testBadgeFollowsModuleRights])
   .catch((err) => {
     console.error(err);
     process.exit(1);

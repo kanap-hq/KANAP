@@ -18,6 +18,7 @@ import { statusColumnProps } from '../components/grid/statusColumn';
 import { metricValueFormatter } from '../components/grid/metricValueFormatter';
 import FxMissingNotice, { FxMissingMark } from '../components/finance/FxMissingNotice';
 import { companyTurnoverFxMissing, companyTurnoverFxNotice, type CompanyTurnoverFxMissing } from './companies/turnoverFxNotice';
+import { companyListYear } from './companies/companyYear';
 
 /** The pinned total, with the orange mark when some turnover was left out. */
 function TurnoverTotalCell({ value, missing }: { value: React.ReactNode; missing: CompanyTurnoverFxMissing[] }) {
@@ -63,19 +64,16 @@ export default function CompaniesPage() {
   }
 
   const currentYear = new Date().getFullYear();
-  const initialYearParam = searchParams.get('year');
-  const initialYear = initialYearParam && !Number.isNaN(Number(initialYearParam))
-    ? Number(initialYearParam)
-    : currentYear;
+  const initialYear = companyListYear(searchParams.get('year') ?? '') ?? currentYear;
   const [year, setYear] = useState<number>(initialYear);
+  // The field may hold a partial year. Requests stay on `year` until it is complete.
+  const [yearDraft, setYearDraft] = useState(String(initialYear));
 
   useEffect(() => {
-    const paramYear = searchParams.get('year');
-    if (!paramYear) return;
-    const parsed = Number(paramYear);
-    if (!Number.isNaN(parsed) && parsed !== year) {
-      setYear(parsed);
-    }
+    const parsed = companyListYear(searchParams.get('year') ?? '');
+    if (parsed == null || parsed === year) return;
+    setYear(parsed);
+    setYearDraft(String(parsed));
   }, [searchParams, year]);
 
   const [refreshKey, setRefreshKey] = useState(0);
@@ -398,9 +396,10 @@ export default function CompaniesPage() {
       const totals = res.data || {};
       const pinned = {
         name: t('companies.pinnedTotal'),
-        headcount_year: Number(totals.headcount || 0),
-        it_users_year: Number(totals.it_users || 0),
-        turnover_year: Number(totals.turnover || 0),
+        // Null when the year has no figure. `Number(x || 0)` would paint a zero.
+        headcount_year: totals.headcount == null ? null : Number(totals.headcount),
+        it_users_year: totals.it_users == null ? null : Number(totals.it_users),
+        turnover_year: totals.turnover == null ? null : Number(totals.turnover),
         turnover_currency: totals.turnover_currency ?? null,
         turnover_fx_missing: companyTurnoverFxMissing(totals.turnover_fx_missing),
       } as Partial<CompanyRow>;
@@ -421,10 +420,12 @@ export default function CompaniesPage() {
         size="small"
         label={t('shared.fields.year')}
         type="number"
-        value={year}
+        value={yearDraft}
         onChange={(e) => {
-          const next = Number(e.target.value);
-          if (!Number.isNaN(next)) updateSearchYear(next);
+          const text = e.target.value;
+          setYearDraft(text);
+          const next = companyListYear(text);
+          if (next != null && next !== year) updateSearchYear(next);
         }}
         sx={{ width: 120 }}
       />

@@ -145,6 +145,8 @@ export type ServerDataGridProps<T> = {
    * parameters; no paging) and its row count, after each first page loads: the CSV export follows it.
    */
   onListRequestChange?: (request: ListRequest) => void;
+  /** The first page of the list answer, with its extra fields (counts, a flag for a column). */
+  onListAnswer?: (answer: Record<string, unknown>) => void;
   pinnedBottomRowData?: any[]; // optional pinned totals row(s)
   enableRowSelection?: boolean; // enable multi-row selection with checkboxes (default: false)
   onSelectionChanged?: (selectedRows: T[]) => void; // callback when selection changes
@@ -527,6 +529,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   onQueryStateChange,
   onTotalChange,
   onListRequestChange,
+  onListAnswer,
   pinnedBottomRowData,
   enableRowSelection = false,
   onSelectionChanged,
@@ -1039,6 +1042,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   onTotalChangeRef.current = onTotalChange;
   const onListRequestChangeRef = useRef(onListRequestChange);
   onListRequestChangeRef.current = onListRequestChange;
+  const onListAnswerRef = useRef(onListAnswer);
+  onListAnswerRef.current = onListAnswer;
   // The page parameters the last block request was sent with: a column change that changes them
   // reloads the rows (see pageParamsChangedRef).
   const pageParamsKeyRef = useRef<string | undefined>(undefined);
@@ -1157,6 +1162,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           setOffDefault(!!reqParams.q || scopeNarrowsRef.current() || filterModelKey(fm) !== defaultFilterKeyRef.current || sortOff);
         }
         onTotalChangeRef.current?.(total);
+        if (startRow === 0) onListAnswerRef.current?.((res.data ?? {}) as Record<string, unknown>);
         if (startRow === 0 && onListRequestChangeRef.current) {
           const { page: _page, limit: _limit, ...listParams } = reqParams;
           onListRequestChangeRef.current({ params: listParams, total });

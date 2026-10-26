@@ -9,12 +9,14 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash, randomUUID } from 'crypto';
 import * as path from 'path';
 import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { extractInlineImageUrls } from '../common/content-image-urls';
+import { displayName } from '../common/display-name';
 import { ItemNumberService } from '../common/item-number.service';
 import { DocumentImportService, ImportedDocumentResult } from '../common/document-import.service';
 import { assertMarkdownSize } from '../common/markdown-limits';
@@ -46,7 +48,7 @@ import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
 import { PermissionLevel, PermissionsService } from '../permissions/permissions.service';
 import { INCIDENT_REVIEW_SLOT } from './integrated-document.constants';
-import { incidentVisibilitySql } from '../incidents/incident-visibility';
+import { incidentVisibilitySql, resolveIncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { UsersService } from '../users/users.service';
 import { UserRole } from '../users/user-role.entity';
 import {
@@ -1630,10 +1632,24 @@ export class KnowledgeService {
     resource: string,
     opts?: { applyDataAccess?: boolean },
   ): Promise<boolean> {
+    return (await this.inlineAttachmentViewer(manager, tenantId, refreshToken, resource, opts)) !== null;
+  }
+
+  /**
+   * The same check as `canAccessInlineAttachment`, returning the person instead of a boolean, for
+   * routes that also filter on who reads (the restricted-incident rule of task images).
+   */
+  async inlineAttachmentViewer(
+    manager: EntityManager,
+    tenantId: string,
+    refreshToken: string | null | undefined,
+    resource: string,
+    opts?: { applyDataAccess?: boolean },
+  ): Promise<string | null> {
     const userId = await this.resolveInlineAttachmentViewer(manager, tenantId, refreshToken, resource);
-    if (!userId) return false;
+    if (!userId) return null;
     if (opts?.applyDataAccess) await applyDataAccess(manager, userId);
-    return true;
+    return userId;
   }
 
   /** The person of the session cookie when allowed to read `resource` (>= reader), else null. */
@@ -3523,23 +3539,26 @@ export class KnowledgeService {
       }
       case 'tasks': {
         const params: any[] = [];
-        let where = `tenant_id = app_current_tenant()`;
+        let where = `t.tenant_id = app_current_tenant()`;
         if (q) {
           params.push(`%${q}%`);
           const textPos = params.length;
           if (itemNumber != null) {
             params.push(itemNumber);
-            where += ` AND (COALESCE(title, '') ILIKE $${textPos} OR item_number = $${params.length})`;
+            where += ` AND (COALESCE(t.title, '') ILIKE $${textPos} OR t.item_number = $${params.length})`;
           } else {
-            where += ` AND COALESCE(title, '') ILIKE $${textPos}`;
+            where += ` AND COALESCE(t.title, '') ILIKE $${textPos}`;
           }
         }
+        // The link selector never offers a task of an incident this reader cannot see.
+        const viewer = await resolveIncidentViewer(manager, opts?.userId, opts?.tenantId ?? null);
+        where += taskIncidentVisibilitySql('t', viewer, params);
         params.push(limit);
         const rows = await manager.query(
-          `SELECT id, title, item_number
-           FROM tasks
+          `SELECT t.id, t.title, t.item_number
+           FROM tasks t
            WHERE ${where}
-           ORDER BY created_at DESC
+           ORDER BY t.created_at DESC
            LIMIT $${params.length}`,
           params,
         );
@@ -3741,6 +3760,10 @@ export class KnowledgeService {
     );
     const backlinkLibraries = await this.listAccessibleLibraryIds(manager, opts?.userId || null, 'reader');
 
+    // The tasks a document links follow the same rule: a task of a restricted
+    // incident the reader cannot see is absent from the list.
+    const relatedTaskParams: unknown[] = [id];
+    const relatedTaskVisibility = taskIncidentVisibilitySql('t', incidentViewer, relatedTaskParams);
     const incidentRelationParams: unknown[] = [id];
     const incidentRelationSql = incidentViewer.canReadIncidents
       ? `SELECT dinc.incident_id, inc.title, inc.item_number FROM document_incidents dinc
@@ -3810,7 +3833,9 @@ export class KnowledgeService {
         knowledgeBranch ? manager.query(
           `SELECT dt.task_id, t.title, t.item_number FROM document_tasks dt
            JOIN tasks t ON t.id = dt.task_id AND t.tenant_id = dt.tenant_id
-           WHERE dt.document_id = $1 ORDER BY dt.created_at ASC`, [id]) : [],
+           WHERE dt.document_id = $1
+             ${relatedTaskVisibility}
+           ORDER BY dt.created_at ASC`, relatedTaskParams) : [],
         knowledgeBranch ? manager.query(
           `SELECT di.interface_id, i.interface_reference, i.interface_id AS interface_code, i.name
            FROM document_interfaces di
@@ -3920,9 +3945,7 @@ export class KnowledgeService {
     }
 
     const senderRows = await manager.query('SELECT first_name, last_name FROM users WHERE id = $1', [userId]);
-    const senderName = senderRows.length > 0
-      ? `${senderRows[0].first_name} ${senderRows[0].last_name}`.trim() || 'Someone'
-      : 'Someone';
+    const senderName = displayName(senderRows[0], 'Someone');
 
     const recipientRows = userIds.length > 0
       ? await manager.query(
@@ -7027,7 +7050,9 @@ export class KnowledgeService {
       manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.asset_reference AS item_ref, a.name, a.status
          FROM app_instances ai
-         JOIN app_asset_assignments aaa ON aaa.app_instance_id = ai.id AND aaa.tenant_id = ai.tenant_id
+         -- The servers the application runs on (effective: a cluster and its members in service).
+         JOIN (${effectiveAssignmentsSql({ tenant: 'app_current_tenant()', applications: 'ARRAY[$1::uuid]' })}) aaa
+           ON aaa.app_instance_id = ai.id AND aaa.tenant_id = ai.tenant_id
          JOIN assets a ON a.id = aaa.asset_id AND a.tenant_id = aaa.tenant_id
          WHERE ai.application_id = $1
          ORDER BY a.name ASC`,
@@ -7111,7 +7136,8 @@ export class KnowledgeService {
       ),
       manager.query<KnowledgeContextSourceRow[]>(
         `SELECT a.id AS entity_id, NULL::int AS item_number, a.sequential_id AS item_ref, a.name, a.status
-         FROM app_asset_assignments aaa
+         -- The applications running on the asset (effective: a member runs what its clusters carry).
+         FROM (${effectiveAssignmentsSql({ tenant: 'app_current_tenant()', assets: 'ARRAY[$1::uuid]' })}) aaa
          JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = aaa.tenant_id
          JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
          WHERE aaa.asset_id = $1

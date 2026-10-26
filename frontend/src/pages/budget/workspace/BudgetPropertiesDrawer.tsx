@@ -20,6 +20,7 @@ import { useLocale } from '../../../i18n/useLocale';
 import { useCostCenterNode } from '../../../hooks/useCostCenterTree';
 import type { CostCenterNode } from '../../../services/costCenters';
 import { axisRequiredFor, useAnalyticsAxes } from '../../../hooks/useAnalyticsAxes';
+import { useLinePlacementFilter } from '../../../hooks/usePlacementOptions';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import { matching, type ItemReferences } from '../../../components/finance/itemReferences';
 
@@ -34,6 +35,8 @@ type Props = {
   onNatureChange?: (next: LineType) => void;
   onChangeType?: () => void;
   mode?: 'create' | 'edit';
+  /** The line shown (edit): a value added to an open dimension's picker goes on it. */
+  lineId?: string | null;
   supplierId: string;
   payingCompanyId: string;
   /** The paying company was brought by the cost center and still follows it: the cost center list is not narrowed to it. */
@@ -84,6 +87,7 @@ export default function BudgetPropertiesDrawer({
   onNatureChange,
   onChangeType,
   mode = 'edit',
+  lineId = null,
   supplierId,
   payingCompanyId,
   companyFollowsCostCenter = false,
@@ -147,6 +151,14 @@ export default function BudgetPropertiesDrawer({
   // dimension, or one for the other nature only, shows no select; its value stays on the line. When the
   // dimensions cannot be loaded, one line says so.
   const analyticsAxes = useAnalyticsAxes({ scope: nature });
+  // A limited data access offers only the companies and cost centers the line may be placed on. A
+  // paying company that follows the cost center is not a choice yet: every placeable cost center.
+  const placement = useLinePlacementFilter(companyFollowsCostCenter ? null : payingCompanyId || null);
+  const costCenterRequired = placement?.costCenterRequired === true;
+  // An open dimension's picker adds a typed value for this line, or for the place of the line being created.
+  const newValueFor = mode === 'create'
+    ? { payingCompanyId: payingCompanyId || null, costCenterId: costCenterId || null }
+    : lineId ? { lineId } : null;
 
   return (
     <>
@@ -181,7 +193,7 @@ export default function BudgetPropertiesDrawer({
             <SupplierSelect hideLabel label={t('opex.fields.supplier')} value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={disabled} selectedOption={matching(references?.supplier, supplierId)} />
           </Box>
         </PropertyRow>
-        <PropertyRow label={t('opex.fields.costCenter')} helperText={costCenterHint}>
+        <PropertyRow label={t('opex.fields.costCenter')} helperText={costCenterHint} required={costCenterRequired}>
           <Box sx={hideInnerLabelSx}>
             <CostCenterSelect
               hideLabel
@@ -191,13 +203,16 @@ export default function BudgetPropertiesDrawer({
               value={costCenterId || null}
               selectedOption={matching(references?.cost_center, costCenterId)}
               onChange={(v, node) => onCostCenterChange(v ?? '', node)}
+              isAllowed={placement?.isCostCenterAllowed}
+              required={costCenterRequired}
+              disableClearable={costCenterRequired}
               disabled={disabled}
             />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.payingCompany')} required>
           <Box sx={hideInnerLabelSx}>
-            <CompanySelect hideLabel label={t('opex.fields.payingCompany')} value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} disabled={disabled} required disableClearable={mode === 'edit'} selectedOption={matching(references?.paying_company, payingCompanyId)} />
+            <CompanySelect hideLabel label={t('opex.fields.payingCompany')} value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} allowedCompanyIds={placement?.companyIds} disabled={disabled} required disableClearable={mode === 'edit'} selectedOption={matching(references?.paying_company, payingCompanyId)} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.account')} required>
@@ -239,6 +254,7 @@ export default function BudgetPropertiesDrawer({
                 // A held value on a required dimension can be replaced, not removed. A line without one stays editable.
                 disableClearable={mode === 'edit' && axisRequiredFor(axis, nature) && !!analyticsValues[axis.id]}
                 selectedOption={matching(analyticsOptions?.[axis.id], analyticsValues[axis.id])}
+                newValueFor={newValueFor}
               />
             </Box>
           </PropertyRow>

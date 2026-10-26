@@ -12,6 +12,9 @@ export type ConnectionMapNode = {
   networkSegment: string | null;
   hostingCategory: 'on_prem' | 'cloud' | null;
   graphTier?: string | null;
+  implicitMember?: boolean;
+  hiddenMembers?: number;
+  hiddenMembersLabel?: string;
   x?: number;
   y?: number;
   fx?: number | null;
@@ -597,6 +600,11 @@ export default function ConnectionMapGraph({
         event.stopPropagation();
       });
 
+    node
+      .filter((d: any) => !!d.hiddenMembersLabel)
+      .append('title')
+      .text((d: any) => d.hiddenMembersLabel);
+
     const hostingFill = (d: any) => {
       if (d.kind === 'entity') return '#FFF7ED';
       if (d.kind === 'cluster') return d.hostingCategory === 'cloud' ? '#E0F2FE' : '#ECFEFF';
@@ -670,7 +678,11 @@ export default function ConnectionMapGraph({
 
     node
       .append('text')
-      .text((d: any) => (d.environment ? d.environment.toUpperCase() : ''))
+      .text((d: any) => {
+        const environment = d.environment ? d.environment.toUpperCase() : '';
+        const hidden = d.hiddenMembers ? `+${d.hiddenMembers}` : '';
+        return [environment, hidden].filter(Boolean).join(' · ');
+      })
       .attr('text-anchor', 'middle')
       .attr('dy', '1.0em')
       .attr('font-size', '11px')

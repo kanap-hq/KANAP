@@ -8,6 +8,7 @@ import { ApplicationsBaseService, ServiceOpts } from './applications-base.servic
 import { projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { assertScopeNatures, auditTableOf, linkedLineOf, natureAnd, type BudgetNature } from '../../spend/budget-nature';
 import { UUID_RE } from '../../common/relations/relation-target';
+import { auditedLinkSet, hiddenLineCount } from '../../data-access/hidden-links';
 
 type LinkedItemKind = 'spend' | 'capex' | 'contract' | 'project';
 
@@ -203,13 +204,15 @@ export class ApplicationsInstancesService extends ApplicationsBaseService {
       [tenantId, resolvedAppId, nextIds],
     );
     if (JSON.stringify(beforeState) !== JSON.stringify(nextIds)) {
+      // The lines a limited person cannot read stayed linked: the audit row says how many (spec §6.6).
+      const hidden = t.items === 'spend_items' ? await hiddenLineCount(mg, 'application', resolvedAppId) : 0;
       await this.audit.log(
         {
           table: t.audit,
           recordId: resolvedAppId,
           action: 'update',
-          before: beforeState,
-          after: nextIds,
+          before: auditedLinkSet(beforeState, hidden),
+          after: auditedLinkSet(nextIds, hidden),
           userId: userId ?? null,
         },
         { manager: mg },

@@ -389,7 +389,7 @@ cd /opt/kanap
 docker compose -f infra/compose.onprem.yml build --pull
 docker compose -f infra/compose.onprem.yml up -d --wait
 docker compose -f infra/compose.onprem.yml ps
-docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|^Admin seeding|WARN|ERROR|successfully started|Email transport'
+docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 ```
 
 Si la compilación se detiene con `signal: killed`, el servidor se quedó sin memoria. `sudo dmesg | grep -i oom` lo confirma. Compruebe la memoria libre con `free -m` y detenga los demás servicios que la usan. Compruebe que PostgreSQL y el almacenamiento siguen funcionando (`pg_lsclusters`, `systemctl status --no-pager rustfs`). Después reinicie Docker, lo que detiene lo que queda de la compilación interrumpida, compile las dos imágenes una tras otra, lo que necesita menos memoria, y arranque KANAP:
@@ -414,7 +414,6 @@ docker compose -f infra/compose.onprem.yml up -d --wait
 [RATE-LIMIT] Client address: taken from X-Forwarded-For behind 1 trusted proxy (RATE_LIMIT_TRUST_PROXY=true)
 [CORS] Configured 1 origin pattern(s)
 [DB] Connected as PostgreSQL role "kanap" with native RLS enforcement
-Admin seeding disabled (set SEED_ADMIN=true to enable)
 [on-prem] Default chart of accounts created
 [on-prem] Created tenant 'default'
 [on-prem] Created administrator account admin@example.internal: the workspace had no active administrator
@@ -428,7 +427,7 @@ El número de migraciones depende de la versión, y las cifras del pool dependen
 
 El bloque omite las líneas de migración: unas 40 líneas que empiezan por `[Migration]` o `[migration:` siguen a `Running migrations...`. Son informativas. En una base de datos nueva, algunas indican cambios en datos de referencia integrados o nombran un identificador de espacio de trabajo que no es el suyo: KANAP mantiene un espacio de trabajo del sistema para las funciones de la plataforma. No requieren ninguna acción. `...` representa el prefijo `[Nest]` con el identificador del proceso y la hora, y el origen entre corchetes (por ejemplo `LOG [NestApplication]`). Algunas de estas líneas terminan con una duración como `+0ms`. La última línea de la salida filtrada es `[DB] pool budget ...`. Un registro guardado en un archivo puede contener códigos de color como `[33m`.
 
-Dos líneas son esperadas y no requieren ninguna acción: `Admin seeding disabled ...` y, mientras no configure el correo, la advertencia de `EmailService`. Una advertencia `[SECURITY]`, `[CONFIG]`, `[CORS]` o `[ENV] APP_ENV is not set` indica que un parámetro requiere atención: [Configuración](configuration.md#que-muestra-el-registro-de-la-api-al-arrancar) explica cada línea.
+Mientras no configure el correo, la advertencia de `EmailService` es esperada y no requiere ninguna acción. Una advertencia `[SECURITY]`, `[CONFIG]`, `[CORS]` o `[ENV] APP_ENV is not set` indica que un parámetro requiere atención: [Configuración](configuration.md#que-muestra-el-registro-de-la-api-al-arrancar) explica cada línea.
 
 ---
 

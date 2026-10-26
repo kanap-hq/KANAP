@@ -6,6 +6,29 @@ export type IncidentSeverity = (typeof INCIDENT_SEVERITIES)[number];
 export const INCIDENT_STATUSES = ['open', 'in_progress', 'resolved', 'closed', 'cancelled'] as const;
 export type IncidentStatus = (typeof INCIDENT_STATUSES)[number];
 
+/**
+ * Forward-only lifecycle. Backward moves go through Reopen; `cancelled` only through Cancel.
+ * The CSV import reserves both to `incidents:admin` (incident-csv.config.ts).
+ */
+export const INCIDENT_STATUS_RANK: Record<IncidentStatus, number> = {
+  open: 0, in_progress: 1, resolved: 2, closed: 3, cancelled: 4,
+};
+
+/**
+ * True when only Reopen or Cancel may move an incident from `previous` to `next`: a lower rank
+ * (backwards) or a cancellation, whatever the previous status. The CSV import refuses these
+ * moves to a contributor and journals them for an administrator.
+ */
+export function isReservedIncidentStatusMove(
+  next: string | null | undefined,
+  previous: string | null | undefined,
+): boolean {
+  if (!next || !previous || next === previous) return false;
+  if (!(next in INCIDENT_STATUS_RANK) || !(previous in INCIDENT_STATUS_RANK)) return false;
+  return next === 'cancelled'
+    || INCIDENT_STATUS_RANK[next as IncidentStatus] < INCIDENT_STATUS_RANK[previous as IncidentStatus];
+}
+
 @Entity('incidents')
 @Index(['tenant_id', 'item_number'], { unique: true })
 export class Incident {

@@ -143,7 +143,7 @@ Ouvrez-le avec **Modifier** (**Ouvrir** si vous pouvez seulement consulter) dans
 
 - **En-tête** : le nom de la dimension. Cliquez dessus pour renommer la dimension. **Précédent** / **Suivant** parcourent les dimensions dans leur ordre, et le bouton de fermeture ramène à la page sur cette dimension
 - **Zone principale** : une ligne d'utilisation, puis la **Description**. La ligne d'utilisation donne le nombre de valeurs et de lignes budgétaires qui portent l'une d'elles, OPEX et CAPEX ensemble, par exemple « 12 valeurs · Utilisée par 29 lignes ». **Utilisée par 29 lignes** est un lien : il ouvre ces lignes dans la liste des lignes budgétaires, dans un nouvel onglet, lignes activées et désactivées comprises. Une dimension qu'aucune ligne n'utilise indique « Pas encore utilisée », et une dimension sans valeur « Aucune valeur pour le moment. » Tant que la dimension est désactivée, le compte s'affiche sans lien
-- **Panneau Propriétés** à droite : **Nom**, **Code**, **Utilisé pour**, **Obligatoire** et **Cycle de vie**
+- **Panneau Propriétés** à droite : **Nom**, **Code**, **Utilisé pour**, **Obligatoire**, **Valeurs ouvertes** et **Cycle de vie**
 
 **Enregistrement automatique** : chaque modification s'enregistre d'elle-même. Il n'y a pas de bouton Enregistrer. Les champs texte s'enregistrent quand vous les quittez (dans **Nom** et **Code**, appuyez sur Entrée pour enregistrer aussitôt) ; l'interrupteur **Obligatoire** et le cycle de vie s'enregistrent dès que vous les modifiez. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné, par exemple un code en double sous **Code**. Un nom refusé dans l'en-tête s'affiche en haut de la page.
 
@@ -156,6 +156,7 @@ Ouvrez-le avec **Modifier** (**Ouvrir** si vous pouvez seulement consulter) dans
 | **Description** | À quoi sert la dimension, pour que vos collègues classent les lignes de la même façon |
 | **Utilisé pour** | **OPEX et CAPEX**, **OPEX uniquement** ou **CAPEX uniquement**. Indique quelles lignes budgétaires peuvent avoir une valeur sur cette dimension. Voir [Dimensions OPEX ou CAPEX](#dimensions-opex-ou-capex). Verrouillé sur la dimension par défaut, avec une ligne en dessous : « La dimension par défaut s'applique aux lignes OPEX et CAPEX. » |
 | **Obligatoire** | Un interrupteur. Activé, il impose une valeur sur cette dimension à chaque nouvelle ligne des types pour lesquels la dimension est utilisée, et une ligne qui porte une valeur ne peut plus la perdre. Voir [Dimensions obligatoires](#dimensions-obligatoires). La dimension par défaut peut aussi être obligatoire |
+| **Valeurs ouvertes** | Un interrupteur, éteint par défaut. Allumé, il permet à toute personne qui peut modifier une ligne d'ajouter une valeur, depuis la ligne ou le fichier budget. Voir [Valeurs ouvertes](#open-values) |
 | **Cycle de vie** | L'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie). Verrouillé sur la dimension par défaut, avec une ligne en dessous : « Cette dimension ne peut être ni désactivée ni supprimée : les anciens fichiers et les questions posées à l'IA l'utilisent. » |
 
 ### Ordonner les dimensions
@@ -216,6 +217,12 @@ Tant que le réglage est activé, des lignes sous l'interrupteur vous aident à 
 
 - **Lignes sans valeur** : par exemple « 117 lignes OPEX et 15 lignes CAPEX n'ont pas de valeur. » Chaque type de ligne a son propre lien, **Afficher les lignes OPEX** et **Afficher les lignes CAPEX** (**Afficher ces lignes** lorsqu'un seul type est concerné). Le lien ouvre les lignes dans leur liste, dans un nouvel onglet, lignes activées et désactivées comprises.
 - **Aucune valeur à choisir** : lorsqu'un type de ligne pour lequel la dimension est utilisée n'a aucune valeur activée utilisable, un avertissement le signale, par exemple « Aucune valeur activée n'est utilisable sur les lignes CAPEX. Aucune nouvelle ligne CAPEX ne peut être créée. » Ajoutez une valeur pour ce type de ligne, ou activez-en une. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex).
+
+### Valeurs ouvertes { #open-values }
+
+Une dimension dont l'interrupteur **Valeurs ouvertes** est allumé reçoit de nouvelles valeurs depuis les lignes elles-mêmes : une référence budgétaire, un code projet, un numéro de commande. Dans le champ d'une ligne, taper un nom qui n'existe pas propose **Ajouter « … »**, qui crée la valeur. Le fichier budget la crée de la même façon. Toute personne qui peut modifier la ligne le fait, y compris les personnes dont l'[accès aux données](data-access.md) est limité.
+
+Sur une dimension dont l'interrupteur est éteint, les valeurs se créent sur cette page, et le fichier budget ne crée les valeurs inconnues que pour les personnes qui ont accès à toutes les données. L'interrupteur est affiché aux personnes qui peuvent modifier les dimensions et qui ont accès à toutes les données.
 
 ### Supprimer une dimension
 
@@ -325,7 +332,7 @@ Dans le panneau **Propriétés** d'une ligne OPEX ou CAPEX, et lorsque vous en c
 - Choisissez une valeur, ou videz le champ pour laisser la ligne sans valeur sur cette dimension. La modification s'enregistre aussitôt.
 - Le champ d'une dimension obligatoire est marqué d'un astérisque. Une nouvelle ligne ne peut pas être créée sans valeur sur cette dimension, avec le message « Nature de coût est obligatoire ». Sur une ligne qui porte une valeur, le champ n'a pas de bouton d'effacement : vous pouvez seulement choisir une autre valeur. Voir [Dimensions obligatoires](#dimensions-obligatoires).
 - Le champ liste les valeurs activées de sa dimension utilisées pour ce type de ligne. Une valeur désactivée, ou une valeur réservée à l'autre type de ligne, reste affichée sur les lignes qui l'ont. Voir [Valeurs OPEX ou CAPEX](#valeurs-opex-ou-capex).
-- Le champ ne peut pas créer de valeur. Créez les valeurs sur la page Dimensions analytiques, ou laissez un import CSV OPEX ou CAPEX les créer.
+- Sur une dimension à [valeurs ouvertes](#open-values), le champ propose **Ajouter « … »** pour un nom qui n'existe pas. Sur les autres dimensions, le champ ne peut pas créer de valeur : créez les valeurs sur la page Dimensions analytiques, ou laissez le fichier budget les créer.
 - Une valeur s'applique à toute la ligne, sur toutes les années.
 - Si les dimensions ne peuvent pas être chargées, une ligne remplace ces champs : « Les dimensions n'ont pas pu être chargées. »
 

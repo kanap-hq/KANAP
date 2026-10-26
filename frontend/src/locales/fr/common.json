@@ -26,6 +26,7 @@
     "retry": "Réessayer",
     "discard": "Abandonner",
     "edit": "Modifier",
+    "editTitle": "Modifier le titre",
     "clear": "Effacer",
     "continue": "Continuer",
     "selectAll": "Tout sélectionner",
@@ -132,6 +133,7 @@
     "recommended": "Recommandé",
     "openCalendar": "Ouvrir le calendrier",
     "datePlaceholder": "jj/mm/aaaa",
+    "dateInvalid": "Date invalide",
     "time": "Heure",
     "timePlaceholder": "hh:mm",
     "requiredTag": "(obligatoire)",
@@ -199,6 +201,8 @@
       "cost_centers_other": "{{count}} centres de coûts",
       "departments_one": "{{count}} département",
       "departments_other": "{{count}} départements",
+      "data_access_one": "l'accès aux données de {{count}} personne",
+      "data_access_other": "l'accès aux données de {{count}} personnes",
       "users_one": "{{count}} utilisateur",
       "users_other": "{{count}} utilisateurs",
       "locations_one": "{{count}} site",
@@ -237,12 +241,14 @@
       "contributors_other": "{{count}} contributeurs",
       "interface_bindings_one": "{{count}} liaison d'interface",
       "interface_bindings_other": "{{count}} liaisons d'interface",
-      "server_assignments_one": "{{count}} affectation de serveur",
-      "server_assignments_other": "{{count}} affectations de serveur",
+      "server_assignments_one": "{{count}} serveur",
+      "server_assignments_other": "{{count}} serveurs",
       "business_processes_one": "{{count}} processus métier",
       "business_processes_other": "{{count}} processus métier",
       "documents_one": "{{count}} document",
       "documents_other": "{{count}} documents",
+      "descriptions_one": "sa description",
+      "descriptions_other": "{{count}} descriptions",
       "sub_folders_one": "{{count}} sous-dossier",
       "sub_folders_other": "{{count}} sous-dossiers",
       "app_instances_one": "{{count}} déploiement",
@@ -250,7 +256,21 @@
       "incidents_one": "{{count}} incident",
       "incidents_other": "{{count}} incidents",
       "subnets_one": "{{count}} sous-réseau",
-      "subnets_other": "{{count}} sous-réseaux"
+      "subnets_other": "{{count}} sous-réseaux",
+      "others_one": "{{count}} autre",
+      "others_other": "{{count}} autres"
+    },
+    "anyway": "Supprimer quand même",
+    "assetWarning": {
+      "memberOf_one": "Membre de {{names}} : il quittera ce cluster.",
+      "memberOf_other": "Membre de {{names}} : il quittera ces clusters.",
+      "stopsHosting": "Il n'hébergera plus {{names}}.",
+      "hasMembers_one": "Cluster de {{count}} membre : il perdra son cluster.",
+      "hasMembers_other": "Cluster de {{count}} membres : ils perdront leur cluster.",
+      "links_one": "{{count}} lien sera supprimé : {{names}}.",
+      "links_other": "{{count}} liens seront supprimés : {{names}}.",
+      "more_one": "et {{count}} autre",
+      "more_other": "et {{count}} autres"
     }
   },
   "messages": {
@@ -316,6 +336,7 @@
     "columnY": "{{column}}, A",
     "topIncreases": "Plus fortes hausses",
     "columnYvsYminus1": "{{column}}, A vs A-1",
+    "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "Aucune hausse",
     "myBudget": {
       "title": "Mon budget",
@@ -659,10 +680,34 @@
       "status": "Statut",
       "owners": "Responsables",
       "timestamps": "Dates",
-      "vulnerabilities": "Vulnérabilités"
+      "vulnerabilities": "Vulnérabilités",
+      "timeline": "Chronologie",
+      "people": "Personnes",
+      "record": "Enregistrement",
+      "source": "Source",
+      "basic": "Informations de base",
+      "context": "Contexte",
+      "dates": "Dates",
+      "ip_addresses": "Adresses IP",
+      "effort": "Charge",
+      "team": "Équipe",
+      "scoring": "Évaluation",
+      "analysis": "Analyse"
     },
     "presets": {
       "applications": {
+        "enrichment": "Enrichissement des données"
+      },
+      "assets": {
+        "enrichment": "Enrichissement des données"
+      },
+      "tasks": {
+        "enrichment": "Enrichissement des données"
+      },
+      "portfolio_projects": {
+        "enrichment": "Enrichissement des données"
+      },
+      "portfolio_requests": {
         "enrichment": "Enrichissement des données"
       }
     },
@@ -715,6 +760,147 @@
         "it_owner_email_3": "E-mail du responsable IT 3",
         "business_owner_email_4": "E-mail du responsable métier 4",
         "it_owner_email_4": "E-mail du responsable IT 4"
+      },
+      "incidents": {
+        "ref": "Réf.",
+        "title": "Titre",
+        "category": "Catégorie",
+        "severity": "Gravité",
+        "status": "Statut",
+        "confidential": "Restreint aux administrateurs du registre",
+        "started_at": "Début",
+        "detected_at": "Détecté",
+        "resolved_at": "Résolu",
+        "closed_at": "Clôturé",
+        "reporter": "Déclarant",
+        "owner": "Responsable",
+        "description": "Description",
+        "review": "Revue d'incident",
+        "source_ref": "Référence externe",
+        "personal_data_affected": "Données personnelles concernées",
+        "authority_notification_required": "Notification aux autorités requise",
+        "authority_notified_at": "Notifié le",
+        "notified_parties": "Parties informées"
+      },
+      "assets": {
+        "id": "ID",
+        "name": "Nom",
+        "location_reference": "Site",
+        "kind": "Type d’actif",
+        "is_cluster": "Est un cluster",
+        "status": "Cycle de vie",
+        "go_live_date": "Date de mise en service",
+        "end_of_life_date": "Date de fin de vie",
+        "notes": "Notes",
+        "environment": "Environnement",
+        "hostname": "Nom d’hôte",
+        "domain": "Domaine",
+        "admin_zone": "Zone d’administration",
+        "aliases": "Alias",
+        "operating_system": "Système d’exploitation",
+        "cluster": "Appartenance au cluster",
+        "ip_1_type": "Type d’adresse IP 1",
+        "ip_1_address": "Adresse IP 1",
+        "ip_1_subnet_cidr": "Sous-réseau IP 1 (CIDR)",
+        "ip_2_type": "Type d’adresse IP 2",
+        "ip_2_address": "Adresse IP 2",
+        "ip_2_subnet_cidr": "Sous-réseau IP 2 (CIDR)",
+        "ip_3_type": "Type d’adresse IP 3",
+        "ip_3_address": "Adresse IP 3",
+        "ip_3_subnet_cidr": "Sous-réseau IP 3 (CIDR)",
+        "ip_4_type": "Type d’adresse IP 4",
+        "ip_4_address": "Adresse IP 4",
+        "ip_4_subnet_cidr": "Sous-réseau IP 4 (CIDR)",
+        "vulnerabilities_to_review": "Vulnérabilités à examiner",
+        "severe_vulnerabilities": "Vulnérabilités graves"
+      },
+      "tasks": {
+        "id": "ID",
+        "title": "Titre",
+        "description": "Description",
+        "task_type_name": "Type de tâche",
+        "related_object_type": "Type d’objet lié",
+        "related_object_id": "ID de l’objet lié",
+        "related_object_name": "Nom de l’objet lié",
+        "phase_name": "Phase",
+        "priority_level": "Priorité",
+        "category_name": "Catégorie",
+        "stream_name": "Filière",
+        "source_name": "Source",
+        "company_name": "Société",
+        "status": "Statut",
+        "start_date": "Date de début",
+        "due_date": "Échéance",
+        "assignee_email": "E-mail de l’assigné",
+        "creator_email": "E-mail du demandeur",
+        "viewer_email_1": "E-mail de l’observateur 1",
+        "viewer_email_2": "E-mail de l’observateur 2",
+        "viewer_email_3": "E-mail de l’observateur 3",
+        "viewer_email_4": "E-mail de l’observateur 4",
+        "owner_email_1": "E-mail du responsable 1",
+        "owner_email_2": "E-mail du responsable 2",
+        "owner_email_3": "E-mail du responsable 3",
+        "owner_email_4": "E-mail du responsable 4",
+        "labels": "Étiquettes"
+      },
+      "portfolio_projects": {
+        "id": "ID",
+        "name": "Nom",
+        "status": "Statut",
+        "purpose": "Objectif",
+        "origin": "Origine",
+        "source_name": "Source",
+        "category_name": "Catégorie",
+        "stream_name": "Filière",
+        "company_name": "Société",
+        "department_name": "Département",
+        "planned_start": "Début prévu",
+        "planned_end": "Fin prévue",
+        "actual_start": "Début réel",
+        "actual_end": "Fin réelle",
+        "baseline_start_date": "Début de référence",
+        "baseline_end_date": "Fin de référence",
+        "execution_progress": "Progression (%)",
+        "estimated_effort_it": "Charge IT estimée (JH)",
+        "estimated_effort_business": "Charge métier estimée (JH)",
+        "actual_effort_it": "Charge IT réelle (JH)",
+        "actual_effort_business": "Charge métier réelle (JH)",
+        "baseline_effort_it": "Charge IT de référence (JH)",
+        "baseline_effort_business": "Charge métier de référence (JH)",
+        "business_sponsor_email": "E-mail du sponsor métier",
+        "business_lead_email": "E-mail du responsable métier",
+        "it_sponsor_email": "E-mail du sponsor IT",
+        "it_lead_email": "E-mail du responsable IT",
+        "criteria_values": "Critères d’évaluation (JSON)",
+        "priority_score": "Score de priorité",
+        "priority_override": "Surcharge de priorité",
+        "override_value": "Valeur de surcharge",
+        "override_justification": "Justification de la surcharge"
+      },
+      "portfolio_requests": {
+        "id": "ID",
+        "name": "Nom",
+        "status": "Statut",
+        "purpose": "Objectif",
+        "source_name": "Source",
+        "category_name": "Catégorie",
+        "stream_name": "Filière",
+        "requestor_email": "E-mail du demandeur",
+        "company_name": "Société",
+        "department_name": "Département",
+        "target_delivery_date": "Date de livraison cible",
+        "current_situation": "Situation actuelle",
+        "expected_benefits": "Bénéfices attendus",
+        "risks": "Risques",
+        "business_sponsor_email": "E-mail du sponsor métier",
+        "business_lead_email": "E-mail du responsable métier",
+        "it_sponsor_email": "E-mail du sponsor IT",
+        "it_lead_email": "E-mail du responsable IT",
+        "criteria_values": "Critères d’évaluation (JSON)",
+        "priority_score": "Score de priorité",
+        "priority_override": "Surcharge de priorité",
+        "override_value": "Valeur de surcharge",
+        "override_justification": "Justification de la surcharge"
       }
     }
   },
@@ -729,6 +915,7 @@
     "noCategoriesFound": "Aucune catégorie trouvée",
     "noUsersFound": "Aucun utilisateur trouvé",
     "noServersFound": "Aucun serveur trouvé",
+    "noMembers": "Aucun membre déclaré",
     "meSuffix": "(moi)",
     "selectBusinessProcesses": "Sélectionner des processus métier",
     "selectCategories": "Sélectionner des catégories",
@@ -767,7 +954,8 @@
     "departments": "Départements",
     "allDepartments": "Tous les départements",
     "newCategoryName": "Nom de la nouvelle catégorie",
-    "removeNamed": "Retirer {{name}}"
+    "removeNamed": "Retirer {{name}}",
+    "chooseServer": "Choisir un serveur"
   },
   "documentEditor": {
     "expandDocument": "Agrandir le document",
@@ -831,7 +1019,8 @@
     "copy": "Copier",
     "copiedToClipboard": "Copié dans le presse-papiers",
     "orEmailSection": "Ou l'envoyer par e-mail à quelqu'un",
-    "sendEmail": "Envoyer l'e-mail"
+    "sendEmail": "Envoyer l'e-mail",
+    "cannotOpen": "{{name}} ne pourra pas ouvrir cet élément."
   },
   "enumEditor": {
     "name": "Nom",
@@ -940,7 +1129,8 @@
     "manuallyAdded": "Ajouté manuellement",
     "removeContact": "Retirer le contact",
     "insufficientPermission": "Autorisation insuffisante",
-    "syncFromSupplier": "Reprendre les contacts du fournisseur"
+    "syncFromSupplier": "Reprendre les contacts du fournisseur",
+    "saveFailed": "Impossible d'enregistrer les contacts."
   },
   "export": {
     "button": "Exporter",
@@ -979,6 +1169,28 @@
     "endOfValidity": "Fin de validité",
     "endOfValidityHint": "Laisser vide pour rester actif indéfiniment.",
     "activeUntil": "Actif jusqu'au {{date}}"
+  },
+  "unsaved": {
+    "saveAndLeave": {
+      "message": "Vous avez des modifications non enregistrées. Enregistrer avant de quitter ?",
+      "confirm": "Enregistrer et quitter",
+      "cancel": "Quitter sans enregistrer"
+    },
+    "leaveWithoutSaving": {
+      "message": "Vous avez des modifications non enregistrées. Quitter sans enregistrer ?",
+      "confirm": "Quitter sans enregistrer",
+      "cancel": "Rester"
+    },
+    "saveAndSwitch": {
+      "message": "Vous avez des modifications non enregistrées. Enregistrer avant de changer d'onglet ?",
+      "confirm": "Enregistrer et changer d'onglet",
+      "cancel": "Changer d'onglet sans enregistrer"
+    },
+    "saveAndContinue": {
+      "message": "Vous avez des modifications non enregistrées. Enregistrer avant de continuer ?",
+      "confirm": "Enregistrer et continuer",
+      "cancel": "Rester"
+    }
   },
   "autosave": {
     "leaveTitle": "Modifications non enregistrées",
@@ -1292,12 +1504,13 @@
     "newLink": "Nouveau lien",
     "editLink": "Modifier le lien",
     "editLinkNamed": "Modifier {{name}}",
-    "removeNamed": "Retirer {{name}}",
+    "removeNamed": "Supprimer {{name}}",
     "placeholders": {
       "name": "ex. : Portail de l’éditeur",
       "url": "ex. : https://status.example.com"
     },
     "linksTitle": "Liens web",
-    "linksEmpty": "Aucun lien web."
+    "linksEmpty": "Aucun lien web.",
+    "removeFileNamed": "Supprimer le fichier {{name}}"
   }
 }

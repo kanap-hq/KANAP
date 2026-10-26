@@ -220,7 +220,7 @@ describe('TechnologyRelationsTab', () => {
   it('deletes a document after a confirmation', async () => {
     mocked.delete.mockResolvedValue({ data: { ok: true } } as never);
     renderTab(relations());
-    fireEvent.click(await screen.findByRole('button', { name: 'linksAndFiles.removeNamed(name=runbook.pdf)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'linksAndFiles.removeFileNamed(name=runbook.pdf)' }));
     expect(mocked.delete).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/technologies/attachments/doc-1'));
@@ -230,5 +230,8 @@ describe('TechnologyRelationsTab', () => {
     expect(technologyRelationsCount(undefined)).toBeUndefined();
     expect(technologyRelationsCount(relations())).toBe(7);
     expect(technologyRelationsCount(relations({ budget_lines: null, incidents: null, links: [] }))).toBe(3);
+    // The budget lines the section counts without listing them: outside the data access, or all without the budget right.
+    expect(technologyRelationsCount(relations({ budget_lines_hidden: 2 }))).toBe(9);
+    expect(technologyRelationsCount(relations({ budget_lines: null, budget_lines_hidden: 3, incidents: null, links: [] }))).toBe(6);
   });
 });

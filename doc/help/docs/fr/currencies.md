@@ -89,6 +89,7 @@ Le bouton **Forcer la synchronisation des taux de change** récupère tout de su
 **Ce qui se passe** :
   - Le bouton reste occupé pendant que KANAP récupère les taux, 20 secondes au plus
   - Un message au-dessus du tableau donne ensuite le résultat : le nombre de taux récupérés, par exemple **12 taux récupérés.**, suivi des paires toujours sans taux, par exemple **Toujours manquants : BRL 2026.**, ou de **Chaque devise utilisée a un taux.**
+  - Lorsque la récupération n'apporte aucun taux nouveau et que chaque devise utilisée a déjà un taux, le message dit **Les taux de change sont à jour.** Lorsque des paires manquent encore, il dit **Aucun nouveau taux n'a été récupéré.** et les nomme.
   - Si les sources n'ont pas répondu, le message le signale, et les taux déjà enregistrés restent en place
   - Si la récupération dure plus longtemps, le message indique **La synchronisation continue en arrière-plan.** Le tableau et le bloc des taux manquants se mettent à jour quand elle se termine
   - Si une mise à jour des taux est déjà en cours, KANAP lui ajoute vos années : aucune demande n'est perdue

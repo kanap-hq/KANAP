@@ -2,9 +2,10 @@ import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
+import { useDataAccessLimited } from '../auth/dataAccess';
 import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
 import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
 import PendingAccessPage from '../pages/PendingAccessPage';
@@ -21,6 +22,8 @@ export default function ProtectedRoute() {
     token,
     isAuthenticating,
     serverUnavailable,
+    refreshRateLimited,
+    retryRefresh,
     sessionExpired,
     profile,
     claims,
@@ -28,6 +31,7 @@ export default function ProtectedRoute() {
     hasAnyAccess,
     subscription,
   } = useAuth();
+  const dataAccessLimited = useDataAccessLimited();
   const location = useLocation();
   const { isPlatformHost } = useTenant();
   const { config } = useFeatures();
@@ -43,7 +47,18 @@ export default function ProtectedRoute() {
         minHeight="100vh"
         px={2}
       >
-        {serverUnavailable ? (
+        {refreshRateLimited ? (
+          // Too many attempts: the refresh tries again by itself after the wait the server asks for;
+          // Retry starts the next attempt now, in the page.
+          <Stack spacing={1.5} alignItems="center">
+            <Typography role="status" sx={{ fontSize: 13, color: 'kanap.text.secondary', textAlign: 'center' }}>
+              {t('session.rateLimited')}
+            </Typography>
+            <Button variant="action" onClick={retryRefresh}>
+              {t('session.retry')}
+            </Button>
+          </Stack>
+        ) : serverUnavailable ? (
           <Typography role="status" sx={{ fontSize: 13, color: 'kanap.text.secondary', textAlign: 'center' }}>
             {t('session.serverUnavailable')}
           </Typography>
@@ -205,6 +220,11 @@ export default function ProtectedRoute() {
       interfaces: 'applications',
       'interface-map': 'applications',
       netbox: 'infrastructure',
+      // Technologies, their end of support, vulnerabilities and the administration view are
+      // infrastructure screens: their API asks for that right.
+      technologies: 'infrastructure',
+      vulnerabilities: 'infrastructure',
+      'administration-view': 'infrastructure',
       settings: 'settings',
     };
     const masterDataAliases: Record<string, string> = {
@@ -257,13 +277,13 @@ export default function ProtectedRoute() {
       requirement = { resource: 'ai_agents', level: 'reader' };
     } else if (path === '/ops/operations' || path === '/ops/operations/') {
       // The administration landing opens when at least one of its pages can be used.
-      if (!canUseAnyOperation(hasLevel)) {
+      if (!canUseAnyOperation(hasLevel, dataAccessLimited)) {
         return <Navigate to="/403" replace />;
       }
       requirement = null;
     } else if (path.startsWith('/ops/operations/')) {
       // Each administration page opens only to the users who can act on it.
-      if (!canUseOperation(path.split('/')[3] ?? '', hasLevel)) {
+      if (!canUseOperation(path.split('/')[3] ?? '', hasLevel, dataAccessLimited)) {
         return <Navigate to="/403" replace />;
       }
       requirement = null;

@@ -27,7 +27,7 @@ Die Karte verwendet ein kraftgerichtetes Graph-Layout, in dem:
 | **Cluster** | Abgerundetes Rechteck, gestrichelter Rand | Cyan | Gruppen von Servern, die als eine einzige logische Einheit fungieren |
 | **Entitäten** | Pillen- / Stadionform | Orange | Logische Endpunkte (externe Systeme, SaaS-Dienste) |
 
-Cluster-Mitglieder erscheinen als separate Server-Knoten mit gestrichelten Indikatorlinien, die sie mit ihrem übergeordneten Cluster-Knoten verbinden.
+Ein Cluster bringt seine Mitglieder in Betrieb mit: Jedes ist ein Server-Knoten, mit dem Cluster durch eine gestrichelte Linie verbunden. Siehe [Cluster-Visualisierung](#cluster-visualization).
 
 ---
 
@@ -43,7 +43,7 @@ Finden Sie Server über die Anwendungen, die auf ihnen laufen:
 
 1. Wählen Sie eine oder mehrere Anwendungen aus dem Dropdown **Anwendungen**
 2. Wählen Sie Umgebungen im Dropdown **App-Umgebung** (es erscheinen nur Umgebungen, in denen die ausgewählten Apps zugewiesene Server haben)
-3. Die übereinstimmenden Server werden automatisch zum Filter **Server** hinzugefügt
+3. Die übereinstimmenden Server werden automatisch zum Filter **Server** hinzugefügt. Eine einem Cluster zugeordnete Anwendung bringt den Cluster und seine Mitglieder mit
 
 Dies ist nützlich, wenn Sie die Infrastrukturverbindungen für eine Anwendung sehen möchten, ohne zu wissen, auf welchen Servern sie läuft.
 
@@ -87,7 +87,7 @@ Wenn aktiviert (Standard), behält die Karte ihr Force-Layout, fügt aber vertik
 - **Server** verwenden die in den IT-Landschaft-Einstellungen konfigurierten Rollenzuweisungen
 - **Entitäten** verwenden ihre konfigurierte **Graph-Tier** (Standard Oben)
 - **Nicht zugewiesene Server** fallen auf Mitte zurück
-- **Cluster** erben das Tier mit der höchsten Priorität von ihren Mitgliedern
+- **Cluster** verwenden die ihnen zugeordneten Rollen, sonst das Tier mit der höchsten Priorität ihrer Mitglieder. Ein Mitglied übernimmt auch die Rollen seines Clusters
 
 Verwenden Sie diesen Schalter, wenn Sie eine Topologieansicht wünschen, die wie Architektur-Tiers gelesen wird (Edge-Komponenten oben, Datenspeicher unten). Die Einstellung gilt nur für die Sitzung und wird beim Neuladen der Seite zurückgesetzt.
 
@@ -118,8 +118,8 @@ Sie können auch mit dem Mausrad zoomen und durch Klicken und Ziehen des Hinterg
 Klicken Sie auf einen Server- oder Cluster-Knoten, um seine Verbindungen hervorzuheben und ein Detail-Panel zu öffnen, das Folgendes zeigt:
 
 - **Server-Typ**, **Server-Standort**, **Betriebssystem**, **Netzwerksegment**, **IP-Adresse**
-- **Zugewiesene Anwendungen**: Apps, die auf diesem Server laufen, gruppiert nach Umgebung. Klicken Sie auf einen App-Namen, um sie zu öffnen.
-- Schaltfläche **Server bearbeiten** oder **Cluster anzeigen**, um den Arbeitsbereich zu öffnen
+- **Zugewiesene Anwendungen**: Apps, die auf diesem Server laufen, gruppiert nach Umgebung. Bei einem Mitglied zeigt eine seinem Cluster zugeordnete App „über“ und den Namen des Clusters. Klicken Sie auf einen App-Namen, um sie zu öffnen.
+- Schaltfläche **Server bearbeiten** oder **Cluster anzeigen**, um den Arbeitsbereich zu öffnen. **Cluster anzeigen** öffnet den Cluster auf seinem Reiter **Betrieb**, wo seine Mitglieder verwaltet werden
 
 Klicken Sie auf einen Entitätsknoten, um seinen Typ und seine Umgebung zu sehen.
 
@@ -155,13 +155,14 @@ Die Karte unterstützt URL-Parameter für die gemeinsame Nutzung bestimmter Ansi
 
 ---
 
-## Cluster-Visualisierung
+## Cluster-Visualisierung { #cluster-visualization }
 
 Cluster erscheinen als unterscheidbare Knoten mit einem gestrichelten cyanfarbenen Rand:
 
-- Cluster-Mitglieder erscheinen als separate Knoten, die mit ihrem übergeordneten Cluster durch gestrichelte Indikatorlinien verbunden sind
-- Bei der Filterung mit Tiefe=0 werden sowohl die ausgewählten Member-Server als auch ihre übergeordneten Cluster angezeigt
-- Member-Server behalten ihre individuellen Server-zu-Server-Verbindungen zusätzlich zu den eigenen Verbindungen des Clusters
+- Ein Cluster auf der Karte zeigt seine Mitglieder in Betrieb, mit ihm durch gestrichelte Linien verbunden, auch wenn keine Verbindung sie nennt. Eine Verbindung auf dem Cluster gilt für jedes von ihnen. Siehe [Verbindungen auf einem Cluster](connections.md#connections-on-a-cluster)
+- Ab mehr als zehn Mitgliedern werden die Mitglieder, die keine Verbindung nennt, eingeklappt. Der Cluster zeigt **+N** nach seiner Umgebung, und sein Tooltip nennt die Zahl der ausgeblendeten Mitglieder. Ein in **Server** gewähltes Mitglied bleibt immer sichtbar
+- Ein in **Server** gewähltes Mitglied bringt die Verbindungen seiner Cluster mit: Seine Cluster gelten ebenfalls als gewählt
+- Mitglieder behalten ihre eigenen Verbindungen zusätzlich zu denen des Clusters
 
 ---
 

@@ -26,6 +26,7 @@
     "retry": "Retry",
     "discard": "Discard",
     "edit": "Edit",
+    "editTitle": "Edit title",
     "clear": "Clear",
     "continue": "Continue",
     "selectAll": "Select all",
@@ -132,6 +133,7 @@
     "recommended": "Recommended",
     "openCalendar": "Open calendar",
     "datePlaceholder": "dd/mm/yyyy",
+    "dateInvalid": "Invalid date",
     "time": "Time",
     "timePlaceholder": "hh:mm",
     "requiredTag": "(required)",
@@ -199,6 +201,8 @@
       "cost_centers_other": "{{count}} cost centers",
       "departments_one": "{{count}} department",
       "departments_other": "{{count}} departments",
+      "data_access_one": "the data access of {{count}} person",
+      "data_access_other": "the data access of {{count}} people",
       "users_one": "{{count}} user",
       "users_other": "{{count}} users",
       "locations_one": "{{count}} location",
@@ -237,12 +241,14 @@
       "contributors_other": "{{count}} contributors",
       "interface_bindings_one": "{{count}} interface binding",
       "interface_bindings_other": "{{count}} interface bindings",
-      "server_assignments_one": "{{count}} server assignment",
-      "server_assignments_other": "{{count}} server assignments",
+      "server_assignments_one": "{{count}} server",
+      "server_assignments_other": "{{count}} servers",
       "business_processes_one": "{{count}} business process",
       "business_processes_other": "{{count}} business processes",
       "documents_one": "{{count}} document",
       "documents_other": "{{count}} documents",
+      "descriptions_one": "its description",
+      "descriptions_other": "{{count}} descriptions",
       "sub_folders_one": "{{count}} subfolder",
       "sub_folders_other": "{{count}} subfolders",
       "app_instances_one": "{{count}} deployment",
@@ -250,7 +256,21 @@
       "incidents_one": "{{count}} incident",
       "incidents_other": "{{count}} incidents",
       "subnets_one": "{{count}} subnet",
-      "subnets_other": "{{count}} subnets"
+      "subnets_other": "{{count}} subnets",
+      "others_one": "{{count}} other",
+      "others_other": "{{count}} others"
+    },
+    "anyway": "Delete anyway",
+    "assetWarning": {
+      "memberOf_one": "Member of {{names}}: it will leave this cluster.",
+      "memberOf_other": "Member of {{names}}: it will leave these clusters.",
+      "stopsHosting": "It will no longer host {{names}}.",
+      "hasMembers_one": "Cluster of {{count}} member: it will lose its cluster.",
+      "hasMembers_other": "Cluster of {{count}} members: they will lose their cluster.",
+      "links_one": "{{count}} link will be removed: {{names}}.",
+      "links_other": "{{count}} links will be removed: {{names}}.",
+      "more_one": "and {{count}} more",
+      "more_other": "and {{count}} more"
     }
   },
   "messages": {
@@ -316,6 +336,7 @@
     "columnY": "{{column}}, Y",
     "topIncreases": "Top increases",
     "columnYvsYminus1": "{{column}}, Y vs Y-1",
+    "withCurrency": "{{context}} · {{currency}}",
     "noIncreases": "No increases",
     "myBudget": {
       "title": "My budget",
@@ -659,10 +680,34 @@
       "status": "Status",
       "owners": "Owners",
       "timestamps": "Dates",
-      "vulnerabilities": "Vulnerabilities"
+      "vulnerabilities": "Vulnerabilities",
+      "timeline": "Timeline",
+      "people": "People",
+      "record": "Record",
+      "source": "Source",
+      "basic": "Basics",
+      "context": "Context",
+      "dates": "Dates",
+      "ip_addresses": "IP addresses",
+      "effort": "Effort",
+      "team": "Team",
+      "scoring": "Scoring",
+      "analysis": "Analysis"
     },
     "presets": {
       "applications": {
+        "enrichment": "Data enrichment"
+      },
+      "assets": {
+        "enrichment": "Data enrichment"
+      },
+      "tasks": {
+        "enrichment": "Data enrichment"
+      },
+      "portfolio_projects": {
+        "enrichment": "Data enrichment"
+      },
+      "portfolio_requests": {
         "enrichment": "Data enrichment"
       }
     },
@@ -715,6 +760,147 @@
         "it_owner_email_3": "IT owner 3 email",
         "business_owner_email_4": "Business owner 4 email",
         "it_owner_email_4": "IT owner 4 email"
+      },
+      "incidents": {
+        "ref": "Ref",
+        "title": "Title",
+        "category": "Category",
+        "severity": "Severity",
+        "status": "Status",
+        "confidential": "Restricted to register administrators",
+        "started_at": "Started",
+        "detected_at": "Detected",
+        "resolved_at": "Resolved",
+        "closed_at": "Closed",
+        "reporter": "Reporter",
+        "owner": "Owner",
+        "description": "Description",
+        "review": "Incident review",
+        "source_ref": "External reference",
+        "personal_data_affected": "Personal data affected",
+        "authority_notification_required": "Authority notification required",
+        "authority_notified_at": "Notified on",
+        "notified_parties": "Parties informed"
+      },
+      "assets": {
+        "id": "ID",
+        "name": "Name",
+        "location_reference": "Location",
+        "kind": "Asset type",
+        "is_cluster": "Is a cluster",
+        "status": "Lifecycle",
+        "go_live_date": "Go-live date",
+        "end_of_life_date": "End-of-life date",
+        "notes": "Notes",
+        "environment": "Environment",
+        "hostname": "Hostname",
+        "domain": "Domain",
+        "admin_zone": "Administration zone",
+        "aliases": "Aliases",
+        "operating_system": "Operating system",
+        "cluster": "Cluster membership",
+        "ip_1_type": "IP 1 type",
+        "ip_1_address": "IP 1 address",
+        "ip_1_subnet_cidr": "IP 1 subnet (CIDR)",
+        "ip_2_type": "IP 2 type",
+        "ip_2_address": "IP 2 address",
+        "ip_2_subnet_cidr": "IP 2 subnet (CIDR)",
+        "ip_3_type": "IP 3 type",
+        "ip_3_address": "IP 3 address",
+        "ip_3_subnet_cidr": "IP 3 subnet (CIDR)",
+        "ip_4_type": "IP 4 type",
+        "ip_4_address": "IP 4 address",
+        "ip_4_subnet_cidr": "IP 4 subnet (CIDR)",
+        "vulnerabilities_to_review": "Vulnerabilities to review",
+        "severe_vulnerabilities": "Severe vulnerabilities"
+      },
+      "tasks": {
+        "id": "ID",
+        "title": "Title",
+        "description": "Description",
+        "task_type_name": "Task type",
+        "related_object_type": "Related object type",
+        "related_object_id": "Related object ID",
+        "related_object_name": "Related object name",
+        "phase_name": "Phase",
+        "priority_level": "Priority",
+        "category_name": "Category",
+        "stream_name": "Stream",
+        "source_name": "Source",
+        "company_name": "Company",
+        "status": "Status",
+        "start_date": "Start date",
+        "due_date": "Due date",
+        "assignee_email": "Assignee email",
+        "creator_email": "Requestor email",
+        "viewer_email_1": "Viewer 1 email",
+        "viewer_email_2": "Viewer 2 email",
+        "viewer_email_3": "Viewer 3 email",
+        "viewer_email_4": "Viewer 4 email",
+        "owner_email_1": "Owner 1 email",
+        "owner_email_2": "Owner 2 email",
+        "owner_email_3": "Owner 3 email",
+        "owner_email_4": "Owner 4 email",
+        "labels": "Labels"
+      },
+      "portfolio_projects": {
+        "id": "ID",
+        "name": "Name",
+        "status": "Status",
+        "purpose": "Purpose",
+        "origin": "Origin",
+        "source_name": "Source",
+        "category_name": "Category",
+        "stream_name": "Stream",
+        "company_name": "Company",
+        "department_name": "Department",
+        "planned_start": "Planned start",
+        "planned_end": "Planned end",
+        "actual_start": "Actual start",
+        "actual_end": "Actual end",
+        "baseline_start_date": "Baseline start",
+        "baseline_end_date": "Baseline end",
+        "execution_progress": "Progress (%)",
+        "estimated_effort_it": "Estimated IT effort (MD)",
+        "estimated_effort_business": "Estimated business effort (MD)",
+        "actual_effort_it": "Actual IT effort (MD)",
+        "actual_effort_business": "Actual business effort (MD)",
+        "baseline_effort_it": "Baseline IT effort (MD)",
+        "baseline_effort_business": "Baseline business effort (MD)",
+        "business_sponsor_email": "Business sponsor email",
+        "business_lead_email": "Business lead email",
+        "it_sponsor_email": "IT sponsor email",
+        "it_lead_email": "IT lead email",
+        "criteria_values": "Evaluation criteria (JSON)",
+        "priority_score": "Priority score",
+        "priority_override": "Priority override",
+        "override_value": "Override value",
+        "override_justification": "Override justification"
+      },
+      "portfolio_requests": {
+        "id": "ID",
+        "name": "Name",
+        "status": "Status",
+        "purpose": "Purpose",
+        "source_name": "Source",
+        "category_name": "Category",
+        "stream_name": "Stream",
+        "requestor_email": "Requestor email",
+        "company_name": "Company",
+        "department_name": "Department",
+        "target_delivery_date": "Target delivery date",
+        "current_situation": "Current situation",
+        "expected_benefits": "Expected benefits",
+        "risks": "Risks",
+        "business_sponsor_email": "Business sponsor email",
+        "business_lead_email": "Business lead email",
+        "it_sponsor_email": "IT sponsor email",
+        "it_lead_email": "IT lead email",
+        "criteria_values": "Evaluation criteria (JSON)",
+        "priority_score": "Priority score",
+        "priority_override": "Priority override",
+        "override_value": "Override value",
+        "override_justification": "Override justification"
       }
     }
   },
@@ -729,6 +915,7 @@
     "noCategoriesFound": "No categories found",
     "noUsersFound": "No users found",
     "noServersFound": "No servers found",
+    "noMembers": "No members declared",
     "meSuffix": "(me)",
     "selectBusinessProcesses": "Select business processes",
     "selectCategories": "Select categories",
@@ -767,7 +954,8 @@
     "departments": "Departments",
     "allDepartments": "All departments",
     "newCategoryName": "New category name",
-    "removeNamed": "Remove {{name}}"
+    "removeNamed": "Remove {{name}}",
+    "chooseServer": "Choose a server"
   },
   "documentEditor": {
     "expandDocument": "Expand document",
@@ -831,7 +1019,8 @@
     "copy": "Copy",
     "copiedToClipboard": "Copied to clipboard",
     "orEmailSection": "Or email it to someone",
-    "sendEmail": "Send email"
+    "sendEmail": "Send email",
+    "cannotOpen": "{{name}} cannot open this item."
   },
   "enumEditor": {
     "name": "Name",
@@ -940,7 +1129,8 @@
     "manuallyAdded": "Manually added",
     "removeContact": "Remove contact",
     "insufficientPermission": "Insufficient permission",
-    "syncFromSupplier": "Add the supplier's contacts"
+    "syncFromSupplier": "Add the supplier's contacts",
+    "saveFailed": "Could not save the contacts."
   },
   "export": {
     "button": "Export",
@@ -979,6 +1169,28 @@
     "endOfValidity": "End of validity",
     "endOfValidityHint": "Leave blank to keep active indefinitely.",
     "activeUntil": "Active until {{date}}"
+  },
+  "unsaved": {
+    "saveAndLeave": {
+      "message": "You have unsaved changes. Save before leaving?",
+      "confirm": "Save and leave",
+      "cancel": "Leave without saving"
+    },
+    "leaveWithoutSaving": {
+      "message": "You have unsaved changes. Leave without saving?",
+      "confirm": "Leave without saving",
+      "cancel": "Stay"
+    },
+    "saveAndSwitch": {
+      "message": "You have unsaved changes. Save before switching tabs?",
+      "confirm": "Save and switch",
+      "cancel": "Switch without saving"
+    },
+    "saveAndContinue": {
+      "message": "You have unsaved changes. Save before continuing?",
+      "confirm": "Save and continue",
+      "cancel": "Stay"
+    }
   },
   "autosave": {
     "leaveTitle": "Changes not saved",
@@ -1292,12 +1504,13 @@
     "newLink": "New link",
     "editLink": "Edit link",
     "editLinkNamed": "Edit {{name}}",
-    "removeNamed": "Remove {{name}}",
+    "removeNamed": "Delete {{name}}",
     "placeholders": {
       "name": "e.g., Vendor portal",
       "url": "e.g., https://status.example.com"
     },
     "linksTitle": "Web links",
-    "linksEmpty": "No web link."
+    "linksEmpty": "No web link.",
+    "removeFileNamed": "Delete file {{name}}"
   }
 }

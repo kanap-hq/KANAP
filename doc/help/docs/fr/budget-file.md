@@ -105,7 +105,7 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 - Chaque ligne est vérifiée selon son propre type : les dimensions et les valeurs qu'elle peut porter, son compte, les colonnes gelées et l'avertissement de doublon. Une colonne gelée pour CAPEX refuse une modification sur une ligne CAPEX uniquement.
 - Il n'y a pas d'autre clé. Une nouvelle ligne qui ressemble à une ligne budgétaire existante de son type, ou à une autre nouvelle ligne du même type dans le fichier, est un avertissement que vous pouvez ignorer.
 - Les fournisseurs sont mis en correspondance par `supplier_erp_id` lorsqu'il est rempli, sinon par `supplier_name`. Un fournisseur nommé par le fichier et absent de KANAP est créé par le chargement lorsque **Créer les fournisseurs manquants** est cochée. Sans cette option, la vérification les liste et vous demande de les créer dans **Données de référence > Fournisseurs**.
-- Une valeur de dimension inexistante est créée par le chargement, et listée dans la vérification. Les comptes, les centres de coûts, les sociétés et les utilisateurs ne sont jamais créés : un élément inconnu est une erreur de ligne qui indique où l'ajouter.
+- Une valeur de dimension inexistante est créée par le chargement, et listée dans la vérification. Les comptes, les centres de coûts, les sociétés et les utilisateurs ne sont jamais créés : un élément inconnu est une erreur de ligne qui indique où l'ajouter. Pour une personne dont l'accès aux données est limité, seulement sur une dimension à valeurs ouvertes : voir [Accès aux données limité](#limited-data-access).
 - Une valeur, ou `-`, sur une dimension réservée à l'autre type de ligne est une erreur de ligne sur sa cellule `analytics:<code>`, par exemple « The Recurrence dimension is for CAPEX lines only. Leave it out. » L'export laisse une telle cellule vide : une valeur masquée sur une ligne n'est donc pas exportée, et un chargement la laisse en place. Le réglage se trouve dans [Dimensions analytiques](analytics.md#dimensions-opex-ou-capex).
 - Une valeur utilisée pour l'autre type de ligne uniquement est une erreur de ligne sur sa cellule `analytics:<code>`, par exemple « Main-d'œuvre interne is for OPEX lines only. Pick a value for CAPEX lines. » Une ligne garde la valeur qu'elle porte déjà. Les valeurs que crée l'import sont utilisées pour OPEX et CAPEX. Le réglage se trouve dans [Dimensions analytiques](analytics.md#valeurs-opex-ou-capex).
 - Une nouvelle ligne doit avoir une valeur sur chaque dimension obligatoire de son propre type, avec le message « The Nature de coût dimension is required. Choose a value. » sur la cellule `analytics:<code>`. Cela vaut lorsque la colonne manque dans le fichier, lorsque la cellule est vide et lorsqu'elle contient `-`. Une valeur que crée le chargement compte. Une ligne existante n'est refusée que pour un `-` qui effacerait la valeur qu'elle porte : une cellule vide ou une colonne absente la laisse telle quelle. Le réglage se trouve dans [Dimensions analytiques](analytics.md#dimensions-obligatoires).
@@ -129,6 +129,18 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 3. Cliquez sur **Charger**. Le chargement écrit tout ou rien.
 
 Si une ligne budgétaire change entre la vérification et le chargement, le chargement s'arrête et vous demande de vérifier le fichier de nouveau. La vérification indique aussi comment elle a lu le fichier lorsqu'une date ou un montant pouvait se lire de deux façons, avec un bouton pour changer la lecture.
+
+## Accès aux données limité { #limited-data-access }
+
+Une personne limitée à une partie du budget utilise le fichier dans son accès, quand son rôle le permet. Voir [Accès aux données](data-access.md).
+
+- L'export contient les lignes qu'elle voit.
+- Une ligne du fichier qui désigne une ligne qu'elle ne voit pas est traitée comme une ligne qui n'existe pas. Dans un fichier issu d'un export, le message est « BL-12 n'est plus disponible depuis l'export. », le même que pour une ligne supprimée depuis.
+- Une ligne qu'elle voit en Lecture passe quand sa ligne du fichier est inchangée. Une modification est refusée avec « BL-12 est en lecture seule dans votre accès. »
+- Une nouvelle ligne, ou une nouvelle société ou un nouveau centre de coûts sur une ligne, doit correspondre à l'un de ses nœuds en Saisie. Sinon la ligne du fichier est refusée avec « Cette société ou ce centre de coûts ne fait pas partie de votre accès. »
+- Une valeur inconnue n'est créée que sur une dimension à valeurs ouvertes. Sur les autres dimensions, c'est une erreur de ligne.
+
+Ces lignes apparaissent parmi les **Erreurs** de la vérification, comme toute autre ligne refusée.
 
 ## Excel et LibreOffice
 

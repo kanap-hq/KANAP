@@ -53,6 +53,7 @@ import {
   type InterfaceMappingSet,
 } from '../../../api/endpoints/interfaces';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { APPLICATION_ENVIRONMENTS, environmentLabel } from '../../../utils/applicationEnvironments';
 import type { InterfaceDetail, InterfaceLeg } from '../components/interface-workspace/types';
 import { getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx, longFormSurfaceFieldSx } from '../../../theme/formSx';
@@ -173,16 +174,9 @@ const MAPPING_LIFECYCLE_OPTIONS = [
   { value: 'retired' },
 ];
 
-type EnvironmentOption = { value: string; labelKey: string };
+type EnvironmentOption = { value: string };
 
-const ENVIRONMENT_OPTIONS: EnvironmentOption[] = [
-  { value: 'prod', labelKey: 'prod' },
-  { value: 'pre_prod', labelKey: 'preProd' },
-  { value: 'qa', labelKey: 'qa' },
-  { value: 'test', labelKey: 'test' },
-  { value: 'dev', labelKey: 'dev' },
-  { value: 'sandbox', labelKey: 'sandbox' },
-];
+const ENVIRONMENT_OPTIONS: readonly EnvironmentOption[] = APPLICATION_ENVIRONMENTS;
 
 const BINDING_TYPE_OPTIONS = [
   'string',
@@ -484,7 +478,7 @@ function environmentOptionsFromBindings(bindings: InterfaceBinding[]): Environme
     }
   }
   return sortEnvironmentValues(Array.from(declared)).map((value) => (
-    ENVIRONMENT_OPTIONS.find((option) => option.value === value) || { value, labelKey: value }
+    ENVIRONMENT_OPTIONS.find((option) => option.value === value) || { value }
   ));
 }
 
@@ -499,15 +493,10 @@ function formatLifecycle(t: TFunction, value: string | null | undefined) {
   return t(`common:statuses.${normalizeRuleLifecycle(value)}`);
 }
 
-function formatEnvironment(t: TFunction, value: string | null | undefined) {
-  const option = ENVIRONMENT_OPTIONS.find((item) => item.value === value);
-  return option ? t(`it:enums.environment.${option.labelKey}`) : value || '';
-}
-
 function formatEnvironmentScope(t: TFunction, value: string[] | null | undefined) {
   const scope = normalizeEnvironmentScope(value);
   if (!scope) return t('it:workspace.interface.mapping.allEnvironments');
-  return scope.map((item) => formatEnvironment(t, item)).join(', ');
+  return scope.map((item) => environmentLabel(t, item)).join(', ');
 }
 
 function formatRuleCount(t: TFunction, count: number) {
@@ -2318,7 +2307,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                       if (values.length === 0) {
                         return t('it:workspace.interface.mapping.allDeclaredEnvironments');
                       }
-                      return values.map((value) => formatEnvironment(t, value)).join(', ');
+                      return values.map((value) => environmentLabel(t, value)).join(', ');
                     }}
                     variant="standard"
                     sx={drawerSelectSx}
@@ -2332,7 +2321,7 @@ export default forwardRef<InterfaceMappingTabHandle, Props>(function InterfaceMa
                           checked={ruleEditor.form.environment_scope.includes(option.value)}
                           sx={{ p: 0, mr: 1 }}
                         />
-                        {formatEnvironment(t, option.value)}
+                        {environmentLabel(t, option.value)}
                       </MenuItem>
                     ))}
                   </Select>

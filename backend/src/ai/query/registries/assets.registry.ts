@@ -1,4 +1,5 @@
 import { operatingSystemLabelSql } from '../../../technologies/operating-system-codes';
+import { effectiveAssignmentsSql } from '../../../app-asset-assignments/effective-assignments';
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 import { VULNERABILITIES_LIST_FIELD } from '../../../vulnerabilities/vulnerability-list-column';
 import { vulnerabilitiesField, vulnerabilityCountMetric } from '../ai-vulnerability-counts.util';
@@ -245,7 +246,7 @@ export const assetsRegistry: AiEntityFilterRegistry = {
         expression: 'cluster_asset.name',
         joins: [
           `LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id`,
-          `LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id`,
+          `LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id AND cluster_asset.is_cluster`,
         ],
       },
       is_cluster: { expression: `CASE WHEN COALESCE(a.is_cluster, false) THEN 'true' ELSE 'false' END` },
@@ -254,7 +255,8 @@ export const assetsRegistry: AiEntityFilterRegistry = {
       open_vulnerabilities: vulnerabilityCountMetric('assets', 'open'),
       severe_vulnerabilities: vulnerabilityCountMetric('assets', 'severe'),
       assignments_count: {
-        expression: `(SELECT COUNT(*) FROM app_asset_assignments aaa WHERE aaa.asset_id = a.id AND aaa.tenant_id = a.tenant_id)`,
+        // Effective: a member counts what its clusters carry (`effectiveAssignmentsSql`).
+        expression: `(SELECT COUNT(*) FROM (${effectiveAssignmentsSql({ tenant: 'a.tenant_id', assets: 'ARRAY[a.id]' })}) aaa)`,
         type: 'number',
       },
     },

@@ -375,10 +375,13 @@
     "exportCsv": "Export CSV",
     "exportTitle": "Export contracts",
     "importTitle": "Import contracts",
+    "readOnlyInYourAccess": "Read only in your access",
+    "outsideYourAccess": "Contract outside your access",
     "columns": {
       "contract": "Contract",
       "supplier": "Supplier",
       "company": "Company",
+      "costCenter": "Cost center",
       "start": "Start",
       "durationMonths": "Duration (m)",
       "autoRenewal": "Auto-renewal",
@@ -400,6 +403,7 @@
     },
     "list": {
       "toDecide": "To decide within {{days}} days ({{count}})",
+      "withoutCostCenter": "Without cost center",
       "dueIn_one": "in {{count}} day",
       "dueIn_other": "in {{count}} days",
       "dueToday": "today",
@@ -445,6 +449,7 @@
       "name": "Contract name",
       "supplier": "Supplier",
       "company": "Contracting company",
+      "costCenter": "Cost center or group",
       "owner": "Owner",
       "status": "Status",
       "startDate": "Start",
@@ -494,6 +499,10 @@
       "currencyRequired": "Choose a currency.",
       "invalidMonths": "Enter a whole number of months.",
       "invalidAmount": "Enter an amount with at most two decimals."
+    },
+    "relations": {
+      "closedDocuments_one": "{{count}} attachment, for people who see this contract",
+      "closedDocuments_other": "{{count}} attachments, for people who see this contract"
     },
     "deadlines": {
       "title": "Deadlines",
@@ -955,6 +964,8 @@
       "frozenVersionsKept_other": "The {{count}} frozen versions of {{year}} keep the rate from when they were frozen.",
       "syncFetched_one": "{{count}} rate fetched.",
       "syncFetched_other": "{{count}} rates fetched.",
+      "syncUpToDate": "Exchange rates are up to date.",
+      "syncNoneFetched": "No new rate was fetched.",
       "syncStillMissing": "Still missing: {{pairs}}.",
       "syncContinues": "Synchronisation continues in the background.",
       "syncSourceUnreachable": "The exchange rate source did not respond. Try again later, or enter the missing rates.",
@@ -1058,7 +1069,7 @@
       "suppliersMissing_one": "{{count}} supplier does not exist. Create it in Master data > Suppliers, or tick Create missing suppliers.",
       "suppliersMissingNoCreate": "{{count}} suppliers do not exist. They must first be created in Master data > Suppliers.",
       "suppliersMissingNoCreate_one": "{{count}} supplier does not exist. It must first be created in Master data > Suppliers.",
-      "deletedLine": "Line {{line}}: {{ref}} was deleted after the file was exported.",
+      "deletedLine": "Line {{line}}: {{ref}} is no longer available since the export.",
       "changesTitle": "Changes",
       "toCreate": "{{count}} to create",
       "toUpdate": "{{count}} to update",
@@ -1088,7 +1099,9 @@
       "oldLayout": "This file comes from an earlier version of KANAP. Export a fresh file from this list, copy your changes into it, and import it again.",
       "exportFailed": "The file could not be exported. Try again.",
       "checkFailed": "The file could not be checked. Try again.",
-      "loadFailed": "The file could not be loaded. Try again."
+      "loadFailed": "The file could not be loaded. Try again.",
+      "dimensionValuesCreated": "{{dimension}}, will be created: {{names}}",
+      "dimensionValuesRefused": "{{dimension}}, refused: {{names}}"
     },
     "budgetAdminOnly": "You need budget administrator rights to use this page.",
     "budgetColumnsSettings": {
@@ -1207,6 +1220,8 @@
       "follows": "Follows <link>{{reference}}</link> ({{type}})",
       "replacedBy": "Replaced by <link>{{reference}}</link> ({{type}}) from {{year}}",
       "replacedByNoYear": "Replaced by <link>{{reference}}</link> ({{type}})",
+      "followsHidden": "Follows {{reference}}",
+      "replacedByHidden": "Replaced by {{reference}}",
       "type": {
         "opex": "OPEX line",
         "capex": "CAPEX line"
@@ -1295,6 +1310,22 @@
       "printedOn": "Printed on {{date}}",
       "share": "Share",
       "unknownCompany": "Unknown company",
+      "unknownDepartment": "Unknown department",
+      "allocationMethodDefault": "Default",
+      "chargebackWarnings": {
+        "storedAllocationUsed": "Used stored allocation for \"{{item}}\" (year {{year}}): {{reason}}",
+        "allocationsSkipped": "Skipped allocations for \"{{item}}\" (year {{year}}): {{reason}}",
+        "missingPayingCompany": "Missing paying company for \"{{item}}\" (year {{year}}). Paid totals excluded for this item.",
+        "selectCompany": "Select at least one company for manual allocation.",
+        "selectDepartment": "Select at least one department for manual allocation.",
+        "noEnabledCompanies": "No enabled companies for allocation distribution.",
+        "departmentsNotFound": "Some departments could not be found for manual allocation.",
+        "provideDepartmentHeadcount": "Provide a headcount for the selected departments.",
+        "driverSumZero": "The driver values must sum to a positive amount.",
+        "companiesUnavailable": "Some companies are not available for manual allocation.",
+        "turnoverRate": "No exchange rate for the turnover of the selected companies.",
+        "provideDriver": "Provide {{driver}} for the selected companies."
+      },
       "unnamedAccount": "Unnamed account",
       "exportTableCsv": "Export table as CSV",
       "exportChartPng": "Export chart as PNG",
@@ -1385,6 +1416,7 @@
       "itCostsPerItUser": "IT costs per IT user",
       "item": "Line",
       "allocationMethod": "Allocation method",
+      "allocationPct": "Allocation",
       "receivables": "Receivables",
       "payables": "Payables",
       "net": "Net",
@@ -1448,7 +1480,10 @@
       "chargebackKpis": "Chargeback KPIs",
       "chartTitle": "Chargeback by department: {{name}}",
       "chartSubtitle": "{{metric}} totals",
-      "chartFootnote": "Overall {{metric}}: {{total}}"
+      "chartFootnote": "Overall {{metric}}: {{total}}",
+      "noCompanyInAccess": "No company is part of your access.",
+      "fxMissingHiddenLines_one": "No exchange rate for {{references}}: its share is left out of the totals.",
+      "fxMissingHiddenLines_other": "No exchange rate for {{references}}: their shares are left out of the totals."
     },
     "topOpex": {
       "title": "Top lines",
@@ -1853,6 +1888,7 @@
       "kept_other": "{{count}} budget lines cannot be deleted and are kept:",
       "deleted_one": "{{count}} budget line deleted",
       "deleted_other": "{{count}} budget lines deleted"
-    }
+    },
+    "readOnlyInYourAccess": "Read only in your access"
   }
 }

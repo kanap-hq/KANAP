@@ -79,7 +79,7 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 
 ## Der Unternehmens-Arbeitsbereich
 
-Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich des Unternehmens zu öffnen. Er hat zwei Tabs: **Übersicht** und **Details**.
+Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich des Unternehmens zu öffnen. Er hat zwei Tabs: **Übersicht** und **Details**. Personen, die den Datenzugriff verwalten, sehen außerdem einen Tab **Zugriff** mit den Personen, die das ganze Unternehmen sehen, und denen, die einen Teil davon sehen. Siehe [Datenzugriff](data-access.md#the-access-tab-of-companies-and-cost-centers).
 
 - **Kopfzeile**: der Name des Unternehmens. Klicken Sie darauf, um das Unternehmen umzubenennen. Die Pfeile mit „N von M" wechseln zwischen Unternehmen in der Reihenfolge und mit den Filtern der Liste, ohne zur Liste zurückzukehren. Der Zurück-Link **Unternehmen** führt mit erhaltenem Suchkontext zur Liste zurück
 - **Status**, unter dem Namen: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** deaktiviert das Unternehmen sofort: Das Ende der Gültigkeit wird auf den aktuellen Zeitpunkt gesetzt

@@ -26,6 +26,7 @@ import { MarkdownContent } from './MarkdownContent';
 import { normalizeMarkdownForRichTextEditor } from '../lib/markdownEditorNormalization';
 import { getApiErrorMessage, getDocumentSaveErrorMessage } from '../utils/apiErrorMessage';
 import { AUTOSAVE_RETRY_DELAYS_MS, autosaveRetryDelayMs, isRetriableAutosaveFailure, type AutosaveStatus } from '../hooks/useAutosave';
+import { releaseLockKeepalive } from '../lib/releaseLockKeepalive';
 
 const MarkdownEditor = React.lazy(() => import('./MarkdownEditor'));
 
@@ -189,6 +190,9 @@ const DocumentEditorForOneSlot = React.forwardRef<
     [],
   );
   const lockTokenRef = React.useRef<string | null>(lockToken);
+  // Set while an axios release is still in flight. A reload cancels that
+  // request; pagehide sends it again with keepalive, then clears this.
+  const releaseInFlightTokenRef = React.useRef<string | null>(null);
   const setLockToken = React.useCallback((next: string | null) => {
     lockTokenRef.current = next;
     setLockTokenState(next);
@@ -289,12 +293,17 @@ const DocumentEditorForOneSlot = React.forwardRef<
     const heldToken = lockTokenRef.current;
     if (isDraftMode || !entityId || !heldToken) return;
     lockTokenRef.current = null;
+    releaseInFlightTokenRef.current = heldToken;
     try {
       await api.delete(`${endpointBase}/locks`, {
         headers: { 'X-Lock-Token': heldToken },
       });
     } catch {
       // Best effort.
+    } finally {
+      if (releaseInFlightTokenRef.current === heldToken) {
+        releaseInFlightTokenRef.current = null;
+      }
     }
     setLockToken(null);
     setLockExpiresAt(null);
@@ -544,6 +553,27 @@ const DocumentEditorForOneSlot = React.forwardRef<
       void releaseLock();
     };
   }, [releaseLock]);
+
+  // A reload or a closed tab discards the page without unmounting, so the
+  // axios release above never leaves the browser and the lock stays until it
+  // expires. pagehide still runs: fetch keepalive delivers the same DELETE,
+  // lock header included, after the document is gone. A release already in
+  // flight is sent again, because that axios call is cancelled with the page.
+  React.useEffect(() => {
+    if (isDraftMode || !entityId) return;
+    const onPageHide = () => {
+      const heldToken = lockTokenRef.current ?? releaseInFlightTokenRef.current;
+      if (!heldToken) return;
+      lockTokenRef.current = null;
+      releaseInFlightTokenRef.current = null;
+      releaseLockKeepalive(`${endpointBase}/locks`, heldToken);
+      setLockToken(null);
+      setLockExpiresAt(null);
+      setEditMode(false);
+    };
+    window.addEventListener('pagehide', onPageHide);
+    return () => window.removeEventListener('pagehide', onPageHide);
+  }, [endpointBase, entityId, isDraftMode, setLockToken]);
 
   // The host can revoke editing under the user's feet (an incident closed in
   // another tab freezes its review). Leaving edit mode is not enough: the edit

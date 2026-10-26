@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { TechnologyCpeEvents } from './technology-cpe-events';
 import type { EntityManager } from 'typeorm';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { AuditService } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { languageOf, writeCsv, type CsvLanguage } from '../common/csv-sheet';
@@ -38,8 +39,9 @@ export type LinkInput = {
 type LinkSide = 'asset' | 'application';
 
 /**
- * A server an application is deployed on (`app_asset_assignments` of its instances), in service, with
- * the environments of those instances and the roles it holds there.
+ * A server an application is deployed on (the effective assignments of its instances,
+ * `effectiveAssignmentsSql`: a cluster and its members in service), in service, with the
+ * environments of those instances and the roles it holds there.
  */
 export type DeploymentServer = {
   asset_id: string;
@@ -140,24 +142,53 @@ export class TechnologyLinksService {
   // ==================== ASSETS ====================
 
   /**
-   * The servers of a technology: installed (with the link) and carried through the graph (with
-   * `via`). A link to a retired asset stays listed, to be seen and removed, with `asset_status`; it
-   * takes no part in the deductions.
+   * The servers of a technology: installed (with the link, one row per link) and carried through
+   * the graph, one row per asset and version with every asset that carries it (`via_assets`, by
+   * name; `via_asset_id` and `via_asset_name` the first): a cluster is one row per version, whatever
+   * the number of its members that carry it (K2-1). Clusters stay listed here, with `is_cluster`;
+   * the counters leave them out. `through_host`: a carried row every path of which crosses a
+   * `contains` edge (the VMs of a host the technology is installed on), shown apart. A link to a
+   * retired asset stays listed, to be seen and removed, with `asset_status`; it takes no part in the
+   * deductions.
    */
   async assetsOfTechnology(idOrRef: string, opts: LinkOpts) {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef);
     const retired: ReachedAsset[] = await mg.query(
-      `SELECT at.technology_id, at.asset_id, NULL::uuid AS via_asset_id, at.technology_version_id, at.id AS link_id, at.source, 0 AS depth
+      `SELECT at.technology_id, at.asset_id, NULL::uuid AS via_asset_id, at.technology_version_id, at.id AS link_id, at.source, 0 AS depth,
+              false AS through_host
          FROM asset_technologies at
          JOIN assets a ON a.tenant_id = $1 AND a.id = at.asset_id AND NOT (${assetInServiceSql('a')})
         WHERE at.tenant_id = $1 AND at.technology_id = $2`,
       [tenantId, tech.id],
     );
-    const reached = [...await this.reach.assetsOfTechnologies(mg, tenantId, [tech.id]), ...retired.map((r) => ({ ...r, depth: 0 }))];
-    const assets = await this.assetLabels(mg, tenantId, reached.flatMap((r) => [r.asset_id, r.via_asset_id]));
-    const versions = await this.versionLabels(mg, tenantId, reached.map((r) => r.technology_version_id));
-    const notes = await this.linkNotes(mg, tenantId, 'asset', reached.map((r) => r.link_id));
+    const all = [...await this.reach.assetsOfTechnologies(mg, tenantId, [tech.id]), ...retired.map((r) => ({ ...r, depth: 0 }))];
+    const assets = await this.assetLabels(mg, tenantId, all.flatMap((r) => [r.asset_id, r.via_asset_id]));
+    const versions = await this.versionLabels(mg, tenantId, all.map((r) => r.technology_version_id));
+    const notes = await this.linkNotes(mg, tenantId, 'asset', all.map((r) => r.link_id));
+    // The carried rows of one asset and version become one, with their carriers by name.
+    const installed = all.filter((r) => !r.via_asset_id).map((r) => ({ ...r, via: [] as ReachedAsset[] }));
+    const carried = new Map<string, ReachedAsset & { via: ReachedAsset[] }>();
+    for (const r of all.filter((row) => !!row.via_asset_id)) {
+      const key = `${r.asset_id}|${r.technology_version_id ?? ''}`;
+      const entry = carried.get(key);
+      if (!entry) carried.set(key, { ...r, via: [r] });
+      else {
+        entry.via.push(r);
+        entry.depth = Math.min(entry.depth, r.depth);
+        // A path without `contains` from any carrier makes the row plain.
+        entry.through_host = entry.through_host && r.through_host;
+      }
+    }
+    const viaRef = (id: string) => ({ id, name: assets.get(id)?.name ?? null, reference: assets.get(id)?.asset_reference ?? null });
+    const byName = (a: { id: string; name: string | null }, b: { id: string; name: string | null }) =>
+      String(a.name ?? '').localeCompare(String(b.name ?? ''), 'en', { sensitivity: 'base' }) || a.id.localeCompare(b.id);
+    const reached = [...installed, ...Array.from(carried.values())].map((r) => {
+      const viaAssets = r.via.map((v) => viaRef(v.via_asset_id!)).sort(byName);
+      // The first carrier names the provenance of the row, as `via`.
+      const first = r.via.find((v) => v.via_asset_id === viaAssets[0]?.id);
+      return { ...r, via_asset_id: viaAssets[0]?.id ?? null, via_assets: viaAssets, source: first?.source ?? r.source };
+    });
     const items = reached.map((r) => {
       const asset = assets.get(r.asset_id);
       return {
@@ -174,11 +205,13 @@ export class TechnologyLinksService {
         operating_system_label: asset?.operating_system ?? null,
         via_asset_id: r.via_asset_id,
         via_asset_name: r.via_asset_id ? assets.get(r.via_asset_id)?.name ?? null : null,
+        via_assets: r.via_assets,
         technology_version_id: r.technology_version_id,
         version_label: r.technology_version_id ? versions.get(r.technology_version_id) ?? null : null,
         notes: r.link_id ? notes.get(r.link_id) ?? null : null,
         source: r.source,
         depth: r.depth,
+        through_host: !!r.via_asset_id && r.through_host === true,
       };
     });
     items.sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'installed' ? -1 : 1)
@@ -480,7 +513,7 @@ export class TechnologyLinksService {
               COALESCE(array_agg(DISTINCT x.role) FILTER (WHERE x.role IS NOT NULL), '{}') AS roles
          FROM app_instances i
          JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
-         JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.app_instance_id = i.id
+         JOIN (${effectiveAssignmentsSql({ tenant: '$1', applications: 'ARRAY[$2::uuid]' })}) x ON x.tenant_id = $1 AND x.app_instance_id = i.id
          JOIN assets a ON a.tenant_id = $1 AND a.id = x.asset_id AND ${assetInServiceSql('a')}
         WHERE i.tenant_id = $1 AND i.application_id = $2${only ? ' AND x.asset_id = ANY($3::uuid[])' : ''}
         GROUP BY a.id, a.name, a.asset_reference
@@ -746,7 +779,7 @@ export class TechnologyLinksService {
       ? await mg.query(`SELECT id, name, item_number, family, editor, hosting_type FROM technologies WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, techIds])
       : [];
     const byId = new Map(techs.map((t) => [t.id, t]));
-    const assets = await this.assetLabels(mg, tenantId, rows.flatMap((r) => [r.asset_id, r.via_asset_id]));
+    const assets = await this.assetLabels(mg, tenantId, rows.flatMap((r) => [r.asset_id, r.via_asset_id, ...(r.via_asset_ids ?? [])]));
     const versions = await this.versionLabels(mg, tenantId, rows.map((r) => r.technology_version_id));
     const versionDates = await this.versionDates(mg, tenantId, rows.map((r) => r.technology_version_id));
     const notes = await this.linkNotes(mg, tenantId, subject, rows.map((r) => (r.kind === 'installed' || r.kind === 'declared' ? r.link_id : null)));
@@ -772,9 +805,14 @@ export class TechnologyLinksService {
         asset_name: r.asset_id ? assets.get(r.asset_id)?.name ?? null : null,
         via_asset_id: r.via_asset_id,
         via_asset_name: r.via_asset_id ? assets.get(r.via_asset_id)?.name ?? null : null,
+        // Every asset that carries it (a host, a cluster's members), by name; the one `via` otherwise.
+        via_assets: (r.via_asset_ids ?? (r.via_asset_id ? [r.via_asset_id] : []))
+          .map((id) => ({ id, name: assets.get(id)?.name ?? null, reference: assets.get(id)?.asset_reference ?? null })),
         notes: removable && r.link_id ? notes.get(r.link_id) ?? null : null,
         source: r.source,
         is_operating_system: subject === 'asset' && r.kind === 'installed' && r.is_operating_system === true,
+        // Carried through a host only (its hypervisor): the platform underneath, shown apart.
+        through_host: r.kind === 'carried' && r.through_host === true,
       };
     });
     const order: Record<string, number> = { installed: 0, declared: 0, carried: 1, hosted: 1 };

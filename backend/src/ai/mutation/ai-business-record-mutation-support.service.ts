@@ -259,6 +259,7 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
     fields: {
       name: { label: 'Name', kind: 'text', requiredOnCreate: true },
       company_id: { label: 'Company', kind: 'relation', requiredOnCreate: true, relationTarget: 'companies', aliases: ['company'] },
+      cost_center_id: { label: 'Cost center', kind: 'relation', nullable: true, relationTarget: 'cost_centers', aliases: ['cost_center'] },
       supplier_id: { label: 'Supplier', kind: 'relation', requiredOnCreate: true, relationTarget: 'suppliers', aliases: ['supplier'] },
       owner_user_id: { label: 'Owner', kind: 'relation', nullable: true, relationTarget: 'users', aliases: ['owner'] },
       start_date: { label: 'Start Date', kind: 'date', requiredOnCreate: true },
@@ -635,8 +636,9 @@ export class AiBusinessRecordMutationSupportService {
       const relation = await this.resolveRelation(context, field.relationTarget!, rawValue, field.label, fieldsSoFar);
       if (!relation && !field.nullable) throw new BadRequestException(`${field.label} cannot be empty.`);
       if (field.relationTarget === 'cost_centers' && relation && relation.id !== (existing?.[fieldName] ?? null)) {
-        // A new assignment names an enabled cost center; the stored one is kept as it is.
-        if (relation.row.kind !== 'cost_center') throw new BadRequestException('Choose a cost center, not a group.');
+        // A new assignment names an enabled node; the stored one is kept as it is. A line takes a
+        // cost center only (spec §2.3); a contract takes a group or a cost center (spec §3.3).
+        if (entityType !== 'contracts' && relation.row.kind !== 'cost_center') throw new BadRequestException('Choose a cost center, not a group.');
         if (!isActiveAt(relation.row.disabled_at as any)) throw new BadRequestException('This cost center is disabled.');
       }
       return { value: relation?.id ?? null, displayValue: relation?.label ?? null };

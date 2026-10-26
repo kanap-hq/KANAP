@@ -441,6 +441,32 @@ async function testDeleteTenantPurgesEveryTable() {
   }
 }
 
+// Spec 9: the data-scoped access of a kept person stays (spec §3.1, §10.7); the nodes are
+// purged with the companies they point at, so the person sees only what they are named on.
+async function testDataAccessKeptAndNodesPurged() {
+  const svc = buildServices();
+  let b: ActivatedTenant | undefined;
+  try {
+    b = await createActivatedTenant(svc, { tag: 'da', orgName: 'Data Access Org' });
+    const [company] = await rowsOf(b.tenantId, `SELECT id FROM companies WHERE tenant_id = $1 LIMIT 1`);
+    await inTenant(b.tenantId, async (manager) => {
+      await manager.query(`UPDATE users SET data_access_mode = 'limited' WHERE tenant_id = $1 AND id = $2`, [b!.tenantId, b!.ownerId]);
+      await manager.query(
+        `INSERT INTO user_data_access_nodes (tenant_id, user_id, node_type, company_id, access)
+         VALUES ($1, $2, 'company', $3, 'edit')`,
+        [b!.tenantId, b!.ownerId, company.id],
+      );
+    });
+    await svc.reset.reset(b.tenantId, b.ownerId);
+    const [owner] = await rowsOf(b.tenantId, `SELECT data_access_mode FROM users WHERE tenant_id = $1 AND id = $2`, [b.ownerId]);
+    assert.equal(owner.data_access_mode, 'limited', 'the kept person stays limited');
+    const [nodes] = await rowsOf(b.tenantId, `SELECT count(*)::int AS n FROM user_data_access_nodes WHERE tenant_id = $1`);
+    assert.equal(nodes.n, 0, 'the reset purges the access nodes');
+  } finally {
+    await cleanupTenants([b?.tenantId]);
+  }
+}
+
 runSpecs('tenant-reset.integration.spec', [
   testResetMatchesActivatedTenant,
   testRoundTrip,
@@ -450,6 +476,7 @@ runSpecs('tenant-reset.integration.spec', [
   testFailureRollsEverythingBack,
   testRefusals,
   testDeleteTenantPurgesEveryTable,
+  testDataAccessKeptAndNodesPurged,
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

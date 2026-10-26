@@ -13,13 +13,23 @@ export type AssetDirection = (typeof ASSET_DIRECTIONS)[number];
 
 export type AssetTaskRow = { id: string; item_number: number | null; title: string; status: string | null; assignee_name: string | null; due_date: string | null };
 
+/** A dependency a cluster carries through its members, with those members in `via`. */
+export type AssetMemberDependencyRow = AssetRelationRow & { via: Array<{ id: string; name: string }> };
+
 /** `GET /assets/:id/relations-tab`: the data of the Dependencies and Relations tabs and of their badges. */
 export type AssetRelationsData = {
   year: number;
   budget_column: { key: string; label: string };
-  assets: Record<AssetDirection, AssetRelationRow[]>;
+  assets: Record<AssetDirection, AssetRelationRow[]> & {
+    /** A cluster only, absent on any other asset: what its members in service depend on. */
+    depends_on_through_members?: AssetMemberDependencyRow[];
+  };
   budget_lines: BudgetLineRow[] | null;
+  /** The linked lines `budget_lines` leaves out, counted: outside the caller's data access, or all without the budget right. */
+  budget_lines_hidden?: number;
   contracts: ContractRow[] | null;
+  /** The linked contracts `contracts` leaves out: outside the caller's data access. */
+  contracts_hidden?: number;
   projects: ProjectRow[] | null;
   tasks: AssetTaskRow[] | null;
   incidents: IncidentLinkRow[] | null;
@@ -30,6 +40,15 @@ export type AssetRelationsData = {
     total: number;
   } & Record<string, number>;
 };
+
+/**
+ * The Relations badge: `counts.total` (the rows the tab lists) plus the budget lines and contracts
+ * the tab counts without listing them (`budget_lines_hidden`, `contracts_hidden`). Undefined until
+ * the read is in.
+ */
+export function assetRelationsBadge(data: AssetRelationsData | undefined): number | undefined {
+  return data ? (data.counts?.total ?? 0) + (data.budget_lines_hidden ?? 0) + (data.contracts_hidden ?? 0) : undefined;
+}
 
 /** The one query key of the read, shared by both tabs and the page (tab badges). */
 export const assetRelationsKey = (id: string) => ['asset-relations-tab', id] as const;

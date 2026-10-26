@@ -18,7 +18,7 @@ import { parseTargetId, UUID_RE } from '../../common/relations/relation-target';
 import {
   binder,
   dateText,
-  listRelatedBudgetLines,
+  readRelatedBudgetLines,
   listRelatedContracts,
   listRelatedIncidents,
   listRelatedProjects,
@@ -28,14 +28,16 @@ import {
   type RelatedProject,
 } from '../../common/relations/related-objects';
 import { FxRateService } from '../../currency/fx-rate.service';
+import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
 import { InterfacesService } from '../../interfaces/services/interfaces.service';
 import { KnowledgeService } from '../../knowledge/knowledge.service';
 import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { TechnologyLinksService, type DeploymentServer, type LinkInput } from '../../technologies/technology-links.service';
 import { technologyReference } from '../../technologies/technology-rows';
-import { type IncidentViewer } from '../../incidents/incident-visibility';
+import { type IncidentViewer, taskIncidentVisibilitySql } from '../../incidents/incident-visibility';
 import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
+import { hiddenContractCount } from '../../data-access/hidden-links';
 
 /** At most this many suggestions per rule. */
 export const SUGGESTIONS_PER_RULE = 20;
@@ -117,7 +119,11 @@ export type ApplicationRelations = {
   year: number;
   budget_column: { key: string; label: string };
   budget_lines: RelatedBudgetLine[] | null;
+  /** The linked lines `budget_lines` leaves out, counted (`readRelatedBudgetLines`). */
+  budget_lines_hidden: number;
   contracts: RelatedContract[] | null;
+  /** The linked contracts the contracts policy hides from a limited person (spec §5.4). */
+  contracts_hidden: number;
   projects: RelatedProject[] | null;
   requests: RelatedRequest[] | null;
   tasks: RelatedTask[] | null;
@@ -201,11 +207,14 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
 
     // One after the other: the request's single connection runs its queries in turn anyway, and
     // pg refuses a query sent while another one runs (deprecated since pg 8, an error in pg 9).
-    const budgetLines = ctx.access.budget_lines ? await listRelatedBudgetLines(mg, this.fxRates, LINE_LINKS, tenantId, app.id, year, measure) : null;
+    const budget = await readRelatedBudgetLines(mg, this.fxRates, LINE_LINKS, 'application', tenantId, app.id, year, measure, ctx.access.budget_lines);
     const contracts = ctx.access.contracts ? await listRelatedContracts(mg, CONTRACT_LINKS, tenantId, app.id) : null;
+    // The contracts the policy hides, counted (spec §5.4): a limited person sees "and N contracts
+    // outside your access"; 0 without a query for an unscoped one.
+    const contractsHidden = ctx.access.contracts ? await hiddenContractCount(mg, 'application', app.id) : 0;
     const projects = ctx.access.projects ? await listRelatedProjects(mg, PROJECT_LINKS, tenantId, app.id, ctx.scopes.project) : null;
     const requests = ctx.access.requests ? await this.listRequests(mg, tenantId, app.id, ctx.scopes.request) : null;
-    const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, app.id, ctx.scopes.task) : null;
+    const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, app.id, ctx.scopes.task, ctx.incidentViewer) : null;
     const linkOpts = { manager: mg, tenantId, userId: ctx.userId };
     const technologies = ctx.access.technologies ? await this.listTechnologies(mg, tenantId, app.id, linkOpts) : null;
     const deploymentServers = ctx.access.technologies ? await this.technologyLinks.deploymentServersOfApplication(app.id, linkOpts) : null;
@@ -222,8 +231,9 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     return {
       year,
       budget_column,
-      budget_lines: budgetLines,
+      ...budget,
       contracts,
+      contracts_hidden: contractsHidden,
       projects,
       requests,
       tasks,
@@ -278,10 +288,18 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
   }
 
   /** Tasks linked to the application itself, never through a linked project (fried, 2026-10-16). */
-  private async listTasks(mg: EntityManager, tenantId: string, appId: string, scope?: ParticipationAccessScope): Promise<RelatedTask[]> {
+  private async listTasks(
+    mg: EntityManager,
+    tenantId: string,
+    appId: string,
+    scope?: ParticipationAccessScope,
+    viewer?: IncidentViewer | null,
+  ): Promise<RelatedTask[]> {
     const params: unknown[] = [tenantId, appId];
     const bind = binder(params);
     const scopeSql = scope ? `AND ${taskParticipantCondition('t', bind(scope.userId))}` : '';
+    // A task of an incident the reader cannot see is absent from the application's Relations tab.
+    const incidentVisibilitySql = taskIncidentVisibilitySql('t', viewer, params);
     return mg.query(
       `SELECT t.id, t.item_number, t.title, t.status,
               NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') AS assignee_name,
@@ -290,6 +308,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
        JOIN tasks t ON t.id = l.task_id AND t.tenant_id = l.tenant_id
        LEFT JOIN users u ON u.id = t.assignee_user_id AND u.tenant_id = t.tenant_id
        WHERE l.tenant_id = $1 AND l.application_id = $2 ${scopeSql}
+       ${incidentVisibilitySql}
        ORDER BY (COALESCE(t.status, '') IN ('done', 'cancelled')) ASC, t.due_date ASC NULLS LAST, t.item_number ASC NULLS LAST, t.id`,
       params,
     );
@@ -429,19 +448,19 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     return out;
   }
 
-  /** Assets through the deployments, interfaces as the Interfaces tab lists them, documents the caller can read. */
+  /** Assets through the deployments (effective: a cluster's members count), interfaces as the Interfaces tab lists them, documents the caller can read. */
   private async countAlso(mg: EntityManager, tenantId: string, appId: string, ctx: RelationsContext) {
     const assetRows: Array<{ n: number }> = await mg.query(
         `SELECT count(DISTINCT aa.asset_id)::int AS n
-         FROM app_instances ai
-         JOIN app_asset_assignments aa ON aa.app_instance_id = ai.id AND aa.tenant_id = ai.tenant_id
-         WHERE ai.tenant_id = $1 AND ai.application_id = $2`,
+         FROM (${effectiveAssignmentsSql({ tenant: '$1', applications: 'ARRAY[$2::uuid]' })}) aa`,
         [tenantId, appId],
     );
-    // Interfaces are closed to a Business Contributor (`InterfacesController`).
+    // Interfaces are closed to a Business Contributor (`InterfacesController`). The tab lists an
+    // interface once per environment: the count is of distinct interfaces.
     const interfaces = ctx.scopes.application
       ? 0
-      : await this.interfaces.listByApplication(appId, tenantId, { manager: mg }).then((res: any) => (Array.isArray(res?.items) ? res.items.length : 0));
+      : await this.interfaces.listByApplication(appId, tenantId, { manager: mg })
+        .then((res: any) => new Set((Array.isArray(res?.items) ? res.items : []).map((item: { id: string }) => item.id)).size);
     const documents = await this.knowledge.listDocumentsForEntity('applications', appId, { manager: mg, userId: ctx.userId })
       .then((res) => Number(res?.total || 0));
     return { assets: Number(assetRows[0]?.n || 0), interfaces, documents };

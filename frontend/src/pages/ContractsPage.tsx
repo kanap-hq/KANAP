@@ -11,6 +11,7 @@ import CsvImportDialog from '../components/csv/CsvImportDialog';
 import CheckboxSetFilter from '../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import { useAuth } from '../auth/AuthContext';
+import { useDataAccessLimited } from '../auth/dataAccess';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { StatusDot } from '../components/design';
@@ -52,6 +53,11 @@ type ContractRow = {
   disabled_at?: string | null;
   company?: { id: string; name: string } | null;
   supplier?: { id: string; name: string } | null;
+  /** The contract's place in the cost centre tree (a group or a centre). */
+  cost_center_id?: string | null;
+  cost_center_name?: string | null;
+  /** False for a limited person whose access does not let them modify it; absent without a data access. */
+  editable?: boolean;
   owner_user_id?: string | null;
   start_date: string;
   duration_months: number;
@@ -266,6 +272,14 @@ export function isToDecideOnly(model: any): boolean {
   return Array.isArray(values) && values.length === 1 && values[0] === 'to_decide' && model.term_state.mode !== 'exclude';
 }
 
+const WITHOUT_COST_CENTER_FILTER = { filterType: 'set', values: [null] };
+
+/** True when the filter model keeps the contracts without a cost centre alone (the quick filter is on). */
+export function isWithoutCostCenterOnly(model: any): boolean {
+  const values = model?.cost_center_id?.values;
+  return Array.isArray(values) && values.length === 1 && values[0] === null && model.cost_center_id.mode !== 'exclude';
+}
+
 /**
  * The budget columns of a year (`budget_year`, `budget_column` on the list's requests): sorted and
  * filtered on the server; the coverage state stays in the column chooser and carries the budget
@@ -322,6 +336,7 @@ function budgetColumns(t: TFunction, year: number): EnhancedColDef<ContractRow>[
 
 export default function ContractsPage() {
   const { hasLevel } = useAuth();
+  const limited = useDataAccessLimited();
   const { t, i18n } = useTranslation(['ops', 'common']);
   const locale = useLocale();
 
@@ -410,6 +425,22 @@ export default function ContractsPage() {
       width: 180,
       valueGetter: (p) => p.data?.company?.name || '',
       cellRenderer: linkCell,
+    },
+    {
+      // Sorted by id on the server, so the column stays unsorted; filtered on the id: the one option
+      // is "Without cost center" (`cost_center_id` with a null value, spec §3.3, §7.7).
+      colId: 'cost_center_id',
+      headerName: t('contracts.columns.costCenter'),
+      width: 180,
+      defaultHidden: true,
+      sortable: false,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        values: [{ value: null, label: t('contracts.list.withoutCostCenter') }],
+        searchable: false,
+      },
+      valueGetter: (p) => p.data?.cost_center_name || '',
     },
     {
       field: 'next_due_date',
@@ -524,6 +555,7 @@ export default function ContractsPage() {
 
   const currentModel = safeParse(listQuery?.filters ?? '');
   const toDecideActive = isToDecideOnly(currentModel);
+  const withoutCostCenterActive = isWithoutCostCenterOnly(currentModel);
   const budgetQuick = budgetQuickFilterOf(currentModel);
   const toggleBudgetQuick = useCallback((state: BudgetQuickFilter) => {
     const api = gridApiRef.current;
@@ -539,6 +571,14 @@ export default function ContractsPage() {
     const model = { ...(api.getFilterModel?.() ?? {}) };
     if (isToDecideOnly(model)) delete model.term_state;
     else model.term_state = TO_DECIDE_FILTER;
+    api.setFilterModel(model);
+  }, []);
+  const toggleWithoutCostCenter = useCallback(() => {
+    const api = gridApiRef.current;
+    if (!api?.setFilterModel) return;
+    const model = { ...(api.getFilterModel?.() ?? {}) };
+    if (isWithoutCostCenterOnly(model)) delete model.cost_center_id;
+    else model.cost_center_id = WITHOUT_COST_CENTER_FILTER;
     api.setFilterModel(model);
   }, []);
 
@@ -570,11 +610,11 @@ export default function ContractsPage() {
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && <Button variant="action-primary" onClick={handleNew}>{t('contracts.newButton')}</Button>}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('contracts.importCsv')}</Button>}
+      {canAdmin && !limited && <Button variant="action" onClick={() => setImportOpen(true)}>{t('contracts.importCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('contracts.exportCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => { void exportRegister(); }}>{t('contracts.compliance.exportRegister')}</Button>}
-      {canAdmin && <Button variant="action" onClick={() => setSettingsOpen(true)}>{t('contracts.renewal.settings.button')}</Button>}
-      {canAdmin && (
+      {canAdmin && !limited && <Button variant="action" onClick={() => setSettingsOpen(true)}>{t('contracts.renewal.settings.button')}</Button>}
+      {canAdmin && !limited && (
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/contracts/bulk"
@@ -611,6 +651,7 @@ export default function ContractsPage() {
   const quickFilter = (
     <Box sx={{ display: 'flex', alignItems: 'center', columnGap: 2, rowGap: 1, flexWrap: 'wrap', flex: '1 1 auto', fontSize: 13, color: 'kanap.text.secondary' }}>
       {decisionWindowDays !== undefined && quickLink('to_decide', t('contracts.list.toDecide', { days: decisionWindowDays, count: toDecideCount ?? 0 }), toDecideCount, toDecideActive, toggleToDecide)}
+      {quickLink('without_cost_center', t('contracts.list.withoutCostCenter'), undefined, withoutCostCenterActive, toggleWithoutCostCenter)}
       {canReadBudget && quickLink('no_line', t('contracts.list.noBudgetLine', { count: budgetTotals?.no_line_count ?? 0 }), budgetTotals?.no_line_count, budgetQuick === 'no_line', () => toggleBudgetQuick('no_line'))}
       {canReadBudget && quickLink('under', t('contracts.list.underBudgeted', { count: budgetTotals?.under_count ?? 0 }), budgetTotals?.under_count, budgetQuick === 'under', () => toggleBudgetQuick('under'))}
       {canReadBudget && (
@@ -672,7 +713,7 @@ export default function ContractsPage() {
           </Box>
         ) : undefined}
         onGridApiReady={(api) => { gridApiRef.current = api; }}
-        enableRowSelection={canAdmin}
+        enableRowSelection={canAdmin && !limited}
         onSelectionChanged={setSelectedRows}
         onQueryStateChange={(state) => {
           const filters = state.filterModel || {};

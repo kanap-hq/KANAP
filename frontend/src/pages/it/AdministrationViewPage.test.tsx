@@ -343,7 +343,7 @@ describe('AdministrationViewPage', () => {
     expect(cell('control', ROW).textContent).toBe('Less sensitive host');
     expect(cell('control', ROW_BARE).textContent).toBe('Without a zone');
     fireEvent.mouseOver(within(cell('control', ROW)).getByText('Less sensitive host'));
-    expect((await screen.findByRole('tooltip')).textContent).toBe('Runs AST-7 (Niveau 0)Member of cluster AST-5 (Niveau 0)');
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Runs AST-7 dc1 (Niveau 0)Member of cluster AST-5 vsphere (Niveau 0)');
   });
 
   it('opens the asset on a click in its row, and leaves a link in a cell to open its own page', async () => {
@@ -480,6 +480,7 @@ describe('AdministrationViewPage', () => {
   it('lists the directory services, then the domains grouped by forest', async () => {
     renderPage('/it/administration?tab=directories');
     const services = await screen.findByRole('table', { name: 'Directory services' });
+    expect(within(services).getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Ref', 'Name', 'Zone', 'Servers']);
     expect(within(services).getByRole('link', { name: 'TEC-1' }).getAttribute('href')).toBe('/it/technologies/tech-ad');
     const serviceRow = within(services).getAllByRole('row')[1];
     expect(serviceRow.textContent).toContain('Active Directory');
@@ -489,7 +490,7 @@ describe('AdministrationViewPage', () => {
     expect(screen.getByRole('heading', { name: 'No forest' })).toBeTruthy();
     const corp = screen.getByRole('table', { name: 'corp.example.com' });
     const headers = within(corp).getAllByRole('columnheader').map((th) => th.textContent);
-    expect(headers).toEqual(expect.arrayContaining(['Domain', 'DNS suffix', 'Trusts', 'Accounts', 'Computers', 'Domain controllers']));
+    expect(headers).toEqual(['Domain', 'DNS suffix', 'Trusts', 'Accounts', 'Computers', 'Domain controllers']);
     const corpRow = within(corp).getAllByRole('row')[1].textContent;
     expect(corpRow).toContain('Labo (two-way)');
     expect(corpRow).toContain('1,200');

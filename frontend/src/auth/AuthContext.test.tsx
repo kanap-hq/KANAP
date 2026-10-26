@@ -83,6 +83,14 @@ function httpError(status: number) {
   return Object.assign(new Error(`Request failed with status code ${status}`), { response: { status } });
 }
 
+function tooManyAttempts(retryAfter?: string) {
+  return Object.assign(new Error('Request failed with status code 429'), {
+    response: { status: 429, headers: retryAfter ? { 'retry-after': retryAfter } : {} },
+  });
+}
+
+const rateLimitedLine = 'Too many attempts. Try again in a moment.';
+
 function unauthorized(url: string) {
   return { response: { status: 401 }, config: { url, headers: {} } };
 }
@@ -121,8 +129,19 @@ function LocationProbe() {
 }
 
 function IdentityProbe() {
-  const { profile, claims } = useAuth();
-  return <div data-testid="identity">{profile || claims ? `identity loaded ${profile?.id ?? ''}` : 'no identity'}</div>;
+  const { profile, claims, dataAccess, hasLevel } = useAuth();
+  return (
+    <div
+      data-testid="identity"
+      data-mode={dataAccess?.mode ?? 'none'}
+      data-companies-admin={String(hasLevel('companies', 'admin'))}
+      data-companies-reader={String(hasLevel('companies', 'reader'))}
+      data-budget-admin={String(hasLevel('budget', 'admin'))}
+      data-agents={String(hasLevel('ai_agents', 'reader'))}
+    >
+      {profile || claims ? `identity loaded ${profile?.id ?? ''}` : 'no identity'}
+    </div>
+  );
 }
 
 function LoginPageStub() {
@@ -279,6 +298,94 @@ describe('AuthProvider and ProtectedRoute', () => {
       expect(getAccessToken()).toBe('fresh-access-token');
       expect(screen.getByText('Home Page')).toBeInTheDocument();
     });
+  });
+
+  describe('refresh rate limited at load', () => {
+    it('says nothing about one short 429 when the next attempt goes through', async () => {
+      storeSession();
+      http.refreshPost.mockRejectedValueOnce(tooManyAttempts()).mockResolvedValueOnce(freshTokens);
+
+      renderApp();
+      await advance();
+      expect(http.refreshPost).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+
+      await advance(1_000);
+      await advance();
+      expect(screen.getByText('Home Page')).toBeInTheDocument();
+      expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
+    });
+
+    it('says so after two 429 in a row, and gives way to the server line when the server goes down', async () => {
+      storeSession();
+      http.refreshPost
+        .mockRejectedValueOnce(tooManyAttempts())
+        .mockRejectedValueOnce(tooManyAttempts())
+        .mockRejectedValueOnce(httpError(503))
+        .mockRejectedValueOnce(networkError());
+
+      renderApp();
+      await advance();
+      expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
+
+      // The second 429, one second later: the line and its button.
+      await advance(1_000);
+      expect(http.refreshPost).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('status')).toHaveTextContent(rateLimitedLine);
+      expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+
+      // A 503 next: no longer "too many attempts".
+      await advance(3_000);
+      expect(http.refreshPost).toHaveBeenCalledTimes(3);
+      expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
+
+      // The round ends on a network error: the server line, never the rate limit.
+      await advance(8_100);
+      expect(http.refreshPost).toHaveBeenCalledTimes(4);
+      expect(screen.getByRole('status')).toHaveTextContent(serverUnavailableLine);
+      expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
+    });
+
+    it('says so at once for a long wait, and Retry tries again in the page without reloading it', async () => {
+      const reload = vi.fn();
+      vi.stubGlobal('location', { ...window.location, pathname: '/', reload });
+      storeSession();
+      http.refreshPost.mockRejectedValueOnce(tooManyAttempts('30')).mockResolvedValueOnce(freshTokens);
+
+      renderApp();
+      await advance();
+      expect(screen.getByRole('status')).toHaveTextContent(rateLimitedLine);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+      await advance();
+      await advance();
+      expect(http.refreshPost).toHaveBeenCalledTimes(2);
+      expect(reload).not.toHaveBeenCalled();
+      expect(screen.getByText('Home Page')).toBeInTheDocument();
+      expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
+    });
+  });
+
+  it('reads the data access from /auth/me: a limited person keeps the reads of a reserved module, not its writes', async () => {
+    const permissions = { companies: 'admin', budget: 'admin', ai_agents: 'admin' };
+    const limitedMe = { data: { ...otherUser.data, claims: { ...otherUser.data.claims, permissions }, dataAccess: { available: true, mode: 'limited', nodes: [], modules: ['budget'] } } };
+    http.instance.get.mockResolvedValue(limitedMe);
+    await renderSignedIn();
+    const identity = screen.getByTestId('identity');
+    expect(identity).toHaveAttribute('data-mode', 'limited');
+    expect(identity).toHaveAttribute('data-companies-admin', 'false');
+    expect(identity).toHaveAttribute('data-companies-reader', 'true');
+    expect(identity).toHaveAttribute('data-budget-admin', 'true');
+    expect(identity).toHaveAttribute('data-agents', 'false');
+  });
+
+  it('an unscoped person keeps every right of their roles', async () => {
+    const permissions = { companies: 'admin', ai_agents: 'admin' };
+    http.instance.get.mockResolvedValue({ data: { ...otherUser.data, claims: { ...otherUser.data.claims, permissions }, dataAccess: { available: true, mode: 'all', nodes: [], modules: ['budget'] } } });
+    await renderSignedIn();
+    expect(screen.getByTestId('identity')).toHaveAttribute('data-companies-admin', 'true');
+    expect(screen.getByTestId('identity')).toHaveAttribute('data-agents', 'true');
   });
 
   it('logout while a refresh waits to retry: the server coming back does not sign the user in again', async () => {

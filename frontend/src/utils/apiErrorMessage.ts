@@ -1,5 +1,5 @@
 import i18next, { type TFunction } from 'i18next';
-import { refusalCounts, usageTotal, type DeleteFailure } from './deleteRefusal';
+import { refusalUsages, usageTotal, type DeleteFailure } from './deleteRefusal';
 
 type ApiErrorPayload = {
   message?: unknown;
@@ -11,6 +11,8 @@ type ApiErrorPayload = {
   usages?: unknown;
   /** Values the refusal's sentence names besides the counts (a frozen column and its year). */
   params?: unknown;
+  /** The applications an asset delete refusal names. */
+  applications?: unknown;
 };
 
 type ApiErrorLike = {
@@ -51,6 +53,77 @@ export function isDuplicateError(error: unknown): boolean {
   return response?.status === 409 && response.data?.code === 'duplicate';
 }
 
+/**
+ * The sentences of a refused data access (403 `DATA_ACCESS_LIMITED`), by the server's English text:
+ * one code carries several messages, each translated here (`errors:dataAccess.*`). A message not
+ * listed shows as the server wrote it.
+ */
+const DATA_ACCESS_MESSAGE_KEYS: Record<string, string> = {
+  'This item is outside your data access.': 'outside',
+  'This line is read only in your access.': 'readOnlyLine',
+  'This company or cost center is not part of your access.': 'placement',
+  'This action is reserved to people with access to all data.': 'reserved',
+  'The chargeback of this company is outside your data access.': 'chargebackCompany',
+  'This task is read only in your access.': 'readOnlyTask',
+  'Only someone who can modify the line or contract of this task can delete it.': 'taskDelete',
+  'This change would take the line out of your access. Keep yourself as an owner, or ask someone with access to its company.': 'leavesAccess',
+};
+/** `BL-12 is read only in your access.` (budget file). */
+const DATA_ACCESS_READ_ONLY_REF = /^(\S+) is read only in your access\.$/;
+/** `OPX-12 is no longer available since the export.` (budget file: deleted, or out of the person's access). */
+const DATA_ACCESS_NO_LONGER_AVAILABLE = /^(\S+) is no longer available since the export\.$/;
+/**
+ * `This application is linked to 3 lines outside your access.`: a refused delete. Its sentence is
+ * the delete check's refusal (`errors:APPLICATION_HIDDEN_LINES`, and the asset's, technology's,
+ * project's and request's).
+ */
+const DATA_ACCESS_HIDDEN_LINES = /^This (application|asset|technology|project|request) is linked to (\d+) lines? outside your access\.$/;
+/** `This application is linked to 2 contracts outside your access.` (lot 5, contracts counted too). */
+const DATA_ACCESS_HIDDEN_CONTRACTS = /^This (application|asset|technology) is linked to (\d+) contracts? outside your access\.$/;
+/** `This application is linked to 1 line and 2 contracts outside your access.` */
+const DATA_ACCESS_HIDDEN_LINKS = /^This (application|asset|technology) is linked to (\d+) lines? and (\d+) contracts? outside your access\.$/;
+
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * A data access sentence of the server in the screen language: a refusal (`DATA_ACCESS_LIMITED`)
+ * or a budget file row error of the same words. Null when the sentence is none of them.
+ */
+export function dataAccessSentence(message: string, t: Translate): string | null {
+  const key = DATA_ACCESS_MESSAGE_KEYS[message];
+  if (key) return t(`errors:dataAccess.${key}`, { defaultValue: message });
+  const readOnly = DATA_ACCESS_READ_ONLY_REF.exec(message);
+  if (readOnly) return t('errors:dataAccess.readOnlyRef', { ref: readOnly[1], defaultValue: message });
+  const gone = DATA_ACCESS_NO_LONGER_AVAILABLE.exec(message);
+  if (gone) return t('errors:dataAccess.noLongerAvailable', { ref: gone[1], defaultValue: message });
+  const both = DATA_ACCESS_HIDDEN_LINKS.exec(message);
+  if (both) {
+    const owner = both[1].toUpperCase();
+    return t(`errors:${owner}_HIDDEN_LINKS`, {
+      lines: t('errors:hiddenLinks.line', { count: Number(both[2]) }),
+      contracts: t('errors:hiddenLinks.contract', { count: Number(both[3]) }),
+      defaultValue: message,
+    });
+  }
+  const contracts = DATA_ACCESS_HIDDEN_CONTRACTS.exec(message);
+  if (contracts) return t(`errors:${contracts[1].toUpperCase()}_HIDDEN_CONTRACTS`, { count: Number(contracts[2]), defaultValue: message });
+  const hidden = DATA_ACCESS_HIDDEN_LINES.exec(message);
+  if (hidden) return t(`errors:${hidden[1].toUpperCase()}_HIDDEN_LINES`, { count: Number(hidden[2]), defaultValue: message });
+  return null;
+}
+
+function dataAccessRefusalMessage(message: string, t: TFunction): string {
+  return dataAccessSentence(message, t)
+    || message
+    || t('errors:dataAccess.outside', { defaultValue: 'This item is outside your data access.' });
+}
+
+/** A refusal for data outside the person's access (403 `DATA_ACCESS_LIMITED`). */
+export function isDataAccessRefusal(error: unknown): boolean {
+  const response = (error as ApiErrorLike | null | undefined)?.response;
+  return response?.status === 403 && response.data?.code === 'DATA_ACCESS_LIMITED';
+}
+
 export function getApiErrorMessage(error: unknown, t: TFunction, fallback: string): string {
   const apiError = error as ApiErrorLike | null | undefined;
   const payload = apiError?.response?.data;
@@ -70,9 +143,19 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
     }
   }
 
+  if (answerCode === 'DATA_ACCESS_LIMITED') {
+    const translated = dataAccessRefusalMessage(stringifyErrorValue(payload?.message), t);
+    if (typeof translated === 'string' && translated.trim()) {
+      return translated;
+    }
+  }
+
   if (code) {
     const variant = stringifyErrorValue(payload?.variant);
     const usages = Array.isArray(payload?.usages) ? (payload.usages as DeleteFailure['usages']) : null;
+    const applications = Array.isArray(payload?.applications)
+      ? payload.applications.map((name) => String(name ?? '')).filter(Boolean)
+      : undefined;
     // The language of `t` (a fixed one), else the interface's.
     const language = (t as { lng?: string }).lng || i18next.resolvedLanguage || i18next.language || 'en';
     const params = payload?.params && typeof payload.params === 'object' ? { ...(payload.params as Record<string, unknown>) } : {};
@@ -80,11 +163,15 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
     if (typeof params.field === 'string' && params.field) {
       params.field = t(`errors:fields.${params.field}`, { defaultValue: params.field });
     }
+    // An environment the sentence names (`pre_prod`) is shown by its name (Pre-production).
+    if (typeof params.environment === 'string' && params.environment) {
+      params.environment = t(`it:pages.applications.environments.${params.environment}.name`, { defaultValue: params.environment });
+    }
     const translated = t(`errors:${code}`, {
       ...params,
       defaultValue: message || fallback,
       ...(variant ? { context: variant } : {}),
-      ...(usages ? { ...usageTotal(usages), usages: refusalCounts({ usages }, t, language) } : {}),
+      ...(usages ? { ...usageTotal(usages), usages: refusalUsages(usages, applications, t, language) } : {}),
     });
     if (typeof translated === 'string' && translated.trim()) {
       return translated;

@@ -6,7 +6,7 @@ import { readRelationsBudgetColumn } from '../common/relations/relations-budget-
 import { setOwnedLink } from '../common/relations/owned-link';
 import { parseTargetId } from '../common/relations/relation-target';
 import {
-  listRelatedBudgetLines,
+  readRelatedBudgetLines,
   listRelatedContracts,
   listRelatedIncidents,
   listRelatedProjects,
@@ -18,6 +18,7 @@ import {
 import { FxRateService } from '../currency/fx-rate.service';
 import { type IncidentViewer } from '../incidents/incident-visibility';
 import { IncidentRelationsService } from '../incidents/services/incident-relations.service';
+import { hiddenContractCount } from '../data-access/hidden-links';
 import { readTechnology } from './technology-rows';
 
 /** The kinds of objects the Relations tab of a technology links one by one. */
@@ -47,7 +48,11 @@ export type TechnologyRelations = {
   year: number;
   budget_column: { key: string; label: string };
   budget_lines: RelatedBudgetLine[] | null;
+  /** The linked lines `budget_lines` leaves out, counted (`readRelatedBudgetLines`). */
+  budget_lines_hidden: number;
   contracts: RelatedContract[] | null;
+  /** The linked contracts the contracts policy hides from a limited person (spec §5.4). */
+  contracts_hidden: number;
   projects: RelatedProject[] | null;
   incidents: RelatedIncident[] | null;
   documents: Array<{ id: string; original_filename: string; mime_type: string | null; size: number; uploaded_at: string }>;
@@ -89,8 +94,9 @@ export class TechnologiesRelationsService {
     const tenantId = tech.tenant_id;
     const { year, measure, budget_column } = await readRelationsBudgetColumn(mg, tenantId);
     // One after the other: the request's single connection runs its queries in turn anyway.
-    const budgetLines = ctx.access.budget_lines ? await listRelatedBudgetLines(mg, this.fxRates, LINE_LINKS, tenantId, tech.id, year, measure) : null;
+    const budget = await readRelatedBudgetLines(mg, this.fxRates, LINE_LINKS, 'technology', tenantId, tech.id, year, measure, ctx.access.budget_lines);
     const contracts = ctx.access.contracts ? await listRelatedContracts(mg, CONTRACT_LINKS, tenantId, tech.id) : null;
+    const contractsHidden = ctx.access.contracts ? await hiddenContractCount(mg, 'technology', tech.id) : 0;
     const projects = ctx.access.projects ? await listRelatedProjects(mg, PROJECT_LINKS, tenantId, tech.id, ctx.projectScope) : null;
     const incidents = ctx.access.incidents
       ? await listRelatedIncidents(mg, tenantId, { table: 'incident_technologies', column: 'technology_id' }, tech.id, ctx.incidentViewer)
@@ -107,8 +113,9 @@ export class TechnologiesRelationsService {
     return {
       year,
       budget_column,
-      budget_lines: budgetLines,
+      ...budget,
       contracts,
+      contracts_hidden: contractsHidden,
       projects,
       incidents,
       documents,

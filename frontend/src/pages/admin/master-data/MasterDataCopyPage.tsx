@@ -54,6 +54,17 @@ function metricLabel(metric: MasterDataMetric, t: any) {
   return entry ? t(entry.labelKey) : metric;
 }
 
+/** A copy row's name. A department with no name is worded from the locale files. */
+export function copyEntityLabel(
+  t: (key: string) => string,
+  row: { entityType?: string | null; entityName?: string | null } | null | undefined,
+): string {
+  const name = row?.entityName?.trim() ?? '';
+  if (name) return name;
+  if (row?.entityType === 'department') return t('ops:reports.shared.unknownDepartment');
+  return '';
+}
+
 function formatValue(value: number | null, locale: string, metric: MasterDataMetric) {
   if (value == null) return '—';
   const options = metric === 'turnover'
@@ -64,7 +75,7 @@ function formatValue(value: number | null, locale: string, metric: MasterDataMet
 
 export default function MasterDataCopyPage() {
   const theme = useTheme();
-  const { t } = useTranslation(['master-data', 'common']);
+  const { t } = useTranslation(['master-data', 'common', 'ops']);
   const locale = useLocale();
   const gridLocaleText = useAgGridLocaleText();
   const years = useYearOptions();
@@ -127,6 +138,7 @@ export default function MasterDataCopyPage() {
       headerName: t('admin.copy.columns.name'),
       flex: 1,
       minWidth: 220,
+      valueGetter: (params) => copyEntityLabel(t, params.data),
       cellStyle: (params) => params.data?.skipped ? { color: theme.palette.warning.dark } : undefined,
     },
     {

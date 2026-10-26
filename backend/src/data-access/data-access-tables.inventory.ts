@@ -44,8 +44,8 @@ export type DataAccessTableEntry = {
   reason: string;
 };
 
-/** The runs whose policies the migrations create today. Lot 5 adds 'lot5'. */
-export const DONE_POLICY_RUNS: DataAccessPolicyRun[] = ['lot2a', 'lot2b'];
+/** The runs whose policies the migrations create today. */
+export const DONE_POLICY_RUNS: DataAccessPolicyRun[] = ['lot2a', 'lot2b', 'lot5'];
 
 export const DATA_ACCESS_TABLES: DataAccessTableEntry[] = [
   // Roots.
@@ -67,11 +67,11 @@ export const DATA_ACCESS_TABLES: DataAccessTableEntry[] = [
   { table: 'spend_tasks', cls: 'follows_line', policies: 'lot2a', reason: 'legacy tasks of a line (item_id), still read' },
 
   // Follow a contract.
-  { table: 'contract_attachments', cls: 'follows_contract', policies: 'lot5', reason: 'attachments of a contract' },
+  { table: 'contract_attachments', cls: 'follows_contract', policies: 'lot5', reason: 'attachments of a contract; read only when the parent contract is directly readable (spec §4.3, §5.4)' },
   { table: 'contract_compliance_items', cls: 'follows_contract', policies: 'lot5', reason: 'compliance items of a contract' },
   { table: 'contract_contacts', cls: 'follows_contract', policies: 'lot5', reason: 'contacts of a contract' },
-  { table: 'contract_links', cls: 'follows_contract', policies: 'lot5', reason: 'document links of a contract' },
-  { table: 'contract_tasks', cls: 'follows_contract', policies: 'lot5', reason: 'legacy tasks of a contract, still read' },
+  { table: 'contract_links', cls: 'follows_contract', policies: 'lot5', reason: 'document links of a contract; read only when the parent contract is directly readable (spec §4.3, §5.4)' },
+  { table: 'contract_tasks', cls: 'follows_contract', policies: 'lot5', reason: 'legacy tasks of a contract, no reader left in backend/src; policies kept for safety' },
 
   // Links from other objects to a line.
   { table: 'application_spend_items', cls: 'link_to_line', policies: 'lot2b', reason: 'application to line' },
@@ -99,8 +99,8 @@ export const DATA_ACCESS_TABLES: DataAccessTableEntry[] = [
 
   // Excluded, with the reason.
   { table: 'contract_spend_items', cls: 'excluded', policies: null, reason: 'cited by the contract policy; its writes are checked by the service (spec §6.4, lot 5)' },
-  { table: 'asset_support_info', cls: 'excluded', policies: null, reason: 'support_contract_id is an attribute of an asset (assets are not scoped); an invisible contract shows as a mention (§5.4), lot 5 confirms' },
-  { table: 'portfolio_activities', cls: 'excluded', policies: null, reason: 'activity feed of portfolio requests and projects (not scoped); task_id names a task of that project or request' },
+  { table: 'asset_support_info', cls: 'excluded', policies: null, reason: 'support_contract_id is an attribute of an asset (assets are not scoped); an invisible support contract shows as a mention (spec §5.4), run 5C' },
+  { table: 'portfolio_activities', cls: 'excluded', policies: null, reason: 'activity feed of every task (task_id, whatever its object, a budget line included) and of portfolio requests and projects (not scoped); a task\'s activities are read and written through the task, whose row is read first under the task policies (404 when hidden)' },
   { table: 'portfolio_requests', cls: 'excluded', policies: null, reason: 'origin_task_id points to the task a request came from; requests are not scoped' },
   { table: 'ai_action_requests', cls: 'excluded', policies: null, reason: 'polymorphic target; agent screens are reserved to unscoped persons (spec §10.3)' },
   { table: 'ai_agent_target_states', cls: 'excluded', policies: null, reason: 'polymorphic target_type/target_ref name objects of external providers; agent screens reserved' },
@@ -110,7 +110,7 @@ export const DATA_ACCESS_TABLES: DataAccessTableEntry[] = [
   { table: 'ai_mutation_previews', cls: 'excluded', policies: null, reason: 'created by the person (spec §10.3)' },
   { table: 'ai_observations', cls: 'excluded', policies: null, reason: 'polymorphic source object; agent screens reserved (spec §10.3)' },
   { table: 'asset_external_links', cls: 'excluded', policies: null, reason: 'external_type/external_id name objects of an external system' },
-  { table: 'audit_log', cls: 'excluded', policies: null, reason: 'table_name/record_id; the audit log is reserved (spec §10.3)' },
+  { table: 'audit_log', cls: 'excluded', policies: null, reason: 'table_name/record_id; the audit log screens are reserved (spec §10.3); the per-record reads serve only a record loaded first under the person\'s access: who changed a line (record-meta counterWriterSql, joined to the line read in item-meta), who wrote a conflicting field (edit-conflicts lastFieldChanges, under the line lock), who created a task (record-creator, for the task read first)' },
   { table: 'integrated_document_bindings', cls: 'excluded', policies: null, reason: 'source_entity_type CHECK names no line, contract or task (requests, projects, interfaces, applications, assets, locations, connections, incidents)' },
 ];
 
@@ -161,6 +161,8 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
     'link_contract_spend_items', 'link_location_sub_items', 'link_portfolio_project_team',
     'link_portfolio_request_team', 'link_portfolio_team_member_configs',
   ].map((name) => ({ name: `search_index_sync_${name}`, cls: 'definer' as const, reason: 'search index family: trigger' })),
+  { name: 'search_index_sync_link_incident_assets', cls: 'definer', reason: 'search index family: statement trigger, the incidents of a link change refreshed by batch of ids' },
+  { name: 'search_index_sync_incident_assets_on_asset', cls: 'definer', reason: 'search index family: trigger, the incidents linked to a renamed asset refreshed by batch of ids' },
 
   // Access functions (lots 1 and 2).
   { name: 'data_access_expected_policies', cls: 'access', reason: 'the expected policies (names the scoped tables)' },
@@ -169,13 +171,16 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
   { name: 'data_access_line_of_round_input', cls: 'access', reason: 'SECURITY DEFINER: the line of a round input, for its lines\' policies' },
   { name: 'data_access_contract_visible', cls: 'access', reason: 'SECURITY DEFINER depth function (spec §6.4): lisible_contrat with the person\'s settings' },
   { name: 'data_access_contract_modifiable', cls: 'access', reason: 'SECURITY DEFINER depth function: modifiable_contrat with the person\'s settings, for the writes of contract tasks' },
+  { name: 'data_access_line_visible', cls: 'access', reason: 'SECURITY DEFINER helper (spec §6.4, §5.4): a budget line readable by the person, for the link triggers of a contract' },
+  { name: 'data_access_contract_spend_items_link', cls: 'access', reason: 'link trigger of contract_spend_items (SECURITY INVOKER, spec §5.4, §6.4): a visible contract and a modifiable line; the same 23503 for an invisible and a nonexistent object' },
   { name: 'data_access_task_visible', cls: 'access', reason: 'SECURITY DEFINER depth function (spec §6.4): a task visible (object readable or participant)' },
   { name: 'data_access_task_modifiable', cls: 'access', reason: 'SECURITY DEFINER depth function: a task modifiable (object modifiable or responsible), for the writes of its elements' },
   { name: 'data_access_visible_contract_ids', cls: 'access', reason: 'SECURITY DEFINER set function (spec §6.4): the visible contracts, once per statement, for the search index policy' },
   { name: 'data_access_searchable_task_ids', cls: 'access', reason: 'SECURITY DEFINER set function (spec §5.4, §6.4): the tasks whose object is readable, once per statement, for the search index policy' },
   { name: 'data_access_tasks_placement', cls: 'access', reason: 'placement trigger of the tasks (SECURITY INVOKER): a new line or contract object must be modifiable in mode limited' },
-  { name: 'data_access_hidden_count', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): lines linked to a visible object that the person cannot read' },
-  { name: 'data_access_reference', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): the reference of the line a visible task names' },
+  { name: 'data_access_hidden_count', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): lines linked to a visible object that the person cannot read, the closed documents of a contract opened through a line (contract_document), and the contracts of an application, an asset or a technology that the person cannot read (application_contract, asset_contract, technology_contract)' },
+  { name: 'data_access_reference', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): the reference of the line a visible task names, or of a visible line\'s predecessor and successor' },
+  { name: 'data_access_can_read', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §5.6, §6.6): whether another person could read a line, a task or a contract, for the notifications and the warning of "Send the link"' },
 
   // Stays SECURITY INVOKER.
   { name: 'search_index_line_analytics', cls: 'excluded', reason: 'returns the axis values of a line: called by the definer refresh functions (it then runs as their owner); a direct call keeps the caller\'s policies; must stay inlinable (1853960000000)' },

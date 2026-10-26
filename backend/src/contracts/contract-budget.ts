@@ -1,10 +1,13 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import type { FxRateService } from '../currency/fx-rate.service';
 import { centsNumber, jsRound } from '../common/list-engine/sql-fragments';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
 import { BUDGET_YEAR_REACH, budgetListAmountsByIds, type FxMissingPair } from '../spend/budget-list/budget-list.service';
 import { LOCAL_AMOUNT_FIELD_PREFIX, SUMMARY_COLUMNS, SUMMARY_SCOPES } from '../spend/spend-summary.builder';
+import { withFullDataAccess } from '../data-access/full-data-access';
+import { isLimitedTransaction } from '../data-access/line-write-checks';
+import { contractBudgetYears } from './contract-budget-years';
 import { contractCommitmentSql, contractCurrencySql } from './contract-terms';
 
 /**
@@ -50,6 +53,15 @@ const LEVEL_RANK: Record<string, number> = { reader: 1, contributor: 2, member: 
  */
 export function canReadContractBudget(req: { isAdmin?: boolean; permissions?: Record<string, string> } | null | undefined): boolean {
   return req?.isAdmin === true || (LEVEL_RANK[req?.permissions?.budget ?? ''] ?? 0) >= LEVEL_RANK.reader;
+}
+
+/**
+ * The contract-side routes that change a contract's budget lines need the budget reader level in
+ * addition to the contracts member level, for everyone (spec §4.3, lot 5): before lot 5 only the
+ * picker was hidden. 403 with the permission guard's own refusal.
+ */
+export function assertContractBudgetRead(req: { isAdmin?: boolean; permissions?: Record<string, string> } | null | undefined): void {
+  if (!canReadContractBudget(req)) throw new ForbiddenException('Forbidden resource');
 }
 
 /** The current year of the budget figures (UTC, as the contract terms). */
@@ -292,6 +304,130 @@ export function contractLinesFxMissing(inputs: Pick<ContractBudgetInputs, 'lineF
     }
   }
   return Array.from(counts.values()).sort((a, b) => a.currency.localeCompare(b.currency) || a.year - b.year);
+}
+
+/**
+ * The coverage of the contracts a person reads, as it leaves `withFullDataAccess` (spec §5.4
+ * "Chiffres d'un objet visible", §6.6): per-contract aggregates only (`rows`, `fxMissingByContract`),
+ * the years with budget data and, when the caller shows its linked lines, the amounts of the lines
+ * it reads (`lineAmounts`, `lineFxMissing`). No linked line of the window, its id or its amount
+ * outside `lineAmounts`, crosses it.
+ */
+export type ContractBudgetCoverage = {
+  tenantId: string;
+  /** The years the rows cover, as the inputs asked them. */
+  years: number[];
+  column: ContractBudgetColumn;
+  reportingCurrency: string;
+  /** One row per contract and year, over every linked line of those contracts. */
+  rows: ContractBudgetRow[];
+  /** The years in which some budget line of the tenant has an amount in the column (`started`). */
+  startedYears: number[];
+  /** The amounts without a rate of the linked lines of each contract: aggregates, no line id. */
+  fxMissingByContract: Map<string, FxMissingPair[]>;
+  /** Only the linked lines the caller reads, when it gives their ids: never a hidden line. */
+  lineAmounts?: Map<string, Map<number, bigint | null>>;
+  lineFxMissing?: Map<string, { currency: string; local: Map<number, bigint> }>;
+  /** The years the budget selector offers, when asked (read in the same window). */
+  offerYears?: number[];
+};
+
+/**
+ * The coverage inputs of `contractIds` (null: every contract of the tenant) read in one window
+ * outside the limited role (`withFullDataAccess`), and reduced to what the screens show: the
+ * per-contract aggregates of `contractBudgetSql` and, when `visibleLineIds` is given, the amounts
+ * of those lines alone. The ids come first, under the person's access (the contract page, or the
+ * list's visible contracts): the window never names a contract the person cannot read.
+ *
+ * An unscoped person has nothing to leave: the same reads run without a window (the chargeback's
+ * `withFullDataAccess` decides the same way), so distinct sums, states and gaps are unchanged.
+ */
+export async function readContractBudgetCoverage(
+  deps: { fxRates: FxRateService },
+  manager: EntityManager,
+  tenantId: string,
+  years: number[],
+  column: ContractBudgetColumn,
+  contractIds: string[] | null,
+  opts?: {
+    visibleLineIds?: readonly string[];
+    /** The budget selector's years, read in the same window. */
+    offerYears?: { currentYear: number; extra?: number };
+    /** The rows cover every offered year too (the contract page); otherwise only `years` (the list). */
+    coverOfferedYears?: boolean;
+  },
+): Promise<ContractBudgetCoverage> {
+  const read = async (full: EntityManager): Promise<ContractBudgetCoverage> => {
+    const offerYears = opts?.offerYears
+      ? await contractBudgetYears(full, tenantId, opts.offerYears.currentYear, opts.offerYears.extra)
+      : undefined;
+    const coveredYears = opts?.coverOfferedYears && offerYears ? offerYears : years;
+    const inputs = await loadContractBudgetInputs(deps, full, tenantId, coveredYears, column, contractIds);
+    const rows = await readContractBudgetRows(full, inputs);
+    // The missing-rate pairs of each contract: a per-contract aggregate of its linked lines, so the
+    // list footer names no line either.
+    const fxMissingByContract = new Map<string, FxMissingPair[]>();
+    if (inputs.lineFxMissing.size > 0) {
+      const links: Array<{ contract_id: string; spend_item_id: string }> = await full.query(
+        `SELECT l.contract_id, l.spend_item_id FROM contract_spend_items l
+          WHERE l.tenant_id = $1${contractIds ? ' AND l.contract_id = ANY($2::uuid[])' : ''}`,
+        contractIds ? [tenantId, contractIds] : [tenantId],
+      );
+      const lineIdsOf = new Map<string, string[]>();
+      for (const link of links) lineIdsOf.set(link.contract_id, [...(lineIdsOf.get(link.contract_id) ?? []), link.spend_item_id]);
+      for (const [contractId, lineIds] of lineIdsOf) {
+        const pairs = contractLinesFxMissing(inputs, lineIds, inputs.years);
+        if (pairs.length > 0) fxMissingByContract.set(contractId, pairs);
+      }
+    }
+    const coverage: ContractBudgetCoverage = {
+      tenantId,
+      years: inputs.years,
+      column,
+      reportingCurrency: inputs.reportingCurrency,
+      rows,
+      startedYears: inputs.startedYears,
+      fxMissingByContract,
+    };
+    if (opts?.visibleLineIds) {
+      const visible = new Set(opts.visibleLineIds);
+      coverage.lineAmounts = new Map(Array.from(inputs.lineAmounts).filter(([lineId]) => visible.has(lineId)));
+      coverage.lineFxMissing = new Map(Array.from(inputs.lineFxMissing).filter(([lineId]) => visible.has(lineId)));
+    }
+    if (offerYears) coverage.offerYears = offerYears;
+    return coverage;
+  };
+  // As the chargeback report: an unscoped person costs no window (and needs no transaction).
+  if (!(await isLimitedTransaction(manager))) return read(manager);
+  return withFullDataAccess(manager, read);
+}
+
+/**
+ * The `cb` CTE of the contract list, built from the aggregates `readContractBudgetCoverage`
+ * returned: the contract list sorts, filters and totals on these values without naming a linked
+ * line. Empty when there is no contract.
+ */
+export function contractBudgetRowsSql(rows: readonly ContractBudgetRow[]): string {
+  return `SELECT * FROM unnest(
+    :cbRowContractIds::uuid[], :cbRowYears::int[], :cbRowCommittedLocal::numeric[],
+    :cbRowCommitted::float8[], :cbRowLinked::numeric[], :cbRowFxMissing::boolean[],
+    :cbRowGap::numeric[], :cbRowState::text[]
+  ) AS cb(contract_id, yr, committed_local, committed, linked, linked_fx_missing, gap, state)`;
+}
+
+/** The named parameters (`cbRow…`) of `contractBudgetRowsSql`. Amounts are cents, as the CTE produced them. */
+export function contractBudgetRowsParams(rows: readonly ContractBudgetRow[]): Record<string, unknown> {
+  const cents = (value: number | null) => (value === null ? null : Math.round(value * 100));
+  return {
+    cbRowContractIds: rows.map((row) => row.contract_id),
+    cbRowYears: rows.map((row) => row.year),
+    cbRowCommittedLocal: rows.map((row) => cents(row.committed_local)),
+    cbRowCommitted: rows.map((row) => cents(row.committed)),
+    cbRowLinked: rows.map((row) => cents(row.linked)),
+    cbRowFxMissing: rows.map((row) => row.linked_fx_missing),
+    cbRowGap: rows.map((row) => cents(row.gap)),
+    cbRowState: rows.map((row) => row.state),
+  };
 }
 
 /**

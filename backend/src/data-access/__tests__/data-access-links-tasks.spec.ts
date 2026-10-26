@@ -459,16 +459,16 @@ async function testPersons(s: Seed2): Promise<void> {
   console.log('  links, tasks, task elements, document links, search index, depth and disclosure functions, per person (§10.1, §10.4): OK');
 }
 
-/** References as the application role: what a visible task's line shows (OPX-n, CPX-n). */
+/** References as the application role: what a visible task's line shows (BL-n, whatever its nature; migration 1854800000000). */
 async function unscopedReferences(s: Seed2): Promise<Record<TaskLabel, string | null>> {
-  const numbers = new Map((await q(`SELECT id::text, item_number, nature FROM spend_items`)).map((r) => [r.id, `${r.nature === 'capex' ? 'CPX' : 'OPX'}-${r.item_number}`]));
+  const numbers = new Map((await q(`SELECT id::text, item_number, nature FROM spend_items`)).map((r) => [r.id, `BL-${r.item_number}`]));
   const out = {} as Record<TaskLabel, string | null>;
   for (const t of TASK_LABELS) {
     const o = TASKS[t].object;
     out[t] = o.kind === 'line' ? numbers.get(s.lines[o.line])! : null;
     assert.equal((await q(`SELECT data_access_reference('task', $1) AS r`, [s.tasks[t]]))[0].r, out[t], `unscoped: reference of ${t}`);
   }
-  assert.ok(out.tL5!.startsWith('CPX-') && out.tL1!.startsWith('OPX-'), 'the prefix follows the nature of the line');
+  assert.ok(out.tL5!.startsWith('BL-') && out.tL1!.startsWith('BL-'), 'one prefix for both natures');
   return out;
 }
 

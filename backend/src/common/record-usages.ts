@@ -27,7 +27,8 @@ export type UsageType =
   | 'projects'
   | 'requests'
   | 'team_members'
-  | 'suppliers';
+  | 'suppliers'
+  | 'data_access';
 
 export type UsageItem = {
   id: string;
@@ -48,14 +49,20 @@ export type UsageGroup = { type: UsageType; total: number; items: UsageItem[] };
 export type Usages = { total: number; groups: UsageGroup[] };
 
 /** What PermissionGuard leaves on the request (`@Tenant()` hands it on). */
-export type UsageCaller = { isAdmin?: boolean; permissions?: Record<string, string> };
+export type UsageCaller = { isAdmin?: boolean; permissions?: Record<string, string>; userId?: string | null };
 
 /**
  * One group's statement. Parameters: `$1` tenant id, `$2` record id, `$3` limit. Columns: `id`,
  * `reference`, `name`, `status`, `active`, `total` (`count(*) OVER ()`), and `nature` or `roles`
  * where the group has them.
  */
-export type UsageQuery = { type: UsageType; resource: string; sql: string };
+export type UsageQuery = {
+  type: UsageType;
+  resource: string;
+  sql: string;
+  /** The statement reads `$4`, the caller's user id (a viewer-scoped group). */
+  viewerScoped?: boolean;
+};
 
 const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
 
@@ -87,7 +94,9 @@ export async function readUsages(
   // One statement per group, in turn: they share the request's connection.
   for (const query of queries) {
     if (!canReadResource(caller, query.resource)) continue;
-    const rows: Row[] = await manager.query(query.sql, [tenantId, recordId, USAGE_GROUP_LIMIT]);
+    const params: unknown[] = [tenantId, recordId, USAGE_GROUP_LIMIT];
+    if (query.viewerScoped) params.push(caller.userId ?? null);
+    const rows: Row[] = await manager.query(query.sql, params);
     if (rows.length === 0) continue;
     groups.push({
       type: query.type,

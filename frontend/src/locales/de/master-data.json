@@ -54,11 +54,10 @@
       "contacts": "Kontakte",
       "prev": "Zurück",
       "next": "Weiter",
-      "enabled": "Aktiviert"
+      "enabled": "Aktiviert",
+      "access": "Zugriff"
     },
     "workspace": {
-      "unsavedNavigate": "Sie haben nicht gespeicherte Änderungen. Vor dem Navigieren speichern?",
-      "unsavedSwitchTab": "Sie haben nicht gespeicherte Änderungen. Vor dem Tab-Wechsel speichern?",
       "itemCountOf": "{{entity}} {{current}} von {{total}}"
     },
     "messages": {
@@ -724,6 +723,10 @@
       "nativeName": "Lokaler Name (Landessprache)",
       "description": "Beschreibung",
       "consolidationAccount": "Konsolidierungskonto",
+      "consolidationAccountNumber": "Konsolidierungskontonummer",
+      "consolidationAccountName": "Konsolidierungskontoname",
+      "consolidationAccountDescription": "Beschreibung des Konsolidierungskontos",
+      "selectChart": "Wählen Sie einen Kontenplan",
       "lifecycle": "Lebenszyklus",
       "loadCoAsError": "Fehler beim Laden der Kontenpläne"
     },
@@ -810,7 +813,8 @@
       "description": "Beschreibung",
       "dimension": "Dimension",
       "lifecycle": "Lebenszyklus",
-      "required": "Erforderlich"
+      "required": "Erforderlich",
+      "openValues": "Offene Werte"
     },
     "hints": {
       "nameDefault": "Leer lassen, um „{{label}}“ in der Sprache jeder Person anzuzeigen.",
@@ -822,7 +826,8 @@
       "valueDimensionAppliesTo": {
         "opex": "Die Dimension {{dimension}} gilt nur für OPEX-Zeilen.",
         "capex": "Die Dimension {{dimension}} gilt nur für CAPEX-Zeilen."
-      }
+      },
+      "openValues": "Jede Person, die eine Zeile bearbeiten kann, kann einen Wert hinzufügen, über die Zeile oder die Budgetdatei."
     },
     "placeholders": {
       "dimensionName": "z. B. Kostenart",
@@ -918,7 +923,8 @@
       "nameRequired": "Geben Sie einen Namen ein.",
       "codeRequired": "Geben Sie einen Code ein.",
       "codeInvalid": "Verwenden Sie Kleinbuchstaben, Ziffern, - oder _ (höchstens 40).",
-      "dimensionRequired": "Wählen Sie eine Dimension."
+      "dimensionRequired": "Wählen Sie eine Dimension.",
+      "valueAddFailed": "Der Wert konnte nicht hinzugefügt werden."
     },
     "recommended": {
       "action": "Empfohlene Dimensionen",
@@ -948,7 +954,8 @@
       "nothingCreated": "Nichts hinzugefügt: Diese Dimensionen sind bereits vorhanden.",
       "failed": "Die Dimensionen konnten nicht hinzugefügt werden.",
       "loadFailed": "Die empfohlenen Dimensionen konnten nicht geladen werden."
-    }
+    },
+    "addValue": "„{{value}}“ hinzufügen"
   },
   "businessProcesses": {
     "title": "Geschäftsprozesse",
@@ -1108,7 +1115,8 @@
     "account": {
       "accountNumberRequired": "Kontonummer ist erforderlich",
       "accountNumberTooLong": "Verwenden Sie höchstens {{max}} Ziffern",
-      "accountNameRequired": "Kontoname ist erforderlich"
+      "accountNameRequired": "Kontoname ist erforderlich",
+      "chartOfAccountsRequired": "Kontenplan ist erforderlich"
     }
   }
 }

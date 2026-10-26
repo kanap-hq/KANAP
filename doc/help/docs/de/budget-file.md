@@ -105,7 +105,7 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 - Jede Zeile wird nach ihrer eigenen Art geprüft: die Dimensionen und Werte, die sie haben darf, ihr Konto, die eingefrorenen Spalten und die Warnung vor Duplikaten. Eine für CAPEX eingefrorene Spalte lehnt eine Änderung nur bei einer CAPEX-Zeile ab.
 - Es gibt keinen weiteren Schlüssel. Eine neue Zeile, die einer bestehenden Budgetzeile ihrer Art ähnelt oder einer anderen neuen Zeile derselben Art in der Datei, ist eine Warnung, die Sie ignorieren können.
 - Lieferanten werden über `supplier_erp_id` zugeordnet, wenn er gefüllt ist, sonst über `supplier_name`. Einen Lieferanten, den die Datei nennt und den KANAP nicht kennt, legt das Laden an, wenn **Fehlende Lieferanten anlegen** angehakt ist. Ohne diese Option listet die Prüfung die fehlenden Lieferanten auf und bittet Sie, sie unter **Stammdaten > Lieferanten** anzulegen.
-- Ein nicht vorhandener Dimensionswert wird beim Laden angelegt und in der Prüfung aufgelistet. Konten, Kostenstellen, Unternehmen und Benutzer werden nie angelegt: Ein unbekanntes Element ist ein Zeilenfehler, der nennt, wo es hinzugefügt wird.
+- Ein nicht vorhandener Dimensionswert wird beim Laden angelegt und in der Prüfung aufgelistet. Konten, Kostenstellen, Unternehmen und Benutzer werden nie angelegt: Ein unbekanntes Element ist ein Zeilenfehler, der nennt, wo es hinzugefügt wird. Für eine Person mit begrenztem Datenzugriff nur bei einer Dimension mit offenen Werten: siehe [Begrenzter Datenzugriff](#limited-data-access).
 - Ein Wert oder `-` in einer Dimension, die nur für die andere Zeilenart gilt, ist ein Zeilenfehler in ihrer Zelle `analytics:<code>`, zum Beispiel „The Recurrence dimension is for CAPEX lines only. Leave it out.“ Der Export lässt eine solche Zelle leer: Ein ausgeblendeter Wert einer Zeile wird nicht exportiert, und ein Laden lässt ihn unverändert. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#opex-oder-capex-dimensionen).
 - Ein Wert, der nur für die andere Zeilenart verwendet wird, ist ein Zeilenfehler in seiner Zelle `analytics:<code>`, zum Beispiel „Internes Personal is for OPEX lines only. Pick a value for CAPEX lines.“ Eine Zeile behält den Wert, den sie bereits hat. Werte, die der Import anlegt, werden für OPEX und CAPEX verwendet. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#opex-oder-capex-werte).
 - Eine neue Zeile braucht einen Wert in jeder erforderlichen Dimension ihrer eigenen Art, mit der Meldung „The Kostenart dimension is required. Choose a value.“ in der Zelle `analytics:<code>`. Das gilt, wenn die Spalte in der Datei fehlt, wenn die Zelle leer ist und wenn sie `-` enthält. Ein Wert, den das Laden anlegt, zählt. Eine bestehende Zeile wird nur bei einem `-` abgelehnt, das ihren Wert löschen würde: Eine leere Zelle oder eine fehlende Spalte lässt sie unverändert. Die Einstellung finden Sie unter [Analysedimensionen](analytics.md#erforderliche-dimensionen).
@@ -129,6 +129,18 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 3. Klicken Sie auf **Laden**. Das Laden schreibt alles oder nichts.
 
 Ändert sich eine Budgetzeile zwischen der Prüfung und dem Laden, stoppt das Laden und bittet Sie, die Datei erneut zu prüfen. Die Prüfung sagt außerdem, wie sie die Datei gelesen hat, wenn ein Datum oder ein Betrag auf zwei Arten gelesen werden konnte, mit einer Schaltfläche zum Wechseln der Lesart.
+
+## Begrenzter Datenzugriff { #limited-data-access }
+
+Eine Person, die auf einen Teil des Budgets begrenzt ist, verwendet die Datei innerhalb ihres Zugriffs, wenn ihre Rolle es erlaubt. Siehe [Datenzugriff](data-access.md).
+
+- Der Export enthält die Zeilen, die sie sieht.
+- Eine Dateizeile, die eine Budgetzeile nennt, die sie nicht sieht, wird wie eine nicht vorhandene Zeile behandelt. In einer Datei aus einem Export lautet die Meldung „BL-12 ist seit dem Export nicht mehr verfügbar.“, wie bei einer seitdem gelöschten Zeile.
+- Eine Zeile, die sie mit Lesen sieht, wird akzeptiert, wenn ihre Dateizeile unverändert ist. Eine Änderung wird mit „BL-12 ist in Ihrem Zugriff schreibgeschützt.“ abgelehnt.
+- Eine neue Zeile, oder ein neues Unternehmen oder eine neue Kostenstelle auf einer Zeile, muss zu einem ihrer Knoten mit Bearbeiten passen. Sonst wird die Dateizeile mit „Dieses Unternehmen oder diese Kostenstelle gehört nicht zu Ihrem Zugriff.“ abgelehnt.
+- Ein unbekannter Wert wird nur bei einer Dimension mit offenen Werten angelegt. Bei den anderen Dimensionen ist er ein Zeilenfehler.
+
+Diese Zeilen erscheinen unter den **Fehlern** der Prüfung, wie jede andere abgelehnte Zeile.
 
 ## Excel und LibreOffice
 

@@ -22,7 +22,8 @@ import { hasLevel } from '../technologies/technologies.controller';
 import { requireManager } from '../technologies/technology-rows';
 import { AssetImpactService } from './services/asset-impact.service';
 import { buildRelationsAccess } from '../common/relations/relations-access';
-import { incidentViewerFromContext } from '../incidents/incident-visibility';
+import { canReadResource } from '../common/record-usages';
+import { incidentViewerFromContext, incidentViewerFromRequest } from '../incidents/incident-visibility';
 import {
   ASSET_RELATION_READS,
   AssetRelationsTabService,
@@ -207,6 +208,7 @@ export class AssetsController {
     return this.tasks.listRelatedTasksForAsset(asset.id, query, {
       manager: req?.queryRunner?.manager,
       tenantId: req?.tenant?.id,
+      viewer: incidentViewerFromRequest(req),
     });
   }
 
@@ -425,8 +427,10 @@ export class AssetsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get(':id/spend-items')
-  listLinkedSpendItems(@Param('id') id: string, @Req() req: any) {
-    return this.svc.listLinkedSpendItems(id, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
+  async listLinkedSpendItems(@Param('id') id: string, @Req() req: any) {
+    const linked = await this.svc.listLinkedSpendItems(id, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
+    // The names of the lines go to the readers of the budget only (spec §5.4).
+    return canReadResource(req ?? {}, 'budget') ? linked : { items: [] };
   }
 
   @UseGuards(PermissionGuard)
@@ -443,8 +447,9 @@ export class AssetsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get(':id/capex-items')
-  listLinkedCapexItems(@Param('id') id: string, @Req() req: any) {
-    return this.svc.listLinkedCapexItems(id, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
+  async listLinkedCapexItems(@Param('id') id: string, @Req() req: any) {
+    const linked = await this.svc.listLinkedCapexItems(id, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id });
+    return canReadResource(req ?? {}, 'budget') ? linked : { items: [] };
   }
 
   @UseGuards(PermissionGuard)
@@ -588,10 +593,11 @@ export class AssetsController {
   replaceMembers(@Param('id') id: string, @Body() body: any, @Req() req: any) {
     const tenantId: string | undefined = req?.tenant?.id;
     const assetIds = body?.asset_ids ?? body?.assetIds ?? body?.server_ids ?? body?.serverIds;
+    // `remove_operating_system: true` removes the cluster's operating system with the first members.
     return this.svc.replaceClusterMembers(id, assetIds, tenantId ?? '', req.user?.sub ?? null, {
       manager: req?.queryRunner?.manager,
       tenantId,
-    });
+    }, { removeOperatingSystem: body?.remove_operating_system });
   }
 
   @UseGuards(PermissionGuard)

@@ -2,6 +2,7 @@ import { ConflictException, HttpStatus, NotFoundException } from '@nestjs/common
 import { EntityManager } from 'typeorm';
 import type { AmountScope } from './amounts-write.util';
 import { assertScopeNatures, BUDGET_NATURES, linkedLineOf, natureAnd, naturesAnd, type BudgetNature } from './budget-nature';
+import { assertLinesEditable, assertVersionsEditable } from '../data-access/line-write-checks';
 
 /**
  * The one lock order of every budget writer, OPEX and CAPEX alike (plan
@@ -55,6 +56,15 @@ import { assertScopeNatures, BUDGET_NATURES, linkedLineOf, natureAnd, naturesAnd
  * the line, its versions and a year's lines are locked for the scope's nature
  * only, so a line of the other nature is "gone" for its caller, which answers
  * 404 or skips it, and nothing is written to it.
+ *
+ * And the read-only gate of a limited person (data-scoped access, lot 3): a lock
+ * FOR NO KEY UPDATE passes the UPDATE policy of the line or the version too, so a
+ * line the person reads but may not modify is not locked. When a lock misses a
+ * line or a version, `lockBudgetLine`, `lockBudgetLines` and `lockBudgetVersions`
+ * ask the database why (`line-write-checks.ts`) and refuse a read-only line with
+ * a 403 instead of answering "gone"; the lock that succeeds costs nothing more.
+ * `lockBudgetLinesOfBothNatures` (the budget file) leaves it to the file's own
+ * row checks.
  */
 
 // Table names come only from here: never from the caller. `nature`: the lines of the scope in
@@ -137,6 +147,7 @@ export async function lockBudgetLine(
     `SELECT 1 FROM ${t.items} WHERE tenant_id = $1 AND id = $2${natureAnd(null, t.nature)} FOR ${mode === 'update' ? 'UPDATE' : 'NO KEY UPDATE'}`,
     [tenantId, itemId],
   );
+  if (rows.length === 0) await assertLinesEditable(manager, [itemId]);
   return rows.length > 0;
 }
 
@@ -149,7 +160,9 @@ export async function lockBudgetLines(manager: EntityManager, scope: AmountScope
     `SELECT id FROM ${t.items} WHERE tenant_id = $1 AND id = ANY($2::uuid[])${natureAnd(null, t.nature)} ORDER BY id FOR NO KEY UPDATE`,
     [tenantId, ids],
   );
-  return new Set(rows.map((row) => row.id));
+  const locked = new Set(rows.map((row) => row.id));
+  if (locked.size < ids.length) await assertLinesEditable(manager, ids.filter((id) => !locked.has(id)));
+  return locked;
 }
 
 /** The message of the 409 `retry` of an operation whose lines changed between its lock and its reads. */
@@ -195,7 +208,9 @@ export async function lockBudgetVersions(manager: EntityManager, scope: AmountSc
     `SELECT id FROM ${t.versions} WHERE tenant_id = $1 AND id = ANY($2::uuid[])${versionNature(t)} ORDER BY id FOR NO KEY UPDATE`,
     [tenantId, ids],
   );
-  return new Set(rows.map((row) => row.id));
+  const locked = new Set(rows.map((row) => row.id));
+  if (locked.size < ids.length) await assertVersionsEditable(manager, ids.filter((id) => !locked.has(id)));
+  return locked;
 }
 
 /**

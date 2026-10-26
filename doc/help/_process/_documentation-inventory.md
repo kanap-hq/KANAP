@@ -1,6 +1,6 @@
 # User Manual Documentation Inventory
 
-_Generated: 2026-10-17_
+_Generated: 2026-10-26_
 
 This document tracks documentation coverage for the KANAP user manual.
 
@@ -13,12 +13,12 @@ This document tracks documentation coverage for the KANAP user manual.
 | IT Landscape | 14 | 14 | 0 |
 | Knowledge | 1 | 1 | 0 |
 | Master Data | 8 | 8 | 0 |
-| Admin & Settings | 17 | 17 | 0 |
+| Admin & Settings | 18 | 18 | 0 |
 | Plaid | 1 | 1 | 0 |
 | AI Agents | 5 | 5 | 0 |
 | Reports | 9 | 9 | 0 |
 | Portfolio | 10 | 10 | 0 |
-| **TOTAL** | **71** | **71** | **0** |
+| **TOTAL** | **72** | **72** | **0** |
 
 _Note: Supplemental Fast Track guides are excluded from these route-based counts. All tenant-facing routes have a manual. The classic product (through the 2026-05-10 sweep) is available in en/fr/de/es; the AI Agents section (added 2026-07-05) is also available in en/fr/de/es. The two AI model registry pages (added 2026-08-10) are available in en/fr/de/es._
 
@@ -28,6 +28,7 @@ _Note: Supplemental Fast Track guides are excluded from these route-based counts
 
 | Date | Doc File | Changes |
 |------|----------|---------|
+| 2026-10-26 | `data-access.md` (en/fr/de/es) | New page for data-scoped access: the two modes and the nodes (company, cost center group, cost center, **Everything**), Read and Edit, creating and moving, lines without a company, roles and nodes, participations, Administrators, the **Data access** tab of the user window and its preview, **Admin > Data access**, the **Access** tab of companies and cost centers, CSV import and export, the audit table, what a limited person sees, the operations reserved to people with all data, the unavailable state. `on-premise/installation.md`: optional step with `infra/scripts/data-access-role.sql`, restart, removal. `on-premise/operations.md`: restore without the role. Short notes in `admin.md`, `companies.md`, `cost-centers.md`, `budget-lines.md`, `budget-file.md` (new section **Limited data access**), `contracts.md` (**Cost center or group**, **Without cost center**, coverage), `reports.md`, `analytics.md` (new section **Open values**, the line field now creates values on open dimensions). mkdocs nav with fr/de/es labels, `index.md`, `doc-update-map.tsv`. The Help button mapping is in `docUrls.ts`. |
 | 2026-10-19 | `administration-view.md` (en/fr/de/es) | Page renamed **Administration zones**, linked to the ANSSI mapping guide: zone band, control point buttons, asset table with filters and bulk zone assignment, directory services and domains grouped by forest, asset and domain exports. `it-ops-settings.md`: **Number of accounts**, **Number of computers** and header hints. Page name updated in `index.md`, `assets.md`, `technologies.md`, `it-ops-settings.md` and the mkdocs nav. |
 | 2026-10-17 | _Technologies, second release (en/fr/de/es)_ | New `vulnerabilities.md` (availability by installation, how vulnerabilities are matched, filters and columns, review states and notes, CSV export, email notifications to IT owners) and `administration-view.md` (zones with their technologies and servers, domains with forest, trusts, counts and deduced domain controllers, exports). `technologies.md`: **Vulnerabilities to review** column, **Administration zone**, the **Servers**, **Applications**, **Operations**, **Compliance** and **Relations** tabs, linking a technology to a server. `assets.md`: **Technologies** section of the Technical tab. `it-ops-settings.md`: **Administration zones**, domain forest, counts and trusts. `applications.md`: support contacts and notes follow a conversion. `contacts.md`: technology support. `admin.md`: **Technology notifications**. mkdocs nav with fr/de/es labels, `docUrls.ts`, `doc-update-map.tsv`, `index.md`. |
 | 2026-10-17 | _Technologies, first release (en/fr/de/es)_ | New `technologies.md` (what a technology is next to applications and assets, with examples; the list, its columns and filters; creation from the catalog or by hand; the workspace header, properties drawer and **Overview** with versions, support states and CPE product identifiers) and `end-of-support.md` (**Deadlines** with **Type** and **Horizon**, states, unfolding rows, **Missing data**, CSV export). `applications.md`: **Technologies** and **Business processes** sections of the Relations tab, new section **Converting an application to a technology**. `assets.md`: **If this server goes down**. `business-processes.md`: **Applications** section. `contracts.md`, `budget-lines.md`, `incidents.md`: the **Technologies** field. `ai-assistant.md`: `@TEC`. mkdocs nav with fr/de/es labels, `docUrls.ts`, `doc-update-map.tsv`, `index.md`. The incident register (`/it/incidents`, `incidents.md`) gets its Help button mapping, map rows and inventory row. |
@@ -228,6 +229,7 @@ _Note: `/knowledge/new`, `/knowledge/:id`, and `/knowledge/:id/:tab` are covered
 | `/admin/users` | UsersPage | **DOCUMENTED** | `admin.md` |
 | `/admin/roles` | RolesPage | **DOCUMENTED** | `admin.md` |
 | `/admin/audit-logs` | AuditLogsPage | **DOCUMENTED** | `admin.md` |
+| `/admin/data-access` | DataAccessPage | **DOCUMENTED** | `data-access.md` |
 | `/admin/billing` | BillingCenter | **DOCUMENTED** | `admin.md` |
 | `/admin/auth` | AdminAuthPage | **DOCUMENTED** | `admin.md` |
 | `/admin/branding` | AdminBrandingPage | **DOCUMENTED** | `branding.md` |

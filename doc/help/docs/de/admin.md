@@ -11,6 +11,7 @@ Navigieren Sie im Hauptmenü zu **Administration**, um den Administrationsbereic
 - Benutzer & Zugriff: `users:reader` zum Anzeigen, `users:admin` zum Verwalten
 - Rollen: `users:reader` zum Anzeigen, `users:admin` zum Bearbeiten
 - Audit-Protokoll: Erfordert `users:admin`
+- Datenzugriff: Erfordert `users:admin` und Zugriff auf alle Daten (siehe [Datenzugriff](data-access.md))
 - Abrechnung: Erfordert die Rolle Abrechnungsadministrator
 - Authentifizierung: Erfordert `users:admin` (Feature-Flag-gesteuert; erfordert aktiviertes SSO)
 - Branding: Erfordert `users:admin` (nur Mandanten-Host; über die Seitenleiste zugänglich)
@@ -53,6 +54,8 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 
 **Rollenänderungen**: Erstellen, Umbenennen und Löschen einer Rolle sowie jede Änderung ihrer Berechtigungen.
 
+**Änderungen des Datenzugriffs** (Tabelle **Datenzugriff**): Modus und Knoten einer Person vorher und nachher, mit der Quelle **Bildschirm** oder **Import**. Siehe [Datenzugriff](data-access.md#audit-log).
+
 **Anmelde- und Sitzungsereignisse** (Tabelle **Anmeldung und Sitzung**):
 
 | Ereignis | Aufgezeichnet, wenn |
@@ -66,7 +69,7 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 
 **Exporte** (Tabelle **Export**): CSV-Exporte, Dokumente und Berichte, die der Server erzeugt. Die Zeile zeigt, was exportiert wurde und von wem. Auch der Export des Audit-Protokolls wird aufgezeichnet.
 
-Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **IP-Adresse** fest, von der die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides im Bereich **Nachher** zu lesen. Hinter einem Reverse Proxy ist es die IP-Adresse der Person selbst, sofern der Proxy sie weitergibt (On-Premise: siehe das [Reverse-Proxy-Beispiel](on-premise/installation.md#reverse-proxy-example-nginx)).
+Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **IP-Adresse** fest, von der die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides in den Zeilen **IP-Adresse** und **Browser** ihrer Tabelle zu lesen. Hinter einem Reverse Proxy ist es die IP-Adresse der Person selbst, sofern der Proxy sie weitergibt (On-Premise: siehe das [Reverse-Proxy-Beispiel](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Passwörter, Anmelde-Links und Tokens werden nie ins Protokoll geschrieben. Versucht sich jemand mit einer E-Mail-Adresse anzumelden, zu der es kein Konto gibt, zeigt die Zeile **Unbekanntes Konto** und speichert die eingegebene Adresse nicht.
 
@@ -84,8 +87,9 @@ Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Datenänder
   - Quelle (`user`, `system`, `webhook`)
 - Beliebige Zeile öffnen, um vollständige Details anzuzeigen:
   - Metadaten-Chips (Datum, Tabelle, Aktion, Quelle, Grund oder Quellreferenz, Mandant, Datensatz-ID, Benutzer)
-  - Zusammenfassung der geänderten Felder
-  - Nebeneinander dargestellte **Vorher**- und **Nachher**-JSON-Daten
+  - Die Geschäftsreferenz des Datensatzes in der Kopfzeile (zum Beispiel `PRJ-3`), sofern er eine hat
+  - Eine Tabelle der Felder: **Feld**, **Vorher** und **Nachher** bei einer Änderung, **Feld** und **Wert** bei jedem anderen Eintrag. Feldnamen erscheinen in Ihrer Sprache, sofern bekannt. Datumsangaben, Ja/Nein-Werte und Personen werden lesbar dargestellt; andere Kennungen erscheinen als **Kennung**, mit dem Wert in einem Tooltip. Technische Felder wie `id`, `tenant_id` und `updated_at` werden ausgelassen
+  - **Rohdaten anzeigen** zeigt das vollständige JSON vorher und nachher
 - Das Protokoll als CSV exportieren (siehe unten)
 
 ### Spalten
@@ -163,6 +167,8 @@ Verwalten Sie, wer auf KANAP zugreifen kann und was die jeweiligen Personen tun 
 - **MFA aktiviert**: Ob Multi-Faktor-Authentifizierung aktiv ist
 - **Erstellt**: Wann der Benutzer erstellt wurde
 
+Sobald der Datenzugriff einer Person begrenzt ist, zeigt eine Spalte **Zugriff** den Zugriff jeder Person: **Alle Daten**, die Namen ihrer Knoten oder **Keine**. Siehe [Datenzugriff](data-access.md).
+
 **Statuswerte**:
 
 | Status | Bedeutung |
@@ -198,6 +204,7 @@ Zeilenaktionen über das Menü am Ende jeder Zeile:
 | **Aktivieren** / **Deaktivieren** | Schaltet das Konto ein oder aus. Beim Deaktivieren wird die Person sofort abgemeldet. |
 | **Einladung senden** | Sendet eine Anmeldeeinladung per E-Mail. Für Microsoft Entra-Konten ausgeblendet. |
 | **Passwort-Zurücksetzung senden** | Sendet einen Link zum Zurücksetzen des Passworts per E-Mail. Nur für aktive lokale Konten sichtbar. |
+| **Datenzugriff** | Öffnet den Benutzer auf dem Reiter **Datenzugriff**. Sichtbar für Personen mit Zugriff auf alle Daten, in den Zeilen anderer Personen. |
 | **Löschen** | Entfernt den Benutzer dauerhaft. Die Datensätze, an denen er gearbeitet hat, bleiben ohne ihn erhalten. Ihr eigenes Konto können Sie nicht löschen. Um den Zugang einer Person zu sperren und das Konto zu behalten, deaktivieren Sie es stattdessen. |
 
 ### CSV-Datei der Benutzer
@@ -234,6 +241,8 @@ Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die b
    - **Unternehmen** / **Abteilung**: Organisatorische Zuordnung
    - **Aktiviert**: Ob der Benutzer sich anmelden kann
 4. Klicken Sie auf **Speichern** oder **Speichern und einladen**, um die Anmelde-E-Mail zu senden
+
+Wenn Sie einen Benutzer bearbeiten, hat das Fenster zwei Reiter: **Identität**, mit den Feldern oben und den Rollen, und **Datenzugriff**, der die Person auf einen Teil des Budgets und der Verträge begrenzt. Ein einziges **Speichern** schreibt beide. Der Reiter **Datenzugriff** ist für Personen mit Zugriff auf alle Daten sichtbar, bei den Konten anderer. Siehe [Datenzugriff](data-access.md).
 
 ### Mehrfach-Rollenzuweisung
 

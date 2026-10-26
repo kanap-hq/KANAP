@@ -34,6 +34,8 @@ type ContractOption = { id: string; name: string };
 type SupportInfo = {
   vendor_id?: string | null;
   support_contract_id?: string | null;
+  /** A limited person cannot read the support contract: no id, no name, the label alone (spec §5.4). */
+  support_contract_hidden?: boolean;
   support_tier?: string | null;
   support_expiry?: string | null;
   notes?: string | null;
@@ -73,6 +75,7 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
 
   const [vendorId, setVendorId] = React.useState<string | null>(null);
   const [contractId, setContractId] = React.useState<string | null>(null);
+  const [contractHidden, setContractHidden] = React.useState(false);
   const [supportTier, setSupportTier] = React.useState('');
   const [supportExpiry, setSupportExpiry] = React.useState('');
   const [notes, setNotes] = React.useState('');
@@ -123,6 +126,7 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
         if (data) {
           setVendorId(data.vendor_id || null);
           setContractId(data.support_contract_id || null);
+          setContractHidden(data.support_contract_hidden === true);
           setSupportTier(data.support_tier || '');
           setSupportExpiry(data.support_expiry || '');
           setNotes(data.notes || '');
@@ -130,6 +134,7 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
         } else {
           setVendorId(null);
           setContractId(null);
+          setContractHidden(false);
           setSupportTier('');
           setSupportExpiry('');
           setNotes('');
@@ -141,6 +146,7 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
         }
         setVendorId(null);
         setContractId(null);
+        setContractHidden(false);
         setSupportTier('');
         setSupportExpiry('');
         setNotes('');
@@ -202,11 +208,12 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
 
   const supportInfoPayload = React.useMemo<SupportInfo>(() => ({
     vendor_id: vendorId || null,
-    support_contract_id: contractId || null,
+    // A closed contract is not ours to send: leaving the field out keeps the link.
+    ...(contractHidden ? {} : { support_contract_id: contractId || null }),
     support_tier: supportTier || null,
     support_expiry: supportExpiry || null,
     notes: notes || null,
-  }), [vendorId, contractId, supportTier, supportExpiry, notes]);
+  }), [contractHidden, vendorId, contractId, supportTier, supportExpiry, notes]);
 
   const saveSignature = React.useMemo(() => JSON.stringify({
     info: supportInfoPayload,
@@ -314,40 +321,44 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
         </PropertyRow>
 
         <PropertyRow label={t('workspace.asset.support.supportContract')}>
-          <Autocomplete
-            {...contractPicker.autocomplete}
-            options={contractPicker.options}
-            value={selectedContract}
-            onChange={(_, v) => {
-              contractPicker.remember([v]);
-              setContractId(v?.id || null);
-            }}
-            getOptionLabel={(o) => contractPicker.label(o, (contract) => contract.name ?? '')}
-            disabled={readOnly || saving}
-            renderOption={(props, option) => {
-              const { key, ...optionProps } = props;
-              return <li key={key} {...optionProps}>{option.name}</li>;
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                placeholder={t('workspace.asset.support.searchSupportContracts')}
-                variant="standard"
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <>
-                      {contractPicker.loading ? <CircularProgress color="inherit" size={16} /> : null}
-                      {params.InputProps.endAdornment}
-                    </>
-                  ),
-                }}
-                sx={drawerFieldValueSx}
-              />
-            )}
-            ListboxProps={{ sx: drawerAutocompleteListboxSx }}
-            fullWidth
-          />
+          {contractHidden ? (
+            <Typography sx={{ fontSize: 13 }}>{t('ops:contracts.outsideYourAccess')}</Typography>
+          ) : (
+            <Autocomplete
+              {...contractPicker.autocomplete}
+              options={contractPicker.options}
+              value={selectedContract}
+              onChange={(_, v) => {
+                contractPicker.remember([v]);
+                setContractId(v?.id || null);
+              }}
+              getOptionLabel={(o) => contractPicker.label(o, (contract) => contract.name ?? '')}
+              disabled={readOnly || saving}
+              renderOption={(props, option) => {
+                const { key, ...optionProps } = props;
+                return <li key={key} {...optionProps}>{option.name}</li>;
+              }}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder={t('workspace.asset.support.searchSupportContracts')}
+                  variant="standard"
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {contractPicker.loading ? <CircularProgress color="inherit" size={16} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                  sx={drawerFieldValueSx}
+                />
+              )}
+              ListboxProps={{ sx: drawerAutocompleteListboxSx }}
+              fullWidth
+            />
+          )}
         </PropertyRow>
 
         <PropertyRow label={t('workspace.asset.support.supportTier')}>

@@ -27,6 +27,7 @@ import { drawerMenuItemSx, textTabSx, textTabsSx } from '../../theme/formSx';
 import api from '../../api';
 import ContributorDrilldownDialog from './components/ContributorDrilldownDialog';
 import { useTranslation } from 'react-i18next';
+import { formatPercentPoints } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 
 type CapacityColorBand = 'green' | 'yellow' | 'orange' | 'red' | 'violet' | 'na';
@@ -261,8 +262,8 @@ export default function CapacityHeatmapReport() {
 
   const formatPercentLabel = useCallback((value: number | null | undefined): string => {
     if (value == null || !Number.isFinite(value)) return t('reports.capacityHeatmap.values.notAvailable');
-    return `${value.toFixed(1)}%`;
-  }, [t]);
+    return formatPercentPoints(value, locale, 1);
+  }, [locale, t]);
 
   const formatSourceLabel = useCallback((value: ContributorCapacityRow['capacitySource']) => {
     if (value === 'historical') return t('reports.capacityHeatmap.values.historical');
