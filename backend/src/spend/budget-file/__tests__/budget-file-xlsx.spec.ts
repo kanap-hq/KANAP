@@ -105,7 +105,9 @@ function testFormat() {
   assert.equal(parseExportFormat(''), 'csv');
   assert.equal(parseExportFormat('csv'), 'csv');
   assert.equal(parseExportFormat('xlsx'), 'xlsx');
-  for (const raw of ['pdf', 'XLSX', ['xlsx', 'csv'], 'xls']) {
+  assert.equal(parseExportFormat(' XLSX '), 'xlsx', 'any case, trimmed');
+  assert.equal(parseExportFormat('Csv'), 'csv');
+  for (const raw of ['pdf', ['xlsx', 'csv'], 'xls', 'x lsx', 42]) {
     assert.throws(() => parseExportFormat(raw), (error: unknown) => {
       assert.ok(error instanceof BadRequestException);
       assert.equal((error.getResponse() as { message: string }).message, 'format must be csv or xlsx.');
@@ -113,7 +115,7 @@ function testFormat() {
     }, String(raw));
   }
   assert.equal(exportListQuery({ format: 'xlsx', sort: 'name:ASC' }, false).format, undefined, 'format is not a list parameter');
-  console.log('  format: csv by default, xlsx, anything else 400: OK');
+  console.log('  format: csv by default, xlsx in any case, anything else 400: OK');
 }
 
 function testRouteAnswer() {
