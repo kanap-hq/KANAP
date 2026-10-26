@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import OptionWithHint from './OptionWithHint';
 import api from '../../api';
+import { useRelationLabels } from '../workspace/relations/labels';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
 
@@ -54,6 +55,7 @@ const ApplicationSelect = React.forwardRef<HTMLInputElement, ApplicationSelectPr
   ref,
 ) {
   const { t } = useTranslation('common');
+  const relationLabels = useRelationLabels();
   const label = labelProp ?? t('selects.application');
   const naked = hideLabel || label === '';
   const { data: applications, isLoading } = useQuery({
@@ -100,7 +102,10 @@ const ApplicationSelect = React.forwardRef<HTMLInputElement, ApplicationSelectPr
           key={option.id}
           optionProps={props}
           label={option.name}
-          hint={[option.lifecycle, option.criticality].filter(Boolean).join(' · ')}
+          hint={[
+            option.lifecycle ? relationLabels.lifecycle(option.lifecycle) : '',
+            option.criticality ? relationLabels.criticality(option.criticality) : '',
+          ].filter(Boolean).join(' · ')}
         />
       )}
       filterOptions={(options, { inputValue }) => {
