@@ -13,6 +13,7 @@ import { ensureCapexDimensions } from '../../analytics/capex-dimensions.seed';
 import { ensureRecommendedDimensions } from '../../analytics/recommended-dimensions.seed';
 import { accessTokenVerifyKey } from '../../auth/jwt-key';
 import { waitForBackgroundWork } from '../../common/background-work';
+import { allocateItemNumbers } from '../../common/item-number.service';
 import { TENANT_SCOPED_TABLES } from '../../common/tenant-isolation.inventory';
 import { Features } from '../../config/features';
 import {
@@ -825,6 +826,78 @@ async function testLoadedIsWrittenAgain() {
   }
 }
 
+// An incident created and then deleted leaves its counter. The workspace is still empty,
+// so a load drops every counter except the document one: template documents already hold
+// their numbers, and the incident journal addresses incidents by number. A workspace that
+// still has data of its own keeps its counters, and another tenant's counters stay.
+async function testLoadResetsItemSequences() {
+  const svc = buildServices();
+  const h = harness(svc);
+  let t: ActivatedTenant | undefined;
+  let other: ActivatedTenant | undefined;
+  try {
+    t = await createActivatedTenant(svc, { tag: 'dd-seq', orgName: 'Sequence Org' });
+    other = await createActivatedTenant(svc, { tag: 'dd-seq2', orgName: 'Other Sequence Org' });
+    const params = { tenantId: t.tenantId, actorId: t.ownerId, host: hostOf(t) };
+
+    await inTenant(t.tenantId, (m) => m.query(
+      `INSERT INTO item_sequences (tenant_id, entity_type, next_val)
+       VALUES ($1, 'incident', 8), ($1, 'task', 4)
+       ON CONFLICT (tenant_id, entity_type) DO UPDATE SET next_val = EXCLUDED.next_val`,
+      [t!.tenantId],
+    ));
+    await inTenant(t.tenantId, (m) => m.query(
+      `INSERT INTO item_sequences (tenant_id, entity_type, next_val) VALUES ($1, 'document', 40)
+       ON CONFLICT (tenant_id, entity_type) DO UPDATE SET next_val = EXCLUDED.next_val`,
+      [t!.tenantId],
+    ));
+    await inTenant(other.tenantId, (m) => m.query(
+      `INSERT INTO item_sequences (tenant_id, entity_type, next_val) VALUES ($1, 'incident', 6)
+       ON CONFLICT (tenant_id, entity_type) DO UPDATE SET next_val = EXCLUDED.next_val`,
+      [other!.tenantId],
+    ));
+
+    // Occupied: the load is refused and the counters stay where they are.
+    await inTenant(t.tenantId, (m) => m.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Real supplier')`, [t!.tenantId]));
+    const refused = await refusal(() => h.service.load(params));
+    assert.equal(codeOf(refused), 'tenant_not_empty');
+    assert.equal(h.spawns.length, 0, 'no loader for a workspace that holds data');
+    const occupied = await inTenant(t.tenantId, (m) => m.query(
+      `SELECT entity_type, next_val FROM item_sequences WHERE tenant_id = $1 AND entity_type = ANY($2::text[]) ORDER BY entity_type`,
+      [t!.tenantId, ['document', 'incident', 'task']],
+    ));
+    assert.deepEqual(occupied.map((row: { entity_type: string; next_val: number }) => [row.entity_type, Number(row.next_val)]), [
+      ['document', 40], ['incident', 8], ['task', 4],
+    ], 'a refused load leaves the counters');
+    await inTenant(t.tenantId, (m) => m.query(`DELETE FROM suppliers WHERE tenant_id = $1`, [t!.tenantId]));
+    assert.deepEqual(await inTenant(t.tenantId, (m) => findTenantContent(m, t!.tenantId)), [], 'empty again');
+
+    const state = await h.service.load(params);
+    assert.equal(state.status, 'loading');
+    assert.equal(h.spawns.length, 1, 'the load started');
+    const rows = await inTenant(t.tenantId, (m) => m.query(
+      `SELECT entity_type, next_val FROM item_sequences WHERE tenant_id = $1 ORDER BY entity_type`,
+      [t!.tenantId],
+    ));
+    assert.deepEqual(
+      rows.map((row: { entity_type: string; next_val: number }) => [row.entity_type, Number(row.next_val)]),
+      [['document', 40]],
+      'the incident and task counters are gone; the document counter stays',
+    );
+    const first = await inTenant(t.tenantId, (m) => allocateItemNumbers('incident', t!.tenantId, 1, m));
+    assert.equal(first, 1, 'the next incident is INC-1');
+
+    const [untouched] = await inTenant(other.tenantId, (m) => m.query(
+      `SELECT next_val FROM item_sequences WHERE tenant_id = $1 AND entity_type = 'incident'`,
+      [other!.tenantId],
+    ));
+    assert.equal(Number(untouched.next_val), 6, 'the other tenant keeps its counter');
+  } finally {
+    await h.finishAll();
+    await cleanupTenants([t?.tenantId, other?.tenantId]);
+  }
+}
+
 // The time limit stays 60 s under the lifetime of the loader's token; the loader is looked up
 // below the backend directory only.
 async function testTimeLimitAndScriptLookup() {
@@ -868,6 +941,7 @@ runSpecs('demo-data.service.integration.spec', [
   testPeriodicSweep,
   testStopDuringClaim,
   testLoadedIsWrittenAgain,
+  testLoadResetsItemSequences,
   testTimeLimitAndScriptLookup,
 ]).catch((err) => {
   console.error(err);
