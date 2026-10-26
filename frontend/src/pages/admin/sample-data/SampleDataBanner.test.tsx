@@ -49,6 +49,7 @@ const EMPTY = {
   reset_failed_at: null,
   can_load: true,
   load_refusal: null,
+  blocking: null,
   created_since_load: null,
   workspace_name: 'Fromage & Co',
   loaded_by_name: null,

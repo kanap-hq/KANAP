@@ -187,14 +187,15 @@ The state lives in `tenants.metadata.demo` (no table of its own). Status values:
 
 - GET `/admin/sample-data`
   - Returns the state plus what the page needs:
-    - `{ status, step, started_at, heartbeat_at, loaded_at, loaded_by, failed_at, error_code, dismissed_at, ever_loaded_at, reset_failed_at, can_load, load_refusal, created_since_load, workspace_name, loaded_by_name }`
+    - `{ status, step, started_at, heartbeat_at, loaded_at, loaded_by, failed_at, error_code, dismissed_at, ever_loaded_at, reset_failed_at, can_load, load_refusal, blocking, created_since_load, workspace_name, loaded_by_name }`
   - `?view=banner` returns the light view the home banner polls: no `created_since_load`, no `loaded_by_name`, and no check of the workspace content once the banner can no longer show (hidden, or sample data loaded once): `can_load` is then `false`. The page uses the full view.
   - `ever_loaded_at` is set when a load completes and is kept by a reset. The home banner never shows again once it is set.
   - `reset_failed_at` is set when a reset an Administrator asked for failed (nothing was changed). The next load or reset clears it.
   - `step` is the loader step of a running load (for example `companies`), `null` otherwise.
   - `error_code` when `status = failed`: `load_failed`, `load_timeout`, `load_not_started`, `load_interrupted` or `reset_failed` (the automatic reset after the failed load failed too).
   - `can_load` is true when the status is `idle` or `failed`, the subscription is in good standing and the workspace is still in its starting state (no business data, no added configuration; what activation creates does not count).
-  - `load_refusal` says why a load would be refused now (status `idle` or `failed` only): `SUBSCRIPTION_FROZEN`, `TRIAL_EXPIRED` or `tenant_not_empty`. `null` when it would not be. The page shows one line from it, and no Load button.
+  - `load_refusal` says why a load would be refused now (status `idle` or `failed` only): `SUBSCRIPTION_FROZEN`, `TRIAL_EXPIRED` or `tenant_not_empty`. `null` when it would not be. The page shows that reason, and no Load button.
+  - `blocking` lists what stands in the way when `load_refusal` is `tenant_not_empty`: `{ table, count }` for each table, where `count` is how many rows are outside the starting state (every row of a table that must be empty; the extras where activation leaves rows, such as companies beyond the first). `null` otherwise, and always on `?view=banner`.
   - `created_since_load` counts the rows created after `loaded_at` in the business and configuration tables, the companies and the documents (every library). Users are not counted: a reset keeps real users. `null` unless `status = loaded`.
   - `loaded_by_name` is the name of the user who started the last load, or their e-mail address when they have no name.
   - `workspace_name` is the name an Administrator types to confirm a reset (the workspace slug when the name is empty).

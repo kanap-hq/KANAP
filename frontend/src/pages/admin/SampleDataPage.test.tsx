@@ -56,6 +56,7 @@ const BASE = {
   reset_failed_at: null,
   can_load: true,
   load_refusal: null,
+  blocking: null,
   created_since_load: null,
   workspace_name: 'Fromage & Co',
   loaded_by_name: null,
@@ -144,6 +145,30 @@ describe('SampleDataPage', () => {
     renderPage();
 
     expect(await screen.findByText(/This workspace already holds data/)).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Load sample data' })).not.toBeInTheDocument();
+  });
+
+  it('lists what blocks a load, with a count and a link to each list', async () => {
+    (apiClient.get as any).mockResolvedValue({
+      ...BASE,
+      can_load: false,
+      load_refusal: 'tenant_not_empty',
+      blocking: [
+        { table: 'applications', count: 4 },
+        { table: 'suppliers', count: 1 },
+        { table: 'not_a_known_table', count: 2 },
+      ],
+    });
+    renderPage();
+
+    expect(await screen.findByText(/These stand in the way/)).toBeInTheDocument();
+    const applications = screen.getByRole('link', { name: 'Applications (4)' });
+    expect(applications).toHaveAttribute('href', '/it/applications');
+    const suppliers = screen.getByRole('link', { name: 'Suppliers (1)' });
+    expect(suppliers).toHaveAttribute('href', '/master-data/suppliers');
+    expect(screen.getByText('not_a_known_table (2)')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /not_a_known_table/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load sample data' })).not.toBeInTheDocument();
   });
 

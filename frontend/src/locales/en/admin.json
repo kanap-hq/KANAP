@@ -1673,6 +1673,8 @@
     "title": "Sample data",
     "intro": "Explore KANAP with Fromage & Co, a fictional cheese maker. Sample data can be loaded into an empty workspace, and erased afterwards from this page.",
     "notEmpty": "Sample data can only be loaded into an empty workspace. This workspace already holds data.",
+    "blockingLead": "These stand in the way:",
+    "blockingItem": "{{label}} ({{count}})",
     "loadRefusal": {
       "SUBSCRIPTION_FROZEN": "Sample data cannot be loaded while the subscription is frozen.",
       "TRIAL_EXPIRED": "Sample data cannot be loaded once the trial has ended."

@@ -44,9 +44,9 @@ What a new workspace creates for you (its first company, the default chart of ac
 
 The page follows the load step by step (for example "Step 4 of 21: charts of accounts") and the status changes to **Loaded** when it finishes. The status strip then shows when the data was loaded and by whom. Everything you see in KANAP refreshes with the new data.
 
-**If a load is not possible**, the page shows no **Load sample data** button. One line explains why:
+**If a load is not possible**, the page shows no **Load sample data** button. It says why:
 
-- the workspace already holds data
+- the workspace already holds data. The page then lists each kind of object that stands in the way, with how many there are and a link to its list, for example **Applications (4)**, **Suppliers (1)**. Remove them to load the sample data, or keep working without it.
 - the subscription is frozen
 - the trial has ended
 
