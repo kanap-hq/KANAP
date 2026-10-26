@@ -2,7 +2,8 @@ import React from 'react';
 import { Box, Button, MenuItem, Stack, TextField } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import UserSelect from '../fields/UserSelect';
-import { formatUserOption, type UserOption } from '../fields/userLookup';
+import type { UserOption } from '../fields/userLookup';
+import { formatUserName } from '../../utils/userDisplay';
 import { accessLevelLabel, type DataAccessLevel } from './dataAccess';
 
 type Props = {
@@ -23,7 +24,7 @@ export default function AccessPersonAdd({ onAdd, busy = false }: Props) {
 
   const add = () => {
     if (!person) return;
-    void Promise.resolve(onAdd(person.id, access, formatUserOption(person))).then((saved) => {
+    void Promise.resolve(onAdd(person.id, access, formatUserName(person) || person.email || '')).then((saved) => {
       if (saved === false) return;
       setPerson(null);
       setAccess('read');
