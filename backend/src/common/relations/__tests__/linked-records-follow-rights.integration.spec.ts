@@ -45,11 +45,12 @@ type Harness = {
   incidents: any;
   projectsController: any;
   requestsController: any;
+  documentMutations: any;
 };
 
 /**
  * A: portfolio and tasks, no IT, no contracts. B: applications only. C: knowledge only.
- * D: incidents only. E: Business Contributor (projects, requests, tasks, applications; no IT).
+ * D: incidents only. E: Business Contributor (projects, requests, tasks, applications, knowledge; no IT).
  * P: projects only. Q: requests only. U: users reader. Full: Administrator.
  */
 type Profile = 'a' | 'b' | 'c' | 'd' | 'e' | 'p' | 'q' | 'u' | 'full';
@@ -59,7 +60,7 @@ const PERMISSIONS: Record<Exclude<Profile, 'full'>, Record<string, string>> = {
   b: { applications: 'reader' },
   c: { knowledge: 'reader' },
   d: { incidents: 'reader' },
-  e: { portfolio_projects: 'contributor', portfolio_requests: 'contributor', tasks: 'contributor', applications: 'reader' },
+  e: { portfolio_projects: 'contributor', portfolio_requests: 'contributor', tasks: 'contributor', applications: 'reader', knowledge: 'reader' },
   p: { portfolio_projects: 'reader' },
   q: { portfolio_requests: 'reader' },
   u: { users: 'reader' },
@@ -106,6 +107,7 @@ async function createHarness(): Promise<Harness> {
   const { IncidentsService } = require('../../../incidents/services/incidents.service');
   const { PortfolioProjectsController } = require('../../../portfolio/portfolio-projects.controller');
   const { PortfolioRequestsController } = require('../../../portfolio/portfolio-requests.controller');
+  const { AiDocumentMutationSupportService } = require('../../../ai/mutation/ai-document-mutation-support.service');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   // The surface checks (tenant AI settings, provider, subscription) are not what this spec tests.
   app.get(AiPolicyService).assertSurfaceAccess = async () => undefined;
@@ -121,6 +123,7 @@ async function createHarness(): Promise<Harness> {
     incidents: app.get(IncidentsService),
     projectsController: app.get(PortfolioProjectsController),
     requestsController: app.get(PortfolioRequestsController),
+    documentMutations: app.get(AiDocumentMutationSupportService),
   };
 }
 
@@ -462,6 +465,48 @@ async function testDeploymentsException(h: Harness, runner: QueryRunner, s: Seed
   has(b, [ASSET], 'B, application context');
 }
 
+// Review: the knowledge context, the document filters and writes, the list searches.
+async function testKnowledgeContextAndSearches(h: Harness, runner: QueryRunner, s: Seed) {
+  // The knowledge tab and Plaid's context name the record a document comes through only to a
+  // reader of its module, inside a Business Contributor's participation (E reads knowledge).
+  const eTab = await h.knowledge.getKnowledgeContextForEntity('projects', s.project, { manager: runner.manager, userId: s.users.e });
+  assert.ok(eTab.groups.some((group: any) => group.key === 'direct'), 'E: the document linked to the project');
+  hasNot(eTab, [ASSET, REQUEST, APP], 'E, project knowledge tab');
+  const fullTab = await h.knowledge.getKnowledgeContextForEntity('projects', s.project, { manager: runner.manager, userId: s.users.full });
+  has(fullTab, [ASSET, REQUEST, APP], 'full, project knowledge tab');
+  // Plaid's project context carries the same groups (`testProjectContext` checks E's whole context).
+  const eContext = await h.entities.getEntityContext(ctx(runner, s, 'e'), { entity_type: 'projects', entity_id: 'PRJ-1' });
+  assert.ok(eContext.knowledge.groups.length > 0, 'E: the project context lists its knowledge');
+
+  // A document's linked-name filters follow the module: refused to Plaid, ignored by the list.
+  const cFilter = await h.executor.execute(ctx(runner, s, 'c'), { entity_type: 'documents', filters: { linked_application: { op: 'contains', value: 'Linked' } } });
+  assert.equal(cFilter.status, 'invalid_filter', 'C: documents do not filter on applications');
+  const noMatch = { filters: { linked_application: { filterType: 'text', type: 'contains', filter: 'no such application' } } };
+  const cList = await h.knowledge.list(noMatch, { manager: runner.manager, tenantId: s.tenantId, userId: s.users.c });
+  assert.equal(cList.total, 1, 'C: the application filter is ignored');
+  const fullList = await h.knowledge.list(noMatch, { manager: runner.manager, tenantId: s.tenantId, userId: s.users.full });
+  assert.equal(fullList.total, 0, 'full: the application filter applies');
+
+  // A Plaid write never links (nor replaces) a family the person does not read.
+  await rejects(runner, () => h.documentMutations.resolveRelationTargets(ctx(runner, s, 'c'), { applications: [APP] }), /cannot link applications/, 'C: no application link');
+  const fullTargets = await h.documentMutations.resolveRelationTargets(ctx(runner, s, 'full'), { applications: [APP] });
+  assert.equal(fullTargets.applications.length, 1, 'full: the application resolves');
+
+  // The task and incident lists match a linked name only in the modules the person reads.
+  const { linkedReadsFromContext } = require('../linked-reads');
+  const taskOpts = (profile: Profile) => ({ manager: runner.manager, tenantId: s.tenantId, linkedReads: linkedReadsFromContext(tenantRequest(runner, s, profile)) });
+  const byName = { filters: { related_object_name: { filterType: 'text', type: 'contains', filter: CONTRACT } } };
+  assert.equal((await h.tasks.listAllTasks({ q: CONTRACT }, taskOpts('a'))).total, 0, 'A: the search does not match the contract');
+  assert.equal((await h.tasks.listAllTasks(byName, taskOpts('a'))).total, 0, 'A: the related filter does not match the contract');
+  assert.equal((await h.tasks.listIds({ q: CONTRACT }, taskOpts('a'))).total, 0, 'A: nor the navigation ids');
+  assert.equal((await h.tasks.listAllTasks({ q: CONTRACT }, taskOpts('full'))).total, 1, 'full: the search matches the contract');
+  assert.equal((await h.tasks.listAllTasks(byName, taskOpts('full'))).total, 1, 'full: the related filter matches the contract');
+  const incidentOpts = { manager: runner.manager, tenantId: s.tenantId, viewer: { userId: s.users.d, isAdmin: false, canReadIncidents: true, canContributeIncidents: false } };
+  assert.equal((await h.incidents.list({ q: ASSET }, { ...incidentOpts, technologies: false, applications: false })).total, 0, 'D: the search does not match the server');
+  assert.equal((await h.incidents.list({ q: APP }, { ...incidentOpts, technologies: false, applications: false })).total, 0, 'D: nor the application');
+  assert.equal((await h.incidents.list({ q: ASSET }, { ...incidentOpts, technologies: true, applications: true })).total, 1, 'IT reader: the search matches the server');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -480,6 +525,7 @@ async function run() {
       await testTaskScreens(harness, runner, s);
       await testPortfolioRoutes(harness, runner, s);
       await testDeploymentsException(harness, runner, s);
+      await testKnowledgeContextAndSearches(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
