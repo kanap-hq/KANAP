@@ -29,6 +29,7 @@ import type { ServerOption } from '../../components/fields/serverOptionRender';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
+import { connectionDeleteMessage } from './connectionDeleteMessage';
 
 type TabKey = 'overview' | 'path';
 const TAB_KEYS: TabKey[] = ['overview', 'path'];
@@ -1093,9 +1094,7 @@ export default function ConnectionWorkspacePage() {
       >
         <Stack spacing={1}>
           <Box sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
-            {linkedInterfaces.length > 0
-              ? t('workspace.connection.deleteDialog.messageWithBindings', { count: linkedInterfaces.length })
-              : t('workspace.connection.deleteDialog.message')}
+            {connectionDeleteMessage(t, legs.length, linkedInterfaces.length)}
           </Box>
         </Stack>
       </KanapDialog>

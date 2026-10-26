@@ -85,7 +85,7 @@ Der Reiter [Netzwerk](assets.md#network) jedes Mitglieds listet die Verbindungen
 
 Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Er hat zwei Reiter: **Übersicht** und **Pfad**. Die Eigenschaftsleiste rechts enthält **Lebenszyklus**, **Topologie**, **Risikomodus**, **Kritikalität**, **Datenklasse**, **Enthält PII** und **Erstellt am**. Änderungen werden automatisch gespeichert.
 
-**Löschen**, ein Papierkorbsymbol in der Kopfzeile, löscht die Verbindung nach einer Bestätigung (`infrastructure:member`). Die Bestätigung zählt die Schnittstellen-Bindungen, von denen sie gelöst wird. Die Schnittstellen selbst bleiben.
+**Löschen**, ein Papierkorbsymbol in der Kopfzeile, löscht die Verbindung nach einer Bestätigung (`infrastructure:member`). Die Bestätigung zählt die Hops, die mit ihr gelöscht werden, und die Schnittstellen-Bindungen, von denen sie gelöst wird. Die Schnittstellen selbst bleiben.
 
 ### Übersicht
 

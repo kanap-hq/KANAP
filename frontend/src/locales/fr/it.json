@@ -2711,7 +2711,12 @@
         "title": "Supprimer la connexion ?",
         "message": "Cette connexion sera définitivement supprimée.",
         "messageWithBindings_one": "Cette connexion sera définitivement supprimée et détachée de {{count}} liaison d'interface. Les interfaces elles-mêmes ne sont pas supprimées.",
-        "messageWithBindings_other": "Cette connexion sera définitivement supprimée et détachée de {{count}} liaisons d'interface. Les interfaces elles-mêmes ne sont pas supprimées."
+        "messageWithBindings_other": "Cette connexion sera définitivement supprimée et détachée de {{count}} liaisons d'interface. Les interfaces elles-mêmes ne sont pas supprimées.",
+        "hops_one": "son {{count}} saut",
+        "hops_other": "ses {{count}} sauts",
+        "messageWithHops": "Cette connexion sera définitivement supprimée, ainsi que {{hops}}.",
+        "messageWithBindingsAndHops_one": "Cette connexion sera définitivement supprimée, ainsi que {{hops}}, et détachée de {{count}} liaison d'interface. Les interfaces elles-mêmes ne sont pas supprimées.",
+        "messageWithBindingsAndHops_other": "Cette connexion sera définitivement supprimée, ainsi que {{hops}}, et détachée de {{count}} liaisons d'interface. Les interfaces elles-mêmes ne sont pas supprimées."
       },
       "topologyDialog": {
         "title": "Changer la topologie ?",

@@ -2711,7 +2711,12 @@
         "title": "Delete connection?",
         "message": "This will permanently delete this connection.",
         "messageWithBindings_one": "This will permanently delete this connection and unlink it from {{count}} interface binding. The interfaces themselves are not deleted.",
-        "messageWithBindings_other": "This will permanently delete this connection and unlink it from {{count}} interface bindings. The interfaces themselves are not deleted."
+        "messageWithBindings_other": "This will permanently delete this connection and unlink it from {{count}} interface bindings. The interfaces themselves are not deleted.",
+        "hops_one": "its {{count}} hop",
+        "hops_other": "its {{count}} hops",
+        "messageWithHops": "This will permanently delete this connection and {{hops}}.",
+        "messageWithBindingsAndHops_one": "This will permanently delete this connection and {{hops}}, and unlink it from {{count}} interface binding. The interfaces themselves are not deleted.",
+        "messageWithBindingsAndHops_other": "This will permanently delete this connection and {{hops}}, and unlink it from {{count}} interface bindings. The interfaces themselves are not deleted."
       },
       "topologyDialog": {
         "title": "Change topology?",

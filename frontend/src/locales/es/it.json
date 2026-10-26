@@ -2711,7 +2711,12 @@
         "title": "¿Eliminar la conexión?",
         "message": "Esta conexión se eliminará de forma permanente.",
         "messageWithBindings_one": "Esta conexión se eliminará de forma permanente y se desvinculará de {{count}} enlace de interfaz. Las interfaces en sí no se eliminan.",
-        "messageWithBindings_other": "Esta conexión se eliminará de forma permanente y se desvinculará de {{count}} enlaces de interfaz. Las interfaces en sí no se eliminan."
+        "messageWithBindings_other": "Esta conexión se eliminará de forma permanente y se desvinculará de {{count}} enlaces de interfaz. Las interfaces en sí no se eliminan.",
+        "hops_one": "su {{count}} salto",
+        "hops_other": "sus {{count}} saltos",
+        "messageWithHops": "Esta conexión se eliminará de forma permanente, junto con {{hops}}.",
+        "messageWithBindingsAndHops_one": "Esta conexión se eliminará de forma permanente, junto con {{hops}}, y se desvinculará de {{count}} enlace de interfaz. Las interfaces en sí no se eliminan.",
+        "messageWithBindingsAndHops_other": "Esta conexión se eliminará de forma permanente, junto con {{hops}}, y se desvinculará de {{count}} enlaces de interfaz. Las interfaces en sí no se eliminan."
       },
       "topologyDialog": {
         "title": "¿Cambiar la topología?",

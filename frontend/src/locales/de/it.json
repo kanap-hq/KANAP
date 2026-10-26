@@ -2711,7 +2711,12 @@
         "title": "Verbindung löschen?",
         "message": "Diese Verbindung wird dauerhaft gelöscht.",
         "messageWithBindings_one": "Diese Verbindung wird dauerhaft gelöscht und von {{count}} Schnittstellen-Bindung getrennt. Die Schnittstellen selbst werden nicht gelöscht.",
-        "messageWithBindings_other": "Diese Verbindung wird dauerhaft gelöscht und von {{count}} Schnittstellen-Bindungen getrennt. Die Schnittstellen selbst werden nicht gelöscht."
+        "messageWithBindings_other": "Diese Verbindung wird dauerhaft gelöscht und von {{count}} Schnittstellen-Bindungen getrennt. Die Schnittstellen selbst werden nicht gelöscht.",
+        "hops_one": "ihrem {{count}} Hop",
+        "hops_other": "ihren {{count}} Hops",
+        "messageWithHops": "Diese Verbindung wird dauerhaft gelöscht, zusammen mit {{hops}}.",
+        "messageWithBindingsAndHops_one": "Diese Verbindung wird dauerhaft gelöscht, zusammen mit {{hops}}, und von {{count}} Schnittstellen-Bindung getrennt. Die Schnittstellen selbst werden nicht gelöscht.",
+        "messageWithBindingsAndHops_other": "Diese Verbindung wird dauerhaft gelöscht, zusammen mit {{hops}}, und von {{count}} Schnittstellen-Bindungen getrennt. Die Schnittstellen selbst werden nicht gelöscht."
       },
       "topologyDialog": {
         "title": "Topologie ändern?",

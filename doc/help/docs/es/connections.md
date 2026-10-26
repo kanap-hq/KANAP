@@ -85,7 +85,7 @@ La pestaña [Red](assets.md#network) de cada miembro lista las conexiones de sus
 
 Haga clic en una fila para abrir el espacio de trabajo. Tiene dos pestañas: **Vista general** y **Ruta**. El panel de propiedades de la derecha contiene **Ciclo de vida**, **Topología**, **Modo de riesgo**, **Criticidad**, **Clasificación de datos**, **Contiene PII** y **Creado el**. Los cambios se guardan automáticamente.
 
-**Eliminar**, un icono de papelera en el encabezado, elimina la conexión tras una confirmación (`infrastructure:member`). La confirmación cuenta los enlaces de interfaz de los que se desvincula. Las interfaces se conservan.
+**Eliminar**, un icono de papelera en el encabezado, elimina la conexión tras una confirmación (`infrastructure:member`). La confirmación cuenta los saltos que se eliminan con ella y los enlaces de interfaz de los que se desvincula. Las interfaces se conservan.
 
 ### Vista general
 
