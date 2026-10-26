@@ -29,6 +29,7 @@ import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useFreezeState } from '../../hooks/useFreezeState';
 import { useLocale } from '../../i18n/useLocale';
 import { AllocationRuleResolution, fetchAllocationRule } from '../../services/allocationRules';
+import { allocationMethodLabel } from '../../utils/allocationLabels';
 import {
   AllocationsPart,
   AmountsPart,
@@ -262,8 +263,8 @@ export default function CopyBudgetPage() {
     switch (part.action) {
       case 'copy': {
         // A destination that follows another method takes the source's: an allocation without rows typed by hand counts as empty.
-        const replaced = part.destinationMethod != null && part.destinationMethod !== part.resultMethod && part.destinationMethodLabel;
-        if (replaced) return { text: t(done ? 'operations.copyBudget.status.replaced' : 'operations.copyBudget.status.replaces', { method: part.destinationMethodLabel }), tone: 'copy' };
+        const replaced = part.destinationMethod != null && part.destinationMethod !== part.resultMethod;
+        if (replaced) return { text: t(done ? 'operations.copyBudget.status.replaced' : 'operations.copyBudget.status.replaces', { method: allocationMethodLabel(t, part.destinationMethod) }), tone: 'copy' };
         return { text: t(done ? 'operations.copyBudget.status.copied' : 'operations.copyBudget.status.toCopy'), tone: 'copy' };
       }
       case 'skip_missing_source_version': return { text: t('operations.copyBudget.status.noSource', { year: sourceYear }), tone: 'skip' };
@@ -457,19 +458,19 @@ export default function CopyBudgetPage() {
           colId: 'allocationSource',
           headerName: t('operations.copyBudget.allocationSource', { year: sourceYear }),
           width: 170,
-          valueGetter: (p) => method((part) => part.sourceMethodLabel)(p.data),
+          valueGetter: (p) => method((part) => allocationMethodLabel(t, part.sourceMethod))(p.data),
         },
         {
           colId: 'allocationCurrent',
           headerName: t('operations.copyBudget.allocationCurrent', { year: destinationYear }),
           width: 190,
-          valueGetter: (p) => method((part) => part.destinationMethodLabel)(p.data),
+          valueGetter: (p) => method((part) => allocationMethodLabel(t, part.destinationMethod))(p.data),
         },
         {
           colId: 'allocationAfter',
           headerName: t('operations.copyBudget.allocationAfter', { year: destinationYear }),
           width: 210,
-          valueGetter: (p) => method((part) => part.resultMethodLabel)(p.data),
+          valueGetter: (p) => method((part) => allocationMethodLabel(t, part.resultMethod))(p.data),
         },
         {
           colId: 'allocationsStatus',

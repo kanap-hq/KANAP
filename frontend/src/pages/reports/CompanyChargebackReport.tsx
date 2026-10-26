@@ -34,6 +34,7 @@ import { formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 import { formatCurrency as formatMoney } from '../../i18n/formatters';
 import { useTranslation } from 'react-i18next';
+import { allocationMethodLabel, chargebackDepartmentLabel } from '../../utils/allocationLabels';
 import { allocationWarningKey, allocationWarningText, amountFxMissingOf, isAmountFxMissingWarning, type ReportWarning } from '../../utils/allocationWarnings';
 import { useAuth } from '../../auth/AuthContext';
 import { chargebackCompanyIds } from '../../auth/dataAccess';
@@ -67,7 +68,7 @@ function baseFormatCount(value: number | null | undefined, locale: string): stri
 
 type CompanyChargebackDepartmentRow = {
   departmentId: string | null;
-  departmentName: string;
+  departmentName: string | null;
   amount: number;
   amountRaw: number;
   sharePct: number | null;
@@ -83,7 +84,6 @@ type CompanyChargebackItemRow = {
   nature?: 'opex' | 'capex' | null;
   itemName: string;
   allocationMethod: string;
-  allocationMethodLabel: string;
   amount: number;
   amountRaw: number;
   sharePct: number | null;
@@ -95,7 +95,7 @@ type CompanyChargebackItemRow = {
   readable?: boolean;
   payingCompanyName?: string | null;
   allocationPct?: number | null;
-  departments?: string[];
+  departments?: Array<string | null>;
 };
 
 type CompanyChargebackSummary = {
@@ -297,7 +297,13 @@ export default function CompanyChargebackReport() {
   };
 
   const departmentColumns = useMemo<ColDef[]>(() => [
-    { field: 'departmentName', headerName: t('reports.columns.department'), flex: 1, minWidth: 200 },
+    {
+      field: 'departmentName',
+      headerName: t('reports.columns.department'),
+      flex: 1,
+      minWidth: 200,
+      valueGetter: (params) => chargebackDepartmentLabel(t, params.data?.departmentId, params.data?.departmentName),
+    },
     {
       field: 'amount',
       headerName: t('reports.columns.metricAmount', { metric: metricLabel }),
@@ -326,7 +332,7 @@ export default function CompanyChargebackReport() {
       type: 'rightAligned',
       valueFormatter: (params) => formatNumber(params.value),
     },
-  ], [formatCount, formatNumber, formatShare, metricLabel]);
+  ], [formatCount, formatNumber, formatShare, metricLabel, t]);
 
   const itemColumns = useMemo<ColDef[]>(() => [
     {
@@ -339,7 +345,12 @@ export default function CompanyChargebackReport() {
       cellRendererParams: { newTab: true, getHref: (row: Partial<CompanyChargebackItemRow>) => itemHref(row.nature ?? scope, row.itemId, row.itemNumber) },
     },
     ...(limitedReport ? [{ field: 'payingCompanyName', headerName: t('reports.columns.payer'), minWidth: 160 } as ColDef] : []),
-    { field: 'allocationMethodLabel', headerName: t('reports.columns.allocationMethod'), minWidth: 180 },
+    {
+      colId: 'allocationMethod',
+      headerName: t('reports.columns.allocationMethod'),
+      minWidth: 180,
+      valueGetter: (params) => allocationMethodLabel(t, params.data?.allocationMethod),
+    },
     ...(limitedReport ? [
       {
         field: 'allocationPct',
@@ -352,7 +363,9 @@ export default function CompanyChargebackReport() {
         colId: 'departments',
         headerName: t('reports.columns.department'),
         minWidth: 160,
-        valueGetter: (params: any) => (params.data?.departments ?? []).join(', '),
+        valueGetter: (params: any) => (params.data?.departments ?? [])
+          .map((name: string | null) => (name?.trim() ? name : t('ops:reports.shared.unknownDepartment')))
+          .join(', '),
       } as ColDef,
     ] : []),
     {
@@ -369,11 +382,14 @@ export default function CompanyChargebackReport() {
       type: 'rightAligned',
       valueFormatter: (params) => formatShare(params.value, 2),
     },
-  ], [formatNumber, formatShare, limitedReport, metricLabel, scope]);
+  ], [formatNumber, formatShare, limitedReport, metricLabel, scope, t]);
 
   const chartData = useMemo(() => {
-    return departments.map((row: CompanyChargebackDepartmentRow) => ({ label: row.departmentName, value: row.amount }));
-  }, [departments]);
+    return departments.map((row: CompanyChargebackDepartmentRow) => ({
+      label: chargebackDepartmentLabel(t, row.departmentId, row.departmentName),
+      value: row.amount,
+    }));
+  }, [departments, t]);
 
   const itemsPinnedBottom = useMemo(() => {
     if (!data) return [];
@@ -382,7 +398,6 @@ export default function CompanyChargebackReport() {
     return [{
       itemName: t('reports.columns.total'),
       allocationMethod: '',
-      allocationMethodLabel: '',
       amount: data.itemsTotal,
       amountRaw: data.itemsTotalRaw,
       sharePct: share != null ? Math.round(share * 100) / 100 : null,

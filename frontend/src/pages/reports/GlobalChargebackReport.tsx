@@ -32,6 +32,7 @@ import { formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 import { formatCurrency as formatMoney } from '../../i18n/formatters';
 import { useTranslation } from 'react-i18next';
+import { chargebackDepartmentLabel } from '../../utils/allocationLabels';
 import { allocationWarningKey, allocationWarningText, amountFxMissingOf, isAmountFxMissingWarning, type ReportWarning } from '../../utils/allocationWarnings';
 import { chargebackKpiTotals } from './chargebackKpiTotals';
 
@@ -191,10 +192,10 @@ export default function GlobalChargebackReport() {
     const rows: GlobalChargebackDetailedRow[] = data?.detailed ?? [];
     return rows.map((row: GlobalChargebackDetailedRow) => ({
       ...row,
-      departmentDisplay: row.departmentName ?? t('reports.globalChargeback.commonCosts'),
+      departmentDisplay: chargebackDepartmentLabel(t, row.departmentId, row.departmentName),
       share: totalAmount > 0 ? (row.amount / totalAmount) * 100 : null,
     }));
-  }, [data?.detailed, totalAmount]);
+  }, [data?.detailed, t, totalAmount]);
 
   const companyRows = useMemo(() => {
     const rows: GlobalChargebackCompanyRow[] = data?.companies ?? [];
