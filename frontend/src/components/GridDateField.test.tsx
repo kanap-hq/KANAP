@@ -34,6 +34,8 @@ describe('GridDateField', () => {
     expect(input.value).toBe('15/10/2026');
     expect(input.placeholder).toBe('jj/mm/aaaa');
     fireEvent.change(input, { target: { value: '20102026' } });
+    expect(onDateChange).not.toHaveBeenCalled();
+    fireEvent.blur(input);
     expect(onDateChange).toHaveBeenCalledTimes(1);
     const emitted = onDateChange.mock.calls[0][0] as Date;
     expect([emitted.getFullYear(), emitted.getMonth(), emitted.getDate(), emitted.getHours()]).toEqual([2026, 9, 20, 0]);

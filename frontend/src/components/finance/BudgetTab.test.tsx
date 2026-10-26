@@ -1884,8 +1884,10 @@ describe('BudgetTab keyboard run through the lines', () => {
     // The line kept its row: nothing was drawn again under the focus.
     expect(screen.getAllByTestId('line-row')[1]).toBe(row);
 
-    // A date typed in From is written as soon as it is whole; the focus stays, Tab goes to To.
+    // A date typed in From is written on Enter, once; the focus stays, Tab goes to To.
     fireEvent.change(from, { target: { value: '01/04/2026' } });
+    expect(bulkCalls()).toHaveLength(1);
+    fireEvent.keyDown(from, { key: 'Enter' });
     await waitFor(() => expect(bulkCalls()).toHaveLength(2));
     await waitFor(() => expect(amountLoads()).toBe(loads + 2));
     await settle();
@@ -1896,6 +1898,8 @@ describe('BudgetTab keyboard run through the lines', () => {
     tab();
     expect(focusName()).toBe('Calendar');
     expect(screen.getAllByTestId('line-row')[1]).toBe(row);
+    await settle();
+    expect(bulkCalls()).toHaveLength(2);
   });
 
   it('a unit changed with the keyboard on a saved line is written, and the focus stays on Unit; from the last field, Tab reaches the next line', async () => {

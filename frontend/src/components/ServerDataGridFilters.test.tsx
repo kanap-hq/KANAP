@@ -456,6 +456,7 @@ describe('ServerDataGrid column filters follow the grid model', () => {
     expect(input.placeholder).toBe('labels.datePlaceholder');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: '15102026' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
     await quiet();
     expect(grid.api().getFilterModel().due).toMatchObject({ filterType: 'date', type: 'equals', dateFrom: '2026-10-15 00:00:00' });
     expect(JSON.parse(String(lastRequestFilters())).due).toMatchObject({ dateFrom: '2026-10-15 00:00:00' });
