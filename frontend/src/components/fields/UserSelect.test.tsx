@@ -41,6 +41,12 @@ function open(input: HTMLElement) {
   fireEvent.keyDown(input, { key: 'ArrowDown' });
 }
 
+function keyWarnings(spy: { mock: { calls: unknown[][] } }) {
+  return spy.mock.calls.filter((args) => args.some((arg) => (
+    typeof arg === 'string' && arg.includes('prop is being spread into JSX')
+  )));
+}
+
 describe('person pickers with two accounts of one name', () => {
   beforeEach(() => {
     apiGet.mockReset();
@@ -53,6 +59,27 @@ describe('person pickers with two accounts of one name', () => {
       }
       return { data: { items: PEOPLE, has_more: false } };
     });
+  });
+
+  // First in the file: React reports a spread `key` once per props shape, for the whole process.
+  it('renders UserSelect options without a key warning', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    wrap(<UserSelect value={null} onChange={() => undefined} />);
+    open(screen.getByRole('combobox'));
+    const listbox = await screen.findByRole('listbox');
+    await waitFor(() => expect(within(listbox).getAllByRole('option').length).toBeGreaterThan(0));
+    expect(keyWarnings(errorSpy)).toEqual([]);
+    errorSpy.mockRestore();
+  });
+
+  it('renders UserMultiSelect options without a key warning', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    wrap(<UserMultiSelect value={[]} onChange={() => undefined} />);
+    open(screen.getByRole('combobox'));
+    const listbox = await screen.findByRole('listbox');
+    await waitFor(() => expect(within(listbox).getAllByRole('option').length).toBeGreaterThan(0));
+    expect(keyWarnings(errorSpy)).toEqual([]);
+    errorSpy.mockRestore();
   });
 
   it('lists the twins by email, me first with its suffix, and others by name', async () => {
