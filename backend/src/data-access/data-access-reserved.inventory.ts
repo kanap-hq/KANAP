@@ -143,7 +143,8 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
     file: 'master-data/master-data-operations.controller.ts',
     controller: 'MasterDataOperationsController',
-    reserved: ['copy'],
+    // The preview of the copy as a file is reserved with the copy.
+    reserved: ['copy', 'exportCopy'],
     allowed: {},
   },
   {

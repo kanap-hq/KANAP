@@ -32,6 +32,7 @@ import {
 import { useFreezeState } from '../../../hooks/useFreezeState';
 import { useAuth } from '../../../auth/AuthContext';
 import { useLocale } from '../../../i18n/useLocale';
+import { masterDataCopyName, masterDataCopyStatus } from './masterDataCopyRows';
 
 const YEARS_SPAN = 7;
 const COMPANY_METRIC_KEYS: { value: MasterDataMetric; labelKey: string }[] = [
@@ -59,22 +60,15 @@ export function copyEntityLabel(
   t: (key: string) => string,
   row: { entityType?: string | null; entityName?: string | null } | null | undefined,
 ): string {
-  const name = row?.entityName?.trim() ?? '';
-  if (name) return name;
-  if (row?.entityType === 'department') return t('ops:reports.shared.unknownDepartment');
-  if (row?.entityType === 'company') return t('ops:reports.shared.unknownCompany');
-  return '';
+  return masterDataCopyName(row, {
+    unknownCompany: t('ops:reports.shared.unknownCompany'),
+    unknownDepartment: t('ops:reports.shared.unknownDepartment'),
+  });
 }
-
-const COPY_STATUS_KEYS: Record<string, string> = {
-  no_data_for_source_year: 'admin.copy.status.noDataForSourceYear',
-  failed_to_copy_metrics: 'admin.copy.status.failedToCopyMetrics',
-};
 
 /** The status of a skipped copy row, worded from the locale files. */
 export function copyStatusLabel(t: (key: string) => string, reason: string | null | undefined): string {
-  const key = reason ? COPY_STATUS_KEYS[reason] : undefined;
-  return t(key ?? 'admin.copy.status.skipped');
+  return t(`admin.copy.status.${masterDataCopyStatus({ skipped: true, reason })}`);
 }
 
 function formatValue(value: number | null, locale: string, metric: MasterDataMetric) {
@@ -105,6 +99,8 @@ export default function MasterDataCopyPage() {
   const [feedback, setFeedback] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [isProcessing, setIsProcessing] = React.useState<boolean>(false);
   const [hasPreview, setHasPreview] = React.useState<boolean>(false);
+  // The copy ran: the table shows what it did, which the export (a preview) no longer describes.
+  const [copied, setCopied] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     setSelectedScopes((prev) => {
@@ -121,6 +117,7 @@ export default function MasterDataCopyPage() {
     setSummary(null);
     setErrors([]);
     setHasPreview(false);
+    setCopied(false);
     setFeedback(null);
   }, [sourceYear, destinationYear, selectedScopes, companyMetrics]);
 
@@ -134,8 +131,6 @@ export default function MasterDataCopyPage() {
   if (includeCompanies && companiesFrozen) blockedScopes.push('companies');
   if (includeDepartments && departmentsFrozen) blockedScopes.push('departments');
   const hasFrozenBlocking = blockedScopes.length > 0;
-
-  const gridApiRef = React.useRef<any>(null);
 
   const columns = React.useMemo<ColDef[]>(() => [
     {
@@ -198,10 +193,7 @@ export default function MasterDataCopyPage() {
       headerName: t('admin.copy.columns.status'),
       flex: 1,
       minWidth: 200,
-      valueGetter: (params) => {
-        if (params.data?.skipped) return copyStatusLabel(t, params.data.reason);
-        return t('admin.copy.status.readyToCopy');
-      },
+      valueGetter: (params) => (params.data ? t(`admin.copy.status.${masterDataCopyStatus(params.data)}`) : ''),
       cellStyle: (params) => params.data?.skipped ? { color: theme.palette.warning.dark } : { color: theme.palette.success.dark },
     },
   ], [locale, t, theme]);
@@ -239,6 +231,7 @@ export default function MasterDataCopyPage() {
       setSummary(response.summary);
       setErrors(response.errors ?? []);
       setHasPreview(true);
+      setCopied(!dryRun);
       if (!response.success && response.errors.length > 0) {
         setFeedback({ type: 'error', message: t('admin.copy.copyErrors') });
       } else {
@@ -381,7 +374,19 @@ export default function MasterDataCopyPage() {
           </Button>
         </Stack>
       }
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
+      // The preview of these parameters, written by the server (the dry run again): CSV or Excel.
+      tableExport={{
+        url: '/master-data-operations/copy/export',
+        params: {
+          sourceYear,
+          destinationYear,
+          includeCompanies: String(includeCompanies),
+          includeDepartments: String(includeDepartments),
+          companyMetrics: includeCompanies ? companyMetrics.join(',') : '',
+        },
+        fileBase: `master-data-copy-${sourceYear}-${destinationYear}`,
+        disabled: disableActions || copied,
+      }}
     >
       <Stack spacing={2}>
         {hasFrozenBlocking && (
@@ -412,7 +417,6 @@ export default function MasterDataCopyPage() {
               rowData={previewData}
               columnDefs={columns}
               defaultColDef={{ sortable: true, resizable: true }}
-              onGridReady={(event) => { gridApiRef.current = event.api; }}
               domLayout="autoHeight"
               suppressRowClickSelection
             />
