@@ -1810,6 +1810,13 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
     - `{ code: 'turnover_fx_missing', items: [{ companyId, companyName, currency, year }], reportingCurrency }`: a company whose turnover has no rate for the year is left out of the turnover indicators (its row stays in its own currency). The other companies' turnovers are converted. Example: `{ "code": "turnover_fx_missing", "items": [{ "companyId": "…", "companyName": "New York", "currency": "USD", "year": 2026 }], "reportingCurrency": "EUR" }`
     - `{ code: 'amount_fx_missing', items: [{ currency, year, lines }], reportingCurrency }`: a budget line whose currency has no rate for its year is left out of every sum of the report (paid, consumed, departments, items, intercompany flows, KPIs, raw amounts included), so the report balances on what it counts. One warning per report lists every pair with its number of distinct lines. Example: `{ "code": "amount_fx_missing", "items": [{ "currency": "JPY", "year": 2026, "lines": 2 }], "reportingCurrency": "EUR" }`
 
+### Budget report exports
+- GET `/reports/budget/comparison/export?startYear=&endYear=&metrics=budget,landing`
+- GET `/reports/budget/columns-compare/export?selections=2026:budget,2027:budget&yearGrouping=true|false`
+- GET `/reports/budget/top-lines/export?year=&metric=&top=&excludeIds=<line id>,…&excludeAccounts=["<account label>",…]`
+  - Every route also takes the screen's address: `scope=all|opex|capex` (default `all`), `measure=amount|fte` (default `amount`), `costCenter=<id>` (the node and every node below it), `runBuild=run|build|none`, `fte=with`, `analytics=<dimension id>:<value id or none>,…`, plus `format=csv|xlsx`, `language`, `tz`
+  - Requires `budget:reader`, as the aggregate routes. The server rebuilds the screen's request (`spend/reports/shared/reportAggregates.ts`, a byte-identical copy of the frontend file), runs it on the aggregate route's path in the request's transaction, and writes the screen's table (`spend/reports/shared/reportTables.ts`): amounts to the cent, FTE as numbers, shares as fractions. Excel adds a Parameters sheet. A person under data-scoped access gets the figures of their lines, the `X-Data-Access: limited` header and the access line. Years must be in the screen's window (Y-2 to Y+2, Y-1 to Y+1 for the top), columns shown, the top's excluded lines and accounts among those the exclusion pickers offer; anything else is a 400. Recorded as an export with its row count.
+
 ### Disabled Date Semantics (applies to Reporting endpoints)
 - Fiscal year = calendar year.
 - Items contribute through their `disabled_at` year and contribute zero for strictly later years.
