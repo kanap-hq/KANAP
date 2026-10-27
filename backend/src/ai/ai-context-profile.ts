@@ -147,6 +147,7 @@ const FINANCIAL_WRITE_TOOLS: AiToolName[] = [
   'get_entity_detail',
   'prepare_mutation_plan',
   'write_financial_plan',
+  'delete_record',
   'undo_preview',
 ];
 

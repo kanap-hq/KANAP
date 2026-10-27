@@ -6,7 +6,7 @@ import { ConnectionServer } from '../connection-server.entity';
 import { ConnectionProtocol } from '../connection-protocol.entity';
 import { ConnectionLeg } from '../connection-leg.entity';
 import { Asset } from '../../assets/asset.entity';
-import { AuditService } from '../../audit/audit.service';
+import { AuditService, AuditSourceOptions } from '../../audit/audit.service';
 import { BulkDeleteResult } from '../../common/delete.types';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import {
@@ -470,7 +470,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
   /**
    * Delete a connection.
    */
-  async delete(id: string, userId: string | null, opts?: ServiceOpts) {
+  async delete(id: string, userId: string | null, opts?: ServiceOpts & { audit?: AuditSourceOptions }) {
     const mg = opts?.manager ?? this.connRepo.manager;
     const repo = this.getRepo(mg);
     const existing = await repo.findOne({ where: { id } });
@@ -478,7 +478,16 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
     await this.deleteLegsForConnection(id, { manager: mg });
     await repo.delete(id);
     await this.audit.log(
-      { table: 'connections', recordId: id, action: 'delete', before: existing, after: null, userId },
+      {
+        table: 'connections',
+        recordId: id,
+        action: 'delete',
+        before: existing,
+        after: null,
+        userId,
+        source: opts?.audit?.source,
+        sourceRef: opts?.audit?.sourceRef ?? null,
+      },
       { manager: mg },
     );
     return { success: true };

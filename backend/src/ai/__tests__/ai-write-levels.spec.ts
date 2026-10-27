@@ -138,6 +138,10 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
     tasks: { resource: 'tasks', level: 'admin', route: [TasksController, 'bulkDelete'] },
     contacts: { resource: 'contacts', level: 'admin', route: [ContactsController, 'remove'] },
     locations: { resource: 'locations', level: 'member', route: [LocationsController, 'remove'] },
+    spend_items: { resource: 'budget', level: 'admin', route: [BudgetLinesController, 'bulkDelete'] },
+    capex_items: { resource: 'budget', level: 'admin', route: [BudgetLinesController, 'bulkDelete'] },
+    connections: { resource: 'infrastructure', level: 'member', route: [ConnectionsController, 'delete'] },
+    interfaces: { resource: 'applications', level: 'admin', route: [InterfacesController, 'bulkDelete'] },
   },
 };
 
@@ -197,10 +201,16 @@ function testToolRequirements() {
   const relations = aiWriteRequirements('update_entity_relations', ['portfolio_projects', 'portfolio_requests']);
   assert.ok(relations.some((r) => r.resource === 'portfolio_requests' && r.level === 'contributor'));
   assert.deepEqual(aiWriteRequirements('create_business_record', ['portfolio_projects']), [{ resource: 'portfolio_projects', level: 'member' }]);
-  assert.deepEqual(aiWriteRequirements('delete_record', ['tasks', 'contacts', 'locations']), [
+  assert.deepEqual(aiWriteRequirements('delete_record', [
+    'tasks', 'contacts', 'locations', 'spend_items', 'capex_items', 'connections', 'interfaces',
+  ]), [
     { resource: 'tasks', level: 'admin' },
     { resource: 'contacts', level: 'admin' },
     { resource: 'locations', level: 'member' },
+    { resource: 'budget', level: 'admin' },
+    { resource: 'budget', level: 'admin' },
+    { resource: 'infrastructure', level: 'member' },
+    { resource: 'applications', level: 'admin' },
   ]);
   console.log('  tool requirements: OK');
 }

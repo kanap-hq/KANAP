@@ -1029,7 +1029,11 @@ export class AiBusinessRecordMutationSupportService {
     };
   }
 
-  private async resolveRecordReference(
+  /**
+   * The one record a uuid, business reference or exact name names, with the label the screens
+   * show. Shared with the delete of a connection or an interface.
+   */
+  async resolveRecordReference(
     context: AiExecutionContextWithManager,
     entityType: RelationTarget,
     ref: string,

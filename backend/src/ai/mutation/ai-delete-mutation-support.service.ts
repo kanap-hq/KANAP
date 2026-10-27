@@ -1,6 +1,11 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConnectionsService } from '../../connections/services/connections.service';
 import { ContactsService } from '../../contacts/contacts.service';
+import { InterfacesService } from '../../interfaces/services/interfaces.service';
 import { LocationsService } from '../../locations/locations.service';
+import { parseItemRef } from '../../common/resolve-item-id';
+import { BUDGET_LINE_PREFIX, LEGACY_PREFIX, natureAnd, type BudgetNature } from '../../spend/budget-nature';
+import { CapexItemsDeleteService, SpendItemsDeleteService } from '../../spend/spend-items-delete.service';
 import { assertTaskDeletable } from '../../tasks/task-data-access';
 import { originRefusals, TasksDeleteService } from '../../tasks/tasks-delete.service';
 import { RecordInUseException } from '../../common/record-in-use';
@@ -9,11 +14,20 @@ import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager } from '../ai.types';
 import { AiDeleteImpact } from '../ai-write-texts';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
+import { AiBusinessRecordMutationSupportService } from './ai-business-record-mutation-support.service';
 import { AiMasterDataMutationSupportService } from './ai-master-data-mutation-support.service';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 
-/** The families a person may delete one record of, in this lot. Lots 2 and 3 add the others. */
-export const AI_DELETE_ENTITY_TYPES = ['tasks', 'contacts', 'locations'] as const;
+/** The families a person may delete one record of, in this lot. Lot 3 adds the documents. */
+export const AI_DELETE_ENTITY_TYPES = [
+  'tasks',
+  'contacts',
+  'locations',
+  'spend_items',
+  'capex_items',
+  'connections',
+  'interfaces',
+] as const;
 export type AiDeleteEntityType = typeof AI_DELETE_ENTITY_TYPES[number];
 
 export type AiDeleteTarget = {
@@ -29,10 +43,38 @@ export type AiPreparedDelete = {
   impact: AiDeleteImpact;
 };
 
+/** What the person asked besides the record: an interface's bindings may go with it, if they say so. */
+export type AiDeleteOptions = {
+  deleteRelatedBindings?: boolean;
+};
+
 const LABELS: Record<AiDeleteEntityType, string> = {
   tasks: 'Task',
   contacts: 'Contact',
   locations: 'Location',
+  spend_items: 'Budget line',
+  capex_items: 'CAPEX line',
+  connections: 'Connection',
+  interfaces: 'Interface',
+};
+
+/** The object type a task of a line carries (`spend/item-delete-cleanup.ts`). */
+const TASK_OBJECT_TYPE: Record<'spend_items' | 'capex_items', string> = {
+  spend_items: 'spend_item',
+  capex_items: 'capex_item',
+};
+
+/** The families a spend line's links name, with the module that reads them. */
+const SPEND_IMPACT_READS: Readonly<Record<string, string>> = {
+  tasks: 'tasks',
+  request_origins: 'portfolio_requests',
+  requests: 'portfolio_requests',
+  contracts: 'contracts',
+  projects: 'portfolio_projects',
+  applications: 'applications',
+  assets: 'infrastructure',
+  technologies: 'infrastructure',
+  contacts: 'contacts',
 };
 
 /** One ISO timestamp normalized, or null when the row has none. */
@@ -47,23 +89,34 @@ export class AiDeleteMutationSupportService {
   constructor(
     private readonly taskSupport: AiTaskMutationSupportService,
     private readonly masterData: AiMasterDataMutationSupportService,
+    private readonly businessRecords: AiBusinessRecordMutationSupportService,
     private readonly tasksDelete: TasksDeleteService,
     private readonly contacts: ContactsService,
     private readonly locations: LocationsService,
+    private readonly opexDelete: SpendItemsDeleteService,
+    private readonly capexDelete: CapexItemsDeleteService,
+    private readonly connections: ConnectionsService,
+    private readonly interfaces: InterfacesService,
     private readonly policy: AiPolicyService,
   ) {}
 
   /**
    * The record a reference or an exact name names, with the same scope as the screen, and what
    * its delete takes. The screen's refusals run here, before any preview exists: a task that
-   * started a request (409, with what to do) and a task whose budget line or contract the person
-   * may not modify (403, `assertTaskDeletable`).
+   * started a request (409, with what to do), a task whose budget line or contract the person may
+   * not modify (403, `assertTaskDeletable`), a budget line with amounts in a frozen column (409,
+   * `BUDGET_LINE_FROZEN`) and an interface whose bindings stay unless the person asks to delete
+   * them with it (409, `INTERFACE_HAS_BINDINGS`).
    */
   async prepare(
     context: AiExecutionContextWithManager,
     entityType: AiDeleteEntityType,
     ref: string,
+    options: AiDeleteOptions = {},
   ): Promise<AiPreparedDelete> {
+    if (options.deleteRelatedBindings && entityType !== 'interfaces') {
+      throw new BadRequestException('delete_related_bindings applies to interfaces only.');
+    }
     switch (entityType) {
       case 'tasks': {
         const task = await this.taskSupport.resolveTaskSnapshot(context, ref);
@@ -106,6 +159,66 @@ export class AiDeleteMutationSupportService {
             updatedAt: isoTimestamp(found.row.updated_at),
           },
           impact: await this.locationImpact(context, found.id),
+        };
+      }
+      case 'spend_items':
+      case 'capex_items': {
+        const found = await this.resolveSpendLine(context, entityType, ref);
+        // The screen's check before the confirmation, and its refusal before any preview.
+        const checker = entityType === 'spend_items' ? this.opexDelete : this.capexDelete;
+        const refusal = (await checker.deleteCheck([found.id], { manager: context.manager })).refused[0];
+        if (refusal) {
+          const column = String(refusal.params?.column ?? 'a frozen column');
+          const year = refusal.params?.year == null ? '' : ` ${refusal.params.year}`;
+          throw new ConflictException({
+            statusCode: 409,
+            error: 'Conflict',
+            code: refusal.code,
+            message: `This line has amounts in ${column}${year}, a frozen budget column. Unfreeze the column first, or set an end of validity date instead of deleting the line.`,
+            usages: refusal.usages,
+            ...(refusal.params ? { params: refusal.params } : {}),
+          });
+        }
+        return {
+          target: {
+            entityType,
+            id: found.id,
+            ref: found.ref,
+            title: found.title,
+            updatedAt: found.updatedAt,
+          },
+          impact: await this.spendImpact(context, entityType, found.id),
+        };
+      }
+      case 'connections': {
+        const found = await this.businessRecords.resolveRecordReference(context, 'connections', ref);
+        return {
+          target: {
+            entityType,
+            id: found.id,
+            ref: found.ref,
+            title: found.label,
+            updatedAt: isoTimestamp(found.row.updated_at),
+          },
+          impact: await this.connectionImpact(context, found.id),
+        };
+      }
+      case 'interfaces': {
+        const found = await this.businessRecords.resolveRecordReference(context, 'interfaces', ref);
+        const impact = await this.interfaceImpact(context, found.id);
+        const bindings = Number(impact.counts.bindings ?? 0);
+        if (bindings > 0 && options.deleteRelatedBindings !== true) {
+          throw this.interfaceBindingsRefusal(found.label, bindings);
+        }
+        return {
+          target: {
+            entityType,
+            id: found.id,
+            ref: found.ref,
+            title: found.label,
+            updatedAt: isoTimestamp(found.row.updated_at),
+          },
+          impact,
         };
       }
     }
@@ -261,6 +374,253 @@ export class AiDeleteMutationSupportService {
   }
 
   /**
+   * The line a reference names, in the nature of the entity type: `BL-n` its own number,
+   * `OPX-n` an OPEX line's number or legacy number, `CPX-n` a CAPEX line's legacy number, as
+   * `write_financial_plan` reads them; a UUID or an exact title also works. A line of the other
+   * nature reads as missing.
+   */
+  private async resolveSpendLine(
+    context: AiExecutionContextWithManager,
+    entityType: 'spend_items' | 'capex_items',
+    ref: string,
+  ): Promise<{ id: string; ref: string; title: string; updatedAt: string | null }> {
+    const nature: BudgetNature = entityType === 'spend_items' ? 'opex' : 'capex';
+    const normalized = String(ref ?? '').trim();
+    if (!normalized) throw new BadRequestException('Budget line reference is required.');
+    const parsed = parseItemRef(normalized, nature === 'opex' ? 'spend' : 'capex');
+    type Row = { id: string; product_name: string | null; item_number: number | null; updated_at: Date | string | null };
+    let rows: Row[];
+    if (parsed.type === 'uuid') {
+      rows = await context.manager.query(
+        `SELECT id, product_name, item_number, updated_at
+           FROM spend_items
+          WHERE tenant_id = $1${natureAnd(null, nature)} AND id = $2
+          LIMIT 1`,
+        [context.tenantId, parsed.value],
+      );
+    } else {
+      const numbers = this.spendLineNumbers(nature, parsed.prefix, parsed.value);
+      rows = await context.manager.query(
+        `SELECT id, product_name, item_number, updated_at
+           FROM spend_items
+          WHERE tenant_id = $1${natureAnd(null, nature)}
+            AND (LOWER(product_name) = LOWER($2::text) OR item_number = $3 OR legacy_number = $4::text)
+          ORDER BY (LOWER(product_name) = LOWER($2::text)) DESC, product_name
+          LIMIT 6`,
+        [context.tenantId, normalized, numbers.itemNumber, numbers.legacyNumber],
+      );
+    }
+    if (rows.length === 0) throw new NotFoundException(`No ${entityType === 'spend_items' ? 'OPEX' : 'CAPEX'} line found matching "${normalized}".`);
+    const exact = parsed.type === 'uuid'
+      ? rows
+      : rows.filter((row) => String(row.product_name ?? '').toLowerCase() === normalized.toLowerCase());
+    const matches = exact.length > 0 ? exact : rows;
+    if (matches.length > 1) {
+      throw new BadRequestException(`Multiple budget lines matched "${normalized}". Use its BL-n reference.`);
+    }
+    const row = matches[0];
+    return {
+      id: row.id,
+      ref: `${BUDGET_LINE_PREFIX}-${row.item_number}`,
+      title: String(row.product_name || `Untitled ${entityType === 'spend_items' ? 'spend' : 'CAPEX'} item`),
+      updatedAt: isoTimestamp(row.updated_at),
+    };
+  }
+
+  /** The numbers a line reference names, as `write_financial_plan` reads them. */
+  private spendLineNumbers(
+    nature: BudgetNature,
+    prefix: string | undefined,
+    value: number,
+  ): { itemNumber: number; legacyNumber: string | null } {
+    if (!prefix || prefix === BUDGET_LINE_PREFIX) return { itemNumber: value, legacyNumber: null };
+    if (prefix === LEGACY_PREFIX[nature]) {
+      return {
+        itemNumber: nature === 'opex' ? value : -1,
+        legacyNumber: `${LEGACY_PREFIX[nature]}-${value}`,
+      };
+    }
+    return { itemNumber: -1, legacyNumber: null };
+  }
+
+  /**
+   * One statement for what a budget line's delete takes, all under its tenant. Links to a family
+   * the person does not read are summed without naming it; the line's own versions, amounts,
+   * attachments, links and dimension values are part of the budget the deleter reads.
+   */
+  private async spendImpact(
+    context: AiExecutionContextWithManager,
+    entityType: 'spend_items' | 'capex_items',
+    lineId: string,
+  ): Promise<AiDeleteImpact> {
+    const objectType = TASK_OBJECT_TYPE[entityType];
+    const [row] = await context.manager.query(
+      `SELECT
+         (SELECT count(*)::int FROM (
+            SELECT v.id
+              FROM spend_versions v
+              JOIN spend_amounts a ON a.tenant_id = v.tenant_id AND a.version_id = v.id
+             WHERE v.tenant_id = $1 AND v.spend_item_id = $2
+               AND (COALESCE(a.planned, 0) <> 0 OR COALESCE(a.committed, 0) <> 0 OR COALESCE(a.forecast, 0) <> 0
+                 OR COALESCE(a.actual, 0) <> 0 OR COALESCE(a.expected_landing, 0) <> 0)
+          ) x) AS amount_versions,
+         (SELECT count(DISTINCT v.budget_year)::int
+            FROM spend_versions v
+            JOIN spend_amounts a ON a.tenant_id = v.tenant_id AND a.version_id = v.id
+           WHERE v.tenant_id = $1 AND v.spend_item_id = $2
+             AND (COALESCE(a.planned, 0) <> 0 OR COALESCE(a.committed, 0) <> 0 OR COALESCE(a.forecast, 0) <> 0
+               OR COALESCE(a.actual, 0) <> 0 OR COALESCE(a.expected_landing, 0) <> 0)) AS amount_years,
+         (SELECT count(*)::int FROM tasks t
+           WHERE t.tenant_id = $1 AND t.related_object_type = $3 AND t.related_object_id = $2) AS tasks,
+         (SELECT count(DISTINCT r.id)::int
+            FROM portfolio_requests r
+            JOIN tasks t ON t.tenant_id = r.tenant_id AND t.id = r.origin_task_id
+           WHERE t.tenant_id = $1 AND t.related_object_type = $3 AND t.related_object_id = $2) AS request_origins,
+         (SELECT count(*)::int FROM spend_attachments WHERE tenant_id = $1 AND spend_item_id = $2) AS attachments,
+         (SELECT count(DISTINCT contract_id)::int FROM contract_spend_items WHERE tenant_id = $1 AND spend_item_id = $2) AS contracts,
+         (SELECT count(DISTINCT project_id)::int FROM portfolio_project_opex WHERE tenant_id = $1 AND opex_id = $2) AS projects,
+         (SELECT count(DISTINCT request_id)::int FROM portfolio_request_opex WHERE tenant_id = $1 AND opex_id = $2) AS requests,
+         (SELECT count(DISTINCT application_id)::int FROM application_spend_items WHERE tenant_id = $1 AND spend_item_id = $2) AS applications,
+         (SELECT count(DISTINCT asset_id)::int FROM asset_spend_items WHERE tenant_id = $1 AND spend_item_id = $2) AS assets,
+         (SELECT count(DISTINCT technology_id)::int FROM technology_spend_items WHERE tenant_id = $1 AND spend_item_id = $2) AS technologies,
+         (SELECT count(DISTINCT contact_id)::int FROM spend_item_contacts WHERE tenant_id = $1 AND spend_item_id = $2) AS contacts,
+         (SELECT count(*)::int FROM spend_links WHERE tenant_id = $1 AND spend_item_id = $2) AS links,
+         (SELECT count(*)::int FROM spend_item_analytics_values WHERE tenant_id = $1 AND item_id = $2) AS dimension_values`,
+      [context.tenantId, lineId, objectType],
+    );
+    const counts: Record<string, number> = {
+      amount_versions: Number(row?.amount_versions ?? 0),
+      amount_years: Number(row?.amount_years ?? 0),
+      tasks: Number(row?.tasks ?? 0),
+      request_origins: Number(row?.request_origins ?? 0),
+      attachments: Number(row?.attachments ?? 0),
+      contracts: Number(row?.contracts ?? 0),
+      projects: Number(row?.projects ?? 0),
+      requests: Number(row?.requests ?? 0),
+      applications: Number(row?.applications ?? 0),
+      assets: Number(row?.assets ?? 0),
+      technologies: Number(row?.technologies ?? 0),
+      contacts: Number(row?.contacts ?? 0),
+      links: Number(row?.links ?? 0),
+      dimension_values: Number(row?.dimension_values ?? 0),
+    };
+    const readable = await this.policy.readableResources(
+      context,
+      Array.from(new Set(Object.values(SPEND_IMPACT_READS))),
+      context.manager,
+    );
+    let hidden = 0;
+    for (const [family, resource] of Object.entries(SPEND_IMPACT_READS)) {
+      if (readable.has(resource)) continue;
+      hidden += counts[family];
+      delete counts[family];
+    }
+    return hidden > 0 ? { counts, hidden } : { counts };
+  }
+
+  /**
+   * One statement for what a connection's delete takes, all under its tenant. The interfaces
+   * that lose it are named only for a reader of the applications, and its linked documents only
+   * for a reader of the knowledge library; anyone else sees them counted among the other links.
+   */
+  private async connectionImpact(context: AiExecutionContextWithManager, connectionId: string): Promise<AiDeleteImpact> {
+    const [row] = await context.manager.query(
+      `SELECT
+         (SELECT count(*)::int FROM connection_legs WHERE tenant_id = $1 AND connection_id = $2) AS hops,
+         (SELECT count(*)::int FROM connection_servers WHERE tenant_id = $1 AND connection_id = $2) AS servers,
+         (SELECT count(*)::int FROM connection_protocols WHERE tenant_id = $1 AND connection_id = $2) AS protocols,
+         (SELECT count(DISTINCT b.interface_id)::int
+            FROM interface_connection_links l
+            JOIN interface_bindings b ON b.tenant_id = l.tenant_id AND b.id = l.interface_binding_id
+           WHERE l.tenant_id = $1 AND l.connection_id = $2) AS interfaces,
+         (SELECT count(*)::int FROM document_connections WHERE tenant_id = $1 AND connection_id = $2) AS documents`,
+      [context.tenantId, connectionId],
+    );
+    const counts: Record<string, number> = {
+      hops: Number(row?.hops ?? 0),
+      servers: Number(row?.servers ?? 0),
+      protocols: Number(row?.protocols ?? 0),
+      interfaces: Number(row?.interfaces ?? 0),
+      documents: Number(row?.documents ?? 0),
+    };
+    const readable = await this.policy.readableResources(context, ['applications', 'knowledge'], context.manager);
+    let hidden = 0;
+    for (const [family, resource] of [['interfaces', 'applications'], ['documents', 'knowledge']] as const) {
+      if (readable.has(resource)) continue;
+      hidden += counts[family];
+      delete counts[family];
+    }
+    return hidden > 0 ? { counts, hidden } : { counts };
+  }
+
+  /**
+   * One statement for what an interface's delete takes, all under its tenant. Its integrated and
+   * linked documents are named only for a reader of the knowledge library; its bindings,
+   * connection links, dependencies, attachments and applications belong to the applications
+   * module the deleter administers.
+   */
+  private async interfaceImpact(context: AiExecutionContextWithManager, interfaceId: string): Promise<AiDeleteImpact> {
+    const [row] = await context.manager.query(
+      `SELECT
+         (SELECT count(*)::int FROM interface_bindings WHERE tenant_id = $1 AND interface_id = $2) AS bindings,
+         (SELECT count(*)::int
+            FROM interface_connection_links l
+            JOIN interface_bindings b ON b.tenant_id = l.tenant_id AND b.id = l.interface_binding_id
+           WHERE l.tenant_id = $1 AND b.interface_id = $2) AS connection_links,
+         (SELECT count(*)::int FROM integrated_document_bindings
+           WHERE tenant_id = $1 AND source_entity_type = 'interfaces' AND source_entity_id = $2) AS integrated_documents,
+         (SELECT count(*)::int FROM document_interfaces WHERE tenant_id = $1 AND interface_id = $2) AS documents,
+         (SELECT count(DISTINCT other.id)::int
+            FROM interface_dependencies d
+            JOIN interfaces other ON other.tenant_id = d.tenant_id
+              AND other.id = CASE WHEN d.interface_id = $2 THEN d.related_interface_id ELSE d.interface_id END
+           WHERE d.tenant_id = $1 AND (d.interface_id = $2 OR d.related_interface_id = $2)) AS dependencies,
+         (SELECT count(*)::int FROM interface_attachments WHERE tenant_id = $1 AND interface_id = $2) AS attachments,
+         (SELECT count(DISTINCT a.id)::int FROM (
+            SELECT source_application_id AS id FROM interfaces WHERE tenant_id = $1 AND id = $2
+            UNION
+            SELECT target_application_id FROM interfaces WHERE tenant_id = $1 AND id = $2
+            UNION
+            SELECT application_id FROM interface_middleware_applications WHERE tenant_id = $1 AND interface_id = $2
+          ) a) AS applications`,
+      [context.tenantId, interfaceId],
+    );
+    const counts: Record<string, number> = {
+      bindings: Number(row?.bindings ?? 0),
+      connection_links: Number(row?.connection_links ?? 0),
+      integrated_documents: Number(row?.integrated_documents ?? 0),
+      documents: Number(row?.documents ?? 0),
+      dependencies: Number(row?.dependencies ?? 0),
+      attachments: Number(row?.attachments ?? 0),
+      applications: Number(row?.applications ?? 0),
+    };
+    const readable = await this.policy.readableResources(context, ['knowledge'], context.manager);
+    let hidden = 0;
+    for (const family of ['integrated_documents', 'documents'] as const) {
+      if (readable.has('knowledge')) continue;
+      hidden += counts[family];
+      delete counts[family];
+    }
+    return hidden > 0 ? { counts, hidden } : { counts };
+  }
+
+  /**
+   * The screen's 409 for an interface with bindings, with their count and what to do: ask again
+   * with `delete_related_bindings` set to true, which deletes the bindings and their links to
+   * connections with the interface.
+   */
+  private interfaceBindingsRefusal(name: string, total: number): ConflictException {
+    const bindings = total === 1 ? '1 binding' : `${total} bindings`;
+    return new ConflictException({
+      statusCode: 409,
+      error: 'Conflict',
+      code: 'INTERFACE_HAS_BINDINGS',
+      message: `Cannot delete interface "${name}" because it has ${bindings}. Ask again with delete_related_bindings set to true to delete it with its bindings, or remove them first.`,
+      usages: [{ type: 'interface_bindings', total }],
+    });
+  }
+
+  /**
    * The delete through the screen's service, with the AI audit source. The preview service has
    * already checked the rights, the reservation and the participation scope again; the record is
    * read again here for the drift check, and the task's own service re-checks its delete refusals.
@@ -313,6 +673,43 @@ export class AiDeleteMutationSupportService {
         this.assertNotChanged(entityType, expectedUpdatedAt, isoTimestamp(found.row.updated_at));
         this.assertImpactUnchanged(entityType, preview, await this.locationImpact(context, found.id));
         await this.locations.delete(found.id, context.userId, { manager: context.manager, audit });
+        return;
+      }
+      case 'spend_items':
+      case 'capex_items': {
+        const found = await this.resolveSpendLine(context, entityType, targetId);
+        this.assertNotChanged(entityType, expectedUpdatedAt, found.updatedAt);
+        this.assertImpactUnchanged(entityType, preview, await this.spendImpact(context, entityType, found.id));
+        const deleter = entityType === 'spend_items' ? this.opexDelete : this.capexDelete;
+        await deleter.delete(found.id, {
+          manager: context.manager,
+          userId: context.userId,
+          audit,
+        });
+        return;
+      }
+      case 'connections': {
+        const found = await this.businessRecords.resolveRecordReference(context, 'connections', targetId);
+        this.assertNotChanged(entityType, expectedUpdatedAt, isoTimestamp(found.row.updated_at));
+        this.assertImpactUnchanged(entityType, preview, await this.connectionImpact(context, found.id));
+        await this.connections.delete(found.id, context.userId, { manager: context.manager, audit });
+        return;
+      }
+      case 'interfaces': {
+        const found = await this.businessRecords.resolveRecordReference(context, 'interfaces', targetId);
+        this.assertNotChanged(entityType, expectedUpdatedAt, isoTimestamp(found.row.updated_at));
+        const impact = await this.interfaceImpact(context, found.id);
+        this.assertImpactUnchanged(entityType, preview, impact);
+        const deleteRelatedBindings = preview.mutation_input?.delete_related_bindings === true;
+        const bindings = Number(impact.counts.bindings ?? 0);
+        if (bindings > 0 && !deleteRelatedBindings) {
+          throw this.interfaceBindingsRefusal(found.label, bindings);
+        }
+        await this.interfaces.delete(found.id, context.userId, {
+          manager: context.manager,
+          deleteRelatedBindings,
+          audit,
+        });
         return;
       }
     }

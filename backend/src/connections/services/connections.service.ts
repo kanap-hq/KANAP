@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { AuditSourceOptions } from '../../audit/audit.service';
 import { ConnectionsListService } from './connections-list.service';
 import { ConnectionsCrudService } from './connections-crud.service';
 import { ConnectionsLegsService } from './connections-legs.service';
@@ -87,7 +88,7 @@ export class ConnectionsService {
     return this.crudService.update(id, body, tenantId, userId, opts);
   }
 
-  delete(id: string, userId: string | null, opts?: ServiceOpts) {
+  delete(id: string, userId: string | null, opts?: ServiceOpts & { audit?: AuditSourceOptions }) {
     return this.crudService.delete(id, userId, opts);
   }
 

@@ -112,12 +112,23 @@ async function testNonWebProfilesExposeAllKanapToolsButPrioritizeProfileTools() 
 }
 
 function testDeleteRecordFollowsTheFamilyWriteProfiles() {
-  for (const prompt of ['Supprime la tâche T-42', 'Supprime le contact Camille Roux', 'Supprime la location LOC-1']) {
+  for (const prompt of [
+    'Supprime la tâche T-42',
+    'Supprime le contact Camille Roux',
+    'Supprime la location LOC-1',
+    'Supprime la ligne OPEX BL-42',
+    "Supprime l'interface INT-7",
+    'Supprime la connexion CON-4',
+  ]) {
     const profile = selectAiContextProfile(prompt);
     assert.equal(profile.promptMode, 'write', prompt);
     assert.ok(profile.toolNames.includes('delete_record'), prompt);
   }
-  console.log('  delete_record follows the task, contact and location write profiles: OK');
+  // The financial write profile can delete a line too.
+  const financial = selectAiContextProfile('Update the notes of [line](/ops/budget/BL-42)');
+  assert.equal(financial.name, 'write_financial');
+  assert.ok(financial.toolNames.includes('delete_record'));
+  console.log('  delete_record follows the task, contact, location, budget line, connection and interface write profiles: OK');
 }
 
 async function testContinuationInheritsOpenWriteRequestProfile() {

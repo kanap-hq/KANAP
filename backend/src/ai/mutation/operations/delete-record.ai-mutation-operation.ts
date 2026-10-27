@@ -12,16 +12,22 @@ import {
 } from '../../ai-write-texts';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
 import { AI_DELETE_ENTITY_TYPES, AiDeleteEntityType, AiDeleteMutationSupportService } from '../ai-delete-mutation-support.service';
+import { aiDeleteBusinessResource } from '../ai-write-levels';
 
 type DeleteRecordInput = {
   entity_type: AiDeleteEntityType;
   ref: string;
+  delete_related_bindings?: boolean;
 };
 
 const NOUNS: Record<AiDeleteEntityType, string> = {
   tasks: 'task',
   contacts: 'contact',
   locations: 'location',
+  spend_items: 'budget line',
+  capex_items: 'CAPEX line',
+  connections: 'connection',
+  interfaces: 'interface',
 };
 
 function textOrNull(value: unknown): string | null {
@@ -69,14 +75,19 @@ function buildTarget(preview: AiMutationPreview): AiMutationPreviewPresentation[
 @Injectable()
 export class DeleteRecordAiMutationOperation implements AiMutationOperation<DeleteRecordInput> {
   readonly toolName = 'delete_record' as const;
-  readonly description = 'Create a preview to delete one task, one contact or one location. One record per preview, never a bulk delete, and every delete waits for explicit approval.';
+  readonly description = 'Create a preview to delete one record: one task, one contact, one location, one budget line, one connection or one interface. One record per preview, never a bulk delete, and every delete waits for explicit approval.';
   readonly inputSchema = z.object({
-    entity_type: z.enum(['tasks', 'contacts', 'locations']).describe('The family of the record to delete: tasks, contacts or locations.'),
-    ref: z.string().trim().min(1).describe('The record reference or exact name: T-42, a contact name or email, or a location reference or name.'),
+    entity_type: z.enum(AI_DELETE_ENTITY_TYPES)
+      .describe('The family of the record to delete: tasks, contacts, locations, spend_items (an OPEX budget line), capex_items (a CAPEX budget line), connections or interfaces.'),
+    ref: z.string().trim().min(1)
+      .describe('The record reference or exact name: T-42, a contact name or email, a location reference or name, a budget line BL-n/OPX-n/CPX-n or UUID, a connection reference or name, or an interface reference or name.'),
+    delete_related_bindings: z.boolean().optional()
+      .describe('Interfaces only. True deletes the interface with its bindings and their links to connections; false (default) refuses an interface that still has bindings, as the screen does.'),
   });
   readonly inputSummary = {
-    entity_type: 'One of tasks, contacts or locations.',
+    entity_type: `One of ${AI_DELETE_ENTITY_TYPES.join(', ')}.`,
     ref: 'The record reference or exact name. One record per preview.',
+    delete_related_bindings: 'Interfaces only: true deletes the interface with its bindings; false refuses one that still has bindings.',
   };
   readonly businessResource = 'tasks';
   readonly businessResources = AI_DELETE_ENTITY_TYPES;
@@ -84,26 +95,30 @@ export class DeleteRecordAiMutationOperation implements AiMutationOperation<Dele
     entity_type: 'records',
     fields: ['entity_type', 'ref'],
     reversible: false,
-    prompt_hint: 'To delete one record, use `delete_record` with `entity_type` (tasks, contacts or locations) and the record\'s `ref` or exact name. One record per preview, always under approval, never in bulk and never in `prepare_mutation_plan`: the preview says what goes with the record and the delete cannot be undone. When several records are asked for, prepare the first and say the others are deleted one at a time, or ask which one to delete first.',
+    prompt_hint: 'To delete one record, use `delete_record` with `entity_type` (tasks, contacts, locations, spend_items, capex_items, connections or interfaces) and the record\'s `ref` or exact name. One record per preview, always under approval, never in bulk and never in `prepare_mutation_plan`: the preview says what goes with the record and the delete cannot be undone. An interface that still has bindings is refused until the person asks again with `delete_related_bindings: true`, which deletes the bindings and their links to connections with it. When several records are asked for, prepare the first and say the others are deleted one at a time, or ask which one to delete first.',
   };
 
   constructor(private readonly support: AiDeleteMutationSupportService) {}
 
   resolveBusinessResource(params: { input?: DeleteRecordInput; preview?: AiMutationPreview }): string {
-    return String(params.input?.entity_type ?? params.preview?.target_entity_type ?? 'tasks');
+    return aiDeleteBusinessResource(String(params.input?.entity_type ?? params.preview?.target_entity_type ?? 'tasks'));
   }
 
   async prepareCreatePreview(
     context: AiExecutionContextWithManager,
     input: DeleteRecordInput,
   ): Promise<AiPreparedMutationPreview> {
-    const { target, impact } = await this.support.prepare(context, input.entity_type, input.ref);
+    const deleteRelatedBindings = input.delete_related_bindings === true;
+    const { target, impact } = await this.support.prepare(context, input.entity_type, input.ref, {
+      deleteRelatedBindings,
+    });
     return {
       targetEntityType: target.entityType,
       targetEntityId: target.id,
       mutationInput: {
         entity_type: target.entityType,
         ref: target.ref ?? target.id,
+        ...(target.entityType === 'interfaces' ? { delete_related_bindings: deleteRelatedBindings } : {}),
       },
       currentValues: {
         target_ref: target.ref,

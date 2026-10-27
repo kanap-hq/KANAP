@@ -368,7 +368,7 @@ function testDeleteRecordSummaryAndCard() {
       target_ref: 'T-42',
       target_title: 'T-42 - Migration',
       updated_at: '2026-10-27T10:00:00.000Z',
-      counts: { activities: 2, time_entries: 1, attachments: 0, links: 0 },
+      counts: { activities: 2, time_entries: 1, attachments: 0, applications: 0, assets: 0, documents: 0 },
     },
   });
   assert.equal(summary(operation, pending, 'en'), 'Delete task "Migration".');
@@ -408,6 +408,131 @@ function testDeleteRecordSummaryAndCard() {
   assert.equal(
     operation.presentPreview(contact, 'fr').changes.deletion.to,
     "- Fournisseurs : 1\n- D'autres rattachements : 2\n\nLes fiches liées restent.",
+  );
+  // A task's applications, assets and documents follow the same rule as a contact's families.
+  const taskWithHiddenLinks: AiMutationPreview = {
+    ...pending,
+    current_values: {
+      target_ref: 'T-43',
+      target_title: 'T-43 - Import',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: { activities: 1 },
+      hidden: 3,
+    },
+  };
+  assert.equal(
+    operation.presentPreview(taskWithHiddenLinks, 'fr').changes.deletion.to,
+    "- Commentaires et changements : 1\n- D'autres rattachements : 3",
+  );
+
+  // A budget line names its versions, amounts, tasks, requests losing their origin, links and files.
+  const line: AiMutationPreview = {
+    ...pending,
+    target_entity_type: 'spend_items',
+    current_values: {
+      target_ref: 'BL-12',
+      target_title: 'ERP licence',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: {
+        amount_versions: 1,
+        amount_years: 2,
+        tasks: 1,
+        request_origins: 1,
+        attachments: 1,
+        contracts: 1,
+        projects: 1,
+        requests: 1,
+        applications: 1,
+        assets: 0,
+        technologies: 0,
+        contacts: 1,
+        links: 1,
+        dimension_values: 1,
+      },
+    },
+  };
+  assert.equal(summary(operation, line, 'en'), 'Delete budget line "ERP licence".');
+  assert.equal(summary(operation, line, 'fr'), 'Suppression de la ligne OPEX « ERP licence ».');
+  assert.equal(summary(operation, line, 'de'), 'OPEX-Zeile „ERP licence“ löschen.');
+  assert.equal(summary(operation, line, 'es'), 'Eliminación de la línea OPEX «ERP licence».');
+  assert.equal(
+    operation.presentPreview(line, 'fr').changes.deletion.to,
+    [
+      '- Versions avec des montants : 1',
+      '- Années avec des montants : 2',
+      '- Tâches : 1',
+      "- Demandes qui perdent leur tâche d'origine : 1",
+      '- Pièces jointes : 1',
+      '- Contrats : 1',
+      '- Projets : 1',
+      '- Demandes : 1',
+      '- Applications : 1',
+      '- Contacts : 1',
+      '- Liens : 1',
+      '- Valeurs de dimensions : 1',
+    ].join('\n'),
+  );
+
+  // A connection names its hops, servers, protocols, the interfaces that lose it and its documents.
+  const connection: AiMutationPreview = {
+    ...pending,
+    target_entity_type: 'connections',
+    current_values: {
+      target_ref: 'CON-4',
+      target_title: 'CON-4 - DB link',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: { hops: 2, servers: 1, protocols: 1, interfaces: 1, documents: 1 },
+    },
+  };
+  assert.equal(summary(operation, connection, 'en'), 'Delete connection "DB link".');
+  assert.equal(summary(operation, connection, 'fr'), 'Suppression de la connexion « DB link ».');
+  assert.equal(
+    operation.presentPreview(connection, 'fr').changes.deletion.to,
+    [
+      '- Sauts : 2',
+      '- Serveurs : 1',
+      '- Protocoles : 1',
+      '- Interfaces qui perdront cette connexion : 1',
+      '- Documents liés : 1',
+      '',
+      'Les interfaces elles-mêmes ne sont pas supprimées.',
+    ].join('\n'),
+  );
+
+  // An interface names its bindings, links, documents, dependencies, files and applications.
+  const iface: AiMutationPreview = {
+    ...pending,
+    target_entity_type: 'interfaces',
+    current_values: {
+      target_ref: 'INT-7',
+      target_title: 'INT-7 - Orders',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: {
+        bindings: 2,
+        connection_links: 2,
+        integrated_documents: 1,
+        documents: 1,
+        dependencies: 1,
+        attachments: 1,
+        applications: 2,
+      },
+    },
+  };
+  assert.equal(summary(operation, iface, 'en'), 'Delete interface "Orders".');
+  assert.equal(summary(operation, iface, 'fr'), "Suppression de l'interface « Orders ».");
+  assert.equal(
+    operation.presentPreview(iface, 'fr').changes.deletion.to,
+    [
+      '- Liaisons : 2',
+      '- Liens aux connexions : 2',
+      '- Documents intégrés : 1',
+      '- Documents liés : 1',
+      '- Interfaces dépendantes : 1',
+      '- Pièces jointes : 1',
+      '- Applications liées : 2',
+      '',
+      'Les connexions sont conservées.',
+    ].join('\n'),
   );
   console.log('  delete_record summary and card: OK');
 }
