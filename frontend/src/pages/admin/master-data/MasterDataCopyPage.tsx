@@ -5,11 +5,8 @@ import {
   Box,
   Button,
   CircularProgress,
-  FormControl,
-  InputLabel,
   MenuItem,
   Paper,
-  Select,
   SelectChangeEvent,
   Stack,
   TextField,
@@ -297,30 +294,31 @@ export default function MasterDataCopyPage() {
               <MenuItem key={year} value={year}>{year}</MenuItem>
             ))}
           </TextField>
-          <FormControl size="small" sx={{ minWidth: 200 }}>
-            <InputLabel id="master-data-scope-label">{t('admin.copy.dataSources')}</InputLabel>
-            <Select
-              labelId="master-data-scope-label"
-              multiple
-              value={selectedScopes}
-              onChange={handleScopeChange}
-              label={t('admin.copy.dataSources')}
-              renderValue={(selected) => selected.map((value) => value === 'companies' ? t('admin.freeze.scopeCompanies') : t('admin.freeze.scopeDepartments')).join(', ')}
-            >
-              <MenuItem value="companies" disabled={disabledScopes.companies}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="body2">{t('admin.freeze.scopeCompanies')}</Typography>
-                  {disabledScopes.companies && <Typography variant="caption" color="text.secondary">{t('admin.copy.noAdminAccess')}</Typography>}
-                </Stack>
-              </MenuItem>
-              <MenuItem value="departments" disabled={disabledScopes.departments}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="body2">{t('admin.freeze.scopeDepartments')}</Typography>
-                  {disabledScopes.departments && <Typography variant="caption" color="text.secondary">{t('admin.copy.noAdminAccess')}</Typography>}
-                </Stack>
-              </MenuItem>
-            </Select>
-          </FormControl>
+          <TextField
+            select
+            size="small"
+            label={t('admin.copy.dataSources')}
+            value={selectedScopes}
+            onChange={(event) => handleScopeChange(event as SelectChangeEvent<string[]>)}
+            SelectProps={{
+              multiple: true,
+              renderValue: (selected) => (selected as string[]).map((value) => value === 'companies' ? t('admin.freeze.scopeCompanies') : t('admin.freeze.scopeDepartments')).join(', '),
+            }}
+            sx={{ minWidth: 200 }}
+          >
+            <MenuItem value="companies" disabled={disabledScopes.companies}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography variant="body2">{t('admin.freeze.scopeCompanies')}</Typography>
+                {disabledScopes.companies && <Typography variant="caption" color="text.secondary">{t('admin.copy.noAdminAccess')}</Typography>}
+              </Stack>
+            </MenuItem>
+            <MenuItem value="departments" disabled={disabledScopes.departments}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography variant="body2">{t('admin.freeze.scopeDepartments')}</Typography>
+                {disabledScopes.departments && <Typography variant="caption" color="text.secondary">{t('admin.copy.noAdminAccess')}</Typography>}
+              </Stack>
+            </MenuItem>
+          </TextField>
           <TextField
             select
             size="small"
@@ -334,23 +332,24 @@ export default function MasterDataCopyPage() {
             ))}
           </TextField>
           {includeCompanies && (
-            <FormControl size="small" sx={{ minWidth: 220 }}>
-              <InputLabel id="company-metrics-label">{t('admin.copy.companyMetrics')}</InputLabel>
-              <Select
-                labelId="company-metrics-label"
-                multiple
-                value={companyMetrics}
-                onChange={handleMetricChange}
-                label={t('admin.copy.companyMetrics')}
-                renderValue={(selected) => selected.map((m) => metricLabel(m, t)).join(', ')}
-              >
-                {COMPANY_METRIC_KEYS.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    <Typography variant="body2">{t(option.labelKey)}</Typography>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <TextField
+              select
+              size="small"
+              label={t('admin.copy.companyMetrics')}
+              value={companyMetrics}
+              onChange={(event) => handleMetricChange(event as SelectChangeEvent<string[]>)}
+              SelectProps={{
+                multiple: true,
+                renderValue: (selected) => (selected as MasterDataMetric[]).map((m) => metricLabel(m, t)).join(', '),
+              }}
+              sx={{ minWidth: 220 }}
+            >
+              {COMPANY_METRIC_KEYS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  <Typography variant="body2">{t(option.labelKey)}</Typography>
+                </MenuItem>
+              ))}
+            </TextField>
           )}
         </>
       }
