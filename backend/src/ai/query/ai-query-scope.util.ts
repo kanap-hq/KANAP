@@ -140,6 +140,23 @@ export function participantConditionForAiEntity(
   return taskParticipantCondition(alias, userRef);
 }
 
+/**
+ * `AND <participation condition on alias>` when the person reads this family in their
+ * participation scope only (`resolveAiParticipationAccessScope`), else an empty string. The user
+ * id is pushed into `params`.
+ */
+export async function aiParticipationScopeSql(
+  context: AiExecutionContextWithManager,
+  entityType: ParticipationScopedAiEntityType,
+  alias: string,
+  params: unknown[],
+): Promise<string> {
+  const scope = await resolveAiParticipationAccessScope(context, entityType);
+  if (!scope) return '';
+  params.push(scope.userId);
+  return `AND ${participantConditionForAiEntity(entityType, alias, `$${params.length}`)}`;
+}
+
 export async function resolveCurrentUserTeam(
   context: AiExecutionContextWithManager,
 ): Promise<{ teamId: string | null; teamName: string | null }> {

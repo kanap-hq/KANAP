@@ -11,6 +11,7 @@ import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-docum
 //   links an application to it; the same on a project outside their scope is refused, at the
 //   preview and at the run, also when the scope changes between the two.
 // - The name of a project is not opened to a contributor (the project page): refused, saying so.
+// - A project out of scope reads as missing, as a project that does not exist.
 // - A project contributor without the Business Contributor role writes on every project.
 // - A reader stays refused; a member renames as before.
 // - The write tools offered follow the level: a contributor gets the tools that change a project.
@@ -131,9 +132,12 @@ async function testBusinessContributorInScope(h: Harness, runner: QueryRunner, s
 
 async function testOutOfScopeAndFields(h: Harness, runner: QueryRunner, s: Seed) {
   const bc = ctx(runner, s, 'bc');
-  // Outside their scope: refused at the preview, as the screen (404).
-  assert.equal(await refusal(() => h.previews.createPreview(bc, 'update_business_record', { entity_type: 'projects', ref: 'PRJ-2', fields: { purpose: 'No' } })), 'Project not found.');
-  assert.equal(await refusal(() => h.previews.createPreview(bc, 'update_entity_relations', { entity_type: 'projects', ref: 'PRJ-2', relation: 'applications', add: ['APP-1'] })), 'Project not found.');
+  // Outside their scope: refused at the preview, as the screen (404), as a project that does not exist.
+  assert.equal(await refusal(() => h.previews.createPreview(bc, 'update_business_record', { entity_type: 'projects', ref: 'PRJ-2', fields: { purpose: 'No' } })), 'No projects found matching "PRJ-2".');
+  assert.equal(await refusal(() => h.previews.createPreview(bc, 'update_business_record', { entity_type: 'projects', ref: 'PRJ-99', fields: { purpose: 'No' } })), 'No projects found matching "PRJ-99".');
+  assert.equal(await refusal(() => h.previews.createPreview(bc, 'update_entity_relations', { entity_type: 'projects', ref: 'PRJ-2', relation: 'applications', add: ['APP-1'] })), 'No projects found matching "PRJ-2".');
+  // By name too: the name of a project out of scope is not told.
+  assert.equal(await refusal(() => h.previews.createPreview(bc, 'update_entity_relations', { entity_type: 'projects', ref: 'Other project', relation: 'applications', add: ['APP-1'] })), 'No projects found matching "Other project".');
   // A field the project page does not open to a contributor.
   const renamed = await refusal(() => h.previews.createPreview(bc, 'update_business_record', { entity_type: 'projects', ref: 'PRJ-1', fields: { name: 'Renamed' } }));
   assert.match(renamed, /^Your role lets you contribute to projects but not change Name: that needs the right to modify projects/);
