@@ -166,6 +166,8 @@ export type AiQueryResult = {
   amounts_currency?: string | null;
   amounts_currency_note?: string;
   amount_totals?: AiAmountTotals;
+  /** The same amounts summed over the items returned only: the total of the records listed (a top N). */
+  page_amount_totals?: AiAmountTotals;
   /** `limited`: a person with limited data access; the items and figures cover their access only. */
   data_access?: 'limited';
   data_access_note?: string;

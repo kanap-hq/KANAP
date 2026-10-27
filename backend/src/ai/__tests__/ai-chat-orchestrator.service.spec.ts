@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { ForbiddenException, Logger } from '@nestjs/common';
+import { ForbiddenException, Logger, NotFoundException } from '@nestjs/common';
 import {
   AiChatOrchestratorService,
   extractMentionContextItems,
@@ -19,6 +19,8 @@ function createOrchestrator(options?: {
   toolPreviews?: any[];
   toolResultsByName?: Record<string, any>;
   toolError?: string;
+  /** One outcome per executed tool call, in order: an Error is thrown, anything else is the output. */
+  toolOutcomes?: any[];
   providerContextWindow?: number | null;
   historyMessages?: any[];
   providerId?: string;
@@ -280,6 +282,11 @@ function createOrchestrator(options?: {
       toolExecuteCount.value++;
       executedToolCalls.push({ toolName: input.capabilityName, input: input.input });
       if (options?.toolError) throw new Error(options.toolError);
+      if (options?.toolOutcomes) {
+        const outcome = options.toolOutcomes[toolExecuteCount.value - 1];
+        if (outcome instanceof Error) throw outcome;
+        return { run_id: input.execution?.runId ?? 'run-1', step_id: 'step-1', tool_execution_id: 'tool-1', output: outcome };
+      }
       if (options?.toolResultsByName && Object.prototype.hasOwnProperty.call(options.toolResultsByName, input.capabilityName)) {
         return {
           run_id: input.execution?.runId ?? 'run-1',
@@ -2925,6 +2932,57 @@ async function testToolExecutionError() {
   assert.equal(toolResult.result.error, 'Permission denied');
 }
 
+/**
+ * A failed call that a later call of the same tool repairs (an input error, the same target) is
+ * named in that call's `repairs`, on the stream and in the stored tool message the history reads
+ * back; a refused right or another target is not (essay of 2026-10-27, question 6).
+ */
+async function testRepairedToolFailuresAreNamed() {
+  const detailCall = (id: string, entityId: string) => [
+    { type: 'tool_call_start', id, name: 'get_entity_detail' },
+    { type: 'tool_call_delta', id, arguments: JSON.stringify({ entity_type: 'applications', entity_id: entityId }) },
+    { type: 'tool_call_end', id },
+    { type: 'done', usage: { input_tokens: 100, output_tokens: 20 } },
+  ];
+  const answer = [{ type: 'text_delta', text: 'CheeseTrack is enabled.' }, { type: 'done', usage: { input_tokens: 100, output_tokens: 20 } }];
+  const found = { entity: { type: 'applications', id: 'a-36', ref: 'APP-36', label: 'CheeseTrack' } };
+  const context = { tenantId: 'tenant-1', userId: 'user-1', isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const };
+
+  // A name that matches no record, then another record: nothing says it is the same target.
+  const other = createOrchestrator({
+    providerEventBatches: [detailCall('tc-1', 'CheeseTrak'), detailCall('tc-2', 'APP-36'), answer],
+    toolOutcomes: [new NotFoundException('No application found matching "CheeseTrak".'), found],
+  });
+  const otherEvents = await collectEvents(other.orchestrator.stream({ context, userMessage: 'Is CheeseTrack enabled?' }));
+  const results = otherEvents.filter((event) => event.type === 'tool_result') as any[];
+  assert.equal(results.length, 2);
+  assert.equal(results[0].repairs, undefined, 'the failed call names nothing');
+  assert.match(results[0].result.error, /No application found matching/);
+  assert.equal(results[1].repairs, undefined, 'another target: the failure stays shown');
+
+  // The name the tool could not resolve alone, then the same record by reference.
+
+  const sameTarget = createOrchestrator({
+    providerEventBatches: [detailCall('tc-1', 'CheeseTrack'), detailCall('tc-2', 'APP-36'), answer],
+    toolOutcomes: [new NotFoundException('Several applications match "CheeseTrack".'), found],
+  });
+  const sameTargetEvents = await collectEvents(sameTarget.orchestrator.stream({ context, userMessage: 'Is CheeseTrack enabled?' }));
+  const sameResults = sameTargetEvents.filter((event) => event.type === 'tool_result') as any[];
+  assert.deepEqual(sameResults[1].repairs, ['tc-1'], 'the record read is the one the failed call named');
+  const stored = sameTarget.persistedMessages.filter((message) => message.role === 'tool').map((message) => JSON.parse(message.content));
+  assert.equal(stored.length, 2);
+  assert.equal(stored[0].repairs, undefined);
+  assert.deepEqual(stored[1].repairs, ['tc-1'], 'the history reads it back');
+
+  const denied = createOrchestrator({
+    // The same record by its id (an identical call would not run again).
+    providerEventBatches: [detailCall('tc-1', 'APP-36'), detailCall('tc-2', 'a-36'), answer],
+    toolOutcomes: [new ForbiddenException('You need the right to read applications.'), found],
+  });
+  const deniedEvents = await collectEvents(denied.orchestrator.stream({ context, userMessage: 'Is CheeseTrack enabled?' }));
+  assert.equal((deniedEvents.filter((event) => event.type === 'tool_result') as any[])[1].repairs, undefined, 'a refused right stays a failure');
+}
+
 async function testMalformedToolArgumentsReturnSyntheticToolError() {
   const { orchestrator, persistedMessages, recordedRequests, toolExecuteCount } = createOrchestrator({
     providerEvents: [
@@ -3203,6 +3261,7 @@ async function run() {
   await testContextCompaction();
   await testToolExecutionError();
   await testMalformedToolArgumentsReturnSyntheticToolError();
+  await testRepairedToolFailuresAreNamed();
   await testMalformedPersistedToolCallsAreSkippedDuringReplay();
   await testStructuredToolResultsCarryBlockingValidationMetadataForIgnoredFilters();
   await testProvidersUseLargerDefaultTokenBudget();

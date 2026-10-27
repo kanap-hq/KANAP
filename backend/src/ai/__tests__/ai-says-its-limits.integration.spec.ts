@@ -9,10 +9,12 @@ import { addMonthsYmd } from '../../contracts/contract-terms';
 // 2026-10-26). Each check replays a question of the pass on the tools and reads the tool answer:
 //
 // - P5 q4: query_entities on budget lines gives `amount_totals`, the amounts of every line the
-//   filters keep (all pages), with the currency; the same for contracts, per currency.
+//   filters keep (all pages), with the currency, and `page_amount_totals`, those of the page
+//   returned (the ten largest lines and their total); the same for contracts, per currency.
 // - P2 q10b, q12, q20: search_all names the families it does not read (cost centers, data access,
 //   chargeback) when the words ask for them, and all of them when nothing matched;
-//   describe_entity_filters lists them.
+//   describe_entity_filters lists them. Their screens come in the person's language (profile),
+//   in the four languages when the profile sets none (essay of 2026-10-27).
 // - P3 q27: get_entity_context of an application carries RTO, RPO, recovery wave, last recovery
 //   test and end of support, and says the context is an extract (`fields_note`).
 // - P3-7: a value outside a closed set (`status: active` for `enabled`) is refused with
@@ -140,6 +142,20 @@ async function testTotals(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(totals.currency, 'EUR', 'the reporting currency');
   assert.equal(cents(totals.values.y_budget), cents(BUDGETS.reduce((sum, value) => sum + value, 0)), 'every line, not only the page');
   assert.match(totals.note, /never added up/);
+  // The ten largest lines and their total: the page's own total, with the tie at the tenth place
+  // (191,840 twice) left to the page (the essay of 2026-10-27 gave the total of eleven lines).
+  const pageTotals = page.page_amount_totals;
+  assert.ok(pageTotals, 'page_amount_totals on budget lines');
+  assert.equal(pageTotals.records, 10);
+  assert.equal(pageTotals.currency, totals.currency, 'the same currency');
+  assert.deepEqual(Object.keys(pageTotals.values).sort(), Object.keys(totals.values).sort(), 'the same fields');
+  const topTen = page.items.map((item: any) => Number(item.metadata.y_budget));
+  assert.deepEqual(topTen.map(cents), BUDGETS.slice(0, 10).map(cents), 'the ten largest, in order');
+  assert.equal(cents(pageTotals.values.y_budget), cents(topTen.reduce((sum: number, value: number) => sum + value, 0)), 'the sum of the ten');
+  assert.equal(cents(pageTotals.values.y_budget), cents(2792515.83));
+  assert.match(pageTotals.note, /returned on this page only/);
+  const secondPage = await h.tools.execute(full, 'query_entities', { entity_type: 'spend_items', limit: 10, page: 2, sort: { field: 'y_budget', direction: 'desc' } });
+  assert.equal(cents(secondPage.page_amount_totals.values.y_budget), cents(191840 + 1000), 'the second page: its two lines');
   const aggregate = await h.tools.execute(full, 'aggregate_entities', { entity_type: 'spend_items', group_by: 'status', metric: 'y_budget', function: 'sum' });
   assert.equal(cents(aggregate.groups.reduce((sum: number, group: any) => sum + Number(group.value), 0)), cents(totals.values.y_budget), 'the aggregate of the same lines');
   // A filtered selection: its own total.
@@ -152,6 +168,10 @@ async function testTotals(h: Harness, runner: QueryRunner, s: Seed) {
     [['EUR', 1200, 1], ['USD', 500, 1]],
     'contracts: per currency, every page',
   );
+  assert.equal(contracts.returned, 1);
+  assert.equal(contracts.page_amount_totals.records, 1);
+  assert.equal(contracts.page_amount_totals.by_currency.length, 1, 'contracts: the page only');
+  assert.equal(contracts.page_amount_totals.by_currency[0].contracts, 1);
   console.log('  P5 q4: amount_totals on budget lines and contracts: OK');
 }
 
@@ -160,21 +180,34 @@ async function testUnreadFamilies(h: Harness, runner: QueryRunner, s: Seed) {
   // P2 q10b: the model searched the code alone.
   const code = await h.tools.execute(full, 'search_all', { query: 'FR-TRV-600' });
   assert.equal(code.items.length, 0);
-  assert.ok(code.families_not_read.some((line: string) => line.startsWith('cost centers (Master data › Cost centers)')), 'no match: the unread families, cost centers first');
+  // The profile sets no language: the screens in the four languages of the menus.
+  assert.ok(code.families_not_read.some((line: string) => line.startsWith('cost centers (en: Master data › Cost centers; fr: Données de référence › Centres de coûts;')), 'no match: the unread families, cost centers first');
   assert.match(code.no_match_note, /may exist/);
   const named = await h.tools.execute(full, 'search_all', { query: 'centre de coûts FR-TRV-600' });
   assert.equal(named.not_read_here[0].family, 'cost centers');
-  assert.match(named.not_read_here[0].note, /^KANAP has cost centers; this server does not read them\. They are on the screen Master data › Cost centers\./);
-  // P2 q12 and q20.
-  const access = await h.tools.execute(full, 'search_all', { query: 'accès limité aux données' });
-  assert.ok(access.not_read_here.some((entry: any) => entry.where === 'Admin › Data access'), 'data access');
-  const chargeback = await h.tools.execute(full, 'search_all', { query: 'refacturation 2026 par société bénéficiaire' });
-  assert.ok(chargeback.not_read_here.some((entry: any) => entry.where === 'Budget management › Reporting › Global chargeback'), 'chargeback');
+  assert.match(named.not_read_here[0].note, /^KANAP has cost centers; this server does not read them\. They are on the screen named, in the person's language, en: Master data › Cost centers; fr: Données de référence › Centres de coûts;/);
+
+  // A French profile: the screens as the French menus name them (P2 q10b, q12, q20).
+  await runner.query(`UPDATE users SET locale = 'fr' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.users.full]);
+  try {
+    const french = await h.tools.execute(full, 'search_all', { query: 'centre de coûts FR-TRV-600' });
+    assert.equal(french.not_read_here[0].where, 'Données de référence › Centres de coûts');
+    assert.match(french.not_read_here[0].note, /They are on the screen Données de référence › Centres de coûts\./);
+    assert.ok(french.families_not_read.includes('audit log (Administration › Journal d\'audit)'));
+    const access = await h.tools.execute(full, 'search_all', { query: 'accès limité aux données' });
+    assert.ok(access.not_read_here.some((entry: any) => entry.where === 'Administration › Accès aux données'), 'data access');
+    const chargeback = await h.tools.execute(full, 'search_all', { query: 'refacturation 2026 par société bénéficiaire' });
+    assert.ok(chargeback.not_read_here.some((entry: any) => entry.where === 'Gestion budgétaire › Rapports › Refacturation globale'), 'chargeback');
+    const frenchFilters = await h.tools.execute(full, 'describe_entity_filters', { entity_type: 'applications' });
+    assert.ok(frenchFilters.families_not_read.includes('data access (which companies or cost centers a person is limited to) (Administration › Accès aux données)'));
+  } finally {
+    await runner.query(`UPDATE users SET locale = NULL WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.users.full]);
+  }
   // A match in a read family still carries no generic list.
   const found = await h.tools.execute(full, 'search_all', { query: 'APP-8' });
   if (found.items.length) assert.equal(found.families_not_read, undefined, 'a match: no generic list');
   const described = await h.tools.execute(full, 'describe_entity_filters', { entity_type: 'applications' });
-  assert.ok(described.families_not_read.includes('audit log (Admin › Audit log)'), 'describe_entity_filters lists them');
+  assert.ok(described.families_not_read.includes('audit log (en: Admin › Audit log; fr: Administration › Journal d\'audit; de: Administration › Audit-Protokoll; es: Administración › Registro de auditoría)'), 'describe_entity_filters lists them');
   const tools = await h.tools.listAvailableTools(full);
   const searchTool = tools.find((tool: any) => tool.name === 'search_all');
   assert.match(searchTool.description, /no proof that such a record does not exist/);

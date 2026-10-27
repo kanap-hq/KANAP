@@ -126,7 +126,7 @@ Plaid names a record linked to the one you ask about only when you can read its 
 
 When Plaid adds up budget amounts, a line whose currency has no exchange rate for the year is left out of the sum. Plaid then says which currencies and years it left out. Assistants connected over MCP get the same answer.
 
-Totals come from KANAP. A list of budget lines or contracts comes with the total of every matching record, all pages included, and Plaid quotes that total or asks KANAP for a sum. When your data access is limited to some companies or cost centers, Plaid says that its counts and totals cover your access, and does not present them as the total of the workspace.
+Totals come from KANAP. A list of budget lines or contracts comes with the total of every matching record, all pages included, and with the total of the records listed, so Plaid quotes one of them or asks KANAP for a sum. Asked for the ten largest lines and their total, Plaid gives the total of those ten. When your data access is limited to some companies or cost centers, Plaid says that its counts and totals cover your access, and does not present them as the total of the workspace.
 
 When Plaid tries a filter value that a field does not take, for example "active" for the status of an application (which is "enabled" or "disabled"), KANAP refuses it and lists the accepted values. Plaid then searches again with the right value.
 
@@ -145,7 +145,7 @@ Plaid does not read:
 - AI agents
 - The chargeback by beneficiary company (**Budget management › Reporting › Global chargeback**)
 
-When a question touches one of these, Plaid says that it cannot read it and names the screen that shows it. A search without a result tells Plaid what it did not search, so the answer does not claim that the record is missing. The same goes for a field: the context of a record carries its main fields, and Plaid reads the full record before saying that a field is empty. Assistants connected over MCP get the same answers.
+When a question touches one of these, Plaid says that it cannot read it and names the screen that shows it, as your menus name it in the language of your profile. A search without a result tells Plaid what it did not search, so the answer does not claim that the record is missing. The same goes for a field: the context of a record carries its main fields, and Plaid reads the full record before saying that a field is empty. Assistants connected over MCP get the same answers.
 
 ## Artifacts and previews
 

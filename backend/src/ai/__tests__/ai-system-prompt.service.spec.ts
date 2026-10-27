@@ -331,6 +331,7 @@ async function testPromptBuildsWriteGuidanceFromToolMetadata() {
   assert.match(prompt, /undo_preview/);
   assert.match(prompt, /same assistant turn before asking for approval/i);
   assert.match(prompt, /Do not stop after the first bulk preview/i);
+  assert.match(prompt, /do not announce the retry \("I will try again with the application name", "je réessaie avec le nom"\)/);
   assert.match(prompt, /prepare_mutation_plan/i);
   assert.match(prompt, /\{\{create_project\.ref\}\}/i);
   assert.match(prompt, /continue calling write-preview tools until every selected target has a preview/i);
@@ -445,8 +446,24 @@ async function testPromptSaysItsLimitsAndRights() {
     writeRights,
   });
   const prompt = build({ plaidChanges: false, modifiableModules: ['projects'] });
-  assert.match(prompt, /cost centers \(Master data › Cost centers\)/);
-  assert.match(prompt, /chargeback by beneficiary company \(Budget management › Reporting › Global chargeback\)/);
+  // No profile language: each screen in the four languages of the menus, quoted as given.
+  assert.match(prompt, /cost centers \(en: Master data › Cost centers; fr: Données de référence › Centres de coûts; de: Stammdaten › Kostenstellen; es: Datos maestros › Centros de coste\)/);
+  assert.match(prompt, /chargeback by beneficiary company \(en: Budget management › Reporting › Global chargeback; fr: Gestion budgétaire › Rapports › Refacturation globale;/);
+  assert.match(prompt, /Quote a screen name exactly as given, never translated/);
+  // A French profile: the French menus only (essay of 2026-10-27).
+  const french = service.build({
+    tenantName: 'Test Tenant',
+    availableTools: [tool],
+    readableEntityTypes: ['projects'],
+    currentUser: { displayName: 'Reader', email: null, roleNames: [], teamName: null, screenLanguage: 'fr' },
+  });
+  assert.match(french, /cost centers \(Données de référence › Centres de coûts\)/);
+  assert.match(french, /data access \(which companies or cost centers a person is limited to\) \(Administration › Accès aux données\)/);
+  assert.match(french, /chargeback by beneficiary company \(Gestion budgétaire › Rapports › Refacturation globale\)/);
+  assert.doesNotMatch(french, /Master data › Cost centers/);
+  // The total of a top N comes from the page's totals; a repaired error is not narrated.
+  assert.match(prompt, /`page_amount_totals` \(only the items returned, for "the ten largest and their total"/);
+  assert.match(prompt, /write nothing about it, neither the failed attempt nor the retry/);
   assert.match(prompt, /Never conclude that something does not exist, is empty or is "none"/);
   assert.match(prompt, /Never add up, subtract or average figures yourself/);
   assert.match(prompt, /"within your access", never as the workspace total/);

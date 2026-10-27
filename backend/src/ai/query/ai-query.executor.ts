@@ -265,6 +265,68 @@ function budgetAmountMetadata(row: any, anchorYear: number): AiEntityMetadata {
 }
 
 /**
+ * The amounts of the budget lines of one page, as `amount_totals` sums every line the filters keep
+ * (same fields, same reporting currency): the total of the lines listed, "the ten largest lines".
+ */
+function budgetPageAmountTotals(rows: any[], anchorYear: number, currency: string | null): AiAmountTotals {
+  const values: Record<string, number> = {};
+  for (const slot of FIXED_SLOTS) {
+    for (const column of SUMMARY_COLUMNS) values[`${slot.ai}_${column.ai}`] = 0;
+  }
+  const fxMissing = new Map<string, { currency: string; year: number; lines: number }>();
+  for (const row of rows) {
+    for (const slot of FIXED_SLOTS) {
+      const data = budgetSlot(row, slot, anchorYear);
+      for (const column of SUMMARY_COLUMNS) {
+        const value = budgetSlotValue(data, column.key);
+        if (value != null) values[`${slot.ai}_${column.ai}`] += value;
+      }
+    }
+    for (const year of budgetFxMissingYears(row, anchorYear)) {
+      const lineCurrency = String(row.currency ?? '');
+      const key = `${lineCurrency}\u0000${year}`;
+      const entry = fxMissing.get(key) ?? { currency: lineCurrency, year, lines: 0 };
+      entry.lines += 1;
+      fxMissing.set(key, entry);
+    }
+  }
+  for (const key of Object.keys(values)) values[key] = Math.round(values[key] * 100) / 100;
+  return {
+    records: rows.length,
+    currency,
+    values,
+    ...(fxMissing.size ? { fx_missing: [...fxMissing.values()] } : {}),
+    note: `Each amount field summed over the ${rows.length} lines returned on this page only, in ${currency ?? 'the reporting currency'}, by the server: `
+      + 'the total of the lines listed (for "the ten largest lines and their total", a page of ten sorted on the amount). '
+      + 'amount_totals is the total of every line the filters keep.'
+      + (fxMissing.size ? ' The amounts of the lines listed in fx_missing have no rate and are left out: say so.' : ''),
+  };
+}
+
+/** The yearly amounts of the contracts of one page, per contract currency, as `amount_totals` sums every contract. */
+function contractPageAmountTotals(rows: any[]): AiAmountTotals {
+  const byCurrency = new Map<string, { currency: string | null; yearly_amount: number | null; contracts: number; without_amount: number }>();
+  for (const row of rows) {
+    const currency = row.currency == null ? null : String(row.currency);
+    const entry = byCurrency.get(currency ?? '') ?? { currency, yearly_amount: null, contracts: 0, without_amount: 0 };
+    const amount = numericScalar(row.yearly_amount_at_signature);
+    entry.contracts += 1;
+    if (amount == null) entry.without_amount += 1;
+    else entry.yearly_amount = Math.round(((entry.yearly_amount ?? 0) + amount) * 100) / 100;
+    byCurrency.set(currency ?? '', entry);
+  }
+  const by_currency = [...byCurrency.values()].sort((a, b) =>
+    (a.currency == null ? 1 : 0) - (b.currency == null ? 1 : 0) || String(a.currency).localeCompare(String(b.currency)));
+  return {
+    records: rows.length,
+    currency: null,
+    by_currency,
+    note: `The yearly amounts of the ${rows.length} contracts returned on this page only, summed per contract currency by the server: `
+      + 'the total of the contracts listed. Amounts in different currencies do not add up. amount_totals is the total of every contract the filters keep.',
+  };
+}
+
+/**
  * The value of each enabled non-default analytics dimension under its AI key
  * (`analytics:<code>`): read from the engine's key, or from the AI key on a
  * detail row already converted by `withDetailAiKeys`.
@@ -1361,6 +1423,19 @@ export class AiQueryExecutor {
     };
   }
 
+  /** The totals of every line the query keeps (`amount_totals`) and of the page returned (`page_amount_totals`). */
+  private async budgetTotals(
+    context: AiExecutionContextWithManager,
+    entityType: 'spend_items' | 'capex_items',
+    query: Record<string, any>,
+    records: number,
+    rows: any[],
+    anchorYear: number,
+  ): Promise<{ amount_totals: AiAmountTotals; page_amount_totals: AiAmountTotals }> {
+    const amountTotals = await this.budgetAmountTotals(context, entityType, query, records);
+    return { amount_totals: amountTotals, page_amount_totals: budgetPageAmountTotals(rows, anchorYear, amountTotals.currency) };
+  }
+
   /**
    * The amounts of every budget line the query keeps, all pages, as the list footer computes them
    * (`summaryTotals`, same filters and quick search): the total an answer quotes.
@@ -1606,7 +1681,7 @@ export class AiQueryExecutor {
         complete: isCompleteQueryResult(resultPage, truncated),
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
-        amount_totals: await this.budgetAmountTotals(context, 'capex_items', scoped.query, result.total ?? 0),
+        ...await this.budgetTotals(context, 'capex_items', scoped.query, result.total ?? 0, result.items || [], anchorYear),
         scope: null,
       };
     }
@@ -1635,7 +1710,7 @@ export class AiQueryExecutor {
         complete: isCompleteQueryResult(resultPage, truncated),
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
-        amount_totals: await this.budgetAmountTotals(context, 'spend_items', scoped.query, result.total ?? 0),
+        ...await this.budgetTotals(context, 'spend_items', scoped.query, result.total ?? 0, result.items || [], anchorYear),
         scope: null,
       };
     }
@@ -1662,6 +1737,7 @@ export class AiQueryExecutor {
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
         amount_totals: await this.contractAmountTotals(context, scoped.query, result.total ?? 0),
+        page_amount_totals: contractPageAmountTotals(result.items || []),
         scope: null,
       };
     }

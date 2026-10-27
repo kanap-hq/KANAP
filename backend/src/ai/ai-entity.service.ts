@@ -47,7 +47,13 @@ import {
 import { resolveAiApplicationsReach } from './query/ai-technologies.query';
 import { classificationLabels } from '../applications/services/application-classification';
 import { readClassificationCatalog } from './ai-classification-catalog.util';
-import { unreadFamiliesAskedBy, unreadFamilyLines } from './ai-unread-families';
+import {
+  asksForUnreadFamily,
+  readAiScreenLanguage,
+  unreadFamiliesAskedBy,
+  unreadFamilyLines,
+  type AiScreenLanguage,
+} from './ai-unread-families';
 
 const ASSET_OS_LABEL = operatingSystemLabelSql('a');
 
@@ -479,20 +485,20 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
 /**
  * A search says what it could not look in: the unread families its words ask for (cost centers,
  * chargeback...), and every unread family when nothing matched, so that no match never reads as
- * "does not exist".
+ * "does not exist". Their screens are named in the person's language (`language`, null: all four).
  */
-function withUnreadFamilies<T extends { items: unknown[] }>(result: T, query: string): T & {
+function withUnreadFamilies<T extends { items: unknown[] }>(result: T, query: string, language: AiScreenLanguage | null): T & {
   not_read_here?: ReturnType<typeof unreadFamiliesAskedBy>;
   families_not_read?: string[];
   no_match_note?: string;
 } {
-  const asked = unreadFamiliesAskedBy(query);
+  const asked = unreadFamiliesAskedBy(query, language);
   return {
     ...result,
     ...(asked.length ? { not_read_here: asked } : {}),
     ...(result.items.length === 0
       ? {
-        families_not_read: unreadFamilyLines(),
+        families_not_read: unreadFamilyLines(language),
         no_match_note: 'No match among the families searched. The families_not_read are not searched: a record of theirs may exist. Say what you could not read and name its screen.',
       }
       : {}),
@@ -2198,7 +2204,11 @@ export class AiEntityService {
     const result = aiSearchIndexEnabled()
       ? await this.searchAllIndexed(context, input)
       : await this.searchAllLegacy(context, input);
-    return withUnreadFamilies(result, input.query);
+    // The profile's language is read only when the answer names a screen.
+    const language = result.items.length === 0 || asksForUnreadFamily(input.query)
+      ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId)
+      : null;
+    return withUnreadFamilies(result, input.query, language);
   }
 
   /**

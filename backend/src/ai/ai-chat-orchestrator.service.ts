@@ -2,6 +2,14 @@ import { BadRequestException, ForbiddenException, Injectable, Logger } from '@ne
 import { EntityManager } from 'typeorm';
 import { resolveBudgetLine } from '../common/resolve-item-id';
 import { timeZoneOf } from '../common/csv-sheet';
+import { aiScreenLanguage, type AiScreenLanguage } from './ai-unread-families';
+import {
+  takeRepairedToolFailures,
+  toolCallTargets,
+  toolFailureKind,
+  type AiRepairableToolFailure,
+  type AiToolFailureKind,
+} from './ai-tool-repairs';
 import { assertPublicHttpTarget } from '../common/ssrf-guard';
 import { getEnvMode, isDevelopmentEnv } from '../common/env';
 import { AiAttachmentService } from './ai-attachment.service';
@@ -206,6 +214,7 @@ type CurrentUserPromptContext = {
   email: string | null;
   roleNames: string[];
   teamName: string | null;
+  screenLanguage: AiScreenLanguage | null;
 };
 
 type StreamUsage = {
@@ -1824,6 +1833,7 @@ export class AiChatOrchestratorService {
       `SELECT u.email,
               u.first_name,
               u.last_name,
+              u.locale,
               r.role_name AS primary_role_name
        FROM users u
        LEFT JOIN roles r
@@ -1868,6 +1878,7 @@ export class AiChatOrchestratorService {
       email: typeof user.email === 'string' && user.email.trim() ? user.email.trim() : null,
       roleNames,
       teamName: teamRows[0]?.team_name ?? null,
+      screenLanguage: aiScreenLanguage(user.locale),
     };
   }
 
@@ -2533,6 +2544,8 @@ export class AiChatOrchestratorService {
     const failedBulkRefsThisTurn = new Set<string>();
     const excludedBulkRefsThisTurn = new Set<string>();
     const coveredBulkRefsByEntityTypeThisTurn = new Map<string, Set<string>>();
+    // The input errors a later call of the same tool may repair in this turn (`ai-tool-repairs.ts`).
+    const repairableToolFailuresThisTurn: AiRepairableToolFailure[] = [];
     const toolSchemaBudget = estimateToolSchemaBreakdown(tools);
     const loadConversationUsage = async (): Promise<AiTokenUsage> => {
       return this.tenantExecutor.runWithContext(context, async (ctx) => {
@@ -2822,6 +2835,8 @@ export class AiChatOrchestratorService {
               `Skipping tool execution for tool_call_id=${tc.id} tool=${tc.name} because arguments were invalid JSON.`,
             );
             result = { error: `${parseErrorMessage} Ask the model to retry with valid JSON arguments.` };
+            // Arguments that are not JSON name no target: the next good call of the tool repairs them.
+            repairableToolFailuresThisTurn.push({ id: tc.id, name: tc.name, targets: null });
             const skippedAssistantText = this.buildSkippedToolCallAssistantText(
               assistantContent,
               tc,
@@ -2924,6 +2939,7 @@ export class AiChatOrchestratorService {
             }
 
             const toolStartedAt = Date.now();
+            let failureKind: AiToolFailureKind | null = null;
             {
               const trace = buildDebugTrace('tool_execution_started', {
                 iteration: iteration + 1,
@@ -2962,6 +2978,7 @@ export class AiChatOrchestratorService {
                 };
               }
             } catch (err: any) {
+              failureKind = toolFailureKind(err);
               result = { error: dataAccessRefusalMessage(err) ?? (err.message || 'Tool execution failed.') };
             } finally {
               toolExecutionMs += Math.max(0, Date.now() - toolStartedAt);
@@ -2978,12 +2995,20 @@ export class AiChatOrchestratorService {
               ? formatToolResultDateTimes(userPreviews, timeZone) as AiMutationPreviewDto[]
               : null;
             toolCallCountThisTurn++;
+            // An input error waits for its repair; a success names the failures it repaired.
+            let repairs: string[] = [];
+            if (failureKind === 'input') {
+              repairableToolFailuresThisTurn.push({ id: tc.id, name: tc.name, targets: toolCallTargets(parsedArgs) });
+            } else if (!failureKind) {
+              repairs = takeRepairedToolFailures(repairableToolFailuresThisTurn, { name: tc.name, args: parsedArgs, result });
+            }
 
             yield {
               type: 'tool_result',
               id: tc.id,
               name: tc.name,
               result,
+              ...(repairs.length ? { repairs } : {}),
             };
             yield {
               type: 'activity',
@@ -3039,6 +3064,8 @@ export class AiChatOrchestratorService {
               tool_name: tc.name,
               result,
               ...(validation ? { validation } : {}),
+              // Read back by the chat history, so that a reloaded conversation hides the same failures.
+              ...(repairs.length ? { repairs } : {}),
             });
 
             messages.push({

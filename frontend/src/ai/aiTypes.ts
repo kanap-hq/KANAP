@@ -187,7 +187,8 @@ export type ChatStreamEvent =
   | ({ type: 'debug_trace' } & Omit<ChatDebugTraceEntry, 'created_at'>)
   | { type: 'text_delta'; text: string }
   | { type: 'tool_call'; id: string; name: string; arguments: Record<string, unknown> }
-  | { type: 'tool_result'; id: string; name: string; result: unknown }
+  /** `repairs`: the earlier failed calls of the same tool that this call repaired, as the server decides. */
+  | { type: 'tool_result'; id: string; name: string; result: unknown; repairs?: string[] }
   | ({ type: 'preview' } & AiMutationPreview)
   | ({ type: 'preview_result' } & AiMutationPreview)
   | { type: 'done'; usage?: TokenUsage; last_usage?: TokenUsage; conversation_usage?: TokenUsage; builtin_usage?: BuiltinUsage }
@@ -222,7 +223,7 @@ export type ChatMessage = {
   role: 'user' | 'assistant' | 'tool';
   content: string;
   toolCalls?: Array<{ id: string; name: string; arguments: Record<string, unknown> }>;
-  toolResults?: Array<{ id: string; name: string; result: unknown }>;
+  toolResults?: Array<{ id: string; name: string; result: unknown; repairs?: string[] }>;
   usage?: TokenUsage;
   isStreaming?: boolean;
   hidden?: boolean;

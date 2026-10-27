@@ -8,13 +8,15 @@ import type { AiContextProfile } from './ai-context-profile';
 import type { budgetColumnsAiContext } from '../budget-columns/budget-columns.util';
 import type { AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 import { isoDateTimeInTimeZone, knownTimeZone } from '../common/csv-sheet';
-import { AI_UNREAD_FAMILIES_SENTENCE } from './ai-unread-families';
+import { unreadFamiliesSentence, type AiScreenLanguage } from './ai-unread-families';
 
 type CurrentUserPromptContext = {
   displayName: string;
   email: string | null;
   roleNames: string[];
   teamName: string | null;
+  /** The language of the person's menus (profile), which names the screens; null or absent: all four. */
+  screenLanguage?: AiScreenLanguage | null;
 };
 
 type SystemPromptParams = {
@@ -122,6 +124,7 @@ function toolUsageGuidelines(mode: AiContextProfile['promptMode']): string {
     '- Use get_entity_comments for the actual project/task discussion feed when comments or older conversation history are requested.',
     '- Treat `filters_ignored` and `sort_ignored` from query_entities or aggregate_entities, and `fields_ignored` from get_filter_values, as blocking validation failures. If they appear, do one silent repair attempt before answering; otherwise explain the invalid filter.',
     '- Never base counts, ownership claims, assignee claims, or analytical conclusions on a structured result that contains ignored filters or ignored fields.',
+    '- A tool error you repair with another call is part of your work: write nothing about it, neither the failed attempt nor the retry ("I will try again with the name"). Report only the outcome.',
     '- When the user says "me", "my", "mine", or "myself", use scope: "me". When they say "my team", use scope: "my_team".',
     '- Cross-entity examples: tasks for projects in a stream use project_stream; applications linked to a project use linked_project; documents linked to an entity use the relevant linked_* filter.',
     '- Spend-item reads and spend-item aggregations are summary-backed and should mirror the OPEX summary view.',
@@ -196,11 +199,11 @@ function writeRightsText(writeRights: SystemPromptParams['writeRights']): string
 }
 
 /** What the tools cannot read, how totals are given, and the person's data access (AGENTS.md). */
-const LIMITS_TEXT = [
+const limitsText = (screenLanguage: AiScreenLanguage | null) => [
   'Limits of what you read:',
-  `- ${AI_UNREAD_FAMILIES_SENTENCE}`,
+  `- ${unreadFamiliesSentence(screenLanguage)}`,
   '- Never conclude that something does not exist, is empty or is "none" because no tool returned it: a family the tools do not read, a field a result does not carry (a context is an extract: get_entity_detail gives every field), or a family the user cannot read (null). Say what you could not read and name the KANAP screen that shows it.',
-  '- Every total, sum, average or count you cite comes from a tool: `amount_totals` of query_entities, or aggregate_entities on the same filters. Never add up, subtract or average figures yourself, even from a list you have just read.',
+  '- Every total, sum, average or count you cite comes from a tool: `amount_totals` of query_entities (every record the filters keep), `page_amount_totals` (only the items returned, for "the ten largest and their total": ask for a page of that size), or aggregate_entities on the same filters. Never add up, subtract or average figures yourself, even from a list you have just read.',
   '- A result with `data_access` limited covers only what the person\'s data access lets them see: give its counts and totals as "within your access", never as the workspace total, and never say they equal it.',
   '- `invalid_filter_value` means a filter value the field does not take: retry with one of the accepted values it lists. It never means that no record matches.',
 ].join('\n');
@@ -395,7 +398,7 @@ export class AiSystemPromptService {
     }
 
     if (params.availableTools.length > 0) {
-      addSection('limits', 'Limits of what you read', LIMITS_TEXT);
+      addSection('limits', 'Limits of what you read', limitsText(params.currentUser.screenLanguage ?? null));
     }
 
     if (profile.includeReadableEntityTypes && params.readableEntityTypes.length > 0) {
@@ -443,7 +446,7 @@ export class AiSystemPromptService {
         '- If a bulk preview tool returns partial `errors`, report which previews were created and which targets failed; never hide partial failures.\n' +
         '- Never write raw tool syntax such as `<tool_call>` in assistant text. Tool calls must be emitted only through the provider tool-calling API.\n' +
         '- Explicit approval is handled outside the model. Never attempt to simulate approval, never claim approval happened implicitly, and never claim execution succeeded without seeing the execution result. Only the person approves a preview: never offer to approve it yourself.\n' +
-        '- A tool error you repair with another call (a reference the tool refused, then the same call by name or id) is part of your work: do not tell the person about the failed attempt, and never write that something failed and then that it was done. Report only the outcome.',
+        '- A tool error you repair with another call (a reference the tool refused, then the same call by name or id) is part of your work: do not tell the person about the failed attempt, do not announce the retry ("I will try again with the application name", "je réessaie avec le nom"), and never write that something failed and then that it was done. Report only the outcome.',
       );
     }
 
