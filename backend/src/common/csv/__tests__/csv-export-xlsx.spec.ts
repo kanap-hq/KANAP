@@ -154,6 +154,40 @@ async function testTypedCells() {
   console.log('  typed cells: exact decimals, CSV text for what is neither a number nor a day: OK');
 }
 
+/**
+ * Each list carries the business reference its screen shows, right after `id` (the incident register
+ * has no id: its reference leads), as a text cell; it is export only, so the import template leaves it out.
+ */
+async function testReferences() {
+  const service = new CsvExportService(new CsvResolverService());
+  const expected: Record<string, { headers: string[]; first: string }> = {
+    applications: { headers: ['id', 'reference', 'name'], first: 'APP-1' },
+    assets: { headers: ['id', 'reference', 'name'], first: 'AST-1' },
+    incidents: { headers: ['Réf.', 'Titre'], first: 'INC-1' },
+    projects: { headers: ['id', 'reference', 'name'], first: 'PRJ-1' },
+    requests: { headers: ['id', 'reference', 'name'], first: 'REQ-1' },
+    tasks: { headers: ['id', 'reference', 'title'], first: 'T-1' },
+  };
+  for (const golden of goldenCases()) {
+    const { headers, first } = expected[golden.name];
+    const options = { manager: goldenManager(), tenantId: 'tenant-1', language: 'fr' as const, timeZone: golden.timeZone };
+    const xlsx = await service.export(golden.config, golden.rows, { ...options, format: 'xlsx' });
+    const cells = sheetCells(new AdmZip(xlsx.content).readAsText('xl/worksheets/sheet1.xml'));
+    headers.forEach((header, index) => {
+      assert.deepEqual(cells.get(`${columnName(index)}1`), { type: 'text', text: header }, `${golden.name}: column ${index + 1} is ${header}`);
+    });
+    const referenceColumn = columnName(headers.length === 2 ? 0 : 1);
+    assert.deepEqual(cells.get(`${referenceColumn}2`), { type: 'text', text: first }, `${golden.name}: the reference as text`);
+    if (golden.name === 'incidents') continue;
+    assert.equal(cells.get(`${referenceColumn}4`), undefined, `${golden.name}: no number, no reference`);
+    const reference = golden.config.fields.find((field) => field.csvColumn === 'reference');
+    assert.equal(reference?.importable, false, `${golden.name}: the reference is export only`);
+    const template = await service.export(golden.config, [], { ...options, scope: 'template' });
+    assert.ok(!(await csvTable(template.content))[0].includes('reference'), `${golden.name}: the template leaves the reference out`);
+  }
+  console.log('  references: after id, text cells, left out of the import template: OK');
+}
+
 async function testTemplateIsCsv() {
   const service = new CsvExportService(new CsvResolverService());
   const [golden] = goldenCases();
@@ -173,6 +207,7 @@ async function run() {
   console.log('csv export xlsx');
   await testSixLists();
   await testTypedCells();
+  await testReferences();
   await testTemplateIsCsv();
   console.log('csv-export-xlsx.spec: all assertions passed');
 }

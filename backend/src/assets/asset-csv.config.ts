@@ -569,9 +569,10 @@ async function recheckClusterRulesAtWrite(entities: any[], context: CsvImportCon
 /**
  * CSV configuration for Assets entity
  *
- * Field order matches AssetWorkspacePage.tsx tabs:
- * - Overview: name, location, kind, is_cluster, status, notes
- * - Technical: environment, hostname, domain, admin_zone, aliases, operating system, cluster, IP addresses
+ * Column order: id, reference (AST-n, export only), name, then AssetWorkspacePage.tsx tab by tab:
+ * - Overview: description (notes), properties (kind to end of life), cluster membership
+ * - Operations: operating system, vulnerabilities
+ * - Network: hostname, domain, aliases, IP addresses
  *
  * Note: fqdn is computed from hostname + domain, so not included in CSV
  */
@@ -585,7 +586,7 @@ export const assetCsvConfig: CsvEntityConfig = {
   // Same rule as the unique names: `lower(btrim(name))`.
   upsertKeyIgnoresOuterSpaces: true,
   fields: [
-    // Identity
+    // === IDENTITY ===
     {
       csvColumn: 'id',
       entityProperty: 'id',
@@ -598,8 +599,17 @@ export const assetCsvConfig: CsvEntityConfig = {
       label: 'ID',
       group: 'Identity',
     },
-
-    // === OVERVIEW TAB ===
+    {
+      // The business reference the list shows (AST-n): export only, ignored on import.
+      csvColumn: 'reference',
+      entityProperty: 'asset_reference',
+      type: CsvFieldType.STRING,
+      exportable: true,
+      importable: false,
+      defaultExport: true,
+      label: 'Reference',
+      group: 'Identity',
+    },
     {
       csvColumn: 'name',
       entityProperty: 'name',
@@ -609,16 +619,15 @@ export const assetCsvConfig: CsvEntityConfig = {
       label: 'Name',
       group: 'Overview',
     },
+
+    // === OVERVIEW TAB (description, properties) ===
     {
-      csvColumn: 'location_reference',
-      entityProperty: 'location_id',
-      type: CsvFieldType.FK_BY_CODE,
-      fkEntity: 'locations',
-      fkLookupColumn: 'location_reference',
-      fkRequired: true,
-      required: true,
-      defaultExport: true,
-      label: 'Location',
+      csvColumn: 'notes',
+      entityProperty: 'notes',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: false,
+      label: 'Notes',
       group: 'Overview',
     },
     {
@@ -637,6 +646,37 @@ export const assetCsvConfig: CsvEntityConfig = {
       required: false,
       defaultExport: true,
       label: 'Is Cluster',
+      group: 'Overview',
+    },
+    {
+      csvColumn: 'environment',
+      entityProperty: 'environment',
+      // A code or the name the screen shows in any language. Resolved in beforeCommit.
+      type: CsvFieldType.STRING,
+      required: true,
+      defaultExport: true,
+      label: 'Environment',
+      group: 'Technical',
+    },
+    {
+      csvColumn: 'admin_zone',
+      entityProperty: 'admin_zone',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: true,
+      label: 'Administration zone',
+      group: 'Technical',
+    },
+    {
+      csvColumn: 'location_reference',
+      entityProperty: 'location_id',
+      type: CsvFieldType.FK_BY_CODE,
+      fkEntity: 'locations',
+      fkLookupColumn: 'location_reference',
+      fkRequired: true,
+      required: true,
+      defaultExport: true,
+      label: 'Location',
       group: 'Overview',
     },
     {
@@ -669,26 +709,29 @@ export const assetCsvConfig: CsvEntityConfig = {
       group: 'Overview',
     },
     {
-      csvColumn: 'notes',
-      entityProperty: 'notes',
+      // The names of the asset's real clusters (`checkClusterMemberships`, `writeClusterMemberships`).
+      csvColumn: 'cluster',
+      entityProperty: 'cluster',
       type: CsvFieldType.STRING,
       required: false,
-      defaultExport: false,
-      label: 'Notes',
-      group: 'Overview',
-    },
-
-    // === TECHNICAL TAB ===
-    {
-      csvColumn: 'environment',
-      entityProperty: 'environment',
-      // A code or the name the screen shows in any language. Resolved in beforeCommit.
-      type: CsvFieldType.STRING,
-      required: true,
       defaultExport: true,
-      label: 'Environment',
+      label: 'Cluster Membership',
       group: 'Technical',
     },
+
+    // === OPERATIONS TAB ===
+    {
+      csvColumn: 'operating_system',
+      entityProperty: 'operating_system',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: true,
+      label: 'Operating System',
+      group: 'Technical',
+    },
+    ...vulnerabilityCsvFields('Vulnerabilities'),
+
+    // === NETWORK TAB ===
     {
       csvColumn: 'hostname',
       entityProperty: 'hostname',
@@ -708,15 +751,6 @@ export const assetCsvConfig: CsvEntityConfig = {
       group: 'Technical',
     },
     {
-      csvColumn: 'admin_zone',
-      entityProperty: 'admin_zone',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: true,
-      label: 'Administration zone',
-      group: 'Technical',
-    },
-    {
       csvColumn: 'aliases',
       entityProperty: 'aliases',
       type: CsvFieldType.ARRAY,
@@ -726,28 +760,6 @@ export const assetCsvConfig: CsvEntityConfig = {
       label: 'Aliases',
       group: 'Technical',
     },
-    {
-      csvColumn: 'operating_system',
-      entityProperty: 'operating_system',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: true,
-      label: 'Operating System',
-      group: 'Technical',
-    },
-    {
-      // The names of the asset's real clusters (`checkClusterMemberships`, `writeClusterMemberships`).
-      csvColumn: 'cluster',
-      entityProperty: 'cluster',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: true,
-      label: 'Cluster Membership',
-      group: 'Technical',
-    },
-    // Note: region and zone were removed - region comes from Location, zone was unused
-
-    // === IP ADDRESSES (up to 4) ===
     {
       csvColumn: 'ip_1_type',
       entityProperty: 'ip_addresses',
@@ -868,9 +880,6 @@ export const assetCsvConfig: CsvEntityConfig = {
       label: 'IP 4 Subnet CIDR',
       group: 'IP Addresses',
     },
-
-    // === VULNERABILITIES (export only, left out with the feed off) ===
-    ...vulnerabilityCsvFields('Vulnerabilities'),
   ],
 
   // Export presets

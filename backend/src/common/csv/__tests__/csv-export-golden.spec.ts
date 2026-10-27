@@ -11,12 +11,13 @@ import { incidentCsvConfig } from '../../../incidents/incident-csv.config';
 import { portfolioProjectCsvConfig } from '../../../portfolio/portfolio-project-csv.config';
 import { portfolioRequestCsvConfig } from '../../../portfolio/portfolio-request-csv.config';
 import { taskCsvConfig } from '../../../tasks/task-csv.config';
-import { vulnerabilityCsvFields, VULNERABILITY_CSV_PROPERTY } from '../../../vulnerabilities/vulnerability-list-column';
+import { VULNERABILITY_CSV_PROPERTY } from '../../../vulnerabilities/vulnerability-list-column';
 
 // The CSV of the six lists exported through the field engine (applications, assets, incidents,
 // projects, requests, tasks), byte for byte, from a fixed seed: every exportable column of each
 // config, in English and in French. The files in `golden/` were written by the engine before the
-// Excel export (lot 3) and must not change. `UPDATE_CSV_GOLDEN=1` rewrites them (never to make a
+// Excel export (lot 3), then rewritten once on purpose when the lists gained their business reference
+// after `id` and the workspace's column order (lot 3, fixes); they must not change otherwise. `UPDATE_CSV_GOLDEN=1` rewrites them (never to make a
 // failing run pass: a difference is a change of the CSV people already use).
 
 const GOLDEN_DIR = backendPath('src', 'common', 'csv', '__tests__', 'golden');
@@ -85,10 +86,6 @@ const vulnerabilityCounts = (index: number) => ({
     : { vulnerabilities_to_review: index * 3, vulnerabilities_severe: index },
 });
 
-const withVulnerabilities = (config: CsvEntityConfig): CsvEntityConfig => ({
-  ...config,
-  fields: [...config.fields.filter((field) => field.entityProperty !== VULNERABILITY_CSV_PROPERTY), ...vulnerabilityCsvFields('Vulnerabilities')],
-});
 
 export interface GoldenCase {
   name: string;
@@ -98,8 +95,8 @@ export interface GoldenCase {
 }
 
 export function goldenCases(): GoldenCase[] {
-  const applications = withVulnerabilities(applicationCsvConfig);
-  const assets = withVulnerabilities(assetCsvConfig);
+  const applications = applicationCsvConfig;
+  const assets = assetCsvConfig;
   return [
     {
       name: 'applications',
@@ -110,6 +107,7 @@ export function goldenCases(): GoldenCase[] {
           { owner_type: 'it', user: { email: '=it@example.test' } },
         ],
         _dataResidency: index === 2 ? [] : [{ country_iso: 'FR' }, { country_iso: 'DE' }],
+        sequential_id: index === 2 ? null : `APP-${index + 1}`,
         status: ['enabled', 'disabled', 'enabled', 'enabled'][index],
         ...vulnerabilityCounts(index),
       })),
@@ -118,6 +116,7 @@ export function goldenCases(): GoldenCase[] {
       name: 'assets',
       config: assets,
       rows: seedRows(assets, (index) => ({
+        asset_reference: index === 2 ? null : `AST-${index + 1}`,
         ip_addresses: index === 2 ? [] : [
           { type: 'Management', ip: '10.0.0.1', subnet_cidr: '10.0.0.0/24' },
           { type: 'Production', ip: '10.0.1.1', subnet_cidr: null },
@@ -145,6 +144,7 @@ export function goldenCases(): GoldenCase[] {
       name: 'projects',
       config: portfolioProjectCsvConfig,
       rows: seedRows(portfolioProjectCsvConfig, (index) => ({
+        item_number: index === 2 ? null : index + 1,
         actual_effort_it: index === 2 ? null : 10.6,
         actual_effort_business: index === 2 ? null : '4.4',
         purpose: index === 0 ? 'Purpose **bold**' : '',
@@ -154,6 +154,7 @@ export function goldenCases(): GoldenCase[] {
       name: 'requests',
       config: portfolioRequestCsvConfig,
       rows: seedRows(portfolioRequestCsvConfig, (index) => ({
+        item_number: index === 2 ? null : index + 1,
         purpose: index === 0 ? 'Purpose' : '',
         risks: index === 1 ? '=risk' : '',
       })),
@@ -162,6 +163,7 @@ export function goldenCases(): GoldenCase[] {
       name: 'tasks',
       config: taskCsvConfig,
       rows: seedRows(taskCsvConfig, (index) => ({
+        item_number: index === 2 ? null : index + 1,
         _relatedObjectName: index === 2 ? '' : 'Related project',
       })),
     },

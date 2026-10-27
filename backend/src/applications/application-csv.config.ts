@@ -5,6 +5,7 @@ import { CLASSIFICATION_INPUT_FIELDS, classificationPatch } from './services/app
 import {
   ArrayStrategy,
   CsvEntityConfig,
+  CsvFieldDefinition,
   CsvFieldType,
   CsvExportContext,
   CsvImportContext,
@@ -163,6 +164,21 @@ function groupKeys<T>(rows: T[], id: (row: T) => string, key: (row: T) => string
   return byId;
 }
 
+/** A classification field the import reads (`__CLEAR__` in a cell empties it). */
+function classificationField(field: string): CsvFieldDefinition {
+  return {
+    csvColumn: field, entityProperty: field, type: CsvFieldType.STRING, required: false, defaultExport: true,
+    label: field.endsWith('_minutes') ? `${field} (integer minutes; __CLEAR__ to clear)` : `${field} (__CLEAR__ to clear)`, group: 'Classification',
+  };
+}
+
+/** A field of the classification review: export only. */
+function classificationReviewField(field: string): CsvFieldDefinition {
+  return {
+    csvColumn: field, entityProperty: field, type: CsvFieldType.STRING, importable: false, exportable: true, defaultExport: false, label: field, group: 'Classification',
+  };
+}
+
 /**
  * CSV configuration for Applications entity (V2)
  *
@@ -170,13 +186,11 @@ function groupKeys<T>(rows: T[], id: (row: T) => string, key: (row: T) => string
  * - Owner emails use numbered columns (business_owner_email_1..4, it_owner_email_1..4)
  * - Removed deprecated fields: hosting_model, sso_enabled, mfa_supported, environment (use AppInstance)
  *
- * Field order matches ApplicationWorkspacePage.tsx tabs:
- * - Overview: name, description, category, supplier, editor, criticality, lifecycle, is_suite
- * - Version: version, go_live_date, end_of_support_date, retired_date
- * - Other: licensing, notes
- * - Technical: access_methods, external_facing, etl_enabled, support_notes
- * - Compliance: data_class, last_dr_test, contains_pii, data_residency
- * - Users: users_mode, users_year, users_override
+ * Column order: id, reference (APP-n, export only), name, then ApplicationWorkspacePage.tsx tab by tab:
+ * - Overview: description, lifecycle, properties (category to retirement), owners, users, support notes
+ * - Operations: access methods, external facing, ETL, suite, vulnerabilities
+ * - Compliance: the classification panel, top to bottom
+ * - Not on the workspace: status, licensing, notes, timestamps
  */
 export const applicationCsvConfig: CsvEntityConfig = {
   entityName: 'application',
@@ -188,15 +202,7 @@ export const applicationCsvConfig: CsvEntityConfig = {
   // Same rule as the unique names: `lower(btrim(name))`.
   upsertKeyIgnoresOuterSpaces: true,
   fields: [
-    ...['rto_minutes', 'rpo_minutes', 'cyber_criticality', 'recovery_wave', 'classification_justification'].map((field) => ({
-      csvColumn: field, entityProperty: field, type: CsvFieldType.STRING, required: false, defaultExport: true,
-      label: field.endsWith('_minutes') ? `${field} (integer minutes; __CLEAR__ to clear)` : `${field} (__CLEAR__ to clear)`, group: 'Classification',
-    })),
-    ...['classification_revision', 'classification_review_state', 'classification_reviewed_at'].map((field) => ({
-      csvColumn: field, entityProperty: field, type: CsvFieldType.STRING, importable: false, exportable: true, defaultExport: false, label: field, group: 'Classification',
-    })),
-
-    // Identity
+    // === IDENTITY ===
     {
       csvColumn: 'id',
       entityProperty: 'id',
@@ -209,8 +215,17 @@ export const applicationCsvConfig: CsvEntityConfig = {
       label: 'ID',
       group: 'Identity',
     },
-
-    // === OVERVIEW TAB ===
+    {
+      // The business reference the list shows (APP-n): export only, ignored on import.
+      csvColumn: 'reference',
+      entityProperty: 'sequential_id',
+      type: CsvFieldType.STRING,
+      exportable: true,
+      importable: false,
+      defaultExport: true,
+      label: 'Reference',
+      group: 'Identity',
+    },
     {
       csvColumn: 'name',
       entityProperty: 'name',
@@ -220,6 +235,8 @@ export const applicationCsvConfig: CsvEntityConfig = {
       label: 'Name',
       group: 'Overview',
     },
+
+    // === OVERVIEW TAB (header, description, properties, support) ===
     {
       csvColumn: 'description',
       entityProperty: 'description',
@@ -233,6 +250,15 @@ export const applicationCsvConfig: CsvEntityConfig = {
         assertMarkdownSize(value, 'description');
         return value;
       },
+    },
+    {
+      csvColumn: 'lifecycle',
+      entityProperty: 'lifecycle',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: true,
+      label: 'Lifecycle',
+      group: 'Overview',
     },
     {
       csvColumn: 'category',
@@ -264,35 +290,6 @@ export const applicationCsvConfig: CsvEntityConfig = {
       label: 'Publisher',
       group: 'Overview',
     },
-    {
-      csvColumn: 'criticality',
-      entityProperty: 'criticality',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: true,
-      label: 'Business criticality (code or name; __CLEAR__ to clear)',
-      group: 'Overview',
-    },
-    {
-      csvColumn: 'lifecycle',
-      entityProperty: 'lifecycle',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: true,
-      label: 'Lifecycle',
-      group: 'Overview',
-    },
-    {
-      csvColumn: 'is_suite',
-      entityProperty: 'is_suite',
-      type: CsvFieldType.BOOLEAN,
-      required: false,
-      defaultExport: false,
-      label: 'Can Have Child Apps',
-      group: 'Overview',
-    },
-
-    // === VERSION INFORMATION ===
     {
       csvColumn: 'version',
       entityProperty: 'version',
@@ -329,146 +326,6 @@ export const applicationCsvConfig: CsvEntityConfig = {
       label: 'Retired Date',
       group: 'Version',
     },
-
-    // === OTHER (bottom of Overview tab) ===
-    {
-      csvColumn: 'licensing',
-      entityProperty: 'licensing',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: false,
-      label: 'Licensing',
-      group: 'Other',
-    },
-    {
-      csvColumn: 'notes',
-      entityProperty: 'notes',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: false,
-      label: 'Notes',
-      group: 'Other',
-    },
-
-    // === TECHNICAL & SUPPORT TAB ===
-    {
-      csvColumn: 'access_methods',
-      entityProperty: 'access_methods',
-      type: CsvFieldType.ARRAY,
-      arrayStrategy: ArrayStrategy.COMMA_SEPARATED,
-      required: false,
-      defaultExport: false,
-      label: 'Access Methods',
-      group: 'Technical',
-    },
-    {
-      csvColumn: 'external_facing',
-      entityProperty: 'external_facing',
-      type: CsvFieldType.BOOLEAN,
-      required: false,
-      defaultExport: true,
-      label: 'External Facing',
-      group: 'Technical',
-    },
-    {
-      csvColumn: 'etl_enabled',
-      entityProperty: 'etl_enabled',
-      type: CsvFieldType.BOOLEAN,
-      required: false,
-      defaultExport: false,
-      label: 'Data Integration / ETL',
-      group: 'Technical',
-    },
-    {
-      csvColumn: 'support_notes',
-      entityProperty: 'support_notes',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: false,
-      label: 'Support Notes',
-      group: 'Technical',
-    },
-
-    // === COMPLIANCE TAB ===
-    {
-      csvColumn: 'data_class',
-      entityProperty: 'data_class',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: true,
-      label: 'Data confidentiality',
-      group: 'Compliance',
-    },
-    {
-      csvColumn: 'last_dr_test',
-      entityProperty: 'last_dr_test',
-      type: CsvFieldType.DATE,
-      required: false,
-      defaultExport: false,
-      label: 'Last DR Test',
-      group: 'Compliance',
-    },
-    {
-      csvColumn: 'contains_pii',
-      entityProperty: 'contains_pii',
-      type: CsvFieldType.BOOLEAN,
-      required: false,
-      defaultExport: true,
-      label: 'Contains PII',
-      group: 'Compliance',
-    },
-    {
-      csvColumn: 'data_residency',
-      entityProperty: '_data_residency_csv',
-      type: CsvFieldType.COMPUTED,
-      exportable: true,
-      importable: true,
-      defaultExport: true,
-      label: 'Data Residency (ISO codes)',
-      group: 'Compliance',
-      exportFn: (entity: any, context: CsvExportContext) => {
-        const residency = entity._dataResidency;
-        if (Array.isArray(residency)) {
-          return residency.map((r: any) => r.country_iso).join(', ');
-        }
-        return '';
-      },
-    },
-
-    // === USERS (from Ownership tab) - export-only, managed via UI ===
-    {
-      csvColumn: 'users_mode',
-      entityProperty: 'users_mode',
-      type: CsvFieldType.ENUM,
-      enumValues: ['manual', 'it_users', 'headcount'],
-      exportable: true,
-      importable: false,
-      defaultExport: false,
-      label: 'Users Mode',
-      group: 'Users',
-    },
-    {
-      csvColumn: 'users_year',
-      entityProperty: 'users_year',
-      type: CsvFieldType.NUMBER,
-      exportable: true,
-      importable: false,
-      defaultExport: false,
-      label: 'Users Year',
-      group: 'Users',
-    },
-    {
-      csvColumn: 'users_override',
-      entityProperty: 'users_override',
-      type: CsvFieldType.NUMBER,
-      exportable: true,
-      importable: false,
-      defaultExport: false,
-      label: 'Users Override',
-      group: 'Users',
-    },
-
-    // === OWNERS ===
     // These fields use COMPUTED for export (reading from _owners) but are importable
     // Import is handled by handleOwnerImport in the service
     {
@@ -599,8 +456,151 @@ export const applicationCsvConfig: CsvEntityConfig = {
         return it[3]?.user?.email || '';
       },
     },
+    {
+      csvColumn: 'users_mode',
+      entityProperty: 'users_mode',
+      type: CsvFieldType.ENUM,
+      enumValues: ['manual', 'it_users', 'headcount'],
+      exportable: true,
+      importable: false,
+      defaultExport: false,
+      label: 'Users Mode',
+      group: 'Users',
+    },
+    {
+      csvColumn: 'users_year',
+      entityProperty: 'users_year',
+      type: CsvFieldType.NUMBER,
+      exportable: true,
+      importable: false,
+      defaultExport: false,
+      label: 'Users Year',
+      group: 'Users',
+    },
+    {
+      csvColumn: 'users_override',
+      entityProperty: 'users_override',
+      type: CsvFieldType.NUMBER,
+      exportable: true,
+      importable: false,
+      defaultExport: false,
+      label: 'Users Override',
+      group: 'Users',
+    },
+    {
+      csvColumn: 'support_notes',
+      entityProperty: 'support_notes',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: false,
+      label: 'Support Notes',
+      group: 'Technical',
+    },
 
-    // === STATUS (export only: the status is changed on the page) ===
+    // === OPERATIONS TAB ===
+    {
+      csvColumn: 'access_methods',
+      entityProperty: 'access_methods',
+      type: CsvFieldType.ARRAY,
+      arrayStrategy: ArrayStrategy.COMMA_SEPARATED,
+      required: false,
+      defaultExport: false,
+      label: 'Access Methods',
+      group: 'Technical',
+    },
+    {
+      csvColumn: 'external_facing',
+      entityProperty: 'external_facing',
+      type: CsvFieldType.BOOLEAN,
+      required: false,
+      defaultExport: true,
+      label: 'External Facing',
+      group: 'Technical',
+    },
+    {
+      csvColumn: 'etl_enabled',
+      entityProperty: 'etl_enabled',
+      type: CsvFieldType.BOOLEAN,
+      required: false,
+      defaultExport: false,
+      label: 'Data Integration / ETL',
+      group: 'Technical',
+    },
+    {
+      csvColumn: 'is_suite',
+      entityProperty: 'is_suite',
+      type: CsvFieldType.BOOLEAN,
+      required: false,
+      defaultExport: false,
+      label: 'Can Have Child Apps',
+      group: 'Overview',
+    },
+    ...vulnerabilityCsvFields('Vulnerabilities'),
+
+    // === COMPLIANCE TAB ===
+    {
+      csvColumn: 'criticality',
+      entityProperty: 'criticality',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: true,
+      label: 'Business criticality (code or name; __CLEAR__ to clear)',
+      group: 'Overview',
+    },
+    classificationField('cyber_criticality'),
+    {
+      csvColumn: 'data_class',
+      entityProperty: 'data_class',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: true,
+      label: 'Data confidentiality',
+      group: 'Compliance',
+    },
+    {
+      csvColumn: 'contains_pii',
+      entityProperty: 'contains_pii',
+      type: CsvFieldType.BOOLEAN,
+      required: false,
+      defaultExport: true,
+      label: 'Contains PII',
+      group: 'Compliance',
+    },
+    {
+      csvColumn: 'data_residency',
+      entityProperty: '_data_residency_csv',
+      type: CsvFieldType.COMPUTED,
+      exportable: true,
+      importable: true,
+      defaultExport: true,
+      label: 'Data Residency (ISO codes)',
+      group: 'Compliance',
+      exportFn: (entity: any, context: CsvExportContext) => {
+        const residency = entity._dataResidency;
+        if (Array.isArray(residency)) {
+          return residency.map((r: any) => r.country_iso).join(', ');
+        }
+        return '';
+      },
+    },
+    classificationField('recovery_wave'),
+    classificationField('rto_minutes'),
+    classificationField('rpo_minutes'),
+    {
+      csvColumn: 'last_dr_test',
+      entityProperty: 'last_dr_test',
+      type: CsvFieldType.DATE,
+      required: false,
+      defaultExport: false,
+      label: 'Last DR Test',
+      group: 'Compliance',
+    },
+    classificationField('classification_justification'),
+    classificationReviewField('classification_revision'),
+    classificationReviewField('classification_review_state'),
+    classificationReviewField('classification_reviewed_at'),
+
+    // === NOT ON THE WORKSPACE ===
     {
       csvColumn: 'status',
       entityProperty: 'status',
@@ -615,8 +615,24 @@ export const applicationCsvConfig: CsvEntityConfig = {
         return APPLICATION_STATUS_LABELS[context.language]?.[status] ?? status;
       },
     },
-
-    // === TIMESTAMPS (export-only) ===
+    {
+      csvColumn: 'licensing',
+      entityProperty: 'licensing',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: false,
+      label: 'Licensing',
+      group: 'Other',
+    },
+    {
+      csvColumn: 'notes',
+      entityProperty: 'notes',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: false,
+      label: 'Notes',
+      group: 'Other',
+    },
     {
       csvColumn: 'created_at',
       entityProperty: 'created_at',
@@ -637,9 +653,6 @@ export const applicationCsvConfig: CsvEntityConfig = {
       label: 'Updated At',
       group: 'Timestamps',
     },
-
-    // === VULNERABILITIES (export only, left out with the feed off) ===
-    ...vulnerabilityCsvFields('Vulnerabilities'),
   ],
 
   // Export presets

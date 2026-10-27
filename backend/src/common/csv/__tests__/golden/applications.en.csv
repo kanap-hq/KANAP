@@ -1,24 +1,24 @@
-﻿rto_minutes,rpo_minutes,cyber_criticality,recovery_wave,classification_justification,classification_revision,classification_review_state,classification_reviewed_at,id,name,description,category,supplier_name,editor,criticality,lifecycle,is_suite,version,go_live_date,end_of_support_date,retired_date,licensing,notes,access_methods,external_facing,etl_enabled,support_notes,data_class,last_dr_test,contains_pii,data_residency,users_mode,users_year,users_override,business_owner_email_1,business_owner_email_2,business_owner_email_3,business_owner_email_4,it_owner_email_1,it_owner_email_2,it_owner_email_3,it_owner_email_4,status,created_at,updated_at,vulnerabilities_to_review,severe_vulnerabilities
-Plain name,Plain name,Plain name,Plain name,Plain name,Plain name,Plain name,Plain name,row-1,Plain name,Plain name,Plain name,suppliers.name,Plain name,Plain name,Plain name,yes,Plain name,2026-03-01,2026-03-01,2026-03-01,Plain name,Plain name,"alpha, beta",yes,yes,Plain name,Plain name,2026-03-01,yes,"FR, DE",manual,12.50,12.50,ada@example.test,,,,'=it@example.test,,,,Enabled,2026-03-01,2026-03-01,0,0
-"'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")",row-2,"'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")",suppliers.name,"'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")",no,"'=HYPERLINK(""http://x"")",2026-10-27,2026-10-27,2026-10-27,"'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")",,no,no,"'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")",2026-10-27,no,"FR, DE",it_users,3,3,ada@example.test,,,,'=it@example.test,,,,Disabled,2026-10-27,2026-10-27,3,1
-"Line; ""quoted""
+﻿id,reference,name,description,lifecycle,category,supplier_name,editor,version,go_live_date,end_of_support_date,retired_date,business_owner_email_1,business_owner_email_2,business_owner_email_3,business_owner_email_4,it_owner_email_1,it_owner_email_2,it_owner_email_3,it_owner_email_4,users_mode,users_year,users_override,support_notes,access_methods,external_facing,etl_enabled,is_suite,vulnerabilities_to_review,severe_vulnerabilities,criticality,cyber_criticality,data_class,contains_pii,data_residency,recovery_wave,rto_minutes,rpo_minutes,last_dr_test,classification_justification,classification_revision,classification_review_state,classification_reviewed_at,status,licensing,notes,created_at,updated_at
+row-1,APP-1,Plain name,Plain name,Plain name,Plain name,suppliers.name,Plain name,Plain name,2026-03-01,2026-03-01,2026-03-01,ada@example.test,,,,'=it@example.test,,,,manual,12.50,12.50,Plain name,"alpha, beta",yes,yes,yes,0,0,Plain name,Plain name,Plain name,yes,"FR, DE",Plain name,Plain name,Plain name,2026-03-01,Plain name,Plain name,Plain name,Plain name,Enabled,Plain name,Plain name,2026-03-01,2026-03-01
+row-2,APP-2,"'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")",suppliers.name,"'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")",2026-10-27,2026-10-27,2026-10-27,ada@example.test,,,,'=it@example.test,,,,it_users,3,3,"'=HYPERLINK(""http://x"")",,no,no,no,3,1,"'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")",no,"FR, DE","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")",2026-10-27,"'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")",Disabled,"'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")",2026-10-27,2026-10-27
+row-3,,"Line; ""quoted""
 second line","Line; ""quoted""
 second line","Line; ""quoted""
 second line","Line; ""quoted""
+second line",,"Line; ""quoted""
+second line","Line; ""quoted""
+second line",,,,,,,,,,,,headcount,,,"Line; ""quoted""
+second line",,,,,,,"Line; ""quoted""
 second line","Line; ""quoted""
 second line","Line; ""quoted""
-second line","Line; ""quoted""
-second line","Line; ""quoted""
-second line",row-3,"Line; ""quoted""
+second line",,,"Line; ""quoted""
 second line","Line; ""quoted""
 second line","Line; ""quoted""
 second line",,"Line; ""quoted""
 second line","Line; ""quoted""
 second line","Line; ""quoted""
-second line",,"Line; ""quoted""
-second line",,,,"Line; ""quoted""
 second line","Line; ""quoted""
-second line",,,,"Line; ""quoted""
+second line",Enabled,"Line; ""quoted""
 second line","Line; ""quoted""
-second line",,,,headcount,,,,,,,,,,,Enabled,,,,
--12,-12,-12,-12,-12,-12,-12,-12,row-4,-12,-12,-12,suppliers.name,-12,-12,-12,yes,-12,2026-02-30,2026-02-30,2026-02-30,-12,-12,'+cmd,yes,yes,-12,-12,2026-02-30,yes,"FR, DE",manual,-7.25,-7.25,ada@example.test,,,,'=it@example.test,,,,Enabled,2026-02-30,2026-02-30,9,3
+second line",,
+row-4,APP-4,-12,-12,-12,-12,suppliers.name,-12,-12,2026-02-30,2026-02-30,2026-02-30,ada@example.test,,,,'=it@example.test,,,,manual,-7.25,-7.25,-12,'+cmd,yes,yes,yes,9,3,-12,-12,-12,yes,"FR, DE",-12,-12,-12,2026-02-30,-12,-12,-12,-12,Enabled,-12,-12,2026-02-30,2026-02-30

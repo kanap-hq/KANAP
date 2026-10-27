@@ -719,6 +719,7 @@
     "fields": {
       "applications": {
         "id": "ID",
+        "reference": "Référence",
         "name": "Nom",
         "description": "Description",
         "category": "Catégorie",
@@ -789,6 +790,7 @@
       },
       "assets": {
         "id": "ID",
+        "reference": "Référence",
         "name": "Nom",
         "location_reference": "Site",
         "kind": "Type d’actif",
@@ -821,6 +823,7 @@
       },
       "tasks": {
         "id": "ID",
+        "reference": "Référence",
         "title": "Titre",
         "description": "Description",
         "task_type_name": "Type de tâche",
@@ -850,6 +853,7 @@
       },
       "portfolio_projects": {
         "id": "ID",
+        "reference": "Référence",
         "name": "Nom",
         "status": "Statut",
         "purpose": "Objectif",
@@ -884,6 +888,7 @@
       },
       "portfolio_requests": {
         "id": "ID",
+        "reference": "Référence",
         "name": "Nom",
         "status": "Statut",
         "purpose": "Objectif",
