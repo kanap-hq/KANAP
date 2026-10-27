@@ -7,7 +7,7 @@ import { AuditLog } from './audit.entity';
 import { assertSetFilterModes, compileAgFilterCondition, createParamNameGenerator, normalizeAgFilterModel, type FilterTargetConfig } from '../common/ag-grid-filtering';
 import { neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { writeCsvHeader, writeCsvRows } from '../common/csv-sheet/write';
-import { writeListExport, type ListExportFile } from '../common/csv/list-export';
+import { writeListExportStream, type ListExportFile } from '../common/csv/list-export';
 import { AUTH_EVENT_TABLE, EXPORT_EVENT_TABLE } from './security-events';
 import {
   IncidentViewer,
@@ -594,25 +594,27 @@ export class AuditLogsService {
   /**
    * The same rows as `exportCsv` in a workbook of one sheet: the same English headers and cells, all
    * text (the date keeps its time, so it stays the ISO 8601 text), the formula guard on every cell.
-   * The workbook is built in memory, up to `exportRowLimit` rows.
+   * The workbook is written as the batches arrive, up to `exportRowLimit` rows: the rows are never
+   * held as one array.
    */
   async exportXlsx(
     query: any,
     opts: { manager: EntityManager; tenantId: string; viewer?: IncidentViewer | null },
   ): Promise<ListExportFile<'xlsx'> & { truncated: boolean; limit: number }> {
     const plan = await this.exportPlan(query, opts);
-    const rows: string[][] = [];
-    for await (const batch of plan.batches()) {
-      for (const row of batch) rows.push(auditExportRow(row));
+    async function* rows(): AsyncGenerator<readonly string[]> {
+      for await (const batch of plan.batches()) {
+        for (const row of batch) yield auditExportRow(row);
+      }
     }
     const day = new Date().toISOString().slice(0, 10);
-    const file = writeListExport({
-      format: 'xlsx',
+    const file = await writeListExportStream({
       language: AUDIT_LOG_EXPORT_LANGUAGE,
       filename: `audit-log-${day}.csv`,
       sheetNames: AUDIT_LOG_SHEET,
       headers: AUDIT_LOG_EXPORT_HEADERS,
-      rows,
+      rows: rows(),
+      rowCount: plan.rows,
     });
     return { ...file, truncated: plan.truncated, limit: plan.limit };
   }

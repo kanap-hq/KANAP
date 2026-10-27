@@ -5,7 +5,7 @@ import { formatCsvPercent } from '../csv-sheet/percent';
 import type { CsvLanguage } from '../csv-sheet/types';
 import { writeCsv } from '../csv-sheet/write';
 import type { ExportFileFormat } from '../xlsx/format';
-import { writeXlsx, XLSX_CONTENT_TYPE } from '../xlsx/write';
+import { writeTextXlsxStream, writeXlsx, XLSX_CONTENT_TYPE } from '../xlsx/write';
 import type { XlsxCell } from '../xlsx/write';
 import { CSV_CONTENT_TYPE } from './csv-export.service';
 
@@ -58,6 +58,43 @@ export function writeListExport<F extends ExportFileFormat>(request: ListExportR
     rows: request.rows.map((row) => row.map((cell) => listCsvText(cell, request.language))),
   });
   return { filename: request.filename, contentType: CSV_CONTENT_TYPE, content, rows } as ListExportFile<F>;
+}
+
+/** A workbook of one styled sheet whose text rows are read as they arrive (the audit log export). */
+export interface ListExportStreamRequest {
+  language: CsvLanguage;
+  /** The CSV file name; the workbook takes it with `.xlsx`. */
+  filename: string;
+  /** The list's name in each language: the sheet of the workbook. */
+  sheetNames: Record<CsvLanguage, string>;
+  headers: readonly string[];
+  /** The rows, read once in order; only text cells. */
+  rows: AsyncIterable<readonly (string | null | undefined)[]>;
+  /** The number of rows the iterator yields: the filter range is written before the first row. */
+  rowCount: number;
+  /** The archive timestamp, for a reproducible file; now when omitted. */
+  modifiedAt?: Date;
+}
+
+/**
+ * The workbook of a streamed list export, written as its rows arrive: the same bytes as `writeListExport`
+ * with the same rows, without holding them as an array (the audit log, up to 100,000 rows).
+ */
+export async function writeListExportStream(request: ListExportStreamRequest): Promise<ListExportFile<'xlsx'>> {
+  const content = await writeTextXlsxStream({
+    language: request.language,
+    sheetName: request.sheetNames[request.language],
+    headers: request.headers,
+    rows: request.rows,
+    rowCount: request.rowCount,
+    modifiedAt: request.modifiedAt,
+  });
+  return {
+    filename: request.filename.replace(/\.csv$/i, '') + '.xlsx',
+    contentType: XLSX_CONTENT_TYPE,
+    content,
+    rows: request.rowCount,
+  };
 }
 
 /** One cell as the CSV writes it. */

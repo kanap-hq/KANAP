@@ -71,7 +71,7 @@ export class AuditLogsController {
   // (export-events.interceptor.ts), with the format and the row count, written before the file is
   // read: the export's own row in the file carries them. The CSV is written to the client batch by
   // batch while the request's tenant transaction stays open: the handler returns, and the
-  // transaction is committed, after the last part. The workbook is built, then sent.
+  // transaction is committed, after the last part. The workbook is written batch by batch, then sent.
   @UseGuards(PermissionGuard, RateLimitGuard)
   @RequireLevel('users', 'admin')
   @Throttle({ default: RATE_LIMITS.documentExport })
