@@ -256,6 +256,10 @@ async function testMinimalProfileSkipsToolsAndLongGuidance() {
   });
 
   assert.match(minimalPrompt, /No KANAP tools are selected for this low-context turn/);
+  // A data request in a minimal turn is confirmed, never answered with "no access to the data in this message".
+  assert.match(minimalPrompt, /do not say that you have no access to the data or that they must ask again/);
+  assert.match(minimalPrompt, /what you will look up or prepare, and ask them to confirm/);
+  assert.doesNotMatch(minimalPrompt, /in the next turn/);
   assert.doesNotMatch(minimalPrompt, /Available tools:/);
   assert.doesNotMatch(minimalPrompt, /Tool usage guidelines:/);
   assert.doesNotMatch(minimalPrompt, /Writable fields currently available:/);

@@ -1191,6 +1191,46 @@ async function testTaskCommentContinuationKeepsTaskMutationTools() {
   assert.equal(contextEvent.context.tools.context_profile, 'write_task');
 }
 
+async function testAcceptedReadOfferGetsReadTools() {
+  // The maintainer's conversation on dev: Plaid offered to list the users, "oui" got no tool.
+  const currentMessage = 'oui';
+  const { orchestrator, recordedRequests, systemPromptParams } = createOrchestrator({
+    historyMessages: [
+      { role: 'user', content: 'Qui a un accès limité aux données et à quoi ?' },
+      {
+        role: 'assistant',
+        content: "Je ne lis pas l'accès aux données : il se règle dans Administration › Accès aux données.\n\n"
+          + 'Je peux en revanche lister les utilisateurs et leurs rôles… Dites-moi si vous voulez que je le fasse.',
+      },
+      { role: 'user', content: currentMessage },
+    ],
+    availableTools: [
+      { name: 'query_entities', category: 'authoritative', description: 'Query entities', input_summary: {}, read_only: true, surfaces: ['chat', 'mcp'] },
+      { name: 'get_entity_detail', category: 'inspection', description: 'Get entity detail', input_summary: {}, read_only: true, surfaces: ['chat', 'mcp'] },
+    ],
+  });
+
+  const events = await collectEvents(
+    orchestrator.stream({
+      context: {
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        isPlatformHost: false,
+        surface: 'chat',
+        authMethod: 'jwt',
+      },
+      userMessage: currentMessage,
+    }),
+  );
+
+  const sentToolNames = recordedRequests[0].tools.map((tool: any) => tool.name);
+  assert.deepEqual(sentToolNames, ['query_entities', 'get_entity_detail'], 'The accepted read offer must reach the provider with the read tools.');
+  assert.equal(systemPromptParams[0].contextProfile.promptMode, 'read');
+  const contextEvent = events.find((e) => e.type === 'context' && (e as any).context.tools) as any;
+  assert.equal(contextEvent.context.tools.context_profile, 'read_query');
+  assert.equal(contextEvent.context.tools.selected_count, 2);
+}
+
 async function testModifiedDocumentFollowUpDoesNotTriggerWritePreviewGuard() {
   const currentMessage = 'et tu es capable de me dire ce qui a été modifié ?';
   const { orchestrator, recordedRequests, toolExecuteCount } = createOrchestrator({
@@ -3235,6 +3275,7 @@ async function run() {
   await testRawPseudoToolCallTextIsRetriedAsRealToolCall();
   await testTaskMentionWriteKeepsTaskMutationTools();
   await testTaskCommentContinuationKeepsTaskMutationTools();
+  await testAcceptedReadOfferGetsReadTools();
   await testModifiedDocumentFollowUpDoesNotTriggerWritePreviewGuard();
   await testFeatureAdviceQuestionDoesNotTriggerWritePreviewGuard();
   await testParallelToolCallsAreReplayedAsSequentialTurns();

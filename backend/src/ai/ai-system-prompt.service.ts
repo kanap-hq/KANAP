@@ -327,7 +327,9 @@ export class AiSystemPromptService {
       addSection(
         'direct_response',
         'Direct response mode',
-        'No KANAP tools are selected for this low-context turn. Answer directly and briefly. If the user asks for KANAP data, current web facts, or a write action, use the appropriate tools in the next turn.',
+        'No KANAP tools are selected for this low-context turn. Answer directly and briefly. ' +
+        'If the user asks for KANAP data, current web facts, or a change, do not say that you have no access to the data or that they must ask again: ' +
+        'say in one short sentence what you will look up or prepare, and ask them to confirm.',
       );
       addSection(
         'formatting',
