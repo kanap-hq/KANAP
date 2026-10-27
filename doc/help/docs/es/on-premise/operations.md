@@ -37,7 +37,7 @@ docker compose -f infra/compose.onprem.yml up -d
 
 `infra/compose.onprem.yml` nombra las imágenes de la versión que tiene en el checkout. `pull` las descarga de `ghcr.io`, y `up -d` vuelve a crear los contenedores sobre ellas. Si compila las imágenes usted mismo (consulte [Compilar las imágenes usted mismo](installation.md#build-the-images-yourself)), ejecute los comandos `build` y `up -d` de esa sección en lugar de `pull` y `up -d`.
 
-**Primera actualización a una versión con imágenes publicadas.** Las versiones hasta la 26.10.8 se compilaban en el servidor. El procedimiento anterior basta para pasar a una versión posterior. Cuando la nueva versión esté en marcha y supere las comprobaciones del paso 4, libere la caché de compilación y las imágenes antiguas (unos 2,5 GB). Añada `kanap-api-tools` a la segunda línea si había compilado la imagen de herramientas de mantenimiento.
+**Primera actualización a una versión con imágenes publicadas.** Las versiones hasta la 26.10.7 se compilaban en el servidor. El procedimiento anterior basta para pasar a una versión posterior. Cuando la nueva versión esté en marcha y supere las comprobaciones del paso 4, libere la caché de compilación y las imágenes antiguas (unos 2,5 GB). Añada `kanap-api-tools` a la segunda línea si había compilado la imagen de herramientas de mantenimiento.
 
 ```bash
 docker builder prune
@@ -121,7 +121,7 @@ La última línea de la salida dice `0 failed`. Con `KANAP_INSECURE_TLS=1`, dos 
 **Vuelta atrás.** Las migraciones solo avanzan, así que volver atrás consiste en restaurar la copia de seguridad hecha antes de la actualización, con la versión anterior:
 
 1. Detenga KANAP: `cd /opt/kanap` y después `docker compose -f infra/compose.onprem.yml down`. Una vuelta atrás suele empezar en una terminal nueva, fuera de `/opt/kanap`.
-2. Cambie a la versión anterior y descargue sus imágenes. Necesita el acceso saliente de una actualización: si lo cerró después de la actualización, ábralo primero (consulte [Reglas de cortafuegos](configuration.md#outbound-installation-and-upgrades)). Ejecute `git checkout v<previous version>` (por ejemplo `git checkout v26.10.9`) y luego `docker compose -f infra/compose.onprem.yml pull`. Una versión hasta la 26.10.8 no tiene imágenes publicadas: compílela como explica la guía de esa versión.
+2. Cambie a la versión anterior y descargue sus imágenes. Necesita el acceso saliente de una actualización: si lo cerró después de la actualización, ábralo primero (consulte [Reglas de cortafuegos](configuration.md#outbound-installation-and-upgrades)). Ejecute `git checkout v<previous version>` (por ejemplo `git checkout v26.10.9`) y luego `docker compose -f infra/compose.onprem.yml pull`. Una versión hasta la 26.10.7 no tiene imágenes publicadas: compílela como explica la guía de esa versión.
 3. Restaure la base de datos y los archivos desde el directorio `before-upgrade-...` de esa actualización: elija la copia de seguridad y ejecute los pasos 1 a 3 de [Restauración](#restauracion) en la misma terminal. Si cambió `.env` para la nueva versión, compárelo con la copia del directorio `config` de la copia de seguridad. Este comando compara los nombres de los parámetros de los dos archivos sin mostrar sus valores:
 
     ```bash

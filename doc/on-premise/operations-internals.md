@@ -5,7 +5,7 @@ User-facing procedures live in `doc/help/docs/en/on-premise/operations.md`.
 
 ## Distribution Model
 
-- Each published version (after 26.10.8) has public images on GitHub Container Registry:
+- Each published version (from 26.10.8 on) has public images on GitHub Container Registry:
   `ghcr.io/kanap-hq/kanap-api`, `kanap-web` and `kanap-api-tools`, built by CI from the version
   tag (`.github/workflows/release-images.yml`, see `doc/releasing.md`), `linux/amd64`, with a
   provenance attestation. No account is needed to pull them.
@@ -13,7 +13,7 @@ User-facing procedures live in `doc/help/docs/en/on-premise/operations.md`.
   `git checkout <stable or tag>`, then `pull` and `up -d`. `KANAP_VERSION` in `.env` has no effect
   (Compose does not read `../.env` for the interpolation of that file).
 - Building from source stays possible with `infra/compose.onprem.build.yml` on top (images named
-  `kanap-*:local`). Versions up to 26.10.8 are built on the server.
+  `kanap-*:local`). Versions up to 26.10.7 are built on the server.
 
 ## Repository Layout (On-Prem Relevant)
 

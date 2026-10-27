@@ -37,7 +37,7 @@ docker compose -f infra/compose.onprem.yml up -d
 
 `infra/compose.onprem.yml` names the images of the version you checked out. `pull` downloads them from `ghcr.io`, and `up -d` recreates the containers on them. If you build the images yourself (see [Build the images yourself](installation.md#build-the-images-yourself)), run the `build` and `up -d` commands of that section instead of `pull` and `up -d`.
 
-**First upgrade to a version with published images.** Versions up to 26.10.8 were built on the server. The procedure above is all you need to move to a later version. Once the new version runs and passes the checks of step 4, free the build cache and the old images (about 2.5 GB). Add `kanap-api-tools` to the second line if you built the maintenance tools image.
+**First upgrade to a version with published images.** Versions up to 26.10.7 were built on the server. The procedure above is all you need to move to a later version. Once the new version runs and passes the checks of step 4, free the build cache and the old images (about 2.5 GB). Add `kanap-api-tools` to the second line if you built the maintenance tools image.
 
 ```bash
 docker builder prune
@@ -121,7 +121,7 @@ The last line of the output reads `0 failed`. With `KANAP_INSECURE_TLS=1`, two T
 **Rollback.** Migrations only go forward, so a rollback puts back the backup taken before the upgrade, under the previous version:
 
 1. Stop KANAP: `cd /opt/kanap`, then `docker compose -f infra/compose.onprem.yml down`. A rollback often starts in a new terminal, outside `/opt/kanap`.
-2. Check out the previous version and download its images. This needs the outbound access of an upgrade: if you closed it after the upgrade, open it first (see [Firewall rules](configuration.md#outbound-installation-and-upgrades)). Run `git checkout v<previous version>` (for example `git checkout v26.10.9`), then `docker compose -f infra/compose.onprem.yml pull`. A version up to 26.10.8 has no published images: build it as the guide of that version explains.
+2. Check out the previous version and download its images. This needs the outbound access of an upgrade: if you closed it after the upgrade, open it first (see [Firewall rules](configuration.md#outbound-installation-and-upgrades)). Run `git checkout v<previous version>` (for example `git checkout v26.10.9`), then `docker compose -f infra/compose.onprem.yml pull`. A version up to 26.10.7 has no published images: build it as the guide of that version explains.
 3. Restore the database and the files from the `before-upgrade-...` directory of that upgrade: choose the backup, then run steps 1 to 3 of [Restore](#restore) in the same terminal. If you changed `.env` for the new version, compare it with the copy in the `config` directory of the backup. This command compares the setting names of the two files without printing their values:
 
     ```bash
