@@ -1106,7 +1106,20 @@ async function testDocumentDelete(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(audit.action, 'delete');
   assert.equal(audit.source, 'ai_chat');
   assert.equal(audit.source_ref, preview.preview_id);
-  console.log('  document deleted by its administrator, versions, links and workflow gone, derived document kept without its template, audit names the preview: OK');
+
+  // A version added after the preview does not move `documents.updated_at`: what the delete takes
+  // is recounted, and the run is refused as a changed document.
+  const drift = await h.previews.createPreview(context, 'delete_record', { entity_type: 'documents', ref: 'DOC-12' });
+  await runner.query(
+    `INSERT INTO document_versions (tenant_id, document_id, version_number, title, content_markdown, content_plain)
+     VALUES ($1, $2, 1, 'Backup procedure', 'New body.', 'New body.')`,
+    [s.tenantId, s.documentCiting],
+  );
+  const drifted = await h.previews.executePreview(context, drift.preview_id);
+  assert.equal(drifted.status, 'failed');
+  assert.equal(drifted.error_message, 'Document changed after the preview was created.');
+  assert.equal(await count(runner, 'documents', 'tenant_id = $1 AND id = $2', [s.tenantId, s.documentCiting]), 1);
+  console.log('  document deleted by its administrator, versions, links and workflow gone, derived document kept without its template, audit names the preview, a version added after the preview refused: OK');
 }
 
 async function testReaderRefused(h: Harness, runner: QueryRunner, s: Seed) {
