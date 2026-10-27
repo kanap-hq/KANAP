@@ -324,6 +324,7 @@
   "netbox_rate_limited": "Netbox is refusing more requests for the moment. Try again in a few minutes.",
   "netbox_token_unreadable": "The saved Netbox token cannot be read on this server. Enter the token again and save.",
   "netbox_sync_failed": "The synchronisation could not finish. Check the Netbox connection, then try again.",
+  "netbox_sync_interrupted": "The previous synchronisation stopped without finishing. Start a new one.",
   "DATA_ACCESS_ADMINISTRATOR": "Administrators see all data.",
   "DATA_ACCESS_SELF": "You cannot change your own data access.",
   "DATA_ACCESS_NODE_UNKNOWN": "A company or cost center of the list does not exist in this workspace.",
