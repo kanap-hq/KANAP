@@ -34,7 +34,6 @@ import { formatCurrency as formatMoney } from '../../i18n/formatters';
 import { useTranslation } from 'react-i18next';
 import { chargebackDepartmentLabel } from '../../utils/allocationLabels';
 import { allocationWarningKey, allocationWarningText, amountFxMissingOf, isAmountFxMissingWarning, type ReportWarning } from '../../utils/allocationWarnings';
-import { chargebackKpiTotals } from './chargebackKpiTotals';
 
 function baseFormatNumber(value: number | null | undefined, locale: string): string {
   const n = Number(value ?? 0);
@@ -82,6 +81,8 @@ type GlobalChargebackCompanyRow = {
   paidRaw?: number;
   net?: number;
   netRaw?: number;
+  /** Fraction of the report total. */
+  share?: number | null;
 };
 
 type GlobalChargebackKpiRow = {
@@ -99,11 +100,31 @@ type GlobalChargebackKpiRow = {
   costVsTurnoverPct: number | null;
 };
 
-type GlobalChargebackDetailedDisplayRow = GlobalChargebackDetailedRow & {
-  departmentDisplay: string;
+/** A row of the detailed allocations table, built by the server: a company's total row, then its departments. */
+type GlobalChargebackDetailedTableRow = GlobalChargebackDetailedRow & {
+  rowType: 'company' | 'department';
+  /** Fraction of the report total. */
   share: number | null;
-  companyDisplay?: string;
-  rowType?: 'company' | 'department';
+};
+
+/** A flow netted per pair of companies; a null name is a company no row names. */
+type GlobalChargebackNettedFlow = {
+  payerId: string;
+  payerName: string | null;
+  consumerId: string;
+  consumerName: string | null;
+  amount: number;
+};
+
+/** The indicators' totals row, null without a company. `costVsTurnoverPct` in points. */
+type GlobalChargebackKpiTotals = {
+  amount: number;
+  headcount: number;
+  itUsers: number;
+  turnover: number;
+  costVsTurnoverPct: number | null;
+  costPerUser: number | null;
+  costPerItUser: number | null;
 };
 
 type GlobalChargebackReportResponse = {
@@ -112,8 +133,11 @@ type GlobalChargebackReportResponse = {
   total: number;
   totalRaw: number;
   detailed: GlobalChargebackDetailedRow[];
+  detailedRows: GlobalChargebackDetailedTableRow[];
   companies: GlobalChargebackCompanyRow[];
   kpis: GlobalChargebackKpiRow[];
+  kpiTotals: GlobalChargebackKpiTotals | null;
+  nettedFlows: GlobalChargebackNettedFlow[];
   intercompanyFlows?: Array<{
     payerId: string;
     payerName: string;
@@ -188,22 +212,8 @@ export default function GlobalChargebackReport() {
   const metricLabel = budgetColumns.label(metric);
   const metricFile = metricFileName(budgetColumns, metric);
 
-  const detailedRows = useMemo<GlobalChargebackDetailedDisplayRow[]>(() => {
-    const rows: GlobalChargebackDetailedRow[] = data?.detailed ?? [];
-    return rows.map((row: GlobalChargebackDetailedRow) => ({
-      ...row,
-      departmentDisplay: chargebackDepartmentLabel(t, row.departmentId, row.departmentName),
-      share: totalAmount > 0 ? (row.amount / totalAmount) * 100 : null,
-    }));
-  }, [data?.detailed, t, totalAmount]);
-
-  const companyRows = useMemo(() => {
-    const rows: GlobalChargebackCompanyRow[] = data?.companies ?? [];
-    return rows.map((row: GlobalChargebackCompanyRow) => ({
-      ...row,
-      share: totalAmount > 0 ? (row.amount / totalAmount) * 100 : null,
-    }));
-  }, [data?.companies, totalAmount]);
+  const companyRows = data?.companies ?? [];
+  const detailedRows = data?.detailedRows ?? [];
 
   const chartData = useMemo(() => {
     const rows: GlobalChargebackCompanyRow[] = data?.companies ?? [];
@@ -211,12 +221,22 @@ export default function GlobalChargebackReport() {
   }, [data?.companies]);
 
   const detailedColumns = useMemo<ColDef[]>(() => [
-    { field: 'companyDisplay', headerName: t('reports.columns.company'), flex: 1, minWidth: 220 },
     {
-      field: 'departmentDisplay',
+      colId: 'company',
+      headerName: t('reports.columns.company'),
+      flex: 1,
+      minWidth: 220,
+      // The company names its total row; its departments follow below it.
+      valueGetter: (params) => (params.data?.rowType === 'company' ? params.data.companyName : ''),
+    },
+    {
+      colId: 'department',
       headerName: t('reports.columns.department'),
       flex: 1,
       minWidth: 200,
+      valueGetter: (params) => (params.data?.rowType === 'company'
+        ? t('reports.columns.total')
+        : chargebackDepartmentLabel(t, params.data?.departmentId, params.data?.departmentName)),
     },
     {
       field: 'amount',
@@ -226,10 +246,11 @@ export default function GlobalChargebackReport() {
       valueFormatter: (params) => formatNumber(params.value),
     },
     {
-      field: 'share',
+      colId: 'share',
       headerName: t('reports.columns.shareOfTotal'),
       width: 160,
       type: 'rightAligned',
+      valueGetter: (params) => (params.data?.share != null ? params.data.share * 100 : null),
       valueFormatter: (params) => formatShare(params.value, 1),
     },
     {
@@ -246,82 +267,13 @@ export default function GlobalChargebackReport() {
       type: 'rightAligned',
       valueFormatter: (params) => (params.value != null ? formatCurrency(params.value) : ''),
     },
-  ], [formatCount, formatCurrency, formatNumber, formatShare, metricLabel]);
+  ], [formatCount, formatCurrency, formatNumber, formatShare, metricLabel, t]);
 
   const kpiRows: GlobalChargebackKpiRow[] = data?.kpis ?? [];
   const allWarnings = data?.warnings ?? [];
   // The lines left out for lack of a rate read as the budget reports' notice, above the report.
   const amountFxMissing = amountFxMissingOf(allWarnings);
   const warnings = allWarnings.filter((warning) => !isAmountFxMissingWarning(warning));
-
-  const companyTotalsById = useMemo(() => {
-    const map = new Map<string, { amount: number; share: number | null; companyName: string }>();
-    for (const row of companyRows) {
-      map.set(row.companyId, {
-        amount: row.amount,
-        share: row.share ?? null,
-        companyName: row.companyName,
-      });
-    }
-    return map;
-  }, [companyRows]);
-
-  const kpiByCompanyId = useMemo(() => {
-    const map = new Map<string, GlobalChargebackKpiRow>();
-    for (const row of kpiRows) map.set(row.companyId, row);
-    return map;
-  }, [kpiRows]);
-
-  const groupedDetailedRows = useMemo(() => {
-    const byCompany = new Map<string, GlobalChargebackDetailedDisplayRow[]>();
-    for (const row of detailedRows) {
-      const list = byCompany.get(row.companyId) ?? [];
-      list.push(row);
-      byCompany.set(row.companyId, list);
-    }
-
-    const orderedCompanyIds = companyRows.map((row) => row.companyId);
-    for (const row of detailedRows) {
-      if (!orderedCompanyIds.includes(row.companyId)) orderedCompanyIds.push(row.companyId);
-    }
-
-    const result: Array<GlobalChargebackDetailedDisplayRow & {
-      rowType: 'company' | 'department';
-      companyDisplay: string;
-      share: number | null;
-    }> = [];
-
-    for (const companyId of orderedCompanyIds) {
-      const companyRowsForId = byCompany.get(companyId) ?? [];
-      if (companyRowsForId.length === 0) continue;
-      companyRowsForId.sort((a, b) => b.amount - a.amount);
-      const companyInfo = companyTotalsById.get(companyId);
-      const kpi = kpiByCompanyId.get(companyId);
-      const companyName = companyRowsForId[0]?.companyName ?? companyInfo?.companyName ?? t('reports.shared.unknownCompany');
-      const companyAmountRaw = companyRowsForId.reduce((sum, row) => sum + row.amountRaw, 0);
-      result.push({
-        ...companyRowsForId[0],
-        rowType: 'company',
-        companyDisplay: companyName,
-        departmentDisplay: t('reports.columns.total'),
-        amount: companyInfo?.amount ?? companyRowsForId.reduce((sum, row) => sum + row.amount, 0),
-        amountRaw: companyAmountRaw,
-        share: companyInfo?.share ?? (totalAmount > 0 ? (companyAmountRaw / totalAmount) * 100 : null),
-        headcount: kpi?.headcount ?? null,
-        costPerUser: kpi?.costPerUser ?? null,
-      });
-      for (const deptRow of companyRowsForId) {
-        result.push({
-          ...deptRow,
-          rowType: 'department',
-          companyDisplay: '',
-          share: deptRow.share ?? null,
-        });
-      }
-    }
-
-    return result;
-  }, [companyRows, detailedRows, companyTotalsById, kpiByCompanyId, totalAmount, t]);
 
   const companyColumns = useMemo<ColDef[]>(() => [
     { field: 'companyName', headerName: t('reports.columns.company'), flex: 1, minWidth: 220 },
@@ -347,70 +299,31 @@ export default function GlobalChargebackReport() {
       valueFormatter: (params) => formatNumber(params.value),
     },
     {
-      field: 'share',
+      colId: 'share',
       headerName: t('reports.columns.shareOfTotal'),
       width: 160,
       type: 'rightAligned',
+      valueGetter: (params) => (params.data?.share != null ? params.data.share * 100 : null),
       valueFormatter: (params) => formatShare(params.value, 1),
     },
-  ], [formatNumber, formatShare, metricLabel]);
+  ], [formatNumber, formatShare, metricLabel, t]);
 
-  const flows = data?.intercompanyFlows ?? [];
-  // Build netted-by-pair flows: show only net direction per company pair
-  const companyNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const row of data?.companies ?? []) {
-      map.set(row.companyId, row.companyName);
-    }
-    for (const f of flows) {
-      if (f.payerId && f.payerName) map.set(f.payerId, f.payerName);
-      if (f.consumerId && f.consumerName) map.set(f.consumerId, f.consumerName);
-    }
-    return map;
-  }, [data?.companies, flows]);
-
-  const nettedFlows = useMemo(() => {
-    const pairNet = new Map<string, { aId: string; bId: string; net: number }>();
-    for (const f of flows) {
-      const aId = f.payerId < f.consumerId ? f.payerId : f.consumerId;
-      const bId = f.payerId < f.consumerId ? f.consumerId : f.payerId;
-      const key = `${aId}|${bId}`;
-      const current = pairNet.get(key) ?? { aId, bId, net: 0 };
-      // If original payer was aId, add; if original payer was bId, subtract
-      const delta = f.payerId === aId ? f.amount : -f.amount;
-      current.net += Number(delta || 0);
-      pairNet.set(key, current);
-    }
-    const result: Array<{ payerId: string; payerName: string; consumerId: string; consumerName: string; amount: number }> = [];
-    for (const entry of pairNet.values()) {
-      const { aId, bId, net } = entry;
-      if (!Number.isFinite(net) || Math.abs(net) < 0.0001) continue;
-      if (net > 0) {
-        result.push({
-          payerId: aId,
-          payerName: companyNameById.get(aId) || t('reports.shared.unknownCompany'),
-          consumerId: bId,
-          consumerName: companyNameById.get(bId) || t('reports.shared.unknownCompany'),
-          amount: net,
-        });
-      } else {
-        result.push({
-          payerId: bId,
-          payerName: companyNameById.get(bId) || t('reports.shared.unknownCompany'),
-          consumerId: aId,
-          consumerName: companyNameById.get(aId) || t('reports.shared.unknownCompany'),
-          amount: -net,
-        });
-      }
-    }
-    // Sort by amount desc then payer name
-    result.sort((x, y) => (y.amount !== x.amount ? y.amount - x.amount : (x.payerName || '').localeCompare(y.payerName || '')));
-    return result;
-  }, [flows, companyNameById, t]);
-
+  const nettedFlows = data?.nettedFlows ?? [];
   const flowsColumns = useMemo<ColDef[]>(() => [
-    { field: 'payerName', headerName: t('reports.columns.payer'), flex: 1, minWidth: 200 },
-    { field: 'consumerName', headerName: t('reports.columns.consumer'), flex: 1, minWidth: 200 },
+    {
+      field: 'payerName',
+      headerName: t('reports.columns.payer'),
+      flex: 1,
+      minWidth: 200,
+      valueGetter: (params) => params.data?.payerName || t('reports.shared.unknownCompany'),
+    },
+    {
+      field: 'consumerName',
+      headerName: t('reports.columns.consumer'),
+      flex: 1,
+      minWidth: 200,
+      valueGetter: (params) => params.data?.consumerName || t('reports.shared.unknownCompany'),
+    },
     {
       field: 'amount',
       headerName: t('reports.columns.metricAmount', { metric: metricLabel }),
@@ -418,7 +331,7 @@ export default function GlobalChargebackReport() {
       type: 'rightAligned',
       valueFormatter: (params) => formatNumber(params.value),
     },
-  ], [formatNumber, metricLabel]);
+  ], [formatNumber, metricLabel, t]);
 
   const flowsGridApiRef = useRef<any>(null);
   const exportFlowsCsv = () => {
@@ -480,7 +393,7 @@ export default function GlobalChargebackReport() {
     chartRef.current?.download(`global-chargeback-company-${scope}-${year}-${metricFile}`);
   };
 
-  const kpiTotals = useMemo(() => chargebackKpiTotals(kpiRows), [kpiRows]);
+  const kpiTotals = data?.kpiTotals ?? null;
 
   return (
     <ReportLayout
@@ -617,7 +530,7 @@ export default function GlobalChargebackReport() {
               {t("reports.globalChargeback.detailedDescription")}
             </Typography>
             <ReportGrid
-              rowData={groupedDetailedRows}
+              rowData={detailedRows}
               columnDefs={detailedColumns}
               defaultColDef={{ sortable: true, resizable: true }}
               onGridReady={(event) => {
@@ -698,14 +611,14 @@ export default function GlobalChargebackReport() {
                       </TableCell>
                     </TableRow>
                   )}
-                  {kpiRows.length > 0 && (
+                  {kpiRows.length > 0 && kpiTotals && (
                     <TableRow sx={{ '& > *': { fontWeight: 600 } }}>
                       <TableCell>{t("shared.total")}</TableCell>
-                      <TableCell align="right">{formatCurrency(kpiTotals.amountDisplayTotal)}</TableCell>
-                      <TableCell align="right">{formatCount(kpiTotals.headcountTotal)}</TableCell>
-                      <TableCell align="right">{formatCount(kpiTotals.itUsersTotal)}</TableCell>
-                      <TableCell align="right">{kpiTotals.turnoverDisplayTotal > 0 ? formatTurnover(kpiTotals.turnoverDisplayTotal) : '—'}</TableCell>
-                      <TableCell align="right">{kpiTotals.costVsTurnover != null ? formatPercent(kpiTotals.costVsTurnover, locale) : '—'}</TableCell>
+                      <TableCell align="right">{formatCurrency(kpiTotals.amount)}</TableCell>
+                      <TableCell align="right">{formatCount(kpiTotals.headcount)}</TableCell>
+                      <TableCell align="right">{formatCount(kpiTotals.itUsers)}</TableCell>
+                      <TableCell align="right">{kpiTotals.turnover > 0 ? formatTurnover(kpiTotals.turnover) : '—'}</TableCell>
+                      <TableCell align="right">{kpiTotals.costVsTurnoverPct != null ? formatPercent(kpiTotals.costVsTurnoverPct, locale) : '—'}</TableCell>
                       <TableCell align="right">{kpiTotals.costPerUser != null ? formatCount(Math.round(kpiTotals.costPerUser)) : '—'}</TableCell>
                       <TableCell align="right">{kpiTotals.costPerItUser != null ? formatCount(Math.round(kpiTotals.costPerItUser)) : '—'}</TableCell>
                     </TableRow>

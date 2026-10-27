@@ -94,6 +94,8 @@ describe('chargeback turnover indicator', () => {
           data: {
             year: 2026, metric: 'budget', total: 1000, totalRaw: 1000, detailed: [], companies: [],
             kpis: [KPI], intercompanyFlows: [], reportingCurrency: 'gbp', warnings: [],
+            detailedRows: [], nettedFlows: [],
+            kpiTotals: { amount: 1000, headcount: 10, itUsers: 5, turnover: 31331125, costVsTurnoverPct: 0.01, costPerUser: 100, costPerItUser: 200 },
           },
         };
       }

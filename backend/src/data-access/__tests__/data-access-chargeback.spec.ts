@@ -101,7 +101,7 @@ async function seedShares(runner: QueryRunner, s: Seed): Promise<Shares> {
 }
 
 const UNSCOPED_ITEM_KEYS = [
-  'allocationMethod', 'amount', 'amountRaw', 'itemId', 'itemName', 'itemNumber', 'nature', 'sharePct', 'versionId',
+  'allocationMethod', 'amount', 'amountRaw', 'itemId', 'itemLabel', 'itemName', 'itemNumber', 'nature', 'sharePct', 'versionId',
 ].sort();
 
 async function testWindow(runner: QueryRunner, s: Seed): Promise<void> {

@@ -17,6 +17,16 @@ import { AllocationWarning, amountFxMissingWarning, convertTurnovers, turnoverFx
 import { transactionDataAccessMode } from '../data-access/data-access';
 import { DataAccessLimitedException } from '../data-access/line-write-checks';
 import { withFullDataAccess } from '../data-access/full-data-access';
+import {
+  chargebackIntercompanyRows,
+  chargebackItemLabel,
+  chargebackKpiTotals,
+  chargebackShare,
+  ChargebackIntercompanyRow,
+  ChargebackIntercompanyTotal,
+  globalChargebackDetailedRows,
+  nettedChargebackFlows,
+} from './chargeback-report.tables';
 
 /** A limited person asks the chargeback of a company their company nodes do not cover (spec §5.2). */
 export const DATA_ACCESS_CHARGEBACK_COMPANY_MESSAGE = 'The chargeback of this company is outside your data access.';
@@ -239,6 +249,8 @@ export type CompanyChargebackItemRow = {
   /** The line's nature, null when the line is not read. */
   nature: BudgetNature | null;
   itemName: string;
+  /** What the line column shows: the name, or `BL-n · name` for a line the person cannot read (`chargebackItemLabel`). */
+  itemLabel: string;
   /** The allocation method code (`headcount`, `manual_pct`, …). The screen translates it. */
   allocationMethod: ResolvedAllocationMethod;
   amount: number;
@@ -287,6 +299,8 @@ export type CompanyChargebackReportResponse = {
   items: CompanyChargebackItemRow[];
   itemsTotal: number;
   itemsTotalRaw: number;
+  /** The lines' total as a fraction of the company's total; null when that total is not positive. */
+  itemsTotalShare: number | null;
   kpis: Array<{
     companyId: string;
     companyName: string;
@@ -323,6 +337,10 @@ export type CompanyChargebackReportResponse = {
     receivables: Array<{ consumerId: string; consumerName: string; amount: number; amountRaw: number }>;
     payables: Array<{ payerId: string; payerName: string; amount: number; amountRaw: number }>;
   };
+  /** `intercompany` merged per partner, largest net first (`chargebackIntercompanyRows`). */
+  intercompanyRows: ChargebackIntercompanyRow[];
+  /** Their total row; null without a partner. */
+  intercompanyTotal: ChargebackIntercompanyTotal | null;
   reportingCurrency: string;
   warnings: ChargebackWarning[];
 };
@@ -420,6 +438,8 @@ export class ChargebackReportService {
           paidRaw,
           net: toCurrency(net),
           netRaw: amountRaw - paidRaw,
+          /** Fraction of the report total. */
+          share: chargebackShare(toCurrency(amount), toCurrency(ctx.total)),
         };
       })
       .filter((row) => Math.abs(row.amount) > 0.0001)
@@ -487,9 +507,15 @@ export class ChargebackReportService {
       total: toCurrency(ctx.total),
       totalRaw: toCurrency(ctx.totalRaw),
       detailed,
+      /** The detailed allocations table: each company's total row, then its departments. */
+      detailedRows: globalChargebackDetailedRows(detailed, companies, kpis, toCurrency(ctx.total)),
       companies,
       kpis,
+      /** The indicators' totals row; null without a company. */
+      kpiTotals: chargebackKpiTotals(kpis),
       intercompanyFlows: flowRows,
+      /** The flows netted per pair of companies. */
+      nettedFlows: nettedChargebackFlows(flowRows, companies),
       reportingCurrency: ctx.reportingCurrency,
       warnings: ctx.warnings,
     };
@@ -625,6 +651,7 @@ export class ChargebackReportService {
         itemNumber: item?.item_number != null ? Number(item.item_number) : null,
         nature: item?.nature ?? null,
         itemName: item?.product_name ?? 'Unknown item',
+        itemLabel: '',
         allocationMethod: method,
         amount: toCurrency(amount),
         amountRaw,
@@ -646,6 +673,7 @@ export class ChargebackReportService {
           .map((id) => departmentNameOf(id, ctx.departmentById.get(id)))
           .sort((a, b) => (a ?? '').localeCompare(b ?? ''));
       }
+      row.itemLabel = chargebackItemLabel(row);
       items.push(row);
       itemsTotal += amount;
       itemsTotalRaw += amountRaw;
@@ -731,6 +759,7 @@ export class ChargebackReportService {
       const payer = ctx.companyById.get(payerId);
       payables.push({ payerId, payerName: payer?.name ?? 'Unknown company', amount: toCurrency(amount), amountRaw: raw });
     }
+    const intercompany = chargebackIntercompanyRows(receivables, payables);
 
     return {
       year: ctx.year,
@@ -743,6 +772,7 @@ export class ChargebackReportService {
       items,
       itemsTotal: toCurrency(itemsTotal),
       itemsTotalRaw,
+      itemsTotalShare: chargebackShare(toCurrency(itemsTotal), toCurrency(total)),
       kpis,
       // The group's totals would give the other companies' by difference (spec §5.3).
       globalKpi: readableLines ? null : globalKpi,
@@ -751,6 +781,8 @@ export class ChargebackReportService {
         receivables,
         payables,
       },
+      intercompanyRows: intercompany.rows,
+      intercompanyTotal: intercompany.total,
       reportingCurrency: ctx.reportingCurrency,
       warnings: ctx.warnings,
     };
