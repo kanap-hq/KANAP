@@ -449,6 +449,8 @@ async function streamPart(archive: BoundedArchive, entry: AdmZip.IZipEntry, hand
     produced += chunk.length;
     // The inflater stops at the declared size: a part that unpacks to more lies about its size.
     if (produced > stored.declared) throw invalid();
+    // The cumulative size is counted as the bytes arrive, against the archive's total budget.
+    archive.account(chunk.length);
     crc = crc32(chunk, crc);
     parser.write(chunk);
   };
@@ -469,7 +471,6 @@ async function streamPart(archive: BoundedArchive, entry: AdmZip.IZipEntry, hand
     throw error;
   }
   if ((crc >>> 0) !== stored.crc) throw invalid();
-  archive.account(produced);
 }
 
 /**
