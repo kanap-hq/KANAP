@@ -41,7 +41,7 @@ Cinq indicateurs mutualisés figurent en haut. Ils décrivent l'ensemble du parc
 - **Actions du jour** : combien de propositions ont réellement été exécutées aujourd'hui (approuvées et appliquées, ou appliquées automatiquement).
 - **Acceptation** : la part des propositions décidées qui ont été approuvées plutôt que rejetées. Affiche **Données insuffisantes** tant qu'il n'y a pas assez d'historique de décisions pour être significatif.
 - **Écartées** : la part des propositions examinées par un humain qui ont été mises de côté plutôt qu'approuvées ou rejetées. Un écartement ne pénalise pas l'agent ; une valeur durablement élevée traduit donc généralement un problème de ciblage (l'agent prend en charge des tickets qu'il ne devrait pas traiter) plutôt qu'un problème de qualité des réponses ; corrigez-le dans le ciblage de l'agent. Affiche également **Données insuffisantes** tant qu'il n'y a pas assez d'historique d'examen.
-- **Coût : aujourd'hui / 7 jours** indique ce que vos agents coûtent réellement en dépense IA, en EUR : le total du jour et celui des sept derniers jours (aujourd'hui inclus). Cet indicateur couvre **tous** les agents du tenant, agents de support comme agents de supervision ; c'est donc le chiffre à consulter lorsque vous voulez savoir, sans détour, ce que vous coûte le parc. L'économie agent par agent (coût par ticket, plafonds par exécution et quotidiens) se trouve dans les onglets **Performance et autonomie** et **Paramètres** de chaque agent.
+- **Coût : aujourd'hui / 7 jours** indique ce que vos agents coûtent réellement en dépense IA, en EUR : le total du jour et celui des sept derniers jours (aujourd'hui inclus). Cet indicateur couvre **tous** les agents de l'espace de travail, agents de support comme agents de supervision ; c'est donc le chiffre à consulter lorsque vous voulez savoir, sans détour, ce que vous coûte le parc. L'économie agent par agent (coût par ticket, plafonds par exécution et quotidiens) se trouve dans les onglets **Performance et autonomie** et **Paramètres** de chaque agent.
 
 Considérez ces indicateurs comme la santé du parc, non comme une comptabilité par agent. Pour les chiffres d'un agent en particulier, ouvrez son espace et utilisez l'onglet **Performance et autonomie**.
 
@@ -58,7 +58,7 @@ Sous le tableau de bord, la section **Parc d'agents** affiche une carte par agen
 | **Surveillance (avec validation)** | Vert | Surveille de lui-même, mais chaque type d'action vous est toujours soumis pour approbation. |
 | **Surveillance (partiellement automatique)** | Vert | Surveille, avec au moins un type d'action promu pour s'exécuter sans approbation. Les autres demandent encore d'abord. |
 | **Test** | Bleu | Activé, mais pas en surveillance : le mode **Manuel uniquement**. Il s'exécute lorsque vous le contrôlez ou le testez manuellement, jamais de lui-même. |
-| **En pause** | Rouge | Retenu par une pause d'urgence (à l'échelle du tenant ou pour ce seul agent). Les contrôles et les écritures en attente sont gelés jusqu'à la levée de la pause. |
+| **En pause** | Rouge | Retenu par une pause d'urgence (à l'échelle de l'espace de travail ou pour ce seul agent). Les contrôles et les écritures en attente sont gelés jusqu'à la levée de la pause. |
 | **Non démarré** | Gris | Créé mais jamais exécuté. C'est là que commence chaque nouvel agent. |
 | **Désactivé** | Gris | Rien ne s'exécute, pas même un contrôle manuel. |
 | **Archivé** | Gris | Retiré de l'usage actif, configuration et historique conservés. |
@@ -98,9 +98,9 @@ La surveillance, le ciblage et les limites ne sont pas demandés ici. **Créer**
 
 ## Pause d'urgence
 
-Si quelque chose semble anormal à tous les niveaux (réponses inattendues envoyées, mauvaise configuration, incident), les administrateurs peuvent tout geler d'un coup avec **Mettre tous les agents en pause**, dans l'en-tête de la section **Parc d'agents**. Un motif vous est demandé (il rejoint le journal d'audit), puis une bannière persistante affiche **Pause d'urgence active : {motif}** dans toute la section. Tant qu'elle est active, les contrôles de chaque agent et toute écriture en attente sont suspendus pour l'ensemble du tenant. Cliquez sur **Lever la pause** dans la bannière pour reprendre.
+Si quelque chose semble anormal à tous les niveaux (réponses inattendues envoyées, mauvaise configuration, incident), les administrateurs peuvent tout geler d'un coup avec **Mettre tous les agents en pause**, dans l'en-tête de la section **Parc d'agents**. Un motif vous est demandé (il rejoint le journal d'audit), puis une bannière persistante affiche **Pause d'urgence active : {motif}** dans toute la section. Tant qu'elle est active, les contrôles de chaque agent et toute écriture en attente sont suspendus pour l'ensemble de l'espace de travail. Cliquez sur **Lever la pause** dans la bannière pour reprendre.
 
-Ce frein à l'échelle du tenant est volontairement radical. Pour geler un seul agent au comportement problématique sans toucher au reste du parc, utilisez plutôt **Mettre l'agent en pause** dans la barre d'actions de l'espace de cet agent (voir l'[Espace de l'agent](agents-workspace.md)). Et n'oubliez pas la différence entre mettre en pause et arrêter : **Arrêté** met simplement l'agent au repos, tandis qu'une pause gèle en plus le travail déjà en cours et consigne le motif.
+Ce frein à l'échelle de l'espace de travail est volontairement radical. Pour geler un seul agent au comportement problématique sans toucher au reste du parc, utilisez plutôt **Mettre l'agent en pause** dans la barre d'actions de l'espace de cet agent (voir l'[Espace de l'agent](agents-workspace.md)). Et n'oubliez pas la différence entre mettre en pause et arrêter : **Arrêté** met simplement l'agent au repos, tandis qu'une pause gèle en plus le travail déjà en cours et consigne le motif.
 
 ---
 

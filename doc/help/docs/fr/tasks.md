@@ -350,6 +350,8 @@ Les liens sont bidirectionnels : depuis l'espace de travail de l'Application ou 
 
 **Conseil** : Réservez ces liens aux tâches qui concernent opérationnellement l'app ou l'actif, pas à chaque tâche qui mentionne l'un d'eux en passant. Sinon la relation devient du bruit au lieu d'un signal.
 
+Vous ne voyez chaque fiche liée que si vous pouvez lire son module : les applications demandent les applications, les actifs l'infrastructure. Il en va de même pour la fiche à laquelle appartient une tâche : un projet demande les projets, une ligne budgétaire le budget, un contrat les contrats, un incident les incidents. Sinon le champ est absent du tiroir, de la liste et de Plaid, et la tâche garde son lien. Un Business Contributor ne voit en outre le projet, sa phase, la demande créée à partir de la tâche et les applications que s'il y participe : une seule application hors de sa participation masque le champ **Applications**.
+
 ---
 
 ## Créer des tâches depuis d'autres espaces de travail

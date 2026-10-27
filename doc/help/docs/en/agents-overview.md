@@ -41,7 +41,7 @@ Five pooled numbers sit at the top. They describe the whole fleet, not any one a
 - **Actions today**: how many proposals were actually executed today (approved and applied, or applied automatically).
 - **Acceptance**: the share of decided proposals that were approved rather than rejected. Reads **Not enough data** until there is enough decision history to be meaningful.
 - **Dismissed**: the share of human-reviewed proposals that were set aside rather than approved or rejected. A dismissal doesn't count against the agent, so a persistently high value usually points to a targeting problem (the agent is picking up tickets it shouldn't handle) rather than poor answer quality; fix it in the agent's targeting. Also reads **Not enough data** until there is enough review history.
-- **Cost: today / 7 days**: what your agents actually cost in AI spend, in EUR: today's total and the trailing seven days (today included). This covers **every** agent in the tenant, desk and monitoring alike, so it is the number to check when you want to know what the fleet is costing you, full stop. Per-agent economics (cost per ticket, per-run and daily caps) live on each agent's **Performance & autonomy** and **Settings** tabs.
+- **Cost: today / 7 days**: what your agents actually cost in AI spend, in EUR: today's total and the trailing seven days (today included). This covers **every** agent in the workspace, desk and monitoring alike, so it is the number to check when you want to know what the fleet is costing you, full stop. Per-agent economics (cost per ticket, per-run and daily caps) live on each agent's **Performance & autonomy** and **Settings** tabs.
 
 Treat these as fleet health, not per-agent accounting. For one agent's numbers, open its workspace and use **Performance & autonomy**.
 
@@ -58,7 +58,7 @@ Below the dashboard, the **Fleet** section shows one card per agent. Each card c
 | **Watching (asks first)** | Green | Watching on its own, but every action type still routes to you for approval. |
 | **Watching (partly automatic)** | Green | Watching, with at least one action type promoted to run without approval. The rest still ask first. |
 | **Testing** | Blue | On, but not watching: the **Manual only** mode. It runs when you check or test it by hand, never on its own. |
-| **Paused** | Red | Held by an emergency pause (tenant-wide or just this agent). Checks and pending writes are frozen until the pause is lifted. |
+| **Paused** | Red | Held by an emergency pause (workspace-wide or just this agent). Checks and pending writes are frozen until the pause is lifted. |
 | **Not started** | Grey | Created but never run. This is where every new agent begins. |
 | **Off** | Grey | Nothing runs, not even a manual check. |
 | **Archived** | Grey | Retired from active use, configuration and history kept. |
@@ -98,9 +98,9 @@ Watching, targeting, and limits are not collected here. **Create** opens the new
 
 ## Emergency pause
 
-If something looks wrong across the board (unexpected replies going out, a misconfiguration, an incident), admins can freeze everything at once with **Pause all agents**, in the header of the **Fleet** section. You are asked for a reason (which becomes part of the audit trail), and a persistent banner then reads **Emergency pause active: {reason}** across the section. While it is active, every agent's checks and any pending writes are held for the whole tenant. Click **Lift pause** on the banner to resume.
+If something looks wrong across the board (unexpected replies going out, a misconfiguration, an incident), admins can freeze everything at once with **Pause all agents**, in the header of the **Fleet** section. You are asked for a reason (which becomes part of the audit trail), and a persistent banner then reads **Emergency pause active: {reason}** across the section. While it is active, every agent's checks and any pending writes are held for the whole workspace. Click **Lift pause** on the banner to resume.
 
-This tenant-wide brake is deliberately blunt. To freeze a single misbehaving agent without touching the rest of the fleet, use **Pause agent** in the action bar of that agent's workspace instead. See the [Agent workspace](agents-workspace.md). And remember the difference between pausing and switching off: **Off** simply stands an agent down, while a pause also freezes the work already in flight and records why.
+This workspace-wide brake is deliberately blunt. To freeze a single misbehaving agent without touching the rest of the fleet, use **Pause agent** in the action bar of that agent's workspace instead. See the [Agent workspace](agents-workspace.md). And remember the difference between pausing and switching off: **Off** simply stands an agent down, while a pause also freezes the work already in flight and records why.
 
 ---
 

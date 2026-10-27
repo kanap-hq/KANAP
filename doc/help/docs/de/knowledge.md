@@ -317,6 +317,8 @@ Wissensdokumente können direkt verknüpft werden mit:
 
 Beziehungen sind nicht nur Tags. Sie steuern, wo das Dokument an anderer Stelle in KANAP erscheint und wie Benutzer es aus operativen Arbeitsbereichen entdecken.
 
+Jede Art von Beziehung erscheint nur für Personen, die ihr Modul lesen dürfen: Anwendungen erfordern die Anwendungen, Assets die Infrastruktur, Projekte die Projekte, Anträge die Anträge, Aufgaben die Aufgaben. Eine Art, die Sie nicht lesen dürfen, fehlt im Dokument, auch in Plaid, und das Speichern des Dokuments lässt ihre Verknüpfungen unverändert. Ein Business Contributor fügt nur die Projekte, Anträge, Anwendungen und Aufgaben hinzu, an denen er beteiligt ist.
+
 Konsequenzen des Hinzufügens von Beziehungen:
 - das Dokument wird vom verknüpften Objekt aus leichter zu finden
 - Leser, die das Objekt öffnen, erhalten kontextbezogene Dokumentation, ohne manuell suchen zu müssen

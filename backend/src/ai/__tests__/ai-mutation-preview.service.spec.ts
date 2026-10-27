@@ -14,12 +14,15 @@ import { UpdateDocumentRelationsAiMutationOperation } from '../mutation/operatio
 import { UpdateTaskAssigneeAiMutationOperation } from '../mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskStatusAiMutationOperation } from '../mutation/operations/update-task-status.ai-mutation-operation';
 
+/** The caller: a uuid, as every real caller, so the linked-module reads (`loadLinkedReads`) are asked. */
+const USER_ID = '00000000-0000-4000-8000-000000000001';
+
 function createStatusPreview(overrides?: Record<string, unknown>) {
   return {
     id: 'preview-1',
     tenant_id: 'tenant-1',
     conversation_id: 'conv-1',
-    user_id: 'user-1',
+    user_id: USER_ID,
     tool_name: 'update_task_status',
     target_entity_type: 'tasks',
     target_entity_id: '11111111-1111-4111-8111-111111111111',
@@ -341,6 +344,8 @@ function createService(options?: {
       return previewRepo;
     },
     query: async (sql: string, params?: any[]) => {
+      // The linked-module reads of the caller (`loadLinkedReads`): an administrator reads every module.
+      if (sql.includes('AS is_administrator')) return [{ is_administrator: true, resource: null }];
       for (const response of options?.sqlResponses || []) {
         if (!sql.includes(response.pattern)) {
           continue;
@@ -362,7 +367,7 @@ function createService(options?: {
       if (sql.includes('FROM users u')) {
         if (sql.includes('AND u.id = $2')) {
           return [options?.currentUserRow ?? {
-            id: options?.contextUserId ?? 'user-1',
+            id: options?.contextUserId ?? USER_ID,
             email: 'requestor@example.com',
             label: 'Requestor User',
           }];
@@ -655,7 +660,7 @@ function createService(options?: {
     planSteps,
     context: {
       tenantId: 'tenant-1',
-      userId: options?.contextUserId ?? 'user-1',
+      userId: options?.contextUserId ?? USER_ID,
       isPlatformHost: false,
       surface: 'chat' as const,
       authMethod: 'jwt' as const,
@@ -1110,7 +1115,7 @@ async function testCreateTaskPreviewPersistsResolvedStandaloneFields() {
       rows: (sql: string) => {
         if (sql.includes('AND u.id = $2')) {
           return [{
-            id: 'user-1',
+            id: USER_ID,
             email: 'requestor@example.com',
             label: 'Requestor User',
           }];
@@ -1144,7 +1149,7 @@ async function testCreateTaskPreviewPersistsResolvedStandaloneFields() {
   assert.equal(result.changes.priority.to, 'High');
   assert.equal(result.changes.status.to, 'Open');
   assert.equal(saved[0].mutation_input.relation_type, 'standalone');
-  assert.equal(saved[0].mutation_input.requestor_user_id, 'user-1');
+  assert.equal(saved[0].mutation_input.requestor_user_id, USER_ID);
   assert.equal(saved[0].mutation_input.assignee_user_id, 'user-2');
   assert.equal(saved[0].mutation_input.priority_level, 'high');
 }
@@ -1162,7 +1167,7 @@ async function testCreateTaskPreviewPersistsResolvedProjectFields() {
         pattern: 'FROM users u',
         rows: (sql: string) => (sql.includes('AND u.id = $2')
           ? [{
-              id: 'user-1',
+              id: USER_ID,
               email: 'requestor@example.com',
               label: 'Requestor User',
             }]
@@ -1222,7 +1227,7 @@ async function testCreateTaskPreviewResolvesSpendItemRelation() {
         pattern: 'FROM users u',
         rows: (sql: string) => (sql.includes('AND u.id = $2')
           ? [{
-              id: 'user-1',
+              id: USER_ID,
               email: 'requestor@example.com',
               label: 'Requestor User',
             }]
@@ -1259,7 +1264,7 @@ async function testCreateTaskPreviewResolvesCapexRelation() {
         pattern: 'FROM users u',
         rows: (sql: string) => (sql.includes('AND u.id = $2')
           ? [{
-              id: 'user-1',
+              id: USER_ID,
               email: 'requestor@example.com',
               label: 'Requestor User',
             }]
@@ -1298,7 +1303,7 @@ async function testCreateTaskPreviewRequiresConfirmationForAmbiguousAssignee() {
       rows: (sql: string) => {
         if (sql.includes('AND u.id = $2')) {
           return [{
-            id: 'user-1',
+            id: USER_ID,
             email: 'requestor@example.com',
             label: 'Requestor User',
           }];
@@ -1584,7 +1589,7 @@ async function testExecuteCreateDocumentRoutesThroughKnowledgeService() {
     status: 'draft',
   });
   assert.equal(documentCreates[0][1], 'tenant-1');
-  assert.equal(documentCreates[0][2], 'user-1');
+  assert.equal(documentCreates[0][2], USER_ID);
   assert.deepEqual(documentCreates[0][3]?.audit, {
     source: 'ai_chat',
     sourceRef: 'preview-1',
@@ -1689,7 +1694,7 @@ async function testExecuteCreateTaskRoutesThroughTasksService() {
       rows: (sql: string) => {
         if (sql.includes('AND u.id = $2')) {
           return [{
-            id: 'user-1',
+            id: USER_ID,
             email: 'requestor@example.com',
             label: 'Requestor User',
           }];
@@ -1740,10 +1745,10 @@ async function testExecuteCreateTaskRoutesThroughTasksService() {
       due_date: '2026-04-07',
       task_type_id: null,
       phase_id: null,
-      creator_id: 'user-1',
+      creator_id: USER_ID,
     },
   });
-  assert.equal(taskCreates[0][1], 'user-1');
+  assert.equal(taskCreates[0][1], USER_ID);
   assert.deepEqual(taskCreates[0][2]?.audit, {
     source: 'ai_chat',
     sourceRef: 'preview-1',
@@ -2253,7 +2258,7 @@ async function testExecuteDocumentMetadataPreviewUsesLockAndAudit() {
     revision: 3,
     save_mode: 'manual',
   });
-  assert.equal(documentUpdates[0][2], 'user-1');
+  assert.equal(documentUpdates[0][2], USER_ID);
   assert.equal(documentUpdates[0][3], 'lock-token-1');
   assert.deepEqual(documentUpdates[0][4]?.audit, {
     source: 'ai_chat',
@@ -2392,7 +2397,7 @@ async function testExecuteDocumentContentPreviewUsesLockAndAudit() {
     revision: 3,
     save_mode: 'manual',
   });
-  assert.equal(documentUpdates[0][2], 'user-1');
+  assert.equal(documentUpdates[0][2], USER_ID);
   assert.equal(documentUpdates[0][3], 'lock-token-1');
   assert.deepEqual(documentUpdates[0][4]?.audit, {
     source: 'ai_chat',
@@ -2793,7 +2798,7 @@ async function testExecuteCommentPreviewRoutesThroughTaskActivities() {
     content: 'Please investigate the rollback path.',
   });
   assert.equal(activityCreates[0][2], 'tenant-1');
-  assert.equal(activityCreates[0][3], 'user-1');
+  assert.equal(activityCreates[0][3], USER_ID);
   assert.deepEqual(activityCreates[0][4]?.audit, {
     source: 'ai_chat',
     sourceRef: 'preview-1',
@@ -2900,7 +2905,7 @@ async function testListConversationPreviewsReturnsLatestWindowInChronologicalOrd
  * skips `incidents:contributor` and the closure freeze entirely.
  */
 async function testUpdatePreviewRequiresDocumentWriteAccess() {
-  const context: any = { manager: {}, userId: 'user-1', tenantId: 'tenant-1' };
+  const context: any = { manager: {}, userId: USER_ID, tenantId: 'tenant-1' };
 
   const refusedCalls: string[] = [];
   const refusing: any = {
@@ -2927,7 +2932,7 @@ async function testUpdatePreviewRequiresDocumentWriteAccess() {
     assertDocumentUnlockedForUser: async () => { allowedCalls.push('lock'); },
   };
   await new AiDocumentMutationSupportService(permissive).assertUpdatePreviewAllowed(context, 'doc-1');
-  assert.deepEqual(allowedCalls, ['writable:doc-1:user-1', 'workflow', 'lock']);
+  assert.deepEqual(allowedCalls, [`writable:doc-1:${USER_ID}`, 'workflow', 'lock']);
 }
 
 async function main() {

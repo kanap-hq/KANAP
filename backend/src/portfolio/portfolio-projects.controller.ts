@@ -36,6 +36,8 @@ import { resolveBusinessContributorScopeForUser } from '../auth/business-contrib
 import { PermissionLevel } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
+import { linkedReadsFromContext } from '../common/relations/linked-reads';
+import { idsInScope, PortfolioLinkedReads } from './portfolio-linked-reads';
 import {
   PortfolioRelationsService,
   PROJECT_RELATION_READS,
@@ -113,6 +115,12 @@ export class PortfolioProjectsController {
       applicationScope,
       requestScope,
     };
+  }
+
+  /** What the project detail may name of other portfolio records (`include=source_requests`). */
+  private async projectLinkedReads(ctx: TenantRequest): Promise<PortfolioLinkedReads> {
+    const { requestScope } = await this.projectRelationsContext(ctx);
+    return { reads: linkedReadsFromContext(ctx), requestScope };
   }
 
   // ==================== CRUD ====================
@@ -297,7 +305,12 @@ export class PortfolioProjectsController {
     @Tenant() ctx: TenantRequest,
   ) {
     const { id, accessScope } = await this.resolveForAccess(idOrRef, ctx, 'reader');
-    return this.svc.get(id, query, { manager: ctx.manager, accessScope, readsBudget: hasLevel(ctx, 'budget', 'reader') });
+    return this.svc.get(id, query, {
+      manager: ctx.manager,
+      accessScope,
+      readsBudget: hasLevel(ctx, 'budget', 'reader'),
+      linked: await this.projectLinkedReads(ctx),
+    });
   }
 
   @UseGuards(PermissionGuard)
@@ -750,8 +763,13 @@ export class PortfolioProjectsController {
     @Param('id') idOrRef: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    // The applications are the applications module's: listed only to its readers, in their scope.
+    if (!hasLevel(ctx, 'applications', 'reader')) throw new ForbiddenException('You cannot read applications.');
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'reader');
-    return this.svc.listLinkedApplications(id, { manager: ctx.manager });
+    const linked = await this.svc.listLinkedApplications(id, { manager: ctx.manager });
+    const { applicationScope } = await this.projectRelationsContext(ctx);
+    const visible = await idsInScope(this.requireManager(ctx), 'applications', linked.items.map((row: { id: string }) => row.id), applicationScope);
+    return { ...linked, items: linked.items.filter((row: { id: string }) => visible.has(String(row.id))) };
   }
 
   @UseGuards(PermissionGuard)
@@ -778,6 +796,8 @@ export class PortfolioProjectsController {
     @Param('id') idOrRef: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    // The assets are the infrastructure's: listed only to its readers.
+    if (!hasLevel(ctx, 'infrastructure', 'reader')) throw new ForbiddenException('You cannot read assets.');
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'reader');
     return this.svc.listLinkedAssets(id, { manager: ctx.manager });
   }

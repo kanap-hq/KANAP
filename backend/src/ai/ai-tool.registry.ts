@@ -331,8 +331,8 @@ export class AiToolRegistry {
           execute: async (context, input) => {
             await this.policy.assertEntityTypeReadAccess(context, input.entity_type, context.manager);
             // OPEX and CAPEX list the tenant's analytics dimensions (`analytics:<code>`) among their fields.
-            const description = describeAiEntityFilters(input.entity_type, await resolveAiEntityRegistry(context, input.entity_type, (entityType) =>
-              this.policy.canReadEntityType(context, entityType, context.manager)));
+            const description = describeAiEntityFilters(input.entity_type, await resolveAiEntityRegistry(context, input.entity_type, (entityType, level) =>
+              this.policy.canReadEntityType(context, entityType, context.manager, level)));
             if (input.entity_type !== 'spend_items' && input.entity_type !== 'capex_items') return description;
             // Amount field descriptions are positional; the tenant's column names come with them (MCP clients have no system prompt).
             return { ...description, budget_columns: budgetColumnsAiContext(await readBudgetColumns(context.manager, context.tenantId)) };
@@ -532,13 +532,12 @@ export class AiToolRegistry {
                 id: document.document_type_id ?? null,
                 name: document.document_type_name ?? null,
               },
-              relations: {
-                applications: (document.relations?.applications || []).map((row: any) => toDocumentRelation('applications', row)),
-                assets: (document.relations?.assets || []).map((row: any) => toDocumentRelation('assets', row)),
-                projects: (document.relations?.projects || []).map((row: any) => toDocumentRelation('projects', row)),
-                requests: (document.relations?.requests || []).map((row: any) => toDocumentRelation('requests', row)),
-                tasks: (document.relations?.tasks || []).map((row: any) => toDocumentRelation('tasks', row)),
-              },
+              // The families the reader reads (`knowledge.get` leaves the others out): absent, never empty.
+              relations: Object.fromEntries(
+                (['applications', 'assets', 'projects', 'requests', 'tasks'] as const)
+                  .filter((family) => Array.isArray(document.relations?.[family]))
+                  .map((family) => [family, document.relations[family].map((row: any) => toDocumentRelation(family, row))]),
+              ),
               contributors: (document.contributors || []).map((row: any) => ({
                 name: row.user_name ?? 'Unknown user',
                 role: row.role,

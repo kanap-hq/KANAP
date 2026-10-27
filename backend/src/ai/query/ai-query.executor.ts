@@ -22,7 +22,7 @@ import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.ser
 import { PortfolioProjectsService } from '../../portfolio/services';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { presentChildren } from '../../spend/budget-line-presentation';
-import { TasksService } from '../../spend/tasks.service';
+import { TaskLinkedScopes, TasksService } from '../../spend/tasks.service';
 import { AllocationCalculatorService } from '../../spend/allocation-calculator.service';
 import { describeAllocationWarning } from '../../spend/allocation-distribution';
 import type { SpendVersion } from '../../spend/spend-version.entity';
@@ -63,6 +63,8 @@ import { budgetFteFields } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
 import { entityNotFound, isUuid, resolveAiEntityReference } from '../ai-entity-reference.util';
 import { AiPolicyService } from '../ai-policy.service';
+import { LinkedReads, loadLinkedReads } from '../../common/relations/linked-reads';
+import type { PortfolioLinkedReads } from '../../portfolio/portfolio-linked-reads';
 import {
   AiTechnologyRow,
   listAiTechnologies,
@@ -1212,8 +1214,27 @@ export class AiQueryExecutor {
     });
   }
 
-  private mapUser(row: any): AiEntitySummaryDto {
+  /**
+   * A user as the users list shows them: every column to an administrator of users, name, email and
+   * status to a reader (`adminView` false), as the screen does.
+   */
+  private mapUser(row: any, adminView: boolean): AiEntitySummaryDto {
     const label = displayName(row) ?? row.email ?? 'Unknown user';
+    if (!adminView) {
+      return toEntitySummary('users', {
+        id: row.id,
+        label,
+        status: row.status ?? null,
+        summary: label === row.email || typeof row.email !== 'string' ? null : row.email,
+        created_at: null,
+        updated_at: null,
+        metadata: {
+          email: scalar(row.email),
+          first_name: scalar(row.first_name),
+          last_name: scalar(row.last_name),
+        },
+      });
+    }
     const summary = label === row.email
       ? ([row.job_title, row.team_name, row.company_name].filter(Boolean).join(' | ') || null)
       : ([row.email, row.job_title, row.team_name, row.company_name].filter(Boolean).join(' | ') || null);
@@ -1379,6 +1400,8 @@ export class AiQueryExecutor {
         tenantId: context.tenantId,
         accessScope,
         viewer: await resolveAiIncidentViewer(context),
+        linkedReads: await this.linkedReads(context),
+        linkedScopes: await this.taskLinkedScopes(context),
       });
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
@@ -1549,7 +1572,14 @@ export class AiQueryExecutor {
 
     if (input.entity_type === 'incidents') {
       const viewer = await resolveIncidentViewer(context.manager, context.userId, context.tenantId);
-      const result = await this.incidents.list(scoped.query, { manager: context.manager, tenantId: context.tenantId, viewer });
+      const result = await this.incidents.list(scoped.query, {
+        manager: context.manager,
+        tenantId: context.tenantId,
+        viewer,
+        // The linked counts, each on its module's read (null otherwise), as on the incidents list.
+        technologies: await this.readProbe(context)('technologies'),
+        applications: await this.readProbe(context)('applications'),
+      });
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
@@ -1874,6 +1904,7 @@ export class AiQueryExecutor {
     }
 
     if (input.entity_type === 'users') {
+      const adminView = await this.usersAdminView(context);
       const result = await this.users.listForAi(scoped.query, {
         manager: context.manager,
         tenantId: context.tenantId,
@@ -1883,7 +1914,7 @@ export class AiQueryExecutor {
       const returned = Array.isArray(result.items) ? result.items.length : 0;
       const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
       return {
-        items: (result.items || []).map((row: any) => this.mapUser(row)),
+        items: (result.items || []).map((row: any) => this.mapUser(row, adminView)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -2320,9 +2351,42 @@ export class AiQueryExecutor {
     };
   }
 
+  /** Whether the caller administers users, as the users list decides its columns (`canViewUserAdministration`). */
+  private async usersAdminView(context: AiExecutionContextWithManager): Promise<boolean> {
+    return (await this.policy?.canReadEntityType(context, 'users', context.manager, 'admin')) === true;
+  }
+
+  /**
+   * What a project or a request detail may name of the other portfolio records: each module on its
+   * read right, a Business Contributor's projects, requests and tasks inside their participation.
+   */
+  private async portfolioLinkedReads(context: AiExecutionContextWithManager): Promise<PortfolioLinkedReads> {
+    const reads = await this.linkedReads(context);
+    return {
+      reads,
+      projectScope: await resolveAiParticipationAccessScope(context, 'projects'),
+      requestScope: await resolveAiParticipationAccessScope(context, 'requests'),
+      taskScope: await resolveAiParticipationAccessScope(context, 'tasks'),
+    };
+  }
+
+  /** A Business Contributor's linked projects, requests and applications, inside their participation. */
+  private async taskLinkedScopes(context: AiExecutionContextWithManager): Promise<TaskLinkedScopes> {
+    return {
+      projects: await resolveAiParticipationAccessScope(context, 'projects'),
+      requests: await resolveAiParticipationAccessScope(context, 'requests'),
+      applications: await resolveAiParticipationAccessScope(context, 'applications'),
+    };
+  }
+
+  /** The modules the caller reads, for the linked records of a task, a project or a request. */
+  private linkedReads(context: AiExecutionContextWithManager): Promise<LinkedReads> {
+    return loadLinkedReads(context.manager, context.userId, context.tenantId);
+  }
+
   /** Whether the caller reads a family; nothing without the policy. */
   private readProbe(context: AiExecutionContextWithManager): AiReadProbe {
-    return async (entityType) => !!(await this.policy?.canReadEntityType(context, entityType, context.manager));
+    return async (entityType, level) => !!(await this.policy?.canReadEntityType(context, entityType, context.manager, level));
   }
 
   /**
@@ -2370,6 +2434,8 @@ export class AiQueryExecutor {
         manager: context.manager,
         accessScope,
         viewer: await resolveAiIncidentViewer(context),
+        linkedReads: await this.linkedReads(context),
+        linkedScopes: await this.taskLinkedScopes(context),
       });
       if (!row) throw new NotFoundException('Task not found.');
       return this.toDetailResult(this.mapTask(row), withoutHiddenLine(row));
@@ -2379,7 +2445,13 @@ export class AiQueryExecutor {
       const row = await this.projects.get(
         entityId,
         { include: 'team,sponsors,contacts,company,department,source_requests,urls,dependencies,attachments,phases,milestones,financials' },
-        { manager: context.manager, tenantId: context.tenantId, accessScope, readsBudget: await this.readsBudget(context) },
+        {
+          manager: context.manager,
+          tenantId: context.tenantId,
+          accessScope,
+          readsBudget: await this.readsBudget(context),
+          linked: await this.portfolioLinkedReads(context),
+        },
       );
       return this.toDetailResult(this.mapProject(row), row);
     }
@@ -2393,6 +2465,7 @@ export class AiQueryExecutor {
           accessScope,
           readsBudget: await this.readsBudget(context),
           viewer: await resolveAiIncidentViewer(context),
+          linked: await this.portfolioLinkedReads(context),
         },
       );
       return this.toDetailResult(this.mapRequest(row), row);
@@ -2627,7 +2700,12 @@ export class AiQueryExecutor {
     if (entityType === 'users') {
       const row = await this.users.findById(entityId, { manager: context.manager });
       if (!row) throw new NotFoundException('User not found.');
-      return this.toDetailResult(this.mapUser(row), row);
+      // A reader of users gets what the user's page gives them (`toUserLookup`): name, email, status.
+      if (!(await this.usersAdminView(context))) {
+        const lookup = { id: row.id, email: row.email, first_name: row.first_name, last_name: row.last_name, status: row.status };
+        return this.toDetailResult(this.mapUser(lookup, false), lookup);
+      }
+      return this.toDetailResult(this.mapUser(row, true), row);
     }
 
     if (entityType === 'documents') {
@@ -2941,6 +3019,8 @@ export class AiQueryExecutor {
         tenantId: context.tenantId,
         accessScope,
         viewer: await resolveAiIncidentViewer(context),
+        linkedReads: await this.linkedReads(context),
+        linkedScopes: await this.taskLinkedScopes(context),
       }) as any;
     } else if (input.entity_type === 'projects') {
       raw = await this.projects.listFilterValues(query, {

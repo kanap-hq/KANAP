@@ -52,7 +52,7 @@ Lorsque Plaid tourne sur le modèle inclus KANAP (aucun choix explicite, aucun m
 - La date de **réinitialisation** du volume
 - Un rappel indiquant que l'utilisation de vos propres clés API supprime le plafond
 
-Comme le dit la carte, le chat et les agents de ce tenant se partagent le volume. Un message correspond à une question de chat ou à un ticket examiné par un agent. Les requêtes des assistants externes via MCP ne comptent pas. Un parc d'agents actif le consomme plus vite : si vous surveillez cette barre, surveillez aussi la page [Utilisation & coûts](ai-usage.md).
+Comme le dit la carte, le chat et les agents de cet espace de travail se partagent le volume. Un message correspond à une question de chat ou à un ticket examiné par un agent. Les requêtes des assistants externes via MCP ne comptent pas. Un parc d'agents actif le consomme plus vite : si vous surveillez cette barre, surveillez aussi la page [Utilisation & coûts](ai-usage.md).
 
 ### Indicateurs d'état
 

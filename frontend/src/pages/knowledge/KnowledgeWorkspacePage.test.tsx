@@ -409,3 +409,37 @@ describe('KnowledgeWorkspacePage — library and folder names', () => {
     expect(screen.queryByText('Managed Docs')).not.toBeInTheDocument();
   });
 });
+
+describe('KnowledgeWorkspacePage — linked records the person cannot read', () => {
+  // The API leaves out the families whose module the person does not read: here only tasks.
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.get).mockImplementation(async (url: string) => {
+      if (url === DOC_URL) {
+        return {
+          data: {
+            id: 'doc-9',
+            item_number: 9,
+            title: 'Runbook',
+            content_markdown: 'Body',
+            revision: 1,
+            can_write: true,
+            edit_lock: null,
+            relations: { tasks: [{ id: 'task-1', name: 'T-1 - Visible task' }] },
+          },
+        } as any;
+      }
+      return { data: [] } as any;
+    });
+    vi.mocked(api.post).mockResolvedValue({ data: {} } as any);
+  });
+
+  it('shows only the families the document came with', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+    renderWorkspace(queryClient);
+    expect(await screen.findByText('sidebar.relations.labels.tasks')).toBeInTheDocument();
+    for (const family of ['applications', 'assets', 'projects', 'requests', 'incidents']) {
+      expect(screen.queryByText(`sidebar.relations.labels.${family}`)).not.toBeInTheDocument();
+    }
+  });
+});

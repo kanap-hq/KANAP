@@ -882,6 +882,8 @@ export class ApplicationsController {
       readsBudget: access.budget_lines,
       readsContracts: access.contracts,
       readsProjects: access.projects,
+      readsProcesses: access.processes,
+      readsTechnologies: access.technologies,
       projectAccessScope: access.projects ? await this.readProjectScope(ctx) : undefined,
       requestsAccess: access.requests ? { scope: await this.participationScope(ctx, 'portfolio_requests') } : null,
     });
