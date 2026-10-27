@@ -633,6 +633,9 @@ export class AiMutationPreviewService {
     if (operations.length > MAX_PENDING_CONVERSATION_PREVIEWS) {
       throw new BadRequestException('Mutation plan contains too many operations.');
     }
+    if (operations.some((operation) => String(operation?.tool_name || '').trim() === 'delete_record')) {
+      throw new BadRequestException('delete_record prepares one record at a time and cannot be part of a mutation plan.');
+    }
 
     const expectedRefs = normalizeTargetRefs(input.expected_target_refs);
     const expectedCount = normalizeExpectedTargetCount(input.expected_target_count, expectedRefs);

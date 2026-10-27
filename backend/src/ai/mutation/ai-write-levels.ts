@@ -19,9 +19,21 @@ const CONTRIBUTOR_WRITE_FAMILIES: Readonly<Record<string, readonly string[]>> = 
   update_entity_relations: ['projects', 'requests'],
 };
 
+/**
+ * The level each family of `delete_record` needs, as its delete route: tasks and contacts are
+ * opened to their administrator only, a location to a member. An unknown family keeps the
+ * strictest level (admin), so a family added without its row is refused rather than opened.
+ */
+const DELETE_RECORD_FAMILIES: Readonly<Record<string, { resource: string; level: PermissionLevel }>> = {
+  tasks: { resource: 'tasks', level: 'admin' },
+  contacts: { resource: 'contacts', level: 'admin' },
+  locations: { resource: 'locations', level: 'member' },
+};
+
 /** The level a write tool needs on its module for one family (`entity_type`). */
 export function aiWriteLevel(toolName: string, family: unknown): PermissionLevel {
   const normalized = String(family ?? '').trim();
+  if (toolName === 'delete_record') return DELETE_RECORD_FAMILIES[normalized]?.level ?? 'admin';
   return CONTRIBUTOR_WRITE_FAMILIES[toolName]?.includes(normalized) ? 'contributor' : 'member';
 }
 
@@ -80,11 +92,17 @@ export const CONTRIBUTOR_PLAIN_SCOPES: Readonly<Record<string, string>> = {
 /**
  * Every (module, level) a write tool may need, for the tools offered to the person: the modules
  * of the tool at `member`, and the modules of its contributor families at `contributor`.
+ * `delete_record` names one family per resource, with the level of that family's delete route.
  */
 export function aiWriteRequirements(
   toolName: string,
   resources: readonly string[],
 ): Array<{ resource: string; level: PermissionLevel }> {
+  if (toolName === 'delete_record') {
+    return resources.map((resource) => DELETE_RECORD_FAMILIES[resource]
+      ? { resource: DELETE_RECORD_FAMILIES[resource].resource, level: DELETE_RECORD_FAMILIES[resource].level }
+      : { resource, level: 'admin' as PermissionLevel });
+  }
   const requirements = resources.map((resource) => ({ resource, level: 'member' as PermissionLevel }));
   for (const family of CONTRIBUTOR_WRITE_FAMILIES[toolName] ?? []) {
     const scoped = WRITE_SCOPED_FAMILIES[family as ParticipationScopedAiEntityType];

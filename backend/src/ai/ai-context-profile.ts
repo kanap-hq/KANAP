@@ -89,6 +89,7 @@ const TASK_WRITE_TOOLS: AiToolName[] = [
   'update_task_assignees',
   'update_task_assignee',
   'add_task_comment',
+  'delete_record',
   'undo_preview',
 ];
 
@@ -119,6 +120,7 @@ const BUSINESS_WRITE_TOOLS: AiToolName[] = [
   'create_business_record',
   'update_business_record',
   'update_entity_relations',
+  'delete_record',
   'undo_preview',
 ];
 
@@ -132,6 +134,7 @@ const MASTER_DATA_WRITE_TOOLS: AiToolName[] = [
   'create_master_data_record',
   'update_master_data_record',
   'update_entity_relations',
+  'delete_record',
   'undo_preview',
 ];
 

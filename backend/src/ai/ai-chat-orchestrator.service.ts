@@ -833,7 +833,9 @@ function isRefBasedSingleMutationTool(toolName: string, writePreviewToolNames: s
   return writePreviewToolNames.includes(toolName)
     && toolName !== 'prepare_mutation_plan'
     && toolName !== 'update_task_assignees'
-    && toolName !== 'undo_preview';
+    && toolName !== 'undo_preview'
+    // A delete is one record per preview, never a bulk target set.
+    && toolName !== 'delete_record';
 }
 
 function buildBulkAutoplanInput(params: {
@@ -1143,7 +1145,7 @@ function toolActivityPhase(toolName: string): AiChatActivityPhase {
   if (toolName === 'web_search') {
     return 'searching_web';
   }
-  if (toolName === 'undo_preview' || toolName === 'prepare_mutation_plan' || toolName.startsWith('create_') || toolName.startsWith('update_') || toolName.startsWith('add_') || toolName.startsWith('import_') || toolName.startsWith('write_')) {
+  if (toolName === 'undo_preview' || toolName === 'prepare_mutation_plan' || toolName.startsWith('create_') || toolName.startsWith('update_') || toolName.startsWith('add_') || toolName.startsWith('delete_') || toolName.startsWith('import_') || toolName.startsWith('write_')) {
     return 'preparing_change';
   }
   return 'using_tool';

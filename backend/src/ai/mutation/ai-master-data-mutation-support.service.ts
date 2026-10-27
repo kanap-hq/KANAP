@@ -867,7 +867,8 @@ export class AiMasterDataMutationSupportService {
     };
   }
 
-  private async resolveRecordReference(
+  /** The record a reference or an exact name names, with the row its card and drift check read. */
+  async resolveRecordReference(
     context: AiExecutionContextWithManager,
     entityType: AiMasterDataEntityType,
     ref: string,
@@ -1057,7 +1058,7 @@ export class AiMasterDataMutationSupportService {
       case 'contacts':
         return textOrNull(row.email);
       case 'locations':
-        return textOrNull(row.code);
+        return textOrNull(row.location_reference);
       default:
         return null;
     }
@@ -1079,7 +1080,7 @@ export class AiMasterDataMutationSupportService {
         return company ? `${name} (${company})` : name;
       }
       case 'locations':
-        return [row.code, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled location';
+        return [row.location_reference, row.name].map(textOrNull).filter(Boolean).join(' - ') || 'Untitled location';
       case 'analytics_categories': {
         const name = textOrNull(row.name) || 'Untitled analytics category';
         const dimension = row.axis_is_default === false ? textOrNull(row.axis_name) : null;

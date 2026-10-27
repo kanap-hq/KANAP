@@ -16,7 +16,7 @@ import { IncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident
  * The refusal of each task's delete that is the origin of a request (`TASK_REQUEST_ORIGIN`, the
  * request's reference in `params`), in the order of `tasks`; null for the others.
  */
-async function originRefusals(
+export async function originRefusals(
   manager: EntityManager,
   tasks: ReadonlyArray<{ id: string; title: string | null }>,
 ): Promise<Array<RecordInUseException | null>> {

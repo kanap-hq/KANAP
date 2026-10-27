@@ -212,6 +212,15 @@ export const writeActionText = {
       case 'es': return `modificación de las relaciones de ${subject}`;
     }
   },
+  /** The deletion of one record, the only irreversible write: one record at a time, under approval. */
+  deleteRecord(language: AiTranslatedWriteLanguage, entityType: string, subject: string): string {
+    const noun = RECORD_NOUNS[entityType] ?? RECORD_NOUNS.default;
+    switch (language) {
+      case 'fr': return `suppression ${noun.fr} ${subject}`;
+      case 'de': return `${noun.de} ${subject} löschen`;
+      case 'es': return `eliminación ${noun.es} ${subject}`;
+    }
+  },
   writeFinancialPlan(
     language: AiTranslatedWriteLanguage,
     action: 'create_version' | 'update_version' | 'upsert_amounts' | 'replace_allocations',
@@ -261,6 +270,7 @@ const RECORD_NOUNS: Record<string, TranslatedTexts> = {
   departments: { fr: 'du département', de: 'Abteilung', es: 'del departamento' },
   suppliers: { fr: 'du fournisseur', de: 'Lieferant', es: 'del proveedor' },
   contacts: { fr: 'du contact', de: 'Kontakt', es: 'del contacto' },
+  tasks: { fr: 'de la tâche', de: 'Aufgabe', es: 'de la tarea' },
   accounts: { fr: 'du compte', de: 'Konto', es: 'de la cuenta' },
   chart_of_accounts: { fr: 'du plan comptable', de: 'Kontenplan', es: 'del plan de cuentas' },
   analytics_categories: { fr: 'de la valeur de dimension', de: 'Dimensionswert', es: 'del valor de dimensión' },
@@ -278,6 +288,76 @@ export const taskDetailText = {
     return labelled(language, { fr: 'Priorité', de: 'Priorität', es: 'Prioridad' }[language], label);
   },
 };
+
+/**
+ * What a delete takes with the record, counted at the preview: the rows of the card's markdown
+ * block, in the person's language, with the words of the record's screen. A family with no count
+ * is left out; a contact's links stay anonymous when the person cannot read that family
+ * (`readContactUsages` leaves the group out), and the linked records stay in every case.
+ */
+export type AiDeleteImpact = {
+  counts: Record<string, number>;
+  /** A contact's links in families the person does not read, counted without naming them. */
+  hidden?: number;
+};
+
+const DELETE_IMPACT_ROWS: Record<string, ReadonlyArray<{ key: string; labels: Texts }>> = {
+  tasks: [
+    { key: 'activities', labels: { en: 'Comments and changes', fr: 'Commentaires et changements', de: 'Kommentare und Änderungen', es: 'Comentarios y cambios' } },
+    { key: 'time_entries', labels: { en: 'Time entries', fr: 'Temps saisis', de: 'Erfasste Zeiten', es: 'Tiempos registrados' } },
+    { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
+    { key: 'links', labels: { en: 'Links', fr: 'Liens', de: 'Verknüpfungen', es: 'Vínculos' } },
+  ],
+  contacts: [
+    { key: 'suppliers', labels: { en: 'Suppliers', fr: 'Fournisseurs', de: 'Lieferanten', es: 'Proveedores' } },
+    { key: 'budget_lines', labels: { en: 'Budget lines', fr: 'Lignes budgétaires', de: 'Budgetzeilen', es: 'Líneas presupuestarias' } },
+    { key: 'contracts', labels: { en: 'Contracts', fr: 'Contrats', de: 'Verträge', es: 'Contratos' } },
+    { key: 'applications', labels: { en: 'Applications', fr: 'Applications', de: 'Anwendungen', es: 'Aplicaciones' } },
+    { key: 'assets', labels: { en: 'Assets', fr: 'Actifs', de: 'Assets', es: 'Activos' } },
+    { key: 'technologies', labels: { en: 'Technologies', fr: 'Technologies', de: 'Technologien', es: 'Tecnologías' } },
+    { key: 'locations', labels: { en: 'Locations', fr: 'Sites', de: 'Standorte', es: 'Ubicaciones' } },
+    { key: 'projects', labels: { en: 'Projects', fr: 'Projets', de: 'Projekte', es: 'Proyectos' } },
+    { key: 'requests', labels: { en: 'Requests', fr: 'Demandes', de: 'Anfragen', es: 'Solicitudes' } },
+  ],
+  locations: [
+    { key: 'assets', labels: { en: 'Assets that will lose their location', fr: 'Actifs qui perdront leur site', de: 'Assets, die ihren Standort verlieren', es: 'Activos que perderán su ubicación' } },
+    { key: 'contacts', labels: { en: 'Contacts', fr: 'Contacts', de: 'Kontakte', es: 'Contactos' } },
+    { key: 'links', labels: { en: 'Links', fr: 'Liens', de: 'Verknüpfungen', es: 'Vínculos' } },
+    { key: 'sub_items', labels: { en: 'Sub-items', fr: 'Sous-éléments', de: 'Unterelemente', es: 'Subelementos' } },
+    { key: 'documents', labels: { en: 'Linked documents', fr: 'Documents liés', de: 'Verknüpfte Dokumente', es: 'Documentos vinculados' } },
+  ],
+};
+
+const DELETE_IMPACT_OTHER: Texts = {
+  en: 'Other links', fr: "D'autres rattachements", de: 'Weitere Verknüpfungen', es: 'Otros vínculos',
+};
+
+const DELETE_IMPACT_NONE: Record<string, Texts> = {
+  tasks: { en: 'Nothing else is deleted with this task.', fr: 'Aucun autre élément ne part avec cette tâche.', de: 'Sonst wird mit dieser Aufgabe nichts gelöscht.', es: 'No se elimina nada más con esta tarea.' },
+  contacts: { en: 'No links.', fr: 'Aucun rattachement.', de: 'Keine Verknüpfungen.', es: 'Sin vínculos.' },
+  locations: { en: 'Nothing else is deleted with this location.', fr: 'Aucun autre élément ne part avec ce site.', de: 'Sonst wird mit diesem Standort nichts gelöscht.', es: 'No se elimina nada más con esta ubicación.' },
+};
+
+const DELETE_IMPACT_CLOSING: Record<string, Texts> = {
+  contacts: { en: 'The linked records stay.', fr: 'Les fiches liées restent.', de: 'Die verknüpften Einträge bleiben.', es: 'Los registros vinculados se conservan.' },
+};
+
+/** The markdown list of what goes with a deleted record, in the person's language. */
+export function deletionImpactText(language: AiWriteLanguage, entityType: string, impact: AiDeleteImpact): string {
+  const colon = language === 'fr' ? ' : ' : ': ';
+  const lines = (DELETE_IMPACT_ROWS[entityType] ?? [])
+    .filter((row) => Number(impact.counts?.[row.key] ?? 0) > 0)
+    .map((row) => `- ${row.labels[language]}${colon}${Number(impact.counts[row.key])}`);
+  if (Number(impact.hidden ?? 0) > 0) {
+    lines.push(`- ${DELETE_IMPACT_OTHER[language]}${colon}${Number(impact.hidden)}`);
+  }
+  if (lines.length === 0) {
+    return DELETE_IMPACT_NONE[entityType]?.[language] ?? DELETE_IMPACT_NONE.tasks[language];
+  }
+  const closing = DELETE_IMPACT_CLOSING[entityType]?.[language];
+  return closing ? `${lines.join('\n')}\n\n${closing}` : lines.join('\n');
+}
+
 
 /** The counts of a ticket import, as "label: count" so no plural has to agree. */
 export const ticketImportDetailText = {

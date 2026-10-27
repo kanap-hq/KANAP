@@ -10,6 +10,7 @@ import { AiTaskMutationSupportService } from '../mutation/ai-task-mutation-suppo
 import { CreateBusinessRecordAiMutationOperation } from '../mutation/operations/create-business-record.ai-mutation-operation';
 import { CreateDocumentAiMutationOperation } from '../mutation/operations/create-document.ai-mutation-operation';
 import { CreateTaskAiMutationOperation } from '../mutation/operations/create-task.ai-mutation-operation';
+import { DeleteRecordAiMutationOperation } from '../mutation/operations/delete-record.ai-mutation-operation';
 import { ImportGlpiTicketAiMutationOperation } from '../mutation/operations/import-glpi-ticket.ai-mutation-operation';
 import { UpdateTaskAssigneeAiMutationOperation } from '../mutation/operations/update-task-assignee.ai-mutation-operation';
 import { UpdateTaskStatusAiMutationOperation } from '../mutation/operations/update-task-status.ai-mutation-operation';
@@ -357,6 +358,41 @@ function testAmountsForTheCard() {
   }
 }
 
+function testDeleteRecordSummaryAndCard() {
+  const operation = make(DeleteRecordAiMutationOperation);
+  const pending = preview({
+    tool_name: 'delete_record',
+    target_entity_type: 'tasks',
+    target_entity_id: 'task-1',
+    current_values: {
+      target_ref: 'T-42',
+      target_title: 'T-42 - Migration',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: { activities: 2, time_entries: 1, attachments: 0, links: 0 },
+    },
+  });
+  assert.equal(summary(operation, pending, 'en'), 'Delete task "Migration".');
+  assert.equal(summary(operation, pending, 'fr'), 'Suppression de la tâche « Migration ».');
+  assert.equal(summary(operation, pending, 'de'), 'Aufgabe „Migration“ löschen.');
+  assert.equal(summary(operation, pending, 'es'), 'Eliminación de la tarea «Migration».');
+  assert.equal(summary(operation, { ...pending, status: 'executed' }, 'en'), 'Task "Migration" deleted.');
+  assert.equal(summary(operation, { ...pending, status: 'executed' }, 'fr'), 'Appliqué : suppression de la tâche « Migration ».');
+  assert.equal(summary(operation, { ...pending, status: 'rejected' }, 'fr'), 'Rejeté : suppression de la tâche « Migration ».');
+  assert.equal(
+    summary(operation, { ...pending, status: 'failed', error_message: 'Task no longer exists.' }, 'fr'),
+    'Task no longer exists.',
+  );
+  // The card lists what goes with the record, in the person's language.
+  const card = operation.presentPreview(pending, 'fr');
+  assert.equal(card.target.ref, 'T-42');
+  assert.equal(card.target.title, 'T-42 - Migration');
+  assert.equal(card.changes.deletion.label, 'What goes with it');
+  assert.equal(card.changes.deletion.format, 'markdown');
+  assert.equal(card.changes.deletion.from, null);
+  assert.equal(card.changes.deletion.to, '- Commentaires et changements : 2\n- Temps saisis : 1');
+  console.log('  delete_record summary and card: OK');
+}
+
 async function testPersonLanguage() {
   assert.equal(aiWriteLanguage('fr-FR'), 'fr');
   assert.equal(aiWriteLanguage('pt'), 'en');
@@ -377,6 +413,7 @@ async function main() {
   testRelationRolesForTheCard();
   testAmountsForTheCard();
   testCardCodesAndFieldOrder();
+  testDeleteRecordSummaryAndCard();
   await testDefaultTaskType();
   await testPersonLanguage();
   console.log('ai-write-preview-summaries.spec: ok');

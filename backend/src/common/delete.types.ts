@@ -1,4 +1,5 @@
 import { EntityManager, Repository, ObjectLiteral } from 'typeorm';
+import { AuditSourceOptions } from '../audit/audit.service';
 
 /**
  * Strategy for handling related records during deletion
@@ -45,6 +46,8 @@ export interface DeleteOptions {
   userId?: string | null;
   /** Skip audit logging */
   skipAudit?: boolean;
+  /** Who asked for the delete besides the user: Plaid's preview writes `ai_chat` and its id. */
+  audit?: AuditSourceOptions;
 }
 
 /**

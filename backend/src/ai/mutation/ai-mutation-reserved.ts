@@ -9,6 +9,7 @@ import { isReservedDimensionValueWrite } from '../../data-access/reserved-operat
  * - dimension values (analytics categories): create and update, as on the dimension page
  *   (`isReservedDimensionValueWrite` without a dimension: open values come from a line only);
  * - suppliers and shared contacts: update, and a supplier's contacts; creating one stays allowed.
+ * - deleting a contact: its delete routes are reserved too.
  * Lines, contracts, tasks, documents, locations and the other records follow the person's access.
  */
 
@@ -28,6 +29,9 @@ export function isReservedAiMutation(toolName: string, entityType: unknown): boo
     case 'update_entity_relations':
       // The contacts of a supplier (as `suppliers/:id/contacts`).
       return type === 'suppliers';
+    case 'delete_record':
+      // The contact delete routes (`DELETE /contacts/:id` and `/contacts/bulk`).
+      return type === 'contacts';
     default:
       return false;
   }
