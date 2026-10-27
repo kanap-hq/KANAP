@@ -113,7 +113,7 @@ On first startup in single-tenant mode (`backend/src/main.ts`, before tenancy mi
 
 1. Migrations run (same as cloud)
 2. If `DEFAULT_TENANT_SLUG` does not exist, create tenant via `TenantsService.createTenant()` (idempotent)
-3. If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set, seed admin user with Administrator role and full permissions
+3. On every start, when `ADMIN_EMAIL` and `ADMIN_PASSWORD` are both set, `ensureBootstrapAdministrator` keeps the Administrator and Contact system roles in place, with full permissions on Administrator. The `ADMIN_EMAIL` account is created when the workspace has no active administrator. If that account already exists, it is restored as an enabled administrator and keeps its password: `ADMIN_PASSWORD` is stored only for a local account that has none. While an active administrator exists, the account stays as it is. If either variable is empty, this step is skipped and the log says nothing about it.
 4. Bootstrap subscription row: `plan_name = 'On-Prem'`, `seat_limit = NULL` (no user limit), `status = 'active'`
 
 **Safety net:** `billing.service.ts` `ensureSubscription()` also defaults to On-Prem with no user limit when `Features.SINGLE_TENANT` is true, and to Trial with no user limit otherwise. At startup, a single-tenant install clears any user limit left on its subscription.

@@ -284,8 +284,13 @@ sudo rm -rf /tmp/export-import
 ## Phase 5 — Configure and restart the application
 
 After import, the `.env` file must be updated before the application starts.
-The app's boot sequence provisions a tenant and admin user from `.env` — if the
-values don't match an imported user, it may create duplicates or fail.
+On each start, when `ADMIN_EMAIL` and `ADMIN_PASSWORD` are both set, KANAP
+creates the `ADMIN_EMAIL` account only when the workspace has no active
+administrator. If that account already exists, the start restores it as an
+enabled administrator and keeps its password. `ADMIN_PASSWORD` is stored only
+for a local account that has none. While an active administrator exists, both
+variables leave the account as it is. If either variable is empty, no account
+is created and the log says nothing about it.
 
 ### 5a. Update .env
 
@@ -293,8 +298,8 @@ Required changes:
 
 | Variable | Value | Reason |
 |---|---|---|
-| `ADMIN_EMAIL` | Email of an existing imported **local** user | This user is treated as the admin. Must be a user who can log in with email + password (not SSO-only). If the tenant uses Entra ID, domain users won't be able to authenticate until the on-prem Entra app registration is configured (see SSO / Entra ID section below). Pick a local account (e.g. a platform admin or service account) to ensure you can log in immediately after migration and complete the setup. |
-| `ADMIN_PASSWORD` | *(empty)* | If set, the app resets the admin password on every boot, overwriting the imported hash. |
+| `ADMIN_EMAIL` | Email of an existing imported **local** user | While an active administrator exists, this account stays as it is. If none remains, the next start restores it as an enabled administrator and keeps its password. If the account does not exist, it is created with `ADMIN_PASSWORD`. It must be a local account that can sign in with email and password. If the tenant uses Entra ID, domain users sign in only after the on-prem Entra app registration is configured (see the SSO / Entra ID section below). Pick a local account (for example a platform admin or a service account) so you can sign in right after the migration and finish the setup. |
+| `ADMIN_PASSWORD` | A value of your own, 12 characters or more | Stored only when the workspace has no active administrator, and only for a new account or a local account that has no password. An existing password stays. An empty value skips account creation, and the log says nothing about it. |
 | `AI_SETTINGS_ENCRYPTION_SECRET` | Any new value | The cloud encryption secret is not transferred. The values encrypted with it are cleared during import: AI API key, model connection keys, GLPI tokens, PRTG and Netbox credentials. Re-enter them in the admin pages after first login. |
 | `DEFAULT_TENANT_SLUG` | `default` | Should already be set. Must match the `destination_slug` used in Phase 4. |
 
