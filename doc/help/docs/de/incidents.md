@@ -170,6 +170,8 @@ Das Journal macht daraus ein Register statt eines Formulars. Es listet alles auf
 
 Jede Zeile zeigt den Autor, die Zeit, auf die sie sich bezieht (für „vor 3 Tagen" darüberfahren), und die Art des Eintrags für alles, was keine einfache Notiz ist.
 
+Ein Eintrag **Verknüpfungen aktualisiert** erscheint nur für Personen, die das genannte Modul lesen dürfen: Assets und Technologien erfordern die Infrastruktur, Anwendungen die Anwendungen. Notizen behalten ihren Text, unabhängig davon, was sie erwähnen.
+
 Das Eingabefeld verschwindet, sobald der Vorfall geschlossen oder abgebrochen ist. Feldänderungen außerhalb des Journals, etwa die Korrektur der Beschreibung, werden im Audit-Protokoll der Plattform festgehalten, nicht im Journal.
 
 Die Vorfallanalyse führt ihre eigene Historie. Jedes Speichern, das sie verändert, erzeugt eine Version, und die Versionen bleiben dauerhaft erhalten. Gewöhnliches Bearbeiten erzeugt keine Journaleinträge: Das Schreiben der Analyse ist kein Ereignis des Vorfalls, und das Audit-Protokoll hält fest, wer was geändert hat. Schließen, Abbrechen und CSV-Importe schreiben dagegen einen Journaleintrag, und dieser Eintrag nennt die Version der Analyse, auf die er sich bezieht, dargestellt als „Vorfallanalyse, Version 4 (DOC-12)".

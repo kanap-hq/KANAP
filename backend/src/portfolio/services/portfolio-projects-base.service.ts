@@ -1,3 +1,4 @@
+import type { PortfolioLinkedReads } from '../portfolio-linked-reads';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager, Repository } from 'typeorm';
 import { PortfolioProject, ProjectStatus, ProjectOrigin } from '../portfolio-project.entity';
@@ -18,6 +19,11 @@ export interface ServiceOpts {
    * named (data-scoped access, spec §5.4). Absent means no.
    */
   readsBudget?: boolean;
+  /**
+   * What the project may name of other records (`get`): source requests on the requests right and
+   * inside a Business Contributor's participation. Absent names none of them.
+   */
+  linked?: PortfolioLinkedReads;
 }
 
 /**

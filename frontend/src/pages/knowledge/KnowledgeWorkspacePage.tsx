@@ -80,6 +80,17 @@ const RELATION_BODY_KEYS: Record<RelationKey, string> = {
   incidents: 'incident_ids',
 };
 
+const ALL_RELATION_KEYS = Object.keys(RELATION_BODY_KEYS) as RelationKey[];
+
+/**
+ * The families a document shows and saves: those it came with. The server leaves out the families
+ * whose module the person does not read, and a family that is not shown is never replaced.
+ */
+function readableRelationKeysOf(relations: unknown): RelationKey[] {
+  if (!relations || typeof relations !== 'object') return ALL_RELATION_KEYS;
+  return ALL_RELATION_KEYS.filter((key) => Object.prototype.hasOwnProperty.call(relations, key));
+}
+
 const EMPTY_RELATIONS: Record<RelationKey, RelationOption[]> = {
   applications: [],
   assets: [],
@@ -253,6 +264,8 @@ export default function KnowledgeWorkspacePage() {
   const [relationSelections, setRelationSelections] = React.useState<Record<RelationKey, RelationOption[]>>(
     () => (isCreate ? createRelationSelections : EMPTY_RELATIONS),
   );
+  const [readableRelationKeys, setReadableRelationKeys] = React.useState<RelationKey[]>(ALL_RELATION_KEYS);
+  const readableRelationKeysRef = React.useRef<RelationKey[]>(ALL_RELATION_KEYS);
   const [classificationRows, setClassificationRows] = React.useState<ClassificationRow[]>([]);
   const [relationsError, setRelationsError] = React.useState<string | null>(null);
   const [relationsDirty, setRelationsDirty] = React.useState(false);
@@ -669,6 +682,9 @@ export default function KnowledgeWorkspacePage() {
       classifications: nextDoc.classifications || [],
     });
     setRelationSelections(nextRelations);
+    const readableKeys = readableRelationKeysOf(nextDoc.relations);
+    readableRelationKeysRef.current = readableKeys;
+    setReadableRelationKeys(readableKeys);
     setRelationsDirty(false);
     setClassificationRows(nextClassifications);
     setClassificationsDirty(false);
@@ -1439,13 +1455,15 @@ export default function KnowledgeWorkspacePage() {
       if (isCreate) return;
       const nextSelections = cloneRelationSelections(selections);
       const payload = buildRelationPayload(nextSelections);
+      const readableKeys = readableRelationKeysRef.current;
       await Promise.all(
-        (Object.keys(payload) as RelationKey[]).map((key) => api.post(
+        (Object.keys(payload) as RelationKey[]).filter((key) => readableKeys.includes(key)).map((key) => api.post(
           `/knowledge/${id}/relations/${key}/bulk-replace`,
           { [RELATION_BODY_KEYS[key]]: payload[key] },
         )),
       );
-      return buildRelationCacheValue(nextSelections);
+      const cacheValue = buildRelationCacheValue(nextSelections);
+      return Object.fromEntries(readableKeys.map((key) => [key, cacheValue[key]]));
     },
     onSuccess: async (nextRelations, variables) => {
       if (variables.version !== relationsSaveVersionRef.current) return;
@@ -2164,6 +2182,7 @@ export default function KnowledgeWorkspacePage() {
               onClassificationRowsChange={handleClassificationRowsChange}
               classificationError={classificationError}
               relationSelections={relationSelections}
+              relationKeys={readableRelationKeys}
               onRelationSelectionsChange={handleRelationSelectionsChange}
               relationSearch={relationSearch}
               onRelationSearchChange={handleRelationSearchChange}

@@ -170,6 +170,8 @@ The journal is what makes this a register rather than a form. It lists everythin
 
 Each row shows the author, the time it refers to (hover for "3 days ago"), and the kind of entry for anything that is not a plain note.
 
+A **Links updated** entry shows only to people who can read the module it names: assets and technologies need the infrastructure, applications the applications. Notes keep their text, whatever they mention.
+
 The composer disappears once the incident is closed or cancelled. Field edits made outside the journal, such as correcting the description, are recorded in the platform audit trail rather than in the journal.
 
 The incident review keeps its own history. Every save that changes it produces a version, and versions are kept for good. Ordinary editing does not add journal entries: writing the review is not an event of the incident, and the audit trail records who changed what. Closing, cancelling and CSV imports do write a journal entry, and that entry names the version of the review it applies to, shown as "Incident review version 4 (DOC-12)".

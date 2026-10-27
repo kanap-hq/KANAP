@@ -238,10 +238,11 @@ export class AiPolicyService {
     context: AiExecutionContext,
     entityType: AiQueryEntityType | AiContextEntityType,
     manager: EntityManager,
+    level: PermissionLevel = 'reader',
   ): Promise<boolean> {
     if (!KNOWN_ENTITY_TYPES.has(entityType) || entityTypeFeature(entityType)) return false;
     try {
-      await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], 'reader', manager);
+      await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], level, manager);
       return true;
     } catch (error) {
       if (!(error instanceof ForbiddenException)) {

@@ -1,7 +1,8 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { loadLinkedReads } from '../../common/relations/linked-reads';
 import { validate as isUuid } from 'uuid';
 import { incidentVisibilitySql, resolveIncidentViewer } from '../../incidents/incident-visibility';
-import { KnowledgeService, RelationEntityType } from '../../knowledge/knowledge.service';
+import { DOCUMENT_RELATION_MODULES, KnowledgeService, RelationEntityType, unreadableRelationFamilies } from '../../knowledge/knowledge.service';
 import {
   documentIncidentVisibilitySql,
 } from '../../knowledge/document-entity-visibility';
@@ -825,6 +826,7 @@ export class AiDocumentMutationSupportService {
     requestedRelations: AiDocumentRelationInput | null | undefined,
   ): Promise<AiDocumentRelationSet> {
     const resolved: AiDocumentRelationSet = {};
+    await this.assertRelationFamiliesReadable(context, requestedRelations);
 
     for (const entityType of AI_DOCUMENT_RELATION_ENTITY_TYPES) {
       const requests = requestedRelations?.[entityType] || [];
@@ -850,6 +852,23 @@ export class AiDocumentMutationSupportService {
     }
 
     return resolved;
+  }
+
+  /**
+   * A family the caller does not read is neither looked up nor written: the document leaves it out
+   * for them (`knowledge.get`), so a write would replace links they cannot see.
+   */
+  private async assertRelationFamiliesReadable(
+    context: AiExecutionContextWithManager,
+    requestedRelations: AiDocumentRelationInput | null | undefined,
+  ): Promise<void> {
+    const families = AI_DOCUMENT_RELATION_ENTITY_TYPES.filter((entityType) =>
+      (requestedRelations?.[entityType] || []).length > 0 && DOCUMENT_RELATION_MODULES[entityType]);
+    if (families.length === 0) return;
+    const refused = unreadableRelationFamilies(families, await loadLinkedReads(context.manager, context.userId, context.tenantId));
+    if (refused.length > 0) {
+      throw new ForbiddenException(`You cannot link ${refused.join(', ')} to a document: you do not read that module.`);
+    }
   }
 
   buildRelationAdditionMutation(

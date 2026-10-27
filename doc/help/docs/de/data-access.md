@@ -190,7 +190,7 @@ Für eine begrenzte Person enthalten Budget und Verträge nur, was ihr Zugriff a
 - Der Vertrag einer sichtbaren Zeile öffnet sich schreibgeschützt. Seine Anhänge und Dokumentlinks bleiben geschlossen, mit einer Anzahl wie „2 Anhänge, nur für Personen sichtbar, die diesen Vertrag sehen“.
 - Suche, Plaid, MCP und Exporte zeigen keine Spur eines verborgenen Elements.
 
-Diese Anzahlen erscheinen für jede Person, die die Zeilen nicht sieht. Eine Person ohne Zugriff auf das Budget sieht „3 Budgetzeilen“ in den Bereichen von Anwendungen, Servern und Projekten, ohne die Namen.
+Diese Anzahlen erscheinen für Personen, die das Budget lesen dürfen, diese Zeilen aber nicht. Eine Person ohne Budgetrecht sieht in den Bereichen von Anwendungen, Servern und Projekten keine Budgetzeilen und keine Anzahl.
 
 **Die Zahlen eines sichtbaren Elements** beziehen sich auf alle seine Daten. Die Deckung eines Vertrags zählt alle verknüpften Zeilen, auch die verborgenen, damit sein Verantwortlicher die tatsächliche Deckung sieht. Siehe [Verträge](contracts.md#verpflichtung-und-deckung).
 

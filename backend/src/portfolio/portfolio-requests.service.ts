@@ -1,3 +1,4 @@
+import { PortfolioLinkedReads, idsInScope } from './portfolio-linked-reads';
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException, forwardRef } from '@nestjs/common';
 import { webLinkUrlsOf } from '../common/web-link-url';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -21,7 +22,6 @@ import { PortfolioRequestOpex } from './portfolio-request-opex.entity';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, OPEX_ITEMS_NOT_FOUND } from './project-budget-links.util';
 import { assertNoHiddenLines, hiddenLineCount } from '../data-access/hidden-links';
 import { activityBudgetLines, budgetLineActivitiesForReader } from './budget-line-activity';
-import { countRelatedBudgetLines, type RelationLinkTable } from '../common/relations/related-objects';
 import { PortfolioRequestBusinessProcess } from './portfolio-request-business-process.entity';
 import { PortfolioRequestDependency } from './portfolio-request-dependency.entity';
 import { PortfolioProjectDependency } from './portfolio-project-dependency.entity';
@@ -268,9 +268,6 @@ export async function convertedRequestPurpose(
     ? await normalizeMarkdownRichText(purposeOverride)
     : await normalizeMarkdownRichText(taskDescription, { fieldName: 'purpose', enforceSizeLimit: false });
 }
-
-/** The request's links to budget lines, both natures (lot Z1). */
-const REQUEST_BUDGET_LINES: RelationLinkTable = { links: 'portfolio_request_opex', owner: 'request_id', target: 'opex_id' };
 
 /**
  * The request lists' column filters (the list, its ids and its filter values): one map, so the
@@ -883,7 +880,12 @@ export class PortfolioRequestsService {
    * `readsBudget`: the reader holds the budget right; without it the budget lines are counted, never
    * named (data-scoped access, spec §5.4).
    */
-  async get(id: string, query: any, opts?: { manager?: EntityManager; accessScope?: ParticipationAccessScope; readsBudget?: boolean; viewer?: IncidentViewer | null }) {
+  /**
+   * `linked`: what the request may name of other records (origin task, resulting projects, project
+   * dependencies, business processes), each on its module's read and a Business Contributor's
+   * participation. Absent names none of them.
+   */
+  async get(id: string, query: any, opts?: { manager?: EntityManager; accessScope?: ParticipationAccessScope; readsBudget?: boolean; viewer?: IncidentViewer | null; linked?: PortfolioLinkedReads }) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(PortfolioRequest);
 
@@ -956,7 +958,9 @@ export class PortfolioRequestsService {
       result.department = departments[0] || null;
     }
 
-    if (include.has('origin_task') && request.origin_task_id) {
+    if (include.has('origin_task') && request.origin_task_id && opts?.linked?.reads.tasks !== true) {
+      result.origin_task = null;
+    } else if (include.has('origin_task') && request.origin_task_id) {
       const originTaskParams: unknown[] = [request.origin_task_id];
       const originTaskVisibility = taskIncidentVisibilitySql('t', opts?.viewer, originTaskParams);
       const originTasks = await mg.query<Array<{
@@ -974,7 +978,8 @@ export class PortfolioRequestsService {
          LIMIT 1`,
         originTaskParams,
       );
-      result.origin_task = originTasks[0] || null;
+      const visibleTask = await idsInScope(mg, 'tasks', originTasks.map((row) => row.id), opts?.linked?.taskScope);
+      result.origin_task = originTasks.find((row) => visibleTask.has(String(row.id))) || null;
     }
 
     // Load URLs
@@ -996,13 +1001,19 @@ export class PortfolioRequestsService {
 
     // Load resulting projects
     if (include.has('projects')) {
-      result.resulting_projects = await mg.query(
-        `SELECT p.id, p.name, p.status
-         FROM portfolio_request_projects rp
-         JOIN portfolio_projects p ON p.id = rp.project_id
-         WHERE rp.request_id = $1`,
-        [id]
-      );
+      if (opts?.linked?.reads.projects !== true) {
+        result.resulting_projects = null;
+      } else {
+        const projects: Array<{ id: string }> = await mg.query(
+          `SELECT p.id, p.name, p.status
+           FROM portfolio_request_projects rp
+           JOIN portfolio_projects p ON p.id = rp.project_id
+           WHERE rp.request_id = $1`,
+          [id]
+        );
+        const visible = await idsInScope(mg, 'projects', projects.map((row) => row.id), opts.linked.projectScope);
+        result.resulting_projects = projects.filter((row) => visible.has(String(row.id)));
+      }
     }
 
     // Load dependencies
@@ -1017,8 +1028,18 @@ export class PortfolioRequestsService {
          WHERE d.request_id = $1`,
         [id]
       );
+      // Each target on its own read: requests inside the caller's scope, projects for a reader of
+      // projects inside a Business Contributor's participation. The others are left out.
+      const readsProjects = opts?.linked?.reads.projects === true;
+      const visibleRequests = await idsInScope(mg, 'requests', rawDeps.map((d: any) => d.depends_on_request_id), opts?.accessScope);
+      const visibleProjects = readsProjects
+        ? await idsInScope(mg, 'projects', rawDeps.map((d: any) => d.depends_on_project_id), opts?.linked?.projectScope)
+        : new Set<string>();
+      const readable = rawDeps.filter((d: any) => (d.depends_on_request_id
+        ? visibleRequests.has(String(d.depends_on_request_id))
+        : visibleProjects.has(String(d.depends_on_project_id))));
       // Transform to unified format for frontend
-      result.dependencies = rawDeps.map((d: any) => ({
+      result.dependencies = readable.map((d: any) => ({
         id: d.id,
         target_type: d.depends_on_request_id ? 'request' : 'project',
         target_id: d.depends_on_request_id || d.depends_on_project_id,
@@ -1034,7 +1055,8 @@ export class PortfolioRequestsService {
     if ((wantsCapex || wantsOpex) && opts?.readsBudget !== true) {
       if (wantsCapex) result.capex_items = null;
       if (wantsOpex) result.opex_items = null;
-      result.budget_lines_hidden = await countRelatedBudgetLines(mg, REQUEST_BUDGET_LINES, 'request', request.tenant_id, id);
+      // Without the budget right, the family is not counted either.
+      result.budget_lines_hidden = 0;
     } else if (wantsCapex || wantsOpex) {
       result.budget_lines_hidden = await hiddenLineCount(mg, 'request', id);
       if (wantsCapex) {
@@ -1062,7 +1084,9 @@ export class PortfolioRequestsService {
     }
 
     // Load business processes
-    if (include.has('business_processes')) {
+    if (include.has('business_processes') && opts?.linked?.reads.business_processes !== true) {
+      result.business_processes = null;
+    } else if (include.has('business_processes')) {
       result.business_processes = await mg.query(
         `SELECT bp.id, bp.name, bp.status
          FROM portfolio_request_business_processes rbp
