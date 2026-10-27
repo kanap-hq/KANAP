@@ -152,14 +152,25 @@ type ServerMapSummary = {
   kind: string;
   environment: string;
   operating_system: string | null;
+  /** Zone of the first address's subnet, the same value as the asset list. */
   network_segment: string | null;
-  ip: string | null;
+  ip_addresses: Array<{ type: string; ip: string; subnet_cidr: string | null }> | null;
+  /** Real clusters this asset belongs to. Empty for a cluster and for an asset of no cluster. */
+  clusters?: Array<{ id: string; name: string }>;
   location_reference: string | null;
   location_name: string | null;
   /** A member also lists what its clusters carry: `inherited`, with the clusters in `via_clusters`. */
   assigned_applications: Array<{ id: string; name: string; environment: string; inherited?: boolean; via_clusters?: Array<{ id: string; name: string }> }>;
   is_cluster?: boolean;
 };
+
+/** The addresses the panel lists, in stored order, skipping a blank one. */
+function summaryIpText(addresses: ServerMapSummary['ip_addresses'] | undefined): string {
+  return (addresses ?? [])
+    .map((entry) => String(entry?.ip ?? '').trim())
+    .filter((ip) => ip.length > 0)
+    .join(', ');
+}
 
 /** `entityName` gives an entity node the entity's name in the reader's language (its id is `entity:<code>`). */
 export function toGraphNodes(nodes: ApiConnectionMapNode[], entityName: (code: string) => string | undefined = () => undefined): ConnectionMapNode[] {
@@ -1251,7 +1262,13 @@ export default function ConnectionMapPage() {
                             : '—'}
                         </Typography>
                         <Typography variant="body2">
-                          <strong>{t('pages.connectionMap.ipAddress')}</strong> {summary?.data?.ip || '—'}
+                          <strong>{t('pages.connectionMap.ipAddress')}</strong> {summaryIpText(summary?.data?.ip_addresses) || '—'}
+                        </Typography>
+                        <Typography variant="body2">
+                          <strong>{t('pages.connectionMap.clusterLine')}</strong>{' '}
+                          {(summary?.data?.clusters?.length ?? 0) > 0
+                            ? <ViaAssetNames assets={summary?.data?.clusters ?? []} />
+                            : '—'}
                         </Typography>
                         <Box sx={{ mt: 0.75 }}>
                           <Typography variant="body2"><strong>{t('pages.connectionMap.assignedApplications')}</strong></Typography>
