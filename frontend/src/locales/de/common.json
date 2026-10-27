@@ -1154,8 +1154,11 @@
     "valueRequired": "Geben Sie einen Wert ein"
   },
   "subscription": {
-    "trialExpiresIn": "Ihre Testphase läuft in {{count}} Tag ab.",
-    "trialExpiresIn_plural": "Ihre Testphase läuft in {{count}} Tagen ab.",
+    "trialExpiresIn_one": "Ihre Testphase läuft in {{count}} Tag ab.",
+    "trialExpiresIn_other": "Ihre Testphase läuft in {{count}} Tagen ab.",
+    "trialChip_one": "Test: {{count}} Tag",
+    "trialChip_other": "Test: {{count}} Tage",
+    "trialEndsOn": "Die Testphase endet am {{date}}",
     "choosePlanToContinue": "Wählen Sie einen Plan, um fortzufahren.",
     "choosePlan": "Plan auswählen",
     "trialExpired": "Ihre Testphase ist abgelaufen.",

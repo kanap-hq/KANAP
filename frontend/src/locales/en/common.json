@@ -1154,8 +1154,11 @@
     "valueRequired": "Enter a value"
   },
   "subscription": {
-    "trialExpiresIn": "Your trial expires in {{count}} day.",
-    "trialExpiresIn_plural": "Your trial expires in {{count}} days.",
+    "trialExpiresIn_one": "Your trial expires in {{count}} day.",
+    "trialExpiresIn_other": "Your trial expires in {{count}} days.",
+    "trialChip_one": "Trial: {{count}} day",
+    "trialChip_other": "Trial: {{count}} days",
+    "trialEndsOn": "Trial ends on {{date}}",
     "choosePlanToContinue": "Choose a plan to continue.",
     "choosePlan": "Choose a plan",
     "trialExpired": "Your trial has expired.",

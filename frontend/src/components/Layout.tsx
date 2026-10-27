@@ -58,6 +58,7 @@ import { useThemeMode } from '../config/ThemeContext';
 import { getDocUrl, RELEASES_URL } from '../utils/docUrls';
 import { formatUserName } from '../utils/userDisplay';
 import SubscriptionBanner from './SubscriptionBanner';
+import TrialChip from './TrialChip';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
 import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
@@ -497,6 +498,7 @@ export default function Layout() {
           {isPlatformHost && <Box sx={{ flex: 1 }} />}
           {token && (
             <>
+              <TrialChip />
               <IconButton
                 size="small"
                 sx={{ color: 'text.secondary' }}

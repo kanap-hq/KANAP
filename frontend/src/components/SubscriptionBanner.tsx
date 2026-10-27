@@ -45,7 +45,7 @@ export default function SubscriptionBanner() {
           ) : undefined
         }
       >
-        {trialDaysRemaining === 1 ? t('subscription.trialExpiresIn', { count: trialDaysRemaining }) : t('subscription.trialExpiresIn_plural', { count: trialDaysRemaining })}
+        {t('subscription.trialExpiresIn', { count: trialDaysRemaining })}
         {!isBillingAdmin && ` ${t('subscription.choosePlanToContinue')}`}
       </Alert>
     );

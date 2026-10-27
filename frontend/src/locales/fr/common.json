@@ -1154,8 +1154,11 @@
     "valueRequired": "Saisissez une valeur"
   },
   "subscription": {
-    "trialExpiresIn": "Votre essai expire dans {{count}} jour.",
-    "trialExpiresIn_plural": "Votre essai expire dans {{count}} jours.",
+    "trialExpiresIn_one": "Votre essai expire dans {{count}} jour.",
+    "trialExpiresIn_other": "Votre essai expire dans {{count}} jours.",
+    "trialChip_one": "Essai : {{count}} j",
+    "trialChip_other": "Essai : {{count}} j",
+    "trialEndsOn": "L'essai se termine le {{date}}",
     "choosePlanToContinue": "Choisissez un plan pour continuer.",
     "choosePlan": "Choisir un plan",
     "trialExpired": "Votre période d'essai a expiré.",
