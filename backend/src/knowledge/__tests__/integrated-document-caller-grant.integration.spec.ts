@@ -414,10 +414,10 @@ async function testRequestDeleteCoversItsPurposeDocument() {
     assert.ok(purpose, 'the request has its purpose document');
 
     // The root cause: `deleteForEntity` checks the Knowledge library unless the record's own
-    // delete covers the document, so the request administrator stops here.
-    await rejects(
+    // delete covers the document, so the request administrator stops on "Library not found".
+    await assert.rejects(
       integrated.deleteForEntity('requests', request.id, admin, { manager }),
-      'the library right is missing without the record delete covering its document',
+      (error: any) => error?.getStatus?.() === 404 && /Library not found/.test(String(error.message)),
     );
     assert.ok(await boundDocument(runner, 'requests', request.id, 'purpose'), 'the refused call changed nothing');
 
