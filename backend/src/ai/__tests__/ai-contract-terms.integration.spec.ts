@@ -22,6 +22,9 @@ import { addDaysYmd, addMonthsYmd, CONTRACT_TERM_STATES } from '../../contracts/
 //   only gets none of them (null in the detail, no section in the context) and no name of them;
 //   the `application` filter is not offered to them. A Business Contributor gets the applications
 //   of their participation only, in the items, the filter, the aggregates, the detail and the context.
+// - The tools give each contract and company its page (`page_url`, `ai-page-urls.ts`): a path in the
+//   chat, an absolute address over MCP when the workspace address is configured, and none to a
+//   person without the right of that page.
 // The AI surface checks are not under test: stubbed open.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -32,8 +35,8 @@ process.env.S3_BUCKET ||= 'ai-contract-terms-spec';
 process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
-type Harness = { app: any; dataSource: DataSource; executor: any; aggregates: any; entities: any; contracts: any };
-type UserKey = 'full' | 'contractsOnly' | 'contributor';
+type Harness = { app: any; dataSource: DataSource; executor: any; aggregates: any; entities: any; contracts: any; tools: any; policy: any };
+type UserKey = 'full' | 'contractsOnly' | 'contributor' | 'companiesOnly';
 
 /** The seeded contracts, by name, with the state each must be in. */
 const EXPECTED_STATES: Record<string, string> = {
@@ -54,6 +57,8 @@ const COVERED_NAMES = ['Billing', 'srv-billing', 'Postgres', 'Billing licences']
 
 type Seed = {
   tenantId: string;
+  slug: string;
+  company: string;
   users: Record<UserKey, string>;
   contracts: Record<string, string>;
   application: string;
@@ -67,6 +72,7 @@ async function createHarness(): Promise<Harness> {
   const { AiEntityService } = require('../ai-entity.service');
   const { AiPolicyService } = require('../ai-policy.service');
   const { ContractsService } = require('../../contracts/contracts.service');
+  const { AiToolRegistry } = require('../ai-tool.registry');
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   app.get(AiPolicyService).assertSurfaceAccess = async () => undefined;
   return {
@@ -76,6 +82,8 @@ async function createHarness(): Promise<Harness> {
     aggregates: app.get(AiAggregateExecutor),
     entities: app.get(AiEntityService),
     contracts: app.get(ContractsService),
+    tools: app.get(AiToolRegistry),
+    policy: app.get(AiPolicyService),
   };
 }
 
@@ -87,10 +95,11 @@ async function insertId(runner: QueryRunner, sql: string, params: unknown[]): Pr
 async function seed(runner: QueryRunner): Promise<Seed> {
   const tenantId = randomUUID();
   const tag = tenantId.slice(0, 8);
+  const slug = `ai-contract-terms-${tag}`;
   await runner.query(
     `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
      VALUES ($1, $2, $3, 'active', '{"contracts":{"decision_window_days":45}}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
-    [tenantId, `ai-contract-terms-${tag}`, `ai-contract-terms-${tag}`],
+    [tenantId, slug, slug],
   );
   await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
 
@@ -108,6 +117,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     full: await user('Full', await role('Everything', ['applications', 'infrastructure', 'budget', 'contracts'])),
     contractsOnly: await user('Contracts', await role('Contracts only', ['contracts'])),
     contributor: await user('Contributor', await role('Business Contributor', ['applications', 'contracts'])),
+    companiesOnly: await user('Companies', await role('Companies only', ['companies'])),
   };
 
   const company = await insertId(runner, `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Company', 'FR', 'Paris')`, [tenantId]);
@@ -165,15 +175,15 @@ async function seed(runner: QueryRunner): Promise<Seed> {
   await runner.query(`INSERT INTO technology_contracts (tenant_id, technology_id, contract_id) VALUES ($1, $2, $3)`, [tenantId, technology, covered]);
   await runner.query(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [tenantId, covered, line]);
 
-  return { tenantId, users, contracts, application };
+  return { tenantId, slug, company, users, contracts, application };
 }
 
-function ctx(runner: QueryRunner, s: Seed, user: UserKey) {
+function ctx(runner: QueryRunner, s: Seed, user: UserKey, surface: 'chat' | 'mcp' = 'mcp') {
   return {
     tenantId: s.tenantId,
     userId: s.users[user],
     isPlatformHost: false,
-    surface: 'mcp' as const,
+    surface,
     authMethod: 'api_key' as const,
     manager: runner.manager,
   };
@@ -348,6 +358,73 @@ async function testCoverage(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  coverage: the site question in one call, the application filter, detail and context by right: OK');
 }
 
+/** The address settings `resolveConfiguredAppBaseUrl` reads, set for one call and put back. */
+async function withAppAddress<T>(value: string | null, call: () => Promise<T>): Promise<T> {
+  const names = ['APP_BASE_URL', 'PUBLIC_APP_URL', 'APP_URL'];
+  const saved = names.map((name) => process.env[name]);
+  for (const name of names) delete process.env[name];
+  if (value) process.env.APP_BASE_URL = value;
+  try {
+    return await call();
+  } finally {
+    names.forEach((name, i) => {
+      if (saved[i] === undefined) delete process.env[name];
+      else process.env[name] = saved[i];
+    });
+  }
+}
+
+async function testPageUrls(h: Harness, runner: QueryRunner, s: Seed) {
+  const { resolveConfiguredAppBaseUrl } = require('../../common/url');
+  const { withAiPageUrls } = require('../ai-page-urls');
+  const chat = ctx(runner, s, 'full', 'chat');
+  const contractId = s.contracts['Renewing to decide'];
+  const contractPage = `/ops/contracts/${contractId}`;
+
+  // A contract has no business reference: its page, as a path in the chat.
+  const list = await h.tools.execute(chat, 'query_entities', { entity_type: 'contracts', limit: 100 });
+  assert.equal(list.items.length, Object.keys(s.contracts).length);
+  for (const item of list.items) {
+    assert.equal(item.ref, null, `${item.label}: no reference`);
+    assert.equal(item.page_url, `/ops/contracts/${item.id}`, `${item.label}: its page`);
+  }
+  const detail = await h.tools.execute(chat, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractId });
+  assert.equal(detail.entity.page_url, contractPage, 'detail: the contract page');
+  const context = await h.tools.execute(chat, 'get_entity_context', { entity_type: 'contracts', entity_id: contractId });
+  assert.equal(context.entity.page_url, contractPage, 'context: the contract page');
+  const linked = context.related.flatMap((group: any) => group.items);
+  assert.ok(linked.length > 0 && linked.every((item: any) => item.page_url === undefined), 'context: the referenced records keep their reference only');
+  const found = await h.tools.execute(chat, 'search_all', { query: 'Renewing to decide', entity_types: ['contracts'] });
+  const hit = found.items.find((item: any) => item.id === contractId);
+  if (hit) assert.equal(hit.page_url, contractPage, 'search_all: the contract page');
+  else console.log('  page_url: search_all found no seeded contract (search index), not checked');
+
+  // A company, for a person who reads companies.
+  const companies = await h.tools.execute(ctx(runner, s, 'companiesOnly', 'chat'), 'query_entities', { entity_type: 'companies' });
+  assert.deepEqual(companies.items.map((item: any) => item.page_url), [`/master-data/companies/${s.company}`], 'the company page');
+
+  // No page the screen refuses: the contract page needs the contracts right, the company page the companies right.
+  const records = () => ({ items: [{ type: 'contracts', id: contractId }, { type: 'companies', id: s.company }] });
+  const forUser = (user: UserKey) => withAiPageUrls(records(), {
+    readableResources: (resources: string[]) => h.policy.readableResources(ctx(runner, s, user, 'chat'), resources, runner.manager),
+    origin: async () => null,
+  });
+  assert.deepEqual((await forUser('companiesOnly')).items.map((item: any) => item.page_url), [undefined, `/master-data/companies/${s.company}`], 'companies only: no contract page');
+  assert.deepEqual((await forUser('full')).items.map((item: any) => item.page_url), [contractPage, undefined], 'no companies right: no company page');
+
+  // MCP: an absolute address when the workspace address is configured, the path otherwise.
+  const mcp = ctx(runner, s, 'full', 'mcp');
+  const origin = await withAppAddress('https://app.example.test', async () => resolveConfiguredAppBaseUrl(s.slug));
+  assert.match(String(origin), /^https:\/\//, 'a configured workspace address');
+  const absolute: any = await withAppAddress('https://app.example.test', () =>
+    h.tools.execute(mcp, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractId }));
+  assert.equal(absolute.entity.page_url, `${origin}${contractPage}`, 'MCP: the absolute address');
+  const relative: any = await withAppAddress(null, () =>
+    h.tools.execute(mcp, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractId }));
+  assert.equal(relative.entity.page_url, contractPage, 'MCP without a configured address: the path');
+  console.log('  page_url: contracts and companies, chat and MCP, by right: OK');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -358,6 +435,7 @@ async function run() {
       const s = await seed(runner);
       await testParity(harness, runner, s);
       await testCoverage(harness, runner, s);
+      await testPageUrls(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
