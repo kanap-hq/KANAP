@@ -103,7 +103,8 @@ async function withFte(kind: Kind, fn: (runner: QueryRunner, seed: Seed) => Prom
 async function testRegistryListsFteFields() {
   for (const kind of KINDS) {
     const registry = getAiEntityRegistry(ENTITY[kind]);
-    const fteKeys = Object.keys(registry.fields).filter((key) => key.endsWith('_fte'));
+    // The staff FTE of the line totals (`y_budget_staff_fte`) is another family (ai-staff-cost spec).
+    const fteKeys = Object.keys(registry.fields).filter((key) => key.endsWith('_fte') && !key.endsWith('_staff_fte'));
     assert.equal(fteKeys.length, 25, `${kind}: 25 FTE fields`);
     for (const slot of FIXED_SLOTS) {
       for (const column of SUMMARY_COLUMNS) {
