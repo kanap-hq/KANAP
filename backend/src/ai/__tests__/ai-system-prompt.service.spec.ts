@@ -502,7 +502,7 @@ async function testPromptRefusesUnsupportedWritesWithoutSubstitutePreview() {
   });
   assert.match(prompt, /Writes Plaid cannot prepare, whatever the person's rights: deleting a budget line, a contract, an interface, a connection, a document, an application or any record other than one task, one contact or one location/);
   assert.match(prompt, /`delete_record` does those, one record at a time/);
-  assert.match(prompt, /deleting several records in one request, which Plaid does one at a time/);
+  assert.match(prompt, /deleting several records in one request, which Plaid prepares one at a time, never as one delete or one plan/);
   assert.match(prompt, /For a request to delete several records, prepare the first one and say the others are deleted one at a time, or ask which one comes first/);
   assert.match(prompt, /creating or changing an incident; changing the state of a vulnerability; adding, changing or removing a technology/);
   assert.match(prompt, /refuse in the user's language in one or two sentences: say what Plaid cannot do and name the KANAP screen/);
