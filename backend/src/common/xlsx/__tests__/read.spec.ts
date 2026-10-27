@@ -16,6 +16,7 @@ import {
   XlsxReadError,
   XlsxReadLimits,
 } from '../read';
+import { hostileZip, HostileZipEntry } from '../../__tests__/hostile-zip';
 import { declareSize, handmadeXlsx, HandmadeParts, si, workbookParts, zipOf } from './fixtures/handmade';
 
 /**
@@ -473,6 +474,73 @@ function corruptEntry(archive: Buffer, entryName: string): Buffer {
   throw new Error(`corruptEntry: ${entryName} not found`);
 }
 
+const SHEET_PART = 'xl/worksheets/sheet1.xml';
+const SHEET_HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+
+/** A workbook whose sheet part is written by hand, with the local or central fields the spec needs. */
+function hostileWorkbook(sheet: HostileZipEntry): Buffer {
+  return hostileZip({ ...workbookParts({ sheetData: '' }), [SHEET_PART]: sheet });
+}
+
+/** A sheet whose first bytes are `padding` then an XML declaration that must be refused. */
+function sheetPrefixed(prefix: string, rows = '<row r="1"><c r="A1"><v>1</v></c></row>'): string {
+  return `${SHEET_HEAD}${prefix}<worksheet><sheetData>${rows}</sheetData></worksheet>`;
+}
+
+/**
+ * The shapes an ordinary writer never produces: declarations split between two inflate chunks, a
+ * stored sheet, encryption, a data descriptor, a damaged local header, and an early stop.
+ */
+async function streamGuardrails() {
+  const declarations = ['<!DOCTYPE worksheet>', '<!ENTITY x "y">'];
+  for (const offset of [16_383, 65_535]) {
+    for (const declaration of declarations) {
+      // The declaration starts at `offset`, one byte before the 16 KB or 64 KB inflate boundary, so
+      // its first bytes and its last bytes arrive in two chunks.
+      const padding = offset - SHEET_HEAD.length - 7;
+      const bytes = hostileWorkbook({ data: sheetPrefixed(`<!--${'x'.repeat(padding)}-->${declaration}`) });
+      const label = `${declaration.slice(0, 9)} at byte ${offset} of the sheet`;
+      refuses(() => readXlsxGrid(bytes), 'XLSX_DOCTYPE', null, `whole: ${label}`);
+      await refusesAsync(() => readXlsxGridAsync(bytes), 'XLSX_DOCTYPE', null, `stream: ${label}`);
+    }
+  }
+
+  const plain = sheetPrefixed('');
+  assert.deepEqual(await readXlsxGridAsync(hostileWorkbook({ data: plain, method: 0 })), readXlsxGrid(hostileWorkbook({ data: plain, method: 0 })), 'a stored sheet');
+  assert.deepEqual(
+    await readXlsxGridAsync(hostileWorkbook({ data: plain, flags: 0x8, descriptor: true })),
+    readXlsxGrid(hostileWorkbook({ data: plain, flags: 0x8, descriptor: true })),
+    'a sheet behind a data descriptor with zero local sizes',
+  );
+
+  for (const [label, entry] of [
+    ['encrypted', { data: plain, flags: 0x1 }],
+    ['a damaged local signature', { data: plain, localSignature: 0 }],
+    ['a local extra field past the end', { data: plain, localExtraLength: 10_000 }],
+  ] as const) {
+    refuses(() => readXlsxGrid(hostileWorkbook(entry as HostileZipEntry)), 'XLSX_INVALID', null, `whole: ${label}`);
+    await refusesAsync(() => readXlsxGridAsync(hostileWorkbook(entry as HostileZipEntry)), 'XLSX_INVALID', null, `stream: ${label}`);
+  }
+
+  // The row cap stops the inflater: its rejection must be the one refusal, with nothing left unhandled.
+  const rows = Array.from({ length: 3_000 }, (_, i) => `<row r="${i + 1}"><c r="A${i + 1}"><v>${i}</v></c></row>`).join('');
+  const unhandled: unknown[] = [];
+  const onUnhandled = (error: unknown) => unhandled.push(error);
+  process.on('unhandledRejection', onUnhandled);
+  try {
+    await refusesAsync(
+      () => readXlsxGridAsync(hostileWorkbook({ data: sheetPrefixed('', rows) }), { maxValueRows: 1_000 }),
+      'XLSX_TOO_LARGE',
+      'maxValueRows',
+      'stream: the row cap stops the inflater',
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+  }
+  assert.deepEqual(unhandled, [], 'nothing is left unhandled after the early stop');
+}
+
 /**
  * The streamed reader: the same grid as the synchronous one on every fixture and hand-made shape, the
  * same limits and refusals while the sheet is inflated, the CRC checked at the end, and a fuzz loop.
@@ -566,10 +634,20 @@ async function streamReader() {
     const flips = 1 + Math.floor(next() * 8);
     for (let i = 0; i < flips; i += 1) mutated[Math.floor(next() * mutated.length)] = Math.floor(next() * 256);
     try {
-      assert.ok(Array.isArray((await readXlsxGridAsync(mutated)).rows));
+      const streamed = await readXlsxGridAsync(mutated);
+      assert.deepEqual(streamed, readXlsxGrid(mutated), `stream round ${round}: the same grid as the whole reader`);
       read += 1;
     } catch (error) {
       assert.ok(error instanceof XlsxReadError, `stream round ${round}: only an XlsxReadError (got ${String(error)})`);
+      let whole: unknown;
+      try {
+        readXlsxGrid(mutated);
+      } catch (caught) {
+        whole = caught;
+      }
+      assert.ok(whole instanceof XlsxReadError, `stream round ${round}: the whole reader refuses it too`);
+      assert.equal((error as XlsxReadError).code, (whole as XlsxReadError).code, `stream round ${round}: the same code`);
+      assert.equal((error as XlsxReadError).limit, (whole as XlsxReadError).limit, `stream round ${round}: the same limit`);
       refused += 1;
     }
   }
@@ -616,6 +694,7 @@ async function run() {
   fuzz();
   await streamReader();
   await readSlots();
+  await streamGuardrails();
   console.log('read.spec.ts: ok');
 }
 

@@ -14,6 +14,7 @@ import {
   ArchiveLimitError,
   openBoundedArchive,
 } from '../archive-limits';
+import { hostileZip } from './hostile-zip';
 import { DocumentExportService } from '../document-export.service';
 import { DocumentImportService } from '../document-import.service';
 import { validateUploadedFile } from '../upload-validation';
@@ -374,8 +375,33 @@ async function testWorldBank() {
   }
 }
 
+/** The bytes of an entry as stored, and the total budget a streamed caller accounts against. */
+function testStoredAndAccount() {
+  const archive = openBoundedArchive(hostileZip({
+    'a.txt': 'alpha',
+    'b.bin': { data: Buffer.alloc(1000), method: 0 },
+  }));
+  const deflated = archive.stored(archive.zip.getEntry('a.txt')!);
+  assert.equal(deflated.declared, 5);
+  assert.equal(deflated.method, 8);
+  assert.equal(zlib.inflateRawSync(deflated.data).toString(), 'alpha');
+  assert.equal(deflated.crc, zlib.crc32(Buffer.from('alpha')));
+  const stored = archive.stored(archive.zip.getEntry('b.bin')!);
+  assert.equal(stored.method, 0);
+  assert.equal(stored.declared, 1000);
+  assert.equal(stored.data.length, 1000);
+
+  const budget = openBoundedArchive(
+    hostileZip({ 'a.bin': { data: Buffer.alloc(100), method: 0 }, 'b.bin': { data: Buffer.alloc(100), method: 0 } }),
+    { maxTotalBytes: 150 },
+  );
+  budget.account(100);
+  assert.throws(() => budget.account(51), isLimitError);
+}
+
 async function run() {
   testHelper();
+  testStoredAndAccount();
   testUploadValidation();
   await testDocumentImport();
   await testDocumentExport();
