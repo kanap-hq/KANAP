@@ -1171,6 +1171,7 @@
   "forbidden": {
     "title": "Access denied",
     "message": "You don't have permission to view this page. If you believe this is a mistake, contact an administrator.",
+    "aiChatRight": "To use Plaid, ask an administrator to add the AI chat permission to your role.",
     "cta": "Go to dashboard"
   },
   "lifecycleField": {

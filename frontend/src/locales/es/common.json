@@ -1171,6 +1171,7 @@
   "forbidden": {
     "title": "Acceso denegado",
     "message": "No tiene permiso para ver esta página. Si cree que se trata de un error, contacte con un administrador.",
+    "aiChatRight": "Para usar Plaid, pida a un administrador que añada el permiso Chat IA a su rol.",
     "cta": "Ir al panel de control"
   },
   "lifecycleField": {

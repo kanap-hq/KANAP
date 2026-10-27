@@ -1171,6 +1171,7 @@
   "forbidden": {
     "title": "Zugriff verweigert",
     "message": "Sie haben keine Berechtigung, diese Seite anzuzeigen. Wenn Sie glauben, dass dies ein Fehler ist, wenden Sie sich an einen Administrator.",
+    "aiChatRight": "Um Plaid zu nutzen, bitten Sie einen Administrator, Ihrer Rolle die Berechtigung KI-Chat hinzuzufügen.",
     "cta": "Zum Dashboard"
   },
   "lifecycleField": {
