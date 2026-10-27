@@ -117,8 +117,8 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen
 
 - **Neuer Wert**: einen Wert in der ausgewählten Dimension erstellen (erfordert `analytics:member`). Solange die ausgewählte Dimension deaktiviert ist, ist die Schaltfläche deaktiviert, und ihr Tooltip lautet „Aktivieren Sie diese Dimension, um Werte hinzuzufügen.“
 - **Neu ordnen**: die Reihenfolge der Werte der ausgewählten Dimension festlegen (erfordert `analytics:member`). Die Schaltfläche ist deaktiviert, solange die Dimension weniger als zwei Werte hat. Siehe [Werte ordnen](#werte-ordnen)
-- **CSV importieren**: Werte aus einer Datei laden (erfordert `analytics:admin`)
-- **CSV exportieren**: die Werte der Liste herunterladen, oder die Werte aller Dimensionen (erfordert `analytics:admin`)
+- **Importieren**: Werte aus einer Datei laden (erfordert `analytics:admin`)
+- **Exportieren**: die Werte der Liste herunterladen, oder die Werte aller Dimensionen (erfordert `analytics:admin`)
 - **Auswahl löschen**: die ausgewählten Werte löschen (erfordert `analytics:admin`). Werden einige davon von Budgetzeilen verwendet, nennt die Bestätigung, wie viele Zeilen sie verlieren, zum Beispiel „2 ausgewählte Werte werden verwendet: Sie werden aus 5 Budgetzeilen entfernt. Diese Daten können nicht wiederhergestellt werden.“, und die Schaltfläche heißt **Trotzdem löschen**
 
 ---
@@ -369,16 +369,18 @@ Die sieben Budgetberichte lassen sich auch auf einen Wert einer Dimension eingre
 
 ## CSV-Import/Export
 
+Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
 Laden oder aktualisieren Sie die Werte aller Dimensionen aus einer Datei. Dimensionen werden auf der Seite erstellt.
 
 Um Werte auf Budgetzeilen aus einer Datei zu setzen, verwenden Sie die Budgetdatei. Darin enthält je eine Spalte `analytics:<code>` jede aktivierte Dimension, die Standarddimension eingeschlossen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
 
-**Export**: Klicken Sie auf **CSV exportieren** und dann auf **Daten exportieren**. Die Datei listet die Werte aller Dimensionen, aktiviert oder deaktiviert, Dimension für Dimension, die Werte jeder Dimension in ihrer Reihenfolge. Die Datei hat keine Spalte für die Reihenfolge. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
+**Export**: Klicken Sie auf **Exportieren** und dann auf **Daten exportieren**. Die Datei listet die Werte aller Dimensionen, aktiviert oder deaktiviert, Dimension für Dimension, die Werte jeder Dimension in ihrer Reihenfolge. Die Datei hat keine Spalte für die Reihenfolge. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
 
 **CSV-Struktur**:
 
 - Kopfzeilen: `axis_code`, `name`, `description`, `status`, `disabled_at`, `applies_to`
-- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 
 | Spalte | Inhalt |
 |---|---|
@@ -393,7 +395,7 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `di
 
 **Import**:
 
-1. Klicken Sie auf der Seite auf **CSV importieren**
+1. Klicken Sie auf der Seite auf **Importieren**
 2. Wählen Sie Ihre Datei
 3. Klicken Sie auf **Vorabprüfung**. Der Bericht nennt die Anzahl der Zeilen, die zu erstellenden und zu aktualisierenden Werte sowie die Zeilen, die nichts ändern
 4. Wenn die Vorabprüfung fehlerfrei ist, klicken Sie auf **Laden**

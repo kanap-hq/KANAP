@@ -43,8 +43,8 @@ Das Kontakte-Grid bietet ein durchsuchbares Verzeichnis aller externen Kontakte.
 
 **Aktionen**:
 - **Neu**: Neuen Kontakt erstellen (erfordert `contacts:member`)
-- **CSV importieren**: Massenimport von Kontakten (erfordert `contacts:admin`)
-- **CSV exportieren**: Als CSV exportieren (erfordert `contacts:admin`)
+- **Importieren**: Massenimport von Kontakten (erfordert `contacts:admin`)
+- **Exportieren**: Als CSV exportieren (erfordert `contacts:admin`)
 - **Ausgewählte löschen**: Ausgewählte Kontakte entfernen (erfordert `contacts:admin`). Sie werden aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die sie nennen; diese Einträge bleiben erhalten
 
 ---
@@ -118,6 +118,8 @@ Standorte können Support-Kontakte haben (Facility Manager, NOC-Kontakte usw.).
 
 ## CSV-Import/Export
 
+Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
 Verwalten Sie Kontakte in großen Mengen per CSV.
 
 **Export**: Lädt die Kontakte der Liste mit ihren Details herunter. Wählen Sie im Dialog **Das ganze Verzeichnis** für alle Kontakte.
@@ -132,7 +134,7 @@ Verwalten Sie Kontakte in großen Mengen per CSV.
 **Optionale Felder**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Hinweise**:
-- Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte
+- Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte
 
 ---
 

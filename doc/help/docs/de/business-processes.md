@@ -45,8 +45,8 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 
 - **Neu** (`business_processes:member`): einen neuen Geschäftsprozess erstellen.
 - **Kategorien verwalten** (`business_processes:member`): den Dialog zur Kategorieverwaltung öffnen.
-- **CSV importieren** (Admin): Prozesse aus einer CSV-Datei massenimportieren.
-- **CSV exportieren** (Admin): die Prozesse der Liste, oder alle Prozesse, als CSV exportieren.
+- **Importieren** (Admin): Prozesse aus einer CSV-Datei massenimportieren.
+- **Exportieren** (Admin): die Prozesse der Liste, oder alle Prozesse, als CSV exportieren.
 - **Ausgewählte löschen** (Admin): eine oder mehrere ausgewählte Zeilen löschen. Ein Prozess, den Anwendungen oder Schnittstellen verwenden, kann nicht gelöscht werden: Deaktivieren Sie ihn stattdessen. Bevor etwas gelöscht wird, listet die Bestätigung die behaltenen Prozesse mit dem Grund auf. Anfragen, die mit einem gelöschten Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.
 
 ---
@@ -119,16 +119,15 @@ Beide öffnen den Dialog **Geschäftsprozess-Kategorien verwalten**.
 
 ## CSV-Import/Export
 
+Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
 Verwenden Sie CSV-Import und -Export für den Massenimport oder die Offline-Bearbeitung Ihres Prozesskatalogs. Beide erfordern **Admin**-Zugriff.
 
 ### Exportieren
 
-Klicken Sie auf der Listenseite auf **CSV exportieren**. Sie können exportieren:
+Klicken Sie auf der Listenseite auf **Exportieren**. Die Datei enthält die Prozesse, die die Liste zeigt, mit ihrer Suche, ihren Filtern und ihrer Sortierung, oder alle Prozesse, wenn Sie im Dialog **Das ganze Verzeichnis** wählen. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
 
-- Eine **Vorlage** (nur Kopfzeile) als Ausgangspunkt.
-- **Daten** (alle Prozesse des aktuellen Mandanten).
-
-Das Trennzeichen folgt der Sprache Ihres Bildschirms. Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte.
+Das Trennzeichen folgt der Sprache Ihres Bildschirms. Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte.
 
 **Spalten**: `name`, `categories`, `description`, `notes`, `status`.
 
@@ -136,9 +135,9 @@ Die Spalte `categories` kann mehrere durch Semikolons getrennte Kategorienamen i
 
 ### Importieren
 
-Klicken Sie auf der Listenseite auf **CSV importieren**, dann:
+Klicken Sie auf der Listenseite auf **Importieren**, dann:
 
-1. Laden Sie Ihre CSV-Datei mit den Spaltentiteln der Vorlage hoch. Kommas und Semikolons funktionieren beide.
+1. Laden Sie Ihre CSV-Datei oder Excel-Arbeitsmappe mit den Spaltentiteln der Vorlage hoch. In einer CSV-Datei funktionieren Kommas und Semikolons beide.
 2. Führen Sie die **Vorprüfung** durch. Diese validiert Kopfzeilen und Daten und zeigt, wie viele Zeilen erstellt bzw. aktualisiert werden.
 3. Wenn die Vorprüfung bestanden wird, klicken Sie auf **Laden** zum Anwenden.
 

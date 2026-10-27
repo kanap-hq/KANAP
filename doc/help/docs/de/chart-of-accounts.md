@@ -105,8 +105,8 @@ Das Grid zeigt nur Konten für den ausgewählten Kontenplan.
 
 **Aktionen** (im Seitenheader):
 - **Neues Konto** (`accounts:member`): Öffnet ein neues Kontoformular, in dem der ausgewählte Kontenplan bereits gewählt ist.
-- **CSV importieren** (`accounts:admin`): Konten in den ausgewählten Kontenplan importieren.
-- **CSV exportieren** (`accounts:admin`): Konten aus dem ausgewählten Kontenplan exportieren.
+- **Importieren** (`accounts:admin`): Konten in den ausgewählten Kontenplan importieren.
+- **Exportieren** (`accounts:admin`): Konten aus dem ausgewählten Kontenplan exportieren.
 - **Auswahl löschen** (`accounts:admin`): Ausgewählte Kontenzeilen löschen. Zeilen über die Kontrollkästchen-Spalte auswählen (für Admins sichtbar). Ein Konto, das von Budgetzeilen verwendet wird, kann nicht gelöscht werden: Deaktivieren Sie es stattdessen. Vor dem Löschen nennt die Bestätigung die behaltenen Konten mit dem Grund.
 
 Alle Zeilenzellen sind anklickbare Links zum Konten-Arbeitsbereich. Sie können rechtsklicken oder Strg+Klicken, um in einem neuen Tab zu öffnen.
@@ -174,7 +174,7 @@ Klicken Sie in der Chip-Leiste auf **Neu** oder im Dialog „Kontenpläne verwal
 
 Klicken Sie im Vorlagenmodus vor dem Erstellen auf **Vorlage prüfen**, um zu sehen, wie viele Konten hinzugefügt und wie viele aktualisiert werden. Klicken Sie dann auf **Erstellen**.
 
-Nach dem Erstellen ist der neue Kontenplan auf der Seite ausgewählt: **CSV importieren** lädt in diesen Kontenplan.
+Nach dem Erstellen ist der neue Kontenplan auf der Seite ausgewählt: **Importieren** lädt in diesen Kontenplan.
 
 Ein neuer Kontenplan hat keine Rolle, außer dem Länderstandard, den Sie hier ankreuzen. Für eine andere Rolle nutzen Sie [Kontenpläne verwalten](#der-dialog-kontenplane-verwalten).
 
@@ -460,16 +460,18 @@ Die Löschung ist sofort und irreversibel. Der Mandantendatensatz bleibt für di
 
 ## CSV-Import/Export
 
+Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
 ### Kontenpläne
 
 Sie können eine Liste Ihrer Kontenpläne exportieren (mit Metadaten wie Code, Name, Land, Standard-Status), aber keine Kontenpläne direkt per CSV importieren. Erstellen Sie Kontenpläne über die Benutzeroberfläche oder laden Sie sie aus Vorlagen.
 
 ### Konten (globaler Endpunkt)
 
-Der globale `/accounts`-CSV enthält eine `coa_code`-Spalte, um zu identifizieren, zu welchem Kontenplan jedes Konto gehört. **CSV exportieren** und **CSV importieren** nutzen sie, wenn auf der Seite kein Kontenplan ausgewählt ist.
+Der globale `/accounts`-CSV enthält eine `coa_code`-Spalte, um zu identifizieren, zu welchem Kontenplan jedes Konto gehört. **Exportieren** und **Importieren** nutzen sie, wenn auf der Seite kein Kontenplan ausgewählt ist.
 
-  - **CSV exportieren**: die Konten der Liste (oder, auf Wunsch im Dialog, alle Konten) mit ihren Kontenplan-Codes, Kontonummern, Namen, lokalen Namen, Beschreibungen, Konsolidierungszuordnungen, Status und **Verwendet für**
-  - **CSV importieren**: **Vorlage herunterladen** im Dialog liefert eine Datei nur mit den Kopfzeilen. Beginnen Sie mit der **Vorabprüfung**, um Struktur, Kodierung, Pflichtfelder und Duplikate zu prüfen, und dann **Laden**, um die Einfügungen und Aktualisierungen anzuwenden
+  - **Exportieren**: die Konten der Liste (oder, auf Wunsch im Dialog, alle Konten) mit ihren Kontenplan-Codes, Kontonummern, Namen, lokalen Namen, Beschreibungen, Konsolidierungszuordnungen, Status und **Verwendet für**
+  - **Importieren**: **Vorlage herunterladen** im Dialog liefert eine Datei nur mit den Kopfzeilen. Beginnen Sie mit der **Vorabprüfung**, um Struktur, Kodierung, Pflichtfelder und Duplikate zu prüfen, und dann **Laden**, um die Einfügungen und Aktualisierungen anzuwenden
   - **Zuordnung**: nach `(coa_code, account_number)` innerhalb Ihres Arbeitsbereichs
   - **Pflichtspalten**: `coa_code`, `account_number`, `account_name`. Alle Zeilen einer Datei müssen denselben `coa_code` tragen
   - **Optionale Spalten**: `native_name`, `description`, die Konsolidierungsspalten, `status`, `nature`. Eine Datei kann sie weglassen: Die Konten, die sie aktualisiert, behalten ihre gespeicherten Werte, und neue Konten erhalten die Standardwerte (leer, enabled, **OPEX und CAPEX**). Eine Spalte, die in der Datei vorhanden ist, übernimmt ihre Zellen, auch leere
@@ -482,10 +484,10 @@ coa_code;account_number;account_name;native_name;description;consolidation_accou
 
 ### Konten (Kontenplan-bezogen)
 
-Von der Kontenpläne-Seite aus sind **CSV importieren** und **CSV exportieren** automatisch auf den aktuell ausgewählten Kontenplan bezogen.
+Von der Kontenpläne-Seite aus sind **Importieren** und **Exportieren** automatisch auf den aktuell ausgewählten Kontenplan bezogen.
 
-  - **CSV exportieren**: Konten aus diesem Kontenplan (keine `coa_code`-Spalte nötig)
-  - **CSV importieren**: Konten werden automatisch in diesen Kontenplan eingefügt oder aktualisiert. Der Titel des Dialogs nennt den Kontenplan, zum Beispiel **Konten in FR-PCG importieren**
+  - **Exportieren**: Konten aus diesem Kontenplan (keine `coa_code`-Spalte nötig)
+  - **Importieren**: Konten werden automatisch in diesen Kontenplan eingefügt oder aktualisiert. Der Titel des Dialogs nennt den Kontenplan, zum Beispiel **Konten in FR-PCG importieren**
   - Nur `account_number` und `account_name` sind Pflicht. Die anderen Spalten sind optional, wie in der globalen Datei
 
 **CSV-Schema** (Kontenplan-bezogen; hier mit Semikolons dargestellt):
@@ -494,7 +496,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 ```
 
 **Hinweise**:
-  - Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+  - Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
   - Der `coa_code` muss einem bestehenden Kontenplan in Ihrem Arbeitsbereich entsprechen
   - Kontonummern sollten innerhalb eines Kontenplans eindeutig sein
   - `account_number` und `consolidation_account_number`: ganze Zahlen mit höchstens 15 Ziffern. Eine längere Nummer wird für diese Zeile abgelehnt. Führende Nullen entfallen (`06156` wird als `6156` gespeichert): die **Vorabprüfung** führt diese Zeilen als Warnungen auf, und die Datei wird trotzdem geladen

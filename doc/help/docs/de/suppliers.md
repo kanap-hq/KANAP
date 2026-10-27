@@ -40,8 +40,8 @@ Jede Zelle in einer Zeile ist anklickbar und öffnet die Seite dieses Lieferante
 
 **Aktionen**:
 - **Neu**: Neuen Lieferanten erstellen (erfordert `suppliers:member`)
-- **CSV importieren**: Massenimport von Lieferanten (erfordert `suppliers:admin`)
-- **CSV exportieren**: Liste als CSV exportieren (erfordert `suppliers:admin`)
+- **Importieren**: Massenimport von Lieferanten (erfordert `suppliers:admin`)
+- **Exportieren**: Liste als CSV exportieren (erfordert `suppliers:admin`)
 - **Ausgewählte löschen**: Ausgewählte Lieferanten entfernen (erfordert `suppliers:admin`)
 
 ---
@@ -111,7 +111,9 @@ Klicken Sie in der Liste auf **Neu**. Geben Sie den Namen (Pflicht), die ERP-Lie
 
 ## CSV-Import/Export
 
-**CSV exportieren** lädt die Lieferanten herunter, die die Liste zeigt, mit ihrer Suche, ihren Filtern und ihrer Sortierung. Wählen Sie im Dialog **Das ganze Verzeichnis**, um alle Lieferanten herunterzuladen, aktivierte und deaktivierte. Der Dialog schließt sich, sobald die Datei heruntergeladen ist. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen. Er nennt die zulässigen Werte.
+Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
+**Exportieren** lädt die Lieferanten herunter, die die Liste zeigt, mit ihrer Suche, ihren Filtern und ihrer Sortierung. Wählen Sie im Dialog **Das ganze Verzeichnis**, um alle Lieferanten herunterzuladen, aktivierte und deaktivierte. Der Dialog schließt sich, sobald die Datei heruntergeladen ist. **Importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen. Er nennt die zulässigen Werte.
 
 Die Spalten:
 
@@ -136,7 +138,7 @@ Die Spalten:
 - `disabled_at` setzt das Gültigkeitsende, der Status ergibt sich daraus. Ein Status, der dem Datum widerspricht, wird abgelehnt. Eine Datei ohne die Spalte `disabled_at` lässt sich weiterhin importieren: Dann bestimmt der Status allein den Lebenszyklus
 
 **Hinweise**:
-- Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte
+- Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte
 - Importieren Sie Lieferanten, bevor Sie Anwendungen oder Verträge importieren, die sie referenzieren. Die Budgetdatei legt einen fehlenden Lieferanten ebenfalls an, wenn **Fehlende Lieferanten anlegen** angehakt ist. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md)
 
 ---

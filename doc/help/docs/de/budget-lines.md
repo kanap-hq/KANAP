@@ -175,8 +175,8 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 **Aktionen**:
 
 - **Neue Zeile**: Eine Zeile erstellen (erfordert `budget:member`)
-- **CSV importieren**: Zeilen aus einer Budgetdatei in großer Zahl laden (erfordert `budget:admin`)
-- **CSV exportieren**: Die Zeilen in eine Budgetdatei exportieren (erfordert `budget:admin`)
+- **Importieren**: Zeilen aus einer Budgetdatei in großer Zahl laden (erfordert `budget:admin`)
+- **Exportieren**: Die Zeilen in eine Budgetdatei exportieren (erfordert `budget:admin`)
 - **Auswahl löschen**: Massenlöschung ausgewählter Zeilen (erfordert `budget:admin`; Zeilen über Kontrollkästchen auswählen). Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden. Vor dem Löschen nennt die Bestätigung die behaltenen Zeilen mit der eingefrorenen Spalte. Die anderen werden gelöscht
 
 **Zurück/Weiter-Navigation**:
@@ -595,9 +595,9 @@ Der Abschnitt fehlt, wenn die Zeile keinen Lieferanten hat oder es nichts vorzus
 
 ## CSV-Import/Export
 
-**CSV exportieren** und **CSV importieren** befinden sich in der Symbolleiste der Liste. Beide erfordern die Administratorstufe auf Budget (`budget:admin`).
+**Exportieren** und **Importieren** befinden sich in der Symbolleiste der Liste. Beide erfordern die Administratorstufe auf Budget (`budget:admin`).
 
-**CSV exportieren** schreibt die Budgetdatei der Zeilen, die die Liste zeigt, OPEX und CAPEX zusammen, als `budget.csv`. **CSV importieren** liest eine Datei wieder ein: Sie wird zuerst geprüft, und nichts wird geschrieben, bevor Sie auf **Laden** klicken.
+**Exportieren** schreibt die Budgetdatei der Zeilen, die die Liste zeigt, OPEX und CAPEX zusammen, als `budget.csv` oder als Excel-Arbeitsmappe `budget.xlsx`. **Importieren** liest beides wieder ein: Die Datei wird zuerst geprüft, und nichts wird geschrieben, bevor Sie auf **Laden** klicken.
 
 Die Datei enthält eine Zeile pro Budgetzeile: ihre `nature` (`opex` oder `capex`), ihre Referenz `BL-n`, die Details der Budgetzeile, ihre Beträge als Spalten und `kanap_token`. Eine Datei ohne Spalte `nature`, die eine frühere Version exportiert hat, wird als OPEX-Zeilen gelesen, oder als CAPEX-Zeilen, wenn der Filter **Typ** der Liste nur CAPEX behält. [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) beschreibt die Spalten, die Bedeutung einer Zelle und die beiden Importschritte.
 
@@ -709,7 +709,7 @@ Zusätzlich:
 - Aufgaben haben separate Berechtigungen (`tasks:member` zum Erstellen und Bearbeiten von Aufgaben an Budgetzeilen)
 - Benutzer mit `tasks:reader` können Aufgaben anzeigen, aber nicht erstellen oder bearbeiten
 
-Wenn Sie eine Aktion nicht ausführen können (z. B. die Schaltfläche **CSV importieren** fehlt oder Sie keine Anhänge hochladen können), prüfen Sie mit Ihrem Arbeitsbereich-Administrator Ihre Rollenberechtigungen.
+Wenn Sie eine Aktion nicht ausführen können (z. B. die Schaltfläche **Importieren** fehlt oder Sie keine Anhänge hochladen können), prüfen Sie mit Ihrem Arbeitsbereich-Administrator Ihre Rollenberechtigungen.
 
 ---
 

@@ -96,9 +96,9 @@ Unterhalb des Grids geben vier Zusammenfassungskarten eine schnelle Übersicht:
 
 Sie können keine Daten in ein eingefrorenes Jahr kopieren. Wenn das Zieljahr für Unternehmen oder Abteilungen eingefroren ist, erscheint ein Fehlerbanner und die Aktionsschaltflächen werden deaktiviert. Geben Sie zuerst das Zieljahr mit **Stammdaten einfrieren** frei.
 
-### CSV-Export
+### Export
 
-Sie können die Vorschautabelle über die Export-Schaltfläche in der Symbolleiste als CSV exportieren. Das ist praktisch für Offline-Überprüfung oder zum Teilen mit Kollegen vor dem Festschreiben. Dieser Export schreibt die Tabelle so, wie sie angezeigt wird. Die Dateien, die die Stammdatenseiten importieren, sind unter [CSV-Dateien](csv-files.md) beschrieben.
+Die Export-Schaltfläche in der Symbolleiste lädt die Vorschau als CSV- oder Excel-Datei herunter: was das Kopieren mit den angezeigten Jahren, Quellen und Kennzahlen tun würde. Das ist praktisch für Offline-Überprüfung oder zum Teilen mit Kollegen vor dem Festschreiben. Nach dem Kopieren ist die Schaltfläche deaktiviert: Die Tabelle zeigt dann, was das Kopieren getan hat, was die Vorschau nicht mehr beschreibt. Die Dateien, die die Stammdatenseiten importieren, sind unter [CSV- und Excel-Dateien](csv-files.md) beschrieben.
 
 ### Berechtigungen
 
@@ -165,13 +165,13 @@ Nein. Das Kopier-Werkzeug zeigt einen Fehler und deaktiviert die Aktionsschaltfl
 Die Kopieroperation überschreibt sie. Führen Sie immer zuerst einen Testlauf durch, damit Sie die Spalte „Aktuelles Ziel" sehen und verstehen, was ersetzt wird.
 
 **Kann ich eine Kopie rückgängig machen?**
-Nein. Kopieroperationen sind nicht umkehrbar. Wenn Sie ein Sicherheitsnetz benötigen, exportieren Sie die Daten des Zieljahres vor dem Kopieren als CSV.
+Nein. Kopieroperationen sind nicht umkehrbar. Wenn Sie ein Sicherheitsnetz benötigen, exportieren Sie die Daten des Zieljahres vor dem Kopieren als CSV oder Excel.
 
 **Warum werden einige Zeilen übersprungen?**
 Zeilen werden übersprungen, wenn der Quellwert null ist, die Entität für das Zieljahr inaktiv ist oder das Ziel eingefroren ist. Die Status-Spalte in der Vorschau zeigt Ihnen, welcher Grund zutrifft.
 
 **Kann ich nur bestimmte Unternehmen oder Abteilungen kopieren?**
-Nein. Das Werkzeug kopiert alle Entitäten für die ausgewählten Bereiche und Kennzahlen. Für selektive Aktualisierungen verwenden Sie stattdessen CSV-Export/Import auf den einzelnen Unternehmen- oder Abteilungsseiten.
+Nein. Das Werkzeug kopiert alle Entitäten für die ausgewählten Bereiche und Kennzahlen. Für selektive Aktualisierungen verwenden Sie stattdessen Export und Import der Seiten Unternehmen oder Abteilungen.
 
 **Erstellt die Kopie neue Unternehmen oder Abteilungen?**
 Nein. Es werden nur Kennzahlen für Entitäten geschrieben, die in beiden Jahren existieren. Wenn ein Unternehmen im Quelljahr existiert, aber nicht im Ziel, wird diese Zeile übersprungen.

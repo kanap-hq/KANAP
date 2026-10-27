@@ -127,8 +127,8 @@ Eine Zelle ohne Wert zeigt einen Strich.
 
 **Aktionen**:
 - **Neue App / Dienst**: Einen neuen Eintrag erstellen (`applications:member`)
-- **CSV importieren**: Massenimport aus CSV-Datei (`applications:admin`)
-- **CSV exportieren**: Die Anwendungen, die die Liste anzeigt, als CSV exportieren (`applications:admin`). Siehe [Exportoptionen](#export-options).
+- **Importieren**: Massenimport aus CSV-Datei (`applications:admin`)
+- **Exportieren**: Die Anwendungen, die die Liste anzeigt, als CSV exportieren (`applications:admin`). Siehe [Exportoptionen](#export-options).
 - **Element kopieren**: Eine ausgewählte Anwendung mit allen Kernbeziehungen duplizieren (`applications:member`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
 - **Ausgewählte löschen**: Ausgewählte Anwendungen entfernen (`applications:admin`). Eine Anwendung, die Quelle oder Ziel einer Schnittstelle ist, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst ihre Schnittstellen. Vor der Bestätigung führt das Fenster diese Anwendungen als behalten auf, mit der Anzahl ihrer Schnittstellen. Die anderen werden mit ihren Bereitstellungen und Verknüpfungen zu anderen Einträgen gelöscht; die Bestätigung zählt die Bereitstellungen
 
@@ -528,15 +528,19 @@ Pflegen Sie Ihr Anwendungsinventar im großen Maßstab mit CSV-Import und -Expor
 ### Zugriff auf CSV-Funktionen
 
 Aus der Anwendungsliste:
-- **CSV exportieren**: Anwendungen in eine CSV-Datei herunterladen
-- **CSV importieren**: Eine CSV-Datei hochladen, um Anwendungen zu erstellen oder zu aktualisieren
+- **Exportieren**: Anwendungen in eine CSV-Datei oder Excel-Arbeitsmappe herunterladen
+- **Importieren**: Eine CSV-Datei oder Excel-Arbeitsmappe hochladen, um Anwendungen zu erstellen oder zu aktualisieren
 - **Vorlage herunterladen** (im Import-Dialog): Eine leere CSV mit korrekten Spaltenköpfen erhalten
 
 **Erforderliche Berechtigungen**: `applications:admin` für Import-/Export-Operationen.
 
 ### Exportoptionen { #export-options }
 
-**Inhalt der Datei**: die Anwendungen, die die Liste anzeigt. Der Export folgt den Spaltenfiltern, der Schnellsuche und der Auswahl **Anzeigen** (**Meine Anwendungen**, **Anwendungen meines Teams** oder **Alle Anwendungen**). Der Dialog nennt die Zahl der Anwendungen, die die Datei enthalten wird. Ohne Filter auf **Lebenszyklus** fehlen außer Betrieb genommene Anwendungen, wie in der Liste.
+**Inhalt der Datei**: die Anwendungen, die die Liste anzeigt. Der Export folgt den Spaltenfiltern, der Schnellsuche und der Auswahl **Anzeigen** (**Meine Anwendungen**, **Anwendungen meines Teams** oder **Alle Anwendungen**). Der Dialog nennt die Zahl der Anwendungen, die die Datei enthalten wird. Ohne Filter auf **Lebenszyklus** fehlen außer Betrieb genommene Anwendungen, wie in der Liste. Die Zeilen behalten die Reihenfolge der Liste.
+
+**Format**: **CSV** oder **Excel (.xlsx)**, im Dialog gewählt und von Ihrem Browser gespeichert. Die Arbeitsmappe enthält dieselben Spalten wie die CSV-Datei auf einem Blatt, mit Zahlen und Datumsangaben als Werte, die Excel sortieren und filtern kann. Der Import liest beides; in einer Arbeitsmappe liest er das erste Blatt. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
+**Spalten**: Die Datei beginnt mit `id` und `reference` (`APP-12`), dann folgen die Spalten dem Arbeitsbereich, Registerkarte für Registerkarte. Der Import ignoriert `reference`.
 
 **Sprache der Werte**: Katalogwerte (Kategorie, Lebenszyklus, Kritikalität, Cyberkritikalität, Wiederherstellungswelle, Datenklasse, Zugriffsmethoden) und der Status werden so geschrieben, wie der Bildschirm sie zeigt, in der Sprache Ihres Bildschirms: `Active` auf Englisch, `Aktiv` auf Deutsch. Ein Name, den Ihre Organisation einem Wert unter **IT-Landschaft > Einstellungen** gegeben hat, bleibt unverändert.
 
@@ -553,7 +557,7 @@ Aus der Anwendungsliste:
 
 ### Import-Workflow
 
-1. **Datei vorbereiten**: Speichern Sie sie als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV-Dateien](csv-files.md).
+1. **Datei vorbereiten**: eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`). Speichern Sie eine CSV-Datei als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV- und Excel-Dateien](csv-files.md).
 
 2. **Importeinstellungen wählen**:
    - **Modus**:
@@ -581,7 +585,7 @@ Der Preflight wendet dieselben Regeln an wie der Arbeitsbereich. Eine Zeile wird
 - ihr **Support-Ende** oder ihr **Außerbetriebnahmedatum** vor ihrem **Go-Live** liegt;
 - `is_suite` für eine Suite, die noch Anwendungen enthält, `no` ist.
 
-Eine Datei mit einer einzigen abgelehnten Zeile lädt nichts. Siehe [CSV-Dateien](csv-files.md).
+Eine Datei mit einer einzigen abgelehnten Zeile lädt nichts. Siehe [CSV- und Excel-Dateien](csv-files.md).
 
 ### Feldreferenz
 

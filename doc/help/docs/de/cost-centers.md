@@ -85,8 +85,8 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 **Aktionen**:
 
 - **Neu**: eine Gruppe oder eine Kostenstelle erstellen (erfordert `cost_centers:member`)
-- **CSV importieren**: den Baum aus einer Datei laden (erfordert `cost_centers:admin`)
-- **CSV exportieren**: die Elemente der Liste herunterladen, oder alle Elemente (erfordert `cost_centers:admin`)
+- **Importieren**: den Baum aus einer Datei laden (erfordert `cost_centers:admin`)
+- **Exportieren**: die Elemente der Liste herunterladen, oder alle Elemente (erfordert `cost_centers:admin`)
 - **Auswahl löschen**: die ausgewählten Elemente löschen (erfordert `cost_centers:admin`). Vor dem Löschen nennt die Bestätigung die behaltenen Elemente mit dem Grund. Inhalte werden vor ihrer Gruppe gelöscht, sodass die Auswahl einer Gruppe zusammen mit ihrem gesamten Inhalt alles löscht
 
 ---
@@ -168,14 +168,16 @@ Die Schaltfläche **Löschen** (Papierkorbsymbol) in der Kopfzeile löscht das E
 
 ## CSV-Import/-Export
 
+Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
 Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 
-**Export**: Klicken Sie auf **CSV exportieren** und dann auf **Daten exportieren**. Die Datei enthält alle Elemente, aktiviert oder deaktiviert, in Baumreihenfolge. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
+**Export**: Klicken Sie auf **Exportieren** und dann auf **Daten exportieren**. Die Datei enthält alle Elemente, aktiviert oder deaktiviert, in Baumreihenfolge. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
 
 **CSV-Struktur**:
 
 - Kopfzeilen: `code`, `kind`, `name`, `parent_code`, `company_name`, `owner_email`, `description`, `status`, `disabled_at`
-- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 
 | Spalte | Inhalt |
 |---|---|
@@ -191,7 +193,7 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 
 **Import**:
 
-1. Klicken Sie in der Liste auf **CSV importieren**
+1. Klicken Sie in der Liste auf **Importieren**
 2. Wählen Sie Ihre Datei
 3. Klicken Sie auf **Vorabprüfung**. Der Bericht nennt die Anzahl der Zeilen, die zu erstellenden und zu aktualisierenden Elemente sowie die Zeilen, die nichts ändern
 4. Wenn die Vorabprüfung fehlerfrei ist, klicken Sie auf **Laden**

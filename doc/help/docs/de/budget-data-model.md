@@ -179,7 +179,7 @@ Worauf es ankommt, wenn Sie ein anderes Werkzeug auf KANAP abbilden:
 
 ## Austauschformate
 
-Jede der folgenden Dateien wird auf der Seite exportiert und importiert, die das Objekt verwaltet. Importe laufen in zwei Schritten: eine Prüfung, die nichts schreibt, dann ein Laden. Mit Ausnahme der Vertragsdatei teilen sie die Regeln zu Kodierung, Trennzeichen, Datumsangaben und Beträgen sowie die Größengrenze, die unter [CSV-Dateien](csv-files.md) beschrieben sind.
+Jede der folgenden Dateien wird auf der Seite exportiert und importiert, die das Objekt verwaltet. Importe laufen in zwei Schritten: eine Prüfung, die nichts schreibt, dann ein Laden. Mit Ausnahme der Vertragsdatei teilen sie die Regeln zu Kodierung, Trennzeichen, Datumsangaben und Beträgen sowie die Größengrenze, die unter [CSV- und Excel-Dateien](csv-files.md) beschrieben sind.
 
 | Objekt | Export | Import | Zugeordnet über | Details |
 |---|---|---|---|---|

@@ -167,7 +167,7 @@ Klicken Sie auf eine Mitwirkenden-Zeile, um eine Projektaufschlüsselung zu öff
 - Projektnamen sind klickbar und öffnen den Reiter **Fortschritt** des Projekts.
 
 ### Exporte
-- **CSV**: Die Heatmap-Tabelle exportieren
+- **Tabelle exportieren**: CSV oder Excel. Die Datei enthält die Tabelle der angezeigten Gruppierung, Mitwirkende oder Teams, mit dem angezeigten Kapazitätsmodus, den Teams und den Status. Tage behalten ihre Nachkommastellen. Die Excel-Datei fügt ein Blatt **Parameter** hinzu. Siehe [Berichte](reports.md#export-options)
 - **PNG**: Momentaufnahme des Berichts
 - **Drucken**: Drucken oder als PDF speichern
 
@@ -263,7 +263,7 @@ Die Geändert-Listen ergänzen am Ende die Spalte **Änderungen**.
 
 Beide Exporte enthalten die Referenz, das Unternehmen, die Herkunft eines Projekts, die Änderungen einer geänderten Zeile und das Datum des Ereignisses. Die geschlossenen Zeilen tragen zusätzlich den Erstellungstag.
 
-Beide Dateien sind in der Sprache der Oberfläche geschrieben: Titel, Spaltennamen, Status, Änderungen, Ja oder Nein und Tage. Die CSV übernimmt außerdem das Trennzeichen und das Dezimalzeichen dieser Sprache, wie unter [CSV-Dateien](csv-files.md) beschrieben.
+Beide Dateien sind in der Sprache der Oberfläche geschrieben: Titel, Spaltennamen, Status, Änderungen, Ja oder Nein und Tage. Die CSV übernimmt außerdem das Trennzeichen und das Dezimalzeichen dieser Sprache, wie unter [CSV- und Excel-Dateien](csv-files.md) beschrieben.
 
 ## Erfasste Zeit
 
@@ -293,7 +293,7 @@ Der Bericht zeigt nur Tage. Er zeigt nie die Notizen eines Eintrags.
 
 ### Exporte
 
-- **CSV**: eine Zeile pro Person und Monat, mit dem Team, der Person, dem Monat, den Projekttagen, den anderen Tagen und der Summe.
+- **Tabelle exportieren**: CSV oder Excel, eine Zeile pro Person und Monat, mit dem Team, der Person, dem Monat, den Projekttagen, den anderen Tagen und der Summe. Die Datei folgt dem Zeitraum und den Team- und Projektfiltern und zählt die Monate in derselben Zeitzone wie die Oberfläche. Die Excel-Datei fügt ein Blatt **Parameter** mit diesen Filtern hinzu. Siehe [Berichte](reports.md#export-options)
 - **PNG**: das Diagramm.
 
 ## Tipps

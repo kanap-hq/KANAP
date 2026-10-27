@@ -89,6 +89,7 @@ Zeigt wöchentliche Auslastungs-Heatmaps:
 - Team-Ansicht: Eine Zeile pro Team, mit ISO-Wochenspalten
 - Team-Bezeichnungen werden als zusammengeführte mehrzeilige Zellen in der Mitwirkenden-Ansicht angezeigt, um Wiederholung zu vermeiden
 - Jede Zelle zeigt die gerundete wöchentliche Auslastung (%) mit Farbintensität basierend auf der Belastung
+- **Tabelle exportieren** bietet **CSV** und **Excel (.xlsx)** für das angezeigte Szenario an. Die CSV-Datei enthält die angezeigte Ansicht, Mitwirkende oder Teams. Die Excel-Datei enthält beide, je ein Blatt, mit der Auslastung in Prozent, und ein Blatt **Parameter**. **Auslastung als PNG exportieren** speichert die Heatmap als Bild
 
 ### Gantt-Vorschau-Verhalten
 

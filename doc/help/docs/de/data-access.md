@@ -145,7 +145,7 @@ Bei einer Kostenstelle oder Gruppe:
 
 ## Import und Export
 
-**CSV importieren** und **CSV exportieren** unter **Administration > Datenzugriff** übertragen den Zugriff vieler Personen auf einmal. Eine Datei enthält eine Zeile pro Person und Knoten:
+**Importieren** und **Exportieren** unter **Administration > Datenzugriff** übertragen den Zugriff vieler Personen auf einmal, in einer CSV-Datei oder einer Excel-Arbeitsmappe (`.xlsx`). Siehe [CSV- und Excel-Dateien](csv-files.md). Eine Datei enthält eine Zeile pro Person und Knoten:
 
 | Spalte | Inhalt |
 |---|---|
@@ -168,7 +168,7 @@ claire.dubois@example.com;all;;read
 - Die Prüfung kommt zuerst und schreibt nichts. Sie meldet jede abgelehnte Zeile: unbekannte Person, unbekanntes Unternehmen oder unbekannte Kostenstelle, ungültiger Typ oder Zugriff, ein Knoten zweimal für dieselbe Person, ein Administrator, Ihr eigenes Konto. Eine Datei mit einem Fehler lädt nichts.
 - Der Export schreibt dasselbe Format, für die begrenzten Personen. Eine begrenzte Person ohne Knoten hat keine Zeile, daher lässt ein erneuter Import der Datei sie unverändert.
 
-Trennzeichen, Kodierung und die zwei Importschritte sind die aller CSV-Dateien: siehe [CSV-Dateien](csv-files.md).
+Trennzeichen, Kodierung und die zwei Importschritte sind die aller CSV-Dateien: siehe [CSV- und Excel-Dateien](csv-files.md).
 
 ## Audit-Protokoll { #audit-log }
 

@@ -43,8 +43,8 @@ Das Abteilungs-Grid gibt Ihnen einen Überblick über alle Abteilungen mit ihrer
 
 **Aktionen**:
 - **Neu**: Neue Abteilung erstellen (erfordert `departments:member`)
-- **CSV importieren**: Massenimport von Abteilungen (erfordert `departments:admin`)
-- **CSV exportieren**: Als CSV exportieren (erfordert `departments:admin`)
+- **Importieren**: Massenimport von Abteilungen (erfordert `departments:admin`)
+- **Exportieren**: Als CSV exportieren (erfordert `departments:admin`)
 - **Ausgewählte löschen**: Ausgewählte Abteilungen entfernen (erfordert `departments:admin`). Eine Abteilung, die in den Zuordnungen von Budgetzeilen verwendet wird, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen. Vor dem Löschen nennt die Bestätigung die behaltenen Abteilungen mit dem Grund
 
 ---
@@ -93,7 +93,9 @@ Der Details-Tab verwaltet jahresbezogene Mitarbeiterzahl-Kennzahlen.
 
 ## CSV-Import/Export
 
-**CSV exportieren** lädt die Abteilungen der Liste (oder, auf Wunsch im Dialog, alle Abteilungen) mit ihrem Unternehmen, Namen, Beschreibung, Status und Ende der Gültigkeit herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
+Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
+**Exportieren** lädt die Abteilungen der Liste (oder, auf Wunsch im Dialog, alle Abteilungen) mit ihrem Unternehmen, Namen, Beschreibung, Status und Ende der Gültigkeit herunter. **Importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
 
 Die Spalten:
 
@@ -119,7 +121,7 @@ Die Spalten:
 - Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“ oder „Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“
 
 **Hinweise**:
-- Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+- Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 - Die Mitarbeiterzahl steht nicht in der Datei. Erfassen Sie sie pro Jahr im **Details-Tab** der Abteilung
 
 ## Tipps
