@@ -1216,7 +1216,6 @@
         "avg": "Ø",
         "week": "KW{{week}}",
         "weekYear": "KW{{week}} {{year}}",
-        "exportExcel": "Auslastung als Excel exportieren",
         "exportPng": "Auslastung als PNG exportieren",
         "noContributorData": "Keine Auslastungsdaten für Mitwirkende verfügbar.",
         "noTeamData": "Keine Auslastungsdaten für Teams verfügbar.",
@@ -1259,7 +1258,6 @@
         "schedulingModeFailed": "Planungsmodus konnte nicht aktualisiert werden",
         "generateFailed": "Roadmap konnte nicht erzeugt werden",
         "exportGanttFailed": "Gantt konnte nicht als PNG exportiert werden",
-        "exportOccupationExcelFailed": "Auslastung konnte nicht als Excel exportiert werden",
         "exportOccupationPngFailed": "Auslastung konnte nicht als PNG exportiert werden"
       },
       "schedulingModes": {

@@ -39,11 +39,10 @@ vi.mock('../../components/reports/ReportLayout', async (importOriginal) => {
   const { default: ReportExportButton } = await import('../../components/reports/ReportExportButton');
   return {
     ...(await importOriginal<typeof import('../../components/reports/ReportLayout')>()),
-    default: ({ filters, children, tableExport, onExportTableCsv }: any) => (
+    default: ({ filters, children, tableExport }: any) => (
       <div>
         {filters}
         {tableExport && <ReportExportButton {...tableExport} />}
-        {onExportTableCsv && <button type="button">browser csv</button>}
         {children}
       </div>
     ),
@@ -104,7 +103,6 @@ describe('chargeback table export', () => {
     renderReport(<GlobalChargebackReport />);
     await waitFor(() => expect(paramsOf('/reports/chargeback/global')).toHaveLength(1));
     const screenParams = paramsOf('/reports/chargeback/global')[0].params;
-    expect(screen.queryByText('browser csv')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'reports.shared.exportTable' }));
     fireEvent.click(await screen.findByText('reports.shared.exportXlsx'));
     await waitFor(() => expect(paramsOf('/reports/chargeback/global/export')).toHaveLength(1));

@@ -159,6 +159,25 @@ function mistakes() {
   assert.equal(csvText(writeReportExport(bad([[{ kind: 'number', value: 1e-7 }]]), request({ language: 'en' })).body), 'A\n0.0000001\n', 'no exponent');
 }
 
+/** A footer row may hold text under a number column (a coverage line `2/5`); a data row may not, nor a footer any other kind. */
+function footerText() {
+  const withFooter = (footer: any[][]): ReportExport => ({
+    ...exportOf(),
+    tables: [{ key: 't', sheet: 'T', columns: [{ header: 'Skill', kind: 'text' }, { header: 'Ann', kind: 'number' }], rows: [['Go', { kind: 'number', value: 3 }]], footer }],
+  });
+  const csvFile = writeReportExport(withFooter([['Coverage', '1/2']]), request({ language: 'en' }));
+  assert.equal(csvText(csvFile.body), 'Skill,Ann\nGo,3\nCoverage,1/2\n', 'text under a number column in the footer');
+  assert.equal(csvFile.rows, 1);
+  const zip = new AdmZip(writeReportExport(withFooter([['Coverage', '1/2']]), request({ format: 'xlsx' })).body);
+  assert.ok(sheetText(zip, 1).includes('<t xml:space="preserve">1/2</t>'), 'the footer text is written');
+  assert.throws(() => writeReportExport(withFooter([['Coverage', { kind: 'date', iso: '2026-01-01' }]]), request()), /row 2 column 2 is date, the column is number/);
+  assert.throws(
+    () => writeReportExport({ ...withFooter([]), tables: [{ ...withFooter([]).tables[0], rows: [['Go', '1/2']] }] }, request()),
+    /row 1 column 2 is text, the column is number/,
+    'a data row keeps the column kind',
+  );
+}
+
 async function body() {
   const headers: Record<string, string> = {};
   const res: any = { setHeader: (name: string, value: string) => { headers[name] = value; } };
@@ -179,6 +198,7 @@ async function main() {
   labels();
   amounts();
   mistakes();
+  footerText();
   await body();
   console.log('report-export.spec.ts: ok');
 }

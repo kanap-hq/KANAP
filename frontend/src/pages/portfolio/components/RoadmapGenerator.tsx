@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -42,7 +42,6 @@ import {
 import { useTheme } from '@mui/material/styles';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import ImageIcon from '@mui/icons-material/Image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
@@ -67,7 +66,15 @@ import {
 } from './roadmap-text';
 import { getDotColor, PROJECT_STATUS_COLORS } from '../../../utils/statusColors';
 import { kanapPalette, modeVal } from '../../tasks/theme/taskDetailTokens';
-import { downloadXlsxWorkbook } from '../../../lib/simpleXlsx';
+import ExportFormatButton from '../../../components/csv/ExportFormatButton';
+import type { ExportFormat } from '../../../components/csv/exportFormat';
+import { downloadServerExport } from '../../../components/csv/serverExport';
+import {
+  buildRoadmapOccupation,
+  isoWeekParts,
+  type ContributorOccupationGroup,
+  type TeamOccupationRow,
+} from '../roadmapOccupation';
 
 type RoadmapTab = 'schedule' | 'bottlenecks' | 'occupation';
 type OccupationView = 'contributor' | 'team';
@@ -292,26 +299,6 @@ type TeamOccupationEntry = {
   occupationPct: number | null;
 };
 
-type ContributorOccupationRow = {
-  contributorId: string;
-  contributorName: string;
-  teamId: string | null;
-  teamName: string;
-  weekOccupation: Map<string, number | null>;
-};
-
-type ContributorOccupationGroup = {
-  teamId: string | null;
-  teamName: string;
-  rows: ContributorOccupationRow[];
-};
-
-type TeamOccupationRow = {
-  teamId: string | null;
-  teamName: string;
-  weekOccupation: Map<string, number | null>;
-};
-
 type ContributorProjectWeekDetail = {
   week: string;
   projectDays: number;
@@ -446,18 +433,6 @@ const classifyTimelineSignificance = (
 const hasContributorLoads = (
   project: ScheduledProject | ReservationProject | UnschedulableProject | null,
 ): project is ScheduledProject | ReservationProject => !!project && 'contributorLoads' in project;
-
-const getIsoWeekParts = (weekStartYmd: string): { week: number; year: number } => {
-  const base = new Date(`${weekStartYmd}T00:00:00Z`);
-  if (Number.isNaN(base.getTime())) return { week: 0, year: 0 };
-  const date = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), base.getUTCDate()));
-  const day = date.getUTCDay() || 7;
-  date.setUTCDate(date.getUTCDate() + 4 - day);
-  const year = date.getUTCFullYear();
-  const yearStart = new Date(Date.UTC(year, 0, 1));
-  const week = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  return { week, year };
-};
 
 const getOccupationCellBackground = (
   occupationPct: number | null | undefined,
@@ -854,51 +829,6 @@ type OccupationExportData = {
   };
 };
 
-const exportOccupationAsExcel = (data: OccupationExportData): void => {
-  const { weekKeys, contributorGroups, teamRows, contributorAverages, teamAverages, labels } = data;
-  const weekHeaders = weekKeys.map((weekKey) => {
-    const parts = getIsoWeekParts(weekKey);
-    return labels.weekYear(String(parts.week).padStart(2, '0'), parts.year);
-  });
-
-  // Contributors sheet
-  const contributorSheetRows: (string | number | null)[][] = [];
-  contributorSheetRows.push([labels.team, labels.contributor, ...weekHeaders, labels.average]);
-  for (const group of contributorGroups) {
-    for (const row of group.rows) {
-      const weekValues = weekKeys.map((wk) => row.weekOccupation.get(wk) ?? null);
-      const nonNull = weekValues.filter((v): v is number => v != null);
-      const avg = nonNull.length > 0 ? Math.round(nonNull.reduce((a, b) => a + b, 0) / nonNull.length) : null;
-      contributorSheetRows.push([group.teamName, row.contributorName, ...weekValues, avg]);
-    }
-  }
-  const contributorAvgRow: (string | number | null)[] = [labels.avg, ''];
-  for (const wk of weekKeys) contributorAvgRow.push(contributorAverages.get(wk) ?? null);
-  const allContribNonNull = weekKeys.map((wk) => contributorAverages.get(wk)).filter((v): v is number => v != null);
-  contributorAvgRow.push(allContribNonNull.length > 0 ? Math.round(allContribNonNull.reduce((a, b) => a + b, 0) / allContribNonNull.length) : null);
-  contributorSheetRows.push(contributorAvgRow);
-
-  // Teams sheet
-  const teamSheetRows: (string | number | null)[][] = [];
-  teamSheetRows.push([labels.team, ...weekHeaders, labels.average]);
-  for (const row of teamRows) {
-    const weekValues = weekKeys.map((wk) => row.weekOccupation.get(wk) ?? null);
-    const nonNull = weekValues.filter((v): v is number => v != null);
-    const avg = nonNull.length > 0 ? Math.round(nonNull.reduce((a, b) => a + b, 0) / nonNull.length) : null;
-    teamSheetRows.push([row.teamName, ...weekValues, avg]);
-  }
-  const teamAvgRow: (string | number | null)[] = [labels.avg];
-  for (const wk of weekKeys) teamAvgRow.push(teamAverages.get(wk) ?? null);
-  const allTeamNonNull = weekKeys.map((wk) => teamAverages.get(wk)).filter((v): v is number => v != null);
-  teamAvgRow.push(allTeamNonNull.length > 0 ? Math.round(allTeamNonNull.reduce((a, b) => a + b, 0) / allTeamNonNull.length) : null);
-  teamSheetRows.push(teamAvgRow);
-
-  downloadXlsxWorkbook(`roadmap-occupation-${getTodayYmd()}.xlsx`, [
-    { name: labels.contributors, rows: contributorSheetRows },
-    { name: labels.teams, rows: teamSheetRows },
-  ]);
-};
-
 const exportOccupationAsPng = async (
   data: OccupationExportData,
   view: OccupationView,
@@ -906,7 +836,7 @@ const exportOccupationAsPng = async (
   const { weekKeys, contributorGroups, teamRows, contributorAverages, teamAverages, labels } = data;
 
   const weekHeaders = weekKeys.map((weekKey) => {
-    const parts = getIsoWeekParts(weekKey);
+    const parts = isoWeekParts(weekKey);
     return labels.week(String(parts.week).padStart(2, '0'));
   });
 
@@ -1066,7 +996,7 @@ type Props = {
 export default function RoadmapGenerator({ onApplied }: Props) {
   const mode = useTheme().palette.mode;
   const locale = useLocale();
-  const { t } = useTranslation(['portfolio', 'common']);
+  const { t } = useTranslation(['portfolio', 'common', 'ops']);
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<RoadmapTab>('schedule');
   const [occupationView, setOccupationView] = useState<OccupationView>('contributor');
@@ -1104,6 +1034,8 @@ export default function RoadmapGenerator({ onApplied }: Props) {
   const [pinDialogProjectName, setPinDialogProjectName] = useState<string>('');
   const [pinDialogWeek, setPinDialogWeek] = useState<string>(startDate);
   const [response, setResponse] = useState<RoadmapResponse | null>(null);
+  // The payload of the generation on screen: the occupation export sends it again, so the file holds the same tables.
+  const responsePayloadRef = useRef<unknown>(null);
   const [selectedExplanationKey, setSelectedExplanationKey] = useState<string | null>(null);
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
   const [scheduleSelectionPool, setScheduleSelectionPool] = useState<ScheduledProject[]>([]);
@@ -1757,103 +1689,21 @@ export default function RoadmapGenerator({ onApplied }: Props) {
     return rowsByContributor;
   }, [scheduledProjects]);
 
-  const occupationWeekKeys = useMemo(() => {
-    const keys = new Set<string>();
-    for (const entry of response?.occupation ?? []) keys.add(entry.week);
-    for (const entry of response?.teamOccupation ?? []) keys.add(entry.week);
-    return Array.from(keys).sort((a, b) => a.localeCompare(b));
-  }, [response?.occupation, response?.teamOccupation]);
-
-  const contributorOccupationGroups = useMemo(() => {
-    const rowsByContributor = new Map<string, ContributorOccupationRow>();
-    for (const entry of response?.occupation ?? []) {
-      const existing = rowsByContributor.get(entry.contributorId) ?? {
-        contributorId: entry.contributorId,
-        contributorName: entry.contributorName,
-        teamId: entry.teamId,
-        teamName: entry.teamName || t('planning.roadmap.occupation.noTeam'),
-        weekOccupation: new Map<string, number | null>(),
-      };
-      existing.weekOccupation.set(
-        entry.week,
-        entry.occupationPct == null ? null : Math.round(entry.occupationPct),
-      );
-      rowsByContributor.set(entry.contributorId, existing);
-    }
-
-    const groupsByTeam = new Map<string, ContributorOccupationGroup>();
-    for (const row of rowsByContributor.values()) {
-      const teamKey = row.teamId || 'no-team';
-      const existing = groupsByTeam.get(teamKey) ?? {
-        teamId: row.teamId,
-        teamName: row.teamName || t('planning.roadmap.occupation.noTeam'),
-        rows: [],
-      };
-      existing.rows.push(row);
-      groupsByTeam.set(teamKey, existing);
-    }
-
-    const groups = Array.from(groupsByTeam.values());
-    groups.sort((a, b) =>
-      a.teamName.localeCompare(b.teamName)
-      || (a.teamId || '').localeCompare(b.teamId || ''));
-    for (const group of groups) {
-      group.rows.sort((a, b) =>
-        a.contributorName.localeCompare(b.contributorName)
-        || a.contributorId.localeCompare(b.contributorId));
-    }
-    return groups;
-  }, [response?.occupation]);
-
-  const teamOccupationRows = useMemo(() => {
-    const rowsByTeam = new Map<string, TeamOccupationRow>();
-    for (const entry of response?.teamOccupation ?? []) {
-      const teamKey = entry.teamId || 'no-team';
-      const existing = rowsByTeam.get(teamKey) ?? {
-        teamId: entry.teamId,
-        teamName: entry.teamName || t('planning.roadmap.occupation.noTeam'),
-        weekOccupation: new Map<string, number | null>(),
-      };
-      existing.weekOccupation.set(
-        entry.week,
-        entry.occupationPct == null ? null : Math.round(entry.occupationPct),
-      );
-      rowsByTeam.set(teamKey, existing);
-    }
-
-    return Array.from(rowsByTeam.values())
-      .sort((a, b) =>
-        a.teamName.localeCompare(b.teamName)
-        || (a.teamId || '').localeCompare(b.teamId || ''));
-  }, [response?.teamOccupation]);
-
-  const contributorOccupationAverages = useMemo(() => {
-    const averages = new Map<string, number | null>();
-    for (const weekKey of occupationWeekKeys) {
-      const values: number[] = [];
-      for (const group of contributorOccupationGroups) {
-        for (const row of group.rows) {
-          const pct = row.weekOccupation.get(weekKey);
-          if (pct != null) values.push(pct);
-        }
-      }
-      averages.set(weekKey, values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null);
-    }
-    return averages;
-  }, [contributorOccupationGroups, occupationWeekKeys]);
-
-  const teamOccupationAverages = useMemo(() => {
-    const averages = new Map<string, number | null>();
-    for (const weekKey of occupationWeekKeys) {
-      const values: number[] = [];
-      for (const row of teamOccupationRows) {
-        const pct = row.weekOccupation.get(weekKey);
-        if (pct != null) values.push(pct);
-      }
-      averages.set(weekKey, values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : null);
-    }
-    return averages;
-  }, [teamOccupationRows, occupationWeekKeys]);
+  // The occupation tables come from `roadmapOccupation.ts`, which the API's export runs too; names
+  // ordered in the screen language, as the export orders them (`new Intl.Collator(language)` on the server).
+  const occupationTables = useMemo(() => buildRoadmapOccupation(
+    response?.occupation ?? [],
+    response?.teamOccupation ?? [],
+    { noTeam: t('planning.roadmap.occupation.noTeam') },
+    new Intl.Collator(locale).compare,
+  ), [locale, response?.occupation, response?.teamOccupation, t]);
+  const {
+    weekKeys: occupationWeekKeys,
+    contributorGroups: contributorOccupationGroups,
+    teamRows: teamOccupationRows,
+    contributorAverages: contributorOccupationAverages,
+    teamAverages: teamOccupationAverages,
+  } = occupationTables;
 
   const toggleBottleneckExpansion = (contributorId: string) => {
     setExpandedBottleneckIds((prev) => {
@@ -1911,6 +1761,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
       const res = await api.post('/portfolio/reports/roadmap/generate', payload);
       const nextResponse = res.data as RoadmapResponse;
       setResponse(nextResponse);
+      responsePayloadRef.current = payload;
 
       if (options?.resetSelectionPool) {
         const oldPoolIds = new Set(scheduleSelectionPool.map((p) => p.projectId));
@@ -2181,13 +2032,21 @@ export default function RoadmapGenerator({ onApplied }: Props) {
     };
   }, [occupationWeekKeys, contributorOccupationGroups, teamOccupationRows, contributorOccupationAverages, teamOccupationAverages, t]);
 
-  const handleExportOccupationExcel = () => {
-    if (!occupationExportData) return;
+  const handleExportOccupation = async (format: ExportFormat) => {
+    if (!responsePayloadRef.current) return;
     try {
-      exportOccupationAsExcel(occupationExportData);
+      await downloadServerExport({
+        url: '/portfolio/reports/roadmap/occupation/export',
+        format,
+        language: locale,
+        // The table of a CSV is the view on screen; the workbook holds both.
+        params: { table: occupationView === 'team' ? 'teams' : 'contributors' },
+        body: responsePayloadRef.current,
+        fileBase: 'roadmap-occupation',
+      });
     } catch (err: any) {
       console.error(err);
-      setError(t('planning.roadmap.messages.exportOccupationExcelFailed'));
+      setError(t('ops:reports.shared.exportFailed'));
     }
   };
 
@@ -2911,18 +2770,12 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                       <ToggleButton value="contributor">{t('planning.roadmap.occupation.contributors')}</ToggleButton>
                       <ToggleButton value="team">{t('planning.roadmap.occupation.teams')}</ToggleButton>
                     </ToggleButtonGroup>
-                    <Tooltip title={t('planning.roadmap.occupation.exportExcel')}>
-                      <span>
-                        <IconButton
-                          size="small"
-                          onClick={handleExportOccupationExcel}
-                          disabled={!occupationExportData}
-                          aria-label={t('planning.roadmap.occupation.exportExcel')}
-                        >
-                          <FileDownloadIcon fontSize="small" />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
+                    <ExportFormatButton
+                      label={t('ops:reports.shared.exportTable')}
+                      size="small"
+                      onExport={handleExportOccupation}
+                      disabled={!occupationExportData}
+                    />
                     <Tooltip title={t('planning.roadmap.occupation.exportPng')}>
                       <span>
                         <IconButton
@@ -2950,7 +2803,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                               <TableCell sx={{ minWidth: 160 }}>{t('planning.roadmap.occupation.team')}</TableCell>
                               <TableCell sx={{ minWidth: 220 }}>{t('planning.roadmap.occupation.contributor')}</TableCell>
                               {occupationWeekKeys.map((weekKey) => {
-                                const isoWeek = getIsoWeekParts(weekKey);
+                                const isoWeek = isoWeekParts(weekKey);
                                 return (
                                   <TableCell key={`contributor-week:${weekKey}`} align="center" sx={{ minWidth: 74 }}>
                                     <Stack spacing={0} alignItems="center">
@@ -3032,7 +2885,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                             <TableRow>
                               <TableCell sx={{ minWidth: 220 }}>{t('planning.roadmap.occupation.team')}</TableCell>
                               {occupationWeekKeys.map((weekKey) => {
-                                const isoWeek = getIsoWeekParts(weekKey);
+                                const isoWeek = isoWeekParts(weekKey);
                                 return (
                                   <TableCell key={`team-week:${weekKey}`} align="center" sx={{ minWidth: 74 }}>
                                     <Stack spacing={0} alignItems="center">

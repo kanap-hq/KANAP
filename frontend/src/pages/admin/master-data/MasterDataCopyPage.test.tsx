@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
@@ -22,6 +22,7 @@ import esMasterData from '../../../locales/es/master-data.json';
 import esOps from '../../../locales/es/ops.json';
 import frMasterData from '../../../locales/fr/master-data.json';
 import frOps from '../../../locales/fr/ops.json';
+import { copyMasterData } from '../../../services/masterDataOperations';
 import MasterDataCopyPage, { copyEntityLabel, copyStatusLabel } from './MasterDataCopyPage';
 
 function opsT(ops: { reports: { shared: { unknownDepartment: string; unknownCompany: string } } }) {
@@ -58,6 +59,27 @@ describe('MasterDataCopyPage header', () => {
     expect(container.querySelector('nav[aria-label="breadcrumb"]')).toBeNull();
     expect(screen.getByText('admin.copy.title')).toBeTruthy();
     expect(screen.getByText('admin.copy.subtitle')).toBeTruthy();
+  });
+});
+
+describe('MasterDataCopyPage export', () => {
+  it('offers the server export of the preview, held once the copy has run', async () => {
+    const answer = { success: true, dryRun: false, summary: { totalItems: 0, processed: 0, skipped: 0, errors: 0 }, results: [], errors: [] };
+    vi.mocked(copyMasterData).mockResolvedValue(answer as never);
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MasterDataCopyPage />
+      </ThemeProvider>,
+    );
+    const exportButton = screen.getByRole('button', { name: 'reports.shared.exportTable' });
+    expect(exportButton).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'admin.copy.dryRunBtn' }));
+    await waitFor(() => expect(copyMasterData).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'admin.copy.copyDataBtn' })).toBeEnabled());
+    expect(screen.getByRole('button', { name: 'reports.shared.exportTable' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'admin.copy.copyDataBtn' }));
+    await waitFor(() => expect(copyMasterData).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'reports.shared.exportTable' })).toBeDisabled());
   });
 });
 

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,9 +8,12 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
@@ -17,6 +21,16 @@ import { EntityManager } from 'typeorm';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { PermissionLevel, PermissionsService } from '../permissions/permissions.service';
 import { ContributorProfileActor, TeamMemberConfigService } from './team-member-config.service';
+import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
+import { reportExportBody, reportExportRequest, writeReportExport } from '../common/report-export';
+import { PortfolioSkillsService } from './portfolio-skills.service';
+import { PortfolioTeamsService } from './portfolio-teams.service';
+import {
+  skillsMatrixExport,
+  SKILLS_MATRIX_EXPORT_QUERY_KEYS,
+  skillsMatrixExportQuery,
+} from './services/skills-matrix-export';
+import { UNASSIGNED_GROUP } from './shared/contributorsOrdering';
 
 const RANK: Record<PermissionLevel, number> = {
   reader: 1,
@@ -48,6 +62,8 @@ export class TeamMemberConfigController {
   constructor(
     private readonly svc: TeamMemberConfigService,
     private readonly permissionsSvc: PermissionsService,
+    private readonly teamsSvc: PortfolioTeamsService,
+    private readonly skillsSvc: PortfolioSkillsService,
   ) {}
 
   /**
@@ -111,6 +127,40 @@ export class TeamMemberConfigController {
   list(@Req() req: any) {
     const tenantId = req?.tenant?.id ?? '';
     return this.svc.list(tenantId, { manager: req?.queryRunner?.manager });
+  }
+
+  /**
+   * The skills matrix as the screen draws it, from the same three reads (the contributors, the teams,
+   * the skills) and the same code (`shared/skillsMatrix.ts`): `teamId`, `employmentTypeId`,
+   * `orientation`, `showUnused`, `hiddenCategories` (a JSON list), plus `format`, `language` and `tz`.
+   * The guard of the contributors list. Recorded as an export.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_settings', 'reader')
+  @Get('skills-matrix/export')
+  async exportSkillsMatrix(@Query() query: Record<string, unknown>, @Tenant() ctx: TenantRequest, @Res() res: Response) {
+    const request = await reportExportRequest(query, ctx, SKILLS_MATRIX_EXPORT_QUERY_KEYS);
+    const parsed = skillsMatrixExportQuery(query);
+    const opts = { manager: ctx.manager };
+    const [{ items: contributors }, teams, { items: skills }] = await Promise.all([
+      this.svc.list(ctx.tenantId, opts),
+      this.teamsSvc.list(ctx.tenantId, opts),
+      this.skillsSvc.list(ctx.tenantId, opts),
+    ]);
+    if (parsed.teamId !== 'all' && parsed.teamId !== UNASSIGNED_GROUP && !teams.some((team) => team.id === parsed.teamId)) {
+      throw new BadRequestException('teamId is not a team of this workspace.');
+    }
+    let employmentTypeName: string | null = null;
+    if (parsed.employmentTypeId !== 'all') {
+      const rows: Array<{ name: string }> = await ctx.manager!.query(
+        'SELECT name FROM portfolio_employment_types WHERE tenant_id = $1 AND id = $2',
+        [ctx.tenantId, parsed.employmentTypeId],
+      );
+      if (rows.length === 0) throw new BadRequestException('employmentTypeId is not a contract type of this workspace.');
+      employmentTypeName = rows[0].name;
+    }
+    const exp = skillsMatrixExport({ contributors, teams, skills, employmentTypeName }, parsed, request.language);
+    res.send(await reportExportBody(res, writeReportExport(exp, request)));
   }
 
   @UseGuards(PermissionGuard)

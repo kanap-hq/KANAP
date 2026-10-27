@@ -41,10 +41,13 @@ vi.mock('ag-grid-react', () => ({
 }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
 vi.mock('../../components/AgGridBox', () => ({ default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div> }));
+// The layout keeps the server export the page hands it.
+const layout = vi.hoisted(() => ({ tableExport: undefined as any }));
 vi.mock('../../components/reports/ReportLayout', () => ({
-  default: ({ filters, actions, children }: { filters?: React.ReactNode; actions?: React.ReactNode; children: React.ReactNode }) => (
-    <div>{filters}{actions}{children}</div>
-  ),
+  default: ({ filters, actions, children, tableExport }: { filters?: React.ReactNode; actions?: React.ReactNode; children: React.ReactNode; tableExport?: unknown }) => {
+    layout.tableExport = tableExport;
+    return <div>{filters}{actions}{children}</div>;
+  },
   ReportFilter: ({ label, children }: { label: string; children: React.ReactNode }) => <div><span>{label}</span>{children}</div>,
   reportFilterMenuProps: {},
   reportFilterSelectSx: {},
@@ -294,6 +297,21 @@ describe('CopyBudgetPage', () => {
     expect(cell(result, 'allocationsStatus')).toBe('operations.copyBudget.status.copied');
     expect(screen.getByText(/^operations\.copyBudget\.summary\.done /)).toBeInTheDocument();
     expect(button('copy')).toBeDisabled();
+    // The table now shows what the copy did: its export (a preview) is held.
+    expect(layout.tableExport.disabled).toBe(true);
+  });
+
+  it('hands the server export the parameters of the preview', async () => {
+    renderPage();
+    await linesLoaded();
+    expect(layout.tableExport).toMatchObject({
+      url: '/budget-lines/budget-operations/copy/export',
+      params: {
+        scope: 'all', sourceYear: Y, destinationYear: Y + 1, amounts: 'true', allocations: 'true',
+        sourceColumn: 'budget', destinationColumn: 'budget', percentageIncrease: 0, overwrite: 'false',
+      },
+      disabled: false,
+    });
   });
 
   it('drops the preview when a parameter changes, so Copy runs only what was previewed', async () => {

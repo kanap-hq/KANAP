@@ -4,11 +4,19 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { useLocalStorageState } from '../../../hooks/useLocalStorageState';
-import { downloadXlsxWorkbook, type XlsxCell } from '../../../lib/simpleXlsx';
+import { screenLanguage } from '../../../components/csv/readings';
+import { downloadServerExport } from '../../../components/csv/serverExport';
+import type { ExportFormat } from '../../../components/csv/exportFormat';
 import { buildItemPath, formatItemRef } from '../../../utils/item-ref';
 import { compactSelectMenuProps, drawerMenuItemSx, drawerSelectSx, inlineControlSx } from '../../../theme/formSx';
-import { groupContributorsByTeam, sortGroupIds, UNASSIGNED_GROUP } from '../contributorsOrdering';
-import { clampSkillLevel } from './SkillLevelControl';
+import {
+  AUTONOMOUS_LEVEL,
+  buildSkillsMatrix,
+  contributorSummary,
+  orientSkillsMatrix,
+  type SkillsMatrixAxis,
+  type SkillsMatrixOrientation,
+} from '../skillsMatrix';
 import type { SkillOption, SkillProficiency } from './ContributorSkillsTab';
 
 export type MatrixContributor = {
@@ -26,17 +34,21 @@ type Props = {
   skills: SkillOption[];
   /** Same team filter as the list view: 'all', a team id, or 'unassigned'. */
   filterTeamId: string;
+  /** The contract type filter of the page ('all' or an id): `contributors` are already narrowed by it,
+   *  the export sends it so the server narrows them the same way. */
+  filterEmploymentTypeId?: string;
   /** Hands the export to the page so the action can sit in the page header.
    *  Called with null while there is nothing on screen to export. */
-  onActionChange?: (action: { label: string; run: () => void } | null) => void;
+  onActionChange?: (action: MatrixExportAction | null) => void;
 };
+
+/** The export of the grid as laid out: the server builds the file from the same parameters. */
+export type MatrixExportAction = { label: string; onExport: (format: ExportFormat) => Promise<void> };
 
 /** Which side of the grid carries the contributors. Catalogues are usually far
  *  longer than the team, so people go across the top by default. */
-type Orientation = 'contributors' | 'skills';
+type Orientation = SkillsMatrixOrientation;
 
-/** A level of 3 or 4 means the person can carry the skill on their own. */
-const AUTONOMOUS_LEVEL = 3;
 const ORIENTATION_STORAGE_KEY = 'kanap.contributors.matrix.columns';
 const SHOW_UNUSED_STORAGE_KEY = 'kanap.contributors.matrix.showUnused';
 const CATEGORY_STORAGE_KEY = 'kanap.contributors.matrix.hiddenCategories';
@@ -58,8 +70,6 @@ type AxisEntry = {
   summaryText: string;
   summaryTone: SummaryTone;
   summaryTooltip: string;
-  /** Leading cells this entry contributes when it forms the export's rows. */
-  exportCells: XlsxCell[];
 };
 
 type Axis = {
@@ -71,7 +81,6 @@ type Axis = {
   summaryTooltip: string;
   groups: Array<{ key: string; label: string; entries: AxisEntry[] }>;
   entries: AxisEntry[];
-  exportHeaders: string[];
 };
 
 const monoSx = {
@@ -88,28 +97,21 @@ const cellSx = {
   px: 0,
 };
 
-function countLevels(levels: Array<number | undefined>) {
-  let declared = 0;
-  let autonomous = 0;
-  for (const level of levels) {
-    if (!level) continue;
-    declared += 1;
-    if (level >= AUTONOMOUS_LEVEL) autonomous += 1;
-  }
-  return { declared, autonomous };
-}
-
 /**
  * Read-only grid crossing contributors with skills, one digit 1-4 per cell.
  * Either side can hold the columns; contributors do by default because a skill
  * catalogue is normally the longer of the two. Whichever side holds the rows
  * gets its summaries in a trailing column, the other in the footer line. The
  * skill summary counts who can carry that skill alone, which is the "where are
- * we thin" reading. Editing stays in the contributor workspace.
+ * we thin" reading. Editing stays in the contributor workspace. What the grid
+ * holds comes from `skillsMatrix.ts`, which the API's export runs too.
  */
-export default function ContributorsSkillsMatrix({ contributors, teams, skills, filterTeamId, onActionChange }: Props) {
-  const { t } = useTranslation(['portfolio']);
+export default function ContributorsSkillsMatrix({
+  contributors, teams, skills, filterTeamId, filterEmploymentTypeId = 'all', onActionChange,
+}: Props) {
+  const { t, i18n } = useTranslation(['portfolio', 'ops']);
   const navigate = useNavigate();
+  const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
   const [orientation, setOrientation] = useLocalStorageState<Orientation>(ORIENTATION_STORAGE_KEY, 'contributors');
   // Off by default: a catalogue is mostly skills nobody has declared yet, and
   // those columns bury the ones that carry real work.
@@ -123,88 +125,36 @@ export default function ContributorsSkillsMatrix({ contributors, teams, skills, 
     4: t('workspace.contributor.proficiency.4'),
   }), [t]);
 
-  const teamName = React.useCallback((groupId: string) => (
-    groupId === UNASSIGNED_GROUP
-      ? t('contributors.filters.unassigned')
-      : teams.find((team) => team.id === groupId)?.name || t('contributors.teams.unknown')
-  ), [t, teams]);
+  // Names ordered in the screen language, as the export orders them (`new Intl.Collator(language)` on the server).
+  const compare = React.useMemo(() => new Intl.Collator(language).compare, [language]);
 
-  // Contributors follow the list view exactly: teams alphabetically, unassigned last.
-  const contributorGroups = React.useMemo(() => {
-    const grouped = groupContributorsByTeam(contributors, teams);
-    const ids = filterTeamId === 'all' ? Object.keys(grouped) : [filterTeamId].filter((id) => grouped[id]);
-    return sortGroupIds(ids, teamName)
-      .map((groupId) => ({ groupId, rows: grouped[groupId] || [] }))
-      .filter(({ rows }) => rows.length > 0);
-  }, [contributors, filterTeamId, teamName, teams]);
+  const matrix = React.useMemo(() => buildSkillsMatrix({
+    contributors,
+    teams,
+    skills,
+    teamId: filterTeamId,
+    showUnused,
+    hiddenCategories,
+    words: { unassigned: t('contributors.filters.unassigned'), unknownTeam: t('contributors.teams.unknown') },
+    compare,
+  }), [compare, contributors, filterTeamId, hiddenCategories, showUnused, skills, t, teams]);
 
-  const visibleContributors = React.useMemo(
-    () => contributorGroups.flatMap((group) => group.rows),
-    [contributorGroups],
-  );
-
-  const levels = React.useMemo(() => {
-    const map = new Map<string, number>();
-    for (const contributor of contributors) {
-      for (const entry of contributor.skills ?? []) {
-        map.set(`${contributor.id}:${entry.skill_id}`, clampSkillLevel(entry.proficiency));
-      }
-    }
-    return map;
-  }, [contributors]);
-
-  const levelOf = React.useCallback(
-    (contributorId: string, skillId: string) => levels.get(`${contributorId}:${skillId}`),
-    [levels],
-  );
-
-  const categories = React.useMemo(() => {
-    const byCategory = new Map<string, SkillOption[]>();
-    for (const skill of skills) {
-      if (!skill.enabled) continue;
-      byCategory.set(skill.category, [...(byCategory.get(skill.category) ?? []), skill]);
-    }
-    return [...byCategory.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([category, list]) => ({
-        category,
-        skills: [...list].sort((a, b) => a.name.localeCompare(b.name)),
-      }));
-  }, [skills]);
-
-  const shownCategories = React.useMemo(
-    () => categories.filter(({ category }) => !hiddenCategories.includes(category)),
-    [categories, hiddenCategories],
-  );
-
-  const skillGroups = React.useMemo(() => shownCategories
-    .map(({ category, skills: list }) => ({
-      category,
-      skills: showUnused
-        ? list
-        : list.filter((skill) => visibleContributors.some((row) => levelOf(row.id, skill.id))),
-    }))
-    .filter(({ skills: list }) => list.length > 0),
-  [levelOf, showUnused, shownCategories, visibleContributors]);
-
-  const visibleSkills = React.useMemo(() => skillGroups.flatMap((group) => group.skills), [skillGroups]);
+  const { categories } = matrix;
 
   const contributorAxis = React.useMemo<Axis>(() => {
-    const groups = contributorGroups.map(({ groupId, rows }) => ({
-      key: groupId,
-      label: teamName(groupId),
-      entries: rows.map<AxisEntry>((row) => {
-        const label = row.user_display_name || row.user_email;
-        const { declared, autonomous } = countLevels(visibleSkills.map((skill) => levelOf(row.id, skill.id)));
-        const reference = formatItemRef('contributor', row.item_number);
+    const groups = matrix.contributorAxis.groups.map((group) => ({
+      key: group.key,
+      label: group.label,
+      entries: group.entries.map<AxisEntry>((entry) => {
+        const { declared, autonomous } = entry.counts;
+        const reference = formatItemRef('contributor', entry.itemNumber);
         return {
-          id: row.id,
-          label,
+          id: entry.id,
+          label: entry.label,
           onOpen: () => navigate(`${buildItemPath('contributor', reference)}/skills`),
-          summaryText: declared > 0 ? `${autonomous}/${declared}` : '',
+          summaryText: contributorSummary(entry.counts),
           summaryTone: 'ratio',
           summaryTooltip: t('contributors.matrix.summaryTooltip', { autonomous, total: declared }),
-          exportCells: [label, reference, teamName(groupId)],
         };
       }),
     }));
@@ -215,27 +165,21 @@ export default function ContributorsSkillsMatrix({ contributors, teams, skills, 
       summaryTooltip: t('contributors.matrix.summaryHeaderTooltip'),
       groups,
       entries: groups.flatMap((group) => group.entries),
-      exportHeaders: [
-        t('contributors.matrix.export.contributor'),
-        t('contributors.matrix.export.reference'),
-        t('contributors.matrix.export.team'),
-      ],
     };
-  }, [contributorGroups, levelOf, navigate, t, teamName, visibleSkills]);
+  }, [matrix, navigate, t]);
 
   const skillAxis = React.useMemo<Axis>(() => {
-    const groups = skillGroups.map(({ category, skills: list }) => ({
-      key: category,
-      label: category,
-      entries: list.map<AxisEntry>((skill) => {
-        const { declared, autonomous } = countLevels(visibleContributors.map((row) => levelOf(row.id, skill.id)));
+    const groups = matrix.skillAxis.groups.map((group) => ({
+      key: group.key,
+      label: group.label,
+      entries: group.entries.map<AxisEntry>((entry) => {
+        const { declared, autonomous } = entry.counts;
         return {
-          id: skill.id,
-          label: skill.name,
+          id: entry.id,
+          label: entry.label,
           summaryText: String(autonomous),
           summaryTone: autonomous === 0 ? 'gap' : 'count',
-          summaryTooltip: t('contributors.matrix.coverageTooltip', { skill: skill.name, autonomous, declared }),
-          exportCells: [category, skill.name],
+          summaryTooltip: t('contributors.matrix.coverageTooltip', { skill: entry.label, autonomous, declared }),
         };
       }),
     }));
@@ -246,16 +190,14 @@ export default function ContributorsSkillsMatrix({ contributors, teams, skills, 
       summaryTooltip: t('contributors.matrix.coverageHeaderTooltip'),
       groups,
       entries: groups.flatMap((group) => group.entries),
-      exportHeaders: [t('contributors.matrix.export.category'), t('contributors.matrix.export.skill')],
     };
-  }, [levelOf, skillGroups, t, visibleContributors]);
+  }, [matrix, t]);
 
-  const columnAxis = orientation === 'contributors' ? contributorAxis : skillAxis;
-  const rowAxis = orientation === 'contributors' ? skillAxis : contributorAxis;
-
-  const levelAt = React.useCallback((rowId: string, columnId: string) => (
-    rowAxis.kind === 'contributor' ? levelOf(rowId, columnId) : levelOf(columnId, rowId)
-  ), [levelOf, rowAxis.kind]);
+  const oriented = React.useMemo(() => orientSkillsMatrix(matrix, orientation), [matrix, orientation]);
+  const axisOf = (axis: SkillsMatrixAxis) => (axis.kind === 'contributor' ? contributorAxis : skillAxis);
+  const columnAxis = axisOf(oriented.columns);
+  const rowAxis = axisOf(oriented.rows);
+  const levelAt = oriented.levelAt;
 
   const cellTooltip = React.useCallback((rowEntry: AxisEntry, columnEntry: AxisEntry, level: number) => {
     const contributor = rowAxis.kind === 'contributor' ? rowEntry.label : columnEntry.label;
@@ -275,44 +217,34 @@ export default function ContributorsSkillsMatrix({ contributors, teams, skills, 
     ));
   };
 
-  const exportXlsx = React.useCallback(() => {
-    const pad = Array<XlsxCell>(rowAxis.exportHeaders.length - 1).fill('');
-    const header = [
-      ...rowAxis.exportHeaders,
-      ...columnAxis.entries.map((entry) => entry.label),
-      rowAxis.summaryLabel,
-    ];
-    const rows = rowAxis.entries.map((rowEntry) => [
-      ...rowEntry.exportCells,
-      ...columnAxis.entries.map((columnEntry) => levelAt(rowEntry.id, columnEntry.id) ?? null),
-      rowEntry.summaryText,
-    ]);
-    const footer = [
-      columnAxis.summaryLabel,
-      ...pad,
-      ...columnAxis.entries.map((entry) => entry.summaryText),
-      '',
-    ];
-    downloadXlsxWorkbook(`skills-matrix-${new Date().toISOString().slice(0, 10)}.xlsx`, [
-      { name: t('contributors.matrix.sheetName'), rows: [header, ...rows, footer] },
-    ]);
-  }, [columnAxis, levelAt, rowAxis, t]);
-
-  const emptyMessage = (() => {
-    if (visibleContributors.length === 0) return t('contributors.matrix.noContributors');
-    if (categories.length === 0) return t('contributors.matrix.noSkills');
-    if (shownCategories.length === 0) return t('contributors.matrix.allFiltered');
-    // Every remaining skill was dropped for being unused, which the category
-    // pills cannot explain: point at the toggle that would bring them back.
-    if (visibleSkills.length === 0) {
-      return showUnused ? t('contributors.matrix.allFiltered') : t('contributors.matrix.noDeclaredSkills');
+  const [exportFailed, setExportFailed] = React.useState(false);
+  const exportFile = React.useCallback(async (format: ExportFormat) => {
+    setExportFailed(false);
+    try {
+      await downloadServerExport({
+        url: '/portfolio/team-members/skills-matrix/export',
+        format,
+        language,
+        params: {
+          teamId: filterTeamId,
+          employmentTypeId: filterEmploymentTypeId,
+          orientation,
+          showUnused: String(showUnused),
+          // Category names may hold commas: one JSON-encoded list.
+          hiddenCategories: hiddenCategories.length > 0 ? JSON.stringify(hiddenCategories) : undefined,
+        },
+        fileBase: 'skills-matrix',
+      });
+    } catch {
+      setExportFailed(true);
     }
-    return null;
-  })();
+  }, [filterEmploymentTypeId, filterTeamId, hiddenCategories, language, orientation, showUnused]);
+
+  const emptyMessage = matrix.empty ? t(`contributors.matrix.${matrix.empty}`) : null;
 
   React.useEffect(() => {
-    onActionChange?.(emptyMessage ? null : { label: t('contributors.matrix.export.action'), run: exportXlsx });
-  }, [emptyMessage, exportXlsx, onActionChange, t]);
+    onActionChange?.(emptyMessage ? null : { label: t('contributors.matrix.export.action'), onExport: exportFile });
+  }, [emptyMessage, exportFile, onActionChange, t]);
 
   React.useEffect(() => () => onActionChange?.(null), [onActionChange]);
 
@@ -342,7 +274,7 @@ export default function ContributorsSkillsMatrix({ contributors, teams, skills, 
           </Select>
         </Box>
 
-        {categories.length > 1 && categories.map(({ category }) => {
+        {categories.length > 1 && categories.map((category) => {
           const active = !hiddenCategories.includes(category);
           return (
             <Chip
@@ -368,6 +300,12 @@ export default function ContributorsSkillsMatrix({ contributors, teams, skills, 
           onClick={() => setShowUnused(!showUnused)}
         />
       </Box>
+
+      {exportFailed && (
+        <Box role="alert" sx={(theme) => ({ fontSize: 12, color: theme.palette.kanap.text.secondary })}>
+          {t('ops:reports.shared.exportFailed')}
+        </Box>
+      )}
 
       {emptyMessage ? (
         <Box sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.tertiary })}>{emptyMessage}</Box>

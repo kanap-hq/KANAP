@@ -1216,7 +1216,6 @@
         "avg": "Prom.",
         "week": "S{{week}}",
         "weekYear": "S{{week}} {{year}}",
-        "exportExcel": "Exportar la ocupación a Excel",
         "exportPng": "Exportar la ocupación a PNG",
         "noContributorData": "No hay datos de ocupación de colaboradores disponibles.",
         "noTeamData": "No hay datos de ocupación de equipos disponibles.",
@@ -1259,7 +1258,6 @@
         "schedulingModeFailed": "No se pudo actualizar el modo de planificación",
         "generateFailed": "No se pudo generar la hoja de ruta",
         "exportGanttFailed": "No se pudo exportar el Gantt a PNG",
-        "exportOccupationExcelFailed": "No se pudo exportar la ocupación a Excel",
         "exportOccupationPngFailed": "No se pudo exportar la ocupación a PNG"
       },
       "schedulingModes": {

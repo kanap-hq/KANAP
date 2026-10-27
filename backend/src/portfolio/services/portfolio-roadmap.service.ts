@@ -283,10 +283,15 @@ export class PortfolioRoadmapService {
     private readonly projectsCrudService: PortfolioProjectsCrudService,
   ) {}
 
+  /**
+   * `runOpts.skipSensitivity` (the occupation export) leaves out the per-contributor reruns that rank the
+   * bottlenecks: `bottlenecks` comes back empty, everything else is the base run's, as with the reruns.
+   */
   async generateRoadmap(
     tenantId: string,
     input: RoadmapGenerateDto | unknown,
     svcOpts?: ServiceOpts,
+    runOpts?: { skipSensitivity?: boolean },
   ): Promise<RoadmapResponse> {
     const startedAt = Date.now();
     const mg = svcOpts?.manager ?? this.projectRepo.manager;
@@ -305,7 +310,7 @@ export class PortfolioRoadmapService {
     const contributorsForSensitivity = Array.from(prepared.contributors.values())
       .filter((c) => c.monthlyCapacity > EPSILON && prepared.relevantContributorIds.has(c.id))
       .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
-    const sampledContributors = contributorsForSensitivity;
+    const sampledContributors = runOpts?.skipSensitivity ? [] : contributorsForSensitivity;
 
     const baseEndDate = baseResult.roadmapEndDate ? parseYmdUtc(baseResult.roadmapEndDate) : null;
     const bottlenecks: BottleneckEntry[] = [];

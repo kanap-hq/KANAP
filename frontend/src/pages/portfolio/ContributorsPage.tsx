@@ -17,10 +17,13 @@ import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import {
   compactSelectMenuProps, drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, pageSelectSx,
 } from '../../theme/formSx';
-import { groupContributorsByTeam, sortGroupIds, UNASSIGNED_GROUP } from './contributorsOrdering';
+import {
+  filterContributorsByEmploymentType, groupContributorsByTeam, sortGroupIds, UNASSIGNED_GROUP,
+} from './contributorsOrdering';
 import { buildItemPath, formatItemRef } from '../../utils/item-ref';
 import { useLocalStorageState } from '../../hooks/useLocalStorageState';
-import ContributorsSkillsMatrix from './components/ContributorsSkillsMatrix';
+import ContributorsSkillsMatrix, { type MatrixExportAction } from './components/ContributorsSkillsMatrix';
+import ExportFormatButton from '../../components/csv/ExportFormatButton';
 import ContributorsOrgChart from './components/ContributorsOrgChart';
 import { ORG_CHART_PARAMS } from './orgChart';
 import type { SkillOption } from './components/ContributorSkillsTab';
@@ -43,6 +46,9 @@ interface Contributor {
   user_status?: string | null;
   manager_user_id?: string | null;
 }
+
+/** The action a view hands up to the page header: the matrix export, or the org chart's print. */
+type ViewAction = MatrixExportAction | { label: string; run: () => void };
 
 interface Team {
   id: string;
@@ -122,8 +128,8 @@ export default function ContributorsPage() {
   // Each view owns its own action (export for the matrix, print for the org
   // chart) and hands it up here, so it sits with the other page actions instead
   // of floating over the content.
-  const [viewAction, setViewAction] = useState<{ label: string; run: () => void } | null>(null);
-  const handleActionChange = useCallback((action: { label: string; run: () => void } | null) => {
+  const [viewAction, setViewAction] = useState<ViewAction | null>(null);
+  const handleActionChange = useCallback((action: ViewAction | null) => {
     setViewAction(action);
   }, []);
 
@@ -192,11 +198,10 @@ export default function ContributorsPage() {
   // through one code path; the matrix only knows about the team filter. The org
   // chart is deliberately left out: a reporting line crosses teams, and it
   // carries its own contract-type pills.
-  const contributors = useMemo(() => {
-    const all = data || [];
-    if (filterEmploymentTypeId === 'all') return all;
-    return all.filter((contributor) => contributor.employment_type_id === filterEmploymentTypeId);
-  }, [data, filterEmploymentTypeId]);
+  const contributors = useMemo(
+    () => filterContributorsByEmploymentType(data || [], filterEmploymentTypeId),
+    [data, filterEmploymentTypeId],
+  );
 
   const getTeamName = useCallback((groupId: string) => {
     if (groupId === UNASSIGNED_GROUP) return t('contributors.filters.unassigned');
@@ -253,7 +258,9 @@ export default function ContributorsPage() {
           {t('contributors.actions.addContributor')}
         </Button>
       )}
-      {viewAction && <Button variant="action" onClick={viewAction.run}>{viewAction.label}</Button>}
+      {viewAction && ('onExport' in viewAction
+        ? <ExportFormatButton label={viewAction.label} onExport={viewAction.onExport} />
+        : <Button variant="action" onClick={viewAction.run}>{viewAction.label}</Button>)}
     </Stack>
   ) : null;
 
@@ -333,6 +340,7 @@ export default function ContributorsPage() {
             teams={teams}
             skills={skills}
             filterTeamId={filterTeamId}
+            filterEmploymentTypeId={filterEmploymentTypeId}
             onActionChange={handleActionChange}
           />
         )}

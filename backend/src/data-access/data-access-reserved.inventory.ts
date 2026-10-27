@@ -143,7 +143,8 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
   {
     file: 'master-data/master-data-operations.controller.ts',
     controller: 'MasterDataOperationsController',
-    reserved: ['copy'],
+    // The preview of the copy as a file is reserved with the copy.
+    reserved: ['copy', 'exportCopy'],
     allowed: {},
   },
   {
@@ -451,6 +452,13 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
       unlinkRelation: LINE_WRITE, // DELETE :id/relations/:kind/:targetId
       update: LINE_WRITE, // PATCH :id
     },
+  },
+  {
+    // The previews of the column reset and the budget copy, as files: reserved with the operations.
+    file: 'spend/budget-operations-export/budget-operations-export.controller.ts',
+    controller: 'BudgetOperationsExportController',
+    reserved: ['clearColumn', 'copy'],
+    allowed: {},
   },
   {
     file: 'contracts/contracts.controller.ts',

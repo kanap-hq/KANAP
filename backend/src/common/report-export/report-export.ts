@@ -29,7 +29,8 @@ import { REPORT_EXPORT_LABELS } from './labels';
  * language's decimal mark; a column marked `decimals: 2` shows two decimals in the workbook), `amount` a dot-decimal string with two decimals (`-1234.50`; CSV with the
  * language's decimal mark), `date` an ISO day (CSV in the language's format), `percent` a fraction
  * (`0.125`; CSV `12.50%` / `12,50%`). `null` is an empty cell in every kind. A cell that does not match its
- * column throws: it is a bug of the report, not of the request.
+ * column throws: it is a bug of the report, not of the request. A footer row may hold text under any
+ * column (the coverage line of the skills matrix, `2/5` under each person's levels).
  *
  * Controllers parse the request with `reportExportRequest` and answer with `reportExportBody`
  * (`send.ts`), which also records the format and the row count on the export's audit row.
@@ -115,7 +116,7 @@ export function writeReportExport(exp: ReportExport, request: ReportExportReques
     const text = writeCsv({
       language,
       headers: table.columns.map((column) => column.header),
-      rows: rowsOf(table).map((row, index) => csvRow(table, row, index, language)),
+      rows: rowsOf(table).map((row, index) => csvRow(table, row, index, language, index >= table.rows.length)),
     });
     const name = exp.tables.length > 1 ? `${exp.fileBase}-${table.key}-${day}.csv` : `${exp.fileBase}-${day}.csv`;
     return { filename: name, contentType: CSV_CONTENT_TYPE, body: Buffer.from(text, 'utf8'), rows: table.rows.length, limited: exp.limited };
@@ -125,7 +126,7 @@ export function writeReportExport(exp: ReportExport, request: ReportExportReques
     ? exp.tables
     : [...exp.tables.filter((table) => table.key === request.table), ...exp.tables.filter((table) => table.key !== request.table)];
   const sheets: XlsxSheet[] = ordered.map((table) => {
-    rowsOf(table).forEach((row, index) => checkRow(table, row, index));
+    rowsOf(table).forEach((row, index) => checkRow(table, row, index, index >= table.rows.length));
     const footer = exp.limited ? [] : table.footer ?? [];
     const shown = (row: ReportCell[]): ReportCell[] => row.map((cell, column) =>
       cell !== null && typeof cell !== 'string' && cell.kind === 'number' && table.columns[column].decimals === 2 ? { ...cell, decimals: 2 } : cell);
@@ -149,7 +150,8 @@ export function writeReportExport(exp: ReportExport, request: ReportExportReques
   };
 }
 
-function checkRow(table: ReportTable, row: ReportCell[], index: number): void {
+/** A footer row may hold text under any column (a coverage line `2/5` under counts); its other cells follow the column. */
+function checkRow(table: ReportTable, row: ReportCell[], index: number, footer: boolean): void {
   if (row.length !== table.columns.length) {
     throw new Error(`report export: table ${table.key} row ${index + 1} has ${row.length} cells for ${table.columns.length} columns`);
   }
@@ -157,6 +159,7 @@ function checkRow(table: ReportTable, row: ReportCell[], index: number): void {
     if (cell === null) return;
     const kind = table.columns[column].kind;
     const actual = typeof cell === 'string' ? 'text' : cell.kind;
+    if (footer && actual === 'text') return;
     if (actual !== kind) {
       throw new Error(`report export: table ${table.key} row ${index + 1} column ${column + 1} is ${actual}, the column is ${kind}`);
     }
@@ -166,8 +169,8 @@ function checkRow(table: ReportTable, row: ReportCell[], index: number): void {
   });
 }
 
-function csvRow(table: ReportTable, row: ReportCell[], index: number, language: CsvLanguage): string[] {
-  checkRow(table, row, index);
+function csvRow(table: ReportTable, row: ReportCell[], index: number, language: CsvLanguage, footer: boolean): string[] {
+  checkRow(table, row, index, footer);
   const decimal = csvProfile(language).decimal;
   return row.map((cell) => {
     if (cell === null) return '';

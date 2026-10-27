@@ -1329,7 +1329,6 @@
         "provideDriver": "Fournissez {{driver}} pour les sociétés sélectionnées."
       },
       "unnamedAccount": "Compte sans nom",
-      "exportTableCsv": "Exporter le tableau en CSV",
       "exportTable": "Exporter le tableau",
       "exportCsv": "CSV",
       "exportCsvTable": "CSV : {{table}}",

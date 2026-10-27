@@ -183,6 +183,8 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /assets/export',
   'GET /audit-logs/export',
   'GET /budget-lines/budget-file/export',
+  'GET /budget-lines/budget-operations/clear-column/export',
+  'GET /budget-lines/budget-operations/copy/export',
   'GET /business-processes/export',
   'GET /capex-items/budget-file/export',
   'GET /chart-of-accounts/:id/accounts/export',
@@ -195,11 +197,13 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /departments/export',
   'GET /incidents/:id/report',
   'GET /incidents/export',
+  'GET /master-data-operations/copy/export',
   'GET /portfolio/projects/export',
   'GET /portfolio/reports/capacity-heatmap/export',
   'GET /portfolio/reports/time-logged/export',
   'GET /portfolio/reports/weekly/export',
   'GET /portfolio/requests/export',
+  'GET /portfolio/team-members/skills-matrix/export',
   'GET /reports/budget/analytics/export',
   'GET /reports/budget/columns-compare/export',
   'GET /reports/budget/comparison/export',
@@ -223,6 +227,7 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /working-day-profiles/export',
   'POST /export',
   'POST /knowledge/:idOrRef/export',
+  'POST /portfolio/reports/roadmap/occupation/export',
 ];
 
 // The routes that send a stored file someone added (an attachment, an inline image, the

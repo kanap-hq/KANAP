@@ -36,7 +36,6 @@ import {
   AllocationsPart,
   AmountsPart,
   BudgetColumn,
-  BudgetOperationScope,
   BudgetScope,
   CalendarIssue,
   copyBudget,
@@ -50,21 +49,10 @@ import { SUMMARY_QUERY_KEY, useBudgetAggregate } from '../reports/useBudgetAggre
 import ItemScopeTabs, { SCOPE_NATURES } from './ItemScopeTabs';
 import OperationLineCell from './OperationLineCell';
 import { formatOperationAmount } from './operationAmount';
+import { copyAfterValue, copyAllocationsStatus, copyAmountsStatus, copyBudgetRows, type CopyRow, type CopyStatus } from './copyBudgetRows';
 
-/** One budget line of the table: what the aggregate reads, and what the copy answered for it. */
-type Row = {
-  id: string;
-  itemNumber: number | null;
-  nature: BudgetOperationScope | null;
-  name: string;
-  /** The source and current destination columns in the line's own currency. */
-  sourceValue: number;
-  destinationValue: number;
-  amounts?: AmountsPart;
-  allocations?: AllocationsPart;
-  /** The copy lists the line: a line it leaves out is not valid in the destination year. */
-  answered: boolean;
-};
+/** One budget line of the table: what the aggregate reads, and what the copy answered for it (`copyBudgetRows.ts`). */
+type Row = CopyRow<AmountsPart, AllocationsPart>;
 
 /** The copy's answer, for a preview or once done. */
 type Outcome = { mode: 'preview' | 'done'; response: CopyBudgetResponse };
@@ -213,70 +201,26 @@ export default function CopyBudgetPage() {
     setAcceptCalendarChanges(false);
   }, [paramsKey]);
 
-  const rows = useMemo<Row[]>(() => {
-    const answers = new Map((outcome?.response.results ?? []).map((line) => [line.itemId, line]));
-    const read = readOperationLines(lines, scope);
-    const known = new Set(read.map((line) => line.id));
-    const fromLines: Row[] = read.map((line) => {
-      const answer = answers.get(line.id);
-      return {
-        id: line.id,
-        itemNumber: line.itemNumber ?? answer?.itemNumber ?? null,
-        nature: line.nature ?? answer?.nature ?? null,
-        name: line.name,
-        sourceValue: line.values.source ?? 0,
-        destinationValue: line.values.destination ?? 0,
-        amounts: answer?.amounts,
-        allocations: answer?.allocations,
-        answered: !!answer,
-      };
-    });
-    // A line the copy lists and the window does not hold still shows.
-    const extra: Row[] = (outcome?.response.results ?? []).filter((answer) => !known.has(answer.itemId)).map((answer) => ({
-      id: answer.itemId,
-      itemNumber: answer.itemNumber,
-      nature: answer.nature,
-      name: answer.itemName,
-      sourceValue: answer.amounts?.sourceValue ?? 0,
-      destinationValue: answer.amounts?.currentDestinationValue ?? 0,
-      amounts: answer.amounts,
-      allocations: answer.allocations,
-      answered: true,
-    }));
-    return [...fromLines, ...extra];
-  }, [lines, outcome, scope]);
+  // The window's lines joined with the copy's answer, by the rule the API's export runs too.
+  const rows = useMemo<Row[]>(() => copyBudgetRows(readOperationLines(lines, scope), outcome?.response.results), [lines, outcome, scope]);
 
   const done = outcome?.mode === 'done';
-  const amountsStatus = useCallback((row: Row | undefined): Status | null => {
-    if (!outcome || !row) return null;
-    if (!row.answered) return { text: t('operations.copyBudget.status.notValid', { year: destinationYear }), tone: 'skip' };
-    const part = row.amounts;
-    if (!part) return null;
-    switch (part.skip) {
-      case 'no_source': return { text: t('operations.copyBudget.status.noSource', { year: sourceYear }), tone: 'skip' };
-      case 'source_empty': return { text: t('operations.copyBudget.status.sourceEmpty'), tone: 'skip' };
-      case 'destination_filled': return { text: t('operations.copyBudget.status.destinationFilled'), tone: 'skip' };
-      default: return { text: t(done ? 'operations.copyBudget.status.copied' : 'operations.copyBudget.status.toCopy'), tone: 'copy' };
-    }
-  }, [outcome, done, destinationYear, sourceYear, t]);
-  const allocationsStatus = useCallback((row: Row | undefined): Status | null => {
-    if (!outcome || !row) return null;
-    if (!row.answered) return { text: t('operations.copyBudget.status.notValid', { year: destinationYear }), tone: 'skip' };
-    const part = row.allocations;
-    if (!part) return null;
-    switch (part.action) {
-      case 'copy': {
-        // A destination that follows another method takes the source's: an allocation without rows typed by hand counts as empty.
-        const replaced = part.destinationMethod != null && part.destinationMethod !== part.resultMethod;
-        if (replaced) return { text: t(done ? 'operations.copyBudget.status.replaced' : 'operations.copyBudget.status.replaces', { method: allocationMethodLabel(t, part.destinationMethod) }), tone: 'copy' };
-        return { text: t(done ? 'operations.copyBudget.status.copied' : 'operations.copyBudget.status.toCopy'), tone: 'copy' };
-      }
-      case 'skip_missing_source_version': return { text: t('operations.copyBudget.status.noSource', { year: sourceYear }), tone: 'skip' };
-      case 'skip_no_source_allocations': return { text: t('operations.copyBudget.status.noSourceAllocation', { year: sourceYear }), tone: 'skip' };
-      case 'skip_destination_has_data': return { text: t('operations.copyBudget.status.destinationAllocation', { year: destinationYear }), tone: 'skip' };
-      default: return { text: t('operations.copyBudget.status.error', { message: part.message ?? '' }), tone: 'error' };
-    }
-  }, [outcome, done, destinationYear, sourceYear, t]);
+  // A status of `copyBudgetRows.ts` in words: `year`, the method's name and the error fill the message.
+  const statusText = useCallback((status: CopyStatus | null): Status | null => {
+    if (!status) return null;
+    const options: Record<string, unknown> = {};
+    if (status.year !== undefined) options.year = status.year;
+    if (status.method !== undefined) options.method = allocationMethodLabel(t, status.method);
+    if (status.message !== undefined) options.message = status.message;
+    const key = `operations.copyBudget.status.${status.key}`;
+    return { text: Object.keys(options).length > 0 ? t(key, options) : t(key), tone: status.tone };
+  }, [t]);
+  const amountsStatus = useCallback((row: Row | undefined): Status | null => (
+    outcome && row ? statusText(copyAmountsStatus(row, { done, sourceYear, destinationYear })) : null
+  ), [outcome, done, destinationYear, sourceYear, statusText]);
+  const allocationsStatus = useCallback((row: Row | undefined): Status | null => (
+    outcome && row ? statusText(copyAllocationsStatus(row, { done, sourceYear, destinationYear })) : null
+  ), [outcome, done, destinationYear, sourceYear, statusText]);
 
   const toneStyle = useCallback((status: Status | null): CellStyle => {
     if (status?.tone === 'error') return { color: theme.palette.kanap.danger, fontWeight: 500 };
@@ -296,7 +240,7 @@ export default function CopyBudgetPage() {
       allocationsToCopy: answered.filter((row) => row.allocations?.action === 'copy').length,
       sourceTotal: rows.reduce((sum, row) => sum + row.sourceValue, 0),
       currentTotal: rows.reduce((sum, row) => sum + row.destinationValue, 0),
-      afterTotal: rows.reduce((sum, row) => sum + (row.answered && row.amounts ? row.amounts.newValue : row.destinationValue), 0),
+      afterTotal: rows.reduce((sum, row) => sum + copyAfterValue(row), 0),
       withAmounts: rows.filter((row) => row.destinationValue !== 0).length,
       allocationsKept: answered.filter((row) => row.allocations?.action === 'skip_destination_has_data').length,
       methodsReplaced: answered.filter((row) => row.allocations?.action === 'copy' && row.allocations.destinationAllocationsCount === 0
@@ -440,7 +384,7 @@ export default function CopyBudgetPage() {
             headerName: t('operations.copyBudget.afterHeader', { column: columnName(destinationColumn), year: destinationYear }),
             width: 190,
             type: 'rightAligned',
-            valueGetter: (p) => (p.data?.answered && p.data.amounts ? p.data.amounts.newValue : p.data?.destinationValue ?? 0),
+            valueGetter: (p) => (p.data ? copyAfterValue(p.data) : 0),
             valueFormatter: (p) => formatOperationAmount(p.value),
             // A skipped line keeps its current value: shown muted.
             cellStyle: (p) => (amountsStatus(p.data)?.tone === 'skip' ? { color: theme.palette.kanap.text.tertiary, fontWeight: 400 } : { color: 'inherit', fontWeight: 500 }),
@@ -487,8 +431,6 @@ export default function CopyBudgetPage() {
     }
     return defs;
   }, [scope, copyAmounts, copyAllocations, outcome, sourceColumn, destinationColumn, sourceYear, destinationYear, budgetColumns, locale, theme, t, amountsStatus, allocationsStatus, toneStyle]);
-
-  const gridApiRef = useRef<any>(null);
 
   const statSx = { display: 'flex', flexDirection: 'column', gap: '2px' } as const;
   const statLabelSx = { fontSize: 12, color: 'kanap.text.tertiary' } as const;
@@ -626,7 +568,22 @@ export default function CopyBudgetPage() {
           </Button>
         </Stack>
       }
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
+      // The preview of these parameters, written by the server (the copy's dry run again): CSV or Excel.
+      // Once the copy has run, the table shows what it did, which a preview no longer describes.
+      tableExport={{
+        url: '/budget-lines/budget-operations/copy/export',
+        params: {
+          scope,
+          sourceYear,
+          destinationYear,
+          amounts: String(copyAmounts),
+          allocations: String(copyAllocations),
+          ...(copyAmounts ? { sourceColumn, destinationColumn, percentageIncrease } : {}),
+          overwrite: String(overwrite),
+        },
+        fileBase: `copy-budget-${scope}-${sourceYear}-${destinationYear}`,
+        disabled: done || isProcessing || !hasPart || rows.length === 0 || (copyAmounts && frozenNatures.length > 0) || !budgetColumns.ready,
+      }}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         {!hasPart && <Alert severity="info">{t('operations.copyBudget.chooseParts')}</Alert>}
@@ -691,7 +648,6 @@ export default function CopyBudgetPage() {
               getRowId={(p) => p.data.id}
               defaultColDef={{ sortable: true, resizable: true }}
               initialState={copyAmounts ? { sort: { sortModel: [{ colId: 'sourceValue', sort: 'desc' }] } } : undefined}
-              onGridReady={(e) => { gridApiRef.current = e.api; }}
               domLayout="autoHeight"
             />
           </Box>

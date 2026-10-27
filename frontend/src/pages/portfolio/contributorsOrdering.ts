@@ -1,12 +1,20 @@
 /**
- * Ordering shared by the contributors list and the workspace prev/next
- * navigation, so walking a contributor's neighbours follows the list exactly:
- * teams alphabetically, "Unassigned" last, API order inside a group.
+ * Ordering shared by the contributors list, the workspace prev/next
+ * navigation and the skills matrix (`skillsMatrix.ts`), so walking a
+ * contributor's neighbours follows the list exactly: teams alphabetically,
+ * "Unassigned" last, API order inside a group.
+ *
+ * Pure, without a single import. The skills matrix export of the API runs the
+ * same code: the backend holds a byte-identical copy in
+ * `backend/src/portfolio/shared/`, checked by
+ * `backend/src/spend/reports/__tests__/report-shared-copies.spec.ts`. Change
+ * this file, then copy it there.
  */
 
 export const UNASSIGNED_GROUP = 'unassigned';
 
 export type ContributorGroupable = { id: string; item_number?: number; team_id?: string | null };
+export type ContributorFilterable = { employment_type_id?: string | null };
 export type TeamLike = { id: string; name: string };
 
 export function groupContributorsByTeam<T extends ContributorGroupable>(
@@ -23,11 +31,22 @@ export function groupContributorsByTeam<T extends ContributorGroupable>(
   return groups;
 }
 
-export function sortGroupIds(groupIds: string[], teamName: (groupId: string) => string): string[] {
+/** The contract type filter of the page: 'all', or the id of one contract type. */
+export function filterContributorsByEmploymentType<T extends ContributorFilterable>(contributors: T[], employmentTypeId: string): T[] {
+  if (employmentTypeId === 'all') return contributors;
+  return contributors.filter((contributor) => contributor.employment_type_id === employmentTypeId);
+}
+
+/** `compare` orders the team names: a collator of the language (`new Intl.Collator(language).compare`). */
+export function sortGroupIds(
+  groupIds: string[],
+  teamName: (groupId: string) => string,
+  compare: (a: string, b: string) => number = (a, b) => a.localeCompare(b),
+): string[] {
   return [...groupIds].sort((a, b) => {
     if (a === UNASSIGNED_GROUP) return 1;
     if (b === UNASSIGNED_GROUP) return -1;
-    return teamName(a).localeCompare(teamName(b));
+    return compare(teamName(a), teamName(b));
   });
 }
 

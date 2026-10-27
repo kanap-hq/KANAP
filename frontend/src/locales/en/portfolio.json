@@ -1216,7 +1216,6 @@
         "avg": "Avg",
         "week": "W{{week}}",
         "weekYear": "W{{week}} {{year}}",
-        "exportExcel": "Export occupation as Excel",
         "exportPng": "Export occupation as PNG",
         "noContributorData": "No contributor occupation data available.",
         "noTeamData": "No team occupation data available.",
@@ -1259,7 +1258,6 @@
         "schedulingModeFailed": "Failed to update scheduling mode",
         "generateFailed": "Failed to generate roadmap",
         "exportGanttFailed": "Failed to export the Gantt as PNG",
-        "exportOccupationExcelFailed": "Failed to export occupation as Excel",
         "exportOccupationPngFailed": "Failed to export occupation as PNG"
       },
       "schedulingModes": {
