@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import QuickLogTimeModal from './QuickLogTimeModal';
 import { createAppTheme } from '../../../config/ThemeContext';
+import { localTodayYmd } from '../../../lib/datetime';
 import api from '../../../api';
 
 vi.mock('../../../api', () => ({
@@ -107,5 +108,22 @@ describe('QuickLogTimeModal', () => {
 
     expect(await screen.findByText(/valid hours/i)).toBeTruthy();
     expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('sends today on a project entry', async () => {
+    levels.portfolio_projects = 'contributor';
+    renderModal();
+
+    const listbox = await openSelect();
+    fireEvent.click(await within(listbox).findByText('ERP rollout'));
+    fireEvent.change(screen.getByLabelText(/hours/i), { target: { value: '2' } });
+    const logButtons = screen.getAllByRole('button', { name: /log time/i });
+    fireEvent.click(logButtons[logButtons.length - 1]);
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+    const [url, body] = (api.post as any).mock.calls[0];
+    expect(url).toBe('/portfolio/projects/p-own/time-entries');
+    expect(body.logged_at).toBe(localTodayYmd());
+    expect(body.hours).toBe(2);
   });
 });

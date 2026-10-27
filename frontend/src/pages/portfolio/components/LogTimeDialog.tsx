@@ -18,7 +18,9 @@ import {
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
+import DateEUField from '../../../components/fields/DateEUField';
 import UserSelect from '../../../components/fields/UserSelect';
+import { localTodayYmd } from '../../../lib/datetime';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
 type TimeEntryCategory = 'it' | 'business';
@@ -29,6 +31,13 @@ export interface TimeEntryData {
   user_id: string | null;
   hours: number;
   notes: string | null;
+  logged_at: string;
+}
+
+/** The calendar day of a stored timestamp, or '' when it is not a day. */
+function entryDay(value: string | null | undefined): string {
+  const day = (value || '').slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '';
 }
 
 interface LogTimeDialogProps {
@@ -55,6 +64,7 @@ export default function LogTimeDialog({
   const [days, setDays] = React.useState<number>(0);
   const [hours, setHours] = React.useState<number>(0);
   const [notes, setNotes] = React.useState<string>('');
+  const [loggedAt, setLoggedAt] = React.useState<string>('');
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -69,12 +79,14 @@ export default function LogTimeDialog({
         setDays(Math.floor(totalHours / 8));
         setHours(totalHours % 8);
         setNotes(editEntry.notes || '');
+        setLoggedAt(entryDay(editEntry.logged_at) || localTodayYmd());
       } else {
         setCategory('it');
         setUserId(profile?.id || null);
         setDays(0);
         setHours(0);
         setNotes('');
+        setLoggedAt(localTodayYmd());
       }
       setError(null);
     }
@@ -91,6 +103,10 @@ export default function LogTimeDialog({
       setError(t('portfolio:dialogs.logTime.validation.personRequired'));
       return;
     }
+    if (!loggedAt) {
+      setError(t('portfolio:dialogs.logTime.validation.dateRequired'));
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -102,6 +118,7 @@ export default function LogTimeDialog({
           user_id: userId,
           hours: totalHours,
           notes: notes.trim() || null,
+          logged_at: loggedAt,
         });
       } else {
         await api.post(`/portfolio/projects/${projectId}/time-entries`, {
@@ -109,6 +126,7 @@ export default function LogTimeDialog({
           user_id: userId,
           hours: totalHours,
           notes: notes.trim() || null,
+          logged_at: loggedAt,
         });
       }
       onSuccess();
@@ -169,6 +187,13 @@ export default function LogTimeDialog({
             required
           />
 
+          <DateEUField
+            label={t('portfolio:dialogs.logTime.fields.date')}
+            valueYmd={loggedAt}
+            onChangeYmd={setLoggedAt}
+            required
+          />
+
           <Stack direction="row" spacing={2} alignItems="flex-start">
             <TextField
               label={t('portfolio:dialogs.logTime.fields.hours')}
@@ -221,7 +246,7 @@ export default function LogTimeDialog({
         <Button
           variant="action-primary"
           onClick={handleSubmit}
-          disabled={saving || totalHours <= 0 || !userId}
+          disabled={saving || totalHours <= 0 || !userId || !loggedAt}
         >
           {saving
             ? t('common:status.saving')
