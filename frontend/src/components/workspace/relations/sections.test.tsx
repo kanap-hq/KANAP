@@ -87,6 +87,26 @@ describe('asset relation picker', () => {
       { id: 'a-3', label: 'QA-VM2', ref: 'AST-75' },
     ]);
   });
+
+  it('hints that a member belongs to its cluster, and leaves the cluster itself unmarked as a member', async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { items: [
+        { id: 'a-1', name: 'CL01', asset_reference: 'AST-1', is_cluster: true, cluster: 'CL01' },
+        { id: 'a-2', name: 'vm-a', asset_reference: 'AST-2', is_cluster: false, cluster: 'CL01' },
+        { id: 'a-3', name: 'plain', asset_reference: 'AST-3', is_cluster: false, cluster: null },
+      ] },
+    } as never);
+    const label = (code?: string | null) => code ?? '';
+    const hintT = ((key: string, opts?: { cluster?: string }) =>
+      (opts?.cluster != null ? `${key}(${opts.cluster})` : key)) as unknown as TFunction;
+    const section = assetsSection({ t: hintT, rows: [], kindLabel: label, environmentLabel: label, statusLabel: label });
+    const options = await section.search!('CL01');
+    expect(options).toEqual([
+      { id: 'a-1', label: 'common:selects.cluster CL01', ref: 'AST-1' },
+      { id: 'a-2', label: 'vm-a', ref: 'AST-2', hint: 'workspace.application.relations.memberOfCluster(CL01)' },
+      { id: 'a-3', label: 'plain', ref: 'AST-3' },
+    ]);
+  });
 });
 
 describe('budget lines outside the data access', () => {
