@@ -350,6 +350,17 @@ describe('sibling relation sections', () => {
     );
   }
 
+  it('puts the anchor and its scroll margin on the section', () => {
+    renderSections(
+      <RelationsSection title="Vulnerabilities" id="vulnerabilities" scrollMarginTop={16}>
+        <span>None</span>
+      </RelationsSection>,
+    );
+    const section = screen.getByRole('region', { name: 'Vulnerabilities' });
+    expect(section.id).toBe('vulnerabilities');
+    expect(getComputedStyle(section).scrollMarginTop).toBe('16px');
+  });
+
   it('shares one max width, and the narrower table fills its section', () => {
     frameWidth = 1600;
     const fixed = COLUMNS.reduce((sum, column) => sum + (column.width ?? 0), 0);

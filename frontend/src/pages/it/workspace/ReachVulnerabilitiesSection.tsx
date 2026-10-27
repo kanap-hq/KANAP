@@ -166,6 +166,9 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
     key: 'via',
     header: t('pages.vulnerabilities.reach.via'),
     width: 150,
+    // Gives up its room before the version, like Servers: the indirect table fits 680px.
+    // The least width holds the header in every language (Activo).
+    minWidth: 72,
     wrap: true,
     render: (row) => <ViaAssetNames assets={viaOf(row)} />,
   };
@@ -237,40 +240,38 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
   );
 
   return (
-    <Box id={REACH_VULNERABILITIES_ANCHOR} sx={{ scrollMarginTop: 16 }}>
-      <RelationsSection title={title} heading={heading} count={count}>
-        {data.rows.length === 0 ? (indirect.length === 0 && (
-          <RelationsEmpty>
-            {showPending
-              ? <span role="status" data-testid="reach-vulnerabilities-pending">{t('pages.vulnerabilities.section.searching')}</span>
-              : showFailed
-                ? <span role="status" data-testid="reach-vulnerabilities-failed">{t('pages.vulnerabilities.section.searchFailed')}</span>
-                : t(`pages.vulnerabilities.reach.empty.${kind}`)}
-          </RelationsEmpty>
-        )) : (
-          <RelationsTable columns={directColumns} rows={data.rows} rowKey={rowKey} ariaLabel={title} />
-        )}
-        {/* What a cluster's members carry: counted with the cluster (`member_totals`). What a host carries folds as the platform. */}
-        {indirect.length > 0 && (
-          <Box data-testid="reach-indirect" sx={{ mt: 2 }}>
-            <Typography component="h3" sx={{ m: 0, mb: 0.5, fontSize: 13, fontWeight: 500, color: 'kanap.text.secondary' }}>
-              {t('pages.vulnerabilities.reach.indirect.title')}
-            </Typography>
-            <RelationsTable
-              columns={indirectColumns}
-              rows={indirect}
-              rowKey={rowKey}
-              folded={platformFold}
-              ariaLabel={t('pages.vulnerabilities.reach.indirect.title')}
-            />
-          </Box>
-        )}
-        {indirect.length === 0 && platformFold && (
-          <Box data-testid="reach-platform" sx={{ mt: 1 }}>
-            <RelationsTable columns={indirectColumns} rows={[]} rowKey={rowKey} folded={platformFold} ariaLabel={platformFold.label} />
-          </Box>
-        )}
-      </RelationsSection>
-    </Box>
+    <RelationsSection id={REACH_VULNERABILITIES_ANCHOR} scrollMarginTop={16} title={title} heading={heading} count={count}>
+      {data.rows.length === 0 ? (indirect.length === 0 && (
+        <RelationsEmpty>
+          {showPending
+            ? <span role="status" data-testid="reach-vulnerabilities-pending">{t('pages.vulnerabilities.section.searching')}</span>
+            : showFailed
+              ? <span role="status" data-testid="reach-vulnerabilities-failed">{t('pages.vulnerabilities.section.searchFailed')}</span>
+              : t(`pages.vulnerabilities.reach.empty.${kind}`)}
+        </RelationsEmpty>
+      )) : (
+        <RelationsTable columns={directColumns} rows={data.rows} rowKey={rowKey} ariaLabel={title} />
+      )}
+      {/* What a cluster's members carry: counted with the cluster (`member_totals`). What a host carries folds as the platform. */}
+      {indirect.length > 0 && (
+        <Box data-testid="reach-indirect" sx={{ mt: 2 }}>
+          <Typography component="h3" sx={{ m: 0, mb: 0.5, fontSize: 13, fontWeight: 500, color: 'kanap.text.secondary' }}>
+            {t('pages.vulnerabilities.reach.indirect.title')}
+          </Typography>
+          <RelationsTable
+            columns={indirectColumns}
+            rows={indirect}
+            rowKey={rowKey}
+            folded={platformFold}
+            ariaLabel={t('pages.vulnerabilities.reach.indirect.title')}
+          />
+        </Box>
+      )}
+      {indirect.length === 0 && platformFold && (
+        <Box data-testid="reach-platform" sx={{ mt: 1 }}>
+          <RelationsTable columns={indirectColumns} rows={[]} rowKey={rowKey} folded={platformFold} ariaLabel={platformFold.label} />
+        </Box>
+      )}
+    </RelationsSection>
   );
 }
