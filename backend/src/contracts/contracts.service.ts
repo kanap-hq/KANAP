@@ -106,6 +106,7 @@ import {
   contractEditableFields,
 } from '../data-access/contract-write-checks';
 import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-write-checks';
+import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -174,7 +175,12 @@ type ListItem = Contract & ContractTermFields & {
 };
 
 /** Who reads a list: the budget figures need the right to read the budget too. */
-type ListReadOptions = { manager?: EntityManager; budgetAccess?: boolean };
+type ListReadOptions = {
+  manager?: EntityManager;
+  budgetAccess?: boolean;
+  /** A Business Contributor's applications (their participation): the `covered_application` filter matches those only. */
+  coveredApplicationScope?: ParticipationAccessScope;
+};
 /** The list columns that sort alphabetically. */
 const CONTRACT_TEXT_SORTS = new Set(['name', 'company_name', 'supplier_name', 'cost_center_name', 'currency', 'billing_frequency']);
 
@@ -205,21 +211,29 @@ const OWNER_NAME_SQL = `(SELECT NULLIF(btrim(concat_ws(' ', ou.first_name, ou.la
 /**
  * The filter on the applications a contract covers (`application_contracts`), for the assistant
  * ("which contracts cover APP-8"): a set of application references (`APP-8`) or names, case
- * ignored; `null` keeps the contracts that cover none. Any other model is not applied.
+ * ignored; `null` keeps the contracts that cover none. Any other model is not applied. With
+ * `scope` (a Business Contributor), only the applications of their participation count, as their
+ * applications list and the contract's `covered_applications`.
  */
 const COVERED_APPLICATION_FILTER = 'covered_application';
 
-function coveredApplicationCondition(model: any, nextParam: () => string): CompiledCondition | null {
+function coveredApplicationCondition(model: any, nextParam: () => string, scope?: ParticipationAccessScope): CompiledCondition | null {
   if (!model || typeof model !== 'object' || model.filterType !== 'set' || !Array.isArray(model.values)) return null;
+  const params: Record<string, string | string[]> = {};
+  let scoped = '';
+  if (scope) {
+    const user = nextParam();
+    params[user] = scope.userId;
+    scoped = ` AND ${applicationParticipantCondition('cov_a', `:${user}`)}`;
+  }
   const keys = Array.from(new Set(model.values
     .filter((value: unknown): value is string => typeof value === 'string')
     .map((value: string) => value.trim().toLowerCase())
     .filter(Boolean))) as string[];
   const covers = (match: string) => `EXISTS (SELECT 1 FROM application_contracts cov_l
       JOIN applications cov_a ON cov_a.tenant_id = cov_l.tenant_id AND cov_a.id = cov_l.application_id
-     WHERE cov_l.tenant_id = c.tenant_id AND cov_l.contract_id = c.id${match})`;
+     WHERE cov_l.tenant_id = c.tenant_id AND cov_l.contract_id = c.id${scoped}${match})`;
   const parts: string[] = [];
-  const params: Record<string, string[]> = {};
   if (keys.length > 0) {
     const refs = nextParam();
     const names = nextParam();
@@ -347,7 +361,14 @@ export class ContractsService {
   private listQuery(
     mg: EntityManager,
     query: any,
-    opts: { windowDays: number; exportAll?: boolean; omitFilters?: string[]; budget?: ContractBudgetCoverage | null; compliance?: ContractComplianceInputs | null },
+    opts: {
+      windowDays: number;
+      exportAll?: boolean;
+      omitFilters?: string[];
+      budget?: ContractBudgetCoverage | null;
+      compliance?: ContractComplianceInputs | null;
+      coveredApplicationScope?: ParticipationAccessScope;
+    },
   ) {
     const repo = mg.getRepository(Contract);
     const parsed = opts.exportAll
@@ -369,7 +390,7 @@ export class ContractsService {
       for (const [field, model] of Object.entries(filtersToApply)) {
         if (opts?.omitFilters?.includes(field)) continue;
         if (field === COVERED_APPLICATION_FILTER) {
-          const covered = coveredApplicationCondition(model, nextParam);
+          const covered = coveredApplicationCondition(model, nextParam, opts.coveredApplicationScope);
           if (covered) compiledFilters.push(covered);
           continue;
         }
@@ -514,7 +535,9 @@ export class ContractsService {
     const budget = await this.listBudgetInputs(mg, query, opts);
     const compliance = await loadContractComplianceInputs(mg);
     const windowDays = await readDecisionWindowDays(mg);
-    const { qb: qbBase, parsed, today, filterTargets } = this.listQuery(mg, query, { windowDays, exportAll: opts?.exportAll, budget, compliance });
+    const { qb: qbBase, parsed, today, filterTargets } = this.listQuery(mg, query, {
+      windowDays, exportAll: opts?.exportAll, budget, compliance, coveredApplicationScope: opts?.coveredApplicationScope,
+    });
     const { page, limit, skip, sort } = parsed;
 
     const total = await qbBase.clone().getCount();
@@ -1121,7 +1144,7 @@ export class ContractsService {
     const budget = await this.listBudgetInputs(mg, query, opts);
     const compliance = await loadContractComplianceInputs(mg);
     const windowDays = await readDecisionWindowDays(mg);
-    const { qb, parsed, filterTargets } = this.listQuery(mg, query, { windowDays, budget, compliance });
+    const { qb, parsed, filterTargets } = this.listQuery(mg, query, { windowDays, budget, compliance, coveredApplicationScope: opts?.coveredApplicationScope });
     const { skip, sort } = parsed;
     // Not the parsed limit: parsePagination defaults to a page of 20, and the prev/next
     // navigation that calls this sends no limit, so it only ever knew 20 contracts.

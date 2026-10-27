@@ -689,7 +689,8 @@ export class AiAggregateExecutor {
           filters: adaptedFilters,
           includeDisabled: true,
         },
-        { manager: context.manager },
+        // The `application` filter matches a Business Contributor's applications only, as on query_entities.
+        { manager: context.manager, coveredApplicationScope: await resolveAiParticipationAccessScope(context, 'applications') },
       );
       const ids = result.ids || [];
       return {

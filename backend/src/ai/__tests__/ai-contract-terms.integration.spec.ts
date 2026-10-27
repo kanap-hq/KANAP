@@ -20,7 +20,8 @@ import { addDaysYmd, addMonthsYmd, CONTRACT_TERM_STATES } from '../../contracts/
 // - get_entity_detail and get_entity_context on a contract: the applications, assets, technologies
 //   and budget lines it covers, for a caller who reads each module. A caller who reads contracts
 //   only gets none of them (null in the detail, no section in the context) and no name of them;
-//   the `application` filter is not offered to them.
+//   the `application` filter is not offered to them. A Business Contributor gets the applications
+//   of their participation only, in the items, the filter, the aggregates, the detail and the context.
 // The AI surface checks are not under test: stubbed open.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -32,7 +33,7 @@ process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
 type Harness = { app: any; dataSource: DataSource; executor: any; aggregates: any; entities: any; contracts: any };
-type UserKey = 'full' | 'contractsOnly';
+type UserKey = 'full' | 'contractsOnly' | 'contributor';
 
 /** The seeded contracts, by name, with the state each must be in. */
 const EXPECTED_STATES: Record<string, string> = {
@@ -106,6 +107,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
   const users = {
     full: await user('Full', await role('Everything', ['applications', 'infrastructure', 'budget', 'contracts'])),
     contractsOnly: await user('Contracts', await role('Contracts only', ['contracts'])),
+    contributor: await user('Contributor', await role('Business Contributor', ['applications', 'contracts'])),
   };
 
   const company = await insertId(runner, `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, 'Company', 'FR', 'Paris')`, [tenantId]);
@@ -156,6 +158,8 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     await runner.query(`INSERT INTO application_contracts (tenant_id, application_id, contract_id) VALUES ($1, $2, $3)`, [tenantId, application, contracts[name]]);
   }
   await runner.query(`INSERT INTO application_contracts (tenant_id, application_id, contract_id) VALUES ($1, $2, $3)`, [tenantId, other, contracts['Fresh renewing']]);
+  // The Business Contributor takes part in Payroll only.
+  await runner.query(`INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, 'business')`, [tenantId, other, users.contributor]);
   const covered = contracts['Renewing to decide'];
   await runner.query(`INSERT INTO asset_contracts (tenant_id, asset_id, contract_id) VALUES ($1, $2, $3)`, [tenantId, asset, covered]);
   await runner.query(`INSERT INTO technology_contracts (tenant_id, technology_id, contract_id) VALUES ($1, $2, $3)`, [tenantId, technology, covered]);
@@ -250,6 +254,9 @@ async function testParity(h: Harness, runner: QueryRunner, s: Seed) {
 
   const owned = await h.executor.execute(full, { entity_type: 'contracts', filters: { owner: ['Full Tester'] } });
   assert.deepEqual(names(owned.items), ['Ending to decide'], 'the owner filter');
+  const renewedOnes = await h.executor.execute(full, { entity_type: 'contracts', limit: 100, filters: { renewed: ['true'] } });
+  assert.ok(renewedOnes.total > 0, 'a renewed contract is seeded');
+  assert.deepEqual(names(renewedOnes.items), names(screen.filter((row) => row.renewed)), 'the renewed filter, as the list');
   console.log('  terms: the values, the state filter, the groups and the sorts of the Contracts list: OK');
 }
 
@@ -310,6 +317,33 @@ async function testCoverage(h: Harness, runner: QueryRunner, s: Seed) {
   for (const [label, value] of [['list', hiddenList], ['detail', hiddenDetail], ['context', hiddenContext]] as const) {
     const text = JSON.stringify(value);
     for (const name of COVERED_NAMES) assert.ok(!text.includes(name), `contracts only, ${label}: ${name} is not shown`);
+  }
+  // A Business Contributor: the applications of their participation only (Payroll, APP-10), as
+  // their applications list; Billing (APP-1) is out of it, so no filter on it matches.
+  const bc = ctx(runner, s, 'contributor');
+  const bcList = await h.executor.execute(bc, { entity_type: 'contracts', limit: 100 });
+  const bcCovered = Object.fromEntries(bcList.items.map((item: any) => [item.label, item.metadata.covered_applications]));
+  assert.equal(bcCovered['Renewing to decide'], '', 'contributor: Billing is out of their participation');
+  assert.equal(bcCovered['Fresh renewing'], 'APP-10 Payroll', 'contributor: their application');
+  const bcAnswers: unknown[] = [bcList];
+  for (const value of ['APP-1', 'Billing']) {
+    const outside = await h.executor.execute(bc, { entity_type: 'contracts', filters: { application: [value] } });
+    assert.equal(outside.status, undefined, `contributor, application ${value}: applied`);
+    assert.equal(outside.total, 0, `contributor: ${value} is out of their participation`);
+    bcAnswers.push(outside);
+  }
+  const bcOwn = await h.executor.execute(bc, { entity_type: 'contracts', filters: { application: ['APP-10'] } });
+  assert.deepEqual(names(bcOwn.items), ['Fresh renewing'], 'contributor: the contracts covering their application');
+  const bcNone = await h.executor.execute(bc, { entity_type: 'contracts', limit: 100, filters: { application: [null] } });
+  assert.ok(names(bcNone.items).includes('Renewing to decide') && !names(bcNone.items).includes('Fresh renewing'), 'contributor: none of theirs');
+  const bcGroups = await h.aggregates.execute(bc, { entity_type: 'contracts', group_by: 'term_state', filters: { application: ['APP-1'] } });
+  assert.deepEqual(bcGroups.groups, [], 'contributor: nothing counted for an application out of their participation');
+  const bcDetail = await h.executor.executeDetail(bc, { entity_type: 'contracts', entity_id: s.contracts['Renewing to decide'] });
+  assert.deepEqual(bcDetail.data.linked_applications, { items: [] }, 'contributor detail: no application of theirs');
+  const bcContext = await h.entities.getEntityContext(bc, { entity_type: 'contracts', entity_id: s.contracts['Renewing to decide'] });
+  assert.deepEqual(relations(bcContext), [], 'contributor context: no section');
+  for (const value of [...bcAnswers, bcGroups, bcDetail, bcContext]) {
+    assert.ok(!JSON.stringify(value).includes('Billing'), 'contributor: Billing is never named');
   }
   console.log('  coverage: the site question in one call, the application filter, detail and context by right: OK');
 }

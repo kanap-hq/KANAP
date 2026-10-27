@@ -1564,7 +1564,11 @@ export class AiQueryExecutor {
     }
 
     if (input.entity_type === 'contracts') {
-      const result = await this.contracts.list(scoped.query, { manager: context.manager });
+      // The `application` filter matches a Business Contributor's applications only, as `covered_applications`.
+      const result = await this.contracts.list(scoped.query, {
+        manager: context.manager,
+        coveredApplicationScope: await resolveAiParticipationAccessScope(context, 'applications'),
+      });
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
