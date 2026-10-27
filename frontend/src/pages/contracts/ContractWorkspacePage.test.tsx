@@ -122,7 +122,7 @@ function LocationProbe() {
 
 function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const tree = () => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
@@ -133,8 +133,10 @@ function renderAt(path: string) {
           </MemoryRouter>
         </KanapDialogProvider>
       </ThemeProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const result = render(tree());
+  return { ...result, renderAgain: () => result.rerender(tree()) };
 }
 
 describe('ContractWorkspacePage', () => {
@@ -633,6 +635,22 @@ describe('ContractWorkspacePage', () => {
 
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/contracts/c-1'));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/ops/contracts?sort=name%3AASC'));
+  });
+
+  it('does not load the deleted contract again after deleting it', async () => {
+    mocked.post.mockResolvedValue({ data: { contracts: 1, budget_lines: 0, applications: 0, assets: 0, contacts: 0, tasks: 0, links: 0, attachments: 0, blocked: 0, recorded_requirements: 0, refused: [] } });
+    mocked.delete.mockResolvedValue({ data: undefined });
+    const { renderAgain } = renderAt('/ops/contracts/c-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    const loadsBefore = mocked.get.mock.calls.filter(([url]) => url === '/contracts/c-1').length;
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/contracts/c-1'));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/ops/contracts'));
+    // The router can keep the page on screen while the list loads: a render then must not reload it.
+    renderAgain();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mocked.get.mock.calls.filter(([url]) => url === '/contracts/c-1')).toHaveLength(loadsBefore);
   });
 
   it('keeps the contract when the confirmation is cancelled', async () => {

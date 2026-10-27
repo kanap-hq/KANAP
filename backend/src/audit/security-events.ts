@@ -12,9 +12,12 @@ import type { AuditEntry } from './audit.service';
  *   hash or link, and no e-mail address (an attempt on an unknown address keeps its reason only).
  *   Kept AUTH_EVENT_RETENTION_DAYS days (cleanup/auth-event-retention.service.ts);
  * - exports: `table_name = 'export'`, `action = 'export'`, the person in `user_id`, and
- *   `after_json = { resource, path, ip, user_agent }` (export-events.interceptor.ts): every route whose path ends
- *   with `/export`, and the other routes that send a file the server produces, marked
- *   `@ExportRoute()`.
+ *   `after_json = { resource, path, query, ip, user_agent }`, plus `format` (the type of the file
+ *   sent, exportFormatOfContentType) when the response has a Content-Type, and `rows` when the
+ *   handler reports how many rows it exported (`completeExport`, before a `@Res()` handler
+ *   sends) (export-events.interceptor.ts): every route whose path ends with
+ *   `/export`, and the other routes that send a file the server produces, marked
+ *   `@ExportRoute()`. Never the request body.
  */
 
 export const AUTH_EVENT_TABLE = 'auth';
@@ -185,14 +188,91 @@ export function exportResource(path: string): string {
   return segments.join('/') || 'document';
 }
 
+/** The query of an export row is at most this long once serialised. */
+export const EXPORT_QUERY_MAX_LENGTH = 2_000;
+/** The format of an export row is at most this long. */
+export const EXPORT_FORMAT_MAX_LENGTH = 40;
+
 /**
- * The audit row of an export: the route's resource, the path asked for without its query
- * (500 characters at most), and the client address and user agent (authEventDetails).
+ * Set by ListContextInterceptor before it merges a saved list context into the query: the query as
+ * the client sent it, whose `ctx` names the context.
  */
-export function exportEventEntry(
-  routePath: string,
-  req: ({ path?: unknown; user?: { sub?: unknown } } & NonNullable<RequestLike>) | null | undefined,
-): AuditEntry {
+export const QUERY_AS_SENT = Symbol('kanap.queryAsSent');
+
+type ExportRequest = ({
+  path?: unknown;
+  user?: { sub?: unknown };
+  query?: unknown;
+  [QUERY_AS_SENT]?: unknown;
+} & NonNullable<RequestLike>) | null | undefined;
+
+const FORMAT_OF_MEDIA_TYPE: Record<string, string> = {
+  'text/csv': 'csv',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/vnd.oasis.opendocument.text': 'odt',
+  'text/markdown': 'markdown',
+};
+
+/**
+ * The format of an export, from the Content-Type of the response it sent: `csv`, `xlsx`, `pdf`,
+ * `docx`, `odt` or `markdown`, else the bare media type (no parameters, lower case, at most
+ * EXPORT_FORMAT_MAX_LENGTH characters). Undefined when the response has no Content-Type.
+ */
+export function exportFormatOfContentType(header: unknown): string | undefined {
+  const raw = Array.isArray(header) ? header[0] : header;
+  if (typeof raw !== 'string') return undefined;
+  const mediaType = raw.split(';')[0].trim().toLowerCase();
+  if (!mediaType) return undefined;
+  return FORMAT_OF_MEDIA_TYPE[mediaType] ?? mediaType.slice(0, EXPORT_FORMAT_MAX_LENGTH);
+}
+
+function queryValue(raw: unknown): string | string[] | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (Array.isArray(raw)) return raw.map((item) => (typeof item === 'string' ? item : JSON.stringify(item) ?? String(item)));
+  if (typeof raw === 'object') return JSON.stringify(raw);
+  return String(raw);
+}
+
+function sortedObject(entries: Array<[string, unknown]>): Record<string, unknown> {
+  return Object.fromEntries([...entries].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+}
+
+/**
+ * The query of an export as the client sent it (`ctx` stays the id of the saved list context):
+ * keys sorted, values as strings or lists of strings. At most EXPORT_QUERY_MAX_LENGTH characters
+ * once serialised: the longest entries are dropped first, and `truncated: true` says so.
+ */
+export function exportQuery(raw: unknown): Record<string, unknown> {
+  const entries: Array<[string, string | string[]]> = [];
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+      const kept = queryValue(value);
+      if (kept !== undefined) entries.push([key, kept]);
+    }
+  }
+  const whole = sortedObject(entries);
+  if (JSON.stringify(whole).length <= EXPORT_QUERY_MAX_LENGTH) return whole;
+  const size = ([key, value]: [string, unknown]) => JSON.stringify(key).length + JSON.stringify(value).length;
+  // Longest first; on a tie, the later key first, so the result does not depend on the input order.
+  const longestFirst = [...entries].sort((a, b) => size(b) - size(a) || (a[0] < b[0] ? 1 : a[0] > b[0] ? -1 : 0));
+  const kept = new Map(entries);
+  for (const [key] of longestFirst) {
+    kept.delete(key);
+    kept.delete('truncated');
+    const next = sortedObject([...kept.entries(), ['truncated', true]]);
+    if (JSON.stringify(next).length <= EXPORT_QUERY_MAX_LENGTH) return next;
+  }
+  return { truncated: true };
+}
+
+/**
+ * The audit row of an export, written before its handler runs: the route's resource, the path
+ * asked for without its query (500 characters at most), the query (exportQuery), and the client
+ * address and user agent (authEventDetails). The format and the row count come after the handler.
+ */
+export function exportEventEntry(routePath: string, req: ExportRequest): AuditEntry {
   const userId = typeof req?.user?.sub === 'string' && req.user.sub ? req.user.sub : null;
   const path = (typeof req?.path === 'string' && req.path ? req.path : routePath).slice(0, 500);
   return {
@@ -200,7 +280,12 @@ export function exportEventEntry(
     recordId: null,
     action: EXPORT_EVENT_ACTION,
     before: null,
-    after: { resource: exportResource(routePath), path, ...authEventDetails(req) },
+    after: {
+      resource: exportResource(routePath),
+      path,
+      query: exportQuery(req?.[QUERY_AS_SENT] ?? req?.query),
+      ...authEventDetails(req),
+    },
     userId,
     source: 'user',
     sourceRef: null,

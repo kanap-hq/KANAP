@@ -9,7 +9,7 @@ import { fieldResetSx } from '../../theme/formSx';
 export type RelationOption = { id: string; label: string; ref?: string | null; hint?: string | null };
 
 type Props = {
-  /** The "Add" button: the picker opens under it, aligned on its right edge. */
+  /** The "Add" button: the picker opens under it, aligned on its left edge. */
   anchorEl: HTMLElement;
   /** Distinguishes the searches in the query cache. */
   searchKey: string;
@@ -84,8 +84,8 @@ export default function RelationAddPicker({ anchorEl, searchKey, search, exclude
       open
       anchorEl={anchorEl}
       onClose={onClose}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       slotProps={{ paper: { sx: { p: 1, width: 380, mt: 0.5 } } }}
     >
       <TextField

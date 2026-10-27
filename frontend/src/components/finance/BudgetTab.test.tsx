@@ -636,6 +636,40 @@ describe('BudgetTab amount', () => {
     expect(mocked.patch).not.toHaveBeenCalled();
   });
 
+  it('refreshes the dashboard tiles after an amount is saved, and leaves them when the save is refused', async () => {
+    const dashboardKeys = [
+      ['budget-lines-summary', 'dashboard', 'snapshot'],
+      ['budget-lines-summary', 'dashboard', 'recent-updates'],
+      ['budget-lines-summary', 'dashboard', 'top-items', 'all', YEAR, 'budget', 5],
+      ['spend-items-summary', 'aggregate'],
+      ['capex-items-summary', 'aggregate'],
+    ] as const;
+    const seed = (client: QueryClient) => {
+      for (const key of dashboardKeys) client.setQueryData([...key], { seeded: true });
+    };
+    const invalidated = (client: QueryClient) => dashboardKeys.map((key) => client.getQueryState([...key])?.isInvalidated);
+
+    setupApi({ empty: true });
+    const saved = renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    seed(saved.queryClient);
+    await waitForAmounts();
+    typeAmount('12000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    await waitFor(() => expect(invalidated(saved.queryClient)).toEqual([true, true, true, true, true]));
+    cleanup();
+
+    mocked.post.mockClear();
+    setupApi({ empty: true });
+    const refused = renderTab(YEAR, { effectiveStart: '2026-04-01' });
+    seed(refused.queryClient);
+    await waitForAmounts();
+    mocked.post.mockRejectedValueOnce(Object.assign(new Error('Forbidden'), { response: { status: 403, data: { message: 'frozen' } } }));
+    typeAmount('12000');
+    await waitFor(() => expect(bulkCalls()).toHaveLength(1));
+    await settle();
+    expect(invalidated(refused.queryClient)).toEqual([false, false, false, false, false]);
+  });
+
   it('clearing the amount writes zero over the period; a column already at zero writes nothing', async () => {
     const state = setupApi();
     renderTab();
@@ -1884,8 +1918,10 @@ describe('BudgetTab keyboard run through the lines', () => {
     // The line kept its row: nothing was drawn again under the focus.
     expect(screen.getAllByTestId('line-row')[1]).toBe(row);
 
-    // A date typed in From is written as soon as it is whole; the focus stays, Tab goes to To.
+    // A date typed in From is written on Enter, once; the focus stays, Tab goes to To.
     fireEvent.change(from, { target: { value: '01/04/2026' } });
+    expect(bulkCalls()).toHaveLength(1);
+    fireEvent.keyDown(from, { key: 'Enter' });
     await waitFor(() => expect(bulkCalls()).toHaveLength(2));
     await waitFor(() => expect(amountLoads()).toBe(loads + 2));
     await settle();
@@ -1896,6 +1932,8 @@ describe('BudgetTab keyboard run through the lines', () => {
     tab();
     expect(focusName()).toBe('Calendar');
     expect(screen.getAllByTestId('line-row')[1]).toBe(row);
+    await settle();
+    expect(bulkCalls()).toHaveLength(2);
   });
 
   it('a unit changed with the keyboard on a saved line is written, and the focus stays on Unit; from the last field, Tab reaches the next line', async () => {

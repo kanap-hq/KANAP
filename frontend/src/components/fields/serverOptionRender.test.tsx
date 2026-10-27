@@ -1,9 +1,27 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
+
+const settings = vi.hoisted(() => ({
+  data: {
+    serverKinds: [{ code: 'physical_server', label: 'Physical Server' }],
+    serverProviders: [{ code: 'azure', label: 'Azure' }, { code: 'other', label: 'Other' }],
+    hostingTypes: [{ code: 'on_prem', label: 'On-prem' }],
+  } as {
+    serverKinds: { code: string; label: string }[];
+    serverProviders: { code: string; label: string }[];
+    hostingTypes: { code: string; label: string }[];
+  },
+}));
+
+vi.mock('../../hooks/useItOpsSettings', () => ({
+  useItOpsSettings: () => ({ data: settings.data }),
+  default: () => ({ data: settings.data }),
+}));
+
 import { renderServerOption, type ServerOption } from './serverOptionRender';
 
 const option = (overrides: Partial<ServerOption> = {}): ServerOption => ({
@@ -23,8 +41,19 @@ function renderOption(value: ServerOption, config: { noMembers: string; showRefe
   );
 }
 
+const SHIPPED_SETTINGS = {
+  serverKinds: [{ code: 'physical_server', label: 'Physical Server' }],
+  serverProviders: [{ code: 'azure', label: 'Azure' }, { code: 'other', label: 'Other' }],
+  hostingTypes: [{ code: 'on_prem', label: 'On-prem' }],
+};
+
 describe('renderServerOption', () => {
   beforeEach(async () => {
+    settings.data = {
+      serverKinds: SHIPPED_SETTINGS.serverKinds.map((item) => ({ ...item })),
+      serverProviders: SHIPPED_SETTINGS.serverProviders.map((item) => ({ ...item })),
+      hostingTypes: SHIPPED_SETTINGS.hostingTypes.map((item) => ({ ...item })),
+    };
     await i18n.changeLanguage('en');
   });
 
@@ -56,5 +85,30 @@ describe('renderServerOption', () => {
     renderOption(option({ asset_reference: 'AST-71' }), { noMembers: 'No members declared' });
     expect(screen.getByText('PAR-SQL-01')).toBeInTheDocument();
     expect(screen.queryByText(/AST-71/)).toBeNull();
+  });
+
+  it('describes a server with catalog labels in French, never the stored codes', async () => {
+    await i18n.changeLanguage('fr');
+    renderOption(option({ environment: 'PROD', kind: 'physical_server', provider: 'on_prem' }), { noMembers: 'Aucun membre déclaré' });
+    const hint = screen.getByText('Prod · Serveur physique · Sur site');
+    expect(hint).not.toBeVisible();
+    expect(screen.getByText('PAR-SQL-01')).toBeVisible();
+    expect(document.body.textContent).not.toMatch(/physical_server|on_prem|\bPROD\b/);
+  });
+
+  it('uses the server provider name when the catalog lists the code there', async () => {
+    await i18n.changeLanguage('fr');
+    renderOption(option({ environment: 'pre_prod', kind: 'physical_server', provider: 'azure' }), { noMembers: 'Aucun membre déclaré' });
+    expect(screen.getByText('Pré-prod · Serveur physique · Azure')).toBeInTheDocument();
+  });
+
+  it('keeps a server kind the tenant renamed', async () => {
+    settings.data = {
+      ...settings.data,
+      serverKinds: [{ code: 'physical_server', label: 'Bare metal' }],
+    };
+    await i18n.changeLanguage('fr');
+    renderOption(option({ environment: 'prod', kind: 'physical_server', provider: 'on_prem' }), { noMembers: 'Aucun membre déclaré' });
+    expect(screen.getByText('Prod · Bare metal · Sur site')).toBeInTheDocument();
   });
 });

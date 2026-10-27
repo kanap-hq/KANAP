@@ -26,6 +26,7 @@ const access = vi.hoisted(() => ({
   aiChat: false,
   aiData: undefined as unknown,
   vulnerabilityFeed: false,
+  profile: { first_name: 'Ada' as string | null, last_name: 'Lovelace' as string | null, email: 'ada@example.com' as string | null },
 }));
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
@@ -37,7 +38,7 @@ vi.mock('../auth/AuthContext', () => ({
       return !!granted && access.rank[granted] >= access.rank[level];
     },
     claims: { isGlobalAdmin: access.isGlobalAdmin, isPlatformAdmin: false, isBillingAdmin: false },
-    profile: { first_name: 'Ada', last_name: 'Lovelace', email: 'ada@example.com' },
+    profile: access.profile,
     // A trial in progress: the subscription banner shows.
     subscription: { status: 'trialing', is_subscription_healthy: false, trial_days_remaining: 5 },
   }),
@@ -364,6 +365,47 @@ describe('Layout user menu: version', () => {
     const menu = within(screen.getByRole('menu'));
     expect(menu.getByRole('menuitem', { name: 'nav:userMenu.logout' })).toBeInTheDocument();
     expect(menu.queryByText(/KANAP/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Layout user menu: display name', () => {
+  const namedProfile = { first_name: 'Ada' as string | null, last_name: 'Lovelace' as string | null, email: 'ada@example.com' as string | null };
+
+  afterEach(() => {
+    access.profile = { ...namedProfile };
+  });
+
+  function openAccountMenu() {
+    renderShell();
+    fireEvent.click(screen.getByTitle('nav:topBar.account'));
+    return within(screen.getByRole('menu'));
+  }
+
+  it('shows the name and the email when the profile has a name', () => {
+    const menu = openAccountMenu();
+    expect(menu.getByText('Ada Lovelace')).toBeInTheDocument();
+    expect(menu.getByText('ada@example.com')).toBeInTheDocument();
+  });
+
+  it('shows the email once when the profile has no name', () => {
+    access.profile = { first_name: null, last_name: null, email: 'owner@example.com' };
+    const menu = openAccountMenu();
+    expect(menu.getAllByText('owner@example.com')).toHaveLength(1);
+    expect(menu.queryByText('User')).not.toBeInTheDocument();
+  });
+
+  it('treats a blank name as absent and still shows the email once', () => {
+    access.profile = { first_name: '  ', last_name: '', email: 'owner@example.com' };
+    const menu = openAccountMenu();
+    expect(menu.getAllByText('owner@example.com')).toHaveLength(1);
+    expect(menu.queryByText('User')).not.toBeInTheDocument();
+  });
+
+  it('keeps a partial name and the email under it', () => {
+    access.profile = { first_name: 'Ada', last_name: null, email: 'ada@example.com' };
+    const menu = openAccountMenu();
+    expect(menu.getByText('Ada')).toBeInTheDocument();
+    expect(menu.getByText('ada@example.com')).toBeInTheDocument();
   });
 });
 

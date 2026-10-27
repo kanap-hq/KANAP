@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
@@ -213,8 +214,26 @@ describe('BudgetPropertiesDrawer end of validity', () => {
     expect(inputs).toHaveLength(2);
     fireEvent.focus(inputs[1]);
     fireEvent.change(inputs[1], { target: { value: '31/12/2027' } });
+    expect(onDisabledAtChange).not.toHaveBeenCalled();
+    fireEvent.blur(inputs[1]);
 
-    expect(onDisabledAtChange).toHaveBeenLastCalledWith(new Date(2027, 11, 31, 23, 59, 0, 0).toISOString());
+    expect(onDisabledAtChange.mock.calls).toEqual([[new Date(2027, 11, 31, 23, 59, 0, 0).toISOString()]]);
+  });
+
+  // The line page saves the effective start at once (one PATCH per value): a day typed over the
+  // saved one ("1", then "5") is one write, when the field is left.
+  it('writes a retyped effective start once, when the field is left', async () => {
+    const user = userEvent.setup();
+    const onEffectiveStartChange = vi.fn();
+    renderDrawer({ mode: 'edit', effectiveStart: '2026-01-21', onEffectiveStartChange });
+    const start = screen.getAllByPlaceholderText('labels.datePlaceholder')[0] as HTMLInputElement;
+    await user.click(start);
+    start.setSelectionRange(0, 2);
+    await user.keyboard('15');
+    expect(start.value).toBe('15/01/2026');
+    expect(onEffectiveStartChange).not.toHaveBeenCalled();
+    await user.tab();
+    expect(onEffectiveStartChange.mock.calls).toEqual([['2026-01-15']]);
   });
 
   it('keeps the end of validity inside the lifecycle group when editing', () => {

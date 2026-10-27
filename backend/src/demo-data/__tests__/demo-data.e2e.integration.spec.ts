@@ -5,6 +5,7 @@ import * as fs from 'node:fs';
 import * as http from 'node:http';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { AddressInfo } from 'node:net';
 import { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
@@ -42,6 +43,7 @@ import { DemoDataService, DemoDataState } from '../demo-data.service';
 // - the tenant is French (activated from a French browser): its budget lines carry the
 //   recommended dimensions in French ("Matériel" for the files' "Hardware"), no English value is
 //   added next to them, and every line has a cost pool, an IT tower and a business domain;
+//   business domain and budget reference are named in French too ("IT partagée" for "Shared IT");
 // - every contact has the supplier and contact type of 09b-contact-suppliers.csv;
 // - the loader's token is refused (401) on another tenant's host, accepted on its own;
 // - the reset brings the tenant back to the state of activation, table by table;
@@ -60,6 +62,52 @@ process.env.S3_BUCKET ||= 'demo-data-spec';
 delete process.env.EMAIL_OVERRIDE;
 
 const FIXTURES = backendPath('fixtures', 'fromage-co');
+
+type FixtureAxis = { code: string; name: string; description: string; values: Array<{ key: string; name: string; description: string }> };
+
+function fixtureDimensionsModule(): Promise<{ fixtureDimensions: (language: string) => FixtureAxis[] }> {
+  // Compiled CommonJS cannot require() this ESM module. The import stays in a string.
+  const importer = new Function('specifier', 'return import(specifier)') as (
+    specifier: string,
+  ) => Promise<{ fixtureDimensions: (language: string) => FixtureAxis[] }>;
+  return importer(pathToFileURL(path.join(FIXTURES, 'fixture-dimensions.mjs')).href);
+}
+
+/**
+ * Business domain and budget reference after the load: the dimension, its values and the
+ * Paris data center line's business domain, in the tenant's language.
+ */
+async function assertOwnDimensions(tenantId: string, language: string) {
+  const { fixtureDimensions } = await fixtureDimensionsModule();
+  const expected = fixtureDimensions(language);
+  const stored: Array<{ code: string; name: string; description: string; values: Array<{ name: string; description: string }> }> = await inTenant(tenantId, (m) => m.query(
+    `SELECT a.code, a.name, a.description,
+            coalesce(json_agg(json_build_object('name', c.name, 'description', c.description) ORDER BY c.sort_order, c.name)
+              FILTER (WHERE c.id IS NOT NULL), '[]'::json) AS values
+       FROM analytics_axes a
+       LEFT JOIN analytics_categories c ON c.axis_id = a.id AND c.tenant_id = a.tenant_id
+      WHERE a.tenant_id = $1 AND a.code IN ('business_domain', 'reference')
+      GROUP BY a.id, a.code, a.name, a.description`, [tenantId]));
+  for (const seed of expected) {
+    const axis = stored.find((item) => item.code === seed.code);
+    assert.ok(axis, `${seed.code} exists`);
+    assert.equal(axis.name, seed.name, `${seed.code}: named in ${language}`);
+    assert.equal(axis.description, seed.description, `${seed.code}: description in ${language}`);
+    assert.deepEqual(
+      axis.values,
+      seed.values.map((value) => ({ name: value.name, description: value.description })),
+      `${seed.code}: values in ${language}`,
+    );
+  }
+  const shared = expected.find((axis) => axis.code === 'business_domain')!.values.find((value) => value.key === 'shared it')!;
+  const [line] = await inTenant(tenantId, (m) => m.query(
+    `SELECT c.name FROM spend_items s
+       JOIN spend_item_analytics_values v ON v.item_id = s.id AND v.tenant_id = s.tenant_id
+       JOIN analytics_axes a ON a.id = v.axis_id AND a.tenant_id = v.tenant_id AND a.code = 'business_domain'
+       JOIN analytics_categories c ON c.id = v.category_id AND c.tenant_id = v.tenant_id
+      WHERE s.tenant_id = $1 AND s.product_name = 'Data center de Paris — hébergement et énergie'`, [tenantId]));
+  assert.equal(line?.name, shared.name, `the file's "Shared IT", in ${language}`);
+}
 
 const INCIDENT_REVIEW_HEADINGS = ['Detailed description', 'Impact', 'Root cause', 'Corrective actions', 'Lessons learned'];
 const REVIEWED_INCIDENTS = [
@@ -95,8 +143,8 @@ function fixtureDimensionCounts(name: string): Map<string, number> {
 
 /**
  * The dimensions after the load: lines with a value per dimension and nature (printed), the
- * recommended dimensions in the tenant's language with no other value, and every line with a
- * cost pool, an IT tower and a business domain.
+ * recommended dimensions in the tenant's language with no other value, the data set's own two
+ * dimensions in that language too, and every line with a cost pool, an IT tower and a business domain.
  */
 async function checkDimensions(tenantId: string) {
   const files = { opex: '14-spend-items.csv', capex: '15-capex-items.csv' } as const;
@@ -116,6 +164,7 @@ async function checkDimensions(tenantId: string) {
     assert.equal(axis.name, seed.name, `${seed.key}: named in French`);
     assert.deepEqual(axis.values, seed.values.map((value) => value.name), `${seed.key}: the French values only, none added by the load`);
   }
+  await assertOwnDimensions(tenantId, 'fr');
 
   const rows: Array<{ code: string; nature: 'opex' | 'capex'; n: number }> = await inTenant(tenantId, (m) => m.query(
     `SELECT a.code, s.nature, count(*)::int AS n
@@ -900,6 +949,7 @@ async function testOlderWorkspace() {
     assert.deepEqual([...new Set(rows.map((row) => row.code))],
       ['business_domain', 'default', 'investment_type', 'it_tower', 'ppe_type', 'priority', 'recurrence', 'reference'], 'no purpose next to the investment type');
     assert.equal(rows.find((row) => row.code === 'default')?.name, 'Cost pool', 'the empty default dimension became the cost pool');
+    await assertOwnDimensions(tenantId, 'en');
     for (const code of ['default', 'it_tower', 'business_domain']) {
       assert.deepEqual([count(code, 'opex'), count(code, 'capex')], [opex, capex], `${code}: every line`);
     }

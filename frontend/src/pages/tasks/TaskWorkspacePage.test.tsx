@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { KanapDialogProvider } from '../../components/design';
 import { createAppTheme } from '../../config/ThemeContext';
 import api from '../../api';
+import { confirmLeave } from '../../hooks/leaveGuard';
 import TaskWorkspacePage from './TaskWorkspacePage';
 
 const translationMock = vi.hoisted(() => {
@@ -151,12 +152,35 @@ vi.mock('react-router-dom', async (importOriginal) => ({
 }));
 
 vi.mock('./components/TaskDetailHeader', () => ({
-  default: ({ onClose, onOriginClick }: { onClose?: () => void; onOriginClick?: () => void }) => (
-    <div data-testid="task-detail-header">
-      <button type="button" onClick={() => onClose?.()}>close-task</button>
-      <button type="button" onClick={() => onOriginClick?.()}>back-task</button>
-    </div>
-  ),
+  default: ({
+    onClose,
+    onOriginClick,
+    onParentClick,
+    onNavigateToProject,
+    projectId,
+    crumbs,
+  }: {
+    onClose?: () => void;
+    onOriginClick?: () => void;
+    onParentClick?: (href: string) => void;
+    onNavigateToProject?: (projectId: string) => void;
+    projectId?: string | null;
+    crumbs?: Array<{ key: string; href: string }>;
+  }) => {
+    const parent = crumbs?.find((crumb) => crumb.key === 'parent');
+    return (
+      <div data-testid="task-detail-header">
+        <button type="button" onClick={() => onClose?.()}>close-task</button>
+        <button type="button" onClick={() => onOriginClick?.()}>back-task</button>
+        {parent ? (
+          <button type="button" onClick={() => onParentClick?.(parent.href)}>parent-breadcrumb</button>
+        ) : null}
+        {projectId && onNavigateToProject ? (
+          <button type="button" onClick={() => onNavigateToProject(projectId)}>project-link</button>
+        ) : null}
+      </div>
+    );
+  },
 }));
 
 vi.mock('./components/TaskPropertiesDrawer', () => ({
@@ -240,13 +264,15 @@ function createLocalStorageMock() {
 
 function renderCreatePage() {
   return render(
-    <KanapDialogProvider>
-      <MemoryRouter initialEntries={['/portfolio/tasks/new/overview']}>
-        <Routes>
-          <Route path="/portfolio/tasks/:id/:tab" element={<TaskWorkspacePage />} />
-        </Routes>
-      </MemoryRouter>
-    </KanapDialogProvider>,
+    <ThemeProvider theme={createAppTheme('light')}>
+      <KanapDialogProvider>
+        <MemoryRouter initialEntries={['/portfolio/tasks/new/overview']}>
+          <Routes>
+            <Route path="/portfolio/tasks/:id/:tab" element={<TaskWorkspacePage />} />
+          </Routes>
+        </MemoryRouter>
+      </KanapDialogProvider>
+    </ThemeProvider>,
   );
 }
 
@@ -549,5 +575,104 @@ describe('TaskWorkspacePage unsaved close', () => {
       expect.objectContaining({ title: 'Move me', description: 'Updated description' }),
     ));
     expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks');
+  });
+
+  it('follows the parent breadcrumb of a clean task without asking', async () => {
+    renderEditPage();
+    await screen.findByLabelText('Task description');
+    fireEvent.click(screen.getByRole('button', { name: 'parent-breadcrumb' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/portfolio/projects/project-a/summary'));
+  });
+
+  it('asks before the parent breadcrumb leaves a dirty task, and Stay keeps the description', async () => {
+    const field = await dirtyDescription();
+    fireEvent.click(screen.getByRole('button', { name: 'parent-breadcrumb' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:unsaved.saveAndLeave.message__0')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.confirm__0' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.cancel__0' })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel__0' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(field).toHaveValue('Updated description');
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      '/portfolio/projects/project-a/tasks/task-1',
+      { description: 'Updated description' },
+    ), { timeout: 4000 });
+  });
+
+  it('asks before the project link leaves a dirty task, and leaving drops the description', async () => {
+    const field = await dirtyDescription();
+    fireEvent.click(screen.getByRole('button', { name: 'project-link' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:unsaved.saveAndLeave.message__0')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.saveAndLeave.cancel__0' }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/portfolio/projects/project-a/activity'));
+    expect(field).toHaveValue('');
+    expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it('asks the same question before a menu link leaves a dirty task', async () => {
+    await dirtyDescription();
+    let answer!: Promise<boolean>;
+    await act(async () => { answer = confirmLeave(); });
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:unsaved.saveAndLeave.message__0')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel__0' }));
+    await expect(answer).resolves.toBe(false);
+    expect(navigateMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      '/portfolio/projects/project-a/tasks/task-1',
+      { description: 'Updated description' },
+    ), { timeout: 4000 });
+  });
+
+  async function typeCreateTitle() {
+    renderCreatePage();
+    const title = await screen.findByPlaceholderText('portfolio:workspace.task.title.placeholder__0');
+    fireEvent.change(title, { target: { value: 'Draft title' } });
+    return title;
+  }
+
+  it('closes a new task with no typed content without asking', async () => {
+    renderCreatePage();
+    await screen.findByPlaceholderText('portfolio:workspace.task.title.placeholder__0');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel__0' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks'));
+  });
+
+  it('asks before Cancel leaves a new task with a title, and Stay keeps it', async () => {
+    const title = await typeCreateTitle();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.cancel__0' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:unsaved.leaveWithoutSaving.message__0')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.confirm__0' })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel__0' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(title).toHaveValue('Draft title');
+  });
+
+  it('asks before the back arrow leaves a new task with a title', async () => {
+    await typeCreateTitle();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.back__0' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.confirm__0' }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/portfolio/tasks'));
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it('asks the same question before a menu link leaves a new task with a title', async () => {
+    const title = await typeCreateTitle();
+    let answer!: Promise<boolean>;
+    await act(async () => { answer = confirmLeave(); });
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:unsaved.leaveWithoutSaving.message__0')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:unsaved.leaveWithoutSaving.cancel__0' }));
+    await expect(answer).resolves.toBe(false);
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(title).toHaveValue('Draft title');
   });
 });

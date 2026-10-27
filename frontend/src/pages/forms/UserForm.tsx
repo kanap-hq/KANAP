@@ -126,13 +126,14 @@ const UserForm = forwardRef<UserFormHandle, {
   }, [defaultValues]);
   const schema = useMemo(() => createUserFormSchema(t), [t]);
   const methods = useZodForm<UserFormValues>({ schema, defaultValues: resolvedDefaults as any });
-  const { register, handleSubmit, formState, watch, control, reset, trigger } = methods;
+  const { register, handleSubmit, formState, watch, control, reset } = methods;
 
-  // Reset form when defaults change (e.g., when selecting another user)
+  // Reset when the person changes. Validating here would show "required" under the email of a
+  // new user before anything is typed. isValid is still computed on mount, without those messages,
+  // so Save stays disabled until the email is valid and enables after an edit.
   useEffect(() => {
     reset(resolvedDefaults as any);
-    void trigger();
-  }, [reset, resolvedDefaults, trigger]);
+  }, [reset, resolvedDefaults]);
 
   useEffect(() => {
     onStateChange?.({ isDirty: formState.isDirty, isValid: formState.isValid, isSubmitting: formState.isSubmitting });

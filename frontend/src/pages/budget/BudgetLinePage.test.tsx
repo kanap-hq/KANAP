@@ -248,10 +248,29 @@ function CreateTargetProbe() {
   </div>;
 }
 
+/** Dashboard and list keys a saved line must drop. The tiles keep these for minutes. */
+const DASHBOARD_QUERY_KEYS = [
+  ['budget-lines-summary', 'dashboard', 'snapshot'],
+  ['budget-lines-summary', 'dashboard', 'recent-updates'],
+  ['budget-lines-summary', 'dashboard', 'top-items', 'all', 2026, 'budget', 5],
+  ['spend-items-summary', 'aggregate'],
+  ['capex-items-summary', 'aggregate'],
+] as const;
+
+function seedDashboard(queryClient: QueryClient) {
+  for (const key of DASHBOARD_QUERY_KEYS) queryClient.setQueryData([...key], { seeded: true });
+}
+
+async function expectDashboardInvalidated(queryClient: QueryClient) {
+  await waitFor(() => {
+    for (const key of DASHBOARD_QUERY_KEYS) expect(queryClient.getQueryState([...key])?.isInvalidated).toBe(true);
+  });
+}
+
 // The routers here render like the app's (`useTransitions={false}` in main.tsx).
 function renderAt(path: string, previous?: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter initialEntries={previous ? [previous, path] : [path]} useTransitions={false}>
@@ -268,6 +287,7 @@ function renderAt(path: string, previous?: string) {
       </ThemeProvider>
     </QueryClientProvider>,
   );
+  return { ...view, queryClient };
 }
 
 describe.each(['opex', 'capex'] as const)('BudgetLinePage %s', (lineNature) => {
@@ -279,6 +299,17 @@ describe('BudgetLinePage create', () => {
     mocked.patch.mockReset();
     mocked.get.mockResolvedValue({ data: {} });
     mocked.post.mockResolvedValue({ data: { id: 'new-id' } });
+  });
+
+  it('refreshes the dashboard tiles after creating a line', async () => {
+    const { queryClient } = renderAt(`/ops/budget/new/overview`);
+    seedDashboard(queryClient);
+    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    await expectDashboardInvalidated(queryClient);
   });
 
   it('creates a line without a supplier and sends none', async () => {
@@ -519,6 +550,13 @@ describe('BudgetLinePage edit', () => {
     fireEvent.click(screen.getByRole('button', { name }));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalled());
   }
+
+  it('refreshes the dashboard tiles after a saved field', async () => {
+    const { queryClient } = renderAt(`/ops/budget/${ITEM_ID}/overview`);
+    seedDashboard(queryClient);
+    await clickOnceLoaded('pick other company');
+    await expectDashboardInvalidated(queryClient);
+  });
 
   it('clears the account in the same write when the new company uses another chart', async () => {
     renderAt(`/ops/budget/${ITEM_ID}/overview`);

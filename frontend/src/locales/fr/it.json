@@ -69,6 +69,7 @@
     "applications": {
       "title": "Applications",
       "newAppService": "Nouvelle application / service",
+      "empty": "Aucune application pour l'instant.",
       "appService": "Application / Service",
       "importCsv": "Importer CSV",
       "exportCsv": "Exporter CSV",
@@ -327,8 +328,8 @@
         "derivedNoInterfaces": "Dérivé (aucune interface liée)",
         "manual": "Manuel"
       },
-      "deleteWarning_one": "Cette action est irréversible. Ses serveurs, interfaces et documents sont conservés ; seuls leurs liens avec cette connexion sont supprimés.",
-      "deleteWarning_other": "Cette action est irréversible. Leurs serveurs, interfaces et documents sont conservés ; seuls leurs liens avec ces connexions sont supprimés.",
+      "deleteWarning_one": "Cette action est irréversible. Les sauts de cette connexion sont supprimés avec elle. Ses serveurs, interfaces et documents sont conservés ; seuls leurs liens avec cette connexion sont supprimés.",
+      "deleteWarning_other": "Cette action est irréversible. Les sauts de chaque connexion sont supprimés avec elle. Leurs serveurs, interfaces et documents sont conservés ; seuls leurs liens avec ces connexions sont supprimés.",
       "delete": {
         "toDelete_one": "{{count}} connexion sera supprimée :",
         "toDelete_other": "{{count}} connexions seront supprimées :",
@@ -787,6 +788,8 @@
       "servers": "Serveurs",
       "selectServers": "Sélectionner des serveurs, clusters ou entités",
       "selectedServers": "Serveurs sélectionnés ({{count}})",
+      "more": "+{{count}}",
+      "removeServer": "Retirer {{name}}",
       "showMultiServer": "Afficher les connexions multi-serveurs",
       "showLayers": "Afficher les couches de connexion",
       "roleBased": "Placement par rôle",
@@ -796,6 +799,7 @@
       "nodeDetails": "Détails du nœud",
       "connectionDetails": "Détails de la connexion",
       "cluster": "Cluster",
+      "clusterLine": "Cluster :",
       "typeValue": "Type : {{value}}",
       "environmentValue": "Environnement : {{value}}",
       "serverType": "Type de serveur :",
@@ -902,7 +906,7 @@
       "more": "+{{count}}",
       "moreItems": "Et {{count}} de plus",
       "trustPeer": {
-        "contains": "Fait tourner {{asset}} ({{zone}})",
+        "contains": "Héberge {{asset}} ({{zone}})",
         "cluster": "Membre du cluster {{asset}} ({{zone}})"
       },
       "selection": {
@@ -984,6 +988,7 @@
       "protocolsValue": "Protocoles : {{value}}",
       "bindingValue": "Liaison : {{env}} · {{leg}}",
       "viewInConnectionMap": "Voir dans la carte des connexions",
+      "openConnection": "Ouvrir la connexion",
       "openInterface": "Ouvrir l'interface",
       "clusterEndpoint": "{{name}} (cluster)"
     },

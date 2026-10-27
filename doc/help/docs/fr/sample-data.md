@@ -19,7 +19,7 @@ Le jeu décrit Fromage & Co, une fromagerie fictive :
 - **18 utilisateurs fictifs**, qui ne peuvent pas se connecter et ne reçoivent aucun e-mail
 - **Des applications et leur cartographie** : instances, interfaces et connexions
 - **Des contrats, le budget de l'année en cours, des projets et des tâches**
-- **Des lignes budgétaires classées sur les [dimensions recommandées](analytics.md#dimensions-recommandees)** : chaque ligne a une nature de coût et un domaine IT, les lignes CAPEX et les lignes build ont un motif, et les lignes CAPEX ont une priorité. Le jeu ajoute aussi **Récurrence**, dans la langue de l'espace de travail, et deux dimensions propres, **Business domain** et **Budget reference**, dont les noms et les valeurs restent en anglais
+- **Des lignes budgétaires classées sur les [dimensions recommandées](analytics.md#dimensions-recommandees)** : chaque ligne a une nature de coût et un domaine IT, les lignes CAPEX et les lignes build ont un motif, et les lignes CAPEX ont une priorité. Le jeu ajoute aussi **Récurrence**, **Domaine métier** et **Référence budgétaire**, avec leurs valeurs, dans la langue de l'espace de travail
 
 Les dates suivent l'année en cours, si bien que le budget paraît toujours à jour. Le chargement prend environ deux minutes.
 
@@ -44,9 +44,9 @@ Ce qu'un nouvel espace de travail crée pour vous (sa première société, le pl
 
 La page suit le chargement étape par étape (par exemple « Étape 4 sur 21 : plans comptables ») et le statut passe à **Chargées** à la fin. La bande de statut indique alors quand les données ont été chargées et par qui. Tout ce que vous voyez dans KANAP se rafraîchit avec les nouvelles données.
 
-**Si un chargement n'est pas possible**, la page n'affiche pas le bouton **Charger les données d'exemple**. Une ligne en explique la raison :
+**Si un chargement n'est pas possible**, la page n'affiche pas le bouton **Charger les données d'exemple**. Elle en indique la raison :
 
-- l'espace de travail contient déjà des données
+- l'espace de travail contient déjà des données. La page liste alors chaque type d'objet qui empêche le chargement, avec son nombre et un lien vers sa liste, par exemple **Applications (4)**, **Fournisseurs (1)**. Retirez-les pour charger les données d'exemple, ou continuez sans elles.
 - l'abonnement est gelé
 - la période d'essai est terminée
 

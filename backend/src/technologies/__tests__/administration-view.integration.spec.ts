@@ -889,7 +889,7 @@ async function testExport() {
       `Runs ${row.reference} guest (Tier 0); Member of cluster ${peers.items[0].reference} vsphere (Tier 0)`,
     ].join(','), 'the asset to raise names what it runs and the cluster it carries');
     const relationLabels = {
-      fr: ['Fait tourner', 'Membre du cluster'],
+      fr: ['Héberge', 'Membre du cluster'],
       de: ['Betreibt', 'Mitglied des Clusters'],
       es: ['Ejecuta', 'Miembro del clúster'],
     } as const;

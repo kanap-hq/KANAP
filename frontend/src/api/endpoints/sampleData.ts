@@ -34,9 +34,14 @@ export type SampleDataState = {
 /** Why a load would be refused now (the codes of the load's errors). */
 export type SampleDataLoadRefusal = 'SUBSCRIPTION_FROZEN' | 'TRIAL_EXPIRED' | 'tenant_not_empty';
 
+/** One kind of object that stands in the way of a load, and how many rows do. */
+export type SampleDataBlocking = { table: string; count: number };
+
 export type SampleDataOverview = SampleDataState & {
   can_load: boolean;
   load_refusal: SampleDataLoadRefusal | null;
+  /** Set when `load_refusal` is `tenant_not_empty` on the page view. Null on the banner view. */
+  blocking: SampleDataBlocking[] | null;
   created_since_load: number | null;
   workspace_name: string;
   loaded_by_name: string | null;

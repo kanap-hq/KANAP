@@ -1,6 +1,5 @@
 import { TechnologyCpeEvents } from '../../technologies/technology-cpe-events';
 import { linkedLineOf } from '../../spend/budget-nature';
-import { countRelatedBudgetLines } from '../../common/relations/related-objects';
 import { hiddenLineCount } from '../../data-access/hidden-links';
 import { copyClassification } from './application-classification';
 import { classificationPatch, classificationReadState } from './application-classification';
@@ -376,6 +375,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     // Budget lines and contracts count only for a caller who reads them (the Relations tab hides them otherwise).
     const readsBudget = opts?.readsBudget !== false;
     const readsContracts = opts?.readsContracts !== false;
+    const readsProcesses = opts?.readsProcesses !== false;
+    const readsTechnologies = opts?.readsTechnologies !== false;
     const rows: Array<{
       opex_count: string | number;
       capex_count: string | number;
@@ -393,8 +394,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
          (${readsContracts ? 'SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()' : 'SELECT 0'}) AS contracts_count,
          (${projectCountSql}) AS projects_count,
          (${requestCountSql}) AS requests_count,
-         (SELECT COUNT(DISTINCT l.technology_id) FROM application_technologies l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS technologies_count,
-         (SELECT COUNT(*) FROM application_business_processes l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS processes_count,
+         (${readsTechnologies ? 'SELECT COUNT(DISTINCT l.technology_id) FROM application_technologies l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()' : 'SELECT 0'}) AS technologies_count,
+         (${readsProcesses ? 'SELECT COUNT(*) FROM application_business_processes l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()' : 'SELECT 0'}) AS processes_count,
          (SELECT COUNT(*) FROM application_links l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS links_count,
          (SELECT COUNT(*) FROM application_attachments l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS attachments_count`,
       params,
@@ -411,12 +412,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       attachments_count: string | number;
     }> = rows[0] || {};
     // The linked lines the Relations tab counts without listing them (`budget_lines_hidden`): those
-    // outside a limited person's data access, or every linked line without the budget right.
-    const budgetLinesHidden = readsBudget
-      ? await hiddenLineCount(mg, 'application', resolvedAppId)
-      : await countRelatedBudgetLines(
-        mg, { links: 'application_spend_items', owner: 'application_id' }, 'application', this.ensureTenantId(opts?.tenantId), resolvedAppId,
-      );
+    // outside a limited person's data access. Without the budget right, the family is not counted.
+    const budgetLinesHidden = readsBudget ? await hiddenLineCount(mg, 'application', resolvedAppId) : 0;
     const counts = {
       opex: Number(row.opex_count || 0),
       capex: Number(row.capex_count || 0),

@@ -328,6 +328,10 @@ or subscriptions must work in both modes.
 - Show business references (`T-4`, `PRJ-3`, `DOC-12`), never raw UUIDs. Do not invent new
   references for tables that have no `item_number`.
 - Exported deliverables (PNG, print) carry the drawing and the date only, no context legend.
+- Every export of data rows (CSV, Excel) is built by the API, on a route whose path ends with
+  `/export` (or marked `@ExportRoute()`), which writes the export's audit entry: who, what,
+  parameters, format, row count. The browser never builds an export file. Chart images and
+  printing stay in the browser: they render the screen.
 - License and marketing copy leads with user benefits (no lock-in, self-hosting, control), not the
   license itself.
 

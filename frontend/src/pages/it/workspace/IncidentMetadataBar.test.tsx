@@ -71,7 +71,27 @@ describe('IncidentMetadataBar detected date popover', () => {
     expect(date.selectionEnd).toBe(date.value.length);
     await user.type(date, '21102026', { skipClick: true });
     expect(date.value).toBe('21/10/2026');
-    expect(onDetectedAtChange).toHaveBeenLastCalledWith(new Date(2026, 9, 21, 14, 5).toISOString());
+    expect(onDetectedAtChange).not.toHaveBeenCalled();
+    await user.keyboard('{Enter}');
+    expect(onDetectedAtChange.mock.calls).toEqual([[new Date(2026, 9, 21, 14, 5).toISOString()]]);
+  });
+
+  it('drops a typed date on a first Escape and closes the popover on a second', async () => {
+    const user = userEvent.setup();
+    const onDetectedAtChange = vi.fn();
+    renderBar(onDetectedAtChange);
+
+    fireEvent.click(screen.getByRole('button', { name: /2022/ }));
+    const date = screen.getByPlaceholderText('dd/mm/yyyy') as HTMLInputElement;
+    const saved = date.value;
+    await user.type(date, '2110', { skipClick: true });
+    await user.keyboard('{Escape}');
+    expect(date.value).toBe(saved);
+    expect(screen.getByPlaceholderText('dd/mm/yyyy')).toBe(date);
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByPlaceholderText('dd/mm/yyyy')).not.toBeInTheDocument());
+    expect(onDetectedAtChange).not.toHaveBeenCalled();
   });
 
   it('leaves the saved timestamp untouched when an invalid date closes with the popover', async () => {

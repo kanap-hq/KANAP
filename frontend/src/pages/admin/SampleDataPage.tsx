@@ -1,7 +1,8 @@
 import React from 'react';
-import { Alert, Box, Button, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Link, Stack, Typography } from '@mui/material';
 import { useTheme, type Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
+import { Link as RouterLink } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import { StatusDot } from '../../components/design';
 import { formatShortDateTime } from '../../lib/dateFormat';
@@ -11,6 +12,7 @@ import { getDotColor, SAMPLE_DATA_STATUS_COLORS } from '../../utils/statusColors
 import { metricStripSx } from '../../theme/stripSx';
 import ForbiddenPage from '../ForbiddenPage';
 import type { SampleDataOverview } from '../../api/endpoints/sampleData';
+import { SAMPLE_DATA_BLOCKING_LISTS } from './sample-data/blockingLists';
 import { LoadSampleDataDialog, ResetWorkspaceDialog, useStepLabel } from './sample-data/SampleDataDialogs';
 import { useSampleData, useSampleDataAvailable } from './sample-data/useSampleData';
 
@@ -53,6 +55,45 @@ function SampleDataStrip({ overview }: { overview: SampleDataOverview }) {
   );
 }
 
+/** Why no load is offered: the objects that stand in the way, or the subscription. */
+function RefusalLine({ overview }: { overview: SampleDataOverview }) {
+  const { t } = useTranslation(['admin', 'errors']);
+  const refusal = overview.load_refusal;
+  if (refusal === 'SUBSCRIPTION_FROZEN' || refusal === 'TRIAL_EXPIRED') {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        {t(`sampleData.loadRefusal.${refusal}`)}
+      </Typography>
+    );
+  }
+  const blocking = overview.blocking ?? [];
+  return (
+    <Stack spacing={0.75}>
+      <Typography variant="body2" color="text.secondary">{t('sampleData.notEmpty')}</Typography>
+      {blocking.length > 0 ? (
+        <Typography variant="body2" component="div" color="text.secondary">
+          {t('sampleData.blockingLead')}{' '}
+          {blocking.map((item, index) => {
+            const list = SAMPLE_DATA_BLOCKING_LISTS[item.table];
+            const label = list ? t(list.labelKey) : item.table;
+            const text = t('sampleData.blockingItem', { label, count: item.count });
+            return (
+              <React.Fragment key={item.table}>
+                {index > 0 ? ', ' : null}
+                {list ? (
+                  <Link component={RouterLink} to={list.to} underline="hover" color="primary">{text}</Link>
+                ) : (
+                  <Box component="span">{text}</Box>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </Typography>
+      ) : null}
+    </Stack>
+  );
+}
+
 /**
  * Administration › Sample data: load the Fromage & Co set into an empty workspace, follow the
  * load, and erase everything to go back to the starting state. Administrator role only, cloud
@@ -80,13 +121,7 @@ export default function SampleDataPage() {
     </Box>
   );
 
-  // Why no load is offered: the workspace holds data, or the subscription refuses it.
-  const refusal = overview?.load_refusal;
-  const refusalLine = (
-    <Typography variant="body2" color="text.secondary">
-      {refusal === 'SUBSCRIPTION_FROZEN' || refusal === 'TRIAL_EXPIRED' ? t(`sampleData.loadRefusal.${refusal}`) : t('sampleData.notEmpty')}
-    </Typography>
-  );
+  const refusalLine = overview ? <RefusalLine overview={overview} /> : null;
 
   const body = (() => {
     if (!overview) return null;

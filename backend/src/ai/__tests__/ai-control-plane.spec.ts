@@ -592,6 +592,8 @@ function createDispatcher(options?: {
     resolveApprovedAction?: (...args: any[]) => Promise<AiApproval>;
     resolveApprovedActionForExecution?: (...args: any[]) => Promise<AiApproval>;
   };
+  redact?: (value: unknown, fields?: string[]) => unknown;
+  recordEvidence?: (context: unknown, seed: { payload?: unknown }) => Promise<{ id: string }>;
 }) {
   const { stores, manager } = createMemoryManager();
   const contract = options?.contract ?? baseContract();
@@ -611,8 +613,8 @@ function createDispatcher(options?: {
         summary: 'summary',
       }),
       hash: (value: unknown) => hashStableJson(value),
-      redact: (value: unknown) => value,
-      recordEvidence: async () => ({ id: 'evidence-1' }),
+      redact: options?.redact ?? ((value: unknown) => value),
+      recordEvidence: options?.recordEvidence ?? (async () => ({ id: 'evidence-1' })),
       recordAdapterEvidenceSeeds: async (_ctx: unknown, seeds: unknown[]) =>
         seeds.map((_seed, index) => ({ id: `adapter-evidence-${index + 1}` })),
     } as any,
@@ -1112,6 +1114,71 @@ function testEvidenceRedactionAndHashing() {
   for (const payload of [{ a: 1, b: undefined, c: [new Date('2026-06-12T00:00:00.000Z'), undefined] }]) {
     assert.equal(service.hash(payload), service.hash(JSON.parse(JSON.stringify(payload))));
   }
+}
+
+async function testDispatcherPreviewKeepsTheUserEmailWhileModelOutputStaysRedacted() {
+  const evidence = new AiEvidenceService({} as any);
+  const recordedPayloads: unknown[] = [];
+  let ensuredPreviews: unknown = null;
+  const preview = {
+    preview_id: 'preview-1',
+    tool_name: 'create_task',
+    status: 'pending',
+    target: { entity_type: 'tasks', entity_id: null, ref: null, title: 'Install server' },
+    changes: {
+      requestor: { label: 'Requestor', from: null, to: 'owner@example.com', format: 'text' },
+    },
+    summary: 'Create standalone task "Install server".',
+    requires_confirmation: true,
+    actions: ['approve', 'reject'],
+  };
+  const { dispatcher, context } = createDispatcher({
+    contract: baseContract({
+      name: 'create_task',
+      effect: 'propose',
+      risk_level: 'medium',
+      max_autonomy_level: 'A2',
+      default_approval: 'none',
+      supported_surfaces: ['chat'],
+      mcp_exposure: { enabled: false, read_only: false },
+      idempotency: { mode: 'non_idempotent' },
+      evidence: {
+        persist_input: false,
+        persist_output: true,
+        redact_fields: [],
+        retention: 'audit',
+      },
+      compatibility: { ai_tool_name: 'create_task' },
+    }),
+    handler: async () => preview,
+    redact: (value, fields) => evidence.redact(value, fields),
+    recordEvidence: async (_context, seed) => {
+      recordedPayloads.push(seed.payload);
+      return { id: 'evidence-1' };
+    },
+    actions: {
+      ensureForPreviewDtos: async (_context, previews) => {
+        ensuredPreviews = previews;
+        return [];
+      },
+    },
+  });
+
+  const result = await dispatcher.execute(context, {
+    capabilityName: 'create_task',
+    input: { title: 'Install server' },
+  });
+
+  const output = result.output as typeof preview;
+  assert.equal(output.changes.requestor.to, '[REDACTED_EMAIL]');
+  assert.equal(result.previews?.[0]?.changes.requestor.to, 'owner@example.com');
+  assert.equal((recordedPayloads[0] as typeof preview).changes.requestor.to, '[REDACTED_EMAIL]');
+  assert.equal(
+    (ensuredPreviews as Array<typeof preview>)[0]?.changes.requestor.to,
+    'owner@example.com',
+  );
+  assert.equal(evidence.hash(output), evidence.hash(recordedPayloads[0]));
+  assert.notEqual(evidence.hash(output), evidence.hash(preview));
 }
 
 async function testDispatcherCreatesDurableRecordsForSuccessfulCall() {
@@ -16402,6 +16469,7 @@ function testRoutingDriftSnapshotIsKindScopedAndIgnoresTheAgentAccount() {
 async function run() {
   testCapabilityContractRejectsMcpWriteExposure();
   testEvidenceRedactionAndHashing();
+  await testDispatcherPreviewKeepsTheUserEmailWhileModelOutputStaysRedacted();
   await testDispatcherCreatesDurableRecordsForSuccessfulCall();
   await testDispatcherValidatesProviderInputBeforeHandler();
   await testDispatcherRecordsDeniedSurface();

@@ -2,6 +2,7 @@
 import 'dotenv/config';
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
+import AdmZip = require('adm-zip');
 import { ConflictException } from '@nestjs/common';
 import { DataSource, EntityManager, QueryRunner } from 'typeorm';
 import appDataSource from '../../data-source';
@@ -136,6 +137,18 @@ async function testExport(runner: QueryRunner, f: Fixture) {
     const all = await exportOf(m, f.persons.marta, { q: 'no-such-line' }, true);
     assert.deepEqual(names(all.content), ['L2', 'L3', 'L4', 'L5'], '"all lines": every line Marta reads, no other');
     assert.equal(all.dataAccessLimited, true, 'the export says it is calculated on the access');
+    assert.equal(all.rows, 4);
+    // The same file in xlsx: the lines of her access only.
+    const { ids } = await budgetList.budgetListIds(SUMMARY_SCOPES.opex, deps, exportListQuery({ format: 'xlsx' }, true), m);
+    const workbook = await budgetFileService().exportFile('opex', ids, { manager: m, tenantId: f.tenantId, userId: f.persons.marta }, {
+      language: 'en', amountYears: '2026', columns: 'budget', detail: 'yearly', format: 'xlsx',
+    });
+    assert.equal(workbook.filename, 'budget.xlsx');
+    assert.equal(workbook.rows, 4);
+    assert.equal(workbook.dataAccessLimited, true);
+    const sheet = new AdmZip(workbook.content as Buffer).readAsText('xl/worksheets/sheet1.xml');
+    assert.deepEqual(names(sheet), ['L2', 'L3', 'L4', 'L5'], 'the xlsx file: every line Marta reads, no other');
+    assert.equal((sheet.match(/<row /g) ?? []).length, 5, 'a header and four lines');
     const filtered = await exportOf(m, f.persons.marta, { q: 'DA line L4' }, false);
     assert.deepEqual(names(filtered.content), ['L4'], 'the list filter');
     const hidden = await exportOf(m, f.persons.marta, { q: 'DA line L1' }, false);
@@ -146,7 +159,7 @@ async function testExport(runner: QueryRunner, f: Fixture) {
     assert.deepEqual(names(all.content), ['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7']);
     assert.equal(all.dataAccessLimited, false);
   });
-  console.log('  export: the list filter and "all lines" give the visible lines only, flagged limited: OK');
+  console.log('  export: the list filter and "all lines" give the visible lines only, flagged limited, in CSV and xlsx: OK');
 }
 
 async function testNumbers(runner: QueryRunner, f: Fixture) {

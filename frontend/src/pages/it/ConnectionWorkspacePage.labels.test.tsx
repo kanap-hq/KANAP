@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -65,7 +65,10 @@ vi.mock('../../hooks/useItOpsSettings', () => ({
         { code: 'https', label: 'HTTPS' },
         { code: 'unknown', label: 'Unknown' },
       ],
-      lifecycleStates: [{ code: 'active', label: 'Active' }],
+      lifecycleStates: [
+        { code: 'active', label: 'Active' },
+        { code: 'legacy', label: 'Legacy', deprecated: true },
+      ],
       interfacePatterns: [{ code: 'rest_api_sync', label: 'REST API (sync)' }],
     },
   }),
@@ -106,6 +109,35 @@ describe('ConnectionWorkspacePage endpoint and protocol names', () => {
     expect(await screen.findByText('Utilisateurs internes → PAR-DC1')).toBeInTheDocument();
     expect(screen.getByText('HTTPS, Inconnu')).toBeInTheDocument();
     expect(document.body.textContent).not.toContain('entity:');
+  });
+
+  it('opens a connection with no criticality without a null value warning, and retires a lifecycle in the locale', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      await i18n.changeLanguage('fr');
+      render(
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <MemoryRouter initialEntries={['/it/connections/c-1/overview']}>
+            <Routes>
+              <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+        </QueryClientProvider>,
+      );
+      expect(await screen.findByText('Utilisateurs internes → PAR-DC1')).toBeInTheDocument();
+      const logged = errors.mock.calls.map((call) => call.map((part) => String(part)).join(' ')).join('\n');
+      expect(logged).not.toContain('should not be null');
+
+      const drawer = document.querySelector('aside');
+      expect(drawer).toBeTruthy();
+      fireEvent.mouseDown(within(drawer as HTMLElement).getAllByRole('combobox')[0]);
+      expect(await screen.findByRole('option', { name: 'Legacy (plus proposé)' })).toBeInTheDocument();
+      expect(screen.queryByRole('option', { name: /\(deprecated\)/ })).toBeNull();
+    } finally {
+      errors.mockRestore();
+    }
   });
 
   it('shows the linked interface step and pattern by name, never their codes', async () => {

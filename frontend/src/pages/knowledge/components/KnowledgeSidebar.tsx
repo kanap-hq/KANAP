@@ -104,6 +104,8 @@ interface KnowledgeSidebarProps {
   classificationError: string | null;
   // Relations
   relationSelections: Record<RelationKey, RelationOption[]>;
+  /** The families the person reads, as the document returned them: only these show. All by default. */
+  relationKeys?: RelationKey[];
   onRelationSelectionsChange: (key: RelationKey, values: RelationOption[]) => void;
   relationSearch: Record<RelationKey, string>;
   onRelationSearchChange: (key: RelationKey, value: string) => void;
@@ -190,6 +192,7 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
   onClassificationRowsChange,
   classificationError,
   relationSelections,
+  relationKeys = Object.keys(RELATION_LABELS) as RelationKey[],
   onRelationSelectionsChange,
   relationSearch,
   onRelationSearchChange,
@@ -258,7 +261,7 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
         .filter((row: { label: string }) => !!row.label)
     : [];
   const readOnlyRelations = React.useMemo(() => (
-    (Object.keys(RELATION_LABELS) as RelationKey[])
+    relationKeys
       .map((key) => ({
         key,
         label: t(`sidebar.relations.labels.${key}`),
@@ -268,7 +271,7 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
         })),
       }))
       .filter((row) => row.items.length > 0)
-  ), [relationSelections, t]);
+  ), [relationKeys, relationSelections, t]);
   const mergedContributorOptions = React.useMemo(() => {
     const out = [...contributorOptions];
     const seen = new Set(out.map((row) => row.id));
@@ -302,20 +305,24 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
     return option.id === currentUserId ? `${baseLabel} ${t('common:selects.meSuffix')}` : baseLabel;
   }, [currentUserId, formatContributorLabel, t]);
   const renderContributorOption = React.useCallback((
-    props: React.HTMLAttributes<HTMLLIElement>,
+    props: React.HTMLAttributes<HTMLLIElement> & { key: React.Key },
     option: ContributorOption,
-  ) => (
-    <React.Fragment key={option.id}>
-      <li {...props}>
-        <div style={{ fontWeight: 500 }}>
-          {getContributorOptionLabel(option)}
-        </div>
-      </li>
-      {option.id === currentUserId && mergedContributorOptions.length > 1 && (
-        <Divider sx={(theme) => ({ borderColor: theme.palette.kanap.border.soft })} />
-      )}
-    </React.Fragment>
-  ), [currentUserId, getContributorOptionLabel, mergedContributorOptions.length]);
+  ) => {
+    // React wants the key passed on its own, not spread with the other props.
+    const { key, ...optionProps } = props;
+    return (
+      <React.Fragment key={option.id}>
+        <li {...optionProps}>
+          <div style={{ fontWeight: 500 }}>
+            {getContributorOptionLabel(option)}
+          </div>
+        </li>
+        {option.id === currentUserId && mergedContributorOptions.length > 1 && (
+          <Divider sx={(theme) => ({ borderColor: theme.palette.kanap.border.soft })} />
+        )}
+      </React.Fragment>
+    );
+  }, [currentUserId, getContributorOptionLabel, mergedContributorOptions.length]);
   const getContributorValue = React.useCallback((id: string | null | undefined) => {
     if (!id) return null;
     return mergedContributorOptions.find((row) => row.id === id) || null;
@@ -1071,7 +1078,7 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
                   </Stack>
                 ) : (
                   <Stack spacing={1.5}>
-                    {(Object.keys(RELATION_LABELS) as RelationKey[]).map((key) => {
+                    {relationKeys.map((key) => {
                       const mergedOptions = [
                         ...relationOptions[key],
                         ...relationSelections[key].filter((s) => !relationOptions[key].some((o) => o.id === s.id)),

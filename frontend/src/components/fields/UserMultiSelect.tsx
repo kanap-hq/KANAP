@@ -67,16 +67,20 @@ export default function UserMultiSelect({
       }}
       getOptionLabel={(option) => formatName(option)}
       size={size}
-      renderOption={(props, option) => (
-        <React.Fragment key={option.id}>
-          <li {...props}>
-            <div style={{ fontWeight: 500 }}>
-              {formatName(option)}{option.id === myId ? ` ${t('selects.meSuffix')}` : ''}
-            </div>
-          </li>
-          {option.id === myId && !picker.searching && <Divider />}
-        </React.Fragment>
-      )}
+      renderOption={(props, option) => {
+        // React wants the key passed on its own, not spread with the other props.
+        const { key, ...optionProps } = props;
+        return (
+          <React.Fragment key={option.id}>
+            <li {...optionProps}>
+              <div style={{ fontWeight: 500 }}>
+                {formatName(option)}{option.id === myId ? ` ${t('selects.meSuffix')}` : ''}
+              </div>
+            </li>
+            {option.id === myId && !picker.searching && <Divider />}
+          </React.Fragment>
+        );
+      }}
       renderTags={(tagValue, getTagProps) =>
         tagValue.map((option, index) => (
           <Chip

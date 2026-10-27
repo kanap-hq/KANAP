@@ -27,6 +27,7 @@
     "discard": "Verwerfen",
     "edit": "Bearbeiten",
     "editTitle": "Titel bearbeiten",
+    "editDescription": "Beschreibung bearbeiten",
     "clear": "Leeren",
     "continue": "Fortfahren",
     "selectAll": "Alle auswählen",
@@ -527,7 +528,7 @@
       "customize": "Anpassen",
       "title": "Einstellungen des Budget-Dashboards",
       "columns": "Betragsspalten",
-      "tenantColumns": "Spalten des Mandanten",
+      "tenantColumns": "Spalten des Arbeitsbereichs",
       "atLeastOne": "Wählen Sie mindestens eine Betragsspalte.",
       "saveFailed": "Die Dashboard-Einstellungen konnten nicht gespeichert werden."
     }
@@ -1462,8 +1463,8 @@
   },
   "tenant": {
     "notFound": {
-      "title": "Mandant nicht gefunden",
-      "message": "Dieser Mandant existiert nicht oder ist nicht mehr verfügbar. Sie werden in Kürze auf unsere Website weitergeleitet.",
+      "title": "Arbeitsbereich nicht gefunden",
+      "message": "Dieser Arbeitsbereich existiert nicht oder ist nicht mehr verfügbar. Sie werden in Kürze auf unsere Website weitergeleitet.",
       "redirecting": "Weiterleitung zu {{url}}"
     }
   },

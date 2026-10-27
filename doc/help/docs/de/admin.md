@@ -86,8 +86,8 @@ Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Datenänder
   - Aktion
   - Quelle (`user`, `system`, `webhook`)
 - Beliebige Zeile öffnen, um vollständige Details anzuzeigen:
-  - Metadaten-Chips (Datum, Tabelle, Aktion, Quelle, Grund oder Quellreferenz, Mandant, Datensatz-ID, Benutzer)
-  - Die Geschäftsreferenz des Datensatzes in der Kopfzeile (zum Beispiel `PRJ-3`), sofern er eine hat
+  - Metadaten-Chips (Datum, Tabelle, Aktion, Quelle, Grund oder Quellreferenz, Datensatz, Benutzer)
+  - Die Geschäftsreferenz des Datensatzes in der Kopfzeile (zum Beispiel `PRJ-3`, `APP-12`, `AST-31`, `LOC-4`, `CONN-2` oder `INT-8`), sofern der Eintrag eine trägt. Ohne Referenz zeigt die Kopfzeile **Kennung** und behält die gespeicherte ID in einem Tooltip
   - Eine Tabelle der Felder: **Feld**, **Vorher** und **Nachher** bei einer Änderung, **Feld** und **Wert** bei jedem anderen Eintrag. Feldnamen erscheinen in Ihrer Sprache, sofern bekannt. Datumsangaben, Ja/Nein-Werte und Personen werden lesbar dargestellt; andere Kennungen erscheinen als **Kennung**, mit dem Wert in einem Tooltip. Technische Felder wie `id`, `tenant_id` und `updated_at` werden ausgelassen
   - **Rohdaten anzeigen** zeigt das vollständige JSON vorher und nachher
 - Das Protokoll als CSV exportieren (siehe unten)

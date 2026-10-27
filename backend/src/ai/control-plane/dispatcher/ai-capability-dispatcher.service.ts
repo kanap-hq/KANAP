@@ -8,6 +8,7 @@ import { AiExecutionContextWithManager } from '../../ai.types';
 import {
   AiActionRequestService,
   mutationPreviewDtosFromCapabilityResult,
+  userFacingPreviewDtosFromCapabilityResult,
 } from '../action-request/ai-action-request.service';
 import { AiApprovalService } from '../approval/ai-approval.service';
 import { AiCapabilityRegistry } from '../capability/ai-capability.registry';
@@ -489,6 +490,9 @@ export class AiCapabilityDispatcherService {
       // capabilities in the same transaction still run. The tenant context set before stays.
       const rawOutput = await withSavepoint(context.manager, () => handler(context, input.input, handlerExecution));
       const output = this.evidence.redact(rawOutput, contract.redaction_policy.fields) as T;
+      // The card the user approves keeps the handler's own labels (a name, or
+      // the user's email). `output` stays redacted for the model and the evidence.
+      const userPreviews = userFacingPreviewDtosFromCapabilityResult(rawOutput);
       const outputSummary = this.evidence.summarize(output);
       const status = toOutputStatus(output);
       const providerError = providerErrorMetadata(output);
@@ -529,7 +533,7 @@ export class AiCapabilityDispatcherService {
 
       let firstActionRequest: AiActionRequest | null = null;
       if (contract.effect === 'propose') {
-        const previews = mutationPreviewDtosFromCapabilityResult(output);
+        const previews = mutationPreviewDtosFromCapabilityResult(rawOutput);
         const actionRequests = await this.actions.ensureForPreviewDtos(context, previews, {
           runId: run.id,
           toolExecutionId: toolExecution.id,
@@ -571,6 +575,7 @@ export class AiCapabilityDispatcherService {
         step_id: step.id,
         tool_execution_id: toolExecution.id,
         output,
+        previews: userPreviews,
       };
     } catch (error: any) {
       const message = error?.message || 'Capability execution failed.';

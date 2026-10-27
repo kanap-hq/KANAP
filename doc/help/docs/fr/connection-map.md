@@ -117,9 +117,11 @@ Vous pouvez également zoomer avec la molette de la souris et faire un panoramiq
 
 Cliquez sur un nœud serveur ou cluster pour mettre en évidence ses connexions et ouvrir un panneau de détails affichant :
 
-- **Type de serveur**, **Site du serveur**, **Système d'exploitation**, **Segment réseau**, **Adresse IP**
+- **Type de serveur**, **Site du serveur**, **Système d'exploitation**, **Segment réseau**, **Adresse IP**, **Cluster**
 - **Applications affectées** : Apps s'exécutant sur ce serveur, regroupées par environnement. Sur un membre, une app affectée à son cluster s'affiche « via » le nom du cluster. Cliquez sur un nom d'app pour l'ouvrir.
 - Bouton **Ouvrir le serveur** ou **Voir le cluster** pour ouvrir l'espace de travail. **Voir le cluster** ouvre le cluster sur son onglet **Exploitation**, où se gèrent ses membres
+
+Le panneau liste chaque adresse IP du serveur. Le segment réseau est la zone réseau du sous-réseau de la première adresse IP. Sur un membre, **Cluster** nomme chaque cluster auquel il appartient, et chaque nom ouvre ce cluster.
 
 Cliquez sur un nœud entité pour voir son type et son environnement.
 

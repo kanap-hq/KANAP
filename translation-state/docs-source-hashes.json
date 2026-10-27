@@ -1,6 +1,6 @@
 {
   "files": {
-    "admin.md": "7e86d2e9325810dd3fa0c67425384848",
+    "admin.md": "cdb02c15112aaf36c7641f8c3e1d3fbd",
 
     "administration-view.md": "da451010a627e33f085ffd88174774ba",
 
@@ -12,9 +12,9 @@
 
     "agents-shared-context.md": "1ee33015c1a9ab8056ab07f0c299e29b",
 
-    "agents-workspace.md": "3e9bf4decb68e99cfec0941526739007",
+    "agents-workspace.md": "777070d650f086745e7dd2e7f8a9e24a",
 
-    "ai-assistant.md": "410f48ac32348be18a8e6179266e1951",
+    "ai-assistant.md": "b5a5c481abf637fd22ebe2a0f339d849",
 
     "ai-models.md": "dd41b5b504573ad8a51d75cedcdc1c92",
 
@@ -46,13 +46,13 @@
 
     "connected-apps.md": "a5ccbff16dcd15aa33c08505ca236702",
 
-    "connection-map.md": "93d4cf51d15462eb448601caf96b905b",
+    "connection-map.md": "8e3ad1a508e7a1b4dac48d203c39d169",
 
-    "connections.md": "e91425fdd8d6f0838d8cc677c3af2db8",
+    "connections.md": "1229401eae1d1c8e26fd1ace323cea86",
 
     "contacts.md": "9c6735247659addd9691f4b00323df1d",
 
-    "contracts.md": "1700e82d6a621bd39e29dee0da87b08c",
+    "contracts.md": "356c3ce424f116c18acefccafcb1819a",
 
     "cost-centers.md": "8ea331bf7f8e877d723ce6b82eba1041",
 
@@ -60,7 +60,7 @@
 
     "currencies.md": "8de455ec65c514b76c582744f9641cc0",
 
-    "data-access.md": "ae16355753e982b1917e8f160a312a82",
+    "data-access.md": "823ec3317525c7dd0779245e4c873705",
 
     "departments.md": "33aff6bbd5aad01108ec450d1ae9d8d8",
 
@@ -74,19 +74,19 @@
 
     "fast-track/task-types.md": "a6adae660a852575fbc2f2de3a80e825",
 
-    "incidents.md": "6eba6ccebb4cee7067372b6ab386ac97",
+    "incidents.md": "d709f184cc46898ee33909fd3c54fb92",
 
     "index.md": "8169c396632373b983f98cd611338107",
 
     "integrations.md": "a85a5f58ba84582a323c330f8d611e2f",
 
-    "interface-map.md": "198b27112d4f4805c5a7c7025b2859c8",
+    "interface-map.md": "fcbe7ba8d14b23a42356114f4e3c7ba8",
 
     "interfaces.md": "2f6b831a1fa904fb063cef8c054574c5",
 
     "it-ops-settings.md": "3f8682887acd585ea7400beb461b23be",
 
-    "knowledge.md": "11f40eb8f2e601eac2c37882189d9ad7",
+    "knowledge.md": "0174572e4800ed99121c93909489bba8",
 
     "locations.md": "2e60572ee321c25b00409fb93bd1860b",
 
@@ -126,13 +126,13 @@
 
     "reports.md": "99706d482a923ff2f71744495aaab170",
 
-    "sample-data.md": "db6b2b405d30aaddb58b138e27cd1a1c",
+    "sample-data.md": "9c66b634a51a55db02e07923eefa143b",
 
     "scheduled-tasks.md": "7f96af09c829079cb9ad97db9f765dbe",
 
     "suppliers.md": "29fc60778b9db0f665382b7926d224b5",
 
-    "tasks.md": "622309c5338e9cd0b34168b41bbde3a3",
+    "tasks.md": "bee2e9f5e3511d4843817809f2956a95",
 
     "technologies.md": "a80c00e63ee403f7ddc4e41e72662a72",
 

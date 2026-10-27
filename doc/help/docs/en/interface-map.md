@@ -151,7 +151,7 @@ For the selected interface and the current environment:
 - **Criticality**, **Route**, **Bindings count**, **Via middleware** (yes/no)
 - **Endpoints**: For each binding in the active environment, shows source app -> target app, leg type, job name, source endpoint, and target endpoint
 - **Infra connections**: Infrastructure connections linked to this interface for the current environment. Each card shows source, destination, protocols, and the binding's environment / leg type. From the card you can:
-  - Click **Edit** to open the connection workspace
+  - Click **Open connection** to open the connection workspace
   - Click **View in Connection Map** to jump to the infrastructure topology, pre-focused on the connection
 - **Open interface**: Opens the interface workspace
 

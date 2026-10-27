@@ -749,16 +749,27 @@ export class AssetsListService extends AssetsBaseService {
       via_clusters: row.via_clusters ?? [],
     }));
 
+    // The segment is the zone of the first address's subnet, the same value as the asset list.
+    const detail: { operating_system: string | null; network_segment: string | null } | undefined = (await mg.query(
+      `WITH ${assetSubnetsCte('$1')}
+       SELECT ${ASSET_OS_LABEL} AS operating_system,
+              ${ASSET_NETWORK_ZONE_SQL} AS network_segment
+         FROM assets a
+        WHERE a.tenant_id = $1 AND a.id = $2`,
+      [tenantId, asset.id],
+    ))[0];
+    // A cluster is never a member: this list is empty for it, and for a plain asset of no cluster.
+    const clusters = (await clusterMembershipsOf(mg, tenantId, [asset.id])).get(asset.id) ?? [];
+
     return {
       id: asset.id,
       name: asset.name,
       kind: asset.kind,
       environment: asset.environment,
-      operating_system: (await mg.query(
-        `SELECT ${ASSET_OS_LABEL} AS operating_system FROM assets a WHERE a.tenant_id = $1 AND a.id = $2`,
-        [tenantId, asset.id],
-      ))[0]?.operating_system ?? null,
+      operating_system: detail?.operating_system ?? null,
+      network_segment: detail?.network_segment ?? null,
       ip_addresses: asset.ip_addresses,
+      clusters,
       location_reference,
       location_name,
       assigned_applications,

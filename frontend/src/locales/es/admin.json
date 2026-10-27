@@ -32,7 +32,7 @@
       "labelPlaceholder": "Ej.: Cliente MCP de escritorio"
     },
     "glpi": {
-      "description": "Configure credenciales GLPI por tenant para que Plaid pueda importar tickets GLPI seleccionados como tareas de KANAP después de la confirmación del usuario.",
+      "description": "Configure credenciales GLPI de este espacio de trabajo para que Plaid pueda importar tickets GLPI seleccionados como tareas de KANAP después de la confirmación del usuario.",
       "fields": {
         "appToken": "Token de aplicación",
         "enabled": "Habilitar importación de tickets GLPI",
@@ -272,7 +272,6 @@
       "source": "Origen: {{value}}",
       "sourceRef": "Ref. de origen: {{value}}",
       "table": "Tabla: {{value}}",
-      "tenant": "Espacio de trabajo: {{value}}",
       "title": "Detalles de la entrada de auditoría",
       "user": "Usuario: {{value}}",
       "value": "Valor"
@@ -1103,6 +1102,120 @@
       "builtIn": "Integrado",
       "system": "Sistema"
     },
+    "builtIn": {
+      "administrator": {
+        "name": "Administrador",
+        "description": "Administrador del sistema, con acceso a todas las funciones"
+      },
+      "agentAdmin": {
+        "name": "Administrador de Agentes IA",
+        "description": "Configura los agentes IA, concede autonomía y gestiona el ciclo de vida de los agentes"
+      },
+      "agentContributor": {
+        "name": "Colaborador de Agentes IA",
+        "description": "Revisa las propuestas de los agentes IA, las aprueba o las rechaza, ejecuta comprobaciones y pone los agentes en pausa"
+      },
+      "agentReader": {
+        "name": "Lector de Agentes IA",
+        "description": "Consulta los agentes IA, su actividad y su rendimiento, en solo lectura"
+      },
+      "aiAdministrator": {
+        "name": "Administrador IA",
+        "description": "Puede gestionar la configuración de IA del espacio de trabajo y usar el chat nativo y las herramientas de lectura MCP"
+      },
+      "aiChatOperator": {
+        "name": "Operador de chat IA",
+        "description": "Puede usar las funciones de chat IA que preparan acciones de IA pendientes de confirmación"
+      },
+      "aiChatUser": {
+        "name": "Usuario de chat IA",
+        "description": "Puede usar herramientas de chat IA de solo lectura, dentro de los permisos existentes"
+      },
+      "aiMcpUser": {
+        "name": "Usuario de MCP IA",
+        "description": "Puede usar claves API MCP personales para herramientas de IA de solo lectura"
+      },
+      "budgetAdministrator": {
+        "name": "Administrador de presupuesto",
+        "description": "Control total de la gestión presupuestaria: líneas presupuestarias, contratos e informes"
+      },
+      "budgetMember": {
+        "name": "Miembro de presupuesto",
+        "description": "Puede gestionar las líneas presupuestarias y los contratos, y consultar los informes"
+      },
+      "budgetReader": {
+        "name": "Lector de presupuesto",
+        "description": "Acceso de solo lectura a los datos presupuestarios y a los informes"
+      },
+      "businessContributor": {
+        "name": "Colaborador de negocio",
+        "description": "Puede enviar solicitudes, contribuir a los proyectos y a las tareas, y consultar las aplicaciones asignadas"
+      },
+      "contact": {
+        "name": "Contacto",
+        "description": "Contacto del directorio, sin acceso a la aplicación de forma predeterminada"
+      },
+      "itLandscapeAdministrator": {
+        "name": "Administrador de panorama IT",
+        "description": "Control total del panorama IT: aplicaciones, infraestructura y configuración"
+      },
+      "itLandscapeMember": {
+        "name": "Miembro de panorama IT",
+        "description": "Puede gestionar las aplicaciones y la infraestructura"
+      },
+      "itLandscapeReader": {
+        "name": "Lector de panorama IT",
+        "description": "Acceso de solo lectura a los datos del panorama IT"
+      },
+      "knowledgeAdministrator": {
+        "name": "Administrador de base de conocimiento",
+        "description": "Control total de los documentos, las bibliotecas, los tipos y las carpetas de la base de conocimiento"
+      },
+      "knowledgeMember": {
+        "name": "Miembro de base de conocimiento",
+        "description": "Puede crear, editar y relacionar documentos de la base de conocimiento"
+      },
+      "knowledgeReader": {
+        "name": "Lector de base de conocimiento",
+        "description": "Acceso de solo lectura a los documentos de la base de conocimiento"
+      },
+      "masterDataAdministrator": {
+        "name": "Administrador de datos maestros",
+        "description": "Control total de los datos maestros: empresas, departamentos, proveedores y ubicaciones"
+      },
+      "masterDataMember": {
+        "name": "Miembro de datos maestros",
+        "description": "Puede gestionar las fichas de datos maestros"
+      },
+      "masterDataReader": {
+        "name": "Lector de datos maestros",
+        "description": "Acceso de solo lectura a los datos maestros"
+      },
+      "portfolioAdministrator": {
+        "name": "Administrador de portafolio",
+        "description": "Control total de la gestión de portafolio: solicitudes, proyectos y planificación"
+      },
+      "portfolioMember": {
+        "name": "Miembro de portafolio",
+        "description": "Puede gestionar las solicitudes, los proyectos y la planificación del portafolio"
+      },
+      "portfolioReader": {
+        "name": "Lector de portafolio",
+        "description": "Acceso de solo lectura a los datos del portafolio"
+      },
+      "tasksAdministrator": {
+        "name": "Administrador de tareas",
+        "description": "Control total de la gestión de tareas"
+      },
+      "tasksMember": {
+        "name": "Miembro de tareas",
+        "description": "Puede gestionar y completar las tareas"
+      },
+      "tasksReader": {
+        "name": "Lector de tareas",
+        "description": "Acceso de solo lectura a las tareas"
+      }
+    },
     "dialogs": {
       "createTitle": "Nuevo rol",
       "deleteMessage": "Esta acción es permanente. Solo puede eliminar roles sin usuarios asignados.",
@@ -1675,6 +1788,8 @@
     "title": "Datos de ejemplo",
     "intro": "Descubra KANAP con Fromage & Co, una quesería ficticia. Los datos de ejemplo se cargan en un espacio de trabajo vacío y se borran después desde esta página.",
     "notEmpty": "Los datos de ejemplo solo se pueden cargar en un espacio de trabajo vacío. Este espacio de trabajo ya contiene datos.",
+    "blockingLead": "Esto impide la carga:",
+    "blockingItem": "{{label}} ({{count}})",
     "loadRefusal": {
       "SUBSCRIPTION_FROZEN": "Los datos de ejemplo no se pueden cargar mientras la suscripción esté congelada.",
       "TRIAL_EXPIRED": "Los datos de ejemplo ya no se pueden cargar una vez finalizado el periodo de prueba."

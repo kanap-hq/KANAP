@@ -11,7 +11,8 @@
 # Rules (the first that matches a file wins for that file; the run takes the largest need):
 #   - .github/: everything;
 #   - backend/: backend full, builds, and frontend too for backend/fixtures/ (a frontend test
-#     reads the demo fixture);
+#     reads the demo fixture) and for tenants.service.ts (roleLabel.test.ts reads the seeded
+#     role names);
 #   - frontend/: frontend, builds, and backend full for the modules the backend specs import
 #     (auditLogLabels, contractTerms, reportAggregates) and the Dockerfiles (container-images
 #     spec);
@@ -52,6 +53,8 @@ while IFS= read -r f; do
     .github/*)
       need_backend full; frontend=true ;;
     backend/fixtures/*)
+      need_backend full; frontend=true ;;
+    backend/src/tenants/tenants.service.ts)
       need_backend full; frontend=true ;;
     backend/*)
       need_backend full ;;

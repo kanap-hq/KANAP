@@ -25,6 +25,33 @@ export function buildStartingCompanyName(signup: { org_name?: string | null; slu
 }
 
 /**
+ * Base currency of the starting company, from its country. Euro-area members use EUR.
+ * Any country not listed is left empty, for the user to choose.
+ */
+const STARTING_COMPANY_CURRENCY: Readonly<Record<string, string>> = {
+  AT: 'EUR', BE: 'EUR', BG: 'EUR', CY: 'EUR', DE: 'EUR', EE: 'EUR', ES: 'EUR', FI: 'EUR',
+  FR: 'EUR', GR: 'EUR', HR: 'EUR', IE: 'EUR', IT: 'EUR', LT: 'EUR', LU: 'EUR', LV: 'EUR',
+  MT: 'EUR', NL: 'EUR', PT: 'EUR', SI: 'EUR', SK: 'EUR',
+  GB: 'GBP',
+  CH: 'CHF',
+  US: 'USD',
+};
+
+/** ISO 4217 code for the country, or null when the map has none. Blank and unknown codes are null. */
+export function baseCurrencyForCountry(countryIso: string | null | undefined): string | null {
+  const code = (countryIso ?? '').trim().toUpperCase();
+  if (!code) return null;
+  return STARTING_COMPANY_CURRENCY[code] ?? null;
+}
+
+/**
+ * Stored city of a starting company. The column is NOT NULL and company creation refuses a blank
+ * city, so this placeholder stays. The company record and the companies list do not show it
+ * (`displayedCompanyCity` in the frontend).
+ */
+export const STARTING_COMPANY_CITY = 'Unknown';
+
+/**
  * The state of a tenant right after a trial activation, apart from its users and subscription:
  * the tenant defaults (TenantsService.seedTenantDefaults), the default global chart of accounts,
  * and the starting company with its standard calendar. Trial activation, the reset to that state
@@ -89,12 +116,16 @@ export class TenantBaselineService {
     }
   }
 
-  /** The starting company: it takes the default chart of accounts and creates its standard calendar. */
+  /**
+   * The starting company: it takes the default chart of accounts and creates its standard calendar.
+   * The base currency follows the country. The city stays the placeholder `STARTING_COMPANY_CITY`.
+   */
   async createStartingCompany(manager: EntityManager, company: StartingCompany) {
     await this.companies.create({
       name: company.companyName,
       country_iso: company.countryIso,
-      city: 'Unknown',
+      city: STARTING_COMPANY_CITY,
+      base_currency: baseCurrencyForCountry(company.countryIso),
       status: StatusState.ENABLED,
     }, company.actorId ?? undefined, { manager });
   }

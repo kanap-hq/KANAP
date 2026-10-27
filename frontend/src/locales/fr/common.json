@@ -27,6 +27,7 @@
     "discard": "Abandonner",
     "edit": "Modifier",
     "editTitle": "Modifier le titre",
+    "editDescription": "Modifier la description",
     "clear": "Effacer",
     "continue": "Continuer",
     "selectAll": "Tout sélectionner",
@@ -1462,8 +1463,8 @@
   },
   "tenant": {
     "notFound": {
-      "title": "Tenant introuvable",
-      "message": "Ce tenant n'existe pas ou n'est plus disponible. Vous allez être redirigé vers notre site dans quelques instants.",
+      "title": "Espace de travail introuvable",
+      "message": "Cet espace de travail n'existe pas ou n'est plus disponible. Vous allez être redirigé vers notre site dans quelques instants.",
       "redirecting": "Redirection vers {{url}}"
     }
   },

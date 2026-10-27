@@ -151,7 +151,7 @@ Para la interfaz seleccionada y el entorno actual:
 - **Criticidad**, **Ruta**, **Conteo de enlaces**, **Vía middleware** (sí/no)
 - **Puntos finales**: Para cada enlace en el entorno activo, muestra app de origen -> app de destino, tipo de tramo, nombre de trabajo, punto final de origen y punto final de destino
 - **Conexiones de infra**: Conexiones de infraestructura vinculadas a esta interfaz para el entorno actual. Cada tarjeta muestra origen, destino, protocolos y el entorno / tipo de tramo del enlace. Desde la tarjeta puede:
-  - Hacer clic en **Editar** para abrir el espacio de trabajo de la conexión
+  - Hacer clic en **Abrir conexión** para abrir el espacio de trabajo de la conexión
   - Hacer clic en **Ver en el Mapa de conexiones** para saltar a la topología de infraestructura, prefocalizada en la conexión
 - **Abrir interfaz**: Abre el espacio de trabajo de la interfaz
 

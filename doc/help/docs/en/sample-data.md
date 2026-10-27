@@ -19,7 +19,7 @@ The set describes Fromage & Co, a fictional cheese maker:
 - **18 fictional users**, who cannot sign in and receive no e-mail
 - **Applications and their landscape**: instances, interfaces and connections
 - **Contracts, the budget of the current year, projects and tasks**
-- **Budget lines classified on the [recommended dimensions](analytics.md#recommended-dimensions)**: every line has a cost pool and an IT tower, CAPEX lines and build lines have a purpose, and CAPEX lines have a priority. The set also adds **Recurrence**, in the workspace's language, and two dimensions of its own, **Business domain** and **Budget reference**, whose names and values stay in English
+- **Budget lines classified on the [recommended dimensions](analytics.md#recommended-dimensions)**: every line has a cost pool and an IT tower, CAPEX lines and build lines have a purpose, and CAPEX lines have a priority. The set also adds **Recurrence**, **Business domain** and **Budget reference**, with their values, in the workspace's language
 
 Dates follow the current year, so the budget always looks up to date. Loading takes about two minutes.
 
@@ -44,9 +44,9 @@ What a new workspace creates for you (its first company, the default chart of ac
 
 The page follows the load step by step (for example "Step 4 of 21: charts of accounts") and the status changes to **Loaded** when it finishes. The status strip then shows when the data was loaded and by whom. Everything you see in KANAP refreshes with the new data.
 
-**If a load is not possible**, the page shows no **Load sample data** button. One line explains why:
+**If a load is not possible**, the page shows no **Load sample data** button. It says why:
 
-- the workspace already holds data
+- the workspace already holds data. The page then lists each kind of object that stands in the way, with how many there are and a link to its list, for example **Applications (4)**, **Suppliers (1)**. Remove them to load the sample data, or keep working without it.
 - the subscription is frozen
 - the trial has ended
 

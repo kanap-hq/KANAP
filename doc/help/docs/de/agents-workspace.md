@@ -10,7 +10,7 @@ Der Agent-Arbeitsbereich ist der Ort, an dem ein einzelner Agent lebt: Sie steue
 - **Pfad:** **KI-Agenten → Übersicht →** Karte eines Agenten öffnen
 - **Route:** `/agents/:agentKey`
 - **Berechtigung:** Zum Anzeigen ist die Rolle KI-Agenten-Leser (`ai_agents:reader`) erforderlich. Eine Prüfung starten, den Agenten testen und über Vorschläge entscheiden setzt die Stufe Mitwirkender (`ai_agents:contributor`) voraus. Den Betriebsmodus ändern, den Agenten pausieren und die Registerkarte **Einstellungen** erfordern die Stufe KI-Agenten-Administrator (`ai_agents:admin`); der KI-Einstellungen-Administrator (`ai_settings:admin`) schaltet ebenfalls alles davon frei.
-- **Verfügbarkeit:** Der gesamte Bereich KI-Agenten setzt voraus, dass KI für die Instanz aktiviert ist. Wenn Sie einen Link zu einem Agenten öffnen, den es für Ihren Mandanten nicht gibt, sehen Sie **Agent nicht gefunden** („Dieser Agent ist im aktuellen Mandanten nicht verfügbar.") mit einem Weg zurück zur Flotte.
+- **Verfügbarkeit:** Der gesamte Bereich KI-Agenten setzt voraus, dass KI für die Instanz aktiviert ist. Wenn Sie einen Link zu einem Agenten öffnen, den es in Ihrem Arbeitsbereich nicht gibt, sehen Sie **Agent nicht gefunden** („Dieser Agent ist im aktuellen Arbeitsbereich nicht verfügbar.") mit einem Weg zurück zur Flotte.
 
 Die Registerkarten sind **Monitor**, **Freigaben**, **Leistung und Autonomie** und **Einstellungen**. Leser sehen die ersten drei; nur Administratoren sehen **Einstellungen**.
 

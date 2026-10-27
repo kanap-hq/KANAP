@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
 import { parseDecimalMark } from '../../../common/csv-sheet';
 import { writeCsv } from '../../../common/csv-sheet';
-import { buildBudgetExport, exportListQuery, parseAmountYears, parseFileColumns } from '../export-file';
+import { budgetCsvRows, buildBudgetExport, exportListQuery, parseAmountYears, parseFileColumns } from '../export-file';
 import { parseItemNumber, readBudgetCsv } from '../interpret';
 import { periodForYearlyTotal } from '../period';
 import { buildPreflight, planBudgetFile } from '../preflight';
@@ -189,7 +189,7 @@ async function testRoundTrip() {
   const built = buildBudgetExport({
     language: 'en', years: [YEAR], columns: ['budget'], detail: 'yearly', lines: [stored], dimensions: [],
   });
-  const csv = writeCsv({ language: 'en', headers: built.headers, rows: built.rows });
+  const csv = writeCsv({ language: 'en', headers: built.headers, rows: budgetCsvRows(built.rows, 'en') });
   assert.ok(csv.startsWith('\uFEFF'));
   assert.ok(csv.includes('kanap_token'));
   assert.ok(csv.includes('v7.2026r3'));
@@ -207,7 +207,7 @@ async function testRoundTrip() {
     language: 'fr', years: [2027], columns: ['budget'], detail: 'yearly',
     lines: [line({ effectiveStart: '2027-03-01' })], dimensions: [],
   });
-  const frenchCsv = writeCsv({ language: 'fr', headers: french.headers, rows: french.rows });
+  const frenchCsv = writeCsv({ language: 'fr', headers: french.headers, rows: budgetCsvRows(french.rows, 'fr') });
   assert.ok(frenchCsv.includes('01/03/2027'));
   assert.ok(frenchCsv.includes(';'));
   const back = await preflight('opex', frenchCsv, [line({ effectiveStart: '2027-03-01' })], { language: 'fr' });
@@ -501,7 +501,7 @@ async function testExportShape() {
     columns: ['budget', 'revision', 'forecast', 'actual', 'landing'],
     detail: 'months', lines: [line({ notes: 'A ordinary note for the row size.' })], dimensions: [],
   });
-  const csv = writeCsv({ language: 'en', headers: sample.headers, rows: sample.rows });
+  const csv = writeCsv({ language: 'en', headers: sample.headers, rows: budgetCsvRows(sample.rows, 'en') });
   const rowBytes = Buffer.byteLength(csv.split('\n')[1] ?? '', 'utf8');
   assert.ok(rowBytes > 0);
   assert.ok(
@@ -786,7 +786,7 @@ async function testCapexDescription() {
 async function testTrailingLineBreak() {
   const stored = line({ notes: 'test\n', description: '  Monitoring ' });
   const built = buildBudgetExport({ language: 'en', years: [YEAR], columns: ['budget'], detail: 'yearly', lines: [stored], dimensions: [] });
-  const csv = writeCsv({ language: 'en', headers: built.headers, rows: built.rows });
+  const csv = writeCsv({ language: 'en', headers: built.headers, rows: budgetCsvRows(built.rows, 'en') });
   const report = await preflight('opex', csv, [stored]);
   assert.equal(report.ok, true, JSON.stringify(report.errors));
   assert.deepEqual([report.changes.unchanged, report.changes.updated], [1, 0], 'an export read back changes nothing');

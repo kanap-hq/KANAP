@@ -15,6 +15,7 @@ import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { countValueFormatter } from '../components/grid/countValueFormatter';
+import { companyListYear } from './companies/companyYear';
 
 export default function DepartmentsPage() {
   const { t } = useTranslation(['master-data', 'common']);
@@ -35,6 +36,8 @@ export default function DepartmentsPage() {
   const gridApiRef = useRef<any>(null);
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState<number>(currentYear);
+  // The field may hold a partial year. Requests stay on `year` until it is complete.
+  const [yearDraft, setYearDraft] = useState(String(currentYear));
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
 
   const buildWorkspaceSearch = useCallback(() => {
@@ -153,7 +156,19 @@ export default function DepartmentsPage() {
   const canAdmin = hasLevel('departments','admin');
   const actions = (
     <Stack direction="row" spacing={1}>
-      <TextField size="small" label={t('shared.fields.year')} type="number" value={year} onChange={(e) => setYear(Number(e.target.value) || currentYear)} sx={{ width: 120 }} />
+      <TextField
+        size="small"
+        label={t('shared.fields.year')}
+        type="number"
+        value={yearDraft}
+        onChange={(e) => {
+          const text = e.target.value;
+          setYearDraft(text);
+          const next = companyListYear(text);
+          if (next != null && next !== year) setYear(next);
+        }}
+        sx={{ width: 120 }}
+      />
       {canCreate && (
         <Button
           variant="action-primary"

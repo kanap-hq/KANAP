@@ -10,7 +10,7 @@ Abra un agente haciendo clic en su tarjeta en [Agentes IA: vista general](agents
 - **Ruta:** **Agentes IA → Vista general →** abra la tarjeta de un agente
 - **Ruta URL:** `/agents/:agentKey`
 - **Permiso:** la visualización requiere el rol Lector de Agentes IA (`ai_agents:reader`). Ejecutar una comprobación, probar el agente y decidir sobre las propuestas requieren el nivel de colaborador (`ai_agents:contributor`). Cambiar el modo de funcionamiento, pausar el agente y la pestaña **Configuración** requieren el nivel Administrador de Agentes IA (`ai_agents:admin`); el administrador de Configuración de IA (`ai_settings:admin`) también lo desbloquea todo.
-- **Disponibilidad:** toda el área de Agentes IA requiere que la IA esté habilitada en la instancia. Si abre un enlace a un agente que no existe en su espacio de trabajo, verá **Agente no encontrado** («Este agente no está disponible en el espacio actual.») con una forma de volver a la flota.
+- **Disponibilidad:** toda el área de Agentes IA requiere que la IA esté habilitada en la instancia. Si abre un enlace a un agente que no existe en su espacio de trabajo, verá **Agente no encontrado** («Este agente no está disponible en el espacio de trabajo actual.») con una forma de volver a la flota.
 
 Las pestañas son **Monitor**, **Aprobaciones**, **Rendimiento y autonomía** y **Configuración**. Los lectores ven las tres primeras; solo los administradores ven **Configuración**.
 

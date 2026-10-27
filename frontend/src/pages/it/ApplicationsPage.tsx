@@ -1070,16 +1070,14 @@ export default function ApplicationsPage() {
     setExportScope({ params, summary });
     setExportOpen(true);
   }, [t]);
+  const openNewApplication = () => {
+    const sp = buildWorkspaceSearch();
+    navigate(`/it/applications/new/overview?${sp.toString()}`);
+  };
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
-        <Button
-          variant="action-primary"
-          onClick={() => {
-            const sp = buildWorkspaceSearch();
-            navigate(`/it/applications/new/overview?${sp.toString()}`);
-          }}
-        >
+        <Button variant="action-primary" onClick={openNewApplication}>
           {t('pages.applications.newAppService')}
         </Button>
       )}
@@ -1163,6 +1161,16 @@ export default function ApplicationsPage() {
           onQueryStateChange={(state) => {
             lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
           }}
+          emptyState={(
+            <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="applications-empty">
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.applications.empty')}</Typography>
+              {canCreate && (
+                <Button variant="contained" size="small" onClick={openNewApplication}>
+                  {t('pages.applications.newAppService')}
+                </Button>
+              )}
+            </Stack>
+          )}
           onColumnStateChange={(state) => {
             try {
               // Compute include flags based on visible columns

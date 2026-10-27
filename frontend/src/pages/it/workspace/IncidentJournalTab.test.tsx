@@ -93,3 +93,14 @@ describe('IncidentJournalTab recorded time', () => {
     expect(screen.getAllByText(/^recorded /)).toHaveLength(1);
   });
 });
+
+// Linked records follow their module's read (2026-10-26): the API leaves out the link changes of a
+// module the reader does not read. A note keeps its free text, and no reference becomes a link.
+describe('IncidentJournalTab linked records', () => {
+  it('shows a note citing a record as plain text, with no link to it', async () => {
+    listEntries.mockResolvedValue([entry('e1', 'note', 'Restarted AST-50 after the failover')]);
+    renderTab();
+    expect(await screen.findByText('Restarted AST-50 after the failover')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).toBeNull();
+  });
+});

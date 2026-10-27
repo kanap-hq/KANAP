@@ -19,7 +19,7 @@ Der Datensatz beschreibt Fromage & Co, einen fiktiven Käsehersteller:
 - **18 fiktive Benutzer**, die sich nicht anmelden können und keine E-Mails erhalten
 - **Anwendungen und ihre Landschaft**: Instanzen, Schnittstellen und Verbindungen
 - **Verträge, das Budget des laufenden Jahres, Projekte und Aufgaben**
-- **Budgetzeilen, nach den [empfohlenen Dimensionen](analytics.md#empfohlene-dimensionen) klassifiziert**: Jede Zeile hat eine Kostenart und einen IT-Bereich, CAPEX-Zeilen und Build-Zeilen haben einen Zweck, und CAPEX-Zeilen eine Priorität. Der Satz fügt außerdem **Wiederkehr** in der Sprache des Arbeitsbereichs hinzu, und zwei eigene Dimensionen, **Business domain** und **Budget reference**, deren Namen und Werte englisch bleiben
+- **Budgetzeilen, nach den [empfohlenen Dimensionen](analytics.md#empfohlene-dimensionen) klassifiziert**: Jede Zeile hat eine Kostenart und einen IT-Bereich, CAPEX-Zeilen und Build-Zeilen haben einen Zweck, und CAPEX-Zeilen eine Priorität. Der Satz fügt außerdem **Wiederkehr**, **Geschäftsbereich** und **Budgetreferenz** mit ihren Werten in der Sprache des Arbeitsbereichs hinzu
 
 Die Daten richten sich nach dem laufenden Jahr, sodass das Budget immer aktuell wirkt. Das Laden dauert etwa zwei Minuten.
 
@@ -44,9 +44,9 @@ Was ein neuer Arbeitsbereich selbst anlegt (sein erstes Unternehmen, der Standar
 
 Die Seite zeigt den Ladevorgang Schritt für Schritt (zum Beispiel „Schritt 4 von 21: Kontenpläne“), und der Status wechselt am Ende zu **Geladen**. Die Statusleiste zeigt dann, wann die Daten geladen wurden und von wem. Alles, was Sie in KANAP sehen, wird mit den neuen Daten aktualisiert.
 
-**Wenn das Laden nicht möglich ist**, zeigt die Seite die Schaltfläche **Beispieldaten laden** nicht an. Eine Zeile nennt den Grund:
+**Wenn das Laden nicht möglich ist**, zeigt die Seite die Schaltfläche **Beispieldaten laden** nicht an. Sie nennt den Grund:
 
-- Der Arbeitsbereich enthält bereits Daten.
+- Der Arbeitsbereich enthält bereits Daten. Die Seite listet dann jede Objektart auf, die dem Laden im Weg steht, mit ihrer Anzahl und einem Link zu ihrer Liste, zum Beispiel **Anwendungen (4)**, **Lieferanten (1)**. Entfernen Sie sie, um die Beispieldaten zu laden, oder arbeiten Sie ohne sie weiter.
 - Das Abonnement ist eingefroren.
 - Die Testphase ist beendet.
 

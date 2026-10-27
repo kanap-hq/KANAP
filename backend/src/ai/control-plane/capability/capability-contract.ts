@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { AiMutationPreviewDto } from '../../ai.types';
 
 export const EXECUTE_APPROVED_PREVIEW_CAPABILITY = 'kanap.mutation_preview.execute_approved';
 export const TICKETING_INTERNAL_NOTE_PREPARE_CAPABILITY = 'ticketing.ticket.internal_note.prepare';
@@ -175,7 +176,10 @@ export type CapabilityExecutionResult<T = unknown> = {
   run_id: string;
   step_id: string;
   tool_execution_id: string;
+  /** Handler output after redaction. The model and the evidence store read this. */
   output: T;
+  /** Mutation previews taken from the handler output before redaction, for the card the user approves. */
+  previews?: AiMutationPreviewDto[];
 };
 
 export type CapabilityApplicability = {

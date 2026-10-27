@@ -14,10 +14,10 @@ import {
   type BudgetLineRelationsContext,
 } from './budget-line-relations';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
-import { contentDisposition } from '../common/content-disposition';
-import { DATA_ACCESS_HEADER } from '../data-access/data-access';
 import { BudgetFileService } from './budget-file/budget-file.service';
 import { exportListQuery } from './budget-file/export-file';
+import { budgetFileBody } from './budget-file/send-export';
+import { parseExportFormat } from '../common/xlsx';
 import { budgetListAccess } from './budget-list/budget-list.runtime';
 import { ListSpendQueryInput } from './dto';
 import { BudgetLinesService } from './budget-lines.service';
@@ -114,9 +114,10 @@ export class BudgetLinesController {
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
+    const format = parseExportFormat(query.format);
     const listQuery = exportListQuery(query, query.all === 'true' || query.all === '1');
     const { ids } = await this.svc.summaryIds(listQuery, { manager: ctx.manager as EntityManager, access: budgetListAccess(ctx) });
-    const { filename, content, dataAccessLimited } = await this.budgetFile.exportFile('all', ids, {
+    const exported = await this.budgetFile.exportFile('all', ids, {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
@@ -125,12 +126,9 @@ export class BudgetLinesController {
       amountYears: query.amountYears,
       columns: query.columns,
       detail: query.detail,
+      format,
     });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(filename));
-    // A limited person's file holds the lines of their access: the dialog says "Calculated on your access".
-    if (dataAccessLimited) res.setHeader(DATA_ACCESS_HEADER, 'limited');
-    res.send(content);
+    res.send(await budgetFileBody(res, exported));
   }
 
   // Which lines a delete would refuse (amounts in a frozen column), asked before the confirmation.

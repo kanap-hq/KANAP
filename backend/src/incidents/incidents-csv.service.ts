@@ -94,6 +94,9 @@ export class IncidentsCsvService {
     /** The zone the date-times are written in and their headers name (`timeZoneOf`). UTC when not given. */
     timeZone?: string;
     viewer?: IncidentViewer;
+    /** The reader's infrastructure and applications reads: the list's search follows them. */
+    technologies?: boolean;
+    applications?: boolean;
     scope?: 'template' | 'data';
     fields?: string[];
     /**
@@ -106,7 +109,9 @@ export class IncidentsCsvService {
     const { manager, tenantId, viewer, scope, fields } = opts;
     let rows: Array<Record<string, any>> = [];
     if (scope !== 'template') {
-      const listQuery = await this.incidents.exportQuery(opts.query ?? {}, { manager, tenantId, viewer });
+      const listQuery = await this.incidents.exportQuery(opts.query ?? {}, {
+        manager, tenantId, viewer, technologies: opts.technologies, applications: opts.applications,
+      });
       rows = await manager.query(
         `SELECT ${EXPORT_COLUMNS} ${INCIDENT_LIST_FROM} WHERE ${listQuery.where} ORDER BY ${listQuery.orderBy}`,
         listQuery.params,

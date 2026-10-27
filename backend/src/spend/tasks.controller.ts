@@ -27,7 +27,7 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { Public } from '../auth/public.decorator';
-import { TasksService } from './tasks.service';
+import { TaskLinkedScopes, TasksService } from './tasks.service';
 import { TasksDeleteService } from '../tasks/tasks-delete.service';
 import { TasksUnifiedService, RelatedType } from '../tasks/tasks-unified.service';
 import { TaskActivitiesService, ActivityBodyDto } from '../tasks/task-activities.service';
@@ -36,6 +36,7 @@ import { TaskTimeEntriesService } from '../tasks/task-time-entries.service';
 import { TasksCsvService } from '../tasks/tasks-csv.service';
 import { StorageService } from '../common/storage/storage.service';
 import { resolveToUuid } from '../common/resolve-item-id';
+import { LinkedReads, linkedReadsFromContext } from '../common/relations/linked-reads';
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { createRequestReleaseConnection } from '../common/import-connection';
@@ -51,6 +52,21 @@ import { PermissionLevel } from '../permissions/permissions.service';
 import { PermissionsService } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { incidentViewerFromRequest, resolveIncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
+
+/**
+ * What a task may name of its linked records: the modules the caller reads, and a Business
+ * Contributor's projects, requests and applications inside their participation.
+ */
+async function linkedOfRequest(req: any): Promise<{ linkedReads: LinkedReads; linkedScopes: TaskLinkedScopes }> {
+  return {
+    linkedReads: linkedReadsFromContext({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }),
+    linkedScopes: {
+      projects: await resolveBusinessContributorScope(req, 'portfolio_projects', 'reader'),
+      requests: await resolveBusinessContributorScope(req, 'portfolio_requests', 'reader'),
+      applications: await resolveBusinessContributorScope(req, 'applications', 'reader'),
+    },
+  };
+}
 
 @UseGuards(JwtAuthGuard)
 @Controller('tasks')
@@ -165,6 +181,7 @@ export class TasksController {
       tenantId: req?.tenant?.id,
       accessScope,
       viewer: incidentViewerFromRequest(req),
+      ...await linkedOfRequest(req),
     });
   }
 
@@ -178,6 +195,7 @@ export class TasksController {
       tenantId: req?.tenant?.id,
       accessScope,
       viewer: incidentViewerFromRequest(req),
+      ...await linkedOfRequest(req),
     });
   }
 
@@ -191,6 +209,7 @@ export class TasksController {
       tenantId: req?.tenant?.id,
       accessScope,
       viewer: incidentViewerFromRequest(req),
+      ...await linkedOfRequest(req),
     });
   }
 
@@ -307,6 +326,7 @@ export class TasksController {
       tenantId: req?.tenant?.id,
       accessScope,
       viewer: incidentViewerFromRequest(req),
+      ...await linkedOfRequest(req),
     });
     if (!res) {
       const { NotFoundException } = await import('@nestjs/common');

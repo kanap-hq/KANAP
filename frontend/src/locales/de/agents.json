@@ -47,7 +47,7 @@
     "dialogTitle": "Diesen Agenten pausieren",
     "dialogDescription": "Dies hält die Prüfungen des Agenten und alle ausstehenden Schreibvorgänge an, bis Sie die Pause aufheben. Andere Agenten laufen weiter.",
     "dialogTitleTenant": "Alle Agenten pausieren",
-    "dialogDescriptionTenant": "Dies hält die Prüfungen aller Agenten und alle ausstehenden Schreibvorgänge für diesen Mandanten an, bis Sie die Pause aufheben.",
+    "dialogDescriptionTenant": "Dies hält die Prüfungen aller Agenten und alle ausstehenden Schreibvorgänge für diesen Arbeitsbereich an, bis Sie die Pause aufheben.",
     "managedForAll": "Für alle Agenten pausiert",
     "reasonLabel": "Grund",
     "reasonPlaceholder": "z. B. Untersuchung unerwarteter Ticket-Antworten"
@@ -115,7 +115,7 @@
     "acceptance": "Annahme",
     "dismissed": "Verworfen",
     "fleet": "Agentenflotte",
-    "empty": "Für diesen Mandanten sind keine Agenten verfügbar.",
+    "empty": "Für diesen Arbeitsbereich sind keine Agenten verfügbar.",
     "noDescription": "Keine Beschreibung.",
     "pendingCount": "{{count}} offen",
     "failedCount": "{{count}} fehlgeschlagen",
@@ -325,7 +325,7 @@
   "workspace": {
     "back": "Zurück zu Agenten",
     "notFound": "Agent nicht gefunden",
-    "notFoundBody": "Dieser Agent ist im aktuellen Mandanten nicht verfügbar.",
+    "notFoundBody": "Dieser Agent ist im aktuellen Arbeitsbereich nicht verfügbar.",
     "tabs": {
       "monitor": "Monitor",
       "approvals": "Freigaben",

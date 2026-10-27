@@ -10,6 +10,7 @@ const DEPARTMENT_SORT_COLUMNS = new Set(['id', 'company_id', 'name', 'descriptio
 const DEPARTMENT_TEXT_SORTS = new Set(['name', 'description']);
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { Company } from '../companies/company.entity';
+import { companyYearPeriod, parseCompanyYear } from '../companies/company-year';
 import {
   buildQuickSearchConditions,
   compileAgFilterCondition,
@@ -57,6 +58,9 @@ export class DepartmentsService {
   }
 
   async list(query: any, opts?: { manager?: EntityManager; exportAll?: boolean }) {
+    // A partial year is a 400 before any date is built. `Number("2")` is finite,
+    // and the end of that year is an invalid date.
+    const year = parseCompanyYear(query?.year);
     const repo = this.getRepo(opts?.manager);
     const { page, limit, skip, sort, status, q, filters } = opts?.exportAll
       ? parseExportPagination(query)
@@ -67,7 +71,6 @@ export class DepartmentsService {
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const year = query?.year ? Number(query.year) : undefined;
 
     type DepartmentFilterTarget = FilterTargetConfig & { requiresMetrics?: boolean };
     const filterTargets: Record<string, DepartmentFilterTarget> = {
@@ -140,12 +143,7 @@ export class DepartmentsService {
     };
 
     const qbBase = repo.createQueryBuilder('d');
-    const period = year
-      ? {
-          start: new Date(`${year}-01-01`),
-          end: new Date(`${year}-12-31T23:59:59.999Z`),
-        }
-      : undefined;
+    const period = year ? companyYearPeriod(year) : undefined;
     if (effectiveStatus) {
       applyStatusFilter(qbBase, { alias: 'd', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {
@@ -338,6 +336,7 @@ export class DepartmentsService {
   }
 
   async listIds(query: any, opts?: { manager?: EntityManager }): Promise<{ ids: string[]; total: number }> {
+    const year = parseCompanyYear(query?.year);
     const repo = this.getRepo(opts?.manager);
     const parsed = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
     const { sort, status, q, filters } = parsed;
@@ -347,7 +346,6 @@ export class DepartmentsService {
     const includeDisabled =
       String(query.includeDisabled ?? '').toLowerCase() === '1' ||
       String(query.includeDisabled ?? '').toLowerCase() === 'true';
-    const year = query?.year ? Number(query.year) : undefined;
 
     type DepartmentFilterTarget = FilterTargetConfig & { requiresMetrics?: boolean };
     const filterTargets: Record<string, DepartmentFilterTarget> = {
@@ -405,12 +403,7 @@ export class DepartmentsService {
 
     const qb = repo.createQueryBuilder('d').select('d.id', 'id');
     qb.leftJoin(Company, 'c', 'c.id = d.company_id');
-    const period = year
-      ? {
-          start: new Date(`${year}-01-01`),
-          end: new Date(`${year}-12-31T23:59:59.999Z`),
-        }
-      : undefined;
+    const period = year ? companyYearPeriod(year) : undefined;
     if (effectiveStatus) {
       applyStatusFilter(qb, { alias: 'd', explicitStatus: effectiveStatus, period, includeDisabled, matchNone });
     } else {

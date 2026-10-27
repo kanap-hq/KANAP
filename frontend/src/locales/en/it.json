@@ -69,6 +69,7 @@
     "applications": {
       "title": "Applications",
       "newAppService": "New app / service",
+      "empty": "No applications yet.",
       "appService": "App / service",
       "importCsv": "Import CSV",
       "exportCsv": "Export CSV",
@@ -327,8 +328,8 @@
         "derivedNoInterfaces": "Derived (no interfaces linked)",
         "manual": "Manual"
       },
-      "deleteWarning_one": "This cannot be undone. Its servers, interfaces and documents stay; only their links to this connection go.",
-      "deleteWarning_other": "This cannot be undone. Their servers, interfaces and documents stay; only their links to these connections go.",
+      "deleteWarning_one": "This cannot be undone. The hops of this connection are deleted with it. Its servers, interfaces and documents stay; only their links to this connection go.",
+      "deleteWarning_other": "This cannot be undone. The hops of each connection are deleted with it. Their servers, interfaces and documents stay; only their links to these connections go.",
       "delete": {
         "toDelete_one": "{{count}} connection will be deleted:",
         "toDelete_other": "{{count}} connections will be deleted:",
@@ -787,6 +788,8 @@
       "servers": "Servers",
       "selectServers": "Select servers, clusters or entities",
       "selectedServers": "Selected servers ({{count}})",
+      "more": "+{{count}}",
+      "removeServer": "Remove {{name}}",
       "showMultiServer": "Show multi-server connections",
       "showLayers": "Show connection layers",
       "roleBased": "Role-based placement",
@@ -796,6 +799,7 @@
       "nodeDetails": "Node details",
       "connectionDetails": "Connection details",
       "cluster": "Cluster",
+      "clusterLine": "Cluster:",
       "typeValue": "Type: {{value}}",
       "environmentValue": "Environment: {{value}}",
       "serverType": "Server type:",
@@ -984,6 +988,7 @@
       "protocolsValue": "Protocols: {{value}}",
       "bindingValue": "Binding: {{env}} · {{leg}}",
       "viewInConnectionMap": "View in connection map",
+      "openConnection": "Open connection",
       "openInterface": "Open interface",
       "clusterEndpoint": "{{name}} (cluster)"
     },

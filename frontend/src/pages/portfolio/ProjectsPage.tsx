@@ -493,16 +493,14 @@ export default function ProjectsPage() {
     return <ForbiddenPage />;
   }
 
+  const openNewProject = () => {
+    const sp = buildWorkspaceSearch();
+    navigate(`/portfolio/projects/new/summary?${sp.toString()}`);
+  };
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
-        <Button
-          variant="action-primary"
-          onClick={() => {
-            const sp = buildWorkspaceSearch();
-            navigate(`/portfolio/projects/new/summary?${sp.toString()}`);
-          }}
-        >
+        <Button variant="action-primary" onClick={openNewProject}>
           {t('projects.actions.new')}
         </Button>
       )}
@@ -533,6 +531,16 @@ export default function ProjectsPage() {
           onQueryStateChange={(state) => {
             lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
           }}
+          emptyState={(
+            <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="center" data-testid="projects-empty">
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('projects.empty')}</Typography>
+              {canCreate && (
+                <Button variant="contained" size="small" onClick={openNewProject}>
+                  {t('projects.actions.new')}
+                </Button>
+              )}
+            </Stack>
+          )}
           toolbarExtras={projectScopeToolbar}
         />
       )}

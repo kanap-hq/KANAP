@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -186,6 +186,49 @@ describe('UserDialog tabs', () => {
     renderDialog({ initialTab: 'access' });
     expect(await screen.findByRole('tab', { name: 'users.actions.dataAccess' })).toHaveAttribute('aria-selected', 'true');
     expect(await screen.findByText('Alpha Spain')).toBeInTheDocument();
+  });
+});
+
+describe('UserDialog validation', () => {
+  it('shows no error on a new user until the email is typed, and keeps Save disabled while it is invalid', async () => {
+    renderDialog({ mode: 'create', userId: undefined, personName: undefined });
+    const email = await screen.findByRole('textbox', { name: 'userForm.fields.email' });
+    // Validation on mount used to arrive after the first paint: let that pass before asserting.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(email).toHaveValue('');
+    expect(email).not.toHaveAttribute('aria-invalid', 'true');
+    expect(screen.queryByText('validation:required')).not.toBeInTheDocument();
+    expect(screen.queryByText('validation:invalidEmail')).not.toBeInTheDocument();
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'users.dialogs.saveAndInvite' })).toBeDisabled();
+
+    fireEvent.change(email, { target: { value: 'not-an-email' } });
+    await waitFor(() => expect(email).toHaveAttribute('aria-invalid', 'true'));
+    expect(screen.getByText('validation:invalidEmail')).toBeInTheDocument();
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'users.dialogs.saveAndInvite' })).toBeDisabled();
+
+    fireEvent.change(email, { target: { value: 'ada@example.test' } });
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    expect(screen.getByRole('button', { name: 'users.dialogs.saveAndInvite' })).toBeEnabled();
+    expect(email).not.toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('shows no error when editing and enables Save after a change', async () => {
+    renderDialog();
+    const email = await screen.findByRole('textbox', { name: 'userForm.fields.email' });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(email).toHaveValue('marta@example.test');
+    expect(email).not.toHaveAttribute('aria-invalid', 'true');
+    expect(saveButton()).toBeDisabled();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'userForm.fields.firstName' }), { target: { value: 'Marta2' } });
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+    expect(email).not.toHaveAttribute('aria-invalid', 'true');
   });
 });
 

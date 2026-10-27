@@ -278,7 +278,7 @@ Every day at 07:30 UTC, KANAP creates a task for each contract that awaits a dec
 - **Decide on the renewal of** the contract, due on the cancellation deadline, for a contract that renews tacitly
 - **Decide whether to renew or let** the contract **end**, due on its end, for a contract without renewal
 
-The task is assigned to the contract's owner, in the owner's language, with the usual assignment email. There is one task per contract and term. A task you delete is not created again for that term. A contract without an owner gets no task until one is set.
+The task is assigned to the contract's owner, with the usual assignment email. Its text is in the owner's language, or in the workspace language when the owner has not chosen one. There is one task per contract and term. A task you delete is not created again for that term. A contract without an owner gets no task until one is set.
 
 The decision box and the task stay in step: a decision taken in the box closes the task, with the justification as a comment.
 

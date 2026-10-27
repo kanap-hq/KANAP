@@ -10,7 +10,7 @@ Ouvrez un agent en cliquant sur sa carte dans [Agents IA : Vue d'ensemble](agent
 - **Chemin :** **Agents IA → Vue d'ensemble →** ouvrez la carte d'un agent
 - **Route :** `/agents/:agentKey`
 - **Autorisation :** la consultation nécessite le rôle Lecteur des Agents IA (`ai_agents:reader`). Lancer un contrôle, tester l'agent et décider des propositions nécessitent le niveau contributeur (`ai_agents:contributor`). Changer le mode de fonctionnement, mettre l'agent en pause et accéder à l'onglet **Paramètres** nécessitent le niveau Administrateur des Agents IA (`ai_agents:admin`) ; l'administrateur des Paramètres IA (`ai_settings:admin`) débloque également l'ensemble.
-- **Disponibilité :** l'ensemble de l'espace Agents IA nécessite que l'IA soit activée sur l'instance. Si vous ouvrez un lien vers un agent qui n'existe pas pour votre tenant, vous verrez **Agent introuvable** (« Cet agent n'est pas disponible dans le tenant actuel. »), avec un moyen de revenir au parc.
+- **Disponibilité :** l'ensemble de l'espace Agents IA nécessite que l'IA soit activée sur l'instance. Si vous ouvrez un lien vers un agent qui n'existe pas dans votre espace de travail, vous verrez **Agent introuvable** (« Cet agent n'est pas disponible dans l'espace de travail actuel. »), avec un moyen de revenir au parc.
 
 Les onglets sont **Suivi**, **Approbations**, **Performance et autonomie** et **Paramètres**. Les lecteurs voient les trois premiers ; seuls les administrateurs voient **Paramètres**.
 

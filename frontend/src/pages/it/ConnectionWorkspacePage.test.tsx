@@ -1,5 +1,5 @@
 import React from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -23,6 +23,25 @@ vi.mock('../../hooks/useModuleItemNav', () => ({
 }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: vi.fn() }) }));
 vi.mock('./workspace/ConnectionEndpointPicker', () => ({ default: ({ label }: { label: string }) => <div>{label}</div> }));
+vi.mock('./workspace/ConnectionServersPicker', () => ({
+  default: ({ value, onChange }: { value: { name: string }[]; onChange: (next: unknown[]) => void }) => (
+    <div>
+      <span>{value.map((server) => server.name).join(', ') || 'no server'}</span>
+      <button
+        type="button"
+        onClick={() => onChange([{
+          id: 'srv-1',
+          name: 'PAR-SQL-01',
+          environment: 'prod',
+          kind: 'physical_server',
+          provider: 'on_prem',
+        }])}
+      >
+        Choose PAR-SQL-01
+      </button>
+    </div>
+  ),
+}));
 // The shell is covered elsewhere; this stub shows what the page hands it.
 vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
   default: (props: any) => (
@@ -118,6 +137,34 @@ describe('ConnectionWorkspacePage (create)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
     expect(screen.getByRole('alert')).toHaveTextContent('Name is required.');
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('hides the two-server message until Create is refused, even with one server chosen', async () => {
+    await i18n.changeLanguage('en');
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter initialEntries={['/it/connections/new/overview']}>
+          <Routes>
+            <Route path="/it/connections/:id/:tab" element={<ConnectionWorkspacePage />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+
+    fireEvent.mouseDown(within(screen.getByRole('main')).getAllByRole('combobox')[0]);
+    fireEvent.click(screen.getByRole('option', { name: 'Multi-server' }));
+    expect(screen.queryByText('Select at least two servers.')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Choose PAR-SQL-01' }));
+    expect(await screen.findByText('PAR-SQL-01')).toBeInTheDocument();
+    expect(screen.queryByText('Select at least two servers.')).toBeNull();
+
+    fireEvent.change(screen.getByPlaceholderText('e.g., App tier to DB tier'), { target: { value: 'App to DB' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Select at least two servers.');
+    expect(screen.getAllByText('Select at least two servers.')).toHaveLength(1);
     expect(post).not.toHaveBeenCalled();
   });
 });

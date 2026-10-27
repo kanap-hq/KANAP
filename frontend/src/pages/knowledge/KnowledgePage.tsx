@@ -749,18 +749,22 @@ export default function KnowledgePage() {
   }, [profile?.id, t]);
 
   const renderLibrarySelectableUserOption = useCallback((
-    props: React.HTMLAttributes<HTMLLIElement>,
+    props: React.HTMLAttributes<HTMLLIElement> & { key: React.Key },
     option: KnowledgeContributorOption,
-  ) => (
-    <React.Fragment key={option.id}>
-      <li {...props}>
-        <div style={{ fontWeight: 500 }}>
-          {getLibrarySelectableUserLabel(option)}
-        </div>
-      </li>
-      {option.id === profile?.id && <Divider />}
-    </React.Fragment>
-  ), [getLibrarySelectableUserLabel, profile?.id]);
+  ) => {
+    // React wants the key passed on its own, not spread with the other props.
+    const { key, ...optionProps } = props;
+    return (
+      <React.Fragment key={option.id}>
+        <li {...optionProps}>
+          <div style={{ fontWeight: 500 }}>
+            {getLibrarySelectableUserLabel(option)}
+          </div>
+        </li>
+        {option.id === profile?.id && <Divider />}
+      </React.Fragment>
+    );
+  }, [getLibrarySelectableUserLabel, profile?.id]);
 
   const handleLibraryOwnerChange = useCallback((nextOwner: KnowledgeContributorOption | null) => {
     const nextOwnerId = nextOwner?.id || null;

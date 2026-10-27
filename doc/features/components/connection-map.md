@@ -68,7 +68,7 @@
 ## Data fields surfaced
 - **Per connection (side panel)**: name/ID, purpose, protocols (labeled), typical ports (from IT Ops connection type defaults), criticality, topology, and edit shortcut.
 - **Linked interfaces (side panel)**: interface name/code, leg (SOURCE/DEST), environment, pattern, source/target endpoints, plus shortcuts to the Interface workspace and Interface Map deep-link. Lifecycle/data class/PII/criticality badges have been removed to keep the panel concise.
-- **Per server/cluster node** (chipless layout): server name, server type (labelled), location code, operating system, network segment, IP address, and assigned applications. Assigned applications are grouped by environment (e.g., `PROD` header) with items sorted alphabetically and shown as `App name` links to the Application workspace (environment indicated by the group header, not per-item text). Cluster nodes reuse the same fields.
+- **Per server/cluster node** (chipless layout): server name, server type (labelled), location code, operating system, network segment (the zone of the first IP address's subnet), every IP address, the clusters a member belongs to (each name links to that cluster), and assigned applications. Assigned applications are grouped by environment (e.g., `PROD` header) with items sorted alphabetically and shown as `App name` links to the Application workspace (environment indicated by the group header, not per-item text). Cluster nodes reuse the same fields.
 - **Per entity node**: name and type (entity).
 - **Cluster nodes**: include `member_server_ids` array listing member server UUIDs.
 - **API response**:

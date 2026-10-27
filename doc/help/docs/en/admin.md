@@ -86,8 +86,8 @@ Sign-in and session events are deleted after **365 days**. Data changes, role ch
   - Action
   - Source (`user`, `system`, `webhook`)
 - Open any row to view full details:
-  - Metadata chips (date, table, action, source, reason or source reference, tenant, record id, user)
-  - The record's business reference in the header (for example `PRJ-3`), when it has one
+  - Metadata chips (date, table, action, source, reason or source reference, record, user)
+  - The record's business reference in the header (for example `PRJ-3`, `APP-12`, `AST-31`, `LOC-4`, `CONN-2` or `INT-8`), when the entry carries one. With no reference, the header shows **Identifier** and keeps the stored id in a tooltip
   - A table of the fields: **Field**, **Before** and **After** for an update, **Field** and **Value** for any other entry. Field names appear in your language when known. Dates, yes/no values and people are shown in readable form; other identifiers show as **Identifier**, with the value in a tooltip. Technical fields such as `id`, `tenant_id` and `updated_at` are left out
   - **View raw data** shows the full JSON before and after
 - Export the log to CSV (see below)

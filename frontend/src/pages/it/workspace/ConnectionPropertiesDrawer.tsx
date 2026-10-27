@@ -15,7 +15,7 @@ type Props = {
   topology: 'server_to_server' | 'multi_server';
   topologyDisabled: boolean;
   riskMode: 'manual' | 'derived';
-  criticality: string;
+  criticality: string | null;
   dataClass: string;
   containsPii: boolean;
   effectiveCriticality: string;
@@ -83,7 +83,7 @@ export default function ConnectionPropertiesDrawer({
           >
             {lifecycleOptions.map((opt) => (
               <MenuItem key={opt.code} value={opt.code} sx={drawerMenuItemSx}>
-                {opt.deprecated ? `${opt.label} (deprecated)` : opt.label}
+                {opt.deprecated ? `${opt.label} (${t('common:enumEditor.retiredSuffix')})` : opt.label}
               </MenuItem>
             ))}
           </TextField>
@@ -150,7 +150,7 @@ export default function ConnectionPropertiesDrawer({
           ) : (
             <TextField
               select
-              value={criticality}
+              value={criticality || ''}
               onChange={(e) => onCriticalityChange(e.target.value)}
               variant="standard"
               sx={drawerSelectSx}

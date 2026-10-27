@@ -1,3 +1,5 @@
+import { linkedReadsFromContext } from '../common/relations/linked-reads';
+import { idsInScope } from './portfolio-linked-reads';
 import { languageOf } from '../common/csv-sheet';
 import {
   Body, Controller, Delete, ForbiddenException, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
@@ -354,6 +356,11 @@ export class PortfolioRequestsController {
       accessScope,
       readsBudget,
       viewer: incidentViewerFromRequest(req),
+      linked: {
+        reads: linkedReadsFromContext({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }),
+        projectScope: await resolveBusinessContributorScope(req, 'portfolio_projects'),
+        taskScope: await resolveBusinessContributorScope(req, 'tasks'),
+      },
     });
   }
 
@@ -759,10 +766,17 @@ export class PortfolioRequestsController {
     @Param('id') idOrRef: string,
     @Req() req: any,
   ) {
+    // The applications are the applications module's: listed only to its readers, in their scope.
+    if (!hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'applications', 'reader')) {
+      throw new ForbiddenException('You cannot read applications.');
+    }
     const { id } = await this.resolveForAccess(idOrRef, req, 'reader');
-    return this.svc.listLinkedApplications(id, {
+    const linked = await this.svc.listLinkedApplications(id, {
       manager: req?.queryRunner?.manager,
     });
+    const applicationScope = await resolveBusinessContributorScope(req, 'applications');
+    const visible = await idsInScope(req.queryRunner.manager, 'applications', linked.items.map((row) => row.id), applicationScope);
+    return { ...linked, items: linked.items.filter((row) => visible.has(String(row.id))) };
   }
 
   @UseGuards(PermissionGuard)
@@ -789,6 +803,10 @@ export class PortfolioRequestsController {
     @Param('id') idOrRef: string,
     @Req() req: any,
   ) {
+    // The assets are the infrastructure's: listed only to its readers.
+    if (!hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'infrastructure', 'reader')) {
+      throw new ForbiddenException('You cannot read assets.');
+    }
     const { id } = await this.resolveForAccess(idOrRef, req, 'reader');
     return this.svc.listLinkedAssets(id, {
       manager: req?.queryRunner?.manager,
