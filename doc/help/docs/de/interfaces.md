@@ -240,11 +240,12 @@ Verwenden Sie dies, wenn Sie eine unabhängige Kopie einer Schnittstelle wünsch
 | Schlüsselkennungen | Ja |
 | Externe URL-Links | Ja |
 | Datenhaltung | Ja |
+| Spezifikation | Ja, mit ihren Bildern |
 | Bindungen | Optional |
 | Mapping-Gruppen und -Regeln | Nein |
 | Anhänge | Nein |
 
-**Benennung**: Die Kopie erhält „ - copy" sowohl an den Namen als auch an die Schnittstellen-ID angehängt.
+**Benennung**: Die Kopie erhält „ - copy" sowohl an den Namen als auch an die Schnittstellen-ID angehängt. Eine leere Schnittstellen-ID bleibt leer.
 
 ### Versionsmigration (aus der Anwendungsversionierung)
 

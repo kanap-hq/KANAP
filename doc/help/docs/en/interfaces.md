@@ -240,11 +240,12 @@ Use this when you want an independent copy of an interface, typically to create 
 | Key identifiers | Yes |
 | External URL links | Yes |
 | Data residency | Yes |
+| Specification | Yes, with its images |
 | Bindings | Optional |
 | Mapping groups and rules | No |
 | Attachments | No |
 
-**Naming**: The copy gets " - copy" appended to both the name and the Interface ID.
+**Naming**: The copy gets " - copy" appended to both the name and the Interface ID. An empty interface ID stays empty.
 
 ### Version Migration (from Application versioning)
 

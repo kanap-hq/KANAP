@@ -196,6 +196,79 @@ async function testNewVersionCopiesTheDescription() {
   });
 }
 
+// A copied interface keeps the source specification, and its inline image is its own attachment.
+async function testCopyKeepsTheInterfaceSpecification() {
+  await inFixture(async (runner, { member }) => {
+    const { integrated } = createServices(runner.manager, []);
+    const manager = runner.manager;
+    const [{ id: sourceApp }] = await runner.query(
+      `INSERT INTO applications (tenant_id, name) VALUES (app_current_tenant(), 'Source app') RETURNING id::text AS id`,
+    );
+    const [{ id: targetApp }] = await runner.query(
+      `INSERT INTO applications (tenant_id, name) VALUES (app_current_tenant(), 'Target app') RETURNING id::text AS id`,
+    );
+    const insertInterface = async (name: string) => {
+      const [row] = await runner.query(
+        `INSERT INTO interfaces (
+           tenant_id, name, business_purpose, source_application_id, target_application_id,
+           data_category, integration_route_type, lifecycle
+         ) VALUES (app_current_tenant(), $1, 'Sync', $2, $3, 'master_data', 'direct', 'active')
+         RETURNING id::text AS id, tenant_id::text AS tenant_id, interface_reference`,
+        [name, sourceApp, targetApp],
+      );
+      return {
+        id: row.id as string,
+        tenant_id: row.tenant_id as string,
+        item_number: null,
+        name,
+        reference_label: row.interface_reference as string,
+      };
+    };
+    const source = await insertInterface('Orders');
+    const target = await insertInterface('Orders copy');
+    assert.equal(
+      await integrated.copyInterfaceSpecification(source.id, target, member, { manager }),
+      false,
+      'no source specification, nothing copied',
+    );
+
+    const attachmentId = randomUUID();
+    const markdown = `The **source** specification.\n\n![Diagram](/api/knowledge/inline/tenant/${attachmentId})`;
+    await integrated.writeSourceSlotContent('interfaces', source, 'specification', markdown, member, { manager });
+    const [{ id: sourceDocumentId }] = await runner.query(
+      `SELECT document_id::text AS id
+       FROM integrated_document_bindings
+       WHERE tenant_id = app_current_tenant()
+         AND source_entity_type = 'interfaces'
+         AND source_entity_id = $1
+         AND slot_key = 'specification'`,
+      [source.id],
+    );
+    await runner.query(
+      `INSERT INTO document_attachments (
+         id, tenant_id, document_id, original_filename, stored_filename, mime_type, size, storage_path, source_field, uploaded_by_id
+       ) VALUES ($1, app_current_tenant(), $2, 'diagram.png', 'diagram.png', 'image/png', 4, 'files/diagram.png', 'content_markdown', $3)`,
+      [attachmentId, sourceDocumentId, member],
+    );
+
+    assert.equal(await integrated.copyInterfaceSpecification(source.id, target, member, { manager }), true);
+    const copied: any = await integrated.getBySource('interfaces', target.id, 'specification', member, { manager });
+    assert.notEqual(copied.id, sourceDocumentId, 'the copy has its own document');
+    assert.match(copied.content_markdown, /The \*\*source\*\* specification\./);
+    assert.equal(String(copied.content_markdown).includes(attachmentId), false, 'the image points at the cloned attachment');
+    assert.match(String(copied.title), new RegExp(`^${target.reference_label} - Orders copy - `));
+    const attachments = await runner.query(
+      `SELECT document_id::text AS document_id, id::text AS id
+       FROM document_attachments
+       WHERE tenant_id = app_current_tenant() AND source_field = 'content_markdown'`,
+    );
+    assert.equal(attachments.length, 2);
+    assert.ok(attachments.some((row: { document_id: string; id: string }) => row.document_id === copied.id && row.id !== attachmentId));
+    const sourceAgain: any = await integrated.getBySource('interfaces', source.id, 'specification', member, { manager });
+    assert.equal(String(sourceAgain.content_markdown).includes(attachmentId), true, 'the source document is left as it is');
+  });
+}
+
 // Issue 816: the page-hide beacon calls the same DELETE the editor uses
 // (`X-Lock-Token` on `.../integrated-documents/:slot/locks`). Once it lands,
 // another member can lock the description at once, inside the five-minute TTL.
@@ -308,6 +381,8 @@ async function main() {
     console.log('  ok testMemberWritesTheDescriptionOfItsRecord');
     await testNewVersionCopiesTheDescription();
     console.log('  ok testNewVersionCopiesTheDescription');
+    await testCopyKeepsTheInterfaceSpecification();
+    console.log('  ok testCopyKeepsTheInterfaceSpecification');
     await testReleaseRouteFreesTheLockAtOnce();
     console.log('  ok testReleaseRouteFreesTheLockAtOnce');
   } finally {

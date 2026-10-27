@@ -448,7 +448,7 @@ Classification and continuity values are copied, but the new version starts with
 
 ### Interface migration
 
-During version creation, the wizard shows all interfaces where this application is source, target, or middleware (when ETL is enabled). Selected interfaces are duplicated with their references updated to the new version. Each migrated interface includes its legs, owners, companies, key identifiers, links, and data residency. Migrated interfaces start with a **Proposed** lifecycle. The original interfaces stay linked to the old version.
+During version creation, the wizard shows all interfaces where this application is source, target, or middleware (when ETL is enabled). Selected interfaces are duplicated with their references updated to the new version. Each migrated interface includes its legs, owners, companies, key identifiers, links, data residency and its specification (the source's text and images). An empty interface ID stays empty. Migrated interfaces start with a **Proposed** lifecycle. The original interfaces stay linked to the old version.
 
 **Copying bindings**: If you select both **Deployments** and **Deployment bindings**, interface bindings are also copied. Bindings are mapped to the new application's deployments (matched by environment); environment-specific details (endpoints, authentication, job names) are cleared, and binding status is reset to **Proposed**.
 

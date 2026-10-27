@@ -165,7 +165,8 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
         body.interfaceIds,
         mg,
         instanceMapping,
-        copyOpts.copyBindings && copyOpts.copyInstances
+        copyOpts.copyBindings && copyOpts.copyInstances,
+        userId,
       );
     }
 
@@ -422,7 +423,8 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
     interfaceIds: string[],
     mg: EntityManager,
     instanceMapping: Map<string, string> = new Map(),
-    copyBindings: boolean = false
+    copyBindings: boolean = false,
+    userId: string | null = null,
   ) {
     const repo = mg.getRepository(InterfaceEntity);
     const legRepo = mg.getRepository(InterfaceLeg);
@@ -455,7 +457,10 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
       const copy = repo.create({
         ...original,
         id: undefined,
-        interface_id: `${original.interface_id} ${nameSuffix}`,
+        // The trigger assigns a new `INT-n`. Keeping the source's would collide with the unique index.
+        interface_reference: undefined,
+        // A missing business id stays empty. Interpolating it would store "null (new version)".
+        interface_id: original.interface_id ? `${original.interface_id} ${nameSuffix}` : null,
         name: original.name ? `${original.name} ${nameSuffix}` : undefined,
         source_application_id: isSource ? targetAppId : original.source_application_id,
         target_application_id: isTarget ? targetAppId : original.target_application_id,
@@ -465,6 +470,13 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
       });
 
       const savedCopy = await repo.save(copy as any);
+      if (!savedCopy.interface_reference) {
+        const [row] = await mg.query(
+          `SELECT interface_reference FROM interfaces WHERE id = $1 AND tenant_id = $2`,
+          [savedCopy.id, savedCopy.tenant_id],
+        );
+        if (row?.interface_reference) savedCopy.interface_reference = row.interface_reference;
+      }
 
       const legMapping = new Map<string, string>();
       const originalLegs = await legRepo.find({
@@ -614,6 +626,21 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
           });
           await bindingRepo.save(newBinding as any);
         }
+      }
+
+      if (this.integratedDocuments) {
+        await this.integratedDocuments.copyInterfaceSpecification(
+          ifaceId,
+          {
+            id: savedCopy.id,
+            tenant_id: savedCopy.tenant_id,
+            item_number: null,
+            name: savedCopy.name,
+            reference_label: savedCopy.interface_reference || savedCopy.interface_id || savedCopy.id,
+          },
+          userId,
+          { manager: mg },
+        );
       }
     }
   }

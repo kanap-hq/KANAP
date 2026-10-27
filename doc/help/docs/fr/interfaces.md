@@ -240,11 +240,12 @@ Utilisez cela lorsque vous voulez une copie indépendante d'une interface, typiq
 | Identifiants clés | Oui |
 | Liens URL externes | Oui |
 | Résidence des données | Oui |
+| Spécification | Oui, avec ses images |
 | Liaisons | Optionnel |
 | Groupes et règles de mappage | Non |
 | Pièces jointes | Non |
 
-**Nommage** : La copie reçoit « - copy » ajouté à la fois au nom et à l'ID de l'interface.
+**Nommage** : La copie reçoit « - copy » ajouté à la fois au nom et à l'ID de l'interface. Un identifiant d'interface vide le reste.
 
 ### Migration de version (depuis le versionnage d'application)
 

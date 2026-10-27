@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { InterfaceEntity } from '../interface.entity';
 import { InterfaceLeg } from '../interface-leg.entity';
 import { InterfaceMiddlewareApplication } from '../interface-middleware-application.entity';
@@ -95,6 +95,19 @@ export class InterfacesCrudService extends InterfacesBaseService {
       name: entity.name,
       reference_label: entity.interface_reference || entity.interface_id || entity.id,
     };
+  }
+
+  /**
+   * The `INT-n` reference is set by a database trigger, which the save does not read back.
+   * The specification document is titled with it, and the audit entry records it.
+   */
+  private async readAssignedReference(entity: InterfaceEntity, manager: EntityManager): Promise<void> {
+    if (entity.interface_reference) return;
+    const [row] = await manager.query(
+      `SELECT interface_reference FROM interfaces WHERE id = $1 AND tenant_id = $2`,
+      [entity.id, entity.tenant_id],
+    );
+    if (row?.interface_reference) entity.interface_reference = row.interface_reference;
   }
 
   /**
@@ -290,15 +303,7 @@ export class InterfacesCrudService extends InterfacesBaseService {
     });
 
     const saved = await repo.save(entity);
-    // The `INT-n` reference is set by a database trigger, which the save does not read back: read it,
-    // so the specification document is titled with it (not with the id).
-    if (!saved.interface_reference) {
-      const [row] = await repo.manager.query(
-        `SELECT interface_reference FROM interfaces WHERE id = $1 AND tenant_id = $2`,
-        [saved.id, saved.tenant_id],
-      );
-      if (row?.interface_reference) saved.interface_reference = row.interface_reference;
-    }
+    await this.readAssignedReference(saved, repo.manager);
     await this.syncMiddlewareApplications(saved, body.middleware_application_ids as string[] | undefined, opts?.manager);
     await this.createDefaultLegs(saved, tenantId, opts?.manager);
     await this.interfaceMappings.ensureDefaultSetForInterface(saved.id, saved.tenant_id, userId, {
@@ -528,26 +533,15 @@ export class InterfacesCrudService extends InterfacesBaseService {
     const source = await repo.findOne({ where: { id: sourceId } });
     if (!source) throw new NotFoundException('Interface not found');
 
-    // Fetch all related data
-    const [
-      legs,
-      owners,
-      companies,
-      dependencies,
-      keyIdentifiers,
-      links,
-      dataResidency,
-      middlewareApps,
-    ] = await Promise.all([
-      legRepo.find({ where: { interface_id: sourceId } as any, order: { order_index: 'ASC' as any } }),
-      mg.getRepository(InterfaceOwner).find({ where: { interface_id: sourceId } as any }),
-      mg.getRepository(InterfaceCompany).find({ where: { interface_id: sourceId } as any }),
-      mg.getRepository(InterfaceDependency).find({ where: { interface_id: sourceId } as any }),
-      mg.getRepository(InterfaceKeyIdentifier).find({ where: { interface_id: sourceId } as any }),
-      mg.getRepository(InterfaceLink).find({ where: { interface_id: sourceId } as any }),
-      mg.getRepository(InterfaceDataResidency).find({ where: { interface_id: sourceId } as any }),
-      this.getMiddlewareRepo(mg).find({ where: { interface_id: sourceId } as any }),
-    ]);
+    // One connection for the request: these reads run one after the other.
+    const legs = await legRepo.find({ where: { interface_id: sourceId } as any, order: { order_index: 'ASC' as any } });
+    const owners = await mg.getRepository(InterfaceOwner).find({ where: { interface_id: sourceId } as any });
+    const companies = await mg.getRepository(InterfaceCompany).find({ where: { interface_id: sourceId } as any });
+    const dependencies = await mg.getRepository(InterfaceDependency).find({ where: { interface_id: sourceId } as any });
+    const keyIdentifiers = await mg.getRepository(InterfaceKeyIdentifier).find({ where: { interface_id: sourceId } as any });
+    const links = await mg.getRepository(InterfaceLink).find({ where: { interface_id: sourceId } as any });
+    const dataResidency = await mg.getRepository(InterfaceDataResidency).find({ where: { interface_id: sourceId } as any });
+    const middlewareApps = await this.getMiddlewareRepo(mg).find({ where: { interface_id: sourceId } as any });
 
     let newInterfaceId: string | null = null;
     if (source.interface_id) {
@@ -592,6 +586,7 @@ export class InterfacesCrudService extends InterfacesBaseService {
     });
 
     const savedInterface = await repo.save(newInterface);
+    await this.readAssignedReference(savedInterface, mg);
 
     // Copy legs with their customizations (but new IDs)
     // Build leg mapping for binding copy
@@ -742,6 +737,13 @@ export class InterfacesCrudService extends InterfacesBaseService {
         await bindingRepo.save(newBinding as any);
       }
     }
+
+    await this.integratedDocuments.copyInterfaceSpecification(
+      sourceId,
+      this.buildSourceDescriptor(savedInterface),
+      userId,
+      { manager: mg },
+    );
 
     // Audit log
     await this.audit.log(
