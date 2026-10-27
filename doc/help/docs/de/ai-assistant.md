@@ -167,7 +167,11 @@ Das Panel öffnet sich automatisch, wenn:
 Bei ausstehenden Änderungsvorschauen bietet das Panel zwei Schaltflächen:
 
 - **Genehmigen**: bestätigt die Änderung und lässt Plaid sie anwenden
-- **Ablehnen**: verwirft die Änderung. Plaid bestätigt die Ablehnung und setzt die Konversation fort.
+- **Ablehnen**: verwirft die Änderung. Plaid teilt mit, dass die Änderung abgelehnt wurde, und bereitet nichts an ihrer Stelle vor. Wenn Ihre Anfrage mehrere Änderungen umfasste, fährt es mit den übrigen fort.
+
+Eine Vorschau und die Nachricht, die Plaid nach Ihrer Genehmigung oder Ablehnung schreibt, sind in der Sprache Ihres Profils, mit den Feldnamen und Werten der Bildschirme. Eine Budgetzeile, die mit einem Betrag angefragt wird, kommt als eine einzige Vorschau: Eine Genehmigung legt die Zeile, ihre Budgetversion für das Jahr und den Betrag an.
+
+Wenn Sie eine Änderung anfragen, die Plaid nicht vornehmen kann, etwa einen Datensatz löschen oder den Status einer Schwachstelle ändern, sagt es das und nennt den Bildschirm, auf dem Sie sie vornehmen können. Es bereitet keine andere Änderung an ihrer Stelle vor.
 
 Nichts, was KANAP-Daten verändert, wird stillschweigend angewendet. Die Vorschau ist die Kontrollinstanz.
 
