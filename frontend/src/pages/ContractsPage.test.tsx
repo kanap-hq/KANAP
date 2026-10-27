@@ -185,7 +185,7 @@ describe('ContractsPage', () => {
     renderPage();
     expect(screen.queryByRole('button', { name: 'contracts.importCsv' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'contracts.renewal.settings.button' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'contracts.exportCsv' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'common:export.button' })).toBeInTheDocument();
   });
 
   it('lists active contracts by default and offers the other scopes', () => {

@@ -255,7 +255,7 @@ describe('AnalyticsCategoriesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'analytics.newDimension' }));
     expect(navigateMock).toHaveBeenCalledWith('/master-data/analytics/dimensions/new/overview');
     expect(screen.queryByRole('button', { name: 'shared.labels.importCsv' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'shared.labels.exportCsv' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:export.button' })).toBeNull();
     expect(grid.props?.enableRowSelection).toBe(false);
     second.unmount();
 
@@ -266,7 +266,7 @@ describe('AnalyticsCategoriesPage', () => {
     expect(context).toHaveTextContent('Analytics dimension');
     expect(within(context).getByRole('button', { name: 'analytics.newValue' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'shared.labels.importCsv' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'shared.labels.exportCsv' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'common:export.button' })).toBeInTheDocument();
     expect(grid.props?.enableRowSelection).toBe(true);
   });
 

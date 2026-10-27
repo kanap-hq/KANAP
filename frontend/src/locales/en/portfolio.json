@@ -960,8 +960,7 @@
     },
     "actions": {
       "new": "New",
-      "importCsv": "Import CSV",
-      "exportCsv": "Export CSV"
+      "importCsv": "Import CSV"
     },
     "csv": {
       "exportTitle": "Export tasks",
@@ -998,8 +997,7 @@
     },
     "actions": {
       "new": "New project",
-      "importCsv": "Import CSV",
-      "exportCsv": "Export CSV"
+      "importCsv": "Import CSV"
     },
     "csv": {
       "exportTitle": "Export portfolio projects",
@@ -1026,8 +1024,7 @@
     },
     "actions": {
       "new": "New request",
-      "importCsv": "Import CSV",
-      "exportCsv": "Export CSV"
+      "importCsv": "Import CSV"
     },
     "csv": {
       "exportTitle": "Export portfolio requests",

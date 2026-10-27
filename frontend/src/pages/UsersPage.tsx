@@ -364,7 +364,7 @@ export default function UsersPage() {
     <Stack direction="row" spacing={1} alignItems="center">
       {canManageUsers && <Button variant="action-primary" onClick={handleNew}>{t('users.actions.new')}</Button>}
       {canManageUsers && <Button variant="action" onClick={() => setImportOpen(true)}>{t('users.actions.importCsv')}</Button>}
-      {canManageUsers && <Button variant="action" onClick={() => setExportOpen(true)}>{t('users.actions.exportCsv')}</Button>}
+      {canManageUsers && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canManageUsers && (
         <Button
           variant="action"

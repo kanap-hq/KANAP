@@ -1082,7 +1082,7 @@ export default function ApplicationsPage() {
         </Button>
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.assets.importCsv')}</Button>}
-      {canAdmin && <Button variant="action" onClick={openExport}>{t('pages.assets.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>}
       {canCreate && (
         <Button variant="action" onClick={() => void handleCopy()} disabled={selectedRows.length !== 1}>{t('pages.applications.copyItem')}</Button>
       )}

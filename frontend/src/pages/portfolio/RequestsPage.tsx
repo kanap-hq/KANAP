@@ -478,7 +478,7 @@ export default function RequestsPage() {
         </Button>
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('requests.actions.importCsv')}</Button>}
-      {canAdmin && <Button variant="action" onClick={openExport}>{t('requests.actions.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>}
     </Stack>
   );
 

@@ -1627,7 +1627,6 @@
     "actions": {
       "new": "Nouveau",
       "importCsv": "Importer CSV",
-      "exportCsv": "Exporter CSV",
       "invite": "Inviter ({{count}})",
       "inviting": "Invitation en cours…",
       "rowMenu": "Actions utilisateur",
@@ -2063,7 +2062,6 @@
       "saveFailed": "L'accès n'a pas pu être mis à jour.",
       "loadFailed": "L'accès n'a pas pu être chargé."
     },
-    "importCsv": "Importer CSV",
-    "exportCsv": "Exporter CSV"
+    "importCsv": "Importer CSV"
   }
 }

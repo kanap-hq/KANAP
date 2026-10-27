@@ -645,7 +645,7 @@ export default function TasksPage() {
         </Button>
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('tasks.actions.importCsv')}</Button>}
-      {canAdmin && <Button variant="action" onClick={openExport}>{t('tasks.actions.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton
           selectedRows={selectedRows}

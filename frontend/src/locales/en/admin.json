@@ -1627,7 +1627,6 @@
     "actions": {
       "new": "New",
       "importCsv": "Import CSV",
-      "exportCsv": "Export CSV",
       "invite": "Invite ({{count}})",
       "inviting": "Inviting…",
       "rowMenu": "User actions",
@@ -2063,7 +2062,6 @@
       "saveFailed": "The access could not be updated.",
       "loadFailed": "The access could not be loaded."
     },
-    "importCsv": "Import CSV",
-    "exportCsv": "Export CSV"
+    "importCsv": "Import CSV"
   }
 }

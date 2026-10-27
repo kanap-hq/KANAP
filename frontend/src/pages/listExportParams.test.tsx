@@ -79,14 +79,14 @@ describe('list exports follow the screen', () => {
   };
 
   it('projects', async () => {
-    expect(await exportParamsOf(<ProjectsPage />, 'projects.actions.exportCsv')).toEqual(expected);
+    expect(await exportParamsOf(<ProjectsPage />, 'common:export.button')).toEqual(expected);
   });
 
   it('requests', async () => {
-    expect(await exportParamsOf(<RequestsPage />, 'requests.actions.exportCsv')).toEqual(expected);
+    expect(await exportParamsOf(<RequestsPage />, 'common:export.button')).toEqual(expected);
   });
 
   it('tasks', async () => {
-    expect(await exportParamsOf(<TasksPage />, 'tasks.actions.exportCsv')).toEqual(expected);
+    expect(await exportParamsOf(<TasksPage />, 'common:export.button')).toEqual(expected);
   });
 });

@@ -513,7 +513,7 @@ export default function ProjectsPage() {
         </Button>
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('projects.actions.importCsv')}</Button>}
-      {canAdmin && <Button variant="action" onClick={openExport}>{t('projects.actions.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>}
     </Stack>
   );
 

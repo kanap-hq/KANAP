@@ -166,7 +166,7 @@ export default function CsvExportDialogV2({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{titleProp || t('csv.exportTitle')}</DialogTitle>
+      <DialogTitle>{titleProp || t('export.button')}</DialogTitle>
       <DialogContent>
         {loadingFields ? (
           <LinearProgress sx={{ my: 2 }} />

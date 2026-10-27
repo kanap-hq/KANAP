@@ -78,7 +78,7 @@ export default function CsvExportDialog({
         ? t(`csv.exportNoRows.${entity}`)
         : t(`csv.exportRows.${entity}`, { count: listRequest!.total })
       : t(`csv.exportAllRows.${entity}`)
-    : titleProp || t('csv.exportTitle');
+    : titleProp || t(csvOnly ? 'csv.exportTitle' : 'export.button');
   const download = async (scope: 'template' | 'data') => {
     setError(null);
     try {

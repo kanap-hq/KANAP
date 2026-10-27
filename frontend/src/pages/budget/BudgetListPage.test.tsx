@@ -910,7 +910,7 @@ describe('BudgetListPage', () => {
   it('opens export and import with the unified filters and the CAPEX fallback, and bulk deletes on the neutral route', async () => {
     await renderPage();
     act(() => lastProps().onQueryStateChange({ sort: 'yBudget:DESC', q: '', statusScope: 'enabled', filterModel: { nature: { filterType: 'set', values: ['capex'] } } }));
-    fireEvent.click(screen.getByRole('button', { name: 'opex.exportCsv' }));
+    fireEvent.click(screen.getByRole('button', { name: 'common:export.button' }));
     expect(dialogs.export).toMatchObject({ open: true, scope: 'all', list: { filters: JSON.stringify({ nature: { filterType: 'set', values: ['capex'] } }) } });
     fireEvent.click(screen.getByRole('button', { name: 'opex.importCsv' }));
     expect(dialogs.import).toMatchObject({ open: true, scope: 'capex' });
@@ -935,7 +935,7 @@ describe('BudgetListPage', () => {
     expect(dialogs.bulk).toBeNull();
     expect(lastProps().enableRowSelection).toBe(false);
     expect(screen.getByRole('button', { name: 'opex.importCsv' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'opex.exportCsv' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'common:export.button' })).toBeInTheDocument();
   });
 
   it('an unscoped administrator keeps bulk delete', async () => {
@@ -950,12 +950,12 @@ describe('BudgetListPage', () => {
     await renderPage();
     expect(screen.queryByRole('button', { name: 'budget.newLine' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'opex.importCsv' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'opex.exportCsv' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:export.button' })).toBeNull();
     expect(dialogs.bulk).toBeNull();
     auth.level = 'manager';
     act(() => lastProps().onQueryStateChange({ sort: '', filterModel: {}, q: 'refresh', statusScope: 'enabled' }));
     expect(screen.getByRole('button', { name: 'budget.newLine' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'opex.exportCsv' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:export.button' })).toBeNull();
   });
 
   it('shows one Total row from one totals GET, with no nature filter added, when the list holds both types', async () => {
