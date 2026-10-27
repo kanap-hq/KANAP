@@ -350,6 +350,8 @@ Verknüpfungen sind bidirektional: Aus dem verknüpften Anwendungs- oder Asset-A
 
 **Tipp**: Reservieren Sie diese Verknüpfungen für Aufgaben, bei denen es operativ um die App oder das Asset geht, nicht für jede Aufgabe, die eine im Vorbeigehen erwähnt. Andernfalls wird die Beziehung zu Rauschen statt zu einem Signal.
 
+Sie sehen jeden verknüpften Datensatz nur, wenn Sie sein Modul lesen dürfen: Anwendungen erfordern die Anwendungen, Assets die Infrastruktur. Dasselbe gilt für den Datensatz, zu dem eine Aufgabe gehört: Ein Projekt erfordert die Projekte, eine Budgetzeile das Budget, ein Vertrag die Verträge, ein Vorfall die Vorfälle. Andernfalls fehlt das Feld in der Eigenschaftsleiste, in der Liste und in Plaid, und die Aufgabe behält ihre Verknüpfung. Ein Business Contributor sieht außerdem das Projekt, seine Phase, den aus der Aufgabe erstellten Antrag und die Anwendungen nur, wenn er daran beteiligt ist: Eine einzige Anwendung außerhalb seiner Beteiligung blendet das Feld **Anwendungen** aus.
+
 ---
 
 ## Aufgaben aus anderen Arbeitsbereichen erstellen

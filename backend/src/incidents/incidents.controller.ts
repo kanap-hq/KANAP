@@ -190,6 +190,8 @@ export class IncidentsController {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       viewer: incidentViewerFromContext(ctx),
+      technologies: canReadResource(ctx, 'infrastructure'),
+      applications: canReadResource(ctx, 'applications'),
       scope,
       fields: fields ? fields.split(',').map((f) => f.trim()) : undefined,
       query,

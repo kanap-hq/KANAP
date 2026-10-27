@@ -33,6 +33,7 @@ import {
   setTenant,
 } from '../../spend/__tests__/round-inputs.fixtures';
 import { taskIncidentVisibilitySql, type IncidentViewer } from '../incident-visibility';
+import { linkedReadsFromContext } from '../../common/relations/linked-reads';
 
 // A restricted incident, its review and its tasks do not exist for a reader who
 // is neither incidents:admin, its reporter nor its owner: the task is absent from
@@ -501,6 +502,7 @@ async function testPlaidAndSearch(): Promise<void> {
       listReadableEntityTypes: async (_context: unknown, requested: string[]) => requested,
       assertEntityTypeReadAccess: async () => undefined,
       canReadKnowledge: async () => false,
+      canReadEntityType: async () => true,
     };
     const entityService = new (AiEntityService as any)(knowledge, policy);
 
@@ -670,14 +672,18 @@ async function testOtherReadSurfaces(): Promise<void> {
 
     // The origin task of a request.
     const requests = new (PortfolioRequestsService as any)(runner.manager.getRepository(PortfolioRequest));
+    // Both read tasks: the origin task follows the incident visibility alone.
+    const linked = { reads: linkedReadsFromContext({ permissions: { tasks: 'reader' } }) };
     const readerRequest = await requests.get(s.requestId, { include: 'origin_task' }, {
       manager: runner.manager,
       viewer: reader,
+      linked,
     });
     assert.equal(readerRequest.origin_task, null);
     const reporterRequest = await requests.get(s.requestId, { include: 'origin_task' }, {
       manager: runner.manager,
       viewer: reporter,
+      linked,
     });
     assert.equal(reporterRequest.origin_task.id, s.restrictedTaskId);
 
@@ -699,6 +705,7 @@ async function testOtherReadSurfaces(): Promise<void> {
       listReadableEntityTypes: async () => [],
       assertEntityTypeReadAccess: async () => undefined,
       canReadKnowledge: async () => false,
+      canReadEntityType: async () => true,
     };
     const entityService = new (AiEntityService as any)(knowledgeStub, policy);
     const readerContext = await (entityService as any).buildRequestContext(

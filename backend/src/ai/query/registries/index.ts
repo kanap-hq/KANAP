@@ -109,15 +109,39 @@ export function withAnalyticsAxisFields(registry: AiEntityFilterRegistry, axes: 
   return { ...registry, fields, sortFields };
 }
 
-/** Whether the caller reads a family (`AiPolicyService.canReadEntityType`). */
-export type AiReadProbe = (entityType: AiQueryEntityType) => Promise<boolean>;
+/**
+ * Whether the caller reads a family (`AiPolicyService.canReadEntityType`), or holds `level` on it
+ * when given (`admin`: the users administration).
+ */
+export type AiReadProbe = (entityType: AiQueryEntityType, level?: 'reader' | 'admin') => Promise<boolean>;
 
 /**
- * Fields that count another module's records, with that module: listed, filtered, sorted and
- * aggregated only for a caller who reads it, as on the record's page (the application Relations tab).
+ * Fields that count or name another module's records, with that module: listed, filtered, sorted
+ * and aggregated only for a caller who reads it, as on the record's page (the application
+ * Relations tab, the task page).
  */
 const LINKED_COUNT_FIELDS: Partial<Record<AiQueryEntityType, Record<string, AiQueryEntityType>>> = {
   applications: { spend_count: 'spend_items', capex_count: 'capex_items', contracts_count: 'contracts' },
+  tasks: { application: 'applications', asset: 'assets', project_name: 'projects' },
+  incidents: { asset: 'assets', application: 'applications', asset_count: 'assets' },
+  documents: {
+    linked_application: 'applications',
+    linked_asset: 'assets',
+    linked_project: 'projects',
+    linked_request: 'requests',
+    linked_task: 'tasks',
+  },
+};
+
+/**
+ * The fields of a family that its own list shows only to an administrator of it. A reader of users
+ * sees what the users list shows them: name, email and status.
+ */
+const ADMIN_ONLY_FIELDS: Partial<Record<AiQueryEntityType, string[]>> = {
+  users: [
+    'job_title', 'company', 'department', 'primary_role', 'locale', 'team',
+    'contributor_profile', 'project_availability', 'areas_of_expertise',
+  ],
 };
 
 /** The registry without the linked counts of the modules the caller does not read. */
@@ -126,10 +150,14 @@ export async function withoutUnreadableLinkedCounts(
   canRead: AiReadProbe,
 ): Promise<AiEntityFilterRegistry> {
   const gated = LINKED_COUNT_FIELDS[registry.entityType];
-  if (!gated) return registry;
+  const adminOnly = ADMIN_ONLY_FIELDS[registry.entityType];
+  if (!gated && !adminOnly) return registry;
   const hidden = new Set<string>();
-  for (const [field, entityType] of Object.entries(gated)) {
+  for (const [field, entityType] of Object.entries(gated ?? {})) {
     if (!(await canRead(entityType))) hidden.add(field);
+  }
+  if (adminOnly && !(await canRead(registry.entityType, 'admin'))) {
+    for (const field of adminOnly) hidden.add(field);
   }
   if (!hidden.size) return registry;
   const kept = <T>(record: Record<string, T>) => Object.fromEntries(Object.entries(record).filter(([key]) => !hidden.has(key)));

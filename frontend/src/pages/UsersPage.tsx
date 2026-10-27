@@ -67,6 +67,15 @@ export default function UsersPage() {
 
   const closeRowMenu = () => setMenuPos(null);
 
+  // One recipient is named; several are a count. Nothing is sent until this is confirmed.
+  const confirmSendInvite = (rows: Array<{ email?: string }>) => dialogs.confirm({
+    message: t('users.messages.inviteConfirm', {
+      count: rows.length,
+      ...(rows.length === 1 ? { email: rows[0]?.email ?? '' } : {}),
+    }),
+    confirmLabel: t('users.actions.sendInvite'),
+  });
+
   const handleRowDisable = async (row: any) => {
     closeRowMenu();
     const okToGo = await dialogs.confirm({
@@ -83,6 +92,7 @@ export default function UsersPage() {
   };
   const handleRowInvite = async (row: any) => {
     closeRowMenu();
+    if (!(await confirmSendInvite([row]))) return;
     try {
       await inviteUser(row.id);
       await dialogs.alert(t('users.messages.inviteSentOne', { email: row.email }));
@@ -328,6 +338,7 @@ export default function UsersPage() {
 
   const handleInviteSelected = async () => {
     if (!selectedRows.length) return;
+    if (!(await confirmSendInvite(selectedRows))) return;
     setInviting(true);
     try {
       const results = await Promise.allSettled(

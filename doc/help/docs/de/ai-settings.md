@@ -51,7 +51,7 @@ Wenn Plaid auf dem Inklusiven KANAP-Modell läuft (keine ausdrückliche Wahl, ke
 - Dem Datum, an dem das Kontingent zurückgesetzt wird
 - Einem Hinweis, dass eigene API-Schlüssel die Obergrenze aufheben
 
-Wie die Karte erläutert, teilen sich der Chat und die Agenten dieses Mandanten das Kontingent. Eine Nachricht ist eine Chat-Frage oder ein von einem Agenten geprüftes Ticket. Anfragen externer Assistenten über MCP zählen nicht. Eine ausgelastete Agentenflotte verbraucht es schneller; wenn Sie also diesen Balken beobachten, behalten Sie auch die Seite [Nutzung & Kosten](ai-usage.md) im Auge.
+Wie die Karte erläutert, teilen sich der Chat und die Agenten dieses Arbeitsbereichs das Kontingent. Eine Nachricht ist eine Chat-Frage oder ein von einem Agenten geprüftes Ticket. Anfragen externer Assistenten über MCP zählen nicht. Eine ausgelastete Agentenflotte verbraucht es schneller; wenn Sie also diesen Balken beobachten, behalten Sie auch die Seite [Nutzung & Kosten](ai-usage.md) im Auge.
 
 ### Status-Chips
 

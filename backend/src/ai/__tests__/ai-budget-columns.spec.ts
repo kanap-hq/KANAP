@@ -67,7 +67,11 @@ async function testPromptBlockFollowsOpexOrCapexRead() {
 /** MCP clients have no system prompt: the filter description of OPEX and CAPEX items carries the names. */
 async function testDescribeEntityFiltersCarriesColumns() {
   const checked: string[] = [];
-  const policy = { assertEntityTypeReadAccess: async (_ctx: unknown, type: string) => { checked.push(type); } };
+  const policy = {
+    assertEntityTypeReadAccess: async (_ctx: unknown, type: string) => { checked.push(type); },
+    // The linked fields of tasks follow the caller's reads: this caller reads everything.
+    canReadEntityType: async () => true,
+  };
   const args: any[] = Array.from({ length: 9 }, () => undefined);
   args[2] = policy;
   args[8] = { listOperations: () => [] };

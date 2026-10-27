@@ -317,6 +317,8 @@ Los documentos de la Base de conocimiento pueden relacionarse directamente con:
 
 Las relaciones no son solo etiquetas. Controlan dónde aparece el documento en otras partes de KANAP y cómo los usuarios lo descubren desde los espacios de trabajo operativos.
 
+Cada tipo de relación solo se muestra a las personas que pueden leer su módulo: las aplicaciones requieren las aplicaciones, los activos la infraestructura, los proyectos los proyectos, las solicitudes las solicitudes, las tareas las tareas. Un tipo que usted no puede leer no aparece en el documento, tampoco en Plaid, y guardar el documento deja sus vínculos intactos. Un Business Contributor solo añade los proyectos, solicitudes, aplicaciones y tareas en los que participa.
+
 Consecuencias de añadir relaciones:
 - el documento se vuelve más fácil de encontrar desde el objeto vinculado
 - los lectores que abren el objeto obtienen documentación contextual sin tener que buscar manualmente

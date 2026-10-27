@@ -51,7 +51,7 @@ When Plaid is running on the KANAP included model (no explicit choice, no organi
 - The date the allowance **resets**
 - A reminder that using your own API keys removes the cap
 
-As the card says, chat and the agents of this tenant share the allowance. One message is one chat question or one ticket reviewed by an agent. Requests from external assistants over MCP do not count. A busy agent fleet consumes it faster, so if you are watching this bar, watch the [Usage & costs](ai-usage.md) page too.
+As the card says, chat and the agents of this workspace share the allowance. One message is one chat question or one ticket reviewed by an agent. Requests from external assistants over MCP do not count. A busy agent fleet consumes it faster, so if you are watching this bar, watch the [Usage & costs](ai-usage.md) page too.
 
 ### Status chips
 

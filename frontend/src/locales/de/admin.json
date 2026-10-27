@@ -1598,6 +1598,8 @@
       "invitePartialFail_one": "{{count}} Benutzer eingeladen; {{failed}} fehlgeschlagen",
       "invitePartialFail_other": "{{count}} Benutzer eingeladen; {{failed}} fehlgeschlagen",
       "inviteFailed": "Ausgewählte Benutzer konnten nicht eingeladen werden",
+      "inviteConfirm_one": "Eine Einladung an {{email}} senden?",
+      "inviteConfirm_other": "Einladungen an {{count}} Benutzer senden?",
       "disableConfirm": "{{name}} verliert den Zugriff und wird sofort abgemeldet. Dieses Konto deaktivieren?",
       "deleteConfirm": "{{name}} löschen? Dies kann nicht rückgängig gemacht werden.",
       "inviteSentOne": "Einladung an {{email}} gesendet",

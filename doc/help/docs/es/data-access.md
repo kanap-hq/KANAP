@@ -190,7 +190,7 @@ Para una persona limitada, el presupuesto y los contratos solo contienen lo que 
 - El contrato de una línea visible se abre en solo lectura. Sus adjuntos y enlaces documentales siguen cerrados, con un número como «2 adjuntos, reservados a las personas que ven este contrato».
 - La búsqueda, Plaid, MCP y las exportaciones no muestran ningún rastro de un elemento oculto.
 
-Estos números aparecen para cualquier persona que no ve las líneas. Una persona sin acceso al presupuesto ve «3 líneas presupuestarias» en los paneles de aplicaciones, servidores y proyectos, sin los nombres.
+Estos números aparecen para las personas que leen el presupuesto pero no esas líneas. Una persona sin el derecho de presupuesto no ve ninguna línea presupuestaria en los paneles de aplicaciones, servidores y proyectos, ni ningún número.
 
 **Las cifras de un elemento visible** abarcan todos sus datos. La cobertura de un contrato cuenta todas sus líneas vinculadas, también las ocultas, para que su responsable vea la cobertura real. Vea [Contratos](contracts.md#compromiso-y-cobertura).
 
