@@ -233,6 +233,9 @@ function CopyValue({ value, copyLabel, copiedLabel, multiline = false }: {
   );
 }
 
+/** A long key label stops at the column width; the full label shows on hover. */
+const KEY_LABEL_CELL_SX = { maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' } as const;
+
 export default function AdminAiPage() {
   const { config } = useFeatures();
   const queryClient = useQueryClient();
@@ -759,7 +762,7 @@ export default function AdminAiPage() {
                           <TableRow key={key.id}>
                             {key.credential_kind === 'oauth' ? (
                               <>
-                                <TableCell>
+                                <TableCell sx={KEY_LABEL_CELL_SX} title={clientDisplayName(key.oauth_client_name) ?? key.label}>
                                   {clientDisplayName(key.oauth_client_name) ?? key.label}
                                   {key.oauth_redirect_host ? (
                                     <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{` · ${key.oauth_redirect_host}`}</Box>
@@ -770,7 +773,7 @@ export default function AdminAiPage() {
                               </>
                             ) : (
                               <>
-                                <TableCell>
+                                <TableCell sx={KEY_LABEL_CELL_SX} title={`${key.label} · ${key.key_prefix}`}>
                                   {key.label}
                                   <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>
                                     {' · '}
@@ -807,6 +810,7 @@ export default function AdminAiPage() {
                                   <span>
                                     <IconButton
                                       size="small"
+                                      sx={{ p: 0.25 }}
                                       aria-label={t('aiAdmin.keys.revokeNamed', {
                                         name: key.credential_kind === 'oauth'
                                           ? clientDisplayName(key.oauth_client_name) ?? key.label
