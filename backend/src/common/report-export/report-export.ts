@@ -48,7 +48,7 @@ export interface ReportColumn {
 export interface ReportTable {
   /** Stable name of the table for `table=` (`contributors`, `teams`): never translated. */
   key: string;
-  /** The translated sheet name. */
+  /** The translated sheet name: 31 characters at most (Excel's limit), so it is never cut. */
   sheet: string;
   columns: ReportColumn[];
   rows: ReportCell[][];
@@ -88,6 +88,8 @@ export interface ReportExportFile {
 }
 
 export const CSV_CONTENT_TYPE = 'text/csv; charset=utf-8';
+/** Excel's limit for a sheet name: a longer label would be cut. */
+export const REPORT_SHEET_NAME_MAX = 31;
 
 const AMOUNT_TEXT = /^-?\d+(\.\d+)?$/;
 
@@ -95,6 +97,9 @@ export function writeReportExport(exp: ReportExport, request: ReportExportReques
   if (exp.tables.length === 0) throw new Error('report export: no table');
   const keys = new Set(exp.tables.map((table) => table.key));
   if (keys.size !== exp.tables.length) throw new Error('report export: table keys must be unique');
+  for (const table of exp.tables) {
+    if (table.sheet.length > REPORT_SHEET_NAME_MAX) throw new Error(`report export: the sheet "${table.sheet}" is over ${REPORT_SHEET_NAME_MAX} characters`);
+  }
   if (request.table !== undefined && !keys.has(request.table)) {
     throw new BadRequestException(`table must be one of ${[...keys].join(', ')}.`);
   }

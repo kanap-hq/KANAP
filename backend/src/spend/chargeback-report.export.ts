@@ -24,7 +24,21 @@ import type {
 export const GLOBAL_CHARGEBACK_TABLES = ['detailed', 'companies', 'flows', 'kpis'] as const;
 export const COMPANY_CHARGEBACK_TABLES = ['departments', 'items', 'intercompany', 'kpis'] as const;
 
-/** Where each label comes from in `frontend/src/locales/<lang>/ops.json` (checked by a spec). */
+/**
+ * The sheet of each table: words of the file only, the screen's section titles shortened where Excel's
+ * 31 characters require it (checked by `report-sheet-names.spec.ts`).
+ */
+export const CHARGEBACK_EXPORT_SHEETS = [
+  'detailedSheet',
+  'companiesSheet',
+  'flowsSheet',
+  'kpisSheet',
+  'departmentsSheet',
+  'itemsSheet',
+  'intercompanySheet',
+] as const;
+
+/** Where each other label comes from in `frontend/src/locales/<lang>/ops.json` (checked by a spec). */
 export const CHARGEBACK_EXPORT_KEYS = {
   company: 'reports.columns.company',
   department: 'reports.columns.department',
@@ -53,13 +67,6 @@ export const CHARGEBACK_EXPORT_KEYS = {
   commonCosts: 'reports.globalChargeback.commonCosts',
   unknownDepartment: 'reports.shared.unknownDepartment',
   unknownCompany: 'reports.shared.unknownCompany',
-  detailedSheet: 'reports.globalChargeback.detailedTitle',
-  companiesSheet: 'reports.globalChargeback.companyTotalsTitle',
-  flowsSheet: 'reports.globalChargeback.flowsTitle',
-  kpisSheet: 'reports.globalChargeback.kpisTitle',
-  departmentsSheet: 'reports.companyChargeback.departmentTotals',
-  itemsSheet: 'reports.companyChargeback.chargebackItems',
-  intercompanySheet: 'reports.companyChargeback.flowsTitle',
   scope: 'operations.scope.label',
   scope_opex: 'operations.scope.opex',
   scope_capex: 'operations.scope.capex',
@@ -77,7 +84,7 @@ export const CHARGEBACK_EXPORT_KEYS = {
   method_default: 'reports.shared.allocationMethodDefault',
 } as const;
 
-export type ChargebackExportLabels = Record<keyof typeof CHARGEBACK_EXPORT_KEYS, string>;
+export type ChargebackExportLabels = Record<keyof typeof CHARGEBACK_EXPORT_KEYS | (typeof CHARGEBACK_EXPORT_SHEETS)[number], string>;
 
 export const CHARGEBACK_EXPORT_LABELS: Record<CsvLanguage, ChargebackExportLabels> = {
   en: {
@@ -212,11 +219,11 @@ export const CHARGEBACK_EXPORT_LABELS: Record<CsvLanguage, ChargebackExportLabel
     unknownCompany: 'Unbekanntes Unternehmen',
     detailedSheet: 'Detaillierte Zuordnungen',
     companiesSheet: 'Globale Unternehmenstotale',
-    flowsSheet: 'Unternehmensübergreifende Flüsse',
+    flowsSheet: 'Flüsse zwischen Unternehmen',
     kpisSheet: 'KPIs der Leistungsverrechnung',
     departmentsSheet: 'Abteilungstotale',
     itemsSheet: 'Leistungsverrechnungszeilen',
-    intercompanySheet: 'Unternehmensübergreifende Flüsse',
+    intercompanySheet: 'Flüsse zwischen Unternehmen',
     scope: 'Zeilentyp',
     scope_opex: 'OPEX',
     scope_capex: 'CAPEX',

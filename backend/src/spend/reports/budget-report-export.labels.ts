@@ -2,10 +2,23 @@ import type { CsvLanguage } from '../../common/csv-sheet/types';
 
 /**
  * The words of the budget report exports (`budget-report-export.service.ts`): the table headers the
- * screens show (`reportTables.ts` takes them as `labels`), the sheet names (the report titles) and the
- * Parameters sheet. The values are the screens' (`frontend/src/locales/<lang>/ops.json`), checked by a
- * spec in the four languages.
+ * screens show (`reportTables.ts` takes them as `labels`), the sheet names and the Parameters sheet.
+ * The values are the screens' (`frontend/src/locales/<lang>/ops.json`), checked by a spec in the four
+ * languages, except the sheet names: the report titles, shortened where Excel's 31 characters require it
+ * (checked by `report-sheet-names.spec.ts`).
  */
+
+/** The sheet of each report: words of the file only. */
+export const BUDGET_REPORT_SHEETS = [
+  'comparisonSheet',
+  'columnsCompareSheet',
+  'topLinesSheet',
+  'deltaSheet',
+  'consolidationSheet',
+  'analyticsSheet',
+  'staffingSheet',
+  'costPerFteSheet',
+] as const;
 
 /** Where each label comes from in `frontend/src/locales/<lang>/ops.json`. */
 export const BUDGET_REPORT_EXPORT_KEYS = {
@@ -42,9 +55,6 @@ export const BUDGET_REPORT_EXPORT_KEYS = {
   shareOfTotal: 'reports.columns.shareOfTotal',
   reportingCurrency: 'operations.currency.reportingCurrency',
   yes: 'contracts.fields.yes',
-  comparisonSheet: 'reports.budgetTrendOpex.title',
-  columnsCompareSheet: 'reports.budgetColumnsCompare.title',
-  topLinesSheet: 'reports.topOpex.title',
   sourceYear: 'reports.filters.sourceYear',
   sourceMetric: 'reports.filters.sourceMetric',
   destinationYear: 'reports.filters.destinationYear',
@@ -65,9 +75,6 @@ export const BUDGET_REPORT_EXPORT_KEYS = {
   analyticsTotal: 'reports.analyticsCategory.totalMetric',
   dimension: 'reports.filters.dimension',
   excludeValues: 'reports.filters.excludeCategories',
-  deltaSheet: 'reports.opexDelta.title',
-  consolidationSheet: 'reports.consolidation.title',
-  analyticsSheet: 'reports.analyticsCategory.title',
   average: 'reports.staffing.average',
   peak: 'reports.staffing.peak',
   groupBy: 'reports.staffing.groupBy',
@@ -77,7 +84,6 @@ export const BUDGET_REPORT_EXPORT_KEYS = {
   none_costCenter: 'reports.staffing.none.costCenter',
   none_supplier: 'reports.staffing.none.supplier',
   none_axis: 'reports.staffing.none.axis',
-  staffingSheet: 'reports.staffing.title',
   show: 'reports.costPerFte.show',
   pairs: 'reports.costPerFte.columns',
   staffCost: 'reports.costPerFte.staffCost',
@@ -85,10 +91,9 @@ export const BUDGET_REPORT_EXPORT_KEYS = {
   days: 'reports.costPerFte.days',
   dayCost: 'reports.costPerFte.dayCost',
   dailyRate: 'reports.costPerFte.dailyRate',
-  costPerFteSheet: 'reports.costPerFte.title',
 } as const;
 
-export type BudgetReportExportLabels = Record<keyof typeof BUDGET_REPORT_EXPORT_KEYS, string>;
+export type BudgetReportExportLabels = Record<keyof typeof BUDGET_REPORT_EXPORT_KEYS | (typeof BUDGET_REPORT_SHEETS)[number], string>;
 
 export const BUDGET_REPORT_EXPORT_LABELS: Record<CsvLanguage, BudgetReportExportLabels> = {
   en: {
@@ -205,7 +210,7 @@ export const BUDGET_REPORT_EXPORT_LABELS: Record<CsvLanguage, BudgetReportExport
     reportingCurrency: 'Devise de reporting',
     yes: 'Oui',
     comparisonSheet: 'Comparaison budgétaire',
-    columnsCompareSheet: 'Comparaison de colonnes budgétaires',
+    columnsCompareSheet: 'Comparaison de colonnes',
     topLinesSheet: 'Top lignes',
     sourceYear: 'Année source',
     sourceMetric: 'Métrique source',
@@ -228,7 +233,7 @@ export const BUDGET_REPORT_EXPORT_LABELS: Record<CsvLanguage, BudgetReportExport
     dimension: 'Dimension',
     excludeValues: 'Exclure des valeurs',
     deltaSheet: 'Top hausse / baisse',
-    consolidationSheet: 'Budget par compte de consolidation',
+    consolidationSheet: 'Par compte de consolidation',
     analyticsSheet: 'Budget par dimension analytique',
     average: 'Moyenne',
     peak: 'Pic',
@@ -307,7 +312,7 @@ export const BUDGET_REPORT_EXPORT_LABELS: Record<CsvLanguage, BudgetReportExport
     dimension: 'Dimension',
     excludeValues: 'Werte ausschließen',
     deltaSheet: 'Top Anstieg / Rückgang',
-    consolidationSheet: 'Budget nach Konsolidierungskonto',
+    consolidationSheet: 'Nach Konsolidierungskonto',
     analyticsSheet: 'Budget nach Analysedimension',
     average: 'Durchschnitt',
     peak: 'Spitze',
@@ -363,7 +368,7 @@ export const BUDGET_REPORT_EXPORT_LABELS: Record<CsvLanguage, BudgetReportExport
     reportingCurrency: 'Moneda de reporting',
     yes: 'Sí',
     comparisonSheet: 'Comparación presupuestaria',
-    columnsCompareSheet: 'Comparación de columnas presupuestarias',
+    columnsCompareSheet: 'Comparación de columnas',
     topLinesSheet: 'Top líneas',
     sourceYear: 'Año de origen',
     sourceMetric: 'Métrica de origen',
@@ -386,8 +391,8 @@ export const BUDGET_REPORT_EXPORT_LABELS: Record<CsvLanguage, BudgetReportExport
     dimension: 'Dimensión',
     excludeValues: 'Excluir valores',
     deltaSheet: 'Top aumento / disminución',
-    consolidationSheet: 'Presupuesto por cuenta de consolidación',
-    analyticsSheet: 'Presupuesto por dimensión analítica',
+    consolidationSheet: 'Por cuenta de consolidación',
+    analyticsSheet: 'Por dimensión analítica',
     average: 'Media',
     peak: 'Pico',
     groupBy: 'Agrupar por',
