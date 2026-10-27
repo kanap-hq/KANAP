@@ -8,6 +8,7 @@
 #   sh infra/postgres/kanap-pg-tune.sh --ram-mb 8192   # size for another machine
 #   --preload "<value>"   the server's current SHOW shared_preload_libraries (may be empty):
 #                         the generated line keeps those libraries and adds pg_stat_statements
+#                         when it is not already there
 #
 # Run it on the PostgreSQL server: it looks for the pg_stat_statements library there.
 # Debian / Ubuntu (include_dir 'conf.d' is in the default postgresql.conf):
@@ -76,10 +77,13 @@ if [ -z "$LIB" ]; then
   done
 fi
 
-# The preload list: the server's current libraries, plus pg_stat_statements.
+# The preload list: the server's current libraries. pg_stat_statements is
+# appended when the list does not already name it. PRELOAD_ALREADY records
+# that match for the note.
 LIST=$(printf '%s' "$PRELOAD" | tr -d " '\"")
+PRELOAD_ALREADY=0
 case ",$LIST," in
-  *,pg_stat_statements,*) ;;
+  *,pg_stat_statements,*) PRELOAD_ALREADY=1 ;;
   ,,) LIST="pg_stat_statements" ;;
   *) LIST="$LIST,pg_stat_statements" ;;
 esac
@@ -95,7 +99,11 @@ elif [ "$PRELOAD_SET" -eq 0 ]; then
 # again with --preload \"<value>\". Then remove the #. Library found: $LIB"
   PRELOAD_LINE="#$PRELOAD_LINE"
 else
-  PRELOAD_NOTE="# The server's libraries ('$PRELOAD') kept, pg_stat_statements added. Library found: $LIB"
+  if [ "$PRELOAD_ALREADY" -eq 1 ]; then
+    PRELOAD_NOTE="# The server's libraries ('$PRELOAD') kept, pg_stat_statements already preloaded, nothing added. Library found: $LIB"
+  else
+    PRELOAD_NOTE="# The server's libraries ('$PRELOAD') kept, pg_stat_statements added. Library found: $LIB"
+  fi
 fi
 
 cat <<CONF
