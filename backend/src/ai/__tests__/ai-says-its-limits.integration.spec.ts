@@ -167,14 +167,14 @@ async function testUnreadFamilies(h: Harness, runner: QueryRunner, s: Seed) {
   assert.match(named.not_read_here[0].note, /^KANAP has cost centers; this server does not read them\. They are on the screen Master data › Cost centers\./);
   // P2 q12 and q20.
   const access = await h.tools.execute(full, 'search_all', { query: 'accès limité aux données' });
-  assert.ok(access.not_read_here.some((entry: any) => entry.where === 'Administration › Data access'), 'data access');
+  assert.ok(access.not_read_here.some((entry: any) => entry.where === 'Admin › Data access'), 'data access');
   const chargeback = await h.tools.execute(full, 'search_all', { query: 'refacturation 2026 par société bénéficiaire' });
   assert.ok(chargeback.not_read_here.some((entry: any) => entry.where === 'Budget management › Reporting › Global chargeback'), 'chargeback');
   // A match in a read family still carries no generic list.
   const found = await h.tools.execute(full, 'search_all', { query: 'APP-8' });
   if (found.items.length) assert.equal(found.families_not_read, undefined, 'a match: no generic list');
   const described = await h.tools.execute(full, 'describe_entity_filters', { entity_type: 'applications' });
-  assert.ok(described.families_not_read.includes('audit log (Administration › Audit log)'), 'describe_entity_filters lists them');
+  assert.ok(described.families_not_read.includes('audit log (Admin › Audit log)'), 'describe_entity_filters lists them');
   const tools = await h.tools.listAvailableTools(full);
   const searchTool = tools.find((tool: any) => tool.name === 'search_all');
   assert.match(searchTool.description, /no proof that such a record does not exist/);

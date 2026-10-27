@@ -23,11 +23,12 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
   {
     family: 'working-day calendars',
     where: 'Master data › Working-day calendars',
-    terms: /calend|kalender/i,
+    // A working-day calendar, never a project or migration calendar.
+    terms: /working[\s-]*days?|business[\s-]*days?|jours?\s+ouvr|arbeitstag|d[ií]as?\s+(h[aá]biles|laborables)|calendario\s+laboral/i,
   },
   {
     family: 'exchange rates',
-    where: 'Budget management › Administration › Exchange rates',
+    where: 'Budget management › Administration › Currencies',
     hint: 'Budget amounts come already converted to the reporting currency (amounts_currency).',
     terms: /exchange\s+rate|fx\s+rate|taux\s+de\s+change|wechselkurs|tipos?\s+de\s+cambio/i,
   },
@@ -35,23 +36,27 @@ export const AI_UNREAD_FAMILIES: readonly AiUnreadFamily[] = [
     family: 'analytics dimensions as records (their settings)',
     where: 'Master data › Analytics dimensions',
     hint: 'Their values are the analytics_categories family, and a budget line carries its value on each dimension.',
-    terms: /dimension|axes?\s+analytique|dimensi[oó]n/i,
+    // An analytics dimension, never a supplier or product named Dimension.
+    terms: /analytic\w*\s+dimension|dimensions?\s+analytique|axes?\s+analytique|analysedimension|dimensi[oó]n(es)?\s+anal[ií]tica/i,
   },
   {
     family: 'data access (which companies or cost centers a person is limited to)',
-    where: 'Administration › Data access',
+    where: 'Admin › Data access',
     hint: 'A role says what a person may do, not which data they see.',
-    terms: /data\s+access|acc[eè]s\s+(aux\s+donn[eé]es|limit)|p[eé]rim[eè]tre|datenzugriff|acceso\s+(a\s+(los\s+)?datos|limitado)/i,
+    // Not the bare "périmètre", the scope of every project.
+    terms: /data\s+access|acc[eè]s\s+(aux\s+donn[eé]es|limit)|p[eé]rim[eè]tre\s+(de\s+)?(donn[eé]es|d['’]acc[eè]s)|datenzugriff|acceso\s+(a\s+(los\s+)?datos|limitado)/i,
   },
   {
     family: 'audit log',
-    where: 'Administration › Audit log',
-    terms: /audit|journal\s+d['’]audit|historique\s+des\s+modifications|änderungsprotokoll|registro\s+de\s+auditor/i,
+    where: 'Admin › Audit log',
+    // The log, not an audit project or a supplier audit.
+    terms: /audit[\s_-]*(log|trail)|journal\s+d['’]audit|piste\s+d['’]audit|historique\s+des\s+modifications|änderungsprotokoll|audit[\s-]*protokoll|registro\s+de\s+auditor/i,
   },
   {
     family: 'AI agents',
     where: 'AI agents',
-    terms: /\bagents?\b|\bagentes?\b|\bagenten\b/i,
+    // An AI agent, not a monitoring or backup agent on a server.
+    terms: /\b(ai|ia|ki)[\s-]+agent(s|en)?\b|\bagents?\s+(ai|ia|plaid)\b|\bagentes?\s+(de\s+)?ia\b/i,
   },
   {
     family: 'chargeback by beneficiary company',

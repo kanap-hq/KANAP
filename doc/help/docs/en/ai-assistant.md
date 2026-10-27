@@ -138,10 +138,10 @@ Plaid does not read:
 
 - Cost centers (**Master data › Cost centers**). A budget line names its cost center, so Plaid can filter lines by it.
 - Working-day calendars (**Master data › Working-day calendars**)
-- Exchange rates (**Budget management › Administration › Exchange rates**). Budget amounts reach Plaid already converted to the reporting currency.
+- Exchange rates (**Budget management › Administration › Currencies**). Budget amounts reach Plaid already converted to the reporting currency.
 - The settings of the analytics dimensions (**Master data › Analytics dimensions**). Their values, and the value each budget line holds, are readable.
-- Data access, that is which companies or cost centers a person is limited to (**Administration › Data access**)
-- The audit log (**Administration › Audit log**)
+- Data access, that is which companies or cost centers a person is limited to (**Admin › Data access**)
+- The audit log (**Admin › Audit log**)
 - AI agents
 - The chargeback by beneficiary company (**Budget management › Reporting › Global chargeback**)
 
