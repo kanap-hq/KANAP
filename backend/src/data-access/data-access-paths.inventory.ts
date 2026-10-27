@@ -83,6 +83,7 @@ export const DATA_ACCESS_PATHS: DataAccessPathEntry[] = [
   { file: 'ai/ai-api-keys.service.ts', member: 'logAudit', site: 'tenant_executor_run', class: 'no_scoped_table', reason: 'writes an MCP key event to audit_log' },
   { file: 'ai/ai-api-keys.service.ts', member: 'logAudit', site: 'transaction_false', class: 'no_scoped_table', reason: 'writes an MCP key event to audit_log' },
   { file: 'ai/auth/mcp-api-key-auth.guard.ts', member: 'authenticate', site: 'tenant_executor_run', class: 'no_scoped_table', reason: 'guard: reads the MCP key and its person (ai_api_keys, users)' },
+  { file: 'ai/auth/mcp-api-key-auth.guard.ts', member: 'recordRefusedKey', site: 'tenant_executor_run', class: 'no_scoped_table', reason: 'guard: writes a refused key to the MCP journal (ai_runs, ai_tool_executions)' },
   { file: 'ai/oauth/mcp-oauth.controller.ts', member: 'McpOAuthController', site: 'skip_tenant_transaction', class: 'no_scoped_table', reason: 'MCP OAuth flow: clients, codes, grants and the person' , routes: ['authorize', 'decide', 'describe', 'revoke', 'token'] },
   { file: 'ai/oauth/mcp-oauth.controller.ts', member: 'McpOAuthMetadataController', site: 'skip_tenant_transaction', class: 'no_scoped_table', reason: 'OAuth metadata documents, no tenant table' , routes: ['authorizationServer', 'protectedResourceAtRoot', 'protectedResourceForPath'] },
   { file: 'ai/oauth/mcp-oauth.service.ts', member: 'authenticateAccessToken', site: 'tenant_executor_run', class: 'no_scoped_table', reason: 'MCP OAuth grants and the person' },

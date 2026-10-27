@@ -210,6 +210,14 @@ export const SAMPLE_DATA_STATUS_COLORS: Record<string, string> = {
   failed: 'error',
 };
 
+/** Result of an MCP call (Administration › Plaid, MCP journal). */
+export const MCP_CALL_RESULT_COLORS: Record<string, string> = {
+  completed: 'success',
+  refused: 'warning',
+  failed: 'error',
+  running: 'default',
+};
+
 /**
  * Contract term states (contract list): orange while a cancellation deadline falls in the decision
  * window, green while a term runs with no decision due, grey once the contract has rolled over,

@@ -17,12 +17,12 @@ import { randomBytes } from 'node:crypto';
 import { Request, Response } from 'express';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { validate as isUuid } from 'uuid';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
 import { McpApiKeyAuthGuard } from './auth/mcp-api-key-auth.guard';
 import { AiCapabilityDispatcherService } from './control-plane/dispatcher/ai-capability-dispatcher.service';
-import { AiMcpAuditService } from './control-plane/mcp/ai-mcp-audit.service';
+import { AiMcpAuditService, AiMcpCallRecord, McpCallReason } from './control-plane/mcp/ai-mcp-audit.service';
 import { AiMcpExposureService } from './control-plane/mcp/ai-mcp-exposure.service';
 import { AiMcpRateLimiter } from './control-plane/mcp/ai-mcp-rate-limiter.service';
 import {
@@ -34,11 +34,47 @@ import {
 } from './control-plane/mcp/ai-mcp-access-policy';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
 import { AiExecutionContext } from './ai.types';
+import { APP_VERSION } from '../config/version';
 
 /** A readable tool title from its name: `get_entity_detail` → "Get entity detail". */
 export function toolTitle(name: string): string {
   const words = name.replace(/[_-]+/g, ' ').trim();
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : name;
+}
+
+/**
+ * What `initialize` tells a client about this server: read only, the person's rights, how to
+ * search, and the families it does not read (so that an empty answer is not taken for "none").
+ */
+export const MCP_SERVER_INSTRUCTIONS = [
+  'KANAP MCP server. It only reads: no tool creates, changes or deletes anything; changes are made in the KANAP application.',
+  'Every call runs with the rights of the person who owns the key or the connection: records that person cannot read are left out of every answer.',
+  'To find a record, start with search_all (names and references such as APP-4 or PRJ-12). Before query_entities or aggregate_entities on a family, call describe_entity_filters for its fields, and get_filter_values for the exact values of a field. get_entity_detail and get_entity_context read one record.',
+  'This server does not read cost centers, calendars, exchange rates, data access settings, the audit log or AI agents: an empty answer about them does not mean they do not exist in KANAP.',
+].join('\n');
+
+/** The instructions of `initialize`, opened by the workspace the key or connection reads. */
+export function mcpServerInstructions(workspace: { name: string | null; slug: string | null } | null): string {
+  if (!workspace?.name && !workspace?.slug) return MCP_SERVER_INSTRUCTIONS;
+  const label = workspace.name && workspace.slug && workspace.name !== workspace.slug
+    ? `"${workspace.name}" (${workspace.slug})`
+    : `"${workspace.name ?? workspace.slug}"`;
+  return [`This connection reads the KANAP workspace ${label}, and only that one.`, MCP_SERVER_INSTRUCTIONS].join('\n');
+}
+
+/** A JSON-RPC error the MCP SDK sends with this code (it reads `code` from the thrown error). */
+function jsonRpcError(code: number, message: string): Error & { code: number } {
+  return Object.assign(new Error(message), { code });
+}
+
+/** How the journal records a tool that threw: an HTTP refusal by its status, anything else as an error. */
+function reasonOfThrown(error: unknown): McpCallReason {
+  if (!(error instanceof HttpException)) return 'error';
+  const status = error.getStatus();
+  if (status === 403) return 'permission';
+  if (status === 404) return 'not_found';
+  if (status >= 400 && status < 500) return 'invalid_input';
+  return 'error';
 }
 
 /** What an MCP client reads when a tool fails for a reason other than its input or access. */
@@ -160,13 +196,41 @@ export class AiMcpController {
   }
 
   private auditFilters(query: Record<string, unknown>) {
+    const text = (value: unknown) => (value == null ? null : String(value));
     return {
-      runId: query.run_id == null ? null : String(query.run_id),
-      toolExecutionId: query.tool_execution_id == null ? null : String(query.tool_execution_id),
-      capabilityName: query.capability_name == null ? null : String(query.capability_name),
-      status: query.status == null ? null : String(query.status),
+      runId: text(query.run_id),
+      toolExecutionId: text(query.tool_execution_id),
+      capabilityName: text(query.capability_name),
+      status: text(query.status),
+      result: text(query.result),
+      from: text(query.from),
+      to: text(query.to),
       limit: query.limit == null ? null : Number(query.limit),
+      offset: query.offset == null ? null : Number(query.offset),
     };
+  }
+
+  /**
+   * Writes a refused or failed call to the MCP journal, after the request transaction rolled
+   * back, in one of its own. Never fails the call: a line that cannot be written is logged.
+   */
+  private async recordCall(
+    context: AiExecutionContext,
+    record: Omit<AiMcpCallRecord, 'userId' | 'apiKeyId' | 'requestId'>,
+  ): Promise<void> {
+    try {
+      await this.tenantExecutor.runWithContext(context, (ctx) => this.mcpAudit.recordCall(ctx, {
+        ...record,
+        userId: context.userId || null,
+        apiKeyId: context.aiApiKeyId ?? null,
+        requestId: context.requestId ?? null,
+      }));
+    } catch (error) {
+      this.logger.warn(
+        // The tool name comes from the client: quoted and cut, so that it cannot forge or flood a log line.
+        `MCP journal line not written for ${JSON.stringify(String(record.toolName).slice(0, 80))}, tenant ${context.tenantId}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   @Post()
@@ -178,8 +242,14 @@ export class AiMcpController {
     this.assertMcpPostPreflight(context, apiKey, methods, this.mcpRequestCount(req.body));
     const definitionScope = this.toolDefinitionScope(methods);
 
+    let workspace: { name: string | null; slug: string | null } | null = null;
     const toolDefs = await this.tenantExecutor.runWithContext(context, async (ctx) => {
       await this.mcpExposure.assertPostAccess(ctx, apiKey);
+      if (methods.has('initialize')) {
+        // The client names the workspace it reads from the instructions (a person may connect several).
+        const rows = await ctx.manager.query(`SELECT name, slug FROM tenants WHERE id = $1`, [ctx.tenantId]);
+        workspace = Array.isArray(rows) && rows[0] ? { name: rows[0].name ?? null, slug: rows[0].slug ?? null } : null;
+      }
       if (definitionScope == null) {
         return [];
       }
@@ -189,8 +259,8 @@ export class AiMcpController {
 
     // The low-level server takes the capabilities' JSON Schemas as they are (McpServer wants Zod).
     const server = new Server(
-      { name: 'kanap-mcp', version: '1.0.0' },
-      { capabilities: { tools: {} } },
+      { name: 'kanap-mcp', title: 'KANAP', version: APP_VERSION },
+      { capabilities: { tools: {} }, instructions: mcpServerInstructions(workspace) },
     );
 
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -206,9 +276,26 @@ export class AiMcpController {
     }));
 
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const toolDef = toolDefs.find((def) => def.name === request.params.name);
+      const startedAt = Date.now();
+      const name = request.params.name;
+      const args = request.params.arguments ?? {};
+      const toolDef = toolDefs.find((def) => def.name === name);
       if (!toolDef) {
-        throw new ForbiddenException('MCP API key is not allowed to execute this capability.');
+        // MCP: an unknown name is a JSON-RPC -32602; a known tool this call may not run is a tool
+        // result the client's model reads, with the cause.
+        const refusal = this.mcpExposure.explainRefusal(apiKey, name);
+        await this.recordCall(context, {
+          toolName: name,
+          arguments: args,
+          reason: refusal.reason,
+          message: refusal.message,
+          effect: refusal.effect,
+          durationMs: Date.now() - startedAt,
+        });
+        if (refusal.reason === 'unknown_tool') {
+          throw jsonRpcError(ErrorCode.InvalidParams, refusal.message);
+        }
+        return { content: [{ type: 'text' as const, text: refusal.message }], isError: true };
       }
       let result: unknown;
       try {
@@ -216,7 +303,7 @@ export class AiMcpController {
           await this.mcpExposure.assertCanExecute(ctx, apiKey, toolDef.name);
           const dispatched = await this.dispatcher.execute(ctx, {
             capabilityName: toolDef.name,
-            input: request.params.arguments ?? {},
+            input: args,
             execution: {
               surface: 'mcp',
               trigger_kind: 'mcp_client',
@@ -230,19 +317,28 @@ export class AiMcpController {
       } catch (error) {
         // A tool error goes back as a tool result, so the client's model can read it and retry.
         // Only our own HTTP errors carry a message meant for the caller; any other error is logged
-        // here, once, under a reference the caller can quote.
+        // here, once, under a reference the caller can quote. The request transaction rolled back
+        // the dispatcher's lines: the journal gets its own.
+        let text: string;
         if (error instanceof HttpException) {
-          return { content: [{ type: 'text' as const, text: error.message }], isError: true };
+          text = error.message;
+        } else {
+          const reference = context.requestId || randomBytes(4).toString('hex');
+          this.logger.error(
+            `MCP tool ${toolDef.name} failed, reference ${reference}, tenant ${context.tenantId}`,
+            error instanceof Error ? error.stack : String(error),
+          );
+          text = internalToolErrorMessage(reference);
         }
-        const reference = context.requestId || randomBytes(4).toString('hex');
-        this.logger.error(
-          `MCP tool ${toolDef.name} failed, reference ${reference}, tenant ${context.tenantId}`,
-          error instanceof Error ? error.stack : String(error),
-        );
-        return {
-          content: [{ type: 'text' as const, text: internalToolErrorMessage(reference) }],
-          isError: true,
-        };
+        await this.recordCall(context, {
+          toolName: toolDef.name,
+          arguments: args,
+          reason: reasonOfThrown(error),
+          message: text,
+          effect: 'read',
+          durationMs: Date.now() - startedAt,
+        });
+        return { content: [{ type: 'text' as const, text }], isError: true };
       }
       return {
         content: [{ type: 'text' as const, text: this.mcpTextResult(result) }],

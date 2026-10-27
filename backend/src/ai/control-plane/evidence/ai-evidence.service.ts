@@ -89,6 +89,11 @@ function redactValue(value: unknown, redactFields: Set<string>, path = ''): unkn
   }));
 }
 
+/** The redaction every evidence summary gets (secret fields, bearer tokens, emails, IP addresses). */
+export function redactSensitiveValue(value: unknown): unknown {
+  return redactValue(value, new Set());
+}
+
 function truncateText(value: string, max = MAX_SUMMARY_CHARS): string {
   const normalized = value.replace(/\s+/g, ' ').trim();
   return normalized.length > max ? `${normalized.slice(0, max - 3)}...` : normalized;

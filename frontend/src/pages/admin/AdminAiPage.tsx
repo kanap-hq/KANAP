@@ -29,7 +29,8 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import KeyOffOutlinedIcon from '@mui/icons-material/KeyOffOutlined';
+import LinkOffOutlinedIcon from '@mui/icons-material/LinkOffOutlined';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useTranslation } from 'react-i18next';
@@ -60,6 +61,8 @@ import {
   type IncludedModelIdentity,
 } from '../../ai/includedModel';
 import { IncludedModelDialog, IncludedModelStatus, WithdrawIncludedModelDialog } from './IncludedModelConfirmation';
+import { useKanapDialogs } from '../../components/design/KanapDialogProvider';
+import McpJournalSection from './McpJournalSection';
 
 type AiSettingsForm = {
   chat_enabled: boolean;
@@ -230,12 +233,16 @@ function CopyValue({ value, copyLabel, copiedLabel, multiline = false }: {
   );
 }
 
+/** A long key label stops at the column width; the full label shows on hover. */
+const KEY_LABEL_CELL_SX = { maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' } as const;
+
 export default function AdminAiPage() {
   const { config } = useFeatures();
   const queryClient = useQueryClient();
   const { t } = useTranslation(['admin', 'common']);
   const locale = useLocale();
   const { mode } = useTheme().palette;
+  const dialogs = useKanapDialogs();
 
   const [form, setForm] = useState<AiSettingsForm>(EMPTY_FORM);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -411,6 +418,20 @@ export default function AdminAiPage() {
       setKeyActionError(getApiErrorMessage(error, t, t('aiAdmin.messages.revokeMcpKeyFailed')));
     },
   });
+
+  // Revoking cuts the access at once and cannot be undone: the dialog names the key or connection.
+  const confirmRevoke = async (key: AiApiKeyRecord) => {
+    const name = key.credential_kind === 'oauth' ? clientDisplayName(key.oauth_client_name) ?? key.label : key.label;
+    const ok = await dialogs.confirm({
+      title: t('aiAdmin.keys.revokeConfirm.title', { name }),
+      message: key.credential_kind === 'oauth'
+        ? t('aiAdmin.keys.revokeConfirm.connectionBody', { name })
+        : t('aiAdmin.keys.revokeConfirm.keyBody', { name }),
+      confirmLabel: t('aiAdmin.keys.revoke'),
+      intent: 'danger',
+    });
+    if (ok) revokeKeyMutation.mutate(key.id);
+  };
 
   const currentSettings = settingsQuery.data?.settings;
   const mcpEndpoint = mcpEndpointUrl(window.location.origin);
@@ -723,12 +744,12 @@ export default function AdminAiPage() {
                       {getApiErrorMessage(keysQuery.error, t, t('aiAdmin.messages.loadKeysFailed'))}
                     </Alert>
                   ) : keysQuery.data && keysQuery.data.length > 0 ? (
-                    <Table size="small">
+                    <Table size="small" sx={{ '& th, & td': { px: 1, whiteSpace: 'nowrap' } }}>
                       <TableHead>
                         <TableRow>
                           <TableCell>{t('aiAdmin.keys.columns.label')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.kind')}</TableCell>
-                          <TableCell>{t('aiAdmin.keys.columns.prefix')}</TableCell>
+                          <TableCell>{t('aiAdmin.keys.columns.person')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.created')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.expires')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.lastUsed')}</TableCell>
@@ -741,25 +762,35 @@ export default function AdminAiPage() {
                           <TableRow key={key.id}>
                             {key.credential_kind === 'oauth' ? (
                               <>
-                                <TableCell>
+                                <TableCell sx={KEY_LABEL_CELL_SX} title={clientDisplayName(key.oauth_client_name) ?? key.label}>
                                   {clientDisplayName(key.oauth_client_name) ?? key.label}
                                   {key.oauth_redirect_host ? (
                                     <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{` · ${key.oauth_redirect_host}`}</Box>
                                   ) : null}
                                 </TableCell>
                                 <TableCell>{t('aiAdmin.keys.kinds.oauth')}</TableCell>
-                                <TableCell />
+                                <TableCell>{key.user_name ?? ''}</TableCell>
                               </>
                             ) : (
                               <>
-                                <TableCell>{key.label}</TableCell>
+                                <TableCell sx={KEY_LABEL_CELL_SX} title={`${key.label} · ${key.key_prefix}`}>
+                                  {key.label}
+                                  <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>
+                                    {' · '}
+                                    <Box component="code" sx={{ fontSize: '0.75rem' }}>{key.key_prefix}</Box>
+                                  </Box>
+                                </TableCell>
                                 <TableCell>{t('aiAdmin.keys.kinds.apiKey')}</TableCell>
-                                <TableCell><code>{key.key_prefix}</code></TableCell>
+                                <TableCell>{key.user_name ?? ''}</TableCell>
                               </>
                             )}
-                            <TableCell>{new Date(key.created_at).toLocaleDateString(locale)}</TableCell>
-                            <TableCell>{key.expires_at ? new Date(key.expires_at).toLocaleDateString(locale) : t('aiAdmin.shared.never')}</TableCell>
-                            <TableCell>{key.last_used_at ? new Date(key.last_used_at).toLocaleString(locale) : t('aiAdmin.shared.never')}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>{new Date(key.created_at).toLocaleDateString(locale)}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>{key.expires_at ? new Date(key.expires_at).toLocaleDateString(locale) : t('aiAdmin.shared.never')}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                              {key.last_used_at
+                                ? new Date(key.last_used_at).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })
+                                : t('aiAdmin.shared.never')}
+                            </TableCell>
                             <TableCell>
                               {key.revoked_at ? (
                                 <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
@@ -775,13 +806,25 @@ export default function AdminAiPage() {
                             </TableCell>
                             <TableCell>
                               {!key.revoked_at ? (
-                                <IconButton
-                                  size="small"
-                                  onClick={() => revokeKeyMutation.mutate(key.id)}
-                                  disabled={revokeKeyMutation.isPending}
-                                >
-                                  <DeleteOutlineIcon fontSize="small" />
-                                </IconButton>
+                                <Tooltip title={t('aiAdmin.keys.revoke')}>
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      sx={{ p: 0.25 }}
+                                      aria-label={t('aiAdmin.keys.revokeNamed', {
+                                        name: key.credential_kind === 'oauth'
+                                          ? clientDisplayName(key.oauth_client_name) ?? key.label
+                                          : key.label,
+                                      })}
+                                      onClick={() => void confirmRevoke(key)}
+                                      disabled={revokeKeyMutation.isPending}
+                                    >
+                                      {key.credential_kind === 'oauth'
+                                        ? <LinkOffOutlinedIcon fontSize="small" />
+                                        : <KeyOffOutlinedIcon fontSize="small" />}
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
                               ) : null}
                             </TableCell>
                           </TableRow>
@@ -797,6 +840,7 @@ export default function AdminAiPage() {
               </CardContent>
             </Card>
 
+            <McpJournalSection />
           </>
         )}
       </Stack>

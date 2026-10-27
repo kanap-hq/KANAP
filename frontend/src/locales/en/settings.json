@@ -131,6 +131,12 @@
     },
     "apiKeys": "API keys",
     "loadFailed": "Could not load your connected applications.",
-    "disconnectFailed": "Could not disconnect this application."
+    "disconnectFailed": "Could not disconnect this application.",
+    "revoke": "Revoke",
+    "revokeConfirm": {
+      "title": "Revoke {{key}}?",
+      "body": "Every client that uses {{key}} loses access to your KANAP data at once. This cannot be undone."
+    },
+    "revokeFailed": "Could not revoke this key."
   }
 }

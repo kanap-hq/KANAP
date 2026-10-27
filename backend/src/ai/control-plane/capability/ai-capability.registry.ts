@@ -2225,6 +2225,31 @@ export class AiCapabilityRegistry {
     return this.tools.toToolJsonSchemas(tools);
   }
 
+  /**
+   * A capability KANAP declares under this name, whatever the person, the settings or the key:
+   * whether it only reads and whether MCP may offer it. Null for a name KANAP does not know.
+   * The MCP server uses it to say why a call is refused (ai-mcp-exposure.service.ts).
+   */
+  describeRegisteredCapability(name: string): { reads: boolean; mcpReadable: boolean } | null {
+    const tool = this.tools.listRegisteredTools().find((candidate) => candidate.name === name);
+    if (tool) {
+      return { reads: tool.readOnly, mcpReadable: tool.readOnly && tool.surfaces.includes('mcp') };
+    }
+    const contract = this.providerContracts.get(name) ?? this.internalContracts.get(name);
+    if (!contract) {
+      return null;
+    }
+    const reads = contract.effect === 'read';
+    return {
+      reads,
+      mcpReadable: reads
+        && contract.default_approval === 'none'
+        && contract.supported_surfaces.includes('mcp')
+        && contract.mcp_exposure.enabled
+        && contract.mcp_exposure.read_only,
+    };
+  }
+
   async resolve(
     context: AiExecutionContextWithManager,
     capabilityName: string,

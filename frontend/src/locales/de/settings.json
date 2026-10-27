@@ -131,6 +131,12 @@
     },
     "apiKeys": "API-Schlüssel",
     "loadFailed": "Ihre verbundenen Anwendungen konnten nicht geladen werden.",
-    "disconnectFailed": "Diese Anwendung konnte nicht getrennt werden."
+    "disconnectFailed": "Diese Anwendung konnte nicht getrennt werden.",
+    "revoke": "Widerrufen",
+    "revokeConfirm": {
+      "title": "{{key}} widerrufen?",
+      "body": "Alle Clients, die {{key}} verwenden, verlieren sofort den Zugriff auf Ihre KANAP-Daten. Dies kann nicht rückgängig gemacht werden."
+    },
+    "revokeFailed": "Dieser Schlüssel konnte nicht widerrufen werden."
   }
 }

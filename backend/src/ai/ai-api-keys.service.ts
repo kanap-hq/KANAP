@@ -63,6 +63,24 @@ export type AiApiKeyAuthentication = {
   user: Awaited<ReturnType<UsersService['findById']>>;
 };
 
+/**
+ * A presented key KANAP recognises (its hash matches) and refuses. The MCP guard writes the
+ * refusal to the MCP journal, with the key's id and never its value.
+ */
+export class McpKeyRefusedException extends UnauthorizedException {
+  constructor(
+    message: string,
+    readonly refusal: {
+      tenantId: string;
+      keyId: string;
+      userId: string;
+      reason: 'key_revoked' | 'key_expired' | 'owner_not_allowed';
+    },
+  ) {
+    super(message);
+  }
+}
+
 type RevokeAiApiKeyOptions = {
   manager?: EntityManager;
   userId?: string | null;
@@ -210,22 +228,35 @@ export class AiApiKeysService {
     return items.map((item) => this.toView(item));
   }
 
+  /** Every key and connection of the workspace, each with the name of the person who owns it. */
   async listForTenant(tenantId: string, opts?: { manager?: EntityManager }) {
     const items = await this.getRepo(opts?.manager).find({
       where: { tenant_id: tenantId },
       order: { created_at: 'DESC' },
     });
-    return items.map((item) => this.toView(item));
+    const ownerIds = Array.from(new Set(items.map((item) => item.user_id)));
+    const owners: Array<{ id: string; name: string | null }> = ownerIds.length === 0
+      ? []
+      : await (opts?.manager ?? this.repo.manager).query(
+        `SELECT id, NULLIF(TRIM(CONCAT_WS(' ', first_name, last_name)), '') AS name
+         FROM users
+         WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [tenantId, ownerIds],
+      );
+    const names = new Map(owners.map((owner) => [owner.id, owner.name]));
+    return items.map((item) => ({ ...this.toView(item), user_name: names.get(item.user_id) ?? null }));
   }
 
   async findById(id: string, opts?: { manager?: EntityManager }) {
     return this.getRepo(opts?.manager).findOne({ where: { id } });
   }
 
+  /** Revokes a key or a connection. One already revoked stays as it is: date and reason unchanged. */
   async revokeKey(id: string, opts?: RevokeAiApiKeyOptions) {
     const repo = this.getRepo(opts?.manager);
     const record = await repo.findOne({ where: { id } });
     if (!record) return null;
+    if (record.revoked_at) return this.toView(record);
     const before = this.toView(record);
     record.revoked_at = new Date();
     record.revoked_by_user_id = opts?.userId ?? record.revoked_by_user_id ?? null;
@@ -315,7 +346,12 @@ export class AiApiKeysService {
         },
         { manager: opts?.manager, tenantId: record.tenant_id },
       );
-      throw new UnauthorizedException('MCP API key has been revoked.');
+      throw new McpKeyRefusedException('MCP API key has been revoked.', {
+        tenantId: record.tenant_id,
+        keyId: record.id,
+        userId: record.user_id,
+        reason: 'key_revoked',
+      });
     }
     if (record.expires_at && record.expires_at.getTime() <= Date.now()) {
       await this.logAudit(
@@ -330,7 +366,12 @@ export class AiApiKeysService {
         },
         { manager: opts?.manager, tenantId: record.tenant_id },
       );
-      throw new UnauthorizedException('MCP API key has expired.');
+      throw new McpKeyRefusedException('MCP API key has expired.', {
+        tenantId: record.tenant_id,
+        keyId: record.id,
+        userId: record.user_id,
+        reason: 'key_expired',
+      });
     }
 
     const user = await this.users.findById(record.user_id, { manager: opts?.manager });
@@ -347,7 +388,12 @@ export class AiApiKeysService {
         },
         { manager: opts?.manager, tenantId: record.tenant_id },
       );
-      throw new UnauthorizedException('The MCP API key owner is not allowed to authenticate.');
+      throw new McpKeyRefusedException('The MCP API key owner is not allowed to authenticate.', {
+        tenantId: record.tenant_id,
+        keyId: record.id,
+        userId: record.user_id,
+        reason: 'owner_not_allowed',
+      });
     }
 
     const before = this.toView(record);

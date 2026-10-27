@@ -64,7 +64,7 @@
         "expires": "Läuft ab",
         "label": "Bezeichnung",
         "lastUsed": "Zuletzt verwendet",
-        "prefix": "Präfix",
+        "person": "Person",
         "status": "Status",
         "kind": "Typ"
       },
@@ -84,6 +84,13 @@
       "kinds": {
         "apiKey": "API-Schlüssel",
         "oauth": "Verbindung"
+      },
+      "revoke": "Widerrufen",
+      "revokeNamed": "{{name}} widerrufen",
+      "revokeConfirm": {
+        "title": "{{name}} widerrufen?",
+        "keyBody": "Alle Clients, die {{name}} verwenden, verlieren sofort den Zugriff auf KANAP. Dies kann nicht rückgängig gemacht werden.",
+        "connectionBody": "{{name}} verliert sofort den Zugriff auf KANAP. Um sie wieder zu nutzen, muss ihr Eigentümer sie erneut verbinden."
       }
     },
     "messages": {
@@ -223,6 +230,66 @@
       "withdrawDialog": {
         "title": "Bestätigung zurückziehen?",
         "body": "KI-Funktionen, die das inklusive Modell verwenden, stoppen, bis ein Administrator erneut bestätigt."
+      }
+    },
+    "journal": {
+      "title": "MCP-Protokoll",
+      "empty": "Keine MCP-Aufrufe für diese Filter.",
+      "loadFailed": "Das MCP-Protokoll konnte nicht geladen werden.",
+      "columns": {
+        "date": "Datum",
+        "person": "Person",
+        "key": "Schlüssel oder Verbindung",
+        "tool": "Tool",
+        "result": "Ergebnis",
+        "duration": "Dauer"
+      },
+      "filters": {
+        "person": "Person",
+        "key": "Schlüssel oder Verbindung",
+        "result": "Ergebnis",
+        "period": "Zeitraum",
+        "all": "Alle"
+      },
+      "periods": {
+        "day": "Letzte 24 Stunden",
+        "week": "Letzte 7 Tage",
+        "month": "Letzte 30 Tage",
+        "all": "Gesamter Zeitraum"
+      },
+      "results": {
+        "completed": "Erfolgreich",
+        "refused": "Abgelehnt",
+        "failed": "Fehlgeschlagen",
+        "running": "Läuft"
+      },
+      "reasons": {
+        "unknown_tool": "Unbekanntes Tool",
+        "read_only": "Der Server ist schreibgeschützt",
+        "key_policy": "Der Schlüssel erlaubt dieses Tool nicht",
+        "permission": "Die Person hat keine Leseberechtigung für diese Daten",
+        "disabled": "Die Websuche ist deaktiviert",
+        "invalid_input": "Ungültige Anfrage",
+        "key_revoked": "Widerrufener Schlüssel",
+        "key_expired": "Abgelaufener Schlüssel",
+        "owner_not_allowed": "Der Eigentümer des Schlüssels kann sich nicht mehr verbinden",
+        "not_found": "Datensatz nicht gefunden",
+        "error": "Serverfehler"
+      },
+      "duration": "{{value}} ms",
+      "range": "{{from}} bis {{to}}",
+      "previous": "Zurück",
+      "next": "Weiter",
+      "deletedKey": "Gelöschter Schlüssel",
+      "formerUser": "Ehemaliger Benutzer",
+      "revokedOption": "{{name}} (widerrufen)",
+      "details": {
+        "arguments": "Argumente",
+        "cause": "Ursache",
+        "hidden": "Ausgeblendet",
+        "more": "{{count}} weitere",
+        "noArguments": "Keine Argumente",
+        "notRecorded": "Nicht erfasst"
       }
     }
   },
