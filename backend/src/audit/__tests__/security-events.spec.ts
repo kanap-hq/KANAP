@@ -203,6 +203,7 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /portfolio/reports/time-logged/export',
   'GET /portfolio/reports/weekly/export',
   'GET /portfolio/requests/export',
+  'GET /portfolio/team-members/skills-matrix/export',
   'GET /reports/budget/analytics/export',
   'GET /reports/budget/columns-compare/export',
   'GET /reports/budget/comparison/export',

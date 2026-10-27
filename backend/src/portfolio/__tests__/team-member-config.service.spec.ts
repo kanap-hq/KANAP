@@ -250,6 +250,8 @@ async function testSelfServiceRouteDropsManagedFields() {
       },
     } as any,
     { listForRoles: async () => new Map() } as any,
+    {} as any,
+    {} as any,
   );
 
   await controller.updateMe(
@@ -285,6 +287,8 @@ async function testSelfServiceRouteCarriesTheJobTitle() {
       },
     } as any,
     { listForRoles: async () => new Map() } as any,
+    {} as any,
+    {} as any,
   );
 
   await controller.updateMe(

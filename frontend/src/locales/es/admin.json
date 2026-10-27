@@ -398,6 +398,7 @@
       "capacityHeatmapReport": "Informe del mapa de calor de capacidad",
       "timeLoggedReport": "Informe de tiempo registrado",
       "weeklyReport": "Informe semanal",
+      "skillsMatrix": "Matriz de competencias",
       "workingDayCalendars": "Calendarios laborales"
     },
     "fields": {

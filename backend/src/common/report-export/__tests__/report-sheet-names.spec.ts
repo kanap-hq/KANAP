@@ -7,6 +7,7 @@ import { BUDGET_REPORT_EXPORT_LABELS, BUDGET_REPORT_SHEETS } from '../../../spen
 import { END_OF_SUPPORT_EXPORT_LABELS } from '../../../technologies/reports/end-of-support-export-labels';
 import { BUDGET_OPERATIONS_EXPORT_LABELS } from '../../../spend/budget-operations-export/budget-operations-export.labels';
 import { MASTER_DATA_COPY_EXPORT_LABELS } from '../../../master-data/master-data-copy-export';
+import { SKILLS_MATRIX_EXPORT_LABELS } from '../../../portfolio/services/skills-matrix-export';
 import { REPORT_EXPORT_LABELS, REPORT_SHEET_NAME_MAX, writeReportExport } from '../index';
 
 /**
@@ -24,6 +25,7 @@ const TABLES: Record<string, Record<CsvLanguage, Record<string, string>>> = {
   endOfSupport: END_OF_SUPPORT_EXPORT_LABELS,
   budgetOperations: BUDGET_OPERATIONS_EXPORT_LABELS,
   masterDataCopy: MASTER_DATA_COPY_EXPORT_LABELS,
+  skillsMatrix: SKILLS_MATRIX_EXPORT_LABELS,
 };
 
 function run() {

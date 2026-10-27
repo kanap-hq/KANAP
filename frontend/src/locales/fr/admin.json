@@ -398,6 +398,7 @@
       "capacityHeatmapReport": "Rapport du planning de capacité",
       "timeLoggedReport": "Rapport du temps saisi",
       "weeklyReport": "Rapport hebdomadaire",
+      "skillsMatrix": "Matrice de compétences",
       "workingDayCalendars": "Calendriers de jours ouvrés"
     },
     "fields": {

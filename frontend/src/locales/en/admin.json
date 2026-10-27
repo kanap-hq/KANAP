@@ -398,6 +398,7 @@
       "capacityHeatmapReport": "Capacity heatmap report",
       "timeLoggedReport": "Time logged report",
       "weeklyReport": "Weekly report",
+      "skillsMatrix": "Skills matrix",
       "workingDayCalendars": "Working-day calendars"
     },
     "fields": {

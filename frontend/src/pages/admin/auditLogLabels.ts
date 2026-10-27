@@ -80,6 +80,7 @@ export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
   'portfolio/reports/time-logged': 'timeLoggedReport',
   'portfolio/reports/weekly': 'weeklyReport',
   'portfolio/requests': 'requests',
+  'portfolio/team-members/skills-matrix': 'skillsMatrix',
   'reports/budget/analytics': 'analyticsReport',
   'reports/budget/columns-compare': 'budgetColumnsCompareReport',
   'reports/budget/comparison': 'budgetComparisonReport',

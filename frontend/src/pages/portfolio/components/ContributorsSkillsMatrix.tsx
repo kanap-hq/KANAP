@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { useLocalStorageState } from '../../../hooks/useLocalStorageState';
 import { screenLanguage } from '../../../components/csv/readings';
-import { downloadXlsxWorkbook, type XlsxCell } from '../../../lib/simpleXlsx';
+import { downloadServerExport } from '../../../components/csv/serverExport';
+import type { ExportFormat } from '../../../components/csv/exportFormat';
 import { buildItemPath, formatItemRef } from '../../../utils/item-ref';
 import { compactSelectMenuProps, drawerMenuItemSx, drawerSelectSx, inlineControlSx } from '../../../theme/formSx';
 import {
@@ -33,10 +34,16 @@ type Props = {
   skills: SkillOption[];
   /** Same team filter as the list view: 'all', a team id, or 'unassigned'. */
   filterTeamId: string;
+  /** The contract type filter of the page ('all' or an id): `contributors` are already narrowed by it,
+   *  the export sends it so the server narrows them the same way. */
+  filterEmploymentTypeId?: string;
   /** Hands the export to the page so the action can sit in the page header.
    *  Called with null while there is nothing on screen to export. */
-  onActionChange?: (action: { label: string; run: () => void } | null) => void;
+  onActionChange?: (action: MatrixExportAction | null) => void;
 };
+
+/** The export of the grid as laid out: the server builds the file from the same parameters. */
+export type MatrixExportAction = { label: string; onExport: (format: ExportFormat) => Promise<void> };
 
 /** Which side of the grid carries the contributors. Catalogues are usually far
  *  longer than the team, so people go across the top by default. */
@@ -63,8 +70,6 @@ type AxisEntry = {
   summaryText: string;
   summaryTone: SummaryTone;
   summaryTooltip: string;
-  /** Leading cells this entry contributes when it forms the export's rows. */
-  exportCells: XlsxCell[];
 };
 
 type Axis = {
@@ -76,7 +81,6 @@ type Axis = {
   summaryTooltip: string;
   groups: Array<{ key: string; label: string; entries: AxisEntry[] }>;
   entries: AxisEntry[];
-  exportHeaders: string[];
 };
 
 const monoSx = {
@@ -102,8 +106,10 @@ const cellSx = {
  * we thin" reading. Editing stays in the contributor workspace. What the grid
  * holds comes from `skillsMatrix.ts`, which the API's export runs too.
  */
-export default function ContributorsSkillsMatrix({ contributors, teams, skills, filterTeamId, onActionChange }: Props) {
-  const { t, i18n } = useTranslation(['portfolio']);
+export default function ContributorsSkillsMatrix({
+  contributors, teams, skills, filterTeamId, filterEmploymentTypeId = 'all', onActionChange,
+}: Props) {
+  const { t, i18n } = useTranslation(['portfolio', 'ops']);
   const navigate = useNavigate();
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
   const [orientation, setOrientation] = useLocalStorageState<Orientation>(ORIENTATION_STORAGE_KEY, 'contributors');
@@ -149,7 +155,6 @@ export default function ContributorsSkillsMatrix({ contributors, teams, skills, 
           summaryText: contributorSummary(entry.counts),
           summaryTone: 'ratio',
           summaryTooltip: t('contributors.matrix.summaryTooltip', { autonomous, total: declared }),
-          exportCells: [entry.label, reference, entry.teamLabel],
         };
       }),
     }));
@@ -160,11 +165,6 @@ export default function ContributorsSkillsMatrix({ contributors, teams, skills, 
       summaryTooltip: t('contributors.matrix.summaryHeaderTooltip'),
       groups,
       entries: groups.flatMap((group) => group.entries),
-      exportHeaders: [
-        t('contributors.matrix.export.contributor'),
-        t('contributors.matrix.export.reference'),
-        t('contributors.matrix.export.team'),
-      ],
     };
   }, [matrix, navigate, t]);
 
@@ -180,7 +180,6 @@ export default function ContributorsSkillsMatrix({ contributors, teams, skills, 
           summaryText: String(autonomous),
           summaryTone: autonomous === 0 ? 'gap' : 'count',
           summaryTooltip: t('contributors.matrix.coverageTooltip', { skill: entry.label, autonomous, declared }),
-          exportCells: [entry.category, entry.label],
         };
       }),
     }));
@@ -191,7 +190,6 @@ export default function ContributorsSkillsMatrix({ contributors, teams, skills, 
       summaryTooltip: t('contributors.matrix.coverageHeaderTooltip'),
       groups,
       entries: groups.flatMap((group) => group.entries),
-      exportHeaders: [t('contributors.matrix.export.category'), t('contributors.matrix.export.skill')],
     };
   }, [matrix, t]);
 
@@ -219,34 +217,34 @@ export default function ContributorsSkillsMatrix({ contributors, teams, skills, 
     ));
   };
 
-  const exportXlsx = React.useCallback(() => {
-    const pad = Array<XlsxCell>(rowAxis.exportHeaders.length - 1).fill('');
-    const header = [
-      ...rowAxis.exportHeaders,
-      ...columnAxis.entries.map((entry) => entry.label),
-      rowAxis.summaryLabel,
-    ];
-    const rows = rowAxis.entries.map((rowEntry) => [
-      ...rowEntry.exportCells,
-      ...columnAxis.entries.map((columnEntry) => levelAt(rowEntry.id, columnEntry.id) ?? null),
-      rowEntry.summaryText,
-    ]);
-    const footer = [
-      columnAxis.summaryLabel,
-      ...pad,
-      ...columnAxis.entries.map((entry) => entry.summaryText),
-      '',
-    ];
-    downloadXlsxWorkbook(`skills-matrix-${new Date().toISOString().slice(0, 10)}.xlsx`, [
-      { name: t('contributors.matrix.sheetName'), rows: [header, ...rows, footer] },
-    ]);
-  }, [columnAxis, levelAt, rowAxis, t]);
+  const [exportFailed, setExportFailed] = React.useState(false);
+  const exportFile = React.useCallback(async (format: ExportFormat) => {
+    setExportFailed(false);
+    try {
+      await downloadServerExport({
+        url: '/portfolio/team-members/skills-matrix/export',
+        format,
+        language,
+        params: {
+          teamId: filterTeamId,
+          employmentTypeId: filterEmploymentTypeId,
+          orientation,
+          showUnused: String(showUnused),
+          // Category names may hold commas: one JSON-encoded list.
+          hiddenCategories: hiddenCategories.length > 0 ? JSON.stringify(hiddenCategories) : undefined,
+        },
+        fileBase: 'skills-matrix',
+      });
+    } catch {
+      setExportFailed(true);
+    }
+  }, [filterEmploymentTypeId, filterTeamId, hiddenCategories, language, orientation, showUnused]);
 
   const emptyMessage = matrix.empty ? t(`contributors.matrix.${matrix.empty}`) : null;
 
   React.useEffect(() => {
-    onActionChange?.(emptyMessage ? null : { label: t('contributors.matrix.export.action'), run: exportXlsx });
-  }, [emptyMessage, exportXlsx, onActionChange, t]);
+    onActionChange?.(emptyMessage ? null : { label: t('contributors.matrix.export.action'), onExport: exportFile });
+  }, [emptyMessage, exportFile, onActionChange, t]);
 
   React.useEffect(() => () => onActionChange?.(null), [onActionChange]);
 
@@ -302,6 +300,12 @@ export default function ContributorsSkillsMatrix({ contributors, teams, skills, 
           onClick={() => setShowUnused(!showUnused)}
         />
       </Box>
+
+      {exportFailed && (
+        <Box role="alert" sx={(theme) => ({ fontSize: 12, color: theme.palette.kanap.text.secondary })}>
+          {t('ops:reports.shared.exportFailed')}
+        </Box>
+      )}
 
       {emptyMessage ? (
         <Box sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.tertiary })}>{emptyMessage}</Box>

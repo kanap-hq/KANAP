@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../api';
-import { downloadXlsxWorkbook } from '../../lib/simpleXlsx';
+import { downloadServerExport } from '../../components/csv/serverExport';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
 import portfolioEn from '../../locales/en/portfolio.json';
@@ -15,7 +15,7 @@ vi.mock('../../api', () => ({
   default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }));
 
-vi.mock('../../lib/simpleXlsx', () => ({ downloadXlsxWorkbook: vi.fn() }));
+vi.mock('../../components/csv/serverExport', () => ({ downloadServerExport: vi.fn(async () => undefined) }));
 
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: () => true, profile: { id: 'user-1' } }),
@@ -177,7 +177,10 @@ describe('ContributorsPage view switch', () => {
     expect(screen.getByRole('button', { name: /Add contributor/ })).toBeInTheDocument();
 
     fireEvent.click(exportButton);
-    expect(downloadXlsxWorkbook).toHaveBeenCalledTimes(1);
+    // CSV, then Excel.
+    fireEvent.click((await screen.findAllByRole('menuitem'))[1]);
+    await waitFor(() => expect(downloadServerExport).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(downloadServerExport).mock.calls[0][0]).toMatchObject({ url: '/portfolio/team-members/skills-matrix/export', format: 'xlsx' });
   });
 
   it('opens straight on the org chart when the address asks for it', async () => {

@@ -1,14 +1,14 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
-import { downloadXlsxWorkbook } from '../../../lib/simpleXlsx';
+import { downloadServerExport } from '../../../components/csv/serverExport';
 import portfolioEn from '../../../locales/en/portfolio.json';
 import ContributorsSkillsMatrix, { type MatrixContributor } from './ContributorsSkillsMatrix';
 
-vi.mock('../../../lib/simpleXlsx', () => ({ downloadXlsxWorkbook: vi.fn() }));
+vi.mock('../../../components/csv/serverExport', () => ({ downloadServerExport: vi.fn(async () => undefined) }));
 
 // Keys resolve against the real English bundle, so a key the component uses
 // but never added to the locale file surfaces here instead of in the browser.
@@ -91,7 +91,7 @@ function LocationProbe() {
   return <div data-testid="location">{location.pathname}</div>;
 }
 
-const exported: { run: (() => void) | null } = { run: null };
+const exported: { run: ((format: 'csv' | 'xlsx') => Promise<void>) | null } = { run: null };
 
 function renderMatrix(props: Partial<React.ComponentProps<typeof ContributorsSkillsMatrix>> = {}) {
   return render(
@@ -106,7 +106,7 @@ function renderMatrix(props: Partial<React.ComponentProps<typeof ContributorsSki
                 teams={TEAMS}
                 skills={SKILLS}
                 filterTeamId="all"
-                onActionChange={(action) => { exported.run = action?.run ?? null; }}
+                onActionChange={(action) => { exported.run = action?.onExport ?? null; }}
                 {...props}
               />
             )}
@@ -166,7 +166,7 @@ function putSkillsInColumns() {
 beforeEach(() => {
   window.localStorage.clear();
   exported.run = null;
-  vi.mocked(downloadXlsxWorkbook).mockClear();
+  vi.mocked(downloadServerExport).mockClear();
 });
 
 describe('ContributorsSkillsMatrix', () => {
@@ -286,34 +286,35 @@ describe('ContributorsSkillsMatrix', () => {
     expect(trailingOf('BGP')).toEqual({ text: '0', gap: true });
   });
 
-  it('hands the page an export of the grid as laid out, levels as numbers', () => {
-    renderMatrix();
-    exported.run!();
+  it('hands the page an export the server builds from the grid as laid out', async () => {
+    renderMatrix({ filterTeamId: 'team-apps', filterEmploymentTypeId: 'type-1' });
+    await exported.run!('xlsx');
 
-    const [filename, sheets] = vi.mocked(downloadXlsxWorkbook).mock.calls[0];
-    expect(filename).toMatch(/^skills-matrix-\d{4}-\d{2}-\d{2}\.xlsx$/);
-    expect(sheets[0].rows).toEqual([
-      ['Category', 'Skill', 'Grace Hopper', 'Ada Lovelace', 'alan@example.com', 'Autonomous or expert'],
-      ['Cloud', 'AWS', 3, 4, null, '2'],
-      ['Cloud', 'Azure', 1, null, null, '0'],
-      ['Network', 'BGP', null, 2, null, '0'],
-      ['Skills', '', '1/2', '1/2', '', ''],
-    ]);
+    expect(downloadServerExport).toHaveBeenCalledWith(expect.objectContaining({
+      url: '/portfolio/team-members/skills-matrix/export',
+      format: 'xlsx',
+      language: 'en',
+      params: { teamId: 'team-apps', employmentTypeId: 'type-1', orientation: 'contributors', showUnused: 'false', hiddenCategories: undefined },
+    }));
   });
 
-  it('exports the transposed grid when the columns hold the skills', () => {
+  it('sends the orientation and the hidden categories as one JSON list', async () => {
     renderMatrix();
     putSkillsInColumns();
-    exported.run!();
+    fireEvent.click(screen.getByRole('button', { name: 'Cloud' }));
+    await exported.run!('csv');
 
-    const [, sheets] = vi.mocked(downloadXlsxWorkbook).mock.calls[0];
-    expect(sheets[0].rows).toEqual([
-      ['Contributor', 'Reference', 'Team', 'AWS', 'Azure', 'BGP', 'Skills'],
-      ['Grace Hopper', 'CTR-2', 'Applications', 3, 1, null, '1/2'],
-      ['Ada Lovelace', 'CTR-1', 'Infrastructure', 4, null, 2, '1/2'],
-      ['alan@example.com', 'CTR-3', 'Unassigned', null, null, null, ''],
-      ['Autonomous or expert', '', '', '2', '0', '0', ''],
-    ]);
+    expect(vi.mocked(downloadServerExport).mock.calls[0][0]).toMatchObject({
+      format: 'csv',
+      params: { teamId: 'all', employmentTypeId: 'all', orientation: 'skills', showUnused: 'false', hiddenCategories: '["Cloud"]' },
+    });
+  });
+
+  it('says so when the export fails', async () => {
+    vi.mocked(downloadServerExport).mockRejectedValueOnce(new Error('boom'));
+    renderMatrix();
+    await act(async () => { await exported.run!('xlsx'); });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 
   it('says so when the team filter leaves no contributor', () => {
