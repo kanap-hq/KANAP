@@ -169,7 +169,7 @@ describe('Top items report', () => {
     renamedColumns();
     renderReport(<TopOpexReport />);
     await waitFor(() => expect((chart.columns ?? []).slice(0, 3).map((column) => column.field)).toEqual(['reference', 'name', 'value']));
-    expect(chart.columns[0].headerName).toBe('opex.columns.reference');
+    expect(chart.columns?.[0]?.headerName).toBe('opex.columns.reference');
   });
 
   it('falls back to the default column when the picked one gets hidden', async () => {
