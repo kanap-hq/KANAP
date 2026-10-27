@@ -19,6 +19,7 @@ Wenn Sie auf **Neu** klicken, öffnet sich der vollständige Aufgaben-Arbeitsber
 
 3. **Füllen Sie optionale Details aus**:
    - **Aufgabentyp**: Wählen Sie eine Kategorie für die Arbeit (z. B. Aufgabe, Bug, Problem, Vorfall). Standardmäßig „Aufgabe", wenn verfügbar
+   - **Labels**: Freie Stichwörter, zum Beispiel dringend oder Nachverfolgung. Geben Sie eines ein und drücken Sie die Eingabetaste
    - **Beschreibung**: Fügen Sie detaillierte Informationen mit dem Markdown-Editor hinzu (unterstützt Formatierung, Listen, Links, Bilder)
    - **Phase**: Wählen Sie für Projektaufgaben eine Phase oder lassen Sie sie als „Projektebene"
    - **Klassifizierung** (eigenständige und Projektaufgaben): Legen Sie **Quelle**, **Kategorie**, **Stream** und **Unternehmen** fest. Für Projektaufgaben werden diese vom übergeordneten Projekt vorbelegt. Für eigenständige Aufgaben werden die Standardklassifizierungswerte Ihrer Organisation vorausgefüllt, wenn verfügbar
@@ -159,6 +160,7 @@ Die Leiste ist einklappbar (klicken Sie auf die vertikale Registerkarte **Eigens
   - **Verknüpft mit**: Eigenständig, Projekt, OPEX, Vertrag oder CAPEX. Sie können den Typ ändern und ein neues Element auswählen; beim Speichern wendet KANAP alle damit verbundenen Nebeneffekte an (siehe [Aufgaben-Kontext ändern](#aufgaben-kontext-andern))
   - **Phase** (nur Projektaufgaben): Standardmäßig **Projektebene**, es sei denn, Sie wählen eine Projektphase
   - **Aufgabentyp**: Aufgabe, Bug, Problem, Vorfall oder ein beliebiger benutzerdefinierter Typ, der von Ihrem Administrator konfiguriert wurde
+  - **Labels**: Freie Stichwörter, zum Beispiel dringend oder Nachverfolgung. Geben Sie eines ein und drücken Sie die Eingabetaste. Sie erscheinen als Chips. Eine Person mit Leserecht sieht die Chips
 
 **Klassifizierung** (nur eigenständige und Projektaufgaben):
   - **Quelle**: Wo die Arbeit ihren Ursprung hatte

@@ -19,6 +19,7 @@ When you click **New**, the full task workspace opens. To create a task:
 
 3. **Fill in optional details**:
    - **Task Type**: Select a category for the work (e.g., Task, Bug, Problem, Incident). Defaults to "Task" when available
+   - **Labels**: Free tags, for example urgent or follow-up. Type one and press Enter
    - **Description**: Add detailed information using the markdown editor (supports formatting, lists, links, images)
    - **Phase**: For project tasks, select a phase or leave as "Project-level"
    - **Classification** (standalone and project tasks): Set **Source**, **Category**, **Stream**, and **Company**. For project tasks, these default from the parent project. For standalone tasks, your organization's default classification values are pre-filled when available
@@ -159,6 +160,7 @@ The drawer is collapsible (click the vertical **Properties** tab on the right ed
   - **Related to**: Standalone, Project, OPEX, Contract, or CAPEX. You can change the type and pick a new item; on save, KANAP applies any related side effects (see [Changing task context](#changing-task-context))
   - **Phase** (project tasks only): Defaults to **Project-level** unless you pick a project phase
   - **Task Type**: Task, Bug, Problem, Incident, or any custom type configured by your administrator
+  - **Labels**: Free tags, for example urgent or follow-up. Type one and press Enter. The tags show as chips. A reader sees the chips
 
 **Classification** (standalone and project tasks only):
   - **Source**: Where the work originated

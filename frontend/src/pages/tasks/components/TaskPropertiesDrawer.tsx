@@ -16,6 +16,7 @@ import RelatedObjectSelect, { RelatedObjectType } from '../../../components/fiel
 import CompanySelect from '../../../components/fields/CompanySelect';
 import { drawerMenuItemSx, drawerSelectSx, selectPlaceholderSx, tealLinkSx } from '../../../theme/formSx';
 import DrawerKnowledgeSection from './DrawerKnowledgeSection';
+import TaskLabelsField from './TaskLabelsField';
 import TaskLogTimeDialog from './TaskLogTimeDialog';
 import { taskDetailTokens, taskDetailTypography } from '../theme/taskDetailTokens';
 import { useLocalizedTaskTypes, useTaskTypeLabel } from '../../../hooks/useLocalizedTaskTypes';
@@ -251,6 +252,12 @@ export default function TaskPropertiesDrawer({
             </Select>
           )}
         </PropertyRow>
+
+        <TaskLabelsField
+          labels={task.labels}
+          readOnly={readOnly}
+          onChange={(labels) => onPatch({ labels })}
+        />
       </PropertyGroup>
 
       {/* ══ Group 2: Classification ══ */}

@@ -855,6 +855,8 @@
           "category": "Catégorie",
           "company": "Société",
           "dueDate": "Échéance",
+          "labels": "Étiquettes",
+          "labelsPlaceholder": "p. ex. urgent",
           "phase": "Phase",
           "priority": "Priorité",
           "relatedTo": "Lié à",
