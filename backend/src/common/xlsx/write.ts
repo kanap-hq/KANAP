@@ -143,13 +143,19 @@ function linkTarget(link: string, appBaseUrl: string): string {
     .join('');
 }
 
-/** Text safe for a cell: no character XML forbids, at most 32,767 characters. */
+/** `_xHHHH_`, which a spreadsheet reads as the character HHHH: its `_x` is written `_x005F_x` (OOXML). */
+const OOXML_ESCAPE_LIKE = /_x(?=[0-9A-Fa-f]{4}_)/g;
+
+/**
+ * Text safe for a cell: no character XML forbids, at most 32,767 characters, and a literal `_xHHHH_`
+ * escaped so a spreadsheet reads it as written.
+ */
 function cellText(text: string): string {
   let out = text.replace(XML_FORBIDDEN, '');
   if (out.length > XLSX_MAX_TEXT_LENGTH) {
     out = out.slice(0, XLSX_MAX_TEXT_LENGTH).replace(XML_FORBIDDEN, '');
   }
-  return out;
+  return out.includes('_x') ? out.replace(OOXML_ESCAPE_LIKE, '_x005F_x') : out;
 }
 
 /** A sheet name Excel accepts, unique (without regard to case) among the names already taken. */

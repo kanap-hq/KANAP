@@ -4,7 +4,7 @@ import { backendPath } from '../../__tests__/backend-root';
 import { writeXlsx, XlsxCell } from '../../xlsx/write';
 import { XLSX_OLD_FORMAT_MESSAGE } from '../../xlsx/read';
 import { handmadeXlsx, si } from '../../xlsx/__tests__/fixtures/handmade';
-import { CSV_FILE_EMPTY_MESSAGE, readCsv, readSheet, sheetCellText } from '../read';
+import { CSV_FILE_EMPTY_MESSAGE, readCsv, readSheet, sheetCellText, XLSX_BLANK_ROW_MARGIN } from '../read';
 import { BUDGET_AMOUNT_COLUMNS, CSV_ROW_CAP, CsvLanguage, CsvParsedAmount, CsvReadSchema } from '../types';
 
 /**
@@ -185,6 +185,29 @@ async function typedCellsInOtherColumns() {
   assert.equal(amountText(r5.amounts.budget_2027), 'invalid', 'more than 20 decimals');
   assert.deepEqual(r5.errors.map((error) => error.code), ['CSV_NUMBER_INVALID']);
   assert.equal(amountText(r7.amounts.budget_2027), '-1500');
+
+  // With the language the file records (here a token-like hint), a number in a text column takes its
+  // decimal mark, as the file's CSV would write it; without one, a point. Amount and date columns keep theirs.
+  const hinted = (language: CsvLanguage): CsvReadSchema => ({
+    ...schema(language, ['kanap_token', 'description', 'end_of_validity'], ['end_of_validity']),
+    conventionHint: { field: 'kanap_token', languageOf: (cell) => (/^v1\.(en|fr|de|es)$/.exec(cell)?.[1] as CsvLanguage | undefined) ?? null },
+  });
+  const numbers = (token: string): Buffer =>
+    workbook(['kanap_token', 'description', 'budget_2027'], [
+      [token, { kind: 'number', value: 2.5 }, { kind: 'amount', value: '1234.5' }],
+      [token, { kind: 'number', value: -0.25 }, { kind: 'amount', value: '7' }],
+    ]);
+  for (const [token, language, expected] of [
+    ['v1.fr', 'en', ['2,5', '-0,25']],
+    ['v1.de', 'en', ['2,5', '-0,25']],
+    ['v1.en', 'fr', ['2.5', '-0.25']],
+    ['', 'fr', ['2.5', '-0.25']],
+  ] as const) {
+    const hintedRead = await readSheet(numbers(token), hinted(language));
+    assert.deepEqual(hintedRead.fileErrors, [], token);
+    assert.deepEqual(hintedRead.rows.map((row) => row.cells.description), expected, `token '${token}'`);
+    assert.deepEqual(hintedRead.rows.map((row) => amountText(row.amounts.budget_2027)), ['1234.5', '7'], `token '${token}': amounts`);
+  }
 }
 
 async function refusals() {
@@ -213,6 +236,17 @@ async function refusals() {
   assert.deepEqual(capped.rows, []);
   const atCap = await readSheet(workbook(['account'], rows.slice(1)), schema('fr', ['account']));
   assert.equal(atCap.rows.length, CSV_ROW_CAP);
+
+  // The reader itself stops past the cap, the header and the margin of rows of spaces this layer skips:
+  // same refusal, and no reader code.
+  const spaces: XlsxCell[][] = Array.from({ length: XLSX_BLANK_ROW_MARGIN }, () => ['   ']);
+  const withMargin = await readSheet(workbook(['account'], [...spaces, ...rows.slice(1)]), schema('fr', ['account']));
+  assert.deepEqual(withMargin.fileErrors, []);
+  assert.equal(withMargin.rows.length, CSV_ROW_CAP, 'rows of spaces within the margin are skipped');
+  const pastMargin = await readSheet(workbook(['account'], [...spaces, ['   '], ...rows.slice(1)]), schema('fr', ['account']));
+  assert.deepEqual(pastMargin.fileErrors, [`This file has more than ${CSV_ROW_CAP.toLocaleString('en-US')} rows.`]);
+  assert.equal(pastMargin.fileErrorCode, undefined);
+  assert.deepEqual(pastMargin.rows, []);
 
   // A typed cell past the header is still a cell: the row has more cells than the header.
   const extra = await readSheet(handmadeXlsx({ sheetData: '<row r="1"><c r="A1" t="inlineStr"><is><t>account</t></is></c></row><row r="2"><c r="C2"><v>1</v></c></row>' }), schema('fr', ['account']));

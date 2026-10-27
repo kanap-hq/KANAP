@@ -53,12 +53,23 @@ export const XLSX_READ_LIMITS = {
   maxSharedStrings: 1_000_000,
   /** `<c>` elements of the sheet. */
   maxCellElements: 5_000_000,
-  /** Cells of the returned grid, the empty cells between two values included. */
+  /**
+   * Cells of the returned grid, the empty cells between two values included. The widest file read at
+   * the row cap of an import is the monthly budget file of three years: 199 columns, plus one per
+   * dimension, 4,040,000 cells for 20,000 lines with three dimensions. 5,000,000 is 20,101 rows of
+   * 248 columns, and about the cells of the largest CSV file an import accepts (48 MB, about 10 bytes
+   * a cell).
+   */
   maxGridCells: 5_000_000,
   /** Characters of one cell (Excel's own limit). */
   maxCellTextLength: 32_767,
   /** Highest row holding a value. */
   maxRows: 200_000,
+  /**
+   * Rows holding a value. A caller passes its own row cap (`readSheet`: the import's row cap, the
+   * header and a margin): reading stops as soon as it is passed, before the rest of the sheet is held.
+   */
+  maxValueRows: 200_000,
   /** Highest column (XFD, Excel's own limit). */
   maxColumns: 16_384,
 } as const;
@@ -107,6 +118,7 @@ function tooLarge(limit: keyof XlsxReadLimits, limits: XlsxReadLimits): XlsxRead
     maxGridCells: `the sheet has more than ${count(value)} cells`,
     maxCellTextLength: `a cell holds more than ${count(value)} characters`,
     maxRows: `the sheet has more than ${count(value)} rows`,
+    maxValueRows: `the sheet has more than ${count(value)} rows`,
     maxColumns: `the sheet has more than ${count(value)} columns`,
   };
   return new XlsxReadError('XLSX_TOO_LARGE', `This file is too large to read: ${reason[limit]}.`, limit);
@@ -495,6 +507,7 @@ function parseSheet(data: Buffer, context: SheetContext): XlsxReadCell[][] {
   const inlineText = new TextBuffer(limits);
   let gridCells = 0;
   let cellElements = 0;
+  let valueRows = 0;
 
   let inSheetData = false;
   let rowNumber = 0;
@@ -517,6 +530,8 @@ function parseSheet(data: Buffer, context: SheetContext): XlsxReadCell[][] {
     if (rowNumber > limits.maxRows) throw tooLarge('maxRows', limits);
     let target = row;
     if (!target) {
+      valueRows += 1;
+      if (valueRows > limits.maxValueRows) throw tooLarge('maxValueRows', limits);
       while (rows.length < rowNumber - 1) rows.push([]);
       target = [];
       rows.push(target);

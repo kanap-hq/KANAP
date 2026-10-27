@@ -228,6 +228,7 @@ function limits() {
     maxGridCells: 5_000_000,
     maxCellTextLength: 32_767,
     maxRows: 200_000,
+    maxValueRows: 200_000,
     maxColumns: 16_384,
   });
   const small = handmadeXlsx({ sheetData: '<row r="1"><c r="A1"><v>1</v></c></row>' });
@@ -271,6 +272,10 @@ function limits() {
   assert.equal(rowsOf({ sheetData: '<row r="1"><c r="J1"><v>1</v></c></row>' }, { maxGridCells: 10 })[0].length, 10);
   refuses(() => rowsOf({ sheetData: '<row r="11"><c r="A11"><v>1</v></c></row>' }, { maxRows: 10 }), 'XLSX_TOO_LARGE', 'maxRows');
   assert.equal(rowsOf({ sheetData: '<row r="10"><c r="A10"><v>1</v></c></row><row r="5000"><c r="A5000" s="0"/></row>' }, { maxRows: 10 }).length, 10, 'an empty row past the limit is ignored');
+  // Rows holding a value, the caller's row cap: the empty rows between them do not count, reading stops past it.
+  const threeValueRows = '<row r="2"><c r="A2"><v>1</v></c></row><row r="7"><c r="B7"><v>2</v></c></row><row r="9"><c r="A9" s="0"/><c r="C9"><v>3</v></c></row>';
+  assert.equal(rowsOf({ sheetData: threeValueRows }, { maxValueRows: 3 }).length, 9);
+  refuses(() => rowsOf({ sheetData: `${threeValueRows}<row r="10"><c r="A10"><v>4</v></c></row>` }, { maxValueRows: 3 }), 'XLSX_TOO_LARGE', 'maxValueRows');
   assert.equal(rowsOf({ sheetData: '<row r="1"><c r="XFD1"><v>1</v></c></row>' })[0].length, 16_384);
   refuses(() => rowsOf({ sheetData: '<row r="1"><c r="XFE1"><v>1</v></c></row>' }), 'XLSX_TOO_LARGE', 'maxColumns');
 

@@ -11,6 +11,7 @@ import {
 } from '../xlsx/read';
 import { parseCsvAmount, resolveAmountConvention } from './amount';
 import { parseCsvDateCell, resolveDateOrder } from './date';
+import { csvProfile } from './language';
 import { CsvDecodeError, decodeCsv } from './decode';
 import { classifyHeaders, validateSchema } from './headers';
 import {
@@ -59,6 +60,15 @@ const SEPARATORS: readonly CsvSeparator[] = [',', ';', '\t'];
 /** The refusal of a file with no header, translated by the interface as `CSV_FILE_EMPTY`. */
 export const CSV_FILE_EMPTY_MESSAGE = 'The file is empty.';
 
+const rowCapMessage = (): string => `This file has more than ${CSV_ROW_CAP.toLocaleString('en-US')} rows.`;
+
+/**
+ * Rows the .xlsx reader counts and this layer then skips as blank (a row of cells holding only spaces),
+ * above the header or among the data rows. The reader stops past the row cap, the header and this
+ * margin; the exact cap is counted here, on rows that are not blank.
+ */
+export const XLSX_BLANK_ROW_MARGIN = 100;
+
 /**
  * Read one spreadsheet file. Parsing is a stream and stops once the row cap
  * is passed. The rows are returned because a preflight needs every one of
@@ -83,7 +93,7 @@ export async function readCsv(input: Buffer | string, schema: CsvReadSchema): Pr
 
   const parsed = await parseRecords(text, separator);
   if (parsed.capped) {
-    return baseResult(decoded.encoding, separator, [`This file has more than ${CSV_ROW_CAP.toLocaleString('en-US')} rows.`]);
+    return baseResult(decoded.encoding, separator, [rowCapMessage()]);
   }
   if (parsed.error) return baseResult(decoded.encoding, separator, [parsed.error]);
   const rows = parsed.rows.map((row) => ({ line: row.line, cells: row.cells.map(textCell) }));
@@ -102,9 +112,11 @@ export async function readSheet(input: Buffer, schema: CsvReadSchema): Promise<S
   validateSchema(schema);
   let grid: ReturnType<typeof readXlsxGrid>;
   try {
-    grid = readXlsxGrid(input);
+    grid = readXlsxGrid(input, { maxValueRows: CSV_ROW_CAP + 1 + XLSX_BLANK_ROW_MARGIN });
   } catch (error) {
     if (!(error instanceof XlsxReadError)) throw error;
+    // Past the row cap: the CSV file's refusal, word for word.
+    if (error.limit === 'maxValueRows') return { ...baseResult('utf-8', null, [rowCapMessage()]), format: 'xlsx' };
     return { ...baseResult('utf-8', null, [error.message]), format: 'xlsx', fileErrorCode: error.code };
   }
   const sheet = { format: 'xlsx' as const, sheetName: grid.sheetName, sheetCount: grid.sheetCount };
@@ -115,9 +127,7 @@ export async function readSheet(input: Buffer, schema: CsvReadSchema): Promise<S
     if (cells.every(isBlank)) continue;
     if (rows.length > 0) {
       dataRows += 1;
-      if (dataRows > CSV_ROW_CAP) {
-        return { ...baseResult('utf-8', null, [`This file has more than ${CSV_ROW_CAP.toLocaleString('en-US')} rows.`]), ...sheet };
-      }
+      if (dataRows > CSV_ROW_CAP) return { ...baseResult('utf-8', null, [rowCapMessage()]), ...sheet };
     }
     rows.push({ line: index + 1, cells });
   }
@@ -460,8 +470,11 @@ function buildRows(
   const hint = hintLanguages.size === 1 ? [...hintLanguages][0] : undefined;
   const decision = resolveDateOrder(samples, schema.language, schema.dateOrder, hint);
   const amountsDecision = resolveAmountConvention(amountSamples, schema.language, schema.decimalMark, hint);
+  // A number cell in a text column is written as the file's own CSV would write it: with the decimal
+  // mark of the language the file records (the budget file's token), a point when it records none.
+  const textDecimal = hint ? csvProfile(hint).decimal : '.';
   const rows = data.map((row) =>
-    buildRow(row, slots, schema, decision.order, decision.error !== null, amountsDecision.decimal, amountsDecision.error !== null),
+    buildRow(row, slots, schema, decision.order, decision.error !== null, amountsDecision.decimal, amountsDecision.error !== null, textDecimal),
   );
   const dates: CsvDateReading | null =
     decision.error || decision.order === null
@@ -483,6 +496,7 @@ function buildRow(
   datesBlocked: boolean,
   amountConvention: ',' | '.' | null,
   amountsBlocked: boolean,
+  textDecimal: ',' | '.',
 ): CsvDataRow {
   const cells: Record<string, string> = {};
   const amounts: CsvDataRow['amounts'] = {};
@@ -495,7 +509,8 @@ function buildRow(
     if (!slot) return;
     const cell: SheetCell = index < row.cells.length ? row.cells[index] : { kind: 'empty' };
     const value = sheetCellText(cell);
-    cells[slot.id] = value;
+    const dateField = slot.kind === 'field' && !!schema.dateFields?.includes(slot.id);
+    cells[slot.id] = cell.kind === 'number' && slot.kind !== 'amount' && !dateField && textDecimal === ',' ? value.replace('.', ',') : value;
     if (slot.kind === 'amount') {
       const typed = cell.kind === 'number';
       const parsed = typed ? typedAmount(cell.value) : parseCsvAmount(value, amountConvention ?? undefined);
@@ -505,7 +520,7 @@ function buildRow(
       }
       return;
     }
-    if (slot.kind === 'field' && schema.dateFields?.includes(slot.id)) {
+    if (dateField) {
       if (cell.kind === 'date') {
         dates[slot.id] = { kind: 'date', isoDate: cell.iso, time: null };
         return;
