@@ -26,7 +26,7 @@ const date = (iso: string): XlsxReadCell => ({ kind: 'date', iso });
 const EMPTY: XlsxReadCell = { kind: 'empty' };
 const rowsOf = (options: HandmadeParts, limits?: Partial<XlsxReadLimits>) => readXlsxGrid(handmadeXlsx(options), limits).rows;
 
-function refuses(read: () => unknown, code: XlsxReadError['code'], limit: XlsxReadError['limit'] = null, label = code): XlsxReadError {
+function refuses(read: () => unknown, code: XlsxReadError['code'], limit: XlsxReadError['limit'] = null, label: string = code): XlsxReadError {
   let caught: unknown;
   try {
     read();
