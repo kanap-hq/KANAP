@@ -31,6 +31,9 @@ import { CSS } from '@dnd-kit/utilities';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import PageHeader from '../../components/PageHeader';
+import FormattedNumberField from '../../components/inputs/FormattedNumberField';
+import { decimalMark } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -1010,6 +1013,7 @@ function CriterionEditDialog({
   onSave: () => void;
 }) {
   const { t } = useTranslation(['portfolio', 'common']);
+  const locale = useLocale();
   const [name, setName] = useState('');
   const [inverted, setInverted] = useState(false);
   const [weight, setWeight] = useState(1);
@@ -1100,12 +1104,13 @@ function CriterionEditDialog({
           />
 
           <Stack direction="row" spacing={2}>
-            <TextField
+            <FormattedNumberField
               label={t('settings.scoring.dialog.weight')}
-              type="number"
               value={weight}
-              onChange={(e) => setWeight(Number(e.target.value))}
-              inputProps={{ min: 0.1, step: 0.1 }}
+              // portfolio_criteria.weight is numeric(5,2).
+              decimals={2}
+              decimalSeparator={decimalMark(locale)}
+              onChange={(event) => setWeight(Number(event.target.value))}
               sx={{ width: 120 }}
             />
             <FormControlLabel
