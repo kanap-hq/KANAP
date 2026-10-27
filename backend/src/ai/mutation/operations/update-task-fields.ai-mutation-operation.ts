@@ -6,6 +6,7 @@ import { Task, TASK_STATUSES, TaskStatus } from '../../../tasks/task.entity';
 import { RelatedType, TasksUnifiedService } from '../../../tasks/tasks-unified.service';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiPolicyService } from '../../ai-policy.service';
+import { assertRecordInWriteScope } from '../ai-write-levels';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import {
   AiMutationOperation,
@@ -180,6 +181,15 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     private readonly policy: AiPolicyService,
   ) {}
 
+  /**
+   * A task moved to a project: the right to contribute to projects and the project in the scope of
+   * the screen route that moves a task to it (`PATCH /tasks/:id/move`, contributor, lot D11).
+   */
+  private async assertProjectTarget(context: AiExecutionContextWithManager, projectId: string | null | undefined): Promise<void> {
+    await this.policy.assertBusinessPermission(context, 'portfolio_projects', 'contributor', context.manager);
+    await assertRecordInWriteScope(context, 'projects', projectId, 'contributor');
+  }
+
   async prepareCreatePreview(
     context: AiExecutionContextWithManager,
     input: UpdateTaskFieldsInput,
@@ -259,6 +269,10 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
         const label = String(((mutation.field_labels as any) || {})[fieldName] || fieldName);
         throw new ConflictException(`${label} changed after the preview was created.`);
       }
+    }
+    // A move to a project: checked again when the preview runs, as when it was asked.
+    if (fields.related_object_type === 'project') {
+      await this.assertProjectTarget(context, textOrNull(fields.related_object_id));
     }
 
     await this.tasks.updateById(
@@ -377,9 +391,7 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
         : mode === 'incident'
           ? await this.resolveIncidentRelation(context, relationRef)
           : await this.support.resolveCreateTarget(context, mode, relationRef);
-      if (relation.mode === 'project') {
-        await this.policy.assertBusinessPermission(context, 'portfolio_projects', 'contributor', context.manager);
-      }
+      if (relation.mode === 'project') await this.assertProjectTarget(context, relation.id);
       fields.related_object_type = relation.type;
       fields.related_object_id = relation.id;
       displayValues.relation = relation.label;

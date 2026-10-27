@@ -134,6 +134,8 @@ Wenn Plaid einen Filterwert versucht, den ein Feld nicht annimmt, etwa „aktiv�
 
 Wenn Sie eine Änderung verlangen, die Ihre Rolle nicht erlaubt, nennt Plaid das fehlende Recht, zum Beispiel „Sie benötigen das Recht, Projekte zu ändern“. Ein Administrator fügt es Ihrer Rolle hinzu.
 
+Plaid nimmt nur die Änderungen vor, die Ihre Bildschirme Ihnen erlauben, an den Datensätzen, die Sie dort erreichen. Mit dem Recht, an Projekten mitzuwirken, können Sie Plaid den Zweck eines Projekts und seine Verknüpfungen mit Anwendungen, Assets und Budgetzeilen ändern lassen. Das Recht, an Anträgen mitzuwirken, deckt dieselben Verknüpfungen bei Anträgen ab. Ein Business Contributor nimmt diese Änderungen nur an den Projekten und Anträgen vor, an denen er beteiligt ist. Um einen Datensatz zu verknüpfen, brauchen Sie das Recht, sein Modul zu lesen. Um ein Projekt umzubenennen oder seine anderen Felder zu ändern, brauchen Sie das Recht, Projekte zu ändern, wie auf der Projektseite.
+
 ### Was Plaid nicht liest { #what-plaid-does-not-read }
 
 Plaid liest nicht:

@@ -11,6 +11,7 @@ import {
   applicationParticipantCondition,
   resolveBusinessContributorScopeForUser,
 } from '../../auth/business-contributor-scope';
+import { aiParticipationScopeSql } from '../query/ai-query-scope.util';
 import { SupplierContactsService } from '../../suppliers/supplier-contacts.service';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewRelationItem } from '../ai.types';
@@ -1703,9 +1704,19 @@ export class AiRelationMutationSupportService {
       case 'departments':
         return manager.query(`SELECT * FROM departments WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text)) ORDER BY name LIMIT 6`, [tenantId, ref]);
       case 'projects':
-        return manager.query(`SELECT * FROM portfolio_projects WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR item_number = $3) ORDER BY item_number LIMIT 6`, [tenantId, ref, Number.isInteger(itemNumber) ? itemNumber : -1]);
-      case 'requests':
-        return manager.query(`SELECT * FROM portfolio_requests WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR item_number = $3) ORDER BY item_number LIMIT 6`, [tenantId, ref, Number.isInteger(itemNumber) ? itemNumber : -1]);
+      case 'requests': {
+        // A Business Contributor finds only the records of their participation scope, as they read
+        // them: one outside it reads as missing (lot D11).
+        const params: unknown[] = [tenantId, ref, Number.isInteger(itemNumber) ? itemNumber : -1];
+        const scopeSql = await aiParticipationScopeSql(context, entityType, 'x', params);
+        return manager.query(
+          `SELECT x.* FROM ${entityType === 'projects' ? 'portfolio_projects' : 'portfolio_requests'} x
+           WHERE x.tenant_id = $1 AND (${uuid ? 'x.id = $2 OR ' : ''}LOWER(x.name) = LOWER($2::text) OR x.item_number = $3)
+             ${scopeSql}
+           ORDER BY x.item_number LIMIT 6`,
+          params,
+        );
+      }
       case 'spend_items':
         // OPEX lines only (`spend/budget-nature.ts`).
         return manager.query(`SELECT * FROM spend_items WHERE tenant_id = $1 AND nature = 'opex' AND (${uuid ? 'id = $2 OR ' : ''}LOWER(product_name) = LOWER($2::text)) ORDER BY product_name LIMIT 6`, [tenantId, ref]);

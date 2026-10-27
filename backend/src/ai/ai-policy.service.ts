@@ -12,6 +12,7 @@ import { UserRole } from '../users/user-role.entity';
 import { AiSettingsService } from './ai-settings.service';
 import { PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
+import { CONTRIBUTOR_PLAIN_SCOPES, CONTRIBUTOR_WRITABLE_FIELDS } from './mutation/ai-write-levels';
 import {
   AI_CONTEXT_ENTITY_TYPES,
   AI_QUERY_ENTITY_TYPES,
@@ -117,6 +118,24 @@ export function missingRightMessage(resource: string, minimumLevel: PermissionLe
 }
 
 /**
+ * The refusal of a field a contributor may not change through Plaid, as the screen does not let
+ * them (lot D11): which fields, and the right that would.
+ */
+export function contributorFieldsMessage(resource: string, fieldLabels: string[]): string {
+  const name = RIGHT_PLAIN_NAMES[resource] ?? resource;
+  return `Your role lets you contribute to ${name} but not change ${fieldLabels.join(', ')}: that needs the right to modify ${name}, which your role does not give. An administrator can add it to your role.`;
+}
+
+/** What a write needs beyond its module: its level and, for a record's fields, the fields it changes. */
+export type AiWriteAccessRequirement = {
+  level?: PermissionLevel;
+  toolName?: string;
+  family?: string;
+  /** The fields the write changes, by name, with their labels for the refusal. */
+  fields?: Record<string, string>;
+};
+
+/**
  * Whether a message is a refusal of a right or of a data access, as `missingRightMessage` and the
  * data-access checks write it ("This line is read only in your access."): a preview card shows such a
  * refusal as it is, and any other failure as a translated sentence with the message as its detail.
@@ -127,6 +146,7 @@ export function isRightRefusalMessage(message: string | null | undefined): boole
   return text.startsWith('You need the right to ')
     || text.startsWith('Your role does not give access to Plaid.')
     || text.startsWith('Your role lets you ask Plaid questions but not prepare changes')
+    || text.startsWith('Your role lets you contribute to ')
     || text.startsWith('Missing required permission ')
     || / in your access\.$/.test(text)
     || / outside your data access\.$/.test(text);
@@ -281,12 +301,19 @@ export class AiPolicyService {
    * What this person may change through Plaid, in plain words, for the refusals of the chat:
    * whether their role lets them prepare changes with Plaid, and the modules they may modify.
    */
-  async describeWriteRights(context: AiExecutionContext, manager: EntityManager): Promise<{ plaidChanges: boolean; modifiableModules: string[] }> {
+  async describeWriteRights(
+    context: AiExecutionContext,
+    manager: EntityManager,
+  ): Promise<{ plaidChanges: boolean; modifiableModules: string[]; contributableModules: string[] }> {
     const state = await this.getEffectivePermissionStateOrNull(context.userId, manager);
     const resources = Object.keys(RIGHT_PLAIN_NAMES);
     return {
       plaidChanges: context.surface === 'chat' && this.hasPermission(state, 'ai_chat', 'member'),
       modifiableModules: resources.filter((resource) => this.hasPermission(state, resource, 'member')).map((resource) => RIGHT_PLAIN_NAMES[resource]),
+      // The modules the person changes at contributor level only, with what that covers (lot D11).
+      contributableModules: Object.keys(CONTRIBUTOR_PLAIN_SCOPES)
+        .filter((resource) => this.hasPermission(state, resource, 'contributor') && !this.hasPermission(state, resource, 'member'))
+        .map((resource) => CONTRIBUTOR_PLAIN_SCOPES[resource]),
     };
   }
 
@@ -624,18 +651,41 @@ export class AiPolicyService {
     return readable;
   }
 
+  /**
+   * A write through Plaid: the chat surface, the Plaid right at member level, and the module at the
+   * level of the screen route that makes the same change (`member`, or `contributor` where the
+   * screen opens it, `mutation/ai-write-levels.ts`). A person who holds the module at contributor
+   * level only changes the fields the screen opens to a contributor; the others are refused with
+   * the right they need. The participation scope of the record is checked by the caller
+   * (`assertRecordInWriteScope`).
+   */
   async assertWriteAccess(
     context: AiExecutionContext,
     businessResource: string,
     manager: EntityManager,
+    requirement: AiWriteAccessRequirement = {},
   ): Promise<void> {
     if (context.surface !== 'chat') {
       throw new ForbiddenException('MCP write access is not available.');
     }
 
+    const level = requirement.level ?? 'member';
     await this.assertSurfaceAccess(context, manager);
     await this.assertUserPermission(context.userId, 'ai_chat', 'member', manager);
-    await this.assertUserPermission(context.userId, businessResource, 'member', manager);
+    await this.assertUserPermission(context.userId, businessResource, level, manager);
+    if (LEVEL_RANK[level] < LEVEL_RANK.member && requirement.fields) {
+      const allowed = CONTRIBUTOR_WRITABLE_FIELDS[requirement.toolName ?? '']?.[requirement.family ?? ''] ?? [];
+      const refused = Object.keys(requirement.fields).filter((field) => !allowed.includes(field));
+      if (refused.length > 0) {
+        const state = await this.getEffectivePermissionState(context.userId, manager);
+        if (!this.hasPermission(state, businessResource, 'member')) {
+          throw new ForbiddenException(contributorFieldsMessage(
+            businessResource,
+            refused.map((field) => requirement.fields?.[field] || field),
+          ));
+        }
+      }
+    }
     await this.assertSubscriptionAllowsAi(context.tenantId, manager);
   }
 

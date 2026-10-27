@@ -16,6 +16,7 @@ import { TaskActivitiesService } from '../../../tasks/task-activities.service';
 import { TaskAttachmentsService } from '../../../tasks/task-attachments.service';
 import { TasksUnifiedService } from '../../../tasks/tasks-unified.service';
 import { AiPolicyService } from '../../ai-policy.service';
+import { assertRecordInWriteScope } from '../ai-write-levels';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationWriteToolName, AiWritePreviewCapabilityDto } from '../../ai.types';
 import {
@@ -652,6 +653,8 @@ abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTi
   ): Promise<void> {
     if (relation.mode === 'project') {
       await this.policy.assertBusinessPermission(context, 'portfolio_projects', 'contributor', context.manager);
+      // The project in the scope of the screen route that adds a task to it (contributor, lot D11).
+      await assertRecordInWriteScope(context, 'projects', relation.id, 'contributor');
     }
   }
 

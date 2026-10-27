@@ -134,6 +134,8 @@ Quand Plaid essaie une valeur de filtre qu'un champ n'accepte pas, par exemple �
 
 Quand vous demandez une modification que votre rôle ne permet pas, Plaid nomme le droit qui vous manque, par exemple « vous avez besoin du droit de modifier les projets ». Un administrateur l'ajoute à votre rôle.
 
+Plaid ne fait que les modifications que vos écrans vous permettent, sur les fiches que vous pouvez y atteindre. Avec le droit de contribuer aux projets, vous pouvez faire changer par Plaid l'objectif d'un projet et ses liens vers des applications, des actifs et des lignes budgétaires. Le droit de contribuer aux demandes couvre les mêmes liens sur les demandes. Un Business Contributor ne fait ces modifications que sur les projets et les demandes auxquels il participe. Lier une fiche demande le droit de lire son module. Renommer un projet ou changer ses autres champs demande le droit de modifier les projets, comme sur la page du projet.
+
 ### Ce que Plaid ne lit pas { #what-plaid-does-not-read }
 
 Plaid ne lit pas :

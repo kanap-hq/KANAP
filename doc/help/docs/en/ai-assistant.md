@@ -134,6 +134,8 @@ When Plaid tries a filter value that a field does not take, for example "active"
 
 When you ask for a change your role does not allow, Plaid names the right you are missing, for example "you need the right to modify projects". An administrator adds it to your role.
 
+Plaid makes only the changes your screens let you make, on the records you can reach there. With the right to contribute to projects, you can have Plaid change the purpose of a project and its links to applications, assets and budget lines. The right to contribute to requests covers the same links on requests. A Business Contributor makes these changes only on the projects and requests they take part in. Linking a record needs the right to read its module. Renaming a project or changing its other fields needs the right to modify projects, as on the project page.
+
 ### What Plaid does not read { #what-plaid-does-not-read }
 
 Plaid does not read:

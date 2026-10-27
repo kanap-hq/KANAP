@@ -49,6 +49,7 @@ import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewClassificationCatalog } from '../ai.types';
 import { previewFieldOrder } from './ai-preview-field-order';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
+import { aiParticipationScopeSql } from '../query/ai-query-scope.util';
 import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
@@ -1122,25 +1123,22 @@ export class AiBusinessRecordMutationSupportService {
           [tenantId, ref],
         );
       case 'projects':
+      case 'requests': {
+        // A Business Contributor finds only the records of their participation scope, as they read
+        // them: one outside it reads as missing (lot D11).
+        const params: unknown[] = [tenantId, ref, Number.isInteger(itemNumber) ? itemNumber : -1];
+        const scopeSql = await aiParticipationScopeSql(context, entityType, 'x', params);
         return manager.query(
           `
-          SELECT * FROM portfolio_projects
-          WHERE tenant_id = $1
-            AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR item_number = $3)
-          ORDER BY item_number LIMIT 6
+          SELECT x.* FROM ${entityType === 'projects' ? 'portfolio_projects' : 'portfolio_requests'} x
+          WHERE x.tenant_id = $1
+            AND (${uuid ? 'x.id = $2 OR ' : ''}LOWER(x.name) = LOWER($2::text) OR x.item_number = $3)
+            ${scopeSql}
+          ORDER BY x.item_number LIMIT 6
           `,
-          [tenantId, ref, Number.isInteger(itemNumber) ? itemNumber : -1],
+          params,
         );
-      case 'requests':
-        return manager.query(
-          `
-          SELECT * FROM portfolio_requests
-          WHERE tenant_id = $1
-            AND (${uuid ? 'id = $2 OR ' : ''}LOWER(name) = LOWER($2::text) OR item_number = $3)
-          ORDER BY item_number LIMIT 6
-          `,
-          [tenantId, ref, Number.isInteger(itemNumber) ? itemNumber : -1],
-        );
+      }
       case 'interfaces':
         return manager.query(
           `SELECT * FROM interfaces WHERE tenant_id = $1 AND (${uuid ? 'id = $2 OR ' : ''}LOWER(interface_reference) = LOWER($2::text) OR LOWER(COALESCE(interface_id, '')) = LOWER($2::text) OR LOWER(name) = LOWER($2::text)) ORDER BY interface_reference LIMIT 6`,
