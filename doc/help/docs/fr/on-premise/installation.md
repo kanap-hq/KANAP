@@ -8,8 +8,9 @@
 - Docker Engine 24.0+
 - Plugin Docker Compose 2.20 ou plus récent (les versions actuelles sont en 5.x)
 - Git
-- 6 Go de RAM au minimum, 8 Go recommandés. Le build des images, à l'installation et à chaque mise à jour, a besoin de cette marge. Davantage de processus API demandent davantage de mémoire, voir [Configuration](configuration.md#facultatif-capacite-et-performance).
-- 20 Go de disque au minimum. Après l'installation, KANAP occupe environ 4 Go (images 1,3 Go, cache de build 2,5 Go). La base de données, les fichiers stockés et le cache de build grossissent avec le temps ; le cache grossit à chaque mise à jour, et `docker builder prune` récupère cet espace.
+- 4 Go de RAM au minimum, 8 Go recommandés quand PostgreSQL tourne sur le même serveur. Davantage de processus API demandent davantage de mémoire, voir [Configuration](configuration.md#facultatif-capacite-et-performance).
+- 10 Go de disque au minimum. KANAP lui-même occupe environ 1,5 Go (ses images). La base de données et les fichiers stockés grossissent avec le temps.
+- Un accès HTTPS sortant vers `ghcr.io` à l'installation et à chaque mise à jour, pour télécharger les images (voir [Règles de pare-feu](configuration.md#outbound-installation-and-upgrades)).
 
 **Infrastructure fournie par le client :**
 
@@ -74,7 +75,7 @@ git clone https://github.com/kanap-hq/KANAP.git /opt/kanap
 cd /opt/kanap
 git checkout stable
 
-# 2. Configurer AVANT le build
+# 2. Configurer avant le premier démarrage
 cp infra/.env.onprem.example .env
 chmod 600 .env
 nano .env  # Renseignez DATABASE_URL, les identifiants S3, ADMIN_EMAIL, ADMIN_PASSWORD, JWT_SECRET,
@@ -83,8 +84,8 @@ nano .env  # Renseignez DATABASE_URL, les identifiants S3, ADMIN_EMAIL, ADMIN_PA
 #          APP_ENV=production (les utilisateurs accèdent à KANAP en HTTPS) et RATE_LIMIT_TRUST_PROXY=true
 # Voir le guide de configuration pour toutes les variables
 
-# 3. Construire les images Docker (Compose les construit à partir du dépôt)
-docker compose -f infra/compose.onprem.yml build --pull
+# 3. Télécharger les images de cette version
+docker compose -f infra/compose.onprem.yml pull
 
 # 4. Démarrer les conteneurs
 docker compose -f infra/compose.onprem.yml up -d
@@ -109,13 +110,24 @@ docker compose -f infra/compose.onprem.yml logs -f api
 
 **Important :** terminez la configuration (étape 2) avant de démarrer les conteneurs. L'API lit `.env` au démarrage et crée le tenant et l'utilisateur administrateur au premier démarrage avec ces valeurs. Le fichier contient tous les secrets de l'installation : `chmod 600` le rend lisible par son seul propriétaire.
 
-**Versions.** KANAP publie une nouvelle version environ une fois par mois (`26.10.1` est la première). La branche `stable` pointe toujours vers la dernière version publiée. Voir [Opérations](operations.md#procedure-de-mise-a-jour) pour mettre à jour, fixer une version précise et revenir en arrière. La branche `main` contient chaque modification fusionnée avant sa publication dans une version. Il est possible de la suivre, ce qui n'est pas recommandé pour un serveur de production.
+**Versions.** KANAP publie une nouvelle version environ une fois par mois (`26.10.1` est la première). La branche `stable` pointe toujours vers la dernière version publiée. Chaque version est livrée avec ses images sur GitHub Container Registry (`ghcr.io/kanap-hq/kanap-api`, `kanap-web` et `kanap-api-tools`), construites à partir du tag de la version. Elles sont publiques : aucun compte n'est nécessaire. `infra/compose.onprem.yml` nomme les images de la version que vous avez extraite : `git checkout stable` ou `git checkout v26.10.9` décide donc de la version que `pull` télécharge. Les versions jusqu'à la 26.10.7 n'ont pas d'images publiées : elles se construisent sur le serveur, comme l'explique le guide de cette version. Voir [Opérations](operations.md#procedure-de-mise-a-jour) pour mettre à jour, fixer une version précise et revenir en arrière. La branche `main` contient chaque modification fusionnée avant sa publication dans une version. Il est possible de la suivre, ce qui n'est pas recommandé pour un serveur de production : il faut alors construire les images vous-même.
 
 **Exigence sur le rôle de base de données :** `DATABASE_URL` doit utiliser un rôle applicatif PostgreSQL dédié. Ne le faites pas pointer vers `postgres` ou un autre rôle d'administration du cluster. KANAP refuse de démarrer plutôt que de fonctionner sans application effective du RLS.
 
 **Adresse et origines :** renseignez `APP_BASE_URL` et `CORS_ORIGINS` avec l'adresse exacte ouverte par les utilisateurs, avec le port lorsqu'il n'est pas standard. Chaque lien envoyé par KANAP provient de `APP_BASE_URL`. Renseignez `APP_ENV=production` lorsque les utilisateurs accèdent à KANAP en HTTPS : l'API refuse alors de démarrer sans ces deux valeurs et marque toujours le cookie de session comme Secure. Voir [Configuration](configuration.md#requis-identifiants-administrateur).
 
 **Choix de l'e-mail :** les déploiements on-premise peuvent utiliser **Resend** ou **SMTP** pour l'e-mail sortant. SMTP est utile lorsque le client dispose déjà d'un relais de messagerie interne ou d'un fournisseur géré comme Microsoft 365. Configurez l'une de ces options si vous voulez que la réinitialisation de mot de passe, les invitations et les notifications par e-mail fonctionnent dès le premier jour.
+
+## Construire les images vous-même { #build-the-images-yourself }
+
+Les images publiées conviennent à la plupart des installations. Construisez-les sur le serveur pour une fourche, un correctif local, un serveur qui n'atteint pas `ghcr.io`, ou une API sur un autre hôte. Le fichier `infra/compose.onprem.build.yml`, ajouté par-dessus le fichier principal, les construit à partir du checkout et les nomme `kanap-api:local`, `kanap-web:local` et `kanap-api-tools:local` :
+
+```bash
+docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml build
+docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml up -d
+```
+
+Nommez les deux fichiers dans chaque `up` et `run` suivant : avec le fichier principal seul, Compose démarre les images publiées. Le build a besoin du paquet `docker-buildx-plugin` et de 6 Go de RAM sur le serveur. Il télécharge des paquets npm et Alpine (voir [Règles de pare-feu](configuration.md#outbound-installation-and-upgrades)). Pour une API sur un autre hôte, passez son adresse dans le shell quand vous construisez l'image web : `VITE_API_URL=https://api.company.com docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml build web`. Compose ne la lit pas dans `.env`.
 
 ## Exemple de reverse proxy (nginx) { #reverse-proxy-example-nginx }
 

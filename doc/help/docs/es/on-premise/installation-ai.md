@@ -8,7 +8,7 @@ Herramientas como [Claude Code](https://docs.anthropic.com/en/docs/claude-code/o
 
 | Requisito | Detalles |
 |-------------|---------|
-| **Servidor** | Ubuntu 26.04 LTS (24.04 LTS funciona), recién instalado, con 6 GB de RAM o más (8 GB recomendados; la compilación de las imágenes necesita ese margen), un usuario con acceso sudo y acceso saliente a internet durante la instalación (paquetes, imágenes Docker, GitHub, y Let's Encrypt si lo usa) |
+| **Servidor** | Ubuntu 26.04 LTS (24.04 LTS funciona), recién instalado, con 4 GB de RAM o más (8 GB recomendados, ya que PostgreSQL se ejecuta en el mismo servidor), un usuario con acceso sudo y acceso saliente a internet durante la instalación (paquetes, imágenes de KANAP y Docker, GitHub, y Let's Encrypt si lo usa) |
 | **Nombre** | El nombre que escriben los usuarios para abrir KANAP. Solo hace falta un registro DNS público para Let's Encrypt. En otro caso, use un registro en el DNS de su empresa, o una entrada en el archivo hosts para una prueba (consulte [Nombre y certificado](installation.md#nombre-y-certificado)). |
 | **Certificado** | Uno de tres casos: un nombre público con Let's Encrypt, archivos de certificado de su autoridad interna ya presentes en el servidor, o un certificado autofirmado para una prueba |
 | **Agente de IA** | Un agente de programación con IA instalado en el servidor (Claude Code, Codex o similar) |
@@ -104,7 +104,7 @@ El agente lee el recorrido y después lo sigue:
 3. **Archivos de KANAP**: clona el repositorio en `/opt/kanap` y cambia a `stable`.
 4. **PostgreSQL**: lo instala, crea la base de datos, el rol de aplicación y las extensiones necesarias, y permite la conexión de las redes Docker.
 5. **Almacenamiento de objetos**: instala RustFS, crea el bucket, un usuario de aplicación restringido y la clave de cifrado.
-6. **KANAP**: escribe `.env` con los secretos generados, compila las imágenes Docker y arranca los contenedores.
+6. **KANAP**: escribe `.env` con los secretos generados, descarga las imágenes de KANAP y arranca los contenedores.
 7. **TLS y nginx**: obtiene o crea el certificado, configura el proxy inverso y se asegura de que el servidor resuelve el nombre.
 8. **Verificación**: comprueba el estado de la API y del frontend, y después ejecuta la prueba de humo (base de datos, almacenamiento, inicio de sesión, exportaciones).
 

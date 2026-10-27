@@ -110,7 +110,7 @@ Le filtre garde les lignes ci-dessous et laisse de côté les détails du framew
 
 **Ordre.** Les lignes que KANAP écrit lui-même (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`, `[DATA-ACCESS]`) viennent en premier. Les lignes du framework (`Starting Nest application...`, e-mail, tâches planifiées, `Nest application successfully started`) suivent. La ligne `[DB] pool budget` vient en dernier.
 
-**Un premier démarrage sans problème** de l'[exemple d'installation](installation-example.md#7-construire-et-demarrer) affiche ces lignes, dans cet ordre (la première ligne `[SECRETS]` est raccourcie ici) :
+**Un premier démarrage sans problème** de l'[exemple d'installation](installation-example.md#7-telecharger-et-demarrer) affiche ces lignes, dans cet ordre (la première ligne `[SECRETS]` est raccourcie ici) :
 
 ```
 [entrypoint] Initializing DB (attempt 1/30) ...
@@ -517,7 +517,7 @@ Les valeurs par défaut conviennent à quelques dizaines d'utilisateurs. Pour da
 
 **Ce que chacun coûte.** Chaque processus API utilise environ 200 Mo de mémoire au démarrage et jusqu'à 300 Mo sous charge (mesuré avec 50 utilisateurs sur 5 000 lignes de budget) ; avec plusieurs processus, un petit processus de supervision ajoute environ 100 Mo. Chaque processus API peut ouvrir jusqu'à `DB_POOL_MAX` connexions vers PostgreSQL. Comptez :
 
-- mémoire : `API_WORKERS` × 0,4 Go pour l'API, plus ce qu'utilise PostgreSQL s'il s'exécute sur le même serveur, plus la marge pour le build des images à chaque mise à jour. 6 Go est le minimum pour tout serveur. Sur une nouvelle installation avec PostgreSQL et le stockage en service, le build simultané des deux images a pris environ 3,8 Go au total à son maximum (environ 3,2 Go pour le build lui-même) : 6 Go laissent donc environ 2 Go libres ;
+- mémoire : `API_WORKERS` × 0,4 Go pour l'API, plus ce qu'utilise PostgreSQL s'il s'exécute sur le même serveur. 4 Go est le minimum pour tout serveur. Si vous [construisez les images vous-même](installation.md#build-the-images-yourself), comptez 6 Go : le build simultané des deux images a pris environ 3,2 Go à son maximum ;
 - connexions : `API_WORKERS` × `DB_POOL_MAX` doit rester inférieur au `max_connections` de PostgreSQL (100 par défaut) moins environ 15. L'API le vérifie au démarrage et écrit un avertissement dans son journal quand le compte n'y est pas, avec une valeur qui conviendrait.
 
 **Valeurs suggérées.**
@@ -633,7 +633,7 @@ S3_FORCE_PATH_STYLE=false
 
 ## Règles de pare-feu
 
-Après le build initial, KANAP peut fonctionner de manière entièrement isolée (air-gapped) si l'e-mail, le SSO, l'IA, les taux de change, les vulnérabilités et le catalogue des technologies sont tous désactivés.
+Après l'installation, KANAP peut fonctionner de manière entièrement isolée (air-gapped) si l'e-mail, le SSO, l'IA, les taux de change, les vulnérabilités et le catalogue des technologies sont tous désactivés.
 
 ### Entrant
 
@@ -647,18 +647,19 @@ Après le build initial, KANAP peut fonctionner de manière entièrement isolée
 
 Rien d'autre n'a besoin d'être joignable depuis le réseau. En particulier, PostgreSQL (5432) et le stockage objet (9000) sont réservés aux réseaux Docker du serveur.
 
-### Sortant : installation initiale et compilation
+### Sortant : installation et mises à jour { #outbound-installation-and-upgrades }
 
-Ces destinations sont nécessaires à l'installation, à chaque mise à jour et à chaque retour arrière (`docker build`), ainsi qu'à la première exécution du test de recette. Elles peuvent être fermées entre ces opérations.
+Ces destinations sont nécessaires à l'installation, à chaque mise à jour et à chaque retour arrière, ainsi qu'à la première exécution du test de recette. Elles peuvent être fermées entre ces opérations.
 
 | Destination | Port | Usage |
 |-------------|------|---------|
 | `github.com`, `*.githubusercontent.com` | 443 | Cloner le code source de KANAP ; télécharger les fichiers de version de RustFS (l'exemple d'installation) |
+| `ghcr.io`, `pkg-containers.githubusercontent.com` | 443 | Télécharger les images de KANAP (`docker compose pull`) |
 | `download.docker.com` | 443 | Dépôt APT de Docker |
-| `registry.npmjs.org` | 443 | Dépendances npm pendant `docker build` |
-| `registry-1.docker.io`, `auth.docker.io` | 443 | Récupérer les images Docker de base (`node:24-alpine`, `nginx:alpine`), et l'image du test de recette (`node:24-alpine`) à la première exécution du test. Chaque récupération obtient d'abord un jeton auprès de `auth.docker.io` |
+| `registry-1.docker.io`, `auth.docker.io` | 443 | Récupérer l'image du test de recette (`node:24-alpine`) à la première exécution du test, et les images de base quand vous construisez les images vous-même. Chaque récupération obtient d'abord un jeton auprès de `auth.docker.io` |
 | `production.cloudflare.docker.com`, `production.cloudfront.docker.com` | 443 | Télécharger les couches des images : Docker Hub redirige chaque récupération vers ces hôtes |
-| `dl-cdn.alpinelinux.org` | 80/443 | Paquets Alpine pendant `docker build` (les deux images installent des paquets avec `apk add`) |
+| `registry.npmjs.org` | 443 | Dépendances npm, seulement quand vous construisez les images vous-même |
+| `dl-cdn.alpinelinux.org` | 80/443 | Paquets Alpine, seulement quand vous construisez les images vous-même |
 | Miroirs APT d'Ubuntu | 80/443 | Paquets système (PostgreSQL, nginx, etc.) |
 | `acme-v02.api.letsencrypt.org` | 443 | Certificats, uniquement avec Let's Encrypt (aussi à chaque renouvellement) |
 
