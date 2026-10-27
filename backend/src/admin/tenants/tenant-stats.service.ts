@@ -21,15 +21,14 @@ export class TenantStatsService {
 
   async compute(tenantId: string): Promise<TenantStats> {
     return withTenant(this.dataSource, tenantId, async (manager) => {
-      const [companiesRow, departmentsRow, suppliersRow, opexRow, capexRow, usersTotalRow, usersEnabledRow] = await Promise.all([
-        manager.query(`SELECT COUNT(*)::int AS count FROM companies`),
-        manager.query(`SELECT COUNT(*)::int AS count FROM departments`),
-        manager.query(`SELECT COUNT(*)::int AS count FROM suppliers`),
-        manager.query(`SELECT COUNT(*)::int AS count FROM spend_items WHERE nature = 'opex'`),
-        manager.query(`SELECT COUNT(*)::int AS count FROM spend_items WHERE nature = 'capex'`),
-        manager.query(`SELECT COUNT(*)::int AS count FROM users`),
-        manager.query(`SELECT COUNT(*)::int AS count FROM users WHERE status = 'enabled'`),
-      ]);
+      // One after the other: the tenant's single connection runs its queries in turn anyway.
+      const companiesRow = await manager.query(`SELECT COUNT(*)::int AS count FROM companies`);
+      const departmentsRow = await manager.query(`SELECT COUNT(*)::int AS count FROM departments`);
+      const suppliersRow = await manager.query(`SELECT COUNT(*)::int AS count FROM suppliers`);
+      const opexRow = await manager.query(`SELECT COUNT(*)::int AS count FROM spend_items WHERE nature = 'opex'`);
+      const capexRow = await manager.query(`SELECT COUNT(*)::int AS count FROM spend_items WHERE nature = 'capex'`);
+      const usersTotalRow = await manager.query(`SELECT COUNT(*)::int AS count FROM users`);
+      const usersEnabledRow = await manager.query(`SELECT COUNT(*)::int AS count FROM users WHERE status = 'enabled'`);
 
       const headcountRows = await manager.query(`
         SELECT COALESCE(SUM(latest.headcount), 0)::int AS total_headcount

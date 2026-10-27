@@ -55,10 +55,10 @@ export async function buildDerivedUsersByApp(
   const companiesByApp: Record<string, string[]> = {};
   const departmentsByApp: Record<string, string[]> = {};
   if (linked.length > 0) {
-    const [companyLinks, departmentLinks] = await Promise.all([
-      mg.getRepository(ApplicationCompany).find({ where: { application_id: In(linked.map((a) => a.id)) } as any }),
-      mg.getRepository(ApplicationDepartment).find({ where: { application_id: In(linked.map((a) => a.id)) } as any }),
-    ]);
+    const linkedIds = linked.map((a) => a.id);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const companyLinks = await mg.getRepository(ApplicationCompany).find({ where: { application_id: In(linkedIds) } as any });
+    const departmentLinks = await mg.getRepository(ApplicationDepartment).find({ where: { application_id: In(linkedIds) } as any });
     for (const l of companyLinks as any[]) (companiesByApp[l.application_id] ||= []).push(l.company_id);
     for (const l of departmentLinks as any[]) (departmentsByApp[l.application_id] ||= []).push(l.department_id);
   }
@@ -75,14 +75,13 @@ export async function buildDerivedUsersByApp(
   const companyIds = [...new Set(Object.values(companiesByApp).flat())];
   const companyMetrics: Record<string, Map<number, { itUsers: number | null; headcount: number }>> = {};
   const departmentHeadcount: Record<string, Map<number, number>> = {};
-  const [companyRows, departmentRows] = await Promise.all([
-    companyIds.length > 0
-      ? mg.getRepository(CompanyMetric).find({ where: { company_id: In(companyIds) } })
-      : Promise.resolve([]),
-    departmentIds.length > 0
-      ? mg.getRepository(DepartmentMetric).find({ where: { department_id: In(departmentIds) } })
-      : Promise.resolve([]),
-  ]);
+  // One after the other: the request's single connection runs its queries in turn anyway.
+  const companyRows = companyIds.length > 0
+    ? await mg.getRepository(CompanyMetric).find({ where: { company_id: In(companyIds) } })
+    : [];
+  const departmentRows = departmentIds.length > 0
+    ? await mg.getRepository(DepartmentMetric).find({ where: { department_id: In(departmentIds) } })
+    : [];
   for (const m of companyRows as any[]) {
     const it = m.it_users;
     (companyMetrics[m.company_id] ||= new Map()).set(Number(m.fiscal_year), {

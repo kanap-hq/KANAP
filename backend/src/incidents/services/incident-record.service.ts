@@ -48,23 +48,22 @@ export class IncidentRecordService {
     // technologies need `infrastructure`, applications need `applications` (and a Business
     // Contributor's participation scope), tasks need `tasks`. A section without its right is
     // null: the PDF omits it, the chat detail leaves it out, and nothing throws.
-    const [entries, relations, tasks, documents, attachments, review] = await Promise.all([
-      this.entries.list(id, { ...opts, order: 'asc' }),
-      this.relations.listForRecord(id, opts),
-      opts.tasks === true
-        ? this.tasks.listForTarget({ type: 'incident', id }, {
-          manager: opts.manager,
-          tenantId: opts.tenantId,
-          viewer: opts.viewer,
-        })
-        : Promise.resolve(null),
-      this.knowledge.listDocumentsForEntity('incidents', id, {
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const entries = await this.entries.list(id, { ...opts, order: 'asc' });
+    const relations = await this.relations.listForRecord(id, opts);
+    const tasks = opts.tasks === true
+      ? await this.tasks.listForTarget({ type: 'incident', id }, {
         manager: opts.manager,
-        userId: opts.userId ?? null,
-      }),
-      this.attachments.listAttachments(id, opts),
-      this.loadReview(id, incident.tenant_id, opts),
-    ]);
+        tenantId: opts.tenantId,
+        viewer: opts.viewer,
+      })
+      : null;
+    const documents = await this.knowledge.listDocumentsForEntity('incidents', id, {
+      manager: opts.manager,
+      userId: opts.userId ?? null,
+    });
+    const attachments = await this.attachments.listAttachments(id, opts);
+    const review = await this.loadReview(id, incident.tenant_id, opts);
     return {
       incident,
       entries,

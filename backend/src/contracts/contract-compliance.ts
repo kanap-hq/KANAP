@@ -398,10 +398,9 @@ export async function contractComplianceView(
   inputs: ContractComplianceInputs,
   contract: { id: string },
 ): Promise<ContractComplianceView> {
-  const [reasons, items] = await Promise.all([
-    readComplianceReasons(manager, inputs, [contract.id]),
-    readComplianceItems(manager, [contract.id]),
-  ]);
+  // One after the other: the request's single connection runs its queries in turn anyway.
+  const reasons = await readComplianceReasons(manager, inputs, [contract.id]);
+  const items = await readComplianceItems(manager, [contract.id]);
   const requirements = requirementViews(reasons.get(contract.id), items.get(contract.id));
   return { summary: summarizeCompliance(requirements), requirements };
 }
@@ -619,10 +618,9 @@ export async function complianceRegisterCsv(
   language: CsvLanguage,
 ): Promise<string> {
   const copy = REGISTER_COPY[language];
-  const [reasons, items] = await Promise.all([
-    readComplianceReasons(manager, inputs, null),
-    readComplianceItems(manager, null),
-  ]);
+  // One after the other: the request's single connection runs its queries in turn anyway.
+  const reasons = await readComplianceReasons(manager, inputs, null);
+  const items = await readComplianceItems(manager, null);
   const rows: string[][] = [];
   for (const contract of contracts) {
     for (const view of requirementViews(reasons.get(contract.id), items.get(contract.id))) {
