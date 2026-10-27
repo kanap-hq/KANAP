@@ -168,7 +168,6 @@ export default function GlobalChargebackReport() {
   const [showKpis, setShowKpis] = useState(true);
   const [showFlows, setShowFlows] = useState(true);
 
-  const detailedGridApiRef = useRef<any>(null);
   const companyGridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
   const formatNumber = React.useCallback(
@@ -333,11 +332,6 @@ export default function GlobalChargebackReport() {
     },
   ], [formatNumber, metricLabel, t]);
 
-  const flowsGridApiRef = useRef<any>(null);
-  const exportFlowsCsv = () => {
-    flowsGridApiRef.current?.exportDataAsCsv?.({ fileName: `global-chargeback-flows-netted-${scope}-${year}-${metricFile}.csv` });
-  };
-
   const chartOptions = useMemo(() => {
     return {
       title: { text: t('reports.globalChargeback.chartTitle', { year }), fontSize: 14 },
@@ -384,10 +378,6 @@ export default function GlobalChargebackReport() {
       animation: { enabled: true, duration: 700 },
     };
   }, [chartData, formatCurrency, formatNumber, locale, metricLabel, t, totalAmount, year]);
-
-  const exportCsv = () => {
-    detailedGridApiRef.current?.exportDataAsCsv?.({ fileName: `global-chargeback-detailed-${scope}-${year}-${metricFile}.csv` });
-  };
 
   const exportChart = () => {
     chartRef.current?.download(`global-chargeback-company-${scope}-${year}-${metricFile}`);
@@ -450,7 +440,17 @@ export default function GlobalChargebackReport() {
           {isFetching ? t('reports.shared.refreshing') : t('reports.shared.run')}
         </Button>
       )}
-      onExportTableCsv={exportCsv}
+      tableExport={{
+        url: '/reports/chargeback/global/export',
+        params: { year, metric, scope },
+        tables: [
+          { key: 'detailed', label: t('reports.globalChargeback.detailedTitle') },
+          { key: 'companies', label: t('reports.globalChargeback.companyTotalsTitle') },
+          { key: 'flows', label: t('reports.globalChargeback.flowsTitle') },
+          { key: 'kpis', label: t('reports.globalChargeback.kpisTitle') },
+        ],
+        fileBase: `chargeback-global-${scope}-${year}`,
+      }}
       onExportChartPng={exportChart}
     >
       <Stack spacing={2}>
@@ -533,9 +533,6 @@ export default function GlobalChargebackReport() {
               rowData={detailedRows}
               columnDefs={detailedColumns}
               defaultColDef={{ sortable: true, resizable: true }}
-              onGridReady={(event) => {
-                detailedGridApiRef.current = event.api;
-              }}
               getRowStyle={(params) => (params.data?.rowType === 'company' ? { fontWeight: 600 } : undefined)}
               domLayout="autoHeight"
             />
@@ -556,18 +553,11 @@ export default function GlobalChargebackReport() {
                 rowData={nettedFlows}
                 columnDefs={flowsColumns}
                 defaultColDef={{ sortable: true, resizable: true }}
-                onGridReady={(event) => {
-                  flowsGridApiRef.current = event.api;
-                }}
                 domLayout="autoHeight"
               />
             ) : (
               <Typography variant="body2" color="text.secondary">{t("reports.globalChargeback.noFlows")}</Typography>
             )}
-            <Box className="report-print-hide">
-              <Divider sx={{ my: 2 }} />
-              <Button variant="outlined" size="small" onClick={exportFlowsCsv}>{t("reports.globalChargeback.exportFlowsCsv")}</Button>
-            </Box>
           </Paper>
         )}
 

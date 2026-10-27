@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   Checkbox,
-  Divider,
   FormControlLabel,
   MenuItem,
   Paper,
@@ -198,9 +197,7 @@ export default function CompanyChargebackReport() {
   const [showKpis, setShowKpis] = useState(true);
   const [showIntercompany, setShowIntercompany] = useState(true);
 
-  const departmentGridRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
-  const intercompanyGridRef = useRef<any>(null);
 
   const queryKey = ['company-chargeback-report', scope, companyId, year, metric];
   const { data, isLoading, isFetching, refetch } = useQuery<CompanyChargebackReportResponse>({
@@ -273,11 +270,6 @@ export default function CompanyChargebackReport() {
     if (!total || !intercompanyRows.length) return [];
     return [{ partnerName: t('reports.columns.total'), ...total }];
   }, [data?.intercompanyTotal, intercompanyRows.length, t]);
-
-  const exportIntercompanyCsv = () => {
-    if (!companyId) return;
-    intercompanyGridRef.current?.exportDataAsCsv?.({ fileName: `company-chargeback-flows-${scope}-${companyId}-${year}-${metricFile}.csv` });
-  };
 
   const departmentColumns = useMemo<ColDef[]>(() => [
     {
@@ -437,13 +429,6 @@ export default function CompanyChargebackReport() {
     };
   }, [chartData, data?.company, data?.total, formatCurrency, formatNumber, locale, metricLabel, t]);
 
-  const exportDepartmentsCsv = () => {
-    if (!companyId) return;
-    departmentGridRef.current?.exportDataAsCsv?.({
-      fileName: `company-chargeback-departments-${scope}-${companyId}-${year}-${metricFile}.csv`,
-    });
-  };
-
   const exportChart = () => {
     if (!companyId) return;
     chartRef.current?.download(`company-chargeback-departments-${scope}-${companyId}-${year}-${metricFile}`);
@@ -521,7 +506,17 @@ export default function CompanyChargebackReport() {
           {!companyId ? t('reports.companyChargeback.selectCompany') : isFetching ? t('reports.shared.refreshing') : t('reports.shared.run')}
         </Button>
       )}
-      onExportTableCsv={isReady ? exportDepartmentsCsv : undefined}
+      tableExport={isReady ? {
+        url: '/reports/chargeback/company/export',
+        params: { companyId, year, metric, scope },
+        tables: [
+          { key: 'departments', label: t('reports.companyChargeback.departmentTotals') },
+          { key: 'items', label: t('reports.companyChargeback.chargebackItems') },
+          { key: 'intercompany', label: t('reports.companyChargeback.flowsTitle') },
+          { key: 'kpis', label: t('reports.companyChargeback.kpisTitle') },
+        ],
+        fileBase: `chargeback-company-${scope}-${year}`,
+      } : undefined}
       onExportChartPng={isReady ? exportChart : undefined}
     >
       <Stack spacing={2}>
@@ -605,9 +600,6 @@ export default function CompanyChargebackReport() {
                 rowData={departments}
                 columnDefs={departmentColumns}
                 defaultColDef={{ sortable: true, resizable: true }}
-                onGridReady={(event) => {
-                  departmentGridRef.current = event.api;
-                }}
                 domLayout="autoHeight"
               />
             </Paper>
@@ -664,16 +656,11 @@ export default function CompanyChargebackReport() {
                 columnDefs={intercompanyColumns}
                 defaultColDef={{ sortable: true, resizable: true }}
                 pinnedBottomRowData={intercompanyPinnedBottom}
-                onGridReady={(e) => { intercompanyGridRef.current = e.api; }}
                 domLayout="autoHeight"
               />
             ) : (
               <Typography variant="body2" color="text.secondary">{t('reports.companyChargeback.noFlows')}</Typography>
             )}
-            <Box className="report-print-hide">
-              <Divider sx={{ my: 2 }} />
-              <Button variant="outlined" size="small" onClick={exportIntercompanyCsv}>{t("reports.companyChargeback.exportFlowsCsv")}</Button>
-            </Box>
           </Paper>
         )}
 
