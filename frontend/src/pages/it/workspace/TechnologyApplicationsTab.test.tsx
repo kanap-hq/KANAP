@@ -3,7 +3,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectAnchoredRight, placeAnchor, stubPopoverPaperWidth } from '../../../test/popoverAnchor';
 import { createAppTheme } from '../../../config/ThemeContext';
 import api from '../../../api';
 import TechnologyApplicationsTab, { countApplications, type TechnologyApplicationRow } from './TechnologyApplicationsTab';
@@ -213,5 +214,29 @@ describe('TechnologyApplicationsTab', () => {
     expect(screen.queryByRole('button', { name: /applications\.remove/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /changeVersion/ })).toBeNull();
     expect(screen.getByText(`${A}.exportCsv`)).toBeTruthy();
+  });
+
+  describe('popover anchor', () => {
+    const innerWidth = window.innerWidth;
+    let restoreWidth: () => void = () => undefined;
+
+    beforeEach(() => {
+      window.innerWidth = 1280;
+      restoreWidth = stubPopoverPaperWidth();
+    });
+
+    afterEach(() => {
+      window.innerWidth = innerWidth;
+      restoreWidth();
+    });
+
+    it('keeps the version picker right-aligned on a row', async () => {
+      renderTab();
+      const button = await screen.findByRole('button', { name: `${A}.changeVersion(name=CRM)` });
+      placeAnchor(button, { left: 900, top: 200, width: 32, height: 32 });
+      fireEvent.click(button);
+      expect(picker().getByText('2022')).toBeTruthy();
+      expectAnchoredRight(932, 300);
+    });
   });
 });

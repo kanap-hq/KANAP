@@ -239,6 +239,7 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
         {editingVersion && (
           <TechnologyVersionPicker
             anchorEl={editingVersion.anchor}
+            align="right"
             versions={versions}
             current={editingVersion.row.technology_version_id}
             onPick={(choice) => { const { row } = editingVersion; setEditingVersion(null); void changeVersion(row, choice); }}

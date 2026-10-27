@@ -317,6 +317,7 @@ export default function ApplicationTechnologiesSection({
         {flow?.step === 'servers' && (
           <TechnologyServersProposal
             anchorEl={flow.anchor}
+            align={flow.mode === 'record' ? 'right' : 'left'}
             technology={flow.technology.label}
             version={flow.version}
             servers={servers}
@@ -333,6 +334,7 @@ export default function ApplicationTechnologiesSection({
         {versionEdit && (
           <TechnologyVersionPicker
             anchorEl={versionEdit.anchor}
+            align="right"
             versions={versions}
             current={versionEdit.declaration.technology_version_id}
             onPick={(choice) => { const { row, declaration } = versionEdit; setVersionEdit(null); void changeVersion(row, declaration, choice); }}
