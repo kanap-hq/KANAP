@@ -78,7 +78,9 @@ async function seed(runner: QueryRunner): Promise<Seed> {
      VALUES ($1, $2, $3, 'Tester', $4, 'enabled', $5)`,
     [tenantId, `${key}-${slug}@example.test`, key, roleId, dataAccessMode]);
   const users: Record<UserKey, string> = {
-    taskAdmin: await user('TaskAdmin', await role('Task Administrator', { ai_chat: 'member', tasks: 'admin' })),
+    taskAdmin: await user('TaskAdmin', await role('Task Administrator', {
+      ai_chat: 'member', tasks: 'admin', applications: 'reader', infrastructure: 'reader', knowledge: 'reader',
+    })),
     contactsAdmin: await user('ContactsAdmin', await role('Contacts Administrator', {
       ai_chat: 'member', contacts: 'admin', suppliers: 'reader', portfolio_projects: 'reader',
     })),
@@ -209,7 +211,7 @@ async function testTaskDelete(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(preview.target.title, 'Migration');
   assert.equal(preview.changes.deletion.format, 'markdown');
   const impact = String(preview.changes.deletion.to);
-  for (const line of ['Comments and changes: 2', 'Time entries: 1', 'Attachments: 1', 'Links: 1']) {
+  for (const line of ['Comments and changes: 2', 'Time entries: 1', 'Attachments: 1', 'Applications: 1']) {
     assert.ok(impact.includes(line), `${line} in:\n${impact}`);
   }
   assert.match(preview.summary, /^Delete task "Migration"\.$/);

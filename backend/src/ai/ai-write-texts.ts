@@ -306,7 +306,9 @@ const DELETE_IMPACT_ROWS: Record<string, ReadonlyArray<{ key: string; labels: Te
     { key: 'activities', labels: { en: 'Comments and changes', fr: 'Commentaires et changements', de: 'Kommentare und Änderungen', es: 'Comentarios y cambios' } },
     { key: 'time_entries', labels: { en: 'Time entries', fr: 'Temps saisis', de: 'Erfasste Zeiten', es: 'Tiempos registrados' } },
     { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
-    { key: 'links', labels: { en: 'Links', fr: 'Liens', de: 'Verknüpfungen', es: 'Vínculos' } },
+    { key: 'applications', labels: { en: 'Applications', fr: 'Applications', de: 'Anwendungen', es: 'Aplicaciones' } },
+    { key: 'assets', labels: { en: 'Assets', fr: 'Actifs', de: 'Assets', es: 'Activos' } },
+    { key: 'documents', labels: { en: 'Linked documents', fr: 'Documents liés', de: 'Verknüpfte Dokumente', es: 'Documentos vinculados' } },
   ],
   contacts: [
     { key: 'suppliers', labels: { en: 'Suppliers', fr: 'Fournisseurs', de: 'Lieferanten', es: 'Proveedores' } },
@@ -326,7 +328,45 @@ const DELETE_IMPACT_ROWS: Record<string, ReadonlyArray<{ key: string; labels: Te
     { key: 'sub_items', labels: { en: 'Sub-items', fr: 'Sous-éléments', de: 'Unterelemente', es: 'Subelementos' } },
     { key: 'documents', labels: { en: 'Linked documents', fr: 'Documents liés', de: 'Verknüpfte Dokumente', es: 'Documentos vinculados' } },
   ],
+  spend_items: spendDeleteRows(),
+  capex_items: spendDeleteRows(),
+  connections: [
+    { key: 'hops', labels: { en: 'Hops', fr: 'Sauts', de: 'Hops', es: 'Saltos' } },
+    { key: 'servers', labels: { en: 'Servers', fr: 'Serveurs', de: 'Server', es: 'Servidores' } },
+    { key: 'protocols', labels: { en: 'Protocols', fr: 'Protocoles', de: 'Protokolle', es: 'Protocolos' } },
+    { key: 'interfaces', labels: { en: 'Interfaces that will lose this connection', fr: 'Interfaces qui perdront cette connexion', de: 'Schnittstellen, die diese Verbindung verlieren', es: 'Interfaces que perderán esta conexión' } },
+    { key: 'documents', labels: { en: 'Linked documents', fr: 'Documents liés', de: 'Verknüpfte Dokumente', es: 'Documentos vinculados' } },
+  ],
+  interfaces: [
+    { key: 'bindings', labels: { en: 'Bindings', fr: 'Liaisons', de: 'Bindungen', es: 'Enlaces' } },
+    { key: 'connection_links', labels: { en: 'Links to connections', fr: 'Liens aux connexions', de: 'Verknüpfungen mit Verbindungen', es: 'Vínculos con conexiones' } },
+    { key: 'integrated_documents', labels: { en: 'Integrated documents', fr: 'Documents intégrés', de: 'Integrierte Dokumente', es: 'Documentos integrados' } },
+    { key: 'documents', labels: { en: 'Linked documents', fr: 'Documents liés', de: 'Verknüpfte Dokumente', es: 'Documentos vinculados' } },
+    { key: 'dependencies', labels: { en: 'Dependent interfaces', fr: 'Interfaces dépendantes', de: 'Abhängige Schnittstellen', es: 'Interfaces dependientes' } },
+    { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
+    { key: 'applications', labels: { en: 'Linked applications', fr: 'Applications liées', de: 'Verknüpfte Anwendungen', es: 'Aplicaciones vinculadas' } },
+  ],
 };
+
+/** The rows of a budget line's delete, both natures: one family, the same card. */
+function spendDeleteRows(): ReadonlyArray<{ key: string; labels: Texts }> {
+  return [
+    { key: 'amount_versions', labels: { en: 'Versions with amounts', fr: 'Versions avec des montants', de: 'Versionen mit Beträgen', es: 'Versiones con importes' } },
+    { key: 'amount_years', labels: { en: 'Years with amounts', fr: 'Années avec des montants', de: 'Jahre mit Beträgen', es: 'Años con importes' } },
+    { key: 'tasks', labels: { en: 'Tasks', fr: 'Tâches', de: 'Aufgaben', es: 'Tareas' } },
+    { key: 'request_origins', labels: { en: 'Requests that lose their origin task', fr: "Demandes qui perdent leur tâche d'origine", de: 'Anfragen, die ihre Ursprungsaufgabe verlieren', es: 'Solicitudes que pierden su tarea de origen' } },
+    { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
+    { key: 'contracts', labels: { en: 'Contracts', fr: 'Contrats', de: 'Verträge', es: 'Contratos' } },
+    { key: 'projects', labels: { en: 'Projects', fr: 'Projets', de: 'Projekte', es: 'Proyectos' } },
+    { key: 'requests', labels: { en: 'Requests', fr: 'Demandes', de: 'Anfragen', es: 'Solicitudes' } },
+    { key: 'applications', labels: { en: 'Applications', fr: 'Applications', de: 'Anwendungen', es: 'Aplicaciones' } },
+    { key: 'assets', labels: { en: 'Assets', fr: 'Actifs', de: 'Assets', es: 'Activos' } },
+    { key: 'technologies', labels: { en: 'Technologies', fr: 'Technologies', de: 'Technologien', es: 'Tecnologías' } },
+    { key: 'contacts', labels: { en: 'Contacts', fr: 'Contacts', de: 'Kontakte', es: 'Contactos' } },
+    { key: 'links', labels: { en: 'Links', fr: 'Liens', de: 'Verknüpfungen', es: 'Vínculos' } },
+    { key: 'dimension_values', labels: { en: 'Dimension values', fr: 'Valeurs de dimensions', de: 'Dimensionswerte', es: 'Valores de dimensiones' } },
+  ];
+}
 
 const DELETE_IMPACT_OTHER: Texts = {
   en: 'Other links', fr: "D'autres rattachements", de: 'Weitere Verknüpfungen', es: 'Otros vínculos',
@@ -336,10 +376,16 @@ const DELETE_IMPACT_NONE: Record<string, Texts> = {
   tasks: { en: 'Nothing else is deleted with this task.', fr: 'Aucun autre élément ne part avec cette tâche.', de: 'Sonst wird mit dieser Aufgabe nichts gelöscht.', es: 'No se elimina nada más con esta tarea.' },
   contacts: { en: 'No links.', fr: 'Aucun rattachement.', de: 'Keine Verknüpfungen.', es: 'Sin vínculos.' },
   locations: { en: 'Nothing else is deleted with this location.', fr: 'Aucun autre élément ne part avec ce site.', de: 'Sonst wird mit diesem Standort nichts gelöscht.', es: 'No se elimina nada más con esta ubicación.' },
+  spend_items: { en: 'Nothing else is deleted with this line.', fr: 'Aucun autre élément ne part avec cette ligne.', de: 'Sonst wird mit dieser Zeile nichts gelöscht.', es: 'No se elimina nada más con esta línea.' },
+  capex_items: { en: 'Nothing else is deleted with this line.', fr: 'Aucun autre élément ne part avec cette ligne.', de: 'Sonst wird mit dieser Zeile nichts gelöscht.', es: 'No se elimina nada más con esta línea.' },
+  connections: { en: 'Nothing else is deleted with this connection.', fr: 'Aucun autre élément ne part avec cette connexion.', de: 'Sonst wird mit dieser Verbindung nichts gelöscht.', es: 'No se elimina nada más con esta conexión.' },
+  interfaces: { en: 'Nothing else is deleted with this interface.', fr: 'Aucun autre élément ne part avec cette interface.', de: 'Sonst wird mit dieser Schnittstelle nichts gelöscht.', es: 'No se elimina nada más con esta interfaz.' },
 };
 
 const DELETE_IMPACT_CLOSING: Record<string, Texts> = {
   contacts: { en: 'The linked records stay.', fr: 'Les fiches liées restent.', de: 'Die verknüpften Einträge bleiben.', es: 'Los registros vinculados se conservan.' },
+  connections: { en: 'The interfaces themselves are not deleted.', fr: 'Les interfaces elles-mêmes ne sont pas supprimées.', de: 'Die Schnittstellen selbst werden nicht gelöscht.', es: 'Las interfaces en sí no se eliminan.' },
+  interfaces: { en: 'The connections stay.', fr: 'Les connexions sont conservées.', de: 'Die Verbindungen bleiben erhalten.', es: 'Las conexiones se conservan.' },
 };
 
 /** The markdown list of what goes with a deleted record, in the person's language. */

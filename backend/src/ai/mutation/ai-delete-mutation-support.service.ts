@@ -1,5 +1,4 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager } from 'typeorm';
 import { ContactsService } from '../../contacts/contacts.service';
 import { LocationsService } from '../../locations/locations.service';
 import { assertTaskDeletable } from '../../tasks/task-data-access';
@@ -79,7 +78,7 @@ export class AiDeleteMutationSupportService {
             title: task.target_title ?? task.target_ref ?? 'Untitled task',
             updatedAt: task.updated_at,
           },
-          impact: { counts: await this.taskImpact(context.manager, context.tenantId, task.task_id) },
+          impact: await this.taskImpact(context, task.task_id),
         };
       }
       case 'contacts': {
@@ -121,24 +120,46 @@ export class AiDeleteMutationSupportService {
     );
   }
 
-  /** One statement per family of what goes with a task, all under its tenant. */
-  private async taskImpact(manager: EntityManager, tenantId: string, taskId: string): Promise<Record<string, number>> {
-    const [row] = await manager.query(
+  /**
+   * One statement for what goes with a task, all under its tenant. Applications, assets and
+   * documents are named only for a reader of their module, as the task page shows those sections;
+   * for anyone else they are counted among the other links, without naming the family.
+   */
+  private async taskImpact(context: AiExecutionContextWithManager, taskId: string): Promise<AiDeleteImpact> {
+    const [row] = await context.manager.query(
       `SELECT
          (SELECT count(*)::int FROM portfolio_activities WHERE tenant_id = $1 AND task_id = $2) AS activities,
          (SELECT count(*)::int FROM task_time_entries WHERE tenant_id = $1 AND task_id = $2) AS time_entries,
          (SELECT count(*)::int FROM task_attachments WHERE tenant_id = $1 AND task_id = $2) AS attachments,
-         (SELECT count(*)::int FROM task_applications WHERE tenant_id = $1 AND task_id = $2)
-           + (SELECT count(*)::int FROM task_assets WHERE tenant_id = $1 AND task_id = $2)
-           + (SELECT count(*)::int FROM document_tasks WHERE tenant_id = $1 AND task_id = $2) AS links`,
-      [tenantId, taskId],
+         (SELECT count(*)::int FROM task_applications WHERE tenant_id = $1 AND task_id = $2) AS applications,
+         (SELECT count(*)::int FROM task_assets WHERE tenant_id = $1 AND task_id = $2) AS assets,
+         (SELECT count(*)::int FROM document_tasks WHERE tenant_id = $1 AND task_id = $2) AS documents`,
+      [context.tenantId, taskId],
     );
-    return {
+    const counts: Record<string, number> = {
       activities: Number(row?.activities ?? 0),
       time_entries: Number(row?.time_entries ?? 0),
       attachments: Number(row?.attachments ?? 0),
-      links: Number(row?.links ?? 0),
+      applications: Number(row?.applications ?? 0),
+      assets: Number(row?.assets ?? 0),
+      documents: Number(row?.documents ?? 0),
     };
+    const readable = await this.policy.readableResources(
+      context,
+      ['applications', 'infrastructure', 'knowledge'],
+      context.manager,
+    );
+    let hidden = 0;
+    for (const [family, resource] of [
+      ['applications', 'applications'],
+      ['assets', 'infrastructure'],
+      ['documents', 'knowledge'],
+    ] as const) {
+      if (readable.has(resource)) continue;
+      hidden += counts[family];
+      delete counts[family];
+    }
+    return hidden > 0 ? { counts, hidden } : { counts };
   }
 
   /**
@@ -151,8 +172,15 @@ export class AiDeleteMutationSupportService {
       `SELECT 'suppliers' AS family, count(DISTINCT supplier_id)::int AS total
          FROM supplier_contacts WHERE tenant_id = $1 AND contact_id = $2
        UNION ALL
-       SELECT 'budget_lines', count(DISTINCT spend_item_id)::int
-         FROM spend_item_contacts WHERE tenant_id = $1 AND contact_id = $2
+       SELECT 'budget_lines', count(DISTINCT c.spend_item_id)::int
+         FROM spend_item_contacts c
+         JOIN spend_items i ON i.tenant_id = c.tenant_id AND i.id = c.spend_item_id AND i.nature = 'opex'
+        WHERE c.tenant_id = $1 AND c.contact_id = $2
+       UNION ALL
+       SELECT 'budget_lines', count(DISTINCT c.spend_item_id)::int
+         FROM spend_item_contacts c
+         JOIN spend_items i ON i.tenant_id = c.tenant_id AND i.id = c.spend_item_id AND i.nature = 'capex'
+        WHERE c.tenant_id = $1 AND c.contact_id = $2
        UNION ALL
        SELECT 'contracts', count(DISTINCT contract_id)::int
          FROM contract_contacts WHERE tenant_id = $1 AND contact_id = $2
@@ -193,7 +221,7 @@ export class AiDeleteMutationSupportService {
     for (const row of rows) {
       const total = Number(row.total ?? 0);
       if (total <= 0) continue;
-      if (readable.has(resources[row.family])) counts[row.family] = total;
+      if (readable.has(resources[row.family])) counts[row.family] = (counts[row.family] ?? 0) + total;
       else hidden += total;
     }
     return hidden > 0 ? { counts, hidden } : { counts };
@@ -251,16 +279,27 @@ export class AiDeleteMutationSupportService {
       case 'tasks': {
         const task = await this.taskSupport.resolveTaskSnapshot(context, targetId);
         this.assertNotChanged(entityType, expectedUpdatedAt, task.updated_at);
-        await this.tasksDelete.delete(task.task_id, {
-          manager: context.manager,
-          userId: context.userId,
-          audit,
-        });
+        this.assertImpactUnchanged(entityType, preview, await this.taskImpact(context, task.task_id));
+        try {
+          await this.tasksDelete.delete(task.task_id, {
+            manager: context.manager,
+            userId: context.userId,
+            audit,
+          });
+        } catch (error) {
+          // A request that took the task as its origin between the preview and the approval:
+          // the screen's refusal, made actionable as it was at the preview.
+          if (error instanceof RecordInUseException && error.code === 'TASK_REQUEST_ORIGIN') {
+            throw this.originRefusal(error);
+          }
+          throw error;
+        }
         return;
       }
       case 'contacts': {
         const found = await this.masterData.resolveRecordReference(context, 'contacts', targetId);
         this.assertNotChanged(entityType, expectedUpdatedAt, isoTimestamp(found.row.updated_at));
+        this.assertImpactUnchanged(entityType, preview, await this.contactImpact(context, found.id));
         await this.contacts.delete(found.id, {
           manager: context.manager,
           tenantId: context.tenantId,
@@ -272,15 +311,49 @@ export class AiDeleteMutationSupportService {
       case 'locations': {
         const found = await this.masterData.resolveRecordReference(context, 'locations', targetId);
         this.assertNotChanged(entityType, expectedUpdatedAt, isoTimestamp(found.row.updated_at));
+        this.assertImpactUnchanged(entityType, preview, await this.locationImpact(context, found.id));
         await this.locations.delete(found.id, context.userId, { manager: context.manager, audit });
         return;
       }
     }
   }
 
-  /** The record moved between the preview and the approval: refused, as every other preview. */
+  /**
+   * The record moved between the preview and the approval, or the dates cannot prove that it did
+   * not: refused, as every other preview. A missing date on either side is treated as a change.
+   */
   private assertNotChanged(entityType: AiDeleteEntityType, expected: string | null, live: string | null): void {
-    if (!expected || !live || expected === live) return;
+    if (expected && live && expected === live) return;
     throw new ConflictException(`${LABELS[entityType]} changed after the preview was created.`);
+  }
+
+  /**
+   * What the delete takes changed between the preview and the approval (a comment or a time entry
+   * added, a link removed) without always moving `updated_at`: refused, like a changed record.
+   */
+  private assertImpactUnchanged(
+    entityType: AiDeleteEntityType,
+    preview: AiMutationPreview,
+    live: AiDeleteImpact,
+  ): void {
+    const current = preview.current_values ?? {};
+    const expectedCounts = current.counts && typeof current.counts === 'object' && !Array.isArray(current.counts)
+      ? current.counts as Record<string, unknown>
+      : {};
+    const expectedHidden = Number(current.hidden) || 0;
+    const expected = Object.fromEntries(
+      Object.entries(expectedCounts)
+        .map(([key, value]) => [key, Number(value) || 0])
+        .filter(([, value]) => Number(value) > 0)
+        .sort(([left], [right]) => String(left).localeCompare(String(right))),
+    );
+    const observed = Object.fromEntries(
+      Object.entries(live.counts)
+        .filter(([, value]) => Number(value) > 0)
+        .sort(([left], [right]) => String(left).localeCompare(String(right))),
+    );
+    if (JSON.stringify(expected) !== JSON.stringify(observed) || expectedHidden !== (live.hidden ?? 0)) {
+      throw new ConflictException(`${LABELS[entityType]} changed after the preview was created.`);
+    }
   }
 }
