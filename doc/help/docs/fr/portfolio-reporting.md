@@ -167,7 +167,7 @@ Cliquez sur une ligne de contributeur pour ouvrir un détail par projet :
 - Les noms de projets sont cliquables et ouvrent l'onglet **Avancement** du projet.
 
 ### Exports
-- **CSV** : Exporter le tableau du planning de capacité
+- **Exporter le tableau** : CSV ou Excel. Le fichier contient le tableau du regroupement à l'écran, contributeurs ou équipes, avec le mode de capacité, les équipes et les statuts à l'écran. Les jours gardent leurs décimales. Le fichier Excel ajoute une feuille **Paramètres**. Voir [Rapports](reports.md#export-options)
 - **PNG** : Capture du rapport
 - **Imprimer** : Imprimer ou enregistrer en PDF
 
@@ -263,7 +263,7 @@ Les listes de modifications ajoutent la colonne **Modifications** à la fin.
 
 Les deux exports portent la référence, la société, l'origine d'un projet, les modifications d'une ligne modifiée et la date de l'événement. Les lignes de clôture portent aussi le jour de création.
 
-Les deux fichiers sont écrits dans la langue de l'écran : titres, noms de colonnes, statuts, modifications, oui ou non et jours. Le CSV prend aussi le séparateur et la marque décimale de cette langue, comme décrit dans [Fichiers CSV](csv-files.md).
+Les deux fichiers sont écrits dans la langue de l'écran : titres, noms de colonnes, statuts, modifications, oui ou non et jours. Le CSV prend aussi le séparateur et la marque décimale de cette langue, comme décrit dans [Fichiers CSV et Excel](csv-files.md).
 
 ## Temps saisi
 
@@ -293,7 +293,7 @@ Le rapport n'affiche que des jours. Il n'affiche jamais les notes d'une saisie.
 
 ### Exports
 
-- **CSV** : une ligne par personne et par mois, avec l'équipe, la personne, le mois, les jours projet, les jours autre et le total.
+- **Exporter le tableau** : CSV ou Excel, une ligne par personne et par mois, avec l'équipe, la personne, le mois, les jours projet, les jours autre et le total. Le fichier suit la période et les filtres d'équipe et de projet, et compte les mois dans le même fuseau horaire que l'écran. Le fichier Excel ajoute une feuille **Paramètres** avec ces filtres. Voir [Rapports](reports.md#export-options)
 - **PNG** : le graphique.
 
 ## Conseils

@@ -105,8 +105,8 @@ La grille affiche uniquement les comptes du CoA sélectionné.
 
 **Actions** (dans l'en-tête de la page) :
 - **Nouveau compte** (`accounts:member`) : Ouvre un nouveau formulaire de compte avec le CoA sélectionné déjà choisi.
-- **Importer CSV** (`accounts:admin`) : Importer des comptes dans le CoA sélectionné.
-- **Exporter CSV** (`accounts:admin`) : Exporter les comptes du CoA sélectionné.
+- **Importer** (`accounts:admin`) : Importer des comptes dans le CoA sélectionné.
+- **Exporter** (`accounts:admin`) : Exporter les comptes du CoA sélectionné.
 - **Supprimer la sélection** (`accounts:admin`) : Supprimer les lignes de comptes sélectionnées. Sélectionnez les lignes avec la colonne de cases à cocher (visible par les administrateurs). Un compte utilisé par des lignes budgétaires ne peut pas être supprimé : désactivez-le plutôt. Avant toute suppression, la confirmation liste les comptes conservés, avec la raison.
 
 Toutes les cellules sont des liens cliquables vers l'espace de travail du compte. Vous pouvez faire un clic droit ou Ctrl+clic pour ouvrir dans un nouvel onglet.
@@ -174,7 +174,7 @@ Cliquez sur **Nouveau** dans la barre de pastilles, ou sur **Nouveau plan** dans
 
 En mode modèle, cliquez sur **Vérifier le modèle** avant de créer pour voir combien de comptes seront ajoutés et combien mis à jour. Cliquez ensuite sur **Créer**.
 
-Une fois créé, le nouveau plan est sélectionné sur la page : **Importer CSV** charge dans ce plan.
+Une fois créé, le nouveau plan est sélectionné sur la page : **Importer** charge dans ce plan.
 
 Un nouveau plan n'a aucun rôle, hormis le plan par défaut d'un pays que vous cochez ici. Pour lui donner un autre rôle, utilisez [Gérer les plans](#la-fenetre-gerer-les-plans).
 
@@ -460,16 +460,18 @@ La suppression est immédiate et irréversible. L'enregistrement du tenant est c
 
 ## Import/export CSV
 
+L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
+
 ### Plans comptables
 
 Vous pouvez exporter la liste de vos CoA (avec des métadonnées comme le code, le nom, le pays et le statut par défaut), mais pas importer de CoA directement via CSV. Créez les CoA dans l'interface ou chargez-les depuis des modèles.
 
 ### Comptes (point d'accès global)
 
-Le CSV global `/accounts` inclut une colonne `coa_code` qui identifie le CoA de chaque compte. **Exporter CSV** et **Importer CSV** l'utilisent lorsqu'aucun CoA n'est sélectionné sur la page.
+Le CSV global `/accounts` inclut une colonne `coa_code` qui identifie le CoA de chaque compte. **Exporter** et **Importer** l'utilisent lorsqu'aucun CoA n'est sélectionné sur la page.
 
-  - **Exporter CSV** : les comptes que la liste affiche (ou, sur demande dans la fenêtre, tous les comptes) avec leur code CoA, numéro, nom, nom local, description, correspondances de consolidation, statut et **Utilisé pour**
-  - **Importer CSV** : **Télécharger le modèle** dans la fenêtre donne un fichier avec les seuls en-têtes. Commencez par la **Vérification préalable** pour valider la structure, l'encodage, les champs obligatoires et les doublons, puis **Charger** pour appliquer les insertions et les mises à jour
+  - **Exporter** : les comptes que la liste affiche (ou, sur demande dans la fenêtre, tous les comptes) avec leur code CoA, numéro, nom, nom local, description, correspondances de consolidation, statut et **Utilisé pour**
+  - **Importer** : **Télécharger le modèle** dans la fenêtre donne un fichier avec les seuls en-têtes. Commencez par la **Vérification préalable** pour valider la structure, l'encodage, les champs obligatoires et les doublons, puis **Charger** pour appliquer les insertions et les mises à jour
   - **Correspondance** : par `(coa_code, account_number)` dans votre espace de travail
   - **Colonnes obligatoires** : `coa_code`, `account_number`, `account_name`. Toutes les lignes d'un fichier doivent porter le même `coa_code`
   - **Colonnes facultatives** : `native_name`, `description`, les colonnes de consolidation, `status`, `nature`. Un fichier peut les omettre : les comptes qu'il met à jour gardent leurs valeurs enregistrées, et les nouveaux comptes prennent les valeurs par défaut (vide, enabled, **OPEX et CAPEX**). Une colonne présente dans le fichier applique ses cellules, vides comprises
@@ -482,10 +484,10 @@ coa_code;account_number;account_name;native_name;description;consolidation_accou
 
 ### Comptes (limités au CoA)
 
-Depuis la page Plans comptables, **Import CSV** et **Export CSV** portent automatiquement sur le CoA sélectionné.
+Depuis la page Plans comptables, **Importer** et **Exporter** portent automatiquement sur le CoA sélectionné.
 
-  - **Exporter CSV** : comptes de ce CoA (pas besoin de colonne `coa_code`)
-  - **Importer CSV** : les comptes sont insérés ou mis à jour automatiquement dans ce CoA. Le titre de la fenêtre nomme le plan, par exemple **Importer des comptes dans FR-PCG**
+  - **Exporter** : comptes de ce CoA (pas besoin de colonne `coa_code`)
+  - **Importer** : les comptes sont insérés ou mis à jour automatiquement dans ce CoA. Le titre de la fenêtre nomme le plan, par exemple **Importer des comptes dans FR-PCG**
   - Seules `account_number` et `account_name` sont obligatoires. Les autres colonnes sont facultatives, comme dans le fichier global
 
 **Schéma CSV** (limité au CoA ; montré ici avec des points-virgules) :
@@ -494,7 +496,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 ```
 
 **Remarques** :
-  - Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
+  - Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
   - Le `coa_code` doit correspondre à un plan comptable existant de votre espace de travail
   - Les numéros de compte doivent être uniques au sein d'un CoA
   - `account_number` et `consolidation_account_number` : nombres entiers de 15 chiffres au plus. Un numéro plus long est refusé pour cette ligne. Les zéros en tête sont supprimés (`06156` est enregistré comme `6156`) : la **Vérification préalable** signale ces lignes par un avertissement, et le fichier se charge quand même

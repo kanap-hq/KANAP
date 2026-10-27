@@ -82,7 +82,7 @@ Le tri sur **Vulnérabilités à traiter** classe les actifs par leurs vulnérab
 
 **Actions** :
 - **Ajouter un actif** : ouvre un menu (`infrastructure:member`). **Ajouter un actif** crée un actif ; **Ajouter un cluster** en crée un avec l'interrupteur **Cluster** déjà activé
-- **Import CSV** / **Export CSV** : Opérations en masse (`infrastructure:admin`). L'export contient les actifs que la liste affiche. Voir [Options d'export](#export-options)
+- **Importer** / **Exporter** : Opérations en masse en CSV ou Excel (`infrastructure:admin`). L'export contient les actifs que la liste affiche. Voir [Options d'export](#export-options)
 - **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé. Le refus nomme les applications, et jusqu'à cinq connexions par leur référence et leur nom. Retirez d'abord l'actif de ces liens. Une affectation que l'actif hérite seulement de son cluster ne bloque pas. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison, et ce que les autres emportent avec eux (voir [Supprimer un cluster ou un membre](#deleting-a-cluster-or-a-member))
 
 ---
@@ -385,14 +385,18 @@ Maintenez votre inventaire d'actifs à grande échelle grâce à l'import et l'e
 ### Accéder aux fonctionnalités CSV
 
 Depuis la liste des Actifs :
-- **Export CSV** : Télécharger les actifs dans un fichier CSV
-- **Import CSV** : Téléverser un fichier CSV pour créer ou mettre à jour des actifs
+- **Exporter** : Télécharger les actifs dans un fichier CSV ou un classeur Excel
+- **Importer** : Téléverser un fichier CSV ou un classeur Excel pour créer ou mettre à jour des actifs
 
 **Autorisations requises** : `infrastructure:admin` pour les opérations d'import/export.
 
 ### Options d'export { #export-options }
 
-**Contenu du fichier** : les actifs que la liste affiche. L'export suit les filtres des colonnes et la recherche rapide. La boîte de dialogue indique combien d'actifs le fichier contiendra. Vous pouvez aussi exporter tout le référentiel.
+**Contenu du fichier** : les actifs que la liste affiche. L'export suit les filtres des colonnes et la recherche rapide. La boîte de dialogue indique combien d'actifs le fichier contiendra. Vous pouvez aussi exporter tout le référentiel. Les lignes gardent l'ordre de la liste.
+
+**Format** : **CSV** ou **Excel (.xlsx)**, choisi dans la fenêtre et mémorisé par votre navigateur. Le classeur contient les mêmes colonnes que le CSV sur une feuille, avec les nombres et les dates en valeurs qu'Excel sait trier et filtrer. L'import lit l'un ou l'autre ; dans un classeur, il lit la première feuille. Voir [Fichiers CSV et Excel](csv-files.md).
+
+**Colonnes** : le fichier commence par `id` et `reference` (`AST-12`), puis les colonnes suivent l'espace de travail, onglet par onglet. L'import ignore `reference`.
 
 Les colonnes du type d'actif, du cycle de vie, du domaine, de la zone d'administration et du type d'adresse IP contiennent les libellés de l'écran, dans la langue de l'écran.
 
@@ -406,7 +410,7 @@ Les colonnes du type d'actif, du cycle de vie, du domaine, de la zone d'administ
 
 ### Processus d'import
 
-1. **Préparez votre fichier** : enregistrez-le en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV](csv-files.md).
+1. **Préparez votre fichier** : un fichier CSV ou un classeur Excel (`.xlsx`). Enregistrez un fichier CSV en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV et Excel](csv-files.md).
 
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
@@ -428,7 +432,7 @@ La vérification préalable signale une erreur sur la ligne, et rien n'est charg
 - un nom d'hôte qui ne respecte pas la règle de l'onglet Réseau ;
 - une adresse IP mal formée ;
 - un type d'actif, un domaine, un cycle de vie, une zone d'administration ou un type d'adresse IP qui ne correspond à rien dans **Cartographie SI > Paramètres** ;
-- une date absente du calendrier, comme `31/02/2025`, ou une date écrite en toutes lettres. Les formes de date acceptées sont dans [Fichiers CSV](csv-files.md) ;
+- une date absente du calendrier, comme `31/02/2025`, ou une date écrite en toutes lettres. Les formes de date acceptées sont dans [Fichiers CSV et Excel](csv-files.md) ;
 - un emplacement d'adresse IP rempli alors qu'un emplacement précédent est vide, par exemple `ip_2_address` sans `ip_1_address` ;
 - un nom ou un FQDN qu'un autre actif porte déjà.
 

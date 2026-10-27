@@ -553,7 +553,7 @@ Una fila **Total** fijada da, para cada par, el total de días, el total del cos
 
 Todos los informes comparten estas capacidades a través de la barra de herramientas compartida:
 
-### Opciones de exportación
+### Opciones de exportación { #export-options }
 
 - **Exportar tabla como CSV** (icono de descarga): Descarga los datos de la tabla principal
 - **Exportar gráfico como PNG** (icono de imagen): Descarga el gráfico como imagen PNG

@@ -127,8 +127,8 @@ Une cellule sans valeur affiche un tiret.
 
 **Actions** :
 - **Nouvelle app / Service** : Créer une nouvelle entrée (`applications:member`)
-- **Import CSV** : Import en masse depuis un fichier CSV (`applications:admin`)
-- **Export CSV** : Exporter en CSV les applications que la liste affiche (`applications:admin`). Voir [Options d'export](#export-options).
+- **Importer** : Import en masse depuis un fichier CSV (`applications:admin`)
+- **Exporter** : Exporter en CSV les applications que la liste affiche (`applications:admin`). Voir [Options d'export](#export-options).
 - **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:member`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
 - **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`). Une application source ou cible d’une interface ne peut pas être supprimée : désactivez-la plutôt, ou supprimez d’abord ses interfaces. Avant la confirmation, la fenêtre liste ces applications comme conservées, avec leur nombre d’interfaces. Les autres sont supprimées avec leurs déploiements et leurs liens vers d’autres éléments ; la confirmation compte les déploiements
 
@@ -528,15 +528,19 @@ Maintenez votre inventaire applicatif à grande échelle grâce à l'import et l
 ### Accéder aux fonctionnalités CSV
 
 Depuis la liste des Applications :
-- **Export CSV** : Télécharger les applications dans un fichier CSV
-- **Import CSV** : Téléverser un fichier CSV pour créer ou mettre à jour des applications
+- **Exporter** : Télécharger les applications dans un fichier CSV ou un classeur Excel
+- **Importer** : Téléverser un fichier CSV ou un classeur Excel pour créer ou mettre à jour des applications
 - **Télécharger le modèle** (depuis la boîte de dialogue d'import) : Obtenir un CSV vierge avec les en-têtes corrects
 
 **Autorisations requises** : `applications:admin` pour les opérations d'import/export.
 
 ### Options d'export { #export-options }
 
-**Contenu du fichier** : les applications que la liste affiche. L'export suit les filtres de colonnes, la recherche rapide et le choix **Afficher** (**Mes applications**, **Applications de mon équipe** ou **Toutes les applications**). Le dialogue indique combien d'applications le fichier contiendra. Sans filtre **Cycle de vie**, les applications retirées sont exclues, comme dans la liste.
+**Contenu du fichier** : les applications que la liste affiche. L'export suit les filtres de colonnes, la recherche rapide et le choix **Afficher** (**Mes applications**, **Applications de mon équipe** ou **Toutes les applications**). Le dialogue indique combien d'applications le fichier contiendra. Sans filtre **Cycle de vie**, les applications retirées sont exclues, comme dans la liste. Les lignes gardent l'ordre de la liste.
+
+**Format** : **CSV** ou **Excel (.xlsx)**, choisi dans la fenêtre et mémorisé par votre navigateur. Le classeur contient les mêmes colonnes que le CSV sur une feuille, avec les nombres et les dates en valeurs qu'Excel sait trier et filtrer. L'import lit l'un ou l'autre ; dans un classeur, il lit la première feuille. Voir [Fichiers CSV et Excel](csv-files.md).
+
+**Colonnes** : le fichier commence par `id` et `reference` (`APP-12`), puis les colonnes suivent l'espace de travail, onglet par onglet. L'import ignore `reference`.
 
 **Langue des valeurs** : les valeurs de catalogue (catégorie, cycle de vie, criticité, criticité cyber, vague de reprise, classification des données, méthodes d'accès) et le statut sont écrits comme l'écran les affiche, dans la langue de votre écran : `Active` en anglais, `Actif` en français. Un nom que votre organisation a donné à une valeur dans **Cartographie SI > Paramètres** reste tel quel.
 
@@ -553,7 +557,7 @@ Depuis la liste des Applications :
 
 ### Processus d'import
 
-1. **Préparez votre fichier** : enregistrez-le en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV](csv-files.md).
+1. **Préparez votre fichier** : un fichier CSV ou un classeur Excel (`.xlsx`). Enregistrez un fichier CSV en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV et Excel](csv-files.md).
 
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
@@ -581,7 +585,7 @@ La vérification préalable applique les mêmes règles que l'espace de travail.
 - sa **Fin de support** ou sa **Date de retrait** précède sa **Mise en production** ;
 - `is_suite` vaut `no` pour une suite qui contient encore des applications.
 
-Un fichier avec une seule ligne refusée ne charge rien. Voir [Fichiers CSV](csv-files.md).
+Un fichier avec une seule ligne refusée ne charge rien. Voir [Fichiers CSV et Excel](csv-files.md).
 
 ### Référence des champs
 

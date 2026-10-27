@@ -63,8 +63,8 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 **Actions** :
 
 - **Nouveau** : créer une société (nécessite `companies:member`)
-- **Import CSV** : import en masse de sociétés depuis un fichier CSV (nécessite `companies:admin`)
-- **Export CSV** : exporter les sociétés et leurs métriques en CSV (nécessite `companies:admin`)
+- **Importer** : import en masse de sociétés depuis un fichier CSV (nécessite `companies:admin`)
+- **Exporter** : exporter les sociétés et leurs métriques en CSV (nécessite `companies:admin`)
 - **Supprimer la sélection** : supprimer une ou plusieurs sociétés sélectionnées (nécessite `companies:admin` ; possible uniquement si rien ne référence la société)
 
 **Contexte de recherche** : lorsque vous ouvrez l'espace de travail d'une société depuis la liste, votre recherche, vos filtres, votre tri et votre année sont préservés. Revenir à la liste restaure votre vue précédente.
@@ -202,7 +202,9 @@ De nombreuses parties de l'application sont sensibles à l'année. Les société
 
 ## Import/export CSV
 
-**Exporter CSV** télécharge les sociétés que la liste affiche (ou, sur demande dans la fenêtre, toutes les sociétés) avec leurs métriques. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les en-têtes et une ligne d'exemple, une société fictive avec des métriques pour l'année de la liste. Remplacez-la par vos propres lignes.
+L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
+
+**Exporter** télécharge les sociétés que la liste affiche (ou, sur demande dans la fenêtre, toutes les sociétés) avec leurs métriques. **Importer** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les en-têtes et une ligne d'exemple, une société fictive avec des métriques pour l'année de la liste. Remplacez-la par vos propres lignes.
 
 Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélectionnée dans la barre d'outils de la liste : l'année précédente, celle-ci et la suivante.
 
@@ -238,7 +240,7 @@ Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélec
 
 **Notes** :
 
-- Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et de montants, et les deux étapes d'import
+- Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur, les formes de dates et de montants, et les deux étapes d'import
 - La liste se rafraîchit automatiquement après un chargement réussi
 
 ## Conseils

@@ -85,8 +85,8 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 **Actions** :
 
 - **Nouveau** : créer un groupe ou un centre de coûts (nécessite `cost_centers:member`)
-- **Importer CSV** : charger l'arbre depuis un fichier (nécessite `cost_centers:admin`)
-- **Exporter CSV** : télécharger les éléments que la liste affiche, ou tous les éléments (nécessite `cost_centers:admin`)
+- **Importer** : charger l'arbre depuis un fichier (nécessite `cost_centers:admin`)
+- **Exporter** : télécharger les éléments que la liste affiche, ou tous les éléments (nécessite `cost_centers:admin`)
 - **Supprimer la sélection** : supprimer les éléments sélectionnés (nécessite `cost_centers:admin`). Avant toute suppression, la confirmation liste les éléments conservés, avec la raison. Le contenu est supprimé avant son groupe : sélectionner un groupe avec tout ce qu'il contient supprime l'ensemble
 
 ---
@@ -168,14 +168,16 @@ Le bouton **Supprimer** (icône corbeille) de l'en-tête supprime l'élément ap
 
 ## Import/export CSV
 
+L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
+
 Chargez ou mettez à jour l'arbre entier depuis un fichier.
 
-**Export** : cliquez sur **Exporter CSV**, puis sur **Exporter les données**. Le fichier liste tous les éléments, activés ou désactivés, dans l'ordre de l'arbre. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
+**Export** : cliquez sur **Exporter**, puis sur **Exporter les données**. Le fichier liste tous les éléments, activés ou désactivés, dans l'ordre de l'arbre. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
 
 **Structure du CSV** :
 
 - En-têtes : `code`, `kind`, `name`, `parent_code`, `company_name`, `owner_email`, `description`, `status`, `disabled_at`
-- L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
+- L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
 
 | Colonne | Contenu |
 |---|---|
@@ -191,7 +193,7 @@ Chargez ou mettez à jour l'arbre entier depuis un fichier.
 
 **Import** :
 
-1. Cliquez sur **Importer CSV** dans la liste
+1. Cliquez sur **Importer** dans la liste
 2. Choisissez votre fichier
 3. Cliquez sur **Vérification préalable**. Le rapport donne le nombre de lignes, les éléments à créer et à mettre à jour, et les lignes qui ne changent rien
 4. Si la vérification préalable est sans erreur, cliquez sur **Charger**

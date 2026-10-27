@@ -179,7 +179,7 @@ Les points qui comptent quand vous faites correspondre un autre outil à KANAP :
 
 ## Formats d'échange
 
-Chaque fichier ci-dessous s'exporte et s'importe depuis la page qui gère l'objet. Les imports se font en deux étapes : une vérification qui n'écrit rien, puis un chargement. À l'exception du fichier des contrats, ils partagent les règles d'encodage, de séparateur, de dates et de montants et la limite de taille décrites dans [Fichiers CSV](csv-files.md).
+Chaque fichier ci-dessous s'exporte et s'importe depuis la page qui gère l'objet. Les imports se font en deux étapes : une vérification qui n'écrit rien, puis un chargement. À l'exception du fichier des contrats, ils partagent les règles d'encodage, de séparateur, de dates et de montants et la limite de taille décrites dans [Fichiers CSV et Excel](csv-files.md).
 
 | Objet | Export | Import | Correspondance par | Détails |
 |---|---|---|---|---|

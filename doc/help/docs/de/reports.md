@@ -553,7 +553,7 @@ Eine angeheftete Zeile **Gesamt** zeigt für jedes Paar die Tage gesamt, die Kos
 
 Jeder Bericht bietet diese Funktionen über die gemeinsame Symbolleiste:
 
-### Exportoptionen
+### Exportoptionen { #export-options }
 
 - **Tabelle als CSV exportieren** (Download-Symbol): Lädt die Primärtabellendaten herunter
 - **Diagramm als PNG exportieren** (Bild-Symbol): Lädt das Diagramm als PNG-Bild herunter

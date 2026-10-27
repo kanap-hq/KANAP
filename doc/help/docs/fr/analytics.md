@@ -117,8 +117,8 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail de la valeu
 
 - **Nouvelle valeur** : créer une valeur dans la dimension sélectionnée (nécessite `analytics:member`). Tant que la dimension sélectionnée est désactivée, le bouton est désactivé et son info-bulle indique « Activez cette dimension pour ajouter des valeurs. »
 - **Réordonner** : définir l'ordre des valeurs de la dimension sélectionnée (nécessite `analytics:member`). Le bouton est désactivé tant que la dimension a moins de deux valeurs. Voir [Ordonner les valeurs](#ordonner-les-valeurs)
-- **Importer CSV** : charger des valeurs depuis un fichier (nécessite `analytics:admin`)
-- **Exporter CSV** : télécharger les valeurs que la liste affiche, ou les valeurs de toutes les dimensions (nécessite `analytics:admin`)
+- **Importer** : charger des valeurs depuis un fichier (nécessite `analytics:admin`)
+- **Exporter** : télécharger les valeurs que la liste affiche, ou les valeurs de toutes les dimensions (nécessite `analytics:admin`)
 - **Supprimer la sélection** : supprimer les valeurs sélectionnées (nécessite `analytics:admin`). Lorsque certaines sont utilisées par des lignes budgétaires, la confirmation indique combien de lignes les perdent, par exemple « 2 valeurs sélectionnées sont utilisées : elles sont retirées de 5 lignes budgétaires. Ces données ne peuvent pas être récupérées. », et le bouton devient **Supprimer quand même**
 
 ---
@@ -369,16 +369,18 @@ Les sept rapports budgétaires peuvent aussi être restreints à une valeur d'un
 
 ## Import/export CSV
 
+L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
+
 Chargez ou mettez à jour les valeurs de toutes les dimensions depuis un seul fichier. Les dimensions se créent sur la page.
 
 Pour renseigner des valeurs sur les lignes budgétaires depuis un fichier, utilisez le fichier budgétaire. Une colonne `analytics:<code>` y porte chaque dimension activée, dimension par défaut incluse. Voir [Charger un budget depuis un tableur](budget-file.md).
 
-**Export** : cliquez sur **Exporter CSV**, puis sur **Exporter les données**. Le fichier liste les valeurs de toutes les dimensions, activées ou désactivées, dimension par dimension, les valeurs de chaque dimension dans son ordre. Le fichier n'a pas de colonne d'ordre. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
+**Export** : cliquez sur **Exporter**, puis sur **Exporter les données**. Le fichier liste les valeurs de toutes les dimensions, activées ou désactivées, dimension par dimension, les valeurs de chaque dimension dans son ordre. Le fichier n'a pas de colonne d'ordre. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
 
 **Structure du CSV** :
 
 - En-têtes : `axis_code`, `name`, `description`, `status`, `disabled_at`, `applies_to`
-- L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
+- L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
 
 | Colonne | Contenu |
 |---|---|
@@ -393,7 +395,7 @@ Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `stat
 
 **Import** :
 
-1. Cliquez sur **Importer CSV** sur la page
+1. Cliquez sur **Importer** sur la page
 2. Choisissez votre fichier
 3. Cliquez sur **Vérification préalable**. Le rapport donne le nombre de lignes, les valeurs à créer et à mettre à jour, et les lignes qui ne changent rien
 4. Si la vérification préalable est sans erreur, cliquez sur **Charger**

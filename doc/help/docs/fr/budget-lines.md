@@ -175,8 +175,8 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 **Actions** :
 
 - **Nouvelle ligne** : Créer une ligne (nécessite `budget:member`)
-- **Importer CSV** : Charger des lignes en masse depuis un fichier budgétaire (nécessite `budget:admin`)
-- **Exporter CSV** : Exporter les lignes dans un fichier budgétaire (nécessite `budget:admin`)
+- **Importer** : Charger des lignes en masse depuis un fichier budgétaire (nécessite `budget:admin`)
+- **Exporter** : Exporter les lignes dans un fichier budgétaire (nécessite `budget:admin`)
 - **Supprimer la sélection** : Suppression en masse des lignes sélectionnées (nécessite `budget:admin` ; sélectionnez-les via les cases à cocher). Une ligne qui a des montants dans une colonne gelée ne peut pas être supprimée. Avant toute suppression, la confirmation liste les lignes conservées, avec la colonne gelée. Les autres sont supprimées
 
 **Navigation Préc./Suiv.** :
@@ -595,9 +595,9 @@ La section est absente quand la ligne n'a pas de fournisseur ou qu'il n'y a rien
 
 ## Import/export CSV
 
-**Exporter CSV** et **Importer CSV** se trouvent dans la barre d'outils de la liste. Les deux demandent le niveau Admin sur Budget (`budget:admin`).
+**Exporter** et **Importer** se trouvent dans la barre d'outils de la liste. Les deux demandent le niveau Admin sur Budget (`budget:admin`).
 
-**Exporter CSV** écrit le fichier budgétaire des lignes affichées par la liste, OPEX et CAPEX ensemble, sous le nom `budget.csv`. **Importer CSV** relit un fichier : il est d'abord vérifié, et rien n'est écrit avant que vous cliquiez sur **Charger**.
+**Exporter** écrit le fichier budgétaire des lignes affichées par la liste, OPEX et CAPEX ensemble, sous le nom `budget.csv` ou en classeur Excel, `budget.xlsx`. **Importer** relit l'un ou l'autre : le fichier est d'abord vérifié, et rien n'est écrit avant que vous cliquiez sur **Charger**.
 
 Le fichier contient une rangée par ligne : sa `nature` (`opex` ou `capex`), sa référence `BL-n`, les détails de la ligne, ses montants en colonnes et `kanap_token`. Un fichier sans colonne `nature`, exporté par une version antérieure, est lu comme des lignes OPEX, ou comme des lignes CAPEX quand le filtre **Type** de la liste ne garde que CAPEX. [Charger un budget depuis un tableur](budget-file.md) décrit les colonnes, ce que signifie une cellule et les deux étapes de l'import.
 
@@ -709,7 +709,7 @@ De plus :
 - Les tâches ont des autorisations séparées (`tasks:member` pour créer et modifier des tâches sur les lignes budgétaires)
 - Les utilisateurs avec `tasks:reader` peuvent consulter les tâches mais ne peuvent pas les créer ou les modifier
 
-Si vous ne pouvez pas effectuer une action (ex. : le bouton **Importer CSV** est manquant, ou vous ne pouvez pas téléverser de pièces jointes), demandez à l'administrateur de votre espace de travail de revoir les autorisations de votre rôle.
+Si vous ne pouvez pas effectuer une action (ex. : le bouton **Importer** est manquant, ou vous ne pouvez pas téléverser de pièces jointes), demandez à l'administrateur de votre espace de travail de revoir les autorisations de votre rôle.
 
 ---
 

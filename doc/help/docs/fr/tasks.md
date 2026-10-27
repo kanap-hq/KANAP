@@ -115,8 +115,8 @@ La grille Tâches affiche toutes les tâches de votre organisation.
 
 **Actions** :
   - **Nouvelle** : Créer une tâche autonome (nécessite `tasks:member`)
-  - **Import CSV** : Téléverser un fichier CSV pour créer ou mettre à jour des tâches (nécessite `tasks:admin`)
-  - **Export CSV** : Télécharger les tâches dans un fichier CSV (nécessite `tasks:admin`)
+  - **Importer** : Téléverser un fichier CSV ou un classeur Excel pour créer ou mettre à jour des tâches (nécessite `tasks:admin`)
+  - **Exporter** : Télécharger les tâches dans un fichier CSV ou un classeur Excel (nécessite `tasks:admin`)
   - **Supprimer la sélection** : Supprimer les tâches sélectionnées (nécessite `tasks:admin`). Une tâche à partir de laquelle une demande a été créée ne peut pas être supprimée : clôturez-la plutôt. Avant toute suppression, la confirmation liste les tâches conservées, avec la raison
 
 ---
@@ -469,13 +469,21 @@ Gérez les tâches à grande échelle grâce à l'import et l'export CSV. Cette 
 ### Accéder aux fonctionnalités CSV
 
 Depuis la liste des Tâches :
-  - **Export CSV** : Télécharger les tâches dans un fichier CSV
-  - **Import CSV** : Téléverser un fichier CSV pour créer ou mettre à jour des tâches
+  - **Exporter** : Télécharger les tâches dans un fichier CSV ou un classeur Excel
+  - **Importer** : Téléverser un fichier CSV ou un classeur Excel pour créer ou mettre à jour des tâches
   - **Télécharger le modèle** : Obtenir un CSV vierge avec les en-têtes corrects (depuis la boîte de dialogue d'import)
 
 **Autorisations requises** : `tasks:admin` pour les opérations d'import/export.
 
 ### Options d'export
+
+**Contenu du fichier** : les tâches que la liste affiche, avec ses filtres, sa recherche et son tri. La fenêtre indique combien de tâches le fichier contiendra.
+
+**Format** : **CSV** ou **Excel (.xlsx)**, choisi dans la fenêtre et mémorisé par votre navigateur. Le classeur contient les mêmes colonnes que le CSV sur une feuille, avec les nombres et les dates en valeurs qu'Excel sait trier et filtrer. L'import lit l'un ou l'autre ; dans un classeur, il lit la première feuille. Voir [Fichiers CSV et Excel](csv-files.md).
+
+**Colonnes** : le fichier commence par `id` et `reference` (`T-12`), puis les colonnes suivent l'espace de travail, onglet par onglet. L'import ignore `reference`.
+
+**Classification des tâches de projet** : une tâche de projet sans source, catégorie, axe ou société propre montre ceux de son projet dans le fichier, comme dans la liste. À l'import, une valeur égale à celle du projet laisse la tâche suivre son projet. Toute autre valeur devient celle de la tâche.
 
 Trois modes d'export sont disponibles :
 
@@ -489,7 +497,7 @@ Trois modes d'export sont disponibles :
 
 ### Processus d'import
 
-1. **Préparez votre fichier** : enregistrez-le en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV](csv-files.md).
+1. **Préparez votre fichier** : un fichier CSV ou un classeur Excel (`.xlsx`). Enregistrez un fichier CSV en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV et Excel](csv-files.md).
 
 2. **Choisissez les paramètres d'import** :
    - **Mode** :

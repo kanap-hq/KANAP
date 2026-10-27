@@ -9,13 +9,13 @@ Un seul fichier contient les deux types de ligne. Sa colonne `nature` indique si
 ## Où la trouver
 
 - Chemin : **Gestion budgétaire > Lignes budgétaires**
-- Export : **Exporter CSV** dans la barre d'outils de la liste
-- Import : **Importer CSV** dans la même barre d'outils
+- Export : **Exporter** dans la barre d'outils de la liste
+- Import : **Importer** dans la même barre d'outils
 - Autorisations : les deux boutons demandent le niveau Admin sur Budget (`budget:admin`), qui couvre les lignes OPEX et CAPEX de la même façon
 
 ## Export
 
-1. Cliquez sur **Exporter CSV** dans la liste.
+1. Cliquez sur **Exporter** dans la liste.
 2. Choisissez ce que le fichier contient :
 
 | Réglage | Effet |
@@ -24,10 +24,11 @@ Un seul fichier contient les deux types de ligne. Sa colonne `nature` indique si
 | **Années** | **Première année** et **Dernière année**, jusqu'à douze années. Par défaut : l'année en cours, la précédente et la suivante. Cochez **Année en cours** pour n'exporter que l'année en cours |
 | **Colonnes** | Les colonnes budgétaires à écrire. Les colonnes que votre organisation affiche sont cochées, et une colonne masquée est marquée **masquée**. Son en-tête est indiqué sous le nom, par exemple `budget_2027` |
 | **Détail** | **Totaux annuels** : une colonne par colonne budgétaire et par année. **Mois** : une colonne par colonne budgétaire, année et mois |
+| **Format** | **CSV** ou **Excel (.xlsx)**. Votre navigateur mémorise ce choix pour l'export suivant |
 
 3. Cliquez sur le bouton en bas de la fenêtre. Il nomme ce que le fichier contiendra : **Exporter 120 lignes filtrées**, **Exporter toutes les lignes**, **Exporter 3 412 lignes**, etc.
 
-Le fichier est enregistré sous le nom `budget.csv` et écrit dans la langue d'affichage de l'écran.
+Le fichier est enregistré sous le nom `budget.csv` ou `budget.xlsx`. Un fichier CSV est écrit dans la langue d'affichage de l'écran :
 
 | Langue | Séparateur | Montants | Dates |
 |---|---|---|---|
@@ -35,7 +36,11 @@ Le fichier est enregistré sous le nom `budget.csv` et écrit dans la langue d'a
 | Français, espagnol | `;` | `12280,50` | `01/03/2027` |
 | Allemand | `;` | `12280,50` | `01.03.2027` |
 
+Le fichier Excel a les mêmes colonnes sur une feuille nommée `budget`. Les montants sont des nombres exacts au centime, et les dates sont des dates, affichées dans l'ordre jour-mois de votre langue. La ligne d'en-tête reste en place au défilement, avec un filtre sur chaque colonne.
+
 Exporter une liste sans ligne budgétaire donne la seule ligne d'en-tête. C'est votre modèle.
+
+Chaque export est enregistré dans le [journal d'audit](admin.md#journal-daudit), avec ses réglages, son format et son nombre de lignes.
 
 ## Les colonnes
 
@@ -115,7 +120,7 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 
 ## Vérifier, puis charger
 
-1. Cliquez sur **Importer CSV** et choisissez le fichier, ou déposez-le sur la fenêtre. Le fichier est vérifié aussitôt. Rien n'est écrit.
+1. Cliquez sur **Importer** et choisissez le fichier, un fichier CSV ou un classeur Excel (`.xlsx`), ou déposez-le sur la fenêtre. Le fichier est vérifié aussitôt. Rien n'est écrit.
 2. Lisez le rapport :
 
 | Section | Contenu |
@@ -144,9 +149,11 @@ Ces lignes apparaissent parmi les **Erreurs** de la vérification, comme toute a
 
 ## Excel et LibreOffice
 
-Ouvrir le fichier et l'enregistrer le laisse chargeable. Les deux programmes conservent les colonnes, le séparateur et les valeurs.
+Ouvrir le fichier et l'enregistrer le laisse chargeable, en CSV comme en `.xlsx`. Les deux programmes conservent les colonnes, le séparateur et les valeurs.
 
-Une date ou un montant que le fichier ne peut pas trancher seul est lu comme l'export l'a écrit, puis dans la langue d'affichage de l'écran. Toute date dont le jour est inférieur ou égal à 12 est ambiguë (`01/03/2027` est le 1er mars en français et le 3 janvier en anglais), et un montant écrit comme `12,280` l'est aussi. La vérification indique comment elle les a lus et propose un bouton pour changer la lecture.
+Dans un classeur, KANAP lit la première feuille. Quand le classeur a d'autres feuilles, la vérification indique la feuille lue. Un montant ou une date saisi dans une cellule est lu exactement tel quel, sans question de séparateur décimal ni d'ordre du jour et du mois. Un ancien fichier Excel (`.xls`) est refusé : enregistrez-le en `.xlsx` ou en CSV.
+
+Une date ou un montant écrit en texte, que le fichier ne peut pas trancher seul, est lu comme l'export l'a écrit, puis dans la langue d'affichage de l'écran. Toute date dont le jour est inférieur ou égal à 12 est ambiguë (`01/03/2027` est le 1er mars en français et le 3 janvier en anglais), et un montant écrit comme `12,280` l'est aussi. La vérification indique comment elle les a lus et propose un bouton pour changer la lecture.
 
 Une colonne que KANAP ne connaît pas est ignorée, avec un avertissement. Une colonne qui ressemble à une colonne de montants mal orthographiée, comme `budjet_2027`, refuse le fichier entier. Une colonne `analytics:<code>` qui ne désigne aucune dimension activée refuse elle aussi le fichier entier, avec « Unknown dimension 'x'. »
 
@@ -185,6 +192,6 @@ Une organisation plus grande ajoute le reste des données de référence entre l
 7. Les calendriers de jours ouvrés, dans [Calendriers de jours ouvrés](working-day-calendars.md), une fois que des lignes budgétaires portent des quantités et des prix
 8. Le fichier budgétaire, lignes OPEX et CAPEX
 
-**Le plan comptable vient en premier.** Sur la page Plans comptables, cliquez sur **Nouveau**, donnez un code et un nom au plan, et choisissez **Tous les pays** sous **Utilisé pour**. Cliquez ensuite sur **Gérer les plans**, ouvrez le menu **⋯** du plan et cliquez sur **Définir par défaut pour les autres pays**. Une société sans plan comptable prend celui-ci, et c'est ainsi que les numéros de compte d'un fichier budgétaire sont résolus. Sélectionnez le plan sur la page, puis cliquez sur **Importer CSV** pour charger ses comptes.
+**Le plan comptable vient en premier.** Sur la page Plans comptables, cliquez sur **Nouveau**, donnez un code et un nom au plan, et choisissez **Tous les pays** sous **Utilisé pour**. Cliquez ensuite sur **Gérer les plans**, ouvrez le menu **⋯** du plan et cliquez sur **Définir par défaut pour les autres pays**. Une société sans plan comptable prend celui-ci, et c'est ainsi que les numéros de compte d'un fichier budgétaire sont résolus. Sélectionnez le plan sur la page, puis cliquez sur **Importer** pour charger ses comptes.
 
-Chacune de ces pages a sa propre section **Importer CSV** avec les colonnes de son fichier.
+Chacune de ces pages a sa propre section d'import avec les colonnes de son fichier. Toutes lisent un fichier CSV ou un classeur Excel. Voir [Fichiers CSV et Excel](csv-files.md).

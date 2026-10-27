@@ -67,7 +67,7 @@ La page Journal d'audit conserve l'historique des modifications de données et d
 | **Réinitialisation du mot de passe demandée** / **Réinitialisation du mot de passe terminée** | Quelqu'un demande un lien de réinitialisation, puis définit un nouveau mot de passe avec ce lien. Si l'e-mail contenant le lien n'a pas pu être envoyé, le **motif** le signale |
 | **Connexion avec Microsoft** / **Échec de connexion avec Microsoft** | Une connexion via Microsoft Entra ID réussit ou échoue |
 
-**Exports** (table **Export**) : exports CSV, documents et rapports produits par le serveur. La ligne indique ce qui a été exporté et par qui. L'export du journal d'audit est lui aussi enregistré.
+**Exports** (table **Export**) : chaque fichier que KANAP produit à partir de vos données : exports de listes et de rapports en CSV ou Excel, documents et rapports PDF. La ligne indique ce qui a été exporté et par qui. Ses détails donnent le format, les paramètres de l'export (filtres, recherche, tri, année, etc.) et, pour un fichier de lignes, le nombre de lignes écrites. L'export du journal d'audit est lui aussi enregistré.
 
 Les lignes de connexion, de session et d'export conservent aussi l'**adresse IP** d'où venait la demande et le **navigateur** utilisé. Ouvrez la ligne pour les lire dans les lignes **Adresse IP** et **Navigateur** de son tableau. Derrière un reverse proxy, c'est l'adresse IP de la personne elle-même, tant que le proxy la transmet (on-premise : voir l'[exemple de reverse proxy](on-premise/installation.md#reverse-proxy-example-nginx)).
 
@@ -90,7 +90,7 @@ Les événements de connexion et de session sont supprimés après **365 jours**
   - La référence métier de l'enregistrement dans l'en-tête (par exemple `PRJ-3`, `APP-12`, `AST-31`, `LOC-4`, `CONN-2` ou `INT-8`), quand l'entrée en porte une. Sans référence, l'en-tête affiche **Identifiant** et garde l'identifiant stocké dans une infobulle
   - Un tableau des champs : **Champ**, **Avant** et **Après** pour une modification, **Champ** et **Valeur** pour toute autre entrée. Les noms des champs s'affichent dans votre langue quand ils sont connus. Les dates, les valeurs oui/non et les personnes s'affichent sous une forme lisible ; les autres identifiants s'affichent comme **Identifiant**, avec la valeur dans une infobulle. Les champs techniques comme `id`, `tenant_id` et `updated_at` sont omis
   - **Voir les données brutes** affiche le JSON complet avant et après
-- Exporter le journal en CSV (voir ci-dessous)
+- Exporter le journal en CSV ou Excel (voir ci-dessous)
 
 ### Colonnes
 
@@ -113,16 +113,16 @@ Les événements de connexion et de session sont supprimés après **365 jours**
 - La grille utilise une pagination explicite avec **100 lignes par page**.
 - Les filtres et la recherche s'appliquent à l'ensemble des données, pas seulement à la page actuelle.
 
-### Export CSV
+### Export
 
-Cliquez sur **Exporter CSV** en haut de la page pour télécharger le journal sous forme de fichier.
+Cliquez sur **Exporter** en haut de la page, puis choisissez **CSV** ou **Excel (.xlsx)**, pour télécharger le journal sous forme de fichier. Votre navigateur mémorise ce choix pour l'export suivant.
 
 - Le fichier contient les entrées qui correspondent aux filtres, à la recherche et au tri affichés à l'écran. Effacez les filtres pour exporter tout le journal.
 - Un fichier contient au plus **100 000 entrées**, les plus récentes d'abord par défaut. Quand le journal est plus grand, KANAP vous indique que le fichier s'arrête là. Affinez les filtres (une plage de dates, par exemple) et exportez à nouveau pour obtenir le reste.
 - Vous ne pouvez lancer que quelques exports par minute. Si vous cliquez de nouveau trop tôt, KANAP vous demande d'attendre une minute.
 - L'export est enregistré dans le journal, comme tout autre export.
 
-Le fichier a toujours le même format, quelle que soit votre langue, pour qu'un outil de collecte de journaux puisse le lire sans réglage :
+Le fichier CSV a toujours le même format, quelle que soit votre langue, pour qu'un outil de collecte de journaux puisse le lire sans réglage :
 
 - séparé par des virgules, en UTF-8 sans marque d'ordre des octets ;
 - noms de colonnes en anglais : `date`, `action`, `table`, `record_id`, `user`, `source`, `source_ref`, `ip`, `user_agent`, `before`, `after` ;
@@ -130,11 +130,13 @@ Le fichier a toujours le même format, quelle que soit votre langue, pour qu'un 
 - dates au format ISO 8601, en UTC (par exemple `2026-10-09T14:32:05.000Z`) ;
 - colonnes `before` et `after` en JSON compact.
 
-Si Excel utilise le point-virgule comme séparateur de liste sur votre poste (fréquent avec les paramètres régionaux français ou allemands), ne double-cliquez pas sur le fichier. Utilisez **Données > À partir d'un fichier texte/CSV**, choisissez UTF-8 comme origine du fichier et la virgule comme délimiteur.
+Si Excel utilise le point-virgule comme séparateur de liste sur votre poste (fréquent avec les paramètres régionaux français ou allemands), ne double-cliquez pas sur le fichier CSV. Utilisez **Données > À partir d'un fichier texte/CSV**, choisissez UTF-8 comme origine du fichier et la virgule comme délimiteur, ou exportez plutôt en Excel.
+
+Le fichier Excel contient les mêmes colonnes et les mêmes valeurs sur une feuille, toutes en texte : les dates gardent leur forme ISO 8601, avec l'heure.
 
 ### Qui peut voir quoi
 
-Les valeurs **Avant** et **Après** contiennent l'enregistrement complet tel qu'il a été sauvegardé, y compris les données personnelles comme les noms, les adresses e-mail et les numéros de téléphone. L'écran de détail et le fichier CSV montrent les mêmes valeurs, et les deux exigent `users:admin`. Les empreintes de mots de passe et les secrets d'authentification multifacteur ne sont jamais écrits dans le journal. Traitez un fichier exporté comme le journal lui-même : conservez-le avec le même soin.
+Les valeurs **Avant** et **Après** contiennent l'enregistrement complet tel qu'il a été sauvegardé, y compris les données personnelles comme les noms, les adresses e-mail et les numéros de téléphone. L'écran de détail et le fichier exporté montrent les mêmes valeurs, et les deux exigent `users:admin`. Les empreintes de mots de passe et les secrets d'authentification multifacteur ne sont jamais écrits dans le journal. Traitez un fichier exporté comme le journal lui-même : conservez-le avec le même soin.
 
 ### Comprendre la source et l'acteur
 
@@ -188,8 +190,8 @@ Actions de la barre d'outils :
 | Action | Description | Autorisation |
 |--------|-------------|-------------|
 | **Nouveau** | Créer un nouvel utilisateur | `users:admin` |
-| **Importer CSV** | Import en masse d'utilisateurs | `users:admin` |
-| **Exporter CSV** | Exporter la liste des utilisateurs | `users:admin` |
+| **Importer** | Import en masse d'utilisateurs depuis un fichier CSV ou un classeur Excel | `users:admin` |
+| **Exporter** | Exporter la liste des utilisateurs en CSV ou Excel | `users:admin` |
 | **Inviter** | Envoyer des invitations de connexion aux utilisateurs sélectionnés | `users:admin` |
 | **Désactiver** | Désactiver les utilisateurs sélectionnés. Ils sont déconnectés immédiatement. | `users:admin` |
 | **Supprimer** | Supprimer définitivement les utilisateurs sélectionnés. Votre propre compte est conservé : la confirmation l'indique avant toute suppression. Pour garder l'historique d'un utilisateur et bloquer son accès, désactivez-le plutôt | `users:admin` |
@@ -209,7 +211,7 @@ Actions de ligne, depuis le menu au bout de chaque ligne :
 
 ### Fichier CSV des utilisateurs
 
-**Exporter CSV** télécharge la liste des utilisateurs. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes.
+**Exporter** télécharge la liste des utilisateurs dans un fichier CSV ou un classeur Excel. **Importer** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes.
 
 Les colonnes :
 
@@ -226,7 +228,7 @@ Un rôle nommé par le fichier et absent de votre espace de travail est créé p
 
 Le fichier ne contient ni date ni montant. Un import ne définit aucun mot de passe : un nouvel utilisateur se connecte après une invitation ou une réinitialisation de mot de passe.
 
-Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import.
+Voir [Fichiers CSV et Excel](csv-files.md) pour les formats, l'encodage, le séparateur et les deux étapes d'import.
 
 ### Créer un utilisateur
 
