@@ -1328,7 +1328,6 @@
         "provideDriver": "Provide {{driver}} for the selected companies."
       },
       "unnamedAccount": "Unnamed account",
-      "exportTableCsv": "Export table as CSV",
       "exportTable": "Export table",
       "exportCsv": "CSV",
       "exportCsvTable": "CSV: {{table}}",

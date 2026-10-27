@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Box, Stack, Typography, IconButton, Tooltip, ThemeProvider, useTheme } from '@mui/material';
-import DownloadIcon from '@mui/icons-material/Download';
 import PrintIcon from '@mui/icons-material/Print';
 import ImageIcon from '@mui/icons-material/Image';
 import { useTranslation } from 'react-i18next';
@@ -146,7 +145,6 @@ export default function ReportLayout({
   subtitle,
   filters,
   actions,
-  onExportTableCsv,
   tableExport,
   onExportChartPng,
   busy = false,
@@ -157,12 +155,7 @@ export default function ReportLayout({
   subtitle?: React.ReactNode;
   filters?: React.ReactNode;
   actions?: React.ReactNode;
-  /**
-   * A table CSV the browser writes itself: only the operations pages that share this layout (copy budget,
-   * column reset, master data copy). Every report passes `tableExport`.
-   */
-  onExportTableCsv?: () => void;
-  /** The table export the server builds, CSV or Excel (ReportExportButton). Takes the place of `onExportTableCsv`. */
+  /** The table export the server builds, CSV or Excel (ReportExportButton). */
   tableExport?: ReportTableExport;
   onExportChartPng?: () => void;
   /**
@@ -240,15 +233,6 @@ export default function ReportLayout({
             <Stack direction="row" spacing={1} alignItems="center">
               {actions}
               {tableExport && <ReportExportButton {...tableExport} disabled={busy || !!tableExport.disabled} />}
-              {!tableExport && onExportTableCsv && (
-                <Tooltip title={t('reports.shared.exportTableCsv')}>
-                  <span>
-                    <IconButton size="small" onClick={onExportTableCsv} disabled={busy} aria-label={t('reports.shared.exportTableCsv')} sx={{ color: 'kanap.text.secondary' }}>
-                      <DownloadIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              )}
               {onExportChartPng && (
                 <Tooltip title={t('reports.shared.exportChartPng')}>
                   <span>

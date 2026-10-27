@@ -14,6 +14,8 @@ vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => fal
 
 import ReportLayout from './ReportLayout';
 
+const TABLE_EXPORT = { url: '/portfolio/reports/time-logged/export', params: {}, fileBase: 'time-logged' };
+
 function renderLayout(props: Partial<React.ComponentProps<typeof ReportLayout>> = {}) {
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
@@ -41,14 +43,14 @@ describe('ReportLayout busy', () => {
     const { container, rerender } = render(
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter>
-          <ReportLayout title="Top items" busy onExportTableCsv={() => undefined} onExportChartPng={() => undefined}>
+          <ReportLayout title="Top items" busy tableExport={TABLE_EXPORT} onExportChartPng={() => undefined}>
             <div data-testid="report">chart</div>
             <p className="report-data-status">loading</p>
           </ReportLayout>
         </MemoryRouter>
       </ThemeProvider>,
     );
-    for (const name of ['reports.shared.exportTableCsv', 'reports.shared.exportChartPng', 'reports.shared.printReport']) {
+    for (const name of ['reports.shared.exportTable', 'reports.shared.exportChartPng', 'reports.shared.printReport']) {
       expect(screen.getByRole('button', { name })).toBeDisabled();
     }
     const content = container.querySelector('[aria-busy="true"]') as HTMLElement;
@@ -58,7 +60,7 @@ describe('ReportLayout busy', () => {
     rerender(
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter>
-          <ReportLayout title="Top items" onExportTableCsv={() => undefined} onExportChartPng={() => undefined}>
+          <ReportLayout title="Top items" tableExport={TABLE_EXPORT} onExportChartPng={() => undefined}>
             <div data-testid="report">chart</div>
           </ReportLayout>
         </MemoryRouter>
@@ -71,13 +73,14 @@ describe('ReportLayout busy', () => {
 });
 
 describe('ReportLayout table export', () => {
-  it('shows the server export in place of the browser CSV, held while the numbers load', () => {
-    renderLayout({
-      busy: true,
-      onExportTableCsv: () => undefined,
-      tableExport: { url: '/portfolio/reports/time-logged/export', params: {}, fileBase: 'time-logged' },
-    });
-    expect(screen.queryByRole('button', { name: 'reports.shared.exportTableCsv' })).toBeNull();
+  it('shows the server export, held while the numbers load', () => {
+    renderLayout({ busy: true, tableExport: TABLE_EXPORT });
     expect(screen.getByRole('button', { name: 'reports.shared.exportTable' })).toBeDisabled();
+  });
+
+  it('holds the export the page disables (an operation that has run)', () => {
+    renderLayout({ tableExport: { ...TABLE_EXPORT, disabled: true } });
+    expect(screen.getByRole('button', { name: 'reports.shared.exportTable' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'reports.shared.printReport' })).toBeEnabled();
   });
 });

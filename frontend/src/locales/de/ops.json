@@ -1328,7 +1328,6 @@
         "provideDriver": "Geben Sie {{driver}} für die ausgewählten Unternehmen an."
       },
       "unnamedAccount": "Unbenanntes Konto",
-      "exportTableCsv": "Tabelle als CSV exportieren",
       "exportTable": "Tabelle exportieren",
       "exportCsv": "CSV",
       "exportCsvTable": "CSV: {{table}}",
