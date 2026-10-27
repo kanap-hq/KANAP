@@ -41,3 +41,12 @@ export function percentileOf(counts: number[], p: number): number {
   }
   return LATENCY_BUCKETS_MS[LATENCY_BUCKETS_MS.length - 1];
 }
+
+/**
+ * The bucket percentile, never above the highest sample of the same window.
+ * The first bucket's bound is 1 ms, so a shorter wait would otherwise read above its maximum.
+ */
+export function percentileCapped(counts: number[], p: number, maxMs: number): number {
+  const value = percentileOf(counts, p);
+  return value > maxMs ? maxMs : value;
+}

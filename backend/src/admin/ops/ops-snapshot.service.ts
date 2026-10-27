@@ -3,7 +3,7 @@ import { hostname } from 'node:os';
 import { DataSource } from 'typeorm';
 import { apiProcessCount, clusterWorkerId, isLeadProcess, processLabel } from '../../common/cluster/process-role';
 import { DbMetricsService } from './db-metrics.service';
-import { addInto, emptyCounts, percentileOf, totalOf } from './latency-histogram';
+import { addInto, emptyCounts, percentileCapped, percentileOf, totalOf } from './latency-histogram';
 import { evaluateOpsHealth, OpsHealth } from './ops-health';
 import { OpsMetricsStore, RouteLatency } from './ops-metrics.store';
 import type { OpsSnapshotDto } from './dto/ops-snapshot.dto';
@@ -21,7 +21,8 @@ import { poolSaturated } from './pool-metrics';
  * lists them in `processes`, the newest row per worker slot (a worker forked again after a crash
  * has a new row, the old one ages out), and adds them up in `aggregate`: sums for requests and
  * memory, current pool use summed and the fullest pool named, the worst process for the event
- * loop, merged latency counts for the p95s. With one process nothing is published and both
+ * loop, merged latency counts for the p95s (the pool wait p95 is capped at the highest
+ * measured wait of that minute). With one process nothing is published and both
  * fields are absent.
  *
  * The figures held in memory (requests, latencies, event loop, pool) are always served; what the
@@ -38,7 +39,7 @@ export type ProcessSummary = {
   rssMB: number;
   heapUsedMB: number;
   eventLoop: { p95Ms: number; maxMs: number; p95Ms5m: number; maxMs5m: number };
-  pool: { maxPool: number; inUse: number; inUseMax1m: number; waiting: number; waitP95Ms1m: number; failures5m: number; waitCounts1m: number[] };
+  pool: { maxPool: number; inUse: number; inUseMax1m: number; waiting: number; waitP95Ms1m: number; waitMaxMs1m: number; failures5m: number; waitCounts1m: number[] };
   requests: { count1m: number; count5m: number; errors5xx5m: number };
   /** 5 minutes of latency counts per route (latency-histogram.ts buckets), 30 busiest routes. */
   routes: Record<string, number[]>;
@@ -192,6 +193,7 @@ export class OpsSnapshotService implements OnModuleInit, OnApplicationBootstrap,
         inUseMax1m: pool.inUseMax1m,
         waiting: pool.waitingCount,
         waitP95Ms1m: pool.wait.p95Ms1m,
+        waitMaxMs1m: pool.wait.maxMs1m,
         failures5m: pool.wait.failures5m,
         waitCounts1m: this.dbMetrics.poolMetrics.waitCounts(60),
       },
@@ -295,6 +297,10 @@ export function aggregateProcesses(processes: ProcessSummary[]): OpsAggregate {
     .slice(0, 30);
   const sum = (pick: (p: ProcessSummary) => number) => processes.reduce((total, p) => total + (Number(pick(p)) || 0), 0);
   const max = (pick: (p: ProcessSummary) => number) => processes.reduce((top, p) => Math.max(top, Number(pick(p)) || 0), 0);
+  // A summary published before the maximum existed cannot cap the merge: its waits may be the slow ones.
+  const waitMaxMs1m = processes.every((p) => typeof p.pool?.waitMaxMs1m === 'number' && Number.isFinite(p.pool.waitMaxMs1m))
+    ? max((p) => p.pool.waitMaxMs1m)
+    : Number.POSITIVE_INFINITY;
   let fullest: { pct: number; label: string | null } = { pct: 0, label: null };
   for (const p of processes) {
     const pct = p.pool.maxPool > 0 ? (p.pool.inUseMax1m / p.pool.maxPool) * 100 : 0;
@@ -311,7 +317,7 @@ export function aggregateProcesses(processes: ProcessSummary[]): OpsAggregate {
       inUsePctMax1m: Math.round(fullest.pct * 10) / 10,
       fullestProcess: fullest.label,
       waiting: sum((p) => p.pool.waiting),
-      waitP95Ms1m: percentileOf(waitCounts, 95),
+      waitP95Ms1m: percentileCapped(waitCounts, 95, waitMaxMs1m),
       failures5m: sum((p) => p.pool.failures5m),
     },
     requests: {
