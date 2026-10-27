@@ -253,5 +253,10 @@
       "overdueTasks": "Zeige mir meine überfälligen Aufgaben"
     },
     "title": "Plaid"
+  },
+  "enablePlaid": {
+    "text": "Plaid, der KANAP-Assistent, ist ausgeschaltet.",
+    "action": "Einschalten",
+    "dismiss": "Ausblenden"
   }
 }
