@@ -345,7 +345,7 @@ export class AiSystemPromptService {
       addSection(
         'formatting',
         'Formatting',
-        'Formatting: use Markdown only when it helps, keep the reply concise, and never expose internal IDs.',
+        'Formatting: write in the language of the user\'s last message, use Markdown only when it helps, keep the reply concise, and never expose internal IDs.',
       );
       return finish();
     }
@@ -481,6 +481,7 @@ export class AiSystemPromptService {
       'formatting',
       'Formatting',
       'Formatting:\n' +
+      '- Write every text the user sees in the language of their last message (the language of the conversation when that message is only a reference or a "yes"), including a short text written before or between tool calls: in a French conversation, "Je relance une recherche plus large", never "Let me try a looser search".\n' +
       '- Use Markdown for formatting responses.\n' +
       '- Keep responses concise and well-structured.\n' +
       '- Use tables for comparative data when appropriate.\n' +

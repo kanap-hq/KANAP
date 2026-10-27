@@ -508,7 +508,22 @@ async function testPromptRefusesUnsupportedWritesWithoutSubstitutePreview() {
   assert.match(prompt, /A request no write-preview tool can make gets a refusal in words, never a preview of another change/);
 }
 
+async function testPromptKeepsTheUserLanguageBetweenToolCalls() {
+  const service = new AiSystemPromptService();
+  const prompt = service.build({
+    ...baseParams,
+    availableTools: [{ name: 'search_all', category: 'discovery', description: 'Search.', input_summary: {}, read_only: true, surfaces: ['chat'] }],
+    contextProfile: selectAiContextProfile('Quelles applications utilisent PostgreSQL ?'),
+  });
+  // A text written between two tool calls is part of the answer: same language as the person.
+  assert.match(prompt, /Write every text the user sees in the language of their last message/);
+  assert.match(prompt, /including a short text written before or between tool calls/);
+  const minimalPrompt = service.build({ ...baseParams, availableTools: [], contextProfile: selectAiContextProfile('salut') });
+  assert.match(minimalPrompt, /write in the language of the user's last message/);
+}
+
 async function run() {
+  await testPromptKeepsTheUserLanguageBetweenToolCalls();
   await testPromptSaysItsLimitsAndRights();
   await testPromptRefusesUnsupportedWritesWithoutSubstitutePreview();
   await testStructuredReadGuidancePrefersQueryLayerTools();

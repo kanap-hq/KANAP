@@ -378,9 +378,12 @@ function rebuildMessagesFromStored(rawMessages: StoredChatMessage[], conversatio
           }
           i++;
         } else if (next.role === 'assistant' && next.tool_calls?.length) {
-          if (String(next.content || '').trim()) {
+          // A turn with text of its own starts a new block, unless the block so far has no text:
+          // a tool turn without text is no message, its tools join the answer that follows.
+          if (String(next.content || '').trim() && String(merged.content || '').trim()) {
             break;
           }
+          merged.content = appendAssistantContent(merged.content, next.content);
           merged.toolCalls!.push(...next.tool_calls);
           if (next.usage_json) merged.usage = next.usage_json;
           i++;
