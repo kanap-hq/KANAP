@@ -60,6 +60,7 @@ import AboutDialog from './about/AboutDialog';
 import { formatUserName } from '../utils/userDisplay';
 import SubscriptionBanner from './SubscriptionBanner';
 import TrialChip from './TrialChip';
+import NamePromptDialog from './NamePromptDialog';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
 import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
@@ -763,6 +764,7 @@ export default function Layout() {
           </React.Suspense>
         </Box>
       </Box>
+      <NamePromptDialog />
     </Box>
   );
 }
