@@ -41,7 +41,7 @@ Fünf gebündelte Kennzahlen stehen ganz oben. Sie beschreiben die gesamte Flott
 - **Aktionen heute**: wie viele Vorschläge heute tatsächlich ausgeführt wurden (freigegeben und angewendet oder automatisch angewendet).
 - **Annahme**: der Anteil der entschiedenen Vorschläge, die freigegeben statt abgelehnt wurden. Zeigt **Nicht genug Daten** an, bis genügend Entscheidungsverlauf vorliegt, um aussagekräftig zu sein.
 - **Verworfen**: der Anteil der von einem Menschen geprüften Vorschläge, die beiseitegelegt statt freigegeben oder abgelehnt wurden. Ein Verwerfen belastet den Agenten nicht; ein dauerhaft hoher Wert deutet daher meist auf ein Zielauswahl-Problem hin (der Agent greift Tickets auf, die er nicht bearbeiten sollte) und nicht auf schlechte Antwortqualität; beheben Sie es in der Zielauswahl des Agenten. Zeigt ebenfalls **Nicht genug Daten** an, bis genügend Prüfverlauf vorliegt.
-- **Kosten (heute / 7 Tage)**: was Ihre Agenten tatsächlich an KI-Ausgaben verursachen, in EUR: die heutige Summe und die vergangenen sieben Tage (heute eingeschlossen). Das umfasst **jeden** Agenten im Mandanten, Desk- wie Überwachungs-Agenten, und ist damit die Zahl, die Sie ansehen, wenn Sie wissen wollen, was die gesamte Flotte kostet. Die Wirtschaftlichkeit einzelner Agenten (Kosten pro Ticket, Limits pro Lauf und pro Tag) finden Sie auf den Registerkarten **Leistung und Autonomie** und **Einstellungen** des jeweiligen Agenten.
+- **Kosten (heute / 7 Tage)**: was Ihre Agenten tatsächlich an KI-Ausgaben verursachen, in EUR: die heutige Summe und die vergangenen sieben Tage (heute eingeschlossen). Das umfasst **jeden** Agenten im Arbeitsbereich, Desk- wie Überwachungs-Agenten, und ist damit die Zahl, die Sie ansehen, wenn Sie wissen wollen, was die gesamte Flotte kostet. Die Wirtschaftlichkeit einzelner Agenten (Kosten pro Ticket, Limits pro Lauf und pro Tag) finden Sie auf den Registerkarten **Leistung und Autonomie** und **Einstellungen** des jeweiligen Agenten.
 
 Betrachten Sie diese als Gesundheitszustand der Flotte, nicht als Abrechnung pro Agent. Für die Zahlen eines einzelnen Agenten öffnen Sie dessen Arbeitsbereich und verwenden die Registerkarte **Leistung und Autonomie**.
 
@@ -58,7 +58,7 @@ Unterhalb des Dashboards zeigt der Bereich **Agentenflotte** eine Karte pro Agen
 | **Überwachung (mit Rückfrage)** | Grün | Überwacht eigenständig, aber jeder Aktionstyp wird weiterhin zu Ihrer Freigabe geleitet. |
 | **Überwachung (teilweise automatisch)** | Grün | Überwacht, wobei mindestens ein Aktionstyp so hochgestuft wurde, dass er ohne Freigabe läuft. Der Rest fragt weiterhin zuerst. |
 | **Test** | Blau | Eingeschaltet, aber nicht überwachend: der Modus **Nur manuell**. Er läuft, wenn Sie ihn von Hand prüfen oder testen, nie von selbst. |
-| **Pausiert** | Rot | Durch eine Notfallpause angehalten (mandantenweit oder nur für diesen Agenten). Prüfungen und ausstehende Schreibvorgänge sind eingefroren, bis die Pause aufgehoben wird. |
+| **Pausiert** | Rot | Durch eine Notfallpause angehalten (für den gesamten Arbeitsbereich oder nur für diesen Agenten). Prüfungen und ausstehende Schreibvorgänge sind eingefroren, bis die Pause aufgehoben wird. |
 | **Nicht gestartet** | Grau | Erstellt, aber noch nie ausgeführt. Hier beginnt jeder neue Agent. |
 | **Aus** | Grau | Es läuft nichts, auch keine manuelle Prüfung. |
 | **Archiviert** | Grau | Aus dem aktiven Einsatz genommen, Konfiguration und Verlauf bleiben erhalten. |
@@ -98,9 +98,9 @@ Administratoren erhalten oben rechts auf der Seite eine Schaltfläche **Neuer Ag
 
 ## Notfallpause
 
-Wenn auf breiter Front etwas nicht stimmt (unerwartete Antworten gehen hinaus, eine Fehlkonfiguration, ein Vorfall), können Administratoren mit **Alle Agenten pausieren** in der Kopfzeile des Bereichs **Agentenflotte** alles auf einmal einfrieren. Sie werden nach einem Grund gefragt (der Teil des Audit-Protokolls wird), und ein dauerhaftes Banner zeigt daraufhin im gesamten Bereich **Notfallpause aktiv: {reason}** an. Solange sie aktiv ist, werden die Prüfungen jedes Agenten und alle ausstehenden Schreibvorgänge für den gesamten Mandanten angehalten. Klicken Sie im Banner auf **Pause aufheben**, um fortzufahren.
+Wenn auf breiter Front etwas nicht stimmt (unerwartete Antworten gehen hinaus, eine Fehlkonfiguration, ein Vorfall), können Administratoren mit **Alle Agenten pausieren** in der Kopfzeile des Bereichs **Agentenflotte** alles auf einmal einfrieren. Sie werden nach einem Grund gefragt (der Teil des Audit-Protokolls wird), und ein dauerhaftes Banner zeigt daraufhin im gesamten Bereich **Notfallpause aktiv: {reason}** an. Solange sie aktiv ist, werden die Prüfungen jedes Agenten und alle ausstehenden Schreibvorgänge für den gesamten Arbeitsbereich angehalten. Klicken Sie im Banner auf **Pause aufheben**, um fortzufahren.
 
-Diese mandantenweite Bremse ist bewusst grob. Um einen einzelnen Agenten, der sich falsch verhält, einzufrieren, ohne den Rest der Flotte anzutasten, verwenden Sie stattdessen **Agent pausieren** in der Steuerleiste im Arbeitsbereich dieses Agenten. Siehe den [Agent-Arbeitsbereich](agents-workspace.md). Und denken Sie an den Unterschied zwischen Pausieren und Ausschalten: **Aus** legt einen Agenten schlicht still, während eine Pause zusätzlich die bereits laufende Arbeit einfriert und festhält, warum.
+Diese Bremse für den gesamten Arbeitsbereich ist bewusst grob. Um einen einzelnen Agenten, der sich falsch verhält, einzufrieren, ohne den Rest der Flotte anzutasten, verwenden Sie stattdessen **Agent pausieren** in der Steuerleiste im Arbeitsbereich dieses Agenten. Siehe den [Agent-Arbeitsbereich](agents-workspace.md). Und denken Sie an den Unterschied zwischen Pausieren und Ausschalten: **Aus** legt einen Agenten schlicht still, während eine Pause zusätzlich die bereits laufende Arbeit einfriert und festhält, warum.
 
 ---
 
