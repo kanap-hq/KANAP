@@ -7,6 +7,7 @@ import {
   isDateTimeFormatCode,
   serialToDateTime,
   readXlsxGrid,
+  readXlsxGridAsync,
   serialToIsoDay,
   XLSX_OLD_FORMAT_MESSAGE,
   XLSX_READ_LIMITS,
@@ -32,6 +33,27 @@ function refuses(read: () => unknown, code: XlsxReadError['code'], limit: XlsxRe
   let caught: unknown;
   try {
     read();
+  } catch (error) {
+    caught = error;
+  }
+  assert.ok(caught instanceof XlsxReadError, `${label}: an XlsxReadError (got ${String(caught)})`);
+  const error = caught as XlsxReadError;
+  assert.equal(error.code, code, `${label}: code`);
+  assert.equal(error.limit, limit, `${label}: limit`);
+  assert.equal(error.getStatus(), 400, `${label}: a 400`);
+  assert.match(error.message, /^[A-Z].*\.$/, `${label}: a sentence`);
+  return error;
+}
+
+async function refusesAsync(
+  read: () => Promise<unknown>,
+  code: XlsxReadError['code'],
+  limit: XlsxReadError['limit'] = null,
+  label: string = code,
+): Promise<XlsxReadError> {
+  let caught: unknown;
+  try {
+    await read();
   } catch (error) {
     caught = error;
   }
@@ -435,7 +457,126 @@ function fuzz() {
   console.log(`read.spec.ts: fuzz ${results} read, ${refusals} refused`);
 }
 
-function run() {
+/** The same archive with one compressed byte of `entryName` flipped: the CRC no longer matches. */
+function corruptEntry(archive: Buffer, entryName: string): Buffer {
+  const out = Buffer.from(archive);
+  const name = Buffer.from(entryName, 'utf8');
+  for (let offset = 0; offset + 30 <= out.length; offset += 1) {
+    if (out.readUInt32LE(offset) !== 0x04034b50) continue;
+    const nameLength = out.readUInt16LE(offset + 26);
+    const extraLength = out.readUInt16LE(offset + 28);
+    if (!out.subarray(offset + 30, offset + 30 + nameLength).equals(name)) continue;
+    out[offset + 30 + nameLength + extraLength] ^= 0xff;
+    return out;
+  }
+  throw new Error(`corruptEntry: ${entryName} not found`);
+}
+
+/**
+ * The streamed reader: the same grid as the synchronous one on every fixture and hand-made shape, the
+ * same limits and refusals while the sheet is inflated, the CRC checked at the end, and a fuzz loop.
+ */
+async function streamReader() {
+  const sameAsWhole = [
+    fixture('writer-budget.xlsx'),
+    fixture('libreoffice-from-csv.xlsx'),
+    fixture('libreoffice-from-writer.xlsx'),
+    handmadeXlsx({
+      sharedStrings: [si('plain'), si('  spaced  '), '<si><r><t>ri</t></r><r><t>ch</t></r><rPh><t>x</t></rPh></si>'],
+      sheetData:
+        '<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c></row>' +
+        '<row r="3"><c r="A3" t="inlineStr"><is><t>a</t></is></c><c r="C3"><v>3.5</v></c><c r="D3" t="b"><v>1</v></c></row>',
+    }),
+    handmadeXlsx({
+      numFmts: '<numFmt numFmtId="164" formatCode="dd/mm/yyyy\\ hh:mm"/><numFmt numFmtId="165" formatCode="dd/mm/yyyy"/>',
+      cellXfs: [0, 164, 22, 165],
+      sheetData: '<row r="1"><c r="A1" s="1"><v>46297.3270833333</v></c><c r="B1" s="2"><v>45567.604166666664</v></c><c r="C1" s="3"><v>46297</v></c></row>',
+    }),
+    handmadeXlsx({ sheetData: '<row r="1"><c r="A1"><v>1</v></c></row>' }),
+  ];
+  for (const bytes of sameAsWhole) {
+    assert.deepEqual(await readXlsxGridAsync(bytes), readXlsxGrid(bytes), 'the streamed grid is the whole-part grid');
+  }
+
+  // Every limit is enforced while the sheet arrives, not after it is held.
+  const threeValueRows = '<row r="2"><c r="A2"><v>1</v></c></row><row r="7"><c r="B7"><v>2</v></c></row><row r="9"><c r="A9" s="0"/><c r="C9"><v>3</v></c></row>';
+  await refusesAsync(
+    () => readXlsxGridAsync(handmadeXlsx({ sheetData: `${threeValueRows}<row r="10"><c r="A10"><v>4</v></c></row>` }), { maxValueRows: 3 }),
+    'XLSX_TOO_LARGE',
+    'maxValueRows',
+    'stream: value rows',
+  );
+  const nine = [1, 2, 3].map((r) => `<row r="${r}">${['A', 'B', 'C'].map((col) => `<c r="${col}${r}"><v>${r}</v></c>`).join('')}</row>`).join('');
+  await refusesAsync(() => readXlsxGridAsync(handmadeXlsx({ sheetData: nine }), { maxElements: 22 }), 'XLSX_TOO_LARGE', 'maxElements', 'stream: elements');
+  const attributes = (n: number): string => Array.from({ length: n }, (_, i) => ` a${i}="0"`).join('');
+  await refusesAsync(
+    () => readXlsxGridAsync(handmadeXlsx({ sheetData: `<row r="1"><c r="A1"${attributes(64)}><v>1</v></c></row>` })),
+    'XLSX_TOO_LARGE',
+    'maxAttributesPerElement',
+    'stream: attributes',
+  );
+  await refusesAsync(
+    () => readXlsxGridAsync(handmadeXlsx({ sheetData: '<row r="1"><c r="XFE1"><v>1</v></c></row>' })),
+    'XLSX_TOO_LARGE',
+    'maxColumns',
+    'stream: columns',
+  );
+  await refusesAsync(
+    () => readXlsxGridAsync(handmadeXlsx({ sheetData: '<row r="1048577"/>' })),
+    'XLSX_TOO_LARGE',
+    'maxRows',
+    'stream: rows',
+  );
+
+  const sheet = 'xl/worksheets/sheet1.xml';
+  const padding = `<!--${' '.repeat(2 * 1024 * 1024)}-->`;
+  const packed = zipOf({ ...workbookParts({ sheetData: '' }), [sheet]: `<worksheet>${padding}<sheetData/></worksheet>` });
+  await refusesAsync(() => readXlsxGridAsync(packed), 'XLSX_TOO_LARGE', 'maxCompressionRatio', 'stream: ratio');
+
+  // A part that unpacks to more than it declares: the inflater stops at the declared size.
+  const honest = handmadeXlsx({ sheetData: `<row r="1"><c r="A1" t="inlineStr"><is><t>${'abcdefgh'.repeat(500)}</t></is></c></row>` });
+  await refusesAsync(() => readXlsxGridAsync(declareSize(honest, sheet, 1_000)), 'XLSX_INVALID', null, 'stream: a lying declared size');
+  await refusesAsync(
+    () => readXlsxGridAsync(handmadeXlsx({ sheetData: '', parts: { 'xl/workbook.xml': '<!ENTITY x "y"><workbook/>' } })),
+    'XLSX_DOCTYPE',
+    null,
+    'stream: ENTITY',
+  );
+  await refusesAsync(() => readXlsxGridAsync(handmadeXlsx({ sheetData: '<row r="1"><c r="A1"><v>1</v></row>' })), 'XLSX_INVALID', null, 'stream: malformed XML');
+  const utf16 = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('<worksheet/>', 'utf16le')]);
+  await refusesAsync(
+    () => readXlsxGridAsync(zipOf({ ...workbookParts({ sheetData: '' }), [sheet]: utf16 })),
+    'XLSX_INVALID',
+    null,
+    'stream: a UTF-16 part',
+  );
+
+  // The CRC-32 of the part, checked at the end of the stream.
+  const written = writeXlsx({ language: 'en', sheets: [{ name: 'Data', headers: ['a', 'b'], rows: [['one', { kind: 'number', value: 2 }]] }] });
+  await refusesAsync(() => readXlsxGridAsync(corruptEntry(written, sheet)), 'XLSX_INVALID', null, 'stream: a bad CRC');
+
+  const next = random(20261028);
+  let read = 0;
+  let refused = 0;
+  const sources = [fixture('writer-budget.xlsx'), fixture('libreoffice-from-csv.xlsx')];
+  for (let round = 0; round < 60; round += 1) {
+    const source = sources[round % sources.length];
+    const mutated = Buffer.from(source);
+    const flips = 1 + Math.floor(next() * 8);
+    for (let i = 0; i < flips; i += 1) mutated[Math.floor(next() * mutated.length)] = Math.floor(next() * 256);
+    try {
+      assert.ok(Array.isArray((await readXlsxGridAsync(mutated)).rows));
+      read += 1;
+    } catch (error) {
+      assert.ok(error instanceof XlsxReadError, `stream round ${round}: only an XlsxReadError (got ${String(error)})`);
+      refused += 1;
+    }
+  }
+  assert.ok(refused > 0, 'some streamed mutations are refused');
+  console.log(`read.spec.ts: stream fuzz ${read} read, ${refused} refused`);
+}
+
+async function run() {
   sharedAndRichStrings();
   inlineFormulaBooleanError();
   gaps();
@@ -446,7 +587,11 @@ function run() {
   writerRoundTrip();
   libreOffice();
   fuzz();
+  await streamReader();
   console.log('read.spec.ts: ok');
 }
 
-run();
+run().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -6,7 +6,8 @@ import { Decimal } from '../decimal';
 import {
   hasOldExcelSignature,
   hasZipSignature,
-  readXlsxGrid,
+  readXlsxGridAsync,
+  XlsxGrid,
   XlsxReadCell,
   XlsxReadError,
   XlsxReadErrorCode,
@@ -113,9 +114,9 @@ export async function readSheet(input: Buffer, schema: CsvReadSchema): Promise<S
   // With the imports in CSV only (`IMPORT_XLSX` off), a workbook meets the CSV decoder and its sentence.
   if (!isWorkbookBytes(input)) return { ...(await readCsv(input, schema)), format: 'csv' };
   validateSchema(schema);
-  let grid: ReturnType<typeof readXlsxGrid>;
+  let grid: XlsxGrid;
   try {
-    grid = readXlsxGrid(input, { maxValueRows: CSV_ROW_CAP + 1 + XLSX_BLANK_ROW_MARGIN });
+    grid = await readXlsxGridAsync(input, { maxValueRows: CSV_ROW_CAP + 1 + XLSX_BLANK_ROW_MARGIN });
   } catch (error) {
     if (!(error instanceof XlsxReadError)) throw error;
     // Past the row cap: the CSV file's refusal, word for word.
@@ -163,11 +164,11 @@ export interface ImportFileText {
  * importer reads as it reads the same text in a CSV file. Its refusals
  * are 400s with their `XLSX_*` code; a sheet past the import's row cap gets the CSV row-cap sentence.
  */
-export function readImportText(input: Buffer): ImportFileText {
+export async function readImportText(input: Buffer): Promise<ImportFileText> {
   if (!isWorkbookBytes(input)) return { text: decodeCsv(input).text, format: 'csv' };
-  let grid: ReturnType<typeof readXlsxGrid>;
+  let grid: XlsxGrid;
   try {
-    grid = readXlsxGrid(input, { maxValueRows: CSV_ROW_CAP + 1 + XLSX_BLANK_ROW_MARGIN });
+    grid = await readXlsxGridAsync(input, { maxValueRows: CSV_ROW_CAP + 1 + XLSX_BLANK_ROW_MARGIN });
   } catch (error) {
     if (!(error instanceof XlsxReadError)) throw error;
     if (error.limit === 'maxValueRows') throw new BadRequestException(rowCapMessage());

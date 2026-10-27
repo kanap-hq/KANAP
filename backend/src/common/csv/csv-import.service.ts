@@ -297,7 +297,7 @@ export class CsvImportService {
     let content: string;
     let firstSheetOnly: string | undefined;
     try {
-      const read = readImportText(buf);
+      const read = await readImportText(buf);
       content = read.text;
       if (read.format === 'xlsx' && (read.sheetCount ?? 1) > 1) firstSheetOnly = read.sheetName;
     } catch (err) {

@@ -6,6 +6,7 @@ export {
   hasOldExcelSignature,
   hasZipSignature,
   readXlsxGrid,
+  readXlsxGridAsync,
   XLSX_OLD_FORMAT_MESSAGE,
   XLSX_READ_LIMITS,
   XlsxReadError,

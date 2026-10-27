@@ -62,6 +62,8 @@ const ZIP64_LOCATOR_SIZE = 20;
 const ZIP64_END_SIGNATURE = 0x06064b50;
 const CENTRAL_HEADER_SIGNATURE = 0x02014b50;
 const CENTRAL_HEADER_SIZE = 46;
+const LOCAL_HEADER_SIGNATURE = 0x04034b50;
+const LOCAL_HEADER_SIZE = 30;
 const SLASH = 0x2f;
 
 function readUInt64(buffer: Buffer, offset: number): number {
@@ -158,6 +160,18 @@ function isOutputLimitError(error: unknown): boolean {
   return (error as { code?: unknown })?.code === 'ERR_BUFFER_TOO_LARGE';
 }
 
+/** One entry as the archive stores it, without decompressing it (see `BoundedArchive.stored`). */
+export interface StoredEntryData {
+  /** A view of the archive buffer, never a copy: deflated bytes, or the stored bytes. */
+  data: Buffer;
+  /** The uncompressed size the central directory declares. */
+  declared: number;
+  /** The CRC-32 the central directory declares. */
+  crc: number;
+  /** 8 (deflate) or 0 (stored), the ZIP method. */
+  method: number;
+}
+
 /**
  * A ZIP archive opened under limits. The entry list (entries and implied
  * folders, name lengths and levels) is checked when it is opened, before adm-zip
@@ -169,7 +183,7 @@ function isOutputLimitError(error: unknown): boolean {
 export class BoundedArchive {
   private readBytes = 0;
 
-  constructor(readonly zip: AdmZip, readonly limits: ArchiveLimits) {}
+  constructor(readonly zip: AdmZip, readonly limits: ArchiveLimits, private readonly buffer: Buffer) {}
 
   entries(): AdmZip.IZipEntry[] {
     return this.zip.getEntries();
@@ -201,6 +215,45 @@ export class BoundedArchive {
         if (error instanceof ArchiveLimitError) throw error;
       }
     }
+  }
+
+  /**
+   * The bytes of one entry as the archive stores them, for a caller that inflates and parses them
+   * itself (the xlsx sheet, streamed). The entry's declared size is checked against the limits left,
+   * exactly as `read` checks it; the local header is read to find where the bytes start, so the
+   * returned buffer is a view of the archive and not a copy. A damaged local header, an encrypted
+   * entry or an unsupported method throws the error adm-zip would, which callers turn into their
+   * own invalid-file refusal.
+   */
+  stored(entry: AdmZip.IZipEntry): StoredEntryData {
+    const remaining = this.limits.maxTotalBytes - this.readBytes;
+    const declared = Number(entry.header.size) || 0;
+    if (declared > this.limits.maxEntryBytes || declared > remaining) throw new ArchiveLimitError();
+    const offset = Number(entry.header.offset) || 0;
+    if (offset < 0 || offset + LOCAL_HEADER_SIZE > this.buffer.length || this.buffer.readUInt32LE(offset) !== LOCAL_HEADER_SIGNATURE) {
+      throw new Error('archive: damaged local header');
+    }
+    const flags = this.buffer.readUInt16LE(offset + 6);
+    if (flags & 0x1) throw new Error('archive: encrypted entry');
+    const method = this.buffer.readUInt16LE(offset + 8);
+    const nameLength = this.buffer.readUInt16LE(offset + 26);
+    const extraLength = this.buffer.readUInt16LE(offset + 28);
+    const start = offset + LOCAL_HEADER_SIZE + nameLength + extraLength;
+    const compressed = Number(entry.header.compressedSize) || 0;
+    if (start + compressed > this.buffer.length) throw new Error('archive: damaged local header');
+    return {
+      data: this.buffer.subarray(start, start + compressed),
+      declared,
+      crc: (Number(entry.header.crc) || 0) >>> 0,
+      method,
+    };
+  }
+
+  /** Counts bytes a caller decompressed itself against the total budget. */
+  account(bytes: number): void {
+    if (bytes < 0) throw new ArchiveLimitError();
+    this.readBytes += bytes;
+    if (this.readBytes > this.limits.maxTotalBytes) throw new ArchiveLimitError();
   }
 
   read(entry: AdmZip.IZipEntry): Buffer {
@@ -237,5 +290,5 @@ export function openBoundedArchive(source: Buffer | string, limits: Partial<Arch
   const declaredEntries = zip.getEntryCount();
   if (declaredEntries > effective.maxEntries) throw new ArchiveLimitError();
   assertEntryListWithinLimits(buffer, declaredEntries, effective);
-  return new BoundedArchive(zip, effective);
+  return new BoundedArchive(zip, effective, buffer);
 }
