@@ -96,7 +96,23 @@
     "deploymentCloud": "Bereitstellung: Cloud",
     "deploymentOnPremise": "Bereitstellung: On-Premise",
     "releaseNotes": "Versionshinweise",
-    "upgradeGuide": "Upgrade-Anleitung"
+    "upgradeGuide": "Upgrade-Anleitung",
+    "docs": "Dokumentation",
+    "license": "Quellcode unter der AGPL-3.0-Lizenz",
+    "trialDaysLeft_one": "Noch {{count}} Tag in Ihrer Testphase",
+    "trialDaysLeft_other": "Noch {{count}} Tage in Ihrer Testphase",
+    "choosePlan": "Tarif wählen",
+    "support": {
+      "title": "Support",
+      "contract": "Mit Supportvertrag: Schreiben Sie an {{email}}",
+      "included": "E-Mail-Support ist inklusive: Schreiben Sie an {{email}}",
+      "copy": "Angaben für den Support kopieren",
+      "copied": "Kopiert",
+      "discussions": "Andernfalls stellen Sie Ihre Frage in {{link}}",
+      "issues": "Melden Sie ein Problem in {{link}}",
+      "offer": "Für einen Supportvertrag siehe {{link}}",
+      "offerLink": "das Support-Angebot"
+    }
   },
   "connectedApps": {
     "title": "Verbundene Anwendungen",

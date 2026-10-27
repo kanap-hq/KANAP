@@ -96,7 +96,23 @@
     "deploymentCloud": "Implementación: nube",
     "deploymentOnPremise": "Implementación: local",
     "releaseNotes": "Notas de la versión",
-    "upgradeGuide": "Guía de actualización"
+    "upgradeGuide": "Guía de actualización",
+    "docs": "Documentación",
+    "license": "Código fuente bajo licencia AGPL-3.0",
+    "trialDaysLeft_one": "Queda {{count}} día de su prueba",
+    "trialDaysLeft_other": "Quedan {{count}} días de su prueba",
+    "choosePlan": "Elegir un plan",
+    "support": {
+      "title": "Soporte",
+      "contract": "Con contrato de soporte: escriba a {{email}}",
+      "included": "Soporte por correo incluido: escriba a {{email}}",
+      "copy": "Copiar la información para el soporte",
+      "copied": "Copiado",
+      "discussions": "Si no, haga su pregunta en {{link}}",
+      "issues": "Informe de un problema en {{link}}",
+      "offer": "Para contratar soporte, consulte {{link}}",
+      "offerLink": "la oferta de soporte"
+    }
   },
   "connectedApps": {
     "title": "Aplicaciones conectadas",
