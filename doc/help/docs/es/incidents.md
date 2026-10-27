@@ -170,6 +170,8 @@ El diario es lo que convierte esto en un registro y no en un formulario. Enumera
 
 Cada fila muestra el autor, la hora a la que se refiere (pase el cursor para ver «hace 3 días») y el tipo de entrada para todo lo que no sea una nota simple.
 
+Una entrada **Vínculos actualizados** solo se muestra a las personas que pueden leer el módulo que nombra: los activos y las tecnologías requieren la infraestructura, las aplicaciones las aplicaciones. Las notas conservan su texto, mencionen lo que mencionen.
+
 El redactor desaparece en cuanto el incidente se cierra o se cancela. Las modificaciones de campos hechas fuera del diario, como corregir la descripción, quedan en el registro de auditoría de la plataforma y no en el diario.
 
 La revisión del incidente conserva su propio historial. Cada guardado que la modifica produce una versión, y las versiones se conservan para siempre. La edición corriente no añade entradas al diario: redactar la revisión no es un acontecimiento del incidente, y el registro de auditoría recoge quién cambió qué. El cierre, la cancelación y las importaciones CSV sí escriben una entrada de diario, y esa entrada nombra la versión de la revisión a la que se aplica, mostrada como «Versión 4 de la revisión del incidente (DOC-12)».
