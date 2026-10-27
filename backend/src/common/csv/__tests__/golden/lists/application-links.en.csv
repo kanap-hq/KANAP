@@ -1,0 +1,3 @@
+﻿application_reference,application_name,technology_reference,technology_name,version,notes,source
+APP-1,Ledger,TEC-7,PostgreSQL,,"Line; ""quoted""
+second, line",Import

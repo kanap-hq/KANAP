@@ -1,0 +1,5 @@
+﻿company_name,name,description,status,disabled_at
+"Line; ""quoted""
+second, line","Line; ""quoted""
+second, line",,disabled,2025-06-30
+Alpha SA,Finance,"'=HYPERLINK(""http://x"")",enabled,

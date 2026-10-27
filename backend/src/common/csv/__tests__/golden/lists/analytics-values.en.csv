@@ -1,0 +1,4 @@
+﻿axis_code,name,description,status,disabled_at,applies_to
+nature,Run,"'=HYPERLINK(""http://x"")",enabled,,opex
+nature,"Line; ""quoted""
+second, line",,disabled,2025-12-31,

@@ -1,0 +1,4 @@
+﻿name;country_iso;address1;address2;postal_code;city;state;reg_number;vat_number;base_currency;status;disabled_at;notes;headcount_2025;it_users_2025;turnover_2025;headcount_2026;it_users_2026;turnover_2026;headcount_2027;it_users_2027;turnover_2027
+"Line; ""quoted""
+second, line";DE;;;01067;Köln;;;;EUR;disabled;31/12/2025;;;;;;;;0;;12,500
+Alpha SA;FR;;;;Lyon;;00123;FR001;EUR;enabled;;"'=HYPERLINK(""http://x"")";;;;120;40;-1250,500;;;

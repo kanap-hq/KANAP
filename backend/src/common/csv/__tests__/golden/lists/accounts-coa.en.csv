@@ -1,0 +1,4 @@
+﻿account_number,account_name,native_name,description,consolidation_account_number,consolidation_account_name,consolidation_account_description,status,nature
+2183,Matériel informatique,,,,,,disabled,capex
+6061,Fournitures,Fournitures non stockables,"'=HYPERLINK(""http://x"")",60,Achats,"Line; ""quoted""
+second, line",enabled,opex

@@ -1,0 +1,5 @@
+﻿code,kind,name,parent_code,company_name,owner_email,description,status,disabled_at
+CC-01,group,Group,,,ada@example.com,"'=HYPERLINK(""http://x"")",enabled,
+CC-01-002,cost_center,"Line; ""quoted""
+second, line",CC-01,"Line; ""quoted""
+second, line",,,disabled,2025-06-30
