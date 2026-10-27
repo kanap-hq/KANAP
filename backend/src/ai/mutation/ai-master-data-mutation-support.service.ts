@@ -389,7 +389,9 @@ function nameWithoutLeadingReference(reference: string | null, name: string | nu
   if (!reference) return name;
   const escaped = reference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const rest = name.replace(new RegExp(`^${escaped}(?:\\s*[-–—·:|]\\s*|\\s+)`, 'i'), '').trim();
-  return rest && rest !== name ? rest : name;
+  if (rest && rest !== name) return rest;
+  // A name that is only the reference leaves the title to the reference the card already shows.
+  return name.toLowerCase() === reference.toLowerCase() ? null : name;
 }
 
 function formatPlainValue(value: unknown, field?: FieldConfig): string | null {
