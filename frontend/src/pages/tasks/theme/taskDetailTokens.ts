@@ -157,8 +157,12 @@ export const kanapPalette = {
   border: {
     default: { light: '#E5E7EB', dark: 'rgba(255,255,255,0.08)' },
     soft: { light: '#F1F2F4', dark: 'rgba(255,255,255,0.05)' },
-    /** Hover border for form fields: one notch darker than `default`. */
+    /** One step above `default`. Form fields use `field` and `fieldHover`. */
     strong: { light: '#D1D5DB', dark: 'rgba(255,255,255,0.16)' },
+    /** Resting form-field border. Light matches `default`; dark is white at 20 %. */
+    field: { light: '#E5E7EB', dark: 'rgba(255,255,255,0.20)' },
+    /** Hover form-field border, above `field`. Light matches `strong`; dark is white at 32 %. */
+    fieldHover: { light: '#D1D5DB', dark: 'rgba(255,255,255,0.32)' },
   },
   text: {
     primary: { light: '#111827', dark: '#E5E7EB' },
