@@ -1088,7 +1088,7 @@ These neutral routes use the existing budget SQL list engine with an explicit `a
 | POST `/budget-lines/summary/aggregate` | `budget:reader` | `{ groups, others, total, groupCount, reportingCurrency, fxMissing }` |
 | GET `/budget-lines/resolve/:ref` | `budget:reader` | `{ id, nature, reference }` |
 | DELETE `/budget-lines/bulk` | `budget:admin` | `{ deleted, failed }` |
-| GET `/budget-lines/budget-file/export` | `budget:admin` | CSV attachment `budget.csv`, or `budget.xlsx` with `format=xlsx` |
+| GET `/budget-lines/budget-file/export` | `budget:admin` | CSV attachment `budget.csv`, or `budget.xlsx` with `format=xlsx`; the lines of both natures, with the parameters of the [Budget file](#budget-file-opex-and-capex) export |
 
 The summary routes take the same query parameters and response shapes as their `/spend-items/summary` equivalents: `page`, `limit`, `sort`, `q`, `filters`, lifecycle/status options, `years`, `shape`, `amounts`, `fte` and saved filter `ctx`, as applicable to each route. The summary uses the existing year-window default; ids and neighbors use the existing enabled-lines default. The native row has `product_name` as its title, `description` as its description, `item_number` as its shared BL number, `nature` (`opex` or `capex`), `reference` (`BL-n`) and `legacy_number`. `shape=grid` preserves these fields. Nature supports set filtering and sorting; filter values include both natures subject to the other filters. Analytics columns include shared and nature-specific dimensions. Quick search matches existing text plus `BL-n`, a bare BL number and case-insensitive legacy `OPX-n` and `CPX-n` references.
 
@@ -1566,31 +1566,40 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
   - Response: `{ stats: { [configId]: { avgProjectDays, avgTotalDays } } }`
 - GET `/portfolio/team-members/:id/time-stats` — time stats for a single contributor config **[Requires: portfolio_settings:reader]**
   - Response: `{ userId, averageProjectDays, monthly: [{ yearMonth, projectDays, otherDays, totalDays }] }`
+- GET `/portfolio/team-members/skills-matrix/export?teamId=&employmentTypeId=&orientation=&showUnused=&hiddenCategories=&format=csv|xlsx&language=&tz=`: the skills matrix as the screen draws it **[Requires: portfolio_settings:reader]**
+  - `teamId`: `all` (default), `unassigned` or a team id. `employmentTypeId`: `all` (default) or a contract type id. A team or contract type that is not one of the tenant is a `400`.
+  - `orientation`: `contributors` (default) or `skills`. `showUnused`: `true|false` (default `false`). `hiddenCategories`: a JSON list of category names (names may hold commas).
+  - Levels are numbers from 1 to 4, empty when none is declared. The footer row holds the summaries of the column entries. One table. Any other query key, `table` included, is a `400`. Recorded as an export.
 
 ## Portfolio Reports
-- GET `/portfolio/reports/status-change?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&statuses=...&itemTypes=...&sourceIds=...&categoryIds=...&streamIds=...` — status change report **[Requires: portfolio_reports:reader]**
-  - Required:
-    - `startDate` (`YYYY-MM-DD`)
-    - `endDate` (`YYYY-MM-DD`)
-  - Optional filters:
-    - `statuses`: comma-separated status values; applies to the status reached after the change (final status for the period)
-    - `itemTypes`: comma-separated `task|request|project`
-    - `sourceIds`, `categoryIds`, `streamIds`: comma-separated UUIDs
-  - Inclusion logic:
-    - Includes items whose `status` changed during the selected period (inclusive by day).
-    - If an item changed status multiple times in the period, only the latest in-period change is kept.
-    - Task scope includes standalone tasks only (project-linked tasks excluded).
-  - Response:
-    - `{ items: StatusChangeReportRow[] }`
-    - `StatusChangeReportRow`: `{ itemType, itemId, itemPath, name, priority, status, sourceId, sourceName, categoryId, categoryName, streamId, streamName, companyName, lastChangedAt }`
-- GET `/portfolio/reports/status-change/filter-values?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&...` — distinct filters for status change report **[Requires: portfolio_reports:reader]**
-  - Returns values constrained to the current query scope and period.
-  - Response:
-    - `{ statuses: string[], itemTypes: ('task'|'request'|'project')[], sources: {id,name}[], categories: {id,name}[], streams: {id,name,categoryId}[] }`
-- GET `/portfolio/reports/status-change/export?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&...&format=csv|xlsx` — export status change report **[Requires: portfolio_reports:reader]**
-  - `format` defaults to `csv`.
-  - CSV columns: `Name, Item Type, Priority, Status, Source, Category, Stream, Company, Last Changed`.
-  - XLSX includes the same columns; `Name` cells are hyperlinks to the item workspace route.
+- GET `/portfolio/reports/weekly?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&tz=&statuses=&entities=&groupBy=&sourceIds=&categoryIds=&streamIds=&taskTypeIds=&projectIds=&teamIds=`: weekly report of what was created, modified and closed in a period **[Requires: portfolio_reports:reader]**
+  - Required: `startDate` and `endDate` (`YYYY-MM-DD`, start on or before end). A missing or malformed date, or a start after the end, is a `400`.
+  - Optional:
+    - `tz`: IANA time zone of the viewer; the period and every event day are read in it
+    - `entities`: comma-separated `request|project|task`. Unknown values are dropped; nothing left means all three. An object left out is not queried and comes back as empty lists
+    - `groupBy`: `person` adds `byPerson`; any other value keeps the default `type`
+    - `statuses`: comma-separated; matches the status reached, that is the status left by the last status event of the period. An item with no status event in the period matches none
+    - `sourceIds`, `categoryIds`, `streamIds`, `taskTypeIds`, `projectIds`, `teamIds`: comma-separated UUIDs. `projectIds` and `teamIds` also narrow the logged time
+  - Response: `{ requests, projects, tasks, byPerson? }`. Each of the first three is `{ created, modified, closed }`, a list of rows with `ref`, `itemPath`, `name`, `sourceId`/`sourceName`, `categoryId`/`categoryName`, `streamId`/`streamName`, `company`, `status`, `createdAt`, `eventAt` and `changes` (filled on `modified` only: `{ statusChain, fields[] }`). Projects add `projectId`, `priority`, `progress`, `origin`, `originValue`. Tasks add `taskId`, `taskTypeId`, `taskTypeName`, `taskTypeCode`, `priority`. Requests add `requestId`.
+  - `byPerson` (only with `groupBy=person`): `{ teams: [{ teamId, teamName, members: [{ userId, name, contributorRef, loggedDays, created, modified, closed }], totals }], unassigned }`. It covers tasks and logged time only.
+- GET `/portfolio/reports/weekly/filter-values`: options of the weekly report filters **[Requires: portfolio_reports:reader]**
+  - No parameters. Active values only.
+  - Response: `{ sources: {id,name}[], categories: {id,name}[], streams: {id,name,categoryId}[], taskTypes: {id,name,code}[] }`
+- GET `/portfolio/reports/weekly/export?<same parameters as weekly>&format=csv|xlsx&language=`: the report as a file **[Requires: portfolio_reports:reader]**
+  - Same parameters and the same service call as `weekly`, same `400` on the dates. `format` is read in any case; `xlsx` gives a workbook, any other value or none gives CSV. `language` (else the user's locale) sets the words, the days, the decimal mark and the CSV separator. A parameter this route does not know is ignored.
+  - File name `weekly-report-<startDate>_to_<endDate>.csv|xlsx`. Recorded as an export (the path ends with `/export`).
+  - CSV: one block per object and list (created, modified, closed), each with a heading and a header row. With `groupBy=person`, the tasks are one block by person.
+  - XLSX: one sheet per object covered (requests, projects, tasks), with an event column in place of the three lists. The reference cells link to the item, with absolute links when an application address is configured and relative ones otherwise.
+- GET `/portfolio/reports/filter-values`: project and team options for the report filters **[Requires: portfolio_reports:reader]**
+  - Response: `{ projects: { id, ref, name, status }[], teams: { id, name }[] }`. Open projects come first. Served under the reports' own permission, so a report reader needs no access to the project list or the team settings.
+- GET `/portfolio/reports/flow?weeks=&months=&tz=&sourceIds=&categoryIds=&projectIds=&teamIds=`: flow report **[Requires: portfolio_reports:reader]**
+  - `weeks` and `months` take the horizons the screen offers; any other value falls back to the default. Ids are comma-separated.
+- GET `/portfolio/reports/upcoming?taskDays=&projectDays=&requestDays=&tz=&projectIds=&teamIds=`: what is due soon **[Requires: portfolio_reports:reader]**
+  - Each `...Days` takes the horizons the screen offers; any other value falls back to the default.
+- GET `/portfolio/reports/steering-summary?days=&tz=`: steering summary **[Requires: portfolio_reports:reader]**
+  - `days` takes the horizons the screen offers; any other value falls back to the default. A project with no activity for the stale threshold counts as stale.
+- GET `/portfolio/reports/attention-by-assignee?staleDays=&tz=&projectIds=&teamIds=`: items that need attention, by assignee **[Requires: portfolio_reports:reader]**
+- GET `/portfolio/reports/classification-gaps`: items missing a source, category or stream **[Requires: portfolio_reports:reader]**
 - GET `/portfolio/reports/capacity-heatmap?teamIds=...&statuses=...&capacityMode=...&groupBy=...` — capacity heatmap **[Requires: portfolio_reports:reader]**
   - `teamIds`: comma-separated team ids; include `no-team` to include contributors without a team (omit to include all teams)
   - `statuses`: comma-separated project statuses; default is `waiting_list,planned,in_progress,in_testing,on_hold`
@@ -1603,7 +1612,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - GET `/portfolio/reports/time-logged?months=6|12&tz=&projectIds=&teamIds=` — days logged by month, team and person **[Requires: portfolio_reports:reader]**
   - Each month cell carries `projectDays`, `otherDays` and `totalDays` (the two added, one decimal: the total the screen shows).
 - GET `/portfolio/reports/time-logged/export?months=6|12&tz=&projectIds=&teamIds=&format=csv|xlsx&language=` — the report table as a file **[Requires: portfolio_reports:reader]**
-  - One row per person and month: Team, Person, Month (`YYYY-MM`), Project days, Other days, Total days, from the same report call. `months` other than 6 or 12, an unknown `tz` or any other query key is a `400`; unknown project or team ids match nothing, as on the data route.
+  - One row per person and month: Team, Person, Month (`YYYY-MM`), Project days, Other days, Total days, from the same report call. `months` defaults to 6. A `months` other than 6 or 12, an unknown `tz`, a `projectIds` or `teamIds` value that is not an id or names no project (team) of the tenant, or any other query key is a `400`. The data route is lenient on ids; the export is not, so the Parameters sheet never lists a filter the file did not apply.
 - GET `/portfolio/reports/capacity-heatmap/contributor/:contributorId?statuses=...` — project breakdown for contributor **[Requires: portfolio_reports:reader]**
   - Response: `{ projects: ProjectBreakdownRow[] }`
 - POST `/portfolio/reports/roadmap/generate` — generate roadmap scenario (read-only simulation) **[Requires: portfolio_reports:reader]**
@@ -1638,6 +1647,9 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
     - `excludedProjectIds` excludes projects entirely from the scenario, including frozen-capacity consumption.
     - Best effort is used for missing capacity: contributors without configured capacity are dropped per project; the project is unschedulable only if no contributor with capacity remains.
     - For already started projects (past `actual_start`, fallback eligible past `planned_start`), the historical start is preserved while remaining effort is simulated forward.
+- POST `/portfolio/reports/roadmap/occupation/export?format=csv|xlsx&language=&tz=&table=contributors|teams`: the occupation tables of a roadmap generation as a file **[Requires: portfolio_reports:reader]**
+  - The body is the `generate` payload, validated the same way. The generation runs without the sensitivity reruns, which only rank the bottlenecks.
+  - CSV: one table, picked by `table` (required, `400` otherwise). XLSX: both tables (the `table` one first) and a Parameters sheet. Any other query key is a `400`. Recorded as an export (the path ends with `/export`).
 
 ## Portfolio Projects
 - GET `/portfolio/projects/:id?include=activities` — load project (include activity feed via `include=activities`) **[Requires: portfolio_projects:reader]**
@@ -1964,6 +1976,12 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 - POST `/budget-lines/budget-operations/clear-column` (requires `budget:admin`)
   - Body: `{ scope: 'all' | 'opex' | 'capex', year, column }`. The clear below on each nature of the scope, under one tenant lock, the lines in play locked first in id order (a line that entered the scope after that lock: 409 `retry`); a frozen column of either nature refuses the whole reset (403 naming the nature)
   - Returns `{ success, scope, summary: { totalItems, cleared, skipped, errors } }`, the natures added up
+- GET `/budget-lines/budget-operations/clear-column/export?scope=all|opex|capex&year=YYYY&column=&format=csv|xlsx&language=&tz=` (requires `budget:admin`, reserved to people without data-scoped access): the lines of "Reset a column" with the column's amount, largest first, as the screen shows them
+  - `scope`, `year` and `column` are required; `column` is one of the five columns and must be shown by the tenant. Any other query key is a `400`. One table; with `scope=all` it adds a column for the nature. Recorded as an export.
+- GET `/budget-lines/budget-operations/copy/export?scope=all|opex|capex&sourceYear=&destinationYear=&amounts=true|false&allocations=true|false&sourceColumn=&destinationColumn=&percentageIncrease=&overwrite=true|false&format=csv|xlsx&language=&tz=` (requires `budget:admin`, reserved to people without data-scoped access): the preview of "Copy budget columns" as a file
+  - `scope`, `sourceYear` and `destinationYear` are required. With `amounts=true`, `sourceColumn` and `destinationColumn` are required and `percentageIncrease` (a decimal, default `0`) is read; without it those three are a `400`. The preview is the dry run of the copy, so its checks apply (a part asked, the freeze, the percentage). The flags are `true|false` and default to `false`. Any other query key is a `400`. One table, largest source amount first when the amounts are copied. Recorded as an export.
+- GET `/master-data-operations/copy/export?sourceYear=&destinationYear=&includeCompanies=true|false&includeDepartments=true|false&companyMetrics=headcount,it_users,turnover&format=csv|xlsx&language=&tz=` (requires `budget_ops:admin`, `companies:admin` or `departments:admin`, reserved to people without data-scoped access): the preview (dry run) of the master data copy as a file
+  - `sourceYear` and `destinationYear` are four-digit years. `companyMetrics` is a comma-separated list. The dry run checks the rest as for the screen. Any other query key is a `400`. Recorded as an export.
 
 ### Copy Budget Columns
 - POST `/spend-items/budget-operations/copy-column`
@@ -2012,7 +2030,7 @@ POST  /spend-versions/v-2025/allocations/bulk-upsert []
 
 ### Budget file (OPEX and CAPEX)
 One file for both natures since lot C1b: a `nature` column (`opex`, `capex`) says what each row is, and every check of a row follows its nature. The OPEX list exports its OPEX lines, the CAPEX list its CAPEX lines, in the same layout; either route imports a file of both. The manual is `doc/help/docs/en/budget-file.md`.
-- GET `/spend-items/budget-file/export?language=en|fr|de|es&amountYears=2026,2027&columns=budget,revision&detail=yearly|months&all=true&format=csv|xlsx` (same on `/capex-items/budget-file/export`)
+- GET `/spend-items/budget-file/export?language=en|fr|de|es&amountYears=2026,2027&columns=budget,revision&detail=yearly|months&all=true&format=csv|xlsx` (same on `/capex-items/budget-file/export`, and on `/budget-lines/budget-file/export` for the lines of both natures)
   - Requires `budget:admin` (a read: a frozen tenant keeps it). The other query parameters are the list's own (`sort`, `q`, `filters`, `status`, `includeDisabled`, `ctx`), and the file holds the lines the list engine returns, in its order: lines of the route's nature, `nature` filled, `item_number` written `BL-n`
   - One `analytics:<code>` column per enabled dimension; a line's cell is empty on a dimension of the other nature
   - `all=true` drops the filters, the search and the status scope and includes ended lines. `amountYears` defaults to the current year ±1, at most twelve years within ten years of the current one. `columns` defaults to the tenant's shown columns, in the fixed order `budget, revision, forecast, actual, landing`. `detail=months` writes `<column>_<year>_<mm>` instead of `<column>_<year>`
