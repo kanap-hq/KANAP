@@ -23,40 +23,72 @@ git diff HEAD origin/stable -- CHANGELOG.md
 
 **2. Sichern Sie die Datenbank, die Dateien und die Konfiguration.** Führen Sie die Befehle aus [Vor einem Upgrade](#vor-einem-upgrade) aus. Sie schreiben in ein eigenes Verzeichnis, das die tägliche Sicherung nie berührt. Migrationen gehen nur vorwärts: Diese Sicherung ist der Weg zurück.
 
-**3. Pullen, bauen, starten.**
+**3. Pullen und starten.**
 
 ```bash
 cd /opt/kanap
 git checkout stable
 git pull origin stable
-docker compose -f infra/compose.onprem.yml build --pull
+docker compose -f infra/compose.onprem.yml pull
 docker compose -f infra/compose.onprem.yml up -d
 # Der alte API-Container schließt zuerst die laufenden Anfragen, die von ihm eingereihten E-Mails und
 # seine laufenden Hintergrundjobs ab (bis zu 20 s) und stoppt dann. Die Migrationen laufen beim Start des neuen.
 ```
 
-Docker Compose baut die Images `api` und `web` selbst, aus den gerade gepullten Quellen. `--pull` holt außerdem aktualisierte Basis-Images. Ein `up -d` allein behält die alte Version, weil Compose die vorhandenen Images wiederverwendet. Führen Sie immer zuerst `build` aus. Der Build braucht den Arbeitsspeicher aus den [Installationsvoraussetzungen](installation.md#voraussetzungen). Bricht er mit `signal: killed` ab, hatte der Server nicht genug Arbeitsspeicher: Bauen Sie die beiden Images nacheinander (`build --pull api`, dann `build --pull web`) und führen Sie dann `up -d` aus.
+`infra/compose.onprem.yml` nennt die Images der ausgecheckten Version. `pull` lädt sie von `ghcr.io` herunter, und `up -d` erstellt die Container darauf neu. Wenn Sie die Images selbst bauen (siehe [Die Images selbst bauen](installation.md#build-the-images-yourself)), führen Sie statt `pull` und `up -d` die Befehle `build` und `up -d` dieses Abschnitts aus.
+
+**Erstes Upgrade auf eine Version mit veröffentlichten Images.** Versionen bis 26.10.8 wurden auf dem Server gebaut. Für den Wechsel auf eine spätere Version genügt das obige Verfahren. Sobald die neue Version läuft und die Prüfungen aus Schritt 4 besteht, geben Sie den Build-Cache und die alten Images frei (etwa 2,5 GB). Ergänzen Sie `kanap-api-tools` in der zweiten Zeile, wenn Sie das Image der Wartungswerkzeuge gebaut hatten.
+
+```bash
+docker builder prune
+docker image rm infra-api infra-web
+docker image prune
+```
+
+Ab dieser Version brauchen Upgrades ausgehenden Zugang zu `ghcr.io` statt zu `registry.npmjs.org` und den Spiegeln der Alpine-Pakete (siehe [Firewall-Regeln](configuration.md#outbound-installation-and-upgrades)).
+
+**Von einem Checkout von `main` vor 26.10.1.** Eine Installation, die vor der ersten Version eingerichtet wurde, folgt `main`. So wechseln Sie zu den veröffentlichten Versionen:
+
+1. Sichern Sie wie in Schritt 2.
+2. Holen Sie den Stand und wechseln Sie auf den Branch der veröffentlichten Versionen. `git checkout stable` geht von jedem Commit von `main` aus vorwärts.
+
+    ```bash
+    cd /opt/kanap
+    git fetch origin
+    git diff HEAD origin/stable -- CHANGELOG.md
+    git checkout stable
+    ```
+
+3. Lesen Sie jeden Changelog-Eintrag, den `git diff` zeigt, und tun Sie, was die Zeilen „Action required“ verlangen. Prüfen Sie besonders in `.env`: `DEPLOYMENT_MODE` ist `single-tenant` (ein unbekannter Wert stoppt die API beim Start, siehe [Bereitstellungsmodus](configuration.md#erforderlich-bereitstellungsmodus)), und `APP_BASE_URL` ist gesetzt (siehe [Upgrade einer Installation aus der Zeit vor Version 26.10.1](configuration.md#upgrade-einer-installation-aus-der-zeit-vor-version-26101)). Prüfen Sie im nginx des Servers `client_max_body_size 80m` (siehe das [Reverse-Proxy-Beispiel](installation.md#reverse-proxy-example-nginx)).
+4. Führen Sie `docker compose -f infra/compose.onprem.yml pull` aus, dann `docker compose -f infra/compose.onprem.yml up -d`. Die Migrationen aller Versionen dazwischen laufen beim ersten Start. Die Migration, die die Betriebssysteme der Server in Technologien umwandelt, dauert umso länger, je mehr Server es gibt: Die API zeigt bis zu ihrem Ende `starting`.
+5. Prüfen Sie das Upgrade wie in Schritt 4, Smoke-Test eingeschlossen, und geben Sie dann den Build-Cache wie oben frei.
+
+Testen Sie einen Sprung über mehrere Versionen zuerst auf einer Kopie der Datenbank.
 
 **Eine bestimmte Version.** Um eine andere veröffentlichte Version als die neueste zu betreiben, holen Sie die Tags und checken einen davon aus. Der Checkout ist losgelöst (detached). Das `git checkout stable` aus Schritt 3 bringt ihn beim nächsten Upgrade zurück auf den Branch.
 
 ```bash
+cd /opt/kanap
 git fetch --tags
-git checkout v26.10.1
+git checkout v26.10.9
+docker compose -f infra/compose.onprem.yml pull
+docker compose -f infra/compose.onprem.yml up -d
 ```
 
-Führen Sie dann die obigen Befehle `build --pull` und `up -d` aus.
-
-**`main` folgen.** Der Branch `main` enthält jede gemergte Änderung, bevor sie als Version veröffentlicht wird. Sie können ihm folgen; empfohlen sind die veröffentlichten Versionen.
+**`main` folgen.** Der Branch `main` enthält jede gemergte Änderung, bevor sie als Version veröffentlicht wird. Sie können ihm folgen, mit Images, die Sie selbst bauen (siehe [Die Images selbst bauen](installation.md#build-the-images-yourself)); empfohlen sind die veröffentlichten Versionen.
 
 **Welche Version läuft.**
 
 ```bash
 cd /opt/kanap
 git describe --tags
+docker compose -f infra/compose.onprem.yml images
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/config/public"
 ```
 
-Der erste Befehl gibt die Version des Checkouts aus. Der zweite antwortet mit einem JSON-Dokument, dessen Feld `version` die Version ist, die die API meldet.
+Der erste Befehl gibt die Version des Checkouts aus. Der zweite listet die Images der Container auf, mit ihrer Version in der Spalte `TAG`. Der dritte antwortet mit einem JSON-Dokument, dessen Feld `version` die Version ist, die die API meldet.
+
+Die veröffentlichten Images tragen einen signierten Nachweis ihres Builds: aus dem Tag der Version, durch den Workflow des KANAP-Repositorys selbst. Mit der GitHub-CLI prüft ihn `gh attestation verify oci://ghcr.io/kanap-hq/kanap-api:26.10.9 -R kanap-hq/KANAP`.
 
 **4. Das Upgrade prüfen.**
 
@@ -67,13 +99,13 @@ docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^
 curl -sSk -w '\n' "https://${KANAP_HOST}/api/health"
 ```
 
-- `ps` zeigt `api` und `web` nach etwa einer Minute als `healthy`. Hat die neue Version den Web-Inhalt nicht geändert, behält Compose den laufenden `web`-Container, und `ps` kann statt `infra-web` eine Image-ID zeigen. Das ist erwartet.
+- `ps` zeigt `api` und `web` nach etwa einer Minute als `healthy`.
 - Das API-Protokoll zeigt die Migrationen (`[entrypoint] Migrations complete (N executed).`) und dann den Start der API (`Nest application successfully started`). Lesen Sie auch die anderen Startzeilen: Die [Konfiguration](configuration.md#was-das-api-protokoll-beim-start-zeigt) erklärt jede davon.
 - Die Health-Adresse antwortet `{"status":"ok"}`.
 
 **Datenzugriff nach Bereich.** Nach einem Upgrade auf eine Version mit [Datenzugriff](../data-access.md) arbeiten alle weiterhin mit allen Daten. Um Personen auf einen Teil des Budgets und der Verträge zu begrenzen, führen Sie einmal den optionalen Schritt [Datenzugriff nach Bereich](installation.md#optional-data-scoped-access) aus und starten Sie dann die API neu. Der Schritt erfolgt einmal pro PostgreSQL-Server: Spätere Upgrades erfordern nichts weiter, denn die API setzt die Berechtigungen der Rolle bei jedem Start.
 
-Führen Sie dann den Smoke-Test aus. Er prüft die Datenbank, die Anmeldung, die wichtigsten Listen und die Exporte über die öffentliche API. Der Server hat kein Node.js, daher läuft der Test in einem Container. Der erste Lauf auf einem Server lädt das Image `node:24-alpine` von Docker Hub (etwa 240 MB) und behält es: Führen Sie den Test einmal aus, solange der ausgehende Zugriff offen ist (siehe [Firewall-Regeln](configuration.md#ausgehend-ersteinrichtung-und-build)). Geben Sie an der Eingabeaufforderung das aktuelle Passwort des Kontos `ADMIN_EMAIL` ein; beim Tippen wird nichts angezeigt. Das `ADMIN_PASSWORD` aus `.env` wird nur beim ersten Start gelesen und ist daher möglicherweise nicht mehr das richtige. Behalten Sie `-e KANAP_INSECURE_TLS=1`, wenn das Zertifikat selbstsigniert ist (der Container vertraut ihm nicht); entfernen Sie es bei einem Zertifikat einer öffentlichen Zertifizierungsstelle. Bei einem Zertifikat Ihrer internen Zertifizierungsstelle behalten Sie es oder ersetzen es durch `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`, damit der Container das Zertifikat gegen die Datei der Zertifizierungsstelle in `/opt/kanap/infra/certs/` prüft (siehe [Zertifikate einer internen Zertifizierungsstelle](configuration.md#optional-zertifikate-einer-internen-zertifizierungsstelle)). Fügen Sie auf einer Produktionsinstallation nicht `-e KANAP_WRITE=1` hinzu: Diese Option legt eine temporäre Aufgabe mit einem Anhang an, um den Speicher zu prüfen, was nur zu einer neuen Installation passt.
+Führen Sie dann den Smoke-Test aus. Er prüft die Datenbank, die Anmeldung, die wichtigsten Listen und die Exporte über die öffentliche API. Der Server hat kein Node.js, daher läuft der Test in einem Container. Der erste Lauf auf einem Server lädt das Image `node:24-alpine` von Docker Hub (etwa 240 MB) und behält es: Führen Sie den Test einmal aus, solange der ausgehende Zugriff offen ist (siehe [Firewall-Regeln](configuration.md#outbound-installation-and-upgrades)). Geben Sie an der Eingabeaufforderung das aktuelle Passwort des Kontos `ADMIN_EMAIL` ein; beim Tippen wird nichts angezeigt. Das `ADMIN_PASSWORD` aus `.env` wird nur beim ersten Start gelesen und ist daher möglicherweise nicht mehr das richtige. Behalten Sie `-e KANAP_INSECURE_TLS=1`, wenn das Zertifikat selbstsigniert ist (der Container vertraut ihm nicht); entfernen Sie es bei einem Zertifikat einer öffentlichen Zertifizierungsstelle. Bei einem Zertifikat Ihrer internen Zertifizierungsstelle behalten Sie es oder ersetzen es durch `-v /opt/kanap/infra/certs:/certs:ro -e NODE_EXTRA_CA_CERTS=/certs/company-ca.pem`, damit der Container das Zertifikat gegen die Datei der Zertifizierungsstelle in `/opt/kanap/infra/certs/` prüft (siehe [Zertifikate einer internen Zertifizierungsstelle](configuration.md#optional-zertifikate-einer-internen-zertifizierungsstelle)). Fügen Sie auf einer Produktionsinstallation nicht `-e KANAP_WRITE=1` hinzu: Diese Option legt eine temporäre Aufgabe mit einem Anhang an, um den Speicher zu prüfen, was nur zu einer neuen Installation passt.
 
 ```bash
 read -rsp 'Administrator password: ' KANAP_PASSWORD; echo; export KANAP_PASSWORD
@@ -89,7 +121,7 @@ Die letzte Zeile der Ausgabe lautet `0 failed`. Mit `KANAP_INSECURE_TLS=1` sind 
 **Zurücksetzen auf die vorherige Version.** Migrationen gehen nur vorwärts, daher spielt ein Zurücksetzen die vor dem Upgrade erstellte Sicherung unter der vorherigen Version wieder ein:
 
 1. Stoppen Sie KANAP: `cd /opt/kanap`, dann `docker compose -f infra/compose.onprem.yml down`. Ein Zurücksetzen beginnt oft in einem neuen Terminal, außerhalb von `/opt/kanap`.
-2. Checken Sie die vorherige Version aus und bauen Sie sie. Der Build braucht den ausgehenden Zugriff eines Upgrades: Haben Sie ihn nach dem Upgrade geschlossen, öffnen Sie ihn zuerst (siehe [Firewall-Regeln](configuration.md#ausgehend-ersteinrichtung-und-build)). Führen Sie dann `git checkout v<previous version>` aus (zum Beispiel `git checkout v26.10.1`), danach `docker compose -f infra/compose.onprem.yml build --pull`.
+2. Checken Sie die vorherige Version aus und laden Sie ihre Images herunter. Das braucht den ausgehenden Zugriff eines Upgrades: Haben Sie ihn nach dem Upgrade geschlossen, öffnen Sie ihn zuerst (siehe [Firewall-Regeln](configuration.md#outbound-installation-and-upgrades)). Führen Sie `git checkout v<previous version>` aus (zum Beispiel `git checkout v26.10.9`), danach `docker compose -f infra/compose.onprem.yml pull`. Eine Version bis 26.10.8 hat keine veröffentlichten Images: Bauen Sie sie, wie es die Anleitung dieser Version beschreibt.
 3. Stellen Sie die Datenbank und die Dateien aus dem Verzeichnis `before-upgrade-...` dieses Upgrades wieder her: Wählen Sie die Sicherung und führen Sie dann die Schritte 1 bis 3 aus [Wiederherstellen](#wiederherstellen) im selben Terminal aus. Haben Sie `.env` für die neue Version geändert, vergleichen Sie die Datei mit der Kopie im Verzeichnis `config` der Sicherung. Dieser Befehl vergleicht die Namen der Einstellungen beider Dateien, ohne ihre Werte auszugeben:
 
     ```bash
@@ -100,9 +132,9 @@ Die letzte Zeile der Ausgabe lautet `0 failed`. Mit `KANAP_INSECURE_TLS=1` sind 
 4. Starten Sie KANAP: `docker compose -f infra/compose.onprem.yml up -d --wait`.
 5. Prüfen Sie es wie in Schritt 4 oben (**Das Upgrade prüfen**). Dessen Befehle verwenden `KANAP_HOST` und `ADMIN_EMAIL` vom Anfang dieser Seite: Setzen Sie diese in einem neuen Terminal zuerst. Die wiederhergestellte Datenbank enthält die Konten und Passwörter zum Zeitpunkt der Sicherung: Ein seitdem geändertes Passwort hat wieder seinen früheren Wert. Der Smoke-Test braucht daher das Passwort, das bei der Sicherung gültig war.
 
-Bauen Sie die vorherige Version, bevor Sie KANAP starten: Ein Start mit der neueren Version würde ihre Migrationen erneut auf der wiederhergestellten Datenbank ausführen.
+Checken Sie die vorherige Version aus, bevor Sie KANAP starten: Ein Start mit der neueren Version würde ihre Migrationen erneut auf der wiederhergestellten Datenbank ausführen.
 
-Bleiben Sie nach dem Zurücksetzen auf dem Tag der Version, zu der Sie zurückgekehrt sind. Das `git checkout stable` des Upgrade-Verfahrens (dessen Schritt 3) bringt den Checkout beim nächsten Upgrade zurück auf den Branch. Der Checkout (`git describe --tags`) und die laufende API (`/api/config/public`, siehe [Welche Version läuft](#upgrade-verfahren)) müssen dieselbe Version zeigen. Weichen sie ab, ändert der nächste `build` die laufende Version.
+Bleiben Sie nach dem Zurücksetzen auf dem Tag der Version, zu der Sie zurückgekehrt sind. Das `git checkout stable` des Upgrade-Verfahrens (dessen Schritt 3) bringt den Checkout beim nächsten Upgrade zurück auf den Branch. Der Checkout (`git describe --tags`) und die laufende API (`/api/config/public`, siehe [Welche Version läuft](#upgrade-verfahren)) müssen dieselbe Version zeigen. Weichen sie ab, ändern die nächsten `pull` und `up -d` die laufende Version.
 
 ## Versionsunterstützung
 
@@ -267,20 +299,11 @@ Führen Sie dann den Smoke-Test aus [Das Upgrade prüfen](#upgrade-verfahren) au
 
 ## Image für Wartungswerkzeuge
 
-Das API-Image enthält nur die kompilierte Anwendung. Ein Wartungsbefehl, der TypeScript braucht, etwa `npm run typeorm`, läuft in einem zweiten Image, das aus denselben Quellen gebaut wird. Bauen Sie es direkt vor jeder Verwendung aus dem aktuellen Checkout, damit es zur laufenden Version passt. Der Build verwendet die zwischengespeicherten Layer des API-Images wieder und dauert etwa 10 bis 20 Sekunden, wenn das API-Image bereits gebaut ist:
+Das API-Image enthält nur die kompilierte Anwendung. Ein Wartungsbefehl, der TypeScript braucht, etwa `npm run typeorm`, läuft in einem zweiten Image derselben Version, `kanap-api-tools`. Der Dienst `tools` von `infra/compose.onprem.yml` verwendet es, mit derselben `.env`, demselben Zugang zu `host.docker.internal` und demselben Zertifikatsverzeichnis wie die API (siehe [Zertifikate einer internen Zertifizierungsstelle](configuration.md#optional-zertifikate-einer-internen-zertifizierungsstelle)). `up` startet ihn nie. Der erste `run` lädt das Image herunter. Dieses Beispiel listet die Migrationen auf und zeigt, ob sie angewendet sind:
 
 ```bash
 cd /opt/kanap
-docker build --target dev -t kanap-api-tools backend
-```
-
-Führen Sie einen Befehl darin mit derselben `.env` und demselben Zertifikatsverzeichnis wie die API aus (siehe [Zertifikate einer internen Zertifizierungsstelle](configuration.md#optional-zertifikate-einer-internen-zertifizierungsstelle)). Dieses Beispiel listet die Migrationen auf und zeigt, ob sie angewendet sind:
-
-```bash
-cd /opt/kanap
-docker run --rm --env-file .env --add-host host.docker.internal:host-gateway \
-  -v /opt/kanap/infra/certs:/etc/kanap/certs:ro \
-  kanap-api-tools npm run typeorm -- migration:show
+docker compose -f infra/compose.onprem.yml run --rm tools npm run typeorm -- migration:show
 ```
 
 ## PostgreSQL-Einstellungen

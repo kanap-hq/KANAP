@@ -8,8 +8,9 @@
 - Docker Engine 24.0+
 - Docker-Compose-Plugin ab Version 2.20 (aktuelle Versionen sind 5.x)
 - Git
-- Mindestens 6 GB RAM, 8 GB empfohlen. Der Image-Build bei der Installation und bei jedem Upgrade braucht diesen Platz. Mehr API-Prozesse benötigen mehr Speicher, siehe [Konfiguration](configuration.md#optional-kapazitat-und-leistung).
-- Mindestens 20 GB Festplatte. Nach der Installation belegt KANAP etwa 4 GB (Images 1,3 GB, Build-Cache 2,5 GB). Die Datenbank, die gespeicherten Dateien und der Build-Cache wachsen mit der Zeit; der Cache wächst bei jedem Upgrade, und `docker builder prune` gibt den Platz wieder frei.
+- Mindestens 4 GB RAM, 8 GB empfohlen, wenn PostgreSQL auf demselben Server läuft. Mehr API-Prozesse benötigen mehr Speicher, siehe [Konfiguration](configuration.md#optional-kapazitat-und-leistung).
+- Mindestens 10 GB Festplatte. KANAP selbst belegt etwa 1,5 GB (seine Images). Die Datenbank und die gespeicherten Dateien wachsen mit der Zeit.
+- Ausgehender HTTPS-Zugang zu `ghcr.io` bei der Installation und bei jedem Upgrade, um die Images herunterzuladen (siehe [Firewall-Regeln](configuration.md#outbound-installation-and-upgrades)).
 
 **Vom Kunden bereitgestellte Infrastruktur:**
 
@@ -74,7 +75,7 @@ git clone https://github.com/kanap-hq/KANAP.git /opt/kanap
 cd /opt/kanap
 git checkout stable
 
-# 2. VOR dem Bauen konfigurieren
+# 2. Vor dem ersten Start konfigurieren
 cp infra/.env.onprem.example .env
 chmod 600 .env
 nano .env  # DATABASE_URL, S3-Zugangsdaten, ADMIN_EMAIL, ADMIN_PASSWORD, JWT_SECRET setzen,
@@ -83,8 +84,8 @@ nano .env  # DATABASE_URL, S3-Zugangsdaten, ADMIN_EMAIL, ADMIN_PASSWORD, JWT_SEC
 #          APP_ENV=production (Benutzer erreichen KANAP über HTTPS) und RATE_LIMIT_TRUST_PROXY=true
 # Alle Variablen stehen im Konfigurationsleitfaden
 
-# 3. Die Docker-Images bauen (Compose baut sie aus dem Repository)
-docker compose -f infra/compose.onprem.yml build --pull
+# 3. Die Images dieser Version herunterladen
+docker compose -f infra/compose.onprem.yml pull
 
 # 4. Container starten
 docker compose -f infra/compose.onprem.yml up -d
@@ -109,13 +110,24 @@ docker compose -f infra/compose.onprem.yml logs -f api
 
 **Wichtig:** Schließen Sie die Konfiguration (Schritt 2) ab, bevor Sie die Container starten. Die API liest `.env` beim Start und legt Mandant und Admin-Benutzer beim ersten Start mit diesen Werten an. Die Datei enthält alle Geheimnisse der Installation: `chmod 600` macht sie nur für ihren Eigentümer lesbar.
 
-**Versionen.** KANAP veröffentlicht etwa einmal im Monat eine neue Version (`26.10.1` ist die erste). Der Branch `stable` zeigt immer auf die neueste veröffentlichte Version. Unter [Betrieb](operations.md#upgrade-verfahren) erfahren Sie, wie Sie aktualisieren, eine bestimmte Version festlegen und zurückkehren. Der Branch `main` enthält jede gemergte Änderung, bevor sie als Version veröffentlicht wird. Sie können ihm folgen, für einen Produktionsserver ist das nicht empfohlen.
+**Versionen.** KANAP veröffentlicht etwa einmal im Monat eine neue Version (`26.10.1` ist die erste). Der Branch `stable` zeigt immer auf die neueste veröffentlichte Version. Jede Version kommt mit ihren Images in der GitHub Container Registry (`ghcr.io/kanap-hq/kanap-api`, `kanap-web` und `kanap-api-tools`), gebaut aus dem Tag der Version. Sie sind öffentlich: Ein Konto ist nicht nötig. `infra/compose.onprem.yml` nennt die Images der ausgecheckten Version, also bestimmt `git checkout stable` oder `git checkout v26.10.9` die Version, die `pull` herunterlädt. Versionen bis 26.10.8 haben keine veröffentlichten Images: Sie werden auf dem Server gebaut, wie es die Anleitung dieser Version beschreibt. Unter [Betrieb](operations.md#upgrade-verfahren) erfahren Sie, wie Sie aktualisieren, eine bestimmte Version festlegen und zurückkehren. Der Branch `main` enthält jede gemergte Änderung, bevor sie als Version veröffentlicht wird. Sie können ihm folgen, für einen Produktionsserver ist das nicht empfohlen: Sie bauen dann die Images selbst.
 
 **Anforderung an die Datenbankrolle:** `DATABASE_URL` muss eine dedizierte PostgreSQL-Anwendungsrolle verwenden. Lassen Sie sie nicht auf `postgres` oder eine andere Cluster-Admin-Rolle zeigen. KANAP bricht den Start ab, statt ohne wirksame RLS-Durchsetzung zu laufen.
 
 **Adresse und Origins:** Setzen Sie `APP_BASE_URL` und `CORS_ORIGINS` auf die genaue Adresse, die Benutzer öffnen, mit dem Port, wenn er nicht dem Standard entspricht. Jeder Link, den KANAP versendet, stammt aus `APP_BASE_URL`. Setzen Sie `APP_ENV=production`, wenn Benutzer KANAP über HTTPS erreichen: Die API startet dann nicht ohne diese beiden Werte und markiert das Sitzungs-Cookie immer als Secure. Siehe [Konfiguration](configuration.md#erforderlich-admin-zugangsdaten).
 
 **Wahl des E-Mail-Versands:** On-Premise-Bereitstellungen können für ausgehende E-Mails entweder **Resend** oder **SMTP** verwenden. SMTP ist nützlich, wenn der Kunde bereits ein internes Mail-Relay oder einen verwalteten Anbieter wie Microsoft 365 hat. Konfigurieren Sie eine dieser Optionen, wenn Passwortzurücksetzung, Einladungen und Benachrichtigungs-E-Mails vom ersten Tag an funktionieren sollen.
+
+## Die Images selbst bauen { #build-the-images-yourself }
+
+Die veröffentlichten Images passen für die meisten Installationen. Bauen Sie sie auf dem Server für einen Fork, eine lokale Korrektur, einen Server ohne Zugang zu `ghcr.io` oder eine API auf einem anderen Host. Die Datei `infra/compose.onprem.build.yml`, zusätzlich zur Hauptdatei angegeben, baut sie aus dem Checkout und nennt sie `kanap-api:local`, `kanap-web:local` und `kanap-api-tools:local`:
+
+```bash
+docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml build
+docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml up -d
+```
+
+Geben Sie bei jedem späteren `up` und `run` beide Dateien an: Mit der Hauptdatei allein startet Compose die veröffentlichten Images. Der Build braucht das Paket `docker-buildx-plugin` und 6 GB RAM auf dem Server. Er lädt npm- und Alpine-Pakete herunter (siehe [Firewall-Regeln](configuration.md#outbound-installation-and-upgrades)). Für eine API auf einem anderen Host geben Sie deren Adresse in der Shell an, wenn Sie das Web-Image bauen: `VITE_API_URL=https://api.company.com docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml build web`. Compose liest sie nicht aus `.env`.
 
 ## Reverse-Proxy-Beispiel (nginx) { #reverse-proxy-example-nginx }
 
