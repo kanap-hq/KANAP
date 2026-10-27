@@ -233,9 +233,10 @@ export class BoundedArchive {
     if (offset < 0 || offset + LOCAL_HEADER_SIZE > this.buffer.length || this.buffer.readUInt32LE(offset) !== LOCAL_HEADER_SIGNATURE) {
       throw new Error('archive: damaged local header');
     }
-    const flags = this.buffer.readUInt16LE(offset + 6);
-    if (flags & 0x1) throw new Error('archive: encrypted entry');
-    const method = this.buffer.readUInt16LE(offset + 8);
+    // adm-zip reads the method and the encryption flag from the central directory, which is
+    // authoritative; the local header only locates the bytes.
+    if (entry.header.encrypted) throw new Error('archive: encrypted entry');
+    const method = Number(entry.header.method) || 0;
     const nameLength = this.buffer.readUInt16LE(offset + 26);
     const extraLength = this.buffer.readUInt16LE(offset + 28);
     const start = offset + LOCAL_HEADER_SIZE + nameLength + extraLength;
