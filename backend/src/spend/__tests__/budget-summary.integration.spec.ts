@@ -503,15 +503,18 @@ async function testDimensionSortsInItsOrder(kind: Kind) {
   });
 }
 
+/** The footer totals of a mocked list (`amount_totals` of query_entities): no amount. */
+const NO_TOTALS = async () => ({ reportingCurrency: 'EUR', fxMissing: [] });
+
 /** The CAPEX list has no cap (lot 2B, PR C): a page is truncated when the total holds more lines, and `capped` is not read. */
 async function testAiMarksAPartialListTruncated() {
   const line = { id: 'capex-1', description: 'Only line', versions: {} };
   // The registry is resolved for the tenant: a tenant without analytics dimensions.
   const context = { tenantId: 'tenant-ai', userId: null, isPlatformHost: false, surface: 'chat', authMethod: 'jwt', manager: { query: async () => [] } } as any;
-  const partial: any = await queryExecutor({ summary: async () => ({ items: [line], total: 3, page: 1, limit: 1 }) }).execute(context, { entity_type: 'capex_items' });
+  const partial: any = await queryExecutor({ summary: async () => ({ items: [line], total: 3, page: 1, limit: 1 }), summaryTotals: NO_TOTALS }).execute(context, { entity_type: 'capex_items' });
   assert.equal(partial.truncated, true, 'AI: a page holding part of the list is truncated');
   assert.equal(partial.complete, false);
-  const whole: any = await queryExecutor({ summary: async () => ({ items: [line], total: 1, page: 1, limit: 200, capped: true }) }).execute(context, { entity_type: 'capex_items' });
+  const whole: any = await queryExecutor({ summary: async () => ({ items: [line], total: 1, page: 1, limit: 200, capped: true }), summaryTotals: NO_TOTALS }).execute(context, { entity_type: 'capex_items' });
   assert.equal(whole.truncated, false, 'AI: a former capped flag is not read');
   assert.equal(whole.complete, true);
 }

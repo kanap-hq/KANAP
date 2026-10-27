@@ -126,12 +126,19 @@ function testSameColumnConflictIsReported() {
 }
 
 function testExcludeSetFilter() {
-  const adapted = adaptFilters(spendItemsRegistry, { supplier: { not: ['Acme', null] }, status: { not: ['disabled', 'bogus'] } } as any);
+  const adapted = adaptFilters(spendItemsRegistry, { supplier: { not: ['Acme', null] }, status: { not: ['disabled'] } } as any);
   assert.deepEqual(adapted.filters, {
     supplier_name: { filterType: 'set', mode: 'exclude', values: ['Acme', null] },
     status: { filterType: 'set', mode: 'exclude', values: ['disabled'] },
-  }, 'OPEX: every value but these; a value outside the declared ones excludes nothing');
+  }, 'OPEX: every value but these');
   assert.deepEqual(adapted.applied, ['supplier', 'status']);
+  // A value outside the declared ones is refused with the accepted values, in both modes (P3-7).
+  const bogus = adaptFilters(spendItemsRegistry, { status: { not: ['disabled', 'bogus'] } } as any);
+  assert.deepEqual(bogus.ignored, ['status']);
+  assert.deepEqual(bogus.invalid_values, [{ field: 'status', rejected: ['bogus'], accepted: spendItemsRegistry.fields.status.values }]);
+  const included = adaptFilters(spendItemsRegistry, { status: ['enabled', 'active'] } as any);
+  assert.deepEqual(included.filters, {}, 'one unknown value refuses the filter, never drops the value');
+  assert.deepEqual(included.invalid_values, [{ field: 'status', rejected: ['active'], accepted: spendItemsRegistry.fields.status.values }]);
   // A list that does not know the exclude mode reports the filter as not applied.
   const tasks = adaptFilters(tasksRegistry, { status: { not: ['done'] } } as any);
   assert.deepEqual(tasks.filters, {});

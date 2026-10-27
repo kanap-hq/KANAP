@@ -80,6 +80,7 @@ function createOrchestrator(options?: {
   const mockPolicy = {
     assertSurfaceAccess: async () => {},
     listReadableEntityTypes: async () => ['applications', 'projects'],
+    describeWriteRights: async () => ({ plaidChanges: false, modifiableModules: [] }),
   };
 
   const mockSettings = {

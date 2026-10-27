@@ -429,7 +429,40 @@ async function testAnalyticsDimensionsFollowOpexOrCapexRead() {
   assert.doesNotMatch(service.build(base), /analytics_dimensions/);
 }
 
+/**
+ * The chat says its limits (lot "Plaid dit ses limites"): the families the tools do not read and
+ * their screens, totals from a tool only, the data access note, the missing right in plain words,
+ * dates in the user's format and the screen's words instead of field names.
+ */
+async function testPromptSaysItsLimitsAndRights() {
+  const service = new AiSystemPromptService();
+  const tool = { name: 'query_entities' as const, category: 'authoritative' as const, description: 'Query.', input_summary: {}, read_only: true, surfaces: ['chat' as const] };
+  const build = (writeRights?: { plaidChanges: boolean; modifiableModules: string[] }) => service.build({
+    tenantName: 'Test Tenant',
+    availableTools: [tool],
+    readableEntityTypes: ['projects'],
+    currentUser: { displayName: 'Reader', email: null, roleNames: [], teamName: null },
+    writeRights,
+  });
+  const prompt = build({ plaidChanges: false, modifiableModules: ['projects'] });
+  assert.match(prompt, /cost centers \(Master data › Cost centers\)/);
+  assert.match(prompt, /chargeback by beneficiary company \(Budget management › Reporting › Global chargeback\)/);
+  assert.match(prompt, /Never conclude that something does not exist, is empty or is "none"/);
+  assert.match(prompt, /Never add up, subtract or average figures yourself/);
+  assert.match(prompt, /"within your access", never as the workspace total/);
+  assert.match(prompt, /`invalid_filter_value`/);
+  assert.match(prompt, /Their role lets them ask Plaid questions but not prepare changes with it/);
+  assert.match(prompt, /Modules they may modify: projects\./);
+  assert.match(prompt, /never quote a permission code such as budget:reader/);
+  assert.doesNotMatch(prompt, /limited to read-only operations\./, 'the old refusal is gone');
+  assert.match(prompt, /31\/12\/2026 in French/);
+  assert.match(prompt, /Never write a field name or a raw value from a tool result \(term_state, to_decide, next_due_date/);
+  assert.match(prompt, /`current_term_number`: quote it, never compute it/);
+  assert.match(build({ plaidChanges: true, modifiableModules: [] }), /Their role lets them prepare changes with Plaid\.\n- Their role lets them modify no module\./);
+}
+
 async function run() {
+  await testPromptSaysItsLimitsAndRights();
   await testStructuredReadGuidancePrefersQueryLayerTools();
   await testWebSearchGuidanceIncludedWhenToolAvailable();
   await testWebSearchGuidanceAbsentWhenToolNotAvailable();

@@ -8,7 +8,7 @@ export const projectsRegistry: AiEntityFilterRegistry = {
       grid: 'status',
       type: 'set',
       description: 'Project status.',
-      dynamic: true,
+      values: ['waiting_list', 'planned', 'in_progress', 'in_testing', 'on_hold', 'done', 'cancelled'],
       discoverable: true,
       sortable: true,
       groupable: true,

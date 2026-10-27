@@ -189,6 +189,8 @@ export type AiEntityContextPayloadDto = {
 };
 
 export type AiEntityContextDto = AiEntityContextPayloadDto & {
+  /** The entity carries an extract of its fields: get_entity_detail gives them all. */
+  fields_note?: string;
   total: number;
   returned: number;
   truncated: boolean;

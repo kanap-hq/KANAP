@@ -55,3 +55,22 @@ export function copyClassification(source: Record<string, any>, catalog: Classif
   // Deprecated decisions of the source may be carried into the copy as historical values.
   return { ...inputs, ...classificationPatch(inputs, source, catalog), classification_revision: 0, classification_review: null, last_dr_test: null };
 }
+
+/**
+ * Each classification code with its catalog label and rank (the recovery wave: its order), as the
+ * Applications list gives them. An unknown code keeps the code as its label and has no rank.
+ */
+export function classificationLabels(app: Record<string, any>, catalog: ClassificationCatalog): Record<string, string | number | null> {
+  const labels: Record<string, string | number | null> = {};
+  for (const [field, options, output, rankField] of [
+    ['criticality', catalog.businessCriticalityLevels, 'business_criticality_label', 'business_criticality_rank'],
+    ['cyber_criticality', catalog.cyberCriticalityLevels, 'cyber_criticality_label', 'cyber_criticality_rank'],
+    ['data_class', catalog.dataClasses, 'data_class_label', 'data_class_rank'],
+    ['recovery_wave', catalog.recoveryWaves, 'recovery_wave_label', 'recovery_wave_order'],
+  ] as const) {
+    const option = (options as ReadonlyArray<{ code: string; label: string; rank?: number; order?: number }>).find((item) => item.code === app[field]);
+    labels[output] = option?.label ?? app[field] ?? null;
+    labels[rankField] = option ? (option.rank ?? option.order ?? null) : null;
+  }
+  return labels;
+}

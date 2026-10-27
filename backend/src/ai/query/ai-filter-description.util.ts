@@ -1,10 +1,12 @@
 import {
+  AiAdaptedFilters,
   AiEntityFilterRegistry,
   AiFilterDescription,
   AiFilterDescriptionResult,
   AiFilterFieldDef,
   AiFilterRepairSuggestion,
   AiFilterValue,
+  AiInvalidFilterValue,
   AiQueryEntityType,
 } from './ai-filter.types';
 import { getAiEntityRegistry } from './registries';
@@ -73,11 +75,39 @@ export function describeAiEntityFilters(
   };
 }
 
+/**
+ * The refusal fields of a query or an aggregate whose filters did not all apply: the status
+ * (`invalid_filter_value` when each filter not applied is a known field given values it does not
+ * take), a repair per filter, and the refused values with the accepted ones.
+ */
+export function invalidFilterResult(registry: AiEntityFilterRegistry, adapted: AiAdaptedFilters): {
+  status: 'invalid_filter' | 'invalid_filter_value';
+  suggested_repairs: AiFilterRepairSuggestion[];
+  invalid_filter_values?: AiInvalidFilterValue[];
+} {
+  const byField = new Map(adapted.invalid_values.map((entry) => [entry.field, entry]));
+  const onlyValues = adapted.ignored.every((field) => byField.has(field));
+  return {
+    status: onlyValues ? 'invalid_filter_value' : 'invalid_filter',
+    suggested_repairs: buildFilterRepairSuggestions(registry, adapted.ignored, byField),
+    ...(byField.size ? { invalid_filter_values: adapted.invalid_values } : {}),
+  };
+}
+
 export function buildFilterRepairSuggestions(
   registry: AiEntityFilterRegistry,
   ignoredFields: string[],
+  invalidValues: Map<string, AiInvalidFilterValue> = new Map(),
 ): AiFilterRepairSuggestion[] {
   return ignoredFields.map((ignored) => {
+    const invalid = invalidValues.get(ignored);
+    if (invalid) {
+      const list = (values: Array<string | null>) => values.map((value) => (value === null ? 'null' : `"${value}"`)).join(', ');
+      return {
+        field: ignored,
+        reason: `${list(invalid.rejected)} is not a value of ${ignored} on ${registry.entityType}. Accepted values: ${list(invalid.accepted)}. Nothing was searched: query again with an accepted value.`,
+      };
+    }
     const aliasMatch = Object.values(registry.fields).find((field) => (field.aliases ?? []).includes(ignored));
     if (aliasMatch) {
       return {

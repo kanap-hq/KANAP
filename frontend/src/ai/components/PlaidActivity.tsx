@@ -233,7 +233,26 @@ type ActivityRow =
       toolCall: NonNullable<ChatMessage['toolCalls']>[number];
       result?: unknown;
       status: ChatActivityEntry['status'];
+      /** A failed call the same tool then made again successfully: not shown as a failure. */
+      recovered?: boolean;
     };
+
+function isToolError(result: unknown): boolean {
+  return !!result && typeof result === 'object' && 'error' in result;
+}
+
+/**
+ * A failed tool call that a later call of the same tool in the message repaired (a reference the
+ * write refused, then the same write by id) is part of the work, not a failure for the person.
+ */
+export function markRecoveredToolFailures<T extends { kind: string; toolCall?: { name: string }; result?: unknown; recovered?: boolean }>(rows: T[]): T[] {
+  return rows.map((row, index) => {
+    if (row.kind !== 'tool' || !row.toolCall || !isToolError(row.result)) return row;
+    const repaired = rows.slice(index + 1).some((later) =>
+      later.kind === 'tool' && later.toolCall?.name === row.toolCall!.name && later.result !== undefined && !isToolError(later.result));
+    return repaired ? { ...row, recovered: true } : row;
+  });
+}
 
 function buildActivityRows(message: ChatMessage): ActivityRow[] {
   const rows: ActivityRow[] = [];
@@ -285,7 +304,7 @@ function buildActivityRows(message: ChatMessage): ActivityRow[] {
     });
   }
 
-  return rows.slice(-14);
+  return markRecoveredToolFailures(rows).slice(-14);
 }
 
 function activityCount(message: ChatMessage): number {
@@ -400,9 +419,11 @@ function formatToolResult(
   toolName: string,
   result: unknown,
   status: ChatActivityEntry['status'],
+  recovered = false,
 ): string {
   if (status === 'running' && result === undefined) return t('activity.toolTrace.running');
-  if (result && typeof result === 'object' && 'error' in result) return t('activity.toolTrace.failed');
+  if (recovered) return '';
+  if (isToolError(result)) return t('activity.toolTrace.failed');
   const summary = getToolResultSummary(toolName, result);
   if (!summary) return status === 'failed' ? t('activity.toolTrace.failed') : '';
   if (summary.count === 0) return t('messageList.toolCallNoResult');
@@ -427,7 +448,7 @@ function ActivitySteps({ message }: { message: ChatMessage }) {
           }) : null;
           const argsHint = row.kind === 'tool' ? formatToolArgs(t, row.toolCall.arguments) : '';
           const resultHint = row.kind === 'tool'
-            ? formatToolResult(t, row.toolCall.name, row.result, row.status)
+            ? formatToolResult(t, row.toolCall.name, row.result, row.status, row.recovered)
             : '';
           return (
             <Stack key={row.key} direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0 }}>

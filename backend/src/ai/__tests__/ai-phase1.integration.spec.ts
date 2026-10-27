@@ -3116,6 +3116,7 @@ async function testAiQueryLayerExplicitTenantPlumbingStaysIsolatedAcrossFamilies
         expectedId: graphA.applicationId,
         expectedStatus: 'enabled',
         forbiddenStatus: 'disabled',
+        declaredStatusValues: true,
       },
       {
         entityType: 'projects' as const,
@@ -3123,6 +3124,7 @@ async function testAiQueryLayerExplicitTenantPlumbingStaysIsolatedAcrossFamilies
         expectedId: graphA.projectId,
         expectedStatus: 'planned',
         forbiddenStatus: 'done',
+        declaredStatusValues: true,
       },
       {
         entityType: 'requests' as const,
@@ -3130,6 +3132,7 @@ async function testAiQueryLayerExplicitTenantPlumbingStaysIsolatedAcrossFamilies
         expectedId: graphA.requestId,
         expectedStatus: 'pending_review',
         forbiddenStatus: 'converted',
+        declaredStatusValues: true,
       },
       {
         entityType: 'tasks' as const,
@@ -3204,7 +3207,10 @@ async function testAiQueryLayerExplicitTenantPlumbingStaysIsolatedAcrossFamilies
       const expectedFilterValue = testCase.expectedFilterValue ?? testCase.expectedStatus;
       const forbiddenFilterValue = testCase.forbiddenFilterValue ?? testCase.forbiddenStatus;
       assert.equal(filterValues.includes(expectedFilterValue), true, `${testCase.entityType} filter values should include tenant A value`);
-      assert.equal(filterValues.includes(forbiddenFilterValue), false, `${testCase.entityType} filter values should not include tenant B value`);
+      // A status with declared values lists all of them, read from no row: nothing of tenant B to leak.
+      if (!(testCase as { declaredStatusValues?: boolean }).declaredStatusValues || testCase.filterField) {
+        assert.equal(filterValues.includes(forbiddenFilterValue), false, `${testCase.entityType} filter values should not include tenant B value`);
+      }
     }
   } finally {
     await runner.rollbackTransaction();
@@ -4049,6 +4055,8 @@ async function testAiQueryExecutorSpendItemsExposeRelativeYearlyTotals() {
   const anchorYear = new Date().getFullYear();
   const summaryCalls: any[] = [];
   const spendItems = {
+    // The footer totals of the list (`amount_totals`), not under test here.
+    summaryTotals: async () => ({ reportingCurrency: 'EUR', fxMissing: [] }),
     summary: async (query: any) => {
       summaryCalls.push(query);
       return {

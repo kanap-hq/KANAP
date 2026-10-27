@@ -2209,6 +2209,7 @@ export class AiChatOrchestratorService {
               budgetColumns,
               analyticsDimensions,
               timeZone,
+              writeRights: await this.policy.describeWriteRights(ctx, ctx.manager),
             });
             const latestUserMessageRow = [...historyAfterApproval]
               .reverse()
@@ -2411,6 +2412,7 @@ export class AiChatOrchestratorService {
           budgetColumns,
           analyticsDimensions,
           timeZone,
+          writeRights: await this.policy.describeWriteRights(ctx, ctx.manager),
         });
         const sysPrompt = builtSystemPrompt.text;
 
