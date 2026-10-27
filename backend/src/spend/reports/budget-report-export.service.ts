@@ -31,6 +31,8 @@ import {
   analyticsRequest,
   columnsCompareRequest,
   consolidationRequest,
+  costPerFteRequests,
+  dailyRateRequests,
   deltaRequests,
   excludedAccountValues,
   keepValues,
@@ -56,7 +58,9 @@ import {
   columnsCompareTable,
   comparisonTable,
   consolidationTable,
+  costPerFteTable,
   deltaTable,
+  pairLabel,
   shortMonthNames,
   sortColumnSelections,
   staffingTable,
@@ -68,7 +72,7 @@ import {
 /**
  * The table exports of the budget aggregate reports (`GET reports/budget/<report>/export`, `<report>` =
  * `comparison`, `columns-compare`, `top-lines`, `increases-decreases`, `consolidation`, `analytics`,
- * `staffing`): the
+ * `staffing`, `cost-per-fte`): the
  * screen's request, rebuilt with the backend copy of `reportAggregates.ts`, runs on the aggregate
  * route's own path (`summaryAggregateRequest` on the scope's service, the request's manager, the
  * caller's access), and the answer becomes the screen's table through the copy of `reportTables.ts`.
@@ -122,6 +126,12 @@ export class BudgetReportExportService {
       monthNames: shortMonthNames(language),
       average: labels.average,
       peak: labels.peak,
+      fte: labels.measure_fte,
+      staffCost: labels.staffCost,
+      costPerFte: labels.costPerFte,
+      days: labels.days,
+      dayCost: labels.dayCost,
+      dailyRate: labels.dailyRate,
     };
     // Rows of equal value in the order of the export's language, as the screen in that language.
     const compare = new Intl.Collator(language).compare;
@@ -227,6 +237,23 @@ export class BudgetReportExportService {
         [labels.groupBy, grouped.header],
         [labels.year, String(params.year)],
         [labels.column, columnName(params.metric)],
+      ];
+    } else if (params.report === 'cost-per-fte') {
+      const grouped = groupWords(params.group, named);
+      const pairs = { scope: params.scope, columns: params.pairs, group: params.group.group, filters };
+      // One request per pair, as the screen (the request's connection: one after the other).
+      const answers: Aggregate[] = [];
+      for (const request of (params.view === 'rate' ? dailyRateRequests(pairs) : costPerFteRequests(pairs))) answers.push(await run(request));
+      answer = answers[0];
+      limited = answers.some((one) => one.dataAccessLimited === true);
+      table = costPerFteTable({ groupHeader: grouped.header, groupLabels: grouped.labels, compare, view: params.view, columns: params.pairs }, answers, tableLabels);
+      sheet = labels.costPerFteSheet;
+      const first = params.pairs[0];
+      fileBase = `${params.view === 'rate' ? 'daily-rate' : 'cost-per-fte'}-${params.scope}-${GROUP_FILE_NAME[params.group.kind]}-${first.year}-${first.metric}`;
+      own = [
+        [labels.groupBy, grouped.header],
+        [labels.show, params.view === 'rate' ? labels.dailyRate : labels.costPerFte],
+        [labels.pairs, params.pairs.map((pair) => pairLabel(tableLabels, pair)).join(', ')],
       ];
     } else {
       const years: number[] = [];
@@ -398,7 +425,7 @@ function groupWords(group: ReportGroupParam, named: Named): { header: string; la
 }
 
 /** The reports with no measure picker: FTE only, or their own measures. */
-const NO_MEASURE: ReadonlySet<BudgetReport> = new Set(['staffing']);
+const NO_MEASURE: ReadonlySet<BudgetReport> = new Set(['staffing', 'cost-per-fte']);
 
 /** The filter bar's picks in words, then the reporting currency of the amounts. */
 function filterParameters(params: BudgetReportParams, named: Named, answer: Aggregate): Array<[string, string]> {

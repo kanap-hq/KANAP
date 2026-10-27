@@ -10,13 +10,14 @@ import {
   NO_ANALYTICS_VALUE,
   NO_CONSOLIDATION_LINE,
   type BudgetScope,
+  type ColumnYear,
   type MetricKey,
   type ReportFilterPicks,
   type ReportMeasure,
   type RunBuildPick,
   type StaffingGroup,
 } from './shared/reportAggregates';
-import type { ColumnSelection } from './shared/reportTables';
+import { distinctColumns, type ColumnSelection, type CostPerFteView } from './shared/reportTables';
 
 /** The direction of the increases and decreases report: one request per direction, both for `both`. */
 export type DeltaDirection = 'increase' | 'decrease' | 'both';
@@ -33,9 +34,9 @@ export type DeltaDirection = 'increase' | 'decrease' | 'both';
  * `useCostCenterTree.descendantIds`, disabled nodes included).
  */
 
-export type BudgetReport = 'comparison' | 'columns-compare' | 'top-lines' | 'increases-decreases' | 'consolidation' | 'analytics' | 'staffing';
+export type BudgetReport = 'comparison' | 'columns-compare' | 'top-lines' | 'increases-decreases' | 'consolidation' | 'analytics' | 'staffing' | 'cost-per-fte';
 
-/** The filter bar's keys; the FTE reports (staffing) have no measure picker. */
+/** The filter bar's keys; the FTE reports (staffing, cost per FTE) have no measure picker. */
 const FILTER_KEYS = ['scope', 'costCenter', 'runBuild', 'fte', 'analytics'] as const;
 const COMMON_KEYS = [...FILTER_KEYS, 'measure'] as const;
 
@@ -50,7 +51,11 @@ export const BUDGET_REPORT_KEYS: Record<BudgetReport, readonly string[]> = {
   consolidation: [...COMMON_KEYS, 'startYear', 'endYear', 'metric', 'excludeAccounts'],
   analytics: [...COMMON_KEYS, 'axis', 'startYear', 'endYear', 'metric', 'excludeValues'],
   staffing: [...FILTER_KEYS, 'group', 'year', 'metric'],
+  'cost-per-fte': [...FILTER_KEYS, 'group', 'view', 'pairs'],
 };
+
+/** The most year and column pairs the cost per FTE screen compares. */
+export const MAX_COST_PER_FTE_PAIRS = 4;
 
 /** The most selections the columns compare screen holds. */
 export const MAX_COLUMN_SELECTIONS = 10;
@@ -84,6 +89,7 @@ export type BudgetReportParams = BudgetReportFilterParams & (
   | { report: 'consolidation'; startYear: number; endYear: number; metric: MetricKey; excludeAccounts: string[] }
   | { report: 'analytics'; axis: AnalyticsAxisInfo | null; startYear: number; endYear: number; metric: MetricKey; excludeValues: string[] }
   | { report: 'staffing'; group: ReportGroupParam; year: number; metric: MetricKey }
+  | { report: 'cost-per-fte'; group: ReportGroupParam; view: CostPerFteView; pairs: ColumnYear[] }
 );
 
 /** What the FTE reports group on (`?group=`), with the dimension when grouped on one. */
@@ -254,7 +260,7 @@ async function reportGroup(manager: EntityManager, tenantId: string, scope: Budg
 /**
  * Reads the query of a report (its keys were checked by `reportExportRequest`). `currentYear` sets the
  * windows the screens allow: Y-2..Y+2 for the comparison, the columns compare and the increases and
- * decreases, Y-1..Y+1 for the top, the consolidation, the analytics and the staffing reports. The exclusions (lines,
+ * decreases and the cost per FTE, Y-1..Y+1 for the top, the consolidation, the analytics and the staffing reports. The exclusions (lines,
  * accounts, values) are checked against what the screen offers by the service.
  */
 export async function parseBudgetReportParams(
@@ -342,6 +348,22 @@ export async function parseBudgetReportParams(
   if (report === 'staffing') {
     const group = await reportGroup(manager, tenantId, scope, query);
     return { ...filters, report, group, year: year(required(query, 'year'), 'year', Y - 1, Y + 1), metric: column(required(query, 'metric'), 'metric', columns) };
+  }
+
+  if (report === 'cost-per-fte') {
+    const group = await reportGroup(manager, tenantId, scope, query);
+    const view = text(query, 'view') ?? 'fte';
+    if (view !== 'fte' && view !== 'rate') throw new BadRequestException('view must be fte or rate.');
+    const picked = list(required(query, 'pairs')).map((part): ColumnYear => {
+      const [yearRaw, metricRaw, extra] = part.split(':');
+      if (extra !== undefined || !yearRaw || !metricRaw) throw new BadRequestException('pairs must read <year>:<column>,…');
+      return { year: year(yearRaw.trim(), 'pairs', Y - 2, Y + 2), metric: column(metricRaw.trim(), 'pairs', columns) };
+    });
+    if (picked.length > MAX_COST_PER_FTE_PAIRS) throw new BadRequestException(`pairs holds ${MAX_COST_PER_FTE_PAIRS} pairs at most.`);
+    // The screen sends its pairs once each (`distinctColumns`), in the order it shows them.
+    const pairs = distinctColumns(picked);
+    if (pairs.length !== picked.length) throw new BadRequestException('pairs names a pair twice.');
+    return { ...filters, report, group, view, pairs };
   }
 
   // Consolidation and analytics: the screens offer Y-1..Y+1.

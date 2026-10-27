@@ -16,11 +16,14 @@ import {
   readAnalytics,
   readColumnsCompare,
   readConsolidation,
+  readCostPerFte,
+  readDailyRate,
   readDelta,
   readStaffing,
   readTopItems,
   readTrend,
   type AggregateResult,
+  type ColumnYear,
   type DeltaMode,
   type FteYearGroups,
   type MetricKey,
@@ -97,6 +100,18 @@ export interface ReportTableLabels {
   average: string;
   /** `reports.staffing.peak` */
   peak: string;
+  /** `reports.measure.fte` */
+  fte: string;
+  /** `reports.costPerFte.staffCost` */
+  staffCost: string;
+  /** `reports.costPerFte.costPerFte` */
+  costPerFte: string;
+  /** `reports.costPerFte.days` */
+  days: string;
+  /** `reports.costPerFte.dayCost` */
+  dayCost: string;
+  /** `reports.costPerFte.dailyRate` */
+  dailyRate: string;
 }
 
 /** The five budget columns in their fixed order (column 1 to 5). */
@@ -432,6 +447,85 @@ export function staffingTable(
       { key: 'peak', header: labels.peak, kind: 'number' },
     ],
     rows: read.rows.map((row) => ({ group: row.label, groupKey: row.key, groupName: row.name, ...values(row) })),
+    footer: [{ group: labels.total, ...values(read.total) }],
+  };
+}
+
+// ----- Cost per FTE and daily rate (CostPerFteReport, `?view=rate`): three values per year and column compared -----
+
+/** The cost per FTE, or the average daily rate (`?view=rate`). */
+export type CostPerFteView = 'fte' | 'rate';
+
+/** What a pair's three values are: what the rows count (FTE, days), its cost, and the cost of one unit. */
+export type PairValueKind = 'fte' | 'days' | 'cost' | 'ratio' | 'rate';
+export const PAIR_VALUES: Record<CostPerFteView, readonly [PairValueKind, PairValueKind, PairValueKind]> = {
+  fte: ['fte', 'cost', 'ratio'],
+  rate: ['days', 'cost', 'rate'],
+};
+
+/** The row field of a pair's value (`c0_fte`, `c1_rate`). */
+export const pairValueKey = (index: number, kind: PairValueKind): string => `c${index}_${kind}`;
+
+/** The pairs compared as the report shows and asks them: by year, then in column order, each once. */
+export function distinctColumns(columns: readonly ColumnYear[]): ColumnYear[] {
+  const byKey = new Map<string, ColumnYear>();
+  for (const column of columns) byKey.set(`${column.year}:${column.metric}`, column);
+  return Array.from(byKey.values()).sort((a, b) => a.year - b.year || COLUMN_ORDER.indexOf(a.metric) - COLUMN_ORDER.indexOf(b.metric));
+}
+
+/** A pair as the report names it: `Budget 2026`. */
+export function pairLabel(labels: Pick<ReportTableLabels, 'columnNames'>, column: ColumnYear): string {
+  return `${labels.columnNames[column.metric]} ${column.year}`;
+}
+
+/** The names of a view's three values: FTE, staff cost, cost per FTE; or days, day cost, daily rate. */
+export function pairValueHeaders(view: CostPerFteView, labels: Pick<ReportTableLabels, 'fte' | 'days' | 'staffCost' | 'dayCost' | 'costPerFte' | 'dailyRate'>): Record<PairValueKind, string> {
+  return {
+    fte: labels.fte,
+    days: labels.days,
+    cost: view === 'rate' ? labels.dayCost : labels.staffCost,
+    ratio: labels.costPerFte,
+    rate: labels.dailyRate,
+  };
+}
+
+const PAIR_VALUE_KIND: Record<PairValueKind, ReportTableColumnKind> = { fte: 'number', days: 'number', cost: 'amount', ratio: 'amount', rate: 'amount' };
+
+export interface CostPerFteTableParams extends GroupTableParams {
+  view: CostPerFteView;
+  /** The pairs compared, as asked (`distinctColumns`). */
+  columns: readonly ColumnYear[];
+}
+
+/**
+ * Cost per FTE, or the daily rate: one row per group with FTE (or days) in some pair, by the earliest
+ * pair that has them, largest first (then by label); per pair, in the screen's order, three columns with
+ * flat headers, `<value> (<column> <year>)`: FTE, staff cost and cost per FTE, or days, day cost and
+ * daily rate. The total as footer (ratio of the totals). `results` holds one answer per pair, in order.
+ */
+export function costPerFteTable(
+  p: CostPerFteTableParams,
+  results: ReadonlyArray<AggregateResult | undefined> | undefined,
+  labels: Pick<ReportTableLabels, 'columnNames' | 'total' | 'fte' | 'days' | 'staffCost' | 'dayCost' | 'costPerFte' | 'dailyRate'>,
+): ReportTableData {
+  const kinds = PAIR_VALUES[p.view];
+  const headers = pairValueHeaders(p.view, labels);
+  const read = p.view === 'rate'
+    ? readDailyRate(p.columns, results, p.groupLabels, p.compare)
+    : readCostPerFte(p.columns, results, p.groupLabels, p.compare);
+  const values = (cells: ReadonlyArray<Partial<Record<PairValueKind, number | null>> | undefined>): ReportTableRow => Object.fromEntries(
+    p.columns.flatMap((_, index) => kinds.map((kind) => [pairValueKey(index, kind), cells[index]?.[kind] ?? null])),
+  );
+  return {
+    columns: [
+      { key: 'group', header: p.groupHeader, kind: 'text' },
+      ...p.columns.flatMap((column, index) => kinds.map((kind): ReportTableColumn => ({
+        key: pairValueKey(index, kind),
+        header: `${headers[kind]} (${pairLabel(labels, column)})`,
+        kind: PAIR_VALUE_KIND[kind],
+      }))),
+    ],
+    rows: read.rows.map((row) => ({ group: row.label, groupKey: row.key, groupName: row.name, ...values(row.cells) })),
     footer: [{ group: labels.total, ...values(read.total) }],
   };
 }

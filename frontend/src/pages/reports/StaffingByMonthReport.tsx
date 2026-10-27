@@ -145,8 +145,6 @@ export default function StaffingByMonthReport() {
   }, [staffing.rows, monthNames, scopeLabel, groupInSentence, columnLabel, year, fte, t]);
 
   const fileName = `staffing-${scope}-${year}-${metricFileName(budgetColumns, metric)}-${GROUP_FILE_NAME[kind]}`;
-  // The grouping the screen resolved: the dimension it shows, not the address's when that one is unknown.
-  const groupParam = kind === 'axis' ? (grouping.axis ? `axis:${grouping.axis.id}` : undefined) : kind;
 
   return (
     <ReportLayout
@@ -189,7 +187,7 @@ export default function StaffingByMonthReport() {
       )}
       tableExport={{
         url: '/reports/budget/staffing/export',
-        params: { scope, ...reportFilters.exportParams, group: groupParam, year, metric },
+        params: { scope, ...reportFilters.exportParams, group: grouping.exportParam, year, metric },
         fileBase: `staffing-${scope}-${year}-${metric}-${GROUP_FILE_NAME[kind]}`,
       }}
       onExportChartPng={() => chartRef.current?.download(fileName)}

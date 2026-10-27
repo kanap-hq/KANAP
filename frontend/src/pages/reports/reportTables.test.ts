@@ -6,7 +6,9 @@ import {
   columnsCompareTable,
   comparisonTable,
   consolidationTable,
+  costPerFteTable,
   deltaTable,
+  distinctColumns,
   shortMonthNames,
   sortColumnSelections,
   staffingTable,
@@ -36,6 +38,12 @@ const labels: ReportTableLabels = {
   monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   average: 'Average',
   peak: 'Peak',
+  fte: 'FTE',
+  staffCost: 'Staff cost',
+  costPerFte: 'Cost per FTE',
+  days: 'Days',
+  dayCost: 'Day cost',
+  dailyRate: 'Daily rate',
 };
 
 const row = (values: Record<string, number | null>, keys: Array<string | null> = []): AggregateRow => ({ keys, count: 1, values, unknown: {} });
@@ -250,5 +258,39 @@ describe('staffingTable', () => {
     ]);
     expect(table.rows[2].m1).toBeNull();
     expect(table.footer).toEqual([{ group: 'Total', ...Object.fromEntries([2, ...twelve(1).slice(1)].map((value, i) => [`m${i + 1}`, value])), average: 13 / 12, peak: 2 }]);
+  });
+});
+
+describe('costPerFteTable', () => {
+  const group = { groupHeader: 'Supplier', groupLabels: { none: 'No supplier', unnamed: 'Unnamed value' }, compare: new Intl.Collator('en').compare };
+  const columns = distinctColumns([{ year: 2026, metric: 'budget' }, { year: 2025, metric: 'landing' }, { year: 2025, metric: 'budget' }, { year: 2026, metric: 'budget' }]);
+
+  it('sorts and dedupes the pairs, by year then in column order', () => {
+    expect(columns).toEqual([{ year: 2025, metric: 'budget' }, { year: 2025, metric: 'landing' }, { year: 2026, metric: 'budget' }]);
+  });
+
+  it('flattens each pair into three headed columns, the ratio of the totals in the footer', () => {
+    const pair = (fte: number | null, cost: number) => ({ fte, cost });
+    const results = [
+      answer(pair(3, 300), [row(pair(1, 100), ['a', 'Acme']), row(pair(2, 200), ['g', 'Globex'])]),
+      answer(pair(null, 0), [row(pair(null, 0), ['a', 'Acme'])]),
+      answer(pair(4, 500), [row(pair(4, 500), ['a', 'Acme'])]),
+    ];
+    const table = costPerFteTable({ ...group, view: 'fte', columns }, results, labels);
+    expect(table.columns.map((column) => [column.key, column.header, column.kind])).toEqual([
+      ['group', 'Supplier', 'text'],
+      ['c0_fte', 'FTE (Budget 2025)', 'number'], ['c0_cost', 'Staff cost (Budget 2025)', 'amount'], ['c0_ratio', 'Cost per FTE (Budget 2025)', 'amount'],
+      ['c1_fte', 'FTE (Landing 2025)', 'number'], ['c1_cost', 'Staff cost (Landing 2025)', 'amount'], ['c1_ratio', 'Cost per FTE (Landing 2025)', 'amount'],
+      ['c2_fte', 'FTE (Budget 2026)', 'number'], ['c2_cost', 'Staff cost (Budget 2026)', 'amount'], ['c2_ratio', 'Cost per FTE (Budget 2026)', 'amount'],
+    ]);
+    expect(table.rows.map((r) => [r.group, r.c0_fte, r.c0_ratio, r.c1_fte, r.c2_ratio])).toEqual([['Globex', 2, 100, null, null], ['Acme', 1, 100, null, 125]]);
+    expect(table.footer).toEqual([{ group: 'Total', c0_fte: 3, c0_cost: 300, c0_ratio: 100, c1_fte: null, c1_cost: null, c1_ratio: null, c2_fte: 4, c2_cost: 500, c2_ratio: 125 }]);
+  });
+
+  it('reads days, day cost and daily rate in the rate view', () => {
+    const results = [answer({ days: 10, cost: 5000, staff: 5000 }, [row({ days: 10, cost: 5000 }, [null, null])])];
+    const table = costPerFteTable({ ...group, view: 'rate', columns: [{ year: 2026, metric: 'budget' }] }, results, labels);
+    expect(table.columns.map((column) => column.header)).toEqual(['Supplier', 'Days (Budget 2026)', 'Day cost (Budget 2026)', 'Daily rate (Budget 2026)']);
+    expect(table.rows).toEqual([{ group: 'No supplier', groupKey: '', groupName: null, c0_days: 10, c0_cost: 5000, c0_rate: 500 }]);
   });
 });

@@ -204,6 +204,7 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /reports/budget/columns-compare/export',
   'GET /reports/budget/comparison/export',
   'GET /reports/budget/consolidation/export',
+  'GET /reports/budget/cost-per-fte/export',
   'GET /reports/budget/increases-decreases/export',
   'GET /reports/budget/staffing/export',
   'GET /reports/budget/top-lines/export',

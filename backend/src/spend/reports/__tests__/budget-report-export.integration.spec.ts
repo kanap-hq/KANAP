@@ -62,6 +62,12 @@ const LABELS: T.ReportTableLabels = {
   monthNames: T.shortMonthNames('en'),
   average: L.average,
   peak: L.peak,
+  fte: L.measure_fte,
+  staffCost: L.staffCost,
+  costPerFte: L.costPerFte,
+  days: L.days,
+  dayCost: L.dayCost,
+  dailyRate: L.dailyRate,
 };
 
 type Fixture = Seed & {

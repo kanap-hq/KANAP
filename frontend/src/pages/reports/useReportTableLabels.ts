@@ -32,5 +32,11 @@ export function useReportTableLabels(): ReportTableLabels {
     monthNames: shortMonthNames(locale),
     average: t('reports.staffing.average'),
     peak: t('reports.staffing.peak'),
+    fte: t('reports.measure.fte'),
+    staffCost: t('reports.costPerFte.staffCost'),
+    costPerFte: t('reports.costPerFte.costPerFte'),
+    days: t('reports.costPerFte.days'),
+    dayCost: t('reports.costPerFte.dayCost'),
+    dailyRate: t('reports.costPerFte.dailyRate'),
   }), [budgetColumns, locale, t]);
 }
