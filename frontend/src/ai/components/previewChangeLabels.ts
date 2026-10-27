@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
+import { useLocale } from '../../i18n/useLocale';
+import { formatShortDate } from '../../lib/dateFormat';
 import { AiMutationPreview } from '../aiTypes';
 
 /**
@@ -8,7 +10,7 @@ import { AiMutationPreview } from '../aiTypes';
  * The server sends each change under its field key, with an English label and the stored value
  * (a code for a list value): the label comes from `ai:previewCard`, the value from the catalog the
  * screens use. A key or a value nobody translates shows as the server sent it (a dimension's name,
- * a record's name, a free text).
+ * a record's name, a free text). A date reads as on the screens ("3 nov. 2027").
  */
 
 const TASK_TOOLS = new Set(['create_task', 'update_task_fields', 'update_task_status', 'update_task_assignee', 'import_ticket', 'import_glpi_ticket']);
@@ -23,6 +25,9 @@ const RECORD_TOOLS = new Set([
 /** A stored code as the catalogs key it: `in progress` and `In_Progress` read as `in_progress`. */
 const codeOf = (value: string) => value.trim().toLowerCase().replace(/[\s-]+/g, '_');
 const camel = (code: string) => code.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+
+/** A date as the server sends it: a day, or a day and a time (a date field read back from a timestamp). */
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/;
 
 type ValueRule = {
   fields: string[];
@@ -65,6 +70,7 @@ const CLASSIFICATION_REVIEW: Record<string, string> = {
 export function usePreviewChangeLabels() {
   const { t, i18n } = useTranslation(['ai', 'portfolio', 'knowledge', 'it', 'ops', 'master-data', 'common']);
   const { labelFor } = useItOpsEnumOptions();
+  const locale = useLocale();
 
   /** The first key the loaded texts hold, translated; null when none does. */
   const known = useCallback(
@@ -90,6 +96,7 @@ export function usePreviewChangeLabels() {
   const valueLabel = useCallback(
     (preview: AiMutationPreview, field: string, value: string | null): string | null => {
       if (!value) return value;
+      if (ISO_DATE_RE.test(value)) return formatShortDate(value, locale, { empty: value });
       if (field === 'classification_review_state') return known([CLASSIFICATION_REVIEW[value] ?? '']) ?? value;
       const entity = preview.target.entity_type;
       if (field === 'lifecycle' && entity === 'applications') return labelFor('lifecycleStatus', value) || value;
@@ -102,7 +109,7 @@ export function usePreviewChangeLabels() {
         && (!rule.entities || rule.entities.includes(entity)));
       return known(rules.map((rule) => rule.key(code))) ?? value;
     },
-    [known, labelFor],
+    [known, labelFor, locale],
   );
 
   return { fieldLabel, valueLabel };

@@ -115,4 +115,18 @@ describe('PreviewCard in French', () => {
     }));
     expect(screen.getByText('Criticité opérationnelle')).toBeInTheDocument();
   });
+
+  it('shows dates in the format of the screens, not as stored', () => {
+    renderCard(preview({
+      tool_name: 'update_task_fields',
+      target: { entity_type: 'tasks', entity_id: 'task-1', ref: 'T-4', title: 'Migration' },
+      changes: {
+        due_date: { label: 'Due Date', from: '2031-01-01T00:00:00.000Z', to: '2031-11-03', format: 'text' },
+      },
+    }));
+
+    expect(screen.getByText('1 janv. 2031')).toBeInTheDocument();
+    expect(screen.getByText('3 nov. 2031')).toBeInTheDocument();
+    expect(screen.queryByText('2031-11-03')).not.toBeInTheDocument();
+  });
 });
