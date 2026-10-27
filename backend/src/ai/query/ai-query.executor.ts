@@ -1447,9 +1447,13 @@ export class AiQueryExecutor {
     const ids = rows.map((row) => row?.id).filter((id): id is string => typeof id === 'string');
     // One after the other: both read on the request's connection.
     const all = await this.budgetLineTotals(context, entityType, listState, pairs);
-    const page = ids.length
-      ? await this.budgetLineTotals(context, entityType, { ...listState, filters: { ...(listState.filters ?? {}), id: { filterType: 'set', values: ids } } }, pairs)
-      : Object.fromEntries(budgetLineTotalFieldsOf(pairs).map((field) => [field.ai, isBudgetMoneyKey(field.ai) ? 0 : null]));
+    // A page that holds every line kept sums as all of them: no second statement.
+    let page = all;
+    if (ids.length !== records) {
+      page = ids.length
+        ? await this.budgetLineTotals(context, entityType, { ...listState, filters: { ...(listState.filters ?? {}), id: { filterType: 'set', values: ids } } }, pairs)
+        : Object.fromEntries(budgetLineTotalFieldsOf(pairs).map((field) => [field.ai, isBudgetMoneyKey(field.ai) ? 0 : null]));
+    }
     const note = ' The staff cost, staff FTE, day cost and days (`<year>_<column>_staff_cost`...) are summed for the current year\'s columns '
       + 'and the years and columns the filters or the sort name; aggregate_entities sums the others. '
       + 'A cost per FTE or a day rate comes from aggregate_entities (`<year>_<column>_cost_per_fte`, `_day_rate`), never from dividing these totals.';

@@ -401,6 +401,11 @@ async function testQueryTotals(kind: Kind) {
     assert.deepEqual(filtered.items.map((item: any) => item.label).sort(), ['Staff alpha full time', 'Staff charlie usd'], `${kind}: a filter on the days`);
     assert.deepEqual(filtered.filters_applied, ['y_budget_days']);
     assert.equal(filtered.amount_totals.values.y_budget_days, 720, `${kind}: the totals follow the filter`);
+    assert.deepEqual(
+      [filtered.page_amount_totals.values.y_budget_days, filtered.page_amount_totals.values.y_budget_staff_cost],
+      [720, filtered.amount_totals.values.y_budget_staff_cost],
+      `${kind}: a page holding every line kept has their totals`,
+    );
 
     const nextYear: any = await query.execute(ctx, { entity_type: ENTITY[kind], filters: { y_plus1_budget_staff_fte: { op: 'gt', value: 0 } } });
     assert.equal(nextYear.total, 0, `${kind}: no staff next year`);
