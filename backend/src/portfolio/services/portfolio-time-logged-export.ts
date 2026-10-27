@@ -175,21 +175,35 @@ export function timeLoggedExport(
   };
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The export's `projectIds` or `teamIds`: ids only, a value that is not one is a 400 (the data route is lenient). */
+export function timeLoggedExportIds(param: 'projectIds' | 'teamIds', ids: string[]): string[] {
+  if (ids.some((id) => !UUID.test(id))) throw new BadRequestException(`${param} must be ${param === 'teamIds' ? 'team' : 'project'} ids.`);
+  return ids;
+}
+
 /**
  * The names of the projects and teams a filter names, for the Parameters sheet, in name order;
- * null when the filter is empty. An id that names nothing in the tenant is left out: the report
- * matches nothing for it either.
+ * null when the filter is empty. An id that names no project (team) of the tenant is a 400: the
+ * file would otherwise list a filter it never applied.
  */
 export async function filterNames(
   manager: EntityManager,
   tenantId: string,
-  table: 'portfolio_projects' | 'portfolio_teams',
+  param: 'projectIds' | 'teamIds',
   ids: string[],
 ): Promise<string[] | null> {
   if (ids.length === 0) return null;
-  const rows: Array<{ name: string | null }> = await manager.query(
-    `SELECT name FROM ${table} WHERE tenant_id = $1 AND id::text = ANY($2::text[]) ORDER BY name`,
+  const table = param === 'teamIds' ? 'portfolio_teams' : 'portfolio_projects';
+  const rows: Array<{ id: string; name: string | null }> = await manager.query(
+    `SELECT id::text AS id, name FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[]) ORDER BY name`,
     [tenantId, ids],
   );
+  const found = new Set(rows.map((row) => row.id.toLowerCase()));
+  const unknown = ids.filter((id) => !found.has(id.toLowerCase()));
+  if (unknown.length > 0) {
+    throw new BadRequestException(`${param}: ${unknown.join(', ')} ${unknown.length === 1 ? 'is' : 'are'} not ${param === 'teamIds' ? 'a team' : 'a project'} of this tenant.`);
+  }
   return rows.map((row) => row.name ?? '').filter(Boolean);
 }

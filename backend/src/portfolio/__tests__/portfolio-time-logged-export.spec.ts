@@ -15,6 +15,9 @@ import type { TimeLoggedReportResponse } from '../dto/time-logged-report.dto';
 
 const TENANT = '00000000-0000-0000-0000-000000000001';
 const USER = '00000000-0000-0000-0000-0000000000aa';
+const TEAM_APPS = '11111111-1111-4111-8111-111111111111';
+const PROJECT = '22222222-2222-4222-8222-222222222222';
+const UNKNOWN = '33333333-3333-4333-8333-333333333333';
 const today = todayIn('UTC');
 const months = buildMonths(today, 6).map((bound) => bound.periodStart.slice(0, 7));
 
@@ -39,8 +42,8 @@ function stubManager() {
       calls.push({ sql, params });
       if (sql.includes('UNION ALL')) return hours;
       if (sql.includes('FROM users u')) return people;
-      if (sql.includes('FROM portfolio_teams')) return params[1].includes('team-apps') ? [{ name: 'Applications' }] : [];
-      if (sql.includes('FROM portfolio_projects')) return [];
+      if (sql.includes('FROM portfolio_teams')) return params[1].includes(TEAM_APPS) ? [{ id: TEAM_APPS, name: 'Applications' }] : [];
+      if (sql.includes('FROM portfolio_projects')) return params[1].includes(PROJECT) ? [{ id: PROJECT, name: 'Migration' }] : [];
       if (sql.includes('split_part(email')) return [{ name: 'Claire Martin' }];
       if (sql.includes('user_notification_preferences')) return [{ timezone: 'Europe/Paris' }];
       if (sql.includes('SELECT locale FROM users')) return [{ locale: 'de' }];
@@ -86,10 +89,10 @@ async function run() {
   // CSV, French, a team filter: the same report call as the data route, the same rows.
   {
     const data = stubManager();
-    const report = await controller.getTimeLogged({ months: '6', tz: 'UTC', teamIds: 'team-apps' }, ctx(data.manager));
+    const report = await controller.getTimeLogged({ months: '6', tz: 'UTC', teamIds: TEAM_APPS }, ctx(data.manager));
     const file = stubManager();
     const out = fakeResponse();
-    await controller.exportTimeLogged({ months: '6', tz: 'UTC', teamIds: 'team-apps', format: 'csv', language: 'fr' }, ctx(file.manager), out.res);
+    await controller.exportTimeLogged({ months: '6', tz: 'UTC', teamIds: TEAM_APPS, format: 'csv', language: 'fr' }, ctx(file.manager), out.res);
     const unionParams = (calls: Call[]) => calls.find((call) => call.sql.includes('UNION ALL'))!.params;
     assert.deepEqual(unionParams(file.calls), unionParams(data.calls), 'the export reads the hours the data route reads');
     const labels = TIME_LOGGED_EXPORT_LABELS.fr;
@@ -141,11 +144,19 @@ async function run() {
     assert.equal(file.calls.find((call) => call.sql.includes('UNION ALL'))!.params[2], 'UTC');
   }
 
-  // An unknown team id: refused by neither route; both match nothing for it.
+  // A project and a team of the tenant: named on the Parameters sheet.
   {
     const out = fakeResponse();
-    await controller.exportTimeLogged({ teamIds: 'nobody', language: 'en' }, ctx(stubManager().manager), out.res);
-    assert.ok(out.body().length > 0);
+    await controller.exportTimeLogged({ projectIds: PROJECT, teamIds: TEAM_APPS, format: 'xlsx', language: 'en' }, ctx(stubManager().manager), out.res);
+    const parameters = sheetRows(new AdmZip(out.body()).readAsText('xl/worksheets/sheet2.xml'));
+    assert.deepEqual(parameters.slice(3, 5), [['Project', 'Migration'], ['Team', 'Applications']]);
+  }
+
+  // An id that is not one, or names nothing in the tenant: the data route is left as it was, the export
+  // refuses it (below).
+  {
+    const report = await controller.getTimeLogged({ teamIds: 'nobody', projectIds: UNKNOWN }, ctx(stubManager().manager));
+    assert.ok(Array.isArray(report.teams), 'the data route is unchanged');
   }
 
   // Refused: unknown parameter, a horizon the screen does not offer, a zone nobody knows, other values.
@@ -157,6 +168,10 @@ async function run() {
     [{ language: 'it' }, /language must be en, fr, de or es/],
     [{ table: 'time-logged' }, /Unknown parameter: table/],
     [{ teamIds: ['a', 'b'] }, /teamIds must be given once/],
+    [{ teamIds: 'nobody' }, /teamIds must be team ids/],
+    [{ projectIds: `${PROJECT},prj-1` }, /projectIds must be project ids/],
+    [{ teamIds: `${TEAM_APPS},${UNKNOWN}` }, new RegExp(`teamIds: ${UNKNOWN} is not a team of this tenant`)],
+    [{ projectIds: UNKNOWN }, new RegExp(`projectIds: ${UNKNOWN} is not a project of this tenant`)],
   ] as Array<[Record<string, unknown>, RegExp]>) {
     await assert.rejects(
       () => controller.exportTimeLogged(query, ctx(stubManager().manager), fakeResponse().res),

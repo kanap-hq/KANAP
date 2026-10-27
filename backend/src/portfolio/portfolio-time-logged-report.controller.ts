@@ -8,7 +8,7 @@ import { reportExportBody, reportExportRequest, writeReportExport } from '../com
 import { normalizeReportTimeZone } from '../common/report-period';
 import { TimeLoggedReportResponse } from './dto/time-logged-report.dto';
 import { normalizeIdList, parseCsvIds } from './services/portfolio-report-filters';
-import { filterNames, timeLoggedExport, timeLoggedExportMonths } from './services/portfolio-time-logged-export';
+import { filterNames, timeLoggedExport, timeLoggedExportIds, timeLoggedExportMonths } from './services/portfolio-time-logged-export';
 import { PortfolioTimeLoggedReportService } from './services/portfolio-time-logged-report.service';
 
 @UseGuards(JwtAuthGuard)
@@ -36,6 +36,8 @@ export class PortfolioTimeLoggedReportController {
   /**
    * The table of the report as a CSV or Excel file (`format`), from the same report call as the
    * screen: `months` (6 or 12), `tz`, `projectIds`, `teamIds`, plus `language`. Recorded as an export.
+   * Stricter than the data route: an id that is not one, or that names no project (team) of the
+   * tenant, is a 400.
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('portfolio_reports', 'reader')
@@ -44,14 +46,16 @@ export class PortfolioTimeLoggedReportController {
     const request = await reportExportRequest(query, ctx, ['months', 'projectIds', 'teamIds']);
     const months = timeLoggedExportMonths(query.months);
     const timeZone = String(query.tz || '').trim() || undefined;
-    const projectIds = normalizeIdList(parseCsvIds(query.projectIds));
-    const teamIds = normalizeIdList(parseCsvIds(query.teamIds));
+    const projectIds = timeLoggedExportIds('projectIds', normalizeIdList(parseCsvIds(query.projectIds)));
+    const teamIds = timeLoggedExportIds('teamIds', normalizeIdList(parseCsvIds(query.teamIds)));
+    const projectNames = await filterNames(ctx.manager!, ctx.tenantId, 'projectIds', projectIds);
+    const teamNames = await filterNames(ctx.manager!, ctx.tenantId, 'teamIds', teamIds);
     const report = await this.svc.getReport(ctx.tenantId, { months, timeZone, projectIds, teamIds }, { manager: ctx.manager });
     const exp = timeLoggedExport(report, request.language, {
       months,
       timeZone: normalizeReportTimeZone(timeZone),
-      projectNames: await filterNames(ctx.manager!, ctx.tenantId, 'portfolio_projects', projectIds),
-      teamNames: await filterNames(ctx.manager!, ctx.tenantId, 'portfolio_teams', teamIds),
+      projectNames,
+      teamNames,
     });
     res.send(await reportExportBody(res, writeReportExport(exp, request)));
   }
