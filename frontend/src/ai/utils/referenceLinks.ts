@@ -23,8 +23,9 @@ const LINKED_REFERENCE_FAMILIES: Record<string, { entityType: string; resource: 
   CPX: { entityType: 'capex_items', resource: 'budget' },
 };
 
+// A KANAP reference number never starts with 0: `APP-01` is part of a name such as `PAR-APP-01`.
 const REFERENCE_PATTERN = new RegExp(
-  `(?<![\\w/-])(${Object.keys(LINKED_REFERENCE_FAMILIES).join('|')})-\\d+(?![\\w-])`,
+  `(?<![\\w/-])(${Object.keys(LINKED_REFERENCE_FAMILIES).join('|')})-[1-9]\\d*(?![\\w-])`,
   'g',
 );
 

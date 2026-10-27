@@ -307,7 +307,7 @@ describe('ChatMessageList', () => {
             content: [
               'APP-36 runs on AST-4 (INT-7) and costs BL-113; see INC-26, T-8, PRJ-5, REQ-2, DOC-12 and TEC-3.',
               '',
-              'Inline `APP-99`, already linked [T-115](/portfolio/tasks/task-115), CVE-2026-1234, XAPP-1, APP-1x and CTR-4.',
+              'Inline `APP-99`, already linked [T-115](/portfolio/tasks/task-115), CVE-2026-1234, XAPP-1, APP-1x, CTR-4 and the server part APP-01.',
               '',
               '```',
               'INC-77',
@@ -336,6 +336,8 @@ describe('ChatMessageList', () => {
     expect(container.querySelector('code')?.textContent).toBe('APP-99');
     expect(container.querySelector('pre')?.textContent).toContain('INC-77');
     expect(container.textContent).toContain('CVE-2026-1234');
+    // No KANAP reference starts with 0: APP-01 is part of a name.
+    expect(screen.queryByRole('link', { name: 'APP-01' })).not.toBeInTheDocument();
   });
 
   it('leaves as text the references of pages the person cannot open', () => {
