@@ -418,7 +418,7 @@ export default function IncidentsPage() {
       {hasLevel('incidents', 'contributor') && (
         <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.incidents.importCsv')}</Button>
       )}
-      <Button variant="action" onClick={openExport}>{t('pages.incidents.exportCsv')}</Button>
+      <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>
       {canDelete && (
         <DeleteSelectedButton
           selectedRows={selectedRows}

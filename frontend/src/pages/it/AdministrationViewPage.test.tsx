@@ -596,11 +596,13 @@ describe('AdministrationViewPage', () => {
     await screen.findByRole('group', { name: 'Administration zones' });
     listed(40, FILTERS, 'srv');
     fireEvent.click(screen.getByRole('button', { name: 'Export assets' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
     await waitFor(() => expect(getMock).toHaveBeenCalledWith(`${ENDPOINT}/export`, expect.objectContaining({
-      params: { sort: 'name:ASC', filters: FILTERS, q: 'srv', list: 'assets', language: 'en' }, responseType: 'blob',
+      params: { sort: 'name:ASC', filters: FILTERS, q: 'srv', list: 'assets', language: 'en', format: 'csv' }, responseType: 'blob',
     })));
     await waitFor(() => expect(download).toHaveBeenCalledWith(expect.any(Blob), 'administration_view_assets.csv'));
     fireEvent.click(screen.getByRole('button', { name: 'Export domains' }));
-    await waitFor(() => expect(getMock).toHaveBeenCalledWith(`${ENDPOINT}/export`, expect.objectContaining({ params: { list: 'domains', language: 'en' } })));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Excel (.xlsx)' }));
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith(`${ENDPOINT}/export`, expect.objectContaining({ params: { list: 'domains', language: 'en', format: 'xlsx' } })));
   });
 });

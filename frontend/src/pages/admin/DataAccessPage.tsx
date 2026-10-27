@@ -95,7 +95,7 @@ function DataAccessAdminContent() {
   const actions = (
     <Stack direction="row" spacing={1}>
       <Button variant="action" onClick={() => setImportOpen(true)}>{t('admin:dataAccess.importCsv')}</Button>
-      <Button variant="action" onClick={() => setExportOpen(true)}>{t('admin:dataAccess.exportCsv')}</Button>
+      <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>
     </Stack>
   );
 

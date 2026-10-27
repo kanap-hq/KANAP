@@ -1,0 +1,2 @@
+﻿asset_reference,asset_name,technology_reference,technology_name,version,operating_system,notes,source
+AST-1,srv-01,TEC-7,PostgreSQL,16,no,"'=HYPERLINK(""http://x"")",Manual entry

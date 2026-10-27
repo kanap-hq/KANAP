@@ -27,6 +27,8 @@ import { useLookupHydration } from '../../hooks/useLookupPicker';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { getWithListContext, withListContext } from '../../lib/listContext';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
+import ExportFormatButton from '../../components/csv/ExportFormatButton';
+import type { ExportFormat } from '../../components/csv/exportFormat';
 import { formatUserName } from '../../utils/userDisplay';
 import { USERS_LOOKUP_ENDPOINT, type UserOption } from '../../components/fields/userLookup';
 import {
@@ -229,13 +231,13 @@ export default function AuditLogsPage() {
   const [exporting, setExporting] = React.useState(false);
   const [exportNotice, setExportNotice] = React.useState<{ severity: 'info' | 'error'; text: string } | null>(null);
 
-  // The rows the list shows (its filters, search and sort), as a CSV file made by the server.
-  const handleExport = React.useCallback(async () => {
+  // The rows the list shows (its filters, search and sort), as a CSV file or a workbook made by the server.
+  const handleExport = React.useCallback(async (format: ExportFormat) => {
     setExporting(true);
     setExportNotice(null);
     try {
       const state = lastQueryRef.current;
-      const params: Record<string, unknown> = {};
+      const params: Record<string, unknown> = { format };
       if (state?.sort) params.sort = state.sort;
       if (state?.q) Object.assign(params, { q: state.q }, auditSearchParams(state.q, t));
       if (state?.filterModel && Object.keys(state.filterModel).length > 0) params.filters = JSON.stringify(state.filterModel);
@@ -244,8 +246,8 @@ export default function AuditLogsPage() {
       const res = await api.get<Blob>('/audit-logs/export', { params: sent, responseType: 'blob' });
       const headers = (res.headers ?? {}) as Record<string, unknown>;
       const disposition = (headers['content-disposition'] ?? headers['Content-Disposition']) as string | undefined;
-      const filename = extractFilenameFromDisposition(disposition) || 'audit-log.csv';
-      downloadBlob(new Blob([res.data], { type: 'text/csv;charset=utf-8' }), filename);
+      const filename = extractFilenameFromDisposition(disposition) || `audit-log.${format}`;
+      downloadBlob(res.data instanceof Blob ? res.data : new Blob([res.data]), filename);
       const limit = Number(headers[EXPORT_TRUNCATED_HEADER] ?? headers['X-Export-Truncated']);
       if (Number.isFinite(limit) && limit > 0) {
         setExportNotice({ severity: 'info', text: t('auditLogs.export.truncated', { limit: limit.toLocaleString(locale) }) });
@@ -434,9 +436,7 @@ export default function AuditLogsPage() {
       <PageHeader
         title={t('auditLogs.title')}
         actions={(
-          <Button variant="action" onClick={() => { void handleExport(); }} disabled={exporting}>
-            {t('auditLogs.export.button')}
-          </Button>
+          <ExportFormatButton label={t('common:export.button')} onExport={handleExport} disabled={exporting} />
         )}
       />
       {exportNotice && (

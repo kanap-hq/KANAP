@@ -7,7 +7,6 @@ import {
   CsvDateOrder,
   CsvLanguage,
   DecimalMark,
-  endOfValidityCell,
   endOfValidityOf,
   keepStoredEndOfValidity,
   MasterDataFileRead,
@@ -16,7 +15,6 @@ import {
   rowError,
   rowProblemErrors,
   textCellError,
-  writeCsv,
 } from '../common/csv-sheet';
 import {
   CALENDAR_YEAR_MAX,
@@ -45,6 +43,8 @@ import {
   WorkingDayProfileValues,
 } from './working-day-profiles.service';
 import { uploadedBytes } from '../common/upload';
+import { endOfValidityDay, ListExportCell, ListExportFile, numberCell, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 export const CALENDAR_MONTH_HEADERS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'] as const;
 export const WORKING_DAY_PROFILE_CSV_HEADERS = [
@@ -102,14 +102,15 @@ export class WorkingDayProfilesCsvService {
    * is one row with a blank year and months. A standard calendar exports its
    * country and region codes and its edited years only.
    */
-  async exportCsv(
+  async exportCsv<F extends ExportFileFormat = 'csv'>(
     scope: 'data' | 'template',
     ctx: WorkingDayProfileContext,
     language: CsvLanguage = 'en',
     listQuery?: Record<string, unknown>,
-  ): Promise<{ filename: string; content: string }> {
+    format: F = 'csv' as F,
+  ): Promise<ListExportFile<F>> {
     const headers = [...WORKING_DAY_PROFILE_CSV_HEADERS];
-    const rows: string[][] = [];
+    const rows: ListExportCell[][] = [];
     if (scope === 'data') {
       // What the list shows, in its order, or the whole register by code.
       let stored = await this.calendars.loadStored(ctx);
@@ -120,14 +121,14 @@ export class WorkingDayProfilesCsvService {
         stored.sort((a, b) => compareText(a.code, b.code) || a.id.localeCompare(b.id));
       }
       for (const calendar of stored) {
-        const base = [
+        const base: ListExportCell[] = [
           calendar.code,
           calendar.name,
           calendar.description ?? '',
           calendar.country_iso ?? '',
           calendar.region_code ?? '',
           effectiveStatus(calendar),
-          endOfValidityCell(calendar.disabled_at, language),
+          endOfValidityDay(calendar.disabled_at),
         ];
         const days = sortDays(calendar.days_by_year ?? {});
         const years = Object.keys(days);
@@ -136,14 +137,19 @@ export class WorkingDayProfilesCsvService {
           continue;
         }
         for (const year of years) {
-          rows.push([...base, year, ...CALENDAR_MONTH_HEADERS.map((_month, index) => days[year][index] ?? '')]);
+          // The year and the days are numbers (the days as stored: exact decimal text).
+          rows.push([...base, numberCell(year), ...CALENDAR_MONTH_HEADERS.map((_month, index) => numberCell(days[year][index]))]);
         }
       }
     }
-    return {
+    return writeListExport({
+      format,
+      language,
       filename: scope === 'template' ? 'working_day_calendars_template.csv' : 'working_day_calendars.csv',
-      content: writeCsv({ language, headers, rows }),
-    };
+      sheetNames: { en: 'Working-day calendars', fr: 'Calendriers de jours ouvrés', de: 'Arbeitstagekalender', es: 'Calendarios laborales' },
+      headers,
+      rows,
+    });
   }
 
   /**

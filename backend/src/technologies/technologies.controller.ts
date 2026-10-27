@@ -23,6 +23,10 @@ import { TechnologyCatalogService } from './catalog/technology-catalog.service';
 import { TechnologyLinksCsvService } from './technology-links-csv.service';
 import { TechnologyLinksService, type ApplicationsReach, type LinkInput } from './technology-links.service';
 import { requireManager } from './technology-rows';
+import { csvExportFormat } from '../common/csv/csv-export.service';
+import { csvExportBody } from '../common/csv/send-csv-export';
+import type { ListExportFile } from '../common/csv/list-export';
+import { parseExportFormat, type ExportFileFormat } from '../common/xlsx/format';
 
 export { hasLevel };
 
@@ -86,15 +90,14 @@ export class TechnologiesController {
     scopeRaw: string | undefined,
     languageRaw: string | undefined,
     ctx: TenantRequest,
-    produce: (scope: 'data' | 'template', language: CsvLanguage) => Promise<{ filename: string; content: string }>,
+    formatRaw: unknown,
+    produce: (scope: 'data' | 'template', language: CsvLanguage, format: ExportFileFormat) => Promise<ListExportFile>,
   ) {
     const scope = scopeRaw === 'template' ? 'template' : scopeRaw == null || scopeRaw === 'data' ? 'data' : null;
     if (!scope) throw new BadRequestException("scope must be 'data' or 'template'.");
+    const format = csvExportFormat(formatRaw, scope);
     const language = await languageOf(requireManager(ctx.manager), ctx.tenantId, ctx.userId || null, languageRaw);
-    const file = await produce(scope, language);
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(file.filename));
-    res.send(file.content);
+    res.send(await csvExportBody(res, await produce(scope, language, format)));
   }
 
   /** A link file import: `dryRun` unless the query says `false`. */
@@ -242,8 +245,9 @@ export class TechnologiesController {
     @Query('language') languageRaw: string | undefined,
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
+    @Query('format') formatRaw?: unknown,
   ) {
-    return this.sendLinkFile(res, scopeRaw, languageRaw, ctx, (scope, language) => this.linkFiles.exportAssetLinks(scope, this.opts(ctx), language));
+    return this.sendLinkFile(res, scopeRaw, languageRaw, ctx, formatRaw, (scope, language, format) => this.linkFiles.exportAssetLinks(scope, this.opts(ctx), language, format));
   }
 
   /** Add or update server ↔ technology links. `dryRun` defaults to true and writes nothing. */
@@ -273,9 +277,10 @@ export class TechnologiesController {
     @Query('language') languageRaw: string | undefined,
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
+    @Query('format') formatRaw?: unknown,
   ) {
     const applications = await this.requireApplications(ctx);
-    return this.sendLinkFile(res, scopeRaw, languageRaw, ctx, (scope, language) => this.linkFiles.exportApplicationLinks(scope, this.opts(ctx), applications, language));
+    return this.sendLinkFile(res, scopeRaw, languageRaw, ctx, formatRaw, (scope, language, format) => this.linkFiles.exportApplicationLinks(scope, this.opts(ctx), applications, language, format));
   }
 
   /** Add or update application declarations. `dryRun` defaults to true and writes nothing. */
@@ -518,20 +523,20 @@ export class TechnologiesController {
     return this.links.applicationsOfTechnology(id, this.opts(ctx), await this.applicationsReach(ctx));
   }
 
-  /** The same rows as a CSV file (a path ending with /export: recorded as an export in the audit log). */
+  /** The same rows as a CSV file or a workbook (a path ending with /export: recorded as an export in the audit log). */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get(':id/applications/export')
   async exportApplications(
     @Param('id') id: string,
     @Query('language') language: string | undefined,
-    @Res({ passthrough: true }) res: Response,
+    @Query('format') format: string | undefined,
+    @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ) {
-    const file = await this.links.applicationsCsv(id, language, this.opts(ctx), await this.requireApplications(ctx));
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(file.filename));
-    return file.content;
+    const fileFormat = parseExportFormat(format);
+    const file = await this.links.applicationsCsv(id, language, this.opts(ctx), await this.requireApplications(ctx), fileFormat);
+    res.send(await csvExportBody(res, file));
   }
 
   /** Declare the technology on several applications at once (`{ application_ids }`). */

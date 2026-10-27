@@ -87,14 +87,9 @@ function codeFromLabels(
 /**
  * CSV configuration for the incident register.
  *
- * Field order matches IncidentWorkspacePage.tsx (overview + properties drawer):
- * - Identity: ref (INC-N)
- * - Overview: title, category, severity, status
- * - Timeline: started / detected / resolved / closed
- * - People: reporter, owner
- * - Record: description, incident review (the integrated document, virtual column)
- * - Source: source reference
- * - Compliance: personal data, authority notification, notified parties
+ * Column order: ref (INC-N), title, then the overview of IncidentWorkspacePage.tsx: description,
+ * incident review (the integrated document, virtual column), then the properties drawer top to
+ * bottom (category to notified parties).
  *
  * Import is a first-class path: customers arrive with an Excel register.
  * A row with a known ref updates that incident (closure lock does not apply to
@@ -306,6 +301,8 @@ function textField(csvColumn: string, label: string, group: string) {
 
 export const incidentCsvConfig: CsvEntityConfig = {
   entityName: 'incident',
+  // The sheet of an xlsx export: the list's title on screen.
+  sheetNames: { en: 'Incident register', fr: 'Registre des incidents', de: 'Vorfallsregister', es: 'Registro de incidentes' },
   tableName: 'incidents',
   displayName: 'Incidents',
   // INC-N is the register's identity; the export writes it, the import matches on it.
@@ -324,8 +321,6 @@ export const incidentCsvConfig: CsvEntityConfig = {
       group: 'Identity',
       importTransformFn: (value: string) => parseRef(value),
     },
-
-    // === OVERVIEW ===
     {
       csvColumn: 'title',
       entityProperty: 'title',
@@ -334,6 +329,27 @@ export const incidentCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'Title',
       group: 'Overview',
+    },
+
+    // === OVERVIEW TAB (description, review, properties) ===
+    textField('description', 'Description', 'Record'),
+    // Virtual column: the review lives in the `incidents:review` integrated
+    // document, not on `incidents` (§3.8). `beforeCommit` moves it off the
+    // entity so nothing tries to save a `review` column, and the CSV service
+    // writes it through the dedicated import primitive after the upsert.
+    // The Markdown is validated here, so a dry run reports a bad cell without
+    // provisioning or writing anything.
+    {
+      csvColumn: 'review',
+      entityProperty: REVIEW_ENTITY_PROPERTY,
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: true,
+      label: 'Incident review',
+      group: 'Record',
+      // Processed in the Markdown workers, within the time budget of the file's rich-text cells.
+      importTransformFn: async (value: string, _row: Record<string, string>, context: CsvImportContext) =>
+        await normalizeMarkdownRichText(value, { fieldName: 'review', budget: context.markdownBudget }) ?? '',
     },
     {
       csvColumn: 'category',
@@ -381,14 +397,10 @@ export const incidentCsvConfig: CsvEntityConfig = {
       label: 'Restricted to register administrators',
       group: 'Overview',
     },
-
-    // === TIMELINE ===
     dateTimeField('started_at', 'Started', 'Timeline'),
     dateTimeField('detected_at', 'Detected', 'Timeline'),
     dateTimeField('resolved_at', 'Resolved', 'Timeline'),
     dateTimeField('closed_at', 'Closed', 'Timeline'),
-
-    // === PEOPLE ===
     {
       csvColumn: 'reporter',
       entityProperty: 'reporter_user_id',
@@ -417,32 +429,7 @@ export const incidentCsvConfig: CsvEntityConfig = {
       importTransformFn: (value: string, _row: Record<string, string>, context: CsvImportContext) =>
         resolveUser(value, 'owner', context),
     },
-
-    // === RECORD ===
-    textField('description', 'Description', 'Record'),
-    // Virtual column: the review lives in the `incidents:review` integrated
-    // document, not on `incidents` (§3.8). `beforeCommit` moves it off the
-    // entity so nothing tries to save a `review` column, and the CSV service
-    // writes it through the dedicated import primitive after the upsert.
-    // The Markdown is validated here, so a dry run reports a bad cell without
-    // provisioning or writing anything.
-    {
-      csvColumn: 'review',
-      entityProperty: REVIEW_ENTITY_PROPERTY,
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: true,
-      label: 'Incident review',
-      group: 'Record',
-      // Processed in the Markdown workers, within the time budget of the file's rich-text cells.
-      importTransformFn: async (value: string, _row: Record<string, string>, context: CsvImportContext) =>
-        await normalizeMarkdownRichText(value, { fieldName: 'review', budget: context.markdownBudget }) ?? '',
-    },
-
-    // === SOURCE ===
     textField('source_ref', 'External reference', 'Source'),
-
-    // === COMPLIANCE ===
     {
       csvColumn: 'personal_data_affected',
       entityProperty: 'personal_data_affected',

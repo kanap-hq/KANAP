@@ -47,7 +47,7 @@ describe('csv labels', () => {
 // Columns of the assets and tasks export field lists (asset-csv.config.ts, task-csv.config.ts,
 // plus the two vulnerability columns shared with applications).
 const ASSET_COLUMNS = [
-  'id', 'name', 'location_reference', 'kind', 'is_cluster', 'status', 'go_live_date', 'end_of_life_date', 'notes',
+  'id', 'reference', 'name', 'location_reference', 'kind', 'is_cluster', 'status', 'go_live_date', 'end_of_life_date', 'notes',
   'environment', 'hostname', 'domain', 'admin_zone', 'aliases', 'operating_system', 'cluster',
   'ip_1_type', 'ip_1_address', 'ip_1_subnet_cidr',
   'ip_2_type', 'ip_2_address', 'ip_2_subnet_cidr',
@@ -56,7 +56,7 @@ const ASSET_COLUMNS = [
   'vulnerabilities_to_review', 'severe_vulnerabilities',
 ];
 const TASK_COLUMNS = [
-  'id', 'title', 'description', 'task_type_name',
+  'id', 'reference', 'title', 'description', 'task_type_name',
   'related_object_type', 'related_object_id', 'related_object_name',
   'phase_name', 'priority_level', 'category_name', 'stream_name', 'source_name', 'company_name',
   'status', 'start_date', 'due_date', 'assignee_email', 'creator_email',
@@ -129,7 +129,7 @@ describe('assets and tasks export labels', () => {
 // Columns of the portfolio project and request export field lists
 // (portfolio-project-csv.config.ts, portfolio-request-csv.config.ts).
 const PROJECT_COLUMNS = [
-  'id', 'name', 'status', 'purpose', 'origin',
+  'id', 'reference', 'name', 'status', 'purpose', 'origin',
   'source_name', 'category_name', 'stream_name', 'company_name', 'department_name',
   'planned_start', 'planned_end', 'actual_start', 'actual_end', 'baseline_start_date', 'baseline_end_date',
   'execution_progress',
@@ -140,7 +140,7 @@ const PROJECT_COLUMNS = [
   'criteria_values', 'priority_score', 'priority_override', 'override_value', 'override_justification',
 ];
 const REQUEST_COLUMNS = [
-  'id', 'name', 'status', 'purpose',
+  'id', 'reference', 'name', 'status', 'purpose',
   'source_name', 'category_name', 'stream_name', 'requestor_email', 'company_name', 'department_name',
   'target_delivery_date', 'current_situation', 'expected_benefits', 'risks',
   'business_sponsor_email', 'business_lead_email', 'it_sponsor_email', 'it_lead_email',

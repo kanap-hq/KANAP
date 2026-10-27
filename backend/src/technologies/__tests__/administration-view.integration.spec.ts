@@ -17,6 +17,7 @@ import {
 import { AdministrationViewController } from '../reports/administration-view.controller';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { application, asset, assign, contains, installed, member, one, technology, version } from './technologies.fixtures';
+import { assertCsvGolden, xlsxCells, xlsxSheetName } from '../../common/csv/__tests__/export-golden';
 
 // The administration view (lot A1e), against a real database in transactions rolled back at the end.
 // The five controls keep the rules reviewed in lot A1d. The summary and the asset page report counts
@@ -932,7 +933,13 @@ async function testExport() {
     assert.equal(frenchTyped[1].includes(';Virtual machine;'), true, frenchTyped[1]);
     const formula = await svc.csv({ q: '=cmd', language: 'en' }, opts);
     assert.ok(formula.content.includes("'=cmd"), formula.content);
+    const assetsBook = await svc.csv({ q: '=cmd', language: 'fr' }, opts, 'xlsx');
+    assert.equal(assetsBook.rows, 1);
+    assert.equal(xlsxSheetName(assetsBook.content), 'Actifs');
+    assert.deepEqual(xlsxCells(assetsBook.content).C2, ['text', "&apos;=cmd"], 'assets: text with the formula guard');
     const all = await svc.csv({ language: 'en' }, opts);
+    assertCsvGolden('administration-view-assets.en', all.content);
+    assertCsvGolden('administration-view-assets.fr', (await svc.csv({ language: 'fr' }, opts)).content);
     assert.equal(all.filename, 'administration_view_assets.csv');
     assert.equal(all.content.includes('gone-export'), false);
     await assert.rejects(svc.csv({ list: 'zones', language: 'en' }, opts), (error: any) => error instanceof BadRequestException && /assets or domains/.test(error.message));
@@ -940,11 +947,19 @@ async function testExport() {
     const s = await seed(runner);
     const domains = await service(s.settings).csv({ list: 'domains', language: 'en' }, { manager: runner.manager, tenantId: s.a });
     assert.equal(domains.filename, 'administration_view_domains.csv');
+    assertCsvGolden('administration-view-domains.en', domains.content);
+    const domainsBook = await service(s.settings).csv({ list: 'domains', language: 'en' }, { manager: runner.manager, tenantId: s.a }, 'xlsx');
+    assert.equal(domainsBook.filename, 'administration_view_domains.xlsx');
+    assert.equal(xlsxSheetName(domainsBook.content), 'Domains');
+    const d = xlsxCells(domainsBook.content);
+    assert.deepEqual([d.F2, d.G2, d.H2, d.H3], [['general', '1200'], ['general', '300'], ['general', '2'], ['general', '0']], 'domains: counts as numbers');
+    assert.deepEqual(d.A2, ['text', 'Corp']);
     const domainLines = domains.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
     assert.equal(domainLines[0], 'Domain,DNS suffix,Forest,Trusts,Trusts declared by other domains,Number of accounts,Number of computers,Domain controllers,Domain controller servers');
     assert.equal(domainLines[1], 'Corp,corp.example.com,corp.example.com,Lab (two-way),,1200,300,2,"dc1, dc2"');
     assert.equal(domainLines[2], 'Lab,lab.example.com,,,"Corp (two-way), Partner (incoming)",,,0,');
     const domainsFr = await service(s.settings).csv({ list: 'domains', language: 'fr' }, { manager: runner.manager, tenantId: s.a });
+    assertCsvGolden('administration-view-domains.fr', domainsFr.content);
     const frHeader = domainsFr.content.replace(/^\uFEFF/, '').split(/\r?\n/)[0];
     assert.equal(frHeader, [
       'Domaine', 'Suffixe DNS', 'Forêt', 'Approbations', "Approbations déclarées par d'autres domaines",

@@ -8,7 +8,6 @@ import {
   readMasterDataFile,
   rowError,
   rowProblemErrors,
-  writeCsv,
   type CsvDataRow,
   type CsvLanguage,
   type ImportReportError,
@@ -18,6 +17,8 @@ import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import { clustersWithMembers } from '../assets/asset-rules';
 import { OperatingSystemService } from './operating-system.service';
 import { TechnologyLinksService, type LinkOpts } from './technology-links.service';
+import { ListExportFile, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 export const ASSET_LINK_CSV_HEADERS = [
   'asset_reference', 'asset_name', 'technology_reference', 'technology_name', 'version', 'operating_system', 'notes', 'source',
@@ -122,11 +123,12 @@ export class TechnologyLinksCsvService {
   // ==================== SERVERS ====================
 
   /** Every server link of the tenant, retired assets included, by server, technology, version. */
-  async exportAssetLinks(
+  async exportAssetLinks<F extends ExportFileFormat = 'csv'>(
     scope: 'data' | 'template',
     ctx: TechnologyLinksCsvContext,
     language: CsvLanguage = 'en',
-  ): Promise<{ filename: string; content: string }> {
+    format: F = 'csv' as F,
+  ): Promise<ListExportFile<F>> {
     const rows: string[][] = [];
     if (scope === 'data') {
       const stored: Array<{
@@ -150,10 +152,14 @@ export class TechnologyLinksCsvService {
         ]);
       }
     }
-    return {
+    return writeListExport({
+      format,
+      language,
       filename: scope === 'template' ? ASSET_LINKS_CSV_TEMPLATE : ASSET_LINKS_CSV_FILENAME,
-      content: writeCsv({ language, headers: [...ASSET_LINK_CSV_HEADERS], rows }),
-    };
+      sheetNames: { en: 'Server technologies', fr: 'Technologies des serveurs', de: 'Server-Technologien', es: 'Tecnologías de servidores' },
+      headers: [...ASSET_LINK_CSV_HEADERS],
+      rows,
+    });
   }
 
   /**
@@ -202,12 +208,13 @@ export class TechnologyLinksCsvService {
   // ==================== APPLICATIONS ====================
 
   /** Every declared application link the caller reads, by application, technology, version. */
-  async exportApplicationLinks(
+  async exportApplicationLinks<F extends ExportFileFormat = 'csv'>(
     scope: 'data' | 'template',
     ctx: TechnologyLinksCsvContext,
     applications: ApplicationsScope,
     language: CsvLanguage = 'en',
-  ): Promise<{ filename: string; content: string }> {
+    format: F = 'csv' as F,
+  ): Promise<ListExportFile<F>> {
     const rows: string[][] = [];
     if (scope === 'data') {
       const params: unknown[] = [ctx.tenantId];
@@ -235,10 +242,14 @@ export class TechnologyLinksCsvService {
         ]);
       }
     }
-    return {
+    return writeListExport({
+      format,
+      language,
       filename: scope === 'template' ? APPLICATION_LINKS_CSV_TEMPLATE : APPLICATION_LINKS_CSV_FILENAME,
-      content: writeCsv({ language, headers: [...APPLICATION_LINK_CSV_HEADERS], rows }),
-    };
+      sheetNames: { en: 'Application technologies', fr: 'Technologies des applications', de: 'Anwendungstechnologien', es: 'Tecnologías de aplicaciones' },
+      headers: [...APPLICATION_LINK_CSV_HEADERS],
+      rows,
+    });
   }
 
   /**

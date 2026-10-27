@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useRef } from 'react';
 import { Button, Stack, Box, LinearProgress, Typography, RadioGroup, FormControlLabel, Radio, Tooltip } from '@mui/material';
-import type { EnhancedColDef } from '../../components/ServerDataGrid';
+import type { EnhancedColDef, ListRequest } from '../../components/ServerDataGrid';
 import ServerDataGrid from '../../components/ServerDataGrid';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import PageHeader from '../../components/PageHeader';
@@ -88,6 +88,9 @@ export default function ProjectsPage() {
   const theme = useTheme();
   const [refreshKey, setRefreshKey] = useState(0);
   const [exportOpen, setExportOpen] = useState(false);
+  // The export holds the rows of the list: its filters, quick search, scope and sort (`rows=list`).
+  const listRequestRef = useRef<ListRequest | null>(null);
+  const [exportParams, setExportParams] = useState<Record<string, unknown>>({ rows: 'list' });
   const [importOpen, setImportOpen] = useState(false);
   const gridApiRef = useRef<any>(null);
 
@@ -497,6 +500,11 @@ export default function ProjectsPage() {
     const sp = buildWorkspaceSearch();
     navigate(`/portfolio/projects/new/summary?${sp.toString()}`);
   };
+  const openExport = () => {
+    const { include: _include, ...params } = (listRequestRef.current?.params ?? {}) as Record<string, unknown>;
+    setExportParams({ ...params, rows: 'list' });
+    setExportOpen(true);
+  };
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
@@ -505,7 +513,7 @@ export default function ProjectsPage() {
         </Button>
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('projects.actions.importCsv')}</Button>}
-      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('projects.actions.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>}
     </Stack>
   );
 
@@ -528,6 +536,7 @@ export default function ProjectsPage() {
           defaultFilterModel={defaultFilterModel}
           refreshKey={refreshKey}
           onGridApiReady={(api) => { gridApiRef.current = api; }}
+          onListRequestChange={(request) => { listRequestRef.current = request; }}
           onQueryStateChange={(state) => {
             lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
           }}
@@ -549,6 +558,7 @@ export default function ProjectsPage() {
         onClose={() => setExportOpen(false)}
         endpoint="/portfolio/projects"
         title={t('projects.csv.exportTitle')}
+        params={exportParams}
         presets={[{ name: 'enrichment', label: t('projects.csv.presetEnrichment') }]}
       />
       <CsvImportDialogV2

@@ -208,13 +208,13 @@ describe('WorkingDayCalendarsPage', () => {
     const { unmount } = renderPage();
     expect(screen.getByRole('button', { name: 'shared.labels.new' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'shared.labels.importCsv' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'shared.labels.exportCsv' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:export.button' })).toBeNull();
     expect(grid.props?.enableRowSelection).toBe(false);
     unmount();
     levels.value = 'admin';
     renderPage();
     expect(screen.getByRole('button', { name: 'shared.labels.importCsv' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'shared.labels.exportCsv' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'common:export.button' })).toBeInTheDocument();
     expect(grid.props?.enableRowSelection).toBe(true);
   });
 

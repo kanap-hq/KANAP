@@ -26,6 +26,9 @@ import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-shee
 import type { ComplianceItemPatch } from './contract-compliance';
 import { ContractsDeleteService } from './contracts-delete.service';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
+import { csvExportFormat } from '../common/csv/csv-export.service';
+import { parseExportFormat } from '../common/xlsx/format';
+import { csvExportBody } from '../common/csv/send-csv-export';
 
 /**
  * The list's `covered_application` filter, for a reader of the applications only (a Business
@@ -89,34 +92,34 @@ export class ContractsController {
   @RequireLevel('contracts', 'admin')
   @Get('export')
   async export(@Query('scope') scope: 'template' | 'data' = 'data', @Query() query: any, @Res() res: Response, @Req() req: any) {
+    const format = csvExportFormat(query?.format, scope);
     const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, query?.language);
-    const { filename, content } = await this.svc.exportCsv(scope, {
+    const file = await this.svc.exportCsv(scope, {
       manager: req?.queryRunner?.manager,
       budgetAccess: canReadContractBudget(req),
       coveredApplications: await coveredApplications(req),
       language,
       listQuery: exportListQuery(query),
+      format,
     });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(filename));
-    res.send(content);
+    res.send(await csvExportBody(res, file));
   }
 
-  // The compliance register of the contracts the list selects (CSV, contract × requirement); before ':id'.
+  // The compliance register of the contracts the list selects, in its order (CSV or xlsx, contract × requirement); before ':id'.
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @Get('compliance-register/export')
   async exportComplianceRegister(@Query() query: any, @Res() res: Response, @Req() req: any) {
     const manager = req?.queryRunner?.manager;
     const language = await languageOf(manager, req.tenant.id, req.user?.sub ?? null, query?.language);
-    const { filename, content } = await this.svc.exportComplianceRegister(query, language, {
+    const format = parseExportFormat(query?.format);
+    const file = await this.svc.exportComplianceRegister(query, language, {
       manager,
       budgetAccess: canReadContractBudget(req),
       coveredApplications: await coveredApplications(req),
+      format,
     });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(filename));
-    res.send(content);
+    res.send(await csvExportBody(res, file));
   }
 
   // Attachments: define static segment before parameterized ':id'

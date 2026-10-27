@@ -4,6 +4,7 @@ import {
   CsvExportContext,
   CsvFieldType,
   CsvImportContext,
+  CsvImportRow,
 } from '../common/csv';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { assertMarkdownSize } from '../common/markdown-limits';
@@ -89,24 +90,62 @@ function csvUserIds(raw: Record<string, string>, prefix: string, userByEmail: Ma
 const hasColumns = (raw: Record<string, string>, prefix: string) => [1, 2, 3, 4].some((i) => `${prefix}_${i}` in raw);
 
 /**
+ * The classification a task of a project takes from its project when it has none of its own: the
+ * task list shows `COALESCE(task, project)` (`TasksService.listAllTasks`), and so does the export.
+ */
+export const TASK_INHERITED_CLASSIFICATION = ['source_id', 'category_id', 'stream_id', 'company_id'] as const;
+
+type ProjectClassification = Record<(typeof TASK_INHERITED_CLASSIFICATION)[number], string | null>;
+
+/** The classification of the projects named, by lower-case id; ids that are not uuids are left out. */
+export async function taskProjectClassifications(
+  manager: { query: (sql: string, params: unknown[]) => Promise<any> },
+  tenantId: string,
+  projectIds: string[],
+): Promise<Map<string, ProjectClassification>> {
+  const ids = [...new Set(projectIds.map((id) => String(id).trim().toLowerCase()).filter((id) => TASK_UUID_RE.test(id)))];
+  if (ids.length === 0) return new Map();
+  const rows: Array<ProjectClassification & { id: string }> = await manager.query(
+    `SELECT id::text AS id, source_id::text AS source_id, category_id::text AS category_id,
+            stream_id::text AS stream_id, company_id::text AS company_id
+       FROM portfolio_projects
+      WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+    [tenantId, ids],
+  );
+  return new Map(rows.map((row) => [row.id, row]));
+}
+
+/** The project a matched row's task belongs to once imported (the file's, else the stored one); null when none. */
+function importedProjectId(row: CsvImportRow): string | null {
+  const stored = row.existingEntity;
+  const pick = (key: string) => (Object.prototype.hasOwnProperty.call(row.parsed, key) ? row.parsed[key] : stored[key]);
+  const type = String(pick('related_object_type') ?? '').trim().toLowerCase();
+  const id = pick('related_object_id');
+  return type === 'project' && id ? String(id).trim().toLowerCase() : null;
+}
+
+/**
  * CSV configuration for Tasks entity
  *
- * Field order matches TaskWorkspacePage.tsx sidebar sections:
- * - Basic: title, description
- * - Context: related_object, phase, priority_level, category, stream
- * - Status: status
+ * Column order: id, reference (T-n, export only), title, description, then the TaskWorkspacePage.tsx
+ * sidebar top to bottom:
+ * - Context: related object, phase
+ * - Details: task type, priority, status
+ * - Classification: source, category, stream, company
+ * - People: requestor, assignee, viewers, then owners (not on the page)
  * - Dates: start_date, due_date
- * - People: assignee, creator, viewers, owners
- * - Other: labels
+ * - Not on the page: labels
  */
 export const taskCsvConfig: CsvEntityConfig = {
   entityName: 'task',
+  // The sheet of an xlsx export: the list's title on screen.
+  sheetNames: { en: 'Tasks', fr: 'Tâches', de: 'Aufgaben', es: 'Tareas' },
   tableName: 'tasks',
   displayName: 'Tasks',
   // For linked tasks: title + related_object_id. For standalone: title alone (matched via id).
   upsertKey: ['title'],
   fields: [
-    // Identity
+    // === IDENTITY ===
     {
       csvColumn: 'id',
       entityProperty: 'id',
@@ -119,8 +158,18 @@ export const taskCsvConfig: CsvEntityConfig = {
       label: 'ID',
       group: 'Identity',
     },
-
-    // === BASIC FIELDS ===
+    {
+      // The business reference the list shows (T-n): export only, ignored on import.
+      csvColumn: 'reference',
+      entityProperty: 'item_number',
+      type: CsvFieldType.COMPUTED,
+      exportable: true,
+      importable: false,
+      defaultExport: true,
+      label: 'Reference',
+      group: 'Identity',
+      exportFn: (entity: any) => (entity.item_number ? `T-${entity.item_number}` : ''),
+    },
     {
       csvColumn: 'title',
       entityProperty: 'title',
@@ -130,6 +179,8 @@ export const taskCsvConfig: CsvEntityConfig = {
       label: 'Title',
       group: 'Basic',
     },
+
+    // === BODY ===
     {
       csvColumn: 'description',
       entityProperty: 'description',
@@ -145,19 +196,7 @@ export const taskCsvConfig: CsvEntityConfig = {
       },
     },
 
-    // === CONTEXT (Related object, phase, priority, category, stream) ===
-    {
-      csvColumn: 'task_type_name',
-      entityProperty: 'task_type_id',
-      type: CsvFieldType.FK_BY_NAME,
-      fkEntity: 'portfolio_task_types',
-      fkLookupColumn: 'name',
-      fkRequired: false,
-      required: false,
-      defaultExport: true,
-      label: 'Task Type',
-      group: 'Context',
-    },
+    // === SIDEBAR: CONTEXT ===
     {
       csvColumn: 'related_object_type',
       entityProperty: 'related_object_type',
@@ -204,6 +243,20 @@ export const taskCsvConfig: CsvEntityConfig = {
       label: 'Phase',
       group: 'Context',
     },
+
+    // === SIDEBAR: DETAILS ===
+    {
+      csvColumn: 'task_type_name',
+      entityProperty: 'task_type_id',
+      type: CsvFieldType.FK_BY_NAME,
+      fkEntity: 'portfolio_task_types',
+      fkLookupColumn: 'name',
+      fkRequired: false,
+      required: false,
+      defaultExport: true,
+      label: 'Task Type',
+      group: 'Context',
+    },
     {
       csvColumn: 'priority_level',
       entityProperty: 'priority_level',
@@ -212,6 +265,30 @@ export const taskCsvConfig: CsvEntityConfig = {
       required: false,
       defaultExport: true,
       label: 'Priority Level',
+      group: 'Context',
+    },
+    {
+      csvColumn: 'status',
+      entityProperty: 'status',
+      type: CsvFieldType.ENUM,
+      enumValues: ['open', 'in_progress', 'pending', 'in_testing', 'done', 'cancelled'],
+      required: false,
+      defaultExport: true,
+      label: 'Status',
+      group: 'Status',
+    },
+
+    // === SIDEBAR: CLASSIFICATION (a project task shows its project's when it has none) ===
+    {
+      csvColumn: 'source_name',
+      entityProperty: 'source_id',
+      type: CsvFieldType.FK_BY_NAME,
+      fkEntity: 'portfolio_sources',
+      fkLookupColumn: 'name',
+      fkRequired: false,
+      required: false,
+      defaultExport: false,
+      label: 'Source',
       group: 'Context',
     },
     {
@@ -239,18 +316,6 @@ export const taskCsvConfig: CsvEntityConfig = {
       group: 'Context',
     },
     {
-      csvColumn: 'source_name',
-      entityProperty: 'source_id',
-      type: CsvFieldType.FK_BY_NAME,
-      fkEntity: 'portfolio_sources',
-      fkLookupColumn: 'name',
-      fkRequired: false,
-      required: false,
-      defaultExport: false,
-      label: 'Source',
-      group: 'Context',
-    },
-    {
       csvColumn: 'company_name',
       entityProperty: 'company_id',
       type: CsvFieldType.FK_BY_NAME,
@@ -263,51 +328,7 @@ export const taskCsvConfig: CsvEntityConfig = {
       group: 'Context',
     },
 
-    // === STATUS ===
-    {
-      csvColumn: 'status',
-      entityProperty: 'status',
-      type: CsvFieldType.ENUM,
-      enumValues: ['open', 'in_progress', 'pending', 'in_testing', 'done', 'cancelled'],
-      required: false,
-      defaultExport: true,
-      label: 'Status',
-      group: 'Status',
-    },
-
-    // === DATES ===
-    {
-      csvColumn: 'start_date',
-      entityProperty: 'start_date',
-      type: CsvFieldType.DATE,
-      required: false,
-      defaultExport: true,
-      label: 'Start Date',
-      group: 'Dates',
-    },
-    {
-      csvColumn: 'due_date',
-      entityProperty: 'due_date',
-      type: CsvFieldType.DATE,
-      required: false,
-      defaultExport: true,
-      label: 'Due Date',
-      group: 'Dates',
-    },
-
-    // === PEOPLE ===
-    {
-      csvColumn: 'assignee_email',
-      entityProperty: 'assignee_user_id',
-      type: CsvFieldType.FK_BY_EMAIL,
-      fkEntity: 'users',
-      fkLookupColumn: 'email',
-      fkRequired: false,
-      required: false,
-      defaultExport: true,
-      label: 'Assignee Email',
-      group: 'People',
-    },
+    // === SIDEBAR: PEOPLE (owners are not on the page) ===
     {
       csvColumn: 'creator_email',
       entityProperty: 'creator_id',
@@ -329,7 +350,18 @@ export const taskCsvConfig: CsvEntityConfig = {
         return '';
       },
     },
-    // Viewers - explicit columns matching Apps/Assets pattern
+    {
+      csvColumn: 'assignee_email',
+      entityProperty: 'assignee_user_id',
+      type: CsvFieldType.FK_BY_EMAIL,
+      fkEntity: 'users',
+      fkLookupColumn: 'email',
+      fkRequired: false,
+      required: false,
+      defaultExport: true,
+      label: 'Assignee Email',
+      group: 'People',
+    },
     {
       csvColumn: 'viewer_email_1',
       entityProperty: '_viewer_emails',
@@ -414,7 +446,6 @@ export const taskCsvConfig: CsvEntityConfig = {
         return '';
       },
     },
-    // Owners - explicit columns matching Apps/Assets pattern
     {
       csvColumn: 'owner_email_1',
       entityProperty: '_owner_emails',
@@ -500,7 +531,27 @@ export const taskCsvConfig: CsvEntityConfig = {
       },
     },
 
-    // === OTHER ===
+    // === SIDEBAR: DATES ===
+    {
+      csvColumn: 'start_date',
+      entityProperty: 'start_date',
+      type: CsvFieldType.DATE,
+      required: false,
+      defaultExport: true,
+      label: 'Start Date',
+      group: 'Dates',
+    },
+    {
+      csvColumn: 'due_date',
+      entityProperty: 'due_date',
+      type: CsvFieldType.DATE,
+      required: false,
+      defaultExport: true,
+      label: 'Due Date',
+      group: 'Dates',
+    },
+
+    // === NOT ON THE PAGE ===
     {
       csvColumn: 'labels',
       entityProperty: 'labels',
@@ -561,6 +612,29 @@ export const taskCsvConfig: CsvEntityConfig = {
       const id = String(row.raw.id ?? '').trim().toLowerCase();
       if (hidden.has(id)) {
         row.errors.push({ row: row.rowNumber, column: 'id', message: 'Task not found' });
+      }
+    }
+  },
+
+  /**
+   * The export writes the classification a project task inherits (TASK_INHERITED_CLASSIFICATION). Read
+   * back, a cell equal to the project's value on a task that has no value of its own is the inherited
+   * value, left as it is: the task keeps following its project. Any other value is the task's own.
+   */
+  afterValidate: async (rows, context) => {
+    const matched = rows
+      .filter((row) => row.errors.length === 0 && row.existingEntity)
+      .map((row) => ({ row, projectId: importedProjectId(row) }))
+      .filter((entry): entry is { row: CsvImportRow; projectId: string } => !!entry.projectId);
+    if (matched.length === 0) return;
+    const projects = await taskProjectClassifications(context.manager, context.tenantId, matched.map((entry) => entry.projectId));
+    for (const { row, projectId } of matched) {
+      const project = projects.get(projectId);
+      if (!project) continue;
+      for (const key of TASK_INHERITED_CLASSIFICATION) {
+        const value = row.parsed[key];
+        if (value == null || row.existingEntity[key] != null || project[key] == null) continue;
+        if (String(value).toLowerCase() === project[key]!.toLowerCase()) delete row.parsed[key];
       }
     }
   },

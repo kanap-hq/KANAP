@@ -6,7 +6,6 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
-import { contentDisposition } from '../common/content-disposition';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { ACCOUNT_LOOKUP_ACCESS, ACCOUNT_LOOKUP_READERS, assertLookupSearch } from '../common/lookup/lookup-requirements';
@@ -17,6 +16,8 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { EntityManager } from 'typeorm';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
+import { csvExportFormat } from '../common/csv/csv-export.service';
+import { csvExportBody } from '../common/csv/send-csv-export';
 
 @UseGuards(JwtAuthGuard)
 @Controller('accounts')
@@ -58,11 +59,10 @@ export class AccountsController {
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ) {
+    const format = csvExportFormat(query?.format, scope);
     const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: ctx.manager, coaId, includeCoaCode: !coaId, language, listQuery: exportListQuery(query) });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(filename));
-    res.send(content);
+    const file = await this.svc.exportCsv(scope, { manager: ctx.manager, coaId, includeCoaCode: !coaId, language, listQuery: exportListQuery(query), format });
+    res.send(await csvExportBody(res, file));
   }
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'reader')

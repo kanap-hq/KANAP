@@ -351,7 +351,7 @@ function BudgetListPageView() {
         </Button>
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('opex.importCsv')}</Button>}
-      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('opex.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canDelete && (
         <DeleteSelectedButton
           selectedRows={selectedRows}

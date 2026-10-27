@@ -1,0 +1,8 @@
+﻿id;reference;name;purpose;status;origin;source_name;category_name;stream_name;company_name;department_name;planned_start;planned_end;business_sponsor_email;business_lead_email;it_sponsor_email;it_lead_email;actual_start;actual_end;baseline_start_date;baseline_end_date;execution_progress;estimated_effort_it;estimated_effort_business;actual_effort_it;actual_effort_business;baseline_effort_it;baseline_effort_business;criteria_values;priority_score;priority_override;override_value;override_justification
+row-1;PRJ-1;Plain name;Purpose **bold**;waiting_list;standard;portfolio_sources.name;portfolio_categories.name;portfolio_streams.name;companies.name;departments.name;01/03/2026;01/03/2026;users.email;users.email;users.email;users.email;01/03/2026;01/03/2026;01/03/2026;01/03/2026;12,50;12,50;12,50;11;4;12,50;12,50;"{""score"":0,""note"":""a;b""}";Plain name;oui;12,50;Plain name
+row-2;PRJ-2;"'=HYPERLINK(""http://x"")";;planned;fast_track;portfolio_sources.name;portfolio_categories.name;portfolio_streams.name;companies.name;departments.name;27/10/2026;27/10/2026;users.email;users.email;users.email;users.email;27/10/2026;27/10/2026;27/10/2026;27/10/2026;3;3;3;11;4;3;3;"{""score"":1,""note"":""a;b""}";"'=HYPERLINK(""http://x"")";non;3;"'=HYPERLINK(""http://x"")"
+row-3;;"Line; ""quoted""
+second line";;in_progress;legacy;;;;;;;;;;;;;;;;;;;;;;;;"Line; ""quoted""
+second line";;;"Line; ""quoted""
+second line"
+row-4;PRJ-4;-12;;in_testing;standard;portfolio_sources.name;portfolio_categories.name;portfolio_streams.name;companies.name;departments.name;2026-02-30;2026-02-30;users.email;users.email;users.email;users.email;2026-02-30;2026-02-30;2026-02-30;2026-02-30;-7,25;-7,25;-7,25;11;4;-7,25;-7,25;"{""score"":3,""note"":""a;b""}";-12;oui;-7,25;-12

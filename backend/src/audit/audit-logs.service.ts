@@ -7,6 +7,7 @@ import { AuditLog } from './audit.entity';
 import { assertSetFilterModes, compileAgFilterCondition, createParamNameGenerator, normalizeAgFilterModel, type FilterTargetConfig } from '../common/ag-grid-filtering';
 import { neutralizeCsvRow } from '../common/csv/csv-export.service';
 import { writeCsvHeader, writeCsvRows } from '../common/csv-sheet/write';
+import { writeListExport, type ListExportFile } from '../common/csv/list-export';
 import { AUTH_EVENT_TABLE, EXPORT_EVENT_TABLE } from './security-events';
 import {
   IncidentViewer,
@@ -92,11 +93,16 @@ export const AUDIT_LOG_EXPORT_HEADERS = [
 /** The comma-separated profile, whatever the user's language (see AUDIT_LOG_EXPORT_HEADERS). */
 const AUDIT_LOG_EXPORT_LANGUAGE = 'en' as const;
 
+/** The sheet of the audit log workbook: English, as the rest of the file. */
+const AUDIT_LOG_SHEET = { en: 'Audit log', fr: 'Audit log', de: 'Audit log', es: 'Audit log' } as const;
+
 export type AuditLogExport = {
   filename: string;
   /** More rows matched than `limit`: the file stops there. Known before the first part. */
   truncated: boolean;
   limit: number;
+  /** The rows the file holds: the matching rows, up to `limit`. Known before the first part. */
+  rows: number;
   /**
    * The file in parts, read once and in order: the header line, then one part per
    * batch of rows. Each batch is read when the previous part has been taken, in the caller's
@@ -573,6 +579,52 @@ export class AuditLogsService {
     query: any,
     opts: { manager: EntityManager; tenantId: string; viewer?: IncidentViewer | null },
   ): Promise<AuditLogExport> {
+    const plan = await this.exportPlan(query, opts);
+    async function* chunks(): AsyncGenerator<string> {
+      yield writeCsvHeader(AUDIT_LOG_EXPORT_LANGUAGE, AUDIT_LOG_EXPORT_HEADERS, { bom: false });
+      for await (const batch of plan.batches()) {
+        const rows = batch.map((row) => neutralizeCsvRow(auditExportRow(row)));
+        yield writeCsvRows({ language: AUDIT_LOG_EXPORT_LANGUAGE, headers: AUDIT_LOG_EXPORT_HEADERS, rows });
+      }
+    }
+    const day = new Date().toISOString().slice(0, 10);
+    return { filename: `audit-log-${day}.csv`, truncated: plan.truncated, limit: plan.limit, rows: plan.rows, chunks: chunks() };
+  }
+
+  /**
+   * The same rows as `exportCsv` in a workbook of one sheet: the same English headers and cells, all
+   * text (the date keeps its time, so it stays the ISO 8601 text), the formula guard on every cell.
+   * The workbook is built in memory, up to `exportRowLimit` rows.
+   */
+  async exportXlsx(
+    query: any,
+    opts: { manager: EntityManager; tenantId: string; viewer?: IncidentViewer | null },
+  ): Promise<ListExportFile<'xlsx'> & { truncated: boolean; limit: number }> {
+    const plan = await this.exportPlan(query, opts);
+    const rows: string[][] = [];
+    for await (const batch of plan.batches()) {
+      for (const row of batch) rows.push(auditExportRow(row));
+    }
+    const day = new Date().toISOString().slice(0, 10);
+    const file = writeListExport({
+      format: 'xlsx',
+      language: AUDIT_LOG_EXPORT_LANGUAGE,
+      filename: `audit-log-${day}.csv`,
+      sheetNames: AUDIT_LOG_SHEET,
+      headers: AUDIT_LOG_EXPORT_HEADERS,
+      rows,
+    });
+    return { ...file, truncated: plan.truncated, limit: plan.limit };
+  }
+
+  /**
+   * What both exports read: whether the file stops at the limit and how many rows it holds (one
+   * count, before any row is read), and the rows in batches, in the list's order.
+   */
+  private async exportPlan(
+    query: any,
+    opts: { manager: EntityManager; tenantId: string; viewer?: IncidentViewer | null },
+  ): Promise<{ truncated: boolean; limit: number; rows: number; batches: () => AsyncGenerator<AuditExportBatchRow[]> }> {
     const { sort, q, filters } = parsePagination(query, {
       field: 'created_at',
       direction: 'DESC',
@@ -597,7 +649,8 @@ export class AuditLogsService {
 
     const [cappedSql, cappedParams] = filtered().select('a.id', 'id').limit(limit + 1).getQueryAndParameters();
     const counted = await manager.query(`SELECT count(*)::int AS matched FROM (${cappedSql}) AS capped`, cappedParams);
-    const truncated = Number(counted?.[0]?.matched ?? 0) > limit;
+    const matched = Number(counted?.[0]?.matched ?? 0);
+    const truncated = matched > limit;
 
     const readBatch = (take: number, after: { value: string; id: string } | null) => {
       const qb = filtered()
@@ -631,16 +684,14 @@ export class AuditLogsService {
         .getRawMany<AuditExportBatchRow>();
     };
 
-    async function* chunks(): AsyncGenerator<string> {
-      yield writeCsvHeader(AUDIT_LOG_EXPORT_LANGUAGE, AUDIT_LOG_EXPORT_HEADERS, { bom: false });
+    async function* batches(): AsyncGenerator<AuditExportBatchRow[]> {
       let written = 0;
       let after: { value: string; id: string } | null = null;
       while (written < limit) {
         const take = Math.min(batchSize, limit - written);
         const batch = await readBatch(take, after);
         if (batch.length === 0) return;
-        const rows = batch.map((row) => neutralizeCsvRow(auditExportRow(row)));
-        yield writeCsvRows({ language: AUDIT_LOG_EXPORT_LANGUAGE, headers: AUDIT_LOG_EXPORT_HEADERS, rows });
+        yield batch;
         written += batch.length;
         if (batch.length < take) return;
         const last = batch[batch.length - 1];
@@ -648,8 +699,7 @@ export class AuditLogsService {
       }
     }
 
-    const day = new Date().toISOString().slice(0, 10);
-    return { filename: `audit-log-${day}.csv`, truncated, limit, chunks: chunks() };
+    return { truncated, limit, rows: Math.min(matched, limit), batches };
   }
 
   async listFilterValues(query: any, opts?: { manager?: EntityManager; viewer?: IncidentViewer | null; tenantId?: string }): Promise<Record<string, Array<string | null>>> {

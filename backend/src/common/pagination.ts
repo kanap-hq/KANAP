@@ -66,8 +66,17 @@ export function parseExportPagination(query: any, defaultSort: Sort = { field: '
  */
 export function exportListQuery(query: any): Record<string, unknown> | undefined {
   if (String(query?.rows ?? '') !== 'list') return undefined;
-  const { scope: _scope, language: _language, rows: _rows, page: _page, limit: _limit, ...list } = query ?? {};
+  const { scope: _scope, language: _language, format: _format, rows: _rows, page: _page, limit: _limit, ...list } = query ?? {};
   return { ...list, page: '1', limit: String(MAX_EXPORT_LIMIT) };
+}
+
+/**
+ * Rows read by id (`id = ANY(:ids)`), put back in the order of `ids`: the order of the list they
+ * were taken from (`listIds`), so an export reads in the screen's order.
+ */
+export function inIdOrder<T extends { id: string }>(rows: T[], ids: readonly string[]): T[] {
+  const position = new Map(ids.map((id, index) => [String(id), index] as const));
+  return [...rows].sort((a, b) => (position.get(String(a.id)) ?? 0) - (position.get(String(b.id)) ?? 0));
 }
 
 /**

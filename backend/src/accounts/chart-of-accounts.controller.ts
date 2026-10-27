@@ -8,11 +8,12 @@ import { ChartOfAccountsUpsertDto } from './dto/chart-of-accounts.dto';
 import { ChartOfAccountsDeleteService } from './chart-of-accounts-delete.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
-import { contentDisposition } from '../common/content-disposition';
 import { Response } from 'express';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
+import { csvExportFormat } from '../common/csv/csv-export.service';
+import { csvExportBody } from '../common/csv/send-csv-export';
 
 @UseGuards(JwtAuthGuard)
 @Controller('chart-of-accounts')
@@ -137,11 +138,10 @@ export class ChartOfAccountsController {
     @Query() query: any,
     @Res() res: Response,
   ) {
+    const format = csvExportFormat(query?.format, scope);
     const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
-    const { filename, content } = await this.svc.exportAccountsCsv(id, { manager: req?.queryRunner?.manager, scope, language, listQuery: exportListQuery(query) });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(filename));
-    res.send(content);
+    const file = await this.svc.exportAccountsCsv(id, { manager: req?.queryRunner?.manager, scope, language, listQuery: exportListQuery(query), format });
+    res.send(await csvExportBody(res, file));
   }
 
   // CoA-scoped Accounts CSV import

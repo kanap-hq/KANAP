@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { assertCsvGolden, xlsxCells, xlsxSheetName } from '../../common/csv/__tests__/export-golden';
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -261,8 +262,8 @@ async function main() {
     const [own, created, updated, login, failed] = rows;
     assert.match(own.date, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/, 'ISO 8601 date');
     assert.equal(own.user, 'Alice Admin');
-    // The route answers itself and does not call completeExport: its row has no format.
-    assert.deepEqual(JSON.parse(own.after), { resource: 'audit-logs', path: '/audit-logs/export', query: {}, ip: '127.0.0.1', user_agent: 'Export probe' });
+    // The route completes its own row before reading the file: the format and the rows the file holds.
+    assert.deepEqual(JSON.parse(own.after), { resource: 'audit-logs', path: '/audit-logs/export', query: {}, ip: '127.0.0.1', user_agent: 'Export probe', format: 'csv', rows: 5 });
     assert.equal(own.ip, '127.0.0.1', 'an export row fills the address column');
     assert.equal(own.user_agent, 'Export probe', 'an export row fills the agent column');
     assert.equal(created.user, 'Alice Admin');
@@ -332,6 +333,39 @@ async function main() {
       assert.ok(answer.bytes.equals(inEnglish.bytes), 'the same bytes as for a user in English');
     }
     console.log('ok - one fixed format: commas, no BOM, English headers, whatever the language');
+    // The file as written before the Excel export, its dates and generated ids masked.
+    const signInsAndSuppliers = { filters: JSON.stringify({ table_name: { filterType: 'set', values: ['auth', 'suppliers'] } }) };
+    assertCsvGolden('audit-log', (await get(signInsAndSuppliers, a.admin)).text, (text) => text
+      .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g, '<date>')
+      .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, '<id>'));
+
+    // 3c. Excel: the same English headers and cells in one sheet, all text (the date keeps its time),
+    // the formula guard; the format and row count on the export's own row. Another format is a 400.
+    const fetchFile = (query: Record<string, string>) => fetch(`${base}/audit-logs/export?${new URLSearchParams(query).toString()}`, {
+      headers: { authorization: `Bearer ${token(a.admin)}`, 'x-probe-tenant': tenantA, 'user-agent': 'Export probe' },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const bookAnswer = await fetchFile({ ...signInsAndSuppliers, format: 'xlsx' });
+    const book = Buffer.from(await bookAnswer.arrayBuffer());
+    await waitForIdlePool();
+    assert.equal(bookAnswer.status, 200, book.toString('utf8'));
+    assert.match(bookAnswer.headers.get('content-type') ?? '', /spreadsheetml/);
+    assert.match(bookAnswer.headers.get('content-disposition') ?? '', /audit-log-\d{4}-\d{2}-\d{2}\.xlsx/);
+    assert.equal(xlsxSheetName(book), 'Audit log');
+    const cells = xlsxCells(book);
+    assert.deepEqual(['A1', 'B1', 'K1'].map((ref) => cells[ref]), [['text', 'date'], ['text', 'action'], ['text', 'after']]);
+    assert.equal(cells.A2[0], 'text');
+    assert.match(cells.A2[1], /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/, 'the date and time as ISO 8601 text');
+    assert.deepEqual([cells.B2, cells.G2], [['text', 'create'], ['text', "&apos;@sheet-2"]], 'the cells of the CSV, with the formula guard');
+    assert.deepEqual(cells.B5, ['text', 'login_failed']);
+    assert.equal(cells.A6, undefined, 'four rows');
+    const bookRow = (await exportRows(tenantA)).at(-1);
+    assert.deepEqual({ format: bookRow?.after_json?.format, rows: bookRow?.after_json?.rows }, { format: 'xlsx', rows: 4 });
+    const odsAnswer = await fetchFile({ format: 'ods' });
+    await odsAnswer.arrayBuffer();
+    await waitForIdlePool();
+    assert.equal(odsAnswer.status, 400, 'an unknown format is refused');
+    console.log('ok - Excel: the same cells in one sheet, format and rows on the audit row; another format 400');
 
     // 4. Only `users:admin`: a people member is refused, another administrator is not.
     const refusedBefore = (await exportRows(tenantA)).length;
@@ -354,10 +388,11 @@ async function main() {
 
     // 6. Each export is recorded in the audit log of its tenant.
     const recordedA = await exportRows(tenantA);
-    assert.equal(recordedA.length, 13, 'one row per export made in tenant A (thirteen answered 200)');
+    assert.equal(recordedA.length, 15, 'one row per export made in tenant A (fifteen answered 200)');
     for (const row of recordedA) {
-      const { query, ...rest } = row.after_json;
+      const { query, format, rows, ...rest } = row.after_json;
       assert.deepEqual(rest, { resource: 'audit-logs', path: '/audit-logs/export', ip: '127.0.0.1', user_agent: 'Export probe' });
+      assert.ok(['csv', 'xlsx'].includes(format) && Number.isSafeInteger(rows), 'the format and the rows of the file');
       assert.equal(typeof query, 'object', 'the query asked for');
     }
     assert.equal(recordedA.filter((row) => row.user_id === a.dash.id).length, 1);

@@ -14,6 +14,7 @@ import { parseString } from '@fast-csv/parse';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import type { CsvDateOrder, CsvLanguage, DecimalMark } from '../common/csv-sheet';
 import { CURRENT_TENANT, lockTenantCharts, resyncFromChart } from './consolidation';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 /** The chart flags a grid can filter and sort on, with its columns. */
 const LIST_FIELDS = ['code', 'name', 'country_iso', 'scope', 'is_default', 'is_global_default', 'is_consolidation', 'created_at', 'updated_at'];
@@ -484,14 +485,14 @@ export class ChartOfAccountsService {
     return { ok: true, dryRun: true, total, inserted: total, updated: 0, errors: [] };
   }
 
-  async exportAccountsCsv(
+  async exportAccountsCsv<F extends ExportFileFormat = 'csv'>(
     coaId: string,
-    opts?: { manager?: EntityManager; scope?: 'template' | 'data'; language?: CsvLanguage; listQuery?: Record<string, unknown> },
+    opts?: { manager?: EntityManager; scope?: 'template' | 'data'; language?: CsvLanguage; listQuery?: Record<string, unknown>; format?: F },
   ) {
     // Validate CoA belongs to tenant and exists
     await this.findOrFail(coaId, opts?.manager ?? this.repo.manager);
     const scope = opts?.scope ?? 'data';
-    return this.accountsSvc.exportCsv(scope, { manager: opts?.manager, coaId, includeCoaCode: false, language: opts?.language, listQuery: opts?.listQuery });
+    return this.accountsSvc.exportCsv(scope, { manager: opts?.manager, coaId, includeCoaCode: false, language: opts?.language, listQuery: opts?.listQuery, format: opts?.format });
   }
 
   async importAccountsCsv(

@@ -1,0 +1,10 @@
+﻿id,reference,name,purpose,status,source_name,category_name,stream_name,requestor_email,company_name,department_name,target_delivery_date,business_sponsor_email,business_lead_email,it_sponsor_email,it_lead_email,risks,current_situation,expected_benefits,criteria_values,priority_score,priority_override,override_value,override_justification
+row-1,REQ-1,Plain name,Purpose,pending_review,portfolio_sources.name,portfolio_categories.name,portfolio_streams.name,users.email,companies.name,departments.name,2026-03-01,users.email,users.email,users.email,users.email,,Plain name,Plain name,"{""score"":0,""note"":""a;b""}",Plain name,yes,12.50,Plain name
+row-2,REQ-2,"'=HYPERLINK(""http://x"")",,candidate,portfolio_sources.name,portfolio_categories.name,portfolio_streams.name,users.email,companies.name,departments.name,2026-10-27,users.email,users.email,users.email,users.email,'=risk,"'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")","{""score"":1,""note"":""a;b""}","'=HYPERLINK(""http://x"")",no,3,"'=HYPERLINK(""http://x"")"
+row-3,,"Line; ""quoted""
+second line",,approved,,,,,,,,,,,,,"Line; ""quoted""
+second line","Line; ""quoted""
+second line",,"Line; ""quoted""
+second line",,,"Line; ""quoted""
+second line"
+row-4,REQ-4,-12,,on_hold,portfolio_sources.name,portfolio_categories.name,portfolio_streams.name,users.email,companies.name,departments.name,2026-02-30,users.email,users.email,users.email,users.email,,-12,-12,"{""score"":3,""note"":""a;b""}",-12,yes,-7.25,-12

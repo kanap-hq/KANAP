@@ -1,0 +1,8 @@
+﻿Zone;Référence;Nom;Type;Technologies;Applications;Contrôles;Dépendance
+Sans zone;AST-3;'=cmd;Virtual machine;;;Actifs sans zone d'administration;
+Tier 0;AST-2;guest;Virtual machine;TEC-1 Active Directory (2019);APP-1 Portal;Applications hébergées dans la zone la plus sensible;
+Tier 1;AST-1;host;Virtual machine;;;Ce qui fait tourner un actif est dans une zone moins sensible;"Héberge AST-2 guest (Tier 0); Membre du cluster AST-5 vsphere (Tier 0)"
+Tier 2 (postes de travail);AST-7;poste;Virtual machine;;;;
+Sans zone;AST-8;shipped-kind;Machine virtuelle;;;Actifs sans zone d'administration;
+Tier 0;AST-5;vsphere;Virtual machine;;;;
+Sans zone;AST-6;zone-vide;Virtual machine;;;Actifs sans zone d'administration;

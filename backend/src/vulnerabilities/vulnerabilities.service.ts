@@ -6,7 +6,10 @@ import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import { assertSetFilterModes } from '../common/ag-grid-filtering';
-import { languageOf, writeCsv } from '../common/csv-sheet';
+import { languageOf } from '../common/csv-sheet';
+import type { CsvLanguage } from '../common/csv-sheet/types';
+import { typedTextRows, writeListExport, type ListExportFile } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 import { readTechnology, technologyReference, UUID_RE } from '../technologies/technology-rows';
 import { gridTextClause, gridTextModel } from '../technologies/technologies.service';
 import { TechnologyReachService } from '../technologies/technology-reach.service';
@@ -16,6 +19,9 @@ import { probesOf, productsOf, readCveNames, VulnerabilityMatchService } from '.
 import { vulnerabilityAlertsSql } from './vulnerability-alerts';
 import { applicationCountsForTenantSql, applicationLinksSql, assetCountsForTenantSql, assetLinksSql, directReachOfTechnologies, EFFECTIVE_SCORE, EFFECTIVE_SEVERITY, exploitedSql, rowOnApplicationsSql, rowOnAssetsSql, technologyInEstateSql } from './vulnerability-reach-counts';
 import { severityOf, VULNERABILITY_STATES, type MatchBasis, type VulnerabilityState } from './vulnerability-rules';
+
+/** The sheet of the vulnerabilities workbook. */
+const VULNERABILITIES_SHEET: Record<CsvLanguage, string> = { en: 'Vulnerabilities', fr: 'Vulnérabilités', de: 'Schwachstellen', es: 'Vulnerabilidades' };
 
 export type VulnOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
 /** The applications the caller reads: null without the `applications` read right, a Business Contributor's own only. */
@@ -1662,8 +1668,18 @@ export class VulnerabilitiesService {
     return { ok: true, added: result.added, updated: result.updated, removed: result.removed, unmatched: result.unmatched, collecting: fresh };
   }
 
-  /** The list as a CSV file, one line per grid row (technology, version and CVE), with its filters and sort. */
-  async exportCsv(filters: VulnerabilityFilters, language: unknown, opts: VulnOpts, applications: ApplicationsAccess) {
+  /**
+   * The list as a CSV file or a workbook (`format`), one line per grid row (technology, version and
+   * CVE), with its filters and sort. The CSV writes the scores, counts and days as plain text in every
+   * language; the workbook has them as numbers and dates.
+   */
+  async exportCsv<F extends ExportFileFormat = 'csv'>(
+    filters: VulnerabilityFilters,
+    language: unknown,
+    opts: VulnOpts,
+    applications: ApplicationsAccess,
+    format?: F,
+  ): Promise<ListExportFile<F>> {
     const { items } = await this.listRows(filters, opts, applications, false);
     const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Publisher', 'Version', 'Match', 'Source', 'State', 'Note', 'Servers', 'Applications', 'Exploited', 'KEV added', 'Ransomware', 'EPSS', 'EPSS percentile', 'EUVD', 'Alerts'];
     const basisLabel: Record<MatchBasis, string> = {
@@ -1695,7 +1711,15 @@ export class VulnerabilitiesService {
       item.euvd_id ?? '',
       item.alerts ? 'yes' : 'no',
     ]);
-    const content = writeCsv({ language: await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, language), headers, rows: lines });
-    return { filename: 'vulnerabilities.csv', content };
+    const fileFormat = format ?? ('csv' as F);
+    return writeListExport({
+      format: fileFormat,
+      language: await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, language),
+      filename: 'vulnerabilities.csv',
+      sheetNames: VULNERABILITIES_SHEET,
+      headers,
+      // Score, Published, Servers, Applications, KEV added, EPSS, EPSS percentile.
+      rows: typedTextRows(fileFormat, lines, { 2: 'number', 3: 'date', 12: 'number', 13: 'number', 15: 'date', 17: 'number', 18: 'number' }),
+    });
   }
 }

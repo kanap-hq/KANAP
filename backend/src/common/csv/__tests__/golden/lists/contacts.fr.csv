@@ -1,0 +1,4 @@
+﻿first_name;last_name;job_title;email;phone;mobile;country;notes;active
+Dan;Ng;;dan@acme.example;;;;;non
+Carla;Ruiz;Sales;carla@acme.example;'+33 1 23;0612;FR;"Line; ""quoted""
+second, line";oui

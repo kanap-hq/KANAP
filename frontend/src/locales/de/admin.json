@@ -344,7 +344,6 @@
       "value": "Wert"
     },
     "export": {
-      "button": "CSV exportieren",
       "failed": "Das Audit-Protokoll konnte nicht exportiert werden.",
       "tooMany": "Zu viele Exporte in kurzer Zeit. Versuchen Sie es in einer Minute erneut.",
       "truncated": "Die Datei enthält die ersten {{limit}} Einträge. Grenzen Sie die Filter ein, um den Rest zu exportieren."
@@ -1628,7 +1627,6 @@
     "actions": {
       "new": "Neu",
       "importCsv": "CSV importieren",
-      "exportCsv": "CSV exportieren",
       "invite": "Einladen ({{count}})",
       "inviting": "Wird eingeladen…",
       "rowMenu": "Benutzeraktionen",
@@ -2064,7 +2062,6 @@
       "saveFailed": "Der Zugriff konnte nicht aktualisiert werden.",
       "loadFailed": "Der Zugriff konnte nicht geladen werden."
     },
-    "importCsv": "CSV importieren",
-    "exportCsv": "CSV exportieren"
+    "importCsv": "CSV importieren"
   }
 }

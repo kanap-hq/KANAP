@@ -185,7 +185,7 @@ describe('ContractsPage', () => {
     renderPage();
     expect(screen.queryByRole('button', { name: 'contracts.importCsv' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'contracts.renewal.settings.button' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'contracts.exportCsv' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'common:export.button' })).toBeInTheDocument();
   });
 
   it('lists active contracts by default and offers the other scopes', () => {
@@ -447,16 +447,25 @@ describe('ContractsPage', () => {
     expect(csvDialogs.import).toMatchObject({ endpoint: '/contracts', flexibleFormat: true });
   });
 
-  it('exports the register of the contracts the list shows, in the screen language', async () => {
+  it('exports the register of the contracts the list shows, in its order and the screen language, CSV or Excel', async () => {
     renderPage();
     const filters = { compliance_state: { filterType: 'set', values: ['missing'] } };
     report(filters);
+    act(() => {
+      grid.props?.onListRequestChange?.({ params: { sort: 'name:DESC', page: 1, limit: 50 }, total: 3 });
+    });
     fireEvent.click(screen.getByRole('button', { name: 'contracts.compliance.exportRegister' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'ops:reports.shared.exportXlsx' }));
     await waitFor(() => expect(api.get).toHaveBeenCalledWith('/contracts/compliance-register/export', expect.objectContaining({
       language: 'en',
+      format: 'xlsx',
+      sort: 'name:DESC',
       filters: JSON.stringify(filters),
       budget_year: String(NEXT_YEAR),
     })));
+    fireEvent.click(screen.getByRole('button', { name: 'contracts.compliance.exportRegister' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'ops:reports.shared.exportCsv' }));
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith('/contracts/compliance-register/export', expect.objectContaining({ format: 'csv', sort: 'name:DESC' })));
     await waitFor(() => expect(download.blob).toHaveBeenCalledWith(expect.any(Blob), 'contract-compliance-register.csv'));
   });
 

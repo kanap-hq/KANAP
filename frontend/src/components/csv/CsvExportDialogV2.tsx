@@ -14,6 +14,7 @@ import {
   Box,
   LinearProgress,
   Alert,
+  Radio,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
@@ -24,6 +25,9 @@ import { screenLanguage } from './readings';
 import { CsvFieldSelector } from './CsvFieldSelector';
 import { CsvFieldInfo, CsvExportPreset } from './csv.types';
 import { csvEntityOf, csvPresetLabel } from './csvLabels';
+import { ExportFormat, readExportFormat, writeExportFormat } from './exportFormat';
+
+const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 interface CsvExportDialogV2Props {
   open: boolean;
@@ -49,7 +53,7 @@ export default function CsvExportDialogV2({
   presets: propPresets = [],
   scopeSummary,
 }: CsvExportDialogV2Props) {
-  const { t, i18n } = useTranslation('common');
+  const { t, i18n } = useTranslation(['common', 'ops']);
   // The file follows the screen: separator, days, decimal mark and yes or no.
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
   const [fieldsInfo, setFieldsInfo] = useState<CsvFieldInfo[]>([]);
@@ -58,6 +62,15 @@ export default function CsvExportDialogV2({
   const [showFieldSelector, setShowFieldSelector] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const entity = csvEntityOf(endpoint);
+  // CSV or Excel: the choice last made in any export dialog of this browser.
+  const [format, setFormat] = useState<ExportFormat>(readExportFormat);
+  useEffect(() => {
+    if (open) setFormat(readExportFormat());
+  }, [open]);
+  const chooseFormat = (next: ExportFormat) => {
+    setFormat(next);
+    writeExportFormat(next);
+  };
 
   const {
     preset,
@@ -107,6 +120,9 @@ export default function CsvExportDialogV2({
     setError(null);
     try {
       const queryParams: Record<string, any> = { ...(params ?? {}), scope, language };
+      // An import template is a CSV file.
+      const fileFormat: ExportFormat = scope === 'template' ? 'csv' : format;
+      if (fileFormat === 'xlsx') queryParams.format = 'xlsx';
 
       // Add field selection based on preset
       if (preset === 'custom' && scope === 'data') {
@@ -117,13 +133,13 @@ export default function CsvExportDialogV2({
       // 'full' preset: no params needed - backend returns all exportable fields
 
       const res = await getWithListContext(`${endpoint}/export`, queryParams, { responseType: 'blob' });
-      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' });
+      const blob = new Blob([res.data], { type: fileFormat === 'xlsx' ? XLSX_TYPE : 'text/csv;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
 
       const disposition = (res.headers?.['content-disposition'] ?? res.headers?.['Content-Disposition']) as string | undefined;
-      let filename = scope === 'template' ? 'template.csv' : 'data.csv';
+      let filename = scope === 'template' ? 'template.csv' : `data.${fileFormat}`;
       if (disposition) {
         const match = /filename="?([^"]+)"?/i.exec(disposition);
         if (match?.[1]) filename = match[1];
@@ -150,15 +166,17 @@ export default function CsvExportDialogV2({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{titleProp || t('csv.exportTitle')}</DialogTitle>
+      <DialogTitle>{titleProp || t('export.button')}</DialogTitle>
       <DialogContent>
         {loadingFields ? (
           <LinearProgress sx={{ my: 2 }} />
         ) : (
           <>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              {t('csv.exportDescriptionFlexible')}
-            </Typography>
+            {format === 'csv' && (
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                {t('csv.exportDescriptionFlexible')}
+              </Typography>
+            )}
             {scopeSummary && (
               <Typography variant="body2" sx={{ mb: 2 }}>
                 {scopeSummary}
@@ -210,6 +228,30 @@ export default function CsvExportDialogV2({
                 />
               </Box>
             )}
+
+            {/* File format */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 2 }}>
+              <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary' }}>
+                {t('ops:operations.budgetFile.format')}
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: 2.5 }}>
+                {(['csv', 'xlsx'] as const).map((choice) => (
+                  <Box key={choice} component="label" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer' }}>
+                    <Radio
+                      size="small"
+                      checked={format === choice}
+                      onChange={() => chooseFormat(choice)}
+                      value={choice}
+                      name="csv-export-format"
+                      sx={{ p: 0.25 }}
+                    />
+                    <Typography component="span" sx={{ fontSize: 13, color: 'kanap.text.primary', lineHeight: 1.4 }}>
+                      {t(choice === 'csv' ? 'ops:operations.budgetFile.formatCsv' : 'ops:operations.budgetFile.formatXlsx')}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
 
             {/* Action button */}
             <Button

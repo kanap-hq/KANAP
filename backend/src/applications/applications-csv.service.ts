@@ -20,8 +20,11 @@ import {
   CsvImportResult,
   CsvFieldInfo,
   CsvResolverService,
+  CSV_CONTENT_TYPE,
 } from '../common/csv';
+import type { ExportFileFormat } from '../common/xlsx';
 import { applicationCsvConfig, csvOwnerKeys, sameKeys, usersByEmail } from './application-csv.config';
+import { inIdOrder } from '../common/pagination';
 import { applicationVulnerabilityCounts } from '../vulnerabilities/vulnerability-reach-counts';
 import {
   csvConfigForVulnerabilityFeed,
@@ -80,7 +83,7 @@ export class ApplicationsCsvService {
   /**
    * Export applications to CSV format (V2).
    */
-  async export(opts: {
+  async export<F extends ExportFileFormat = 'csv'>(opts: {
     manager: EntityManager;
     tenantId: string;
     /** The screen language: separator, days, decimal mark and yes or no (`csv-sheet`). */
@@ -92,18 +95,22 @@ export class ApplicationsCsvService {
     criticality?: string;
     status?: string;
     query?: Record<string, unknown>;
-  }): Promise<CsvExportResult> {
+    /** `csv` (default) or `xlsx` (data only: a template is CSV). */
+    format?: F;
+  }): Promise<CsvExportResult<F>> {
     const { manager, tenantId, scope, fields, preset, lifecycle, criticality, status } = opts;
 
     // For template export, just return headers (all importable fields)
     if (scope === 'template') {
       const headers = this.buildExportHeaders(fields, preset, 'template');
+      if (opts.format === 'xlsx') throw new BadRequestException('An import template is a CSV file: format=xlsx is for the data export.');
       return {
         filename: 'application_template.csv',
+        contentType: CSV_CONTENT_TYPE,
         content: writeCsvHeader(opts.language, headers),
-        rowCount: 0,
+        rows: 0,
         warnings: [],
-      };
+      } as unknown as CsvExportResult<F>;
     }
 
     // Build query for applications with related data
@@ -123,14 +130,13 @@ export class ApplicationsCsvService {
       queryBuilder = queryBuilder.andWhere('app.status = :status', { status });
     }
 
-    queryBuilder = queryBuilder.orderBy('app.name', 'ASC');
-
     const filters = typeof opts.query?.filters === 'string' ? JSON.parse(opts.query.filters) : { ...(opts.query?.filters as any || {}) };
     for (const [field, value] of Object.entries({ lifecycle, criticality, status })) if (value) filters[field] = { filterType: 'set', values: [value] };
     const matching = await this.listService.listIds({ ...opts.query, filters: JSON.stringify(filters), __classificationExport: true }, { manager, tenantId });
     if (!matching.ids.length) queryBuilder.andWhere('FALSE');
     else queryBuilder.andWhere('app.id = ANY(:ids)', { ids: matching.ids });
-    const applications = await queryBuilder.getMany();
+    // In the list's order (its sort, the id breaking ties), as the screen shows them.
+    const applications = inIdOrder(await queryBuilder.getMany(), matching.ids);
     // Users never see codes: catalog-backed columns are exported as names (import accepts either).
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
     for (const app of applications) {
@@ -207,6 +213,7 @@ export class ApplicationsCsvService {
       fields,
       preset,
       language: opts.language,
+      format: opts.format,
     });
   }
 

@@ -962,8 +962,7 @@
     },
     "actions": {
       "new": "Nouveau",
-      "importCsv": "Importer CSV",
-      "exportCsv": "Exporter CSV"
+      "importCsv": "Importer CSV"
     },
     "csv": {
       "exportTitle": "Exporter les tâches",
@@ -1000,8 +999,7 @@
     },
     "actions": {
       "new": "Nouveau projet",
-      "importCsv": "Importer CSV",
-      "exportCsv": "Exporter CSV"
+      "importCsv": "Importer CSV"
     },
     "csv": {
       "exportTitle": "Exporter les projets du portefeuille",
@@ -1028,8 +1026,7 @@
     },
     "actions": {
       "new": "Nouvelle demande",
-      "importCsv": "Importer CSV",
-      "exportCsv": "Exporter CSV"
+      "importCsv": "Importer CSV"
     },
     "csv": {
       "exportTitle": "Exporter les demandes du portefeuille",

@@ -1,0 +1,24 @@
+﻿id;reference;name;description;lifecycle;category;supplier_name;editor;version;go_live_date;end_of_support_date;retired_date;business_owner_email_1;business_owner_email_2;business_owner_email_3;business_owner_email_4;it_owner_email_1;it_owner_email_2;it_owner_email_3;it_owner_email_4;users_mode;users_year;users_override;support_notes;access_methods;external_facing;etl_enabled;is_suite;vulnerabilities_to_review;severe_vulnerabilities;criticality;cyber_criticality;data_class;contains_pii;data_residency;recovery_wave;rto_minutes;rpo_minutes;last_dr_test;classification_justification;classification_revision;classification_review_state;classification_reviewed_at;status;licensing;notes;created_at;updated_at
+row-1;APP-1;Plain name;Plain name;Plain name;Plain name;suppliers.name;Plain name;Plain name;01/03/2026;01/03/2026;01/03/2026;ada@example.test;;;;'=it@example.test;;;;manual;12,50;12,50;Plain name;alpha, beta;oui;oui;oui;0;0;Plain name;Plain name;Plain name;oui;FR, DE;Plain name;Plain name;Plain name;01/03/2026;Plain name;Plain name;Plain name;Plain name;Activé;Plain name;Plain name;01/03/2026;01/03/2026
+row-2;APP-2;"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";suppliers.name;"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";27/10/2026;27/10/2026;27/10/2026;ada@example.test;;;;'=it@example.test;;;;it_users;3;3;"'=HYPERLINK(""http://x"")";;non;non;non;3;1;"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";non;FR, DE;"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";27/10/2026;"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";Désactivé;"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";27/10/2026;27/10/2026
+row-3;;"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";;"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";;;;;;;;;;;;headcount;;;"Line; ""quoted""
+second line";;;;;;;"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";;;"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";;"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";Activé;"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";;
+row-4;APP-4;-12;-12;-12;-12;suppliers.name;-12;-12;2026-02-30;2026-02-30;2026-02-30;ada@example.test;;;;'=it@example.test;;;;manual;-7,25;-7,25;-12;'+cmd;oui;oui;oui;9;3;-12;-12;-12;oui;FR, DE;-12;-12;-12;2026-02-30;-12;-12;-12;-12;Activé;-12;-12;2026-02-30;2026-02-30

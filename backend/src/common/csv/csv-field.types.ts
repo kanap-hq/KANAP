@@ -1,4 +1,5 @@
 import type { CsvLanguage } from '../csv-sheet/types';
+import type { ExportFileFormat } from '../xlsx/format';
 /**
  * CSV Field Type Definitions
  *
@@ -126,6 +127,8 @@ export interface CsvEntityConfig {
    * keeps the technical header.
    */
   headerLabels?: Record<string, Partial<Record<CsvLanguage, string>>>;
+  /** The name of the list in each language: the sheet of an xlsx export. `displayName` when a language has none. */
+  sheetNames?: Partial<Record<CsvLanguage, string>>;
   /** Export presets (e.g., 'basic', 'full') */
   exportPresets?: CsvExportPreset[];
   /** Relation handlers for complex relationships */
@@ -240,15 +243,18 @@ export interface CsvImportResult {
 }
 
 /**
- * Export result
+ * Export result. `F` is the format asked for: a CSV export (the default) holds text, an xlsx
+ * export a workbook.
  */
-export interface CsvExportResult {
-  /** Generated filename */
+export interface CsvExportResult<F extends ExportFileFormat = 'csv'> {
+  /** Generated filename: `<entity>_export.csv`, `.xlsx` for a workbook. */
   filename: string;
-  /** CSV content (with BOM) */
-  content: string;
+  /** The Content-Type the file is sent with. */
+  contentType: string;
+  /** The CSV text (with BOM), or the xlsx workbook. */
+  content: F extends 'xlsx' ? Buffer : string;
   /** Number of rows exported */
-  rowCount: number;
+  rows: number;
   /** Warnings generated during export */
   warnings: string[];
 }

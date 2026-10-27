@@ -1,0 +1,6 @@
+﻿Reference,Application,Link,Environment,Server,Installed on,Version,Criticality,External,IT owners,Notes
+APP-1,ERP csv-lang,Hosted,Pre-prod,SQL-01 csv-lang,,2019,Critical,Yes,,
+APP-1,ERP csv-lang,Hosted,Pre-prod,SQL-02 csv-lang,,2016,Critical,Yes,,
+APP-1,ERP csv-lang,Hosted,Prod,SQL-01 csv-lang,,2019,Critical,Yes,,
+APP-1,ERP csv-lang,Hosted,Prod,SQL-02 csv-lang,,2016,Critical,Yes,,
+APP-2,Portal csv-lang,Declared,,,,Version unknown,,No,,

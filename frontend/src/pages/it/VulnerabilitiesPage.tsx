@@ -28,6 +28,8 @@ import { drawerMenuItemSx, drawerSelectSx, inlineControlSx } from '../../theme/f
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
+import ExportFormatButton from '../../components/csv/ExportFormatButton';
+import type { ExportFormat } from '../../components/csv/exportFormat';
 import ForbiddenPage from '../ForbiddenPage';
 import {
   EPSS_HOME,
@@ -1537,14 +1539,14 @@ export default function VulnerabilitiesPage() {
   if (!enabled) return null;
   if (!allowed) return <ForbiddenPage />;
 
-  const exportCsv = async () => {
+  const exportFile = async (format: ExportFormat) => {
     setExportError(false);
     try {
       // Long filters go as a saved list context, as the other list exports.
-      const res = await getWithListContext<Blob>(`${ENDPOINT}/export`, scopeParams(requestRef.current), { responseType: 'blob' });
+      const res = await getWithListContext<Blob>(`${ENDPOINT}/export`, { ...scopeParams(requestRef.current), format }, { responseType: 'blob' });
       const headers = (res.headers ?? {}) as Record<string, unknown>;
       const disposition = (headers['content-disposition'] ?? headers['Content-Disposition']) as string | undefined;
-      downloadBlob(new Blob([res.data], { type: 'text/csv;charset=utf-8' }), extractFilenameFromDisposition(disposition) || 'vulnerabilities.csv');
+      downloadBlob(res.data instanceof Blob ? res.data : new Blob([res.data]), extractFilenameFromDisposition(disposition) || `vulnerabilities.${format}`);
     } catch {
       setExportError(true);
     }
@@ -1569,7 +1571,7 @@ export default function VulnerabilitiesPage() {
             : t('pages.vulnerabilities.actions.changeState')}
         </Button>
       )}
-      <Button variant="action" onClick={() => void exportCsv()}>{t('pages.vulnerabilities.actions.export')}</Button>
+      <ExportFormatButton label={t('common:export.button')} onExport={exportFile} />
     </Stack>
   );
 

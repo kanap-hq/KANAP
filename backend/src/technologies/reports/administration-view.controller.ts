@@ -4,7 +4,8 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PermissionGuard } from '../../auth/permission.guard';
 import { RequireLevel } from '../../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../../common/decorators/tenant.decorator';
-import { contentDisposition } from '../../common/content-disposition';
+import { csvExportBody } from '../../common/csv/send-csv-export';
+import { parseExportFormat } from '../../common/xlsx/format';
 import { requireManager } from '../technology-rows';
 import { AdministrationViewService, type AdministrationAssetQuery, type AdministrationOpts } from './administration-view.service';
 
@@ -55,14 +56,12 @@ export class AdministrationViewController {
     return this.svc.directories(this.opts(ctx));
   }
 
-  /** The assets or the domains as a CSV file; a path ending with /export: recorded as an export. */
+  /** The assets or the domains as a CSV file or a workbook (`format`); a path ending with /export: recorded as an export. */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get('export')
-  async export(@Query() query: Record<string, unknown>, @Res({ passthrough: true }) res: Response, @Tenant() ctx: TenantRequest) {
-    const file = await this.svc.csv(query, this.opts(ctx));
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(file.filename));
-    return file.content;
+  async export(@Query() query: Record<string, unknown>, @Res() res: Response, @Tenant() ctx: TenantRequest) {
+    const file = await this.svc.csv(query, this.opts(ctx), parseExportFormat(query?.format));
+    res.send(await csvExportBody(res, file));
   }
 }

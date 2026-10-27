@@ -2,13 +2,15 @@ import { BadRequestException, ConflictException, Inject, Injectable, NotFoundExc
 import { isUUID } from 'class-validator';
 import { DataSource, EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
-import { cellOf, CsvLanguage, ImportReportError, readMasterDataFile, rowError, writeCsv } from '../common/csv-sheet';
+import { cellOf, CsvLanguage, ImportReportError, readMasterDataFile, rowError } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
 import { naturesAnd } from '../spend/budget-nature';
 import { applyDataAccess, DataAccessMode } from './data-access';
 import { dataAccessAvailability, DataAccessAvailability, DataAccessMissing } from './data-access-availability';
 import { AccessNodeRow, AccessTree, loadAccessTree, nodeCoversCenter, nodeCoversCompany, widestAccess } from './data-access-tree';
 import { lineEditableSql } from './line-write-checks';
+import { ListExportFile, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 /**
  * Data-scoped access, lot 6 (planning/data-scoped-access/spec.md §7.1-§7.6, §8): the
@@ -589,7 +591,7 @@ export class DataAccessAdminService {
   }
 
   /** `GET /data-access/export` (spec §7.5): one line per limited, non-Administrator person and node. */
-  async exportCsv(manager: EntityManager, language: CsvLanguage): Promise<{ filename: string; content: string }> {
+  async exportCsv<F extends ExportFileFormat = 'csv'>(manager: EntityManager, language: CsvLanguage, format: F = 'csv' as F): Promise<ListExportFile<F>> {
     const tenantId: string = (await manager.query(`SELECT app_current_tenant()::text AS tenant_id`))[0].tenant_id;
     const persons = await this.loadLimitedPersons(manager, tenantId);
     const tree = await loadAccessTree(manager, tenantId);
@@ -605,10 +607,14 @@ export class DataAccessAdminService {
         }
       }
     }
-    return {
+    return writeListExport({
+      format,
+      language,
       filename: 'data_access.csv',
-      content: writeCsv({ language, headers: [...DATA_ACCESS_CSV_HEADERS], rows }),
-    };
+      sheetNames: { en: 'Data access', fr: 'Accès aux données', de: 'Datenzugriff', es: 'Acceso a datos' },
+      headers: [...DATA_ACCESS_CSV_HEADERS],
+      rows,
+    });
   }
 
   /**

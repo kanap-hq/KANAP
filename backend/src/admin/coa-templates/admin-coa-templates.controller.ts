@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, Req, UseGuards, UploadedFile, UseInterceptors, Res } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Patch, Delete, Param, Body, Query, Req, UseGuards, UploadedFile, UseInterceptors, Res } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { PlatformAdminGuard } from '../../auth/platform-admin.guard';
 import { MultiTenantOnlyGuard } from '../../common/feature-gates';
@@ -7,6 +7,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../../common/upload';
 import { contentDisposition } from '../../common/content-disposition';
 import { Response } from 'express';
+import { parseExportFormat } from '../../common/xlsx/format';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../../common/request-db-timeouts';
 
 @UseGuards(MultiTenantOnlyGuard, JwtAuthGuard, PlatformAdminGuard)
@@ -35,8 +36,10 @@ export class AdminCoaTemplatesController {
     return this.svc.delete(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  /** The stored template file, as uploaded: a CSV file only (xlsx answers 400). */
   @Get(':id/export')
-  async export(@Param('id') id: string, @Res() res: Response) {
+  async export(@Param('id') id: string, @Res() res: Response, @Query('format') formatRaw?: unknown) {
+    if (parseExportFormat(formatRaw) !== 'csv') throw new BadRequestException('A chart of accounts template is a CSV file.');
     const { filename, content } = await this.svc.exportCsv(id);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));

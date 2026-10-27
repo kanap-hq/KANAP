@@ -4,7 +4,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
-import { contentDisposition } from '../common/content-disposition';
+import { csvExportBody } from '../common/csv/send-csv-export';
+import { parseExportFormat } from '../common/xlsx/format';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { throwFeatureDisabled } from '../common/feature-gates';
 import { Features } from '../config/features';
@@ -54,18 +55,17 @@ export class VulnerabilitiesController {
     return this.svc.list(query ?? {}, opts(ctx), await applicationsAccess(ctx));
   }
 
-  /** The list as a CSV file (a path ending with /export: recorded as an export in the audit log). */
+  /** The list as a CSV file or a workbook (`format`); a path ending with /export: recorded as an export in the audit log. */
   @RequireLevel('infrastructure', 'reader')
   @Get('export')
   async export(
-    @Query() query: VulnerabilityFilters & { language?: string },
-    @Res({ passthrough: true }) res: Response,
+    @Query() query: VulnerabilityFilters & { language?: string; format?: string },
+    @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ) {
-    const file = await this.svc.exportCsv(query ?? {}, query?.language, opts(ctx), await applicationsAccess(ctx));
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(file.filename));
-    return file.content;
+    const format = parseExportFormat(query?.format);
+    const file = await this.svc.exportCsv(query ?? {}, query?.language, opts(ctx), await applicationsAccess(ctx), format);
+    res.send(await csvExportBody(res, file));
   }
 
   /** The values of the page's filters: the version labels under the other filters, the assets and applications with vulnerabilities that count. */

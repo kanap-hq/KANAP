@@ -4,7 +4,6 @@
       "title": "Incident register",
       "newIncident": "New incident",
       "importCsv": "Import CSV",
-      "exportCsv": "Export CSV",
       "importTitle": "Import incidents",
       "exportTitle": "Export incidents",
       "exportScope_one": "Filtered export: {{count}} incident",
@@ -174,7 +173,6 @@
       "addAsset": "Add asset",
       "addCluster": "Add cluster",
       "importCsv": "Import CSV",
-      "exportCsv": "Export CSV",
       "exportTitle": "Export assets",
       "importTitle": "Import assets",
       "exportScope_one": "{{count}} asset, following the filters of the list.",
@@ -417,8 +415,7 @@
       "actions": {
         "changeState": "Change state",
         "changeStateSelected_one": "Change state ({{count}})",
-        "changeStateSelected_other": "Change state ({{count}})",
-        "export": "Export CSV"
+        "changeStateSelected_other": "Change state ({{count}})"
       },
       "bulk": {
         "title": "Change the state",
@@ -2562,7 +2559,6 @@
         "changeVersion": "Change the version for {{name}}",
         "remove": "Remove {{name}}, every declared version",
         "saveFailed": "The applications could not be saved.",
-        "exportCsv": "Export CSV",
         "exportFailed": "The export failed.",
         "columns": {
           "ref": "Ref",

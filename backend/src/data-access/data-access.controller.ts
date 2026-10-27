@@ -15,13 +15,14 @@ import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
-import { contentDisposition } from '../common/content-disposition';
 import { languageOf } from '../common/csv-sheet';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { csvImportMulterOptions } from '../common/upload';
 import { DataAccessAdminService } from './data-access-admin.service';
 import { readPlacementOptions } from './placement-options';
 import { ReservedToUnscopedDataAccess } from './reserved-operations';
+import { csvExportFormat } from '../common/csv/csv-export.service';
+import { csvExportBody } from '../common/csv/send-csv-export';
 
 /**
  * Data-scoped access: the person's own placement options (lot 3, not reserved: spec §8) and the
@@ -57,15 +58,15 @@ export class DataAccessController {
   @ReservedToUnscopedDataAccess()
   async export(
     @Query('language') languageRaw: string | undefined,
+    @Query('format') formatRaw: unknown,
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ) {
     if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
+    const format = csvExportFormat(formatRaw, 'data');
     const language = await languageOf(ctx.manager, ctx.tenantId, ctx.userId || null, languageRaw);
-    const { filename, content } = await this.svc.exportCsv(ctx.manager, language);
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(filename));
-    res.send(content);
+    const file = await this.svc.exportCsv(ctx.manager, language, format);
+    res.send(await csvExportBody(res, file));
   }
 
   /** `POST /data-access/import?dryRun=` (spec §7.5): dry run by default, nothing written on any error. */

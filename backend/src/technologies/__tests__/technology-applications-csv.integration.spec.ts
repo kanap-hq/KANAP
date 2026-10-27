@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { csvProfile } from '../../common/csv-sheet/language';
 import { assert, inRolledBackTransaction, runSpecs } from '../../spend/__tests__/round-inputs.fixtures';
 import { assign, seedGraph, services } from './technologies.fixtures';
+import { assertCsvGolden, xlsxCells, xlsxSheetName } from '../../common/csv/__tests__/export-golden';
 
 // The export of a technology's Applications tab (lot T1b): headers, words, environments and
 // criticality in the language asked, the criticality as the tenant's catalog names it.
@@ -27,6 +28,7 @@ async function testEnglishAndFrench() {
     const opts = { manager: runner.manager, tenantId: g.tenantId };
 
     const en = await links.applicationsCsv(g.tech.sql, 'en', opts, {});
+    assertCsvGolden('technology-applications.en', en.content);
     assert.match(en.filename, /^TEC-\d+_applications\.csv$/);
     const enRows = cells(en.content, 'en');
     assert.deepEqual(enRows[0], ['Reference', 'Application', 'Link', 'Environment', 'Server', 'Installed on', 'Version', 'Criticality', 'External', 'IT owners', 'Notes']);
@@ -37,6 +39,7 @@ async function testEnglishAndFrench() {
     assert.deepEqual([enPortal[2], enPortal[6], enPortal[7], enPortal[8]], ['Declared', 'Version unknown', '', 'No']);
 
     const fr = await links.applicationsCsv(g.tech.sql, 'fr', opts, {});
+    assertCsvGolden('technology-applications.fr', fr.content);
     const frRows = cells(fr.content, 'fr');
     assert.deepEqual(frRows[0], ['Référence', 'Application', 'Lien', 'Environnement', 'Serveur', 'Installée sur', 'Version', 'Criticité', 'Externe', 'Responsables IT', 'Notes']);
     const frErp = frRows.filter((row) => row[1].startsWith('ERP'));
@@ -45,6 +48,15 @@ async function testEnglishAndFrench() {
     const frPortal = frRows.find((row) => row[1].startsWith('Portal'))!;
     assert.deepEqual([frPortal[2], frPortal[6], frPortal[8]], ['Déclarée', 'Version inconnue', 'Non']);
     assert.ok(!fr.content.includes('business_critical') && !fr.content.includes('pre_prod'), 'no raw code');
+
+    // The workbook: the same text cells, one sheet named in the language.
+    const book = await links.applicationsCsv(g.tech.sql, 'fr', opts, {}, 'xlsx');
+    assert.match(book.filename, /^TEC-\d+_applications\.xlsx$/);
+    assert.equal(book.rows, frRows.length - 1);
+    assert.equal(xlsxSheetName(book.content), 'Applications');
+    const x = xlsxCells(book.content);
+    assert.deepEqual(x.A1, ['text', 'Référence']);
+    assert.deepEqual(x.I2, ['text', frRows[1][8]], 'yes or no as the CSV writes it');
   });
 }
 

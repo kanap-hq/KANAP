@@ -21,7 +21,6 @@ import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
-import { contentDisposition } from '../common/content-disposition';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { csvImportMulterOptions } from '../common/upload';
@@ -39,6 +38,8 @@ import {
 } from './dto/analytics.dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
+import { csvExportFormat } from '../common/csv/csv-export.service';
+import { csvExportBody } from '../common/csv/send-csv-export';
 
 export function analyticsContext(ctx: TenantRequest): AnalyticsContext {
   if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
@@ -90,12 +91,11 @@ export class AnalyticsCategoriesController {
   ) {
     const scope = scopeRaw === 'template' ? 'template' : scopeRaw == null || scopeRaw === 'data' ? 'data' : null;
     if (!scope) throw new BadRequestException("scope must be 'data' or 'template'.");
+    const format = csvExportFormat(query?.format, scope);
     const caller = analyticsContext(ctx);
     const language = await languageOf(caller.manager, caller.tenantId, caller.userId ?? null, languageRaw);
-    const { filename, content } = await this.csv.exportCsv(scope, caller, language, exportListQuery(query));
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(filename));
-    res.send(content);
+    const file = await this.csv.exportCsv(scope, caller, language, exportListQuery(query), format);
+    res.send(await csvExportBody(res, file));
   }
 
   // The order of one dimension's values (same permission as PATCH :id), before the `:id` routes.

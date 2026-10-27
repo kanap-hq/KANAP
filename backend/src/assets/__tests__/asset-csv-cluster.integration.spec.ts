@@ -105,7 +105,8 @@ async function testExport() {
       operatingSystems,
       new AssetsListService(runner.manager.getRepository(Asset)),
     );
-    const exported = await service.export({ manager: runner.manager, tenantId, language: 'fr', scope: 'data', fields: ['name', 'cluster'] });
+    // The export keeps the list's order: sorted by name, as the screen asks.
+    const exported = await service.export({ manager: runner.manager, tenantId, language: 'fr', scope: 'data', fields: ['name', 'cluster'], query: { sort: 'name:ASC' } });
     const lines = exported.content.replace(/^﻿/, '').trim().split(/\r?\n/);
     assert.deepEqual(lines.slice(1), ['Alpha-cl;', 'beta-cl;', 'node-lonely;', 'node-twice;Alpha-cl, beta-cl']);
   });

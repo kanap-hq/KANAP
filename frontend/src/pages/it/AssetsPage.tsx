@@ -541,7 +541,7 @@ export default function AssetsPage() {
         </Button>
       )}
       {hasLevel('infrastructure', 'admin') && <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.assets.importCsv')}</Button>}
-      {hasLevel('infrastructure', 'admin') && <Button variant="action" onClick={openExport}>{t('pages.assets.exportCsv')}</Button>}
+      {hasLevel('infrastructure', 'admin') && <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>}
       {hasLevel('infrastructure', 'admin') && (
         <DeleteSelectedButton
           selectedRows={selectedRows}

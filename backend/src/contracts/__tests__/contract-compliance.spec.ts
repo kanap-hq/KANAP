@@ -3,7 +3,7 @@ import {
   COMPLIANCE_RULE_REQUIREMENTS,
   CONTRACT_COMPLIANCE_REQUIREMENTS,
   complianceInputsFromSettings,
-  complianceRegisterCsv,
+  complianceRegisterFile,
   contractComplianceView,
   highLevelCodes,
   registerReasonText,
@@ -141,13 +141,14 @@ async function testComplianceReadsRunOneAfterTheOther() {
   const view = await contractComplianceView(manager as never, inputs, { id: 'c1' });
   assert.equal(view.requirements.length, CONTRACT_COMPLIANCE_REQUIREMENTS.length);
   assert.equal(view.summary.state, 'none');
-  const csv = await complianceRegisterCsv(
+  const file = await complianceRegisterFile(
     manager as never,
     inputs,
     [{ id: 'c1', name: 'Lease', supplier_name: null, company_name: null }],
     'en',
+    'csv',
   );
-  assert.match(csv, /Lease/);
+  assert.match(file.content, /Lease/);
 }
 
 async function run() {

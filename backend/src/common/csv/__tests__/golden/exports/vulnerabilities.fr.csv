@@ -1,0 +1,5 @@
+﻿CVE;Severity;Score;Published;Technology reference;Technology;Publisher;Version;Match;Source;State;Note;Servers;Applications;Exploited;KEV added;Ransomware;EPSS;EPSS percentile;EUVD;Alerts
+CVE-2096-41001;critical;9.8;2026-01-01;TEC-1;Signal API;;Unknown;Version unknown;NVD;To review;;0;;no;;;0.1;0.5;;yes
+CVE-2096-41002;medium;5;2026-02-01;TEC-1;Signal API;;Unknown;Version unknown;NVD;To review;;0;;yes;2026-03-01;yes;0.4;0.8;EUVD-2026-41002;yes
+CVE-2096-41003;low;2;2026-03-01;TEC-1;Signal API;;Unknown;Version unknown;NVD;To review;;0;;yes;;;0.9;0.99;;yes
+CVE-2096-41004;high;7.5;2026-04-01;TEC-1;Signal API;;Unknown;Version unknown;NVD;To review;;0;;no;;;;;;yes

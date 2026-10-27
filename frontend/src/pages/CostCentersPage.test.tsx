@@ -106,7 +106,7 @@ describe('CostCentersPage', () => {
     levels.value = 'admin';
     renderPage();
     expect(screen.getByRole('button', { name: 'shared.labels.importCsv' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'shared.labels.exportCsv' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'common:export.button' })).toBeInTheDocument();
   });
 
   it('refuses readers without access', () => {
