@@ -555,7 +555,7 @@ A pinned **Total** row gives, for each pair, the total days, the total day cost 
 
 Every report shares these capabilities through the shared toolbar:
 
-### Export options
+### Export options { #export-options }
 
 - **Export table** (download icon): opens a menu with **CSV** and **Excel (.xlsx)**. Your browser remembers the last choice and highlights it
 - **Export chart as PNG** (image icon): Downloads the chart as a PNG image
