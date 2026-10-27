@@ -14,6 +14,7 @@ import {
 } from '../common/csv';
 import type { ExportFileFormat } from '../common/xlsx';
 import { portfolioProjectCsvConfig } from './portfolio-project-csv.config';
+import { inIdOrder } from '../common/pagination';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 
 /**
@@ -134,10 +135,15 @@ export class PortfolioProjectsCsvService {
     fields?: string[];
     preset?: string;
     status?: string;
+    /**
+     * The rows of the list the screen shows, in its order (`listIds` of the list's query, every
+     * page): only these, in this order. Absent: the whole register (API scripts).
+     */
+    ids?: string[];
     /** `csv` (default) or `xlsx` (data only: a template is CSV). */
     format?: F;
   }): Promise<CsvExportResult<F>> {
-    const { manager, tenantId, scope, fields, preset, status } = opts;
+    const { manager, tenantId, scope, fields, preset, status, ids } = opts;
 
     // Build query for projects
     let queryBuilder = manager
@@ -150,10 +156,12 @@ export class PortfolioProjectsCsvService {
       queryBuilder = queryBuilder.andWhere('project.status = :status', { status });
     }
 
+    if (ids) queryBuilder = queryBuilder.andWhere(ids.length ? 'project.id = ANY(:ids)' : 'FALSE', { ids });
     queryBuilder = queryBuilder.orderBy('project.created_at', 'DESC');
 
-    // Get projects (empty for template export)
-    const projects = scope === 'template' ? [] : await queryBuilder.getMany();
+    // Get projects (empty for template export), in the list's order when it gives them
+    const read = scope === 'template' ? [] : await queryBuilder.getMany();
+    const projects = ids ? inIdOrder(read, ids) : read;
     if (scope !== 'template' && projects.length > 0) {
       await this.hydrateManagedBodies(projects, manager, tenantId);
     }

@@ -40,6 +40,7 @@ import { LinkedReads, linkedReadsFromContext } from '../common/relations/linked-
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { csvExportFormat } from '../common/csv';
+import { exportListQuery } from '../common/pagination';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { createRequestReleaseConnection } from '../common/import-connection';
 import { RATE_LIMITS } from '../common/rate-limit';
@@ -234,6 +235,7 @@ export class TasksController {
   @RequireLevel('tasks', 'admin')
   @Get('export')
   async exportCsv(
+    @Query() query: Record<string, unknown>,
     @Query('language') languageRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('fields') fields: string | undefined,
@@ -248,7 +250,19 @@ export class TasksController {
     const tenantId = req?.tenant?.id ?? '';
     // The screen's language (the user's own when the screen sends none), as every shared-layer file.
     const language = await languageOf(req?.queryRunner?.manager, tenantId, req.user?.sub ?? null, languageRaw);
+    // `rows=list` (the dialog): the rows of the list, its filters, search, scope and sort, every page.
+    const listQuery = scope === 'template' ? undefined : exportListQuery(query);
+    const ids = listQuery
+      ? (await this.svc.listIds({ ...listQuery, __export: true }, {
+        manager: req?.queryRunner?.manager,
+        tenantId: req?.tenant?.id,
+        accessScope: await this.taskAccessScope(req, 'reader'),
+        viewer: incidentViewerFromRequest(req),
+        ...await linkedOfRequest(req),
+      })).ids
+      : undefined;
     const result = await this.csvSvc.export({
+      ids,
       language,
       manager: req?.queryRunner?.manager,
       tenantId,

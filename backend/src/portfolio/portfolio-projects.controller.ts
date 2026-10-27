@@ -18,6 +18,7 @@ import { resolveToUuid } from '../common/resolve-item-id';
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions, inlineImageMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
 import { csvExportFormat } from '../common/csv';
+import { exportListQuery } from '../common/pagination';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import { createRequestReleaseConnection } from '../common/import-connection';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
@@ -169,6 +170,7 @@ export class PortfolioProjectsController {
   @RequireLevel('portfolio_projects', 'admin')
   @Get('export')
   async exportCsv(
+    @Query() query: Record<string, unknown>,
     @Query('language') languageRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('fields') fields: string | undefined,
@@ -181,7 +183,17 @@ export class PortfolioProjectsController {
     const format = csvExportFormat(formatRaw, scope);
     // The screen's language (the user's own when the screen sends none), as every shared-layer file.
     const language = await languageOf(this.requireManager(ctx), ctx.tenantId, ctx.userId ?? null, languageRaw);
+    // `rows=list` (the dialog): the rows of the list, its filters, search, scope and sort, every page.
+    const listQuery = scope === 'template' ? undefined : exportListQuery(query);
+    const ids = listQuery
+      ? (await this.svc.listIds({ ...listQuery, __export: true }, {
+        manager: ctx.manager,
+        tenantId: ctx.tenantId,
+        accessScope: await this.projectAccessScope(ctx, listAccessLevel(listQuery as ListProjectsQueryInput)),
+      })).ids
+      : undefined;
     const result = await this.csvSvc.export({
+      ids,
       language,
       manager: this.requireManager(ctx),
       tenantId: ctx.tenantId,

@@ -16,6 +16,7 @@ import {
 } from '../common/csv';
 import type { ExportFileFormat } from '../common/xlsx';
 import { taskCsvConfig } from './task-csv.config';
+import { inIdOrder } from '../common/pagination';
 import { assertTaskWritten } from './task-data-access';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
 import {
@@ -55,10 +56,15 @@ export class TasksCsvService {
     relatedObjectId?: string;
     /** A task of an incident the reader cannot see stays out of the file (empty for incidents:admin). */
     viewer?: IncidentViewer | null;
+    /**
+     * The rows of the list the screen shows, in its order (`listIds` of the list's query, every
+     * page): only these, in this order. Absent: the whole register (API scripts).
+     */
+    ids?: string[];
     /** `csv` (default) or `xlsx` (data only: a template is CSV). */
     format?: F;
   }): Promise<CsvExportResult<F>> {
-    const { manager, tenantId, scope, fields, preset, relatedObjectType, relatedObjectId, viewer } = opts;
+    const { manager, tenantId, scope, fields, preset, relatedObjectType, relatedObjectId, viewer, ids } = opts;
 
     // Build query for tasks
     let queryBuilder = manager
@@ -80,10 +86,12 @@ export class TasksCsvService {
       queryBuilder = queryBuilder.andWhere(incidentVisibility.clause, incidentVisibility.params);
     }
 
+    if (ids) queryBuilder = queryBuilder.andWhere(ids.length ? 'task.id = ANY(:ids)' : 'FALSE', { ids });
     queryBuilder = queryBuilder.orderBy('task.created_at', 'DESC');
 
-    // Get tasks (empty for template export)
-    const tasks = scope === 'template' ? [] : await queryBuilder.getMany();
+    // Get tasks (empty for template export), in the list's order when it gives them
+    const read = scope === 'template' ? [] : await queryBuilder.getMany();
+    const tasks = ids ? inIdOrder(read, ids) : read;
 
     // Pre-load related object names for export
     if (tasks.length > 0) {

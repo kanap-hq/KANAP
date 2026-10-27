@@ -71,6 +71,15 @@ export function exportListQuery(query: any): Record<string, unknown> | undefined
 }
 
 /**
+ * Rows read by id (`id = ANY(:ids)`), put back in the order of `ids`: the order of the list they
+ * were taken from (`listIds`), so an export reads in the screen's order.
+ */
+export function inIdOrder<T extends { id: string }>(rows: T[], ids: readonly string[]): T[] {
+  const position = new Map(ids.map((id, index) => [String(id), index] as const));
+  return [...rows].sort((a, b) => (position.get(String(a.id)) ?? 0) - (position.get(String(b.id)) ?? 0));
+}
+
+/**
  * Names of the bound parameters of the set filters below. A where clause built here can be
  * merged with another one, or spread into several OR branches of one query, so each name is
  * unique in the process; the branches of one clause share the same operator, name and value.

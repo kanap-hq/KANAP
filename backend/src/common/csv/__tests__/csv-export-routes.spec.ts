@@ -86,19 +86,19 @@ const probes: Probe[] = [
     name: 'projects',
     path: '/portfolio/projects/export',
     controller: PortfolioProjectsController,
-    call: (c, format, scope, req, res) => c.exportCsv('fr', scope, undefined, undefined, undefined, format, req.ctx, res),
+    call: (c, format, scope, req, res) => c.exportCsv({}, 'fr', scope, undefined, undefined, undefined, format, req.ctx, res),
   },
   {
     name: 'requests',
     path: '/portfolio/requests/export',
     controller: PortfolioRequestsController,
-    call: (c, format, scope, req, res) => c.exportCsv('fr', scope, undefined, undefined, undefined, format, req, res),
+    call: (c, format, scope, req, res) => c.exportCsv({}, 'fr', scope, undefined, undefined, undefined, format, req, res),
   },
   {
     name: 'tasks',
     path: '/tasks/export',
     controller: TasksController,
-    call: (c, format, scope, req, res) => c.exportCsv('fr', scope, undefined, undefined, undefined, undefined, format, req, res),
+    call: (c, format, scope, req, res) => c.exportCsv({}, 'fr', scope, undefined, undefined, undefined, undefined, format, req, res),
   },
 ];
 

@@ -24,6 +24,7 @@ import {
 } from '../common/csv';
 import type { ExportFileFormat } from '../common/xlsx';
 import { applicationCsvConfig, csvOwnerKeys, sameKeys, usersByEmail } from './application-csv.config';
+import { inIdOrder } from '../common/pagination';
 import { applicationVulnerabilityCounts } from '../vulnerabilities/vulnerability-reach-counts';
 import {
   csvConfigForVulnerabilityFeed,
@@ -129,14 +130,13 @@ export class ApplicationsCsvService {
       queryBuilder = queryBuilder.andWhere('app.status = :status', { status });
     }
 
-    queryBuilder = queryBuilder.orderBy('app.name', 'ASC');
-
     const filters = typeof opts.query?.filters === 'string' ? JSON.parse(opts.query.filters) : { ...(opts.query?.filters as any || {}) };
     for (const [field, value] of Object.entries({ lifecycle, criticality, status })) if (value) filters[field] = { filterType: 'set', values: [value] };
     const matching = await this.listService.listIds({ ...opts.query, filters: JSON.stringify(filters), __classificationExport: true }, { manager, tenantId });
     if (!matching.ids.length) queryBuilder.andWhere('FALSE');
     else queryBuilder.andWhere('app.id = ANY(:ids)', { ids: matching.ids });
-    const applications = await queryBuilder.getMany();
+    // In the list's order (its sort, the id breaking ties), as the screen shows them.
+    const applications = inIdOrder(await queryBuilder.getMany(), matching.ids);
     // Users never see codes: catalog-backed columns are exported as names (import accepts either).
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
     for (const app of applications) {

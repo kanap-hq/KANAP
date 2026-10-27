@@ -20,6 +20,7 @@ import type { ExportFileFormat } from '../common/xlsx';
 import { clusterMembershipsOf, clusterNamesText, lockAssetNames } from './asset-rules';
 import { assetEnvironmentLabel } from './asset-environments';
 import { assetCsvConfig } from './asset-csv.config';
+import { inIdOrder } from '../common/pagination';
 import { assetVulnerabilityCounts } from '../vulnerabilities/vulnerability-reach-counts';
 import {
   csvConfigForVulnerabilityFeed,
@@ -119,6 +120,7 @@ export class AssetsCsvService {
   private async rowsForExport(queryBuilder: SelectQueryBuilder<Asset>, opts: {
     manager: EntityManager;
     tenantId: string;
+    language: CsvLanguage;
     environment?: string;
     kind?: string;
     status?: string;
@@ -143,11 +145,13 @@ export class AssetsCsvService {
     const matching = await this.list.listIds(
       // Every matching asset: the navigation's 10,000 cap does not apply to the export.
       { ...opts.query, filters: JSON.stringify(filters), __export: true },
-      { manager: opts.manager, tenantId: opts.tenantId },
+      // The language sorts the catalog columns, as on the list.
+      { manager: opts.manager, tenantId: opts.tenantId, language: opts.language },
     );
     if (!matching.ids.length) queryBuilder.andWhere('FALSE');
     else queryBuilder.andWhere('asset.id = ANY(:ids)', { ids: matching.ids });
-    return queryBuilder.orderBy('asset.name', 'ASC').getMany();
+    // In the list's order (its sort, the id breaking ties), as the screen shows them.
+    return inIdOrder(await queryBuilder.getMany(), matching.ids);
   }
 
   /**
