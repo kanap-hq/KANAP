@@ -1,12 +1,12 @@
 import React from 'react';
 import { Box, Tooltip } from '@mui/material';
 
-export const SKILL_LEVELS = [1, 2, 3, 4] as const;
-export const MIN_SKILL_LEVEL = 1;
-export const MAX_SKILL_LEVEL = 4;
+import { clampSkillLevel, MAX_SKILL_LEVEL, MIN_SKILL_LEVEL } from '../skillsMatrix';
 
-/** Older records may still carry a 0 ("no knowledge", dropped 2026-09): show it as the lowest level. */
-export const clampSkillLevel = (level: number) => Math.min(MAX_SKILL_LEVEL, Math.max(MIN_SKILL_LEVEL, Number.isFinite(level) ? level : MIN_SKILL_LEVEL));
+// The level bounds live with the skills matrix, which the API's export shares.
+export { clampSkillLevel, MAX_SKILL_LEVEL, MIN_SKILL_LEVEL };
+
+export const SKILL_LEVELS = [1, 2, 3, 4] as const;
 
 type SkillLevelControlProps = {
   /** Accessible group name, e.g. "Office 365 level". */

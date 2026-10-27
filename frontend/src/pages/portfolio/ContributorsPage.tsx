@@ -17,7 +17,9 @@ import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import {
   compactSelectMenuProps, drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, pageSelectSx,
 } from '../../theme/formSx';
-import { groupContributorsByTeam, sortGroupIds, UNASSIGNED_GROUP } from './contributorsOrdering';
+import {
+  filterContributorsByEmploymentType, groupContributorsByTeam, sortGroupIds, UNASSIGNED_GROUP,
+} from './contributorsOrdering';
 import { buildItemPath, formatItemRef } from '../../utils/item-ref';
 import { useLocalStorageState } from '../../hooks/useLocalStorageState';
 import ContributorsSkillsMatrix from './components/ContributorsSkillsMatrix';
@@ -192,11 +194,10 @@ export default function ContributorsPage() {
   // through one code path; the matrix only knows about the team filter. The org
   // chart is deliberately left out: a reporting line crosses teams, and it
   // carries its own contract-type pills.
-  const contributors = useMemo(() => {
-    const all = data || [];
-    if (filterEmploymentTypeId === 'all') return all;
-    return all.filter((contributor) => contributor.employment_type_id === filterEmploymentTypeId);
-  }, [data, filterEmploymentTypeId]);
+  const contributors = useMemo(
+    () => filterContributorsByEmploymentType(data || [], filterEmploymentTypeId),
+    [data, filterEmploymentTypeId],
+  );
 
   const getTeamName = useCallback((groupId: string) => {
     if (groupId === UNASSIGNED_GROUP) return t('contributors.filters.unassigned');
