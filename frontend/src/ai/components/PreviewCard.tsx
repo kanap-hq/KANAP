@@ -127,7 +127,7 @@ function PreviewCard({
   const statusDisplay = getPreviewStatusDisplay(preview);
   const statusColorKey = getPreviewStatusColorKey(statusDisplay);
   const statusLabel = t(`ai:previewStatuses.${statusDisplay}`);
-  const { fieldLabel, valueLabel } = usePreviewChangeLabels();
+  const { fieldLabel, valueLabel, amountsLabel } = usePreviewChangeLabels();
 
   return (
     <Box
@@ -214,10 +214,16 @@ function PreviewCard({
 
         <Stack spacing={1.25}>
           {Object.entries(preview.changes).map(([field, change]) => {
-            // A list value reads as on the screens; a markdown text stays as written.
-            const diff = change.format === 'markdown'
-              ? change
-              : { ...change, from: valueLabel(preview, field, change.from), to: valueLabel(preview, field, change.to) };
+            // A list value reads as on the screens, budget amounts as on the budget screens; a markdown text stays as written.
+            const diff = change.amounts
+              ? {
+                ...change,
+                from: change.amounts.from ? amountsLabel(change.amounts.from) : change.from,
+                to: change.amounts.to ? amountsLabel(change.amounts.to) : change.to,
+              }
+              : change.format === 'markdown'
+                ? change
+                : { ...change, from: valueLabel(preview, field, change.from), to: valueLabel(preview, field, change.to) };
             return (
             <Stack key={field} spacing={0.75}>
               <Typography

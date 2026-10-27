@@ -6,6 +6,7 @@ import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutati
 import { AiFinancialPlanMutationSupportService } from '../mutation/ai-financial-plan-mutation-support.service';
 import { AiMasterDataMutationSupportService } from '../mutation/ai-master-data-mutation-support.service';
 import { AiRelationMutationSupportService } from '../mutation/ai-relation-mutation-support.service';
+import { CreateBusinessRecordAiMutationOperation } from '../mutation/operations/create-business-record.ai-mutation-operation';
 import { CreateDocumentAiMutationOperation } from '../mutation/operations/create-document.ai-mutation-operation';
 import { CreateTaskAiMutationOperation } from '../mutation/operations/create-task.ai-mutation-operation';
 import { ImportGlpiTicketAiMutationOperation } from '../mutation/operations/import-glpi-ticket.ai-mutation-operation';
@@ -187,6 +188,51 @@ function testFinancialPlanAndRelations() {
   assert.equal(summary(relations, links, 'es'), 'Modificación de las relaciones de «CheeseTrack».');
 }
 
+// The amounts of a budget line reach the card as numbers, the same in every language: the card writes
+// them with the column names of the budget screens and the line's currency ("Budget 2026 : 12 000 €").
+function testAmountsForTheCard() {
+  const amounts12000 = { year: 2026, currency: 'EUR', column_names: {}, totals: { planned: 12000 } };
+  const before = { year: 2026, currency: 'EUR', column_names: {}, totals: { planned: 0, committed: 0, actual: 0, expected_landing: 0 } };
+  const financial = make(AiFinancialPlanMutationSupportService);
+  const upsert = preview({
+    tool_name: 'write_financial_plan',
+    target_entity_type: 'spend_items',
+    mutation_input: { action: 'upsert_amounts', entity_type: 'spend_items' },
+    current_values: {
+      target_title: 'Licences',
+      display_values: { from: '2026 totals (Budget: 0)', to: '2026 annual totals (Budget: 12000)', from_amounts: before, to_amounts: amounts12000 },
+    },
+  });
+  for (const language of ['en', 'fr'] as const) {
+    const change = financial.presentPreview(upsert, language).changes.amounts;
+    assert.deepEqual(change.amounts, { from: before, to: amounts12000 }, `${language}: upsert amounts as numbers`);
+    assert.equal(change.to, '2026 annual totals (Budget: 12000)', `${language}: the English text stays for the model`);
+  }
+  const older = preview({ ...upsert, current_values: { target_title: 'Licences', display_values: { from: '0', to: '12000' } } });
+  assert.equal(financial.presentPreview(older, 'fr').changes.amounts.amounts, undefined, 'a preview made before keeps its text');
+
+  const create = new CreateBusinessRecordAiMutationOperation(make(AiBusinessRecordMutationSupportService), financial);
+  const line = preview({
+    tool_name: 'create_business_record',
+    target_entity_type: 'spend_items',
+    mutation_input: {
+      action: 'create',
+      entity_type: 'spend_items',
+      fields: { product_name: 'Licences', currency: 'EUR' },
+      display_values: { product_name: 'Licences', currency: 'EUR' },
+      field_labels: { product_name: 'Product Name', currency: 'Currency' },
+      amounts: { kind: 'annual', year: 2026, totals: { planned: '12000' } },
+      amounts_display: '2026 annual totals (Budget: 12000)',
+      amounts_preview: amounts12000,
+    },
+    current_values: { target_title: 'Licences' },
+  });
+  for (const language of ['en', 'fr'] as const) {
+    const change = create.presentPreview(line, language).changes.amounts;
+    assert.deepEqual(change.amounts, { from: null, to: amounts12000 }, `${language}: new line amounts as numbers`);
+  }
+}
+
 async function testPersonLanguage() {
   assert.equal(aiWriteLanguage('fr-FR'), 'fr');
   assert.equal(aiWriteLanguage('pt'), 'en');
@@ -204,6 +250,7 @@ async function main() {
   testDocumentCreation();
   testBusinessRecords();
   testFinancialPlanAndRelations();
+  testAmountsForTheCard();
   await testPersonLanguage();
   console.log('ai-write-preview-summaries.spec: ok');
 }

@@ -14,7 +14,7 @@ import {
   AiCreateBusinessRecordInput,
   getAiBusinessRecordBusinessResource,
 } from '../ai-business-record-mutation-support.service';
-import { AiFinancialPlanMutationSupportService } from '../ai-financial-plan-mutation-support.service';
+import { AiFinancialPlanMutationSupportService, storedPreviewAmounts } from '../ai-financial-plan-mutation-support.service';
 import { AiWriteLanguage } from '../../ai-write-texts';
 
 /** The families whose creation may carry the amounts of the new line. */
@@ -65,10 +65,16 @@ export class CreateBusinessRecordAiMutationOperation implements AiMutationOperat
     }
     const prepared = await this.support.prepareCreatePreview(context, input);
     if (input.amounts == null) return prepared;
-    const lineAmounts = await this.financialPlan.prepareNewLineAmounts(context, input.entity_type, input.amounts);
+    const fields = prepared.mutationInput.fields as Record<string, unknown> | undefined;
+    const lineAmounts = await this.financialPlan.prepareNewLineAmounts(context, input.entity_type, input.amounts, fields?.currency);
     return {
       ...prepared,
-      mutationInput: { ...prepared.mutationInput, amounts: lineAmounts.amounts, amounts_display: lineAmounts.display },
+      mutationInput: {
+        ...prepared.mutationInput,
+        amounts: lineAmounts.amounts,
+        amounts_display: lineAmounts.display,
+        amounts_preview: lineAmounts.preview,
+      },
     };
   }
 
@@ -77,9 +83,13 @@ export class CreateBusinessRecordAiMutationOperation implements AiMutationOperat
     const display = preview.mutation_input?.amounts_display;
     if (preview.mutation_input?.amounts == null || typeof display !== 'string') return presentation;
     // The card shows the line with the amount it is created with.
+    const amounts = storedPreviewAmounts(preview.mutation_input?.amounts_preview);
     return {
       ...presentation,
-      changes: { ...presentation.changes, amounts: { label: 'Amounts', from: null, to: display, format: 'text' } },
+      changes: {
+        ...presentation.changes,
+        amounts: { label: 'Amounts', from: null, to: display, format: 'text', ...(amounts ? { amounts: { from: null, to: amounts } } : {}) },
+      },
     };
   }
 

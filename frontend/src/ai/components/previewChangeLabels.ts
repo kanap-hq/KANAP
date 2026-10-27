@@ -3,14 +3,18 @@ import { useTranslation } from 'react-i18next';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
-import { AiMutationPreview } from '../aiTypes';
+import { formatCurrency, formatDecimal } from '../../i18n/formatters';
+import { AMOUNT_COLUMNS } from '../../components/finance/amountColumns';
+import { AiMutationPreview, AiPreviewAmounts } from '../aiTypes';
 
 /**
  * The labels and values of a preview card in the user's language, with the words of the screens.
  * The server sends each change under its field key, with an English label and the stored value
  * (a code for a list value): the label comes from `ai:previewCard`, the value from the catalog the
  * screens use. A key or a value nobody translates shows as the server sent it (a dimension's name,
- * a record's name, a free text). A date reads as on the screens ("3 nov. 2027").
+ * a record's name, a free text). A date reads as on the screens ("3 nov. 2027"). Budget amounts come
+ * as numbers: each column is named as on the budget screens (or as the tenant named it), with the
+ * year, and the amount in the language and the line's currency ("Budget 2026 : 12 000 €").
  */
 
 const TASK_TOOLS = new Set(['create_task', 'update_task_fields', 'update_task_status', 'update_task_assignee', 'import_ticket', 'import_glpi_ticket']);
@@ -112,5 +116,36 @@ export function usePreviewChangeLabels() {
     [known, labelFor, locale],
   );
 
-  return { fieldLabel, valueLabel };
+  const amountsLabel = useCallback(
+    (value: AiPreviewAmounts): string => {
+      const money = (amount: number) => {
+        const digits = Number.isInteger(amount) ? 0 : 2;
+        return value.currency
+          ? formatCurrency(amount, locale, value.currency, { minimumFractionDigits: digits, maximumFractionDigits: digits })
+          : formatDecimal(amount, locale, digits);
+      };
+      const columnLabel = (measure: string) => {
+        const column = AMOUNT_COLUMNS.find((entry) => entry.measure === measure);
+        const name = value.column_names?.[measure] || (column ? t(column.labelKey) : measure);
+        return value.year == null ? name : `${name} ${value.year}`;
+      };
+      if (value.quarters) {
+        const quarters = (['Q1', 'Q2', 'Q3', 'Q4'] as const)
+          .map((quarter, index) => `${t('ops:budgetTab.result.quarter', { n: index + 1 })} ${money(value.quarters!.values[quarter] ?? 0)}`)
+          .join(', ');
+        return t('ai:previewCard.amounts.column', { column: columnLabel(value.quarters.measure), amount: quarters });
+      }
+      if (value.months != null) {
+        return t('ai:previewCard.amounts.months', { count: value.months, year: value.year ?? '' });
+      }
+      const totals = value.totals ?? {};
+      return AMOUNT_COLUMNS
+        .filter((column) => totals[column.measure] != null)
+        .map((column) => t('ai:previewCard.amounts.column', { column: columnLabel(column.measure), amount: money(totals[column.measure]!) }))
+        .join(', ');
+    },
+    [locale, t],
+  );
+
+  return { fieldLabel, valueLabel, amountsLabel };
 }

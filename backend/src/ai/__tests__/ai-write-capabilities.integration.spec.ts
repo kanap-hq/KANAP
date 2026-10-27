@@ -841,6 +841,15 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
         totals: { planned: 12000, committed: 3000, actual: 1000, expected_landing: 11000 },
       },
     });
+    // The card writes the amounts in the person's language: numbers, the year and the line's currency.
+    assert.deepEqual(amountPreview.changes.amounts.amounts.to, {
+      year: 2026,
+      currency: 'EUR',
+      column_names: {},
+      totals: { planned: 12000, committed: 3000, actual: 1000, expected_landing: 11000 },
+    });
+    assert.equal(amountPreview.changes.amounts.amounts.from.year, 2026);
+    assert.equal(amountPreview.changes.amounts.amounts.from.currency, 'EUR');
     await approvePreview(harness, financialCtx, amountPreview);
     let [amountTotals] = await runner.query(
       `SELECT
@@ -1617,6 +1626,10 @@ async function testLineCreatedWithItsAmountInOneApproval(harness: Harness) {
     assert.equal(preview.changes.amounts.from, null);
     assert.match(preview.changes.amounts.to, /2026/);
     assert.match(preview.changes.amounts.to, /12000/);
+    assert.deepEqual(preview.changes.amounts.amounts, {
+      from: null,
+      to: { year: 2026, currency: 'EUR', column_names: {}, totals: { planned: 12000 } },
+    });
 
     const executed = await approvePreview(harness, ctx, preview);
     const lineId = executed.target.entity_id;

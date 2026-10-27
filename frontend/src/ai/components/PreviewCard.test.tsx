@@ -129,4 +129,47 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText('3 nov. 2031')).toBeInTheDocument();
     expect(screen.queryByText('2031-11-03')).not.toBeInTheDocument();
   });
+
+  // Intl separates thousands and the currency with no-break spaces: compare the visible words.
+  const byText = (expected: string) => (_: string, element: Element | null) =>
+    element?.tagName === 'P' && (element.textContent ?? '').replace(/[\u00a0\u202f]/g, ' ') === expected;
+
+  it('writes budget amounts with the column names of the budget screens, in the language and currency', () => {
+    renderCard(preview({
+      tool_name: 'create_business_record',
+      target: { entity_type: 'spend_items', entity_id: null, ref: null, title: 'Licences' },
+      changes: {
+        amounts: {
+          label: 'Amounts',
+          from: null,
+          to: '2026 annual totals (Budget: 12000)',
+          format: 'text',
+          amounts: { from: null, to: { year: 2026, currency: 'EUR', column_names: {}, totals: { planned: 12000, expected_landing: 11500.5 } } },
+        },
+      },
+    }));
+    expect(screen.getByText('Montants')).toBeInTheDocument();
+    expect(screen.getByText(byText('Budget 2026 : 12 000 €, Atterrissage prévu 2026 : 11 500,50 €'))).toBeInTheDocument();
+    expect(screen.queryByText('2026 annual totals (Budget: 12000)')).not.toBeInTheDocument();
+    cleanup();
+
+    renderCard(preview({
+      tool_name: 'write_financial_plan',
+      target: { entity_type: 'spend_items', entity_id: 'line-1', ref: 'BL-7', title: 'Licences / Y2026' },
+      changes: {
+        amounts: {
+          label: 'Amounts',
+          from: '2026 totals (A0: 0)',
+          to: '2026 quarterly A0 (Q1: 1000, Q2: 0, Q3: 0, Q4: 0)',
+          format: 'text',
+          amounts: {
+            from: { year: 2026, currency: 'CHF', column_names: { planned: 'A0' }, totals: { planned: 0 } },
+            to: { year: 2026, currency: 'CHF', column_names: { planned: 'A0' }, quarters: { measure: 'planned', values: { Q1: 1000, Q2: 0, Q3: 0, Q4: 0 } } },
+          },
+        },
+      },
+    }));
+    expect(screen.getByText(byText('A0 2026 : 0 CHF'))).toBeInTheDocument();
+    expect(screen.getByText(byText('A0 2026 : T1 1 000 CHF, T2 0 CHF, T3 0 CHF, T4 0 CHF'))).toBeInTheDocument();
+  });
 });

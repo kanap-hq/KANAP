@@ -171,6 +171,11 @@
   },
   "previewCard": {
     "after": "Después",
+    "amounts": {
+      "column": "{{column}}: {{amount}}",
+      "months_one": "{{count}} mes en {{year}}",
+      "months_other": "{{count}} meses en {{year}}"
+    },
     "approve": "Aprobar",
     "before": "Antes",
     "fields": {

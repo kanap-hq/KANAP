@@ -13,7 +13,7 @@ import { AMOUNT_MEASURES, AmountMeasure, assertSpreadProfile, validateAmountValu
 import { formatAmount, formatCents } from '../../common/amount';
 import { budgetColumnName, BudgetColumnsSettings, readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
-import { AiExecutionContextWithManager, AiMutationPreviewChangeDto } from '../ai.types';
+import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewAmounts } from '../ai.types';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
 import {
   AiMutationPreviewPresentation,
@@ -39,7 +39,14 @@ export type AiNewLineAmounts = {
   amounts: Record<string, unknown>;
   /** What the approval card shows: the year and the amounts, under the tenant's column names. */
   display: string;
+  /** The same amounts as numbers, which the card writes in the person's language. */
+  preview: AiPreviewAmounts;
 };
+
+/** Stored amounts of a preview, as the card receives them; null when the preview holds none. */
+export function storedPreviewAmounts(value: unknown): AiPreviewAmounts | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as AiPreviewAmounts : null;
+}
 
 export type AiWriteFinancialPlanInput = {
   entity_type: AiFinancialPlanEntityType;
@@ -399,6 +406,8 @@ export class AiFinancialPlanMutationSupportService {
           display_values: {
             from: this.formatAmountSummary(before, columns),
             to: this.formatAmountPayload(amounts, columns),
+            from_amounts: this.previewTotals(before, columns, item.row.currency),
+            to_amounts: this.previewPayload(amounts, columns, item.row.currency),
           },
         },
       };
@@ -515,11 +524,14 @@ export class AiFinancialPlanMutationSupportService {
       }
     } else if (action === 'upsert_amounts') {
       const display = current.display_values && typeof current.display_values === 'object' ? current.display_values as Record<string, unknown> : {};
+      const fromAmounts = storedPreviewAmounts(display.from_amounts);
+      const toAmounts = storedPreviewAmounts(display.to_amounts);
       changes.amounts = {
         label: 'Amounts',
         from: formatValue(display.from),
         to: formatValue(display.to),
         format: 'text',
+        ...(toAmounts ? { amounts: { from: fromAmounts, to: toAmounts } } : {}),
       };
     } else if (action === 'replace_allocations') {
       const display = current.display_values && typeof current.display_values === 'object' ? current.display_values as Record<string, unknown> : {};
@@ -645,12 +657,17 @@ export class AiFinancialPlanMutationSupportService {
     context: AiExecutionContextWithManager,
     entityType: unknown,
     raw: unknown,
+    currency: unknown,
   ): Promise<AiNewLineAmounts> {
     requireFinancialEntityType(entityType);
     const amounts = this.normalizeAmountPayload(raw);
     await assertSpreadProfile(context.manager, amounts.kind, 'spread_profile_name' in amounts ? amounts.spread_profile_name : undefined);
     const columns = await readBudgetColumns(context.manager, context.tenantId);
-    return { amounts: amounts as unknown as Record<string, unknown>, display: this.formatAmountPayload(amounts, columns) };
+    return {
+      amounts: amounts as unknown as Record<string, unknown>,
+      display: this.formatAmountPayload(amounts, columns),
+      preview: this.previewPayload(amounts, columns, currency),
+    };
   }
 
   /**
@@ -1254,6 +1271,46 @@ export class AiFinancialPlanMutationSupportService {
       return `${payload.year} quarterly ${budgetColumnName(columns, payload.measure)} (${['Q1', 'Q2', 'Q3', 'Q4'].map((q) => `${q}: ${(payload as any)[q] ?? 0}`).join(', ')})`;
     }
     return `${payload.year} monthly rows (${payload.months.length})`;
+  }
+
+  /** The year's totals before the write: the shown columns, and a hidden one that holds an amount. */
+  private previewTotals(value: Record<string, unknown>, columns: BudgetColumnsSettings, currency: unknown): AiPreviewAmounts {
+    const stored = value.totals && typeof value.totals === 'object' ? value.totals as Record<string, unknown> : {};
+    const totals: Partial<Record<AmountMeasure, number>> = {};
+    for (const measure of AMOUNT_MEASURES) {
+      const amount = Number(stored[measure] ?? 0) || 0;
+      if (columns.enabled[measure] || amount !== 0) totals[measure] = amount;
+    }
+    return { ...this.previewBase(value.year == null ? null : Number(value.year), columns, currency), totals };
+  }
+
+  private previewPayload(payload: AmountPayload, columns: BudgetColumnsSettings, currency: unknown): AiPreviewAmounts {
+    const base = this.previewBase(payload.year, columns, currency);
+    if (payload.kind === 'annual') {
+      const totals: Partial<Record<AmountMeasure, number>> = {};
+      for (const measure of AMOUNT_MEASURES) {
+        if (payload.totals[measure] !== undefined) totals[measure] = Number(payload.totals[measure]);
+      }
+      return { ...base, totals };
+    }
+    if (payload.kind === 'quarterly') {
+      const quarter = (value: string | undefined) => Number(value ?? 0);
+      return {
+        ...base,
+        quarters: { measure: payload.measure, values: { Q1: quarter(payload.Q1), Q2: quarter(payload.Q2), Q3: quarter(payload.Q3), Q4: quarter(payload.Q4) } },
+      };
+    }
+    return { ...base, months: payload.months.length };
+  }
+
+  private previewBase(year: number | null, columns: BudgetColumnsSettings, currency: unknown): Pick<AiPreviewAmounts, 'year' | 'currency' | 'column_names'> {
+    const columnNames: AiPreviewAmounts['column_names'] = {};
+    for (const measure of AMOUNT_MEASURES) {
+      const name = columns.labels[measure];
+      if (name) columnNames[measure] = name;
+    }
+    const code = typeof currency === 'string' ? currency.trim().toUpperCase() : '';
+    return { year, currency: /^[A-Z]{3}$/.test(code) ? code : null, column_names: columnNames };
   }
 
   private formatAllocationSummary(value: Record<string, unknown>): string {

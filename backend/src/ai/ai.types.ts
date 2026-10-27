@@ -321,11 +321,34 @@ export type AiMutationPreviewStatus =
   | 'expired'
   | 'failed';
 
+/** A budget column, by the measure it stores (`spend/amounts-write.util.ts`). */
+type AiPreviewAmountMeasure = 'planned' | 'committed' | 'forecast' | 'actual' | 'expected_landing';
+
+/**
+ * The amounts of a budget line for one year, as numbers: the card writes them in the person's
+ * language and the line's currency, under the column names of the budget screens.
+ */
+export type AiPreviewAmounts = {
+  year: number | null;
+  /** The line's currency code; null when unknown. */
+  currency: string | null;
+  /** The names the tenant gave its columns; a column missing here keeps the screens' name. */
+  column_names: Partial<Record<AiPreviewAmountMeasure, string>>;
+  /** A total per column, in the fixed column order. */
+  totals?: Partial<Record<AiPreviewAmountMeasure, number>>;
+  /** Quarterly amounts of one column. */
+  quarters?: { measure: AiPreviewAmountMeasure; values: Record<'Q1' | 'Q2' | 'Q3' | 'Q4', number> };
+  /** Monthly amounts: the number of months written. */
+  months?: number;
+};
+
 export type AiMutationPreviewChangeDto = {
   label?: string | null;
   from: string | null;
   to: string | null;
   format?: 'text' | 'markdown';
+  /** Budget amounts, formatted by the card; `from` and `to` keep an English text of them. */
+  amounts?: { from: AiPreviewAmounts | null; to: AiPreviewAmounts | null };
 };
 
 export type AiMutationPreviewDto = {

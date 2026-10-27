@@ -25,6 +25,21 @@ export type AiMutationPreviewStatus =
   | 'expired'
   | 'failed';
 
+/** The amounts of a budget line for one year, as the server sends them for a preview card. */
+export type AiPreviewAmounts = {
+  year: number | null;
+  /** The line's currency code; null when unknown. */
+  currency: string | null;
+  /** The names the tenant gave its columns, by measure; the others keep the screens' names. */
+  column_names: Partial<Record<string, string>>;
+  /** A total per column, by measure. */
+  totals?: Partial<Record<string, number>>;
+  /** Quarterly amounts of one column. */
+  quarters?: { measure: string; values: Record<'Q1' | 'Q2' | 'Q3' | 'Q4', number> };
+  /** Monthly amounts: the number of months written. */
+  months?: number;
+};
+
 export type AiMutationPreview = {
   preview_id: string;
   tool_name: AiMutationWriteToolName;
@@ -40,6 +55,8 @@ export type AiMutationPreview = {
     from: string | null;
     to: string | null;
     format?: 'text' | 'markdown';
+    /** Budget amounts as numbers, written by the card; `from` and `to` hold an English text of them. */
+    amounts?: { from: AiPreviewAmounts | null; to: AiPreviewAmounts | null };
   }>;
   requires_confirmation: boolean;
   actions: Array<'approve' | 'reject'>;
