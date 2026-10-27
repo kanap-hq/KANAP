@@ -117,9 +117,11 @@ También puede hacer zoom con la rueda del ratón y desplazarse haciendo clic y 
 
 Haga clic en un nodo de servidor o clúster para resaltar sus conexiones y abrir un panel de detalle que muestra:
 
-- **Tipo de servidor**, **Ubicación del servidor**, **Sistema operativo**, **Segmento de red**, **Dirección IP**
+- **Tipo de servidor**, **Ubicación del servidor**, **Sistema operativo**, **Segmento de red**, **Dirección IP**, **Clúster**
 - **Aplicaciones asignadas**: Apps que se ejecutan en este servidor, agrupadas por entorno. En un miembro, una app asignada a su clúster se muestra «vía» el nombre del clúster. Haga clic en el nombre de una app para abrirla.
 - Botón **Abrir servidor** o **Ver clúster** para abrir el espacio de trabajo. **Ver clúster** abre el clúster en su pestaña **Operaciones**, donde se gestionan sus miembros
+
+El panel muestra cada dirección IP del servidor. El segmento de red es la zona de red de la subred de la primera dirección. En un miembro, **Clúster** nombra cada clúster al que pertenece, y cada nombre abre ese clúster.
 
 Haga clic en un nodo de entidad para ver su tipo y entorno.
 

@@ -799,6 +799,7 @@
       "nodeDetails": "Détails du nœud",
       "connectionDetails": "Détails de la connexion",
       "cluster": "Cluster",
+      "clusterLine": "Cluster :",
       "typeValue": "Type : {{value}}",
       "environmentValue": "Environnement : {{value}}",
       "serverType": "Type de serveur :",

@@ -799,6 +799,7 @@
       "nodeDetails": "Knotendetails",
       "connectionDetails": "Verbindungsdetails",
       "cluster": "Cluster",
+      "clusterLine": "Cluster:",
       "typeValue": "Typ: {{value}}",
       "environmentValue": "Umgebung: {{value}}",
       "serverType": "Servertyp:",

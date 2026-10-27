@@ -21,7 +21,12 @@ vi.mock('react-i18next', () => ({ initReactI18next: { type: '3rdParty', init: ()
 vi.mock('../../api', () => ({ default: { get } }));
 const catalog = vi.hoisted(() => ({ data: undefined }));
 vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({ default: () => catalog }));
-const enums = vi.hoisted(() => ({ settings: null, byField: {}, labelFor: () => '', entityName: (_code: string, fallback?: string) => fallback ?? '' }));
+const enums = vi.hoisted(() => ({
+  settings: null,
+  byField: {},
+  labelFor: (field: string, code?: string | null) => (field === 'networkSegment' && code === 'dmz' ? 'DMZ' : ''),
+  entityName: (_code: string, fallback?: string) => fallback ?? '',
+}));
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({ default: () => enums }));
 vi.mock('../../components/LightModeIsland', () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 // The graph is a canvas: a button per node stands for a click on it.
@@ -62,12 +67,12 @@ function Where() {
   return <div data-testid="where">{location.pathname}</div>;
 }
 
-function renderPage(entry = '/it/connection-map', map: typeof MAP = MAP) {
+function renderPage(entry = '/it/connection-map', map: typeof MAP = MAP, summaries: Record<string, Record<string, unknown>> = {}) {
   get.mockImplementation(async (url: string) => {
     if (url === '/connections/map') return { data: map };
     if (url.endsWith('/map-summary')) {
       const id = url.split('/')[2];
-      return { data: { id, name: id, kind: 'vm', environment: 'prod', operating_system: null, ip_addresses: null, location_reference: null, location_name: null, assigned_applications: APPLICATIONS[id] ?? [], is_cluster: id === 'cl-1' } };
+      return { data: { id, name: id, kind: 'vm', environment: 'prod', operating_system: null, ip_addresses: null, network_segment: null, clusters: [], location_reference: null, location_name: null, assigned_applications: APPLICATIONS[id] ?? [], is_cluster: id === 'cl-1', ...summaries[id] } };
     }
     return { data: { items: [] } };
   });
@@ -165,6 +170,41 @@ describe('ConnectionMapPage node panel', () => {
     expect(await screen.findByRole('button', { name: 'CheeseTrack' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Sage X3' })).toBeTruthy();
     expect(screen.queryByText('components.clusterAssignment.via')).toBeNull();
+  });
+
+  it('shows the IP addresses, the network segment and the clusters of a member', async () => {
+    renderPage('/it/connection-map', MAP, {
+      'srv-1': {
+        ip_addresses: [
+          { type: 'host', ip: '10.1.2.3', subnet_cidr: '10.1.2.0/24' },
+          { type: 'management', ip: '  ', subnet_cidr: null },
+          { type: 'iscsi', ip: '10.9.0.4', subnet_cidr: null },
+        ],
+        network_segment: 'dmz',
+        clusters: [{ id: 'cl-9', name: 'QA-CL-Z' }],
+      },
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'node QA-VM1' }));
+    const ipLine = () => screen.getByText('pages.connectionMap.ipAddress').parentElement?.textContent ?? '';
+    await waitFor(() => expect(ipLine()).toContain('10.1.2.3, 10.9.0.4'));
+    expect(ipLine()).not.toMatch(/10\.1\.2\.3,\s*,/);
+    const segment = screen.getByText('pages.connectionMap.networkSegment');
+    expect(segment.parentElement?.textContent).toContain('DMZ');
+    const cluster = screen.getByText('pages.connectionMap.clusterLine');
+    const link = cluster.parentElement?.querySelector('a');
+    expect(link?.textContent).toBe('QA-CL-Z');
+    expect(link?.getAttribute('href')).toBe('/it/assets/cl-9/overview');
+  });
+
+  it('shows a dash for the IP and the cluster when neither is known', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'node QA-VM1' }));
+    const ip = await screen.findByText('pages.connectionMap.ipAddress');
+    expect(ip.parentElement?.textContent).toContain('—');
+    expect(ip.parentElement?.textContent).not.toContain('10.');
+    const cluster = screen.getByText('pages.connectionMap.clusterLine');
+    expect(cluster.parentElement?.textContent).toContain('—');
+    expect(cluster.parentElement?.querySelector('a')).toBeNull();
   });
 
   it('lists the applications of a member with the ones it inherits, through their cluster', async () => {
