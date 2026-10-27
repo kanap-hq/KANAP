@@ -206,16 +206,14 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
   return (
     <Stack spacing={1}>
       {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
-      {rows.length > 0 && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button variant="action" size="small" onClick={() => { void exportCsv(); }}>
-            {t('workspace.technology.applications.exportCsv')}
-          </Button>
-        </Box>
-      )}
       <RelationsSection
         title={title}
         count={data ? countApplications(rows) : undefined}
+        actions={rows.length > 0 ? (
+          <Button variant="action" size="small" onClick={() => { void exportCsv(); }}>
+            {t('workspace.technology.applications.exportCsv')}
+          </Button>
+        ) : undefined}
         onAdd={canManage && data ? setAnchor : undefined}
         adding={!!anchor}
         addLabel={t('workspace.technology.applications.add')}

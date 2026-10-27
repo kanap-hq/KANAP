@@ -193,10 +193,24 @@ describe('TechnologyApplicationsTab', () => {
   it('exports the rows as CSV in the screen language', async () => {
     renderTab();
     await screen.findByRole('table', { name: `${A}.title` });
-    fireEvent.click(screen.getByText(`${A}.exportCsv`));
+    const region = screen.getByRole('region', { name: `${A}.title` });
+    const button = within(region).getByRole('button', { name: `${A}.exportCsv` });
+    const titleRow = region.querySelector('h2')?.parentElement as HTMLElement;
+    // Next to the title: after the count, before Add.
+    expect(titleRow.contains(button)).toBe(true);
+    expect(within(titleRow).getByText('2').compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(button.compareDocumentPosition(within(region).getByRole('button', { name: `${A}.add` })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(button);
     await waitFor(() => expect(download).toHaveBeenCalled());
     expect(mocked.get).toHaveBeenCalledWith('/technologies/tech-1/applications/export', { params: { language: 'fr' }, responseType: 'blob' });
     expect(download.mock.calls[0][1]).toBe('TEC-3_applications.csv');
+  });
+
+  it('shows no Export CSV when the section has no row', async () => {
+    renderTab([]);
+    const region = await screen.findByRole('region', { name: `${A}.title` });
+    expect(await within(region).findByText(`${A}.empty`)).toBeTruthy();
+    expect(within(region).queryByRole('button', { name: `${A}.exportCsv` })).toBeNull();
   });
 
   it('says in one line that the applications cannot be read', async () => {
@@ -213,7 +227,7 @@ describe('TechnologyApplicationsTab', () => {
     expect(screen.queryByText(`${A}.add`)).toBeNull();
     expect(screen.queryByRole('button', { name: /applications\.remove/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /changeVersion/ })).toBeNull();
-    expect(screen.getByText(`${A}.exportCsv`)).toBeTruthy();
+    expect(within(screen.getByRole('region', { name: `${A}.title` })).getByRole('button', { name: `${A}.exportCsv` })).toBeTruthy();
   });
 
   describe('popover anchor', () => {
