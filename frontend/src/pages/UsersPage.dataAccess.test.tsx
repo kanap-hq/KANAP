@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -30,6 +30,7 @@ const grid = vi.hoisted(() => ({
   },
 }));
 const get = vi.hoisted(() => vi.fn());
+const post = vi.hoisted(() => vi.fn());
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -43,7 +44,7 @@ vi.mock('../auth/AuthContext', () => ({
     dataAccess: { mode: auth.limited ? 'limited' : 'all', nodes: [] },
   }),
 }));
-vi.mock('../api', () => ({ default: { get, post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+vi.mock('../api', () => ({ default: { get, post, put: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../components/ServerDataGrid', () => ({
   default: (props: Record<string, any>) => {
@@ -91,7 +92,15 @@ beforeEach(() => {
   auth.limited = false;
   grid.props = null;
   get.mockResolvedValue({ data: { items: [] } });
+  post.mockResolvedValue({ data: {} });
 });
+
+function confirmationDialog(text: string) {
+  const message = screen.getByText(text);
+  const dialog = message.closest('[role="dialog"]');
+  if (!dialog) throw new Error('confirmation dialog missing');
+  return dialog as HTMLElement;
+}
 
 describe('UsersPage data access', () => {
   it('hides the Access column until a person is limited', () => {
@@ -156,5 +165,67 @@ describe('UsersPage data access', () => {
     expect(screen.queryByText('users.actions.dataAccess')).toBeNull();
     fireEvent.click(screen.getByText('Marta'));
     expect(await screen.findByText('user dialog edit identity Marta Ruiz')).toBeInTheDocument();
+  });
+});
+
+describe('UsersPage invitations', () => {
+  const one = 'users.messages.inviteConfirm|{"count":1,"email":"marta@example.test"}';
+  const many = 'users.messages.inviteConfirm|{"count":2}';
+
+  async function openRowInvite() {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'users.actions.rowMenu' }));
+    fireEvent.click(await screen.findByText('users.actions.sendInvite'));
+    expect(await screen.findByText(one)).toBeInTheDocument();
+    return confirmationDialog(one);
+  }
+
+  it('asks before a row invitation and sends nothing when cancelled', async () => {
+    const dialog = await openRowInvite();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByText(one)).not.toBeInTheDocument());
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('sends the row invitation after confirmation', async () => {
+    const dialog = await openRowInvite();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'users.actions.sendInvite' }));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/users/u-2/invite'));
+  });
+
+  it('names the only selected recipient', async () => {
+    renderPage();
+    act(() => grid.props!.onSelectionChanged([{ id: 'u-2', email: 'marta@example.test' }]));
+    fireEvent.click(screen.getByRole('button', { name: 'users.actions.invite|{"count":1}' }));
+    expect(await screen.findByText(one)).toBeInTheDocument();
+    fireEvent.click(within(confirmationDialog(one)).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByText(one)).not.toBeInTheDocument());
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('names the count before inviting several users, and sends nothing when cancelled', async () => {
+    renderPage();
+    act(() => grid.props!.onSelectionChanged([
+      { id: 'u-2', email: 'marta@example.test' },
+      { id: 'u-3', email: 'julie.martin@example.com' },
+    ]));
+    fireEvent.click(screen.getByRole('button', { name: 'users.actions.invite|{"count":2}' }));
+    expect(await screen.findByText(many)).toBeInTheDocument();
+    fireEvent.click(within(confirmationDialog(many)).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByText(many)).not.toBeInTheDocument());
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it('invites the selection after confirmation', async () => {
+    renderPage();
+    act(() => grid.props!.onSelectionChanged([
+      { id: 'u-2', email: 'marta@example.test' },
+      { id: 'u-3', email: 'julie.martin@example.com' },
+    ]));
+    fireEvent.click(screen.getByRole('button', { name: 'users.actions.invite|{"count":2}' }));
+    expect(await screen.findByText(many)).toBeInTheDocument();
+    fireEvent.click(within(confirmationDialog(many)).getByRole('button', { name: 'users.actions.sendInvite' }));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/users/u-2/invite'));
+    expect(post).toHaveBeenCalledWith('/users/u-3/invite');
   });
 });
