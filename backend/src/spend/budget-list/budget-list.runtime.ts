@@ -92,52 +92,42 @@ export async function loadBudgetRuntime(
   access?: BudgetListAccess,
 ): Promise<BudgetListRuntime> {
   const runtime: BudgetListRuntime = { scope, tenantId, currentYear, canReadAccounts: access?.accounts === true };
-  const tasks: Array<Promise<void>> = [];
+  // The request transaction has one connection: a client runs one statement at a time, so these
+  // reads wait for each other instead of making `pg` queue them and warn about it.
   if (needs.fxYears?.length) {
-    tasks.push(buildFxTable(scope, deps.fxRates, manager, tenantId, needs.fxYears).then((fx) => { runtime.fx = fx; }));
+    runtime.fx = await buildFxTable(scope, deps.fxRates, manager, tenantId, needs.fxYears);
   }
   if (needs.axes) {
-    tasks.push(
-      manager.query(
-        `SELECT ax.id, ax.is_default FROM analytics_axes ax
-          WHERE ax.tenant_id = $1 AND (ax.applies_to IS NULL OR ax.applies_to = ANY($2::text[]))`,
-        [tenantId, scope.allNatures ? BUDGET_NATURES : [scope.scope]],
-      ).then((rows: Array<{ id: string; is_default: boolean }>) => {
-        let defaultAxisId: string | null = null;
-        for (const row of rows) if (row.is_default) defaultAxisId = row.id;
-        runtime.axes = { ids: rows.map((row) => row.id), defaultAxisId };
-      }),
+    const rows: Array<{ id: string; is_default: boolean }> = await manager.query(
+      `SELECT ax.id, ax.is_default FROM analytics_axes ax
+        WHERE ax.tenant_id = $1 AND (ax.applies_to IS NULL OR ax.applies_to = ANY($2::text[]))`,
+      [tenantId, scope.allNatures ? BUDGET_NATURES : [scope.scope]],
     );
+    let defaultAxisId: string | null = null;
+    for (const row of rows) if (row.is_default) defaultAxisId = row.id;
+    runtime.axes = { ids: rows.map((row) => row.id), defaultAxisId };
   }
   if (needs.costCenters) {
-    tasks.push(
-      loadCostCenterTree(manager, tenantId).then((nodes) => {
-        runtime.costCenters = nodes.map((node) => ({
-          id: node.id,
-          code: node.code,
-          name: node.name,
-          path: node.path,
-          holder_id: node.owner_user_id ?? null,
-          holder_name: node.owner_user_id ? node.owner_name || null : null,
-        }));
-      }),
-    );
+    const nodes = await loadCostCenterTree(manager, tenantId);
+    runtime.costCenters = nodes.map((node) => ({
+      id: node.id,
+      code: node.code,
+      name: node.name,
+      path: node.path,
+      holder_id: node.owner_user_id ?? null,
+      holder_name: node.owner_user_id ? node.owner_name || null : null,
+    }));
   }
   if (needs.ruleYears?.length) {
     const years = Array.from(new Set(needs.ruleYears));
-    tasks.push(
-      manager.query(
-        `SELECT r.tenant_id, r.fiscal_year, r.method, r.mode, r.company_ids
-         FROM allocation_rules r
-         WHERE r.fiscal_year = ANY($2::int[]) AND (r.tenant_id IS NULL OR r.tenant_id = $1)`,
-        [tenantId, years],
-      ).then((rows: any[]) => {
-        const byYear = buildDefaultByYear(rows, tenantId);
-        runtime.ruleLabels = new Map(years.map((year) => [year, ruleLabel(byYear.get(year))]));
-      }),
+    const rows: any[] = await manager.query(
+      `SELECT r.tenant_id, r.fiscal_year, r.method, r.mode, r.company_ids
+       FROM allocation_rules r
+       WHERE r.fiscal_year = ANY($2::int[]) AND (r.tenant_id IS NULL OR r.tenant_id = $1)`,
+      [tenantId, years],
     );
+    const byYear = buildDefaultByYear(rows, tenantId);
+    runtime.ruleLabels = new Map(years.map((year) => [year, ruleLabel(byYear.get(year))]));
   }
-  // The request transaction has one connection: the client queues these reads back to back.
-  await Promise.all(tasks);
   return runtime;
 }
