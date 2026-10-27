@@ -241,7 +241,7 @@ Le serveur MCP est en lecture seule. Un client peut rechercher et lire vos donn�
 | `get_document` | Lit un document de la base de connaissances |
 | `web_search` | Recherche sur le web, lorsque la recherche web est activée pour votre organisation |
 
-Lorsqu'un client se connecte, le serveur lui indique qu'il ne fait que lire, qu'il lit avec les droits de la personne derrière la clé ou la connexion, comment rechercher, et quelles données il ne lit pas (centres de coûts, calendriers, taux de change, paramètres d'accès aux données, journal d'audit et agents IA).
+Lorsqu'un client se connecte, le serveur lui indique quel espace de travail il lit, qu'il ne fait que lire, qu'il lit avec les droits de la personne derrière la clé ou la connexion, comment rechercher, et quelles données il ne lit pas (centres de coûts, calendriers, taux de change, paramètres d'accès aux données, journal d'audit et agents IA).
 
 Un appel refusé par le serveur revient avec sa cause, pour que l'assistant puisse l'expliquer : un outil inconnu, un outil qui modifierait des données, un outil que la clé n'autorise pas, ou des données que la personne ne peut pas lire.
 
@@ -253,7 +253,7 @@ La carte **Journal MCP** liste chaque appel d'outil fait par les clients MCP de 
 - **Personne** : le propriétaire de la clé ou de la connexion
 - **Clé ou connexion** : le nom de la clé, ou l'application et son domaine pour une connexion (*Claude · claude.ai*). *Clé supprimée* quand la clé n'existe plus
 - **Outil**
-- **Résultat** : **Réussi**, **Refusé** ou **Échoué**, avec la cause sous un refus ou un échec (par exemple *Le serveur est en lecture seule*, *La clé n'autorise pas cet outil*, *Clé révoquée*)
+- **Résultat** : **Réussi**, **Refusé** ou **Échoué**, avec la cause à côté d'un refus ou d'un échec (par exemple *Le serveur est en lecture seule*, *La clé n'autorise pas cet outil*, *Clé révoquée*)
 - **Durée** : un tiret quand elle est inconnue
 
 Filtrez la liste par **Personne**, **Clé ou connexion**, **Résultat** et **Période** (dernières 24 heures, 7 derniers jours, 30 derniers jours ou toute la période). Elle affiche 25 appels par page. Utilisez **Précédent** et **Suivant** pour passer d'une page à l'autre.

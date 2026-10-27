@@ -243,7 +243,7 @@ The MCP server is read only. A client can search and read your data but cannot c
 | `get_document` | Reads one knowledge document |
 | `web_search` | Searches the web, when web search is switched on for your organization |
 
-When a client connects, the server tells it that it only reads, that it reads with the rights of the person behind the key or the connection, how to search, and which data it does not read (cost centers, calendars, exchange rates, data access settings, the audit log and AI agents).
+When a client connects, the server tells it which workspace it reads, that it only reads, that it reads with the rights of the person behind the key or the connection, how to search, and which data it does not read (cost centers, calendars, exchange rates, data access settings, the audit log and AI agents).
 
 A call the server refuses comes back with its cause, so that the assistant can explain it: an unknown tool, a tool that would change data, a tool the key does not allow, or data the person cannot read.
 
@@ -255,7 +255,7 @@ The **MCP journal** card lists every tool call made by MCP clients in your organ
 - **Person**: the owner of the key or the connection
 - **Key or connection**: the key's label, or the application and its domain for a connection (*Claude · claude.ai*). *Deleted key* when the key no longer exists
 - **Tool**
-- **Result**: **Completed**, **Refused** or **Failed**, with the cause under a refusal or a failure (for example *The server only reads*, *The key does not allow this tool*, *Revoked key*)
+- **Result**: **Completed**, **Refused** or **Failed**, with the cause next to a refusal or a failure (for example *The server only reads*, *The key does not allow this tool*, *Revoked key*)
 - **Duration**: a dash when it is unknown
 
 Filter the list by **Person**, **Key or connection**, **Result** and **Period** (last 24 hours, last 7 days, last 30 days, or all time). It shows 25 calls a page; use **Previous** and **Next** to move between pages.

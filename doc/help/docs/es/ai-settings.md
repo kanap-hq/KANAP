@@ -241,7 +241,7 @@ El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, si
 | `get_document` | Lee un documento de la base de conocimiento |
 | `web_search` | Busca en la web, cuando la búsqueda web está activada para su organización |
 
-Cuando un cliente se conecta, el servidor le indica que solo lee, que lee con los derechos de la persona detrás de la clave o de la conexión, cómo buscar y qué datos no lee (centros de coste, calendarios, tipos de cambio, configuración de acceso a los datos, el registro de auditoría y los agentes de IA).
+Cuando un cliente se conecta, el servidor le indica qué espacio de trabajo lee, que solo lee, que lee con los derechos de la persona detrás de la clave o de la conexión, cómo buscar y qué datos no lee (centros de coste, calendarios, tipos de cambio, configuración de acceso a los datos, el registro de auditoría y los agentes de IA).
 
 Una llamada que el servidor rechaza vuelve con su causa, para que el asistente pueda explicarla: una herramienta desconocida, una herramienta que cambiaría datos, una herramienta que la clave no permite o datos que la persona no puede leer.
 
@@ -253,7 +253,7 @@ La tarjeta **Registro MCP** enumera cada llamada a herramientas hecha por los cl
 - **Persona**: el propietario de la clave o de la conexión
 - **Clave o conexión**: el nombre de la clave, o la aplicación y su dominio para una conexión (*Claude · claude.ai*). *Clave eliminada* cuando la clave ya no existe
 - **Herramienta**
-- **Resultado**: **Completada**, **Rechazada** o **Fallida**, con la causa debajo de un rechazo o un fallo (por ejemplo *El servidor es de solo lectura*, *La clave no permite esta herramienta*, *Clave revocada*)
+- **Resultado**: **Completada**, **Rechazada** o **Fallida**, con la causa junto a un rechazo o un fallo (por ejemplo *El servidor es de solo lectura*, *La clave no permite esta herramienta*, *Clave revocada*)
 - **Duración**: un guion cuando se desconoce
 
 Filtre la lista por **Persona**, **Clave o conexión**, **Resultado** y **Periodo** (últimas 24 horas, últimos 7 días, últimos 30 días o todo el periodo). Muestra 25 llamadas por página. Use **Anterior** y **Siguiente** para pasar de una página a otra.

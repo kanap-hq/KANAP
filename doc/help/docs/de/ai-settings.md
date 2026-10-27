@@ -241,7 +241,7 @@ Der MCP-Server ist schreibgeschützt. Ein Client kann Ihre Daten durchsuchen und
 | `get_document` | Liest ein Dokument der Wissensdatenbank |
 | `web_search` | Sucht im Web, wenn die Websuche für Ihre Organisation eingeschaltet ist |
 
-Wenn sich ein Client verbindet, teilt der Server ihm mit, dass er nur liest, dass er mit den Rechten der Person hinter dem Schlüssel oder der Verbindung liest, wie er sucht und welche Daten er nicht liest (Kostenstellen, Kalender, Wechselkurse, Einstellungen des Datenzugriffs, das Audit-Protokoll und KI-Agenten).
+Wenn sich ein Client verbindet, teilt der Server ihm mit, welchen Arbeitsbereich er liest, dass er nur liest, dass er mit den Rechten der Person hinter dem Schlüssel oder der Verbindung liest, wie er sucht und welche Daten er nicht liest (Kostenstellen, Kalender, Wechselkurse, Einstellungen des Datenzugriffs, das Audit-Protokoll und KI-Agenten).
 
 Ein Aufruf, den der Server ablehnt, kommt mit seiner Ursache zurück, damit der Assistent sie erklären kann: ein unbekanntes Werkzeug, ein Werkzeug, das Daten ändern würde, ein Werkzeug, das der Schlüssel nicht erlaubt, oder Daten, die die Person nicht lesen darf.
 
@@ -253,7 +253,7 @@ Die Karte **MCP-Protokoll** listet jeden Werkzeugaufruf der MCP-Clients Ihrer Or
 - **Person**: der Eigentümer des Schlüssels oder der Verbindung
 - **Schlüssel oder Verbindung**: der Name des Schlüssels, bei einer Verbindung die Anwendung und ihre Domain (*Claude · claude.ai*). *Gelöschter Schlüssel*, wenn der Schlüssel nicht mehr existiert
 - **Tool**
-- **Ergebnis**: **Erfolgreich**, **Abgelehnt** oder **Fehlgeschlagen**, mit der Ursache unter einer Ablehnung oder einem Fehler (zum Beispiel *Der Server ist schreibgeschützt*, *Der Schlüssel erlaubt dieses Tool nicht*, *Widerrufener Schlüssel*)
+- **Ergebnis**: **Erfolgreich**, **Abgelehnt** oder **Fehlgeschlagen**, mit der Ursache neben einer Ablehnung oder einem Fehler (zum Beispiel *Der Server ist schreibgeschützt*, *Der Schlüssel erlaubt dieses Tool nicht*, *Widerrufener Schlüssel*)
 - **Dauer**: ein Strich, wenn sie unbekannt ist
 
 Filtern Sie die Liste nach **Person**, **Schlüssel oder Verbindung**, **Ergebnis** und **Zeitraum** (letzte 24 Stunden, letzte 7 Tage, letzte 30 Tage oder gesamter Zeitraum). Sie zeigt 25 Aufrufe pro Seite. Mit **Zurück** und **Weiter** wechseln Sie zwischen den Seiten.

@@ -53,6 +53,15 @@ export const MCP_SERVER_INSTRUCTIONS = [
   'This server does not read cost centers, calendars, exchange rates, data access settings, the audit log or AI agents: an empty answer about them does not mean they do not exist in KANAP.',
 ].join('\n');
 
+/** The instructions of `initialize`, opened by the workspace the key or connection reads. */
+export function mcpServerInstructions(workspace: { name: string | null; slug: string | null } | null): string {
+  if (!workspace?.name && !workspace?.slug) return MCP_SERVER_INSTRUCTIONS;
+  const label = workspace.name && workspace.slug && workspace.name !== workspace.slug
+    ? `"${workspace.name}" (${workspace.slug})`
+    : `"${workspace.name ?? workspace.slug}"`;
+  return [`This connection reads the KANAP workspace ${label}, and only that one.`, MCP_SERVER_INSTRUCTIONS].join('\n');
+}
+
 /** A JSON-RPC error the MCP SDK sends with this code (it reads `code` from the thrown error). */
 function jsonRpcError(code: number, message: string): Error & { code: number } {
   return Object.assign(new Error(message), { code });
@@ -233,8 +242,14 @@ export class AiMcpController {
     this.assertMcpPostPreflight(context, apiKey, methods, this.mcpRequestCount(req.body));
     const definitionScope = this.toolDefinitionScope(methods);
 
+    let workspace: { name: string | null; slug: string | null } | null = null;
     const toolDefs = await this.tenantExecutor.runWithContext(context, async (ctx) => {
       await this.mcpExposure.assertPostAccess(ctx, apiKey);
+      if (methods.has('initialize')) {
+        // The client names the workspace it reads from the instructions (a person may connect several).
+        const rows = await ctx.manager.query(`SELECT name, slug FROM tenants WHERE id = $1`, [ctx.tenantId]);
+        workspace = Array.isArray(rows) && rows[0] ? { name: rows[0].name ?? null, slug: rows[0].slug ?? null } : null;
+      }
       if (definitionScope == null) {
         return [];
       }
@@ -245,7 +260,7 @@ export class AiMcpController {
     // The low-level server takes the capabilities' JSON Schemas as they are (McpServer wants Zod).
     const server = new Server(
       { name: 'kanap-mcp', title: 'KANAP', version: APP_VERSION },
-      { capabilities: { tools: {} }, instructions: MCP_SERVER_INSTRUCTIONS },
+      { capabilities: { tools: {} }, instructions: mcpServerInstructions(workspace) },
     );
 
     server.setRequestHandler(ListToolsRequestSchema, async () => ({

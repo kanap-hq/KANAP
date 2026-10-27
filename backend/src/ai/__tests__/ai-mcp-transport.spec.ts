@@ -73,7 +73,10 @@ function createController(
     { recordCall: async (_ctx: any, record: AiMcpCallRecord) => { journal.push(record); } } as any,
     options.rateLimiter ?? { assertAllowed: () => undefined },
     {
-      runWithContext: async (context: any, fn: Function) => fn({ ...context, manager: {} }),
+      runWithContext: async (context: any, fn: Function) => fn({
+        ...context,
+        manager: { query: async () => [{ name: 'Fromage & Co', slug: 'fromage' }] },
+      }),
     } as any,
   );
 }
@@ -142,6 +145,8 @@ async function testInitializeAdvertisesTools(url: string) {
   assert.equal(reply.result.serverInfo.version, APP_VERSION);
   assert.notEqual(reply.result.serverInfo.version, '1.0.0');
   const instructions: string = reply.result.instructions;
+  // The client knows which workspace it reads before its first call.
+  assert.match(instructions, /^This connection reads the KANAP workspace "Fromage & Co" \(fromage\)/);
   assert.match(instructions, /only reads/);
   assert.match(instructions, /rights of the person/);
   assert.match(instructions, /start with search_all/);
