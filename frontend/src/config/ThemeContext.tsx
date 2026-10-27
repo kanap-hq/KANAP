@@ -193,7 +193,8 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
       },
     },
     // Form fields are bordered boxes by default (charter, decision 2026-09-08):
-    // 1px border, 6px radius, ~32px tall, teal border on focus. The theme owns
+    // 1px `border.field`, 6px radius, ~32px tall, `border.fieldHover` on hover,
+    // teal on focus. Read-only focus stays on `border.field`. The theme owns
     // the box; call sites only opt out (`inlineControlSx`, `fieldResetSx`) or
     // compact it (`tableCellFieldSx`). `variant="standard"` is the app default,
     // so this override is what every TextField / Select / Autocomplete gets.
@@ -202,7 +203,7 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
         root: ({ theme }) => ({
           marginTop: '0px !important',
           boxSizing: 'border-box',
-          border: `1px solid ${theme.palette.kanap.border.default}`,
+          border: `1px solid ${theme.palette.kanap.border.field}`,
           borderRadius: 6,
           padding: '5px 8px',
           backgroundColor: theme.palette.kanap.bg.primary,
@@ -210,13 +211,13 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
           transition: 'border-color 120ms ease, background-color 120ms ease',
           '&::before, &::after': { display: 'none' },
           '&:hover:not(.Mui-disabled):not(.Mui-readOnly):not(.Mui-focused)': {
-            borderColor: theme.palette.kanap.border.strong,
+            borderColor: theme.palette.kanap.border.fieldHover,
           },
           '&.Mui-focused, &:focus-within': { borderColor: theme.palette.kanap.teal },
           '&.Mui-error, &.Mui-error.Mui-focused': { borderColor: theme.palette.kanap.danger },
           '&.Mui-readOnly': {
             backgroundColor: theme.palette.kanap.bg.drawer,
-            '&.Mui-focused, &:focus-within': { borderColor: theme.palette.kanap.border.default },
+            '&.Mui-focused, &:focus-within': { borderColor: theme.palette.kanap.border.field },
           },
           '&.Mui-disabled': {
             backgroundColor: theme.palette.kanap.bg.drawer,
@@ -296,9 +297,9 @@ function getComponentOverrides(mode: PaletteMode): ThemeOptions['components'] {
         root: ({ theme }) => ({
           borderRadius: 6,
           backgroundColor: theme.palette.kanap.bg.primary,
-          '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.kanap.border.default },
+          '& .MuiOutlinedInput-notchedOutline': { borderColor: theme.palette.kanap.border.field },
           '&:hover:not(.Mui-disabled):not(.Mui-focused) .MuiOutlinedInput-notchedOutline': {
-            borderColor: theme.palette.kanap.border.strong,
+            borderColor: theme.palette.kanap.border.fieldHover,
           },
           '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
             borderColor: theme.palette.kanap.teal,

@@ -76,8 +76,11 @@ MUI palette mappings (set in `ThemeContext.tsx`):
 
 | Token | Light | Dark | Usage |
 |---|---|---|---|
-| `kanap.border.default` | `#E5E7EB` | `rgba(255,255,255,0.08)` | Standard borders, dividers between sections |
+| `kanap.border.default` | `#E5E7EB` | `rgba(255,255,255,0.08)` | Cards, tables, separators, alerts, and other non-field borders |
 | `kanap.border.soft` | `#F1F2F4` | `rgba(255,255,255,0.05)` | Subtle dividers within groups |
+| `kanap.border.strong` | `#D1D5DB` | `rgba(255,255,255,0.16)` | One step above `default` |
+| `kanap.border.field` | `#E5E7EB` | `rgba(255,255,255,0.20)` | Form field box at rest. Light matches `default` |
+| `kanap.border.fieldHover` | `#D1D5DB` | `rgba(255,255,255,0.32)` | Form field box on hover. Light matches `strong` |
 
 ### Status colors
 
@@ -219,7 +222,7 @@ KANAP uses MUI components but only with specific patterns. Violations cause visu
 
 **Always (decision 2026-09-08 — form fields are bordered boxes):**
 
-- Every form field is a discreet bordered box drawn **by the theme** (`MuiInput` override in `ThemeContext.tsx`): 1px `kanap.border.default`, 6px radius, ~32px tall, `kanap.bg.primary` background, `kanap.border.strong` on hover, `kanap.teal` border on focus, `kanap.danger` on error, `kanap.bg.drawer` background when read-only or disabled. Same box in dialogs, properties drawers, content tabs, create forms, and popover forms. Light and dark.
+- Every form field is a discreet bordered box drawn **by the theme** (`MuiInput` override in `ThemeContext.tsx`): 1px `kanap.border.field`, 6px radius, ~32px tall, `kanap.bg.primary` background, `kanap.border.fieldHover` on hover, `kanap.teal` border on focus, `kanap.danger` on error, `kanap.bg.drawer` background when read-only or disabled. Read-only focus stays on `kanap.border.field`. Same box in dialogs, properties drawers, content tabs, create forms, and popover forms. Light and dark. Cards, tables, separators and alerts keep `kanap.border.default`.
 - Write `<TextField variant="standard">`, `<Select>`, `<Autocomplete>` with **no field sx**. `disableUnderline` is no longer needed (the theme hides the underline). Never draw a field border by hand (`'& .MuiInputBase-root': { border: ... }`).
 - Wrap each field in a `<PropertyRow label="...">` component that renders the label as a styled `<div>` above the input. Its value slot is capped at 480px so bordered fields never stretch across a wide content tab; pass `valueSx={{ maxWidth: ... }}` to widen or narrow.
 - Selects use `drawerSelectSx` (full row width, 13px) in drawers/dialogs and `pageSelectSx` on pages; menu items use `drawerMenuItemSx`.
