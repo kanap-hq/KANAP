@@ -257,6 +257,40 @@ function partName(target: string): string | null {
 }
 
 // ---------------------------------------------------------------------------------------------------
+// Concurrency
+
+/** Reads of one worksheet that may run at once: each one holds its grid until it returns. */
+const WORKBOOK_READ_SLOTS = 2;
+
+/** A fair counting semaphore: a released place is handed to the first waiter, never lost between them. */
+class Semaphore {
+  private used = 0;
+  private readonly waiters: Array<() => void> = [];
+
+  constructor(private readonly places: number) {}
+
+  async acquire(): Promise<void> {
+    if (this.used < this.places) {
+      this.used += 1;
+      return;
+    }
+    await new Promise<void>((resolve) => this.waiters.push(resolve));
+  }
+
+  release(): void {
+    const next = this.waiters.shift();
+    // The place is transferred as it is: a new caller cannot take it before the waiter resumes.
+    if (next) next();
+    else this.used -= 1;
+  }
+}
+
+const workbookReadSlots = new Semaphore(WORKBOOK_READ_SLOTS);
+
+/** What the specs observe: streamed reads in flight and the highest number seen, against the two places. */
+export const XLSX_READ_ACTIVITY = { active: 0, peak: 0, limit: WORKBOOK_READ_SLOTS };
+
+// ---------------------------------------------------------------------------------------------------
 // XML
 
 const PART_CHUNK = MB;
@@ -981,18 +1015,30 @@ function readWorkbook(buffer: Buffer, limits: XlsxReadLimits): XlsxGrid {
   return { sheetName: parts.sheetName, sheetCount: parts.workbook.sheets.length, rows };
 }
 
-/** `readWorkbook` with the worksheet part read as a stream: the small parts are still held whole. */
+/**
+ * `readWorkbook` with the worksheet part read as a stream: the small parts are still held whole.
+ * A process has two places at most, because the stream returns before the caller has used its grid:
+ * without them, N parallel imports would hold N grids (about 200 MB each at the import row cap).
+ */
 async function readWorkbookAsync(buffer: Buffer, limits: XlsxReadLimits): Promise<XlsxGrid> {
-  const archive = openArchive(buffer, limits);
-  const parts = locateParts(archive, limits);
-  const dateStyles = parts.stylesEntry ? parseStyles(readPart(archive, parts.stylesEntry, limits), limits) : [];
-  const sharedStrings = parts.sharedStringsEntry ? parseSharedStrings(readPart(archive, parts.sharedStringsEntry, limits), limits) : [];
-  const sheet = sheetHandlers({
-    sharedStrings,
-    dateStyles,
-    date1904: parts.workbook.date1904,
-    limits,
-  });
-  await streamPart(archive, parts.sheetEntry, sheet.handlers, limits);
-  return { sheetName: parts.sheetName, sheetCount: parts.workbook.sheets.length, rows: sheet.rows() };
+  await workbookReadSlots.acquire();
+  XLSX_READ_ACTIVITY.active += 1;
+  XLSX_READ_ACTIVITY.peak = Math.max(XLSX_READ_ACTIVITY.peak, XLSX_READ_ACTIVITY.active);
+  try {
+    const archive = openArchive(buffer, limits);
+    const parts = locateParts(archive, limits);
+    const dateStyles = parts.stylesEntry ? parseStyles(readPart(archive, parts.stylesEntry, limits), limits) : [];
+    const sharedStrings = parts.sharedStringsEntry ? parseSharedStrings(readPart(archive, parts.sharedStringsEntry, limits), limits) : [];
+    const sheet = sheetHandlers({
+      sharedStrings,
+      dateStyles,
+      date1904: parts.workbook.date1904,
+      limits,
+    });
+    await streamPart(archive, parts.sheetEntry, sheet.handlers, limits);
+    return { sheetName: parts.sheetName, sheetCount: parts.workbook.sheets.length, rows: sheet.rows() };
+  } finally {
+    XLSX_READ_ACTIVITY.active -= 1;
+    workbookReadSlots.release();
+  }
 }

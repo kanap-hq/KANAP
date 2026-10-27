@@ -8,6 +8,7 @@ import {
   serialToDateTime,
   readXlsxGrid,
   readXlsxGridAsync,
+  XLSX_READ_ACTIVITY,
   serialToIsoDay,
   XLSX_OLD_FORMAT_MESSAGE,
   XLSX_READ_LIMITS,
@@ -576,6 +577,32 @@ async function streamReader() {
   console.log(`read.spec.ts: stream fuzz ${read} read, ${refused} refused`);
 }
 
+/**
+ * The process has two streamed reads at most: the stream returns before the caller has used its grid,
+ * so N parallel imports would otherwise hold N grids. A refused read gives its place back.
+ */
+async function readSlots() {
+  const headers = Array.from({ length: 20 }, (_, column) => `column_${column + 1}`);
+  const rows = Array.from({ length: 20_000 }, (_, row) => headers.map((_, column) => `row ${row} column ${column} a text value`));
+  const workbook = writeXlsx({ language: 'en', sheets: [{ name: 'Data', headers, rows }] });
+
+  XLSX_READ_ACTIVITY.peak = 0;
+  const grids = await Promise.all([readXlsxGridAsync(workbook), readXlsxGridAsync(workbook), readXlsxGridAsync(workbook)]);
+  assert.equal(grids.length, 3);
+  assert.equal(grids[0].rows.length, 20_001);
+  assert.equal(XLSX_READ_ACTIVITY.peak, 2, 'three streamed reads, two places');
+  assert.equal(XLSX_READ_ACTIVITY.active, 0, 'every place is back');
+
+  // A read refused in the middle of its sheet releases its place as well.
+  const failing = assert.rejects(readXlsxGridAsync(corruptEntry(workbook, 'xl/worksheets/sheet1.xml')), XlsxReadError);
+  const [first, second] = await Promise.all([readXlsxGridAsync(workbook), readXlsxGridAsync(workbook)]);
+  await failing;
+  assert.equal(first.rows.length, 20_001);
+  assert.equal(second.rows.length, 20_001);
+  assert.equal(XLSX_READ_ACTIVITY.active, 0, 'a refused read gives its place back');
+  assert.equal((await readXlsxGridAsync(workbook)).rows.length, 20_001);
+}
+
 async function run() {
   sharedAndRichStrings();
   inlineFormulaBooleanError();
@@ -588,6 +615,7 @@ async function run() {
   libreOffice();
   fuzz();
   await streamReader();
+  await readSlots();
   console.log('read.spec.ts: ok');
 }
 
