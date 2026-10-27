@@ -161,8 +161,13 @@ export function hasOldExcelSignature(buffer: Buffer): boolean {
 }
 
 /**
- * Reads the first worksheet of an .xlsx file. Throws XlsxReadError, and nothing else, when the file
- * cannot be read or passes a limit.
+ * Reads the first worksheet of an .xlsx file whole. Throws XlsxReadError, and nothing else, when the
+ * file cannot be read or passes a limit.
+ *
+ * This is the specs' oracle, not a production entry point: it holds the decompressed sheet and the
+ * whole grid, which is what `readXlsxGridAsync` avoids. The imports call the streamed reader, and
+ * this one stays reachable from `read.ts` so a spec can compare both on the same bytes. It is not
+ * exported by `common/xlsx/index.ts`.
  */
 export function readXlsxGrid(buffer: Buffer, limits: Partial<XlsxReadLimits> = {}): XlsxGrid {
   const effective: XlsxReadLimits = { ...XLSX_READ_LIMITS, ...limits };
