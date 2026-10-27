@@ -126,7 +126,7 @@ Plaid ne nomme une fiche liée à celle que vous interrogez que si vous pouvez l
 
 Quand Plaid additionne des montants budgétaires, une ligne dont la devise n'a pas de taux de change pour l'année est exclue de la somme. Plaid indique alors quelles devises et quelles années il a exclues. Les assistants connectés par MCP reçoivent la même réponse.
 
-Les totaux viennent de KANAP. Une liste de lignes budgétaires ou de contrats est accompagnée du total de toutes les fiches qui correspondent, toutes pages comprises, et Plaid cite ce total ou demande une somme à KANAP. Quand votre accès aux données est limité à certaines sociétés ou à certains centres de coûts, Plaid précise que ses décomptes et ses totaux couvrent votre accès, et ne les présente pas comme le total de l'espace de travail.
+Les totaux viennent de KANAP. Une liste de lignes budgétaires ou de contrats est accompagnée du total de toutes les fiches qui correspondent, toutes pages comprises, et du total des fiches listées : Plaid cite l'un des deux ou demande une somme à KANAP. Si vous demandez les dix plus grosses lignes et leur total, Plaid donne le total de ces dix lignes. Quand votre accès aux données est limité à certaines sociétés ou à certains centres de coûts, Plaid précise que ses décomptes et ses totaux couvrent votre accès, et ne les présente pas comme le total de l'espace de travail.
 
 Quand Plaid essaie une valeur de filtre qu'un champ n'accepte pas, par exemple « actif » pour le statut d'une application (qui est « activé » ou « désactivé »), KANAP la refuse et liste les valeurs acceptées. Plaid relance alors la recherche avec la bonne valeur.
 
@@ -145,7 +145,7 @@ Plaid ne lit pas :
 - Les agents IA
 - La refacturation par société bénéficiaire (**Gestion budgétaire › Rapports › Refacturation globale**)
 
-Quand une question touche l'un de ces éléments, Plaid dit qu'il ne peut pas le lire et nomme l'écran qui le montre. Une recherche sans résultat indique à Plaid ce qu'il n'a pas cherché, pour que la réponse n'affirme pas que la fiche n'existe pas. Il en va de même pour un champ : le contexte d'une fiche porte ses champs principaux, et Plaid lit la fiche complète avant de dire qu'un champ est vide. Les assistants connectés par MCP obtiennent les mêmes réponses.
+Quand une question touche l'un de ces éléments, Plaid dit qu'il ne peut pas le lire et nomme l'écran qui le montre, avec les mots de vos menus dans la langue de votre profil. Une recherche sans résultat indique à Plaid ce qu'il n'a pas cherché, pour que la réponse n'affirme pas que la fiche n'existe pas. Il en va de même pour un champ : le contexte d'une fiche porte ses champs principaux, et Plaid lit la fiche complète avant de dire qu'un champ est vide. Les assistants connectés par MCP obtiennent les mêmes réponses.
 
 ## Artefacts et aperçus
 

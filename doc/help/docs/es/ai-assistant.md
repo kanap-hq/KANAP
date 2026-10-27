@@ -126,7 +126,7 @@ Plaid nombra un registro vinculado al que usted consulta solo si puede leer su m
 
 Cuando Plaid suma importes presupuestarios, una línea cuya moneda no tiene tipo de cambio para el año queda excluida de la suma. Plaid indica entonces qué monedas y años ha excluido. Los asistentes conectados por MCP reciben la misma respuesta.
 
-Los totales vienen de KANAP. Una lista de líneas presupuestarias o de contratos llega con el total de todos los registros que coinciden, todas las páginas incluidas, y Plaid cita ese total o pide una suma a KANAP. Cuando su acceso a los datos está limitado a algunas empresas o centros de coste, Plaid indica que sus recuentos y totales cubren su acceso, y no los presenta como el total del espacio de trabajo.
+Los totales vienen de KANAP. Una lista de líneas presupuestarias o de contratos llega con el total de todos los registros que coinciden, todas las páginas incluidas, y con el total de los registros listados, así que Plaid cita uno de los dos o pide una suma a KANAP. Si usted pide las diez líneas más grandes y su total, Plaid da el total de esas diez líneas. Cuando su acceso a los datos está limitado a algunas empresas o centros de coste, Plaid indica que sus recuentos y totales cubren su acceso, y no los presenta como el total del espacio de trabajo.
 
 Cuando Plaid prueba un valor de filtro que un campo no admite, por ejemplo «activa» para el estado de una aplicación (que es «activado» o «desactivado»), KANAP lo rechaza y lista los valores aceptados. Plaid vuelve entonces a buscar con el valor correcto.
 
@@ -145,7 +145,7 @@ Plaid no lee:
 - Los agentes IA
 - El contracargo por empresa beneficiaria (**Gestión presupuestaria › Informes › Contracargo global**)
 
-Cuando una pregunta toca uno de estos elementos, Plaid dice que no puede leerlo y nombra la pantalla que lo muestra. Una búsqueda sin resultado indica a Plaid lo que no ha buscado, para que la respuesta no afirme que el registro no existe. Lo mismo ocurre con un campo: el contexto de un registro incluye sus campos principales, y Plaid lee el registro completo antes de decir que un campo está vacío. Los asistentes conectados por MCP obtienen las mismas respuestas.
+Cuando una pregunta toca uno de estos elementos, Plaid dice que no puede leerlo y nombra la pantalla que lo muestra, como la nombran sus menús en el idioma de su perfil. Una búsqueda sin resultado indica a Plaid lo que no ha buscado, para que la respuesta no afirme que el registro no existe. Lo mismo ocurre con un campo: el contexto de un registro incluye sus campos principales, y Plaid lee el registro completo antes de decir que un campo está vacío. Los asistentes conectados por MCP obtienen las mismas respuestas.
 
 ## Artefactos y vistas previas
 
