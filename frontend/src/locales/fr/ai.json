@@ -256,6 +256,7 @@
       "zone": "Zone"
     },
     "none": "Aucun",
+    "notApplied": "La modification n'a pas été faite.",
     "pendingInlineImage": "L'image inline sera importée après approbation.",
     "preview": "Aperçu",
     "reject": "Rejeter",
@@ -279,6 +280,12 @@
       "spend_items": "Lignes OPEX",
       "sub_locations": "Sous-sites",
       "support_contacts": "Contacts de support"
+    },
+    "relationItems": {
+      "assignment": "{{environment}} : {{name}} ({{role}})",
+      "hostContains": "{{host}} contient {{name}}",
+      "role": "{{role}} : {{name}}",
+      "withRole": "{{name}} ({{role}})"
     },
     "values": {
       "allocationMethod": {

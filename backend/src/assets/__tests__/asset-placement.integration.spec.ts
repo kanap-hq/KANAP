@@ -601,6 +601,8 @@ async function testAssistantRules() {
       from: 'par-esx-01 contains par-app-01',
       to: null,
       format: 'text',
+      // The card names the link in the person's language from its parts.
+      relation_items: { from: [{ name: 'par-app-01', role: null, host: 'par-esx-01' }], to: [] },
     });
 
     // Executed as previewed: the cluster link is written, the host link removed and audited with

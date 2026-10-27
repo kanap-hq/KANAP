@@ -7,10 +7,16 @@ import { createAppTheme } from '../../config/ThemeContext';
 import i18n from '../../i18n';
 import { AiMutationPreview } from '../aiTypes';
 import PreviewCard from './PreviewCard';
+import ArtifactPreviewChip from './ArtifactPreviewChip';
+import { getPreviewLabel } from '../utils/previewClassification';
 
 vi.mock('../../hooks/useItOpsEnumOptions', () => ({
   default: () => ({
-    labelFor: (field: string, code?: string | null) => (field === 'lifecycleStatus' && code === 'retired' ? 'Retirée' : String(code ?? '')),
+    labelFor: (field: string, code?: string | null) => (
+      field === 'lifecycleStatus' && code === 'retired' ? 'Retirée'
+        : field === 'serverRole' && code === 'database' ? 'Base de données'
+          : String(code ?? '')
+    ),
   }),
 }));
 
@@ -254,5 +260,153 @@ describe('PreviewCard in French', () => {
     }));
     expect(screen.getByText(byText('A0 2026 : 0 CHF'))).toBeInTheDocument();
     expect(screen.getByText(byText('A0 2026 : T1 1 000 CHF, T2 0 CHF, T3 0 CHF, T4 0 CHF'))).toBeInTheDocument();
+  });
+
+  it('shows the reference of the target once, in the card, its tab and its chip', () => {
+    const app = preview({
+      tool_name: 'update_business_record',
+      target: { entity_type: 'applications', entity_id: 'app-36', ref: 'APP-36', title: 'APP-36 - CheeseTrack' },
+      changes: { version: { label: 'Version', from: '4.1', to: '4.2', format: 'text' } },
+    });
+    renderCard(app);
+    expect(screen.getByText('APP-36')).toBeInTheDocument();
+    expect(screen.getByText('CheeseTrack')).toBeInTheDocument();
+    expect(screen.queryByText(/APP-36 - CheeseTrack/)).not.toBeInTheDocument();
+    cleanup();
+
+    const project = preview({
+      tool_name: 'update_business_record',
+      target: { entity_type: 'projects', entity_id: 'prj-2', ref: 'PRJ-2', title: "PRJ-2 - Suivi connecté de l'affinage" },
+    });
+    expect(getPreviewLabel(project)).toBe("PRJ-2 · Suivi connecté de l'affinage");
+    expect(getPreviewLabel(preview({ target: { entity_type: 'tasks', entity_id: 't', ref: 'T-4', title: 'T-4' } }))).toBe('T-4');
+    // A reference that only starts like the title's is not cut out of it.
+    expect(getPreviewLabel(preview({ target: { entity_type: 'applications', entity_id: 'a', ref: 'APP-3', title: 'APP-36 - CheeseTrack' } })))
+      .toBe('APP-3 · APP-36 - CheeseTrack');
+
+    const queryClient = new QueryClient();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <ArtifactPreviewChip preview={project} onOpen={() => undefined} />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByText('Ouvrir dans le panneau')).toBeInTheDocument();
+    expect(screen.getByText("PRJ-2 · Suivi connecté de l'affinage")).toBeInTheDocument();
+  });
+
+  it('names the roles of a relation as the screens do', () => {
+    renderCard(preview({
+      tool_name: 'update_entity_relations',
+      target: { entity_type: 'applications', entity_id: 'app-36', ref: 'APP-36', title: 'APP-36 - CheeseTrack' },
+      changes: {
+        owners: {
+          label: 'Owners',
+          from: 'BUSINESS owner: Thomas Berger',
+          to: 'BUSINESS owner: Thomas Berger, IT owner: Claire Martin',
+          format: 'text',
+          relation_items: {
+            from: [{ name: 'Thomas Berger', role: { kind: 'owner', code: 'business' } }],
+            to: [
+              { name: 'Thomas Berger', role: { kind: 'owner', code: 'business' } },
+              { name: 'Claire Martin', role: { kind: 'owner', code: 'it' } },
+            ],
+          },
+        },
+        support_contacts: {
+          label: 'Support Contacts',
+          from: null,
+          to: 'Marc Dubois - Astreinte',
+          format: 'text',
+          relation_items: { from: [], to: [{ name: 'Marc Dubois', role: { kind: 'text', code: 'Astreinte' } }] },
+        },
+        asset_assignments: {
+          label: 'Asset Assignments',
+          from: null,
+          to: 'pre_prod: SRV-DB-01 (database)',
+          format: 'text',
+          relation_items: { from: [], to: [{ name: 'SRV-DB-01', role: { kind: 'server_role', code: 'database' }, environment: 'pre_prod' }] },
+        },
+      },
+    }));
+    expect(screen.getByText(byText('Responsable métier : Thomas Berger'))).toBeInTheDocument();
+    expect(screen.getByText(byText('Responsable métier : Thomas Berger, Responsable IT : Claire Martin'))).toBeInTheDocument();
+    expect(screen.getByText(byText('Marc Dubois (Astreinte)'))).toBeInTheDocument();
+    expect(screen.getByText(byText('Pré-prod : SRV-DB-01 (Base de données)'))).toBeInTheDocument();
+    cleanup();
+
+    renderCard(preview({
+      tool_name: 'update_entity_relations',
+      target: { entity_type: 'assets', entity_id: 'ast-1', ref: 'AST-1', title: 'Cluster SQL' },
+      changes: {
+        relations: {
+          label: 'Asset Relations',
+          from: null,
+          to: 'contains: SRV-DB-01, depends_on: SAN-01',
+          format: 'text',
+          relation_items: {
+            from: [],
+            to: [
+              { name: 'SRV-DB-01', role: { kind: 'asset_relation', code: 'contains' } },
+              { name: 'SAN-01', role: { kind: 'asset_relation', code: 'depends_on' } },
+            ],
+          },
+        },
+        replaced_host_links: {
+          label: 'Host links replaced',
+          from: 'ESX-01 contains SRV-DB-01',
+          to: null,
+          format: 'text',
+          relation_items: { from: [{ name: 'SRV-DB-01', role: null, host: 'ESX-01' }], to: [] },
+        },
+      },
+    }));
+    expect(screen.getByText(byText('Contient : SRV-DB-01, Dépend de : SAN-01'))).toBeInTheDocument();
+    expect(screen.getByText(byText('ESX-01 contient SRV-DB-01'))).toBeInTheDocument();
+    cleanup();
+
+    renderCard(preview({
+      tool_name: 'update_entity_relations',
+      target: { entity_type: 'suppliers', entity_id: 'sup-1', ref: null, title: 'Oracle' },
+      changes: {
+        contacts: {
+          label: 'Contacts',
+          from: null,
+          to: 'Marc Dubois - technical',
+          format: 'text',
+          relation_items: { from: [], to: [{ name: 'Marc Dubois', role: { kind: 'contact', code: 'technical' } }] },
+        },
+      },
+    }));
+    expect(screen.getByText(byText('Marc Dubois (Technique)'))).toBeInTheDocument();
+    for (const english of [/owner/, /depends_on/, /contains/, /technical/]) {
+      expect(screen.queryByText(english)).not.toBeInTheDocument();
+    }
+  });
+
+  it('says that a change failed in the language of the person, the message of the service as detail', () => {
+    renderCard(preview({
+      tool_name: 'create_document',
+      status: 'failed',
+      target: { entity_type: 'documents', entity_id: null, ref: null, title: 'Plan de reprise' },
+      error_message: 'Library not found',
+      error_is_technical: true,
+    }));
+    expect(screen.getByText("La modification n'a pas été faite.")).toBeInTheDocument();
+    expect(screen.getByText('Library not found')).toBeInTheDocument();
+    cleanup();
+
+    // A refused right keeps its message, as the limits of Plaid write it.
+    const refusal = 'You need the right to modify knowledge documents, which your role does not give. An administrator can add it to your role.';
+    renderCard(preview({
+      tool_name: 'create_document',
+      status: 'failed',
+      target: { entity_type: 'documents', entity_id: null, ref: null, title: 'Plan de reprise' },
+      error_message: refusal,
+      error_is_technical: false,
+    }));
+    expect(screen.getByText(refusal)).toBeInTheDocument();
+    expect(screen.queryByText("La modification n'a pas été faite.")).not.toBeInTheDocument();
   });
 });

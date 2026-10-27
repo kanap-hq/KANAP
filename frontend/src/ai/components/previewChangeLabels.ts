@@ -7,7 +7,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
 import { formatCurrency, formatDecimal } from '../../i18n/formatters';
 import { AMOUNT_COLUMNS } from '../../components/finance/amountColumns';
-import { AiMutationPreview, AiPreviewAmounts } from '../aiTypes';
+import { AiMutationPreview, AiPreviewAmounts, AiPreviewRelationItem } from '../aiTypes';
 
 type PreviewChange = AiMutationPreview['changes'][string];
 
@@ -336,6 +336,13 @@ const SCREEN_FIELD_KEYS: Record<string, Record<string, string>> = {
   },
 };
 
+/** The role words of a relation item, as the screens name them: owners, contact roles, asset relations. */
+const RELATION_ROLE_KEYS: Record<'owner' | 'contact' | 'asset_relation', (code: string) => string> = {
+  owner: (code) => (code === 'it' ? 'ops:opex.metadata.itOwner' : code === 'business' ? 'ops:opex.metadata.businessOwner' : ''),
+  contact: (code) => `master-data:contacts.roles.${code}`,
+  asset_relation: (code) => `it:workspace.asset.relations.${camel(code)}`,
+};
+
 const CLASSIFICATION_REVIEW: Record<string, string> = {
   Reviewed: 'ai:previewCard.values.classificationReview.reviewed',
   'Stale after this change': 'ai:previewCard.values.classificationReview.stale',
@@ -436,5 +443,35 @@ export function usePreviewChangeLabels(preview?: AiMutationPreview) {
     [locale, t],
   );
 
-  return { fieldLabel, valueLabel, amountsLabel, classificationLabel };
+  /**
+   * The items of a relation, each role named as on the screens in the person's language (a role a person
+   * typed stays as typed, a server role from the tenant's catalog); the names as sent.
+   */
+  const relationItemsLabel = useCallback(
+    (items: AiPreviewRelationItem[]): string | null => {
+      if (items.length === 0) return null;
+      return items.map((item) => {
+        if (item.host) return t('ai:previewCard.relationItems.hostContains', { host: item.host, name: item.name });
+        const role = item.role;
+        if (!role) return item.name;
+        if (role.kind === 'server_role') {
+          const environment = item.environment
+            ? known([`it:enums.environment.${camel(codeOf(item.environment))}`]) ?? item.environment
+            : null;
+          const roleLabel = labelFor('serverRole', role.code) || role.code;
+          return environment
+            ? t('ai:previewCard.relationItems.assignment', { environment, name: item.name, role: roleLabel })
+            : t('ai:previewCard.relationItems.withRole', { name: item.name, role: roleLabel });
+        }
+        if (role.kind === 'text') return t('ai:previewCard.relationItems.withRole', { name: item.name, role: role.code });
+        const roleLabel = known([RELATION_ROLE_KEYS[role.kind](codeOf(role.code))]) ?? role.code;
+        return role.kind === 'contact'
+          ? t('ai:previewCard.relationItems.withRole', { name: item.name, role: roleLabel })
+          : t('ai:previewCard.relationItems.role', { role: roleLabel, name: item.name });
+      }).join(', ');
+    },
+    [known, labelFor, t],
+  );
+
+  return { fieldLabel, valueLabel, amountsLabel, classificationLabel, relationItemsLabel };
 }

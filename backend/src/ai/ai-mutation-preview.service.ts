@@ -19,7 +19,7 @@ import {
 import { AiMutationPlan } from './ai-mutation-plan.entity';
 import { AiMutationPlanStep } from './ai-mutation-plan-step.entity';
 import { AiMutationPreview } from './ai-mutation-preview.entity';
-import { AiPolicyService } from './ai-policy.service';
+import { AiPolicyService, isRightRefusalMessage } from './ai-policy.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
 import { AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
@@ -33,6 +33,7 @@ import {
   PREVIEW_EXPIRED_MESSAGE,
   personWriteLanguage,
   previewErrorText,
+  isFixedPreviewError,
 } from './ai-write-texts';
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
@@ -221,6 +222,12 @@ export class AiMutationPreviewService {
         : [],
       summary: presentation.summary,
       error_message: previewErrorText(language, preview.error_message ?? null),
+      // A failure the card shows as a translated sentence, the message being its technical detail; a refusal
+      // of a right and the errors the backend writes itself show as they are.
+      error_is_technical: preview.status === 'failed'
+        && !!preview.error_message
+        && !isFixedPreviewError(preview.error_message)
+        && !isRightRefusalMessage(preview.error_message),
       conversation_id: preview.conversation_id ?? null,
       created_at: preview.created_at.toISOString(),
       expires_at: toIso(preview.expires_at),

@@ -40,6 +40,15 @@ export type AiPreviewAmounts = {
   months?: number;
 };
 
+/** One item of a relation on a preview card, its role by code in the catalog of its kind (`text`: typed by a person). */
+export type AiPreviewRelationItem = {
+  name: string;
+  role: { kind: 'owner' | 'contact' | 'asset_relation' | 'server_role' | 'text'; code: string } | null;
+  environment?: string | null;
+  /** The cluster that contains the asset, for a host link a cluster's write replaces. */
+  host?: string | null;
+};
+
 export type AiMutationPreview = {
   preview_id: string;
   tool_name: AiMutationWriteToolName;
@@ -63,11 +72,15 @@ export type AiMutationPreview = {
       from: string | null;
       to: string | null;
     };
+    /** The items of a relation with their role by code; `from` and `to` hold an English text of them. */
+    relation_items?: { from: AiPreviewRelationItem[]; to: AiPreviewRelationItem[] };
   }>;
   requires_confirmation: boolean;
   actions: Array<'approve' | 'reject'>;
   summary: string;
   error_message: string | null;
+  /** A failure of the service: the card says the change was not made, with `error_message` as its detail. */
+  error_is_technical?: boolean;
   conversation_id: string | null;
   created_at: string;
   expires_at: string | null;

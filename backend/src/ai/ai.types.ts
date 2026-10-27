@@ -351,6 +351,25 @@ export type AiMutationPreviewChangeDto = {
   amounts?: { from: AiPreviewAmounts | null; to: AiPreviewAmounts | null };
   /** A classification level by its code in the tenant's catalog, named by the card as the screens name it; `from` and `to` keep the catalog's base label. */
   classification?: { catalog: AiPreviewClassificationCatalog; from: string | null; to: string | null };
+  /** The items of a relation with their role by code, named by the card as the screens name them; `from` and `to` keep an English text of them. */
+  relation_items?: { from: AiPreviewRelationItem[]; to: AiPreviewRelationItem[] };
+};
+
+/**
+ * The catalog of a relation item's role: an application owner (`business`, `it`), a supplier contact
+ * role (`commercial`, `technical`, `support`, `other`), an asset relation (`contains`, `depends_on`),
+ * a server role of an asset assignment, or a role typed by a person (`text`, shown as typed).
+ */
+export type AiPreviewRelationRoleKind = 'owner' | 'contact' | 'asset_relation' | 'server_role' | 'text';
+
+/** One item of a relation on a preview card. */
+export type AiPreviewRelationItem = {
+  name: string;
+  role: { kind: AiPreviewRelationRoleKind; code: string } | null;
+  /** The environment of an asset assignment, by code. */
+  environment?: string | null;
+  /** The cluster that contains the asset, for a host link a cluster's write replaces. */
+  host?: string | null;
 };
 
 /** The list of the application classification catalog a level belongs to. */
@@ -371,6 +390,8 @@ export type AiMutationPreviewDto = {
   actions: Array<'approve' | 'reject'>;
   summary: string;
   error_message: string | null;
+  /** A failure of the service (not a refused right): the card says the change was not made, with `error_message` as its detail. */
+  error_is_technical?: boolean;
   conversation_id: string | null;
   created_at: string;
   expires_at: string | null;

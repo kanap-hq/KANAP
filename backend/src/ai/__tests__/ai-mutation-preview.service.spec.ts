@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AiMutationPreviewService } from '../ai-mutation-preview.service';
+import { isRightRefusalMessage, missingRightMessage } from '../ai-policy.service';
 import { AiMutationOperationRegistry } from '../mutation/ai-mutation-operation.registry';
 import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutation-support.service';
 import { AiTaskMutationSupportService } from '../mutation/ai-task-mutation-support.service';
@@ -2955,6 +2956,45 @@ async function testUpdatePreviewRequiresDocumentWriteAccess() {
   assert.deepEqual(allowedCalls, [`writable:doc-1:${USER_ID}`, 'workflow', 'lock']);
 }
 
+/**
+ * A failure of the service is flagged for the card, which says in the person's language that the
+ * change was not made and keeps the message as its detail; a refused right and the fixed errors are not.
+ */
+async function testFailedCardFlagsTechnicalErrors() {
+  const failed = createService({
+    previews: [createDocumentContentPreview()],
+    updateError: new NotFoundException('Library not found'),
+  });
+  const result = await failed.service.executePreview(failed.context, 'preview-1');
+  assert.equal(result.status, 'failed');
+  assert.equal(result.error_message, 'Library not found');
+  assert.equal(result.error_is_technical, true);
+
+  const refusal = missingRightMessage('knowledge', 'member');
+  const refused = createService({
+    previews: [createDocumentContentPreview()],
+    updateError: new ForbiddenException(refusal),
+  });
+  const refusedResult = await refused.service.executePreview(refused.context, 'preview-1');
+  assert.equal(refusedResult.status, 'failed');
+  assert.equal(refusedResult.error_message, refusal);
+  assert.equal(refusedResult.error_is_technical, false);
+
+  for (const message of [
+    missingRightMessage('ai_chat', 'member'),
+    missingRightMessage('settings', 'admin'),
+    'This line is read only in your access.',
+    'This item is outside your data access.',
+  ]) {
+    assert.equal(isRightRefusalMessage(message), true, message);
+  }
+  assert.equal(isRightRefusalMessage('Library not found'), false);
+
+  const pending = createService({ previews: [createStatusPreview()] });
+  const rejected = await pending.service.rejectPreview(pending.context, 'preview-1');
+  assert.equal(rejected.error_is_technical, false);
+}
+
 /** The cards and their fixed errors follow the person's stored locale, read once per request. */
 async function testPreviewsFollowThePersonLanguage() {
   const localeReads: string[] = [];
@@ -2983,6 +3023,7 @@ async function testPreviewsFollowThePersonLanguage() {
     assert.equal(result.status, 'expired');
     assert.equal(result.summary, 'Abgelaufen: Status von T-1 ändern (Offen → Erledigt).');
     assert.equal(result.error_message, 'Die Vorschau ist vor der Genehmigung abgelaufen.');
+    assert.equal(result.error_is_technical, false);
   } finally {
     Date.now = now;
   }
@@ -2995,6 +3036,7 @@ async function testPreviewsFollowThePersonLanguage() {
 
 async function main() {
   await testPreviewsFollowThePersonLanguage();
+  await testFailedCardFlagsTechnicalErrors();
   await testCreatePreviewPersistsCorrectData();
   await testCreatePreviewAllowsMultiplePendingPreviewsInConversation();
   await testCreatePreviewReusesEquivalentPendingPreviewInConversation();

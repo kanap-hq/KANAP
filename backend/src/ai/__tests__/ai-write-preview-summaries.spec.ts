@@ -260,6 +260,58 @@ function testFinancialPlanAndRelations() {
   assert.equal(summary(relations, links, 'es'), 'Modificación de las relaciones de «CheeseTrack».');
 }
 
+// The roles of a relation reach the card by code (A7): the card names them as the screens do; the
+// English text stays in `from` and `to` for the model; a label in another form shows as it is.
+function testRelationRolesForTheCard() {
+  const relations = make(AiRelationMutationSupportService);
+  const item = (key: string, label: string, payload: Record<string, unknown>) => ({ key, label, payload });
+  const relationPreview = (entity: string, relation: string, current: unknown[], next: unknown[]) => preview({
+    tool_name: 'update_entity_relations',
+    target_entity_type: entity,
+    mutation_input: { entity_type: entity, relation, next_items: next },
+    current_values: { target_title: 'CheeseTrack', items: current },
+  });
+
+  const owners = relations.presentPreview(relationPreview('applications', 'owners',
+    [item('business:u1', 'BUSINESS owner: Thomas Berger', { user_id: 'u1', owner_type: 'business' })],
+    [item('it:u2', 'IT owner: Claire Martin', { user_id: 'u2', owner_type: 'it' })]), 'fr').changes.owners;
+  assert.equal(owners.from, 'BUSINESS owner: Thomas Berger');
+  assert.deepEqual(owners.relation_items, {
+    from: [{ name: 'Thomas Berger', role: { kind: 'owner', code: 'business' } }],
+    to: [{ name: 'Claire Martin', role: { kind: 'owner', code: 'it' } }],
+  });
+
+  const supplierContacts = relations.presentPreview(relationPreview('suppliers', 'contacts', [],
+    [item('c1:technical', 'Marc Dubois - technical', { contact_id: 'c1', role: 'technical' })]), 'fr').changes.contacts;
+  assert.deepEqual(supplierContacts.relation_items?.to, [{ name: 'Marc Dubois', role: { kind: 'contact', code: 'technical' } }]);
+
+  const contractContacts = relations.presentPreview(relationPreview('contracts', 'contacts', [],
+    [item('c1:commercial:manual', 'Marc Dubois - commercial', { contact_id: 'c1', role: 'commercial', origin: 'manual' })]), 'en').changes.contacts;
+  assert.deepEqual(contractContacts.relation_items?.to, [{ name: 'Marc Dubois', role: { kind: 'contact', code: 'commercial' } }]);
+
+  // A support contact's role is typed by a person: it shows as typed.
+  const support = relations.presentPreview(relationPreview('applications', 'support_contacts', [],
+    [item('c1:Astreinte:', 'Marc Dubois - Astreinte', { contact_id: 'c1', role: 'Astreinte', origin: null })]), 'fr').changes.support_contacts;
+  assert.deepEqual(support.relation_items?.to, [{ name: 'Marc Dubois', role: { kind: 'text', code: 'Astreinte' } }]);
+
+  const assetRelations = relations.presentPreview(relationPreview('assets', 'relations', [],
+    [item('a2:depends_on', 'depends_on: SRV-DB-01', { related_asset_id: 'a2', relation_type: 'depends_on', notes: null })]), 'fr').changes.relations;
+  assert.deepEqual(assetRelations.relation_items?.to, [{ name: 'SRV-DB-01', role: { kind: 'asset_relation', code: 'depends_on' } }]);
+
+  const assignments = relations.presentPreview(relationPreview('applications', 'asset_assignments', [],
+    [item('i1:a1:database', 'prod: SRV-DB-01 (database)', { app_instance_id: 'i1', environment: 'prod', asset_id: 'a1', role: 'database' })]), 'de').changes.asset_assignments;
+  assert.deepEqual(assignments.relation_items?.to, [
+    { name: 'SRV-DB-01', role: { kind: 'server_role', code: 'database' }, environment: 'prod' },
+  ]);
+
+  // A label in another form keeps its text; a relation without roles sends no items.
+  const odd = relations.presentPreview(relationPreview('applications', 'owners', [],
+    [item('business:u1', 'Thomas Berger', { user_id: 'u1', owner_type: 'business' })]), 'fr').changes.owners;
+  assert.deepEqual(odd.relation_items?.to, [{ name: 'Thomas Berger', role: null }]);
+  const companies = relations.presentPreview(relationPreview('applications', 'companies', [], [item('co1', 'Fromagerie', {})]), 'fr').changes.companies;
+  assert.equal(companies.relation_items, undefined);
+}
+
 // The amounts of a budget line reach the card as numbers, the same in every language: the card writes
 // them with the column names of the budget screens and the line's currency ("Budget 2026 : 12 000 €").
 function testAmountsForTheCard() {
@@ -322,6 +374,7 @@ async function main() {
   testDocumentCreation();
   testBusinessRecords();
   testFinancialPlanAndRelations();
+  testRelationRolesForTheCard();
   testAmountsForTheCard();
   testCardCodesAndFieldOrder();
   await testDefaultTaskType();

@@ -13,7 +13,7 @@ import {
 } from '../../auth/business-contributor-scope';
 import { SupplierContactsService } from '../../suppliers/supplier-contacts.service';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
-import { AiExecutionContextWithManager, AiMutationPreviewChangeDto } from '../ai.types';
+import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewRelationItem } from '../ai.types';
 import { AiMutationAuditOptions, buildAiMutationAudit } from './ai-mutation-audit.util';
 import { firstReturnedRow } from '../../analytics/analytics-context';
 import {
@@ -252,6 +252,66 @@ function itemListLabel(items: RelationItem[]): string | null {
   return items.map((item) => item.label).join(', ');
 }
 
+/** The relation kinds whose items carry a role, sent to the card by code. */
+const ROLE_RELATION_KINDS: ReadonlySet<RelationKind> = new Set<RelationKind>([
+  'owner_role',
+  'contact_role',
+  'supplier_contacts',
+  'asset_relations',
+  'app_asset_assignments',
+  'location_internal_contacts',
+  'location_external_contacts',
+]);
+
+/** The records whose contacts take a supplier contact role (`supplier_contact_role`); applications and assets take a typed role. */
+const SUPPLIER_ROLE_CONTACT_SOURCES: ReadonlySet<AiRelationEntityType> = new Set<AiRelationEntityType>(['contracts', 'spend_items', 'capex_items']);
+
+/**
+ * A relation item for the card: the name, and the role by its code, read back from the label the item
+ * was given (`resolve*Input`, `load*`), which joins them in a fixed form. Previews made before keep
+ * their items, so the label is the one stored source; a label in another form shows as it is.
+ */
+function relationItemForCard(config: RelationConfig, item: RelationItem): AiPreviewRelationItem {
+  const plain: AiPreviewRelationItem = { name: item.label, role: null };
+  const between = (prefix: string, suffix: string): string | null => {
+    const label = item.label;
+    if (label.length <= prefix.length + suffix.length || !label.startsWith(prefix) || !label.endsWith(suffix)) return null;
+    return label.slice(prefix.length, label.length - suffix.length).trim() || null;
+  };
+  switch (config.kind) {
+    case 'owner_role': {
+      const code = textOrNull(item.payload.owner_type);
+      const name = code ? between(`${code.toUpperCase()} owner: `, '') : null;
+      return code && name ? { name, role: { kind: 'owner', code } } : plain;
+    }
+    case 'contact_role':
+    case 'supplier_contacts':
+    case 'location_internal_contacts':
+    case 'location_external_contacts': {
+      const code = textOrNull(item.payload.role);
+      if (!code) return plain;
+      const name = between('', ` - ${code}`);
+      const kind = config.kind === 'supplier_contacts' || (config.kind === 'contact_role' && SUPPLIER_ROLE_CONTACT_SOURCES.has(config.sourceEntity))
+        ? 'contact'
+        : 'text';
+      return name ? { name, role: { kind, code } } : plain;
+    }
+    case 'asset_relations': {
+      const code = textOrNull(item.payload.relation_type);
+      const name = code ? between(`${code}: `, '') : null;
+      return code && name ? { name, role: { kind: 'asset_relation', code } } : plain;
+    }
+    case 'app_asset_assignments': {
+      const environment = textOrNull(item.payload.environment);
+      const code = textOrNull(item.payload.role);
+      const name = environment && code ? between(`${environment}: `, ` (${code})`) : null;
+      return environment && code && name ? { name, role: { kind: 'server_role', code }, environment } : plain;
+    }
+    default:
+      return plain;
+  }
+}
+
 /** The host/asset pairs of a placement list, in a stable form for the execution comparison. */
 function replacedHostLinkSignature(links: ReplacedHostLink[]): string {
   return links.map((link) => `${link.host_id}:${link.asset_id}`).sort().join('|');
@@ -397,6 +457,13 @@ export class AiRelationMutationSupportService {
         from: itemListLabel(currentItems),
         to: itemListLabel(nextItems),
         format: 'text',
+        // The roles by code: the card names them as the screens do, in the person's language.
+        ...(ROLE_RELATION_KINDS.has(config.kind) ? {
+          relation_items: {
+            from: currentItems.map((item) => relationItemForCard(config, item)),
+            to: nextItems.map((item) => relationItemForCard(config, item)),
+          },
+        } : {}),
       },
     };
     // R1: the host links the cluster's write replaces, shown as one text change.
@@ -407,6 +474,10 @@ export class AiRelationMutationSupportService {
         from: replaced.map((link) => `${link.host_name} contains ${link.asset_name}`).join(', '),
         to: null,
         format: 'text',
+        relation_items: {
+          from: replaced.map((link) => ({ name: link.asset_name, role: null, host: link.host_name })),
+          to: [],
+        },
       };
     }
     return {

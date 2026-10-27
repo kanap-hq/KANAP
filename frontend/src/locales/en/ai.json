@@ -256,6 +256,7 @@
       "zone": "Zone"
     },
     "none": "None",
+    "notApplied": "The change was not made.",
     "pendingInlineImage": "Inline image will be imported after approval.",
     "preview": "Preview",
     "reject": "Reject",
@@ -279,6 +280,12 @@
       "spend_items": "OPEX lines",
       "sub_locations": "Sub-locations",
       "support_contacts": "Support contacts"
+    },
+    "relationItems": {
+      "assignment": "{{environment}}: {{name}} ({{role}})",
+      "hostContains": "{{host}} contains {{name}}",
+      "role": "{{role}}: {{name}}",
+      "withRole": "{{name}} ({{role}})"
     },
     "values": {
       "allocationMethod": {

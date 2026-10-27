@@ -116,6 +116,22 @@ export function missingRightMessage(resource: string, minimumLevel: PermissionLe
   return `You need the right to ${LEVEL_PLAIN_VERBS[minimumLevel] ?? minimumLevel} ${name}, which your role does not give. An administrator can add it to your role.`;
 }
 
+/**
+ * Whether a message is a refusal of a right or of a data access, as `missingRightMessage` and the
+ * data-access checks write it ("This line is read only in your access."): a preview card shows such a
+ * refusal as it is, and any other failure as a translated sentence with the message as its detail.
+ */
+export function isRightRefusalMessage(message: string | null | undefined): boolean {
+  const text = String(message ?? '').trim();
+  if (!text) return false;
+  return text.startsWith('You need the right to ')
+    || text.startsWith('Your role does not give access to Plaid.')
+    || text.startsWith('Your role lets you ask Plaid questions but not prepare changes')
+    || text.startsWith('Missing required permission ')
+    || / in your access\.$/.test(text)
+    || / outside your data access\.$/.test(text);
+}
+
 /** The entity types the policy knows; any other requested value is never readable. */
 const KNOWN_ENTITY_TYPES: ReadonlySet<string> = new Set<string>([
   ...AI_QUERY_ENTITY_TYPES,

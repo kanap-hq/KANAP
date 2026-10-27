@@ -404,6 +404,11 @@ const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
   },
 };
 
+/** Whether a preview error is one the backend writes itself (expired, data busy), in every language. */
+export function isFixedPreviewError(message: string | null | undefined): boolean {
+  return message != null && Object.prototype.hasOwnProperty.call(FIXED_PREVIEW_ERRORS, message);
+}
+
 /** A preview error the backend writes itself, in the person's language; any other error as it is. */
 export function previewErrorText(language: AiWriteLanguage, message: string | null | undefined): string | null {
   if (message == null) return null;
