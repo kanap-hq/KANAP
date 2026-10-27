@@ -362,19 +362,15 @@ function longestLine(value: string): number {
   return value.split(/\r?\n/).reduce((max, line) => Math.max(max, line.length), 0);
 }
 
-/**
- * Writes a workbook: one sheet per entry, in order. Throws on no sheet, on a sheet over Excel's rows or columns,
- * and on a row whose length differs from the headers.
- */
-export function writeXlsx(request: XlsxWriteRequest): Buffer {
-  const { language, sheets } = request;
-  if (!sheets || sheets.length === 0) throw new Error('xlsx: a workbook needs at least one sheet');
-  const appBaseUrl = String(request.appBaseUrl || '').trim().replace(/\/$/, '');
-  const taken = new Set<string>();
-  const built = sheets.map((sheet) => buildSheet(sheet, sheetName(sheet.name, taken), appBaseUrl, language));
-  const extraStyles = built.some((sheet) => sheet.usesExtraStyles);
 
-  const sheetOverrides = built
+interface PackageSheet {
+  name: string;
+  filterRange: string | null;
+}
+
+/** The workbook-level parts `writeXlsx` and `writeTextXlsxStream` share: types, rels, sheets, styles. */
+function workbookPackage(sheets: readonly PackageSheet[], extraStyles: boolean, language: CsvLanguage) {
+  const sheetOverrides = sheets
     .map(
       (_, index) =>
         `<Override PartName="/xl/worksheets/sheet${index + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`,
@@ -395,12 +391,12 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
 </Relationships>`;
 
-  const workbookSheetsXml = built
+  const workbookSheetsXml = sheets
     .map((sheet, index) => `<sheet name="${xmlEscape(sheet.name)}" sheetId="${index + 1}" r:id="rId${index + 1}"/>`)
     .join('\n    ');
 
   // Excel keeps a sheet's filter in a hidden defined name as well; the filter works without it, but this is how Excel writes it.
-  const filterNames = built
+  const filterNames = sheets
     .map((sheet, index) =>
       sheet.filterRange
         ? `<definedName name="_xlnm._FilterDatabase" localSheetId="${index}" hidden="1">${xmlEscape(
@@ -417,7 +413,7 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   </sheets>${filterNames ? `\n  <definedNames>${filterNames}</definedNames>` : ''}
 </workbook>`;
 
-  const workbookRelationshipsXml = built
+  const workbookRelationshipsXml = sheets
     .map(
       (_, index) =>
         `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`,
@@ -427,7 +423,7 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   const workbookRelsXml = `${XML_HEAD}
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   ${workbookRelationshipsXml}
-  <Relationship Id="rId${built.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`;
 
   // Style 0 is the default, 1 the date cells; 2 (bold header), 3 (amount, `#,##0.00`), 4 (percent, `0.00%`), the
@@ -452,16 +448,33 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
 </styleSheet>`;
 
+  return { contentTypesXml, rootRelsXml, workbookXml, workbookRelsXml, stylesXml };
+}
+
+/**
+ * Writes a workbook: one sheet per entry, in order. Throws on no sheet, on a sheet over Excel's rows or columns,
+ * and on a row whose length differs from the headers.
+ */
+export function writeXlsx(request: XlsxWriteRequest): Buffer {
+  const { language, sheets } = request;
+  if (!sheets || sheets.length === 0) throw new Error('xlsx: a workbook needs at least one sheet');
+  const appBaseUrl = String(request.appBaseUrl || '').trim().replace(/\/$/, '');
+  const taken = new Set<string>();
+  const built = sheets.map((sheet) => buildSheet(sheet, sheetName(sheet.name, taken), appBaseUrl, language));
+  const extraStyles = built.some((sheet) => sheet.usesExtraStyles);
+
+  const packageXml = workbookPackage(built, extraStyles, language);
+
   const zip = new AdmZip();
   const addFile = (name: string, data: Buffer): void => {
     const entry = zip.addFile(name, data);
     if (request.modifiedAt) entry.header.time = request.modifiedAt;
   };
-  addFile('[Content_Types].xml', Buffer.from(contentTypesXml, 'utf8'));
-  addFile('_rels/.rels', Buffer.from(rootRelsXml, 'utf8'));
-  addFile('xl/workbook.xml', Buffer.from(workbookXml, 'utf8'));
-  addFile('xl/_rels/workbook.xml.rels', Buffer.from(workbookRelsXml, 'utf8'));
-  addFile('xl/styles.xml', Buffer.from(stylesXml, 'utf8'));
+  addFile('[Content_Types].xml', Buffer.from(packageXml.contentTypesXml, 'utf8'));
+  addFile('_rels/.rels', Buffer.from(packageXml.rootRelsXml, 'utf8'));
+  addFile('xl/workbook.xml', Buffer.from(packageXml.workbookXml, 'utf8'));
+  addFile('xl/_rels/workbook.xml.rels', Buffer.from(packageXml.workbookRelsXml, 'utf8'));
+  addFile('xl/styles.xml', Buffer.from(packageXml.stylesXml, 'utf8'));
   built.forEach((sheet, index) => {
     addFile(`xl/worksheets/sheet${index + 1}.xml`, sheet.xml);
   });
@@ -570,93 +583,64 @@ export async function writeTextXlsxStream(request: XlsxTextStreamRequest): Promi
   // those rows are turned into XML now (a few hundred kilobytes) and written after the header.
   const firstRows: string[] = [];
   let written = 0;
-  while (written < WIDTH_SAMPLE_ROWS) {
-    const next = await iterator.next();
-    if (next.done) break;
-    if (written >= XLSX_MAX_DATA_ROWS) throw new Error(`xlsx: streamed sheet "${name}" has more than ${XLSX_MAX_DATA_ROWS} rows`);
-    firstRows.push(rowXml(next.value, written));
-    written += 1;
-  }
+  try {
+    while (written < WIDTH_SAMPLE_ROWS) {
+      const next = await iterator.next();
+      if (next.done) break;
+      if (written >= XLSX_MAX_DATA_ROWS) throw new Error(`xlsx: streamed sheet "${name}" has more than ${XLSX_MAX_DATA_ROWS} rows`);
+      firstRows.push(rowXml(next.value, written));
+      written += 1;
+    }
 
-  const colsXml = widths
-    .map((measured, index) => {
-      const width = Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, measured + 2));
-      return `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`;
-    })
-    .join('');
-  save.write(
-    [
-      XML_HEAD,
-      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
-      '  <sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>',
-      `  <cols>${colsXml}</cols>`,
-      '  <sheetData>',
-      '    ',
-    ].join('\n'),
-  );
-  save.write(`<row r="1">${headerCells.join('')}</row>`);
-  for (const row of firstRows) save.write(row);
-  for (;;) {
-    const next = await iterator.next();
-    if (next.done) break;
-    if (written >= XLSX_MAX_DATA_ROWS) throw new Error(`xlsx: streamed sheet "${name}" has more than ${XLSX_MAX_DATA_ROWS} rows`);
-    save.write(rowXml(next.value, written));
-    written += 1;
+    const colsXml = widths
+      .map((measured, index) => {
+        const width = Math.min(WIDTH_MAX, Math.max(WIDTH_MIN, measured + 2));
+        return `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`;
+      })
+      .join('');
+    save.write(
+      [
+        XML_HEAD,
+        '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
+        '  <sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>',
+        `  <cols>${colsXml}</cols>`,
+        '  <sheetData>',
+        '    ',
+      ].join('\n'),
+    );
+    save.write(`<row r="1">${headerCells.join('')}</row>`);
+    for (const row of firstRows) save.write(row);
+    for (;;) {
+      const next = await iterator.next();
+      if (next.done) break;
+      if (written >= XLSX_MAX_DATA_ROWS) throw new Error(`xlsx: streamed sheet "${name}" has more than ${XLSX_MAX_DATA_ROWS} rows`);
+      save.write(rowXml(next.value, written));
+      written += 1;
+    }
+  } catch (error) {
+    // Stop pulling rows, so a generator releases its database batch; keep the original error.
+    try {
+      await iterator.return?.();
+    } catch {
+      // The refusal that stopped the writer is the one to report.
+    }
+    throw error;
   }
   const filterRange = `A1:${names[columns - 1]}${written + 1}`;
   save.write(['', '  </sheetData>', `  <autoFilter ref="${filterRange}"/>`, '</worksheet>'].join('\n'));
 
-  const sheetOverrides = '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
-  const contentTypesXml = `${XML_HEAD}
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="xml" ContentType="application/xml"/>
-  <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-  ${sheetOverrides}
-  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-</Types>`;
-  const rootRelsXml = `${XML_HEAD}
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-</Relationships>`;
-  const filterName = xmlEscape(`'${name.replace(/'/g, "''")}'!${filterRange.replace(/([A-Z]+)(\d+)/g, '$$$1$$$2')}`);
-  const workbookXml = `${XML_HEAD}
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-  <sheets>
-    <sheet name="${xmlEscape(name)}" sheetId="1" r:id="rId1"/>
-  </sheets>
-  <definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">${filterName}</definedName></definedNames>
-</workbook>`;
-  const workbookRelsXml = `${XML_HEAD}
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-</Relationships>`;
-  const fonts = '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>';
-  const cellXfs = '<cellXfs count="10"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="10" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
-    + '<xf numFmtId="4" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="10" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="164" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>'
-    + '<xf numFmtId="2" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="2" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/></cellXfs>';
-  const stylesXml = `${XML_HEAD}
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <numFmts count="1"><numFmt numFmtId="164" formatCode="${XLSX_DATE_FORMAT[language]}"/></numFmts>
-  ${fonts}
-  <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
-  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
-  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
-  ${cellXfs}
-  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
-</styleSheet>`;
+  const packageXml = workbookPackage([{ name, filterRange }], true, language);
 
   const zip = new AdmZip();
   const addFile = (entryName: string, data: Buffer): void => {
     const entry = zip.addFile(entryName, data);
     if (request.modifiedAt) entry.header.time = request.modifiedAt;
   };
-  addFile('[Content_Types].xml', Buffer.from(contentTypesXml, 'utf8'));
-  addFile('_rels/.rels', Buffer.from(rootRelsXml, 'utf8'));
-  addFile('xl/workbook.xml', Buffer.from(workbookXml, 'utf8'));
-  addFile('xl/_rels/workbook.xml.rels', Buffer.from(workbookRelsXml, 'utf8'));
-  addFile('xl/styles.xml', Buffer.from(stylesXml, 'utf8'));
+  addFile('[Content_Types].xml', Buffer.from(packageXml.contentTypesXml, 'utf8'));
+  addFile('_rels/.rels', Buffer.from(packageXml.rootRelsXml, 'utf8'));
+  addFile('xl/workbook.xml', Buffer.from(packageXml.workbookXml, 'utf8'));
+  addFile('xl/_rels/workbook.xml.rels', Buffer.from(packageXml.workbookRelsXml, 'utf8'));
+  addFile('xl/styles.xml', Buffer.from(packageXml.stylesXml, 'utf8'));
   addFile('xl/worksheets/sheet1.xml', save.result());
   return zip.toBuffer();
 }

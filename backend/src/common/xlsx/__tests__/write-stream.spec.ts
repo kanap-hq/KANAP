@@ -64,6 +64,28 @@ async function main(): Promise<void> {
   await compareWithWriter(rowsOf(0), 'Audit log', 'no row');
   await compareWithWriter(rowsOf(5), "Audit 'log' []:*?/\\ 2026", 'a sheet name to sanitise');
 
+  // A writer stopped by a row returns the iterator, so a generator can release its batch.
+  let closed = false;
+  await assert.rejects(
+    () =>
+      writeTextXlsxStream({
+        language: 'en',
+        sheetName: 'Data',
+        headers: ['a'],
+        rows: (async function* () {
+          try {
+            yield ['one'];
+            yield [{ kind: 'number', value: 1 } as unknown as string];
+          } finally {
+            closed = true;
+          }
+        })(),
+        rowCountHint: 2,
+      }),
+    /text only/,
+  );
+  assert.equal(closed, true, 'the row iterator is returned when the writer refuses a row');
+
   // A cell that is not text: the audit export never has one, and the stream says so.
   await assert.rejects(
     () =>
