@@ -1,5 +1,7 @@
 import React from 'react';
 import { TextField, TextFieldProps } from '@mui/material';
+import { decimalMark } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
 
 /**
  * Groups the integer part with spaces; a typed separator and trailing zeros are kept ("1.", "400.10").
@@ -50,8 +52,8 @@ export type FormattedNumberFieldProps = TextFieldProps & {
    */
   emit?: 'number' | 'string';
   /**
-   * The decimal mark the field shows. A comma is the mark in French, German and Spanish, a point in
-   * English. What `onChange` emits still uses a point, so the value does not depend on the browser.
+   * The decimal mark the field shows. When omitted, the mark of the application language: a comma
+   * in French, German and Spanish, a point in English. What `onChange` emits still uses a point.
    */
   decimalSeparator?: '.' | ',';
 };
@@ -66,18 +68,21 @@ const FormattedNumberField = React.forwardRef<HTMLDivElement, FormattedNumberFie
   InputLabelProps,
   decimals = 2,
   emit = 'number',
-  decimalSeparator = '.',
+  decimalSeparator,
   ...rest
 }, ref) {
+  const locale = useLocale();
+  // An explicit mark wins. With none, the application language decides.
+  const separator = decimalSeparator ?? decimalMark(locale);
   const [text, setText] = React.useState<string>('');
   // The value this field last sent. When the parent hands it back, the text the user typed stays as
   // typed ("400.10", "1."), instead of being rewritten from the parent's form of the same value.
   const emittedRef = React.useRef<Emitted>(null);
-  const separatorRef = React.useRef(decimalSeparator);
+  const separatorRef = React.useRef(separator);
 
   React.useEffect(() => {
-    const separatorChanged = separatorRef.current !== decimalSeparator;
-    separatorRef.current = decimalSeparator;
+    const separatorChanged = separatorRef.current !== separator;
+    separatorRef.current = separator;
     const emitted = emittedRef.current;
     if (!separatorChanged && emitted && sameValue(value, emitted.value, emit)) return;
     emittedRef.current = null;
@@ -88,12 +93,12 @@ const FormattedNumberField = React.forwardRef<HTMLDivElement, FormattedNumberFie
     }
 
     if (typeof value === 'number' || typeof value === 'string') {
-      setText(formatWithSpaces(value, decimalSeparator));
+      setText(formatWithSpaces(value, separator));
       return;
     }
 
     if (Array.isArray(value)) {
-      setText(formatWithSpaces(value.join(''), decimalSeparator));
+      setText(formatWithSpaces(value.join(''), separator));
       return;
     }
 
@@ -101,13 +106,13 @@ const FormattedNumberField = React.forwardRef<HTMLDivElement, FormattedNumberFie
     setText('');
     // `emit` is fixed for the life of a field. A separator change reformats the same value.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, decimalSeparator]);
+  }, [value, separator]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e?.target?.value;
     const raw = typeof rawValue === 'number' ? String(rawValue) : rawValue ?? '';
     const cleaned = cleanTyped(raw, decimals);
-    setText(formatWithSpaces(cleaned, decimalSeparator));
+    setText(formatWithSpaces(cleaned, separator));
     const asString = emittedString(cleaned);
     const next: number | string = emit === 'string' ? asString : asString === '' ? '' : Number(asString);
     emittedRef.current = { value: next };
