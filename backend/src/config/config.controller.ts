@@ -27,6 +27,8 @@ export class ConfigController {
         vulnerabilityFeed: Features.VULNERABILITY_FEED_ENABLED,
         // CVE.org names (directory and suggestions). Off when the list or the vulnerability feed is off.
         cveNames: cveListEnabled(),
+        // Data imports accept an Excel workbook (.xlsx) as well as a CSV file (IMPORT_XLSX, on by default).
+        importXlsx: Features.IMPORT_XLSX,
       },
       version: APP_VERSION,
       supportedLocales: [...SUPPORTED_LOCALES],
