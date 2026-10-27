@@ -7,7 +7,9 @@ import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { formatAmount } from '../../i18n/formatters';
+import { decimalMark, formatAmount } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
+import FormattedNumberField from '../inputs/FormattedNumberField';
 import useAutosave from '../../hooks/useAutosave';
 import YearTabs from '../navigation/YearTabs';
 import { drawerMenuItemSx, drawerSelectSx, tableCellFieldSx } from '../../theme/formSx';
@@ -213,6 +215,9 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({ id, year, currency, availableYears, onYearChange, config, held, onBudgetRev, knownBudgetRev, lineEditable = true }, ref) {
   const { t } = useTranslation(['ops', 'common']);
+  const locale = useLocale();
+  // The application language decides the decimal mark, not the browser.
+  const separator = decimalMark(locale);
   const { defaultColumn } = useBudgetColumns();
   const { profile, hasLevel } = useAuth();
   // A budget reader sees the split, with no control to change it; so does a person whose data
@@ -783,11 +788,12 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
                 {!isManualPct && <Box component="td" sx={numCellSx}>{driverLabel(r.company_id)}</Box>}
                 <Box component="td" sx={{ ...numCellSx, width: isManualPct ? 124 : undefined }}>
                   {isManualPct ? (
-                    <TextField
-                      type="number" size="small" variant="standard" value={r.allocation_pct}
+                    <FormattedNumberField
+                      size="small" variant="standard" value={r.allocation_pct}
+                      decimals={2} emit="number" decimalSeparator={separator}
                       onChange={(e) => onPctEdit(idx, e.target.value === '' ? '' : Number(e.target.value))}
-                      inputProps={{ step: 0.01 }}
                       disabled={readOnly}
+                      inputProps={{ 'aria-label': '%' }}
                       InputProps={{
                         endAdornment: <Box component="span" sx={{ fontSize: 13, color: 'kanap.text.tertiary', pl: 0.25 }}>%</Box>,
                       }}

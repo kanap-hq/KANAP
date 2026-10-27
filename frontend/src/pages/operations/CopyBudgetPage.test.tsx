@@ -13,7 +13,8 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
-vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+const localeState = vi.hoisted(() => ({ value: 'en' }));
+vi.mock('../../i18n/useLocale', () => ({ useLocale: () => localeState.value }));
 // The grid draws its header and every cell as the page defines them (value getters, formatters, renderers).
 vi.mock('ag-grid-react', () => ({
   AgGridReact: ({ rowData, columnDefs }: { rowData: any[]; columnDefs: any[] }) => (
@@ -152,8 +153,15 @@ async function pickYear(label: 'sourceYear' | 'destinationYear', year: number) {
   fireEvent.click(await screen.findByRole('option', { name: String(year) }));
 }
 
+/** Types as if the current text were selected, one character at a time. */
+function typeOver(input: HTMLInputElement, text: string) {
+  fireEvent.change(input, { target: { value: text[0] ?? '' } });
+  for (const ch of text.slice(1)) fireEvent.change(input, { target: { value: input.value + ch } });
+}
+
 describe('CopyBudgetPage', () => {
   beforeEach(() => {
+    localeState.value = 'en';
     frozen.capex = false;
     alert.mockClear();
     operation.mockReset();
@@ -303,6 +311,18 @@ describe('CopyBudgetPage', () => {
     expect(screen.queryByText(/^operations\.copyBudget\.summary\.preview /)).toBeNull();
   });
 
+  it('types 12,5 in French and previews an increase of 12.5', async () => {
+    localeState.value = 'fr';
+    renderPage();
+    await linesLoaded();
+    const input = screen.getByRole('textbox', { name: 'operations.copyBudget.percentageIncrease' }) as HTMLInputElement;
+    typeOver(input, '12,5');
+    expect(input).toHaveValue('12,5');
+    fireEvent.click(button('preview'));
+    await waitFor(() => expect(copyCalls()).toHaveLength(1));
+    expect(copyCalls()[0]).toMatchObject({ amounts: { percentageIncrease: 12.5 } });
+  });
+
   it('turns the controls off while the copy runs', async () => {
     let finish: (value: unknown) => void = () => undefined;
     renderPage();
@@ -317,7 +337,7 @@ describe('CopyBudgetPage', () => {
     for (const name of ['sourceYear', 'destinationYear', 'sourceColumn', 'destinationColumn']) {
       expect(screen.getByRole('combobox', { name: `operations.copyBudget.${name}` })).toHaveAttribute('aria-disabled', 'true');
     }
-    expect(screen.getByRole('spinbutton', { name: 'operations.copyBudget.percentageIncrease' })).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'operations.copyBudget.percentageIncrease' })).toBeDisabled();
     for (const name of ['amounts', 'allocations', 'overwrite']) {
       expect(screen.getByRole('checkbox', { name: `operations.copyBudget.${name}` })).toBeDisabled();
     }
