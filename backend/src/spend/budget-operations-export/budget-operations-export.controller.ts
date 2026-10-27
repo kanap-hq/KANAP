@@ -24,4 +24,11 @@ export class BudgetOperationsExportController {
   async clearColumn(@Query() query: Record<string, unknown>, @Tenant() ctx: TenantRequest, @Res() res: Response) {
     res.send(await reportExportBody(res, await this.svc.clearColumn(query, ctx)));
   }
+
+  @ReservedToUnscopedDataAccess()
+  @RequireLevel('budget', 'admin')
+  @Get('copy/export')
+  async copy(@Query() query: Record<string, unknown>, @Tenant() ctx: TenantRequest, @Res() res: Response) {
+    res.send(await reportExportBody(res, await this.svc.copy(query, ctx)));
+  }
 }
