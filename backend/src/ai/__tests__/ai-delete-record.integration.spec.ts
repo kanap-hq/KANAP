@@ -252,7 +252,12 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     });
 
   const opexLine = await line(9001, 'opex', 'ERP licence');
-  await version(opexLine, 2026, 1200);
+  const opexVersion = await version(opexLine, 2026, 1200);
+  // A second month of the same version: the card still counts one version.
+  await runner.query(
+    `INSERT INTO spend_amounts (tenant_id, version_id, period, planned) VALUES ($1, $2, '2026-02-01', 100)`,
+    [tenantId, opexVersion],
+  );
   await version(opexLine, 2027, 500);
 
   const lineTask = await insertId(runner,
@@ -657,6 +662,10 @@ async function testOpexLineDelete(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(await count(runner, 'spend_items', 'tenant_id = $1 AND id = $2', [s.tenantId, s.opexLine]), 1);
   await runner.query(`DELETE FROM tasks WHERE tenant_id = $1 AND id = $2`, [s.tenantId, extraTask]);
 
+  // Its exact title names it too, as in `write_financial_plan`.
+  preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'spend_items', ref: 'erp licence' });
+  assert.equal(preview.target.entity_id, s.opexLine);
+  await h.previews.rejectPreview(context, preview.preview_id);
   preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'spend_items', ref: 'OPX-9001' });
   assert.equal(preview.target.entity_id, s.opexLine);
   const executed = await h.previews.executePreview(context, preview.preview_id);
@@ -764,6 +773,10 @@ async function testBudgetLineRefusals(h: Harness, runner: QueryRunner, s: Seed) 
 
 async function testConnectionDelete(h: Harness, runner: QueryRunner, s: Seed) {
   const context = ctx(runner, s, 'infraMember');
+  // The bindings flag belongs to interfaces: on another family it is refused, no preview made.
+  assert.match(await refusal(() => h.previews.createPreview(context, 'delete_record', {
+    entity_type: 'connections', ref: 'CON-1', delete_related_bindings: true,
+  })), /interfaces only/);
   const preview = await h.previews.createPreview(context, 'delete_record', { entity_type: 'connections', ref: 'CON-1' });
   assert.equal(preview.status, 'pending');
   assert.equal(preview.target.entity_type, 'connections');

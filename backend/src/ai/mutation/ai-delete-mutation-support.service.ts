@@ -387,10 +387,16 @@ export class AiDeleteMutationSupportService {
     const nature: BudgetNature = entityType === 'spend_items' ? 'opex' : 'capex';
     const normalized = String(ref ?? '').trim();
     if (!normalized) throw new BadRequestException('Budget line reference is required.');
-    const parsed = parseItemRef(normalized, nature === 'opex' ? 'spend' : 'capex');
+    // A name, or a bare number, names no line number (as `write_financial_plan`): it matches the title.
+    let parsed: ReturnType<typeof parseItemRef> | null = null;
+    try {
+      parsed = parseItemRef(normalized, nature === 'opex' ? 'spend' : 'capex');
+    } catch {
+      parsed = null;
+    }
     type Row = { id: string; product_name: string | null; item_number: number | null; updated_at: Date | string | null };
     let rows: Row[];
-    if (parsed.type === 'uuid') {
+    if (parsed?.type === 'uuid') {
       rows = await context.manager.query(
         `SELECT id, product_name, item_number, updated_at
            FROM spend_items
@@ -399,7 +405,9 @@ export class AiDeleteMutationSupportService {
         [context.tenantId, parsed.value],
       );
     } else {
-      const numbers = this.spendLineNumbers(nature, parsed.prefix, parsed.value);
+      const numbers = parsed?.type === 'item_number' && parsed.prefix
+        ? this.spendLineNumbers(nature, parsed.prefix, parsed.value)
+        : { itemNumber: -1, legacyNumber: null };
       rows = await context.manager.query(
         `SELECT id, product_name, item_number, updated_at
            FROM spend_items
@@ -411,7 +419,7 @@ export class AiDeleteMutationSupportService {
       );
     }
     if (rows.length === 0) throw new NotFoundException(`No ${entityType === 'spend_items' ? 'OPEX' : 'CAPEX'} line found matching "${normalized}".`);
-    const exact = parsed.type === 'uuid'
+    const exact = parsed?.type === 'uuid'
       ? rows
       : rows.filter((row) => String(row.product_name ?? '').toLowerCase() === normalized.toLowerCase());
     const matches = exact.length > 0 ? exact : rows;
@@ -456,14 +464,12 @@ export class AiDeleteMutationSupportService {
     const objectType = TASK_OBJECT_TYPE[entityType];
     const [row] = await context.manager.query(
       `SELECT
-         (SELECT count(*)::int FROM (
-            SELECT v.id
-              FROM spend_versions v
-              JOIN spend_amounts a ON a.tenant_id = v.tenant_id AND a.version_id = v.id
-             WHERE v.tenant_id = $1 AND v.spend_item_id = $2
-               AND (COALESCE(a.planned, 0) <> 0 OR COALESCE(a.committed, 0) <> 0 OR COALESCE(a.forecast, 0) <> 0
-                 OR COALESCE(a.actual, 0) <> 0 OR COALESCE(a.expected_landing, 0) <> 0)
-          ) x) AS amount_versions,
+         (SELECT count(DISTINCT v.id)::int
+            FROM spend_versions v
+            JOIN spend_amounts a ON a.tenant_id = v.tenant_id AND a.version_id = v.id
+           WHERE v.tenant_id = $1 AND v.spend_item_id = $2
+             AND (COALESCE(a.planned, 0) <> 0 OR COALESCE(a.committed, 0) <> 0 OR COALESCE(a.forecast, 0) <> 0
+               OR COALESCE(a.actual, 0) <> 0 OR COALESCE(a.expected_landing, 0) <> 0)) AS amount_versions,
          (SELECT count(DISTINCT v.budget_year)::int
             FROM spend_versions v
             JOIN spend_amounts a ON a.tenant_id = v.tenant_id AND a.version_id = v.id

@@ -212,6 +212,8 @@ function testToolRequirements() {
     { resource: 'infrastructure', level: 'member' },
     { resource: 'applications', level: 'admin' },
   ]);
+  // The unit interface delete takes the integrated documents too: no lower than the list's bulk.
+  assert.deepEqual(routeGuard([InterfacesController, 'delete']), { resource: 'applications', level: 'admin' });
   console.log('  tool requirements: OK');
 }
 
