@@ -1,10 +1,12 @@
+# KANAP on-premise: the API and the web server run the published images of one version.
+# The version is the one of this checkout. KANAP_VERSION in ../.env runs another published
+# version instead (an update, a rollback). Between two versions, `main` still names the latest
+# published version: to run the code of `main`, build it yourself with compose.onprem.build.yml
+# (docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml build).
+
 services:
   api:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
-      # The runtime stage: compiled code and production dependencies only.
-      target: runtime
+    image: ghcr.io/kanap-hq/kanap-api:${KANAP_VERSION:-26.10.7}
     env_file: ../.env
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -51,11 +53,7 @@ services:
     #                 under PostgreSQL's max_connections minus about 15; the API warns at start.
 
   web:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-/api}
+    image: ghcr.io/kanap-hq/kanap-web:${KANAP_VERSION:-26.10.7}
     depends_on:
       - api
     ports:
@@ -88,3 +86,21 @@ services:
       - SETGID
       - SETUID
       - NET_BIND_SERVICE
+
+  # Maintenance commands (TypeORM CLI, scripts), never started by `up`. The image is the full
+  # tree of the same version; the command given to `run` replaces its default start-up command:
+  #   docker compose -f infra/compose.onprem.yml run --rm tools npm run typeorm -- migration:show
+  tools:
+    profiles: ["tools"]
+    image: ghcr.io/kanap-hq/kanap-api-tools:${KANAP_VERSION:-26.10.7}
+    env_file: ../.env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./certs:/etc/kanap/certs:ro
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 1024
+    cap_drop:
+      - ALL

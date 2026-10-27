@@ -1,16 +1,16 @@
-# ${VAR} interpolation in this file (e.g. web build.args.VITE_API_URL)
-# comes from the Compose project env file passed on the command line:
+# The images are the published ones: ghcr.io/kanap-hq/kanap-api, kanap-web and kanap-marketing.
+# ${VAR} interpolation in this file comes from the Compose project env file passed on the
+# command line:
 #   docker compose --env-file backend/.env.prod -f infra/compose.prod.yml ...
-# (a top-level env_file: key is not part of the Compose spec). The api
-# service still loads backend/.env.prod at runtime via its own env_file.
+# (a top-level env_file: key is not part of the Compose spec). The api and web services still
+# load their own env files at runtime via env_file.
+# KANAP_VERSION (default: the version of this checkout) names the version of the three images.
+# KANAP_MARKETING_VERSION overrides it for the public site, which is also published from main
+# between two versions: KANAP_MARKETING_VERSION=main-<short sha>.
 
 services:
   api:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
-      # The runtime stage: compiled code and production dependencies only.
-      target: runtime
+    image: ghcr.io/kanap-hq/kanap-api:${KANAP_VERSION:-26.10.7}
     env_file: ../backend/.env.prod
     environment:
       INTEGRATED_DOCS_AUTO_ROLLOUT: ${INTEGRATED_DOCS_AUTO_ROLLOUT:-if-needed}
@@ -55,11 +55,7 @@ services:
     # keep 1 there. See doc/architecture.md, "Several API processes".
 
   web:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-/api}
+    image: ghcr.io/kanap-hq/kanap-web:${KANAP_VERSION:-26.10.7}
     env_file: ../frontend/.env.prod
     depends_on:
       - api
@@ -95,9 +91,7 @@ services:
       - NET_BIND_SERVICE
 
   marketing:
-    build:
-      context: ../marketing
-      dockerfile: Dockerfile
+    image: ghcr.io/kanap-hq/kanap-marketing:${KANAP_MARKETING_VERSION:-${KANAP_VERSION:-26.10.7}}
     ports:
       - "127.0.0.1:8082:80"
     restart: unless-stopped

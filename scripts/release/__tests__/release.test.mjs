@@ -10,8 +10,8 @@ import path from 'node:path';
 import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
-  curatedStaleWarning, githubRepoOf, hasImagesSection, imagesSection, imagesToPromote, isImageTag, parseDigests,
-  pickPromotionRun, runIdFromDispatch,
+  composeVersions, curatedStaleWarning, githubRepoOf, hasImagesSection, imagesSection, imagesToPromote, isImageTag,
+  parseDigests, pickPromotionRun, runIdFromDispatch, setComposeVersion,
 } from '../release.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -96,7 +96,22 @@ function writeJson(file, data) {
   writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
 }
 
+const COMPOSE_FILES = ['infra/compose.onprem.yml', 'infra/compose.qa.yml', 'infra/compose.prod.yml'];
+const composeText = (version, marketing = true) => [
+  'services:',
+  '  api:',
+  `    image: ghcr.io/kanap-hq/kanap-api:\${KANAP_VERSION:-${version}}`,
+  '  web:',
+  `    image: ghcr.io/kanap-hq/kanap-web:\${KANAP_VERSION:-${version}}`,
+  ...(marketing ? ['  marketing:', `    image: ghcr.io/kanap-hq/kanap-marketing:\${KANAP_MARKETING_VERSION:-\${KANAP_VERSION:-${version}}}`] : []),
+  '',
+].join('\n');
+
 function setVersion(dir, version) {
+  for (const file of COMPOSE_FILES) {
+    mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+    writeFileSync(path.join(dir, file), composeText(version));
+  }
   for (const folder of ['backend', 'frontend']) {
     writeJson(path.join(dir, folder, 'package.json'), { name: `kanap-${folder}`, version, license: 'AGPL-3.0-only' });
     writeJson(path.join(dir, folder, 'package-lock.json'), {
@@ -191,6 +206,26 @@ function fixture({ tags = {}, stable = null, workflow = false } = {}) {
     remote: (ref) => spawnSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { cwd: bare, encoding: 'utf8' }).stdout.trim(),
   };
 }
+
+describe('compose versions', () => {
+  it('reads every default, the nested marketing one included', () => {
+    assert.deepEqual(composeVersions(composeText('26.10.7')), ['26.10.7', '26.10.7', '26.10.7']);
+    assert.deepEqual(composeVersions('image: x:${KANAP_MARKETING_VERSION:-main-abc1234}\n'), []);
+  });
+
+  it('sets every default, nested marketing included, and nothing else', () => {
+    const before = `# KANAP_VERSION=26.10.7 in a comment stays\nports: ["8080:8080"]\n${composeText('26.10.7')}`;
+    const after = setComposeVersion(before, '26.11.1', 'infra/compose.qa.yml');
+    assert.equal(after, before.replaceAll('${KANAP_VERSION:-26.10.7}', '${KANAP_VERSION:-26.11.1}'));
+    assert.match(after, /kanap-marketing:\$\{KANAP_MARKETING_VERSION:-\$\{KANAP_VERSION:-26\.11\.1\}\}/);
+    assert.equal(setComposeVersion(after, '26.11.1'), after, 'a second run changes nothing');
+  });
+
+  it('fails on a file without any default, naming it', () => {
+    assert.throws(() => setComposeVersion('image: ghcr.io/kanap-hq/kanap-api:26.10.7\n', '26.11.1', 'infra/compose.prod.yml'),
+      /infra\/compose\.prod\.yml has no \$\{KANAP_VERSION:-<version>\} default to set to 26\.11\.1/);
+  });
+});
 
 describe('publish', () => {
   it('prints the tag on the merge commit, the release and the stable push under --dry-run', () => {
@@ -353,6 +388,17 @@ describe('publish', () => {
     assert.match(output, /backend\/package\.json is at 0\.1\.0 in [0-9a-f]+, not 26\.10\.1/);
   });
 
+  it('refuses a release commit whose compose file has another version', () => {
+    const repo = fixture();
+    const seed = path.join(repo.base, 'seed');
+    const stale = commit(seed, 'Compose left at the old version (#4)', { 'infra/compose.qa.yml': composeText('26.10.0') });
+    git(seed, 'push', '-q', repo.bare, 'main');
+    repo.answer({ merged: [{ number: 4, title: 'Release 26.10.1', mergeCommit: { oid: stale } }] });
+    const { status, output } = repo.run('publish', '26.10.1', '--dry-run');
+    assert.equal(status, 2, output);
+    assert.match(output, /infra\/compose\.qa\.yml is at 26\.10\.0 in [0-9a-f]+, not 26\.10\.1/);
+  });
+
   it('never moves a tag that points at another commit', () => {
     const repo = fixture({ tags: { 'v26.10.1': 'second' } });
     const { status, output } = repo.run('publish', '26.10.1', '--dry-run');
@@ -398,6 +444,9 @@ describe('prepare', () => {
     assert.match(output, /would run: \(cd \S+ && git worktree add \S+kanap-release\/v26\.10\.2 -b release\/v26\.10\.2 origin\/main\)/);
     assert.match(output, /would run: \(cd \S+\/v26\.10\.2\/backend && npm version 26\.10\.2 --no-git-tag-version\)/);
     assert.match(output, /would run: \(cd \S+\/v26\.10\.2\/frontend && npm version 26\.10\.2 --no-git-tag-version\)/);
+    for (const file of COMPOSE_FILES) {
+      assert.match(output, new RegExp(`would set the KANAP_VERSION default of ${file.replaceAll('.', '\\.')} \\(3 occurrence\\(s\\), now 26\\.10\\.1\\) to 26\\.10\\.2`));
+    }
     assert.match(output, /- Migrations: run automatically at start \(2000-lists\)\./);
     assert.match(output, /### #2 Faster lists\n\n- Budget lists open faster\.\n/);
     assert.match(output, /## Without a release notes section\n\n### #3 Release 26\.10\.1\n\n_No release notes section\._/);
@@ -411,6 +460,9 @@ describe('prepare', () => {
     const first = repo.run('prepare', '26.10.2', '--since', 'ignored');
     assert.equal(first.status, 0, first.output);
     assert.match(first.output, /Notice: --since is ignored/);
+    for (const file of COMPOSE_FILES) {
+      assert.deepEqual(composeVersions(readFileSync(path.join(dir, file), 'utf8')), ['26.10.2', '26.10.2', '26.10.2'], file);
+    }
     for (const folder of ['backend', 'frontend']) {
       assert.equal(JSON.parse(readFileSync(path.join(dir, folder, 'package.json'), 'utf8')).version, '26.10.2');
       assert.equal(JSON.parse(readFileSync(path.join(dir, folder, 'package-lock.json'), 'utf8')).version, '26.10.2');
@@ -434,6 +486,9 @@ describe('prepare', () => {
     assert.match(done.output, /CHANGELOG\.md already has the 26\.10\.2 entry: kept\./);
     assert.equal(git(repo.bare, 'log', '-1', '--format=%s', 'release/v26.10.2'), 'Release 26.10.2');
     assert.equal(JSON.parse(git(repo.bare, 'show', 'release/v26.10.2:frontend/package-lock.json')).packages[''].version, '26.10.2');
+    for (const file of COMPOSE_FILES) {
+      assert.deepEqual(composeVersions(git(repo.bare, 'show', `release/v26.10.2:${file}`)), ['26.10.2', '26.10.2', '26.10.2'], file);
+    }
     assert.match(repo.calls(), /^pr create --repo kanap-hq\/KANAP --base main --head release\/v26\.10\.2 --title Release 26\.10\.2 --body-file \S+$/m);
     assert.equal(repo.queued(), 'queue-stack 9\n');
     assert.match(done.output, /Release pull request: https:\/\/github\.com\/kanap-hq\/KANAP\/pull\/9/);

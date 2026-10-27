@@ -5,7 +5,8 @@
 //   node scripts/release/release.mjs publish <version> [--dry-run] [--no-sbom] [--no-images]
 //
 // prepare: in a worktree outside the repository (../kanap-release/v<version>, branch
-// release/v<version> from origin/main), sets both package.json files to the version, inserts an
+// release/v<version> from origin/main), sets both package.json files to the version and the
+// default of ${KANAP_VERSION:-...} in the three server compose files (infra/compose.*.yml), inserts an
 // empty CHANGELOG.md entry and writes a draft (../kanap-release/v<version>-release-notes.md) with
 // the "Release notes" section of every pull request merged since the previous version. --since
 // gives the starting point of the first release, when no version tag exists yet. Once the entry
@@ -14,7 +15,8 @@
 // backend/src/technologies/catalog/curated/ whose oldest checked_on is more than 120 days
 // old prints a warning. The warning never stops the command.
 //
-// publish: once the release pull request has merged, tags its merge commit v<version>, waits
+// publish: once the release pull request has merged, checks that the package.json files and the
+// compose files of its merge commit carry the version, tags that commit v<version>, waits
 // for the CI to publish the images of the tag (.github/workflows/release-images.yml) and checks
 // that anyone can pull them, creates the GitHub release from the CHANGELOG.md entry plus the
 // image digests, attaches the component inventory (scripts/sbom/generate.mjs), points the
@@ -48,9 +50,14 @@ import {
 const DEFAULT_REPO = 'kanap-hq/KANAP';
 let repo = DEFAULT_REPO;
 const PACKAGE_FOLDERS = ['backend', 'frontend'];
+// The compose files that run the published images. Each names its version once or twice, as the
+// default of ${KANAP_VERSION:-<version>} (the marketing image nests it in KANAP_MARKETING_VERSION).
+const COMPOSE_FILES = ['infra/compose.onprem.yml', 'infra/compose.qa.yml', 'infra/compose.prod.yml'];
+const COMPOSE_DEFAULT = /\$\{KANAP_VERSION:-([^}]*)\}/g;
 const RELEASE_FILES = [
   'backend/package.json', 'backend/package-lock.json',
   'frontend/package.json', 'frontend/package-lock.json',
+  ...COMPOSE_FILES,
   'CHANGELOG.md',
 ];
 const USAGE = [
@@ -239,6 +246,20 @@ export function pickPromotionRun(runs, version, knownIds) {
   return (runs ?? [])
     .filter((run) => run.displayTitle === `promote ${version}` && !known.has(Number(run.databaseId)))
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0] ?? null;
+}
+
+// The versions a compose file names as the default of KANAP_VERSION, one per occurrence.
+export function composeVersions(text) {
+  return [...text.matchAll(COMPOSE_DEFAULT)].map((match) => match[1]);
+}
+
+// The text of a compose file with every ${KANAP_VERSION:-<old>} default set to the version. A file
+// without any occurrence fails: it was rewritten by hand and would keep the old version unnoticed.
+export function setComposeVersion(text, version, file = 'compose file') {
+  if (!composeVersions(text).length) {
+    throw new InputError(`${file} has no \${KANAP_VERSION:-<version>} default to set to ${version}: it must name the version of its images that way`);
+  }
+  return text.replace(COMPOSE_DEFAULT, () => `\${KANAP_VERSION:-${version}}`);
 }
 
 function parseArgs(argv) {
@@ -432,6 +453,18 @@ function prepare(root, options) {
         if (found.some((value) => value !== version)) {
           throw new Error(`${folder}: npm version left package.json / package-lock.json at ${found.join(' / ')}, expected ${version}`);
         }
+      }
+    }
+    for (const file of COMPOSE_FILES) {
+      if (dryRun) {
+        // The worktree does not exist yet: preview the replacements on this checkout's copy.
+        const text = readFileSync(path.join(root, file), 'utf8');
+        const found = composeVersions(text);
+        setComposeVersion(text, version, file);
+        console.log(`  would set the KANAP_VERSION default of ${file} (${found.length} occurrence(s), now ${[...new Set(found)].join(' / ')}) to ${version}`);
+      } else {
+        const composeFile = path.join(dir, file);
+        writeText(composeFile, setComposeVersion(readFileSync(composeFile, 'utf8'), version, file));
       }
     }
     const migrations = read('git', ['diff', '--name-only', '--diff-filter=A', `${base}..origin/main`, '--', 'backend/src/migrations'], root)
@@ -705,6 +738,14 @@ function publish(root, options) {
     const file = `${folder}/package.json`;
     const found = JSON.parse(showFile(root, sha, file)).version;
     if (found !== version) throw new InputError(`${file} is at ${found} in ${sha}, not ${version}`);
+  }
+  // The compose files pull the images by version. --no-images is for a version older than them.
+  if (options.images) {
+    for (const file of COMPOSE_FILES) {
+      const found = [...new Set(composeVersions(showFile(root, sha, file)))];
+      if (!found.length) throw new InputError(`${file} has no \${KANAP_VERSION:-<version>} default in ${sha}`);
+      if (found.length !== 1 || found[0] !== version) throw new InputError(`${file} is at ${found.join(' / ')} in ${sha}, not ${version}`);
+    }
   }
   const entry = extractEntry(showFile(root, sha, 'CHANGELOG.md'), version);
   if (!entry) throw new InputError(`CHANGELOG.md has no ${version} entry in ${sha}`);
