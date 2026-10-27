@@ -254,6 +254,15 @@ export class AiPolicyService {
     }
   }
 
+  /**
+   * The rights, among `resources`, the user holds at reader level, without the surface checks: the
+   * pages of the application a read tool may link to (`ai-page-urls.ts`).
+   */
+  async readableResources(context: AiExecutionContext, resources: string[], manager: EntityManager): Promise<Set<string>> {
+    const state = await this.getEffectivePermissionStateOrNull(context.userId, manager);
+    return new Set(resources.filter((resource) => this.hasPermission(state, resource, 'reader')));
+  }
+
   async getCapabilities(
     context: AiPolicyAccessContext,
     manager: EntityManager,

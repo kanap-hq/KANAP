@@ -31,8 +31,10 @@ type Suggestion = {
 };
 
 type ContractRelationsData = {
-  applications: ApplicationRelationRow[];
-  assets: AssetRelationRow[];
+  /** Null when the caller cannot read the applications. */
+  applications: ApplicationRelationRow[] | null;
+  /** Null when the caller cannot read the infrastructure. */
+  assets: AssetRelationRow[] | null;
   /** Null when the caller cannot read the infrastructure. */
   technologies: TechnologyRelationRow[] | null;
   suggestions: Suggestion[];
@@ -50,7 +52,8 @@ const SUGGESTION_KIND: Record<Suggestion['type'], 'applications' | 'assets'> = {
  * The Relations tab of a contract: applications, assets and technologies in one round trip
  * (`GET /contracts/:id/relations`), then suggestions, contacts, and links and files.
  * A row opens its record. Editors add from a server search and unlink on hover, each saved at once.
- * Technologies are absent when the caller cannot read the infrastructure (`technologies: null`).
+ * A family whose module the caller does not read is absent (`null`): the applications without the
+ * applications right, the assets and technologies without the infrastructure right.
  * A contract opened through one of its lines (`closedDocumentsCount` above 0) shows the number of
  * its attachments and documentary links instead of them: those detail other companies (spec §5.4).
  */

@@ -140,3 +140,16 @@ describe('isKanapImageSource', () => {
     expect(isKanapImageSource(src)).toBe(false);
   });
 });
+
+describe('MarkdownContent links', () => {
+  it('keeps a relative link to a page of the application', () => {
+    // How the assistant cites a record without a business reference (its `page_url`).
+    renderMarkdown('Renew [SAP Maintenance & Support](/ops/contracts/11111111-1111-4111-8111-111111111111) before May.', {
+      externalImages: 'link',
+    });
+
+    const link = screen.getByRole('link', { name: 'SAP Maintenance & Support' });
+    expect(link).toHaveAttribute('href', '/ops/contracts/11111111-1111-4111-8111-111111111111');
+    expect(screen.queryByText(/11111111-1111/)).toBeNull();
+  });
+});

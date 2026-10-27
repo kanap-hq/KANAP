@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
-import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
+import { applicationParticipantCondition, ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
 import { assertLinesEditable, DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE, isLimitedTransaction } from '../../data-access/line-write-checks';
 import { auditedLinkSet, hiddenLineCount, type HiddenLineOwner } from '../../data-access/hidden-links';
@@ -83,7 +83,8 @@ export async function assertProjectVisible(
  * (3) `loadOwner`, then the owner row locked FOR NO KEY UPDATE (a budget line read but not
  * modifiable: 403). (5) A budget line's nature,
  * or 400. (6) A contract's existence. (7) A project's visibility. An application, an asset, a
- * technology or a business process exists in the tenant, or 400 with `notFound`. (8) The stored set
+ * technology or a business process exists in the tenant, or 400 with `notFound`; with
+ * `applicationScope`, an application outside the person's participation is 403. (8) The stored set
  * (a budget line: the links of that nature only). (9) Linking what is linked, or unlinking
  * what is not, changes nothing and writes no audit row. Otherwise one INSERT or DELETE and
  * one audit row: `recordId` the owner, before and after the sorted ids.
@@ -109,6 +110,8 @@ export async function setOwnedLink(args: {
   ownerNotFound: string;
   link: OwnedRelationLink;
   projectScope?: ParticipationAccessScope;
+  /** A Business Contributor's applications: linked and unlinked inside their participation only. */
+  applicationScope?: ParticipationAccessScope;
   audit: OwnedLinkAudit;
 }): Promise<{ ok: true; changed: boolean }> {
   if (!args.allowed) throw new ForbiddenException('You cannot read this module.');
@@ -149,6 +152,13 @@ export async function setOwnedLink(args: {
       [tenantId, id],
     );
     if (rows.length === 0) throw new BadRequestException(args.link.notFound);
+    if (args.kind === 'applications' && args.applicationScope) {
+      const inScope: unknown[] = await args.manager.query(
+        `SELECT 1 FROM applications a WHERE a.tenant_id = $1 AND a.id = $2 AND ${applicationParticipantCondition('a', '$3')}`,
+        [tenantId, id, args.applicationScope.userId],
+      );
+      if (inScope.length === 0) throw new ForbiddenException('You can only link applications you take part in.');
+    }
   }
 
   const scopeSql = nature ? linkedLineOf('l.tenant_id', `l.${args.link.targetColumn}`, nature) : '';

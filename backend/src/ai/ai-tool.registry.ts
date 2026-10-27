@@ -22,6 +22,8 @@ import { AiAdapterConfig } from './control-plane/providers/adapter-config.entity
 import { parseCredentialRef } from './control-plane/providers/adapter-config.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { dataAccessRefusalMessage } from '../common/filters/database-error.mapping';
+import { resolveConfiguredAppBaseUrl } from '../common/url';
+import { AI_PAGE_URL_NOTE, withAiPageUrls } from './ai-page-urls';
 import {
   AI_CONTEXT_ENTITY_TYPES,
   AI_QUERY_ENTITY_TYPES,
@@ -57,7 +59,7 @@ const SearchAllInputSchema = z.object({
 
 const GetEntityContextInputSchema = z.object({
   entity_type: AiContextEntityTypeSchema.describe(`One of ${CONTEXT_ENTITY_TYPE_SUMMARY}.`),
-  entity_id: z.string().trim().min(1).describe('The UUID or reference of the record, such as APP-4, AST-9, PRJ-12, REQ-7, T-42 or TEC-3.'),
+  entity_id: z.string().trim().min(1).describe('The UUID or reference of the record, such as APP-4, AST-9, PRJ-12, REQ-7, T-42 or TEC-3; a contract by its UUID.'),
 });
 
 const GetEntityDetailInputSchema = z.object({
@@ -310,12 +312,12 @@ export class AiToolRegistry {
         {
           name: 'search_all',
           category: 'discovery',
-          description: 'Searches the readable KANAP records of every family (applications, assets, projects, requests, tasks, documents, budget lines, contracts and more) by text or by reference such as PRJ-12, and returns the matches with their reference, name and status. Suited to finding a record whose family or exact name is unknown; query_entities lists, filters and counts one family. When `complete` is true and `truncated` false, the results hold every match. `failed_entity_types` lists the families that could not be searched: the results are then partial, and query_entities on those families gives the authoritative answer.',
+          description: 'Searches the readable KANAP records of every family (applications, assets, projects, requests, tasks, documents, budget lines, contracts and more) by text or by reference such as PRJ-12, and returns the matches with their reference, name and status. Suited to finding a record whose family or exact name is unknown; query_entities lists, filters and counts one family. When `complete` is true and `truncated` false, the results hold every match. `failed_entity_types` lists the families that could not be searched: the results are then partial, and query_entities on those families gives the authoritative answer.' + ` ${AI_PAGE_URL_NOTE}`,
           inputSchema: SearchAllInputSchema,
           inputSummary: fieldDescriptions(SearchAllInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
-          execute: (context, input) => this.entityTools.searchAll(context, input),
+          execute: async (context, input) => this.withPageUrls(context, await this.entityTools.searchAll(context, input)),
         },
       ],
       [
@@ -344,14 +346,14 @@ export class AiToolRegistry {
         {
           name: 'query_entities',
           category: 'authoritative',
-          description: 'Lists the records of one entity family with server-side filters, sort and pagination, and returns the exact `total`. Each item carries its created_at and updated_at. `filters_ignored` lists the filters the server could not apply: the items are then not the requested set. `sort` is the order the items are in. `sort_ignored` names a requested sort field that is not supported: the items are then in the default order, and `sortable_fields` lists the fields a new query can sort by, which a question about order (latest, oldest, largest, first) needs. Items with the same sort value come in no particular order: when the first items share it (for example the same created_at), they tie, which a page of one item cannot show. A limit above the family\'s maximum is reduced and named in `limit_capped`. On budget lines and contracts, `amounts_currency` and `amounts_currency_note` give the currency of the returned amounts; an item\'s own `currency` is the one its amounts were entered in. On technologies, a question about what is out of support filters `support_status` on `out_of_support` (past every end of support, as the End of support report says); `extended_support` is past the standard end only, and `end_of_standard_support` and `end_of_support` date the first and the last end; each item\'s `versions_in_use` names the versions concerned. On vulnerabilities, an item is a CVE on one version of a technology (`ref` is the CVE id, so one CVE can come once per technology version); without a `state` or `alerts` filter, the list and the aggregates keep, as the vulnerabilities page, the rows to review (`state` to_review) that alert (`alerts` true), and `all` on either lifts that default; the counts per asset and per application keep the same rows; `servers_reached`, `applications_reached` and the `asset` and `application` filters follow direct links only; `page_url` opens the vulnerabilities page on the item. On assets and applications, each item carries `open_vulnerabilities` and `severe_vulnerabilities`, the CVE to review that alert, by direct links (null when retired, out of service or with the feed off), and the `vulnerabilities` filter takes severe, any or none. To find the critical applications touched by an exploited CVE, query applications filtered on the top criticality and `vulnerabilities` severe, then query vulnerabilities filtered on their `application` references and `exploited` true.',
+          description: 'Lists the records of one entity family with server-side filters, sort and pagination, and returns the exact `total`. Each item carries its created_at and updated_at. `filters_ignored` lists the filters the server could not apply: the items are then not the requested set. `sort` is the order the items are in. `sort_ignored` names a requested sort field that is not supported: the items are then in the default order, and `sortable_fields` lists the fields a new query can sort by, which a question about order (latest, oldest, largest, first) needs. Items with the same sort value come in no particular order: when the first items share it (for example the same created_at), they tie, which a page of one item cannot show. A limit above the family\'s maximum is reduced and named in `limit_capped`. On budget lines and contracts, `amounts_currency` and `amounts_currency_note` give the currency of the returned amounts; an item\'s own `currency` is the one its amounts were entered in. On technologies, a question about what is out of support filters `support_status` on `out_of_support` (past every end of support, as the End of support report says); `extended_support` is past the standard end only, and `end_of_standard_support` and `end_of_support` date the first and the last end; each item\'s `versions_in_use` names the versions concerned. On vulnerabilities, an item is a CVE on one version of a technology (`ref` is the CVE id, so one CVE can come once per technology version); without a `state` or `alerts` filter, the list and the aggregates keep, as the vulnerabilities page, the rows to review (`state` to_review) that alert (`alerts` true), and `all` on either lifts that default; the counts per asset and per application keep the same rows; `servers_reached`, `applications_reached` and the `asset` and `application` filters follow direct links only; `page_url` opens the vulnerabilities page on the item. On assets and applications, each item carries `open_vulnerabilities` and `severe_vulnerabilities`, the CVE to review that alert, by direct links (null when retired, out of service or with the feed off), and the `vulnerabilities` filter takes severe, any or none. To find the critical applications touched by an exploited CVE, query applications filtered on the top criticality and `vulnerabilities` severe, then query vulnerabilities filtered on their `application` references and `exploited` true. On contracts, each item carries its current term as the Contracts list shows it: `term_state` (to_decide, in_progress, renewed, ending, expired), `next_due_date`, `cancellation_deadline`, and `covered_applications`, the applications it covers (a Business Contributor\'s: those they take part in; null when the user cannot read applications, which is not "none"); the contracts to decide within the workspace\'s decision window (`describe_entity_filters` gives it), with the applications they cover, are one query filtered on `term_state` to_decide, and the `application` filter (APP-8) lists the contracts that cover an application.' + ` ${AI_PAGE_URL_NOTE}`,
           inputSchema: QueryEntitiesInputSchema,
           inputSummary: fieldDescriptions(QueryEntitiesInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: async (context, input) => {
             await this.policy.assertEntityTypeReadAccess(context, input.entity_type, context.manager);
-            return this.queryExecutor.execute(context, input);
+            return this.withPageUrls(context, await this.queryExecutor.execute(context, input));
           },
         },
       ],
@@ -415,14 +417,14 @@ export class AiToolRegistry {
         {
           name: 'get_entity_detail',
           category: 'inspection',
-          description: 'Returns one record with all its scalar fields and its attachment metadata, by UUID or reference (APP-4, PRJ-12, BL-5...). query_entities suits lists; this tool gives the full detail of one known record. A vulnerability read by its CVE id is that CVE\'s first row (exploited, then most severe), and `rows` lists every technology version the CVE concerns in the workspace. On budget lines and contracts, `amounts_currency_note` says which amounts are in the reporting currency and which in the record\'s own currency.',
+          description: 'Returns one record with all its scalar fields and its attachment metadata, by UUID or reference (APP-4, PRJ-12, BL-5...). query_entities suits lists; this tool gives the full detail of one known record. A vulnerability read by its CVE id is that CVE\'s first row (exploited, then most severe), and `rows` lists every technology version the CVE concerns in the workspace. On budget lines and contracts, `amounts_currency_note` says which amounts are in the reporting currency and which in the record\'s own currency. A contract comes with its current term (`term_state`, `next_due_date`, `cancellation_deadline`) and what it covers: `linked_applications` (a Business Contributor\'s: those they take part in), `linked_assets`, `linked_technologies`, its budget lines (`linked_spend_items`, `linked_capex_items`) and `budget_lines_outside_access`, the linked lines outside the user\'s data access; a family the user cannot read is null, which is not "none".' + ` ${AI_PAGE_URL_NOTE}`,
           inputSchema: GetEntityDetailInputSchema,
           inputSummary: fieldDescriptions(GetEntityDetailInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
           execute: async (context, input): Promise<AiEntityDetailDto> => {
             await this.policy.assertEntityTypeReadAccess(context, input.entity_type, context.manager);
-            return this.queryExecutor.executeDetail(context, input);
+            return this.withPageUrls(context, await this.queryExecutor.executeDetail(context, input));
           },
         },
       ],
@@ -431,12 +433,12 @@ export class AiToolRegistry {
         {
           name: 'get_entity_context',
           category: 'inspection',
-          description: 'Returns one application, asset, project, request, task or technology with the records linked to it, by UUID or reference (APP-4, AST-9, PRJ-12, REQ-7, T-42, TEC-3). Applications and assets come with their related applications or assets, linked projects and requests, and their technologies (an asset: installed on it or carried to it; an application: declared, or deduced from its servers, for a user who reads technologies); technologies with the servers they are installed on and the applications that declare them or are deduced from those servers (for a user who reads applications); projects with their source requests, tasks, dependencies, linked applications, assets and documents; requests with their resulting projects, dependencies, linked applications and assets; tasks with their project, converted request, linked applications and assets. Every record but a technology also lists the knowledge documents linked to it, and projects and tasks their recent activity. A group with a `total` lists at most 25 records; `truncated` is true when a group or the recent activity holds more entries than returned.',
+          description: 'Returns one application, asset, project, request, task, technology or contract with the records linked to it, by UUID or reference (APP-4, AST-9, PRJ-12, REQ-7, T-42, TEC-3; a contract by UUID). Applications and assets come with their related applications or assets, linked projects and requests, and their technologies (an asset: installed on it or carried to it; an application: declared, or deduced from its servers, for a user who reads technologies); technologies with the servers they are installed on and the applications that declare them or are deduced from those servers (for a user who reads applications); projects with their source requests, tasks, dependencies, linked applications, assets and documents; requests with their resulting projects, dependencies, linked applications and assets; tasks with their project, converted request, linked applications and assets; contracts with their current term and the applications, assets, technologies and budget lines they cover (a family that is empty or that the user cannot read is left out, so a missing family is not "none": get_entity_detail tells them apart). Every record but a technology or a contract also lists the knowledge documents linked to it, and projects and tasks their recent activity. A group with a `total` lists at most 25 records; `truncated` is true when a group or the recent activity holds more entries than returned.' + ` ${AI_PAGE_URL_NOTE}`,
           inputSchema: GetEntityContextInputSchema,
           inputSummary: fieldDescriptions(GetEntityContextInputSchema),
           surfaces: ['chat', 'mcp'],
           readOnly: true,
-          execute: (context, input) => this.entityTools.getEntityContext(context, input),
+          execute: async (context, input) => this.withPageUrls(context, await this.entityTools.getEntityContext(context, input)),
         },
       ],
       [
@@ -910,6 +912,22 @@ export class AiToolRegistry {
         description: definition.description,
         parameters: jsonSchema as Record<string, unknown>,
       };
+    });
+  }
+
+  /**
+   * `page_url` on the records of a read result (`ai-page-urls.ts`), for the pages the user may open.
+   * An MCP client is outside the application: its addresses are absolute when the server knows the
+   * workspace address (`resolveConfiguredAppBaseUrl`, as the links of the emails).
+   */
+  private async withPageUrls<T>(context: AiExecutionContextWithManager, result: T): Promise<T> {
+    return withAiPageUrls(result, {
+      readableResources: (resources) => this.policy.readableResources(context, resources, context.manager),
+      origin: async () => {
+        if (context.surface !== 'mcp') return null;
+        const [tenant]: Array<{ slug: string }> = await context.manager.query('SELECT slug FROM tenants WHERE id = $1', [context.tenantId]);
+        return resolveConfiguredAppBaseUrl(tenant?.slug ?? null);
+      },
     });
   }
 

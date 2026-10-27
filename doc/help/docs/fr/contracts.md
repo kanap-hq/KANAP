@@ -224,13 +224,13 @@ L'onglet Relations montre ce que couvre ce contrat : ses applications, actifs et
 
 | Section | Colonnes |
 |---|---|
-| **Applications** | Référence (`APP-3`), nom, cycle de vie, criticité business |
-| **Actifs** | Référence (`AST-12`), nom, type, environnement, statut |
+| **Applications** | Référence (`APP-3`), nom, cycle de vie, criticité business. Visible seulement si vous pouvez lire les applications. Un Business Contributor voit les applications auxquelles il participe |
+| **Actifs** | Référence (`AST-12`), nom, type, environnement, statut. Visible seulement si vous pouvez lire l'infrastructure |
 | **Technologies** | Référence (`TEC-5`), nom, famille, éditeur. Visible seulement si vous pouvez lire l'infrastructure |
 
 Une application ou un actif désactivé ou retiré reste affiché, son nom grisé. Les applications et les actifs alimentent l'onglet [Conformité](#conformite). Un actif dont le contrat de support est celui-ci, renseigné sur la fiche de l'actif, n'apparaît pas ici. Il compte quand même pour la conformité.
 
-**Ajouter et retirer des liens** (`contracts:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. La recherche propose les applications et les actifs que vous pouvez voir. Les technologies retirées ne sont pas proposées. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Lier une technologie demande aussi de pouvoir lire l'infrastructure. Les lecteurs voient les tableaux en lecture seule.
+**Ajouter et retirer des liens** (`contracts:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. La recherche propose les applications et les actifs que vous pouvez voir. Les technologies retirées ne sont pas proposées. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Lier une application demande aussi de pouvoir lire les applications, et lier un actif ou une technologie de pouvoir lire l'infrastructure. Un Business Contributor lie et retire seulement les applications auxquelles il participe ; les autres applications du contrat restent liées. Les lecteurs voient les tableaux en lecture seule.
 
 **Apparentés** : les applications et les actifs du fournisseur du contrat qui ne sont pas encore liés, avec la raison « même fournisseur ». Un actif appartient au fournisseur par son fournisseur de support. Cliquez sur **Lier** pour ajouter la suggestion à sa section. Les suggestions montrent :
 
@@ -288,7 +288,7 @@ L'encart affiche la date limite, les jours restants, la tâche et son assigné, 
 
 - **Renouveler** : le renouvellement est confirmé pour ce terme. La tâche est fermée, le contrat quitte **À décider** et revient dans le délai à la date limite du terme suivant
 - **Renégocier** : l'encart indique **Renégociation en cours** et la tâche reste ouverte jusqu'à la décision finale. Le contrat reste **À décider**
-- **Résilier** : l'encart affiche la date de fin à confirmer. KANAP propose la première fin que permet le préavis (« Préavis de 6 mois : la première fin possible est le 30 juin 2027. »). Vous pouvez choisir un autre jour, à partir d'aujourd'hui et du début du contrat. Un jour antérieur à la date proposée affiche un avertissement orange : le fournisseur doit l'accepter. L'encart liste les conséquences pour ce jour : l'engagement de l'année et de la suivante, les applications qui perdent ce contrat et les actifs qui perdent leur contrat de support. **Confirmer la résiliation** désactive la reconduction tacite, fixe la fin de validité à ce jour et ferme la tâche. Le contrat indique alors **Fin sans reconduction** et son engagement s'arrête ce jour-là
+- **Résilier** : l'encart affiche la date de fin à confirmer. KANAP propose la première fin que permet le préavis (« Préavis de 6 mois : la première fin possible est le 30 juin 2027. »). Vous pouvez choisir un autre jour, à partir d'aujourd'hui et du début du contrat. Un jour antérieur à la date proposée affiche un avertissement orange : le fournisseur doit l'accepter. L'encart liste les conséquences pour ce jour : l'engagement de l'année et de la suivante, les applications qui perdent ce contrat et les actifs qui perdent leur contrat de support, chacun si vous pouvez lire son module. **Confirmer la résiliation** désactive la reconduction tacite, fixe la fin de validité à ce jour et ferme la tâche. Le contrat indique alors **Fin sans reconduction** et son engagement s'arrête ce jour-là
 
 Pour un contrat sans reconduction, l'encart indique « Fin prévue le 31 mars 2027 · décision attendue » et propose deux actions :
 

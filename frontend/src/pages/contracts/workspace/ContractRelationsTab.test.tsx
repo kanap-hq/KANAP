@@ -41,8 +41,8 @@ type Suggestion = {
 };
 
 type Relations = {
-  applications: ApplicationRelationRow[];
-  assets: AssetRelationRow[];
+  applications: ApplicationRelationRow[] | null;
+  assets: AssetRelationRow[] | null;
   technologies: TechnologyRelationRow[] | null;
   suggestions: Suggestion[];
 };
@@ -196,7 +196,7 @@ describe('ContractRelationsTab', () => {
       if (url === '/contracts/c-1/relations/applications' && id === 'app-7') {
         current.suggestions = [];
         current.applications = [
-          ...current.applications,
+          ...(current.applications ?? []),
           { id: 'app-7', reference: 'APP-7', name: 'Payroll', lifecycle: 'active', business_criticality: 'high', status: 'enabled' },
         ];
       }
@@ -231,6 +231,15 @@ describe('ContractRelationsTab', () => {
     await screen.findByRole('region', { name: 'workspace.application.relations.sections.applications' });
     expect(screen.queryByRole('region', { name: 'workspace.application.relations.sections.technologies' })).toBeNull();
     expect(screen.getByRole('region', { name: 'workspace.application.relations.sections.assets' })).toBeTruthy();
+  });
+
+  it('leaves out the applications and the assets when the response is null', async () => {
+    renderTab(relations({ applications: null, assets: null, suggestions: [] }));
+    // The technologies section shows once the response is in.
+    await screen.findByRole('region', { name: 'workspace.application.relations.sections.technologies' });
+    expect(screen.queryByRole('region', { name: 'workspace.application.relations.sections.applications' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'workspace.application.relations.sections.assets' })).toBeNull();
+    expect(screen.queryByText('SAP S/4HANA')).toBeNull();
   });
 
   it('gives readers the tables and the navigation only', async () => {

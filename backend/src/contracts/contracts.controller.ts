@@ -1,5 +1,5 @@
 import { exportListQuery } from '../common/pagination';
-import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors, Delete } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ContractsService } from './contracts.service';
 import { Response } from 'express';
@@ -21,11 +21,20 @@ import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-ti
 import { assertContractBudgetRead, canReadContractBudget } from './contract-budget';
 import { canReadResource } from '../common/record-usages';
 import { resolveBusinessContributorScope } from '../auth/business-contributor-scope';
-import { contractRelationKindOrThrow } from './contract-relations';
+import { assertContractRelationRead, contractRelationKindOrThrow, contractRelationsAccess } from './contract-relations';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import type { ComplianceItemPatch } from './contract-compliance';
 import { ContractsDeleteService } from './contracts-delete.service';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
+
+/**
+ * The list's `covered_application` filter, for a reader of the applications only (a Business
+ * Contributor's matches the applications they take part in); undefined leaves it unapplied.
+ */
+async function coveredApplications(req: any): Promise<{ scope?: Awaited<ReturnType<typeof resolveBusinessContributorScope>> } | undefined> {
+  if (!canReadResource(req ?? {}, 'applications')) return undefined;
+  return { scope: await resolveBusinessContributorScope(req, 'applications') };
+}
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -40,24 +49,29 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get()
-  list(@Query() query: any, @Req() req: any) {
+  async list(@Query() query: any, @Req() req: any) {
     // `budget_year` and `budget_column` add the budget figures for a reader of the budget (contract-budget.ts).
-    return this.svc.list(query, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req) });
+    return this.svc.list(query, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req), coveredApplications: await coveredApplications(req) });
   }
 
   // The list's footer and quick filter counts, for the same search, filters and status scope.
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get('totals')
-  totals(@Query() query: any, @Req() req: any) {
-    return this.svc.totals(query, { manager: req?.queryRunner?.manager, tenantId: req?.tenant?.id, budgetAccess: canReadContractBudget(req) });
+  async totals(@Query() query: any, @Req() req: any) {
+    return this.svc.totals(query, {
+      manager: req?.queryRunner?.manager,
+      tenantId: req?.tenant?.id,
+      budgetAccess: canReadContractBudget(req),
+      coveredApplications: await coveredApplications(req),
+    });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get('ids')
-  listIds(@Query() query: any, @Req() req: any) {
-    return this.svc.listIds(query, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req) });
+  async listIds(@Query() query: any, @Req() req: any) {
+    return this.svc.listIds(query, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req), coveredApplications: await coveredApplications(req) });
   }
 
   // Picker search (`q`) and hydration of chosen values (`ids`); see common/lookup.
@@ -79,6 +93,7 @@ export class ContractsController {
     const { filename, content } = await this.svc.exportCsv(scope, {
       manager: req?.queryRunner?.manager,
       budgetAccess: canReadContractBudget(req),
+      coveredApplications: await coveredApplications(req),
       language,
       listQuery: exportListQuery(query),
     });
@@ -94,7 +109,11 @@ export class ContractsController {
   async exportComplianceRegister(@Query() query: any, @Res() res: Response, @Req() req: any) {
     const manager = req?.queryRunner?.manager;
     const language = await languageOf(manager, req.tenant.id, req.user?.sub ?? null, query?.language);
-    const { filename, content } = await this.svc.exportComplianceRegister(query, language, { manager, budgetAccess: canReadContractBudget(req) });
+    const { filename, content } = await this.svc.exportComplianceRegister(query, language, {
+      manager,
+      budgetAccess: canReadContractBudget(req),
+      coveredApplications: await coveredApplications(req),
+    });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(filename));
     res.send(content);
@@ -208,8 +227,9 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/relation-counts')
-  relationCounts(@Param('id') id: string, @Req() req: any) {
-    return this.svc.relationCounts(id, { manager: req?.queryRunner?.manager, technologies: canReadResource(req ?? {}, 'infrastructure') });
+  async relationCounts(@Param('id') id: string, @Req() req: any) {
+    // A family the caller does not read is not counted (null), as the Relations tab leaves it out.
+    return this.svc.relationCounts(id, { manager: req?.queryRunner?.manager, ...(await contractRelationsAccess(req)) });
   }
 
   @UseGuards(PermissionGuard)
@@ -252,24 +272,38 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/applications')
-  listApplications(@Param('id') id: string, @Req() req: any) { return this.svc.listApplications(id, { manager: req?.queryRunner?.manager }); }
+  async listApplications(@Param('id') id: string, @Req() req: any) {
+    // Without the right to read the applications the list is null (the contract is still checked);
+    // a Business Contributor's lists the applications they take part in.
+    const access = await contractRelationsAccess(req);
+    const list = await this.svc.listApplications(id, { manager: req?.queryRunner?.manager, applicationScope: access.applicationScope });
+    return access.applications ? list : { items: null };
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Post(':id/applications/bulk-replace')
-  bulkReplaceApplications(@Param('id') id: string, @Body() body: { application_ids: string[] }, @Req() req: any) {
-    return this.svc.replaceRelations(id, 'applications', body?.application_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  async bulkReplaceApplications(@Param('id') id: string, @Body() body: { application_ids: string[] }, @Req() req: any) {
+    // A set the caller cannot read is never replaced (an empty list would remove every link).
+    assertContractRelationRead(req, 'applications');
+    const { applicationScope } = await contractRelationsAccess(req);
+    return this.svc.replaceRelations(id, 'applications', body?.application_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager, applicationScope });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/assets')
-  listAssets(@Param('id') id: string, @Req() req: any) { return this.svc.listAssets(id, { manager: req?.queryRunner?.manager }); }
+  async listAssets(@Param('id') id: string, @Req() req: any) {
+    // Without the right to read the infrastructure the list is null (the contract is still checked).
+    const list = await this.svc.listAssets(id, { manager: req?.queryRunner?.manager });
+    return canReadResource(req ?? {}, 'infrastructure') ? list : { items: null };
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Post(':id/assets/bulk-replace')
   bulkReplaceAssets(@Param('id') id: string, @Body() body: { asset_ids: string[] }, @Req() req: any) {
+    assertContractRelationRead(req, 'assets');
     return this.svc.replaceRelations(id, 'assets', body?.asset_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
@@ -287,21 +321,19 @@ export class ContractsController {
   @Post(':id/technologies/bulk-replace')
   bulkReplaceTechnologies(@Param('id') id: string, @Body() body: { technology_ids: string[] }, @Req() req: any) {
     // A set the caller cannot read is never replaced (an empty list would remove every link).
-    if (!canReadResource(req ?? {}, 'infrastructure')) throw new ForbiddenException('You cannot read technologies.');
+    assertContractRelationRead(req, 'technologies');
     return this.svc.replaceRelations(id, 'technologies', body?.technology_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
-  /** Applications, assets, technologies and supplier suggestions, in one round trip. */
+  /**
+   * Applications, assets, technologies and supplier suggestions, in one round trip. A family whose
+   * module the caller does not read is null; a Business Contributor sees the applications they take part in.
+   */
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/relations')
   async relations(@Param('id') id: string, @Req() req: any) {
-    return this.svc.getRelations(id, {
-      manager: req?.queryRunner?.manager,
-      infrastructure: canReadResource(req ?? {}, 'infrastructure'),
-      applications: canReadResource(req ?? {}, 'applications'),
-      applicationScope: await resolveBusinessContributorScope(req, 'applications'),
-    });
+    return this.svc.getRelations(id, { manager: req?.queryRunner?.manager, ...(await contractRelationsAccess(req)) });
   }
 
   /** Link one application, asset or technology (`{ id }`). */
@@ -319,13 +351,16 @@ export class ContractsController {
     return this.writeRelation(kind, id, targetId, false, req);
   }
 
-  /** `technologies` also needs a read of the infrastructure, as the bulk replacement does. */
-  private writeRelation(kind: string, id: string, targetId: string, add: boolean, req: any) {
+  /**
+   * Each kind also needs a read of its module (applications; infrastructure for assets and
+   * technologies), as the bulk replacements do; a Business Contributor links and unlinks the
+   * applications they take part in only.
+   */
+  private async writeRelation(kind: string, id: string, targetId: string, add: boolean, req: any) {
     const relation = contractRelationKindOrThrow(kind);
-    if (relation === 'technologies' && !canReadResource(req ?? {}, 'infrastructure')) {
-      throw new ForbiddenException('You cannot read technologies.');
-    }
-    return this.svc.setRelation(relation, id, targetId, add, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+    assertContractRelationRead(req, relation);
+    const { applicationScope } = await contractRelationsAccess(req);
+    return this.svc.setRelation(relation, id, targetId, add, req.user?.sub ?? null, { manager: req?.queryRunner?.manager, applicationScope });
   }
 
   // Tasks for contract

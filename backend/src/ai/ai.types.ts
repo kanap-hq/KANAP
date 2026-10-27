@@ -81,6 +81,7 @@ export const AI_CONTEXT_ENTITY_TYPES = [
   'requests',
   'tasks',
   'technologies',
+  'contracts',
 ] as const;
 
 export const AiSearchEntityTypeSchema = z.enum(AI_SEARCH_ENTITY_TYPES);
@@ -133,6 +134,8 @@ export type AiEntitySummaryDto = {
   updated_at: string | null;
   match_context?: string | null;
   metadata?: AiEntityMetadata | null;
+  /** The record's page, for a family without a business reference the user may open (`ai-page-urls.ts`). */
+  page_url?: string;
 };
 
 export type AiEntityRelationshipGroupDto = {

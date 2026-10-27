@@ -224,13 +224,13 @@ The Relations tab shows what this contract covers: its applications, assets and 
 
 | Section | Columns |
 |---|---|
-| **Applications** | Reference (`APP-3`), name, lifecycle, business criticality |
-| **Assets** | Reference (`AST-12`), name, type, environment, status |
+| **Applications** | Reference (`APP-3`), name, lifecycle, business criticality. Shown only if you can read the applications. A Business Contributor sees the applications they take part in |
+| **Assets** | Reference (`AST-12`), name, type, environment, status. Shown only if you can read the infrastructure |
 | **Technologies** | Reference (`TEC-5`), name, family, vendor. Shown only if you can read the infrastructure |
 
 A disabled or retired application or asset stays listed with its name greyed out. The applications and assets feed the [Compliance](#compliance) tab. An asset whose support contract is set to this one on the asset page is not listed here. It still counts for compliance.
 
-**Adding and removing links** (`contracts:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. The search offers the applications and assets you can see. Retired technologies are not offered. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Linking a technology also needs a read of the infrastructure. Readers see the tables read-only.
+**Adding and removing links** (`contracts:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. The search offers the applications and assets you can see. Retired technologies are not offered. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Linking an application also needs a read of the applications, and linking an asset or a technology a read of the infrastructure. A Business Contributor links and removes only the applications they take part in; the other applications of the contract stay linked. Readers see the tables read-only.
 
 **Related**: applications and assets of the contract's supplier that are not linked yet, with the reason "same supplier". An asset belongs to the supplier through its support vendor. Click **Link** to add the suggestion to its section. The suggestions show:
 
@@ -288,7 +288,7 @@ The box shows the deadline, the days left, the task and its assignee, and what h
 
 - **Renew**: the renewal is confirmed for this term. The task is closed, the contract leaves **To decide**, and it comes back into the window at the next term's deadline
 - **Renegotiate**: the box reads **Renegotiation in progress** and the task stays open until the final decision. The contract stays in **To decide**
-- **Terminate**: the box shows the end date to confirm. KANAP proposes the earliest end the notice allows ("6 months notice: the earliest possible end is 30 Jun 2027"). You can pick another day, from today and from the contract's start. A day before the proposed one shows an orange warning: the supplier has to agree to it. The box lists the consequences for that day: the commitment of the year and the next, the applications that lose this contract, and the assets that lose their support contract. **Confirm termination** turns the tacit renewal off, sets the end of validity to that day and closes the task. The contract then reads **Ends without renewal** and its commitment stops on that day
+- **Terminate**: the box shows the end date to confirm. KANAP proposes the earliest end the notice allows ("6 months notice: the earliest possible end is 30 Jun 2027"). You can pick another day, from today and from the contract's start. A day before the proposed one shows an orange warning: the supplier has to agree to it. The box lists the consequences for that day: the commitment of the year and the next, the applications that lose this contract, and the assets that lose their support contract, each if you can read its module. **Confirm termination** turns the tacit renewal off, sets the end of validity to that day and closes the task. The contract then reads **Ends without renewal** and its commitment stops on that day
 
 For a contract without renewal, the box reads "Ends on 31 Mar 2027 · decision due" and offers two actions:
 

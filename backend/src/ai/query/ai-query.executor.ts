@@ -58,6 +58,8 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
+import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
+import { hiddenContractLineCount } from '../../contracts/contract-relations';
 import { AiReadProbe, analyticsAxisFields, resolveAiEntityRegistry } from './registries';
 import { budgetFteFields } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
@@ -930,7 +932,12 @@ export class AiQueryExecutor {
     });
   }
 
-  private mapContract(row: any): AiEntitySummaryDto {
+  /**
+   * A contract as the Contracts list shows it, with its current term (`contract-terms.ts`): state,
+   * next due date, cancellation deadline. `coveredApplications` is the line of the applications it
+   * covers when the caller reads them (`coveredApplicationsOf`); null otherwise.
+   */
+  private mapContract(row: any, coveredApplications: string | null = null): AiEntitySummaryDto {
     const companyName = row.company?.name ?? row.company_name ?? null;
     const supplierName = row.supplier?.name ?? row.supplier_name ?? null;
     const summary = row.notes ?? ([companyName, supplierName].filter(Boolean).join(' | ') || null);
@@ -950,8 +957,14 @@ export class AiQueryExecutor {
         duration_months: numericScalar(row.duration_months),
         auto_renewal: row.auto_renewal == null ? null : Boolean(row.auto_renewal),
         notice_period_months: numericScalar(row.notice_period_months),
+        owner: scalar(row.owner_name),
+        term_state: scalar(row.term_state),
+        next_due_date: scalar(row.next_due_date),
+        renewed: row.renewed == null ? null : Boolean(row.renewed),
+        current_term_end: scalar(row.current_term_end),
         end_date: scalar(row.end_date),
         cancellation_deadline: scalar(row.cancellation_deadline),
+        covered_applications: coveredApplications,
         yearly_amount: numericScalar(row.yearly_amount_at_signature),
         yearly_amount_at_signature: numericScalar(row.yearly_amount_at_signature),
       },
@@ -1551,13 +1564,18 @@ export class AiQueryExecutor {
     }
 
     if (input.entity_type === 'contracts') {
-      const result = await this.contracts.list(scoped.query, { manager: context.manager });
+      // The `application` filter matches a Business Contributor's applications only, as `covered_applications`.
+      const result = await this.contracts.list(scoped.query, {
+        manager: context.manager,
+        coveredApplications: { scope: await resolveAiParticipationAccessScope(context, 'applications') },
+      });
       const resultPage = result.page ?? page;
       const resultLimit = result.limit ?? limit;
       const returned = Array.isArray(result.items) ? result.items.length : 0;
       const truncated = (result.total ?? 0) > ((resultPage - 1) * resultLimit + returned);
+      const covered = await this.coveredApplicationsOf(context, (result.items || []).map((row: any) => String(row.id)));
       return {
-        items: (result.items || []).map((row: any) => this.mapContract(row)),
+        items: (result.items || []).map((row: any) => this.mapContract(row, covered ? covered.get(String(row.id)) ?? '' : null)),
         total: result.total ?? 0,
         page: resultPage,
         limit: resultLimit,
@@ -2324,6 +2342,9 @@ export class AiQueryExecutor {
     });
 
     const reads = await this.readableLinks(context);
+    const probe = this.readProbe(context);
+    const readsAssets = await probe('assets');
+    const readsTechnologies = await probe('technologies');
     const [contacts, linkedCapexItems, tasks] = await Promise.all([
       this.loadLinkedContacts(context, {
         table: 'contract_contacts',
@@ -2333,6 +2354,22 @@ export class AiQueryExecutor {
       reads.budget ? this.contracts.listLinkedCapexItems(contractId, { manager: context.manager }).catch(() => ({ items: [] })) : null,
       this.contracts.listTasks(contractId, { manager: context.manager }).catch(() => []),
     ]);
+    // What the contract covers, each family on its module's read right (as `linked_spend_items`):
+    // null when the caller does not read it, so the answer never reads it as "none".
+    const covered = async (family: 'applications' | 'assets' | 'technologies', readable: boolean) => {
+      if (!readable) return null;
+      const scope = family === 'applications' ? await resolveAiParticipationAccessScope(context, 'applications') : undefined;
+      const byContract = await loadContractCoverage(context.manager, context.tenantId, family, [contractId], scope);
+      return { items: byContract.get(contractId) ?? [] };
+    };
+    const linkedApplications = await covered('applications', reads.applications);
+    const linkedAssets = await covered('assets', readsAssets);
+    const linkedTechnologies = await covered('technologies', readsTechnologies);
+    // The linked lines outside a limited person's data access: counted, never named, as on the
+    // contract's Budget tab ("and 3 lines outside your access"). Only with the budget right.
+    const linesOutsideAccess = reads.budget
+      ? await hiddenContractLineCount(context.manager, { id: contractId, tenant_id: context.tenantId })
+      : null;
 
     return {
       company_name: names.company_name ?? null,
@@ -2347,8 +2384,24 @@ export class AiQueryExecutor {
       // The OPEX lines come with the contract (`contracts.get`): both natures need the budget right.
       ...(reads.budget ? {} : { linked_spend_items: null }),
       linked_capex_items: linkedCapexItems,
+      budget_lines_outside_access: linesOutsideAccess,
+      linked_applications: linkedApplications,
+      linked_assets: linkedAssets,
+      linked_technologies: linkedTechnologies,
       tasks,
     };
+  }
+
+  /**
+   * The applications each contract of `contractIds` covers, as one line per contract, for the
+   * caller who reads applications (a Business Contributor: those of their participation); null
+   * for any other caller.
+   */
+  private async coveredApplicationsOf(context: AiExecutionContextWithManager, contractIds: string[]): Promise<Map<string, string> | null> {
+    if (!(await this.readProbe(context)('applications'))) return null;
+    const scope = await resolveAiParticipationAccessScope(context, 'applications');
+    const byContract = await loadContractCoverage(context.manager, context.tenantId, 'applications', contractIds, scope);
+    return new Map(contractIds.map((id) => [id, coveredRecordsText(byContract.get(id))]));
   }
 
   /** Whether the caller administers users, as the users list decides its columns (`canViewUserAdministration`). */
@@ -2601,7 +2654,8 @@ export class AiQueryExecutor {
       const row: any = await this.contracts.get(entityId, { manager: context.manager });
       if (row.tenant_id && row.tenant_id !== context.tenantId) throw new NotFoundException('Contract not found.');
       Object.assign(row, await this.loadContractDeepDetail(context, entityId));
-      return this.toDetailResult(this.mapContract(row), row);
+      const coveredApplications = row.linked_applications ? coveredRecordsText(row.linked_applications.items) : null;
+      return this.toDetailResult(this.mapContract(row, coveredApplications), row);
     }
 
     if (entityType === 'companies') {

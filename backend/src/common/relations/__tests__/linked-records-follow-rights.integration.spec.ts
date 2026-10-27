@@ -37,6 +37,10 @@ import { DataSource, QueryRunner } from 'typeorm';
 //  15. The document's link selectors (`GET /knowledge/relation-options/:entity`): no option of a
 //      family whose module the person does not read, and a Business Contributor's options inside
 //      their participation.
+//  16. A contract's Relations tab, badge and family routes, its link writes, what a termination
+//      changes and the list's covered application filter: the applications for their readers (a
+//      Business Contributor's inside their participation), the assets for readers of the
+//      infrastructure; a write on a family the person does not read is refused, even empty.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -712,6 +716,103 @@ async function testRelationOptions(h: Harness, runner: QueryRunner, s: Seed) {
   has(await options('full', 'incidents'), ['Outage'], 'full: incidents');
 }
 
+const contractLinks = async (runner: QueryRunner, table: string, contractId: string) =>
+  (await runner.query(`SELECT * FROM ${table} WHERE contract_id = $1`, [contractId])).length;
+
+// 16. A contract's linked applications and assets.
+async function testContractRelations(h: Harness, runner: QueryRunner, s: Seed) {
+  const { ContractsController } = require('../../../contracts/contracts.controller');
+  const { ContractRenewalController } = require('../../../contracts/contract-renewal.controller');
+  const contracts = h.app.get(ContractsController);
+  const renewal = h.app.get(ContractRenewalController);
+  // The contract covers the application, an application E owns and the server, which it also supports.
+  const owned = await insertId(runner,
+    `INSERT INTO applications (tenant_id, name, sequential_id, status) VALUES ($1, 'Covered owned app', 'APP-3', 'enabled')`, [s.tenantId]);
+  await runner.query(`INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, 'business')`,
+    [s.tenantId, owned, s.users.e]);
+  await runner.query(`INSERT INTO application_contracts (tenant_id, contract_id, application_id) VALUES ($1, $2, $3), ($1, $2, $4)`,
+    [s.tenantId, s.contract, s.application, owned]);
+  await runner.query(`INSERT INTO asset_contracts (tenant_id, contract_id, asset_id) VALUES ($1, $2, $3)`, [s.tenantId, s.contract, s.asset]);
+  await runner.query(`INSERT INTO asset_support_info (tenant_id, asset_id, support_contract_id) VALUES ($1, $2, $3)`, [s.tenantId, s.asset, s.contract]);
+  // A second contract covers nothing: the list's covered application filter tells them apart.
+  await runner.query(
+    `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date)
+     SELECT tenant_id, 'Uncovered contract', company_id, supplier_id, start_date FROM contracts WHERE id = $1`, [s.contract]);
+
+  // The routes check the contracts right (guard); the families follow the request's permissions.
+  const req = (profile: Profile, permissions: Record<string, string>) => ({ ...rawRequest(runner, s, profile), permissions });
+  const contractsOnly = req('a', { contracts: 'member' });
+  const appsReader = req('b', { contracts: 'member', applications: 'reader' });
+  const contributor = req('e', { contracts: 'member', applications: 'reader' });
+  const full = rawRequest(runner, s, 'full');
+  const names = (rows: Array<{ name: string }> | null) => (rows === null ? null : rows.map((row) => row.name));
+  const counts = async (r: any) => {
+    const c = await contracts.relationCounts(s.contract, r);
+    return [c.applications, c.assets, c.technologies, c.relations];
+  };
+
+  // Contracts only: no linked application, asset or technology, and no counter.
+  const a = await contracts.relations(s.contract, contractsOnly);
+  assert.deepEqual([a.applications, a.assets, a.technologies], [null, null, null], 'contracts only: no family on the tab');
+  hasNot(a, [APP, 'Covered owned app', ASSET], 'contracts only: the tab');
+  assert.deepEqual(await counts(contractsOnly), [null, null, null, 0], 'contracts only: no counter');
+  assert.deepEqual(await contracts.listApplications(s.contract, contractsOnly), { items: null }, 'contracts only: no application list');
+  assert.deepEqual(await contracts.listAssets(s.contract, contractsOnly), { items: null }, 'contracts only: no asset list');
+  // B reads the applications, not the infrastructure.
+  const b = await contracts.relations(s.contract, appsReader);
+  assert.deepEqual([names(b.applications), b.assets, b.technologies], [['Covered owned app', APP], null, null], 'B: the applications only');
+  assert.deepEqual(await counts(appsReader), [2, null, null, 2], 'B: the applications counted');
+  // E: the application they own, not the other one.
+  const e = await contracts.relations(s.contract, contributor);
+  assert.deepEqual(names(e.applications), ['Covered owned app'], 'E: the application they take part in');
+  hasNot(e, [APP], 'E: the application outside their participation');
+  assert.deepEqual(await counts(contributor), [1, null, null, 1], 'E: one application counted');
+  assert.deepEqual(names((await contracts.listApplications(s.contract, contributor)).items), ['Covered owned app'], 'E: the family route');
+  // Counter-check: an administrator gets every family.
+  const all = await contracts.relations(s.contract, full);
+  assert.deepEqual([names(all.applications), names(all.assets), names(all.technologies)], [['Covered owned app', APP], [ASSET], []], 'full: every family');
+  assert.deepEqual(await counts(full), [2, 1, 0, 3], 'full: every family counted');
+
+  // What a termination changes names the same records.
+  const endDate = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+  const impact = async (r: any) => {
+    const view = await renewal.get(s.contract, endDate, r);
+    return [names(view.impact.applications), names(view.impact.assets)];
+  };
+  assert.deepEqual(await impact(contractsOnly), [[], []], 'contracts only: no application or asset in the consequences');
+  assert.deepEqual(await impact(appsReader), [['Covered owned app', APP], []], 'B: the applications');
+  assert.deepEqual(await impact(contributor), [['Covered owned app'], []], 'E: their application');
+  assert.deepEqual(await impact(full), [['Covered owned app', APP], [ASSET]], 'full: every consequence');
+
+  // The list's covered application filter applies for a reader of the applications only.
+  const covering = async (r: any) => {
+    const list = await contracts.list({ filters: JSON.stringify({ covered_application: { filterType: 'set', values: ['APP-1'] } }) }, r);
+    return list.items.map((row: { name: string }) => row.name).sort();
+  };
+  assert.deepEqual(await covering(contractsOnly), [CONTRACT, 'Uncovered contract'], 'contracts only: the filter is not applied');
+  assert.deepEqual(await covering(appsReader), [CONTRACT], 'B: the contract that covers APP-1');
+  assert.deepEqual(await covering(contributor), [], 'E: APP-1 is outside their participation');
+  assert.deepEqual(await covering(full), [CONTRACT], 'full: the contract that covers APP-1');
+
+  // Writes: a family the person does not read is refused, even empty (it would clear the family).
+  await rejects(runner, () => contracts.bulkReplaceApplications(s.contract, { application_ids: [] }, contractsOnly), /cannot read applications/, 'contracts only: no application replacement');
+  await rejects(runner, () => contracts.bulkReplaceAssets(s.contract, { asset_ids: [] }, appsReader), /cannot read assets/, 'B: no asset replacement');
+  await rejects(runner, () => contracts.unlinkRelation(s.contract, 'applications', s.application, contractsOnly), /cannot read applications/, 'contracts only: no unlink');
+  await rejects(runner, () => contracts.linkRelation(s.contract, 'assets', { id: s.asset }, appsReader), /cannot read assets/, 'B: no asset link');
+  assert.deepEqual([await contractLinks(runner, 'application_contracts', s.contract), await contractLinks(runner, 'asset_contracts', s.contract)], [2, 1], 'refused writes change nothing');
+
+  // E replaces the applications they see: the other one stays. Outside their participation, nothing.
+  await contracts.bulkReplaceApplications(s.contract, { application_ids: [] }, contributor);
+  assert.deepEqual((await runner.query(`SELECT application_id FROM application_contracts WHERE contract_id = $1`, [s.contract])).map((row: any) => row.application_id), [s.application], 'E: the application outside their participation stays');
+  await rejects(runner, () => contracts.bulkReplaceApplications(s.contract, { application_ids: [s.application] }, contributor), /only link applications you take part in/, 'E: no replacement with an application outside');
+  await rejects(runner, () => contracts.unlinkRelation(s.contract, 'applications', s.application, contributor), /only link applications you take part in/, 'E: no unlink outside');
+  assert.deepEqual(await contracts.linkRelation(s.contract, 'applications', { id: owned }, contributor), { ok: true, changed: true }, 'E: links their application');
+  assert.equal(await contractLinks(runner, 'application_contracts', s.contract), 2, 'E: both applications linked again');
+  // Counter-check: B removes any application; the assets, left out, stay.
+  await contracts.bulkReplaceApplications(s.contract, { application_ids: [owned] }, appsReader);
+  assert.deepEqual([await contractLinks(runner, 'application_contracts', s.contract), await contractLinks(runner, 'asset_contracts', s.contract)], [1, 1], 'B: one application left, the server stays');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -735,6 +836,7 @@ async function run() {
       await testDocumentLinkWrites(harness, runner, s);
       await testHiddenFamilyCounters(harness, runner, s);
       await testRelationOptions(harness, runner, s);
+      await testContractRelations(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
