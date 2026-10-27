@@ -127,7 +127,7 @@ function PreviewCard({
   const statusDisplay = getPreviewStatusDisplay(preview);
   const statusColorKey = getPreviewStatusColorKey(statusDisplay);
   const statusLabel = t(`ai:previewStatuses.${statusDisplay}`);
-  const { fieldLabel, valueLabel, amountsLabel } = usePreviewChangeLabels();
+  const { fieldLabel, valueLabel, amountsLabel, classificationLabel } = usePreviewChangeLabels(preview);
 
   return (
     <Box
@@ -214,13 +214,20 @@ function PreviewCard({
 
         <Stack spacing={1.25}>
           {Object.entries(preview.changes).map(([field, change]) => {
-            // A list value reads as on the screens, budget amounts as on the budget screens; a markdown text stays as written.
+            // A list value reads as on the screens, budget amounts as on the budget screens, a classification level
+            // as the tenant's catalog names it; a markdown text stays as written.
             const diff = change.amounts
               ? {
                 ...change,
                 from: change.amounts.from ? amountsLabel(change.amounts.from) : change.from,
                 to: change.amounts.to ? amountsLabel(change.amounts.to) : change.to,
               }
+              : change.classification
+                ? {
+                  ...change,
+                  from: classificationLabel(change.classification, 'from', change.from),
+                  to: classificationLabel(change.classification, 'to', change.to),
+                }
               : change.format === 'markdown'
                 ? change
                 : { ...change, from: valueLabel(preview, field, change.from), to: valueLabel(preview, field, change.to) };

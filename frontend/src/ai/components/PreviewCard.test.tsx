@@ -1,6 +1,7 @@
 import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import i18n from '../../i18n';
@@ -11,6 +12,30 @@ vi.mock('../../hooks/useItOpsEnumOptions', () => ({
   default: () => ({
     labelFor: (field: string, code?: string | null) => (field === 'lifecycleStatus' && code === 'retired' ? 'Retirée' : String(code ?? '')),
   }),
+}));
+
+// The tenant's catalogs as the API sends them: the shipped English levels and task types, which the
+// screens show in the person's language.
+const level = (code: string, label: string, rank: number) => ({ code, label, description: '', rank });
+vi.mock('../../api', () => ({
+  default: {
+    get: vi.fn(async (url: string) => {
+      if (url === '/applications/classification-catalog') {
+        return {
+          data: {
+            businessCriticalityLevels: [level('business_critical', 'Critical', 4), level('medium', 'Moderate', 2), level('low', 'Low', 1)],
+            cyberCriticalityLevels: [],
+            dataClasses: [],
+            recoveryWaves: [],
+          },
+        };
+      }
+      if (url === '/portfolio/classification/task-types') {
+        return { data: [{ id: 'type-1', name: 'Task', code: 'task', description: 'Standard task or work item', is_active: true }] };
+      }
+      throw new Error(`Unexpected request ${url}`);
+    }),
+  },
 }));
 
 function preview(overrides: Partial<AiMutationPreview>): AiMutationPreview {
@@ -35,10 +60,13 @@ function preview(overrides: Partial<AiMutationPreview>): AiMutationPreview {
 }
 
 function renderCard(value: AiMutationPreview) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
-    <ThemeProvider theme={createAppTheme('light')}>
-      <PreviewCard preview={value} onApprove={() => undefined} onReject={() => undefined} />
-    </ThemeProvider>,
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <PreviewCard preview={value} onApprove={() => undefined} onReject={() => undefined} />
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -52,20 +80,27 @@ describe('PreviewCard in French', () => {
     await i18n.changeLanguage('en');
   });
 
-  it('shows a task creation with the labels and values of the task screens', () => {
+  it('shows a task creation with the labels and values of the task screens', async () => {
     renderCard(preview({
       summary: 'Création de la tâche autonome « Migration ». Priorité : Moyenne.',
       changes: {
         relation: { label: 'Relation', from: null, to: 'Standalone', format: 'text' },
         title: { label: 'Title', from: null, to: 'Migration', format: 'text' },
+        assignee: { label: 'Assignee', from: null, to: 'Marie Durand', format: 'text' },
         priority: { label: 'Priority', from: null, to: 'Normal', format: 'text' },
         status: { label: 'Status', from: null, to: 'Open', format: 'text' },
         due_date: { label: 'Due Date', from: null, to: null, format: 'text' },
+        task_type: { label: 'Task Type', from: null, to: 'Task', format: 'text' },
       },
     }));
 
-    for (const text of ['Rattachement', 'Autonome', 'Titre', 'Priorité', 'Moyenne', 'Statut', 'Ouvert', 'Échéance']) {
+    // The task type reads as the tenant's types are shown, once they are loaded.
+    expect(await screen.findByText('Tâche')).toBeInTheDocument();
+    for (const text of ['Lié à', 'Autonome', 'Titre de la tâche', 'Assigné à', 'Priorité', 'Moyenne', 'Statut', 'Ouvert', 'Échéance', 'Type de tâche']) {
       expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    for (const text of ['Rattachement', 'Responsable', 'Task']) {
+      expect(screen.queryByText(text)).not.toBeInTheDocument();
     }
     expect(screen.getByText('Création de la tâche autonome « Migration ». Priorité : Moyenne.')).toBeInTheDocument();
     expect(screen.queryByText('Standalone')).not.toBeInTheDocument();
@@ -78,17 +113,39 @@ describe('PreviewCard in French', () => {
       target: { entity_type: 'applications', entity_id: 'app-1', ref: null, title: 'CheeseTrack' },
       changes: {
         lifecycle: { label: 'Lifecycle', from: 'active', to: 'retired', format: 'text' },
-        criticality: { label: 'Business criticality', from: 'Modérée', to: 'Élevée', format: 'text' },
         external_facing: { label: 'External Facing', from: 'No', to: 'Yes', format: 'text' },
         environment: { label: 'Environment', from: null, to: 'pre_prod', format: 'text' },
         'analytics_axis:pool': { label: 'Pool de coûts', from: null, to: 'Infra', format: 'text' },
       },
     }));
 
-    for (const text of ['Cycle de vie', 'Retirée', 'Criticité métier', 'Élevée', 'Exposé à l\'extérieur', 'Oui', 'Non', 'Environnement', 'Pool de coûts']) {
+    for (const text of ['Cycle de vie', 'Retirée', 'Exposition externe', 'Oui', 'Non', 'Environnement', 'Pool de coûts']) {
       expect(screen.getByText(text)).toBeInTheDocument();
     }
     expect(screen.queryByText('retired')).not.toBeInTheDocument();
+  });
+
+  it('names a criticality level as the application screen does, from the tenant catalog', async () => {
+    renderCard(preview({
+      tool_name: 'update_business_record',
+      target: { entity_type: 'applications', entity_id: 'app-1', ref: 'APP-36', title: 'CheeseTrack' },
+      changes: {
+        criticality: {
+          label: 'Business criticality',
+          from: 'Critical',
+          to: 'Low',
+          format: 'text',
+          classification: { catalog: 'businessCriticalityLevels', from: 'business_critical', to: 'low' },
+        },
+      },
+    }));
+
+    expect(await screen.findByText('Critique')).toBeInTheDocument();
+    expect(screen.getByText('Faible')).toBeInTheDocument();
+    expect(screen.getByText('Criticité business')).toBeInTheDocument();
+    for (const text of ['Critical', 'Low', 'Criticité métier']) {
+      expect(screen.queryByText(text)).not.toBeInTheDocument();
+    }
   });
 
   it('names relation sections, document statuses and operational criticality as the screens do', () => {
@@ -113,7 +170,33 @@ describe('PreviewCard in French', () => {
       target: { entity_type: 'interfaces', entity_id: 'if-1', ref: 'IF-3', title: 'Flux paie' },
       changes: { criticality: { label: 'Operational criticality', from: null, to: 'Haute', format: 'text' } },
     }));
-    expect(screen.getByText('Criticité opérationnelle')).toBeInTheDocument();
+    expect(screen.getByText('Criticité')).toBeInTheDocument();
+  });
+
+  it('names the fields of a budget line as the budget line screen does', () => {
+    renderCard(preview({
+      tool_name: 'create_business_record',
+      target: { entity_type: 'spend_items', entity_id: null, ref: null, title: 'QA-PL montant' },
+      changes: {
+        product_name: { label: 'Product Name', from: null, to: 'QA-PL montant', format: 'text' },
+        paying_company_id: { label: 'Paying Company', from: null, to: 'Fromage & Co SA', format: 'text' },
+        account_id: { label: 'Account', from: null, to: '612100 - SaaS Subscriptions', format: 'text' },
+        currency: { label: 'Currency', from: null, to: 'EUR', format: 'text' },
+        effective_start: { label: 'Effective Start', from: null, to: '2026-01-01', format: 'text' },
+        owner_it_id: { label: 'IT Owner', from: null, to: 'Marie Durand', format: 'text' },
+        run_build: { label: 'Run or build', from: null, to: 'run', format: 'text' },
+      },
+    }));
+
+    for (const text of ['Nom du produit', 'Société payeuse', 'Compte', 'Devise', 'Début d\'effet', 'Responsable IT', 'Run ou build']) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.queryByText('Début de validité')).not.toBeInTheDocument();
+    // The fields keep the order the server sends, which no longer depends on how the preview was stored.
+    const labels = ['Nom du produit', 'Société payeuse', 'Compte', 'Devise', 'Début d\'effet'].map((text) => screen.getByText(text));
+    labels.slice(1).forEach((label, index) => {
+      expect(labels[index].compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
   });
 
   it('shows dates in the format of the screens, not as stored', () => {

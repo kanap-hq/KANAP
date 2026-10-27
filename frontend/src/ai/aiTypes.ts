@@ -57,6 +57,12 @@ export type AiMutationPreview = {
     format?: 'text' | 'markdown';
     /** Budget amounts as numbers, written by the card; `from` and `to` hold an English text of them. */
     amounts?: { from: AiPreviewAmounts | null; to: AiPreviewAmounts | null };
+    /** A classification level by its code in the tenant's catalog; `from` and `to` hold the catalog's base label. */
+    classification?: {
+      catalog: 'businessCriticalityLevels' | 'cyberCriticalityLevels' | 'dataClasses' | 'recoveryWaves';
+      from: string | null;
+      to: string | null;
+    };
   }>;
   requires_confirmation: boolean;
   actions: Array<'approve' | 'reject'>;
