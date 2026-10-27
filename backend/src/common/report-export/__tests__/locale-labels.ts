@@ -14,14 +14,15 @@ const LANGUAGES: CsvLanguage[] = ['en', 'fr', 'de', 'es'];
 export function assertLocaleLabels<K extends string>(
   namespace: string,
   keys: Record<K, string>,
-  labels: Record<CsvLanguage, Record<K, string>>,
+  /** May hold more labels than `keys` (words only the file has): those are not checked. */
+  labels: Record<CsvLanguage, Record<string, string>>,
 ): void {
   for (const language of LANGUAGES) {
     const file = backendPath('..', 'frontend', 'src', 'locales', language, `${namespace}.json`);
     const json = JSON.parse(fs.readFileSync(file, 'utf8'));
     for (const [name, key] of Object.entries(keys) as Array<[K, string]>) {
       const value = key.split('.').reduce<any>((node, part) => (node == null ? undefined : node[part]), json);
-      assert.equal(labels[language][name], value, `${language}/${namespace}.json ${key} (label ${name})`);
+      assert.equal(labels[language][name as string], value, `${language}/${namespace}.json ${key} (label ${name})`);
     }
   }
 }

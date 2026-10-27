@@ -407,8 +407,7 @@
       "empty": {
         "deadlines": "Rien n'arrive en fin de support dans cet horizon.",
         "gaps": "Aucune donnée manquante."
-      },
-      "exportFailed": "L'export a échoué. Réessayez."
+      }
     },
     "vulnerabilities": {
       "title": "Vulnérabilités",
