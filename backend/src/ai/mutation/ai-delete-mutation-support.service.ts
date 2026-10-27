@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { ConnectionsService } from '../../connections/services/connections.service';
 import { ContactsService } from '../../contacts/contacts.service';
 import { InterfacesService } from '../../interfaces/services/interfaces.service';
+import { KnowledgeService } from '../../knowledge/knowledge.service';
 import { LocationsService } from '../../locations/locations.service';
 import { parseItemRef } from '../../common/resolve-item-id';
 import { BUDGET_LINE_PREFIX, LEGACY_PREFIX, natureAnd, type BudgetNature } from '../../spend/budget-nature';
@@ -15,10 +16,11 @@ import { AiExecutionContextWithManager } from '../ai.types';
 import { AiDeleteImpact } from '../ai-write-texts';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
 import { AiBusinessRecordMutationSupportService } from './ai-business-record-mutation-support.service';
+import { AiDocumentMutationSupportService } from './ai-document-mutation-support.service';
 import { AiMasterDataMutationSupportService } from './ai-master-data-mutation-support.service';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
 
-/** The families a person may delete one record of, in this lot. Lot 3 adds the documents. */
+/** The families a person may delete one record of: the screen's own delete, one record at a time. */
 export const AI_DELETE_ENTITY_TYPES = [
   'tasks',
   'contacts',
@@ -27,6 +29,7 @@ export const AI_DELETE_ENTITY_TYPES = [
   'capex_items',
   'connections',
   'interfaces',
+  'documents',
 ] as const;
 export type AiDeleteEntityType = typeof AI_DELETE_ENTITY_TYPES[number];
 
@@ -56,12 +59,26 @@ const LABELS: Record<AiDeleteEntityType, string> = {
   capex_items: 'CAPEX line',
   connections: 'Connection',
   interfaces: 'Interface',
+  documents: 'Document',
 };
 
 /** The object type a task of a line carries (`spend/item-delete-cleanup.ts`). */
 const TASK_OBJECT_TYPE: Record<'spend_items' | 'capex_items', string> = {
   spend_items: 'spend_item',
   capex_items: 'capex_item',
+};
+
+/** The families a document's links name, with the module that reads them. */
+const DOCUMENT_LINK_READS: Readonly<Record<string, string>> = {
+  applications: 'applications',
+  assets: 'infrastructure',
+  projects: 'portfolio_projects',
+  requests: 'portfolio_requests',
+  tasks: 'tasks',
+  locations: 'locations',
+  connections: 'infrastructure',
+  interfaces: 'applications',
+  incidents: 'incidents',
 };
 
 /** The families a spend line's links name, with the module that reads them. */
@@ -97,6 +114,8 @@ export class AiDeleteMutationSupportService {
     private readonly capexDelete: CapexItemsDeleteService,
     private readonly connections: ConnectionsService,
     private readonly interfaces: InterfacesService,
+    private readonly documentSupport: AiDocumentMutationSupportService,
+    private readonly knowledge: KnowledgeService,
     private readonly policy: AiPolicyService,
   ) {}
 
@@ -105,8 +124,10 @@ export class AiDeleteMutationSupportService {
    * its delete takes. The screen's refusals run here, before any preview exists: a task that
    * started a request (409, with what to do), a task whose budget line or contract the person may
    * not modify (403, `assertTaskDeletable`), a budget line with amounts in a frozen column (409,
-   * `BUDGET_LINE_FROZEN`) and an interface whose bindings stay unless the person asks to delete
-   * them with it (409, `INTERFACE_HAS_BINDINGS`).
+   * `BUDGET_LINE_FROZEN`), an interface whose bindings stay unless the person asks to delete
+   * them with it (409, `INTERFACE_HAS_BINDINGS`) and a managed document, which goes with its
+   * record (409, `KNOWLEDGE_DOCUMENT_MANAGED`). The document's library write right is checked
+   * as its screen route does, on top of the Knowledge admin level.
    */
   async prepare(
     context: AiExecutionContextWithManager,
@@ -219,6 +240,27 @@ export class AiDeleteMutationSupportService {
             updatedAt: isoTimestamp(found.row.updated_at),
           },
           impact,
+        };
+      }
+      case 'documents': {
+        const document = await this.documentSupport.resolveDocumentSnapshot(context, ref);
+        // The route's `knowledge:admin` is already checked; the library write right is the
+        // document's own gate, as the Knowledge screen and `KnowledgeService.remove` apply it.
+        await this.knowledge.assertDocumentWritable(document.document_id, context.manager, context.userId);
+        const refusal = await this.knowledge.managedDocumentRefusal(
+          { id: document.document_id, title: document.target_title ?? '' },
+          context.manager,
+        );
+        if (refusal) throw refusal;
+        return {
+          target: {
+            entityType,
+            id: document.document_id,
+            ref: document.target_ref,
+            title: document.target_title ?? 'Untitled document',
+            updatedAt: document.updated_at,
+          },
+          impact: await this.documentImpact(context, document.document_id),
         };
       }
     }
@@ -525,6 +567,76 @@ export class AiDeleteMutationSupportService {
   }
 
   /**
+   * One statement for what a document's delete takes, all under its tenant: its versions, its
+   * attachments, the documents that cite it and that it cites, the records it links to, and the
+   * documents created from it (which lose their template). A linked family the person does not
+   * read is summed without naming it, as the document page leaves the family out. A review
+   * workflow or another person's edit lock is reported in a line, never refused: the Knowledge
+   * screen still deletes the document.
+   */
+  private async documentImpact(context: AiExecutionContextWithManager, documentId: string): Promise<AiDeleteImpact> {
+    const [row] = await context.manager.query(
+      `SELECT
+         (SELECT count(*)::int FROM document_versions WHERE tenant_id = $1 AND document_id = $2) AS versions,
+         (SELECT count(*)::int FROM document_attachments WHERE tenant_id = $1 AND document_id = $2) AS attachments,
+         (SELECT count(*)::int FROM document_references WHERE tenant_id = $1 AND target_document_id = $2) AS citing_documents,
+         (SELECT count(*)::int FROM document_references WHERE tenant_id = $1 AND source_document_id = $2) AS cited_documents,
+         (SELECT count(*)::int FROM document_applications WHERE tenant_id = $1 AND document_id = $2) AS applications,
+         (SELECT count(*)::int FROM document_assets WHERE tenant_id = $1 AND document_id = $2) AS assets,
+         (SELECT count(*)::int FROM document_projects WHERE tenant_id = $1 AND document_id = $2) AS projects,
+         (SELECT count(*)::int FROM document_requests WHERE tenant_id = $1 AND document_id = $2) AS requests,
+         (SELECT count(*)::int FROM document_tasks WHERE tenant_id = $1 AND document_id = $2) AS tasks,
+         (SELECT count(*)::int FROM document_locations WHERE tenant_id = $1 AND document_id = $2) AS locations,
+         (SELECT count(*)::int FROM document_connections WHERE tenant_id = $1 AND document_id = $2) AS connections,
+         (SELECT count(*)::int FROM document_interfaces WHERE tenant_id = $1 AND document_id = $2) AS interfaces,
+         (SELECT count(*)::int FROM document_incidents WHERE tenant_id = $1 AND document_id = $2) AS incidents,
+         (SELECT count(*)::int FROM documents WHERE tenant_id = $1 AND template_document_id = $2) AS derived_documents,
+         (SELECT count(*)::int FROM document_workflows
+           WHERE tenant_id = $1 AND document_id = $2 AND status IN ('pending_review', 'pending_approval')) AS active_workflows,
+         (SELECT COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), u.email)
+            FROM document_edit_locks l
+            JOIN users u ON u.id = l.holder_user_id AND u.tenant_id = l.tenant_id
+           WHERE l.tenant_id = $1 AND l.document_id = $2 AND l.expires_at > now()
+             AND l.holder_user_id <> $3::uuid
+           LIMIT 1) AS lock_holder`,
+      [context.tenantId, documentId, context.userId],
+    );
+    const counts: Record<string, number> = {
+      versions: Number(row?.versions ?? 0),
+      attachments: Number(row?.attachments ?? 0),
+      citing_documents: Number(row?.citing_documents ?? 0),
+      cited_documents: Number(row?.cited_documents ?? 0),
+      applications: Number(row?.applications ?? 0),
+      assets: Number(row?.assets ?? 0),
+      projects: Number(row?.projects ?? 0),
+      requests: Number(row?.requests ?? 0),
+      tasks: Number(row?.tasks ?? 0),
+      locations: Number(row?.locations ?? 0),
+      connections: Number(row?.connections ?? 0),
+      interfaces: Number(row?.interfaces ?? 0),
+      incidents: Number(row?.incidents ?? 0),
+      derived_documents: Number(row?.derived_documents ?? 0),
+    };
+    const readable = await this.policy.readableResources(
+      context,
+      Array.from(new Set(Object.values(DOCUMENT_LINK_READS))),
+      context.manager,
+    );
+    let hidden = 0;
+    for (const [family, resource] of Object.entries(DOCUMENT_LINK_READS)) {
+      if (readable.has(resource)) continue;
+      hidden += counts[family];
+      delete counts[family];
+    }
+    return {
+      counts,
+      ...(hidden > 0 ? { hidden } : {}),
+      ...(Number(row?.active_workflows ?? 0) > 0 ? { inReview: true } : {}),
+      ...(row?.lock_holder ? { lockHolder: String(row.lock_holder) } : {}),
+    };
+  }
+
+  /**
    * One statement for what a connection's delete takes, all under its tenant. The interfaces
    * that lose it are named only for a reader of the applications, and its linked documents only
    * for a reader of the knowledge library; anyone else sees them counted among the other links.
@@ -714,6 +826,22 @@ export class AiDeleteMutationSupportService {
         await this.interfaces.delete(found.id, context.userId, {
           manager: context.manager,
           deleteRelatedBindings,
+          audit,
+        });
+        return;
+      }
+      case 'documents': {
+        const document = await this.documentSupport.resolveDocumentSnapshot(context, targetId);
+        this.assertNotChanged(entityType, expectedUpdatedAt, document.updated_at);
+        await this.knowledge.assertDocumentWritable(document.document_id, context.manager, context.userId);
+        const refusal = await this.knowledge.managedDocumentRefusal(
+          { id: document.document_id, title: document.target_title ?? '' },
+          context.manager,
+        );
+        if (refusal) throw refusal;
+        this.assertImpactUnchanged(entityType, preview, await this.documentImpact(context, document.document_id));
+        await this.knowledge.remove(document.document_id, context.userId, {
+          manager: context.manager,
           audit,
         });
         return;

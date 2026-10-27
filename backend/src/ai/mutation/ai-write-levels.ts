@@ -23,9 +23,10 @@ const CONTRIBUTOR_WRITE_FAMILIES: Readonly<Record<string, readonly string[]>> = 
  * The level each family of `delete_record` needs, as its delete route: tasks and contacts are
  * opened to their administrator only, a location to a member, a budget line to the budget
  * administrator (its bulk delete and its delete-check are reserved), a connection to an
- * infrastructure member and an interface to an applications administrator (the bulk delete the
- * list offers). An unknown family keeps the strictest level (admin), so a family added without
- * its row is refused rather than opened.
+ * infrastructure member, an interface to an applications administrator (the bulk delete the list
+ * offers) and a document to a Knowledge administrator (`DELETE /knowledge/:idOrRef`, with the
+ * document's library write right checked by `KnowledgeService`). An unknown family keeps the
+ * strictest level (admin), so a family added without its row is refused rather than opened.
  */
 const DELETE_RECORD_FAMILIES: Readonly<Record<string, { resource: string; level: PermissionLevel }>> = {
   tasks: { resource: 'tasks', level: 'admin' },
@@ -35,6 +36,7 @@ const DELETE_RECORD_FAMILIES: Readonly<Record<string, { resource: string; level:
   capex_items: { resource: 'budget', level: 'admin' },
   connections: { resource: 'infrastructure', level: 'member' },
   interfaces: { resource: 'applications', level: 'admin' },
+  documents: { resource: 'knowledge', level: 'admin' },
 };
 
 /** The module a `delete_record` family belongs to, as the route of its screen. */

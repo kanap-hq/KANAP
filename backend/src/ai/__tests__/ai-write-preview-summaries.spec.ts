@@ -534,6 +534,75 @@ function testDeleteRecordSummaryAndCard() {
       'Les connexions sont conservées.',
     ].join('\n'),
   );
+  // A document names its versions, files, citations, linked records, derived documents, and the
+  // review or edit lock that does not stop the delete.
+  const document: AiMutationPreview = {
+    ...pending,
+    target_entity_type: 'documents',
+    current_values: {
+      target_ref: 'DOC-12',
+      target_title: 'Runbook',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: {
+        versions: 2,
+        attachments: 1,
+        citing_documents: 1,
+        cited_documents: 1,
+        applications: 1,
+        assets: 1,
+        projects: 1,
+        requests: 1,
+        tasks: 1,
+        locations: 1,
+        connections: 1,
+        interfaces: 1,
+        incidents: 1,
+        derived_documents: 1,
+      },
+      in_review: true,
+      lock_holder: 'Camille Roux',
+    },
+  };
+  assert.equal(summary(operation, document, 'en'), 'Delete document "Runbook".');
+  assert.equal(summary(operation, document, 'fr'), 'Suppression du document « Runbook ».');
+  assert.equal(summary(operation, document, 'de'), 'Dokument „Runbook“ löschen.');
+  assert.equal(summary(operation, document, 'es'), 'Eliminación del documento «Runbook».');
+  assert.equal(
+    operation.presentPreview(document, 'fr').changes.deletion.to,
+    [
+      '- Versions : 2',
+      '- Pièces jointes : 1',
+      '- Documents qui le citent : 1',
+      "- Documents qu'il cite : 1",
+      '- Applications : 1',
+      '- Actifs : 1',
+      '- Projets : 1',
+      '- Demandes : 1',
+      '- Tâches : 1',
+      '- Sites : 1',
+      '- Connexions : 1',
+      '- Interfaces : 1',
+      '- Incidents : 1',
+      '- Documents créés depuis ce modèle : 1',
+      '- En cours de relecture. La suppression reste possible.',
+      '- Verrouillé pour édition par Camille Roux. La suppression reste possible.',
+    ].join('\n'),
+  );
+  // A linked family the person does not read is counted among the other links, unnamed.
+  const hiddenDocument: AiMutationPreview = {
+    ...document,
+    current_values: {
+      ...document.current_values,
+      counts: { versions: 1 },
+      hidden: 3,
+      in_review: false,
+      lock_holder: null,
+    },
+  };
+  assert.equal(
+    operation.presentPreview(hiddenDocument, 'fr').changes.deletion.to,
+    "- Versions : 1\n- D'autres rattachements : 3",
+  );
   console.log('  delete_record summary and card: OK');
 }
 

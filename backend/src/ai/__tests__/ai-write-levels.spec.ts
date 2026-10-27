@@ -142,6 +142,7 @@ const TABLE: Record<AiMutationWriteToolName, Record<string, Row>> = {
     capex_items: { resource: 'budget', level: 'admin', route: [BudgetLinesController, 'bulkDelete'] },
     connections: { resource: 'infrastructure', level: 'member', route: [ConnectionsController, 'delete'] },
     interfaces: { resource: 'applications', level: 'admin', route: [InterfacesController, 'bulkDelete'] },
+    documents: { resource: 'knowledge', level: 'admin', route: [KnowledgeController, 'remove'] },
   },
 };
 
@@ -202,7 +203,7 @@ function testToolRequirements() {
   assert.ok(relations.some((r) => r.resource === 'portfolio_requests' && r.level === 'contributor'));
   assert.deepEqual(aiWriteRequirements('create_business_record', ['portfolio_projects']), [{ resource: 'portfolio_projects', level: 'member' }]);
   assert.deepEqual(aiWriteRequirements('delete_record', [
-    'tasks', 'contacts', 'locations', 'spend_items', 'capex_items', 'connections', 'interfaces',
+    'tasks', 'contacts', 'locations', 'spend_items', 'capex_items', 'connections', 'interfaces', 'documents',
   ]), [
     { resource: 'tasks', level: 'admin' },
     { resource: 'contacts', level: 'admin' },
@@ -211,6 +212,7 @@ function testToolRequirements() {
     { resource: 'budget', level: 'admin' },
     { resource: 'infrastructure', level: 'member' },
     { resource: 'applications', level: 'admin' },
+    { resource: 'knowledge', level: 'admin' },
   ]);
   // The unit interface delete takes the integrated documents too: no lower than the list's bulk.
   assert.deepEqual(routeGuard([InterfacesController, 'delete']), { resource: 'applications', level: 'admin' });

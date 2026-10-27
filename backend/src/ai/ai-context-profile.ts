@@ -106,6 +106,7 @@ const DOCUMENT_WRITE_TOOLS: AiToolName[] = [
   'update_document_content',
   'update_document_metadata',
   'update_document_relations',
+  'delete_record',
   'undo_preview',
 ];
 

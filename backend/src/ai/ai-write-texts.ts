@@ -276,6 +276,7 @@ const RECORD_NOUNS: Record<string, TranslatedTexts> = {
   analytics_categories: { fr: 'de la valeur de dimension', de: 'Dimensionswert', es: 'del valor de dimensión' },
   business_processes: { fr: 'du processus métier', de: 'Geschäftsprozess', es: 'del proceso de negocio' },
   locations: { fr: 'du site', de: 'Standort', es: 'de la ubicación' },
+  documents: { fr: 'du document', de: 'Dokument', es: 'del documento' },
   default: { fr: "de l'élément", de: 'Element', es: 'del elemento' },
 };
 
@@ -299,6 +300,12 @@ export type AiDeleteImpact = {
   counts: Record<string, number>;
   /** Links in families the person does not read (a contact's, a location's assets and documents), counted without naming them. */
   hidden?: number;
+  /** Lines the card adds after the counts (a document's review or edit lock), already worded in the person's language. */
+  notices?: string[];
+  /** A document in review still deletes: the preview says so, as the Knowledge screen allows it. */
+  inReview?: boolean;
+  /** The person holding the document's edit lock, when it is not the deleter. */
+  lockHolder?: string | null;
 };
 
 const DELETE_IMPACT_ROWS: Record<string, ReadonlyArray<{ key: string; labels: Texts }>> = {
@@ -336,6 +343,22 @@ const DELETE_IMPACT_ROWS: Record<string, ReadonlyArray<{ key: string; labels: Te
     { key: 'protocols', labels: { en: 'Protocols', fr: 'Protocoles', de: 'Protokolle', es: 'Protocolos' } },
     { key: 'interfaces', labels: { en: 'Interfaces that will lose this connection', fr: 'Interfaces qui perdront cette connexion', de: 'Schnittstellen, die diese Verbindung verlieren', es: 'Interfaces que perderán esta conexión' } },
     { key: 'documents', labels: { en: 'Linked documents', fr: 'Documents liés', de: 'Verknüpfte Dokumente', es: 'Documentos vinculados' } },
+  ],
+  documents: [
+    { key: 'versions', labels: { en: 'Versions', fr: 'Versions', de: 'Versionen', es: 'Versiones' } },
+    { key: 'attachments', labels: { en: 'Attachments', fr: 'Pièces jointes', de: 'Anhänge', es: 'Archivos adjuntos' } },
+    { key: 'citing_documents', labels: { en: 'Documents that cite it', fr: 'Documents qui le citent', de: 'Dokumente, die es zitieren', es: 'Documentos que lo citan' } },
+    { key: 'cited_documents', labels: { en: 'Documents it cites', fr: "Documents qu'il cite", de: 'Dokumente, die es zitiert', es: 'Documentos que cita' } },
+    { key: 'applications', labels: { en: 'Applications', fr: 'Applications', de: 'Anwendungen', es: 'Aplicaciones' } },
+    { key: 'assets', labels: { en: 'Assets', fr: 'Actifs', de: 'Assets', es: 'Activos' } },
+    { key: 'projects', labels: { en: 'Projects', fr: 'Projets', de: 'Projekte', es: 'Proyectos' } },
+    { key: 'requests', labels: { en: 'Requests', fr: 'Demandes', de: 'Anfragen', es: 'Solicitudes' } },
+    { key: 'tasks', labels: { en: 'Tasks', fr: 'Tâches', de: 'Aufgaben', es: 'Tareas' } },
+    { key: 'locations', labels: { en: 'Locations', fr: 'Sites', de: 'Standorte', es: 'Ubicaciones' } },
+    { key: 'connections', labels: { en: 'Connections', fr: 'Connexions', de: 'Verbindungen', es: 'Conexiones' } },
+    { key: 'interfaces', labels: { en: 'Interfaces', fr: 'Interfaces', de: 'Schnittstellen', es: 'Interfaces' } },
+    { key: 'incidents', labels: { en: 'Incidents', fr: 'Incidents', de: 'Vorfälle', es: 'Incidentes' } },
+    { key: 'derived_documents', labels: { en: 'Documents created from it', fr: 'Documents créés depuis ce modèle', de: 'Aus dieser Vorlage erstellte Dokumente', es: 'Documentos creados a partir de esta plantilla' } },
   ],
   interfaces: [
     { key: 'bindings', labels: { en: 'Bindings', fr: 'Liaisons', de: 'Bindungen', es: 'Enlaces' } },
@@ -380,6 +403,7 @@ const DELETE_IMPACT_NONE: Record<string, Texts> = {
   capex_items: { en: 'Nothing else is deleted with this line.', fr: 'Aucun autre élément ne part avec cette ligne.', de: 'Sonst wird mit dieser Zeile nichts gelöscht.', es: 'No se elimina nada más con esta línea.' },
   connections: { en: 'Nothing else is deleted with this connection.', fr: 'Aucun autre élément ne part avec cette connexion.', de: 'Sonst wird mit dieser Verbindung nichts gelöscht.', es: 'No se elimina nada más con esta conexión.' },
   interfaces: { en: 'Nothing else is deleted with this interface.', fr: 'Aucun autre élément ne part avec cette interface.', de: 'Sonst wird mit dieser Schnittstelle nichts gelöscht.', es: 'No se elimina nada más con esta interfaz.' },
+  documents: { en: 'Nothing else is deleted with this document.', fr: 'Aucun autre élément ne part avec ce document.', de: 'Sonst wird mit diesem Dokument nichts gelöscht.', es: 'No se elimina nada más con este documento.' },
 };
 
 const DELETE_IMPACT_CLOSING: Record<string, Texts> = {
@@ -387,6 +411,35 @@ const DELETE_IMPACT_CLOSING: Record<string, Texts> = {
   connections: { en: 'The interfaces themselves are not deleted.', fr: 'Les interfaces elles-mêmes ne sont pas supprimées.', de: 'Die Schnittstellen selbst werden nicht gelöscht.', es: 'Las interfaces en sí no se eliminan.' },
   interfaces: { en: 'The connections stay.', fr: 'Les connexions sont conservées.', de: 'Die Verbindungen bleiben erhalten.', es: 'Las conexiones se conservan.' },
 };
+
+/**
+ * The line a document's preview adds when it is in review or locked for editing: the delete stays
+ * possible, as the Knowledge screen allows it, so the card says what is true rather than refusing.
+ */
+export function documentDeleteNoticeText(
+  language: AiWriteLanguage,
+  state: { inReview?: boolean; lockHolder?: string | null },
+): string[] {
+  const notices: string[] = [];
+  if (state.inReview) {
+    notices.push({
+      en: 'In review. The delete remains possible.',
+      fr: 'En cours de relecture. La suppression reste possible.',
+      de: 'In Prüfung. Das Löschen bleibt möglich.',
+      es: 'En revisión. La eliminación sigue siendo posible.',
+    }[language]);
+  }
+  const holder = String(state.lockHolder ?? '').trim();
+  if (holder) {
+    notices.push({
+      en: `Locked for editing by ${holder}. The delete remains possible.`,
+      fr: `Verrouillé pour édition par ${holder}. La suppression reste possible.`,
+      de: `Zur Bearbeitung gesperrt von ${holder}. Das Löschen bleibt möglich.`,
+      es: `Bloqueado para edición por ${holder}. La eliminación sigue siendo posible.`,
+    }[language]);
+  }
+  return notices;
+}
 
 /** The markdown list of what goes with a deleted record, in the person's language. */
 export function deletionImpactText(language: AiWriteLanguage, entityType: string, impact: AiDeleteImpact): string {
@@ -396,6 +449,9 @@ export function deletionImpactText(language: AiWriteLanguage, entityType: string
     .map((row) => `- ${row.labels[language]}${colon}${Number(impact.counts[row.key])}`);
   if (Number(impact.hidden ?? 0) > 0) {
     lines.push(`- ${DELETE_IMPACT_OTHER[language]}${colon}${Number(impact.hidden)}`);
+  }
+  for (const notice of impact.notices ?? []) {
+    if (notice.trim()) lines.push(`- ${notice.trim()}`);
   }
   if (lines.length === 0) {
     return DELETE_IMPACT_NONE[entityType]?.[language] ?? DELETE_IMPACT_NONE.tasks[language];
