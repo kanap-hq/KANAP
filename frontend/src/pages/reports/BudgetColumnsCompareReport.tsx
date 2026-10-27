@@ -7,8 +7,10 @@ import type { ColDef } from 'ag-grid-community';
 import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
-import { MetricKey, metricKeys, resolveMetric } from './reportMetrics';
-import { columnsCompareRequest, readColumnsCompare } from './reportAggregates';
+import { MetricKey, resolveMetric } from './reportMetrics';
+import { columnsCompareRequest } from './reportAggregates';
+import { columnsCompareTable, columnsInUse, sortColumnSelections } from './reportTables';
+import { useReportTableLabels } from './useReportTableLabels';
 import { useReportScope } from './useReportScope';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { useBudgetAggregate } from './useBudgetAggregate';
@@ -43,6 +45,7 @@ export default function BudgetColumnsCompareReport() {
   const measureText = useMeasureText(measure);
   const formatNumber = measureText.format;
   const totalLabel = measureText.fte ? t('reports.measure.totalFte') : t('reports.columns.total');
+  const tableLabels = useReportTableLabels();
   const [picked, setSelections] = useState<PickedSelection[]>([
     { year: Y, metric: null },
     { year: Y + 1, metric: null },
@@ -59,12 +62,7 @@ export default function BudgetColumnsCompareReport() {
   const reportFilters = useBudgetReportFilters({ scope: itemType, years: yearsNeeded });
 
   // Sort selections chronologically for display (chart and table)
-  const sortedSelections = useMemo(() => {
-    return [...selections].sort((a, b) => {
-      if (a.year !== b.year) return a.year - b.year;
-      return metricKeys.indexOf(a.metric) - metricKeys.indexOf(b.metric);
-    });
-  }, [selections]);
+  const sortedSelections = useMemo(() => sortColumnSelections(selections), [selections]);
 
   // One total per year and column picked, over the lines the filter bar keeps.
   const request = useMemo(
@@ -72,81 +70,31 @@ export default function BudgetColumnsCompareReport() {
     [reportFilters.queryFilters, sortedSelections, measure],
   );
   const report = useBudgetAggregate(itemType, request, { keepPrevious: true });
-  // FTE: a year and column nobody declares is null (an empty cell, no point), never a 0.
-  const selectionTotals = useMemo(() => readColumnsCompare(sortedSelections, report.data, measure), [sortedSelections, report.data, measure]);
   // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
   const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
 
-  type TableRow = { key: string; selection: string; year: number; column: string; total: number | null };
-  const tableRows = useMemo<TableRow[]>(() => {
-    return sortedSelections.map((sel, idx) => {
-      const total = measureText.fte ? selectionTotals[idx] ?? null : selectionTotals[idx] ?? 0;
-      const label = `${sel.year} ${metricLabels[sel.metric]}`;
-      return { key: `${sel.year}-${sel.metric}-${idx}`, selection: label, year: sel.year, column: metricLabels[sel.metric], total };
-    });
-  }, [sortedSelections, selectionTotals, metricLabels, measureText]);
+  // The key table (`reportTables.ts`, the same code as the export): one row per selection, or per year
+  // when year grouping applies. FTE: a year and column nobody declares is null (an empty cell, no point).
+  const table = useMemo(
+    () => columnsCompareTable({ selections: sortedSelections, measure, yearGrouping }, report.data, tableLabels),
+    [sortedSelections, measure, yearGrouping, report.data, tableLabels],
+  );
+  const groupingEligible = table.grouped;
+  const metricsInUse = useMemo(() => columnsInUse(sortedSelections), [sortedSelections]);
 
-  const columns = useMemo<ColDef[]>(() => ([
-    { field: 'selection', headerName: t('reports.columns.selection'), flex: 1, minWidth: 200 },
-    { field: 'year', headerName: t('reports.filters.year'), width: 120 },
-    { field: 'column', headerName: t('reports.filters.column'), width: 160 },
-    { field: 'total', headerName: totalLabel, width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
-  ]), [totalLabel, formatNumber]); // eslint-disable-line react-hooks/exhaustive-deps
+  const columns = useMemo<ColDef[]>(() => table.columns.map((column): ColDef => {
+    if (column.key === 'selection') return { field: column.key, headerName: column.header, flex: 1, minWidth: 200 };
+    if (column.key === 'year') return { field: column.key, headerName: column.header, width: 120 };
+    if (column.key === 'column') return { field: column.key, headerName: column.header, width: 160 };
+    return { field: column.key, headerName: column.header, width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) };
+  }), [table, formatNumber]);
 
-  const chartData = useMemo(() => tableRows.map((r) => ({ selection: r.selection, total: r.total })), [tableRows]);
+  const chartData = useMemo(() => (table.grouped ? [] : table.rows.map((r) => ({ selection: r.selection, total: r.total }))), [table]);
   const chartRef = useRef<ChartCardHandle>(null);
   const gridApiRef = useRef<any>(null);
 
-  // Determine if grouping by metric across years is applicable
-  const metricsInUse = useMemo(() => Array.from(new Set(sortedSelections.map((s) => s.metric))) as MetricKey[], [sortedSelections]);
-  const distinctYearCountByMetric = useMemo(() => {
-    const m = new Map<MetricKey, Set<number>>();
-    for (const sel of sortedSelections) {
-      if (!m.has(sel.metric)) m.set(sel.metric, new Set<number>());
-      m.get(sel.metric)!.add(sel.year);
-    }
-    const out = new Map<MetricKey, number>();
-    for (const key of m.keys()) out.set(key, m.get(key)!.size);
-    return out;
-  }, [sortedSelections]);
-  const groupingEligible = useMemo(() => {
-    if (!yearGrouping) return false;
-    if (metricsInUse.length === 0) return false;
-    for (const m of metricsInUse) {
-      const count = distinctYearCountByMetric.get(m) || 0;
-      if (count < 2) return false;
-    }
-    return true;
-  }, [yearGrouping, metricsInUse, distinctYearCountByMetric]);
-
-  // Build grouped data when eligible
-  const groupedYears = useMemo(() => Array.from(new Set(sortedSelections.map((s) => s.year))).sort((a, b) => a - b), [sortedSelections]);
-  const totalsByMetricYear = useMemo(() => {
-    const map = new Map<string, number | null>(); // key: `${year}:${metric}`
-    // A year and column picked twice adds up twice, as the table lists it twice. FTE nobody declares stays null.
-    sortedSelections.forEach((sel, idx) => {
-      const key = `${sel.year}:${sel.metric}`;
-      const value = selectionTotals[idx] ?? null;
-      if (value == null) {
-        if (!map.has(key)) map.set(key, measureText.fte ? null : 0);
-        return;
-      }
-      map.set(key, (map.get(key) || 0) + value);
-    });
-    return map;
-  }, [sortedSelections, selectionTotals, measureText]);
-
-  const groupedChartData = useMemo(() => {
-    return groupedYears.map((year) => {
-      const row: any = { year };
-      for (const m of metricKeys) {
-        if (!metricsInUse.includes(m)) continue;
-        const key = `${year}:${m}`;
-        row[m] = totalsByMetricYear.has(key) ? totalsByMetricYear.get(key) : null;
-      }
-      return row;
-    });
-  }, [groupedYears, metricsInUse, totalsByMetricYear]);
+  // Grouped by year, the chart reads the table's rows: one per year, one field per column in use.
+  const groupedChartData = useMemo(() => (table.grouped ? table.rows : []), [table]);
 
   // FTE: the value axis names the measure and reads FTE.
   const valueAxis = useMemo(() => ({
@@ -183,30 +131,6 @@ export default function BudgetColumnsCompareReport() {
       ],
     } as any;
   }, [groupingEligible, itemType, groupedChartData, metricsInUse, metricLabels, selections.length, chartData, valueAxis, measureText, totalLabel, t]);
-
-  // Grouped table (reflects year grouping) or flat table (per selection)
-  const groupedTableRows = useMemo(() => {
-    if (!groupingEligible) return [] as any[];
-    return groupedYears.map((year) => {
-      const row: any = { year };
-      for (const m of metricsInUse) {
-        const key = `${year}:${m}`;
-        row[m] = totalsByMetricYear.has(key) ? totalsByMetricYear.get(key) : null;
-      }
-      return row;
-    });
-  }, [groupingEligible, groupedYears, metricsInUse, totalsByMetricYear]);
-
-  const groupedColumns = useMemo<ColDef[]>(() => {
-    if (!groupingEligible) return [];
-    const cols: ColDef[] = [
-      { field: 'year', headerName: t('reports.filters.year'), width: 120 },
-    ];
-    for (const m of metricsInUse) {
-      cols.push({ field: m, headerName: measureText.column(metricLabels[m]), width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) });
-    }
-    return cols;
-  }, [groupingEligible, metricsInUse, metricLabels, measureText, formatNumber]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const MAX_SELECTIONS = 10;
   const canAdd = selections.length < MAX_SELECTIONS;
@@ -284,8 +208,8 @@ export default function BudgetColumnsCompareReport() {
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>{t("reports.shared.keyTable")}</Typography>
           <ReportGrid
             wrapperSx={{ height: 360 }}
-            rowData={groupingEligible ? groupedTableRows : tableRows}
-            columnDefs={groupingEligible ? groupedColumns : columns}
+            rowData={table.rows}
+            columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}
             onGridReady={(e) => { gridApiRef.current = e.api; }}
           />

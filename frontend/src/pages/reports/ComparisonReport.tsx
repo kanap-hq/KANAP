@@ -5,7 +5,9 @@ import type { ColDef } from 'ag-grid-community';
 import ReportLayout from '../../components/reports/ReportLayout';
 import ChartCard, { ChartCardHandle } from '../../components/reports/ChartCard';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
-import { readTrend, trendRequest, type MetricKey } from './reportAggregates';
+import { trendRequest, type MetricKey } from './reportAggregates';
+import { comparisonTable } from './reportTables';
+import { useReportTableLabels } from './useReportTableLabels';
 import { useBudgetAggregate } from './useBudgetAggregate';
 import { useTranslation } from 'react-i18next';
 import { metricFileName, useReportMetrics } from './reportMetrics';
@@ -32,8 +34,7 @@ export default function ComparisonReport() {
   const [measure, setMeasure] = useReportMeasure();
   const measureText = useMeasureText(measure);
   const formatNumber = measureText.format;
-  // FTE: a year and column nobody declares stays blank, never a 0 (an empty cell, no point).
-  const cell = (value: number | null | undefined) => (measureText.fte ? value ?? null : value || 0);
+  const tableLabels = useReportTableLabels();
 
   // Keep range valid and within allowed set
   const years = useMemo(() => allowedYears.filter((yr) => yr >= startYear && yr <= endYear), [allowedYears, startYear, endYear]);
@@ -53,34 +54,24 @@ export default function ComparisonReport() {
   const report = useBudgetAggregate(scope, request, { keepPrevious: true });
   // Loading, the filter bar still reading its address, or the last answer kept while the new one loads.
   const busy = reportFilters.queryFilters == null || report.isLoading || report.isPlaceholderData;
-  const totalsByMetricAndYear = useMemo(() => readTrend({ years, metrics: metrics as MetricKey[] }, report.data, measure), [years, metrics, report.data, measure]);
+  // The key table (`reportTables.ts`, the same code as the export): one row per column, one column per year.
+  const table = useMemo(
+    () => comparisonTable({ years, metrics: metrics as MetricKey[], measure }, report.data, tableLabels),
+    [years, metrics, measure, report.data, tableLabels],
+  );
 
-  const tableRows = useMemo(() => {
-    return metrics.map((m) => {
-      const row: any = { metric: measureText.column(metricLabels[m]), _key: m };
-      for (const yr of years) row[yr] = cell(totalsByMetricAndYear[m]?.[yr]);
-      return row;
-    });
-  }, [metrics, metricLabels, years, totalsByMetricAndYear, measureText]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const columns = useMemo<ColDef[]>(() => {
-    const cols: ColDef[] = [
-      { field: 'metric', headerName: t('reports.filters.metric'), flex: 1, minWidth: 200 },
-    ];
-    for (const yr of years) {
-      cols.push({ field: String(yr), headerName: String(yr), width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) });
-    }
-    return cols;
-  }, [years, formatNumber]); // eslint-disable-line react-hooks/exhaustive-deps
+  const columns = useMemo<ColDef[]>(() => table.columns.map((column) => (column.kind === 'text'
+    ? { field: column.key, headerName: column.header, flex: 1, minWidth: 200 }
+    : { field: column.key, headerName: column.header, width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) })), [table, formatNumber]);
 
   // Chart data: one row per year with each metric as a field
   const chartData = useMemo(() => {
     return years.map((yr) => {
       const row: any = { year: yr };
-      for (const m of metrics) row[m] = cell(totalsByMetricAndYear[m]?.[yr]);
+      metrics.forEach((m, index) => { row[m] = table.rows[index]?.[String(yr)] ?? null; });
       return row;
     });
-  }, [years, metrics, totalsByMetricAndYear, measureText]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [years, metrics, table]);
 
   const chartSeries = useMemo(
     () => metrics.map((m) => ({ type: 'line', xKey: 'year', yKey: m, yName: measureText.column(metricLabels[m]) })),
@@ -156,7 +147,7 @@ export default function ComparisonReport() {
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>{t("reports.shared.keyTable")}</Typography>
           <ReportGrid
             wrapperSx={{ height: 360 }}
-            rowData={tableRows}
+            rowData={table.rows}
             columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}
             onGridReady={(e) => { gridApiRef.current = e.api; }}
