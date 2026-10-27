@@ -40,6 +40,10 @@ Après l'enregistrement, la tuile de synthèse du temps du tableau de bord se ra
 
 Dans un espace de travail cloud vide, qui n'a jamais reçu les données d'exemple, les administrateurs voient une ligne au-dessus des tuiles : « Découvrez KANAP avec des données d'exemple. » **Charger** ouvre la fenêtre des données d'exemple et **Masquer** supprime la ligne définitivement. La ligne disparaît dès que l'espace de travail contient des données et ne revient pas après un effacement. Voir [Données d'exemple](sample-data.md).
 
+## Ligne pour activer Plaid
+
+Pendant un essai sur le cloud, les administrateurs des paramètres de Plaid voient une ligne sous la ligne des données d'exemple tant que Plaid est désactivé et que le modèle inclus de KANAP est proposé : « Plaid, l'assistant de KANAP, est désactivé. » **Activer** ouvre la confirmation habituelle du modèle inclus. La confirmation active Plaid. Le bouton de fermeture (**×**) masque la ligne dans ce navigateur. La ligne n'apparaît plus après le passage à une offre payante, ni sur site. Voir [Paramètres Plaid](ai-settings.md).
+
 ## Tuiles du tableau de bord
 
 Le tableau de bord affiche une grille de tuiles, chacune montrant un aspect différent de votre travail. Les tuiles sont disposées dans une grille responsive (trois colonnes sur les grands écrans, deux sur les moyens, une sur les petits). Les tuiles que vous n'avez pas l'autorisation de voir ne sont pas chargées du tout.
