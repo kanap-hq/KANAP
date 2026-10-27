@@ -1331,6 +1331,11 @@
       },
       "unnamedAccount": "Cuenta sin nombre",
       "exportTableCsv": "Exportar la tabla en CSV",
+      "exportTable": "Exportar la tabla",
+      "exportCsv": "CSV",
+      "exportCsvTable": "CSV: {{table}}",
+      "exportXlsx": "Excel (.xlsx)",
+      "exportFailed": "No se pudo exportar el archivo. Vuelva a intentarlo.",
       "exportChartPng": "Exportar el gráfico en PNG",
       "printPdf": "Imprimir / Guardar como PDF",
       "printReport": "Imprimir el informe"

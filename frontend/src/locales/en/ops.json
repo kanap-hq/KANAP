@@ -1331,6 +1331,11 @@
       },
       "unnamedAccount": "Unnamed account",
       "exportTableCsv": "Export table as CSV",
+      "exportTable": "Export table",
+      "exportCsv": "CSV",
+      "exportCsvTable": "CSV: {{table}}",
+      "exportXlsx": "Excel (.xlsx)",
+      "exportFailed": "The file could not be exported. Try again.",
       "exportChartPng": "Export chart as PNG",
       "printPdf": "Print / Save as PDF",
       "printReport": "Print report"
