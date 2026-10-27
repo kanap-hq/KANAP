@@ -12,6 +12,7 @@ import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-docum
 //   preview and at the run, also when the scope changes between the two.
 // - The name of a project is not opened to a contributor (the project page): refused, saying so.
 // - A project out of scope reads as missing, as a project that does not exist.
+// - A link needs the read of the linked family, as the Relations tab.
 // - A project contributor without the Business Contributor role writes on every project.
 // - A reader stays refused; a member renames as before.
 // - The write tools offered follow the level: a contributor gets the tools that change a project.
@@ -141,6 +142,11 @@ async function testOutOfScopeAndFields(h: Harness, runner: QueryRunner, s: Seed)
   // A field the project page does not open to a contributor.
   const renamed = await refusal(() => h.previews.createPreview(bc, 'update_business_record', { entity_type: 'projects', ref: 'PRJ-1', fields: { name: 'Renamed' } }));
   assert.match(renamed, /^Your role lets you contribute to projects but not change Name: that needs the right to modify projects/);
+  // A link needs the read of the linked family, as the Relations tab: no infrastructure, no asset.
+  assert.equal(
+    await refusal(() => h.previews.createPreview(bc, 'update_entity_relations', { entity_type: 'projects', ref: 'PRJ-1', relation: 'assets', add: ['Any asset'] })),
+    'You need the right to read IT infrastructure (assets, connections, technologies), which your role does not give. An administrator can add it to your role.',
+  );
 
   // The scope changes between the preview and the run: the run is refused, nothing is written.
   const preview = await h.previews.createPreview(bc, 'update_business_record', { entity_type: 'projects', ref: 'PRJ-1', fields: { purpose: 'Too late' } });
@@ -160,6 +166,11 @@ async function testOtherLevels(h: Harness, runner: QueryRunner, s: Seed) {
   assert.match(
     await refusal(() => h.previews.createPreview(contributor, 'update_business_record', { entity_type: 'projects', ref: 'PRJ-2', fields: { name: 'Renamed' } })),
     /^Your role lets you contribute to projects but not change Name/,
+  );
+  // Without the read of applications, no application link.
+  assert.equal(
+    await refusal(() => h.previews.createPreview(contributor, 'update_entity_relations', { entity_type: 'projects', ref: 'PRJ-2', relation: 'applications', add: ['APP-1'] })),
+    'You need the right to read applications and interfaces, which your role does not give. An administrator can add it to your role.',
   );
   // A contributor still creates no project (the screen asks member).
   assert.equal(

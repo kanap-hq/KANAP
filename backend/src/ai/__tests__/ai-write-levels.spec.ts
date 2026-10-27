@@ -3,7 +3,8 @@ import * as assert from 'node:assert/strict';
 import { REQUIRE_LEVEL_KEY, RequireLevelMeta } from '../../auth/require-level.decorator';
 import { PermissionLevel } from '../../permissions/permissions.service';
 import { AiMutationWriteToolName } from '../ai.types';
-import { aiWriteLevel, aiWriteRequirements, CONTRIBUTOR_WRITABLE_FIELDS } from '../mutation/ai-write-levels';
+import { aiRelationTargetRequirement, aiWriteLevel, aiWriteRequirements, CONTRIBUTOR_WRITABLE_FIELDS } from '../mutation/ai-write-levels';
+import { PROJECT_RELATION_READS, REQUEST_RELATION_READS } from '../../portfolio/portfolio-relations.service';
 import {
   AI_BUSINESS_RECORD_ENTITY_TYPES,
   getAiBusinessRecordBusinessResource,
@@ -192,10 +193,59 @@ function testToolRequirements() {
   console.log('  tool requirements: OK');
 }
 
+/** The relations Plaid writes for one source family, as its refusal of an unknown relation lists them. */
+function plaidRelations(family: string): string[] {
+  try {
+    getAiRelationBusinessResource(family, '__none__');
+  } catch (error) {
+    const listed = /Supported relations: (.*)\.$/.exec(String((error as Error).message))?.[1];
+    if (listed) return listed.split(', ');
+  }
+  throw new Error(`No relations listed for ${family}`);
+}
+
+/**
+ * A link written on a project or a request needs what its Relations tab needs: the read of the
+ * linked family (`*_RELATION_READS`), and the right to modify business processes for a process
+ * link (`PortfolioRequestsController.assertProcessWrite`). Breaks when Plaid writes a relation of
+ * these families the table does not know, or when the tab reads another module.
+ */
+function testRelationTargetsMatchTheRelationsTab() {
+  // Plaid's relation -> the section of the Relations tab.
+  const section: Record<string, string> = {
+    applications: 'applications',
+    assets: 'assets',
+    spend_items: 'budget_lines',
+    capex_items: 'budget_lines',
+    business_processes: 'processes',
+  };
+  const reads: Record<string, Record<string, string>> = { projects: PROJECT_RELATION_READS, requests: REQUEST_RELATION_READS };
+  let rows = 0;
+  for (const family of ['projects', 'requests']) {
+    for (const relation of plaidRelations(family)) {
+      const read = reads[family][section[relation]];
+      assert.ok(read, `${family}.${relation}: a section of the Relations tab`);
+      assert.deepEqual(
+        aiRelationTargetRequirement('update_entity_relations', family, relation),
+        { resource: read, level: relation === 'business_processes' ? 'member' : 'reader' },
+        `${family}.${relation}`,
+      );
+      rows += 1;
+    }
+  }
+  assert.equal(rows, 9);
+  // The relation is read as the relation writes read it; other tools and families need nothing more.
+  assert.deepEqual(aiRelationTargetRequirement('update_entity_relations', 'projects', 'Spend Items'), { resource: 'budget', level: 'reader' });
+  assert.equal(aiRelationTargetRequirement('update_entity_relations', 'applications', 'projects'), null);
+  assert.equal(aiRelationTargetRequirement('update_business_record', 'projects', 'spend_items'), null);
+  console.log('  relation targets match the Relations tab: OK');
+}
+
 function run() {
   testTableMatchesRoutesAndPlaid();
   testOnlyTheContributorRowsAreBelowMember();
   testToolRequirements();
+  testRelationTargetsMatchTheRelationsTab();
   console.log('ai-write-levels.spec: ok');
 }
 

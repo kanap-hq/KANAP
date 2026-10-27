@@ -27,7 +27,7 @@ import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/da
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
 import { assertLinesEditable } from '../data-access/line-write-checks';
 import { isReservedAiMutation } from './mutation/ai-mutation-reserved';
-import { aiWriteLevel, assertRecordInWriteScope } from './mutation/ai-write-levels';
+import { aiRelationTargetRequirement, aiWriteLevel, assertRecordInWriteScope } from './mutation/ai-write-levels';
 import {
   AiWriteLanguage,
   PREVIEW_DATA_BUSY_MESSAGE,
@@ -307,11 +307,35 @@ export class AiMutationPreviewService {
     const resource = this.getOperationBusinessResource(operation, params as any);
     if (!change) {
       await this.policy.assertWriteAccess(context, resource, context.manager, { level });
+      // A new write: the linked family is checked before its records are looked up.
+      if (params.input !== undefined) await this.assertRelationTargetRights(context, operation, family, params);
       return;
     }
     const fields = level === 'member' ? undefined : this.writtenFields(change.mutationInput);
     await this.policy.assertWriteAccess(context, resource, context.manager, { level, toolName: operation.toolName, family, fields });
+    await this.assertRelationTargetRights(context, operation, family, params, change.mutationInput);
     await assertRecordInWriteScope(context, change.targetEntityType, change.targetId, level);
+  }
+
+  /**
+   * A link written from the Relations tab of a project or a request needs what the tab needs: the
+   * read of the linked family, and the right to modify business processes for a process link
+   * (`aiRelationTargetRequirement`).
+   */
+  private async assertRelationTargetRights(
+    context: AiExecutionContextWithManager,
+    operation: ReturnType<AiMutationOperationRegistry['getOperation']>,
+    family: string,
+    params: { input?: unknown; preview?: AiMutationPreview },
+    mutationInput?: Record<string, unknown> | null,
+  ): Promise<void> {
+    const relation = mutationInput?.relation
+      ?? (params.input as { relation?: unknown } | null | undefined)?.relation
+      ?? params.preview?.mutation_input?.relation;
+    const requirement = aiRelationTargetRequirement(operation.toolName, family, relation);
+    if (requirement) {
+      await this.policy.assertBusinessPermission(context, requirement.resource, requirement.level, context.manager);
+    }
   }
 
   /** The rights of a stored preview, before it runs or is undone. */

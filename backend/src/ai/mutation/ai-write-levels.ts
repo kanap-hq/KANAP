@@ -37,6 +37,40 @@ export const CONTRIBUTOR_WRITABLE_FIELDS: Readonly<Record<string, Readonly<Recor
   update_business_record: { projects: ['purpose'] },
 };
 
+/**
+ * What the Relations tab of a project or a request needs besides the module of the record, per
+ * relation: the read of the linked family (`PROJECT_RELATION_READS`, `REQUEST_RELATION_READS`),
+ * and the right to modify business processes for a process link (`assertProcessWrite`). The tab
+ * shows no section of a family the person does not read, and the routes refuse its links.
+ */
+const RELATION_TARGET_REQUIREMENTS: Readonly<Record<string, Readonly<Record<string, { resource: string; level: PermissionLevel }>>>> = {
+  projects: {
+    applications: { resource: 'applications', level: 'reader' },
+    assets: { resource: 'infrastructure', level: 'reader' },
+    spend_items: { resource: 'budget', level: 'reader' },
+    capex_items: { resource: 'budget', level: 'reader' },
+  },
+  requests: {
+    applications: { resource: 'applications', level: 'reader' },
+    assets: { resource: 'infrastructure', level: 'reader' },
+    spend_items: { resource: 'budget', level: 'reader' },
+    capex_items: { resource: 'budget', level: 'reader' },
+    business_processes: { resource: 'business_processes', level: 'member' },
+  },
+};
+
+/** The rights a relation write needs on the linked family, as the Relations tab of the record. */
+export function aiRelationTargetRequirement(
+  toolName: string,
+  family: unknown,
+  relation: unknown,
+): { resource: string; level: PermissionLevel } | null {
+  if (toolName !== 'update_entity_relations') return null;
+  // The relation as the relation writes read it (`getRelationConfig`).
+  const key = String(relation ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  return RELATION_TARGET_REQUIREMENTS[String(family ?? '').trim()]?.[key] ?? null;
+}
+
 /** The modules a contributor may change through Plaid, in plain words, for the refusals. */
 export const CONTRIBUTOR_PLAIN_SCOPES: Readonly<Record<string, string>> = {
   portfolio_projects: 'projects they take part in (their purpose and their links to applications, assets and budget lines)',
