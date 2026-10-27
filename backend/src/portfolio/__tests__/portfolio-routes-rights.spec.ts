@@ -32,6 +32,7 @@ const PROJECT_MEMBER_WRITES = [
   'setEffortAllocations', 'resetEffortAllocations',
   'bulkReplaceContacts',
   'addComment', 'updateComment',
+  'addDependency', 'removeDependency',
   'createPhase', 'updatePhase', 'deletePhase', 'reorderPhases', 'togglePhaseMilestone',
   'createMilestone', 'updateMilestone', 'deleteMilestone', 'applyPhaseTemplate',
 ];
@@ -44,9 +45,6 @@ const PROJECT_CONTRIBUTOR_WRITES = [
   'replaceUrls', 'uploadAttachment', 'uploadInlineAttachment', 'importInlineAttachment', 'deleteAttachment',
   'updateIntegratedDocument', 'acquireIntegratedDocumentLock',
   'createTimeEntry', 'updateTimeEntry', 'deleteTimeEntry',
-  // Dependencies: the page locks them without `canManage`, the manual opens them to a contributor.
-  // Left at contributor until the maintainer decides which one is right.
-  'addDependency', 'removeDependency',
 ];
 
 function testRouteLevels() {

@@ -899,14 +899,14 @@ export class PortfolioProjectsController {
   // ==================== DEPENDENCIES ====================
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Post(':id/dependencies')
   async addDependency(
     @Param('id') idOrRef: string,
     @Body() body: { target_type: 'request' | 'project'; target_id: string },
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.addDependency(id, body.target_type, body.target_id, ctx.tenantId, {
       manager: ctx.manager,
       userId: ctx.userId ?? null,
@@ -914,7 +914,7 @@ export class PortfolioProjectsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Delete(':id/dependencies/:targetType/:targetId')
   async removeDependency(
     @Param('id') idOrRef: string,
@@ -922,7 +922,7 @@ export class PortfolioProjectsController {
     @Param('targetId') targetId: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.removeDependency(id, targetType, targetId, {
       manager: ctx.manager,
       userId: ctx.userId ?? null,

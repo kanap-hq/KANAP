@@ -14,7 +14,7 @@ Pour le séquencement à l'échelle du portefeuille et le travail de roadmap, ut
 ## Autorisations
 
 - `portfolio_projects:reader` : ouvrir la liste et consulter les espaces de travail des projets
-- `portfolio_projects:contributor` : mettre à jour le document **Objectif** managé, saisir du temps sur le projet (saisies de gestion de projet et saisies sur les tâches du projet), et maintenir les dépendances, les enregistrements liés, les liens et les fichiers de l'onglet **Relations**
+- `portfolio_projects:contributor` : mettre à jour le document **Objectif** managé, saisir du temps sur le projet (saisies de gestion de projet et saisies sur les tâches du projet), et maintenir les enregistrements liés, les liens et les fichiers de l'onglet **Relations** (les dépendances demandent `portfolio_projects:member`)
 - `portfolio_projects:member` : créer des projets et gérer les données du projet, statut, équipe, relations, planning, avancement, tâches, évaluation, commentaires et décisions
 - `portfolio_projects:admin` : inclut les capacités du niveau membre et peut également importer/exporter en CSV, enregistrer les remplacements de priorité et maintenir les saisies de temps de gestion de projet d'autres utilisateurs
 - La consultation des connaissances nécessite également un accès Connaissances

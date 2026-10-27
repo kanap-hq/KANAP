@@ -14,7 +14,7 @@ For portfolio-wide sequencing and roadmap work, use [Portfolio Planning](portfol
 ## Permissions
 
 - `portfolio_projects:reader`: open the list and view project workspaces
-- `portfolio_projects:contributor`: update the managed **Purpose** document, log time on the project (project-overhead entries and project task entries), and maintain dependencies, linked records, links and files on the **Relations** tab
+- `portfolio_projects:contributor`: update the managed **Purpose** document, log time on the project (project-overhead entries and project task entries), and maintain linked records, links and files on the **Relations** tab (dependencies need `portfolio_projects:member`)
 - `portfolio_projects:member`: create projects and manage project data, status, team, relations, timeline, progress, tasks, scoring, comments, and decisions
 - `portfolio_projects:admin`: includes member capabilities and can also import/export CSV, save priority overrides and maintain other users' project-overhead time entries
 - Knowledge viewing also requires Knowledge access

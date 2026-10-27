@@ -14,7 +14,7 @@ Para la secuenciación a nivel de portafolio y el trabajo de hoja de ruta, use [
 ## Permisos
 
 - `portfolio_projects:reader`: abrir la lista y ver los espacios de trabajo de proyecto
-- `portfolio_projects:contributor`: actualizar el documento gestionado **Propósito**, registrar tiempo en el proyecto (entradas de gastos generales del proyecto y entradas en tareas del proyecto) y mantener las dependencias, los registros vinculados, los enlaces y los archivos de la pestaña **Relaciones**
+- `portfolio_projects:contributor`: actualizar el documento gestionado **Propósito**, registrar tiempo en el proyecto (entradas de gastos generales del proyecto y entradas en tareas del proyecto) y mantener los registros vinculados, los enlaces y los archivos de la pestaña **Relaciones** (las dependencias requieren `portfolio_projects:member`)
 - `portfolio_projects:member`: crear proyectos y gestionar datos del proyecto, estado, equipo, relaciones, cronograma, progreso, tareas, evaluación, comentarios y decisiones
 - `portfolio_projects:admin`: incluye las capacidades del nivel miembro y también puede importar/exportar CSV, guardar sobrescrituras de prioridad y mantener entradas de tiempo de gastos generales de otros usuarios
 - La visualización del conocimiento también requiere acceso a Base de conocimiento
