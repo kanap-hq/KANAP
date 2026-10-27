@@ -213,6 +213,15 @@ describe('BudgetFileImportDialog', () => {
     expect(screen.queryByText('The file is empty.')).toBeNull();
   });
 
+  it('shows a file without a budget header in the screen language', async () => {
+    const sentence = Object.keys(DECODE_SENTENCE_CODES).find((text) => DECODE_SENTENCE_CODES[text] === 'CSV_HEADER_NOT_BUDGET_FILE')!;
+    post.mockResolvedValueOnce({ data: report({ ok: false, notices: { dates: null, amounts: null }, headerErrors: [sentence] }) });
+    renderDialog();
+    expect(await screen.findByText(/^errors:CSV_HEADER_NOT_BUDGET_FILE/)).toBeInTheDocument();
+    expect(screen.queryByText(sentence)).toBeNull();
+    expect(screen.getByRole('button', { name: 'operations.budgetFile.load' })).toBeDisabled();
+  });
+
   it('takes CSV and Excel files and sends an Excel file as it is', async () => {
     post.mockResolvedValue({ data: report() });
     renderDialog();

@@ -2,7 +2,16 @@ import { CENTS_LIMIT } from '../../common/amount';
 import { CsvDateOrder, CsvLanguage, CsvParsedDate, CsvReadResult, DecimalMark, readCsv, readSheet, SheetReadResult } from '../../common/csv-sheet';
 import { AmountMeasure } from '../amounts-write.util';
 import { LEGACY_PREFIX, type BudgetNature } from '../budget-nature';
-import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, EXPORT_ONLY_COLUMNS, hasCriteriaColumns, isOldBudgetLayout, OLD_BUDGET_FILE_MESSAGE, schemaFields } from './columns';
+import {
+  budgetFileSchema,
+  CRITERIA_COLUMNS_MESSAGE,
+  EXPORT_ONLY_COLUMNS,
+  hasCriteriaColumns,
+  isOldBudgetLayout,
+  MISSING_BUDGET_HEADER_MESSAGE,
+  OLD_BUDGET_FILE_MESSAGE,
+  schemaFields,
+} from './columns';
 import { parseToken, ParsedToken } from './token';
 
 export type FieldCell =
@@ -83,16 +92,31 @@ export async function readBudgetCsv(
   const refusal = isOldBudgetLayout(read.rawHeaders)
     ? OLD_BUDGET_FILE_MESSAGE
     : hasCriteriaColumns(read.rawHeaders) ? CRITERIA_COLUMNS_MESSAGE : null;
-  if (!refusal) return read;
-  return {
-    ...read,
-    headerErrors: [],
-    ignoredColumns: [],
-    fileErrors: [refusal],
-    rows: [],
-    dates: null,
-    amounts: null,
-  };
+  if (refusal) {
+    return {
+      ...read,
+      headerErrors: [],
+      ignoredColumns: [],
+      fileErrors: [refusal],
+      rows: [],
+      dates: null,
+      amounts: null,
+    };
+  }
+  // No column of the budget file on the first line: a title, free text, a row of values. Left alone,
+  // such a file reads as a complete file with nothing to change; the person gets no header to fix.
+  // Any recognized column keeps the partial-file behavior (a header of another language, a hand-made file).
+  if (read.fileErrors.length === 0 && read.headerErrors.length === 0 && read.columns.length === 0) {
+    return {
+      ...read,
+      headerErrors: [MISSING_BUDGET_HEADER_MESSAGE],
+      ignoredColumns: [],
+      rows: [],
+      dates: null,
+      amounts: null,
+    };
+  }
+  return read;
 }
 
 /**

@@ -54,6 +54,7 @@
   "CSV_HEADER_MISSING_COLUMNS": "Fehlende Spalten: {{missing}}.",
   "CSV_HEADER_UNKNOWN_COLUMNS": "Unbekannte Spalten: {{extra}}.",
   "CSV_HEADER_MISMATCH": "Fehlende Spalten: {{missing}}. Unbekannte Spalten: {{extra}}.",
+  "CSV_HEADER_NOT_BUDGET_FILE": "Die erste Zeile dieser Datei ist keine Kopfzeile einer Budgetdatei. Exportieren Sie eine neue Datei aus dieser Liste, übernehmen Sie Ihre Änderungen und importieren Sie sie erneut.",
   "CSV_ACCOUNT_COA_CODE_REQUIRED": "Geben Sie den Code des Kontenplans an (coa_code).",
   "CSV_ACCOUNT_NUMBER_REQUIRED": "Die Kontonummer (account_number) ist erforderlich und muss eine ganze Zahl sein.",
   "CSV_ACCOUNT_NUMBER_TOO_LONG": "{{value}} hat mehr als {{max}} Ziffern. Verwenden Sie höchstens {{max}} Ziffern.",

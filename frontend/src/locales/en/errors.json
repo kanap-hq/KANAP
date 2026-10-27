@@ -54,6 +54,7 @@
   "CSV_HEADER_MISSING_COLUMNS": "Missing columns: {{missing}}.",
   "CSV_HEADER_UNKNOWN_COLUMNS": "Unknown columns: {{extra}}.",
   "CSV_HEADER_MISMATCH": "Missing columns: {{missing}}. Unknown columns: {{extra}}.",
+  "CSV_HEADER_NOT_BUDGET_FILE": "The first line of this file is not a budget file header. Export a fresh file from this list, copy your changes into it, and import it again.",
   "CSV_ACCOUNT_COA_CODE_REQUIRED": "Enter the chart of accounts code (coa_code).",
   "CSV_ACCOUNT_NUMBER_REQUIRED": "The account number (account_number) is required and must be a whole number.",
   "CSV_ACCOUNT_NUMBER_TOO_LONG": "{{value}} has more than {{max}} digits. Use at most {{max}} digits.",

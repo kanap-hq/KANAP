@@ -6,7 +6,8 @@ import { budgetCsvRows, buildBudgetExport, exportListQuery, parseAmountYears, pa
 import { parseItemNumber, readBudgetCsv } from '../interpret';
 import { periodForYearlyTotal } from '../period';
 import { buildPreflight, planBudgetFile } from '../preflight';
-import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, OLD_BUDGET_FILE_MESSAGE } from '../columns';
+import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, MISSING_BUDGET_HEADER_MESSAGE, OLD_BUDGET_FILE_MESSAGE } from '../columns';
+import { writeXlsx } from '../../../common/xlsx';
 import { natureChangeMessage } from '../preflight';
 import type { BudgetNature } from '../../budget-nature';
 import { formatToken, parseToken, tokenError } from '../token';
@@ -70,7 +71,7 @@ function catalog(patch: Partial<BudgetCatalog> = {}): BudgetCatalog {
 
 async function preflight(
   scope: BudgetFileScope,
-  text: string,
+  text: string | Buffer,
   stored: StoredLine[],
   options: {
     language?: 'en' | 'fr' | 'de' | 'es';
@@ -179,6 +180,49 @@ async function testOldFiles() {
   assert.deepEqual(fresh.fileErrors, []);
   assert.deepEqual(fresh.warnings.ignoredColumns, ['status']);
   assert.equal(fresh.changes.unchanged, 1, 'a status column is ignored and the line is unchanged');
+}
+
+/** A first line that is not a budget file header is refused; a header with a column of the file is read as before. */
+async function testMissingHeader() {
+  const stored = line({ versions: withJanuary(10000n) });
+  const refused = [
+    'just some text',
+    'just some text\nand another line\n',
+    'Some title\nitem_number,name,currency\nBL-3,Widget,EUR\n',
+  ];
+  for (const text of refused) {
+    const report = await preflight('opex', text, [stored]);
+    assert.deepEqual(report.headerErrors, [MISSING_BUDGET_HEADER_MESSAGE], JSON.stringify(text));
+    assert.deepEqual(report.fileErrors, [], JSON.stringify(text));
+    assert.deepEqual([report.errorCount, report.changes.created, report.changes.updated, report.changes.unchanged], [0, 0, 0, 0], JSON.stringify(text));
+    assert.equal(report.ok, false, JSON.stringify(text));
+  }
+  const workbook = writeXlsx({
+    language: 'en',
+    sheets: [{ name: 'budget', header: 'plain', headers: ['just some text'], rows: [['and another line']] }],
+  });
+  const fromWorkbook = await preflight('opex', workbook, [stored]);
+  assert.deepEqual(fromWorkbook.headerErrors, [MISSING_BUDGET_HEADER_MESSAGE], 'xlsx: the first row is the sheet header');
+  assert.deepEqual(fromWorkbook.fileErrors, [], 'xlsx: not a file error');
+  assert.deepEqual([fromWorkbook.errorCount, fromWorkbook.changes.unchanged], [0, 0], 'xlsx: no row is read');
+
+  // Empty files keep their own sentence, CSV and xlsx alike.
+  const empty = await preflight('opex', '', [stored]);
+  assert.deepEqual(empty.fileErrors, ['The file is empty.']);
+  assert.deepEqual(empty.headerErrors, []);
+  const emptyWorkbook = writeXlsx({ language: 'en', sheets: [{ name: 'budget', headers: [], rows: [] }] });
+  const emptySheet = await preflight('opex', emptyWorkbook, [stored]);
+  assert.deepEqual(emptySheet.fileErrors, ['The file is empty.']);
+  assert.deepEqual(emptySheet.headerErrors, []);
+
+  // A header of another language, and any partial header, keep the behaviour they have: one column of
+  // the file is enough, the words the reader does not know are only warnings.
+  const foreign = await preflight('opex', 'Nature;Item Number;Nom;Budget 2026\nopex;BL-3;Widget;100.00\n', [stored]);
+  assert.deepEqual([foreign.ok, foreign.fileErrors, foreign.headerErrors], [true, [], []], 'a foreign header with file columns is read');
+  assert.deepEqual(foreign.warnings.ignoredColumns, ['Nom']);
+  assert.equal(foreign.changes.unchanged, 1);
+  const onlyHeader = await preflight('opex', 'item_number\n', []);
+  assert.deepEqual([onlyHeader.ok, onlyHeader.headerErrors, onlyHeader.changes.unchanged], [true, [], 0], 'an empty partial export is nothing to change');
 }
 
 async function testRoundTrip() {
@@ -830,6 +874,7 @@ async function main() {
   await testTokenLanguages();
   await testDecimalMarkParameter();
   await testOldFiles();
+  await testMissingHeader();
   await testRoundTrip();
   await testAmounts();
   await testIdentity();
