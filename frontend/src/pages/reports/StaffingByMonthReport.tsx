@@ -16,7 +16,7 @@ import { useReportScope } from './useReportScope';
 import { metricFileName, MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { MONTHS, readStaffing, requestFirstYear, staffingChartSeries, staffingRequest } from './reportAggregates';
-import { compareNames, useBudgetAggregate } from './useBudgetAggregate';
+import { useBudgetAggregate } from './useBudgetAggregate';
 import { ReportNoticeLine } from './reportMeasure';
 import { GROUP_FILE_NAME, ReportGroupFilters, useGroupLinks, useReportGroup } from './reportGroup';
 import ReportGroupLinkCell from './ReportGroupLinkCell';
@@ -60,7 +60,9 @@ export default function StaffingByMonthReport() {
   // report's window, the lines that declare FTE), in a new tab.
   const groupLink = useGroupLinks(scope, grouping, reportFilters, { firstYear: requestFirstYear(request, Y), fteOnly: true });
   const busy = request == null || report.isLoading || report.isPlaceholderData;
-  const staffing = useMemo(() => readStaffing(report.data, labels, compareNames), [report.data, labels]);
+  // Ties ordered in the screen language, as the export orders them (`new Intl.Collator(language)` on the server).
+  const compare = useMemo(() => new Intl.Collator(locale).compare, [locale]);
+  const staffing = useMemo(() => readStaffing(report.data, labels, compare), [report.data, labels, compare]);
 
   const monthNames = useMemo(() => {
     const format = new Intl.DateTimeFormat(locale, { month: 'short' });

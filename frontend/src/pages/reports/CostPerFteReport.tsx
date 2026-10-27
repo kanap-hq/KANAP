@@ -29,7 +29,7 @@ import {
   type CostPerFteNotice,
   type DailyRate,
 } from './reportAggregates';
-import { compareNames, useBudgetAggregates } from './useBudgetAggregate';
+import { useBudgetAggregates } from './useBudgetAggregate';
 import { formatAmount, ReportNoticeLine } from './reportMeasure';
 import { GROUP_FILE_NAME, ReportGroupFilters, useGroupLinks, useReportGroup } from './reportGroup';
 import ReportGroupLinkCell from './ReportGroupLinkCell';
@@ -182,11 +182,13 @@ export default function CostPerFteReport() {
   // While a new pair loads, the kept answers may hold fewer pairs: read nothing rather than shifted columns.
   const results = report.data && report.data.length === columns.length ? report.data : undefined;
   // The two views ask measures of other names, so an answer of one never stands in for the other.
+  // Ties ordered in the screen language, as the export orders them (`new Intl.Collator(language)` on the server).
+  const compare = useMemo(() => new Intl.Collator(locale).compare, [locale]);
   const data = useMemo<ViewData>(
     () => (view === 'rate'
-      ? readDailyRate(columns, results, labels, compareNames)
-      : { ...readCostPerFte(columns, results, labels, compareNames), monthly: [] }),
-    [view, columns, results, labels],
+      ? readDailyRate(columns, results, labels, compare)
+      : { ...readCostPerFte(columns, results, labels, compare), monthly: [] }),
+    [view, columns, results, labels, compare],
   );
 
   const tableRows = useMemo(() => data.rows.map((row) => ({
