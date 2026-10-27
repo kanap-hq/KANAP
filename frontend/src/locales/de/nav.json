@@ -21,8 +21,7 @@
   },
   "userMenu": {
     "myProfile": "Mein Profil",
-    "logout": "Abmelden",
-    "version": "KANAP {{version}}"
+    "logout": "Abmelden"
   },
   "sidebar": {
     "ops": {

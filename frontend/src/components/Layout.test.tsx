@@ -7,10 +7,8 @@ import Layout from './Layout';
 import { registerLeaveGuard } from '../hooks/leaveGuard';
 
 vi.mock('react-i18next', async () => {
-  const { default: nav } = await import('../locales/en/nav.json');
-  // One stable `t`: keys render as themselves, except the version line, which renders its English text.
-  const t = (key: string, options?: { version?: string }) =>
-    key === 'nav:userMenu.version' ? nav.userMenu.version.replace('{{version}}', options?.version ?? '') : key;
+  // One stable `t`: keys render as themselves.
+  const t = (key: string) => key;
   return { useTranslation: () => ({ t, i18n: { language: 'en' } }) };
 });
 
