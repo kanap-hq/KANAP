@@ -19,6 +19,13 @@ function format() {
   assert.equal(formatCsvPercent(-0.00004, 'en'), '0.00%', 'no negative zero');
   assert.equal(formatCsvPercent(0.1235, 'en'), '12.35%', 'rounded on the hundredth of a point');
   assert.equal(formatCsvPercent(1 / 3, 'fr'), '33,33%');
+  // Half away from zero on the decimal text, never through a float (0.01005 × 10000 is 100.49999… as a float).
+  assert.equal(formatCsvPercent(0.01005, 'en'), '1.01%');
+  assert.equal(formatCsvPercent(-0.01125, 'en'), '-1.13%');
+  assert.equal(formatCsvPercent(0.01125, 'en'), '1.13%');
+  assert.equal(formatCsvPercent(0.001 + 0.002, 'en'), '0.30%');
+  assert.equal(formatCsvPercent(-0.00005, 'en'), '-0.01%', 'half away from zero below zero too');
+  assert.equal(formatCsvPercent(1e-7, 'en'), '0.00%', 'an exponent form');
   for (const bad of [NaN, Infinity, -Infinity]) assert.throws(() => formatCsvPercent(bad, 'en'), /Invalid percent/);
 }
 

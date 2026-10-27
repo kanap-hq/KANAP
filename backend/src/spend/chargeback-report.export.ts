@@ -1,5 +1,5 @@
 import type { CsvLanguage } from '../common/csv-sheet/types';
-import { fillLabel, type ReportCell, type ReportColumn, type ReportExport, type ReportTable } from '../common/report-export';
+import { fillLabel, reportAmount, type ReportCell, type ReportColumn, type ReportExport, type ReportTable } from '../common/report-export';
 import type { ChargebackScope, CompanyChargebackReportResponse } from './chargeback-report.service';
 import type {
   ChargebackKpiTotals,
@@ -296,7 +296,7 @@ export const CHARGEBACK_EXPORT_LABELS: Record<CsvLanguage, ChargebackExportLabel
 /** An amount cell to the cent; null stays empty. */
 function amount(value: number | null | undefined): ReportCell {
   if (value == null || !Number.isFinite(value)) return null;
-  return { kind: 'amount', value: (Math.round(value * 100) / 100).toFixed(2) };
+  return { kind: 'amount', value: reportAmount(value) };
 }
 
 function number(value: number | null | undefined): ReportCell {

@@ -6,6 +6,7 @@ import type { CsvLanguage } from '../../common/csv-sheet/types';
 import type { TenantRequest } from '../../common/decorators/tenant.decorator';
 import {
   fillLabel,
+  reportAmount,
   reportExportRequest,
   writeReportExport,
   type ReportCell,
@@ -450,7 +451,7 @@ function reportTable(key: string, sheet: string, table: ReportTableData): Report
     if (value === null || value === undefined) return null;
     if (column.kind === 'text') return String(value);
     if (typeof value !== 'number' || !Number.isFinite(value)) return null;
-    if (column.kind === 'amount') return { kind: 'amount', value: (Math.round(value * 100) / 100).toFixed(2) };
+    if (column.kind === 'amount') return { kind: 'amount', value: reportAmount(value) };
     return { kind: column.kind, value };
   });
   return {

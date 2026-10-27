@@ -1,3 +1,5 @@
+import { formatCentsFixed } from '../amount';
+import { parseDecimalLiteral, rescale } from '../decimal';
 import { csvProfile } from './language';
 import { CsvLanguage } from './types';
 
@@ -9,8 +11,9 @@ import { CsvLanguage } from './types';
  */
 export function formatCsvPercent(fraction: number, language: CsvLanguage): string {
   if (typeof fraction !== 'number' || !Number.isFinite(fraction)) throw new Error(`Invalid percent '${String(fraction)}'.`);
-  // Rounded on the hundredth of a point first, so 0.0004999… is not written -0.00 or 0.05 by a float.
-  const points = Math.round(fraction * 10_000) / 100;
-  const text = (Object.is(points, -0) ? 0 : points).toFixed(2);
+  // Rounded on the hundredth of a point, half away from zero, on the decimal text of the fraction
+  // (`0.01005` is `1.01%`), never through a float; a value that rounds to zero is `0.00`.
+  const { mantissa, scale } = parseDecimalLiteral(fraction);
+  const text = formatCentsFixed(rescale(mantissa, scale - 2, 2));
   return `${csvProfile(language).decimal === ',' ? text.replace('.', ',') : text}%`;
 }

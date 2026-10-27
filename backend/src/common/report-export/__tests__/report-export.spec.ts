@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import AdmZip = require('adm-zip');
 import { DATA_ACCESS_HEADER } from '../../../data-access/data-access';
 import { XLSX_CONTENT_TYPE } from '../../xlsx';
-import { fillLabel, REPORT_EXPORT_LABELS, reportExportBody, ReportExport, ReportExportRequest, writeReportExport } from '../index';
+import { fillLabel, REPORT_EXPORT_LABELS, reportAmount, reportExportBody, ReportExport, ReportExportRequest, writeReportExport } from '../index';
 
 /** The shared report table file: CSV and xlsx of a two-table export, Parameters, footers, `table=`, counts, headers. */
 
@@ -137,6 +137,17 @@ function labels() {
   assert.equal(fillLabel('Total {{metric}}', 'other', 'x'), 'Total {{metric}}', 'another placeholder is left alone');
 }
 
+/** Amounts to the cent, half away from zero on the decimal text, never through a float. */
+function amounts() {
+  assert.equal(reportAmount(1.005), '1.01', 'a float would give 1.00');
+  assert.equal(reportAmount(-1.125), '-1.13', 'a float would give -1.12');
+  assert.equal(reportAmount(1.125), '1.13');
+  assert.equal(reportAmount(0.1 + 0.2), '0.30');
+  assert.equal(reportAmount(-0.001), '0.00', 'no negative zero');
+  assert.equal(reportAmount(-1234.5), '-1234.50');
+  assert.equal(reportAmount(0), '0.00');
+}
+
 function mistakes() {
   const bad = (rows: any[][]): ReportExport => ({ ...exportOf(), tables: [{ key: 't', sheet: 'T', columns: [{ header: 'A', kind: 'number' }], rows }] });
   assert.throws(() => writeReportExport(bad([['3']]), request()), /is text, the column is number/);
@@ -166,6 +177,7 @@ async function main() {
   csv();
   xlsx();
   labels();
+  amounts();
   mistakes();
   await body();
   console.log('report-export.spec.ts: ok');
