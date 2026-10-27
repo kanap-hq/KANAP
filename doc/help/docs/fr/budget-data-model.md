@@ -136,7 +136,7 @@ Chaque année budgétaire d'une ligne a une méthode de ventilation :
 | Manuel par département | L'effectif des départements que vous choisissez |
 | Pourcentages manuels | Les pourcentages que vous saisissez, dont la somme fait 100 % |
 
-Les ventilations alimentent les rapports de refacturation, pour les lignes OPEX et CAPEX. Aucun fichier ne les importe. [Copier les colonnes budgétaires](budget-operations.md#copier-les-ventilations) les reporte d'une année sur la suivante, et les rapports de refacturation exportent leurs tableaux en CSV. Voir [Rapports](reports.md).
+Les ventilations alimentent les rapports de refacturation, pour les lignes OPEX et CAPEX. Aucun fichier ne les importe. [Copier les colonnes budgétaires](budget-operations.md#copier-les-ventilations) les reporte d'une année sur la suivante, et les rapports de refacturation exportent leurs tableaux en CSV ou en Excel. Voir [Rapports](reports.md).
 
 ### Liens vers d'autres objets
 
@@ -179,7 +179,7 @@ Les points qui comptent quand vous faites correspondre un autre outil à KANAP :
 
 ## Formats d'échange
 
-Chaque fichier ci-dessous s'exporte et s'importe depuis la page qui gère l'objet. Les imports se font en deux étapes : une vérification qui n'écrit rien, puis un chargement. À l'exception du fichier des contrats, ils partagent les règles d'encodage, de séparateur, de dates et de montants et la limite de taille décrites dans [Fichiers CSV](csv-files.md).
+Chaque fichier ci-dessous s'exporte et s'importe depuis la page qui gère l'objet. Les imports se font en deux étapes : une vérification qui n'écrit rien, puis un chargement. À l'exception du fichier des contrats, ils partagent les règles d'encodage, de séparateur, de dates et de montants et la limite de taille décrites dans [Fichiers CSV et Excel](csv-files.md).
 
 | Objet | Export | Import | Correspondance par | Détails |
 |---|---|---|---|---|

@@ -66,7 +66,7 @@ Ohne die Administratorstufe für die Budget-Administration zeigt die Seite die Z
 ### Was das Einfrieren bewirkt
 
 - Verhindert Bearbeitungen an eingefrorenen Spalten im Arbeitsbereich der Zeilen dieses Typs. Die Felder zeigen ein Schloss-Symbol
-- Blockiert CSV-Importe in eingefrorene Spalten
+- Blockiert Importe in eingefrorene Spalten
 - Blockiert Kopier- und Zurücksetzungsoperationen für eingefrorene Spalten
 - Verweigert das Löschen einer Zeile oder die Änderung ihres Typs, solange sie Beträge in einer eingefrorenen Spalte der betroffenen Jahre hat
 - Beeinflusst **nicht** den Lesezugriff: Die Daten bleiben sichtbar
@@ -127,6 +127,8 @@ Ausgeblendete Spalten werden nicht angeboten. Ist unter **Zu kopieren** nichts a
 3. Wenn Sie zufrieden sind, klicken Sie auf **Kopieren**, um sie anzuwenden
 
 **Kopieren** ist erst nach einer Vorschau aktiv. Jede Änderung eines Feldes verwirft die Vorschau: Starten Sie sie erneut. Nach der Kopie bleibt die Tabelle unter dem Titel **Ergebnis** sichtbar, mit dem, was jede Zeile getan hat.
+
+**Tabelle exportieren** (Download-Symbol) lädt die Vorschau der angezeigten Felder als CSV- oder Excel-Datei herunter, eine Zeile pro Budgetzeile, mit den Spalten und Status der Tabelle. Nach dem Kopieren ist der Export deaktiviert: Die Tabelle zeigt dann, was das Kopieren getan hat, was eine Vorschau nicht mehr beschreibt. Die Beträge der Datei behalten ihre Cents.
 
 Jeder Teil hat in jeder Zeile seinen eigenen Status:
 
@@ -243,6 +245,8 @@ Bevor Sie eine Spalte wählen, ersetzt eine einzige Zeile das Grid: „Wählen S
 - **Gesamtelemente**
 - **Zeilen mit einer Summe ungleich null**
 - **Aktueller Gesamtwert**
+
+**Tabelle exportieren** (Download-Symbol) lädt das Raster als CSV- oder Excel-Datei herunter: die Budgetzeilen des gewählten Typs und ihren aktuellen Wert in der gewählten Spalte.
 
 ### Bestätigung
 

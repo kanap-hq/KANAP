@@ -117,8 +117,8 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail de la valeu
 
 - **Nouvelle valeur** : créer une valeur dans la dimension sélectionnée (nécessite `analytics:member`). Tant que la dimension sélectionnée est désactivée, le bouton est désactivé et son info-bulle indique « Activez cette dimension pour ajouter des valeurs. »
 - **Réordonner** : définir l'ordre des valeurs de la dimension sélectionnée (nécessite `analytics:member`). Le bouton est désactivé tant que la dimension a moins de deux valeurs. Voir [Ordonner les valeurs](#ordonner-les-valeurs)
-- **Importer CSV** : charger des valeurs depuis un fichier (nécessite `analytics:admin`)
-- **Exporter CSV** : télécharger les valeurs que la liste affiche, ou les valeurs de toutes les dimensions (nécessite `analytics:admin`)
+- **Importer** : charger des valeurs depuis un fichier (nécessite `analytics:admin`)
+- **Exporter** : télécharger les valeurs que la liste affiche, ou les valeurs de toutes les dimensions (nécessite `analytics:admin`)
 - **Supprimer la sélection** : supprimer les valeurs sélectionnées (nécessite `analytics:admin`). Lorsque certaines sont utilisées par des lignes budgétaires, la confirmation indique combien de lignes les perdent, par exemple « 2 valeurs sélectionnées sont utilisées : elles sont retirées de 5 lignes budgétaires. Ces données ne peuvent pas être récupérées. », et le bouton devient **Supprimer quand même**
 
 ---
@@ -152,7 +152,7 @@ Ouvrez-le avec **Modifier** (**Ouvrir** si vous pouvez seulement consulter) dans
 | Champ | Ce qu'il faut saisir |
 |---|---|
 | **Nom** | Jusqu'à 200 caractères. Les noms sont uniques sans tenir compte de la casse. Obligatoire, sauf sur la dimension par défaut : laissez-le vide pour afficher « Dimension analytique » dans la langue de chaque personne. Le libellé de la dimension par défaut est réservé dans toutes les langues de l'application (« Analytics dimension », « Dimension analytique », « Analysedimension », « Dimensión analítica »), sans tenir compte de la casse : une autre dimension qui porte l'un de ces noms est refusée avec « This name is reserved for the default dimension. » |
-| **Code** | De 1 à 40 caractères : lettres minuscules, chiffres, `-` ou `_`, en commençant par une lettre ou un chiffre. Chaque code est unique. Le code nomme la colonne de la dimension dans les fichiers CSV OPEX et CAPEX : le modifier change donc le nom de cette colonne. Les lignes budgétaires conservent leurs valeurs quand le code change |
+| **Code** | De 1 à 40 caractères : lettres minuscules, chiffres, `-` ou `_`, en commençant par une lettre ou un chiffre. Chaque code est unique. Le code nomme la colonne de la dimension dans les fichiers OPEX et CAPEX : le modifier change donc le nom de cette colonne. Les lignes budgétaires conservent leurs valeurs quand le code change |
 | **Description** | À quoi sert la dimension, pour que vos collègues classent les lignes de la même façon |
 | **Utilisé pour** | **OPEX et CAPEX**, **OPEX uniquement** ou **CAPEX uniquement**. Indique quelles lignes budgétaires peuvent avoir une valeur sur cette dimension. Voir [Dimensions OPEX ou CAPEX](#dimensions-opex-ou-capex). Verrouillé sur la dimension par défaut, avec une ligne en dessous : « La dimension par défaut s'applique aux lignes OPEX et CAPEX. » |
 | **Obligatoire** | Un interrupteur. Activé, il impose une valeur sur cette dimension à chaque nouvelle ligne des types pour lesquels la dimension est utilisée, et une ligne qui porte une valeur ne peut plus la perdre. Voir [Dimensions obligatoires](#dimensions-obligatoires). La dimension par défaut peut aussi être obligatoire |
@@ -266,7 +266,7 @@ Les valeurs d'une dimension ont un ordre, que vous définissez. KANAP propose le
 - les champs de valeur des lignes OPEX et CAPEX (quand vous tapez dans un champ, les meilleures correspondances viennent en premier)
 - les filtres à cases à cocher de la dimension dans la liste des lignes budgétaires
 - les filtres de dimension des rapports et la liste **Exclure des valeurs** du rapport Dimensions analytiques
-- l'export CSV des valeurs
+- l'export des valeurs
 - les valeurs que liste Plaid
 
 Trier la liste des lignes budgétaires sur la colonne d'une dimension suit aussi cet ordre, puis le nom de la valeur. Les lignes sans valeur viennent en dernier dans l'ordre croissant. Les lignes des rapports gardent leur propre ordre, par montant.
@@ -309,15 +309,15 @@ Les dimensions et les valeurs ont chacune un statut (**Activé** ou **Désactiv�
 
 **Une valeur désactivée** :
 
-- Ne peut pas être choisie pour une ligne, dans l'application, dans un fichier CSV ou via Plaid.
+- Ne peut pas être choisie pour une ligne, dans l'application, dans un fichier importé ou via Plaid.
 - Reste sur les lignes qui l'ont déjà et continue de compter dans les rapports. Dans la liste du champ, elle est marquée **Désactivé**.
 
 **Une dimension désactivée** :
 
 - N'est pas contrôlée lorsqu'elle est **Obligatoire** : des lignes peuvent être créées sans valeur sur elle. Elle garde le réglage pour le jour où vous la réactivez.
-- Disparaît des formulaires des lignes, de la liste des lignes budgétaires, des filtres des rapports, du sélecteur de dimension du rapport, des exports CSV OPEX et CAPEX et de Plaid. Seule la page Dimensions analytiques l'affiche, marquée **Désactivé**.
+- Disparaît des formulaires des lignes, de la liste des lignes budgétaires, des filtres des rapports, du sélecteur de dimension du rapport, des exports OPEX et CAPEX et de Plaid. Seule la page Dimensions analytiques l'affiche, marquée **Désactivé**.
 - Conserve ses valeurs sur les lignes. Réactivez la dimension et elles s'affichent de nouveau.
-- Ne reçoit plus de nouvelles valeurs. **Nouvelle valeur** est désactivé tant que la dimension est sélectionnée, et les fichiers CSV ne peuvent ni ajouter ni modifier ses valeurs.
+- Ne reçoit plus de nouvelles valeurs. **Nouvelle valeur** est désactivé tant que la dimension est sélectionnée, et les fichiers importés ne peuvent ni ajouter ni modifier ses valeurs.
 
 La dimension par défaut ne peut pas être désactivée.
 
@@ -369,16 +369,18 @@ Les sept rapports budgétaires peuvent aussi être restreints à une valeur d'un
 
 ## Import/export CSV
 
+L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
+
 Chargez ou mettez à jour les valeurs de toutes les dimensions depuis un seul fichier. Les dimensions se créent sur la page.
 
 Pour renseigner des valeurs sur les lignes budgétaires depuis un fichier, utilisez le fichier budgétaire. Une colonne `analytics:<code>` y porte chaque dimension activée, dimension par défaut incluse. Voir [Charger un budget depuis un tableur](budget-file.md).
 
-**Export** : cliquez sur **Exporter CSV**, puis sur **Exporter les données**. Le fichier liste les valeurs de toutes les dimensions, activées ou désactivées, dimension par dimension, les valeurs de chaque dimension dans son ordre. Le fichier n'a pas de colonne d'ordre. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
+**Export** : cliquez sur **Exporter**, puis sur **Exporter les données**. Le fichier liste les valeurs de toutes les dimensions, activées ou désactivées, dimension par dimension, les valeurs de chaque dimension dans son ordre. Le fichier n'a pas de colonne d'ordre. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
 
 **Structure du CSV** :
 
 - En-têtes : `axis_code`, `name`, `description`, `status`, `disabled_at`, `applies_to`
-- L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
+- L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
 
 | Colonne | Contenu |
 |---|---|
@@ -393,7 +395,7 @@ Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `stat
 
 **Import** :
 
-1. Cliquez sur **Importer CSV** sur la page
+1. Cliquez sur **Importer** sur la page
 2. Choisissez votre fichier
 3. Cliquez sur **Vérification préalable**. Le rapport donne le nombre de lignes, les valeurs à créer et à mettre à jour, et les lignes qui ne changent rien
 4. Si la vérification préalable est sans erreur, cliquez sur **Charger**
@@ -427,7 +429,7 @@ Seule la colonne `name` est obligatoire. Lorsque la colonne `description`, `stat
 |---|---|
 | `analytics:reader` | Consulter la page Dimensions analytiques et ouvrir les dimensions et les valeurs |
 | `analytics:member` | Créer des dimensions et des valeurs, les modifier et définir l'ordre des dimensions et des valeurs |
-| `analytics:admin` | Tout ce qui précède, plus l'import et l'export CSV, les dimensions recommandées, et la suppression |
+| `analytics:admin` | Tout ce qui précède, plus l'import et l'export, les dimensions recommandées, et la suppression |
 
 Le rôle intégré Administrateur budget est admin, Membre budget est member et Lecteur budget est reader. Toute personne qui peut consulter les lignes budgétaires (Budget) ou les rapports voit les dimensions et leurs valeurs sur les lignes budgétaires, dans les listes et dans les rapports, sans accès à cette page.
 

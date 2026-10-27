@@ -14,7 +14,7 @@ Navigate to **Master Data > Business Processes** to open the list.
 
 - View: `business_processes:reader`
 - Create / edit: `business_processes:member`
-- Delete, import/export CSV: `business_processes:admin`
+- Delete, import and export: `business_processes:admin`
 
 If the page is missing or fields are read-only, ask your tenant admin to adjust your role permissions.
 
@@ -45,8 +45,8 @@ The list shows all business processes for your tenant.
 
 - **New** (`business_processes:member`): create a new business process.
 - **Manage Categories** (`business_processes:member`): open the category management dialog.
-- **Import CSV** (Admin): bulk-import processes from a CSV file.
-- **Export CSV** (Admin): export the processes the list shows, or all processes, to CSV.
+- **Import** (Admin): bulk-import processes from a CSV file or an Excel workbook.
+- **Export** (Admin): export the processes the list shows, or all processes, to a CSV file or an Excel workbook.
 - **Delete Selected** (Admin): delete one or more selected rows. A process that applications or interfaces use cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the processes kept, with the reason. Requests linked to a deleted process stay, without the link.
 
 ---
@@ -119,16 +119,15 @@ Both open the **Manage Business Process Categories** dialog.
 
 ## CSV import/export
 
-Use CSV import and export for bulk onboarding or offline editing of your process catalog. Both require **Admin** access.
+The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
+
+Use import and export for bulk onboarding or offline editing of your process catalog. Both require **Admin** access.
 
 ### Exporting
 
-Click **Export CSV** on the list page. You can export:
+Click **Export** on the list page. The file holds the processes the list shows, with its search, filters and sort, or every process when you choose **The whole register** in the dialog. For an empty file with the headers only, use **Download template** in the import dialog.
 
-- A **template** (header row only) to use as a starting point.
-- **Data** (all processes for the current tenant).
-
-The separator follows the language of your screen. See [CSV files](csv-files.md) for the encoding, the separator and the two import steps.
+The separator follows the language of your screen. See [CSV and Excel files](csv-files.md) for the encoding, the separator and the two import steps.
 
 **Columns**: `name`, `categories`, `description`, `notes`, `status`.
 
@@ -136,9 +135,9 @@ The `categories` column may contain multiple category names separated by semicol
 
 ### Importing
 
-Click **Import CSV** on the list page, then:
+Click **Import** on the list page, then:
 
-1. Upload your CSV file with the column titles of the template. Commas or semicolons both work.
+1. Upload your CSV file or Excel workbook with the column titles of the template. In a CSV file, commas or semicolons both work.
 2. Run the **Preflight** check. It validates headers and data, and shows how many rows will be created vs. updated.
 3. If preflight passes, click **Load** to apply changes.
 
@@ -148,7 +147,7 @@ Click **Import CSV** on the list page, then:
 - Each category in the `categories` cell is trimmed and matched by name. If a category does not exist yet, it is created automatically as an active category.
 - The file has no end of validity column. On an update, a blank `status`, or one equal to the process's current status, keeps its end of validity. A different status applies it: `enabled` clears the end of validity, and `disabled` ends the process today unless its end of validity has already passed. A new process is enabled unless the row says `disabled`.
 
-**Tip**: export your current data first, modify the CSV, and re-import. This avoids accidental duplicates and ensures you are working from the latest state.
+**Tip**: export your current data first, modify the file, and re-import. This avoids accidental duplicates and ensures you are working from the latest state.
 
 ---
 

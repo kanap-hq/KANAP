@@ -112,9 +112,9 @@ Cada servidor aparece una vez. «Ninguno encontrado» significa que ningún serv
 
 ## Exportación
 
-**Exportar activos** descarga los activos de la tabla en un archivo CSV, con su búsqueda, sus filtros y su orden. Las columnas son **Zone**, **Reference**, **Name**, **Type**, **Technologies**, **Applications**, **Controls** y **Dependency**. **Dependency** indica, para **Host menos sensible**, cada activo más sensible que ejecuta el activo o cada clúster del que es miembro, con su zona. Una exportación contiene hasta 10.000 activos: por encima, acote los filtros.
+**Exportar activos** descarga los activos de la tabla en un archivo CSV o Excel, con su búsqueda, sus filtros y su orden. Las columnas son **Zone**, **Reference**, **Name**, **Type**, **Technologies**, **Applications**, **Controls** y **Dependency**. **Dependency** indica, para **Host menos sensible**, cada activo más sensible que ejecuta el activo o cada clúster del que es miembro, con su zona. Una exportación contiene hasta 10.000 activos: por encima, acote los filtros.
 
-**Exportar dominios** descarga cada dominio con su sufijo DNS, su bosque, sus confianzas (las suyas y las declaradas por otros dominios), sus números de cuentas y de equipos, y sus controladores de dominio.
+**Exportar dominios** descarga cada dominio, en CSV o Excel, con su sufijo DNS, su bosque, sus confianzas (las suyas y las declaradas por otros dominios), sus números de cuentas y de equipos, y sus controladores de dominio.
 
 ## Consejos
 

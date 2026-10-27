@@ -43,8 +43,8 @@ La grille Contacts fournit un répertoire consultable de tous les contacts exter
 
 **Actions** :
 - **Nouveau** : Créer un nouveau contact (nécessite `contacts:member`)
-- **Importer CSV** : Import en masse de contacts (nécessite `contacts:admin`)
-- **Exporter CSV** : Exporter en CSV (nécessite `contacts:admin`)
+- **Importer** : Import en masse de contacts (nécessite `contacts:admin`)
+- **Exporter** : Exporter dans un fichier CSV ou un classeur Excel (nécessite `contacts:admin`)
 - **Supprimer la sélection** : Supprimer les contacts sélectionnés (nécessite `contacts:admin`). Ils sont retirés des fournisseurs, lignes budgétaires, contrats, applications, actifs, sites, projets et demandes qui les citent ; ces éléments restent
 
 ---
@@ -118,7 +118,9 @@ Les sites peuvent avoir des contacts de support (responsables d'installations, c
 
 ## Import/export CSV
 
-Gérez les contacts en masse via CSV.
+L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
+
+Gérez les contacts en masse avec des fichiers CSV ou des classeurs Excel.
 
 **Export** : Télécharge les contacts que la liste affiche avec leurs détails. Choisissez **Tout le référentiel** dans la fenêtre pour tous les contacts.
 
@@ -132,7 +134,7 @@ Gérez les contacts en masse via CSV.
 **Champs optionnels** : `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Notes** :
-- Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import
+- Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import
 
 ---
 

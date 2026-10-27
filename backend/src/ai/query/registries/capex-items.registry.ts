@@ -1,5 +1,13 @@
 import { AiEntityFilterRegistry } from '../ai-filter.types';
-import { budgetAmountFields, budgetAmountSortFields, budgetFteFields, budgetFteSortFields } from './budget-amount-fields';
+import {
+  budgetAmountFields,
+  budgetAmountSortFields,
+  budgetFteFields,
+  budgetFteSortFields,
+  budgetLineTotalFields,
+  budgetLineTotalSortFields,
+  budgetRatioMetricFamilies,
+} from './budget-amount-fields';
 
 export const capexItemsRegistry: AiEntityFilterRegistry = {
   entityType: 'capex_items',
@@ -206,6 +214,7 @@ export const capexItemsRegistry: AiEntityFilterRegistry = {
     },
     ...budgetAmountFields(),
     ...budgetFteFields(),
+    ...budgetLineTotalFields(),
   },
   sortFields: {
     description: 'description',
@@ -233,9 +242,11 @@ export const capexItemsRegistry: AiEntityFilterRegistry = {
     effective_end: 'disabled_at',
     ...budgetAmountSortFields(),
     ...budgetFteSortFields(),
+    ...budgetLineTotalSortFields(),
     created_at: 'created_at',
     updated_at: 'updated_at',
   },
+  metricFamilies: budgetRatioMetricFamilies(),
   defaultSort: {
     field: 'created_at',
     direction: 'desc',

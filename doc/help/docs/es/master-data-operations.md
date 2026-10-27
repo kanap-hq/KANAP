@@ -96,9 +96,9 @@ Debajo de la cuadrícula, cuatro tarjetas de resumen ofrecen un conteo rápido:
 
 No puede copiar datos a un año congelado. Si el año de destino está congelado para Empresas o Departamentos, aparece un banner de error y los botones de acción se deshabilitan. Descongele primero el año de destino con **Congelar datos maestros**.
 
-### Exportación CSV
+### Exportación
 
-Puede exportar la tabla de vista previa a CSV usando el botón de exportación en la barra de herramientas. Esto es práctico para revisión fuera de línea o para compartir con colegas antes de confirmar. Esta exportación escribe la tabla tal como se muestra. Los archivos que importan las páginas de datos maestros se describen en [Archivos CSV](csv-files.md).
+El botón de exportación de la barra de herramientas descarga la vista previa como archivo CSV o Excel: lo que haría la copia con los años, las fuentes y las métricas en pantalla. Esto es práctico para revisión fuera de línea o para compartir con colegas antes de confirmar. Una vez hecha la copia, el botón queda desactivado: la tabla muestra entonces lo que hizo la copia, que la vista previa ya no describe. Los archivos que importan las páginas de datos maestros se describen en [Archivos CSV y Excel](csv-files.md).
 
 ### Permisos
 
@@ -165,13 +165,13 @@ No. La herramienta de Copia mostrará un error y deshabilitará los botones de a
 La operación de copia los sobrescribe. Siempre ejecute una Simulación primero para ver la columna "Destino actual" y entender qué se reemplazará.
 
 **¿Puedo deshacer una copia?**
-No. Las operaciones de copia no son reversibles. Si necesita una red de seguridad, exporte los datos del año de destino a CSV antes de copiar.
+No. Las operaciones de copia no son reversibles. Si necesita una red de seguridad, exporte los datos del año de destino a CSV o Excel antes de copiar.
 
 **¿Por qué se omiten algunas filas?**
 Las filas se omiten cuando el valor de origen es nulo, la entidad está inactiva para el año de destino o el destino está congelado. La columna Estado de la vista previa le indica qué razón aplica.
 
 **¿Puedo copiar solo empresas o departamentos específicos?**
-No. La herramienta copia todas las entidades para los alcances y métricas seleccionados. Para actualizaciones selectivas, utilice la exportación/importación CSV en las páginas individuales de Empresas o Departamentos.
+No. La herramienta copia todas las entidades para los alcances y métricas seleccionados. Para actualizaciones selectivas, utilice la exportación y la importación de las páginas Empresas o Departamentos.
 
 **¿La copia crea nuevas empresas o departamentos?**
 No. Solo escribe métricas para entidades que ya existen en ambos años. Si una empresa existe en el año de origen pero no en el de destino, esa fila se omite.

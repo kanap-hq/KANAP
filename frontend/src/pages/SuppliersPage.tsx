@@ -15,6 +15,7 @@ import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
+import { ImportLabel } from '../components/csv/importFiles';
 
 export default function SuppliersPage() {
   const { t } = useTranslation(['master-data', 'common']);
@@ -122,7 +123,7 @@ export default function SuppliersPage() {
           {t('shared.labels.new')}
         </Button>
       )}
-      {canChangeShared && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
+      {canChangeShared && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('shared.labels.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canChangeShared && (
         <DeleteSelectedButton

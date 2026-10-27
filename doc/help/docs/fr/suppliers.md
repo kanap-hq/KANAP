@@ -40,8 +40,8 @@ Chaque cellule d'une ligne est cliquable et ouvre la fiche du fournisseur.
 
 **Actions** :
 - **Nouveau** : Créer un nouveau fournisseur (nécessite `suppliers:member`)
-- **Importer CSV** : Import en masse de fournisseurs (nécessite `suppliers:admin`)
-- **Exporter CSV** : Exporter la liste en CSV (nécessite `suppliers:admin`)
+- **Importer** : Import en masse de fournisseurs (nécessite `suppliers:admin`)
+- **Exporter** : Exporter la liste dans un fichier CSV ou un classeur Excel (nécessite `suppliers:admin`)
 - **Supprimer la sélection** : Supprimer les fournisseurs sélectionnés (nécessite `suppliers:admin`)
 
 ---
@@ -111,7 +111,9 @@ Cliquez sur **Nouveau** dans la liste. Renseignez le nom (obligatoire), l'ID fou
 
 ## Import/export CSV
 
-**Exporter CSV** télécharge les fournisseurs que la liste affiche, avec sa recherche, ses filtres et son tri. Choisissez **Tout le référentiel** dans la fenêtre pour télécharger tous les fournisseurs, activés et désactivés. La fenêtre se ferme une fois le fichier téléchargé. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes. Elle indique les valeurs acceptées.
+L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
+
+**Exporter** télécharge les fournisseurs que la liste affiche, avec sa recherche, ses filtres et son tri. Choisissez **Tout le référentiel** dans la fenêtre pour télécharger tous les fournisseurs, activés et désactivés. La fenêtre se ferme une fois le fichier téléchargé. **Importer** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes. Elle indique les valeurs acceptées.
 
 Les colonnes :
 
@@ -136,7 +138,7 @@ Les colonnes :
 - `disabled_at` fixe la fin de validité, et le statut en découle. Un statut qui contredit la date est refusé. Un fichier sans la colonne `disabled_at` s'importe toujours : le statut seul fixe alors le cycle de vie
 
 **Notes** :
-- Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import
+- Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur et les deux étapes d'import
 - Importez les fournisseurs avant les applications ou les contrats qui les référencent. Le fichier budgétaire crée aussi un fournisseur manquant lorsque **Créer les fournisseurs manquants** est cochée. Voir [Charger un budget depuis un tableur](budget-file.md)
 
 ---

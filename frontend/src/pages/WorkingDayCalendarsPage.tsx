@@ -28,6 +28,7 @@ import {
 } from './working-day-calendars/workingDayCalendarFields';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
+import { ImportLabel } from '../components/csv/importFiles';
 
 const DEFAULT_SORT = 'name:ASC';
 
@@ -191,7 +192,7 @@ function WorkingDayCalendarsList() {
           {t('shared.labels.new')}
         </Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('shared.labels.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton

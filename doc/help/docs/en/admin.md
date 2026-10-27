@@ -67,7 +67,7 @@ The Audit Log page keeps the history of data changes and of security events in y
 | **Password reset requested** / **Password reset completed** | Someone asks for a reset link, then sets a new password with it. When the email with the link could not be sent, the **Reason** says so |
 | **Sign-in with Microsoft** / **Failed sign-in with Microsoft** | A sign-in through Microsoft Entra ID succeeds or fails |
 
-**Exports** (table **Export**): CSV exports, documents and reports produced by the server. The row says what was exported and by whom. Exporting the audit log is recorded too.
+**Exports** (table **Export**): every file KANAP produces from your data: list and report exports in CSV or Excel, documents and PDF reports. The row says what was exported and by whom. Its details give the format, the parameters of the export (filters, search, sort, year and so on) and, for a file of rows, the number of rows written. Exporting the audit log is recorded too.
 
 Sign-in, session and export rows also keep the **IP address** the request came from and the **browser** it used. Open the row to read them in the **IP address** and **Browser** rows of its table. Behind a reverse proxy, this is the person's own IP address, as long as the proxy passes it on (on-premise: see the [reverse proxy example](on-premise/installation.md#reverse-proxy-example-nginx)).
 
@@ -90,7 +90,7 @@ Sign-in and session events are deleted after **365 days**. Data changes, role ch
   - The record's business reference in the header (for example `PRJ-3`, `APP-12`, `AST-31`, `LOC-4`, `CONN-2` or `INT-8`), when the entry carries one. With no reference, the header shows **Identifier** and keeps the stored id in a tooltip
   - A table of the fields: **Field**, **Before** and **After** for an update, **Field** and **Value** for any other entry. Field names appear in your language when known. Dates, yes/no values and people are shown in readable form; other identifiers show as **Identifier**, with the value in a tooltip. Technical fields such as `id`, `tenant_id` and `updated_at` are left out
   - **View raw data** shows the full JSON before and after
-- Export the log to CSV (see below)
+- Export the log to CSV or Excel (see below)
 
 ### Columns
 
@@ -113,16 +113,16 @@ Sign-in and session events are deleted after **365 days**. Data changes, role ch
 - The grid uses explicit pagination with **100 rows per page**.
 - Filters and search apply to the full dataset, not only the current page.
 
-### Export to CSV
+### Export
 
-Click **Export CSV** at the top of the page to download the log as a file.
+Click **Export** at the top of the page, then choose **CSV** or **Excel (.xlsx)**, to download the log as a file. Your browser remembers the choice for the next export.
 
 - The file holds the entries that match the filters, the search and the sort currently shown on screen. Clear the filters to export the whole log.
 - A file holds at most **100,000 entries**, newest first by default. When the log is larger, KANAP tells you that the file stops there. Narrow the filters (a date range, for example) and export again to get the rest.
 - You can start only a few exports per minute. If you click again too soon, KANAP asks you to wait a minute.
 - The export is recorded in the log, like any other export.
 
-The file always has the same format, whatever your language, so that a log collection tool can read it without setup:
+The CSV file always has the same format, whatever your language, so that a log collection tool can read it without setup:
 
 - comma-separated, UTF-8 without a byte order mark;
 - English column names: `date`, `action`, `table`, `record_id`, `user`, `source`, `source_ref`, `ip`, `user_agent`, `before`, `after`;
@@ -130,11 +130,13 @@ The file always has the same format, whatever your language, so that a log colle
 - dates in ISO 8601, in UTC (for example `2026-10-09T14:32:05.000Z`);
 - the `before` and `after` columns as compact JSON.
 
-If Excel on your computer uses a semicolon as list separator (common with French or German regional settings), do not double-click the file. Use **Data > From Text/CSV**, choose UTF-8 as the file origin and comma as the delimiter.
+If Excel on your computer uses a semicolon as list separator (common with French or German regional settings), do not double-click the CSV file. Use **Data > From Text/CSV**, choose UTF-8 as the file origin and comma as the delimiter, or export in Excel instead.
+
+The Excel file holds the same columns and the same values on one sheet, all as text: the dates keep their ISO 8601 form, with the time.
 
 ### Who can see what
 
-The **Before** and **After** values hold the complete record as it was saved, including personal data such as names, email addresses and phone numbers. The detail screen and the CSV file show the same values, and both need `users:admin`. Password hashes and multi-factor secrets are never written to the log. Treat an exported file like the log itself: store it with the same care.
+The **Before** and **After** values hold the complete record as it was saved, including personal data such as names, email addresses and phone numbers. The detail screen and the exported file show the same values, and both need `users:admin`. Password hashes and multi-factor secrets are never written to the log. Treat an exported file like the log itself: store it with the same care.
 
 ### Understanding Source and Actor
 
@@ -188,8 +190,8 @@ Toolbar actions:
 | Action | Description | Permission |
 |--------|-------------|------------|
 | **New** | Create a new user | `users:admin` |
-| **Import CSV** | Bulk import users | `users:admin` |
-| **Export CSV** | Export user list | `users:admin` |
+| **Import** | Bulk import users from a CSV file or an Excel workbook | `users:admin` |
+| **Export** | Export the user list to CSV or Excel | `users:admin` |
 | **Invite** | Send login invitations to selected users | `users:admin` |
 | **Disable** | Disable the selected users. They are signed out immediately. | `users:admin` |
 | **Delete** | Remove selected users permanently. Your own account is kept: the confirmation says so before anything is deleted. To keep a user's history and block their access, disable them instead | `users:admin` |
@@ -209,7 +211,7 @@ Row actions, from the menu at the end of each row:
 
 ### Users CSV
 
-**Export CSV** downloads the user list. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
+**Export** downloads the user list as a CSV file or an Excel workbook. **Import** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
 
 The columns:
 
@@ -226,7 +228,7 @@ A role the file names and your workspace does not have is created by the load, w
 
 The file holds no date and no amount. An import sets no password: a new user signs in after an invitation or a password reset.
 
-See [CSV files](csv-files.md) for the encoding, the separator and the two import steps.
+See [CSV and Excel files](csv-files.md) for the formats, the encoding, the separator and the two import steps.
 
 ### Creating a User
 
@@ -397,7 +399,7 @@ The **Business Contributor** role is designed for business stakeholders who part
 A Business Contributor **cannot**:
 - Create new projects (requires Member level on portfolio projects)
 - Convert requests into projects (requires Member level)
-- Import/export CSV (requires Admin level)
+- Import and export (requires Admin level)
 
 This role bridges the gap between read-only access (Reader) and full project management (Member), letting business users actively contribute without the ability to create new projects.
 

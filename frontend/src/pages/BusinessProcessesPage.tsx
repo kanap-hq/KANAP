@@ -15,6 +15,7 @@ import { formatShortDateTime } from '../lib/dateFormat';
 import BusinessProcessCategoryManagerDialog from './business-processes/BusinessProcessCategoryManagerDialog';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
+import { ImportLabel } from '../components/csv/importFiles';
 
 type BusinessProcessRow = {
   id: string;
@@ -150,7 +151,7 @@ export default function BusinessProcessesPage() {
           {t('businessProcesses.manageCategories')}
         </Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('shared.labels.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton

@@ -117,7 +117,7 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 - [Acceso a los datos](data-access.md): Limitar a una persona al presupuesto y a los contratos de ciertas empresas o centros de coste
 - [Personalización](branding.md): Personalización del logotipo del espacio de trabajo y colores primarios claro/oscuro
 - [Datos de ejemplo](sample-data.md): Descubra KANAP con una empresa ficticia, bórrela después y empiece de cero
-- [Registro de auditoría](admin.md#registro-de-auditoria): Revisión de los cambios de datos, los accesos y las exportaciones con filtros, vista detallada y exportación CSV
+- [Registro de auditoría](admin.md#registro-de-auditoria): Revisión de los cambios de datos, los accesos y las exportaciones con filtros, vista detallada y exportación CSV o Excel
 - [Modelos IA](ai-models.md): Registro de los modelos IA que usa su organización, con sus precios, y definición del predeterminado
 - [Configuración de Plaid](ai-settings.md): Elección del modelo que usa Plaid, funcionalidades de chat, retención y claves MCP
 - [Uso y costes](ai-usage.md): Uso de la IA y costes reales en chat y agentes, por agente y por modelo

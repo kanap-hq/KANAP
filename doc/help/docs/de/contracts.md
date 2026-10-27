@@ -107,7 +107,7 @@ Die unten angeheftete Zeile lautet **Gesamt (n Verträge)**. Sie summiert die Ja
 ### Aktionen
 
 - **Neu**: einen Vertrag anlegen (`contracts:member`)
-- **CSV importieren** und **CSV exportieren**: siehe [CSV-Import und -Export](#csv-import-und-export) (`contracts:admin`)
+- **Importieren** und **Exportieren**: siehe [CSV-Import und -Export](#csv-import-und-export) (`contracts:admin`)
 - **Register exportieren**: das Konformitätsregister der Verträge, die die Liste zeigt (`contracts:admin`). Siehe [Konformität](#konformitat)
 - **Einstellungen**: der Entscheidungszeitraum des Arbeitsbereichs (`contracts:admin`). Siehe [Entscheidungszeitraum](#entscheidungszeitraum)
 - **Löschen**: die angehakten Verträge löschen (`contracts:admin`). Siehe [Einen Vertrag löschen](#einen-vertrag-loschen)
@@ -214,7 +214,7 @@ Das Abzeichen des Reiters zählt die erwarteten Anforderungen, die als fehlend e
 
 Das Verknüpfen oder Entfernen einer Anwendung oder eines Assets unter **Verknüpfungen** aktualisiert den Reiter sofort. Zum Erfassen benötigen Sie `contracts:member`; Leser sehen den Reiter schreibgeschützt.
 
-**Register exportieren** (Liste, `contracts:admin`) lädt eine CSV-Datei der Verträge herunter, die die Liste mit ihrer Suche, ihren Filtern und ihrem Bereich zeigt: eine Zeile pro Vertrag und Anforderung, mit der Angabe, ob sie erwartet wird, dem Grund, dem Stand, der Referenz und der letzten Aktualisierung. Überschriften und Begriffe folgen der Sprache Ihres Bildschirms.
+**Register exportieren** (Liste, `contracts:admin`) lädt eine CSV- oder Excel-Datei der Verträge herunter, die die Liste mit ihrer Suche, ihren Filtern, ihrem Bereich und ihrer Reihenfolge zeigt: eine Zeile pro Vertrag und Anforderung, mit der Angabe, ob sie erwartet wird, dem Grund, dem Stand, der Referenz und der letzten Aktualisierung. Überschriften und Begriffe folgen der Sprache Ihres Bildschirms.
 
 ### Verknüpfungen
 
@@ -317,7 +317,9 @@ Bei einem Vertrag in seiner ersten Periode, für den keine Entscheidung ansteht,
 
 ## CSV-Import und -Export
 
-Halten Sie Ihre Vertragsliste per CSV mit anderen Werkzeugen synchron (`contracts:admin`).
+Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
+Halten Sie Ihre Vertragsliste mit CSV-Dateien oder Excel-Arbeitsmappen mit anderen Werkzeugen synchron (`contracts:admin`).
 
 **Export**: lädt die Verträge der Liste (oder, auf Wunsch im Dialog, alle Verträge) mit diesen Spalten herunter: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Die berechneten Daten (Laufzeitende, Kündigungstermine, Stand) werden nicht exportiert.
 
@@ -332,7 +334,7 @@ Halten Sie Ihre Vertragsliste per CSV mit anderen Werkzeugen synchron (`contract
 
 **Hinweise**:
 
-- Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datums- und Betragsformen und die beiden Importschritte
+- Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datums- und Betragsformen und die beiden Importschritte
 - Die Daten werden aus Beginn, Laufzeit, Kündigungsfrist und Verlängerung berechnet; sie werden nie importiert
 
 ---

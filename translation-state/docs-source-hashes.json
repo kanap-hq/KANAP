@@ -1,8 +1,8 @@
 {
   "files": {
-    "admin.md": "daf322bf5bb16e8c9efc2b9d7e1a53b6",
+    "admin.md": "9ff4edea7475b24c9ab7631e989b95b0",
 
-    "administration-view.md": "da451010a627e33f085ffd88174774ba",
+    "administration-view.md": "50d7154af364743f12afb56174c4745c",
 
     "agents-activity.md": "21ee59e63955c7e47568f162a1ec4b51",
 
@@ -14,7 +14,7 @@
 
     "agents-workspace.md": "48f9f5d61e2d0f4cf7e4f0e051657a48",
 
-    "ai-assistant.md": "c3d7765221062d4d8b96c880952ccd67",
+    "ai-assistant.md": "135e3088f2553f0dc75dd8b9207d6c94",
 
     "ai-models.md": "dd41b5b504573ad8a51d75cedcdc1c92",
 
@@ -22,27 +22,27 @@
 
     "ai-usage.md": "c5ef4c260ba0162a443ac7741a09d47f",
 
-    "analytics.md": "cc0a334ebd06d4ea124cbba1fafeb799",
+    "analytics.md": "3d259627d01e1bf2ebae89238c43a4f0",
 
-    "applications.md": "c6657db8486973eb2d5a8f68c0816007",
+    "applications.md": "6bb2a70bd216e2cada5a51c2e77e31c3",
 
-    "assets.md": "3e8c2ec498bc4b5d8a91832b8b3b00f9",
+    "assets.md": "eeeab3e11dc0241f5e0f290c74744945",
 
     "branding.md": "89014110f2460e59fca29b2bc2064272",
 
-    "budget-data-model.md": "956ab98a403242aaed0cd276c5f8ec62",
+    "budget-data-model.md": "3a8e09228578e6b5b79fbe376f16a880",
 
-    "budget-file.md": "416f349061348c745ae2357ad1f1edd8",
+    "budget-file.md": "e058559524ecb48743366234bc538ca2",
 
-    "budget-lines.md": "77e11e88ed5e9d7e65b1a531734b7031",
+    "budget-lines.md": "7d7cd9fdd85567da07c6aef067c7b2ea",
 
-    "budget-operations.md": "eb2f9b52b8b949a3c34c4f282be00219",
+    "budget-operations.md": "449be16d51ad61544225d42a1f976bcb",
 
-    "business-processes.md": "4b3dae89e5e4b10507b8ee4adc1e35b2",
+    "business-processes.md": "f2780f924d2d826d1fcfbd80c6de82db",
 
-    "chart-of-accounts.md": "ae8b6d49fff322c2ed5e6b691ee51620",
+    "chart-of-accounts.md": "e80cb2612acb7aba0d49d30f8f5d9f93",
 
-    "companies.md": "a3f3c2b0ce6ab7ae9c2dcb8edcc194fa",
+    "companies.md": "ade1d498024fc53b5757ce8a21ca124e",
 
     "connected-apps.md": "3c84fa4e338dd64f2029ed214324c2e1",
 
@@ -50,21 +50,21 @@
 
     "connections.md": "1229401eae1d1c8e26fd1ace323cea86",
 
-    "contacts.md": "9c6735247659addd9691f4b00323df1d",
+    "contacts.md": "03553862c888bc7659e1981d8e6c184d",
 
-    "contracts.md": "8aa37b09cf37deae517e2c40e997e157",
+    "contracts.md": "5131324a476c46ec6cdccca40f907fa4",
 
-    "cost-centers.md": "8ea331bf7f8e877d723ce6b82eba1041",
+    "cost-centers.md": "4e349e0daea8d28f4b0b6cf52e356aa8",
 
-    "csv-files.md": "9652de21fdb95484cbc52bdfc2de99a1",
+    "csv-files.md": "3b53ca5e7027c526b7d2a9011b54ad4c",
 
     "currencies.md": "8de455ec65c514b76c582744f9641cc0",
 
-    "data-access.md": "823ec3317525c7dd0779245e4c873705",
+    "data-access.md": "60ea9dd42829e732451bd26e3fdbf29e",
 
-    "departments.md": "33aff6bbd5aad01108ec450d1ae9d8d8",
+    "departments.md": "fbb03b178f16fe05f09160d2861bbe05",
 
-    "end-of-support.md": "aaac140c436b4268de9ecbc8570ad375",
+    "end-of-support.md": "238852893fc2f5678e4aa6966c4ede1d",
 
     "fast-track/apps-and-assets.md": "364b680a93a8c5501669d37103cce7c8",
 
@@ -72,11 +72,11 @@
 
     "fast-track/index.md": "6563fa6dfaa869b07b0297a32845f456",
 
-    "fast-track/task-types.md": "a6adae660a852575fbc2f2de3a80e825",
+    "fast-track/task-types.md": "61b74e53273bd6515b353f7dee788044",
 
-    "incidents.md": "d709f184cc46898ee33909fd3c54fb92",
+    "incidents.md": "f1e0c16048108fb7aef5784c27d00675",
 
-    "index.md": "8169c396632373b983f98cd611338107",
+    "index.md": "f086c83508e61962ccd5aed4e1dc21cd",
 
     "integrations.md": "a85a5f58ba84582a323c330f8d611e2f",
 
@@ -84,19 +84,19 @@
 
     "interfaces.md": "da700994c51be9eaa91c4b5f91d498da",
 
-    "it-ops-settings.md": "3f8682887acd585ea7400beb461b23be",
+    "it-ops-settings.md": "821637d1ec3bcef9bafb8434a92f5e0b",
 
     "knowledge.md": "0174572e4800ed99121c93909489bba8",
 
     "locations.md": "2e60572ee321c25b00409fb93bd1860b",
 
-    "master-data-operations.md": "4216be4b64a5a516c8f0ca509a271304",
+    "master-data-operations.md": "35a9a7fb87e520baf0d6516a0d39e75c",
 
     "my-dashboard.md": "6a3c6a395791ef1bc2c736e8a6e66794",
 
     "netbox.md": "b832db9f21cea4ffab9aa044cf714030",
 
-    "on-premise/configuration.md": "be1cf68771c6ee8520b76be76952f235",
+    "on-premise/configuration.md": "c3231e9eab9a022d3135167c3cded63d",
 
     "on-premise/index.md": "2541531aef583251d7e83808411cdd47",
 
@@ -112,33 +112,33 @@
 
     "operations-dashboard.md": "7663e88066118754f599ba95cc48ec9b",
 
-    "portfolio-planning.md": "90a8528b994c5c562148b8f069a0701e",
+    "portfolio-planning.md": "5f5943ccd182054e61d2c077195680b0",
 
-    "portfolio-projects.md": "1f3a9f33e6867ee66d93ff2feb9de5ca",
+    "portfolio-projects.md": "b7e544842159a46300a812d94f5e70b0",
 
-    "portfolio-reporting.md": "21ca86781576d41b9323e2d6254f5fca",
+    "portfolio-reporting.md": "e4bac10c4d300364dfbfcc594ec5d411",
 
-    "portfolio-requests.md": "94660befbabd7367432143bf6fc6ba0b",
+    "portfolio-requests.md": "d4cc7725a1ac4dd04c95206848e7e71a",
 
     "portfolio-settings.md": "4d741ccd0508434f52ae3df385cfacd4",
 
-    "portfolio-team-members.md": "8c2647222d5a66b773e420596a0e00ba",
+    "portfolio-team-members.md": "c2ec5c912a15db1f17ca7071161c8212",
 
-    "reports.md": "99706d482a923ff2f71744495aaab170",
+    "reports.md": "d932abd46420b5e7029a896c3171fdde",
 
     "sample-data.md": "9c66b634a51a55db02e07923eefa143b",
 
     "scheduled-tasks.md": "7f96af09c829079cb9ad97db9f765dbe",
 
-    "suppliers.md": "29fc60778b9db0f665382b7926d224b5",
+    "suppliers.md": "2e55bb3148362371b14b673de54785ed",
 
-    "tasks.md": "cdf781ebbcb2e57ec180b009ae74d0de",
+    "tasks.md": "ac865b29db164b5da7e10e21567b8df4",
 
-    "technologies.md": "a80c00e63ee403f7ddc4e41e72662a72",
+    "technologies.md": "071352a983043807ecf2d3b5d70cd194",
 
-    "vulnerabilities.md": "31d89159e341d081dcb666b4f540ada7",
+    "vulnerabilities.md": "bee34ae164aa805cee81a1b317547a20",
 
-    "working-day-calendars.md": "3ca1354e4be9858d7cf4cf105b10ebe4"
+    "working-day-calendars.md": "d7fa2768d97c10d2be417b6aaca1115a"
   },
 
   "glossary_hash": "9f44e04a31257e1141582ae5b9c01324",

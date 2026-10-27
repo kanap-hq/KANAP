@@ -49,7 +49,7 @@ Une ligne par entité se lit ainsi : **14 créés · 9 clôturés · 52 ouverts 
 - **Ouverts** : éléments ouverts en ce moment, quoi qu'il se soit passé pendant la période. Ce chiffre est un lien vers la liste correspondante.
 - **(+5)** : la variation nette, affichée seulement quand elle n'est pas nulle. C'est créés, plus rouverts, moins clôturés. Les éléments rouverts sont ceux passés d'un statut clos à un statut ouvert. Survolez le chiffre pour voir la formule.
 
-Créés et clôturés proviennent de l'historique des modifications. Ils couvrent donc toutes les façons d'écrire un élément : l'application, un import CSV et les agents. Aucun filtre de liste ne reproduit cet historique : ces deux chiffres ouvrent donc le **Bilan de la période** sur les mêmes jours. Ses listes des créations et des clôtures montrent exactement les éléments comptés ici. Un zéro n'est pas un lien.
+Créés et clôturés proviennent de l'historique des modifications. Ils couvrent donc toutes les façons d'écrire un élément : l'application, un import et les agents. Aucun filtre de liste ne reproduit cet historique : ces deux chiffres ouvrent donc le **Bilan de la période** sur les mêmes jours. Ses listes des créations et des clôtures montrent exactement les éléments comptés ici. Un zéro n'est pas un lien.
 
 ### Quelles tâches sont comptées
 
@@ -167,7 +167,7 @@ Cliquez sur une ligne de contributeur pour ouvrir un détail par projet :
 - Les noms de projets sont cliquables et ouvrent l'onglet **Avancement** du projet.
 
 ### Exports
-- **CSV** : Exporter le tableau du planning de capacité
+- **Exporter le tableau** : CSV ou Excel. Le fichier contient le tableau du regroupement à l'écran, contributeurs ou équipes, avec le mode de capacité, les équipes et les statuts à l'écran. Les jours gardent leurs décimales. Le fichier Excel ajoute une feuille **Paramètres**. Voir [Rapports](reports.md#export-options)
 - **PNG** : Capture du rapport
 - **Imprimer** : Imprimer ou enregistrer en PDF
 
@@ -187,7 +187,7 @@ Chacune des trois sections contient les trois mêmes listes.
 
 Un élément créé et clôturé dans la même période apparaît dans les deux listes, avec sa propre date dans chacune. Il n'apparaît jamais sous Modifications : Modifications correspond à ce qui reste une fois les créations et les clôtures prises en compte.
 
-La création compte comme un changement de statut. Un import CSV ou un agent peut créer une tâche déjà terminée, ou une demande déjà rejetée. Un tel élément figure en création et en clôture le même jour, même si personne n'a jamais changé son statut ensuite.
+La création compte comme un changement de statut. Un import ou un agent peut créer une tâche déjà terminée, ou une demande déjà rejetée. Un tel élément figure en création et en clôture le même jour, même si personne n'a jamais changé son statut ensuite.
 
 La clôture repose sur des statuts différents selon le type :
 
@@ -263,7 +263,7 @@ Les listes de modifications ajoutent la colonne **Modifications** à la fin.
 
 Les deux exports portent la référence, la société, l'origine d'un projet, les modifications d'une ligne modifiée et la date de l'événement. Les lignes de clôture portent aussi le jour de création.
 
-Les deux fichiers sont écrits dans la langue de l'écran : titres, noms de colonnes, statuts, modifications, oui ou non et jours. Le CSV prend aussi le séparateur et la marque décimale de cette langue, comme décrit dans [Fichiers CSV](csv-files.md).
+Les deux fichiers sont écrits dans la langue de l'écran : titres, noms de colonnes, statuts, modifications, oui ou non et jours. Le CSV prend aussi le séparateur et la marque décimale de cette langue, comme décrit dans [Fichiers CSV et Excel](csv-files.md).
 
 ## Temps saisi
 
@@ -293,7 +293,7 @@ Le rapport n'affiche que des jours. Il n'affiche jamais les notes d'une saisie.
 
 ### Exports
 
-- **CSV** : une ligne par personne et par mois, avec l'équipe, la personne, le mois, les jours projet, les jours autre et le total.
+- **Exporter le tableau** : CSV ou Excel, une ligne par personne et par mois, avec l'équipe, la personne, le mois, les jours projet, les jours autre et le total. Le fichier suit la période et les filtres d'équipe et de projet, et compte les mois dans le même fuseau horaire que l'écran. Le fichier Excel ajoute une feuille **Paramètres** avec ces filtres. Voir [Rapports](reports.md#export-options)
 - **PNG** : le graphique.
 
 ## Conseils

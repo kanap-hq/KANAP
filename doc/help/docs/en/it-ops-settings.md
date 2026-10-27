@@ -44,13 +44,13 @@ For long lists (more than 25 rows), the table virtualizes rows, showing about 20
 
 ### Names are the identity of a value
 
-You only ever see and type **names**. KANAP generates a stable internal code from the name when a value is first saved and keeps it forever, so renaming a value never breaks the records that use it. The code is visible to integrators in the API and can be used in CSV files, but the CSV export writes names and the import accepts either.
+You only ever see and type **names**. KANAP generates a stable internal code from the name when a value is first saved and keeps it forever, so renaming a value never breaks the records that use it. The code is visible to integrators in the API and can be used in imported files, but the export writes names and the import accepts either.
 
 Because names identify values, a few rules apply within a list:
 
 - every value needs a name (an asterisk marks the **Name** column), and two values cannot have the same name (case does not matter);
 - a name cannot be identical to the internal code of another value in the same list;
-- names of **Access methods** cannot contain a comma or a semicolon, because the CSV export lists them in one comma-separated cell.
+- names of **Access methods** cannot contain a comma or a semicolon, because the export lists them in one comma-separated cell.
 
 A list that breaks one of these rules is not saved until you fix it; the row shows what is wrong.
 

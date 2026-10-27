@@ -165,7 +165,7 @@ El correo a los responsables de TI anuncia una vulnerabilidad explotada de cualq
 
 ## Exportación
 
-**Exportar CSV** descarga las vulnerabilidades que cumplen los filtros, una fila por fila de la cuadrícula, en su orden, en el idioma de su pantalla. Su columna **Source**, después de **Match**, da `NVD`, `CVE.org` o `NVD, CVE.org`. Por encima de 10 000 vulnerabilidades, acote primero los filtros.
+**Exportar** descarga las vulnerabilidades que cumplen los filtros como archivo CSV o Excel, una fila por fila de la cuadrícula, en su orden, en el idioma de su pantalla. En el archivo Excel, las puntuaciones, el EPSS y las fechas son valores que Excel puede ordenar y filtrar. Su columna **Source**, después de **Match**, da `NVD`, `CVE.org` o `NVD, CVE.org`. Por encima de 10 000 vulnerabilidades, acote primero los filtros.
 
 ## Notificaciones por correo electrónico
 

@@ -38,7 +38,8 @@ function mockManager() {
 
 const TEXTS = ['Plain name', '=HYPERLINK("http://x")', 'Line; "quoted"\nsecond line', '-12'];
 const NUMBERS: unknown[] = ['12.50', 3, null, '-7.25'];
-const DATES: unknown[] = ['2026-03-01', new Date('2026-10-27T23:30:00Z'), null, '2026-02-30'];
+// A Date as node-postgres reads a `date` column: local midnight, its day in the server's zone.
+const DATES: unknown[] = ['2026-03-01', new Date(2026, 9, 27), null, '2026-02-30'];
 const BOOLEANS: unknown[] = [true, false, null, true];
 const ARRAYS: unknown[] = [['alpha', 'beta'], [], null, ['+cmd']];
 

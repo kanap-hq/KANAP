@@ -100,7 +100,7 @@ When vulnerabilities are followed, the **Publisher** column also opens the Vulne
 **Actions**:
 
 - **New technology** (`infrastructure:member`).
-- **Import links** (`infrastructure:member`) and **Export links**: load or download the links between technologies and servers or applications as a CSV file. See [Import and export links](#import-and-export-links).
+- **Import links** (`infrastructure:member`) and **Export links**: load or download the links between technologies and servers or applications as a CSV file or an Excel workbook. See [Import and export links](#import-and-export-links).
 - **Delete** the selected rows (`infrastructure:admin`). The confirmation counts what goes with them: links to servers and applications, contracts, budget lines, projects, incidents and documents.
 
 ---
@@ -246,7 +246,7 @@ An application appears in two ways:
 
 **Add** (`infrastructure:member`) opens a search where you can tick several applications, then add them in one go. They are declared with an unknown version: set it afterwards on each row. Disabled applications and deployments do not count.
 
-**Export CSV** downloads the rows in the language of your screen.
+**Export** downloads the rows as a CSV or Excel file, in the language of your screen.
 
 ### Operations
 
@@ -314,12 +314,12 @@ Record the technology on the server where it is installed: the host for a hyperv
 
 ## Import and export links
 
-The technologies list loads and downloads links in bulk, one link per row of a CSV file. Two files exist:
+The technologies list loads and downloads links in bulk, one link per row of a CSV file or an Excel workbook. Two files exist:
 
 - **Servers and technologies**: the technologies installed on each server.
 - **Applications and technologies**: the technologies each application declares. Applications hosted on a server that carries a technology are deduced from the servers, so the file leaves them out.
 
-Click **Import links** or **Export links** in the toolbar, then pick the file. The export offers the data or an empty template. The general rules of CSV files apply: encoding, separator, yes and no in four languages, at most 20,000 rows. See [CSV files](csv-files.md).
+Click **Import links** or **Export links** in the toolbar, then pick the file. The export offers the data, in CSV or Excel, or an empty CSV template. The general rules of import files apply: encoding, separator, yes and no in four languages, at most 20,000 rows. See [CSV and Excel files](csv-files.md).
 
 **Permissions**:
 

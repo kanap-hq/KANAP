@@ -1,6 +1,6 @@
 # Berichte
 
-Der Berichtsbereich bietet Ihnen vorgefertigte, interaktive Berichte zur Analyse von Budgetdaten, Kostenzuordnungen und Ausgabentrends. Jeder Bericht kombiniert eine Zusammenfassungstabelle mit einem Diagramm, und alle unterstützen CSV- und Bildexporte.
+Der Berichtsbereich bietet Ihnen vorgefertigte, interaktive Berichte zur Analyse von Budgetdaten, Kostenzuordnungen und Ausgabentrends. Jeder Bericht kombiniert eine Zusammenfassungstabelle mit einem Diagramm, und alle exportieren ihre Tabelle als CSV oder Excel und ihr Diagramm als Bild.
 
 ## Wo Sie es finden
 
@@ -53,7 +53,7 @@ Mit **VZÄ** summiert ein Bericht Personen statt Geld:
 - **Top Anstieg / Rückgang** vergleicht die VZÄ der beiden Spalten Budgetzeile für Budgetzeile. Eine Budgetzeile, die nur auf einer Seite VZÄ meldet, zählt auf der anderen Seite 0.
 - Werte erscheinen mit zwei Dezimalstellen. Spaltennamen und Diagrammtitel tragen den Zusatz VZÄ.
 - Die Seitenadresse speichert die Messgröße (`?measure=fte`), sodass ein gespeicherter oder geteilter Link mit derselben Messgröße öffnet.
-- Die Dateinamen exportierter PNG- und CSV-Dateien enden auf `-fte`.
+- Die Namen exportierter Dateien enthalten `-fte`.
 
 Mit VZÄ warnt eine Zeile unter der Tabelle, wenn einige Budgetzeilen VZÄ in einer Spalte melden, deren Betrag den Mengen-und-Preis-Zeilen nicht mehr folgt. Das ist der Fall, wenn der Betrag verteilt wurde, seine Monate von Hand bearbeitet wurden oder die Spalte aus einer Spalte kopiert wurde, deren Zeilen nur als Referenz dienten. Die Zeile nennt pro Spalte und Jahr, wie viele Budgetzeilen und wie viele VZÄ betroffen sind. Bei mehreren Spalten lautet sie zum Beispiel: „Der Betrag folgt nicht mehr den Zeilen bei: Budget 2026 (2 Zeilen, 1,50 VZÄ), Budget 2027 (1 Zeile, 0,50 VZÄ).“ Bei einer Spalte lautet sie: „2 Zeilen melden 1,50 VZÄ, ihr Betrag folgt aber nicht mehr ihren Mengen-und-Preis-Zeilen.“ Ihre VZÄ zählen weiterhin. Die Zeile weist darauf hin, dass der Betrag der Spalte nicht den Kosten ihrer Zeilen entspricht.
 
@@ -147,7 +147,6 @@ Zeigen Sie Kostenzuordnungen über alle Unternehmen hinweg mit Zusammenfassungs-
 
 - Verrechnete Zahler-zu-Nutznießer-Flüsse pro Unternehmenspaar (Eigenverbrauch ausgeschlossen)
 - Spalten: Zahler, Nutznießer, Betrag
-- Separate Schaltfläche **Verrechnete Flüsse als CSV exportieren**
 
 **KPI-Tabelle** (wenn aktiviert):
 
@@ -166,9 +165,11 @@ Eine Summenzeile ist unten angeheftet.
 
 ### Export
 
-- **Tabelle als CSV exportieren** (Download-Symbol): Exportiert das detaillierte Zuordnungs-Grid
+- **Tabelle exportieren** (Download-Symbol): **Excel (.xlsx)** schreibt ein Blatt pro Tabelle: **Detaillierte Zuordnungen**, **Globale Unternehmenstotale**, **Unternehmensübergreifende Flüsse** und **KPIs der Leistungsverrechnung**, dann das Blatt **Parameter**. **CSV** bietet einen Eintrag pro Tabelle, zum Beispiel **CSV: Unternehmensübergreifende Flüsse**. Die detaillierten Zuordnungen enthalten eine Zeile pro Abteilung, mit ihrem Unternehmen in jeder Zeile, sodass die Summe der Betragsspalte die Gesamtsumme ergibt. Die Unternehmenstotale stehen in ihrer eigenen Tabelle
 - **Diagramm als PNG exportieren** (Bild-Symbol): Exportiert das Balkendiagramm
 - **Drucken / Als PDF speichern** (Druck-Symbol)
+
+Der Export enthält alle Tabellen, unabhängig davon, welche die Kontrollkästchen auf dem Bildschirm zeigen.
 
 ---
 
@@ -210,7 +211,6 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 
 - Partnerunternehmen, Forderungen, Verbindlichkeiten, Netto
 - Angeheftete Summenzeile
-- Separate Schaltfläche **Flüsse als CSV exportieren**
 
 **KPI-Tabelle** (wenn aktiviert): Gleiche Spalten wie die KPI-Tabelle der Globalen Leistungsverrechnung, mit einer „Globale Summen"-Zeile unten zum Vergleich.
 
@@ -218,9 +218,11 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 
 ### Export
 
-- **Tabelle als CSV exportieren**: Exportiert das Abteilungs-Summen-Grid
+- **Tabelle exportieren**: **Excel (.xlsx)** schreibt ein Blatt pro Tabelle: **Abteilungstotale**, **Leistungsverrechnungszeilen**, **Unternehmensübergreifende Flüsse** und **KPIs der Leistungsverrechnung**, dann das Blatt **Parameter**. **CSV** bietet einen Eintrag pro Tabelle, zum Beispiel **CSV: Leistungsverrechnungszeilen**
 - **Diagramm als PNG exportieren**: Exportiert das Abteilungs-Balkendiagramm
 - **Drucken / Als PDF speichern**
+
+Der Export enthält alle Tabellen, unabhängig davon, welche die Kontrollkästchen auf dem Bildschirm zeigen.
 
 ---
 
@@ -333,7 +335,7 @@ Vergleichen Sie Budgetkennzahlen über mehrere Jahre in einem einzelnen Liniendi
 
 ### Export
 
-- **Tabelle als CSV exportieren**
+- **Tabelle exportieren**: CSV oder Excel. Siehe [Exportoptionen](#export-options)
 - **Diagramm als PNG exportieren**
 - **Drucken / Als PDF speichern**
 
@@ -365,7 +367,7 @@ Vergleichen Sie flexibel bis zu 10 Jahr+Spalten-Kombinationen.
 
 ### Export
 
-- **Tabelle als CSV exportieren**
+- **Tabelle exportieren**: CSV oder Excel. Siehe [Exportoptionen](#export-options)
 - **Diagramm als PNG exportieren**
 - **Drucken / Als PDF speichern**
 
@@ -464,7 +466,7 @@ Die Seitenadresse speichert die Gruppierung (`?group=item`, `?group=supplier` od
 
 Eine angeheftete Zeile **Gesamt** zeigt die Monatssummen, ihren Durchschnitt und ihre Spitze. Werte erscheinen mit zwei Dezimalstellen. Es zählen nur gemeldete VZÄ: Budgetzeilen ohne Zeilen mit Menge und Preis in der Spalte bleiben unberücksichtigt.
 
-Der Name einer Gruppe ist ein Link, der sich in einem neuen Tab öffnet. Eine Budgetzeile öffnet ihre Seite. Eine Kostenstelle, ein Lieferant oder ein Wert öffnet die Liste der Budgetzeilen mit den Budgetzeilen der Gruppe, die VZÄ melden, im Zeitraum des Berichts und eingegrenzt durch die Filterleiste (siehe [Die Liste aus einem Bericht öffnen](#die-liste-aus-einem-bericht-offnen)). „Keine Kostenstelle“, „Kein Lieferant“ und „Kein Wert“ öffnen die Budgetzeilen ohne Angabe. Die Zeile **Gesamt** ist reiner Text. Der CSV-Export behält die Namen als reinen Text.
+Der Name einer Gruppe ist ein Link, der sich in einem neuen Tab öffnet. Eine Budgetzeile öffnet ihre Seite. Eine Kostenstelle, ein Lieferant oder ein Wert öffnet die Liste der Budgetzeilen mit den Budgetzeilen der Gruppe, die VZÄ melden, im Zeitraum des Berichts und eingegrenzt durch die Filterleiste (siehe [Die Liste aus einem Bericht öffnen](#die-liste-aus-einem-bericht-offnen)). „Keine Kostenstelle“, „Kein Lieferant“ und „Kein Wert“ öffnen die Budgetzeilen ohne Angabe. Die Zeile **Gesamt** ist reiner Text. Der Export behält die reinen Namen.
 
 ### Hinweise
 
@@ -475,8 +477,8 @@ Eine Zeile unter der Tabelle für jeden Fall, wenn er eintritt:
 
 ### Export
 
-- **Tabelle als CSV exportieren**: Der Dateiname nennt Typ, Jahr, Spalte und Gruppierung, zum Beispiel `staffing-opex-2026-budget-cost-center.csv`
-- **Diagramm als PNG exportieren**: Gleicher Name, als PNG-Bild
+- **Tabelle exportieren**: CSV oder Excel. Der Dateiname nennt Typ, Jahr, Spalte, Gruppierung und den Tag des Exports, zum Beispiel `staffing-opex-2026-budget-cost-center-2026-10-27.xlsx`
+- **Diagramm als PNG exportieren**: Typ, Jahr, Spalte und Gruppierung, als PNG-Bild
 - **Drucken / Als PDF speichern**
 
 ---
@@ -543,8 +545,8 @@ Eine angeheftete Zeile **Gesamt** zeigt für jedes Paar die Tage gesamt, die Kos
 
 ### Export
 
-- **Tabelle als CSV exportieren**: Der Dateiname nennt Typ, Gruppierung und das erste Paar, zum Beispiel `cost-per-fte-opex-cost-center-2025-budget.csv`. Beim Tagessatz beginnt er mit `daily-rate`, zum Beispiel `daily-rate-opex-cost-center-2025-budget.csv`
-- **Diagramm als PNG exportieren**: Gleicher Name, als PNG-Bild
+- **Tabelle exportieren**: CSV oder Excel. Der Dateiname nennt Typ, Gruppierung, das erste Paar und den Tag des Exports, zum Beispiel `cost-per-fte-opex-cost-center-2025-budget-2026-10-27.xlsx`. Beim Tagessatz beginnt er mit `daily-rate`, zum Beispiel `daily-rate-opex-cost-center-2025-budget-2026-10-27.csv`
+- **Diagramm als PNG exportieren**: Typ, Gruppierung und das erste Paar, als PNG-Bild
 - **Drucken / Als PDF speichern**
 
 ---
@@ -553,13 +555,23 @@ Eine angeheftete Zeile **Gesamt** zeigt für jedes Paar die Tage gesamt, die Kos
 
 Jeder Bericht bietet diese Funktionen über die gemeinsame Symbolleiste:
 
-### Exportoptionen
+### Exportoptionen { #export-options }
 
-- **Tabelle als CSV exportieren** (Download-Symbol): Lädt die Primärtabellendaten herunter
+- **Tabelle exportieren** (Download-Symbol): öffnet ein Menü mit **CSV** und **Excel (.xlsx)**. Ihr Browser merkt sich die letzte Wahl und hebt sie hervor
 - **Diagramm als PNG exportieren** (Bild-Symbol): Lädt das Diagramm als PNG-Bild herunter
 - **Drucken / Als PDF speichern** (Druck-Symbol): Öffnet den Browser-Druckdialog. Sie können auch `?print=1` an jede Bericht-URL anhängen, um den Druck beim Laden automatisch auszulösen.
 
-Exportierte Dateinamen enthalten den Spaltennamen, zum Beispiel `top10-opex-2026-budget-bar.png`. Mit der Messgröße VZÄ enden sie auf `-fte`.
+KANAP erstellt die Tabellendatei aus denselben Zahlen wie die Oberfläche, mit den angezeigten Filtern:
+
+- **Werte**: Beträge behalten ihre Cents, VZÄ und Tage ihre Nachkommastellen, Anteile sind Prozentwerte. Die Oberfläche rundet sie zum Lesen; die Datei behält die Werte, sodass eine Summe in Excel dem Bericht entspricht.
+- **Reihenfolge**: Die Zeilen folgen der eigenen Reihenfolge des Berichts. Eine Sortierung per Klick auf einen Spaltenkopf bleibt auf dem Bildschirm.
+- **Sprache**: Die Spaltenköpfe, die Gruppennamen („Keine Kostenstelle“) und die Datumsangaben folgen der Sprache Ihres Bildschirms. Eine CSV-Datei übernimmt auch das Trennzeichen und das Dezimalzeichen dieser Sprache (siehe [CSV- und Excel-Dateien](csv-files.md)).
+- **Excel**: ein Blatt pro Tabelle, mit den Summenzeilen fett nach den Daten. Eine Sortierung oder ein Filter in Excel lässt die Summen an ihrem Platz. Ein letztes Blatt, **Parameter**, nennt die angewendeten Filter, Datum und Uhrzeit des Exports in Ihrer Zeitzone und Ihren Namen.
+- **Begrenzter Datenzugriff**: Für eine Person mit begrenztem [Datenzugriff](data-access.md) zählt die Datei die Zeilen, die sie sieht, und enthält keine Summenzeile. Das Blatt **Parameter** nennt **Auf Ihre Zugriffsrechte berechnet**.
+
+Jeder Tabellenexport wird im [Audit-Protokoll](admin.md#audit-protokoll) aufgezeichnet.
+
+Exportierte Dateinamen enthalten den Spaltennamen, zum Beispiel `top10-opex-2026-budget-bar.png`, und eine Tabellendatei endet mit dem Tag des Exports. Mit der Messgröße VZÄ enthalten die Namen `-fte`, bei einer Tabellendatei vor dem Tag.
 
 ### Verfügbare Kennzahlen
 
@@ -578,4 +590,4 @@ Um den Bericht zu wechseln, klicken Sie im linken Bereich auf **Berichte**, um z
 - **Budget vs. Erwarteter Endwert vergleichen**: Verwenden Sie den Bericht Budgetspaltenvergleich, um die Prognosegenauigkeit über Jahre zu messen.
 - **Abschnitte in Leistungsverrechnungsberichten umschalten**: Die Kontrollkästchen ermöglichen es, sich nur auf die benötigten Daten zu konzentrieren (Abteilungen, Budgetzeilen, KPIs oder Flüsse), ohne visuelle Unordnung.
 - **Jahresgruppierung im Budgetspaltenvergleich**: Wenn Sie die gleiche Kennzahl über mehrere Jahre vergleichen, aktivieren Sie die Jahresgruppierung für ein übersichtlicheres Liniendiagramm.
-- **Für Präsentationen exportieren**: Diagramme exportieren als PNG und Tabellen als CSV, beides bereit für Folien oder Tabellenkalkulationen.
+- **Für Präsentationen exportieren**: Diagramme exportieren als PNG und Tabellen als CSV oder Excel, bereit für Folien oder Tabellenkalkulationen.

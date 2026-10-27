@@ -126,6 +126,8 @@ Plaid names a record linked to the one you ask about only when you can read its 
 
 When Plaid adds up budget amounts, a line whose currency has no exchange rate for the year is left out of the sum. Plaid then says which currencies and years it left out. Assistants connected over MCP get the same answer.
 
+Plaid reads the staff figures of the [Cost per FTE](reports.md#cost-per-fte) report for each year and budget column: the cost and FTE of the lines in people or days, the cost of the lines priced per day and the days they buy. KANAP computes the cost per FTE and the average daily rate per supplier, company, cost center or any other grouping, as the report does, and Plaid quotes them. Ask, for example: "What are the external FTE and the average daily rate per supplier in 2026?" OPEX and CAPEX lines are read separately: when you name neither, Plaid answers for both, or says that its answer covers OPEX only. Assistants connected over MCP get the same answers.
+
 Totals come from KANAP. A list of budget lines or contracts comes with the total of every matching record, all pages included, and with the total of the records listed, so Plaid quotes one of them or asks KANAP for a sum. Asked for the ten largest lines and their total, Plaid gives the total of those ten. When your data access is limited to some companies or cost centers, Plaid says that its counts and totals cover your access, and does not present them as the total of the workspace.
 
 When Plaid tries a filter value that a field does not take, for example "active" for the status of an application (which is "enabled" or "disabled"), KANAP refuses it and lists the accepted values. Plaid then searches again with the right value.

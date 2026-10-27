@@ -43,8 +43,8 @@ La cuadrícula de Departamentos proporciona una visión general de todos los dep
 
 **Acciones**:
 - **Nuevo**: Crear un nuevo departamento (requiere `departments:member`)
-- **Importar CSV**: Importación masiva de departamentos (requiere `departments:admin`)
-- **Exportar CSV**: Exportar a CSV (requiere `departments:admin`)
+- **Importar**: Importación masiva de departamentos (requiere `departments:admin`)
+- **Exportar**: Exportar a un archivo CSV o un libro de Excel (requiere `departments:admin`)
 - **Eliminar seleccionados**: Eliminar departamentos seleccionados (requiere `departments:admin`). Un departamento usado en las asignaciones de líneas presupuestarias no se puede eliminar: desactívelo en su lugar. Antes de eliminar nada, la confirmación enumera los departamentos que se conservan, con el motivo
 
 ---
@@ -93,7 +93,9 @@ La pestaña Detalles gestiona las métricas de plantilla año a año.
 
 ## Importación/exportación CSV
 
-**Exportar CSV** descarga los departamentos que muestra la lista (o, a petición en el diálogo, todos los departamentos) con su empresa, su nombre, su descripción, su estado y su fin de validez. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
+La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
+
+**Exportar** descarga los departamentos que muestra la lista (o, a petición en el diálogo, todos los departamentos) con su empresa, su nombre, su descripción, su estado y su fin de validez. **Importar** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
 
 Las columnas:
 
@@ -119,7 +121,7 @@ Las columnas:
 - Una fila cuyo estado contradice su fecha se rechaza con un error de fila: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." o "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
 
 **Notas**:
-- Consulte [Archivos CSV](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
+- Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
 - La plantilla de personal no está en el archivo. Introdúzcala por año en la pestaña **Detalles** del departamento
 
 ## Consejos

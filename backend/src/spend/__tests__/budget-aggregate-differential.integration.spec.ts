@@ -374,7 +374,9 @@ type Sample = Map<string, Array<string | number>>;
 function buildCases(r: ReturnType<typeof prng>, scope: SummaryScopeConfig, registry: AiEntityFilterRegistry, sample: Sample, axisIds: string[], sampleRows: any[]): Case[] {
   const entity_type = scope.scope === 'opex' ? 'spend_items' : 'capex_items';
   const cases: Case[] = [];
-  const fields = Object.entries(registry.fields);
+  // The line totals (`y_budget_staff_cost`...) have no former computation to compare with: the
+  // ai-staff-cost spec compares them with the Cost per FTE report.
+  const fields = Object.entries(registry.fields).filter(([, f]) => !f.family);
   const groupable = fields.filter(([, f]) => f.groupable).map(([key]) => key);
   const amountAi = fields.filter(([key, f]) => f.type === 'number' && !key.endsWith('_fte')).map(([key]) => key);
   const fteAi = fields.filter(([key, f]) => f.type === 'number' && key.endsWith('_fte')).map(([key]) => key);

@@ -165,7 +165,7 @@ The email to the IT owners announces an exploited vulnerability of any severity,
 
 ## Export
 
-**Export CSV** downloads the vulnerabilities that match the filters, one line per row of the grid, in its order, in the language of your screen. Its **Source** column, after **Match**, gives `NVD`, `CVE.org` or `NVD, CVE.org`. Above 10,000 vulnerabilities, narrow the filters first.
+**Export** downloads the vulnerabilities that match the filters as a CSV or Excel file, one line per row of the grid, in its order, in the language of your screen. In the Excel file, scores, EPSS and dates are values Excel can sort and filter. Its **Source** column, after **Match**, gives `NVD`, `CVE.org` or `NVD, CVE.org`. Above 10,000 vulnerabilities, narrow the filters first.
 
 ## Email notifications
 

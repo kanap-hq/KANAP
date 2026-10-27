@@ -43,8 +43,8 @@ The Departments grid gives you an overview of all departments with their headcou
 
 **Actions**:
 - **New**: Create a new department (requires `departments:member`)
-- **Import CSV**: Bulk import departments (requires `departments:admin`)
-- **Export CSV**: Export to CSV (requires `departments:admin`)
+- **Import**: Bulk import departments (requires `departments:admin`)
+- **Export**: Export to a CSV file or an Excel workbook (requires `departments:admin`)
 - **Delete Selected**: Remove selected departments (requires `departments:admin`). A department used in the allocations of budget lines cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the departments kept, with the reason
 
 ---
@@ -93,7 +93,9 @@ The Details tab manages year-by-year headcount metrics.
 
 ## CSV import/export
 
-**Export CSV** downloads the departments the list shows (or, on request in the dialog, every department) with its company, name, description, status and end of validity. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
+The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
+
+**Export** downloads the departments the list shows (or, on request in the dialog, every department) with its company, name, description, status and end of validity. **Import** reads a file back. The import dialog also carries **Download template**: a file with the headers only.
 
 The columns:
 
@@ -119,7 +121,7 @@ The columns:
 - A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
 
 **Notes**:
-- See [CSV files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
+- See [CSV and Excel files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
 - Headcount is not in the file. Enter it per year on the department's **Details** tab
 
 ---

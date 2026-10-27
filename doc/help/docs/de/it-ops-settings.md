@@ -44,13 +44,13 @@ Bei langen Listen (mehr als 25 Zeilen) virtualisiert die Tabelle die Zeilen: Sie
 
 ### Namen sind die Identität eines Werts
 
-Sie sehen und tippen ausschließlich **Namen**. KANAP erzeugt beim ersten Speichern eines Werts einen stabilen internen Code aus dem Namen und behält ihn dauerhaft bei, sodass das Umbenennen eines Werts nie die Datensätze beschädigt, die ihn verwenden. Der Code ist für Integratoren in der API sichtbar und kann in CSV-Dateien verwendet werden; der CSV-Export schreibt jedoch Namen, und der Import akzeptiert beides.
+Sie sehen und tippen ausschließlich **Namen**. KANAP erzeugt beim ersten Speichern eines Werts einen stabilen internen Code aus dem Namen und behält ihn dauerhaft bei, sodass das Umbenennen eines Werts nie die Datensätze beschädigt, die ihn verwenden. Der Code ist für Integratoren in der API sichtbar und kann in importierten Dateien verwendet werden; der Export schreibt jedoch Namen, und der Import akzeptiert beides.
 
 Weil Namen die Werte identifizieren, gelten innerhalb einer Liste einige Regeln:
 
 - jeder Wert braucht einen Namen (ein Sternchen kennzeichnet die Spalte **Name**), und zwei Werte dürfen nicht denselben Namen tragen (Groß- und Kleinschreibung spielt keine Rolle);
 - ein Name darf nicht mit dem internen Code eines anderen Werts derselben Liste identisch sein;
-- Namen von **Zugriffsmethoden** dürfen weder Komma noch Semikolon enthalten, da der CSV-Export sie in einer einzigen, durch Kommas getrennten Zelle auflistet.
+- Namen von **Zugriffsmethoden** dürfen weder Komma noch Semikolon enthalten, da der Export sie in einer einzigen, durch Kommas getrennten Zelle auflistet.
 
 Eine Liste, die gegen eine dieser Regeln verstößt, wird erst gespeichert, wenn Sie den Fehler behoben haben; die Zeile zeigt an, was nicht stimmt.
 

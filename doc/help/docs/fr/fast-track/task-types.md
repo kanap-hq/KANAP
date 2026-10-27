@@ -254,7 +254,7 @@ La liste de ce guide est un point de départ. Adaptez-la à la façon dont votre
 
 ## Pour aller plus loin
 
-- [Tâches](../tasks.md) : référence complète pour les statuts, import/export CSV, suivi du temps et chaque fonctionnalité de l'espace de travail
+- [Tâches](../tasks.md) : référence complète pour les statuts, l'import et l'export, suivi du temps et chaque fonctionnalité de l'espace de travail
 - [Lignes budgétaires](../budget-lines.md) : gestion des lignes OPEX et CAPEX et de leurs tâches
 - [Contrats](../contracts.md) : gestion des contrats et de leurs tâches
 - [Projets du portefeuille](../portfolio-projects.md) : livraison de projet, phases, suivi de charge et tâches au niveau projet

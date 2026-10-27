@@ -44,13 +44,13 @@ Pour les longues listes (plus de 25 lignes), le tableau virtualise les lignes, a
 
 ### Les noms identifient les valeurs
 
-Vous ne voyez et ne saisissez jamais que des **noms**. KANAP génère un code interne stable à partir du nom lors du premier enregistrement d'une valeur et le conserve définitivement : renommer une valeur ne casse donc jamais les enregistrements qui l'utilisent. Ce code est visible des intégrateurs dans l'API et peut être utilisé dans les fichiers CSV, mais l'export CSV écrit les noms et l'import accepte l'un comme l'autre.
+Vous ne voyez et ne saisissez jamais que des **noms**. KANAP génère un code interne stable à partir du nom lors du premier enregistrement d'une valeur et le conserve définitivement : renommer une valeur ne casse donc jamais les enregistrements qui l'utilisent. Ce code est visible des intégrateurs dans l'API et peut être utilisé dans les fichiers importés, mais l'export écrit les noms et l'import accepte l'un comme l'autre.
 
 Parce que les noms identifient les valeurs, quelques règles s'appliquent au sein d'une liste :
 
 - chaque valeur doit avoir un nom (un astérisque marque la colonne **Nom**), et deux valeurs ne peuvent pas porter le même nom (la casse n'est pas prise en compte) ;
 - un nom ne peut pas être identique au code interne d'une autre valeur de la même liste ;
-- les noms des **Méthodes d'accès** ne peuvent contenir ni virgule ni point-virgule, car l'export CSV les regroupe dans une seule cellule séparée par des virgules.
+- les noms des **Méthodes d'accès** ne peuvent contenir ni virgule ni point-virgule, car l'export les regroupe dans une seule cellule séparée par des virgules.
 
 Une liste qui enfreint l'une de ces règles n'est pas enregistrée tant que vous ne l'avez pas corrigée ; la ligne indique ce qui ne va pas.
 

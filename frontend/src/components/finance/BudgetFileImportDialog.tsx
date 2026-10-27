@@ -22,6 +22,7 @@ import {
   screenLanguage,
 } from './budgetFile';
 import { failureText, serverSentence } from './budgetFileText';
+import { useImportFiles } from '../csv/importFiles';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -52,6 +53,7 @@ export default function BudgetFileImportDialog({
   onImported?: () => void;
 }) {
   const { t, i18n } = useTranslation('ops');
+  const { accept } = useImportFiles();
   const screen = screenLanguage(i18n.resolvedLanguage || i18n.language);
   const locale = screen;
   const queryClient = useQueryClient();
@@ -200,7 +202,7 @@ export default function BudgetFileImportDialog({
           ref={inputRef}
           type="file"
           hidden
-          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          accept={accept}
           onChange={(event) => {
             chooseFile(event.target.files?.[0]);
             event.target.value = '';

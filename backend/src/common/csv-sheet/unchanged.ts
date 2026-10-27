@@ -15,7 +15,8 @@ function isBlank(value: unknown): boolean {
   return value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
 }
 
-function localDay(date: Date): string {
+/** The day of a Date in the server's zone: node-postgres returns a `date` column as local midnight. */
+export function localDay(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }

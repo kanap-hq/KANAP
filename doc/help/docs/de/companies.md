@@ -63,8 +63,8 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 **Aktionen**:
 
 - **Neu**: Unternehmen erstellen (erfordert `companies:member`)
-- **CSV importieren**: Massenimport von Unternehmen aus einer CSV-Datei (erfordert `companies:admin`)
-- **CSV exportieren**: Unternehmen und ihre Kennzahlen als CSV exportieren (erfordert `companies:admin`)
+- **Importieren**: Massenimport von Unternehmen aus einer CSV-Datei oder Excel-Arbeitsmappe (erfordert `companies:admin`)
+- **Exportieren**: Unternehmen und ihre Kennzahlen in eine CSV-Datei oder Excel-Arbeitsmappe exportieren (erfordert `companies:admin`)
 - **Ausgewählte löschen**: Ein oder mehrere ausgewählte Unternehmen löschen (erfordert `companies:admin`; nur möglich, wenn nichts das Unternehmen referenziert)
 
 **Suchkontext**: Wenn Sie einen Unternehmens-Arbeitsbereich aus der Liste öffnen, werden Ihre aktuelle Suche, Filter, Sortierreihenfolge und das Jahr beibehalten. Die Rückkehr zur Liste stellt Ihre vorherige Ansicht wieder her.
@@ -202,7 +202,9 @@ Viele Bereiche der App sind jahresbezogen. Unternehmen haben Kennzahlen pro Jahr
 
 ## CSV-Import/Export
 
-**CSV exportieren** lädt die Unternehmen der Liste (oder, auf Wunsch im Dialog, alle Unternehmen) mit ihren Kennzahlen herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei mit den Kopfzeilen und einer Beispielzeile, einem fiktiven Unternehmen mit Kennzahlen für das Jahr der Liste. Ersetzen Sie sie durch Ihre eigenen Zeilen.
+Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
+**Exportieren** lädt die Unternehmen der Liste (oder, auf Wunsch im Dialog, alle Unternehmen) mit ihren Kennzahlen herunter. **Importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei mit den Kopfzeilen und einer Beispielzeile, einem fiktiven Unternehmen mit Kennzahlen für das Jahr der Liste. Ersetzen Sie sie durch Ihre eigenen Zeilen.
 
 Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbolleiste der Liste gewählten Jahr: das Jahr davor, dieses Jahr und das Jahr danach.
 
@@ -238,7 +240,7 @@ Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbo
 
 **Hinweise**:
 
-- Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datums- und Betragsformen und die beiden Importschritte
+- Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datums- und Betragsformen und die beiden Importschritte
 - Die Liste aktualisiert sich nach einem erfolgreichen Laden automatisch
 
 ## Tipps

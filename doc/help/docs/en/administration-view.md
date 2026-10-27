@@ -112,9 +112,9 @@ Each server appears once. "None found" means no server of the domain meets eithe
 
 ## Export
 
-**Export assets** downloads the assets of the table as a CSV file, with its search, filters and sort. The columns are **Zone**, **Reference**, **Name**, **Type**, **Technologies**, **Applications**, **Controls** and **Dependency**. **Dependency** gives, for **Less sensitive host**, each more sensitive asset the asset runs or cluster it belongs to, with its zone. One export holds up to 10,000 assets: narrow the filters beyond that.
+**Export assets** downloads the assets of the table as a CSV or Excel file, with its search, filters and sort. The columns are **Zone**, **Reference**, **Name**, **Type**, **Technologies**, **Applications**, **Controls** and **Dependency**. **Dependency** gives, for **Less sensitive host**, each more sensitive asset the asset runs or cluster it belongs to, with its zone. One export holds up to 10,000 assets: narrow the filters beyond that.
 
-**Export domains** downloads every domain with its DNS suffix, forest, trusts (its own and those declared by other domains), numbers of accounts and computers, and domain controllers.
+**Export domains** downloads every domain, in CSV or Excel, with its DNS suffix, forest, trusts (its own and those declared by other domains), numbers of accounts and computers, and domain controllers.
 
 ## Tips
 

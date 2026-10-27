@@ -16,7 +16,7 @@ Für portfolio-weite Sequenzierung und Roadmap-Arbeit verwenden Sie [Portfolio-P
 - `portfolio_projects:reader`: die Liste öffnen und Projekt-Arbeitsbereiche anzeigen
 - `portfolio_projects:contributor`: das verwaltete Dokument **Zweck** aktualisieren, Zeit auf dem Projekt erfassen (Projekt-Overhead-Einträge und Einträge auf Projektaufgaben) und im Reiter **Beziehungen** Abhängigkeiten, verknüpfte Datensätze, Links und Dateien pflegen
 - `portfolio_projects:member`: Projekte erstellen und Projektdaten, Status, Team, Beziehungen, Zeitleiste, Fortschritt, Aufgaben, Bewertung, Kommentare und Entscheidungen verwalten
-- `portfolio_projects:admin`: enthält die Member-Funktionen und kann auch CSV importieren/exportieren, Prioritäts-Überschreibungen speichern und Projekt-Overhead-Zeiteinträge anderer Benutzer pflegen
+- `portfolio_projects:admin`: enthält die Member-Funktionen und kann auch importieren und exportieren, Prioritäts-Überschreibungen speichern und Projekt-Overhead-Zeiteinträge anderer Benutzer pflegen
 - Die Anzeige der Wissensdatenbank erfordert auch Wissensdatenbank-Zugriff
 - Das Erstellen oder Verknüpfen von eigenständigem Wissen erfordert auch eine Wissens-Erstellungsrolle
 
@@ -66,7 +66,7 @@ Die Projektliste ist darauf ausgelegt, zwei Fragen schnell zu beantworten: „Wo
 **Massenverwaltung**
 
 - **Neues Projekt** ist mit `portfolio_projects:member` verfügbar
-- **CSV importieren** und **CSV exportieren** sind für Administratoren verfügbar
+- **Importieren** und **Exportieren** sind für Administratoren verfügbar
 
 Das Öffnen eines Projekts aus der Liste bewahrt den aktuellen Listenkontext. Der Projekt-Arbeitsbereich verwendet denselben Kontext für die **Vorherige**- und **Nächste**-Navigation, sodass Sie einen gefilterten Satz überprüfen können, ohne Ihren Platz zu verlieren.
 
@@ -369,9 +369,13 @@ Wenn Sie das Projekt öffnen können, aber keine Wissensanzeige-Rechte haben, sa
 
 ## CSV-Import und -Export
 
-Projekt-CSV-Werkzeuge sind auf der Listenseite für Administratoren verfügbar.
+**Exportieren** und **Importieren** sind auf der Listenseite für Administratoren verfügbar.
 
 ### Export
+
+Die Datei enthält die Projekte, die die Liste zeigt, mit ihren Filtern, ihrer Suche und ihrer Sortierung. **Format**: **CSV** oder **Excel (.xlsx)**, im Dialog gewählt und von Ihrem Browser gespeichert. Die Arbeitsmappe enthält dieselben Spalten wie die CSV-Datei auf einem Blatt, mit Zahlen und Datumsangaben als Werte, die Excel sortieren und filtern kann. Der Import liest beides; in einer Arbeitsmappe liest er das erste Blatt. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
+**Spalten**: Die Datei beginnt mit `id` und `reference` (`PRJ-12`), dann folgen die Spalten dem Arbeitsbereich, Registerkarte für Registerkarte. Der Import ignoriert `reference`.
 
 Exporte unterstützen:
 

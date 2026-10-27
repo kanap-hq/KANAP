@@ -44,13 +44,13 @@ Para listas largas (más de 25 filas), la tabla virtualiza filas, mostrando unas
 
 ### Los nombres son la identidad de un valor
 
-Usted solo ve y escribe **nombres**. KANAP genera un código interno estable a partir del nombre cuando un valor se guarda por primera vez y lo conserva para siempre, de modo que renombrar un valor nunca rompe los registros que lo usan. El código es visible para los integradores en la API y puede usarse en archivos CSV, pero la exportación CSV escribe nombres y la importación acepta cualquiera de los dos.
+Usted solo ve y escribe **nombres**. KANAP genera un código interno estable a partir del nombre cuando un valor se guarda por primera vez y lo conserva para siempre, de modo que renombrar un valor nunca rompe los registros que lo usan. El código es visible para los integradores en la API y puede usarse en archivos importados, pero la exportación escribe nombres y la importación acepta cualquiera de los dos.
 
 Como los nombres identifican los valores, dentro de una lista se aplican algunas reglas:
 
 - todo valor necesita un nombre (un asterisco marca la columna **Nombre**), y dos valores no pueden tener el mismo nombre (las mayúsculas y minúsculas no importan);
 - un nombre no puede ser idéntico al código interno de otro valor de la misma lista;
-- los nombres de los **Métodos de acceso** no pueden contener una coma ni un punto y coma, porque la exportación CSV los lista en una sola celda separada por comas.
+- los nombres de los **Métodos de acceso** no pueden contener una coma ni un punto y coma, porque la exportación los lista en una sola celda separada por comas.
 
 Una lista que incumple una de estas reglas no se guarda hasta que la corrija; la fila muestra qué está mal.
 

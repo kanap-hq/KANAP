@@ -89,6 +89,7 @@ Shows weekly occupation heatmaps:
 - Team view: one row per team, with ISO week columns
 - Team labels are displayed as merged multi-row cells in contributor view to avoid repetition
 - Each cell shows rounded weekly occupation (%) with accent color intensity based on load
+- **Export table** offers **CSV** and **Excel (.xlsx)** for the scenario on screen. The CSV holds the view on screen, contributors or teams. The Excel file holds both, one sheet each, with the occupation as percentages, plus a **Parameters** sheet. **Export occupation as PNG** saves the heatmap as an image
 
 ### Gantt preview behavior
 
