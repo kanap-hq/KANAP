@@ -149,6 +149,24 @@ describe('AdminAiPage', () => {
     expect(screen.queryByText('Token usage')).not.toBeInTheDocument();
   });
 
+  it('places the AI models page link in the row helper under the select', async () => {
+    renderPage();
+
+    const link = await screen.findByRole('link', { name: 'AI models page' });
+    expect(link).toHaveAttribute('href', '/admin/ai-models');
+
+    const row = screen.getByText('Model used by Plaid').closest('.kanap-field-label')?.parentElement;
+    expect(row).toBeTruthy();
+    // Label, value, then the helper. The hint must not sit beside the select.
+    expect(row!.children).toHaveLength(3);
+    const value = row!.children[1] as HTMLElement;
+    const helper = row!.children[2] as HTMLElement;
+    expect(value).toContainElement(within(row as HTMLElement).getByRole('combobox'));
+    expect(value).not.toContainElement(link);
+    expect(helper).toContainElement(link);
+    expect(helper).toHaveTextContent('Models are managed on the AI models page');
+  });
+
   it('tells a key from a connection, with the client and its return host', async () => {
     adminKeys = [
       {
