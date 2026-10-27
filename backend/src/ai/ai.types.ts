@@ -189,6 +189,8 @@ export type AiEntityContextPayloadDto = {
 };
 
 export type AiEntityContextDto = AiEntityContextPayloadDto & {
+  /** The entity carries an extract of its fields: get_entity_detail gives them all. */
+  fields_note?: string;
   total: number;
   returned: number;
   truncated: boolean;
@@ -529,7 +531,8 @@ export type ChatStreamEvent =
   | ({ type: 'debug_trace' } & AiChatDebugTraceDto)
   | { type: 'text_delta'; text: string }
   | { type: 'tool_call'; id: string; name: string; arguments: Record<string, unknown> }
-  | { type: 'tool_result'; id: string; name: string; result: unknown }
+  /** `repairs`: the ids of the earlier failed calls of the same tool this call repaired (`ai-tool-repairs.ts`). */
+  | { type: 'tool_result'; id: string; name: string; result: unknown; repairs?: string[] }
   | ({ type: 'preview' } & AiMutationPreviewDto)
   | ({ type: 'preview_result' } & AiMutationPreviewDto)
   | { type: 'done'; usage?: AiTokenUsage; last_usage?: AiTokenUsage; conversation_usage?: AiTokenUsage; builtin_usage?: AiBuiltinUsageDto }

@@ -3,6 +3,7 @@ import {
   AiDateFilterValue,
   AiEntityFilterRegistry,
   AiFilterValue,
+  AiInvalidFilterValue,
   AiNumberFilterValue,
   AiSetExcludeFilterValue,
 } from './ai-filter.types';
@@ -104,10 +105,24 @@ export function adaptFilters(
   const filters: Record<string, any> = {};
   const applied = new Set<string>();
   const ignored = new Set<string>();
+  const invalidValues: AiInvalidFilterValue[] = [];
 
   if (!aiFilters || typeof aiFilters !== 'object') {
-    return { filters, applied: [], ignored: [] };
+    return { filters, applied: [], ignored: [], invalid_values: [] };
   }
+
+  /**
+   * A set field with declared values takes nothing else: a value outside them (`active` for
+   * `enabled`) is refused with the accepted values, never dropped into an empty, complete result.
+   */
+  const rejectUnknownValues = (fieldName: string, values: Array<string | null>, allowed: Set<string | null> | null): boolean => {
+    if (!allowed) return false;
+    const rejected = values.filter((value) => !allowed.has(value));
+    if (rejected.length === 0) return false;
+    invalidValues.push({ field: fieldName, rejected, accepted: [...allowed] });
+    ignored.add(fieldName);
+    return true;
+  };
 
   for (const [fieldName, rawValue] of Object.entries(aiFilters)) {
     const field = registry.fields[fieldName];
@@ -119,11 +134,11 @@ export function adaptFilters(
     let adapted: any = null;
     if (field.type === 'set' && isExcludeSetValue(rawValue)) {
       // `{ not: [...] }`: every value but these. Only lists that know the exclude mode take it.
-      // A value outside the field's declared values matches no line: leaving it out excludes the same lines.
       const values = rawValue.not.filter((value) => value === null || typeof value === 'string');
       const allowed = Array.isArray(field.values) ? new Set(field.values) : null;
+      if (rejectUnknownValues(fieldName, values, allowed)) continue;
       if (acceptsExcludeMode(registry.entityType, field.grid)) {
-        adapted = { filterType: 'set', mode: 'exclude', values: allowed ? values.filter((value) => allowed.has(value)) : values };
+        adapted = { filterType: 'set', mode: 'exclude', values };
       }
     } else if (field.type === 'set') {
       const values = Array.isArray(rawValue)
@@ -133,12 +148,8 @@ export function adaptFilters(
           : [];
       if (values.length > 0) {
         const allowed = Array.isArray(field.values) ? new Set(field.values) : null;
-        const filteredValues = allowed
-          ? values.filter((value) => allowed.has(value))
-          : values;
-        if (filteredValues.length > 0) {
-          adapted = { filterType: 'set', values: filteredValues };
-        }
+        if (rejectUnknownValues(fieldName, values, allowed)) continue;
+        adapted = { filterType: 'set', values };
       }
     } else if (field.type === 'text') {
       if (typeof rawValue === 'string' && rawValue.trim()) {
@@ -181,6 +192,7 @@ export function adaptFilters(
     filters,
     applied: Array.from(applied),
     ignored: Array.from(ignored),
+    invalid_values: invalidValues,
   };
 }
 

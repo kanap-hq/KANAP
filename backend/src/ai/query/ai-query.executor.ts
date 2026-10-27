@@ -39,7 +39,7 @@ import {
 } from '../ai.types';
 import { adaptFilters } from './ai-filter.adapter';
 import {
-  buildFilterRepairSuggestions,
+  invalidFilterResult,
   hasEmailOrUuidFilterValue,
 } from './ai-filter-description.util';
 import {
@@ -51,6 +51,8 @@ import {
   resolveAiParticipationAccessScope,
 } from './ai-query-scope.util';
 import {
+  AiAdaptedFilters,
+  AiAmountTotals,
   AiEntityFilterRegistry,
   AiFilterValue,
   AiFilterValuesResult,
@@ -58,6 +60,7 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { aiAmountsCurrency } from './ai-amounts-currency.util';
+import { aiDataAccessNote } from './ai-data-access-note.util';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
 import { hiddenContractLineCount } from '../../contracts/contract-relations';
 import { AiReadProbe, analyticsAxisFields, resolveAiEntityRegistry } from './registries';
@@ -77,6 +80,8 @@ import {
 import { AiVulnerabilityDetailRow, AiVulnerabilityRow, listAiVulnerabilities } from './ai-vulnerabilities.query';
 import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
+import { classificationLabels } from '../../applications/services/application-classification';
+import { readClassificationCatalog } from '../ai-classification-catalog.util';
 
 function toIso(value: Date | string | null | undefined): string | null {
   if (!value) return null;
@@ -257,6 +262,68 @@ function budgetAmountMetadata(row: any, anchorYear: number): AiEntityMetadata {
     for (const column of SUMMARY_COLUMNS) metadata[`${slot.ai}_${column.ai}_fte`] = budgetFteValue(row, slot, column, anchorYear);
   }
   return metadata;
+}
+
+/**
+ * The amounts of the budget lines of one page, as `amount_totals` sums every line the filters keep
+ * (same fields, same reporting currency): the total of the lines listed, "the ten largest lines".
+ */
+function budgetPageAmountTotals(rows: any[], anchorYear: number, currency: string | null): AiAmountTotals {
+  const values: Record<string, number> = {};
+  for (const slot of FIXED_SLOTS) {
+    for (const column of SUMMARY_COLUMNS) values[`${slot.ai}_${column.ai}`] = 0;
+  }
+  const fxMissing = new Map<string, { currency: string; year: number; lines: number }>();
+  for (const row of rows) {
+    for (const slot of FIXED_SLOTS) {
+      const data = budgetSlot(row, slot, anchorYear);
+      for (const column of SUMMARY_COLUMNS) {
+        const value = budgetSlotValue(data, column.key);
+        if (value != null) values[`${slot.ai}_${column.ai}`] += value;
+      }
+    }
+    for (const year of budgetFxMissingYears(row, anchorYear)) {
+      const lineCurrency = String(row.currency ?? '');
+      const key = `${lineCurrency}\u0000${year}`;
+      const entry = fxMissing.get(key) ?? { currency: lineCurrency, year, lines: 0 };
+      entry.lines += 1;
+      fxMissing.set(key, entry);
+    }
+  }
+  for (const key of Object.keys(values)) values[key] = Math.round(values[key] * 100) / 100;
+  return {
+    records: rows.length,
+    currency,
+    values,
+    ...(fxMissing.size ? { fx_missing: [...fxMissing.values()] } : {}),
+    note: `Each amount field summed over the ${rows.length} lines returned on this page only, in ${currency ?? 'the reporting currency'}, by the server: `
+      + 'the total of the lines listed (for "the ten largest lines and their total", a page of ten sorted on the amount). '
+      + 'amount_totals is the total of every line the filters keep.'
+      + (fxMissing.size ? ' The amounts of the lines listed in fx_missing have no rate and are left out: say so.' : ''),
+  };
+}
+
+/** The yearly amounts of the contracts of one page, per contract currency, as `amount_totals` sums every contract. */
+function contractPageAmountTotals(rows: any[]): AiAmountTotals {
+  const byCurrency = new Map<string, { currency: string | null; yearly_amount: number | null; contracts: number; without_amount: number }>();
+  for (const row of rows) {
+    const currency = row.currency == null ? null : String(row.currency);
+    const entry = byCurrency.get(currency ?? '') ?? { currency, yearly_amount: null, contracts: 0, without_amount: 0 };
+    const amount = numericScalar(row.yearly_amount_at_signature);
+    entry.contracts += 1;
+    if (amount == null) entry.without_amount += 1;
+    else entry.yearly_amount = Math.round(((entry.yearly_amount ?? 0) + amount) * 100) / 100;
+    byCurrency.set(currency ?? '', entry);
+  }
+  const by_currency = [...byCurrency.values()].sort((a, b) =>
+    (a.currency == null ? 1 : 0) - (b.currency == null ? 1 : 0) || String(a.currency).localeCompare(String(b.currency)));
+  return {
+    records: rows.length,
+    currency: null,
+    by_currency,
+    note: `The yearly amounts of the ${rows.length} contracts returned on this page only, summed per contract currency by the server: `
+      + 'the total of the contracts listed. Amounts in different currencies do not add up. amount_totals is the total of every contract the filters keep.',
+  };
 }
 
 /**
@@ -551,7 +618,7 @@ export class AiQueryExecutor {
       limit?: number;
     },
     sort: AiResolvedSort,
-  ): Promise<{ query: Record<string, any>; filtersApplied: string[]; filtersIgnored: string[] }> {
+  ): Promise<{ query: Record<string, any>; filtersApplied: string[]; filtersIgnored: string[]; adapted: AiAdaptedFilters }> {
     const normalizedFilters = await this.normalizePersonFilters(context, entityType, input.filters);
     const adapted = adaptFilters(registry, normalizedFilters);
     const page = Math.min(Math.max(Number(input.page) || 1, 1), 100);
@@ -603,6 +670,7 @@ export class AiQueryExecutor {
       query,
       filtersApplied: adapted.applied,
       filtersIgnored: adapted.ignored,
+      adapted,
     };
   }
 
@@ -959,6 +1027,8 @@ export class AiQueryExecutor {
         notice_period_months: numericScalar(row.notice_period_months),
         owner: scalar(row.owner_name),
         term_state: scalar(row.term_state),
+        // The number of the term in progress (1 for the first), counted here: a model got it one off.
+        current_term_number: row.term_index == null ? null : Number(row.term_index) + 1,
         next_due_date: scalar(row.next_due_date),
         renewed: row.renewed == null ? null : Boolean(row.renewed),
         current_term_end: scalar(row.current_term_end),
@@ -1338,7 +1408,8 @@ export class AiQueryExecutor {
       ? { limit_capped: { requested: requestedLimit, applied: result.limit } }
       : {};
     const amounts = await aiAmountsCurrency(context, input.entity_type);
-    if (!sort.ignored.length) return { ...result, sort: sort.applied, sort_ignored: [], ...limitCapped, ...amounts };
+    const dataAccess = await aiDataAccessNote(context, input.entity_type);
+    if (!sort.ignored.length) return { ...result, sort: sort.applied, sort_ignored: [], ...limitCapped, ...amounts, ...dataAccess };
     // The items come in the default order, said so.
     return {
       ...result,
@@ -1348,6 +1419,83 @@ export class AiQueryExecutor {
       sortable_fields: Object.keys(registry.sortFields),
       ...limitCapped,
       ...amounts,
+      ...dataAccess,
+    };
+  }
+
+  /** The totals of every line the query keeps (`amount_totals`) and of the page returned (`page_amount_totals`). */
+  private async budgetTotals(
+    context: AiExecutionContextWithManager,
+    entityType: 'spend_items' | 'capex_items',
+    query: Record<string, any>,
+    records: number,
+    rows: any[],
+    anchorYear: number,
+  ): Promise<{ amount_totals: AiAmountTotals; page_amount_totals: AiAmountTotals }> {
+    const amountTotals = await this.budgetAmountTotals(context, entityType, query, records);
+    return { amount_totals: amountTotals, page_amount_totals: budgetPageAmountTotals(rows, anchorYear, amountTotals.currency) };
+  }
+
+  /**
+   * The amounts of every budget line the query keeps, all pages, as the list footer computes them
+   * (`summaryTotals`, same filters and quick search): the total an answer quotes.
+   */
+  private async budgetAmountTotals(
+    context: AiExecutionContextWithManager,
+    entityType: 'spend_items' | 'capex_items',
+    query: Record<string, any>,
+    records: number,
+  ): Promise<AiAmountTotals> {
+    const { page: _page, limit: _limit, sort: _sort, years: _years, ...listState } = query;
+    const service = entityType === 'spend_items' ? this.spendItems : this.capexItems;
+    const totals: any = await service.summaryTotals(listState, { manager: context.manager });
+    const values: Record<string, number> = {};
+    for (const slot of FIXED_SLOTS) {
+      for (const column of SUMMARY_COLUMNS) values[`${slot.ai}_${column.ai}`] = Number(totals?.[`${slot.key}${column.suffix}`] ?? 0);
+    }
+    const currency = typeof totals?.reportingCurrency === 'string' ? totals.reportingCurrency : null;
+    const fxMissing = Array.isArray(totals?.fxMissing) ? totals.fxMissing : [];
+    return {
+      records,
+      currency,
+      values,
+      ...(fxMissing.length ? { fx_missing: fxMissing } : {}),
+      note: `Each amount field summed over the ${records} lines the filters keep (every page, not only the items returned), in ${currency ?? 'the reporting currency'}, by the server. `
+        + 'A total in the answer is quoted from here (or from aggregate_entities on the same filters), never added up from the items.'
+        + (fxMissing.length ? ' The amounts of the lines listed in fx_missing have no rate and are left out: say so.' : ''),
+    };
+  }
+
+  /** The yearly amounts of every contract the query keeps, all pages, summed per currency. */
+  private async contractAmountTotals(context: AiExecutionContextWithManager, query: Record<string, any>, records: number): Promise<AiAmountTotals> {
+    const { ids } = await this.contracts.listIds(
+      { q: query.q, filters: query.filters, includeDisabled: true, limit: 10_000 },
+      { manager: context.manager, coveredApplications: { scope: await resolveAiParticipationAccessScope(context, 'applications') } },
+    );
+    const rows: Array<{ currency: string | null; total: string | null; contracts: number; without_amount: number }> = ids?.length
+      ? await context.manager.query(
+        `SELECT c.currency, sum(c.yearly_amount_at_signature)::text AS total, count(*)::int AS contracts,
+                count(*) FILTER (WHERE c.yearly_amount_at_signature IS NULL)::int AS without_amount
+         FROM contracts c
+         WHERE c.tenant_id = $1 AND c.id = ANY($2::uuid[])
+         GROUP BY c.currency
+         ORDER BY c.currency NULLS LAST`,
+        [context.tenantId, ids],
+      )
+      : [];
+    return {
+      records,
+      currency: null,
+      by_currency: rows.map((row) => ({
+        currency: row.currency,
+        yearly_amount: row.total == null ? null : Number(row.total),
+        contracts: Number(row.contracts),
+        without_amount: Number(row.without_amount),
+      })),
+      note: `The yearly amounts of the ${records} contracts the filters keep (every page, not only the items returned), summed per contract currency by the server. `
+        + 'Amounts in different currencies do not add up. A total in the answer is quoted from here (or from aggregate_entities), never added up from the items.'
+        // The ids stop at 10,000 (`listIds`): a larger selection is summed in part, said so.
+        + ((ids?.length ?? 0) < records ? ` Only ${ids?.length ?? 0} of the ${records} contracts are summed: say that the total is partial.` : ''),
     };
   }
 
@@ -1365,12 +1513,13 @@ export class AiQueryExecutor {
     registry: AiEntityFilterRegistry,
     sort: AiResolvedSort,
   ): Promise<AiQueryResult> {
-    const { query, filtersApplied, filtersIgnored } = await this.buildBaseQuery(context, input.entity_type, registry, input, sort);
+    const { query, filtersApplied, filtersIgnored, adapted } = await this.buildBaseQuery(context, input.entity_type, registry, input, sort);
     const page = Number(query.page) || 1;
     const limit = Number(query.limit);
     if (filtersIgnored.length > 0) {
+      const refusal = invalidFilterResult(registry, adapted);
       return {
-        status: 'invalid_filter',
+        status: refusal.status,
         items: [],
         total: 0,
         page,
@@ -1380,7 +1529,8 @@ export class AiQueryExecutor {
         complete: false,
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
-        suggested_repairs: buildFilterRepairSuggestions(registry, filtersIgnored),
+        suggested_repairs: refusal.suggested_repairs,
+        ...(refusal.invalid_filter_values ? { invalid_filter_values: refusal.invalid_filter_values } : {}),
         scope: null,
       };
     }
@@ -1531,6 +1681,7 @@ export class AiQueryExecutor {
         complete: isCompleteQueryResult(resultPage, truncated),
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
+        ...await this.budgetTotals(context, 'capex_items', scoped.query, result.total ?? 0, result.items || [], anchorYear),
         scope: null,
       };
     }
@@ -1559,6 +1710,7 @@ export class AiQueryExecutor {
         complete: isCompleteQueryResult(resultPage, truncated),
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
+        ...await this.budgetTotals(context, 'spend_items', scoped.query, result.total ?? 0, result.items || [], anchorYear),
         scope: null,
       };
     }
@@ -1584,6 +1736,8 @@ export class AiQueryExecutor {
         complete: isCompleteQueryResult(resultPage, truncated),
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
+        amount_totals: await this.contractAmountTotals(context, scoped.query, result.total ?? 0),
+        page_amount_totals: contractPageAmountTotals(result.items || []),
         scope: null,
       };
     }
@@ -2596,6 +2750,8 @@ export class AiQueryExecutor {
         accessScope,
       }).catch(() => ({ items: [] }));
       Object.assign(row, vulnerabilityCountsOf((await applicationVulnerabilityCounts(context.manager, context.tenantId, [row.id])).get(row.id)));
+      // The labels and ranks of the classification, as the list gives them.
+      Object.assign(row, classificationLabels(row, await readClassificationCatalog(context)));
       return this.toDetailResult(this.mapApplication(row), row);
     }
 

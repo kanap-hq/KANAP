@@ -126,6 +126,27 @@ Plaid ne nomme une fiche liée à celle que vous interrogez que si vous pouvez l
 
 Quand Plaid additionne des montants budgétaires, une ligne dont la devise n'a pas de taux de change pour l'année est exclue de la somme. Plaid indique alors quelles devises et quelles années il a exclues. Les assistants connectés par MCP reçoivent la même réponse.
 
+Les totaux viennent de KANAP. Une liste de lignes budgétaires ou de contrats est accompagnée du total de toutes les fiches qui correspondent, toutes pages comprises, et du total des fiches listées : Plaid cite l'un des deux ou demande une somme à KANAP. Si vous demandez les dix plus grosses lignes et leur total, Plaid donne le total de ces dix lignes. Quand votre accès aux données est limité à certaines sociétés ou à certains centres de coûts, Plaid précise que ses décomptes et ses totaux couvrent votre accès, et ne les présente pas comme le total de l'espace de travail.
+
+Quand Plaid essaie une valeur de filtre qu'un champ n'accepte pas, par exemple « actif » pour le statut d'une application (qui est « activé » ou « désactivé »), KANAP la refuse et liste les valeurs acceptées. Plaid relance alors la recherche avec la bonne valeur.
+
+Quand vous demandez une modification que votre rôle ne permet pas, Plaid nomme le droit qui vous manque, par exemple « vous avez besoin du droit de modifier les projets ». Un administrateur l'ajoute à votre rôle.
+
+### Ce que Plaid ne lit pas { #what-plaid-does-not-read }
+
+Plaid ne lit pas :
+
+- Les centres de coûts (**Données de référence › Centres de coûts**). Une ligne budgétaire indique son centre de coûts, Plaid peut donc filtrer les lignes par centre de coûts.
+- Les calendriers de jours ouvrés (**Données de référence › Calendriers de jours ouvrés**)
+- Les taux de change (**Gestion budgétaire › Administration › Devises**). Les montants budgétaires parviennent à Plaid déjà convertis dans la devise de reporting.
+- Les réglages des dimensions analytiques (**Données de référence › Dimensions analytiques**). Leurs valeurs, et la valeur que porte chaque ligne budgétaire, sont lisibles.
+- L'accès aux données, c'est-à-dire les sociétés ou les centres de coûts auxquels une personne est limitée (**Administration › Accès aux données**)
+- Le journal d'audit (**Administration › Journal d'audit**)
+- Les agents IA
+- La refacturation par société bénéficiaire (**Gestion budgétaire › Rapports › Refacturation globale**)
+
+Quand une question touche l'un de ces éléments, Plaid dit qu'il ne peut pas le lire et nomme l'écran qui le montre, avec les mots de vos menus dans la langue de votre profil. Une recherche sans résultat indique à Plaid ce qu'il n'a pas cherché, pour que la réponse n'affirme pas que la fiche n'existe pas. Il en va de même pour un champ : le contexte d'une fiche porte ses champs principaux, et Plaid lit la fiche complète avant de dire qu'un champ est vide. Les assistants connectés par MCP obtiennent les mêmes réponses.
+
 ## Artefacts et aperçus
 
 Certaines réponses s'accompagnent de contenu supplémentaire qui ne trouve pas naturellement sa place dans le fil de discussion. KANAP les appelle des **artefacts**.

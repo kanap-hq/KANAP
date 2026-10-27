@@ -14,7 +14,7 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
       grid: 'status',
       type: 'set',
       description: 'Application enabled or disabled status.',
-      dynamic: true,
+      values: ['enabled', 'disabled'],
       discoverable: true,
       sortable: true,
       groupable: true,

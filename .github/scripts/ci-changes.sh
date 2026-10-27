@@ -60,7 +60,8 @@ while IFS= read -r f; do
       need_backend full ;;
     frontend/src/pages/admin/auditLogLabels.* | frontend/src/pages/contracts/contractTerms.* | \
       frontend/src/pages/reports/reportAggregates.* | frontend/src/pages/reports/reportTables.* | frontend/Dockerfile* | \
-      frontend/src/locales/*/portfolio.json | frontend/src/locales/*/it.json | frontend/src/locales/*/ops.json)
+      frontend/src/locales/*/portfolio.json | frontend/src/locales/*/it.json | frontend/src/locales/*/ops.json | \
+      frontend/src/locales/*/nav.json)
       need_backend full; frontend=true ;;
     frontend/*)
       frontend=true ;;

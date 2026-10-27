@@ -126,6 +126,27 @@ Plaid nennt einen Datensatz, der mit dem erfragten verknüpft ist, nur dann, wen
 
 Wenn Plaid Budgetbeträge addiert, bleibt eine Zeile, deren Währung für das Jahr keinen Wechselkurs hat, außerhalb der Summe. Plaid nennt dann die ausgelassenen Währungen und Jahre. Über MCP verbundene Assistenten erhalten dieselbe Antwort.
 
+Summen kommen von KANAP. Eine Liste von Budgetzeilen oder Verträgen enthält die Summe aller passenden Datensätze über alle Seiten hinweg, und die Summe der aufgelisteten Datensätze. Plaid nennt eine der beiden oder lässt KANAP eine Summe bilden. Fragen Sie nach den zehn größten Zeilen und ihrer Summe, nennt Plaid die Summe dieser zehn Zeilen. Wenn Ihr Datenzugriff auf bestimmte Unternehmen oder Kostenstellen beschränkt ist, sagt Plaid, dass seine Anzahlen und Summen Ihren Zugriff abdecken, und stellt sie nicht als Summe des Arbeitsbereichs dar.
+
+Wenn Plaid einen Filterwert versucht, den ein Feld nicht annimmt, etwa „aktiv“ für den Status einer Anwendung (der „aktiviert“ oder „deaktiviert“ ist), lehnt KANAP ihn ab und listet die zulässigen Werte auf. Plaid sucht dann erneut mit dem richtigen Wert.
+
+Wenn Sie eine Änderung verlangen, die Ihre Rolle nicht erlaubt, nennt Plaid das fehlende Recht, zum Beispiel „Sie benötigen das Recht, Projekte zu ändern“. Ein Administrator fügt es Ihrer Rolle hinzu.
+
+### Was Plaid nicht liest { #what-plaid-does-not-read }
+
+Plaid liest nicht:
+
+- Kostenstellen (**Stammdaten › Kostenstellen**). Eine Budgetzeile nennt ihre Kostenstelle, daher kann Plaid Zeilen danach filtern.
+- Arbeitstagekalender (**Stammdaten › Arbeitstagekalender**)
+- Wechselkurse (**Budgetverwaltung › Administration › Währungen**). Budgetbeträge erreichen Plaid bereits in die Reportingwährung umgerechnet.
+- Die Einstellungen der Analysedimensionen (**Stammdaten › Analysedimensionen**). Ihre Werte und der Wert jeder Budgetzeile sind lesbar.
+- Den Datenzugriff, also auf welche Unternehmen oder Kostenstellen eine Person beschränkt ist (**Administration › Datenzugriff**)
+- Das Audit-Protokoll (**Administration › Audit-Protokoll**)
+- KI-Agenten
+- Die Leistungsverrechnung nach begünstigtem Unternehmen (**Budgetverwaltung › Berichte › Globale Leistungsverrechnung**)
+
+Berührt eine Frage einen dieser Bereiche, sagt Plaid, dass es ihn nicht lesen kann, und nennt die Seite, die ihn zeigt, so wie Ihre Menüs sie in der Sprache Ihres Profils nennen. Eine Suche ohne Ergebnis teilt Plaid mit, was es nicht durchsucht hat, damit die Antwort nicht behauptet, der Datensatz fehle. Dasselbe gilt für ein Feld: Der Kontext eines Datensatzes enthält seine wichtigsten Felder, und Plaid liest den vollständigen Datensatz, bevor es sagt, dass ein Feld leer ist. Über MCP verbundene Assistenten erhalten dieselben Antworten.
+
 ## Artefakte und Vorschauen
 
 Einige Antworten bringen zusätzliches Material mit, das nicht natürlich in den Chat-Verlauf passt. KANAP nennt diese **Artefakte**.

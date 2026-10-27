@@ -6,6 +6,7 @@ import { SpendItemsService } from '../spend-items.service';
 import { CapexItemsService } from '../spend-items.service';
 import { AiAggregateExecutor } from '../../ai/query/ai-aggregate.executor';
 import { adaptFilters } from '../../ai/query/ai-filter.adapter';
+import { invalidFilterResult } from '../../ai/query/ai-filter-description.util';
 import type { AiEntityFilterRegistry } from '../../ai/query/ai-filter.types';
 import { resolveAiEntityRegistry } from '../../ai/query/registries';
 import { centsToNumber, formatCents, toCents } from '../../common/amount';
@@ -563,7 +564,8 @@ async function runAiCase(env: Env, c: Extract<Case, { kind: 'ai' }>): Promise<vo
   const o = await settle(env.runner, async () => {
     // The former executor's budget path: adapted filters, the ids of every line of the state, their rows, grouped.
     const adapted = adaptFilters(env.registry, c.input.filters);
-    if (adapted.ignored.length) return { status: 'invalid_filter', groups: [], total: 0 };
+    // A refusal: an unknown field (`invalid_filter`) or a value outside a closed set (`invalid_filter_value`).
+    if (adapted.ignored.length) return { status: invalidFilterResult(env.registry, adapted).status, groups: [], total: 0 };
     const scoped = await env.svc.summaryIds({ q: c.input.q?.trim(), limit: 10_000, filters: adapted.filters, includeDisabled: true }, { manager: m });
     const fn = c.input.function as any;
     const metric = fn === 'count' ? null : { key: c.input.metric!, def: {} as any };
@@ -571,11 +573,12 @@ async function runAiCase(env: Env, c: Extract<Case, { kind: 'ai' }>): Promise<vo
     return { status: undefined, groups, total: scoped.total, returned: groups.length, truncated: scoped.ids.length < scoped.total, complete: true, filters_applied: adapted.applied };
   });
   if (failed(label, e, o)) return;
-  const actual = e.value.status === 'invalid_filter'
-    ? { status: 'invalid_filter', groups: e.value.groups, total: e.value.total }
+  const refused = e.value.status === 'invalid_filter' || e.value.status === 'invalid_filter_value';
+  const actual = refused
+    ? { status: e.value.status, groups: e.value.groups, total: e.value.total }
     : { status: e.value.status, groups: e.value.groups, total: e.value.total, returned: e.value.returned, truncated: e.value.truncated, complete: e.value.complete, filters_applied: e.value.filters_applied };
   if (same(label, actual, o.value)) {
-    if (o.value.status === 'invalid_filter') stats.invalidFilter += 1;
+    if (o.value.status === 'invalid_filter' || o.value.status === 'invalid_filter_value') stats.invalidFilter += 1;
     const n = o.value.groups.length;
     stats.groups += n;
     if (n === 0) stats.empty += 1;

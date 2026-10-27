@@ -346,11 +346,16 @@ function withWebCapability(profile: AiContextProfile, needsWeb: boolean): AiCont
   };
 }
 
+const SOCIAL_MESSAGE_RE = /^(hi|hello|hey|bonjour|bonsoir|salut|merci|thanks|thank you|ca va|ça va|help|aide)[\s!.?]*$/i;
+
+function isSocialMessage(text: string): boolean {
+  return SOCIAL_MESSAGE_RE.test(text.trim());
+}
+
 function isMinimalDirectRequest(text: string): boolean {
   const trimmed = text.trim();
   if (!trimmed || trimmed.length > 80 || hasEntityReference(trimmed)) return false;
-  return /^(hi|hello|hey|bonjour|bonsoir|salut|merci|thanks|thank you|ok|okay|oui|non|ca va|ça va|help|aide)[\s!.?]*$/i
-    .test(trimmed);
+  return isSocialMessage(trimmed) || /^(ok|okay|oui|non)[\s!.?]*$/i.test(trimmed);
 }
 
 function isReadOnlyChangeInquiry(rawText: string, text: string): boolean {
@@ -542,6 +547,57 @@ function shouldInheritPreviousWriteProfile(
   return latestUserMessage.trim().length > 0;
 }
 
+// An assistant message that ends on a question or an offer ("Dites-moi si vous voulez que je le fasse").
+function isAssistantQuestionOrOffer(content: string): boolean {
+  return isAssistantContinuationPrompt(content) || containsAny(normalizeText(content), [
+    /\b(je peux|puis-je|dites-moi|i can|shall i|should i|let me know|ich kann|soll ich|sagen sie|puedo|digame|quiere|desea)\b/,
+  ]);
+}
+
+// A short answer to that question or offer: an acceptance ("oui", "go ahead", "ja", "sí"), a name, a
+// choice or a number. Thanks and greetings are not answers; a question is a request of its own.
+function isShortReply(rawText: string, latest: ClassifiedContextProfile): boolean {
+  const trimmed = rawText.trim();
+  if (!trimmed || trimmed.includes('?') || isSocialMessage(trimmed)) return false;
+  if (latest.profile.promptMode === 'minimal') return true;
+  return !latest.explicitIntent && trimmed.length <= 60 && trimmed.split(/\s+/).length <= 4;
+}
+
+function lastPart(text: string, separator: RegExp): string {
+  const parts = text.split(separator).map((part) => part.trim()).filter(Boolean);
+  return parts[parts.length - 1] ?? '';
+}
+
+// The profile of what the assistant proposed, read from its last paragraph as if the user had
+// written it. A write counts only when the closing sentence itself proposes it: a write word
+// elsewhere in the paragraph usually describes the data ("qui peut modifier le budget").
+function profileOfAssistantOffer(content: string): AiContextProfile | null {
+  const paragraph = lastPart(content, /\n\s*\n/);
+  const offer = classifyAiContextProfile(paragraph);
+  if (!offer.explicitIntent || offer.profile.promptMode === 'minimal') return null;
+  if (offer.profile.promptMode !== 'write') return offer.profile;
+  const closing = classifyAiContextProfile(lastPart(paragraph, /(?<=[.!?…])\s+/));
+  return closing.profile.promptMode === 'write' ? closing.profile : null;
+}
+
+// A short reply to an assistant question or offer takes the profile of that offer, else the one
+// of the request it answers (other than a write: that one has its own rule above), else read.
+function profileForShortReply(
+  latest: ClassifiedContextProfile,
+  previous: ClassifiedContextProfile,
+  latestUserMessage: string,
+  assistantMessage: string,
+): AiContextProfile | null {
+  if (!isShortReply(latestUserMessage, latest) || !isAssistantQuestionOrOffer(assistantMessage)) {
+    return null;
+  }
+  const inherited = profileOfAssistantOffer(assistantMessage)
+    ?? (previous.profile.promptMode !== 'minimal' && previous.profile.promptMode !== 'write'
+      ? previous.profile
+      : PROFILES.read_query);
+  return { ...inherited, reason: `${inherited.reason}; reply to the assistant's question or offer` };
+}
+
 export function selectAiContextProfile(userMessage: string): AiContextProfile {
   return classifyAiContextProfile(userMessage).profile;
 }
@@ -581,6 +637,8 @@ export function selectAiContextProfileForTurn(messages: AiContextProfileTurnMess
           reason: `${previous.profile.reason}; continuation of previous write request`,
         };
       }
+      const replyProfile = profileForShortReply(latest, previous, latestUserMessage.content, assistantBetween.content);
+      if (replyProfile) return replyProfile;
     }
   }
 

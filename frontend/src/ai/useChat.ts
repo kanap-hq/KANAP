@@ -371,6 +371,7 @@ function rebuildMessagesFromStored(rawMessages: StoredChatMessage[], conversatio
               id: parsed.tool_call_id,
               name: parsed.tool_name,
               result: parsed.result,
+              ...(Array.isArray(parsed.repairs) && parsed.repairs.length ? { repairs: parsed.repairs } : {}),
             });
           } catch {
             // skip malformed tool messages
@@ -741,7 +742,7 @@ export function useChat() {
                       ...m,
                       toolResults: [
                         ...(m.toolResults || []),
-                        { id: event.id, name: event.name, result: event.result },
+                        { id: event.id, name: event.name, result: event.result, ...(event.repairs?.length ? { repairs: event.repairs } : {}) },
                       ],
                     }
                   : m,

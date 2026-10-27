@@ -45,6 +45,15 @@ import {
   resolveAiParticipationAccessScope,
 } from './query/ai-query-scope.util';
 import { resolveAiApplicationsReach } from './query/ai-technologies.query';
+import { classificationLabels } from '../applications/services/application-classification';
+import { readClassificationCatalog } from './ai-classification-catalog.util';
+import {
+  asksForUnreadFamily,
+  readAiScreenLanguage,
+  unreadFamiliesAskedBy,
+  unreadFamilyLines,
+  type AiScreenLanguage,
+} from './ai-unread-families';
 
 const ASSET_OS_LABEL = operatingSystemLabelSql('a');
 
@@ -472,6 +481,29 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
     'team', 'contributor_profile', 'project_availability', 'areas_of_expertise',
   ],
 };
+
+/**
+ * A search says what it could not look in: the unread families its words ask for (cost centers,
+ * chargeback...), and every unread family when nothing matched, so that no match never reads as
+ * "does not exist". Their screens are named in the person's language (`language`, null: all four).
+ */
+function withUnreadFamilies<T extends { items: unknown[] }>(result: T, query: string, language: AiScreenLanguage | null): T & {
+  not_read_here?: ReturnType<typeof unreadFamiliesAskedBy>;
+  families_not_read?: string[];
+  no_match_note?: string;
+} {
+  const asked = unreadFamiliesAskedBy(query, language);
+  return {
+    ...result,
+    ...(asked.length ? { not_read_here: asked } : {}),
+    ...(result.items.length === 0
+      ? {
+        families_not_read: unreadFamilyLines(language),
+        no_match_note: 'No match among the families searched. The families_not_read are not searched: a record of theirs may exist. Say what you could not read and name its screen.',
+      }
+      : {}),
+  };
+}
 
 function appendParticipationScopeSql(
   entityType: ParticipationScopedAiEntityType,
@@ -2169,10 +2201,14 @@ export class AiEntityService {
       offset?: number;
     },
   ) {
-    if (aiSearchIndexEnabled()) {
-      return this.searchAllIndexed(context, input);
-    }
-    return this.searchAllLegacy(context, input);
+    const result = aiSearchIndexEnabled()
+      ? await this.searchAllIndexed(context, input)
+      : await this.searchAllLegacy(context, input);
+    // The profile's language is read only when the answer names a screen.
+    const language = result.items.length === 0 || asksForUnreadFamily(input.query)
+      ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId)
+      : null;
+    return withUnreadFamilies(result, input.query, language);
   }
 
   /**
@@ -2912,7 +2948,10 @@ export class AiEntityService {
     const applicationRootParams: unknown[] = [applicationId, tenantId];
     const applicationRootScopeSql = appendParticipationScopeSql('applications', 'a', applicationRootParams, applicationAccessScope);
     const applications = await manager.query<any[]>(
-      `SELECT a.id, a.sequential_id, a.name, a.description, a.status, a.updated_at, a.lifecycle, a.environment, a.editor, a.criticality, a.hosting_model, a.data_class, a.version
+      `SELECT a.id, a.sequential_id, a.name, a.description, a.status, a.updated_at, a.lifecycle, a.environment, a.editor, a.criticality, a.hosting_model, a.data_class, a.version,
+              a.cyber_criticality, a.recovery_wave, a.rto_minutes, a.rpo_minutes,
+              -- Calendar days, as text: a date never shifts with the time zone.
+              a.last_dr_test::text AS last_dr_test, a.go_live_date::text AS go_live_date, a.end_of_support_date::text AS end_of_support_date, a.retired_date::text AS retired_date
        FROM applications a
        WHERE a.id = $1
          AND a.tenant_id = $2
@@ -3012,8 +3051,18 @@ export class AiEntityService {
           environment: application.environment,
           editor: application.editor,
           criticality: application.criticality,
-          hosting_model: application.hosting_model,
+          cyber_criticality: application.cyber_criticality,
           data_class: application.data_class,
+          recovery_wave: application.recovery_wave,
+          // Labels and ranks of the four classifications, as the Applications list gives them.
+          ...classificationLabels(application, await readClassificationCatalog(context)),
+          rto_minutes: toNullableNumber(application.rto_minutes),
+          rpo_minutes: toNullableNumber(application.rpo_minutes),
+          last_dr_test: toMetadataScalar(application.last_dr_test),
+          go_live_date: toMetadataScalar(application.go_live_date),
+          end_of_support_date: toMetadataScalar(application.end_of_support_date),
+          retired_date: toMetadataScalar(application.retired_date),
+          hosting_model: application.hosting_model,
           version: application.version,
           business_owners: businessOwners,
           it_owners: itOwners,
@@ -3967,6 +4016,8 @@ export class AiEntityService {
           company: contract.company_name ?? null,
           owner: contract.owner_name ?? null,
           term_state: terms.term_state,
+          // The number of the term in progress (1 for the first), counted here: a model got it one off.
+          current_term_number: terms.term_index + 1,
           next_due_date: terms.next_due_date,
           cancellation_deadline: terms.cancellation_deadline,
           current_term_end: terms.current_term_end,
@@ -4020,6 +4071,7 @@ export class AiEntityService {
       || result.related.some((group) => group.truncated === true);
     return {
       ...result,
+      fields_note: 'entity.metadata is an extract of the record\'s fields: a field it does not carry is not read here, which is not "empty". get_entity_detail returns every field.',
       total: 1,
       returned: 1,
       truncated,

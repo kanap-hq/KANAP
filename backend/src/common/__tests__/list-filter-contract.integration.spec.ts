@@ -16,6 +16,7 @@ import {
   runSpecs,
 } from '../../admin/tenants/__tests__/tenant-reset-test-helpers';
 import { backendPath } from './backend-root';
+import { waitForBackgroundWork } from '../background-work';
 import { applyHttpMiddleware, applyTenancyAndPipeline } from '../../http-app';
 import { DemoDataService } from '../../demo-data/demo-data.service';
 import { FxRateService } from '../../currency/fx-rate.service';
@@ -103,6 +104,8 @@ function send(port: number, method: string, path: string, host: string, token: s
 async function statementsOf(port: number, host: string, token: string, endpoint: string, pageParams: Record<string, string>, filters?: Record<string, unknown>) {
   const params = new URLSearchParams({ page: '1', limit: '50', ...pageParams });
   if (filters) params.set('filters', JSON.stringify(filters));
+  // Work an earlier request left running in the background (`background-work.ts`) records nothing here.
+  assert.equal(await waitForBackgroundWork(Date.now() + 30_000), 0, 'the background work of the earlier requests ends');
   recorded.length = 0;
   recording = true;
   try {
@@ -120,8 +123,14 @@ function firstDifference(first: string, second: string): string {
   const b = second.split('\n');
   const at = a.findIndex((line, index) => line !== b[index]);
   const index = at === -1 ? a.length : at;
-  const show = (line: string | undefined) => (line === undefined ? '(none)' : line.slice(0, 300));
-  return `; ${a.length} then ${b.length} statements, first difference at ${index}: ${show(a[index])} | then: ${show(b[index])}`;
+  // Around the first character that differs: a statement can part only in its parameters, past its first lines.
+  const lineA = a[index] ?? '';
+  const lineB = b[index] ?? '';
+  let char = 0;
+  while (char < lineA.length && lineA[char] === lineB[char]) char += 1;
+  const from = Math.max(0, char - 150);
+  const show = (line: string | undefined) => (line === undefined ? '(none)' : `${from > 0 ? '…' : ''}${line.slice(from, from + 300)}`);
+  return `; ${a.length} then ${b.length} statements, first difference at ${index}, character ${char}: ${show(a[index])} | then: ${show(b[index])}`;
 }
 
 async function testEveryOfferedFilterReachesTheDatabase() {
@@ -174,6 +183,11 @@ async function testEveryOfferedFilterReachesTheDatabase() {
     }
     // The matching that follows the sample technologies' commit is over before the first recording.
     await feed.whenIdle(60_000);
+    // The sample data load starts an exchange-rate refresh that can outlive it (a refresh request
+    // stops waiting after 20 s, the run goes on, network calls included). Its statements fell
+    // inside later recordings: a rate-set lock in /connections, new rates in /contracts. Every
+    // tracked background work is over before the first recording.
+    assert.equal(await waitForBackgroundWork(Date.now() + 120_000), 0, 'the background work of the sample data load ends');
 
     // Lists filtered in memory (cost centers) show a filter only by the rows it leaves: give them one.
     const companies = JSON.parse((await send(port, 'GET', '/companies', host, token)).body);
