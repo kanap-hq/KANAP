@@ -316,6 +316,8 @@
       "technologyServerLinks": "Serveurs et technologies",
       "users": "Utilisateurs",
       "vulnerabilities": "Vulnérabilités",
+      "companyChargebackReport": "Rapport de refacturation par société",
+      "globalChargebackReport": "Rapport de refacturation globale",
       "capacityHeatmapReport": "Rapport du planning de capacité",
       "timeLoggedReport": "Rapport du temps saisi",
       "weeklyReport": "Rapport hebdomadaire",

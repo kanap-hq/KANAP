@@ -316,6 +316,8 @@
       "technologyServerLinks": "Server und Technologien",
       "users": "Benutzer",
       "vulnerabilities": "Schwachstellen",
+      "companyChargebackReport": "Bericht zur Leistungsverrechnung pro Unternehmen",
+      "globalChargebackReport": "Bericht zur globalen Leistungsverrechnung",
       "capacityHeatmapReport": "Bericht zur Kapazitäts-Heatmap",
       "timeLoggedReport": "Bericht zur erfassten Zeit",
       "weeklyReport": "Wochenbericht",

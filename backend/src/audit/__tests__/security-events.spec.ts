@@ -200,6 +200,8 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /portfolio/reports/time-logged/export',
   'GET /portfolio/reports/weekly/export',
   'GET /portfolio/requests/export',
+  'GET /reports/chargeback/company/export',
+  'GET /reports/chargeback/global/export',
   'GET /spend-items/budget-file/export',
   'GET /suppliers/export',
   'GET /tasks/export',

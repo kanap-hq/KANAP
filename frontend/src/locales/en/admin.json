@@ -316,6 +316,8 @@
       "technologyServerLinks": "Servers and technologies",
       "users": "Users",
       "vulnerabilities": "Vulnerabilities",
+      "companyChargebackReport": "Company chargeback report",
+      "globalChargebackReport": "Global chargeback report",
       "capacityHeatmapReport": "Capacity heatmap report",
       "timeLoggedReport": "Time logged report",
       "weeklyReport": "Weekly report",

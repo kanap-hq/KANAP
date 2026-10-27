@@ -60,7 +60,7 @@ test('files read across the two trees bring the other suite', (t) => {
   for (const file of ['frontend/src/pages/admin/auditLogLabels.ts', 'frontend/src/pages/contracts/contractTerms.ts',
     'frontend/src/pages/reports/reportAggregates.ts',
     // The label tables of the report exports are checked against these locale files.
-    'frontend/src/locales/fr/portfolio.json', 'frontend/src/locales/de/it.json']) {
+    'frontend/src/locales/fr/portfolio.json', 'frontend/src/locales/de/it.json', 'frontend/src/locales/es/ops.json']) {
     assert.equal(needs(t, [file]).backend, 'full', file);
   }
   assert.equal(needs(t, ['backend/fixtures/fromage-co/setup-tenant.mjs']).frontend, 'true');

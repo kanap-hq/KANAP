@@ -77,6 +77,8 @@ export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
   'portfolio/reports/time-logged': 'timeLoggedReport',
   'portfolio/reports/weekly': 'weeklyReport',
   'portfolio/requests': 'requests',
+  'reports/chargeback/company': 'companyChargebackReport',
+  'reports/chargeback/global': 'globalChargebackReport',
   'spend-items/budget-file': 'opexBudgetFile',
   suppliers: 'suppliers',
   tasks: 'tasks',

@@ -316,6 +316,8 @@
       "technologyServerLinks": "Servidores y tecnologías",
       "users": "Usuarios",
       "vulnerabilities": "Vulnerabilidades",
+      "companyChargebackReport": "Informe de contracargo por empresa",
+      "globalChargebackReport": "Informe de contracargo global",
       "capacityHeatmapReport": "Informe del mapa de calor de capacidad",
       "timeLoggedReport": "Informe de tiempo registrado",
       "weeklyReport": "Informe semanal",
