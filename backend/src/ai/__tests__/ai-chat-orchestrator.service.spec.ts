@@ -2948,6 +2948,39 @@ async function testConfirmedProposalKeepsItsTargetSet() {
   assert.deepEqual(executedToolCalls[0].input.operations.map((operation: any) => operation.input.ref), ['T-1', 'T-2', 'T-3']);
 }
 
+/**
+ * Issue 125: words of a refusal do not let through an answer that asks to run the change; it is a
+ * write waiting for its preview, repaired then stopped as before.
+ */
+async function testRefusalWordsDoNotCoverARequestToApply() {
+  const ask = [
+    { type: 'text_delta', text: "L'échéance de T-1 n'est pas disponible. Voulez-vous que j'applique la réassignation à Marie ?" },
+    { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+  ];
+  const { orchestrator, providerCallCount } = createOrchestrator({
+    historyMessages: [{ role: 'user', content: 'Réassigne T-1 à Marie.' }],
+    availableTools: [{
+      name: 'update_task_assignees',
+      category: 'mutation',
+      description: 'Create assignee previews.',
+      input_summary: {},
+      read_only: false,
+      surfaces: ['chat'],
+      write_preview: { entity_type: 'tasks', fields: ['assignee'], reversible: true, prompt_hint: 'Use update_task_assignees.' },
+    }],
+    providerEventBatches: [ask, ask, ask],
+  });
+
+  const events = await collectEvents(orchestrator.stream({
+    context: STREAM_CONTEXT,
+    conversationId: 'conv-1',
+    userMessage: 'Réassigne T-1 à Marie.',
+  }));
+
+  assert.equal(providerCallCount.value, 3);
+  assert.equal(streamedText(events), writePreviewMissingText('en'));
+}
+
 async function testTextualWriteConfirmationWithoutPreviewIsRewrittenToCreatePreviews() {
   const { orchestrator, recordedRequests } = createOrchestrator({
     historyMessages: [
@@ -3840,6 +3873,7 @@ async function run() {
   await testRejectedPreviewEndsUnlessThePersonAskedForMore();
   await testHeldBackAnswerStatesNoTargetSet();
   await testConfirmedProposalKeepsItsTargetSet();
+  await testRefusalWordsDoNotCoverARequestToApply();
   await testProviderReceivesAbortSignal();
   await testProviderRequestUsesChatTimeout();
   await testProviderEndpointSourceFollowsTheResolvedModel();

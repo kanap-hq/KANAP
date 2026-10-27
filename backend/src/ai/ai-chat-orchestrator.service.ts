@@ -178,22 +178,37 @@ function containsRawToolMarkup(content: string): boolean {
  */
 function statesWriteRefusal(content: string): boolean {
   const text = normalizePlainText(content).replace(/[’`]/g, "'");
-  return /\b(i|we) (cannot|can't|can not|am not able to|am unable to|do not|don't)\b/.test(text)
+  return /\b(i|we) (cannot|can't|can not|am not able to|am unable to|am not allowed to|(do not|don't) have (a|any|the) (tool|way|right|permission))\b/.test(text)
     || /\b(cannot|can't|unable to|not able to|not possible|not available|not supported|read[- ]only)\b/.test(text)
-    || /\b(je ne (peux|sais|suis)|ne peut pas|ne permet(tent)? pas|pas possible|impossible|pas disponible|n'est pas (prise? en charge|disponible)|lecture seule|aucun outil|ne supprime)\b/.test(text)
+    || /\b(je ne peux|ne peut pas|ne permet(tent)? pas|pas possible|impossible|pas disponible|n'est pas (prise? en charge|disponible)|lecture seule|aucun outil|ne supprime)\b/.test(text)
     || /\b(kann (ich )?(nicht|keine?n?)|nicht (moglich|verfugbar|unterstutzt)|schreibgeschutzt|nur lesend)\b/.test(text)
     || /\b(no (puedo|es posible|esta disponible|se puede|permite)|solo lectura|imposible)\b/.test(text);
 }
 
+const CONFIRMATION_REQUEST_RE = /\b(souhaitez|souhaites|voulez|veux|do you want|would you like|shall i|should i|confirm|confirme|approve|approuver)\b/;
+
+/**
+ * One of the answer's questions asks to run a change ("Voulez-vous que j'applique la modification ?"):
+ * a write waiting for its preview, whatever the answer says before it.
+ */
+function questionAsksToRunAChange(content: string): boolean {
+  return String(content || '')
+    .split(/(?<=[.!?])\s+|\n+/)
+    .map((sentence) => ({ sentence, text: normalizePlainText(sentence) }))
+    .filter(({ sentence, text }) => sentence.includes('?') || CONFIRMATION_REQUEST_RE.test(text))
+    .some(({ text }) => /\b(execute|executer|execution|procede|proceder|proceed|applique|appliquer|apply)\b/.test(text));
+}
+
 function asksForWriteExecutionWithoutPreview(content: string): boolean {
-  if (statesWriteRefusal(content)) {
+  const text = normalizePlainText(content);
+  const asksForConfirmation = /[?]/.test(content) || CONFIRMATION_REQUEST_RE.test(text);
+  const mentionsWriteExecution = /\b(execute|executer|execution|procede|proceder|applique|appliquer|apply|modification|modifications|changement|changements|reassign|assign|assigne|assignee|tache|taches|task|tasks)\b/.test(text);
+  if (!asksForConfirmation || !mentionsWriteExecution) {
     return false;
   }
-  const text = normalizePlainText(content);
-  const asksForConfirmation = /[?]/.test(content)
-    || /\b(souhaitez|souhaites|voulez|veux|do you want|would you like|shall i|should i|confirm|confirme|approve|approuver)\b/.test(text);
-  const mentionsWriteExecution = /\b(execute|executer|execution|procede|proceder|applique|appliquer|apply|modification|modifications|changement|changements|reassign|assign|assigne|assignee|tache|taches|task|tasks)\b/.test(text);
-  return asksForConfirmation && mentionsWriteExecution;
+  // A refusal that offers another action in words is an answer, not a write waiting for its preview
+  // (issue 125), unless it still asks to run a change.
+  return !statesWriteRefusal(content) || questionAsksToRunAChange(content);
 }
 
 function hasMultiStepWriteSignals(content: string): boolean {
