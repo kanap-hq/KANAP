@@ -56,7 +56,7 @@ describe('TechnologyComplianceTab', () => {
     renderTab();
     expect(screen.getByText('Critical')).toBeInTheDocument();
     expect(screen.getByText('Choose a recovery wave')).toBeInTheDocument();
-    expect(screen.getByRole('spinbutton', { name: 'Recovery point objective' })).toHaveValue(1);
+    expect(screen.getByRole('textbox', { name: 'Recovery point objective' })).toHaveValue('1');
     expect(screen.queryByText('Business criticality')).not.toBeInTheDocument();
     expect(screen.queryByText('Data confidentiality')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mark as reviewed' })).not.toBeInTheDocument();
@@ -75,7 +75,7 @@ describe('TechnologyComplianceTab', () => {
 
   it('saves the RTO in minutes when the field loses focus', () => {
     const { onPatch } = renderTab();
-    const rto = screen.getByRole('spinbutton', { name: 'Recovery time objective' });
+    const rto = screen.getByRole('textbox', { name: 'Recovery time objective' });
     fireEvent.change(rto, { target: { value: '4' } });
     fireEvent.blur(rto);
     expect(onPatch).toHaveBeenLastCalledWith({ rto_minutes: 240 });
@@ -84,7 +84,7 @@ describe('TechnologyComplianceTab', () => {
   it('is read-only without the right to manage the technology', () => {
     renderTab(false);
     expect(screen.getByRole('combobox', { name: 'Recovery wave' })).toHaveAttribute('aria-disabled', 'true');
-    expect(screen.getByRole('spinbutton', { name: 'Recovery time objective' })).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'Recovery time objective' })).toBeDisabled();
   });
 
   it('shows the vulnerabilities of the technology under the continuity classification', async () => {
