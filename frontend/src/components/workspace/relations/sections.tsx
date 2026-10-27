@@ -365,8 +365,8 @@ async function searchNamed(
   q: string,
   signal: AbortSignal | undefined,
   sorted: boolean,
-): Promise<Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null; is_cluster?: boolean }>> {
-  const res = await api.get<{ items: Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null; is_cluster?: boolean }> }>(endpoint, {
+): Promise<Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null; is_cluster?: boolean; cluster?: string | null }>> {
+  const res = await api.get<{ items: Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null; is_cluster?: boolean; cluster?: string | null }> }>(endpoint, {
     params: { page: 1, limit: PAGE, ...(sorted ? { sort: 'name:ASC' } : {}), ...(q ? { q } : {}) },
     signal,
   });
@@ -456,6 +456,10 @@ export function assetsSection({
         id: row.id,
         label: row.is_cluster ? `${t('common:selects.cluster')} ${row.name}` : row.name,
         ref: row.asset_reference ?? null,
+        // Quick search matches a member by its cluster's name, so the option names that cluster.
+        ...(!row.is_cluster && row.cluster
+          ? { hint: t('workspace.application.relations.memberOfCluster', { cluster: row.cluster }) }
+          : {}),
       }));
     },
   };

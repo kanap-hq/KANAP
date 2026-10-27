@@ -1905,6 +1905,7 @@
           "assets": "Search assets",
           "processes": "Search business processes"
         },
+        "memberOfCluster": "Member of {{cluster}}",
         "types": {
           "budget_line": "Budget line",
           "contract": "Contract",
