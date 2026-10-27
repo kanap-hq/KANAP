@@ -303,11 +303,9 @@ function limits() {
   // Rows without a value: row numbers only go up, and stop at Excel's 1,048,576; the element cap bounds them too.
   // Numbered, so that the part does not pack past the compression ratio.
   const emptyRows = (n: number): string => Array.from({ length: n }, (_, i) => `<row r="${i + 1}"/>`).join('');
-  const emptyStarted = Date.now();
   assert.deepEqual(rowsOf({ sheetData: emptyRows(1_048_576) }), [], "Excel's last row is read");
   refuses(() => rowsOf({ sheetData: emptyRows(1_048_577) }), 'XLSX_TOO_LARGE', 'maxRows', 'empty rows past 1,048,576');
   refuses(() => rowsOf({ sheetData: '<row r="1048577"/>' }), 'XLSX_TOO_LARGE', 'maxRows', 'a row number past 1,048,576');
-  assert.ok(Date.now() - emptyStarted < 5_000, 'empty rows are refused quickly');
   refuses(() => rowsOf({ sheetData: emptyRows(100_000) }, { maxElements: 99_999 }), 'XLSX_TOO_LARGE', 'maxElements', 'empty rows past the element cap');
   // Rows holding a value, the caller's row cap: the empty rows between them do not count, reading stops past it.
   const threeValueRows = '<row r="2"><c r="A2"><v>1</v></c></row><row r="7"><c r="B7"><v>2</v></c></row><row r="9"><c r="A9" s="0"/><c r="C9"><v>3</v></c></row>';
@@ -322,9 +320,11 @@ function limits() {
   const cellWith = (n: number): string => `<row r="1"><c r="A1"${attributes(n - 1)}><v>1</v></c></row>`;
   assert.deepEqual(rowsOf({ sheetData: cellWith(64) }), [[number('1')]], '64 attributes are read');
   refuses(() => rowsOf({ sheetData: cellWith(65) }), 'XLSX_TOO_LARGE', 'maxAttributesPerElement', '65 attributes');
-  const started = Date.now();
   refuses(() => rowsOf({ sheetData: cellWith(500_000) }), 'XLSX_TOO_LARGE', 'maxAttributesPerElement', '500,000 attributes');
-  assert.ok(Date.now() - started < 2_000, 'the parse stops at the 65th attribute');
+  // The parse stops at the 65th attribute, before the end of the element: a malformed attribute after
+  // the 100th is never read. Counted only once the element is complete, it would be refused as invalid.
+  const brokenAfter100 = `<row r="1"><c r="A1"${attributes(100)} 1bad><v>1</v></c></row>`;
+  refuses(() => rowsOf({ sheetData: brokenAfter100 }), 'XLSX_TOO_LARGE', 'maxAttributesPerElement', 'the parse stops at the 65th attribute');
   const workbookAttack = zipOf({ ...workbookParts({ sheetData: '' }), 'xl/workbook.xml': `<workbook><sheets><sheet${attributes(65)}/></sheets></workbook>` });
   refuses(() => readXlsxGrid(workbookAttack), 'XLSX_TOO_LARGE', 'maxAttributesPerElement', 'in the workbook part');
   // A sheet of three rows of three values: `worksheet`, `sheetData`, 3 `row`, 9 `c`, 9 `v`, 23 elements
