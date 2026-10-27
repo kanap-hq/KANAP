@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
@@ -10,7 +10,10 @@ import type { ServerOption } from '../../../components/fields/serverOptionRender
 const apiGet = vi.hoisted(() => vi.fn());
 vi.mock('../../../api', () => ({ default: { get: apiGet, post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 const enumOptions = vi.hoisted(() => ({
-  settings: { connectionTypes: [], pathHopFunctions: [] },
+  settings: {
+    connectionTypes: [] as Array<{ code: string; label: string }>,
+    pathHopFunctions: [] as Array<{ code: string; label: string; deprecated?: boolean }>,
+  },
 }));
 vi.mock('../../../hooks/useItOpsEnumOptions', () => ({ default: () => enumOptions }));
 
@@ -40,6 +43,7 @@ const HOP: ConnectionPathHop = {
 describe('ConnectionPathSection', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('en');
+    enumOptions.settings.pathHopFunctions = [];
     apiGet.mockReset();
     apiGet.mockResolvedValue({ data: { items: [] } });
   });
@@ -63,5 +67,32 @@ describe('ConnectionPathSection', () => {
     expect(screen.getAllByRole('img', { name: 'Cluster' })).toHaveLength(3);
     await waitFor(() => expect(apiGet).toHaveBeenCalled());
     expect(apiGet.mock.calls.some(([url]) => url === `/assets/${CLUSTER.id}`)).toBe(false);
+  });
+
+  it('shows the translated suffix on a deprecated hop function', async () => {
+    await i18n.changeLanguage('fr');
+    enumOptions.settings.pathHopFunctions = [
+      { code: 'firewall', label: 'Firewall' },
+      { code: 'proxy', label: 'Proxy', deprecated: true },
+    ];
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <ConnectionPathSection
+          connectionId="c-1"
+          hops={[{ ...HOP, function_code: 'proxy' }]}
+          canManage
+          sourceLabel="PAR-SRC-CL01"
+          destinationLabel="PAR-DST-CL01"
+          onChange={vi.fn()}
+        />
+      </ThemeProvider>,
+    );
+
+    const hopFunction = screen.getAllByRole('combobox').find((node) => node.textContent?.includes('Proxy'));
+    expect(hopFunction).toBeTruthy();
+    fireEvent.mouseDown(hopFunction!);
+    expect(await screen.findByRole('option', { name: 'Proxy (plus proposé)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Firewall' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: / \(deprecated\)$/ })).toBeNull();
   });
 });
