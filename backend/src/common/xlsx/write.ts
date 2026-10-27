@@ -20,6 +20,8 @@ export type XlsxCell =
   | { kind: 'amount'; value: string }
   /** A calendar day, `YYYY-MM-DD`. A day before 1900-03-01 is written as text in the language's format. */
   | { kind: 'date'; iso: string }
+  /** A share as a fraction (`0.125` is 12.5 %), shown with two decimals and a percent sign. */
+  | { kind: 'percent'; value: number }
   /** An empty cell: nothing is written. */
   | null;
 
@@ -71,6 +73,8 @@ const XLSX_DATE_FORMAT: Record<CsvLanguage, string> = {
 const STYLE_DATE = 1;
 const STYLE_BOLD = 2;
 const STYLE_AMOUNT = 3;
+/** Appended after the others so 0 to 3 keep their place. Built-in `0.00%`. */
+const STYLE_PERCENT = 4;
 
 const XML_HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
 const XML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' };
@@ -229,6 +233,13 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string, language
         amountColumns.add(index + 1);
         usesAmount = true;
         if (sample) widths[index] = Math.max(widths[index], cell.value.length + Math.floor(cell.value.length / 3));
+      } else if (cell.kind === 'percent') {
+        if (typeof cell.value !== 'number' || !Number.isFinite(cell.value)) {
+          throw new Error(`xlsx: sheet "${name}" ${ref}: a percent cell needs a finite number`);
+        }
+        cells.push(`<c r="${ref}" s="${STYLE_PERCENT}"><v>${cell.value}</v></c>`);
+        usesAmount = true;
+        if (sample) widths[index] = Math.max(widths[index], String(Math.round(cell.value * 10_000) / 100).length + 1);
       } else if (cell.kind === 'date') {
         const serial = daySerial(cell.iso);
         if (cell.iso < FIRST_SERIAL_DAY) cells.push(textCell(ref, formatCsvDate(cell.iso, language), false));
@@ -385,12 +396,13 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   <Relationship Id="rId${built.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`;
 
-  // Style 0 is the default, 1 the date cells; 2 (bold header) and 3 (amount, `#,##0.00`) exist when a sheet uses them.
+  // Style 0 is the default, 1 the date cells; 2 (bold header), 3 (amount, `#,##0.00`) and 4 (percent, `0.00%`) exist
+  // when a sheet uses them.
   const fonts = extraStyles
     ? '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
     : '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>';
   const cellXfs = extraStyles
-    ? '<cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>'
+    ? '<cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="10" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>'
     : '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>';
   const stylesXml = `${XML_HEAD}
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">

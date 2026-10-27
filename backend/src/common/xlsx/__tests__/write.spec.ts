@@ -27,6 +27,7 @@ function types() {
       ['x', { kind: 'amount', value: '-1234.50' }],
       ['y', { kind: 'date', iso: '2026-09-15' }],
       ['z', null],
+      ['p', { kind: 'percent', value: 0.125 }],
       ['', 'last'],
     ]),
   );
@@ -35,7 +36,8 @@ function types() {
   assert.equal(cellOf(xml, 'B3'), '<c r="B3" s="3"><v>-1234.50</v></c>', 'amount is its text, style 3');
   assert.equal(cellOf(xml, 'B4'), '<c r="B4" s="1"><v>46280</v></c>', 'date is a serial, style 1');
   assert.ok(!xml.includes('r="B5"'), 'null writes no cell');
-  assert.ok(!xml.includes('r="A6"') && xml.includes('r="B6"'), 'an empty text writes no cell');
+  assert.equal(cellOf(xml, 'B6'), '<c r="B6" s="4"><v>0.125</v></c>', 'percent is the fraction, style 4');
+  assert.ok(!xml.includes('r="A7"') && xml.includes('r="B7"'), 'an empty text writes no cell');
   // Before 1900-03-01 Excel's serials are wrong (its 1900-02-29) or negative: the day is text, in the language's format.
   const early = sheetXml(write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'date', iso: '1900-02-28' }], [{ kind: 'date', iso: '1850-07-04' }], [{ kind: 'date', iso: '1900-03-01' }]] }], 'fr'));
   assert.equal(cellOf(early, 'A2'), '<c r="A2" t="inlineStr"><is><t xml:space="preserve">28/02/1900</t></is></c>', 'the day before the leap-year bug is text');
@@ -46,9 +48,9 @@ function types() {
 
 function styles() {
   const styled = text(one([[{ kind: 'amount', value: '1' }, { kind: 'date', iso: '2026-01-01' }]]), 'xl/styles.xml');
-  assert.match(styled, /<cellXfs count="4">/);
+  assert.match(styled, /<cellXfs count="5">/);
   const xfs = [...styled.matchAll(/<xf numFmtId="(\d+)" fontId="(\d)"[^>]*\/>/g)].slice(1); // the first xf is cellStyleXfs
-  assert.deepEqual(xfs.map((x) => [x[1], x[2]]), [['0', '0'], ['164', '0'], ['0', '1'], ['4', '0']], 'indices: default, date, bold, amount');
+  assert.deepEqual(xfs.map((x) => [x[1], x[2]]), [['0', '0'], ['164', '0'], ['0', '1'], ['4', '0'], ['10', '0']], 'indices: default, date, bold, amount, percent');
   assert.ok(styled.includes('<font><b/><sz val="11"/><name val="Calibri"/></font>'), 'the bold font');
   for (const [language, format] of [['en', 'yyyy-mm-dd'], ['fr', '[$-40C]dd/mm/yyyy'], ['de', '[$-407]dd.mm.yyyy'], ['es', '[$-C0A]dd/mm/yyyy']] as const) {
     const out = text(write([{ name: 'S', headers: ['A'], rows: [[null]] }], language), 'xl/styles.xml');
@@ -59,7 +61,9 @@ function styles() {
   assert.match(plain, /<cellXfs count="2">/);
   assert.match(plain, /<fonts count="1">/);
   const plainAmount = text(write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'amount', value: '1.5' }]], header: 'plain' }]), 'xl/styles.xml');
-  assert.match(plainAmount, /<cellXfs count="4">/, 'an amount in a plain sheet brings the amount style');
+  assert.match(plainAmount, /<cellXfs count="5">/, 'an amount in a plain sheet brings the amount style');
+  const plainPercent = text(write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'percent', value: 0.5 }]], header: 'plain' }]), 'xl/styles.xml');
+  assert.match(plainPercent, /<cellXfs count="5">.*<xf numFmtId="10"[^>]*\/><\/cellXfs>/s, 'a percent in a plain sheet brings the percent style');
 }
 
 function styledHeader() {
@@ -173,6 +177,8 @@ function validation() {
   }
   assert.throws(() => one([['a', { kind: 'number', value: NaN }]]), /finite/);
   assert.throws(() => one([['a', { kind: 'number', value: Infinity }]]), /finite/);
+  assert.throws(() => one([['a', { kind: 'percent', value: NaN }]]), /percent cell needs a finite number/);
+  assert.throws(() => one([['a', { kind: 'percent', value: '0.5' as unknown as number }]]), /percent cell needs a finite number/);
   assert.throws(() => one([['a', { kind: 'date', iso: '2026-02-30' }]]), /calendar day/);
   assert.throws(() => one([['a', { kind: 'date', iso: '15/09/2026' }]]), /calendar day/);
   assert.throws(() => one([['only one']]), /1 cells for 2 headers/, 'a short row throws');
@@ -243,10 +249,10 @@ function libreOffice() {
         [
           {
             name: 'Data',
-            headers: ['Name', 'Days', 'Amount', 'Day', 'Formula', 'Note'],
+            headers: ['Name', 'Days', 'Amount', 'Day', 'Formula', 'Note', 'Share'],
             rows: [
-              ['Alpha', { kind: 'number', value: 3.5 }, { kind: 'amount', value: '-1234.50' }, { kind: 'date', iso: '2026-09-15' }, '=SUM(A1)', 'Café "x"'],
-              ['Beta', { kind: 'number', value: 0 }, { kind: 'amount', value: '1234567.05' }, null, '+1', 'é'],
+              ['Alpha', { kind: 'number', value: 3.5 }, { kind: 'amount', value: '-1234.50' }, { kind: 'date', iso: '2026-09-15' }, '=SUM(A1)', 'Café "x"', { kind: 'percent', value: 0.125 }],
+              ['Beta', { kind: 'number', value: 0 }, { kind: 'amount', value: '1234567.05' }, null, '+1', 'é', { kind: 'percent', value: -0.0325 }],
             ],
           },
           { name: 'Empty', headers: ['A'], rows: [] },
@@ -275,9 +281,9 @@ function libreOffice() {
       return fs.readFileSync(path.join(out, 'book-Data.csv'), 'utf8');
     };
     const csv = convert('fr');
-    assert.ok(csv.startsWith('"Name","Days","Amount","Day","Formula","Note"'), 'LibreOffice reads the headers');
-    assert.ok(csv.includes('"Alpha",3.5,-1234.5,15/09/2026,"\'=SUM(A1)","Café ""x"""'), `numbers are numbers (no quote), the date is in the French format, the formula is text: ${csv}`);
-    assert.ok(csv.includes('"Beta",0,1234567.05,,"\'+1","é"'), 'second row: zero, long amount, empty date, guarded +1');
+    assert.ok(csv.startsWith('"Name","Days","Amount","Day","Formula","Note","Share"'), 'LibreOffice reads the headers');
+    assert.ok(csv.includes('"Alpha",3.5,-1234.5,15/09/2026,"\'=SUM(A1)","Café ""x""",12.5%'), `numbers are numbers (no quote), the date is in the French format, the formula is text, the share a percentage: ${csv}`);
+    assert.ok(csv.includes('"Beta",0,1234567.05,,"\'+1","é",-3.25%'), 'second row: zero, long amount, empty date, guarded +1, negative share');
     assert.ok(convert('en').includes(',2026-09-15,'), 'English: ISO day');
     assert.ok(convert('de').includes(',15.09.2026,'), 'German: dd.mm.yyyy');
     assert.ok(convert('es').includes(',15/09/2026,'), 'Spanish: dd/mm/yyyy');
