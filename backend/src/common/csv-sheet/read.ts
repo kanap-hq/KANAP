@@ -1,5 +1,14 @@
 import { parse } from 'csv-parse';
 import { denormalizeCsvFormulaValue } from '../csv/csv-export.service';
+import { Decimal } from '../decimal';
+import {
+  hasOldExcelSignature,
+  hasZipSignature,
+  readXlsxGrid,
+  XlsxReadCell,
+  XlsxReadError,
+  XlsxReadErrorCode,
+} from '../xlsx/read';
 import { parseCsvAmount, resolveAmountConvention } from './amount';
 import { parseCsvDateCell, resolveDateOrder } from './date';
 import { CsvDecodeError, decodeCsv } from './decode';
@@ -8,6 +17,7 @@ import {
   CSV_ROW_CAP,
   CsvAmountReading,
   CsvColumn,
+  CsvParsedAmount,
   CsvDataRow,
   CsvDateReading,
   CsvLanguage,
@@ -19,6 +29,29 @@ import {
 interface RawRow {
   line: number;
   cells: string[];
+}
+
+/**
+ * One cell of a sheet: a CSV file gives text cells, an .xlsx file typed ones. Text is already cleaned
+ * (trimmed, formula guard undone).
+ */
+export type SheetCell = XlsxReadCell;
+
+/** A row of a sheet, with the physical line (CSV) or the spreadsheet row (.xlsx) it starts on. */
+interface GridRow {
+  line: number;
+  cells: SheetCell[];
+}
+
+/** `readCsv`'s result, with the format read and, for an .xlsx file, the sheet read. */
+export interface SheetReadResult extends CsvReadResult {
+  format: 'csv' | 'xlsx';
+  /** The sheet read: the first worksheet of the workbook. */
+  sheetName?: string;
+  /** Sheets of the workbook: more than one means the others were not read. */
+  sheetCount?: number;
+  /** The code of an .xlsx refusal, whose sentence is `fileErrors[0]`. */
+  fileErrorCode?: XlsxReadErrorCode;
 }
 
 const SEPARATORS: readonly CsvSeparator[] = [',', ';', '\t'];
@@ -53,16 +86,61 @@ export async function readCsv(input: Buffer | string, schema: CsvReadSchema): Pr
     return baseResult(decoded.encoding, separator, [`This file has more than ${CSV_ROW_CAP.toLocaleString('en-US')} rows.`]);
   }
   if (parsed.error) return baseResult(decoded.encoding, separator, [parsed.error]);
-  if (parsed.rows.length === 0) return baseResult(decoded.encoding, separator, [CSV_FILE_EMPTY_MESSAGE]);
+  const rows = parsed.rows.map((row) => ({ line: row.line, cells: row.cells.map(textCell) }));
+  return readGrid(rows, schema, decoded.encoding, separator);
+}
 
-  const headerRow = parsed.rows[0];
+/**
+ * Read a spreadsheet file, CSV or .xlsx, told apart by content: a ZIP archive is an .xlsx workbook
+ * (the old .xls format is refused with its own sentence), anything else is CSV. The result is
+ * `readCsv`'s, plus the format. In an .xlsx file only the first worksheet is read; number and date
+ * cells are read as they are typed, outside the date-order and decimal-mark settlement, which only
+ * concerns text cells.
+ */
+export async function readSheet(input: Buffer, schema: CsvReadSchema): Promise<SheetReadResult> {
+  if (!hasZipSignature(input) && !hasOldExcelSignature(input)) return { ...(await readCsv(input, schema)), format: 'csv' };
+  validateSchema(schema);
+  let grid: ReturnType<typeof readXlsxGrid>;
+  try {
+    grid = readXlsxGrid(input);
+  } catch (error) {
+    if (!(error instanceof XlsxReadError)) throw error;
+    return { ...baseResult('utf-8', null, [error.message]), format: 'xlsx', fileErrorCode: error.code };
+  }
+  const sheet = { format: 'xlsx' as const, sheetName: grid.sheetName, sheetCount: grid.sheetCount };
+  const rows: GridRow[] = [];
+  let dataRows = 0;
+  for (let index = 0; index < grid.rows.length; index += 1) {
+    const cells = grid.rows[index].map((cell) => (cell.kind === 'text' ? textCell(cleanCell(cell.value)) : cell));
+    if (cells.every(isBlank)) continue;
+    if (rows.length > 0) {
+      dataRows += 1;
+      if (dataRows > CSV_ROW_CAP) {
+        return { ...baseResult('utf-8', null, [`This file has more than ${CSV_ROW_CAP.toLocaleString('en-US')} rows.`]), ...sheet };
+      }
+    }
+    rows.push({ line: index + 1, cells });
+  }
+  return { ...readGrid(rows, schema, 'utf-8', null), ...sheet };
+}
+
+/** Header detection, matching, settlement and row building, on rows that are not blank. */
+function readGrid(
+  rows: readonly GridRow[],
+  schema: CsvReadSchema,
+  encoding: 'utf-8' | 'windows-1252',
+  separator: CsvSeparator | null,
+): CsvReadResult {
+  if (rows.length === 0) return baseResult(encoding, separator, [CSV_FILE_EMPTY_MESSAGE]);
+
+  const headerRow = rows[0];
   // `name;notes;` is a trailing delimiter, not an empty column.
-  const headerCells = withoutTrailingBlanks(headerRow.cells);
-  if (headerCells.length === 0) return baseResult(decoded.encoding, separator, [CSV_FILE_EMPTY_MESSAGE]);
+  const headerCells = withoutTrailingBlanks(headerRow.cells.map(sheetCellText));
+  if (headerCells.length === 0) return baseResult(encoding, separator, [CSV_FILE_EMPTY_MESSAGE]);
   const classified = classifyHeaders(headerCells, schema);
-  const built = buildRows(parsed.rows.slice(1), classified.slots, schema);
+  const built = buildRows(rows.slice(1), classified.slots, schema);
   return {
-    encoding: decoded.encoding,
+    encoding,
     separator,
     headerLine: headerRow.line,
     rawHeaders: headerCells,
@@ -74,6 +152,93 @@ export async function readCsv(input: Buffer | string, schema: CsvReadSchema): Pr
     dates: built.dates,
     amounts: built.amounts,
   };
+}
+
+function textCell(value: string): SheetCell {
+  return { kind: 'text', value };
+}
+
+function isBlank(cell: SheetCell): boolean {
+  return cell.kind === 'empty' || (cell.kind === 'text' && cell.value === '');
+}
+
+/**
+ * The text of a cell, as a CSV file would hold it: a number in plain decimal notation without float
+ * noise (`1100`, `0.001`), a date as its ISO day.
+ */
+export function sheetCellText(cell: SheetCell): string {
+  switch (cell.kind) {
+    case 'text':
+      return cell.value;
+    case 'number':
+      return typedNumberText(cell.value);
+    case 'date':
+      return cell.iso;
+    default:
+      return '';
+  }
+}
+
+const NUMBER_LITERAL = /^([+-]?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/;
+
+function significantDigits(digits: string): number {
+  return digits.replace(/^0+/, '').replace(/0+$/, '').length;
+}
+
+/**
+ * The value of a number cell (`<v>` text such as `1100`, `-0.5`, `1.5E-3`) in plain decimal notation,
+ * trailing zeros dropped. Excel writes some values with 17 significant digits (`2.4300000000000002`
+ * for 2.43): when the shortest form of the same double has 15 digits or fewer (Excel's precision),
+ * that form is taken. Any other text is kept exactly. Text that is not a number is returned as is.
+ */
+export function typedNumberText(raw: string): string {
+  const text = raw.trim();
+  const match = NUMBER_LITERAL.exec(text);
+  if (!match || (match[2] === '' && (match[3] ?? '') === '')) return text;
+  if (significantDigits(`${match[2]}${match[3] ?? ''}`) >= 16) {
+    const shortest = String(Number(text));
+    const short = NUMBER_LITERAL.exec(shortest);
+    if (short && Number.isFinite(Number(text)) && significantDigits(`${short[2]}${short[3] ?? ''}`) <= 15) {
+      return plainDecimal(short);
+    }
+  }
+  return plainDecimal(match);
+}
+
+function plainDecimal(match: RegExpExecArray): string {
+  const [, sign, intDigits, fracDigits = '', exponentText] = match;
+  const exponent = exponentText === undefined ? 0 : Number(exponentText);
+  if (!Number.isSafeInteger(exponent) || Math.abs(exponent) > 400) return match[0];
+  const digits = `${intDigits}${fracDigits}`;
+  const point = intDigits.length + exponent;
+  let whole: string;
+  let fraction: string;
+  if (point <= 0) {
+    whole = '';
+    fraction = `${'0'.repeat(-point)}${digits}`;
+  } else if (point >= digits.length) {
+    whole = `${digits}${'0'.repeat(point - digits.length)}`;
+    fraction = '';
+  } else {
+    whole = digits.slice(0, point);
+    fraction = digits.slice(point);
+  }
+  whole = whole.replace(/^0+/, '') || '0';
+  fraction = fraction.replace(/0+$/, '');
+  const body = fraction ? `${whole}.${fraction}` : whole;
+  return sign === '-' && body !== '0' ? `-${body}` : body;
+}
+
+/** A number cell in an amount column: that amount, from its decimal text, with the CSV bounds. */
+function typedAmount(raw: string): CsvParsedAmount {
+  const text = typedNumberText(raw);
+  const match = /^-?(\d+)(?:\.(\d+))?$/.exec(text);
+  if (!match || match[1].length > 20 || (match[2] ?? '').length > 20) return { kind: 'invalid' };
+  try {
+    return { kind: 'value', decimal: Decimal.from(text) };
+  } catch {
+    return { kind: 'invalid' };
+  }
 }
 
 function decodeInput(input: Buffer | string): { encoding: 'utf-8' | 'windows-1252'; text: string; error: string | null } {
@@ -259,7 +424,7 @@ function parseRecords(
 }
 
 function buildRows(
-  data: readonly RawRow[],
+  data: readonly GridRow[],
   slots: readonly (CsvColumn | null)[],
   schema: CsvReadSchema,
 ): { rows: CsvDataRow[]; fileErrors: string[]; dates: CsvDateReading | null; amounts: CsvAmountReading | null } {
@@ -276,17 +441,19 @@ function buildRows(
   const hintLanguages = new Set<CsvLanguage>();
   const samples: string[] = [];
   const amountSamples: string[] = [];
+  // Only text cells settle the date order and the decimal mark: typed cells are read as they are.
+  const textOf = (cell: SheetCell | undefined): string => (cell?.kind === 'text' ? cell.value : '');
   for (const row of data) {
     if (hintIndex >= 0 && conventionHint) {
-      const language = conventionHint.languageOf(row.cells[hintIndex] ?? '');
+      const language = conventionHint.languageOf(row.cells[hintIndex] ? sheetCellText(row.cells[hintIndex]) : '');
       if (language !== null) hintLanguages.add(language);
     }
     for (const index of dateIndexes) {
-      const cell = row.cells[index] ?? '';
+      const cell = textOf(row.cells[index]);
       if (cell !== '') samples.push(cell);
     }
     for (const index of amountIndexes) {
-      const cell = row.cells[index] ?? '';
+      const cell = textOf(row.cells[index]);
       if (cell !== '') amountSamples.push(cell);
     }
   }
@@ -309,7 +476,7 @@ function buildRows(
 }
 
 function buildRow(
-  row: RawRow,
+  row: GridRow,
   slots: readonly (CsvColumn | null)[],
   schema: CsvReadSchema,
   order: CsvReadSchema['dateOrder'] | null,
@@ -326,17 +493,23 @@ function buildRow(
   }
   slots.forEach((slot, index) => {
     if (!slot) return;
-    const value = index < row.cells.length ? row.cells[index] : '';
+    const cell: SheetCell = index < row.cells.length ? row.cells[index] : { kind: 'empty' };
+    const value = sheetCellText(cell);
     cells[slot.id] = value;
     if (slot.kind === 'amount') {
-      const parsed = parseCsvAmount(value, amountConvention ?? undefined);
+      const typed = cell.kind === 'number';
+      const parsed = typed ? typedAmount(cell.value) : parseCsvAmount(value, amountConvention ?? undefined);
       amounts[slot.id] = parsed;
-      if (parsed.kind === 'invalid' && !amountsBlocked) {
+      if (parsed.kind === 'invalid' && (typed || !amountsBlocked)) {
         errors.push({ column: slot.id, message: `Invalid amount '${value}'.`, code: 'CSV_NUMBER_INVALID', params: { value } });
       }
       return;
     }
     if (slot.kind === 'field' && schema.dateFields?.includes(slot.id)) {
+      if (cell.kind === 'date') {
+        dates[slot.id] = { kind: 'date', isoDate: cell.iso, time: null };
+        return;
+      }
       const parsed = parseCsvDateCell(value, order ?? null);
       if (parsed.ok) dates[slot.id] = parsed.value;
       else if ('clear' in parsed && parsed.clear) dates[slot.id] = { kind: 'clear' };
@@ -354,9 +527,9 @@ function withoutTrailingBlanks(cells: readonly string[]): string[] {
   return cells.slice(0, end);
 }
 
-function hasExtra(cells: readonly string[], width: number): boolean {
+function hasExtra(cells: readonly SheetCell[], width: number): boolean {
   for (let i = width; i < cells.length; i += 1) {
-    if (cells[i] !== '') return true;
+    if (!isBlank(cells[i])) return true;
   }
   return false;
 }
