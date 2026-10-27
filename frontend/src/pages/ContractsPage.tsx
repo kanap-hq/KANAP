@@ -37,6 +37,8 @@ import ContractComplianceSummaryLabel from './contracts/ContractComplianceSummar
 import { COMPLIANCE_SUMMARY_STATES, type ComplianceSummary } from './contracts/contractCompliance';
 import { screenLanguage } from '../components/csv/readings';
 import { downloadBlob, extractFilenameFromDisposition } from '../utils/downloadBlob';
+import ExportFormatButton from '../components/csv/ExportFormatButton';
+import type { ExportFormat } from '../components/csv/exportFormat';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import ContractSettingsDialog from './contracts/ContractSettingsDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
@@ -589,20 +591,22 @@ export default function ContractsPage() {
 
   const canCreate = hasLevel('contracts','manager');
   const canAdmin = hasLevel('contracts','admin');
-  // The compliance register of the contracts the list shows (search, filters, scope), in the screen's language.
-  const exportRegister = async () => {
+  // The compliance register of the contracts the list shows (search, filters, scope, sort), in the screen's language.
+  const exportRegister = async (format: ExportFormat) => {
     setRegisterError(null);
     const params: Record<string, unknown> = {
       ...statusScopeParams(listQuery?.statusScope ?? 'enabled'),
       ...budgetParams,
       language: screenLanguage(i18n.resolvedLanguage || i18n.language),
+      format,
     };
     if (listQuery?.q) params.q = listQuery.q;
     if (listQuery?.filters) params.filters = listQuery.filters;
+    if (listRequest?.params?.sort) params.sort = listRequest.params.sort;
     try {
       const res = await getWithListContext<Blob>('/contracts/compliance-register/export', params, { responseType: 'blob' });
-      const filename = extractFilenameFromDisposition(res.headers?.['content-disposition']) || 'contract-compliance-register.csv';
-      downloadBlob(new Blob([res.data], { type: 'text/csv;charset=utf-8' }), filename);
+      const filename = extractFilenameFromDisposition(res.headers?.['content-disposition']) || `contract-compliance-register.${format}`;
+      downloadBlob(res.data instanceof Blob ? res.data : new Blob([res.data]), filename);
     } catch (e) {
       setRegisterError(getApiErrorMessage(e, t, t('contracts.compliance.exportFailed')));
     }
@@ -612,7 +616,7 @@ export default function ContractsPage() {
       {canCreate && <Button variant="action-primary" onClick={handleNew}>{t('contracts.newButton')}</Button>}
       {canAdmin && !limited && <Button variant="action" onClick={() => setImportOpen(true)}>{t('contracts.importCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('contracts.exportCsv')}</Button>}
-      {canAdmin && <Button variant="action" onClick={() => { void exportRegister(); }}>{t('contracts.compliance.exportRegister')}</Button>}
+      {canAdmin && <ExportFormatButton label={t('contracts.compliance.exportRegister')} onExport={exportRegister} />}
       {canAdmin && !limited && <Button variant="action" onClick={() => setSettingsOpen(true)}>{t('contracts.renewal.settings.button')}</Button>}
       {canAdmin && !limited && (
         <DeleteSelectedButton

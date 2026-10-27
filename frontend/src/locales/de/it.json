@@ -417,8 +417,7 @@
       "actions": {
         "changeState": "Status ändern",
         "changeStateSelected_one": "Status ändern ({{count}})",
-        "changeStateSelected_other": "Status ändern ({{count}})",
-        "export": "CSV exportieren"
+        "changeStateSelected_other": "Status ändern ({{count}})"
       },
       "bulk": {
         "title": "Status ändern",
@@ -2562,7 +2561,6 @@
         "changeVersion": "Version für {{name}} ändern",
         "remove": "{{name}} entfernen, alle deklarierten Versionen",
         "saveFailed": "Die Anwendungen konnten nicht gespeichert werden.",
-        "exportCsv": "CSV exportieren",
         "exportFailed": "Der Export ist fehlgeschlagen.",
         "columns": {
           "ref": "Ref.",

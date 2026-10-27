@@ -344,7 +344,6 @@
       "value": "Valeur"
     },
     "export": {
-      "button": "Exporter CSV",
       "failed": "Le journal d'audit n'a pas pu être exporté.",
       "tooMany": "Trop d'exports en peu de temps. Réessayez dans une minute.",
       "truncated": "Le fichier contient les {{limit}} premières entrées. Affinez les filtres pour exporter le reste."

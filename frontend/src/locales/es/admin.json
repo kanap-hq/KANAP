@@ -344,7 +344,6 @@
       "value": "Valor"
     },
     "export": {
-      "button": "Exportar CSV",
       "failed": "No se pudo exportar el registro de auditoría.",
       "tooMany": "Demasiadas exportaciones en poco tiempo. Vuelva a intentarlo en un minuto.",
       "truncated": "El archivo contiene las primeras {{limit}} entradas. Acote los filtros para exportar el resto."

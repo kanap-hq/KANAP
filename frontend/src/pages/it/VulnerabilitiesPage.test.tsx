@@ -308,9 +308,10 @@ describe('VulnerabilitiesPage', () => {
         data: body.dry_run ? { rows: 3, cves: 2, changes: 3, as_of: '2026-10-18T10:00:02.000Z' } : { ok: true, changed: 3 },
       }) as any);
       listed(3, JSON.stringify(filters), 'exploited:DESC');
-      fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
       await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/export', expect.objectContaining({
-        params: { sort: 'exploited:DESC', filters: JSON.stringify(filters) },
+        params: { format: 'csv', sort: 'exploited:DESC', filters: JSON.stringify(filters) },
       })));
       fireEvent.click(box(ALL_BOX));
       fireEvent.click(screen.getByRole('button', { name: 'Change state (3)' }));
@@ -743,10 +744,11 @@ describe('VulnerabilitiesPage', () => {
     }) as any);
     renderPage('/it/vulnerabilities?alerts=excluded');
     act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50, sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded' }, total: 3 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
     await waitFor(() => expect(getMock).toHaveBeenCalledWith(
       '/vulnerabilities/export',
-      expect.objectContaining({ params: { sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded' }, responseType: 'blob' }),
+      expect.objectContaining({ params: { format: 'csv', sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded' }, responseType: 'blob' }),
     ));
     fireEvent.click(box(ALL_BOX));
     fireEvent.click(screen.getByRole('button', { name: 'Change state (3)' }));
@@ -761,8 +763,9 @@ describe('VulnerabilitiesPage', () => {
     getMock.mockResolvedValue({ data: new Blob(['x']), headers: {} } as any);
     renderPage();
     act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50, filters: FILTERS }, total: 40 }));
-    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
-    await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/export', expect.objectContaining({ params: { filters: FILTERS }, responseType: 'blob' })));
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/export', expect.objectContaining({ params: { format: 'csv', filters: FILTERS }, responseType: 'blob' })));
   });
 
   it('turns each publication period into inclusive UTC days', () => {
@@ -836,9 +839,10 @@ describe('VulnerabilitiesPage', () => {
         params: { page: 1, limit: 50, sort: 'severity:DESC', filters: FILTERS, ...grid.props!.extraParams },
         total: 3,
       }));
-      fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
       await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/export', expect.objectContaining({
-        params: { sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded', to: '2025-10-20' },
+        params: { format: 'csv', sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded', to: '2025-10-20' },
         responseType: 'blob',
       })));
       fireEvent.click(box(ALL_BOX));
@@ -985,9 +989,10 @@ describe('VulnerabilitiesPage', () => {
       params: { page: 1, limit: 50, sort: 'exploited:DESC', filters: FILTERS, ...grid.props!.extraParams },
       total: 3,
     }));
-    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Excel (.xlsx)' }));
     await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/export', expect.objectContaining({
-      params: { sort: 'exploited:DESC', filters: FILTERS, alerts: 'included', exploited: 'yes' },
+      params: { format: 'xlsx', sort: 'exploited:DESC', filters: FILTERS, alerts: 'included', exploited: 'yes' },
       responseType: 'blob',
     })));
     fireEvent.click(box(ALL_BOX));
@@ -1062,7 +1067,7 @@ describe('VulnerabilitiesPage', () => {
     expect(column('select')).toBeUndefined();
     expect(screen.queryByRole('checkbox')).toBeNull();
     expect(screen.queryByRole('button', { name: /Change state/ })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Export' })).toBeTruthy();
   });
 
   describe('detail panel', () => {
@@ -1252,8 +1257,9 @@ describe('VulnerabilitiesPage', () => {
       getMock.mockResolvedValue({ data: new Blob(['x']), headers: {} } as any);
       const filters = JSON.stringify({ state: { filterType: 'set', values: ['to_review'] }, source: { filterType: 'set', values: ['cve_org'] } });
       act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50, filters }, total: 2 }));
-      fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
-      await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/export', expect.objectContaining({ params: { filters } })));
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
+      await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/export', expect.objectContaining({ params: { format: 'csv', filters } })));
       postMock.mockResolvedValue({ data: { rows: 2, cves: 1, changes: 2, as_of: '2026-10-21T08:00:00.000Z' } } as any);
       fireEvent.click(box(ALL_BOX));
       fireEvent.click(screen.getByRole('button', { name: 'Change state (2)' }));

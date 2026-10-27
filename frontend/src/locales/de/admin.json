@@ -344,7 +344,6 @@
       "value": "Wert"
     },
     "export": {
-      "button": "CSV exportieren",
       "failed": "Das Audit-Protokoll konnte nicht exportiert werden.",
       "tooMany": "Zu viele Exporte in kurzer Zeit. Versuchen Sie es in einer Minute erneut.",
       "truncated": "Die Datei enthält die ersten {{limit}} Einträge. Grenzen Sie die Filter ein, um den Rest zu exportieren."
