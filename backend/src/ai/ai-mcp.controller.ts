@@ -218,7 +218,8 @@ export class AiMcpController {
       }));
     } catch (error) {
       this.logger.warn(
-        `MCP journal line not written for ${record.toolName}, tenant ${context.tenantId}: ${error instanceof Error ? error.message : String(error)}`,
+        // The tool name comes from the client: quoted and cut, so that it cannot forge or flood a log line.
+        `MCP journal line not written for ${JSON.stringify(String(record.toolName).slice(0, 80))}, tenant ${context.tenantId}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

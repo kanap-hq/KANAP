@@ -233,6 +233,23 @@ function testArgumentPreviewKeepsValuesWithoutSecrets() {
   assert.doesNotMatch(text, /eyJhbGciOiJIUzI1NiJ9/);
   assert.doesNotMatch(text, /secretvalue/);
 
+  // An OAuth refresh token in a value, and secrets under other names, nested in objects and arrays.
+  const refreshToken = `kanap_mcprt_0123456789ab_${'n'.repeat(32)}_${'m'.repeat(43)}`;
+  const nested: any = mcpArgumentPreview({
+    query: `my token is ${refreshToken}`,
+    filters: [{ name: 'SAP', passwd: 'hunter2' }, { connection: { private_key: 'pk-value', Credentials: 'cred-value' } }],
+    auth: 'auth-value',
+    author: 'Ana Silva',
+  });
+  assert.equal(nested.query, 'my token is [REDACTED]');
+  assert.deepEqual(nested.filters, [
+    { name: 'SAP', passwd: '[REDACTED]' },
+    { connection: { private_key: '[REDACTED]', Credentials: '[REDACTED]' } },
+  ]);
+  assert.equal(nested.auth, '[REDACTED]');
+  assert.equal(nested.author, 'Ana Silva');
+  assert.doesNotMatch(JSON.stringify(nested), /kanap_mcprt|hunter2|pk-value|cred-value|auth-value/);
+
   const huge: any = mcpArgumentPreview({ items: Array.from({ length: 200 }, (_, i) => ({ id: i, text: 'y'.repeat(150) })) });
   assert.equal(huge.truncated, true);
   assert.ok(huge.preview.length <= 2_000, String(huge.preview.length));
