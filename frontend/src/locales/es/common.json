@@ -1154,8 +1154,11 @@
     "valueRequired": "Ingrese un valor"
   },
   "subscription": {
-    "trialExpiresIn": "Su período de prueba expira en {{count}} día.",
-    "trialExpiresIn_plural": "Su período de prueba expira en {{count}} días.",
+    "trialExpiresIn_one": "Su período de prueba expira en {{count}} día.",
+    "trialExpiresIn_other": "Su período de prueba expira en {{count}} días.",
+    "trialChip_one": "Prueba: {{count}} día",
+    "trialChip_other": "Prueba: {{count}} días",
+    "trialEndsOn": "La prueba termina el {{date}}",
     "choosePlanToContinue": "Elija un plan para continuar.",
     "choosePlan": "Elegir un plan",
     "trialExpired": "Su período de prueba ha expirado.",
