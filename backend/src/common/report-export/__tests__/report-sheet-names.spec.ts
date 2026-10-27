@@ -5,6 +5,8 @@ import { TIME_LOGGED_EXPORT_LABELS } from '../../../portfolio/services/portfolio
 import { CHARGEBACK_EXPORT_LABELS, CHARGEBACK_EXPORT_SHEETS } from '../../../spend/chargeback-report.export';
 import { BUDGET_REPORT_EXPORT_LABELS, BUDGET_REPORT_SHEETS } from '../../../spend/reports/budget-report-export.labels';
 import { END_OF_SUPPORT_EXPORT_LABELS } from '../../../technologies/reports/end-of-support-export-labels';
+import { BUDGET_OPERATIONS_EXPORT_LABELS } from '../../../spend/budget-operations-export/budget-operations-export.labels';
+import { MASTER_DATA_COPY_EXPORT_LABELS } from '../../../master-data/master-data-copy-export';
 import { REPORT_EXPORT_LABELS, REPORT_SHEET_NAME_MAX, writeReportExport } from '../index';
 
 /**
@@ -20,6 +22,8 @@ const TABLES: Record<string, Record<CsvLanguage, Record<string, string>>> = {
   capacityHeatmap: CAPACITY_HEATMAP_EXPORT_LABELS,
   timeLogged: TIME_LOGGED_EXPORT_LABELS,
   endOfSupport: END_OF_SUPPORT_EXPORT_LABELS,
+  budgetOperations: BUDGET_OPERATIONS_EXPORT_LABELS,
+  masterDataCopy: MASTER_DATA_COPY_EXPORT_LABELS,
 };
 
 function run() {

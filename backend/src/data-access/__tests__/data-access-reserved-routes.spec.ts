@@ -33,6 +33,7 @@ import { DepartmentMetricsController } from '../../departments/department-metric
 import { SpendItemsController } from '../../spend/spend-items.controller';
 import { CapexItemsController } from '../../spend/capex-items.controller';
 import { BudgetLinesController } from '../../spend/budget-lines.controller';
+import { BudgetOperationsExportController } from '../../spend/budget-operations-export/budget-operations-export.controller';
 import { ContractsController } from '../../contracts/contracts.controller';
 import { UsersController } from '../../users/users.controller';
 import { RolesController } from '../../roles/roles.controller';
@@ -142,7 +143,7 @@ class SkipProbeController {
 const REAL_CONTROLLERS = [
   FreezeController, BudgetColumnsController, CurrencyController, AllocationRulesController,
   MasterDataOperationsController, CompanyMetricsController, DepartmentMetricsController,
-  SpendItemsController, CapexItemsController, BudgetLinesController, ContractsController,
+  SpendItemsController, CapexItemsController, BudgetLinesController, BudgetOperationsExportController, ContractsController,
   UsersController, RolesController, AuditLogsController,
   CompaniesController, CostCentersController, ChartOfAccountsController, AnalyticsAxesController,
   AnalyticsCategoriesController, BusinessProcessesController, SuppliersController, ContactsController,
@@ -254,12 +255,15 @@ const RESERVED_SAMPLES: Array<[string, Method, string, boolean]> = [
   ['currencies', 'PATCH', 'currency/settings', false],
   ['default allocation rule', 'PATCH', 'allocation-rules/active', false],
   ['master-data year copy', 'POST', 'master-data-operations/copy', false],
+  ['master-data year copy preview file', 'GET', 'master-data-operations/copy/export', false],
   ['company metrics', 'PATCH', `company-metrics/${ID}`, false],
   ['department metrics', 'PATCH', `department-metrics/${ID}`, false],
   ['column copy', 'POST', 'spend-items/budget-operations/copy-column', false],
   ['allocation copy', 'POST', 'spend-items/budget-operations/copy-allocations', false],
   ['column reset', 'POST', 'capex-items/budget-operations/clear-column', false],
   ['budget copy', 'POST', 'budget-lines/budget-operations/copy', false],
+  ['budget copy preview file', 'GET', 'budget-lines/budget-operations/copy/export', false],
+  ['column reset preview file', 'GET', 'budget-lines/budget-operations/clear-column/export', false],
   ['bulk delete of lines', 'DELETE', 'spend-items/bulk', false],
   ['delete of a line', 'DELETE', `spend-items/${ID}`, false],
   ['delete of a contract', 'DELETE', `contracts/${ID}`, false],

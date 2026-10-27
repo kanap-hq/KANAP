@@ -33,10 +33,13 @@ vi.mock('ag-grid-react', () => ({
   ),
 }));
 vi.mock('../../components/AgGridBox', () => ({ default: ({ children }: { children?: React.ReactNode }) => <div>{children}</div> }));
+// The layout keeps the server export the page hands it.
+const layout = vi.hoisted(() => ({ tableExport: undefined as any }));
 vi.mock('../../components/reports/ReportLayout', () => ({
-  default: ({ filters, actions, children }: { filters?: React.ReactNode; actions?: React.ReactNode; children: React.ReactNode }) => (
-    <div>{filters}{actions}{children}</div>
-  ),
+  default: ({ filters, actions, children, tableExport }: { filters?: React.ReactNode; actions?: React.ReactNode; children: React.ReactNode; tableExport?: unknown }) => {
+    layout.tableExport = tableExport;
+    return <div>{filters}{actions}{children}</div>;
+  },
   ReportFilter: ({ label, children }: { label: string; children: React.ReactNode }) => <label>{label}{children}</label>,
   reportFilterMenuProps: {},
   reportFilterSelectSx: {},
@@ -118,6 +121,17 @@ describe('BudgetColumnResetPage', () => {
     confirm.mockClear();
     capexRows.current = [serversRow];
     frozen.capex = false;
+  });
+
+  it('offers the server export of the grid once a column is chosen', async () => {
+    renderPage();
+    expect(layout.tableExport).toBeUndefined();
+    fireEvent.click(screen.getByRole('tab', { name: 'operations.scope.capex' }));
+    await chooseColumn('ops:operations.budgetColumns.budget');
+    await waitFor(() => expect(layout.tableExport).toMatchObject({
+      url: '/budget-lines/budget-operations/clear-column/export',
+      params: { scope: 'capex', year: new Date().getFullYear(), column: 'budget' },
+    }));
   });
 
   it('clears the CAPEX column after confirmation and reports the result with plural forms', async () => {
