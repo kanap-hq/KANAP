@@ -158,7 +158,9 @@ export interface ImportFileText {
  * is decoded as `decodeCsv` does, with its refusals (`CsvDecodeError`). An .xlsx workbook, while the
  * imports read them, becomes the CSV text of its first worksheet, one line per spreadsheet row and
  * `;` between cells: a text cell as it is (the importer trims it and undoes the formula guard, as for
- * a CSV file), a number in plain decimal notation with a point, a date as its ISO day. Its refusals
+ * a CSV file), a number in plain decimal notation with a point, a date as its ISO day, followed by its
+ * time (`2026-06-02 07:52:00`) when the cell has one: the time Excel shows, with no zone, which the
+ * importer reads as it reads the same text in a CSV file. Its refusals
  * are 400s with their `XLSX_*` code; a sheet past the import's row cap gets the CSV row-cap sentence.
  */
 export function readImportText(input: Buffer): ImportFileText {
@@ -171,8 +173,13 @@ export function readImportText(input: Buffer): ImportFileText {
     if (error.limit === 'maxValueRows') throw new BadRequestException(rowCapMessage());
     throw new BadRequestException({ message: error.message, code: error.code });
   }
-  const text = grid.rows.map((row) => row.map((cell) => csvTextCell(sheetCellText(cell))).join(';')).join('\n');
+  const text = grid.rows.map((row) => row.map((cell) => csvTextCell(importCellText(cell))).join(';')).join('\n');
   return { text, format: 'xlsx', sheetName: grid.sheetName, sheetCount: grid.sheetCount };
+}
+
+/** The text of a cell for the import text: `sheetCellText`, with the time of a date-time cell. */
+function importCellText(cell: SheetCell): string {
+  return cell.kind === 'date' && cell.time ? `${cell.iso} ${cell.time}` : sheetCellText(cell);
 }
 
 /** A cell of CSV text: quoted when it holds a separator, a quote, a line break or edge spaces. */
@@ -220,7 +227,7 @@ function isBlank(cell: SheetCell): boolean {
 
 /**
  * The text of a cell, as a CSV file would hold it: a number in plain decimal notation without float
- * noise (`1100`, `0.001`), a date as its ISO day.
+ * noise (`1100`, `0.001`), a date as its ISO day (the shared layer's date columns hold days only).
  */
 export function sheetCellText(cell: SheetCell): string {
   switch (cell.kind) {

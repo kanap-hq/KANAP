@@ -7,6 +7,7 @@ import { workbookOfCsv } from '../../__tests__/workbook-of-csv';
 import { CsvDecodeError } from '../decode';
 import { csvSeparatorOf, readImportText } from '../read';
 import { CSV_ROW_CAP } from '../types';
+import { handmadeXlsx } from '../../xlsx/__tests__/fixtures/handmade';
 import { minimalXls } from './office-files';
 
 // `readImportText`, the reading of the importers that parse CSV text themselves (the field engine,
@@ -53,6 +54,30 @@ async function testWorkbookReadsAsItsCsv() {
   assert.equal(fromXlsx.length, 4);
   assert.equal(fromXlsx[1].code, "'=SUM(A1)", 'the formula guard stays for the importer to undo, as in a CSV export');
   assert.equal(fromXlsx[2].code, '  padded  ', 'edge spaces kept for the importer to trim');
+}
+
+/**
+ * A date-time cell keeps the time Excel shows, written as the CSV text a person would type
+ * (`2026-10-02 07:51:00`); a day cell stays its ISO day. Styles: a custom `dd/mm/yyyy hh:mm`, the
+ * built-in 22 and a plain day format.
+ */
+async function testDateTimeCells() {
+  const inline = (ref: string, value: string) => `<c r="${ref}" t="inlineStr"><is><t>${value}</t></is></c>`;
+  const workbook = handmadeXlsx({
+    numFmts: '<numFmt numFmtId="164" formatCode="dd/mm/yyyy\\ hh:mm"/><numFmt numFmtId="165" formatCode="dd/mm/yyyy"/>',
+    cellXfs: [0, 164, 22, 165],
+    sheetData: [
+      `<row r="1">${inline('A1', 'detected_at')}${inline('B1', 'occurred_at')}${inline('C1', 'due_date')}</row>`,
+      '<row r="2"><c r="A2" s="1"><v>46297.3270833333</v></c><c r="B2" s="2"><v>45567.604166666664</v></c><c r="C2" s="3"><v>46297</v></c></row>',
+      '<row r="3"><c r="A3" s="1"><v>46297</v></c><c r="B3" s="2"><v>46297.5</v></c><c r="C3" s="3"><v>46297.25</v></c></row>',
+    ].join(''),
+  });
+  const read = readImportText(workbook);
+  assert.equal(read.text, 'detected_at;occurred_at;due_date\n2026-10-02 07:51:00;2024-10-02 14:30:00;2026-10-02\n2026-10-02 00:00:00;2026-10-02 12:00:00;2026-10-02 06:00:00');
+  assert.deepEqual(await rowsOf(read.text), [
+    { detected_at: '2026-10-02 07:51:00', occurred_at: '2024-10-02 14:30:00', due_date: '2026-10-02' },
+    { detected_at: '2026-10-02 00:00:00', occurred_at: '2026-10-02 12:00:00', due_date: '2026-10-02 06:00:00' },
+  ]);
 }
 
 async function testSheetsAndRefusals() {
@@ -104,6 +129,7 @@ async function testCoaTemplate() {
 
 async function main() {
   await testWorkbookReadsAsItsCsv();
+  await testDateTimeCells();
   await testSheetsAndRefusals();
   await testCoaTemplate();
   console.log('import-text.spec: all assertions passed');

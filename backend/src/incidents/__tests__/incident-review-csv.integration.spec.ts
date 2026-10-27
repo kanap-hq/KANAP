@@ -21,6 +21,7 @@ import { CsvImportService } from '../../common/csv/csv-import.service';
 import { CsvJsonValidators } from '../../common/csv/csv-json-validators';
 import { CsvResolverService } from '../../common/csv/csv-resolver.service';
 import { timeZoneOf } from '../../common/csv-sheet';
+import { handmadeXlsx } from '../../common/xlsx/__tests__/fixtures/handmade';
 import { ItemNumberService } from '../../common/item-number.service';
 import { KnowledgeService } from '../../knowledge/knowledge.service';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
@@ -1368,12 +1369,72 @@ async function testProjectPurposeIgnoresKnowledgeAcl() {
   });
 }
 
+/**
+ * A date-time typed in Excel imports at the time Excel shows, read in the zone its header names, as
+ * the same text typed in a CSV file: the workbook's `detected_at` cell is a serial in a
+ * `dd/mm/yyyy hh:mm` format, the CSV's is `2026-10-16 10:45:00`.
+ */
+async function testXlsxDateTimeAsItsCsvText() {
+  await withFixture(async (runner, f) => {
+    const services = createServices(runner.manager);
+    const incident = await createIncident(runner, f, services, { detected_at: '2026-10-01T00:00:00Z' });
+    const detectedAt = async (): Promise<string> => ((await runner.query(
+      `SELECT detected_at FROM incidents WHERE tenant_id = $1 AND id = $2`,
+      [f.tenantId, incident.id],
+    ))[0].detected_at as Date).toISOString();
+    const reset = () => runner.query(
+      `UPDATE incidents SET detected_at = '2026-10-01T00:00:00Z' WHERE tenant_id = $1 AND id = $2`,
+      [f.tenantId, incident.id],
+    );
+    const headers = ['ref', 'title', 'severity', 'status', 'detected_at (Europe/Paris)'];
+    const values = [`INC-${incident.item_number}`, incident.title, 'major', 'open'];
+
+    const inline = (ref: string, value: string) => `<c r="${ref}" t="inlineStr"><is><t>${value}</t></is></c>`;
+    const row = (r: number, cells: string[]) => `<row r="${r}">${cells.map((v, i) => inline(`${String.fromCharCode(65 + i)}${r}`, v)).join('')}`;
+    const workbook = handmadeXlsx({
+      numFmts: '<numFmt numFmtId="164" formatCode="dd/mm/yyyy\\ hh:mm"/>',
+      cellXfs: [0, 164],
+      // 46311.447916666664 is 2026-10-16 10:45, as Excel writes it.
+      sheetData: `${row(1, headers)}</row>${row(2, values)}<c r="E2" s="1"><v>46311.447916666664</v></c></row>`,
+    });
+    const xlsxFile = {
+      buffer: workbook,
+      fieldname: 'file',
+      originalname: 'incidents.xlsx',
+      encoding: '7bit',
+      mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      size: workbook.length,
+    } as Express.Multer.File;
+
+    const fromXlsx = await services.csv.import(
+      xlsxFile,
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      importOpts(runner, f, f.users.admin),
+    );
+    assert.deepEqual(fromXlsx.errors, []);
+    const xlsxInstant = await detectedAt();
+
+    await reset();
+    const fromCsv = await services.csv.import(
+      csvFile(`${headers.join(';')}\n${[...values, '2026-10-16 10:45:00'].join(';')}`),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      importOpts(runner, f, f.users.admin),
+    );
+    assert.deepEqual(fromCsv.errors, []);
+    const csvInstant = await detectedAt();
+
+    assert.equal(xlsxInstant, '2026-10-16T08:45:00.000Z', 'the time Excel shows, in Paris time');
+    assert.equal(xlsxInstant, csvInstant, 'the same instant as the CSV text');
+  });
+}
+
 async function run() {
   await dataSource.initialize();
   try {
     await testExportImportRoundTrip();
     await testExportFollowsTheList();
     await testDateTimesInTheExportersZone();
+    await testXlsxDateTimeAsItsCsvText();
     await testExportTimeZoneSource();
     await testEmptyCellAndDryRun();
     await testReviewTemplateFollowsTheCreatorLanguage();

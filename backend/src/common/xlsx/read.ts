@@ -14,11 +14,15 @@ import { ArchiveLimitError, BoundedArchive, openBoundedArchive } from '../archiv
  * worksheet, the shared strings and the styles. Entry names are only looked up, never written anywhere.
  */
 
-/** One cell. `number` keeps the text of `<v>` exactly as the file holds it; a date is a calendar day. */
+/**
+ * One cell. `number` keeps the text of `<v>` exactly as the file holds it. A date is a calendar day
+ * (`iso`, `YYYY-MM-DD`), plus `time` (`HH:MM:SS`, rounded to the second, no time zone: the wall-clock
+ * time Excel shows) when its format shows a time or its serial has a time of day.
+ */
 export type XlsxReadCell =
   | { kind: 'text'; value: string }
   | { kind: 'number'; value: string }
-  | { kind: 'date'; iso: string }
+  | { kind: 'date'; iso: string; time?: string }
   | { kind: 'empty' };
 
 export interface XlsxGrid {
@@ -392,12 +396,29 @@ function parseRelationships(data: Buffer, limits: XlsxReadLimits): Relationship[
 
 /** Built-in number formats that show a date or a time. */
 const BUILTIN_DATE_FORMATS = new Set([14, 15, 16, 17, 18, 19, 20, 21, 22, 45, 46, 47]);
+/** Those of them that show a time of day. */
+const BUILTIN_TIME_FORMATS = new Set([18, 19, 20, 21, 22, 45, 46, 47]);
+
+/** How a cell style shows a number: as itself, as a day, or as a day with a time of day. */
+type DateStyle = 'none' | 'date' | 'dateTime';
 
 /**
  * Whether a custom number format shows a date: a `d`, `m` or `y` outside quotes, escapes and brackets.
  * An elapsed time (`[h]:mm`, `[mm]:ss`) is a duration, not a date.
  */
 export function isDateFormatCode(code: string): boolean {
+  const plain = plainFormatText(code);
+  return plain !== null && /[dmy]/i.test(plain);
+}
+
+/** Whether a custom date format also shows a time of day: an `h` or an `s` outside quotes, escapes and brackets. */
+export function isDateTimeFormatCode(code: string): boolean {
+  const plain = plainFormatText(code);
+  return plain !== null && /[dmy]/i.test(plain) && /[hs]/i.test(plain);
+}
+
+/** The letters of a format code outside quotes, escapes and brackets; null for an elapsed time. */
+function plainFormatText(code: string): string | null {
   let plain = '';
   for (let i = 0; i < code.length; i += 1) {
     const ch = code[i];
@@ -409,17 +430,17 @@ export function isDateFormatCode(code: string): boolean {
     } else if (ch === '[') {
       const end = code.indexOf(']', i + 1);
       const inside = code.slice(i + 1, end < 0 ? code.length : end);
-      if (/^(h+|m+|s+)$/i.test(inside)) return false;
+      if (/^(h+|m+|s+)$/i.test(inside)) return null;
       i = end < 0 ? code.length : end;
     } else {
       plain += ch;
     }
   }
-  return /[dmy]/i.test(plain);
+  return plain;
 }
 
-/** For each `cellXfs` entry (the `s` of a cell), whether its number format shows a date. */
-function parseStyles(data: Buffer, limits: XlsxReadLimits): boolean[] {
+/** For each `cellXfs` entry (the `s` of a cell), whether its number format shows a date, and a time. */
+function parseStyles(data: Buffer, limits: XlsxReadLimits): DateStyle[] {
   const customFormats = new Map<number, string>();
   const formatOfStyle: number[] = [];
   let inCellXfs = false;
@@ -447,9 +468,10 @@ function parseStyles(data: Buffer, limits: XlsxReadLimits): boolean[] {
     },
     text() {},
   }, limits);
-  return formatOfStyle.map((id) => {
+  return formatOfStyle.map((id): DateStyle => {
     const custom = customFormats.get(id);
-    return custom !== undefined ? isDateFormatCode(custom) : BUILTIN_DATE_FORMATS.has(id);
+    if (custom !== undefined) return isDateTimeFormatCode(custom) ? 'dateTime' : isDateFormatCode(custom) ? 'date' : 'none';
+    return BUILTIN_TIME_FORMATS.has(id) ? 'dateTime' : BUILTIN_DATE_FORMATS.has(id) ? 'date' : 'none';
   });
 }
 
@@ -507,6 +529,20 @@ export function serialToIsoDay(serial: number, date1904: boolean): string | null
   return day.toISOString().slice(0, 10);
 }
 
+/**
+ * The day of a date serial (`serialToIsoDay`) and its time of day, rounded to the second and kept
+ * within the day (a fraction that rounds to midnight is 23:59:59). `time` is set when `showsTime` or
+ * when the serial has a time of day; null when the serial is no day.
+ */
+export function serialToDateTime(serial: number, date1904: boolean, showsTime: boolean): { iso: string; time?: string } | null {
+  const iso = serialToIsoDay(serial, date1904);
+  if (!iso) return null;
+  const seconds = Math.min(Math.round((serial - Math.floor(serial)) * 86_400), 86_399);
+  if (seconds === 0 && !showsTime) return { iso };
+  const two = (value: number) => String(value).padStart(2, '0');
+  return { iso, time: `${two(Math.floor(seconds / 3600))}:${two(Math.floor(seconds / 60) % 60)}:${two(seconds % 60)}` };
+}
+
 // ---------------------------------------------------------------------------------------------------
 // Sheet
 
@@ -531,7 +567,7 @@ function isoDayOf(text: string): string | null {
 
 interface SheetContext {
   sharedStrings: readonly string[];
-  dateStyles: readonly boolean[];
+  dateStyles: readonly DateStyle[];
   date1904: boolean;
   limits: XlsxReadLimits;
 }
@@ -613,9 +649,10 @@ function parseSheet(data: Buffer, context: SheetContext): XlsxReadCell[][] {
         if (value === null || value.trim() === '') return { kind: 'empty' };
         const text = value.trim();
         if (!NUMBER_TEXT.test(text)) throw invalid();
-        if (dateStyles[cellStyle]) {
-          const iso = serialToIsoDay(Number(text), date1904);
-          if (iso) return { kind: 'date', iso };
+        const style = dateStyles[cellStyle] ?? 'none';
+        if (style !== 'none') {
+          const day = serialToDateTime(Number(text), date1904, style === 'dateTime');
+          if (day) return { kind: 'date', ...day };
         }
         return { kind: 'number', value: text };
       }
