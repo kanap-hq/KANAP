@@ -239,7 +239,7 @@ export default function ReportLayout({
             </Stack>
             <Stack direction="row" spacing={1} alignItems="center">
               {actions}
-              {tableExport && <ReportExportButton {...tableExport} disabled={busy} />}
+              {tableExport && <ReportExportButton {...tableExport} disabled={busy || !!tableExport.disabled} />}
               {!tableExport && onExportTableCsv && (
                 <Tooltip title={t('reports.shared.exportTableCsv')}>
                   <span>

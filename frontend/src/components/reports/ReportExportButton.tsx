@@ -24,6 +24,8 @@ export type ReportTableExport = {
   tables?: ReadonlyArray<{ key: string; label: string }>;
   /** The name of the file when the server gives none. */
   fileBase: string;
+  /** The screen no longer describes what the export would write (an operation that has run). */
+  disabled?: boolean;
 };
 
 export default function ReportExportButton({
@@ -32,7 +34,7 @@ export default function ReportExportButton({
   tables,
   fileBase,
   disabled = false,
-}: ReportTableExport & { disabled?: boolean }) {
+}: ReportTableExport) {
   const { t, i18n } = useTranslation(['ops']);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [remembered, setRemembered] = useState<ExportFormat>(readExportFormat);

@@ -453,6 +453,13 @@ export const DATA_ACCESS_RESERVED_ROUTES: DataAccessReservedEntry[] = [
     },
   },
   {
+    // The previews of the column reset and the budget copy, as files: reserved with the operations.
+    file: 'spend/budget-operations-export/budget-operations-export.controller.ts',
+    controller: 'BudgetOperationsExportController',
+    reserved: ['clearColumn'],
+    allowed: {},
+  },
+  {
     file: 'contracts/contracts.controller.ts',
     controller: 'ContractsController',
     reserved: ['bulkDelete', 'delete', 'deleteImpact', 'import'],

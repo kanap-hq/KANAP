@@ -39,6 +39,8 @@ import { FreezeModule } from '../freeze/freeze.module';
 import { ChargebackReportService } from './chargeback-report.service';
 import { ChargebackReportController } from './chargeback-report.controller';
 import { BudgetReportExportController } from './reports/budget-report-export.controller';
+import { BudgetOperationsExportController } from './budget-operations-export/budget-operations-export.controller';
+import { BudgetOperationsExportService } from './budget-operations-export/budget-operations-export.service';
 import { BudgetReportExportService } from './reports/budget-report-export.service';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import { CurrencyModule } from '../currency/currency.module';
@@ -80,7 +82,7 @@ import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
   // The CAPEX lines live in the same tables (plan planning/budget-unifie.md, lot Z1): their routes
   // are aliases on the same services, for the lines of nature `capex`.
   controllers: [
-    BudgetLinesController, SpendItemsController, SpendVersionsController, SpendTasksController, AllocationRulesController, TasksController, ChargebackReportController, BudgetReportExportController,
+    BudgetLinesController, SpendItemsController, SpendVersionsController, SpendTasksController, AllocationRulesController, TasksController, ChargebackReportController, BudgetReportExportController, BudgetOperationsExportController,
     CapexItemsController, CapexVersionsController, CapexTasksController,
   ],
   providers: [
@@ -98,6 +100,7 @@ import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
     AllocationRulesService,
     ChargebackReportService,
     BudgetReportExportService,
+    BudgetOperationsExportService,
     SpendItemContactsService,
     UserTimeAggregateService,
     CapexItemsService,

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -136,8 +136,6 @@ export default function BudgetColumnResetPage() {
     },
   ], [column, columnLabel, year, locale, theme, t, scope]);
 
-  const gridApiRef = useRef<any>(null);
-
   const handleClearClick = async () => {
     if (!column) return;
     const confirmed = await dialogs.confirm({
@@ -244,7 +242,12 @@ export default function BudgetColumnResetPage() {
           {isProcessing ? t('operations.columnReset.processing') : t('operations.columnReset.clearColumn')}
         </Button>
       }
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.()}
+      // The grid as the server writes it: CSV or Excel, once a column is chosen.
+      tableExport={column ? {
+        url: '/budget-lines/budget-operations/clear-column/export',
+        params: { scope, year, column },
+        fileBase: `column-reset-${scope}-${year}-${column}`,
+      } : undefined}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
         {columnFrozen && (
@@ -292,7 +295,6 @@ export default function BudgetColumnResetPage() {
                     sortModel: [{ colId: 'currentValue', sort: 'desc' }],
                   },
                 }}
-                onGridReady={(e) => { gridApiRef.current = e.api; }}
                 domLayout="autoHeight"
               />
             </Box>
