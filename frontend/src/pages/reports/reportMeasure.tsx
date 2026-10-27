@@ -85,8 +85,6 @@ export type MeasureText = {
   axisTitle: { text: string } | undefined;
   /** A downloaded file's name (no extension): FTE adds `-fte`. */
   fileName: (base: string) => string;
-  /** The table's CSV export parameters: FTE names the file after the chart, amounts keep the grid's default. */
-  csvParams: (base: string) => { fileName: string } | undefined;
 };
 
 /** The words and formats of a report for its measure. */
@@ -102,7 +100,6 @@ export function useMeasureText(measure: ReportMeasure): MeasureText {
         chartTitle: (title) => title,
         axisTitle: undefined,
         fileName: (base) => base,
-        csvParams: () => undefined,
       };
     }
     return {
@@ -112,7 +109,6 @@ export function useMeasureText(measure: ReportMeasure): MeasureText {
       chartTitle: (title) => t('reports.measure.chartTitleFte', { title }),
       axisTitle: { text: t('reports.measure.fte') },
       fileName: (base) => `${base}-fte`,
-      csvParams: (base) => ({ fileName: `${base}-fte.csv` }),
     };
   }, [measure, locale, t]);
 }

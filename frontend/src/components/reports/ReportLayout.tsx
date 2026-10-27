@@ -157,7 +157,10 @@ export default function ReportLayout({
   subtitle?: React.ReactNode;
   filters?: React.ReactNode;
   actions?: React.ReactNode;
-  /** A table CSV the browser writes itself (the reports not moved to `tableExport` yet). */
+  /**
+   * A table CSV the browser writes itself: only the operations pages that share this layout (copy budget,
+   * column reset, master data copy). Every report passes `tableExport`.
+   */
   onExportTableCsv?: () => void;
   /** The table export the server builds, CSV or Excel (ReportExportButton). Takes the place of `onExportTableCsv`. */
   tableExport?: ReportTableExport;
