@@ -104,11 +104,12 @@
     "choosePlan": "Choose a plan",
     "support": {
       "title": "Support",
-      "contract": "Under a support contract: write to {{email}}",
-      "included": "Email support is included: write to {{email}}",
+      "contract": "If you have a support contract, write to {{email}}",
+      "included": "Email support: write to {{email}}",
       "copy": "Copy the details for support",
+      "otherwise": "Otherwise:",
       "copied": "Copied",
-      "discussions": "Otherwise, ask your question in {{link}}",
+      "discussions": "Ask your question in {{link}}",
       "issues": "Report a problem in {{link}}",
       "offer": "To get a support contract, see {{link}}",
       "offerLink": "the support offer"

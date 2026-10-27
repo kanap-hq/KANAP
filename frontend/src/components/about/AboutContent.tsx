@@ -97,10 +97,15 @@ export default function AboutContent({ onNavigate }: { onNavigate?: () => void }
   return (
     <Stack spacing={2}>
       <Stack spacing={0.5}>
-        {versionKnown && <Typography variant="body2">{t('about.version', { version: config.version })}</Typography>}
-        <Typography variant="body2">
-          {isOnPremise ? t('about.deploymentOnPremise') : t('about.deploymentCloud')}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: 0.5 }}>
+          <Box component="img" src="/icon-192.png" alt="KANAP" sx={{ width: 40, height: 40, flexShrink: 0 }} />
+          <Box>
+            {versionKnown && <Typography variant="body2">{t('about.version', { version: config.version })}</Typography>}
+            <Typography variant="body2">
+              {isOnPremise ? t('about.deploymentOnPremise') : t('about.deploymentCloud')}
+            </Typography>
+          </Box>
+        </Box>
         {showTrial && (
           <Typography variant="body2">
             {t('about.trialDaysLeft', { count: trialDays })}
@@ -144,19 +149,28 @@ export default function AboutContent({ onNavigate }: { onNavigate?: () => void }
               {copied ? t('about.support.copied') : t('about.support.copy')}
             </Button>
           </Box>
-          <Sentence
-            text={t('about.support.discussions', { link: TOKEN })}
-            link={<ExternalLink href={DISCUSSIONS_URL}>{DISCUSSIONS_LABEL}</ExternalLink>}
-          />
-          <Sentence
-            text={t('about.support.issues', { link: TOKEN })}
-            link={<ExternalLink href={ISSUES_URL}>{ISSUES_LABEL}</ExternalLink>}
-          />
           {isOnPremise && (
-            <Sentence
-              text={t('about.support.offer', { link: TOKEN })}
-              link={<ExternalLink href={supportOfferUrl(locale)}>{t('about.support.offerLink')}</ExternalLink>}
-            />
+            <>
+              <Typography variant="body2" sx={{ pt: 0.5 }}>{t('about.support.otherwise')}</Typography>
+              <Box component="ul" sx={{ m: 0, pl: 2.5, '& > li': { typography: 'body2' } }}>
+                <li>
+                  <Sentence
+                    text={t('about.support.discussions', { link: TOKEN })}
+                    link={<ExternalLink href={DISCUSSIONS_URL}>{DISCUSSIONS_LABEL}</ExternalLink>}
+                  />
+                </li>
+                <li>
+                  <Sentence
+                    text={t('about.support.issues', { link: TOKEN })}
+                    link={<ExternalLink href={ISSUES_URL}>{ISSUES_LABEL}</ExternalLink>}
+                  />
+                </li>
+              </Box>
+              <Sentence
+                text={t('about.support.offer', { link: TOKEN })}
+                link={<ExternalLink href={supportOfferUrl(locale)}>{t('about.support.offerLink')}</ExternalLink>}
+              />
+            </>
           )}
         </Stack>
       </Box>

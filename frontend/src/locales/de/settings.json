@@ -104,11 +104,12 @@
     "choosePlan": "Tarif wählen",
     "support": {
       "title": "Support",
-      "contract": "Mit Supportvertrag: Schreiben Sie an {{email}}",
-      "included": "E-Mail-Support ist inklusive: Schreiben Sie an {{email}}",
+      "contract": "Wenn Sie einen Supportvertrag haben, schreiben Sie an {{email}}",
+      "included": "E-Mail-Support: Schreiben Sie an {{email}}",
       "copy": "Angaben für den Support kopieren",
+      "otherwise": "Andernfalls:",
       "copied": "Kopiert",
-      "discussions": "Andernfalls stellen Sie Ihre Frage in {{link}}",
+      "discussions": "Stellen Sie Ihre Frage in {{link}}",
       "issues": "Melden Sie ein Problem in {{link}}",
       "offer": "Für einen Supportvertrag siehe {{link}}",
       "offerLink": "das Support-Angebot"

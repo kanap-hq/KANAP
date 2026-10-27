@@ -95,7 +95,7 @@ describe('AboutContent', () => {
     expect(screen.getByText('Deployment: on-premise')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Upgrade guide' })).toHaveAttribute('href', 'https://doc.kanap.net/fr/on-premise/operations/');
     expect(screen.getByRole('link', { name: 'Documentation' })).toHaveAttribute('href', 'https://doc.kanap.net/fr/');
-    expect(screen.getByText(/Under a support contract: write to/)).toBeInTheDocument();
+    expect(screen.getByText(/If you have a support contract, write to/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'the support offer' })).toHaveAttribute('href', 'https://kanap.net/fr/offer');
     expect(screen.getByRole('link', { name: 'GitHub Discussions' })).toHaveAttribute('href', 'https://github.com/kanap-hq/KANAP/discussions');
     expect(screen.getByRole('link', { name: 'GitHub Issues' })).toHaveAttribute('href', 'https://github.com/kanap-hq/KANAP/issues');
@@ -107,16 +107,16 @@ describe('AboutContent', () => {
     expect(screen.getByRole('link', { name: 'the support offer' })).toHaveAttribute('href', 'https://kanap.net/offer');
   });
 
-  it('in the cloud, says e-mail support is included and shows no upgrade guide nor offer', () => {
+  it('in the cloud, points to e-mail support only, with no upgrade guide, offer or GitHub links', () => {
     renderContent();
 
     expect(screen.getByText('Deployment: cloud')).toBeInTheDocument();
-    expect(screen.getByText(/Email support is included: write to/)).toBeInTheDocument();
-    expect(screen.queryByText(/Under a support contract/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Email support: write to/)).toBeInTheDocument();
+    expect(screen.queryByText(/If you have a support contract/)).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Upgrade guide' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'the support offer' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'GitHub Discussions' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'GitHub Issues' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'GitHub Discussions' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'GitHub Issues' })).not.toBeInTheDocument();
   });
 
   it('shows the trial days only during a running trial, with a plan link for billing admins', () => {
