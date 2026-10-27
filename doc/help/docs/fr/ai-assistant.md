@@ -136,6 +136,37 @@ Quand vous demandez une modification que votre rôle ne permet pas, Plaid nomme 
 
 Plaid ne fait que les modifications que vos écrans vous permettent, sur les fiches que vous pouvez y atteindre. Avec le droit de contribuer aux projets, vous pouvez faire changer par Plaid l'objectif d'un projet et ses liens vers des applications, des actifs et des lignes budgétaires. Le droit de contribuer aux demandes couvre les mêmes liens sur les demandes. Un Business Contributor ne fait ces modifications que sur les projets et les demandes auxquels il participe. Lier une fiche demande le droit de lire son module. Renommer un projet ou changer ses autres champs demande le droit de modifier les projets, comme sur la page du projet.
 
+### Supprimer une fiche { #deleting-a-record }
+
+Plaid supprime une fiche à la fois : une tâche, un contact, un site, un document, une ligne budgétaire (OPEX ou CAPEX), une connexion ou une interface. Chaque suppression arrive en aperçu, que vous approuvez. Une suppression ne s'annule pas.
+
+L'aperçu liste ce qui part avec la fiche, comme les commentaires, les temps saisis, les pièces jointes, les versions et les liens. Il ne nomme que ce que vous pouvez lire et compte le reste parmi les autres liens. Si la fiche change entre l'aperçu et votre approbation, KANAP refuse la suppression. Redemandez-la à Plaid pour obtenir un nouvel aperçu.
+
+Une seule suppression attend votre approbation à la fois dans une conversation. Quand vous demandez de supprimer plusieurs fiches, Plaid les prépare l'une après l'autre.
+
+Plaid demande le niveau que demande l'écran :
+
+| Fiche | Niveau |
+|---|---|
+| Tâche | Administrateur des tâches |
+| Contact | Administrateur des contacts |
+| Site | Membre des sites |
+| Document | Administrateur de la base de connaissances, avec le droit d'écrire dans sa bibliothèque |
+| Ligne budgétaire | Administrateur du budget |
+| Connexion | Membre de l'infrastructure |
+| Interface | Administrateur des applications |
+
+Quand votre accès aux données est limité à certaines sociétés ou à certains centres de coûts, Plaid ne supprime ni contacts ni lignes budgétaires, comme les écrans.
+
+Plaid refuse ce que les écrans refusent :
+
+- Une tâche qu'une demande désigne comme son origine
+- Une ligne budgétaire avec des montants dans une colonne gelée
+- Une interface avec des liaisons, sauf si vous demandez de supprimer ses liaisons avec elle
+- Un document intégré à une fiche. Il part quand sa fiche est supprimée.
+
+Les autres fiches, comme les applications, les actifs, les contrats, les projets, les demandes, les incidents et les technologies, se suppriment sur leurs écrans. Plaid le dit et nomme l'écran. Les assistants connectés par MCP ne font que lire.
+
 ### Ce que Plaid ne lit pas { #what-plaid-does-not-read }
 
 Plaid ne lit pas :
@@ -175,7 +206,7 @@ Pour les aperçus de modification en attente, le panneau propose deux boutons :
 
 Un aperçu, et le message que Plaid écrit après votre approbation ou votre rejet, sont dans la langue de votre profil, avec les noms de champs et les valeurs des écrans. Une ligne budgétaire demandée avec un montant arrive en un seul aperçu : une seule approbation crée la ligne, sa version budgétaire de l'année et le montant.
 
-Quand vous demandez une modification que Plaid ne peut pas faire, comme supprimer une fiche ou changer l'état d'une vulnérabilité, il le dit et nomme l'écran où vous pouvez la faire. Il ne prépare aucune autre modification à sa place.
+Quand vous demandez une modification que Plaid ne peut pas faire, comme supprimer un projet ou changer l'état d'une vulnérabilité, il le dit et nomme l'écran où vous pouvez la faire. Il ne prépare aucune autre modification à sa place.
 
 Rien de ce qui modifie les données de KANAP n'est appliqué en silence. L'aperçu est le point de contrôle.
 
