@@ -76,6 +76,8 @@ export interface ReportTableLabels {
   totalFte: string;
   /** `reports.columns.item` */
   item: string;
+  /** `opex.columns.reference`: the business reference of a budget line (`BL-12`). */
+  reference: string;
   /** `reports.columns.shareOfTotal` */
   shareOfTotal: string;
   /** `reports.columns.delta` */
@@ -264,19 +266,26 @@ export interface TopLinesTableParams {
   measure: ReportMeasure;
 }
 
+/** A budget line's business reference (`BL-12`), from the number the aggregate groups it on. */
+export function budgetLineReference(itemNumber: number | null | undefined): string | null {
+  return itemNumber == null ? null : `BL-${itemNumber}`;
+}
+
 /**
- * The top lines (server order, largest first) with their share of the total of every kept line, as a
- * fraction. The total and the top's sum stay outside the table (`readTopItems`).
+ * The top lines (server order, largest first), each named by its business reference and its name, with
+ * their share of the total of every kept line, as a fraction. The total and the top's sum stay outside
+ * the table (`readTopItems`).
  */
 export function topLinesTable(
   p: TopLinesTableParams,
   result: AggregateResult | undefined,
-  labels: Pick<ReportTableLabels, 'columnNames' | 'columnFte' | 'item' | 'shareOfTotal'>,
+  labels: Pick<ReportTableLabels, 'columnNames' | 'columnFte' | 'item' | 'reference' | 'shareOfTotal'>,
 ): ReportTableData {
   const { processed, totalMetric } = readTopItems(result, p.measure);
   const total = totalMetric ?? 0;
   return {
     columns: [
+      { key: 'reference', header: labels.reference, kind: 'text' },
       { key: 'name', header: labels.item, kind: 'text' },
       { key: 'value', header: `${measureColumnName(labels, p.metric, p.measure)} (${p.year})`, kind: measureKind(p.measure) },
       { key: 'pct_of_total', header: labels.shareOfTotal, kind: 'percent' },
@@ -284,6 +293,7 @@ export function topLinesTable(
     rows: processed.map((row) => ({
       id: row.id,
       itemNumber: row.itemNumber,
+      reference: budgetLineReference(row.itemNumber),
       name: row.name,
       value: row.value,
       pct_of_total: total > 0 ? row.value / total : 0,

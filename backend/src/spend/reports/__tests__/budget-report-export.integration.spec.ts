@@ -88,6 +88,7 @@ const LABELS: T.ReportTableLabels = {
   total: L.total,
   totalFte: L.totalFte,
   item: L.item,
+  reference: L.reference,
   shareOfTotal: L.shareOfTotal,
   delta: L.delta,
   pctIncrease: L.pctIncrease,
@@ -420,7 +421,7 @@ async function testTables(runner: QueryRunner, f: Fixture): Promise<void> {
     const fteTopFile = await exportFile(svc.controller, m, f, admin, 'top-lines', { measure: 'fte', year: String(Y), metric: 'budget', top: '10', format: 'csv', language: 'en' });
     const csv = fteTopFile.body().toString('utf8').replace(/^﻿/, '').trim().split(/\r?\n/);
     assert.equal(csv.length, 1 + fteTop.rows.length, 'CSV: header and the three lines');
-    assert.equal(csv[0], 'Line,Budget FTE (' + Y + '),Share of total');
+    assert.equal(csv[0], 'Ref,Line,Budget FTE (' + Y + '),Share of total');
   });
   console.log('  comparison, columns compare (grouped, flat FTE) and top lines (amount, FTE) equal the screen tables: OK');
 }

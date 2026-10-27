@@ -20,6 +20,7 @@ export function useReportTableLabels(): ReportTableLabels {
     total: t('reports.columns.total'),
     totalFte: t('reports.measure.totalFte'),
     item: t('reports.columns.item'),
+    reference: t('opex.columns.reference'),
     shareOfTotal: t('reports.columns.shareOfTotal'),
     delta: t('reports.columns.delta'),
     pctIncrease: t('reports.columns.pctIncrease'),
