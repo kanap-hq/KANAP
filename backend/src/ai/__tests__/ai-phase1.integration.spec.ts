@@ -4057,6 +4057,8 @@ async function testAiQueryExecutorSpendItemsExposeRelativeYearlyTotals() {
   const spendItems = {
     // The footer totals of the list (`amount_totals`), not under test here.
     summaryTotals: async () => ({ reportingCurrency: 'EUR', fxMissing: [] }),
+    // The line totals (`y_budget_staff_cost`...), not under test here.
+    summaryAggregate: async () => ({ total: { count: 0, values: {}, unknown: {} } }),
     summary: async (query: any) => {
       summaryCalls.push(query);
       return {

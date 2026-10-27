@@ -66,6 +66,11 @@ export type AiFilterFieldDef = {
   lookupEntity?: AiQueryEntityType;
   examples?: string[];
   doesNotAccept?: string[];
+  /**
+   * A family of generated keys (`<year>_<column>_staff_cost`): describe_entity_filters lists the
+   * family once, with its keys, instead of one entry per key.
+   */
+  family?: string;
 };
 
 export type AiAggregateGroupDef = {
@@ -104,6 +109,42 @@ export type AiEntityFilterRegistry = {
     direction: 'asc' | 'desc';
   };
   aggregate: AiAggregateConfig;
+  /** Metrics aggregate_entities computes that are not fields (budget lines: the cost per FTE and the day rate). */
+  metricFamilies?: AiMetricFamilyDescription[];
+};
+
+/**
+ * The staff figures of a group of budget lines in one year and column, as the "Cost per FTE"
+ * report shows them: the people and days lines' FTE and cost, the cost per FTE, the days the
+ * per-day lines buy, their cost and the day rate. Amounts in the reporting currency.
+ */
+export type AiBudgetStaffFigures = {
+  staff_fte: number | null;
+  staff_cost: number | null;
+  cost_per_fte: number | null;
+  days: number | null;
+  day_cost: number | null;
+  day_rate: number | null;
+};
+
+/** A family of aggregate-only metrics, as describe_entity_filters lists it. */
+export type AiMetricFamilyDescription = {
+  family: string;
+  description: string;
+  metrics: string[];
+};
+
+/** A family of generated fields, as describe_entity_filters lists it: one entry for its keys. */
+export type AiFieldFamilyDescription = {
+  family: string;
+  type: AiFilterFieldType;
+  description: string;
+  accepted_value_kind: string;
+  examples: string[];
+  sortable: boolean;
+  groupable: boolean;
+  aggregable: boolean;
+  fields: string[];
 };
 
 /** A set filter given values its field does not take, with the ones it does. */
@@ -131,8 +172,12 @@ export type AiAmountTotals = {
   records: number;
   /** Budget lines: the reporting currency of every value. Contracts: null (one row per currency). */
   currency: string | null;
-  /** Budget lines: each amount field (`y_budget`, `y_minus1_actual`...) summed over the records. */
-  values?: Record<string, number>;
+  /**
+   * Budget lines: each amount field (`y_budget`, `y_minus1_actual`...) and each line total
+   * (`y_budget_staff_cost`, `y_budget_staff_fte`, `y_budget_day_cost`, `y_budget_days`) summed over
+   * the records; a staff FTE or days total is null when no record has one.
+   */
+  values?: Record<string, number | null>;
   /** Contracts: the yearly amounts summed per contract currency. */
   by_currency?: Array<{ currency: string | null; yearly_amount: number | null; contracts: number; without_amount: number }>;
   /** Budget lines: the currencies and years without an exchange rate, left out of `values`. */
@@ -197,12 +242,24 @@ export type AiAggregateResult = {
   data_access_note?: string;
   group_by: string;
   metric?: string | null;
-  function?: 'count' | 'sum' | 'avg' | 'min' | 'max';
+  /** `ratio`: a budget ratio metric (cost per FTE, day rate), computed by the server. */
+  function?: 'count' | 'sum' | 'avg' | 'min' | 'max' | 'ratio';
   groups: Array<
     | { key: string | null; count: number }
     // `unknown`: FTE metrics only, the lines of the group without an FTE (left out of the value).
     | { key: string | null; value: number | string | null; unknown?: number }
+    | ({ key: string | null; count: number; value: number | null } & AiBudgetStaffFigures)
   >;
+  /**
+   * Budget lines with a metric: the same measure over every line the filters keep (all groups
+   * together), computed by the server. A ratio's overall figures are the ratios of the totals.
+   */
+  overall?: { count: number; value: number | null; unknown?: number } & Partial<AiBudgetStaffFigures> & {
+    fte_without_line_detail?: number;
+    staff_cost_not_in_day_rate?: number;
+  };
+  /** Budget ratio metrics: how the figures are computed and what they leave out. */
+  ratio_note?: string;
   total: number;
   returned: number;
   truncated: boolean;
@@ -251,7 +308,11 @@ export type AiFilterDescription = {
 export type AiFilterDescriptionResult = {
   entity_type: AiQueryEntityType;
   fields: AiFilterDescription[];
-  /** Every `sort.field` query_entities takes for this family (the sortable fields, label, created_at, updated_at...). */
+  /** Generated fields listed once per family (budget lines: the staff cost, staff FTE, day cost and days of each year and column). */
+  field_families?: AiFieldFamilyDescription[];
+  /** Metrics of aggregate_entities that are not fields (budget lines: the cost per FTE and the day rate). */
+  metric_families?: AiMetricFamilyDescription[];
+  /** Every `sort.field` query_entities takes for this family (the sortable fields, label, created_at, updated_at...), the keys of `field_families` aside. */
   sort_fields: string[];
   default_sort: { field: string; direction: 'asc' | 'desc' };
   total: number;

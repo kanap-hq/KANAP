@@ -64,7 +64,7 @@ import { aiDataAccessNote } from './ai-data-access-note.util';
 import { coveredRecordsText, loadContractCoverage } from './ai-contract-coverage';
 import { hiddenContractLineCount } from '../../contracts/contract-relations';
 import { AiReadProbe, analyticsAxisFields, resolveAiEntityRegistry } from './registries';
-import { budgetFteFields } from './registries/budget-amount-fields';
+import { budgetFteFields, budgetLineTotalFieldsOf, budgetPairOfKey, isBudgetMoneyKey } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
 import { entityNotFound, isUuid, resolveAiEntityReference } from '../ai-entity-reference.util';
 import { AiPolicyService } from '../ai-policy.service';
@@ -1431,9 +1431,63 @@ export class AiQueryExecutor {
     records: number,
     rows: any[],
     anchorYear: number,
+    named: string[],
   ): Promise<{ amount_totals: AiAmountTotals; page_amount_totals: AiAmountTotals }> {
     const amountTotals = await this.budgetAmountTotals(context, entityType, query, records);
-    return { amount_totals: amountTotals, page_amount_totals: budgetPageAmountTotals(rows, anchorYear, amountTotals.currency) };
+    const pageTotals = budgetPageAmountTotals(rows, anchorYear, amountTotals.currency);
+    // The line totals (staff cost and FTE, day cost, days) of every line kept, and of the page's lines:
+    // the five columns of the current year and the years and columns the filters or the sort name
+    // (each year read costs a statement's worth of joins; aggregate_entities sums any other).
+    const pairs = new Set(SUMMARY_COLUMNS.map((column) => `y_${column.ai}`));
+    for (const key of named) {
+      const pair = budgetPairOfKey(key);
+      if (pair) pairs.add(pair);
+    }
+    const { page: _page, limit: _limit, sort: _sort, years: _years, ...listState } = query;
+    const ids = rows.map((row) => row?.id).filter((id): id is string => typeof id === 'string');
+    // One after the other: both read on the request's connection.
+    const all = await this.budgetLineTotals(context, entityType, listState, pairs);
+    const page = ids.length
+      ? await this.budgetLineTotals(context, entityType, { ...listState, filters: { ...(listState.filters ?? {}), id: { filterType: 'set', values: ids } } }, pairs)
+      : Object.fromEntries(budgetLineTotalFieldsOf(pairs).map((field) => [field.ai, isBudgetMoneyKey(field.ai) ? 0 : null]));
+    const note = ' The staff cost, staff FTE, day cost and days (`<year>_<column>_staff_cost`...) are summed for the current year\'s columns '
+      + 'and the years and columns the filters or the sort name; aggregate_entities sums the others. '
+      + 'A cost per FTE or a day rate comes from aggregate_entities (`<year>_<column>_cost_per_fte`, `_day_rate`), never from dividing these totals.';
+    amountTotals.values = { ...amountTotals.values, ...all };
+    amountTotals.note += note;
+    pageTotals.values = { ...pageTotals.values, ...page };
+    pageTotals.note += note;
+    return { amount_totals: amountTotals, page_amount_totals: pageTotals };
+  }
+
+  /**
+   * The line totals of every line of a list state (`<slot>_<column>_<total>`: staff cost, staff FTE,
+   * day cost, days), summed by the list engine as the "Cost per FTE" report sums them: amounts exact
+   * to the cent in the reporting currency (0 without line detail), FTE and days null when no line has one.
+   */
+  private async budgetLineTotals(
+    context: AiExecutionContextWithManager,
+    entityType: 'spend_items' | 'capex_items',
+    listState: Record<string, any>,
+    pairs: ReadonlySet<string>,
+  ): Promise<Record<string, number | null>> {
+    const service = entityType === 'spend_items' ? this.spendItems : this.capexItems;
+    const fields = budgetLineTotalFieldsOf(pairs);
+    const values: Record<string, number | null> = {};
+    // One statement per 50 sums: the engine takes at most 60 measures without group keys.
+    for (let start = 0; start < fields.length; start += 50) {
+      const chunk = fields.slice(start, start + 50);
+      const result = await service.summaryAggregate(
+        listState,
+        { groupBy: [], measures: chunk.map((field, i) => ({ id: `m${i}`, fn: 'sum' as const, field: field.grid })) },
+        { manager: context.manager },
+      );
+      chunk.forEach((field, i) => {
+        const value = result.total.values[`m${i}`] ?? null;
+        values[field.ai] = value == null && isBudgetMoneyKey(field.ai) ? 0 : value;
+      });
+    }
+    return values;
   }
 
   /**
@@ -1681,7 +1735,7 @@ export class AiQueryExecutor {
         complete: isCompleteQueryResult(resultPage, truncated),
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
-        ...await this.budgetTotals(context, 'capex_items', scoped.query, result.total ?? 0, result.items || [], anchorYear),
+        ...await this.budgetTotals(context, 'capex_items', scoped.query, result.total ?? 0, result.items || [], anchorYear, [...Object.keys(input.filters ?? {}), sort.applied.field]),
         scope: null,
       };
     }
@@ -1710,7 +1764,7 @@ export class AiQueryExecutor {
         complete: isCompleteQueryResult(resultPage, truncated),
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
-        ...await this.budgetTotals(context, 'spend_items', scoped.query, result.total ?? 0, result.items || [], anchorYear),
+        ...await this.budgetTotals(context, 'spend_items', scoped.query, result.total ?? 0, result.items || [], anchorYear, [...Object.keys(input.filters ?? {}), sort.applied.field]),
         scope: null,
       };
     }

@@ -53,6 +53,7 @@ import {
   AiAggregateMetricDef,
   AiAggregateMetricType,
   AiAggregateResult,
+  AiBudgetStaffFigures,
   AiDateFilterValue,
   AiEntityFilterRegistry,
   AiFilterValue,
@@ -60,7 +61,8 @@ import {
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { resolveAiEntityRegistry } from './registries';
 import { COMPANY_AGGREGATE_METRIC_YEAR_SQL } from './registries/companies.registry';
-import { resolveFteField } from '../../spend/spend-summary.builder';
+import { isMoneyVariant, resolveFteField, resolveFteVariantField } from '../../spend/spend-summary.builder';
+import { BudgetRatioMetric, isBudgetMoneyKey, resolveBudgetRatioMetric } from './registries/budget-amount-fields';
 import type { AggregateSpec } from '../../common/list-engine/list-aggregate';
 import type { FxMissingPair } from '../../spend/budget-list/budget-list.service';
 import { trailingDigits } from '../../common/text-scan';
@@ -463,6 +465,37 @@ function buildMetricAggregateExpression(fn: AiAggregateFunction, expression: str
 }
 
 type BudgetValueGroup = { key: string | null; value: number | null; unknown?: number };
+type BudgetOverall = NonNullable<AiAggregateResult['overall']>;
+type BudgetRatioGroup = { key: string | null; count: number; value: number | null } & AiBudgetStaffFigures;
+
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
+/**
+ * A group's staff figures, as the "Cost per FTE" report reads them (`costPerFteCell`,
+ * `dailyRateCell` in `spend/reports/shared/reportAggregates.ts`): no FTE (no line detail) is no
+ * cost either; a ratio is null when its divisor is null or 0, rounded to the cent.
+ */
+function budgetStaffFigures(values: Record<string, number | null>): AiBudgetStaffFigures {
+  const staffFte = values.staff_fte ?? null;
+  const days = values.days ?? null;
+  const staffCost = staffFte == null ? null : values.staff_cost ?? 0;
+  const dayCost = days == null ? null : values.day_cost ?? 0;
+  return {
+    staff_fte: staffFte,
+    staff_cost: staffCost,
+    cost_per_fte: staffFte ? round2(staffCost! / staffFte) : null,
+    days,
+    day_cost: dayCost,
+    day_rate: days ? round2(dayCost! / days) : null,
+  };
+}
+
+const BUDGET_RATIO_NOTE = 'Computed by the server, as the "Cost per FTE" report: from the people and days quantity × price lines of the column '
+  + '(pieces lines left out), in the reporting currency. cost_per_fte is staff_cost ÷ staff_fte and day_rate is day_cost ÷ days, per group and, '
+  + 'in overall, of all groups together (never an average of the groups\' ratios). Quote these figures: never divide amounts by FTE '
+  + 'or assume a number of working days. Groups without people or days lines are left out. '
+  + 'fte_without_line_detail is FTE declared on columns without line detail, left out of every figure; '
+  + 'staff_cost_not_in_day_rate is the cost of people priced per month, in the cost per FTE but not in the day rate. Say so when present.';
 
 function normalizeAggregateValue(value: any, metricType: AiAggregateMetricType): number | string | null {
   if (value == null) return null;
@@ -1344,7 +1377,7 @@ export class AiAggregateExecutor {
     filters: Record<string, any>,
     fn: AiAggregateFunction,
     metric: { key: string; def: AiAggregateMetricDef } | null,
-  ): Promise<{ groups: Array<{ key: string | null; count: number } | BudgetValueGroup>; total: number; fxMissing: FxMissingPair[] | null }> {
+  ): Promise<{ groups: Array<{ key: string | null; count: number } | BudgetValueGroup>; total: number; fxMissing: FxMissingPair[] | null; overall: BudgetOverall | null }> {
     const groupField = registry.fields[groupBy];
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
@@ -1358,7 +1391,9 @@ export class AiAggregateExecutor {
       if (!metricField) {
         throw new BadRequestException('Unsupported metric field.');
       }
-      fte = resolveFteField(metricField.grid) != null;
+      // FTE and days (not amounts) count, per group, the lines without a value.
+      const variant = resolveFteVariantField(metricField.grid);
+      fte = resolveFteField(metricField.grid) != null || (variant != null && !isMoneyVariant(variant));
       spec = {
         groupBy: [groupField.grid],
         measures: [{ id: 'value', fn, field: metricField.grid }],
@@ -1373,8 +1408,68 @@ export class AiAggregateExecutor {
       if (!spec.measures.length) return { key, count: group.count };
       return fte ? { key, value: group.values.value, unknown: group.unknown.value } : { key, value: group.values.value };
     });
+    // The same measure over every line (all groups together): a total the answer quotes, never adds up.
+    const overall: BudgetOverall | null = spec.measures.length
+      ? { count: result.total.count, value: result.total.values.value ?? null, ...(fte ? { unknown: result.total.unknown.value ?? 0 } : {}) }
+      : null;
     // The amounts left out of the values for lack of a rate (`[]` when none); null without a measure.
-    return { groups, total: result.total.count, fxMissing: spec.measures.length ? result.fxMissing ?? [] : null };
+    return { groups, total: result.total.count, fxMissing: spec.measures.length ? result.fxMissing ?? [] : null, overall };
+  }
+
+  /**
+   * OPEX and CAPEX, a ratio metric (`y_budget_cost_per_fte`, `y_budget_day_rate`): the "Cost per FTE"
+   * report's figures per group, in one aggregate statement of the list engine (`costPerFteRequests`,
+   * `dailyRateRequests`): the sums of the staff cost, staff FTE, day cost and days, and the ratios
+   * computed here. The groups the report shows (a staff FTE for the cost per FTE, days for the day
+   * rate), largest first; `overall` holds the ratios of the totals and the report's notices.
+   */
+  private async aggregateBudgetRatio(
+    context: AiExecutionContextWithManager,
+    entityType: 'spend_items' | 'capex_items',
+    registry: AiEntityFilterRegistry,
+    groupBy: string,
+    q: string | undefined,
+    filters: Record<string, any>,
+    ratio: BudgetRatioMetric,
+  ): Promise<{ groups: BudgetRatioGroup[]; total: number; fxMissing: FxMissingPair[]; overall: BudgetOverall }> {
+    const groupField = registry.fields[groupBy];
+    if (!groupField) {
+      throw new BadRequestException('Unsupported group_by field.');
+    }
+    const governing = ratio.kind === 'cost_per_fte' ? 'staff_fte' : 'days';
+    const spec: AggregateSpec = {
+      groupBy: [groupField.grid],
+      measures: [
+        { id: 'staff_cost', fn: 'sum', field: ratio.staffCost },
+        { id: 'staff_fte', fn: 'sum', field: ratio.staffFte },
+        { id: 'day_cost', fn: 'sum', field: ratio.dayCost },
+        { id: 'days', fn: 'sum', field: ratio.days },
+        { id: 'no_detail', fn: 'sum', field: ratio.noDetail },
+      ],
+      order: [{ by: 'measure', id: governing, dir: 'DESC', nulls: 'LAST' }],
+    };
+    const items = entityType === 'spend_items' ? this.spendItems : this.capexItems;
+    const result = await items.summaryAggregate({ q, filters, includeDisabled: true }, spec, { manager: context.manager });
+    const valueOf = (figures: AiBudgetStaffFigures) => (ratio.kind === 'cost_per_fte' ? figures.cost_per_fte : figures.day_rate);
+    const groups = result.groups
+      .filter((group) => group.values[governing] != null)
+      .map((group): BudgetRatioGroup => {
+        const figures = budgetStaffFigures(group.values);
+        return { key: group.keys[0] ?? null, count: group.count, value: valueOf(figures), ...figures };
+      });
+    const total = result.total.values;
+    const figures = budgetStaffFigures(total);
+    // The report's notices: FTE without line detail, and (cents, from 50) the staff cost priced per month.
+    const noDetail = total.no_detail ?? 0;
+    const monthlyCents = Math.round((total.staff_cost ?? 0) * 100) - Math.round((total.day_cost ?? 0) * 100);
+    const overall: BudgetOverall = {
+      count: result.total.count,
+      value: valueOf(figures),
+      ...figures,
+      ...(noDetail > 0 ? { fte_without_line_detail: noDetail } : {}),
+      ...(monthlyCents >= 50 ? { staff_cost_not_in_day_rate: monthlyCents / 100 } : {}),
+    };
+    return { groups, total: result.total.count, fxMissing: result.fxMissing ?? [], overall };
   }
 
   async execute(
@@ -1399,7 +1494,7 @@ export class AiAggregateExecutor {
     // A sum or an average of amounts names their currency; a count or an FTE has none.
     const metric = input.metric?.trim() ?? '';
     const isAmount = metric !== '' && (
-      isBudgetLineEntity(input.entity_type) ? !metric.endsWith('_fte') : metric.startsWith('yearly_amount')
+      isBudgetLineEntity(input.entity_type) ? isBudgetMoneyKey(metric) : metric.startsWith('yearly_amount')
     );
     const amounts = isAmount ? await aiAmountsCurrency(context, input.entity_type, 'list', result.amounts_fx_missing) : null;
     return amounts ? { ...result, ...amounts } : result;
@@ -1426,8 +1521,10 @@ export class AiAggregateExecutor {
     }
     assertPlainTextQuickSearch(input.entity_type, input.q, registry);
 
+    // A budget ratio (cost per FTE, day rate) is no field: the server computes it whatever the function.
+    const ratio = isBudgetLineEntity(input.entity_type) ? resolveBudgetRatioMetric(input.metric?.trim()) : null;
     const fn = normalizeAggregateFunction(input.function);
-    const metric = this.resolveMetric(registry, input.metric?.trim(), fn);
+    const metric = ratio ? null : this.resolveMetric(registry, input.metric?.trim(), fn);
     const normalizedFilters = await this.normalizePersonFilters(context, input.entity_type, input.filters);
     const adapted = adaptFilters(registry, normalizedFilters);
     if (adapted.ignored.length > 0) {
@@ -1435,8 +1532,8 @@ export class AiAggregateExecutor {
       return {
         status: refusal.status,
         group_by: input.group_by,
-        metric: metric ? input.metric?.trim() ?? null : null,
-        function: fn,
+        metric: metric || ratio ? input.metric?.trim() ?? null : null,
+        function: ratio ? 'ratio' : fn,
         groups: [],
         total: 0,
         returned: 0,
@@ -1543,8 +1640,36 @@ export class AiAggregateExecutor {
       };
     }
 
+    if ((input.entity_type === 'spend_items' || input.entity_type === 'capex_items') && ratio) {
+      const { groups, total, fxMissing, overall } = await this.aggregateBudgetRatio(
+        context,
+        input.entity_type,
+        registry,
+        input.group_by,
+        input.q?.trim(),
+        adapted.filters,
+        ratio,
+      );
+      return {
+        group_by: input.group_by,
+        metric: ratio.key,
+        function: 'ratio',
+        groups,
+        overall,
+        ratio_note: BUDGET_RATIO_NOTE,
+        total,
+        returned: groups.length,
+        truncated: false,
+        complete: isCompleteAggregateResult(null),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: null,
+        amounts_fx_missing: fxMissing,
+      };
+    }
+
     if (input.entity_type === 'spend_items' || input.entity_type === 'capex_items') {
-      const { groups, total, fxMissing } = await this.aggregateBudgetSummary(
+      const { groups, total, fxMissing, overall } = await this.aggregateBudgetSummary(
         context,
         input.entity_type,
         registry,
@@ -1559,6 +1684,7 @@ export class AiAggregateExecutor {
         metric: metric?.key ?? null,
         function: fn,
         groups,
+        ...(overall ? { overall } : {}),
         total,
         returned: groups.length,
         truncated: false,

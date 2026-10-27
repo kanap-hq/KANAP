@@ -1,6 +1,7 @@
 import {
   AiAdaptedFilters,
   AiEntityFilterRegistry,
+  AiFieldFamilyDescription,
   AiFilterDescription,
   AiFilterDescriptionResult,
   AiFilterFieldDef,
@@ -47,26 +48,49 @@ export function describeAiEntityFilters(
   entityType: AiQueryEntityType,
   registry: AiEntityFilterRegistry = getAiEntityRegistry(entityType),
 ): AiFilterDescriptionResult {
-  const fields: AiFilterDescription[] = Object.entries(registry.fields).map(([fieldName, field]) => ({
-    field: fieldName,
-    type: field.type,
-    description: field.description,
-    accepted_value_kind: inferAcceptedValueKind(fieldName, field),
-    aliases: field.aliases ?? [],
-    lookup_entity: field.lookupEntity ?? null,
-    examples: inferExamples(fieldName, field),
-    does_not_accept: inferDoesNotAccept(fieldName, field),
-    discoverable: field.discoverable === true,
-    sortable: field.sortable === true,
-    groupable: field.groupable === true,
-    aggregable: field.aggregable === true,
-    ...(field.values ? { values: field.values } : {}),
-  }));
+  const fields: AiFilterDescription[] = [];
+  const families = new Map<string, AiFieldFamilyDescription>();
+  for (const [fieldName, field] of Object.entries(registry.fields)) {
+    if (field.family) {
+      const family = families.get(field.family) ?? {
+        family: field.family,
+        type: field.type,
+        description: field.description,
+        accepted_value_kind: inferAcceptedValueKind(fieldName, field),
+        examples: inferExamples(fieldName, field),
+        sortable: field.sortable === true,
+        groupable: field.groupable === true,
+        aggregable: field.aggregable === true,
+        fields: [],
+      };
+      family.fields.push(fieldName);
+      families.set(field.family, family);
+      continue;
+    }
+    fields.push({
+      field: fieldName,
+      type: field.type,
+      description: field.description,
+      accepted_value_kind: inferAcceptedValueKind(fieldName, field),
+      aliases: field.aliases ?? [],
+      lookup_entity: field.lookupEntity ?? null,
+      examples: inferExamples(fieldName, field),
+      does_not_accept: inferDoesNotAccept(fieldName, field),
+      discoverable: field.discoverable === true,
+      sortable: field.sortable === true,
+      groupable: field.groupable === true,
+      aggregable: field.aggregable === true,
+      ...(field.values ? { values: field.values } : {}),
+    });
+  }
 
   return {
     entity_type: entityType,
     fields,
-    sort_fields: Object.keys(registry.sortFields),
+    ...(families.size ? { field_families: [...families.values()] } : {}),
+    ...(registry.metricFamilies?.length ? { metric_families: registry.metricFamilies } : {}),
+    // The keys of a family are listed in it, not here.
+    sort_fields: Object.keys(registry.sortFields).filter((key) => !registry.fields[key]?.family),
     default_sort: registry.defaultSort,
     total: fields.length,
     returned: fields.length,

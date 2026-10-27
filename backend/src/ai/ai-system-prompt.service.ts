@@ -128,6 +128,8 @@ function toolUsageGuidelines(mode: AiContextProfile['promptMode']): string {
     '- When the user says "me", "my", "mine", or "myself", use scope: "me". When they say "my team", use scope: "my_team".',
     '- Cross-entity examples: tasks for projects in a stream use project_stream; applications linked to a project use linked_project; documents linked to an entity use the relevant linked_* filter.',
     '- Spend-item reads and spend-item aggregations are summary-backed and should mirror the OPEX summary view.',
+    '- OPEX lines (spend_items) and CAPEX lines (capex_items) are two families. A budget question that names neither (a budget, FTE, staff, a cost per FTE, a day rate) covers both: make the same call on each and give each family\'s figures with its own total, or say that the answer covers OPEX only.',
+    '- A cost per FTE or an average day rate (TJM) comes from aggregate_entities with the metric `<year>_<column>_cost_per_fte` or `<year>_<column>_day_rate` (for example `y_budget_day_rate`): the server divides, per group and overall, as the Cost per FTE report does, and returns the FTE, the staff cost, the days and the day cost with it. Never divide an amount by FTE or assume a number of working days yourself.',
     '- Discovery tools are ranked and incomplete. Authoritative query/aggregate tools can support exact answers when complete is true.',
     '- Prefer completeness over speed. Use generous limits and paginate when total exceeds returned or truncated is true before claiming "all".',
     '- Reference entities with readable refs such as PRJ-12, T-42, or INC-12. Never expose UUIDs.',
