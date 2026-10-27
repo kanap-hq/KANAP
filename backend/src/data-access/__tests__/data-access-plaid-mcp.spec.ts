@@ -390,6 +390,11 @@ async function testPlaidReads(): Promise<void> {
     await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'contracts', entity_id: randomContract })),
     contractHidden, randomContract, 'get_entity_detail of CH (Rita)',
   );
+  sameRefusal(
+    await rejection(() => tool(rita, 'get_entity_context', { entity_type: 'contracts', entity_id: contractHidden })),
+    await rejection(() => tool(rita, 'get_entity_context', { entity_type: 'contracts', entity_id: randomContract })),
+    contractHidden, randomContract, 'get_entity_context of CH (Rita)',
+  );
   const contractTasks = { entity_type: 'tasks', q: `DA 4D contract task ${tag}` };
   const ritaContractTask = (await tool(rita, 'query_entities', contractTasks)).items?.find((item: any) => item.id === contractTaskId);
   assert.ok(ritaContractTask, 'query_entities tasks: Rita sees her contract task');
