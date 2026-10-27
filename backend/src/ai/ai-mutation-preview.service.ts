@@ -19,7 +19,7 @@ import {
 import { AiMutationPlan } from './ai-mutation-plan.entity';
 import { AiMutationPlanStep } from './ai-mutation-plan-step.entity';
 import { AiMutationPreview } from './ai-mutation-preview.entity';
-import { AiPolicyService } from './ai-policy.service';
+import { AiPolicyService, isRightRefusalMessage } from './ai-policy.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
 import { AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
@@ -27,14 +27,20 @@ import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/da
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
 import { assertLinesEditable } from '../data-access/line-write-checks';
 import { isReservedAiMutation } from './mutation/ai-mutation-reserved';
+import {
+  AiWriteLanguage,
+  PREVIEW_DATA_BUSY_MESSAGE,
+  PREVIEW_EXPIRED_MESSAGE,
+  personWriteLanguage,
+  previewErrorText,
+  isFixedPreviewError,
+} from './ai-write-texts';
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
 const MAX_CONVERSATION_PREVIEWS = 50;
 const MAX_PENDING_CONVERSATION_PREVIEWS = 50;
 const EXECUTION_SAVEPOINT_NAME = 'ai_mutation_preview_execution';
 /** A preview whose data was held by another operation: nothing ran, it can be approved again. */
-const PREVIEW_DATA_BUSY_MESSAGE =
-  'The data this change writes was busy with another operation, so nothing was changed. Approve it again in a moment.';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PLAN_PLACEHOLDER_RE = /\{\{\s*([A-Za-z0-9_-]+)\.(id|ref|title)\s*\}\}/g;
 
@@ -150,6 +156,8 @@ function planStepTargetRef(step: AiMutationPlanStep): string | null {
 
 @Injectable()
 export class AiMutationPreviewService {
+  private readonly languages = new WeakMap<AiExecutionContextWithManager, Promise<AiWriteLanguage>>();
+
   constructor(
     @InjectRepository(AiMutationPreview)
     private readonly previewRepo: Repository<AiMutationPreview>,
@@ -185,9 +193,22 @@ export class AiMutationPreviewService {
     }
   }
 
-  private toPreviewDto(preview: AiMutationPreview): AiMutationPreviewDto {
+  /**
+   * The language of the person a context acts for, read once per context: the summaries of the
+   * cards and their fixed errors are written in it (`ai-write-texts.ts`).
+   */
+  private languageOf(context: AiExecutionContextWithManager): Promise<AiWriteLanguage> {
+    let language = this.languages.get(context);
+    if (!language) {
+      language = personWriteLanguage(context.manager, context.tenantId, context.userId);
+      this.languages.set(context, language);
+    }
+    return language;
+  }
+
+  private toPreviewDto(preview: AiMutationPreview, language: AiWriteLanguage): AiMutationPreviewDto {
     const operation = this.operations.getOperation(preview.tool_name);
-    const presentation = operation.presentPreview(preview);
+    const presentation = operation.presentPreview(preview, language);
 
     return {
       preview_id: preview.id,
@@ -200,7 +221,13 @@ export class AiMutationPreviewService {
         ? ['approve', 'reject'] as Array<'approve' | 'reject'>
         : [],
       summary: presentation.summary,
-      error_message: preview.error_message ?? null,
+      error_message: previewErrorText(language, preview.error_message ?? null),
+      // A failure the card shows as a translated sentence, the message being its technical detail; a refusal
+      // of a right and the errors the backend writes itself show as they are.
+      error_is_technical: preview.status === 'failed'
+        && !!preview.error_message
+        && !isFixedPreviewError(preview.error_message)
+        && !isRightRefusalMessage(preview.error_message),
       conversation_id: preview.conversation_id ?? null,
       created_at: preview.created_at.toISOString(),
       expires_at: toIso(preview.expires_at),
@@ -461,7 +488,7 @@ export class AiMutationPreviewService {
     await this.assertTargetLineEditable(context, prepared);
     const existing = await this.findEquivalentConversationPreview(context, operation.toolName, prepared);
     if (existing) {
-      return this.toPreviewDto(existing);
+      return this.toPreviewDto(existing, await this.languageOf(context));
     }
 
     const repo = this.getRepo(context.manager);
@@ -486,7 +513,7 @@ export class AiMutationPreviewService {
       created_at: now,
     }));
 
-    return this.toPreviewDto(preview);
+    return this.toPreviewDto(preview, await this.languageOf(context));
   }
 
   private async createPreviewForPlanStep(
@@ -612,6 +639,7 @@ export class AiMutationPreviewService {
           step_key: step.step_key,
           label: step.label ?? null,
           tool_name: step.tool_name,
+          ref: planStepTargetRef(step),
           message: step.error_message || 'Step failed.',
         });
         continue;
@@ -627,6 +655,7 @@ export class AiMutationPreviewService {
           step_key: step.step_key,
           label: step.label ?? null,
           tool_name: step.tool_name,
+          ref: planStepTargetRef(step),
           message: step.error_message,
         });
         continue;
@@ -651,6 +680,7 @@ export class AiMutationPreviewService {
           step_key: step.step_key,
           label: step.label ?? null,
           tool_name: step.tool_name,
+          ref: planStepTargetRef(step),
           message: step.error_message || 'Preview creation failed.',
         });
       }
@@ -664,6 +694,7 @@ export class AiMutationPreviewService {
         step_key: blocked.step_key,
         label: blocked.label ?? null,
         tool_name: blocked.tool_name,
+        ref: planStepTargetRef(blocked),
         message: blocked.error_message || 'Step was blocked by a failed dependency.',
       });
     }
@@ -790,7 +821,7 @@ export class AiMutationPreviewService {
       },
     });
 
-    const dto = this.toPreviewDto(preview);
+    const dto = this.toPreviewDto(preview, await this.languageOf(context));
     const updatedSteps: AiMutationPlanStep[] = [];
     for (const step of steps) {
       step.status = preview.status === 'executed' ? 'executed' : 'failed';
@@ -978,7 +1009,7 @@ export class AiMutationPreviewService {
       preview.executed_at = new Date();
       preview.error_message = null;
       const saved = await repo.save(preview);
-      const dto = this.toPreviewDto(saved);
+      const dto = this.toPreviewDto(saved, await this.languageOf(context));
       const followUps = await this.advanceMutationPlanAfterPreview(context, saved);
       if (followUpPreviews) {
         followUpPreviews.push(...followUps);
@@ -996,14 +1027,14 @@ export class AiMutationPreviewService {
         const transient = mapDatabaseError(error);
         if (transient && (transient.code === 'busy' || transient.code === 'retry')) {
           preview.error_message = PREVIEW_DATA_BUSY_MESSAGE;
-          return this.toPreviewDto(await repo.save(preview));
+          return this.toPreviewDto(await repo.save(preview), await this.languageOf(context));
         }
       }
       preview.status = 'failed';
       preview.approved_at = new Date();
       preview.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview execution failed.');
       const saved = await repo.save(preview);
-      const dto = this.toPreviewDto(saved);
+      const dto = this.toPreviewDto(saved, await this.languageOf(context));
       const followUps = await this.advanceMutationPlanAfterPreview(context, saved);
       if (followUpPreviews) {
         followUpPreviews.push(...followUps);
@@ -1027,14 +1058,14 @@ export class AiMutationPreviewService {
     this.assertConversationScope(preview, context.conversationId ?? null);
 
     if (preview.status !== 'pending') {
-      return this.toPreviewDto(preview);
+      return this.toPreviewDto(preview, await this.languageOf(context));
     }
 
     if (preview.expires_at.getTime() < Date.now()) {
       preview.status = 'expired';
-      preview.error_message = 'Preview expired before approval.';
+      preview.error_message = PREVIEW_EXPIRED_MESSAGE;
       const saved = await this.getRepo(context.manager).save(preview);
-      return this.toPreviewDto(saved);
+      return this.toPreviewDto(saved, await this.languageOf(context));
     }
 
     return this.executePreviewInternal(context, preview);
@@ -1087,15 +1118,15 @@ export class AiMutationPreviewService {
       this.assertConversationScope(preview, context.conversationId ?? null);
 
       if (preview.status !== 'pending') {
-        results.push(this.toPreviewDto(preview));
+        results.push(this.toPreviewDto(preview, await this.languageOf(context)));
         continue;
       }
 
       if (preview.expires_at.getTime() < Date.now()) {
         preview.status = 'expired';
-        preview.error_message = 'Preview expired before approval.';
+        preview.error_message = PREVIEW_EXPIRED_MESSAGE;
         const saved = await this.getRepo(context.manager).save(preview);
-        results.push(this.toPreviewDto(saved));
+        results.push(this.toPreviewDto(saved, await this.languageOf(context)));
         followUpPreviews.push(...await this.advanceMutationPlanAfterPreview(context, saved));
         continue;
       }
@@ -1122,7 +1153,7 @@ export class AiMutationPreviewService {
     if (preview.status === 'pending') {
       if (preview.expires_at.getTime() < Date.now()) {
         preview.status = 'expired';
-        preview.error_message = 'Preview expired before approval.';
+        preview.error_message = PREVIEW_EXPIRED_MESSAGE;
       } else {
         preview.status = 'rejected';
         preview.rejected_at = new Date();
@@ -1146,7 +1177,7 @@ export class AiMutationPreviewService {
       }
     }
 
-    return this.toPreviewDto(preview);
+    return this.toPreviewDto(preview, await this.languageOf(context));
   }
 
   async rejectPreviews(
@@ -1209,7 +1240,7 @@ export class AiMutationPreviewService {
       created_at: now,
     }));
 
-    return this.toPreviewDto(preview);
+    return this.toPreviewDto(preview, await this.languageOf(context));
   }
 
   async listConversationPreviews(
@@ -1233,10 +1264,11 @@ export class AiMutationPreviewService {
       take: MAX_CONVERSATION_PREVIEWS,
     });
 
+    const language = await this.languageOf(context);
     return previews
       .slice()
       .reverse()
-      .map((preview) => this.toPreviewDto(preview));
+      .map((preview) => this.toPreviewDto(preview, language));
   }
 
   async hasExecutedUndoablePreviewInConversation(

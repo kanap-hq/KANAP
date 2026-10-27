@@ -169,7 +169,11 @@ El panel se abre automáticamente cuando:
 Para las vistas previas de cambios pendientes, el panel ofrece dos botones:
 
 - **Aprobar**: confirma el cambio y permite que Plaid lo aplique
-- **Rechazar**: cancela el cambio. Plaid confirma el rechazo y continúa la conversación.
+- **Rechazar**: cancela el cambio. Plaid indica que el cambio se ha rechazado y no prepara nada en su lugar. Si su solicitud pedía varios cambios, continúa con los demás.
+
+Una vista previa, y el mensaje que Plaid escribe después de que usted la apruebe o la rechace, están en el idioma de su perfil, con los nombres de campo y los valores de las pantallas. Una línea presupuestaria pedida con un importe llega como una sola vista previa: una sola aprobación crea la línea, su versión presupuestaria del año y el importe.
+
+Cuando usted pide un cambio que Plaid no puede hacer, como eliminar un registro o cambiar el estado de una vulnerabilidad, Plaid lo dice e indica la pantalla donde puede hacerlo. No prepara ningún otro cambio en su lugar.
 
 Nada que modifique los datos de KANAP se aplica de forma silenciosa. La vista previa es la barrera de control.
 

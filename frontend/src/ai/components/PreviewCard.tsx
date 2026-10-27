@@ -11,6 +11,8 @@ import { AiMutationPreview } from '../aiTypes';
 import { MarkdownContent } from '../../components/MarkdownContent';
 import { getDotColor } from '../../utils/statusColors';
 import { getPreviewStatusColorKey, getPreviewStatusDisplay } from '../utils/previewStatus';
+import { getPreviewTitle } from '../utils/previewClassification';
+import { usePreviewChangeLabels } from './previewChangeLabels';
 
 const LINKED_MARKDOWN_IMAGE_RE = /\[\s*!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)\s*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
 const MARKDOWN_IMAGE_RE = /!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
@@ -126,6 +128,9 @@ function PreviewCard({
   const statusDisplay = getPreviewStatusDisplay(preview);
   const statusColorKey = getPreviewStatusColorKey(statusDisplay);
   const statusLabel = t(`ai:previewStatuses.${statusDisplay}`);
+  const { fieldLabel, valueLabel, amountsLabel, classificationLabel, relationItemsLabel } = usePreviewChangeLabels(preview);
+  // The reference shows once: the server's title often starts with it ("APP-36 - CheeseTrack").
+  const title = getPreviewTitle(preview);
 
   return (
     <Box
@@ -154,7 +159,7 @@ function PreviewCard({
                 {preview.target.ref}
               </Typography>
             )}
-            {preview.target.title && (
+            {title && (
               <Typography
                 component="span"
                 sx={(theme) => ({
@@ -165,7 +170,7 @@ function PreviewCard({
                   minWidth: 0,
                 })}
               >
-                {preview.target.title}
+                {title}
               </Typography>
             )}
             <Stack
@@ -211,7 +216,31 @@ function PreviewCard({
         </Stack>
 
         <Stack spacing={1.25}>
-          {Object.entries(preview.changes).map(([field, diff]) => (
+          {Object.entries(preview.changes).map(([field, change]) => {
+            // A list value reads as on the screens, budget amounts as on the budget screens, a classification level
+            // as the tenant's catalog names it; a markdown text stays as written.
+            const diff = change.amounts
+              ? {
+                ...change,
+                from: change.amounts.from ? amountsLabel(change.amounts.from) : change.from,
+                to: change.amounts.to ? amountsLabel(change.amounts.to) : change.to,
+              }
+              : change.classification
+                ? {
+                  ...change,
+                  from: classificationLabel(change.classification, 'from', change.from),
+                  to: classificationLabel(change.classification, 'to', change.to),
+                }
+              : change.relation_items
+                ? {
+                  ...change,
+                  from: relationItemsLabel(change.relation_items.from),
+                  to: relationItemsLabel(change.relation_items.to),
+                }
+              : change.format === 'markdown'
+                ? change
+                : { ...change, from: valueLabel(preview, field, change.from), to: valueLabel(preview, field, change.to) };
+            return (
             <Stack key={field} spacing={0.75}>
               <Typography
                 component="div"
@@ -222,7 +251,7 @@ function PreviewCard({
                   letterSpacing: 0.1,
                 })}
               >
-                {diff.label || field}
+                {fieldLabel(preview, field, diff.label)}
               </Typography>
               {diff.format === 'markdown' ? (
                 <Stack spacing={0.75}>
@@ -275,18 +304,31 @@ function PreviewCard({
                 </Stack>
               )}
             </Stack>
-          ))}
+            );
+          })}
         </Stack>
 
-        <Typography
-          variant="caption"
-          sx={{
-            fontSize: 12,
-            color: preview.error_message ? 'error.main' : 'kanap.text.tertiary',
-          }}
-        >
-          {preview.error_message || preview.summary}
-        </Typography>
+        {/* A failure of the service reads as a sentence in the person's language, its message as the detail. */}
+        {preview.error_message && preview.error_is_technical ? (
+          <Stack spacing={0.25}>
+            <Typography variant="caption" sx={{ fontSize: 12, color: 'error.main' }}>
+              {t('ai:previewCard.notApplied')}
+            </Typography>
+            <Typography variant="caption" sx={{ fontSize: 11, color: 'kanap.text.tertiary', overflowWrap: 'anywhere' }}>
+              {preview.error_message}
+            </Typography>
+          </Stack>
+        ) : (
+          <Typography
+            variant="caption"
+            sx={{
+              fontSize: 12,
+              color: preview.error_message ? 'error.main' : 'kanap.text.tertiary',
+            }}
+          >
+            {preview.error_message || preview.summary}
+          </Typography>
+        )}
 
         {isPending && (
           <Stack direction="row" spacing={1}>

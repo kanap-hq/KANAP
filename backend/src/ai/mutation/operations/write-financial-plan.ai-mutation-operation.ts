@@ -15,6 +15,7 @@ import {
   AiWriteFinancialPlanInput,
   getAiFinancialPlanBusinessResource,
 } from '../ai-financial-plan-mutation-support.service';
+import { AiWriteLanguage } from '../../ai-write-texts';
 
 const WriteFinancialPlanInputSchema = z.object({
   entity_type: z.enum(AI_FINANCIAL_PLAN_ENTITY_TYPES)
@@ -53,7 +54,7 @@ export class WriteFinancialPlanAiMutationOperation implements AiMutationOperatio
     entity_type: 'financial_plan',
     fields: this.support.getWritableFieldDescriptions(),
     reversible: true,
-    prompt_hint: 'Use `write_financial_plan` for Tier 4 spend/CAPEX versions, amounts, and allocations. Query the item detail first, set `entity_type`, `ref`, `action`, and `version_ref` when needed. This only creates a preview and still requires explicit approval. update_version, upsert_amounts, and replace_allocations can be undone through `undo_preview` when the prior state is still applicable; create_version is auditable but not undoable.',
+    prompt_hint: 'Use `write_financial_plan` for Tier 4 spend/CAPEX versions, amounts, and allocations. Query the item detail first, set `entity_type`, `ref` (the BL-n reference of the line, its UUID or its exact title), `action`, and `version_ref` when needed. The amounts of a line being created go in `amounts` of `create_business_record`, not here. This only creates a preview and still requires explicit approval. update_version, upsert_amounts, and replace_allocations can be undone through `undo_preview` when the prior state is still applicable; create_version is auditable but not undoable.',
   };
 
   constructor(private readonly support: AiFinancialPlanMutationSupportService) {}
@@ -69,8 +70,8 @@ export class WriteFinancialPlanAiMutationOperation implements AiMutationOperatio
     return this.support.prepareCreatePreview(context, input);
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
-    return this.support.presentPreview(preview);
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
+    return this.support.presentPreview(preview, language);
   }
 
   executePreview(context: AiExecutionContextWithManager, preview: AiMutationPreview): Promise<void> {

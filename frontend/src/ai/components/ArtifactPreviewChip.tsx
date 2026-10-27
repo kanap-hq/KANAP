@@ -6,6 +6,7 @@ import { useTheme } from '@mui/material/styles';
 import { AiMutationPreview } from '../aiTypes';
 import { getDotColor, getPillBg } from '../../utils/statusColors';
 import { getPreviewLabel } from '../utils/previewClassification';
+import { getPreviewStatusColorKey, getPreviewStatusDisplay } from '../utils/previewStatus';
 
 type ArtifactPreviewChipProps = {
   preview: AiMutationPreview;
@@ -13,19 +14,12 @@ type ArtifactPreviewChipProps = {
   onOpen: (previewId: string) => void;
 };
 
-function statusColorKey(status: AiMutationPreview['status']): string {
-  switch (status) {
-    case 'executed': return 'success';
-    case 'failed': return 'error';
-    case 'expired': return 'warning';
-    default: return 'default';
-  }
-}
-
 export default function ArtifactPreviewChip({ preview, active, onOpen }: ArtifactPreviewChipProps) {
   const { t } = useTranslation(['ai']);
   const mode = useTheme().palette.mode;
-  const status = statusColorKey(preview.status);
+  // The status as the preview card words it.
+  const statusDisplay = getPreviewStatusDisplay(preview);
+  const status = getPreviewStatusColorKey(statusDisplay);
   const label = getPreviewLabel(preview);
 
   return (
@@ -104,7 +98,7 @@ export default function ArtifactPreviewChip({ preview, active, onOpen }: Artifac
           flexShrink: 0,
         }}
       >
-        {preview.status}
+        {t(`ai:previewStatuses.${statusDisplay}`)}
       </Box>
     </Box>
   );

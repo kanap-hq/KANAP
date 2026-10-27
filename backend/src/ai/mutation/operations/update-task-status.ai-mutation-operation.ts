@@ -7,6 +7,7 @@ import { AiExecutionContextWithManager } from '../../ai.types';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiTaskMutationSupportService, toDisplayStatus } from '../ai-task-mutation-support.service';
+import { AiWriteLanguage, previewSummaryText, taskStatusText, writeActionText } from '../../ai-write-texts';
 
 type UpdateTaskStatusInput = {
   ref: string;
@@ -74,7 +75,7 @@ export class UpdateTaskStatusAiMutationOperation implements AiMutationOperation<
     };
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const current = preview.current_values ?? {};
     const mutation = preview.mutation_input ?? {};
     const ref = typeof current.target_ref === 'string' ? current.target_ref : 'task';
@@ -98,6 +99,16 @@ export class UpdateTaskStatusAiMutationOperation implements AiMutationOperation<
       case 'failed':
         summary = preview.error_message || `Status update for ${ref} failed.`;
         break;
+    }
+
+    if (language !== 'en') {
+      const statusOf = (value: unknown) => taskStatusText(language, typeof value === 'string' ? value : null) ?? '—';
+      summary = previewSummaryText(
+        language,
+        preview.status,
+        writeActionText.changeTaskStatus(language, ref, statusOf(current.status), statusOf(mutation.status)),
+        { errorMessage: preview.error_message },
+      );
     }
 
     return {

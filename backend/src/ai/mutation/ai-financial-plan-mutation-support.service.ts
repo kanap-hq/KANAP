@@ -6,18 +6,20 @@ import { CapexAllocationsService, SpendAllocationsService } from '../../spend/sp
 import { lockBudgetLine, lockBudgetVersions } from '../../spend/budget-locks';
 import { CapexAmountsService, SpendAmountsService } from '../../spend/spend-amounts.service';
 import { CapexVersionsService, SpendVersionsService } from '../../spend/spend-versions.service';
-import { auditTableOf, BudgetNature, natureAnd } from '../../spend/budget-nature';
+import { auditTableOf, BUDGET_LINE_PREFIX, BudgetNature, LEGACY_PREFIX, natureAnd } from '../../spend/budget-nature';
+import { parseItemRef } from '../../common/resolve-item-id';
 import { presentChild } from '../../spend/budget-line-presentation';
 import { AMOUNT_MEASURES, AmountMeasure, assertSpreadProfile, validateAmountValue } from '../../spend/amounts-write.util';
 import { formatAmount, formatCents } from '../../common/amount';
 import { budgetColumnName, BudgetColumnsSettings, readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
-import { AiExecutionContextWithManager, AiMutationPreviewChangeDto } from '../ai.types';
+import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewAmounts } from '../ai.types';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
 import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
+import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 
 export const AI_FINANCIAL_PLAN_ENTITY_TYPES = ['spend_items', 'capex_items'] as const;
 export type AiFinancialPlanEntityType = typeof AI_FINANCIAL_PLAN_ENTITY_TYPES[number];
@@ -31,6 +33,20 @@ export const AI_FINANCIAL_PLAN_ACTIONS = [
 export type AiFinancialPlanAction = typeof AI_FINANCIAL_PLAN_ACTIONS[number];
 
 export const AI_FINANCIAL_PLAN_BUSINESS_RESOURCES = ['budget'] as const;
+
+/** Amounts given with a new line (`create_business_record`), checked at preview time and written with it. */
+export type AiNewLineAmounts = {
+  amounts: Record<string, unknown>;
+  /** What the approval card shows: the year and the amounts, under the tenant's column names. */
+  display: string;
+  /** The same amounts as numbers, which the card writes in the person's language. */
+  preview: AiPreviewAmounts;
+};
+
+/** Stored amounts of a preview, as the card receives them; null when the preview holds none. */
+export function storedPreviewAmounts(value: unknown): AiPreviewAmounts | null {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as AiPreviewAmounts : null;
+}
 
 export type AiWriteFinancialPlanInput = {
   entity_type: AiFinancialPlanEntityType;
@@ -390,6 +406,8 @@ export class AiFinancialPlanMutationSupportService {
           display_values: {
             from: this.formatAmountSummary(before, columns),
             to: this.formatAmountPayload(amounts, columns),
+            from_amounts: this.previewTotals(before, columns, item.row.currency),
+            to_amounts: this.previewPayload(amounts, columns, item.row.currency),
           },
         },
       };
@@ -483,7 +501,7 @@ export class AiFinancialPlanMutationSupportService {
     throw new BadRequestException('Unsupported financial plan action.');
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const entityType = requireFinancialEntityType(preview.target_entity_type || preview.mutation_input?.entity_type);
     const action = requireFinancialAction(preview.mutation_input?.action);
     const mutation = preview.mutation_input ?? {};
@@ -506,11 +524,14 @@ export class AiFinancialPlanMutationSupportService {
       }
     } else if (action === 'upsert_amounts') {
       const display = current.display_values && typeof current.display_values === 'object' ? current.display_values as Record<string, unknown> : {};
+      const fromAmounts = storedPreviewAmounts(display.from_amounts);
+      const toAmounts = storedPreviewAmounts(display.to_amounts);
       changes.amounts = {
         label: 'Amounts',
         from: formatValue(display.from),
         to: formatValue(display.to),
         format: 'text',
+        ...(toAmounts ? { amounts: { from: fromAmounts, to: toAmounts } } : {}),
       };
     } else if (action === 'replace_allocations') {
       const display = current.display_values && typeof current.display_values === 'object' ? current.display_values as Record<string, unknown> : {};
@@ -533,6 +554,12 @@ export class AiFinancialPlanMutationSupportService {
       summary = `Financial plan preview for "${title}" was rejected.`;
     } else if (preview.status === 'expired') {
       summary = `Financial plan preview for "${title}" expired before approval.`;
+    }
+
+    if (language !== 'en') {
+      summary = previewSummaryText(language, preview.status, writeActionText.writeFinancialPlan(language, action, quoted(language, title)), {
+        errorMessage: preview.error_message,
+      });
     }
 
     return {
@@ -619,6 +646,62 @@ export class AiFinancialPlanMutationSupportService {
     }
 
     throw new BadRequestException('Unsupported financial plan action.');
+  }
+
+  /**
+   * The amounts a new line is created with (issue 127: one preview, one approval for a line and its
+   * amount). Checked as `upsert_amounts` checks them, before the line exists: the payload, the
+   * spread profile. Nothing is read from the line.
+   */
+  async prepareNewLineAmounts(
+    context: AiExecutionContextWithManager,
+    entityType: unknown,
+    raw: unknown,
+    currency: unknown,
+  ): Promise<AiNewLineAmounts> {
+    requireFinancialEntityType(entityType);
+    const amounts = this.normalizeAmountPayload(raw);
+    await assertSpreadProfile(context.manager, amounts.kind, 'spread_profile_name' in amounts ? amounts.spread_profile_name : undefined);
+    const columns = await readBudgetColumns(context.manager, context.tenantId);
+    return {
+      amounts: amounts as unknown as Record<string, unknown>,
+      display: this.formatAmountPayload(amounts, columns),
+      preview: this.previewPayload(amounts, columns, currency),
+    };
+  }
+
+  /**
+   * Writes the amounts of a line the same preview has just created: its budget version for the
+   * amounts' year, named as the budget tab names it (`Y2026`), then the amounts. Same services,
+   * locks and audit rows as `create_version` then `upsert_amounts`; same transaction as the line,
+   * so a refusal leaves nothing behind.
+   */
+  async writeNewLineAmounts(
+    context: AiExecutionContextWithManager,
+    preview: AiMutationPreview,
+    entityType: unknown,
+    itemId: string,
+    raw: unknown,
+  ): Promise<void> {
+    const type = requireFinancialEntityType(entityType);
+    const amounts = this.normalizeAmountPayload(raw);
+    const scope = this.nature(type);
+    if (!(await lockBudgetLine(context.manager, scope, context.tenantId, itemId))) {
+      throw new NotFoundException(`${this.itemLabelSingular(type)} not found.`);
+    }
+    const saved = await this.createVersion(context, type, itemId, {
+      version_name: `Y${amounts.year}`,
+      budget_year: amounts.year,
+      as_of_date: `${amounts.year}-01-01`,
+      input_grain: amounts.kind,
+    });
+    const version = await this.resolveVersionById(context, type, itemId, String((saved as any).id));
+    await this.logAiAudit(context, preview, this.versionAuditTable(type), version.id, 'create', null, version.row);
+    await lockBudgetVersions(context.manager, scope, context.tenantId, [version.id]);
+    const before = await this.listAmounts(context, type, version.id, amounts.year);
+    await this.upsertAmounts(context, type, version.id, amounts);
+    const after = await this.listAmounts(context, type, version.id, amounts.year);
+    await this.logAiAudit(context, preview, this.amountsAuditTable(type), null, 'update', before, after);
   }
 
   private pendingSummary(action: AiFinancialPlanAction, title: string): string {
@@ -894,20 +977,47 @@ export class AiFinancialPlanMutationSupportService {
     if (isUuid(normalized)) {
       return this.resolveItemById(context, entityType, normalized);
     }
-    // The title of a line of either nature is `product_name` (lot Z1).
+    // The title of a line of either nature is `product_name` (lot Z1); its reference `BL-n`, or the
+    // legacy `OPX-n` / `CPX-n` the screens showed before (issue 127: a new line was addressed as BL-n).
+    const number = this.lineNumberOfReference(entityType, normalized);
     const rows = await context.manager.query(
       `
       SELECT *
       FROM spend_items
-      WHERE tenant_id = $1${this.itemNature(entityType)} AND LOWER(product_name) = LOWER($2::text)
-      ORDER BY product_name
+      WHERE tenant_id = $1${this.itemNature(entityType)}
+        AND (LOWER(product_name) = LOWER($2::text) OR item_number = $3 OR legacy_number = $4::text)
+      ORDER BY (LOWER(product_name) = LOWER($2::text)) DESC, product_name
       LIMIT 6
       `,
-      [context.tenantId, normalized],
+      [context.tenantId, normalized, number.itemNumber, number.legacyNumber],
     );
     if (rows.length === 0) throw new NotFoundException(`No ${this.itemLabelPlural(entityType)} found matching "${normalized}".`);
-    if (rows.length > 1) throw new BadRequestException(`Multiple ${this.itemLabelPlural(entityType)} matched "${normalized}". Use a UUID.`);
-    return this.itemRef(entityType, rows[0]);
+    // A reference names one line; a title several when lines share it.
+    const exact = rows.filter((row: Record<string, unknown>) => String(row.product_name ?? '').toLowerCase() === normalized.toLowerCase());
+    const matches = exact.length > 0 ? exact : rows;
+    if (matches.length > 1) throw new BadRequestException(`Multiple ${this.itemLabelPlural(entityType)} matched "${normalized}". Use a UUID.`);
+    return this.itemRef(entityType, matches[0]);
+  }
+
+  /**
+   * The numbers a line reference names: `BL-n` its own number; `OPX-n` an OPEX line's number or the
+   * legacy number it kept; `CPX-n` a CAPEX line's legacy number. A name, or a bare number, names none.
+   */
+  private lineNumberOfReference(entityType: AiFinancialPlanEntityType, ref: string): { itemNumber: number; legacyNumber: string | null } {
+    const none = { itemNumber: -1, legacyNumber: null };
+    if (!ref.includes('-')) return none;
+    const nature = this.nature(entityType);
+    try {
+      const parsed = parseItemRef(ref, nature === 'opex' ? 'spend' : 'capex');
+      if (parsed.type !== 'item_number') return none;
+      if (parsed.prefix === BUDGET_LINE_PREFIX) return { itemNumber: parsed.value, legacyNumber: null };
+      if (parsed.prefix === LEGACY_PREFIX[nature]) {
+        return { itemNumber: nature === 'opex' ? parsed.value : -1, legacyNumber: `${LEGACY_PREFIX[nature]}-${parsed.value}` };
+      }
+      return none;
+    } catch {
+      return none;
+    }
   }
 
   private async resolveItemById(
@@ -1161,6 +1271,46 @@ export class AiFinancialPlanMutationSupportService {
       return `${payload.year} quarterly ${budgetColumnName(columns, payload.measure)} (${['Q1', 'Q2', 'Q3', 'Q4'].map((q) => `${q}: ${(payload as any)[q] ?? 0}`).join(', ')})`;
     }
     return `${payload.year} monthly rows (${payload.months.length})`;
+  }
+
+  /** The year's totals before the write: the shown columns, and a hidden one that holds an amount. */
+  private previewTotals(value: Record<string, unknown>, columns: BudgetColumnsSettings, currency: unknown): AiPreviewAmounts {
+    const stored = value.totals && typeof value.totals === 'object' ? value.totals as Record<string, unknown> : {};
+    const totals: Partial<Record<AmountMeasure, number>> = {};
+    for (const measure of AMOUNT_MEASURES) {
+      const amount = Number(stored[measure] ?? 0) || 0;
+      if (columns.enabled[measure] || amount !== 0) totals[measure] = amount;
+    }
+    return { ...this.previewBase(value.year == null ? null : Number(value.year), columns, currency), totals };
+  }
+
+  private previewPayload(payload: AmountPayload, columns: BudgetColumnsSettings, currency: unknown): AiPreviewAmounts {
+    const base = this.previewBase(payload.year, columns, currency);
+    if (payload.kind === 'annual') {
+      const totals: Partial<Record<AmountMeasure, number>> = {};
+      for (const measure of AMOUNT_MEASURES) {
+        if (payload.totals[measure] !== undefined) totals[measure] = Number(payload.totals[measure]);
+      }
+      return { ...base, totals };
+    }
+    if (payload.kind === 'quarterly') {
+      const quarter = (value: string | undefined) => Number(value ?? 0);
+      return {
+        ...base,
+        quarters: { measure: payload.measure, values: { Q1: quarter(payload.Q1), Q2: quarter(payload.Q2), Q3: quarter(payload.Q3), Q4: quarter(payload.Q4) } },
+      };
+    }
+    return { ...base, months: payload.months.length };
+  }
+
+  private previewBase(year: number | null, columns: BudgetColumnsSettings, currency: unknown): Pick<AiPreviewAmounts, 'year' | 'currency' | 'column_names'> {
+    const columnNames: AiPreviewAmounts['column_names'] = {};
+    for (const measure of AMOUNT_MEASURES) {
+      const name = columns.labels[measure];
+      if (name) columnNames[measure] = name;
+    }
+    const code = typeof currency === 'string' ? currency.trim().toUpperCase() : '';
+    return { year, currency: /^[A-Z]{3}$/.test(code) ? code : null, column_names: columnNames };
   }
 
   private formatAllocationSummary(value: Record<string, unknown>): string {

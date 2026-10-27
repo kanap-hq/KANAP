@@ -17,9 +17,27 @@ export function isLongPreview(preview: AiMutationPreview): boolean {
   });
 }
 
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * The title of a preview's target without its reference: the server names a record by its label,
+ * which often starts with the reference ("APP-36 - CheeseTrack"), while the card and the tabs show
+ * the reference beside the title. A title that is only the reference gives null.
+ */
+export function getPreviewTitle(preview: AiMutationPreview): string | null {
+  const ref = preview.target?.ref?.trim();
+  const title = preview.target?.title?.trim() || null;
+  if (!ref || !title) return title;
+  if (title === ref) return null;
+  const stripped = title.replace(new RegExp(`^${escapeRegExp(ref)}(?:\\s*[-–—·:|]\\s*|\\s+)`), '').trim();
+  return stripped && stripped !== title ? stripped : title;
+}
+
 export function getPreviewLabel(preview: AiMutationPreview): string {
   const ref = preview.target?.ref?.trim();
-  const title = preview.target?.title?.trim();
+  const title = getPreviewTitle(preview);
   if (ref && title) return `${ref} · ${title}`;
   return ref || title || preview.tool_name;
 }

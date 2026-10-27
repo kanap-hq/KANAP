@@ -169,7 +169,11 @@ Le panneau s'ouvre automatiquement lorsque :
 Pour les aperçus de modification en attente, le panneau propose deux boutons :
 
 - **Approuver** : confirme la modification et permet à Plaid de l'appliquer
-- **Rejeter** : annule la modification. Plaid prend acte du rejet et poursuit la conversation.
+- **Rejeter** : annule la modification. Plaid indique que la modification a été rejetée et ne prépare rien à sa place. Si votre demande portait sur plusieurs modifications, il poursuit avec les autres.
+
+Un aperçu, et le message que Plaid écrit après votre approbation ou votre rejet, sont dans la langue de votre profil, avec les noms de champs et les valeurs des écrans. Une ligne budgétaire demandée avec un montant arrive en un seul aperçu : une seule approbation crée la ligne, sa version budgétaire de l'année et le montant.
+
+Quand vous demandez une modification que Plaid ne peut pas faire, comme supprimer une fiche ou changer l'état d'une vulnérabilité, il le dit et nomme l'écran où vous pouvez la faire. Il ne prépare aucune autre modification à sa place.
 
 Rien de ce qui modifie les données de KANAP n'est appliqué en silence. L'aperçu est le point de contrôle.
 

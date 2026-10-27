@@ -750,6 +750,27 @@ export class AiTaskMutationSupportService {
     return this.getExactTarget(context, relationType, relationId);
   }
 
+  /**
+   * The type a new task gets when none is named, as the task screen preselects it: the shipped
+   * `task` type, or an active type named "Task"; null when the tenant has neither.
+   */
+  async resolveDefaultTaskType(context: AiExecutionContextWithManager): Promise<AiTaskTypeReference | null> {
+    const rows: Array<Record<string, unknown>> = await context.manager.query(
+      `
+      SELECT id, name
+      FROM portfolio_task_types
+      WHERE tenant_id = $1
+        AND is_active = true
+        AND (code = 'task' OR name = 'Task')
+      ORDER BY (code = 'task') DESC NULLS LAST, display_order ASC
+      LIMIT 1
+      `,
+      [context.tenantId],
+    );
+    const row = rows[0];
+    return row ? { id: String(row.id), label: String(row.name || row.id) } : null;
+  }
+
   async resolveTaskType(
     context: AiExecutionContextWithManager,
     taskType: string,

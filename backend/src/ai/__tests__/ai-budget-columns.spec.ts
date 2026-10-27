@@ -130,12 +130,48 @@ function testApprovalCardUsesNames() {
   );
 }
 
+// The card writes these amounts in the person's language: the server sends numbers, the year, the
+// line's currency and the tenant's column names, whatever the language.
+function testApprovalCardAmountsAreNumbers() {
+  const proto = AiFinancialPlanMutationSupportService.prototype as any;
+  assert.deepEqual(
+    proto.previewPayload.call(proto, { kind: 'annual', year: 2026, totals: { planned: '12000.50', expected_landing: '4' } }, SETTINGS, 'eur'),
+    {
+      year: 2026,
+      currency: 'EUR',
+      column_names: { planned: 'A0', committed: 'A1', forecast: 'A2', actual: 'A3', expected_landing: 'Réel' },
+      totals: { planned: 12000.5, expected_landing: 4 },
+    },
+  );
+  const defaults = normalizeBudgetColumns(undefined);
+  assert.deepEqual(
+    proto.previewPayload.call(proto, { kind: 'quarterly', year: 2026, measure: 'forecast', Q1: '1' }, defaults, null),
+    { year: 2026, currency: null, column_names: {}, quarters: { measure: 'forecast', values: { Q1: 1, Q2: 0, Q3: 0, Q4: 0 } } },
+    'no tenant names, no currency',
+  );
+  assert.deepEqual(
+    proto.previewPayload.call(proto, { kind: 'monthly', year: 2026, months: [{ period: '2026-01-01' }, { period: '2026-02-01' }] }, defaults, 'CHF'),
+    { year: 2026, currency: 'CHF', column_names: {}, months: 2 },
+  );
+  assert.deepEqual(
+    proto.previewTotals.call(proto, { year: 2026, totals: { planned: 10, forecast: 3 } }, defaults, 'EUR').totals,
+    { planned: 10, committed: 0, forecast: 3, actual: 0, expected_landing: 0 },
+    'shown columns, and the hidden forecast because it holds an amount',
+  );
+  assert.deepEqual(
+    proto.previewTotals.call(proto, { year: 2026, totals: { planned: 10 } }, defaults, 'EUR').totals,
+    { planned: 10, committed: 0, actual: 0, expected_landing: 0 },
+    'an empty hidden column is left out',
+  );
+}
+
 async function main() {
   testFieldDescriptionsAreNeutral();
   testAiContext();
   await testPromptBlockFollowsOpexOrCapexRead();
   await testDescribeEntityFiltersCarriesColumns();
   testApprovalCardUsesNames();
+  testApprovalCardAmountsAreNumbers();
   console.log('ai-budget-columns.spec: ok');
 }
 

@@ -10,6 +10,7 @@ import { estimateTokenCount } from '../ai-context-budget.helper';
 import { AiModelResolutionError, BUILTIN_NOT_ACCEPTED_MESSAGE } from '../ai-model-resolver.service';
 import { AiSystemPromptService } from '../ai-system-prompt.service';
 import { ChatStreamEvent } from '../ai.types';
+import { bulkPreviewsIncompleteText, writePreviewMissingText } from '../ai-write-texts';
 
 function createOrchestrator(options?: {
   providerEvents?: any[];
@@ -33,6 +34,8 @@ function createOrchestrator(options?: {
   availableTools?: any[];
   resolvedSource?: 'registry' | 'builtin';
   resolveError?: Error;
+  /** The person's stored locale (`users.locale`). */
+  userLocale?: string | null;
 }) {
   const persistedMessages: any[] = [];
   let conversationCreated = false;
@@ -58,6 +61,7 @@ function createOrchestrator(options?: {
                 email: 'alex@example.com',
                 first_name: 'Alex',
                 last_name: 'Operator',
+                locale: options?.userLocale ?? null,
                 primary_role_name: 'Administrator',
               }];
             }
@@ -2437,6 +2441,546 @@ async function testPartialMutationPlanUsesCurrentTextualTargetSet() {
   assert.equal((events.filter((event) => event.type === 'preview') as any[]).length, refs.length);
 }
 
+const STREAM_CONTEXT = {
+  tenantId: 'tenant-1',
+  userId: 'user-1',
+  isPlatformHost: false,
+  surface: 'chat',
+  authMethod: 'jwt',
+} as const;
+
+const PLAN_TOOL = {
+  name: 'prepare_mutation_plan',
+  category: 'mutation',
+  description: 'Prepare mutation plan.',
+  input_summary: {},
+  read_only: false,
+  surfaces: ['chat'],
+  write_preview: {
+    entity_type: 'mutation_plan',
+    fields: ['operations'],
+    reversible: false,
+    prompt_hint: 'Use prepare_mutation_plan for bulk target tracking.',
+  },
+};
+
+function streamedText(events: ChatStreamEvent[]): string {
+  return (events.filter((event) => event.type === 'text_delta') as any[]).map((event) => event.text).join('');
+}
+
+function sentInstructions(recordedRequests: any[]): string[] {
+  return recordedRequests.flatMap((request: any) => request.messages
+    .filter((message: any) => message.role === 'user')
+    .map((message: any) => String(message.content || '')));
+}
+
+/**
+ * Issue 124: one relation on one application. The model first asks to confirm a change naming the
+ * application and the technology; the unsafe-write check sends that text back, with an instruction
+ * that speaks of "multiple related changes". Neither the blocked text nor the instruction makes a
+ * bulk target set: the single call runs as asked, its refusal comes back, and the answer is shown.
+ */
+async function testSingleTargetWriteIsNotTurnedIntoABulkWrite() {
+  const refusal = "Je ne peux pas ajouter de technologie à une application : les technologies sont en lecture seule pour Plaid. Ajoutez-la depuis l'onglet Technologies de CheeseTrack.";
+  const { orchestrator, executedToolCalls, recordedRequests } = createOrchestrator({
+    historyMessages: [{ role: 'user', content: "Ajoute la technologie PostgreSQL version 16 sur l'application CheeseTrack." }],
+    availableTools: [
+      { name: 'query_entities', category: 'authoritative', description: 'Query entities', input_summary: {}, read_only: true, surfaces: ['chat'] },
+      PLAN_TOOL,
+      {
+        name: 'update_entity_relations',
+        category: 'mutation',
+        description: 'Update entity relations.',
+        input_summary: {},
+        read_only: false,
+        surfaces: ['chat'],
+        write_preview: {
+          entity_type: 'applications',
+          fields: ['relations'],
+          reversible: true,
+          prompt_hint: 'Use update_entity_relations with the record ref.',
+        },
+      },
+    ],
+    providerEventBatches: [
+      [
+        { type: 'text_delta', text: "Je peux lier PostgreSQL 16 (TEC-3) à CheeseTrack (APP-36). Voulez-vous que j'applique cette modification ?" },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+      ],
+      [
+        { type: 'tool_call_start', id: 'tc-rel', name: 'update_entity_relations' },
+        { type: 'tool_call_delta', id: 'tc-rel', arguments: '{"ref":"APP-36","relation":"technologies","add":["TEC-3"]}' },
+        { type: 'tool_call_end', id: 'tc-rel' },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+      ],
+      [
+        { type: 'text_delta', text: refusal },
+        { type: 'done', usage: { input_tokens: 140, output_tokens: 30 } },
+      ],
+    ],
+    toolResultsByName: {
+      update_entity_relations: { error: 'Unsupported relation "technologies" for applications.' },
+      // What the plan service returned before the fix when it was handed this pair: two failed steps without a ref.
+      prepare_mutation_plan: {
+        previews: [],
+        errors: ['APP-36', 'TEC-3'].map((ref, index) => ({
+          index,
+          step_key: `update_entity_relations_${ref.toLowerCase()}_${index + 1}`,
+          label: null,
+          tool_name: 'update_entity_relations',
+          message: 'Unsupported relation "technologies" for applications.',
+        })),
+        deferred: [],
+        total: 2,
+        created: 0,
+        failed: 2,
+        deferred_count: 0,
+        target_set_label: 'assistant stated target set',
+        expected_count: 2,
+        expected_refs: ['APP-36', 'TEC-3'],
+        covered_refs: [],
+        missing_refs: [],
+        excluded: [],
+        complete: false,
+      },
+    },
+  });
+
+  const events = await collectEvents(orchestrator.stream({
+    context: STREAM_CONTEXT,
+    conversationId: 'conv-1',
+    userMessage: "Ajoute la technologie PostgreSQL version 16 sur l'application CheeseTrack.",
+  }));
+
+  assert.deepEqual(executedToolCalls.map((call) => call.toolName), ['update_entity_relations']);
+  assert.equal(executedToolCalls[0].input.ref, 'APP-36');
+  assert.ok(!sentInstructions(recordedRequests).some((content) => /complete resolved bulk target set/i.test(content)));
+  assert.equal(streamedText(events), refusal);
+  assert.doesNotMatch(streamedText(events), /previews de masse/);
+}
+
+/** A plan whose steps all fail names the refs of its failed steps: they are handled, nothing is pending. */
+async function testFailedPlanStepsCountAsHandledTargets() {
+  const answer = "Les tâches T-1 et T-2 sont verrouillées : je n'ai rien préparé.";
+  const { orchestrator, providerCallCount, recordedRequests } = createOrchestrator({
+    historyMessages: [{ role: 'user', content: 'Passe toutes les tâches du lot, T-1 et T-2, au statut terminé.' }],
+    availableTools: [PLAN_TOOL, {
+      name: 'update_task_status',
+      category: 'mutation',
+      description: 'Update task status.',
+      input_summary: {},
+      read_only: false,
+      surfaces: ['chat'],
+      write_preview: { entity_type: 'tasks', fields: ['status'], reversible: true, prompt_hint: 'Use update_task_status.' },
+    }],
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-plan', name: 'prepare_mutation_plan' },
+        { type: 'tool_call_delta', id: 'tc-plan', arguments: '{"summary":"Close tasks","expected_target_refs":["T-1","T-2"],"operations":[{"operation_id":"t1","tool_name":"update_task_status","input":{"ref":"T-1","status":"done"}},{"operation_id":"t2","tool_name":"update_task_status","input":{"ref":"T-2","status":"done"}}]}' },
+        { type: 'tool_call_end', id: 'tc-plan' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+      ],
+      [
+        { type: 'text_delta', text: answer },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+      ],
+    ],
+    toolResultsByName: {
+      prepare_mutation_plan: {
+        previews: [],
+        errors: ['T-1', 'T-2'].map((ref, index) => ({
+          index, step_key: `t${index + 1}`, label: null, tool_name: 'update_task_status', ref, message: 'Task is locked.',
+        })),
+        deferred: [],
+        total: 2,
+        created: 0,
+        failed: 2,
+        deferred_count: 0,
+        expected_count: 2,
+        expected_refs: ['T-1', 'T-2'],
+        covered_refs: [],
+        missing_refs: [],
+        excluded: [],
+        complete: false,
+      },
+    },
+  });
+
+  const events = await collectEvents(orchestrator.stream({
+    context: STREAM_CONTEXT,
+    conversationId: 'conv-1',
+    userMessage: 'Passe toutes les tâches du lot, T-1 et T-2, au statut terminé.',
+  }));
+
+  assert.equal(providerCallCount.value, 2);
+  assert.ok(!sentInstructions(recordedRequests).some((content) => /complete resolved bulk target set/i.test(content)));
+  assert.equal(streamedText(events), answer);
+}
+
+/** A bulk change that really misses a record stays blocked; its stop is in the person's language and lists no refs. */
+async function testIncompleteBulkWriteStaysBlockedInThePersonsLanguage() {
+  for (const language of ['en', 'fr', 'de', 'es'] as const) {
+    const taskPreviews = [1, 2, 3].map((number) => ({
+      preview_id: `task-comment-preview-${number}`,
+      tool_name: 'add_task_comment',
+      status: 'pending',
+      target: { entity_type: 'tasks', entity_id: `task-${number}`, ref: `T-${number}`, title: `Task ${number}` },
+      changes: { comment: { from: null, to: 'allo ?' } },
+      requires_confirmation: true,
+      actions: ['approve', 'reject'],
+      summary: `Add comment to T-${number}.`,
+      error_message: null,
+      conversation_id: 'conv-1',
+      created_at: '2026-03-24T10:00:00.000Z',
+      expires_at: '2026-03-24T10:10:00.000Z',
+      approved_at: null,
+      rejected_at: null,
+      executed_at: null,
+    }));
+    const done = [
+      { type: 'text_delta', text: 'J ai prepare les previews.' },
+      { type: 'done', usage: { input_tokens: 140, output_tokens: 20 } },
+    ];
+    const { orchestrator, providerCallCount } = createOrchestrator({
+      userLocale: language,
+      historyMessages: [{ role: 'user', content: 'Ajoute le commentaire "allo ?" à toutes les tâches en retard' }],
+      availableTools: [
+        { name: 'query_entities', category: 'authoritative', description: 'Query entities', input_summary: {}, read_only: true, surfaces: ['chat'] },
+        PLAN_TOOL,
+        {
+          name: 'add_task_comment',
+          category: 'mutation',
+          description: 'Add task comment.',
+          input_summary: {},
+          read_only: false,
+          surfaces: ['chat'],
+          write_preview: { entity_type: 'tasks', fields: ['comments'], reversible: false, prompt_hint: 'Use add_task_comment.' },
+        },
+      ],
+      providerEventBatches: [
+        [
+          { type: 'tool_call_start', id: 'tc-query', name: 'query_entities' },
+          { type: 'tool_call_delta', id: 'tc-query', arguments: '{"entity_type":"tasks","filters":{"due":"overdue"},"limit":50}' },
+          { type: 'tool_call_end', id: 'tc-query' },
+          { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+        ],
+        [
+          { type: 'tool_call_start', id: 'tc-plan', name: 'prepare_mutation_plan' },
+          { type: 'tool_call_delta', id: 'tc-plan', arguments: '{"summary":"Add comments","operations":[{"operation_id":"t1","tool_name":"add_task_comment","input":{"ref":"T-1","content":"allo ?"}},{"operation_id":"t2","tool_name":"add_task_comment","input":{"ref":"T-2","content":"allo ?"}},{"operation_id":"t3","tool_name":"add_task_comment","input":{"ref":"T-3","content":"allo ?"}}]}' },
+          { type: 'tool_call_end', id: 'tc-plan' },
+          { type: 'done', usage: { input_tokens: 120, output_tokens: 40 } },
+        ],
+        done,
+        done,
+        done,
+      ],
+      toolResultsByName: {
+        query_entities: {
+          items: [1, 2, 3, 4].map((number) => ({ id: `task-${number}`, type: 'tasks', ref: `T-${number}`, label: `Task ${number}` })),
+          total: 4,
+          returned: 4,
+          truncated: false,
+          complete: true,
+        },
+        prepare_mutation_plan: { previews: taskPreviews, errors: [], total: 3, created: 3, failed: 0, complete: true },
+      },
+    });
+
+    const events = await collectEvents(orchestrator.stream({
+      context: STREAM_CONTEXT,
+      conversationId: 'conv-1',
+      userMessage: 'Ajoute le commentaire "allo ?" à toutes les tâches en retard',
+    }));
+
+    assert.equal(providerCallCount.value, 5, language);
+    const text = streamedText(events);
+    assert.equal(text, bulkPreviewsIncompleteText(language), language);
+    assert.doesNotMatch(text, /T-4/, language);
+  }
+  assert.match(bulkPreviewsIncompleteText('fr'), /préparer un aperçu/);
+}
+
+/** A write still asked about without a preview after two repairs ends with a stop in the person's language. */
+async function testMissingWritePreviewStopIsInThePersonsLanguage() {
+  for (const language of ['en', 'fr', 'de', 'es'] as const) {
+    const ask = [
+      { type: 'text_delta', text: "Souhaitez-vous que j'execute cette reassignment ?" },
+      { type: 'done', usage: { input_tokens: 100, output_tokens: 50 } },
+    ];
+    const { orchestrator, providerCallCount } = createOrchestrator({
+      userLocale: language,
+      historyMessages: [{ role: 'user', content: 'Réassigne T-1 à Marie.' }],
+      availableTools: [{
+        name: 'update_task_assignees',
+        category: 'mutation',
+        description: 'Create assignee previews.',
+        input_summary: {},
+        read_only: false,
+        surfaces: ['chat'],
+        write_preview: { entity_type: 'tasks', fields: ['assignee'], reversible: true, prompt_hint: 'Use update_task_assignees.' },
+      }],
+      providerEventBatches: [ask, ask, ask],
+    });
+
+    const events = await collectEvents(orchestrator.stream({
+      context: STREAM_CONTEXT,
+      conversationId: 'conv-1',
+      userMessage: 'Réassigne T-1 à Marie.',
+    }));
+
+    assert.equal(providerCallCount.value, 3, language);
+    assert.equal(streamedText(events), writePreviewMissingText(language), language);
+  }
+  assert.match(writePreviewMissingText('fr'), /préparer cette modification/);
+}
+
+/** Issue 125: a refusal that offers another action in words is an answer, not a write without preview. */
+async function testRefusalWithAnOfferIsShownAsIs() {
+  const answers = [
+    "Je ne peux pas supprimer de tâche : Plaid ne supprime aucun enregistrement. Supprimez T-1 depuis sa page. Voulez-vous que je la passe plutôt au statut annulé ?",
+    "I can't create incidents: Plaid does not write incidents. Create it from the Incidents page. Do you want me to create a task instead?",
+  ];
+  for (const answer of answers) {
+    const { orchestrator, providerCallCount, executedToolCalls } = createOrchestrator({
+      historyMessages: [{ role: 'user', content: 'Supprime la tâche T-1.' }],
+      availableTools: [PLAN_TOOL, {
+        name: 'update_task_status',
+        category: 'mutation',
+        description: 'Update task status.',
+        input_summary: {},
+        read_only: false,
+        surfaces: ['chat'],
+        write_preview: { entity_type: 'tasks', fields: ['status'], reversible: true, prompt_hint: 'Use update_task_status.' },
+      }],
+      providerEventBatches: [[
+        { type: 'text_delta', text: answer },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+      ]],
+    });
+
+    const events = await collectEvents(orchestrator.stream({
+      context: STREAM_CONTEXT,
+      conversationId: 'conv-1',
+      userMessage: 'Supprime la tâche T-1.',
+    }));
+
+    assert.equal(providerCallCount.value, 1, answer);
+    assert.equal(executedToolCalls.length, 0, answer);
+    assert.equal(streamedText(events), answer);
+    assert.ok(!events.some((event) => event.type === 'preview'));
+  }
+}
+
+/**
+ * Issue 125: rejecting a preview ends with the acknowledgement when the person asked for one change,
+ * even if the assistant announced a plan; the model runs again only for the person's own multi-step
+ * request, and then is told to prepare nothing in place of the rejected change.
+ */
+async function testRejectedPreviewEndsUnlessThePersonAskedForMore() {
+  const reject = '[REJECT:11111111-1111-4111-8111-111111111111]';
+  const tools = [PLAN_TOOL, {
+    name: 'create_task',
+    category: 'mutation',
+    description: 'Create task.',
+    input_summary: {},
+    read_only: false,
+    surfaces: ['chat'],
+    write_preview: { entity_type: 'tasks', fields: ['title'], reversible: false, prompt_hint: 'Use create_task.' },
+  }];
+
+  const single = createOrchestrator({
+    historyMessages: [
+      { role: 'user', content: 'Supprime la tâche T-1.' },
+      { role: 'assistant', content: "Je prépare un plan : la tâche T-1 passe au statut annulé, puis une tâche liée suit la suppression." },
+      { role: 'user', content: reject },
+    ],
+    availableTools: tools,
+  });
+  const singleEvents = await collectEvents(single.orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: reject }));
+  assert.equal(single.providerCallCount.value, 0);
+  assert.equal(single.approvalCalls.reject, 1);
+  assert.equal(streamedText(singleEvents), 'Status update for [T-1](/portfolio/tasks/task-1) was rejected.');
+
+  const multi = createOrchestrator({
+    historyMessages: [
+      { role: 'user', content: 'Crée le projet A puis trois tâches associées.' },
+      { role: 'assistant', content: 'Voici le premier aperçu.' },
+      { role: 'user', content: reject },
+    ],
+    availableTools: tools,
+    providerEventBatches: [[
+      { type: 'text_delta', text: "Rien n'a été modifié." },
+      { type: 'done', usage: { input_tokens: 100, output_tokens: 10 } },
+    ]],
+  });
+  await collectEvents(multi.orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: reject }));
+  assert.equal(multi.providerCallCount.value, 1);
+  const instruction = sentInstructions(multi.recordedRequests).find((content) => /Continue from this exact state/.test(content)) ?? '';
+  assert.match(instruction, /do not prepare any other change in their place/);
+  assert.doesNotMatch(instruction, /prepare the remaining backend previews now/);
+}
+
+function taskPreviewDto(ref: string, toolName: string) {
+  return {
+    preview_id: `preview-${ref}`,
+    tool_name: toolName,
+    status: 'pending',
+    target: { entity_type: 'tasks', entity_id: `task-${ref}`, ref, title: `Task ${ref}` },
+    changes: {},
+    requires_confirmation: true,
+    actions: ['approve', 'reject'],
+    summary: `Change ${ref}.`,
+    error_message: null,
+    conversation_id: 'conv-1',
+    created_at: '2026-03-24T10:00:00.000Z',
+    expires_at: '2026-03-24T10:10:00.000Z',
+    approved_at: null,
+    rejected_at: null,
+    executed_at: null,
+  };
+}
+
+const TASK_STATUS_TOOL = {
+  name: 'update_task_status',
+  category: 'mutation',
+  description: 'Update task status.',
+  input_summary: {},
+  read_only: false,
+  surfaces: ['chat'],
+  write_preview: { entity_type: 'tasks', fields: ['status'], reversible: true, prompt_hint: 'Use update_task_status.' },
+};
+
+/**
+ * Issue 124: an answer the write guard held back is no target set, also once the loop has sent
+ * copies of the messages to the model. Its refs (T-9 here) were never shown to the person.
+ */
+async function testHeldBackAnswerStatesNoTargetSet() {
+  const { orchestrator, executedToolCalls, providerCallCount } = createOrchestrator({
+    historyMessages: [{ role: 'user', content: 'Passe toutes les tâches du projet PRJ-5 au statut en cours.' }],
+    availableTools: [PLAN_TOOL, TASK_STATUS_TOOL],
+    providerEventBatches: [
+      [
+        { type: 'text_delta', text: "Je vais passer T-1, T-2 et T-9 au statut en cours. Voulez-vous que j'applique ces modifications ?" },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+      ],
+      [
+        { type: 'tool_call_start', id: 'tc-status', name: 'update_task_status' },
+        { type: 'tool_call_delta', id: 'tc-status', arguments: '{"ref":"T-1","status":"in_progress"}' },
+        { type: 'tool_call_end', id: 'tc-status' },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+      ],
+      [
+        { type: 'text_delta', text: "L'aperçu de T-1 est prêt." },
+        { type: 'done', usage: { input_tokens: 140, output_tokens: 20 } },
+      ],
+    ],
+    toolResultsByName: { update_task_status: taskPreviewDto('T-1', 'update_task_status') },
+  });
+
+  await collectEvents(orchestrator.stream({
+    context: STREAM_CONTEXT,
+    conversationId: 'conv-1',
+    userMessage: 'Passe toutes les tâches du projet PRJ-5 au statut en cours.',
+  }));
+
+  assert.equal(providerCallCount.value, 3);
+  assert.deepEqual(executedToolCalls.map((call) => call.toolName), ['update_task_status']);
+  assert.equal(executedToolCalls[0].input.ref, 'T-1');
+}
+
+/**
+ * Issue 124: a "yes" to a change the assistant proposed in words, in an answer the person saw, asks
+ * for every record that proposal lists: a single-ref call still becomes the plan of the three tasks.
+ */
+async function testConfirmedProposalKeepsItsTargetSet() {
+  const message = 'oui';
+  const { orchestrator, executedToolCalls } = createOrchestrator({
+    historyMessages: [
+      { id: 'msg-1', role: 'user', content: 'Réassigne les tâches en retard de Friedrich EVA à Nicolas Bertrand.' },
+      {
+        id: 'msg-2',
+        role: 'assistant',
+        content: 'Les tâches en retard de Friedrich EVA sont T-1, T-2 et T-3. Souhaitez-vous que je procède à cette réassignation ?',
+      },
+      { id: 'msg-3', role: 'user', content: message },
+    ],
+    availableTools: [PLAN_TOOL, {
+      name: 'update_task_assignee',
+      category: 'mutation',
+      description: 'Create assignee preview.',
+      input_summary: {},
+      read_only: false,
+      surfaces: ['chat'],
+      write_preview: { entity_type: 'tasks', fields: ['assignee'], reversible: true, prompt_hint: 'Use update_task_assignee.' },
+    }],
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-assignee', name: 'update_task_assignee' },
+        { type: 'tool_call_delta', id: 'tc-assignee', arguments: '{"ref":"T-1","assignee_email":"nicolas@example.com"}' },
+        { type: 'tool_call_end', id: 'tc-assignee' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+      ],
+      [
+        { type: 'text_delta', text: 'Les aperçus sont prêts.' },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 20 } },
+      ],
+    ],
+    toolResultsByName: {
+      prepare_mutation_plan: {
+        previews: ['T-1', 'T-2', 'T-3'].map((ref) => taskPreviewDto(ref, 'update_task_assignee')),
+        errors: [],
+        total: 3,
+        created: 3,
+        failed: 0,
+        expected_count: 3,
+        expected_refs: ['T-1', 'T-2', 'T-3'],
+        covered_refs: ['T-1', 'T-2', 'T-3'],
+        missing_refs: [],
+        excluded: [],
+        complete: true,
+      },
+    },
+  });
+
+  await collectEvents(orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: message }));
+
+  assert.deepEqual(executedToolCalls.map((call) => call.toolName), ['prepare_mutation_plan']);
+  assert.deepEqual(executedToolCalls[0].input.operations.map((operation: any) => operation.input.ref), ['T-1', 'T-2', 'T-3']);
+}
+
+/**
+ * Issue 125: words of a refusal do not let through an answer that asks to run the change; it is a
+ * write waiting for its preview, repaired then stopped as before.
+ */
+async function testRefusalWordsDoNotCoverARequestToApply() {
+  const ask = [
+    { type: 'text_delta', text: "L'échéance de T-1 n'est pas disponible. Voulez-vous que j'applique la réassignation à Marie ?" },
+    { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+  ];
+  const { orchestrator, providerCallCount } = createOrchestrator({
+    historyMessages: [{ role: 'user', content: 'Réassigne T-1 à Marie.' }],
+    availableTools: [{
+      name: 'update_task_assignees',
+      category: 'mutation',
+      description: 'Create assignee previews.',
+      input_summary: {},
+      read_only: false,
+      surfaces: ['chat'],
+      write_preview: { entity_type: 'tasks', fields: ['assignee'], reversible: true, prompt_hint: 'Use update_task_assignees.' },
+    }],
+    providerEventBatches: [ask, ask, ask],
+  });
+
+  const events = await collectEvents(orchestrator.stream({
+    context: STREAM_CONTEXT,
+    conversationId: 'conv-1',
+    userMessage: 'Réassigne T-1 à Marie.',
+  }));
+
+  assert.equal(providerCallCount.value, 3);
+  assert.equal(streamedText(events), writePreviewMissingText('en'));
+}
+
 async function testTextualWriteConfirmationWithoutPreviewIsRewrittenToCreatePreviews() {
   const { orchestrator, recordedRequests } = createOrchestrator({
     historyMessages: [
@@ -3261,6 +3805,37 @@ async function run() {
     target: { entity_type: 'capex_items', entity_id: '11111111-2222-3333-4444-555555555555', ref: 'CPX-2' }, status: 'executed', summary: 'Updated CPX-2.',
   }]);
   assert.equal(linked, 'Updated [CPX-2](/ops/budget/BL-127).');
+  // Accounts and dimension values have pages of their own: their confirmations link to them.
+  const account = await (orchestrator as any).buildPreviewResultsAssistantText({ query: async () => [] }, [{
+    target: { entity_type: 'accounts', entity_id: 'account-id', ref: '612100' }, status: 'executed', summary: 'Updated 612100.',
+  }]);
+  assert.equal(account, 'Updated [612100](/master-data/accounts/account-id).');
+  const value = await (orchestrator as any).buildPreviewResultsAssistantText({ query: async () => [] }, [{
+    target: { entity_type: 'analytics_categories', entity_id: 'value-id', ref: 'Run' }, status: 'executed', summary: 'Created Run.',
+  }]);
+  assert.equal(value, 'Created [Run](/master-data/analytics/value-id).');
+  // The messages written after an approval or a rejection follow the person's language.
+  const frenchBatch = await (orchestrator as any).buildPreviewResultsAssistantText({ query: async () => [] }, [
+    { target: { entity_type: 'tasks', ref: 'T-4' }, status: 'executed', summary: 'Appliqué : nouveau commentaire sur T-4.' },
+    {
+      target: { entity_type: 'tasks', ref: 'T-5' },
+      status: 'expired',
+      summary: 'Expiré : nouveau commentaire sur T-5.',
+      error_message: "L'aperçu a expiré avant l'approbation.",
+    },
+  ], [], 'fr');
+  assert.equal(frenchBatch, "Aperçus traités (appliqués : 1, expirés : 1).\n\nÉchecs :\n- T-5 : L'aperçu a expiré avant l'approbation.");
+  const spanishRejection = await (orchestrator as any).buildPreviewResultsAssistantText({ query: async () => [] }, [
+    { target: { entity_type: 'tasks' }, status: 'rejected', summary: '' },
+  ], [], 'es');
+  assert.equal(spanishRejection, 'Se ha rechazado la vista previa.');
+  const germanFollowUp = await (orchestrator as any).buildPreviewResultsAssistantText({ query: async () => [] }, [
+    { target: { entity_type: 'tasks', ref: 'T-6' }, status: 'failed', summary: '', error_message: 'Task changed.' },
+  ], [{ target: { ref: 'T-7' }, summary: 'Status von T-7 ändern (Offen → Erledigt).' }], 'de');
+  assert.equal(
+    germanFollowUp,
+    'Die genehmigte Änderung ist fehlgeschlagen. Fehler: Task changed.\n\nAbhängige Vorschauen bereit, die auf Ihre Genehmigung warten: 1.\n- T-7',
+  );
   await testSimpleTextResponse();
   await testToolCallFlow();
   await testToolResultDateTimesUseTheUserTimeZone();
@@ -3290,6 +3865,15 @@ async function run() {
   await testSingleRefBulkContinuationUsesTextualTargetSet();
   await testPartialMutationPlanUsesCurrentTextualTargetSet();
   await testTextualWriteConfirmationWithoutPreviewIsRewrittenToCreatePreviews();
+  await testSingleTargetWriteIsNotTurnedIntoABulkWrite();
+  await testFailedPlanStepsCountAsHandledTargets();
+  await testIncompleteBulkWriteStaysBlockedInThePersonsLanguage();
+  await testMissingWritePreviewStopIsInThePersonsLanguage();
+  await testRefusalWithAnOfferIsShownAsIs();
+  await testRejectedPreviewEndsUnlessThePersonAskedForMore();
+  await testHeldBackAnswerStatesNoTargetSet();
+  await testConfirmedProposalKeepsItsTargetSet();
+  await testRefusalWordsDoNotCoverARequestToApply();
   await testProviderReceivesAbortSignal();
   await testProviderRequestUsesChatTimeout();
   await testProviderEndpointSourceFollowsTheResolvedModel();

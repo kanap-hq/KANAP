@@ -46,13 +46,15 @@ import {
 import { isActiveAt, parseEndOfValidityInput } from '../../common/status';
 import { sameFieldValue } from '../../common/edit-conflicts';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
-import { AiExecutionContextWithManager, AiMutationPreviewChangeDto } from '../ai.types';
+import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewClassificationCatalog } from '../ai.types';
+import { previewFieldOrder } from './ai-preview-field-order';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
 import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
+import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 
 export const AI_BUSINESS_RECORD_ENTITY_TYPES = [
   'applications',
@@ -71,6 +73,8 @@ export type AiBusinessRecordEntityType = typeof AI_BUSINESS_RECORD_ENTITY_TYPES[
 export type AiCreateBusinessRecordInput = {
   entity_type: AiBusinessRecordEntityType;
   fields: Record<string, unknown>;
+  /** A new spend or CAPEX line's amounts for one year (`create_business_record` only). */
+  amounts?: unknown;
 };
 
 export type AiUpdateBusinessRecordInput = AiCreateBusinessRecordInput & {
@@ -522,6 +526,24 @@ function formatPlainValue(value: unknown): string | null {
   return String(value);
 }
 
+/** The list of the catalog each classification axis reads. */
+const CLASSIFICATION_CATALOG_LISTS: Record<NonNullable<FieldConfig['classificationAxis']>, AiPreviewClassificationCatalog> = {
+  business: 'businessCriticalityLevels',
+  cyber: 'cyberCriticalityLevels',
+  confidentiality: 'dataClasses',
+  recovery: 'recoveryWaves',
+};
+
+/** The options of one classification axis of the tenant's catalog. */
+function classificationOptions(catalog: ClassificationCatalog, axis: NonNullable<FieldConfig['classificationAxis']>) {
+  switch (axis) {
+    case 'business': return catalog.businessCriticalityLevels;
+    case 'cyber': return catalog.cyberCriticalityLevels;
+    case 'confidentiality': return catalog.dataClasses;
+    default: return catalog.recoveryWaves;
+  }
+}
+
 function toJsonValue(value: unknown): unknown {
   if (value instanceof Date) return value.toISOString();
   if (value === undefined) return null;
@@ -692,11 +714,7 @@ export class AiBusinessRecordMutationSupportService {
     }
     if (field.kind === 'application_classification') {
       if (!catalog || !field.classificationAxis) throw new BadRequestException('Application classification catalog is unavailable.');
-      const options = field.classificationAxis === 'business' ? catalog.businessCriticalityLevels : field.classificationAxis === 'cyber'
-        ? catalog.cyberCriticalityLevels
-        : field.classificationAxis === 'confidentiality'
-          ? catalog.dataClasses
-          : catalog.recoveryWaves;
+      const options = classificationOptions(catalog, field.classificationAxis);
       const value = resolveClassificationOption(rawValue, options, existing?.[fieldName] as string | null | undefined);
       const option = options.find((item) => item.code === value);
       return { value, displayValue: option?.label ?? value };
@@ -1213,6 +1231,25 @@ export class AiBusinessRecordMutationSupportService {
     previousValues: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     const display: Record<string, unknown> = { ...previousValues };
+    // The value a field holds, as the new one is shown: a classification by its catalog label, a
+    // linked record by its name. A record that no longer resolves keeps its stored value.
+    const fields = this.getConfig(entityType).fields;
+    let catalog: ClassificationCatalog | null = null;
+    for (const [fieldName, value] of Object.entries(previousValues)) {
+      const field = fields[fieldName];
+      // The analytics dimensions of a line are named below, from their values.
+      if (!field || typeof value !== 'string' || !value || isAnalyticsDimensionField(fieldName)) continue;
+      if (field.kind === 'application_classification' && field.classificationAxis) {
+        catalog ??= await this.itOpsSettings.getClassificationCatalog(context.tenantId, { manager: context.manager });
+        display[fieldName] = classificationOptions(catalog, field.classificationAxis).find((option) => option.code === value)?.label ?? value;
+      } else if (field.kind === 'relation' && field.relationTarget && isUuid(value)) {
+        try {
+          display[fieldName] = (await this.resolveRelation(context, field.relationTarget, value, field.label, previousValues))?.label ?? value;
+        } catch (error) {
+          if (!(error instanceof NotFoundException)) throw error;
+        }
+      }
+    }
     if (!lineScope(entityType)) return display;
     const ids = Object.entries(previousValues)
       .filter(([fieldName, value]) => isAnalyticsDimensionField(fieldName) && typeof value === 'string' && isUuid(value))
@@ -1428,7 +1465,7 @@ export class AiBusinessRecordMutationSupportService {
     };
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const entityType = requireEntityType(preview.target_entity_type || preview.mutation_input?.entity_type);
     const config = this.getConfig(entityType);
     const mutation = preview.mutation_input ?? {};
@@ -1441,7 +1478,7 @@ export class AiBusinessRecordMutationSupportService {
       ? current.display_values as Record<string, unknown>
       : {};
     const title = textOrNull(current.target_title) || this.titleForPendingCreate(entityType, fields);
-    const fieldNames = Object.keys(fields);
+    const fieldNames = previewFieldOrder(fields, config.fields);
     const labelList = fieldNames.map((fieldName) => String(fieldLabels[fieldName] || fieldName)).join(', ');
 
     let summary = `Preview ${preview.id} ${preview.status}.`;
@@ -1467,13 +1504,32 @@ export class AiBusinessRecordMutationSupportService {
         break;
     }
 
+    if (language !== 'en') {
+      summary = previewSummaryText(
+        language,
+        preview.status,
+        writeActionText.writeRecord(language, action === 'create' ? 'create' : 'update', entityType, quoted(language, title)),
+        { errorMessage: preview.error_message },
+      );
+    }
+
+    const previousCodes = current.values && typeof current.values === 'object' ? current.values as Record<string, unknown> : {};
     const changes: Record<string, AiMutationPreviewChangeDto> = {};
     for (const fieldName of fieldNames) {
+      const field = config.fields[fieldName];
       changes[fieldName] = {
         label: String(fieldLabels[fieldName] || fieldName),
         from: action === 'create' ? null : formatPlainValue(currentValues[fieldName]),
         to: formatPlainValue(displayValues[fieldName]),
         format: 'text',
+        // The card names a level from the catalog in the person's language, as the application screens do.
+        ...(field?.kind === 'application_classification' && field.classificationAxis ? {
+          classification: {
+            catalog: CLASSIFICATION_CATALOG_LISTS[field.classificationAxis],
+            from: action === 'create' ? null : textOrNull(previousCodes[fieldName]),
+            to: textOrNull(fields[fieldName]),
+          },
+        } : {}),
       };
     }
     const classification = mutation.classification && typeof mutation.classification === 'object'

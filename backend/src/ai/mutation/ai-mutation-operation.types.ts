@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
+import { AiWriteLanguage } from '../ai-write-texts';
 import {
   AiExecutionContextWithManager,
   AiMutationPreviewChangeDto,
@@ -40,7 +41,8 @@ export interface AiMutationOperation<TInput = unknown> {
     input: TInput,
   ): Promise<AiPreparedMutationPreview>;
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation;
+  /** The card of a preview: its summary in the person's language (English when not given). */
+  presentPreview(preview: AiMutationPreview, language?: AiWriteLanguage): AiMutationPreviewPresentation;
 
   executePreview(
     context: AiExecutionContextWithManager,

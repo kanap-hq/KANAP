@@ -342,6 +342,62 @@ describe('useChat', () => {
     }));
   });
 
+  it('joins a tool turn without text to the answer that follows instead of showing an empty block', async () => {
+    vi.mocked(aiConversationsApi.getMessages).mockResolvedValue({
+      messages: [
+        { id: 'user-1', role: 'user', content: 'Quelles applications utilisent PostgreSQL ?' },
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          content: '',
+          tool_calls: [{ id: 'tool-call-1', name: 'search_all', arguments: { query: 'PostgreSQL 16' } }],
+        },
+        {
+          id: 'tool-1',
+          role: 'tool',
+          content: JSON.stringify({ tool_call_id: 'tool-call-1', tool_name: 'search_all', result: { items: [] } }),
+        },
+        {
+          id: 'assistant-2',
+          role: 'assistant',
+          content: 'Je relance une recherche plus large.',
+          tool_calls: [{ id: 'tool-call-2', name: 'search_all', arguments: { query: 'PostgreSQL' } }],
+        },
+        {
+          id: 'tool-2',
+          role: 'tool',
+          content: JSON.stringify({ tool_call_id: 'tool-call-2', tool_name: 'search_all', result: { items: [{ ref: 'APP-36' }] } }),
+        },
+        { id: 'assistant-3', role: 'assistant', content: 'APP-36 utilise PostgreSQL.' },
+      ],
+      conversation_usage: { input_tokens: 10, output_tokens: 10 },
+    });
+    vi.mocked(aiConversationsApi.getPreviews).mockResolvedValue([]);
+
+    const { result } = renderHook(() => useChat());
+
+    await act(async () => {
+      await result.current.loadConversation('conversation-1');
+    });
+
+    // One answer: the text of the model, never hidden, with the two searches in its ribbon.
+    expect(result.current.messages.map((message) => message.content)).toEqual([
+      'Quelles applications utilisent PostgreSQL ?',
+      'Je relance une recherche plus large.\n\nAPP-36 utilise PostgreSQL.',
+    ]);
+    expect(result.current.messages[1]).toEqual(expect.objectContaining({
+      id: 'assistant-1',
+      toolCalls: [
+        expect.objectContaining({ id: 'tool-call-1' }),
+        expect.objectContaining({ id: 'tool-call-2' }),
+      ],
+      toolResults: [
+        expect.objectContaining({ id: 'tool-call-1' }),
+        expect.objectContaining({ id: 'tool-call-2' }),
+      ],
+    }));
+  });
+
   it('surfaces streamed error events on the assistant message', async () => {
     vi.mocked(streamChat).mockImplementation(async function* () {
       yield { type: 'conversation', id: 'conversation-1', title: 'Broken stream' };

@@ -71,9 +71,51 @@ async function testNewYearIsCreatedAndAudited() {
   assert.equal((audited[0] as any).action, 'create');
 }
 
+/**
+ * Issue 127: a line created with an amount gets its version and its amounts in the same approval:
+ * the version of the amounts' year, named as the budget tab names it, then the amounts, each audited.
+ */
+async function testNewLineAmountsCreateTheVersionThenTheAmounts() {
+  const { service, context, audited, calls } = setup(false);
+  const upserts: Array<{ versionId: string; amounts: any }> = [];
+  (service as any).resolveVersionById = async () => ({ id: 'version-1', ref: 'Y2026', label: 'Y2026 / 2026', row: { id: 'version-1', budget_year: 2026 } });
+  (service as any).listAmounts = async () => ({ items: [], totals: {} });
+  (service as any).upsertAmounts = async (_ctx: unknown, _type: unknown, versionId: string, amounts: unknown) => { upserts.push({ versionId, amounts }); };
+  const versionFields: unknown[] = [];
+  (service as any).createVersion = async (_ctx: unknown, _type: unknown, itemId: string, fields: unknown) => {
+    versionFields.push(fields);
+    calls.push({ itemId, opts: { refuseExisting: true } });
+    return { id: 'version-1' };
+  };
+  await service.writeNewLineAmounts(context, preview('spend_items'), 'spend_items', ITEM_ID, { kind: 'annual', year: 2026, totals: { planned: 12000 } });
+  assert.deepEqual(versionFields, [{ version_name: 'Y2026', budget_year: 2026, as_of_date: '2026-01-01', input_grain: 'annual' }]);
+  assert.deepEqual(upserts, [{ versionId: 'version-1', amounts: { kind: 'annual', year: 2026, totals: { planned: '12000' } } }]);
+  assert.deepEqual(audited.map((entry: any) => [entry.table, entry.action]), [['spend_versions', 'create'], ['spend_amounts', 'update']]);
+}
+
+/** Issue 127: the financial plan tool finds a line by its BL-n reference (the failed step of the old flow). */
+async function testLineIsFoundByItsReference() {
+  const { service, context } = setup(false);
+  const queries: Array<{ sql: string; params: unknown[] }> = [];
+  context.manager.query = async (sql: string, params: unknown[]) => {
+    queries.push({ sql, params });
+    return [{ id: ITEM_ID, product_name: 'QA Test', item_number: 146 }];
+  };
+  const item = await (service as any).resolveItem(context, 'spend_items', 'BL-146');
+  assert.equal(item.id, ITEM_ID);
+  assert.deepEqual(queries[0].params, ['tenant-1', 'BL-146', 146, null]);
+  assert.match(queries[0].sql, /nature = 'opex'/);
+  await (service as any).resolveItem(context, 'capex_items', 'CPX-7');
+  assert.deepEqual(queries[1].params, ['tenant-1', 'CPX-7', -1, 'CPX-7']);
+  await (service as any).resolveItem(context, 'spend_items', 'Monitoring');
+  assert.deepEqual(queries[2].params, ['tenant-1', 'Monitoring', -1, null]);
+}
+
 async function main() {
   await testExistingYearIsRefused();
   await testNewYearIsCreatedAndAudited();
+  await testNewLineAmountsCreateTheVersionThenTheAmounts();
+  await testLineIsFoundByItsReference();
   console.log('ai-financial-plan-create-version.spec: ok');
 }
 

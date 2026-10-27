@@ -2,10 +2,17 @@ export type AiMutationWriteToolName =
   | 'import_ticket'
   | 'import_glpi_ticket'
   | 'create_task'
+  | 'create_master_data_record'
+  | 'create_business_record'
   | 'create_document'
+  | 'write_financial_plan'
+  | 'update_master_data_record'
+  | 'update_business_record'
+  | 'update_entity_relations'
   | 'update_document_content'
   | 'update_document_metadata'
   | 'update_document_relations'
+  | 'update_task_fields'
   | 'update_task_status'
   | 'update_task_assignee'
   | 'add_task_comment';
@@ -17,6 +24,30 @@ export type AiMutationPreviewStatus =
   | 'executed'
   | 'expired'
   | 'failed';
+
+/** The amounts of a budget line for one year, as the server sends them for a preview card. */
+export type AiPreviewAmounts = {
+  year: number | null;
+  /** The line's currency code; null when unknown. */
+  currency: string | null;
+  /** The names the tenant gave its columns, by measure; the others keep the screens' names. */
+  column_names: Partial<Record<string, string>>;
+  /** A total per column, by measure. */
+  totals?: Partial<Record<string, number>>;
+  /** Quarterly amounts of one column. */
+  quarters?: { measure: string; values: Record<'Q1' | 'Q2' | 'Q3' | 'Q4', number> };
+  /** Monthly amounts: the number of months written. */
+  months?: number;
+};
+
+/** One item of a relation on a preview card, its role by code in the catalog of its kind (`text`: typed by a person). */
+export type AiPreviewRelationItem = {
+  name: string;
+  role: { kind: 'owner' | 'contact' | 'asset_relation' | 'server_role' | 'text'; code: string } | null;
+  environment?: string | null;
+  /** The cluster that contains the asset, for a host link a cluster's write replaces. */
+  host?: string | null;
+};
 
 export type AiMutationPreview = {
   preview_id: string;
@@ -33,11 +64,23 @@ export type AiMutationPreview = {
     from: string | null;
     to: string | null;
     format?: 'text' | 'markdown';
+    /** Budget amounts as numbers, written by the card; `from` and `to` hold an English text of them. */
+    amounts?: { from: AiPreviewAmounts | null; to: AiPreviewAmounts | null };
+    /** A classification level by its code in the tenant's catalog; `from` and `to` hold the catalog's base label. */
+    classification?: {
+      catalog: 'businessCriticalityLevels' | 'cyberCriticalityLevels' | 'dataClasses' | 'recoveryWaves';
+      from: string | null;
+      to: string | null;
+    };
+    /** The items of a relation with their role by code; `from` and `to` hold an English text of them. */
+    relation_items?: { from: AiPreviewRelationItem[]; to: AiPreviewRelationItem[] };
   }>;
   requires_confirmation: boolean;
   actions: Array<'approve' | 'reject'>;
   summary: string;
   error_message: string | null;
+  /** A failure of the service: the card says the change was not made, with `error_message` as its detail. */
+  error_is_technical?: boolean;
   conversation_id: string | null;
   created_at: string;
   expires_at: string | null;

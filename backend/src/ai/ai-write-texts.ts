@@ -1,0 +1,513 @@
+import type { EntityManager } from 'typeorm';
+
+/**
+ * The sentences the backend writes itself around a write, in the person's language: the stops of
+ * the write guards, the summaries of the preview cards and the messages written after an approval
+ * or a rejection. The model writes everything else.
+ *
+ * English keeps the sentences each operation writes itself. French, German and Spanish name the
+ * change once, as on a stamp: the action alone while it waits, then the card's status word and
+ * the action ("Rejeté : création de la tâche « Migration »."), so no word has to agree with it.
+ */
+
+export type AiWriteLanguage = 'en' | 'fr' | 'de' | 'es';
+export type AiTranslatedWriteLanguage = Exclude<AiWriteLanguage, 'en'>;
+
+/** The person's stored locale (`fr-FR` reads as `fr`); English when it is missing or unknown. */
+export function aiWriteLanguage(locale: string | null | undefined): AiWriteLanguage {
+  const code = String(locale ?? '').trim().toLowerCase().split(/[-_]/)[0];
+  return code === 'fr' || code === 'de' || code === 'es' ? code : 'en';
+}
+
+/** The language of the person a write belongs to, read from their stored locale. */
+export async function personWriteLanguage(
+  manager: EntityManager,
+  tenantId: string,
+  userId: string | null | undefined,
+): Promise<AiWriteLanguage> {
+  if (!userId) return 'en';
+  const rows: unknown = await manager.query(
+    'SELECT locale FROM users WHERE tenant_id = $1 AND id = $2',
+    [tenantId, userId],
+  );
+  const row = Array.isArray(rows) ? rows[0] as { locale?: string | null } | undefined : undefined;
+  return aiWriteLanguage(row?.locale ?? null);
+}
+
+type Texts = Record<AiWriteLanguage, string>;
+type TranslatedTexts = Record<AiTranslatedWriteLanguage, string>;
+
+/** A bulk change whose previews do not cover every record it concerns: nothing was changed. */
+const BULK_PREVIEWS_INCOMPLETE: Texts = {
+  en: 'I could not prepare a preview for every record this request concerns. Nothing has been changed.',
+  fr: "Je n'ai pas pu préparer un aperçu pour chaque élément concerné par cette demande. Rien n'a été modifié.",
+  de: 'Ich konnte nicht für jedes von dieser Anfrage betroffene Element eine Vorschau vorbereiten. Es wurde nichts geändert.',
+  es: 'No he podido preparar una vista previa para cada elemento afectado por esta solicitud. No se ha modificado nada.',
+};
+
+/** A change the model described or asked about without preparing its preview: nothing was changed. */
+const WRITE_PREVIEW_MISSING: Texts = {
+  en: 'I could not prepare this change for your approval. Nothing has been changed.',
+  fr: "Je n'ai pas pu préparer cette modification pour votre approbation. Rien n'a été modifié.",
+  de: 'Ich konnte diese Änderung nicht zur Genehmigung vorbereiten. Es wurde nichts geändert.',
+  es: 'No he podido preparar este cambio para su aprobación. No se ha modificado nada.',
+};
+
+export function bulkPreviewsIncompleteText(language: AiWriteLanguage): string {
+  return BULK_PREVIEWS_INCOMPLETE[language];
+}
+
+export function writePreviewMissingText(language: AiWriteLanguage): string {
+  return WRITE_PREVIEW_MISSING[language];
+}
+
+// ---------------------------------------------------------------------------------------------
+// Preview summaries
+// ---------------------------------------------------------------------------------------------
+
+/** The status words of the preview card (`ai:previewStatuses`), written before the action. */
+const STATUS_WORDS: Record<AiTranslatedWriteLanguage, Record<'executed' | 'rejected' | 'expired' | 'failed', string>> = {
+  fr: { executed: 'Appliqué', rejected: 'Rejeté', expired: 'Expiré', failed: 'Échec' },
+  de: { executed: 'Angewendet', rejected: 'Abgelehnt', expired: 'Abgelaufen', failed: 'Fehlgeschlagen' },
+  es: { executed: 'Aplicada', rejected: 'Rechazada', expired: 'Caducada', failed: 'Fallida' },
+};
+
+const COLON: TranslatedTexts = { fr: ' : ', de: ': ', es: ': ' };
+
+function capitalize(text: string): string {
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+}
+
+/** A name in the quotation marks of the language. */
+export function quoted(language: AiWriteLanguage, text: string): string {
+  switch (language) {
+    case 'fr': return `« ${text} »`;
+    case 'de': return `„${text}“`;
+    case 'es': return `«${text}»`;
+    default: return `"${text}"`;
+  }
+}
+
+/** "Label : value." in the punctuation of the language. */
+export function labelled(language: AiWriteLanguage, label: string, value: string | number): string {
+  return `${label}${language === 'fr' ? ' : ' : ': '}${value}.`;
+}
+
+/**
+ * The summary of a preview in French, German or Spanish: the action while it waits (with its
+ * details), then the status word and the action. A failure that has an error message shows it,
+ * as in English.
+ */
+export function previewSummaryText(
+  language: AiTranslatedWriteLanguage,
+  status: string,
+  action: string,
+  details: { pending?: string[]; executed?: string[]; errorMessage?: string | null } = {},
+): string {
+  const extra = (lines: string[] | undefined) => (lines && lines.length > 0 ? ` ${lines.join(' ')}` : '');
+  if (status === 'failed' && details.errorMessage) return details.errorMessage;
+  if (status === 'pending') return `${capitalize(action)}.${extra(details.pending)}`;
+  const word = STATUS_WORDS[language][status as keyof (typeof STATUS_WORDS)['fr']];
+  if (!word) return `${capitalize(action)}.`;
+  return `${word}${COLON[language]}${action}.${status === 'executed' ? extra(details.executed) : ''}`;
+}
+
+/** The action phrases of the summaries, by operation. */
+export const writeActionText = {
+  createTask(language: AiTranslatedWriteLanguage, p: { subject: string; on: string | null; standalone: boolean }): string {
+    switch (language) {
+      case 'fr': return p.standalone
+        ? `création de la tâche autonome ${p.subject}`
+        : `création de la tâche ${p.subject}${p.on ? ` sur ${p.on}` : ''}`;
+      case 'de': return p.standalone
+        ? `Eigenständige Aufgabe ${p.subject} erstellen`
+        : `Aufgabe ${p.subject}${p.on ? ` für ${p.on}` : ''} erstellen`;
+      case 'es': return p.standalone
+        ? `creación de la tarea independiente ${p.subject}`
+        : `creación de la tarea ${p.subject}${p.on ? ` en ${p.on}` : ''}`;
+    }
+  },
+  importTicket(
+    language: AiTranslatedWriteLanguage,
+    p: { ticketId: string; provider: string | null; subject: string; on: string | null },
+  ): string {
+    switch (language) {
+      case 'fr': {
+        const ticket = p.provider ? `ticket n° ${p.ticketId} de ${p.provider}` : `ticket GLPI n° ${p.ticketId}`;
+        return `import du ${ticket} en tâche ${p.subject}${p.on ? ` sur ${p.on}` : ''}`;
+      }
+      case 'de': {
+        const ticket = p.provider ? `Ticket Nr. ${p.ticketId} von ${p.provider}` : `GLPI-Ticket Nr. ${p.ticketId}`;
+        return `${ticket} als Aufgabe ${p.subject}${p.on ? ` für ${p.on}` : ''} importieren`;
+      }
+      case 'es': {
+        const ticket = p.provider ? `ticket n.º ${p.ticketId} de ${p.provider}` : `ticket de GLPI n.º ${p.ticketId}`;
+        return `importación del ${ticket} como tarea ${p.subject}${p.on ? ` en ${p.on}` : ''}`;
+      }
+    }
+  },
+  addTaskComment(language: AiTranslatedWriteLanguage, ref: string): string {
+    switch (language) {
+      case 'fr': return `nouveau commentaire sur ${ref}`;
+      case 'de': return `Kommentar zu ${ref} hinzufügen`;
+      case 'es': return `nuevo comentario en ${ref}`;
+    }
+  },
+  changeTaskStatus(language: AiTranslatedWriteLanguage, ref: string, from: string, to: string): string {
+    switch (language) {
+      case 'fr': return `changement de statut de ${ref} (${from} → ${to})`;
+      case 'de': return `Status von ${ref} ändern (${from} → ${to})`;
+      case 'es': return `cambio de estado de ${ref} (${from} → ${to})`;
+    }
+  },
+  changeTaskAssignee(language: AiTranslatedWriteLanguage, ref: string, from: string, to: string): string {
+    switch (language) {
+      case 'fr': return `changement d'assignation de ${ref} (${from} → ${to})`;
+      case 'de': return `Zuweisung von ${ref} ändern (${from} → ${to})`;
+      case 'es': return `cambio de asignación de ${ref} (${from} → ${to})`;
+    }
+  },
+  /** A change of fields of a record named by its reference (a task, a document). */
+  updateRecord(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `modification de ${subject}`;
+      case 'de': return `${subject} ändern`;
+      case 'es': return `modificación de ${subject}`;
+    }
+  },
+  createDocument(language: AiTranslatedWriteLanguage, subject: string, library: string | null): string {
+    switch (language) {
+      case 'fr': return `création du document ${subject}${library ? ` dans ${library}` : ''}`;
+      case 'de': return `Dokument ${subject}${library ? ` in ${library}` : ''} erstellen`;
+      case 'es': return `creación del documento ${subject}${library ? ` en ${library}` : ''}`;
+    }
+  },
+  updateDocumentContent(language: AiTranslatedWriteLanguage, ref: string): string {
+    switch (language) {
+      case 'fr': return `modification du contenu de ${ref}`;
+      case 'de': return `Inhalt von ${ref} ändern`;
+      case 'es': return `modificación del contenido de ${ref}`;
+    }
+  },
+  updateDocumentLinks(language: AiTranslatedWriteLanguage, ref: string): string {
+    switch (language) {
+      case 'fr': return `modification des liens de ${ref}`;
+      case 'de': return `Verknüpfungen von ${ref} ändern`;
+      case 'es': return `modificación de los vínculos de ${ref}`;
+    }
+  },
+  /** The creation or the change of a record of a module or of master data, by its entity type. */
+  writeRecord(language: AiTranslatedWriteLanguage, action: 'create' | 'update', entityType: string, subject: string): string {
+    const noun = RECORD_NOUNS[entityType] ?? RECORD_NOUNS.default;
+    switch (language) {
+      case 'fr': return `${action === 'create' ? 'création' : 'modification'} ${noun.fr} ${subject}`;
+      case 'de': return `${noun.de} ${subject} ${action === 'create' ? 'erstellen' : 'ändern'}`;
+      case 'es': return `${action === 'create' ? 'creación' : 'modificación'} ${noun.es} ${subject}`;
+    }
+  },
+  updateRelations(language: AiTranslatedWriteLanguage, subject: string): string {
+    switch (language) {
+      case 'fr': return `modification des relations de ${subject}`;
+      case 'de': return `Beziehungen von ${subject} ändern`;
+      case 'es': return `modificación de las relaciones de ${subject}`;
+    }
+  },
+  writeFinancialPlan(
+    language: AiTranslatedWriteLanguage,
+    action: 'create_version' | 'update_version' | 'upsert_amounts' | 'replace_allocations',
+    subject: string,
+  ): string {
+    const texts: Record<typeof action, TranslatedTexts> = {
+      create_version: {
+        fr: `création d'une version budgétaire pour ${subject}`,
+        de: `Budgetversion für ${subject} erstellen`,
+        es: `creación de una versión presupuestaria para ${subject}`,
+      },
+      update_version: {
+        fr: `modification de la version budgétaire ${subject}`,
+        de: `Budgetversion ${subject} ändern`,
+        es: `modificación de la versión presupuestaria ${subject}`,
+      },
+      upsert_amounts: {
+        fr: `modification des montants de ${subject}`,
+        de: `Beträge von ${subject} ändern`,
+        es: `modificación de los importes de ${subject}`,
+      },
+      replace_allocations: {
+        fr: `remplacement des ventilations de ${subject}`,
+        de: `Zuordnungen von ${subject} ersetzen`,
+        es: `sustitución de las asignaciones de ${subject}`,
+      },
+    };
+    return texts[action][language];
+  },
+};
+
+/**
+ * The record of each entity type with its article: "de l'application" in French, "del contrato"
+ * in Spanish, the noun alone in German (its phrases end with the verb).
+ */
+const RECORD_NOUNS: Record<string, TranslatedTexts> = {
+  applications: { fr: "de l'application", de: 'Anwendung', es: 'de la aplicación' },
+  assets: { fr: "de l'actif", de: 'Asset', es: 'del activo' },
+  contracts: { fr: 'du contrat', de: 'Vertrag', es: 'del contrato' },
+  projects: { fr: 'du projet', de: 'Projekt', es: 'del proyecto' },
+  requests: { fr: 'de la demande', de: 'Anfrage', es: 'de la solicitud' },
+  interfaces: { fr: "de l'interface", de: 'Schnittstelle', es: 'de la interfaz' },
+  connections: { fr: 'de la connexion', de: 'Verbindung', es: 'de la conexión' },
+  spend_items: { fr: 'de la ligne OPEX', de: 'OPEX-Zeile', es: 'de la línea OPEX' },
+  capex_items: { fr: 'de la ligne CAPEX', de: 'CAPEX-Zeile', es: 'de la línea CAPEX' },
+  companies: { fr: 'de la société', de: 'Unternehmen', es: 'de la empresa' },
+  departments: { fr: 'du département', de: 'Abteilung', es: 'del departamento' },
+  suppliers: { fr: 'du fournisseur', de: 'Lieferant', es: 'del proveedor' },
+  contacts: { fr: 'du contact', de: 'Kontakt', es: 'del contacto' },
+  accounts: { fr: 'du compte', de: 'Konto', es: 'de la cuenta' },
+  chart_of_accounts: { fr: 'du plan comptable', de: 'Kontenplan', es: 'del plan de cuentas' },
+  analytics_categories: { fr: 'de la valeur de dimension', de: 'Dimensionswert', es: 'del valor de dimensión' },
+  business_processes: { fr: 'du processus métier', de: 'Geschäftsprozess', es: 'del proceso de negocio' },
+  locations: { fr: 'du site', de: 'Standort', es: 'de la ubicación' },
+  default: { fr: "de l'élément", de: 'Element', es: 'del elemento' },
+};
+
+/** The detail lines of a task preview: its assignee and its priority. */
+export const taskDetailText = {
+  assignee(language: AiTranslatedWriteLanguage, name: string): string {
+    return labelled(language, { fr: 'Responsable', de: 'Zugewiesen an', es: 'Asignado a' }[language], name);
+  },
+  priority(language: AiTranslatedWriteLanguage, label: string): string {
+    return labelled(language, { fr: 'Priorité', de: 'Priorität', es: 'Prioridad' }[language], label);
+  },
+};
+
+/** The counts of a ticket import, as "label: count" so no plural has to agree. */
+export const ticketImportDetailText = {
+  imagesQueued: (language: AiTranslatedWriteLanguage, count: number) => labelled(language, {
+    fr: 'Images intégrées à importer', de: 'Eingebettete Bilder zum Import', es: 'Imágenes incrustadas por importar',
+  }[language], count),
+  followupsQueued: (language: AiTranslatedWriteLanguage, count: number) => labelled(language, {
+    fr: 'Suivis publics à importer en commentaires',
+    de: 'Öffentliche Follow-ups, die als Kommentare importiert werden',
+    es: 'Seguimientos públicos por importar como comentarios',
+  }[language], count),
+  privateFollowupsSkipped: (language: AiTranslatedWriteLanguage, count: number) => labelled(language, {
+    fr: 'Suivis privés ignorés', de: 'Übersprungene private Follow-ups', es: 'Seguimientos privados omitidos',
+  }[language], count),
+  imagesImported: (language: AiTranslatedWriteLanguage, imported: number, total: number) => labelled(language, {
+    fr: 'Images intégrées importées', de: 'Importierte eingebettete Bilder', es: 'Imágenes incrustadas importadas',
+  }[language], `${imported} ${{ fr: 'sur', de: 'von', es: 'de' }[language]} ${total}`),
+  followupsImported: (language: AiTranslatedWriteLanguage, imported: number, total: number) => labelled(language, {
+    fr: 'Suivis publics importés en commentaires',
+    de: 'Als Kommentare importierte öffentliche Follow-ups',
+    es: 'Seguimientos públicos importados como comentarios',
+  }[language], `${imported} ${{ fr: 'sur', de: 'von', es: 'de' }[language]} ${total}`),
+  imageWarnings: (language: AiTranslatedWriteLanguage, count: number) => labelled(language, {
+    fr: "Avertissements lors de l'import des images",
+    de: 'Warnungen beim Bildimport',
+    es: 'Advertencias al importar las imágenes',
+  }[language], count),
+};
+
+/** The values of a ticket import card: its source and its counts. English keeps its wording. */
+export const ticketImportCardText = {
+  source(language: AiWriteLanguage, ticketId: string, provider: string | null, url: string | null): string {
+    const ticket = {
+      en: provider ? `Ticket #${ticketId} from ${provider}` : `GLPI Ticket #${ticketId}`,
+      fr: provider ? `Ticket n° ${ticketId} de ${provider}` : `Ticket GLPI n° ${ticketId}`,
+      de: provider ? `Ticket Nr. ${ticketId} von ${provider}` : `GLPI-Ticket Nr. ${ticketId}`,
+      es: provider ? `Ticket n.º ${ticketId} de ${provider}` : `Ticket de GLPI n.º ${ticketId}`,
+    }[language];
+    return url ? `${ticket} (${url})` : ticket;
+  },
+  none: (language: AiWriteLanguage) => ({ en: 'None', fr: 'Aucun', de: 'Keine', es: 'Ninguno' }[language]),
+  queued: (language: AiWriteLanguage, count: number) => ({
+    en: `${count} queued for import`, fr: `${count} à importer`, de: `${count} zum Import`, es: `${count} por importar`,
+  }[language]),
+  followups(language: AiWriteLanguage, publicCount: number, privateSkipped: number): string {
+    if (language === 'en') {
+      if (publicCount > 0) return `${publicCount} public queued as comments${privateSkipped > 0 ? `, ${privateSkipped} private skipped` : ''}`;
+      return privateSkipped > 0 ? `${privateSkipped} private skipped` : 'None';
+    }
+    const colon = language === 'fr' ? ' : ' : ': ';
+    const parts = [
+      ...(publicCount > 0 ? [`${{ fr: 'publics, en commentaires', de: 'öffentlich, als Kommentare', es: 'públicos, como comentarios' }[language]}${colon}${publicCount}`] : []),
+      ...(privateSkipped > 0 ? [`${{ fr: 'privés ignorés', de: 'private übersprungen', es: 'privados omitidos' }[language]}${colon}${privateSkipped}`] : []),
+    ];
+    return parts.length > 0 ? capitalize(parts.join(', ')) : ticketImportCardText.none(language);
+  },
+  followupImages(language: AiWriteLanguage, imported: number, total: number): string {
+    if (total <= 0) return ticketImportCardText.none(language);
+    if (imported <= 0) return language === 'en' ? `${total} queued` : ticketImportCardText.queued(language, total);
+    return {
+      en: `${imported} imported of ${total} queued`,
+      fr: `${imported} importées sur ${total}`,
+      de: `${imported} von ${total} importiert`,
+      es: `${imported} importadas de ${total}`,
+    }[language];
+  },
+};
+
+/** The task statuses and priorities of the task screens (`portfolio:statuses.task`, `portfolio:priority`). */
+const TASK_STATUS_LABELS: Record<AiWriteLanguage, Record<string, string>> = {
+  en: { open: 'Open', in_progress: 'In progress', pending: 'Pending', in_testing: 'In testing', done: 'Done', cancelled: 'Cancelled' },
+  fr: { open: 'Ouvert', in_progress: 'En cours', pending: 'En attente', in_testing: 'En test', done: 'Terminé', cancelled: 'Annulé' },
+  de: { open: 'Offen', in_progress: 'In Bearbeitung', pending: 'Ausstehend', in_testing: 'Im Test', done: 'Erledigt', cancelled: 'Abgebrochen' },
+  es: { open: 'Abierta', in_progress: 'En curso', pending: 'Pendiente', in_testing: 'En pruebas', done: 'Completada', cancelled: 'Cancelada' },
+};
+
+const TASK_PRIORITY_LABELS: Record<AiWriteLanguage, Record<string, string>> = {
+  en: { blocker: 'Blocker', high: 'High', normal: 'Medium', low: 'Low', optional: 'Optional' },
+  fr: { blocker: 'Bloquant', high: 'Haute', normal: 'Moyenne', low: 'Basse', optional: 'Optionnelle' },
+  de: { blocker: 'Blocker', high: 'Hoch', normal: 'Mittel', low: 'Niedrig', optional: 'Optional' },
+  es: { blocker: 'Bloqueante', high: 'Alta', normal: 'Media', low: 'Baja', optional: 'Opcional' },
+};
+
+const UNASSIGNED: Texts = { en: 'Unassigned', fr: 'Non assigné', de: 'Nicht zugewiesen', es: 'Sin asignar' };
+
+function taskCode(value: string | null | undefined): string {
+  return String(value ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+}
+
+/** A task status as the task screens show it; the stored code when it is unknown. */
+export function taskStatusText(language: AiWriteLanguage, status: string | null | undefined): string | null {
+  if (!status) return null;
+  return TASK_STATUS_LABELS[language][taskCode(status)] ?? status;
+}
+
+/** A task priority as the task screens show it; the stored code when it is unknown. */
+export function taskPriorityText(language: AiWriteLanguage, priority: string | null | undefined): string | null {
+  if (!priority) return null;
+  return TASK_PRIORITY_LABELS[language][taskCode(priority)] ?? priority;
+}
+
+export function unassignedText(language: AiWriteLanguage): string {
+  return UNASSIGNED[language];
+}
+
+// ---------------------------------------------------------------------------------------------
+// Fixed preview errors and the messages written after an approval or a rejection
+// ---------------------------------------------------------------------------------------------
+
+export const PREVIEW_EXPIRED_MESSAGE = 'Preview expired before approval.';
+export const PREVIEW_DATA_BUSY_MESSAGE =
+  'The data this change writes was busy with another operation, so nothing was changed. Approve it again in a moment.';
+
+const FIXED_PREVIEW_ERRORS: Record<string, TranslatedTexts> = {
+  [PREVIEW_EXPIRED_MESSAGE]: {
+    fr: "L'aperçu a expiré avant l'approbation.",
+    de: 'Die Vorschau ist vor der Genehmigung abgelaufen.',
+    es: 'La vista previa caducó antes de la aprobación.',
+  },
+  [PREVIEW_DATA_BUSY_MESSAGE]: {
+    fr: "Les données que cette modification écrit étaient occupées par une autre opération : rien n'a été modifié. Approuvez-la de nouveau dans un instant.",
+    de: 'Die Daten, die diese Änderung schreibt, waren durch einen anderen Vorgang belegt. Es wurde nichts geändert. Genehmigen Sie sie gleich noch einmal.',
+    es: 'Los datos que escribe este cambio estaban ocupados por otra operación, así que no se ha modificado nada. Vuelva a aprobarlo en un momento.',
+  },
+};
+
+/** Whether a preview error is one the backend writes itself (expired, data busy), in every language. */
+export function isFixedPreviewError(message: string | null | undefined): boolean {
+  return message != null && Object.prototype.hasOwnProperty.call(FIXED_PREVIEW_ERRORS, message);
+}
+
+/** A preview error the backend writes itself, in the person's language; any other error as it is. */
+export function previewErrorText(language: AiWriteLanguage, message: string | null | undefined): string | null {
+  if (message == null) return null;
+  if (language === 'en') return message;
+  return FIXED_PREVIEW_ERRORS[message]?.[language] ?? message;
+}
+
+/** The messages of a preview result when its summary is empty, by status. */
+const RESULT_FALLBACKS: Record<'executed' | 'rejected' | 'failed' | 'expired' | 'other', Texts> = {
+  executed: {
+    en: 'The approved change has been executed.',
+    fr: 'La modification approuvée a été appliquée.',
+    de: 'Die genehmigte Änderung wurde angewendet.',
+    es: 'Se ha aplicado el cambio aprobado.',
+  },
+  rejected: {
+    en: 'The preview was rejected.',
+    fr: "L'aperçu a été rejeté.",
+    de: 'Die Vorschau wurde abgelehnt.',
+    es: 'Se ha rechazado la vista previa.',
+  },
+  failed: {
+    en: 'The approved change failed.',
+    fr: "La modification approuvée n'a pas pu être appliquée.",
+    de: 'Die genehmigte Änderung ist fehlgeschlagen.',
+    es: 'No se ha podido aplicar el cambio aprobado.',
+  },
+  expired: {
+    en: 'The preview expired before approval.',
+    fr: "L'aperçu a expiré avant l'approbation.",
+    de: 'Die Vorschau ist vor der Genehmigung abgelaufen.',
+    es: 'La vista previa caducó antes de la aprobación.',
+  },
+  other: {
+    en: 'The backend processed the preview action.',
+    fr: "L'action sur l'aperçu a été traitée.",
+    de: 'Die Aktion zur Vorschau wurde verarbeitet.',
+    es: 'Se ha procesado la acción sobre la vista previa.',
+  },
+};
+
+export function previewResultFallbackText(
+  language: AiWriteLanguage,
+  status: 'executed' | 'rejected' | 'failed' | 'expired' | 'other',
+): string {
+  return RESULT_FALLBACKS[status][language];
+}
+
+/** "Error: …" after a result whose change failed. */
+export function previewErrorLine(language: AiWriteLanguage, message: string): string {
+  return `${{ en: 'Error', fr: 'Erreur', de: 'Fehler', es: 'Error' }[language]}${language === 'fr' ? ' : ' : ': '}${message}`;
+}
+
+/** The first line of the message after several previews were approved or rejected at once. */
+export function previewBatchText(
+  language: AiWriteLanguage,
+  counts: { applied: number; rejected: number; failed: number; expired: number; unchanged: number },
+): string {
+  const words: Record<keyof typeof counts, Texts> = {
+    applied: { en: 'applied', fr: 'appliqués', de: 'angewendet', es: 'aplicadas' },
+    rejected: { en: 'rejected', fr: 'rejetés', de: 'abgelehnt', es: 'rechazadas' },
+    failed: { en: 'failed', fr: 'en échec', de: 'fehlgeschlagen', es: 'fallidas' },
+    expired: { en: 'expired', fr: 'expirés', de: 'abgelaufen', es: 'caducadas' },
+    unchanged: { en: 'unchanged', fr: 'inchangés', de: 'unverändert', es: 'sin cambios' },
+  };
+  const keys = (Object.keys(words) as Array<keyof typeof counts>).filter((key) => counts[key] > 0);
+  if (language === 'en') {
+    const parts = keys.map((key) => `${counts[key]} ${words[key].en}`);
+    return parts.length > 0 ? `Preview batch completed: ${parts.join(', ')}.` : 'Preview batch completed.';
+  }
+  const head: TranslatedTexts = { fr: 'Aperçus traités', de: 'Vorschauen verarbeitet', es: 'Vistas previas procesadas' };
+  if (keys.length === 0) return `${head[language]}.`;
+  const colon = language === 'fr' ? ' : ' : ': ';
+  return `${head[language]} (${keys.map((key) => `${words[key][language]}${colon}${counts[key]}`).join(', ')}).`;
+}
+
+export const previewBatchDetailText = {
+  failuresHeading: (language: AiWriteLanguage) => ({ en: 'Failures:', fr: 'Échecs :', de: 'Fehler:', es: 'Errores:' }[language]),
+  moreFailures: (language: AiWriteLanguage, count: number) => (language === 'en'
+    ? `${count} more failed previews.`
+    : labelled(language, { fr: 'Autres échecs', de: 'Weitere Fehler', es: 'Otros errores' }[language], count)),
+  noErrorDetail: (language: AiWriteLanguage) => ({
+    en: 'No error detail was returned.',
+    fr: "Aucun détail d'erreur n'a été renvoyé.",
+    de: 'Es wurden keine Fehlerdetails zurückgegeben.',
+    es: 'No se ha devuelto ningún detalle del error.',
+  }[language]),
+};
+
+/** The line announcing previews a plan prepared after an approval, then "N more." */
+export const followUpPreviewText = {
+  heading: (language: AiWriteLanguage, count: number) => (language === 'en'
+    ? `${count} dependent preview${count > 1 ? 's are' : ' is'} now prepared and waiting for explicit approval.`
+    : labelled(language, {
+      fr: 'Aperçus dépendants prêts, en attente de votre approbation',
+      de: 'Abhängige Vorschauen bereit, die auf Ihre Genehmigung warten',
+      es: 'Vistas previas dependientes listas, a la espera de su aprobación',
+    }[language], count)),
+  more: (language: AiWriteLanguage, count: number) => (language === 'en'
+    ? `${count} more.`
+    : labelled(language, { fr: 'Autres', de: 'Weitere', es: 'Otras' }[language], count)),
+};
