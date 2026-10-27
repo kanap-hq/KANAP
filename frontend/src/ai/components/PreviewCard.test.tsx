@@ -202,6 +202,62 @@ describe('PreviewCard in French', () => {
     expect(screen.getByText("Suppression de l'interface « INT-7 - Orders ».")).toBeInTheDocument();
   });
 
+  it('shows a document deletion with its versions, links and review notice, in French', () => {
+    renderCard(preview({
+      tool_name: 'delete_record',
+      target: { entity_type: 'documents', entity_id: 'doc-12', ref: 'DOC-12', title: 'Runbook' },
+      summary: 'Suppression du document « Runbook ».',
+      changes: {
+        deletion: {
+          label: 'What goes with it',
+          from: null,
+          to: [
+            '- Versions : 2',
+            '- Pièces jointes : 1',
+            "- Documents qui le citent : 1",
+            "- Documents qu'il cite : 1",
+            '- Applications : 1',
+            '- Documents créés depuis ce modèle : 1',
+            '- En cours de relecture. La suppression reste possible.',
+            '- Verrouillé pour édition par Camille Roux. La suppression reste possible.',
+          ].join('\n'),
+          format: 'markdown',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Ce qui part avec la fiche')).toBeInTheDocument();
+    for (const text of [
+      'Versions : 2',
+      'Pièces jointes : 1',
+      'Documents qui le citent : 1',
+      "Documents qu'il cite : 1",
+      'Applications : 1',
+      'Documents créés depuis ce modèle : 1',
+      'En cours de relecture. La suppression reste possible.',
+      'Verrouillé pour édition par Camille Roux. La suppression reste possible.',
+    ]) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.getByText('Suppression du document « Runbook ».')).toBeInTheDocument();
+  });
+
+  it('shows the reference of a connection once when the server label repeats it', () => {
+    renderCard(preview({
+      tool_name: 'delete_record',
+      target: { entity_type: 'connections', entity_id: 'conn-1', ref: 'CON-1', title: 'CON-1 - CON-1 - DB link' },
+      summary: 'Suppression de la connexion « DB link ».',
+      changes: {
+        deletion: { label: 'What goes with it', from: null, to: '- Sauts : 1', format: 'markdown' },
+      },
+    }));
+
+    expect(screen.getByText('CON-1')).toBeInTheDocument();
+    expect(screen.getByText('DB link')).toBeInTheDocument();
+    expect(screen.queryByText(/CON-1 - CON-1/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/CON-1 - DB link/)).not.toBeInTheDocument();
+  });
+
   it('shows a task creation with the labels and values of the task screens', async () => {
     renderCard(preview({
       summary: 'Création de la tâche autonome « Migration ». Priorité : Moyenne.',

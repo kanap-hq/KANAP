@@ -31,7 +31,15 @@ export function getPreviewTitle(preview: AiMutationPreview): string | null {
   const title = preview.target?.title?.trim() || null;
   if (!ref || !title) return title;
   if (title === ref) return null;
-  const stripped = title.replace(new RegExp(`^${escapeRegExp(ref)}(?:\\s*[-–—·:|]\\s*|\\s+)`), '').trim();
+  // A server label that already repeats the reference ("CON-1 - CON-1 - DB link") loses every
+  // leading occurrence: the header shows the reference once, beside the rest of the name.
+  const pattern = new RegExp(`^${escapeRegExp(ref)}(?:\\s*[-–—·:|]\\s*|\\s+)`);
+  let stripped = title;
+  for (let pass = 0; pass < 3; pass += 1) {
+    const next = stripped.replace(pattern, '').trim();
+    if (next === stripped) break;
+    stripped = next;
+  }
   return stripped && stripped !== title ? stripped : title;
 }
 
