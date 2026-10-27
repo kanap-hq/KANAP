@@ -251,14 +251,16 @@ Die Karte **MCP-Protokoll** listet jeden Werkzeugaufruf der MCP-Clients Ihrer Or
 
 - **Datum**
 - **Person**: der Eigentümer des Schlüssels oder der Verbindung
-- **Schlüssel oder Verbindung**
+- **Schlüssel oder Verbindung**: der Name des Schlüssels, bei einer Verbindung die Anwendung und ihre Domain (*Claude · claude.ai*). *Gelöschter Schlüssel*, wenn der Schlüssel nicht mehr existiert
 - **Tool**
 - **Ergebnis**: **Erfolgreich**, **Abgelehnt** oder **Fehlgeschlagen**, mit der Ursache unter einer Ablehnung oder einem Fehler (zum Beispiel *Der Server ist schreibgeschützt*, *Der Schlüssel erlaubt dieses Tool nicht*, *Widerrufener Schlüssel*)
-- **Dauer**
+- **Dauer**: ein Strich, wenn sie unbekannt ist
 
 Filtern Sie die Liste nach **Person**, **Schlüssel oder Verbindung**, **Ergebnis** und **Zeitraum** (letzte 24 Stunden, letzte 7 Tage, letzte 30 Tage oder gesamter Zeitraum). Sie zeigt 25 Aufrufe pro Seite. Mit **Zurück** und **Weiter** wechseln Sie zwischen den Seiten.
 
-Das Protokoll erfasst auch Aufrufe mit einem widerrufenen oder abgelaufenen Schlüssel und speichert die Werte, die jeder Aufruf gesendet hat, gekürzt. Es speichert nie einen Schlüssel oder ein Token.
+Klicken Sie auf eine Zeile, um die Argumente des Aufrufs zu sehen, gekürzt, und bei einer Ablehnung oder einem Fehler die vollständige Ursache. Geheime Werte erscheinen als *Ausgeblendet*.
+
+Das Protokoll erfasst auch Aufrufe mit einem widerrufenen oder abgelaufenen Schlüssel. Es speichert nie einen Schlüssel oder ein Token.
 
 ---
 

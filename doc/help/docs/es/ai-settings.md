@@ -251,14 +251,16 @@ La tarjeta **Registro MCP** enumera cada llamada a herramientas hecha por los cl
 
 - **Fecha**
 - **Persona**: el propietario de la clave o de la conexión
-- **Clave o conexión**
+- **Clave o conexión**: el nombre de la clave, o la aplicación y su dominio para una conexión (*Claude · claude.ai*). *Clave eliminada* cuando la clave ya no existe
 - **Herramienta**
 - **Resultado**: **Completada**, **Rechazada** o **Fallida**, con la causa debajo de un rechazo o un fallo (por ejemplo *El servidor es de solo lectura*, *La clave no permite esta herramienta*, *Clave revocada*)
-- **Duración**
+- **Duración**: un guion cuando se desconoce
 
 Filtre la lista por **Persona**, **Clave o conexión**, **Resultado** y **Periodo** (últimas 24 horas, últimos 7 días, últimos 30 días o todo el periodo). Muestra 25 llamadas por página. Use **Anterior** y **Siguiente** para pasar de una página a otra.
 
-El registro también guarda las llamadas hechas con una clave revocada o caducada, y conserva los valores que envió cada llamada, acortados. Nunca guarda una clave ni un token.
+Haga clic en una línea para ver los argumentos que envió la llamada, acortados, y para un rechazo o un fallo su causa completa. Los valores secretos aparecen como *Oculto*.
+
+El registro también guarda las llamadas hechas con una clave revocada o caducada. Nunca guarda una clave ni un token.
 
 ---
 

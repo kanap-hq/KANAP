@@ -253,14 +253,16 @@ The **MCP journal** card lists every tool call made by MCP clients in your organ
 
 - **Date**
 - **Person**: the owner of the key or the connection
-- **Key or connection**
+- **Key or connection**: the key's label, or the application and its domain for a connection (*Claude · claude.ai*). *Deleted key* when the key no longer exists
 - **Tool**
 - **Result**: **Completed**, **Refused** or **Failed**, with the cause under a refusal or a failure (for example *The server only reads*, *The key does not allow this tool*, *Revoked key*)
-- **Duration**
+- **Duration**: a dash when it is unknown
 
 Filter the list by **Person**, **Key or connection**, **Result** and **Period** (last 24 hours, last 7 days, last 30 days, or all time). It shows 25 calls a page; use **Previous** and **Next** to move between pages.
 
-The journal also records calls made with a key that was revoked or has expired, and keeps the values each call sent, shortened. It never keeps a key or a token.
+Click a line to see the arguments the call sent, shortened, and for a refusal or a failure its full cause. Secret values show as *Hidden*.
+
+The journal also records calls made with a key that was revoked or has expired. It never keeps a key or a token.
 
 ---
 

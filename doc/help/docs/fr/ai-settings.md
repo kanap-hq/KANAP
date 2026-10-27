@@ -251,14 +251,16 @@ La carte **Journal MCP** liste chaque appel d'outil fait par les clients MCP de 
 
 - **Date**
 - **Personne** : le propriétaire de la clé ou de la connexion
-- **Clé ou connexion**
+- **Clé ou connexion** : le nom de la clé, ou l'application et son domaine pour une connexion (*Claude · claude.ai*). *Clé supprimée* quand la clé n'existe plus
 - **Outil**
 - **Résultat** : **Réussi**, **Refusé** ou **Échoué**, avec la cause sous un refus ou un échec (par exemple *Le serveur est en lecture seule*, *La clé n'autorise pas cet outil*, *Clé révoquée*)
-- **Durée**
+- **Durée** : un tiret quand elle est inconnue
 
 Filtrez la liste par **Personne**, **Clé ou connexion**, **Résultat** et **Période** (dernières 24 heures, 7 derniers jours, 30 derniers jours ou toute la période). Elle affiche 25 appels par page. Utilisez **Précédent** et **Suivant** pour passer d'une page à l'autre.
 
-Le journal enregistre aussi les appels faits avec une clé révoquée ou expirée, et conserve les valeurs envoyées par chaque appel, raccourcies. Il ne conserve jamais de clé ni de jeton.
+Cliquez sur une ligne pour voir les arguments envoyés par l'appel, raccourcis, et pour un refus ou un échec sa cause complète. Les valeurs secrètes apparaissent comme *Masqué*.
+
+Le journal enregistre aussi les appels faits avec une clé révoquée ou expirée. Il ne conserve jamais de clé ni de jeton.
 
 ---
 
