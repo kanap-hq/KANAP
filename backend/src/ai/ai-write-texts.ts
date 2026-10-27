@@ -358,7 +358,6 @@ export function deletionImpactText(language: AiWriteLanguage, entityType: string
   return closing ? `${lines.join('\n')}\n\n${closing}` : lines.join('\n');
 }
 
-
 /** The counts of a ticket import, as "label: count" so no plural has to agree. */
 export const ticketImportDetailText = {
   imagesQueued: (language: AiTranslatedWriteLanguage, count: number) => labelled(language, {
