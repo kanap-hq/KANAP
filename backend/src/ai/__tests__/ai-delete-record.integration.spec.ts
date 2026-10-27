@@ -4,14 +4,24 @@ import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 
-// Lot L3, lot 1: Plaid deletes one task, one contact or one location under preview.
+// Lot L3: Plaid deletes one task, contact, location, budget line, connection or interface under
+// preview.
 // - A task deletes through its screen service, with the counts of what goes with it and an
-//   `ai_chat` audit entry naming the preview; its comments and time entries go.
+//   `ai_chat` audit entry naming the preview; its comments and time entries go. A comment added
+//   after the preview refuses the run, even when the task's `updated_at` did not move.
 // - A task that started a request is refused before any preview exists, and a task outside a
 //   Business Contributor's scope reads as missing.
 // - A contact deletes for its administrator, with its links counted by readable family and the
 //   others left unnamed; a member and a limited person are refused, at the preview and at the run.
 // - A location deletes for a member, and its assets keep existing without a location.
+// - An OPEX and a CAPEX line delete through their screen services, with their versions, tasks,
+//   links and dimension values gone; a request keeps its own row and loses its origin task. A
+//   line with amounts in a frozen column refuses before any preview; a budget member and a
+//   limited person are refused.
+// - A connection deletes for an infrastructure member, its interfaces kept and unlinked.
+// - An interface with bindings is refused without `delete_related_bindings`, then deleted with
+//   its bindings and its integrated documents even for an applications administrator without a
+//   Knowledge library right; an applications member is refused.
 // - A reader is refused, a record changed between the preview and the run is refused, and two
 //   deletes never enter a mutation plan.
 // The AI surface checks are stubbed open: this spec tests the operation, not the routes.
