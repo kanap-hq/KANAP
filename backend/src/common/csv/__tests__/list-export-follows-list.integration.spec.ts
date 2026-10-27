@@ -49,6 +49,13 @@ import { User } from '../../../users/user.entity';
 import { UsersService } from '../../../users/users.service';
 import { WorkingDayProfilesCsvService } from '../../../working-day-profiles/working-day-profiles-csv.service';
 import { WorkingDayProfilesService } from '../../../working-day-profiles/working-day-profiles.service';
+import { AuditLog } from '../../../audit/audit.entity';
+import { AuditLogsService } from '../../../audit/audit-logs.service';
+import { AdministrationViewService } from '../../../technologies/reports/administration-view.service';
+import { AuditService } from '../../../audit/audit.service';
+import { DEFAULT_TECHNOLOGY_FAMILIES } from '../../../it-ops-settings/it-ops-settings.service';
+import { TechnologyReachService } from '../../../technologies/technology-reach.service';
+import { VulnerabilitiesService } from '../../../vulnerabilities/vulnerabilities.service';
 
 // The list exports follow the screen (Excel export, lot 3): with a column filter, a quick search and a
 // sort active, the rows of the export (their ids, in order) are the rows of the list route for the
@@ -59,6 +66,10 @@ import { WorkingDayProfilesService } from '../../../working-day-profiles/working
 // contracts, cost centers, departments, suppliers, users, working-day calendars) read the list's rows
 // through their list service with the export bound; their file has no id, so the names (or emails)
 // of the export, in order, are compared with those of the list route.
+// The exports with a plain button (run C): the contract compliance register (its contracts, in order,
+// against the contracts list), the administration view's assets, the vulnerabilities and the audit
+// log, each against its own list route. The applications of a technology have no list query: the tab
+// and its file read the same function.
 
 const engine = new CsvExportService(new CsvResolverService());
 const importer = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
@@ -240,6 +251,98 @@ async function testMasterDataLists(runner: QueryRunner, tenantId: string, checke
   }
 }
 
+/** The first cells of an English CSV (no quote in the columns compared), in order. */
+function cellsOf(content: string, index: number): string[] {
+  return content.replace(/^\uFEFF/, '').trim().split(/\r?\n/).slice(1).map((line) => line.split(',')[index]);
+}
+
+/** The exports with a plain button, against their list route, with a filter, a search and a sort. */
+async function testPlainButtonExports(runner: QueryRunner, tenantId: string, checked: string[]) {
+  const manager = runner.manager;
+  const opts = { manager, tenantId };
+
+  // Contract compliance register: the master-data contracts (seedMasterData), five lines per contract.
+  const contracts = new (ContractsService as any)(...Array.from({ length: 10 }, () => undefined)) as ContractsService;
+  for (const sort of ['name:DESC', 'name:ASC']) {
+    const query = screenQuery({ name: { filterType: 'text', type: 'contains', filter: 'a' } }, 'alpha', sort);
+    const listed = (await contracts.list({ ...query, page: 1, limit: 100 }, { manager })).items.map((row: any) => String(row.name));
+    const register = await contracts.exportComplianceRegister(query, 'en', { manager });
+    const names = cellsOf(register.content, 0).filter((name, index, all) => index === 0 || all[index - 1] !== name);
+    assert.ok(listed.length >= 2, `register ${sort}: the query keeps several contracts`);
+    assert.deepEqual(names, listed, `register ${sort}: the contracts of the list, in its order`);
+    checked.push(`compliance register ${sort} (${listed.length})`);
+  }
+
+  // Administration view: the assets of seed().
+  const settings = { adminZones: [], domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES, serverKinds: [] };
+  const administration = new AdministrationViewService({ getSettings: async () => settings } as any, new AuditService({} as any));
+  for (const sort of ['name:DESC', 'name:ASC']) {
+    const query = screenQuery({ name: { filterType: 'text', type: 'contains', filter: 'a' } }, 'alpha', sort);
+    const listed = (await administration.assets({ ...query, limit: 200 } as any, opts)).items.map((row) => row.name);
+    const file = await administration.csv({ ...query, language: 'en' }, opts);
+    assert.ok(listed.length >= 2, `administration ${sort}: the query keeps several assets`);
+    assert.deepEqual(cellsOf(file.content, 2), listed, `administration ${sort}: the list's assets, in its order`);
+    checked.push(`administration view ${sort} (${listed.length})`);
+  }
+
+  // Vulnerabilities: two technologies, four CVE (the catalog rows are rolled back with the rest).
+  const cves = ['CVE-2097-51001', 'CVE-2097-51002', 'CVE-2097-51003', 'CVE-2097-51004'];
+  await runner.query(
+    `INSERT INTO vulnerability_cves (cve_id, summary, cvss_score, severity, published_at, epss) VALUES
+       ($1, 'one', 9.8, 'critical', '2026-01-01T12:00:00Z', 0.1), ($2, 'two', 5.0, 'medium', '2026-02-01T12:00:00Z', 0.4),
+       ($3, 'three', 2.0, 'low', '2026-03-01T12:00:00Z', 0.9), ($4, 'four', 7.5, 'high', '2026-04-01T12:00:00Z', NULL)`,
+    cves,
+  );
+  const technologies: string[] = [];
+  for (const [index, name] of ['Follows API', 'Follows DB'].entries()) {
+    const [row] = await runner.query(`INSERT INTO technologies (tenant_id, item_number, name) VALUES ($1, $2, $3) RETURNING id`, [tenantId, 900 + index, name]);
+    technologies.push(row.id);
+  }
+  for (const [index, cve] of cves.entries()) {
+    for (const technology of index % 2 === 0 ? technologies : technologies.slice(0, 1)) {
+      await runner.query(
+        `INSERT INTO technology_vulnerabilities (tenant_id, technology_id, cve_id, match_basis) VALUES ($1, $2, $3, 'version_unknown')`,
+        [tenantId, technology, cve],
+      );
+    }
+  }
+  const vulnerabilities = new VulnerabilitiesService(new TechnologyReachService(), {} as any, { log: async () => undefined } as any);
+  for (const sort of ['epss:ASC', 'technology:DESC']) {
+    const query = { epss: '0', sort };
+    const listed = (await vulnerabilities.list({ ...query, limit: 200 }, opts, null)).items.map((row) => `${row.cve_id} ${row.technology.name}`);
+    const file = await vulnerabilities.exportCsv(query, 'en', opts, null);
+    const exported = cellsOf(file.content, 0).map((cve, index) => `${cve} ${cellsOf(file.content, 5)[index]}`);
+    assert.ok(listed.length >= 2, `vulnerabilities ${sort}: the query keeps several rows`);
+    assert.deepEqual(exported, listed, `vulnerabilities ${sort}: the list's rows, in its order`);
+    checked.push(`vulnerabilities ${sort} (${listed.length})`);
+  }
+
+  // Audit log: rows of a date range, a column filter, a search and a sort.
+  const day = (date: string, hour: number) => new Date(`${date}T${String(hour).padStart(2, '0')}:00:00Z`).toISOString();
+  const seeded: Array<[string, string, string]> = [
+    ['suppliers', 'update', day('2026-10-01', 9)], ['suppliers', 'update', day('2026-10-02', 9)], ['suppliers', 'update', day('2026-10-02', 15)],
+    ['suppliers', 'create', day('2026-10-02', 10)], ['contracts', 'update', day('2026-10-02', 11)], ['suppliers', 'update', day('2026-10-05', 9)],
+  ];
+  for (const [table, action, createdAt] of seeded) {
+    await runner.query(
+      `INSERT INTO audit_log (tenant_id, table_name, record_id, action, source, created_at) VALUES ($1, $2, $3, $4, 'user', $5)`,
+      [tenantId, table, randomUUID(), action, createdAt],
+    );
+  }
+  const audit = new AuditLogsService(manager.getRepository(AuditLog));
+  for (const sort of ['created_at:ASC', 'created_at:DESC']) {
+    const query = { ...screenQuery({ table_name: { filterType: 'set', values: ['suppliers'] } }, 'upd', sort), from: '2026-10-01', to: '2026-10-03' };
+    const listed = (await audit.list({ ...query, page: 1, limit: 100 }, opts)).items.map((row) => String(row.record_id));
+    const file = await audit.exportCsv(query, opts);
+    let content = '';
+    for await (const part of file.chunks) content += part;
+    assert.equal(listed.length, 3, `audit log ${sort}: the range, filter and search keep three rows`);
+    assert.equal(file.rows, 3);
+    assert.deepEqual(cellsOf(content, 3), listed, `audit log ${sort}: the list's rows, in its order`);
+    checked.push(`audit log ${sort} (${listed.length})`);
+  }
+}
+
 async function run() {
   await dataSource.initialize();
   try {
@@ -312,6 +415,7 @@ async function run() {
       }
 
       await testMasterDataLists(runner, tenantId, checked);
+      await testPlainButtonExports(runner, tenantId, checked);
       console.log(`  export rows = list rows, in order: ${checked.join(', ')}: OK`);
     });
   } finally {
