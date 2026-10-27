@@ -34,7 +34,8 @@ export function contractsRegistryFor(decisionWindowDays: number): AiEntityFilter
           + `cancellation deadline falls in it and whose renewal is not confirmed, or a contract without tacit renewal ending in it `
           + `that nobody decided to let end); in_progress ("In progress"); renewed ("Renewed": past this term's cancellation deadline, `
           + `it goes on into the next term); ending ("Ends without renewal"); expired ("Expired"). `
-          + `Contracts to decide within the window: term_state to_decide; for another horizon, filter next_due_date.`,
+          + `Contracts to decide within the window: term_state to_decide. For another horizon, filter next_due_date, which also keeps `
+          + `the contracts already decided (a renewal confirmed, an end decided).`,
         values: [...CONTRACT_TERM_STATES],
         discoverable: true,
         sortable: false,
@@ -74,7 +75,7 @@ export function contractsRegistryFor(decisionWindowDays: number): AiEntityFilter
         ai: 'application',
         grid: 'covered_application',
         type: 'set',
-        description: 'An application the contract covers (linked from the contract or the application), by reference (APP-8) or exact name: "which contracts cover APP-8". Each item names its covered applications in covered_applications.',
+        description: 'An application the contract covers (linked from the contract or the application), by reference (APP-8) or exact name: "which contracts cover APP-8". A Business Contributor matches the applications they take part in. Each item names its covered applications in covered_applications.',
         dynamic: true,
         discoverable: false,
         sortable: false,
@@ -173,7 +174,7 @@ export function contractsRegistryFor(decisionWindowDays: number): AiEntityFilter
         ai: 'cancellation_deadline',
         grid: 'cancellation_deadline',
         type: 'date',
-        description: 'Cancellation deadline: the next one (the term end minus the notice period, tacit renewals included); the last one once the contract has ended.',
+        description: 'Cancellation deadline: the next one (the term end minus the notice period, tacit renewals included); when none is left, the last one, already past.',
         sortable: true,
         groupable: false,
         aggregable: true,
