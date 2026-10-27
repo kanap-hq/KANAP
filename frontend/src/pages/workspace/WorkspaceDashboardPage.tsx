@@ -40,6 +40,7 @@ import DashboardTile from './tiles/DashboardTile';
 import DashboardSettingsModal from './settings/DashboardSettingsModal';
 import QuickLogTimeModal from './actions/QuickLogTimeModal';
 import SampleDataBanner from '../admin/sample-data/SampleDataBanner';
+import EnablePlaidCard from './EnablePlaidCard';
 
 // Create lazy-loaded tile components
 const tileComponents: Record<string, ReturnType<typeof lazy>> = {};
@@ -179,6 +180,7 @@ export default function WorkspaceDashboardPage() {
   return (
     <Box sx={{ p: 3 }}>
       <SampleDataBanner />
+      <EnablePlaidCard />
       <Paper
         variant="outlined"
         sx={{ mb: 3, p: 2.5, borderRadius: '8px', bgcolor: 'kanap.bg.drawer' }}

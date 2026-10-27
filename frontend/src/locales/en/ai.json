@@ -253,5 +253,10 @@
       "overdueTasks": "Show me my overdue tasks"
     },
     "title": "Plaid"
+  },
+  "enablePlaid": {
+    "text": "Plaid, the KANAP assistant, is turned off.",
+    "action": "Turn on",
+    "dismiss": "Hide"
   }
 }
