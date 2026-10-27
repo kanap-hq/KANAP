@@ -13,6 +13,8 @@ import { Seed, seed } from '../../../data-access/__tests__/data-access-line-seed
 import { budgetListAccess } from '../../budget-list/budget-list.runtime';
 import { BudgetLinesService } from '../../budget-lines.service';
 import { CapexItemsService, SpendItemsService } from '../../spend-items.service';
+import { computeColumn, type CostLine } from '../../costing.util';
+import { linesCalculation } from '../../round-inputs.util';
 import { realSummaryDeps } from '../../__tests__/oracle/oracle-deps';
 import { BudgetReportExportController } from '../budget-report-export.controller';
 import { BUDGET_REPORT_EXPORT_LABELS } from '../budget-report-export.labels';
@@ -23,8 +25,9 @@ import * as T from '../../../../../frontend/src/pages/reports/reportTables';
 
 /**
  * The budget report exports against what the screens compute, on the data-scoped access reference
- * example (`data-access-line-seed.ts`) with amounts for two years, declared FTE and a dimension value on
- * three lines, in one rolled-back transaction, each person in a savepoint after `applyDataAccess`.
+ * example (`data-access-line-seed.ts`) with amounts for two years, people priced per day on three lines
+ * (their FTE, months, staff cost and days; two of them the year before too) and a dimension value on
+ * those three, in one rolled-back transaction, each person in a savepoint after `applyDataAccess`.
  *
  * For each case, the expected table is the frontend files' (`frontend/src/pages/reports/`, imported
  * here) applied to the aggregate route's answer for the request the screen sends: the filter bar's
@@ -40,6 +43,41 @@ const dataSource = new DataSource({ ...(appDataSource.options as any), poolSize:
 const Y = new Date().getFullYear();
 const L = BUDGET_REPORT_EXPORT_LABELS.en;
 const COLUMN_NAMES: Record<R.MetricKey, string> = { budget: 'Budget', revision: 'Revision', forecast: 'Forecast', follow_up: 'Actuals', landing: 'Expected landing' };
+/** The collator the server gives the tables of an English export, as an English screen does. */
+const COMPARE = new Intl.Collator('en').compare;
+const CALENDAR_ID = '55555555-5555-4555-8555-555555555555';
+const CALENDARS = new Map([[CALENDAR_ID, { name: 'Twenty', code: 'T20', days: Array(12).fill('20') as string[] }]]);
+
+/**
+ * A round of people priced per day on a 20-day calendar, from the real costing: `people` from month
+ * `from` to December of `year`, at `dayPrice` a day. Its FTE (the year's average), its stored calculation.
+ */
+function staffRound(year: number, people: string, dayPrice: string, from = 1, to = 12) {
+  const lines: CostLine[] = [{
+    label: `${people} people`,
+    quantity_unit: 'people',
+    quantity: people,
+    unit_price: dayPrice,
+    price_basis: 'per_day',
+    frequency: 'per_month',
+    days_per_month: null,
+    period_start: `${year}-${String(from).padStart(2, '0')}-01`,
+    period_end: `${year}-${String(to).padStart(2, '0')}-${new Date(Date.UTC(year, to, 0)).getUTCDate()}`,
+    working_day_profile_id: CALENDAR_ID,
+  }];
+  const result = computeColumn(lines, year, CALENDARS);
+  return { fte: result.fte, calc: linesCalculation(lines, CALENDARS, result) };
+}
+
+/**
+ * The staff of L1 to L3 in Y (the FTE 0.5, 1 and 1.5 every other case reads; L1 one person from January
+ * to June), and of L1 and L2 in Y-1.
+ */
+const STAFF: Record<number, Array<ReturnType<typeof staffRound>>> = {
+  [Y]: [staffRound(Y, '1', '400', 1, 6), staffRound(Y, '1', '500'), staffRound(Y, '1.5', '600')],
+  [Y - 1]: [staffRound(Y - 1, '1', '300'), staffRound(Y - 1, '0.5', '450')],
+};
+
 const LABELS: T.ReportTableLabels = {
   columnNames: COLUMN_NAMES,
   columnFte: (column) => L.columnFte.replace('{{column}}', column),
@@ -129,16 +167,17 @@ async function enrich(runner: QueryRunner, s: Seed): Promise<Fixture> {
       // Distinct values with cents, so an order or a rounding slip shows.
       const planned = year === Y ? 100 * (index + 1) + 0.25 : 50 * (7 - index) + 0.5;
       await q(`INSERT INTO spend_amounts (tenant_id, version_id, period, planned) VALUES ($1, $2, $3, $4)`, [s.tenantId, version, `${year}-01-01`, planned]);
-      if (year === Y && index < 3) {
-        const round = (await q(`SELECT id FROM spend_round_inputs WHERE tenant_id = $1 AND version_id = $2 AND measure = 'planned'`, [s.tenantId, version]))[0]?.id;
-        if (round) await q(`UPDATE spend_round_inputs SET fte = $3 WHERE tenant_id = $1 AND id = $2`, [s.tenantId, round, 0.5 * (index + 1)]);
-        else {
-          await q(
-            `INSERT INTO spend_round_inputs (tenant_id, version_id, measure, period_start, period_end, method, fte) VALUES ($1, $2, 'planned', $3, $4, 'manual', $5)`,
-            [s.tenantId, version, `${year}-01-01`, `${year}-12-31`, 0.5 * (index + 1)],
-          );
-        }
-      }
+      if (year === Y && index < 3) await staff(q, s, version, year, STAFF[Y][index]);
+    }
+    if (index < 2) {
+      // The year before: a version without amounts, its people only (the cost per FTE's first pair).
+      const year = Y - 1;
+      const version: string = (await q(`SELECT id FROM spend_versions WHERE tenant_id = $1 AND spend_item_id = $2 AND budget_year = $3`, [s.tenantId, line, year]))[0]?.id
+        ?? (await q(
+          `INSERT INTO spend_versions (tenant_id, spend_item_id, version_name, as_of_date, budget_year) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+          [s.tenantId, line, `Budget ${year}`, `${year}-01-01`, year],
+        ))[0].id;
+      await staff(q, s, version, year, STAFF[year][index]);
     }
     if (index < 3) {
       await q(`INSERT INTO spend_item_analytics_values (tenant_id, item_id, axis_id, category_id) VALUES ($1, $2, $3, $4)`, [s.tenantId, line, s.axis2, s.category2]);
@@ -161,6 +200,20 @@ async function enrich(runner: QueryRunner, s: Seed): Promise<Fixture> {
   await q(`UPDATE spend_items SET account_id = $3 WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [s.tenantId, [s.lines.L1, s.lines.L2], accounts.hosting]);
   await q(`UPDATE spend_items SET account_id = $3 WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.lines.L3, accounts.support]);
   return { ...s, axis2Name, category2Name, axis1: first.axis_id, category1: first.category_id, accounts, costCenters };
+}
+
+/** A version's Budget round: computed from its people lines (FTE, months, staff cost, days). */
+async function staff(q: (sql: string, params: unknown[]) => Promise<any>, s: Seed, version: string, year: number, round: ReturnType<typeof staffRound>): Promise<void> {
+  const existing = (await q(`SELECT id FROM spend_round_inputs WHERE tenant_id = $1 AND version_id = $2 AND measure = 'planned'`, [s.tenantId, version]))[0]?.id;
+  if (existing) {
+    await q(`UPDATE spend_round_inputs SET method = 'computed', fte = $3, last_calculation = $4::jsonb WHERE tenant_id = $1 AND id = $2`, [s.tenantId, existing, round.fte, JSON.stringify(round.calc)]);
+    return;
+  }
+  await q(
+    `INSERT INTO spend_round_inputs (tenant_id, version_id, measure, period_start, period_end, method, fte, last_calculation)
+     VALUES ($1, $2, 'planned', $3, $4, 'computed', $5, $6::jsonb)`,
+    [s.tenantId, version, `${year}-01-01`, `${year}-12-31`, round.fte, JSON.stringify(round.calc)],
+  );
 }
 
 /** The browser's subtree (`useCostCenterTree.descendantIds`): the node and every node below it. */
@@ -193,7 +246,7 @@ function response(req: unknown) {
   return { res, headers, body: () => body! };
 }
 
-type Report = 'comparison' | 'columns-compare' | 'top-lines' | 'increases-decreases' | 'consolidation' | 'analytics';
+type Report = 'comparison' | 'columns-compare' | 'top-lines' | 'increases-decreases' | 'consolidation' | 'analytics' | 'staffing' | 'cost-per-fte';
 const HANDLER = {
   comparison: 'comparison',
   'columns-compare': 'columnsCompare',
@@ -201,6 +254,8 @@ const HANDLER = {
   'increases-decreases': 'increasesDecreases',
   consolidation: 'consolidation',
   analytics: 'analytics',
+  staffing: 'staffing',
+  'cost-per-fte': 'costPerFte',
 } as const;
 
 function requestOf(m: EntityManager, f: Fixture, person: Person, report: Report, query: Record<string, unknown>) {
@@ -468,6 +523,123 @@ async function testDeltaGroupTables(runner: QueryRunner, f: Fixture): Promise<vo
   console.log('  increases and decreases (both, FTE), consolidation (exclusions, without the accounts page) and analytics equal the screen tables: OK');
 }
 
+const MONTH_KEYS = Array.from({ length: 12 }, (_, i) => T.staffingMonthKey(i + 1));
+
+/**
+ * The footer against the data rows: each additive column (FTE, costs, days) is the rows' sum, to the
+ * cent, blank when no row has a value; each ratio is the ratio of the footer's totals.
+ */
+function assertFooter(table: T.ReportTableData, what: string, additive: string[], ratios: Array<[string, string, string]> = []): void {
+  assert.equal(table.footer.length, 1, `${what}: one total row`);
+  const footer = table.footer[0];
+  for (const key of additive) {
+    const values = table.rows.map((row) => row[key]).filter((value): value is number => typeof value === 'number');
+    const total = footer[key];
+    if (!values.length) assert.equal(total ?? null, null, `${what}: ${key} blank as every row`);
+    else assert.equal(Math.round((total as number) * 100), values.reduce((sum, value) => sum + Math.round(value * 100), 0), `${what}: ${key} adds up`);
+  }
+  for (const [key, numerator, denominator] of ratios) {
+    const den = footer[denominator] as number | null;
+    if (den == null || den === 0) assert.equal(footer[key] ?? null, null, `${what}: ${key} blank without ${denominator}`);
+    else assert.equal(footer[key], (footer[numerator] as number) / den, `${what}: ${key} is ${numerator} / ${denominator} of the totals`);
+  }
+}
+
+/** Every pair's additive values and ratio in a cost per FTE or daily rate table. */
+function assertPairFooter(table: T.ReportTableData, what: string, view: T.CostPerFteView, pairs: number): void {
+  const [count, cost, ratio] = T.PAIR_VALUES[view];
+  const additive: string[] = [];
+  const ratios: Array<[string, string, string]> = [];
+  for (let index = 0; index < pairs; index += 1) {
+    additive.push(T.pairValueKey(index, count), T.pairValueKey(index, cost));
+    ratios.push([T.pairValueKey(index, ratio), T.pairValueKey(index, cost), T.pairValueKey(index, count)]);
+  }
+  assertFooter(table, what, additive, ratios);
+}
+
+/** Staffing by month and cost per FTE (both views), each against the screen's table, with a cost center or a dimension. */
+async function testFteTables(runner: QueryRunner, f: Fixture): Promise<void> {
+  const svc = services();
+  const admin: Person = { id: f.persons.admin, isAdmin: true };
+  await as(runner, admin.id, async (m) => {
+    const byCostCenter = { groupHeader: L.group_costCenter, groupLabels: { none: L.none_costCenter, unnamed: L.analyticsUnnamed }, compare: COMPARE };
+
+    // Staffing by cost center, every line: INF-FR (L1 half a year, L3) and INF-ES (L2).
+    const staffingAnswer = await screenAnswer(svc, m, f, admin, 'all', R.staffingRequest({ scope: 'all', year: Y, metric: 'budget', group: { kind: 'costCenter' }, filters: {} }));
+    const staffing = T.staffingTable(byCostCenter, staffingAnswer, LABELS);
+    assert.deepEqual(staffing.rows.map((row) => [row.groupKey, row.average, row.peak]), [[f.infFr, 2, 2.5], [f.infEs, 1, 1]], 'largest average first; L1 in the first half only');
+    assertFooter(staffing, 'staffing', [...MONTH_KEYS, 'average']);
+    const staffingFile = await exportFile(svc.controller, m, f, admin, 'staffing', { year: String(Y), metric: 'budget', format: 'xlsx', language: 'en' });
+    const staffingSheets = workbook(staffingFile.body());
+    assert.deepEqual([...staffingSheets.keys()], [L.staffingSheet, 'Parameters']);
+    assert.deepEqual(staffingSheets.get(L.staffingSheet)!.map(trim), written(staffing), 'staffing = the screen table, months in English');
+    assert.deepEqual(staffing.columns.slice(1, 4).map((column) => column.header), ['Jan', 'Feb', 'Mar']);
+    const staffingParameters = staffingSheets.get('Parameters')!.map(trim);
+    assert.deepEqual(staffingParameters.slice(1, 5), [['Line type', 'All'], ['Group by', 'Cost center'], ['Year', String(Y)], ['Column', 'Budget']], 'no measure, no currency: FTE only');
+    assert.match(staffingFile.headers['Content-Disposition'], new RegExp(`filename="staffing-all-${Y}-budget-cost-center-`));
+
+    // Staffing on the second dimension, under INF and with FTE: L1 to L3 hold its value. In French: the months too.
+    const inf = browserSubtree(f, f.inf);
+    const axisFilters = R.reportFilterModels({ costCenterIds: inf, runBuild: null, analytics: [], withFte: true });
+    const axisAnswer = await screenAnswer(svc, m, f, admin, 'opex', R.staffingRequest({ scope: 'opex', year: Y, metric: 'budget', group: { kind: 'axis', axisId: f.axis2 }, filters: axisFilters }));
+    const byAxis = { groupHeader: f.axis2Name, groupLabels: { none: L.none_axis, unnamed: L.analyticsUnnamed }, compare: COMPARE };
+    const axisTable = T.staffingTable(byAxis, axisAnswer, LABELS);
+    assert.deepEqual(axisTable.rows.map((row) => [row.group, row.average]), [[f.category2Name, 3]]);
+    assertFooter(axisTable, 'staffing by dimension', [...MONTH_KEYS, 'average']);
+    const axisQuery = { scope: 'opex', costCenter: f.inf, fte: 'with', group: `axis:${f.axis2}`, year: String(Y), metric: 'budget' };
+    const axisFile = await exportFile(svc.controller, m, f, admin, 'staffing', { ...axisQuery, format: 'xlsx', language: 'en' });
+    const axisSheets = workbook(axisFile.body());
+    assert.deepEqual(dataSheet(axisSheets), written(axisTable), 'staffing by dimension = the screen table, headed by the dimension');
+    assert.ok(axisSheets.get('Parameters')!.some((row) => row[0] === 'Group by' && row[1] === f.axis2Name));
+    const french = (await exportFile(svc.controller, m, f, admin, 'staffing', { ...axisQuery, format: 'csv', language: 'fr' })).body().toString('utf8').replace(/^﻿/, '').split(/\r?\n/)[0];
+    for (const word of [f.axis2Name, ...T.shortMonthNames('fr'), BUDGET_REPORT_EXPORT_LABELS.fr.average, BUDGET_REPORT_EXPORT_LABELS.fr.peak]) {
+      assert.ok(french.includes(word), `French CSV header holds ${word}`);
+    }
+
+    // Cost per FTE, the screen's default pairs (Y-1 and Y), under INF: one request per pair.
+    const pairs = T.distinctColumns([{ year: Y, metric: 'budget' }, { year: Y - 1, metric: 'budget' }]);
+    const infFilters = R.reportFilterModels({ costCenterIds: inf, runBuild: null, analytics: [], withFte: false });
+    const costAnswers = [];
+    for (const request of R.costPerFteRequests({ scope: 'all', columns: pairs, group: { kind: 'costCenter' }, filters: infFilters })) {
+      costAnswers.push(await screenAnswer(svc, m, f, admin, 'all', request));
+    }
+    const cost = T.costPerFteTable({ ...byCostCenter, view: 'fte', columns: pairs }, costAnswers, LABELS);
+    assert.deepEqual(cost.columns.slice(1, 4).map((column) => [column.header, column.kind]), [
+      [`FTE (Budget ${Y - 1})`, 'number'], [`Staff cost (Budget ${Y - 1})`, 'amount'], [`Cost per FTE (Budget ${Y - 1})`, 'amount'],
+    ]);
+    assert.deepEqual(cost.rows.map((row) => [row.groupKey, row.c0_fte, row.c1_fte]), [[f.infFr, 1, 2], [f.infEs, 0.5, 1]], 'by the FTE of the first pair');
+    assertPairFooter(cost, 'cost per FTE', 'fte', 2);
+    const costFile = await exportFile(svc.controller, m, f, admin, 'cost-per-fte', { costCenter: f.inf, pairs: `${Y - 1}:budget,${Y}:budget`, format: 'xlsx', language: 'en' });
+    const costSheets = workbook(costFile.body());
+    assert.deepEqual([...costSheets.keys()], [L.costPerFteSheet, 'Parameters']);
+    assert.deepEqual(costSheets.get(L.costPerFteSheet)!.map(trim), written(cost), 'cost per FTE = the screen table, one header row');
+    const costParameters = costSheets.get('Parameters')!.map(trim);
+    for (const pair of [['Group by', 'Cost center'], ['Show', 'Cost per FTE'], ['Columns', `Budget ${Y - 1}, Budget ${Y}`], ['Reporting currency', 'EUR']]) {
+      assert.ok(costParameters.some((row) => row[0] === pair[0] && row[1] === pair[1]), `parameter ${pair.join(': ')}`);
+    }
+    assert.ok(!costParameters.some((row) => row[0] === 'Measure'), 'no measure picker');
+    assert.match(costFile.headers['Content-Disposition'], new RegExp(`filename="cost-per-fte-all-cost-center-${Y - 1}-budget-`));
+
+    // Daily rate by line, OPEX, the same pairs.
+    const rateAnswers = [];
+    for (const request of R.dailyRateRequests({ scope: 'opex', columns: pairs, group: { kind: 'item' }, filters: {} })) {
+      rateAnswers.push(await screenAnswer(svc, m, f, admin, 'opex', request));
+    }
+    const rate = T.costPerFteTable({ groupHeader: L.group_item, groupLabels: { none: '', unnamed: L.analyticsUnnamed }, compare: COMPARE, view: 'rate', columns: pairs }, rateAnswers, LABELS);
+    const lineOf = (row: T.ReportTableRow) => /DA line (L\d)/.exec(String(row.group))?.[1];
+    assert.deepEqual(rate.rows.map((row) => [lineOf(row), row.c1_days, row.c1_rate]), [['L1', 120, 400], ['L2', 240, 500], ['L3', 360, 600]], 'by the days of the first pair; L1 half a year');
+    assert.deepEqual(rate.rows.map((row) => row.c0_rate), [300, 450, null], 'a day costs its price; L3 had no staff the year before');
+    assertPairFooter(rate, 'daily rate', 'rate', 2);
+    const rateFile = await exportFile(svc.controller, m, f, admin, 'cost-per-fte', { scope: 'opex', group: 'item', view: 'rate', pairs: `${Y - 1}:budget,${Y}:budget`, format: 'xlsx', language: 'en' });
+    const rateSheets = workbook(rateFile.body());
+    assert.deepEqual(dataSheet(rateSheets), written(rate), 'daily rate = the screen table');
+    assert.deepEqual(rate.columns.slice(1, 4).map((column) => column.header), [`Days (Budget ${Y - 1})`, `Day cost (Budget ${Y - 1})`, `Daily rate (Budget ${Y - 1})`]);
+    assert.ok(rateSheets.get('Parameters')!.some((row) => row[0] === 'Show' && row[1] === 'Daily rate'));
+    assert.match(rateFile.headers['Content-Disposition'], new RegExp(`filename="daily-rate-opex-item-${Y - 1}-budget-`));
+  });
+  console.log('  staffing (cost center, dimension, French months) and cost per FTE (two pairs, daily rate) equal the screen tables, totals add up: OK');
+}
+
 async function testLimited(runner: QueryRunner, f: Fixture): Promise<void> {
   const svc = services();
   const marta: Person = { id: f.persons.marta, isAdmin: false };
@@ -511,6 +683,28 @@ async function testLimited(runner: QueryRunner, f: Fixture): Promise<void> {
     });
     assert.deepEqual(dataSheet(workbook(deltaFile.body())), written(delta));
     assert.equal(deltaFile.headers[DATA_ACCESS_HEADER], 'limited');
+
+    // Staffing and cost per FTE on her lines: L3 (INF-FR) and L2 (INF-ES); no total row.
+    const byCostCenter = { groupHeader: L.group_costCenter, groupLabels: { none: L.none_costCenter, unnamed: L.analyticsUnnamed }, compare: COMPARE };
+    const staffingAnswer = await screenAnswer(svc, m, f, marta, 'all', R.staffingRequest({ scope: 'all', year: Y, metric: 'budget', group: { kind: 'costCenter' }, filters: {} }));
+    assert.equal(staffingAnswer.dataAccessLimited, true);
+    const staffing = T.staffingTable(byCostCenter, staffingAnswer, LABELS);
+    assert.deepEqual(staffing.rows.map((row) => [row.groupKey, row.average]), [[f.infFr, 1.5], [f.infEs, 1]], 'her lines only');
+    const staffingFile = await exportFile(svc.controller, m, f, marta, 'staffing', { year: String(Y), metric: 'budget', format: 'xlsx', language: 'en' });
+    const staffingSheets = workbook(staffingFile.body());
+    assert.deepEqual(dataSheet(staffingSheets), written(staffing, true), 'staffing on her lines, no total');
+    assert.ok(staffingSheets.get('Parameters')!.some((row) => row[0] === 'Computed on your access'));
+    assert.equal(staffingFile.headers[DATA_ACCESS_HEADER], 'limited');
+    const pairs = [{ year: Y - 1, metric: 'budget' as const }, { year: Y, metric: 'budget' as const }];
+    const costAnswers = [];
+    for (const request of R.costPerFteRequests({ scope: 'all', columns: pairs, group: { kind: 'costCenter' }, filters: {} })) {
+      costAnswers.push(await screenAnswer(svc, m, f, marta, 'all', request));
+    }
+    const cost = T.costPerFteTable({ ...byCostCenter, view: 'fte', columns: pairs }, costAnswers, LABELS);
+    assert.deepEqual(cost.rows.map((row) => [row.groupKey, row.c0_fte, row.c1_fte]), [[f.infEs, 0.5, 1], [f.infFr, null, 1.5]]);
+    const costFile = await exportFile(svc.controller, m, f, marta, 'cost-per-fte', { pairs: `${Y - 1}:budget,${Y}:budget`, format: 'xlsx', language: 'en' });
+    assert.deepEqual(dataSheet(workbook(costFile.body())), written(cost, true), 'cost per FTE on her lines, no total');
+    assert.equal(costFile.headers[DATA_ACCESS_HEADER], 'limited');
   });
   console.log('  limited: her lines only, the access line and header: OK');
 }
@@ -523,6 +717,8 @@ async function testRefused(runner: QueryRunner, f: Fixture): Promise<void> {
   const comparison = { startYear: String(Y), endYear: String(Y + 1), metrics: 'budget' };
   const delta = { sourceYear: String(Y), sourceMetric: 'budget', destinationYear: String(Y + 1), destinationMetric: 'budget', direction: 'increase', top: '10' };
   const range = { startYear: String(Y), endYear: String(Y + 1), metric: 'budget' };
+  const staffing = { year: String(Y), metric: 'budget' };
+  const costPerFte = { pairs: `${Y - 1}:budget,${Y}:budget` };
   const cases: Array<[Report, Record<string, unknown>, RegExp]> = [
     ['comparison', { ...comparison, sort: 'name' }, /Unknown parameter: sort/],
     ['comparison', { endYear: String(Y), metrics: 'budget' }, /startYear is required/],
@@ -573,6 +769,25 @@ async function testRefused(runner: QueryRunner, f: Fixture): Promise<void> {
     ['analytics', { ...range, axis: f.axis2, excludeValues: 'Cloud' }, /excludeValues must be value ids or none/],
     ['analytics', { ...range, axis: f.axis1, excludeValues: f.category2 }, /is not a value of this dimension/],
     ['analytics', { ...range, axis: f.axis2, excludeAccounts: 'none' }, /Unknown parameter: excludeAccounts/],
+    ['staffing', { ...staffing, group: 'department' }, /group must be costCenter, item, supplier or axis/],
+    ['staffing', { ...staffing, group: 'axis:default' }, /group must be costCenter, item, supplier or axis/],
+    ['staffing', { ...staffing, group: `axis:${missing}` }, /is not an enabled dimension of these lines/],
+    ['staffing', { ...staffing, year: undefined }, /year is required/],
+    ['staffing', { ...staffing, year: String(Y + 2) }, /year must be between/],
+    ['staffing', { ...staffing, metric: 'forecast' }, /metric: the column forecast is hidden/],
+    ['staffing', { ...staffing, measure: 'fte' }, /Unknown parameter: measure/],
+    ['staffing', { ...staffing, costCenter: missing }, /no such cost center/],
+    ['cost-per-fte', { ...costPerFte, view: 'days' }, /view must be fte or rate/],
+    ['cost-per-fte', { ...costPerFte, pairs: undefined }, /pairs is required/],
+    ['cost-per-fte', { ...costPerFte, pairs: `${Y}-budget` }, /pairs must read/],
+    ['cost-per-fte', { ...costPerFte, pairs: `${Y}:budget:x` }, /pairs must read/],
+    ['cost-per-fte', { ...costPerFte, pairs: [Y - 2, Y - 1, Y, Y + 1, Y + 2].map((y) => `${y}:budget`).join(',') }, /4 pairs at most/],
+    ['cost-per-fte', { ...costPerFte, pairs: `${Y}:budget,${Y - 1}:budget,${Y}:budget` }, /names a pair twice/],
+    ['cost-per-fte', { ...costPerFte, pairs: `${Y - 3}:budget` }, /pairs must be between/],
+    ['cost-per-fte', { ...costPerFte, pairs: `${Y}:actuals` }, /pairs: unknown column actuals/],
+    ['cost-per-fte', { ...costPerFte, pairs: `${Y}:forecast` }, /pairs: the column forecast is hidden/],
+    ['cost-per-fte', { ...costPerFte, group: 'project' }, /group must be costCenter, item, supplier or axis/],
+    ['cost-per-fte', { ...costPerFte, year: String(Y) }, /Unknown parameter: year/],
   ];
   await as(runner, admin.id, async (m) => {
     for (const [report, query, message] of cases) {
@@ -590,8 +805,11 @@ async function testRefused(runner: QueryRunner, f: Fixture): Promise<void> {
 async function testAudit(runner: QueryRunner, f: Fixture): Promise<void> {
   const svc = services();
   const admin: Person = { id: f.persons.admin, isAdmin: true };
-  // The consolidation's total row is not counted: Software, Services and the unassigned lines.
+  // The total rows are not counted: consolidation (Software, Services and the unassigned lines),
+  // staffing (INF-FR, INF-ES), cost per FTE by line (L1 to L3).
   const cases: Array<[Report, Record<string, unknown>, number]> = [
+    ['staffing', { year: String(Y), metric: 'budget', format: 'xlsx', language: 'en' }, 2],
+    ['cost-per-fte', { group: 'item', pairs: `${Y - 1}:budget,${Y}:budget`, format: 'csv', language: 'en' }, 3],
     ['top-lines', { scope: 'opex', year: String(Y), metric: 'budget', top: '4', format: 'xlsx', language: 'en' }, 4],
     ['consolidation', { startYear: String(Y), endYear: String(Y), metric: 'budget', format: 'xlsx', language: 'en' }, 3],
     ['increases-decreases', {
@@ -642,6 +860,7 @@ async function run() {
       const f = await enrich(runner, await seed(clientOf(runner)));
       await testTables(runner, f);
       await testDeltaGroupTables(runner, f);
+      await testFteTables(runner, f);
       await testLimited(runner, f);
       await testRefused(runner, f);
       await testAudit(runner, f);
