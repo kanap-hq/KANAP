@@ -73,8 +73,8 @@ export function aiRelationTargetRequirement(
 
 /** The modules a contributor may change through Plaid, in plain words, for the refusals. */
 export const CONTRIBUTOR_PLAIN_SCOPES: Readonly<Record<string, string>> = {
-  portfolio_projects: 'projects they take part in (their purpose and their links to applications, assets and budget lines)',
-  portfolio_requests: 'requests they take part in (their links to applications, assets, budget lines and business processes)',
+  portfolio_projects: 'projects (their purpose and their links to applications, assets and budget lines)',
+  portfolio_requests: 'requests (their links to applications, assets, budget lines and business processes)',
 };
 
 /**

@@ -236,7 +236,7 @@ async function testOfferedTools(h: Harness, runner: QueryRunner, s: Seed) {
 
   const rights = await h.policy.describeWriteRights(ctx(runner, s, 'contributor'), runner.manager);
   assert.deepEqual(rights.modifiableModules, []);
-  assert.match(rights.contributableModules.join(' '), /^projects they take part in/);
+  assert.match(rights.contributableModules.join(' '), /^projects \(their purpose/);
   console.log('  offered tools and write rights follow the level: OK');
 }
 

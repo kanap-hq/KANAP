@@ -716,7 +716,7 @@ async function testContributorWritesAtTheScreenLevel() {
   const rights = await contributor.describeWriteRights(chat, createManager());
   assert.deepEqual(rights.modifiableModules, []);
   assert.equal(rights.contributableModules.length, 1);
-  assert.match(rights.contributableModules[0], /^projects they take part in/);
+  assert.match(rights.contributableModules[0], /^projects \(their purpose/);
   assert.deepEqual((await member.describeWriteRights(chat, createManager())).contributableModules, []);
 
   Features.AI_CHAT_ENABLED = originalFeature;
