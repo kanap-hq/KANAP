@@ -26,6 +26,8 @@ import { DocumentType } from '../document-type.entity';
 import { DocumentVersion } from '../document-version.entity';
 import { IntegratedDocumentBinding } from '../integrated-document-binding.entity';
 import { PortfolioProjectsCrudService } from '../../portfolio/services/portfolio-projects-crud.service';
+import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
+import { PortfolioRequest } from '../../portfolio/portfolio-request.entity';
 import { PermissionsService } from '../../permissions/permissions.service';
 import { RolePermission } from '../../permissions/role-permission.entity';
 import { UserPageRole } from '../../permissions/user-page-role.entity';
@@ -91,7 +93,18 @@ function createServices(manager: any) {
     new ItemNumberService() as any,
     integrated,
   );
-  return { integrated, knowledge, projects };
+  const requests = new PortfolioRequestsService(
+    manager.getRepository(PortfolioRequest),
+    { log: async () => undefined } as any,
+    storage as any,
+    {} as any,
+    {} as any,
+    {} as any,
+    new ItemNumberService() as any,
+    {} as any,
+    integrated,
+  );
+  return { integrated, knowledge, projects, requests };
 }
 
 type Fixture = {
@@ -381,6 +394,45 @@ async function testIncidentContributorRenamesItsReview() {
   });
 }
 
+// Deleting a request covers its integrated documents with the request's own right: an
+// administrator of the requests, without any Knowledge right, deletes the request and its
+// purpose document. The library check is the one the three other record deletes already skip
+// (`checkAccess: false`); without it the screen stops on "Library not found".
+async function testRequestDeleteCoversItsPurposeDocument() {
+  await inFixture(async ({ runner, tenantId, seedUser }) => {
+    const { integrated, requests } = createServices(runner.manager);
+    const manager = runner.manager;
+    const member = await seedUser('Request member', { portfolio_requests: 'member' });
+    const admin = await seedUser('Request administrator', { portfolio_requests: 'admin' });
+    const [{ id }] = await runner.query(
+      `INSERT INTO portfolio_requests (tenant_id, name, item_number) VALUES ($1, 'Scanner', 8) RETURNING id::text AS id`,
+      [tenantId],
+    );
+    const request = { id: id as string, tenant_id: tenantId, item_number: 8, name: 'Scanner' };
+    await integrated.provisionForRequest(request, { purpose: 'Scan.' }, member, { manager });
+    const purpose = await boundDocument(runner, 'requests', request.id, 'purpose');
+    assert.ok(purpose, 'the request has its purpose document');
+
+    // The root cause: `deleteForEntity` checks the Knowledge library unless the record's own
+    // delete covers the document, so the request administrator stops here.
+    await rejects(
+      integrated.deleteForEntity('requests', request.id, admin, { manager }),
+      'the library right is missing without the record delete covering its document',
+    );
+    assert.ok(await boundDocument(runner, 'requests', request.id, 'purpose'), 'the refused call changed nothing');
+
+    await requests.delete(request.id, admin, { manager });
+    assert.equal(await boundDocument(runner, 'requests', request.id, 'purpose'), undefined);
+    assert.equal(await count(runner, 'portfolio_requests', 'tenant_id = $1 AND id = $2', [tenantId, request.id]), 0);
+    console.log('  request delete covers its purpose document without a knowledge right: OK');
+  });
+}
+
+async function count(runner: QueryRunner, table: string, where: string, params: unknown[]): Promise<number> {
+  const [row] = await runner.query(`SELECT count(*)::int AS n FROM ${table} WHERE ${where}`, params);
+  return Number(row.n);
+}
+
 async function main() {
   await dataSource.initialize();
   try {
@@ -392,6 +444,7 @@ async function main() {
       testRequestMemberWritesItsDocuments,
       testApplicationsMemberWritesInterfaceAndApplication,
       testIncidentContributorRenamesItsReview,
+      testRequestDeleteCoversItsPurposeDocument,
     ];
     for (const spec of specs) {
       await spec();
