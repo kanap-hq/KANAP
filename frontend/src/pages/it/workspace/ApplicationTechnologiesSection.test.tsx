@@ -3,7 +3,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectAnchoredLeft, expectAnchoredRight, placeAnchor, stubPopoverPaperWidth } from '../../../test/popoverAnchor';
 import { createAppTheme } from '../../../config/ThemeContext';
 import api from '../../../api';
 import ApplicationTechnologiesSection from './ApplicationTechnologiesSection';
@@ -266,6 +267,55 @@ describe('ApplicationTechnologiesSection', () => {
     renderSection(relations({ technologies: null }));
     await waitFor(() => {
       expect(screen.queryByRole('region', { name: 'workspace.application.relations.sections.technologies' })).toBeNull();
+    });
+  });
+
+  describe('popover anchor', () => {
+    const innerWidth = window.innerWidth;
+    let restoreWidth: () => void = () => undefined;
+    const addBox = { left: 280, top: 80, width: 160, height: 32 };
+    const rowBox = { left: 900, top: 200, width: 32, height: 32 };
+
+    beforeEach(() => {
+      window.innerWidth = 1280;
+      restoreWidth = stubPopoverPaperWidth();
+    });
+
+    afterEach(() => {
+      window.innerWidth = innerWidth;
+      restoreWidth();
+    });
+
+    it('opens the version picker and the server proposal under the Add button, on its left edge', async () => {
+      renderSection(relations({ deployment_servers: servers }));
+      const section = await screen.findByRole('region', { name: 'workspace.application.relations.sections.technologies' });
+      const button = (await within(section).findByText('workspace.application.relations.add')).closest('button') as HTMLButtonElement;
+      placeAnchor(button, addBox);
+      fireEvent.click(button);
+      fireEvent.click(await screen.findByRole('option', { name: /SQL Server/ }));
+      expect(await screen.findByRole('combobox', { name: 'workspace.technology.versionPicker.search' })).toBeTruthy();
+      expectAnchoredLeft({ left: 280, bottom: 112 });
+      fireEvent.click(await screen.findByRole('option', { name: '2019' }));
+      expect(await screen.findByText('workspace.application.relations.technologyServers.proposal(technology=SQL Server,version=2019)')).toBeTruthy();
+      expectAnchoredLeft({ left: 280, bottom: 112 });
+    });
+
+    it('keeps the version picker right-aligned on a row', async () => {
+      renderSection(relations());
+      const button = await screen.findByRole('button', { name: 'workspace.application.relations.technologyServers.changeVersion(name=Tomcat)' });
+      placeAnchor(button, rowBox);
+      fireEvent.click(button);
+      expect(await screen.findByRole('option', { name: '9.0' })).toBeTruthy();
+      expectAnchoredRight(932, 300);
+    });
+
+    it('keeps the server proposal right-aligned on a row action', async () => {
+      renderSection(relations({ deployment_servers: servers }));
+      const button = await screen.findByRole('button', { name: 'workspace.application.relations.technologyServers.actionNamed(name=Java)' });
+      placeAnchor(button, rowBox);
+      fireEvent.click(button);
+      expect(await screen.findByText('workspace.application.relations.technologyServers.proposalUnknown(technology=Java)')).toBeTruthy();
+      expectAnchoredRight(932, 340);
     });
   });
 });

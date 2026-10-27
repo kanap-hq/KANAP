@@ -3,7 +3,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { expectAnchoredLeft, expectAnchoredRight, placeAnchor, stubPopoverPaperWidth } from '../../../test/popoverAnchor';
 import { createAppTheme } from '../../../config/ThemeContext';
 import api from '../../../api';
 import AssetTechnologiesSection, { type AssetTechnologyRow } from './AssetTechnologiesSection';
@@ -257,5 +258,42 @@ describe('AssetTechnologiesSection', () => {
     expect(long.textContent).toBe('16.99-c2check');
     expect(within(table).getByTitle('2019 (1809)').textContent).toBe('2019 (1809)');
     expect(table.querySelectorAll('col')[3].style.width).toBe('128px');
+  });
+
+  describe('popover anchor', () => {
+    const innerWidth = window.innerWidth;
+    let restoreWidth: () => void = () => undefined;
+    const addBox = { left: 280, top: 80, width: 160, height: 32 };
+    const rowBox = { left: 900, top: 200, width: 32, height: 32 };
+
+    beforeEach(() => {
+      window.innerWidth = 1280;
+      restoreWidth = stubPopoverPaperWidth();
+    });
+
+    afterEach(() => {
+      window.innerWidth = innerWidth;
+      restoreWidth();
+    });
+
+    it('opens the version picker under the Add button, on its left edge', async () => {
+      renderSection();
+      await screen.findByRole('table', { name: `${K}.title` });
+      const button = screen.getByText(`${K}.add`).closest('button') as HTMLButtonElement;
+      placeAnchor(button, addBox);
+      fireEvent.click(button);
+      fireEvent.click(await waitFor(() => picker().getByText('Tomcat')));
+      await waitFor(() => picker().getByPlaceholderText('workspace.technology.versionPicker.placeholder'));
+      expectAnchoredLeft({ left: 280, bottom: 112 });
+    });
+
+    it('keeps the version picker right-aligned on a row', async () => {
+      renderSection();
+      const button = await screen.findByRole('button', { name: `${K}.changeVersion(name=SQL Server)` });
+      placeAnchor(button, rowBox);
+      fireEvent.click(button);
+      expect(await waitFor(() => picker().getByText('9.0'))).toBeTruthy();
+      expectAnchoredRight(932, 300);
+    });
   });
 });
