@@ -165,7 +165,7 @@ L'e-mail aux responsables IT annonce une vulnérabilité exploitée quelle que s
 
 ## Export
 
-**Exporter en CSV** télécharge les vulnérabilités qui répondent aux filtres, une ligne par ligne de la grille, dans son ordre, dans la langue de votre écran. Sa colonne **Source**, après **Match**, donne `NVD`, `CVE.org` ou `NVD, CVE.org`. Au-delà de 10 000 vulnérabilités, resserrez d'abord les filtres.
+**Exporter** télécharge les vulnérabilités qui répondent aux filtres dans un fichier CSV ou Excel, une ligne par ligne de la grille, dans son ordre, dans la langue de votre écran. Dans le fichier Excel, les scores, l'EPSS et les dates sont des valeurs qu'Excel sait trier et filtrer. Sa colonne **Source**, après **Match**, donne `NVD`, `CVE.org` ou `NVD, CVE.org`. Au-delà de 10 000 vulnérabilités, resserrez d'abord les filtres.
 
 ## Notifications par e-mail
 

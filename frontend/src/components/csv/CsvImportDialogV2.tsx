@@ -26,6 +26,7 @@ import { CsvImportWorkflowPresets } from './CsvImportWorkflowPresets';
 import { CsvImportAdvancedOptions } from './CsvImportAdvancedOptions';
 import { CsvValidationResults } from './CsvValidationResults';
 import { CsvImportResult } from './csv.types';
+import { useImportFiles } from './importFiles';
 
 interface CsvImportDialogV2Props {
   open: boolean;
@@ -48,6 +49,7 @@ export default function CsvImportDialogV2({
   note,
 }: CsvImportDialogV2Props) {
   const { t, i18n } = useTranslation('common');
+  const { accept, workbook } = useImportFiles();
   const {
     file,
     phase,
@@ -157,12 +159,12 @@ export default function CsvImportDialogV2({
 
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
-      <DialogTitle>{titleProp || t('csv.importTitle')}</DialogTitle>
+      <DialogTitle>{titleProp || t(workbook ? 'buttons.import' : 'csv.importTitle')}</DialogTitle>
       <DialogContent>
         {phase === 'upload' && (
           <>
             <Typography variant="body2" sx={{ mb: 2 }}>
-              {t('csv.uploadDescriptionFlexible')}
+              {t(workbook ? 'csv.uploadDescriptionFlexibleWorkbook' : 'csv.uploadDescriptionFlexible')}
             </Typography>
             {note && (
               <Typography variant="body2" sx={{ mb: 2 }}>
@@ -198,8 +200,8 @@ export default function CsvImportDialogV2({
               }}
               onClick={onPick}
             >
-              <Typography sx={{ textTransform: 'none', overflowWrap: 'anywhere' }}>{file ? file.name : t('csv.dragDropOrClick')}</Typography>
-              <input type="file" ref={inputRef} onChange={onFileChange} hidden accept=".csv,text/csv" />
+              <Typography sx={{ textTransform: 'none', overflowWrap: 'anywhere' }}>{file ? file.name : t(workbook ? 'csv.dragDropFileOrClick' : 'csv.dragDropOrClick')}</Typography>
+              <input type="file" ref={inputRef} onChange={onFileChange} hidden accept={accept} />
             </Box>
 
             {/* Workflow presets */}

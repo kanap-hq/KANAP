@@ -175,8 +175,8 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 **Aktionen**:
 
 - **Neue Zeile**: Eine Zeile erstellen (erfordert `budget:member`)
-- **CSV importieren**: Zeilen aus einer Budgetdatei in großer Zahl laden (erfordert `budget:admin`)
-- **CSV exportieren**: Die Zeilen in eine Budgetdatei exportieren (erfordert `budget:admin`)
+- **Importieren**: Zeilen aus einer Budgetdatei in großer Zahl laden (erfordert `budget:admin`)
+- **Exportieren**: Die Zeilen in eine Budgetdatei exportieren (erfordert `budget:admin`)
 - **Auswahl löschen**: Massenlöschung ausgewählter Zeilen (erfordert `budget:admin`; Zeilen über Kontrollkästchen auswählen). Eine Zeile mit Beträgen in einer eingefrorenen Spalte kann nicht gelöscht werden. Vor dem Löschen nennt die Bestätigung die behaltenen Zeilen mit der eingefrorenen Spalte. Die anderen werden gelöscht
 
 **Zurück/Weiter-Navigation**:
@@ -250,8 +250,8 @@ Ersetzt die Zeile eine andere, oder wurde sie nach einer Typänderung ab einem s
 - Eine deaktivierte Kostenstelle ist als **Deaktiviert** markiert. Sie bleibt auf den Zeilen, die sie bereits haben, und kann für keine andere Zeile gewählt werden
 - Wenn Sie eine Zeile erstellen und das zahlende Unternehmen leer ist, zeigt die Liste alle Kostenstellen. Die Wahl einer Kostenstelle füllt das zahlende Unternehmen mit dem Unternehmen der Kostenstelle, sodass die Liste **Konto** den Kontenplan dieses Unternehmens zeigt. Solange Sie nicht selbst ein Unternehmen oder ein Konto wählen, zeigt die Liste weiterhin alle Kostenstellen und die Wahl einer anderen Kostenstelle aktualisiert auch das Unternehmen
 - Wenn Sie das zahlende Unternehmen ändern, wird eine Kostenstelle eines anderen Unternehmens beim selben Speichern entfernt. **Kostenstelle** zeigt dann die Kostenstellen des neuen Unternehmens
-- Eine Zeile, deren Kostenstelle zu einem anderen Unternehmen gehört, aus einer CSV-Datei oder über die API, behält beide. Ein Hinweis unter dem Feld lautet „Diese Kostenstelle gehört zu“, gefolgt vom Namen des Unternehmens
-- Eine über die API gespeicherte Zeile mit Kostenstelle und ohne zahlendes Unternehmen erhält das Unternehmen der Kostenstelle. Für CSV-Dateien siehe [CSV-Import/Export](#csv-importexport)
+- Eine Zeile, deren Kostenstelle zu einem anderen Unternehmen gehört, aus einer Datei oder über die API, behält beide. Ein Hinweis unter dem Feld lautet „Diese Kostenstelle gehört zu“, gefolgt vom Namen des Unternehmens
+- Eine über die API gespeicherte Zeile mit Kostenstelle und ohne zahlendes Unternehmen erhält das Unternehmen der Kostenstelle. Für importierte Dateien siehe [CSV-Import/Export](#csv-importexport)
 
 **Run oder Build**: **Run**, **Build** oder **Nicht festgelegt**. Damit teilen Sie das Budget auf zwischen dem Betrieb bestehender Services und deren Veränderung.
 
@@ -260,7 +260,7 @@ Ersetzt die Zeile eine andere, oder wurde sie nach einer Typänderung ab einem s
 - Jede aktivierte Dimension, die für den Typ der Zeile verwendet wird, hat ein eigenes Feld, nach der Dimension benannt, in der Reihenfolge der Dimensionen. Eine Dimension, die nur für den anderen Typ verwendet wird, hat keines, und der Wert, den eine Zeile dort hat, bleibt ausgeblendet. Wählen Sie einen Wert oder leeren Sie das Feld; die Änderung wird sofort gespeichert
 - Jedes Feld listet die aktivierten Werte seiner Dimension. Ein deaktivierter Wert bleibt auf den Zeilen, die ihn bereits haben, und kann für keine andere Zeile gewählt werden
 - Ein Wert, der nur für den anderen Typ verwendet wird, wird nicht angeboten, und seine Wahl wird abgelehnt. Eine Zeile, die ihn bereits hat, behält ihn und bleibt bearbeitbar. Siehe [OPEX- oder CAPEX-Werte](analytics.md#opex-oder-capex-werte)
-- Das Feld kann keinen Wert erstellen: Erstellen Sie ihn unter [Analysedimensionen](analytics.md), oder lassen Sie ihn von einem CSV-Import erstellen
+- Das Feld kann keinen Wert erstellen: Erstellen Sie ihn unter [Analysedimensionen](analytics.md), oder lassen Sie ihn von einem Import erstellen
 - Eine erforderliche Dimension ist mit einem Sternchen markiert. Eine neue Zeile braucht einen Wert in ihr: **Erstellen** bricht mit „Kostenart ist erforderlich“ ab, bis Sie einen wählen. Bei einer Zeile mit einem Wert kann das Feld nicht geleert, nur geändert werden. Eine Zeile ohne Wert bleibt bearbeitbar. Wenn Sie eine solche Zeile ändern, fragt KANAP beim Verlassen zuerst: „Kostenart ist erforderlich. Wählen Sie einen Wert, bevor Sie die Seite verlassen.“ **Bleiben** setzt den Cursor in das fehlende Feld. **Trotzdem verlassen** verlässt die Zeile. Siehe [Erforderliche Dimensionen](analytics.md#erforderliche-dimensionen)
 - Können die Dimensionen nicht geladen werden, ersetzt eine Zeile diese Felder: „Die Dimensionen konnten nicht geladen werden.“
 
@@ -595,9 +595,9 @@ Der Abschnitt fehlt, wenn die Zeile keinen Lieferanten hat oder es nichts vorzus
 
 ## CSV-Import/Export
 
-**CSV exportieren** und **CSV importieren** befinden sich in der Symbolleiste der Liste. Beide erfordern die Administratorstufe auf Budget (`budget:admin`).
+**Exportieren** und **Importieren** befinden sich in der Symbolleiste der Liste. Beide erfordern die Administratorstufe auf Budget (`budget:admin`).
 
-**CSV exportieren** schreibt die Budgetdatei der Zeilen, die die Liste zeigt, OPEX und CAPEX zusammen, als `budget.csv`. **CSV importieren** liest eine Datei wieder ein: Sie wird zuerst geprüft, und nichts wird geschrieben, bevor Sie auf **Laden** klicken.
+**Exportieren** schreibt die Budgetdatei der Zeilen, die die Liste zeigt, OPEX und CAPEX zusammen, als `budget.csv` oder als Excel-Arbeitsmappe `budget.xlsx`. **Importieren** liest beides wieder ein: Die Datei wird zuerst geprüft, und nichts wird geschrieben, bevor Sie auf **Laden** klicken.
 
 Die Datei enthält eine Zeile pro Budgetzeile: ihre `nature` (`opex` oder `capex`), ihre Referenz `BL-n`, die Details der Budgetzeile, ihre Beträge als Spalten und `kanap_token`. Eine Datei ohne Spalte `nature`, die eine frühere Version exportiert hat, wird als OPEX-Zeilen gelesen, oder als CAPEX-Zeilen, wenn der Filter **Typ** der Liste nur CAPEX behält. [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) beschreibt die Spalten, die Bedeutung einer Zelle und die beiden Importschritte.
 
@@ -680,7 +680,7 @@ Eine Budgetdatei ändert den Typ einer Zeile nie. Siehe [Ein Budget aus einer Ta
 
 9. **Unternehmenskennzahlen aktuell halten**: Zuordnungen hängen von Mitarbeiterzahl, IT-Benutzern und Umsatz der Unternehmen ab. Veraltete Kennzahlen verursachen Zuordnungsfehler.
 
-10. **CSV für Masseneinrichtung verwenden**: Wenn Sie von einem anderen System migrieren oder Hunderte von Zeilen haben, beginnen Sie mit dem CSV-Import. Exportieren Sie eine neue Datei, füllen Sie Ihre Zeilen aus und prüfen Sie sie vor dem Laden.
+10. **Eine Datei für die Masseneinrichtung verwenden**: Wenn Sie von einem anderen System migrieren oder Hunderte von Zeilen haben, beginnen Sie mit einem Import. Exportieren Sie eine neue Datei, füllen Sie Ihre Zeilen aus und prüfen Sie sie vor dem Laden.
 
 11. **Deaktivieren statt löschen**: Bewahren Sie die Historie, indem Sie Zeilen deaktivieren, wenn sie nicht mehr aktiv sind. Löschen Sie nur bei Fehlern.
 
@@ -698,7 +698,7 @@ Der Zugriff auf Budgetzeilen wird durch die Ressource Budget gesteuert, die für
 
 - `budget:reader`: Liste anzeigen, Zeilen öffnen, Budgets und Zuordnungen einsehen (schreibgeschützt), Anhänge herunterladen
 - `budget:member`: Zeilen erstellen und bearbeiten, ihren Typ ändern, Budgets und Zuordnungen aktualisieren, Anhänge hochladen und löschen, Beziehungen, Verknüpfungen und Kontakte verwalten
-- `budget:admin`: Alle Mitglied-Rechte plus CSV-Import und -Export, Budget-Operationen (Budgetspalten kopieren, mit Beträgen und Zuordnungen, und Budgetspalte zurücksetzen) und Massenlöschung
+- `budget:admin`: Alle Mitglied-Rechte plus Import und Export, Budget-Operationen (Budgetspalten kopieren, mit Beträgen und Zuordnungen, und Budgetspalte zurücksetzen) und Massenlöschung
 
 Das Einfrieren von Budgetspalten erfordert die Budgetadministration (`budget_ops:admin`).
 
@@ -709,13 +709,13 @@ Zusätzlich:
 - Aufgaben haben separate Berechtigungen (`tasks:member` zum Erstellen und Bearbeiten von Aufgaben an Budgetzeilen)
 - Benutzer mit `tasks:reader` können Aufgaben anzeigen, aber nicht erstellen oder bearbeiten
 
-Wenn Sie eine Aktion nicht ausführen können (z. B. die Schaltfläche **CSV importieren** fehlt oder Sie keine Anhänge hochladen können), prüfen Sie mit Ihrem Arbeitsbereich-Administrator Ihre Rollenberechtigungen.
+Wenn Sie eine Aktion nicht ausführen können (z. B. die Schaltfläche **Importieren** fehlt oder Sie keine Anhänge hochladen können), prüfen Sie mit Ihrem Arbeitsbereich-Administrator Ihre Rollenberechtigungen.
 
 ---
 
 ## Hilfe benötigt?
 
-- **CSV-Probleme**: Exportieren Sie eine neue Datei aus der Liste und prüfen Sie sie erneut. Der Bericht nennt die Zeile und die Spalte jedes Fehlers, und [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) erklärt, was jede Zelle bedeutet
+- **Dateiprobleme**: Exportieren Sie eine neue Datei aus der Liste und prüfen Sie sie erneut. Der Bericht nennt die Zeile und die Spalte jedes Fehlers, und [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md) erklärt, was jede Zelle bedeutet
 - **Zuordnungsfehler**: Prüfen Sie, ob alle Unternehmen die erforderlichen Kennzahlen (Mitarbeiterzahl, IT-Benutzer, Umsatz) für das ausgewählte Jahr haben
 - **Warnung „Veraltetes Konto“**: Das Konto gehört nicht zum Kontenplan des zahlenden Unternehmens; wählen Sie ein anderes Konto
 - **Fehlende Schaltflächen oder Tabs**: Ihre Rolle hat möglicherweise nicht die erforderliche Berechtigungsstufe (Mitglied oder Admin). Wenden Sie sich an Ihren Arbeitsbereich-Administrator

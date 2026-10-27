@@ -67,7 +67,7 @@ La página de Registro de auditoría conserva el historial de los cambios de dat
 | **Restablecimiento de contraseña solicitado** / **Restablecimiento de contraseña completado** | Alguien pide un enlace de restablecimiento y luego define una contraseña nueva con él. Si no se pudo enviar el correo electrónico con el enlace, el **motivo** lo indica |
 | **Inicio de sesión con Microsoft** / **Inicio de sesión con Microsoft fallido** | Un inicio de sesión mediante Microsoft Entra ID se completa o falla |
 
-**Exportaciones** (tabla **Exportación**): exportaciones CSV, documentos e informes que genera el servidor. La fila indica qué se exportó y quién lo hizo. La exportación del propio registro de auditoría también se registra.
+**Exportaciones** (tabla **Exportación**): cada archivo que KANAP genera a partir de sus datos: exportaciones de listas e informes en CSV o Excel, documentos e informes PDF. La fila indica qué se exportó y quién lo hizo. Sus detalles dan el formato, los parámetros de la exportación (filtros, búsqueda, orden, año, etc.) y, para un archivo de filas, el número de filas escritas. La exportación del propio registro de auditoría también se registra.
 
 Las filas de acceso, de sesión y de exportación guardan además la **dirección IP** desde la que llegó la solicitud y el **navegador** utilizado. Abra la fila para leerlos en las filas **Dirección IP** y **Navegador** de su tabla. Detrás de un proxy inverso, es la dirección IP de la propia persona, siempre que el proxy la transmita (on-premise: consulte el [ejemplo de proxy inverso](on-premise/installation.md#reverse-proxy-example-nginx)).
 
@@ -90,7 +90,7 @@ Los eventos de acceso y de sesión se eliminan después de **365 días**. Los ca
   - La referencia de negocio del registro en el encabezado (por ejemplo `PRJ-3`, `APP-12`, `AST-31`, `LOC-4`, `CONN-2` o `INT-8`), cuando la entrada la incluye. Sin referencia, el encabezado muestra **Identificador** y conserva el id almacenado en una información emergente
   - Una tabla de los campos: **Campo**, **Antes** y **Después** para una modificación, **Campo** y **Valor** para cualquier otra entrada. Los nombres de los campos aparecen en su idioma cuando se conocen. Las fechas, los valores sí/no y las personas se muestran de forma legible; los demás identificadores aparecen como **Identificador**, con el valor en una información emergente. Los campos técnicos como `id`, `tenant_id` y `updated_at` se omiten
   - **Ver datos sin formato** muestra el JSON completo antes y después
-- Exportar el registro a CSV (véase más abajo)
+- Exportar el registro a CSV o Excel (véase más abajo)
 
 ### Columnas
 
@@ -113,16 +113,16 @@ Los eventos de acceso y de sesión se eliminan después de **365 días**. Los ca
 - La cuadrícula utiliza paginación explícita con **100 filas por página**.
 - Los filtros y la búsqueda se aplican a todo el conjunto de datos, no solo a la página actual.
 
-### Exportar a CSV
+### Exportar
 
-Haga clic en **Exportar CSV** en la parte superior de la página para descargar el registro como archivo.
+Haga clic en **Exportar** en la parte superior de la página y elija **CSV** o **Excel (.xlsx)** para descargar el registro como archivo. Su navegador recuerda la elección para la próxima exportación.
 
 - El archivo contiene las entradas que coinciden con los filtros, la búsqueda y el orden que se muestran en pantalla. Quite los filtros para exportar todo el registro.
 - Un archivo contiene como máximo **100 000 entradas**, las más recientes primero de forma predeterminada. Cuando el registro es mayor, KANAP le avisa de que el archivo termina ahí. Acote los filtros (por ejemplo, un intervalo de fechas) y vuelva a exportar para obtener el resto.
 - Solo puede iniciar unas pocas exportaciones por minuto. Si vuelve a hacer clic demasiado pronto, KANAP le pide que espere un minuto.
 - La exportación queda registrada en el registro, como cualquier otra exportación.
 
-El archivo tiene siempre el mismo formato, sea cual sea su idioma, para que una herramienta de recopilación de registros pueda leerlo sin configuración:
+El archivo CSV tiene siempre el mismo formato, sea cual sea su idioma, para que una herramienta de recopilación de registros pueda leerlo sin configuración:
 
 - separado por comas, en UTF-8 sin marca de orden de bytes;
 - nombres de columna en inglés: `date`, `action`, `table`, `record_id`, `user`, `source`, `source_ref`, `ip`, `user_agent`, `before`, `after`;
@@ -130,11 +130,13 @@ El archivo tiene siempre el mismo formato, sea cual sea su idioma, para que una 
 - fechas en formato ISO 8601, en UTC (por ejemplo `2026-10-09T14:32:05.000Z`);
 - las columnas `before` y `after` como JSON compacto.
 
-Si Excel usa el punto y coma como separador de listas en su equipo (habitual con la configuración regional española o francesa), no haga doble clic sobre el archivo. Use **Datos > Desde texto o CSV**, elija UTF-8 como origen del archivo y la coma como delimitador.
+Si Excel usa el punto y coma como separador de listas en su equipo (habitual con la configuración regional española o francesa), no haga doble clic sobre el archivo CSV. Use **Datos > Desde texto o CSV**, elija UTF-8 como origen del archivo y la coma como delimitador, o exporte en Excel.
+
+El archivo Excel contiene las mismas columnas y los mismos valores en una hoja, todos como texto: las fechas conservan su forma ISO 8601, con la hora.
 
 ### Quién puede ver qué
 
-Los valores **Antes** y **Después** contienen el registro completo tal como se guardó, incluidos datos personales como nombres, correos y números de teléfono. La pantalla de detalle y el archivo CSV muestran los mismos valores, y ambos requieren `users:admin`. Los hashes de contraseña y los secretos de la autenticación multifactor nunca se escriben en el registro. Trate un archivo exportado como el propio registro: guárdelo con el mismo cuidado.
+Los valores **Antes** y **Después** contienen el registro completo tal como se guardó, incluidos datos personales como nombres, correos y números de teléfono. La pantalla de detalle y el archivo exportado muestran los mismos valores, y ambos requieren `users:admin`. Los hashes de contraseña y los secretos de la autenticación multifactor nunca se escriben en el registro. Trate un archivo exportado como el propio registro: guárdelo con el mismo cuidado.
 
 ### Comprender el origen y el actor
 
@@ -188,8 +190,8 @@ Acciones de la barra de herramientas:
 | Acción | Descripción | Permiso |
 |--------|-------------|---------|
 | **Nuevo** | Crear un nuevo usuario | `users:admin` |
-| **Importar CSV** | Importación masiva de usuarios | `users:admin` |
-| **Exportar CSV** | Exportar lista de usuarios | `users:admin` |
+| **Importar** | Importación masiva de usuarios desde un archivo CSV o un libro de Excel | `users:admin` |
+| **Exportar** | Exportar la lista de usuarios a CSV o Excel | `users:admin` |
 | **Invitar** | Enviar invitaciones de inicio de sesión a los usuarios seleccionados | `users:admin` |
 | **Desactivar** | Desactivar los usuarios seleccionados. Se cierra su sesión de inmediato. | `users:admin` |
 | **Eliminar** | Eliminar permanentemente los usuarios seleccionados. Su propia cuenta se conserva: la confirmación lo indica antes de eliminar nada. Para conservar el historial de un usuario y bloquear su acceso, desactívelo en su lugar | `users:admin` |
@@ -209,7 +211,7 @@ Acciones de fila, desde el menú al final de cada fila:
 
 ### Archivo CSV de usuarios
 
-**Exportar CSV** descarga la lista de usuarios. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
+**Exportar** descarga la lista de usuarios como archivo CSV o libro de Excel. **Importar** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados.
 
 Las columnas:
 
@@ -226,7 +228,7 @@ La carga crea un rol que el archivo nombra y que su espacio de trabajo no tiene,
 
 El archivo no contiene ninguna fecha ni ningún importe. Una importación no define ninguna contraseña: un usuario nuevo inicia sesión tras una invitación o un restablecimiento de contraseña.
 
-Consulte [Archivos CSV](csv-files.md) para la codificación, el separador y los dos pasos de importación.
+Consulte [Archivos CSV y Excel](csv-files.md) para los formatos, la codificación, el separador y los dos pasos de importación.
 
 ### Crear un usuario
 
@@ -397,7 +399,7 @@ El rol de **Colaborador de negocio** está diseñado para partes interesadas del
 Un Colaborador de negocio **no puede**:
 - Crear nuevos proyectos (requiere nivel Miembro en proyectos del portafolio)
 - Convertir solicitudes en proyectos (requiere nivel Miembro)
-- Importar/exportar CSV (requiere nivel Administrador)
+- Importar y exportar (requiere nivel Administrador)
 
 Este rol cubre la brecha entre el acceso de solo lectura (Lector) y la gestión completa de proyectos (Miembro), permitiendo a los usuarios de negocio contribuir activamente sin la capacidad de crear nuevos proyectos.
 

@@ -67,7 +67,7 @@ Die Seite Audit-Protokoll bewahrt die Historie der Datenänderungen und der Sich
 | **Zurücksetzen des Passworts angefordert** / **Passwort zurückgesetzt** | jemand einen Link zum Zurücksetzen anfordert und danach mit diesem Link ein neues Passwort festlegt. Konnte die E-Mail mit dem Link nicht gesendet werden, nennt der **Grund** dies |
 | **Anmeldung mit Microsoft** / **Fehlgeschlagene Anmeldung mit Microsoft** | eine Anmeldung über Microsoft Entra ID gelingt oder fehlschlägt |
 
-**Exporte** (Tabelle **Export**): CSV-Exporte, Dokumente und Berichte, die der Server erzeugt. Die Zeile zeigt, was exportiert wurde und von wem. Auch der Export des Audit-Protokolls wird aufgezeichnet.
+**Exporte** (Tabelle **Export**): jede Datei, die KANAP aus Ihren Daten erzeugt: Listen- und Berichtsexporte als CSV oder Excel, Dokumente und PDF-Berichte. Die Zeile zeigt, was exportiert wurde und von wem. Ihre Details nennen das Format, die Parameter des Exports (Filter, Suche, Sortierung, Jahr usw.) und, bei einer Datei mit Zeilen, die Zahl der geschriebenen Zeilen. Auch der Export des Audit-Protokolls wird aufgezeichnet.
 
 Anmelde-, Sitzungs- und Export-Zeilen halten außerdem die **IP-Adresse** fest, von der die Anfrage kam, sowie den verwendeten **Browser**. Öffnen Sie die Zeile, um beides in den Zeilen **IP-Adresse** und **Browser** ihrer Tabelle zu lesen. Hinter einem Reverse Proxy ist es die IP-Adresse der Person selbst, sofern der Proxy sie weitergibt (On-Premise: siehe das [Reverse-Proxy-Beispiel](on-premise/installation.md#reverse-proxy-example-nginx)).
 
@@ -90,7 +90,7 @@ Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Datenänder
   - Die Geschäftsreferenz des Datensatzes in der Kopfzeile (zum Beispiel `PRJ-3`, `APP-12`, `AST-31`, `LOC-4`, `CONN-2` oder `INT-8`), sofern der Eintrag eine trägt. Ohne Referenz zeigt die Kopfzeile **Kennung** und behält die gespeicherte ID in einem Tooltip
   - Eine Tabelle der Felder: **Feld**, **Vorher** und **Nachher** bei einer Änderung, **Feld** und **Wert** bei jedem anderen Eintrag. Feldnamen erscheinen in Ihrer Sprache, sofern bekannt. Datumsangaben, Ja/Nein-Werte und Personen werden lesbar dargestellt; andere Kennungen erscheinen als **Kennung**, mit dem Wert in einem Tooltip. Technische Felder wie `id`, `tenant_id` und `updated_at` werden ausgelassen
   - **Rohdaten anzeigen** zeigt das vollständige JSON vorher und nachher
-- Das Protokoll als CSV exportieren (siehe unten)
+- Das Protokoll als CSV oder Excel exportieren (siehe unten)
 
 ### Spalten
 
@@ -113,16 +113,16 @@ Anmelde- und Sitzungsereignisse werden nach **365 Tagen** gelöscht. Datenänder
 - Das Grid verwendet explizite Paginierung mit **100 Zeilen pro Seite**.
 - Filter und Suche gelten für den gesamten Datensatz, nicht nur für die aktuelle Seite.
 
-### CSV-Export
+### Export
 
-Klicken Sie oben auf der Seite auf **CSV exportieren**, um das Protokoll als Datei herunterzuladen.
+Klicken Sie oben auf der Seite auf **Exportieren** und wählen Sie **CSV** oder **Excel (.xlsx)**, um das Protokoll als Datei herunterzuladen. Ihr Browser merkt sich die Wahl für den nächsten Export.
 
 - Die Datei enthält die Einträge, die zu den auf dem Bildschirm angezeigten Filtern, der Suche und der Sortierung passen. Entfernen Sie die Filter, um das gesamte Protokoll zu exportieren.
 - Eine Datei enthält höchstens **100.000 Einträge**, standardmäßig die neuesten zuerst. Ist das Protokoll größer, weist KANAP darauf hin, dass die Datei dort endet. Grenzen Sie die Filter ein (zum Beispiel auf einen Zeitraum) und exportieren Sie erneut, um den Rest zu erhalten.
 - Sie können nur wenige Exporte pro Minute starten. Klicken Sie zu früh erneut, bittet KANAP Sie, eine Minute zu warten.
 - Der Export wird wie jeder andere Export im Protokoll aufgezeichnet.
 
-Die Datei hat unabhängig von Ihrer Sprache immer dasselbe Format, damit ein Werkzeug zur Protokollsammlung sie ohne Einrichtung lesen kann:
+Die CSV-Datei hat unabhängig von Ihrer Sprache immer dasselbe Format, damit ein Werkzeug zur Protokollsammlung sie ohne Einrichtung lesen kann:
 
 - durch Kommas getrennt, UTF-8 ohne Byte-Order-Mark;
 - englische Spaltennamen: `date`, `action`, `table`, `record_id`, `user`, `source`, `source_ref`, `ip`, `user_agent`, `before`, `after`;
@@ -130,11 +130,13 @@ Die Datei hat unabhängig von Ihrer Sprache immer dasselbe Format, damit ein Wer
 - Datumsangaben nach ISO 8601, in UTC (zum Beispiel `2026-10-09T14:32:05.000Z`);
 - die Spalten `before` und `after` als kompaktes JSON.
 
-Verwendet Excel auf Ihrem Rechner das Semikolon als Listentrennzeichen (üblich bei deutschen oder französischen Regionaleinstellungen), öffnen Sie die Datei nicht per Doppelklick. Verwenden Sie **Daten > Aus Text/CSV**, wählen Sie UTF-8 als Dateiursprung und das Komma als Trennzeichen.
+Verwendet Excel auf Ihrem Rechner das Semikolon als Listentrennzeichen (üblich bei deutschen oder französischen Regionaleinstellungen), öffnen Sie die CSV-Datei nicht per Doppelklick. Verwenden Sie **Daten > Aus Text/CSV**, wählen Sie UTF-8 als Dateiursprung und das Komma als Trennzeichen, oder exportieren Sie stattdessen als Excel.
+
+Die Excel-Datei enthält dieselben Spalten und dieselben Werte auf einem Blatt, alle als Text: Die Datumsangaben behalten ihre ISO-8601-Form, mit der Uhrzeit.
 
 ### Wer was sehen kann
 
-Die Werte **Vorher** und **Nachher** enthalten den vollständigen Datensatz, wie er gespeichert wurde, einschließlich personenbezogener Daten wie Namen, E-Mail-Adressen und Telefonnummern. Die Detailansicht und die CSV-Datei zeigen dieselben Werte, und beide erfordern `users:admin`. Passwort-Hashes und Geheimnisse der Mehrfaktor-Authentifizierung werden nie ins Protokoll geschrieben. Behandeln Sie eine exportierte Datei wie das Protokoll selbst: Bewahren Sie sie mit derselben Sorgfalt auf.
+Die Werte **Vorher** und **Nachher** enthalten den vollständigen Datensatz, wie er gespeichert wurde, einschließlich personenbezogener Daten wie Namen, E-Mail-Adressen und Telefonnummern. Die Detailansicht und die exportierte Datei zeigen dieselben Werte, und beide erfordern `users:admin`. Passwort-Hashes und Geheimnisse der Mehrfaktor-Authentifizierung werden nie ins Protokoll geschrieben. Behandeln Sie eine exportierte Datei wie das Protokoll selbst: Bewahren Sie sie mit derselben Sorgfalt auf.
 
 ### Quelle und Akteur verstehen
 
@@ -188,8 +190,8 @@ Aktionen in der Symbolleiste:
 | Aktion | Beschreibung | Berechtigung |
 |--------|--------------|--------------|
 | **Neu** | Neuen Benutzer erstellen | `users:admin` |
-| **CSV importieren** | Massenimport von Benutzern | `users:admin` |
-| **CSV exportieren** | Benutzerliste exportieren | `users:admin` |
+| **Importieren** | Massenimport von Benutzern aus einer CSV-Datei oder Excel-Arbeitsmappe | `users:admin` |
+| **Exportieren** | Benutzerliste als CSV oder Excel exportieren | `users:admin` |
 | **Einladen** | Anmeldeeinladungen an ausgewählte Benutzer senden | `users:admin` |
 | **Deaktivieren** | Die ausgewählten Benutzer deaktivieren. Sie werden sofort abgemeldet. | `users:admin` |
 | **Löschen** | Ausgewählte Benutzer dauerhaft entfernen. Ihr eigenes Konto bleibt erhalten: Die Bestätigung nennt es vor dem Löschen. Um den Verlauf eines Benutzers zu behalten und seinen Zugang zu sperren, deaktivieren Sie ihn stattdessen | `users:admin` |
@@ -209,7 +211,7 @@ Zeilenaktionen über das Menü am Ende jeder Zeile:
 
 ### CSV-Datei der Benutzer
 
-**CSV exportieren** lädt die Benutzerliste herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
+**Exportieren** lädt die Benutzerliste als CSV-Datei oder Excel-Arbeitsmappe herunter. **Importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen.
 
 Die Spalten:
 
@@ -226,7 +228,7 @@ Eine Rolle, die die Datei nennt und die Ihr Arbeitsbereich nicht hat, wird beim 
 
 Die Datei enthält kein Datum und keinen Betrag. Ein Import setzt kein Passwort: Ein neuer Benutzer meldet sich nach einer Einladung oder einer Passwort-Zurücksetzung an.
 
-Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen und die beiden Importschritte.
+Siehe [CSV- und Excel-Dateien](csv-files.md) für die Formate, die Kodierung, das Trennzeichen und die beiden Importschritte.
 
 ### Benutzer erstellen
 
@@ -397,7 +399,7 @@ Die Rolle **Fachbereichs-Mitwirkender** ist für Fachbereichs-Stakeholder konzip
 Ein Fachbereichs-Mitwirkender **kann nicht**:
 - Neue Projekte erstellen (erfordert Mitglied-Stufe für Portfolio-Projekte)
 - Anfragen in Projekte umwandeln (erfordert Mitglied-Stufe)
-- CSV importieren/exportieren (erfordert Administrator-Stufe)
+- Importieren und exportieren (erfordert Administrator-Stufe)
 
 Diese Rolle schließt die Lücke zwischen schreibgeschütztem Zugriff (Leser) und vollem Projektmanagement (Mitglied) und ermöglicht es Fachbereichsbenutzern, aktiv beizutragen, ohne neue Projekte erstellen zu können.
 

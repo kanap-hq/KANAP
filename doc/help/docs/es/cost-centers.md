@@ -54,7 +54,7 @@ Navegue a **Datos maestros > Centros de coste** (en la sección **Organización*
 - **Responsable del presupuesto**: la persona que rinde cuentas de esta partida presupuestaria en la revisión del presupuesto. Cada línea OPEX y CAPEX del centro de coste muestra a esta persona
 - **Descripción**: lo que abarca el centro de coste
 
-**Consejo**: Si su equipo de finanzas ya mantiene la lista de centros de coste, impórtela desde un archivo CSV. Las filas pueden venir en cualquier orden.
+**Consejo**: Si su equipo de finanzas ya mantiene la lista de centros de coste, impórtela desde un archivo CSV o un libro de Excel. Las filas pueden venir en cualquier orden.
 
 ---
 
@@ -85,8 +85,8 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 **Acciones**:
 
 - **Nuevo**: crear un grupo o un centro de coste (requiere `cost_centers:member`)
-- **Importar CSV**: cargar el árbol desde un archivo (requiere `cost_centers:admin`)
-- **Exportar CSV**: descargar los elementos que muestra la lista, o todos los elementos (requiere `cost_centers:admin`)
+- **Importar**: cargar el árbol desde un archivo (requiere `cost_centers:admin`)
+- **Exportar**: descargar los elementos que muestra la lista, o todos los elementos (requiere `cost_centers:admin`)
 - **Eliminar selección**: eliminar los elementos seleccionados (requiere `cost_centers:admin`). Antes de eliminar nada, la confirmación enumera los elementos que se conservan, con el motivo. El contenido se elimina antes que su grupo, de modo que seleccionar un grupo junto con todo lo que contiene lo elimina todo
 
 ---
@@ -168,14 +168,16 @@ El botón **Eliminar** (icono de papelera) del encabezado elimina el elemento tr
 
 ## Importación/exportación CSV
 
+La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
+
 Cargue o actualice todo el árbol desde un archivo.
 
-**Exportar**: haga clic en **Exportar CSV** y después en **Exportar datos**. El archivo lista todos los elementos, activados o desactivados, en orden de árbol. Para un archivo vacío solo con los encabezados, use **Descargar plantilla** en el diálogo de importación.
+**Exportar**: haga clic en **Exportar** y después en **Exportar datos**. El archivo lista todos los elementos, activados o desactivados, en orden de árbol. Para un archivo vacío solo con los encabezados, use **Descargar plantilla** en el diálogo de importación.
 
 **Estructura CSV**:
 
 - Encabezados: `code`, `kind`, `name`, `parent_code`, `company_name`, `owner_email`, `description`, `status`, `disabled_at`
-- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
+- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
 
 | Columna | Contenido |
 |---|---|
@@ -191,7 +193,7 @@ Cargue o actualice todo el árbol desde un archivo.
 
 **Importar**:
 
-1. Haga clic en **Importar CSV** en la lista
+1. Haga clic en **Importar** en la lista
 2. Elija su archivo
 3. Haga clic en **Verificación previa**. El informe indica el número de filas, los elementos que se crearán y actualizarán, y las filas que no cambian nada
 4. Si la verificación previa no muestra errores, haga clic en **Cargar**
@@ -223,7 +225,7 @@ Cargue o actualice todo el árbol desde un archivo.
 |---|---|
 | `cost_centers:reader` | Ver la lista y abrir los centros de coste |
 | `cost_centers:member` | Crear centros de coste y grupos, y editarlos |
-| `cost_centers:admin` | Todo lo anterior, más la importación y exportación CSV y la eliminación |
+| `cost_centers:admin` | Todo lo anterior, más la importación y exportación y la eliminación |
 
 Cada rol empieza con el nivel que tiene en departamentos, salvo el rol integrado Administrador de presupuesto, que recibe admin. Así, Administrador de presupuesto y Administrador de datos maestros son administradores, Miembro de presupuesto y Miembro de datos maestros son miembros, y los roles de lectura pueden leer. Cualquier persona que pueda leer las líneas presupuestarias (Presupuesto) o los informes puede elegir un centro de coste en una línea o en un filtro de informe sin acceso a esta página.
 

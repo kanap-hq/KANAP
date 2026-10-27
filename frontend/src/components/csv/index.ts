@@ -5,6 +5,7 @@ export * from './csv.types';
 export { useCsvImport } from './useCsvImport';
 export type { UseCsvImportReturn } from './useCsvImport';
 export { useCsvExport } from './useCsvExport';
+export { useImportFiles, ImportLabel } from './importFiles';
 export type { UseCsvExportReturn } from './useCsvExport';
 
 // V1 Components (existing)

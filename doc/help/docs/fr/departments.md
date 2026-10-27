@@ -43,8 +43,8 @@ La grille des départements vous offre une vue d'ensemble de tous les départeme
 
 **Actions** :
 - **Nouveau** : Créer un nouveau département (nécessite `departments:member`)
-- **Importer CSV** : Import en masse de départements (nécessite `departments:admin`)
-- **Exporter CSV** : Exporter en CSV (nécessite `departments:admin`)
+- **Importer** : Import en masse de départements (nécessite `departments:admin`)
+- **Exporter** : Exporter dans un fichier CSV ou un classeur Excel (nécessite `departments:admin`)
 - **Supprimer la sélection** : Supprimer les départements sélectionnés (nécessite `departments:admin`). Un département utilisé dans les ventilations de lignes budgétaires ne peut pas être supprimé : désactivez-le plutôt. Avant toute suppression, la confirmation liste les départements conservés, avec la raison
 
 ---
@@ -93,7 +93,9 @@ L'onglet Détails gère les métriques d'effectif année par année.
 
 ## Import/export CSV
 
-**Exporter CSV** télécharge les départements que la liste affiche (ou, sur demande dans la fenêtre, tous les départements) avec leur société, leur nom, leur description, leur statut et leur fin de validité. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes.
+L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
+
+**Exporter** télécharge les départements que la liste affiche (ou, sur demande dans la fenêtre, tous les départements) avec leur société, leur nom, leur description, leur statut et leur fin de validité. **Importer** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes.
 
 Les colonnes :
 
@@ -119,7 +121,7 @@ Les colonnes :
 - Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »
 
 **Notes** :
-- Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
+- Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
 - L'effectif n'est pas dans le fichier. Saisissez-le par année dans l'onglet **Détails** du département
 
 ## Conseils

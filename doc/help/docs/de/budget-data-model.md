@@ -136,7 +136,7 @@ Jedes Budgetjahr einer Budgetzeile hat eine Zuordnungsmethode:
 | Manuell nach Abteilung | Der Mitarbeiterzahl der Abteilungen, die Sie auswählen |
 | Manuelle Prozentsätze | Den Prozentsätzen, die Sie eingeben, zusammen 100 % |
 
-Zuordnungen speisen die Berichte zur Leistungsverrechnung, für OPEX- und CAPEX-Zeilen. Keine Datei importiert sie. [Budgetspalten kopieren](budget-operations.md#zuordnungen-kopieren) überträgt sie von einem Jahr ins nächste, und die Berichte zur Leistungsverrechnung exportieren ihre Tabellen als CSV. Siehe [Berichte](reports.md).
+Zuordnungen speisen die Berichte zur Leistungsverrechnung, für OPEX- und CAPEX-Zeilen. Keine Datei importiert sie. [Budgetspalten kopieren](budget-operations.md#zuordnungen-kopieren) überträgt sie von einem Jahr ins nächste, und die Berichte zur Leistungsverrechnung exportieren ihre Tabellen als CSV oder Excel. Siehe [Berichte](reports.md).
 
 ### Verknüpfungen mit anderen Objekten
 
@@ -179,7 +179,7 @@ Worauf es ankommt, wenn Sie ein anderes Werkzeug auf KANAP abbilden:
 
 ## Austauschformate
 
-Jede der folgenden Dateien wird auf der Seite exportiert und importiert, die das Objekt verwaltet. Importe laufen in zwei Schritten: eine Prüfung, die nichts schreibt, dann ein Laden. Mit Ausnahme der Vertragsdatei teilen sie die Regeln zu Kodierung, Trennzeichen, Datumsangaben und Beträgen sowie die Größengrenze, die unter [CSV-Dateien](csv-files.md) beschrieben sind.
+Jede der folgenden Dateien wird auf der Seite exportiert und importiert, die das Objekt verwaltet. Importe laufen in zwei Schritten: eine Prüfung, die nichts schreibt, dann ein Laden. Mit Ausnahme der Vertragsdatei teilen sie die Regeln zu Kodierung, Trennzeichen, Datumsangaben und Beträgen sowie die Größengrenze, die unter [CSV- und Excel-Dateien](csv-files.md) beschrieben sind.
 
 | Objekt | Export | Import | Zugeordnet über | Details |
 |---|---|---|---|---|

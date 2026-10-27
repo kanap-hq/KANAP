@@ -112,9 +112,9 @@ Chaque serveur apparaît une fois. « Aucun trouvé » signifie qu'aucun serveur
 
 ## Export
 
-**Exporter les actifs** télécharge les actifs de la table dans un fichier CSV, avec sa recherche, ses filtres et son tri. Les colonnes sont **Zone**, **Reference**, **Name**, **Type**, **Technologies**, **Applications**, **Controls** et **Dependency**. **Dependency** donne, pour **Hôte moins sensible**, chaque actif plus sensible que l'actif fait tourner ou chaque cluster dont il est membre, avec sa zone. Un export contient jusqu'à 10 000 actifs : au-delà, affinez les filtres.
+**Exporter les actifs** télécharge les actifs de la table dans un fichier CSV ou Excel, avec sa recherche, ses filtres et son tri. Les colonnes sont **Zone**, **Reference**, **Name**, **Type**, **Technologies**, **Applications**, **Controls** et **Dependency**. **Dependency** donne, pour **Hôte moins sensible**, chaque actif plus sensible que l'actif fait tourner ou chaque cluster dont il est membre, avec sa zone. Un export contient jusqu'à 10 000 actifs : au-delà, affinez les filtres.
 
-**Exporter les domaines** télécharge chaque domaine avec son suffixe DNS, sa forêt, ses approbations (les siennes et celles déclarées par d'autres domaines), ses nombres de comptes et d'ordinateurs, et ses contrôleurs de domaine.
+**Exporter les domaines** télécharge chaque domaine, en CSV ou Excel, avec son suffixe DNS, sa forêt, ses approbations (les siennes et celles déclarées par d'autres domaines), ses nombres de comptes et d'ordinateurs, et ses contrôleurs de domaine.
 
 ## Conseils
 

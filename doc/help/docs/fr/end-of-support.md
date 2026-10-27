@@ -60,7 +60,7 @@ Les lignes qui concernent des applications demandent le droit de lire les applic
 
 ## Export et impression
 
-**Exporter le tableau en CSV** télécharge la liste à l'écran : les échéances avec l'horizon et le type en cours, ou les données manquantes. Les en-têtes suivent la langue de votre écran. **Imprimer / Enregistrer en PDF** imprime le rapport.
+**Exporter le tableau** télécharge la liste à l'écran dans un fichier CSV ou Excel : les échéances avec l'horizon et le type en cours, ou les données manquantes. Les en-têtes suivent la langue de votre écran, et les dates sont de vraies dates dans le fichier Excel, qui ajoute une feuille **Paramètres**. Voir [Rapports](reports.md#export-options). **Imprimer / Enregistrer en PDF** imprime le rapport.
 
 ## Conseils
 

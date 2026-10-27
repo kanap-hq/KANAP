@@ -3,8 +3,8 @@ import { EntityManager, In } from 'typeorm';
 import { parseString } from '@fast-csv/parse';
 import { parseCsvBoolean } from '../csv-sheet/boolean';
 import { knownTimeZone, readTimeZoneHeader } from '../csv-sheet/date';
-import { CsvDecodeError, decodeCsv } from '../csv-sheet/decode';
-import { csvSeparatorOf } from '../csv-sheet/read';
+import { CsvDecodeError } from '../csv-sheet/decode';
+import { csvSeparatorOf, readImportText } from '../csv-sheet/read';
 import { looseKey } from '../csv-sheet/text';
 import { sameStoredValues } from '../csv-sheet/unchanged';
 import { AuditLog } from '../../audit/audit.entity';
@@ -115,7 +115,16 @@ export class CsvImportService {
     opts: CsvImportOptions,
   ): Promise<CsvImportResult> {
     // Decode and parse CSV
-    const { rows, headerErrors, headerWarnings, timeZones } = await this.parseCsv(config, file);
+    const { rows, headerErrors, headerWarnings, timeZones, firstSheetOnly } = await this.parseCsv(config, file);
+    // A workbook of several sheets: the report says which one was read, on every outcome.
+    if (firstSheetOnly !== undefined) {
+      headerWarnings.push({
+        row: 0,
+        message: `Only the first sheet, ${firstSheetOnly}, was read.`,
+        code: 'XLSX_FIRST_SHEET_ONLY',
+        params: { name: firstSheetOnly },
+      });
+    }
 
     // Early return if header errors
     if (headerErrors.length > 0) {
@@ -269,7 +278,8 @@ export class CsvImportService {
   }
 
   /**
-   * Parse CSV file and validate headers.
+   * Parse the file and validate headers: a CSV file, or the first sheet of an .xlsx workbook turned
+   * into the same CSV text (`readImportText`), so both are read by the same parser and rules.
    */
   private async parseCsv(
     config: CsvEntityConfig,
@@ -279,12 +289,17 @@ export class CsvImportService {
     headerErrors: CsvImportError[];
     headerWarnings: CsvImportWarning[];
     timeZones: Record<string, string>;
+    /** A workbook of several sheets: the name of the one read, the first. */
+    firstSheetOnly?: string;
   }> {
     const buf = uploadedBytes(file);
 
     let content: string;
+    let firstSheetOnly: string | undefined;
     try {
-      content = decodeCsv(buf).text;
+      const read = readImportText(buf);
+      content = read.text;
+      if (read.format === 'xlsx' && (read.sheetCount ?? 1) > 1) firstSheetOnly = read.sheetName;
     } catch (err) {
       if (err instanceof CsvDecodeError) {
         throw new BadRequestException({ message: err.message, code: err.code });
@@ -410,7 +425,7 @@ export class CsvImportService {
         .on('end', () => resolve());
     });
 
-    return { rows, headerErrors, headerWarnings, timeZones };
+    return { rows, headerErrors, headerWarnings, timeZones, firstSheetOnly };
   }
 
   /**

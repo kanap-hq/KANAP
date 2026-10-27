@@ -11,6 +11,7 @@ import CsvImportDialog from '../../components/csv/CsvImportDialog';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
+import { ImportLabel } from '../../components/csv/importFiles';
 
 type Template = {
   id: string;
@@ -114,7 +115,7 @@ export default function AdminCoaTemplatesPage() {
     <Stack direction="row" spacing={1}>
       <Button variant="action-primary" onClick={() => { setEditInitial(undefined); setEditOpen(true); }}>{t('coaTemplates.actions.new')}</Button>
       <Button variant="action" disabled={selectedRows.length !== 1} onClick={() => { setEditInitial(selectedRows[0]); setEditOpen(true); }}>{t('coaTemplates.actions.edit')}</Button>
-      <Button variant="action" disabled={selectedRows.length !== 1} onClick={() => setImportOpen(true)}>{t('coaTemplates.actions.importCsv')}</Button>
+      <Button variant="action" disabled={selectedRows.length !== 1} onClick={() => setImportOpen(true)}><ImportLabel csv={t('coaTemplates.actions.importCsv')} /></Button>
       <Button variant="action" disabled={selectedRows.length !== 1} onClick={() => setExportOpen(true)}>{t('coaTemplates.actions.exportCsv')}</Button>
       <Button
         variant="action-danger"

@@ -1,6 +1,6 @@
 # Rapports
 
-La section Rapports vous donne accès à des rapports préconstruits et interactifs pour analyser les données budgétaires, les ventilations de coûts et les tendances de dépenses. Chaque rapport associe un tableau récapitulatif à un graphique, et tous supportent l'export CSV et image.
+La section Rapports vous donne accès à des rapports préconstruits et interactifs pour analyser les données budgétaires, les ventilations de coûts et les tendances de dépenses. Chaque rapport associe un tableau récapitulatif à un graphique, et tous exportent leur tableau en CSV ou Excel et leur graphique en image.
 
 ## Où trouver cette page
 
@@ -53,7 +53,7 @@ Avec **ETP**, un rapport additionne des personnes au lieu de montants :
 - **Top hausse / baisse** compare les ETP des deux colonnes ligne budgétaire par ligne budgétaire. Une ligne budgétaire qui déclare des ETP d'un seul côté compte 0 de l'autre.
 - Les valeurs s'affichent avec deux décimales. Les noms de colonnes et les titres de graphiques portent la mention ETP.
 - L'adresse de la page conserve la mesure (`?measure=fte`) : un lien enregistré en favori ou partagé s'ouvre sur la même mesure.
-- Les noms des fichiers PNG et CSV exportés se terminent par `-fte`.
+- Les noms des fichiers exportés contiennent `-fte`.
 
 Avec les ETP, un avertissement sous le tableau signale quand certaines lignes budgétaires déclarent des ETP dans une colonne dont le montant ne suit plus les lignes de quantité et prix. C'est le cas quand le montant a été réparti, quand ses mois ont été modifiés à la main, ou quand la colonne a été copiée depuis une colonne dont les lignes ne servaient que de référence. L'avertissement indique combien de lignes budgétaires et combien d'ETP sont concernés, par colonne et par année. Avec plusieurs colonnes, elle se lit par exemple : « Le montant ne suit plus les lignes pour : Budget 2026 (2 lignes, 1,50 ETP), Budget 2027 (1 ligne, 0,50 ETP). » Avec une seule colonne : « 2 lignes déclarent 1,50 ETP alors que leur montant ne suit plus leurs lignes de quantité et prix. » Leurs ETP comptent toujours. L'avertissement vous signale que le montant de la colonne ne correspond pas au coût de ses lignes de quantité et prix.
 
@@ -147,7 +147,6 @@ Consultez les ventilations de coûts à travers toutes les sociétés avec des K
 
 - Flux nets payeur-vers-consommateur par paire de sociétés (auto-consommation exclue)
 - Colonnes : Payeur, Consommateur, montant
-- Bouton séparé **Exporter les flux nets en CSV**
 
 **Tableau des KPI** (lorsque activé) :
 
@@ -166,9 +165,11 @@ Une ligne de totaux est épinglée en bas.
 
 ### Export
 
-- **Exporter le tableau en CSV** (icône de téléchargement) : Exporte la grille des ventilations détaillées
+- **Exporter le tableau** (icône de téléchargement) : **Excel (.xlsx)** écrit une feuille par tableau : **Ventilations détaillées**, **Totaux globaux par société**, **Flux interentreprises** et **KPI de refacturation**, puis la feuille **Paramètres**. **CSV** propose une entrée par tableau, par exemple **CSV : Flux interentreprises**. Les ventilations détaillées contiennent une ligne par département, avec sa société sur chaque ligne, si bien que la somme de la colonne des montants donne le total. Les totaux par société sont dans leur propre tableau
 - **Exporter le graphique en PNG** (icône image) : Exporte le graphique en barres
 - **Imprimer / Enregistrer en PDF** (icône imprimante)
+
+L'export contient tous les tableaux, quels que soient ceux que les cases à cocher affichent à l'écran.
 
 ---
 
@@ -210,7 +211,6 @@ Vue détaillée des ventilations de refacturation d'une société avec départem
 
 - Société partenaire, créances, dettes, net
 - Ligne de totaux épinglée
-- Bouton séparé **Exporter les flux en CSV**
 
 **Tableau des KPI** (lorsque activé) : Mêmes colonnes que le tableau KPI de la refacturation globale, avec une ligne « Totaux globaux » en bas pour comparaison.
 
@@ -218,9 +218,11 @@ Vue détaillée des ventilations de refacturation d'une société avec départem
 
 ### Export
 
-- **Exporter le tableau en CSV** : Exporte la grille des totaux par département
+- **Exporter le tableau** : **Excel (.xlsx)** écrit une feuille par tableau : **Totaux par département**, **Lignes de refacturation**, **Flux interentreprises** et **KPI de refacturation**, puis la feuille **Paramètres**. **CSV** propose une entrée par tableau, par exemple **CSV : Lignes de refacturation**
 - **Exporter le graphique en PNG** : Exporte le graphique en barres des départements
 - **Imprimer / Enregistrer en PDF**
+
+L'export contient tous les tableaux, quels que soient ceux que les cases à cocher affichent à l'écran.
 
 ---
 
@@ -333,7 +335,7 @@ Comparez les métriques budgétaires sur plusieurs années sur un seul graphique
 
 ### Export
 
-- **Exporter le tableau en CSV**
+- **Exporter le tableau** : CSV ou Excel. Voir [Options d'export](#export-options)
 - **Exporter le graphique en PNG**
 - **Imprimer / Enregistrer en PDF**
 
@@ -365,7 +367,7 @@ Comparez de manière flexible jusqu'à 10 combinaisons année+colonne.
 
 ### Export
 
-- **Exporter le tableau en CSV**
+- **Exporter le tableau** : CSV ou Excel. Voir [Options d'export](#export-options)
 - **Exporter le graphique en PNG**
 - **Imprimer / Enregistrer en PDF**
 
@@ -464,7 +466,7 @@ L'adresse de la page conserve le regroupement (`?group=item`, `?group=supplier` 
 
 Une ligne **Total** épinglée donne les totaux mensuels, leur moyenne et leur pic. Les valeurs s'affichent avec deux décimales. Seuls les ETP déclarés comptent : les lignes budgétaires sans lignes de quantité et de prix dans la colonne sont écartées.
 
-Le nom d'un groupe est un lien qui s'ouvre dans un nouvel onglet. Une ligne budgétaire ouvre sa page. Un centre de coûts, un fournisseur ou une valeur ouvre la liste des lignes budgétaires sur les lignes budgétaires du groupe qui déclarent des ETP, dans la période du rapport et restreintes par la barre de filtres (voir [Ouvrir la liste depuis un rapport](#ouvrir-la-liste-depuis-un-rapport)). « Aucun centre de coûts », « Aucun fournisseur » et « Aucune valeur » ouvrent les lignes budgétaires qui n'en ont pas. La ligne **Total** est en texte simple. L'export CSV garde les noms en texte simple.
+Le nom d'un groupe est un lien qui s'ouvre dans un nouvel onglet. Une ligne budgétaire ouvre sa page. Un centre de coûts, un fournisseur ou une valeur ouvre la liste des lignes budgétaires sur les lignes budgétaires du groupe qui déclarent des ETP, dans la période du rapport et restreintes par la barre de filtres (voir [Ouvrir la liste depuis un rapport](#ouvrir-la-liste-depuis-un-rapport)). « Aucun centre de coûts », « Aucun fournisseur » et « Aucune valeur » ouvrent les lignes budgétaires qui n'en ont pas. La ligne **Total** est en texte simple. L'export garde les noms en texte simple.
 
 ### Avertissements
 
@@ -475,8 +477,8 @@ Une ligne sous le tableau pour chaque cas, quand il se présente :
 
 ### Export
 
-- **Exporter le tableau en CSV** : Le nom du fichier porte le type, l'année, la colonne et le regroupement, par exemple `staffing-opex-2026-budget-cost-center.csv`
-- **Exporter le graphique en PNG** : Même nom, en image PNG
+- **Exporter le tableau** : CSV ou Excel. Le nom du fichier porte le type, l'année, la colonne, le regroupement et le jour de l'export, par exemple `staffing-opex-2026-budget-cost-center-2026-10-27.xlsx`
+- **Exporter le graphique en PNG** : Le type, l'année, la colonne et le regroupement, en image PNG
 - **Imprimer / Enregistrer en PDF**
 
 ---
@@ -543,8 +545,8 @@ Une ligne **Total** épinglée donne, pour chaque paire, le total des jours, le 
 
 ### Export
 
-- **Exporter le tableau en CSV** : Le nom du fichier porte le type, le regroupement et la première paire, par exemple `cost-per-fte-opex-cost-center-2025-budget.csv`. Pour le TJM, il commence par `daily-rate`, par exemple `daily-rate-opex-cost-center-2025-budget.csv`
-- **Exporter le graphique en PNG** : Même nom, en image PNG
+- **Exporter le tableau** : CSV ou Excel. Le nom du fichier porte le type, le regroupement, la première paire et le jour de l'export, par exemple `cost-per-fte-opex-cost-center-2025-budget-2026-10-27.xlsx`. Pour le TJM, il commence par `daily-rate`, par exemple `daily-rate-opex-cost-center-2025-budget-2026-10-27.csv`
+- **Exporter le graphique en PNG** : Le type, le regroupement et la première paire, en image PNG
 - **Imprimer / Enregistrer en PDF**
 
 ---
@@ -553,13 +555,23 @@ Une ligne **Total** épinglée donne, pour chaque paire, le total des jours, le 
 
 Chaque rapport partage ces capacités via la barre d'outils partagée :
 
-### Options d'export
+### Options d'export { #export-options }
 
-- **Exporter le tableau en CSV** (icône de téléchargement) : Télécharge les données du tableau principal
+- **Exporter le tableau** (icône de téléchargement) : ouvre un menu avec **CSV** et **Excel (.xlsx)**. Votre navigateur mémorise le dernier choix et le met en évidence
 - **Exporter le graphique en PNG** (icône image) : Télécharge le graphique en tant qu'image PNG
 - **Imprimer / Enregistrer en PDF** (icône imprimante) : Ouvre la boîte de dialogue d'impression du navigateur. Vous pouvez aussi ajouter `?print=1` à n'importe quelle URL de rapport pour déclencher l'impression automatiquement au chargement.
 
-Les noms des fichiers exportés contiennent le nom de la colonne, par exemple `top10-opex-2026-budget-bar.png`. Avec la mesure ETP, ils se terminent par `-fte`.
+KANAP construit le fichier du tableau à partir des mêmes chiffres que l'écran, avec les filtres à l'écran :
+
+- **Valeurs** : les montants gardent leurs centimes, les ETP et les jours leurs décimales, les parts sont des pourcentages. L'écran les arrondit pour la lecture ; le fichier garde les valeurs, si bien qu'une somme dans Excel correspond au rapport.
+- **Ordre** : les lignes suivent l'ordre propre du rapport. Un tri cliqué dans un en-tête de colonne reste à l'écran.
+- **Langue** : les en-têtes, les noms de groupe (« Aucun centre de coûts ») et les dates suivent la langue de votre écran. Un fichier CSV prend aussi le séparateur et la marque décimale de cette langue (voir [Fichiers CSV et Excel](csv-files.md)).
+- **Excel** : une feuille par tableau, avec les lignes de total en gras après les données. Un tri ou un filtre dans Excel laisse les totaux en place. Une dernière feuille, **Paramètres**, liste les filtres appliqués, la date et l'heure de l'export dans votre fuseau horaire, et votre nom.
+- **Accès limité aux données** : pour une personne dont l'[accès aux données](data-access.md) est limité, le fichier compte les lignes qu'elle voit et ne contient aucune ligne de total. La feuille **Paramètres** indique **Calculé sur vos accès**.
+
+Chaque export de tableau est enregistré dans le [journal d'audit](admin.md#journal-daudit).
+
+Les noms des fichiers exportés contiennent le nom de la colonne, par exemple `top10-opex-2026-budget-bar.png`, et un fichier de tableau se termine par le jour de l'export. Avec la mesure ETP, les noms contiennent `-fte`, avant le jour pour un fichier de tableau.
 
 ### Métriques disponibles
 
@@ -578,4 +590,4 @@ Pour changer de rapport, cliquez sur **Rapports** dans le panneau de gauche pour
 - **Comparez Budget vs Atterrissage prévu** : Utilisez le rapport Comparaison de colonnes budgétaires pour mesurer la précision des prévisions sur plusieurs années.
 - **Basculez les sections sur les rapports de refacturation** : Les cases à cocher vous permettent de vous concentrer uniquement sur les données dont vous avez besoin (départements, lignes budgétaires, KPI ou flux) sans encombrement visuel.
 - **Regroupement par année dans la Comparaison de colonnes budgétaires** : Lorsque vous comparez la même métrique sur plusieurs années, activez le regroupement par année pour un graphique en courbe plus lisible.
-- **Exportez pour les présentations** : Les graphiques s'exportent en PNG et les tableaux en CSV, tous deux prêts pour les diaporamas ou les tableurs.
+- **Exportez pour les présentations** : Les graphiques s'exportent en PNG et les tableaux en CSV ou Excel, prêts pour les diaporamas ou les tableurs.

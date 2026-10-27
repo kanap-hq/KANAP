@@ -23,6 +23,7 @@ import { COST_CENTER_KINDS } from './cost-centers/costCenterFields';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { setListFiltersParam } from '../lib/listContext';
+import { ImportLabel } from '../components/csv/importFiles';
 
 const DEFAULT_SORT = 'path:ASC';
 
@@ -190,7 +191,7 @@ function CostCentersList() {
           {t('shared.labels.new')}
         </Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('shared.labels.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton

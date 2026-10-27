@@ -81,7 +81,7 @@ Los catálogos suelen ser más largos que los equipos, por eso los colaboradores
 
 **Actuar sobre lo que ve**:
 - Haga clic en un colaborador para abrir su pestaña **Competencias**, donde se pueden cambiar los niveles
-- **Exportar**, junto a **Agregar colaborador** en la parte superior de la página, descarga lo que está en pantalla como archivo `.xlsx`, con la misma disposición, los niveles como números. Útil para revisiones de competencias y planes de formación
+- **Exportar**, junto a **Agregar colaborador** en la parte superior de la página, descarga lo que está en pantalla como archivo CSV o Excel, con la misma disposición, los niveles como números y los recuentos de cobertura en la última fila. El archivo Excel añade una hoja **Parámetros** con los filtros. Útil para revisiones de competencias y planes de formación
 
 ---
 

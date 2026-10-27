@@ -19,6 +19,8 @@ vi.mock('react-i18next', () => {
 });
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+const features = vi.hoisted(() => ({ importXlsx: false }));
+vi.mock('../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features }, isLoading: false }) }));
 
 import api from '../../api';
 import en from '../../locales/en/it.json';
@@ -261,5 +263,35 @@ describe('CsvImportDialog', () => {
     render(<CsvImportDialog open onClose={() => undefined} endpoint="/technologies/asset-links" hintList={asset} />);
     expect(screen.getByText(asset.intro)).toBeInTheDocument();
     expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(asset.items);
+  });
+
+  it('takes CSV files only, titled for CSV, while the server reads no workbook', () => {
+    render(<CsvImportDialog open onClose={() => undefined} endpoint="/suppliers" flexibleFormat />);
+    expect((document.querySelector('input[type="file"]') as HTMLInputElement).accept).toBe('.csv,text/csv');
+    expect(screen.getByText('csv.importTitle')).toBeInTheDocument();
+    expect(screen.getByText('csv.uploadDescriptionFlexible')).toBeInTheDocument();
+    expect(screen.getByText('csv.dragDropOrClick')).toBeInTheDocument();
+  });
+
+  it('takes CSV and Excel files while the server reads workbooks, and names the sheet it read', async () => {
+    features.importXlsx = true;
+    try {
+      post.mockResolvedValueOnce({ data: report({ notices: { dates: null, amounts: null, firstSheetOnly: 'Suppliers' } }) });
+      render(<CsvImportDialog open onClose={() => undefined} endpoint="/suppliers" flexibleFormat />);
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      expect(input.accept.split(',')).toEqual(expect.arrayContaining(['.csv', '.xlsx']));
+      expect(screen.getByText('buttons.import')).toBeInTheDocument();
+      expect(screen.getByText('csv.uploadDescriptionFlexibleWorkbook')).toBeInTheDocument();
+      expect(screen.getByText('csv.dragDropFileOrClick')).toBeInTheDocument();
+      const workbook = new File([new Uint8Array([0x50, 0x4b, 0x03, 0x04])], 'suppliers.xlsx', {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      fireEvent.change(input, { target: { files: [workbook] } });
+      fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+      expect(await screen.findByText('ops:operations.budgetFile.firstSheetOnly')).toBeInTheDocument();
+      expect((lastCall()?.[1] as FormData).get('file')).toBe(workbook);
+    } finally {
+      features.importXlsx = false;
+    }
   });
 });

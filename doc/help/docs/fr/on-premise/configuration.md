@@ -488,6 +488,16 @@ Remarques :
 - Une valeur changée dans KANAP, ou une version qui y a été supprimée, n'est jamais écrasée ni recréée.
 - Redémarrez l'API après avoir changé ces valeurs.
 
+## Facultatif : imports Excel { #optional-excel-imports }
+
+Chaque import de données lit un classeur Excel (`.xlsx`) comme un fichier CSV : les listes de données de référence, les registres IT et portefeuille, le fichier budgétaire, les fichiers de liens des technologies, l'accès aux données et le plan comptable. KANAP lit la première feuille d'un classeur, sur le serveur, avec les mêmes colonnes et les mêmes contrôles qu'un fichier CSV. Voir [Fichiers CSV et Excel](../csv-files.md).
+
+| Variable | Description | Défaut |
+|----------|-------------|---------|
+| `IMPORT_XLSX` | Permet aux imports de lire les classeurs Excel. Mettez `false` pour n'accepter que les fichiers CSV. | `true` |
+
+Avec `IMPORT_XLSX=false`, les boutons d'import affichent **Importer CSV**, les fenêtres d'import ne proposent que les fichiers CSV, et un classeur est refusé avec un message qui explique comment l'enregistrer en CSV. Les exports en Excel et les modèles d'import ne changent pas. Redémarrez l'API après avoir changé la valeur.
+
 ## Facultatif : avancé
 
 | Variable | Description | Défaut |
@@ -617,6 +627,9 @@ S3_FORCE_PATH_STYLE=false
 # CATALOGUE DES TECHNOLOGIES (facultatif - désactivé par défaut)
 # TECHNOLOGY_CATALOG_SYNC_ENABLED=false
 # ENDOFLIFE_API_BASE_URL=
+
+# IMPORTS EXCEL (facultatif - activés par défaut)
+# IMPORT_XLSX=true
 
 # AVANCÉ (facultatif - les valeurs par défaut conviennent)
 # JWT_ACCESS_TOKEN_TTL=15m

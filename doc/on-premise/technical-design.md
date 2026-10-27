@@ -442,6 +442,19 @@ The CVE.org list (cvelistV5) fills the platform cache of published records. `CVE
 | `config/config.controller.ts` | 29 | `cveNames` | `cveListEnabled()` in `GET /config/public`, beside `vulnerabilityFeed` |
 | `frontend/src/config/FeaturesContext.tsx` | 21 | `features.cveNames` | False until `GET /config/public` says otherwise. Technologies › Overview, section CVE.org names, arrives in the following run |
 
+#### Excel workbooks in the data imports (`Features.IMPORT_XLSX`)
+
+Every data import that takes a CSV file (the master-data lists, the IT and portfolio registers, the budget file, the technology link files, data access, the chart of accounts templates and the incident journal) also takes an Excel workbook (.xlsx): its first worksheet is read with the same columns, rules, preflight and report as the CSV file. `IMPORT_XLSX` is true by default in both modes; set to false, the imports are CSV only, as before the workbooks: the upload filter refuses an .xlsx or .xls by its name with the "save as CSV" sentence (`CSV_FILE_EXCEL`), a workbook that passes under another name meets the CSV decoder and the same sentence, and the dialogs offer `.csv` only. Import templates stay CSV files either way. Nothing leaves the server and no other component is involved: the reader is `backend/src/common/xlsx/read.ts`.
+
+| File | Line | What | Behavior |
+|------|------|------|----------|
+| `config/features.ts` | 39 | `IMPORT_XLSX` | Env value when set, otherwise true |
+| `common/upload.ts` | 58 | `isWorkbookUpload` in the `csv-import` file filter (every CSV import route, and the budget file through `budgetFileMulterOptions`) | Passes an .xlsx or .xls name, or the xlsx type, when on; the "save as CSV" refusal when off |
+| `common/csv-sheet/read.ts` | 141 | `isWorkbookBytes`, read by `readSheet` (master-data files, budget file) and `readImportText` (field engine, registers' follow-up columns, chart of accounts templates, incident journal) | A ZIP or OLE file is read as a workbook when on; it goes to the CSV decoder when off |
+| `config/config.controller.ts` | 31 | `importXlsx` | `Features.IMPORT_XLSX` in `GET /config/public` |
+| `frontend/src/config/FeaturesContext.tsx` | 52 | `features.importXlsx` | False until `GET /config/public` says otherwise |
+| `frontend/src/components/csv/importFiles.tsx` | 12 | `useImportFiles`, `ImportLabel` (import dialogs, budget file dialog, "Import CSV" buttons) | `.csv,.xlsx` and "Import" when on; `.csv` and the CSV labels when off |
+
 #### Outbound target guard (`backend/src/common/ssrf-guard.ts`)
 
 Shared by every tenant-supplied outbound URL: Netbox, PRTG and GLPI. Not a `Features` flag of its own, but mode-dependent.

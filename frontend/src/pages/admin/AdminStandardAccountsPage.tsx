@@ -11,6 +11,7 @@ import { LinkCellRenderer } from '../../components/grid/renderers';
 import { statusColumnProps } from '../../components/grid/statusColumn';
 import { lineTypeUsageColumnProps } from '../../components/grid/lineTypeUsageColumn';
 import api from '../../api';
+import { ImportLabel } from '../../components/csv/importFiles';
 
 type Template = { id: string; country_iso: string | null; template_code: string; template_name: string; version: string; is_global?: boolean };
 
@@ -152,7 +153,7 @@ export default function AdminStandardAccountsPage() {
         })}
       </TextField>
       <Button variant="action-primary" disabled={!selectedTemplateId} onClick={() => navigate(`/admin/standard-accounts/${selectedTemplateId}/new/overview`)}>{t('standardAccounts.actions.new')}</Button>
-      <Button variant="action" onClick={() => setImportOpen(true)} disabled={!selectedTemplateId}>{t('standardAccounts.actions.importCsv')}</Button>
+      <Button variant="action" onClick={() => setImportOpen(true)} disabled={!selectedTemplateId}><ImportLabel csv={t('standardAccounts.actions.importCsv')} /></Button>
       <Button variant="action" onClick={() => setExportOpen(true)} disabled={!selectedTemplateId}>{t('standardAccounts.actions.exportCsv')}</Button>
       <DeleteSelectedButton
         selectedRows={selectedRows}

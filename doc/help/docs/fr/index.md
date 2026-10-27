@@ -117,7 +117,7 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 - [Accès aux données](data-access.md): Limiter une personne au budget et aux contrats de certaines sociétés ou de certains centres de coûts
 - [Personnalisation](branding.md): Personnalisez le logo de votre tenant et les couleurs primaires en mode clair et sombre
 - [Données d'exemple](sample-data.md): Découvrez KANAP avec une entreprise fictive, puis effacez-la et repartez de zéro
-- [Journal d'audit](admin.md#journal-daudit): Consultez les modifications de données, les connexions et les exports avec des filtres, une vue détaillée et un export CSV
+- [Journal d'audit](admin.md#journal-daudit): Consultez les modifications de données, les connexions et les exports avec des filtres, une vue détaillée et un export CSV ou Excel
 - [Modèles IA](ai-models.md): Enregistrez les modèles IA utilisés par votre organisation, avec leurs tarifs, et désignez celui par défaut
 - [Paramètres Plaid](ai-settings.md): Choisissez le modèle utilisé par Plaid, ainsi que les fonctionnalités de chat, la rétention et les clés MCP
 - [Utilisation & coûts](ai-usage.md): L'utilisation de l'IA et les coûts réels du chat et des agents, par agent et par modèle

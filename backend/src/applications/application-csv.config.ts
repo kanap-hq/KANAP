@@ -685,6 +685,8 @@ export const applicationCsvConfig: CsvEntityConfig = {
     for (const row of rows) {
       // Persist this through the relation handler, never as an application column.
       delete row.parsed._data_residency_csv;
+      // The yes/no and the day as their typed columns read them, in the language of the file.
+      const typed = { contains_pii: row.parsed.contains_pii, last_dr_test: row.parsed.last_dr_test };
       // Empty and absent classification cells preserve values in BOTH modes, rows in error included.
       for (const field of CLASSIFICATION_INPUT_FIELDS) delete row.parsed[field];
       if (row.errors.length) continue;
@@ -694,7 +696,7 @@ export const applicationCsvConfig: CsvEntityConfig = {
         if (raw === undefined || raw === null || String(raw).trim() === '') continue;
         if (String(raw).trim() === '__CLEAR__') input[field] = null;
         else if (field.endsWith('_minutes')) input[field] = Number(raw);
-        else if (field === 'contains_pii') input[field] = ['true','yes','1','y'].includes(String(raw).toLowerCase());
+        else if (field === 'contains_pii' || field === 'last_dr_test') input[field] = typed[field];
         else input[field] = raw;
       }
       try { Object.assign(row.parsed, classificationPatch(input, row.existingEntity ?? null, catalog)); }

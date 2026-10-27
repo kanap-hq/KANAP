@@ -22,6 +22,7 @@ import { useTheme } from '@mui/material/styles';
 import { StatusDot } from '../../components/design';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 import { useUrlFilterModel } from '../../hooks/useListContextSearch';
+import { ImportLabel } from '../../components/csv/importFiles';
 
 type RequestRow = {
   id: string;
@@ -477,7 +478,7 @@ export default function RequestsPage() {
           {t('requests.actions.new')}
         </Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('requests.actions.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('requests.actions.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>}
     </Stack>
   );

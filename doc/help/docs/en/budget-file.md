@@ -9,13 +9,13 @@ One file holds both kinds of line. Its `nature` column says whether a row is an 
 ## Where to find it
 
 - Path: **Budget management > Budget lines**
-- Export: **Export CSV** in the list toolbar
-- Import: **Import CSV** in the same toolbar
+- Export: **Export** in the list toolbar
+- Import: **Import** in the same toolbar
 - Permissions: both buttons need the Admin level on Budget (`budget:admin`), which covers OPEX and CAPEX lines alike
 
 ## Export
 
-1. Click **Export CSV** in the list.
+1. Click **Export** in the list.
 2. Choose what the file holds:
 
 | Setting | What it does |
@@ -24,10 +24,11 @@ One file holds both kinds of line. Its `nature` column says whether a row is an 
 | **Years** | **First year** and **Last year**, up to twelve years. The default is the current year, the year before and the year after. Tick **Current year** to export the current year alone |
 | **Columns** | The budget columns to write. The columns your organisation shows are ticked, and a hidden one is marked **hidden**. Its header is shown under the name, for example `budget_2027` |
 | **Detail** | **Yearly totals**: one column per column and year. **Months**: one column per column, year and month |
+| **Format** | **CSV** or **Excel (.xlsx)**. Your browser remembers the choice for the next export |
 
 3. Click the button at the bottom of the dialog. It names what the file will hold: **Export 120 filtered lines**, **Export all lines**, **Export 3,412 lines**, and so on.
 
-The file is saved as `budget.csv` and written for the language the screen is shown in.
+The file is saved as `budget.csv` or `budget.xlsx`. A CSV file is written for the language the screen is shown in:
 
 | Language | Separator | Amounts | Dates |
 |---|---|---|---|
@@ -35,7 +36,11 @@ The file is saved as `budget.csv` and written for the language the screen is sho
 | French, Spanish | `;` | `12280,50` | `01/03/2027` |
 | German | `;` | `12280,50` | `01.03.2027` |
 
+The Excel file has the same columns on one sheet named `budget`. Amounts are numbers exact to the cent, and dates are dates, shown in the day order of your language. The header row stays in place when you scroll, with a filter on each column.
+
 Exporting a list with no line gives the header row alone. That is your template.
+
+Every export is recorded in the [audit log](admin.md#audit-log), with its settings, its format and its number of lines.
 
 ## The columns
 
@@ -115,7 +120,7 @@ An absent column keeps every stored value of that column. A file holding only `i
 
 ## Check, then load
 
-1. Click **Import CSV** and choose the file, or drop it on the dialog. The file is checked at once. Nothing is written.
+1. Click **Import** and choose the file, a CSV file or an Excel workbook (`.xlsx`), or drop it on the dialog. The file is checked at once. Nothing is written.
 2. Read the report:
 
 | Section | What it shows |
@@ -144,9 +149,11 @@ These rows appear among the **Errors** of the check, like any other refused row.
 
 ## Excel and LibreOffice
 
-Opening the file and saving it keeps it loadable. Both programs keep the columns, the separator and the values.
+Opening the file and saving it keeps it loadable, as CSV or as `.xlsx`. Both programs keep the columns, the separator and the values.
 
-A date or an amount the file cannot settle on its own is read the way the export wrote it, then in the language the screen is shown in. Every date whose day is 12 or less is ambiguous (`01/03/2027` is March 1 in French and January 3 in English), and so is an amount written like `12,280`. The check says how it read them and offers a button to switch.
+In a workbook, KANAP reads the first sheet. When the workbook has other sheets, the check says which sheet it read. An amount or a date typed in a cell is read exactly as it is, with no question of decimal mark or day order. An old Excel file (`.xls`) is refused: save it as `.xlsx` or CSV.
+
+A date or an amount written as text, which the file cannot settle on its own, is read the way the export wrote it, then in the language the screen is shown in. Every date whose day is 12 or less is ambiguous (`01/03/2027` is March 1 in French and January 3 in English), and so is an amount written like `12,280`. The check says how it read them and offers a button to switch.
 
 A column KANAP does not know is ignored, with a warning. A column that looks like a misspelled amount column, such as `budjet_2027`, refuses the whole file. An `analytics:<code>` column that names no enabled dimension refuses the whole file too, with "Unknown dimension 'x'."
 
@@ -185,6 +192,6 @@ A larger organisation adds the rest of the master data in between:
 7. The working-day calendars, in [Working-day calendars](working-day-calendars.md), once lines carry quantity and price
 8. The budget file, OPEX and CAPEX lines
 
-**The chart of accounts comes first.** On the Charts of Accounts page, click **New**, give the chart a code and a name, and choose **All countries** under **Used for**. Then click **Manage charts**, open the **⋯** menu of the chart and click **Make default for other countries**. A company without a chart takes that one, which is how the account numbers of a budget file resolve. Select the chart on the page, then click **Import CSV** to load its accounts.
+**The chart of accounts comes first.** On the Charts of Accounts page, click **New**, give the chart a code and a name, and choose **All countries** under **Used for**. Then click **Manage charts**, open the **⋯** menu of the chart and click **Make default for other countries**. A company without a chart takes that one, which is how the account numbers of a budget file resolve. Select the chart on the page, then click **Import** to load its accounts.
 
-Each of these pages has its own **Import CSV** section with the columns of its file.
+Each of these pages has its own import section with the columns of its file. Every one of them reads a CSV file or an Excel workbook. See [CSV and Excel files](csv-files.md).

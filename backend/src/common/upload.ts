@@ -3,7 +3,9 @@
 import { BadRequestException } from '@nestjs/common';
 import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import * as path from 'path';
+import { Features } from '../config/features';
 import { CSV_DECODE_MESSAGES, CsvDecodeErrorCode } from './csv-sheet/decode';
+import { XLSX_CONTENT_TYPE } from './xlsx/write';
 import { isUploadTypeAllowedForScope, UploadValidationScope } from './upload-validation';
 
 export const ATTACHMENT_MAX_BYTES = 20 * 1024 * 1024; // 20 MB
@@ -48,9 +50,21 @@ function csvRefusalCode(originalName: string | undefined): CsvDecodeErrorCode {
   return 'CSV_FILE_NOT_TEXT';
 }
 
+/**
+ * An Excel workbook offered to a data import, while the imports read them (`IMPORT_XLSX`): an .xlsx,
+ * or the xlsx type. An .xls passes too, so that its content gets the sentence of the old format. The
+ * import reads the file by its content, never by this name.
+ */
+function isWorkbookUpload(file: Pick<Express.Multer.File, 'mimetype' | 'originalname'>): boolean {
+  if (!Features.IMPORT_XLSX) return false;
+  const extension = path.extname(String(file.originalname || '')).toLowerCase();
+  const mimeType = String(file.mimetype || '').toLowerCase().split(';')[0].trim();
+  return extension === '.xlsx' || extension === '.xls' || mimeType === XLSX_CONTENT_TYPE;
+}
+
 const buildFileFilter = (scope: UploadValidationScope): NonNullable<MulterOptions['fileFilter']> => {
   return (_req, file, cb) => {
-    if (isUploadTypeAllowedForScope(file, { scope })) {
+    if (isUploadTypeAllowedForScope(file, { scope }) || (scope === 'csv-import' && isWorkbookUpload(file))) {
       cb(null, true);
       return;
     }

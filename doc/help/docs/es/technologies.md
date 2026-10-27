@@ -100,7 +100,7 @@ Cuando se siguen las vulnerabilidades, la columna **Editor** también abre la p�
 **Acciones**:
 
 - **Nueva tecnología** (`infrastructure:member`).
-- **Importar vínculos** (`infrastructure:member`) y **Exportar vínculos**: cargue o descargue en un archivo CSV los vínculos entre las tecnologías y los servidores o las aplicaciones. Consulte [Importar y exportar vínculos](#importar-y-exportar-vinculos).
+- **Importar vínculos** (`infrastructure:member`) y **Exportar vínculos**: cargue o descargue en un archivo CSV o un libro de Excel los vínculos entre las tecnologías y los servidores o las aplicaciones. Consulte [Importar y exportar vínculos](#importar-y-exportar-vinculos).
 - **Eliminar** las filas seleccionadas (`infrastructure:admin`). La confirmación cuenta lo que se va con ellas: vínculos con servidores y aplicaciones, contratos, líneas presupuestarias, proyectos, incidentes y documentos.
 
 ---
@@ -246,7 +246,7 @@ Una aplicación aparece de dos maneras:
 
 **Añadir** (`infrastructure:member`) abre una búsqueda en la que puede marcar varias aplicaciones y añadirlas de una vez. Se declaran con una versión desconocida: indíquela después en cada fila. Las aplicaciones y los despliegues desactivados no cuentan.
 
-**Exportar CSV** descarga las filas en el idioma de su pantalla.
+**Exportar** descarga las filas como archivo CSV o Excel, en el idioma de su pantalla.
 
 ### Operaciones
 
@@ -314,12 +314,12 @@ Registre la tecnología en el servidor donde está instalada: el host para un hi
 
 ## Importar y exportar vínculos
 
-La lista de tecnologías carga y descarga vínculos en bloque, un vínculo por fila de un archivo CSV. Existen dos archivos:
+La lista de tecnologías carga y descarga vínculos en bloque, un vínculo por fila de un archivo CSV o de un libro de Excel. Existen dos archivos:
 
 - **Servidores y tecnologías**: las tecnologías instaladas en cada servidor.
 - **Aplicaciones y tecnologías**: las tecnologías que declara cada aplicación. Las aplicaciones alojadas en un servidor que lleva una tecnología se deducen de los servidores, así que el archivo las deja fuera.
 
-Haga clic en **Importar vínculos** o **Exportar vínculos** en la barra de herramientas y elija el archivo. La exportación ofrece los datos o una plantilla vacía. Se aplican las reglas generales de los archivos CSV: codificación, separador, sí y no en cuatro idiomas, 20.000 filas como máximo. Consulte [Archivos CSV](csv-files.md).
+Haga clic en **Importar vínculos** o **Exportar vínculos** en la barra de herramientas y elija el archivo. La exportación ofrece los datos, en CSV o Excel, o una plantilla CSV vacía. Se aplican las reglas generales de los archivos de importación: codificación, separador, sí y no en cuatro idiomas, 20.000 filas como máximo. Consulte [Archivos CSV y Excel](csv-files.md).
 
 **Permisos**:
 

@@ -1,4 +1,4 @@
-import { csvSeparatorOf } from '../../common/csv-sheet/read';
+import { csvSeparatorOf, readImportText } from '../../common/csv-sheet/read';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, ILike, Repository } from 'typeorm';
@@ -8,7 +8,7 @@ import { format } from '@fast-csv/format';
 import { AuditService } from '../../audit/audit.service';
 import { denormalizeCsvRow } from '../../common/csv/csv-export.service';
 import { headerMismatchError } from '../../common/csv-sheet';
-import { CsvDecodeError, decodeCsv } from '../../common/csv-sheet/decode';
+import { CsvDecodeError } from '../../common/csv-sheet/decode';
 import { ACCOUNT_NUMBER_MAX_DIGITS, ACCOUNT_NUMBER_RULE, parseAccountNumber, readAccountNumber } from '../../accounts/account-number';
 import { uploadedBytes } from '../../common/upload';
 
@@ -308,13 +308,19 @@ export class AdminCoaTemplatesService {
 
   async importCsv(id: string, file: Express.Multer.File, dryRun = true, userId?: string | null, opts?: { manager?: EntityManager }) {
     const buf = uploadedBytes(file);
+    // A CSV file, or the first sheet of a workbook as CSV text: the template stores that text.
     let content: string;
+    let firstSheetOnly: string | undefined;
     try {
-      content = decodeCsv(buf).text;
+      const read = readImportText(buf);
+      content = read.text;
+      if (read.format === 'xlsx' && (read.sheetCount ?? 1) > 1) firstSheetOnly = read.sheetName;
     } catch (err) {
       if (err instanceof CsvDecodeError) throw new BadRequestException({ message: err.message, code: err.code });
       throw err;
     }
+    // A workbook of several sheets: the name of the one read, with the other notices of a CSV import.
+    const notices = firstSheetOnly !== undefined ? { notices: { dates: null, amounts: null, firstSheetOnly } } : {};
     const delimiter = ';';
     const expected = this.csvHeaders();
     let headerOk = false;
@@ -353,13 +359,13 @@ export class AdminCoaTemplatesService {
     });
     if (!headerOk) throw new BadRequestException('Invalid header');
     if (errors.length > 0) {
-      return { ok: false, dryRun, total, inserted: 0, updated: 0, errors };
+      return { ok: false, dryRun, total, inserted: 0, updated: 0, errors, ...notices };
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total, inserted: total, updated: 0, errors: [] };
+      return { ok: true, dryRun: true, total, inserted: total, updated: 0, errors: [], ...notices };
     }
     await this.update(id, { csv_payload: content }, userId, { manager: opts?.manager, skipAudit: false });
-    return { ok: true, dryRun: false, total, inserted: total, updated: 0, processed: total, errors: [] };
+    return { ok: true, dryRun: false, total, inserted: total, updated: 0, processed: total, errors: [], ...notices };
   }
 
   // Accounts within a template

@@ -24,6 +24,7 @@ import { useDataAccessLimited } from '../auth/dataAccess';
 import { userAccessColumnText } from '../components/dataAccess/dataAccess';
 import UserDialog, { type UserDialogTab } from './users/UserDialog';
 import { roleLabel } from '../utils/roleLabel';
+import { ImportLabel } from '../components/csv/importFiles';
 
 export default function UsersPage() {
   const { t } = useTranslation(['admin', 'common']);
@@ -363,7 +364,7 @@ export default function UsersPage() {
   const actions = (
     <Stack direction="row" spacing={1} alignItems="center">
       {canManageUsers && <Button variant="action-primary" onClick={handleNew}>{t('users.actions.new')}</Button>}
-      {canManageUsers && <Button variant="action" onClick={() => setImportOpen(true)}>{t('users.actions.importCsv')}</Button>}
+      {canManageUsers && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('users.actions.importCsv')} /></Button>}
       {canManageUsers && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canManageUsers && (
         <Button

@@ -66,7 +66,7 @@ Sans le niveau Admin sur l'administration budgétaire, la page affiche les état
 ### Ce que fait le gel
 
 - Empêche les modifications des colonnes gelées dans l'espace de travail des lignes de ce type. Les champs affichent un cadenas
-- Bloque les imports CSV vers les colonnes gelées
+- Bloque les imports vers les colonnes gelées
 - Bloque les opérations de copie et de réinitialisation ciblant les colonnes gelées
 - Refuse de supprimer une ligne, ou de changer son type, tant qu'elle a des montants dans une colonne gelée des années concernées
 - N'affecte **pas** l'accès en lecture : les données restent visibles
@@ -127,6 +127,8 @@ Les colonnes masquées ne sont pas proposées. Lorsque rien n'est coché sous **
 3. Lorsque le résultat vous convient, cliquez sur **Copier** pour l'appliquer
 
 **Copier** n'est activé qu'après un aperçu. Modifier un champ efface l'aperçu : relancez-le. Après la copie, le tableau reste affiché sous le titre **Résultat**, avec ce que chaque ligne a fait.
+
+**Exporter le tableau** (icône de téléchargement) télécharge l'aperçu des champs à l'écran dans un fichier CSV ou Excel, une ligne par ligne budgétaire, avec les colonnes et les statuts du tableau. Après la copie, l'export est désactivé : le tableau montre alors ce que la copie a fait, ce qu'un aperçu ne décrit plus. Les montants du fichier gardent leurs centimes.
 
 Chaque partie a son propre statut sur chaque ligne :
 
@@ -243,6 +245,8 @@ Tant que vous n'avez pas choisi de colonne, une ligne remplace la grille : « Ch
 - **Total des lignes**
 - **Lignes avec un total non nul**
 - **Valeur totale actuelle**
+
+**Exporter le tableau** (icône de téléchargement) télécharge la grille dans un fichier CSV ou Excel : les lignes budgétaires du type choisi et leur valeur actuelle dans la colonne choisie.
 
 ### Confirmation
 

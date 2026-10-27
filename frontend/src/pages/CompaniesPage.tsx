@@ -20,6 +20,7 @@ import FxMissingNotice, { FxMissingMark } from '../components/finance/FxMissingN
 import { companyTurnoverFxMissing, companyTurnoverFxNotice, type CompanyTurnoverFxMissing } from './companies/turnoverFxNotice';
 import { companyListYear } from './companies/companyYear';
 import { displayedCompanyCity } from './companies/companyCity';
+import { ImportLabel } from '../components/csv/importFiles';
 
 /** The pinned total, with the orange mark when some turnover was left out. */
 function TurnoverTotalCell({ value, missing }: { value: React.ReactNode; missing: CompanyTurnoverFxMissing[] }) {
@@ -442,7 +443,7 @@ export default function CompaniesPage() {
           {t('shared.labels.new')}
         </Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('shared.labels.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton

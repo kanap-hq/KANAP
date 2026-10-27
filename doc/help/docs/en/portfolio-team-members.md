@@ -81,7 +81,7 @@ Catalogs are usually longer than teams, so contributors sit in the columns by de
 
 **Acting on what you see**:
 - Click a contributor to open their **Skills** tab, where levels can be changed
-- **Export**, next to **Add contributor** at the top of the page, downloads what is on screen as an `.xlsx` file, laid out the same way round, levels as numbers. Useful for skill reviews and training plans
+- **Export**, next to **Add contributor** at the top of the page, downloads what is on screen as a CSV or Excel file, laid out the same way round, levels as numbers, with the coverage counts in the last row. The Excel file adds a **Parameters** sheet with the filters. Useful for skill reviews and training plans
 
 ---
 

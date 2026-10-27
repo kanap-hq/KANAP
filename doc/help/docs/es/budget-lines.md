@@ -175,8 +175,8 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 **Acciones**:
 
 - **Nueva línea**: Crear una línea (requiere `budget:member`)
-- **Importar CSV**: Carga masiva de líneas desde un archivo de presupuesto (requiere `budget:admin`)
-- **Exportar CSV**: Exportar las líneas a un archivo de presupuesto (requiere `budget:admin`)
+- **Importar**: Carga masiva de líneas desde un archivo de presupuesto (requiere `budget:admin`)
+- **Exportar**: Exportar las líneas a un archivo de presupuesto (requiere `budget:admin`)
 - **Eliminar seleccionadas**: Eliminación masiva de líneas seleccionadas (requiere `budget:admin`; seleccione filas mediante casillas de verificación). Una línea con importes en una columna congelada no se puede eliminar. Antes de eliminar nada, la confirmación enumera las líneas que se conservan, con la columna congelada. Las demás se eliminan
 
 **Navegación Anterior/Siguiente**:
@@ -250,8 +250,8 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 - Un centro de coste desactivado aparece marcado como **Desactivado**. Se mantiene en las líneas que ya lo tienen y no se puede elegir para otra línea
 - Cuando crea una línea y la empresa pagadora está vacía, la lista muestra todos los centros de coste. Elegir uno completa la empresa pagadora con la empresa del centro de coste, de modo que la lista **Cuenta** se abre en el plan de cuentas de esa empresa. Hasta que usted elija una empresa o una cuenta, la lista conserva todos los centros de coste y elegir otro también actualiza la empresa
 - Cuando cambia la empresa pagadora, un centro de coste de otra empresa se borra en el mismo guardado. **Centro de coste** muestra entonces los centros de coste de la nueva empresa
-- Una línea cuyo centro de coste pertenece a otra empresa, desde un archivo CSV o la API, conserva ambas. Una indicación bajo el campo dice "Este centro de coste pertenece a" seguido del nombre de la empresa
-- Una línea guardada mediante la API con un centro de coste y sin empresa pagadora toma la empresa del centro de coste. Para los archivos CSV, consulte [Importación/exportación CSV](#importacionexportacion-csv)
+- Una línea cuyo centro de coste pertenece a otra empresa, desde un archivo o la API, conserva ambas. Una indicación bajo el campo dice "Este centro de coste pertenece a" seguido del nombre de la empresa
+- Una línea guardada mediante la API con un centro de coste y sin empresa pagadora toma la empresa del centro de coste. Para los archivos importados, consulte [Importación/exportación CSV](#importacionexportacion-csv)
 
 **Run o build**: **Run**, **Build** o **Sin definir**. Úselo para repartir el presupuesto entre mantener los servicios en funcionamiento y modificarlos.
 
@@ -260,7 +260,7 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 - Cada dimensión activada usada para el tipo de la línea tiene su propio campo, con el nombre de la dimensión, en el orden de las dimensiones. Una dimensión usada solo para el otro tipo no tiene campo, y el valor que una línea tenga en ella sigue oculto. Elija un valor o vacíe el campo; el cambio se guarda de inmediato
 - Cada campo lista los valores activados de su dimensión. Un valor desactivado se mantiene en las líneas que ya lo tienen y no se puede elegir para otra línea
 - Un valor usado solo para el otro tipo no se ofrece, y elegirlo como valor nuevo se rechaza. Una línea que ya lo tiene lo conserva y sigue siendo editable. Consulte [Valores OPEX o CAPEX](analytics.md#valores-opex-o-capex)
-- El campo no puede crear un valor: créelo en [Dimensiones analíticas](analytics.md) o deje que lo cree una importación CSV
+- El campo no puede crear un valor: créelo en [Dimensiones analíticas](analytics.md) o deje que lo cree una importación
 - Una dimensión obligatoria está marcada con un asterisco. Una línea nueva necesita un valor en ella: **Crear** se detiene con "El campo Tipo de coste es obligatorio" hasta que elija uno. En una línea que tiene un valor, el campo no se puede vaciar, solo cambiar. Una línea sin valor sigue siendo editable. Si modifica una línea así, al salir se le pregunta primero: "El campo Tipo de coste es obligatorio. Elija un valor antes de salir." **Quedarse** coloca el cursor en el campo que falta. **Salir de todos modos** sale de la línea. Consulte [Dimensiones obligatorias](analytics.md#dimensiones-obligatorias)
 - Si las dimensiones no se pueden cargar, una línea sustituye a estos campos: "No se pudieron cargar las dimensiones."
 
@@ -595,9 +595,9 @@ La sección no aparece cuando la línea no tiene proveedor o no hay nada que sug
 
 ## Importación/exportación CSV
 
-**Exportar CSV** e **Importar CSV** están en la barra de herramientas de la lista. Ambos requieren el nivel Administrador en Presupuesto (`budget:admin`).
+**Exportar** e **Importar** están en la barra de herramientas de la lista. Ambos requieren el nivel Administrador en Presupuesto (`budget:admin`).
 
-**Exportar CSV** escribe el archivo de presupuesto de las líneas que muestra la lista, OPEX y CAPEX juntas, como `budget.csv`. **Importar CSV** vuelve a leer un archivo: primero se comprueba, y no se escribe nada hasta que haga clic en **Cargar**.
+**Exportar** escribe el archivo de presupuesto de las líneas que muestra la lista, OPEX y CAPEX juntas, como `budget.csv` o como libro de Excel, `budget.xlsx`. **Importar** vuelve a leer cualquiera de los dos: primero se comprueba, y no se escribe nada hasta que haga clic en **Cargar**.
 
 El archivo contiene una fila por línea: su `nature` (`opex` o `capex`), su referencia `BL-n`, los detalles de la línea, sus importes en columnas y `kanap_token`. Un archivo sin columna `nature`, exportado por una versión anterior, se lee como líneas OPEX, o como líneas CAPEX cuando el filtro **Tipo** de la lista conserva solo CAPEX. [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) describe las columnas, lo que significa una celda y los dos pasos de la importación.
 
@@ -680,7 +680,7 @@ Un archivo de presupuesto nunca cambia el tipo de una línea. Consulte [Cargar u
 
 9. **Mantenga actualizadas las métricas de empresa**: Las asignaciones dependen de la plantilla, usuarios IT y facturación de la empresa. Las métricas desactualizadas causan errores de asignación.
 
-10. **Use CSV para configuración masiva**: Si está migrando desde otro sistema o tiene cientos de líneas, comience con importación CSV. Exporte un archivo nuevo, rellene sus filas y compruébelo antes de cargar.
+10. **Use un archivo para la configuración masiva**: Si está migrando desde otro sistema o tiene cientos de líneas, comience con una importación. Exporte un archivo nuevo, rellene sus filas y compruébelo antes de cargar.
 
 11. **Desactive, no elimine**: Preserve el historial desactivando líneas cuando ya no estén activas. Elimine solo si es un error.
 
@@ -698,7 +698,7 @@ El acceso a las líneas presupuestarias se controla con el recurso Presupuesto, 
 
 - `budget:reader`: Ver la lista, abrir líneas, ver presupuestos y asignaciones (solo lectura), descargar adjuntos
 - `budget:member`: Crear y editar líneas, cambiar su tipo, actualizar presupuestos y asignaciones, subir y eliminar adjuntos, gestionar relaciones, enlaces y contactos
-- `budget:admin`: Todos los derechos de miembro más importación y exportación CSV, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y restablecer columna presupuestaria) y eliminación masiva
+- `budget:admin`: Todos los derechos de miembro más importación y exportación, operaciones presupuestarias (copiar columnas presupuestarias, con sus importes y asignaciones, y restablecer columna presupuestaria) y eliminación masiva
 
 Congelar columnas presupuestarias requiere la administración presupuestaria (`budget_ops:admin`).
 
@@ -709,13 +709,13 @@ Adicionalmente:
 - Las tareas tienen permisos separados (`tasks:member` para crear y editar tareas en las líneas)
 - Los usuarios con `tasks:reader` pueden ver tareas pero no crear ni editar
 
-Si no puede realizar una acción (p. ej., falta el botón **Importar CSV**, o no puede subir adjuntos), consulte con su administrador del espacio de trabajo para revisar sus permisos de rol.
+Si no puede realizar una acción (p. ej., falta el botón **Importar**, o no puede subir adjuntos), consulte con su administrador del espacio de trabajo para revisar sus permisos de rol.
 
 ---
 
 ## ¿Necesita ayuda?
 
-- **Problemas con CSV**: Exporte un archivo nuevo desde la lista y compruébelo de nuevo. El informe nombra la línea y la columna de cada error, y [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) explica qué significa cada celda
+- **Problemas con el archivo**: Exporte un archivo nuevo desde la lista y compruébelo de nuevo. El informe nombra la línea y la columna de cada error, y [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) explica qué significa cada celda
 - **Errores de asignación**: Verifique que todas las empresas tengan las métricas requeridas (plantilla, usuarios IT, facturación) para el año seleccionado
 - **Advertencia de cuenta obsoleta**: La cuenta no pertenece al plan de cuentas de la empresa pagadora; seleccione una cuenta diferente
 - **Faltan botones o pestañas**: Su rol puede no tener el nivel de permiso requerido (miembro o administrador). Contacte a su administrador del espacio de trabajo

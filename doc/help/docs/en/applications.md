@@ -127,8 +127,8 @@ A cell with no value shows a dash.
 
 **Actions**:
 - **New App / Service**: Create a new entry (`applications:member`)
-- **Import CSV**: Bulk import from CSV file (`applications:admin`)
-- **Export CSV**: Export the applications the list shows to CSV (`applications:admin`). See [Export options](#export-options).
+- **Import**: Bulk import from a CSV file or an Excel workbook (`applications:admin`)
+- **Export**: Export the applications the list shows to a CSV file or an Excel workbook (`applications:admin`). See [Export options](#export-options).
 - **Copy item**: Duplicate a selected application with all its core relations (`applications:member`). See [Copying applications](#copying-applications) for what is and is not copied.
 - **Delete Selected**: Remove selected applications (`applications:admin`). An application that is the source or target of an interface cannot be deleted: disable it instead, or delete its interfaces first. Before the confirmation, the window lists those applications as kept, with their count of interfaces. The others are deleted with their deployments and their links to other records; the confirmation counts the deployments
 
@@ -187,7 +187,7 @@ Removing an owner, a business process, a suite or a support contact shows a mess
 
 The Overview tab is the application's narrative. It contains:
 
-**Description**: A rich-text description of the application. The editor autosaves as you type. Anyone who can edit the application can edit its description, without a Knowledge permission. The description is kept as a managed document in Knowledge, titled with the application's reference and name, in the language of the person who created it. Renaming the application, in the workspace or by CSV import, updates that title.
+**Description**: A rich-text description of the application. The editor autosaves as you type. Anyone who can edit the application can edit its description, without a Knowledge permission. The description is kept as a managed document in Knowledge, titled with the application's reference and name, in the language of the person who created it. Renaming the application, in the workspace or by an import, updates that title.
 
 **Connections**: A read-only summary built from the application's interfaces. For non-middleware apps it shows two rows: **Receives from** and **Sends to**. For ETL/middleware apps it shows a single **Connected to** row. Each entry is a clickable pill that opens the related application; "+ N more in Interfaces" jumps to the Interfaces tab.
 
@@ -523,20 +523,24 @@ Use this when you want to create an independent duplicate of an application, typ
 
 ## CSV import/export
 
-Maintain your application inventory at scale using CSV import and export. This feature supports bulk operations for initial data loading, periodic updates from external systems, and data extraction for reporting.
+Maintain your application inventory at scale using import and export. This feature supports bulk operations for initial data loading, periodic updates from external systems, and data extraction for reporting.
 
 ### Accessing CSV features
 
 From the Applications list:
-- **Export CSV**: Download applications to a CSV file
-- **Import CSV**: Upload a CSV file to create or update applications
+- **Export**: Download applications to a CSV file or an Excel workbook
+- **Import**: Upload a CSV file or an Excel workbook to create or update applications
 - **Download Template** (from inside the import dialog): Get a blank CSV with correct headers
 
 **Permissions required**: `applications:admin` for import/export operations.
 
 ### Export options { #export-options }
 
-**What the file holds**: the applications the list shows. The export follows the column filters, the quick search and the **Show** choice (**My apps**, **My team's apps** or **All apps**). The dialog says how many applications the file will hold. Without a **Lifecycle** filter, retired applications are left out, as in the list.
+**What the file holds**: the applications the list shows. The export follows the column filters, the quick search and the **Show** choice (**My apps**, **My team's apps** or **All apps**). The dialog says how many applications the file will hold. Without a **Lifecycle** filter, retired applications are left out, as in the list. The rows keep the order of the list.
+
+**Format**: **CSV** or **Excel (.xlsx)**, chosen in the dialog and remembered in your browser. The workbook holds the same columns as the CSV on one sheet, with numbers and dates as values Excel can sort and filter. The import reads either; in a workbook, it reads the first sheet. See [CSV and Excel files](csv-files.md).
+
+**Columns**: the file starts with `id` and `reference` (`APP-12`), then the columns follow the workspace, tab by tab. The import ignores `reference`.
 
 **Language of the values**: catalog values (category, lifecycle, criticality, cyber criticality, recovery wave, data class, access methods) and the status are written as the screen shows them, in the language of your screen: `Active` in English, `Actif` in French. A name your organization gave a value in **IT Landscape > Settings** stays as it is.
 
@@ -553,7 +557,7 @@ From the Applications list:
 
 ### Import workflow
 
-1. **Prepare your file**: Save it as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV files](csv-files.md).
+1. **Prepare your file**: a CSV file or an Excel workbook (`.xlsx`). Save a CSV file as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV and Excel files](csv-files.md).
 
 2. **Choose import settings**:
    - **Mode**:
@@ -581,7 +585,7 @@ The preflight check applies the same rules as the workspace. A row is refused wh
 - its **End of support** or **Retired date** is earlier than its **Go live**;
 - `is_suite` is `no` for a suite that still has applications in it.
 
-A file with one refused row loads nothing. See [CSV files](csv-files.md).
+A file with one refused row loads nothing. See [CSV and Excel files](csv-files.md).
 
 ### Field reference
 
@@ -690,7 +694,7 @@ A row matched by `id` with a different name renames the application. The new nam
 
 - **Deployments not included**: Environment deployments (Prod, QA, Dev) require workspace configuration
 - **Server assignments excluded**: Server bindings must be set up in the Deployments tab
-- **Interfaces excluded**: Integration definitions are not part of CSV import/export
+- **Interfaces excluded**: Integration definitions are not part of the import and export
 - **Maximum 4 owners per type**: Up to 4 business owners and 4 IT owners can be imported/exported
 - **User metrics are export-only**: Audience and user count fields (`users_mode`, `users_year`, `users_override`) are managed in the workspace
 - **Status is export-only**: Enable or disable an application in its workspace

@@ -9,13 +9,13 @@ Un solo archivo contiene los dos tipos de línea. Su columna `nature` indica si 
 ## Dónde encontrarlo
 
 - Ruta: **Gestión presupuestaria > Líneas presupuestarias**
-- Exportación: **Exportar CSV** en la barra de herramientas de la lista
-- Importación: **Importar CSV** en la misma barra de herramientas
+- Exportación: **Exportar** en la barra de herramientas de la lista
+- Importación: **Importar** en la misma barra de herramientas
 - Permisos: ambos botones requieren el nivel Administrador en Presupuesto (`budget:admin`), que cubre por igual las líneas OPEX y CAPEX
 
 ## Exportación
 
-1. Haga clic en **Exportar CSV** en la lista.
+1. Haga clic en **Exportar** en la lista.
 2. Elija lo que contendrá el archivo:
 
 | Ajuste | Efecto |
@@ -24,10 +24,11 @@ Un solo archivo contiene los dos tipos de línea. Su columna `nature` indica si 
 | **Años** | **Primer año** y **Último año**, hasta doce años. Por defecto: el año en curso, el anterior y el siguiente. Marque **Año en curso** para exportar solo el año en curso |
 | **Columnas** | Las columnas presupuestarias que se escribirán. Las columnas que muestra su organización están marcadas, y una columna oculta aparece marcada como **oculta**. Su encabezado se muestra bajo el nombre, por ejemplo `budget_2027` |
 | **Detalle** | **Totales anuales**: una columna por columna presupuestaria y año. **Meses**: una columna por columna presupuestaria, año y mes |
+| **Formato** | **CSV** o **Excel (.xlsx)**. Su navegador recuerda la elección para la próxima exportación |
 
 3. Haga clic en el botón inferior de la ventana. Nombra lo que contendrá el archivo: **Exportar 120 líneas filtradas**, **Exportar todas las líneas**, **Exportar 3.412 líneas**, etc.
 
-El archivo se guarda como `budget.csv` y se escribe en el idioma en que se muestra la pantalla.
+El archivo se guarda como `budget.csv` o `budget.xlsx`. Un archivo CSV se escribe en el idioma en que se muestra la pantalla:
 
 | Idioma | Separador | Importes | Fechas |
 |---|---|---|---|
@@ -35,7 +36,11 @@ El archivo se guarda como `budget.csv` y se escribe en el idioma en que se muest
 | Francés, español | `;` | `12280,50` | `01/03/2027` |
 | Alemán | `;` | `12280,50` | `01.03.2027` |
 
+El archivo Excel tiene las mismas columnas en una hoja llamada `budget`. Los importes son números exactos al céntimo, y las fechas son fechas, mostradas en el orden de día y mes de su idioma. La fila de encabezados queda fija al desplazarse, con un filtro en cada columna.
+
 Exportar una lista sin líneas devuelve solo la fila de encabezados. Esa es su plantilla.
+
+Cada exportación queda anotada en el [registro de auditoría](admin.md#registro-de-auditoria), con sus ajustes, su formato y su número de líneas.
 
 ## Las columnas
 
@@ -115,7 +120,7 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 
 ## Comprobar y después cargar
 
-1. Haga clic en **Importar CSV** y elija el archivo, o suéltelo en la ventana. El archivo se comprueba de inmediato. No se escribe nada.
+1. Haga clic en **Importar** y elija el archivo, un archivo CSV o un libro de Excel (`.xlsx`), o suéltelo en la ventana. El archivo se comprueba de inmediato. No se escribe nada.
 2. Lea el informe:
 
 | Sección | Contenido |
@@ -144,9 +149,11 @@ Estas filas aparecen entre los **Errores** de la comprobación, como cualquier o
 
 ## Excel y LibreOffice
 
-Abrir el archivo y guardarlo lo deja cargable. Los dos programas conservan las columnas, el separador y los valores.
+Abrir el archivo y guardarlo lo deja cargable, en CSV o en `.xlsx`. Los dos programas conservan las columnas, el separador y los valores.
 
-Una fecha o un importe que el archivo no puede decidir por sí solo se lee como lo escribió la exportación, y después en el idioma en que se muestra la pantalla. Toda fecha con un día igual o menor que 12 es ambigua (`01/03/2027` es el 1 de marzo en francés y el 3 de enero en inglés), y un importe escrito como `12,280` también lo es. La verificación indica cómo los ha leído y ofrece un botón para cambiar la lectura.
+En un libro, KANAP lee la primera hoja. Cuando el libro tiene otras hojas, la verificación indica qué hoja leyó. Un importe o una fecha introducidos como valor en una celda se leen tal cual, sin dudas sobre la marca decimal ni el orden de día y mes. Un archivo antiguo de Excel (`.xls`) se rechaza: guárdelo como `.xlsx` o CSV.
+
+Una fecha o un importe escrito como texto, que el archivo no puede decidir por sí solo, se lee como lo escribió la exportación, y después en el idioma en que se muestra la pantalla. Toda fecha con un día igual o menor que 12 es ambigua (`01/03/2027` es el 1 de marzo en francés y el 3 de enero en inglés), y un importe escrito como `12,280` también lo es. La verificación indica cómo los ha leído y ofrece un botón para cambiar la lectura.
 
 Una columna que KANAP no conoce se ignora, con una advertencia. Una columna que parece una columna de importes mal escrita, como `budjet_2027`, rechaza el archivo entero. Una columna `analytics:<code>` que no nombra ninguna dimensión activada también rechaza el archivo entero, con "Unknown dimension 'x'."
 
@@ -185,6 +192,6 @@ Una organización más grande añade el resto de los datos maestros entre medias
 7. Los calendarios laborales, en [Calendarios laborales](working-day-calendars.md), cuando las líneas lleven cantidades y precios
 8. El archivo de presupuesto, líneas OPEX y CAPEX
 
-**El plan de cuentas va primero.** En la página Planes de cuentas, haga clic en **Nuevo**, dé un código y un nombre al plan y elija **Todos los países** en **Se usa para**. Después haga clic en **Gestionar planes**, abra el menú **⋯** del plan y haga clic en **Hacer predeterminado para otros países**. Una empresa sin plan de cuentas toma ese, y así se resuelven los números de cuenta de un archivo de presupuesto. Seleccione el plan en la página y haga clic en **Importar CSV** para cargar sus cuentas.
+**El plan de cuentas va primero.** En la página Planes de cuentas, haga clic en **Nuevo**, dé un código y un nombre al plan y elija **Todos los países** en **Se usa para**. Después haga clic en **Gestionar planes**, abra el menú **⋯** del plan y haga clic en **Hacer predeterminado para otros países**. Una empresa sin plan de cuentas toma ese, y así se resuelven los números de cuenta de un archivo de presupuesto. Seleccione el plan en la página y haga clic en **Importar** para cargar sus cuentas.
 
-Cada una de estas páginas tiene su propia sección **Importar CSV** con las columnas de su archivo.
+Cada una de estas páginas tiene su propia sección de importación con las columnas de su archivo. Todas leen un archivo CSV o un libro de Excel. Consulte [Archivos CSV y Excel](csv-files.md).

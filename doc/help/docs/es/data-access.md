@@ -145,7 +145,7 @@ Los cambios en estas pestañas se guardan al momento. Si la persona añadida tie
 
 ## Importación y exportación
 
-**Importar CSV** y **Exportar CSV**, en **Administración > Acceso a los datos**, trasladan el acceso de muchas personas a la vez. Un archivo contiene una fila por persona y por nodo:
+**Importar** y **Exportar**, en **Administración > Acceso a los datos**, trasladan el acceso de muchas personas a la vez, en un archivo CSV o un libro de Excel (`.xlsx`). Consulte [Archivos CSV y Excel](csv-files.md). Un archivo contiene una fila por persona y por nodo:
 
 | Columna | Contenido |
 |---|---|
@@ -168,7 +168,7 @@ claire.dubois@example.com;all;;read
 - La comprobación va primero y no escribe nada. Indica cada fila rechazada: persona desconocida, empresa o centro de coste desconocido, tipo o acceso no válido, un nodo listado dos veces para una misma persona, un Administrador, su propia cuenta. Un archivo con un error no carga nada.
 - La exportación escribe el mismo formato, para las personas limitadas. Una persona limitada sin nodos no tiene fila, de modo que volver a importar el archivo la deja como está.
 
-El separador, la codificación y los dos pasos de la importación son los de todos los archivos CSV: vea [Archivos CSV](csv-files.md).
+El separador, la codificación y los dos pasos de la importación son los de todos los archivos CSV: vea [Archivos CSV y Excel](csv-files.md).
 
 ## Registro de auditoría { #audit-log }
 

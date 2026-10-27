@@ -76,6 +76,7 @@
   "XLSX_DOCTYPE": "No se pudo leer este archivo de Excel: contiene una declaración de tipo de documento, que Excel nunca escribe.",
   "XLSX_NO_SHEET": "Este libro no tiene ninguna hoja que leer.",
   "XLSX_TOO_LARGE": "Este archivo de Excel es demasiado grande para leerlo.",
+  "XLSX_FIRST_SHEET_ONLY": "Solo se leyó la primera hoja, {{name}}.",
   "BUDGET_FILE_COST_CENTER_OTHER_COMPANY": "El centro de coste {{costCenter}} pertenece a {{costCenterCompany}}. La línea la paga {{company}}.",
   "CSV_HEADER_IGNORED_COLUMNS": "Estas columnas no se importan: {{extra}}.",
   "CSV_HEADER_UNKNOWN_TIME_ZONE": "Zona horaria desconocida en la columna {{column}}: {{zone}}. Use una zona como Europe/Paris o UTC.",
