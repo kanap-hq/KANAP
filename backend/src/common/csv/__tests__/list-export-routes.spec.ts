@@ -19,6 +19,7 @@ import { SuppliersController } from '../../../suppliers/suppliers.controller';
 import { TechnologiesController } from '../../../technologies/technologies.controller';
 import { UsersController } from '../../../users/users.controller';
 import { WorkingDayProfilesController } from '../../../working-day-profiles/working-day-profiles.controller';
+import { AdminCoaTemplatesController } from '../../../admin/coa-templates/admin-coa-templates.controller';
 
 // The list exports written with typed cells (`writeListExport`: the master-data files, data access,
 // the technology link files), without a database. The cells: the CSV text of each kind is what the
@@ -240,10 +241,25 @@ async function testRoutes() {
   console.log(`  ${probes.length} routes: format to the service, type, name, audit format and rows before sending; template xlsx and unknown format 400: OK`);
 }
 
+/** A chart of accounts template is the CSV file stored as uploaded: xlsx answers 400, CSV is sent as before. */
+async function testTemplateFile() {
+  let calls = 0;
+  const controller = new AdminCoaTemplatesController({ exportCsv: async () => { calls += 1; return { filename: 't.csv', content: 'a\n' }; } } as any);
+  const sent: unknown[] = [];
+  const res: any = { setHeader: () => undefined, send: (body: unknown) => sent.push(body) };
+  await assert.rejects(() => controller.export('t1', res, 'xlsx'), (error: any) => error?.getStatus?.() === 400);
+  assert.equal(calls, 0, 'refused before reading the template');
+  await controller.export('t1', res);
+  await controller.export('t1', res, 'csv');
+  assert.deepEqual(sent, ['a\n', 'a\n']);
+  console.log('  chart of accounts template: CSV only: OK');
+}
+
 async function main() {
   console.log('list export routes');
   testCells();
   await testRoutes();
+  await testTemplateFile();
   console.log('list-export-routes.spec: all assertions passed');
 }
 

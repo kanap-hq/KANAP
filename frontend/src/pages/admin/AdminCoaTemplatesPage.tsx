@@ -149,6 +149,7 @@ export default function AdminCoaTemplatesPage() {
         <CsvExportDialog
           open={exportOpen}
           onClose={() => setExportOpen(false)}
+          csvOnly
           endpoint={`/admin/coa-templates/${selectedRows[0].id}`}
           title={t('coaTemplates.exportTitle', { code: selectedRows[0].template_code, version: selectedRows[0].version })}
         />

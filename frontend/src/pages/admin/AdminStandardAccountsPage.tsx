@@ -196,6 +196,7 @@ export default function AdminStandardAccountsPage() {
         <CsvExportDialog
           open={exportOpen}
           onClose={() => setExportOpen(false)}
+          csvOnly
           endpoint={`/admin/coa-templates/${selectedTemplateId}`}
           title={t('standardAccounts.exportTitle')}
         />
