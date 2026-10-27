@@ -10,7 +10,8 @@ import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-docum
 // - A Business Contributor in the team of a project changes its purpose (preview, then run) and
 //   links an application to it; the same on a project outside their scope is refused, at the
 //   preview and at the run, also when the scope changes between the two.
-// - The name of a project is not opened to a contributor (the project page): refused, saying so.
+// - The name of a project is not opened to a contributor (the project page): refused, saying so,
+//   also next to the purpose, and when a member's rename runs after the role became contributor.
 // - A project out of scope reads as missing, as a project that does not exist.
 // - A link needs the read of the linked family, as the Relations tab.
 // - A task moved to a project: the project's scope is checked again when the preview runs.
@@ -140,9 +141,12 @@ async function testOutOfScopeAndFields(h: Harness, runner: QueryRunner, s: Seed)
   assert.equal(await refusal(() => h.previews.createPreview(bc, 'update_entity_relations', { entity_type: 'projects', ref: 'PRJ-2', relation: 'applications', add: ['APP-1'] })), 'No projects found matching "PRJ-2".');
   // By name too: the name of a project out of scope is not told.
   assert.equal(await refusal(() => h.previews.createPreview(bc, 'update_entity_relations', { entity_type: 'projects', ref: 'Other project', relation: 'applications', add: ['APP-1'] })), 'No projects found matching "Other project".');
-  // A field the project page does not open to a contributor.
+  // A field the project page does not open to a contributor, alone or next to the purpose.
   const renamed = await refusal(() => h.previews.createPreview(bc, 'update_business_record', { entity_type: 'projects', ref: 'PRJ-1', fields: { name: 'Renamed' } }));
   assert.match(renamed, /^Your role lets you contribute to projects but not change Name: that needs the right to modify projects/);
+  const mixed = await refusal(() => h.previews.createPreview(bc, 'update_business_record', { entity_type: 'projects', ref: 'PRJ-1', fields: { purpose: 'Mixed', name: 'Renamed' } }));
+  assert.match(mixed, /^Your role lets you contribute to projects but not change Name:/);
+  assert.deepEqual(await projectRow(runner, s, s.inScope), { name: 'Contributor project', purpose: 'Written by Plaid' });
   // A link needs the read of the linked family, as the Relations tab: no infrastructure, no asset.
   assert.equal(
     await refusal(() => h.previews.createPreview(bc, 'update_entity_relations', { entity_type: 'projects', ref: 'PRJ-1', relation: 'assets', add: ['Any asset'] })),
@@ -188,6 +192,12 @@ async function testOtherLevels(h: Harness, runner: QueryRunner, s: Seed) {
   const rename = await h.previews.createPreview(member, 'update_business_record', { entity_type: 'projects', ref: 'PRJ-3', fields: { name: 'Renamed by a member' } });
   const renamedRun = await h.previews.executePreview(member, rename.preview_id);
   assert.equal(renamedRun.status, 'executed', renamedRun.error_message ?? '');
+  assert.equal((await projectRow(runner, s, s.third)).name, 'Renamed by a member');
+  // A rename asked as a member and run once the role gives only contributor: refused at the run.
+  const later = await h.previews.createPreview(member, 'update_business_record', { entity_type: 'projects', ref: 'PRJ-3', fields: { name: 'Renamed too late' } });
+  await runner.query(`UPDATE role_permissions SET level = 'contributor' WHERE tenant_id = $1 AND resource = 'portfolio_projects' AND role_id = (SELECT role_id FROM users WHERE id = $2)`, [s.tenantId, s.users.member]);
+  assert.match(await refusal(() => h.previews.executePreview(member, later.preview_id)), /^Your role lets you contribute to projects but not change Name:/);
+  await runner.query(`UPDATE role_permissions SET level = 'member' WHERE tenant_id = $1 AND resource = 'portfolio_projects' AND role_id = (SELECT role_id FROM users WHERE id = $2)`, [s.tenantId, s.users.member]);
   assert.equal((await projectRow(runner, s, s.third)).name, 'Renamed by a member');
   console.log('  project contributor, reader, member: OK');
 }
