@@ -316,6 +316,8 @@
       "technologyServerLinks": "Server und Technologien",
       "users": "Benutzer",
       "vulnerabilities": "Schwachstellen",
+      "capacityHeatmapReport": "Bericht zur Kapazitäts-Heatmap",
+      "timeLoggedReport": "Bericht zur erfassten Zeit",
       "weeklyReport": "Wochenbericht",
       "workingDayCalendars": "Arbeitstagekalender"
     },

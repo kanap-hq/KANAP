@@ -73,6 +73,8 @@ export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
   'incidents/report': 'incidentReport',
   knowledge: 'knowledgeDocument',
   'portfolio/projects': 'projects',
+  'portfolio/reports/capacity-heatmap': 'capacityHeatmapReport',
+  'portfolio/reports/time-logged': 'timeLoggedReport',
   'portfolio/reports/weekly': 'weeklyReport',
   'portfolio/requests': 'requests',
   'spend-items/budget-file': 'opexBudgetFile',

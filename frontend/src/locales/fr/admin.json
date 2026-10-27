@@ -316,6 +316,8 @@
       "technologyServerLinks": "Serveurs et technologies",
       "users": "Utilisateurs",
       "vulnerabilities": "Vulnérabilités",
+      "capacityHeatmapReport": "Rapport du planning de capacité",
+      "timeLoggedReport": "Rapport du temps saisi",
       "weeklyReport": "Rapport hebdomadaire",
       "workingDayCalendars": "Calendriers de jours ouvrés"
     },

@@ -316,6 +316,8 @@
       "technologyServerLinks": "Servidores y tecnologías",
       "users": "Usuarios",
       "vulnerabilities": "Vulnerabilidades",
+      "capacityHeatmapReport": "Informe del mapa de calor de capacidad",
+      "timeLoggedReport": "Informe de tiempo registrado",
       "weeklyReport": "Informe semanal",
       "workingDayCalendars": "Calendarios laborales"
     },

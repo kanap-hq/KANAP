@@ -196,6 +196,8 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /incidents/:id/report',
   'GET /incidents/export',
   'GET /portfolio/projects/export',
+  'GET /portfolio/reports/capacity-heatmap/export',
+  'GET /portfolio/reports/time-logged/export',
   'GET /portfolio/reports/weekly/export',
   'GET /portfolio/requests/export',
   'GET /spend-items/budget-file/export',
