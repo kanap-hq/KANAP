@@ -5,6 +5,7 @@ import {
   NETBOX_ERROR_MESSAGES,
   netboxBadRequest,
   netboxFailureOf,
+  syncFailureOf,
 } from '../netbox-errors';
 import { NetboxApiError } from '../netbox.types';
 
@@ -96,6 +97,27 @@ async function main(): Promise<void> {
     assert.equal(failure.code, 'netbox_unreachable');
     assertSafe(failure.message);
     assert.match(failure.detail || '', /10\.0\.0\.5/);
+  }
+
+  // A synchronisation that fails for a reason other than the connection stores
+  // the generic code. The original text is for the log only.
+  {
+    const failure = syncFailureOf(new Error('connect ECONNREFUSED 10.0.0.5:8999'));
+    assert.equal(failure.code, 'netbox_sync_failed');
+    assert.equal(failure.message, NETBOX_ERROR_MESSAGES.netbox_sync_failed);
+    assertSafe(failure.message);
+    assert.match(failure.detail || '', /10\.0\.0\.5/);
+  }
+  {
+    const failure = syncFailureOf(new NetboxApiError('timeout', 'raw timeout ETIMEDOUT 10.0.0.5'));
+    assert.equal(failure.code, 'netbox_timeout');
+    assert.equal(failure.message, NETBOX_ERROR_MESSAGES.netbox_timeout);
+    assertSafe(failure.message);
+  }
+  {
+    const failure = syncFailureOf(netboxBadRequest('netbox_token_missing'));
+    assert.equal(failure.code, 'netbox_token_missing');
+    assert.equal(failure.detail, undefined);
   }
 }
 

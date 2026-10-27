@@ -36,7 +36,7 @@ import {
   suggestOperatingSystem,
 } from './netbox-mapper';
 import { ExistingAsset } from './netbox-matcher';
-import { netboxBadRequest, netboxFailureOf } from './netbox-errors';
+import { NETBOX_ERROR_MESSAGES, netboxBadRequest, netboxFailureOf, syncFailureOf } from './netbox-errors';
 import { NetboxNotice, netboxNotice, netboxNoticeFromStore, primaryNotice } from './netbox-notice';
 import {
   ExistingLink,
@@ -330,7 +330,7 @@ export function plainErrorMessage(error: unknown): string {
     const message = httpExceptionMessage(error);
     if (message) return message;
   }
-  return 'The synchronisation could not finish. Check the Netbox connection, then try again.';
+  return NETBOX_ERROR_MESSAGES.netbox_sync_failed;
 }
 
 /**
@@ -1156,6 +1156,7 @@ export class NetboxSyncService {
       duration_ms: null,
       counts: null,
       error: null,
+      error_code: null,
       warnings: [],
     };
   }
@@ -1252,12 +1253,13 @@ export class NetboxSyncService {
         duration_ms: finishedAt.getTime() - startedAt.getTime(),
         counts: result.counts,
         error: null,
+        error_code: null,
         warnings: result.warnings,
       });
       return { status: 'success', counts: result.counts };
     } catch (error) {
       const finishedAt = new Date();
-      const message = plainErrorMessage(error);
+      const failure = syncFailureOf(error);
       await this.persistState(tenantId, {
         status: 'failure',
         trigger,
@@ -1265,11 +1267,15 @@ export class NetboxSyncService {
         finished_at: finishedAt.toISOString(),
         duration_ms: finishedAt.getTime() - startedAt.getTime(),
         counts: null,
-        error: message,
+        error: failure.message,
+        error_code: failure.code,
         warnings: [],
       });
-      this.logger.warn(`Netbox synchronisation failed for tenant ${tenantId}: ${message}`, (error as Error)?.stack);
-      return { status: 'failure', error: message };
+      this.logger.warn(
+        `Netbox synchronisation failed for tenant ${tenantId}: ${failure.detail ?? failure.message}`,
+        (error as Error)?.stack,
+      );
+      return { status: 'failure', error: failure.message };
     } finally {
       await this.releaseRunLock(runner, tenantId);
     }

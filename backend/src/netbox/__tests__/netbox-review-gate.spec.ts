@@ -73,6 +73,7 @@ function manualSuccess(deferred: number | undefined): NetboxSyncStateView {
     duration_ms: 60000,
     counts: { create: 500, update: 0, unchanged: 0, ambiguous: 0, skipped: 0, missing: 0, error: 0, deferred },
     error: null,
+    error_code: null,
     warnings: [],
   };
 }
