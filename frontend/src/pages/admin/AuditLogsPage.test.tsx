@@ -232,8 +232,8 @@ describe('AuditLogsPage', () => {
     expect(screen.getByText('Status')).toBeTruthy();
     expect(screen.getByText('Go-live date')).toBeTruthy();
     expect(screen.getByText('MFA supported')).toBeTruthy();
-    expect(screen.getByText('draft')).toBeTruthy();
-    expect(screen.getByText('active')).toBeTruthy();
+    expect(screen.getByText('Draft')).toBeTruthy();
+    expect(screen.getByText('Active')).toBeTruthy();
     expect(screen.getByText('1 Nov 2020')).toBeTruthy();
     expect(screen.getByText('No')).toBeTruthy();
     expect(screen.getByText('Yes')).toBeTruthy();
@@ -244,6 +244,17 @@ describe('AuditLogsPage', () => {
     const pre = document.querySelector('pre');
     expect(pre?.textContent).toContain('"status": "draft"');
     expect(screen.getByRole('button', { name: 'Hide raw data' })).toBeTruthy();
+  });
+
+  it('shows an incident status with the incident label', async () => {
+    const entry = auditRow({
+      table_name: 'incidents',
+      before_json: { status: 'open' },
+      after_json: { status: 'resolved' },
+    });
+    await openDetail(entry);
+    expect(screen.getByText('Open')).toBeTruthy();
+    expect(screen.getByText('Resolved')).toBeTruthy();
   });
 
   it('shows one value column for a create, without the technical id fields', async () => {

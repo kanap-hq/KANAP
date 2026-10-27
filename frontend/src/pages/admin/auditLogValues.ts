@@ -43,6 +43,8 @@ export type AuditValueContext = {
   snapshot?: unknown;
   /** The names of the users the dialog read in one lookup. */
   users?: ReadonlyMap<string, string>;
+  /** The audited table. `status` and `mode` name different lists on different tables. */
+  table?: string;
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -91,6 +93,34 @@ const RECORD_TEXT_FIELDS: Record<string, string> = {
   locations: 'location_reference',
   connections: 'connection_reference',
   interfaces: 'interface_reference',
+};
+
+/**
+ * Enumerations whose screen labels already exist. Status on an incident uses its own list
+ * (`it:enums.incidentStatus`); every other status uses `common:statuses`, like `lifecycle`.
+ * Codes with an underscore are stored in snake case and labelled in camelCase
+ * (`on_premise` → `hostingModel.onPremise`, `pre_prod` → `environment.preProd`).
+ */
+const ENUM_GROUPS: Record<string, string> = {
+  environment: 'it:enums.environment',
+  criticality: 'it:enums.criticality',
+  hosting_model: 'it:enums.hostingModel',
+  severity: 'it:enums.incidentSeverity',
+};
+
+/**
+ * `mode` follows the table. Data access is also named from its snapshot, earlier in
+ * `formatAuditValue`, because that payload carries the nodes next to the mode.
+ */
+const MODE_LABEL_KEYS: Record<string, Record<string, string>> = {
+  user_data_access: {
+    all: 'auditLogs.dataAccess.allData',
+    limited: 'auditLogs.dataAccess.limitedTo',
+  },
+  allocation_rules: {
+    auto: 'ops:operations.allocationDefault.modeAuto',
+    manual_company: 'ops:operations.allocationDefault.modeManual',
+  },
 };
 
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -239,7 +269,34 @@ function dateText(value: string, locale: string): string | null {
   return null;
 }
 
-function scalarText(value: unknown, context: AuditValueContext): string {
+function screenLabel(context: AuditValueContext, key: string): string | null {
+  const value = context.t(key, { defaultValue: '' });
+  if (typeof value !== 'string') return null;
+  const text = value.trim();
+  if (!text || text === key) return null;
+  return text;
+}
+
+/** Snake case as stored, camelCase as the IT enum keys name it. Status keys stay snake case. */
+function enumerationCode(field: string, code: string): string {
+  if (field === 'status' || field === 'lifecycle') return code;
+  return code.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+}
+
+/** The screen label of a known enumeration, or null so an unknown code stays as stored. */
+function enumerationLabel(field: string, code: string, context: AuditValueContext): string | null {
+  if (field === 'mode') {
+    const key = MODE_LABEL_KEYS[context.table ?? '']?.[code];
+    return key ? screenLabel(context, key) : null;
+  }
+  const group = field === 'status'
+    ? (context.table === 'incidents' ? 'it:enums.incidentStatus' : 'common:statuses')
+    : (field === 'lifecycle' ? 'common:statuses' : ENUM_GROUPS[field]);
+  if (!group) return null;
+  return screenLabel(context, `${group}.${enumerationCode(field, code)}`);
+}
+
+function scalarText(value: unknown, field: string, context: AuditValueContext): string {
   if (value === null || value === undefined) return DASH;
   if (typeof value === 'boolean') {
     return context.t(value ? 'auditLogs.values.yes' : 'auditLogs.values.no');
@@ -250,7 +307,7 @@ function scalarText(value: unknown, context: AuditValueContext): string {
   if (typeof value === 'string') {
     const text = value.trim();
     if (!text) return DASH;
-    return dateText(text, context.locale) ?? value;
+    return dateText(text, context.locale) ?? enumerationLabel(field, text, context) ?? value;
   }
   return String(value);
 }
@@ -309,7 +366,8 @@ function dataAccessNodesText(value: unknown[], context: AuditValueContext): Audi
 
 /**
  * The text of a value cell: empty marker, yes/no, short dates, locale numbers, scalar lists,
- * one-line JSON for objects, the name of a person or a readable neighbour instead of an id.
+ * one-line JSON for objects, the name of a person or a readable neighbour instead of an id,
+ * and the screen label of a known enumeration. A code with no label stays as stored.
  */
 export function formatAuditValue(value: unknown, field: string, context: AuditValueContext): AuditValue {
   if (value === null || value === undefined) return { text: DASH };
@@ -341,12 +399,14 @@ export function formatAuditValue(value: unknown, field: string, context: AuditVa
       const neighbour = neighbourName(context.snapshot, field);
       return neighbour ? { text: neighbour } : identifier(context, text);
     }
+    const label = enumerationLabel(field, text, context);
+    if (label) return { text: label };
     return { text: value };
   }
   if (Array.isArray(value)) {
     if (value.length === 0) return { text: DASH };
     const scalars = value.every((item) => item === null || item === undefined || ['string', 'number', 'boolean'].includes(typeof item));
-    if (scalars) return { text: value.map((item) => scalarText(item, context)).join(', ') };
+    if (scalars) return { text: value.map((item) => scalarText(item, field, context)).join(', ') };
     return jsonValue(value);
   }
   if (typeof value === 'object') return jsonValue(value);
