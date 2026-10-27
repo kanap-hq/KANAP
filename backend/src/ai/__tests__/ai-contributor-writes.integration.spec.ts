@@ -13,6 +13,7 @@ import { seedManagedDocsKnowledgeAssets } from '../../knowledge/integrated-docum
 // - The name of a project is not opened to a contributor (the project page): refused, saying so.
 // - A project out of scope reads as missing, as a project that does not exist.
 // - A link needs the read of the linked family, as the Relations tab.
+// - A task moved to a project: the project's scope is checked again when the preview runs.
 // - A project contributor without the Business Contributor role writes on every project.
 // - A reader stays refused; a member renames as before.
 // - The write tools offered follow the level: a contributor gets the tools that change a project.
@@ -69,7 +70,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     [tenantId, `${key}-${slug}@example.test`, key, roleId]);
   const users: Record<UserKey, string> = {
     // The built-in role's name sets the participation scope (`resolveBusinessContributorScopeForUser`).
-    bc: await user('Bc', await role('Business Contributor', { ai_chat: 'member', portfolio_projects: 'contributor', applications: 'reader' })),
+    bc: await user('Bc', await role('Business Contributor', { ai_chat: 'member', portfolio_projects: 'contributor', applications: 'reader', tasks: 'member' })),
     contributor: await user('Contributor', await role('Project Contributor', { ai_chat: 'member', portfolio_projects: 'contributor' })),
     reader: await user('Reader', await role('Project Reader', { ai_chat: 'member', portfolio_projects: 'reader' })),
     member: await user('Member', await role('Project Member', { ai_chat: 'member', portfolio_projects: 'member' })),
@@ -191,6 +192,26 @@ async function testOtherLevels(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  project contributor, reader, member: OK');
 }
 
+async function testTaskMoveScope(h: Harness, runner: QueryRunner, s: Seed) {
+  const bc = ctx(runner, s, 'bc');
+  const created = await h.previews.createPreview(bc, 'create_task', { title: 'Task to move' });
+  const task = await h.previews.executePreview(bc, created.preview_id);
+  assert.equal(task.status, 'executed', task.error_message ?? '');
+  const taskId = task.target.entity_id as string;
+  // Out of scope at the preview: the project reads as missing.
+  assert.equal(await refusal(() => h.previews.createPreview(bc, 'update_task_fields', { ref: taskId, fields: { relation_type: 'project', relation_ref: 'PRJ-2' } })), 'No project found matching "PRJ-2".');
+  // In scope at the preview, out of scope when it runs: refused, the task stays where it was.
+  const move = await h.previews.createPreview(bc, 'update_task_fields', { ref: taskId, fields: { relation_type: 'project', relation_ref: 'PRJ-1' } });
+  await runner.query(`UPDATE portfolio_projects SET business_lead_id = NULL WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.inScope]);
+  const ran = await h.previews.executePreview(bc, move.preview_id);
+  assert.equal(ran.status, 'failed');
+  assert.equal(ran.error_message, 'Project not found.');
+  const [row] = await runner.query(`SELECT related_object_type FROM tasks WHERE tenant_id = $1 AND id = $2`, [s.tenantId, taskId]);
+  assert.equal(row.related_object_type, null);
+  await runner.query(`UPDATE portfolio_projects SET business_lead_id = $3 WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.inScope, s.users.bc]);
+  console.log('  task moved to a project out of scope when the preview runs: refused');
+}
+
 async function testOfferedTools(h: Harness, runner: QueryRunner, s: Seed) {
   const names = async (user: UserKey) => new Set((await h.tools.listAvailableTools(ctx(runner, s, user))).map((tool: { name: string }) => tool.name));
   const contributor = await names('contributor');
@@ -220,6 +241,7 @@ async function run() {
       await testBusinessContributorInScope(harness, runner, s);
       await testOutOfScopeAndFields(harness, runner, s);
       await testOtherLevels(harness, runner, s);
+      await testTaskMoveScope(harness, runner, s);
       await testOfferedTools(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
