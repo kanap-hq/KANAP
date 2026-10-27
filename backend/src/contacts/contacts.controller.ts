@@ -8,13 +8,14 @@ import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { csvImportMulterOptions } from '../common/upload';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
-import { contentDisposition } from '../common/content-disposition';
 import { ContactUpsertDto } from './dto/contact.dto';
 import { ContactsDeleteService } from './contacts-delete.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { readContactUsages } from './contact-usages';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
+import { csvExportFormat } from '../common/csv/csv-export.service';
+import { csvExportBody } from '../common/csv/send-csv-export';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contacts')
@@ -39,10 +40,9 @@ export class ContactsController {
     @Req() req: any,
   ) {
     const language = await languageOf(req?.queryRunner?.manager, req.tenant.id, req.user?.sub ?? null, languageRaw);
-    const { filename, content } = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, language, listQuery: exportListQuery(query) });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(filename));
-    res.send(content);
+    const format = csvExportFormat(query?.format, scope);
+    const file = await this.svc.exportCsv(scope, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, language, listQuery: exportListQuery(query), format });
+    res.send(await csvExportBody(res, file));
   }
 
   @UseGuards(PermissionGuard)

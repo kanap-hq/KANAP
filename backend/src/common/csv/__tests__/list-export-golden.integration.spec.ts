@@ -2,6 +2,7 @@ import 'dotenv/config';
 import * as assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import AdmZip = require('adm-zip');
 import { randomUUID } from 'node:crypto';
 import type { EntityManager, QueryRunner } from 'typeorm';
 import dataSource from '../../../data-source';
@@ -39,7 +40,8 @@ import { WorkingDayProfilesService } from '../../../working-day-profiles/working
 // working-day calendars, data access, the two technology link files), byte for byte, from a fixed
 // seed, in English and in French. The files in `golden/lists/` were written by the exports before
 // the Excel export (lot 3, run B) and must not change. `UPDATE_CSV_GOLDEN=1` rewrites them (never
-// to make a failing run pass: a difference is a change of the CSV people already use).
+// to make a failing run pass: a difference is a change of the CSV people already use). The same
+// seed in xlsx: amounts exact, days as date serials, counts and days as numbers, codes as text.
 
 const GOLDEN_DIR = backendPath('src', 'common', 'csv', '__tests__', 'golden', 'lists');
 const LANGUAGES: CsvLanguage[] = ['en', 'fr'];
@@ -163,6 +165,52 @@ function exportsOf(manager: EntityManager, tenantId: string, ids: Ids): Array<[s
   ];
 }
 
+/** The cells of the first sheet: `{ ref: [style or 'text', value] }`. */
+function sheetOf(content: string | Buffer): Record<string, [string, string]> {
+  assert.ok(Buffer.isBuffer(content), 'a workbook');
+  const xml = new AdmZip(content).readAsText('xl/worksheets/sheet1.xml');
+  const cells: Record<string, [string, string]> = {};
+  for (const [, ref, attributes, body] of xml.matchAll(/<c r="([A-Z]+\d+)"([^>]*)>(.*?)<\/c>/gs)) {
+    if (/t="inlineStr"/.test(attributes)) cells[ref] = ['text', /<t[^>]*>(.*?)<\/t>/s.exec(body)?.[1] ?? ''];
+    else cells[ref] = [/s="(\d+)"/.exec(attributes)?.[1] ?? 'general', /<v>(.*?)<\/v>/.exec(body)?.[1] ?? ''];
+  }
+  return cells;
+}
+
+/** The typed columns of three exports in xlsx, on the golden seed (French). */
+async function testXlsx(manager: EntityManager, tenantId: string): Promise<void> {
+  const ctx = { manager, tenantId, userId: null };
+  const contractArgs: any[] = Array.from({ length: 10 }, () => undefined);
+  const contracts = new (ContractsService as any)(...contractArgs) as ContractsService;
+  const contract = await contracts.exportCsv('data', { manager, language: 'fr', format: 'xlsx' });
+  assert.equal(contract.filename, 'contracts.xlsx');
+  assert.equal(contract.rows, 2);
+  const c = sheetOf(contract.content);
+  assert.equal(c.E2[1], '45657', 'contracts: start date 2024-12-31 as a date serial');
+  assert.deepEqual(c.F2, ['general', '12'], 'contracts: duration as a number');
+  assert.equal(c.I2[1], '-0.5', 'contracts: amount exact');
+  assert.equal(c.I3[1], '1250.5');
+  assert.notEqual(c.I3[0], 'text');
+  assert.deepEqual(c.G2, ['text', 'non'], 'contracts: yes or no as the CSV writes it');
+  assert.deepEqual(c.N3, ['text', '&apos;=HYPERLINK(&quot;http://x&quot;)'], 'contracts: formula guard');
+
+  const metrics = new CompanyMetricsService(undefined as any, undefined as any, { assertNotFrozen: async () => undefined } as any);
+  const company = await new CompaniesService(undefined as any, undefined as any, metrics).exportCsv('data', { manager, year: 2026, language: 'fr', format: 'xlsx' });
+  assert.equal(company.filename, 'companies_2026.xlsx');
+  const k = sheetOf(company.content);
+  assert.equal(k.L2[1], '46022', 'companies: end of validity, the UTC day of the instant');
+  assert.deepEqual([k.Q3, k.R3], [['general', '120'], ['general', '40']], 'companies: headcount and IT users as numbers');
+  assert.equal(k.S3[1], '-1250.500', 'companies: turnover exact');
+  assert.deepEqual(k.H3, ['text', '00123'], 'companies: registration number keeps its zeros');
+  assert.deepEqual(k.T2, ['general', '0']);
+
+  const calendars = await new WorkingDayProfilesCsvService(new WorkingDayProfilesService(undefined as any)).exportCsv('data', ctx, 'fr', undefined, 'xlsx');
+  const w = sheetOf(calendars.content);
+  assert.deepEqual(w.H2, ['general', '2026'], 'calendars: the year as a number');
+  assert.deepEqual([w.J3, w.T3], [['general', '19.083333'], ['general', '20.5']], 'calendars: days as numbers');
+  assert.equal(calendars.rows, 3);
+}
+
 async function run() {
   const update = process.env.UPDATE_CSV_GOLDEN === '1';
   await dataSource.initialize();
@@ -188,11 +236,13 @@ async function run() {
           checked.push(`${name}.${language}`);
         }
       }
+      if (!update) await testXlsx(runner.manager, tenantId);
     });
   } finally {
     await dataSource.destroy();
   }
   console.log(`  ${update ? 'written' : 'identical'}: ${checked.join(', ')}`);
+  if (!update) console.log('  xlsx: contracts, companies, calendars typed: OK');
   console.log('list-export-golden.integration.spec: all assertions passed');
 }
 

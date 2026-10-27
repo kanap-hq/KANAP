@@ -5,7 +5,6 @@ import {
   CsvDateOrder,
   CsvLanguage,
   DecimalMark,
-  endOfValidityCell,
   endOfValidityOf,
   keepStoredEndOfValidity,
   ImportReportError,
@@ -15,7 +14,6 @@ import {
   rowError,
   rowProblemErrors,
   textCellError,
-  writeCsv,
 } from '../common/csv-sheet';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { ANALYTICS_NAME_MAX, AnalyticsContext, normalizeAnalyticsDescription, normalizeAnalyticsName } from './analytics-context';
@@ -35,6 +33,8 @@ import {
 } from './analytics-categories.service';
 import { AXIS_APPLIES_TO, AxisAppliesTo } from './analytics-axis.entity';
 import { uploadedBytes } from '../common/upload';
+import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 export const ANALYTICS_VALUE_CSV_HEADERS = ['axis_code', 'name', 'description', 'status', 'disabled_at', 'applies_to'] as const;
 /** Only the name is required; an absent column keeps what is stored (a new value gets the default). */
@@ -79,14 +79,15 @@ interface ParsedRow {
 export class AnalyticsCategoriesCsvService {
   constructor(private readonly categories: AnalyticsCategoriesService) {}
 
-  async exportCsv(
+  async exportCsv<F extends ExportFileFormat = 'csv'>(
     scope: 'data' | 'template',
     ctx: AnalyticsContext,
     language: CsvLanguage = 'en',
     listQuery?: Record<string, unknown>,
-  ): Promise<{ filename: string; content: string }> {
+    format: F = 'csv' as F,
+  ): Promise<ListExportFile<F>> {
     const headers = [...ANALYTICS_VALUE_CSV_HEADERS];
-    const rows: string[][] = [];
+    const rows: ListExportCell[][] = [];
     if (scope === 'data') {
       const axes = await loadAnalyticsAxes(ctx.manager, ctx.tenantId);
       const order = new Map(axes.map((axis, index) => [axis.id, index]));
@@ -110,15 +111,19 @@ export class AnalyticsCategoriesCsvService {
           value.name,
           value.description ?? '',
           isAxisActive(value) ? StatusState.ENABLED : StatusState.DISABLED,
-          endOfValidityCell(value.disabled_at, language),
+          endOfValidityDay(value.disabled_at),
           value.applies_to ?? '',
         ]);
       }
     }
-    return {
+    return writeListExport({
+      format,
+      language,
       filename: scope === 'template' ? 'analytics_values_template.csv' : 'analytics_values.csv',
-      content: writeCsv({ language, headers, rows }),
-    };
+      sheetNames: { en: 'Analytics values', fr: 'Valeurs analytiques', de: 'Analysewerte', es: 'Valores analíticos' },
+      headers,
+      rows,
+    });
   }
 
   /**

@@ -17,18 +17,18 @@ import {
   CsvDateOrder,
   CsvLanguage,
   DecimalMark,
-  endOfValidityCell,
   endOfValidityOf,
   keepStoredEndOfValidity,
   ImportReportError,
   nameMatchedWarning,
   readMasterDataFile,
   rowProblemErrors,
-  writeCsv,
 } from '../common/csv-sheet';
 import { csvLifecycleConflict } from '../spend/item-write.util';
 import { duplicateNameException } from '../common/duplicate-name';
 import { uploadedBytes } from '../common/upload';
+import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 /** The contact columns of the file: one e-mail per contact type. */
 const CONTACT_COLUMNS = ['commercial_contact', 'technical_contact', 'support_contact'] as const;
@@ -270,13 +270,13 @@ export class SuppliersService {
     return ['name', 'erp_supplier_id', 'commercial_contact', 'technical_contact', 'support_contact', 'notes', 'status', 'disabled_at'];
   }
 
-  async exportCsv(
+  async exportCsv<F extends ExportFileFormat = 'csv'>(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown> },
-  ): Promise<{ filename: string; content: string }> {
+    opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown>; format?: F },
+  ): Promise<ListExportFile<F>> {
     const language = opts?.language ?? 'en';
     const headers = this.csvHeaders();
-    const rows: string[][] = [];
+    const rows: ListExportCell[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
       const mg = opts?.manager ?? repo.manager;
@@ -307,12 +307,13 @@ export class SuppliersService {
           s.notes ?? '',
           // Read from the end of validity, so a fresh export never contradicts its own row.
           deriveStatusFromDisabledAt(s.disabled_at),
-          endOfValidityCell(s.disabled_at, language),
+          endOfValidityDay(s.disabled_at),
         ]);
       }
     }
     const filename = scope === 'template' ? 'suppliers_template.csv' : 'suppliers.csv';
-    return { filename, content: writeCsv({ language, headers, rows }) };
+    const sheetNames = { en: 'Suppliers', fr: 'Fournisseurs', de: 'Lieferanten', es: 'Proveedores' };
+    return writeListExport({ format: opts?.format ?? ('csv' as F), language, filename, sheetNames, headers, rows });
   }
 
   async importCsv(

@@ -22,7 +22,6 @@ import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireAnyLevelMeta, RequireLevel } from '../auth/require-level.decorator';
-import { contentDisposition } from '../common/content-disposition';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { csvImportMulterOptions } from '../common/upload';
@@ -32,6 +31,8 @@ import { CostCenterContext, CostCentersService } from './cost-centers.service';
 import { CostCenterBulkDeleteDto, CostCenterCreateDto, CostCenterUpdateDto } from './dto/cost-center.dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
+import { csvExportFormat } from '../common/csv/csv-export.service';
+import { csvExportBody } from '../common/csv/send-csv-export';
 
 function context(ctx: TenantRequest): CostCenterContext {
   if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
@@ -98,12 +99,11 @@ export class CostCentersController {
   ) {
     const scope = scopeRaw === 'template' ? 'template' : scopeRaw == null || scopeRaw === 'data' ? 'data' : null;
     if (!scope) throw new BadRequestException("scope must be 'data' or 'template'.");
+    const format = csvExportFormat(query?.format, scope);
     const caller = context(ctx);
     const language = await languageOf(caller.manager, caller.tenantId, caller.userId ?? null, languageRaw);
-    const { filename, content } = await this.csv.exportCsv(scope, caller, language, exportListQuery(query));
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(filename));
-    res.send(content);
+    const file = await this.csv.exportCsv(scope, caller, language, exportListQuery(query), format);
+    res.send(await csvExportBody(res, file));
   }
 
   @RequireLevel('cost_centers', 'reader')

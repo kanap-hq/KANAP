@@ -42,18 +42,18 @@ import {
   endOfValidityOf,
   keepStoredEndOfValidity,
   formatCsvAmount,
-  formatCsvEndOfValidity,
   ImportReportError,
   headerMismatchError,
   nameMatchedWarning,
   readMasterDataFile,
   rowError,
   rowProblemErrors,
-  writeCsv,
 } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
 import { FxRateService } from '../currency/fx-rate.service';
 import { convertTurnovers, yearRateSetId } from '../spend/allocation-distribution';
+import { amountCell, endOfValidityDay, ListExportCell, ListExportFile, numberCell, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 /** A metric column of any year (`headcount_2031`), inside or outside the list's window. */
 const METRIC_COLUMN = /^(headcount|it_users|turnover)_(\d{4})$/i;
@@ -895,15 +895,16 @@ export class CompaniesService {
     return [...read.ignoredColumns, ...outside];
   }
 
-  async exportCsv(
+  /** Headcounts are numbers, turnovers exact amounts, the end of validity a day. */
+  async exportCsv<F extends ExportFileFormat = 'csv'>(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; year?: number; language?: CsvLanguage; listQuery?: Record<string, unknown> },
-  ): Promise<{ filename: string; content: string }> {
+    opts?: { manager?: EntityManager; year?: number; language?: CsvLanguage; listQuery?: Record<string, unknown>; format?: F },
+  ): Promise<ListExportFile<F>> {
     const language = opts?.language ?? 'en';
     const baseYear = this.normalizeYear(opts?.year);
     const headers = this.csvHeaders(baseYear);
     const years = this.metricYears(baseYear);
-    const rows: string[][] = [];
+    const rows: ListExportCell[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
       // What the list shows (its search, filters, scope and sort), or the whole register, newest first.
@@ -924,7 +925,7 @@ export class CompaniesService {
         );
       }
       for (const c of items) {
-        const row: string[] = [
+        const row: ListExportCell[] = [
           c.name ?? '',
           c.country_iso ?? '',
           c.address1 ?? '',
@@ -937,14 +938,14 @@ export class CompaniesService {
           c.base_currency ?? '',
           // Read from the end of validity: a stored status left stale by a passed date never contradicts its own row.
           deriveStatusFromDisabledAt(c.disabled_at),
-          c.disabled_at ? formatCsvEndOfValidity(new Date(c.disabled_at).toISOString(), language) : '',
+          c.disabled_at ? endOfValidityDay(new Date(c.disabled_at)) : null,
           c.notes ?? '',
         ];
         years.forEach((year) => {
           const metrics = metricsByYear.get(year)?.get(c.id);
-          row.push(metrics ? String(metrics.headcount ?? '') : '');
-          row.push(metrics && metrics.it_users != null ? String(metrics.it_users) : '');
-          row.push(metrics && metrics.turnover != null ? formatCsvAmount(String(metrics.turnover), language) : '');
+          row.push(metrics ? numberCell(metrics.headcount) : null);
+          row.push(metrics ? numberCell(metrics.it_users) : null);
+          row.push(metrics ? amountCell(metrics.turnover) : null);
         });
         rows.push(row);
       }
@@ -957,7 +958,8 @@ export class CompaniesService {
       rows.push(example);
     }
     const filename = scope === 'template' ? `companies_template_${baseYear}.csv` : `companies_${baseYear}.csv`;
-    return { filename, content: writeCsv({ language, headers, rows }) };
+    const sheetNames = { en: 'Companies', fr: 'Sociétés', de: 'Gesellschaften', es: 'Empresas' };
+    return writeListExport({ format: opts?.format ?? ('csv' as F), language, filename, sheetNames, headers, rows });
   }
 
   async importCsv(

@@ -84,12 +84,9 @@ import {
   parseCsvBoolean,
   cellOf,
   fieldAmounts,
-  formatCsvAmount,
-  formatCsvDate,
   readMasterDataFile,
   rowError,
   rowProblemErrors,
-  writeCsv,
   type CsvDateOrder,
   type CsvLanguage,
   type DecimalMark,
@@ -106,6 +103,8 @@ import {
   contractEditableFields,
 } from '../data-access/contract-write-checks';
 import { assertLinesEditable, isLimitedTransaction } from '../data-access/line-write-checks';
+import { amountCell, dayCell, ListExportCell, ListExportFile, numberCell, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 /**
  * The session tenant as a find condition: `app_current_tenant()`, the tenant RLS checks too,
@@ -1207,15 +1206,15 @@ export class ContractsService {
    * The contracts file in the screen's language (`common/csv-sheet`): its separator, the start
    * date written the language's way and the amount with its decimal mark.
    */
-  async exportCsv(
+  async exportCsv<F extends ExportFileFormat = 'csv'>(
     scope: 'template' | 'data' = 'data',
-    opts?: ListReadOptions & { language?: CsvLanguage; listQuery?: Record<string, unknown> },
-  ) {
+    opts?: ListReadOptions & { language?: CsvLanguage; listQuery?: Record<string, unknown>; format?: F },
+  ): Promise<ListExportFile<F>> {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(Contract);
     const language = opts?.language ?? 'en';
     const headers = this.csvHeaders();
-    const rows: string[][] = [];
+    const rows: ListExportCell[][] = [];
     const isoDate = (value: unknown): string => {
       if (value == null || value === '') return '';
       if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -1256,11 +1255,11 @@ export class ContractsService {
             cMap.get(it.company_id)?.name ?? '',
             sMap.get(it.supplier_id)?.name ?? '',
             it.cost_center_id ? (nMap.get(it.cost_center_id)?.name ?? '') : '',
-            start ? formatCsvDate(start, language) : '',
-            String(it.duration_months ?? ''),
+            dayCell(start),
+            numberCell(it.duration_months),
             formatCsvBoolean(!!it.auto_renewal, language),
-            String(it.notice_period_months ?? ''),
-            formatCsvAmount(Decimal.from(String(it.yearly_amount_at_signature ?? 0)), language),
+            numberCell(it.notice_period_months),
+            amountCell(Decimal.from(String(it.yearly_amount_at_signature ?? 0)).toString()),
             it.currency,
             it.billing_frequency,
             // Read from the end of validity: the stored status is not updated when the date passes.
@@ -1272,7 +1271,8 @@ export class ContractsService {
       }
     }
     const filename = scope === 'template' ? 'contracts_template.csv' : 'contracts.csv';
-    return { filename, content: writeCsv({ language, headers, rows }) };
+    const sheetNames = { en: 'Contracts', fr: 'Contrats', de: 'Verträge', es: 'Contratos' };
+    return writeListExport({ format: opts?.format ?? ('csv' as F), language, filename, sheetNames, headers, rows });
   }
 
   /**
