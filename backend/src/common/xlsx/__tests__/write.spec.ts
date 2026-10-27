@@ -5,6 +5,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import AdmZip = require('adm-zip');
 import { writeXlsx, XLSX_CONTENT_TYPE, XLSX_MAX_TEXT_LENGTH, XlsxCell, XlsxSheet } from '../index';
+import { readXlsxGrid } from '../read';
 
 /** Rules of the common xlsx writer, read back from the XML, then a round trip through LibreOffice when it is installed. */
 
@@ -180,6 +181,16 @@ function characters() {
   assert.ok(body && body[1].length === XLSX_MAX_TEXT_LENGTH && XLSX_MAX_TEXT_LENGTH === 32_767, 'cut at 32,767 characters');
   const pairCut = sheetXml(one([['a'.repeat(32_766) + '\u{1F600}', 'x']]));
   assert.ok(!/[\uD800-\uDBFF]<\/t>/.test(pairCut), 'a surrogate pair cut in two leaves no lone surrogate');
+
+  // A literal `_xHHHH_` is escaped (OOXML: `_x005F_` is `_`), so it reads back as written, in a cell and a header.
+  const escapes = one([['_x0041_ and _x000D_', 'a_x12_b _xZZZZ_ _x0041']], ['_x0041_', 'B']);
+  const escapedXml = sheetXml(escapes);
+  assert.ok(escapedXml.includes('>_x005F_x0041_ and _x005F_x000D_</t>'), 'the _x of _xHHHH_ is written _x005F_x');
+  assert.ok(escapedXml.includes('>a_x12_b _xZZZZ_ _x0041</t>'), 'text that is no escape is written as is');
+  assert.deepEqual(readXlsxGrid(escapes).rows, [
+    [{ kind: 'text', value: '_x0041_' }, { kind: 'text', value: 'B' }],
+    [{ kind: 'text', value: '_x0041_ and _x000D_' }, { kind: 'text', value: 'a_x12_b _xZZZZ_ _x0041' }],
+  ]);
 }
 
 function formulaGuard() {

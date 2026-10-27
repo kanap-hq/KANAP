@@ -94,6 +94,7 @@
     "reflect-metadata": "^0.2.2",
     "resend": "^6.34.1",
     "sanitize-html": "^2.18.1",
+    "saxes": "6.0.0",
     "speakeasy": "^2.0.0",
     "stripe": "^20.4.1",
     "turndown": "^7.2.4",

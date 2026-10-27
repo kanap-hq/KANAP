@@ -12,6 +12,7 @@ import { RESERVED_TO_UNSCOPED_DATA_ACCESS_KEY } from '../reserved-operations';
 import { AnalyticsCategoriesService } from '../../analytics/analytics-categories.service';
 import { AnalyticsCategory } from '../../analytics/analytics-category.entity';
 import { PREFLIGHT_STALE } from '../../spend/budget-file/import-file';
+import { writeXlsx } from '../../common/xlsx';
 import { closedDimensionValueMessage, noLongerAvailableMessage, readOnlyLineMessage } from '../../spend/budget-file/preflight';
 import { loadPreflight } from '../../spend/budget-file/load';
 import { interpretBudgetFile, readBudgetCsv } from '../../spend/budget-file/interpret';
@@ -203,6 +204,28 @@ async function testReadOnly(runner: QueryRunner, f: Fixture) {
     assert.equal(await notesOf(m, f.lines.L2), null);
   });
   console.log('  read-only line: unchanged passes (nothing written), changed refused: OK');
+}
+
+/** The same files in xlsx: the same refusals, word for word (Excel export, lot 4). */
+async function testXlsx(runner: QueryRunner, f: Fixture) {
+  const xlsx = (columns: string[], rows: Array<Record<string, string>>): Buffer =>
+    writeXlsx({ language: 'en', sheets: [{ name: 'OPEX', headers: columns, rows: rows.map((row) => columns.map((column) => row[column] ?? null)) }] });
+  await as(runner, f.persons.marta, async (m) => {
+    const cases: Array<[string[], Array<Record<string, string>>, string[]]> = [
+      [['item_number', 'notes'], [{ item_number: f.ref.L2, notes: 'Changed' }], [`item_number: ${readOnlyLineMessage(f.ref.L2)}`]],
+      [['item_number', 'notes', 'kanap_token'], [{ item_number: f.ref.L1, notes: 'x', kanap_token: 'v1' }], [`item_number: ${noLongerAvailableMessage(f.ref.L1)}`]],
+    ];
+    for (const [columns, rows, expected] of cases) {
+      const fromCsv = await preflight(m, f, f.persons.marta, csv(columns, rows));
+      const fromXlsx = await preflight(m, f, f.persons.marta, xlsx(columns, rows));
+      assert.deepEqual(errorsOf(fromXlsx), expected);
+      assert.deepEqual(errorsOf(fromXlsx), errorsOf(fromCsv), 'the CSV file says the same');
+      assert.equal(fromXlsx.ok, false);
+      assert.equal(fromXlsx.dataAccessLimited, true);
+    }
+    assert.equal(await notesOf(m, f.lines.L2), null);
+  });
+  console.log('  xlsx: a line read only or out of access is refused with the CSV sentences: OK');
 }
 
 async function testCreatePlacement(runner: QueryRunner, f: Fixture) {
@@ -428,6 +451,7 @@ async function run() {
       await testExport(runner, f);
       await testNumbers(runner, f);
       await testReadOnly(runner, f);
+      await testXlsx(runner, f);
       await testCreatePlacement(runner, f);
       await testCentreChange(runner, f);
       await testDimensionValues(runner, f);

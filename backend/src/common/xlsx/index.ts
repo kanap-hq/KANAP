@@ -2,3 +2,12 @@ export { writeXlsx, XLSX_CONTENT_TYPE, XLSX_MAX_COLUMNS, XLSX_MAX_DATA_ROWS, XLS
 export type { XlsxCell, XlsxSheet, XlsxWriteRequest } from './write';
 export { parseExportFormat } from './format';
 export type { ExportFileFormat } from './format';
+export {
+  hasOldExcelSignature,
+  hasZipSignature,
+  readXlsxGrid,
+  XLSX_OLD_FORMAT_MESSAGE,
+  XLSX_READ_LIMITS,
+  XlsxReadError,
+} from './read';
+export type { XlsxGrid, XlsxReadCell, XlsxReadErrorCode, XlsxReadLimits } from './read';

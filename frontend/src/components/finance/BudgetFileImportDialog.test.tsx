@@ -211,6 +211,37 @@ describe('BudgetFileImportDialog', () => {
     expect(screen.queryByText('The file is empty.')).toBeNull();
   });
 
+  it('takes CSV and Excel files and sends an Excel file as it is', async () => {
+    post.mockResolvedValue({ data: report() });
+    renderDialog();
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input.accept.split(',')).toEqual(expect.arrayContaining(['.csv', '.xlsx']));
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    const workbook = new File([new Uint8Array([0x50, 0x4b, 0x03, 0x04])], 'budget.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    fireEvent.change(input, { target: { files: [workbook] } });
+    await waitFor(() => expect((lastCall()?.[1] as FormData).get('file')).toBe(workbook));
+  });
+
+  it('says when only the first sheet of a workbook was read', async () => {
+    post.mockResolvedValueOnce({ data: report({ firstSheetOnly: 'OPEX' }) });
+    renderDialog();
+    expect(await screen.findByText('operations.budgetFile.firstSheetOnly:{"name":"OPEX"}')).toBeInTheDocument();
+    expect(screen.getByText('operations.budgetFile.warningsTitle')).toBeInTheDocument();
+  });
+
+  it('shows an Excel file it cannot read in the screen language', async () => {
+    const codes = ['XLSX_OLD_FORMAT', 'XLSX_NOT_WORKBOOK', 'XLSX_INVALID', 'XLSX_DOCTYPE', 'XLSX_NO_SHEET'];
+    const sentences = codes.map((code) => Object.keys(DECODE_SENTENCE_CODES).find((text) => DECODE_SENTENCE_CODES[text] === code)!);
+    expect(sentences.every(Boolean)).toBe(true);
+    const tooLarge = 'This file is too large to read: the sheet has more than 5,000,000 cells.';
+    post.mockResolvedValueOnce({ data: report({ ok: false, notices: { dates: null, amounts: null }, fileErrors: [...sentences, tooLarge] }) });
+    renderDialog();
+    for (const code of [...codes, 'XLSX_TOO_LARGE']) expect(await screen.findByText(new RegExp(`^errors:${code}`))).toBeInTheDocument();
+    for (const text of [...sentences, tooLarge]) expect(screen.queryByText(text)).toBeNull();
+  });
+
   it('loads with the snapshot of the check and shows the result', async () => {
     const onImported = vi.fn();
     post.mockResolvedValueOnce({ data: report() });

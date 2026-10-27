@@ -79,6 +79,36 @@ async function post(app: INestApplication, path: string, body: FormData) {
   return { status: res.status, body: json };
 }
 
+/** The budget file takes CSV and .xlsx (its content decides, an .xls included); other files meet the CSV import's sentences. */
+function testFileFilter() {
+  const answer = (originalname: string, mimetype: string) => {
+    let result: { error: any; accepted: boolean } | null = null;
+    budgetFileMulterOptions.fileFilter!({} as any, { originalname, mimetype } as any, (error: any, accepted?: boolean) => {
+      result = { error, accepted: accepted === true };
+    });
+    return result!;
+  };
+  for (const [name, mimetype] of [
+    ['budget.csv', 'text/csv'],
+    ['budget.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+    ['BUDGET.XLSX', 'application/octet-stream'],
+    ['budget', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+    ['budget.xls', 'application/vnd.ms-excel'],
+  ]) {
+    assert.equal(answer(name, mimetype).accepted, true, name);
+  }
+  for (const [name, mimetype, code] of [
+    ['budget.ods', 'application/vnd.oasis.opendocument.spreadsheet', 'CSV_FILE_OPENDOCUMENT'],
+    ['budget.xlsm', 'application/vnd.ms-excel.sheet.macroEnabled.12', 'CSV_FILE_EXCEL'],
+    ['budget.pdf', 'application/pdf', 'CSV_FILE_NOT_TEXT'],
+  ]) {
+    const { error, accepted } = answer(name, mimetype);
+    assert.equal(accepted, false, name);
+    assert.equal(error.getStatus(), 400, name);
+    assert.equal(error.getResponse().code, code, name);
+  }
+}
+
 function testSizing() {
   // The cap holds the 20,000 lines the manual announces, each with 14 budget years.
   const widest = Buffer.byteLength(snapshotOf(20_000, 14), 'utf8');
@@ -116,6 +146,7 @@ async function testHttp(app: INestApplication) {
 }
 
 async function run() {
+  testFileFilter();
   testSizing();
   const app = await createApp();
   try {

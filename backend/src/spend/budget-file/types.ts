@@ -273,6 +273,8 @@ export interface BudgetFileReport {
   };
   supplierMessage: string | null;
   snapshot: { lines: BudgetFileSnapshotLine[] };
+  /** An .xlsx workbook of more than one sheet: the name of the sheet read, the first one. Absent otherwise. */
+  firstSheetOnly?: string;
   /** For a limited person only: the check ran on the person's access ("Calculated on your access"). */
   dataAccessLimited?: true;
 }

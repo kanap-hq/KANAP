@@ -180,7 +180,7 @@ export class SpendItemsController {
     @Query('createSuppliers') createSuppliers: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    if (!file?.buffer) throw new BadRequestException('Choose a CSV file.');
+    if (!file?.buffer) throw new BadRequestException('Choose a file.');
     return this.budgetFile.preflight('opex', file.buffer, {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
@@ -211,7 +211,7 @@ export class SpendItemsController {
     @Tenant() ctx: TenantRequest,
     @Req() req: any,
   ) {
-    if (!file?.buffer) throw new BadRequestException('Choose a CSV file.');
+    if (!file?.buffer) throw new BadRequestException('Choose a file.');
     const result = await this.budgetFile.importFile('opex', file.buffer, snapshot, {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,

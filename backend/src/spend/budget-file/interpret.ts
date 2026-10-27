@@ -1,5 +1,5 @@
 import { CENTS_LIMIT } from '../../common/amount';
-import { CsvDateOrder, CsvLanguage, CsvParsedDate, CsvReadResult, DecimalMark, readCsv } from '../../common/csv-sheet';
+import { CsvDateOrder, CsvLanguage, CsvParsedDate, CsvReadResult, DecimalMark, readCsv, readSheet, SheetReadResult } from '../../common/csv-sheet';
 import { AmountMeasure } from '../amounts-write.util';
 import { LEGACY_PREFIX, type BudgetNature } from '../budget-nature';
 import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, EXPORT_ONLY_COLUMNS, hasCriteriaColumns, isOldBudgetLayout, OLD_BUDGET_FILE_MESSAGE, schemaFields } from './columns';
@@ -60,11 +60,13 @@ export interface InterpretedRow {
   errors: Array<{ column: string | null; message: string }>;
 }
 
+/** A budget file as read: CSV, or the first sheet of an .xlsx workbook (`sheetName`, `sheetCount`). */
+export type BudgetFileRead = CsvReadResult & Partial<Pick<SheetReadResult, 'format' | 'sheetName' | 'sheetCount'>>;
+
 /**
- * Read one budget file. An old layout, or a CAPEX file of before lot C1 (the
- * three criteria columns together), comes back as that one message and no
- * rows, so the preflight does not also list a missing name or dimension on
- * every line.
+ * Read one budget file, CSV or .xlsx, told apart by its content (text is CSV). An old layout, or a
+ * CAPEX file of before lot C1 (the three criteria columns together), comes back as that one message
+ * and no rows, so the preflight does not also list a missing name or dimension on every line.
  */
 export async function readBudgetCsv(
   input: Buffer | string,
@@ -75,11 +77,9 @@ export async function readBudgetCsv(
     dateOrder?: CsvDateOrder;
     decimalMark?: DecimalMark;
   },
-): Promise<CsvReadResult> {
-  const read = await readCsv(
-    input,
-    budgetFileSchema(options.language, options.dimensionCodes, options.dateOrder, options.decimalMark),
-  );
+): Promise<BudgetFileRead> {
+  const schema = budgetFileSchema(options.language, options.dimensionCodes, options.dateOrder, options.decimalMark);
+  const read: BudgetFileRead = typeof input === 'string' ? await readCsv(input, schema) : await readSheet(input, schema);
   const refusal = isOldBudgetLayout(read.rawHeaders)
     ? OLD_BUDGET_FILE_MESSAGE
     : hasCriteriaColumns(read.rawHeaders) ? CRITERIA_COLUMNS_MESSAGE : null;

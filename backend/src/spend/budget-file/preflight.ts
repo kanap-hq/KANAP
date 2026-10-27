@@ -1,11 +1,10 @@
-import { CsvReadResult } from '../../common/csv-sheet';
 import { keepStoredEndOfValidity, matchCode } from '../../common/csv-sheet';
 import { normalizeAnalyticsName } from '../../analytics/analytics-context';
 import { notApplicableDimensionMessage, requiredDimensionMessage } from '../item-analytics.util';
 import { AmountMeasure, MEASURE_FREEZE_COLUMN } from '../amounts-write.util';
 import { endOfValidityFromDate, isActiveAt } from '../../common/status';
 import type { BudgetNature } from '../budget-nature';
-import { firstAmountYear, interpretBudgetFile, InterpretedRow, FieldCell, ItemNumberCell } from './interpret';
+import { BudgetFileRead, firstAmountYear, interpretBudgetFile, InterpretedRow, FieldCell, ItemNumberCell } from './interpret';
 import { tokenError } from './token';
 import { DATA_ACCESS_LEAVES_ACCESS_MESSAGE, DATA_ACCESS_PLACEMENT_MESSAGE } from '../../data-access/line-write-checks';
 import {
@@ -94,7 +93,7 @@ function storedText(value: string | null | undefined): string {
 export interface PreflightInput {
   /** The route's nature: the nature of a line when the file has no `nature` column (a file of before lot C1b). */
   scope: BudgetFileScope;
-  read: CsvReadResult;
+  read: BudgetFileRead;
   catalog: BudgetCatalog;
   stored: StoredLine[];
   names: LineHint[];
@@ -1295,6 +1294,7 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
     },
     supplierMessage: supplierNote,
     snapshot: { lines: bag.snapshot },
+    ...((input.read.sheetCount ?? 0) > 1 ? { firstSheetOnly: input.read.sheetName ?? '' } : {}),
     ...(input.access ? { dataAccessLimited: true as const } : {}),
   };
 }
@@ -1306,7 +1306,7 @@ function namesByDimension(byCode: Map<string, Map<string, string>>): Array<{ dim
   }));
 }
 
-export function blankPreflightInput(scope: BudgetFileScope, read: CsvReadResult, currentYear: number): PreflightInput {
+export function blankPreflightInput(scope: BudgetFileScope, read: BudgetFileRead, currentYear: number): PreflightInput {
   return {
     scope,
     read,
