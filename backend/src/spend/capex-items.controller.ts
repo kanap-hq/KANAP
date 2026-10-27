@@ -185,7 +185,7 @@ export class CapexItemsController {
     @Query('createSuppliers') createSuppliers: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    if (!file?.buffer) throw new BadRequestException('Choose a CSV file.');
+    if (!file?.buffer) throw new BadRequestException('Choose a file.');
     return this.budgetFile.preflight('capex', file.buffer, {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
@@ -216,7 +216,7 @@ export class CapexItemsController {
     @Tenant() ctx: TenantRequest,
     @Req() req: any,
   ) {
-    if (!file?.buffer) throw new BadRequestException('Choose a CSV file.');
+    if (!file?.buffer) throw new BadRequestException('Choose a file.');
     const result = await this.budgetFile.importFile('capex', file.buffer, snapshot, {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,

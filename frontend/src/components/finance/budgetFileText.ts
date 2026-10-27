@@ -1,5 +1,5 @@
 import { dataAccessSentence } from '../../utils/apiErrorMessage';
-import { BudgetFileFailure, DECODE_SENTENCE_CODES, OLD_LAYOUT_SENTENCE } from './budgetFile';
+import { BudgetFileFailure, DECODE_SENTENCE_CODES, OLD_LAYOUT_SENTENCE, XLSX_TOO_LARGE_START } from './budgetFile';
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -8,7 +8,7 @@ const K = 'operations.budgetFile.';
 /** A server sentence the dialog has in the screen language, or the sentence as the server wrote it. */
 export function serverSentence(text: string, t: Translate): string {
   if (text === OLD_LAYOUT_SENTENCE) return t(`${K}oldLayout`);
-  const code = DECODE_SENTENCE_CODES[text];
+  const code = DECODE_SENTENCE_CODES[text] ?? (text.startsWith(XLSX_TOO_LARGE_START) ? 'XLSX_TOO_LARGE' : undefined);
   if (code) return t(`errors:${code}`, { defaultValue: text });
   // A line refused for the person's data access: its sentence in the screen language.
   return dataAccessSentence(text, t) ?? text;

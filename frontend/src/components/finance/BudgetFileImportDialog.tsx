@@ -200,7 +200,7 @@ export default function BudgetFileImportDialog({
           ref={inputRef}
           type="file"
           hidden
-          accept=".csv,text/csv"
+          accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
           onChange={(event) => {
             chooseFile(event.target.files?.[0]);
             event.target.value = '';
@@ -356,7 +356,8 @@ function ReportView({
   const ignoredCells = report.warnings.ignoredCells ?? [];
   const costCenterCompanies = report.warnings.costCenterCompanies ?? [];
   const hasWarnings = report.warnings.duplicates.length > 0 || report.warnings.ignoredColumns.length > 0
-    || report.warnings.supplierNames.length > 0 || ignoredCells.length > 0 || costCenterCompanies.length > 0;
+    || report.warnings.supplierNames.length > 0 || ignoredCells.length > 0 || costCenterCompanies.length > 0
+    || report.firstSheetOnly !== undefined;
   // A limited person's check names the unknown values of a closed list it refuses (their rows are among the errors).
   const refusedValues = report.creates.refusedDimensionValues ?? [];
   const hasCreates = report.creates.suppliers.length > 0 || report.creates.dimensionValues.length > 0 || refusedValues.length > 0;
@@ -459,6 +460,7 @@ function ReportView({
           {report.warnings.ignoredColumns.length > 0 && (
             <Line text={t(`${K}ignoredColumns`, { count: report.warnings.ignoredColumns.length, columns: report.warnings.ignoredColumns.join(', ') })} />
           )}
+          {report.firstSheetOnly !== undefined && <Line text={t(`${K}firstSheetOnly`, { name: report.firstSheetOnly })} />}
         </Section>
       )}
 

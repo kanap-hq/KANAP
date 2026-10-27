@@ -138,6 +138,8 @@ export type BudgetFileReport = {
   };
   supplierMessage: string | null;
   snapshot: { lines: unknown[] };
+  /** An Excel workbook of several sheets: the name of the one read, the first. */
+  firstSheetOnly?: string;
   /** The check followed a limited person's access, line by line. */
   dataAccessLimited?: true;
 };
@@ -163,7 +165,15 @@ export const DECODE_SENTENCE_CODES: Record<string, string> = {
   'This file is not a CSV file. Save it as CSV UTF-8 and import it again.': 'CSV_FILE_NOT_TEXT',
   // `common/csv-sheet/read.ts` CSV_FILE_EMPTY_MESSAGE.
   'The file is empty.': 'CSV_FILE_EMPTY',
+  // `common/xlsx/read.ts`: an Excel file that cannot be read (its `XlsxReadErrorCode`).
+  'This is an old Excel file (.xls). Save it as .xlsx or CSV and import it again.': 'XLSX_OLD_FORMAT',
+  'This file is not an Excel workbook (.xlsx). Save it as .xlsx or CSV and import it again.': 'XLSX_NOT_WORKBOOK',
+  'This Excel file could not be read: it is damaged or incomplete. Save it again as .xlsx or CSV and import it again.': 'XLSX_INVALID',
+  'This Excel file could not be read: it holds a document type declaration, which Excel never writes.': 'XLSX_DOCTYPE',
+  'This workbook has no sheet to read.': 'XLSX_NO_SHEET',
 };
+/** `common/xlsx/read.ts` XLSX_TOO_LARGE: one sentence per limit, all with this start. */
+export const XLSX_TOO_LARGE_START = 'This file is too large to read: ';
 const SUPPLIERS_MISSING = /^(\d+) suppliers? do(?:es)? not exist\./;
 
 /** The count of missing suppliers in the server's sentence, or null when it says something else. */
