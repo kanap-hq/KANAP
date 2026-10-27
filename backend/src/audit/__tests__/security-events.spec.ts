@@ -227,6 +227,7 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /working-day-profiles/export',
   'POST /export',
   'POST /knowledge/:idOrRef/export',
+  'POST /portfolio/reports/roadmap/occupation/export',
 ];
 
 // The routes that send a stored file someone added (an attachment, an inline image, the

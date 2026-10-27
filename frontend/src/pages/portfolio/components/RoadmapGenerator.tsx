@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Box,
@@ -42,7 +42,6 @@ import {
 import { useTheme } from '@mui/material/styles';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import ImageIcon from '@mui/icons-material/Image';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
@@ -67,7 +66,9 @@ import {
 } from './roadmap-text';
 import { getDotColor, PROJECT_STATUS_COLORS } from '../../../utils/statusColors';
 import { kanapPalette, modeVal } from '../../tasks/theme/taskDetailTokens';
-import { downloadXlsxWorkbook } from '../../../lib/simpleXlsx';
+import ExportFormatButton from '../../../components/csv/ExportFormatButton';
+import type { ExportFormat } from '../../../components/csv/exportFormat';
+import { downloadServerExport } from '../../../components/csv/serverExport';
 import {
   buildRoadmapOccupation,
   isoWeekParts,
@@ -828,51 +829,6 @@ type OccupationExportData = {
   };
 };
 
-const exportOccupationAsExcel = (data: OccupationExportData): void => {
-  const { weekKeys, contributorGroups, teamRows, contributorAverages, teamAverages, labels } = data;
-  const weekHeaders = weekKeys.map((weekKey) => {
-    const parts = isoWeekParts(weekKey);
-    return labels.weekYear(String(parts.week).padStart(2, '0'), parts.year);
-  });
-
-  // Contributors sheet
-  const contributorSheetRows: (string | number | null)[][] = [];
-  contributorSheetRows.push([labels.team, labels.contributor, ...weekHeaders, labels.average]);
-  for (const group of contributorGroups) {
-    for (const row of group.rows) {
-      const weekValues = weekKeys.map((wk) => row.weekOccupation.get(wk) ?? null);
-      const nonNull = weekValues.filter((v): v is number => v != null);
-      const avg = nonNull.length > 0 ? Math.round(nonNull.reduce((a, b) => a + b, 0) / nonNull.length) : null;
-      contributorSheetRows.push([group.teamName, row.contributorName, ...weekValues, avg]);
-    }
-  }
-  const contributorAvgRow: (string | number | null)[] = [labels.avg, ''];
-  for (const wk of weekKeys) contributorAvgRow.push(contributorAverages.get(wk) ?? null);
-  const allContribNonNull = weekKeys.map((wk) => contributorAverages.get(wk)).filter((v): v is number => v != null);
-  contributorAvgRow.push(allContribNonNull.length > 0 ? Math.round(allContribNonNull.reduce((a, b) => a + b, 0) / allContribNonNull.length) : null);
-  contributorSheetRows.push(contributorAvgRow);
-
-  // Teams sheet
-  const teamSheetRows: (string | number | null)[][] = [];
-  teamSheetRows.push([labels.team, ...weekHeaders, labels.average]);
-  for (const row of teamRows) {
-    const weekValues = weekKeys.map((wk) => row.weekOccupation.get(wk) ?? null);
-    const nonNull = weekValues.filter((v): v is number => v != null);
-    const avg = nonNull.length > 0 ? Math.round(nonNull.reduce((a, b) => a + b, 0) / nonNull.length) : null;
-    teamSheetRows.push([row.teamName, ...weekValues, avg]);
-  }
-  const teamAvgRow: (string | number | null)[] = [labels.avg];
-  for (const wk of weekKeys) teamAvgRow.push(teamAverages.get(wk) ?? null);
-  const allTeamNonNull = weekKeys.map((wk) => teamAverages.get(wk)).filter((v): v is number => v != null);
-  teamAvgRow.push(allTeamNonNull.length > 0 ? Math.round(allTeamNonNull.reduce((a, b) => a + b, 0) / allTeamNonNull.length) : null);
-  teamSheetRows.push(teamAvgRow);
-
-  downloadXlsxWorkbook(`roadmap-occupation-${getTodayYmd()}.xlsx`, [
-    { name: labels.contributors, rows: contributorSheetRows },
-    { name: labels.teams, rows: teamSheetRows },
-  ]);
-};
-
 const exportOccupationAsPng = async (
   data: OccupationExportData,
   view: OccupationView,
@@ -1040,7 +996,7 @@ type Props = {
 export default function RoadmapGenerator({ onApplied }: Props) {
   const mode = useTheme().palette.mode;
   const locale = useLocale();
-  const { t } = useTranslation(['portfolio', 'common']);
+  const { t } = useTranslation(['portfolio', 'common', 'ops']);
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<RoadmapTab>('schedule');
   const [occupationView, setOccupationView] = useState<OccupationView>('contributor');
@@ -1078,6 +1034,8 @@ export default function RoadmapGenerator({ onApplied }: Props) {
   const [pinDialogProjectName, setPinDialogProjectName] = useState<string>('');
   const [pinDialogWeek, setPinDialogWeek] = useState<string>(startDate);
   const [response, setResponse] = useState<RoadmapResponse | null>(null);
+  // The payload of the generation on screen: the occupation export sends it again, so the file holds the same tables.
+  const responsePayloadRef = useRef<unknown>(null);
   const [selectedExplanationKey, setSelectedExplanationKey] = useState<string | null>(null);
   const [selectedProjectIds, setSelectedProjectIds] = useState<Set<string>>(new Set());
   const [scheduleSelectionPool, setScheduleSelectionPool] = useState<ScheduledProject[]>([]);
@@ -1803,6 +1761,7 @@ export default function RoadmapGenerator({ onApplied }: Props) {
       const res = await api.post('/portfolio/reports/roadmap/generate', payload);
       const nextResponse = res.data as RoadmapResponse;
       setResponse(nextResponse);
+      responsePayloadRef.current = payload;
 
       if (options?.resetSelectionPool) {
         const oldPoolIds = new Set(scheduleSelectionPool.map((p) => p.projectId));
@@ -2073,13 +2032,21 @@ export default function RoadmapGenerator({ onApplied }: Props) {
     };
   }, [occupationWeekKeys, contributorOccupationGroups, teamOccupationRows, contributorOccupationAverages, teamOccupationAverages, t]);
 
-  const handleExportOccupationExcel = () => {
-    if (!occupationExportData) return;
+  const handleExportOccupation = async (format: ExportFormat) => {
+    if (!responsePayloadRef.current) return;
     try {
-      exportOccupationAsExcel(occupationExportData);
+      await downloadServerExport({
+        url: '/portfolio/reports/roadmap/occupation/export',
+        format,
+        language: locale,
+        // The table of a CSV is the view on screen; the workbook holds both.
+        params: { table: occupationView === 'team' ? 'teams' : 'contributors' },
+        body: responsePayloadRef.current,
+        fileBase: 'roadmap-occupation',
+      });
     } catch (err: any) {
       console.error(err);
-      setError(t('planning.roadmap.messages.exportOccupationExcelFailed'));
+      setError(t('ops:reports.shared.exportFailed'));
     }
   };
 
@@ -2803,18 +2770,12 @@ export default function RoadmapGenerator({ onApplied }: Props) {
                       <ToggleButton value="contributor">{t('planning.roadmap.occupation.contributors')}</ToggleButton>
                       <ToggleButton value="team">{t('planning.roadmap.occupation.teams')}</ToggleButton>
                     </ToggleButtonGroup>
-                    <Tooltip title={t('planning.roadmap.occupation.exportExcel')}>
-                      <span>
-                        <IconButton
-                          size="small"
-                          onClick={handleExportOccupationExcel}
-                          disabled={!occupationExportData}
-                          aria-label={t('planning.roadmap.occupation.exportExcel')}
-                        >
-                          <FileDownloadIcon fontSize="small" />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
+                    <ExportFormatButton
+                      label={t('ops:reports.shared.exportTable')}
+                      size="small"
+                      onExport={handleExportOccupation}
+                      disabled={!occupationExportData}
+                    />
                     <Tooltip title={t('planning.roadmap.occupation.exportPng')}>
                       <span>
                         <IconButton

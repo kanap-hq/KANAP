@@ -1216,7 +1216,6 @@
         "avg": "Moy.",
         "week": "S{{week}}",
         "weekYear": "S{{week}} {{year}}",
-        "exportExcel": "Exporter l'occupation en Excel",
         "exportPng": "Exporter l'occupation en PNG",
         "noContributorData": "Aucune donnée d'occupation des contributeurs disponible.",
         "noTeamData": "Aucune donnée d'occupation des équipes disponible.",
@@ -1259,7 +1258,6 @@
         "schedulingModeFailed": "Échec de la mise à jour du mode de planification",
         "generateFailed": "Échec de la génération de la roadmap",
         "exportGanttFailed": "Échec de l'export du Gantt en PNG",
-        "exportOccupationExcelFailed": "Échec de l'export de l'occupation en Excel",
         "exportOccupationPngFailed": "Échec de l'export de l'occupation en PNG"
       },
       "schedulingModes": {

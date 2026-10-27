@@ -398,6 +398,7 @@
       "capacityHeatmapReport": "Bericht zur Kapazitäts-Heatmap",
       "timeLoggedReport": "Bericht zur erfassten Zeit",
       "weeklyReport": "Wochenbericht",
+      "roadmapOccupation": "Auslastung der Roadmap",
       "skillsMatrix": "Kompetenzmatrix",
       "workingDayCalendars": "Arbeitstagekalender"
     },

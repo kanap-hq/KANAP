@@ -77,6 +77,7 @@ export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
   'master-data-operations/copy': 'masterDataCopyPreview',
   'portfolio/projects': 'projects',
   'portfolio/reports/capacity-heatmap': 'capacityHeatmapReport',
+  'portfolio/reports/roadmap/occupation': 'roadmapOccupation',
   'portfolio/reports/time-logged': 'timeLoggedReport',
   'portfolio/reports/weekly': 'weeklyReport',
   'portfolio/requests': 'requests',
