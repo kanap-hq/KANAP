@@ -165,7 +165,7 @@ function DueDateChip({ dueDate, readOnly, onPatch }: { dueDate: string | null; r
         <Box component="span" sx={{ ...metaLabelSx, color: theme.palette.kanap.text.tertiary }}>
           {t('workspace.task.sidebar.fields.dueDate')}
         </Box>
-        <span>{formatShortDate(dueDate, locale, { empty: 'Not set' })}</span>
+        <span>{formatShortDate(dueDate, locale, { empty: t('common:selects.notSet') })}</span>
       </Box>
       <Popover
         open={!!anchor}
