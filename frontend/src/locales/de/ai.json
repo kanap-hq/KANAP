@@ -204,6 +204,7 @@
       "country_iso": "Land",
       "criteria_values": "Kriterienwerte",
       "data_class": "Datenvertraulichkeit",
+      "deletion": "Was damit gelöscht wird",
       "destination_asset_id": "Ziel-Asset",
       "destination_entity_code": "Code der Zielentität",
       "disabled_at": "Deaktiviert am",

@@ -86,6 +86,29 @@ describe('PreviewCard in French', () => {
     await i18n.changeLanguage('en');
   });
 
+  it('shows a deletion card with what goes with the record, in French', () => {
+    renderCard(preview({
+      tool_name: 'delete_record',
+      target: { entity_type: 'tasks', entity_id: 'task-1', ref: 'T-42', title: 'T-42 - Migration' },
+      summary: 'Suppression de la tâche « Migration ».',
+      changes: {
+        deletion: {
+          label: 'What goes with it',
+          from: null,
+          to: '- Commentaires et changements : 2\n- Temps saisis : 1\n- Pièces jointes : 1\n- Liens : 1',
+          format: 'markdown',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Ce qui part avec la fiche')).toBeInTheDocument();
+    for (const text of ['Commentaires et changements : 2', 'Temps saisis : 1', 'Pièces jointes : 1', 'Liens : 1']) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.getByText('Suppression de la tâche « Migration ».')).toBeInTheDocument();
+    expect(screen.queryByText('What goes with it')).not.toBeInTheDocument();
+  });
+
   it('shows a task creation with the labels and values of the task screens', async () => {
     renderCard(preview({
       summary: 'Création de la tâche autonome « Migration ». Priorité : Moyenne.',
