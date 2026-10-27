@@ -5,6 +5,7 @@ import { resolveAppBaseUrl } from '../url';
 import { createOriginPolicy } from '../cors-policy';
 import { isPlatformAdmin } from '../../auth/platform-admin.util';
 import { isSecureRequest, setRefreshTokenCookie } from '../../auth/auth-cookie.util';
+import { getPasswordResetTtl } from '../../auth/password-reset.util';
 
 // Run mode: APP_ENV (or NODE_ENV when APP_ENV is absent) gives development, production or
 // unspecified. Only development turns on the workstation conveniences; production keeps the
@@ -141,7 +142,8 @@ function testDecisionsPerMode() {
   }
 }
 
-const BASE_STARTUP_ENV = { DATABASE_URL: 'postgres://example.test/db', JWT_SECRET: 'run-mode-spec-secret' };
+// S3_BUCKET is set so these cases stay about run mode. A missing bucket has its own case.
+const BASE_STARTUP_ENV = { DATABASE_URL: 'postgres://example.test/db', JWT_SECRET: 'run-mode-spec-secret', S3_BUCKET: 'kanap-files' };
 
 function testStartupChecks() {
   // Unspecified, nothing configured: warnings, one line each, no throw.
@@ -179,7 +181,77 @@ function testStartupChecks() {
   assert.deepEqual(development.warnings, ['[CORS] CORS_ORIGINS not set; allowing all origins (development only)']);
 }
 
+function configured(extra: Record<string, string | undefined> = {}) {
+  return validateStartupEnv(
+    {
+      ...BASE_STARTUP_ENV,
+      APP_ENV: 'production',
+      APP_BASE_URL: 'https://kanap.example.test',
+      CORS_ORIGINS: 'https://kanap.example.test',
+      ...extra,
+    },
+    { singleTenant: true },
+  );
+}
+
+function lineAbout(extra: Record<string, string | undefined>, name: string): string | undefined {
+  return configured(extra).warnings.find((warning) => warning.includes(`${name} `) || warning.includes(`${name} is`));
+}
+
+function testConfigValueWarnings() {
+  // Invalid token lifetimes: one warning per variable, naming the value. The token still lasts 15 minutes.
+  const both = configured({ JWT_ACCESS_TOKEN_TTL: 'tomorrow', JWT_REFRESH_TOKEN_TTL: 'later' });
+  const access = both.warnings.find((warning) => warning.includes('JWT_ACCESS_TOKEN_TTL'));
+  const refresh = both.warnings.find((warning) => warning.includes('JWT_REFRESH_TOKEN_TTL'));
+  assert.ok(access?.startsWith('[CONFIG]') && access.includes('"tomorrow"') && access.includes('15 minutes'), access);
+  assert.ok(refresh?.startsWith('[CONFIG]') && refresh.includes('"later"') && refresh.includes('15 minutes'), refresh);
+  assert.equal(lineAbout({ JWT_ACCESS_TOKEN_TTL: '15m', JWT_REFRESH_TOKEN_TTL: '4h' }, 'JWT_ACCESS_TOKEN_TTL'), undefined);
+  assert.equal(lineAbout({ JWT_ACCESS_TOKEN_TTL: '15m', JWT_REFRESH_TOKEN_TTL: '4h' }, 'JWT_REFRESH_TOKEN_TTL'), undefined);
+
+  // API_WORKERS: a non-integer runs 1 process, a value above 16 runs 16. Both name the value.
+  const abc = lineAbout({ API_WORKERS: 'abc' }, 'API_WORKERS');
+  assert.ok(abc?.startsWith('[CONFIG]') && abc.includes('"abc"') && abc.includes('1 process'), abc);
+  const high = lineAbout({ API_WORKERS: '40' }, 'API_WORKERS');
+  assert.ok(high?.startsWith('[CONFIG]') && high.includes('"40"') && high.includes('16'), high);
+  assert.equal(lineAbout({ API_WORKERS: '4' }, 'API_WORKERS'), undefined);
+
+  // S3 driver without a bucket: reported at start, before the first storage call.
+  const { S3_BUCKET: _bucket, ...withoutBucket } = {
+    ...BASE_STARTUP_ENV,
+    APP_ENV: 'production',
+    APP_BASE_URL: 'https://kanap.example.test',
+    CORS_ORIGINS: 'https://kanap.example.test',
+    FILES_STORAGE: 's3',
+  };
+  const missingBucket = validateStartupEnv(withoutBucket, { singleTenant: true }).warnings.find((warning) => warning.includes('S3_BUCKET'));
+  assert.ok(missingBucket?.startsWith('[CONFIG]') && missingBucket.includes('not set'), missingBucket);
+  assert.equal(lineAbout({ FILES_STORAGE: 's3' }, 'S3_BUCKET'), undefined);
+
+  // An invalid reset lifetime is named at start and the link lasts 1 hour. A valid one is kept.
+  const reset = lineAbout({ PASSWORD_RESET_TTL: 'soon' }, 'PASSWORD_RESET_TTL');
+  assert.ok(reset?.startsWith('[CONFIG]') && reset.includes('"soon"') && reset.includes('1 hour'), reset);
+  withEnv({ PASSWORD_RESET_TTL: 'soon' }, () => {
+    assert.equal(getPasswordResetTtl(), '1h');
+  });
+  withEnv({ PASSWORD_RESET_TTL: '1.5' }, () => {
+    assert.equal(getPasswordResetTtl(), '1h');
+  });
+  withEnv({ PASSWORD_RESET_TTL: '30m' }, () => {
+    assert.equal(getPasswordResetTtl(), '30m');
+  });
+  withEnv({ PASSWORD_RESET_TTL: '3600' }, () => {
+    assert.equal(getPasswordResetTtl(), 3600);
+  });
+  withEnv({ PASSWORD_RESET_TTL: '2 days' }, () => {
+    assert.equal(getPasswordResetTtl(), '2 days');
+  });
+  assert.equal(lineAbout({ PASSWORD_RESET_TTL: '30m' }, 'PASSWORD_RESET_TTL'), undefined);
+  assert.equal(lineAbout({ PASSWORD_RESET_TTL: '3600' }, 'PASSWORD_RESET_TTL'), undefined);
+  assert.ok(configured({ PASSWORD_RESET_TTL: 'soon', JWT_ACCESS_TOKEN_TTL: 'tomorrow', API_WORKERS: 'abc' }).warnings.every((warning) => !warning.includes('\n')));
+}
+
 testModeMatrix();
 testDecisionsPerMode();
 testStartupChecks();
+testConfigValueWarnings();
 console.log('run-mode.spec: ok');

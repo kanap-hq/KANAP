@@ -3,8 +3,7 @@ import * as jwt from 'jsonwebtoken';
 import { getPasswordResetSecret } from './token-secret.util';
 import { PASSWORD_RESET_PURPOSE } from './access-token.util';
 import { ISSUED_TOKEN_ALGORITHM } from './jwt-algorithms';
-
-const DEFAULT_TTL: StringValue | number = '1h';
+import { parsePasswordResetTtl } from './token-ttl.util';
 
 export type PasswordResetTokenPayload = {
   purpose: typeof PASSWORD_RESET_PURPOSE;
@@ -15,13 +14,8 @@ export type PasswordResetTokenPayload = {
 };
 
 export function getPasswordResetTtl(): StringValue | number {
-  const raw = process.env.PASSWORD_RESET_TTL;
-  if (!raw) return DEFAULT_TTL;
-  const trimmed = raw.trim();
-  if (trimmed === '') return DEFAULT_TTL;
-  const num = Number(trimmed);
-  if (!Number.isNaN(num) && num > 0) return num;
-  return trimmed as StringValue;
+  const ttl = parsePasswordResetTtl(process.env.PASSWORD_RESET_TTL);
+  return typeof ttl === 'number' ? ttl : ttl as StringValue;
 }
 
 export function getPasswordResetExpirationMinutes() {

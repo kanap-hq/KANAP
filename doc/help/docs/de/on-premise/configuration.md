@@ -244,7 +244,7 @@ Wurde eine dedizierte Anwendungsrolle ursprünglich mit zu vielen Rechten angele
 
 **Anforderungen an den Bucket:**
 
-- Legen Sie den Bucket vor dem Start von KANAP an (er wird nicht automatisch angelegt). KANAP prüft ihn beim Start nicht: Ein fehlender Bucket zeigt sich beim ersten Hoch- oder Herunterladen.
+- Legen Sie den Bucket vor dem Start von KANAP an (er wird nicht automatisch angelegt). Ein fehlendes `S3_BUCKET` wird beim Start in einer `[CONFIG]`-Warnung genannt. Ein Bucket, der im Speicher nicht existiert, zeigt sich weiterhin beim ersten Hoch- oder Herunterladen.
 - KANAP ruft `PutObject`, `GetObject`, `HeadObject`, `DeleteObject` und `ListObjectsV2` auf und baut vorsignierte `GET`-Links, alles auf diesem einen Bucket. Die passenden Berechtigungen sind `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` und `s3:ListBucket`.
 
 **Verschlüsselung im Ruhezustand.** KANAP bittet den Speicher, jeden Upload zu verschlüsseln (serverseitige Verschlüsselung `AES256`). Unterstützt ein Speicher das nicht, schreibt die API die Warnung `PutObject fallback used: provider rejected explicit SSE header; upload retried without SSE request header` und speichert die Datei wie gesendet. RustFS nimmt die Anfrage an, wenn `RUSTFS_SSE_S3_MASTER_KEY` gesetzt ist, was das [Installationsbeispiel](installation-example.md#5-objektspeicher-rustfs) tut. Bewahren Sie diesen Schlüssel mit der Sicherung Ihrer Konfiguration auf: Mit ihm verschlüsselte Dateien sind ohne ihn nicht lesbar.
@@ -494,9 +494,9 @@ Hinweise:
 |----------|-------------|---------|
 | `RATE_LIMIT_TRUST_PROXY` | Wie KANAP die Client-Adresse für seine Anmelde- und Anfragelimits ermittelt. `true`: Ein Reverse Proxy steht vor der API und sendet `X-Forwarded-For` (das nginx dieses Leitfadens). `false`: Nichts steht davor, die Adresse der Verbindung wird verwendet. `1` bis `3`: so viele Proxys hintereinander. | Nicht gesetzt bedeutet bei Single-Tenant ein vertrauenswürdiger Proxy, mit einer `[RATE-LIMIT]`-Warnung bei jedem Start. Setzen Sie den Wert ausdrücklich. |
 | `RATE_LIMIT_ENABLED` | Schalter für die Anfragebegrenzung auf Anwendungsebene | `true` |
-| `JWT_ACCESS_TOKEN_TTL` | Lebensdauer des Zugriffstokens: eine Zahl gefolgt von `s`, `m`, `h` oder `d`. Ein anderes Format ergibt 15 Minuten. | `15m` |
-| `JWT_REFRESH_TOKEN_TTL` | Lebensdauer des Aktualisierungstokens, gleiches Format. Ein anderes Format ergibt 15 Minuten. | `4h` |
-| `PASSWORD_RESET_TTL` | Gültigkeitsdauer eines Links zur Passwortzurücksetzung: eine Zahl von Sekunden oder eine Dauer wie `30m` oder `2h`. | `1h` |
+| `JWT_ACCESS_TOKEN_TTL` | Lebensdauer des Zugriffstokens: eine Zahl gefolgt von `s`, `m`, `h` oder `d`. Ein anderes Format ergibt 15 Minuten, und die API nennt den Wert in einer `[CONFIG]`-Warnung beim Start. | `15m` |
+| `JWT_REFRESH_TOKEN_TTL` | Lebensdauer des Aktualisierungstokens, gleiches Format. Ein anderes Format ergibt 15 Minuten, und die API nennt den Wert in einer `[CONFIG]`-Warnung beim Start. | `4h` |
+| `PASSWORD_RESET_TTL` | Gültigkeitsdauer eines Links zur Passwortzurücksetzung: eine Zahl von Sekunden oder eine Dauer wie `30m` oder `2h`. Ein anderer Wert gilt 1 Stunde, und die API nennt ihn in einer `[CONFIG]`-Warnung beim Start. | `1h` |
 | `LOG_LEVEL` | `debug` oder `verbose` ergänzt das Protokoll um die Details jedes Laufs eines geplanten Jobs. Jeder andere Wert ändert nichts. | *nicht gesetzt* |
 | `INTEGRATED_DOCS_AUTO_ROLLOUT` | Repariert beim Start die mit Anfragen und Projekten verknüpften Dokumente. On-Premise ausgeschaltet, sofern Sie es nicht setzen: `if-needed` führt die Reparatur nur aus, wenn die Zählungen abweichen, `always` bei jedem Start. | *aus* |
 | `APP_URL` | Nur Multi-Tenant (Cloud). **On-Premise nicht nötig**: `APP_BASE_URL` wird verwendet. | *nicht gesetzt* |
@@ -510,7 +510,7 @@ Die Standardwerte passen für einige Dutzend Benutzer. Für mehr gleichzeitige B
 
 | Variable | Beschreibung | Standard |
 |----------|-------------|---------|
-| `API_WORKERS` | Anzahl der API-Prozesse im API-Container (1 bis 16). Mit mehr als einem lässt eine rechenintensive Anfrage nicht mehr alle anderen warten. | `1` |
+| `API_WORKERS` | Anzahl der API-Prozesse im API-Container (1 bis 16). Ein Wert, der keine ganze Zahl ist, startet 1 Prozess. Ein Wert über 16 startet 16. Die API nennt diesen Wert in einer `[CONFIG]`-Warnung beim Start. Mit mehr als einem lässt eine rechenintensive Anfrage nicht mehr alle anderen warten. | `1` |
 | `DB_POOL_MAX` | Datenbankverbindungen pro API-Prozess (mindestens 2: Ein niedrigerer Wert wird auf 2 angehoben) | `20` |
 | `SHUTDOWN_DRAIN_TIMEOUT_MS` | Wie lange die API beim Stoppen oder bei einem Upgrade laufende Anfragen, die von ihnen gestarteten Benachrichtigungen, laufende Hintergrundjobs und E-Mails in der Warteschlange abschließen lässt (Millisekunden, höchstens 120000). Der Container wird in jedem Fall nach 30 s gestoppt. | `20000` |
 | `OPS_METRICS_TOKEN` | Aktiviert `GET /api/ops/metrics` für Ihr Monitoring-Tool (mindestens 24 Zeichen, zum Beispiel `openssl rand -hex 32`; ein kürzerer Wert lässt es deaktiviert, und die API meldet das beim Start). Siehe [Betrieb](operations.md#api-metriken-fur-ein-monitoring-tool). | *nicht gesetzt (deaktiviert)* |
