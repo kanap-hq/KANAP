@@ -111,9 +111,9 @@ Both ways share the rest:
 - A limit of 60 MCP requests a minute for each key and each connection. Past it, requests are refused with a `Retry-After` header that gives the number of seconds to wait.
 - The same [MCP journal](#mcp-journal).
 
-The **MCP keys and connections** card shows a **Create key** button, the **Server address** that clients connect to (with a copy button), the **Key max lifetime (days)** cap, and a table with **Label**, **Type**, **Person**, **Prefix**, **Created**, **Expires**, **Last used** and **Status** (**Active** or **Revoked**).
+The **MCP keys and connections** card shows a **Create key** button, the **Server address** that clients connect to (with a copy button), the **Key max lifetime (days)** cap, and a table with **Label**, **Type**, **Person**, **Created**, **Expires**, **Last used** and **Status** (**Active** or **Revoked**).
 
-The **Type** column says **API key** or **Connection**. A connection row shows the name of the application and the host it returns to, for example *Claude · claude.ai*. Connections have no prefix. **Person** names who created the key or approved the connection.
+The **Type** column says **API key** or **Connection**. A connection row shows the name of the application and the host it returns to, for example *Claude · claude.ai*. An API key shows its prefix next to its label, for example *Laptop · abcd1234*. **Person** names who created the key or approved the connection.
 
 ### Creating a key
 

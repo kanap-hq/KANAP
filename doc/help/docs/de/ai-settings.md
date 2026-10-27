@@ -111,9 +111,9 @@ Beide Wege teilen den Rest:
 - Eine Grenze von 60 MCP-Anfragen pro Minute für jeden Schlüssel und jede Verbindung. Darüber hinaus werden Anfragen mit einem `Retry-After`-Header abgelehnt, der die Wartezeit in Sekunden angibt.
 - Dasselbe [MCP-Protokoll](#mcp-journal).
 
-Die Karte **MCP-Schlüssel und -Verbindungen** zeigt eine Schaltfläche **Schlüssel erstellen**, die **Serveradresse**, mit der sich Clients verbinden (mit einer Kopierschaltfläche), die Obergrenze **Max. Lebensdauer des Schlüssels (Tage)** und eine Tabelle mit **Bezeichnung**, **Typ**, **Person**, **Präfix**, **Erstellt**, **Läuft ab**, **Zuletzt verwendet** und **Status** (**Aktiv** oder **Widerrufen**).
+Die Karte **MCP-Schlüssel und -Verbindungen** zeigt eine Schaltfläche **Schlüssel erstellen**, die **Serveradresse**, mit der sich Clients verbinden (mit einer Kopierschaltfläche), die Obergrenze **Max. Lebensdauer des Schlüssels (Tage)** und eine Tabelle mit **Bezeichnung**, **Typ**, **Person**, **Erstellt**, **Läuft ab**, **Zuletzt verwendet** und **Status** (**Aktiv** oder **Widerrufen**).
 
-Die Spalte **Typ** zeigt **API-Schlüssel** oder **Verbindung**. Eine Verbindungszeile zeigt den Namen der Anwendung und den Host, zu dem sie zurückkehrt, zum Beispiel *Claude · claude.ai*. Verbindungen haben kein Präfix. **Person** nennt, wer den Schlüssel erstellt oder die Verbindung genehmigt hat.
+Die Spalte **Typ** zeigt **API-Schlüssel** oder **Verbindung**. Eine Verbindungszeile zeigt den Namen der Anwendung und den Host, zu dem sie zurückkehrt, zum Beispiel *Claude · claude.ai*. Ein API-Schlüssel zeigt sein Präfix neben seiner Bezeichnung, zum Beispiel *Laptop · abcd1234*. **Person** nennt, wer den Schlüssel erstellt oder die Verbindung genehmigt hat.
 
 ### Einen Schlüssel erstellen
 

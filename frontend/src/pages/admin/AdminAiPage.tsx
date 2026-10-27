@@ -741,13 +741,12 @@ export default function AdminAiPage() {
                       {getApiErrorMessage(keysQuery.error, t, t('aiAdmin.messages.loadKeysFailed'))}
                     </Alert>
                   ) : keysQuery.data && keysQuery.data.length > 0 ? (
-                    <Table size="small">
+                    <Table size="small" sx={{ '& th, & td': { px: 1, whiteSpace: 'nowrap' } }}>
                       <TableHead>
                         <TableRow>
                           <TableCell>{t('aiAdmin.keys.columns.label')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.kind')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.person')}</TableCell>
-                          <TableCell>{t('aiAdmin.keys.columns.prefix')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.created')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.expires')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.lastUsed')}</TableCell>
@@ -768,14 +767,18 @@ export default function AdminAiPage() {
                                 </TableCell>
                                 <TableCell>{t('aiAdmin.keys.kinds.oauth')}</TableCell>
                                 <TableCell>{key.user_name ?? ''}</TableCell>
-                                <TableCell />
                               </>
                             ) : (
                               <>
-                                <TableCell>{key.label}</TableCell>
+                                <TableCell>
+                                  {key.label}
+                                  <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>
+                                    {' · '}
+                                    <Box component="code" sx={{ fontSize: '0.75rem' }}>{key.key_prefix}</Box>
+                                  </Box>
+                                </TableCell>
                                 <TableCell>{t('aiAdmin.keys.kinds.apiKey')}</TableCell>
                                 <TableCell>{key.user_name ?? ''}</TableCell>
-                                <TableCell><code>{key.key_prefix}</code></TableCell>
                               </>
                             )}
                             <TableCell sx={{ whiteSpace: 'nowrap' }}>{new Date(key.created_at).toLocaleDateString(locale)}</TableCell>
