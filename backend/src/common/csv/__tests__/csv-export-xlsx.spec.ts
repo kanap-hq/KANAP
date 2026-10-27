@@ -139,7 +139,7 @@ async function testTypedCells() {
   const rows = [
     { name: '@SUM(1)', effort: '1234567.89', day: '1899-12-31' },
     { name: 'b', effort: 'n/a', day: '2026-02-30' },
-    { name: 'c', effort: -0.5, day: new Date('2026-01-31T23:00:00Z') },
+    { name: 'c', effort: -0.5, day: new Date(2026, 0, 31) },
   ];
   const file = await service.export(config, rows, { manager: goldenManager(), tenantId: 't', language: 'de', format: 'xlsx' });
   const cells = sheetCells(new AdmZip(file.content).readAsText('xl/worksheets/sheet1.xml'));
@@ -149,7 +149,7 @@ async function testTypedCells() {
   assert.deepEqual(cells.get('B3'), { type: 'text', text: 'n/a' }, 'not a number: the CSV text');
   assert.deepEqual(cells.get('C3'), { type: 'text', text: '2026-02-30' }, 'not a day: the CSV text');
   assert.deepEqual(cells.get('B4'), { type: 'number', value: '-0.5', style: null });
-  assert.deepEqual(cells.get('C4'), { type: 'number', value: String(daySerial('2026-01-31')), style: '1' }, 'a Date: its UTC day, as the CSV');
+  assert.deepEqual(cells.get('C4'), { type: 'number', value: String(daySerial('2026-01-31')), style: '1' }, 'a Date (a `date` column, local midnight): its day in the server\'s zone, as the CSV');
   assert.match(new AdmZip(file.content).readAsText('xl/workbook.xml'), /<sheet name="Probes"/, 'displayName without sheetNames');
   console.log('  typed cells: exact decimals, CSV text for what is neither a number nor a day: OK');
 }

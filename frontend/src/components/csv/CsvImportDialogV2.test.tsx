@@ -10,6 +10,8 @@ vi.mock('react-i18next', () => {
 });
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+const features = vi.hoisted(() => ({ importXlsx: false }));
+vi.mock('../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features }, isLoading: false }) }));
 
 import api from '../../api';
 import CsvImportDialogV2 from './CsvImportDialogV2';
@@ -77,5 +79,23 @@ describe('CsvImportDialogV2', () => {
     expect(await screen.findByText('csv.validationFailed')).toBeInTheDocument();
     expect(screen.getByText('csv.rowPrefix')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'buttons.cancel' })).toBeInTheDocument();
+  });
+
+  it('takes CSV files only while the server reads no workbook, and both while it does', () => {
+    const { unmount } = render(<CsvImportDialogV2 open onClose={() => undefined} endpoint="/portfolio/projects" />);
+    expect((document.querySelector('input[type="file"]') as HTMLInputElement).accept).toBe('.csv,text/csv');
+    expect(screen.getByText('csv.importTitle')).toBeInTheDocument();
+    unmount();
+    features.importXlsx = true;
+    try {
+      render(<CsvImportDialogV2 open onClose={() => undefined} endpoint="/portfolio/projects" />);
+      const accept = (document.querySelector('input[type="file"]') as HTMLInputElement).accept;
+      expect(accept.split(',')).toEqual(expect.arrayContaining(['.csv', '.xlsx']));
+      expect(screen.getByText('buttons.import')).toBeInTheDocument();
+      expect(screen.getByText('csv.uploadDescriptionFlexibleWorkbook')).toBeInTheDocument();
+      expect(screen.getByText('csv.dragDropFileOrClick')).toBeInTheDocument();
+    } finally {
+      features.importXlsx = false;
+    }
   });
 });

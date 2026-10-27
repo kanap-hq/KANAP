@@ -31,8 +31,8 @@ export {
   rowProblems,
   textCellError,
 } from './master-data';
-export { csvSeparatorOf, readCsv, readSheet, sheetCellText } from './read';
-export type { SheetCell, SheetReadResult } from './read';
+export { csvSeparatorOf, readCsv, readImportText, readSheet, sheetCellText } from './read';
+export type { ImportFileText, SheetCell, SheetReadResult } from './read';
 export { languageOf, parseDateOrder, parseDecimalMark, timeZoneOf } from './request-options';
 export { writeCsv, writeCsvHeader, writeCsvLine, writeCsvRows } from './write';
 export {

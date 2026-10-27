@@ -76,6 +76,7 @@
   "XLSX_DOCTYPE": "Ce fichier Excel n'a pas pu être lu : il contient une déclaration de type de document, qu'Excel n'écrit jamais.",
   "XLSX_NO_SHEET": "Ce classeur ne contient aucune feuille à lire.",
   "XLSX_TOO_LARGE": "Ce fichier Excel est trop volumineux pour être lu.",
+  "XLSX_FIRST_SHEET_ONLY": "Seule la première feuille, {{name}}, a été lue.",
   "BUDGET_FILE_COST_CENTER_OTHER_COMPANY": "Le centre de coûts {{costCenter}} appartient à {{costCenterCompany}}. La ligne est payée par {{company}}.",
   "CSV_HEADER_IGNORED_COLUMNS": "Ces colonnes ne sont pas importées : {{extra}}.",
   "CSV_HEADER_UNKNOWN_TIME_ZONE": "Fuseau horaire inconnu dans la colonne {{column}} : {{zone}}. Utilisez un fuseau comme Europe/Paris ou UTC.",

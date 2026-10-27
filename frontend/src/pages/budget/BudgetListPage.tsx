@@ -46,6 +46,7 @@ import { migrateBudgetGridLayout, type BudgetNatureScope, natureScopeOf } from '
 import BudgetTotalCell from './BudgetTotalCell';
 import { statusColumnProps } from '../../components/grid/statusColumn';
 import FxMissingNotice, { FxMissingMark } from '../../components/finance/FxMissingNotice';
+import { ImportLabel } from '../../components/csv/importFiles';
 
 /** A cell amount in the line currency (its year has no exchange rate): secondary text, visited or not. */
 const LOCAL_AMOUNT_LINK_SX = { color: 'kanap.text.secondary', '&:visited, &:hover': { color: 'kanap.text.secondary' } } as const;
@@ -350,7 +351,7 @@ function BudgetListPageView() {
           {t('budget.newLine')}
         </Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('opex.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('opex.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canDelete && (
         <DeleteSelectedButton

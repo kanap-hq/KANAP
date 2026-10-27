@@ -3,7 +3,7 @@ import { parseString } from '@fast-csv/parse';
 import { EntityManager } from 'typeorm';
 import {
   csvSeparatorOf,
-  decodeCsv,
+  readImportText,
   instantInTimeZone,
   knownTimeZone,
   readTimeZoneHeader,
@@ -95,7 +95,7 @@ export class IncidentJournalImportService {
 
     let text: string;
     try {
-      text = decodeCsv(file.buffer).text;
+      text = readImportText(file.buffer).text;
     } catch (error) {
       throw new BadRequestException(error instanceof Error ? error.message : 'The journal file could not be read.');
     }

@@ -26,6 +26,7 @@ import { useTheme } from '@mui/material/styles';
 import { StatusDot } from '../components/design';
 import { setListFiltersParam, getWithListContext } from '../lib/listContext';
 import { useUrlFilterModel } from '../hooks/useListContextSearch';
+import { ImportLabel } from '../components/csv/importFiles';
 
 type TaskRow = {
   id: string;
@@ -644,7 +645,7 @@ export default function TasksPage() {
           {t('tasks.actions.new')}
         </Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('tasks.actions.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('tasks.actions.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton

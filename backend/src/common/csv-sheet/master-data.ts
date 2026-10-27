@@ -3,7 +3,7 @@ import { endOfValidityFromDate } from '../status';
 import { DecimalMark, ParsedAmount, parseCsvAmount, resolveAmountConvention } from './amount';
 import { formatCsvDate, formatCsvEndOfValidity } from './date';
 import { csvDecodeErrorCode } from './decode';
-import { CSV_FILE_EMPTY_MESSAGE, readCsv } from './read';
+import { CSV_FILE_EMPTY_MESSAGE, readSheet } from './read';
 import { CsvAmountColumn, CsvDataRow, CsvDateOrder, CsvLanguage } from './types';
 
 /**
@@ -53,29 +53,33 @@ export interface MasterDataFileRead {
   /** The column ids the file carried, so a caller can tell an absent column from a blank cell. */
   present: string[];
   ignoredColumns: string[];
-  notices: { dates: string | null; amounts: string | null };
+  /** `firstSheetOnly`: an .xlsx workbook of several sheets, the name of the one read (the first). */
+  notices: { dates: string | null; amounts: string | null; firstSheetOnly?: string };
 }
 
 /**
- * Read one master-data file. A file that cannot be read at all is a 400, the
- * way every one of these importers answered for an unreadable upload. A
- * header problem comes back for the caller's own report, as it did before.
+ * Read one master-data file, CSV or .xlsx (`readSheet`). A file that cannot be read at all is a 400,
+ * the way every one of these importers answered for an unreadable upload. A header problem comes back
+ * for the caller's own report, as it did before.
  */
 export async function readMasterDataFile(request: MasterDataFileRequest): Promise<MasterDataFileRead> {
-  const read = await readCsv(request.file, {
+  const read = await readSheet(request.file, {
     fields: request.fields,
     amounts: request.amounts,
     dateFields: request.dateFields,
     language: request.language,
     dateOrder: request.dateOrder,
     decimalMark: request.decimalMark,
+    typedNumbersInLanguage: true,
   });
   if (read.fileErrors.length > 0) {
-    const code = csvDecodeErrorCode(read.fileErrors[0])
+    const code = read.fileErrorCode
+      ?? csvDecodeErrorCode(read.fileErrors[0])
       ?? (read.fileErrors[0] === CSV_FILE_EMPTY_MESSAGE ? 'CSV_FILE_EMPTY' : null);
     throw new BadRequestException(code ? { message: read.fileErrors[0], code } : read.fileErrors[0]);
   }
-  const notices = { dates: read.dates?.notice ?? null, amounts: read.amounts?.notice ?? null };
+  const notices: MasterDataFileRead['notices'] = { dates: read.dates?.notice ?? null, amounts: read.amounts?.notice ?? null };
+  if (read.format === 'xlsx' && (read.sheetCount ?? 1) > 1 && read.sheetName !== undefined) notices.firstSheetOnly = read.sheetName;
   const headerError = headerProblem(request, read);
   return {
     headerError,
