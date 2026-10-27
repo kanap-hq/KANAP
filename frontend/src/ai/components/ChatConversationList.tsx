@@ -17,6 +17,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import { useTranslation } from 'react-i18next';
 import { aiConversationsApi } from '../aiApi';
 import { ChatConversation } from '../aiTypes';
+import { plainConversationTitle } from '../utils/conversationTitle';
 
 type ChatConversationListProps = {
   activeId: string | null;
@@ -66,25 +67,26 @@ function ConversationItem({
   renameLabel: string;
   untitledLabel: string;
 }) {
+  const title = plainConversationTitle(conversation.title || '');
   const [editing, setEditing] = useState(false);
-  const [draftTitle, setDraftTitle] = useState(conversation.title || '');
+  const [draftTitle, setDraftTitle] = useState(title);
 
   const startRename = (event: React.MouseEvent) => {
     event.stopPropagation();
-    setDraftTitle(conversation.title || '');
+    setDraftTitle(title);
     setEditing(true);
   };
 
   const commitRename = () => {
     const trimmed = draftTitle.replace(/\s+/g, ' ').trim();
     setEditing(false);
-    if (trimmed && trimmed !== (conversation.title || '')) {
+    if (trimmed && trimmed !== title) {
       onRename(conversation.id, trimmed);
     }
   };
 
   const cancelRename = () => {
-    setDraftTitle(conversation.title || '');
+    setDraftTitle(title);
     setEditing(false);
   };
 
@@ -182,7 +184,7 @@ function ConversationItem({
               },
             }}
           >
-            {conversation.title || untitledLabel}
+            {title || untitledLabel}
           </Typography>
           <Box
             sx={(theme) => ({
@@ -286,7 +288,7 @@ export default function ChatConversationList({
   const filtered = useMemo(() => {
     if (!query.trim()) return list;
     const needle = query.trim().toLowerCase();
-    return list.filter((c) => (c.title || '').toLowerCase().includes(needle));
+    return list.filter((c) => plainConversationTitle(c.title || '').toLowerCase().includes(needle));
   }, [list, query]);
 
   const grouped = useMemo(() => {
