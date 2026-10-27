@@ -14,7 +14,7 @@ Für portfolio-weite Sequenzierung und Roadmap-Arbeit verwenden Sie [Portfolio-P
 ## Berechtigungen
 
 - `portfolio_projects:reader`: die Liste öffnen und Projekt-Arbeitsbereiche anzeigen
-- `portfolio_projects:contributor`: das verwaltete Dokument **Zweck** aktualisieren, Zeit auf dem Projekt erfassen (Projekt-Overhead-Einträge und Einträge auf Projektaufgaben) und im Reiter **Beziehungen** Abhängigkeiten, verknüpfte Datensätze, Links und Dateien pflegen
+- `portfolio_projects:contributor`: das verwaltete Dokument **Zweck** aktualisieren, Zeit auf dem Projekt erfassen (Projekt-Overhead-Einträge und Einträge auf Projektaufgaben) und im Reiter **Beziehungen** verknüpfte Datensätze, Links und Dateien pflegen (Abhängigkeiten erfordern `portfolio_projects:member`)
 - `portfolio_projects:member`: Projekte erstellen und Projektdaten, Status, Team, Beziehungen, Zeitleiste, Fortschritt, Aufgaben, Bewertung, Kommentare und Entscheidungen verwalten
 - `portfolio_projects:admin`: enthält die Member-Funktionen und kann auch importieren und exportieren, Prioritäts-Überschreibungen speichern und Projekt-Overhead-Zeiteinträge anderer Benutzer pflegen
 - Die Anzeige der Wissensdatenbank erfordert auch Wissensdatenbank-Zugriff

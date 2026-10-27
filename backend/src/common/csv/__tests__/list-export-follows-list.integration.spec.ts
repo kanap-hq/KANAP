@@ -57,6 +57,9 @@ import { DEFAULT_TECHNOLOGY_FAMILIES } from '../../../it-ops-settings/it-ops-set
 import { TechnologyReachService } from '../../../technologies/technology-reach.service';
 import { VulnerabilitiesService } from '../../../vulnerabilities/vulnerabilities.service';
 
+/** Reads the applications and the assets: the reasons name them all. */
+const READS_ALL = { applications: true, infrastructure: true };
+
 // The list exports follow the screen (Excel export, lot 3): with a column filter, a quick search and a
 // sort active, the rows of the export (their ids, in order) are the rows of the list route for the
 // same query, every page. Projects, requests and tasks read the list's ids (`rows=list`, the
@@ -266,7 +269,7 @@ async function testPlainButtonExports(runner: QueryRunner, tenantId: string, che
   for (const sort of ['name:DESC', 'name:ASC']) {
     const query = screenQuery({ name: { filterType: 'text', type: 'contains', filter: 'a' } }, 'alpha', sort);
     const listed = (await contracts.list({ ...query, page: 1, limit: 100 }, { manager })).items.map((row: any) => String(row.name));
-    const register = await contracts.exportComplianceRegister(query, 'en', { manager });
+    const register = await contracts.exportComplianceRegister(query, 'en', READS_ALL, { manager });
     const names = cellsOf(register.content, 0).filter((name, index, all) => index === 0 || all[index - 1] !== name);
     assert.ok(listed.length >= 2, `register ${sort}: the query keeps several contracts`);
     assert.deepEqual(names, listed, `register ${sort}: the contracts of the list, in its order`);

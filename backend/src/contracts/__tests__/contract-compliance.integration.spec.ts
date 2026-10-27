@@ -13,6 +13,9 @@ import type { ContractComplianceView } from '../contract-compliance';
 import { assertCsvGolden, xlsxCells, xlsxSheetName } from '../../common/csv/__tests__/export-golden';
 import { daySerial } from '../../common/xlsx/write';
 
+/** Reads the applications and the assets: the reasons name them all. */
+const READS_ALL = { applications: true, infrastructure: true };
+
 // The compliance register of the contracts (`contract-compliance.ts`), against a real database,
 // on a tenant created here (the catalogs' defaults: high = the two most severe levels; cloud =
 // public cloud, private cloud, SaaS):
@@ -115,7 +118,7 @@ async function rejection(fn: () => Promise<unknown>): Promise<Error> {
 function reasonsOf(view: ContractComplianceView): Record<string, string[]> {
   return Object.fromEntries(view.requirements.map((item) => [
     item.requirement,
-    item.reasons.map((r) => [r.rule, r.application.name, r.asset?.name, r.level?.code].filter(Boolean).join(' ')),
+    item.reasons.map((r) => [r.rule, r.application?.name, r.asset?.name, r.level?.code].filter(Boolean).join(' ')),
   ]));
 }
 
@@ -125,7 +128,7 @@ async function testExpectations() {
     const svc = service(runner);
     const opts = { manager: runner.manager };
 
-    const full = await svc.compliance(s.full, opts);
+    const full = await svc.compliance(s.full, READS_ALL, opts);
     assert.deepEqual(reasonsOf(full), {
       gdpr_dpa: ['personal_data HR ccx'],
       data_location: ['cloud_hosting CRM ccx saas', 'personal_data HR ccx'],
@@ -137,7 +140,7 @@ async function testExpectations() {
     const location = full.requirements.find((item) => item.requirement === 'data_location')!;
     assert.deepEqual(location.reasons[0].level, { axis: 'hostingTypes', code: 'saas', label: 'SaaS' }, 'the hosting type as the settings name it');
 
-    const viaAsset = await svc.compliance(s.viaAsset, opts);
+    const viaAsset = await svc.compliance(s.viaAsset, READS_ALL, opts);
     assert.deepEqual(reasonsOf(viaAsset), {
       gdpr_dpa: [],
       data_location: [],
@@ -146,12 +149,25 @@ async function testExpectations() {
       audit_security: ['cyber_criticality Mail ccx mail-srv-ccx high'],
     }, 'reached through the asset it supports');
 
+    // As the Relations tab: without a read of the infrastructure, no asset; without a read of the
+    // applications, one reason per requirement that names nothing. The summary stays the contract's.
+    assert.deepEqual(reasonsOf(await svc.compliance(s.viaAsset, { applications: true, infrastructure: false }, opts)).exit_plan, ['cyber_criticality Mail ccx high']);
+    const blind = await svc.compliance(s.full, { applications: false, infrastructure: true }, opts);
+    assert.deepEqual(reasonsOf(blind), {
+      gdpr_dpa: ['personal_data'],
+      data_location: ['cloud_hosting'],
+      reversibility: ['business_criticality'],
+      exit_plan: ['business_criticality'],
+      audit_security: ['business_criticality'],
+    });
+    assert.deepEqual(blind.summary, full.summary);
+
     // The same asset linked to the bare contract from its Relations tab counts too; linked directly
     // as well, the application is named without the asset.
     await runner.query(`INSERT INTO asset_contracts (tenant_id, asset_id, contract_id) VALUES ($1, $2, $3)`, [s.tenantId, s.assets.support, s.bare]);
-    assert.deepEqual(reasonsOf(await svc.compliance(s.bare, opts)).exit_plan, ['cyber_criticality Mail ccx mail-srv-ccx high']);
+    assert.deepEqual(reasonsOf(await svc.compliance(s.bare, READS_ALL, opts)).exit_plan, ['cyber_criticality Mail ccx mail-srv-ccx high']);
     await runner.query(`INSERT INTO application_contracts (tenant_id, application_id, contract_id) VALUES ($1, $2, $3)`, [s.tenantId, s.apps.cyber, s.bare]);
-    assert.deepEqual(reasonsOf(await svc.compliance(s.bare, opts)).exit_plan, ['cyber_criticality Mail ccx high']);
+    assert.deepEqual(reasonsOf(await svc.compliance(s.bare, READS_ALL, opts)).exit_plan, ['cyber_criticality Mail ccx high']);
   });
 }
 
@@ -174,18 +190,18 @@ async function testRecording() {
       [s.tenantId, `recorder-${s.tenantId.slice(0, 8)}@compliance.test`, roleId],
     );
 
-    let view = await svc.updateCompliance(s.full, 'gdpr_dpa', { state: 'absent' }, userId, opts);
+    let view = await svc.updateCompliance(s.full, 'gdpr_dpa', { state: 'absent' }, userId, READS_ALL, opts);
     assert.deepEqual(view.summary, { expected: 5, missing: 1, to_check: 4, state: 'missing' });
     const dpa = () => view.requirements.find((item) => item.requirement === 'gdpr_dpa')!;
     assert.equal(dpa().state, 'absent');
     assert.equal(dpa().updated_by?.id, userId);
     assert.ok(dpa().updated_at);
 
-    view = await svc.updateCompliance(s.full, 'gdpr_dpa', { reference: '  Annex 4, art. 12  ' }, userId, opts);
+    view = await svc.updateCompliance(s.full, 'gdpr_dpa', { reference: '  Annex 4, art. 12  ' }, userId, READS_ALL, opts);
     assert.equal(dpa().reference, 'Annex 4, art. 12', 'trimmed');
     assert.equal(dpa().state, 'absent', 'a field left out is kept');
     // The same value again writes and logs nothing.
-    await svc.updateCompliance(s.full, 'gdpr_dpa', { reference: 'Annex 4, art. 12' }, userId, opts);
+    await svc.updateCompliance(s.full, 'gdpr_dpa', { reference: 'Annex 4, art. 12' }, userId, READS_ALL, opts);
     assert.deepEqual(audit.entries.map((entry) => [entry.table, entry.action]), [
       ['contract_compliance_items', 'create'],
       ['contract_compliance_items', 'update'],
@@ -194,13 +210,13 @@ async function testRecording() {
     assert.equal((audit.entries[1].after as any).reference, 'Annex 4, art. 12');
 
     // A requirement not expected is recorded too and does not count.
-    view = await svc.updateCompliance(s.bare, 'exit_plan', { state: 'absent' }, userId, opts);
+    view = await svc.updateCompliance(s.bare, 'exit_plan', { state: 'absent' }, userId, READS_ALL, opts);
     assert.deepEqual(view.summary, { expected: 0, missing: 0, to_check: 0, state: 'none' });
     assert.equal(view.requirements.find((item) => item.requirement === 'exit_plan')!.state, 'absent');
 
     // Clearing both removes the row.
-    await svc.updateCompliance(s.full, 'gdpr_dpa', { state: null }, userId, opts);
-    view = await svc.updateCompliance(s.full, 'gdpr_dpa', { reference: '' }, userId, opts);
+    await svc.updateCompliance(s.full, 'gdpr_dpa', { state: null }, userId, READS_ALL, opts);
+    view = await svc.updateCompliance(s.full, 'gdpr_dpa', { reference: '' }, userId, READS_ALL, opts);
     assert.deepEqual([dpa().state, dpa().reference, dpa().updated_at], [null, null, null]);
     assert.equal(audit.entries.at(-1)?.action, 'delete');
     const [{ count }] = await runner.query(`SELECT count(*)::int AS count FROM contract_compliance_items WHERE contract_id = $1`, [s.full]);
@@ -214,9 +230,9 @@ async function testRecording() {
       ['gdpr_dpa', { reference: 12 }],
       ['gdpr_dpa', { reference: 'x'.repeat(501) }],
     ] as const) {
-      assert.ok((await rejection(() => svc.updateCompliance(s.full, requirement, body as any, userId, opts))) instanceof BadRequestException, `${requirement} ${JSON.stringify(body)}`);
+      assert.ok((await rejection(() => svc.updateCompliance(s.full, requirement, body as any, userId, READS_ALL, opts))) instanceof BadRequestException, `${requirement} ${JSON.stringify(body)}`);
     }
-    assert.ok((await rejection(() => svc.updateCompliance('00000000-0000-4000-8000-0000000000ff', 'gdpr_dpa', { state: 'present' }, userId, opts))) instanceof NotFoundException);
+    assert.ok((await rejection(() => svc.updateCompliance('00000000-0000-4000-8000-0000000000ff', 'gdpr_dpa', { state: 'present' }, userId, READS_ALL, opts))) instanceof NotFoundException);
   });
 }
 
@@ -226,11 +242,11 @@ async function testListColumn() {
     const svc = service(runner);
     const opts = { manager: runner.manager };
     // full: one missing; viaAsset: complete (present or not applicable); bare: nothing expected.
-    await svc.updateCompliance(s.full, 'exit_plan', { state: 'absent' }, null, opts);
+    await svc.updateCompliance(s.full, 'exit_plan', { state: 'absent' }, null, READS_ALL, opts);
     for (const requirement of ['reversibility', 'exit_plan'] as const) {
-      await svc.updateCompliance(s.viaAsset, requirement, { state: 'present' }, null, opts);
+      await svc.updateCompliance(s.viaAsset, requirement, { state: 'present' }, null, READS_ALL, opts);
     }
-    await svc.updateCompliance(s.viaAsset, 'audit_security', { state: 'not_applicable' }, null, opts);
+    await svc.updateCompliance(s.viaAsset, 'audit_security', { state: 'not_applicable' }, null, READS_ALL, opts);
 
     const page = await svc.list({}, opts);
     const byId = new Map(page.items.map((item: any) => [item.id, item.compliance]));
@@ -238,7 +254,7 @@ async function testListColumn() {
     assert.deepEqual(byId.get(s.viaAsset), { expected: 3, missing: 0, to_check: 0, state: 'complete' });
     assert.deepEqual(byId.get(s.bare), { expected: 0, missing: 0, to_check: 0, state: 'none' });
     // The tab says the same.
-    for (const id of [s.full, s.viaAsset, s.bare]) assert.deepEqual((await svc.compliance(id, opts)).summary, byId.get(id), id);
+    for (const id of [s.full, s.viaAsset, s.bare]) assert.deepEqual((await svc.compliance(id, READS_ALL, opts)).summary, byId.get(id), id);
 
     // Sorted on the server: none, complete, then missing (ascending), and back.
     const names = (items: any[]) => items.map((item) => item.id);
@@ -259,14 +275,14 @@ async function testRegister() {
     const s = await seed(runner, 'cce');
     const svc = service(runner);
     const opts = { manager: runner.manager };
-    await svc.updateCompliance(s.full, 'gdpr_dpa', { state: 'absent', reference: 'DPA; v2' }, null, opts);
+    await svc.updateCompliance(s.full, 'gdpr_dpa', { state: 'absent', reference: 'DPA; v2' }, null, READS_ALL, opts);
 
-    const fr = await svc.exportComplianceRegister({ sort: 'name:ASC' }, 'fr', opts);
+    const fr = await svc.exportComplianceRegister({ sort: 'name:ASC' }, 'fr', READS_ALL, opts);
     // Today's date: the day the requirement was recorded.
     const today = new Date().toISOString().slice(0, 10);
     const noToday = (text: string) => text.split(today).join('<today>');
     assertCsvGolden('contract-compliance-register.fr', fr.content, noToday);
-    assertCsvGolden('contract-compliance-register.en', (await svc.exportComplianceRegister({ sort: 'name:ASC' }, 'en', opts)).content, noToday);
+    assertCsvGolden('contract-compliance-register.en', (await svc.exportComplianceRegister({ sort: 'name:ASC' }, 'en', READS_ALL, opts)).content, noToday);
     assert.equal(fr.filename, 'contract-compliance-register.csv');
     const lines = fr.content.replace(/^﻿/, '').trim().split('\n');
     assert.equal(lines[0], 'Contrat;Fournisseur;Société;Exigence;Attendue;Raison;État;Référence;Mis à jour le;Mis à jour par');
@@ -280,7 +296,7 @@ async function testRegister() {
     assert.ok(lines.some((line) => line.startsWith('C bare cce;') && line.includes(';Plan de sortie;Non;;;;;')), 'not expected, nothing recorded');
 
     // The workbook: the day of the last update is a date, the rest the CSV's text.
-    const book = await svc.exportComplianceRegister({ sort: 'name:ASC' }, 'fr', { ...opts, format: 'xlsx' });
+    const book = await svc.exportComplianceRegister({ sort: 'name:ASC' }, 'fr', READS_ALL, { ...opts, format: 'xlsx' });
     assert.equal(book.filename, 'contract-compliance-register.xlsx');
     assert.equal(book.rows, 15);
     assert.equal(xlsxSheetName(book.content), 'Registre de conformité');
@@ -290,12 +306,12 @@ async function testRegister() {
     assert.deepEqual(x.H2, ['text', 'DPA; v2']);
 
     // The list's sort: the contracts in its order, each one's requirements together.
-    const byNameDesc = await svc.exportComplianceRegister({ sort: 'name:DESC' }, 'en', opts);
+    const byNameDesc = await svc.exportComplianceRegister({ sort: 'name:DESC' }, 'en', READS_ALL, opts);
     const firsts = byNameDesc.content.replace(/^﻿/, '').trim().split('\n').slice(1).map((line) => line.split(',')[0]);
     assert.deepEqual([firsts[0], firsts[5], firsts[10]], ['C bare cce', 'B via asset cce', 'A full cce']);
 
     // The list's request narrows it; English uses the comma.
-    const en = await svc.exportComplianceRegister({ q: 'bare' }, 'en', opts);
+    const en = await svc.exportComplianceRegister({ q: 'bare' }, 'en', READS_ALL, opts);
     const enLines = en.content.replace(/^﻿/, '').trim().split('\n');
     assert.equal(enLines[0], 'Contract,Supplier,Company,Requirement,Expected,Reason,State,Reference,Updated on,Updated by');
     assert.equal(enLines.length, 1 + 5);
@@ -305,21 +321,21 @@ async function testRegister() {
 async function testOtherTenant() {
   await inRolledBackTransaction(async (runner) => {
     const a = await seed(runner, 'cca');
-    await service(runner).updateCompliance(a.full, 'gdpr_dpa', { state: 'present' }, null, { manager: runner.manager });
+    await service(runner).updateCompliance(a.full, 'gdpr_dpa', { state: 'present' }, null, READS_ALL, { manager: runner.manager });
     const b = await seed(runner, 'ccb');
     await setTenant(runner, b.tenantId);
     const svc = service(runner);
     const opts = { manager: runner.manager };
 
     for (const call of [
-      () => svc.compliance(a.full, opts),
-      () => svc.updateCompliance(a.full, 'gdpr_dpa', { state: 'absent' }, null, opts),
+      () => svc.compliance(a.full, READS_ALL, opts),
+      () => svc.updateCompliance(a.full, 'gdpr_dpa', { state: 'absent' }, null, READS_ALL, opts),
     ]) {
       assert.ok((await rejection(call)) instanceof NotFoundException);
     }
     const [{ count }] = await runner.query(`SELECT count(*)::int AS count FROM contract_compliance_items`);
     assert.equal(count, 0, "RLS hides the other tenant's rows");
-    const register = await svc.exportComplianceRegister({}, 'en', opts);
+    const register = await svc.exportComplianceRegister({}, 'en', READS_ALL, opts);
     assert.ok(!register.content.includes('cca'), 'nothing of the other tenant in the register');
 
     // RLS refuses a row written for the other tenant; the composite key refuses its contract.

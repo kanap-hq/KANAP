@@ -21,6 +21,8 @@ type RecommendationColor = 'default' | 'success' | 'error' | 'warning' | 'info';
 
 type RequestAnalysisTabProps = {
   canEditManagedDocs: boolean;
+  /** `business_processes:member` on top of `canManage`, as the process links of the Relations tab. */
+  canEditProcesses: boolean;
   canManage: boolean;
   categoryName?: string;
   form: any;
@@ -54,6 +56,7 @@ const hasContentValue = (value: unknown): boolean => {
 
 export default function RequestAnalysisTab({
   canEditManagedDocs,
+  canEditProcesses,
   canManage,
   categoryName,
   form,
@@ -90,7 +93,7 @@ export default function RequestAnalysisTab({
             label={t('workspace.request.analysis.fields.businessProcesses')}
             value={(form?.business_processes || []).map((bp: any) => bp.id)}
             onChange={onBusinessProcessesChange}
-            disabled={!canManage}
+            disabled={!canEditProcesses}
           />
         </>
       )}

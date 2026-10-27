@@ -8,6 +8,8 @@ import type { ExportFileFormat } from '../common/xlsx/format';
 import { catalogFromMetadata, type ClassificationLevel } from '../it-ops-settings/classification-catalog';
 import type { CatalogTranslations } from '../it-ops-settings/catalog-codes';
 import { DEFAULT_HOSTING_TYPES } from '../it-ops-settings/it-ops-settings.service';
+import type { ParticipationAccessScope } from '../auth/business-contributor-scope';
+import { idsInScope } from '../portfolio/portfolio-linked-reads';
 
 /**
  * The compliance register of the contracts: what a contract is expected to hold, and what the user
@@ -82,11 +84,23 @@ export type ContractComplianceInputs = {
 
 export type ComplianceReason = {
   rule: ComplianceRule;
-  application: { id: string; name: string };
+  /** Null for an application the person cannot read (`hideUnreadableReasons`). */
+  application: { id: string; name: string } | null;
   /** The covered asset the application was reached through; null when it is linked to the contract. */
   asset: { id: string; name: string } | null;
   /** The application's level, or the hosting type; null for personal data. */
   level: CatalogEntry | null;
+};
+
+/**
+ * What a person may read of the reasons, as the Relations tab of the contract
+ * (`ContractRelationsAccess`): the applications (a Business Contributor's: those they take part
+ * in) and the assets (the infrastructure).
+ */
+export type ComplianceReasonAccess = {
+  applications: boolean;
+  infrastructure: boolean;
+  applicationScope?: ParticipationAccessScope;
 };
 
 export type ComplianceRequirementView = {
@@ -394,14 +408,49 @@ function requirementViews(
   });
 }
 
+/**
+ * The reasons as `access` lets the person read them. A reason on an application they cannot read
+ * keeps its rule only: no application, level or asset, and one such reason per requirement. The
+ * asset of a reason is dropped without a read of the infrastructure. The requirement stays
+ * expected: the summary is the contract's, the same for everyone (the list sorts on it).
+ */
+export async function hideUnreadableReasons(
+  manager: EntityManager,
+  reasons: Map<string, Map<ComplianceRequirement, ComplianceReason[]>>,
+  access: ComplianceReasonAccess,
+): Promise<Map<string, Map<ComplianceRequirement, ComplianceReason[]>>> {
+  const all = [...reasons.values()].flatMap((byRequirement) => [...byRequirement.values()].flat());
+  const appIds = all.map((reason) => reason.application?.id);
+  const readable = access.applications ? await idsInScope(manager, 'applications', appIds, access.applicationScope) : new Set<string>();
+  const result = new Map<string, Map<ComplianceRequirement, ComplianceReason[]>>();
+  for (const [contractId, byRequirement] of reasons) {
+    const next = new Map<ComplianceRequirement, ComplianceReason[]>();
+    for (const [requirement, list] of byRequirement) {
+      const shown: ComplianceReason[] = [];
+      let hidden: ComplianceReason | null = null;
+      for (const reason of list) {
+        if (!reason.application || !readable.has(String(reason.application.id))) {
+          hidden ??= { rule: reason.rule, application: null, asset: null, level: null };
+          continue;
+        }
+        shown.push(access.infrastructure ? reason : { ...reason, asset: null });
+      }
+      next.set(requirement, hidden ? [...shown, hidden] : shown);
+    }
+    result.set(contractId, next);
+  }
+  return result;
+}
+
 /** The Compliance tab of a contract: every requirement, expected or not, with its reasons and what was recorded. */
 export async function contractComplianceView(
   manager: EntityManager,
   inputs: ContractComplianceInputs,
   contract: { id: string },
+  access: ComplianceReasonAccess,
 ): Promise<ContractComplianceView> {
   // One after the other: the request's single connection runs its queries in turn anyway.
-  const reasons = await readComplianceReasons(manager, inputs, [contract.id]);
+  const reasons = await hideUnreadableReasons(manager, await readComplianceReasons(manager, inputs, [contract.id]), access);
   const items = await readComplianceItems(manager, [contract.id]);
   const requirements = requirementViews(reasons.get(contract.id), items.get(contract.id));
   return { summary: summarizeCompliance(requirements), requirements };
@@ -512,6 +561,8 @@ type RegisterCopy = {
   no: string;
   reasons: Record<ComplianceRule, string>;
   viaAsset: string;
+  /** A reason on an application the person cannot read. */
+  hiddenApplication: string;
 };
 
 /** The register's words, the same as the screen's (`contracts.compliance.*` in the `ops` locale files). */
@@ -535,6 +586,7 @@ const REGISTER_COPY: Record<CsvLanguage, RegisterCopy> = {
       cloud_hosting: '{app}: hosted in {level}',
     },
     viaAsset: ' (asset {asset})',
+    hiddenApplication: 'An application you cannot see',
   },
   fr: {
     headers: ['Contrat', 'Fournisseur', 'Société', 'Exigence', 'Attendue', 'Raison', 'État', 'Référence', 'Mis à jour le', 'Mis à jour par'],
@@ -555,6 +607,7 @@ const REGISTER_COPY: Record<CsvLanguage, RegisterCopy> = {
       cloud_hosting: '{app} : hébergement {level}',
     },
     viaAsset: ' (actif {asset})',
+    hiddenApplication: 'Une application que vous ne voyez pas',
   },
   de: {
     headers: ['Vertrag', 'Lieferant', 'Unternehmen', 'Anforderung', 'Erwartet', 'Grund', 'Status', 'Referenz', 'Aktualisiert am', 'Aktualisiert von'],
@@ -575,6 +628,7 @@ const REGISTER_COPY: Record<CsvLanguage, RegisterCopy> = {
       cloud_hosting: '{app}: Hosting {level}',
     },
     viaAsset: ' (Asset {asset})',
+    hiddenApplication: 'Eine Anwendung, die Sie nicht sehen',
   },
   es: {
     headers: ['Contrato', 'Proveedor', 'Empresa', 'Requisito', 'Esperado', 'Motivo', 'Estado', 'Referencia', 'Actualizado el', 'Actualizado por'],
@@ -595,12 +649,14 @@ const REGISTER_COPY: Record<CsvLanguage, RegisterCopy> = {
       cloud_hosting: '{app}: alojamiento {level}',
     },
     viaAsset: ' (activo {asset})',
+    hiddenApplication: 'Una aplicación que no puede ver',
   },
 };
 
 /** A reason in words: the tenant's translation of the level when it has one, else its name. */
 export function registerReasonText(language: CsvLanguage, reason: ComplianceReason): string {
   const copy = REGISTER_COPY[language];
+  if (!reason.application) return copy.hiddenApplication;
   const level = reason.level ? reason.level.translations?.[language]?.label || reason.level.label : '';
   const text = copy.reasons[reason.rule].replace('{app}', reason.application.name).replace('{level}', level);
   return reason.asset ? text + copy.viaAsset.replace('{asset}', reason.asset.name) : text;
@@ -628,10 +684,11 @@ export async function complianceRegisterFile<F extends ExportFileFormat>(
   contracts: RegisterContract[],
   language: CsvLanguage,
   format: F,
+  access: ComplianceReasonAccess,
 ): Promise<ListExportFile<F>> {
   const copy = REGISTER_COPY[language];
   // One after the other: the request's single connection runs its queries in turn anyway.
-  const reasons = await readComplianceReasons(manager, inputs, null);
+  const reasons = await hideUnreadableReasons(manager, await readComplianceReasons(manager, inputs, null), access);
   const items = await readComplianceItems(manager, null);
   const rows: string[][] = [];
   for (const contract of contracts) {

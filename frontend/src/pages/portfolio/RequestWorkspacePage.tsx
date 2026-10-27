@@ -1127,6 +1127,7 @@ export default function RequestWorkspacePage() {
           <React.Suspense fallback={<WorkspaceTabLoadingFallback label={t('portfolio:workspace.request.loadingTabs.analysis')} />}>
             <RequestAnalysisTab
               canEditManagedDocs={canEditManagedDocs}
+              canEditProcesses={canManage && hasLevel('business_processes', 'member')}
               canManage={canManage}
               categoryName={categoryName}
               form={form}

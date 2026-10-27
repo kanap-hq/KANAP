@@ -193,6 +193,8 @@ Reúne cuatro elementos distintos:
 
 Vincule los procesos de negocio tocados por la solicitud. Esto cambia el significado de la solicitud en términos de portafolio: una solicitud que afecta a procesos operativos principales no debe evaluarse de la misma manera que una mejora de conveniencia local.
 
+Modificarlos requiere `portfolio_requests:member` y `business_processes:member`.
+
 ### Revisión de viabilidad
 
 La revisión de viabilidad es una evaluación estructurada en siete dimensiones:

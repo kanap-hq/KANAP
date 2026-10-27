@@ -113,7 +113,7 @@ export class ContractsController {
     const manager = req?.queryRunner?.manager;
     const language = await languageOf(manager, req.tenant.id, req.user?.sub ?? null, query?.language);
     const format = parseExportFormat(query?.format);
-    const file = await this.svc.exportComplianceRegister(query, language, {
+    const file = await this.svc.exportComplianceRegister(query, language, await contractRelationsAccess(req), {
       manager,
       budgetAccess: canReadContractBudget(req),
       coveredApplications: await coveredApplications(req),
@@ -263,13 +263,16 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/compliance')
-  compliance(@Param('id') id: string, @Req() req: any) { return this.svc.compliance(id, { manager: req?.queryRunner?.manager }); }
+  async compliance(@Param('id') id: string, @Req() req: any) {
+    // The reasons name only the applications and assets the Relations tab shows the person.
+    return this.svc.compliance(id, await contractRelationsAccess(req), { manager: req?.queryRunner?.manager });
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
   @Patch(':id/compliance/:requirement')
-  updateCompliance(@Param('id') id: string, @Param('requirement') requirement: string, @Body() body: ComplianceItemPatch, @Req() req: any) {
-    return this.svc.updateCompliance(id, requirement, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  async updateCompliance(@Param('id') id: string, @Param('requirement') requirement: string, @Body() body: ComplianceItemPatch, @Req() req: any) {
+    return this.svc.updateCompliance(id, requirement, body, req.user?.sub ?? null, await contractRelationsAccess(req), { manager: req?.queryRunner?.manager });
   }
 
   @UseGuards(PermissionGuard)

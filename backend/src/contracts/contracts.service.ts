@@ -70,6 +70,7 @@ import {
   COMPLIANCE_SORT_EXPRESSION,
   complianceParams,
   complianceRegisterFile,
+  type ComplianceReasonAccess,
   complianceSummarySql,
   contractComplianceView,
   loadContractComplianceInputs,
@@ -1839,19 +1840,19 @@ export class ContractsService {
   }
 
   /** The Compliance tab: every requirement, whether it is expected and why, and what was recorded (`contract-compliance.ts`). */
-  async compliance(contractId: string, opts?: { manager?: EntityManager }) {
+  async compliance(contractId: string, access: ComplianceReasonAccess, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const contract = await this.findContract(contractId, mg);
-    return contractComplianceView(mg, await loadContractComplianceInputs(mg), contract);
+    return contractComplianceView(mg, await loadContractComplianceInputs(mg), contract, access);
   }
 
   /** Records the state and / or reference of one requirement, then answers the tab as `compliance` does. */
-  async updateCompliance(contractId: string, requirement: string, body: ComplianceItemPatch, userId?: string | null, opts?: { manager?: EntityManager }) {
+  async updateCompliance(contractId: string, requirement: string, body: ComplianceItemPatch, userId: string | null, access: ComplianceReasonAccess, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     const contract = await this.findContract(contractId, mg);
     await assertContractsEditable(mg, [contract.id]);
     await updateContractComplianceItem({ manager: mg, audit: this.audit }, contract, requirement, body, userId ?? null);
-    return contractComplianceView(mg, await loadContractComplianceInputs(mg), contract);
+    return contractComplianceView(mg, await loadContractComplianceInputs(mg), contract, access);
   }
 
   /**
@@ -1859,7 +1860,7 @@ export class ContractsService {
    * filters, status scope), in the list's order (its sort): one line per contract and requirement
    * (`complianceRegisterFile`).
    */
-  async exportComplianceRegister<F extends ExportFileFormat = 'csv'>(query: any, language: CsvLanguage, opts?: ListReadOptions & { format?: F }): Promise<ListExportFile<F>> {
+  async exportComplianceRegister<F extends ExportFileFormat = 'csv'>(query: any, language: CsvLanguage, access: ComplianceReasonAccess, opts?: ListReadOptions & { format?: F }): Promise<ListExportFile<F>> {
     const mg = opts?.manager ?? this.repo.manager;
     // The list's budget filters apply too, for a reader of the budget (as on the list).
     const budget = await this.listBudgetInputs(mg, query, opts);
@@ -1872,7 +1873,7 @@ export class ContractsService {
       .addSelect('comp.name', 'company_name');
     await this.applyListSort(qb, parsed.sort, filterTargets);
     const contracts: Array<{ id: string; name: string; supplier_name: string | null; company_name: string | null }> = await qb.getRawMany();
-    return complianceRegisterFile(mg, compliance, contracts, language, opts?.format ?? ('csv' as F));
+    return complianceRegisterFile(mg, compliance, contracts, language, opts?.format ?? ('csv' as F), access);
   }
 
   /** Each linked family is counted only for a caller who reads it (`ContractRelationsAccess`, none by default). */
