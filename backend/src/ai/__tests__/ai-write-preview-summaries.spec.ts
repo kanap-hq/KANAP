@@ -6,6 +6,7 @@ import { AiDocumentMutationSupportService } from '../mutation/ai-document-mutati
 import { AiFinancialPlanMutationSupportService } from '../mutation/ai-financial-plan-mutation-support.service';
 import { AiMasterDataMutationSupportService } from '../mutation/ai-master-data-mutation-support.service';
 import { AiRelationMutationSupportService } from '../mutation/ai-relation-mutation-support.service';
+import { AiTaskMutationSupportService } from '../mutation/ai-task-mutation-support.service';
 import { CreateBusinessRecordAiMutationOperation } from '../mutation/operations/create-business-record.ai-mutation-operation';
 import { CreateDocumentAiMutationOperation } from '../mutation/operations/create-document.ai-mutation-operation';
 import { CreateTaskAiMutationOperation } from '../mutation/operations/create-task.ai-mutation-operation';
@@ -165,6 +166,77 @@ function testBusinessRecords() {
   assert.equal(summary(masterData, supplier, 'fr'), 'Création du fournisseur « Acme ».');
 }
 
+/** What the card needs beyond the summary: classification codes, and fields in a stable order (quality pass 2026-10-27, A1 and A3). */
+function testCardCodesAndFieldOrder() {
+  const support = make(AiBusinessRecordMutationSupportService);
+  const criticality = preview({
+    tool_name: 'update_business_record',
+    target_entity_type: 'applications',
+    target_entity_id: 'app-1',
+    mutation_input: {
+      action: 'update',
+      entity_type: 'applications',
+      fields: { criticality: 'low', recovery_wave: 'vital' },
+      display_values: { criticality: 'Low', recovery_wave: 'V1 — Vital activities' },
+    },
+    current_values: {
+      target_title: 'CheeseTrack',
+      values: { criticality: 'business_critical', recovery_wave: null },
+      display_values: { criticality: 'Critical', recovery_wave: null },
+    },
+  });
+  const changes = support.presentPreview(criticality, 'fr').changes;
+  assert.deepEqual(changes.criticality, {
+    label: 'criticality',
+    from: 'Critical',
+    to: 'Low',
+    format: 'text',
+    classification: { catalog: 'businessCriticalityLevels', from: 'business_critical', to: 'low' },
+  });
+  assert.deepEqual(changes.recovery_wave.classification, { catalog: 'recoveryWaves', from: null, to: 'vital' });
+  const created = support.presentPreview({ ...criticality, mutation_input: { ...criticality.mutation_input, action: 'create', fields: { name: 'X', data_class: 'internal' } } } as AiMutationPreview, 'en').changes;
+  assert.deepEqual(created.data_class.classification, { catalog: 'dataClasses', from: null, to: 'internal' });
+  assert.equal(created.name.classification, undefined, 'a plain field carries no classification');
+
+  // jsonb gives the keys back by length: the card follows the order of the line's fields instead.
+  const line = preview({
+    tool_name: 'create_business_record',
+    target_entity_type: 'spend_items',
+    mutation_input: {
+      action: 'create',
+      entity_type: 'spend_items',
+      fields: { currency: 'EUR', account_id: 'a-1', product_name: 'QA-PL montant', effective_start: '2026-01-01', paying_company_id: 'c-1', 'analytics_axis:b': 'v-2', 'analytics_axis:a': 'v-1' },
+      display_values: {},
+    },
+  });
+  assert.deepEqual(Object.keys(support.presentPreview(line, 'fr').changes), [
+    'product_name', 'paying_company_id', 'account_id', 'currency', 'effective_start', 'analytics_axis:a', 'analytics_axis:b',
+  ]);
+
+  const masterData = make(AiMasterDataMutationSupportService);
+  const company = preview({
+    tool_name: 'create_master_data_record',
+    target_entity_type: 'companies',
+    mutation_input: { action: 'create', entity_type: 'companies', fields: { city: 'Lyon', name: 'Acme' }, display_values: {} },
+  });
+  assert.deepEqual(Object.keys(masterData.presentPreview(company, 'fr').changes), ['name', 'city']);
+}
+
+/** A task created without a type gets the one the task screen preselects (A2). */
+async function testDefaultTaskType() {
+  const support = new AiTaskMutationSupportService();
+  const reads: Array<{ sql: string; params: unknown[] }> = [];
+  const context = (rows: unknown[]) => ({
+    tenantId: 'tenant-1',
+    manager: { query: async (sql: string, params: unknown[]) => { reads.push({ sql, params }); return rows; } },
+  }) as any;
+  assert.deepEqual(await support.resolveDefaultTaskType(context([{ id: 'type-1', name: 'Task' }])), { id: 'type-1', label: 'Task' });
+  assert.match(reads[0].sql, /code = 'task' OR name = 'Task'/);
+  assert.match(reads[0].sql, /is_active = true/);
+  assert.deepEqual(reads[0].params, ['tenant-1']);
+  assert.equal(await support.resolveDefaultTaskType(context([])), null);
+}
+
 function testFinancialPlanAndRelations() {
   const financial = make(AiFinancialPlanMutationSupportService);
   const amounts = preview({
@@ -251,6 +323,8 @@ async function main() {
   testBusinessRecords();
   testFinancialPlanAndRelations();
   testAmountsForTheCard();
+  testCardCodesAndFieldOrder();
+  await testDefaultTaskType();
   await testPersonLanguage();
   console.log('ai-write-preview-summaries.spec: ok');
 }

@@ -349,7 +349,12 @@ export type AiMutationPreviewChangeDto = {
   format?: 'text' | 'markdown';
   /** Budget amounts, formatted by the card; `from` and `to` keep an English text of them. */
   amounts?: { from: AiPreviewAmounts | null; to: AiPreviewAmounts | null };
+  /** A classification level by its code in the tenant's catalog, named by the card as the screens name it; `from` and `to` keep the catalog's base label. */
+  classification?: { catalog: AiPreviewClassificationCatalog; from: string | null; to: string | null };
 };
+
+/** The list of the application classification catalog a level belongs to. */
+export type AiPreviewClassificationCatalog = 'businessCriticalityLevels' | 'cyberCriticalityLevels' | 'dataClasses' | 'recoveryWaves';
 
 export type AiMutationPreviewDto = {
   preview_id: string;

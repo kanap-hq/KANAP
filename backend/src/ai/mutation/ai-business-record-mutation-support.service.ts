@@ -46,7 +46,8 @@ import {
 import { isActiveAt, parseEndOfValidityInput } from '../../common/status';
 import { sameFieldValue } from '../../common/edit-conflicts';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
-import { AiExecutionContextWithManager, AiMutationPreviewChangeDto } from '../ai.types';
+import { AiExecutionContextWithManager, AiMutationPreviewChangeDto, AiPreviewClassificationCatalog } from '../ai.types';
+import { previewFieldOrder } from './ai-preview-field-order';
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
 import {
   AiMutationPreviewPresentation,
@@ -524,6 +525,14 @@ function formatPlainValue(value: unknown): string | null {
   if (typeof value === 'object') return JSON.stringify(value);
   return String(value);
 }
+
+/** The list of the catalog each classification axis reads. */
+const CLASSIFICATION_CATALOG_LISTS: Record<NonNullable<FieldConfig['classificationAxis']>, AiPreviewClassificationCatalog> = {
+  business: 'businessCriticalityLevels',
+  cyber: 'cyberCriticalityLevels',
+  confidentiality: 'dataClasses',
+  recovery: 'recoveryWaves',
+};
 
 /** The options of one classification axis of the tenant's catalog. */
 function classificationOptions(catalog: ClassificationCatalog, axis: NonNullable<FieldConfig['classificationAxis']>) {
@@ -1469,7 +1478,7 @@ export class AiBusinessRecordMutationSupportService {
       ? current.display_values as Record<string, unknown>
       : {};
     const title = textOrNull(current.target_title) || this.titleForPendingCreate(entityType, fields);
-    const fieldNames = Object.keys(fields);
+    const fieldNames = previewFieldOrder(fields, config.fields);
     const labelList = fieldNames.map((fieldName) => String(fieldLabels[fieldName] || fieldName)).join(', ');
 
     let summary = `Preview ${preview.id} ${preview.status}.`;
@@ -1504,13 +1513,23 @@ export class AiBusinessRecordMutationSupportService {
       );
     }
 
+    const previousCodes = current.values && typeof current.values === 'object' ? current.values as Record<string, unknown> : {};
     const changes: Record<string, AiMutationPreviewChangeDto> = {};
     for (const fieldName of fieldNames) {
+      const field = config.fields[fieldName];
       changes[fieldName] = {
         label: String(fieldLabels[fieldName] || fieldName),
         from: action === 'create' ? null : formatPlainValue(currentValues[fieldName]),
         to: formatPlainValue(displayValues[fieldName]),
         format: 'text',
+        // The card names a level from the catalog in the person's language, as the application screens do.
+        ...(field?.kind === 'application_classification' && field.classificationAxis ? {
+          classification: {
+            catalog: CLASSIFICATION_CATALOG_LISTS[field.classificationAxis],
+            from: action === 'create' ? null : textOrNull(previousCodes[fieldName]),
+            to: textOrNull(fields[fieldName]),
+          },
+        } : {}),
       };
     }
     const classification = mutation.classification && typeof mutation.classification === 'object'

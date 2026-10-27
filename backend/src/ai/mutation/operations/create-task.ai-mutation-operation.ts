@@ -258,7 +258,7 @@ export class CreateTaskAiMutationOperation implements AiMutationOperation<Create
       : null;
     const taskType = input.task_type
       ? await this.support.resolveTaskType(context, input.task_type)
-      : null;
+      : await this.support.resolveDefaultTaskType(context);
     const phase = input.phase && relation.mode === 'project'
       ? await this.support.resolveProjectPhase(context, relation.id ?? '', relation.label, input.phase)
       : null;

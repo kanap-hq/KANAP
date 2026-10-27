@@ -22,6 +22,7 @@ import { LocationsService } from '../../locations/locations.service';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { AiMutationPreview } from '../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager, AiMutationPreviewChangeDto } from '../ai.types';
+import { previewFieldOrder } from './ai-preview-field-order';
 import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
@@ -1292,7 +1293,7 @@ export class AiMasterDataMutationSupportService {
       ? current.display_values as Record<string, unknown>
       : {};
     const title = textOrNull(current.target_title) || this.titleForPendingCreate(entityType, fields);
-    const fieldNames = Object.keys(fields);
+    const fieldNames = previewFieldOrder(fields, config.fields);
     const labelList = fieldNames.map((fieldName) => String(fieldLabels[fieldName] || fieldName)).join(', ');
 
     let summary = `Preview ${preview.id} ${preview.status}.`;
