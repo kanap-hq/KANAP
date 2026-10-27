@@ -1583,6 +1583,67 @@ async function testBudgetLinesByBusinessReference(harness: Harness) {
   });
 }
 
+/**
+ * Issue 127: a line asked for with an amount is one preview and one approval. The card shows the
+ * amount; the approval creates the line, its version of that year and the amounts; the financial
+ * plan tool then finds the new line by its BL-n reference.
+ */
+async function testLineCreatedWithItsAmountInOneApproval(harness: Harness) {
+  await withSeededTransaction(harness, async (runner, seed) => {
+    const ctx = context(seed, runner, 'line-with-amount');
+    const fields = {
+      product_name: `QA Test ${seed.tag}`,
+      paying_company_id: seed.companyId,
+      currency: 'EUR',
+      effective_start: '2026-01-01',
+    };
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'create_business_record', {
+        entity_type: 'applications', fields: { name: `No amounts ${seed.tag}` }, amounts: { kind: 'annual', year: 2026, totals: { planned: 1 } },
+      }),
+      /amounts is only accepted when creating a spend item or a CAPEX item/,
+    );
+    await expectRejects(
+      () => harness.tools.execute(ctx, 'create_business_record', {
+        entity_type: 'spend_items', fields, amounts: { kind: 'annual', year: 2026, totals: { planned: 'twelve' } },
+      }),
+      /amounts\.totals\.planned must be a number/,
+    );
+    const preview = await executeToolPreview(harness, ctx, 'create_business_record', {
+      entity_type: 'spend_items',
+      fields,
+      amounts: { kind: 'annual', year: 2026, totals: { planned: 12000 } },
+    });
+    assert.equal(preview.changes.amounts.from, null);
+    assert.match(preview.changes.amounts.to, /2026/);
+    assert.match(preview.changes.amounts.to, /12000/);
+
+    const executed = await approvePreview(harness, ctx, preview);
+    const lineId = executed.target.entity_id;
+    const [version] = await runner.query(
+      `SELECT id, version_name, budget_year FROM spend_versions WHERE tenant_id = $1 AND spend_item_id = $2`,
+      [seed.tenantId, lineId],
+    );
+    assert.equal(version.version_name, 'Y2026');
+    assert.equal(version.budget_year, 2026);
+    const [totals] = await runner.query(
+      `SELECT round(sum(planned)::numeric, 2)::float8 AS planned FROM spend_amounts WHERE tenant_id = $1 AND version_id = $2`,
+      [seed.tenantId, version.id],
+    );
+    assert.equal(totals.planned, 12000);
+
+    const [line] = await runner.query(`SELECT item_number FROM spend_items WHERE tenant_id = $1 AND id = $2`, [seed.tenantId, lineId]);
+    const byReference = await executeToolPreview(harness, ctx, 'write_financial_plan', {
+      entity_type: 'spend_items',
+      ref: `BL-${line.item_number}`,
+      action: 'upsert_amounts',
+      version_ref: '2026',
+      amounts: { kind: 'annual', year: 2026, totals: { planned: 13000 } },
+    });
+    assert.equal(byReference.target.entity_id, lineId, 'BL-n names the new line');
+  });
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -1597,6 +1658,7 @@ async function run() {
     await testCapexCriteriaAreDimensions(harness);
     await testAnalyticsValueInANamedDimension(harness);
     await testBudgetLinesByBusinessReference(harness);
+    await testLineCreatedWithItsAmountInOneApproval(harness);
   } finally {
     await harness.app.close();
   }

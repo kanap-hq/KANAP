@@ -71,6 +71,8 @@ export type AiBusinessRecordEntityType = typeof AI_BUSINESS_RECORD_ENTITY_TYPES[
 export type AiCreateBusinessRecordInput = {
   entity_type: AiBusinessRecordEntityType;
   fields: Record<string, unknown>;
+  /** A new spend or CAPEX line's amounts for one year (`create_business_record` only). */
+  amounts?: unknown;
 };
 
 export type AiUpdateBusinessRecordInput = AiCreateBusinessRecordInput & {
