@@ -16,13 +16,15 @@ import { portfolioProjectCsvConfig } from '../../../portfolio/portfolio-project-
 import { incidentCsvConfig } from '../../../incidents/incident-csv.config';
 import { DEFAULT_CLASSIFICATION_CATALOG } from '../../../it-ops-settings/classification-catalog';
 import { inRolledBackTransaction, seedTenant } from '../../../spend/__tests__/round-inputs.fixtures';
+import { hasLibreOffice, throughLibreOffice, workbookOfCsv } from '../../__tests__/workbook-of-csv';
 
 // Full replace in the shared CSV import, against the real tables: a column the file leaves out is
 // never touched; a blank cell of a column the file holds empties the field (the empty list of a
 // NOT NULL list column, null for a nullable one) or, for a NOT NULL column with no empty value,
 // is a row error at the preflight. The identity column and the matching key are never emptied.
-// A full export read back in full replace changes nothing. Each test runs in a transaction
-// rolled back.
+// A full export read back in full replace changes nothing, in CSV and in .xlsx alike: the list's
+// own xlsx export and the workbook of its CSV export check and load as the CSV does (the
+// applications' one also through LibreOffice). Each test runs in a transaction rolled back.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file on a database lane.
 
 const itOpsSettings: any = {
@@ -41,7 +43,10 @@ const resolver = new CsvResolverService();
 const importer = new CsvImportService(resolver, new CsvJsonValidators());
 const exporter = new CsvExportService(resolver);
 
-function file(content: string): Express.Multer.File {
+function file(content: string | Buffer): Express.Multer.File {
+  if (Buffer.isBuffer(content)) {
+    return { buffer: content, originalname: 'import.xlsx', mimetype: 'application/octet-stream', size: content.length } as Express.Multer.File;
+  }
   const text = '﻿' + content;
   return { buffer: Buffer.from(text, 'utf8'), originalname: 'import.csv', mimetype: 'text/csv', size: text.length } as Express.Multer.File;
 }
@@ -50,7 +55,7 @@ async function run(
   runner: QueryRunner,
   tenantId: string,
   config: CsvEntityConfig,
-  csv: string,
+  csv: string | Buffer,
   params: Partial<CsvImportParams> = {},
 ): Promise<CsvImportResult> {
   return importer.import(config, file(csv), { dryRun: false, mode: 'replace', operation: 'upsert', ...params }, {
@@ -89,11 +94,22 @@ async function preflightThenLoad(
  * Every column the import reads, as the export writes them, with the business reference (`reference`,
  * export only): the import leaves it out.
  */
-async function fullExport(runner: QueryRunner, tenantId: string, config: CsvEntityConfig, id: string): Promise<string> {
-  const rows = await runner.query(`SELECT * FROM ${config.tableName} WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
-  const fields = [...new Set(config.fields
+function exportedFields(config: CsvEntityConfig): string[] {
+  return [...new Set(config.fields
     .filter((f) => (f.importable !== false || f.csvColumn === 'reference') && f.exportable !== false)
     .map((f) => f.csvColumn))];
+}
+
+/** The list's own .xlsx export of the row: the same columns, numbers and days as typed cells. */
+async function fullExportXlsx(runner: QueryRunner, tenantId: string, config: CsvEntityConfig, id: string): Promise<Buffer> {
+  const rows = await runner.query(`SELECT * FROM ${config.tableName} WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
+  const result = await exporter.export(config, rows, { manager: runner.manager, tenantId, fields: exportedFields(config), language: 'en', format: 'xlsx' });
+  return result.content;
+}
+
+async function fullExport(runner: QueryRunner, tenantId: string, config: CsvEntityConfig, id: string): Promise<string> {
+  const rows = await runner.query(`SELECT * FROM ${config.tableName} WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
+  const fields = exportedFields(config);
   const result = await exporter.export(config, rows, { manager: runner.manager, tenantId, fields, language: 'en' });
   const content = result.content.replace(/^﻿/, '');
   if (fields.includes('reference')) {
@@ -114,6 +130,20 @@ async function assertRoundTrip(runner: QueryRunner, tenantId: string, config: Cs
   const result = await run(runner, tenantId, config, csv);
   assert.equal(result.ok, true, `${config.entityName}: import of the full export ${JSON.stringify(result.errors)}`);
   assert.deepEqual(await stored(runner, config.tableName, id), before, `${config.entityName}: nothing changed`);
+
+  // The same row in .xlsx: the list's own workbook, the workbook of its CSV export, and for the
+  // applications the LibreOffice copy of the list's workbook. Each checks and loads as the CSV did.
+  const own = await fullExportXlsx(runner, tenantId, config, id);
+  const workbooks: Array<[string, Buffer]> = [['xlsx export', own], ['workbook of the CSV export', workbookOfCsv(csv, 'en')]];
+  if (config.entityName === applicationCsvConfig.entityName && hasLibreOffice()) workbooks.push(['LibreOffice copy', throughLibreOffice(own)]);
+  const outcome = (r: CsvImportResult) => [r.ok, r.errors, r.warnings, r.inserted, r.updated, r.skipped, r.unchanged];
+  for (const [label, workbook] of workbooks) {
+    const xlsxPreflight = await run(runner, tenantId, config, workbook, { dryRun: true });
+    assert.deepEqual(outcome(xlsxPreflight), outcome(preflight), `${config.entityName}: preflight of the ${label}`);
+    const xlsxResult = await run(runner, tenantId, config, workbook);
+    assert.deepEqual(outcome(xlsxResult), outcome(result), `${config.entityName}: load of the ${label}`);
+    assert.deepEqual(await stored(runner, config.tableName, id), before, `${config.entityName}: the ${label} changed nothing`);
+  }
 }
 
 async function seedApplication(runner: QueryRunner, tenantId: string, values: { name: string; access_methods: string[] }) {
@@ -304,9 +334,15 @@ async function testPortfolio() {
     // A full export reads back without error. These rows have no document binding (seeded in SQL),
     // so their purpose counts as an update: only the errors are checked here.
     for (const [config, id] of [[portfolioRequestCsvConfig, requestId], [portfolioProjectCsvConfig, projectId]] as const) {
-      const preflight = await run(runner, tenantId, config, await fullExport(runner, tenantId, config, id), { dryRun: true });
+      const csv = await fullExport(runner, tenantId, config, id);
+      const preflight = await run(runner, tenantId, config, csv, { dryRun: true });
       assert.deepEqual(preflight.errors, [], `${config.entityName}: preflight of the full export`);
       assert.equal(preflight.ok, true);
+      // The list's own workbook and the workbook of its CSV export check as the CSV does.
+      const outcome = (r: CsvImportResult) => [r.ok, r.errors, r.warnings, r.inserted, r.updated, r.skipped, r.unchanged];
+      for (const workbook of [await fullExportXlsx(runner, tenantId, config, id), workbookOfCsv(csv, 'en')]) {
+        assert.deepEqual(outcome(await run(runner, tenantId, config, workbook, { dryRun: true })), outcome(preflight), `${config.entityName}: preflight of a workbook`);
+      }
     }
 
     let result = await run(runner, tenantId, portfolioProjectCsvConfig, 'name;status\nCloud move;', { dryRun: true });
