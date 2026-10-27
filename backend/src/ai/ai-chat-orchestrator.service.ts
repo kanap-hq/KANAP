@@ -292,6 +292,11 @@ type StreamPreparationResult = {
   writePreviewToolNames: string[];
   /** What the person last typed: approval markers and orchestration instructions are not theirs. */
   latestPersonText: string;
+  /**
+   * What the person typed is a "yes" to a change the assistant proposed in words, in an answer they
+   * saw: that proposal is their request (`shouldRewriteTextualWriteConfirmation`).
+   */
+  personConfirmedWriteProposal: boolean;
   /** The language of the sentences the orchestrator writes itself. */
   replyLanguage: AiWriteLanguage;
 };
@@ -1043,16 +1048,22 @@ function targetSetOfFamily(targetSet: BulkTargetSet, family: string | null): Bul
  * signal comes from what the person typed (never from an orchestration instruction, which also
  * travels as a user message) or from the text that goes with the call; the set from an answer the
  * person saw (never from a text a write guard held back). Only refs of the requested ref's family
- * count: a list naming an application and a technology is not a set of applications.
+ * count: a list naming an application and a technology is not a set of applications. A "yes" to a
+ * change the assistant proposed in words is a request for every record that proposal lists.
  */
 function selectTextualBulkTargetSet(params: {
   assistantTexts: string[];
   personText: string;
+  personConfirmedWriteProposal: boolean;
   currentAssistantText: string;
   requestedRef: unknown;
 }): BulkTargetSet | null {
   const personText = params.personText;
-  if (!hasBulkContinuationSignal(params.currentAssistantText) && !hasBulkContinuationSignal(personText)) {
+  if (
+    !params.personConfirmedWriteProposal
+    && !hasBulkContinuationSignal(params.currentAssistantText)
+    && !hasBulkContinuationSignal(personText)
+  ) {
     return null;
   }
 
@@ -2029,6 +2040,7 @@ export class AiChatOrchestratorService {
       requiresWritePreviewGuard,
       writePreviewToolNames,
       latestPersonText,
+      personConfirmedWriteProposal,
       replyLanguage,
     } =
       await this.tenantExecutor.runWithContext(context, async (ctx) => {
@@ -2337,6 +2349,7 @@ export class AiChatOrchestratorService {
               requiresWritePreviewGuard: contextProfile.promptMode === 'write' && writePreviewToolNames.length > 0,
               writePreviewToolNames,
               latestPersonText: latestUserMessageRow?.content ?? '',
+              personConfirmedWriteProposal: false,
               replyLanguage: aiWriteLanguage(currentUser.screenLanguage),
             } satisfies StreamPreparationResult;
           }
@@ -2369,6 +2382,7 @@ export class AiChatOrchestratorService {
             requiresWritePreviewGuard: false,
             writePreviewToolNames: [],
             latestPersonText: '',
+            personConfirmedWriteProposal: false,
             replyLanguage: approvalLanguage,
           } satisfies StreamPreparationResult;
         }
@@ -2559,6 +2573,7 @@ export class AiChatOrchestratorService {
           requiresWritePreviewGuard: contextProfile.promptMode === 'write' && writePreviewToolNames.length > 0,
           writePreviewToolNames,
           latestPersonText: latestUserMessage,
+          personConfirmedWriteProposal: rewriteLatestTextualWriteConfirmation,
           replyLanguage: aiWriteLanguage(currentUser.screenLanguage),
         } satisfies StreamPreparationResult;
       });
@@ -2640,11 +2655,12 @@ export class AiChatOrchestratorService {
     const excludedBulkRefsThisTurn = new Set<string>();
     const coveredBulkRefsByEntityTypeThisTurn = new Map<string, Set<string>>();
     // Answers a write guard held back and sent to the model for repair: the person never saw them,
-    // so they state no target set.
-    const heldBackAssistantMessages = new WeakSet<AiProviderMessage>();
+    // so they state no target set. Kept by their text: each iteration sends copies of the messages
+    // (`prepareAiProviderMessages`), so the message objects do not last the turn.
+    const heldBackAssistantTexts = new Set<string>();
     const holdBack = (content: string): AiProviderMessage => {
       const message: AiProviderMessage = { role: 'assistant', content: stripBase64Images(content) };
-      heldBackAssistantMessages.add(message);
+      heldBackAssistantTexts.add(message.content);
       return message;
     };
     // The input errors a later call of the same tool may repair in this turn (`ai-tool-repairs.ts`).
@@ -3005,9 +3021,10 @@ export class AiChatOrchestratorService {
               )
                 ? selectTextualBulkTargetSet({
                   assistantTexts: messages
-                    .filter((message) => message.role === 'assistant' && !heldBackAssistantMessages.has(message))
+                    .filter((message) => message.role === 'assistant' && !heldBackAssistantTexts.has(message.content))
                     .map((message) => message.content),
                   personText: latestPersonText,
+                  personConfirmedWriteProposal,
                   currentAssistantText: assistantTextForToolTurn,
                   requestedRef: parsedArgs.ref,
                 })

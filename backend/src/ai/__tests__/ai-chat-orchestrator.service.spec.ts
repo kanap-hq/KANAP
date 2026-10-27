@@ -2820,6 +2820,134 @@ async function testRejectedPreviewEndsUnlessThePersonAskedForMore() {
   assert.doesNotMatch(instruction, /prepare the remaining backend previews now/);
 }
 
+function taskPreviewDto(ref: string, toolName: string) {
+  return {
+    preview_id: `preview-${ref}`,
+    tool_name: toolName,
+    status: 'pending',
+    target: { entity_type: 'tasks', entity_id: `task-${ref}`, ref, title: `Task ${ref}` },
+    changes: {},
+    requires_confirmation: true,
+    actions: ['approve', 'reject'],
+    summary: `Change ${ref}.`,
+    error_message: null,
+    conversation_id: 'conv-1',
+    created_at: '2026-03-24T10:00:00.000Z',
+    expires_at: '2026-03-24T10:10:00.000Z',
+    approved_at: null,
+    rejected_at: null,
+    executed_at: null,
+  };
+}
+
+const TASK_STATUS_TOOL = {
+  name: 'update_task_status',
+  category: 'mutation',
+  description: 'Update task status.',
+  input_summary: {},
+  read_only: false,
+  surfaces: ['chat'],
+  write_preview: { entity_type: 'tasks', fields: ['status'], reversible: true, prompt_hint: 'Use update_task_status.' },
+};
+
+/**
+ * Issue 124: an answer the write guard held back is no target set, also once the loop has sent
+ * copies of the messages to the model. Its refs (T-9 here) were never shown to the person.
+ */
+async function testHeldBackAnswerStatesNoTargetSet() {
+  const { orchestrator, executedToolCalls, providerCallCount } = createOrchestrator({
+    historyMessages: [{ role: 'user', content: 'Passe toutes les tâches du projet PRJ-5 au statut en cours.' }],
+    availableTools: [PLAN_TOOL, TASK_STATUS_TOOL],
+    providerEventBatches: [
+      [
+        { type: 'text_delta', text: "Je vais passer T-1, T-2 et T-9 au statut en cours. Voulez-vous que j'applique ces modifications ?" },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+      ],
+      [
+        { type: 'tool_call_start', id: 'tc-status', name: 'update_task_status' },
+        { type: 'tool_call_delta', id: 'tc-status', arguments: '{"ref":"T-1","status":"in_progress"}' },
+        { type: 'tool_call_end', id: 'tc-status' },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 30 } },
+      ],
+      [
+        { type: 'text_delta', text: "L'aperçu de T-1 est prêt." },
+        { type: 'done', usage: { input_tokens: 140, output_tokens: 20 } },
+      ],
+    ],
+    toolResultsByName: { update_task_status: taskPreviewDto('T-1', 'update_task_status') },
+  });
+
+  await collectEvents(orchestrator.stream({
+    context: STREAM_CONTEXT,
+    conversationId: 'conv-1',
+    userMessage: 'Passe toutes les tâches du projet PRJ-5 au statut en cours.',
+  }));
+
+  assert.equal(providerCallCount.value, 3);
+  assert.deepEqual(executedToolCalls.map((call) => call.toolName), ['update_task_status']);
+  assert.equal(executedToolCalls[0].input.ref, 'T-1');
+}
+
+/**
+ * Issue 124: a "yes" to a change the assistant proposed in words, in an answer the person saw, asks
+ * for every record that proposal lists: a single-ref call still becomes the plan of the three tasks.
+ */
+async function testConfirmedProposalKeepsItsTargetSet() {
+  const message = 'oui';
+  const { orchestrator, executedToolCalls } = createOrchestrator({
+    historyMessages: [
+      { id: 'msg-1', role: 'user', content: 'Réassigne les tâches en retard de Friedrich EVA à Nicolas Bertrand.' },
+      {
+        id: 'msg-2',
+        role: 'assistant',
+        content: 'Les tâches en retard de Friedrich EVA sont T-1, T-2 et T-3. Souhaitez-vous que je procède à cette réassignation ?',
+      },
+      { id: 'msg-3', role: 'user', content: message },
+    ],
+    availableTools: [PLAN_TOOL, {
+      name: 'update_task_assignee',
+      category: 'mutation',
+      description: 'Create assignee preview.',
+      input_summary: {},
+      read_only: false,
+      surfaces: ['chat'],
+      write_preview: { entity_type: 'tasks', fields: ['assignee'], reversible: true, prompt_hint: 'Use update_task_assignee.' },
+    }],
+    providerEventBatches: [
+      [
+        { type: 'tool_call_start', id: 'tc-assignee', name: 'update_task_assignee' },
+        { type: 'tool_call_delta', id: 'tc-assignee', arguments: '{"ref":"T-1","assignee_email":"nicolas@example.com"}' },
+        { type: 'tool_call_end', id: 'tc-assignee' },
+        { type: 'done', usage: { input_tokens: 100, output_tokens: 30 } },
+      ],
+      [
+        { type: 'text_delta', text: 'Les aperçus sont prêts.' },
+        { type: 'done', usage: { input_tokens: 120, output_tokens: 20 } },
+      ],
+    ],
+    toolResultsByName: {
+      prepare_mutation_plan: {
+        previews: ['T-1', 'T-2', 'T-3'].map((ref) => taskPreviewDto(ref, 'update_task_assignee')),
+        errors: [],
+        total: 3,
+        created: 3,
+        failed: 0,
+        expected_count: 3,
+        expected_refs: ['T-1', 'T-2', 'T-3'],
+        covered_refs: ['T-1', 'T-2', 'T-3'],
+        missing_refs: [],
+        excluded: [],
+        complete: true,
+      },
+    },
+  });
+
+  await collectEvents(orchestrator.stream({ context: STREAM_CONTEXT, conversationId: 'conv-1', userMessage: message }));
+
+  assert.deepEqual(executedToolCalls.map((call) => call.toolName), ['prepare_mutation_plan']);
+  assert.deepEqual(executedToolCalls[0].input.operations.map((operation: any) => operation.input.ref), ['T-1', 'T-2', 'T-3']);
+}
+
 async function testTextualWriteConfirmationWithoutPreviewIsRewrittenToCreatePreviews() {
   const { orchestrator, recordedRequests } = createOrchestrator({
     historyMessages: [
@@ -3710,6 +3838,8 @@ async function run() {
   await testMissingWritePreviewStopIsInThePersonsLanguage();
   await testRefusalWithAnOfferIsShownAsIs();
   await testRejectedPreviewEndsUnlessThePersonAskedForMore();
+  await testHeldBackAnswerStatesNoTargetSet();
+  await testConfirmedProposalKeepsItsTargetSet();
   await testProviderReceivesAbortSignal();
   await testProviderRequestUsesChatTimeout();
   await testProviderEndpointSourceFollowsTheResolvedModel();
