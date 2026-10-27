@@ -743,6 +743,11 @@ const KNOWLEDGE_SOURCE_CONDITIONS: Record<keyof typeof KNOWLEDGE_SOURCE_SCOPES, 
   tasks: taskParticipantCondition,
 };
 
+/** Whether a family name, often taken from a request, is one of the participation families. */
+function isKnowledgeSourceFamily(family: string): family is keyof typeof KNOWLEDGE_SOURCE_SCOPES {
+  return Object.prototype.hasOwnProperty.call(KNOWLEDGE_SOURCE_SCOPES, family);
+}
+
 /** The module of each linked-name filter of the documents list. */
 const DOCUMENT_LINKED_FILTER_MODULES: Record<DocumentLinkedEntityField, LinkedModule> = {
   linked_application: 'applications',
@@ -3518,7 +3523,7 @@ export class KnowledgeService {
     if (unreadableRelationFamilies([entity], reads).length > 0) {
       return { items: [] };
     }
-    const scopeResource = KNOWLEDGE_SOURCE_SCOPES[entity as keyof typeof KNOWLEDGE_SOURCE_SCOPES];
+    const scopeResource = isKnowledgeSourceFamily(entity) ? KNOWLEDGE_SOURCE_SCOPES[entity] : undefined;
     const scope = scopeResource && opts?.userId
       ? await resolveBusinessContributorScopeForUser(
         { manager, userId: opts.userId, tenantId: opts?.tenantId ?? null },
@@ -3527,9 +3532,9 @@ export class KnowledgeService {
       )
       : undefined;
     const participationSql = (alias: string, params: any[]): string => {
-      if (!scope) return '';
+      if (!scope || !isKnowledgeSourceFamily(entity)) return '';
       params.push(scope.userId);
-      const condition = KNOWLEDGE_SOURCE_CONDITIONS[entity as keyof typeof KNOWLEDGE_SOURCE_CONDITIONS];
+      const condition = KNOWLEDGE_SOURCE_CONDITIONS[entity];
       return ` AND ${condition(alias, `$${params.length}`)}`;
     };
 
@@ -5762,7 +5767,7 @@ export class KnowledgeService {
     }
     if (mode === 'remove' || !userId) return;
     for (const family of families) {
-      const resource = KNOWLEDGE_SOURCE_SCOPES[family as keyof typeof KNOWLEDGE_SOURCE_SCOPES];
+      const resource = isKnowledgeSourceFamily(family) ? KNOWLEDGE_SOURCE_SCOPES[family] : undefined;
       const map = RELATION_TABLE_MAP[family];
       // A malformed id fails the write's own check (`assertTenantScopedIdsExist`).
       const ids = dedupeStrings(writes[family] ?? []).filter((id) => RELATION_ID_RE.test(id));
