@@ -15,6 +15,8 @@ import { Throttle } from '@nestjs/throttler';
 import { DataSource, EntityManager } from 'typeorm';
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions, inlineImageMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
+import { csvExportFormat } from '../common/csv';
+import { csvExportBody } from '../common/csv/send-csv-export';
 import { StorageService } from '../common/storage/storage.service';
 import { createRequestReleaseConnection } from '../common/import-connection';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
@@ -207,9 +209,11 @@ export class ApplicationsController {
     @Query('lifecycle') lifecycle: string | undefined,
     @Query('criticality') criticality: string | undefined,
     @Query('status') status: string | undefined,
+    @Query('format') formatRaw: unknown,
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
+    const format = csvExportFormat(formatRaw, scope);
     // The screen's language (the user's own when the screen sends none), as every shared-layer file.
     const language = await languageOf(this.requireManager(ctx), ctx.tenantId, ctx.userId ?? null, languageRaw);
     const result = await this.csvSvc.export({
@@ -223,10 +227,9 @@ export class ApplicationsController {
       lifecycle,
       criticality,
       status,
+      format,
     });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(result.filename));
-    res.send(result.content);
+    res.send(await csvExportBody(res, result));
   }
 
   // Attachments: static segment before :id for download

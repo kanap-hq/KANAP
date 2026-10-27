@@ -17,6 +17,8 @@ import { StorageService } from '../common/storage/storage.service';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions, inlineImageMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
+import { csvExportFormat } from '../common/csv';
+import { csvExportBody } from '../common/csv/send-csv-export';
 import { createRequestReleaseConnection } from '../common/import-connection';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { RATE_LIMITS } from '../common/rate-limit';
@@ -172,9 +174,11 @@ export class PortfolioProjectsController {
     @Query('fields') fields: string | undefined,
     @Query('preset') preset: string | undefined,
     @Query('status') status: string | undefined,
+    @Query('format') formatRaw: unknown,
     @Tenant() ctx: TenantRequest,
     @Res() res: Response,
   ) {
+    const format = csvExportFormat(formatRaw, scope);
     // The screen's language (the user's own when the screen sends none), as every shared-layer file.
     const language = await languageOf(this.requireManager(ctx), ctx.tenantId, ctx.userId ?? null, languageRaw);
     const result = await this.csvSvc.export({
@@ -185,11 +189,9 @@ export class PortfolioProjectsController {
       fields: fields ? fields.split(',').map((f) => f.trim()) : undefined,
       preset,
       status,
+      format,
     });
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(result.filename));
-    res.send(result.content);
+    res.send(await csvExportBody(res, result));
   }
 
   @UseGuards(PermissionGuard)

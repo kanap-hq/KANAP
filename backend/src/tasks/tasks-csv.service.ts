@@ -14,6 +14,7 @@ import {
   CsvFieldInfo,
   CsvFieldType,
 } from '../common/csv';
+import type { ExportFileFormat } from '../common/xlsx';
 import { taskCsvConfig } from './task-csv.config';
 import { assertTaskWritten } from './task-data-access';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
@@ -42,7 +43,7 @@ export class TasksCsvService {
    * @param opts Export options
    * @returns Export result with filename and content
    */
-  async export(opts: {
+  async export<F extends ExportFileFormat = 'csv'>(opts: {
     manager: EntityManager;
     tenantId: string;
     /** The screen language: separator, days, decimal mark and yes or no (`csv-sheet`). */
@@ -54,7 +55,9 @@ export class TasksCsvService {
     relatedObjectId?: string;
     /** A task of an incident the reader cannot see stays out of the file (empty for incidents:admin). */
     viewer?: IncidentViewer | null;
-  }): Promise<CsvExportResult> {
+    /** `csv` (default) or `xlsx` (data only: a template is CSV). */
+    format?: F;
+  }): Promise<CsvExportResult<F>> {
     const { manager, tenantId, scope, fields, preset, relatedObjectType, relatedObjectId, viewer } = opts;
 
     // Build query for tasks
@@ -94,6 +97,7 @@ export class TasksCsvService {
       fields,
       preset,
       language: opts.language,
+      format: opts.format,
     });
   }
 

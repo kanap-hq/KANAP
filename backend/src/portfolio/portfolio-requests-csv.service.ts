@@ -12,6 +12,7 @@ import {
   CsvImportResult,
   CsvFieldInfo,
 } from '../common/csv';
+import type { ExportFileFormat } from '../common/xlsx';
 import { portfolioRequestCsvConfig } from './portfolio-request-csv.config';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 
@@ -151,7 +152,7 @@ export class PortfolioRequestsCsvService {
   /**
    * Export portfolio requests to CSV format.
    */
-  async export(opts: {
+  async export<F extends ExportFileFormat = 'csv'>(opts: {
     manager: EntityManager;
     tenantId: string;
     /** The screen language: separator, days, decimal mark and yes or no (`csv-sheet`). */
@@ -160,7 +161,9 @@ export class PortfolioRequestsCsvService {
     fields?: string[];
     preset?: string;
     status?: string;
-  }): Promise<CsvExportResult> {
+    /** `csv` (default) or `xlsx` (data only: a template is CSV). */
+    format?: F;
+  }): Promise<CsvExportResult<F>> {
     const { manager, tenantId, scope, fields, preset, status } = opts;
 
     // Build query for requests
@@ -189,6 +192,7 @@ export class PortfolioRequestsCsvService {
       fields,
       preset,
       language: opts.language,
+      format: opts.format,
     });
   }
 

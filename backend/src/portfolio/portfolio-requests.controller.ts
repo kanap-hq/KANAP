@@ -19,6 +19,8 @@ import { PortfolioProjectsService } from './services';
 import { StorageService } from '../common/storage/storage.service';
 import { attachmentMulterOptions, csvImportMulterOptions, documentImportMulterOptions, inlineImageMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
+import { csvExportFormat } from '../common/csv';
+import { csvExportBody } from '../common/csv/send-csv-export';
 import { createRequestReleaseConnection } from '../common/import-connection';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { ShareRateLimit } from '../notifications/share-rate-limit';
@@ -201,9 +203,11 @@ export class PortfolioRequestsController {
     @Query('fields') fields: string | undefined,
     @Query('preset') preset: string | undefined,
     @Query('status') status: string | undefined,
+    @Query('format') formatRaw: unknown,
     @Req() req: any,
     @Res() res: Response,
   ) {
+    const format = csvExportFormat(formatRaw, scope);
     const tenantId = req?.tenant?.id ?? '';
     // The screen's language (the user's own when the screen sends none), as every shared-layer file.
     const language = await languageOf(req?.queryRunner?.manager, tenantId, req.user?.sub ?? null, languageRaw);
@@ -215,11 +219,9 @@ export class PortfolioRequestsController {
       fields: fields ? fields.split(',').map((f) => f.trim()) : undefined,
       preset,
       status,
+      format,
     });
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(result.filename));
-    res.send(result.content);
+    res.send(await csvExportBody(res, result));
   }
 
   @UseGuards(PermissionGuard)
