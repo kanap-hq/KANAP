@@ -23,6 +23,7 @@ import {
   type BudgetReport,
   type BudgetReportParams,
   type LineExclusions,
+  type ReportGroupParam,
 } from './budget-report-params';
 import {
   accountIdOptionsRequest,
@@ -39,6 +40,7 @@ import {
   NO_ANALYTICS_VALUE,
   NO_CONSOLIDATION_LINE,
   reportFilterModels,
+  staffingRequest,
   topItemsRequest,
   trendRequest,
   type AccountRow,
@@ -47,6 +49,7 @@ import {
   type BudgetScope,
   type DeltaMode,
   type MetricKey,
+  type StaffingLabels,
 } from './shared/reportAggregates';
 import {
   analyticsTable,
@@ -54,7 +57,9 @@ import {
   comparisonTable,
   consolidationTable,
   deltaTable,
+  shortMonthNames,
   sortColumnSelections,
+  staffingTable,
   topLinesTable,
   type ReportTableData,
   type ReportTableLabels,
@@ -62,7 +67,8 @@ import {
 
 /**
  * The table exports of the budget aggregate reports (`GET reports/budget/<report>/export`, `<report>` =
- * `comparison`, `columns-compare`, `top-lines`, `increases-decreases`, `consolidation`, `analytics`): the
+ * `comparison`, `columns-compare`, `top-lines`, `increases-decreases`, `consolidation`, `analytics`,
+ * `staffing`): the
  * screen's request, rebuilt with the backend copy of `reportAggregates.ts`, runs on the aggregate
  * route's own path (`summaryAggregateRequest` on the scope's service, the request's manager, the
  * caller's access), and the answer becomes the screen's table through the copy of `reportTables.ts`.
@@ -113,7 +119,12 @@ export class BudgetReportExportService {
       analyticsUnassigned: labels.analyticsUnassigned,
       analyticsUnnamed: labels.analyticsUnnamed,
       analyticsTotal: (metric) => labels.analyticsTotal.replace('{{metric}}', metric),
+      monthNames: shortMonthNames(language),
+      average: labels.average,
+      peak: labels.peak,
     };
+    // Rows of equal value in the order of the export's language, as the screen in that language.
+    const compare = new Intl.Collator(language).compare;
     const run = (aggregate: AggregateRequest) => this.aggregate(params.scope, aggregate, manager, ctx);
     const filters = reportFilterModels(params.picks);
 
@@ -205,6 +216,17 @@ export class BudgetReportExportService {
         [labels.topCount, String(params.top)],
         ...(excludedLines.length ? [[labels.excludeItems, excludedLines.join(', ')] as [string, string]] : []),
         ...(params.excludeAccounts.length ? [[labels.excludeAccounts, params.excludeAccounts.join(', ')] as [string, string]] : []),
+      ];
+    } else if (params.report === 'staffing') {
+      const grouped = groupWords(params.group, named);
+      answer = await run(staffingRequest({ scope: params.scope, year: params.year, metric: params.metric, group: params.group.group, filters }));
+      table = staffingTable({ groupHeader: grouped.header, groupLabels: grouped.labels, compare }, answer, tableLabels);
+      sheet = labels.staffingSheet;
+      fileBase = `staffing-${params.scope}-${params.year}-${params.metric}-${GROUP_FILE_NAME[params.group.kind]}`;
+      own = [
+        [labels.groupBy, grouped.header],
+        [labels.year, String(params.year)],
+        [labels.column, columnName(params.metric)],
       ];
     } else {
       const years: number[] = [];
@@ -361,20 +383,35 @@ function axisLabel(axis: AnalyticsAxisInfo, language: CsvLanguage): string {
   return axis.name?.trim() || DEFAULT_ANALYTICS_AXIS_LABELS[(['en', 'fr', 'de', 'es'] as const).indexOf(language)];
 }
 
+/** The grouping in a file name, as the screens name it. */
+const GROUP_FILE_NAME: Record<ReportGroupParam['kind'], string> = { costCenter: 'cost-center', item: 'item', supplier: 'supplier', axis: 'dimension' };
+
+/**
+ * A grouping as the screens word it (`useReportGroup`): the group column's header (the kind, or the
+ * dimension's name) and the rows without a key or without a name.
+ */
+function groupWords(group: ReportGroupParam, named: Named): { header: string; labels: StaffingLabels } {
+  const { labels, language } = named;
+  const unnamed = labels.analyticsUnnamed;
+  if (group.kind === 'axis') return { header: group.axis ? axisLabel(group.axis, language) : labels.analyticsDimension, labels: { none: labels.none_axis, unnamed } };
+  return { header: labels[`group_${group.kind}`], labels: { none: group.kind === 'item' ? '' : labels[`none_${group.kind}`], unnamed } };
+}
+
+/** The reports with no measure picker: FTE only, or their own measures. */
+const NO_MEASURE: ReadonlySet<BudgetReport> = new Set(['staffing']);
+
 /** The filter bar's picks in words, then the reporting currency of the amounts. */
 function filterParameters(params: BudgetReportParams, named: Named, answer: Aggregate): Array<[string, string]> {
   const { labels, language } = named;
-  const out: Array<[string, string]> = [
-    [labels.scope, labels[`scope_${params.scope}`]],
-    [labels.measure, labels[`measure_${params.measure}`]],
-  ];
+  const out: Array<[string, string]> = [[labels.scope, labels[`scope_${params.scope}`]]];
+  if (!NO_MEASURE.has(params.report)) out.push([labels.measure, labels[`measure_${params.measure}`]]);
   if (params.costCenter) out.push([labels.costCenter, params.costCenter]);
   if (params.picks.runBuild) out.push([labels.runBuild, labels[`runBuild_${params.picks.runBuild}`]]);
   if (params.picks.withFte) out.push([labels.fteItems, labels.fteItemsWith]);
   for (const pick of params.analytics) {
     out.push([axisLabel(pick.axis, language), pick.valueName ?? labels.analyticsNone]);
   }
-  if (params.measure === 'amount' && answer.reportingCurrency) out.push([labels.reportingCurrency, answer.reportingCurrency.toUpperCase()]);
+  if (params.measure === 'amount' && params.report !== 'staffing' && answer.reportingCurrency) out.push([labels.reportingCurrency, answer.reportingCurrency.toUpperCase()]);
   return out;
 }
 

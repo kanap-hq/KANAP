@@ -52,4 +52,10 @@ export class BudgetReportExportController {
   async analytics(@Query() query: Record<string, unknown>, @Tenant() ctx: TenantRequest, @Res() res: Response) {
     res.send(await reportExportBody(res, await this.svc.export('analytics', query, ctx)));
   }
+
+  @RequireLevel('budget', 'reader')
+  @Get('staffing/export')
+  async staffing(@Query() query: Record<string, unknown>, @Tenant() ctx: TenantRequest, @Res() res: Response) {
+    res.send(await reportExportBody(res, await this.svc.export('staffing', query, ctx)));
+  }
 }

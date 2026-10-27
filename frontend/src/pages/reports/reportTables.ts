@@ -12,10 +12,12 @@
 
 import {
   METRIC_SUFFIX,
+  MONTHS,
   readAnalytics,
   readColumnsCompare,
   readConsolidation,
   readDelta,
+  readStaffing,
   readTopItems,
   readTrend,
   type AggregateResult,
@@ -23,6 +25,7 @@ import {
   type FteYearGroups,
   type MetricKey,
   type ReportMeasure,
+  type StaffingLabels,
 } from './reportAggregates';
 
 /** `amount`: currency units; `number`: FTE, years, counts; `percent`: a fraction. */
@@ -88,6 +91,12 @@ export interface ReportTableLabels {
   analyticsUnnamed: string;
   /** `reports.analyticsCategory.totalMetric`: `Total Budget`. */
   analyticsTotal: (metric: string) => string;
+  /** The twelve short month names, January first, in the table's language (`shortMonthNames`). */
+  monthNames: readonly string[];
+  /** `reports.staffing.average` */
+  average: string;
+  /** `reports.staffing.peak` */
+  peak: string;
 }
 
 /** The five budget columns in their fixed order (column 1 to 5). */
@@ -373,4 +382,56 @@ export function analyticsTable(
     header: p.dimension,
     total: labels.analyticsTotal(measureColumnName(labels, p.metric, p.measure)),
   });
+}
+
+// ----- By group (StaffingByMonthReport, CostPerFteReport): grouped on a cost center, a line, a supplier or a dimension -----
+
+export interface GroupTableParams {
+  /** The header of the group column: the group kind (`reports.staffing.groups.<kind>`) or the dimension's name. */
+  groupHeader: string;
+  /** The rows without a key (`reports.staffing.none.<kind>`) and the dimension values without a name. */
+  groupLabels: StaffingLabels;
+  /** Orders the rows of equal value by label: a collator of the table's language (`new Intl.Collator(language).compare`). */
+  compare: (a: string, b: string) => number;
+}
+
+/**
+ * The twelve short month names of a language (`Jan` to `Dec`), January first: the month headers of the
+ * staffing table. The language is explicit, so a server writes the names of the export's language
+ * whatever its own default locale.
+ */
+export function shortMonthNames(language: string): string[] {
+  const format = new Intl.DateTimeFormat(language, { month: 'short', timeZone: 'UTC' });
+  return MONTHS.map((month) => format.format(new Date(Date.UTC(2000, month - 1, 1))));
+}
+
+/** The row field of a month (1 to 12) in the staffing table. */
+export const staffingMonthKey = (month: number): string => `m${month}`;
+
+/**
+ * Staffing by month: one row per group with a monthly FTE (largest average first, then by label), the
+ * twelve months, the average (sum ÷ 12) and the peak, all FTE; the total as footer. The notices under
+ * the screen's table stay outside it (`readStaffing`).
+ */
+export function staffingTable(
+  p: GroupTableParams,
+  result: AggregateResult | undefined,
+  labels: Pick<ReportTableLabels, 'monthNames' | 'average' | 'peak' | 'total'>,
+): ReportTableData {
+  const read = readStaffing(result, p.groupLabels, p.compare);
+  const values = (row: { months: Array<number | null>; average: number | null; peak: number | null }): ReportTableRow => ({
+    ...Object.fromEntries(MONTHS.map((month, i) => [staffingMonthKey(month), row.months[i]])),
+    average: row.average,
+    peak: row.peak,
+  });
+  return {
+    columns: [
+      { key: 'group', header: p.groupHeader, kind: 'text' },
+      ...MONTHS.map((month, i): ReportTableColumn => ({ key: staffingMonthKey(month), header: labels.monthNames[i] ?? String(month), kind: 'number' })),
+      { key: 'average', header: labels.average, kind: 'number' },
+      { key: 'peak', header: labels.peak, kind: 'number' },
+    ],
+    rows: read.rows.map((row) => ({ group: row.label, groupKey: row.key, groupName: row.name, ...values(row) })),
+    footer: [{ group: labels.total, ...values(read.total) }],
+  };
 }

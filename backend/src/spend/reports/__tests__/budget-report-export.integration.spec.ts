@@ -59,6 +59,9 @@ const LABELS: T.ReportTableLabels = {
   analyticsUnassigned: L.analyticsUnassigned,
   analyticsUnnamed: L.analyticsUnnamed,
   analyticsTotal: (metric) => L.analyticsTotal.replace('{{metric}}', metric),
+  monthNames: T.shortMonthNames('en'),
+  average: L.average,
+  peak: L.peak,
 };
 
 type Fixture = Seed & {

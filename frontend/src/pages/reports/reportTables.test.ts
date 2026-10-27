@@ -7,7 +7,9 @@ import {
   comparisonTable,
   consolidationTable,
   deltaTable,
+  shortMonthNames,
   sortColumnSelections,
+  staffingTable,
   topLinesTable,
   type ReportTableLabels,
 } from './reportTables';
@@ -31,6 +33,9 @@ const labels: ReportTableLabels = {
   analyticsUnassigned: 'No value',
   analyticsUnnamed: 'Unnamed value',
   analyticsTotal: (metric) => `All ${metric}`,
+  monthNames: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  average: 'Average',
+  peak: 'Peak',
 };
 
 const row = (values: Record<string, number | null>, keys: Array<string | null> = []): AggregateRow => ({ keys, count: 1, values, unknown: {} });
@@ -210,5 +215,40 @@ describe('analyticsTable', () => {
       { group: 'No value', groupKey: 'uncategorized', groupName: null, 2026: 10 },
     ]);
     expect(table.footer).toEqual([{ group: 'All Budget', 2026: 60 }]);
+  });
+});
+
+describe('shortMonthNames', () => {
+  it('names the months in the language asked, whatever the default locale', () => {
+    expect(shortMonthNames('en')).toEqual(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
+    expect(shortMonthNames('de')[2]).toBe(new Intl.DateTimeFormat('de', { month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(2000, 2, 1))));
+  });
+});
+
+describe('staffingTable', () => {
+  const months = (values: Array<number | null>) => Object.fromEntries(values.map((value, i) => [`m${String(i + 1).padStart(2, '0')}`, value]));
+  const twelve = (value: number | null) => Array(12).fill(value) as Array<number | null>;
+  const group = { groupHeader: 'Cost center', groupLabels: { none: 'No cost center', unnamed: 'Unnamed value' }, compare: new Intl.Collator('en').compare };
+
+  it('lists the groups with a monthly FTE, largest average first then by label, the total as footer', () => {
+    const table = staffingTable(group, answer(months([2, ...twelve(1).slice(1)]), [
+      row(months(twelve(0.5)), ['b', 'Beta']),
+      row(months(twelve(null)), ['c', 'Gamma']),
+      row(months(twelve(0.5)), ['a', 'Alpha']),
+      row(months([...twelve(null).slice(1), 1.2]), [null, null]),
+    ]), labels);
+    expect(table.columns.map((column) => [column.key, column.header, column.kind])).toEqual([
+      ['group', 'Cost center', 'text'],
+      ...labels.monthNames.map((name, i) => [`m${i + 1}`, name, 'number']),
+      ['average', 'Average', 'number'],
+      ['peak', 'Peak', 'number'],
+    ]);
+    expect(table.rows.map((r) => [r.group, r.groupKey, r.groupName, r.average, r.peak])).toEqual([
+      ['Alpha', 'a', 'Alpha', 0.5, 0.5],
+      ['Beta', 'b', 'Beta', 0.5, 0.5],
+      ['No cost center', '', null, 1.2 / 12, 1.2],
+    ]);
+    expect(table.rows[2].m1).toBeNull();
+    expect(table.footer).toEqual([{ group: 'Total', ...Object.fromEntries([2, ...twelve(1).slice(1)].map((value, i) => [`m${i + 1}`, value])), average: 13 / 12, peak: 2 }]);
   });
 });

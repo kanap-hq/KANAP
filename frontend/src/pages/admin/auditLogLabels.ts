@@ -82,6 +82,7 @@ export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
   'reports/budget/comparison': 'budgetComparisonReport',
   'reports/budget/consolidation': 'consolidationReport',
   'reports/budget/increases-decreases': 'increasesDecreasesReport',
+  'reports/budget/staffing': 'staffingReport',
   'reports/budget/top-lines': 'topLinesReport',
   'reports/chargeback/company': 'companyChargebackReport',
   'reports/chargeback/global': 'globalChargebackReport',

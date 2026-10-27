@@ -39,15 +39,18 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
     },
   };
 });
+const layout = vi.hoisted(() => ({ tableExport: null as any }));
 vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../components/reports/ReportLayout')>()),
-  default: ({ filters, children, onExportTableCsv }: { filters?: React.ReactNode; children?: React.ReactNode; onExportTableCsv?: () => void }) => (
-    <div>
-      <button type="button" onClick={onExportTableCsv}>export-csv</button>
-      <div data-testid="filters">{filters}</div>
-      {children}
-    </div>
-  ),
+  default: ({ filters, children, tableExport }: { filters?: React.ReactNode; children?: React.ReactNode; tableExport?: unknown }) => {
+    layout.tableExport = tableExport ?? null;
+    return (
+      <div>
+        <div data-testid="filters">{filters}</div>
+        {children}
+      </div>
+    );
+  },
 }));
 const chart = vi.hoisted(() => ({ options: null as any }));
 vi.mock('../../components/reports/ChartCard', () => ({
@@ -56,19 +59,18 @@ vi.mock('../../components/reports/ChartCard', () => ({
     return null;
   }),
 }));
-// Each mount of the grid: the value width it laid out with and the api it handed to `onGridReady`.
-type GridMount = { width: number | undefined; api: { exportDataAsCsv: ReturnType<typeof vi.fn> } };
+// Each mount of the grid: the value width it laid out with.
+type GridMount = { width: number | undefined };
 const grid = vi.hoisted(() => ({ columns: [] as any[], pinned: [] as any[], props: {} as Record<string, any>, mounts: [] as GridMount[] }));
 vi.mock('../../components/reports/ReportGrid', () => ({
-  default: (props: { rowData?: unknown[]; columnDefs?: any[]; pinnedBottomRowData?: any[]; onGridReady?: (e: { api: unknown }) => void }) => {
+  default: (props: { rowData?: unknown[]; columnDefs?: any[]; pinnedBottomRowData?: any[] }) => {
     const { rowData, columnDefs, pinnedBottomRowData } = props;
     grid.columns = columnDefs ?? [];
     grid.pinned = pinnedBottomRowData ?? [];
     grid.props = props;
     React.useEffect(() => {
-      const mount: GridMount = { width: props.columnDefs?.[1]?.width, api: { exportDataAsCsv: vi.fn() } };
+      const mount: GridMount = { width: props.columnDefs?.[1]?.width };
       grid.mounts.push(mount);
-      props.onGridReady?.({ api: mount.api });
       // Mount only: a remount is what the test watches.
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -270,7 +272,7 @@ describe('Staffing by month', () => {
     expect(new Set(grid.columns.slice(1).map((column) => column.width)).size).toBe(1);
   });
 
-  it('lays the grid out again only when the shared value width changes, the export following the new grid', async () => {
+  it('lays the grid out again only when the shared value width changes; the export asks the server for the screen\'s table', async () => {
     serverRows = [
       line('a', ['cc1', 'CC1 · Ops'], null, { fte: 1, months: flat(1) }),
       line('b', ['cc2', 'CC2 · Dev'], null, { fte: 1234.5, months: flat(1234.5) }),
@@ -280,9 +282,11 @@ describe('Staffing by month', () => {
     // Before the rows: `00.00`; with them: `1,235.50`. The new width remounts the grid.
     const wide = Math.ceil(8 * 13 * 0.65 + 2 * 10 + 6);
     await waitFor(() => expect(grid.mounts.map((mount) => mount.width)).toEqual([69, wide]));
-    fireEvent.click(screen.getByRole('button', { name: 'export-csv' }));
-    expect(grid.mounts[0].api.exportDataAsCsv).not.toHaveBeenCalled();
-    expect(grid.mounts[1].api.exportDataAsCsv).toHaveBeenCalledWith({ fileName: expect.stringMatching(/^staffing-.*\.csv$/) });
+    expect(layout.tableExport).toMatchObject({
+      url: '/reports/budget/staffing/export',
+      params: { scope: 'all', group: 'costCenter', year: new Date().getFullYear(), metric: 'budget' },
+      fileBase: `staffing-all-${new Date().getFullYear()}-budget-cost-center`,
+    });
 
     // A refresh with values as wide (another budget column, same values): same width, same grid.
     const requests = post.mock.calls.length;

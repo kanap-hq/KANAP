@@ -14,6 +14,7 @@ import {
   type ReportFilterPicks,
   type ReportMeasure,
   type RunBuildPick,
+  type StaffingGroup,
 } from './shared/reportAggregates';
 import type { ColumnSelection } from './shared/reportTables';
 
@@ -32,9 +33,11 @@ export type DeltaDirection = 'increase' | 'decrease' | 'both';
  * `useCostCenterTree.descendantIds`, disabled nodes included).
  */
 
-export type BudgetReport = 'comparison' | 'columns-compare' | 'top-lines' | 'increases-decreases' | 'consolidation' | 'analytics';
+export type BudgetReport = 'comparison' | 'columns-compare' | 'top-lines' | 'increases-decreases' | 'consolidation' | 'analytics' | 'staffing';
 
-const COMMON_KEYS = ['scope', 'measure', 'costCenter', 'runBuild', 'fte', 'analytics'] as const;
+/** The filter bar's keys; the FTE reports (staffing) have no measure picker. */
+const FILTER_KEYS = ['scope', 'costCenter', 'runBuild', 'fte', 'analytics'] as const;
+const COMMON_KEYS = [...FILTER_KEYS, 'measure'] as const;
 
 /** The query keys of each report, besides `format`, `language` and `tz`. */
 export const BUDGET_REPORT_KEYS: Record<BudgetReport, readonly string[]> = {
@@ -46,6 +49,7 @@ export const BUDGET_REPORT_KEYS: Record<BudgetReport, readonly string[]> = {
   ],
   consolidation: [...COMMON_KEYS, 'startYear', 'endYear', 'metric', 'excludeAccounts'],
   analytics: [...COMMON_KEYS, 'axis', 'startYear', 'endYear', 'metric', 'excludeValues'],
+  staffing: [...FILTER_KEYS, 'group', 'year', 'metric'],
 };
 
 /** The most selections the columns compare screen holds. */
@@ -79,7 +83,15 @@ export type BudgetReportParams = BudgetReportFilterParams & (
   } & LineExclusions)
   | { report: 'consolidation'; startYear: number; endYear: number; metric: MetricKey; excludeAccounts: string[] }
   | { report: 'analytics'; axis: AnalyticsAxisInfo | null; startYear: number; endYear: number; metric: MetricKey; excludeValues: string[] }
+  | { report: 'staffing'; group: ReportGroupParam; year: number; metric: MetricKey }
 );
+
+/** What the FTE reports group on (`?group=`), with the dimension when grouped on one. */
+export interface ReportGroupParam {
+  kind: StaffingGroup['kind'];
+  group: StaffingGroup;
+  axis: AnalyticsAxisInfo | null;
+}
 
 /** The lines and account labels a top leaves out (top lines, increases and decreases). */
 export interface LineExclusions {
@@ -226,9 +238,23 @@ async function analyticsPicks(
 }
 
 /**
+ * `group`: `costCenter` (also when absent), `item`, `supplier` or `axis:<dimension id>`, an enabled
+ * dimension of the scope's lines (the one the screen resolved and shows).
+ */
+async function reportGroup(manager: EntityManager, tenantId: string, scope: BudgetScope, query: Query): Promise<ReportGroupParam> {
+  const raw = text(query, 'group') ?? 'costCenter';
+  if (raw === 'costCenter' || raw === 'item' || raw === 'supplier') return { kind: raw, group: { kind: raw }, axis: null };
+  const axisId = raw.startsWith('axis:') ? raw.slice('axis:'.length).trim() : '';
+  if (!UUID.test(axisId)) throw new BadRequestException('group must be costCenter, item, supplier or axis:<dimension id>.');
+  const axis = (await enabledAxes(manager, tenantId, scope)).find((candidate) => candidate.id === axisId.toLowerCase());
+  if (!axis) throw new BadRequestException(`group: ${axisId} is not an enabled dimension of these lines.`);
+  return { kind: 'axis', group: { kind: 'axis', axisId: axis.id }, axis };
+}
+
+/**
  * Reads the query of a report (its keys were checked by `reportExportRequest`). `currentYear` sets the
  * windows the screens allow: Y-2..Y+2 for the comparison, the columns compare and the increases and
- * decreases, Y-1..Y+1 for the top, the consolidation and the analytics reports. The exclusions (lines,
+ * decreases, Y-1..Y+1 for the top, the consolidation, the analytics and the staffing reports. The exclusions (lines,
  * accounts, values) are checked against what the screen offers by the service.
  */
 export async function parseBudgetReportParams(
@@ -311,6 +337,11 @@ export async function parseBudgetReportParams(
     const direction = required(query, 'direction');
     if (direction !== 'increase' && direction !== 'decrease' && direction !== 'both') throw new BadRequestException('direction must be increase, decrease or both.');
     return { ...filters, report, source, destination, direction, top: topCount(query), ...lineExclusions(query, scope) };
+  }
+
+  if (report === 'staffing') {
+    const group = await reportGroup(manager, tenantId, scope, query);
+    return { ...filters, report, group, year: year(required(query, 'year'), 'year', Y - 1, Y + 1), metric: column(required(query, 'metric'), 'metric', columns) };
   }
 
   // Consolidation and analytics: the screens offer Y-1..Y+1.

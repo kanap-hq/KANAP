@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import { useLocale } from '../../i18n/useLocale';
 import type { MetricKey } from './reportAggregates';
-import type { ReportTableLabels } from './reportTables';
+import { shortMonthNames, type ReportTableLabels } from './reportTables';
 
 /** The words of the budget report tables (`reportTables.ts`) in the screen language, column names resolved. */
 export function useReportTableLabels(): ReportTableLabels {
   const { t } = useTranslation(['ops']);
   const budgetColumns = useBudgetColumns();
+  const locale = useLocale();
   return useMemo<ReportTableLabels>(() => ({
     columnNames: Object.fromEntries(budgetColumns.all.map((column) => [column.key, column.label])) as Record<MetricKey, string>,
     columnFte: (column) => t('reports.measure.columnFte', { column }),
@@ -27,5 +29,8 @@ export function useReportTableLabels(): ReportTableLabels {
     analyticsUnassigned: t('reports.analyticsCategory.unassigned'),
     analyticsUnnamed: t('reports.analyticsCategory.unnamed'),
     analyticsTotal: (metric) => t('reports.analyticsCategory.totalMetric', { metric }),
-  }), [budgetColumns, t]);
+    monthNames: shortMonthNames(locale),
+    average: t('reports.staffing.average'),
+    peak: t('reports.staffing.peak'),
+  }), [budgetColumns, locale, t]);
 }
