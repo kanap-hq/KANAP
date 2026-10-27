@@ -165,7 +165,7 @@ Die E-Mail an die IT-Verantwortlichen meldet eine ausgenutzte Schwachstelle jede
 
 ## Export
 
-**CSV exportieren** lädt die Schwachstellen herunter, die den Filtern entsprechen, eine Zeile pro Zeile des Rasters, in seiner Reihenfolge, in der Sprache Ihres Bildschirms. Ihre Spalte **Source** nach **Match** enthält `NVD`, `CVE.org` oder `NVD, CVE.org`. Ab 10.000 Schwachstellen grenzen Sie die Filter zuerst ein.
+**Exportieren** lädt die Schwachstellen, die den Filtern entsprechen, als CSV- oder Excel-Datei herunter, eine Zeile pro Zeile des Rasters, in seiner Reihenfolge, in der Sprache Ihres Bildschirms. In der Excel-Datei sind Scores, EPSS und Datumsangaben Werte, die Excel sortieren und filtern kann. Ihre Spalte **Source** nach **Match** enthält `NVD`, `CVE.org` oder `NVD, CVE.org`. Ab 10.000 Schwachstellen grenzen Sie die Filter zuerst ein.
 
 ## E-Mail-Benachrichtigungen
 

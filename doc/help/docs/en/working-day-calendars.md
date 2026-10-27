@@ -32,7 +32,7 @@ To create a calendar yourself, click **New**.
 - **Country** and **Region**: make the calendar standard. Without a country, the calendar is custom
 - **Description**: who the calendar applies to, for example "Working days of salaried staff, public holidays excluded"
 
-**Tip**: If your finance team already keeps working days in a spreadsheet, import them from a CSV file. One row holds one calendar and one year.
+**Tip**: If your finance team already keeps working days in a spreadsheet, import them from a CSV file or an Excel workbook. One row holds one calendar and one year.
 
 ---
 
@@ -64,8 +64,8 @@ Click any cell to open the workspace.
 **Actions**:
 
 - **New**: create a calendar (requires `working_day_profiles:member`)
-- **Import CSV**: load calendars and their working days from a file (requires `working_day_profiles:admin`)
-- **Export CSV**: download the calendars the list shows, or every calendar (requires `working_day_profiles:admin`)
+- **Import**: load calendars and their working days from a file (requires `working_day_profiles:admin`)
+- **Export**: download the calendars the list shows, or every calendar (requires `working_day_profiles:admin`)
 - **Delete selected**: delete the selected calendars (requires `working_day_profiles:admin`). Before anything is deleted, the confirmation lists the calendars kept, with the reason
 
 ---
@@ -170,14 +170,16 @@ A budget line uses a calendar when one of its columns, in any year, has a line p
 
 ## CSV import/export
 
+The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
+
 Load or update calendars and their working days from a file.
 
-**Export**: click **Export CSV**, then **Export data**. The file lists every calendar, enabled or disabled, sorted by code. For an empty file with the headers only, use **Download template** in the import dialog.
+**Export**: click **Export**, then **Export data**. The file lists every calendar, enabled or disabled, sorted by code. For an empty file with the headers only, use **Download template** in the import dialog.
 
 **CSV structure**:
 
 - Headers: `code`, `name`, `description`, `country`, `region`, `status`, `disabled_at`, `year`, `jan`, `feb`, `mar`, `apr`, `may`, `jun`, `jul`, `aug`, `sep`, `oct`, `nov`, `dec`
-- The export writes the separator of the screen language. See [CSV files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
+- The export writes the separator of the screen language. See [CSV and Excel files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
 - One row per calendar and year. A calendar with three years takes three rows. A calendar without any year is exported as one row with the year and the months empty
 - A standard calendar exports the years you edited only. The other years follow the public holidays and need no row
 - The `country`, `region` and `disabled_at` columns are optional on import. A file without `country` and `region` creates custom calendars
@@ -196,7 +198,7 @@ Load or update calendars and their working days from a file.
 
 **Import**:
 
-1. Click **Import CSV** in the list
+1. Click **Import** in the list
 2. Choose your file
 3. Click **Preflight check**. The report gives the number of rows, the inserts and updates, and the rows that change nothing
 4. If the preflight is clean, click **Load**
@@ -235,7 +237,7 @@ Load or update calendars and their working days from a file.
 |---|---|
 | `working_day_profiles:reader` | View the list and open calendars |
 | `working_day_profiles:member` | Create calendars, edit them and their working days |
-| `working_day_profiles:admin` | Everything above, plus CSV import and export, and deletion |
+| `working_day_profiles:admin` | Everything above, plus import and export, and deletion |
 
 Budget administrators are calendar administrators: the built-in Budget Administrator role gets admin. Every other role starts with the level it has on departments, so Master Data Administrator is admin, Budget Member and Master Data Member are members, and the reader roles can read.
 

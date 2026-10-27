@@ -32,7 +32,7 @@ Pour créer vous-même un calendrier, cliquez sur **Nouveau**.
 - **Pays** et **Région** : font du calendrier un calendrier standard. Sans pays, le calendrier est personnalisé
 - **Description** : à qui s'applique le calendrier, par exemple « Jours ouvrés des salariés, jours fériés exclus »
 
-**Astuce** : si votre équipe finance tient déjà les jours ouvrés dans un tableur, importez-les depuis un fichier CSV. Une ligne correspond à un calendrier et une année.
+**Astuce** : si votre équipe finance tient déjà les jours ouvrés dans un tableur, importez-les depuis un fichier CSV ou un classeur Excel. Une ligne correspond à un calendrier et une année.
 
 ---
 
@@ -64,8 +64,8 @@ Cliquez sur n'importe quelle cellule pour ouvrir l'espace de travail.
 **Actions** :
 
 - **Nouveau** : créer un calendrier (nécessite `working_day_profiles:member`)
-- **Importer CSV** : charger des calendriers et leurs jours ouvrés depuis un fichier (nécessite `working_day_profiles:admin`)
-- **Exporter CSV** : télécharger les calendriers que la liste affiche, ou tous les calendriers (nécessite `working_day_profiles:admin`)
+- **Importer** : charger des calendriers et leurs jours ouvrés depuis un fichier (nécessite `working_day_profiles:admin`)
+- **Exporter** : télécharger les calendriers que la liste affiche, ou tous les calendriers (nécessite `working_day_profiles:admin`)
 - **Supprimer la sélection** : supprimer les calendriers sélectionnés (nécessite `working_day_profiles:admin`). Avant toute suppression, la confirmation liste les calendriers conservés, avec la raison
 
 ---
@@ -170,14 +170,16 @@ Une ligne budgétaire utilise un calendrier lorsque l'une de ses colonnes, pour 
 
 ## Import/export CSV
 
+L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
+
 Chargez ou mettez à jour des calendriers et leurs jours ouvrés depuis un fichier.
 
-**Export** : cliquez sur **Exporter CSV**, puis sur **Exporter les données**. Le fichier liste tous les calendriers, activés ou désactivés, triés par code. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
+**Export** : cliquez sur **Exporter**, puis sur **Exporter les données**. Le fichier liste tous les calendriers, activés ou désactivés, triés par code. Pour un fichier vide avec les seuls en-têtes, utilisez **Télécharger le modèle** dans la boîte de dialogue d'import.
 
 **Structure du CSV** :
 
 - En-têtes : `code`, `name`, `description`, `country`, `region`, `status`, `disabled_at`, `year`, `jan`, `feb`, `mar`, `apr`, `may`, `jun`, `jul`, `aug`, `sep`, `oct`, `nov`, `dec`
-- L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
+- L'export écrit le séparateur de la langue de l'écran. Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur, les formes de dates et les deux étapes d'import
 - Une ligne par calendrier et par année. Un calendrier avec trois années occupe trois lignes. Un calendrier sans aucune année est exporté sur une ligne, avec l'année et les mois vides
 - Un calendrier standard n'exporte que les années que vous avez modifiées. Les autres années suivent les jours fériés et n'ont besoin d'aucune ligne
 - Les colonnes `country`, `region` et `disabled_at` sont facultatives à l'import. Un fichier sans `country` ni `region` crée des calendriers personnalisés
@@ -196,7 +198,7 @@ Chargez ou mettez à jour des calendriers et leurs jours ouvrés depuis un fichi
 
 **Import** :
 
-1. Cliquez sur **Importer CSV** dans la liste
+1. Cliquez sur **Importer** dans la liste
 2. Choisissez votre fichier
 3. Cliquez sur **Vérification préalable**. Le rapport donne le nombre de lignes, les créations et les mises à jour, et les lignes qui ne changent rien
 4. Si la vérification préalable est sans erreur, cliquez sur **Charger**
@@ -235,7 +237,7 @@ Chargez ou mettez à jour des calendriers et leurs jours ouvrés depuis un fichi
 |---|---|
 | `working_day_profiles:reader` | Consulter la liste et ouvrir les calendriers |
 | `working_day_profiles:member` | Créer des calendriers, les modifier ainsi que leurs jours ouvrés |
-| `working_day_profiles:admin` | Tout ce qui précède, plus l'import et l'export CSV, et la suppression |
+| `working_day_profiles:admin` | Tout ce qui précède, plus l'import et l'export, et la suppression |
 
 Les administrateurs budgétaires sont administrateurs des calendriers : le rôle intégré Administrateur budget reçoit admin. Chaque autre rôle reçoit au départ le niveau qu'il a sur les départements. Ainsi, Administrateur données de référence est admin, Membre budget et Membre données de référence sont membres, et les rôles lecteurs peuvent consulter.
 

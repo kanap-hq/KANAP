@@ -112,9 +112,9 @@ Jeder Server erscheint einmal. „Keiner gefunden“ bedeutet, dass kein Server 
 
 ## Export
 
-**Assets exportieren** lädt die Assets der Tabelle als CSV-Datei herunter, mit ihrer Suche, ihren Filtern und ihrer Sortierung. Die Spalten sind **Zone**, **Reference**, **Name**, **Type**, **Technologies**, **Applications**, **Controls** und **Dependency**. **Dependency** nennt für **Weniger sensibler Host** jedes sensiblere Asset, das das Asset betreibt, oder jeden Cluster, dem es angehört, mit seiner Zone. Ein Export umfasst bis zu 10.000 Assets: Grenzen Sie darüber hinaus die Filter ein.
+**Assets exportieren** lädt die Assets der Tabelle als CSV- oder Excel-Datei herunter, mit ihrer Suche, ihren Filtern und ihrer Sortierung. Die Spalten sind **Zone**, **Reference**, **Name**, **Type**, **Technologies**, **Applications**, **Controls** und **Dependency**. **Dependency** nennt für **Weniger sensibler Host** jedes sensiblere Asset, das das Asset betreibt, oder jeden Cluster, dem es angehört, mit seiner Zone. Ein Export umfasst bis zu 10.000 Assets: Grenzen Sie darüber hinaus die Filter ein.
 
-**Domänen exportieren** lädt jede Domäne mit DNS-Suffix, Gesamtstruktur, Vertrauensstellungen (ihren eigenen und den von anderen Domänen deklarierten), Anzahl der Konten und Computer sowie Domänencontrollern herunter.
+**Domänen exportieren** lädt jede Domäne als CSV oder Excel herunter, mit DNS-Suffix, Gesamtstruktur, Vertrauensstellungen (ihren eigenen und den von anderen Domänen deklarierten), Anzahl der Konten und Computer sowie Domänencontrollern.
 
 ## Tipps
 

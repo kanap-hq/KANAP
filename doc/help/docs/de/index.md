@@ -117,7 +117,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 - [Datenzugriff](data-access.md): Eine Person auf Budget und Verträge bestimmter Unternehmen oder Kostenstellen begrenzen
 - [Branding](branding.md): Ihr Mandanten-Logo und die Primärfarben für hell/dunkel anpassen
 - [Beispieldaten](sample-data.md): KANAP mit einem fiktiven Unternehmen erkunden, dann alles löschen und neu beginnen
-- [Audit-Protokoll](admin.md#audit-protokoll): Datenänderungen, Anmeldungen und Exporte mit Filtern, Detailansicht und CSV-Export prüfen
+- [Audit-Protokoll](admin.md#audit-protokoll): Datenänderungen, Anmeldungen und Exporte mit Filtern, Detailansicht und Export als CSV oder Excel prüfen
 - [KI-Modelle](ai-models.md): Die von Ihrer Organisation genutzten KI-Modelle mit ihren Preisen registrieren und den Standard festlegen
 - [Plaid-Einstellungen](ai-settings.md): Das von Plaid genutzte Modell wählen, dazu Chat-Funktionen, Aufbewahrung und MCP-Schlüssel
 - [Nutzung & Kosten](ai-usage.md): KI-Nutzung und reale Kosten über Chat und Agenten hinweg, pro Agent und pro Modell

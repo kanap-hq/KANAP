@@ -488,6 +488,16 @@ Hinweise:
 - Ein in KANAP geänderter Wert oder eine dort gelöschte Version wird nie überschrieben oder wiederhergestellt.
 - Starten Sie die API nach einer Änderung dieser Werte neu.
 
+## Optional: Excel-Importe { #optional-excel-imports }
+
+Jeder Datenimport liest eine Excel-Arbeitsmappe (`.xlsx`) ebenso wie eine CSV-Datei: die Stammdatenlisten, die IT- und Portfolio-Register, die Budgetdatei, die Verknüpfungsdateien der Technologien, den Datenzugriff und den Kontenplan. KANAP liest das erste Blatt einer Arbeitsmappe auf dem Server, mit denselben Spalten und Prüfungen wie bei einer CSV-Datei. Siehe [CSV- und Excel-Dateien](../csv-files.md).
+
+| Variable | Beschreibung | Standard |
+|----------|-------------|---------|
+| `IMPORT_XLSX` | Erlaubt den Importen, Excel-Arbeitsmappen zu lesen. Setzen Sie `false`, um nur CSV-Dateien anzunehmen. | `true` |
+
+Mit `IMPORT_XLSX=false` heißen die Import-Schaltflächen **CSV importieren**, die Importdialoge bieten nur CSV-Dateien an, und eine Arbeitsmappe wird mit einer Meldung abgelehnt, die erklärt, wie man sie als CSV speichert. Excel-Exporte und Importvorlagen bleiben unverändert. Starten Sie die API nach einer Änderung des Werts neu.
+
 ## Optional: Erweitert
 
 | Variable | Beschreibung | Standard |
@@ -617,6 +627,9 @@ S3_FORCE_PATH_STYLE=false
 # TECHNOLOGIEKATALOG (optional - standardmäßig aus)
 # TECHNOLOGY_CATALOG_SYNC_ENABLED=false
 # ENDOFLIFE_API_BASE_URL=
+
+# EXCEL-IMPORTE (optional - standardmäßig an)
+# IMPORT_XLSX=true
 
 # ERWEITERT (optional - die Standardwerte passen)
 # JWT_ACCESS_TOKEN_TTL=15m

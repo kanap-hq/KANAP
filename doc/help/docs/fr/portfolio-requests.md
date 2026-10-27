@@ -14,7 +14,7 @@ Les Demandes du portefeuille sont la couche d'intake pour les travaux proposés.
 | `portfolio_requests:reader` | Ouvrir la liste des demandes et consulter les espaces de travail des demandes |
 | `portfolio_requests:contributor` | Lier et délier des lignes budgétaires, applications, actifs et processus métier dans l'onglet **Relations** |
 | `portfolio_requests:member` | Créer des demandes, mettre à jour les données de demande, modifier les documents managés (Objectif, Risques et atténuations), maintenir l'équipe et les relations, ajouter commentaires et décisions, changer le statut, soumettre des recommandations d'analyse et modifier l'évaluation |
-| `portfolio_requests:admin` | Supprimer des demandes, utiliser l'import/export CSV et enregistrer les remplacements de priorité |
+| `portfolio_requests:admin` | Supprimer des demandes, utiliser l'import et l'export et enregistrer les remplacements de priorité |
 
 La conversion d'une demande en projet nécessite aussi `portfolio_projects:member`.
 
@@ -65,7 +65,7 @@ La grille standard met en évidence les champs qui comptent pendant l'intake et 
 ### Actions de la liste
 
 - **Nouvelle demande** est disponible avec `portfolio_requests:member`.
-- **Import CSV** et **Export CSV** sont disponibles pour les administrateurs de demandes.
+- **Importer** et **Exporter** sont disponibles pour les administrateurs de demandes.
 
 ## L'espace de travail Demande
 
@@ -339,7 +339,11 @@ En d'autres termes, la conversion n'efface pas la demande. Elle la promeut.
 
 ## Import et export CSV
 
-L'import et l'export CSV sont disponibles pour `portfolio_requests:admin`.
+**Exporter** et **Importer** sont disponibles pour `portfolio_requests:admin`.
+
+L'export contient les demandes que la liste affiche, avec ses filtres, sa recherche et son tri. **Format** : **CSV** ou **Excel (.xlsx)**, choisi dans la fenêtre et mémorisé par votre navigateur. Le classeur contient les mêmes colonnes que le CSV sur une feuille, avec les nombres et les dates en valeurs qu'Excel sait trier et filtrer. L'import lit l'un ou l'autre ; dans un classeur, il lit la première feuille. Voir [Fichiers CSV et Excel](csv-files.md).
+
+**Colonnes** : le fichier commence par `id` et `reference` (`REQ-12`), puis les colonnes suivent l'espace de travail, onglet par onglet. L'import ignore `reference`.
 
 Utilisez l'export quand vous avez besoin de reporting de portefeuille ou d'enrichissement hors ligne. Utilisez l'import quand vous avez besoin de créer ou mettre à jour des demandes en masse. Parce que l'import peut altérer les enregistrements d'intake à grande échelle, il est intentionnellement réservé aux administrateurs.
 

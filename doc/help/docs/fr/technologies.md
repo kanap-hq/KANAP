@@ -100,7 +100,7 @@ Quand les vulnérabilités sont suivies, la colonne **Éditeur** ouvre aussi la 
 **Actions** :
 
 - **Nouvelle technologie** (`infrastructure:member`).
-- **Importer les liens** (`infrastructure:member`) et **Exporter les liens** : chargez ou téléchargez les liens entre les technologies et les serveurs ou les applications dans un fichier CSV. Voir [Importer et exporter les liens](#importer-et-exporter-les-liens).
+- **Importer les liens** (`infrastructure:member`) et **Exporter les liens** : chargez ou téléchargez les liens entre les technologies et les serveurs ou les applications dans un fichier CSV ou un classeur Excel. Voir [Importer et exporter les liens](#importer-et-exporter-les-liens).
 - **Supprimer** les lignes sélectionnées (`infrastructure:admin`). La confirmation compte ce qui part avec elles : liens vers les serveurs et les applications, contrats, lignes budgétaires, projets, incidents et documents.
 
 ---
@@ -246,7 +246,7 @@ Une application apparaît de deux façons :
 
 **Ajouter** (`infrastructure:member`) ouvre une recherche où vous pouvez cocher plusieurs applications, puis les ajouter d'un coup. Elles sont déclarées avec une version inconnue : renseignez-la ensuite sur chaque ligne. Les applications et déploiements désactivés ne comptent pas.
 
-**Exporter en CSV** télécharge les lignes dans la langue de votre écran.
+**Exporter** télécharge les lignes dans un fichier CSV ou Excel, dans la langue de votre écran.
 
 ### Exploitation
 
@@ -314,12 +314,12 @@ Saisissez la technologie sur le serveur où elle est installée : l'hôte pour u
 
 ## Importer et exporter les liens
 
-La liste des technologies charge et télécharge les liens en masse, un lien par ligne d'un fichier CSV. Il existe deux fichiers :
+La liste des technologies charge et télécharge les liens en masse, un lien par ligne d'un fichier CSV ou d'un classeur Excel. Il existe deux fichiers :
 
 - **Serveurs et technologies** : les technologies installées sur chaque serveur.
 - **Applications et technologies** : les technologies que chaque application déclare. Les applications hébergées sur un serveur qui porte une technologie sont déduites des serveurs : le fichier les laisse de côté.
 
-Cliquez sur **Importer les liens** ou **Exporter les liens** dans la barre d'outils, puis choisissez le fichier. L'export propose les données ou un modèle vide. Les règles générales des fichiers CSV s'appliquent : encodage, séparateur, oui et non en quatre langues, 20 000 lignes au plus. Voir [Fichiers CSV](csv-files.md).
+Cliquez sur **Importer les liens** ou **Exporter les liens** dans la barre d'outils, puis choisissez le fichier. L'export propose les données, en CSV ou Excel, ou un modèle CSV vide. Les règles générales des fichiers d'import s'appliquent : encodage, séparateur, oui et non en quatre langues, 20 000 lignes au plus. Voir [Fichiers CSV et Excel](csv-files.md).
 
 **Permissions** :
 

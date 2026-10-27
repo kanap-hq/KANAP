@@ -254,7 +254,7 @@ The list in this guide is a starting point. Adapt it to how your IT department a
 
 ## Where to Go Next
 
-- [Tasks](../tasks.md): full reference for statuses, CSV import/export, time tracking, and every workspace feature
+- [Tasks](../tasks.md): full reference for statuses, import and export, time tracking, and every workspace feature
 - [Budget lines](../budget-lines.md): managing OPEX and CAPEX lines and their tasks
 - [Contracts](../contracts.md): managing contracts and their tasks
 - [Portfolio Projects](../portfolio-projects.md): project delivery, phases, effort tracking, and project-level tasks

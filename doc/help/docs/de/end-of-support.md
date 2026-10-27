@@ -60,7 +60,7 @@ Die Zeilen zu Anwendungen erfordern das Recht, Anwendungen zu lesen.
 
 ## Export und Druck
 
-**Tabelle als CSV exportieren** lädt die angezeigte Liste herunter: die Fristen mit dem aktuellen Zeitraum und Typ oder die fehlenden Daten. Die Spaltenköpfe folgen der Sprache Ihres Bildschirms. **Drucken / Als PDF speichern** druckt den Bericht.
+**Tabelle exportieren** lädt die angezeigte Liste als CSV- oder Excel-Datei herunter: die Fristen mit dem aktuellen Zeitraum und Typ oder die fehlenden Daten. Die Spaltenköpfe folgen der Sprache Ihres Bildschirms, und Datumsangaben sind in der Excel-Datei echte Datumswerte; sie fügt ein Blatt **Parameter** hinzu. Siehe [Berichte](reports.md#export-options). **Drucken / Als PDF speichern** druckt den Bericht.
 
 ## Tipps
 

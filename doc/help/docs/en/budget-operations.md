@@ -66,7 +66,7 @@ Without the Admin level on Budget administration, the page shows the states read
 ### What freezing does
 
 - Prevents edits to frozen columns in the workspace of the lines of that type. The inputs show a lock icon
-- Blocks CSV imports to frozen columns
+- Blocks imports to frozen columns
 - Blocks copy and reset operations targeting frozen columns
 - Refuses to delete a line, or to change its type, while it has amounts in a frozen column of the years concerned
 - Does **not** affect read access: data remains visible
@@ -127,6 +127,8 @@ Hidden columns are not offered. With nothing ticked under **To copy**, the page 
 3. When you are satisfied, click **Copy** to apply
 
 **Copy** is enabled only after a preview. Changing any field drops the preview: run it again. After the copy, the table stays on screen under the title **Result**, with what each line did.
+
+**Export table** (download icon) downloads the preview of the fields on screen as a CSV or Excel file, one row per line, with the columns and statuses of the table. After the copy, the export is disabled: the table then shows what the copy did, which a preview no longer describes. Amounts in the file carry their cents.
 
 Each part has its own status on each line:
 
@@ -243,6 +245,8 @@ Before you choose a column, one line replaces the grid: "Choose a column to see 
 - **Total lines**
 - **Lines with a non-zero total**
 - **Current total value**
+
+**Export table** (download icon) downloads the grid as a CSV or Excel file: the lines of the chosen type and their current value in the chosen column.
 
 ### Confirmation
 

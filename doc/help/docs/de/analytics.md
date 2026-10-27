@@ -117,8 +117,8 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich des Werts zu öffnen
 
 - **Neuer Wert**: einen Wert in der ausgewählten Dimension erstellen (erfordert `analytics:member`). Solange die ausgewählte Dimension deaktiviert ist, ist die Schaltfläche deaktiviert, und ihr Tooltip lautet „Aktivieren Sie diese Dimension, um Werte hinzuzufügen.“
 - **Neu ordnen**: die Reihenfolge der Werte der ausgewählten Dimension festlegen (erfordert `analytics:member`). Die Schaltfläche ist deaktiviert, solange die Dimension weniger als zwei Werte hat. Siehe [Werte ordnen](#werte-ordnen)
-- **CSV importieren**: Werte aus einer Datei laden (erfordert `analytics:admin`)
-- **CSV exportieren**: die Werte der Liste herunterladen, oder die Werte aller Dimensionen (erfordert `analytics:admin`)
+- **Importieren**: Werte aus einer Datei laden (erfordert `analytics:admin`)
+- **Exportieren**: die Werte der Liste herunterladen, oder die Werte aller Dimensionen (erfordert `analytics:admin`)
 - **Auswahl löschen**: die ausgewählten Werte löschen (erfordert `analytics:admin`). Werden einige davon von Budgetzeilen verwendet, nennt die Bestätigung, wie viele Zeilen sie verlieren, zum Beispiel „2 ausgewählte Werte werden verwendet: Sie werden aus 5 Budgetzeilen entfernt. Diese Daten können nicht wiederhergestellt werden.“, und die Schaltfläche heißt **Trotzdem löschen**
 
 ---
@@ -152,7 +152,7 @@ Eine neue Dimension kommt in der Reihenfolge der Dimensionen an die letzte Stell
 | Feld | Was Sie eingeben |
 |---|---|
 | **Name** | Bis zu 200 Zeichen. Namen sind unabhängig von Groß- und Kleinschreibung eindeutig. Pflicht, außer bei der Standarddimension: Lassen Sie ihn dort leer, um „Analysedimension“ in der Sprache jeder Person anzuzeigen. Die Bezeichnung der Standarddimension ist in jeder Sprache der App reserviert („Analytics dimension“, „Dimension analytique“, „Analysedimension“, „Dimensión analítica“), unabhängig von Groß- und Kleinschreibung: Eine andere Dimension mit einem dieser Namen wird mit „This name is reserved for the default dimension.“ abgelehnt |
-| **Code** | 1 bis 40 Zeichen: Kleinbuchstaben, Ziffern, `-` oder `_`, beginnend mit einem Buchstaben oder einer Ziffer. Jeder Code ist eindeutig. Der Code benennt die Spalte der Dimension in den OPEX- und CAPEX-CSV-Dateien, sodass eine Änderung des Codes diesen Spaltennamen ändert. Budgetzeilen behalten ihre Werte, wenn sich der Code ändert |
+| **Code** | 1 bis 40 Zeichen: Kleinbuchstaben, Ziffern, `-` oder `_`, beginnend mit einem Buchstaben oder einer Ziffer. Jeder Code ist eindeutig. Der Code benennt die Spalte der Dimension in den OPEX- und CAPEX-Dateien, sodass eine Änderung des Codes diesen Spaltennamen ändert. Budgetzeilen behalten ihre Werte, wenn sich der Code ändert |
 | **Beschreibung** | Wofür die Dimension da ist, damit Teammitglieder Zeilen einheitlich klassifizieren |
 | **Verwendet für** | **OPEX und CAPEX**, **Nur OPEX** oder **Nur CAPEX**. Legt fest, welche Budgetzeilen einen Wert in dieser Dimension haben können. Siehe [OPEX- oder CAPEX-Dimensionen](#opex-oder-capex-dimensionen). Bei der Standarddimension gesperrt, mit einer Zeile darunter: „Die Standarddimension gilt für OPEX- und CAPEX-Zeilen.“ |
 | **Erforderlich** | Ein Schalter. Ist er eingeschaltet, braucht jede neue Zeile der Arten, für die die Dimension verwendet wird, einen Wert in ihr, und eine Zeile mit einem Wert kann ihn nicht mehr verlieren. Siehe [Erforderliche Dimensionen](#erforderliche-dimensionen). Auch die Standarddimension kann erforderlich sein |
@@ -266,7 +266,7 @@ Die Werte einer Dimension haben eine Reihenfolge, die Sie festlegen. KANAP biete
 - die Wertefelder von OPEX- und CAPEX-Zeilen (wenn Sie in ein Feld tippen, stehen die besten Treffer zuerst)
 - die Kontrollkästchen-Filter der Dimension in der Liste der Budgetzeilen
 - die Dimensionsfilter der Berichte und die Liste **Werte ausschließen** des Berichts Analysedimensionen
-- der CSV-Export der Werte
+- der Export der Werte
 - die Werte, die Plaid auflistet
 
 Wenn Sie die Liste der Budgetzeilen nach der Spalte einer Dimension sortieren, folgt sie ebenfalls dieser Reihenfolge, dann dem Namen des Werts. Zeilen ohne Wert stehen bei aufsteigender Sortierung am Ende. Die Zeilen der Berichte behalten ihre eigene Reihenfolge, nach Betrag.
@@ -309,15 +309,15 @@ Dimensionen und Werte haben jeweils einen Status (**Aktiviert** oder **Deaktivie
 
 **Ein deaktivierter Wert**:
 
-- Kann nicht für eine Zeile gewählt werden, weder in der App noch in einer CSV-Datei noch über Plaid.
+- Kann nicht für eine Zeile gewählt werden, weder in der App noch in einer importierten Datei noch über Plaid.
 - Bleibt auf den Zeilen, die ihn bereits haben, und zählt weiterhin in den Berichten. In der Liste des Felds ist er als **Deaktiviert** markiert.
 
 **Eine deaktivierte Dimension**:
 
 - Wird nicht geprüft, wenn sie **Erforderlich** ist: Zeilen können ohne Wert in ihr angelegt werden. Sie behält die Einstellung für den Fall, dass Sie sie wieder aktivieren.
-- Verschwindet aus den Zeilenformularen, der Liste der Budgetzeilen, den Berichtsfiltern, der Dimensionsauswahl des Berichts, den OPEX- und CAPEX-CSV-Exporten und aus Plaid. Nur die Seite Analysedimensionen zeigt sie, als **Deaktiviert** markiert.
+- Verschwindet aus den Zeilenformularen, der Liste der Budgetzeilen, den Berichtsfiltern, der Dimensionsauswahl des Berichts, den OPEX- und CAPEX-Exporten und aus Plaid. Nur die Seite Analysedimensionen zeigt sie, als **Deaktiviert** markiert.
 - Behält ihre Werte auf den Zeilen. Aktivieren Sie die Dimension wieder, und die Werte erscheinen wieder.
-- Nimmt keine neuen Werte auf. **Neuer Wert** ist deaktiviert, solange die Dimension ausgewählt ist, und CSV-Dateien können ihre Werte weder hinzufügen noch ändern.
+- Nimmt keine neuen Werte auf. **Neuer Wert** ist deaktiviert, solange die Dimension ausgewählt ist, und importierte Dateien können ihre Werte weder hinzufügen noch ändern.
 
 Die Standarddimension kann nicht deaktiviert werden.
 
@@ -369,16 +369,18 @@ Die sieben Budgetberichte lassen sich auch auf einen Wert einer Dimension eingre
 
 ## CSV-Import/Export
 
+Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
 Laden oder aktualisieren Sie die Werte aller Dimensionen aus einer Datei. Dimensionen werden auf der Seite erstellt.
 
 Um Werte auf Budgetzeilen aus einer Datei zu setzen, verwenden Sie die Budgetdatei. Darin enthält je eine Spalte `analytics:<code>` jede aktivierte Dimension, die Standarddimension eingeschlossen. Siehe [Ein Budget aus einer Tabellenkalkulation laden](budget-file.md).
 
-**Export**: Klicken Sie auf **CSV exportieren** und dann auf **Daten exportieren**. Die Datei listet die Werte aller Dimensionen, aktiviert oder deaktiviert, Dimension für Dimension, die Werte jeder Dimension in ihrer Reihenfolge. Die Datei hat keine Spalte für die Reihenfolge. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
+**Export**: Klicken Sie auf **Exportieren** und dann auf **Daten exportieren**. Die Datei listet die Werte aller Dimensionen, aktiviert oder deaktiviert, Dimension für Dimension, die Werte jeder Dimension in ihrer Reihenfolge. Die Datei hat keine Spalte für die Reihenfolge. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
 
 **CSV-Struktur**:
 
 - Kopfzeilen: `axis_code`, `name`, `description`, `status`, `disabled_at`, `applies_to`
-- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 
 | Spalte | Inhalt |
 |---|---|
@@ -393,7 +395,7 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `di
 
 **Import**:
 
-1. Klicken Sie auf der Seite auf **CSV importieren**
+1. Klicken Sie auf der Seite auf **Importieren**
 2. Wählen Sie Ihre Datei
 3. Klicken Sie auf **Vorabprüfung**. Der Bericht nennt die Anzahl der Zeilen, die zu erstellenden und zu aktualisierenden Werte sowie die Zeilen, die nichts ändern
 4. Wenn die Vorabprüfung fehlerfrei ist, klicken Sie auf **Laden**
@@ -427,7 +429,7 @@ Nur `name` ist eine Pflichtspalte. Fehlt die Spalte `description`, `status`, `di
 |---|---|
 | `analytics:reader` | Die Seite Analysedimensionen ansehen und Dimensionen und Werte öffnen |
 | `analytics:member` | Dimensionen und Werte erstellen und bearbeiten, die Reihenfolge der Dimensionen und Werte festlegen |
-| `analytics:admin` | Alles oben Genannte, dazu CSV-Import und -Export, die empfohlenen Dimensionen sowie Löschen |
+| `analytics:admin` | Alles oben Genannte, dazu Import und Export, die empfohlenen Dimensionen sowie Löschen |
 
 Die integrierte Rolle Budget-Administrator ist admin, Budget-Mitglied ist member und Budget-Leser ist reader. Wer Budgetzeilen (Budget) oder Berichte lesen kann, sieht die Dimensionen und ihre Werte auf Budgetzeilen, in den Listen und in den Berichten, ohne Zugriff auf diese Seite zu haben.
 

@@ -9,13 +9,13 @@ Eine Datei enthält beide Arten von Budgetzeilen. Ihre Spalte `nature` gibt an, 
 ## Wo Sie es finden
 
 - Pfad: **Budgetverwaltung > Budgetzeilen**
-- Export: **CSV exportieren** in der Symbolleiste der Liste
-- Import: **CSV importieren** in derselben Symbolleiste
+- Export: **Exportieren** in der Symbolleiste der Liste
+- Import: **Importieren** in derselben Symbolleiste
 - Berechtigungen: Beide Schaltflächen erfordern die Administratorstufe auf Budget (`budget:admin`), die für OPEX- und CAPEX-Zeilen gleichermaßen gilt
 
 ## Export
 
-1. Klicken Sie in der Liste auf **CSV exportieren**.
+1. Klicken Sie in der Liste auf **Exportieren**.
 2. Wählen Sie, was die Datei enthält:
 
 | Einstellung | Wirkung |
@@ -24,10 +24,11 @@ Eine Datei enthält beide Arten von Budgetzeilen. Ihre Spalte `nature` gibt an, 
 | **Jahre** | **Erstes Jahr** und **Letztes Jahr**, bis zu zwölf Jahre. Standard: das laufende Jahr, das davor und das danach. Aktivieren Sie **Laufendes Jahr**, um nur das laufende Jahr zu exportieren |
 | **Spalten** | Die zu schreibenden Budgetspalten. Die Spalten, die Ihre Organisation zeigt, sind angehakt, und eine ausgeblendete Spalte ist mit **ausgeblendet** markiert. Ihre Überschrift steht unter dem Namen, zum Beispiel `budget_2027` |
 | **Detail** | **Jahressummen**: eine Spalte pro Budgetspalte und Jahr. **Monate**: eine Spalte pro Budgetspalte, Jahr und Monat |
+| **Format** | **CSV** oder **Excel (.xlsx)**. Ihr Browser merkt sich die Wahl für den nächsten Export |
 
 3. Klicken Sie auf die Schaltfläche am unteren Rand des Fensters. Sie benennt, was die Datei enthält: **120 gefilterte Zeilen exportieren**, **Alle Zeilen exportieren**, **3.412 Zeilen exportieren** und so weiter.
 
-Die Datei wird als `budget.csv` gespeichert und in der Sprache geschrieben, in der die Oberfläche angezeigt wird.
+Die Datei wird als `budget.csv` oder `budget.xlsx` gespeichert. Eine CSV-Datei wird in der Sprache geschrieben, in der die Oberfläche angezeigt wird:
 
 | Sprache | Trennzeichen | Beträge | Datumsangaben |
 |---|---|---|---|
@@ -35,7 +36,11 @@ Die Datei wird als `budget.csv` gespeichert und in der Sprache geschrieben, in d
 | Französisch, Spanisch | `;` | `12280,50` | `01/03/2027` |
 | Deutsch | `;` | `12280,50` | `01.03.2027` |
 
+Die Excel-Datei hat dieselben Spalten auf einem Blatt namens `budget`. Beträge sind centgenaue Zahlen, und Datumsangaben sind echte Datumswerte, angezeigt in der Tagesreihenfolge Ihrer Sprache. Die Kopfzeile bleibt beim Blättern stehen, mit einem Filter auf jeder Spalte.
+
 Der Export einer Liste ohne Budgetzeilen ergibt die Kopfzeile allein. Das ist Ihre Vorlage.
+
+Jeder Export wird im [Audit-Protokoll](admin.md#audit-protokoll) aufgezeichnet, mit seinen Einstellungen, seinem Format und seiner Zeilenzahl.
 
 ## Die Spalten
 
@@ -115,7 +120,7 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 
 ## Prüfen, dann laden
 
-1. Klicken Sie auf **CSV importieren** und wählen Sie die Datei, oder legen Sie sie im Fenster ab. Die Datei wird sofort geprüft. Nichts wird geschrieben.
+1. Klicken Sie auf **Importieren** und wählen Sie die Datei, eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`), oder legen Sie sie im Fenster ab. Die Datei wird sofort geprüft. Nichts wird geschrieben.
 2. Lesen Sie den Bericht:
 
 | Abschnitt | Inhalt |
@@ -144,9 +149,11 @@ Diese Zeilen erscheinen unter den **Fehlern** der Prüfung, wie jede andere abge
 
 ## Excel und LibreOffice
 
-Die Datei zu öffnen und zu speichern lässt sie ladbar. Beide Programme behalten die Spalten, das Trennzeichen und die Werte.
+Die Datei zu öffnen und zu speichern lässt sie ladbar, als CSV wie als `.xlsx`. Beide Programme behalten die Spalten, das Trennzeichen und die Werte.
 
-Ein Datum oder ein Betrag, den die Datei nicht selbst entscheiden kann, wird so gelesen, wie der Export ihn geschrieben hat, dann in der Sprache, in der die Oberfläche angezeigt wird. Jedes Datum mit einem Tag bis 12 ist mehrdeutig (`01/03/2027` ist auf Französisch der 1. März und auf Englisch der 3. Januar), und ein Betrag wie `12,280` ebenfalls. Die Prüfung sagt, wie sie gelesen wurden, und bietet eine Schaltfläche zum Wechseln der Lesart.
+In einer Arbeitsmappe liest KANAP das erste Blatt. Hat die Arbeitsmappe weitere Blätter, nennt die Prüfung das gelesene Blatt. Ein Betrag oder ein Datum, das in einer Zelle als Wert steht, wird genau so gelesen, ohne Frage nach Dezimalzeichen oder Tagesreihenfolge. Eine alte Excel-Datei (`.xls`) wird abgelehnt: Speichern Sie sie als `.xlsx` oder CSV.
+
+Ein Datum oder ein Betrag als Text, den die Datei nicht selbst entscheiden kann, wird so gelesen, wie der Export ihn geschrieben hat, dann in der Sprache, in der die Oberfläche angezeigt wird. Jedes Datum mit einem Tag bis 12 ist mehrdeutig (`01/03/2027` ist auf Französisch der 1. März und auf Englisch der 3. Januar), und ein Betrag wie `12,280` ebenfalls. Die Prüfung sagt, wie sie gelesen wurden, und bietet eine Schaltfläche zum Wechseln der Lesart.
 
 Eine Spalte, die KANAP nicht kennt, wird mit einer Warnung ignoriert. Eine Spalte, die wie eine falsch geschriebene Betragsspalte aussieht, zum Beispiel `budjet_2027`, lehnt die ganze Datei ab. Auch eine Spalte `analytics:<code>`, die keine aktivierte Dimension benennt, lehnt die ganze Datei ab, mit „Unknown dimension 'x'.“
 
@@ -185,6 +192,6 @@ Eine größere Organisation fügt dazwischen die übrigen Stammdaten hinzu:
 7. Die Arbeitstagekalender, unter [Arbeitstagekalender](working-day-calendars.md), sobald Budgetzeilen Mengen und Preise tragen
 8. Die Budgetdatei, OPEX- und CAPEX-Zeilen
 
-**Der Kontenplan kommt zuerst.** Klicken Sie auf der Seite Kontenpläne auf **Neu**, geben Sie dem Plan einen Code und einen Namen und wählen Sie unter **Verwendet für** die Option **Alle Länder**. Klicken Sie dann auf **Kontenpläne verwalten**, öffnen Sie das Menü **⋯** des Plans und klicken Sie auf **Als Standard für andere Länder festlegen**. Ein Unternehmen ohne Kontenplan übernimmt diesen, und so werden die Kontonummern einer Budgetdatei aufgelöst. Wählen Sie den Plan auf der Seite aus und klicken Sie dann auf **CSV importieren**, um seine Konten zu laden.
+**Der Kontenplan kommt zuerst.** Klicken Sie auf der Seite Kontenpläne auf **Neu**, geben Sie dem Plan einen Code und einen Namen und wählen Sie unter **Verwendet für** die Option **Alle Länder**. Klicken Sie dann auf **Kontenpläne verwalten**, öffnen Sie das Menü **⋯** des Plans und klicken Sie auf **Als Standard für andere Länder festlegen**. Ein Unternehmen ohne Kontenplan übernimmt diesen, und so werden die Kontonummern einer Budgetdatei aufgelöst. Wählen Sie den Plan auf der Seite aus und klicken Sie dann auf **Importieren**, um seine Konten zu laden.
 
-Jede dieser Seiten hat ihren eigenen Abschnitt **CSV importieren** mit den Spalten ihrer Datei.
+Jede dieser Seiten hat ihren eigenen Importabschnitt mit den Spalten ihrer Datei. Jede liest eine CSV-Datei oder eine Excel-Arbeitsmappe. Siehe [CSV- und Excel-Dateien](csv-files.md).

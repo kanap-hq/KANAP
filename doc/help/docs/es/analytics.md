@@ -117,8 +117,8 @@ Haga clic en cualquier celda para abrir el espacio de trabajo del valor.
 
 - **Nuevo valor**: crear un valor en la dimensión seleccionada (requiere `analytics:member`). Mientras la dimensión seleccionada está desactivada, el botón está desactivado y su información emergente indica "Active esta dimensión para añadir valores."
 - **Reordenar**: definir el orden de los valores de la dimensión seleccionada (requiere `analytics:member`). El botón está desactivado mientras la dimensión tiene menos de dos valores. Consulte [Ordenar los valores](#ordenar-los-valores)
-- **Importar CSV**: cargar valores desde un archivo (requiere `analytics:admin`)
-- **Exportar CSV**: descargar los valores que muestra la lista, o los valores de todas las dimensiones (requiere `analytics:admin`)
+- **Importar**: cargar valores desde un archivo (requiere `analytics:admin`)
+- **Exportar**: descargar los valores que muestra la lista, o los valores de todas las dimensiones (requiere `analytics:admin`)
 - **Eliminar selección**: eliminar los valores seleccionados (requiere `analytics:admin`). Cuando algunos los usan líneas de presupuesto, la confirmación indica cuántas líneas los pierden, por ejemplo «2 valores seleccionados están en uso: se quitan de 5 líneas presupuestarias. Estos datos no se pueden recuperar.», y el botón pasa a **Eliminar de todos modos**
 
 ---
@@ -152,7 +152,7 @@ Una dimensión nueva se coloca la última en el orden de las dimensiones. Despu�
 | Campo | Qué introducir |
 |---|---|
 | **Nombre** | Hasta 200 caracteres. Los nombres son únicos sin distinguir mayúsculas y minúsculas. Obligatorio, salvo en la dimensión por defecto: déjelo vacío en ella para mostrar "Dimensión analítica" en el idioma de cada persona. La etiqueta de la dimensión por defecto está reservada en todos los idiomas de la aplicación ("Analytics dimension", "Dimension analytique", "Analysedimension", "Dimensión analítica"), sin distinguir mayúsculas y minúsculas: otra dimensión con uno de estos nombres se rechaza con "This name is reserved for the default dimension." |
-| **Código** | De 1 a 40 caracteres: letras minúsculas, dígitos, `-` o `_`, empezando por una letra o un dígito. Cada código es único. El código da nombre a la columna de la dimensión en los archivos CSV de OPEX y CAPEX, de modo que cambiarlo cambia el nombre de esa columna. Las líneas de presupuesto conservan sus valores cuando cambia el código |
+| **Código** | De 1 a 40 caracteres: letras minúsculas, dígitos, `-` o `_`, empezando por una letra o un dígito. Cada código es único. El código da nombre a la columna de la dimensión en los archivos de OPEX y CAPEX, de modo que cambiarlo cambia el nombre de esa columna. Las líneas de presupuesto conservan sus valores cuando cambia el código |
 | **Descripción** | Para qué sirve la dimensión, de modo que sus compañeros clasifiquen las líneas de la misma manera |
 | **Usada para** | **OPEX y CAPEX**, **Solo OPEX** o **Solo CAPEX**. Indica qué líneas de presupuesto pueden tener un valor en esta dimensión. Consulte [Dimensiones OPEX o CAPEX](#dimensiones-opex-o-capex). Bloqueado en la dimensión por defecto, con una línea debajo: "La dimensión predeterminada se aplica a las líneas OPEX y CAPEX." |
 | **Obligatoria** | Un interruptor. Cuando está activado, cada línea nueva de los tipos para los que se usa la dimensión necesita un valor en ella, y una línea que tiene un valor no puede perderlo. Consulte [Dimensiones obligatorias](#dimensiones-obligatorias). La dimensión por defecto también puede ser obligatoria |
@@ -266,7 +266,7 @@ Los valores de una dimensión tienen un orden, que usted define. KANAP ofrece lo
 - los campos de valor de las líneas OPEX y CAPEX (cuando escribe en un campo, las mejores coincidencias aparecen primero)
 - los filtros de casillas de la dimensión en la lista de líneas presupuestarias
 - los filtros de dimensión de los informes y la lista **Excluir valores** del informe Dimensiones analíticas
-- la exportación CSV de los valores
+- la exportación de los valores
 - los valores que lista Plaid
 
 Ordenar la lista de líneas presupuestarias por la columna de una dimensión también sigue este orden, y después el nombre del valor. Las líneas sin valor van al final en orden ascendente. Las filas de los informes mantienen su propio orden, por importe.
@@ -309,15 +309,15 @@ Las dimensiones y los valores tienen cada uno un estado (**Activado** o **Desact
 
 **Un valor desactivado**:
 
-- No se puede elegir para una línea, ni en la aplicación, ni en un archivo CSV, ni mediante Plaid.
+- No se puede elegir para una línea, ni en la aplicación, ni en un archivo importado, ni mediante Plaid.
 - Se mantiene en las líneas que ya lo tienen y sigue contando en los informes. En la lista del campo aparece marcado como **Desactivado**.
 
 **Una dimensión desactivada**:
 
 - No se comprueba cuando es **Obligatoria**: se pueden crear líneas sin valor en ella. Conserva el ajuste para cuando vuelva a activarla.
-- Desaparece de los formularios de las líneas, de la lista de líneas presupuestarias, de los filtros de los informes, del selector de dimensión del informe, de las exportaciones CSV de OPEX y CAPEX y de Plaid. Solo la página Dimensiones analíticas la muestra, marcada como **Desactivado**.
+- Desaparece de los formularios de las líneas, de la lista de líneas presupuestarias, de los filtros de los informes, del selector de dimensión del informe, de las exportaciones de OPEX y CAPEX y de Plaid. Solo la página Dimensiones analíticas la muestra, marcada como **Desactivado**.
 - Conserva sus valores en las líneas. Vuelva a activar la dimensión y se muestran de nuevo.
-- No admite valores nuevos. **Nuevo valor** está desactivado mientras la dimensión está seleccionada, y los archivos CSV no pueden añadir ni cambiar sus valores.
+- No admite valores nuevos. **Nuevo valor** está desactivado mientras la dimensión está seleccionada, y los archivos importados no pueden añadir ni cambiar sus valores.
 
 La dimensión por defecto no se puede desactivar.
 
@@ -369,16 +369,18 @@ Los siete informes presupuestarios también se pueden limitar a un valor de una 
 
 ## Importación/exportación CSV
 
+La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
+
 Cargue o actualice los valores de todas las dimensiones desde un solo archivo. Las dimensiones se crean en la página.
 
 Para definir valores en las líneas de presupuesto desde un archivo, use el archivo de presupuesto. En él, una columna `analytics:<code>` contiene cada dimensión activada, la dimensión por defecto incluida. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md).
 
-**Exportar**: haga clic en **Exportar CSV** y después en **Exportar datos**. El archivo lista los valores de todas las dimensiones, activados o desactivados, dimensión por dimensión, los valores de cada dimensión en su orden. El archivo no tiene columna de orden. Para un archivo vacío solo con los encabezados, use **Descargar plantilla** en el diálogo de importación.
+**Exportar**: haga clic en **Exportar** y después en **Exportar datos**. El archivo lista los valores de todas las dimensiones, activados o desactivados, dimensión por dimensión, los valores de cada dimensión en su orden. El archivo no tiene columna de orden. Para un archivo vacío solo con los encabezados, use **Descargar plantilla** en el diálogo de importación.
 
 **Estructura CSV**:
 
 - Encabezados: `axis_code`, `name`, `description`, `status`, `disabled_at`, `applies_to`
-- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
+- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
 
 | Columna | Contenido |
 |---|---|
@@ -393,7 +395,7 @@ Solo `name` es una columna obligatoria. Cuando falta la columna `description`, `
 
 **Importar**:
 
-1. Haga clic en **Importar CSV** en la página
+1. Haga clic en **Importar** en la página
 2. Elija su archivo
 3. Haga clic en **Verificación previa**. El informe indica el número de filas, los valores que se crearán y actualizarán, y las filas que no cambian nada
 4. Si la verificación previa no muestra errores, haga clic en **Cargar**
@@ -427,7 +429,7 @@ Solo `name` es una columna obligatoria. Cuando falta la columna `description`, `
 |---|---|
 | `analytics:reader` | Ver la página Dimensiones analíticas y abrir las dimensiones y los valores |
 | `analytics:member` | Crear dimensiones y valores, editarlos y definir el orden de las dimensiones y de los valores |
-| `analytics:admin` | Todo lo anterior, más la importación y exportación CSV, las dimensiones recomendadas y la eliminación |
+| `analytics:admin` | Todo lo anterior, más la importación y exportación, las dimensiones recomendadas y la eliminación |
 
 El rol integrado Administrador de presupuesto es admin, Miembro de presupuesto es member y Lector de presupuesto es reader. Cualquier persona que pueda leer las líneas presupuestarias (Presupuesto) o los informes ve las dimensiones y sus valores en las líneas de presupuesto, en las listas y en los informes, sin acceso a esta página.
 

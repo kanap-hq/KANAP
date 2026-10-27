@@ -145,7 +145,7 @@ Les changements de ces onglets s'enregistrent aussitôt. Quand la personne ajout
 
 ## Import et export
 
-**Importer CSV** et **Exporter CSV**, sur **Administration > Accès aux données**, déplacent l'accès de nombreuses personnes à la fois. Un fichier contient une ligne par personne et par nœud :
+**Importer** et **Exporter**, sur **Administration > Accès aux données**, déplacent l'accès de nombreuses personnes à la fois, dans un fichier CSV ou un classeur Excel (`.xlsx`). Voir [Fichiers CSV et Excel](csv-files.md). Un fichier contient une ligne par personne et par nœud :
 
 | Colonne | Contenu |
 |---|---|
@@ -168,7 +168,7 @@ claire.dubois@example.com;all;;read
 - La vérification vient d'abord et n'écrit rien. Elle signale chaque ligne refusée : personne inconnue, société ou centre de coûts inconnu, type ou accès invalide, nœud listé deux fois pour une même personne, Administrateur, votre propre compte. Un fichier avec une erreur ne charge rien.
 - L'export écrit le même format, pour les personnes limitées. Une personne limitée sans nœud n'a pas de ligne : réimporter le fichier la laisse telle quelle.
 
-Le séparateur, l'encodage et les deux étapes de l'import sont ceux de tous les fichiers CSV : voir [Fichiers CSV](csv-files.md).
+Le séparateur, l'encodage et les deux étapes de l'import sont ceux de tous les fichiers CSV : voir [Fichiers CSV et Excel](csv-files.md).
 
 ## Journal d'audit { #audit-log }
 

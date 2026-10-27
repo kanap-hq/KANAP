@@ -60,7 +60,7 @@ Las filas sobre aplicaciones requieren el derecho de leer las aplicaciones.
 
 ## Exportación e impresión
 
-**Exportar la tabla en CSV** descarga la lista en pantalla: los vencimientos con el horizonte y el tipo actuales, o los datos que faltan. Los encabezados siguen el idioma de su pantalla. **Imprimir / Guardar como PDF** imprime el informe.
+**Exportar la tabla** descarga la lista en pantalla como archivo CSV o Excel: los vencimientos con el horizonte y el tipo actuales, o los datos que faltan. Los encabezados siguen el idioma de su pantalla, y en el archivo Excel las fechas son fechas reales y se añade una hoja **Parámetros**. Consulte [Informes](reports.md#export-options). **Imprimir / Guardar como PDF** imprime el informe.
 
 ## Consejos
 

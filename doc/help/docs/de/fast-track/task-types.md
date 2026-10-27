@@ -254,7 +254,7 @@ Die Liste in diesem Leitfaden ist ein Ausgangspunkt. Passen Sie sie an die tats�
 
 ## Weiterf체hrend
 
-- [Aufgaben](../tasks.md): vollst채ndige Referenz f체r Status, CSV-Import/Export, Zeiterfassung und jede Arbeitsbereich-Funktion
+- [Aufgaben](../tasks.md): vollst채ndige Referenz f체r Status, Import und Export, Zeiterfassung und jede Arbeitsbereich-Funktion
 - [Budgetzeilen](../budget-lines.md): OPEX- und CAPEX-Zeilen und ihre Aufgaben verwalten
 - [Vertr채ge](../contracts.md): Vertr채ge und ihre Aufgaben verwalten
 - [Portfolio-Projekte](../portfolio-projects.md): Projektumsetzung, Phasen, Aufwandsverfolgung und Projektaufgaben

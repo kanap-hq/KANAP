@@ -49,7 +49,7 @@ One line per entity reads like this: **14 created · 9 closed · 52 open (+5)**.
 - **Open**: items open right now, whatever happened during the period. This figure is a link to the matching list.
 - **(+5)**: the net change, shown only when it is not zero. It is created, plus reopened, minus closed. Reopened items are items that went from a closed status back to an open one. Hover the figure to see the formula.
 
-Created and closed come from the change history, so they include every way an item can be written: the app, a CSV import and the agents. No list filter reproduces that history, so these two figures open the [Period review](#period-review) on the same days instead. Its created and closed lists show exactly the items counted here. A zero is not a link.
+Created and closed come from the change history, so they include every way an item can be written: the app, an import and the agents. No list filter reproduces that history, so these two figures open the [Period review](#period-review) on the same days instead. Its created and closed lists show exactly the items counted here. A zero is not a link.
 
 ### Which tasks count
 
@@ -167,7 +167,7 @@ Click a contributor row to open a project breakdown:
 - Project names are clickable and open the project's **Progress** tab.
 
 ### Exports
-- **CSV**: Export the heatmap table
+- **Export table**: CSV or Excel. The file holds the table of the grouping on screen, contributors or teams, with the capacity mode, the teams and the statuses on screen. Days carry their decimals. The Excel file adds a **Parameters** sheet. See [Reporting](reports.md#export-options)
 - **PNG**: Snapshot of the report
 - **Print**: Print or save as PDF
 
@@ -187,7 +187,7 @@ Each of the three sections holds the same three lists.
 
 An item created and closed inside the same period appears in both lists, with its own date in each. It never appears under Modified: Modified is what is left once creations and closures are accounted for.
 
-The creation counts as a status change. A CSV import or an agent can create a task already done, or a request already rejected. Such an item is listed as created and as closed on the same day, even though nobody ever changed its status afterwards.
+The creation counts as a status change. An import or an agent can create a task already done, or a request already rejected. Such an item is listed as created and as closed on the same day, even though nobody ever changed its status afterwards.
 
 Closed means different statuses per type:
 
@@ -263,7 +263,7 @@ Modified lists add the **Changes** column at the end.
 
 Both exports carry the reference, the company, the origin of a project, the changes of a modified row and the event date. The closed rows also carry the creation day.
 
-Both files are written in the language of the screen: titles, column names, statuses, the changes, yes or no and the days. The CSV also takes that language's separator and decimal mark, as described in [CSV files](csv-files.md).
+Both files are written in the language of the screen: titles, column names, statuses, the changes, yes or no and the days. The CSV also takes that language's separator and decimal mark, as described in [CSV and Excel files](csv-files.md).
 
 ## Time logged
 
@@ -293,7 +293,7 @@ The report shows days only. It never shows the notes of an entry.
 
 ### Exports
 
-- **CSV**: one line per person and month, with the team, the person, the month, project days, other days and the total.
+- **Export table**: CSV or Excel, one line per person and month, with the team, the person, the month, project days, other days and the total. The file follows the period, the team and project filters, and counts the months in the same time zone as the screen. The Excel file adds a **Parameters** sheet with these filters. See [Reporting](reports.md#export-options)
 - **PNG**: the chart.
 
 ## Tips

@@ -54,7 +54,7 @@ Navigate to **Master data > Cost centers** (in the **Organization** section) to 
 - **Budget holder**: the person accountable for this budget envelope at budget review. Every OPEX and CAPEX line on the cost center shows this person
 - **Description**: what the cost center covers
 
-**Tip**: If your finance team already keeps the list of cost centers, import it from a CSV file. The rows can come in any order.
+**Tip**: If your finance team already keeps the list of cost centers, import it from a CSV file or an Excel workbook. The rows can come in any order.
 
 ---
 
@@ -85,8 +85,8 @@ Click any cell to open the workspace.
 **Actions**:
 
 - **New**: create a group or a cost center (requires `cost_centers:member`)
-- **Import CSV**: load the tree from a file (requires `cost_centers:admin`)
-- **Export CSV**: download the nodes the list shows, or every node (requires `cost_centers:admin`)
+- **Import**: load the tree from a file (requires `cost_centers:admin`)
+- **Export**: download the nodes the list shows, or every node (requires `cost_centers:admin`)
 - **Delete selected**: delete the selected nodes (requires `cost_centers:admin`). Before anything is deleted, the confirmation lists the nodes kept, with the reason. Contents are deleted before their group, so selecting a group together with everything it holds deletes all of it
 
 ---
@@ -168,14 +168,16 @@ The **Delete** button (trash icon) in the header deletes the node after a confir
 
 ## CSV import/export
 
+The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
+
 Load or update the whole tree from a file.
 
-**Export**: click **Export CSV**, then **Export data**. The file lists every node, enabled or disabled, in tree order. For an empty file with the headers only, use **Download template** in the import dialog.
+**Export**: click **Export**, then **Export data**. The file lists every node, enabled or disabled, in tree order. For an empty file with the headers only, use **Download template** in the import dialog.
 
 **CSV structure**:
 
 - Headers: `code`, `kind`, `name`, `parent_code`, `company_name`, `owner_email`, `description`, `status`, `disabled_at`
-- The export writes the separator of the screen language. See [CSV files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
+- The export writes the separator of the screen language. See [CSV and Excel files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
 
 | Column | Content |
 |---|---|
@@ -191,7 +193,7 @@ Load or update the whole tree from a file.
 
 **Import**:
 
-1. Click **Import CSV** in the list
+1. Click **Import** in the list
 2. Choose your file
 3. Click **Preflight check**. The report gives the number of rows, the nodes to create and update, and the rows that change nothing
 4. If the preflight is clean, click **Load**
@@ -223,7 +225,7 @@ Load or update the whole tree from a file.
 |---|---|
 | `cost_centers:reader` | View the list and open cost centers |
 | `cost_centers:member` | Create cost centers and groups, and edit them |
-| `cost_centers:admin` | Everything above, plus CSV import and export, and deletion |
+| `cost_centers:admin` | Everything above, plus import and export, and deletion |
 
 Each role starts with the level it has on departments, except the built-in Budget Administrator role, which gets admin. So Budget Administrator and Master Data Administrator are admins, Budget Member and Master Data Member are members, and the reader roles can read. Anyone who can read budget lines (Budget) or reports can pick a cost center on a line or in a report filter without access to this page.
 

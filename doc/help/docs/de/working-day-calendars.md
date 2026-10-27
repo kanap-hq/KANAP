@@ -32,7 +32,7 @@ Um selbst einen Kalender anzulegen, klicken Sie auf **Neu**.
 - **Land** und **Region**: machen den Kalender zu einem Standardkalender. Ohne Land ist der Kalender individuell
 - **Beschreibung**: für wen der Kalender gilt, zum Beispiel „Arbeitstage der Angestellten, ohne Feiertage“
 
-**Tipp**: Wenn Ihr Finanzteam die Arbeitstage bereits in einer Tabellenkalkulation führt, importieren Sie sie aus einer CSV-Datei. Eine Zeile enthält einen Kalender und ein Jahr.
+**Tipp**: Wenn Ihr Finanzteam die Arbeitstage bereits in einer Tabellenkalkulation führt, importieren Sie sie aus einer CSV-Datei oder Excel-Arbeitsmappe. Eine Zeile enthält einen Kalender und ein Jahr.
 
 ---
 
@@ -64,8 +64,8 @@ Klicken Sie auf eine beliebige Zelle, um den Arbeitsbereich zu öffnen.
 **Aktionen**:
 
 - **Neu**: einen Kalender erstellen (erfordert `working_day_profiles:member`)
-- **CSV importieren**: Kalender und ihre Arbeitstage aus einer Datei laden (erfordert `working_day_profiles:admin`)
-- **CSV exportieren**: die Kalender der Liste herunterladen, oder alle Kalender (erfordert `working_day_profiles:admin`)
+- **Importieren**: Kalender und ihre Arbeitstage aus einer Datei laden (erfordert `working_day_profiles:admin`)
+- **Exportieren**: die Kalender der Liste herunterladen, oder alle Kalender (erfordert `working_day_profiles:admin`)
 - **Auswahl löschen**: die ausgewählten Kalender löschen (erfordert `working_day_profiles:admin`). Vor dem Löschen nennt die Bestätigung die behaltenen Kalender mit dem Grund
 
 ---
@@ -170,14 +170,16 @@ Eine Budgetzeile verwendet einen Kalender, wenn eine ihrer Spalten, in einem bel
 
 ## CSV-Import/-Export
 
+Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
 Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 
-**Export**: Klicken Sie auf **CSV exportieren** und dann auf **Daten exportieren**. Die Datei enthält alle Kalender, aktiviert oder deaktiviert, nach Code sortiert. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
+**Export**: Klicken Sie auf **Exportieren** und dann auf **Daten exportieren**. Die Datei enthält alle Kalender, aktiviert oder deaktiviert, nach Code sortiert. Für eine leere Datei nur mit den Kopfzeilen verwenden Sie **Vorlage herunterladen** im Importdialog.
 
 **CSV-Struktur**:
 
 - Kopfzeilen: `code`, `name`, `description`, `country`, `region`, `status`, `disabled_at`, `year`, `jan`, `feb`, `mar`, `apr`, `may`, `jun`, `jul`, `aug`, `sep`, `oct`, `nov`, `dec`
-- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
+- Der Export schreibt das Trennzeichen der Sprache der Oberfläche. Siehe [CSV- und Excel-Dateien](csv-files.md) für die Kodierung, das Trennzeichen, die Datumsformen und die beiden Importschritte
 - Eine Zeile pro Kalender und Jahr. Ein Kalender mit drei Jahren belegt drei Zeilen. Ein Kalender ohne Jahr wird als eine Zeile mit leerem Jahr und leeren Monaten exportiert
 - Ein Standardkalender exportiert nur die Jahre, die Sie geändert haben. Die anderen Jahre folgen den Feiertagen und brauchen keine Zeile
 - Die Spalten `country`, `region` und `disabled_at` sind beim Import optional. Eine Datei ohne `country` und `region` legt individuelle Kalender an
@@ -196,7 +198,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 
 **Import**:
 
-1. Klicken Sie in der Liste auf **CSV importieren**
+1. Klicken Sie in der Liste auf **Importieren**
 2. Wählen Sie Ihre Datei
 3. Klicken Sie auf **Vorabprüfung**. Der Bericht nennt die Anzahl der Zeilen, die Einfügungen und Aktualisierungen sowie die Zeilen, die nichts ändern
 4. Wenn die Vorabprüfung fehlerfrei ist, klicken Sie auf **Laden**
@@ -235,7 +237,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 |---|---|
 | `working_day_profiles:reader` | Die Liste ansehen und Kalender öffnen |
 | `working_day_profiles:member` | Kalender erstellen, sie und ihre Arbeitstage bearbeiten |
-| `working_day_profiles:admin` | Alles oben Genannte, dazu CSV-Import und -Export sowie Löschen |
+| `working_day_profiles:admin` | Alles oben Genannte, dazu Import und Export sowie Löschen |
 
 Budget-Administratoren sind Kalender-Administratoren: Die integrierte Rolle Budget-Administrator erhält admin. Jede andere Rolle beginnt mit der Stufe, die sie für Abteilungen hat. Stammdaten-Administrator ist also admin, Budget-Mitglied und Stammdaten-Mitglied sind Mitglieder, und die Leserollen können lesen.
 

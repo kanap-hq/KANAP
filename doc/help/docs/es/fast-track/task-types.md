@@ -254,7 +254,7 @@ La lista de esta guía es un punto de partida. Adáptela a cómo funciona realme
 
 ## Adónde ir a continuación
 
-- [Tareas](../tasks.md): referencia completa para estados, importación/exportación CSV, seguimiento de tiempo y cada funcionalidad del espacio de trabajo
+- [Tareas](../tasks.md): referencia completa para estados, importación y exportación, seguimiento de tiempo y cada funcionalidad del espacio de trabajo
 - [Líneas presupuestarias](../budget-lines.md): gestionar las líneas OPEX y CAPEX y sus tareas
 - [Contratos](../contracts.md): gestionar contratos y sus tareas
 - [Proyectos del portafolio](../portfolio-projects.md): ejecución de proyectos, fases, seguimiento de esfuerzo y tareas a nivel de proyecto

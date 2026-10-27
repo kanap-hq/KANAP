@@ -66,7 +66,7 @@ Sin el nivel Administrador en la administración presupuestaria, la página mues
 ### Qué hace la congelación
 
 - Previene ediciones en columnas congeladas en el espacio de trabajo de las líneas de ese tipo. Los campos muestran un candado
-- Bloquea importaciones CSV a columnas congeladas
+- Bloquea importaciones a columnas congeladas
 - Bloquea operaciones de copia y restablecimiento dirigidas a columnas congeladas
 - Rechaza eliminar una línea, o cambiar su tipo, mientras tenga importes en una columna congelada de los años afectados
 - **No** afecta el acceso de lectura: los datos siguen siendo visibles
@@ -127,6 +127,8 @@ Las columnas ocultas no se ofrecen. Si no hay nada marcado en **Qué copiar**, l
 3. Cuando el resultado le convenza, haga clic en **Copiar** para aplicarlo
 
 **Copiar** solo se activa tras una vista previa. Cambiar cualquier campo descarta la vista previa: vuelva a ejecutarla. Tras la copia, la tabla sigue en pantalla bajo el título **Resultado**, con lo que hizo cada línea.
+
+**Exportar la tabla** (icono de descarga) descarga la vista previa de los campos en pantalla como archivo CSV o Excel, una fila por línea, con las columnas y los estados de la tabla. Después de la copia, la exportación queda desactivada: la tabla muestra entonces lo que hizo la copia, que una vista previa ya no describe. Los importes del archivo conservan sus céntimos.
 
 Cada parte tiene su propio estado en cada línea:
 
@@ -243,6 +245,8 @@ Antes de elegir una columna, una línea sustituye a la cuadrícula: «Elija una 
 - **Total de elementos**
 - **Líneas con un total distinto de cero**
 - **Valor total actual**
+
+**Exportar la tabla** (icono de descarga) descarga la cuadrícula como archivo CSV o Excel: las líneas del tipo elegido y su valor actual en la columna elegida.
 
 ### Confirmación
 

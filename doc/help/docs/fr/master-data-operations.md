@@ -96,9 +96,9 @@ Sous la grille, quatre cartes récapitulatives vous donnent un comptage rapide :
 
 Vous ne pouvez pas copier de données dans une année gelée. Si l'année de destination est gelée pour les Sociétés ou Départements, une bannière d'erreur apparaît et les boutons d'action sont désactivés. Dégelez d'abord l'année de destination avec **Geler les données de référence**.
 
-### Export CSV
+### Export
 
-Vous pouvez exporter le tableau d'aperçu en CSV en utilisant le bouton d'export dans la barre d'outils. C'est pratique pour une revue hors ligne ou un partage avec des collègues avant de valider. Cet export écrit le tableau tel qu'il est affiché. Les fichiers que les pages de données de référence importent sont décrits dans [Fichiers CSV](csv-files.md).
+Le bouton d'export de la barre d'outils télécharge l'aperçu dans un fichier CSV ou Excel : ce que la copie ferait avec les années, les sources et les métriques à l'écran. C'est pratique pour une revue hors ligne ou un partage avec des collègues avant de valider. Une fois la copie faite, le bouton est désactivé : le tableau montre alors ce que la copie a fait, ce que l'aperçu ne décrit plus. Les fichiers que les pages de données de référence importent sont décrits dans [Fichiers CSV et Excel](csv-files.md).
 
 ### Autorisations
 
@@ -165,13 +165,13 @@ Non. L'outil de copie affichera une erreur et désactivera les boutons d'action.
 L'opération de copie les écrase. Exécutez toujours un essai à blanc d'abord pour voir la colonne « Destination actuelle » et comprendre ce qui sera remplacé.
 
 **Puis-je annuler une copie ?**
-Non. Les opérations de copie ne sont pas réversibles. Si vous avez besoin d'un filet de sécurité, exportez les données de l'année de destination en CSV avant de copier.
+Non. Les opérations de copie ne sont pas réversibles. Si vous avez besoin d'un filet de sécurité, exportez les données de l'année de destination en CSV ou Excel avant de copier.
 
 **Pourquoi certaines lignes sont-elles sautées ?**
 Les lignes sont sautées lorsque la valeur source est nulle, l'entité est inactive pour l'année de destination, ou la destination est gelée. La colonne Statut dans l'aperçu vous indique la raison applicable.
 
 **Puis-je copier uniquement certaines sociétés ou départements ?**
-Non. L'outil copie toutes les entités pour les périmètres et métriques sélectionnés. Pour des mises à jour sélectives, utilisez l'export/import CSV sur les pages individuelles Sociétés ou Départements.
+Non. L'outil copie toutes les entités pour les périmètres et métriques sélectionnés. Pour des mises à jour sélectives, utilisez plutôt l'export et l'import des pages Sociétés ou Départements.
 
 **La copie crée-t-elle de nouvelles sociétés ou départements ?**
 Non. Elle n'écrit des métriques que pour les entités qui existent déjà dans les deux années. Si une société existe dans l'année source mais pas dans la destination, cette ligne est sautée.
