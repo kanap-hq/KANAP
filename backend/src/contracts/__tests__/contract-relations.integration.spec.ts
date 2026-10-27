@@ -122,7 +122,7 @@ async function testApplicationsAndAssets() {
     assert.deepEqual(await svc.listAssets(a.contractId, opts), { items: [{ id: a.assetId, name: 'relations-srv-ctrel-apps' }] });
     assert.deepEqual(audit.entries.map((entry) => entry.table), ['application_contracts', 'application_contracts', 'asset_contracts']);
 
-    const counts = await svc.relationCounts(a.contractId, opts);
+    const counts = await svc.relationCounts(a.contractId, { ...opts, applications: true, infrastructure: true });
     assert.equal(counts.applications, 1);
     assert.equal(counts.assets, 1);
     assert.equal(counts.relations, 2);
@@ -136,7 +136,7 @@ async function testTechnologies() {
     const svc = contracts(audit);
     const controller = new ContractsController(svc, undefined as any, undefined as any, undefined as any);
     const req = (permissions: Record<string, string>) => ({ queryRunner: { manager: runner.manager }, user: { sub: null }, isAdmin: false, permissions });
-    const reader = req({ contracts: 'member', infrastructure: 'reader' });
+    const reader = req({ contracts: 'member', infrastructure: 'reader', applications: 'reader' });
     const contractsOnly = req({ contracts: 'admin' });
 
     await controller.bulkReplaceTechnologies(a.contractId, { technology_ids: [a.techId] }, reader);
@@ -152,7 +152,7 @@ async function testTechnologies() {
     assert.deepEqual(await controller.listTechnologies(a.contractId, contractsOnly), { items: null });
     const hidden = await controller.relationCounts(a.contractId, contractsOnly);
     assert.equal(hidden.technologies, null);
-    assert.equal(hidden.relations, 1);
+    assert.equal(hidden.relations, 0, 'nor the applications, without their read');
     assert.ok((await rejection(() => Promise.resolve().then(() => controller.bulkReplaceTechnologies(a.contractId, { technology_ids: [] }, contractsOnly)))) instanceof ForbiddenException);
     assert.equal((await svc.listTechnologies(a.contractId, { manager: runner.manager })).items.length, 1, 'nothing removed');
   });
@@ -194,7 +194,7 @@ async function testOtherTenantRefused() {
       assert.ok(err instanceof BadRequestException, `${set} refused`);
       assert.equal(err.message, message);
     }
-    const counts = await svc.relationCounts(b.contractId, { ...opts, technologies: true });
+    const counts = await svc.relationCounts(b.contractId, { ...opts, applications: true, infrastructure: true });
     assert.deepEqual([counts.budget_lines, counts.applications, counts.assets, counts.technologies], [0, 0, 0, 0], 'nothing written');
   });
 }

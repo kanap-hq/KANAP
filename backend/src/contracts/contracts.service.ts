@@ -178,9 +178,13 @@ type ListItem = Contract & ContractTermFields & {
 type ListReadOptions = {
   manager?: EntityManager;
   budgetAccess?: boolean;
-  /** A Business Contributor's applications (their participation): the `covered_application` filter matches those only. */
-  coveredApplicationScope?: ParticipationAccessScope;
+  /**
+   * The `covered_application` filter applies only for a caller who reads the applications (absent:
+   * the filter is not applied); `scope`, a Business Contributor's, matches the applications they take part in.
+   */
+  coveredApplications?: CoveredApplicationsAccess;
 };
+type CoveredApplicationsAccess = { scope?: ParticipationAccessScope };
 /** The list columns that sort alphabetically. */
 const CONTRACT_TEXT_SORTS = new Set(['name', 'company_name', 'supplier_name', 'cost_center_name', 'currency', 'billing_frequency']);
 
@@ -367,7 +371,7 @@ export class ContractsService {
       omitFilters?: string[];
       budget?: ContractBudgetCoverage | null;
       compliance?: ContractComplianceInputs | null;
-      coveredApplicationScope?: ParticipationAccessScope;
+      coveredApplications?: CoveredApplicationsAccess;
     },
   ) {
     const repo = mg.getRepository(Contract);
@@ -390,7 +394,9 @@ export class ContractsService {
       for (const [field, model] of Object.entries(filtersToApply)) {
         if (opts?.omitFilters?.includes(field)) continue;
         if (field === COVERED_APPLICATION_FILTER) {
-          const covered = coveredApplicationCondition(model, nextParam, opts.coveredApplicationScope);
+          // Not applied for a caller who does not read the applications: it would name what they cover.
+          if (!opts.coveredApplications) continue;
+          const covered = coveredApplicationCondition(model, nextParam, opts.coveredApplications.scope);
           if (covered) compiledFilters.push(covered);
           continue;
         }
@@ -536,7 +542,7 @@ export class ContractsService {
     const compliance = await loadContractComplianceInputs(mg);
     const windowDays = await readDecisionWindowDays(mg);
     const { qb: qbBase, parsed, today, filterTargets } = this.listQuery(mg, query, {
-      windowDays, exportAll: opts?.exportAll, budget, compliance, coveredApplicationScope: opts?.coveredApplicationScope,
+      windowDays, exportAll: opts?.exportAll, budget, compliance, coveredApplications: opts?.coveredApplications,
     });
     const { page, limit, skip, sort } = parsed;
 
@@ -658,7 +664,8 @@ export class ContractsService {
     const budget = await this.listBudgetInputs(mg, query, { ...opts, offerYears: true });
     const compliance = await loadContractComplianceInputs(mg);
     const windowDays = await readDecisionWindowDays(mg, opts?.tenantId);
-    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
+    const covered = opts?.coveredApplications;
+    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance, coveredApplications: covered });
     const groups: Array<{ currency: string; count: string; amount: string }> = await qb
       .clone()
       .select(`UPPER(TRIM(COALESCE(c.currency, '')))`, 'currency')
@@ -668,7 +675,7 @@ export class ContractsService {
       .getRawMany();
     groups.sort((a, b) => a.currency.localeCompare(b.currency));
 
-    const { qb: stateBase, filterTargets } = this.listQuery(mg, query, { windowDays, exportAll: true, omitFilters: ['term_state'], budget, compliance });
+    const { qb: stateBase, filterTargets } = this.listQuery(mg, query, { windowDays, exportAll: true, omitFilters: ['term_state'], budget, compliance, coveredApplications: covered });
     const toDecideCount = await stateBase
       .andWhere(`${filterTargets.term_state.expression} = 'to_decide'`)
       .getCount();
@@ -699,13 +706,20 @@ export class ContractsService {
       excluded,
       to_decide_count: toDecideCount,
       decision_window_days: windowDays,
-      ...(budget ? { budget: await this.budgetTotals(mg, query, budget, compliance, windowDays) } : {}),
+      ...(budget ? { budget: await this.budgetTotals(mg, query, budget, compliance, windowDays, covered) } : {}),
     };
   }
 
   /** The `budget` part of the totals (see `totals`). */
-  private async budgetTotals(mg: EntityManager, query: any, budget: ContractBudgetCoverage, compliance: ContractComplianceInputs, windowDays: number) {
-    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
+  private async budgetTotals(
+    mg: EntityManager,
+    query: any,
+    budget: ContractBudgetCoverage,
+    compliance: ContractComplianceInputs,
+    windowDays: number,
+    coveredApplications: CoveredApplicationsAccess | undefined,
+  ) {
+    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance, coveredApplications });
     const sums: { committed: string | null; linked: string | null; gap: string | null } = await qb
       .clone()
       .select('SUM(cb.committed::numeric)::text', 'committed')
@@ -720,7 +734,7 @@ export class ContractsService {
       .groupBy(`COALESCE(NULLIF(UPPER(TRIM(c.currency)), ''), 'EUR')`)
       .getRawMany();
     excluded.sort((a, b) => a.currency.localeCompare(b.currency));
-    const { qb: stateBase } = this.listQuery(mg, query, { windowDays, exportAll: true, omitFilters: ['budget_state'], budget, compliance });
+    const { qb: stateBase } = this.listQuery(mg, query, { windowDays, exportAll: true, omitFilters: ['budget_state'], budget, compliance, coveredApplications });
     const counts: { no_line: string; under: string } = await stateBase
       .select(`COUNT(*) FILTER (WHERE cb.state = 'no_line')::text`, 'no_line')
       .addSelect(`COUNT(*) FILTER (WHERE cb.state = 'under')::text`, 'under')
@@ -1144,7 +1158,7 @@ export class ContractsService {
     const budget = await this.listBudgetInputs(mg, query, opts);
     const compliance = await loadContractComplianceInputs(mg);
     const windowDays = await readDecisionWindowDays(mg);
-    const { qb, parsed, filterTargets } = this.listQuery(mg, query, { windowDays, budget, compliance, coveredApplicationScope: opts?.coveredApplicationScope });
+    const { qb, parsed, filterTargets } = this.listQuery(mg, query, { windowDays, budget, compliance, coveredApplications: opts?.coveredApplications });
     const { skip, sort } = parsed;
     // Not the parsed limit: parsePagination defaults to a page of 20, and the prev/next
     // navigation that calls this sends no limit, so it only ever knew 20 contracts.
@@ -1763,9 +1777,10 @@ export class ContractsService {
     };
   }
 
-  async listApplications(contractId: string, opts?: { manager?: EntityManager }) {
+  /** `applicationScope`: a Business Contributor's, who sees the applications they take part in. */
+  async listApplications(contractId: string, opts?: { manager?: EntityManager; applicationScope?: ParticipationAccessScope }) {
     const mg = opts?.manager ?? this.repo.manager;
-    return listContractApplications(mg, await this.findContract(contractId, mg));
+    return listContractApplications(mg, await this.findContract(contractId, mg), opts?.applicationScope);
   }
 
   async listAssets(contractId: string, opts?: { manager?: EntityManager }) {
@@ -1780,9 +1795,8 @@ export class ContractsService {
 
   /**
    * The Relations tab in one round trip (`readContractRelations`). `infrastructure` shows the
-   * technologies and the asset suggestions; `applications` the application suggestions, which
-   * `applicationScope` limits
-   * of a Business Contributor.
+   * assets, the technologies and the asset suggestions; `applications` the applications and their
+   * suggestions, which `applicationScope` limits to a Business Contributor's participation.
    */
   async getRelations(contractId: string, opts?: { manager?: EntityManager } & Partial<ContractRelationsAccess>) {
     const mg = opts?.manager ?? this.repo.manager;
@@ -1793,20 +1807,37 @@ export class ContractsService {
     });
   }
 
-  /** Link or unlink one application, asset or technology (`setContractRelation`). */
-  async setRelation(kind: ContractTabKind, contractId: string, targetId: string, add: boolean, userId?: string | null, opts?: { manager?: EntityManager }) {
+  /**
+   * Link or unlink one application, asset or technology (`setContractRelation`); `applicationScope`
+   * keeps a Business Contributor inside their participation.
+   */
+  async setRelation(
+    kind: ContractTabKind,
+    contractId: string,
+    targetId: string,
+    add: boolean,
+    userId?: string | null,
+    opts?: { manager?: EntityManager; applicationScope?: ParticipationAccessScope },
+  ) {
     const mg = opts?.manager ?? this.repo.manager;
     return setContractRelation({ manager: mg, audit: this.audit }, kind, targetId, add, userId ?? null, async () => {
       const contract = await this.findContract(contractId, mg);
       await assertContractsEditable(mg, [contract.id]);
       return { id: contract.id, tenantId: contract.tenant_id };
-    });
+    }, opts?.applicationScope);
   }
 
-  async replaceRelations(contractId: string, set: ContractRelationSet, ids: string[], userId?: string | null, opts?: { manager?: EntityManager }) {
+  /** `applicationScope`: a Business Contributor replaces the applications they take part in only. */
+  async replaceRelations(
+    contractId: string,
+    set: ContractRelationSet,
+    ids: string[],
+    userId?: string | null,
+    opts?: { manager?: EntityManager; applicationScope?: ParticipationAccessScope },
+  ) {
     const mg = opts?.manager ?? this.repo.manager;
     const contract = await this.findContract(contractId, mg);
-    return replaceContractRelations({ manager: mg, audit: this.audit }, set, contract, ids, userId ?? null);
+    return replaceContractRelations({ manager: mg, audit: this.audit }, set, contract, ids, userId ?? null, opts?.applicationScope);
   }
 
   /** The Compliance tab: every requirement, whether it is expected and why, and what was recorded (`contract-compliance.ts`). */
@@ -1835,7 +1866,7 @@ export class ContractsService {
     const budget = await this.listBudgetInputs(mg, query, opts);
     const compliance = await loadContractComplianceInputs(mg);
     const windowDays = await readDecisionWindowDays(mg);
-    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
+    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance, coveredApplications: opts?.coveredApplications });
     const contracts: Array<{ id: string; name: string; supplier_name: string | null; company_name: string | null }> = await qb
       .select('c.id', 'id')
       .addSelect('c.name', 'name')
@@ -1848,10 +1879,14 @@ export class ContractsService {
     return { filename: 'contract-compliance-register.csv', content };
   }
 
-  /** `technologies`: the caller reads the infrastructure (the technologies are counted for it only). */
-  async relationCounts(contractId: string, opts?: { manager?: EntityManager; technologies?: boolean }) {
+  /** Each linked family is counted only for a caller who reads it (`ContractRelationsAccess`, none by default). */
+  async relationCounts(contractId: string, opts?: { manager?: EntityManager } & Partial<ContractRelationsAccess>) {
     const mg = opts?.manager ?? this.repo.manager;
-    return contractRelationCounts(mg, await this.findContract(contractId, mg), { technologies: opts?.technologies === true });
+    return contractRelationCounts(mg, await this.findContract(contractId, mg), {
+      infrastructure: opts?.infrastructure === true,
+      applications: opts?.applications === true,
+      applicationScope: opts?.applicationScope,
+    });
   }
 
   /**
