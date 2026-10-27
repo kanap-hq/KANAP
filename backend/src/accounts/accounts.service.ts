@@ -18,7 +18,6 @@ import {
   ImportReportError,
   readMasterDataFile,
   rowProblemErrors,
-  writeCsv,
 } from '../common/csv-sheet';
 import {
   AccountAuditRow,
@@ -38,6 +37,10 @@ import {
 } from './consolidation';
 import { ACCOUNT_NUMBER_MAX, ACCOUNT_NUMBER_MAX_DIGITS, ACCOUNT_NUMBER_RULE, readAccountNumber } from './account-number';
 import { uploadedBytes } from '../common/upload';
+import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
+
+const ACCOUNTS_SHEET = { en: 'Accounts', fr: 'Comptes', de: 'Konten', es: 'Cuentas' };
 
 const ACCOUNT_NUMBER_TOKEN = '__account_number__';
 
@@ -760,14 +763,15 @@ export class AccountsService {
     return includeCoaCode ? ['coa_code', ...base] : base;
   }
 
-  async exportCsv(
+  /** Account numbers and codes are text; `format` xlsx writes the same columns in one sheet. */
+  async exportCsv<F extends ExportFileFormat = 'csv'>(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; coaId?: string; includeCoaCode?: boolean; language?: CsvLanguage; listQuery?: Record<string, unknown> },
-  ): Promise<{ filename: string; content: string }> {
+    opts?: { manager?: EntityManager; coaId?: string; includeCoaCode?: boolean; language?: CsvLanguage; listQuery?: Record<string, unknown>; format?: F },
+  ): Promise<ListExportFile<F>> {
     const language = opts?.language ?? 'en';
     const includeCoa = !!opts?.includeCoaCode;
     const headers = this.csvHeaders(includeCoa);
-    const rows: string[][] = [];
+    const rows: ListExportCell[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
       const where: any = {};
@@ -802,7 +806,7 @@ export class AccountsService {
       }
     }
     const filename = scope === 'template' ? 'accounts_template.csv' : (opts?.coaId ? 'accounts_coa.csv' : 'accounts.csv');
-    return { filename, content: writeCsv({ language, headers, rows }) };
+    return writeListExport({ format: opts?.format ?? ('csv' as F), language, filename, sheetNames: ACCOUNTS_SHEET, headers, rows });
   }
 
   async importCsv(

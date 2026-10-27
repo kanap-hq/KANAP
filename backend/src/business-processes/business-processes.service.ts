@@ -23,10 +23,11 @@ import {
   readMasterDataFile,
   rowError,
   rowProblemErrors,
-  writeCsv,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { uploadedBytes } from '../common/upload';
+import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 /**
  * True when re-importing a CSV row over the stored process writes nothing (`importCsv`): the
@@ -447,12 +448,12 @@ export class BusinessProcessesService {
    * The business processes file in the screen's language (`common/csv-sheet`). The status is read
    * from the end of validity, as on screen: the file has no date column.
    */
-  async exportCsv(
+  async exportCsv<F extends ExportFileFormat = 'csv'>(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown> },
-  ): Promise<{ filename: string; content: string }> {
+    opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown>; format?: F },
+  ): Promise<ListExportFile<F>> {
     const headers = this.csvHeaders();
-    const rows: string[][] = [];
+    const rows: ListExportCell[][] = [];
     if (scope === 'data') {
       // What the list shows (its search, filters, scope and sort), or the whole register by name.
       const query = opts?.listQuery ?? { page: 1, limit: MAX_EXPORT_LIMIT, sort: 'name:ASC', includeDisabled: '1' };
@@ -471,7 +472,8 @@ export class BusinessProcessesService {
       }
     }
     const filename = scope === 'template' ? 'business_processes_template.csv' : 'business_processes.csv';
-    return { filename, content: writeCsv({ language: opts?.language ?? 'en', headers, rows }) };
+    const sheetNames = { en: 'Business processes', fr: 'Processus métier', de: 'Geschäftsprozesse', es: 'Procesos de negocio' };
+    return writeListExport({ format: opts?.format ?? ('csv' as F), language: opts?.language ?? 'en', filename, sheetNames, headers, rows });
   }
 
   /**

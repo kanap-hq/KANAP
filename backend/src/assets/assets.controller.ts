@@ -10,6 +10,8 @@ import { AssetsDeleteService } from './assets-delete.service';
 import { AssetsCsvService } from './assets-csv.service';
 import { attachmentMulterOptions, csvImportMulterOptions } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
+import { csvExportFormat } from '../common/csv';
+import { csvExportBody } from '../common/csv/send-csv-export';
 import { StorageService } from '../common/storage/storage.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
@@ -85,9 +87,11 @@ export class AssetsController {
     @Query('environment') environment: string | undefined,
     @Query('kind') kind: string | undefined,
     @Query('status') status: string | undefined,
+    @Query('format') formatRaw: unknown,
     @Req() req: any,
     @Res() res: Response,
   ) {
+    const format = csvExportFormat(formatRaw, scope);
     const tenantId = req?.tenant?.id ?? '';
     // The screen's language (the user's own when the screen sends none), as every shared-layer file.
     const language = await languageOf(req?.queryRunner?.manager, tenantId, req.user?.sub ?? null, languageRaw);
@@ -102,14 +106,9 @@ export class AssetsController {
       kind,
       status,
       query,
+      format,
     });
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(result.filename));
-    if (result.warnings && result.warnings.length > 0) {
-      res.setHeader('X-CSV-Warnings', JSON.stringify(result.warnings));
-    }
-    res.send(result.content);
+    res.send(await csvExportBody(res, result));
   }
 
   @UseGuards(PermissionGuard)

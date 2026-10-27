@@ -5,6 +5,9 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { contentDisposition } from '../common/content-disposition';
+import { csvExportBody } from '../common/csv/send-csv-export';
+import { parseExportFormat } from '../common/xlsx/format';
+import { completeExport } from './export-events.interceptor';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { RateLimitGuard } from '../common/rate-limit.guard';
@@ -63,10 +66,12 @@ export class AuditLogsController {
     });
   }
 
-  // The list's rows as a CSV file, same query as `GET /audit-logs`. Declared before ':id'.
-  // Recorded in the audit log itself, like every `/export` route (export-events.interceptor.ts).
-  // Written to the client batch by batch while the request's tenant transaction stays open: the
-  // handler returns, and the transaction is committed, after the last part.
+  // The list's rows as a CSV file or a workbook (`format`), same query as `GET /audit-logs`.
+  // Declared before ':id'. Recorded in the audit log itself, like every `/export` route
+  // (export-events.interceptor.ts), with the format and the row count, written before the file is
+  // read: the export's own row in the file carries them. The CSV is written to the client batch by
+  // batch while the request's tenant transaction stays open: the handler returns, and the
+  // transaction is committed, after the last part. The workbook is built, then sent.
   @UseGuards(PermissionGuard, RateLimitGuard)
   @RequireLevel('users', 'admin')
   @Throttle({ default: RATE_LIMITS.documentExport })
@@ -77,14 +82,19 @@ export class AuditLogsController {
     @Res() res: Response,
   ): Promise<void> {
     if (!ctx.manager) throw new BadRequestException('The audit log export needs a tenant.');
-    const result = await this.svc.exportCsv(query, {
-      manager: ctx.manager,
-      tenantId: ctx.tenantId,
-      viewer: incidentViewerFromContext(ctx),
-    });
+    const format = parseExportFormat(query?.format);
+    const opts = { manager: ctx.manager, tenantId: ctx.tenantId, viewer: incidentViewerFromContext(ctx) };
+    if (format === 'xlsx') {
+      const file = await this.svc.exportXlsx(query, opts);
+      if (file.truncated) res.setHeader(AUDIT_LOG_EXPORT_TRUNCATED_HEADER, String(file.limit));
+      res.send(await csvExportBody(res, file));
+      return;
+    }
+    const result = await this.svc.exportCsv(query, opts);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', contentDisposition(result.filename));
     if (result.truncated) res.setHeader(AUDIT_LOG_EXPORT_TRUNCATED_HEADER, String(result.limit));
+    await completeExport(res, { rows: result.rows });
     try {
       for await (const part of result.chunks) await writePart(res, part);
     } catch (error) {

@@ -14,7 +14,9 @@ import {
   CsvFieldInfo,
   CsvFieldType,
 } from '../common/csv';
-import { taskCsvConfig } from './task-csv.config';
+import type { ExportFileFormat } from '../common/xlsx';
+import { TASK_INHERITED_CLASSIFICATION, taskCsvConfig, taskProjectClassifications } from './task-csv.config';
+import { inIdOrder } from '../common/pagination';
 import { assertTaskWritten } from './task-data-access';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
 import {
@@ -42,7 +44,7 @@ export class TasksCsvService {
    * @param opts Export options
    * @returns Export result with filename and content
    */
-  async export(opts: {
+  async export<F extends ExportFileFormat = 'csv'>(opts: {
     manager: EntityManager;
     tenantId: string;
     /** The screen language: separator, days, decimal mark and yes or no (`csv-sheet`). */
@@ -54,8 +56,15 @@ export class TasksCsvService {
     relatedObjectId?: string;
     /** A task of an incident the reader cannot see stays out of the file (empty for incidents:admin). */
     viewer?: IncidentViewer | null;
-  }): Promise<CsvExportResult> {
-    const { manager, tenantId, scope, fields, preset, relatedObjectType, relatedObjectId, viewer } = opts;
+    /**
+     * The rows of the list the screen shows, in its order (`listIds` of the list's query, every
+     * page): only these, in this order. Absent: the whole register (API scripts).
+     */
+    ids?: string[];
+    /** `csv` (default) or `xlsx` (data only: a template is CSV). */
+    format?: F;
+  }): Promise<CsvExportResult<F>> {
+    const { manager, tenantId, scope, fields, preset, relatedObjectType, relatedObjectId, viewer, ids } = opts;
 
     // Build query for tasks
     let queryBuilder = manager
@@ -77,14 +86,17 @@ export class TasksCsvService {
       queryBuilder = queryBuilder.andWhere(incidentVisibility.clause, incidentVisibility.params);
     }
 
+    if (ids) queryBuilder = queryBuilder.andWhere(ids.length ? 'task.id = ANY(:ids)' : 'FALSE', { ids });
     queryBuilder = queryBuilder.orderBy('task.created_at', 'DESC');
 
-    // Get tasks (empty for template export)
-    const tasks = scope === 'template' ? [] : await queryBuilder.getMany();
+    // Get tasks (empty for template export), in the list's order when it gives them
+    const read = scope === 'template' ? [] : await queryBuilder.getMany();
+    const tasks = ids ? inIdOrder(read, ids) : read;
 
     // Pre-load related object names for export
     if (tasks.length > 0) {
       await this.loadRelatedObjectNames(tasks, manager, tenantId);
+      await this.loadInheritedClassification(tasks, manager, tenantId);
     }
 
     return this.exportSvc.export(taskCsvConfig, tasks, {
@@ -94,6 +106,7 @@ export class TasksCsvService {
       fields,
       preset,
       language: opts.language,
+      format: opts.format,
     });
   }
 
@@ -179,6 +192,24 @@ export class TasksCsvService {
           task.related_object_id = null;
         }
         (task as any)._relatedObjectName = relatedObjectId ? (nameById.get(relatedObjectId) ?? '') : '';
+      }
+    }
+  }
+
+  /**
+   * The classification the list shows: a task of a project without a value of its own takes its
+   * project's (`TASK_INHERITED_CLASSIFICATION`). Set on the exported copies only; the import reads
+   * that value back as unchanged (`taskCsvConfig.afterValidate`).
+   */
+  private async loadInheritedClassification(tasks: Task[], manager: EntityManager, tenantId: string): Promise<void> {
+    const projectTasks = tasks.filter((task) => task.related_object_type === 'project' && task.related_object_id);
+    if (projectTasks.length === 0) return;
+    const projects = await taskProjectClassifications(manager, tenantId, projectTasks.map((task) => task.related_object_id!));
+    for (const task of projectTasks) {
+      const project = projects.get(task.related_object_id!.toLowerCase());
+      if (!project) continue;
+      for (const key of TASK_INHERITED_CLASSIFICATION) {
+        if (task[key] == null) task[key] = project[key];
       }
     }
   }
@@ -284,7 +315,8 @@ export class TasksCsvService {
         }
       }
 
-      // Update task with viewer and owner arrays (only if columns were present)
+      // Update task with viewer and owner arrays (only if columns were present). The columns are NOT
+      // NULL jsonb lists: none is `[]`, and the list goes as JSON (a bare array is a PostgreSQL array).
       const hasViewerColumns = [1, 2, 3, 4].some((i) => `viewer_email_${i}` in row);
       const hasOwnerColumns = [1, 2, 3, 4].some((i) => `owner_email_${i}` in row);
 
@@ -294,14 +326,14 @@ export class TasksCsvService {
         let paramIndex = 2;
 
         if (hasViewerColumns) {
-          updates.push(`viewer_ids = $${paramIndex}`);
-          params.push(viewerIds.length > 0 ? viewerIds : null);
+          updates.push(`viewer_ids = $${paramIndex}::jsonb`);
+          params.push(JSON.stringify(viewerIds));
           paramIndex++;
         }
 
         if (hasOwnerColumns) {
-          updates.push(`owner_ids = $${paramIndex}`);
-          params.push(ownerIds.length > 0 ? ownerIds : null);
+          updates.push(`owner_ids = $${paramIndex}::jsonb`);
+          params.push(JSON.stringify(ownerIds));
           paramIndex++;
         }
 

@@ -66,7 +66,7 @@ describe.each([
   it('offers the CSV import, the selection and bulk delete to an administrator with access to all data', () => {
     renderPage(Page);
     expect(screen.getByRole('button', { name: 'shared.labels.importCsv' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'shared.labels.exportCsv' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'common:export.button' })).toBeInTheDocument();
     expect(screen.getByTestId('delete-selected')).toBeInTheDocument();
     expect(state.grid?.enableRowSelection).toBe(true);
   });
@@ -75,7 +75,7 @@ describe.each([
     state.limited = true;
     renderPage(Page);
     expect(screen.queryByRole('button', { name: 'shared.labels.importCsv' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'shared.labels.exportCsv' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'common:export.button' })).toBeInTheDocument();
     expect(screen.queryByTestId('delete-selected')).toBeNull();
     expect(state.deleteButtons).toBe(0);
     expect(state.grid?.enableRowSelection).toBe(false);

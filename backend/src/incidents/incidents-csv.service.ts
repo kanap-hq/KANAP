@@ -14,6 +14,7 @@ import {
   CsvImportResult,
   CsvImportService,
 } from '../common/csv';
+import type { ExportFileFormat } from '../common/xlsx';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 import { INCIDENT_REVIEW_SLOT } from '../knowledge/integrated-document.constants';
 import {
@@ -86,7 +87,7 @@ export class IncidentsCsvService {
     private readonly incidents: IncidentsService,
   ) {}
 
-  async export(opts: {
+  async export<F extends ExportFileFormat = 'csv'>(opts: {
     manager: EntityManager;
     tenantId: string;
     /** The screen language: separator, days, decimal mark and yes or no (`csv-sheet`). */
@@ -105,7 +106,9 @@ export class IncidentsCsvService {
      * the whole register the viewer may see.
      */
     query?: Record<string, unknown>;
-  }): Promise<CsvExportResult> {
+    /** `csv` (default) or `xlsx` (data only: a template is CSV). */
+    format?: F;
+  }): Promise<CsvExportResult<F>> {
     const { manager, tenantId, viewer, scope, fields } = opts;
     let rows: Array<Record<string, any>> = [];
     if (scope !== 'template') {
@@ -128,7 +131,7 @@ export class IncidentsCsvService {
     }
 
     return this.exportSvc.export(incidentCsvConfig, rows, {
-      manager, tenantId, scope, fields, language: opts.language, timeZone: opts.timeZone,
+      manager, tenantId, scope, fields, language: opts.language, timeZone: opts.timeZone, format: opts.format,
     });
   }
 

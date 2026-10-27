@@ -26,7 +26,20 @@ describe('CsvExportDialog', () => {
     Object.assign(window.URL, { createObjectURL, revokeObjectURL });
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
   });
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const stubStorage = (initial: Record<string, string> = {}) => {
+    const store = new Map(Object.entries(initial));
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => { store.set(key, value); },
+      removeItem: (key: string) => { store.delete(key); },
+    });
+    return store;
+  };
 
   it('downloads the file and closes', async () => {
     get.mockResolvedValueOnce({ data: 'name\n', headers: { 'content-disposition': 'attachment; filename="suppliers.csv"' } });
@@ -81,7 +94,7 @@ describe('CsvExportDialog', () => {
   });
 
   it('keeps the page title and the whole register without a list', () => {
-    render(<CsvExportDialog open onClose={() => undefined} endpoint="/admin/coa-templates/t1" title="Export template" />);
+    render(<CsvExportDialog open onClose={() => undefined} endpoint="/admin/coa-templates/t1" title="Export template" csvOnly />);
     expect(screen.getByText('Export template')).toBeInTheDocument();
     expect(screen.queryByRole('radio')).toBeNull();
   });
@@ -111,5 +124,51 @@ describe('CsvExportDialog', () => {
     fireEvent.click(button);
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(get).toHaveBeenLastCalledWith('/suppliers/export', expect.objectContaining({ params: { language: 'en', scope: 'data' } }));
+  });
+
+  it('offers CSV or Excel, remembers the choice and sends it with the list', async () => {
+    const store = stubStorage();
+    get.mockResolvedValue({ data: new Blob(['x']), headers: {} });
+    const appended: HTMLAnchorElement[] = [];
+    const append = document.body.appendChild.bind(document.body);
+    vi.spyOn(document.body, 'appendChild').mockImplementation((node: any) => {
+      if (node instanceof HTMLAnchorElement) appended.push(node);
+      return append(node);
+    });
+    const onClose = vi.fn();
+    const listRequest = { params: { q: 'ok' }, total: 3 };
+    render(<CsvExportDialog open onClose={onClose} endpoint="/suppliers" listRequest={listRequest} entity="suppliers" flexibleFormat />);
+    expect(screen.getByRole('radio', { name: 'ops:operations.budgetFile.formatCsv' })).toBeChecked();
+    expect(screen.getByText('csv.exportDescriptionFlexible')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('radio', { name: 'ops:operations.budgetFile.formatXlsx' }));
+    expect(store.get('kanap.exportFormat')).toBe('xlsx');
+    // The CSV hints (separator, decimal mark) say nothing about a workbook.
+    expect(screen.queryByText('csv.exportDescriptionFlexible')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(get).toHaveBeenLastCalledWith('/suppliers/export', expect.objectContaining({
+      params: { q: 'ok', language: 'en', scope: 'data', rows: 'list', format: 'xlsx' },
+    }));
+    // No file name from the server: the fallback has the format's extension.
+    expect(appended[appended.length - 1]?.download).toBe('data.xlsx');
+  });
+
+  it('opens on the format last chosen in any export dialog', () => {
+    stubStorage({ 'kanap.exportFormat': 'xlsx' });
+    render(<CsvExportDialog open onClose={() => undefined} endpoint="/contacts" />);
+    expect(screen.getByRole('radio', { name: 'ops:operations.budgetFile.formatXlsx' })).toBeChecked();
+    expect(screen.queryByText('csv.exportDescription')).toBeNull();
+  });
+
+  it('keeps a stored CSV file in CSV, whatever was chosen elsewhere', async () => {
+    stubStorage({ 'kanap.exportFormat': 'xlsx' });
+    get.mockResolvedValue({ data: 'a\n', headers: {} });
+    const onClose = vi.fn();
+    render(<CsvExportDialog open onClose={onClose} endpoint="/admin/coa-templates/t1" csvOnly />);
+    expect(screen.queryByText('ops:operations.budgetFile.format')).toBeNull();
+    expect(screen.getByText('csv.exportDescription')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(get).toHaveBeenLastCalledWith('/admin/coa-templates/t1/export', expect.objectContaining({ params: { language: 'en', scope: 'data' } }));
   });
 });

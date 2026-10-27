@@ -3,7 +3,6 @@
     "title": "OPEX",
     "newButton": "Nuevo",
     "importCsv": "Importar CSV",
-    "exportCsv": "Exportar CSV",
     "exportTitle": "Exportar OPEX",
     "columns": {
       "reference": "Ref",
@@ -372,7 +371,6 @@
     "title": "Contratos",
     "newButton": "Nuevo",
     "importCsv": "Importar CSV",
-    "exportCsv": "Exportar CSV",
     "exportTitle": "Exportar contratos",
     "importTitle": "Importar contratos",
     "readOnlyInYourAccess": "Solo lectura en su acceso",

@@ -18,6 +18,8 @@ import {
   inlineImageMulterOptions,
 } from '../common/upload';
 import { contentDisposition } from '../common/content-disposition';
+import { csvExportFormat } from '../common/csv';
+import { csvExportBody } from '../common/csv/send-csv-export';
 import { createRequestReleaseConnection } from '../common/import-connection';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { RateLimitGuard } from '../common/rate-limit.guard';
@@ -177,9 +179,11 @@ export class IncidentsController {
     @Query('timeZone') timeZoneRaw: string | undefined,
     @Query('scope') scope: 'template' | 'data' = 'data',
     @Query('fields') fields: string | undefined,
+    @Query('format') formatRaw: unknown,
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
+    const format = csvExportFormat(formatRaw, scope);
     // The screen's language (the user's own when the screen sends none), as every shared-layer file.
     const language = await languageOf(ctx.manager as EntityManager, ctx.tenantId, ctx.userId ?? null, languageRaw);
     // Date-times in the local time the user sees: the browser's zone, else the user's own, else UTC.
@@ -195,14 +199,9 @@ export class IncidentsController {
       scope,
       fields: fields ? fields.split(',').map((f) => f.trim()) : undefined,
       query,
+      format,
     });
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(result.filename));
-    if (result.warnings.length > 0) {
-      res.setHeader('X-CSV-Warnings', JSON.stringify(result.warnings));
-    }
-    res.send(result.content);
+    res.send(await csvExportBody(res, result));
   }
 
   @UseGuards(PermissionGuard)

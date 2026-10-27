@@ -6,7 +6,6 @@ import {
   CsvDateOrder,
   CsvLanguage,
   DecimalMark,
-  endOfValidityCell,
   endOfValidityOf,
   keepStoredEndOfValidity,
   MasterDataFileRead,
@@ -15,7 +14,6 @@ import {
   rowError,
   rowProblemErrors,
   textCellError,
-  writeCsv,
 } from '../common/csv-sheet';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { CostCenterKind } from './cost-center.entity';
@@ -36,6 +34,8 @@ import {
   validateCostCenterGraph,
 } from './cost-centers.service';
 import { uploadedBytes } from '../common/upload';
+import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 export const COST_CENTER_CSV_HEADERS = [
   'code', 'kind', 'name', 'parent_code', 'company_name', 'owner_email', 'description', 'status', 'disabled_at',
@@ -68,14 +68,15 @@ interface ParsedRow {
 export class CostCentersCsvService {
   constructor(private readonly costCenters: CostCentersService) {}
 
-  async exportCsv(
+  async exportCsv<F extends ExportFileFormat = 'csv'>(
     scope: 'data' | 'template',
     ctx: CostCenterContext,
     language: CsvLanguage = 'en',
     listQuery?: Record<string, unknown>,
-  ): Promise<{ filename: string; content: string }> {
+    format: F = 'csv' as F,
+  ): Promise<ListExportFile<F>> {
     const headers = [...COST_CENTER_CSV_HEADERS];
-    const rows: string[][] = [];
+    const rows: ListExportCell[][] = [];
     if (scope === 'data') {
       // The whole register in tree order (a parent before its children), or what the list shows
       // in its order: the import resolves parents against the stored tree as well.
@@ -102,14 +103,18 @@ export class CostCentersCsvService {
           extra?.description ?? '',
           // The tree reads it from the end of validity, so it never contradicts its own row.
           node.status,
-          endOfValidityCell(node.disabled_at, language),
+          endOfValidityDay(node.disabled_at),
         ]);
       }
     }
-    return {
+    return writeListExport({
+      format,
+      language,
       filename: scope === 'template' ? 'cost_centers_template.csv' : 'cost_centers.csv',
-      content: writeCsv({ language, headers, rows }),
-    };
+      sheetNames: { en: 'Cost centers', fr: 'Centres de coûts', de: 'Kostenstellen', es: 'Centros de coste' },
+      headers,
+      rows,
+    });
   }
 
   /**

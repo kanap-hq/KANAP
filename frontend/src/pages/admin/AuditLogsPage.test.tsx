@@ -114,16 +114,18 @@ describe('AuditLogsPage', () => {
     await i18n.changeLanguage('en');
   });
 
-  it('offers an administrator the CSV export of the list', () => {
+  it('offers an administrator the export of the list, CSV or Excel', () => {
     renderPage();
-    expect(screen.getByRole('button', { name: 'Export CSV' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    expect(screen.getByRole('menuitem', { name: 'CSV' })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'Excel (.xlsx)' })).toBeTruthy();
   });
 
   it('shows nothing of the log without the users admin level', () => {
     auth.admin = false;
     renderPage();
     expect(screen.getByText('Forbidden')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Export CSV' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Export' })).toBeNull();
   });
 
   it("exports with the list's filters, search and sort, in one format whatever the screen language", async () => {
@@ -134,10 +136,11 @@ describe('AuditLogsPage', () => {
     act(() => {
       grid.props?.onQueryStateChange({ sort: 'created_at:ASC', filterModel, q: 'alice' });
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Exporter CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Exporter' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Excel (.xlsx)' }));
     await waitFor(() => expect(downloadBlob).toHaveBeenCalledTimes(1));
     expect(getMock).toHaveBeenCalledWith('/audit-logs/export', {
-      params: { sort: 'created_at:ASC', q: 'alice', filters: JSON.stringify(filterModel) },
+      params: { format: 'xlsx', sort: 'created_at:ASC', q: 'alice', filters: JSON.stringify(filterModel) },
       responseType: 'blob',
     });
     expect(vi.mocked(downloadBlob).mock.calls[0][1]).toBe('audit-log-2026-10-09.csv');
@@ -147,17 +150,20 @@ describe('AuditLogsPage', () => {
   it('says when the file stopped at the row limit', async () => {
     getMock.mockResolvedValue(csvResponse({ 'x-export-truncated': '100000' }) as any);
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
     expect(await screen.findByText('The file holds the first 100,000 entries. Narrow the filters to export the rest.')).toBeTruthy();
   });
 
   it('says when exports come too fast, and when one fails', async () => {
     getMock.mockRejectedValueOnce({ response: { status: 429 } });
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
     expect(await screen.findByText('Too many exports in a short time. Try again in a minute.')).toBeTruthy();
     getMock.mockRejectedValueOnce({ response: { status: 500 } });
-    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
     expect(await screen.findByText('The audit log could not be exported.')).toBeTruthy();
     expect(downloadBlob).not.toHaveBeenCalled();
   });
@@ -454,10 +460,11 @@ describe('AuditLogsPage', () => {
     act(() => {
       grid.props?.onQueryStateChange({ sort: 'created_at:DESC', filterModel: {}, q: 'Fournisseurs' });
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Exporter CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Exporter' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
     await waitFor(() => expect(downloadBlob).toHaveBeenCalledTimes(1));
     expect(getMock).toHaveBeenCalledWith('/audit-logs/export', {
-      params: { sort: 'created_at:DESC', q: 'Fournisseurs', q_tables: 'suppliers' },
+      params: { format: 'csv', sort: 'created_at:DESC', q: 'Fournisseurs', q_tables: 'suppliers' },
       responseType: 'blob',
     });
     // Accents and case aside, as the server folds a search.
@@ -479,7 +486,7 @@ describe('AuditLogsPage', () => {
       ...AUTH_EVENT_REASONS.map((reason) => `reasons.${reason}`),
       ...Object.values(EXPORT_RESOURCE_KEYS).map((key) => `exportResources.${key}`),
       'values.unknownAccount', 'tableNames.auth', 'tableNames.export',
-      'export.button', 'export.failed', 'export.tooMany', 'export.truncated',
+      'export.failed', 'export.tooMany', 'export.truncated',
       'details.reason', 'details.exported',
     ];
     for (const key of required) expect(english[key], key).toBeTruthy();

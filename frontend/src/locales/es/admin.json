@@ -344,7 +344,6 @@
       "value": "Valor"
     },
     "export": {
-      "button": "Exportar CSV",
       "failed": "No se pudo exportar el registro de auditoría.",
       "tooMany": "Demasiadas exportaciones en poco tiempo. Vuelva a intentarlo en un minuto.",
       "truncated": "El archivo contiene las primeras {{limit}} entradas. Acote los filtros para exportar el resto."
@@ -1628,7 +1627,6 @@
     "actions": {
       "new": "Nuevo",
       "importCsv": "Importar CSV",
-      "exportCsv": "Exportar CSV",
       "invite": "Invitar ({{count}})",
       "inviting": "Invitando…",
       "rowMenu": "Acciones de usuario",
@@ -2064,7 +2062,6 @@
       "saveFailed": "No se pudo actualizar el acceso.",
       "loadFailed": "No se pudo cargar el acceso."
     },
-    "importCsv": "Importar CSV",
-    "exportCsv": "Exportar CSV"
+    "importCsv": "Importar CSV"
   }
 }

@@ -2,7 +2,9 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
-import { writeCsv, type CsvLanguage } from '../common/csv-sheet';
+import type { CsvLanguage } from '../common/csv-sheet';
+import { typedTextRows, writeListExport, type ListExportFile } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 import { catalogFromMetadata, type ClassificationLevel } from '../it-ops-settings/classification-catalog';
 import type { CatalogTranslations } from '../it-ops-settings/catalog-codes';
 import { DEFAULT_HOSTING_TYPES } from '../it-ops-settings/it-ops-settings.service';
@@ -606,17 +608,27 @@ export function registerReasonText(language: CsvLanguage, reason: ComplianceReas
 
 export type RegisterContract = { id: string; name: string; supplier_name: string | null; company_name: string | null };
 
+/** The sheet of the register's workbook. */
+const REGISTER_SHEET: Record<CsvLanguage, string> = {
+  en: 'Compliance register',
+  fr: 'Registre de conformité',
+  de: 'Konformitätsregister',
+  es: 'Registro de conformidad',
+};
+
 /**
  * The register of `contracts` (in their order): one line per contract and requirement, expected or
  * not, with its reasons, what was recorded and who recorded it last. Three statements whatever the
- * number of contracts (reasons and records of the whole tenant, read once).
+ * number of contracts (reasons and records of the whole tenant, read once). CSV (the day of the last
+ * update as `YYYY-MM-DD` in every language), or a workbook where that day is a date.
  */
-export async function complianceRegisterCsv(
+export async function complianceRegisterFile<F extends ExportFileFormat>(
   manager: EntityManager,
   inputs: ContractComplianceInputs,
   contracts: RegisterContract[],
   language: CsvLanguage,
-): Promise<string> {
+  format: F,
+): Promise<ListExportFile<F>> {
   const copy = REGISTER_COPY[language];
   // One after the other: the request's single connection runs its queries in turn anyway.
   const reasons = await readComplianceReasons(manager, inputs, null);
@@ -639,5 +651,13 @@ export async function complianceRegisterCsv(
       ]);
     }
   }
-  return writeCsv({ language, headers: copy.headers, rows });
+  return writeListExport({
+    format,
+    language,
+    filename: 'contract-compliance-register.csv',
+    sheetNames: REGISTER_SHEET,
+    headers: copy.headers,
+    // Updated on.
+    rows: typedTextRows(format, rows, { 8: 'date' }),
+  });
 }

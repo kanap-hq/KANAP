@@ -85,12 +85,23 @@ async function preflightThenLoad(
   return result;
 }
 
-/** Every column the import reads, as the export writes them. */
+/**
+ * Every column the import reads, as the export writes them, with the business reference (`reference`,
+ * export only): the import leaves it out.
+ */
 async function fullExport(runner: QueryRunner, tenantId: string, config: CsvEntityConfig, id: string): Promise<string> {
   const rows = await runner.query(`SELECT * FROM ${config.tableName} WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
-  const fields = [...new Set(config.fields.filter((f) => f.importable !== false && f.exportable !== false).map((f) => f.csvColumn))];
+  const fields = [...new Set(config.fields
+    .filter((f) => (f.importable !== false || f.csvColumn === 'reference') && f.exportable !== false)
+    .map((f) => f.csvColumn))];
   const result = await exporter.export(config, rows, { manager: runner.manager, tenantId, fields, language: 'en' });
-  return result.content.replace(/^﻿/, '');
+  const content = result.content.replace(/^﻿/, '');
+  if (fields.includes('reference')) {
+    const [header, line] = content.split('\n');
+    assert.equal(header.split(',')[1], 'reference', `${config.entityName}: the reference follows id`);
+    assert.match(line.split(',')[1], /^[A-Z]+-\d+$/, `${config.entityName}: the reference is exported`);
+  }
+  return content;
 }
 
 /** The exported file read back in full replace: no error, the row counted as unchanged. */

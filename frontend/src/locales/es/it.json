@@ -4,7 +4,6 @@
       "title": "Registro de incidentes",
       "newIncident": "Nuevo incidente",
       "importCsv": "Importar CSV",
-      "exportCsv": "Exportar CSV",
       "importTitle": "Importar incidentes",
       "exportTitle": "Exportar incidentes",
       "exportScope_one": "Exportación filtrada: {{count}} incidente",
@@ -174,7 +173,6 @@
       "addAsset": "Añadir activo",
       "addCluster": "Añadir clúster",
       "importCsv": "Importar CSV",
-      "exportCsv": "Exportar CSV",
       "exportTitle": "Exportar activos",
       "importTitle": "Importar activos",
       "exportScope_one": "{{count}} activo, según los filtros de la lista.",
@@ -417,8 +415,7 @@
       "actions": {
         "changeState": "Cambiar el estado",
         "changeStateSelected_one": "Cambiar el estado ({{count}})",
-        "changeStateSelected_other": "Cambiar el estado ({{count}})",
-        "export": "Exportar CSV"
+        "changeStateSelected_other": "Cambiar el estado ({{count}})"
       },
       "bulk": {
         "title": "Cambiar el estado",
@@ -2562,7 +2559,6 @@
         "changeVersion": "Cambiar la versión para {{name}}",
         "remove": "Quitar {{name}}, todas las versiones declaradas",
         "saveFailed": "No se pudieron guardar las aplicaciones.",
-        "exportCsv": "Exportar CSV",
         "exportFailed": "La exportación falló.",
         "columns": {
           "ref": "Ref.",

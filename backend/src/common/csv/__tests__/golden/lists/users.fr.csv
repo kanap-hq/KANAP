@@ -1,0 +1,4 @@
+﻿email;first_name;last_name;role;company_name;department_name;status
+bob@example.com;'-Bob;"Line; ""quoted""
+second, line";Spec reader;;;disabled
+ada@example.com;Ada;Byron;Spec reader;Alpha SA;Finance;enabled

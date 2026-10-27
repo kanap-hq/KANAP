@@ -28,7 +28,6 @@ import {
   CsvDateOrder,
   CsvLanguage,
   DecimalMark,
-  endOfValidityCell,
   endOfValidityOf,
   keepStoredEndOfValidity,
   ImportReportError,
@@ -36,9 +35,10 @@ import {
   readMasterDataFile,
   rowError,
   rowProblemErrors,
-  writeCsv,
 } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
+import { endOfValidityDay, ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 type DepartmentLookupItem = { id: string; name: string; company_id: string };
 
@@ -488,13 +488,13 @@ export class DepartmentsService {
     return ['company_name', 'name', 'description', 'status', 'disabled_at'];
   }
 
-  async exportCsv(
+  async exportCsv<F extends ExportFileFormat = 'csv'>(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown> },
-  ): Promise<{ filename: string; content: string }> {
+    opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown>; format?: F },
+  ): Promise<ListExportFile<F>> {
     const language = opts?.language ?? 'en';
     const headers = this.csvHeaders();
-    const rows: string[][] = [];
+    const rows: ListExportCell[][] = [];
     if (scope === 'data' && opts?.listQuery) {
       // What the list shows: its search, filters, scope and sort.
       const { items } = await this.list(opts.listQuery, { manager: opts.manager, exportAll: true });
@@ -504,7 +504,7 @@ export class DepartmentsService {
           d.name ?? '',
           d.description ?? '',
           String(deriveStatusFromDisabledAt(d.disabled_at ?? null)),
-          endOfValidityCell(d.disabled_at ?? null, language),
+          endOfValidityDay(d.disabled_at ?? null),
         ]);
       }
     } else if (scope === 'data') {
@@ -521,12 +521,13 @@ export class DepartmentsService {
           r.d_description ?? r.description ?? '',
           // Read from the end of validity: a stored status left stale by a passed date never contradicts its own row.
           String(deriveStatusFromDisabledAt(r.d_disabled_at ?? null)),
-          endOfValidityCell(r.d_disabled_at ?? null, language),
+          endOfValidityDay(r.d_disabled_at ?? null),
         ]);
       }
     }
     const filename = scope === 'template' ? 'departments_template.csv' : 'departments.csv';
-    return { filename, content: writeCsv({ language, headers, rows }) };
+    const sheetNames = { en: 'Departments', fr: 'Départements', de: 'Abteilungen', es: 'Departamentos' };
+    return writeListExport({ format: opts?.format ?? ('csv' as F), language, filename, sheetNames, headers, rows });
   }
 
   async importCsv(

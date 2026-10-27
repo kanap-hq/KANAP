@@ -1,4 +1,5 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { MAX_EXPORT_LIMIT } from '../common/pagination';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Repository, EntityManager, DataSource } from 'typeorm';
 import {
@@ -1109,7 +1110,10 @@ export class TasksService {
     const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer, opts?.linkedReads, opts?.linkedScopes);
 
     const sortField = await taskSortKey(manager, sort.field);
-    const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
+    // The navigation reads at most 10,000 ids; the export (`__export`, set by the server only: a query
+    // string never carries a boolean) reads up to the export bound.
+    const cap = query?.__export === true ? MAX_EXPORT_LIMIT : 10000;
+    const limit = Math.min(Math.max(Number(query?.limit) || cap, 1), cap);
 
     const countQuery = `
       SELECT COUNT(*)::int AS total

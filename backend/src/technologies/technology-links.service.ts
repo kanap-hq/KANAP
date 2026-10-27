@@ -4,7 +4,9 @@ import type { EntityManager } from 'typeorm';
 import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { AuditService } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
-import { languageOf, writeCsv, type CsvLanguage } from '../common/csv-sheet';
+import { languageOf, type CsvLanguage } from '../common/csv-sheet';
+import { writeListExport, type ListExportFile } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 import { MANUAL_PROVENANCE, provenanceParams, type LinkProvenance } from '../common/link-provenance';
 import { withSavepoint } from '../common/savepoint.util';
 import { shippedLabelIn } from '../it-ops-settings/catalog-shipped-labels';
@@ -68,6 +70,9 @@ type ApplicationsCsvCopy = {
 };
 
 /** The words of the Applications export, the screen's (`workspace.technology.applications` in the `it` locale files). */
+/** The sheet of the Applications tab's workbook. */
+const APPLICATIONS_SHEET: Record<CsvLanguage, string> = { en: 'Applications', fr: 'Applications', de: 'Anwendungen', es: 'Aplicaciones' };
+
 const APPLICATIONS_CSV_COPY: Record<CsvLanguage, ApplicationsCsvCopy> = {
   en: {
     headers: ['Reference', 'Application', 'Link', 'Environment', 'Server', 'Installed on', 'Version', 'Criticality', 'External', 'IT owners', 'Notes'],
@@ -339,9 +344,15 @@ export class TechnologyLinksService {
   /**
    * The Applications tab as a file to send to the teams: one line per row of the tab, in the
    * language asked (headers, words, environments, and the criticality as the tenant's catalog
-   * names it in that language).
+   * names it in that language). CSV, or a workbook of one sheet with the same text cells.
    */
-  async applicationsCsv(idOrRef: string, language: unknown, opts: LinkOpts, applications: { scope?: ParticipationAccessScope }): Promise<{ filename: string; content: string }> {
+  async applicationsCsv<F extends ExportFileFormat = 'csv'>(
+    idOrRef: string,
+    language: unknown,
+    opts: LinkOpts,
+    applications: { scope?: ParticipationAccessScope },
+    format?: F,
+  ): Promise<ListExportFile<F>> {
     const lang = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, language);
     const { technology, items } = await this.applicationsOfTechnology(idOrRef, opts, applications);
     const copy = APPLICATIONS_CSV_COPY[lang];
@@ -365,7 +376,14 @@ export class TechnologyLinksService {
       item.notes ?? '',
     ]);
     const safeName = String(technology.reference ?? 'technology').replace(/[^A-Za-z0-9_-]/g, '_');
-    return { filename: `${safeName}_applications.csv`, content: writeCsv({ language: lang, headers: copy.headers, rows }) };
+    return writeListExport({
+      format: format ?? ('csv' as F),
+      language: lang,
+      filename: `${safeName}_applications.csv`,
+      sheetNames: APPLICATIONS_SHEET,
+      headers: copy.headers,
+      rows,
+    });
   }
 
   /**

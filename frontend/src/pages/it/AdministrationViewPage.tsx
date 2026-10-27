@@ -25,6 +25,8 @@ import WorkspaceTabs from '../portfolio/workspace/WorkspaceTabs';
 import type { DomainTrustDirection } from '../../services/itOpsSettings';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
+import ExportFormatButton from '../../components/csv/ExportFormatButton';
+import type { ExportFormat } from '../../components/csv/exportFormat';
 
 const ENDPOINT = '/technologies/reports/administration';
 const ASSETS_ENDPOINT = `${ENDPOINT}/assets`;
@@ -994,16 +996,16 @@ export default function AdministrationViewPage() {
   ], [canEdit, controlValues, kindValues, labelFor, t, toggleAll, toggleRow, zoneValues]);
 
   /** The assets with the grid's filters and sort, or the domains; long filters go as a saved list context. */
-  const exportList = async (list: 'assets' | 'domains') => {
+  const exportList = async (list: 'assets' | 'domains', format: ExportFormat) => {
     setExporting(true);
     setExportError(null);
     try {
       const language = (i18n.resolvedLanguage || i18n.language || 'en').slice(0, 2);
-      const params = list === 'assets' ? { ...exportParams(requestRef.current), list, language } : { list, language };
+      const params = list === 'assets' ? { ...exportParams(requestRef.current), list, language, format } : { list, language, format };
       const res = await getWithListContext<Blob>(`${ENDPOINT}/export`, params, { responseType: 'blob' });
       const headers = (res.headers ?? {}) as Record<string, unknown>;
       const disposition = (headers['content-disposition'] ?? headers['Content-Disposition']) as string | undefined;
-      downloadBlob(new Blob([res.data], { type: 'text/csv;charset=utf-8' }), extractFilenameFromDisposition(disposition) || `administration_view_${list}.csv`);
+      downloadBlob(res.data instanceof Blob ? res.data : new Blob([res.data]), extractFilenameFromDisposition(disposition) || `administration_view_${list}.${format}`);
     } catch (err) {
       setExportError(getApiErrorMessage(err, t, t('pages.administrationView.exportFailed')));
     } finally {
@@ -1041,8 +1043,8 @@ export default function AdministrationViewPage() {
             : t('pages.administrationView.actions.assign')}
         </Button>
       )}
-      <Button variant="action" disabled={exporting} onClick={() => void exportList('assets')}>{t('pages.administrationView.exportAssets')}</Button>
-      <Button variant="action" disabled={exporting} onClick={() => void exportList('domains')}>{t('pages.administrationView.exportDomains')}</Button>
+      <ExportFormatButton label={t('pages.administrationView.exportAssets')} disabled={exporting} onExport={(format) => exportList('assets', format)} />
+      <ExportFormatButton label={t('pages.administrationView.exportDomains')} disabled={exporting} onExport={(format) => exportList('domains', format)} />
     </Stack>
   );
 

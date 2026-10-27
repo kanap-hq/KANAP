@@ -33,19 +33,20 @@ function normalizeCodes(entity: any): void {
 /**
  * CSV configuration for Portfolio Requests entity
  *
- * Field order matches RequestWorkspacePage.tsx tabs:
- * - Overview: name, status, purpose, type, category, stream, requestor, company, department, target_delivery_date
- * - Analysis: current_situation, expected_benefits, risks
- * - Team: business_sponsor, business_lead, it_sponsor, it_lead
+ * Column order: id, reference (REQ-n, export only), name, then RequestWorkspacePage.tsx tab by tab:
+ * - Summary: purpose, the property panel (status to target delivery date, sponsors and leads)
+ * - Analysis: risks, current_situation, expected_benefits
  * - Scoring: criteria_values, priority fields
  */
 export const portfolioRequestCsvConfig: CsvEntityConfig = {
   entityName: 'portfolio_request',
+  // The sheet of an xlsx export: the list's title on screen.
+  sheetNames: { en: 'Portfolio requests', fr: 'Demandes du portefeuille', de: 'Portfolio-Anfragen', es: 'Solicitudes del portafolio' },
   tableName: 'portfolio_requests',
   displayName: 'Portfolio Requests',
   upsertKey: ['name'],
   fields: [
-    // Identity
+    // === IDENTITY ===
     {
       csvColumn: 'id',
       entityProperty: 'id',
@@ -58,8 +59,18 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
       label: 'ID',
       group: 'Identity',
     },
-
-    // === OVERVIEW TAB ===
+    {
+      // The business reference the list shows (REQ-n): export only, ignored on import.
+      csvColumn: 'reference',
+      entityProperty: 'item_number',
+      type: CsvFieldType.COMPUTED,
+      exportable: true,
+      importable: false,
+      defaultExport: true,
+      label: 'Reference',
+      group: 'Identity',
+      exportFn: (entity: any) => (entity.item_number ? `REQ-${entity.item_number}` : ''),
+    },
     {
       csvColumn: 'name',
       entityProperty: 'name',
@@ -67,6 +78,17 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
       required: true,
       defaultExport: true,
       label: 'Name',
+      group: 'Overview',
+    },
+
+    // === SUMMARY TAB (purpose, properties) ===
+    {
+      csvColumn: 'purpose',
+      entityProperty: 'purpose',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: true,
+      label: 'Purpose',
       group: 'Overview',
     },
     {
@@ -77,15 +99,6 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
       required: false,
       defaultExport: true,
       label: 'Status',
-      group: 'Overview',
-    },
-    {
-      csvColumn: 'purpose',
-      entityProperty: 'purpose',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: true,
-      label: 'Purpose',
       group: 'Overview',
     },
     {
@@ -169,37 +182,6 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
       label: 'Target Delivery Date',
       group: 'Overview',
     },
-
-    // === ANALYSIS TAB ===
-    {
-      csvColumn: 'current_situation',
-      entityProperty: 'current_situation',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: false,
-      label: 'Current Situation',
-      group: 'Analysis',
-    },
-    {
-      csvColumn: 'expected_benefits',
-      entityProperty: 'expected_benefits',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: false,
-      label: 'Expected Benefits',
-      group: 'Analysis',
-    },
-    {
-      csvColumn: 'risks',
-      entityProperty: 'risks',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: false,
-      label: 'Risks',
-      group: 'Analysis',
-    },
-
-    // === TEAM TAB ===
     {
       csvColumn: 'business_sponsor_email',
       entityProperty: 'business_sponsor_id',
@@ -247,6 +229,35 @@ export const portfolioRequestCsvConfig: CsvEntityConfig = {
       defaultExport: true,
       label: 'IT Lead Email',
       group: 'Team',
+    },
+
+    // === ANALYSIS TAB ===
+    {
+      csvColumn: 'risks',
+      entityProperty: 'risks',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: false,
+      label: 'Risks',
+      group: 'Analysis',
+    },
+    {
+      csvColumn: 'current_situation',
+      entityProperty: 'current_situation',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: false,
+      label: 'Current Situation',
+      group: 'Analysis',
+    },
+    {
+      csvColumn: 'expected_benefits',
+      entityProperty: 'expected_benefits',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: false,
+      label: 'Expected Benefits',
+      group: 'Analysis',
     },
 
     // === SCORING TAB ===

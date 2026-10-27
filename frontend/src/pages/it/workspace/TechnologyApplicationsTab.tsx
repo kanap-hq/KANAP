@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Box, Button, Stack } from '@mui/material';
+import { Alert, Box, Stack } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
@@ -7,6 +7,8 @@ import { screenLanguage } from '../../../components/csv/readings';
 import useApplicationClassificationCatalog from '../../../hooks/useApplicationClassificationCatalog';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { downloadBlob, extractFilenameFromDisposition } from '../../../utils/downloadBlob';
+import ExportFormatButton from '../../../components/csv/ExportFormatButton';
+import type { ExportFormat } from '../../../components/csv/exportFormat';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
 import { invalidateTechnologyLinks } from '../components/technologyLinkQueries';
@@ -115,15 +117,15 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
     await refresh();
   };
 
-  const exportCsv = async () => {
+  const exportFile = async (format: ExportFormat) => {
     setError(null);
     try {
       const res = await api.get<Blob>(`/technologies/${technologyId}/applications/export`, {
-        params: { language: screenLanguage(i18n.resolvedLanguage || i18n.language) },
+        params: { language: screenLanguage(i18n.resolvedLanguage || i18n.language), format },
         responseType: 'blob',
       });
-      const filename = extractFilenameFromDisposition(res.headers?.['content-disposition']) || `${technologyReference}_applications.csv`;
-      downloadBlob(new Blob([res.data], { type: 'text/csv;charset=utf-8' }), filename);
+      const filename = extractFilenameFromDisposition(res.headers?.['content-disposition']) || `${technologyReference}_applications.${format}`;
+      downloadBlob(res.data instanceof Blob ? res.data : new Blob([res.data]), filename);
     } catch (e) {
       setError(getApiErrorMessage(e, t, t('workspace.technology.applications.exportFailed')));
     }
@@ -210,9 +212,7 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
         title={title}
         count={data ? countApplications(rows) : undefined}
         actions={rows.length > 0 ? (
-          <Button variant="action" size="small" onClick={() => { void exportCsv(); }}>
-            {t('workspace.technology.applications.exportCsv')}
-          </Button>
+          <ExportFormatButton size="small" label={t('common:export.button')} onExport={exportFile} />
         ) : undefined}
         onAdd={canManage && data ? setAnchor : undefined}
         adding={!!anchor}

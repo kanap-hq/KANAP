@@ -1,0 +1,5 @@
+﻿name;company_name;supplier_name;cost_center;start_date;duration_months;auto_renewal;notice_period_months;yearly_amount_at_signature;currency;billing_frequency;status;owner_email;notes
+"Line; ""quoted""
+second, line";"Line; ""quoted""
+second, line";"Zeta; ""Z""";;31/12/2024;12;non;1;-0,5;USD;monthly;disabled;;
+Support;Alpha SA;Acme;Group;01/03/2026;36;oui;3;1250,5;EUR;annual;enabled;ada@example.com;"'=HYPERLINK(""http://x"")"

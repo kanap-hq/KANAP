@@ -344,7 +344,6 @@
       "value": "Value"
     },
     "export": {
-      "button": "Export CSV",
       "failed": "The audit log could not be exported.",
       "tooMany": "Too many exports in a short time. Try again in a minute.",
       "truncated": "The file holds the first {{limit}} entries. Narrow the filters to export the rest."
@@ -1628,7 +1627,6 @@
     "actions": {
       "new": "New",
       "importCsv": "Import CSV",
-      "exportCsv": "Export CSV",
       "invite": "Invite ({{count}})",
       "inviting": "Inviting…",
       "rowMenu": "User actions",
@@ -2064,7 +2062,6 @@
       "saveFailed": "The access could not be updated.",
       "loadFailed": "The access could not be loaded."
     },
-    "importCsv": "Import CSV",
-    "exportCsv": "Export CSV"
+    "importCsv": "Import CSV"
   }
 }

@@ -4,7 +4,6 @@
       "title": "Vorfallsregister",
       "newIncident": "Neuer Vorfall",
       "importCsv": "CSV importieren",
-      "exportCsv": "CSV exportieren",
       "importTitle": "Vorfälle importieren",
       "exportTitle": "Vorfälle exportieren",
       "exportScope_one": "Gefilterter Export: {{count}} Vorfall",
@@ -174,7 +173,6 @@
       "addAsset": "Asset hinzufügen",
       "addCluster": "Cluster hinzufügen",
       "importCsv": "CSV importieren",
-      "exportCsv": "CSV exportieren",
       "exportTitle": "Assets exportieren",
       "importTitle": "Assets importieren",
       "exportScope_one": "{{count}} Asset, entsprechend den Filtern der Liste.",
@@ -417,8 +415,7 @@
       "actions": {
         "changeState": "Status ändern",
         "changeStateSelected_one": "Status ändern ({{count}})",
-        "changeStateSelected_other": "Status ändern ({{count}})",
-        "export": "CSV exportieren"
+        "changeStateSelected_other": "Status ändern ({{count}})"
       },
       "bulk": {
         "title": "Status ändern",
@@ -2562,7 +2559,6 @@
         "changeVersion": "Version für {{name}} ändern",
         "remove": "{{name}} entfernen, alle deklarierten Versionen",
         "saveFailed": "Die Anwendungen konnten nicht gespeichert werden.",
-        "exportCsv": "CSV exportieren",
         "exportFailed": "Der Export ist fehlgeschlagen.",
         "columns": {
           "ref": "Ref.",

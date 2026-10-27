@@ -497,7 +497,7 @@ async function testExportFollowsTheList() {
       scope: 'template',
       query: { filters: JSON.stringify({ severity: { filterType: 'set', values: ['major'] } }) },
     });
-    assert.equal(template.rowCount, 0);
+    assert.equal(template.rows, 0);
     assert.equal(template.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/).length, 1, 'the template has no data line');
   });
 }

@@ -1,0 +1,5 @@
+date,action,table,record_id,user,source,source_ref,ip,user_agent,before,after
+<date>,create,suppliers,<id>,Alice Admin,user,'@sheet-2,,,,"{""name"":""Tenant A supplier""}"
+<date>,update,suppliers,<id>,'-Dash Person,system,'+import-7,,,"{""ip"":""203.0.113.9"",""name"":""Old supplier""}","{""name"":""@New supplier"",""amount"":-12}"
+<date>,login,auth,<id>,Alice Admin,user,,2001:db8::1,Probe browser,,"{""ip"":""2001:db8::1"",""user_agent"":""Probe browser""}"
+<date>,login_failed,auth,,Unknown account,user,unknown_user,198.51.100.7,'=probe agent,,"{""ip"":""198.51.100.7"",""user_agent"":""=probe agent""}"

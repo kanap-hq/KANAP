@@ -1,0 +1,11 @@
+﻿Réf.;Titre;Description;Revue d'incident;Catégorie;Gravité;Statut;Restreint aux administrateurs du registre;Début (Europe/Paris);Détecté (Europe/Paris);Résolu (Europe/Paris);Clôturé (Europe/Paris);Déclarant;Responsable;Référence externe;Données personnelles concernées;Notification aux autorités requise;Notifié le (Europe/Paris);Parties informées
+INC-1;Plain name;Plain name;"# Review
+- 300 mailboxes";Plain name;Faible;Ouvert;oui;16/10/2026 10:38;29/03/2026 01:30:15;;;users.email;users.email;Plain name;oui;oui;;Plain name
+INC-2;"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";;"'=HYPERLINK(""http://x"")";medium;investigating;non;16/10/2026 10:38;29/03/2026 01:30:15;;01/01/2027 00:59;users.email;users.email;"'=HYPERLINK(""http://x"")";non;non;;"'=HYPERLINK(""http://x"")"
+INC-3;"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";;"Line; ""quoted""
+second line";high;Résolu;;;29/03/2026 01:30:15;;;;;"Line; ""quoted""
+second line";;;;"Line; ""quoted""
+second line"
+INC-4;-12;-12;;-12;Critique;Clôturé;oui;16/10/2026 10:38;29/03/2026 01:30:15;;;users.email;users.email;-12;oui;oui;;-12

@@ -1,0 +1,3 @@
+﻿name,erp_supplier_id,commercial_contact,technical_contact,support_contact,notes,status,disabled_at
+Acme,000123,carla@acme.example,,dan@acme.example,"'=HYPERLINK(""http://x"")",enabled,
+"Zeta; ""Z""",,,,,,disabled,2025-12-31

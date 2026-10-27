@@ -1,0 +1,5 @@
+﻿code,name,description,country,region,status,disabled_at,year,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec
+CAL-A,Office,"'=HYPERLINK(""http://x"")",,,enabled,,2026,20,20,20,20,20,20,20,20,20,20,20,20
+CAL-A,Office,"'=HYPERLINK(""http://x"")",,,enabled,,2027,21,19.083333,22,20,19,21,22,21,22,21,20,20.5
+CAL-B,"Line; ""quoted""
+second, line",,,,disabled,2025-06-30,,,,,,,,,,,,,

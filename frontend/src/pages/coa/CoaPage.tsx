@@ -409,7 +409,7 @@ export default function CoaPage() {
       )}
       {canAdmin && (
         <Button variant="action" onClick={() => setExportOpen(true)} disabled={!selectedCoaId}>
-          {t('shared.labels.exportCsv')}
+          {t('common:export.button')}
         </Button>
       )}
       {canAdmin && (

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, Repository, SelectQueryBuilder } from 'typeorm';
 import { PortfolioProject } from '../portfolio-project.entity';
-import { parsePagination } from '../../common/pagination';
+import { MAX_EXPORT_LIMIT, parsePagination } from '../../common/pagination';
 import { applyProjectParticipantScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import {
   compileAgFilterCondition,
@@ -635,7 +635,10 @@ export class PortfolioProjectsListService extends PortfolioProjectsBaseService {
     await orderListQuery(qb, `p.${sortField}`, sort.direction, { text: sortField === 'name', idExpr: 'p.id', nulls: nullsOption });
 
     const total = await qb.clone().getCount();
-    const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
+    // The navigation reads at most 10,000 ids; the export (`__export`, set by the server only: a query
+    // string never carries a boolean) reads up to the export bound.
+    const cap = query?.__export === true ? MAX_EXPORT_LIMIT : 10000;
+    const limit = Math.min(Math.max(Number(query?.limit) || cap, 1), cap);
     const rows: Array<{ p_id: string; item_number: number | null }> = await qb.take(limit).getRawMany();
     const ids = rows.map((r) => r.p_id);
     const refs = rows.map((r) => (r.item_number != null ? `PRJ-${r.item_number}` : r.p_id));

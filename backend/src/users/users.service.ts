@@ -43,10 +43,11 @@ import {
   readMasterDataFile,
   rowError,
   rowProblemErrors,
-  writeCsv,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { uploadedBytes } from '../common/upload';
+import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 const SUPPORTED_USER_LOCALES = ['en', 'fr', 'de', 'es'] as const;
 const SELF_SERVICE_FIELDS = ['first_name', 'last_name', 'job_title', 'business_phone', 'mobile_phone', 'locale'] as const;
@@ -770,13 +771,13 @@ export class UsersService {
     ];
   }
 
-  async exportCsv(
+  async exportCsv<F extends ExportFileFormat = 'csv'>(
     scope: 'template' | 'data' = 'data',
-    opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown> },
-  ): Promise<{ filename: string; content: string }> {
+    opts?: { manager?: EntityManager; language?: CsvLanguage; listQuery?: Record<string, unknown>; format?: F },
+  ): Promise<ListExportFile<F>> {
     const language = opts?.language ?? 'en';
     const headers = this.csvHeaders();
-    const rows: string[][] = [];
+    const rows: ListExportCell[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
       // What the list shows (its search, filters, scope and sort), or the whole register, newest first.
@@ -796,7 +797,8 @@ export class UsersService {
       }
     }
     const filename = scope === 'template' ? 'users_template.csv' : 'users.csv';
-    return { filename, content: writeCsv({ language, headers, rows }) };
+    const sheetNames = { en: 'Users', fr: 'Utilisateurs', de: 'Benutzer', es: 'Usuarios' };
+    return writeListExport({ format: opts?.format ?? ('csv' as F), language, filename, sheetNames, headers, rows });
   }
 
   async importCsv(

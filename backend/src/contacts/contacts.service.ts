@@ -21,11 +21,12 @@ import {
   readMasterDataFile,
   rowError,
   rowProblemErrors,
-  writeCsv,
 } from '../common/csv-sheet';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { assertSetFilterModes, compileAgFilterCondition, createParamNameGenerator, type FilterTargetConfig } from '../common/ag-grid-filtering';
 import { uploadedBytes } from '../common/upload';
+import { ListExportCell, ListExportFile, writeListExport } from '../common/csv/list-export';
+import type { ExportFileFormat } from '../common/xlsx/format';
 
 /** The contact list's column filters (`c` the contact, `s` its supplier). */
 const CONTACT_FILTER_TARGETS: Record<string, FilterTargetConfig> = {
@@ -419,13 +420,13 @@ export class ContactsService {
   }
 
   /** The contacts file in the screen's language (`common/csv-sheet`): its separator, BOM and formula guard. */
-  async exportCsv(
+  async exportCsv<F extends ExportFileFormat = 'csv'>(
     scope: 'template' | 'data',
-    opts: TenantOpts & { language?: CsvLanguage; listQuery?: Record<string, unknown> },
-  ): Promise<{ filename: string; content: string }> {
+    opts: TenantOpts & { language?: CsvLanguage; listQuery?: Record<string, unknown>; format?: F },
+  ): Promise<ListExportFile<F>> {
     const repo = this.getRepo(opts.manager);
     const headers = this.csvHeaders();
-    const rows: string[][] = [];
+    const rows: ListExportCell[][] = [];
     if (scope === 'data') {
       // What the list shows (its search, filters and sort), or the whole register, newest first.
       const items: ExternalContact[] = opts.listQuery
@@ -446,7 +447,8 @@ export class ContactsService {
       }
     }
     const filename = scope === 'template' ? 'contacts_template.csv' : 'contacts.csv';
-    return { filename, content: writeCsv({ language: opts.language ?? 'en', headers, rows }) };
+    const sheetNames = { en: 'Contacts', fr: 'Contacts', de: 'Kontakte', es: 'Contactos' };
+    return writeListExport({ format: opts.format ?? ('csv' as F), language: opts.language ?? 'en', filename, sheetNames, headers, rows });
   }
 
   /**

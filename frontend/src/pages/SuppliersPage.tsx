@@ -123,7 +123,7 @@ export default function SuppliersPage() {
         </Button>
       )}
       {canChangeShared && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
-      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('shared.labels.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canChangeShared && (
         <DeleteSelectedButton
           selectedRows={selectedRows}

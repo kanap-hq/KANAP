@@ -69,7 +69,7 @@ describe('IncidentsPage CSV', () => {
     act(() => {
       dialogs.grid?.onListRequestChange({ params: { sort: 'detected_at:ASC', filters, q: 'mail' }, total: 12 });
     });
-    fireEvent.click(screen.getByText('pages.incidents.exportCsv'));
+    fireEvent.click(screen.getByText('common:export.button'));
     expect(dialogs.export?.params).toEqual({ sort: 'detected_at:ASC', filters, q: 'mail', timeZone: expect.any(String) });
     expect(dialogs.export?.scopeSummary).toBe('pages.incidents.exportScope');
   });

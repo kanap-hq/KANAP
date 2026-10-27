@@ -55,20 +55,21 @@ function normalizeCodes(entity: any): void {
 /**
  * CSV configuration for Portfolio Projects entity
  *
- * Field order matches ProjectWorkspacePage.tsx tabs:
- * - Overview: name, status, purpose, origin, type, category, stream, company, department
- * - Timeline: planned dates, actual dates, baseline dates
- * - Effort: execution_progress, estimated effort, actual effort
- * - Team: sponsors and leads
+ * Column order: id, reference (PRJ-n, export only), name, then ProjectWorkspacePage.tsx tab by tab:
+ * - Summary: purpose, the property panel (status to planned dates, sponsors and leads)
+ * - Timeline: actual and baseline dates
+ * - Progress: execution_progress, efforts
  * - Scoring: criteria_values, priority fields
  */
 export const portfolioProjectCsvConfig: CsvEntityConfig = {
   entityName: 'portfolio_project',
+  // The sheet of an xlsx export: the list's title on screen.
+  sheetNames: { en: 'Portfolio projects', fr: 'Projets du portefeuille', de: 'Portfolio-Projekte', es: 'Proyectos del portafolio' },
   tableName: 'portfolio_projects',
   displayName: 'Portfolio Projects',
   upsertKey: ['name'],
   fields: [
-    // Identity
+    // === IDENTITY ===
     {
       csvColumn: 'id',
       entityProperty: 'id',
@@ -81,8 +82,18 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
       label: 'ID',
       group: 'Identity',
     },
-
-    // === OVERVIEW TAB ===
+    {
+      // The business reference the list shows (PRJ-n): export only, ignored on import.
+      csvColumn: 'reference',
+      entityProperty: 'item_number',
+      type: CsvFieldType.COMPUTED,
+      exportable: true,
+      importable: false,
+      defaultExport: true,
+      label: 'Reference',
+      group: 'Identity',
+      exportFn: (entity: any) => (entity.item_number ? `PRJ-${entity.item_number}` : ''),
+    },
     {
       csvColumn: 'name',
       entityProperty: 'name',
@@ -90,6 +101,17 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
       required: true,
       defaultExport: true,
       label: 'Name',
+      group: 'Overview',
+    },
+
+    // === SUMMARY TAB (purpose, properties) ===
+    {
+      csvColumn: 'purpose',
+      entityProperty: 'purpose',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: true,
+      label: 'Purpose',
       group: 'Overview',
     },
     {
@@ -100,15 +122,6 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
       required: false,
       defaultExport: true,
       label: 'Status',
-      group: 'Overview',
-    },
-    {
-      csvColumn: 'purpose',
-      entityProperty: 'purpose',
-      type: CsvFieldType.STRING,
-      required: false,
-      defaultExport: true,
-      label: 'Purpose',
       group: 'Overview',
     },
     {
@@ -181,8 +194,6 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
       label: 'Department',
       group: 'Overview',
     },
-
-    // === TIMELINE TAB ===
     {
       csvColumn: 'planned_start',
       entityProperty: 'planned_start',
@@ -201,6 +212,56 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
       label: 'Planned End',
       group: 'Timeline',
     },
+    {
+      csvColumn: 'business_sponsor_email',
+      entityProperty: 'business_sponsor_id',
+      type: CsvFieldType.FK_BY_EMAIL,
+      fkEntity: 'users',
+      fkLookupColumn: 'email',
+      fkRequired: false,
+      required: false,
+      defaultExport: true,
+      label: 'Business Sponsor Email',
+      group: 'Team',
+    },
+    {
+      csvColumn: 'business_lead_email',
+      entityProperty: 'business_lead_id',
+      type: CsvFieldType.FK_BY_EMAIL,
+      fkEntity: 'users',
+      fkLookupColumn: 'email',
+      fkRequired: false,
+      required: false,
+      defaultExport: true,
+      label: 'Business Lead Email',
+      group: 'Team',
+    },
+    {
+      csvColumn: 'it_sponsor_email',
+      entityProperty: 'it_sponsor_id',
+      type: CsvFieldType.FK_BY_EMAIL,
+      fkEntity: 'users',
+      fkLookupColumn: 'email',
+      fkRequired: false,
+      required: false,
+      defaultExport: true,
+      label: 'IT Sponsor Email',
+      group: 'Team',
+    },
+    {
+      csvColumn: 'it_lead_email',
+      entityProperty: 'it_lead_id',
+      type: CsvFieldType.FK_BY_EMAIL,
+      fkEntity: 'users',
+      fkLookupColumn: 'email',
+      fkRequired: false,
+      required: false,
+      defaultExport: true,
+      label: 'IT Lead Email',
+      group: 'Team',
+    },
+
+    // === TIMELINE TAB ===
     {
       csvColumn: 'actual_start',
       entityProperty: 'actual_start',
@@ -238,7 +299,7 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
       group: 'Timeline',
     },
 
-    // === EFFORT TAB ===
+    // === PROGRESS TAB ===
     {
       csvColumn: 'execution_progress',
       entityProperty: 'execution_progress',
@@ -310,56 +371,6 @@ export const portfolioProjectCsvConfig: CsvEntityConfig = {
       defaultExport: false,
       label: 'Baseline Effort Business (MD)',
       group: 'Effort',
-    },
-
-    // === TEAM TAB ===
-    {
-      csvColumn: 'business_sponsor_email',
-      entityProperty: 'business_sponsor_id',
-      type: CsvFieldType.FK_BY_EMAIL,
-      fkEntity: 'users',
-      fkLookupColumn: 'email',
-      fkRequired: false,
-      required: false,
-      defaultExport: true,
-      label: 'Business Sponsor Email',
-      group: 'Team',
-    },
-    {
-      csvColumn: 'business_lead_email',
-      entityProperty: 'business_lead_id',
-      type: CsvFieldType.FK_BY_EMAIL,
-      fkEntity: 'users',
-      fkLookupColumn: 'email',
-      fkRequired: false,
-      required: false,
-      defaultExport: true,
-      label: 'Business Lead Email',
-      group: 'Team',
-    },
-    {
-      csvColumn: 'it_sponsor_email',
-      entityProperty: 'it_sponsor_id',
-      type: CsvFieldType.FK_BY_EMAIL,
-      fkEntity: 'users',
-      fkLookupColumn: 'email',
-      fkRequired: false,
-      required: false,
-      defaultExport: true,
-      label: 'IT Sponsor Email',
-      group: 'Team',
-    },
-    {
-      csvColumn: 'it_lead_email',
-      entityProperty: 'it_lead_id',
-      type: CsvFieldType.FK_BY_EMAIL,
-      fkEntity: 'users',
-      fkLookupColumn: 'email',
-      fkRequired: false,
-      required: false,
-      defaultExport: true,
-      label: 'IT Lead Email',
-      group: 'Team',
     },
 
     // === SCORING TAB ===

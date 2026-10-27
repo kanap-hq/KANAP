@@ -1,0 +1,5 @@
+﻿email;type;node;access
+ada@example.com;all;;read
+ada@example.com;company;"Line; ""quoted""
+second, line";edit
+ada@example.com;cost_center;CC-01-002;read
