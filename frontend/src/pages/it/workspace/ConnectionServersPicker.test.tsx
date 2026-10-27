@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../../i18n';
@@ -31,10 +32,13 @@ const CLUSTER: ServerOption = {
 };
 
 function renderPicker(value: ServerOption[], onChange = vi.fn()) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <ThemeProvider theme={createAppTheme('light')}>
-      <ConnectionServersPicker value={value} onChange={onChange} placeholder="Add a server" />
-    </ThemeProvider>,
+    <QueryClientProvider client={client}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <ConnectionServersPicker value={value} onChange={onChange} placeholder="Add a server" />
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -54,9 +58,11 @@ describe('ConnectionServersPicker', () => {
     expect(onChange.mock.calls[0][0]).toEqual([SERVER]);
 
     rerender(
-      <ThemeProvider theme={createAppTheme('light')}>
-        <ConnectionServersPicker value={[SERVER]} onChange={onChange} placeholder="Add a server" />
-      </ThemeProvider>,
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <ConnectionServersPicker value={[SERVER]} onChange={onChange} placeholder="Add a server" />
+        </ThemeProvider>
+      </QueryClientProvider>,
     );
     fireEvent.click(screen.getByTestId('CancelIcon'));
     expect(onChange.mock.calls[1][0]).toEqual([]);

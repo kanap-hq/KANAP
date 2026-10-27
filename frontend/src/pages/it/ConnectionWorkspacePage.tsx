@@ -956,7 +956,6 @@ export default function ConnectionWorkspacePage() {
                   <PropertyRow
                     label={t('pages.connections.columns.servers')}
                     required
-                    helperText={createForm.servers.length < 2 ? t('workspace.connection.overview.selectTwoServers') : undefined}
                     valueSx={{ maxWidth: 640 }}
                   >
                     <ConnectionServersPicker

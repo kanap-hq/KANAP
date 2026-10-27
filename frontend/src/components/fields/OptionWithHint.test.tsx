@@ -77,7 +77,7 @@ describe('picker options: one line, the description in a delayed tooltip', () =>
     await waitFor(() => expect(screen.getByRole('option').firstChild?.textContent).toBe('web-01PAR-SQL-01, PAR-SQL-02'));
     const option = screen.getByRole('option');
     expect(within(option).getByRole('img', { name: 'pages.assets.columns.cluster' })).toBeTruthy();
-    expect(option).toHaveAccessibleDescription('PROD · vm · azure');
+    expect(option).toHaveAccessibleDescription('enums.environment.prod · vm · azure');
   });
 
   it('MultiRoleSelect: the role description moves to the tooltip', async () => {

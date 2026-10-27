@@ -1,8 +1,14 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
 import ServerSelect from './ServerSelect';
+
+function renderSelect(ui: React.ReactElement) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+}
 
 const apiGet = vi.hoisted(() => vi.fn());
 
@@ -16,7 +22,7 @@ describe('ServerSelect', () => {
   });
 
   it('leaves clusters out through the filter model the assets list reads', async () => {
-    render(<ServerSelect value={null} onChange={vi.fn()} allowClusters={false} hideLabel />);
+    renderSelect(<ServerSelect value={null} onChange={vi.fn()} allowClusters={false} hideLabel />);
     await waitFor(() => expect(apiGet).toHaveBeenCalled());
     const params = apiGet.mock.calls[0][1].params;
     expect(params.is_cluster).toBeUndefined();
@@ -24,7 +30,7 @@ describe('ServerSelect', () => {
   });
 
   it('asks for every asset when clusters are allowed', async () => {
-    render(<ServerSelect value={null} onChange={vi.fn()} hideLabel />);
+    renderSelect(<ServerSelect value={null} onChange={vi.fn()} hideLabel />);
     await waitFor(() => expect(apiGet).toHaveBeenCalled());
     expect(apiGet.mock.calls[0][1].params.filters).toBeUndefined();
   });
@@ -35,7 +41,7 @@ describe('ServerSelect', () => {
     apiGet.mockImplementation(async (url: string) => (url === '/assets/srv-1'
       ? { data: { id: 'srv-1', name: 'PAR-ESX-01', environment: 'prod', kind: 'vm', provider: 'vmware' } }
       : { data: { items: [{ id: 'srv-2', name: 'PAR-ESX-02', environment: 'prod', kind: 'vm', provider: 'vmware' }] } }));
-    const { findByDisplayValue } = render(<ServerSelect value="srv-1" onChange={vi.fn()} hideLabel />);
+    const { findByDisplayValue } = renderSelect(<ServerSelect value="srv-1" onChange={vi.fn()} hideLabel />);
     expect(await findByDisplayValue('PAR-ESX-01')).toBeTruthy();
     const messages = [...warn.mock.calls, ...error.mock.calls].map((call) => String(call[0]));
     expect(messages.filter((message) => message.includes('None of the options match'))).toEqual([]);
@@ -57,7 +63,7 @@ describe('ServerSelect', () => {
       return { data: { items: [] } };
     });
     const onChange = vi.fn();
-    render(<ServerSelect value="srv-1" onChange={onChange} hideLabel />);
+    renderSelect(<ServerSelect value="srv-1" onChange={onChange} hideLabel />);
     const input = await screen.findByDisplayValue('PAR-ESX-01') as HTMLInputElement;
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'PAR-ESX-02' } });
@@ -70,7 +76,7 @@ describe('ServerSelect', () => {
   });
 
   it('invites to choose a server in an empty field', async () => {
-    const { findByPlaceholderText } = render(<ServerSelect value={null} onChange={vi.fn()} hideLabel />);
+    const { findByPlaceholderText } = renderSelect(<ServerSelect value={null} onChange={vi.fn()} hideLabel />);
     expect(await findByPlaceholderText('Choose a server')).toBeTruthy();
   });
 });
