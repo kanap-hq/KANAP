@@ -46,7 +46,9 @@ departments, dimension values and budget lines next to the French ones: load
 the current dataset on a new tenant instead.
 
 The budget lines use the recommended analytics dimensions every new tenant
-starts with, in the tenant's seed language (see "Analytics dimensions" below).
+starts with, in the tenant's seed language, and the data set's own two
+dimensions (business domain, budget reference) in that same language
+(see "Analytics dimensions" below).
 Tenants loaded before this change have a `Domain` default dimension, a
 `Cost type` dimension and the CAPEX dimensions PP&E type and investment type.
 The runner leaves them as they are and puts the cost pool on a dimension of
@@ -203,11 +205,17 @@ investment type stands for the purpose, on CAPEX lines only.
 The files carry no PP&E type: on such a tenant the runner fills it from the
 cost pool, Hardware for hardware and Software for the rest.
 
-Business domain and budget reference are the data set's own dimensions, in
-English: the runner creates them and `27-analytics-values.csv` holds their
-values. The business domain says which part of the business a line serves,
-the IT tower which part of IT: an SAP developer is Application and ERP, the
-group WAN is Network and Shared IT.
+Business domain and budget reference are the data set's own dimensions.
+The runner creates them in the tenant's seed language, the same four
+languages as the recommended dimensions (`fixture-dimensions.mjs`).
+`27-analytics-values.csv` holds their values in English. On another
+language the runner writes the translated names and descriptions, and
+replaces the English names in the budget files before the import, as it
+does for the recommended dimensions. The budget reference values keep
+their codes (REF-SAP-S4 and the others) in every language, and their
+descriptions are translated. The business domain says which part of the
+business a line serves, the IT tower which part of IT: an SAP developer
+is Application and ERP, the group WAN is Network and Shared IT.
 
 The cost pool and the IT tower of each line come from the generator
 (`tools/generate-budget.mjs`): a cost pool per kind of expense (licences and

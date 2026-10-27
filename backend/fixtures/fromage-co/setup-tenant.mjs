@@ -46,6 +46,7 @@ import { fileURLToPath } from 'node:url';
 import { buildLinesFile, buildMonthlyFile, loadBudgetFile } from '../../scripts/lib/budget-file.mjs';
 import { DATASET_YEAR, parseCsv, shiftCsvText, shiftIsoDate } from '../../scripts/lib/fixture-csv.mjs';
 import { createHttpClient } from '../../scripts/lib/http-client.mjs';
+import { analyticsValuesText, fixtureDimensions, resolveFixtureLanguage, withFixtureDimensionValues } from './fixture-dimensions.mjs';
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url));
 
@@ -561,14 +562,19 @@ async function ensurePortfolioClassification() {
 /** The `analytics:<code>` columns of the budget files that hold a recommended dimension -> its key. */
 const RECOMMENDED_COLUMNS = { default: 'cost_pool', it_tower: 'it_tower', purpose: 'purpose', priority: 'priority', recurrence: 'recurrence' };
 
-/** Adds the recommended dimensions the tenant lacks, in its seed language. */
+/**
+ * Adds the recommended dimensions the tenant lacks, in its seed language, and returns that
+ * language. The data set's own dimensions are named in it too.
+ */
 async function ensureRecommendedDimensions() {
   info('Ensuring the recommended analytics dimensions');
   const state = await apiGet('/analytics-axes/recommended');
+  const language = resolveFixtureLanguage(state.language);
   const missing = state.items.filter((item) => !item.present).map((item) => item.code);
-  if (!missing.length) return;
+  if (!missing.length) return language;
   const result = await apiPost('/analytics-axes/recommended', { codes: missing, language: state.language });
   for (const created of result.created) ok(`Created analytics dimension '${created.name}' (${created.values_created} values)`);
+  return language;
 }
 
 /**
@@ -648,20 +654,17 @@ function withTenantDimensions(rows, scope, { dimensions, ppeType }) {
 // once the lines are imported: both steps resolve the names against the tenant
 // first.
 
-// The fixture's own dimensions, after the recommended ones. The business domain says which part of
-// the business a line serves (the IT tower says which part of IT); the budget reference groups the
-// lines of one order or program.
-const ANALYTICS_AXES = [
-  { code: 'business_domain', name: 'Business domain', description: 'The part of the business the spending serves: ERP, e-commerce, shops… Shared IT serves every business.', sort_order: 100 },
-  { code: 'reference', name: 'Budget reference', description: 'Groups the OPEX and CAPEX lines of one order or one competence center, whatever the supplier', sort_order: 110 },
-];
+// The fixture's own dimensions, after the recommended ones, in the tenant's seed language
+// (fixture-dimensions.mjs). The business domain says which part of the business a line serves
+// (the IT tower says which part of IT); the budget reference groups the lines of one order or
+// program. A dimension already there keeps its name: a sample data load creates these two.
 
-async function ensureAnalyticsAxes() {
+async function ensureAnalyticsAxes(language) {
   info('Ensuring analytics dimensions');
   const existing = items(await apiGet('/analytics-axes'));
-  for (const axis of ANALYTICS_AXES) {
+  for (const axis of fixtureDimensions(language)) {
     if (existing.some((item) => lower(item.code) === axis.code)) continue;
-    await apiPost('/analytics-axes', axis);
+    await apiPost('/analytics-axes', { code: axis.code, name: axis.name, description: axis.description, sort_order: axis.sort_order });
     ok(`Created analytics dimension '${axis.name}'`);
   }
 }
@@ -769,9 +772,9 @@ function disabledWithoutDate(rows) {
 }
 
 /** One item file, converted to a lines file and loaded through the two routes. */
-async function importBudgetLines(scope, tenantDimensions, existingNumbers) {
+async function importBudgetLines(scope, tenantDimensions, existingNumbers, language) {
   const name = BUDGET_ITEM_FILES[scope];
-  const rows = withTenantDimensions(readCsv(name), scope, tenantDimensions);
+  const rows = withFixtureDimensionValues(withTenantDimensions(readCsv(name), scope, tenantDimensions), language);
   const dated = disabledWithoutDate(rows);
   if (dated.length) {
     info(`${name}: ${dated.length} disabled rows without a date are written as ended on ${BUDGET_YEAR - 1}-12-31`);
@@ -785,11 +788,11 @@ async function importBudgetLines(scope, tenantDimensions, existingNumbers) {
 }
 
 /** The OPEX and CAPEX lines through the budget file, then the refreshed index. */
-async function importBudgetItems() {
+async function importBudgetItems(language) {
   const before = await budgetItemIndex();
   const tenantDimensions = await recommendedColumns();
   for (const scope of ['opex', 'capex']) {
-    await importBudgetLines(scope, tenantDimensions, numbersByName(before, scope));
+    await importBudgetLines(scope, tenantDimensions, numbersByName(before, scope), language);
   }
   return budgetItemIndex();
 }
@@ -843,6 +846,20 @@ async function ensureCoa(name, code, scope, countryIso = undefined) {
 async function importCsv(name, route, extraQuery = '') {
   info(`Importing ${name}`);
   const result = await uploadCsv(`${route}?dryRun=false${extraQuery}`, name);
+  if (result?.ok === false) throw new Error(`${name} import returned ok=false:\n${JSON.stringify(result, null, 2)}`);
+  ok(`Imported ${name}`);
+  return result;
+}
+
+/** The data set's own dimension values, named in the tenant's seed language. English sends the file as it is. */
+async function importAnalyticsValues(language) {
+  const name = '27-analytics-values.csv';
+  info(`Importing ${name}`);
+  const text = analyticsValuesText(language, fixtureText(name));
+  const result = await request('POST', '/analytics-categories/import?dryRun=false', undefined, {
+    uploadBytes: Buffer.from(text, 'utf8'),
+    uploadName: name,
+  });
   if (result?.ok === false) throw new Error(`${name} import returned ok=false:\n${JSON.stringify(result, null, 2)}`);
   ok(`Imported ${name}`);
   return result;
@@ -1978,7 +1995,7 @@ async function linkContactsToSuppliers() {
 
 // ── Orchestration ────────────────────────────────────────────────────────────
 
-async function runImports() {
+async function runImports(language) {
   step('companies');
   // The metric columns of 01-companies.csv (headcount_2025 ...) are read against this year.
   await importCsv('01-companies.csv', '/companies/import', `&year=${options.year + YEAR_SHIFT}`);
@@ -1993,7 +2010,7 @@ async function runImports() {
   await ensureDemoUsers();
   step('budget-setup');
   await importCsv('26-cost-centers.csv', '/cost-centers/import');
-  await importCsv('27-analytics-values.csv', '/analytics-categories/import');
+  await importAnalyticsValues(language);
   await importCsv('28-working-day-calendars.csv', '/working-day-profiles/import');
   step('applications');
   await importCsv('11-business-processes.csv', '/business-processes/import');
@@ -2001,7 +2018,7 @@ async function runImports() {
   step('contracts');
   await importCsv('13-contracts.csv', '/contracts/import');
   step('budget');
-  const budgetIndex = await importBudgetItems();
+  const budgetIndex = await importBudgetItems(language);
   await runBudget(budgetIndex);
   await linkContactsToSuppliers();
   step('portfolio');
@@ -2513,9 +2530,9 @@ async function main() {
   await setupSettings();
   step('classification');
   await ensurePortfolioClassification();
-  await ensureRecommendedDimensions();
-  await ensureAnalyticsAxes();
-  await runImports();
+  const language = await ensureRecommendedDimensions();
+  await ensureAnalyticsAxes(language);
+  await runImports(language);
   if (!options.skipRelations) await runRelations();
   step('knowledge');
   await ensureServiceDeskDocs();
