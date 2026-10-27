@@ -51,6 +51,13 @@ export function formatCents(cents: bigint): string {
   return neg ? `-${formatted}` : formatted;
 }
 
+/** Cents as text with exactly two decimals (`-1.13`, `0.30`, `12.00`): an amount cell of an export. */
+export function formatCentsFixed(cents: bigint): string {
+  const neg = cents < 0n;
+  const digits = (neg ? -cents : cents).toString().padStart(3, '0');
+  return `${neg ? '-' : ''}${digits.slice(0, -2)}.${digits.slice(-2)}`;
+}
+
 export function formatAmount(value: AmountInput): string {
   return formatCents(toCents(value));
 }

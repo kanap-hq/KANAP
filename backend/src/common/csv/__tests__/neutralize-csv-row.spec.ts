@@ -94,6 +94,11 @@ function testLeavesPlainNegativeNumbersAlone() {
   assert.equal(neutralizeCsvFormulaValue('-1200.50'), '-1200.50');
   assert.equal(neutralizeCsvFormulaValue('-1200,5'), '-1200,5');
   assert.equal(neutralizeCsvFormulaValue('-7'), '-7');
+  // A negative share, as the report exports write it, is a number too.
+  assert.equal(neutralizeCsvFormulaValue('-3,25%'), '-3,25%');
+  assert.equal(neutralizeCsvFormulaValue('-3.25%'), '-3.25%');
+  assert.equal(neutralizeCsvFormulaValue('-3%%'), "'-3%%");
+  assert.equal(neutralizeCsvFormulaValue('-3%+1'), "'-3%+1");
   // Anything else starting with a trigger stays protected.
   assert.equal(neutralizeCsvFormulaValue('-1+cmd|calc'), "'-1+cmd|calc");
   assert.equal(neutralizeCsvFormulaValue('-x'), "'-x");

@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   Checkbox,
-  Divider,
   FormControlLabel,
   MenuItem,
   Paper,
@@ -83,6 +82,8 @@ type CompanyChargebackItemRow = {
   itemNumber?: number | null;
   nature?: 'opex' | 'capex' | null;
   itemName: string;
+  /** What the line column shows: the name, or `BL-n · name` for a line the person cannot read. */
+  itemLabel: string;
   allocationMethod: string;
   amount: number;
   amountRaw: number;
@@ -128,6 +129,8 @@ type CompanyChargebackReportResponse = {
   items: CompanyChargebackItemRow[];
   itemsTotal: number;
   itemsTotalRaw: number;
+  /** Fraction of the company's total. */
+  itemsTotalShare?: number | null;
   kpis: Array<{
     companyId: string;
     companyName: string;
@@ -161,6 +164,10 @@ type CompanyChargebackReportResponse = {
     receivables: Array<{ consumerId: string; consumerName: string; amount: number; amountRaw: number }>;
     payables: Array<{ payerId: string; payerName: string; amount: number; amountRaw: number }>;
   };
+  /** The flows merged per partner by the server, largest net first; a null name is a company no row names. */
+  intercompanyRows?: Array<{ partnerId: string; partnerName: string | null; receivables: number; payables: number; net: number }>;
+  /** Their total row; null without a partner. */
+  intercompanyTotal?: { receivables: number; payables: number; net: number } | null;
   reportingCurrency?: string;
   warnings?: ReportWarning[];
 };
@@ -190,9 +197,7 @@ export default function CompanyChargebackReport() {
   const [showKpis, setShowKpis] = useState(true);
   const [showIntercompany, setShowIntercompany] = useState(true);
 
-  const departmentGridRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
-  const intercompanyGridRef = useRef<any>(null);
 
   const queryKey = ['company-chargeback-report', scope, companyId, year, metric];
   const { data, isLoading, isFetching, refetch } = useQuery<CompanyChargebackReportResponse>({
@@ -218,12 +223,8 @@ export default function CompanyChargebackReport() {
   );
   const departments = data?.departments ?? [];
   const limitedReport = data?.dataAccessLimited === true;
-  // A line the person cannot read: its reference and label, without a link (no `itemId`).
-  const items = useMemo(() => (data?.items ?? []).map((row) => (
-    row.readable === false
-      ? { ...row, itemName: [row.itemNumber != null ? formatItemRef('budget', row.itemNumber) : null, row.itemName].filter(Boolean).join(' · ') }
-      : row
-  )), [data?.items]);
+  // A line the person cannot read: its reference and label (`itemLabel`), without a link (no `itemId`).
+  const items = data?.items ?? [];
   const kpiRows = data?.kpis ?? [];
   const globalKpi = data?.globalKpi;
   const allWarnings = data?.warnings ?? [];
@@ -251,50 +252,24 @@ export default function CompanyChargebackReport() {
 
   // Intercompany rows (partner, receivables, payables, net)
   const intercompanyColumns = useMemo<ColDef[]>(() => [
-    { field: 'partnerName', headerName: t('reports.columns.company'), flex: 1, minWidth: 220 },
+    {
+      field: 'partnerName',
+      headerName: t('reports.columns.company'),
+      flex: 1,
+      minWidth: 220,
+      valueGetter: (p: any) => p.data?.partnerName || t('reports.shared.unknownCompany'),
+    },
     { field: 'receivables', headerName: t('reports.columns.receivables'), width: 160, type: 'rightAligned', valueFormatter: (p: any) => formatNumber(p.value) },
     { field: 'payables', headerName: t('reports.columns.payables'), width: 160, type: 'rightAligned', valueFormatter: (p: any) => formatNumber(p.value) },
     { field: 'net', headerName: t('reports.columns.net'), width: 160, type: 'rightAligned', valueFormatter: (p: any) => formatNumber(p.value) },
-  ], [formatNumber]);
+  ], [formatNumber, t]);
 
-  const intercompanyRows = useMemo(() => {
-    const receivables = data?.intercompany?.receivables ?? [];
-    const payables = data?.intercompany?.payables ?? [];
-    type Row = { partnerId: string; partnerName: string; receivables: number; payables: number; net: number };
-    const map = new Map<string, Row>();
-    for (const r of receivables) {
-      const id = r.consumerId;
-      const name = r.consumerName || t('reports.shared.unknownCompany');
-      const row = map.get(id) ?? { partnerId: id, partnerName: name, receivables: 0, payables: 0, net: 0 };
-      row.partnerName = name;
-      row.receivables += Number(r.amount || 0);
-      map.set(id, row);
-    }
-    for (const p of payables) {
-      const id = p.payerId;
-      const name = p.payerName || t('reports.shared.unknownCompany');
-      const row = map.get(id) ?? { partnerId: id, partnerName: name, receivables: 0, payables: 0, net: 0 };
-      row.partnerName = name;
-      row.payables += Number(p.amount || 0);
-      map.set(id, row);
-    }
-    const rows = Array.from(map.values()).map((r) => ({ ...r, net: Number((r.receivables - r.payables) || 0) }));
-    rows.sort((a, b) => (b.net !== a.net ? b.net - a.net : a.partnerName.localeCompare(b.partnerName)));
-    return rows;
-  }, [data?.intercompany, t]);
-
+  const intercompanyRows = data?.intercompanyRows ?? [];
   const intercompanyPinnedBottom = useMemo(() => {
-    if (!intercompanyRows.length) return [];
-    const tRec = intercompanyRows.reduce((s, r) => s + (r.receivables || 0), 0);
-    const tPay = intercompanyRows.reduce((s, r) => s + (r.payables || 0), 0);
-    const tNet = tRec - tPay;
-    return [{ partnerName: t('reports.columns.total'), receivables: tRec, payables: tPay, net: tNet } as Partial<any>];
-  }, [intercompanyRows, t]);
-
-  const exportIntercompanyCsv = () => {
-    if (!companyId) return;
-    intercompanyGridRef.current?.exportDataAsCsv?.({ fileName: `company-chargeback-flows-${scope}-${companyId}-${year}-${metricFile}.csv` });
-  };
+    const total = data?.intercompanyTotal;
+    if (!total || !intercompanyRows.length) return [];
+    return [{ partnerName: t('reports.columns.total'), ...total }];
+  }, [data?.intercompanyTotal, intercompanyRows.length, t]);
 
   const departmentColumns = useMemo<ColDef[]>(() => [
     {
@@ -336,7 +311,7 @@ export default function CompanyChargebackReport() {
 
   const itemColumns = useMemo<ColDef[]>(() => [
     {
-      field: 'itemName',
+      field: 'itemLabel',
       headerName: t('reports.columns.item'),
       flex: 1,
       minWidth: 220,
@@ -393,14 +368,13 @@ export default function CompanyChargebackReport() {
 
   const itemsPinnedBottom = useMemo(() => {
     if (!data) return [];
-    const total = data.total ?? 0;
-    const share = total > 0 ? (data.itemsTotal / total) * 100 : null;
+    const share = data.itemsTotalShare;
     return [{
-      itemName: t('reports.columns.total'),
+      itemLabel: t('reports.columns.total'),
       allocationMethod: '',
       amount: data.itemsTotal,
       amountRaw: data.itemsTotalRaw,
-      sharePct: share != null ? Math.round(share * 100) / 100 : null,
+      sharePct: share != null ? share * 100 : null,
     } as Partial<CompanyChargebackItemRow>];
   }, [data, t]);
 
@@ -454,13 +428,6 @@ export default function CompanyChargebackReport() {
       animation: { enabled: true, duration: 700 },
     };
   }, [chartData, data?.company, data?.total, formatCurrency, formatNumber, locale, metricLabel, t]);
-
-  const exportDepartmentsCsv = () => {
-    if (!companyId) return;
-    departmentGridRef.current?.exportDataAsCsv?.({
-      fileName: `company-chargeback-departments-${scope}-${companyId}-${year}-${metricFile}.csv`,
-    });
-  };
 
   const exportChart = () => {
     if (!companyId) return;
@@ -539,7 +506,17 @@ export default function CompanyChargebackReport() {
           {!companyId ? t('reports.companyChargeback.selectCompany') : isFetching ? t('reports.shared.refreshing') : t('reports.shared.run')}
         </Button>
       )}
-      onExportTableCsv={isReady ? exportDepartmentsCsv : undefined}
+      tableExport={isReady ? {
+        url: '/reports/chargeback/company/export',
+        params: { companyId, year, metric, scope },
+        tables: [
+          { key: 'departments', label: t('reports.companyChargeback.departmentTotals') },
+          { key: 'items', label: t('reports.companyChargeback.chargebackItems') },
+          { key: 'intercompany', label: t('reports.companyChargeback.flowsTitle') },
+          { key: 'kpis', label: t('reports.companyChargeback.kpisTitle') },
+        ],
+        fileBase: `chargeback-company-${scope}-${year}`,
+      } : undefined}
       onExportChartPng={isReady ? exportChart : undefined}
     >
       <Stack spacing={2}>
@@ -623,9 +600,6 @@ export default function CompanyChargebackReport() {
                 rowData={departments}
                 columnDefs={departmentColumns}
                 defaultColDef={{ sortable: true, resizable: true }}
-                onGridReady={(event) => {
-                  departmentGridRef.current = event.api;
-                }}
                 domLayout="autoHeight"
               />
             </Paper>
@@ -682,16 +656,11 @@ export default function CompanyChargebackReport() {
                 columnDefs={intercompanyColumns}
                 defaultColDef={{ sortable: true, resizable: true }}
                 pinnedBottomRowData={intercompanyPinnedBottom}
-                onGridReady={(e) => { intercompanyGridRef.current = e.api; }}
                 domLayout="autoHeight"
               />
             ) : (
               <Typography variant="body2" color="text.secondary">{t('reports.companyChargeback.noFlows')}</Typography>
             )}
-            <Box className="report-print-hide">
-              <Divider sx={{ my: 2 }} />
-              <Button variant="outlined" size="small" onClick={exportIntercompanyCsv}>{t("reports.companyChargeback.exportFlowsCsv")}</Button>
-            </Box>
           </Paper>
         )}
 

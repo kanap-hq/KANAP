@@ -39,15 +39,18 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
     },
   };
 });
+const layout = vi.hoisted(() => ({ tableExport: null as any }));
 vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../components/reports/ReportLayout')>()),
-  default: ({ filters, children, onExportTableCsv }: { filters?: React.ReactNode; children?: React.ReactNode; onExportTableCsv?: () => void }) => (
-    <div>
-      <button type="button" onClick={onExportTableCsv}>export-csv</button>
-      <div data-testid="filters">{filters}</div>
-      {children}
-    </div>
-  ),
+  default: ({ filters, children, tableExport }: { filters?: React.ReactNode; children?: React.ReactNode; tableExport?: unknown }) => {
+    layout.tableExport = tableExport ?? null;
+    return (
+      <div>
+        <div data-testid="filters">{filters}</div>
+        {children}
+      </div>
+    );
+  },
 }));
 const chart = vi.hoisted(() => ({ options: null as any }));
 vi.mock('../../components/reports/ChartCard', () => ({
@@ -56,17 +59,11 @@ vi.mock('../../components/reports/ChartCard', () => ({
     return null;
   }),
 }));
-const grid = vi.hoisted(() => ({ columns: [] as any[], pinned: [] as any[], api: null as null | { exportDataAsCsv: ReturnType<typeof vi.fn> } }));
+const grid = vi.hoisted(() => ({ columns: [] as any[], pinned: [] as any[] }));
 vi.mock('../../components/reports/ReportGrid', () => ({
-  default: (props: { rowData?: unknown[]; columnDefs?: any[]; pinnedBottomRowData?: any[]; onGridReady?: (e: { api: unknown }) => void }) => {
+  default: (props: { rowData?: unknown[]; columnDefs?: any[]; pinnedBottomRowData?: any[] }) => {
     grid.columns = props.columnDefs ?? [];
     grid.pinned = props.pinnedBottomRowData ?? [];
-    React.useEffect(() => {
-      const api = { exportDataAsCsv: vi.fn() };
-      grid.api = api;
-      props.onGridReady?.({ api });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
     return <pre data-testid="grid">{JSON.stringify(props.rowData ?? [])}</pre>;
   },
 }));
@@ -186,7 +183,7 @@ beforeEach(() => {
   chart.options = null;
   grid.columns = [];
   grid.pinned = [];
-  grid.api = null;
+  layout.tableExport = null;
   get.mockReset();
   get.mockImplementation(async (url: string, config?: { params?: Record<string, string> }) => {
     if (url.endsWith('/summary/filter-values')) return { data: fakeFilterValues(serverRows, String(config?.params?.fields ?? '').split(',')) };
@@ -285,8 +282,11 @@ describe('Cost per FTE', () => {
     await waitFor(() => expect(gridRows().map((row) => row.group)).toEqual(['Line c', 'Line a', 'Line b', 'Line d']));
     expect(grid.columns[0].headerName).toBe('reports.staffing.groups.item');
 
-    fireEvent.click(screen.getByRole('button', { name: 'export-csv' }));
-    expect(grid.api!.exportDataAsCsv).toHaveBeenCalledWith({ fileName: expect.stringMatching(new RegExp(`^cost-per-fte-all-item-${Y - 1}-[a-z0-9-]+\\.csv$`)) });
+    expect(layout.tableExport).toMatchObject({
+      url: '/reports/budget/cost-per-fte/export',
+      params: { scope: 'all', group: 'item', view: 'fte', pairs: `${Y - 1}:budget,${Y}:budget` },
+      fileBase: `cost-per-fte-all-item-${Y - 1}-budget`,
+    });
   });
 
   it('charts the cost per FTE of the total and the largest groups, one bar per pair', async () => {
@@ -423,8 +423,11 @@ describe('Daily rate', () => {
       expect(column.type).toBe('rightAligned');
     }
 
-    fireEvent.click(screen.getByRole('button', { name: 'export-csv' }));
-    expect(grid.api!.exportDataAsCsv).toHaveBeenCalledWith({ fileName: expect.stringMatching(new RegExp(`^daily-rate-all-cost-center-${Y - 1}-[a-z0-9-]+\\.csv$`)) });
+    expect(layout.tableExport).toMatchObject({
+      url: '/reports/budget/cost-per-fte/export',
+      params: { scope: 'all', group: 'costCenter', view: 'rate', pairs: `${Y - 1}:budget,${Y}:budget` },
+      fileBase: `daily-rate-all-cost-center-${Y - 1}-budget`,
+    });
   });
 
   it('charts the daily rate of the total and the groups with the most days', async () => {

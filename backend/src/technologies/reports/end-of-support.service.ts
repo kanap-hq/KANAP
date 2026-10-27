@@ -2,7 +2,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
-import { languageOf, writeCsv } from '../../common/csv-sheet';
+import type { CsvLanguage } from '../../common/csv-sheet/types';
+import { fillLabel, type ReportCell, type ReportExport } from '../../common/report-export';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { shippedKeysWithoutPlannedEnd } from '../catalog/technology-catalog.service';
 import type { ApplicationsReach } from '../technology-links.service';
@@ -10,6 +11,7 @@ import { assetInServiceSql, inServiceSql, TechnologyReachService } from '../tech
 import { onPremHostingTypes } from '../hosting-type';
 import { technologyReference } from '../technology-rows';
 import { versionInUseSql, versionSupportSql } from './version-support';
+import { END_OF_SUPPORT_EXPORT_LABELS } from './end-of-support-export-labels';
 
 /**
  * The "End of support" report (lot T4 of planning/cartographie-technologies): what reaches or has
@@ -350,32 +352,89 @@ export class EndOfSupportService {
     return { applications_visible: !!applications, items };
   }
 
-  /** One of the two lists as a CSV file (`list`: deadlines or gaps). */
-  async csv(query: { list?: unknown; horizon_months?: unknown; type?: unknown; language?: unknown }, opts: ReportOpts, applications: ApplicationsReach) {
-    const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, query.language);
-    const list = String(query.list ?? 'deadlines');
+  /**
+   * One of the two lists as a report table export (`list`: deadlines or gaps; common/report-export), in
+   * the screen's words and order: the columns the CSV always had, the end date a date, the counts numbers,
+   * and the application columns only for a caller who reads applications. `horizon_months` and `type`
+   * belong to the deadlines.
+   */
+  async exportTable(
+    query: { list?: unknown; horizon_months?: unknown; type?: unknown },
+    language: CsvLanguage,
+    opts: ReportOpts,
+    applications: ApplicationsReach,
+  ): Promise<ReportExport> {
+    const labels = END_OF_SUPPORT_EXPORT_LABELS[language];
+    const list = query.list === undefined || query.list === '' ? 'deadlines' : String(query.list);
     if (list === 'gaps') {
+      if ((query.horizon_months ?? '') !== '' || (query.type ?? '') !== '') {
+        throw new BadRequestException('horizon_months and type apply to the deadlines list only.');
+      }
       const { items } = await this.gaps(opts, applications);
-      const headers = ['Missing data', 'Record type', 'Reference', 'Record', 'Linked to', 'Version'];
-      const rows = items.map((r) => [GAP_LABELS[r.gap], RECORD_LABELS[r.subject_type], r.subject_reference ?? '', r.subject_name, r.related_name ?? '', r.version ?? '']);
-      return { filename: 'end-of-support-gaps.csv', content: writeCsv({ language, headers, rows }) };
+      const record = { application: labels.type_application, asset: labels.record_asset, technology: labels.type_technology };
+      return {
+        fileBase: 'end-of-support-gaps',
+        limited: false,
+        parameters: [[labels.view, labels.gapsSheet]],
+        tables: [{
+          key: 'gaps',
+          sheet: labels.gapsSheet,
+          columns: [
+            { header: labels.missing, kind: 'text' },
+            { header: labels.recordType, kind: 'text' },
+            { header: labels.reference, kind: 'text' },
+            { header: labels.record, kind: 'text' },
+            { header: labels.linkedTo, kind: 'text' },
+            { header: labels.version, kind: 'text' },
+          ],
+          rows: items.map((r): ReportCell[] => [
+            labels[`gap_${r.gap}`], record[r.subject_type], r.subject_reference, r.subject_name, r.related_name, r.version,
+          ]),
+        }],
+      };
     }
     if (list !== 'deadlines') throw new BadRequestException('list must be deadlines or gaps.');
     const report = await this.deadlines(query, opts, applications);
-    const headers = ['Type', 'Reference', 'Item', 'Version', 'Date', 'State', 'Servers', ...(applications ? ['Applications'] : []), 'Server names', ...(applications ? ['Application names'] : [])];
-    const rows = report.items.map((r) => [
-      TYPE_LABELS[r.type],
-      r.item_reference ?? '',
-      r.item_name,
-      r.version ?? (r.milestone ? MILESTONE_LABELS[r.milestone] : ''),
-      r.date,
-      STATE_LABELS[r.state],
-      String(r.server_count),
-      ...(applications ? [String(r.application_count ?? 0)] : []),
-      r.servers.map((s) => s.name).join(', '),
-      ...(applications ? [(r.applications ?? []).map((a) => a.name).join(', ')] : []),
-    ]);
-    return { filename: `end-of-support-${report.horizon_months}-months.csv`, content: writeCsv({ language, headers, rows }) };
+    const type = typeOf(query.type);
+    const months = fillLabel(report.horizon_months === 1 ? labels.monthsOne : labels.monthsOther, 'count', String(report.horizon_months));
+    const count = (value: number | null): ReportCell => ({ kind: 'number', value: value ?? 0 });
+    return {
+      fileBase: `end-of-support-${report.horizon_months}-months`,
+      limited: false,
+      parameters: [
+        [labels.view, labels.deadlinesSheet],
+        [labels.horizon, months],
+        [labels.typeFilter, type ? labels[`type_${type}`] : labels.allTypes],
+      ],
+      tables: [{
+        key: 'deadlines',
+        sheet: labels.deadlinesSheet,
+        columns: [
+          { header: labels.type, kind: 'text' },
+          { header: labels.reference, kind: 'text' },
+          { header: labels.item, kind: 'text' },
+          { header: labels.version, kind: 'text' },
+          { header: labels.date, kind: 'date' },
+          { header: labels.state, kind: 'text' },
+          { header: labels.servers, kind: 'number' },
+          ...(applications ? [{ header: labels.applications, kind: 'number' as const }] : []),
+          { header: labels.serverNames, kind: 'text' },
+          ...(applications ? [{ header: labels.applicationNames, kind: 'text' as const }] : []),
+        ],
+        rows: report.items.map((r): ReportCell[] => [
+          labels[`type_${r.type}`],
+          r.item_reference,
+          r.item_name,
+          r.version ?? (r.milestone ? labels[`milestone_${r.milestone}`] : null),
+          { kind: 'date', iso: r.date },
+          labels[`state_${r.state}`],
+          count(r.server_count),
+          ...(applications ? [count(r.application_count)] : []),
+          r.servers.map((s) => s.name).join(', '),
+          ...(applications ? [(r.applications ?? []).map((a) => a.name).join(', ')] : []),
+        ]),
+      }],
+    };
   }
 
   /**
@@ -578,38 +637,3 @@ export class EndOfSupportService {
     return `AND ${applicationParticipantCondition(alias, `$${params.length}`)}`;
   }
 }
-
-const TYPE_LABELS: Record<DeadlineType, string> = {
-  technology: 'Technology',
-  operating_system: 'Operating system',
-  application: 'Application',
-  hardware: 'Hardware',
-};
-
-const RECORD_LABELS: Record<GapRow['subject_type'], string> = {
-  application: 'Application',
-  asset: 'Asset',
-  technology: 'Technology',
-};
-
-const STATE_LABELS: Record<DeadlineState, string> = {
-  out_of_support: 'Out of support',
-  extended_support: 'Extended support',
-  upcoming: 'Ends within the horizon',
-};
-
-const MILESTONE_LABELS: Record<'end_of_life' | 'support_contract', string> = {
-  end_of_life: 'End of life',
-  support_contract: 'Support contract',
-};
-
-const GAP_LABELS: Record<GapKind, string> = {
-  application_without_server: 'Hosted application without a server',
-  vm_without_host: 'Virtual machine without a host',
-  technology_not_installed: 'On-premises technology on no server',
-  technology_without_hosting_type: 'Technology without a hosting type of the IT settings',
-  database_server_without_dbms: 'Database server without a database technology',
-  sso_application_without_identity: 'Application with SSO without an identity technology',
-  link_without_version: 'Technology link without a version',
-  version_without_end_date: 'Version in use without an end of support date',
-};

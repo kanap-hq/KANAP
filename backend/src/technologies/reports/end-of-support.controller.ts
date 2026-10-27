@@ -5,7 +5,7 @@ import { PermissionGuard } from '../../auth/permission.guard';
 import { RequireLevel } from '../../auth/require-level.decorator';
 import { resolveBusinessContributorScopeForUser } from '../../auth/business-contributor-scope';
 import { Tenant, TenantRequest } from '../../common/decorators/tenant.decorator';
-import { contentDisposition } from '../../common/content-disposition';
+import { reportExportBody, reportExportRequest, writeReportExport } from '../../common/report-export';
 import { hasLevel } from '../technologies.controller';
 import type { ApplicationsReach } from '../technology-links.service';
 import { requireManager } from '../technology-rows';
@@ -48,14 +48,16 @@ export class EndOfSupportController {
     return this.svc.gaps(this.opts(ctx), await this.applicationsReach(ctx));
   }
 
-  /** One list as a CSV file (`?list=deadlines|gaps`); a path ending with /export: recorded as an export. */
+  /**
+   * One list as a CSV or Excel file (`?list=deadlines|gaps`, `horizon_months`, `type`, `format`, `language`),
+   * from the same calls as the screen; a path ending with /export: recorded as an export.
+   */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get('export')
-  async export(@Query() query: Record<string, unknown>, @Res({ passthrough: true }) res: Response, @Tenant() ctx: TenantRequest) {
-    const file = await this.svc.csv(query, this.opts(ctx), await this.applicationsReach(ctx));
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(file.filename));
-    return file.content;
+  async export(@Query() query: Record<string, unknown>, @Res() res: Response, @Tenant() ctx: TenantRequest) {
+    const request = await reportExportRequest(query, ctx, ['list', 'horizon_months', 'type']);
+    const exp = await this.svc.exportTable(query, request.language, this.opts(ctx), await this.applicationsReach(ctx));
+    res.send(await reportExportBody(res, writeReportExport(exp, request)));
   }
 }

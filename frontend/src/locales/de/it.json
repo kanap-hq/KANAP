@@ -407,8 +407,7 @@
       "empty": {
         "deadlines": "In diesem Zeitraum erreicht nichts sein Supportende.",
         "gaps": "Keine fehlenden Daten."
-      },
-      "exportFailed": "Der Export ist fehlgeschlagen. Versuchen Sie es erneut."
+      }
     },
     "vulnerabilities": {
       "title": "Schwachstellen",

@@ -244,17 +244,22 @@ describe('EndOfSupportReportPage', () => {
     respond();
     renderPage('/it/technologies/end-of-support?type=hardware&horizon=36');
     await screen.findByText('ESX-09');
-    fireEvent.click(screen.getByRole('button', { name: 'Export table as CSV' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export table' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Excel (.xlsx)' }));
     await waitFor(() => expect(downloadBlob).toHaveBeenCalledWith(expect.any(Blob), 'eos.csv'));
     expect(getMock).toHaveBeenCalledWith('/technologies/reports/end-of-support/export', {
-      params: { list: 'deadlines', horizon_months: 36, type: 'hardware' },
+      params: { list: 'deadlines', horizon_months: 36, type: 'hardware', format: 'xlsx', language: 'en', tz: expect.any(String) },
       responseType: 'blob',
     });
 
     fireEvent.click(screen.getByRole('tab', { name: 'Missing data' }));
     await screen.findByText('VM-ORPHAN');
-    fireEvent.click(screen.getByRole('button', { name: 'Export table as CSV' }));
-    await waitFor(() => expect(getMock).toHaveBeenCalledWith('/technologies/reports/end-of-support/export', { params: { list: 'gaps' }, responseType: 'blob' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export table' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith('/technologies/reports/end-of-support/export', {
+      params: { list: 'gaps', format: 'csv', language: 'en', tz: expect.any(String) },
+      responseType: 'blob',
+    }));
   });
 
   it('refuses a reader without the infrastructure right', () => {

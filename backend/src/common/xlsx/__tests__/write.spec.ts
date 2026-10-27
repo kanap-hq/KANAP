@@ -27,6 +27,7 @@ function types() {
       ['x', { kind: 'amount', value: '-1234.50' }],
       ['y', { kind: 'date', iso: '2026-09-15' }],
       ['z', null],
+      ['p', { kind: 'percent', value: 0.125 }],
       ['', 'last'],
     ]),
   );
@@ -35,7 +36,8 @@ function types() {
   assert.equal(cellOf(xml, 'B3'), '<c r="B3" s="3"><v>-1234.50</v></c>', 'amount is its text, style 3');
   assert.equal(cellOf(xml, 'B4'), '<c r="B4" s="1"><v>46280</v></c>', 'date is a serial, style 1');
   assert.ok(!xml.includes('r="B5"'), 'null writes no cell');
-  assert.ok(!xml.includes('r="A6"') && xml.includes('r="B6"'), 'an empty text writes no cell');
+  assert.equal(cellOf(xml, 'B6'), '<c r="B6" s="4"><v>0.125</v></c>', 'percent is the fraction, style 4');
+  assert.ok(!xml.includes('r="A7"') && xml.includes('r="B7"'), 'an empty text writes no cell');
   // Before 1900-03-01 Excel's serials are wrong (its 1900-02-29) or negative: the day is text, in the language's format.
   const early = sheetXml(write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'date', iso: '1900-02-28' }], [{ kind: 'date', iso: '1850-07-04' }], [{ kind: 'date', iso: '1900-03-01' }]] }], 'fr'));
   assert.equal(cellOf(early, 'A2'), '<c r="A2" t="inlineStr"><is><t xml:space="preserve">28/02/1900</t></is></c>', 'the day before the leap-year bug is text');
@@ -46,9 +48,13 @@ function types() {
 
 function styles() {
   const styled = text(one([[{ kind: 'amount', value: '1' }, { kind: 'date', iso: '2026-01-01' }]]), 'xl/styles.xml');
-  assert.match(styled, /<cellXfs count="4">/);
+  assert.match(styled, /<cellXfs count="10">/);
   const xfs = [...styled.matchAll(/<xf numFmtId="(\d+)" fontId="(\d)"[^>]*\/>/g)].slice(1); // the first xf is cellStyleXfs
-  assert.deepEqual(xfs.map((x) => [x[1], x[2]]), [['0', '0'], ['164', '0'], ['0', '1'], ['4', '0']], 'indices: default, date, bold, amount');
+  assert.deepEqual(
+    xfs.map((x) => [x[1], x[2]]),
+    [['0', '0'], ['164', '0'], ['0', '1'], ['4', '0'], ['10', '0'], ['4', '1'], ['10', '1'], ['164', '1'], ['2', '0'], ['2', '1']],
+    'indices: default, date, bold, amount, percent, then bold amount, percent and date of the footer, then the two-decimal number and its bold',
+  );
   assert.ok(styled.includes('<font><b/><sz val="11"/><name val="Calibri"/></font>'), 'the bold font');
   for (const [language, format] of [['en', 'yyyy-mm-dd'], ['fr', '[$-40C]dd/mm/yyyy'], ['de', '[$-407]dd.mm.yyyy'], ['es', '[$-C0A]dd/mm/yyyy']] as const) {
     const out = text(write([{ name: 'S', headers: ['A'], rows: [[null]] }], language), 'xl/styles.xml');
@@ -59,7 +65,56 @@ function styles() {
   assert.match(plain, /<cellXfs count="2">/);
   assert.match(plain, /<fonts count="1">/);
   const plainAmount = text(write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'amount', value: '1.5' }]], header: 'plain' }]), 'xl/styles.xml');
-  assert.match(plainAmount, /<cellXfs count="4">/, 'an amount in a plain sheet brings the amount style');
+  assert.match(plainAmount, /<cellXfs count="10">/, 'an amount in a plain sheet brings the amount style');
+  const plainPercent = text(write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'percent', value: 0.5 }]], header: 'plain' }]), 'xl/styles.xml');
+  assert.match(plainPercent, /<cellXfs count="10">.*<xf numFmtId="10" fontId="0"[^>]*\/>/s, 'a percent in a plain sheet brings the percent style');
+}
+
+/** A number marked `decimals: 2` keeps its value and shows `0.00` (style 8, bold 9 in a footer); others stay General. */
+function decimals() {
+  const buffer = write([{
+    name: 'S',
+    headers: ['FTE', 'Headcount'],
+    rows: [[{ kind: 'number', value: 49 / 6, decimals: 2 }, { kind: 'number', value: 12 }]],
+    footer: [[{ kind: 'number', value: 8.5, decimals: 2 }, { kind: 'number', value: 12 }]],
+  }]);
+  const xml = sheetXml(buffer);
+  assert.equal(cellOf(xml, 'A2'), `<c r="A2" s="8"><v>${49 / 6}</v></c>`, 'the value is kept whole, style 8');
+  assert.equal(cellOf(xml, 'B2'), '<c r="B2"><v>12</v></c>', 'an integer column stays General');
+  assert.equal(cellOf(xml, 'A3'), '<c r="A3" s="9"><v>8.5</v></c>', 'bold two-decimal footer');
+  assert.equal(cellOf(xml, 'B3'), '<c r="B3" s="2"><v>12</v></c>', 'bold General footer');
+  assert.match(text(buffer, 'xl/styles.xml'), /<xf numFmtId="2" fontId="0"[^>]*\/><xf numFmtId="2" fontId="1"[^>]*\/><\/cellXfs>/);
+  const plain = write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'number', value: 1.25, decimals: 2 }]], header: 'plain' }]);
+  assert.match(text(plain, 'xl/styles.xml'), /<cellXfs count="10">/, 'a two-decimal number in a plain sheet brings the extra styles');
+}
+
+/** Total rows: bold, after the data rows, outside the filter, so a sort or a filter in the spreadsheet never moves them. */
+function footer() {
+  const buffer = write([{
+    name: 'S',
+    headers: ['Name', 'Days', 'Amount', 'Share', 'Day'],
+    rows: [
+      ['a', { kind: 'number', value: 1 }, { kind: 'amount', value: '10.00' }, { kind: 'percent', value: 0.25 }, { kind: 'date', iso: '2026-01-01' }],
+      ['b', { kind: 'number', value: 3 }, { kind: 'amount', value: '30.00' }, { kind: 'percent', value: 0.75 }, null],
+    ],
+    footer: [['Total', { kind: 'number', value: 4 }, { kind: 'amount', value: '40.00' }, { kind: 'percent', value: 1 }, { kind: 'date', iso: '2026-12-31' }]],
+    links: ['/budget/1', '/budget/2'],
+  }]);
+  const xml = sheetXml(buffer);
+  assert.ok(xml.includes('<autoFilter ref="A1:E3"/>'), 'the filter covers the header and the data rows only');
+  assert.match(text(buffer, 'xl/workbook.xml'), /<definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">&apos;S&apos;!\$A\$1:\$E\$3<\/definedName>/);
+  assert.equal(cellOf(xml, 'A4'), '<c r="A4" s="2" t="inlineStr"><is><t xml:space="preserve">Total</t></is></c>', 'bold text');
+  assert.equal(cellOf(xml, 'B4'), '<c r="B4" s="2"><v>4</v></c>', 'bold number');
+  assert.equal(cellOf(xml, 'C4'), '<c r="C4" s="5"><v>40.00</v></c>', 'bold amount');
+  assert.equal(cellOf(xml, 'D4'), '<c r="D4" s="6"><v>1</v></c>', 'bold percent');
+  assert.equal(cellOf(xml, 'E4'), '<c r="E4" s="7"><v>46387</v></c>', 'bold date');
+  assert.equal(cellOf(xml, 'C2'), '<c r="C2" s="3"><v>10.00</v></c>', 'data rows keep their styles');
+  assert.equal((xml.match(/<hyperlink /g) ?? []).length, 2, 'the footer carries no link');
+  // A footer alone in a plain sheet brings the bold styles.
+  const plain = write([{ name: 'S', headers: ['A'], rows: [['x']], footer: [['Total']], header: 'plain' }]);
+  assert.match(text(plain, 'xl/styles.xml'), /<cellXfs count="10">/);
+  assert.ok(!sheetXml(plain).includes('autoFilter'));
+  assert.throws(() => write([{ name: 'S', headers: ['A', 'B'], rows: [], footer: [['Total']] }]), /row 1 has 1 cells for 2 headers/);
 }
 
 function styledHeader() {
@@ -173,6 +228,8 @@ function validation() {
   }
   assert.throws(() => one([['a', { kind: 'number', value: NaN }]]), /finite/);
   assert.throws(() => one([['a', { kind: 'number', value: Infinity }]]), /finite/);
+  assert.throws(() => one([['a', { kind: 'percent', value: NaN }]]), /percent cell needs a finite number/);
+  assert.throws(() => one([['a', { kind: 'percent', value: '0.5' as unknown as number }]]), /percent cell needs a finite number/);
   assert.throws(() => one([['a', { kind: 'date', iso: '2026-02-30' }]]), /calendar day/);
   assert.throws(() => one([['a', { kind: 'date', iso: '15/09/2026' }]]), /calendar day/);
   assert.throws(() => one([['only one']]), /1 cells for 2 headers/, 'a short row throws');
@@ -243,10 +300,10 @@ function libreOffice() {
         [
           {
             name: 'Data',
-            headers: ['Name', 'Days', 'Amount', 'Day', 'Formula', 'Note'],
+            headers: ['Name', 'Days', 'Amount', 'Day', 'Formula', 'Note', 'Share'],
             rows: [
-              ['Alpha', { kind: 'number', value: 3.5 }, { kind: 'amount', value: '-1234.50' }, { kind: 'date', iso: '2026-09-15' }, '=SUM(A1)', 'Café "x"'],
-              ['Beta', { kind: 'number', value: 0 }, { kind: 'amount', value: '1234567.05' }, null, '+1', 'é'],
+              ['Alpha', { kind: 'number', value: 3.5 }, { kind: 'amount', value: '-1234.50' }, { kind: 'date', iso: '2026-09-15' }, '=SUM(A1)', 'Café "x"', { kind: 'percent', value: 0.125 }],
+              ['Beta', { kind: 'number', value: 0 }, { kind: 'amount', value: '1234567.05' }, null, '+1', 'é', { kind: 'percent', value: -0.0325 }],
             ],
           },
           { name: 'Empty', headers: ['A'], rows: [] },
@@ -275,9 +332,9 @@ function libreOffice() {
       return fs.readFileSync(path.join(out, 'book-Data.csv'), 'utf8');
     };
     const csv = convert('fr');
-    assert.ok(csv.startsWith('"Name","Days","Amount","Day","Formula","Note"'), 'LibreOffice reads the headers');
-    assert.ok(csv.includes('"Alpha",3.5,-1234.5,15/09/2026,"\'=SUM(A1)","Café ""x"""'), `numbers are numbers (no quote), the date is in the French format, the formula is text: ${csv}`);
-    assert.ok(csv.includes('"Beta",0,1234567.05,,"\'+1","é"'), 'second row: zero, long amount, empty date, guarded +1');
+    assert.ok(csv.startsWith('"Name","Days","Amount","Day","Formula","Note","Share"'), 'LibreOffice reads the headers');
+    assert.ok(csv.includes('"Alpha",3.5,-1234.5,15/09/2026,"\'=SUM(A1)","Café ""x""",12.5%'), `numbers are numbers (no quote), the date is in the French format, the formula is text, the share a percentage: ${csv}`);
+    assert.ok(csv.includes('"Beta",0,1234567.05,,"\'+1","é",-3.25%'), 'second row: zero, long amount, empty date, guarded +1, negative share');
     assert.ok(convert('en').includes(',2026-09-15,'), 'English: ISO day');
     assert.ok(convert('de').includes(',15.09.2026,'), 'German: dd.mm.yyyy');
     assert.ok(convert('es').includes(',15/09/2026,'), 'Spanish: dd/mm/yyyy');
@@ -290,6 +347,8 @@ function libreOffice() {
 function run() {
   types();
   styles();
+  footer();
+  decimals();
   styledHeader();
   plainHeader();
   characters();

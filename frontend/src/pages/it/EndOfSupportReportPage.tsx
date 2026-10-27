@@ -14,7 +14,6 @@ import { RelationRef } from '../../components/workspace/RelationsTable';
 import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
 import { drawerMenuItemSx, textTabSx, textTabsSx } from '../../theme/formSx';
-import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
 import { type SupportState, supportStateColor } from '../../utils/supportState';
 import ForbiddenPage from '../ForbiddenPage';
 
@@ -329,7 +328,6 @@ export default function EndOfSupportReportPage() {
   const horizon = (HORIZONS as readonly number[]).includes(horizonParam) ? horizonParam : 12;
   const typeParam = params.get('type') ?? '';
   const type = (DEADLINE_TYPES as readonly string[]).includes(typeParam) ? (typeParam as DeadlineType) : '';
-  const [exportError, setExportError] = useState(false);
 
   const setParam = (key: string, value: string | null) => {
     setParams((prev) => {
@@ -360,22 +358,6 @@ export default function EndOfSupportReportPage() {
 
   const active = view === 'deadlines' ? deadlines : gaps;
 
-  const exportCsv = async () => {
-    setExportError(false);
-    try {
-      const res = await api.get<Blob>(`${ENDPOINT}/export`, {
-        params: view === 'gaps' ? { list: 'gaps' } : { list: 'deadlines', horizon_months: horizon, ...(type ? { type } : {}) },
-        responseType: 'blob',
-      });
-      const headers = (res.headers ?? {}) as Record<string, unknown>;
-      const disposition = (headers['content-disposition'] ?? headers['Content-Disposition']) as string | undefined;
-      const filename = extractFilenameFromDisposition(disposition) || `end-of-support-${view}.csv`;
-      downloadBlob(new Blob([res.data], { type: 'text/csv;charset=utf-8' }), filename);
-    } catch {
-      setExportError(true);
-    }
-  };
-
   const subtitle = view === 'gaps'
     ? t('pages.endOfSupport.subtitleGaps')
     : t('pages.endOfSupport.subtitle', { date: deadlines.data ? formatShortDate(deadlines.data.until, locale, { year: 'always' }) : '…' });
@@ -385,7 +367,11 @@ export default function EndOfSupportReportPage() {
       title={t('pages.endOfSupport.title')}
       subtitle={subtitle}
       busy={active.isFetching}
-      onExportTableCsv={() => void exportCsv()}
+      tableExport={{
+        url: `${ENDPOINT}/export`,
+        params: view === 'gaps' ? { list: 'gaps' } : { list: 'deadlines', horizon_months: horizon, type },
+        fileBase: `end-of-support-${view}`,
+      }}
       filters={(
         <>
           <Tabs
@@ -433,9 +419,6 @@ export default function EndOfSupportReportPage() {
         </>
       )}
     >
-      {exportError && (
-        <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>{t('pages.endOfSupport.exportFailed')}</Typography>
-      )}
       {view === 'deadlines' && deadlines.data && (
         rows.length === 0
           ? <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{t('pages.endOfSupport.empty.deadlines')}</Typography>

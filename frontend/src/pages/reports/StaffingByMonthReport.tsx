@@ -16,19 +16,20 @@ import { useReportScope } from './useReportScope';
 import { metricFileName, MetricKey, useReportMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import { MONTHS, readStaffing, requestFirstYear, staffingChartSeries, staffingRequest } from './reportAggregates';
-import { compareNames, useBudgetAggregate } from './useBudgetAggregate';
+import { staffingMonthKey, staffingTable } from './reportTables';
+import { useReportTableLabels } from './useReportTableLabels';
+import { useBudgetAggregate } from './useBudgetAggregate';
 import { ReportNoticeLine } from './reportMeasure';
 import { GROUP_FILE_NAME, ReportGroupFilters, useGroupLinks, useReportGroup } from './reportGroup';
 import ReportGroupLinkCell from './ReportGroupLinkCell';
 import { gridTextMeasure, valueColumnWidth } from './reportValueWidth';
 
-const monthField = (month: number) => `m${month}`;
 /**
  * The fourteen value columns (twelve months, average, peak), all as wide as the widest value among them
  * (a uniform grid reads better). The width is known before the grid lays out, so the group column's flex
  * takes exactly the room left; `headerTooltip` shows a cut header in full.
  */
-export const VALUE_COLUMN_IDS: readonly string[] = [...MONTHS.map(monthField), 'average', 'peak'];
+export const VALUE_COLUMN_IDS: readonly string[] = [...MONTHS.map(staffingMonthKey), 'average', 'peak'];
 
 export default function StaffingByMonthReport() {
   const { t } = useTranslation(['ops']);
@@ -41,6 +42,7 @@ export default function StaffingByMonthReport() {
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
   const fte = useCallback((value: unknown) => formatFte(value, locale), [locale]);
+  const tableLabels = useReportTableLabels();
 
   const reportFilters = useBudgetReportFilters({ scope });
   const grouping = useReportGroup(reportFilters.analyticsAxes);
@@ -60,27 +62,19 @@ export default function StaffingByMonthReport() {
   // report's window, the lines that declare FTE), in a new tab.
   const groupLink = useGroupLinks(scope, grouping, reportFilters, { firstYear: requestFirstYear(request, Y), fteOnly: true });
   const busy = request == null || report.isLoading || report.isPlaceholderData;
-  const staffing = useMemo(() => readStaffing(report.data, labels, compareNames), [report.data, labels]);
+  // Ties ordered in the screen language, as the export orders them (`new Intl.Collator(language)` on the server).
+  const compare = useMemo(() => new Intl.Collator(locale).compare, [locale]);
+  const staffing = useMemo(() => readStaffing(report.data, labels, compare), [report.data, labels, compare]);
 
-  const monthNames = useMemo(() => {
-    const format = new Intl.DateTimeFormat(locale, { month: 'short' });
-    return MONTHS.map((month) => format.format(new Date(year, month - 1, 1)));
-  }, [locale, year]);
+  const monthNames = tableLabels.monthNames;
 
-  const tableRows = useMemo(() => staffing.rows.map((row) => ({
-    group: row.label,
-    groupKey: row.key,
-    groupName: row.name,
-    ...Object.fromEntries(MONTHS.map((month, i) => [monthField(month), row.months[i]])),
-    average: row.average,
-    peak: row.peak,
-  })), [staffing.rows]);
-  const totalRow = useMemo(() => ({
-    group: t('reports.columns.total'),
-    ...Object.fromEntries(MONTHS.map((month, i) => [monthField(month), staffing.total.months[i]])),
-    average: staffing.total.average,
-    peak: staffing.total.peak,
-  }), [staffing.total, t]);
+  // The key table (`reportTables.ts`, the same code as the export): one row per group, the total as footer.
+  const table = useMemo(
+    () => staffingTable({ groupHeader, groupLabels: labels, compare }, report.data, tableLabels),
+    [groupHeader, labels, compare, report.data, tableLabels],
+  );
+  const tableRows = table.rows;
+  const totalRow = table.footer[0];
 
   // Fifteen columns on the dense grid: the fourteen value columns share one width, measured from their
   // values before the grid lays out; the group column flexes into the rest and shows its full name on hover.
@@ -103,23 +97,19 @@ export default function StaffingByMonthReport() {
       width: valueWidth,
       valueFormatter: (p) => fte(p.value),
     });
-    return [
-      {
-        field: 'group',
-        headerName: groupHeader,
+    return table.columns.map((column): ColDef => (column.key === 'group'
+      ? {
+        field: column.key,
+        headerName: column.header,
         flex: 1,
         minWidth: 180,
         tooltipField: 'group',
         cellRenderer: ReportGroupLinkCell,
         cellRendererParams: { getLink: groupLink },
-      },
-      ...MONTHS.map((month, i) => value(monthField(month), monthNames[i])),
-      value('average', t('reports.staffing.average')),
-      value('peak', t('reports.staffing.peak')),
-    ];
-  }, [groupHeader, groupLink, monthNames, fte, valueWidth, t]);
+      }
+      : value(column.key, column.header)));
+  }, [table.columns, groupLink, fte, valueWidth]);
 
-  const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
 
   const chartOptions = useMemo(() => {
@@ -195,7 +185,11 @@ export default function StaffingByMonthReport() {
           <ReportGroupFilters state={grouping} />
         </>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.({ fileName: `${fileName}.csv` })}
+      tableExport={{
+        url: '/reports/budget/staffing/export',
+        params: { scope, ...reportFilters.exportParams, group: grouping.exportParam, year, metric },
+        fileBase: `staffing-${scope}-${year}-${metric}-${GROUP_FILE_NAME[kind]}`,
+      }}
       onExportChartPng={() => chartRef.current?.download(fileName)}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
@@ -213,7 +207,6 @@ export default function StaffingByMonthReport() {
             rowData={tableRows}
             columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}
-            onGridReady={(e) => { gridApiRef.current = e.api; }}
             pinnedBottomRowData={[totalRow]}
           />
           {staffing.detached && (

@@ -13,6 +13,7 @@ import { prepareReportPrint, setReportPrinting, useReportPrinting } from './repo
 import { REPORT_DATA_STATUS_CLASS } from './ReportDataStatus';
 import FxMissingNotice from '../finance/FxMissingNotice';
 import type { FxMissing } from '../finance/fxMissing';
+import ReportExportButton, { type ReportTableExport } from './ReportExportButton';
 
 /**
  * Label-above wrapper for a filter control in a report filter bar. The charter bans
@@ -146,6 +147,7 @@ export default function ReportLayout({
   filters,
   actions,
   onExportTableCsv,
+  tableExport,
   onExportChartPng,
   busy = false,
   fxMissing,
@@ -155,7 +157,13 @@ export default function ReportLayout({
   subtitle?: React.ReactNode;
   filters?: React.ReactNode;
   actions?: React.ReactNode;
+  /**
+   * A table CSV the browser writes itself: only the operations pages that share this layout (copy budget,
+   * column reset, master data copy). Every report passes `tableExport`.
+   */
   onExportTableCsv?: () => void;
+  /** The table export the server builds, CSV or Excel (ReportExportButton). Takes the place of `onExportTableCsv`. */
+  tableExport?: ReportTableExport;
   onExportChartPng?: () => void;
   /**
    * The report's numbers are loading, or are the last answer kept while new ones load: the chart
@@ -231,7 +239,8 @@ export default function ReportLayout({
             </Stack>
             <Stack direction="row" spacing={1} alignItems="center">
               {actions}
-              {onExportTableCsv && (
+              {tableExport && <ReportExportButton {...tableExport} disabled={busy} />}
+              {!tableExport && onExportTableCsv && (
                 <Tooltip title={t('reports.shared.exportTableCsv')}>
                   <span>
                     <IconButton size="small" onClick={onExportTableCsv} disabled={busy} aria-label={t('reports.shared.exportTableCsv')} sx={{ color: 'kanap.text.secondary' }}>
