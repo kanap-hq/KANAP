@@ -310,7 +310,13 @@ export interface NetboxSyncState {
   finished_at: string | null;
   duration_ms: number | null;
   counts: NetboxSyncCounts | null;
+  /** English fallback. Shown as stored when `error_code` is absent. */
   error: string | null;
+  /**
+   * Stable code the page translates (`errors:<code>`).
+   * Absent on a state written before codes existed.
+   */
+  error_code?: string | null;
   /** Run-level notices, such as an incomplete read of a very large Netbox. */
   warnings?: NetboxNotice[];
 }

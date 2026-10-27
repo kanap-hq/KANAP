@@ -323,6 +323,7 @@
   "netbox_invalid_response": "El servidor Netbox ha devuelto una respuesta que KANAP no ha podido leer. Compruebe que la dirección apunta a Netbox.",
   "netbox_rate_limited": "Netbox rechaza más solicitudes por el momento. Inténtelo de nuevo en unos minutos.",
   "netbox_token_unreadable": "El token de Netbox guardado no se puede leer en este servidor. Vuelva a introducirlo y guarde.",
+  "netbox_sync_failed": "La sincronización no ha podido terminar. Compruebe la conexión con Netbox e inténtelo de nuevo.",
   "DATA_ACCESS_ADMINISTRATOR": "Los administradores ven todos los datos.",
   "DATA_ACCESS_SELF": "No puede cambiar su propio acceso a los datos.",
   "DATA_ACCESS_NODE_UNKNOWN": "Una empresa o un centro de coste de la lista no existe en este espacio de trabajo.",
