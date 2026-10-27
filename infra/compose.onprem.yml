@@ -1,7 +1,9 @@
-# KANAP on-premise: the API and the web server run the published images of one version.
-# The version is the one of this checkout. KANAP_VERSION in ../.env runs another published
-# version instead (an update, a rollback). Between two versions, `main` still names the latest
-# published version: to run the code of `main`, build it yourself with compose.onprem.build.yml
+# KANAP on-premise: the API and the web server run the published images of one version, the
+# version of this checkout. To run another one (an update, a rollback), check out its tag
+# (git checkout v26.10.9), then pull: this file and the images stay in step. Compose does not read
+# ../.env for the ${...} of this file, so KANAP_VERSION there would change nothing. Between two
+# versions, `main` still names the latest published version: to run the code of `main`, build it
+# yourself with compose.onprem.build.yml
 # (docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml build).
 
 services:

@@ -1,6 +1,7 @@
 # Builds the images on this machine instead of pulling the published ones. Use it on top of
 # compose.onprem.yml, for a fork, a local fix, a host without access to ghcr.io, or an API on
-# another host (VITE_API_URL in ../.env is baked into the web image when it is built):
+# another host (VITE_API_URL, baked into the web image when it is built; Compose takes it from
+# the shell, not from ../.env: VITE_API_URL=https://api.example.org docker compose ... build web):
 #   docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml build
 #   docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml up -d
 # A locally built image is named *:local, never like a published one.
