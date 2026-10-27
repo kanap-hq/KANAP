@@ -8,9 +8,11 @@ const WORDS: Record<CsvLanguage, readonly [string, string]> = {
   es: ['sí', 'no'],
 };
 
-// Read whatever the screen language: yes or no of every language, and the forms older files wrote.
-const TRUE = new Set(['yes', 'oui', 'ja', 'sí', 'si', 'true', '1', 'y', 'on', 't']);
-const FALSE = new Set(['no', 'non', 'nein', 'false', '0', 'n', 'off', 'f']);
+// Read whatever the screen language: yes or no of every language, the adjective forms a hand-made
+// file writes (vrai, wahr, verdadero), and the forms older files wrote. Spanish verdadero and
+// falso carry no accent.
+const TRUE = new Set(['yes', 'oui', 'vrai', 'ja', 'wahr', 'sí', 'si', 'verdadero', 'true', '1', 'y', 'on', 't']);
+const FALSE = new Set(['no', 'non', 'faux', 'nein', 'falsch', 'falso', 'false', '0', 'n', 'off', 'f']);
 
 /** A yes or no cell, in the file's language. */
 export function formatCsvBoolean(value: boolean, language: CsvLanguage): string {
@@ -19,7 +21,8 @@ export function formatCsvBoolean(value: boolean, language: CsvLanguage): string 
 
 /**
  * A yes or no cell: null when it is blank, undefined when it is neither. Yes and no are read in
- * every language, with true/false, 1/0, y/n, on/off and t/f, whatever the case.
+ * every language, with vrai/faux, wahr/falsch, verdadero/falso, true/false, 1/0, y/n, on/off and
+ * t/f, whatever the case. Writing keeps the words of `WORDS`.
  */
 export function parseCsvBoolean(raw: string): boolean | null | undefined {
   const text = raw.trim().toLowerCase();
