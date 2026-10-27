@@ -513,6 +513,11 @@ async function streamGuardrails() {
     'a sheet behind a data descriptor with zero local sizes',
   );
 
+  // A stored part whose two sizes disagree is malformed; both readers refuse it.
+  const lyingStored = hostileWorkbook({ data: plain, method: 0, centralSize: Buffer.byteLength(plain) + 10 });
+  refuses(() => readXlsxGrid(lyingStored), 'XLSX_INVALID', null, 'whole: a stored part with two sizes');
+  await refusesAsync(() => readXlsxGridAsync(lyingStored), 'XLSX_INVALID', null, 'stream: a stored part with two sizes');
+
   // CRC rule: the local header is checked unless a data descriptor (bit 3) defers it to the central one.
   const wrongLocal = hostileWorkbook({ data: plain, localCrc: 0x12345678 });
   refuses(() => readXlsxGrid(wrongLocal), 'XLSX_INVALID', null, 'whole: a local CRC that disagrees');

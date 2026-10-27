@@ -235,13 +235,18 @@ function readPart(archive: BoundedArchive, entry: AdmZip.IZipEntry, limits: Xlsx
   if (size > limits.compressionRatioFromBytes && size > limits.maxCompressionRatio * Math.max(compressed, 1)) {
     throw tooLarge('maxCompressionRatio', limits);
   }
+  let data: Buffer;
   try {
-    return archive.read(entry);
+    data = archive.read(entry);
   } catch (error) {
     // The inflater stops at the declared size: a part that unpacks to more lies about its size.
     if (error instanceof ArchiveLimitError) throw invalid();
     throw error;
   }
+  // A stored entry declares the same size twice. adm-zip returns the compressed bytes, which the
+  // streamed reader refuses; the whole reader refuses them too instead of parsing a short part.
+  if ((Number(entry.header.method) || 0) === 0 && data.length !== (Number(entry.header.size) || 0)) throw invalid();
+  return data;
 }
 
 function findEntry(archive: BoundedArchive, name: string): AdmZip.IZipEntry | null {
