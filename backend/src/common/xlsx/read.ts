@@ -325,15 +325,17 @@ function attribute(attributes: Record<string, string>, name: string, prefixed = 
 }
 
 /**
- * Parses one part with saxes, fed in chunks. A DOCTYPE or an ENTITY declaration refuses the part
- * before it is parsed: no entity is ever expanded; only the five predefined entities and numeric
- * character references are decoded. The attributes of an element are counted as saxes reads them,
- * before it builds the element, and the elements of the part as they open. An error thrown by a
- * handler leaves `parser.write` at once and ends the parse.
+ * Parses one part with saxes, fed in chunks. DOCTYPE and ENTITY declarations are searched on the bytes
+ * of each chunk, across the chunk boundary, before saxes sees them: no entity is ever expanded; only
+ * the five predefined entities and numeric character references are decoded. The attributes of an
+ * element are counted as saxes reads them, before it builds the element, and the elements of the part
+ * as they open. An error thrown by a handler leaves `parser.write` at once and ends the parse.
  *
  * The same parser reads a small part held in memory (`parsePart`) and the sheet inflated as it
  * arrives (`streamPart`): the declarations and the byte order marks are checked on the bytes, across
- * the chunks, and each chunk is decoded and parsed as soon as it is produced.
+ * the chunks, and each chunk is decoded and parsed as soon as it is produced. Refusals follow that
+ * order: a size, ratio, element or attribute limit raised while the bytes arrive comes before the
+ * CRC-32 of the part, checked at its end. A file with both reports the limit, which is accepted.
  */
 class PartParser {
   private readonly parser: SaxesParser;
