@@ -1797,10 +1797,14 @@ export type McpJournalItem = {
   key_label: string | null;
   key_kind: string | null;
   oauth_client_name: string | null;
+  /** The host a connection redirects to (`claude.ai`): it tells two clients of the same name apart. */
+  oauth_redirect_host: string | null;
   capability_name: string;
   result: McpJournalResult;
   /** Why a call was refused or failed (`unknown_tool`, `read_only`, `key_policy`, ...). */
   reason: string | null;
+  /** What the client read when the call was refused or failed. */
+  error_message: string | null;
   duration_ms: number | null;
   tool_created_at: string;
   input_summary: Record<string, unknown> | null;
@@ -1813,7 +1817,15 @@ export type McpJournalPage = {
   has_more: boolean;
   facets?: {
     people: Array<{ id: string; name: string | null }>;
-    keys: Array<{ id: string; label: string; credential_kind: string; oauth_client_name: string | null; user_id: string; revoked: boolean }>;
+    keys: Array<{
+      id: string;
+      label: string;
+      credential_kind: string;
+      oauth_client_name: string | null;
+      oauth_redirect_host: string | null;
+      user_id: string;
+      revoked: boolean;
+    }>;
   };
 };
 

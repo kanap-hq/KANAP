@@ -293,6 +293,99 @@ describe('AdminAiPage', () => {
     journalPage = EMPTY_JOURNAL;
   });
 
+  it('opens a journal line on its arguments and full cause, and names keys and connections as the keys table does', async () => {
+    const cause = 'Invalid input for search_all: unknown field "password" (accepted: query, entity_types, limit).';
+    journalPage = {
+      items: [
+        {
+          // The key and its owner were deleted after the call (ON DELETE SET NULL); the duration is unknown.
+          tool_execution_id: 'te-1', user_id: null, user_name: null, ai_api_key_id: null, key_label: null,
+          key_kind: null, oauth_client_name: null, oauth_redirect_host: null, capability_name: 'search_all',
+          result: 'refused', reason: 'key_revoked', error_message: 'MCP API key has been revoked.', duration_ms: null,
+          tool_created_at: '2026-10-27T09:40:00.000Z', input_summary: { arguments: {} },
+        },
+        {
+          tool_execution_id: 'te-2', user_id: 'u1', user_name: 'Ana Silva', ai_api_key_id: 'k2', key_label: 'Claude',
+          key_kind: 'oauth', oauth_client_name: 'Claude', oauth_redirect_host: 'claude.ai', capability_name: 'search_all',
+          result: 'refused', reason: 'invalid_input', error_message: cause, duration_ms: 0,
+          tool_created_at: '2026-10-27T09:39:00.000Z',
+          input_summary: {
+            arguments: {
+              query: 'Sage', password: '[REDACTED]', entity_types: ['application', 'contract'], filters: { status: 'active' },
+            },
+          },
+        },
+        {
+          tool_execution_id: 'te-3', user_id: 'u1', user_name: 'Ana Silva', ai_api_key_id: 'k1', key_label: 'Laptop',
+          key_kind: 'api_key', oauth_client_name: null, oauth_redirect_host: null, capability_name: 'get_application_classification_catalog',
+          result: 'completed', reason: null, error_message: null, duration_ms: 64,
+          tool_created_at: '2026-10-27T09:38:00.000Z', input_summary: { argument_names: [] },
+        },
+      ],
+      limit: 25,
+      offset: 0,
+      has_more: false,
+      facets: {
+        people: [{ id: 'u1', name: 'Ana Silva' }],
+        keys: [
+          { id: 'k1', label: 'Laptop', credential_kind: 'api_key', oauth_client_name: null, oauth_redirect_host: null, user_id: 'u1', revoked: false },
+          { id: 'k2', label: 'Claude', credential_kind: 'oauth', oauth_client_name: 'Claude', oauth_redirect_host: 'claude.ai', user_id: 'u1', revoked: false },
+          { id: 'k3', label: 'Claude', credential_kind: 'oauth', oauth_client_name: 'Claude', oauth_redirect_host: 'localhost', user_id: 'u1', revoked: true },
+        ],
+      },
+    };
+    renderPage();
+
+    const rows = await screen.findAllByTestId('mcp-journal-row');
+    expect(rows).toHaveLength(3);
+    // R1: a line whose key and person are gone.
+    expect(within(rows[0]).getByText('Deleted key')).toBeInTheDocument();
+    expect(within(rows[0]).getByText('Former user')).toBeInTheDocument();
+    expect(within(rows[0]).queryByText('No key')).not.toBeInTheDocument();
+    // R3: an unknown duration reads as a dash, a measured one in ms.
+    expect(within(rows[0]).getByText('—')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('0 ms')).toBeInTheDocument();
+    // A connection shows its client and host, as in the keys table.
+    expect(rows[1]).toHaveTextContent('Claude · claude.ai');
+
+    // R4: the arguments and the full cause, closed until the line is opened.
+    expect(screen.queryByTestId('mcp-journal-details')).not.toBeInTheDocument();
+    expect(rows[1]).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(rows[1]);
+    const details = await screen.findByTestId('mcp-journal-details');
+    expect(rows[1]).toHaveAttribute('aria-expanded', 'true');
+    expect(within(details).getByText('query')).toBeInTheDocument();
+    expect(within(details).getByText('Sage')).toBeInTheDocument();
+    expect(within(details).getByText('password')).toBeInTheDocument();
+    expect(within(details).getByText('Hidden')).toBeInTheDocument();
+    expect(within(details).queryByText('[REDACTED]')).not.toBeInTheDocument();
+    expect(within(details).getByText('entity_types').nextSibling).toHaveTextContent('application, contract');
+    expect(within(details).getByText('status')).toBeInTheDocument();
+    expect(within(details).getByText('active')).toBeInTheDocument();
+    expect(within(details).getByText('Cause')).toBeInTheDocument();
+    expect(within(details).getByText(cause)).toBeInTheDocument();
+    expect(details).not.toHaveTextContent('{');
+    fireEvent.click(rows[1]);
+    await waitFor(() => expect(screen.queryByTestId('mcp-journal-details')).not.toBeInTheDocument());
+
+    // From the keyboard; a call without arguments says so; a completed call shows no cause.
+    fireEvent.keyDown(rows[0], { key: 'Enter' });
+    expect(within(await screen.findByTestId('mcp-journal-details')).getByText('No arguments')).toBeInTheDocument();
+    expect(within(screen.getByTestId('mcp-journal-details')).getByText('MCP API key has been revoked.')).toBeInTheDocument();
+    fireEvent.keyDown(rows[0], { key: 'Enter' });
+    fireEvent.click(rows[2]);
+    const completed = await screen.findByTestId('mcp-journal-details');
+    expect(within(completed).getByText('Not recorded')).toBeInTheDocument();
+    expect(within(completed).queryByText('Cause')).not.toBeInTheDocument();
+
+    // R2: the filter names connections by client and host, and marks a revoked one.
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Key or connection' }));
+    expect(await screen.findByRole('option', { name: 'Laptop' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Claude · claude.ai' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Claude · localhost (revoked)' })).toBeInTheDocument();
+    journalPage = EMPTY_JOURNAL;
+  });
+
   it('shows the server address and a Claude Code command for a new key', async () => {
     const endpoint = `${window.location.origin}/api/ai/mcp`;
     (api.post as any).mockResolvedValueOnce({ data: { key: 'kanap_mcp_secret', record: { id: 'key-1' } } });

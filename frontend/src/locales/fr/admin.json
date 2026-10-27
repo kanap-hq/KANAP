@@ -280,9 +280,17 @@
       "range": "{{from}} à {{to}}",
       "previous": "Précédent",
       "next": "Suivant",
-      "unknownPerson": "Personne inconnue",
       "deletedKey": "Clé supprimée",
-      "noKey": "Aucune clé"
+      "formerUser": "Ancien utilisateur",
+      "revokedOption": "{{name}} (révoquée)",
+      "details": {
+        "arguments": "Arguments",
+        "cause": "Cause",
+        "hidden": "Masqué",
+        "more": "{{count}} de plus",
+        "noArguments": "Aucun argument",
+        "notRecorded": "Non enregistrés"
+      }
     }
   },
   "auditLogs": {
