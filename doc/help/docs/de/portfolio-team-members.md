@@ -81,7 +81,7 @@ Kataloge sind meist länger als Teams, deshalb stehen die Mitwirkenden standardm
 
 **Auf das Gesehene reagieren**:
 - Klicken Sie auf einen Mitwirkenden, um seinen Reiter **Kompetenzen** zu öffnen, in dem sich die Niveaus ändern lassen
-- **Exportieren** neben **Mitwirkenden hinzufügen** oben auf der Seite lädt das Angezeigte als `.xlsx`-Datei herunter, in derselben Ausrichtung, die Niveaus als Zahlen. Nützlich für Kompetenzbewertungen und Schulungspläne
+- **Exportieren** neben **Mitwirkenden hinzufügen** oben auf der Seite lädt das Angezeigte als CSV- oder Excel-Datei herunter, in derselben Ausrichtung, die Niveaus als Zahlen, mit den Abdeckungszahlen in der letzten Zeile. Die Excel-Datei fügt ein Blatt **Parameter** mit den Filtern hinzu. Nützlich für Kompetenzbewertungen und Schulungspläne
 
 ---
 

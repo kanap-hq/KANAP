@@ -32,6 +32,7 @@ import {
 } from '../index';
 import { CSV_DECODE_MESSAGES, decodeCsv } from '../decode';
 import { minimalDocx, minimalOds, minimalXls, minimalXlsx } from './office-files';
+import { withImportXlsx } from '../../__tests__/import-xlsx-flag';
 
 // The shared reader and writer. Importers are not involved: this file never
 // opens a database and never calls a service that writes one.
@@ -644,11 +645,16 @@ async function testNotACsvFile() {
   assert.deepEqual(read.rawHeaders, []);
   assert.deepEqual(read.ignoredColumns, []);
 
-  // The master-data importers answer 400 with the code the interface translates.
-  await assert.rejects(
+  // The master-data importers answer 400 with the code the interface translates: with the imports
+  // in CSV only, the "save as CSV" sentence; while they read workbooks, the sentence of the old format.
+  await withImportXlsx(false, () => assert.rejects(
     readMasterDataFile({ file: minimalXls(), fields: ['name'], language: 'fr' }),
     (err: any) => err?.getStatus?.() === 400 && err.getResponse().code === 'CSV_FILE_EXCEL',
-  );
+  ));
+  await withImportXlsx(true, () => assert.rejects(
+    readMasterDataFile({ file: minimalXls(), fields: ['name'], language: 'fr' }),
+    (err: any) => err?.getStatus?.() === 400 && err.getResponse().code === 'XLSX_OLD_FORMAT',
+  ));
   // An empty file too: the English sentence stays for API clients, the code is for the interface.
   for (const bytes of [Buffer.alloc(0), Buffer.from('  \n', 'utf8'), Buffer.from(';;\n', 'utf8')]) {
     await assert.rejects(

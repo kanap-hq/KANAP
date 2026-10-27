@@ -136,7 +136,7 @@ Each budget year of a line has one allocation method:
 | Manual by department | The headcount of the departments you pick |
 | Manual percentages | Percentages you type, adding up to 100% |
 
-Allocations drive the chargeback reports, for OPEX and CAPEX lines. No file imports them. [Copy budget columns](budget-operations.md#copying-allocations) carries them from one year to the next, and the chargeback reports export their tables as CSV. See [Reporting](reports.md).
+Allocations drive the chargeback reports, for OPEX and CAPEX lines. No file imports them. [Copy budget columns](budget-operations.md#copying-allocations) carries them from one year to the next, and the chargeback reports export their tables in CSV or Excel. See [Reporting](reports.md).
 
 ### Links to other objects
 
@@ -179,7 +179,7 @@ Points that matter when you map another tool to KANAP:
 
 ## Exchange formats
 
-Every file below exports and imports from the page that manages the object. Imports run in two steps: a check that writes nothing, then a load. Except for the contracts file, they share the encoding, separator, date and amount rules and the size limit described in [CSV files](csv-files.md).
+Every file below exports and imports from the page that manages the object. Imports run in two steps: a check that writes nothing, then a load. Except for the contracts file, they share the encoding, separator, date and amount rules and the size limit described in [CSV and Excel files](csv-files.md).
 
 | Object | Export | Import | Matched by | Details |
 |---|---|---|---|---|

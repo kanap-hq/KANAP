@@ -43,6 +43,7 @@ import { getApiErrorMessage } from '../utils/apiErrorMessage';
 import ContractSettingsDialog from './contracts/ContractSettingsDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
 import { contractDeleteCheck } from './contracts/contractDelete';
+import { ImportLabel } from '../components/csv/importFiles';
 
 /** The states of a contract's terms, computed by the API (`backend/src/contracts/contract-terms.ts`). */
 const TERM_STATES = ['to_decide', 'in_progress', 'renewed', 'ending', 'expired'] as const;
@@ -614,7 +615,7 @@ export default function ContractsPage() {
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && <Button variant="action-primary" onClick={handleNew}>{t('contracts.newButton')}</Button>}
-      {canAdmin && !limited && <Button variant="action" onClick={() => setImportOpen(true)}>{t('contracts.importCsv')}</Button>}
+      {canAdmin && !limited && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('contracts.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canAdmin && <ExportFormatButton label={t('contracts.compliance.exportRegister')} onExport={exportRegister} />}
       {canAdmin && !limited && <Button variant="action" onClick={() => setSettingsOpen(true)}>{t('contracts.renewal.settings.button')}</Button>}

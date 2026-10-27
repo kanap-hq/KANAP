@@ -10,6 +10,8 @@ import { QueryRunner } from 'typeorm';
 import dataSource from '../../../data-source';
 import { writeXlsx } from '../../../common/xlsx';
 import { XLSX_OLD_FORMAT_MESSAGE } from '../../../common/xlsx/read';
+import { CSV_DECODE_MESSAGES } from '../../../common/csv-sheet/decode';
+import { withImportXlsx } from '../../../common/__tests__/import-xlsx-flag';
 import { PREFLIGHT_STALE } from '../import-file';
 import { BudgetFileReport, BudgetFileExportScope } from '../types';
 import { budgetFileService, lineServices, reportProblems } from '../../__tests__/budget-file.fixtures';
@@ -175,7 +177,18 @@ async function testSheetsAndBrokenFiles(caller: Caller, ref: string) {
     else assert.match(report.fileErrors[0], /^This (file is not an Excel workbook|Excel file could not be read)/, label);
     assert.deepEqual(report.snapshot.lines, [], `${label}: nothing to load`);
   }
-  console.log('  first sheet only, said in the report; .xls and broken archives are file errors: OK');
+  // With the imports in CSV only (IMPORT_XLSX off), the CSV decoder's sentences as before: "save as
+  // CSV" for a workbook; this bare OLE header names no Workbook stream, so it is "not a CSV file".
+  for (const [label, file, expected] of [
+    ['a workbook', twoSheets, CSV_DECODE_MESSAGES.CSV_FILE_EXCEL],
+    ['an OLE file', xls, CSV_DECODE_MESSAGES.CSV_FILE_NOT_TEXT],
+  ] as const) {
+    const report = await withImportXlsx(false, () => service.preflight('opex', file, caller, OPTIONS));
+    assert.equal(report.ok, false, label);
+    assert.deepEqual(report.fileErrors, [expected], `${label}, IMPORT_XLSX off`);
+    assert.equal(report.firstSheetOnly, undefined, `${label}, IMPORT_XLSX off`);
+  }
+  console.log('  first sheet only, said in the report; .xls and broken archives are file errors; CSV only when off: OK');
 }
 
 async function main() {

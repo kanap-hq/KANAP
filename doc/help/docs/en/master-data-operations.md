@@ -96,9 +96,9 @@ Below the grid, four summary cards give you a quick count:
 
 You cannot copy data into a frozen year. If the destination year is frozen for Companies or Departments, an error banner appears and the action buttons are disabled. Unfreeze the destination year first with **Freeze master data**.
 
-### CSV export
+### Export
 
-You can export the preview table to CSV using the export button in the toolbar. This is handy for offline review or sharing with colleagues before committing. This export writes the table as it is shown. The files the master data pages import are described in [CSV files](csv-files.md).
+The export button in the toolbar downloads the preview as a CSV or Excel file: what the copy would do with the years, the sources and the metrics on screen. This is handy for offline review or sharing with colleagues before committing. Once the copy has run, the button is disabled: the table then shows what the copy did, which the preview no longer describes. The files the master data pages import are described in [CSV and Excel files](csv-files.md).
 
 ### Permissions
 
@@ -165,13 +165,13 @@ No. The Copy tool will show an error and disable the action buttons. Unfreeze th
 The copy operation overwrites them. Always run a Dry Run first so you can see the "Current Destination" column and understand what will be replaced.
 
 **Can I undo a copy?**
-No. Copy operations are not reversible. If you need a safety net, export the destination year's data to CSV before copying.
+No. Copy operations are not reversible. If you need a safety net, export the destination year's data to CSV or Excel before copying.
 
 **Why are some rows skipped?**
 Rows are skipped when the source value is null, the entity is inactive for the destination year, or the destination is frozen. The Status column in the preview tells you which reason applies.
 
 **Can I copy only specific companies or departments?**
-No. The tool copies all entities for the selected scopes and metrics. For selective updates, use CSV export/import on the individual Companies or Departments pages instead.
+No. The tool copies all entities for the selected scopes and metrics. For selective updates, use the export and import of the Companies or Departments pages instead.
 
 **Does the copy create new companies or departments?**
 No. It only writes metrics for entities that already exist in both years. If a company exists in the source year but not the destination, that row is skipped.

@@ -183,3 +183,10 @@ on-premise/installation-example.md	infra/compose.onprem.yml
 on-premise/installation-example.md	infra/compose.onprem.build.yml
 on-premise/operations.md	infra/compose.onprem.yml
 on-premise/operations.md	infra/compose.onprem.build.yml
+csv-files.md	backend/src/common/xlsx/*.ts
+csv-files.md	backend/src/common/csv/list-export.ts
+reports.md	frontend/src/components/reports/ReportExportButton.tsx
+reports.md	backend/src/common/report-export/*.ts
+admin.md	backend/src/audit/export-events.interceptor.ts
+on-premise/configuration.md	backend/src/config/features.ts
+on-premise/configuration.md	infra/.env.onprem.example

@@ -89,6 +89,7 @@ Affiche des cartes thermiques d'occupation hebdomadaire :
 - Vue équipe : une ligne par équipe, avec des colonnes par semaine ISO
 - Les libellés d'équipe sont affichés comme des cellules fusionnées multi-lignes en vue contributeur pour éviter la répétition
 - Chaque cellule affiche l'occupation hebdomadaire arrondie (%) avec une intensité de couleur d'accent basée sur la charge
+- **Exporter le tableau** propose **CSV** et **Excel (.xlsx)** pour le scénario à l'écran. Le CSV contient la vue à l'écran, contributeurs ou équipes. Le fichier Excel contient les deux, une feuille chacune, avec l'occupation en pourcentages, plus une feuille **Paramètres**. **Exporter l'occupation en PNG** enregistre la carte de chaleur en image
 
 ### Comportement de l'aperçu Gantt
 

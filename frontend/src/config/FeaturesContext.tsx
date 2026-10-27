@@ -19,6 +19,8 @@ export type FeaturesConfig = {
     vulnerabilityFeed: boolean;
     /** Technologies › Overview, section CVE.org names (CVE_LIST_FEED_ENABLED, and the vulnerability feed). */
     cveNames: boolean;
+    /** The data imports accept an Excel workbook (.xlsx) as well as a CSV file (IMPORT_XLSX). */
+    importXlsx: boolean;
   };
   version: string;
   tenantSlug?: string;
@@ -46,6 +48,8 @@ const CLOUD_DEFAULTS: FeaturesConfig = {
     vulnerabilityFeed: false,
     // Off until the server says otherwise, as the vulnerability feed.
     cveNames: false,
+    // Off until the server says otherwise: the dialogs offer only what every server reads.
+    importXlsx: false,
   },
   version: 'unknown',
 };

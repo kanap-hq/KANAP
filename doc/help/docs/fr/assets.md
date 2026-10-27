@@ -82,7 +82,7 @@ Le tri sur **Vulnérabilités à traiter** classe les actifs par leurs vulnérab
 
 **Actions** :
 - **Ajouter un actif** : ouvre un menu (`infrastructure:member`). **Ajouter un actif** crée un actif ; **Ajouter un cluster** en crée un avec l'interrupteur **Cluster** déjà activé
-- **Import CSV** / **Export CSV** : Opérations en masse (`infrastructure:admin`). L'export contient les actifs que la liste affiche. Voir [Options d'export](#export-options)
+- **Importer** / **Exporter** : Opérations en masse en CSV ou Excel (`infrastructure:admin`). L'export contient les actifs que la liste affiche. Voir [Options d'export](#export-options)
 - **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé. Le refus nomme les applications, et jusqu'à cinq connexions par leur référence et leur nom. Retirez d'abord l'actif de ces liens. Une affectation que l'actif hérite seulement de son cluster ne bloque pas. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison, et ce que les autres emportent avec eux (voir [Supprimer un cluster ou un membre](#deleting-a-cluster-or-a-member))
 
 ---
@@ -380,19 +380,23 @@ Les dates en orange demandent votre attention : un contrat dont la décision de 
 
 ## Import/export CSV
 
-Maintenez votre inventaire d'actifs à grande échelle grâce à l'import et l'export CSV. Cette fonctionnalité prend en charge les opérations en masse pour le chargement initial de données, les mises à jour périodiques depuis des systèmes externes et l'extraction de données pour le reporting.
+Maintenez votre inventaire d'actifs à grande échelle grâce à l'import et l'export. Cette fonctionnalité prend en charge les opérations en masse pour le chargement initial de données, les mises à jour périodiques depuis des systèmes externes et l'extraction de données pour le reporting.
 
 ### Accéder aux fonctionnalités CSV
 
 Depuis la liste des Actifs :
-- **Export CSV** : Télécharger les actifs dans un fichier CSV
-- **Import CSV** : Téléverser un fichier CSV pour créer ou mettre à jour des actifs
+- **Exporter** : Télécharger les actifs dans un fichier CSV ou un classeur Excel
+- **Importer** : Téléverser un fichier CSV ou un classeur Excel pour créer ou mettre à jour des actifs
 
 **Autorisations requises** : `infrastructure:admin` pour les opérations d'import/export.
 
 ### Options d'export { #export-options }
 
-**Contenu du fichier** : les actifs que la liste affiche. L'export suit les filtres des colonnes et la recherche rapide. La boîte de dialogue indique combien d'actifs le fichier contiendra. Vous pouvez aussi exporter tout le référentiel.
+**Contenu du fichier** : les actifs que la liste affiche. L'export suit les filtres des colonnes et la recherche rapide. La boîte de dialogue indique combien d'actifs le fichier contiendra. Vous pouvez aussi exporter tout le référentiel. Les lignes gardent l'ordre de la liste.
+
+**Format** : **CSV** ou **Excel (.xlsx)**, choisi dans la fenêtre et mémorisé par votre navigateur. Le classeur contient les mêmes colonnes que le CSV sur une feuille, avec les nombres et les dates en valeurs qu'Excel sait trier et filtrer. L'import lit l'un ou l'autre ; dans un classeur, il lit la première feuille. Voir [Fichiers CSV et Excel](csv-files.md).
+
+**Colonnes** : le fichier commence par `id` et `reference` (`AST-12`), puis les colonnes suivent l'espace de travail, onglet par onglet. L'import ignore `reference`.
 
 Les colonnes du type d'actif, du cycle de vie, du domaine, de la zone d'administration et du type d'adresse IP contiennent les libellés de l'écran, dans la langue de l'écran.
 
@@ -406,7 +410,7 @@ Les colonnes du type d'actif, du cycle de vie, du domaine, de la zone d'administ
 
 ### Processus d'import
 
-1. **Préparez votre fichier** : enregistrez-le en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV](csv-files.md).
+1. **Préparez votre fichier** : un fichier CSV ou un classeur Excel (`.xlsx`). Enregistrez un fichier CSV en UTF-8. Les virgules et les points-virgules conviennent tous les deux, de même qu'un fichier enregistré par Excel en CSV simple (Windows-1252). Téléchargez un modèle pour vous assurer des bons en-têtes. Le séparateur, les montants, les dates et les oui ou non de chaque langue sont dans [Fichiers CSV et Excel](csv-files.md).
 
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
@@ -428,7 +432,7 @@ La vérification préalable signale une erreur sur la ligne, et rien n'est charg
 - un nom d'hôte qui ne respecte pas la règle de l'onglet Réseau ;
 - une adresse IP mal formée ;
 - un type d'actif, un domaine, un cycle de vie, une zone d'administration ou un type d'adresse IP qui ne correspond à rien dans **Cartographie SI > Paramètres** ;
-- une date absente du calendrier, comme `31/02/2025`, ou une date écrite en toutes lettres. Les formes de date acceptées sont dans [Fichiers CSV](csv-files.md) ;
+- une date absente du calendrier, comme `31/02/2025`, ou une date écrite en toutes lettres. Les formes de date acceptées sont dans [Fichiers CSV et Excel](csv-files.md) ;
 - un emplacement d'adresse IP rempli alors qu'un emplacement précédent est vide, par exemple `ip_2_address` sans `ip_1_address` ;
 - un nom ou un FQDN qu'un autre actif porte déjà.
 
@@ -478,7 +482,7 @@ Pour les champs configurés dans **Cartographie SI > Paramètres**, vous pouvez 
 | Zone d'administration (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (cœur de confiance)`, `Tier 1 (serveurs et applications)` |
 | Type d'adresse IP | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
-Le système normalise automatiquement les valeurs lors de l'import, donc `Virtual Machine`, `virtual machine` et `vm` se résolvent tous vers le même type d'actif. Une valeur qui correspond à plusieurs entrées est refusée plutôt que devinée. L'export CSV écrit les noms pour ces colonnes, dans la langue de l'écran, si bien qu'un fichier exporté peut être réimporté tel quel.
+Le système normalise automatiquement les valeurs lors de l'import, donc `Virtual Machine`, `virtual machine` et `vm` se résolvent tous vers le même type d'actif. Une valeur qui correspond à plusieurs entrées est refusée plutôt que devinée. L'export écrit les noms pour ces colonnes, dans la langue de l'écran, si bien qu'un fichier exporté peut être réimporté tel quel.
 
 **Système d'exploitation** : la colonne `operating_system` contient le nom de la technologie suivi de sa version, comme l'écrit l'export (`Windows Server 2019`, `Ubuntu 24.04 LTS`). À l'import, KANAP cherche la technologie parmi les vôtres, puis dans le catalogue, et enregistre la version. Une technologie ou une version introuvable est créée : vérifiez donc l'orthographe avant. La valeur devient le système d'exploitation du serveur.
 
@@ -507,7 +511,7 @@ Certains champs sont calculés et ne peuvent pas être importés :
 
 ### Limitations
 
-- **Maximum 4 adresses IP** : Les actifs prennent en charge jusqu'à 4 entrées d'adresse IP via CSV
+- **Maximum 4 adresses IP** : Les actifs prennent en charge jusqu'à 4 entrées d'adresse IP dans un fichier
 - **Site obligatoire** : Chaque actif doit avoir le code d'un site existant
 - **Relations non incluses** : Les affectations d'applications, connexions, liens financiers, projets, tâches et pièces jointes doivent être gérés dans l'espace de travail
 

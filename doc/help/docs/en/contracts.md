@@ -107,7 +107,7 @@ The row pinned at the bottom reads **Total (n contracts)**. It sums the yearly a
 ### Actions
 
 - **New**: create a contract (`contracts:member`)
-- **Import CSV** and **Export CSV**: see [CSV import/export](#csv-importexport) (`contracts:admin`)
+- **Import** and **Export**: see [CSV import/export](#csv-importexport) (`contracts:admin`)
 - **Export the register**: the compliance register of the contracts the list shows (`contracts:admin`). See [Compliance](#compliance)
 - **Settings**: the decision window of the workspace (`contracts:admin`). See [Decision window](#decision-window)
 - **Delete**: delete the contracts you tick (`contracts:admin`). See [Deleting a contract](#deleting-a-contract)
@@ -214,7 +214,7 @@ The tab's badge counts the expected requirements recorded as missing. In the lis
 
 Linking or removing an application or an asset in **Relations** updates the tab at once. You need `contracts:member` to record; readers see the tab read-only.
 
-**Export the register** (list, `contracts:admin`) downloads a CSV of the contracts the list shows, with its search, filters and scope: one line per contract and requirement, with whether it is expected, the reason, the state, the reference and the last update. Headers and words follow the language of your screen.
+**Export the register** (list, `contracts:admin`) downloads a CSV or Excel file of the contracts the list shows, with its search, filters, scope and order: one line per contract and requirement, with whether it is expected, the reason, the state, the reference and the last update. Headers and words follow the language of your screen.
 
 ### Relations
 
@@ -317,7 +317,9 @@ On a contract in its first term with no decision due, **No** applies at once: th
 
 ## CSV import/export
 
-Keep your contract list in sync with other tools using CSV (`contracts:admin`).
+The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
+
+Keep your contract list in sync with other tools using CSV files or Excel workbooks (`contracts:admin`).
 
 **Export**: downloads the contracts the list shows (or, on request in the dialog, every contract) with these columns: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. The computed dates (term end, deadlines, state) are not exported.
 
@@ -332,7 +334,7 @@ Keep your contract list in sync with other tools using CSV (`contracts:admin`).
 
 **Notes**:
 
-- See [CSV files](csv-files.md) for the encoding, the separator, the date and amount forms, and the two import steps
+- See [CSV and Excel files](csv-files.md) for the encoding, the separator, the date and amount forms, and the two import steps
 - Dates are computed from the start, duration, notice and renewal; they are never imported
 
 ---

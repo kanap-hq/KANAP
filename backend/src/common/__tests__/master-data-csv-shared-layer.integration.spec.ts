@@ -35,6 +35,8 @@ import { BusinessProcessesService } from '../../business-processes/business-proc
 import { BusinessProcess } from '../../business-processes/business-process.entity';
 import { BusinessProcessCategory } from '../../business-processes/business-process-category.entity';
 import { BusinessProcessCategoryLink } from '../../business-processes/business-process-category-link.entity';
+import { withImportXlsx } from './import-xlsx-flag';
+import { hasLibreOffice, throughLibreOffice, workbookOfCsv } from './workbook-of-csv';
 
 // The master-data files (companies, departments, users, suppliers, accounts,
 // cost centers, analytics values, calendars, contacts, contracts, business
@@ -57,7 +59,12 @@ import { BusinessProcessCategoryLink } from '../../business-processes/business-p
 //    read back keeps the stored instant;
 //  - an extra cell and an unreadable file are refused;
 //  - the accounts file's optional `nature` column: absent, it leaves the
-//    stored natures alone; an invalid value is a row error.
+//    stored natures alone; an invalid value is a row error;
+//  - an .xlsx workbook made of a file (numbers and days as typed cells)
+//    checks and loads with the same counts, errors and stored rows as that
+//    file, and so does the workbook of an export and its LibreOffice copy; a
+//    workbook of several sheets is read on its first, and with the imports in
+//    CSV only (IMPORT_XLSX off) a workbook is refused as before.
 //
 // Every case runs inside one transaction, rolled back at the end, like
 // `master-data-csv-lifecycle.integration.spec.ts`.
@@ -82,7 +89,7 @@ type Result = {
   unchanged?: number;
   errors: Array<{ row: number; message: string }>;
   ignoredColumns: string[];
-  notices: { dates: string | null; amounts: string | null };
+  notices: { dates: string | null; amounts: string | null; firstSheetOnly?: string };
 };
 
 type ImportOptions = { dryRun?: boolean; language?: CsvLanguage };
@@ -1111,6 +1118,78 @@ async function testAccountNatureColumn() {
   });
 }
 
+/** What a check or a load reports, but the notices: typed cells settle no date order or decimal mark. */
+const outcome = (result: Result) => ({
+  ok: result.ok,
+  inserted: result.inserted,
+  updated: result.updated,
+  unchanged: result.unchanged,
+  errors: result.errors,
+  ignoredColumns: result.ignoredColumns,
+});
+
+/**
+ * Stored rows with their ids numbered by first appearance (a row the import creates beside them, such
+ * as the role of the users file, gets a new id after a rollback to a savepoint) and their instants as
+ * their day (a status disabled without a date takes the clock's time).
+ */
+function canonicalIds(rows: Array<Record<string, any>>): Array<Record<string, any>> {
+  const seen = new Map<string, string>();
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return rows.map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => {
+    if (value instanceof Date) return [key, value.toISOString().slice(0, 10)];
+    if (typeof value !== 'string' || !uuid.test(value)) return [key, value];
+    if (!seen.has(value)) seen.set(value, `id#${seen.size + 1}`);
+    return [key, seen.get(value)];
+  })));
+}
+
+/**
+ * The workbook of a file imports as the file: new rows (checked, then loaded, the stored rows
+ * compared after a rollback to a savepoint), then the importer's own export, which counts every row
+ * unchanged. The suppliers file also goes through LibreOffice, a workbook of two sheets, and the
+ * switch off.
+ */
+async function testWorkbookImportsAsItsCsv() {
+  await each('xlsx', async (importer, runner, tenantId) => {
+    const csv = await fileFor(importer, importer.samples(), { language: 'fr' });
+    const workbook = workbookOfCsv(csv, 'fr');
+    await runner.query('SAVEPOINT xlsx_case');
+    const csvDry = await importer.importCsv(csv, { language: 'fr', dryRun: true });
+    const csvLoad = await importer.importCsv(csv, { language: 'fr' });
+    assert.equal(csvLoad.ok, true, `${importer.label} CSV load: ${JSON.stringify(csvLoad.errors)}`);
+    const csvRows = await importer.snapshot(runner, tenantId);
+    await runner.query('ROLLBACK TO SAVEPOINT xlsx_case');
+    const xlsxDry = await importer.importCsv(workbook, { language: 'fr', dryRun: true });
+    assert.deepEqual(outcome(xlsxDry), outcome(csvDry), `${importer.label}: the check of the workbook`);
+    assert.equal(xlsxDry.notices.firstSheetOnly, undefined, `${importer.label}: one sheet`);
+    const xlsxLoad = await importer.importCsv(workbook, { language: 'fr' });
+    assert.deepEqual(outcome(xlsxLoad), outcome(csvLoad), `${importer.label}: the load of the workbook`);
+    assert.deepEqual(canonicalIds(await importer.snapshot(runner, tenantId)), canonicalIds(csvRows), `${importer.label}: the stored rows`);
+
+    const exported = await importer.exportCsv('fr');
+    const copies: Array<[string, Buffer]> = [['writer', workbookOfCsv(exported, 'fr')]];
+    if (importer.label === 'suppliers' && hasLibreOffice()) copies.push(['LibreOffice', throughLibreOffice(copies[0][1])]);
+    for (const [maker, copy] of copies) {
+      for (const dryRun of [true, false]) {
+        const fromCsv = await importer.importCsv(exported, { language: 'fr', dryRun });
+        const fromXlsx = await importer.importCsv(copy, { language: 'fr', dryRun });
+        assert.deepEqual(outcome(fromXlsx), outcome(fromCsv), `${importer.label}: the ${maker} workbook of the export, ${dryRun ? 'check' : 'load'}`);
+      }
+    }
+    assert.deepEqual(canonicalIds(await importer.snapshot(runner, tenantId)), canonicalIds(csvRows), `${importer.label}: the exports change nothing`);
+
+    if (importer.label !== 'suppliers') return;
+    const twoSheets = await importer.importCsv(workbookOfCsv(exported, 'fr', { extraSheet: true }), { language: 'fr', dryRun: true });
+    assert.equal(twoSheets.notices.firstSheetOnly, 'Data');
+    assert.deepEqual(outcome(twoSheets), outcome(await importer.importCsv(exported, { language: 'fr', dryRun: true })));
+    await withImportXlsx(false, () => assert.rejects(
+      importer.importCsv(workbook, { language: 'fr', dryRun: true }),
+      (err: any) => err?.getStatus?.() === 400 && err.getResponse().code === 'CSV_FILE_EXCEL',
+    ));
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   let failed = 0;
@@ -1128,6 +1207,7 @@ async function main() {
     ['testAccountNatureColumn', testAccountNatureColumn],
     ['testContractDatesAndAmounts', testContractDatesAndAmounts],
     ['testYesNoFollowTheLanguage', testYesNoFollowTheLanguage],
+    ['testWorkbookImportsAsItsCsv', testWorkbookImportsAsItsCsv],
   ];
   try {
     for (const [name, test] of tests) {

@@ -14,7 +14,7 @@ Portfolio Requests are the intake layer for proposed work. A request lets you ca
 | `portfolio_requests:reader` | Open the requests list and view request workspaces |
 | `portfolio_requests:contributor` | Link and unlink budget lines, applications, assets and business processes on the **Relations** tab |
 | `portfolio_requests:member` | Create requests, update request data, edit the managed documents (Purpose, Risks & Mitigations), maintain team and relations, add comments and decisions, change status, submit analysis recommendations, and edit scoring |
-| `portfolio_requests:admin` | Delete requests, use CSV import/export and save priority overrides |
+| `portfolio_requests:admin` | Delete requests, use import and export and save priority overrides |
 
 Converting a request into a project also needs `portfolio_projects:member`.
 
@@ -65,7 +65,7 @@ The standard grid highlights the fields that matter during intake and review:
 ### List actions
 
 - **New Request** is available with `portfolio_requests:member`.
-- **Import CSV** and **Export CSV** are available to request administrators.
+- **Import** and **Export** are available to request administrators.
 
 ## The Request workspace
 
@@ -341,7 +341,11 @@ In other words, conversion does not erase the request. It promotes it.
 
 ## CSV import and export
 
-CSV import and export are available to `portfolio_requests:admin`.
+**Export** and **Import** are available to `portfolio_requests:admin`.
+
+The export holds the requests the list shows, with its filters, its search and its sort. **Format**: **CSV** or **Excel (.xlsx)**, chosen in the dialog and remembered in your browser. The workbook holds the same columns as the CSV on one sheet, with numbers and dates as values Excel can sort and filter. The import reads either; in a workbook, it reads the first sheet. See [CSV and Excel files](csv-files.md).
+
+**Columns**: the file starts with `id` and `reference` (`REQ-12`), then the columns follow the workspace, tab by tab. The import ignores `reference`.
 
 Use export when you need portfolio reporting or offline enrichment. Use import when you need to create or update requests in bulk. Because import can alter intake records at scale, it is intentionally reserved for administrators.
 

@@ -38,7 +38,7 @@ Líneas OPEX/CAPEX -> Selección de cuenta (filtrada a cuentas de FR-2024 única
 - Permisos:
   - Ver: `accounts:reader`
   - Crear/editar cuentas y CoA: `accounts:member`
-  - Importar CSV, Exportar CSV, Eliminar: `accounts:admin`
+  - Importar, Exportar, Eliminar: `accounts:admin`
 
 ## Trabajar con la lista
 
@@ -105,8 +105,8 @@ La cuadrícula muestra cuentas solo del CoA seleccionado.
 
 **Acciones** (en el encabezado de la página):
 - **Nueva cuenta** (`accounts:member`): Abre un nuevo formulario de cuenta con el CoA seleccionado ya elegido.
-- **Importar CSV** (`accounts:admin`): Importar cuentas al CoA seleccionado.
-- **Exportar CSV** (`accounts:admin`): Exportar cuentas del CoA seleccionado.
+- **Importar** (`accounts:admin`): Importar cuentas al CoA seleccionado.
+- **Exportar** (`accounts:admin`): Exportar cuentas del CoA seleccionado.
 - **Eliminar selección** (`accounts:admin`): Eliminar filas de cuentas seleccionadas. Seleccione filas usando la columna de casilla de verificación (visible para administradores). Una cuenta usada por líneas presupuestarias no se puede eliminar: desactívela en su lugar. Antes de eliminar nada, la confirmación enumera las cuentas que se conservan, con el motivo.
 
 Todas las celdas de fila son enlaces clicables al espacio de trabajo de la cuenta. Puede hacer clic derecho o Ctrl+clic para abrir en una nueva pestaña.
@@ -160,13 +160,13 @@ La sección **Consolidación** contiene un único campo, **Cuenta de consolidaci
 
 Haga clic en **Nuevo** en la barra de chips, o en **Nuevo plan** en el cuadro Gestionar planes. Puede crear un CoA de dos maneras:
 
-1. **Un plan vacío**: añada las cuentas más tarde, una a una o con una importación CSV.
+1. **Un plan vacío**: añada las cuentas más tarde, una a una o con una importación.
 2. **Una plantilla**: cargue un conjunto de cuentas preconfigurado, mantenido por los administradores de la plataforma.
 
 **Campos del diálogo de creación**:
 - **Partir de**: **Un plan vacío** o **Una plantilla**.
 - **Plantilla** (solo en modo plantilla): Elija una plantilla de la lista. Cada entrada muestra su nombre, sus países y su versión. Al elegir una plantilla se rellenan el nombre y el código, que puede cambiar.
-- **Código** (obligatorio): Un identificador corto y estable, usado en archivos CSV y enlaces.
+- **Código** (obligatorio): Un identificador corto y estable, usado en los archivos importados y exportados y en los enlaces.
 - **Nombre** (obligatorio): Un nombre descriptivo para el CoA.
 - **Se usa para**: **Un país** o **Todos los países**. Una plantilla global siempre crea un plan para **Todos los países**.
 - **País** (solo para un país): Elija un país de la lista.
@@ -174,7 +174,7 @@ Haga clic en **Nuevo** en la barra de chips, o en **Nuevo plan** en el cuadro Ge
 
 En modo plantilla, haga clic en **Verificar plantilla** antes de crear para ver cuántas cuentas se añadirán y cuántas se actualizarán. Después haga clic en **Crear**.
 
-Una vez creado, el nuevo plan queda seleccionado en la página: **Importar CSV** carga en ese plan.
+Una vez creado, el nuevo plan queda seleccionado en la página: **Importar** carga en ese plan.
 
 Un plan nuevo no tiene ningún rol, salvo el predeterminado de país que marque aquí. Para darle otro rol, use [Gestionar planes](#el-cuadro-gestionar-planes).
 
@@ -349,8 +349,8 @@ Las tres cuentas locales se asignan a la misma cuenta de consolidación `6200`, 
 **Opción 1: Plantillas (recomendado)**
 Todas las plantillas integradas incluyen mapeos de consolidación IFRS en cada cuenta. Cargue cualquier plantilla de país y las columnas de consolidación ya están rellenadas. Un nuevo espacio de trabajo ya tiene el plan IFRS como plan de consolidación. Consulte [Plantillas disponibles](#plantillas-disponibles) para la lista completa.
 
-**Opción 2: Importación CSV**
-Al importar cuentas, incluya los campos de consolidación en su CSV:
+**Opción 2: Importación**
+Al importar cuentas, incluya los campos de consolidación en su archivo:
 
 ```
 coa_code;account_number;account_name;consolidation_account_number;consolidation_account_name;consolidation_account_description
@@ -402,12 +402,12 @@ Las **cuentas legado** son cuentas sin un `coa_id` (creadas antes de que se intr
 **Cómo funcionan**:
   - Las empresas SIN CoA pueden usar cuentas legado
   - Las empresas CON CoA no pueden usar cuentas legado: se filtran automáticamente
-  - Las cuentas legado pueden migrarse vía CSV (`coa_code`) y flujos de trabajo de reasignación
+  - Las cuentas legado pueden migrarse con una importación (`coa_code`) y flujos de trabajo de reasignación
 
 **Ruta de migración**:
   1. Cree o cargue Planes de cuentas para sus empresas
   2. Asigne CoA a las empresas (en la pestaña Visión general de la empresa)
-  3. Asigne `coa_id` a sus cuentas legado (vía importación CSV con `coa_code` o edición masiva)
+  3. Asigne `coa_id` a sus cuentas legado (con una importación que lleve `coa_code`, o edición masiva)
   4. Actualice las líneas OPEX/CAPEX existentes que muestren advertencias de "cuenta obsoleta"
 
 **Consejo**: No tiene que migrar todo a la vez. Las empresas sin CoA continúan trabajando con cuentas legado, permitiendo una adopción gradual.
@@ -460,16 +460,18 @@ La eliminación es inmediata e irreversible. El registro del espacio de trabajo 
 
 ## Importación/exportación CSV
 
+La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
+
 ### Planes de cuentas
 
-Puede exportar una lista de sus CoA (con metadatos como código, nombre, país, estado de predeterminado) pero no importar CoA directamente vía CSV. Cree CoA a través de la interfaz o cárguelos desde plantillas.
+Puede exportar una lista de sus CoA (con metadatos como código, nombre, país, estado de predeterminado) pero no importar CoA desde un archivo. Cree CoA a través de la interfaz o cárguelos desde plantillas.
 
 ### Cuentas (endpoint global)
 
-El CSV global `/accounts` incluye una columna `coa_code` para identificar a qué CoA pertenece cada cuenta. **Exportar CSV** e **Importar CSV** la usan cuando no hay ningún CoA seleccionado en la página.
+El archivo global `/accounts` incluye una columna `coa_code` para identificar a qué CoA pertenece cada cuenta. **Exportar** e **Importar** la usan cuando no hay ningún CoA seleccionado en la página.
 
-  - **Exportar CSV**: las cuentas que muestra la lista (o, a petición en el diálogo, todas las cuentas) con sus códigos de CoA, números de cuenta, nombres, nombres locales, descripciones, mapeos de consolidación, estado y **Usada para**
-  - **Importar CSV**: **Descargar plantilla** en el diálogo da un archivo solo con los encabezados. Empiece por la **Verificación previa** para validar la estructura, la codificación, los campos obligatorios y los duplicados, y después **Cargar** para aplicar las inserciones y las actualizaciones
+  - **Exportar**: las cuentas que muestra la lista (o, a petición en el diálogo, todas las cuentas) con sus códigos de CoA, números de cuenta, nombres, nombres locales, descripciones, mapeos de consolidación, estado y **Usada para**
+  - **Importar**: **Descargar plantilla** en el diálogo da un archivo solo con los encabezados. Empiece por la **Verificación previa** para validar la estructura, la codificación, los campos obligatorios y los duplicados, y después **Cargar** para aplicar las inserciones y las actualizaciones
   - **Coincidencia**: por `(coa_code, account_number)` dentro de su espacio de trabajo
   - **Columnas obligatorias**: `coa_code`, `account_number`, `account_name`. Todas las filas de un archivo deben llevar el mismo `coa_code`
   - **Columnas opcionales**: `native_name`, `description`, las columnas de consolidación, `status`, `nature`. Un archivo puede omitirlas: las cuentas que actualiza conservan sus valores guardados, y las cuentas nuevas toman los valores predeterminados (vacío, enabled, **OPEX y CAPEX**). Una columna presente en el archivo aplica sus celdas, incluidas las vacías
@@ -482,10 +484,10 @@ coa_code;account_number;account_name;native_name;description;consolidation_accou
 
 ### Cuentas (con alcance de CoA)
 
-Desde la página de Planes de cuentas, **Importar CSV** y **Exportar CSV** se limitan automáticamente al CoA seleccionado actualmente.
+Desde la página de Planes de cuentas, **Importar** y **Exportar** se limitan automáticamente al CoA seleccionado actualmente.
 
-  - **Exportar CSV**: cuentas de este CoA (no se necesita columna `coa_code`)
-  - **Importar CSV**: las cuentas se insertan o se actualizan en este CoA automáticamente. El título del diálogo nombra el plan, por ejemplo **Importar cuentas en FR-PCG**
+  - **Exportar**: cuentas de este CoA (no se necesita columna `coa_code`)
+  - **Importar**: las cuentas se insertan o se actualizan en este CoA automáticamente. El título del diálogo nombra el plan, por ejemplo **Importar cuentas en FR-PCG**
   - Solo `account_number` y `account_name` son obligatorias. Las demás columnas son opcionales, como en el archivo global
 
 **Esquema CSV** (con alcance de CoA; aquí se muestra con puntos y coma):
@@ -494,7 +496,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 ```
 
 **Notas**:
-  - Consulte [Archivos CSV](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
+  - Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
   - El `coa_code` debe coincidir con un Plan de cuentas existente en su espacio de trabajo
   - Los números de cuenta deben ser únicos dentro de un CoA
   - `account_number` y `consolidation_account_number`: números enteros de 15 dígitos como máximo. Un número más largo se rechaza para esa fila. Se eliminan los ceros a la izquierda (`06156` se guarda como `6156`): la **Verificación previa** muestra esas filas como advertencias, y el archivo se carga igualmente
@@ -510,7 +512,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - **Migre gradualmente**: No tiene que convertir todo a la vez. Las empresas sin CoA continúan trabajando con cuentas legado.
   - **Corrija cuentas obsoletas**: Cuando vea advertencias, actualice la cuenta para que coincida con el CoA actual de la empresa. Esto mantiene sus datos limpios para informes.
   - **Deshabilite en lugar de eliminar**: Deshabilitar cuentas preserva el historial. Solo elimine cuentas que fueron creadas por error y nunca se usaron.
-  - **Las importaciones CSV son aditivas**: Importar cuentas añade nuevas y actualiza las existentes (emparejadas por coa_code + account_number). No elimina cuentas que no están en el archivo.
+  - **Las importaciones son aditivas**: Importar cuentas añade nuevas y actualiza las existentes (emparejadas por coa_code + account_number). No elimina cuentas que no están en el archivo.
   - **Las cuentas de consolidación son clave para grupos**: Si opera en múltiples países, configure los mapeos de consolidación desde el primer día. Esto hace que los informes a nivel de grupo no requieran esfuerzo y mantiene a los usuarios locales trabajando con cuentas familiares.
   - **IFRS como estándar de consolidación**: La mayoría de grupos europeos usan IFRS para consolidación. Todas las plantillas integradas ya se mapean a las mismas 14 cuentas de consolidación IFRS, por lo que los informes de grupo funcionan entre países sin configuración adicional.
   - **Enlace directo**: La URL preserva su CoA seleccionado, orden de clasificación, texto de búsqueda y filtros. Comparta o marque un enlace para volver exactamente a la misma vista.
@@ -534,9 +536,9 @@ Tiene 50 cuentas y 5 empresas, todo configurado antes de que existieran los Plan
 
 **Pasos de migración**:
   1. Cree un CoA (p. ej., `US-GAAP`)
-  2. Exporte sus cuentas a CSV
+  2. Exporte sus cuentas
   3. Añada una columna `coa_code` (p. ej., `US-GAAP`) a todas las filas
-  4. Importe el CSV actualizado (las cuentas ahora pertenecen al CoA)
+  4. Importe el archivo actualizado (las cuentas ahora pertenecen al CoA)
   5. Asigne el CoA a sus empresas
   6. Edite cualquier línea OPEX/CAPEX que muestre advertencias de "cuenta obsoleta"
 

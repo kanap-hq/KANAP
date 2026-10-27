@@ -22,6 +22,7 @@ import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 import { countValueFormatter } from '../../components/grid/countValueFormatter';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import { incidentDeleteCheck } from './incidents/incidentDelete';
+import { ImportLabel } from '../../components/csv/importFiles';
 
 const DEFAULT_SORT = 'detected_at:DESC';
 
@@ -416,7 +417,7 @@ export default function IncidentsPage() {
         </Button>
       )}
       {hasLevel('incidents', 'contributor') && (
-        <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.incidents.importCsv')}</Button>
+        <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('pages.incidents.importCsv')} /></Button>
       )}
       <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>
       {canDelete && (

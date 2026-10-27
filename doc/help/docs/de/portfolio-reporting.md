@@ -49,7 +49,7 @@ Eine Zeile je Entität liest sich so: **14 erstellt · 9 abgeschlossen · 52 off
 - **Offen**: Elemente, die gerade offen sind, unabhängig davon, was im Zeitraum geschah. Diese Zahl ist ein Link auf die passende Liste.
 - **(+5)**: die Nettoveränderung, nur sichtbar, wenn sie nicht null ist. Sie ist erstellt, plus wieder geöffnet, minus abgeschlossen. Wieder geöffnet sind Elemente, die aus einem geschlossenen Status zurück in einen offenen gewechselt sind. Fahren Sie über die Zahl, um die Formel zu sehen.
 
-Erstellt und abgeschlossen stammen aus der Änderungshistorie. Sie erfassen damit jeden Schreibweg: die Anwendung, einen CSV-Import und die Agenten. Kein Listenfilter bildet diese Historie nach, deshalb öffnen diese beiden Zahlen den **Periodenrückblick** für dieselben Tage. Seine Listen der erstellten und abgeschlossenen Elemente zeigen genau die hier gezählten Elemente. Eine Null ist kein Link.
+Erstellt und abgeschlossen stammen aus der Änderungshistorie. Sie erfassen damit jeden Schreibweg: die Anwendung, einen Import und die Agenten. Kein Listenfilter bildet diese Historie nach, deshalb öffnen diese beiden Zahlen den **Periodenrückblick** für dieselben Tage. Seine Listen der erstellten und abgeschlossenen Elemente zeigen genau die hier gezählten Elemente. Eine Null ist kein Link.
 
 ### Welche Aufgaben zählen
 
@@ -167,7 +167,7 @@ Klicken Sie auf eine Mitwirkenden-Zeile, um eine Projektaufschlüsselung zu öff
 - Projektnamen sind klickbar und öffnen den Reiter **Fortschritt** des Projekts.
 
 ### Exporte
-- **CSV**: Die Heatmap-Tabelle exportieren
+- **Tabelle exportieren**: CSV oder Excel. Die Datei enthält die Tabelle der angezeigten Gruppierung, Mitwirkende oder Teams, mit dem angezeigten Kapazitätsmodus, den Teams und den Status. Tage behalten ihre Nachkommastellen. Die Excel-Datei fügt ein Blatt **Parameter** hinzu. Siehe [Berichte](reports.md#export-options)
 - **PNG**: Momentaufnahme des Berichts
 - **Drucken**: Drucken oder als PDF speichern
 
@@ -187,7 +187,7 @@ Jeder der drei Abschnitte enthält dieselben drei Listen.
 
 Ein Element, das im selben Zeitraum erstellt und geschlossen wurde, erscheint in beiden Listen, jeweils mit seinem eigenen Datum. Unter Geändert erscheint es nie: Geändert ist das, was nach Erstellungen und Abschlüssen übrig bleibt.
 
-Die Erstellung zählt als Statuswechsel. Ein CSV-Import oder ein Agent kann eine Aufgabe bereits erledigt oder eine Anfrage bereits abgelehnt anlegen. Ein solches Element steht am selben Tag unter Erstellt und unter Geschlossen, obwohl danach niemand seinen Status geändert hat.
+Die Erstellung zählt als Statuswechsel. Ein Import oder ein Agent kann eine Aufgabe bereits erledigt oder eine Anfrage bereits abgelehnt anlegen. Ein solches Element steht am selben Tag unter Erstellt und unter Geschlossen, obwohl danach niemand seinen Status geändert hat.
 
 Geschlossen bedeutet je nach Typ andere Status:
 
@@ -263,7 +263,7 @@ Die Geändert-Listen ergänzen am Ende die Spalte **Änderungen**.
 
 Beide Exporte enthalten die Referenz, das Unternehmen, die Herkunft eines Projekts, die Änderungen einer geänderten Zeile und das Datum des Ereignisses. Die geschlossenen Zeilen tragen zusätzlich den Erstellungstag.
 
-Beide Dateien sind in der Sprache der Oberfläche geschrieben: Titel, Spaltennamen, Status, Änderungen, Ja oder Nein und Tage. Die CSV übernimmt außerdem das Trennzeichen und das Dezimalzeichen dieser Sprache, wie unter [CSV-Dateien](csv-files.md) beschrieben.
+Beide Dateien sind in der Sprache der Oberfläche geschrieben: Titel, Spaltennamen, Status, Änderungen, Ja oder Nein und Tage. Die CSV übernimmt außerdem das Trennzeichen und das Dezimalzeichen dieser Sprache, wie unter [CSV- und Excel-Dateien](csv-files.md) beschrieben.
 
 ## Erfasste Zeit
 
@@ -293,7 +293,7 @@ Der Bericht zeigt nur Tage. Er zeigt nie die Notizen eines Eintrags.
 
 ### Exporte
 
-- **CSV**: eine Zeile pro Person und Monat, mit dem Team, der Person, dem Monat, den Projekttagen, den anderen Tagen und der Summe.
+- **Tabelle exportieren**: CSV oder Excel, eine Zeile pro Person und Monat, mit dem Team, der Person, dem Monat, den Projekttagen, den anderen Tagen und der Summe. Die Datei folgt dem Zeitraum und den Team- und Projektfiltern und zählt die Monate in derselben Zeitzone wie die Oberfläche. Die Excel-Datei fügt ein Blatt **Parameter** mit diesen Filtern hinzu. Siehe [Berichte](reports.md#export-options)
 - **PNG**: das Diagramm.
 
 ## Tipps

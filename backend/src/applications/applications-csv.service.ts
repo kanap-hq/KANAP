@@ -327,10 +327,10 @@ export class ApplicationsCsvService {
 
     // Re-parse the file to get owner columns
     const { parseString } = await import('@fast-csv/parse');
-    const { decodeCsv } = await import('../common/csv-sheet/decode');
-    const { csvSeparatorOf } = await import('../common/csv-sheet/read');
+    const { csvSeparatorOf, readImportText } = await import('../common/csv-sheet/read');
 
-    const text = decodeCsv(file.buffer).text;
+    // The CSV text of the file, or of the first sheet of a workbook, as the main import read it.
+    const text = readImportText(file.buffer).text;
     const rows: Record<string, string>[] = [];
 
     await new Promise<void>((resolve, reject) => {
@@ -421,10 +421,10 @@ export class ApplicationsCsvService {
 
     // Re-parse the file
     const { parseString } = await import('@fast-csv/parse');
-    const { decodeCsv } = await import('../common/csv-sheet/decode');
-    const { csvSeparatorOf } = await import('../common/csv-sheet/read');
+    const { csvSeparatorOf, readImportText } = await import('../common/csv-sheet/read');
 
-    const text = decodeCsv(file.buffer).text;
+    // The CSV text of the file, or of the first sheet of a workbook, as the main import read it.
+    const text = readImportText(file.buffer).text;
     const rows: Record<string, string>[] = [];
 
     await new Promise<void>((resolve, reject) => {

@@ -16,7 +16,7 @@ For portfolio-wide sequencing and roadmap work, use [Portfolio Planning](portfol
 - `portfolio_projects:reader`: open the list and view project workspaces
 - `portfolio_projects:contributor`: update the managed **Purpose** document, log time on the project (project-overhead entries and project task entries), and maintain linked records, links and files on the **Relations** tab (dependencies need `portfolio_projects:member`)
 - `portfolio_projects:member`: create projects and manage project data, status, team, relations, timeline, progress, tasks, scoring, comments, and decisions
-- `portfolio_projects:admin`: includes member capabilities and can also import/export CSV, save priority overrides and maintain other users' project-overhead time entries
+- `portfolio_projects:admin`: includes member capabilities and can also import and export, save priority overrides and maintain other users' project-overhead time entries
 - Knowledge viewing also requires Knowledge access
 - Creating or linking standalone knowledge also requires a Knowledge creation role
 
@@ -66,7 +66,7 @@ The project list is designed to answer two questions quickly: "what should I car
 **Bulk administration**
 
 - **New Project** is available with `portfolio_projects:member`
-- **Import CSV** and **Export CSV** are available to administrators
+- **Import** and **Export** are available to administrators
 
 Opening a project from the list preserves the current list context. The project workspace uses the same context for **Previous** and **Next** navigation, so you can review a filtered set without losing your place.
 
@@ -369,9 +369,13 @@ If you can open the project but do not have Knowledge viewing rights, KANAP will
 
 ## CSV import and export
 
-Project CSV tools are available from the list page to administrators.
+**Export** and **Import** are available from the list page to administrators.
 
 ### Export
+
+The file holds the projects the list shows, with its filters, its search and its sort. **Format**: **CSV** or **Excel (.xlsx)**, chosen in the dialog and remembered in your browser. The workbook holds the same columns as the CSV on one sheet, with numbers and dates as values Excel can sort and filter. The import reads either; in a workbook, it reads the first sheet. See [CSV and Excel files](csv-files.md).
+
+**Columns**: the file starts with `id` and `reference` (`PRJ-12`), then the columns follow the workspace, tab by tab. The import ignores `reference`.
 
 Exports support:
 

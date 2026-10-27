@@ -51,7 +51,7 @@ Wenn Sie auf **Neu** klicken, öffnet sich der vollständige Aufgaben-Arbeitsber
   - Sie benötigen mindestens `tasks:reader`, um Aufgaben anzuzeigen
   - Sie benötigen `tasks:member`, um Aufgaben zu erstellen und Aufgaben in eigenständigen/OPEX/Vertrags-/CAPEX-Kontexten zu bearbeiten
   - Sie benötigen `portfolio_projects:contributor`, um eine Aufgabe zu speichern, wenn der Zielkontext ein Projekt ist
-  - Sie benötigen `tasks:admin` für Massenlöschung, CSV-Import und CSV-Export
+  - Sie benötigen `tasks:admin` für Massenlöschung, Import und Export
 
 Wenn Sie Aufgaben nicht im Menü sehen, bitten Sie Ihren Administrator, Ihnen die entsprechenden Berechtigungen zu erteilen.
 
@@ -115,8 +115,8 @@ Das Aufgaben-Raster zeigt alle Aufgaben in Ihrer Organisation.
 
 **Aktionen**:
   - **Neu**: Eine eigenständige Aufgabe erstellen (erfordert `tasks:member`)
-  - **CSV importieren**: Eine CSV-Datei hochladen, um Aufgaben zu erstellen oder zu aktualisieren (erfordert `tasks:admin`)
-  - **CSV exportieren**: Aufgaben in eine CSV-Datei herunterladen (erfordert `tasks:admin`)
+  - **Importieren**: Eine CSV-Datei oder Excel-Arbeitsmappe hochladen, um Aufgaben zu erstellen oder zu aktualisieren (erfordert `tasks:admin`)
+  - **Exportieren**: Aufgaben in eine CSV-Datei oder Excel-Arbeitsmappe herunterladen (erfordert `tasks:admin`)
   - **Ausgewählte löschen**: Ausgewählte Aufgaben entfernen (erfordert `tasks:admin`). Eine Aufgabe, aus der eine Anfrage erstellt wurde, kann nicht gelöscht werden: Schließen Sie sie stattdessen. Vor dem Löschen nennt die Bestätigung die behaltenen Aufgaben mit dem Grund
 
 ---
@@ -464,18 +464,26 @@ Der Wert erscheint in der Metadatenleiste oben im Arbeitsbereich und als Spalte 
 
 ## CSV-Import/Export
 
-Verwalten Sie Aufgaben in großem Maßstab mit CSV-Import und -Export. Diese Funktion unterstützt Massenoperationen für das initiale Datenladen, Aufgabenmigrationen und Datenextraktion für Berichte.
+Verwalten Sie Aufgaben in großem Maßstab mit Import und Export. Diese Funktion unterstützt Massenoperationen für das initiale Datenladen, Aufgabenmigrationen und Datenextraktion für Berichte.
 
 ### Zugriff auf CSV-Funktionen
 
 Aus der Aufgabenliste:
-  - **CSV exportieren**: Aufgaben in eine CSV-Datei herunterladen
-  - **CSV importieren**: Eine CSV-Datei hochladen, um Aufgaben zu erstellen oder zu aktualisieren
+  - **Exportieren**: Aufgaben in eine CSV-Datei oder Excel-Arbeitsmappe herunterladen
+  - **Importieren**: Eine CSV-Datei oder Excel-Arbeitsmappe hochladen, um Aufgaben zu erstellen oder zu aktualisieren
   - **Vorlage herunterladen**: Eine leere CSV mit korrekten Spaltenköpfen erhalten (aus dem Import-Dialog)
 
 **Erforderliche Berechtigungen**: `tasks:admin` für Import-/Export-Operationen.
 
 ### Exportoptionen
+
+**Inhalt der Datei**: die Aufgaben, die die Liste zeigt, mit ihren Filtern, ihrer Suche und ihrer Sortierung. Der Dialog nennt die Zahl der Aufgaben in der Datei.
+
+**Format**: **CSV** oder **Excel (.xlsx)**, im Dialog gewählt und von Ihrem Browser gespeichert. Die Arbeitsmappe enthält dieselben Spalten wie die CSV-Datei auf einem Blatt, mit Zahlen und Datumsangaben als Werte, die Excel sortieren und filtern kann. Der Import liest beides; in einer Arbeitsmappe liest er das erste Blatt. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
+**Spalten**: Die Datei beginnt mit `id` und `reference` (`T-12`), dann folgen die Spalten dem Arbeitsbereich, Registerkarte für Registerkarte. Der Import ignoriert `reference`.
+
+**Klassifizierung von Projektaufgaben**: Eine Projektaufgabe ohne eigene Quelle, Kategorie, eigenen Strang oder eigenes Unternehmen zeigt in der Datei die ihres Projekts, wie in der Liste. Beim Import lässt ein Wert gleich dem des Projekts die Aufgabe ihrem Projekt folgen. Jeder andere Wert wird zum eigenen Wert der Aufgabe.
 
 Drei Exportmodi sind verfügbar:
 
@@ -489,7 +497,7 @@ Drei Exportmodi sind verfügbar:
 
 ### Import-Workflow
 
-1. **Datei vorbereiten**: Speichern Sie sie als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV-Dateien](csv-files.md).
+1. **Datei vorbereiten**: eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`). Speichern Sie eine CSV-Datei als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV- und Excel-Dateien](csv-files.md).
 
 2. **Importeinstellungen wählen**:
    - **Modus**:
@@ -613,7 +621,7 @@ Diese Felder sind im **Vollständigen Export** für Berichtszwecke enthalten, ab
 
 ### Einschränkungen
 
-  - **Maximal 4 Betrachter/Verantwortliche**: Aufgaben unterstützen bis zu 4 Betrachter-E-Mails und 4 Verantwortlichen-E-Mails per CSV
+  - **Maximal 4 Betrachter/Verantwortliche**: Aufgaben unterstützen bis zu 4 Betrachter-E-Mails und 4 Verantwortlichen-E-Mails in einer Datei
   - **Klassifizierung nur für eigenständige und Projektaufgaben**: Quelle, Kategorie, Stream und Unternehmen können auf eigenständigen und Projektaufgaben festgelegt werden (nicht auf OPEX-, Vertrags- oder CAPEX-Aufgaben)
   - **Phase erfordert Projekt**: Phasenzuweisung funktioniert nur für Projektaufgaben
   - **Anwendungs-/Asset-Verknüpfungen nicht in CSV**: Verwenden Sie die Eigenschaftsleiste des Arbeitsbereichs, um Aufgaben mit Anwendungen und Assets zu verknüpfen

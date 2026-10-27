@@ -51,7 +51,7 @@ When you click **New**, the full task workspace opens. To create a task:
   - You need at least `tasks:reader` to view tasks
   - You need `tasks:member` to create tasks and edit tasks in standalone/OPEX/Contract/CAPEX contexts
   - You need `portfolio_projects:contributor` to save a task when the target context is a project
-  - You need `tasks:admin` for bulk deletion, CSV import, and CSV export
+  - You need `tasks:admin` for bulk deletion, import, and export
 
 If you don't see Tasks in the menu, ask your administrator to grant you the appropriate permissions.
 
@@ -115,8 +115,8 @@ The Tasks grid shows all tasks across your organization.
 
 **Actions**:
   - **New**: Create a standalone task (requires `tasks:member`)
-  - **Import CSV**: Upload a CSV file to create or update tasks (requires `tasks:admin`)
-  - **Export CSV**: Download tasks to a CSV file (requires `tasks:admin`)
+  - **Import**: Upload a CSV file or an Excel workbook to create or update tasks (requires `tasks:admin`)
+  - **Export**: Download tasks to a CSV file or an Excel workbook (requires `tasks:admin`)
   - **Delete Selected**: Remove selected tasks (requires `tasks:admin`). A task a request was created from cannot be deleted: close it instead. Before anything is deleted, the confirmation lists the tasks kept, with the reason
 
 ---
@@ -464,18 +464,26 @@ The score appears in the metadata bar at the top of the workspace and as the **S
 
 ## CSV import/export
 
-Manage tasks at scale using CSV import and export. This feature supports bulk operations for initial data loading, task migrations, and data extraction for reporting.
+Manage tasks at scale using import and export. This feature supports bulk operations for initial data loading, task migrations, and data extraction for reporting.
 
 ### Accessing CSV features
 
 From the Tasks list:
-  - **Export CSV**: Download tasks to a CSV file
-  - **Import CSV**: Upload a CSV file to create or update tasks
+  - **Export**: Download tasks to a CSV file or an Excel workbook
+  - **Import**: Upload a CSV file or an Excel workbook to create or update tasks
   - **Download Template**: Get a blank CSV with correct headers (from the Import dialog)
 
 **Permissions required**: `tasks:admin` for import/export operations.
 
 ### Export options
+
+**What the file holds**: the tasks the list shows, with its filters, its search and its sort. The dialog says how many tasks the file will hold.
+
+**Format**: **CSV** or **Excel (.xlsx)**, chosen in the dialog and remembered in your browser. The workbook holds the same columns as the CSV on one sheet, with numbers and dates as values Excel can sort and filter. The import reads either; in a workbook, it reads the first sheet. See [CSV and Excel files](csv-files.md).
+
+**Columns**: the file starts with `id` and `reference` (`T-12`), then the columns follow the workspace, tab by tab. The import ignores `reference`.
+
+**Classification of project tasks**: a project task without its own source, category, stream or company shows its project's in the file, as in the list. On import, a value equal to the project's leaves the task following its project. Any other value becomes the task's own.
 
 Three export modes are available:
 
@@ -489,7 +497,7 @@ Three export modes are available:
 
 ### Import workflow
 
-1. **Prepare your file**: Save it as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV files](csv-files.md).
+1. **Prepare your file**: a CSV file or an Excel workbook (`.xlsx`). Save a CSV file as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV and Excel files](csv-files.md).
 
 2. **Choose import settings**:
    - **Mode**:
@@ -613,7 +621,7 @@ These fields are included in **Full Export** for reporting purposes but excluded
 
 ### Limitations
 
-  - **Maximum 4 viewers/owners**: Tasks support up to 4 viewer emails and 4 owner emails via CSV
+  - **Maximum 4 viewers/owners**: Tasks support up to 4 viewer emails and 4 owner emails in a file
   - **Classification for standalone and project tasks only**: Source, Category, Stream, and Company can be set on standalone and project tasks (not on OPEX, Contract, or CAPEX tasks)
   - **Phase requires project**: Phase assignment only works for project tasks
   - **Application/Asset links not in CSV**: Use the workspace Properties drawer to link tasks to applications and assets

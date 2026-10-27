@@ -107,7 +107,7 @@ La ligne épinglée en bas indique **Total (n contrats)**. Elle additionne les m
 ### Actions
 
 - **Nouveau** : créer un contrat (`contracts:member`)
-- **Importer CSV** et **Exporter CSV** : voir [Import/export CSV](#importexport-csv) (`contracts:admin`)
+- **Importer** et **Exporter** : voir [Import/export CSV](#importexport-csv) (`contracts:admin`)
 - **Exporter le registre** : le registre de conformité des contrats affichés par la liste (`contracts:admin`). Voir [Conformité](#conformite)
 - **Réglages** : le délai de décision de l'espace de travail (`contracts:admin`). Voir [Délai de décision](#delai-de-decision)
 - **Supprimer** : supprimer les contrats cochés (`contracts:admin`). Voir [Supprimer un contrat](#supprimer-un-contrat)
@@ -214,7 +214,7 @@ La pastille de l'onglet compte les exigences attendues notées absentes. Dans la
 
 Lier ou retirer une application ou un actif dans **Relations** met l'onglet à jour aussitôt. Il faut `contracts:member` pour saisir ; les lecteurs voient l'onglet en lecture seule.
 
-**Exporter le registre** (liste, `contracts:admin`) télécharge un CSV des contrats affichés par la liste, avec sa recherche, ses filtres et son périmètre : une ligne par contrat et par exigence, avec le fait qu'elle soit attendue ou non, la raison, l'état, la référence et la dernière mise à jour. Les en-têtes et les mots suivent la langue de votre écran.
+**Exporter le registre** (liste, `contracts:admin`) télécharge un fichier CSV ou Excel des contrats affichés par la liste, avec sa recherche, ses filtres, son périmètre et son ordre : une ligne par contrat et par exigence, avec le fait qu'elle soit attendue ou non, la raison, l'état, la référence et la dernière mise à jour. Les en-têtes et les mots suivent la langue de votre écran.
 
 ### Relations
 
@@ -317,7 +317,9 @@ Sur un contrat dans son premier terme sans décision attendue, **Non** s'appliqu
 
 ## Import/export CSV
 
-Gardez votre liste de contrats synchronisée avec d'autres outils grâce au CSV (`contracts:admin`).
+L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
+
+Gardez votre liste de contrats synchronisée avec d'autres outils grâce aux fichiers CSV ou aux classeurs Excel (`contracts:admin`).
 
 **Export** : télécharge les contrats que la liste affiche (ou, sur demande dans la fenêtre, tous les contrats) avec ces colonnes : `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Les dates calculées (fin du terme, dates limites, état) ne sont pas exportées.
 
@@ -332,7 +334,7 @@ Gardez votre liste de contrats synchronisée avec d'autres outils grâce au CSV 
 
 **Remarques** :
 
-- Voir [Fichiers CSV](csv-files.md) pour l'encodage, le séparateur, les formes de dates et de montants, et les deux étapes d'import
+- Voir [Fichiers CSV et Excel](csv-files.md) pour l'encodage, le séparateur, les formes de dates et de montants, et les deux étapes d'import
 - Les dates sont calculées à partir du début, de la durée, du préavis et de la reconduction ; elles ne sont jamais importées
 
 ---

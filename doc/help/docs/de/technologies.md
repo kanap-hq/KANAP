@@ -100,7 +100,7 @@ Wenn Schwachstellen verfolgt werden, öffnet die Spalte **Hersteller** auch die 
 **Aktionen**:
 
 - **Neue Technologie** (`infrastructure:member`).
-- **Verknüpfungen importieren** (`infrastructure:member`) und **Verknüpfungen exportieren**: Laden Sie die Verknüpfungen zwischen Technologien und Servern oder Anwendungen als CSV-Datei hoch oder herunter. Siehe [Verknüpfungen importieren und exportieren](#verknupfungen-importieren-und-exportieren).
+- **Verknüpfungen importieren** (`infrastructure:member`) und **Verknüpfungen exportieren**: Laden Sie die Verknüpfungen zwischen Technologien und Servern oder Anwendungen als CSV-Datei oder Excel-Arbeitsmappe hoch oder herunter. Siehe [Verknüpfungen importieren und exportieren](#verknupfungen-importieren-und-exportieren).
 - **Löschen** der ausgewählten Zeilen (`infrastructure:admin`). Die Bestätigung zählt, was mitgelöscht wird: Verknüpfungen zu Servern und Anwendungen, Verträge, Budgetzeilen, Projekte, Vorfälle und Dokumente.
 
 ---
@@ -246,7 +246,7 @@ Eine Anwendung erscheint auf zwei Wegen:
 
 **Hinzufügen** (`infrastructure:member`) öffnet eine Suche, in der Sie mehrere Anwendungen ankreuzen und in einem Schritt hinzufügen können. Sie werden mit unbekannter Version deklariert: Tragen Sie sie danach in jeder Zeile ein. Deaktivierte Anwendungen und Bereitstellungen zählen nicht.
 
-**CSV exportieren** lädt die Zeilen in der Sprache Ihres Bildschirms herunter.
+**Exportieren** lädt die Zeilen als CSV- oder Excel-Datei herunter, in der Sprache Ihres Bildschirms.
 
 ### Betrieb
 
@@ -314,12 +314,12 @@ Erfassen Sie die Technologie auf dem Server, auf dem sie installiert ist: dem Ho
 
 ## Verknüpfungen importieren und exportieren
 
-Die Technologieliste lädt Verknüpfungen in großer Zahl hoch und herunter, eine Verknüpfung pro Zeile einer CSV-Datei. Es gibt zwei Dateien:
+Die Technologieliste lädt Verknüpfungen in großer Zahl hoch und herunter, eine Verknüpfung pro Zeile einer CSV-Datei oder Excel-Arbeitsmappe. Es gibt zwei Dateien:
 
 - **Server und Technologien**: die auf jedem Server installierten Technologien.
 - **Anwendungen und Technologien**: die Technologien, die jede Anwendung deklariert. Anwendungen, die auf einem Server laufen, der eine Technologie trägt, werden aus den Servern abgeleitet; die Datei lässt sie weg.
 
-Klicken Sie in der Symbolleiste auf **Verknüpfungen importieren** oder **Verknüpfungen exportieren** und wählen Sie dann die Datei. Der Export bietet die Daten oder eine leere Vorlage an. Es gelten die allgemeinen Regeln für CSV-Dateien: Kodierung, Trennzeichen, Ja und Nein in vier Sprachen, höchstens 20.000 Zeilen. Siehe [CSV-Dateien](csv-files.md).
+Klicken Sie in der Symbolleiste auf **Verknüpfungen importieren** oder **Verknüpfungen exportieren** und wählen Sie dann die Datei. Der Export bietet die Daten als CSV oder Excel oder eine leere CSV-Vorlage an. Es gelten die allgemeinen Regeln für Importdateien: Kodierung, Trennzeichen, Ja und Nein in vier Sprachen, höchstens 20.000 Zeilen. Siehe [CSV- und Excel-Dateien](csv-files.md).
 
 **Berechtigungen**:
 

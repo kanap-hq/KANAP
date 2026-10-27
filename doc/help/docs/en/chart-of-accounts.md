@@ -38,7 +38,7 @@ OPEX/CAPEX lines -> Account selection (filtered to FR-2024 accounts only)
 - Permissions:
   - View: `accounts:reader`
   - Create/edit accounts and CoAs: `accounts:member`
-  - Import CSV, Export CSV, Delete: `accounts:admin`
+  - Import, Export, Delete: `accounts:admin`
 
 ## Working with the list
 
@@ -105,8 +105,8 @@ The grid shows accounts for the selected CoA only.
 
 **Actions** (in the page header):
 - **New account** (`accounts:member`): Opens a new account form with the selected CoA already chosen.
-- **Import CSV** (`accounts:admin`): Import accounts into the selected CoA.
-- **Export CSV** (`accounts:admin`): Export accounts from the selected CoA.
+- **Import** (`accounts:admin`): Import accounts into the selected CoA.
+- **Export** (`accounts:admin`): Export accounts from the selected CoA.
 - **Delete selected** (`accounts:admin`): Delete selected account rows. Select rows using the checkbox column (visible to admins). An account used by budget lines cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the accounts kept, with the reason.
 
 All row cells are clickable links to the account workspace. You can right-click or Ctrl+click to open in a new tab.
@@ -160,13 +160,13 @@ The **Consolidation** section holds one field, **Consolidation account**. It is 
 
 Click **New** in the chip bar, or **New chart** in the Manage charts dialog. You can create a CoA in two ways:
 
-1. **An empty chart**: add accounts later, one by one or with a CSV import.
+1. **An empty chart**: add accounts later, one by one or with an import.
 2. **A template**: load a pre-configured account set maintained by platform admins.
 
 **Create dialog fields**:
 - **Start from**: **An empty chart** or **A template**.
 - **Template** (template mode only): Select a template from the list. Each entry shows its name, its countries and its version. Choosing a template fills in the name and the code, which you can change.
-- **Code** (required): A short, stable identifier used in CSV files and links.
+- **Code** (required): A short, stable identifier used in imported and exported files and in links.
 - **Name** (required): A descriptive name for the CoA.
 - **Used for**: **One country** or **All countries**. A global template always creates an **All countries** chart.
 - **Country** (one country only): Select a country from the list.
@@ -174,7 +174,7 @@ Click **New** in the chip bar, or **New chart** in the Manage charts dialog. You
 
 In template mode, click **Check template** before creating to see how many accounts will be added and how many updated. Then click **Create**.
 
-Once created, the new chart is selected on the page: **Import CSV** loads into it.
+Once created, the new chart is selected on the page: **Import** loads into it.
 
 A new chart holds no role except the country default you tick here. To give it another role, use [Manage charts](#the-manage-charts-dialog).
 
@@ -349,8 +349,8 @@ All three local accounts map to the same consolidation account `6200`, enabling 
 **Option 1: Templates (recommended)**
 All built-in templates include IFRS consolidation mappings on every account. Load any country template and the consolidation columns are already filled in. A new workspace already has the IFRS chart as its consolidation chart. See [Available templates](#available-templates) for the full list.
 
-**Option 2: CSV import**
-When importing accounts, include the consolidation fields in your CSV:
+**Option 2: Import**
+When importing accounts, include the consolidation fields in your file:
 
 ```
 coa_code;account_number;account_name;consolidation_account_number;consolidation_account_name;consolidation_account_description
@@ -402,12 +402,12 @@ This dual view lets you satisfy both local compliance requirements and group rep
 **How they work**:
   - Companies WITHOUT a CoA can use legacy accounts
   - Companies WITH a CoA cannot use legacy accounts. They're filtered out automatically
-  - Legacy accounts can still be migrated via CSV (`coa_code`) and reassignment workflows
+  - Legacy accounts can still be migrated with an import (`coa_code`) and reassignment workflows
 
 **Migration path**:
   1. Create or load Charts of Accounts for your companies
   2. Assign CoAs to companies (in Company Overview tab)
-  3. Assign `coa_id` to your legacy accounts (via CSV import with `coa_code` or bulk edit)
+  3. Assign `coa_id` to your legacy accounts (with an import that carries `coa_code`, or bulk edit)
   4. Update existing OPEX/CAPEX lines that show "obsolete account" warnings
 
 **Tip**: You don't have to migrate everything at once. Companies without a CoA continue to work with legacy accounts, allowing gradual adoption.
@@ -460,16 +460,18 @@ Deletion is immediate and irreversible. The tenant record remains for auditabili
 
 ## CSV import/export
 
+The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
+
 ### Charts of Accounts
 
-You can export a list of your CoAs (with metadata like code, name, country, default status) but not import CoAs directly via CSV. Create CoAs through the UI or load them from templates.
+You can export a list of your CoAs (with metadata like code, name, country, default status) but not import CoAs from a file. Create CoAs through the UI or load them from templates.
 
 ### Accounts (global endpoint)
 
-The global `/accounts` CSV includes a `coa_code` column to identify which CoA each account belongs to. **Export CSV** and **Import CSV** use it when no CoA is selected on the page.
+The global `/accounts` file includes a `coa_code` column to identify which CoA each account belongs to. **Export** and **Import** use it when no CoA is selected on the page.
 
-  - **Export CSV**: the accounts the list shows (or, on request in the dialog, all accounts) with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, status and **Used for**
-  - **Import CSV**: **Download template** in the dialog gives a file with the headers only. Start with **Preflight check** to validate the structure, the encoding, the required fields and the duplicates, then **Load** to apply the inserts and the updates
+  - **Export**: the accounts the list shows (or, on request in the dialog, all accounts) with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, status and **Used for**
+  - **Import**: **Download template** in the dialog gives a file with the headers only. Start with **Preflight check** to validate the structure, the encoding, the required fields and the duplicates, then **Load** to apply the inserts and the updates
   - **Matching**: by `(coa_code, account_number)` within your workspace
   - **Required columns**: `coa_code`, `account_number`, `account_name`. All rows of one file must carry the same `coa_code`
   - **Optional columns**: `native_name`, `description`, the consolidation columns, `status`, `nature`. A file can leave them out: the accounts it updates keep their stored values, and new accounts take the defaults (empty, enabled, **OPEX and CAPEX**). A column present in the file applies its cells, empty ones included
@@ -482,10 +484,10 @@ coa_code;account_number;account_name;native_name;description;consolidation_accou
 
 ### Accounts (CoA-scoped)
 
-From the Charts of Accounts page, **Import CSV** and **Export CSV** are automatically scoped to the currently selected CoA.
+From the Charts of Accounts page, **Import** and **Export** are automatically scoped to the currently selected CoA.
 
-  - **Export CSV**: accounts from this CoA (no `coa_code` column needed)
-  - **Import CSV**: accounts are inserted and updated in this CoA automatically. The dialog title names the chart, for example **Import accounts into FR-PCG**
+  - **Export**: accounts from this CoA (no `coa_code` column needed)
+  - **Import**: accounts are inserted and updated in this CoA automatically. The dialog title names the chart, for example **Import accounts into FR-PCG**
   - Only `account_number` and `account_name` are required. The other columns are optional, as in the global file
 
 **CSV schema** (CoA-scoped; shown here with semicolons):
@@ -494,7 +496,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 ```
 
 **Notes**:
-  - See [CSV files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
+  - See [CSV and Excel files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
   - The `coa_code` must match an existing Chart of Accounts in your workspace
   - Account numbers should be unique within a CoA
   - `account_number` and `consolidation_account_number`: whole numbers of at most 15 digits. A longer number is refused for that row. Leading zeros are dropped (`06156` is stored as `6156`): the **Preflight check** lists these rows as warnings, and the file still loads
@@ -510,7 +512,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - **Migrate gradually**: You don't have to convert everything at once. Companies without CoAs continue to work with legacy accounts.
   - **Fix obsolete accounts**: When you see warnings, update the account to match the company's current CoA. This keeps your data clean for reporting.
   - **Disable over delete**: Disabling accounts preserves history. Only delete accounts that were created by mistake and have never been used.
-  - **CSV imports are additive**: Importing accounts adds new ones and updates existing ones (matched by coa_code + account_number). It doesn't delete accounts not in the file.
+  - **Imports are additive**: Importing accounts adds new ones and updates existing ones (matched by coa_code + account_number). It doesn't delete accounts not in the file.
   - **Consolidation accounts are key for groups**: If you operate in multiple countries, set up consolidation mappings from day one. This makes group-level reporting effortless and keeps local users working with familiar accounts.
   - **IFRS as consolidation standard**: Most European groups use IFRS for consolidation. All built-in templates already map to the same 14 IFRS consolidation accounts, so group reporting works across countries with no extra setup.
   - **Deep linking**: The URL preserves your selected CoA, sort order, search text, and filters. Share or bookmark a link to return to exactly the same view.
@@ -534,9 +536,9 @@ You have 50 accounts and 5 companies, all set up before Charts of Accounts exist
 
 **Migration steps**:
   1. Create a CoA (e.g., `US-GAAP`)
-  2. Export your accounts to CSV
+  2. Export your accounts
   3. Add a `coa_code` column (e.g., `US-GAAP`) to all rows
-  4. Import the updated CSV (accounts now belong to the CoA)
+  4. Import the updated file (accounts now belong to the CoA)
   5. Assign the CoA to your companies
   6. Edit any OPEX/CAPEX lines showing "obsolete account" warnings
 

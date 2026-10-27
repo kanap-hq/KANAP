@@ -14,7 +14,7 @@ Las Solicitudes del portafolio son la capa de recepción para el trabajo propues
 | `portfolio_requests:reader` | Abrir la lista de solicitudes y ver los espacios de trabajo de solicitud |
 | `portfolio_requests:contributor` | Vincular y desvincular líneas presupuestarias, aplicaciones, activos y procesos de negocio en la pestaña **Relaciones** |
 | `portfolio_requests:member` | Crear solicitudes, actualizar datos de solicitud, editar los documentos gestionados (Propósito, Riesgos y mitigaciones), mantener equipo y relaciones, añadir comentarios y decisiones, cambiar el estado, enviar recomendaciones de análisis y editar la evaluación |
-| `portfolio_requests:admin` | Eliminar solicitudes, usar importación/exportación CSV y guardar sobrescrituras de prioridad |
+| `portfolio_requests:admin` | Eliminar solicitudes, usar la importación y exportación y guardar sobrescrituras de prioridad |
 
 Convertir una solicitud en proyecto también requiere `portfolio_projects:member`.
 
@@ -65,7 +65,7 @@ La cuadrícula estándar resalta los campos que importan durante la recepción y
 ### Acciones de la lista
 
 - **Nueva solicitud** está disponible con `portfolio_requests:member`.
-- **Importar CSV** y **Exportar CSV** están disponibles para los administradores de solicitudes.
+- **Importar** y **Exportar** están disponibles para los administradores de solicitudes.
 
 ## El espacio de trabajo de Solicitud
 
@@ -341,7 +341,11 @@ En otras palabras, la conversión no borra la solicitud. La promueve.
 
 ## Importación y exportación CSV
 
-La importación y exportación CSV están disponibles para `portfolio_requests:admin`.
+**Exportar** e **Importar** están disponibles para `portfolio_requests:admin`.
+
+La exportación contiene las solicitudes que muestra la lista, con sus filtros, su búsqueda y su orden. **Formato**: **CSV** o **Excel (.xlsx)**, elegido en el diálogo y recordado por su navegador. El libro contiene las mismas columnas que el CSV en una hoja, con los números y las fechas como valores que Excel puede ordenar y filtrar. La importación lee los dos; en un libro, lee la primera hoja. Consulte [Archivos CSV y Excel](csv-files.md).
+
+**Columnas**: el archivo empieza por `id` y `reference` (`REQ-12`), y después las columnas siguen el espacio de trabajo, pestaña por pestaña. La importación ignora `reference`.
 
 Use exportar cuando necesite informes del portafolio o enriquecimiento sin conexión. Use importar cuando necesite crear o actualizar solicitudes en masa. Debido a que la importación puede alterar registros de recepción a escala, está intencionadamente reservada para administradores.
 

@@ -14,7 +14,7 @@ Portfolio-Anfragen sind die Erfassungsebene für vorgeschlagene Arbeit. Eine Anf
 | `portfolio_requests:reader` | Die Anfragenliste öffnen und Anfragen-Arbeitsbereiche anzeigen |
 | `portfolio_requests:contributor` | Budgetzeilen, Anwendungen, Assets und Geschäftsprozesse im Reiter **Beziehungen** verknüpfen und lösen |
 | `portfolio_requests:member` | Anfragen erstellen, Anfragendaten aktualisieren, die verwalteten Dokumente (Zweck, Risiken & Mitigationen) bearbeiten, Team und Beziehungen pflegen, Kommentare und Entscheidungen hinzufügen, Status ändern, Analyseempfehlungen einreichen und Bewertung bearbeiten |
-| `portfolio_requests:admin` | Anfragen löschen, CSV-Import/-Export verwenden und Prioritäts-Überschreibungen speichern |
+| `portfolio_requests:admin` | Anfragen löschen, Import und Export verwenden und Prioritäts-Überschreibungen speichern |
 
 Die Umwandlung einer Anfrage in ein Projekt erfordert zusätzlich `portfolio_projects:member`.
 
@@ -65,7 +65,7 @@ Das Standardraster hebt die Felder hervor, die während der Erfassung und Überp
 ### Listenaktionen
 
 - **Neue Anfrage** ist mit `portfolio_requests:member` verfügbar.
-- **CSV importieren** und **CSV exportieren** sind für Anfragenadministratoren verfügbar.
+- **Importieren** und **Exportieren** sind für Anfragenadministratoren verfügbar.
 
 ## Der Anfragen-Arbeitsbereich
 
@@ -341,7 +341,11 @@ Mit anderen Worten, die Konvertierung löscht die Anfrage nicht. Sie befördert 
 
 ## CSV-Import und -Export
 
-CSV-Import und -Export sind für `portfolio_requests:admin` verfügbar.
+**Exportieren** und **Importieren** sind für `portfolio_requests:admin` verfügbar.
+
+Der Export enthält die Anfragen, die die Liste zeigt, mit ihren Filtern, ihrer Suche und ihrer Sortierung. **Format**: **CSV** oder **Excel (.xlsx)**, im Dialog gewählt und von Ihrem Browser gespeichert. Die Arbeitsmappe enthält dieselben Spalten wie die CSV-Datei auf einem Blatt, mit Zahlen und Datumsangaben als Werte, die Excel sortieren und filtern kann. Der Import liest beides; in einer Arbeitsmappe liest er das erste Blatt. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
+**Spalten**: Die Datei beginnt mit `id` und `reference` (`REQ-12`), dann folgen die Spalten dem Arbeitsbereich, Registerkarte für Registerkarte. Der Import ignoriert `reference`.
 
 Verwenden Sie den Export, wenn Sie Portfolio-Berichterstattung oder Offline-Anreicherung benötigen. Verwenden Sie den Import, wenn Sie Anfragen in großen Mengen erstellen oder aktualisieren müssen. Da der Import Erfassungsdatensätze in großem Maßstab ändern kann, ist er absichtlich Administratoren vorbehalten.
 

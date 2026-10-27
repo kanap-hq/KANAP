@@ -49,7 +49,7 @@ Una línea por entidad se lee así: **14 creadas · 9 cerradas · 52 abiertas (+
 - **Abiertas**: elementos abiertos ahora mismo, pase lo que pase durante el periodo. Esta cifra es un enlace a la lista correspondiente.
 - **(+5)**: la variación neta, visible solo cuando no es cero. Es creadas, más reabiertas, menos cerradas. Los elementos reabiertos son los que volvieron de un estado cerrado a uno abierto. Pase el cursor sobre la cifra para ver la fórmula.
 
-Creadas y cerradas proceden del historial de cambios, así que cubren todas las formas de escribir un elemento: la aplicación, una importación CSV y los agentes. Ningún filtro de lista reproduce ese historial, por eso esas dos cifras abren el **Balance del periodo** en los mismos días. Sus listas de creadas y cerradas muestran exactamente los elementos contados aquí. Un cero no es un enlace.
+Creadas y cerradas proceden del historial de cambios, así que cubren todas las formas de escribir un elemento: la aplicación, una importación y los agentes. Ningún filtro de lista reproduce ese historial, por eso esas dos cifras abren el **Balance del periodo** en los mismos días. Sus listas de creadas y cerradas muestran exactamente los elementos contados aquí. Un cero no es un enlace.
 
 ### Qué tareas cuentan
 
@@ -167,7 +167,7 @@ Haga clic en una fila de colaborador para abrir un desglose por proyecto:
 - Los nombres de proyecto son clicables y abren la pestaña **Progreso** del proyecto.
 
 ### Exportaciones
-- **CSV**: Exportar la tabla del mapa de calor
+- **Exportar la tabla**: CSV o Excel. El archivo contiene la tabla de la agrupación en pantalla, colaboradores o equipos, con el modo de capacidad, los equipos y los estados en pantalla. Los días conservan sus decimales. El archivo Excel añade una hoja **Parámetros**. Consulte [Informes](reports.md#export-options)
 - **PNG**: Captura del informe
 - **Imprimir**: Imprimir o guardar como PDF
 
@@ -187,7 +187,7 @@ Cada una de las tres secciones contiene las mismas tres listas.
 
 Un elemento creado y cerrado dentro del mismo periodo aparece en ambas listas, con su propia fecha en cada una. Nunca aparece en Modificaciones: Modificaciones es lo que queda una vez contabilizadas las creaciones y los cierres.
 
-La creación cuenta como un cambio de estado. Una importación CSV o un agente puede crear una tarea ya terminada, o una solicitud ya rechazada. Ese elemento figura como creado y como cerrado el mismo día, aunque nadie haya cambiado su estado después.
+La creación cuenta como un cambio de estado. Una importación o un agente puede crear una tarea ya terminada, o una solicitud ya rechazada. Ese elemento figura como creado y como cerrado el mismo día, aunque nadie haya cambiado su estado después.
 
 El cierre se apoya en estados distintos según el tipo:
 
@@ -263,7 +263,7 @@ Las listas de modificaciones añaden la columna **Cambios** al final.
 
 Ambas exportaciones llevan la referencia, la empresa, la procedencia de un proyecto, los cambios de una fila modificada y la fecha del evento. Las filas de cierre llevan además el día de creación.
 
-Ambos archivos se escriben en el idioma de la pantalla: títulos, nombres de columna, estados, cambios, sí o no y días. El CSV toma además el separador y la marca decimal de ese idioma, como se describe en [Archivos CSV](csv-files.md).
+Ambos archivos se escriben en el idioma de la pantalla: títulos, nombres de columna, estados, cambios, sí o no y días. El CSV toma además el separador y la marca decimal de ese idioma, como se describe en [Archivos CSV y Excel](csv-files.md).
 
 ## Tiempo registrado
 
@@ -293,7 +293,7 @@ El informe solo muestra días. Nunca muestra las notas de un registro.
 
 ### Exportaciones
 
-- **CSV**: una línea por persona y mes, con el equipo, la persona, el mes, los días de proyecto, los otros días y el total.
+- **Exportar la tabla**: CSV o Excel, una línea por persona y mes, con el equipo, la persona, el mes, los días de proyecto, los otros días y el total. El archivo sigue el periodo y los filtros de equipo y de proyecto, y cuenta los meses en la misma zona horaria que la pantalla. El archivo Excel añade una hoja **Parámetros** con estos filtros. Consulte [Informes](reports.md#export-options)
 - **PNG**: el gráfico.
 
 ## Consejos

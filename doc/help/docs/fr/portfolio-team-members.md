@@ -81,7 +81,7 @@ Les catalogues sont en général plus longs que les équipes, c'est pourquoi les
 
 **Agir sur ce que vous voyez** :
 - Cliquez sur un contributeur pour ouvrir son onglet **Compétences**, où les niveaux se modifient
-- **Exporter**, à côté d'**Ajouter un contributeur** en haut de la page, télécharge ce qui est affiché dans un fichier `.xlsx`, disposé dans le même sens, les niveaux en chiffres. Utile pour les revues de compétences et les plans de formation
+- **Exporter**, à côté d'**Ajouter un contributeur** en haut de la page, télécharge ce qui est affiché dans un fichier CSV ou Excel, disposé dans le même sens, les niveaux en chiffres, avec les comptes de couverture en dernière ligne. Le fichier Excel ajoute une feuille **Paramètres** avec les filtres. Utile pour les revues de compétences et les plans de formation
 
 ---
 

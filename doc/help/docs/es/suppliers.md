@@ -40,8 +40,8 @@ Cada celda de una fila es clicable y abre la página de ese proveedor.
 
 **Acciones**:
 - **Nuevo**: Crear un nuevo proveedor (requiere `suppliers:member`)
-- **Importar CSV**: Importación masiva de proveedores (requiere `suppliers:admin`)
-- **Exportar CSV**: Exportar la lista a CSV (requiere `suppliers:admin`)
+- **Importar**: Importación masiva de proveedores (requiere `suppliers:admin`)
+- **Exportar**: Exportar la lista a un archivo CSV o un libro de Excel (requiere `suppliers:admin`)
 - **Eliminar seleccionados**: Eliminar proveedores seleccionados (requiere `suppliers:admin`)
 
 ---
@@ -111,7 +111,9 @@ Haga clic en **Nuevo** en la lista. Rellene el nombre (obligatorio), el ID de pr
 
 ## Importación/exportación CSV
 
-**Exportar CSV** descarga los proveedores que muestra la lista, con su búsqueda, sus filtros y su orden. Elija **Todo el registro** en el diálogo para descargar todos los proveedores, activados y desactivados. El diálogo se cierra una vez descargado el archivo. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados. Indica los valores aceptados.
+La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
+
+**Exportar** descarga los proveedores que muestra la lista, con su búsqueda, sus filtros y su orden. Elija **Todo el registro** en el diálogo para descargar todos los proveedores, activados y desactivados. El diálogo se cierra una vez descargado el archivo. **Importar** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados. Indica los valores aceptados.
 
 Las columnas:
 
@@ -136,7 +138,7 @@ Las columnas:
 - `disabled_at` fija el fin de validez, y el estado se deduce de él. Un estado que contradice la fecha se rechaza. Un archivo sin la columna `disabled_at` se sigue importando: el estado solo fija entonces el ciclo de vida
 
 **Notas**:
-- Consulte [Archivos CSV](csv-files.md) para la codificación, el separador y los dos pasos de importación
+- Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador y los dos pasos de importación
 - Importe los proveedores antes que las aplicaciones o los contratos que los referencian. El archivo de presupuesto también crea un proveedor que falta cuando **Crear los proveedores que faltan** está marcada. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md)
 
 ---

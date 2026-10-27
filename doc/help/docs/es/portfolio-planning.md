@@ -89,6 +89,7 @@ Muestra mapas de calor de ocupación semanal:
 - Vista por equipo: una fila por equipo, con columnas de semana ISO
 - Las etiquetas de equipo se muestran como celdas combinadas de múltiples filas en la vista por colaborador para evitar repetición
 - Cada celda muestra la ocupación semanal redondeada (%) con intensidad de color de acento basada en la carga
+- **Exportar la tabla** ofrece **CSV** y **Excel (.xlsx)** para el escenario en pantalla. El CSV contiene la vista en pantalla, colaboradores o equipos. El archivo Excel contiene las dos, una hoja cada una, con la ocupación en porcentajes, y una hoja **Parámetros**. **Exportar la ocupación a PNG** guarda el mapa de calor como imagen
 
 ### Comportamiento de la vista previa Gantt
 

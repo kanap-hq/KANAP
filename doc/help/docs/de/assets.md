@@ -82,7 +82,7 @@ Die Sortierung nach **Zu prüfende Schwachstellen** ordnet die Assets nach ihren
 
 **Aktionen**:
 - **Asset hinzufügen**: öffnet ein Menü (`infrastructure:member`). **Asset hinzufügen** legt ein Asset an; **Cluster hinzufügen** legt eines mit bereits eingeschaltetem Schalter **Cluster** an
-- **CSV importieren** / **CSV exportieren**: Massenoperationen (`infrastructure:admin`). Der Export enthält die Assets, die die Liste zeigt. Siehe [Exportoptionen](#export-options)
+- **Importieren** / **Exportieren**: Massenoperationen als CSV oder Excel (`infrastructure:admin`). Der Export enthält die Assets, die die Liste zeigt. Siehe [Exportoptionen](#export-options)
 - **Asset löschen** (ausgewählte Zeilen): Ausgewählte Assets entfernen (`infrastructure:admin`). Ein Asset, das noch Anwendungen zugeordnet oder mit Verbindungen verknüpft ist, kann nicht gelöscht werden. Die Ablehnung nennt die Anwendungen und bis zu fünf Verbindungen mit Referenz und Name. Entfernen Sie das Asset zuerst daraus. Eine Zuordnung, die das Asset nur von seinem Cluster erbt, hindert nicht daran. Vor dem Löschen nennt die Bestätigung die behaltenen Assets mit dem Grund, und was die anderen mitnehmen (siehe [Einen Cluster oder ein Mitglied löschen](#deleting-a-cluster-or-a-member))
 
 ---
@@ -380,19 +380,23 @@ Orange Daten verlangen Aufmerksamkeit: ein Vertrag, dessen Verlängerungsentsche
 
 ## CSV-Import/Export
 
-Pflegen Sie Ihr Asset-Inventar im großen Maßstab mit CSV-Import und -Export. Diese Funktion unterstützt Massenoperationen für das initiale Datenladen, periodische Updates aus externen Systemen und Datenextraktion für Berichte.
+Pflegen Sie Ihr Asset-Inventar im großen Maßstab mit Import und Export. Diese Funktion unterstützt Massenoperationen für das initiale Datenladen, periodische Updates aus externen Systemen und Datenextraktion für Berichte.
 
 ### Zugriff auf CSV-Funktionen
 
 Aus der Asset-Liste:
-- **CSV exportieren**: Assets in eine CSV-Datei herunterladen
-- **CSV importieren**: Eine CSV-Datei hochladen, um Assets zu erstellen oder zu aktualisieren
+- **Exportieren**: Assets in eine CSV-Datei oder Excel-Arbeitsmappe herunterladen
+- **Importieren**: Eine CSV-Datei oder Excel-Arbeitsmappe hochladen, um Assets zu erstellen oder zu aktualisieren
 
 **Erforderliche Berechtigungen**: `infrastructure:admin` für Import-/Export-Operationen.
 
 ### Exportoptionen { #export-options }
 
-**Inhalt der Datei**: die Assets, die die Liste zeigt. Der Export folgt den Spaltenfiltern und der Schnellsuche. Der Dialog nennt die Zahl der Assets in der Datei. Sie können auch das ganze Verzeichnis exportieren.
+**Inhalt der Datei**: die Assets, die die Liste zeigt. Der Export folgt den Spaltenfiltern und der Schnellsuche. Der Dialog nennt die Zahl der Assets in der Datei. Sie können auch das ganze Verzeichnis exportieren. Die Zeilen behalten die Reihenfolge der Liste.
+
+**Format**: **CSV** oder **Excel (.xlsx)**, im Dialog gewählt und von Ihrem Browser gespeichert. Die Arbeitsmappe enthält dieselben Spalten wie die CSV-Datei auf einem Blatt, mit Zahlen und Datumsangaben als Werte, die Excel sortieren und filtern kann. Der Import liest beides; in einer Arbeitsmappe liest er das erste Blatt. Siehe [CSV- und Excel-Dateien](csv-files.md).
+
+**Spalten**: Die Datei beginnt mit `id` und `reference` (`AST-12`), dann folgen die Spalten dem Arbeitsbereich, Registerkarte für Registerkarte. Der Import ignoriert `reference`.
 
 Die Spalten für Asset-Typ, Lebenszyklus, Domäne, Administrationszone und IP-Adresstyp enthalten die Bezeichnungen des Bildschirms, in der Sprache des Bildschirms.
 
@@ -406,7 +410,7 @@ Die Spalten für Asset-Typ, Lebenszyklus, Domäne, Administrationszone und IP-Ad
 
 ### Import-Workflow
 
-1. **Datei vorbereiten**: Speichern Sie sie als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV-Dateien](csv-files.md).
+1. **Datei vorbereiten**: eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`). Speichern Sie eine CSV-Datei als UTF-8. Kommas und Semikolons funktionieren beide, ebenso eine von Excel als einfache CSV gespeicherte Datei (Windows-1252). Laden Sie eine Vorlage herunter, um korrekte Spaltenköpfe sicherzustellen. Trennzeichen, Beträge, Datumsangaben und Ja oder Nein jeder Sprache stehen unter [CSV- und Excel-Dateien](csv-files.md).
 
 2. **Importeinstellungen wählen**:
    - **Modus**:
@@ -428,7 +432,7 @@ Preflight meldet einen Fehler in der Zeile, und nichts wird geladen, bei:
 - einem Hostnamen, der die Regel des Reiters Netzwerk verletzt;
 - einer fehlerhaften IP-Adresse;
 - einem Asset-Typ, einer Domäne, einem Lebenszyklus, einer Administrationszone oder einem IP-Adresstyp, der zu nichts in **IT-Landschaft > Einstellungen** passt;
-- einem Datum, das es im Kalender nicht gibt, etwa `31/02/2025`, oder einem in Worten geschriebenen Datum. Die zulässigen Datumsformen stehen unter [CSV-Dateien](csv-files.md);
+- einem Datum, das es im Kalender nicht gibt, etwa `31/02/2025`, oder einem in Worten geschriebenen Datum. Die zulässigen Datumsformen stehen unter [CSV- und Excel-Dateien](csv-files.md);
 - einem belegten IP-Adressplatz, während ein früherer leer ist, zum Beispiel `ip_2_address` ohne `ip_1_address`;
 - einem Namen oder FQDN, den bereits ein anderes Asset hat.
 
@@ -478,7 +482,7 @@ Für Felder, die in **IT-Landschaft > Einstellungen** konfiguriert sind, können
 | Administrationszone (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (Vertrauenskern)`, `Tier 1 (Server und Anwendungen)` |
 | IP-Adresstyp | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
-Das System normalisiert Werte automatisch beim Import, sodass `Virtual Machine`, `virtual machine` und `vm` alle zum gleichen Asset-Typ aufgelöst werden. Ein Wert, der auf mehrere Einträge passt, wird abgelehnt statt erraten. Der CSV-Export schreibt für diese Spalten Namen, in der Sprache des Bildschirms, sodass eine exportierte Datei unverändert wieder importiert werden kann.
+Das System normalisiert Werte automatisch beim Import, sodass `Virtual Machine`, `virtual machine` und `vm` alle zum gleichen Asset-Typ aufgelöst werden. Ein Wert, der auf mehrere Einträge passt, wird abgelehnt statt erraten. Der Export schreibt für diese Spalten Namen, in der Sprache des Bildschirms, sodass eine exportierte Datei unverändert wieder importiert werden kann.
 
 **Betriebssystem**: Die Spalte `operating_system` enthält den Namen der Technologie, gefolgt von ihrer Version, so wie der Export sie schreibt (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Beim Import sucht KANAP die Technologie unter Ihren Technologien, dann im Katalog, und erfasst die Version. Eine Technologie oder Version, die es nicht findet, wird angelegt: Prüfen Sie also vorher die Schreibweise. Der Wert wird zum Betriebssystem des Servers.
 
@@ -507,7 +511,7 @@ Einige Felder werden berechnet und können nicht importiert werden:
 
 ### Einschränkungen
 
-- **Maximal 4 IP-Adressen**: Assets unterstützen bis zu 4 IP-Adresseinträge per CSV
+- **Maximal 4 IP-Adressen**: Assets unterstützen bis zu 4 IP-Adresseinträge in einer Datei
 - **Standort erforderlich**: Jedes Asset muss den Code eines vorhandenen Standorts haben
 - **Verknüpfungen nicht enthalten**: Anwendungszuweisungen, Verbindungen, Finanzverknüpfungen, Projekte, Aufgaben und Anhänge müssen im Arbeitsbereich verwaltet werden
 

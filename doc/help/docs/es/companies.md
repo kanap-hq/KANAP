@@ -63,8 +63,8 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 **Acciones**:
 
 - **Nuevo**: crear una empresa (requiere `companies:member`)
-- **Importar CSV**: importación masiva de empresas desde un archivo CSV (requiere `companies:admin`)
-- **Exportar CSV**: exportar empresas y sus métricas a CSV (requiere `companies:admin`)
+- **Importar**: importación masiva de empresas desde un archivo CSV o un libro de Excel (requiere `companies:admin`)
+- **Exportar**: exportar empresas y sus métricas a un archivo CSV o un libro de Excel (requiere `companies:admin`)
 - **Eliminar seleccionadas**: eliminar una o más empresas seleccionadas (requiere `companies:admin`; solo es posible si nada referencia a la empresa)
 
 **Contexto de búsqueda**: cuando abre un espacio de trabajo de empresa desde la lista, su búsqueda actual, filtros, orden y año se preservan. Al volver a la lista se restaura su vista anterior.
@@ -202,7 +202,9 @@ Muchas partes de la aplicación son conscientes del año. Las empresas tienen m�
 
 ## Importación/exportación CSV
 
-**Exportar CSV** descarga las empresas que muestra la lista (o, a petición en el diálogo, todas las empresas) con sus métricas. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo con los encabezados y una fila de ejemplo, una empresa ficticia con métricas para el año de la lista. Sustitúyala por sus propias filas.
+La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
+
+**Exportar** descarga las empresas que muestra la lista (o, a petición en el diálogo, todas las empresas) con sus métricas. **Importar** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo con los encabezados y una fila de ejemplo, una empresa ficticia con métricas para el año de la lista. Sustitúyala por sus propias filas.
 
 Las columnas, en este orden. Las columnas de métricas siguen el año seleccionado en la barra de herramientas de la lista: el año anterior, ese año y el siguiente.
 
@@ -238,7 +240,7 @@ Las columnas, en este orden. Las columnas de métricas siguen el año selecciona
 
 **Notas**:
 
-- Consulte [Archivos CSV](csv-files.md) para la codificación, el separador, los formatos de fecha e importe y los dos pasos de importación
+- Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador, los formatos de fecha e importe y los dos pasos de importación
 - La lista se actualiza automáticamente tras una carga correcta
 
 ## Consejos

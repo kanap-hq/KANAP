@@ -16,7 +16,7 @@ Pour le séquencement à l'échelle du portefeuille et le travail de roadmap, ut
 - `portfolio_projects:reader` : ouvrir la liste et consulter les espaces de travail des projets
 - `portfolio_projects:contributor` : mettre à jour le document **Objectif** managé, saisir du temps sur le projet (saisies de gestion de projet et saisies sur les tâches du projet), et maintenir les enregistrements liés, les liens et les fichiers de l'onglet **Relations** (les dépendances demandent `portfolio_projects:member`)
 - `portfolio_projects:member` : créer des projets et gérer les données du projet, statut, équipe, relations, planning, avancement, tâches, évaluation, commentaires et décisions
-- `portfolio_projects:admin` : inclut les capacités du niveau membre et peut également importer/exporter en CSV, enregistrer les remplacements de priorité et maintenir les saisies de temps de gestion de projet d'autres utilisateurs
+- `portfolio_projects:admin` : inclut les capacités du niveau membre et peut également importer et exporter, enregistrer les remplacements de priorité et maintenir les saisies de temps de gestion de projet d'autres utilisateurs
 - La consultation des connaissances nécessite également un accès Connaissances
 - Créer ou lier des connaissances autonomes nécessite également un rôle de création de connaissances
 
@@ -66,7 +66,7 @@ La liste des projets est conçue pour répondre rapidement à deux questions : �
 **Administration en masse**
 
 - **Nouveau projet** est disponible avec `portfolio_projects:member`
-- **Import CSV** et **Export CSV** sont disponibles pour les administrateurs
+- **Importer** et **Exporter** sont disponibles pour les administrateurs
 
 Ouvrir un projet depuis la liste préserve le contexte de liste actuel. L'espace de travail du projet utilise le même contexte pour la navigation **Précédent** et **Suivant**, vous pouvez donc parcourir un ensemble filtré sans perdre votre place.
 
@@ -369,9 +369,13 @@ Si vous pouvez ouvrir le projet mais n'avez pas les droits de consultation des c
 
 ## Import et export CSV
 
-Les outils CSV de projet sont disponibles depuis la page liste pour les administrateurs.
+**Exporter** et **Importer** sont disponibles depuis la page liste pour les administrateurs.
 
 ### Export
+
+Le fichier contient les projets que la liste affiche, avec ses filtres, sa recherche et son tri. **Format** : **CSV** ou **Excel (.xlsx)**, choisi dans la fenêtre et mémorisé par votre navigateur. Le classeur contient les mêmes colonnes que le CSV sur une feuille, avec les nombres et les dates en valeurs qu'Excel sait trier et filtrer. L'import lit l'un ou l'autre ; dans un classeur, il lit la première feuille. Voir [Fichiers CSV et Excel](csv-files.md).
+
+**Colonnes** : le fichier commence par `id` et `reference` (`PRJ-12`), puis les colonnes suivent l'espace de travail, onglet par onglet. L'import ignore `reference`.
 
 Les exports prennent en charge :
 

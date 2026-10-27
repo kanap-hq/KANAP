@@ -488,6 +488,16 @@ Notas:
 - Un valor cambiado en KANAP, o una versión eliminada allí, nunca se sobrescribe ni se vuelve a crear.
 - Reinicie la API después de cambiar estos valores.
 
+## Opcional: importaciones de Excel { #optional-excel-imports }
+
+Cada importación de datos lee un libro de Excel (`.xlsx`) además de un archivo CSV: las listas de datos maestros, los registros de TI y de portafolio, el archivo de presupuesto, los archivos de vínculos de las tecnologías, el acceso a los datos y el plan de cuentas. KANAP lee la primera hoja de un libro, en el servidor, con las mismas columnas y comprobaciones que un archivo CSV. Consulte [Archivos CSV y Excel](../csv-files.md).
+
+| Variable | Descripción | Valor por defecto |
+|----------|-------------|---------|
+| `IMPORT_XLSX` | Permite que las importaciones lean libros de Excel. Póngala en `false` para aceptar solo archivos CSV. | `true` |
+
+Con `IMPORT_XLSX=false`, los botones de importación muestran **Importar CSV**, los diálogos de importación solo ofrecen archivos CSV, y un libro se rechaza con un mensaje que explica cómo guardarlo en CSV. Las exportaciones a Excel y las plantillas de importación no cambian. Reinicie la API después de cambiar el valor.
+
 ## Opcional: avanzado
 
 | Variable | Descripción | Valor predeterminado |
@@ -617,6 +627,9 @@ S3_FORCE_PATH_STYLE=false
 # CATÁLOGO DE TECNOLOGÍAS (opcional - desactivado por defecto)
 # TECHNOLOGY_CATALOG_SYNC_ENABLED=false
 # ENDOFLIFE_API_BASE_URL=
+
+# IMPORTACIONES DE EXCEL (opcional - activadas por defecto)
+# IMPORT_XLSX=true
 
 # AVANZADO (opcional - los valores predeterminados son adecuados)
 # JWT_ACCESS_TOKEN_TTL=15m

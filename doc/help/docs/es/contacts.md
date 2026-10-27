@@ -43,8 +43,8 @@ La cuadrícula de Contactos proporciona un directorio buscable de todos los cont
 
 **Acciones**:
 - **Nuevo**: Crear un nuevo contacto (requiere `contacts:member`)
-- **Importar CSV**: Importación masiva de contactos (requiere `contacts:admin`)
-- **Exportar CSV**: Exportar a CSV (requiere `contacts:admin`)
+- **Importar**: Importación masiva de contactos (requiere `contacts:admin`)
+- **Exportar**: Exportar a un archivo CSV o un libro de Excel (requiere `contacts:admin`)
 - **Eliminar seleccionados**: Eliminar los contactos seleccionados (requiere `contacts:admin`). Se quitan de los proveedores, líneas presupuestarias, contratos, aplicaciones, activos, ubicaciones, proyectos y solicitudes que los mencionan; esos elementos se conservan
 
 ---
@@ -118,7 +118,9 @@ Las ubicaciones pueden tener contactos de soporte (gestores de instalaciones, co
 
 ## Importación/exportación CSV
 
-Gestione contactos de forma masiva usando CSV.
+La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
+
+Gestione contactos de forma masiva usando archivos CSV o libros de Excel.
 
 **Exportar**: Descarga los contactos que muestra la lista con sus detalles. Elija **Todo el registro** en el diálogo para todos los contactos.
 
@@ -132,7 +134,7 @@ Gestione contactos de forma masiva usando CSV.
 **Campos opcionales**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Notas**:
-- Consulte [Archivos CSV](csv-files.md) para la codificación, el separador y los dos pasos de importación
+- Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador y los dos pasos de importación
 
 ---
 

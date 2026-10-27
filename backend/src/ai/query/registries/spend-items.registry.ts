@@ -1,5 +1,13 @@
 import { AiEntityFilterRegistry } from '../ai-filter.types';
-import { budgetAmountFields, budgetAmountSortFields, budgetFteFields, budgetFteSortFields } from './budget-amount-fields';
+import {
+  budgetAmountFields,
+  budgetAmountSortFields,
+  budgetFteFields,
+  budgetFteSortFields,
+  budgetLineTotalFields,
+  budgetLineTotalSortFields,
+  budgetRatioMetricFamilies,
+} from './budget-amount-fields';
 
 export const spendItemsRegistry: AiEntityFilterRegistry = {
   entityType: 'spend_items',
@@ -197,6 +205,7 @@ export const spendItemsRegistry: AiEntityFilterRegistry = {
     },
     ...budgetAmountFields(),
     ...budgetFteFields(),
+    ...budgetLineTotalFields(),
   },
   sortFields: {
     label: 'product_name',
@@ -222,9 +231,11 @@ export const spendItemsRegistry: AiEntityFilterRegistry = {
     effective_end: 'disabled_at',
     ...budgetAmountSortFields(),
     ...budgetFteSortFields(),
+    ...budgetLineTotalSortFields(),
     created_at: 'created_at',
     updated_at: 'updated_at',
   },
+  metricFamilies: budgetRatioMetricFamilies(),
   defaultSort: {
     field: 'created_at',
     direction: 'desc',
