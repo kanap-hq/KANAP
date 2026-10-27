@@ -612,6 +612,7 @@ export class AiMutationPreviewService {
           step_key: step.step_key,
           label: step.label ?? null,
           tool_name: step.tool_name,
+          ref: planStepTargetRef(step),
           message: step.error_message || 'Step failed.',
         });
         continue;
@@ -627,6 +628,7 @@ export class AiMutationPreviewService {
           step_key: step.step_key,
           label: step.label ?? null,
           tool_name: step.tool_name,
+          ref: planStepTargetRef(step),
           message: step.error_message,
         });
         continue;
@@ -651,6 +653,7 @@ export class AiMutationPreviewService {
           step_key: step.step_key,
           label: step.label ?? null,
           tool_name: step.tool_name,
+          ref: planStepTargetRef(step),
           message: step.error_message || 'Preview creation failed.',
         });
       }
@@ -664,6 +667,7 @@ export class AiMutationPreviewService {
         step_key: blocked.step_key,
         label: blocked.label ?? null,
         tool_name: blocked.tool_name,
+        ref: planStepTargetRef(blocked),
         message: blocked.error_message || 'Step was blocked by a failed dependency.',
       });
     }

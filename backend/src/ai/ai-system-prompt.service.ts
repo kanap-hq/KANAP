@@ -198,6 +198,17 @@ function writeRightsText(writeRights: SystemPromptParams['writeRights']): string
   return lines.join('\n');
 }
 
+/**
+ * The writes no Plaid tool makes (issue 125): a refusal in words, never a substitute preview the
+ * person has to reject. The alternative is offered in words and prepared once accepted.
+ */
+const UNSUPPORTED_WRITES_RULE =
+  'Writes Plaid cannot prepare, whatever the person\'s rights: deleting any record (a task, a budget line, a document, an application or any other); '
+  + 'creating or changing an incident; changing the state of a vulnerability; adding, changing or removing a technology, including the technologies of an application. '
+  + 'For such a request, and for any change that no write-preview tool listed here makes, refuse in the user\'s language in one or two sentences: say what Plaid cannot do and name the KANAP screen where the person can do it. '
+  + 'Prepare no preview in its place: no task recording the request, no status change, cancellation or deactivation standing in for a deletion. '
+  + 'You may offer the closest change Plaid can make, in words ("I can create a task to track it if you want"); prepare it only after the user says yes.';
+
 /** What the tools cannot read, how totals are given, and the person's data access (AGENTS.md). */
 const limitsText = (screenLanguage: AiScreenLanguage | null) => [
   'Limits of what you read:',
@@ -349,7 +360,8 @@ export class AiSystemPromptService {
         'For bulk requests affecting several records, first resolve the complete target set, then create one backend preview per target record in the same assistant turn before asking for approval. ' +
         'Do not stop after the first bulk preview and do not ask the user to type "continue" between previews. ' +
         'Do not compress unrelated record edits into one preview; the user must be able to approve or reject each preview independently. ' +
-        'Do not claim a write succeeded until you receive the execution result from the backend.',
+        'Do not claim a write succeeded until you receive the execution result from the backend.\n' +
+        UNSUPPORTED_WRITES_RULE,
       );
       if (profile.includeWritableFields) {
         addSection(
@@ -444,6 +456,7 @@ export class AiSystemPromptService {
         '- Apply obvious lifecycle assumptions in the query itself. For example, "overdue tasks" normally means active, non-completed tasks unless the user explicitly asks to include completed or cancelled tasks; state the assumption and record explicit exclusions if excluded refs were already discovered.\n' +
         '- If the target set is too large or ambiguous, ask the user to narrow or confirm the target set before creating previews; once the set is clear, create the previews without a per-preview confirmation loop.\n' +
         '- A user saying "yes", "oui", or "go ahead" to a natural-language write proposal is not backend approval. If no preview card exists yet, create the required backend previews.\n' +
+        '- Prepare only the change the user asked for. A request no write-preview tool can make gets a refusal in words, never a preview of another change (a task recording the request, a status change or a deactivation standing in for a deletion).\n' +
         '- Use only the available write-preview tools by their exact names. There is no generic `update_entity` tool. For task assignee changes, use `update_task_assignee` with the task ref and assignee email. For bulk task reassignment, prefer `update_task_assignees` when available.\n' +
         '- If a bulk preview tool returns partial `errors`, report which previews were created and which targets failed; never hide partial failures.\n' +
         '- Never write raw tool syntax such as `<tool_call>` in assistant text. Tool calls must be emitted only through the provider tool-calling API.\n' +

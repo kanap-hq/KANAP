@@ -482,8 +482,35 @@ async function testPromptSaysItsLimitsAndRights() {
   assert.match(build({ plaidChanges: true, modifiableModules: [] }), /Their role lets them prepare changes with Plaid\.\n- Their role lets them modify no module\./);
 }
 
+/** Issue 125: what Plaid cannot write is refused in words; no substitute preview. */
+async function testPromptRefusesUnsupportedWritesWithoutSubstitutePreview() {
+  const service = new AiSystemPromptService();
+  const writeTool = {
+    name: 'create_task' as const,
+    category: 'mutation' as const,
+    description: 'Create a task preview.',
+    input_summary: {},
+    read_only: false,
+    surfaces: ['chat' as const],
+    write_preview: { entity_type: 'tasks', fields: ['title'], reversible: false, prompt_hint: 'Use create_task.' },
+  };
+  const prompt = service.build({
+    tenantName: 'Test Tenant',
+    availableTools: [writeTool],
+    readableEntityTypes: ['tasks'],
+    currentUser: { displayName: 'Writer', email: null, roleNames: [], teamName: null },
+  });
+  assert.match(prompt, /Writes Plaid cannot prepare, whatever the person's rights: deleting any record/);
+  assert.match(prompt, /creating or changing an incident; changing the state of a vulnerability; adding, changing or removing a technology/);
+  assert.match(prompt, /refuse in the user's language in one or two sentences: say what Plaid cannot do and name the KANAP screen/);
+  assert.match(prompt, /Prepare no preview in its place: no task recording the request, no status change, cancellation or deactivation standing in for a deletion/);
+  assert.match(prompt, /prepare it only after the user says yes/);
+  assert.match(prompt, /A request no write-preview tool can make gets a refusal in words, never a preview of another change/);
+}
+
 async function run() {
   await testPromptSaysItsLimitsAndRights();
+  await testPromptRefusesUnsupportedWritesWithoutSubstitutePreview();
   await testStructuredReadGuidancePrefersQueryLayerTools();
   await testWebSearchGuidanceIncludedWhenToolAvailable();
   await testWebSearchGuidanceAbsentWhenToolNotAvailable();

@@ -991,6 +991,26 @@ async function testMutationPlanBlocksDependentsWhenDependencyPreparationFails() 
   ));
 }
 
+/** Issue 124: steps that fail name their target, so a plan whose steps all fail leaves no missing target. */
+async function testMutationPlanFailedStepsNameTheirTargets() {
+  const { service, context } = createService({ previews: [] });
+
+  const plan = await service.createMutationPlan(context, {
+    summary: 'Two steps the registry does not know.',
+    expected_target_refs: ['APP-36', 'TEC-3'],
+    operations: [
+      { operation_id: 'app', tool_name: 'unsupported_tool', input: { ref: 'APP-36' } },
+      { operation_id: 'tec', tool_name: 'unsupported_tool', input: { ref: 'tec-3' } },
+    ],
+  });
+
+  assert.equal(plan.created, 0);
+  assert.equal(plan.failed, 2);
+  assert.deepEqual(plan.errors.map((error) => error.ref), ['APP-36', 'TEC-3']);
+  assert.deepEqual(plan.missing_refs, []);
+  assert.equal(plan.complete, false);
+}
+
 async function testMutationPlanReportsMissingExpectedTargetRefs() {
   const { service, context } = createService({
     previews: [],
@@ -2944,6 +2964,7 @@ async function main() {
   await testMutationPlanDeduplicatesEquivalentOperationsAndRemapsDependents();
   await testMutationPlanAdvancesDependentsWhenRootPreviewAlreadyExecuted();
   await testMutationPlanBlocksDependentsWhenDependencyPreparationFails();
+  await testMutationPlanFailedStepsNameTheirTargets();
   await testMutationPlanReportsMissingExpectedTargetRefs();
   await testMutationPlanAcceptsExplicitTargetExclusion();
   await testCreateCommentPreviewPersistsMarkdownPayload();

@@ -70,6 +70,12 @@ import { findMarkdownPathLinks, replaceDataImageTags, replaceMarkdownDataImages 
 import { assertMarkdownSize } from '../common/markdown-limits';
 import { dataAccessRefusalMessage } from '../common/filters/database-error.mapping';
 import { conversationTitleFromMessage } from './ai-conversation-title.util';
+import {
+  aiWriteLanguage,
+  bulkPreviewsIncompleteText,
+  writePreviewMissingText,
+  type AiWriteLanguage,
+} from './ai-write-texts';
 
 const MAX_TOOL_ITERATIONS = parsePositiveIntEnv(process.env.AI_CHAT_MAX_TOOL_ITERATIONS, 40);
 /**
@@ -159,7 +165,24 @@ function containsRawToolMarkup(content: string): boolean {
   return /<\s*tool_call\b|<\s*\/\s*tool_call\s*>|<\s*function\s*=|<\s*parameter\s*=/i.test(content);
 }
 
+/**
+ * The answer says the asked change cannot be done (Plaid cannot write it, or the person may not):
+ * a refusal, in the four languages of the product. A question that follows it offers another
+ * action in words, which the person accepts or not; it is not a write waiting for its preview.
+ */
+function statesWriteRefusal(content: string): boolean {
+  const text = normalizePlainText(content).replace(/[’`]/g, "'");
+  return /\b(i|we) (cannot|can't|can not|am not able to|am unable to|do not|don't)\b/.test(text)
+    || /\b(cannot|can't|unable to|not able to|not possible|not available|not supported|read[- ]only)\b/.test(text)
+    || /\b(je ne (peux|sais|suis)|ne peut pas|ne permet(tent)? pas|pas possible|impossible|pas disponible|n'est pas (prise? en charge|disponible)|lecture seule|aucun outil|ne supprime)\b/.test(text)
+    || /\b(kann (ich )?(nicht|keine?n?)|nicht (moglich|verfugbar|unterstutzt)|schreibgeschutzt|nur lesend)\b/.test(text)
+    || /\b(no (puedo|es posible|esta disponible|se puede|permite)|solo lectura|imposible)\b/.test(text);
+}
+
 function asksForWriteExecutionWithoutPreview(content: string): boolean {
+  if (statesWriteRefusal(content)) {
+    return false;
+  }
   const text = normalizePlainText(content);
   const asksForConfirmation = /[?]/.test(content)
     || /\b(souhaitez|souhaites|voulez|veux|do you want|would you like|shall i|should i|confirm|confirme|approve|approuver)\b/.test(text);
@@ -261,6 +284,10 @@ type StreamPreparationResult = {
   contextSummary: AiChatContextSummaryDto;
   requiresWritePreviewGuard: boolean;
   writePreviewToolNames: string[];
+  /** What the person last typed: approval markers and orchestration instructions are not theirs. */
+  latestPersonText: string;
+  /** The language of the sentences the orchestrator writes itself. */
+  replyLanguage: AiWriteLanguage;
 };
 
 function buildToolCallSignature(toolCalls: Array<{ name: string; arguments: string }>): string {
@@ -379,9 +406,8 @@ function escapeRegExp(value: string): string {
  * entity ref (e.g. "Created DOC-152.") and we rewrite that ref into a markdown link so
  * the assistant's confirmation is one click away from the artifact.
  *
- * Keep this in sync with frontend/src/App.tsx routes. Sub-entities of master-data
- * such as accounts/chart_of_accounts/analytics_categories don't have workspace pages
- * yet — leave them out so we don't surface dead links.
+ * Keep this in sync with frontend/src/App.tsx routes. A family without a page of its own (a chart
+ * of accounts) stays out, so that no dead link is written.
  */
 const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
   documents: (id) => `/knowledge/${id}`,
@@ -403,6 +429,9 @@ const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
   departments: (id) => `/master-data/departments/${id}`,
   suppliers: (id) => `/master-data/suppliers/${id}`,
   business_processes: (id) => `/master-data/business-processes/${id}`,
+  accounts: (id) => `/master-data/accounts/${id}`,
+  // A dimension value; the dimensions themselves are at /master-data/analytics/dimensions/:id.
+  analytics_categories: (id) => `/master-data/analytics/${id}`,
 };
 
 const ENTITY_TYPE_FROM_URL_PREFIX: Array<{ prefix: string; entityType: string }> = [
@@ -800,14 +829,21 @@ function buildBulkAutoplanInput(params: {
   ) {
     return null;
   }
+  // The same tool on every missing ref: only refs of one kind of record, the requested ref's.
+  const families = new Set(params.issue.missingRefs.map(refFamily));
+  const family = requestedRef ? refFamily(requestedRef) : families.size === 1 ? [...families][0] : null;
+  const missingRefs = family ? params.issue.missingRefs.filter((ref) => refFamily(ref) === family) : [];
+  if (missingRefs.length <= 1) {
+    return null;
+  }
   const baseInput = { ...params.input };
   const targetLabel = params.issue.label || params.issue.entityType || 'bulk target set';
   return {
     summary: `Prepare missing ${params.toolName} previews for ${targetLabel}.`,
     target_set_label: targetLabel,
-    expected_target_refs: params.issue.missingRefs,
-    expected_target_count: params.issue.missingRefs.length,
-    operations: params.issue.missingRefs.map((ref, index) => ({
+    expected_target_refs: missingRefs,
+    expected_target_count: missingRefs.length,
+    operations: missingRefs.map((ref, index) => ({
       operation_id: `${params.toolName}_${ref.toLowerCase().replace(/[^a-z0-9_-]+/g, '_')}_${index + 1}`.slice(0, 80),
       tool_name: params.toolName,
       input: {
@@ -859,15 +895,21 @@ function buildAugmentedBulkMutationPlanInput(params: {
   )) {
     return null;
   }
+  // The plan's tool on every missing ref: only refs of the kind of record its operations target.
+  const family = refFamily(first.ref!);
+  const missingRefs = params.issue.missingRefs.filter((ref) => refFamily(ref) === family);
+  if (missingRefs.length <= operations.length) {
+    return null;
+  }
 
   const targetLabel = params.issue.label || params.issue.entityType || 'bulk target set';
   return {
     ...params.input,
     summary: params.input.summary || `Prepare missing ${first.toolName} previews for ${targetLabel}.`,
     target_set_label: params.input.target_set_label || targetLabel,
-    expected_target_refs: params.issue.missingRefs,
-    expected_target_count: params.issue.missingRefs.length,
-    operations: params.issue.missingRefs.map((ref, index) => ({
+    expected_target_refs: missingRefs,
+    expected_target_count: missingRefs.length,
+    operations: missingRefs.map((ref, index) => ({
       operation_id: `${first.toolName}_${ref.toLowerCase().replace(/[^a-z0-9_-]+/g, '_')}_${index + 1}`.slice(0, 80),
       tool_name: first.toolName,
       input: {
@@ -971,39 +1013,60 @@ function extractTextualBulkTargetSet(content: string): BulkTargetSet | null {
   };
 }
 
-function latestUserText(messages: AiProviderMessage[]): string {
-  for (let index = messages.length - 1; index >= 0; index--) {
-    const message = messages[index];
-    if (message.role === 'user') {
-      return message.content;
-    }
-  }
-  return '';
+/** The kind of record a reference names: `T` for `T-12`, `APP` for `APP-36`. */
+function refFamily(ref: string): string {
+  return ref.replace(/-\d+$/, '');
 }
 
+/** The refs of the requested ref's family; a set of another kind of record is no target of that tool. */
+function targetSetOfFamily(targetSet: BulkTargetSet, family: string | null): BulkTargetSet | null {
+  if (!family) {
+    return targetSet;
+  }
+  const refs = targetSet.refs.filter((ref) => refFamily(ref) === family);
+  if (refs.length <= 1) {
+    return null;
+  }
+  return refs.length === targetSet.refs.length
+    ? targetSet
+    : { ...targetSet, refs, expectedCount: refs.length, entityType: inferEntityTypeFromRefs(refs) };
+}
+
+/**
+ * A target set the assistant stated, for a single-ref call that continues a bulk change. The
+ * signal comes from what the person typed (never from an orchestration instruction, which also
+ * travels as a user message) or from the text that goes with the call; the set from an answer the
+ * person saw (never from a text a write guard held back). Only refs of the requested ref's family
+ * count: a list naming an application and a technology is not a set of applications.
+ */
 function selectTextualBulkTargetSet(params: {
-  messages: AiProviderMessage[];
+  assistantTexts: string[];
+  personText: string;
   currentAssistantText: string;
   requestedRef: unknown;
 }): BulkTargetSet | null {
-  const userText = latestUserText(params.messages);
-  if (!hasBulkContinuationSignal(params.currentAssistantText) && !hasBulkContinuationSignal(userText)) {
+  const personText = params.personText;
+  if (!hasBulkContinuationSignal(params.currentAssistantText) && !hasBulkContinuationSignal(personText)) {
     return null;
   }
 
   const requestedRef = normalizeBulkRef(params.requestedRef);
+  const family = requestedRef ? refFamily(requestedRef) : null;
   const expectedCounts = [
     ...extractExpectedBulkCounts(params.currentAssistantText),
-    ...extractExpectedBulkCounts(userText),
+    ...extractExpectedBulkCounts(personText),
   ];
   const currentTargetSet = extractTextualBulkTargetSet(params.currentAssistantText);
   const candidates = [
-    ...params.messages
-    .filter((message) => message.role === 'assistant' && String(message.content || '').trim())
-    .map((message) => extractTextualBulkTargetSet(message.content))
+    ...params.assistantTexts
+    .filter((content) => String(content || '').trim())
+    .map((content) => extractTextualBulkTargetSet(content))
     .filter((targetSet): targetSet is BulkTargetSet => targetSet != null),
     ...(currentTargetSet ? [currentTargetSet] : []),
-  ].filter((targetSet) => !requestedRef || targetSet.refs.includes(requestedRef));
+  ]
+    .map((targetSet) => targetSetOfFamily(targetSet, family))
+    .filter((targetSet): targetSet is BulkTargetSet => targetSet != null)
+    .filter((targetSet) => !requestedRef || targetSet.refs.includes(requestedRef));
 
   if (candidates.length === 0) {
     return null;
@@ -1308,6 +1371,7 @@ export class AiChatOrchestratorService {
   }
 
   private shouldContinueAfterPreviewAction(params: {
+    action: ApprovalAction['action'];
     history: Array<{ role: string; content: string }>;
     existingPreviews: AiMutationPreviewDto[];
     previewResults: AiMutationPreviewDto[];
@@ -1338,8 +1402,10 @@ export class AiChatOrchestratorService {
       return false;
     }
 
+    // After a rejection, only the person's own request can leave changes to prepare (issue 125):
+    // a plan the assistant announced does not restart the model, which would offer another change.
     const recentText = contextualHistory
-      .filter((message) => message.role === 'user' || message.role === 'assistant')
+      .filter((message) => message.role === 'user' || (params.action === 'approve' && message.role === 'assistant'))
       .slice(-8)
       .map((message) => message.content)
       .join('\n\n');
@@ -1370,8 +1436,15 @@ export class AiChatOrchestratorService {
       'Recent workflow context:',
       recentContext || '(none)',
       '',
-      'Continue from this exact state. If the original user request or the previous assistant plan implies remaining changes, prepare the remaining backend previews now without asking the user to type continue.',
-      'For multiple remaining related changes, mixed object changes, or dependency chains, use prepare_mutation_plan. If there are no remaining changes, answer concisely with the final state.',
+      ...(params.action === 'reject'
+        ? [
+          'Continue from this exact state. The rejected changes are dropped: do not prepare them again and do not prepare any other change in their place.',
+          'Prepare previews only for changes the user asked for that never had a preview. If there are none, answer in one short sentence, in the user\'s language, that nothing was changed.',
+        ]
+        : [
+          'Continue from this exact state. If the original user request or the previous assistant plan implies remaining changes, prepare the remaining backend previews now without asking the user to type continue.',
+          'For multiple remaining related changes, mixed object changes, or dependency chains, use prepare_mutation_plan. If there are no remaining changes, answer concisely with the final state.',
+        ]),
       'Do not re-create previews for changes already executed or rejected. Do not claim execution for any remaining change until its backend preview is explicitly approved and executed.',
     ].join('\n');
   }
@@ -1949,6 +2022,8 @@ export class AiChatOrchestratorService {
       contextSummary,
       requiresWritePreviewGuard,
       writePreviewToolNames,
+      latestPersonText,
+      replyLanguage,
     } =
       await this.tenantExecutor.runWithContext(context, async (ctx) => {
         let convId = prepared.inputConversationId;
@@ -2119,6 +2194,7 @@ export class AiChatOrchestratorService {
           );
           const existingPreviewsAfterApproval = await this.previews.listConversationPreviews(ctx, convId!);
           if (this.shouldContinueAfterPreviewAction({
+            action: approvalAction.action,
             history: historyAfterApproval.map((msg) => ({ role: msg.role, content: msg.content })),
             existingPreviews: existingPreviewsAfterApproval,
             previewResults,
@@ -2254,6 +2330,8 @@ export class AiChatOrchestratorService {
               },
               requiresWritePreviewGuard: contextProfile.promptMode === 'write' && writePreviewToolNames.length > 0,
               writePreviewToolNames,
+              latestPersonText: latestUserMessageRow?.content ?? '',
+              replyLanguage: aiWriteLanguage(currentUser.screenLanguage),
             } satisfies StreamPreparationResult;
           }
 
@@ -2277,6 +2355,8 @@ export class AiChatOrchestratorService {
             },
             requiresWritePreviewGuard: false,
             writePreviewToolNames: [],
+            latestPersonText: '',
+            replyLanguage: 'en',
           } satisfies StreamPreparationResult;
         }
 
@@ -2465,6 +2545,8 @@ export class AiChatOrchestratorService {
           },
           requiresWritePreviewGuard: contextProfile.promptMode === 'write' && writePreviewToolNames.length > 0,
           writePreviewToolNames,
+          latestPersonText: latestUserMessage,
+          replyLanguage: aiWriteLanguage(currentUser.screenLanguage),
         } satisfies StreamPreparationResult;
       });
 
@@ -2544,6 +2626,14 @@ export class AiChatOrchestratorService {
     const failedBulkRefsThisTurn = new Set<string>();
     const excludedBulkRefsThisTurn = new Set<string>();
     const coveredBulkRefsByEntityTypeThisTurn = new Map<string, Set<string>>();
+    // Answers a write guard held back and sent to the model for repair: the person never saw them,
+    // so they state no target set.
+    const heldBackAssistantMessages = new WeakSet<AiProviderMessage>();
+    const holdBack = (content: string): AiProviderMessage => {
+      const message: AiProviderMessage = { role: 'assistant', content: stripBase64Images(content) };
+      heldBackAssistantMessages.add(message);
+      return message;
+    };
     // The input errors a later call of the same tool may repair in this turn (`ai-tool-repairs.ts`).
     const repairableToolFailuresThisTurn: AiRepairableToolFailure[] = [];
     const toolSchemaBudget = estimateToolSchemaBreakdown(tools);
@@ -2901,7 +2991,10 @@ export class AiChatOrchestratorService {
                 || isRefBasedSingleMutationTool(tc.name, writePreviewToolNames)
               )
                 ? selectTextualBulkTargetSet({
-                  messages,
+                  assistantTexts: messages
+                    .filter((message) => message.role === 'assistant' && !heldBackAssistantMessages.has(message))
+                    .map((message) => message.content),
+                  personText: latestPersonText,
                   currentAssistantText: assistantTextForToolTurn,
                   requestedRef: parsedArgs.ref,
                 })
@@ -2933,7 +3026,9 @@ export class AiChatOrchestratorService {
                 executionArgs = autoplanInput;
                 bulkAutoplan = {
                   originalToolName: tc.name,
-                  missingRefs: currentBulkIssue!.missingRefs,
+                  missingRefs: Array.isArray(autoplanInput.expected_target_refs)
+                    ? autoplanInput.expected_target_refs as string[]
+                    : currentBulkIssue!.missingRefs,
                 };
               }
             }
@@ -3160,10 +3255,7 @@ export class AiChatOrchestratorService {
         if (bulkCompletenessRepairRetries < MAX_UNSAFE_WRITE_RESPONSE_RETRIES) {
           bulkCompletenessRepairRetries++;
           if (accumulatedText.trim()) {
-            messages.push({
-              role: 'assistant',
-              content: stripBase64Images(accumulatedText),
-            });
+            messages.push(holdBack(accumulatedText));
           }
           messages.push({
             role: 'user',
@@ -3175,7 +3267,10 @@ export class AiChatOrchestratorService {
           previousToolCallSignature = null;
           continue;
         }
-        accumulatedText = `Je n'ai pas pu verifier la completude des previews de masse. Aucune modification n'a ete executee. Cibles manquantes: ${bulkCoverageIssue.missingRefs.join(', ') || 'inconnues'}.`;
+        this.logger.warn(
+          `Bulk write stopped: no preview for ${bulkCoverageIssue.missingRefs.join(', ') || 'an unknown part of the expected count'}.`,
+        );
+        accumulatedText = bulkPreviewsIncompleteText(replyLanguage);
       }
 
       if (
@@ -3224,10 +3319,7 @@ export class AiChatOrchestratorService {
         })
       ) {
         unstructuredPlanRepairRetries++;
-        messages.push({
-          role: 'assistant',
-          content: stripBase64Images(accumulatedText),
-        });
+        messages.push(holdBack(accumulatedText));
         messages.push({
           role: 'user',
           content: this.buildUnstructuredPlanRepairInstruction({
@@ -3246,10 +3338,7 @@ export class AiChatOrchestratorService {
       ) {
         if (unsafeWriteResponseRetries < MAX_UNSAFE_WRITE_RESPONSE_RETRIES) {
           unsafeWriteResponseRetries++;
-          messages.push({
-            role: 'assistant',
-            content: stripBase64Images(accumulatedText),
-          });
+          messages.push(holdBack(accumulatedText));
           messages.push({
             role: 'user',
             content: this.buildUnsafeWritePreviewResponseRepairInstruction({
@@ -3260,7 +3349,7 @@ export class AiChatOrchestratorService {
           previousToolCallSignature = null;
           continue;
         }
-        accumulatedText = "Je n'ai pas pu creer les previews backend necessaires. Aucune modification n'a ete executee.";
+        accumulatedText = writePreviewMissingText(replyLanguage);
       }
 
       if (requiresWritePreviewGuard && accumulatedText.length > 0) {

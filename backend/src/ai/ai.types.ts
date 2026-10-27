@@ -382,6 +382,8 @@ export type AiMutationPlanPrepareResultDto = {
     step_key: string;
     label: string | null;
     tool_name: string;
+    /** The ref the failed step targets: a handled target, which the bulk completeness guard counts. */
+    ref: string | null;
     message: string;
   }>;
   deferred: AiMutationPlanStepDto[];
