@@ -274,6 +274,15 @@ function limits() {
   assert.equal(rowsOf({ sheetData: '<row r="1"><c r="J1"><v>1</v></c></row>' }, { maxGridCells: 10 })[0].length, 10);
   refuses(() => rowsOf({ sheetData: '<row r="11"><c r="A11"><v>1</v></c></row>' }, { maxRows: 10 }), 'XLSX_TOO_LARGE', 'maxRows');
   assert.equal(rowsOf({ sheetData: '<row r="10"><c r="A10"><v>1</v></c></row><row r="5000"><c r="A5000" s="0"/></row>' }, { maxRows: 10 }).length, 10, 'an empty row past the limit is ignored');
+  // Rows without a value: row numbers only go up, and stop at Excel's 1,048,576; the element cap bounds them too.
+  // Numbered, so that the part does not pack past the compression ratio.
+  const emptyRows = (n: number): string => Array.from({ length: n }, (_, i) => `<row r="${i + 1}"/>`).join('');
+  const emptyStarted = Date.now();
+  assert.deepEqual(rowsOf({ sheetData: emptyRows(1_048_576) }), [], "Excel's last row is read");
+  refuses(() => rowsOf({ sheetData: emptyRows(1_048_577) }), 'XLSX_TOO_LARGE', 'maxRows', 'empty rows past 1,048,576');
+  refuses(() => rowsOf({ sheetData: '<row r="1048577"/>' }), 'XLSX_TOO_LARGE', 'maxRows', 'a row number past 1,048,576');
+  assert.ok(Date.now() - emptyStarted < 5_000, 'empty rows are refused quickly');
+  refuses(() => rowsOf({ sheetData: emptyRows(100_000) }, { maxElements: 99_999 }), 'XLSX_TOO_LARGE', 'maxElements', 'empty rows past the element cap');
   // Rows holding a value, the caller's row cap: the empty rows between them do not count, reading stops past it.
   const threeValueRows = '<row r="2"><c r="A2"><v>1</v></c></row><row r="7"><c r="B7"><v>2</v></c></row><row r="9"><c r="A9" s="0"/><c r="C9"><v>3</v></c></row>';
   assert.equal(rowsOf({ sheetData: threeValueRows }, { maxValueRows: 3 }).length, 9);

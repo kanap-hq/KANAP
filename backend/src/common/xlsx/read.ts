@@ -33,6 +33,11 @@ export interface XlsxGrid {
 const MB = 1024 * 1024;
 const MAX_SHARED_STRINGS = 1_000_000;
 const MAX_CELL_ELEMENTS = 5_000_000;
+/**
+ * Rows of a worksheet in Excel. A row number past it comes from no spreadsheet; it also bounds the
+ * rows without a value, which `maxRows` does not count.
+ */
+const EXCEL_MAX_ROWS = 1_048_576;
 
 /** Limits of the reader, one place. */
 export const XLSX_READ_LIMITS = {
@@ -634,6 +639,7 @@ function parseSheet(data: Buffer, context: SheetContext): XlsxReadCell[][] {
           next = Number(r.trim());
         }
         if (next <= rowNumber || next < 1) throw invalid();
+        if (next > EXCEL_MAX_ROWS) throw tooLarge('maxRows', limits);
         rowNumber = next;
         row = null;
         lastColumn = 0;
