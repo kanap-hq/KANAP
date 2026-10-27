@@ -256,6 +256,7 @@ export type AiAggregateResult = {
    */
   overall?: { count: number; value: number | null; unknown?: number } & Partial<AiBudgetStaffFigures> & {
     fte_without_line_detail?: number;
+    fte_amount_not_following_lines?: number;
     staff_cost_not_in_day_rate?: number;
   };
   /** Budget ratio metrics: how the figures are computed and what they leave out. */

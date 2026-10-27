@@ -493,8 +493,11 @@ function budgetStaffFigures(values: Record<string, number | null>): AiBudgetStaf
 const BUDGET_RATIO_NOTE = 'Computed by the server, as the "Cost per FTE" report: from the people and days quantity × price lines of the column '
   + '(pieces lines left out), in the reporting currency. cost_per_fte is staff_cost ÷ staff_fte and day_rate is day_cost ÷ days, per group and, '
   + 'in overall, of all groups together (never an average of the groups\' ratios). Quote these figures: never divide amounts by FTE '
-  + 'or assume a number of working days. Groups without people or days lines are left out. '
+  + 'or assume a number of working days. The cost per FTE keeps every group with line detail (its day rate included); '
+  + 'the day rate keeps only the groups with days bought. '
   + 'fte_without_line_detail is FTE declared on columns without line detail, left out of every figure; '
+  + 'fte_amount_not_following_lines is FTE on columns whose amount no longer follows their lines (spread, copied or edited): '
+  + 'these figures use the cost of their lines, not the column amount; '
   + 'staff_cost_not_in_day_rate is the cost of people priced per month, in the cost per FTE but not in the day rate. Say so when present.';
 
 function normalizeAggregateValue(value: any, metricType: AiAggregateMetricType): number | string | null {
@@ -1445,6 +1448,7 @@ export class AiAggregateExecutor {
         { id: 'day_cost', fn: 'sum', field: ratio.dayCost },
         { id: 'days', fn: 'sum', field: ratio.days },
         { id: 'no_detail', fn: 'sum', field: ratio.noDetail },
+        { id: 'detached', fn: 'sum', field: ratio.detached },
       ],
       order: [{ by: 'measure', id: governing, dir: 'DESC', nulls: 'LAST' }],
     };
@@ -1459,14 +1463,21 @@ export class AiAggregateExecutor {
       });
     const total = result.total.values;
     const figures = budgetStaffFigures(total);
-    // The report's notices: FTE without line detail, and (cents, from 50) the staff cost priced per month.
+    // The report's notices: FTE without line detail, FTE whose amount no longer follows its lines,
+    // and (cents, from 50) the staff cost priced per month.
     const noDetail = total.no_detail ?? 0;
+    // As the report (`detachedWithDetail`): a column without line detail is detached too, so it comes
+    // off both the FTE and the line count (in cents; a rounding below zero reads as none).
+    const linesWith = (id: string) => result.total.count - (result.total.unknown[id] ?? 0);
+    const detachedFte = Math.max(0, Math.round(((total.detached ?? 0) - noDetail) * 100) / 100);
+    const detachedLines = (total.detached ? linesWith('detached') : 0) - (noDetail > 0 ? linesWith('no_detail') : 0);
     const monthlyCents = Math.round((total.staff_cost ?? 0) * 100) - Math.round((total.day_cost ?? 0) * 100);
     const overall: BudgetOverall = {
       count: result.total.count,
       value: valueOf(figures),
       ...figures,
       ...(noDetail > 0 ? { fte_without_line_detail: noDetail } : {}),
+      ...(detachedFte > 0 && detachedLines > 0 ? { fte_amount_not_following_lines: detachedFte } : {}),
       ...(monthlyCents >= 50 ? { staff_cost_not_in_day_rate: monthlyCents / 100 } : {}),
     };
     return { groups, total: result.total.count, fxMissing: result.fxMissing ?? [], overall };

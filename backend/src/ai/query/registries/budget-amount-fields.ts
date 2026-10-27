@@ -169,13 +169,16 @@ export type BudgetRatioMetric = {
   days: string;
   /** The FTE declared without line detail (`fte_nodetail_…`): left out of the figures, as the report says. */
   noDetail: string;
+  /** The FTE of a column whose amount no longer follows its lines (`fte_detached_…`): the report's notice. */
+  detached: string;
 };
 
 export const BUDGET_RATIO_DESCRIPTIONS: Record<BudgetRatioKind, string> = {
   cost_per_fte: 'Cost per FTE, computed by the server as the "Cost per FTE" report does: staff cost ÷ staff FTE of each group '
-    + '(and of all groups together for the overall row), from the people and days quantity × price lines (pieces left out), in the reporting currency.',
+    + '(and of all groups together for the overall row), from the people and days quantity × price lines (pieces left out), in the reporting currency. '
+    + 'Keeps every group with line detail, with its day rate: the metric for FTE and day rate per group.',
   day_rate: 'Average day rate (TJM), computed by the server as the daily rate view of the "Cost per FTE" report: day cost ÷ days bought of each group '
-    + '(and of all groups together), from the lines priced per day, in the reporting currency.',
+    + '(and of all groups together), from the lines priced per day, in the reporting currency. Keeps only the groups with days bought.',
 };
 
 /** `<slot>_<column>_cost_per_fte` or `<slot>_<column>_day_rate` (`y_budget_day_rate`); null for any other key. */
@@ -194,6 +197,7 @@ export function resolveBudgetRatioMetric(key: string | undefined | null): Budget
         dayCost: `day_cost_${suffix}`,
         days: `days_${suffix}`,
         noDetail: `fte_nodetail_${suffix}`,
+        detached: `fte_detached_${suffix}`,
       };
     }
   }

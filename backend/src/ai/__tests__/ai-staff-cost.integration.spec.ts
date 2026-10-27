@@ -14,7 +14,7 @@ import { ItemNumberService } from '../../common/item-number.service';
 import { SUMMARY_SCOPES } from '../../spend/spend-summary.builder';
 import * as engine from '../../spend/budget-list/budget-list.service';
 import { computeColumn, type CostLine } from '../../spend/costing.util';
-import { linesCalculation } from '../../spend/round-inputs.util';
+import { linesCalculation, linesResult } from '../../spend/round-inputs.util';
 import {
   costPerFteRequests,
   dailyRateRequests,
@@ -77,6 +77,11 @@ const NO_DETAIL: Round = {
   calc: { kind: 'copy', source_year: Y - 1, source_measure: 'planned', uplift_pct: '0', source_total: '1000', total: '1000', source_method: 'spread' },
   total: '1000',
 };
+/** A copy that keeps the result of `lines` (`lines_result`): its amount no longer follows them. */
+function copiedWithLines(lines: CostLine[]): Round {
+  const result = computeColumn(lines, Y, CALENDARS);
+  return { ...NO_DETAIL, fte: result.fte, calc: { ...NO_DETAIL.calc, lines_result: linesResult(lines, CALENDARS, result) } };
+}
 
 const FULL_TIME = costLine('people', 'per_day', '2', '500');
 const BUNDLE = costLine('days', 'per_day', '40', '500');
@@ -107,7 +112,7 @@ const LINES: Line[] = [
 
 type Seed = { tenantId: string; suppliers: Record<string, string>; companies: Record<'fr' | 'es', { id: string; name: string }>; ids: Record<string, string> };
 
-async function seed(runner: QueryRunner, kind: Kind): Promise<Seed> {
+async function seed(runner: QueryRunner, kind: Kind, lines: Line[] = LINES): Promise<Seed> {
   const tenantId = randomUUID();
   const tag = tenantId.slice(0, 8);
   await runner.query(
@@ -129,7 +134,7 @@ async function seed(runner: QueryRunner, kind: Kind): Promise<Seed> {
   });
   const companies = { fr: await company('Fromage France'), es: await company('Fromage Espana') };
   const ids: Record<string, string> = {};
-  for (const [i, line] of LINES.entries()) {
+  for (const [i, line] of lines.entries()) {
     const itemId = randomUUID();
     ids[line.label] = itemId;
     const supplierId = line.supplier ? suppliers[line.supplier] : null;
@@ -221,6 +226,7 @@ async function reportFigures(runner: QueryRunner, kind: Kind, filters: ColumnFil
     dayRate: new Map(rate.rows.map((row) => [name(row), [row.cells[0].days, row.cells[0].cost, round2(row.cells[0].rate)]])),
     total: { fte: fte.total[0], rate: rate.total[0] },
     noDetail: fte.noDetail[0]?.fte ?? null,
+    detached: fte.detached[0]?.fte ?? null,
     monthly: rate.monthly[0]?.amount ?? null,
   };
 }
@@ -260,6 +266,7 @@ async function compareWithReport(runner: QueryRunner, kind: Kind, tenantId: stri
     `${kind} ${label}: overall day rate`,
   );
   assert.equal(perFte.overall.fte_without_line_detail ?? null, report.noDetail, `${kind} ${label}: the FTE without line detail, as the report's notice`);
+  assert.equal(perFte.overall.fte_amount_not_following_lines ?? null, report.detached, `${kind} ${label}: the FTE whose amount no longer follows its lines, as the report's notice`);
   assert.equal(dayRate.overall.staff_cost_not_in_day_rate ?? null, report.monthly, `${kind} ${label}: the staff cost priced per month, as the report's notice`);
   assert.equal(perFte.amounts_currency, 'EUR', `${kind} ${label}: the ratios name their currency`);
   assert.match(perFte.ratio_note, /never divide amounts by FTE/);
@@ -355,6 +362,19 @@ async function testAggregateAsTheReport(kind: Kind) {
   console.log(`ok - ${kind}: cost per FTE and day rate by supplier as the report`);
 }
 
+/** A copy that keeps its lines' result: the report's third notice, its figures from the lines. */
+async function testAmountNotFollowingLines(kind: Kind) {
+  await inRolledBackTransaction(async (runner) => {
+    const s = await seed(runner, kind, [...LINES, { label: 'alpha copied', supplier: 'Alpha', company: 'es', round: copiedWithLines([FULL_TIME]) }]);
+    const { perFte, report } = await compareWithReport(runner, kind, s.tenantId, {}, 'a copy with its lines');
+    assert.equal(report.detached, 2, `${kind}: the report names the 2 FTE of the copy`);
+    assert.equal(perFte.overall.fte_amount_not_following_lines, 2, `${kind}: so does Plaid (the copy without detail left out of it)`);
+    assert.equal(perFte.overall.fte_without_line_detail, 1.75, `${kind}: the copy without detail stays apart`);
+    assert.deepEqual(report.costPerFte.get(`Alpha ${s.tenantId.slice(0, 8)}`), [4.17, 500000, 119904.08], `${kind}: the copy counts at the cost of its lines`);
+  });
+  console.log(`ok - ${kind}: the FTE whose amount no longer follows its lines, as the report`);
+}
+
 async function testQueryTotals(kind: Kind) {
   await inRolledBackTransaction(async (runner) => {
     const s = await seed(runner, kind);
@@ -428,6 +448,7 @@ void runSpecs('ai-staff-cost.integration.spec', [
   ['registries and description', testRegistryAndDescription],
   ...KINDS.flatMap((kind): Array<[string, () => Promise<void>]> => [
     [`aggregate as the report (${kind})`, () => testAggregateAsTheReport(kind)],
+    [`amount not following its lines (${kind})`, () => testAmountNotFollowingLines(kind)],
     [`query totals (${kind})`, () => testQueryTotals(kind)],
     [`limited person (${kind})`, () => testLimitedPerson(kind)],
   ]),
