@@ -16,6 +16,14 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+// Rights the signed-in person holds: a reference opens its record only where the route would.
+let readableResources: string[] | null = null;
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({
+    hasLevel: (resource: string) => readableResources == null || readableResources.includes(resource),
+  }),
+}));
+
 describe('ChatMessageList', () => {
   const theme = createAppTheme('light');
   const renderWithTheme = (ui: React.ReactElement) => render(
@@ -286,6 +294,65 @@ describe('ChatMessageList', () => {
 
     const link = screen.getByRole('link', { name: 'T-115' });
     expect(link.getAttribute('href')).toBe('/portfolio/tasks/task-115');
+  });
+
+  it('links the references cited in an assistant answer, outside code and existing links', () => {
+    readableResources = null;
+    const { container } = renderWithTheme(
+      <ChatMessageList
+        messages={[
+          {
+            id: 'assistant-1',
+            role: 'assistant',
+            content: [
+              'APP-36 runs on AST-4 (INT-7) and costs BL-113; see INC-26, T-8, PRJ-5, REQ-2, DOC-12 and TEC-3.',
+              '',
+              'Inline `APP-99`, already linked [T-115](/portfolio/tasks/task-115), CVE-2026-1234, XAPP-1, APP-1x and CTR-4.',
+              '',
+              '```',
+              'INC-77',
+              '```',
+            ].join('\n'),
+          },
+        ]}
+        previews={[]}
+        onSend={() => undefined}
+      />,
+    );
+
+    const hrefOf = (name: string) => screen.getByRole('link', { name }).getAttribute('href');
+    expect(hrefOf('APP-36')).toBe('/it/applications/APP-36');
+    expect(hrefOf('AST-4')).toBe('/it/assets/AST-4');
+    expect(hrefOf('INT-7')).toBe('/it/interfaces/INT-7');
+    expect(hrefOf('BL-113')).toBe('/ops/budget/BL-113');
+    expect(hrefOf('INC-26')).toBe('/it/incidents/INC-26');
+    expect(hrefOf('T-8')).toBe('/portfolio/tasks/T-8');
+    expect(hrefOf('PRJ-5')).toBe('/portfolio/projects/PRJ-5');
+    expect(hrefOf('REQ-2')).toBe('/portfolio/requests/REQ-2');
+    expect(hrefOf('DOC-12')).toBe('/knowledge/DOC-12');
+    expect(hrefOf('TEC-3')).toBe('/it/technologies/TEC-3');
+    expect(hrefOf('T-115')).toBe('/portfolio/tasks/task-115');
+    expect(screen.getAllByRole('link')).toHaveLength(11);
+    expect(container.querySelector('code')?.textContent).toBe('APP-99');
+    expect(container.querySelector('pre')?.textContent).toContain('INC-77');
+    expect(container.textContent).toContain('CVE-2026-1234');
+  });
+
+  it('leaves as text the references of pages the person cannot open', () => {
+    readableResources = ['applications'];
+    try {
+      renderWithTheme(
+        <ChatMessageList
+          messages={[{ id: 'assistant-1', role: 'assistant', content: 'APP-36 is funded by BL-113.' }]}
+          previews={[]}
+          onSend={() => undefined}
+        />,
+      );
+      expect(screen.getByRole('link', { name: 'APP-36' })).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'BL-113' })).toBeNull();
+    } finally {
+      readableResources = null;
+    }
   });
 
   it('always renders a status row for assistant messages', () => {
