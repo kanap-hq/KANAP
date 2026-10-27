@@ -30,7 +30,7 @@ import * as T from '../../../../../frontend/src/pages/reports/reportTables';
  * here) applied to the aggregate route's answer for the request the screen sends: the filter bar's
  * models built from the cost center subtree expanded as the browser does (a walk of the parent links),
  * independently of the server's recursive read. The file's sheet holds the same headers and rows, cells
- * as the file writes them. Then a person under data-scoped access (their lines only, the access line,
+ * as the file writes them, the totals as a footer row that each amount column adds up to. Then a person under data-scoped access (their lines only, the access line,
  * the header), refused requests, and the audit row with the row count.
  *
  * Needs the role kanap_data_limited (CI installs it); skipped without it, failed in CI.
@@ -61,8 +61,18 @@ const LABELS: T.ReportTableLabels = {
   analyticsTotal: (metric) => L.analyticsTotal.replace('{{metric}}', metric),
 };
 
-type Fixture = Seed & { axis2Name: string; category2Name: string; costCenters: Array<{ id: string; parent_id: string | null }> };
-type Person = { id: string; isAdmin: boolean };
+type Fixture = Seed & {
+  axis2Name: string;
+  category2Name: string;
+  /** The seed's first dimension and its value, held by every line. */
+  axis1: string;
+  category1: string;
+  /** Hosting (L1, L2; consolidation line 60 Software) and Support (L3; 61 Services). */
+  accounts: { hosting: string; support: string };
+  costCenters: Array<{ id: string; parent_id: string | null }>;
+};
+/** `permissions` as `PermissionGuard` sets them; none: no accounts page, so no consolidation line. */
+type Person = { id: string; isAdmin: boolean; permissions?: Record<string, string> };
 
 function clientOf(runner: QueryRunner): PgClient {
   return { query: async (sql: string, params?: unknown[]) => ({ rows: await runner.query(sql, params as any[]) }) } as unknown as PgClient;
@@ -128,7 +138,20 @@ async function enrich(runner: QueryRunner, s: Seed): Promise<Fixture> {
   const axis2Name = (await q(`SELECT name FROM analytics_axes WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.axis2]))[0].name as string;
   const category2Name = (await q(`SELECT name FROM analytics_categories WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.category2]))[0].name as string;
   const costCenters = await q(`SELECT id, parent_id FROM cost_centers WHERE tenant_id = $1`, [s.tenantId]);
-  return { ...s, axis2Name, category2Name, costCenters };
+  const first = (await q(
+    `SELECT axis_id, category_id FROM spend_item_analytics_values WHERE tenant_id = $1 AND item_id = $2 AND axis_id <> $3`,
+    [s.tenantId, s.lines.L1, s.axis2],
+  ))[0];
+  const chart = (await q(`INSERT INTO chart_of_accounts (tenant_id, code, name, country_iso) VALUES ($1, 'XR', 'Export chart', 'FR') RETURNING id`, [s.tenantId]))[0].id;
+  const account = async (number: number, name: string, consolidation: number, consolidationName: string) => (await q(
+    `INSERT INTO accounts (tenant_id, coa_id, account_number, account_name, consolidation_account_number, consolidation_account_name)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+    [s.tenantId, chart, number, name, consolidation, consolidationName],
+  ))[0].id as string;
+  const accounts = { hosting: await account(7011, 'Hosting', 60, 'Software'), support: await account(7020, 'Support', 61, 'Services') };
+  await q(`UPDATE spend_items SET account_id = $3 WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [s.tenantId, [s.lines.L1, s.lines.L2], accounts.hosting]);
+  await q(`UPDATE spend_items SET account_id = $3 WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.lines.L3, accounts.support]);
+  return { ...s, axis2Name, category2Name, axis1: first.axis_id, category1: first.category_id, accounts, costCenters };
 }
 
 /** The browser's subtree (`useCostCenterTree.descendantIds`): the node and every node below it. */
@@ -145,7 +168,7 @@ function browserSubtree(f: Fixture, id: string): string[] {
 }
 
 function ctxOf(m: EntityManager, f: Fixture, person: Person) {
-  return { tenantId: f.tenantId, userId: person.id, userRoles: [], isAdmin: person.isAdmin, permissions: {}, manager: m };
+  return { tenantId: f.tenantId, userId: person.id, userRoles: [], isAdmin: person.isAdmin, permissions: person.permissions ?? {}, manager: m };
 }
 
 function response(req: unknown) {
@@ -161,8 +184,15 @@ function response(req: unknown) {
   return { res, headers, body: () => body! };
 }
 
-type Report = 'comparison' | 'columns-compare' | 'top-lines';
-const HANDLER = { comparison: 'comparison', 'columns-compare': 'columnsCompare', 'top-lines': 'topLines' } as const;
+type Report = 'comparison' | 'columns-compare' | 'top-lines' | 'increases-decreases' | 'consolidation' | 'analytics';
+const HANDLER = {
+  comparison: 'comparison',
+  'columns-compare': 'columnsCompare',
+  'top-lines': 'topLines',
+  'increases-decreases': 'increasesDecreases',
+  consolidation: 'consolidation',
+  analytics: 'analytics',
+} as const;
 
 function requestOf(m: EntityManager, f: Fixture, person: Person, report: Report, query: Record<string, unknown>) {
   return { queryRunner: { manager: m, isReleased: false }, tenant: { id: f.tenantId }, user: { sub: person.id }, query, path: `/reports/budget/${report}/export` };
@@ -202,17 +232,32 @@ const trim = (row: string[]): string[] => {
   return out;
 };
 
-/** A table as the file writes it: headers, then each row's cells by column kind. */
-function written(table: T.ReportTableData): string[][] {
+/** A table as the file writes it: headers, then each row's cells by column kind, then the footer unless limited. */
+function written(table: T.ReportTableData, limited = false): string[][] {
   const cell = (kind: T.ReportTableColumnKind, value: unknown): string => {
     if (value === null || value === undefined) return '';
     if (kind === 'amount') return (Math.round((value as number) * 100) / 100).toFixed(2);
     return String(value);
   };
-  return [
-    table.columns.map((column) => column.header),
-    ...table.rows.map((row) => trim(table.columns.map((column) => cell(column.kind, row[column.key])))),
-  ];
+  const line = (row: T.ReportTableRow) => trim(table.columns.map((column) => cell(column.kind, row[column.key])));
+  return [table.columns.map((column) => column.header), ...table.rows.map(line), ...(limited ? [] : table.footer.map(line))];
+}
+
+/** The data sheet of a one-table workbook (its name is the report title, cut and cleaned for Excel), then Parameters. */
+function dataSheet(sheets: Map<string, string[][]>): string[][] {
+  const names = [...sheets.keys()];
+  assert.equal(names.length, 2, 'one table, then Parameters');
+  assert.equal(names[1], 'Parameters');
+  return sheets.get(names[0])!.map(trim);
+}
+
+/** Each amount column of the data rows adds up to the footer (the screen's total), to the cent. */
+function assertColumnsAddUp(table: T.ReportTableData, what: string): void {
+  assert.equal(table.footer.length, 1, `${what}: one total row`);
+  for (const column of table.columns.filter((c) => c.kind === 'amount')) {
+    const sum = table.rows.reduce((acc, row) => acc + Math.round(((row[column.key] as number | null) ?? 0) * 100), 0);
+    assert.equal(sum, Math.round(((table.footer[0][column.key] as number | null) ?? 0) * 100), `${what}: column ${column.header} adds up to the total`);
+  }
 }
 
 /** What the screen shows for a request: the aggregate route's answer (its service call), read by the frontend files. */
@@ -308,6 +353,112 @@ async function testTables(runner: QueryRunner, f: Fixture): Promise<void> {
   console.log('  comparison, columns compare (grouped, flat FTE) and top lines (amount, FTE) equal the screen tables: OK');
 }
 
+/** Increases and decreases, consolidation and analytics, each with a cost center and a dimension filter; increases and decreases in FTE too. */
+async function testDeltaGroupTables(runner: QueryRunner, f: Fixture): Promise<void> {
+  const svc = services();
+  const admin: Person = { id: f.persons.admin, isAdmin: true };
+  await as(runner, admin.id, async (m) => {
+    const inf = browserSubtree(f, f.inf);
+    const filters = R.reportFilterModels({ costCenterIds: inf, runBuild: null, analytics: [[f.axis2, f.category2]], withFte: false });
+    const address = { costCenter: f.inf, analytics: `${f.axis2}:${f.category2}` };
+    const source = { year: Y, metric: 'budget' as const };
+    const destination = { year: Y + 1, metric: 'budget' as const };
+
+    // Both directions: L1 and L2 rise, L3 falls; two requests, increases first.
+    const modes: R.DeltaMode[] = ['increase', 'decrease'];
+    const deltaAnswers = [];
+    for (const request of R.deltaRequests({ scope: 'all', source, destination, modes, topCount: 10, excludedIds: [], excludedAccounts: [], filters, measure: 'amount' })) {
+      deltaAnswers.push(await screenAnswer(svc, m, f, admin, 'all', request));
+    }
+    const delta = T.deltaTable({ source, destination, modes, measure: 'amount' }, deltaAnswers, LABELS);
+    assert.deepEqual(delta.rows.map((row) => [row.id, row.direction]), [[f.lines.L1, 'increase'], [f.lines.L2, 'increase'], [f.lines.L3, 'decrease']]);
+    assert.equal(delta.rows[0].pct_increase, (350.5 - 100.25) / 100.25, 'the change as a fraction of the source');
+    const deltaFile = await exportFile(svc.controller, m, f, admin, 'increases-decreases', {
+      ...address, sourceYear: String(Y), sourceMetric: 'budget', destinationYear: String(Y + 1), destinationMetric: 'budget', direction: 'both', top: '10', format: 'xlsx', language: 'en',
+    });
+    const deltaSheets = workbook(deltaFile.body());
+    assert.deepEqual(dataSheet(deltaSheets), written(delta), 'increases and decreases = the screen table');
+    const deltaParameters = deltaSheets.get('Parameters')!.map(trim);
+    for (const pair of [['Source year', String(Y)], ['Source metric', 'Budget'], ['Destination year', String(Y + 1)], ['Destination metric', 'Budget'], ['Increase or decrease', 'Both'], ['Top count', '10']]) {
+      assert.ok(deltaParameters.some((row) => row[0] === pair[0] && row[1] === pair[1]), `parameter ${pair.join(': ')}`);
+    }
+    assert.match(deltaFile.headers['Content-Disposition'], new RegExp(`filename="top2-1-all-delta-${Y}-budget-to-${Y + 1}-budget-decrease-increase-`));
+
+    // FTE, OPEX, decreases: L2 left out by id, L1 by its account label; the FTE of Y+1 nobody declares.
+    const fteAnswer = await screenAnswer(svc, m, f, admin, 'opex', R.deltaRequests({
+      scope: 'opex', source, destination, modes: ['decrease'], topCount: 10, excludedIds: [f.lines.L2], excludedAccounts: ['7011 - Hosting'], filters: {}, measure: 'fte',
+    })[0]);
+    const fteDelta = T.deltaTable({ source, destination, modes: ['decrease'], measure: 'fte' }, [fteAnswer], LABELS);
+    assert.deepEqual(fteDelta.rows.map((row) => [row.id, row.previous, row.current, row.delta]), [[f.lines.L3, 1.5, null, -1.5]]);
+    const fteFile = await exportFile(svc.controller, m, f, admin, 'increases-decreases', {
+      scope: 'opex', measure: 'fte', sourceYear: String(Y), sourceMetric: 'budget', destinationYear: String(Y + 1), destinationMetric: 'budget', direction: 'decrease', top: '10',
+      excludeIds: f.lines.L2, excludeAccounts: '["7011 - Hosting"]', format: 'xlsx', language: 'en',
+    });
+    const fteSheets = workbook(fteFile.body());
+    assert.deepEqual(dataSheet(fteSheets), written(fteDelta), 'FTE decreases = the screen table');
+    assert.ok(fteSheets.get('Parameters')!.some((row) => row[0] === 'Exclude accounts' && row[1] === '7011 - Hosting'));
+
+    // Consolidation: L1 and L2 on Software, L3 on Services; then Services and the unassigned lines left out.
+    const years = [Y, Y + 1];
+    const consolidationAnswer = await screenAnswer(svc, m, f, admin, 'all', R.consolidationRequest({ years, metric: 'budget', excludedAccountIds: [], filters, measure: 'amount' }));
+    const consolidation = T.consolidationTable({ years, metric: 'budget', measure: 'amount' }, consolidationAnswer, LABELS);
+    assert.deepEqual(consolidation.rows.map((row) => row.group), ['[60] Software', '[61] Services'], 'the first year\'s largest first');
+    assertColumnsAddUp(consolidation, 'consolidation');
+    const consolidationFile = await exportFile(svc.controller, m, f, admin, 'consolidation', {
+      ...address, startYear: String(Y), endYear: String(Y + 1), metric: 'budget', format: 'xlsx', language: 'en',
+    });
+    assert.deepEqual(dataSheet(workbook(consolidationFile.body())), written(consolidation), 'consolidation = the screen table, the total last');
+    const keptAnswer = await screenAnswer(svc, m, f, admin, 'all', R.consolidationRequest({ years, metric: 'budget', excludedAccountIds: [f.accounts.support, R.NO_CONSOLIDATION_LINE], filters: {}, measure: 'amount' }));
+    const kept = T.consolidationTable({ years, metric: 'budget', measure: 'amount' }, keptAnswer, LABELS);
+    assert.deepEqual(kept.rows.map((row) => row.group), ['[60] Software']);
+    const keptFile = await exportFile(svc.controller, m, f, admin, 'consolidation', {
+      startYear: String(Y), endYear: String(Y + 1), metric: 'budget', excludeAccounts: `${f.accounts.support},none`, format: 'xlsx', language: 'en',
+    });
+    const keptSheets = workbook(keptFile.body());
+    assert.deepEqual(dataSheet(keptSheets), written(kept));
+    assert.ok(keptSheets.get('Parameters')!.some((row) => row[0] === 'Exclude accounts' && row[1] === '[7020] Support, Unassigned'), 'the excluded accounts by label');
+
+    // Analytics on the second dimension, filtered on the first: L1 to L3 hold its value, the other INF lines none.
+    const analyticsFilters = R.reportFilterModels({ costCenterIds: inf, runBuild: null, analytics: [[f.axis1, f.category1]], withFte: false });
+    const analyticsAnswer = await screenAnswer(svc, m, f, admin, 'all', R.analyticsRequest({ axisId: f.axis2, years, metric: 'budget', excludedIds: [], filters: analyticsFilters, measure: 'amount' }));
+    const analytics = T.analyticsTable({ years, metric: 'budget', measure: 'amount', dimension: f.axis2Name }, analyticsAnswer, LABELS);
+    assert.deepEqual(new Set(analytics.rows.map((row) => row.group)), new Set([f.category2Name, L.analyticsUnassigned]));
+    assertColumnsAddUp(analytics, 'analytics');
+    const analyticsFile = await exportFile(svc.controller, m, f, admin, 'analytics', {
+      costCenter: f.inf, analytics: `${f.axis1}:${f.category1}`, axis: f.axis2, startYear: String(Y), endYear: String(Y + 1), metric: 'budget', format: 'xlsx', language: 'en',
+    });
+    const analyticsSheets = workbook(analyticsFile.body());
+    assert.deepEqual(dataSheet(analyticsSheets), written(analytics), 'analytics = the screen table, headed by the dimension');
+    assert.ok(analyticsSheets.get('Parameters')!.some((row) => row[0] === 'Dimension' && row[1] === f.axis2Name));
+    const valuedAnswer = await screenAnswer(svc, m, f, admin, 'all', R.analyticsRequest({ axisId: f.axis2, years, metric: 'budget', excludedIds: [R.NO_ANALYTICS_VALUE], filters: analyticsFilters, measure: 'amount' }));
+    const valued = T.analyticsTable({ years, metric: 'budget', measure: 'amount', dimension: f.axis2Name }, valuedAnswer, LABELS);
+    const valuedFile = await exportFile(svc.controller, m, f, admin, 'analytics', {
+      costCenter: f.inf, analytics: `${f.axis1}:${f.category1}`, axis: f.axis2, startYear: String(Y), endYear: String(Y + 1), metric: 'budget', excludeValues: 'none', format: 'csv', language: 'en',
+    });
+    const csv = valuedFile.body().toString('utf8').replace(/^﻿/, '').trim().split(/\r?\n/);
+    assert.equal(csv.length, 1 + valued.rows.length + 1, 'CSV: header, the valued group, the total');
+    assert.equal(csv[0], `${f.axis2Name},${Y},${Y + 1}`);
+  });
+
+  // A person who cannot read the accounts page: every line unassigned, on the screen and in the file.
+  const noAccounts: Person = { id: f.persons.admin, isAdmin: false };
+  await as(runner, noAccounts.id, async (m) => {
+    const years = [Y];
+    const answer = await screenAnswer(svc, m, f, noAccounts, 'all', R.consolidationRequest({ years, metric: 'budget', excludedAccountIds: [], filters: {}, measure: 'amount' }));
+    const expected = T.consolidationTable({ years, metric: 'budget', measure: 'amount' }, answer, LABELS);
+    assert.deepEqual(expected.rows.map((row) => row.group), [L.consolidationUnassigned], 'no consolidation line without the accounts page');
+    const file = await exportFile(svc.controller, m, f, noAccounts, 'consolidation', { startYear: String(Y), endYear: String(Y), metric: 'budget', format: 'xlsx', language: 'en' });
+    assert.deepEqual(dataSheet(workbook(file.body())), written(expected), 'what the route gives them');
+    const reader: Person = { ...noAccounts, permissions: { accounts: 'reader' } };
+    const readerAnswer = await screenAnswer(svc, m, f, reader, 'all', R.consolidationRequest({ years, metric: 'budget', excludedAccountIds: [], filters: {}, measure: 'amount' }));
+    const readerTable = T.consolidationTable({ years, metric: 'budget', measure: 'amount' }, readerAnswer, LABELS);
+    assert.ok(readerTable.rows.some((row) => row.group === '[60] Software'), 'an accounts reader sees the consolidation lines');
+    const readerFile = await exportFile(svc.controller, m, f, reader, 'consolidation', { startYear: String(Y), endYear: String(Y), metric: 'budget', format: 'xlsx', language: 'en' });
+    assert.deepEqual(dataSheet(workbook(readerFile.body())), written(readerTable));
+  });
+  console.log('  increases and decreases (both, FTE), consolidation (exclusions, without the accounts page) and analytics equal the screen tables: OK');
+}
+
 async function testLimited(runner: QueryRunner, f: Fixture): Promise<void> {
   const svc = services();
   const marta: Person = { id: f.persons.marta, isAdmin: false };
@@ -328,6 +479,29 @@ async function testLimited(runner: QueryRunner, f: Fixture): Promise<void> {
       (error: any) => error.getStatus?.() === 400 && /is not a line of this report/.test(error.message),
       'a line she cannot read cannot be excluded',
     );
+
+    // Consolidation and increases and decreases on her lines: no total row.
+    const years = [Y, Y + 1];
+    const consolidation = T.consolidationTable({ years, metric: 'budget', measure: 'amount' }, await screenAnswer(svc, m, f, marta, 'all', R.consolidationRequest({
+      years, metric: 'budget', excludedAccountIds: [], filters: {}, measure: 'amount',
+    })), LABELS);
+    const consolidationFile = await exportFile(svc.controller, m, f, marta, 'consolidation', { startYear: String(Y), endYear: String(Y + 1), metric: 'budget', format: 'xlsx', language: 'en' });
+    const consolidationSheets = workbook(consolidationFile.body());
+    assert.deepEqual(dataSheet(consolidationSheets), written(consolidation, true), 'consolidation on her lines, no total');
+    assert.ok(consolidationSheets.get('Parameters')!.some((row) => row[0] === 'Computed on your access'));
+    const source = { year: Y, metric: 'budget' as const };
+    const destination = { year: Y + 1, metric: 'budget' as const };
+    const answers = [];
+    for (const request of R.deltaRequests({ scope: 'all', source, destination, modes: ['increase', 'decrease'], topCount: 10, excludedIds: [], excludedAccounts: [], filters: {}, measure: 'amount' })) {
+      answers.push(await screenAnswer(svc, m, f, marta, 'all', request));
+    }
+    const delta = T.deltaTable({ source, destination, modes: ['increase', 'decrease'], measure: 'amount' }, answers, LABELS);
+    assert.deepEqual(new Set(delta.rows.map((row) => row.id)), new Set([f.lines.L2, f.lines.L3, f.lines.L4, f.lines.L5]), 'her lines only');
+    const deltaFile = await exportFile(svc.controller, m, f, marta, 'increases-decreases', {
+      sourceYear: String(Y), sourceMetric: 'budget', destinationYear: String(Y + 1), destinationMetric: 'budget', direction: 'both', top: '10', format: 'xlsx', language: 'en',
+    });
+    assert.deepEqual(dataSheet(workbook(deltaFile.body())), written(delta));
+    assert.equal(deltaFile.headers[DATA_ACCESS_HEADER], 'limited');
   });
   console.log('  limited: her lines only, the access line and header: OK');
 }
@@ -338,6 +512,8 @@ async function testRefused(runner: QueryRunner, f: Fixture): Promise<void> {
   const missing = '00000000-0000-4000-8000-000000000000';
   const top = { year: String(Y), metric: 'budget', top: '10' };
   const comparison = { startYear: String(Y), endYear: String(Y + 1), metrics: 'budget' };
+  const delta = { sourceYear: String(Y), sourceMetric: 'budget', destinationYear: String(Y + 1), destinationMetric: 'budget', direction: 'increase', top: '10' };
+  const range = { startYear: String(Y), endYear: String(Y + 1), metric: 'budget' };
   const cases: Array<[Report, Record<string, unknown>, RegExp]> = [
     ['comparison', { ...comparison, sort: 'name' }, /Unknown parameter: sort/],
     ['comparison', { endYear: String(Y), metrics: 'budget' }, /startYear is required/],
@@ -365,6 +541,29 @@ async function testRefused(runner: QueryRunner, f: Fixture): Promise<void> {
     ['top-lines', { ...top, excludeAccounts: 'Licences' }, /excludeAccounts must be a JSON list/],
     ['top-lines', { ...top, excludeAccounts: '["6011 Licences"]' }, /no line holds the account 6011 Licences/],
     ['top-lines', { ...top, format: 'pdf' }, /format must be csv or xlsx/],
+    ['increases-decreases', { ...delta, sourceYear: undefined }, /sourceYear is required/],
+    ['increases-decreases', { ...delta, sourceYear: String(Y - 3) }, /sourceYear must be between/],
+    ['increases-decreases', { ...delta, destinationYear: String(Y + 3) }, /destinationYear must be between/],
+    ['increases-decreases', { ...delta, sourceMetric: 'actuals' }, /sourceMetric: unknown column actuals/],
+    ['increases-decreases', { ...delta, destinationMetric: 'forecast' }, /destinationMetric: the column forecast is hidden/],
+    ['increases-decreases', { ...delta, direction: 'up' }, /direction must be increase, decrease or both/],
+    ['increases-decreases', { ...delta, direction: undefined }, /direction is required/],
+    ['increases-decreases', { ...delta, top: 'ten' }, /top must be a whole number/],
+    ['increases-decreases', { ...delta, excludeIds: missing }, /is not a line of this report/],
+    ['increases-decreases', { ...delta, excludeAccounts: '["6011 Licences"]' }, /no line holds the account 6011 Licences/],
+    ['increases-decreases', { ...delta, year: String(Y) }, /Unknown parameter: year/],
+    ['consolidation', { ...range, startYear: String(Y - 2) }, /startYear must be between/],
+    ['consolidation', { ...range, endYear: String(Y + 2) }, /endYear must be between/],
+    ['consolidation', { ...range, metric: undefined }, /metric is required/],
+    ['consolidation', { ...range, excludeAccounts: '7011' }, /excludeAccounts must be account ids or none/],
+    ['consolidation', { ...range, excludeAccounts: missing }, /is not an account of this report/],
+    ['consolidation', { ...range, excludeAccounts: 'none,none' }, /names a value twice/],
+    ['consolidation', { ...range, excludeAccounts: '["7011 - Hosting"]' }, /excludeAccounts must be account ids or none/],
+    ['analytics', { ...range, axis: 'default' }, /axis must be a dimension id/],
+    ['analytics', { ...range, axis: missing }, /is not an enabled dimension of these lines/],
+    ['analytics', { ...range, axis: f.axis2, excludeValues: 'Cloud' }, /excludeValues must be value ids or none/],
+    ['analytics', { ...range, axis: f.axis1, excludeValues: f.category2 }, /is not a value of this dimension/],
+    ['analytics', { ...range, axis: f.axis2, excludeAccounts: 'none' }, /Unknown parameter: excludeAccounts/],
   ];
   await as(runner, admin.id, async (m) => {
     for (const [report, query, message] of cases) {
@@ -382,26 +581,38 @@ async function testRefused(runner: QueryRunner, f: Fixture): Promise<void> {
 async function testAudit(runner: QueryRunner, f: Fixture): Promise<void> {
   const svc = services();
   const admin: Person = { id: f.persons.admin, isAdmin: true };
+  // The consolidation's total row is not counted: Software, Services and the unassigned lines.
+  const cases: Array<[Report, Record<string, unknown>, number]> = [
+    ['top-lines', { scope: 'opex', year: String(Y), metric: 'budget', top: '4', format: 'xlsx', language: 'en' }, 4],
+    ['consolidation', { startYear: String(Y), endYear: String(Y), metric: 'budget', format: 'xlsx', language: 'en' }, 3],
+    ['increases-decreases', {
+      sourceYear: String(Y), sourceMetric: 'budget', destinationYear: String(Y + 1), destinationMetric: 'budget', direction: 'both', top: '2', format: 'csv', language: 'en',
+    }, 4],
+  ];
   await as(runner, admin.id, async (m) => {
-    const query = { scope: 'opex', year: String(Y), metric: 'budget', top: '4', format: 'xlsx', language: 'en' };
-    const req = requestOf(m, f, admin, 'top-lines', query);
-    const out = response(req);
-    const context: any = {
-      getType: () => 'http',
-      getClass: () => BudgetReportExportController,
-      getHandler: () => BudgetReportExportController.prototype.topLines,
-      switchToHttp: () => ({ getRequest: () => req, getResponse: () => out.res }),
-    };
-    await lastValueFrom(new ExportEventsInterceptor().intercept(context, { handle: () => from(svc.controller.topLines(query, ctxOf(m, f, admin) as any, out.res)) }), { defaultValue: undefined });
-    const rows: Array<{ after: any }> = await m.query(
-      `SELECT after_json AS after FROM audit_log WHERE tenant_id = $1 AND table_name = 'export' AND after_json->>'path' = $2`,
-      [f.tenantId, '/reports/budget/top-lines/export'],
-    );
-    assert.equal(rows.length, 1, 'one export row');
-    assert.deepEqual(
-      { resource: rows[0].after.resource, format: rows[0].after.format, rows: rows[0].after.rows },
-      { resource: 'reports/budget/top-lines', format: 'xlsx', rows: 4 },
-    );
+    for (const [report, query, count] of cases) {
+      const req = requestOf(m, f, admin, report, query);
+      const out = response(req);
+      const handler = (BudgetReportExportController.prototype as any)[HANDLER[report]];
+      const context: any = {
+        getType: () => 'http',
+        getClass: () => BudgetReportExportController,
+        getHandler: () => handler,
+        switchToHttp: () => ({ getRequest: () => req, getResponse: () => out.res }),
+      };
+      const call = () => from((svc.controller as any)[HANDLER[report]](query, ctxOf(m, f, admin), out.res) as Promise<void>);
+      await lastValueFrom(new ExportEventsInterceptor().intercept(context, { handle: call }), { defaultValue: undefined });
+      const rows: Array<{ after: any }> = await m.query(
+        `SELECT after_json AS after FROM audit_log WHERE tenant_id = $1 AND table_name = 'export' AND after_json->>'path' = $2`,
+        [f.tenantId, `/reports/budget/${report}/export`],
+      );
+      assert.equal(rows.length, 1, `${report}: one export row`);
+      assert.deepEqual(
+        { resource: rows[0].after.resource, format: rows[0].after.format, rows: rows[0].after.rows },
+        { resource: `reports/budget/${report}`, format: query.format, rows: count },
+        report,
+      );
+    }
   });
   console.log('  audit: the export row carries the format and the row count: OK');
 }
@@ -421,6 +632,7 @@ async function run() {
     try {
       const f = await enrich(runner, await seed(clientOf(runner)));
       await testTables(runner, f);
+      await testDeltaGroupTables(runner, f);
       await testLimited(runner, f);
       await testRefused(runner, f);
       await testAudit(runner, f);
