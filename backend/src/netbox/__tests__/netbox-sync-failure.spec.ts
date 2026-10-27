@@ -113,6 +113,39 @@ async function main(): Promise<void> {
     assert.equal(read.error_code, null);
     assert.equal(read.error, 'Kept as written.');
   }
+
+  // A run still marked running two hours later stopped without finishing.
+  {
+    const started = '2026-10-27T08:00:00.000Z';
+    const now = Date.parse(started) + 2 * 60 * 60 * 1000;
+    const read = readSyncState({
+      sync_state: {
+        status: 'running',
+        trigger: 'scheduled',
+        started_at: started,
+        finished_at: null,
+        error: null,
+        error_code: null,
+      },
+    }, now);
+    assert.equal(read.status, 'failure');
+    assert.equal(read.error_code, 'netbox_sync_interrupted');
+    assert.equal(read.error, NETBOX_ERROR_MESSAGES.netbox_sync_interrupted);
+    assert.equal(read.trigger, 'scheduled');
+    assert.equal(read.started_at, started);
+  }
+
+  // Under an hour, the same row is still a run in progress.
+  {
+    const started = '2026-10-27T08:00:00.000Z';
+    const now = Date.parse(started) + 30 * 60 * 1000;
+    const read = readSyncState({
+      sync_state: { status: 'running', trigger: 'manual', started_at: started },
+    }, now);
+    assert.equal(read.status, 'running');
+    assert.equal(read.error_code, null);
+    assert.equal(read.error, null);
+  }
 }
 
 main().then(() => console.log('netbox-sync-failure.spec.ts OK')).catch((error) => {
