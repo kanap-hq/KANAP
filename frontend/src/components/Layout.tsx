@@ -58,6 +58,7 @@ import { useThemeMode } from '../config/ThemeContext';
 import { getDocUrl, RELEASES_URL } from '../utils/docUrls';
 import { formatUserName } from '../utils/userDisplay';
 import SubscriptionBanner from './SubscriptionBanner';
+import NamePromptDialog from './NamePromptDialog';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
 import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
@@ -766,6 +767,7 @@ export default function Layout() {
           </React.Suspense>
         </Box>
       </Box>
+      <NamePromptDialog />
     </Box>
   );
 }
