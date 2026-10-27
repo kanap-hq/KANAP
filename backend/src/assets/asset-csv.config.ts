@@ -577,6 +577,8 @@ async function recheckClusterRulesAtWrite(entities: any[], context: CsvImportCon
  */
 export const assetCsvConfig: CsvEntityConfig = {
   entityName: 'asset',
+  // The sheet of an xlsx export: the list's title on screen.
+  sheetNames: { en: 'Assets', fr: 'Actifs', de: 'Assets', es: 'Activos' },
   tableName: 'assets',
   displayName: 'Assets',
   upsertKey: ['name'],

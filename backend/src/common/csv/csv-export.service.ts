@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { formatCsvBoolean } from '../csv-sheet/boolean';
 import { formatCsvDate, timeZoneHeader } from '../csv-sheet/date';
 import { csvProfile } from '../csv-sheet/language';
 import { CsvLanguage } from '../csv-sheet/types';
 import { writeCsvHeader, writeCsvRows } from '../csv-sheet/write';
+import { parseExportFormat, type ExportFileFormat } from '../xlsx/format';
+import { writeXlsx, XLSX_CONTENT_TYPE, type XlsxCell } from '../xlsx/write';
 import {
   ArrayStrategy,
   CsvEntityConfig,
@@ -86,10 +88,25 @@ export function denormalizeCsvRow<T>(row: T): T {
   return row;
 }
 
+export const CSV_CONTENT_TYPE = 'text/csv; charset=utf-8';
+const TEMPLATE_IS_CSV = 'An import template is a CSV file: format=xlsx is for the data export.';
+
+/**
+ * The `format` of a field-engine export (`parseExportFormat`: csv by default, xlsx, anything else
+ * 400). An import template stays a CSV file: xlsx with `scope=template` answers 400.
+ */
+export function csvExportFormat(raw: unknown, scope: unknown): ExportFileFormat {
+  const format = parseExportFormat(raw);
+  if (format === 'xlsx' && scope === 'template') {
+    throw new BadRequestException(TEMPLATE_IS_CSV);
+  }
+  return format;
+}
+
 /**
  * Export options
  */
-export interface CsvExportOptions {
+export interface CsvExportOptions<F extends ExportFileFormat = 'csv'> {
   /** TypeORM EntityManager */
   manager: EntityManager;
   /** Tenant ID */
@@ -110,7 +127,20 @@ export interface CsvExportOptions {
    * (`detected_at (Europe/Paris)`): the exporting user's. UTC when not given.
    */
   timeZone?: string;
+  /**
+   * `csv` (default), or `xlsx`: the same columns, headers and order in one styled sheet named after
+   * the list (`sheetNames`), the number and date fields as number and date cells, every other cell
+   * the text the CSV writes. A template is CSV only.
+   */
+  format?: F;
 }
+
+/** The day of a date field, `YYYY-MM-DD` when the value holds one. */
+function dayOf(rawValue: unknown): string {
+  return rawValue instanceof Date ? rawValue.toISOString().split('T')[0] : String(rawValue).split('T')[0];
+}
+
+const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
 
 /**
  * Service for exporting entities to CSV format.
@@ -137,12 +167,16 @@ export class CsvExportService {
    * @param opts - Export options
    * @returns Export result with filename, content, and metadata
    */
-  async export(
+  async export<F extends ExportFileFormat = 'csv'>(
     config: CsvEntityConfig,
     entities: any[],
-    opts: CsvExportOptions,
-  ): Promise<CsvExportResult> {
+    opts: CsvExportOptions<F>,
+  ): Promise<CsvExportResult<F>> {
     const warnings: string[] = [];
+    const format: ExportFileFormat = opts.format ?? 'csv';
+    if (format === 'xlsx' && opts.scope === 'template') {
+      throw new BadRequestException(TEMPLATE_IS_CSV);
+    }
 
     // Determine which fields to export
     const exportFields = this.selectExportFields(config, opts);
@@ -160,10 +194,11 @@ export class CsvExportService {
     if (opts.scope === 'template') {
       return {
         filename: `${config.entityName}_template.csv`,
+        contentType: CSV_CONTENT_TYPE,
         content: headerLine,
-        rowCount: 0,
+        rows: 0,
         warnings: [],
-      };
+      } as unknown as CsvExportResult<F>;
     }
 
     // Preload FK resolvers
@@ -204,12 +239,57 @@ export class CsvExportService {
       return columns.map(({ column }) => row[column] ?? '');
     });
 
+    if (format === 'xlsx') {
+      // The CSV in a workbook: the same cells, a number or a date where the field is one.
+      const fieldOf = new Map(
+        exportFields.filter((field) => !field.arrayIndex && field.arrayStrategy !== ArrayStrategy.NUMBERED_COLUMNS).map((field) => [field.csvColumn, field]),
+      );
+      const cells = rows.map((texts, rowIndex) =>
+        columns.map(({ column }, index) => this.xlsxCell(entities[rowIndex], fieldOf.get(column), texts[index], context)),
+      );
+      return {
+        filename: `${config.entityName}_export.xlsx`,
+        contentType: XLSX_CONTENT_TYPE,
+        content: writeXlsx({
+          language: opts.language,
+          sheets: [{ name: config.sheetNames?.[opts.language] ?? config.displayName, headers: headerTexts, rows: cells }],
+        }),
+        rows: entities.length,
+        warnings,
+      } as unknown as CsvExportResult<F>;
+    }
+
     return {
       filename: `${config.entityName}_export.csv`,
+      contentType: CSV_CONTENT_TYPE,
       content: headerLine + writeCsvRows({ language: opts.language, headers: headerTexts, rows }),
-      rowCount: entities.length,
+      rows: entities.length,
       warnings,
-    };
+    } as unknown as CsvExportResult<F>;
+  }
+
+  /**
+   * One cell of the workbook. A number field is a number cell and a date field a date cell, read from
+   * the stored value; any other cell, and a value that is neither, is the text of the CSV (`text`,
+   * formula-guarded already, guarded again by the writer). Empty stays empty.
+   */
+  private xlsxCell(entity: any, field: CsvFieldDefinition | undefined, text: string, context: CsvExportContext): XlsxCell {
+    if (text === '') return null;
+    if (!field || field.exportFn || (field.type !== CsvFieldType.NUMBER && field.type !== CsvFieldType.DATE)) return text;
+    const rawValue = this.rawFieldValue(entity, field);
+    if (rawValue === null || rawValue === undefined) return text;
+    if (field.type === CsvFieldType.NUMBER) {
+      if (typeof rawValue === 'number') return Number.isFinite(rawValue) ? { kind: 'number', value: rawValue } : text;
+      const number = String(rawValue).trim();
+      return PLAIN_NUMBER.test(number) ? { kind: 'number', value: Number(number) } : text;
+    }
+    const day = dayOf(rawValue);
+    try {
+      // The day the CSV wrote: a value the CSV could not read as a day stays its text.
+      return formatCsvDate(day, context.language) === text ? { kind: 'date', iso: day } : text;
+    } catch {
+      return text;
+    }
   }
 
   /**
@@ -224,7 +304,7 @@ export class CsvExportService {
    */
   private selectExportFields(
     config: CsvEntityConfig,
-    opts: CsvExportOptions,
+    opts: Pick<CsvExportOptions<ExportFileFormat>, 'scope' | 'preset' | 'fields'>,
   ): CsvFieldDefinition[] {
     // For template scope, use all importable fields (so users see what they can import)
     if (opts.scope === 'template') {
@@ -432,13 +512,7 @@ export class CsvExportService {
       return field.exportFn(entity, context) ?? '';
     }
 
-    // Get raw value from entity
-    let rawValue = entity[field.entityProperty];
-
-    // Handle nested paths (e.g., [0].type for ip_addresses[0].type)
-    if (field.nestedPath && rawValue !== null && rawValue !== undefined) {
-      rawValue = this.getNestedValue(rawValue, field.nestedPath);
-    }
+    const rawValue = this.rawFieldValue(entity, field);
 
     // Handle null/undefined
     if (rawValue === null || rawValue === undefined) {
@@ -472,7 +546,7 @@ export class CsvExportService {
 
     // Handle dates: the day, written the language's way
     if (field.type === CsvFieldType.DATE) {
-      const day = rawValue instanceof Date ? rawValue.toISOString().split('T')[0] : String(rawValue).split('T')[0];
+      const day = dayOf(rawValue);
       try {
         return formatCsvDate(day, context.language);
       } catch {
@@ -493,6 +567,16 @@ export class CsvExportService {
 
     // Default: string conversion
     return String(rawValue);
+  }
+
+  /** The stored value of a field: its property, followed into `nestedPath` when it has one. */
+  private rawFieldValue(entity: any, field: CsvFieldDefinition): any {
+    const rawValue = entity[field.entityProperty];
+    // Handle nested paths (e.g., [0].type for ip_addresses[0].type)
+    if (field.nestedPath && rawValue !== null && rawValue !== undefined) {
+      return this.getNestedValue(rawValue, field.nestedPath);
+    }
+    return rawValue;
   }
 
   private neutralizeFormulaValue(value: string): string {

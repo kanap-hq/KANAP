@@ -1,0 +1,15 @@
+﻿id;name;location_reference;kind;is_cluster;status;go_live_date;end_of_life_date;notes;environment;hostname;domain;admin_zone;aliases;operating_system;cluster;ip_1_type;ip_1_address;ip_1_subnet_cidr;ip_2_type;ip_2_address;ip_2_subnet_cidr;ip_3_type;ip_3_address;ip_3_subnet_cidr;ip_4_type;ip_4_address;ip_4_subnet_cidr;vulnerabilities_to_review;severe_vulnerabilities
+row-1;Plain name;locations.location_reference;Plain name;oui;Plain name;01/03/2026;01/03/2026;Plain name;Plain name;Plain name;Plain name;Plain name;alpha, beta;Plain name;Plain name;Management;10.0.0.1;10.0.0.0/24;Production;10.0.1.1;;;;;;;;0;0
+row-2;"'=HYPERLINK(""http://x"")";locations.location_reference;"'=HYPERLINK(""http://x"")";non;"'=HYPERLINK(""http://x"")";27/10/2026;27/10/2026;"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";;"'=HYPERLINK(""http://x"")";"'=HYPERLINK(""http://x"")";Management;10.0.0.1;10.0.0.0/24;Production;10.0.1.1;;;;;;;;3;1
+row-3;"Line; ""quoted""
+second line";;"Line; ""quoted""
+second line";;"Line; ""quoted""
+second line";;;"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";;"Line; ""quoted""
+second line";"Line; ""quoted""
+second line";;;;;;;;;;;;;;
+row-4;-12;locations.location_reference;-12;oui;-12;2026-02-30;2026-02-30;-12;-12;-12;-12;-12;'+cmd;-12;-12;Management;10.0.0.1;10.0.0.0/24;Production;10.0.1.1;;;;;;;;9;3

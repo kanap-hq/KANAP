@@ -41,6 +41,8 @@ function normalizeCodes(entity: any): void {
  */
 export const portfolioRequestCsvConfig: CsvEntityConfig = {
   entityName: 'portfolio_request',
+  // The sheet of an xlsx export: the list's title on screen.
+  sheetNames: { en: 'Portfolio requests', fr: 'Demandes du portefeuille', de: 'Portfolio-Anfragen', es: 'Solicitudes del portafolio' },
   tableName: 'portfolio_requests',
   displayName: 'Portfolio Requests',
   upsertKey: ['name'],

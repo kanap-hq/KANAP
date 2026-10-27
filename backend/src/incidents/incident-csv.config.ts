@@ -306,6 +306,8 @@ function textField(csvColumn: string, label: string, group: string) {
 
 export const incidentCsvConfig: CsvEntityConfig = {
   entityName: 'incident',
+  // The sheet of an xlsx export: the list's title on screen.
+  sheetNames: { en: 'Incident register', fr: 'Registre des incidents', de: 'Vorfallsregister', es: 'Registro de incidentes' },
   tableName: 'incidents',
   displayName: 'Incidents',
   // INC-N is the register's identity; the export writes it, the import matches on it.

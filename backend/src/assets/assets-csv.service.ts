@@ -16,6 +16,7 @@ import {
   CsvImportResult,
   CsvFieldInfo,
 } from '../common/csv';
+import type { ExportFileFormat } from '../common/xlsx';
 import { clusterMembershipsOf, clusterNamesText, lockAssetNames } from './asset-rules';
 import { assetEnvironmentLabel } from './asset-environments';
 import { assetCsvConfig } from './asset-csv.config';
@@ -43,7 +44,7 @@ export class AssetsCsvService {
   /**
    * Export assets to CSV format.
    */
-  async export(opts: {
+  async export<F extends ExportFileFormat = 'csv'>(opts: {
     manager: EntityManager;
     tenantId: string;
     /** The screen language: separator, days, decimal mark and yes or no (`csv-sheet`). */
@@ -56,7 +57,9 @@ export class AssetsCsvService {
     status?: string;
     /** The list request: filters, search and scope. The same query the grid sends. */
     query?: Record<string, unknown>;
-  }): Promise<CsvExportResult> {
+    /** `csv` (default) or `xlsx` (data only: a template is CSV). */
+    format?: F;
+  }): Promise<CsvExportResult<F>> {
     const { manager, tenantId, scope, fields, preset } = opts;
 
     let queryBuilder = manager
@@ -108,6 +111,7 @@ export class AssetsCsvService {
       fields,
       preset,
       language: opts.language,
+      format: opts.format,
     });
   }
 

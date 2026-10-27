@@ -79,7 +79,7 @@ async function testTemplateExportReturnsHeadersOnly() {
     scope: 'template',
   });
 
-  assert.equal(result.rowCount, 0);
+  assert.equal(result.rows, 0);
   assert.ok(result.content.startsWith('\uFEFF')); // BOM
   assert.ok(result.content.includes('id;title;description;status;due_date;priority'));
   assert.equal(result.filename, 'task_template.csv');
@@ -102,7 +102,7 @@ async function testDataExportIncludesRows() {
     scope: 'data',
   });
 
-  assert.equal(result.rowCount, 2);
+  assert.equal(result.rows, 2);
   assert.ok(result.content.includes('Task 1'));
   assert.ok(result.content.includes('Task 2'));
   assert.ok(result.content.includes('open'));

@@ -1,0 +1,8 @@
+﻿id,title,description,task_type_name,related_object_type,related_object_id,related_object_name,phase_name,priority_level,category_name,stream_name,source_name,company_name,status,start_date,due_date,assignee_email,creator_email,viewer_email_1,viewer_email_2,viewer_email_3,viewer_email_4,owner_email_1,owner_email_2,owner_email_3,owner_email_4,labels
+row-1,Plain name,Plain name,portfolio_task_types.name,spend_item,Plain name,Related project,portfolio_project_phases.name,blocker,portfolio_categories.name,portfolio_streams.name,portfolio_sources.name,companies.name,open,2026-03-01,2026-03-01,users.email,,,,,,,,,,"alpha, beta"
+row-2,"'=HYPERLINK(""http://x"")","'=HYPERLINK(""http://x"")",portfolio_task_types.name,contract,"'=HYPERLINK(""http://x"")",Related project,portfolio_project_phases.name,high,portfolio_categories.name,portfolio_streams.name,portfolio_sources.name,companies.name,in_progress,2026-10-27,2026-10-27,users.email,,,,,,,,,,
+row-3,"Line; ""quoted""
+second line","Line; ""quoted""
+second line",,capex_item,"Line; ""quoted""
+second line",,,normal,,,,,pending,,,,,,,,,,,,,
+row-4,-12,-12,portfolio_task_types.name,project,-12,Related project,portfolio_project_phases.name,low,portfolio_categories.name,portfolio_streams.name,portfolio_sources.name,companies.name,in_testing,2026-02-30,2026-02-30,users.email,,,,,,,,,,'+cmd

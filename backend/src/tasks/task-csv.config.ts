@@ -101,6 +101,8 @@ const hasColumns = (raw: Record<string, string>, prefix: string) => [1, 2, 3, 4]
  */
 export const taskCsvConfig: CsvEntityConfig = {
   entityName: 'task',
+  // The sheet of an xlsx export: the list's title on screen.
+  sheetNames: { en: 'Tasks', fr: 'Tâches', de: 'Aufgaben', es: 'Tareas' },
   tableName: 'tasks',
   displayName: 'Tasks',
   // For linked tasks: title + related_object_id. For standalone: title alone (matched via id).

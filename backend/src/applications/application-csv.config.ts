@@ -180,6 +180,8 @@ function groupKeys<T>(rows: T[], id: (row: T) => string, key: (row: T) => string
  */
 export const applicationCsvConfig: CsvEntityConfig = {
   entityName: 'application',
+  // The sheet of an xlsx export: the list's title on screen.
+  sheetNames: { en: 'Applications', fr: 'Applications', de: 'Anwendungen', es: 'Aplicaciones' },
   tableName: 'applications',
   displayName: 'Applications',
   upsertKey: ['name'],

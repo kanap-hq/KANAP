@@ -1,0 +1,8 @@
+﻿id,name,status,purpose,origin,source_name,category_name,stream_name,company_name,department_name,planned_start,planned_end,actual_start,actual_end,baseline_start_date,baseline_end_date,execution_progress,estimated_effort_it,estimated_effort_business,actual_effort_it,actual_effort_business,baseline_effort_it,baseline_effort_business,business_sponsor_email,business_lead_email,it_sponsor_email,it_lead_email,criteria_values,priority_score,priority_override,override_value,override_justification
+row-1,Plain name,waiting_list,Purpose **bold**,standard,portfolio_sources.name,portfolio_categories.name,portfolio_streams.name,companies.name,departments.name,2026-03-01,2026-03-01,2026-03-01,2026-03-01,2026-03-01,2026-03-01,12.50,12.50,12.50,11,4,12.50,12.50,users.email,users.email,users.email,users.email,"{""score"":0,""note"":""a;b""}",Plain name,yes,12.50,Plain name
+row-2,"'=HYPERLINK(""http://x"")",planned,,fast_track,portfolio_sources.name,portfolio_categories.name,portfolio_streams.name,companies.name,departments.name,2026-10-27,2026-10-27,2026-10-27,2026-10-27,2026-10-27,2026-10-27,3,3,3,11,4,3,3,users.email,users.email,users.email,users.email,"{""score"":1,""note"":""a;b""}","'=HYPERLINK(""http://x"")",no,3,"'=HYPERLINK(""http://x"")"
+row-3,"Line; ""quoted""
+second line",in_progress,,legacy,,,,,,,,,,,,,,,,,,,,,,,,"Line; ""quoted""
+second line",,,"Line; ""quoted""
+second line"
+row-4,-12,in_testing,,standard,portfolio_sources.name,portfolio_categories.name,portfolio_streams.name,companies.name,departments.name,2026-02-30,2026-02-30,2026-02-30,2026-02-30,2026-02-30,2026-02-30,-7.25,-7.25,-7.25,11,4,-7.25,-7.25,users.email,users.email,users.email,users.email,"{""score"":3,""note"":""a;b""}",-12,yes,-7.25,-12

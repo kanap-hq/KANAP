@@ -20,7 +20,9 @@ import {
   CsvImportResult,
   CsvFieldInfo,
   CsvResolverService,
+  CSV_CONTENT_TYPE,
 } from '../common/csv';
+import type { ExportFileFormat } from '../common/xlsx';
 import { applicationCsvConfig, csvOwnerKeys, sameKeys, usersByEmail } from './application-csv.config';
 import { applicationVulnerabilityCounts } from '../vulnerabilities/vulnerability-reach-counts';
 import {
@@ -80,7 +82,7 @@ export class ApplicationsCsvService {
   /**
    * Export applications to CSV format (V2).
    */
-  async export(opts: {
+  async export<F extends ExportFileFormat = 'csv'>(opts: {
     manager: EntityManager;
     tenantId: string;
     /** The screen language: separator, days, decimal mark and yes or no (`csv-sheet`). */
@@ -92,18 +94,22 @@ export class ApplicationsCsvService {
     criticality?: string;
     status?: string;
     query?: Record<string, unknown>;
-  }): Promise<CsvExportResult> {
+    /** `csv` (default) or `xlsx` (data only: a template is CSV). */
+    format?: F;
+  }): Promise<CsvExportResult<F>> {
     const { manager, tenantId, scope, fields, preset, lifecycle, criticality, status } = opts;
 
     // For template export, just return headers (all importable fields)
     if (scope === 'template') {
       const headers = this.buildExportHeaders(fields, preset, 'template');
+      if (opts.format === 'xlsx') throw new BadRequestException('An import template is a CSV file: format=xlsx is for the data export.');
       return {
         filename: 'application_template.csv',
+        contentType: CSV_CONTENT_TYPE,
         content: writeCsvHeader(opts.language, headers),
-        rowCount: 0,
+        rows: 0,
         warnings: [],
-      };
+      } as unknown as CsvExportResult<F>;
     }
 
     // Build query for applications with related data
@@ -207,6 +213,7 @@ export class ApplicationsCsvService {
       fields,
       preset,
       language: opts.language,
+      format: opts.format,
     });
   }
 
