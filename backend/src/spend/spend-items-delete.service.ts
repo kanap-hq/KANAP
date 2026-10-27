@@ -111,8 +111,7 @@ export class SpendItemsDeleteService extends BaseDeleteService<SpendItem> {
           before: auditLine(this.nature, item),
           after: null,
           userId,
-          source: audit?.source,
-          sourceRef: audit?.sourceRef ?? null,
+          ...(audit ? { source: audit.source, sourceRef: audit.sourceRef ?? null } : {}),
         },
         { manager }
       );

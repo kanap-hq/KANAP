@@ -485,8 +485,7 @@ export class ConnectionsCrudService extends ConnectionsBaseService {
         before: existing,
         after: null,
         userId,
-        source: opts?.audit?.source,
-        sourceRef: opts?.audit?.sourceRef ?? null,
+        ...(opts?.audit ? { source: opts.audit.source, sourceRef: opts.audit.sourceRef ?? null } : {}),
       },
       { manager: mg },
     );

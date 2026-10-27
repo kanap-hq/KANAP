@@ -211,8 +211,7 @@ export async function deleteItemTasks(
           before: { origin_task: labelOf(request), __origin_task_id: request.origin_task_id },
           after: { origin_task: null, __origin_task_id: null },
           userId: deps.userId,
-          source: deps.auditSource?.source,
-          sourceRef: deps.auditSource?.sourceRef ?? null,
+          ...(deps.auditSource ? { source: deps.auditSource.source, sourceRef: deps.auditSource.sourceRef ?? null } : {}),
         },
         { manager },
       );
