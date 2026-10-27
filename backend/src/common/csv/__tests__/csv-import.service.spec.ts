@@ -9,6 +9,7 @@ import {
   CsvImportParams,
 } from '../csv-field.types';
 import { minimalXls, minimalXlsx } from '../../csv-sheet/__tests__/office-files';
+import { withImportXlsx } from '../../__tests__/import-xlsx-flag';
 
 /**
  * Create a mock file from CSV content
@@ -710,20 +711,25 @@ async function testUtf16FileIsRefusedWithClearMessage() {
 /** A workbook or another binary file is one 400 with a code, never a header report naming its bytes. */
 async function testNonCsvFilesAreRefusedBeforeTheHeader() {
   const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
-  const cases: Array<[string, Buffer, string]> = [
-    ['xlsx', minimalXlsx(), 'CSV_FILE_EXCEL'],
-    ['xls', minimalXls(), 'CSV_FILE_EXCEL'],
-    ['binary', Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a, 0x00, 0x00, 0xff, 0xfe, 0x01]), 'CSV_FILE_NOT_TEXT'],
+  const binary = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x37, 0x0a, 0x00, 0x00, 0xff, 0xfe, 0x01]);
+  // With the imports in CSV only (IMPORT_XLSX off), a workbook gets the "save as CSV" sentence; while
+  // they read workbooks, an .xls gets the sentence of the old format.
+  const cases: Array<[boolean, string, Buffer, string]> = [
+    [false, 'xlsx', minimalXlsx(), 'CSV_FILE_EXCEL'],
+    [false, 'xls', minimalXls(), 'CSV_FILE_EXCEL'],
+    [false, 'binary', binary, 'CSV_FILE_NOT_TEXT'],
+    [true, 'xls', minimalXls(), 'XLSX_OLD_FORMAT'],
+    [true, 'binary', binary, 'CSV_FILE_NOT_TEXT'],
   ];
-  for (const [label, buffer, code] of cases) {
-    await assert.rejects(
+  for (const [xlsx, label, buffer, code] of cases) {
+    await withImportXlsx(xlsx, () => assert.rejects(
       service.import(createTestConfig(), createRawFile(buffer), { ...defaultParams, dryRun: true }, {
         manager: createMockManager({ tasks: [] }),
         tenantId: 't1',
       }),
       (err: any) => err?.getStatus?.() === 400 && err.getResponse().code === code,
-      label,
-    );
+      `${label} (IMPORT_XLSX ${xlsx ? 'on' : 'off'})`,
+    ));
   }
 }
 

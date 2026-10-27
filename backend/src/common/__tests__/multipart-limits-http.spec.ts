@@ -16,6 +16,7 @@ import {
   inlineImageMulterOptions,
   MULTIPART_LIMITS,
 } from '../upload';
+import { withImportXlsx } from './import-xlsx-flag';
 import { BUDGET_FILE_MAX_BYTES, BUDGET_FILE_SNAPSHOT_MAX_BYTES, budgetFileMulterOptions } from '../../spend/budget-file/upload';
 
 // Every multipart upload is bounded: one file, a few text fields with short,
@@ -142,34 +143,56 @@ async function testHttp(app: INestApplication) {
   assert.match(String(destroyed.body?.message), /interrupted/);
 }
 
-/** A CSV import refuses a workbook by its name with the translated sentence that says how to save it as CSV. */
-function testCsvFileFilter() {
-  const refusal = (originalname: string, mimetype: string) => {
+/**
+ * With the imports in CSV only (IMPORT_XLSX off), a CSV import refuses a workbook by its name with the
+ * translated sentence that says how to save it as CSV. While they read workbooks, an .xlsx (by name or
+ * type) and an .xls pass, for their content to decide; the budget file has the same filter.
+ */
+async function testCsvFileFilter() {
+  const refusal = (originalname: string, mimetype: string, options: any = csvImportMulterOptions) => {
     let answer: { error: any; accepted: boolean } | null = null;
-    csvImportMulterOptions.fileFilter!({} as any, { originalname, mimetype } as any, (error: any, accepted?: boolean) => {
+    options.fileFilter!({} as any, { originalname, mimetype } as any, (error: any, accepted?: boolean) => {
       answer = { error, accepted: accepted === true };
     });
     return answer!;
   };
-  assert.equal(refusal('budget.csv', 'text/csv').accepted, true);
-  const cases: Array<[string, string, string]> = [
-    ['projects.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'CSV_FILE_EXCEL'],
-    ['projects.xls', 'application/vnd.ms-excel', 'CSV_FILE_EXCEL'],
-    ['projects.ods', 'application/vnd.oasis.opendocument.spreadsheet', 'CSV_FILE_OPENDOCUMENT'],
-    ['projects.pdf', 'application/pdf', 'CSV_FILE_NOT_TEXT'],
+  const xlsxType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const cases: Array<[boolean, string, string, string | null]> = [
+    [false, 'budget.csv', 'text/csv', null],
+    [false, 'projects.xlsx', xlsxType, 'CSV_FILE_EXCEL'],
+    [false, 'projects.xls', 'application/vnd.ms-excel', 'CSV_FILE_EXCEL'],
+    [false, 'projects.xlsm', 'application/vnd.ms-excel.sheet.macroEnabled.12', 'CSV_FILE_EXCEL'],
+    [false, 'projects.ods', 'application/vnd.oasis.opendocument.spreadsheet', 'CSV_FILE_OPENDOCUMENT'],
+    [false, 'projects.pdf', 'application/pdf', 'CSV_FILE_NOT_TEXT'],
+    [true, 'budget.csv', 'text/csv', null],
+    [true, 'projects.xlsx', xlsxType, null],
+    [true, 'PROJECTS.XLSX', 'application/octet-stream', null],
+    [true, 'projects', xlsxType, null],
+    [true, 'projects.xls', 'application/vnd.ms-excel', null],
+    [true, 'projects.xlsm', 'application/vnd.ms-excel.sheet.macroEnabled.12', 'CSV_FILE_EXCEL'],
+    [true, 'projects.ods', 'application/vnd.oasis.opendocument.spreadsheet', 'CSV_FILE_OPENDOCUMENT'],
+    [true, 'projects.pdf', 'application/pdf', 'CSV_FILE_NOT_TEXT'],
   ];
-  for (const [name, mimetype, code] of cases) {
-    const { error, accepted } = refusal(name, mimetype);
-    assert.equal(accepted, false, name);
-    assert.equal(error.getStatus(), 400, name);
-    assert.equal(error.getResponse().code, code, name);
+  for (const options of [csvImportMulterOptions, budgetFileMulterOptions]) {
+    for (const [xlsx, name, mimetype, code] of cases) {
+      const label = `${name} (IMPORT_XLSX ${xlsx ? 'on' : 'off'})`;
+      const { error, accepted } = await withImportXlsx(xlsx, () => refusal(name, mimetype, options));
+      if (code === null) {
+        assert.equal(accepted, true, label);
+        assert.equal(error, null, label);
+        continue;
+      }
+      assert.equal(accepted, false, label);
+      assert.equal(error.getStatus(), 400, label);
+      assert.equal(error.getResponse().code, code, label);
+    }
   }
 }
 
 async function run() {
   testOptionObjects();
   testMapping();
-  testCsvFileFilter();
+  await testCsvFileFilter();
   const app = await createApp();
   try {
     await testHttp(app);

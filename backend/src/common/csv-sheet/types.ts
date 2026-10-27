@@ -70,6 +70,11 @@ export interface CsvReadSchema {
   decimalMark?: DecimalMark;
   /** A caller-owned field that records the export's language. Mixed hints are ignored. */
   conventionHint?: { field: string; languageOf: (cell: string) => CsvLanguage | null };
+  /**
+   * An .xlsx file: a number cell in a text column is written with the decimal mark of `language`, as
+   * this file's CSV export writes it, when the file records no language of its own. Unset, a point.
+   */
+  typedNumbersInLanguage?: boolean;
 }
 
 export interface CsvFieldColumn {
