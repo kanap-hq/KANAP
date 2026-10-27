@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useDataAccessAdmin } from '../../auth/dataAccess';
-import { KanapDialog } from '../../components/design';
+import { KanapDialog, useKanapDialogs } from '../../components/design';
 import DataAccessPanel, {
   type DataAccessPanelHandle,
   type DataAccessPanelState,
@@ -47,6 +47,7 @@ export default function UserDialog({
   onSaved,
 }: Props) {
   const { t } = useTranslation(['admin', 'common']);
+  const dialogs = useKanapDialogs();
   const { profile, tenantAuth } = useAuth();
   const canAdminDataAccess = useDataAccessAdmin();
   const queryClient = useQueryClient();
@@ -98,6 +99,14 @@ export default function UserDialog({
   const accessRef = React.useRef<DataAccessPanelHandle>(null);
 
   const saveIdentity = React.useCallback(async (values: UserInput, intent: UserFormIntent): Promise<boolean> => {
+    // Asked before the account is created: cancelling leaves the form as it is and sends nothing.
+    if (intent === 'save-invite') {
+      const okToGo = await dialogs.confirm({
+        message: t('users.messages.inviteConfirm', { count: 1, email: values.email }),
+        confirmLabel: t('users.actions.sendInvite'),
+      });
+      if (!okToGo) return false;
+    }
     setIdentityError(undefined);
     const { role_ids, ...userPayload } = values;
     try {
@@ -142,7 +151,7 @@ export default function UserDialog({
       );
       return false;
     }
-  }, [mode, queryClient, t, userId]);
+  }, [dialogs, mode, queryClient, t, userId]);
 
   const handleSave = React.useCallback(async (intent: UserFormIntent) => {
     if (saving) return;

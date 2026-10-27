@@ -458,6 +458,8 @@ The top of the page sums up your subscription in two lines:
 
 Without a running subscription (a trial, an expired trial or an ended subscription), only the status is shown. During a trial, it comes with the trial end date and the number of days remaining.
 
+During a trial, a pill in the top bar also shows the days left, for example "Trial: 9 days". For billing administrators it opens this page. Hover over it to see the trial end date. Once the trial has expired, a banner takes its place.
+
 When a switch to monthly billing is planned, a third line shows it, for example "Switches to monthly on 7 Oct 2027." Click **Keep annual** on that line to cancel the switch.
 
 ### Actions
@@ -620,9 +622,12 @@ For what the set contains, what the erase step removes and keeps, and the home b
 
 The Settings page lets you manage your personal profile and notification preferences. Access it from the user menu (top-right avatar) or navigate to `/settings`.
 
-The page has two tabs, accessible via URL:
+The page has these tabs, each with its own URL:
 - `/settings/profile` (default): Profile tab
 - `/settings/notifications`: Notifications tab
+- `/settings/appearance`: Appearance tab
+- `/settings/connected-apps`: Connected apps tab, shown when the MCP API is offered (see [Connected apps](connected-apps.md))
+- `/settings/about`: About tab
 
 ### Profile
 
@@ -632,6 +637,8 @@ Edit your personal information:
 - **Business Phone** / **Mobile Phone**
 
 If your organization uses Microsoft Entra ID (SSO), some fields may be synced from Entra and cannot be edited in KANAP.
+
+When your account has neither a first nor a last name, a small window asks for them after you sign in. **Later** hides it in this browser. You can change both here at any time.
 
 ### Notifications
 
@@ -660,6 +667,20 @@ Control which email notifications you receive.
 Use the **Preview email** button to send yourself a test email and verify the format.
 
 All changes are saved automatically as you toggle switches or change selections.
+
+### About KANAP
+
+Open **About KANAP** from the user menu, below **Logout**. The menu entry also shows the version. The **About** tab of this page shows the same content:
+
+- The version and the deployment (cloud or on-premise)
+- On the cloud service, during a trial, the days left, with a **Choose a plan** link for billing administrators
+- Links to the release notes of this version, the documentation, kanap.net and the source code (AGPL-3.0 license)
+- On-premise, a link to the upgrade guide
+
+**Support** lists where to get help:
+
+- On the cloud service, email support is included. The support address opens an email that already holds the version, the workspace, the deployment and your browser. **Copy the details for support** copies the same details, to paste into a message.
+- On-premise, if you have a support contract, write to the same address, with the same prefilled email and copy button. Otherwise, ask your question in GitHub Discussions or report a problem in GitHub Issues. A last link leads to the support offer.
 
 ---
 

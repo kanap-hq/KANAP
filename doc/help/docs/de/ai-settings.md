@@ -37,6 +37,7 @@ Eine Bestätigung deckt ab, was diese Funktionen an den Anbieter senden: die Fra
 
 - **Bestätigen** speichert Ihre Bestätigung. Plaid wird dadurch nicht eingeschaltet.
 - **Chat aktivieren** verlangt die Bestätigung, solange sie fehlt. Schalten Sie ihn ein und speichern Sie: Ein Fenster zeigt den Anbieter und den Verarbeitungsort. **Bestätigen und aktivieren** speichert Ihre Änderungen und die Bestätigung gemeinsam. Schließen Sie das Fenster, wird nichts gespeichert. Das Fenster verweist außerdem auf die Seite [KI-Modelle](ai-models.md), falls Sie lieber ein eigenes Modell verwenden.
+- Während einer Cloud-Testphase bietet auch die Startseite an, Plaid einzuschalten, mit demselben Bestätigungsfenster. Siehe [Mein Dashboard](my-dashboard.md).
 - **Zurückziehen** entfernt die Bestätigung nach einer zweiten Rückfrage. KI-Funktionen, die das inklusive Modell verwenden, stoppen, bis ein Administrator erneut bestätigt. Plaid bleibt eingeschaltet und zeigt seinen Benutzern einen Hinweis.
 - Eine erneute Bestätigung wird verlangt, wenn sich der Anbieter, seine Verbindungsadresse, der angezeigte Name oder der Verarbeitungsort ändert. Ein neues Modell desselben Anbieters verlangt sie nicht. Ändert sich der Anbieter, während Ihr Fenster offen ist, zeigt das Fenster den neuen und bittet Sie, ihn zu prüfen.
 - Plaid und Agenten, die auf einem von Ihnen angelegten Modell laufen, brauchen keine Bestätigung. Auch über MCP verbundene externe Assistenten hängen nicht davon ab, weil MCP nichts an das inklusive Modell sendet.
@@ -51,7 +52,7 @@ Wenn Plaid auf dem Inklusiven KANAP-Modell läuft (keine ausdrückliche Wahl, ke
 - Dem Datum, an dem das Kontingent zurückgesetzt wird
 - Einem Hinweis, dass eigene API-Schlüssel die Obergrenze aufheben
 
-Wie die Karte erläutert, teilen sich der Chat und die Agenten dieses Mandanten das Kontingent. Eine Nachricht ist eine Chat-Frage oder ein von einem Agenten geprüftes Ticket. Anfragen externer Assistenten über MCP zählen nicht. Eine ausgelastete Agentenflotte verbraucht es schneller; wenn Sie also diesen Balken beobachten, behalten Sie auch die Seite [Nutzung & Kosten](ai-usage.md) im Auge.
+Wie die Karte erläutert, teilen sich der Chat und die Agenten dieses Arbeitsbereichs das Kontingent. Eine Nachricht ist eine Chat-Frage oder ein von einem Agenten geprüftes Ticket. Anfragen externer Assistenten über MCP zählen nicht. Eine ausgelastete Agentenflotte verbraucht es schneller; wenn Sie also diesen Balken beobachten, behalten Sie auch die Seite [Nutzung & Kosten](ai-usage.md) im Auge.
 
 ### Status-Chips
 

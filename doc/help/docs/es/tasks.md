@@ -350,6 +350,8 @@ Los enlaces son bidireccionales: desde el espacio de trabajo de la Aplicación o
 
 **Consejo**: Reserve estos enlaces para tareas que tratan operativamente de la app o activo, no cada tarea que mencione una de pasada. De lo contrario, la relación se convierte en ruido en lugar de señal.
 
+Solo ve cada registro vinculado si puede leer su módulo: las aplicaciones requieren las aplicaciones, los activos la infraestructura. Lo mismo vale para el registro al que pertenece una tarea: un proyecto requiere los proyectos, una línea presupuestaria el presupuesto, un contrato los contratos, un incidente los incidentes. De lo contrario, el campo no aparece en el panel, en la lista ni en Plaid, y la tarea conserva su vínculo. Además, un Business Contributor solo ve el proyecto, su fase, la solicitud creada a partir de la tarea y las aplicaciones si participa en ellos: una sola aplicación fuera de su participación oculta el campo **Aplicaciones**.
+
 ---
 
 ## Crear tareas desde otros espacios de trabajo

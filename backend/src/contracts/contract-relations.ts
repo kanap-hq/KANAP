@@ -80,8 +80,8 @@ export type ContractBudgetLine = {
 /**
  * The contract's budget lines (Budget tab), spec §5.4. `items` lists the lines the caller reads,
  * none without the right to read the budget; `hidden` counts the linked lines the list leaves out:
- * those outside a limited person's data access ("and 3 lines outside your access"), or every
- * linked line without the budget right ("3 budget lines"), never named. `contract_spend_items` has
+ * those outside a limited person's data access ("and 3 lines outside your access"), never named;
+ * without the budget right, nothing is counted. `contract_spend_items` has
  * no data-access policy, so its links count directly: those whose line the policies hide (spec §6.6).
  */
 export async function listContractBudgetLines(
@@ -89,13 +89,8 @@ export async function listContractBudgetLines(
   contract: RelationsContract,
   readsBudget = true,
 ): Promise<{ items: ContractBudgetLine[]; hidden: number }> {
-  if (!readsBudget) {
-    const [row]: Array<{ n: number }> = await manager.query(
-      `SELECT count(*)::int AS n FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2`,
-      [contract.tenant_id, contract.id],
-    );
-    return { items: [], hidden: Number(row?.n ?? 0) };
-  }
+  // Without the budget right, the family is neither listed nor counted.
+  if (!readsBudget) return { items: [], hidden: 0 };
   const hidden = await hiddenContractLineCount(manager, contract);
   const rows: Array<ContractBudgetLine & { item_number: number | string | null }> = await manager.query(
     `SELECT i.id, i.nature, i.item_number, i.product_name, i.paying_company_id AS company_id, comp.name AS company_name

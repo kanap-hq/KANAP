@@ -264,6 +264,37 @@ describe('NetboxSyncPage', () => {
     }
   });
 
+  it('translates an interrupted synchronisation', async () => {
+    await i18n.changeLanguage('fr');
+    const english = 'The previous synchronisation stopped without finishing. Start a new one.';
+    const french = 'La synchronisation précédente s\'est arrêtée sans se terminer. Lancez-en une nouvelle.';
+    try {
+      (apiClient.get as any).mockImplementation((url: string) => {
+        if (url === '/netbox/status') {
+          return Promise.resolve({
+            ...STATUS,
+            sync: {
+              ...STATUS.sync,
+              status: 'failure',
+              counts: null,
+              error: english,
+              error_code: 'netbox_sync_interrupted',
+            },
+          });
+        }
+        if (url === '/netbox/records') return Promise.resolve({ items: [], total: 0 });
+        throw new Error(`Unexpected GET ${url}`);
+      });
+
+      renderPage();
+      expect(await screen.findByText(french)).toBeInTheDocument();
+      expect(screen.queryByText(english)).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+      await i18n.changeLanguage('en');
+    }
+  });
+
   it('shows a compact line and a settings link when Netbox is not configured', async () => {
     (apiClient.get as any).mockResolvedValue({ ...STATUS, configured: false });
 

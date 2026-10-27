@@ -7,10 +7,8 @@ import Layout from './Layout';
 import { registerLeaveGuard } from '../hooks/leaveGuard';
 
 vi.mock('react-i18next', async () => {
-  const { default: nav } = await import('../locales/en/nav.json');
-  // One stable `t`: keys render as themselves, except the version line, which renders its English text.
-  const t = (key: string, options?: { version?: string }) =>
-    key === 'nav:userMenu.version' ? nav.userMenu.version.replace('{{version}}', options?.version ?? '') : key;
+  // One stable `t`: keys render as themselves.
+  const t = (key: string) => key;
   return { useTranslation: () => ({ t, i18n: { language: 'en' } }) };
 });
 
@@ -71,6 +69,8 @@ vi.mock('../ai/aiApi', () => ({
   aiAgentControlApi: { getBadges: vi.fn().mockResolvedValue({ pendingApprovals: 0 }) },
 }));
 
+// The dialog itself is covered by its own test; here only the menu entry that opens it.
+vi.mock('./about/AboutDialog', () => ({ default: ({ open }: { open: boolean }) => (open ? <div role="dialog">about-dialog</div> : null) }));
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 
 const applicationVisibility = vi.hoisted(() => ({
@@ -340,31 +340,32 @@ describe('Layout administration sidebar: sample data', () => {
 
 });
 
-describe('Layout user menu: version', () => {
+describe('Layout user menu: about', () => {
   afterEach(() => {
     access.version = 'unknown';
   });
 
-  it('shows the version after Logout, linking to the release notes', () => {
+  it('shows About KANAP after Logout, with the version, and opens the dialog', () => {
     access.version = '26.10.1';
     renderShell();
     fireEvent.click(screen.getByTitle('nav:topBar.account'));
 
-    const line = within(screen.getByRole('menu')).getByRole('link', { name: 'KANAP 26.10.1' });
-    expect(line).toHaveAttribute('href', 'https://github.com/kanap-hq/KANAP/releases');
-    expect(line).toHaveAttribute('target', '_blank');
-    expect(line).toHaveAttribute('rel', 'noopener');
+    const item = within(screen.getByRole('menu')).getByRole('menuitem', { name: /settings:about\.title/ });
+    expect(item).toHaveTextContent('26.10.1');
     const logout = screen.getByRole('menuitem', { name: 'nav:userMenu.logout' });
-    expect(logout.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(logout.compareDocumentPosition(item) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(item);
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('about-dialog')).toBeInTheDocument();
   });
 
-  it('shows no version line while the version is unknown', () => {
+  it('shows no version next to the item while the version is unknown', () => {
     renderShell();
     fireEvent.click(screen.getByTitle('nav:topBar.account'));
 
-    const menu = within(screen.getByRole('menu'));
-    expect(menu.getByRole('menuitem', { name: 'nav:userMenu.logout' })).toBeInTheDocument();
-    expect(menu.queryByText(/KANAP/)).not.toBeInTheDocument();
+    const item = within(screen.getByRole('menu')).getByRole('menuitem', { name: /settings:about\.title/ });
+    expect(item).toHaveTextContent(/^settings:about\.title$/);
   });
 });
 

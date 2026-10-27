@@ -80,15 +80,20 @@ export default function RequestAnalysisTab({
 
   return (
     <Stack spacing={2}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-        {t('workspace.request.analysis.sections.businessProcesses')}
-      </Typography>
-      <BusinessProcessMultiSelect
-        label={t('workspace.request.analysis.fields.businessProcesses')}
-        value={(form?.business_processes || []).map((bp: any) => bp.id)}
-        onChange={onBusinessProcessesChange}
-        disabled={!canManage}
-      />
+      {/* Null for a person who does not read business processes: the section is not shown. */}
+      {form?.business_processes !== null && (
+        <>
+          <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+            {t('workspace.request.analysis.sections.businessProcesses')}
+          </Typography>
+          <BusinessProcessMultiSelect
+            label={t('workspace.request.analysis.fields.businessProcesses')}
+            value={(form?.business_processes || []).map((bp: any) => bp.id)}
+            onChange={onBusinessProcessesChange}
+            disabled={!canManage}
+          />
+        </>
+      )}
       <Typography variant="subtitle1" sx={{ fontWeight: 500, mt: 1 }}>
         {t('workspace.request.analysis.sections.feasibilityReview')}
       </Typography>

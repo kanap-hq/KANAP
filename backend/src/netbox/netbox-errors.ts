@@ -22,6 +22,7 @@ export const NETBOX_ERROR_CODES = [
   'netbox_rate_limited',
   'netbox_token_unreadable',
   'netbox_sync_failed',
+  'netbox_sync_interrupted',
 ] as const;
 
 export type NetboxErrorCode = (typeof NETBOX_ERROR_CODES)[number];
@@ -41,6 +42,7 @@ export const NETBOX_ERROR_MESSAGES: Record<NetboxErrorCode, string> = {
   netbox_rate_limited: 'Netbox is refusing more requests for the moment. Try again in a few minutes.',
   netbox_token_unreadable: 'The saved Netbox token cannot be read on this server. Enter the token again and save.',
   netbox_sync_failed: 'The synchronisation could not finish. Check the Netbox connection, then try again.',
+  netbox_sync_interrupted: 'The previous synchronisation stopped without finishing. Start a new one.',
 };
 
 export type NetboxFailure = {

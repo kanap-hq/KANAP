@@ -594,6 +594,8 @@ async function testDescribeEntityFiltersExposesAssigneeFormat() {
   const registry = createRegistry({
     policy: {
       listReadableEntityTypes: async () => ['tasks'],
+      // The linked fields of tasks follow the caller's reads: this caller reads everything.
+      canReadEntityType: async () => true,
     },
   });
 

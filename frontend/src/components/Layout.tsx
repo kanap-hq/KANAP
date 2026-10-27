@@ -55,9 +55,12 @@ import BrightnessAutoIcon from '@mui/icons-material/BrightnessAuto';
 import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
 import { useThemeMode } from '../config/ThemeContext';
-import { getDocUrl, RELEASES_URL } from '../utils/docUrls';
+import { getDocUrl } from '../utils/docUrls';
+import AboutDialog from './about/AboutDialog';
 import { formatUserName } from '../utils/userDisplay';
 import SubscriptionBanner from './SubscriptionBanner';
+import TrialChip from './TrialChip';
+import NamePromptDialog from './NamePromptDialog';
 import { focusPageScroller } from './appScroll';
 import { useAiCapabilities } from '../ai/useAiCapabilities';
 import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
@@ -282,6 +285,7 @@ export default function Layout() {
   const [menuAnchor, setMenuAnchor] = React.useState<null | HTMLElement>(null);
   const openMenu = (e: React.MouseEvent<HTMLElement>) => setMenuAnchor(e.currentTarget);
   const closeMenu = () => setMenuAnchor(null);
+  const [aboutOpen, setAboutOpen] = React.useState(false);
 
   // Check if user has access to any resource in a workspace
   const hasWorkspaceAccess = React.useCallback((ws: string): boolean => {
@@ -497,6 +501,7 @@ export default function Layout() {
           {isPlatformHost && <Box sx={{ flex: 1 }} />}
           {token && (
             <>
+              <TrialChip />
               <IconButton
                 size="small"
                 sx={{ color: 'text.secondary' }}
@@ -535,22 +540,15 @@ export default function Layout() {
                 <Divider sx={{ my: 0.5 }} />
                 <MenuItem onClick={() => { closeMenu(); void guardedLeave(() => navigate('/settings')); }}>{t('nav:userMenu.myProfile')}</MenuItem>
                 <MenuItem onClick={() => { closeMenu(); void guardedLeave(logout); }}>{t('nav:userMenu.logout')}</MenuItem>
-                {config.version !== 'unknown' && [
-                  <Divider key="version-divider" sx={{ my: 0.5 }} />,
-                  <Typography
-                    key="version"
-                    component="a"
-                    variant="caption"
-                    href={RELEASES_URL}
-                    target="_blank"
-                    rel="noopener"
-                    onClick={closeMenu}
-                    sx={{ display: 'block', px: 2, py: 0.5, color: 'text.secondary', textDecoration: 'none' }}
-                  >
-                    {t('nav:userMenu.version', { version: config.version })}
-                  </Typography>,
-                ]}
+                <Divider sx={{ my: 0.5 }} />
+                <MenuItem onClick={() => { closeMenu(); setAboutOpen(true); }} sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                  {t('settings:about.title')}
+                  {config.version !== 'unknown' && (
+                    <Typography component="span" variant="caption" color="text.secondary">{config.version}</Typography>
+                  )}
+                </MenuItem>
               </Menu>
+              <AboutDialog open={aboutOpen} onClose={() => setAboutOpen(false)} />
             </>
           )}
         </Toolbar>
@@ -766,6 +764,7 @@ export default function Layout() {
           </React.Suspense>
         </Box>
       </Box>
+      <NamePromptDialog />
     </Box>
   );
 }

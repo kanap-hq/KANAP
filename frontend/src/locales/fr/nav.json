@@ -21,8 +21,7 @@
   },
   "userMenu": {
     "myProfile": "Mon profil",
-    "logout": "Déconnexion",
-    "version": "KANAP {{version}}"
+    "logout": "Déconnexion"
   },
   "sidebar": {
     "ops": {

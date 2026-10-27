@@ -276,6 +276,7 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
         {editingVersion && (
           <TechnologyVersionPicker
             anchorEl={editingVersion.anchor}
+            align="right"
             versions={versions}
             current={editingVersion.row.technology_version_id}
             onPick={(choice) => { const { row } = editingVersion; setEditingVersion(null); void changeLink(row, choice); }}

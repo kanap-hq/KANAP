@@ -170,6 +170,8 @@ Le journal est ce qui fait de cet outil un registre plutôt qu'un formulaire. Il
 
 Chaque ligne affiche l'auteur, l'heure à laquelle elle se rapporte (survolez pour « il y a 3 jours ») et le type d'entrée pour tout ce qui n'est pas une simple note.
 
+Une entrée **Liens mis à jour** n'apparaît qu'aux personnes qui peuvent lire le module qu'elle nomme : les actifs et les technologies demandent l'infrastructure, les applications les applications. Les notes gardent leur texte, quoi qu'elles mentionnent.
+
 Le composeur disparaît dès que l'incident est clôturé ou annulé. Les modifications de champs faites hors du journal, comme la correction de la description, sont consignées dans le journal d'audit de la plateforme plutôt que dans le journal de l'incident.
 
 La revue d'incident conserve son propre historique. Chaque enregistrement qui la modifie produit une version, et les versions sont conservées définitivement. La rédaction courante ne crée pas d'entrée de journal : écrire la revue n'est pas un événement de l'incident, et le journal d'audit garde la trace de qui a modifié quoi. En revanche, la clôture, l'annulation et les imports CSV écrivent une entrée de journal, et cette entrée nomme la version de la revue à laquelle elle se rapporte, affichée « Version 4 de la revue d'incident (DOC-12) ».

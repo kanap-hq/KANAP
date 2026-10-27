@@ -35,7 +35,15 @@ export function sanitizeHostname(value: string): string {
     .replace(/[\s_]+/g, '-')
     .replace(/[^a-z0-9-.]/g, '')
     .split('.')
-    .map((label) => label.replace(/-+/g, '-').replace(/^-+|-+$/g, '').slice(0, HOSTNAME_LABEL_MAX_LENGTH))
+    .map((label) =>
+      label
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, HOSTNAME_LABEL_MAX_LENGTH)
+        // The length cut runs after edge hyphens are removed, so it can end on one.
+        .replace(/-+$/, ''),
+    )
     .filter((label) => label.length > 0);
-  return labels.join('.').slice(0, HOSTNAME_MAX_LENGTH).replace(/\.+$/, '');
+  // The 253 cut can end on a hyphen, or on the dot of a label the cut dropped.
+  return labels.join('.').slice(0, HOSTNAME_MAX_LENGTH).replace(/[-.]+$/, '');
 }

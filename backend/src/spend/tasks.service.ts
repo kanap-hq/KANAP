@@ -1,10 +1,17 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Repository, EntityManager, DataSource } from 'typeorm';
-import { ParticipationAccessScope, taskParticipantCondition } from '../auth/business-contributor-scope';
+import {
+  ParticipationAccessScope,
+  applicationParticipantCondition,
+  projectParticipantCondition,
+  taskParticipantCondition,
+} from '../auth/business-contributor-scope';
+import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import { IncidentViewer, incidentRelatedLabelSql, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { textSortKey } from '../common/list-sort';
 import { resolveRecordCreators } from '../audit/record-creator.util';
+import type { LinkedModule, LinkedReads } from '../common/relations/linked-reads';
 import { assertSetFilterModes, bindPositional, compileAgFilterCondition, compileReferenceFilter, createParamNameGenerator, type CompiledCondition } from '../common/ag-grid-filtering';
 
 export interface TaskListItem {
@@ -61,10 +68,12 @@ export interface TaskListItem {
   created_by_name?: string | null;
   owner_ids: string[];
   viewer_ids: string[];
-  application_ids: string[];
-  asset_ids: string[];
-  applications?: Array<{ id: string; name: string | null; sequential_id?: string | null }>;
-  assets?: Array<{ id: string; name: string | null; asset_reference?: string | null; hostname?: string | null }>;
+  /** Null, as `applications`, for a person who does not read applications (`withReadableTaskLinks`). */
+  application_ids: string[] | null;
+  /** Null, as `assets`, for a person who does not read the infrastructure. */
+  asset_ids: string[] | null;
+  applications?: Array<{ id: string; name: string | null; sequential_id?: string | null }> | null;
+  assets?: Array<{ id: string; name: string | null; asset_reference?: string | null; hostname?: string | null }> | null;
   converted_request_id?: string | null;
   converted_request_item_number?: number | null;
 }
@@ -117,8 +126,37 @@ function buildWhereConditions(
   tenantId: string,
   accessScope?: ParticipationAccessScope,
   viewer?: IncidentViewer | null,
+  linkedReads?: LinkedReads,
+  linkedScopes?: TaskLinkedScopes,
 ) {
+  // A search or a filter on the name of a linked record matches only in the modules the person
+  // reads: the list does not show the others, and a match would tell which task links them.
+  const readsModule = (module: LinkedModule) => !linkedReads || linkedReads[module];
   const params: any[] = [requireListTenant(tenantId)];
+  // A Business Contributor's project and applications, inside their participation: the person's
+  // id goes into the parameters only when a condition uses it.
+  const userRefs = new Map<string, string>();
+  const userRef = (userId: string) => {
+    if (!userRefs.has(userId)) {
+      params.push(userId);
+      userRefs.set(userId, `$${params.length}`);
+    }
+    return userRefs.get(userId)!;
+  };
+  /** Whether the task's project (`pp`) shows: the projects module, then the participation. */
+  const projectVisible = () => {
+    if (!readsModule('projects')) return 'FALSE';
+    return linkedScopes?.projects ? projectParticipantCondition('pp', userRef(linkedScopes.projects.userId)) : 'TRUE';
+  };
+  /** A value of the task's project (its name, its phase), null where the project does not show. */
+  const projectField = (expression: string) => {
+    const visible = projectVisible();
+    return visible === 'TRUE' ? expression : `(CASE WHEN ${visible} THEN ${expression} END)`;
+  };
+  /** Whether a linked application (`alias`) shows to a Business Contributor. */
+  const applicationVisible = (alias: string) => (linkedScopes?.applications
+    ? applicationParticipantCondition(alias, userRef(linkedScopes.applications.userId))
+    : 'TRUE');
   const tenantParamRef = '$1';
   // Every condition below is appended as ` AND <atom>` or ` AND (<...>)`, so none widens this one.
   let whereConditions = `t.tenant_id = ${tenantParamRef}`;
@@ -249,6 +287,8 @@ function buildWhereConditions(
     targetTable: 'applications' | 'assets',
     nameColumn: 'name',
   ) => {
+    // A name matches only on the records the person sees: an application inside their participation.
+    const targetVisible = (alias: string) => (targetTable === 'applications' ? applicationVisible(alias) : 'TRUE');
     if (isSetFilter(model)) {
       if (model.values.length === 0) {
         whereConditions += ' AND 1=0';
@@ -264,6 +304,7 @@ function buildWhereConditions(
         WHERE rel.task_id = t.id
           AND rel.tenant_id = t.tenant_id
           AND target.${nameColumn} = ANY($${params.length}::text[])
+          AND ${targetVisible('target')}
       )`;
       return true;
     }
@@ -276,6 +317,7 @@ function buildWhereConditions(
         WHERE rel.task_id = t.id
           AND rel.tenant_id = t.tenant_id
           AND target.${nameColumn} ILIKE $${params.length}
+          AND ${targetVisible('target')}
       )`;
       return true;
     }
@@ -338,13 +380,15 @@ function buildWhereConditions(
 
   if (!shouldSkip('related_object_name') && filters.related_object_name?.filter) {
     params.push(`%${filters.related_object_name.filter}%`);
-    whereConditions += ` AND (
-      (t.related_object_type = 'spend_item' AND si.product_name ILIKE $${params.length}) OR
-      (t.related_object_type = 'contract' AND c.name ILIKE $${params.length}) OR
-      (t.related_object_type = 'project' AND pp.name ILIKE $${params.length}) OR
-      (t.related_object_type = 'incident' AND ${incidentRelatedLabelSql('inc')} ILIKE $${params.length}) OR
-      (${TASK_HIDDEN_LINE_REFERENCE_SQL}) ILIKE $${params.length}
-    )`;
+    const p = `$${params.length}`;
+    const clauses = [
+      readsModule('budget') && `(t.related_object_type = 'spend_item' AND si.product_name ILIKE ${p})`,
+      readsModule('contracts') && `(t.related_object_type = 'contract' AND c.name ILIKE ${p})`,
+      readsModule('projects') && `(t.related_object_type = 'project' AND ${projectField('pp.name')} ILIKE ${p})`,
+      readsModule('incidents') && `(t.related_object_type = 'incident' AND ${incidentRelatedLabelSql('inc')} ILIKE ${p})`,
+      readsModule('budget') && `(${TASK_HIDDEN_LINE_REFERENCE_SQL}) ILIKE ${p}`,
+    ].filter(Boolean);
+    whereConditions += clauses.length > 0 ? ` AND (\n      ${clauses.join(' OR\n      ')}\n    )` : ' AND 1=0';
   }
 
   if (!shouldSkip('task_type_name') && filters.task_type_name) {
@@ -386,9 +430,11 @@ function buildWhereConditions(
   }
 
   if (!shouldSkip('phase_name') && filters.phase_name) {
-    if (!applySetFilter(filters.phase_name, 'phase.name') && filters.phase_name?.filter) {
+    // The phase of a project the person does not see reads as empty, as on the task.
+    const phaseName = projectField('phase.name');
+    if (!applySetFilter(filters.phase_name, phaseName) && filters.phase_name?.filter) {
       params.push(`%${filters.phase_name.filter}%`);
-      whereConditions += ` AND phase.name ILIKE $${params.length}`;
+      whereConditions += ` AND ${phaseName} ILIKE $${params.length}`;
     }
   }
 
@@ -501,30 +547,33 @@ function buildWhereConditions(
     }
   }
 
-  if (!shouldSkip('project_name') && filters.project_name?.filter) {
+  if (!shouldSkip('project_name') && filters.project_name?.filter && readsModule('projects')) {
+    const projectName = projectField('pp.name');
     params.push(`%${filters.project_name.filter}%`);
-    whereConditions += ` AND pp.name ILIKE $${params.length}`;
+    whereConditions += ` AND ${projectName} ILIKE $${params.length}`;
   }
 
   if (!shouldSkip('project_stream_name') && filters.project_stream_name) {
-    if (!applySetFilter(filters.project_stream_name, 'project_pst.name') && filters.project_stream_name?.filter) {
+    const projectStream = projectField('project_pst.name');
+    if (!applySetFilter(filters.project_stream_name, projectStream) && filters.project_stream_name?.filter) {
       params.push(`%${filters.project_stream_name.filter}%`);
-      whereConditions += ` AND project_pst.name ILIKE $${params.length}`;
+      whereConditions += ` AND ${projectStream} ILIKE $${params.length}`;
     }
   }
 
   if (!shouldSkip('project_category_name') && filters.project_category_name) {
-    if (!applySetFilter(filters.project_category_name, 'project_pc.name') && filters.project_category_name?.filter) {
+    const projectCategory = projectField('project_pc.name');
+    if (!applySetFilter(filters.project_category_name, projectCategory) && filters.project_category_name?.filter) {
       params.push(`%${filters.project_category_name.filter}%`);
-      whereConditions += ` AND project_pc.name ILIKE $${params.length}`;
+      whereConditions += ` AND ${projectCategory} ILIKE $${params.length}`;
     }
   }
 
-  if (!shouldSkip('application_name') && filters.application_name) {
+  if (!shouldSkip('application_name') && filters.application_name && readsModule('applications')) {
     applyRelationNameFilter(filters.application_name, 'task_applications', 'application_id', 'applications', 'name');
   }
 
-  if (!shouldSkip('asset_name') && filters.asset_name) {
+  if (!shouldSkip('asset_name') && filters.asset_name && readsModule('assets')) {
     applyRelationNameFilter(filters.asset_name, 'task_assets', 'asset_id', 'assets', 'name');
   }
 
@@ -542,8 +591,16 @@ function buildWhereConditions(
     whereConditions += ` AND t.description ILIKE $${params.length}`;
   }
 
+  // The quick search on the name of the object a task belongs to, in the modules the person reads.
   // Apply quick search across multiple fields
   if (q) {
+    // Resolved before the search's own parameters: the project's condition may add one.
+    const searchedProjectName = readsModule('projects') ? projectField('pp.name') : null;
+    const linkedNameSearch = (p: string) => [
+      readsModule('budget') && `si.product_name ILIKE ${p} OR`,
+      readsModule('contracts') && `c.name ILIKE ${p} OR`,
+      searchedProjectName && `${searchedProjectName} ILIKE ${p} OR`,
+    ].filter(Boolean).join(' ');
     // Check if query matches item ref pattern (T-123 or plain number)
     const refMatch = q.match(/^(?:T-)?(\d+)$/i);
     if (refMatch) {
@@ -553,9 +610,7 @@ function buildWhereConditions(
         t.item_number = $${params.length - 1} OR
         t.title ILIKE $${params.length} OR
         t.description ILIKE $${params.length} OR
-        si.product_name ILIKE $${params.length} OR
-        c.name ILIKE $${params.length} OR
-        pp.name ILIKE $${params.length} OR
+        ${linkedNameSearch(`$${params.length}`)}
         u.first_name ILIKE $${params.length} OR
         u.last_name ILIKE $${params.length} OR
         u.email ILIKE $${params.length} OR
@@ -568,9 +623,7 @@ function buildWhereConditions(
       whereConditions += ` AND (
         t.title ILIKE $${params.length} OR
         t.description ILIKE $${params.length} OR
-        si.product_name ILIKE $${params.length} OR
-        c.name ILIKE $${params.length} OR
-        pp.name ILIKE $${params.length} OR
+        ${linkedNameSearch(`$${params.length}`)}
         u.first_name ILIKE $${params.length} OR
         u.last_name ILIKE $${params.length} OR
         u.email ILIKE $${params.length} OR
@@ -581,7 +634,7 @@ function buildWhereConditions(
     }
   }
 
-  return { whereConditions, params };
+  return { whereConditions, params, projectField, applicationVisible };
 }
 
 const TASK_FILTER_VALUE_FIELDS: Record<string, string> = {
@@ -776,11 +829,134 @@ function withHiddenReference(row: TaskListItem & { related_object_reference?: st
   return { ...task, related_object_id: null, related_object_name: reference, related_object_hidden: true };
 }
 
+/** The module that reads each kind of object a task belongs to. */
+const TASK_RELATED_MODULES: Record<string, LinkedModule> = {
+  project: 'projects',
+  spend_item: 'budget',
+  capex_item: 'budget',
+  contract: 'contracts',
+  incident: 'incidents',
+};
+
+/**
+ * The records a Business Contributor sees inside their participation, by family (`idsInScope`).
+ * A family left out has no participation limit.
+ */
+export type TaskVisibleLinks = {
+  projects?: Set<string>;
+  requests?: Set<string>;
+  applications?: Set<string>;
+};
+
+/**
+ * A task row without the linked records of the modules the person does not read, as on the
+ * records' own pages: applications and assets are null (the field disappears from the screen), the
+ * object the task belongs to loses its id and its name (`related_object_hidden`, without a kind:
+ * the screen shows nothing in its place), and so do the project's name, phase and classification
+ * and the converted request. A record outside a Business Contributor's participation (`visible`)
+ * reads the same way; one application outside it hides the field, which a save would replace whole.
+ * The task keeps its own type of object, so an edit of another field leaves the link untouched.
+ */
+export function withReadableTaskLinks<T extends Record<string, any>>(row: T, reads: LinkedReads, visible: TaskVisibleLinks = {}): T {
+  const task: Record<string, any> = { ...row };
+  const applicationIds: string[] = Array.isArray(task.application_ids) ? task.application_ids.map(String) : [];
+  if (!reads.applications || (visible.applications && applicationIds.some((id) => !visible.applications!.has(id)))) {
+    task.applications = null;
+    task.application_ids = null;
+  }
+  if (!reads.assets) {
+    task.assets = null;
+    task.asset_ids = null;
+  }
+  const relatedType = String(task.related_object_type ?? '');
+  const module = TASK_RELATED_MODULES[relatedType];
+  const outsideParticipation = relatedType === 'project'
+    && !!visible.projects
+    && !!task.related_object_id
+    && !visible.projects.has(String(task.related_object_id));
+  const projectHidden = relatedType === 'project' && (!reads.projects || outsideParticipation);
+  if (module && task.related_object_type && (!reads[module] || outsideParticipation)) {
+    task.related_object_id = null;
+    task.related_object_name = null;
+    task.related_object_hidden = true;
+    delete task.related_object_hidden_kind;
+  }
+  if ((!reads.projects || projectHidden) && 'project_name' in task) task.project_name = null;
+  if (projectHidden) {
+    for (const field of ['phase_name', 'project_stream_name', 'project_category_name']) {
+      if (field in task) task[field] = null;
+    }
+  }
+  const requestHidden = !reads.requests
+    || (!!visible.requests && !!task.converted_request_id && !visible.requests.has(String(task.converted_request_id)));
+  if (requestHidden) {
+    if ('converted_request_id' in task) task.converted_request_id = null;
+    if ('converted_request_item_number' in task) task.converted_request_item_number = null;
+  }
+  return task as T;
+}
+
+/**
+ * The scopes of a Business Contributor's linked records: the projects, requests and applications
+ * they take part in (`resolveBusinessContributorScope` on each module). None for everyone else.
+ */
+export type TaskLinkedScopes = {
+  projects?: ParticipationAccessScope;
+  requests?: ParticipationAccessScope;
+  applications?: ParticipationAccessScope;
+};
+
+/** Task rows through `withReadableTaskLinks`, the participation of the page's records in one query per family. */
+async function readableTaskRows<T extends Record<string, any>>(
+  manager: EntityManager,
+  rows: T[],
+  reads: LinkedReads | undefined,
+  scopes: TaskLinkedScopes | undefined,
+): Promise<T[]> {
+  if (!reads) return rows;
+  const visible: TaskVisibleLinks = {};
+  if (scopes?.projects && reads.projects) {
+    const ids = rows.filter((row) => row.related_object_type === 'project').map((row) => row.related_object_id);
+    visible.projects = await idsInScope(manager, 'projects', ids, scopes.projects);
+  }
+  if (scopes?.requests && reads.requests) {
+    visible.requests = await idsInScope(manager, 'requests', rows.map((row) => row.converted_request_id), scopes.requests);
+  }
+  if (scopes?.applications && reads.applications) {
+    const ids = rows.flatMap((row) => (Array.isArray(row.application_ids) ? row.application_ids.map(String) : []));
+    visible.applications = await idsInScope(manager, 'applications', ids, scopes.applications);
+  }
+  return rows.map((row) => withReadableTaskLinks(row, reads, visible));
+}
+
+/** The filter-value fields that are values of the task's project: empty where the project does not show. */
+const TASK_PROJECT_VALUE_FIELDS = new Set(['phase_name', 'project_stream_name', 'project_category_name']);
+
+/** The filter-value fields that name another module's records, with that module. */
+const TASK_LINKED_VALUE_FIELDS: Record<string, LinkedModule> = {
+  application_name: 'applications',
+  asset_name: 'assets',
+};
+
 /** The ORDER BY key of a task list field: text alphabetically, the creation date by default. */
 async function taskSortKey(manager: EntityManager, field: string): Promise<string> {
   const expr = TASK_SORT_EXPRESSIONS[field] ?? 't.created_at';
   return TASK_TEXT_SORTS.has(field) ? (await textSortKey(manager))(expr) : expr;
 }
+
+/**
+ * How a read of tasks is scoped. `linkedReads`: the modules the person reads; the rows then leave
+ * out the linked records of the others (`withReadableTaskLinks`). The screen and the assistant pass it.
+ */
+export type TaskReadOptions = {
+  manager?: EntityManager;
+  tenantId: string;
+  accessScope?: ParticipationAccessScope;
+  viewer?: IncidentViewer | null;
+  linkedReads?: LinkedReads;
+  /** A Business Contributor's participation in the linked projects, requests and applications. */
+  linkedScopes?: TaskLinkedScopes;
+};
 
 @Injectable()
 export class TasksService {
@@ -796,15 +972,15 @@ export class TasksService {
     return sessionTenant;
   }
 
-  async list(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }) {
+  async list(query: any, opts: TaskReadOptions) {
     return this.listAllTasks(query, opts);
   }
 
-  async listAllTasks(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<{ items: TaskListItem[]; total: number; page: number; limit: number }> {
+  async listAllTasks(query: any, opts: TaskReadOptions): Promise<{ items: TaskListItem[]; total: number; page: number; limit: number }> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const { page, limit, skip, sort, q, filters } = parsePagination(query);
-    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer);
+    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer, opts?.linkedReads, opts?.linkedScopes);
 
     // Count total
     const countQuery = `
@@ -916,16 +1092,21 @@ export class TasksService {
       LIMIT ${limit} OFFSET ${skip}
     `;
 
-    const items: TaskListItem[] = (await manager.query(dataQuery, params)).map(withHiddenReference);
+    const items: TaskListItem[] = await readableTaskRows(
+      manager,
+      (await manager.query(dataQuery, params)).map(withHiddenReference),
+      opts?.linkedReads,
+      opts?.linkedScopes,
+    );
 
     return { items, total, page, limit };
   }
 
-  async listIds(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<{ ids: string[]; refs: string[]; total: number }> {
+  async listIds(query: any, opts: TaskReadOptions): Promise<{ ids: string[]; refs: string[]; total: number }> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const { sort, q, filters } = parsePagination({ ...query, page: 1, limit: query?.limit ?? 10000 });
-    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer);
+    const { whereConditions, params } = buildWhereConditions(query, filters, q, undefined, tenantId, opts?.accessScope, opts?.viewer, opts?.linkedReads, opts?.linkedScopes);
 
     const sortField = await taskSortKey(manager, sort.field);
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
@@ -984,7 +1165,7 @@ export class TasksService {
     return { ids, refs, total };
   }
 
-  async listFilterValues(query: any, opts: { manager?: EntityManager; tenantId: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<Record<string, Array<string | null>>> {
+  async listFilterValues(query: any, opts: TaskReadOptions): Promise<Record<string, Array<string | null>>> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = requireListTenant(opts?.tenantId);
     const q = (query.q as string) || '';
@@ -1002,23 +1183,29 @@ export class TasksService {
     }
 
     const rawFields = String(query.fields || query.field || '').split(',').map((f) => f.trim()).filter(Boolean);
-    const fields = rawFields.filter((field) => Object.prototype.hasOwnProperty.call(TASK_FILTER_VALUE_FIELDS, field));
+    const reads = opts?.linkedReads;
+    // Names of another module's records only for a person who reads it.
+    const fields = rawFields
+      .filter((field) => Object.prototype.hasOwnProperty.call(TASK_FILTER_VALUE_FIELDS, field))
+      .filter((field) => !reads || !TASK_LINKED_VALUE_FIELDS[field] || reads[TASK_LINKED_VALUE_FIELDS[field]]);
     if (fields.length === 0) return {};
 
     const results: Record<string, Array<string | null>> = {};
 
     for (const field of fields) {
-      const { whereConditions, params } = buildWhereConditions(query, filters, q, field, tenantId, opts?.accessScope, opts?.viewer);
+      const { whereConditions, params, projectField, applicationVisible } = buildWhereConditions(query, filters, q, field, tenantId, opts?.accessScope, opts?.viewer, opts?.linkedReads, opts?.linkedScopes);
       if (field === 'application_name' || field === 'asset_name') {
         const relation = field === 'application_name'
           ? { table: 'task_applications', column: 'application_id', target: 'applications' }
           : { table: 'task_assets', column: 'asset_id', target: 'assets' };
+        // A Business Contributor's application names, inside their participation.
+        const targetVisible = field === 'application_name' ? applicationVisible('target') : 'TRUE';
         const rows: Array<{ value: string | null }> = await manager.query(
           `
             SELECT DISTINCT target.name AS value
             FROM tasks t
             JOIN ${relation.table} rel ON rel.task_id = t.id AND rel.tenant_id = t.tenant_id
-            JOIN ${relation.target} target ON target.id = rel.${relation.column} AND target.tenant_id = rel.tenant_id
+            JOIN ${relation.target} target ON target.id = rel.${relation.column} AND target.tenant_id = rel.tenant_id AND ${targetVisible}
             LEFT JOIN users u ON t.assignee_user_id = u.id AND u.tenant_id = t.tenant_id
             LEFT JOIN users uc ON t.creator_id = uc.id AND uc.tenant_id = t.tenant_id
             LEFT JOIN spend_items si ON (t.related_object_type = 'spend_item' AND t.related_object_id = si.id AND si.tenant_id = t.tenant_id AND si.nature = 'opex')
@@ -1073,7 +1260,10 @@ export class TasksService {
         continue;
       }
 
-      const expression = TASK_FILTER_VALUE_FIELDS[field];
+      // The project's own values (phase, classification) only where the project shows.
+      const expression = TASK_PROJECT_VALUE_FIELDS.has(field)
+        ? projectField(TASK_FILTER_VALUE_FIELDS[field])
+        : TASK_FILTER_VALUE_FIELDS[field];
       const distinctQuery = `
         SELECT DISTINCT ${expression} as value
         FROM tasks t
@@ -1104,7 +1294,7 @@ export class TasksService {
   }
 
   /** `tenantId`: the request's tenant; without it, the session tenant of the manager. */
-  async getOne(id: string, opts?: { manager?: EntityManager; tenantId?: string; accessScope?: ParticipationAccessScope; viewer?: IncidentViewer | null }): Promise<TaskListItem | null> {
+  async getOne(id: string, opts?: Partial<TaskReadOptions>): Promise<TaskListItem | null> {
     const manager = opts?.manager ?? this.dataSource.manager;
     const tenantId = await this.resolveTenantId(manager, opts?.tenantId);
     const params: any[] = [id, tenantId];
@@ -1191,7 +1381,7 @@ export class TasksService {
       LIMIT 1
     `;
     const rows: TaskListItem[] = (await manager.query(dataQuery, params)).map(withHiddenReference);
-    const task = rows[0];
+    const [task] = await readableTaskRows(manager, rows.slice(0, 1), opts?.linkedReads, opts?.linkedScopes);
     if (!task) return null;
 
     // `creator_id` is the requestor (mutable, labelled "Requestor"), so the

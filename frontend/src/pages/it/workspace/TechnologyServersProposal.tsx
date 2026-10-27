@@ -6,6 +6,11 @@ import type { DeploymentServer } from './ApplicationRelationsTab';
 
 type Props = {
   anchorEl: HTMLElement;
+  /**
+   * Which edge of the anchor the panel shares. An Add button is `'left'` (the panel grows into
+   * the content). A row button is `'right'`, so the panel stays over the table.
+   */
+  align?: 'left' | 'right';
   /** The technology and its version as the line reads them (`version` null: version unknown). */
   technology: string;
   version: string | null;
@@ -30,7 +35,7 @@ const camel = (value: string) => value.replace(/_([a-z])/g, (_, c: string) => c.
  * chosen: "Also record PHP 8.2 on", one checkbox per server with its environments and roles.
  * Nothing is ticked at first. Closing the popover saves nothing.
  */
-export default function TechnologyServersProposal({ anchorEl, technology, version, servers, carrying, mode, onConfirm, onClose }: Props) {
+export default function TechnologyServersProposal({ anchorEl, align = 'left', technology, version, servers, carrying, mode, onConfirm, onClose }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { labelFor } = useItOpsEnumOptions();
   const [ticked, setTicked] = React.useState<Set<string>>(() => new Set());
@@ -60,8 +65,8 @@ export default function TechnologyServersProposal({ anchorEl, technology, versio
       open
       anchorEl={anchorEl}
       onClose={onClose}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      anchorOrigin={{ vertical: 'bottom', horizontal: align }}
+      transformOrigin={{ vertical: 'top', horizontal: align }}
       slotProps={{ paper: { sx: { p: 1, width: 340, mt: 0.5 } } }}
     >
       <Typography id="technology-servers-title" sx={{ px: 1, pt: 0.25, pb: 0.75, fontSize: 13, color: 'kanap.text.secondary' }}>{title}</Typography>

@@ -1665,6 +1665,8 @@
       "invitePartialFail_one": "{{count}} usuario invitado; {{failed}} con errores",
       "invitePartialFail_other": "{{count}} usuarios invitados; {{failed}} con errores",
       "inviteFailed": "No se pudieron invitar los usuarios seleccionados",
+      "inviteConfirm_one": "¿Enviar una invitación a {{email}}?",
+      "inviteConfirm_other": "¿Enviar invitaciones a {{count}} usuarios?",
       "disableConfirm": "{{name}} perderá el acceso y se cerrará su sesión inmediatamente. ¿Desactivar esta cuenta?",
       "deleteConfirm": "¿Eliminar {{name}}? Esta acción no se puede deshacer.",
       "inviteSentOne": "Invitación enviada a {{email}}",

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,7 +14,15 @@ vi.mock('../../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: '
 vi.mock('../../../hooks/useApplicationClassificationCatalog', () => ({
   default: () => ({ data: { dataClasses: [], businessCriticalityLevels: [] } }),
 }));
-vi.mock('../../../hooks/useItOpsEnumOptions', () => ({ default: () => ({ byField: {} }), useItOpsEnumOptions: () => ({ byField: {} }) }));
+const enumOptions = vi.hoisted(() => ({
+  byField: {} as {
+    lifecycleStatus?: Array<{ code: string; label: string; deprecated?: boolean }>;
+  },
+}));
+vi.mock('../../../hooks/useItOpsEnumOptions', () => ({
+  default: () => enumOptions,
+  useItOpsEnumOptions: () => enumOptions,
+}));
 vi.mock('../../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../../components/fields/BusinessProcessSelect', () => ({ default: () => null }));
 // The owners picker stands for itself: it shows the names it is given.
@@ -47,8 +55,9 @@ function panel(owners: Array<{ user_id: string; owner_type: 'business' | 'it' }>
   );
 }
 
-describe('InterfacePropertyPanel owners', () => {
+describe('InterfacePropertyPanel', () => {
   beforeEach(() => {
+    enumOptions.byField = {};
     apiGet.mockReset();
     apiGet.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
       if (url !== '/users/lookup') return { data: { items: [], has_more: false } };
@@ -86,5 +95,36 @@ describe('InterfacePropertyPanel owners', () => {
       </QueryClientProvider>,
     );
     await waitFor(() => expect(screen.getByTestId('it:workspace.interface.fields.itOwners')).toHaveTextContent('common:selects.valueUnavailable'));
+  });
+
+  it('shows the translated suffix on the current deprecated lifecycle', async () => {
+    enumOptions.byField = {
+      lifecycleStatus: [
+        { code: 'active', label: 'Active' },
+        { code: 'legacy', label: 'Legacy', deprecated: true },
+      ],
+    };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <InterfacePropertyPanel
+            canManage
+            isCreate={false}
+            data={{ id: 'int-1', lifecycle: 'legacy', owners: [], companies: [], data_residency: [] } as never}
+            onPatch={async () => undefined}
+            onReplaceCompanies={async () => undefined}
+            onReplaceDataResidency={async () => undefined}
+            onReplaceOwners={async () => undefined}
+          />
+        </ThemeProvider>
+      </QueryClientProvider>,
+    );
+
+    const field = screen.getByDisplayValue('Legacy (common:enumEditor.retiredSuffix)');
+    fireEvent.mouseDown(field);
+    expect(await screen.findByRole('option', { name: 'Legacy (common:enumEditor.retiredSuffix)' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Legacy (deprecated)' })).toBeNull();
+    expect(screen.getByRole('option', { name: 'Active' })).toBeInTheDocument();
   });
 });

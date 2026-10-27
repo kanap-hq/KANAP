@@ -340,7 +340,7 @@ export default function ConnectionPathSection({
                     </MenuItem>
                     {pathHopFunctions.map((fn: any) => (
                       <MenuItem key={fn.code} value={fn.code} sx={drawerMenuItemSx}>
-                        {fn.deprecated ? `${fn.label} (deprecated)` : fn.label}
+                        {fn.deprecated ? `${fn.label} (${t('common:enumEditor.retiredSuffix')})` : fn.label}
                       </MenuItem>
                     ))}
                   </TextField>
