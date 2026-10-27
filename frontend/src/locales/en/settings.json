@@ -96,7 +96,24 @@
     "deploymentCloud": "Deployment: cloud",
     "deploymentOnPremise": "Deployment: on-premise",
     "releaseNotes": "Release notes",
-    "upgradeGuide": "Upgrade guide"
+    "upgradeGuide": "Upgrade guide",
+    "docs": "Documentation",
+    "license": "Source code under the AGPL-3.0 license",
+    "trialDaysLeft_one": "{{count}} day left in your trial",
+    "trialDaysLeft_other": "{{count}} days left in your trial",
+    "choosePlan": "Choose a plan",
+    "support": {
+      "title": "Support",
+      "contract": "If you have a support contract, write to {{email}}",
+      "included": "Email support: write to {{email}}",
+      "copy": "Copy the details for support",
+      "otherwise": "Otherwise:",
+      "copied": "Copied",
+      "discussions": "Ask your question in {{link}}",
+      "issues": "Report a problem in {{link}}",
+      "offer": "To get a support contract, see {{link}}",
+      "offerLink": "the support offer"
+    }
   },
   "connectedApps": {
     "title": "Connected applications",
