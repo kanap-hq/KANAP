@@ -41,6 +41,7 @@ import { formatShortDate } from '../../lib/dateFormat';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDocPageUrl } from '../../utils/docUrls';
 import api from '../../api';
+import { ImportLabel } from '../../components/csv/importFiles';
 
 /** The budget list's set filter for the lines without a paying company (`ag-grid-filtering.ts` reads the null). */
 const LINES_WITHOUT_COMPANY_URL = `/ops/budget?filters=${encodeURIComponent(JSON.stringify({
@@ -94,7 +95,7 @@ function DataAccessAdminContent() {
 
   const actions = (
     <Stack direction="row" spacing={1}>
-      <Button variant="action" onClick={() => setImportOpen(true)}>{t('admin:dataAccess.importCsv')}</Button>
+      <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('admin:dataAccess.importCsv')} /></Button>
       <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>
     </Stack>
   );

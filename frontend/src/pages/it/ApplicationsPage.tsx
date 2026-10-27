@@ -39,6 +39,7 @@ import {
   vulnerabilityFilterFromSearch,
   vulnerabilityFilterOptions,
 } from '../../components/vulnerabilities/vulnerabilityListColumn';
+import { ImportLabel } from '../../components/csv/importFiles';
 /** The environments of the pills, in the one display order; their abbreviation and full name come from `pages.applications.environments.<value>`. */
 const ENV_SUMMARY = APPLICATION_ENVIRONMENTS;
 
@@ -1081,7 +1082,7 @@ export default function ApplicationsPage() {
           {t('pages.applications.newAppService')}
         </Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.assets.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('pages.assets.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>}
       {canCreate && (
         <Button variant="action" onClick={() => void handleCopy()} disabled={selectedRows.length !== 1}>{t('pages.applications.copyItem')}</Button>

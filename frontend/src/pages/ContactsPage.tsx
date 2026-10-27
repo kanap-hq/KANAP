@@ -15,6 +15,7 @@ import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
+import { ImportLabel } from '../components/csv/importFiles';
 
 export default function ContactsPage() {
   const { hasLevel, dataAccess } = useAuth();
@@ -158,7 +159,7 @@ export default function ContactsPage() {
           navigate(`/master-data/contacts/new/overview?${sp.toString()}`);
         }}>{t('shared.labels.new')}</Button>
       )}
-      {canChangeShared && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
+      {canChangeShared && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('shared.labels.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canChangeShared && (
         <DeleteSelectedButton

@@ -13,6 +13,8 @@ vi.mock('react-i18next', () => {
 });
 
 vi.mock('../../api', () => ({ default: { post: vi.fn() } }));
+const features = vi.hoisted(() => ({ importXlsx: true }));
+vi.mock('../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features }, isLoading: false }) }));
 
 import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -222,6 +224,17 @@ describe('BudgetFileImportDialog', () => {
     });
     fireEvent.change(input, { target: { files: [workbook] } });
     await waitFor(() => expect((lastCall()?.[1] as FormData).get('file')).toBe(workbook));
+  });
+
+  it('takes CSV files only while the server reads no workbook', () => {
+    features.importXlsx = false;
+    try {
+      renderDialog();
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      expect(input.accept).toBe('.csv,text/csv');
+    } finally {
+      features.importXlsx = true;
+    }
   });
 
   it('says when only the first sheet of a workbook was read', async () => {

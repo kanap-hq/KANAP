@@ -76,6 +76,7 @@
   "XLSX_DOCTYPE": "Diese Excel-Datei konnte nicht gelesen werden: Sie enthält eine Dokumenttypdeklaration, die Excel nie schreibt.",
   "XLSX_NO_SHEET": "Diese Arbeitsmappe enthält kein Blatt, das gelesen werden kann.",
   "XLSX_TOO_LARGE": "Diese Excel-Datei ist zu groß zum Lesen.",
+  "XLSX_FIRST_SHEET_ONLY": "Nur das erste Blatt, {{name}}, wurde gelesen.",
   "BUDGET_FILE_COST_CENTER_OTHER_COMPANY": "Die Kostenstelle {{costCenter}} gehört zu {{costCenterCompany}}. Die Budgetzeile wird von {{company}} bezahlt.",
   "CSV_HEADER_IGNORED_COLUMNS": "Diese Spalten werden nicht importiert: {{extra}}.",
   "CSV_HEADER_UNKNOWN_TIME_ZONE": "Unbekannte Zeitzone in der Spalte {{column}}: {{zone}}. Verwenden Sie eine Zeitzone wie Europe/Paris oder UTC.",

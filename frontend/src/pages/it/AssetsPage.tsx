@@ -31,6 +31,7 @@ import {
   vulnerabilityFilterFromSearch,
   vulnerabilityFilterOptions,
 } from '../../components/vulnerabilities/vulnerabilityListColumn';
+import { ImportLabel } from '../../components/csv/importFiles';
 type AssetRow = {
   id: string;
   asset_reference: string | null;
@@ -540,7 +541,7 @@ export default function AssetsPage() {
           {t('pages.assets.addAsset')}
         </Button>
       )}
-      {hasLevel('infrastructure', 'admin') && <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.assets.importCsv')}</Button>}
+      {hasLevel('infrastructure', 'admin') && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('pages.assets.importCsv')} /></Button>}
       {hasLevel('infrastructure', 'admin') && <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>}
       {hasLevel('infrastructure', 'admin') && (
         <DeleteSelectedButton

@@ -23,6 +23,7 @@ import { ANALYTICS_DIMENSIONS_PATH, ANALYTICS_LIST_PATH, valuesInUseMessage } fr
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { lineTypeUsageColumnProps } from '../components/grid/lineTypeUsageColumn';
+import { ImportLabel } from '../components/csv/importFiles';
 
 // The dimension's own order (position, then name), as pickers and filters offer the values.
 const DEFAULT_SORT = ANALYTICS_VALUE_ORDER_SORT;
@@ -232,7 +233,7 @@ function AnalyticsValuesList() {
           {t('analytics.reorder.action')}
         </Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('shared.labels.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton
