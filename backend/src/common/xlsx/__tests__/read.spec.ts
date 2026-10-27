@@ -225,6 +225,8 @@ function limits() {
     compressionRatioFromBytes: 1024 * 1024,
     maxSharedStrings: 1_000_000,
     maxCellElements: 5_000_000,
+    maxAttributesPerElement: 64,
+    maxElements: 12_000_000,
     maxGridCells: 5_000_000,
     maxCellTextLength: 32_767,
     maxRows: 200_000,
@@ -278,6 +280,25 @@ function limits() {
   refuses(() => rowsOf({ sheetData: `${threeValueRows}<row r="10"><c r="A10"><v>4</v></c></row>` }, { maxValueRows: 3 }), 'XLSX_TOO_LARGE', 'maxValueRows');
   assert.equal(rowsOf({ sheetData: '<row r="1"><c r="XFD1"><v>1</v></c></row>' })[0].length, 16_384);
   refuses(() => rowsOf({ sheetData: '<row r="1"><c r="XFE1"><v>1</v></c></row>' }), 'XLSX_TOO_LARGE', 'maxColumns');
+
+  // Attributes of one element and elements of one part, counted as the parser reads them: saxes holds
+  // every attribute of an element before it reports it, and nothing else bounds the elements.
+  const attributes = (n: number): string => Array.from({ length: n }, (_, i) => ` a${i}="0"`).join('');
+  const cellWith = (n: number): string => `<row r="1"><c r="A1"${attributes(n - 1)}><v>1</v></c></row>`;
+  assert.deepEqual(rowsOf({ sheetData: cellWith(64) }), [[number('1')]], '64 attributes are read');
+  refuses(() => rowsOf({ sheetData: cellWith(65) }), 'XLSX_TOO_LARGE', 'maxAttributesPerElement', '65 attributes');
+  const started = Date.now();
+  refuses(() => rowsOf({ sheetData: cellWith(500_000) }), 'XLSX_TOO_LARGE', 'maxAttributesPerElement', '500,000 attributes');
+  assert.ok(Date.now() - started < 2_000, 'the parse stops at the 65th attribute');
+  const workbookAttack = zipOf({ ...workbookParts({ sheetData: '' }), 'xl/workbook.xml': `<workbook><sheets><sheet${attributes(65)}/></sheets></workbook>` });
+  refuses(() => readXlsxGrid(workbookAttack), 'XLSX_TOO_LARGE', 'maxAttributesPerElement', 'in the workbook part');
+  // A sheet of three rows of three values: `worksheet`, `sheetData`, 3 `row`, 9 `c`, 9 `v`, 23 elements
+  // (the other parts hold fewer).
+  const nine = [1, 2, 3].map((r) => `<row r="${r}">${['A', 'B', 'C'].map((col) => `<c r="${col}${r}"><v>${r}</v></c>`).join('')}</row>`).join('');
+  assert.equal(rowsOf({ sheetData: nine }, { maxElements: 23 }).length, 3);
+  refuses(() => rowsOf({ sheetData: nine }, { maxElements: 22 }), 'XLSX_TOO_LARGE', 'maxElements');
+  // Elements no other limit counts: thousands of unknown siblings.
+  refuses(() => rowsOf({ sheetData: '<x/>'.repeat(10_001) }, { maxElements: 10_000 }), 'XLSX_TOO_LARGE', 'maxElements', 'unknown elements');
 
   // Text of one cell: 32,767 characters, in a shared string, an inline string and a value.
   const longest = 'x'.repeat(32_767);

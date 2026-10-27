@@ -31,6 +31,8 @@ export interface XlsxGrid {
 }
 
 const MB = 1024 * 1024;
+const MAX_SHARED_STRINGS = 1_000_000;
+const MAX_CELL_ELEMENTS = 5_000_000;
 
 /** Limits of the reader, one place. */
 export const XLSX_READ_LIMITS = {
@@ -50,9 +52,20 @@ export const XLSX_READ_LIMITS = {
    */
   compressionRatioFromBytes: 1 * MB,
   /** Entries of the shared string table. */
-  maxSharedStrings: 1_000_000,
+  maxSharedStrings: MAX_SHARED_STRINGS,
   /** `<c>` elements of the sheet. */
-  maxCellElements: 5_000_000,
+  maxCellElements: MAX_CELL_ELEMENTS,
+  /**
+   * Attributes of one element. Excel writes fewer than ten; the XML parser holds all of them before it
+   * reports the element, so they are counted as it reads them.
+   */
+  maxAttributesPerElement: 64,
+  /**
+   * Elements of one part, whatever their name: 12,000,000. Two per cell (`<c>` and its value), one per
+   * shared string, and 1,000,000 for the rows and the rest (formulas, rich text runs, columns, styles).
+   * The monthly budget file of three years at the import's row cap is about 8,100,000.
+   */
+  maxElements: 2 * MAX_CELL_ELEMENTS + MAX_SHARED_STRINGS + 1_000_000,
   /**
    * Cells of the returned grid, the empty cells between two values included. The widest file read at
    * the row cap of an import is the monthly budget file of three years: 199 columns, plus one per
@@ -115,6 +128,8 @@ function tooLarge(limit: keyof XlsxReadLimits, limits: XlsxReadLimits): XlsxRead
     compressionRatioFromBytes: `a part is compressed more than ${count(limits.maxCompressionRatio)} times`,
     maxSharedStrings: `it holds more than ${count(value)} different texts`,
     maxCellElements: `the sheet has more than ${count(value)} cells`,
+    maxAttributesPerElement: `an XML element of the file has more than ${count(value)} attributes`,
+    maxElements: `a part of the file holds more than ${count(value)} XML elements`,
     maxGridCells: `the sheet has more than ${count(value)} cells`,
     maxCellTextLength: `a cell holds more than ${count(value)} characters`,
     maxRows: `the sheet has more than ${count(value)} rows`,
@@ -242,9 +257,11 @@ function attribute(attributes: Record<string, string>, name: string, prefixed = 
 /**
  * Parses one part with saxes, fed in chunks. A DOCTYPE or an ENTITY declaration refuses the part
  * before it is parsed: no entity is ever expanded; only the five predefined entities and numeric
- * character references are decoded.
+ * character references are decoded. The attributes of an element are counted as saxes reads them,
+ * before it builds the element, and the elements of the part as they open. An error thrown by a
+ * handler leaves `parser.write` at once and ends the parse.
  */
-function parsePart(data: Buffer, handlers: TagHandlers): void {
+function parsePart(data: Buffer, handlers: TagHandlers, limits: XlsxReadLimits): void {
   if (data.indexOf(DOCTYPE) >= 0 || data.indexOf(ENTITY) >= 0) throw new XlsxReadError('XLSX_DOCTYPE', DOCTYPE_MESSAGE);
   // A part in UTF-16 (byte order mark): Excel writes UTF-8 only.
   if (data.length >= 2 && ((data[0] === 0xff && data[1] === 0xfe) || (data[0] === 0xfe && data[1] === 0xff))) throw invalid();
@@ -257,7 +274,21 @@ function parsePart(data: Buffer, handlers: TagHandlers): void {
   parser.on('doctype', () => {
     throw new XlsxReadError('XLSX_DOCTYPE', DOCTYPE_MESSAGE);
   });
-  parser.on('opentag', (tag: SaxesTagPlain) => handlers.open(localName(tag.name), tag.attributes as Record<string, string>));
+  // saxes reports each attribute as it reads it, then the element once all are read: the attributes
+  // seen since the last element belong to the element being read. (An `opentagstart` handler next to
+  // the `attribute` one makes saxes about three times slower on large parts.)
+  let elements = 0;
+  let attributes = 0;
+  parser.on('attribute', () => {
+    attributes += 1;
+    if (attributes > limits.maxAttributesPerElement) throw tooLarge('maxAttributesPerElement', limits);
+  });
+  parser.on('opentag', (tag: SaxesTagPlain) => {
+    attributes = 0;
+    elements += 1;
+    if (elements > limits.maxElements) throw tooLarge('maxElements', limits);
+    handlers.open(localName(tag.name), tag.attributes as Record<string, string>);
+  });
   parser.on('closetag', (tag: SaxesTagPlain) => handlers.close(localName(tag.name)));
   parser.on('text', handlers.text);
   parser.on('cdata', handlers.text);
@@ -312,7 +343,7 @@ interface WorkbookInfo {
   date1904: boolean;
 }
 
-function parseWorkbook(data: Buffer): WorkbookInfo {
+function parseWorkbook(data: Buffer, limits: XlsxReadLimits): WorkbookInfo {
   const info: WorkbookInfo = { sheets: [], date1904: false };
   parsePart(data, {
     open(name, attributes) {
@@ -325,7 +356,7 @@ function parseWorkbook(data: Buffer): WorkbookInfo {
     },
     close() {},
     text() {},
-  });
+  }, limits);
   return info;
 }
 
@@ -336,7 +367,7 @@ interface Relationship {
   external: boolean;
 }
 
-function parseRelationships(data: Buffer): Relationship[] {
+function parseRelationships(data: Buffer, limits: XlsxReadLimits): Relationship[] {
   const relationships: Relationship[] = [];
   parsePart(data, {
     open(name, attributes) {
@@ -350,7 +381,7 @@ function parseRelationships(data: Buffer): Relationship[] {
     },
     close() {},
     text() {},
-  });
+  }, limits);
   return relationships;
 }
 
@@ -383,7 +414,7 @@ export function isDateFormatCode(code: string): boolean {
 }
 
 /** For each `cellXfs` entry (the `s` of a cell), whether its number format shows a date. */
-function parseStyles(data: Buffer): boolean[] {
+function parseStyles(data: Buffer, limits: XlsxReadLimits): boolean[] {
   const customFormats = new Map<number, string>();
   const formatOfStyle: number[] = [];
   let inCellXfs = false;
@@ -410,7 +441,7 @@ function parseStyles(data: Buffer): boolean[] {
       else depth -= 1;
     },
     text() {},
-  });
+  }, limits);
   return formatOfStyle.map((id) => {
     const custom = customFormats.get(id);
     return custom !== undefined ? isDateFormatCode(custom) : BUILTIN_DATE_FORMATS.has(id);
@@ -446,7 +477,7 @@ function parseSharedStrings(data: Buffer, limits: XlsxReadLimits): string[] {
     text(value) {
       if (inText) text.add(value);
     },
-  });
+  }, limits);
   return strings;
 }
 
@@ -665,7 +696,7 @@ function parseSheet(data: Buffer, context: SheetContext): XlsxReadCell[][] {
       if (inValue) valueText.add(value);
       else if (inInlineText) inlineText.add(value);
     },
-  });
+  }, limits);
   return rows;
 }
 
@@ -679,8 +710,8 @@ function readWorkbook(buffer: Buffer, limits: XlsxReadLimits): XlsxGrid {
   const relsEntry = findEntry(archive, 'xl/_rels/workbook.xml.rels');
   if (!workbookEntry || !relsEntry) throw new XlsxReadError('XLSX_NOT_WORKBOOK', NOT_WORKBOOK_MESSAGE);
 
-  const workbook = parseWorkbook(readPart(archive, workbookEntry, limits));
-  const relationships = parseRelationships(readPart(archive, relsEntry, limits));
+  const workbook = parseWorkbook(readPart(archive, workbookEntry, limits), limits);
+  const relationships = parseRelationships(readPart(archive, relsEntry, limits), limits);
   const byId = new Map(relationships.filter((rel) => !rel.external).map((rel) => [rel.id, rel]));
 
   // The first worksheet in workbook order (a chart sheet is skipped).
@@ -706,7 +737,7 @@ function readWorkbook(buffer: Buffer, limits: XlsxReadLimits): XlsxGrid {
   const stylesEntry = relatedPart('styles', 'xl/styles.xml');
   const sharedStringsEntry = relatedPart('sharedStrings', 'xl/sharedStrings.xml');
 
-  const dateStyles = stylesEntry ? parseStyles(readPart(archive, stylesEntry, limits)) : [];
+  const dateStyles = stylesEntry ? parseStyles(readPart(archive, stylesEntry, limits), limits) : [];
   const sharedStrings = sharedStringsEntry ? parseSharedStrings(readPart(archive, sharedStringsEntry, limits), limits) : [];
   const rows = parseSheet(readPart(archive, sheetEntry, limits), {
     sharedStrings,
