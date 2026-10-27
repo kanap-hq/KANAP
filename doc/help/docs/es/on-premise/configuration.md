@@ -110,7 +110,7 @@ El filtro conserva las líneas siguientes y omite los detalles del framework. Si
 
 **Orden.** Las líneas que escribe el propio KANAP (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`, `[DATA-ACCESS]`) aparecen primero. Les siguen las líneas del framework (`Starting Nest application...`, correo, trabajos programados, `Nest application successfully started`). La línea `[DB] pool budget` aparece la última.
 
-**Un primer arranque sin problemas** del [ejemplo de instalación](installation-example.md#7-compilar-e-iniciar) muestra estas líneas, en este orden (la primera línea `[SECRETS]` está abreviada aquí):
+**Un primer arranque sin problemas** del [ejemplo de instalación](installation-example.md#7-descargar-e-iniciar) muestra estas líneas, en este orden (la primera línea `[SECRETS]` está abreviada aquí):
 
 ```
 [entrypoint] Initializing DB (attempt 1/30) ...
@@ -517,7 +517,7 @@ Los valores predeterminados sirven para unas pocas decenas de usuarios. Para má
 
 **Lo que cuesta cada uno.** Cada proceso de API usa unos 200 MB de memoria al arrancar y hasta 300 MB bajo carga (medido con 50 usuarios sobre 5000 líneas de presupuesto); con varios, un pequeño proceso supervisor añade unos 100 MB. Cada proceso de API puede abrir hasta `DB_POOL_MAX` conexiones a PostgreSQL. Calcule:
 
-- memoria: `API_WORKERS` × 0,4 GB para la API, más lo que use PostgreSQL si se ejecuta en el mismo servidor, más margen para la compilación de las imágenes en cada actualización. 6 GB es el mínimo para cualquier servidor. En una instalación nueva con PostgreSQL y el almacenamiento en marcha, compilar las dos imágenes a la vez ocupó unos 3,8 GB en total en su punto máximo (unos 3,2 GB para la propia compilación), así que 6 GB dejan unos 2 GB libres;
+- memoria: `API_WORKERS` × 0,4 GB para la API, más lo que use PostgreSQL si se ejecuta en el mismo servidor. 4 GB es el mínimo para cualquier servidor. Si [compila las imágenes usted mismo](installation.md#build-the-images-yourself), cuente 6 GB: compilar las dos imágenes a la vez ocupó unos 3,2 GB en su punto máximo;
 - conexiones: `API_WORKERS` × `DB_POOL_MAX` debe quedar por debajo del `max_connections` de PostgreSQL (100 por defecto) menos unas 15. La API lo comprueba al arrancar y escribe una advertencia en su registro cuando no cabe, con un valor que sí cabría.
 
 **Valores sugeridos.**
@@ -633,7 +633,7 @@ S3_FORCE_PATH_STYLE=false
 
 ## Reglas de cortafuegos
 
-Tras la compilación inicial, KANAP puede funcionar completamente aislado de la red si las funciones de correo, SSO, IA, tipos de cambio, vulnerabilidades y catálogo de tecnologías están todas desactivadas.
+Tras la instalación, KANAP puede funcionar completamente aislado de la red si las funciones de correo, SSO, IA, tipos de cambio, vulnerabilidades y catálogo de tecnologías están todas desactivadas.
 
 ### Entrante
 
@@ -647,18 +647,19 @@ Tras la compilación inicial, KANAP puede funcionar completamente aislado de la 
 
 Nada más necesita ser accesible desde la red. En particular, PostgreSQL (5432) y el almacenamiento de objetos (9000) son solo para las redes Docker del servidor.
 
-### Saliente: instalación inicial y compilación
+### Saliente: instalación y actualizaciones { #outbound-installation-and-upgrades }
 
-Estos destinos son necesarios en la instalación, en cada actualización y en cada vuelta atrás (`docker build`), y la primera vez que se ejecuta la prueba de humo. Pueden cerrarse entre esas operaciones.
+Estos destinos son necesarios en la instalación, en cada actualización y en cada vuelta atrás, y la primera vez que se ejecuta la prueba de humo. Pueden cerrarse entre esas operaciones.
 
 | Destino | Puerto | Uso |
 |-------------|------|---------|
 | `github.com`, `*.githubusercontent.com` | 443 | Clonar el código fuente de KANAP; descargar los archivos de las versiones de RustFS (el ejemplo de instalación) |
+| `ghcr.io`, `pkg-containers.githubusercontent.com` | 443 | Descargar las imágenes de KANAP (`docker compose pull`) |
 | `download.docker.com` | 443 | Repositorio APT de Docker |
-| `registry.npmjs.org` | 443 | Dependencias npm durante `docker build` |
-| `registry-1.docker.io`, `auth.docker.io` | 443 | Descargar las imágenes Docker base (`node:24-alpine`, `nginx:alpine`) y la imagen de la prueba de humo (`node:24-alpine`) la primera vez que se ejecuta la prueba. Cada descarga obtiene primero un token de `auth.docker.io` |
+| `registry-1.docker.io`, `auth.docker.io` | 443 | Descargar la imagen de la prueba de humo (`node:24-alpine`) la primera vez que se ejecuta la prueba, y las imágenes base cuando compila las imágenes usted mismo. Cada descarga obtiene primero un token de `auth.docker.io` |
 | `production.cloudflare.docker.com`, `production.cloudfront.docker.com` | 443 | Descargar las capas de las imágenes: Docker Hub redirige cada descarga a estos hosts |
-| `dl-cdn.alpinelinux.org` | 80/443 | Paquetes Alpine durante `docker build` (las dos imágenes instalan paquetes con `apk add`) |
+| `registry.npmjs.org` | 443 | Dependencias npm, solo cuando compila las imágenes usted mismo |
+| `dl-cdn.alpinelinux.org` | 80/443 | Paquetes Alpine, solo cuando compila las imágenes usted mismo |
 | Réplicas APT de Ubuntu | 80/443 | Paquetes del sistema (PostgreSQL, nginx, etc.) |
 | `acme-v02.api.letsencrypt.org` | 443 | Certificados, solo con Let's Encrypt (también en cada renovación) |
 

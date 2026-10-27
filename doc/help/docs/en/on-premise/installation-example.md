@@ -25,7 +25,7 @@ All services run on a single server. Containers reach host services through `hos
 
 You need:
 
-- A fresh Ubuntu 26.04 LTS server with 6 GB of RAM or more (8 GB recommended), 20 GB of disk and outbound internet access. The image build, at installation and at each upgrade, needs that memory.
+- A fresh Ubuntu 26.04 LTS server with 4 GB of RAM or more (8 GB recommended, since PostgreSQL runs on the same server), 10 GB of disk and outbound internet access.
 - A user with `sudo` rights (not `root`). Every command below runs as that user.
 - The name users type to open KANAP, for example `kanap.example.internal`. See [Name and certificate](installation.md#name-and-certificate). This example uses an internal name with a self-signed certificate. Step 8 shows the other two cases.
 - The email address of the first administrator.
@@ -78,7 +78,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 
 sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io \
-  docker-buildx-plugin docker-compose-plugin
+  docker-compose-plugin
 ```
 
 Add your user to the `docker` group:
@@ -380,27 +380,19 @@ Notes on the file:
 
 ---
 
-## 7. Build and start
+## 7. Pull and start
 
-Build the images and start the containers. The build takes about a minute or two. `--wait` returns when both containers report `healthy`; the first start runs the database migrations and takes a few seconds to a minute.
+Download the images of the version you checked out and start the containers. `pull` downloads about 1.5 GB the first time. `--wait` returns when both containers report `healthy`; the first start runs the database migrations and takes a few seconds to a minute.
 
 ```bash
 cd /opt/kanap
-docker compose -f infra/compose.onprem.yml build --pull
+docker compose -f infra/compose.onprem.yml pull
 docker compose -f infra/compose.onprem.yml up -d --wait
 docker compose -f infra/compose.onprem.yml ps
 docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 ```
 
-If the build stops with `signal: killed`, the server ran out of memory. `sudo dmesg | grep -i oom` confirms it. Check the free memory with `free -m` and stop the other services that use it. Check that PostgreSQL and the storage still run (`pg_lsclusters`, `systemctl status --no-pager rustfs`). Then restart Docker, which stops what is left of the killed build, build the two images one after the other, which needs less memory, and start KANAP:
-
-```bash
-sudo systemctl restart docker
-cd /opt/kanap
-docker compose -f infra/compose.onprem.yml build --pull api
-docker compose -f infra/compose.onprem.yml build --pull web
-docker compose -f infra/compose.onprem.yml up -d --wait
-```
+If `pull` cannot reach `ghcr.io`, open the outbound access of [Firewall rules](configuration.md#outbound-installation-and-upgrades), or [build the images yourself](installation.md#build-the-images-yourself).
 
 `ps` shows `api` and `web` as `healthy`. The last command keeps the start-up lines of the API log and leaves out the framework details. On the first start it shows these lines, in this order (the first `[SECRETS]` line is shortened here):
 
@@ -690,11 +682,12 @@ pg_lsclusters
 sudo systemctl status --no-pager nginx rustfs
 docker compose -f infra/compose.onprem.yml ps
 
-# Which version runs: the checkout, then the API (-k: see step 9)
+# Which version runs: the checkout, the images, then the API (-k: see step 9)
 git describe --tags
+docker compose -f infra/compose.onprem.yml images
 curl -sSk -w '\n' "$(grep '^APP_BASE_URL=' .env | cut -d= -f2-)/api/config/public"
 ```
 
 Check PostgreSQL with `pg_lsclusters`. `systemctl status postgresql` stays `active` even when the cluster is down. The `version` field of the last answer is the version the API reports.
 
-To update KANAP, follow the [upgrade procedure](operations.md#upgrade-procedure): read the changelog, then `git pull origin stable`, `build --pull` and `up -d`.
+To update KANAP, follow the [upgrade procedure](operations.md#upgrade-procedure): read the changelog, back up, then `git pull origin stable`, `pull` and `up -d`.

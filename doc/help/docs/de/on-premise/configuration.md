@@ -110,7 +110,7 @@ Der Filter behält die unten aufgeführten Zeilen und lässt die Details des Fra
 
 **Reihenfolge.** Die Zeilen, die KANAP selbst schreibt (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`, `[DATA-ACCESS]`), kommen zuerst. Die Zeilen des Frameworks (`Starting Nest application...`, E-Mail, geplante Jobs, `Nest application successfully started`) folgen. Die Zeile `[DB] pool budget` kommt zuletzt.
 
-**Ein sauberer erster Start** des [Installationsbeispiels](installation-example.md#7-bauen-und-starten) zeigt diese Zeilen in dieser Reihenfolge (die erste `[SECRETS]`-Zeile ist hier gekürzt):
+**Ein sauberer erster Start** des [Installationsbeispiels](installation-example.md#7-herunterladen-und-starten) zeigt diese Zeilen in dieser Reihenfolge (die erste `[SECRETS]`-Zeile ist hier gekürzt):
 
 ```
 [entrypoint] Initializing DB (attempt 1/30) ...
@@ -517,7 +517,7 @@ Die Standardwerte passen für einige Dutzend Benutzer. Für mehr gleichzeitige B
 
 **Was jede Einstellung kostet.** Jeder API-Prozess belegt beim Start etwa 200 MB Arbeitsspeicher und unter Last bis zu 300 MB (gemessen mit 50 Benutzern auf 5.000 Budgetzeilen); bei mehreren Prozessen kommt ein kleiner überwachender Prozess mit etwa 100 MB hinzu. Jeder API-Prozess kann bis zu `DB_POOL_MAX` Verbindungen zu PostgreSQL öffnen. Rechnen Sie:
 
-- Arbeitsspeicher: `API_WORKERS` × 0,4 GB für die API, plus den Bedarf von PostgreSQL, wenn es auf demselben Server läuft, plus Platz für den Image-Build bei jedem Upgrade. 6 GB sind das Minimum für jeden Server. Auf einer neuen Installation mit laufendem PostgreSQL und Speicher brauchte der gleichzeitige Build beider Images in der Spitze insgesamt etwa 3,8 GB (etwa 3,2 GB für den Build selbst), mit 6 GB bleiben also etwa 2 GB frei;
+- Arbeitsspeicher: `API_WORKERS` × 0,4 GB für die API, plus den Bedarf von PostgreSQL, wenn es auf demselben Server läuft. 4 GB sind das Minimum für jeden Server. Wenn Sie [die Images selbst bauen](installation.md#build-the-images-yourself), rechnen Sie mit 6 GB: Der gleichzeitige Build beider Images brauchte in der Spitze etwa 3,2 GB;
 - Verbindungen: `API_WORKERS` × `DB_POOL_MAX` muss unter `max_connections` von PostgreSQL (standardmäßig 100) minus etwa 15 bleiben. Die API prüft das beim Start und schreibt eine Warnung in ihr Protokoll, wenn es nicht passt, mit einem Wert, der passen würde.
 
 **Empfohlene Werte.**
@@ -633,7 +633,7 @@ S3_FORCE_PATH_STYLE=false
 
 ## Firewall-Regeln
 
-Nach dem ersten Build kann KANAP vollständig vom Netz getrennt laufen, wenn E-Mail, SSO, KI, Wechselkurs-, Schwachstellen- und Technologiekatalogfunktionen alle deaktiviert sind.
+Nach der Installation kann KANAP vollständig vom Netz getrennt laufen, wenn E-Mail, SSO, KI, Wechselkurs-, Schwachstellen- und Technologiekatalogfunktionen alle deaktiviert sind.
 
 ### Eingehend
 
@@ -647,18 +647,19 @@ Nach dem ersten Build kann KANAP vollständig vom Netz getrennt laufen, wenn E-M
 
 Sonst muss nichts aus dem Netzwerk erreichbar sein. Insbesondere sind PostgreSQL (5432) und der Objektspeicher (9000) nur für die Docker-Netzwerke des Servers bestimmt.
 
-### Ausgehend: Ersteinrichtung und Build
+### Ausgehend: Installation und Upgrades { #outbound-installation-and-upgrades }
 
-Diese Ziele werden bei der Installation, bei jedem Upgrade und bei jedem Zurücksetzen auf eine frühere Version (`docker build`) sowie beim ersten Lauf des Smoke-Tests gebraucht. Zwischen diesen Vorgängen können sie geschlossen werden.
+Diese Ziele werden bei der Installation, bei jedem Upgrade und bei jedem Zurücksetzen auf eine frühere Version sowie beim ersten Lauf des Smoke-Tests gebraucht. Zwischen diesen Vorgängen können sie geschlossen werden.
 
 | Ziel | Port | Zweck |
 |-------------|------|---------|
 | `github.com`, `*.githubusercontent.com` | 443 | KANAP-Quellcode klonen; die Release-Dateien von RustFS herunterladen (das Installationsbeispiel) |
+| `ghcr.io`, `pkg-containers.githubusercontent.com` | 443 | Die KANAP-Images herunterladen (`docker compose pull`) |
 | `download.docker.com` | 443 | APT-Repository von Docker |
-| `registry.npmjs.org` | 443 | npm-Abhängigkeiten während `docker build` |
-| `registry-1.docker.io`, `auth.docker.io` | 443 | Docker-Basis-Images laden (`node:24-alpine`, `nginx:alpine`) und das Image des Smoke-Tests (`node:24-alpine`) beim ersten Lauf des Tests. Jeder Pull holt sich zuerst ein Token von `auth.docker.io` |
+| `registry-1.docker.io`, `auth.docker.io` | 443 | Das Image des Smoke-Tests (`node:24-alpine`) beim ersten Lauf des Tests laden, und die Basis-Images, wenn Sie die Images selbst bauen. Jeder Pull holt sich zuerst ein Token von `auth.docker.io` |
 | `production.cloudflare.docker.com`, `production.cloudfront.docker.com` | 443 | Die Image-Layer herunterladen: Docker Hub leitet jeden Pull auf diese Hosts um |
-| `dl-cdn.alpinelinux.org` | 80/443 | Alpine-Pakete während `docker build` (beide Images installieren Pakete mit `apk add`) |
+| `registry.npmjs.org` | 443 | npm-Abhängigkeiten, nur wenn Sie die Images selbst bauen |
+| `dl-cdn.alpinelinux.org` | 80/443 | Alpine-Pakete, nur wenn Sie die Images selbst bauen |
 | Ubuntu-APT-Spiegel | 80/443 | Systempakete (PostgreSQL, nginx usw.) |
 | `acme-v02.api.letsencrypt.org` | 443 | Zertifikate, nur mit Let's Encrypt (auch bei jeder Erneuerung) |
 

@@ -4,7 +4,7 @@ KANAP lässt sich On-Premise im **Single-Tenant-Modus** betreiben. Sie stellen P
 
 ## Leitfäden
 
-- **[Installation](installation.md):** Voraussetzungen, Name und Zertifikat, Klonen, Bauen, Konfigurieren und Starten
+- **[Installation](installation.md):** Voraussetzungen, Name und Zertifikat, Klonen, Konfigurieren, Images herunterladen und Starten
 - **[Installationsbeispiel](installation-example.md):** Schritt-für-Schritt-Anleitung unter Ubuntu 26.04 mit PostgreSQL, RustFS, einer Firewall und nginx
 - **[KI-gestützte Installation](installation-ai.md):** Installation mit einem einzigen Prompt durch einen KI-Coding-Agenten
 - **[Konfiguration](configuration.md):** Referenz der Umgebungsvariablen, Startzeilen im Protokoll, Hintergrundjobs, Firewall-Regeln

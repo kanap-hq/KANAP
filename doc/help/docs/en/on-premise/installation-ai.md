@@ -8,7 +8,7 @@ Tools like [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview
 
 | Requirement | Details |
 |-------------|---------|
-| **Server** | Ubuntu 26.04 LTS (24.04 LTS works), freshly provisioned, with 6 GB of RAM or more (8 GB recommended; the image build needs that room), a user with sudo access and outbound internet access during the installation (packages, Docker images, GitHub, and Let's Encrypt if you use it) |
+| **Server** | Ubuntu 26.04 LTS (24.04 LTS works), freshly provisioned, with 4 GB of RAM or more (8 GB recommended, since PostgreSQL runs on the same server), a user with sudo access and outbound internet access during the installation (packages, KANAP and Docker images, GitHub, and Let's Encrypt if you use it) |
 | **Name** | The name users type to open KANAP. A public DNS record is needed only for Let's Encrypt. Otherwise use a record in your company DNS, or a hosts file entry for a test (see [Name and certificate](installation.md#name-and-certificate)). |
 | **Certificate** | One of three cases: a public name with Let's Encrypt, certificate files from your internal authority already on the server, or a self-signed certificate for a test |
 | **AI agent** | A coding AI agent installed on the server (Claude Code, Codex, or similar) |
@@ -104,7 +104,7 @@ The agent reads the walkthrough, then works through it:
 3. **KANAP files**: clones the repository into `/opt/kanap` and checks out `stable`.
 4. **PostgreSQL**: installs it, creates the database, the application role and the required extensions, and lets the Docker networks connect.
 5. **Object storage**: installs RustFS, creates the bucket, a restricted application user and the encryption key.
-6. **KANAP**: writes `.env` with the generated secrets, builds the Docker images and starts the containers.
+6. **KANAP**: writes `.env` with the generated secrets, pulls the KANAP images and starts the containers.
 7. **TLS and nginx**: obtains or creates the certificate, configures the reverse proxy, makes sure the server resolves the name.
 8. **Verification**: checks the API health and the front end, then runs the smoke test (database, storage, sign-in, exports).
 

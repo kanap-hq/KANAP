@@ -25,7 +25,7 @@ Tous les services s'exécutent sur un seul serveur. Les conteneurs atteignent le
 
 Il vous faut :
 
-- Un serveur Ubuntu 26.04 LTS neuf avec 6 Go de RAM ou plus (8 Go recommandés), 20 Go de disque et un accès sortant à internet. Le build des images, à l'installation et à chaque mise à jour, a besoin de cette mémoire.
+- Un serveur Ubuntu 26.04 LTS neuf avec 4 Go de RAM ou plus (8 Go recommandés, puisque PostgreSQL tourne sur le même serveur), 10 Go de disque et un accès sortant à internet.
 - Un utilisateur avec les droits `sudo` (pas `root`). Toutes les commandes ci-dessous s'exécutent sous cet utilisateur.
 - Le nom que les utilisateurs saisissent pour ouvrir KANAP, par exemple `kanap.example.internal`. Voir [Nom et certificat](installation.md#nom-et-certificat). Cet exemple utilise un nom interne avec un certificat auto-signé. L'étape 8 montre les deux autres cas.
 - L'adresse e-mail du premier administrateur.
@@ -78,7 +78,7 @@ echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.
 
 sudo apt-get update
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io \
-  docker-buildx-plugin docker-compose-plugin
+  docker-compose-plugin
 ```
 
 Ajoutez votre utilisateur au groupe `docker` :
@@ -380,27 +380,19 @@ Remarques sur le fichier :
 
 ---
 
-## 7. Construire et démarrer
+## 7. Télécharger et démarrer
 
-Construisez les images et démarrez les conteneurs. Le build prend une à deux minutes. `--wait` rend la main quand les deux conteneurs indiquent `healthy` ; le premier démarrage exécute les migrations de la base de données et prend de quelques secondes à une minute.
+Téléchargez les images de la version extraite et démarrez les conteneurs. `pull` télécharge environ 1,5 Go la première fois. `--wait` rend la main quand les deux conteneurs indiquent `healthy` ; le premier démarrage exécute les migrations de la base de données et prend de quelques secondes à une minute.
 
 ```bash
 cd /opt/kanap
-docker compose -f infra/compose.onprem.yml build --pull
+docker compose -f infra/compose.onprem.yml pull
 docker compose -f infra/compose.onprem.yml up -d --wait
 docker compose -f infra/compose.onprem.yml ps
 docker compose -f infra/compose.onprem.yml logs --no-log-prefix api | grep -E '^\[|WARN|ERROR|successfully started|Email transport'
 ```
 
-Si le build s'arrête avec `signal: killed`, le serveur a manqué de mémoire. `sudo dmesg | grep -i oom` le confirme. Vérifiez la mémoire libre avec `free -m` et arrêtez les autres services qui l'occupent. Vérifiez que PostgreSQL et le stockage tournent toujours (`pg_lsclusters`, `systemctl status --no-pager rustfs`). Redémarrez ensuite Docker, ce qui arrête ce qui reste du build interrompu, construisez les deux images l'une après l'autre, ce qui demande moins de mémoire, et démarrez KANAP :
-
-```bash
-sudo systemctl restart docker
-cd /opt/kanap
-docker compose -f infra/compose.onprem.yml build --pull api
-docker compose -f infra/compose.onprem.yml build --pull web
-docker compose -f infra/compose.onprem.yml up -d --wait
-```
+Si `pull` n'atteint pas `ghcr.io`, ouvrez l'accès sortant des [Règles de pare-feu](configuration.md#outbound-installation-and-upgrades), ou [construisez les images vous-même](installation.md#build-the-images-yourself).
 
 `ps` affiche `api` et `web` à l'état `healthy`. La dernière commande garde les lignes de démarrage du journal de l'API et laisse de côté les détails du framework. Au premier démarrage, elle affiche ces lignes, dans cet ordre (la première ligne `[SECRETS]` est raccourcie ici) :
 
@@ -690,11 +682,12 @@ pg_lsclusters
 sudo systemctl status --no-pager nginx rustfs
 docker compose -f infra/compose.onprem.yml ps
 
-# Version en service : le checkout, puis l'API (-k : voir l'étape 9)
+# Version en service : le checkout, les images, puis l'API (-k : voir l'étape 9)
 git describe --tags
+docker compose -f infra/compose.onprem.yml images
 curl -sSk -w '\n' "$(grep '^APP_BASE_URL=' .env | cut -d= -f2-)/api/config/public"
 ```
 
 Vérifiez PostgreSQL avec `pg_lsclusters`. `systemctl status postgresql` reste `active` même quand le cluster est arrêté. Le champ `version` de la dernière réponse est la version que l'API indique.
 
-Pour mettre à jour KANAP, suivez la [procédure de mise à jour](operations.md#procedure-de-mise-a-jour) : lisez le changelog, puis `git pull origin stable`, `build --pull` et `up -d`.
+Pour mettre à jour KANAP, suivez la [procédure de mise à jour](operations.md#procedure-de-mise-a-jour) : lisez le changelog, sauvegardez, puis `git pull origin stable`, `pull` et `up -d`.

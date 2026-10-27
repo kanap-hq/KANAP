@@ -134,7 +134,7 @@ describe('Application classification workspace surfaces', () => {
   it('blocks review while a duration draft is invalid even when the saved classification is complete', () => {
     const { onReview } = renderPanel();
     const reviewButton = screen.getByRole('button', { name: 'Mark as reviewed' });
-    const rto = screen.getByRole('spinbutton', { name: 'Recovery time objective' });
+    const rto = screen.getByRole('textbox', { name: 'Recovery time objective' });
 
     expect(reviewButton).toBeEnabled();
     fireEvent.change(rto, { target: { value: '0.01' } });

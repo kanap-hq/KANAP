@@ -368,6 +368,8 @@ jobs:
           cp infra/.env.onprem.example .env
           touch backend/.env.qa frontend/.env.qa backend/.env.prod frontend/.env.prod backend/env.dev
           docker compose -f infra/compose.onprem.yml config -q
+          docker compose -f infra/compose.onprem.yml --profile tools config -q
+          docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml config -q
           docker compose --env-file backend/.env.qa -f infra/compose.qa.yml config -q
           docker compose --env-file backend/.env.prod -f infra/compose.prod.yml config -q
           docker compose -f infra/docker-compose.example.yml config -q

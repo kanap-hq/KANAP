@@ -61,6 +61,10 @@ node scripts/release/release.mjs prepare 26.10.2 [--dry-run]
 The first version has no previous tag to start from: give the starting commit with
 `--since <ref>`. Once a version tag exists, `--since` is ignored.
 
+Besides both `package.json` files, `prepare` sets the version default (`${KANAP_VERSION:-26.10.2}`) in
+`infra/compose.onprem.yml`, `compose.qa.yml` and `compose.prod.yml`, the images they pull. It stops
+when one of them holds no such default; `--dry-run` lists the replacements.
+
 Refresh the KANAP-maintained catalog before preparing a version. Its files are
 `backend/src/technologies/catalog/curated/*.json`. The `technology-catalog-curation` skill reads
 each vendor source again and regenerates the shipped catalog. `prepare` then warns when a
@@ -112,8 +116,9 @@ node scripts/release/release.mjs publish 26.10.2 [--dry-run] [--no-sbom] [--no-i
 2. Finds the merged pull request titled exactly `Release 26.10.2` and takes its merge commit. The
    tag goes on that commit: the queue squashes, and other pull requests may have merged since.
    The commit must be on `origin/main`.
-3. Reads that commit: both `package.json` must be at the version and `CHANGELOG.md` must hold its
-   entry.
+3. Reads that commit: both `package.json` and the three compose files (their `KANAP_VERSION`
+   default) must be at the version and `CHANGELOG.md` must hold its entry. `--no-images` skips the
+   compose files.
 4. Lists, as a warning, the pull requests merged between the previous tag and the release commit
    that the entry does not cite. They merged while the release pull request was waiting. The
    warning does not stop the command.

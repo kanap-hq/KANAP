@@ -7,6 +7,7 @@ import { KanapDialog, PropertyRow } from '../design';
 import AccountSelect from '../fields/AccountSelect';
 import AnalyticsCategorySelect from '../fields/AnalyticsCategorySelect';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
+import { accountDisplayText } from '../../utils/accountDisplay';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { formatShortDate } from '../../lib/dateFormat';
 import type { LineType } from '../../constants/lineTypeUsage';
@@ -237,7 +238,7 @@ export default function ChangeTypeDialog({ open, nature, lineId, lineReference, 
               label={t('ops:shared.changeType.accountLabel')}
               helperText={data.account && !(dated ? data.account.carried : data.account.fits)
                 ? t(dated ? 'ops:shared.changeType.accountNotCopied' : 'ops:shared.changeType.accountUnfit', {
-                  account: `[${data.account.account_number}] ${data.account.account_name}`,
+                  account: accountDisplayText(data.account.account_number, data.account.account_name),
                   type: typeLabel(nature),
                   target: typeLabel(target),
                 })
