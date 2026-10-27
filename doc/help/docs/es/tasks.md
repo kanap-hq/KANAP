@@ -115,8 +115,8 @@ La cuadrícula de Tareas muestra todas las tareas de su organización.
 
 **Acciones**:
   - **Nuevo**: Crear una tarea independiente (requiere `tasks:member`)
-  - **Importar CSV**: Subir un archivo CSV para crear o actualizar tareas (requiere `tasks:admin`)
-  - **Exportar CSV**: Descargar tareas a un archivo CSV (requiere `tasks:admin`)
+  - **Importar**: Subir un archivo CSV o un libro de Excel para crear o actualizar tareas (requiere `tasks:admin`)
+  - **Exportar**: Descargar tareas a un archivo CSV o un libro de Excel (requiere `tasks:admin`)
   - **Eliminar seleccionados**: Eliminar las tareas seleccionadas (requiere `tasks:admin`). Una tarea a partir de la cual se creó una solicitud no se puede eliminar: ciérrela en su lugar. Antes de eliminar nada, la confirmación enumera las tareas que se conservan, con el motivo
 
 ---
@@ -469,13 +469,21 @@ Gestione tareas a escala usando importación y exportación CSV. Esta funcionali
 ### Acceder a las funcionalidades CSV
 
 Desde la lista de Tareas:
-  - **Exportar CSV**: Descargar tareas a un archivo CSV
-  - **Importar CSV**: Subir un archivo CSV para crear o actualizar tareas
+  - **Exportar**: Descargar tareas a un archivo CSV o un libro de Excel
+  - **Importar**: Subir un archivo CSV o un libro de Excel para crear o actualizar tareas
   - **Descargar plantilla**: Obtener un CSV en blanco con los encabezados correctos (desde el diálogo de Importación)
 
 **Permisos requeridos**: `tasks:admin` para operaciones de importación/exportación.
 
 ### Opciones de exportación
+
+**Contenido del archivo**: las tareas que muestra la lista, con sus filtros, su búsqueda y su orden. El diálogo indica cuántas tareas contendrá el archivo.
+
+**Formato**: **CSV** o **Excel (.xlsx)**, elegido en el diálogo y recordado por su navegador. El libro contiene las mismas columnas que el CSV en una hoja, con los números y las fechas como valores que Excel puede ordenar y filtrar. La importación lee los dos; en un libro, lee la primera hoja. Consulte [Archivos CSV y Excel](csv-files.md).
+
+**Columnas**: el archivo empieza por `id` y `reference` (`T-12`), y después las columnas siguen el espacio de trabajo, pestaña por pestaña. La importación ignora `reference`.
+
+**Clasificación de las tareas de proyecto**: una tarea de proyecto sin fuente, categoría, línea o empresa propias muestra en el archivo las de su proyecto, como en la lista. Al importar, un valor igual al del proyecto deja que la tarea siga a su proyecto. Cualquier otro valor pasa a ser propio de la tarea.
 
 Hay tres modos de exportación disponibles:
 
@@ -489,7 +497,7 @@ Hay tres modos de exportación disponibles:
 
 ### Flujo de trabajo de importación
 
-1. **Prepare su archivo**: guárdelo en UTF-8. Las comas y los puntos y coma funcionan, y también un archivo que Excel guardó como CSV simple (Windows-1252). Descargue una plantilla para asegurar los encabezados correctos. El separador, los importes, las fechas y los sí o no de cada idioma están en [Archivos CSV](csv-files.md).
+1. **Prepare su archivo**: un archivo CSV o un libro de Excel (`.xlsx`). Guarde un archivo CSV en UTF-8. Las comas y los puntos y coma funcionan, y también un archivo que Excel guardó como CSV simple (Windows-1252). Descargue una plantilla para asegurar los encabezados correctos. El separador, los importes, las fechas y los sí o no de cada idioma están en [Archivos CSV y Excel](csv-files.md).
 
 2. **Elija la configuración de importación**:
    - **Modo**:

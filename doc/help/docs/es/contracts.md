@@ -107,7 +107,7 @@ La fila fijada abajo dice **Total (n contratos)**. Suma los importes anuales de 
 ### Acciones
 
 - **Nuevo**: crear un contrato (`contracts:member`)
-- **Importar CSV** y **Exportar CSV**: vea [Importación y exportación CSV](#importacion-y-exportacion-csv) (`contracts:admin`)
+- **Importar** y **Exportar**: vea [Importación y exportación CSV](#importacion-y-exportacion-csv) (`contracts:admin`)
 - **Exportar el registro**: el registro de conformidad de los contratos que muestra la lista (`contracts:admin`). Vea [Conformidad](#conformidad)
 - **Ajustes**: el plazo de decisión del espacio de trabajo (`contracts:admin`). Vea [Plazo de decisión](#plazo-de-decision)
 - **Eliminar**: eliminar los contratos marcados (`contracts:admin`). Vea [Eliminar un contrato](#eliminar-un-contrato)
@@ -214,7 +214,7 @@ La insignia de la pestaña cuenta los requisitos esperados registrados como ause
 
 Vincular o quitar una aplicación o un activo en **Relaciones** actualiza la pestaña al instante. Necesita `contracts:member` para registrar; los lectores ven la pestaña en solo lectura.
 
-**Exportar el registro** (lista, `contracts:admin`) descarga un CSV de los contratos que muestra la lista, con su búsqueda, sus filtros y su alcance: una línea por contrato y requisito, con si se espera, el motivo, el estado, la referencia y la última actualización. Los encabezados y las palabras siguen el idioma de su pantalla.
+**Exportar el registro** (lista, `contracts:admin`) descarga un archivo CSV o Excel de los contratos que muestra la lista, con su búsqueda, sus filtros, su alcance y su orden: una línea por contrato y requisito, con si se espera, el motivo, el estado, la referencia y la última actualización. Los encabezados y las palabras siguen el idioma de su pantalla.
 
 ### Relaciones
 
@@ -317,6 +317,8 @@ En un contrato en su primer periodo sin decisión pendiente, **No** se aplica al
 
 ## Importación y exportación CSV
 
+La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
+
 Mantenga su lista de contratos sincronizada con otras herramientas mediante CSV (`contracts:admin`).
 
 **Exportar**: descarga los contratos que muestra la lista (o, a petición en el diálogo, todos los contratos) con estas columnas: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Las fechas calculadas (fin del periodo, fechas límite, situación) no se exportan.
@@ -332,7 +334,7 @@ Mantenga su lista de contratos sincronizada con otras herramientas mediante CSV 
 
 **Notas**:
 
-- Consulte [Archivos CSV](csv-files.md) para la codificación, el separador, los formatos de fecha e importe y los dos pasos de importación
+- Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador, los formatos de fecha e importe y los dos pasos de importación
 - Las fechas se calculan a partir del inicio, la duración, el preaviso y la renovación; nunca se importan
 
 ---

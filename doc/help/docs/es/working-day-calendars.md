@@ -64,8 +64,8 @@ Haga clic en cualquier celda para abrir el espacio de trabajo.
 **Acciones**:
 
 - **Nuevo**: crear un calendario (requiere `working_day_profiles:member`)
-- **Importar CSV**: cargar calendarios y sus días laborables desde un archivo (requiere `working_day_profiles:admin`)
-- **Exportar CSV**: descargar los calendarios que muestra la lista, o todos los calendarios (requiere `working_day_profiles:admin`)
+- **Importar**: cargar calendarios y sus días laborables desde un archivo (requiere `working_day_profiles:admin`)
+- **Exportar**: descargar los calendarios que muestra la lista, o todos los calendarios (requiere `working_day_profiles:admin`)
 - **Eliminar selección**: eliminar los calendarios seleccionados (requiere `working_day_profiles:admin`). Antes de eliminar nada, la confirmación enumera los calendarios que se conservan, con el motivo
 
 ---
@@ -170,14 +170,16 @@ Una línea de presupuesto usa un calendario cuando una de sus columnas, en cualq
 
 ## Importación/exportación CSV
 
+La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
+
 Cargue o actualice calendarios y sus días laborables desde un archivo.
 
-**Exportar**: haga clic en **Exportar CSV** y después en **Exportar datos**. El archivo lista todos los calendarios, activados o desactivados, ordenados por código. Para un archivo vacío solo con los encabezados, use **Descargar plantilla** en el diálogo de importación.
+**Exportar**: haga clic en **Exportar** y después en **Exportar datos**. El archivo lista todos los calendarios, activados o desactivados, ordenados por código. Para un archivo vacío solo con los encabezados, use **Descargar plantilla** en el diálogo de importación.
 
 **Estructura CSV**:
 
 - Encabezados: `code`, `name`, `description`, `country`, `region`, `status`, `disabled_at`, `year`, `jan`, `feb`, `mar`, `apr`, `may`, `jun`, `jul`, `aug`, `sep`, `oct`, `nov`, `dec`
-- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
+- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
 - Una fila por calendario y año. Un calendario con tres años ocupa tres filas. Un calendario sin ningún año se exporta como una fila con el año y los meses vacíos
 - Un calendario estándar solo exporta los años que usted modificó. Los demás años siguen los festivos y no necesitan fila
 - Las columnas `country`, `region` y `disabled_at` son opcionales al importar. Un archivo sin `country` ni `region` crea calendarios personalizados
@@ -196,7 +198,7 @@ Cargue o actualice calendarios y sus días laborables desde un archivo.
 
 **Importar**:
 
-1. Haga clic en **Importar CSV** en la lista
+1. Haga clic en **Importar** en la lista
 2. Elija su archivo
 3. Haga clic en **Verificación previa**. El informe indica el número de filas, las inserciones y actualizaciones, y las filas que no cambian nada
 4. Si la verificación previa no muestra errores, haga clic en **Cargar**

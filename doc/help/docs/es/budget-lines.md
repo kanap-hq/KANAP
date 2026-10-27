@@ -175,8 +175,8 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 **Acciones**:
 
 - **Nueva línea**: Crear una línea (requiere `budget:member`)
-- **Importar CSV**: Carga masiva de líneas desde un archivo de presupuesto (requiere `budget:admin`)
-- **Exportar CSV**: Exportar las líneas a un archivo de presupuesto (requiere `budget:admin`)
+- **Importar**: Carga masiva de líneas desde un archivo de presupuesto (requiere `budget:admin`)
+- **Exportar**: Exportar las líneas a un archivo de presupuesto (requiere `budget:admin`)
 - **Eliminar seleccionadas**: Eliminación masiva de líneas seleccionadas (requiere `budget:admin`; seleccione filas mediante casillas de verificación). Una línea con importes en una columna congelada no se puede eliminar. Antes de eliminar nada, la confirmación enumera las líneas que se conservan, con la columna congelada. Las demás se eliminan
 
 **Navegación Anterior/Siguiente**:
@@ -595,9 +595,9 @@ La sección no aparece cuando la línea no tiene proveedor o no hay nada que sug
 
 ## Importación/exportación CSV
 
-**Exportar CSV** e **Importar CSV** están en la barra de herramientas de la lista. Ambos requieren el nivel Administrador en Presupuesto (`budget:admin`).
+**Exportar** e **Importar** están en la barra de herramientas de la lista. Ambos requieren el nivel Administrador en Presupuesto (`budget:admin`).
 
-**Exportar CSV** escribe el archivo de presupuesto de las líneas que muestra la lista, OPEX y CAPEX juntas, como `budget.csv`. **Importar CSV** vuelve a leer un archivo: primero se comprueba, y no se escribe nada hasta que haga clic en **Cargar**.
+**Exportar** escribe el archivo de presupuesto de las líneas que muestra la lista, OPEX y CAPEX juntas, como `budget.csv` o como libro de Excel, `budget.xlsx`. **Importar** vuelve a leer cualquiera de los dos: primero se comprueba, y no se escribe nada hasta que haga clic en **Cargar**.
 
 El archivo contiene una fila por línea: su `nature` (`opex` o `capex`), su referencia `BL-n`, los detalles de la línea, sus importes en columnas y `kanap_token`. Un archivo sin columna `nature`, exportado por una versión anterior, se lee como líneas OPEX, o como líneas CAPEX cuando el filtro **Tipo** de la lista conserva solo CAPEX. [Cargar un presupuesto desde una hoja de cálculo](budget-file.md) describe las columnas, lo que significa una celda y los dos pasos de la importación.
 
@@ -709,7 +709,7 @@ Adicionalmente:
 - Las tareas tienen permisos separados (`tasks:member` para crear y editar tareas en las líneas)
 - Los usuarios con `tasks:reader` pueden ver tareas pero no crear ni editar
 
-Si no puede realizar una acción (p. ej., falta el botón **Importar CSV**, o no puede subir adjuntos), consulte con su administrador del espacio de trabajo para revisar sus permisos de rol.
+Si no puede realizar una acción (p. ej., falta el botón **Importar**, o no puede subir adjuntos), consulte con su administrador del espacio de trabajo para revisar sus permisos de rol.
 
 ---
 

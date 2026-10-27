@@ -167,7 +167,7 @@ Haga clic en una fila de colaborador para abrir un desglose por proyecto:
 - Los nombres de proyecto son clicables y abren la pestaña **Progreso** del proyecto.
 
 ### Exportaciones
-- **CSV**: Exportar la tabla del mapa de calor
+- **Exportar la tabla**: CSV o Excel. El archivo contiene la tabla de la agrupación en pantalla, colaboradores o equipos, con el modo de capacidad, los equipos y los estados en pantalla. Los días conservan sus decimales. El archivo Excel añade una hoja **Parámetros**. Consulte [Informes](reports.md#export-options)
 - **PNG**: Captura del informe
 - **Imprimir**: Imprimir o guardar como PDF
 
@@ -263,7 +263,7 @@ Las listas de modificaciones añaden la columna **Cambios** al final.
 
 Ambas exportaciones llevan la referencia, la empresa, la procedencia de un proyecto, los cambios de una fila modificada y la fecha del evento. Las filas de cierre llevan además el día de creación.
 
-Ambos archivos se escriben en el idioma de la pantalla: títulos, nombres de columna, estados, cambios, sí o no y días. El CSV toma además el separador y la marca decimal de ese idioma, como se describe en [Archivos CSV](csv-files.md).
+Ambos archivos se escriben en el idioma de la pantalla: títulos, nombres de columna, estados, cambios, sí o no y días. El CSV toma además el separador y la marca decimal de ese idioma, como se describe en [Archivos CSV y Excel](csv-files.md).
 
 ## Tiempo registrado
 
@@ -293,7 +293,7 @@ El informe solo muestra días. Nunca muestra las notas de un registro.
 
 ### Exportaciones
 
-- **CSV**: una línea por persona y mes, con el equipo, la persona, el mes, los días de proyecto, los otros días y el total.
+- **Exportar la tabla**: CSV o Excel, una línea por persona y mes, con el equipo, la persona, el mes, los días de proyecto, los otros días y el total. El archivo sigue el periodo y los filtros de equipo y de proyecto, y cuenta los meses en la misma zona horaria que la pantalla. El archivo Excel añade una hoja **Parámetros** con estos filtros. Consulte [Informes](reports.md#export-options)
 - **PNG**: el gráfico.
 
 ## Consejos

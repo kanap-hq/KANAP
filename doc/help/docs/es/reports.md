@@ -1,6 +1,6 @@
 # Informes
 
-La sección de Informes ofrece informes interactivos predefinidos para analizar datos presupuestarios, asignaciones de costes y tendencias de gasto. Cada informe combina una tabla resumen con un gráfico, y todos soportan exportación a CSV e imágenes.
+La sección de Informes ofrece informes interactivos predefinidos para analizar datos presupuestarios, asignaciones de costes y tendencias de gasto. Cada informe combina una tabla resumen con un gráfico, y todos exportan su tabla en CSV o Excel y su gráfico como imagen.
 
 ## Dónde encontrarlos
 
@@ -53,7 +53,7 @@ Con **ETC**, un informe suma personas en lugar de dinero:
 - **Top aumento / disminución** compara los ETC de las dos columnas línea por línea. Una línea que declara ETC solo en un lado cuenta 0 en el otro.
 - Los valores se muestran con dos decimales. Los nombres de columna y los títulos de gráfico llevan la mención ETC.
 - La dirección de la página conserva la medida (`?measure=fte`), de modo que un enlace guardado o compartido se abre con la misma medida.
-- Los nombres de los archivos PNG y CSV exportados terminan en `-fte`.
+- Los nombres de los archivos exportados llevan `-fte`.
 
 Con ETC, un aviso bajo la tabla indica cuando algunas líneas declaran ETC en una columna cuyo importe ya no sigue sus líneas de cantidad y precio. Ocurre cuando el importe se ha distribuido, cuando sus meses se han editado a mano o cuando la columna se ha copiado de una columna cuyas líneas eran solo una referencia. El aviso indica cuántas líneas y cuántos ETC están afectados, por columna y año. Con varias columnas dice, por ejemplo: «El importe ya no sigue las líneas en: Presupuesto 2026 (2 líneas, 1,50 ETC), Presupuesto 2027 (1 línea, 0,50 ETC).» Con una sola columna dice: «2 líneas declaran 1,50 ETC, pero su importe ya no sigue sus líneas de cantidad y precio.» Sus ETC siguen contando. El aviso le indica que el importe de la columna no es el coste de sus líneas de cantidad y precio.
 
@@ -147,7 +147,6 @@ Vea las asignaciones de costes entre todas las empresas con KPI resumen y flujos
 
 - Flujos netos pagador-consumidor por par de empresas (auto-consumo excluido)
 - Columnas: Pagador, Consumidor, importe
-- Botón separado **Exportar flujos netos CSV**
 
 **Tabla de KPI** (cuando está habilitada):
 
@@ -166,9 +165,11 @@ Una fila de totales está fijada en la parte inferior.
 
 ### Exportar
 
-- **Exportar tabla como CSV** (icono de descarga): Exporta la cuadrícula de asignaciones detalladas
+- **Exportar la tabla** (icono de descarga): **Excel (.xlsx)** escribe una hoja por tabla: **Asignaciones detalladas**, **Totales globales por empresa**, **Flujos interempresariales** y **KPI de contracargo**, y después la hoja **Parámetros**. **CSV** ofrece una entrada por tabla, por ejemplo **CSV: Flujos interempresariales**. Las asignaciones detalladas contienen una fila por departamento, con su empresa en cada fila, de modo que la suma de la columna de importes da el total. Los totales por empresa están en su propia tabla
 - **Exportar gráfico como PNG** (icono de imagen): Exporta el gráfico de barras
 - **Imprimir / Guardar como PDF** (icono de impresión)
+
+La exportación contiene todas las tablas, sean cuales sean las que muestran las casillas en pantalla.
 
 ---
 
@@ -210,7 +211,6 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 
 - Empresa asociada, cuentas por cobrar, cuentas por pagar, neto
 - Fila de totales fijada
-- Botón separado **Exportar flujos CSV**
 
 **Tabla de KPI** (cuando está habilitada): Mismas columnas que la tabla de KPI del Contracargo global, con una fila de "Totales globales" en la parte inferior para comparación.
 
@@ -218,9 +218,11 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 
 ### Exportar
 
-- **Exportar tabla como CSV**: Exporta la cuadrícula de totales por departamento
+- **Exportar la tabla**: **Excel (.xlsx)** escribe una hoja por tabla: **Totales por departamento**, **Líneas de contracargo**, **Flujos interempresariales** y **KPI de contracargo**, y después la hoja **Parámetros**. **CSV** ofrece una entrada por tabla, por ejemplo **CSV: Líneas de contracargo**
 - **Exportar gráfico como PNG**: Exporta el gráfico de barras por departamento
 - **Imprimir / Guardar como PDF**
+
+La exportación contiene todas las tablas, sean cuales sean las que muestran las casillas en pantalla.
 
 ---
 
@@ -333,7 +335,7 @@ Compare métricas presupuestarias en múltiples años en un solo gráfico de lí
 
 ### Exportar
 
-- **Exportar tabla como CSV**
+- **Exportar la tabla**: CSV o Excel. Consulte [Opciones de exportación](#export-options)
 - **Exportar gráfico como PNG**
 - **Imprimir / Guardar como PDF**
 
@@ -365,7 +367,7 @@ Compare de forma flexible hasta 10 combinaciones de año+columna.
 
 ### Exportar
 
-- **Exportar tabla como CSV**
+- **Exportar la tabla**: CSV o Excel. Consulte [Opciones de exportación](#export-options)
 - **Exportar gráfico como PNG**
 - **Imprimir / Guardar como PDF**
 
@@ -464,7 +466,7 @@ La dirección de la página conserva la agrupación (`?group=item`, `?group=supp
 
 Una fila **Total** fijada da los totales mensuales, su media y su pico. Los valores se muestran con dos decimales. Solo cuentan los ETC declarados: las líneas sin líneas de cantidad y precio en la columna se dejan fuera.
 
-El nombre de un grupo es un enlace que se abre en una pestaña nueva. Una línea abre su página. Un centro de coste, un proveedor o un valor abre la lista de líneas presupuestarias con las líneas del grupo que declaran ETC, en el periodo del informe y restringidas por la barra de filtros (consulte [Abrir la lista desde un informe](#abrir-la-lista-desde-un-informe)). «Sin centro de coste», «Sin proveedor» y «Sin valor» abren las líneas que no lo tienen. La fila **Total** es texto sin enlace. La exportación CSV conserva los nombres como texto.
+El nombre de un grupo es un enlace que se abre en una pestaña nueva. Una línea abre su página. Un centro de coste, un proveedor o un valor abre la lista de líneas presupuestarias con las líneas del grupo que declaran ETC, en el periodo del informe y restringidas por la barra de filtros (consulte [Abrir la lista desde un informe](#abrir-la-lista-desde-un-informe)). «Sin centro de coste», «Sin proveedor» y «Sin valor» abren las líneas que no lo tienen. La fila **Total** es texto sin enlace. La exportación conserva los nombres como texto.
 
 ### Avisos
 
@@ -475,8 +477,8 @@ Una línea bajo la tabla para cada caso, cuando se da:
 
 ### Exportar
 
-- **Exportar tabla como CSV**: El nombre del archivo lleva el tipo, el año, la columna y la agrupación, por ejemplo `staffing-opex-2026-budget-cost-center.csv`
-- **Exportar gráfico como PNG**: El mismo nombre, como imagen PNG
+- **Exportar la tabla**: CSV o Excel. El nombre del archivo lleva el tipo, el año, la columna, la agrupación y el día de la exportación, por ejemplo `staffing-opex-2026-budget-cost-center-2026-10-27.xlsx`
+- **Exportar gráfico como PNG**: El tipo, el año, la columna y la agrupación, como imagen PNG
 - **Imprimir / Guardar como PDF**
 
 ---
@@ -543,8 +545,8 @@ Una fila **Total** fijada da, para cada par, el total de días, el total del cos
 
 ### Exportar
 
-- **Exportar tabla como CSV**: El nombre del archivo lleva el tipo, la agrupación y el primer par, por ejemplo `cost-per-fte-opex-cost-center-2025-budget.csv`. En la tarifa diaria empieza por `daily-rate`, por ejemplo `daily-rate-opex-cost-center-2025-budget.csv`
-- **Exportar gráfico como PNG**: El mismo nombre, como imagen PNG
+- **Exportar la tabla**: CSV o Excel. El nombre del archivo lleva el tipo, la agrupación, el primer par y el día de la exportación, por ejemplo `cost-per-fte-opex-cost-center-2025-budget-2026-10-27.xlsx`. En la tarifa diaria empieza por `daily-rate`, por ejemplo `daily-rate-opex-cost-center-2025-budget-2026-10-27.csv`
+- **Exportar gráfico como PNG**: El tipo, la agrupación y el primer par, como imagen PNG
 - **Imprimir / Guardar como PDF**
 
 ---
@@ -555,11 +557,21 @@ Todos los informes comparten estas capacidades a través de la barra de herramie
 
 ### Opciones de exportación { #export-options }
 
-- **Exportar tabla como CSV** (icono de descarga): Descarga los datos de la tabla principal
+- **Exportar la tabla** (icono de descarga): abre un menú con **CSV** y **Excel (.xlsx)**. Su navegador recuerda la última elección y la resalta
 - **Exportar gráfico como PNG** (icono de imagen): Descarga el gráfico como imagen PNG
 - **Imprimir / Guardar como PDF** (icono de impresión): Abre el diálogo de impresión del navegador. También puede añadir `?print=1` a cualquier URL de informe para activar la impresión automáticamente al cargar.
 
-Los nombres de los archivos exportados llevan el nombre de la columna, por ejemplo `top10-opex-2026-presupuesto-bar.png`. Con la medida ETC, terminan en `-fte`.
+KANAP construye el archivo de la tabla con las mismas cifras que la pantalla, con los filtros en pantalla:
+
+- **Valores**: los importes conservan sus céntimos, los ETC y los días sus decimales, las partes son porcentajes. La pantalla los redondea para leerlos; el archivo conserva los valores, de modo que una suma en Excel coincide con el informe.
+- **Orden**: las filas siguen el orden propio del informe. Un orden elegido con un clic en un encabezado de columna se queda en la pantalla.
+- **Idioma**: los encabezados, los nombres de grupo («Sin centro de coste») y las fechas siguen el idioma de su pantalla. Un archivo CSV toma también el separador y la marca decimal de ese idioma (consulte [Archivos CSV y Excel](csv-files.md)).
+- **Excel**: una hoja por tabla, con las filas de total en negrita después de los datos. Un orden o un filtro en Excel deja los totales en su sitio. Una última hoja, **Parámetros**, lista los filtros aplicados, la fecha y la hora de la exportación en su zona horaria, y su nombre.
+- **Acceso a los datos limitado**: para una persona con el [acceso a los datos](data-access.md) limitado, el archivo cuenta las líneas que ve y no contiene ninguna fila de total. La hoja **Parámetros** indica **Calculado sobre sus accesos**.
+
+Cada exportación de tabla queda anotada en el [registro de auditoría](admin.md#registro-de-auditoria).
+
+Los nombres de los archivos exportados llevan el nombre de la columna, por ejemplo `top10-opex-2026-presupuesto-bar.png`, y un archivo de tabla termina con el día de la exportación. Con la medida ETC, los nombres llevan `-fte`, antes del día en un archivo de tabla.
 
 ### Métricas disponibles
 
@@ -578,4 +590,4 @@ Para cambiar de informe, haga clic en **Informes** en el panel izquierdo para vo
 - **Compare Presupuesto vs Aterrizaje previsto**: Utilice el informe de Comparación de columnas presupuestarias para medir la precisión de la previsión entre años.
 - **Alterne secciones en informes de contracargo**: Los controles de casilla le permiten centrarse solo en los datos que necesita (departamentos, líneas, KPI o flujos) sin ruido visual.
 - **Agrupación por año en Comparación de columnas presupuestarias**: Al comparar la misma métrica en múltiples años, active la agrupación por año para un gráfico de líneas más limpio.
-- **Exporte para presentaciones**: Los gráficos se exportan como PNG y las tablas como CSV, ambos listos para diapositivas u hojas de cálculo.
+- **Exporte para presentaciones**: Los gráficos se exportan como PNG y las tablas como CSV o Excel, listos para diapositivas u hojas de cálculo.

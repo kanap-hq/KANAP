@@ -128,6 +128,8 @@ Las columnas ocultas no se ofrecen. Si no hay nada marcado en **Qué copiar**, l
 
 **Copiar** solo se activa tras una vista previa. Cambiar cualquier campo descarta la vista previa: vuelva a ejecutarla. Tras la copia, la tabla sigue en pantalla bajo el título **Resultado**, con lo que hizo cada línea.
 
+**Exportar la tabla** (icono de descarga) descarga la vista previa de los campos en pantalla como archivo CSV o Excel, una fila por línea, con las columnas y los estados de la tabla. Después de la copia, la exportación queda desactivada: la tabla muestra entonces lo que hizo la copia, que una vista previa ya no describe. Los importes del archivo conservan sus céntimos.
+
 Cada parte tiene su propio estado en cada línea:
 
 | Estado | Significado |
@@ -243,6 +245,8 @@ Antes de elegir una columna, una línea sustituye a la cuadrícula: «Elija una 
 - **Total de elementos**
 - **Líneas con un total distinto de cero**
 - **Valor total actual**
+
+**Exportar la tabla** (icono de descarga) descarga la cuadrícula como archivo CSV o Excel: las líneas del tipo elegido y su valor actual en la columna elegida.
 
 ### Confirmación
 

@@ -179,7 +179,7 @@ Lo que importa cuando hace corresponder otra herramienta con KANAP:
 
 ## Formatos de intercambio
 
-Cada archivo de la tabla se exporta y se importa desde la página que gestiona el objeto. Las importaciones se hacen en dos pasos: una comprobación que no escribe nada y después una carga. Salvo el archivo de contratos, comparten las reglas de codificación, separador, fechas e importes y el límite de tamaño descritos en [Archivos CSV](csv-files.md).
+Cada archivo de la tabla se exporta y se importa desde la página que gestiona el objeto. Las importaciones se hacen en dos pasos: una comprobación que no escribe nada y después una carga. Salvo el archivo de contratos, comparten las reglas de codificación, separador, fechas e importes y el límite de tamaño descritos en [Archivos CSV y Excel](csv-files.md).
 
 | Objeto | Exportación | Importación | Coincidencia por | Detalles |
 |---|---|---|---|---|

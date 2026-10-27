@@ -65,7 +65,7 @@ La cuadrícula estándar resalta los campos que importan durante la recepción y
 ### Acciones de la lista
 
 - **Nueva solicitud** está disponible con `portfolio_requests:member`.
-- **Importar CSV** y **Exportar CSV** están disponibles para los administradores de solicitudes.
+- **Importar** y **Exportar** están disponibles para los administradores de solicitudes.
 
 ## El espacio de trabajo de Solicitud
 
@@ -339,7 +339,11 @@ En otras palabras, la conversión no borra la solicitud. La promueve.
 
 ## Importación y exportación CSV
 
-La importación y exportación CSV están disponibles para `portfolio_requests:admin`.
+**Exportar** e **Importar** están disponibles para `portfolio_requests:admin`.
+
+La exportación contiene las solicitudes que muestra la lista, con sus filtros, su búsqueda y su orden. **Formato**: **CSV** o **Excel (.xlsx)**, elegido en el diálogo y recordado por su navegador. El libro contiene las mismas columnas que el CSV en una hoja, con los números y las fechas como valores que Excel puede ordenar y filtrar. La importación lee los dos; en un libro, lee la primera hoja. Consulte [Archivos CSV y Excel](csv-files.md).
+
+**Columnas**: el archivo empieza por `id` y `reference` (`REQ-12`), y después las columnas siguen el espacio de trabajo, pestaña por pestaña. La importación ignora `reference`.
 
 Use exportar cuando necesite informes del portafolio o enriquecimiento sin conexión. Use importar cuando necesite crear o actualizar solicitudes en masa. Debido a que la importación puede alterar registros de recepción a escala, está intencionadamente reservada para administradores.
 

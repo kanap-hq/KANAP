@@ -66,7 +66,7 @@ La lista de proyectos está diseñada para responder rápidamente a dos pregunta
 **Administración masiva**
 
 - **Nuevo proyecto** está disponible con `portfolio_projects:member`
-- **Importar CSV** y **Exportar CSV** están disponibles para los administradores
+- **Importar** y **Exportar** están disponibles para los administradores
 
 Abrir un proyecto desde la lista preserva el contexto actual de la lista. El espacio de trabajo del proyecto utiliza el mismo contexto para la navegación **Anterior** y **Siguiente**, de modo que pueda revisar un conjunto filtrado sin perder su lugar.
 
@@ -369,9 +369,13 @@ Si puede abrir el proyecto pero no tiene derechos de visualización de Base de c
 
 ## Importación y exportación CSV
 
-Las herramientas CSV de proyectos están disponibles desde la página de lista para administradores.
+**Exportar** e **Importar** están disponibles desde la página de lista para administradores.
 
 ### Exportar
+
+El archivo contiene los proyectos que muestra la lista, con sus filtros, su búsqueda y su orden. **Formato**: **CSV** o **Excel (.xlsx)**, elegido en el diálogo y recordado por su navegador. El libro contiene las mismas columnas que el CSV en una hoja, con los números y las fechas como valores que Excel puede ordenar y filtrar. La importación lee los dos; en un libro, lee la primera hoja. Consulte [Archivos CSV y Excel](csv-files.md).
+
+**Columnas**: el archivo empieza por `id` y `reference` (`PRJ-12`), y después las columnas siguen el espacio de trabajo, pestaña por pestaña. La importación ignora `reference`.
 
 Las exportaciones admiten:
 

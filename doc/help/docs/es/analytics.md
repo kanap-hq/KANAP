@@ -117,8 +117,8 @@ Haga clic en cualquier celda para abrir el espacio de trabajo del valor.
 
 - **Nuevo valor**: crear un valor en la dimensión seleccionada (requiere `analytics:member`). Mientras la dimensión seleccionada está desactivada, el botón está desactivado y su información emergente indica "Active esta dimensión para añadir valores."
 - **Reordenar**: definir el orden de los valores de la dimensión seleccionada (requiere `analytics:member`). El botón está desactivado mientras la dimensión tiene menos de dos valores. Consulte [Ordenar los valores](#ordenar-los-valores)
-- **Importar CSV**: cargar valores desde un archivo (requiere `analytics:admin`)
-- **Exportar CSV**: descargar los valores que muestra la lista, o los valores de todas las dimensiones (requiere `analytics:admin`)
+- **Importar**: cargar valores desde un archivo (requiere `analytics:admin`)
+- **Exportar**: descargar los valores que muestra la lista, o los valores de todas las dimensiones (requiere `analytics:admin`)
 - **Eliminar selección**: eliminar los valores seleccionados (requiere `analytics:admin`). Cuando algunos los usan líneas de presupuesto, la confirmación indica cuántas líneas los pierden, por ejemplo «2 valores seleccionados están en uso: se quitan de 5 líneas presupuestarias. Estos datos no se pueden recuperar.», y el botón pasa a **Eliminar de todos modos**
 
 ---
@@ -369,16 +369,18 @@ Los siete informes presupuestarios también se pueden limitar a un valor de una 
 
 ## Importación/exportación CSV
 
+La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
+
 Cargue o actualice los valores de todas las dimensiones desde un solo archivo. Las dimensiones se crean en la página.
 
 Para definir valores en las líneas de presupuesto desde un archivo, use el archivo de presupuesto. En él, una columna `analytics:<code>` contiene cada dimensión activada, la dimensión por defecto incluida. Consulte [Cargar un presupuesto desde una hoja de cálculo](budget-file.md).
 
-**Exportar**: haga clic en **Exportar CSV** y después en **Exportar datos**. El archivo lista los valores de todas las dimensiones, activados o desactivados, dimensión por dimensión, los valores de cada dimensión en su orden. El archivo no tiene columna de orden. Para un archivo vacío solo con los encabezados, use **Descargar plantilla** en el diálogo de importación.
+**Exportar**: haga clic en **Exportar** y después en **Exportar datos**. El archivo lista los valores de todas las dimensiones, activados o desactivados, dimensión por dimensión, los valores de cada dimensión en su orden. El archivo no tiene columna de orden. Para un archivo vacío solo con los encabezados, use **Descargar plantilla** en el diálogo de importación.
 
 **Estructura CSV**:
 
 - Encabezados: `axis_code`, `name`, `description`, `status`, `disabled_at`, `applies_to`
-- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
+- La exportación escribe el separador del idioma de la pantalla. Consulte [Archivos CSV y Excel](csv-files.md) para la codificación, el separador, los formatos de fecha y los dos pasos de importación
 
 | Columna | Contenido |
 |---|---|
@@ -393,7 +395,7 @@ Solo `name` es una columna obligatoria. Cuando falta la columna `description`, `
 
 **Importar**:
 
-1. Haga clic en **Importar CSV** en la página
+1. Haga clic en **Importar** en la página
 2. Elija su archivo
 3. Haga clic en **Verificación previa**. El informe indica el número de filas, los valores que se crearán y actualizarán, y las filas que no cambian nada
 4. Si la verificación previa no muestra errores, haga clic en **Cargar**
