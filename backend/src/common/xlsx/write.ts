@@ -30,6 +30,11 @@ export interface XlsxSheet {
   name: string;
   headers: readonly string[];
   rows: readonly (readonly XlsxCell[])[];
+  /**
+   * Total rows, written in bold after the data rows and left out of the filter range, so a sort or a
+   * filter in the spreadsheet never moves them. They carry no link.
+   */
+  footer?: readonly (readonly XlsxCell[])[];
   /** `styled` (default): bold header, frozen first row, filter and column widths. `plain`: the header is a row of text. */
   header?: 'styled' | 'plain';
   /**
@@ -75,6 +80,10 @@ const STYLE_BOLD = 2;
 const STYLE_AMOUNT = 3;
 /** Appended after the others so 0 to 3 keep their place. Built-in `0.00%`. */
 const STYLE_PERCENT = 4;
+/** The bold styles of the footer (total) rows: amount, percent and date in bold; text and numbers use STYLE_BOLD. */
+const STYLE_AMOUNT_BOLD = 5;
+const STYLE_PERCENT_BOLD = 6;
+const STYLE_DATE_BOLD = 7;
 
 const XML_HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
 const XML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' };
@@ -169,8 +178,9 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string, language
   const styled = (sheet.header ?? 'styled') === 'styled';
   const columns = sheet.headers.length;
   if (columns > XLSX_MAX_COLUMNS) throw new Error(`xlsx: sheet "${name}" has ${columns} columns, ${XLSX_MAX_COLUMNS} at most`);
-  if (sheet.rows.length > XLSX_MAX_DATA_ROWS) {
-    throw new Error(`xlsx: sheet "${name}" has ${sheet.rows.length} rows, ${XLSX_MAX_DATA_ROWS} at most below the header`);
+  const footer = sheet.footer ?? [];
+  if (sheet.rows.length + footer.length > XLSX_MAX_DATA_ROWS) {
+    throw new Error(`xlsx: sheet "${name}" has ${sheet.rows.length + footer.length} rows, ${XLSX_MAX_DATA_ROWS} at most below the header`);
   }
   const names: string[] = [];
   for (let column = 1; column <= columns; column += 1) names.push(columnNumberToName(column));
@@ -181,14 +191,15 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string, language
   if (!Number.isInteger(linkColumn) || linkColumn < 1) throw new Error(`xlsx: sheet "${name}": linkColumn must be 1 or more`);
   const linkColumnName = columnNumberToName(linkColumn);
 
-  let usesAmount = false;
+  // The footer is bold: its styles live among the extra ones.
+  let usesAmount = footer.length > 0;
   const dateColumns = new Set<number>();
   const amountColumns = new Set<number>();
   const widths: number[] = sheet.headers.map((header) => longestLine(header));
 
-  const textCell = (ref: string, text: string, guard: boolean): string => {
+  const textCell = (ref: string, text: string, guard: boolean, bold = false): string => {
     const value = cellText(guard ? neutralizeCsvFormulaValue(text) : text);
-    return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`;
+    return `<c r="${ref}"${bold ? ` s="${STYLE_BOLD}"` : ''} t="inlineStr"><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`;
   };
 
   const headerStyle = styled ? ` s="${STYLE_BOLD}"` : '';
@@ -205,7 +216,7 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string, language
   const hyperlinks: string[] = [];
   const hyperlinkRels: string[] = [];
 
-  sheet.rows.forEach((row, rowIndex) => {
+  const writeRow = (row: readonly XlsxCell[], rowIndex: number, bold: boolean): void => {
     if (row.length !== columns) {
       throw new Error(`xlsx: sheet "${name}" row ${rowIndex + 1} has ${row.length} cells for ${columns} headers`);
     }
@@ -217,19 +228,19 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string, language
       if (cell === null || cell === undefined || cell === '') continue;
       const ref = `${names[index]}${rowNumber}`;
       if (typeof cell === 'string') {
-        cells.push(textCell(ref, cell, styled));
+        cells.push(textCell(ref, cell, styled, bold));
         if (sample) widths[index] = Math.max(widths[index], longestLine(cell));
       } else if (cell.kind === 'number') {
         if (typeof cell.value !== 'number' || !Number.isFinite(cell.value)) {
           throw new Error(`xlsx: sheet "${name}" ${ref}: a number cell needs a finite number`);
         }
-        cells.push(`<c r="${ref}"><v>${cell.value}</v></c>`);
+        cells.push(`<c r="${ref}"${bold ? ` s="${STYLE_BOLD}"` : ''}><v>${cell.value}</v></c>`);
         if (sample) widths[index] = Math.max(widths[index], String(cell.value).length);
       } else if (cell.kind === 'amount') {
         if (typeof cell.value !== 'string' || !AMOUNT_TEXT.test(cell.value)) {
           throw new Error(`xlsx: sheet "${name}" ${ref}: "${String(cell.value)}" is not a decimal amount`);
         }
-        cells.push(`<c r="${ref}" s="${STYLE_AMOUNT}"><v>${cell.value}</v></c>`);
+        cells.push(`<c r="${ref}" s="${bold ? STYLE_AMOUNT_BOLD : STYLE_AMOUNT}"><v>${cell.value}</v></c>`);
         amountColumns.add(index + 1);
         usesAmount = true;
         if (sample) widths[index] = Math.max(widths[index], cell.value.length + Math.floor(cell.value.length / 3));
@@ -237,20 +248,20 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string, language
         if (typeof cell.value !== 'number' || !Number.isFinite(cell.value)) {
           throw new Error(`xlsx: sheet "${name}" ${ref}: a percent cell needs a finite number`);
         }
-        cells.push(`<c r="${ref}" s="${STYLE_PERCENT}"><v>${cell.value}</v></c>`);
+        cells.push(`<c r="${ref}" s="${bold ? STYLE_PERCENT_BOLD : STYLE_PERCENT}"><v>${cell.value}</v></c>`);
         usesAmount = true;
         if (sample) widths[index] = Math.max(widths[index], String(Math.round(cell.value * 10_000) / 100).length + 1);
       } else if (cell.kind === 'date') {
         const serial = daySerial(cell.iso);
-        if (cell.iso < FIRST_SERIAL_DAY) cells.push(textCell(ref, formatCsvDate(cell.iso, language), false));
-        else cells.push(`<c r="${ref}" s="${STYLE_DATE}"><v>${serial}</v></c>`);
+        if (cell.iso < FIRST_SERIAL_DAY) cells.push(textCell(ref, formatCsvDate(cell.iso, language), false, bold));
+        else cells.push(`<c r="${ref}" s="${bold ? STYLE_DATE_BOLD : STYLE_DATE}"><v>${serial}</v></c>`);
         dateColumns.add(index + 1);
       } else {
         throw new Error(`xlsx: sheet "${name}" ${ref}: unknown cell kind`);
       }
     }
 
-    const link = sheet.links?.[rowIndex];
+    const link = bold ? null : sheet.links?.[rowIndex];
     const target = link ? linkTarget(link, appBaseUrl) : '';
     if (target && target.length <= XLSX_MAX_LINK_LENGTH && hyperlinks.length < XLSX_MAX_LINKS_PER_SHEET) {
       const relId = `rId${hyperlinkRels.length + 1}`;
@@ -260,7 +271,9 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string, language
       );
     }
     rowBuffers.push(Buffer.from(`\n    <row r="${rowNumber}">${cells.join('')}</row>`, 'utf8'));
-  });
+  };
+  sheet.rows.forEach((row, rowIndex) => writeRow(row, rowIndex, false));
+  footer.forEach((row, index) => writeRow(row, sheet.rows.length + index, true));
 
   const hyperlinksXml = hyperlinks.length > 0 ? `<hyperlinks>${hyperlinks.join('')}</hyperlinks>` : '';
   let xml: Buffer;
@@ -299,6 +312,7 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string, language
         return `<col min="${column}" max="${column}" width="${width}" customWidth="1"/>`;
       })
       .join('');
+    // The header and the data rows: the footer stays below the filter.
     filterRange = columns > 0 ? `A1:${names[columns - 1]}${sheet.rows.length + 1}` : null;
     const parts = [
       XML_HEAD,
@@ -396,13 +410,14 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   <Relationship Id="rId${built.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`;
 
-  // Style 0 is the default, 1 the date cells; 2 (bold header), 3 (amount, `#,##0.00`) and 4 (percent, `0.00%`) exist
-  // when a sheet uses them.
+  // Style 0 is the default, 1 the date cells; 2 (bold header), 3 (amount, `#,##0.00`), 4 (percent, `0.00%`) and the
+  // bold amount, percent and date of the footer rows (5 to 7) exist when a sheet uses them.
   const fonts = extraStyles
     ? '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
     : '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>';
   const cellXfs = extraStyles
-    ? '<cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="10" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>'
+    ? '<cellXfs count="8"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="10" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
+      + '<xf numFmtId="4" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="10" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="164" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/></cellXfs>'
     : '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>';
   const stylesXml = `${XML_HEAD}
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">

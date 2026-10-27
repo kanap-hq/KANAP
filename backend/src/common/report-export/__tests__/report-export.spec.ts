@@ -99,7 +99,8 @@ function xlsx() {
   assert.ok(people.includes('<c r="C2" s="3"><v>-1234.50</v></c>'), 'amount cell');
   assert.ok(people.includes('<c r="D2" s="1"><v>46266</v></c>'), 'date cell');
   assert.ok(people.includes('<c r="E2" s="4"><v>0.125</v></c>'), 'percent cell');
-  assert.ok(people.includes('<row r="4"><c r="A4" t="inlineStr"><is><t xml:space="preserve">Total</t>'), 'footer after the data rows');
+  assert.ok(people.includes('<row r="4"><c r="A4" s="2" t="inlineStr"><is><t xml:space="preserve">Total</t>'), 'footer after the data rows, bold');
+  assert.ok(people.includes('<autoFilter ref="A1:E3"/>'), 'the filter leaves the footer out');
   assert.deepEqual(cellTexts(sheetText(zip, 3)), [
     'Paramètre', 'Valeur', 'Months', '6', 'Teams', 'Alpha, Beta', 'Généré le', '27/10/2026 00:30 (Europe/Paris)', 'Généré par', 'Claire Martin',
   ], 'parameters, then the generation time in the user zone and the user');

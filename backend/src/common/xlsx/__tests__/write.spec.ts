@@ -48,9 +48,13 @@ function types() {
 
 function styles() {
   const styled = text(one([[{ kind: 'amount', value: '1' }, { kind: 'date', iso: '2026-01-01' }]]), 'xl/styles.xml');
-  assert.match(styled, /<cellXfs count="5">/);
+  assert.match(styled, /<cellXfs count="8">/);
   const xfs = [...styled.matchAll(/<xf numFmtId="(\d+)" fontId="(\d)"[^>]*\/>/g)].slice(1); // the first xf is cellStyleXfs
-  assert.deepEqual(xfs.map((x) => [x[1], x[2]]), [['0', '0'], ['164', '0'], ['0', '1'], ['4', '0'], ['10', '0']], 'indices: default, date, bold, amount, percent');
+  assert.deepEqual(
+    xfs.map((x) => [x[1], x[2]]),
+    [['0', '0'], ['164', '0'], ['0', '1'], ['4', '0'], ['10', '0'], ['4', '1'], ['10', '1'], ['164', '1']],
+    'indices: default, date, bold, amount, percent, then bold amount, percent and date of the footer',
+  );
   assert.ok(styled.includes('<font><b/><sz val="11"/><name val="Calibri"/></font>'), 'the bold font');
   for (const [language, format] of [['en', 'yyyy-mm-dd'], ['fr', '[$-40C]dd/mm/yyyy'], ['de', '[$-407]dd.mm.yyyy'], ['es', '[$-C0A]dd/mm/yyyy']] as const) {
     const out = text(write([{ name: 'S', headers: ['A'], rows: [[null]] }], language), 'xl/styles.xml');
@@ -61,9 +65,38 @@ function styles() {
   assert.match(plain, /<cellXfs count="2">/);
   assert.match(plain, /<fonts count="1">/);
   const plainAmount = text(write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'amount', value: '1.5' }]], header: 'plain' }]), 'xl/styles.xml');
-  assert.match(plainAmount, /<cellXfs count="5">/, 'an amount in a plain sheet brings the amount style');
+  assert.match(plainAmount, /<cellXfs count="8">/, 'an amount in a plain sheet brings the amount style');
   const plainPercent = text(write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'percent', value: 0.5 }]], header: 'plain' }]), 'xl/styles.xml');
-  assert.match(plainPercent, /<cellXfs count="5">.*<xf numFmtId="10"[^>]*\/><\/cellXfs>/s, 'a percent in a plain sheet brings the percent style');
+  assert.match(plainPercent, /<cellXfs count="8">.*<xf numFmtId="10" fontId="0"[^>]*\/>/s, 'a percent in a plain sheet brings the percent style');
+}
+
+/** Total rows: bold, after the data rows, outside the filter, so a sort or a filter in the spreadsheet never moves them. */
+function footer() {
+  const buffer = write([{
+    name: 'S',
+    headers: ['Name', 'Days', 'Amount', 'Share', 'Day'],
+    rows: [
+      ['a', { kind: 'number', value: 1 }, { kind: 'amount', value: '10.00' }, { kind: 'percent', value: 0.25 }, { kind: 'date', iso: '2026-01-01' }],
+      ['b', { kind: 'number', value: 3 }, { kind: 'amount', value: '30.00' }, { kind: 'percent', value: 0.75 }, null],
+    ],
+    footer: [['Total', { kind: 'number', value: 4 }, { kind: 'amount', value: '40.00' }, { kind: 'percent', value: 1 }, { kind: 'date', iso: '2026-12-31' }]],
+    links: ['/budget/1', '/budget/2'],
+  }]);
+  const xml = sheetXml(buffer);
+  assert.ok(xml.includes('<autoFilter ref="A1:E3"/>'), 'the filter covers the header and the data rows only');
+  assert.match(text(buffer, 'xl/workbook.xml'), /<definedName name="_xlnm._FilterDatabase" localSheetId="0" hidden="1">&apos;S&apos;!\$A\$1:\$E\$3<\/definedName>/);
+  assert.equal(cellOf(xml, 'A4'), '<c r="A4" s="2" t="inlineStr"><is><t xml:space="preserve">Total</t></is></c>', 'bold text');
+  assert.equal(cellOf(xml, 'B4'), '<c r="B4" s="2"><v>4</v></c>', 'bold number');
+  assert.equal(cellOf(xml, 'C4'), '<c r="C4" s="5"><v>40.00</v></c>', 'bold amount');
+  assert.equal(cellOf(xml, 'D4'), '<c r="D4" s="6"><v>1</v></c>', 'bold percent');
+  assert.equal(cellOf(xml, 'E4'), '<c r="E4" s="7"><v>46387</v></c>', 'bold date');
+  assert.equal(cellOf(xml, 'C2'), '<c r="C2" s="3"><v>10.00</v></c>', 'data rows keep their styles');
+  assert.equal((xml.match(/<hyperlink /g) ?? []).length, 2, 'the footer carries no link');
+  // A footer alone in a plain sheet brings the bold styles.
+  const plain = write([{ name: 'S', headers: ['A'], rows: [['x']], footer: [['Total']], header: 'plain' }]);
+  assert.match(text(plain, 'xl/styles.xml'), /<cellXfs count="8">/);
+  assert.ok(!sheetXml(plain).includes('autoFilter'));
+  assert.throws(() => write([{ name: 'S', headers: ['A', 'B'], rows: [], footer: [['Total']] }]), /row 1 has 1 cells for 2 headers/);
 }
 
 function styledHeader() {
@@ -296,6 +329,7 @@ function libreOffice() {
 function run() {
   types();
   styles();
+  footer();
   styledHeader();
   plainHeader();
   characters();

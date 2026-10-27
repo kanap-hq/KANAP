@@ -15,7 +15,8 @@ import { REPORT_EXPORT_LABELS } from './labels';
  * A report builds a `ReportExport` from the result its screen shows (the same service call, the same
  * order): one or more tables of values, never display strings, and the parameters it applied in readable
  * words, in the language of the request. `writeReportExport` turns it into the file:
- * - xlsx: one styled sheet per table (data rows, then the footer rows), then a "Parameters" sheet: the
+ * - xlsx: one styled sheet per table (data rows, then the footer rows in bold, outside the filter range so a
+ *   sort or a filter never moves a total), then a "Parameters" sheet: the
  *   parameters, the generation date and time in the user's zone, the user's name and, for a person under
  *   data-scoped access, "Computed on your access".
  * - CSV: exactly one table (header, data rows, footer rows), in the language's separator and decimal mark.
@@ -117,9 +118,9 @@ export function writeReportExport(exp: ReportExport, request: ReportExportReques
     ? exp.tables
     : [...exp.tables.filter((table) => table.key === request.table), ...exp.tables.filter((table) => table.key !== request.table)];
   const sheets: XlsxSheet[] = ordered.map((table) => {
-    const rows = rowsOf(table);
-    rows.forEach((row, index) => checkRow(table, row, index));
-    return { name: table.sheet, headers: table.columns.map((column) => column.header), rows };
+    rowsOf(table).forEach((row, index) => checkRow(table, row, index));
+    const footer = exp.limited ? [] : table.footer ?? [];
+    return { name: table.sheet, headers: table.columns.map((column) => column.header), rows: table.rows, footer };
   });
   const labels = REPORT_EXPORT_LABELS[request.language];
   const zoneSuffix = request.timeZone === 'UTC' ? ' UTC' : ` (${request.timeZone})`;
