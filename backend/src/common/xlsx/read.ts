@@ -1,10 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import { StringDecoder } from 'node:string_decoder';
 import { posix } from 'node:path';
-import { crc32, createInflateRaw } from 'node:zlib';
 import type AdmZip = require('adm-zip');
 import { SaxesParser, SaxesTagPlain } from 'saxes';
-import { ArchiveLimitError, BoundedArchive, openBoundedArchive, StoredEntryData } from '../archive-limits';
+import { ArchiveLimitError, BoundedArchive, openBoundedArchive } from '../archive-limits';
 
 /**
  * The common .xlsx reader: the first worksheet of a workbook as a grid of cells, read with a streaming
@@ -429,42 +428,6 @@ function parsePart(data: Buffer, handlers: TagHandlers, limits: XlsxReadLimits):
 }
 
 /**
- * Decompresses one entry as it arrives, passing each chunk of the part to `take`. The declared size is
- * the ceiling: a part that unpacks to more lies about its size (the same refusal as adm-zip's inflater).
- */
-function inflateEntry(data: Buffer, take: (chunk: Buffer) => void): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    const inflater = createInflateRaw();
-    let settled = false;
-    const fail = (error: unknown): void => {
-      if (settled) return;
-      settled = true;
-      inflater.destroy();
-      reject(error);
-    };
-    inflater.on('data', (chunk: Buffer) => {
-      if (settled) return;
-      try {
-        take(chunk);
-      } catch (error) {
-        fail(error);
-      }
-    });
-    inflater.on('error', (error) => {
-      if (settled) return;
-      settled = true;
-      reject((error as { code?: unknown }).code === 'ERR_BUFFER_TOO_LARGE' ? invalid() : error);
-    });
-    inflater.on('end', () => {
-      if (settled) return;
-      settled = true;
-      resolve();
-    });
-    inflater.end(data);
-  });
-}
-
-/**
  * Reads the worksheet part as a stream: its stored bytes (a view of the archive) are inflated chunk by
  * chunk and parsed as they arrive, so the 200 MB part is never held whole. The ratio and declared size
  * are checked before anything is inflated, the cumulative size and the CRC-32 at the end, and the
@@ -476,42 +439,16 @@ async function streamPart(archive: BoundedArchive, entry: AdmZip.IZipEntry, hand
   if (size > limits.compressionRatioFromBytes && size > limits.maxCompressionRatio * Math.max(compressed, 1)) {
     throw tooLarge('maxCompressionRatio', limits);
   }
-  let stored: StoredEntryData;
-  try {
-    stored = archive.stored(entry);
-  } catch (error) {
-    if (error instanceof ArchiveLimitError) throw invalid();
-    throw error;
-  }
   const parser = new PartParser(handlers, limits);
-  let produced = 0;
-  let crc = 0;
-  const take = (chunk: Buffer): void => {
-    produced += chunk.length;
-    // The inflater stops at the declared size: a part that unpacks to more lies about its size.
-    if (produced > stored.declared) throw invalid();
-    // The cumulative size is counted as the bytes arrive, against the archive's total budget.
-    archive.account(chunk.length);
-    crc = crc32(chunk, crc);
-    parser.write(chunk);
-  };
   try {
-    if (stored.method === 0) {
-      if (stored.data.length !== stored.declared) throw invalid();
-      for (let offset = 0; offset < stored.data.length; offset += PART_CHUNK) {
-        take(stored.data.subarray(offset, Math.min(offset + PART_CHUNK, stored.data.length)));
-      }
-    } else if (stored.method === 8) {
-      await inflateEntry(stored.data, take);
-    } else {
-      throw new Error('archive: unsupported method');
-    }
+    // The archive checks the declared size, the cumulative budget and the CRC-32; this layer only
+    // parses the bytes it is handed.
+    await archive.stream(entry, (chunk) => parser.write(chunk));
     parser.end();
   } catch (error) {
     if (error instanceof ArchiveLimitError) throw invalid();
     throw error;
   }
-  if ((crc >>> 0) !== stored.crc) throw invalid();
 }
 
 /**

@@ -375,33 +375,54 @@ async function testWorldBank() {
   }
 }
 
-/** The bytes of an entry as stored, and the total budget a streamed caller accounts against. */
-function testStoredAndAccount() {
+/** Streaming one entry: the bytes, the budget counted as they arrive, the CRC and the refuses. */
+async function testStream() {
   const archive = openBoundedArchive(hostileZip({
     'a.txt': 'alpha',
     'b.bin': { data: Buffer.alloc(1000), method: 0 },
   }));
-  const deflated = archive.stored(archive.zip.getEntry('a.txt')!);
-  assert.equal(deflated.declared, 5);
-  assert.equal(deflated.method, 8);
-  assert.equal(zlib.inflateRawSync(deflated.data).toString(), 'alpha');
-  assert.equal(deflated.crc, zlib.crc32(Buffer.from('alpha')));
-  const stored = archive.stored(archive.zip.getEntry('b.bin')!);
-  assert.equal(stored.method, 0);
-  assert.equal(stored.declared, 1000);
-  assert.equal(stored.data.length, 1000);
+  const text: Buffer[] = [];
+  await archive.stream(archive.zip.getEntry('a.txt')!, (chunk) => text.push(chunk));
+  assert.equal(Buffer.concat(text).toString(), 'alpha');
+  let stored = 0;
+  await archive.stream(archive.zip.getEntry('b.bin')!, (chunk) => { stored += chunk.length; });
+  assert.equal(stored, 1000);
 
+  // The total budget is counted as the bytes arrive, not at the end.
   const budget = openBoundedArchive(
     hostileZip({ 'a.bin': { data: Buffer.alloc(100), method: 0 }, 'b.bin': { data: Buffer.alloc(100), method: 0 } }),
     { maxTotalBytes: 150 },
   );
-  budget.account(100);
-  assert.throws(() => budget.account(51), isLimitError);
+  await budget.stream(budget.zip.getEntry('a.bin')!, () => undefined);
+  await assert.rejects(budget.stream(budget.zip.getEntry('b.bin')!, () => undefined), isLimitError);
+
+  // An error from the caller stops the inflater and comes back as it is.
+  const sentinel = new Error('stop');
+  const stopped = openBoundedArchive(hostileZip({ 'big.bin': Buffer.alloc(4 * MB) }));
+  let calls = 0;
+  await assert.rejects(
+    stopped.stream(stopped.zip.getEntry('big.bin')!, () => {
+      calls += 1;
+      if (calls === 1) throw sentinel;
+    }),
+    (error) => error === sentinel,
+  );
+  assert.equal(calls, 1, 'no chunk is handed over after the error');
+
+  // The entry-level refuses: a stored size that disagrees, a damaged local header, encryption, a CRC.
+  const lying = openBoundedArchive(hostileZip({ 's.bin': { data: 'abc', method: 0, centralSize: 5 } }));
+  await assert.rejects(lying.stream(lying.zip.getEntry('s.bin')!, () => undefined), /two sizes/);
+  const damaged = openBoundedArchive(hostileZip({ 'd.bin': { data: 'x', localSignature: 0 } }));
+  await assert.rejects(damaged.stream(damaged.zip.getEntry('d.bin')!, () => undefined), /damaged local header/);
+  const encrypted = openBoundedArchive(hostileZip({ 'e.bin': { data: 'x', flags: 0x1 } }));
+  await assert.rejects(encrypted.stream(encrypted.zip.getEntry('e.bin')!, () => undefined), /encrypted/);
+  const badCrc = openBoundedArchive(hostileZip({ 'c.bin': { data: 'crc', localCrc: 0x12345678 } }));
+  await assert.rejects(badCrc.stream(badCrc.zip.getEntry('c.bin')!, () => undefined), /checksum/);
 }
 
 async function run() {
   testHelper();
-  testStoredAndAccount();
+  await testStream();
   testUploadValidation();
   await testDocumentImport();
   await testDocumentExport();
