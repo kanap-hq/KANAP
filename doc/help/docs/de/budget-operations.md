@@ -66,7 +66,7 @@ Ohne die Administratorstufe für die Budget-Administration zeigt die Seite die Z
 ### Was das Einfrieren bewirkt
 
 - Verhindert Bearbeitungen an eingefrorenen Spalten im Arbeitsbereich der Zeilen dieses Typs. Die Felder zeigen ein Schloss-Symbol
-- Blockiert CSV-Importe in eingefrorene Spalten
+- Blockiert Importe in eingefrorene Spalten
 - Blockiert Kopier- und Zurücksetzungsoperationen für eingefrorene Spalten
 - Verweigert das Löschen einer Zeile oder die Änderung ihres Typs, solange sie Beträge in einer eingefrorenen Spalte der betroffenen Jahre hat
 - Beeinflusst **nicht** den Lesezugriff: Die Daten bleiben sichtbar

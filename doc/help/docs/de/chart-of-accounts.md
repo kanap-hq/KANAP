@@ -38,7 +38,7 @@ OPEX/CAPEX-Zeilen -> Kontoauswahl (gefiltert auf FR-2024-Konten)
 - Berechtigungen:
   - Anzeigen: `accounts:reader`
   - Konten und Kontenpläne erstellen/bearbeiten: `accounts:member`
-  - CSV importieren, CSV exportieren, Löschen: `accounts:admin`
+  - Importieren, Exportieren, Löschen: `accounts:admin`
 
 ## Mit der Liste arbeiten
 
@@ -160,13 +160,13 @@ Der Abschnitt **Konsolidierung** enthält ein einziges Feld, **Konsolidierungsko
 
 Klicken Sie in der Chip-Leiste auf **Neu** oder im Dialog „Kontenpläne verwalten" auf **Neuer Kontenplan**. Sie können einen Kontenplan auf zwei Arten erstellen:
 
-1. **Ein leerer Kontenplan**: Konten fügen Sie später einzeln oder per CSV-Import hinzu.
+1. **Ein leerer Kontenplan**: Konten fügen Sie später einzeln oder per Import hinzu.
 2. **Eine Vorlage**: Laden Sie einen vorkonfigurierten Kontensatz, der von Plattform-Administratoren gepflegt wird.
 
 **Felder des Erstellen-Dialogs**:
 - **Ausgangspunkt**: **Ein leerer Kontenplan** oder **Eine Vorlage**.
 - **Vorlage** (nur im Vorlagenmodus): Wählen Sie eine Vorlage aus der Liste. Jeder Eintrag zeigt Name, Länder und Version. Mit der Wahl einer Vorlage werden Name und Code ausgefüllt, die Sie ändern können.
-- **Code** (Pflicht): Eine kurze, stabile Kennung für CSV-Dateien und Links.
+- **Code** (Pflicht): Eine kurze, stabile Kennung für importierte und exportierte Dateien und für Links.
 - **Name** (Pflicht): Ein beschreibender Name für den Kontenplan.
 - **Verwendet für**: **Ein Land** oder **Alle Länder**. Eine globale Vorlage erstellt immer einen Kontenplan für **Alle Länder**.
 - **Land** (nur bei einem Land): Wählen Sie ein Land aus der Liste.
@@ -349,8 +349,8 @@ Alle drei lokalen Konten werden auf dasselbe Konsolidierungskonto `6200` abgebil
 **Option 1: Vorlagen (empfohlen)**
 Alle integrierten Vorlagen enthalten IFRS-Konsolidierungszuordnungen für jedes Konto. Laden Sie eine beliebige Ländervorlage, und die Konsolidierungsspalten sind bereits ausgefüllt. Ein neuer Arbeitsbereich hat den IFRS-Kontenplan bereits als Konsolidierungskontenplan. Siehe [Verfügbare Vorlagen](#verfugbare-vorlagen) für die vollständige Liste.
 
-**Option 2: CSV-Import**
-Nehmen Sie beim Import von Konten die Konsolidierungsfelder in Ihre CSV auf:
+**Option 2: Import**
+Nehmen Sie beim Import von Konten die Konsolidierungsfelder in Ihre Datei auf:
 
 ```
 coa_code;account_number;account_name;consolidation_account_number;consolidation_account_name;consolidation_account_description
@@ -402,12 +402,12 @@ Diese duale Sicht erfüllt sowohl lokale Compliance-Anforderungen als auch Konze
 **Funktionsweise**:
   - Unternehmen OHNE Kontenplan können Legacy-Konten verwenden
   - Unternehmen MIT Kontenplan können Legacy-Konten nicht verwenden. Sie werden automatisch herausgefiltert
-  - Legacy-Konten können weiterhin per CSV (`coa_code`) und Neuzuweisungs-Workflows migriert werden
+  - Legacy-Konten können weiterhin per Import (`coa_code`) und Neuzuweisungs-Workflows migriert werden
 
 **Migrationspfad**:
   1. Kontenpläne für Ihre Unternehmen erstellen oder laden
   2. Kontenpläne den Unternehmen zuweisen (im Unternehmens-Übersichts-Tab)
-  3. Ihren Legacy-Konten `coa_id` zuweisen (per CSV-Import mit `coa_code` oder Massenbearbeitung)
+  3. Ihren Legacy-Konten `coa_id` zuweisen (per Import mit `coa_code` oder Massenbearbeitung)
   4. Bestehende OPEX/CAPEX-Zeilen aktualisieren, die Warnungen „Veraltetes Konto" zeigen
 
 **Tipp**: Sie müssen nicht alles auf einmal migrieren. Unternehmen ohne Kontenplan arbeiten weiterhin mit Legacy-Konten, was eine schrittweise Einführung ermöglicht.
@@ -464,11 +464,11 @@ Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wähl
 
 ### Kontenpläne
 
-Sie können eine Liste Ihrer Kontenpläne exportieren (mit Metadaten wie Code, Name, Land, Standard-Status), aber keine Kontenpläne direkt per CSV importieren. Erstellen Sie Kontenpläne über die Benutzeroberfläche oder laden Sie sie aus Vorlagen.
+Sie können eine Liste Ihrer Kontenpläne exportieren (mit Metadaten wie Code, Name, Land, Standard-Status), aber keine Kontenpläne aus einer Datei importieren. Erstellen Sie Kontenpläne über die Benutzeroberfläche oder laden Sie sie aus Vorlagen.
 
 ### Konten (globaler Endpunkt)
 
-Der globale `/accounts`-CSV enthält eine `coa_code`-Spalte, um zu identifizieren, zu welchem Kontenplan jedes Konto gehört. **Exportieren** und **Importieren** nutzen sie, wenn auf der Seite kein Kontenplan ausgewählt ist.
+Die globale `/accounts`-Datei enthält eine `coa_code`-Spalte, um zu identifizieren, zu welchem Kontenplan jedes Konto gehört. **Exportieren** und **Importieren** nutzen sie, wenn auf der Seite kein Kontenplan ausgewählt ist.
 
   - **Exportieren**: die Konten der Liste (oder, auf Wunsch im Dialog, alle Konten) mit ihren Kontenplan-Codes, Kontonummern, Namen, lokalen Namen, Beschreibungen, Konsolidierungszuordnungen, Status und **Verwendet für**
   - **Importieren**: **Vorlage herunterladen** im Dialog liefert eine Datei nur mit den Kopfzeilen. Beginnen Sie mit der **Vorabprüfung**, um Struktur, Kodierung, Pflichtfelder und Duplikate zu prüfen, und dann **Laden**, um die Einfügungen und Aktualisierungen anzuwenden
@@ -512,7 +512,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - **Schrittweise migrieren**: Sie müssen nicht alles auf einmal umstellen. Unternehmen ohne Kontenpläne arbeiten weiterhin mit Legacy-Konten.
   - **Veraltete Konten beheben**: Wenn Sie Warnungen sehen, aktualisieren Sie das Konto, damit es zum aktuellen Kontenplan des Unternehmens passt. Dies hält Ihre Daten für Berichte sauber.
   - **Deaktivieren statt löschen**: Das Deaktivieren von Konten bewahrt die Historie. Löschen Sie nur Konten, die versehentlich erstellt wurden und nie verwendet wurden.
-  - **CSV-Importe sind additiv**: Der Import von Konten fügt neue hinzu und aktualisiert bestehende (zugeordnet nach coa_code + account_number). Er löscht keine Konten, die nicht in der Datei enthalten sind.
+  - **Importe sind additiv**: Der Import von Konten fügt neue hinzu und aktualisiert bestehende (zugeordnet nach coa_code + account_number). Er löscht keine Konten, die nicht in der Datei enthalten sind.
   - **Konsolidierungskonten sind der Schlüssel für Konzerne**: Wenn Sie in mehreren Ländern tätig sind, richten Sie Konsolidierungszuordnungen von Anfang an ein. Dies macht die Konzernberichterstattung mühelos und lässt lokale Benutzer mit vertrauten Konten arbeiten.
   - **IFRS als Konsolidierungsstandard**: Die meisten europäischen Konzerne verwenden IFRS für die Konsolidierung. Alle integrierten Vorlagen ordnen bereits den gleichen 14 IFRS-Konsolidierungskonten zu, sodass die Konzernberichterstattung ohne zusätzlichen Aufwand länderübergreifend funktioniert.
   - **Deep Linking**: Die URL bewahrt Ihren ausgewählten Kontenplan, die Sortierreihenfolge, den Suchtext und die Filter. Teilen oder setzen Sie ein Lesezeichen auf einen Link, um genau die gleiche Ansicht wiederherzustellen.
@@ -536,9 +536,9 @@ Sie haben 50 Konten und 5 Unternehmen, die alle eingerichtet wurden, bevor es Ko
 
 **Migrationsschritte**:
   1. Erstellen Sie einen Kontenplan (z. B. `US-GAAP`)
-  2. Exportieren Sie Ihre Konten als CSV
+  2. Exportieren Sie Ihre Konten
   3. Fügen Sie allen Zeilen eine Spalte `coa_code` hinzu (z. B. `US-GAAP`)
-  4. Importieren Sie die aktualisierte CSV (die Konten gehören nun zum Kontenplan)
+  4. Importieren Sie die aktualisierte Datei (die Konten gehören nun zum Kontenplan)
   5. Weisen Sie den Kontenplan Ihren Unternehmen zu
   6. Bearbeiten Sie alle OPEX/CAPEX-Zeilen, die Warnungen zu veralteten Konten anzeigen
 

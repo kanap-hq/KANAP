@@ -63,8 +63,8 @@ The list shows all companies for your workspace. Use it to review key informatio
 **Actions**:
 
 - **New**: create a company (requires `companies:member`)
-- **Import**: bulk-import companies from a CSV file (requires `companies:admin`)
-- **Export**: export companies and their metrics to CSV (requires `companies:admin`)
+- **Import**: bulk-import companies from a CSV file or an Excel workbook (requires `companies:admin`)
+- **Export**: export companies and their metrics to a CSV file or an Excel workbook (requires `companies:admin`)
 - **Delete Selected**: delete one or more selected companies (requires `companies:admin`; only possible if nothing references the company)
 
 **Search context**: when you open a company workspace from the list, your current search, filters, sort order, and year are preserved. Navigating back to the list restores your previous view.

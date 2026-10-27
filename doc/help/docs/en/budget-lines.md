@@ -250,8 +250,8 @@ When the line replaces another one, or was replaced from a later year after a ty
 - A disabled cost center is marked **Disabled**. It stays on the lines that already have it, and cannot be picked for another line
 - When you create a line and the paying company is empty, the list shows every cost center. Picking one fills the paying company with the cost center's company, so the **Account** list opens on that company's chart of accounts. Until you pick a company or an account yourself, the list keeps every cost center and choosing another one updates the company too
 - When you change the paying company, a cost center of another company is cleared in the same save. **Cost center** then lists the new company's cost centers
-- A line whose cost center belongs to another company, from a CSV file or the API, keeps both. A hint under the field says "This cost center belongs to" followed by the company name
-- A line saved through the API with a cost center and no paying company takes the cost center's company. For CSV files, see [CSV import/export](#csv-importexport)
+- A line whose cost center belongs to another company, from a file or the API, keeps both. A hint under the field says "This cost center belongs to" followed by the company name
+- A line saved through the API with a cost center and no paying company takes the cost center's company. For imported files, see [CSV import/export](#csv-importexport)
 
 **Run or build**: **Run**, **Build**, or **Not set**. Use it to split the budget between keeping services running and changing them.
 
@@ -260,7 +260,7 @@ When the line replaces another one, or was replaced from a later year after a ty
 - Each enabled dimension used for the line's type has its own field, named after the dimension, in dimension order. A dimension used for the other type only has none, and a value a line holds on it stays hidden. Pick a value or clear the field; the change saves at once
 - Each field lists the enabled values of its dimension. A disabled value stays on the lines that already have it, and cannot be picked for another line
 - A value used for the other type only is not offered, and is refused as a new choice. A line that already has it keeps it and stays editable. See [OPEX or CAPEX values](analytics.md#opex-or-capex-values)
-- The field cannot create a value: create it in [Analytics dimensions](analytics.md), or let a CSV import create it
+- The field cannot create a value: create it in [Analytics dimensions](analytics.md), or let an import create it
 - A required dimension is marked with an asterisk. A new line needs a value on it: **Create** stops with "Cost pool is required" until you pick one. On a line that holds a value, the field cannot be cleared, only changed. A line without a value stays editable. If you change such a line, leaving it asks first: "Cost pool is required. Choose a value before leaving." **Stay** puts the cursor in the missing field. **Leave anyway** leaves. See [Required dimensions](analytics.md#required-dimensions)
 - If the dimensions cannot be loaded, one line replaces these fields: "Dimensions could not be loaded."
 
@@ -680,7 +680,7 @@ A budget file never changes the type of a line. See [Load a budget from a spread
 
 9. **Keep company metrics up to date**: Allocations depend on company headcount, IT users, and turnover. Outdated metrics cause allocation errors.
 
-10. **Use CSV for bulk setup**: If you are migrating from another system or have hundreds of lines, start with CSV import. Export a fresh file, fill in your rows, and check it before loading.
+10. **Use a file for bulk setup**: If you are migrating from another system or have hundreds of lines, start with an import. Export a fresh file, fill in your rows, and check it before loading.
 
 11. **Disable, do not delete**: Preserve history by disabling lines when they are no longer active. Delete only if it is a mistake.
 
@@ -698,7 +698,7 @@ Access to budget lines is controlled by the Budget resource, which covers OPEX a
 
 - `budget:reader`: View the list, open lines, see budgets and allocations (read-only), download attachments
 - `budget:member`: Create and edit lines, change their type, update budgets and allocations, upload and delete attachments, manage relations, links and contacts
-- `budget:admin`: All member rights plus CSV import and export, budget operations (copy budget columns, with their amounts and allocations, and reset budget column), and bulk delete
+- `budget:admin`: All member rights plus import and export, budget operations (copy budget columns, with their amounts and allocations, and reset budget column), and bulk delete
 
 Freezing budget columns needs Budget administration (`budget_ops:admin`).
 
@@ -715,7 +715,7 @@ If you cannot perform an action (e.g., the **Import** button is missing, or you 
 
 ## Need help?
 
-- **CSV issues**: Export a fresh file from the list and check it again. The report names the line and the column of every error, and [Load a budget from a spreadsheet](budget-file.md) explains what each cell means
+- **File issues**: Export a fresh file from the list and check it again. The report names the line and the column of every error, and [Load a budget from a spreadsheet](budget-file.md) explains what each cell means
 - **Allocation errors**: Check that all companies have the required metrics (headcount, IT users, turnover) for the selected year
 - **Obsolete account warning**: The account does not belong to the paying company's chart of accounts; pick a different account
 - **Missing buttons or tabs**: Your role may not have the required permission level (member or admin). Contact your workspace admin

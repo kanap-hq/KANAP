@@ -41,7 +41,7 @@ Every cell in a row is clickable and opens that supplier's page.
 **Actions**:
 - **New**: Create a new supplier (requires `suppliers:member`)
 - **Import**: Bulk-import suppliers (requires `suppliers:admin`)
-- **Export**: Export the list to CSV (requires `suppliers:admin`)
+- **Export**: Export the list to a CSV file or an Excel workbook (requires `suppliers:admin`)
 - **Delete Selected**: Remove selected suppliers (requires `suppliers:admin`)
 
 ---

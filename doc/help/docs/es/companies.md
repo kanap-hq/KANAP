@@ -63,8 +63,8 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 **Acciones**:
 
 - **Nuevo**: crear una empresa (requiere `companies:member`)
-- **Importar**: importación masiva de empresas desde un archivo CSV (requiere `companies:admin`)
-- **Exportar**: exportar empresas y sus métricas a CSV (requiere `companies:admin`)
+- **Importar**: importación masiva de empresas desde un archivo CSV o un libro de Excel (requiere `companies:admin`)
+- **Exportar**: exportar empresas y sus métricas a un archivo CSV o un libro de Excel (requiere `companies:admin`)
 - **Eliminar seleccionadas**: eliminar una o más empresas seleccionadas (requiere `companies:admin`; solo es posible si nada referencia a la empresa)
 
 **Contexto de búsqueda**: cuando abre un espacio de trabajo de empresa desde la lista, su búsqueda actual, filtros, orden y año se preservan. Al volver a la lista se restaura su vista anterior.

@@ -380,7 +380,7 @@ Dates in orange need attention: a contract whose renewal decision is due within 
 
 ## CSV import/export
 
-Maintain your asset inventory at scale using CSV import and export. This feature supports bulk operations for initial data loading, periodic updates from external systems, and data extraction for reporting.
+Maintain your asset inventory at scale using import and export. This feature supports bulk operations for initial data loading, periodic updates from external systems, and data extraction for reporting.
 
 ### Accessing CSV features
 
@@ -482,7 +482,7 @@ For fields configured in **IT Landscape > Settings**, you can use either the int
 | Administration zone (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (core of trust)`, `Tier 1 (servers and applications)` |
 | IP Address Type | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
-The system automatically normalizes values during import, so `Virtual Machine`, `virtual machine`, and `vm` all resolve to the same asset type. A value that matches several entries is refused rather than guessed. The CSV export writes names for these columns, in the language of the screen, so an exported file can be imported back as is.
+The system automatically normalizes values during import, so `Virtual Machine`, `virtual machine`, and `vm` all resolve to the same asset type. A value that matches several entries is refused rather than guessed. The export writes names for these columns, in the language of the screen, so an exported file can be imported back as is.
 
 **Operating system**: the `operating_system` column holds the technology name followed by its version, as the export writes it (`Windows Server 2019`, `Ubuntu 24.04 LTS`). On import, KANAP looks for the technology among yours, then in the catalog, and records the version. A technology or a version it does not find is created, so check the spelling first. The value becomes the server's operating system.
 
@@ -511,7 +511,7 @@ Some fields are computed and cannot be imported:
 
 ### Limitations
 
-- **Maximum 4 IP addresses**: Assets support up to 4 IP address entries via CSV
+- **Maximum 4 IP addresses**: Assets support up to 4 IP address entries in a file
 - **Location required**: Every asset must have the code of an existing location
 - **Relations not included**: Application assignments, connections, financial links, projects, tasks, and attachments must be managed in the workspace
 

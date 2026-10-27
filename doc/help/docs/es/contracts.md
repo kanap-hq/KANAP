@@ -319,7 +319,7 @@ En un contrato en su primer periodo sin decisión pendiente, **No** se aplica al
 
 La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
 
-Mantenga su lista de contratos sincronizada con otras herramientas mediante CSV (`contracts:admin`).
+Mantenga su lista de contratos sincronizada con otras herramientas mediante archivos CSV o libros de Excel (`contracts:admin`).
 
 **Exportar**: descarga los contratos que muestra la lista (o, a petición en el diálogo, todos los contratos) con estas columnas: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Las fechas calculadas (fin del periodo, fechas límite, situación) no se exportan.
 

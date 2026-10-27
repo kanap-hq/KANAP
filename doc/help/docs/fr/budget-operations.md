@@ -66,7 +66,7 @@ Sans le niveau Admin sur l'administration budgétaire, la page affiche les état
 ### Ce que fait le gel
 
 - Empêche les modifications des colonnes gelées dans l'espace de travail des lignes de ce type. Les champs affichent un cadenas
-- Bloque les imports CSV vers les colonnes gelées
+- Bloque les imports vers les colonnes gelées
 - Bloque les opérations de copie et de réinitialisation ciblant les colonnes gelées
 - Refuse de supprimer une ligne, ou de changer son type, tant qu'elle a des montants dans une colonne gelée des années concernées
 - N'affecte **pas** l'accès en lecture : les données restent visibles

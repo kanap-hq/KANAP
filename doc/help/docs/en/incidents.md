@@ -47,7 +47,7 @@ Navigate to **IT Landscape > Incidents** to see the register. Click **New incide
 
 These permissions also cover the incident review and the PDF export, so someone who works on incidents does not need any Knowledge permission to write the review. See [Overview](#overview).
 
-A restricted incident is hidden from everyone except register administrators, the reporter and the owner. On a stock tenant that means Administrator and IT Landscape Administrator, plus whoever logged or owns that record. Readers and contributors who are not the reporter or owner do not see it in the list, in search, in chat or in a CSV export. Opening it by reference returns the same “not found” as a missing number. Its linked tasks are hidden from them too: in the task list, in search, on the dashboard, in Plaid and among linked records. The incident review is covered by the same restriction, wherever it is reached from: Knowledge, search, the assistant, exports and the images pasted into it.
+A restricted incident is hidden from everyone except register administrators, the reporter and the owner. On a stock tenant that means Administrator and IT Landscape Administrator, plus whoever logged or owns that record. Readers and contributors who are not the reporter or owner do not see it in the list, in search, in chat or in an export. Opening it by reference returns the same “not found” as a missing number. Its linked tasks are hidden from them too: in the task list, in search, on the dashboard, in Plaid and among linked records. The incident review is covered by the same restriction, wherever it is reached from: Knowledge, search, the assistant, exports and the images pasted into it.
 
 **Restrict to register administrators** is in the properties drawer, under Classification. A contributor can turn it on while they can still see the record; only an administrator can turn it off, including after the incident is closed. The change is written to the journal. The audit log shows the entries of a restricted incident, of its review and of its tasks only to people who can see the incident, and document relation chips leave its title out. Only the “recently viewed” list, kept in each person's browser, can still show the title to someone who opened the incident before it was restricted.
 
@@ -174,7 +174,7 @@ A **Links updated** entry shows only to people who can read the module it names:
 
 The composer disappears once the incident is closed or cancelled. Field edits made outside the journal, such as correcting the description, are recorded in the platform audit trail rather than in the journal.
 
-The incident review keeps its own history. Every save that changes it produces a version, and versions are kept for good. Ordinary editing does not add journal entries: writing the review is not an event of the incident, and the audit trail records who changed what. Closing, cancelling and CSV imports do write a journal entry, and that entry names the version of the review it applies to, shown as "Incident review version 4 (DOC-12)".
+The incident review keeps its own history. Every save that changes it produces a version, and versions are kept for good. Ordinary editing does not add journal entries: writing the review is not an event of the incident, and the audit trail records who changed what. Closing, cancelling and imports do write a journal entry, and that entry names the version of the review it applies to, shown as "Incident review version 4 (DOC-12)".
 
 Reopening an incident changes none of that. The versions stay, the closure entry keeps pointing at the version that was current when the record was closed, and that text can still be read later with the images it contained, under whatever access rules the incident has at that moment.
 
@@ -216,7 +216,7 @@ The incident review is not listed here. It belongs to the incident itself and is
 
 **Resolved** means service is restored. **Closed** means the record is final.
 
-Closing locks the incident. Fields, the incident review, journal notes, links, attachments and task creation are all refused, in the interface, in Knowledge, in the assistant and through the API. The Overview shows a one-line banner: "Closed on 12 Mar 2026. Reopen it to make changes." The review is frozen at the version the journal entry names, whether it was closed from the incident or by a CSV import.
+Closing locks the incident. Fields, the incident review, journal notes, links, attachments and task creation are all refused, in the interface, in Knowledge, in the assistant and through the API. The Overview shows a one-line banner: "Closed on 12 Mar 2026. Reopen it to make changes." The review is frozen at the version the journal entry names, whether it was closed from the incident or by an import.
 
 **Reopen** (`incidents:admin`) takes a resolved, closed or cancelled incident back to In progress and clears the resolution and closing dates. A reason is required and is written into the journal, so the record shows why it was touched again.
 

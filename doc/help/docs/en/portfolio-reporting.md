@@ -49,7 +49,7 @@ One line per entity reads like this: **14 created · 9 closed · 52 open (+5)**.
 - **Open**: items open right now, whatever happened during the period. This figure is a link to the matching list.
 - **(+5)**: the net change, shown only when it is not zero. It is created, plus reopened, minus closed. Reopened items are items that went from a closed status back to an open one. Hover the figure to see the formula.
 
-Created and closed come from the change history, so they include every way an item can be written: the app, a CSV import and the agents. No list filter reproduces that history, so these two figures open the [Period review](#period-review) on the same days instead. Its created and closed lists show exactly the items counted here. A zero is not a link.
+Created and closed come from the change history, so they include every way an item can be written: the app, an import and the agents. No list filter reproduces that history, so these two figures open the [Period review](#period-review) on the same days instead. Its created and closed lists show exactly the items counted here. A zero is not a link.
 
 ### Which tasks count
 
@@ -187,7 +187,7 @@ Each of the three sections holds the same three lists.
 
 An item created and closed inside the same period appears in both lists, with its own date in each. It never appears under Modified: Modified is what is left once creations and closures are accounted for.
 
-The creation counts as a status change. A CSV import or an agent can create a task already done, or a request already rejected. Such an item is listed as created and as closed on the same day, even though nobody ever changed its status afterwards.
+The creation counts as a status change. An import or an agent can create a task already done, or a request already rejected. Such an item is listed as created and as closed on the same day, even though nobody ever changed its status afterwards.
 
 Closed means different statuses per type:
 

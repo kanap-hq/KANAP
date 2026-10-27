@@ -49,7 +49,7 @@ Eine Zeile je Entität liest sich so: **14 erstellt · 9 abgeschlossen · 52 off
 - **Offen**: Elemente, die gerade offen sind, unabhängig davon, was im Zeitraum geschah. Diese Zahl ist ein Link auf die passende Liste.
 - **(+5)**: die Nettoveränderung, nur sichtbar, wenn sie nicht null ist. Sie ist erstellt, plus wieder geöffnet, minus abgeschlossen. Wieder geöffnet sind Elemente, die aus einem geschlossenen Status zurück in einen offenen gewechselt sind. Fahren Sie über die Zahl, um die Formel zu sehen.
 
-Erstellt und abgeschlossen stammen aus der Änderungshistorie. Sie erfassen damit jeden Schreibweg: die Anwendung, einen CSV-Import und die Agenten. Kein Listenfilter bildet diese Historie nach, deshalb öffnen diese beiden Zahlen den **Periodenrückblick** für dieselben Tage. Seine Listen der erstellten und abgeschlossenen Elemente zeigen genau die hier gezählten Elemente. Eine Null ist kein Link.
+Erstellt und abgeschlossen stammen aus der Änderungshistorie. Sie erfassen damit jeden Schreibweg: die Anwendung, einen Import und die Agenten. Kein Listenfilter bildet diese Historie nach, deshalb öffnen diese beiden Zahlen den **Periodenrückblick** für dieselben Tage. Seine Listen der erstellten und abgeschlossenen Elemente zeigen genau die hier gezählten Elemente. Eine Null ist kein Link.
 
 ### Welche Aufgaben zählen
 
@@ -187,7 +187,7 @@ Jeder der drei Abschnitte enthält dieselben drei Listen.
 
 Ein Element, das im selben Zeitraum erstellt und geschlossen wurde, erscheint in beiden Listen, jeweils mit seinem eigenen Datum. Unter Geändert erscheint es nie: Geändert ist das, was nach Erstellungen und Abschlüssen übrig bleibt.
 
-Die Erstellung zählt als Statuswechsel. Ein CSV-Import oder ein Agent kann eine Aufgabe bereits erledigt oder eine Anfrage bereits abgelehnt anlegen. Ein solches Element steht am selben Tag unter Erstellt und unter Geschlossen, obwohl danach niemand seinen Status geändert hat.
+Die Erstellung zählt als Statuswechsel. Ein Import oder ein Agent kann eine Aufgabe bereits erledigt oder eine Anfrage bereits abgelehnt anlegen. Ein solches Element steht am selben Tag unter Erstellt und unter Geschlossen, obwohl danach niemand seinen Status geändert hat.
 
 Geschlossen bedeutet je nach Typ andere Status:
 

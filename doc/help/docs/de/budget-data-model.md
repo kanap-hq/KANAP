@@ -136,7 +136,7 @@ Jedes Budgetjahr einer Budgetzeile hat eine Zuordnungsmethode:
 | Manuell nach Abteilung | Der Mitarbeiterzahl der Abteilungen, die Sie auswählen |
 | Manuelle Prozentsätze | Den Prozentsätzen, die Sie eingeben, zusammen 100 % |
 
-Zuordnungen speisen die Berichte zur Leistungsverrechnung, für OPEX- und CAPEX-Zeilen. Keine Datei importiert sie. [Budgetspalten kopieren](budget-operations.md#zuordnungen-kopieren) überträgt sie von einem Jahr ins nächste, und die Berichte zur Leistungsverrechnung exportieren ihre Tabellen als CSV. Siehe [Berichte](reports.md).
+Zuordnungen speisen die Berichte zur Leistungsverrechnung, für OPEX- und CAPEX-Zeilen. Keine Datei importiert sie. [Budgetspalten kopieren](budget-operations.md#zuordnungen-kopieren) überträgt sie von einem Jahr ins nächste, und die Berichte zur Leistungsverrechnung exportieren ihre Tabellen als CSV oder Excel. Siehe [Berichte](reports.md).
 
 ### Verknüpfungen mit anderen Objekten
 

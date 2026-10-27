@@ -14,7 +14,7 @@ Las Solicitudes del portafolio son la capa de recepción para el trabajo propues
 | `portfolio_requests:reader` | Abrir la lista de solicitudes y ver los espacios de trabajo de solicitud |
 | `portfolio_requests:contributor` | Vincular y desvincular líneas presupuestarias, aplicaciones, activos y procesos de negocio en la pestaña **Relaciones** |
 | `portfolio_requests:member` | Crear solicitudes, actualizar datos de solicitud, editar los documentos gestionados (Propósito, Riesgos y mitigaciones), mantener equipo y relaciones, añadir comentarios y decisiones, cambiar el estado, enviar recomendaciones de análisis y editar la evaluación |
-| `portfolio_requests:admin` | Eliminar solicitudes, usar importación/exportación CSV y guardar sobrescrituras de prioridad |
+| `portfolio_requests:admin` | Eliminar solicitudes, usar la importación y exportación y guardar sobrescrituras de prioridad |
 
 Convertir una solicitud en proyecto también requiere `portfolio_projects:member`.
 

@@ -14,7 +14,7 @@ Naviguez vers **Données de référence > Processus métier** pour ouvrir la lis
 
 - Consultation : `business_processes:reader`
 - Création / modification : `business_processes:member`
-- Suppression, import/export CSV : `business_processes:admin`
+- Suppression, import et export : `business_processes:admin`
 
 Si la page est manquante ou les champs sont en lecture seule, demandez à votre administrateur d'ajuster vos autorisations de rôle.
 
@@ -45,8 +45,8 @@ La liste affiche tous les processus métier de votre tenant.
 
 - **Nouveau** (`business_processes:member`) : créer un nouveau processus métier.
 - **Gérer les catégories** (`business_processes:member`) : ouvrir le dialogue de gestion des catégories.
-- **Importer** (Admin) : import en masse de processus depuis un fichier CSV.
-- **Exporter** (Admin) : exporter les processus que la liste affiche, ou tous les processus, en CSV.
+- **Importer** (Admin) : import en masse de processus depuis un fichier CSV ou un classeur Excel.
+- **Exporter** (Admin) : exporter les processus que la liste affiche, ou tous les processus, dans un fichier CSV ou un classeur Excel.
 - **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées. Un processus utilisé par des applications ou des interfaces ne peut pas être supprimé : désactivez-le plutôt. Avant toute suppression, la confirmation liste les processus conservés, avec la raison. Les demandes liées à un processus supprimé sont conservées, sans ce lien.
 
 ---
@@ -121,7 +121,7 @@ Les deux ouvrent le dialogue **Gérer les catégories de processus métier**.
 
 L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
 
-Utilisez l'import et l'export CSV pour l'intégration en masse ou la modification hors ligne de votre catalogue de processus. Les deux nécessitent un accès **Admin**.
+Utilisez l'import et l'export pour l'intégration en masse ou la modification hors ligne de votre catalogue de processus. Les deux nécessitent un accès **Admin**.
 
 ### Export
 
@@ -147,7 +147,7 @@ Cliquez sur **Importer** sur la page de la liste, puis :
 - Chaque catégorie dans la cellule `categories` est nettoyée et mise en correspondance par nom. Si une catégorie n'existe pas encore, elle est créée automatiquement comme catégorie active.
 - Le fichier n'a pas de colonne de fin de validité. Lors d'une mise à jour, un `status` vide, ou égal au statut actuel du processus, garde sa fin de validité. Un statut différent s'applique : `enabled` efface la fin de validité, et `disabled` termine le processus aujourd'hui, sauf si sa fin de validité est déjà passée. Un nouveau processus est activé, sauf si la ligne indique `disabled`.
 
-**Conseil** : exportez d'abord vos données actuelles, modifiez le CSV et réimportez. Cela évite les doublons accidentels et garantit que vous travaillez à partir de l'état le plus récent.
+**Conseil** : exportez d'abord vos données actuelles, modifiez le fichier et réimportez. Cela évite les doublons accidentels et garantit que vous travaillez à partir de l'état le plus récent.
 
 ---
 

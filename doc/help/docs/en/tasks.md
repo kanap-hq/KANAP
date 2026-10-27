@@ -51,7 +51,7 @@ When you click **New**, the full task workspace opens. To create a task:
   - You need at least `tasks:reader` to view tasks
   - You need `tasks:member` to create tasks and edit tasks in standalone/OPEX/Contract/CAPEX contexts
   - You need `portfolio_projects:contributor` to save a task when the target context is a project
-  - You need `tasks:admin` for bulk deletion, CSV import, and CSV export
+  - You need `tasks:admin` for bulk deletion, import, and export
 
 If you don't see Tasks in the menu, ask your administrator to grant you the appropriate permissions.
 
@@ -464,7 +464,7 @@ The score appears in the metadata bar at the top of the workspace and as the **S
 
 ## CSV import/export
 
-Manage tasks at scale using CSV import and export. This feature supports bulk operations for initial data loading, task migrations, and data extraction for reporting.
+Manage tasks at scale using import and export. This feature supports bulk operations for initial data loading, task migrations, and data extraction for reporting.
 
 ### Accessing CSV features
 
@@ -621,7 +621,7 @@ These fields are included in **Full Export** for reporting purposes but excluded
 
 ### Limitations
 
-  - **Maximum 4 viewers/owners**: Tasks support up to 4 viewer emails and 4 owner emails via CSV
+  - **Maximum 4 viewers/owners**: Tasks support up to 4 viewer emails and 4 owner emails in a file
   - **Classification for standalone and project tasks only**: Source, Category, Stream, and Company can be set on standalone and project tasks (not on OPEX, Contract, or CAPEX tasks)
   - **Phase requires project**: Phase assignment only works for project tasks
   - **Application/Asset links not in CSV**: Use the workspace Properties drawer to link tasks to applications and assets

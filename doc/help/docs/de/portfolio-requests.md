@@ -14,7 +14,7 @@ Portfolio-Anfragen sind die Erfassungsebene für vorgeschlagene Arbeit. Eine Anf
 | `portfolio_requests:reader` | Die Anfragenliste öffnen und Anfragen-Arbeitsbereiche anzeigen |
 | `portfolio_requests:contributor` | Budgetzeilen, Anwendungen, Assets und Geschäftsprozesse im Reiter **Beziehungen** verknüpfen und lösen |
 | `portfolio_requests:member` | Anfragen erstellen, Anfragendaten aktualisieren, die verwalteten Dokumente (Zweck, Risiken & Mitigationen) bearbeiten, Team und Beziehungen pflegen, Kommentare und Entscheidungen hinzufügen, Status ändern, Analyseempfehlungen einreichen und Bewertung bearbeiten |
-| `portfolio_requests:admin` | Anfragen löschen, CSV-Import/-Export verwenden und Prioritäts-Überschreibungen speichern |
+| `portfolio_requests:admin` | Anfragen löschen, Import und Export verwenden und Prioritäts-Überschreibungen speichern |
 
 Die Umwandlung einer Anfrage in ein Projekt erfordert zusätzlich `portfolio_projects:member`.
 

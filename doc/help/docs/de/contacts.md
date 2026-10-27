@@ -44,7 +44,7 @@ Das Kontakte-Grid bietet ein durchsuchbares Verzeichnis aller externen Kontakte.
 **Aktionen**:
 - **Neu**: Neuen Kontakt erstellen (erfordert `contacts:member`)
 - **Importieren**: Massenimport von Kontakten (erfordert `contacts:admin`)
-- **Exportieren**: Als CSV exportieren (erfordert `contacts:admin`)
+- **Exportieren**: In eine CSV-Datei oder Excel-Arbeitsmappe exportieren (erfordert `contacts:admin`)
 - **Ausgewählte löschen**: Ausgewählte Kontakte entfernen (erfordert `contacts:admin`). Sie werden aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die sie nennen; diese Einträge bleiben erhalten
 
 ---
@@ -120,7 +120,7 @@ Standorte können Support-Kontakte haben (Facility Manager, NOC-Kontakte usw.).
 
 Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
 
-Verwalten Sie Kontakte in großen Mengen per CSV.
+Verwalten Sie Kontakte in großen Mengen mit CSV-Dateien oder Excel-Arbeitsmappen.
 
 **Export**: Lädt die Kontakte der Liste mit ihren Details herunter. Wählen Sie im Dialog **Das ganze Verzeichnis** für alle Kontakte.
 

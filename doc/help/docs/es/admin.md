@@ -399,7 +399,7 @@ El rol de **Colaborador de negocio** está diseñado para partes interesadas del
 Un Colaborador de negocio **no puede**:
 - Crear nuevos proyectos (requiere nivel Miembro en proyectos del portafolio)
 - Convertir solicitudes en proyectos (requiere nivel Miembro)
-- Importar/exportar CSV (requiere nivel Administrador)
+- Importar y exportar (requiere nivel Administrador)
 
 Este rol cubre la brecha entre el acceso de solo lectura (Lector) y la gestión completa de proyectos (Miembro), permitiendo a los usuarios de negocio contribuir activamente sin la capacidad de crear nuevos proyectos.
 

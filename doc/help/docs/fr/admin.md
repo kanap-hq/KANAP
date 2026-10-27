@@ -399,7 +399,7 @@ Le rôle **Contributeur métier** est conçu pour les parties prenantes métier 
 Un Contributeur métier **ne peut pas** :
 - Créer de nouveaux projets (nécessite le niveau Member sur les projets du portefeuille)
 - Convertir des demandes en projets (nécessite le niveau Member)
-- Importer/exporter en CSV (nécessite le niveau Admin)
+- Importer et exporter (nécessite le niveau Admin)
 
 Ce rôle comble le fossé entre l'accès en lecture seule (Reader) et la gestion complète de projet (Member), permettant aux utilisateurs métier de contribuer activement sans pouvoir créer de nouveaux projets.
 

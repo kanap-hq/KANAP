@@ -41,7 +41,7 @@ Chaque cellule d'une ligne est cliquable et ouvre la fiche du fournisseur.
 **Actions** :
 - **Nouveau** : Créer un nouveau fournisseur (nécessite `suppliers:member`)
 - **Importer** : Import en masse de fournisseurs (nécessite `suppliers:admin`)
-- **Exporter** : Exporter la liste en CSV (nécessite `suppliers:admin`)
+- **Exporter** : Exporter la liste dans un fichier CSV ou un classeur Excel (nécessite `suppliers:admin`)
 - **Supprimer la sélection** : Supprimer les fournisseurs sélectionnés (nécessite `suppliers:admin`)
 
 ---

@@ -54,7 +54,7 @@ Naviguez vers **Données de référence > Centres de coûts** (dans la section *
 - **Responsable budgétaire** : la personne qui rend compte de cette enveloppe budgétaire lors de la revue budgétaire. Chaque ligne OPEX et CAPEX du centre de coûts affiche cette personne
 - **Description** : ce que couvre le centre de coûts
 
-**Astuce** : si votre équipe finance tient déjà la liste des centres de coûts, importez-la depuis un fichier CSV. Les lignes peuvent être dans n'importe quel ordre.
+**Astuce** : si votre équipe finance tient déjà la liste des centres de coûts, importez-la depuis un fichier CSV ou un classeur Excel. Les lignes peuvent être dans n'importe quel ordre.
 
 ---
 
@@ -225,7 +225,7 @@ Chargez ou mettez à jour l'arbre entier depuis un fichier.
 |---|---|
 | `cost_centers:reader` | Consulter la liste et ouvrir les centres de coûts |
 | `cost_centers:member` | Créer des centres de coûts et des groupes, et les modifier |
-| `cost_centers:admin` | Tout ce qui précède, plus l'import et l'export CSV, et la suppression |
+| `cost_centers:admin` | Tout ce qui précède, plus l'import et l'export, et la suppression |
 
 Chaque rôle reçoit le niveau qu'il a sur les départements, sauf le rôle intégré Administrateur budget, qui reçoit admin. Ainsi, Administrateur budget et Administrateur données de référence sont admins, Membre budget et Membre données de référence sont membres, et les rôles lecteurs peuvent consulter. Toute personne qui peut consulter les lignes budgétaires (Budget) ou les rapports peut choisir un centre de coûts sur une ligne ou dans un filtre de rapport sans accès à cette page.
 

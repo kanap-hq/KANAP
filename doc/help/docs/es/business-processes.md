@@ -14,7 +14,7 @@ Navegue a **Datos maestros > Procesos de negocio** para abrir la lista.
 
 - Ver: `business_processes:reader`
 - Crear / editar: `business_processes:member`
-- Eliminar, importar/exportar CSV: `business_processes:admin`
+- Eliminar, importar y exportar: `business_processes:admin`
 
 Si la página no aparece o los campos son de solo lectura, solicite a su administrador del espacio de trabajo que ajuste sus permisos de rol.
 
@@ -45,8 +45,8 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 
 - **Nuevo** (`business_processes:member`): crear un nuevo proceso de negocio.
 - **Gestionar categorías** (`business_processes:member`): abrir el diálogo de gestión de categorías.
-- **Importar** (Admin): importación masiva de procesos desde un archivo CSV.
-- **Exportar** (Admin): exportar los procesos que muestra la lista, o todos los procesos, a CSV.
+- **Importar** (Admin): importación masiva de procesos desde un archivo CSV o un libro de Excel.
+- **Exportar** (Admin): exportar los procesos que muestra la lista, o todos los procesos, a un archivo CSV o un libro de Excel.
 - **Eliminar seleccionados** (Admin): eliminar una o más filas seleccionadas. Un proceso que usan aplicaciones o interfaces no se puede eliminar: desactívelo en su lugar. Antes de eliminar nada, la confirmación lista los procesos que se conservan, con el motivo. Las solicitudes vinculadas a un proceso eliminado se conservan, sin el vínculo.
 
 ---
@@ -121,7 +121,7 @@ Ambos abren el diálogo **Gestionar categorías de procesos de negocio**.
 
 La exportación escribe un archivo CSV o un libro de Excel (`.xlsx`): elija en **Formato** en el diálogo. La importación lee los dos. Consulte [Archivos CSV y Excel](csv-files.md).
 
-Utilice la importación y exportación CSV para la incorporación masiva o edición fuera de línea de su catálogo de procesos. Ambas requieren acceso **Admin**.
+Utilice la importación y exportación para la incorporación masiva o edición fuera de línea de su catálogo de procesos. Ambas requieren acceso **Admin**.
 
 ### Exportar
 
@@ -147,7 +147,7 @@ Haga clic en **Importar** en la página de la lista, luego:
 - Cada categoría en la celda `categories` se recorta y empareja por nombre. Si una categoría no existe aún, se crea automáticamente como categoría activa.
 - El archivo no tiene columna de fin de validez. En una actualización, un `status` vacío, o igual al estado actual del proceso, conserva su fin de validez. Un estado distinto se aplica: `enabled` borra el fin de validez, y `disabled` termina el proceso hoy, salvo que su fin de validez ya haya pasado. Un proceso nuevo está habilitado salvo que la fila indique `disabled`.
 
-**Consejo**: exporte sus datos actuales primero, modifique el CSV y vuelva a importar. Esto evita duplicados accidentales y garantiza que esté trabajando desde el estado más reciente.
+**Consejo**: exporte sus datos actuales primero, modifique el archivo y vuelva a importar. Esto evita duplicados accidentales y garantiza que esté trabajando desde el estado más reciente.
 
 ---
 

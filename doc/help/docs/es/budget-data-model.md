@@ -136,7 +136,7 @@ Cada año presupuestario de una línea tiene un método de asignación:
 | Manual por departamento | La plantilla de los departamentos que usted elige |
 | Porcentajes manuales | Los porcentajes que usted escribe, que suman 100 % |
 
-Las asignaciones alimentan los informes de contracargo, para las líneas OPEX y CAPEX. Ningún archivo las importa. [Copiar columnas presupuestarias](budget-operations.md#copiar-asignaciones) las traslada de un año al siguiente, y los informes de contracargo exportan sus tablas en CSV. Consulte [Informes](reports.md).
+Las asignaciones alimentan los informes de contracargo, para las líneas OPEX y CAPEX. Ningún archivo las importa. [Copiar columnas presupuestarias](budget-operations.md#copiar-asignaciones) las traslada de un año al siguiente, y los informes de contracargo exportan sus tablas en CSV o Excel. Consulte [Informes](reports.md).
 
 ### Vínculos con otros objetos
 

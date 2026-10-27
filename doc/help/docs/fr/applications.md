@@ -127,8 +127,8 @@ Une cellule sans valeur affiche un tiret.
 
 **Actions** :
 - **Nouvelle app / Service** : Créer une nouvelle entrée (`applications:member`)
-- **Importer** : Import en masse depuis un fichier CSV (`applications:admin`)
-- **Exporter** : Exporter en CSV les applications que la liste affiche (`applications:admin`). Voir [Options d'export](#export-options).
+- **Importer** : Import en masse depuis un fichier CSV ou un classeur Excel (`applications:admin`)
+- **Exporter** : Exporter les applications que la liste affiche dans un fichier CSV ou un classeur Excel (`applications:admin`). Voir [Options d'export](#export-options).
 - **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:member`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
 - **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`). Une application source ou cible d’une interface ne peut pas être supprimée : désactivez-la plutôt, ou supprimez d’abord ses interfaces. Avant la confirmation, la fenêtre liste ces applications comme conservées, avec leur nombre d’interfaces. Les autres sont supprimées avec leurs déploiements et leurs liens vers d’autres éléments ; la confirmation compte les déploiements
 
@@ -187,7 +187,7 @@ Le retrait d'un responsable, d'un processus métier, d'une suite ou d'un contact
 
 L'onglet Vue d'ensemble est le récit de l'application. Il contient :
 
-**Description** : Une description en texte enrichi de l'application. L'éditeur sauvegarde automatiquement au fur et à mesure que vous tapez. Toute personne qui peut modifier l'application peut modifier sa description, sans droit sur la base de connaissances. La description est conservée comme document managé dans la base de connaissances. Son titre reprend la référence et le nom de l'application, dans la langue de la personne qui l'a créée. Renommer l'application, dans l'espace de travail ou par import CSV, met ce titre à jour.
+**Description** : Une description en texte enrichi de l'application. L'éditeur sauvegarde automatiquement au fur et à mesure que vous tapez. Toute personne qui peut modifier l'application peut modifier sa description, sans droit sur la base de connaissances. La description est conservée comme document managé dans la base de connaissances. Son titre reprend la référence et le nom de l'application, dans la langue de la personne qui l'a créée. Renommer l'application, dans l'espace de travail ou par un import, met ce titre à jour.
 
 **Connexions** : Un résumé en lecture seule construit à partir des interfaces de l'application. Pour les apps non-middleware, il affiche deux lignes : **Reçoit de** et **Envoie vers**. Pour les apps ETL/middleware, il affiche une seule ligne **Connecté à**. Chaque entrée est une pastille cliquable qui ouvre l'application liée ; « + N de plus dans Interfaces » saute à l'onglet Interfaces.
 
@@ -523,7 +523,7 @@ Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une appl
 
 ## Import/export CSV
 
-Maintenez votre inventaire applicatif à grande échelle grâce à l'import et l'export CSV. Cette fonctionnalité prend en charge les opérations en masse pour le chargement initial de données, les mises à jour périodiques depuis des systèmes externes et l'extraction de données pour le reporting.
+Maintenez votre inventaire applicatif à grande échelle grâce à l'import et l'export. Cette fonctionnalité prend en charge les opérations en masse pour le chargement initial de données, les mises à jour périodiques depuis des systèmes externes et l'extraction de données pour le reporting.
 
 ### Accéder aux fonctionnalités CSV
 
@@ -694,7 +694,7 @@ Une ligne retrouvée par son `id` avec un autre nom renomme l'application. Le no
 
 - **Déploiements non inclus** : Les déploiements d'environnement (Prod, QA, Dev) nécessitent une configuration dans l'espace de travail
 - **Affectations de serveurs exclues** : Les liaisons serveur doivent être configurées dans l'onglet Déploiements
-- **Interfaces exclues** : Les définitions d'intégration ne font pas partie de l'import/export CSV
+- **Interfaces exclues** : Les définitions d'intégration ne font pas partie de l'import et de l'export
 - **Maximum 4 responsables par type** : Jusqu'à 4 responsables métier et 4 responsables IT peuvent être importés/exportés
 - **Métriques utilisateurs en export uniquement** : Les champs d'audience et de comptage d'utilisateurs (`users_mode`, `users_year`, `users_override`) sont gérés dans l'espace de travail
 - **Statut en export uniquement** : Activez ou désactivez une application dans son espace de travail

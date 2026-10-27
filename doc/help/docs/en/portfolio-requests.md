@@ -14,7 +14,7 @@ Portfolio Requests are the intake layer for proposed work. A request lets you ca
 | `portfolio_requests:reader` | Open the requests list and view request workspaces |
 | `portfolio_requests:contributor` | Link and unlink budget lines, applications, assets and business processes on the **Relations** tab |
 | `portfolio_requests:member` | Create requests, update request data, edit the managed documents (Purpose, Risks & Mitigations), maintain team and relations, add comments and decisions, change status, submit analysis recommendations, and edit scoring |
-| `portfolio_requests:admin` | Delete requests, use CSV import/export and save priority overrides |
+| `portfolio_requests:admin` | Delete requests, use import and export and save priority overrides |
 
 Converting a request into a project also needs `portfolio_projects:member`.
 

@@ -44,7 +44,7 @@ Das Abteilungs-Grid gibt Ihnen einen Überblick über alle Abteilungen mit ihrer
 **Aktionen**:
 - **Neu**: Neue Abteilung erstellen (erfordert `departments:member`)
 - **Importieren**: Massenimport von Abteilungen (erfordert `departments:admin`)
-- **Exportieren**: Als CSV exportieren (erfordert `departments:admin`)
+- **Exportieren**: In eine CSV-Datei oder Excel-Arbeitsmappe exportieren (erfordert `departments:admin`)
 - **Ausgewählte löschen**: Ausgewählte Abteilungen entfernen (erfordert `departments:admin`). Eine Abteilung, die in den Zuordnungen von Budgetzeilen verwendet wird, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen. Vor dem Löschen nennt die Bestätigung die behaltenen Abteilungen mit dem Grund
 
 ---

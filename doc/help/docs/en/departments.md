@@ -44,7 +44,7 @@ The Departments grid gives you an overview of all departments with their headcou
 **Actions**:
 - **New**: Create a new department (requires `departments:member`)
 - **Import**: Bulk import departments (requires `departments:admin`)
-- **Export**: Export to CSV (requires `departments:admin`)
+- **Export**: Export to a CSV file or an Excel workbook (requires `departments:admin`)
 - **Delete Selected**: Remove selected departments (requires `departments:admin`). A department used in the allocations of budget lines cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the departments kept, with the reason
 
 ---

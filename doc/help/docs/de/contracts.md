@@ -319,7 +319,7 @@ Bei einem Vertrag in seiner ersten Periode, für den keine Entscheidung ansteht,
 
 Der Export schreibt eine CSV-Datei oder eine Excel-Arbeitsmappe (`.xlsx`): Wählen Sie unter **Format** im Dialog. Der Import liest beides. Siehe [CSV- und Excel-Dateien](csv-files.md).
 
-Halten Sie Ihre Vertragsliste per CSV mit anderen Werkzeugen synchron (`contracts:admin`).
+Halten Sie Ihre Vertragsliste mit CSV-Dateien oder Excel-Arbeitsmappen mit anderen Werkzeugen synchron (`contracts:admin`).
 
 **Export**: lädt die Verträge der Liste (oder, auf Wunsch im Dialog, alle Verträge) mit diesen Spalten herunter: `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Die berechneten Daten (Laufzeitende, Kündigungstermine, Stand) werden nicht exportiert.
 

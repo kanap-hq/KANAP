@@ -51,7 +51,7 @@ Lorsque vous cliquez sur **Nouvelle**, l'espace de travail complet de la tâche 
   - Vous avez besoin d'au moins `tasks:reader` pour consulter les tâches
   - Vous avez besoin de `tasks:member` pour créer des tâches et modifier des tâches dans les contextes autonome/OPEX/Contrat/CAPEX
   - Vous avez besoin de `portfolio_projects:contributor` pour enregistrer une tâche lorsque le contexte cible est un projet
-  - Vous avez besoin de `tasks:admin` pour la suppression en masse, l'import CSV et l'export CSV
+  - Vous avez besoin de `tasks:admin` pour la suppression en masse, l'import et l'export
 
 Si vous ne voyez pas Tâches dans le menu, demandez à votre administrateur de vous accorder les autorisations appropriées.
 
@@ -464,7 +464,7 @@ Le score apparaît dans la barre de métadonnées en haut de l'espace de travail
 
 ## Import/export CSV
 
-Gérez les tâches à grande échelle grâce à l'import et l'export CSV. Cette fonctionnalité prend en charge les opérations en masse pour le chargement initial de données, les migrations de tâches et l'extraction de données pour le reporting.
+Gérez les tâches à grande échelle grâce à l'import et l'export. Cette fonctionnalité prend en charge les opérations en masse pour le chargement initial de données, les migrations de tâches et l'extraction de données pour le reporting.
 
 ### Accéder aux fonctionnalités CSV
 
@@ -621,7 +621,7 @@ Ces champs sont inclus dans **Export complet** à des fins de reporting mais exc
 
 ### Limitations
 
-  - **Maximum 4 observateurs/responsables** : Les tâches prennent en charge jusqu'à 4 e-mails d'observateurs et 4 e-mails de responsables via CSV
+  - **Maximum 4 observateurs/responsables** : Les tâches prennent en charge jusqu'à 4 e-mails d'observateurs et 4 e-mails de responsables dans un fichier
   - **Classification pour tâches autonomes et de projet uniquement** : Source, Catégorie, Stream et Société peuvent être définis sur les tâches autonomes et de projet (pas sur les tâches OPEX, Contrat ou CAPEX)
   - **Phase nécessite un projet** : L'assignation de phase ne fonctionne que pour les tâches de projet
   - **Liens Application/Actif non dans CSV** : Utilisez le tiroir Propriétés de l'espace de travail pour lier les tâches aux applications et actifs

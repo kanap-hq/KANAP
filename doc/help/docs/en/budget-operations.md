@@ -66,7 +66,7 @@ Without the Admin level on Budget administration, the page shows the states read
 ### What freezing does
 
 - Prevents edits to frozen columns in the workspace of the lines of that type. The inputs show a lock icon
-- Blocks CSV imports to frozen columns
+- Blocks imports to frozen columns
 - Blocks copy and reset operations targeting frozen columns
 - Refuses to delete a line, or to change its type, while it has amounts in a frozen column of the years concerned
 - Does **not** affect read access: data remains visible

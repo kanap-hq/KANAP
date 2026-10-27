@@ -38,7 +38,7 @@ Lignes OPEX/CAPEX -> Sélection de compte (filtré aux comptes FR-2024 uniquemen
 - Autorisations :
   - Consultation : `accounts:reader`
   - Créer/modifier des comptes et des CoA : `accounts:member`
-  - Import CSV, Export CSV, Suppression : `accounts:admin`
+  - Import, Export, Suppression : `accounts:admin`
 
 ## Travailler avec la liste
 
@@ -160,13 +160,13 @@ La section **Consolidation** contient un seul champ, **Compte de consolidation**
 
 Cliquez sur **Nouveau** dans la barre de pastilles, ou sur **Nouveau plan** dans la fenêtre Gérer les plans. Vous pouvez créer un CoA de deux façons :
 
-1. **Un plan vide** : ajoutez les comptes plus tard, un par un ou par import CSV.
+1. **Un plan vide** : ajoutez les comptes plus tard, un par un ou par un import.
 2. **Un modèle** : chargez un ensemble de comptes préconfiguré, géré par les administrateurs de la plateforme.
 
 **Champs de la boîte de dialogue de création** :
 - **Partir de** : **Un plan vide** ou **Un modèle**.
 - **Modèle** (mode modèle uniquement) : Choisissez un modèle dans la liste. Chaque entrée indique son nom, ses pays et sa version. Le choix d'un modèle renseigne le nom et le code, que vous pouvez modifier.
-- **Code** (obligatoire) : Un identifiant court et stable, utilisé dans les fichiers CSV et les liens.
+- **Code** (obligatoire) : Un identifiant court et stable, utilisé dans les fichiers importés et exportés et dans les liens.
 - **Nom** (obligatoire) : Un nom descriptif pour le CoA.
 - **Utilisé pour** : **Un pays** ou **Tous les pays**. Un modèle global crée toujours un plan pour **Tous les pays**.
 - **Pays** (un pays uniquement) : Choisissez un pays dans la liste.
@@ -349,8 +349,8 @@ Les trois comptes locaux sont rattachés au même compte de consolidation `6200`
 **Option 1 : Modèles (recommandé)**
 Tous les modèles intégrés incluent les correspondances de consolidation IFRS sur chaque compte. Chargez n'importe quel modèle pays et les colonnes de consolidation sont déjà remplies. Un nouvel espace de travail a déjà le plan IFRS comme plan de consolidation. Consultez [Modèles disponibles](#modeles-disponibles) pour la liste complète.
 
-**Option 2 : Import CSV**
-Lors de l'import de comptes, incluez les champs de consolidation dans votre CSV :
+**Option 2 : Import**
+Lors de l'import de comptes, incluez les champs de consolidation dans votre fichier :
 
 ```
 coa_code;account_number;account_name;consolidation_account_number;consolidation_account_name;consolidation_account_description
@@ -402,12 +402,12 @@ Les **comptes historiques** sont des comptes sans `coa_id` (créés avant l'intr
 **Fonctionnement** :
   - Les sociétés SANS CoA peuvent utiliser les comptes historiques
   - Les sociétés AVEC un CoA ne peuvent pas utiliser les comptes historiques : ils sont filtrés automatiquement
-  - Les comptes historiques peuvent toujours être migrés via CSV (`coa_code`) et par réassignation
+  - Les comptes historiques peuvent toujours être migrés par un import (`coa_code`) et par réassignation
 
 **Chemin de migration** :
   1. Créez ou chargez des plans comptables pour vos sociétés
   2. Assignez les CoA aux sociétés (dans l'onglet Vue d'ensemble de la société)
-  3. Assignez un `coa_id` à vos comptes historiques (via import CSV avec `coa_code` ou modification en masse)
+  3. Assignez un `coa_id` à vos comptes historiques (par un import qui porte `coa_code`, ou modification en masse)
   4. Mettez à jour les lignes OPEX/CAPEX existantes qui affichent un avertissement « compte obsolète »
 
 **Conseil** : Vous n'avez pas à tout migrer en une fois. Les sociétés sans CoA continuent de fonctionner avec les comptes historiques, ce qui permet une adoption progressive.
@@ -464,11 +464,11 @@ L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous 
 
 ### Plans comptables
 
-Vous pouvez exporter la liste de vos CoA (avec des métadonnées comme le code, le nom, le pays et le statut par défaut), mais pas importer de CoA directement via CSV. Créez les CoA dans l'interface ou chargez-les depuis des modèles.
+Vous pouvez exporter la liste de vos CoA (avec des métadonnées comme le code, le nom, le pays et le statut par défaut), mais pas importer de CoA depuis un fichier. Créez les CoA dans l'interface ou chargez-les depuis des modèles.
 
 ### Comptes (point d'accès global)
 
-Le CSV global `/accounts` inclut une colonne `coa_code` qui identifie le CoA de chaque compte. **Exporter** et **Importer** l'utilisent lorsqu'aucun CoA n'est sélectionné sur la page.
+Le fichier global `/accounts` inclut une colonne `coa_code` qui identifie le CoA de chaque compte. **Exporter** et **Importer** l'utilisent lorsqu'aucun CoA n'est sélectionné sur la page.
 
   - **Exporter** : les comptes que la liste affiche (ou, sur demande dans la fenêtre, tous les comptes) avec leur code CoA, numéro, nom, nom local, description, correspondances de consolidation, statut et **Utilisé pour**
   - **Importer** : **Télécharger le modèle** dans la fenêtre donne un fichier avec les seuls en-têtes. Commencez par la **Vérification préalable** pour valider la structure, l'encodage, les champs obligatoires et les doublons, puis **Charger** pour appliquer les insertions et les mises à jour
@@ -512,7 +512,7 @@ account_number;account_name;native_name;description;consolidation_account_number
   - **Migrez progressivement** : Vous n'avez pas à tout convertir en une fois. Les sociétés sans CoA continuent de fonctionner avec les comptes historiques.
   - **Corrigez les comptes obsolètes** : Lorsque vous voyez un avertissement, mettez à jour le compte pour qu'il corresponde au CoA actuel de la société. Vos données restent propres pour le reporting.
   - **Désactivez plutôt que de supprimer** : La désactivation préserve l'historique. Ne supprimez que les comptes créés par erreur et jamais utilisés.
-  - **Les imports CSV sont additifs** : L'import ajoute les nouveaux comptes et met à jour les existants (correspondance par coa_code + account_number). Il ne supprime pas les comptes absents du fichier.
+  - **Les imports sont additifs** : L'import ajoute les nouveaux comptes et met à jour les existants (correspondance par coa_code + account_number). Il ne supprime pas les comptes absents du fichier.
   - **Les comptes de consolidation sont essentiels pour les groupes** : Si vous opérez dans plusieurs pays, configurez les correspondances de consolidation dès le premier jour. Le reporting de groupe devient simple et les utilisateurs locaux continuent de travailler avec les comptes qu'ils connaissent.
   - **IFRS comme norme de consolidation** : La plupart des groupes européens consolident en IFRS. Tous les modèles intégrés sont déjà associés aux 14 mêmes comptes de consolidation IFRS : le reporting de groupe fonctionne entre pays sans configuration supplémentaire.
   - **Liens directs** : L'URL conserve le CoA sélectionné, l'ordre de tri, le texte de recherche et les filtres. Partagez ou ajoutez un lien à vos favoris pour retrouver exactement la même vue.
@@ -536,9 +536,9 @@ Vous avez 50 comptes et 5 sociétés, tous configurés avant l'arrivée des plan
 
 **Étapes de migration** :
   1. Créez un CoA (ex. : `US-GAAP`)
-  2. Exportez vos comptes en CSV
+  2. Exportez vos comptes
   3. Ajoutez une colonne `coa_code` (ex. : `US-GAAP`) à toutes les lignes
-  4. Importez le CSV mis à jour (les comptes appartiennent désormais au CoA)
+  4. Importez le fichier mis à jour (les comptes appartiennent désormais au CoA)
   5. Assignez le CoA à vos sociétés
   6. Modifiez les lignes OPEX/CAPEX qui affichent un avertissement « compte obsolète »
 

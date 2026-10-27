@@ -54,7 +54,7 @@ Navigate to **Master data > Cost centers** (in the **Organization** section) to 
 - **Budget holder**: the person accountable for this budget envelope at budget review. Every OPEX and CAPEX line on the cost center shows this person
 - **Description**: what the cost center covers
 
-**Tip**: If your finance team already keeps the list of cost centers, import it from a CSV file. The rows can come in any order.
+**Tip**: If your finance team already keeps the list of cost centers, import it from a CSV file or an Excel workbook. The rows can come in any order.
 
 ---
 
@@ -225,7 +225,7 @@ Load or update the whole tree from a file.
 |---|---|
 | `cost_centers:reader` | View the list and open cost centers |
 | `cost_centers:member` | Create cost centers and groups, and edit them |
-| `cost_centers:admin` | Everything above, plus CSV import and export, and deletion |
+| `cost_centers:admin` | Everything above, plus import and export, and deletion |
 
 Each role starts with the level it has on departments, except the built-in Budget Administrator role, which gets admin. So Budget Administrator and Master Data Administrator are admins, Budget Member and Master Data Member are members, and the reader roles can read. Anyone who can read budget lines (Budget) or reports can pick a cost center on a line or in a report filter without access to this page.
 

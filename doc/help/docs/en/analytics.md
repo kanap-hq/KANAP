@@ -152,7 +152,7 @@ Open it with **Edit** (**Open** if you can only read) in the selector bar, with 
 | Field | What to enter |
 |---|---|
 | **Name** | Up to 200 characters. Names are unique regardless of case. Required, except on the default dimension: leave it empty there to show "Analytics dimension" in each person's language. The default dimension's label is reserved in every app language ("Analytics dimension", "Dimension analytique", "Analysedimension", "Dimensión analítica"), regardless of case: another dimension with one of these names is refused with "This name is reserved for the default dimension." |
-| **Code** | 1 to 40 characters: lowercase letters, digits, `-` or `_`, starting with a letter or a digit. Each code is unique. The code names the dimension's column in the OPEX and CAPEX CSV files, so changing it changes that column name. Budget lines keep their values when the code changes |
+| **Code** | 1 to 40 characters: lowercase letters, digits, `-` or `_`, starting with a letter or a digit. Each code is unique. The code names the dimension's column in the OPEX and CAPEX files, so changing it changes that column name. Budget lines keep their values when the code changes |
 | **Description** | What the dimension is for, so teammates classify lines the same way |
 | **Used for** | **OPEX and CAPEX**, **OPEX only** or **CAPEX only**. Says which budget lines can have a value on this dimension. See [OPEX or CAPEX dimensions](#opex-or-capex-dimensions). Locked on the default dimension, with one line under it: "The default dimension applies to OPEX and CAPEX lines." |
 | **Required** | A switch. When it is on, every new line of the kinds the dimension is used for needs a value on it, and a line that holds a value cannot lose it. See [Required dimensions](#required-dimensions). The default dimension can be required too |
@@ -266,7 +266,7 @@ The values of a dimension have an order, which you set. KANAP offers the values 
 - the value fields of OPEX and CAPEX lines (when you type in a field, the best matches come first)
 - the dimension's checkbox filters in the budget lines list
 - the dimension filters of the reports and the **Exclude values** list of the Analytics dimensions report
-- the values CSV export
+- the values export
 - the values Plaid lists
 
 Sorting the budget lines list on a dimension's column follows this order too, then the value name. Lines without a value come last in ascending order. Report rows keep their own order, by amount.
@@ -309,15 +309,15 @@ Dimensions and values each have a status (**Enabled** or **Disabled**) and an op
 
 **A disabled value**:
 
-- Cannot be picked for a line, in the app, in a CSV file or through Plaid.
+- Cannot be picked for a line, in the app, in an imported file or through Plaid.
 - Stays on the lines that already have it and keeps counting in reports. In the field's list it is marked **Disabled**.
 
 **A disabled dimension**:
 
 - Is not checked when it is **Required**: lines can be created without a value on it. It keeps the setting for when you enable it again.
-- Disappears from the line forms, the budget lines list, the report filters, the report's dimension picker, the OPEX and CAPEX CSV exports and Plaid. Only the Analytics dimensions page shows it, marked **Disabled**.
+- Disappears from the line forms, the budget lines list, the report filters, the report's dimension picker, the OPEX and CAPEX exports and Plaid. Only the Analytics dimensions page shows it, marked **Disabled**.
 - Keeps its values on the lines. Enable the dimension again and they show again.
-- Takes no new values. **New value** is disabled while the dimension is selected, and CSV files cannot add or change its values.
+- Takes no new values. **New value** is disabled while the dimension is selected, and imported files cannot add or change its values.
 
 The default dimension cannot be disabled.
 
@@ -429,7 +429,7 @@ Only `name` is a required column. When the `description`, `status`, `disabled_at
 |---|---|
 | `analytics:reader` | View the Analytics dimensions page and open dimensions and values |
 | `analytics:member` | Create dimensions and values, edit them and set the order of dimensions and values |
-| `analytics:admin` | Everything above, plus CSV import and export, the recommended dimensions, and deletion |
+| `analytics:admin` | Everything above, plus import and export, the recommended dimensions, and deletion |
 
 The built-in Budget Administrator role is admin, Budget Member is member and Budget Reader is reader. Anyone who can read budget lines (Budget) or reports sees the dimensions and their values on budget lines, in the lists and in the reports, without access to this page.
 

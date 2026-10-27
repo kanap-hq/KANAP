@@ -41,7 +41,7 @@ Jede Zelle in einer Zeile ist anklickbar und öffnet die Seite dieses Lieferante
 **Aktionen**:
 - **Neu**: Neuen Lieferanten erstellen (erfordert `suppliers:member`)
 - **Importieren**: Massenimport von Lieferanten (erfordert `suppliers:admin`)
-- **Exportieren**: Liste als CSV exportieren (erfordert `suppliers:admin`)
+- **Exportieren**: Liste in eine CSV-Datei oder Excel-Arbeitsmappe exportieren (erfordert `suppliers:admin`)
 - **Ausgewählte löschen**: Ausgewählte Lieferanten entfernen (erfordert `suppliers:admin`)
 
 ---

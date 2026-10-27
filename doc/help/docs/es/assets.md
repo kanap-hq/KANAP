@@ -380,7 +380,7 @@ Las fechas en naranja requieren atención: un contrato cuya decisión de renovac
 
 ## Importación/exportación CSV
 
-Mantenga su inventario de activos a escala usando la importación y exportación CSV. Esta funcionalidad soporta operaciones masivas para carga inicial de datos, actualizaciones periódicas desde sistemas externos y extracción de datos para informes.
+Mantenga su inventario de activos a escala usando la importación y exportación. Esta funcionalidad soporta operaciones masivas para carga inicial de datos, actualizaciones periódicas desde sistemas externos y extracción de datos para informes.
 
 ### Acceder a las funciones CSV
 
@@ -482,7 +482,7 @@ Para campos configurados en **Panorama IT > Configuración**, puede usar tanto e
 | Zona de administración (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (núcleo de confianza)`, `Tier 1 (servidores y aplicaciones)` |
 | Tipo de dirección IP | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
-El sistema normaliza automáticamente los valores durante la importación, por lo que `Virtual Machine`, `virtual machine` y `vm` se resuelven al mismo tipo de activo. Un valor que coincide con varias entradas se rechaza en lugar de adivinarse. La exportación CSV escribe nombres en estas columnas, en el idioma de la pantalla, de modo que un archivo exportado se puede volver a importar tal cual.
+El sistema normaliza automáticamente los valores durante la importación, por lo que `Virtual Machine`, `virtual machine` y `vm` se resuelven al mismo tipo de activo. Un valor que coincide con varias entradas se rechaza en lugar de adivinarse. La exportación escribe nombres en estas columnas, en el idioma de la pantalla, de modo que un archivo exportado se puede volver a importar tal cual.
 
 **Sistema operativo**: la columna `operating_system` contiene el nombre de la tecnología seguido de su versión, tal como lo escribe la exportación (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Al importar, KANAP busca la tecnología entre las suyas y después en el catálogo, y registra la versión. Una tecnología o una versión que no encuentra se crea: revise antes la ortografía. El valor pasa a ser el sistema operativo del servidor.
 
@@ -511,7 +511,7 @@ Algunos campos se calculan y no pueden importarse:
 
 ### Limitaciones
 
-- **Máximo 4 direcciones IP**: Los activos admiten hasta 4 entradas de direcciones IP vía CSV
+- **Máximo 4 direcciones IP**: Los activos admiten hasta 4 entradas de direcciones IP en un archivo
 - **Ubicación obligatoria**: Cada activo debe tener el código de una ubicación existente
 - **Relaciones no incluidas**: Las asignaciones de aplicaciones, conexiones, vínculos financieros, proyectos, tareas y adjuntos deben gestionarse en el espacio de trabajo
 

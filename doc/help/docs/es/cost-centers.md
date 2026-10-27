@@ -54,7 +54,7 @@ Navegue a **Datos maestros > Centros de coste** (en la sección **Organización*
 - **Responsable del presupuesto**: la persona que rinde cuentas de esta partida presupuestaria en la revisión del presupuesto. Cada línea OPEX y CAPEX del centro de coste muestra a esta persona
 - **Descripción**: lo que abarca el centro de coste
 
-**Consejo**: Si su equipo de finanzas ya mantiene la lista de centros de coste, impórtela desde un archivo CSV. Las filas pueden venir en cualquier orden.
+**Consejo**: Si su equipo de finanzas ya mantiene la lista de centros de coste, impórtela desde un archivo CSV o un libro de Excel. Las filas pueden venir en cualquier orden.
 
 ---
 
@@ -225,7 +225,7 @@ Cargue o actualice todo el árbol desde un archivo.
 |---|---|
 | `cost_centers:reader` | Ver la lista y abrir los centros de coste |
 | `cost_centers:member` | Crear centros de coste y grupos, y editarlos |
-| `cost_centers:admin` | Todo lo anterior, más la importación y exportación CSV y la eliminación |
+| `cost_centers:admin` | Todo lo anterior, más la importación y exportación y la eliminación |
 
 Cada rol empieza con el nivel que tiene en departamentos, salvo el rol integrado Administrador de presupuesto, que recibe admin. Así, Administrador de presupuesto y Administrador de datos maestros son administradores, Miembro de presupuesto y Miembro de datos maestros son miembros, y los roles de lectura pueden leer. Cualquier persona que pueda leer las líneas presupuestarias (Presupuesto) o los informes puede elegir un centro de coste en una línea o en un filtro de informe sin acceso a esta página.
 

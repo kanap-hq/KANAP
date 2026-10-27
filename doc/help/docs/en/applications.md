@@ -127,8 +127,8 @@ A cell with no value shows a dash.
 
 **Actions**:
 - **New App / Service**: Create a new entry (`applications:member`)
-- **Import**: Bulk import from CSV file (`applications:admin`)
-- **Export**: Export the applications the list shows to CSV (`applications:admin`). See [Export options](#export-options).
+- **Import**: Bulk import from a CSV file or an Excel workbook (`applications:admin`)
+- **Export**: Export the applications the list shows to a CSV file or an Excel workbook (`applications:admin`). See [Export options](#export-options).
 - **Copy item**: Duplicate a selected application with all its core relations (`applications:member`). See [Copying applications](#copying-applications) for what is and is not copied.
 - **Delete Selected**: Remove selected applications (`applications:admin`). An application that is the source or target of an interface cannot be deleted: disable it instead, or delete its interfaces first. Before the confirmation, the window lists those applications as kept, with their count of interfaces. The others are deleted with their deployments and their links to other records; the confirmation counts the deployments
 
@@ -187,7 +187,7 @@ Removing an owner, a business process, a suite or a support contact shows a mess
 
 The Overview tab is the application's narrative. It contains:
 
-**Description**: A rich-text description of the application. The editor autosaves as you type. Anyone who can edit the application can edit its description, without a Knowledge permission. The description is kept as a managed document in Knowledge, titled with the application's reference and name, in the language of the person who created it. Renaming the application, in the workspace or by CSV import, updates that title.
+**Description**: A rich-text description of the application. The editor autosaves as you type. Anyone who can edit the application can edit its description, without a Knowledge permission. The description is kept as a managed document in Knowledge, titled with the application's reference and name, in the language of the person who created it. Renaming the application, in the workspace or by an import, updates that title.
 
 **Connections**: A read-only summary built from the application's interfaces. For non-middleware apps it shows two rows: **Receives from** and **Sends to**. For ETL/middleware apps it shows a single **Connected to** row. Each entry is a clickable pill that opens the related application; "+ N more in Interfaces" jumps to the Interfaces tab.
 
@@ -523,7 +523,7 @@ Use this when you want to create an independent duplicate of an application, typ
 
 ## CSV import/export
 
-Maintain your application inventory at scale using CSV import and export. This feature supports bulk operations for initial data loading, periodic updates from external systems, and data extraction for reporting.
+Maintain your application inventory at scale using import and export. This feature supports bulk operations for initial data loading, periodic updates from external systems, and data extraction for reporting.
 
 ### Accessing CSV features
 
@@ -694,7 +694,7 @@ A row matched by `id` with a different name renames the application. The new nam
 
 - **Deployments not included**: Environment deployments (Prod, QA, Dev) require workspace configuration
 - **Server assignments excluded**: Server bindings must be set up in the Deployments tab
-- **Interfaces excluded**: Integration definitions are not part of CSV import/export
+- **Interfaces excluded**: Integration definitions are not part of the import and export
 - **Maximum 4 owners per type**: Up to 4 business owners and 4 IT owners can be imported/exported
 - **User metrics are export-only**: Audience and user count fields (`users_mode`, `users_year`, `users_override`) are managed in the workspace
 - **Status is export-only**: Enable or disable an application in its workspace

@@ -32,7 +32,7 @@ To create a calendar yourself, click **New**.
 - **Country** and **Region**: make the calendar standard. Without a country, the calendar is custom
 - **Description**: who the calendar applies to, for example "Working days of salaried staff, public holidays excluded"
 
-**Tip**: If your finance team already keeps working days in a spreadsheet, import them from a CSV file. One row holds one calendar and one year.
+**Tip**: If your finance team already keeps working days in a spreadsheet, import them from a CSV file or an Excel workbook. One row holds one calendar and one year.
 
 ---
 
@@ -237,7 +237,7 @@ Load or update calendars and their working days from a file.
 |---|---|
 | `working_day_profiles:reader` | View the list and open calendars |
 | `working_day_profiles:member` | Create calendars, edit them and their working days |
-| `working_day_profiles:admin` | Everything above, plus CSV import and export, and deletion |
+| `working_day_profiles:admin` | Everything above, plus import and export, and deletion |
 
 Budget administrators are calendar administrators: the built-in Budget Administrator role gets admin. Every other role starts with the level it has on departments, so Master Data Administrator is admin, Budget Member and Master Data Member are members, and the reader roles can read.
 

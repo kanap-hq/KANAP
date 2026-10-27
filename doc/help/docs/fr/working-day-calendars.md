@@ -32,7 +32,7 @@ Pour créer vous-même un calendrier, cliquez sur **Nouveau**.
 - **Pays** et **Région** : font du calendrier un calendrier standard. Sans pays, le calendrier est personnalisé
 - **Description** : à qui s'applique le calendrier, par exemple « Jours ouvrés des salariés, jours fériés exclus »
 
-**Astuce** : si votre équipe finance tient déjà les jours ouvrés dans un tableur, importez-les depuis un fichier CSV. Une ligne correspond à un calendrier et une année.
+**Astuce** : si votre équipe finance tient déjà les jours ouvrés dans un tableur, importez-les depuis un fichier CSV ou un classeur Excel. Une ligne correspond à un calendrier et une année.
 
 ---
 
@@ -237,7 +237,7 @@ Chargez ou mettez à jour des calendriers et leurs jours ouvrés depuis un fichi
 |---|---|
 | `working_day_profiles:reader` | Consulter la liste et ouvrir les calendriers |
 | `working_day_profiles:member` | Créer des calendriers, les modifier ainsi que leurs jours ouvrés |
-| `working_day_profiles:admin` | Tout ce qui précède, plus l'import et l'export CSV, et la suppression |
+| `working_day_profiles:admin` | Tout ce qui précède, plus l'import et l'export, et la suppression |
 
 Les administrateurs budgétaires sont administrateurs des calendriers : le rôle intégré Administrateur budget reçoit admin. Chaque autre rôle reçoit au départ le niveau qu'il a sur les départements. Ainsi, Administrateur données de référence est admin, Membre budget et Membre données de référence sont membres, et les rôles lecteurs peuvent consulter.
 

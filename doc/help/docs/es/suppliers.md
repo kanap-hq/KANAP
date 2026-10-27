@@ -41,7 +41,7 @@ Cada celda de una fila es clicable y abre la página de ese proveedor.
 **Acciones**:
 - **Nuevo**: Crear un nuevo proveedor (requiere `suppliers:member`)
 - **Importar**: Importación masiva de proveedores (requiere `suppliers:admin`)
-- **Exportar**: Exportar la lista a CSV (requiere `suppliers:admin`)
+- **Exportar**: Exportar la lista a un archivo CSV o un libro de Excel (requiere `suppliers:admin`)
 - **Eliminar seleccionados**: Eliminar proveedores seleccionados (requiere `suppliers:admin`)
 
 ---

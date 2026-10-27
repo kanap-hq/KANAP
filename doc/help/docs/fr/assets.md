@@ -380,7 +380,7 @@ Les dates en orange demandent votre attention : un contrat dont la décision de 
 
 ## Import/export CSV
 
-Maintenez votre inventaire d'actifs à grande échelle grâce à l'import et l'export CSV. Cette fonctionnalité prend en charge les opérations en masse pour le chargement initial de données, les mises à jour périodiques depuis des systèmes externes et l'extraction de données pour le reporting.
+Maintenez votre inventaire d'actifs à grande échelle grâce à l'import et l'export. Cette fonctionnalité prend en charge les opérations en masse pour le chargement initial de données, les mises à jour périodiques depuis des systèmes externes et l'extraction de données pour le reporting.
 
 ### Accéder aux fonctionnalités CSV
 
@@ -482,7 +482,7 @@ Pour les champs configurés dans **Cartographie SI > Paramètres**, vous pouvez 
 | Zone d'administration (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (cœur de confiance)`, `Tier 1 (serveurs et applications)` |
 | Type d'adresse IP | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
-Le système normalise automatiquement les valeurs lors de l'import, donc `Virtual Machine`, `virtual machine` et `vm` se résolvent tous vers le même type d'actif. Une valeur qui correspond à plusieurs entrées est refusée plutôt que devinée. L'export CSV écrit les noms pour ces colonnes, dans la langue de l'écran, si bien qu'un fichier exporté peut être réimporté tel quel.
+Le système normalise automatiquement les valeurs lors de l'import, donc `Virtual Machine`, `virtual machine` et `vm` se résolvent tous vers le même type d'actif. Une valeur qui correspond à plusieurs entrées est refusée plutôt que devinée. L'export écrit les noms pour ces colonnes, dans la langue de l'écran, si bien qu'un fichier exporté peut être réimporté tel quel.
 
 **Système d'exploitation** : la colonne `operating_system` contient le nom de la technologie suivi de sa version, comme l'écrit l'export (`Windows Server 2019`, `Ubuntu 24.04 LTS`). À l'import, KANAP cherche la technologie parmi les vôtres, puis dans le catalogue, et enregistre la version. Une technologie ou une version introuvable est créée : vérifiez donc l'orthographe avant. La valeur devient le système d'exploitation du serveur.
 
@@ -511,7 +511,7 @@ Certains champs sont calculés et ne peuvent pas être importés :
 
 ### Limitations
 
-- **Maximum 4 adresses IP** : Les actifs prennent en charge jusqu'à 4 entrées d'adresse IP via CSV
+- **Maximum 4 adresses IP** : Les actifs prennent en charge jusqu'à 4 entrées d'adresse IP dans un fichier
 - **Site obligatoire** : Chaque actif doit avoir le code d'un site existant
 - **Relations non incluses** : Les affectations d'applications, connexions, liens financiers, projets, tâches et pièces jointes doivent être gérés dans l'espace de travail
 

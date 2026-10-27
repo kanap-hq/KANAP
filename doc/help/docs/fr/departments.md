@@ -44,7 +44,7 @@ La grille des départements vous offre une vue d'ensemble de tous les départeme
 **Actions** :
 - **Nouveau** : Créer un nouveau département (nécessite `departments:member`)
 - **Importer** : Import en masse de départements (nécessite `departments:admin`)
-- **Exporter** : Exporter en CSV (nécessite `departments:admin`)
+- **Exporter** : Exporter dans un fichier CSV ou un classeur Excel (nécessite `departments:admin`)
 - **Supprimer la sélection** : Supprimer les départements sélectionnés (nécessite `departments:admin`). Un département utilisé dans les ventilations de lignes budgétaires ne peut pas être supprimé : désactivez-le plutôt. Avant toute suppression, la confirmation liste les départements conservés, avec la raison
 
 ---

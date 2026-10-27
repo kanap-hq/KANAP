@@ -51,7 +51,7 @@ Al hacer clic en **Nuevo**, se abre el espacio de trabajo completo de la tarea. 
   - Necesita al menos `tasks:reader` para ver tareas
   - Necesita `tasks:member` para crear tareas y editar tareas en contextos independiente/OPEX/Contrato/CAPEX
   - Necesita `portfolio_projects:contributor` para guardar una tarea cuando el contexto destino es un proyecto
-  - Necesita `tasks:admin` para eliminación masiva, importación CSV y exportación CSV
+  - Necesita `tasks:admin` para eliminación masiva, importación y exportación
 
 Si no ve Tareas en el menú, solicite a su administrador que le otorgue los permisos apropiados.
 
@@ -464,7 +464,7 @@ La puntuación aparece en la barra de metadatos en la parte superior del espacio
 
 ## Importación/exportación CSV
 
-Gestione tareas a escala usando importación y exportación CSV. Esta funcionalidad admite operaciones masivas para carga inicial de datos, migración de tareas y extracción de datos para informes.
+Gestione tareas a escala usando importación y exportación. Esta funcionalidad admite operaciones masivas para carga inicial de datos, migración de tareas y extracción de datos para informes.
 
 ### Acceder a las funcionalidades CSV
 
@@ -621,7 +621,7 @@ Estos campos se incluyen en la **Exportación completa** para fines de informes 
 
 ### Limitaciones
 
-  - **Máximo 4 observadores/responsables**: Las tareas admiten hasta 4 correos de observadores y 4 correos de responsables vía CSV
+  - **Máximo 4 observadores/responsables**: Las tareas admiten hasta 4 correos de observadores y 4 correos de responsables en un archivo
   - **Clasificación solo para tareas independientes y de proyecto**: Origen, Categoría, Flujo y Empresa solo pueden establecerse en tareas independientes y de proyecto (no en tareas OPEX, Contrato o CAPEX)
   - **La fase requiere proyecto**: La asignación de fase solo funciona para tareas de proyecto
   - **Enlaces de aplicación/activo no en CSV**: Use el panel de Propiedades del espacio de trabajo para vincular tareas a aplicaciones y activos

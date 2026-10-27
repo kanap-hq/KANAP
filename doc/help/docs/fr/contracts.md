@@ -319,7 +319,7 @@ Sur un contrat dans son premier terme sans décision attendue, **Non** s'appliqu
 
 L'export écrit un fichier CSV ou un classeur Excel (`.xlsx`) : choisissez sous **Format** dans la fenêtre. L'import lit l'un ou l'autre. Voir [Fichiers CSV et Excel](csv-files.md).
 
-Gardez votre liste de contrats synchronisée avec d'autres outils grâce au CSV (`contracts:admin`).
+Gardez votre liste de contrats synchronisée avec d'autres outils grâce aux fichiers CSV ou aux classeurs Excel (`contracts:admin`).
 
 **Export** : télécharge les contrats que la liste affiche (ou, sur demande dans la fenêtre, tous les contrats) avec ces colonnes : `name`, `company_name`, `supplier_name`, `start_date`, `duration_months`, `auto_renewal`, `notice_period_months`, `yearly_amount_at_signature`, `currency`, `billing_frequency`, `status`, `owner_email`, `notes`. Les dates calculées (fin du terme, dates limites, état) ne sont pas exportées.
 

@@ -32,7 +32,7 @@ Para crear un calendario usted mismo, haga clic en **Nuevo**.
 - **País** y **Región**: convierten el calendario en estándar. Sin país, el calendario es personalizado
 - **Descripción**: a quién se aplica el calendario, por ejemplo "Días laborables del personal asalariado, sin festivos"
 
-**Consejo**: Si su equipo de finanzas ya mantiene los días laborables en una hoja de cálculo, impórtelos desde un archivo CSV. Una fila contiene un calendario y un año.
+**Consejo**: Si su equipo de finanzas ya mantiene los días laborables en una hoja de cálculo, impórtelos desde un archivo CSV o un libro de Excel. Una fila contiene un calendario y un año.
 
 ---
 
@@ -237,7 +237,7 @@ Cargue o actualice calendarios y sus días laborables desde un archivo.
 |---|---|
 | `working_day_profiles:reader` | Ver la lista y abrir los calendarios |
 | `working_day_profiles:member` | Crear calendarios y editarlos junto con sus días laborables |
-| `working_day_profiles:admin` | Todo lo anterior, más la importación y exportación CSV y la eliminación |
+| `working_day_profiles:admin` | Todo lo anterior, más la importación y exportación y la eliminación |
 
 Los administradores de presupuesto son administradores de calendarios: el rol integrado Administrador de presupuesto recibe admin. Cada uno de los demás roles empieza con el nivel que tiene en departamentos, de modo que Administrador de datos maestros es admin, Miembro de presupuesto y Miembro de datos maestros son miembros, y los roles de lectura pueden leer.
 

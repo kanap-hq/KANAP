@@ -399,7 +399,7 @@ The **Business Contributor** role is designed for business stakeholders who part
 A Business Contributor **cannot**:
 - Create new projects (requires Member level on portfolio projects)
 - Convert requests into projects (requires Member level)
-- Import/export CSV (requires Admin level)
+- Import and export (requires Admin level)
 
 This role bridges the gap between read-only access (Reader) and full project management (Member), letting business users actively contribute without the ability to create new projects.
 

@@ -63,8 +63,8 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 **Aktionen**:
 
 - **Neu**: Unternehmen erstellen (erfordert `companies:member`)
-- **Importieren**: Massenimport von Unternehmen aus einer CSV-Datei (erfordert `companies:admin`)
-- **Exportieren**: Unternehmen und ihre Kennzahlen als CSV exportieren (erfordert `companies:admin`)
+- **Importieren**: Massenimport von Unternehmen aus einer CSV-Datei oder Excel-Arbeitsmappe (erfordert `companies:admin`)
+- **Exportieren**: Unternehmen und ihre Kennzahlen in eine CSV-Datei oder Excel-Arbeitsmappe exportieren (erfordert `companies:admin`)
 - **Ausgewählte löschen**: Ein oder mehrere ausgewählte Unternehmen löschen (erfordert `companies:admin`; nur möglich, wenn nichts das Unternehmen referenziert)
 
 **Suchkontext**: Wenn Sie einen Unternehmens-Arbeitsbereich aus der Liste öffnen, werden Ihre aktuelle Suche, Filter, Sortierreihenfolge und das Jahr beibehalten. Die Rückkehr zur Liste stellt Ihre vorherige Ansicht wieder her.

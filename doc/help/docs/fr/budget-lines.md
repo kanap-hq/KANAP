@@ -250,8 +250,8 @@ Lorsque la ligne en remplace une autre, ou a été remplacée à partir d'une an
 - Un centre de coûts désactivé est marqué **Désactivé**. Il reste sur les lignes qui l'ont déjà et ne peut pas être choisi pour une autre ligne
 - Lorsque vous créez une ligne et que la société payeuse est vide, la liste présente tous les centres de coûts. En choisir un remplit la société payeuse avec la société du centre de coûts : la liste **Compte** s'ouvre alors sur le plan comptable de cette société. Tant que vous n'avez pas choisi vous-même une société ou un compte, la liste conserve tous les centres de coûts et choisir un autre centre de coûts met aussi à jour la société
 - Lorsque vous changez la société payeuse, un centre de coûts d'une autre société est effacé dans le même enregistrement. **Centre de coûts** présente alors les centres de coûts de la nouvelle société
-- Une ligne dont le centre de coûts appartient à une autre société, depuis un fichier CSV ou l'API, conserve les deux. Une indication sous le champ affiche « Ce centre de coûts appartient à » suivi du nom de la société
-- Une ligne enregistrée via l'API avec un centre de coûts et sans société payeuse prend la société du centre de coûts. Pour les fichiers CSV, voir [Import/export CSV](#importexport-csv)
+- Une ligne dont le centre de coûts appartient à une autre société, depuis un fichier ou l'API, conserve les deux. Une indication sous le champ affiche « Ce centre de coûts appartient à » suivi du nom de la société
+- Une ligne enregistrée via l'API avec un centre de coûts et sans société payeuse prend la société du centre de coûts. Pour les fichiers importés, voir [Import/export CSV](#importexport-csv)
 
 **Run ou build** : **Run**, **Build** ou **Non défini**. Utilisez-le pour répartir le budget entre le maintien des services et leur évolution.
 
@@ -260,7 +260,7 @@ Lorsque la ligne en remplace une autre, ou a été remplacée à partir d'une an
 - Chaque dimension activée utilisée pour le type de la ligne a son propre champ, au nom de la dimension, dans l'ordre des dimensions. Une dimension réservée à l'autre type n'en a pas, et la valeur qu'une ligne y porte reste masquée. Choisissez une valeur ou videz le champ ; la modification s'enregistre aussitôt
 - Chaque champ liste les valeurs activées de sa dimension. Une valeur désactivée reste sur les lignes qui l'ont déjà, et ne peut pas être choisie pour une autre ligne
 - Une valeur réservée à l'autre type n'est pas proposée, et son choix est refusé. Une ligne qui l'a déjà la garde et reste modifiable. Voir [Valeurs OPEX ou CAPEX](analytics.md#valeurs-opex-ou-capex)
-- Le champ ne peut pas créer de valeur : créez-la dans [Dimensions analytiques](analytics.md), ou laissez un import CSV la créer
+- Le champ ne peut pas créer de valeur : créez-la dans [Dimensions analytiques](analytics.md), ou laissez un import la créer
 - Une dimension obligatoire est marquée d'un astérisque. Une nouvelle ligne doit avoir une valeur sur cette dimension : **Créer** s'arrête avec « Nature de coût est obligatoire » tant que vous n'en avez pas choisi. Sur une ligne qui porte une valeur, le champ ne peut pas être vidé, seulement modifié. Une ligne sans valeur reste modifiable. Si vous modifiez une telle ligne, la quitter demande d'abord : « Nature de coût est obligatoire. Choisissez une valeur avant de quitter. » **Rester** place le curseur dans le champ manquant. **Quitter quand même** quitte la ligne. Voir [Dimensions obligatoires](analytics.md#dimensions-obligatoires)
 - Si les dimensions ne peuvent pas être chargées, une ligne remplace ces champs : « Les dimensions n'ont pas pu être chargées. »
 
@@ -680,7 +680,7 @@ Un fichier budgétaire ne change jamais le type d'une ligne. Voir [Charger un bu
 
 9. **Maintenez les métriques des sociétés à jour** : Les ventilations dépendent de l'effectif, des utilisateurs IT et du chiffre d'affaires des sociétés. Des métriques obsolètes causent des erreurs de ventilation.
 
-10. **Utilisez le CSV pour la configuration en masse** : Si vous migrez depuis un autre système ou avez des centaines de lignes, commencez par l'import CSV. Exportez un fichier récent, remplissez vos rangées et vérifiez-le avant de charger.
+10. **Utilisez un fichier pour la configuration en masse** : Si vous migrez depuis un autre système ou avez des centaines de lignes, commencez par un import. Exportez un fichier récent, remplissez vos rangées et vérifiez-le avant de charger.
 
 11. **Désactivez au lieu de supprimer** : Préservez l'historique en désactivant les lignes lorsqu'elles ne sont plus actives. Ne supprimez qu'en cas d'erreur.
 
@@ -698,7 +698,7 @@ L'accès aux lignes budgétaires est contrôlé par la ressource Budget, qui cou
 
 - `budget:reader` : Consulter la liste, ouvrir les lignes, voir les budgets et ventilations (lecture seule), télécharger les pièces jointes
 - `budget:member` : Créer et modifier les lignes, changer leur type, mettre à jour les budgets et ventilations, téléverser et supprimer les pièces jointes, gérer les relations, liens et contacts
-- `budget:admin` : Tous les droits membre plus import et export CSV, opérations budgétaires (copier les colonnes budgétaires, avec leurs montants et leurs ventilations, et réinitialiser une colonne budgétaire) et suppression en masse
+- `budget:admin` : Tous les droits membre plus import et export, opérations budgétaires (copier les colonnes budgétaires, avec leurs montants et leurs ventilations, et réinitialiser une colonne budgétaire) et suppression en masse
 
 Le gel des colonnes budgétaires relève de l'administration budgétaire (`budget_ops:admin`).
 
@@ -715,7 +715,7 @@ Si vous ne pouvez pas effectuer une action (ex. : le bouton **Importer** est man
 
 ## Besoin d'aide ?
 
-- **Problèmes de CSV** : Exportez un nouveau fichier depuis la liste et vérifiez-le de nouveau. Le rapport nomme la ligne et la colonne de chaque erreur, et [Charger un budget depuis un tableur](budget-file.md) explique ce que signifie chaque cellule
+- **Problèmes de fichier** : Exportez un nouveau fichier depuis la liste et vérifiez-le de nouveau. Le rapport nomme la ligne et la colonne de chaque erreur, et [Charger un budget depuis un tableur](budget-file.md) explique ce que signifie chaque cellule
 - **Erreurs de ventilation** : Vérifiez que toutes les sociétés ont les métriques requises (effectif, utilisateurs IT, chiffre d'affaires) pour l'année sélectionnée
 - **Avertissement de compte obsolète** : Le compte n'appartient pas au plan comptable de la société payeuse ; choisissez un autre compte
 - **Boutons ou onglets manquants** : Votre rôle n'a peut-être pas le niveau d'autorisation requis (membre ou admin). Contactez l'administrateur de votre espace de travail

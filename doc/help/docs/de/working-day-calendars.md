@@ -32,7 +32,7 @@ Um selbst einen Kalender anzulegen, klicken Sie auf **Neu**.
 - **Land** und **Region**: machen den Kalender zu einem Standardkalender. Ohne Land ist der Kalender individuell
 - **Beschreibung**: für wen der Kalender gilt, zum Beispiel „Arbeitstage der Angestellten, ohne Feiertage“
 
-**Tipp**: Wenn Ihr Finanzteam die Arbeitstage bereits in einer Tabellenkalkulation führt, importieren Sie sie aus einer CSV-Datei. Eine Zeile enthält einen Kalender und ein Jahr.
+**Tipp**: Wenn Ihr Finanzteam die Arbeitstage bereits in einer Tabellenkalkulation führt, importieren Sie sie aus einer CSV-Datei oder Excel-Arbeitsmappe. Eine Zeile enthält einen Kalender und ein Jahr.
 
 ---
 
@@ -237,7 +237,7 @@ Laden oder aktualisieren Sie Kalender und ihre Arbeitstage aus einer Datei.
 |---|---|
 | `working_day_profiles:reader` | Die Liste ansehen und Kalender öffnen |
 | `working_day_profiles:member` | Kalender erstellen, sie und ihre Arbeitstage bearbeiten |
-| `working_day_profiles:admin` | Alles oben Genannte, dazu CSV-Import und -Export sowie Löschen |
+| `working_day_profiles:admin` | Alles oben Genannte, dazu Import und Export sowie Löschen |
 
 Budget-Administratoren sind Kalender-Administratoren: Die integrierte Rolle Budget-Administrator erhält admin. Jede andere Rolle beginnt mit der Stufe, die sie für Abteilungen hat. Stammdaten-Administrator ist also admin, Budget-Mitglied und Stammdaten-Mitglied sind Mitglieder, und die Leserollen können lesen.
 

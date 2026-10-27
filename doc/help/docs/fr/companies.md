@@ -63,8 +63,8 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 **Actions** :
 
 - **Nouveau** : créer une société (nécessite `companies:member`)
-- **Importer** : import en masse de sociétés depuis un fichier CSV (nécessite `companies:admin`)
-- **Exporter** : exporter les sociétés et leurs métriques en CSV (nécessite `companies:admin`)
+- **Importer** : import en masse de sociétés depuis un fichier CSV ou un classeur Excel (nécessite `companies:admin`)
+- **Exporter** : exporter les sociétés et leurs métriques dans un fichier CSV ou un classeur Excel (nécessite `companies:admin`)
 - **Supprimer la sélection** : supprimer une ou plusieurs sociétés sélectionnées (nécessite `companies:admin` ; possible uniquement si rien ne référence la société)
 
 **Contexte de recherche** : lorsque vous ouvrez l'espace de travail d'une société depuis la liste, votre recherche, vos filtres, votre tri et votre année sont préservés. Revenir à la liste restaure votre vue précédente.

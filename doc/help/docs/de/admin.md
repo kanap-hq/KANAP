@@ -399,7 +399,7 @@ Die Rolle **Fachbereichs-Mitwirkender** ist für Fachbereichs-Stakeholder konzip
 Ein Fachbereichs-Mitwirkender **kann nicht**:
 - Neue Projekte erstellen (erfordert Mitglied-Stufe für Portfolio-Projekte)
 - Anfragen in Projekte umwandeln (erfordert Mitglied-Stufe)
-- CSV importieren/exportieren (erfordert Administrator-Stufe)
+- Importieren und exportieren (erfordert Administrator-Stufe)
 
 Diese Rolle schließt die Lücke zwischen schreibgeschütztem Zugriff (Leser) und vollem Projektmanagement (Mitglied) und ermöglicht es Fachbereichsbenutzern, aktiv beizutragen, ohne neue Projekte erstellen zu können.
 

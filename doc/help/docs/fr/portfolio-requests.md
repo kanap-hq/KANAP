@@ -14,7 +14,7 @@ Les Demandes du portefeuille sont la couche d'intake pour les travaux proposés.
 | `portfolio_requests:reader` | Ouvrir la liste des demandes et consulter les espaces de travail des demandes |
 | `portfolio_requests:contributor` | Lier et délier des lignes budgétaires, applications, actifs et processus métier dans l'onglet **Relations** |
 | `portfolio_requests:member` | Créer des demandes, mettre à jour les données de demande, modifier les documents managés (Objectif, Risques et atténuations), maintenir l'équipe et les relations, ajouter commentaires et décisions, changer le statut, soumettre des recommandations d'analyse et modifier l'évaluation |
-| `portfolio_requests:admin` | Supprimer des demandes, utiliser l'import/export CSV et enregistrer les remplacements de priorité |
+| `portfolio_requests:admin` | Supprimer des demandes, utiliser l'import et l'export et enregistrer les remplacements de priorité |
 
 La conversion d'une demande en projet nécessite aussi `portfolio_projects:member`.
 

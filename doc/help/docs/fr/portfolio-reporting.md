@@ -49,7 +49,7 @@ Une ligne par entité se lit ainsi : **14 créés · 9 clôturés · 52 ouverts 
 - **Ouverts** : éléments ouverts en ce moment, quoi qu'il se soit passé pendant la période. Ce chiffre est un lien vers la liste correspondante.
 - **(+5)** : la variation nette, affichée seulement quand elle n'est pas nulle. C'est créés, plus rouverts, moins clôturés. Les éléments rouverts sont ceux passés d'un statut clos à un statut ouvert. Survolez le chiffre pour voir la formule.
 
-Créés et clôturés proviennent de l'historique des modifications. Ils couvrent donc toutes les façons d'écrire un élément : l'application, un import CSV et les agents. Aucun filtre de liste ne reproduit cet historique : ces deux chiffres ouvrent donc le **Bilan de la période** sur les mêmes jours. Ses listes des créations et des clôtures montrent exactement les éléments comptés ici. Un zéro n'est pas un lien.
+Créés et clôturés proviennent de l'historique des modifications. Ils couvrent donc toutes les façons d'écrire un élément : l'application, un import et les agents. Aucun filtre de liste ne reproduit cet historique : ces deux chiffres ouvrent donc le **Bilan de la période** sur les mêmes jours. Ses listes des créations et des clôtures montrent exactement les éléments comptés ici. Un zéro n'est pas un lien.
 
 ### Quelles tâches sont comptées
 
@@ -187,7 +187,7 @@ Chacune des trois sections contient les trois mêmes listes.
 
 Un élément créé et clôturé dans la même période apparaît dans les deux listes, avec sa propre date dans chacune. Il n'apparaît jamais sous Modifications : Modifications correspond à ce qui reste une fois les créations et les clôtures prises en compte.
 
-La création compte comme un changement de statut. Un import CSV ou un agent peut créer une tâche déjà terminée, ou une demande déjà rejetée. Un tel élément figure en création et en clôture le même jour, même si personne n'a jamais changé son statut ensuite.
+La création compte comme un changement de statut. Un import ou un agent peut créer une tâche déjà terminée, ou une demande déjà rejetée. Un tel élément figure en création et en clôture le même jour, même si personne n'a jamais changé son statut ensuite.
 
 La clôture repose sur des statuts différents selon le type :
 

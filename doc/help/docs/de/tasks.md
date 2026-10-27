@@ -51,7 +51,7 @@ Wenn Sie auf **Neu** klicken, öffnet sich der vollständige Aufgaben-Arbeitsber
   - Sie benötigen mindestens `tasks:reader`, um Aufgaben anzuzeigen
   - Sie benötigen `tasks:member`, um Aufgaben zu erstellen und Aufgaben in eigenständigen/OPEX/Vertrags-/CAPEX-Kontexten zu bearbeiten
   - Sie benötigen `portfolio_projects:contributor`, um eine Aufgabe zu speichern, wenn der Zielkontext ein Projekt ist
-  - Sie benötigen `tasks:admin` für Massenlöschung, CSV-Import und CSV-Export
+  - Sie benötigen `tasks:admin` für Massenlöschung, Import und Export
 
 Wenn Sie Aufgaben nicht im Menü sehen, bitten Sie Ihren Administrator, Ihnen die entsprechenden Berechtigungen zu erteilen.
 
@@ -464,7 +464,7 @@ Der Wert erscheint in der Metadatenleiste oben im Arbeitsbereich und als Spalte 
 
 ## CSV-Import/Export
 
-Verwalten Sie Aufgaben in großem Maßstab mit CSV-Import und -Export. Diese Funktion unterstützt Massenoperationen für das initiale Datenladen, Aufgabenmigrationen und Datenextraktion für Berichte.
+Verwalten Sie Aufgaben in großem Maßstab mit Import und Export. Diese Funktion unterstützt Massenoperationen für das initiale Datenladen, Aufgabenmigrationen und Datenextraktion für Berichte.
 
 ### Zugriff auf CSV-Funktionen
 
@@ -621,7 +621,7 @@ Diese Felder sind im **Vollständigen Export** für Berichtszwecke enthalten, ab
 
 ### Einschränkungen
 
-  - **Maximal 4 Betrachter/Verantwortliche**: Aufgaben unterstützen bis zu 4 Betrachter-E-Mails und 4 Verantwortlichen-E-Mails per CSV
+  - **Maximal 4 Betrachter/Verantwortliche**: Aufgaben unterstützen bis zu 4 Betrachter-E-Mails und 4 Verantwortlichen-E-Mails in einer Datei
   - **Klassifizierung nur für eigenständige und Projektaufgaben**: Quelle, Kategorie, Stream und Unternehmen können auf eigenständigen und Projektaufgaben festgelegt werden (nicht auf OPEX-, Vertrags- oder CAPEX-Aufgaben)
   - **Phase erfordert Projekt**: Phasenzuweisung funktioniert nur für Projektaufgaben
   - **Anwendungs-/Asset-Verknüpfungen nicht in CSV**: Verwenden Sie die Eigenschaftsleiste des Arbeitsbereichs, um Aufgaben mit Anwendungen und Assets zu verknüpfen

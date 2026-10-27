@@ -54,7 +54,7 @@ Navigieren Sie zu **Stammdaten > Kostenstellen** (im Abschnitt **Organisation**)
 - **Budgetverantwortlicher**: die Person, die in der Budgetprüfung für diesen Budgetrahmen einsteht. Jede OPEX- und CAPEX-Zeile der Kostenstelle zeigt diese Person
 - **Beschreibung**: was die Kostenstelle abdeckt
 
-**Tipp**: Wenn Ihr Finanzteam die Liste der Kostenstellen bereits führt, importieren Sie sie aus einer CSV-Datei. Die Zeilen können in beliebiger Reihenfolge stehen.
+**Tipp**: Wenn Ihr Finanzteam die Liste der Kostenstellen bereits führt, importieren Sie sie aus einer CSV-Datei oder Excel-Arbeitsmappe. Die Zeilen können in beliebiger Reihenfolge stehen.
 
 ---
 
@@ -225,7 +225,7 @@ Laden oder aktualisieren Sie den gesamten Baum aus einer Datei.
 |---|---|
 | `cost_centers:reader` | Die Liste ansehen und Kostenstellen öffnen |
 | `cost_centers:member` | Kostenstellen und Gruppen erstellen und bearbeiten |
-| `cost_centers:admin` | Alles oben Genannte, dazu CSV-Import und -Export sowie Löschen |
+| `cost_centers:admin` | Alles oben Genannte, dazu Import und Export sowie Löschen |
 
 Jede Rolle beginnt mit der Stufe, die sie für Abteilungen hat, mit Ausnahme der integrierten Rolle Budget-Administrator, die admin erhält. Budget-Administrator und Stammdaten-Administrator sind also Administratoren, Budget-Mitglied und Stammdaten-Mitglied sind Mitglieder, und die Leserollen können lesen. Wer Budgetzeilen (Budget) oder Berichte lesen kann, kann eine Kostenstelle auf einer Zeile oder in einem Berichtsfilter wählen, ohne Zugriff auf diese Seite zu haben.
 

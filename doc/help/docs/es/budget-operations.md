@@ -66,7 +66,7 @@ Sin el nivel Administrador en la administración presupuestaria, la página mues
 ### Qué hace la congelación
 
 - Previene ediciones en columnas congeladas en el espacio de trabajo de las líneas de ese tipo. Los campos muestran un candado
-- Bloquea importaciones CSV a columnas congeladas
+- Bloquea importaciones a columnas congeladas
 - Bloquea operaciones de copia y restablecimiento dirigidas a columnas congeladas
 - Rechaza eliminar una línea, o cambiar su tipo, mientras tenga importes en una columna congelada de los años afectados
 - **No** afecta el acceso de lectura: los datos siguen siendo visibles
