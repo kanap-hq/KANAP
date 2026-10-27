@@ -479,8 +479,8 @@ export interface XlsxTextStreamRequest {
   headers: readonly string[];
   /** The data rows, read once, in order. Only text cells: a string, or an empty cell. */
   rows: AsyncIterable<readonly (string | null | undefined)[]>;
-  /** The number of data rows the iterator yields: the filter range is written before the first row. */
-  rowCount: number;
+  /** A size hint for the XML buffer (the rows about to be read); the filter uses the rows actually read. */
+  rowCountHint?: number;
   /** The archive timestamp, for a reproducible file; now when omitted. */
   modifiedAt?: Date;
 }
@@ -527,8 +527,8 @@ export async function writeTextXlsxStream(request: XlsxTextStreamRequest): Promi
   const columns = headers.length;
   if (columns === 0) throw new Error('xlsx: a streamed sheet needs at least one column');
   if (columns > XLSX_MAX_COLUMNS) throw new Error(`xlsx: streamed sheet has ${columns} columns, ${XLSX_MAX_COLUMNS} at most`);
-  if (!Number.isInteger(request.rowCount) || request.rowCount < 0 || request.rowCount > XLSX_MAX_DATA_ROWS) {
-    throw new Error(`xlsx: streamed sheet has ${request.rowCount} rows, ${XLSX_MAX_DATA_ROWS} at most below the header`);
+  if (request.rowCountHint !== undefined && (!Number.isInteger(request.rowCountHint) || request.rowCountHint < 0)) {
+    throw new Error('xlsx: streamed sheet rowCountHint must be a non-negative count');
   }
 
   const name = sheetName(request.sheetName, new Set());
@@ -564,7 +564,7 @@ export async function writeTextXlsxStream(request: XlsxTextStreamRequest): Promi
     return `\n    <row r="${rowNumber}">${cells.join('')}</row>`;
   };
 
-  const save = new GrowingBuffer(Math.min(128 * 1024 * 1024, Math.max(1024 * 1024, request.rowCount * 600 + 65_536)));
+  const save = new GrowingBuffer(Math.min(128 * 1024 * 1024, Math.max(1024 * 1024, (request.rowCountHint ?? 0) * 600 + 65_536)));
   const iterator = request.rows[Symbol.asyncIterator]();
   // The column widths come from the header and the first 1,000 rows, and the header is written first:
   // those rows are turned into XML now (a few hundred kilobytes) and written after the header.
@@ -573,6 +573,7 @@ export async function writeTextXlsxStream(request: XlsxTextStreamRequest): Promi
   while (written < WIDTH_SAMPLE_ROWS) {
     const next = await iterator.next();
     if (next.done) break;
+    if (written >= XLSX_MAX_DATA_ROWS) throw new Error(`xlsx: streamed sheet "${name}" has more than ${XLSX_MAX_DATA_ROWS} rows`);
     firstRows.push(rowXml(next.value, written));
     written += 1;
   }
@@ -583,7 +584,6 @@ export async function writeTextXlsxStream(request: XlsxTextStreamRequest): Promi
       return `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`;
     })
     .join('');
-  const filterRange = `A1:${names[columns - 1]}${request.rowCount + 1}`;
   save.write(
     [
       XML_HEAD,
@@ -599,12 +599,11 @@ export async function writeTextXlsxStream(request: XlsxTextStreamRequest): Promi
   for (;;) {
     const next = await iterator.next();
     if (next.done) break;
+    if (written >= XLSX_MAX_DATA_ROWS) throw new Error(`xlsx: streamed sheet "${name}" has more than ${XLSX_MAX_DATA_ROWS} rows`);
     save.write(rowXml(next.value, written));
     written += 1;
   }
-  if (written !== request.rowCount) {
-    throw new Error(`xlsx: streamed sheet "${name}" has ${written} rows and a declared count of ${request.rowCount}`);
-  }
+  const filterRange = `A1:${names[columns - 1]}${written + 1}`;
   save.write(['', '  </sheetData>', `  <autoFilter ref="${filterRange}"/>`, '</worksheet>'].join('\n'));
 
   const sheetOverrides = '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';

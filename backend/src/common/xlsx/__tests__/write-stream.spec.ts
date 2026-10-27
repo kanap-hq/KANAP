@@ -39,7 +39,7 @@ async function compareWithWriter(rows: readonly (readonly string[])[], sheetName
     sheetName,
     headers,
     rows: streamedRows(),
-    rowCount: rows.length,
+    rowCountHint: rows.length,
     modifiedAt,
   });
   assert.ok(streamed.equals(reference), `${label}: byte for byte the common writer's file`);
@@ -52,7 +52,7 @@ async function compareWithWriter(rows: readonly (readonly string[])[], sheetName
     rows: (async function* () {
       for (const row of rows) yield row;
     })(),
-    rowCount: rows.length,
+    rowCountHint: rows.length,
     modifiedAt,
   });
   assert.ok(again.equals(streamed), `${label}: the same bytes on a second run`);
@@ -74,26 +74,27 @@ async function main(): Promise<void> {
         rows: (async function* () {
           yield [{ kind: 'number', value: 1 } as unknown as string];
         })(),
-        rowCount: 1,
+        rowCountHint: 1,
       }),
     /text only/,
   );
 
-  // The count written in the filter range and the number of rows read must agree.
-  await assert.rejects(
-    () =>
-      writeTextXlsxStream({
-        language: 'en',
-        sheetName: 'Data',
-        headers: ['a'],
-        rows: (async function* () {
-          yield ['one'];
-          yield ['two'];
-        })(),
-        rowCount: 1,
-      }),
-    /declared count/,
-  );
+  // A hint that is too large only sizes the buffer: the filter uses the two rows actually read.
+  const at = new Date('2026-01-02T03:04:06Z');
+  const headers = ['a', 'b'];
+  const two = [['one', 'two'], ['three', 'four']];
+  const reference = writeXlsx({ language: 'en', modifiedAt: at, sheets: [{ name: 'Data', headers, rows: two, header: 'styled' }] });
+  const hinted = await writeTextXlsxStream({
+    language: 'en',
+    sheetName: 'Data',
+    headers,
+    rows: (async function* () {
+      for (const row of two) yield row;
+    })(),
+    rowCountHint: 100_000,
+    modifiedAt: at,
+  });
+  assert.ok(hinted.equals(reference), 'the row count hint does not change the file, the rows read do');
 
   console.log('write-stream.spec.ts: ok');
 }

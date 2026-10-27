@@ -70,8 +70,8 @@ export interface ListExportStreamRequest {
   headers: readonly string[];
   /** The rows, read once in order; only text cells. */
   rows: AsyncIterable<readonly (string | null | undefined)[]>;
-  /** The number of rows the iterator yields: the filter range is written before the first row. */
-  rowCount: number;
+  /** A size hint for the workbook buffer; the row count written in the file is the rows actually read. */
+  rowCountHint?: number;
   /** The archive timestamp, for a reproducible file; now when omitted. */
   modifiedAt?: Date;
 }
@@ -81,19 +81,26 @@ export interface ListExportStreamRequest {
  * with the same rows, without holding them as an array (the audit log, up to 100,000 rows).
  */
 export async function writeListExportStream(request: ListExportStreamRequest): Promise<ListExportFile<'xlsx'>> {
+  let rows = 0;
+  async function* counted(): AsyncGenerator<readonly (string | null | undefined)[]> {
+    for await (const row of request.rows) {
+      rows += 1;
+      yield row;
+    }
+  }
   const content = await writeTextXlsxStream({
     language: request.language,
     sheetName: request.sheetNames[request.language],
     headers: request.headers,
-    rows: request.rows,
-    rowCount: request.rowCount,
+    rows: counted(),
+    rowCountHint: request.rowCountHint,
     modifiedAt: request.modifiedAt,
   });
   return {
     filename: request.filename.replace(/\.csv$/i, '') + '.xlsx',
     contentType: XLSX_CONTENT_TYPE,
     content,
-    rows: request.rowCount,
+    rows,
   };
 }
 

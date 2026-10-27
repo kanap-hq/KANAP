@@ -614,7 +614,7 @@ export class AuditLogsService {
       sheetNames: AUDIT_LOG_SHEET,
       headers: AUDIT_LOG_EXPORT_HEADERS,
       rows: rows(),
-      rowCount: plan.rows,
+      rowCountHint: plan.rows,
     });
     return { ...file, truncated: plan.truncated, limit: plan.limit };
   }
