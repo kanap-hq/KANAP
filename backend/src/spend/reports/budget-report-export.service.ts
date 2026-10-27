@@ -16,25 +16,44 @@ import { budgetListAccess } from '../budget-list/budget-list.runtime';
 import { BudgetLinesService } from '../budget-lines.service';
 import { CapexItemsService, SpendItemsService } from '../spend-items.service';
 import { BUDGET_REPORT_EXPORT_LABELS, type BudgetReportExportLabels } from './budget-report-export.labels';
-import { BUDGET_REPORT_KEYS, parseBudgetReportParams, type BudgetReport, type BudgetReportParams } from './budget-report-params';
+import type { AnalyticsAxisInfo } from '../../analytics/analytics-axes.util';
 import {
+  BUDGET_REPORT_KEYS,
+  parseBudgetReportParams,
+  type BudgetReport,
+  type BudgetReportParams,
+  type LineExclusions,
+} from './budget-report-params';
+import {
+  accountIdOptionsRequest,
   accountLabelOptions,
+  analyticsRequest,
   columnsCompareRequest,
+  consolidationRequest,
+  deltaRequests,
   excludedAccountValues,
   keepValues,
   LINE_NUMBER_FIELD,
+  mergeAccountOptions,
   NAME_FIELD,
+  NO_ANALYTICS_VALUE,
+  NO_CONSOLIDATION_LINE,
   reportFilterModels,
   topItemsRequest,
   trendRequest,
+  type AccountRow,
   type AggregateRequest,
   type AggregateResult,
   type BudgetScope,
+  type DeltaMode,
   type MetricKey,
 } from './shared/reportAggregates';
 import {
+  analyticsTable,
   columnsCompareTable,
   comparisonTable,
+  consolidationTable,
+  deltaTable,
   sortColumnSelections,
   topLinesTable,
   type ReportTableData,
@@ -42,7 +61,8 @@ import {
 } from './shared/reportTables';
 
 /**
- * The table exports of the budget aggregate reports (`GET reports/budget/<report>/export`): the
+ * The table exports of the budget aggregate reports (`GET reports/budget/<report>/export`, `<report>` =
+ * `comparison`, `columns-compare`, `top-lines`, `increases-decreases`, `consolidation`, `analytics`): the
  * screen's request, rebuilt with the backend copy of `reportAggregates.ts`, runs on the aggregate
  * route's own path (`summaryAggregateRequest` on the scope's service, the request's manager, the
  * caller's access), and the answer becomes the screen's table through the copy of `reportTables.ts`.
@@ -85,12 +105,22 @@ export class BudgetReportExportService {
       totalFte: labels.totalFte,
       item: labels.item,
       shareOfTotal: labels.shareOfTotal,
+      delta: labels.delta,
+      pctIncrease: labels.pctIncrease,
+      consolidationAccount: labels.consolidationAccount,
+      consolidationUnassigned: labels.consolidationUnassigned,
+      consolidationTotal: (metric) => labels.consolidationTotal.replace('{{metric}}', metric),
+      analyticsUnassigned: labels.analyticsUnassigned,
+      analyticsUnnamed: labels.analyticsUnnamed,
+      analyticsTotal: (metric) => labels.analyticsTotal.replace('{{metric}}', metric),
     };
     const run = (aggregate: AggregateRequest) => this.aggregate(params.scope, aggregate, manager, ctx);
     const filters = reportFilterModels(params.picks);
 
     let table: ReportTableData;
     let answer: Aggregate;
+    // Every answer the table reads (two for both directions): one limited answer limits the file.
+    let limited = false;
     let sheet: string;
     let fileBase: string;
     let own: Array<[string, string]>;
@@ -119,7 +149,7 @@ export class BudgetReportExportService {
         [labels.selection, selections.map((selection) => `${selection.year} ${columnName(selection.metric)}`).join(', ')],
         ...(compared.grouped ? [[labels.yearGrouping, labels.yes] as [string, string]] : []),
       ];
-    } else {
+    } else if (params.report === 'top-lines') {
       const excludedLines = await this.excludedLines(params, manager, ctx);
       const excludedAccounts = await this.excludedAccounts(params, manager, ctx, language);
       answer = await run(topItemsRequest({
@@ -142,11 +172,77 @@ export class BudgetReportExportService {
         ...(excludedLines.length ? [[labels.excludeItems, excludedLines.join(', ')] as [string, string]] : []),
         ...(params.excludeAccounts.length ? [[labels.excludeAccounts, params.excludeAccounts.join(', ')] as [string, string]] : []),
       ];
+    } else if (params.report === 'increases-decreases') {
+      const { source, destination } = params;
+      const modes: DeltaMode[] = params.direction === 'both' ? ['increase', 'decrease'] : [params.direction];
+      const excludedLines = await this.excludedLines(params, manager, ctx);
+      const excludedAccounts = await this.excludedAccounts(params, manager, ctx, language);
+      // One request per direction, as the screen (the request's connection: one after the other).
+      const answers: Aggregate[] = [];
+      for (const request of deltaRequests({
+        scope: params.scope,
+        source,
+        destination,
+        modes,
+        topCount: params.top,
+        excludedIds: params.excludeIds,
+        excludedAccounts,
+        filters,
+        measure: params.measure,
+      })) answers.push(await run(request));
+      answer = answers[0];
+      limited = answers.some((one) => one.dataAccessLimited === true);
+      table = deltaTable({ source, destination, modes, measure: params.measure }, answers, tableLabels);
+      sheet = labels.deltaSheet;
+      const counts = modes.map((mode) => table.rows.filter((row) => row.direction === mode).length);
+      fileBase = `top${counts.join('-')}-${params.scope}-delta-${source.year}-${source.metric}-to-${destination.year}-${destination.metric}-${[...modes].sort().join('-')}`;
+      own = [
+        [labels.sourceYear, String(source.year)],
+        [labels.sourceMetric, columnName(source.metric)],
+        [labels.destinationYear, String(destination.year)],
+        [labels.destinationMetric, columnName(destination.metric)],
+        [labels.direction, labels[`direction_${params.direction}`]],
+        [labels.topCount, String(params.top)],
+        ...(excludedLines.length ? [[labels.excludeItems, excludedLines.join(', ')] as [string, string]] : []),
+        ...(params.excludeAccounts.length ? [[labels.excludeAccounts, params.excludeAccounts.join(', ')] as [string, string]] : []),
+      ];
+    } else {
+      const years: number[] = [];
+      for (let y = params.startYear; y <= params.endYear; y += 1) years.push(y);
+      const range: Array<[string, string]> = [
+        [labels.startYear, String(params.startYear)],
+        [labels.endYear, String(params.endYear)],
+        [labels.metric, columnName(params.metric)],
+      ];
+      if (params.report === 'consolidation') {
+        const excluded = await this.excludedAccountIds(params, manager, ctx, labels, language);
+        answer = await run(consolidationRequest({ years, metric: params.metric, excludedAccountIds: params.excludeAccounts, filters, measure: params.measure }));
+        table = consolidationTable({ years, metric: params.metric, measure: params.measure }, answer, tableLabels);
+        sheet = labels.consolidationSheet;
+        fileBase = `consolidation-${params.scope}-${params.startYear}-${params.endYear}`;
+        own = [...range, ...(excluded.length ? [[labels.excludeAccounts, excluded.join(', ')] as [string, string]] : [])];
+      } else {
+        const excluded = await this.excludedValues(params, manager, ctx, labels);
+        answer = await run(analyticsRequest({
+          axisId: params.axis?.id ?? null,
+          years,
+          metric: params.metric,
+          excludedIds: params.excludeValues,
+          filters,
+          measure: params.measure,
+        }));
+        // The screen's header: the dimension's name, the product name of the default one.
+        const dimension = params.axis ? axisLabel(params.axis, language) : labels.analyticsDimension;
+        table = analyticsTable({ years, metric: params.metric, measure: params.measure, dimension }, answer, tableLabels);
+        sheet = labels.analyticsSheet;
+        fileBase = `analytics-${params.scope}-${params.startYear}-${params.endYear}`;
+        own = [[labels.dimension, dimension], ...range, ...(excluded.length ? [[labels.excludeValues, excluded.join(', ')] as [string, string]] : [])];
+      }
     }
 
     const exp: ReportExport = {
       fileBase: params.measure === 'fte' ? `${fileBase}-fte` : fileBase,
-      limited: answer.dataAccessLimited === true,
+      limited: limited || answer.dataAccessLimited === true,
       tables: [reportTable(report, sheet, table)],
       parameters: [...filterParameters(params, named, answer), ...own],
     };
@@ -166,7 +262,7 @@ export class BudgetReportExportService {
    * The excluded lines as `BL-n name`, in the order given. Each must be a line the exclusion picker
    * offers (`itemOptionsRequest`: the lines of the default window the caller reads).
    */
-  private async excludedLines(params: BudgetReportParams & { report: 'top-lines' }, manager: EntityManager, ctx: Ctx): Promise<string[]> {
+  private async excludedLines(params: LineExclusions, manager: EntityManager, ctx: Ctx): Promise<string[]> {
     if (params.excludeIds.length === 0) return [];
     const found = await this.aggregate(params.scope, {
       query: { filters: { id: keepValues([...params.excludeIds]) } },
@@ -185,7 +281,7 @@ export class BudgetReportExportService {
    * The account labels as the lines hold them, for the picked labels (`excludedAccountValues` on the
    * screen's options: `summary/filter-values?fields=account_display`). A label no line holds is a 400.
    */
-  private async excludedAccounts(params: BudgetReportParams & { report: 'top-lines' }, manager: EntityManager, ctx: Ctx, language: CsvLanguage): Promise<string[]> {
+  private async excludedAccounts(params: LineExclusions, manager: EntityManager, ctx: Ctx, language: CsvLanguage): Promise<string[]> {
     if (params.excludeAccounts.length === 0) return [];
     const opts = { manager, access: budgetListAccess(ctx) };
     const query = { fields: 'account_display' };
@@ -199,6 +295,70 @@ export class BudgetReportExportService {
     if (unknown.length) throw new BadRequestException(`excludeAccounts: no line holds the account ${unknown.join(', ')}.`);
     return excludedAccountValues(params.excludeAccounts, options);
   }
+
+  /**
+   * The excluded accounts of the consolidation report by label (`[number] name`), in the order given.
+   * Each must be one the picker offers: an account the lines use (the aggregate, the caller's access)
+   * or, for a reader of the accounts page, any account of the tenant (`/accounts`); `none` is the
+   * unassigned lines.
+   */
+  private async excludedAccountIds(
+    params: BudgetReportParams & { report: 'consolidation' },
+    manager: EntityManager,
+    ctx: Ctx,
+    labels: BudgetReportExportLabels,
+    language: CsvLanguage,
+  ): Promise<string[]> {
+    const ids = params.excludeAccounts.filter((id) => id !== NO_CONSOLIDATION_LINE);
+    const byId = new Map<string, string>();
+    if (ids.length) {
+      const used = await this.aggregate(params.scope, accountIdOptionsRequest(), manager, ctx);
+      const accounts: AccountRow[] = budgetListAccess(ctx).accounts
+        ? await manager.query(`SELECT id, account_number, account_name FROM accounts WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [ctx.tenantId, ids])
+        : [];
+      const collator = new Intl.Collator(language);
+      for (const option of mergeAccountOptions(accounts, used, labels.unnamedAccount, (a, b) => collator.compare(a, b))) byId.set(option.id, option.label);
+    }
+    return params.excludeAccounts.map((id) => {
+      if (id === NO_CONSOLIDATION_LINE) return labels.consolidationUnassigned;
+      const label = byId.get(id);
+      if (label === undefined) throw new BadRequestException(`excludeAccounts: ${id} is not an account of this report.`);
+      return label;
+    });
+  }
+
+  /**
+   * The excluded values of the analytics report by name, in the order given: each a value of the
+   * dimension grouped on (the default one when none is named); `none` is the lines without a value.
+   */
+  private async excludedValues(
+    params: BudgetReportParams & { report: 'analytics' },
+    manager: EntityManager,
+    ctx: Ctx,
+    labels: BudgetReportExportLabels,
+  ): Promise<string[]> {
+    const ids = params.excludeValues.filter((id) => id !== NO_ANALYTICS_VALUE);
+    const values: Array<{ id: string; name: string | null }> = ids.length
+      ? await manager.query(
+        `SELECT c.id, c.name FROM analytics_categories c
+          WHERE c.tenant_id = $1 AND c.id = ANY($2::uuid[])
+            AND c.axis_id = COALESCE($3::uuid, (SELECT a.id FROM analytics_axes a WHERE a.tenant_id = $1 AND a.is_default))`,
+        [ctx.tenantId, ids, params.axis?.id ?? null],
+      )
+      : [];
+    const byId = new Map(values.map((value) => [value.id, value.name?.trim() || labels.analyticsUnnamed]));
+    return params.excludeValues.map((id) => {
+      if (id === NO_ANALYTICS_VALUE) return labels.analyticsUnassigned;
+      const name = byId.get(id);
+      if (name === undefined) throw new BadRequestException(`excludeValues: ${id} is not a value of this dimension.`);
+      return name;
+    });
+  }
+}
+
+/** A dimension as the screens name it: its name, else the product name of the default one. */
+function axisLabel(axis: AnalyticsAxisInfo, language: CsvLanguage): string {
+  return axis.name?.trim() || DEFAULT_ANALYTICS_AXIS_LABELS[(['en', 'fr', 'de', 'es'] as const).indexOf(language)];
 }
 
 /** The filter bar's picks in words, then the reporting currency of the amounts. */
@@ -212,8 +372,7 @@ function filterParameters(params: BudgetReportParams, named: Named, answer: Aggr
   if (params.picks.runBuild) out.push([labels.runBuild, labels[`runBuild_${params.picks.runBuild}`]]);
   if (params.picks.withFte) out.push([labels.fteItems, labels.fteItemsWith]);
   for (const pick of params.analytics) {
-    const axisName = pick.axis.name?.trim() || DEFAULT_ANALYTICS_AXIS_LABELS[(['en', 'fr', 'de', 'es'] as const).indexOf(language)];
-    out.push([axisName, pick.valueName ?? labels.analyticsNone]);
+    out.push([axisLabel(pick.axis, language), pick.valueName ?? labels.analyticsNone]);
   }
   if (params.measure === 'amount' && answer.reportingCurrency) out.push([labels.reportingCurrency, answer.reportingCurrency.toUpperCase()]);
   return out;

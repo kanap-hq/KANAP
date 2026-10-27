@@ -20,6 +20,8 @@ import { useTranslation } from 'react-i18next';
 import { formatPercentPoints } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 import { NO_ANALYTICS_VALUE, analyticsRequest, readAnalytics, requestFirstYear } from './reportAggregates';
+import { analyticsTable } from './reportTables';
+import { useReportTableLabels } from './useReportTableLabels';
 import { useBudgetAggregate } from './useBudgetAggregate';
 import { useAxisValueOptions } from './useReportOptions';
 import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
@@ -69,6 +71,7 @@ export default function AnalyticsCategoryReport() {
   const [measure, setMeasure] = useReportMeasure();
   const measureText = useMeasureText(measure);
   const formatNumber = measureText.format;
+  const tableLabels = useReportTableLabels();
   // FTE: a year nobody declares stays blank, never a 0 (an empty cell, no slice, no point).
   const cell = (value: number | null | undefined) => (measureText.fte ? value ?? null : value || 0);
   const reportFilters = useBudgetReportFilters({ scope });
@@ -108,7 +111,7 @@ export default function AnalyticsCategoryReport() {
   const busy = reportFilters.queryFilters == null || !analyticsAxes.ready || report.isLoading || report.isPlaceholderData;
   const labels = useMemo(() => ({ unassigned: t('reports.analyticsCategory.unassigned'), unnamed: t('reports.analyticsCategory.unnamed') }), [t]);
   // FTE: only the values that declare FTE in one of the years.
-  const { groups, totals } = useMemo(() => readAnalytics(years, report.data, labels, measure), [years, report.data, labels, measure]);
+  const { groups } = useMemo(() => readAnalytics(years, report.data, labels, measure), [years, report.data, labels, measure]);
 
   // A value opens the list filtered on it and on the bar, in a new tab; the total row stays plain.
   const listPicks = useMemo(() => reportListPicks(reportFilters), [reportFilters]);
@@ -122,39 +125,25 @@ export default function AnalyticsCategoryReport() {
     return group ? reportListLink(scope, group, listPicks, { firstYear, fteOnly }) : null;
   }, [scope, listPicks, axisColumn, firstYear, fteOnly]);
 
-  const tableRows = useMemo(() => groups.map((group) => {
-    const row: any = { group: group.label, groupName: group.name ?? null };
-    for (const yr of years) row[yr] = cell(group.values[yr]);
-    return row;
-  }), [groups, years, measureText]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const columns = useMemo<ColDef[]>(() => {
-    const cols: ColDef[] = [
-      {
-        field: 'group',
-        headerName: dimensionLabel,
-        flex: 1,
-        minWidth: 240,
-        cellRenderer: ReportGroupLinkCell,
-        cellRendererParams: { getLink: valueLink },
-      },
-    ];
-    for (const yr of years) {
-      cols.push({ field: String(yr), headerName: String(yr), width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) });
+  // The key table (`reportTables.ts`, the same code as the export): one row per value, the total as footer.
+  const table = useMemo(
+    () => analyticsTable({ years, metric, measure, dimension: dimensionLabel }, report.data, tableLabels),
+    [years, metric, measure, dimensionLabel, report.data, tableLabels],
+  );
+  const columns = useMemo<ColDef[]>(() => table.columns.map((column): ColDef => (column.key === 'group'
+    ? {
+      field: column.key,
+      headerName: column.header,
+      flex: 1,
+      minWidth: 240,
+      cellRenderer: ReportGroupLinkCell,
+      cellRendererParams: { getLink: valueLink },
     }
-    return cols;
-  }, [years, dimensionLabel, valueLink, formatNumber]);
+    : { field: column.key, headerName: column.header, width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) })), [table, valueLink, formatNumber]);
 
   // The column as the measure reads it: `Budget`, or `Budget FTE`.
   const metricLabel = measureText.column(budgetColumns.label(metric));
 
-  const totalsRow = useMemo(() => {
-    const row: any = { group: t('reports.analyticsCategory.totalMetric', { metric: metricLabel }) };
-    for (const yr of years) row[yr] = measureText.fte ? totals[yr] ?? null : totals[yr] ?? 0;
-    return row;
-  }, [totals, years, metricLabel, measureText, t]);
-
-  const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
 
   const metricsCaption = metricLabel;
@@ -379,7 +368,21 @@ export default function AnalyticsCategoryReport() {
           </ReportFilter>
         </>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.(measureText.csvParams(`analytics-${scope}-${years[0]}-${years[years.length - 1]}`))}
+      tableExport={{
+        url: '/reports/budget/analytics/export',
+        params: {
+          scope,
+          measure,
+          ...reportFilters.exportParams,
+          // The dimension the screen resolved (the address's, else the default one).
+          axis: axisId,
+          startYear,
+          endYear,
+          metric,
+          excludeValues: excludedCategories.join(','),
+        },
+        fileBase: measureText.fileName(`analytics-${scope}-${years[0]}-${years[years.length - 1]}`),
+      }}
       onExportChartPng={() => chartRef.current?.download(measureText.fileName(`analytics-${scope}-${years[0]}-${years[years.length - 1]}`))}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
@@ -390,11 +393,10 @@ export default function AnalyticsCategoryReport() {
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>{t("reports.shared.summaryTable")}</Typography>
           <ReportGrid
             wrapperSx={{ height: 520 }}
-            rowData={tableRows}
+            rowData={table.rows}
             columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}
-            onGridReady={(e) => { gridApiRef.current = e.api; }}
-            pinnedBottomRowData={[totalsRow]}
+            pinnedBottomRowData={table.footer}
           />
           <ReportFteNotice scope={scope} request={request} result={report.data} columnLabel={(column) => `${budgetColumns.label(column.metric)} ${column.year}`} />
         </Paper>

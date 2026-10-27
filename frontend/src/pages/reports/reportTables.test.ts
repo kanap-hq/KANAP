@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { AggregateResult, AggregateRow } from './reportAggregates';
 import {
+  analyticsTable,
   columnsCompareGrouped,
   columnsCompareTable,
   comparisonTable,
+  consolidationTable,
+  deltaTable,
   sortColumnSelections,
   topLinesTable,
   type ReportTableLabels,
@@ -20,6 +23,14 @@ const labels: ReportTableLabels = {
   totalFte: 'Total FTE',
   item: 'Line',
   shareOfTotal: 'Share of total',
+  delta: 'Δ',
+  pctIncrease: '% increase',
+  consolidationAccount: 'Consolidation account',
+  consolidationUnassigned: 'Unassigned',
+  consolidationTotal: (metric) => `Total ${metric}`,
+  analyticsUnassigned: 'No value',
+  analyticsUnnamed: 'Unnamed value',
+  analyticsTotal: (metric) => `All ${metric}`,
 };
 
 const row = (values: Record<string, number | null>, keys: Array<string | null> = []): AggregateRow => ({ keys, count: 1, values, unknown: {} });
@@ -131,5 +142,73 @@ describe('topLinesTable', () => {
     const table = topLinesTable({ year: 2026, metric: 'landing', measure: 'fte' }, answer({ value: null }, groups), labels);
     expect(table.columns[1]).toEqual({ key: 'value', header: 'Landing FTE (2026)', kind: 'number' });
     expect(table.rows).toEqual([{ id: 'a', itemNumber: 1, name: 'Alpha', value: 2, pct_of_total: 0 }]);
+  });
+});
+
+describe('deltaTable', () => {
+  const p = { source: { year: 2025, metric: 'budget' as const }, destination: { year: 2026, metric: 'landing' as const }, measure: 'amount' as const };
+
+  it('lists the increases then the decreases, the change as a fraction of the source', () => {
+    const up = answer({ delta: 30 }, [row({ prev: 80, curr: 100, delta: 20 }, ['a', 'Alpha', '3']), row({ prev: 0, curr: 10, delta: 10 }, ['b', 'Beta', null])]);
+    const down = answer({ delta: 30 }, [row({ prev: 50, curr: 40, delta: -10 }, ['c', 'Gamma', '5'])]);
+    const table = deltaTable({ ...p, modes: ['increase', 'decrease'] }, [up, down], labels);
+    expect(table.columns).toEqual([
+      { key: 'name', header: 'Line', kind: 'text' },
+      { key: 'previous', header: 'Budget (2025)', kind: 'amount' },
+      { key: 'current', header: 'Landing (2026)', kind: 'amount' },
+      { key: 'delta', header: 'Δ', kind: 'amount' },
+      { key: 'pct_increase', header: '% increase', kind: 'percent' },
+    ]);
+    expect(table.rows.map((r) => [r.name, r.previous, r.current, r.delta, r.pct_increase, r.direction])).toEqual([
+      ['Alpha', 80, 100, 20, 0.25, 'increase'],
+      ['Beta', 0, 10, 10, null, 'increase'],
+      ['Gamma', 50, 40, -10, -0.2, 'decrease'],
+    ]);
+    expect(table.footer).toEqual([]);
+  });
+
+  it('keeps a side nobody declares FTE on blank, and its change without a share', () => {
+    const up = answer({ delta: 1 }, [row({ prev: null, curr: 1.5, delta: 1.5 }, ['a', 'Alpha', '3'])]);
+    const table = deltaTable({ ...p, measure: 'fte', modes: ['increase'] }, [up], labels);
+    expect(table.columns[1]).toEqual({ key: 'previous', header: 'Budget FTE (2025)', kind: 'number' });
+    expect(table.rows).toEqual([{ id: 'a', itemNumber: 3, name: 'Alpha', previous: null, current: 1.5, delta: 1.5, pct_increase: null, direction: 'increase' }]);
+  });
+});
+
+describe('consolidationTable', () => {
+  it('lists the consolidation lines by year and puts the total in the footer', () => {
+    const groups = [row({ y2025: 40, y2026: null }, ['c_601', '601 Licences']), row({ y2025: 5, y2026: 7 }, [null, null])];
+    const table = consolidationTable({ years: [2025, 2026], metric: 'budget', measure: 'amount' }, answer({ y2025: 45, y2026: 7 }, groups), labels);
+    expect(table.columns).toEqual([
+      { key: 'group', header: 'Consolidation account', kind: 'text' },
+      { key: '2025', header: '2025', kind: 'amount' },
+      { key: '2026', header: '2026', kind: 'amount' },
+    ]);
+    expect(table.rows).toEqual([
+      { group: '601 Licences', groupKey: 'c_601', groupName: null, 2025: 40, 2026: 0 },
+      { group: 'Unassigned', groupKey: 'unassigned', groupName: null, 2025: 5, 2026: 7 },
+    ]);
+    expect(table.footer).toEqual([{ group: 'Total Budget', 2025: 45, 2026: 7 }]);
+  });
+
+  it('keeps FTE nobody declares blank, in the rows and the total', () => {
+    const groups = [row({ y2026: 1.5 }, ['c_601', '601 Licences']), row({ y2026: null }, ['c_602', '602 Services'])];
+    const table = consolidationTable({ years: [2026], metric: 'landing', measure: 'fte' }, answer({ y2026: null }, groups), labels);
+    expect(table.rows.map((r) => r.group)).toEqual(['601 Licences']);
+    expect(table.footer).toEqual([{ group: 'Total Landing FTE', 2026: null }]);
+  });
+});
+
+describe('analyticsTable', () => {
+  it('names the group column after the dimension and words the values without a name', () => {
+    const groups = [row({ y2026: 30 }, ['v1', ' Cloud ']), row({ y2026: 20 }, ['v2', '  ']), row({ y2026: 10 }, [null, null])];
+    const table = analyticsTable({ years: [2026], metric: 'budget', measure: 'amount', dimension: 'Domain' }, answer({ y2026: 60 }, groups), labels);
+    expect(table.columns[0]).toEqual({ key: 'group', header: 'Domain', kind: 'text' });
+    expect(table.rows).toEqual([
+      { group: 'Cloud', groupKey: 'cat_v1', groupName: ' Cloud ', 2026: 30 },
+      { group: 'Unnamed value', groupKey: 'cat_v2', groupName: '  ', 2026: 20 },
+      { group: 'No value', groupKey: 'uncategorized', groupName: null, 2026: 10 },
+    ]);
+    expect(table.footer).toEqual([{ group: 'All Budget', 2026: 60 }]);
   });
 });

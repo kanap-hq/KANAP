@@ -8,6 +8,7 @@ import {
   MAX_GROUPS,
   METRIC_SUFFIX,
   NO_ANALYTICS_VALUE,
+  NO_CONSOLIDATION_LINE,
   type BudgetScope,
   type MetricKey,
   type ReportFilterPicks,
@@ -16,11 +17,14 @@ import {
 } from './shared/reportAggregates';
 import type { ColumnSelection } from './shared/reportTables';
 
+/** The direction of the increases and decreases report: one request per direction, both for `both`. */
+export type DeltaDirection = 'increase' | 'decrease' | 'both';
+
 /**
  * The parameters of the budget report exports (`GET reports/budget/<report>/export`), read and
  * checked once for the eight reports. They mirror the screen: its address (`scope`, `measure`,
  * `costCenter`, `runBuild`, `fte=with`, `analytics=<dimension id>:<value id or none>,…`) and the state it
- * holds (years, column keys, selections, top count, exclusions), always explicit: the server computes
+ * holds (years, column keys, selections, top count, direction, dimension, exclusions), always explicit: the server computes
  * no year from today except the window the screen allows. Every invalid value is a 400.
  *
  * The filter bar's picks become the `ReportFilterPicks` the screen gives `reportFilterModels`; the
@@ -28,7 +32,7 @@ import type { ColumnSelection } from './shared/reportTables';
  * `useCostCenterTree.descendantIds`, disabled nodes included).
  */
 
-export type BudgetReport = 'comparison' | 'columns-compare' | 'top-lines';
+export type BudgetReport = 'comparison' | 'columns-compare' | 'top-lines' | 'increases-decreases' | 'consolidation' | 'analytics';
 
 const COMMON_KEYS = ['scope', 'measure', 'costCenter', 'runBuild', 'fte', 'analytics'] as const;
 
@@ -37,6 +41,11 @@ export const BUDGET_REPORT_KEYS: Record<BudgetReport, readonly string[]> = {
   comparison: [...COMMON_KEYS, 'startYear', 'endYear', 'metrics'],
   'columns-compare': [...COMMON_KEYS, 'selections', 'yearGrouping'],
   'top-lines': [...COMMON_KEYS, 'year', 'metric', 'top', 'excludeIds', 'excludeAccounts'],
+  'increases-decreases': [
+    ...COMMON_KEYS, 'sourceYear', 'sourceMetric', 'destinationYear', 'destinationMetric', 'direction', 'top', 'excludeIds', 'excludeAccounts',
+  ],
+  consolidation: [...COMMON_KEYS, 'startYear', 'endYear', 'metric', 'excludeAccounts'],
+  analytics: [...COMMON_KEYS, 'axis', 'startYear', 'endYear', 'metric', 'excludeValues'],
 };
 
 /** The most selections the columns compare screen holds. */
@@ -60,8 +69,25 @@ export interface BudgetReportFilterParams {
 export type BudgetReportParams = BudgetReportFilterParams & (
   | { report: 'comparison'; startYear: number; endYear: number; metrics: MetricKey[] }
   | { report: 'columns-compare'; selections: ColumnSelection[]; yearGrouping: boolean }
-  | { report: 'top-lines'; year: number; metric: MetricKey; top: number; excludeIds: string[]; excludeAccounts: string[] }
+  | ({ report: 'top-lines'; year: number; metric: MetricKey; top: number } & LineExclusions)
+  | ({
+    report: 'increases-decreases';
+    source: { year: number; metric: MetricKey };
+    destination: { year: number; metric: MetricKey };
+    direction: DeltaDirection;
+    top: number;
+  } & LineExclusions)
+  | { report: 'consolidation'; startYear: number; endYear: number; metric: MetricKey; excludeAccounts: string[] }
+  | { report: 'analytics'; axis: AnalyticsAxisInfo | null; startYear: number; endYear: number; metric: MetricKey; excludeValues: string[] }
 );
+
+/** The lines and account labels a top leaves out (top lines, increases and decreases). */
+export interface LineExclusions {
+  scope: BudgetScope;
+  excludeIds: string[];
+  /** Account labels as the picker shows them (trimmed). */
+  excludeAccounts: string[];
+}
 
 type Query = Record<string, unknown>;
 
@@ -97,6 +123,55 @@ function list(raw: string): string[] {
   return raw.split(',').map((part) => part.trim());
 }
 
+/** A comma list of ids (UUIDs, lower case) and, when `none` is given, that word: each once. */
+function idList(query: Query, key: string, none: string | null, what: string): string[] {
+  const raw = text(query, key);
+  if (raw === undefined) return [];
+  const ids = list(raw).map((id) => {
+    if (id === none) return id;
+    if (!UUID.test(id)) throw new BadRequestException(`${key} must be ${what}${none ? ` or ${none}` : ''}.`);
+    return id.toLowerCase();
+  });
+  if (new Set(ids).size !== ids.length) throw new BadRequestException(`${key} names a value twice.`);
+  return ids;
+}
+
+/** `top`: a whole number of lines, 1 or more; the request asks `MAX_GROUPS` lines at most (`topLimit`), the screen keeps what was typed. */
+function topCount(query: Query): number {
+  const raw = required(query, 'top');
+  if (!/^\d+$/.test(raw) || Number(raw) < 1) throw new BadRequestException('top must be a whole number of lines, 1 or more.');
+  return Math.min(Number(raw), MAX_GROUPS);
+}
+
+/** `excludeIds` (line ids) and `excludeAccounts` (a JSON list of account labels: a label may hold a comma). */
+function lineExclusions(query: Query, scope: BudgetScope): LineExclusions {
+  const excludeIds = idList(query, 'excludeIds', null, 'line ids');
+  const accountsRaw = text(query, 'excludeAccounts');
+  let excludeAccounts: string[] = [];
+  if (accountsRaw !== undefined) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(accountsRaw);
+    } catch {
+      parsed = null;
+    }
+    if (!Array.isArray(parsed) || parsed.some((label) => typeof label !== 'string' || label.trim() === '')) {
+      throw new BadRequestException('excludeAccounts must be a JSON list of account labels.');
+    }
+    excludeAccounts = parsed as string[];
+    if (new Set(excludeAccounts).size !== excludeAccounts.length) throw new BadRequestException('excludeAccounts names an account twice.');
+  }
+  return { scope, excludeIds, excludeAccounts };
+}
+
+/** A year range of the screen's window, start not after end. */
+function yearRange(query: Query, from: number, to: number): { startYear: number; endYear: number } {
+  const startYear = year(required(query, 'startYear'), 'startYear', from, to);
+  const endYear = year(required(query, 'endYear'), 'endYear', from, to);
+  if (startYear > endYear) throw new BadRequestException('startYear must not be after endYear.');
+  return { startYear, endYear };
+}
+
 /** The node and every node below it, disabled ones included; null for a node the tenant does not hold. */
 async function costCenterSubtree(manager: EntityManager, tenantId: string, id: string): Promise<{ ids: string[]; label: string } | null> {
   const rows: Array<{ id: string; code: string; name: string; root: boolean }> = await manager.query(
@@ -112,6 +187,12 @@ async function costCenterSubtree(manager: EntityManager, tenantId: string, id: s
   return root ? { ids: rows.map((row) => row.id), label: costCenterLabel(root) } : null;
 }
 
+/** The dimensions the screen offers for the scope's lines: enabled, and applying to them (all for `all`). */
+async function enabledAxes(manager: EntityManager, tenantId: string, scope: BudgetScope): Promise<AnalyticsAxisInfo[]> {
+  return (await loadAnalyticsAxes(manager, tenantId))
+    .filter((axis) => axis.status === 'enabled' && (scope === 'all' || axisAppliesTo(axis, scope)));
+}
+
 /** `?analytics=`: each pair names an enabled dimension of the scope's lines and one of its values, or `none`. */
 async function analyticsPicks(
   manager: EntityManager,
@@ -119,8 +200,7 @@ async function analyticsPicks(
   scope: BudgetScope,
   raw: string,
 ): Promise<Array<{ axis: AnalyticsAxisInfo; value: string; valueName: string | null }>> {
-  const axes = (await loadAnalyticsAxes(manager, tenantId))
-    .filter((axis) => axis.status === 'enabled' && (scope === 'all' || axisAppliesTo(axis, scope)));
+  const axes = await enabledAxes(manager, tenantId, scope);
   const pairs = list(raw).map((part) => {
     const at = part.indexOf(':');
     const axisId = at > 0 ? part.slice(0, at).trim() : '';
@@ -147,8 +227,9 @@ async function analyticsPicks(
 
 /**
  * Reads the query of a report (its keys were checked by `reportExportRequest`). `currentYear` sets the
- * windows the screens allow: Y-2..Y+2 for the comparison and the columns compare, Y-1..Y+1 for the top.
- * The exclusions of the top are checked against what the screen offers by the service.
+ * windows the screens allow: Y-2..Y+2 for the comparison, the columns compare and the increases and
+ * decreases, Y-1..Y+1 for the top, the consolidation and the analytics reports. The exclusions (lines,
+ * accounts, values) are checked against what the screen offers by the service.
  */
 export async function parseBudgetReportParams(
   report: BudgetReport,
@@ -196,9 +277,7 @@ export async function parseBudgetReportParams(
   };
 
   if (report === 'comparison') {
-    const startYear = year(required(query, 'startYear'), 'startYear', Y - 2, Y + 2);
-    const endYear = year(required(query, 'endYear'), 'endYear', Y - 2, Y + 2);
-    if (startYear > endYear) throw new BadRequestException('startYear must not be after endYear.');
+    const { startYear, endYear } = yearRange(query, Y - 2, Y + 2);
     const metrics = list(required(query, 'metrics')).map((raw) => column(raw, 'metrics', columns));
     if (new Set(metrics).size !== metrics.length) throw new BadRequestException('metrics names a column twice.');
     return { ...filters, report, startYear, endYear, metrics };
@@ -216,32 +295,38 @@ export async function parseBudgetReportParams(
     return { ...filters, report, selections, yearGrouping: grouping === 'true' };
   }
 
-  const topYear = year(required(query, 'year'), 'year', Y - 1, Y + 1);
-  const metric = column(required(query, 'metric'), 'metric', columns);
-  const topRaw = required(query, 'top');
-  if (!/^\d+$/.test(topRaw) || Number(topRaw) < 1) throw new BadRequestException('top must be a whole number of lines, 1 or more.');
-  // The screen keeps what was typed; the request asks `MAX_GROUPS` lines at most (`topLimit`).
-  const top = Math.min(Number(topRaw), MAX_GROUPS);
-  const idsRaw = text(query, 'excludeIds');
-  const excludeIds = idsRaw === undefined ? [] : list(idsRaw).map((id) => {
-    if (!UUID.test(id)) throw new BadRequestException('excludeIds must be line ids.');
-    return id.toLowerCase();
-  });
-  if (new Set(excludeIds).size !== excludeIds.length) throw new BadRequestException('excludeIds names a line twice.');
-  const accountsRaw = text(query, 'excludeAccounts');
-  let excludeAccounts: string[] = [];
-  if (accountsRaw !== undefined) {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(accountsRaw);
-    } catch {
-      parsed = null;
-    }
-    if (!Array.isArray(parsed) || parsed.some((label) => typeof label !== 'string' || label.trim() === '')) {
-      throw new BadRequestException('excludeAccounts must be a JSON list of account labels.');
-    }
-    excludeAccounts = parsed as string[];
-    if (new Set(excludeAccounts).size !== excludeAccounts.length) throw new BadRequestException('excludeAccounts names an account twice.');
+  if (report === 'top-lines') {
+    const topYear = year(required(query, 'year'), 'year', Y - 1, Y + 1);
+    const metric = column(required(query, 'metric'), 'metric', columns);
+    return { ...filters, report, year: topYear, metric, top: topCount(query), ...lineExclusions(query, scope) };
   }
-  return { ...filters, report, year: topYear, metric, top, excludeIds, excludeAccounts };
+
+  if (report === 'increases-decreases') {
+    // The years the screen offers: Y-1..Y+1, and Y-2 or Y+2 when a line holds a version then.
+    const source = { year: year(required(query, 'sourceYear'), 'sourceYear', Y - 2, Y + 2), metric: column(required(query, 'sourceMetric'), 'sourceMetric', columns) };
+    const destination = {
+      year: year(required(query, 'destinationYear'), 'destinationYear', Y - 2, Y + 2),
+      metric: column(required(query, 'destinationMetric'), 'destinationMetric', columns),
+    };
+    const direction = required(query, 'direction');
+    if (direction !== 'increase' && direction !== 'decrease' && direction !== 'both') throw new BadRequestException('direction must be increase, decrease or both.');
+    return { ...filters, report, source, destination, direction, top: topCount(query), ...lineExclusions(query, scope) };
+  }
+
+  // Consolidation and analytics: the screens offer Y-1..Y+1.
+  const { startYear, endYear } = yearRange(query, Y - 1, Y + 1);
+  const metric = column(required(query, 'metric'), 'metric', columns);
+  if (report === 'consolidation') {
+    return { ...filters, report, startYear, endYear, metric, excludeAccounts: idList(query, 'excludeAccounts', NO_CONSOLIDATION_LINE, 'account ids') };
+  }
+
+  // The dimension the screen resolved; none sent: the screen had none (the default field).
+  const axisRaw = text(query, 'axis');
+  let axis: AnalyticsAxisInfo | null = null;
+  if (axisRaw !== undefined) {
+    if (!UUID.test(axisRaw)) throw new BadRequestException('axis must be a dimension id.');
+    axis = (await enabledAxes(manager, tenantId, scope)).find((candidate) => candidate.id === axisRaw.toLowerCase()) ?? null;
+    if (!axis) throw new BadRequestException(`axis: ${axisRaw} is not an enabled dimension of these lines.`);
+  }
+  return { ...filters, report, axis, startYear, endYear, metric, excludeValues: idList(query, 'excludeValues', NO_ANALYTICS_VALUE, 'value ids') };
 }

@@ -18,6 +18,8 @@ import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { textTabSx, textTabsSx } from '../../theme/formSx';
 import { deltaRequests, deltaYearsRequest, excludedAccountValues, readDelta, readDeltaYears, sumDeclared, type FteDeltaTotals, type MetricKey } from './reportAggregates';
+import { deltaTable } from './reportTables';
+import { useReportTableLabels } from './useReportTableLabels';
 import { useBudgetAggregate, useBudgetAggregates } from './useBudgetAggregate';
 import { useAccountLabelOptions, useItemOptions } from './useReportOptions';
 import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
@@ -57,6 +59,7 @@ export default function OpexDeltaReport() {
   const [measure, setMeasure] = useReportMeasure();
   const measureText = useMeasureText(measure);
   const formatNumber = measureText.format;
+  const tableLabels = useReportTableLabels();
 
   const reportFilters = useBudgetReportFilters({ scope });
   // The exclusion pickers offer every line and account of the window; they load when first opened.
@@ -170,20 +173,31 @@ export default function OpexDeltaReport() {
     ? `${measureText.column(labelForMetric(destinationMetric, budgetColumns))} (${destinationYear})`
     : t('reports.opexDelta.destinationColumn');
 
-  const columns = useMemo<ColDef[]>(() => [
-    {
-      field: 'name',
-      headerName: t('reports.columns.item'),
-      flex: 1,
-      minWidth: 240,
-      cellRenderer: LinkCellRenderer,
-      cellRendererParams: { newTab: true, getHref: (row: { id?: string | null; itemNumber?: number }) => itemHref(scope, row.id, row.itemNumber) },
-    },
-    { field: 'previous', headerName: sourceLabel, width: 200, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
-    { field: 'current', headerName: destinationLabel, width: 200, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
-    { field: 'delta', headerName: t('reports.columns.delta'), width: 140, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
-    { field: 'pct_increase', headerName: t('reports.columns.pctIncrease'), width: 140, type: 'rightAligned', valueFormatter: (p) => formatSharePercent(p.value, locale, 1) },
-  ], [scope, sourceLabel, destinationLabel, formatNumber, locale, t]);
+  // The key table (`reportTables.ts`, the same code as the export): the change as a fraction of the source.
+  const table = useMemo(() => deltaTable({
+    source: { year: sourceYear ?? currentYear, metric: (sourceMetric || 'budget') as MetricKey },
+    destination: { year: destinationYear ?? currentYear, metric: (destinationMetric || 'budget') as MetricKey },
+    modes,
+    measure,
+  }, requests && report.data ? report.data : [], tableLabels), [sourceYear, sourceMetric, destinationYear, destinationMetric, currentYear, modes, measure, requests, report.data, tableLabels]);
+  const columns = useMemo<ColDef[]>(() => table.columns.map((column): ColDef => {
+    if (column.key === 'name') {
+      return {
+        field: column.key,
+        headerName: column.header,
+        flex: 1,
+        minWidth: 240,
+        cellRenderer: LinkCellRenderer,
+        cellRendererParams: { newTab: true, getHref: (row: { id?: string | null; itemNumber?: number }) => itemHref(scope, row.id, row.itemNumber) },
+      };
+    }
+    if (column.kind === 'percent') {
+      return { field: column.key, headerName: column.header, width: 140, type: 'rightAligned', valueFormatter: (p) => formatSharePercent(p.value == null ? null : p.value * 100, locale, 1) };
+    }
+    // Until both sides are picked, the side columns read "Source column" and "Destination column".
+    const headerName = column.key === 'previous' ? sourceLabel : column.key === 'current' ? destinationLabel : column.header;
+    return { field: column.key, headerName, width: column.key === 'delta' ? 140 : 200, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) };
+  }), [table, scope, sourceLabel, destinationLabel, formatNumber, locale]);
 
   const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
@@ -545,7 +559,24 @@ export default function OpexDeltaReport() {
           </Tabs>
         </Box>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.(measureText.csvParams(`top${countSlug}-${scope}-delta-${sourceSlug}-to-${destinationSlug}-${modeSlug}`))}
+      tableExport={requests ? {
+        url: '/reports/budget/increases-decreases/export',
+        params: {
+          scope,
+          measure,
+          ...reportFilters.exportParams,
+          sourceYear,
+          sourceMetric,
+          destinationYear,
+          destinationMetric,
+          direction,
+          top: topCount,
+          excludeIds: excludedIds.join(','),
+          // Account labels may hold commas: a JSON list.
+          excludeAccounts: excludedAccounts.length ? JSON.stringify(excludedAccounts) : undefined,
+        },
+        fileBase: measureText.fileName(`top${countSlug}-${scope}-delta-${sourceSlug}-to-${destinationSlug}-${modeSlug}`),
+      } : undefined}
       onExportChartPng={() => {
         const increaseSlug = `inc${increaseCount}`;
         const decreaseSlug = `dec${decreaseCount}`;
@@ -559,7 +590,7 @@ export default function OpexDeltaReport() {
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>{t("reports.shared.keyTable")}</Typography>
           <ReportGrid
-            rowData={processed}
+            rowData={table.rows}
             columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}
             onGridReady={(e) => { gridApiRef.current = e.api; }}

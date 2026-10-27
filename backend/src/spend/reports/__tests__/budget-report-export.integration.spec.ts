@@ -51,6 +51,14 @@ const LABELS: T.ReportTableLabels = {
   totalFte: L.totalFte,
   item: L.item,
   shareOfTotal: L.shareOfTotal,
+  delta: L.delta,
+  pctIncrease: L.pctIncrease,
+  consolidationAccount: L.consolidationAccount,
+  consolidationUnassigned: L.consolidationUnassigned,
+  consolidationTotal: (metric) => L.consolidationTotal.replace('{{metric}}', metric),
+  analyticsUnassigned: L.analyticsUnassigned,
+  analyticsUnnamed: L.analyticsUnnamed,
+  analyticsTotal: (metric) => L.analyticsTotal.replace('{{metric}}', metric),
 };
 
 type Fixture = Seed & { axis2Name: string; category2Name: string; costCenters: Array<{ id: string; parent_id: string | null }> };

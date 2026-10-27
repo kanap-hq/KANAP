@@ -12,10 +12,15 @@
 
 import {
   METRIC_SUFFIX,
+  readAnalytics,
   readColumnsCompare,
+  readConsolidation,
+  readDelta,
   readTopItems,
   readTrend,
   type AggregateResult,
+  type DeltaMode,
+  type FteYearGroups,
   type MetricKey,
   type ReportMeasure,
 } from './reportAggregates';
@@ -67,6 +72,22 @@ export interface ReportTableLabels {
   item: string;
   /** `reports.columns.shareOfTotal` */
   shareOfTotal: string;
+  /** `reports.columns.delta` */
+  delta: string;
+  /** `reports.columns.pctIncrease` */
+  pctIncrease: string;
+  /** `reports.columns.consolidationAccount` */
+  consolidationAccount: string;
+  /** `reports.consolidation.unassigned` */
+  consolidationUnassigned: string;
+  /** `reports.consolidation.totalMetric`: `Total Budget`. */
+  consolidationTotal: (metric: string) => string;
+  /** `reports.analyticsCategory.unassigned` */
+  analyticsUnassigned: string;
+  /** `reports.analyticsCategory.unnamed` */
+  analyticsUnnamed: string;
+  /** `reports.analyticsCategory.totalMetric`: `Total Budget`. */
+  analyticsTotal: (metric: string) => string;
 }
 
 /** The five budget columns in their fixed order (column 1 to 5). */
@@ -245,4 +266,111 @@ export function topLinesTable(
     })),
     footer: [],
   };
+}
+
+// ----- Increases and decreases (OpexDeltaReport) -----
+
+export interface DeltaTableParams {
+  source: { year: number; metric: MetricKey };
+  destination: { year: number; metric: MetricKey };
+  /** One answer per mode, in this order (`deltaRequests`): increases first, then decreases. */
+  modes: readonly DeltaMode[];
+  measure: ReportMeasure;
+}
+
+/**
+ * The kept lines of each mode in the server's order (largest change first), each with both columns,
+ * the change and the change as a fraction of the source (blank when the source is blank or not
+ * above 0, as `readDelta`). The totals stay outside the table.
+ */
+export function deltaTable(
+  p: DeltaTableParams,
+  results: ReadonlyArray<AggregateResult | undefined>,
+  labels: Pick<ReportTableLabels, 'columnNames' | 'columnFte' | 'item' | 'delta' | 'pctIncrease'>,
+): ReportTableData {
+  const kind = measureKind(p.measure);
+  const { processed } = readDelta(p.modes, results, p.measure);
+  const side = (picked: { year: number; metric: MetricKey }) => `${measureColumnName(labels, picked.metric, p.measure)} (${picked.year})`;
+  return {
+    columns: [
+      { key: 'name', header: labels.item, kind: 'text' },
+      { key: 'previous', header: side(p.source), kind },
+      { key: 'current', header: side(p.destination), kind },
+      { key: 'delta', header: labels.delta, kind },
+      { key: 'pct_increase', header: labels.pctIncrease, kind: 'percent' },
+    ],
+    rows: processed.map((row) => ({
+      id: row.id,
+      itemNumber: row.itemNumber,
+      name: row.name,
+      previous: row.previous,
+      current: row.current,
+      delta: row.delta,
+      pct_increase: row.pct_increase == null || row.previous == null ? null : row.delta / row.previous,
+      direction: row.direction,
+    })),
+    footer: [],
+  };
+}
+
+// ----- Per year groups (ConsolidationReport, AnalyticsCategoryReport) -----
+
+export interface YearGroupsTableParams {
+  /** The years of the range, in order. */
+  years: readonly number[];
+  metric: MetricKey;
+  measure: ReportMeasure;
+}
+
+/** One row per group (`groupKey`, `groupName` kept for the screen's links), one column per year, the total as footer. */
+function yearGroupsTable(
+  p: YearGroupsTableParams,
+  read: FteYearGroups,
+  group: { header: string; total: string },
+): ReportTableData {
+  const kind = measureKind(p.measure);
+  const footer: ReportTableRow = { group: group.total };
+  for (const year of p.years) footer[String(year)] = measureCell(read.totals[year], p.measure);
+  return {
+    columns: [
+      { key: 'group', header: group.header, kind: 'text' },
+      ...p.years.map((year): ReportTableColumn => ({ key: String(year), header: String(year), kind })),
+    ],
+    rows: read.groups.map((g) => {
+      const row: ReportTableRow = { group: g.label, groupKey: g.key, groupName: g.name ?? null };
+      for (const year of p.years) row[String(year)] = measureCell(g.values[year], p.measure);
+      return row;
+    }),
+    footer: [footer],
+  };
+}
+
+/** By consolidation account (server order: the first year's largest first), the total as footer. */
+export function consolidationTable(
+  p: YearGroupsTableParams,
+  result: AggregateResult | undefined,
+  labels: Pick<ReportTableLabels, 'columnNames' | 'columnFte' | 'consolidationAccount' | 'consolidationUnassigned' | 'consolidationTotal'>,
+): ReportTableData {
+  return yearGroupsTable(p, readConsolidation(p.years, result, labels.consolidationUnassigned, p.measure), {
+    header: labels.consolidationAccount,
+    total: labels.consolidationTotal(measureColumnName(labels, p.metric, p.measure)),
+  });
+}
+
+export interface AnalyticsTableParams extends YearGroupsTableParams {
+  /** The header of the group column: the dimension's name, or the product name of the default one. */
+  dimension: string;
+}
+
+/** By value on the dimension (server order: the first year's largest first), the total as footer. */
+export function analyticsTable(
+  p: AnalyticsTableParams,
+  result: AggregateResult | undefined,
+  labels: Pick<ReportTableLabels, 'columnNames' | 'columnFte' | 'analyticsUnassigned' | 'analyticsUnnamed' | 'analyticsTotal'>,
+): ReportTableData {
+  const read = readAnalytics(p.years, result, { unassigned: labels.analyticsUnassigned, unnamed: labels.analyticsUnnamed }, p.measure);
+  return yearGroupsTable(p, read, {
+    header: p.dimension,
+    total: labels.analyticsTotal(measureColumnName(labels, p.metric, p.measure)),
+  });
 }

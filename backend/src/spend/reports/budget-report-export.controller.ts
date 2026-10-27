@@ -34,4 +34,22 @@ export class BudgetReportExportController {
   async topLines(@Query() query: Record<string, unknown>, @Tenant() ctx: TenantRequest, @Res() res: Response) {
     res.send(await reportExportBody(res, await this.svc.export('top-lines', query, ctx)));
   }
+
+  @RequireLevel('budget', 'reader')
+  @Get('increases-decreases/export')
+  async increasesDecreases(@Query() query: Record<string, unknown>, @Tenant() ctx: TenantRequest, @Res() res: Response) {
+    res.send(await reportExportBody(res, await this.svc.export('increases-decreases', query, ctx)));
+  }
+
+  @RequireLevel('budget', 'reader')
+  @Get('consolidation/export')
+  async consolidation(@Query() query: Record<string, unknown>, @Tenant() ctx: TenantRequest, @Res() res: Response) {
+    res.send(await reportExportBody(res, await this.svc.export('consolidation', query, ctx)));
+  }
+
+  @RequireLevel('budget', 'reader')
+  @Get('analytics/export')
+  async analytics(@Query() query: Record<string, unknown>, @Tenant() ctx: TenantRequest, @Res() res: Response) {
+    res.send(await reportExportBody(res, await this.svc.export('analytics', query, ctx)));
+  }
 }

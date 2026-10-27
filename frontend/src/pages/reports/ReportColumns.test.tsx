@@ -250,6 +250,27 @@ describe('Budget report table exports', () => {
     expect(chart.tableExport.params).toMatchObject({ scope: 'all', measure: 'amount', year: Y, metric: 'budget', top: 10, excludeIds: '' });
     expect(chart.tableExport.params.excludeAccounts).toBeUndefined();
   });
+
+  it('send the increases and decreases, consolidation and analytics state to the server export', async () => {
+    const delta = renderReport(<OpexDeltaReport />);
+    await waitFor(() => expect(chart.tableExport?.url).toBe('/reports/budget/increases-decreases/export'));
+    expect(chart.tableExport.params).toMatchObject({
+      scope: 'all', measure: 'amount', sourceYear: Y - 1, sourceMetric: 'budget', destinationYear: Y, destinationMetric: 'budget', direction: 'increase', top: 10, excludeIds: '',
+    });
+    fireEvent.click(screen.getByRole('tab', { name: 'reports.opexDelta.both' }));
+    await waitFor(() => expect(chart.tableExport.params.direction).toBe('both'));
+    delta.unmount();
+
+    const consolidation = renderReport(<ConsolidationReport />);
+    await waitFor(() => expect(chart.tableExport?.url).toBe('/reports/budget/consolidation/export'));
+    expect(chart.tableExport.params).toMatchObject({ scope: 'all', measure: 'amount', startYear: Y, endYear: Y, metric: 'budget', excludeAccounts: '' });
+    consolidation.unmount();
+
+    renderReport(<AnalyticsCategoryReport />);
+    await waitFor(() => expect(chart.tableExport?.url).toBe('/reports/budget/analytics/export'));
+    // No dimension here: the screen groups on the default field and sends none.
+    expect(chart.tableExport.params).toMatchObject({ scope: 'all', measure: 'amount', axis: null, startYear: Y, endYear: Y, metric: 'budget', excludeValues: '' });
+  });
 });
 
 describe('Global chargeback report', () => {
@@ -355,8 +376,9 @@ describe('OPEX delta shares', () => {
     renderReport(<OpexDeltaReport />);
     await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('Small'));
     const column = chart.columns?.find((col) => col.field === 'pct_increase');
-    expect(column.valueFormatter({ value: 12.3 })).toBe(formatSharePercent(12.3, 'fr', 1));
-    expect(column.valueFormatter({ value: 12.3 })).toContain('12,3');
+    // The table holds the change as a fraction of the source (`reportTables.ts`).
+    expect(column.valueFormatter({ value: 0.123 })).toBe(formatSharePercent(12.3, 'fr', 1));
+    expect(column.valueFormatter({ value: 0.123 })).toContain('12,3');
     expect(column.valueFormatter({ value: null })).toBe('');
     const bar = chart.options.series[0];
     const share = shareOf(bar.tooltip.renderer({ datum: { name: 'Small', magnitude: 123, delta: 123, direction: 'increase' } }));

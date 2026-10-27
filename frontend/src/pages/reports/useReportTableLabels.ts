@@ -19,5 +19,13 @@ export function useReportTableLabels(): ReportTableLabels {
     totalFte: t('reports.measure.totalFte'),
     item: t('reports.columns.item'),
     shareOfTotal: t('reports.columns.shareOfTotal'),
+    delta: t('reports.columns.delta'),
+    pctIncrease: t('reports.columns.pctIncrease'),
+    consolidationAccount: t('reports.columns.consolidationAccount'),
+    consolidationUnassigned: t('reports.consolidation.unassigned'),
+    consolidationTotal: (metric) => t('reports.consolidation.totalMetric', { metric }),
+    analyticsUnassigned: t('reports.analyticsCategory.unassigned'),
+    analyticsUnnamed: t('reports.analyticsCategory.unnamed'),
+    analyticsTotal: (metric) => t('reports.analyticsCategory.totalMetric', { metric }),
   }), [budgetColumns, t]);
 }
