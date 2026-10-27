@@ -21,12 +21,17 @@
 // `stable` and YY.M image tags at the version (a manual run of the same workflow) and moves the
 // stable branch to the tag. Every step checks what exists first: a rerun after a failure only
 // does what is missing. A tag is never moved and no push is forced. --no-images skips the image
-// steps (for a version older than the image workflow); without it, a version without images
-// does not move stable.
+// steps, for a version older than the image workflow only: it is refused when the tagged commit
+// holds .github/workflows/release-images.yml. Without it, a version without images does not move
+// stable.
 //
-// --dry-run runs every read (git fetch included) and prints each write instead of running it.
-// It does not read the image workflow runs or the registry: it prints the commands it would
-// wait on and the Images section with placeholder digests.
+// The GitHub repository is the one of the origin remote (kanap-hq/KANAP when origin is not on
+// GitHub), so a trial run on a fork exercises every step against the fork.
+//
+// --dry-run prints each write instead of running it. It runs the git and GitHub reads that the
+// steps before the images depend on (git fetch, the release pull request, the commit, the tags,
+// the release, the stable branch). It reads neither the image workflow runs nor the registry:
+// it prints the commands it would wait on and the Images section with placeholder digests.
 // Exit status: 2 for a usage or input mistake, 1 for any other failure.
 
 import { spawnSync } from 'node:child_process';
@@ -39,7 +44,9 @@ import {
   isUnchangedSkeleton, latestVersion, missingPrNumbers, parseVersion, prNumbersOf, tagOf, versionOfTag,
 } from './changelog.mjs';
 
-const REPO = 'kanap-hq/KANAP';
+// The repository gh acts on: the GitHub repository of origin (see main), this one otherwise.
+const DEFAULT_REPO = 'kanap-hq/KANAP';
+let repo = DEFAULT_REPO;
 const PACKAGE_FOLDERS = ['backend', 'frontend'];
 const RELEASE_FILES = [
   'backend/package.json', 'backend/package-lock.json',
@@ -57,6 +64,7 @@ const IMAGE_WORKFLOW = 'release-images.yml';
 const IMAGE_ARTIFACT = 'image-digests';
 // Same form as the first step of release-images.yml.
 const IMAGE_TAG = /^v\d{2}\.([1-9]|1[0-2])\.[1-9]\d*$/;
+const RUN_FIELDS = 'databaseId,status,conclusion,url,headSha,createdAt,event,displayTitle';
 const RUN_APPEAR_SECONDS = 120;
 const RUN_WAIT_MINUTES = 45;
 const POLL_SECONDS = 15;
@@ -175,8 +183,20 @@ export function parseDigests(text, version, owner) {
   return IMAGES.map((image) => found.get(image));
 }
 
-/** The "### Images" section appended to the notes of a GitHub release. */
-export function imagesSection(entries, repo) {
+/**
+ * The GitHub repository (`owner/name`) of a remote URL: https, ssh or scp-like git@github.com
+ * form, with or without .git. Null for any other host or form.
+ */
+export function githubRepoOf(url) {
+  const match = /^(?:https:\/\/github\.com\/|ssh:\/\/git@github\.com(?::\d+)?\/|git@github\.com:)([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?\/?$/.exec(String(url ?? '').trim());
+  return match ? `${match[1]}/${match[2]}` : null;
+}
+
+/**
+ * The "### Images" section appended to the notes of a GitHub release. Its verify command accepts
+ * only an attestation signed by release-images.yml of `repo` for the tag of the version.
+ */
+export function imagesSection(entries, repo, version) {
   return [
     '### Images',
     '',
@@ -184,7 +204,7 @@ export function imagesSection(entries, repo) {
     '|---|---|',
     ...entries.map((entry) => `| \`${entry.image}\` | \`${entry.ref}\` |`),
     '',
-    `Provenance: \`gh attestation verify oci://${entries[0].ref} -R ${repo}\``,
+    `Provenance: \`gh attestation verify oci://${entries[0].ref} -R ${repo} --signer-workflow ${repo}/.github/workflows/${IMAGE_WORKFLOW} --source-ref refs/tags/${tagOf(version)}\``,
   ].join('\n');
 }
 
@@ -194,11 +214,31 @@ export function hasImagesSection(body) {
 }
 
 /**
- * The images whose `stable` tag is not on the digest of the version yet. `current` maps an image
- * to the digest of its `stable` tag, or null when it has none. An empty list: already promoted.
+ * The images where one of `tags` (stable and YY.M) is not on the digest of the version yet.
+ * `current` maps an image to `{ <tag>: digest or null }`. An empty list: already promoted.
  */
-export function imagesToPromote(entries, current) {
-  return entries.filter((entry) => (current?.[entry.image] ?? null) !== entry.digest).map((entry) => entry.image);
+export function imagesToPromote(entries, current, tags) {
+  return entries
+    .filter((entry) => tags.some((tag) => (current?.[entry.image]?.[tag] ?? null) !== entry.digest))
+    .map((entry) => entry.image);
+}
+
+/** The run id in the output of `gh workflow run` (its run URL), or null when it gives none. */
+export function runIdFromDispatch(output) {
+  const match = /\/actions\/runs\/(\d+)/.exec(String(output ?? ''));
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * The promotion run of `version` among `runs` (gh run list, newest first or not): titled
+ * "promote <version>" (run-name of release-images.yml) and absent from `knownIds`, the runs
+ * listed before the dispatch. The newest such run, or null.
+ */
+export function pickPromotionRun(runs, version, knownIds) {
+  const known = new Set([...(knownIds ?? [])].map(Number));
+  return (runs ?? [])
+    .filter((run) => run.displayTitle === `promote ${version}` && !known.has(Number(run.databaseId)))
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0] ?? null;
 }
 
 function parseArgs(argv) {
@@ -304,7 +344,7 @@ function isAncestor(root, ancestor, descendant) {
 }
 
 function prView(number) {
-  const result = probe('gh', ['pr', 'view', String(number), '--repo', REPO, '--json', 'number,title,body']);
+  const result = probe('gh', ['pr', 'view', String(number), '--repo', repo, '--json', 'number,title,body']);
   if (result.status !== 0) return { number, title: '(could not be read)', notes: null, error: result.stderr || `exit ${result.status}` };
   const pr = JSON.parse(result.stdout);
   return { number, title: pr.title, notes: extractReleaseNotes(pr.body) };
@@ -433,7 +473,7 @@ function prepare(root, options) {
   }
   write('git', ['push', '-u', 'origin', branch], { cwd: dir });
 
-  const open = JSON.parse(read('gh', ['pr', 'list', '--repo', REPO, '--head', branch, '--state', 'open', '--json', 'number,url']));
+  const open = JSON.parse(read('gh', ['pr', 'list', '--repo', repo, '--head', branch, '--state', 'open', '--json', 'number,url']));
   let number;
   let url;
   if (open.length) {
@@ -445,7 +485,7 @@ function prepare(root, options) {
       bodyFile = path.join(mkdtempSync(path.join(tmpdir(), 'kanap-release-')), 'body.md');
       writeFileSync(bodyFile, `${entry.heading}\n\n${entry.body}\n`);
     }
-    const out = write('gh', ['pr', 'create', '--repo', REPO, '--base', 'main', '--head', branch, '--title', `Release ${version}`, '--body-file', bodyFile], { cwd: dir });
+    const out = write('gh', ['pr', 'create', '--repo', repo, '--base', 'main', '--head', branch, '--title', `Release ${version}`, '--body-file', bodyFile], { cwd: dir });
     if (!dryRun) rmSync(path.dirname(bodyFile), { recursive: true, force: true });
     if (out !== null) {
       url = out.trim().split('\n').pop();
@@ -474,7 +514,7 @@ function sbom(root, tag) {
     write('git', ['worktree', 'add', '--detach', tree, tag], { cwd: root });
     write('node', ['scripts/sbom/generate.mjs', '--out', out], { cwd: tree });
     const files = dryRun ? [path.join(out, '*')] : readdirSync(out).sort().map((name) => path.join(out, name));
-    write('gh', ['release', 'upload', tag, ...files, '--clobber', '--repo', REPO]);
+    write('gh', ['release', 'upload', tag, ...files, '--clobber', '--repo', repo]);
     return files.map((file) => path.basename(file));
   } catch (err) {
     throw new Error(`The inventory step failed, the stable branch was not moved: ${err.message}\n`
@@ -507,7 +547,7 @@ function findRun(args, accept) {
 }
 
 function runListArgs(extra) {
-  return ['run', 'list', '--repo', REPO, '--workflow', IMAGE_WORKFLOW, ...extra, '--json', 'databaseId,status,conclusion,url,headSha,createdAt', '--limit', '20'];
+  return ['run', 'list', '--repo', repo, '--workflow', IMAGE_WORKFLOW, ...extra, '--json', RUN_FIELDS, '--limit', '20'];
 }
 
 // Waits for a run to complete, up to RUN_WAIT_MINUTES. Throws `failed(url)` unless it succeeded.
@@ -520,7 +560,7 @@ function waitRun(run, failed) {
     announced = true;
     if (Date.now() >= deadline) throw new Error(`${state.url} has not finished after ${RUN_WAIT_MINUTES} minutes. Rerun publish once it has: it starts again from there.`);
     sleep(POLL_SECONDS);
-    state = { ...state, ...JSON.parse(read('gh', ['run', 'view', String(run.databaseId), '--repo', REPO, '--json', 'status,conclusion,url'])) };
+    state = { ...state, ...JSON.parse(read('gh', ['run', 'view', String(run.databaseId), '--repo', repo, '--json', 'status,conclusion,url'])) };
   }
   if (state.conclusion !== 'success') throw new Error(failed(state.url));
   return state;
@@ -555,30 +595,31 @@ function placeholderImages(owner) {
   return IMAGES.map((image) => ({ image, ref: `ghcr.io/${owner}/${image}@sha256:<digest>`, name: `ghcr.io/${owner}/${image}`, digest: 'sha256:<digest>' }));
 }
 
-// Step 5: the run of release-images.yml for the push of the tag, its digests.txt, and an
-// anonymous pull of each image at the version.
+// Step 5: the newest run of release-images.yml for the tag (its push, or a manual run on it),
+// its digests.txt, and an anonymous pull of each image at the version.
 function waitForImages(version, tag, sha) {
-  const owner = registryOwner(REPO);
+  const owner = registryOwner(repo);
   if (!isImageTag(tag)) throw new InputError(`${tag} is not a version tag vYY.M.N: release-images.yml builds no image for it`);
-  const list = runListArgs(['--branch', tag, '--event', 'push']);
+  const list = runListArgs(['--branch', tag]);
   if (dryRun) {
-    console.log(`  would wait for the run of ${IMAGE_WORKFLOW} on ${sha}: ${show('gh', list)}, then ${show('gh', ['run', 'view', '<run>', '--repo', REPO, '--json', 'status,conclusion,url'])} until it completes (up to ${RUN_WAIT_MINUTES} minutes)`);
-    console.log(`  would run: ${show('gh', ['run', 'download', '<run>', '--repo', REPO, '--name', IMAGE_ARTIFACT, '--dir', '<tmp>'])}`);
+    console.log(`  would wait for the run of ${IMAGE_WORKFLOW} on ${sha}: ${show('gh', list)}, then ${show('gh', ['run', 'view', '<run>', '--repo', repo, '--json', 'status,conclusion,url'])} until it completes (up to ${RUN_WAIT_MINUTES} minutes)`);
+    console.log(`  would run: ${show('gh', ['run', 'download', '<run>', '--repo', repo, '--name', IMAGE_ARTIFACT, '--dir', '<tmp>'])}`);
     console.log(`  would check an anonymous pull of ${IMAGES.map((image) => `ghcr.io/${owner}/${image}:${version}`).join(', ')}`);
     return placeholderImages(owner);
   }
-  const run = findRun(list, (candidate) => candidate.headSha === sha);
+  const run = findRun(list, (candidate) => candidate.headSha === sha && ['push', 'workflow_dispatch'].includes(candidate.event));
   if (!run) {
-    throw new Error(`no run of ${IMAGE_WORKFLOW} for the push of ${tag} after ${RUN_APPEAR_SECONDS} seconds: the release was not created and stable was not moved. `
-      + `Check the Actions tab; for a version older than the image workflow, rerun with --no-images.`);
+    throw new Error(`no run of ${IMAGE_WORKFLOW} for ${tag} after ${RUN_APPEAR_SECONDS} seconds: the release was not created and stable was not moved. `
+      + `Start it on the tag (${show('gh', ['workflow', 'run', IMAGE_WORKFLOW, '--repo', repo, '--ref', tag])}), then rerun publish ${version}.`);
   }
-  waitRun(run, (url) => `the image workflow failed, the release was not created and stable was not moved: ${url}`);
+  waitRun(run, (url) => `the image workflow failed, the release was not created and stable was not moved: ${url}. `
+    + `Fix the cause, rerun the failed jobs of that run (it reuses the images this commit already pushed), then rerun publish ${version}.`);
   console.log(`Images published by ${run.url}.`);
 
   const dir = mkdtempSync(path.join(tmpdir(), 'kanap-release-images-'));
   let entries;
   try {
-    read('gh', ['run', 'download', String(run.databaseId), '--repo', REPO, '--name', IMAGE_ARTIFACT, '--dir', dir]);
+    read('gh', ['run', 'download', String(run.databaseId), '--repo', repo, '--name', IMAGE_ARTIFACT, '--dir', dir]);
     entries = parseDigests(readFileSync(path.join(dir, 'digests.txt'), 'utf8'), version, owner);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -605,29 +646,34 @@ function waitForImages(version, tag, sha) {
 // Step 8: stable and YY.M on the digests of the version (a manual run of release-images.yml).
 function promoteImages(version, entries, tags) {
   const minor = version.split('.').slice(0, 2).join('.');
-  const dispatch = ['workflow', 'run', IMAGE_WORKFLOW, '--repo', REPO, '--ref', 'main', '-f', `promote=${version}`];
+  const dispatch = ['workflow', 'run', IMAGE_WORKFLOW, '--repo', repo, '--ref', 'main', '-f', `promote=${version}`];
   const list = runListArgs(['--branch', 'main', '--event', 'workflow_dispatch']);
+  const promoted = ['stable', minor];
   if (dryRun) {
-    console.log(`  would run, unless every stable tag is already on the version: ${show('gh', dispatch)}`);
-    console.log(`  then wait for that run: ${show('gh', list)} (stable and ${minor} on the digests above)`);
+    console.log(`  would run, unless every stable and ${minor} tag is already on the version: ${show('gh', dispatch)}`);
+    console.log(`  then wait for the run it names, or the new run titled "promote ${version}" in ${show('gh', list)} (stable and ${minor} on the digests above)`);
     return;
   }
-  const stableDigests = () => Object.fromEntries(entries.map((entry) => [entry.image, anonymousManifest(entry.name, 'stable').digest]));
-  if (imagesToPromote(entries, stableDigests()).length === 0) {
-    console.log(`The stable images are already on ${version}.`);
+  const currentDigests = () => Object.fromEntries(entries.map((entry) => [entry.image,
+    Object.fromEntries(promoted.map((tag) => [tag, anonymousManifest(entry.name, tag).digest]))]));
+  if (imagesToPromote(entries, currentDigests(), promoted).length === 0) {
+    console.log(`The stable and ${minor} images are already on ${version}.`);
     return;
   }
   const latest = latestVersion([...tags.keys(), tagOf(version)]);
   if (latest !== version) throw new InputError(`${latest} is newer than ${version}: the stable images never move back`);
-  // The dispatch answers no run id: the run is the newest manual run created since, give or take
-  // a clock difference. The stable digests are read again after it, which catches a wrong pick.
-  const since = Date.now() - 10 * 1000;
-  write('gh', dispatch);
-  const run = findRun(list, (candidate) => Date.parse(candidate.createdAt) >= since);
+  // gh prints the URL of the run it started when GitHub returns it. Otherwise the run is the new
+  // one titled "promote <version>" (run-name of the workflow): the runs listed before the
+  // dispatch are left out, which needs no clock.
+  const known = JSON.parse(read('gh', list)).map((run) => run.databaseId);
+  const id = runIdFromDispatch(write('gh', dispatch));
+  const run = id
+    ? JSON.parse(read('gh', ['run', 'view', String(id), '--repo', repo, '--json', RUN_FIELDS]))
+    : findRun(list, (candidate) => pickPromotionRun([candidate], version, known) !== null);
   if (!run) throw new Error(`the promotion run of ${IMAGE_WORKFLOW} did not appear after ${RUN_APPEAR_SECONDS} seconds: check the Actions tab, then rerun publish`);
   waitRun(run, (url) => `the promotion of the images failed, stable was not moved: ${url}`);
-  const left = imagesToPromote(entries, stableDigests());
-  if (left.length) throw new Error(`after ${run.url}, stable is still not on ${version} for ${left.join(', ')}: find out why, then rerun publish`);
+  const left = imagesToPromote(entries, currentDigests(), promoted);
+  if (left.length) throw new Error(`after ${run.url}, stable or ${minor} is still not on ${version} for ${left.join(', ')}: find out why, then rerun publish`);
   console.log(`stable and ${minor} images on ${version} (${run.url}).`);
 }
 
@@ -641,7 +687,7 @@ function publish(root, options) {
 
   // 1. The merge commit of the release pull request.
   const title = `Release ${version}`;
-  const found = JSON.parse(read('gh', ['pr', 'list', '--repo', REPO, '--state', 'merged', '--search', `${title} in:title`, '--json', 'number,title,mergeCommit']));
+  const found = JSON.parse(read('gh', ['pr', 'list', '--repo', repo, '--state', 'merged', '--search', `${title} in:title`, '--json', 'number,title,mergeCommit']));
   const releases = found.filter((pr) => pr.title === title);
   if (releases.length !== 1) {
     throw new InputError(releases.length
@@ -662,6 +708,13 @@ function publish(root, options) {
   }
   const entry = extractEntry(showFile(root, sha, 'CHANGELOG.md'), version);
   if (!entry) throw new InputError(`CHANGELOG.md has no ${version} entry in ${sha}`);
+  // --no-images would move the stable branch while the stable images stay on an older version.
+  const workflowFile = `.github/workflows/${IMAGE_WORKFLOW}`;
+  if (!options.images && probe('git', ['cat-file', '-e', `${sha}:${workflowFile}`], root).status === 0) {
+    throw new InputError(`--no-images is for a version older than the image workflow, and ${sha} holds ${workflowFile}. `
+      + `Without a run for the tag, start it: ${show('gh', ['workflow', 'run', IMAGE_WORKFLOW, '--repo', repo, '--ref', tag])}; `
+      + `after a failed run, rerun its failed jobs. Then rerun publish ${version} without --no-images.`);
+  }
 
   // 3. Pull requests merged after prepare and absent from the entry.
   const tags = remoteTags(root);
@@ -697,12 +750,12 @@ function publish(root, options) {
   } else {
     console.log('Images skipped (--no-images): the release gets no Images section and the stable images do not move.');
   }
-  const section = images ? imagesSection(images, REPO) : null;
+  const section = images ? imagesSection(images, repo, version) : null;
   if (section && dryRun) console.log(`Images section of the release notes:\n\n${section}\n`);
 
   // 6. The GitHub release, its notes ending with the Images section.
   let releaseUrl;
-  const viewArgs = ['release', 'view', tag, '--repo', REPO, '--json', 'url,body'];
+  const viewArgs = ['release', 'view', tag, '--repo', repo, '--json', 'url,body'];
   const view = probe('gh', viewArgs);
   const notesFileWith = (text) => {
     if (dryRun) return path.join(tmpdir(), `kanap-release-${tag}-notes.md`);
@@ -718,12 +771,12 @@ function publish(root, options) {
     } else {
       console.log(`Release ${tag} exists without the Images section: ${dryRun ? 'it would be completed' : 'completed'}.`);
       const notesFile = notesFileWith(`${String(existing.body ?? '').trimEnd()}\n\n${section}\n`);
-      write('gh', ['release', 'edit', tag, '--repo', REPO, '--notes-file', notesFile]);
+      write('gh', ['release', 'edit', tag, '--repo', repo, '--notes-file', notesFile]);
       if (!dryRun) rmSync(path.dirname(notesFile), { recursive: true, force: true });
     }
   } else if (/not found/i.test(view.stderr)) {
     const notesFile = notesFileWith(`${entry.body}\n${section ? `\n${section}\n` : ''}`);
-    const out = write('gh', ['release', 'create', tag, '--repo', REPO, '--title', entry.title, '--notes-file', notesFile]);
+    const out = write('gh', ['release', 'create', tag, '--repo', repo, '--title', entry.title, '--notes-file', notesFile]);
     if (!dryRun) rmSync(path.dirname(notesFile), { recursive: true, force: true });
     releaseUrl = out?.trim().split('\n').pop();
   } else {
@@ -764,6 +817,9 @@ function main() {
   const top = exec('git', ['rev-parse', '--show-toplevel']);
   if (top.status !== 0) throw new InputError('run this script inside the KANAP repository');
   const root = top.stdout.trim();
+  const origin = exec('git', ['remote', 'get-url', 'origin'], { cwd: root });
+  repo = (origin.status === 0 && githubRepoOf(origin.stdout)) || DEFAULT_REPO;
+  if (repo !== DEFAULT_REPO) console.log(`GitHub repository: ${repo} (from origin).`);
   if (options.command === 'prepare') prepare(root, options);
   else publish(root, options);
 }
