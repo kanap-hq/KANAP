@@ -241,17 +241,38 @@ function isToolError(result: unknown): boolean {
   return !!result && typeof result === 'object' && 'error' in result;
 }
 
+/** How many arguments two calls do not share (a value changed, added or left out). */
+function differingArguments(first?: Record<string, unknown>, second?: Record<string, unknown>): number {
+  const a = first ?? {};
+  const b = second ?? {};
+  return Array.from(new Set([...Object.keys(a), ...Object.keys(b)]))
+    .filter((key) => JSON.stringify(a[key]) !== JSON.stringify(b[key])).length;
+}
+
 /**
- * A failed tool call that a later call of the same tool in the message repaired (a reference the
- * write refused, then the same write by id) is part of the work, not a failure for the person.
+ * A failed tool call that the next call of the same tool repaired (a reference the write refused,
+ * then the same write by id; a missing field, then added) is part of the work, not a failure for
+ * the person. The repair is the same call with one argument changed at most, and it succeeded or
+ * was repaired in turn. A call that changes more (another record with its own title or fields)
+ * repairs nothing: the failure stays shown.
  */
-export function markRecoveredToolFailures<T extends { kind: string; toolCall?: { name: string }; result?: unknown; recovered?: boolean }>(rows: T[]): T[] {
-  return rows.map((row, index) => {
-    if (row.kind !== 'tool' || !row.toolCall || !isToolError(row.result)) return row;
-    const repaired = rows.slice(index + 1).some((later) =>
-      later.kind === 'tool' && later.toolCall?.name === row.toolCall!.name && later.result !== undefined && !isToolError(later.result));
-    return repaired ? { ...row, recovered: true } : row;
-  });
+export function markRecoveredToolFailures<T extends {
+  kind: string;
+  toolCall?: { name: string; arguments?: Record<string, unknown> };
+  result?: unknown;
+  recovered?: boolean;
+}>(rows: T[]): T[] {
+  const recovered = rows.map(() => false);
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    const row = rows[index];
+    if (row.kind !== 'tool' || !row.toolCall || !isToolError(row.result)) continue;
+    const nextIndex = rows.findIndex((later, at) => at > index && later.kind === 'tool' && later.toolCall?.name === row.toolCall!.name);
+    const next = nextIndex === -1 ? null : rows[nextIndex];
+    if (!next || next.result === undefined) continue;
+    if (differingArguments(row.toolCall.arguments, next.toolCall?.arguments) > 1) continue;
+    recovered[index] = !isToolError(next.result) || recovered[nextIndex];
+  }
+  return rows.map((row, index) => (recovered[index] ? { ...row, recovered: true } : row));
 }
 
 function buildActivityRows(message: ChatMessage): ActivityRow[] {
