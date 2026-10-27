@@ -3,7 +3,9 @@ import type { EntityManager } from 'typeorm';
 import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
 import { AuditService } from '../../audit/audit.service';
 import { assertSetFilterModes } from '../../common/ag-grid-filtering';
-import { languageOf, writeCsv } from '../../common/csv-sheet';
+import { languageOf } from '../../common/csv-sheet';
+import { numberCell, writeListExport, type ListExportFile } from '../../common/csv/list-export';
+import type { ExportFileFormat } from '../../common/xlsx/format';
 import { shippedLabelIn } from '../../it-ops-settings/catalog-shipped-labels';
 import type { CsvLanguage } from '../../common/csv-sheet/types';
 import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
@@ -103,6 +105,10 @@ const NO_ZONE_LABEL: Record<CsvLanguage, string> = {
   de: 'Keine Zone',
   es: 'Sin zona',
 };
+
+/** The sheet of each list's workbook. */
+const ASSET_SHEET: Record<CsvLanguage, string> = { en: 'Assets', fr: 'Actifs', de: 'Assets', es: 'Activos' };
+const DOMAIN_SHEET: Record<CsvLanguage, string> = { en: 'Domains', fr: 'Domaines', de: 'Domänen', es: 'Dominios' };
 
 /** Directory export headers, one row per language. No comma: the English file splits on it. */
 const DOMAIN_CSV_HEADERS: Record<CsvLanguage, string[]> = {
@@ -653,15 +659,16 @@ export class AdministrationViewService {
   }
 
   /**
-   * One list as a CSV file. `list=domains` is the domains. `list=assets` (the default) is every
-   * asset the asset list's filters reach, in the list's order. A cell is written by `writeCsv`,
-   * which prefixes a formula.
+   * One list as a CSV file or a workbook of one sheet (`format`). `list=domains` is the domains.
+   * `list=assets` (the default) is every asset the asset list's filters reach, in the list's order.
+   * A text cell gets the formula guard; the domains' counts are numbers.
    */
-  async csv(query: Record<string, unknown>, opts: AdministrationOpts): Promise<{ filename: string; content: string }> {
+  async csv<F extends ExportFileFormat = 'csv'>(query: Record<string, unknown>, opts: AdministrationOpts, format?: F): Promise<ListExportFile<F>> {
     const list = query.list === undefined || query.list === '' ? 'assets' : String(query.list);
-    if (list === 'domains') return this.domainsCsv(query, opts);
+    const fileFormat = format ?? ('csv' as F);
+    if (list === 'domains') return this.domainsCsv(query, opts, fileFormat);
     if (list !== 'assets') throw new BadRequestException('list must be assets or domains.');
-    return this.assetsCsv(query, opts);
+    return this.assetsCsv(query, opts, fileFormat);
   }
 
   private async context(opts: AdministrationOpts, forWrite = false): Promise<RankCtx> {
@@ -996,7 +1003,7 @@ export class AdministrationViewService {
     };
   }
 
-  private async assetsCsv(query: Record<string, unknown>, opts: AdministrationOpts): Promise<{ filename: string; content: string }> {
+  private async assetsCsv<F extends ExportFileFormat>(query: Record<string, unknown>, opts: AdministrationOpts, format: F): Promise<ListExportFile<F>> {
     const ctx = await this.context(opts);
     const params: unknown[] = [opts.tenantId];
     const where = this.whereOf(query, ctx, params);
@@ -1042,10 +1049,10 @@ export class AdministrationViewService {
         return `${relations[link.relation]} ${who} (${zoneLabel(link.zone)})`.trim();
       }).join('; '),
     ]);
-    return { filename: 'administration_view_assets.csv', content: writeCsv({ language, headers, rows: lines }) };
+    return writeListExport({ format, language, filename: 'administration_view_assets.csv', sheetNames: ASSET_SHEET, headers, rows: lines });
   }
 
-  private async domainsCsv(query: Record<string, unknown>, opts: AdministrationOpts): Promise<{ filename: string; content: string }> {
+  private async domainsCsv<F extends ExportFileFormat>(query: Record<string, unknown>, opts: AdministrationOpts, format: F): Promise<ListExportFile<F>> {
     const ctx = await this.context(opts);
     const domains = await this.domains(opts, ctx.domains);
     const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, query.language);
@@ -1057,11 +1064,11 @@ export class AdministrationViewService {
       domain.forest ?? '',
       domain.trusts.map((trust) => `${trust.label} (${direction[trust.direction]})`).join(', '),
       domain.declared_by.map((trust) => `${trust.label} (${direction[trust.direction]})`).join(', '),
-      domain.account_count == null ? '' : String(domain.account_count),
-      domain.machine_count == null ? '' : String(domain.machine_count),
-      String(domain.domain_controllers.length),
+      numberCell(domain.account_count),
+      numberCell(domain.machine_count),
+      numberCell(domain.domain_controllers.length),
       domain.domain_controllers.map((server) => server.name).join(', '),
     ]);
-    return { filename: 'administration_view_domains.csv', content: writeCsv({ language, headers, rows }) };
+    return writeListExport({ format, language, filename: 'administration_view_domains.csv', sheetNames: DOMAIN_SHEET, headers, rows });
   }
 }

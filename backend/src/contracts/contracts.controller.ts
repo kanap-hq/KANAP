@@ -27,6 +27,7 @@ import type { ComplianceItemPatch } from './contract-compliance';
 import { ContractsDeleteService } from './contracts-delete.service';
 import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { csvExportFormat } from '../common/csv/csv-export.service';
+import { parseExportFormat } from '../common/xlsx/format';
 import { csvExportBody } from '../common/csv/send-csv-export';
 
 @UseGuards(JwtAuthGuard)
@@ -89,17 +90,16 @@ export class ContractsController {
     res.send(await csvExportBody(res, file));
   }
 
-  // The compliance register of the contracts the list selects (CSV, contract × requirement); before ':id'.
+  // The compliance register of the contracts the list selects, in its order (CSV or xlsx, contract × requirement); before ':id'.
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @Get('compliance-register/export')
   async exportComplianceRegister(@Query() query: any, @Res() res: Response, @Req() req: any) {
     const manager = req?.queryRunner?.manager;
     const language = await languageOf(manager, req.tenant.id, req.user?.sub ?? null, query?.language);
-    const { filename, content } = await this.svc.exportComplianceRegister(query, language, { manager, budgetAccess: canReadContractBudget(req) });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(filename));
-    res.send(content);
+    const format = parseExportFormat(query?.format);
+    const file = await this.svc.exportComplianceRegister(query, language, { manager, budgetAccess: canReadContractBudget(req), format });
+    res.send(await csvExportBody(res, file));
   }
 
   // Attachments: define static segment before parameterized ':id'

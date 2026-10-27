@@ -26,7 +26,7 @@ import { requireManager } from './technology-rows';
 import { csvExportFormat } from '../common/csv/csv-export.service';
 import { csvExportBody } from '../common/csv/send-csv-export';
 import type { ListExportFile } from '../common/csv/list-export';
-import type { ExportFileFormat } from '../common/xlsx/format';
+import { parseExportFormat, type ExportFileFormat } from '../common/xlsx/format';
 
 export { hasLevel };
 
@@ -523,20 +523,20 @@ export class TechnologiesController {
     return this.links.applicationsOfTechnology(id, this.opts(ctx), await this.applicationsReach(ctx));
   }
 
-  /** The same rows as a CSV file (a path ending with /export: recorded as an export in the audit log). */
+  /** The same rows as a CSV file or a workbook (a path ending with /export: recorded as an export in the audit log). */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get(':id/applications/export')
   async exportApplications(
     @Param('id') id: string,
     @Query('language') language: string | undefined,
-    @Res({ passthrough: true }) res: Response,
+    @Query('format') format: string | undefined,
+    @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ) {
-    const file = await this.links.applicationsCsv(id, language, this.opts(ctx), await this.requireApplications(ctx));
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(file.filename));
-    return file.content;
+    const fileFormat = parseExportFormat(format);
+    const file = await this.links.applicationsCsv(id, language, this.opts(ctx), await this.requireApplications(ctx), fileFormat);
+    res.send(await csvExportBody(res, file));
   }
 
   /** Declare the technology on several applications at once (`{ application_ids }`). */

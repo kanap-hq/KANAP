@@ -118,3 +118,28 @@ export function endOfValidityDay(value: Date | string | null | undefined): ListE
   if (Number.isNaN(date.getTime())) return null;
   return { kind: 'date', iso: date.toISOString().slice(0, 10) };
 }
+
+/**
+ * A cell the CSV writes as plain text whatever the language (`9.8`, `2026-03-01`), typed for the
+ * workbook: `number`, a number when the text is one; `date`, a day when the text is `YYYY-MM-DD`.
+ * Anything else stays the text; empty is an empty cell.
+ */
+export function typedTextCell(text: string, kind: 'number' | 'date'): ListExportCell {
+  if (text === '') return null;
+  if (kind === 'date') return /^\d{4}-\d{2}-\d{2}$/.test(text) ? { kind: 'date', iso: text } : text;
+  const number = Number(text);
+  return text.trim() !== '' && Number.isFinite(number) ? { kind: 'number', value: number } : text;
+}
+
+/**
+ * The rows of an export whose CSV cells are text: as they are for the CSV, and for the workbook
+ * with the columns of `kinds` (0-based) typed by `typedTextCell`.
+ */
+export function typedTextRows(
+  format: ExportFileFormat,
+  rows: readonly (readonly string[])[],
+  kinds: Readonly<Record<number, 'number' | 'date'>>,
+): ListExportCell[][] {
+  if (format !== 'xlsx') return rows.map((row) => [...row]);
+  return rows.map((row) => row.map((text, index) => (kinds[index] ? typedTextCell(text, kinds[index]) : text)));
+}

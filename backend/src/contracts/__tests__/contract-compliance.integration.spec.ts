@@ -10,7 +10,8 @@ import { CurrencyRateSet } from '../../currency/currency-rate-set.entity';
 import { Tenant } from '../../tenants/tenant.entity';
 import { assert, captureAudit, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import type { ContractComplianceView } from '../contract-compliance';
-import { assertCsvGolden } from '../../common/csv/__tests__/export-golden';
+import { assertCsvGolden, xlsxCells, xlsxSheetName } from '../../common/csv/__tests__/export-golden';
+import { daySerial } from '../../common/xlsx/write';
 
 // The compliance register of the contracts (`contract-compliance.ts`), against a real database,
 // on a tenant created here (the catalogs' defaults: high = the two most severe levels; cloud =
@@ -277,6 +278,21 @@ async function testRegister() {
     assert.ok(lines[2].includes(';Localisation des données;Oui;"CRM cce : hébergement SaaS; HR cce contient des données personnelles";À vérifier;'), lines[2]);
     assert.ok(lines.some((line) => line.startsWith('B via asset cce;') && line.includes('Mail cce : criticité cyber High (actif mail-srv-cce)')));
     assert.ok(lines.some((line) => line.startsWith('C bare cce;') && line.includes(';Plan de sortie;Non;;;;;')), 'not expected, nothing recorded');
+
+    // The workbook: the day of the last update is a date, the rest the CSV's text.
+    const book = await svc.exportComplianceRegister({ sort: 'name:ASC' }, 'fr', { ...opts, format: 'xlsx' });
+    assert.equal(book.filename, 'contract-compliance-register.xlsx');
+    assert.equal(book.rows, 15);
+    assert.equal(xlsxSheetName(book.content), 'Registre de conformité');
+    const x = xlsxCells(book.content);
+    assert.equal(x.I2[1], String(daySerial(today)));
+    assert.notEqual(x.I2[0], 'text');
+    assert.deepEqual(x.H2, ['text', 'DPA; v2']);
+
+    // The list's sort: the contracts in its order, each one's requirements together.
+    const byNameDesc = await svc.exportComplianceRegister({ sort: 'name:DESC' }, 'en', opts);
+    const firsts = byNameDesc.content.replace(/^﻿/, '').trim().split('\n').slice(1).map((line) => line.split(',')[0]);
+    assert.deepEqual([firsts[0], firsts[5], firsts[10]], ['C bare cce', 'B via asset cce', 'A full cce']);
 
     // The list's request narrows it; English uses the comma.
     const en = await svc.exportComplianceRegister({ q: 'bare' }, 'en', opts);

@@ -4,7 +4,7 @@ import { defer, lastValueFrom } from 'rxjs';
 import AdmZip = require('adm-zip');
 import { ExportEventsInterceptor } from '../../../audit/export-events.interceptor';
 import { XLSX_CONTENT_TYPE } from '../../xlsx';
-import { amountCell, dayCell, endOfValidityDay, listCsvText, ListExportCell, numberCell, writeListExport } from '../list-export';
+import { amountCell, dayCell, endOfValidityDay, listCsvText, ListExportCell, numberCell, typedTextRows, writeListExport } from '../list-export';
 import { AccountsController } from '../../../accounts/accounts.controller';
 import { ChartOfAccountsController } from '../../../accounts/chart-of-accounts.controller';
 import { AnalyticsCategoriesController } from '../../../analytics/analytics-categories.controller';
@@ -20,9 +20,11 @@ import { TechnologiesController } from '../../../technologies/technologies.contr
 import { UsersController } from '../../../users/users.controller';
 import { WorkingDayProfilesController } from '../../../working-day-profiles/working-day-profiles.controller';
 import { AdminCoaTemplatesController } from '../../../admin/coa-templates/admin-coa-templates.controller';
+import { VulnerabilitiesController } from '../../../vulnerabilities/vulnerabilities.controller';
+import { AdministrationViewController } from '../../../technologies/reports/administration-view.controller';
 
 // The list exports written with typed cells (`writeListExport`: the master-data files, data access,
-// the technology link files), without a database. The cells: the CSV text of each kind is what the
+// the technology link files, and the exports with a plain button), without a database. The cells: the CSV text of each kind is what the
 // exports wrote before (the goldens of list-export-golden.integration.spec.ts pin the files), the
 // workbook holds numbers, exact amounts and days. The routes, run through the export interceptor as
 // Nest runs them: `format` (csv by default, xlsx; anything else, or xlsx for a template, 400 before
@@ -69,6 +71,14 @@ function testCells() {
   assert.match(sheet, /<t xml:space="preserve">&apos;=cmd<\/t>/, 'the formula guard');
   assert.match(sheet, /<c r="A4" t="inlineStr"[^>]*><is><t[^>]*>000123<\/t>/, 'a code keeps its leading zeros');
   assert.match(sheet, /<c r="D4" t="inlineStr"[^>]*><is><t[^>]*>20.50<\/t>/, 'a stored text stays text');
+  // Text the CSV writes the same in every language (scores, ISO days): untouched for the CSV, typed for the workbook.
+  const texts = [['9.8', '2026-03-01', 'n/a', ''], ['0.00043', 'soon', '12', '']];
+  const kinds = { 0: 'number', 1: 'date', 2: 'number' } as const;
+  assert.deepEqual(typedTextRows('csv', texts, kinds), texts);
+  assert.deepEqual(typedTextRows('xlsx', texts, kinds), [
+    [{ kind: 'number', value: 9.8 }, { kind: 'date', iso: '2026-03-01' }, 'n/a', ''],
+    [{ kind: 'number', value: 0.00043 }, 'soon', { kind: 'number', value: 12 }, ''],
+  ]);
   console.log('  typed cells: CSV text as before, workbook numbers, amounts, days, codes, guard: OK');
 }
 
@@ -117,6 +127,18 @@ const probes: Probe[] = [
     call: (c, f, s, req, res) => c.exportAssetLinks(s, 'fr', res, req.ctx, f) },
   { name: 'application links', path: '/technologies/application-links/export', type: TechnologiesController, handler: 'exportApplicationLinks', service: 'linkFiles', methods: ['exportApplicationLinks'],
     call: (c, f, s, req, res) => c.exportApplicationLinks(s, 'fr', res, req.ctx, f) },
+  // The exports with a plain button (run C). The audit log streams its CSV: audit-log-export-http.integration.spec.ts.
+  { name: 'contract compliance register', path: '/contracts/compliance-register/export', type: ContractsController, handler: 'exportComplianceRegister',
+    service: 'svc', methods: ['exportComplianceRegister'], template: false,
+    call: (c, f, s, req, res) => c.exportComplianceRegister(q(f, s), res, req) },
+  { name: 'vulnerabilities', path: '/vulnerabilities/export', type: VulnerabilitiesController, handler: 'export', service: 'svc', methods: ['exportCsv'], template: false,
+    call: (c, f, s, req, res) => c.export(q(f, s), res, req.ctx) },
+  { name: 'administration view', path: '/technologies/reports/administration/export', type: AdministrationViewController, handler: 'export',
+    service: 'svc', methods: ['csv'], template: false,
+    call: (c, f, s, req, res) => c.export({ ...q(f, s), list: 'domains' }, res, req.ctx) },
+  { name: 'applications of a technology', path: '/technologies/t1/applications/export', type: TechnologiesController, handler: 'exportApplications',
+    service: 'links', methods: ['applicationsCsv'], template: false,
+    call: (c, f, _s, req, res) => c.exportApplications('t1', 'fr', f, res, req.ctx) },
 ];
 
 const manager = (queries: Array<{ sql: string; params?: unknown[] }>) => ({

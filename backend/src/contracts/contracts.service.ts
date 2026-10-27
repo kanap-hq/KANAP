@@ -69,7 +69,7 @@ import {
 import {
   COMPLIANCE_SORT_EXPRESSION,
   complianceParams,
-  complianceRegisterCsv,
+  complianceRegisterFile,
   complianceSummarySql,
   contractComplianceView,
   loadContractComplianceInputs,
@@ -1754,26 +1754,24 @@ export class ContractsService {
   }
 
   /**
-   * The compliance register (CSV) of the contracts a list request selects (search, filters, status
-   * scope), by name: one line per contract and requirement (`complianceRegisterCsv`).
+   * The compliance register (CSV or workbook) of the contracts a list request selects (search,
+   * filters, status scope), in the list's order (its sort): one line per contract and requirement
+   * (`complianceRegisterFile`).
    */
-  async exportComplianceRegister(query: any, language: CsvLanguage, opts?: ListReadOptions) {
+  async exportComplianceRegister<F extends ExportFileFormat = 'csv'>(query: any, language: CsvLanguage, opts?: ListReadOptions & { format?: F }): Promise<ListExportFile<F>> {
     const mg = opts?.manager ?? this.repo.manager;
     // The list's budget filters apply too, for a reader of the budget (as on the list).
     const budget = await this.listBudgetInputs(mg, query, opts);
     const compliance = await loadContractComplianceInputs(mg);
     const windowDays = await readDecisionWindowDays(mg);
-    const { qb } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
-    const contracts: Array<{ id: string; name: string; supplier_name: string | null; company_name: string | null }> = await qb
-      .select('c.id', 'id')
+    const { qb, parsed, filterTargets } = this.listQuery(mg, query, { windowDays, exportAll: true, budget, compliance });
+    qb.select('c.id', 'id')
       .addSelect('c.name', 'name')
       .addSelect('sup.name', 'supplier_name')
-      .addSelect('comp.name', 'company_name')
-      .orderBy('c.name', 'ASC')
-      .addOrderBy('c.id', 'ASC')
-      .getRawMany();
-    const content = await complianceRegisterCsv(mg, compliance, contracts, language);
-    return { filename: 'contract-compliance-register.csv', content };
+      .addSelect('comp.name', 'company_name');
+    await this.applyListSort(qb, parsed.sort, filterTargets);
+    const contracts: Array<{ id: string; name: string; supplier_name: string | null; company_name: string | null }> = await qb.getRawMany();
+    return complianceRegisterFile(mg, compliance, contracts, language, opts?.format ?? ('csv' as F));
   }
 
   /** `technologies`: the caller reads the infrastructure (the technologies are counted for it only). */
