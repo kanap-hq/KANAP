@@ -130,6 +130,53 @@ describe('ApplicationTechnologiesSection', () => {
     expect(screen.getByTestId('location').textContent).toBe('/it/assets/srv-1/operations');
   });
 
+  it('wraps several long server names in Via instead of cutting them', async () => {
+    const names = [
+      'paris-prod-application-server-01',
+      'lyon-prod-application-server-02',
+      'nantes-prod-application-server-03',
+    ];
+    renderSection(relations({
+      technologies: [{
+        id: 'tec-9', reference: 'TEC-9', name: 'PostgreSQL', family: 'database', declared: false, hosted: true,
+        versions: ['16'], version_unknown: false, standard_support_end: null,
+        via: names.map((name, index) => ({
+          asset_id: `srv-long-${index}`,
+          asset_name: name,
+          host_name: index === 2 ? 'esx-long-03' : null,
+        })),
+      }],
+    }));
+    const table = await screen.findByRole('table', { name: 'workspace.application.relations.sections.technologies' });
+    const row = within(table).getByText('PostgreSQL').closest('tr') as HTMLElement;
+    const labels = [
+      names[0],
+      names[1],
+      `workspace.application.relations.viaHost(server=${names[2]},host=esx-long-03)`,
+    ];
+    for (const label of labels) {
+      const link = within(row).getByRole('link', { name: label });
+      expect(link).toHaveAttribute('href', `/it/assets/srv-long-${labels.indexOf(label)}/operations`);
+      expect(link.className).not.toMatch(/ellipsis/i);
+      const style = getComputedStyle(link);
+      expect(style.textOverflow).not.toBe('ellipsis');
+      expect(style.whiteSpace).not.toBe('nowrap');
+    }
+    const cell = within(row).getByRole('link', { name: names[0] }).closest('td') as HTMLElement;
+    expect(cell.classList.contains('w')).toBe(true);
+    const cellStyle = getComputedStyle(cell);
+    expect(cellStyle.textOverflow).not.toBe('ellipsis');
+    expect(cellStyle.whiteSpace).toBe('normal');
+    for (const node of cell.querySelectorAll<HTMLElement>('*')) {
+      const style = getComputedStyle(node);
+      expect(style.textOverflow).not.toBe('ellipsis');
+      expect(style.whiteSpace).not.toBe('nowrap');
+    }
+    const viaIndex = within(table).getAllByRole('columnheader')
+      .findIndex((header) => header.textContent === 'workspace.application.relations.columns.via');
+    expect((table.querySelectorAll('col')[viaIndex] as HTMLElement).style.width).toBe('140px');
+  });
+
   it('leaves the free width to the technology name', async () => {
     renderSection(relations());
     const table = await screen.findByRole('table', { name: 'workspace.application.relations.sections.technologies' });
