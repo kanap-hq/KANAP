@@ -294,6 +294,9 @@ async function testGuardJournalsARefusedKeyWithoutItsValue() {
     { tenant: 'tenant-1', tool: 'search_all', reason: 'key_revoked', key: 'key-1', user: 'user-1' },
   );
   assert.doesNotMatch(JSON.stringify(journal), /kanap_mcp_/);
+  // Like every other refusal, the line carries a duration (R3 of the 27/10 check: it was empty).
+  const durationMs = journal[0].record.durationMs;
+  assert.ok(typeof durationMs === 'number' && durationMs >= 0, `durationMs ${String(durationMs)}`);
 
   await assert.rejects(() => guard.canActivate(http(request())), (error: unknown) => error instanceof UnauthorizedException);
   assert.equal(journal.length, 1);

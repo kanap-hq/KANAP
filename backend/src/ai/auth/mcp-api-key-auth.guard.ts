@@ -34,11 +34,12 @@ export class McpApiKeyAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const http = context.switchToHttp();
     const req: any = http.getRequest();
+    const startedAt = Date.now();
     try {
       return await this.authenticate(req);
     } catch (error) {
       if (error instanceof McpKeyRefusedException) {
-        await this.recordRefusedKey(req, error);
+        await this.recordRefusedKey(req, error, Date.now() - startedAt);
       }
       const res: any = http.getResponse?.();
       if (error instanceof UnauthorizedException && typeof res?.setHeader === 'function' && !res.headersSent) {
@@ -108,9 +109,10 @@ export class McpApiKeyAuthGuard implements CanActivate {
   /**
    * A known key refused (revoked, expired, owner no longer allowed) leaves a line in the MCP
    * journal: the tool named by a tools/call, or the JSON-RPC method. The key's value never does.
-   * The request transaction rolled back, so the line has a transaction of its own.
+   * The request transaction rolled back, so the line has a transaction of its own. The duration is
+   * the time the key check took, as for the other refusals.
    */
-  private async recordRefusedKey(req: any, error: McpKeyRefusedException): Promise<void> {
+  private async recordRefusedKey(req: any, error: McpKeyRefusedException, durationMs: number): Promise<void> {
     if (!this.mcpAudit || req?.method !== 'POST') return;
     const messages = Array.isArray(req?.body) ? req.body : [req?.body];
     const first = messages.find((entry: any) => entry && typeof entry === 'object' && typeof entry.method === 'string');
@@ -127,6 +129,7 @@ export class McpApiKeyAuthGuard implements CanActivate {
         arguments: isCall ? first.params.arguments : undefined,
         reason,
         message: error.message,
+        durationMs,
         userId,
         apiKeyId: keyId,
         requestId: req?.id ?? null,

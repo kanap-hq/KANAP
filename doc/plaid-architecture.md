@@ -438,13 +438,16 @@ Current MCP behavior is deliberately read-only:
   transaction: `AiMcpAuditService.recordCall` writes it afterwards, status
   `refused` or `failed`, cause in `metadata_json.refusal_reason`. So does the
   guard for a known key that is revoked, expired or whose owner may no longer
-  connect (at most one line per key every 10 seconds). No key or token value
-  enters these rows.
+  connect (at most one line per key every 10 seconds), with the time the key
+  check took as its duration. No key or token value enters these rows.
 - `GET /ai/mcp/audit` (keys with `mcp:audit:read`, their own calls) and
   `GET /ai/admin/mcp-audit` (administrators, with `facets` for the filters)
   return the journal, newest first: filters `user_id`, `api_key_id`,
   `capability_name`, `result` (`completed`, `refused`, `failed`), `from`, `to`,
-  paged by `limit` (1 to 200) and `offset`, with `has_more`
+  paged by `limit` (1 to 200) and `offset`, with `has_more`. Each item carries
+  the message the client read (`error_message`, keys and tokens hidden) and,
+  for a connection, the host of its redirect URI (`oauth_redirect_host`), as do
+  the keys of `facets`
 - revoking a key or a connection already revoked changes nothing
 
 Read-write MCP is roadmap. It needs an explicit approval protocol rather than

@@ -217,6 +217,13 @@ async function testRefusalsAndRevokedKeyAreJournaled(a: Seed) {
   assert.equal(write.key_kind, 'api_key');
   assert.equal(write.effect, 'write');
   assert.ok(write.duration_ms != null && write.duration_ms >= 0);
+  assert.match(String(write.error_message), /^This server is read only/);
+  assert.equal(write.oauth_redirect_host, null);
+  // The line of the revoked key has a duration like the other refusals, and the full cause.
+  const revokedLine = page.items.find((item) => item.reason === 'key_revoked')!;
+  assert.ok(revokedLine.duration_ms != null && revokedLine.duration_ms >= 0, JSON.stringify(revokedLine));
+  assert.equal(revokedLine.error_message, 'MCP API key has been revoked.');
+  assert.deepEqual(revokedLine.input_summary, { arguments: { query: 'after revocation' } });
 
   // No key value anywhere in the journal rows.
   const dump = await executor.run(a.tenantId, (manager) => manager.query(
@@ -259,7 +266,10 @@ async function testListPagesAndFilters(a: Seed) {
 
   const facets = await asAdmin(a, (ctx) => audit.listFacets(ctx));
   assert.deepEqual(facets.people, [{ id: a.userId, name: 'Ana Journal a' }]);
-  assert.deepEqual(facets.keys.map((key) => [key.id, key.label, key.revoked]), [[a.keyId, `Journal key ${TAG}`, true]]);
+  assert.deepEqual(
+    facets.keys.map((key) => [key.id, key.label, key.revoked, key.oauth_redirect_host]),
+    [[a.keyId, `Journal key ${TAG}`, true, null]],
+  );
 }
 
 async function testTenantsReadOnlyTheirOwnLines(a: Seed, b: Seed) {

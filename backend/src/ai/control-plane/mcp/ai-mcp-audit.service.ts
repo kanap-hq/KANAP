@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { AiExecutionContextWithManager } from '../../ai.types';
+import { redirectHost } from '../../oauth/mcp-oauth.util';
 import { redactSensitiveValue } from '../evidence/ai-evidence.service';
 
 /**
@@ -83,11 +84,15 @@ export type AiMcpAuditItem = {
   key_label: string | null;
   key_kind: string | null;
   oauth_client_name: string | null;
+  /** The host of a connection's redirect URI (`claude.ai`), which tells two clients of the same name apart. */
+  oauth_redirect_host: string | null;
   capability_name: string;
   capability_version: string;
   status: string;
   result: McpAuditResult;
   reason: string | null;
+  /** What the client read when the call was refused or failed, keys and tokens hidden. */
+  error_message: string | null;
   effect: string;
   duration_ms: number | null;
   run_created_at: string;
@@ -105,6 +110,7 @@ export type AiMcpAuditFacets = {
     label: string;
     credential_kind: string;
     oauth_client_name: string | null;
+    oauth_redirect_host: string | null;
     user_id: string;
     revoked: boolean;
   }>;
@@ -182,6 +188,10 @@ export function mcpArgumentPreview(value: unknown): unknown {
     return preview;
   }
   return { truncated: true, preview: `${json.slice(0, MAX_ARGUMENTS_JSON_CHARS - 3)}...` };
+}
+
+function hostOf(uri: unknown): string | null {
+  return typeof uri === 'string' && uri ? redirectHost(uri) || null : null;
 }
 
 function resultOf(status: string): McpAuditResult {
@@ -286,10 +296,12 @@ export class AiMcpAuditService {
           api_key.label AS key_label,
           api_key.credential_kind AS key_kind,
           api_key.oauth_client_name,
+          api_key.oauth_redirect_uri,
           tool.capability_name,
           tool.capability_version,
           tool.status,
           tool.metadata_json->>'refusal_reason' AS reason,
+          tool.error_message,
           tool.effect,
           tool.duration_ms,
           run.created_at AS run_created_at,
@@ -335,11 +347,15 @@ export class AiMcpAuditService {
         key_label: row.key_label ? String(row.key_label) : null,
         key_kind: row.key_kind ? String(row.key_kind) : null,
         oauth_client_name: row.oauth_client_name ? String(row.oauth_client_name) : null,
+        oauth_redirect_host: hostOf(row.oauth_redirect_uri),
         capability_name: String(row.capability_name),
         capability_version: String(row.capability_version ?? ''),
         status: String(row.status),
         result: resultOf(String(row.status)),
         reason: row.reason ? String(row.reason) : null,
+        error_message: row.error_message
+          ? truncate(hideCredentials(String(row.error_message)), MAX_MESSAGE_CHARS)
+          : null,
         effect: String(row.effect),
         duration_ms: row.duration_ms == null ? null : Number(row.duration_ms),
         run_created_at: new Date(row.run_created_at).toISOString(),
@@ -364,6 +380,7 @@ export class AiMcpAuditService {
           api_key.label,
           api_key.credential_kind,
           api_key.oauth_client_name,
+          api_key.oauth_redirect_uri,
           api_key.revoked_at,
           api_key.user_id::text AS user_id,
           COALESCE(NULLIF(btrim(concat_ws(' ', person.first_name, person.last_name)), ''), person.email) AS user_name
@@ -389,6 +406,7 @@ export class AiMcpAuditService {
         label: String(row.label),
         credential_kind: String(row.credential_kind ?? 'api_key'),
         oauth_client_name: row.oauth_client_name ? String(row.oauth_client_name) : null,
+        oauth_redirect_host: hostOf(row.oauth_redirect_uri),
         user_id: String(row.user_id),
         revoked: !!row.revoked_at,
       })),
