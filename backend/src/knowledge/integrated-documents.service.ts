@@ -2692,6 +2692,50 @@ export class IntegratedDocumentsService {
     return true;
   }
 
+  /**
+   * The specification of an interface copied into another one (a duplicate, or the
+   * interface migrated onto a new application version): the content of the source's
+   * `specification` document, its inline images cloned. A source with no document
+   * has nothing to copy; the new interface then gets its own on first opening.
+   * Returns whether it copied.
+   */
+  async copyInterfaceSpecification(
+    sourceInterfaceId: string,
+    target: SourceDescriptor,
+    userId: string | null | undefined,
+    opts?: { manager?: EntityManager },
+  ): Promise<boolean> {
+    const manager = this.getManager(opts);
+    const sourceBinding = await this.findBinding('interfaces', sourceInterfaceId, 'specification', manager);
+    if (!sourceBinding) return false;
+
+    const sourceDocument = await this.getDocumentOrThrow(sourceBinding.document_id, manager);
+    const content = sourceDocument.content_markdown || '';
+    const referencedAttachmentIds = this.extractKnowledgeInlineAttachmentIds(content);
+    const ownerUserId = await this.loadPreferredOwnerUserId('interfaces', target.id, manager);
+
+    await this.ensureBoundDocument('interfaces', target, 'specification', content, userId, manager, {
+      ownerUserId,
+      useTemplateWhenBlank: false,
+      storedContent: true,
+      initializer: async (targetDocumentId, initializerManager) => {
+        if (referencedAttachmentIds.length === 0) return { content_markdown: content };
+        const mappings = await this.knowledge.cloneInlineAttachments(
+          sourceBinding.document_id,
+          targetDocumentId,
+          referencedAttachmentIds,
+          userId || null,
+          { manager: initializerManager },
+        );
+        if (mappings.length !== referencedAttachmentIds.length) {
+          throw new NotFoundException('Failed to clone one or more managed inline attachments');
+        }
+        return { content_markdown: this.rewriteKnowledgeInlineAttachmentIds(content, mappings) };
+      },
+    });
+    return true;
+  }
+
   private async backfillSourceSlot(
     sourceEntityType: SourceScopedEntityType,
     source: SourceDescriptor,

@@ -240,11 +240,12 @@ Use esto cuando desee una copia independiente de una interfaz, típicamente para
 | Identificadores clave | Sí |
 | Enlaces a URLs externas | Sí |
 | Residencia de datos | Sí |
+| Especificación | Sí, con sus imágenes |
 | Enlaces | Opcional |
 | Grupos y reglas de mapeo | No |
 | Adjuntos | No |
 
-**Nomenclatura**: La copia recibe " - copia" añadido tanto al nombre como al ID de interfaz.
+**Nomenclatura**: La copia recibe " - copia" añadido tanto al nombre como al ID de interfaz. Un ID de interfaz vacío permanece vacío.
 
 ### Migración de versión (desde el versionado de aplicaciones)
 
