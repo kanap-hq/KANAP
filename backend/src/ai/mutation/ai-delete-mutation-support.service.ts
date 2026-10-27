@@ -106,7 +106,7 @@ export class AiDeleteMutationSupportService {
             title: found.label,
             updatedAt: isoTimestamp(found.row.updated_at),
           },
-          impact: { counts: await this.locationImpact(context.manager, context.tenantId, found.id) },
+          impact: await this.locationImpact(context, found.id),
         };
       }
     }
@@ -199,9 +199,13 @@ export class AiDeleteMutationSupportService {
     return hidden > 0 ? { counts, hidden } : { counts };
   }
 
-  /** One statement for what a location's delete takes, all under its tenant. */
-  private async locationImpact(manager: EntityManager, tenantId: string, locationId: string): Promise<Record<string, number>> {
-    const [row] = await manager.query(
+  /**
+   * One statement for what a location's delete takes, all under its tenant. Assets and documents
+   * are named only for a reader of their module, as the location's Relations tab and the
+   * documents do; for anyone else they are counted among the other links.
+   */
+  private async locationImpact(context: AiExecutionContextWithManager, locationId: string): Promise<AiDeleteImpact> {
+    const [row] = await context.manager.query(
       `SELECT
          (SELECT count(*)::int FROM assets WHERE tenant_id = $1 AND location_id = $2) AS assets,
          (SELECT count(*)::int FROM location_contacts WHERE tenant_id = $1 AND location_id = $2)
@@ -209,15 +213,23 @@ export class AiDeleteMutationSupportService {
          (SELECT count(*)::int FROM location_links WHERE tenant_id = $1 AND location_id = $2) AS links,
          (SELECT count(*)::int FROM location_sub_items WHERE tenant_id = $1 AND location_id = $2) AS sub_items,
          (SELECT count(*)::int FROM document_locations WHERE tenant_id = $1 AND location_id = $2) AS documents`,
-      [tenantId, locationId],
+      [context.tenantId, locationId],
     );
-    return {
+    const counts: Record<string, number> = {
       assets: Number(row?.assets ?? 0),
       contacts: Number(row?.contacts ?? 0),
       links: Number(row?.links ?? 0),
       sub_items: Number(row?.sub_items ?? 0),
       documents: Number(row?.documents ?? 0),
     };
+    const readable = await this.policy.readableResources(context, ['infrastructure', 'knowledge'], context.manager);
+    let hidden = 0;
+    for (const [family, resource] of [['assets', 'infrastructure'], ['documents', 'knowledge']] as const) {
+      if (readable.has(resource)) continue;
+      hidden += counts[family];
+      delete counts[family];
+    }
+    return hidden > 0 ? { counts, hidden } : { counts };
   }
 
   /**

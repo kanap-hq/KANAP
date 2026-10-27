@@ -83,7 +83,7 @@ async function seed(runner: QueryRunner): Promise<Seed> {
       ai_chat: 'member', contacts: 'admin', suppliers: 'reader', portfolio_projects: 'reader',
     })),
     member: await user('Member', await role('Member', {
-      ai_chat: 'member', tasks: 'member', contacts: 'member', locations: 'member',
+      ai_chat: 'member', tasks: 'member', contacts: 'member', locations: 'member', infrastructure: 'reader',
     })),
     reader: await user('Reader', await role('Reader', {
       ai_chat: 'member', tasks: 'reader', contacts: 'reader', locations: 'reader',
@@ -312,10 +312,12 @@ async function testLocationDelete(h: Harness, runner: QueryRunner, s: Seed) {
     'Contacts: 2',
     'Links: 1',
     'Sub-items: 1',
-    'Linked documents: 1',
+    // The member does not read the documents: their link is counted, not named.
+    'Other links: 1',
   ]) {
     assert.ok(impact.includes(line), `${line} in:\n${impact}`);
   }
+  assert.ok(!impact.includes('documents'), impact);
 
   const executed = await h.previews.executePreview(context, preview.preview_id);
   assert.equal(executed.status, 'executed', executed.error_message ?? '');
@@ -351,6 +353,22 @@ async function testDriftRefused(h: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(executed.error_message, 'Location changed after the preview was created.');
   assert.equal(await count(runner, 'locations', 'tenant_id = $1 AND id = $2', [s.tenantId, s.secondLocation]), 1);
   console.log('  record changed between preview and run refused: OK');
+}
+
+async function testOnePendingDelete(h: Harness, runner: QueryRunner, s: Seed) {
+  const context = ctx(runner, s, 'taskAdmin');
+  const first = await h.previews.createPreview(context, 'delete_record', { entity_type: 'tasks', ref: 'T-3' });
+  assert.equal(first.status, 'pending');
+  // While one delete waits, another record's delete is refused: no batch approval deletes two.
+  assert.match(
+    await refusal(() => h.previews.createPreview(context, 'delete_record', { entity_type: 'tasks', ref: 'T-4' })),
+    /one at a time/,
+  );
+  await h.previews.rejectPreview(context, first.preview_id);
+  const next = await h.previews.createPreview(context, 'delete_record', { entity_type: 'tasks', ref: 'T-4' });
+  assert.equal(next.status, 'pending');
+  await h.previews.rejectPreview(context, next.preview_id);
+  console.log('  one pending delete at a time, the next once the first is answered: OK');
 }
 
 async function testDeleteNeverInPlan(h: Harness, runner: QueryRunner, s: Seed) {
@@ -393,6 +411,7 @@ async function run() {
       await testLocationDelete(harness, runner, s);
       await testReaderRefused(harness, runner, s);
       await testDriftRefused(harness, runner, s);
+      await testOnePendingDelete(harness, runner, s);
       await testDeleteNeverInPlan(harness, runner, s);
       await testDeleteRecordIsChatOnly(harness, runner, s);
     } finally {

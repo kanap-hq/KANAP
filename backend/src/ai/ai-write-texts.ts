@@ -297,7 +297,7 @@ export const taskDetailText = {
  */
 export type AiDeleteImpact = {
   counts: Record<string, number>;
-  /** A contact's links in families the person does not read, counted without naming them. */
+  /** Links in families the person does not read (a contact's, a location's assets and documents), counted without naming them. */
   hidden?: number;
 };
 

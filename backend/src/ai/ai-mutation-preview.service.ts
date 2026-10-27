@@ -417,6 +417,32 @@ export class AiMutationPreviewService {
     });
   }
 
+  /**
+   * A delete is one record at a time: while the delete of one record waits for approval in the
+   * conversation, the delete of another is refused, so no batch approval deletes several records.
+   */
+  private async assertNoOtherPendingDelete(
+    context: AiExecutionContextWithManager,
+    toolName: string,
+    prepared: AiPreparedMutationPreview,
+  ): Promise<void> {
+    if (toolName !== 'delete_record') return;
+    const [row] = await context.manager.query(
+      `SELECT count(*)::int AS pending
+         FROM ai_mutation_previews
+        WHERE tenant_id = $1 AND user_id = $2 AND tool_name = 'delete_record' AND status = 'pending'
+          AND expires_at > now()
+          AND conversation_id IS NOT DISTINCT FROM $3::uuid
+          AND target_entity_id IS DISTINCT FROM $4::uuid`,
+      [context.tenantId, context.userId, context.conversationId ?? null, prepared.targetEntityId ?? null],
+    );
+    if (Number(row?.pending ?? 0) > 0) {
+      throw new ConflictException(
+        'Another delete is waiting for approval in this conversation. Records are deleted one at a time: approve or reject that delete first.',
+      );
+    }
+  }
+
   private async findEquivalentConversationPreview(
     context: AiExecutionContextWithManager,
     toolName: string,
@@ -569,6 +595,7 @@ export class AiMutationPreviewService {
     if (existing) {
       return this.toPreviewDto(existing, await this.languageOf(context));
     }
+    await this.assertNoOtherPendingDelete(context, operation.toolName, prepared);
 
     const repo = this.getRepo(context.manager);
     const now = new Date();
