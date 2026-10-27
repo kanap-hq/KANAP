@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { Button, Stack, Box, RadioGroup, FormControlLabel, Radio, Tooltip, Typography } from '@mui/material';
-import type { EnhancedColDef } from '../components/ServerDataGrid';
+import type { EnhancedColDef, ListRequest } from '../components/ServerDataGrid';
 import ServerDataGrid from '../components/ServerDataGrid';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import PageHeader from '../components/PageHeader';
@@ -156,6 +156,9 @@ export default function TasksPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedRows, setSelectedRows] = useState<TaskRow[]>([]);
   const [exportOpen, setExportOpen] = useState(false);
+  // The export holds the rows of the list: its filters, quick search, scope and sort (`rows=list`).
+  const listRequestRef = useRef<ListRequest | null>(null);
+  const [exportParams, setExportParams] = useState<Record<string, unknown>>({ rows: 'list' });
   const [importOpen, setImportOpen] = useState(false);
   const gridApiRef = useRef<any>(null);
 
@@ -629,6 +632,11 @@ export default function TasksPage() {
     const sp = buildWorkspaceSearch();
     navigate(`/portfolio/tasks/new/overview?${sp.toString()}`);
   };
+  const openExport = () => {
+    const { include: _include, ...params } = (listRequestRef.current?.params ?? {}) as Record<string, unknown>;
+    setExportParams({ ...params, rows: 'list' });
+    setExportOpen(true);
+  };
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
@@ -637,7 +645,7 @@ export default function TasksPage() {
         </Button>
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('tasks.actions.importCsv')}</Button>}
-      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('tasks.actions.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={openExport}>{t('tasks.actions.exportCsv')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton
           selectedRows={selectedRows}
@@ -674,6 +682,7 @@ export default function TasksPage() {
           enableRowSelection={canAdmin}
           onSelectionChanged={(rows) => setSelectedRows(rows)}
           onGridApiReady={(api) => { gridApiRef.current = api; }}
+          onListRequestChange={(request) => { listRequestRef.current = request; }}
           defaultFilterModel={defaultFilterModel}
           initialState={{
             filter: {
@@ -704,6 +713,7 @@ export default function TasksPage() {
         onClose={() => setExportOpen(false)}
         endpoint="/tasks"
         title={t('tasks.csv.exportTitle')}
+        params={exportParams}
         presets={[{ name: 'enrichment', label: t('tasks.csv.presetEnrichment') }]}
       />
       <CsvImportDialogV2
