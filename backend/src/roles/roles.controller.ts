@@ -73,13 +73,19 @@ export class RolesController {
   async getRoles(@Req() req: any) {
     const mg: EntityManager | undefined = req?.queryRunner?.manager;
     const items = await this.rolesService.list({ manager: mg });
-    const userRolesRepo = (mg ?? this.userRoleRepo.manager).getRepository(UserRole);
-    // Attach user counts
-    const withCounts = await Promise.all(items.map(async (r) => {
-      const count = await userRolesRepo.count({ where: { role_id: r.id } });
-      return { ...r, user_count: count } as any;
-    }));
-    return { items: withCounts };
+    // One grouped count on the request's single connection: pg refuses a query sent while another
+    // one runs (deprecated since pg 8, an error in pg 9).
+    const rows: Array<{ role_id: string; user_count: number | string }> = items.length
+      ? await (mg ?? this.userRoleRepo.manager).query(
+        `SELECT role_id, COUNT(*)::int AS user_count
+           FROM user_roles
+          WHERE tenant_id = app_current_tenant() AND role_id = ANY($1::uuid[])
+          GROUP BY role_id`,
+        [items.map((role) => role.id)],
+      )
+      : [];
+    const counts = new Map(rows.map((row) => [row.role_id, Number(row.user_count)]));
+    return { items: items.map((role) => ({ ...role, user_count: counts.get(role.id) ?? 0 })) };
   }
 
   @ReservedToUnscopedDataAccess()

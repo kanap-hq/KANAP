@@ -16,6 +16,8 @@ const APP_ID = (i: number) => `app-${i}`;
 
 function createCountingManager(appCount: number) {
   const reads: Record<string, number> = {};
+  // A second find while one is in flight is the node-postgres warning this page must not raise.
+  let busy = 0;
   const rowsFor: Record<string, any[]> = {
     ApplicationCompany: Array.from({ length: appCount }, (_, i) => ({
       application_id: APP_ID(i),
@@ -33,8 +35,15 @@ function createCountingManager(appCount: number) {
   const manager = {
     getRepository: (entity: { name: string }) => ({
       find: async () => {
-        reads[entity.name] = (reads[entity.name] || 0) + 1;
-        return rowsFor[entity.name] ?? [];
+        if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+        busy += 1;
+        try {
+          await new Promise((resolve) => setImmediate(resolve));
+          reads[entity.name] = (reads[entity.name] || 0) + 1;
+          return rowsFor[entity.name] ?? [];
+        } finally {
+          busy -= 1;
+        }
       },
     }),
   };

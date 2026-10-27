@@ -557,14 +557,13 @@ export class ContractsService {
     const companyIds = Array.from(new Set(items.map(i => i.company_id).filter(Boolean))) as string[];
     const centreIds = Array.from(new Set(items.map(i => i.cost_center_id).filter(Boolean))) as string[];
     const ownerIds = Array.from(new Set(items.map(i => i.owner_user_id).filter(Boolean))) as string[];
-    const [suppliers, companies, centres, owners] = await Promise.all([
-      supplierIds.length ? mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [supplierIds]) : [],
-      companyIds.length ? mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [companyIds]) : [],
-      centreIds.length ? mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [centreIds]) : [],
-      ownerIds.length
-        ? mg.query(`SELECT id, NULLIF(btrim(concat_ws(' ', first_name, last_name)), '') AS name FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [ownerIds])
-        : [],
-    ]);
+    // One after the other: the request's single connection runs its queries in turn anyway.
+    const suppliers = supplierIds.length ? await mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [supplierIds]) : [];
+    const companies = companyIds.length ? await mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [companyIds]) : [];
+    const centres = centreIds.length ? await mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [centreIds]) : [];
+    const owners = ownerIds.length
+      ? await mg.query(`SELECT id, NULLIF(btrim(concat_ws(' ', first_name, last_name)), '') AS name FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [ownerIds])
+      : [];
     const sById = new Map<string, any>(suppliers.map((r: any) => [r.id, r]));
     const cById = new Map<string, any>(companies.map((r: any) => [r.id, r]));
     const nById = new Map<string, any>(centres.map((r: any) => [r.id, r]));
@@ -1325,12 +1324,11 @@ export class ContractsService {
         const cIds = Array.from(new Set(items.map(i => i.company_id)));
         const nIds = Array.from(new Set(items.map(i => i.cost_center_id).filter(Boolean)));
         const uIds = Array.from(new Set(items.map(i => i.owner_user_id).filter(Boolean)));
-        const [sRows, cRows, nRows, uRows] = await Promise.all([
-          mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [sIds]),
-          mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [cIds]),
-          nIds.length ? mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [nIds]) : Promise.resolve([]),
-          uIds.length ? mg.query(`SELECT id, email FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [uIds]) : Promise.resolve([]),
-        ]);
+        // One after the other: the request's single connection runs its queries in turn anyway.
+        const sRows = await mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [sIds]);
+        const cRows = await mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [cIds]);
+        const nRows = nIds.length ? await mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [nIds]) : [];
+        const uRows = uIds.length ? await mg.query(`SELECT id, email FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [uIds]) : [];
         const sMap = new Map<string, any>(sRows.map((r: any) => [r.id, r]));
         const cMap = new Map<string, any>(cRows.map((r: any) => [r.id, r]));
         const nMap = new Map<string, any>(nRows.map((r: any) => [r.id, r]));
