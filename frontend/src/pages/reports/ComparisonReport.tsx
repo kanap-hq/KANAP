@@ -78,7 +78,6 @@ export default function ComparisonReport() {
     [metrics, metricLabels, measureText],
   );
   const chartRef = useRef<ChartCardHandle>(null);
-  const gridApiRef = useRef<any>(null);
 
   const chartOptions = useMemo(() => ({
     title: { text: measureText.chartTitle(t('reports.budgetTrendOpex.title')) },
@@ -136,7 +135,11 @@ export default function ComparisonReport() {
           </TextField>
         </>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.(measureText.csvParams(`comparison-${years[0]}-${years[years.length - 1]}-${metrics.map((m) => metricFileName(budgetColumns, m)).join('_')}`))}
+      tableExport={{
+        url: '/reports/budget/comparison/export',
+        params: { scope, measure, ...reportFilters.exportParams, startYear, endYear, metrics: metrics.join(',') },
+        fileBase: measureText.fileName(`comparison-${scope}-${startYear}-${endYear}`),
+      }}
       onExportChartPng={() => chartRef.current?.download(measureText.fileName(`comparison-${years[0]}-${years[years.length - 1]}-${metrics.map((m) => metricFileName(budgetColumns, m)).join('_')}`))}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
@@ -150,7 +153,6 @@ export default function ComparisonReport() {
             rowData={table.rows}
             columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}
-            onGridReady={(e) => { gridApiRef.current = e.api; }}
           />
           <ReportFteNotice scope={scope} request={request} result={report.data} columnLabel={(column) => `${metricLabels[column.metric]} ${column.year}`} />
         </Paper>

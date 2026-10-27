@@ -25,10 +25,12 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../hooks/useAnalyticsAxes')>();
   return { ...actual, useAnalyticsAxes: () => actual.buildAnalyticsAxes([], ((key: string) => key) as never) };
 });
-const chart = vi.hoisted(() => ({ options: null as any, columns: null as any[] | null }));
+const chart = vi.hoisted(() => ({ options: null as any, columns: null as any[] | null, tableExport: null as any }));
 vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../components/reports/ReportLayout')>()),
-  default: ({ title, subtitle, filters, actions, children }: { title: string; subtitle?: React.ReactNode; filters?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode }) => (
+  default: ({ title, subtitle, filters, actions, children, tableExport }: { title: string; subtitle?: React.ReactNode; filters?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; tableExport?: unknown }) => {
+    chart.tableExport = tableExport ?? null;
+    return (
     <div>
       <h1>{title}</h1>
       <p data-testid="subtitle">{subtitle}</p>
@@ -36,7 +38,8 @@ vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
       <div data-testid="actions">{actions}</div>
       {children}
     </div>
-  ),
+    );
+  },
 }));
 vi.mock('../../components/reports/ChartCard', () => ({
   default: React.forwardRef(({ options }: { options: { title?: { text?: string } } | null }, _ref) => {
@@ -120,6 +123,7 @@ beforeEach(() => {
   locale.value = 'en';
   chart.options = null;
   chart.columns = null;
+  chart.tableExport = null;
   setBudgetColumns();
   get.mockReset();
   get.mockImplementation(async () => ({ data: { items: [], total: 0 } }));
@@ -227,6 +231,26 @@ describe('Budget column comparison report', () => {
 });
 
 const chargebackCalls = (url: string) => get.mock.calls.filter(([called]) => called === url).map(([, config]) => config?.params ?? {});
+
+describe('Budget report table exports', () => {
+  it('send the screen state to the server export', async () => {
+    const comparison = renderReport(<ComparisonReport />);
+    await waitFor(() => expect(chart.tableExport?.url).toBe('/reports/budget/comparison/export'));
+    expect(chart.tableExport.params).toMatchObject({ scope: 'all', measure: 'amount', startYear: Y - 1, endYear: Y + 1, metrics: 'budget,landing' });
+    expect(chart.tableExport.params.costCenter).toBeUndefined();
+    comparison.unmount();
+
+    const compare = renderReport(<BudgetColumnsCompareReport />);
+    await waitFor(() => expect(chart.tableExport?.url).toBe('/reports/budget/columns-compare/export'));
+    expect(chart.tableExport.params).toMatchObject({ scope: 'all', measure: 'amount', selections: `${Y}:budget,${Y + 1}:budget`, yearGrouping: 'false' });
+    compare.unmount();
+
+    renderReport(<TopOpexReport />);
+    await waitFor(() => expect(chart.tableExport?.url).toBe('/reports/budget/top-lines/export'));
+    expect(chart.tableExport.params).toMatchObject({ scope: 'all', measure: 'amount', year: Y, metric: 'budget', top: 10, excludeIds: '' });
+    expect(chart.tableExport.params.excludeAccounts).toBeUndefined();
+  });
+});
 
 describe('Global chargeback report', () => {
   it('waits for the setting, then sends the default column and offers the shown ones', async () => {

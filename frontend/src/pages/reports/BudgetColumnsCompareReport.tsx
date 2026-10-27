@@ -91,7 +91,6 @@ export default function BudgetColumnsCompareReport() {
 
   const chartData = useMemo(() => (table.grouped ? [] : table.rows.map((r) => ({ selection: r.selection, total: r.total }))), [table]);
   const chartRef = useRef<ChartCardHandle>(null);
-  const gridApiRef = useRef<any>(null);
 
   // Grouped by year, the chart reads the table's rows: one per year, one field per column in use.
   const groupedChartData = useMemo(() => (table.grouped ? table.rows : []), [table]);
@@ -191,7 +190,17 @@ export default function BudgetColumnsCompareReport() {
           </Box>
         </>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.(measureText.csvParams(`budget-columns-compare-${itemType}`))}
+      tableExport={{
+        url: '/reports/budget/columns-compare/export',
+        params: {
+          scope: itemType,
+          measure,
+          ...reportFilters.exportParams,
+          selections: sortedSelections.map((sel) => `${sel.year}:${sel.metric}`).join(','),
+          yearGrouping: yearGrouping ? 'true' : 'false',
+        },
+        fileBase: measureText.fileName(`budget-columns-compare-${itemType}`),
+      }}
       onExportChartPng={() => chartRef.current?.download(measureText.fileName(`budget-columns-compare-${itemType}`))}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
@@ -211,7 +220,6 @@ export default function BudgetColumnsCompareReport() {
             rowData={table.rows}
             columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}
-            onGridReady={(e) => { gridApiRef.current = e.api; }}
           />
           <ReportFteNotice scope={itemType} request={request} result={report.data} columnLabel={(column) => `${metricLabels[column.metric]} ${column.year}`} />
         </Paper>

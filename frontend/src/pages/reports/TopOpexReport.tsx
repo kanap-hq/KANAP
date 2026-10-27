@@ -94,7 +94,6 @@ export default function TopOpexReport() {
     return { field: column.key, headerName: column.header, width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) };
   }), [table, scope, formatNumber]);
 
-  const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
 
   const chartData = useMemo(() => processed.map((r) => ({ name: r.name, value: r.value })), [processed]);
@@ -274,7 +273,21 @@ export default function TopOpexReport() {
           />
         </Box>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.(measureText.csvParams(`top${processed.length}-${scope}-${year}-${metricFileName(budgetColumns, metric)}`))}
+      tableExport={{
+        url: '/reports/budget/top-lines/export',
+        params: {
+          scope,
+          measure,
+          ...reportFilters.exportParams,
+          year,
+          metric,
+          top: topCount,
+          excludeIds: excludedIds.join(','),
+          // Account labels may hold commas: a JSON list.
+          excludeAccounts: excludedAccounts.length ? JSON.stringify(excludedAccounts) : undefined,
+        },
+        fileBase: measureText.fileName(`top${processed.length}-${scope}-${year}-${metric}`),
+      }}
       onExportChartPng={() => chartRef.current?.download(measureText.fileName(`top${processed.length}-${scope}-${year}-${metricFileName(budgetColumns, metric)}-${chartType}`))}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
@@ -287,7 +300,6 @@ export default function TopOpexReport() {
             rowData={table.rows}
             columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}
-            onGridReady={(e) => { gridApiRef.current = e.api; }}
             domLayout="autoHeight"
           />
           <ReportFteNotice scope={scope} request={request} result={report.data} columnLabel={(column) => `${budgetColumns.label(column.metric)} ${column.year}`} />
