@@ -7,8 +7,16 @@ import OptionWithHint from './OptionWithHint';
 import api from '../../api';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
+import { roleDescription, roleLabel } from '../../utils/roleLabel';
 
-type Role = { id: string; role_name: string; role_description: string };
+// `/roles` returns the lock flags with the row. They decide whether the stored English name is translated.
+type Role = {
+  id: string;
+  role_name: string;
+  role_description: string | null;
+  is_system?: boolean;
+  is_built_in?: boolean;
+};
 
 export default function MultiRoleSelect({
   label: labelProp,
@@ -31,7 +39,7 @@ export default function MultiRoleSelect({
   hideLabel?: boolean;
   textFieldSx?: SxProps<Theme>;
 }) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const label = labelProp ?? t('selects.roles');
   const naked = hideLabel || label === '';
   // A hidden label still names the field for assistive technology; the placeholder must not.
@@ -44,10 +52,11 @@ export default function MultiRoleSelect({
     },
   });
 
+  const language = i18n.resolvedLanguage || i18n.language;
   const options: Role[] = React.useMemo(() => {
     const list = data ? [...data] : [];
-    return list.sort((a, b) => a.role_name.localeCompare(b.role_name, undefined, { sensitivity: 'base' }));
-  }, [data]);
+    return list.sort((a, b) => roleLabel(a, t).localeCompare(roleLabel(b, t), language, { sensitivity: 'base' }));
+  }, [data, t, language]);
 
   const selectedRoles = React.useMemo(
     () => options.filter((o) => value.includes(o.id)),
@@ -62,7 +71,7 @@ export default function MultiRoleSelect({
     <Autocomplete
       multiple
       options={options}
-      getOptionLabel={(o: Role) => o.role_name}
+      getOptionLabel={(o: Role) => roleLabel(o, t)}
       value={selectedRoles}
       onChange={handleRoleChange}
       disabled={disabled}
@@ -95,7 +104,7 @@ export default function MultiRoleSelect({
           return (
             <Chip
               key={key}
-              label={option.role_name}
+              label={roleLabel(option, t)}
               {...chipProps}
             />
           );
@@ -105,8 +114,8 @@ export default function MultiRoleSelect({
         <OptionWithHint
           key={option.id}
           optionProps={props}
-          label={option.role_name}
-          hint={option.role_description}
+          label={roleLabel(option, t)}
+          hint={roleDescription(option, t)}
         />
       )}
     />
