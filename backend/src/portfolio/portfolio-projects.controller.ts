@@ -1206,6 +1206,7 @@ export class PortfolioProjectsController {
       user_id?: string;
       hours: number;
       notes?: string;
+      logged_at: string;
     },
     @Tenant() ctx: TenantRequest,
   ) {
@@ -1226,6 +1227,7 @@ export class PortfolioProjectsController {
       user_id?: string;
       hours?: number;
       notes?: string;
+      logged_at?: string;
     },
     @Req() req: { isAdmin?: boolean },
     @Tenant() ctx: TenantRequest,
