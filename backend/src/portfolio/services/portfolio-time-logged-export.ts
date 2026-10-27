@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import type { CsvLanguage } from '../../common/csv-sheet/types';
-import { REPORT_EXPORT_LABELS, ReportCell, ReportExport } from '../../common/report-export';
+import { fillLabel, REPORT_EXPORT_LABELS, ReportCell, ReportExport } from '../../common/report-export';
 import { TIME_LOGGED_DEFAULT_MONTHS, TIME_LOGGED_MONTHS, TimeLoggedReportResponse } from '../dto/time-logged-report.dto';
 
 /**
@@ -147,7 +147,7 @@ export function timeLoggedExport(
   applied: { months: number; timeZone: string; projectNames: string[] | null; teamNames: string[] | null },
 ): ReportExport {
   const labels = TIME_LOGGED_EXPORT_LABELS[language];
-  const months = (applied.months === 1 ? labels.monthsOne : labels.monthsOther).replace('{{count}}', String(applied.months));
+  const months = fillLabel(applied.months === 1 ? labels.monthsOne : labels.monthsOther, 'count', String(applied.months));
   return {
     fileBase: 'time-logged',
     limited: false,

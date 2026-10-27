@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import AdmZip = require('adm-zip');
 import { DATA_ACCESS_HEADER } from '../../../data-access/data-access';
 import { XLSX_CONTENT_TYPE } from '../../xlsx';
-import { REPORT_EXPORT_LABELS, reportExportBody, ReportExport, ReportExportRequest, writeReportExport } from '../index';
+import { fillLabel, REPORT_EXPORT_LABELS, reportExportBody, ReportExport, ReportExportRequest, writeReportExport } from '../index';
 
 /** The shared report table file: CSV and xlsx of a two-table export, Parameters, footers, `table=`, counts, headers. */
 
@@ -129,6 +129,14 @@ function xlsx() {
   assert.throws(() => writeReportExport(exportOf(), request({ format: 'xlsx', table: 'x' })), (e: any) => e.getStatus?.() === 400);
 }
 
+/** A label template takes its value as is, `$` included. */
+function labels() {
+  assert.equal(fillLabel('{{metric}} amount', 'metric', 'Budget $&'), 'Budget $& amount');
+  assert.equal(fillLabel('Montant {{metric}}', 'metric', 'Prix $$'), 'Montant Prix $$');
+  assert.equal(fillLabel('{{column}} FTE', 'column', "$` $' $1"), "$` $' $1 FTE");
+  assert.equal(fillLabel('Total {{metric}}', 'other', 'x'), 'Total {{metric}}', 'another placeholder is left alone');
+}
+
 function mistakes() {
   const bad = (rows: any[][]): ReportExport => ({ ...exportOf(), tables: [{ key: 't', sheet: 'T', columns: [{ header: 'A', kind: 'number' }], rows }] });
   assert.throws(() => writeReportExport(bad([['3']]), request()), /is text, the column is number/);
@@ -157,6 +165,7 @@ async function body() {
 async function main() {
   csv();
   xlsx();
+  labels();
   mistakes();
   await body();
   console.log('report-export.spec.ts: ok');

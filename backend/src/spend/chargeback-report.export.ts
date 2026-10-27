@@ -1,5 +1,5 @@
 import type { CsvLanguage } from '../common/csv-sheet/types';
-import type { ReportCell, ReportColumn, ReportExport, ReportTable } from '../common/report-export';
+import { fillLabel, type ReportCell, type ReportColumn, type ReportExport, type ReportTable } from '../common/report-export';
 import type { ChargebackScope, CompanyChargebackReportResponse } from './chargeback-report.service';
 import type {
   ChargebackKpiTotals,
@@ -325,7 +325,7 @@ export function chargebackMethodLabel(labels: ChargebackExportLabels, method: st
   return method && key in labels ? labels[key] : method ?? '';
 }
 
-const amountHeader = (labels: ChargebackExportLabels, columnName: string) => labels.metricAmount.replace('{{metric}}', columnName);
+const amountHeader = (labels: ChargebackExportLabels, columnName: string) => fillLabel(labels.metricAmount, 'metric', columnName);
 
 type KpiRow = {
   companyName: string;

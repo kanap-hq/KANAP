@@ -127,6 +127,10 @@ function companyTables() {
   // No line, no partner: no total rows.
   const empty = companyChargebackExport({ ...companyReport(false), items: [], intercompanyRows: [], intercompanyTotal: null, kpis: [] }, { language: 'en', columnName: 'Budget' });
   assert.deepEqual(empty.tables.map((table) => table.footer ?? []), [[], [], [], []]);
+
+  // A column name with `$` goes in as is: `$&` and `$$` are no replacement patterns.
+  const dollars = companyChargebackExport(companyReport(false), { language: 'en', columnName: 'Prix $$ $& $1' });
+  assert.equal(dollars.tables[0].columns[1].header, 'Prix $$ $& $1 amount');
 }
 
 function labels() {

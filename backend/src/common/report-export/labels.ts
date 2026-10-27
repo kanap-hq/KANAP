@@ -17,6 +17,14 @@ export interface ReportExportLabels {
   computedOnYourAccess: string;
 }
 
+/**
+ * A label template with its placeholder filled (`{{metric}} amount`): the value goes in as is, a `$` in it
+ * included (a string replacement would read `$&` or `$$` as patterns).
+ */
+export function fillLabel(template: string, placeholder: string, value: string): string {
+  return template.replace(`{{${placeholder}}}`, () => value);
+}
+
 export const REPORT_EXPORT_LABELS: Record<CsvLanguage, ReportExportLabels> = {
   en: {
     parameters: 'Parameters',

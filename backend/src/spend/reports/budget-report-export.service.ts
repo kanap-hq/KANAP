@@ -5,6 +5,7 @@ import { localizedBudgetColumnName } from '../../budget-columns/budget-column-la
 import type { CsvLanguage } from '../../common/csv-sheet/types';
 import type { TenantRequest } from '../../common/decorators/tenant.decorator';
 import {
+  fillLabel,
   reportExportRequest,
   writeReportExport,
   type ReportCell,
@@ -106,7 +107,7 @@ export class BudgetReportExportService {
     const named: Named = { language, labels, columnName };
     const tableLabels: ReportTableLabels = {
       columnNames: { budget: columnName('budget'), revision: columnName('revision'), forecast: columnName('forecast'), follow_up: columnName('follow_up'), landing: columnName('landing') },
-      columnFte: (column) => labels.columnFte.replace('{{column}}', column),
+      columnFte: (column) => fillLabel(labels.columnFte, 'column', column),
       metric: labels.metric,
       year: labels.year,
       column: labels.column,
@@ -119,10 +120,10 @@ export class BudgetReportExportService {
       pctIncrease: labels.pctIncrease,
       consolidationAccount: labels.consolidationAccount,
       consolidationUnassigned: labels.consolidationUnassigned,
-      consolidationTotal: (metric) => labels.consolidationTotal.replace('{{metric}}', metric),
+      consolidationTotal: (metric) => fillLabel(labels.consolidationTotal, 'metric', metric),
       analyticsUnassigned: labels.analyticsUnassigned,
       analyticsUnnamed: labels.analyticsUnnamed,
-      analyticsTotal: (metric) => labels.analyticsTotal.replace('{{metric}}', metric),
+      analyticsTotal: (metric) => fillLabel(labels.analyticsTotal, 'metric', metric),
       monthNames: shortMonthNames(language),
       average: labels.average,
       peak: labels.peak,

@@ -3,7 +3,7 @@ import type { EntityManager } from 'typeorm';
 import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import type { CsvLanguage } from '../../common/csv-sheet/types';
-import type { ReportCell, ReportExport } from '../../common/report-export';
+import { fillLabel, type ReportCell, type ReportExport } from '../../common/report-export';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { shippedKeysWithoutPlannedEnd } from '../catalog/technology-catalog.service';
 import type { ApplicationsReach } from '../technology-links.service';
@@ -396,7 +396,7 @@ export class EndOfSupportService {
     if (list !== 'deadlines') throw new BadRequestException('list must be deadlines or gaps.');
     const report = await this.deadlines(query, opts, applications);
     const type = typeOf(query.type);
-    const months = (report.horizon_months === 1 ? labels.monthsOne : labels.monthsOther).replace('{{count}}', String(report.horizon_months));
+    const months = fillLabel(report.horizon_months === 1 ? labels.monthsOne : labels.monthsOther, 'count', String(report.horizon_months));
     const count = (value: number | null): ReportCell => ({ kind: 'number', value: value ?? 0 });
     return {
       fileBase: `end-of-support-${report.horizon_months}-months`,
