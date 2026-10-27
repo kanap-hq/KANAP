@@ -736,12 +736,14 @@ const KNOWLEDGE_SOURCE_SCOPES = {
 } as const;
 
 /** The participation condition of each family a Business Contributor reads inside their participation. */
-const KNOWLEDGE_SOURCE_CONDITIONS: Record<keyof typeof KNOWLEDGE_SOURCE_SCOPES, (alias: string, userRef: string) => string> = {
-  projects: projectParticipantCondition,
-  requests: requestParticipantCondition,
-  applications: applicationParticipantCondition,
-  tasks: taskParticipantCondition,
-};
+function knowledgeSourceCondition(family: keyof typeof KNOWLEDGE_SOURCE_SCOPES, alias: string, userRef: string): string {
+  switch (family) {
+    case 'projects': return projectParticipantCondition(alias, userRef);
+    case 'requests': return requestParticipantCondition(alias, userRef);
+    case 'applications': return applicationParticipantCondition(alias, userRef);
+    case 'tasks': return taskParticipantCondition(alias, userRef);
+  }
+}
 
 /** Whether a family name, often taken from a request, is one of the participation families. */
 function isKnowledgeSourceFamily(family: string): family is keyof typeof KNOWLEDGE_SOURCE_SCOPES {
@@ -3534,8 +3536,7 @@ export class KnowledgeService {
     const participationSql = (alias: string, params: any[]): string => {
       if (!scope || !isKnowledgeSourceFamily(entity)) return '';
       params.push(scope.userId);
-      const condition = KNOWLEDGE_SOURCE_CONDITIONS[entity];
-      return ` AND ${condition(alias, `$${params.length}`)}`;
+      return ` AND ${knowledgeSourceCondition(entity, alias, `$${params.length}`)}`;
     };
 
     switch (entity) {
