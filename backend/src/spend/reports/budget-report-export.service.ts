@@ -442,7 +442,7 @@ function filterParameters(params: BudgetReportParams, named: Named, answer: Aggr
   return out;
 }
 
-/** A shared table as a file table: amounts to the cent, FTE and years as numbers, shares as fractions. */
+/** A shared table as a file table: amounts to the cent, FTE (two decimals shown) and years as numbers, shares as fractions. */
 function reportTable(key: string, sheet: string, table: ReportTableData): ReportTable {
   const cells = (row: Record<string, unknown>): ReportCell[] => table.columns.map((column): ReportCell => {
     const value = row[column.key];
@@ -455,7 +455,10 @@ function reportTable(key: string, sheet: string, table: ReportTableData): Report
   return {
     key,
     sheet,
-    columns: table.columns.map((column) => ({ header: column.header, kind: column.kind })),
+    // FTE and days show two decimals, as the screens; a year stays a plain number.
+    columns: table.columns.map((column) => (column.kind === 'number' && column.key !== 'year'
+      ? { header: column.header, kind: column.kind, decimals: 2 as const }
+      : { header: column.header, kind: column.kind })),
     rows: table.rows.map(cells),
     footer: table.footer.map(cells),
   };

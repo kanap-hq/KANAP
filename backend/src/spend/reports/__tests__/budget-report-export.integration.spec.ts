@@ -290,6 +290,14 @@ function workbook(buffer: Buffer): Map<string, string[][]> {
   return sheets;
 }
 
+/** The style index of a cell of the first sheet (`B2`), '' when it has none. */
+function styleOf(buffer: Buffer, ref: string): string {
+  const xml = new AdmZip(buffer).readAsText('xl/worksheets/sheet1.xml');
+  const cell = new RegExp(`<c r="${ref}"([^>]*)>`).exec(xml);
+  assert.ok(cell, `cell ${ref} written`);
+  return / s="(\d+)"/.exec(cell[1])?.[1] ?? '';
+}
+
 const trim = (row: string[]): string[] => {
   const out = [...row];
   while (out.length > 0 && out[out.length - 1] === '') out.pop();
@@ -574,6 +582,8 @@ async function testFteTables(runner: QueryRunner, f: Fixture): Promise<void> {
     assert.deepEqual([...staffingSheets.keys()], [L.staffingSheet, 'Parameters']);
     assert.deepEqual(staffingSheets.get(L.staffingSheet)!.map(trim), written(staffing), 'staffing = the screen table, months in English');
     assert.deepEqual(staffing.columns.slice(1, 4).map((column) => column.header), ['Jan', 'Feb', 'Mar']);
+    // FTE show two decimals (`0.00`, style 8; 9 in bold on the total row), the value kept whole.
+    assert.deepEqual([styleOf(staffingFile.body(), 'B2'), styleOf(staffingFile.body(), 'N2'), styleOf(staffingFile.body(), 'B4')], ['8', '8', '9'], 'staffing FTE in 0.00');
     const staffingParameters = staffingSheets.get('Parameters')!.map(trim);
     assert.deepEqual(staffingParameters.slice(1, 5), [['Line type', 'All'], ['Group by', 'Cost center'], ['Year', String(Y)], ['Column', 'Budget']], 'no measure, no currency: FTE only');
     assert.match(staffingFile.headers['Content-Disposition'], new RegExp(`filename="staffing-all-${Y}-budget-cost-center-`));
@@ -613,6 +623,7 @@ async function testFteTables(runner: QueryRunner, f: Fixture): Promise<void> {
     const costSheets = workbook(costFile.body());
     assert.deepEqual([...costSheets.keys()], [L.costPerFteSheet, 'Parameters']);
     assert.deepEqual(costSheets.get(L.costPerFteSheet)!.map(trim), written(cost), 'cost per FTE = the screen table, one header row');
+    assert.deepEqual([styleOf(costFile.body(), 'B2'), styleOf(costFile.body(), 'C2')], ['8', '3'], 'FTE in 0.00, the cost an amount');
     const costParameters = costSheets.get('Parameters')!.map(trim);
     for (const pair of [['Group by', 'Cost center'], ['Show', 'Cost per FTE'], ['Columns', `Budget ${Y - 1}, Budget ${Y}`], ['Reporting currency', 'EUR']]) {
       assert.ok(costParameters.some((row) => row[0] === pair[0] && row[1] === pair[1]), `parameter ${pair.join(': ')}`);
@@ -633,6 +644,7 @@ async function testFteTables(runner: QueryRunner, f: Fixture): Promise<void> {
     const rateFile = await exportFile(svc.controller, m, f, admin, 'cost-per-fte', { scope: 'opex', group: 'item', view: 'rate', pairs: `${Y - 1}:budget,${Y}:budget`, format: 'xlsx', language: 'en' });
     const rateSheets = workbook(rateFile.body());
     assert.deepEqual(dataSheet(rateSheets), written(rate), 'daily rate = the screen table');
+    assert.equal(styleOf(rateFile.body(), 'B2'), '8', 'days in 0.00');
     assert.deepEqual(rate.columns.slice(1, 4).map((column) => column.header), [`Days (Budget ${Y - 1})`, `Day cost (Budget ${Y - 1})`, `Daily rate (Budget ${Y - 1})`]);
     assert.ok(rateSheets.get('Parameters')!.some((row) => row[0] === 'Show' && row[1] === 'Daily rate'));
     assert.match(rateFile.headers['Content-Disposition'], new RegExp(`filename="daily-rate-opex-item-${Y - 1}-budget-`));

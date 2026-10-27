@@ -48,12 +48,12 @@ function types() {
 
 function styles() {
   const styled = text(one([[{ kind: 'amount', value: '1' }, { kind: 'date', iso: '2026-01-01' }]]), 'xl/styles.xml');
-  assert.match(styled, /<cellXfs count="8">/);
+  assert.match(styled, /<cellXfs count="10">/);
   const xfs = [...styled.matchAll(/<xf numFmtId="(\d+)" fontId="(\d)"[^>]*\/>/g)].slice(1); // the first xf is cellStyleXfs
   assert.deepEqual(
     xfs.map((x) => [x[1], x[2]]),
-    [['0', '0'], ['164', '0'], ['0', '1'], ['4', '0'], ['10', '0'], ['4', '1'], ['10', '1'], ['164', '1']],
-    'indices: default, date, bold, amount, percent, then bold amount, percent and date of the footer',
+    [['0', '0'], ['164', '0'], ['0', '1'], ['4', '0'], ['10', '0'], ['4', '1'], ['10', '1'], ['164', '1'], ['2', '0'], ['2', '1']],
+    'indices: default, date, bold, amount, percent, then bold amount, percent and date of the footer, then the two-decimal number and its bold',
   );
   assert.ok(styled.includes('<font><b/><sz val="11"/><name val="Calibri"/></font>'), 'the bold font');
   for (const [language, format] of [['en', 'yyyy-mm-dd'], ['fr', '[$-40C]dd/mm/yyyy'], ['de', '[$-407]dd.mm.yyyy'], ['es', '[$-C0A]dd/mm/yyyy']] as const) {
@@ -65,9 +65,27 @@ function styles() {
   assert.match(plain, /<cellXfs count="2">/);
   assert.match(plain, /<fonts count="1">/);
   const plainAmount = text(write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'amount', value: '1.5' }]], header: 'plain' }]), 'xl/styles.xml');
-  assert.match(plainAmount, /<cellXfs count="8">/, 'an amount in a plain sheet brings the amount style');
+  assert.match(plainAmount, /<cellXfs count="10">/, 'an amount in a plain sheet brings the amount style');
   const plainPercent = text(write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'percent', value: 0.5 }]], header: 'plain' }]), 'xl/styles.xml');
-  assert.match(plainPercent, /<cellXfs count="8">.*<xf numFmtId="10" fontId="0"[^>]*\/>/s, 'a percent in a plain sheet brings the percent style');
+  assert.match(plainPercent, /<cellXfs count="10">.*<xf numFmtId="10" fontId="0"[^>]*\/>/s, 'a percent in a plain sheet brings the percent style');
+}
+
+/** A number marked `decimals: 2` keeps its value and shows `0.00` (style 8, bold 9 in a footer); others stay General. */
+function decimals() {
+  const buffer = write([{
+    name: 'S',
+    headers: ['FTE', 'Headcount'],
+    rows: [[{ kind: 'number', value: 49 / 6, decimals: 2 }, { kind: 'number', value: 12 }]],
+    footer: [[{ kind: 'number', value: 8.5, decimals: 2 }, { kind: 'number', value: 12 }]],
+  }]);
+  const xml = sheetXml(buffer);
+  assert.equal(cellOf(xml, 'A2'), `<c r="A2" s="8"><v>${49 / 6}</v></c>`, 'the value is kept whole, style 8');
+  assert.equal(cellOf(xml, 'B2'), '<c r="B2"><v>12</v></c>', 'an integer column stays General');
+  assert.equal(cellOf(xml, 'A3'), '<c r="A3" s="9"><v>8.5</v></c>', 'bold two-decimal footer');
+  assert.equal(cellOf(xml, 'B3'), '<c r="B3" s="2"><v>12</v></c>', 'bold General footer');
+  assert.match(text(buffer, 'xl/styles.xml'), /<xf numFmtId="2" fontId="0"[^>]*\/><xf numFmtId="2" fontId="1"[^>]*\/><\/cellXfs>/);
+  const plain = write([{ name: 'S', headers: ['A'], rows: [[{ kind: 'number', value: 1.25, decimals: 2 }]], header: 'plain' }]);
+  assert.match(text(plain, 'xl/styles.xml'), /<cellXfs count="10">/, 'a two-decimal number in a plain sheet brings the extra styles');
 }
 
 /** Total rows: bold, after the data rows, outside the filter, so a sort or a filter in the spreadsheet never moves them. */
@@ -94,7 +112,7 @@ function footer() {
   assert.equal((xml.match(/<hyperlink /g) ?? []).length, 2, 'the footer carries no link');
   // A footer alone in a plain sheet brings the bold styles.
   const plain = write([{ name: 'S', headers: ['A'], rows: [['x']], footer: [['Total']], header: 'plain' }]);
-  assert.match(text(plain, 'xl/styles.xml'), /<cellXfs count="8">/);
+  assert.match(text(plain, 'xl/styles.xml'), /<cellXfs count="10">/);
   assert.ok(!sheetXml(plain).includes('autoFilter'));
   assert.throws(() => write([{ name: 'S', headers: ['A', 'B'], rows: [], footer: [['Total']] }]), /row 1 has 1 cells for 2 headers/);
 }
@@ -330,6 +348,7 @@ function run() {
   types();
   styles();
   footer();
+  decimals();
   styledHeader();
   plainHeader();
   characters();

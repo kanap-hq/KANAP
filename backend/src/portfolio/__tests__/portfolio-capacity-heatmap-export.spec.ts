@@ -117,6 +117,10 @@ async function run() {
     const contributors = sheetRows(zip.readAsText('xl/worksheets/sheet2.xml'));
     assert.deepEqual(contributors.slice(1), expected.contributor.map(trimEnd));
     assert.ok(!zip.readAsText('xl/worksheets/sheet2.xml').includes('N/A'), 'no "N/A" text');
+    // Days and months show two decimals (`0.00`, style 8); the member count stays General.
+    const teamXml = zip.readAsText('xl/worksheets/sheet1.xml');
+    const style = (ref: string) => / s="(\d+)"/.exec(new RegExp(`<c r="${ref}"([^>]*)>`).exec(teamXml)?.[1] ?? '')?.[1] ?? '';
+    assert.deepEqual(['B2', 'C2', 'D2', 'E2'].map(style), ['', '8', '8', '8'], 'members General; days, capacity and months in 0.00');
     const parameters = sheetRows(zip.readAsText('xl/worksheets/sheet3.xml'));
     assert.deepEqual(parameters.slice(1, 4), [
       [labels.teamsFilter, `Applications, ${labels.noTeam}`],

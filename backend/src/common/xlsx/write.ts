@@ -14,8 +14,8 @@ export const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.
 export type XlsxCell =
   /** Text. */
   | string
-  /** A general number (days, counts). */
-  | { kind: 'number'; value: number }
+  /** A general number (days, counts); `decimals: 2` shows it with two decimals (`0.00`), the value kept whole. */
+  | { kind: 'number'; value: number; decimals?: 2 }
   /** A decimal written as text, such as `-1234.50`, stored as is in the cell. */
   | { kind: 'amount'; value: string }
   /** A calendar day, `YYYY-MM-DD`. A day before 1900-03-01 is written as text in the language's format. */
@@ -84,6 +84,9 @@ const STYLE_PERCENT = 4;
 const STYLE_AMOUNT_BOLD = 5;
 const STYLE_PERCENT_BOLD = 6;
 const STYLE_DATE_BOLD = 7;
+/** A number with two decimals (built-in `0.00`), and its bold footer variant. Appended so 0 to 7 keep their place. */
+const STYLE_DECIMAL = 8;
+const STYLE_DECIMAL_BOLD = 9;
 
 const XML_HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
 const XML_ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' };
@@ -234,8 +237,14 @@ function buildSheet(sheet: XlsxSheet, name: string, appBaseUrl: string, language
         if (typeof cell.value !== 'number' || !Number.isFinite(cell.value)) {
           throw new Error(`xlsx: sheet "${name}" ${ref}: a number cell needs a finite number`);
         }
-        cells.push(`<c r="${ref}"${bold ? ` s="${STYLE_BOLD}"` : ''}><v>${cell.value}</v></c>`);
-        if (sample) widths[index] = Math.max(widths[index], String(cell.value).length);
+        if (cell.decimals === 2) {
+          cells.push(`<c r="${ref}" s="${bold ? STYLE_DECIMAL_BOLD : STYLE_DECIMAL}"><v>${cell.value}</v></c>`);
+          usesAmount = true;
+          if (sample) widths[index] = Math.max(widths[index], cell.value.toFixed(2).length);
+        } else {
+          cells.push(`<c r="${ref}"${bold ? ` s="${STYLE_BOLD}"` : ''}><v>${cell.value}</v></c>`);
+          if (sample) widths[index] = Math.max(widths[index], String(cell.value).length);
+        }
       } else if (cell.kind === 'amount') {
         if (typeof cell.value !== 'string' || !AMOUNT_TEXT.test(cell.value)) {
           throw new Error(`xlsx: sheet "${name}" ${ref}: "${String(cell.value)}" is not a decimal amount`);
@@ -410,14 +419,16 @@ export function writeXlsx(request: XlsxWriteRequest): Buffer {
   <Relationship Id="rId${built.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`;
 
-  // Style 0 is the default, 1 the date cells; 2 (bold header), 3 (amount, `#,##0.00`), 4 (percent, `0.00%`) and the
-  // bold amount, percent and date of the footer rows (5 to 7) exist when a sheet uses them.
+  // Style 0 is the default, 1 the date cells; 2 (bold header), 3 (amount, `#,##0.00`), 4 (percent, `0.00%`), the
+  // bold amount, percent and date of the footer rows (5 to 7) and the two-decimal number, plain and bold (8, 9), exist
+  // when a sheet uses them.
   const fonts = extraStyles
     ? '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
     : '<fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>';
   const cellXfs = extraStyles
-    ? '<cellXfs count="8"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="10" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
-      + '<xf numFmtId="4" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="10" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="164" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/></cellXfs>'
+    ? '<cellXfs count="10"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="10" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>'
+      + '<xf numFmtId="4" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="10" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="164" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>'
+      + '<xf numFmtId="2" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="2" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/></cellXfs>'
     : '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>';
   const stylesXml = `${XML_HEAD}
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">

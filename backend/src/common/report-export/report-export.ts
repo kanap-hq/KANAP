@@ -26,7 +26,7 @@ import { REPORT_EXPORT_LABELS } from './labels';
  *   tables is `<fileBase>-<table key>-<day>.csv`. `rows` counts the data rows written, footers left out.
  *
  * Cells by column kind: `text` a string, `number` a finite number (days, FTE, counts; CSV with the
- * language's decimal mark), `amount` a dot-decimal string with two decimals (`-1234.50`; CSV with the
+ * language's decimal mark; a column marked `decimals: 2` shows two decimals in the workbook), `amount` a dot-decimal string with two decimals (`-1234.50`; CSV with the
  * language's decimal mark), `date` an ISO day (CSV in the language's format), `percent` a fraction
  * (`0.125`; CSV `12.50%` / `12,50%`). `null` is an empty cell in every kind. A cell that does not match its
  * column throws: it is a bug of the report, not of the request.
@@ -41,6 +41,8 @@ export type ReportColumnKind = 'text' | 'number' | 'amount' | 'date' | 'percent'
 export interface ReportColumn {
   header: string;
   kind: ReportColumnKind;
+  /** A `number` column the screen shows with two decimals (FTE, days): `0.00` in the workbook. The CSV keeps the value. */
+  decimals?: 2;
 }
 
 export interface ReportTable {
@@ -120,7 +122,9 @@ export function writeReportExport(exp: ReportExport, request: ReportExportReques
   const sheets: XlsxSheet[] = ordered.map((table) => {
     rowsOf(table).forEach((row, index) => checkRow(table, row, index));
     const footer = exp.limited ? [] : table.footer ?? [];
-    return { name: table.sheet, headers: table.columns.map((column) => column.header), rows: table.rows, footer };
+    const shown = (row: ReportCell[]): ReportCell[] => row.map((cell, column) =>
+      cell !== null && typeof cell !== 'string' && cell.kind === 'number' && table.columns[column].decimals === 2 ? { ...cell, decimals: 2 } : cell);
+    return { name: table.sheet, headers: table.columns.map((column) => column.header), rows: table.rows.map(shown), footer: footer.map(shown) };
   });
   const labels = REPORT_EXPORT_LABELS[request.language];
   const zoneSuffix = request.timeZone === 'UTC' ? ' UTC' : ` (${request.timeZone})`;

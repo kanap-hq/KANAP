@@ -10,7 +10,7 @@ import type { ProjectStatus } from '../portfolio-project.entity';
  * The table export of the capacity heatmap (`GET portfolio/reports/capacity-heatmap/export`), built from
  * `PortfolioCapacityReportService.getHeatmap`'s result for the parameters of the screen: the contributor
  * table and the team table as the screen shows them, in its order. A value the screen shows as "N/A" is an
- * empty cell; days and months are numbers. The workbook holds both groupings (the one asked by `groupBy`
+ * empty cell; days and months are numbers, shown with two decimals in the workbook. The workbook holds both groupings (the one asked by `groupBy`
  * first), a CSV the one asked by `groupBy`.
  */
 
@@ -194,10 +194,10 @@ export function capacityHeatmapTables(heatmap: CapacityHeatmapResponse, labels: 
     columns: [
       { header: labels.contributor, kind: 'text' },
       { header: labels.team, kind: 'text' },
-      { header: labels.remainingDays, kind: 'number' },
-      { header: labels.capacityPerMonth, kind: 'number' },
+      { header: labels.remainingDays, kind: 'number', decimals: 2 },
+      { header: labels.capacityPerMonth, kind: 'number', decimals: 2 },
       { header: labels.source, kind: 'text' },
-      { header: labels.monthsOfWork, kind: 'number' },
+      { header: labels.monthsOfWork, kind: 'number', decimals: 2 },
     ],
     rows: heatmap.contributors.map((row) => [
       row.contributorName,
@@ -214,9 +214,9 @@ export function capacityHeatmapTables(heatmap: CapacityHeatmapResponse, labels: 
     columns: [
       { header: labels.team, kind: 'text' },
       { header: labels.members, kind: 'number' },
-      { header: labels.remainingDays, kind: 'number' },
-      { header: labels.capacityPerMonth, kind: 'number' },
-      { header: labels.monthsOfWork, kind: 'number' },
+      { header: labels.remainingDays, kind: 'number', decimals: 2 },
+      { header: labels.capacityPerMonth, kind: 'number', decimals: 2 },
+      { header: labels.monthsOfWork, kind: 'number', decimals: 2 },
     ],
     rows: heatmap.teams.map((row) => [
       row.teamId === NO_TEAM_ID ? labels.noTeam : row.teamName,
