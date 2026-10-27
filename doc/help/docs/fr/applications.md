@@ -448,7 +448,7 @@ Les valeurs de classification et de continuité sont copiées, mais la nouvelle 
 
 ### Migration d'interfaces
 
-Pendant la création de version, l'assistant affiche toutes les interfaces où cette application est source, cible ou middleware (lorsque ETL est activé). Les interfaces sélectionnées sont dupliquées avec leurs références mises à jour vers la nouvelle version. Chaque interface migrée inclut ses legs, responsables, sociétés, identifiants clés, liens et résidence des données. Les interfaces migrées démarrent avec un cycle de vie **Proposé**. Les interfaces originales restent liées à l'ancienne version.
+Pendant la création de version, l'assistant affiche toutes les interfaces où cette application est source, cible ou middleware (lorsque ETL est activé). Les interfaces sélectionnées sont dupliquées avec leurs références mises à jour vers la nouvelle version. Chaque interface migrée inclut ses legs, responsables, sociétés, identifiants clés, liens, sa résidence des données et sa spécification (le texte de la source et ses images). Un identifiant d'interface vide le reste. Les interfaces migrées démarrent avec un cycle de vie **Proposé**. Les interfaces originales restent liées à l'ancienne version.
 
 **Copie des liaisons** : Si vous sélectionnez à la fois **Déploiements** et **Liaisons de déploiement**, les liaisons d'interfaces sont également copiées. Les liaisons sont mappées vers les déploiements de la nouvelle application (associées par environnement) ; les détails spécifiques à l'environnement (endpoints, authentification, noms de jobs) sont effacés, et le statut de liaison est réinitialisé à **Proposé**.
 

@@ -106,14 +106,43 @@ export type AiEntityFilterRegistry = {
   aggregate: AiAggregateConfig;
 };
 
+/** A set filter given values its field does not take, with the ones it does. */
+export type AiInvalidFilterValue = {
+  field: string;
+  rejected: Array<string | null>;
+  accepted: Array<string | null>;
+};
+
 export type AiAdaptedFilters = {
   filters: Record<string, any>;
   applied: string[];
+  /** Every filter not applied: unknown fields, malformed values and `invalid_values`. */
   ignored: string[];
+  invalid_values: AiInvalidFilterValue[];
+};
+
+/**
+ * The amounts of every record the filters keep, all pages included, computed by the server
+ * (query_entities on budget lines and contracts). A total in an answer is quoted from here or
+ * from aggregate_entities, never added up from the items.
+ */
+export type AiAmountTotals = {
+  /** Records counted (the result's `total`). */
+  records: number;
+  /** Budget lines: the reporting currency of every value. Contracts: null (one row per currency). */
+  currency: string | null;
+  /** Budget lines: each amount field (`y_budget`, `y_minus1_actual`...) summed over the records. */
+  values?: Record<string, number>;
+  /** Contracts: the yearly amounts summed per contract currency. */
+  by_currency?: Array<{ currency: string | null; yearly_amount: number | null; contracts: number; without_amount: number }>;
+  /** Budget lines: the currencies and years without an exchange rate, left out of `values`. */
+  fx_missing?: Array<{ currency: string; year: number; lines: number }>;
+  note: string;
 };
 
 export type AiQueryResult = {
-  status?: 'ok' | 'invalid_filter';
+  /** `invalid_filter_value`: every filter not applied is a known field given values it does not take. */
+  status?: 'ok' | 'invalid_filter' | 'invalid_filter_value';
   items: AiEntitySummaryDto[];
   total: number;
   page: number;
@@ -124,6 +153,8 @@ export type AiQueryResult = {
   filters_applied: string[];
   filters_ignored: string[];
   suggested_repairs?: AiFilterRepairSuggestion[];
+  /** The set filters given values their field does not take, with the accepted values. */
+  invalid_filter_values?: AiInvalidFilterValue[];
   /** The order of `items`: the requested sort, or the family's default one when `sort_ignored` names it. */
   sort?: { field: string; direction: 'asc' | 'desc' };
   /** A requested sort field the family cannot sort on; `sortable_fields` then lists the ones it can. */
@@ -134,6 +165,12 @@ export type AiQueryResult = {
   /** The currency of the amounts, on the families that carry some (`ai-amounts-currency.util.ts`). */
   amounts_currency?: string | null;
   amounts_currency_note?: string;
+  amount_totals?: AiAmountTotals;
+  /** The same amounts summed over the items returned only: the total of the records listed (a top N). */
+  page_amount_totals?: AiAmountTotals;
+  /** `limited`: a person with limited data access; the items and figures cover their access only. */
+  data_access?: 'limited';
+  data_access_note?: string;
   scope: {
     requested: AiQueryScope;
     resolved: boolean;
@@ -142,7 +179,7 @@ export type AiQueryResult = {
 };
 
 export type AiAggregateResult = {
-  status?: 'ok' | 'invalid_filter';
+  status?: 'ok' | 'invalid_filter' | 'invalid_filter_value';
   amounts_currency?: string | null;
   amounts_currency_note?: string;
   /**
@@ -156,6 +193,8 @@ export type AiAggregateResult = {
    * Shape of `TurnoverFxMissingItem`.
    */
   turnover_fx_missing?: Array<{ companyId: string; companyName: string; currency: string; year: number }>;
+  data_access?: 'limited';
+  data_access_note?: string;
   group_by: string;
   metric?: string | null;
   function?: 'count' | 'sum' | 'avg' | 'min' | 'max';
@@ -171,6 +210,7 @@ export type AiAggregateResult = {
   filters_applied: string[];
   filters_ignored: string[];
   suggested_repairs?: AiFilterRepairSuggestion[];
+  invalid_filter_values?: AiInvalidFilterValue[];
   scope: {
     requested: AiQueryScope;
     resolved: boolean;

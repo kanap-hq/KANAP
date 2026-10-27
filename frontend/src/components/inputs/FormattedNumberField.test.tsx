@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import i18n from '../../i18n';
 import FormattedNumberField from './FormattedNumberField';
 
 function renderField(decimals?: number) {
@@ -53,6 +54,10 @@ function typeChars(text: string, props: { decimals?: number; emit?: 'number' | '
 }
 
 describe('FormattedNumberField', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
   it('keeps two decimals by default, as the budget amounts do', () => {
     const { input, onChange } = renderField();
     fireEvent.change(input, { target: { value: '1234.5678' } });
@@ -132,6 +137,13 @@ describe('FormattedNumberField', () => {
       expect(last).toBe('12.5');
     });
 
+    it('in French, typing 12,5 emits 12.5 with the language mark', async () => {
+      await i18n.changeLanguage('fr');
+      const { input, last } = typeChars('12,5', {});
+      expect(input.value).toBe('12,5');
+      expect(last).toBe(12.5);
+    });
+
     it('does not rewrite 400.10 when the parent hands back the same value', () => {
       const asString = typeChars('400.10', { decimals: 4, emit: 'string' });
       expect(asString.input.value).toBe('400.10');
@@ -151,6 +163,24 @@ describe('FormattedNumberField', () => {
       fireEvent.change(input, { target: { value: '1.5' } });
       expect(input.value).toBe('1.5');
     });
+  });
+
+  it('shows 1 234,50 for 1234.50 in French, German and Spanish, and 1 234.50 in English', async () => {
+    for (const locale of ['fr', 'de', 'es'] as const) {
+      await i18n.changeLanguage(locale);
+      const view = render(<FormattedNumberField value="1234.50" onChange={() => {}} inputProps={{ 'aria-label': 'amount' }} />);
+      expect(screen.getByLabelText('amount')).toHaveValue('1 234,50');
+      view.unmount();
+    }
+    await i18n.changeLanguage('en');
+    render(<FormattedNumberField value="1234.50" onChange={() => {}} inputProps={{ 'aria-label': 'amount' }} />);
+    expect(screen.getByLabelText('amount')).toHaveValue('1 234.50');
+  });
+
+  it('an explicit decimal mark wins over the language', async () => {
+    await i18n.changeLanguage('fr');
+    render(<FormattedNumberField value="1234.50" decimalSeparator="." onChange={() => {}} inputProps={{ 'aria-label': 'forced' }} />);
+    expect(screen.getByLabelText('forced')).toHaveValue('1 234.50');
   });
 
   it('shows a new value from the parent', () => {

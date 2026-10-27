@@ -19,6 +19,7 @@ Lorsque vous cliquez sur **Nouvelle**, l'espace de travail complet de la tâche 
 
 3. **Remplissez les détails optionnels** :
    - **Type de tâche** : Sélectionnez une catégorie pour le travail (ex. : Tâche, Bug, Problème, Incident). Par défaut « Tâche » lorsque disponible
+   - **Étiquettes** : Mots libres, par exemple urgent ou suivi. Saisissez-en un et appuyez sur Entrée
    - **Description** : Ajoutez des informations détaillées avec l'éditeur markdown (prend en charge formatage, listes, liens, images)
    - **Phase** : Pour les tâches de projet, sélectionnez une phase ou laissez sur « Niveau projet »
    - **Classification** (tâches autonomes et de projet) : Définissez **Source**, **Catégorie**, **Stream** et **Société**. Pour les tâches de projet, ces valeurs proviennent par défaut du projet parent. Pour les tâches autonomes, les valeurs de classification par défaut de votre organisation sont pré-remplies lorsque disponibles
@@ -159,6 +160,7 @@ Le tiroir est rétractable (cliquez sur l'onglet vertical **Propriétés** sur l
   - **Lié à** : Autonome, Projet, OPEX, Contrat ou CAPEX. Vous pouvez changer le type et choisir un nouvel élément ; à l'enregistrement, KANAP applique tous les effets secondaires associés (voir [Changer le contexte d'une tâche](#changer-le-contexte-dune-tache))
   - **Phase** (tâches de projet uniquement) : Par défaut sur **Niveau projet** sauf si vous choisissez une phase de projet
   - **Type de tâche** : Tâche, Bug, Problème, Incident, ou tout type personnalisé configuré par votre administrateur
+  - **Étiquettes** : Mots libres, par exemple urgent ou suivi. Saisissez-en un et appuyez sur Entrée. Ils s'affichent en pastilles. Une personne en lecture voit les pastilles
 
 **Classification** (tâches autonomes et de projet uniquement) :
   - **Source** : Où le travail provient

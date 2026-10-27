@@ -8,7 +8,7 @@ export const requestsRegistry: AiEntityFilterRegistry = {
       grid: 'status',
       type: 'set',
       description: 'Request status.',
-      dynamic: true,
+      values: ['pending_review', 'candidate', 'approved', 'on_hold', 'rejected', 'converted'],
       discoverable: true,
       sortable: true,
       groupable: true,

@@ -24,6 +24,13 @@ import {
 } from './ai.types';
 import { incidentRelatedLabelSql, incidentRelatedTitleSql, incidentVisibilitySql, resolveIncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { budgetLineReference } from '../spend/budget-nature';
+import { contractTermFields } from '../contracts/contract-terms';
+import { readDecisionWindowDays } from '../contracts/contract-settings.service';
+import { readRenewalDecisions, renewalDecisionOf } from '../contracts/contract-renewal.service';
+import { listContractBudgetLines } from '../contracts/contract-relations';
+import { deriveStatusFromDisabledAt } from '../common/status';
+import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
+import { loadContractCoverage, type ContractCoveredFamily } from './query/ai-contract-coverage';
 import { operatingSystemLabelSql } from '../technologies/operating-system-codes';
 import { TechnologyLinksService } from '../technologies/technology-links.service';
 import { assetInServiceSql, type ReachedApplication, TechnologyReachService } from '../technologies/technology-reach.service';
@@ -38,6 +45,15 @@ import {
   resolveAiParticipationAccessScope,
 } from './query/ai-query-scope.util';
 import { resolveAiApplicationsReach } from './query/ai-technologies.query';
+import { classificationLabels } from '../applications/services/application-classification';
+import { readClassificationCatalog } from './ai-classification-catalog.util';
+import {
+  asksForUnreadFamily,
+  readAiScreenLanguage,
+  unreadFamiliesAskedBy,
+  unreadFamilyLines,
+  type AiScreenLanguage,
+} from './ai-unread-families';
 
 const ASSET_OS_LABEL = operatingSystemLabelSql('a');
 
@@ -465,6 +481,29 @@ const SEARCH_INDEX_METADATA_KEYS: Partial<Record<AiSearchEntityType, string[]>> 
     'team', 'contributor_profile', 'project_availability', 'areas_of_expertise',
   ],
 };
+
+/**
+ * A search says what it could not look in: the unread families its words ask for (cost centers,
+ * chargeback...), and every unread family when nothing matched, so that no match never reads as
+ * "does not exist". Their screens are named in the person's language (`language`, null: all four).
+ */
+function withUnreadFamilies<T extends { items: unknown[] }>(result: T, query: string, language: AiScreenLanguage | null): T & {
+  not_read_here?: ReturnType<typeof unreadFamiliesAskedBy>;
+  families_not_read?: string[];
+  no_match_note?: string;
+} {
+  const asked = unreadFamiliesAskedBy(query, language);
+  return {
+    ...result,
+    ...(asked.length ? { not_read_here: asked } : {}),
+    ...(result.items.length === 0
+      ? {
+        families_not_read: unreadFamilyLines(language),
+        no_match_note: 'No match among the families searched. The families_not_read are not searched: a record of theirs may exist. Say what you could not read and name its screen.',
+      }
+      : {}),
+  };
+}
 
 function appendParticipationScopeSql(
   entityType: ParticipationScopedAiEntityType,
@@ -2162,10 +2201,14 @@ export class AiEntityService {
       offset?: number;
     },
   ) {
-    if (aiSearchIndexEnabled()) {
-      return this.searchAllIndexed(context, input);
-    }
-    return this.searchAllLegacy(context, input);
+    const result = aiSearchIndexEnabled()
+      ? await this.searchAllIndexed(context, input)
+      : await this.searchAllLegacy(context, input);
+    // The profile's language is read only when the answer names a screen.
+    const language = result.items.length === 0 || asksForUnreadFamily(input.query)
+      ? await readAiScreenLanguage(context.manager, context.tenantId, context.userId)
+      : null;
+    return withUnreadFamilies(result, input.query, language);
   }
 
   /**
@@ -2905,7 +2948,10 @@ export class AiEntityService {
     const applicationRootParams: unknown[] = [applicationId, tenantId];
     const applicationRootScopeSql = appendParticipationScopeSql('applications', 'a', applicationRootParams, applicationAccessScope);
     const applications = await manager.query<any[]>(
-      `SELECT a.id, a.sequential_id, a.name, a.description, a.status, a.updated_at, a.lifecycle, a.environment, a.editor, a.criticality, a.hosting_model, a.data_class, a.version
+      `SELECT a.id, a.sequential_id, a.name, a.description, a.status, a.updated_at, a.lifecycle, a.environment, a.editor, a.criticality, a.hosting_model, a.data_class, a.version,
+              a.cyber_criticality, a.recovery_wave, a.rto_minutes, a.rpo_minutes,
+              -- Calendar days, as text: a date never shifts with the time zone.
+              a.last_dr_test::text AS last_dr_test, a.go_live_date::text AS go_live_date, a.end_of_support_date::text AS end_of_support_date, a.retired_date::text AS retired_date
        FROM applications a
        WHERE a.id = $1
          AND a.tenant_id = $2
@@ -3005,8 +3051,18 @@ export class AiEntityService {
           environment: application.environment,
           editor: application.editor,
           criticality: application.criticality,
-          hosting_model: application.hosting_model,
+          cyber_criticality: application.cyber_criticality,
           data_class: application.data_class,
+          recovery_wave: application.recovery_wave,
+          // Labels and ranks of the four classifications, as the Applications list gives them.
+          ...classificationLabels(application, await readClassificationCatalog(context)),
+          rto_minutes: toNullableNumber(application.rto_minutes),
+          rpo_minutes: toNullableNumber(application.rpo_minutes),
+          last_dr_test: toMetadataScalar(application.last_dr_test),
+          go_live_date: toMetadataScalar(application.go_live_date),
+          end_of_support_date: toMetadataScalar(application.end_of_support_date),
+          retired_date: toMetadataScalar(application.retired_date),
+          hosting_model: application.hosting_model,
           version: application.version,
           business_owners: businessOwners,
           it_owners: itOwners,
@@ -3893,6 +3949,93 @@ export class AiEntityService {
     };
   }
 
+  /**
+   * A contract with its current term, as the Contracts list shows it (`contract-terms.ts`: the
+   * tenant's decision window and the renewal decisions recorded), and what it covers: its
+   * applications, assets, technologies and budget lines. Each family shows only to a caller who
+   * reads its module, and is left out otherwise (`readableGroups`); a Business Contributor's
+   * applications are those of their participation; the budget lines are those of the caller's data
+   * access, the others counted in `budget_lines_outside_access`, never named. No knowledge section:
+   * documents are not linked to contracts.
+   */
+  private async buildContractContext(context: AiExecutionContextWithManager, contractId: string, manager: AiExecutionContextWithManager['manager']): Promise<AiEntityContextPayloadDto> {
+    const { tenantId } = context;
+    const [contract] = await manager.query<any[]>(
+      `SELECT c.id, c.tenant_id, c.name, c.notes, c.status, c.updated_at, c.start_date, c.duration_months, c.notice_period_months,
+              c.auto_renewal, c.disabled_at, c.yearly_amount_at_signature, c.currency,
+              sup.name AS supplier_name, comp.name AS company_name,
+              NULLIF(btrim(concat_ws(' ', ou.first_name, ou.last_name)), '') AS owner_name
+       FROM contracts c
+       LEFT JOIN suppliers sup ON sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id
+       LEFT JOIN companies comp ON comp.id = c.company_id AND comp.tenant_id = c.tenant_id
+       LEFT JOIN users ou ON ou.id = c.owner_user_id AND ou.tenant_id = c.tenant_id
+       WHERE c.id = $1
+         AND c.tenant_id = $2`,
+      [contractId, tenantId],
+    );
+    if (!contract) throw new NotFoundException('Contract not found.');
+    const windowDays = await readDecisionWindowDays(manager, tenantId);
+    const decisions = await readRenewalDecisions(manager, [contract.id]);
+    const terms = contractTermFields(contract, utcDateYmd(new Date()), { decisionWindowDays: windowDays, renewalDecision: renewalDecisionOf(decisions, contract.id) });
+
+    const applicationScope = await resolveAiParticipationAccessScope(context, 'applications');
+    const coveredGroup = async (family: ContractCoveredFamily, relation: string, label: string) => {
+      const records = (await loadContractCoverage(manager, tenantId, family, [contractId], family === 'applications' ? applicationScope : undefined)).get(contractId) ?? [];
+      return boundedGroup(relation, label, records.map((record) => toSummary(family, {
+        id: record.id,
+        ref: record.reference,
+        label: record.name,
+        summary: null,
+        status: null,
+        updated_at: null,
+      })));
+    };
+    const readsBudget = await this.canReadType(context, 'spend_items');
+    const budgetLines = readsBudget ? await listContractBudgetLines(manager, { id: contract.id, tenant_id: tenantId }) : null;
+    const lineSummaries = (budgetLines?.items ?? []).map((line) => toSummary(line.nature === 'capex' ? 'capex_items' : 'spend_items', {
+      id: line.id,
+      item_number: line.item_number,
+      label: line.product_name,
+      summary: line.company_name,
+      status: null,
+      updated_at: null,
+      metadata: { nature: line.nature },
+    }));
+
+    return {
+      entity: {
+        ...toContextEntityBase('contracts', {
+          id: contract.id,
+          label: contract.name,
+          summary: contract.notes ?? null,
+          status: deriveStatusFromDisabledAt(contract.disabled_at),
+          updated_at: contract.updated_at,
+        }),
+        metadata: {
+          supplier: contract.supplier_name ?? null,
+          company: contract.company_name ?? null,
+          owner: contract.owner_name ?? null,
+          term_state: terms.term_state,
+          // The number of the term in progress (1 for the first), counted here: a model got it one off.
+          current_term_number: terms.term_index + 1,
+          next_due_date: terms.next_due_date,
+          cancellation_deadline: terms.cancellation_deadline,
+          current_term_end: terms.current_term_end,
+          renewed: terms.renewed,
+          auto_renewal: contract.auto_renewal == null ? null : Boolean(contract.auto_renewal),
+          ...(budgetLines ? { budget_lines_outside_access: budgetLines.hidden } : {}),
+        },
+      },
+      related: await this.readableGroups(context, [
+        await coveredGroup('applications', 'covered_applications', 'Covered Applications'),
+        await coveredGroup('assets', 'covered_assets', 'Covered Assets'),
+        await coveredGroup('technologies', 'covered_technologies', 'Covered Technologies'),
+        boundedGroup('budget_lines', 'Budget Lines', lineSummaries),
+      ].filter((group) => group.items.length > 0)),
+      knowledge: null,
+    };
+  }
+
   async getEntityContext(
     context: AiExecutionContextWithManager,
     input: {
@@ -3918,6 +4061,8 @@ export class AiEntityService {
       result = await this.buildTaskContext(context, entityId, context.manager);
     } else if (input.entity_type === 'technologies') {
       result = await this.buildTechnologyContext(context, entityId, context.manager);
+    } else if (input.entity_type === 'contracts') {
+      result = await this.buildContractContext(context, entityId, context.manager);
     } else {
       throw new BadRequestException('Unsupported entity type.');
     }
@@ -3926,6 +4071,7 @@ export class AiEntityService {
       || result.related.some((group) => group.truncated === true);
     return {
       ...result,
+      fields_note: 'entity.metadata is an extract of the record\'s fields: a field it does not carry is not read here, which is not "empty". get_entity_detail returns every field.',
       total: 1,
       returned: 1,
       truncated,

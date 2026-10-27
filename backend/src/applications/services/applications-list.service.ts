@@ -1,7 +1,7 @@
 import { classificationSqlExpressions } from '../../it-ops-settings/classification-sql';
 import { linkedLineOf } from '../../spend/budget-nature';
 import { catalogFromMetadata } from '../../it-ops-settings/classification-catalog';
-import { classificationReadState } from './application-classification';
+import { classificationLabels, classificationReadState } from './application-classification';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, In, Repository, SelectQueryBuilder } from 'typeorm';
@@ -679,16 +679,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
     const items = await Promise.all(
       entities.map(async (app) => {
         const base: any = { ...app, ...classificationReadState(app) };
-        for (const [field, options, output, rankField] of [
-          ['criticality', catalog.businessCriticalityLevels, 'business_criticality_label', 'business_criticality_rank'],
-          ['cyber_criticality', catalog.cyberCriticalityLevels, 'cyber_criticality_label', 'cyber_criticality_rank'],
-          ['data_class', catalog.dataClasses, 'data_class_label', 'data_class_rank'],
-          ['recovery_wave', catalog.recoveryWaves, 'recovery_wave_label', 'recovery_wave_order'],
-        ] as const) {
-          const option = options.find((item) => item.code === base[field]);
-          base[output] = option?.label ?? base[field] ?? null;
-          base[rankField] = option ? ('rank' in option ? option.rank : option.order) : null;
-        }
+        Object.assign(base, classificationLabels(base, catalog));
         if (include.has('supplier')) {
           base.supplier_name = supplierNames.get(app.id) || null;
         }

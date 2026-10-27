@@ -87,6 +87,8 @@ async function testDescribeEntityFiltersCarriesColumns() {
       query: async (...params: unknown[]) => {
         // The tenant's analytics dimensions (the registry is resolved per tenant), then the budget column settings.
         if (/analytics_axes/.test(String(params[0]))) { axisQueries.push(params); return [nature]; }
+        // The language of the person's menus, for the screens of `families_not_read`.
+        if (/FROM users/.test(String(params[0]))) return [{ locale: 'fr' }];
         queries.push(params);
         return [{ value: { labels: { committed: 'A1' } } }];
       },
@@ -99,6 +101,7 @@ async function testDescribeEntityFiltersCarriesColumns() {
     assert.ok(result.fields.some((field: any) => field.field === 'analytics:nature' && field.groupable), `${entityType}: the tenant's dimension listed`);
     assert.deepEqual(result.budget_columns[1], { column: 2, ai_field_suffix: 'review', measure: 'committed', name: 'A1', shown: true, default: false });
     assert.equal(result.budget_columns.length, 5);
+    assert.ok(result.families_not_read.includes('cost centers (Données de référence › Centres de coûts)'), `${entityType}: screens in the profile's language`);
   }
   assert.deepEqual(queries.map((q) => q[1]), [['tenant-1'], ['tenant-1']], 'settings read for the context tenant');
   assert.deepEqual(axisQueries.map((q) => q[1]), [['tenant-1'], ['tenant-1']], 'dimensions read for the context tenant');

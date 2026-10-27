@@ -448,7 +448,7 @@ Klassifizierungs- und Kontinuitätswerte werden kopiert, die neue Version beginn
 
 ### Schnittstellenmigration
 
-Während der Versionserstellung zeigt der Assistent alle Schnittstellen an, bei denen diese Anwendung Quelle, Ziel oder Middleware ist (wenn ETL aktiviert ist). Ausgewählte Schnittstellen werden mit auf die neue Version aktualisierten Referenzen dupliziert. Jede migrierte Schnittstelle enthält ihre Legs, Verantwortlichen, Unternehmen, Schlüsselkennungen, Verknüpfungen und Datenhaltung. Migrierte Schnittstellen starten mit einem **Vorgeschlagen**-Lebenszyklus. Die ursprünglichen Schnittstellen bleiben mit der alten Version verknüpft.
+Während der Versionserstellung zeigt der Assistent alle Schnittstellen an, bei denen diese Anwendung Quelle, Ziel oder Middleware ist (wenn ETL aktiviert ist). Ausgewählte Schnittstellen werden mit auf die neue Version aktualisierten Referenzen dupliziert. Jede migrierte Schnittstelle enthält ihre Legs, Verantwortlichen, Unternehmen, Schlüsselkennungen, Verknüpfungen, Datenhaltung und ihre Spezifikation (der Text der Quelle und ihre Bilder). Eine leere Schnittstellen-ID bleibt leer. Migrierte Schnittstellen starten mit einem **Vorgeschlagen**-Lebenszyklus. Die ursprünglichen Schnittstellen bleiben mit der alten Version verknüpft.
 
 **Bindungen kopieren**: Wenn Sie sowohl **Bereitstellungen** als auch **Bereitstellungs-Bindungen** auswählen, werden auch Schnittstellen-Bindungen kopiert. Bindungen werden den Bereitstellungen der neuen Anwendung zugeordnet (nach Umgebung abgeglichen); umgebungsspezifische Details (Endpunkte, Authentifizierung, Job-Namen) werden gelöscht, und der Bindungsstatus wird auf **Vorgeschlagen** zurückgesetzt.
 

@@ -16,7 +16,10 @@ type Ref = { id: string; reference: string };
 
 type Seed = {
   tenantId: string;
+  /** A Business Contributor who takes part in `apps.suggested` only. */
   userId: string;
+  /** A contract editor with no participation scope. */
+  memberId: string;
   supplierId: string;
   contractId: string;
   bareContractId: string;
@@ -61,7 +64,7 @@ function req(runner: QueryRunner, seed: Seed, permissions: Record<string, string
 }
 
 const READ = { contracts: 'reader', infrastructure: 'reader', applications: 'reader' };
-const WRITE = { contracts: 'member', infrastructure: 'reader' };
+const WRITE = { contracts: 'member', infrastructure: 'reader', applications: 'reader' };
 
 async function rejection(fn: () => Promise<unknown>): Promise<Error> {
   try {
@@ -82,6 +85,14 @@ async function seedTab(runner: QueryRunner, tag: string): Promise<Seed> {
   const userId = (await one(
     `INSERT INTO users (tenant_id, email, role_id, first_name, last_name) VALUES ($1, $2, $3, 'Ada', 'Martin') RETURNING id`,
     [tenantId, `ctab-${tag}-${tenantId.slice(0, 8)}@example.test`, roleId],
+  )).id as string;
+  const memberRoleId = (await one(
+    `INSERT INTO roles (tenant_id, role_name) VALUES ($1, 'Contract editor') RETURNING id`,
+    [tenantId],
+  )).id as string;
+  const memberId = (await one(
+    `INSERT INTO users (tenant_id, email, role_id, first_name, last_name) VALUES ($1, $2, $3, 'Max', 'Durand') RETURNING id`,
+    [tenantId, `ctab-member-${tag}-${tenantId.slice(0, 8)}@example.test`, memberRoleId],
   )).id as string;
   const companyId = (await one(
     `INSERT INTO companies (tenant_id, name, country_iso, city) VALUES ($1, $2, 'FR', 'Lyon') RETURNING id`,
@@ -171,6 +182,7 @@ async function seedTab(runner: QueryRunner, tag: string): Promise<Seed> {
   return {
     tenantId,
     userId,
+    memberId,
     supplierId,
     contractId,
     bareContractId,
@@ -235,12 +247,12 @@ async function testSuggestions() {
     // No read of the infrastructure: the technologies are null, and no asset is suggested.
     const hidden = await http.relations(seed.contractId, req(runner, seed, { contracts: 'reader', applications: 'reader' }));
     assert.equal(hidden.technologies, null);
-    assert.deepEqual(hidden.assets.map((row) => row.id), [seed.assets.alpha.id, seed.assets.mid.id], 'linked assets stay listed');
+    assert.equal(hidden.assets, null, 'no linked asset without the read of the infrastructure');
     assert.deepEqual(hidden.suggestions.map((row) => row.name), ['Cedar app', 'Delta app']);
 
-    // No read of the applications: linked applications stay listed, none is suggested.
+    // No read of the applications: no linked application, none is suggested.
     const noApps = await http.relations(seed.contractId, req(runner, seed, { contracts: 'reader', infrastructure: 'reader' }));
-    assert.ok(noApps.applications.length > 0, 'linked applications stay listed');
+    assert.equal(noApps.applications, null, 'no linked application without the read right');
     assert.ok(!noApps.suggestions.some((row) => row.type === 'application'), 'no application suggested without the read right');
     assert.ok(noApps.suggestions.some((row) => row.type === 'asset'));
 
@@ -251,6 +263,7 @@ async function testSuggestions() {
       [seed.apps.suggested.id],
     );
     assert.ok(scoped.suggestions.some((row) => row.id === seed.assets.suggested.id), 'assets are not scoped by application participation');
+    assert.deepEqual(scoped.applications, [], 'none of the linked applications is in their participation');
 
     // The same supplier, before the supplier is cleared.
     const bare = await http.relations(seed.bareContractId, req(runner, seed, READ));
@@ -307,7 +320,7 @@ async function testLinksAndAudit() {
     const seed = await seedTab(runner, 'ctab-audit');
     const { audit, svc, controller: http } = controller();
     const opts = { manager: runner.manager };
-    const writer = req(runner, seed, WRITE, seed.userId);
+    const writer = req(runner, seed, WRITE, seed.memberId);
     const linked = [seed.apps.alpha.id, seed.apps.mid.id].sort();
 
     assert.deepEqual(
@@ -323,7 +336,7 @@ async function testLinksAndAudit() {
     const withCedar = [...linked, seed.apps.suggested.id].sort();
     assert.deepEqual(audit.entries[0], {
       table: 'application_contracts', recordId: seed.contractId, action: 'update',
-      before: { ids: linked }, after: { ids: withCedar }, userId: seed.userId,
+      before: { ids: linked }, after: { ids: withCedar }, userId: seed.memberId,
     });
     assert.deepEqual(
       await http.linkRelation(seed.contractId, 'applications', { id: seed.apps.suggested.id }, writer),
@@ -365,10 +378,10 @@ async function testLinksAndAudit() {
     );
     assert.deepEqual(audit.entries[4], {
       table: 'technology_contracts', recordId: seed.contractId, action: 'update',
-      before: { ids: techIds }, after: { ids: [seed.techs.alpha.id] }, userId: seed.userId,
+      before: { ids: techIds }, after: { ids: [seed.techs.alpha.id] }, userId: seed.memberId,
     });
 
-    const counts = await svc.relationCounts(seed.contractId, { ...opts, technologies: true });
+    const counts = await svc.relationCounts(seed.contractId, { ...opts, applications: true, infrastructure: true });
     assert.equal(counts.applications, 2);
     assert.equal(counts.assets, 2);
     assert.equal(counts.technologies, 1);
@@ -433,12 +446,12 @@ async function testTenantIsolation() {
     assert.ok(err instanceof BadRequestException);
     assert.equal(err.message, 'One or more applications not found.');
     const own = await http.relations(b.contractId, reader);
-    assert.deepEqual(own.applications.map((row) => row.id), [b.apps.alpha.id, b.apps.mid.id]);
+    assert.deepEqual(own.applications!.map((row) => row.id), [b.apps.alpha.id, b.apps.mid.id]);
     assert.ok(!own.suggestions.some((row) => row.id === a.apps.suggested.id));
 
     await setTenant(runner, a.tenantId);
     const back = await http.relations(a.contractId, req(runner, a, READ));
-    assert.deepEqual(back.applications.map((row) => row.id), [a.apps.alpha.id, a.apps.mid.id]);
+    assert.deepEqual(back.applications!.map((row) => row.id), [a.apps.alpha.id, a.apps.mid.id]);
   });
 }
 

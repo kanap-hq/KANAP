@@ -8,7 +8,8 @@
  *
  * An alert fires when the value is above its threshold (`>`). Latencies of several processes are
  * read from histogram buckets as the bucket's upper bound (latency-histogram.ts): their thresholds
- * are bucket bounds, so a value at most the threshold never reads as above it.
+ * are bucket bounds, so a value at most the threshold never reads as above it. The pool wait
+ * percentile is capped at the measured maximum before this comparison.
  */
 export const OPS_THRESHOLDS = {
   /** Event loop lag p95 over the last minute: every request of the process waits that long. */

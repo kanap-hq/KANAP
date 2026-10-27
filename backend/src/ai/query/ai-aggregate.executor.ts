@@ -5,6 +5,7 @@ import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem, yearRate
 import { listAiTechnologies, resolveAiApplicationsReach } from './ai-technologies.query';
 import { listAiVulnerabilities } from './ai-vulnerabilities.query';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
+import { aiDataAccessNote } from './ai-data-access-note.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { bilingualDocumentTsQuerySql } from '../../common/document-search-tsquery';
 import { AccountsService } from '../../accounts/accounts.service';
@@ -38,7 +39,7 @@ import { UsersService } from '../../users/users.service';
 import { AiExecutionContextWithManager, AiQueryEntityType, AiQueryScope } from '../ai.types';
 import { adaptFilters } from './ai-filter.adapter';
 import {
-  buildFilterRepairSuggestions,
+  invalidFilterResult,
   hasEmailOrUuidFilterValue,
 } from './ai-filter-description.util';
 import {
@@ -689,7 +690,8 @@ export class AiAggregateExecutor {
           filters: adaptedFilters,
           includeDisabled: true,
         },
-        { manager: context.manager },
+        // The `application` filter matches a Business Contributor's applications only, as on query_entities.
+        { manager: context.manager, coveredApplications: { scope: await resolveAiParticipationAccessScope(context, 'applications') } },
       );
       const ids = result.ids || [];
       return {
@@ -1387,7 +1389,7 @@ export class AiAggregateExecutor {
       scope?: AiQueryScope;
     },
   ): Promise<AiAggregateResult> {
-    const result = await this.executeAggregate(context, input);
+    const result = { ...await this.executeAggregate(context, input), ...await aiDataAccessNote(context, input.entity_type) };
     // Company turnover (sum, avg, min, max) is in the reporting currency. A count has none.
     // Attached here, as the budget and contract notes are, so chat and MCP both carry it.
     if (input.entity_type === 'companies' && result.metric === 'turnover_year') {
@@ -1429,8 +1431,9 @@ export class AiAggregateExecutor {
     const normalizedFilters = await this.normalizePersonFilters(context, input.entity_type, input.filters);
     const adapted = adaptFilters(registry, normalizedFilters);
     if (adapted.ignored.length > 0) {
+      const refusal = invalidFilterResult(registry, adapted);
       return {
-        status: 'invalid_filter',
+        status: refusal.status,
         group_by: input.group_by,
         metric: metric ? input.metric?.trim() ?? null : null,
         function: fn,
@@ -1441,7 +1444,8 @@ export class AiAggregateExecutor {
         complete: false,
         filters_applied: adapted.applied,
         filters_ignored: adapted.ignored,
-        suggested_repairs: buildFilterRepairSuggestions(registry, adapted.ignored),
+        suggested_repairs: refusal.suggested_repairs,
+        ...(refusal.invalid_filter_values ? { invalid_filter_values: refusal.invalid_filter_values } : {}),
         scope: null,
       };
     }

@@ -60,11 +60,47 @@ async function testPoolWaitAndUse() {
   assert.equal(snap.wait.count1m, 3, 'every connection asked for is timed, failures included');
   assert.equal(snap.wait.failures5m, 1, 'a connection the pool could not give is counted');
   assert.ok(snap.wait.p95Ms1m >= 25 && snap.wait.p95Ms1m <= 50, `the 30 ms wait sets the p95 (${snap.wait.p95Ms1m})`);
+  assert.ok(snap.wait.p50Ms1m <= snap.wait.maxMs1m && snap.wait.p95Ms1m <= snap.wait.maxMs1m && snap.wait.p95Ms5m <= snap.wait.maxMs1m,
+    `percentiles stay at most the measured maximum (p50 ${snap.wait.p50Ms1m}, p95 ${snap.wait.p95Ms1m}, p95 5m ${snap.wait.p95Ms5m}, max ${snap.wait.maxMs1m})`);
 
   now += 6 * 60_000;
   const later = metrics.snapshot();
   assert.equal(later.wait.count1m, 0, 'a minute later the waits are out of the 1 min window');
   assert.equal(later.wait.failures5m, 0, 'and out of the 5 min window after five');
+}
+
+/**
+ * A wait under 1 ms sits in the first bucket, whose bound is 1 ms. The percentile stays at most
+ * the highest wait of the same window, in one process and across processes.
+ */
+function testShortPoolWaitCappedAtMax() {
+  let now = 1_000_000;
+  const metrics = new PoolMetrics(10, () => now);
+  metrics.recordWait(0.3, false);
+  metrics.recordWait(0.3, false);
+  const snap = metrics.snapshot();
+  assert.equal(snap.wait.maxMs1m, 0.3);
+  assert.equal(snap.wait.p50Ms1m, 0.3);
+  assert.equal(snap.wait.p95Ms1m, 0.3);
+  assert.equal(snap.wait.p95Ms5m, 0.3);
+  assert.ok(snap.wait.p50Ms1m <= snap.wait.maxMs1m && snap.wait.p95Ms1m <= snap.wait.maxMs1m);
+
+  now += 90_000;
+  metrics.recordWait(0.2, false);
+  const later = metrics.snapshot();
+  assert.equal(later.wait.maxMs1m, 0.2);
+  assert.equal(later.wait.p50Ms1m, 0.2);
+  assert.equal(later.wait.p95Ms1m, 0.2);
+  assert.equal(later.wait.p95Ms5m, 0.3, 'the 5 min percentile is capped at the highest wait of those five minutes');
+
+  const counts = emptyCounts();
+  counts[bucketIndex(0.3)] = 4;
+  const merged = aggregateProcesses([
+    summary(1, {}, { pool: { ...summary(1, {}).pool, waitCounts1m: counts, waitMaxMs1m: 0.3 } }),
+    summary(2, {}, { pool: { ...summary(2, {}).pool, waitCounts1m: counts, waitMaxMs1m: 0.2 } }),
+  ]);
+  assert.equal(merged.pool.waitP95Ms1m, 0.3, 'merged p95 is capped at the highest measured wait');
+  assert.ok(merged.pool.waitP95Ms1m <= 0.3);
 }
 
 async function testEventLoopWindow() {
@@ -161,13 +197,14 @@ function testThresholdsOnBucketBounds() {
 }
 
 function summary(workerId: number, routeCounts: Record<string, number[]>, extra: Partial<ProcessSummary> = {}): ProcessSummary {
+  const waitedMs = workerId === 2 ? 800 : 2;
   const wait = emptyCounts();
-  wait[bucketIndex(workerId === 2 ? 800 : 2)] += 10;
+  wait[bucketIndex(waitedMs)] += 10;
   return {
     label: `worker ${workerId}/2`, workerId, pid: 100 + workerId, host: 'h', startedAt: 0, updatedAt: 0,
     rssMB: 250, heapUsedMB: 100,
     eventLoop: { p95Ms: workerId * 10, maxMs: workerId * 100, p95Ms5m: 0, maxMs5m: 0 },
-    pool: { maxPool: 20, inUse: workerId, inUseMax1m: workerId + 1, waiting: 0, waitP95Ms1m: 0, failures5m: workerId - 1, waitCounts1m: wait },
+    pool: { maxPool: 20, inUse: workerId, inUseMax1m: workerId + 1, waiting: 0, waitP95Ms1m: 0, waitMaxMs1m: waitedMs, failures5m: workerId - 1, waitCounts1m: wait },
     requests: { count1m: 10, count5m: 100, errors5xx5m: workerId },
     routes: routeCounts,
     ...extra,
@@ -192,7 +229,11 @@ function testAggregate() {
   assert.equal(halves.pool.inUsePctMax1m, 50);
   const health = evaluateOpsHealth({ ...quiet, poolInUsePct: halves.pool.inUsePctMax1m });
   assert.equal(health.alerts.some((a) => a.metric === 'pool_in_use_pct'), false, 'no false 90 % warning from summed highs');
-  assert.equal(agg.pool.waitP95Ms1m, 1000, 'the wait p95 comes from the merged counts');
+  assert.equal(agg.pool.waitP95Ms1m, 800, 'the wait p95 comes from the merged counts, capped at the measured maximum (800 ms, bucket 1000)');
+  const legacy = summary(2, {});
+  delete (legacy.pool as { waitMaxMs1m?: number }).waitMaxMs1m;
+  const uncapped = aggregateProcesses([summary(1, {}), legacy]);
+  assert.equal(uncapped.pool.waitP95Ms1m, 1000, 'a summary without a published maximum leaves the merged p95 on the bucket bound');
   assert.deepEqual([agg.requests.count5m, agg.requests.errors5xx5m], [200, 3]);
   const x = agg.topRoutes.find((r) => r.route === '/x')!;
   assert.equal(x.count, 110, 'a route served by both processes is counted once, merged');
@@ -237,6 +278,7 @@ function testMonitoringToken() {
 async function run() {
   testHistogram();
   await testPoolWaitAndUse();
+  testShortPoolWaitCappedAtMax();
   await testEventLoopWindow();
   testRouteHistograms();
   testHealth();

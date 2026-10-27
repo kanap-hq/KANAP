@@ -19,6 +19,7 @@ Al hacer clic en **Nuevo**, se abre el espacio de trabajo completo de la tarea. 
 
 3. **Complete los detalles opcionales**:
    - **Tipo de tarea**: Seleccione una categoría para el trabajo (p. ej., Tarea, Bug, Problema, Incidente). Por defecto es "Tarea" cuando está disponible
+   - **Etiquetas**: Etiquetas libres, por ejemplo urgente o seguimiento. Escriba una y pulse Intro
    - **Descripción**: Añada información detallada usando el editor markdown (admite formato, listas, enlaces, imágenes)
    - **Fase**: Para tareas de proyecto, seleccione una fase o deje como "Nivel de proyecto"
    - **Clasificación** (tareas independientes y de proyecto): Establezca **Origen**, **Categoría**, **Flujo** y **Empresa**. Para tareas de proyecto, estos valores se heredan del proyecto padre. Para tareas independientes, los valores de clasificación predeterminados de su organización se rellenan automáticamente cuando están disponibles
@@ -159,6 +160,7 @@ El panel es plegable (haga clic en la pestaña vertical **Propiedades** en el bo
   - **Relacionado con**: Independiente, Proyecto, OPEX, Contrato o CAPEX. Puede cambiar el tipo y elegir un nuevo elemento; al guardar, KANAP aplica cualquier efecto secundario relacionado (consulte [Cambiar el contexto de la tarea](#cambiar-el-contexto-de-la-tarea))
   - **Fase** (solo tareas de proyecto): Por defecto es **Nivel de proyecto** a menos que elija una fase del proyecto
   - **Tipo de tarea**: Tarea, Bug, Problema, Incidente o cualquier tipo personalizado configurado por su administrador
+  - **Etiquetas**: Etiquetas libres, por ejemplo urgente o seguimiento. Escriba una y pulse Intro. Se muestran como chips. Una persona con permiso de lectura ve los chips
 
 **Clasificación** (solo tareas independientes y de proyecto):
   - **Origen**: De dónde provino el trabajo

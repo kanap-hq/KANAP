@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { AiPolicyService } from '../ai-policy.service';
+import { AiPolicyService, missingRightMessage } from '../ai-policy.service';
 import { Features } from '../../config/features';
 import { Tenant, TenantStatus } from '../../tenants/tenant.entity';
 import { UserRole } from '../../users/user-role.entity';
@@ -661,7 +661,18 @@ async function testCapabilitiesRejectPlatformHost() {
   );
 }
 
+/** A refusal names the missing right in plain words, never its code (P4-5, P4-9). */
+async function testMissingRightIsSaidInPlainWords() {
+  assert.equal(missingRightMessage('portfolio_projects', 'member'), 'You need the right to modify projects, which your role does not give. An administrator can add it to your role.');
+  assert.equal(missingRightMessage('budget', 'reader'), 'You need the right to read budget lines, which your role does not give. An administrator can add it to your role.');
+  assert.match(missingRightMessage('ai_chat', 'member'), /^Your role lets you ask Plaid questions but not prepare changes with it/);
+  for (const [resource, level] of [['budget', 'reader'], ['infrastructure', 'reader'], ['applications', 'member'], ['knowledge', 'reader']] as const) {
+    assert.doesNotMatch(missingRightMessage(resource, level), /:|reader|member/, `${resource}: no permission code`);
+  }
+}
+
 async function run() {
+  await testMissingRightIsSaidInPlainWords();
   await testListReadableEntityTypesFiltersUnreadableFamilies();
   await testSettingsAccessRequiresAiSettingsAdmin();
   await testModelConfigReadTierMatrix();

@@ -71,6 +71,51 @@ const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> =
   vulnerabilities: 'infrastructure',
 };
 
+/** Each right in plain words, as a refusal names it to the person (never its code, P4-9). */
+const RIGHT_PLAIN_NAMES: Record<string, string> = {
+  accounts: 'accounts',
+  analytics: 'analytics dimensions',
+  applications: 'applications and interfaces',
+  budget: 'budget lines',
+  business_processes: 'business processes',
+  companies: 'companies',
+  contacts: 'contacts',
+  contracts: 'contracts',
+  departments: 'departments',
+  incidents: 'incidents',
+  infrastructure: 'IT infrastructure (assets, connections, technologies)',
+  knowledge: 'knowledge documents',
+  locations: 'locations',
+  portfolio_projects: 'projects',
+  portfolio_requests: 'requests',
+  suppliers: 'suppliers',
+  tasks: 'tasks',
+  users: 'users',
+};
+
+const LEVEL_PLAIN_VERBS: Record<PermissionLevel, string> = {
+  reader: 'read',
+  contributor: 'contribute to',
+  member: 'modify',
+  admin: 'administer',
+};
+
+/**
+ * The refusal of a missing right, in plain words: which right, at which level (P4-5, P4-9). The
+ * chat model says it again in the person's language; an MCP client reads it as is.
+ */
+export function missingRightMessage(resource: string, minimumLevel: PermissionLevel): string {
+  if (resource === 'ai_chat') {
+    return minimumLevel === 'reader'
+      ? 'Your role does not give access to Plaid. An administrator can add it to your role.'
+      : 'Your role lets you ask Plaid questions but not prepare changes with it: that needs the Plaid right at member level. An administrator can add it to your role.';
+  }
+  const name = RIGHT_PLAIN_NAMES[resource];
+  // The rights of the settings and the MCP surface keep their code: the administration screens read it.
+  if (!name) return `Missing required permission ${resource}:${minimumLevel}.`;
+  return `You need the right to ${LEVEL_PLAIN_VERBS[minimumLevel] ?? minimumLevel} ${name}, which your role does not give. An administrator can add it to your role.`;
+}
+
 /** The entity types the policy knows; any other requested value is never readable. */
 const KNOWN_ENTITY_TYPES: ReadonlySet<string> = new Set<string>([
   ...AI_QUERY_ENTITY_TYPES,
@@ -212,8 +257,21 @@ export class AiPolicyService {
 
     const current = state.permissions.get(resource);
     if (!current || (LEVEL_RANK[current] ?? 0) < (LEVEL_RANK[minimumLevel] ?? 0)) {
-      throw new ForbiddenException(`Missing required permission ${resource}:${minimumLevel}.`);
+      throw new ForbiddenException(missingRightMessage(resource, minimumLevel));
     }
+  }
+
+  /**
+   * What this person may change through Plaid, in plain words, for the refusals of the chat:
+   * whether their role lets them prepare changes with Plaid, and the modules they may modify.
+   */
+  async describeWriteRights(context: AiExecutionContext, manager: EntityManager): Promise<{ plaidChanges: boolean; modifiableModules: string[] }> {
+    const state = await this.getEffectivePermissionStateOrNull(context.userId, manager);
+    const resources = Object.keys(RIGHT_PLAIN_NAMES);
+    return {
+      plaidChanges: context.surface === 'chat' && this.hasPermission(state, 'ai_chat', 'member'),
+      modifiableModules: resources.filter((resource) => this.hasPermission(state, resource, 'member')).map((resource) => RIGHT_PLAIN_NAMES[resource]),
+    };
   }
 
   async canReadKnowledge(context: AiExecutionContext, manager: EntityManager): Promise<boolean> {
@@ -252,6 +310,15 @@ export class AiPolicyService {
       }
       return false;
     }
+  }
+
+  /**
+   * The rights, among `resources`, the user holds at reader level, without the surface checks: the
+   * pages of the application a read tool may link to (`ai-page-urls.ts`).
+   */
+  async readableResources(context: AiExecutionContext, resources: string[], manager: EntityManager): Promise<Set<string>> {
+    const state = await this.getEffectivePermissionStateOrNull(context.userId, manager);
+    return new Set(resources.filter((resource) => this.hasPermission(state, resource, 'reader')));
   }
 
   async getCapabilities(

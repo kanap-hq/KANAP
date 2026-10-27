@@ -18,7 +18,8 @@ function createContext() {
     isPlatformHost: false,
     surface: 'mcp' as const,
     authMethod: 'api_key' as const,
-    manager: { tag: 'manager' } as any,
+    // `query` answers the data access mode probe (`aiDataAccessNote`): an unscoped person.
+    manager: { tag: 'manager', query: async () => [{ limited: false }] } as any,
   };
 }
 

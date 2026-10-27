@@ -1,6 +1,8 @@
 // url.ts imports this module as well: only functions cross between the two, called after load.
 import { resolveConfiguredAppBaseUrl } from './url';
 import { parseDeploymentMode } from './deployment-mode';
+import { passwordResetTtlWarning, tokenDurationWarning } from '../auth/token-ttl.util';
+import { apiWorkersConfigWarning } from './cluster/process-role';
 
 export function requireEnv(name: string, env: NodeJS.ProcessEnv = process.env): string {
   const value = env[name];
@@ -209,7 +211,8 @@ export type StartupEnvReport = {
  * Start-up checks of the environment. Throws only where the API refuses to start:
  * `DEPLOYMENT_MODE` outside `single-tenant`, `multi-tenant` or unset, `DATABASE_URL` or
  * `JWT_SECRET` missing, and in production mode `APP_BASE_URL` or `CORS_ORIGINS` missing.
- * Everything else is returned as a warning.
+ * Everything else is returned as a warning, including a token lifetime, `API_WORKERS` or
+ * `S3_BUCKET` the API will not use as written. The lead process prints the lines once per start.
  */
 export function validateStartupEnv(
   env: NodeJS.ProcessEnv = process.env,
@@ -274,5 +277,26 @@ export function validateStartupEnv(
     }
   }
 
+  for (const warning of [
+    tokenDurationWarning('JWT_ACCESS_TOKEN_TTL', env.JWT_ACCESS_TOKEN_TTL),
+    tokenDurationWarning('JWT_REFRESH_TOKEN_TTL', env.JWT_REFRESH_TOKEN_TTL),
+    passwordResetTtlWarning(env.PASSWORD_RESET_TTL),
+    apiWorkersConfigWarning(env.API_WORKERS),
+    s3BucketWarning(env),
+  ]) {
+    if (warning) warnings.push(warning);
+  }
+
   return { mode, warnings };
+}
+
+/**
+ * `S3StorageService` keeps an empty bucket and throws on the first storage call. The storage
+ * module builds that service for `FILES_STORAGE=s3` and for every other value, including unset.
+ */
+function s3BucketWarning(env: NodeJS.ProcessEnv): string | null {
+  const raw = env.S3_BUCKET;
+  if (typeof raw === 'string' && raw.trim() !== '') return null;
+  const named = typeof raw === 'string' && raw !== '' ? `is ${JSON.stringify(raw)}` : 'is not set';
+  return `[CONFIG] S3_BUCKET ${named}: file storage fails at the first upload or download. Set S3_BUCKET to the name of the bucket.`;
 }

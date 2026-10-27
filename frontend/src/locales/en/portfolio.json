@@ -855,6 +855,8 @@
           "category": "Category",
           "company": "Company",
           "dueDate": "Due date",
+          "labels": "Labels",
+          "labelsPlaceholder": "e.g., urgent",
           "phase": "Phase",
           "priority": "Priority",
           "relatedTo": "Related to",

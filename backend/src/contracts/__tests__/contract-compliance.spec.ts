@@ -3,6 +3,8 @@ import {
   COMPLIANCE_RULE_REQUIREMENTS,
   CONTRACT_COMPLIANCE_REQUIREMENTS,
   complianceInputsFromSettings,
+  complianceRegisterCsv,
+  contractComplianceView,
   highLevelCodes,
   registerReasonText,
   summarizeCompliance,
@@ -105,13 +107,60 @@ function testReasonText() {
   );
 }
 
-function run() {
+/**
+ * Reasons and recorded items share the request's connection. Two queries in flight at once are the
+ * node-postgres warning (`client.query() when the client is already executing a query`).
+ */
+function serialManager() {
+  let busy = 0;
+  async function occupy<T>(work: () => T): Promise<T> {
+    if (busy > 0) throw new Error('client.query() when the client is already executing a query');
+    busy += 1;
+    try {
+      await new Promise((resolve) => setImmediate(resolve));
+      return work();
+    } finally {
+      busy -= 1;
+    }
+  }
+  const qb = {
+    select: () => qb,
+    from: () => qb,
+    setParameters: () => qb,
+    getRawMany: () => occupy(() => []),
+  };
+  return {
+    query: () => occupy(() => []),
+    createQueryBuilder: () => qb,
+  };
+}
+
+async function testComplianceReadsRunOneAfterTheOther() {
+  const inputs = complianceInputsFromSettings({});
+  const manager = serialManager();
+  const view = await contractComplianceView(manager as never, inputs, { id: 'c1' });
+  assert.equal(view.requirements.length, CONTRACT_COMPLIANCE_REQUIREMENTS.length);
+  assert.equal(view.summary.state, 'none');
+  const csv = await complianceRegisterCsv(
+    manager as never,
+    inputs,
+    [{ id: 'c1', name: 'Lease', supplier_name: null, company_name: null }],
+    'en',
+  );
+  assert.match(csv, /Lease/);
+}
+
+async function run() {
   testHighLevels();
   testDefaultSettings();
   testCustomSettings();
   testRulesCoverEveryRequirement();
   testSummary();
   testReasonText();
+  await testComplianceReadsRunOneAfterTheOther();
 }
 
-run();
+void run().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

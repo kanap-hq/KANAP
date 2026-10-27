@@ -30,8 +30,9 @@ import { runDataAccessStartup } from './data-access/data-access-availability';
 /**
  * Environment checks (common/env.ts): throws where the API refuses to start (a DEPLOYMENT_MODE
  * outside single-tenant, multi-tenant or unset, plus the checks that already stopped the start),
- * prints the rest as warnings (run mode, application address, browser origins). Every process
- * checks; the lead process alone prints, so the lines appear once per start (`API_WORKERS` > 1).
+ * prints the rest as warnings (run mode, application address, browser origins, token lifetimes,
+ * `API_WORKERS`, `S3_BUCKET`). Every process checks; the lead process alone prints, so the lines
+ * appear once per start (`API_WORKERS` > 1).
  */
 function checkStartupEnv() {
   const report = validateStartupEnv(process.env, { singleTenant: Features.SINGLE_TENANT });

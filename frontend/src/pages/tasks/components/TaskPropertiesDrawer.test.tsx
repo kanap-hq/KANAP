@@ -1,5 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
@@ -198,5 +199,29 @@ describe('TaskPropertiesDrawer linked records the person cannot read', () => {
     expect(within(fieldRow('Related to')).getByText('ERP rollout')).toBeTruthy();
     expect(within(fieldRow('Applications')).getByText('APP-36 CheeseTrack')).toBeTruthy();
     expect(screen.getByText('Assets')).toBeTruthy();
+  });
+});
+
+describe('TaskPropertiesDrawer labels', () => {
+  it('adds and removes a label through onPatch', async () => {
+    const user = userEvent.setup();
+    const onPatch = vi.fn();
+    renderDrawer({ readOnly: false, onPatch, task: task({ labels: ['alpha'] }) });
+    const input = within(fieldRow('Labels')).getByRole('combobox', { name: 'Labels' });
+    await user.type(input, ' beta{enter}');
+    expect(onPatch).toHaveBeenCalledWith({ labels: ['alpha', 'beta'] });
+    const alpha = within(fieldRow('Labels')).getByText('alpha').closest('.MuiChip-root');
+    if (!alpha) throw new Error('missing alpha chip');
+    await user.click(alpha.querySelector('.MuiChip-deleteIcon') as Element);
+    expect(onPatch).toHaveBeenLastCalledWith({ labels: [] });
+  });
+
+  it('shows chips only to a reader', () => {
+    renderDrawer({ readOnly: true, task: task({ labels: ['alpha', 'beta'] }) });
+    const row = fieldRow('Labels');
+    expect(within(row).getByText('alpha')).toBeTruthy();
+    expect(within(row).getByText('beta')).toBeTruthy();
+    expect(within(row).queryByRole('combobox')).toBeNull();
+    expect(within(row).getByText('alpha').closest('.MuiChip-root')?.querySelector('.MuiChip-deleteIcon')).toBeNull();
   });
 });

@@ -224,13 +224,13 @@ La pestaña Relaciones muestra lo que cubre este contrato: sus aplicaciones, act
 
 | Sección | Columnas |
 |---|---|
-| **Aplicaciones** | Referencia (`APP-3`), nombre, ciclo de vida, criticidad de negocio |
-| **Activos** | Referencia (`AST-12`), nombre, tipo, entorno, estado |
+| **Aplicaciones** | Referencia (`APP-3`), nombre, ciclo de vida, criticidad de negocio. Solo visible si puede leer las aplicaciones. Un Business Contributor ve las aplicaciones en las que participa |
+| **Activos** | Referencia (`AST-12`), nombre, tipo, entorno, estado. Solo visible si puede leer la infraestructura |
 | **Tecnologías** | Referencia (`TEC-5`), nombre, familia, editor. Solo visible si puede leer la infraestructura |
 
 Una aplicación o un activo desactivado o retirado sigue en la lista con el nombre atenuado. Las aplicaciones y los activos alimentan la pestaña [Conformidad](#conformidad). Un activo cuyo contrato de soporte es este, indicado en la ficha del activo, no aparece aquí. Cuenta igualmente para la conformidad.
 
-**Añadir y quitar vínculos** (`contracts:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. La búsqueda ofrece las aplicaciones y los activos que usted puede ver. Las tecnologías retiradas no se ofrecen. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Vincular una tecnología requiere también poder leer la infraestructura. Los lectores ven las tablas en solo lectura.
+**Añadir y quitar vínculos** (`contracts:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. La búsqueda ofrece las aplicaciones y los activos que usted puede ver. Las tecnologías retiradas no se ofrecen. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Vincular una aplicación requiere también poder leer las aplicaciones, y vincular un activo o una tecnología, poder leer la infraestructura. Un Business Contributor vincula y quita solo las aplicaciones en las que participa; las demás aplicaciones del contrato siguen vinculadas. Los lectores ven las tablas en solo lectura.
 
 **Relacionados**: las aplicaciones y los activos del proveedor del contrato que aún no están vinculados, con el motivo «mismo proveedor». Un activo pertenece al proveedor por su proveedor de soporte. Haga clic en **Vincular** para añadir la sugerencia a su sección. Las sugerencias muestran:
 
@@ -288,7 +288,7 @@ El recuadro muestra la fecha límite, los días restantes, la tarea y su asignad
 
 - **Renovar**: la renovación queda confirmada para este periodo. La tarea se cierra, el contrato sale de **Por decidir** y vuelve al plazo en la fecha límite del periodo siguiente
 - **Renegociar**: el recuadro indica **Renegociación en curso** y la tarea sigue abierta hasta la decisión final. El contrato sigue **Por decidir**
-- **Rescindir**: el recuadro muestra la fecha de fin que debe confirmar. KANAP propone el primer fin que permite el preaviso («Preaviso de 6 meses: el primer fin posible es el 30 jun. 2027.»). Puede elegir otro día, a partir de hoy y del inicio del contrato. Un día anterior al propuesto muestra un aviso naranja: el proveedor tiene que aceptarlo. El recuadro enumera las consecuencias para ese día: el compromiso del año y del siguiente, las aplicaciones que pierden este contrato y los activos que pierden su contrato de soporte. **Confirmar la rescisión** desactiva la renovación tácita, fija el fin de validez en ese día y cierra la tarea. El contrato indica entonces **Termina sin renovación** y su compromiso se detiene ese día
+- **Rescindir**: el recuadro muestra la fecha de fin que debe confirmar. KANAP propone el primer fin que permite el preaviso («Preaviso de 6 meses: el primer fin posible es el 30 jun. 2027.»). Puede elegir otro día, a partir de hoy y del inicio del contrato. Un día anterior al propuesto muestra un aviso naranja: el proveedor tiene que aceptarlo. El recuadro enumera las consecuencias para ese día: el compromiso del año y del siguiente, las aplicaciones que pierden este contrato y los activos que pierden su contrato de soporte, cada uno si puede leer su módulo. **Confirmar la rescisión** desactiva la renovación tácita, fija el fin de validez en ese día y cierra la tarea. El contrato indica entonces **Termina sin renovación** y su compromiso se detiene ese día
 
 En un contrato sin renovación, el recuadro dice «Fin prevista el 31 mar. 2027 · decisión pendiente» y ofrece dos acciones:
 

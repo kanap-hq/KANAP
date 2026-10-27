@@ -244,7 +244,7 @@ If a dedicated application role was initially created with too many privileges, 
 
 **Bucket requirements:**
 
-- Create the bucket before starting KANAP (it is not created automatically). KANAP does not check it at start: a missing bucket shows at the first upload or download.
+- Create the bucket before starting KANAP (it is not created automatically). A missing `S3_BUCKET` is named in a `[CONFIG]` warning at start. A bucket that does not exist in the store still shows at the first upload or download.
 - KANAP calls `PutObject`, `GetObject`, `HeadObject`, `DeleteObject` and `ListObjectsV2`, and builds presigned `GET` links, all on that one bucket. The matching permissions are `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` and `s3:ListBucket`.
 
 **Encryption at rest.** KANAP asks the store to encrypt every upload (server-side encryption `AES256`). A store that does not support it makes the API write the warning `PutObject fallback used: provider rejected explicit SSE header; upload retried without SSE request header` and keep the file as sent. RustFS accepts the request when `RUSTFS_SSE_S3_MASTER_KEY` is set, which the [installation example](installation-example.md#5-object-storage-rustfs) does. Keep that key with your configuration backup: files encrypted with it cannot be read without it.
@@ -494,9 +494,9 @@ Notes:
 |----------|-------------|---------|
 | `RATE_LIMIT_TRUST_PROXY` | How KANAP finds the client address for its sign-in and request limits. `true`: one reverse proxy sits in front of the API and sends `X-Forwarded-For` (the nginx of this guide). `false`: nothing sits in front, the address of the connection is used. `1` to `3`: that many proxies in a row. | Unset on single-tenant means one trusted proxy, with a `[RATE-LIMIT]` warning at each start. Set it explicitly. |
 | `RATE_LIMIT_ENABLED` | App-level rate limiting toggle | `true` |
-| `JWT_ACCESS_TOKEN_TTL` | Access token lifetime: a number followed by `s`, `m`, `h` or `d`. Another format becomes 15 minutes. | `15m` |
-| `JWT_REFRESH_TOKEN_TTL` | Refresh token lifetime, same format. Another format becomes 15 minutes. | `4h` |
-| `PASSWORD_RESET_TTL` | Lifetime of a password reset link: a number of seconds or a duration such as `30m` or `2h`. | `1h` |
+| `JWT_ACCESS_TOKEN_TTL` | Access token lifetime: a number followed by `s`, `m`, `h` or `d`. Another format becomes 15 minutes, and the API names the value in a `[CONFIG]` warning at start. | `15m` |
+| `JWT_REFRESH_TOKEN_TTL` | Refresh token lifetime, same format. Another format becomes 15 minutes, and the API names the value in a `[CONFIG]` warning at start. | `4h` |
+| `PASSWORD_RESET_TTL` | Lifetime of a password reset link: a number of seconds or a duration such as `30m` or `2h`. Another value lasts 1 hour, and the API names it in a `[CONFIG]` warning at start. | `1h` |
 | `LOG_LEVEL` | `debug` or `verbose` adds the details of each scheduled job run to the log. Any other value changes nothing. | *unset* |
 | `INTEGRATED_DOCS_AUTO_ROLLOUT` | Repairs, at start, the documents linked to requests and projects. Off on-premise unless you set it: `if-needed` runs the repair only when the counts differ, `always` at every start. | *off* |
 | `APP_URL` | Multi-tenant (cloud) only. **Not needed on-premise**: `APP_BASE_URL` is used. | *unset* |
@@ -510,7 +510,7 @@ The defaults suit a few dozen users. For more users at once, run several API pro
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `API_WORKERS` | Number of API processes in the API container (1 to 16). With more than one, a request that computes no longer makes everyone else wait. | `1` |
+| `API_WORKERS` | Number of API processes in the API container (1 to 16). A value that is not a whole number runs 1 process. A value above 16 runs 16. The API names that value in a `[CONFIG]` warning at start. With more than one, a request that computes no longer makes everyone else wait. | `1` |
 | `DB_POOL_MAX` | Database connections per API process (2 at least: a lower value is raised to 2) | `20` |
 | `SHUTDOWN_DRAIN_TIMEOUT_MS` | On stop or upgrade, how long the API lets requests in progress, the notifications they started, running background jobs and queued emails finish (milliseconds, at most 120000). The container is stopped after 30 s whatever happens. | `20000` |
 | `OPS_METRICS_TOKEN` | Enables `GET /api/ops/metrics` for your monitoring tool (24 characters or more, for example `openssl rand -hex 32`; a shorter value leaves it disabled and the API says so at start). See [Operations](operations.md#api-metrics-for-a-monitoring-tool). | *unset (disabled)* |

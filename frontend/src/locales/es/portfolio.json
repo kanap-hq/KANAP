@@ -855,6 +855,8 @@
           "category": "Categoría",
           "company": "Empresa",
           "dueDate": "Fecha de vencimiento",
+          "labels": "Etiquetas",
+          "labelsPlaceholder": "p. ej., urgente",
           "phase": "Fase",
           "priority": "Prioridad",
           "relatedTo": "Relacionado con",

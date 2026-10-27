@@ -1,5 +1,5 @@
 import { performance } from 'node:perf_hooks';
-import { addInto, bucketIndex, emptyCounts, percentileOf, totalOf } from './latency-histogram';
+import { addInto, bucketIndex, emptyCounts, percentileCapped, totalOf } from './latency-histogram';
 
 /**
  * Database pool of this API process, as the ops metrics show it (plan planning/perf-scale lot
@@ -32,7 +32,7 @@ export type PoolMetricsSnapshot = {
   inUseMax1m: number;
   inUseAvg1m: number;
   waitingMax1m: number;
-  /** Time to get a connection from the pool. */
+  /** Time to get a connection from the pool. Each percentile is capped at the maximum of its window. */
   wait: {
     count1m: number;
     p50Ms1m: number;
@@ -120,6 +120,8 @@ export class PoolMetrics {
     const totalCount = this.pool?.totalCount ?? 0;
     const idleCount = this.pool?.idleCount ?? 0;
     const inUse = Math.max(0, totalCount - idleCount);
+    const maxMs1m = Math.round(minute.reduce((max, slot) => Math.max(max, slot.max), 0) * 10) / 10;
+    const maxMs5m = Math.round(five.reduce((max, slot) => Math.max(max, slot.max), 0) * 10) / 10;
     return {
       maxPool: this.maxPool,
       totalCount,
@@ -132,10 +134,10 @@ export class PoolMetrics {
       waitingMax1m: minute.reduce((max, slot) => Math.max(max, slot.waitingMax), this.pool?.waitingCount ?? 0),
       wait: {
         count1m: totalOf(counts1m),
-        p50Ms1m: percentileOf(counts1m, 50),
-        p95Ms1m: percentileOf(counts1m, 95),
-        maxMs1m: Math.round(minute.reduce((max, slot) => Math.max(max, slot.max), 0) * 10) / 10,
-        p95Ms5m: percentileOf(counts5m, 95),
+        p50Ms1m: percentileCapped(counts1m, 50, maxMs1m),
+        p95Ms1m: percentileCapped(counts1m, 95, maxMs1m),
+        maxMs1m,
+        p95Ms5m: percentileCapped(counts5m, 95, maxMs5m),
         failures5m: five.reduce((sum, slot) => sum + slot.failed, 0),
       },
     };

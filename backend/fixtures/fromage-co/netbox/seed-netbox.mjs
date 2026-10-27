@@ -401,9 +401,11 @@ async function seedBase() {
   for (const pass of [0, 1]) {
     for (const item of LOCATIONS) {
       if ((item.parent ? 1 : 0) !== pass) continue;
+      // The drift scenario renames a location and leaves its slug, so the slug
+      // is what finds it again. `restore` puts the name back.
       const row = await ensure(
         '/dcim/locations',
-        { name: item.name, site_id: siteId.get(item.site) },
+        { slug: item.slug, site_id: siteId.get(item.site) },
         {
           name: item.name,
           slug: item.slug,

@@ -1409,6 +1409,7 @@ export default function TaskWorkspacePage() {
         creator_id: form.creator_id || null,
         phase_id: form.phase_id || null,
         viewer_ids: form.viewer_ids || [],
+        labels: Array.isArray(form.labels) ? form.labels : [],
         task_type_id: (form as any).task_type_id || null,
         application_ids: Array.isArray((form as any).application_ids) ? (form as any).application_ids : [],
         asset_ids: Array.isArray((form as any).asset_ids) ? (form as any).asset_ids : [],

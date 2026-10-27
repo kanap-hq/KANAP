@@ -933,7 +933,7 @@ async function testBusinessTaskFinancialWritesAndRbac(harness: Harness) {
           effective_start: '2026-01-01',
         },
       }),
-      /budget:member|permission|available/i,
+      /right to modify budget lines|available/i,
     );
   });
 }

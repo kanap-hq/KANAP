@@ -118,9 +118,34 @@ Plaid lista y lee las tecnologías para los usuarios que pueden leer la infraest
 
 Cuando se siguen las vulnerabilidades, Plaid también lista, cuenta y lee las vulnerabilidades, para los usuarios que leen la infraestructura. Un elemento es una CVE en una versión de una tecnología, como en la página [Vulnerabilidades](vulnerabilities.md). Plaid puede filtrarlas por gravedad, explotación, estado, alertas, tecnología, fecha de publicación, activo o aplicación, y contarlas por gravedad o por tecnología. Salvo que pida otra cosa, Plaid conserva las vulnerabilidades por revisar que están en las alertas, como la página. Los servidores y las aplicaciones que alcanza una vulnerabilidad siguen los vínculos directos, como los cuenta la página (consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts)). En los activos y las aplicaciones, Plaid lee cuántas vulnerabilidades quedan por revisar y cuántas son críticas o altas. Pregunte, por ejemplo: «¿Qué aplicaciones críticas están afectadas por una CVE explotada?» Plaid no puede cambiar el estado de una vulnerabilidad. Los asistentes conectados por MCP obtienen las mismas respuestas.
 
+Plaid lee los contratos como los muestra la lista de [Contratos](contracts.md): el estado del periodo en curso (por decidir, en curso, renovado, termina sin renovación, vencido), el próximo vencimiento y la fecha límite de rescisión, con el plazo de decisión de su espacio de trabajo y las decisiones de renovación ya registradas. También lee lo que cubre un contrato: sus aplicaciones, activos, tecnologías y líneas presupuestarias. Pregunte, por ejemplo: «¿Qué contratos están por decidir y qué aplicaciones cubren?» o «¿Qué contratos cubren APP-8?» Los asistentes conectados por MCP obtienen las mismas respuestas.
+
+Plaid nombra un registro por su referencia, como `APP-8` o `BL-14`, o por su nombre cuando no tiene, como un contrato, un proveedor o una ubicación. La referencia o el nombre lleva a la página del registro cuando usted puede abrirla.
+
 Plaid nombra un registro vinculado al que usted consulta solo si puede leer su módulo, como la página del registro: las aplicaciones de un proyecto requieren las aplicaciones, sus activos la infraestructura, sus solicitudes de origen las solicitudes. Un Business Contributor solo obtiene los proyectos, solicitudes y aplicaciones en los que participa. Los servidores en los que se ejecuta una aplicación son la excepción: vienen con la aplicación, como en su pestaña **Despliegues**. Si se le pregunta por una persona, Plaid da lo que le muestra la lista de usuarios: un administrador de usuarios obtiene el perfil completo, los demás el nombre, el correo electrónico y el estado. Los asistentes conectados por MCP obtienen las mismas respuestas.
 
 Cuando Plaid suma importes presupuestarios, una línea cuya moneda no tiene tipo de cambio para el año queda excluida de la suma. Plaid indica entonces qué monedas y años ha excluido. Los asistentes conectados por MCP reciben la misma respuesta.
+
+Los totales vienen de KANAP. Una lista de líneas presupuestarias o de contratos llega con el total de todos los registros que coinciden, todas las páginas incluidas, y con el total de los registros listados, así que Plaid cita uno de los dos o pide una suma a KANAP. Si usted pide las diez líneas más grandes y su total, Plaid da el total de esas diez líneas. Cuando su acceso a los datos está limitado a algunas empresas o centros de coste, Plaid indica que sus recuentos y totales cubren su acceso, y no los presenta como el total del espacio de trabajo.
+
+Cuando Plaid prueba un valor de filtro que un campo no admite, por ejemplo «activa» para el estado de una aplicación (que es «activado» o «desactivado»), KANAP lo rechaza y lista los valores aceptados. Plaid vuelve entonces a buscar con el valor correcto.
+
+Cuando usted pide un cambio que su rol no permite, Plaid nombra el derecho que le falta, por ejemplo «necesita el derecho de modificar los proyectos». Un administrador lo añade a su rol.
+
+### Lo que Plaid no lee { #what-plaid-does-not-read }
+
+Plaid no lee:
+
+- Los centros de coste (**Datos maestros › Centros de coste**). Una línea presupuestaria indica su centro de coste, así que Plaid puede filtrar las líneas por él.
+- Los calendarios laborales (**Datos maestros › Calendarios laborales**)
+- Los tipos de cambio (**Gestión presupuestaria › Administración › Monedas**). Los importes presupuestarios llegan a Plaid ya convertidos a la moneda de informes.
+- Los ajustes de las dimensiones analíticas (**Datos maestros › Dimensiones analíticas**). Sus valores, y el valor que tiene cada línea presupuestaria, se pueden leer.
+- El acceso a los datos, es decir, a qué empresas o centros de coste está limitada una persona (**Administración › Acceso a los datos**)
+- El registro de auditoría (**Administración › Registro de auditoría**)
+- Los agentes IA
+- El contracargo por empresa beneficiaria (**Gestión presupuestaria › Informes › Contracargo global**)
+
+Cuando una pregunta toca uno de estos elementos, Plaid dice que no puede leerlo y nombra la pantalla que lo muestra, como la nombran sus menús en el idioma de su perfil. Una búsqueda sin resultado indica a Plaid lo que no ha buscado, para que la respuesta no afirme que el registro no existe. Lo mismo ocurre con un campo: el contexto de un registro incluye sus campos principales, y Plaid lee el registro completo antes de decir que un campo está vacío. Los asistentes conectados por MCP obtienen las mismas respuestas.
 
 ## Artefactos y vistas previas
 

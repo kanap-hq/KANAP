@@ -194,6 +194,145 @@ async function testTechnologyReferencesAndRelatedRecords() {
   assert.equal(selectAiContextProfile('Update the lifecycle of TEC-3').name, 'write_general');
 }
 
+// The maintainer's conversation on dev: Plaid offers to list the users, the reply "oui" got no tool.
+const DATA_ACCESS_CONVERSATIONS = [
+  {
+    question: 'Qui a un accès limité aux données et à quoi ?',
+    answer: "Je ne lis pas l'accès aux données : il se règle dans Administration › Accès aux données.\n\n"
+      + 'Je peux en revanche lister les utilisateurs et leurs rôles… Dites-moi si vous voulez que je le fasse.',
+    replies: ['oui', 'Oui.', 'ok', 'vas-y', "d'accord", 'oui, vas-y'],
+  },
+  {
+    question: 'Who has limited data access, and to what?',
+    answer: 'I do not read data access: it is set in Administration › Data access.\n\n'
+      + 'I can list the users and their roles instead. Let me know if you want me to.',
+    replies: ['yes', 'ok', 'go ahead', 'yes please'],
+  },
+  {
+    question: 'Wer hat eingeschränkten Datenzugriff und worauf?',
+    answer: 'Den Datenzugriff lese ich nicht: Er wird unter Administration › Datenzugriff eingestellt.\n\n'
+      + 'Ich kann stattdessen die Benutzer und ihre Rollen auflisten. Soll ich das tun?',
+    replies: ['ja', 'ok', 'ja, bitte'],
+  },
+  {
+    question: '¿Quién tiene acceso limitado a los datos y a qué?',
+    answer: 'No leo el acceso a los datos: se configura en Administración › Acceso a los datos.\n\n'
+      + 'Puedo listar los usuarios y sus roles. ¿Quiere que lo haga?',
+    replies: ['sí', 'ok', 'vale', 'adelante'],
+  },
+];
+
+async function testAcceptingAReadOfferKeepsReadTools() {
+  for (const conversation of DATA_ACCESS_CONVERSATIONS) {
+    for (const reply of conversation.replies) {
+      const profile = selectAiContextProfileForTurn([
+        { role: 'user', content: conversation.question },
+        { role: 'assistant', content: conversation.answer },
+        { role: 'user', content: reply },
+      ]);
+      assert.equal(profile.name, 'read_query', reply);
+      assert.ok(profile.toolNames.includes('query_entities'), reply);
+    }
+  }
+
+  // A greeting, then an offer: the reply takes the profile of what was offered.
+  const afterGreeting = selectAiContextProfileForTurn([
+    { role: 'user', content: 'bonjour' },
+    { role: 'assistant', content: 'Bonjour ! Voulez-vous que je liste vos tâches en retard ?' },
+    { role: 'user', content: 'oui' },
+  ]);
+  assert.equal(afterGreeting.name, 'read_query');
+
+  // A write word that describes the data does not turn the accepted read into a write.
+  const describedWrite = selectAiContextProfileForTurn([
+    { role: 'user', content: 'Qui a un accès limité aux données et à quoi ?' },
+    {
+      role: 'assistant',
+      content: 'Je peux lister les utilisateurs et leurs rôles, qui disent qui peut modifier le budget. Dites-moi si vous voulez que je le fasse.',
+    },
+    { role: 'user', content: 'oui' },
+  ]);
+  assert.equal(describedWrite.promptMode, 'read');
+}
+
+async function testAcceptingAWriteOfferGetsTheWriteProfile() {
+  // The write the assistant proposed after a read: the confirmation is a write (previews, approval).
+  const profile = selectAiContextProfileForTurn([
+    { role: 'user', content: 'Liste mes tâches en retard' },
+    { role: 'assistant', content: 'Deux tâches sont en retard : T-4 et T-7.\n\nVoulez-vous que je passe T-4 en cours ?' },
+    { role: 'user', content: 'oui' },
+  ]);
+  assert.equal(profile.name, 'write_task');
+  assert.ok(profile.toolNames.includes('update_task_status'));
+
+  // The confirmation of an open write request keeps its profile, as before.
+  const confirmation = selectAiContextProfileForTurn([
+    { role: 'user', content: 'Crée une tâche pour relancer le fournisseur' },
+    { role: 'assistant', content: 'Je prépare la tâche « Relancer le fournisseur ». Voulez-vous que je la crée ?' },
+    { role: 'user', content: 'oui' },
+  ]);
+  assert.equal(confirmation.name, 'write_task');
+  assert.match(confirmation.reason, /continuation of previous write request/);
+}
+
+async function testShortAnswersToAQuestionKeepTheirProfile() {
+  // A name: the inspection asked for continues.
+  const name = selectAiContextProfileForTurn([
+    { role: 'user', content: 'Résume les commentaires de cette application' },
+    { role: 'assistant', content: 'Quelle application voulez-vous que je résume ?' },
+    { role: 'user', content: 'CheeseTrack' },
+  ]);
+  assert.equal(name.name, 'entity_inspection');
+
+  // A choice: the document search continues.
+  const choice = selectAiContextProfileForTurn([
+    { role: 'user', content: 'Trouve les documents sur les sauvegardes' },
+    { role: 'assistant', content: "J'en trouve 12. Voulez-vous seulement les publiés ou aussi les brouillons ?" },
+    { role: 'user', content: 'les publiés seulement' },
+  ]);
+  assert.equal(choice.name, 'knowledge');
+  assert.ok(choice.toolNames.includes('search_knowledge'));
+
+  // A number: the web lookup keeps the web search.
+  const number = selectAiContextProfileForTurn([
+    { role: 'user', content: 'What is the latest Windows Server version?' },
+    { role: 'assistant', content: 'Which edition do you mean: 1 (Standard), 2 (Datacenter) or 3 (Essentials)?' },
+    { role: 'user', content: '2' },
+  ]);
+  assert.equal(number.name, 'web');
+  assert.ok(number.toolNames.includes('web_search'));
+}
+
+async function testThanksAndPlainAcknowledgementsStayMinimal() {
+  for (const answer of [
+    'Deux tâches sont en retard : T-4 et T-7.',
+    'Deux tâches sont en retard : T-4 et T-7. Voulez-vous le détail ?',
+  ]) {
+    const thanks = selectAiContextProfileForTurn([
+      { role: 'user', content: 'Liste mes tâches en retard' },
+      { role: 'assistant', content: answer },
+      { role: 'user', content: 'merci' },
+    ]);
+    assert.equal(thanks.name, 'minimal', answer);
+  }
+
+  // "ok" after an answer that asks nothing and offers nothing.
+  const acknowledgement = selectAiContextProfileForTurn([
+    { role: 'user', content: 'Liste mes tâches en retard' },
+    { role: 'assistant', content: 'Deux tâches sont en retard : T-4 et T-7.' },
+    { role: 'user', content: 'ok' },
+  ]);
+  assert.equal(acknowledgement.name, 'minimal');
+
+  // A new question after an assistant question is a request of its own.
+  const question = selectAiContextProfileForTurn([
+    { role: 'user', content: 'What is the latest Windows Server version?' },
+    { role: 'assistant', content: 'Windows Server 2025. Anything else?' },
+    { role: 'user', content: 'Who uses CheeseTrack?' },
+  ]);
+  assert.equal(question.name, 'read_query');
+}
+
 async function run() {
   for (const url of ['/ops/budget/BL-127', '/ops/opex/OPX-7', '/ops/capex/CPX-2']) {
     assert.equal(selectAiContextProfile(`Update the notes of [line](${url})`).name, 'write_financial');
@@ -215,6 +354,10 @@ async function run() {
   await testExplicitNewIntentDoesNotInheritOpenWriteRequestProfile();
   await testReadOnlyModifiedDocumentFollowUpKeepsInspectionTools();
   await testTechnologyReferencesAndRelatedRecords();
+  await testAcceptingAReadOfferKeepsReadTools();
+  await testAcceptingAWriteOfferGetsTheWriteProfile();
+  await testShortAnswersToAQuestionKeepTheirProfile();
+  await testThanksAndPlainAcknowledgementsStayMinimal();
 }
 
 void run();

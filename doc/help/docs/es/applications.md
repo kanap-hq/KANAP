@@ -448,7 +448,7 @@ Los valores de clasificación y continuidad se copian, pero la nueva versión em
 
 ### Migración de interfaces
 
-Durante la creación de versiones, el asistente muestra todas las interfaces donde esta aplicación es origen, destino o middleware (cuando ETL está habilitado). Las interfaces seleccionadas se duplican con sus referencias actualizadas a la nueva versión. Cada interfaz migrada incluye sus tramos, responsables, empresas, identificadores clave, enlaces y residencia de datos. Las interfaces migradas comienzan con un ciclo de vida **Propuesto**. Las interfaces originales permanecen vinculadas a la versión anterior.
+Durante la creación de versiones, el asistente muestra todas las interfaces donde esta aplicación es origen, destino o middleware (cuando ETL está habilitado). Las interfaces seleccionadas se duplican con sus referencias actualizadas a la nueva versión. Cada interfaz migrada incluye sus tramos, responsables, empresas, identificadores clave, enlaces, residencia de datos y su especificación (el texto del origen y sus imágenes). Un ID de interfaz vacío permanece vacío. Las interfaces migradas comienzan con un ciclo de vida **Propuesto**. Las interfaces originales permanecen vinculadas a la versión anterior.
 
 **Copiar enlaces**: Si selecciona tanto **Despliegues** como **Enlaces de despliegue**, los enlaces de interfaz también se copian. Los enlaces se mapean a los despliegues de la nueva aplicación (emparejados por entorno); los detalles específicos del entorno (endpoints, autenticación, nombres de trabajo) se borran y el estado del enlace se restablece a **Propuesto**.
 

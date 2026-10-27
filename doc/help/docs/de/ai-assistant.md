@@ -118,9 +118,34 @@ Plaid listet und liest Technologien für Benutzer, die die Infrastruktur lesen d
 
 Wenn Schwachstellen verfolgt werden, listet, zählt und liest Plaid auch die Schwachstellen, für Benutzer, die die Infrastruktur lesen dürfen. Ein Element ist eine CVE auf einer Version einer Technologie, wie auf der Seite [Schwachstellen](vulnerabilities.md). Plaid kann sie nach Schweregrad, Ausnutzung, Status, Warnungen, Technologie, Veröffentlichungsdatum, Asset oder Anwendung filtern und nach Schweregrad oder Technologie zählen. Sofern Sie nichts anderes verlangen, behält Plaid die noch zu prüfenden Schwachstellen in den Warnungen, wie die Seite. Die Server und Anwendungen, die eine Schwachstelle erreicht, folgen den direkten Verknüpfungen, so wie die Seite sie zählt (siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts)). Bei Assets und Anwendungen liest Plaid, wie viele Schwachstellen noch zu prüfen sind und wie viele davon kritisch oder hoch sind. Fragen Sie zum Beispiel: „Welche kritischen Anwendungen sind von einer ausgenutzten CVE betroffen?“ Plaid kann den Status einer Schwachstelle nicht ändern. Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
+Plaid liest Verträge so, wie die Liste der [Verträge](contracts.md) sie zeigt: den Zustand der laufenden Periode (zu entscheiden, laufend, verlängert, endet ohne Verlängerung, abgelaufen), die nächste Frist und den Kündigungstermin, mit dem Entscheidungszeitraum Ihres Arbeitsbereichs und den bereits erfassten Verlängerungsentscheidungen. Es liest auch, was ein Vertrag abdeckt: seine Anwendungen, Assets, Technologien und Budgetzeilen. Fragen Sie zum Beispiel: „Welche Verträge sind zu entscheiden, und welche Anwendungen decken sie ab?“ oder „Welche Verträge decken APP-8 ab?“ Über MCP verbundene Assistenten erhalten dieselben Antworten.
+
+Plaid nennt einen Datensatz bei seiner Referenz, etwa `APP-8` oder `BL-14`, oder bei seinem Namen, wenn er keine hat, etwa einen Vertrag, einen Lieferanten oder einen Standort. Die Referenz oder der Name führt zur Seite des Datensatzes, wenn Sie sie öffnen können.
+
 Plaid nennt einen Datensatz, der mit dem erfragten verknüpft ist, nur dann, wenn Sie sein Modul lesen dürfen, wie die Seite des Datensatzes: Die Anwendungen eines Projekts erfordern die Anwendungen, seine Assets die Infrastruktur, seine Ursprungsanträge die Anträge. Ein Business Contributor erhält nur die Projekte, Anträge und Anwendungen, an denen er beteiligt ist. Die Server, auf denen eine Anwendung läuft, sind die Ausnahme: Sie gehören zur Anwendung, wie auf ihrem Reiter **Bereitstellungen**. Auf eine Person angesprochen, gibt Plaid wieder, was Ihnen die Benutzerliste zeigt: Ein Benutzeradministrator erhält das vollständige Profil, alle anderen Name, E-Mail und Status. Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
 Wenn Plaid Budgetbeträge addiert, bleibt eine Zeile, deren Währung für das Jahr keinen Wechselkurs hat, außerhalb der Summe. Plaid nennt dann die ausgelassenen Währungen und Jahre. Über MCP verbundene Assistenten erhalten dieselbe Antwort.
+
+Summen kommen von KANAP. Eine Liste von Budgetzeilen oder Verträgen enthält die Summe aller passenden Datensätze über alle Seiten hinweg, und die Summe der aufgelisteten Datensätze. Plaid nennt eine der beiden oder lässt KANAP eine Summe bilden. Fragen Sie nach den zehn größten Zeilen und ihrer Summe, nennt Plaid die Summe dieser zehn Zeilen. Wenn Ihr Datenzugriff auf bestimmte Unternehmen oder Kostenstellen beschränkt ist, sagt Plaid, dass seine Anzahlen und Summen Ihren Zugriff abdecken, und stellt sie nicht als Summe des Arbeitsbereichs dar.
+
+Wenn Plaid einen Filterwert versucht, den ein Feld nicht annimmt, etwa „aktiv“ für den Status einer Anwendung (der „aktiviert“ oder „deaktiviert“ ist), lehnt KANAP ihn ab und listet die zulässigen Werte auf. Plaid sucht dann erneut mit dem richtigen Wert.
+
+Wenn Sie eine Änderung verlangen, die Ihre Rolle nicht erlaubt, nennt Plaid das fehlende Recht, zum Beispiel „Sie benötigen das Recht, Projekte zu ändern“. Ein Administrator fügt es Ihrer Rolle hinzu.
+
+### Was Plaid nicht liest { #what-plaid-does-not-read }
+
+Plaid liest nicht:
+
+- Kostenstellen (**Stammdaten › Kostenstellen**). Eine Budgetzeile nennt ihre Kostenstelle, daher kann Plaid Zeilen danach filtern.
+- Arbeitstagekalender (**Stammdaten › Arbeitstagekalender**)
+- Wechselkurse (**Budgetverwaltung › Administration › Währungen**). Budgetbeträge erreichen Plaid bereits in die Reportingwährung umgerechnet.
+- Die Einstellungen der Analysedimensionen (**Stammdaten › Analysedimensionen**). Ihre Werte und der Wert jeder Budgetzeile sind lesbar.
+- Den Datenzugriff, also auf welche Unternehmen oder Kostenstellen eine Person beschränkt ist (**Administration › Datenzugriff**)
+- Das Audit-Protokoll (**Administration › Audit-Protokoll**)
+- KI-Agenten
+- Die Leistungsverrechnung nach begünstigtem Unternehmen (**Budgetverwaltung › Berichte › Globale Leistungsverrechnung**)
+
+Berührt eine Frage einen dieser Bereiche, sagt Plaid, dass es ihn nicht lesen kann, und nennt die Seite, die ihn zeigt, so wie Ihre Menüs sie in der Sprache Ihres Profils nennen. Eine Suche ohne Ergebnis teilt Plaid mit, was es nicht durchsucht hat, damit die Antwort nicht behauptet, der Datensatz fehle. Dasselbe gilt für ein Feld: Der Kontext eines Datensatzes enthält seine wichtigsten Felder, und Plaid liest den vollständigen Datensatz, bevor es sagt, dass ein Feld leer ist. Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
 ## Artefakte und Vorschauen
 

@@ -118,9 +118,34 @@ Plaid lists and reads technologies for users who can read the infrastructure. It
 
 When vulnerabilities are followed, Plaid also lists, counts and reads the vulnerabilities, for users who can read the infrastructure. One item is a CVE on one version of a technology, as on the [Vulnerabilities](vulnerabilities.md) page. Plaid can filter them by severity, exploitation, state, alerts, technology, publication date, asset or application, and count them by severity or technology. Unless you ask otherwise, Plaid keeps the vulnerabilities still to review that are in the alerts, as the page does. The servers and applications a vulnerability reaches follow direct links, as the page counts them (see [What KANAP counts](vulnerabilities.md#what-kanap-counts)). On assets and applications, Plaid reads how many vulnerabilities are still to review and how many are critical or high. Ask, for example: "Which critical applications are reached by an exploited CVE?" Plaid cannot change the state of a vulnerability. Assistants connected over MCP get the same answers.
 
+Plaid reads contracts as the [Contracts](contracts.md) list shows them: the state of the current term (to decide, in progress, renewed, ends without renewal, expired), the next due date and the cancellation deadline, with the decision window of your workspace and the renewal decisions already recorded. It also reads what a contract covers: its applications, assets, technologies and budget lines. Ask, for example: "Which contracts are to decide, and which applications do they cover?" or "Which contracts cover APP-8?" Assistants connected over MCP get the same answers.
+
+Plaid names a record by its reference, such as `APP-8` or `BL-14`, or by its name when it has none, such as a contract, a supplier or a site. The reference or the name links to the record's page when you can open it.
+
 Plaid names a record linked to the one you ask about only when you can read its module, as the record's page does: the applications of a project need the applications, its assets the infrastructure, its source requests the requests. A Business Contributor only gets the projects, requests and applications they take part in. The servers an application runs on are the exception: they come with the application, as on its **Deployments** tab. Asked about a person, Plaid gives what the users list shows you: an administrator of users gets the full profile, everyone else the name, email and status. Assistants connected over MCP get the same answers.
 
 When Plaid adds up budget amounts, a line whose currency has no exchange rate for the year is left out of the sum. Plaid then says which currencies and years it left out. Assistants connected over MCP get the same answer.
+
+Totals come from KANAP. A list of budget lines or contracts comes with the total of every matching record, all pages included, and with the total of the records listed, so Plaid quotes one of them or asks KANAP for a sum. Asked for the ten largest lines and their total, Plaid gives the total of those ten. When your data access is limited to some companies or cost centers, Plaid says that its counts and totals cover your access, and does not present them as the total of the workspace.
+
+When Plaid tries a filter value that a field does not take, for example "active" for the status of an application (which is "enabled" or "disabled"), KANAP refuses it and lists the accepted values. Plaid then searches again with the right value.
+
+When you ask for a change your role does not allow, Plaid names the right you are missing, for example "you need the right to modify projects". An administrator adds it to your role.
+
+### What Plaid does not read { #what-plaid-does-not-read }
+
+Plaid does not read:
+
+- Cost centers (**Master data › Cost centers**). A budget line names its cost center, so Plaid can filter lines by it.
+- Working-day calendars (**Master data › Working-day calendars**)
+- Exchange rates (**Budget management › Administration › Currencies**). Budget amounts reach Plaid already converted to the reporting currency.
+- The settings of the analytics dimensions (**Master data › Analytics dimensions**). Their values, and the value each budget line holds, are readable.
+- Data access, that is which companies or cost centers a person is limited to (**Admin › Data access**)
+- The audit log (**Admin › Audit log**)
+- AI agents
+- The chargeback by beneficiary company (**Budget management › Reporting › Global chargeback**)
+
+When a question touches one of these, Plaid says that it cannot read it and names the screen that shows it, as your menus name it in the language of your profile. A search without a result tells Plaid what it did not search, so the answer does not claim that the record is missing. The same goes for a field: the context of a record carries its main fields, and Plaid reads the full record before saying that a field is empty. Assistants connected over MCP get the same answers.
 
 ## Artifacts and previews
 

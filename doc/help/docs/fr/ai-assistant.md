@@ -118,9 +118,34 @@ Plaid liste et lit les technologies pour les utilisateurs qui peuvent lire l'inf
 
 Quand les vulnérabilités sont suivies, Plaid liste, compte et lit aussi les vulnérabilités, pour les utilisateurs qui lisent l'infrastructure. Un élément est une CVE sur une version d'une technologie, comme sur la page [Vulnérabilités](vulnerabilities.md). Plaid peut les filtrer par sévérité, exploitation, état, alertes, technologie, date de publication, actif ou application, et les compter par sévérité ou par technologie. Sauf demande contraire, Plaid garde les vulnérabilités à traiter qui sont dans les alertes, comme la page. Les serveurs et les applications qu'une vulnérabilité atteint suivent les liens directs, comme la page les compte (voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts)). Sur les actifs et les applications, Plaid lit combien de vulnérabilités restent à traiter et combien sont critiques ou élevées. Demandez par exemple : « Quelles applications critiques sont touchées par une CVE exploitée ? » Plaid ne peut pas changer l'état d'une vulnérabilité. Les assistants connectés via MCP obtiennent les mêmes réponses.
 
+Plaid lit les contrats comme les montre la liste des [Contrats](contracts.md) : l'état du terme en cours (à décider, en cours, reconduit, fin sans reconduction, échu), la prochaine échéance et la date limite de résiliation, avec le délai de décision de votre espace de travail et les décisions de renouvellement déjà enregistrées. Il lit aussi ce que couvre un contrat : ses applications, actifs, technologies et lignes budgétaires. Demandez par exemple : « Quels contrats sont à décider, et quelles applications couvrent-ils ? » ou « Quels contrats couvrent APP-8 ? » Les assistants connectés par MCP obtiennent les mêmes réponses.
+
+Plaid désigne une fiche par sa référence, comme `APP-8` ou `BL-14`, ou par son nom quand elle n'en a pas, comme un contrat, un fournisseur ou un site. La référence ou le nom mène à la page de la fiche quand vous pouvez l'ouvrir.
+
 Plaid ne nomme une fiche liée à celle que vous interrogez que si vous pouvez lire son module, comme la page de la fiche : les applications d'un projet demandent les applications, ses actifs l'infrastructure, ses demandes d'origine les demandes. Un Business Contributor n'obtient que les projets, demandes et applications auxquels il participe. Les serveurs sur lesquels tourne une application font exception : ils viennent avec l'application, comme dans son onglet **Déploiements**. Interrogé sur une personne, Plaid donne ce que la liste des utilisateurs vous montre : un administrateur des utilisateurs obtient le profil complet, les autres le nom, l'e-mail et le statut. Les assistants connectés via MCP obtiennent les mêmes réponses.
 
 Quand Plaid additionne des montants budgétaires, une ligne dont la devise n'a pas de taux de change pour l'année est exclue de la somme. Plaid indique alors quelles devises et quelles années il a exclues. Les assistants connectés par MCP reçoivent la même réponse.
+
+Les totaux viennent de KANAP. Une liste de lignes budgétaires ou de contrats est accompagnée du total de toutes les fiches qui correspondent, toutes pages comprises, et du total des fiches listées : Plaid cite l'un des deux ou demande une somme à KANAP. Si vous demandez les dix plus grosses lignes et leur total, Plaid donne le total de ces dix lignes. Quand votre accès aux données est limité à certaines sociétés ou à certains centres de coûts, Plaid précise que ses décomptes et ses totaux couvrent votre accès, et ne les présente pas comme le total de l'espace de travail.
+
+Quand Plaid essaie une valeur de filtre qu'un champ n'accepte pas, par exemple « actif » pour le statut d'une application (qui est « activé » ou « désactivé »), KANAP la refuse et liste les valeurs acceptées. Plaid relance alors la recherche avec la bonne valeur.
+
+Quand vous demandez une modification que votre rôle ne permet pas, Plaid nomme le droit qui vous manque, par exemple « vous avez besoin du droit de modifier les projets ». Un administrateur l'ajoute à votre rôle.
+
+### Ce que Plaid ne lit pas { #what-plaid-does-not-read }
+
+Plaid ne lit pas :
+
+- Les centres de coûts (**Données de référence › Centres de coûts**). Une ligne budgétaire indique son centre de coûts, Plaid peut donc filtrer les lignes par centre de coûts.
+- Les calendriers de jours ouvrés (**Données de référence › Calendriers de jours ouvrés**)
+- Les taux de change (**Gestion budgétaire › Administration › Devises**). Les montants budgétaires parviennent à Plaid déjà convertis dans la devise de reporting.
+- Les réglages des dimensions analytiques (**Données de référence › Dimensions analytiques**). Leurs valeurs, et la valeur que porte chaque ligne budgétaire, sont lisibles.
+- L'accès aux données, c'est-à-dire les sociétés ou les centres de coûts auxquels une personne est limitée (**Administration › Accès aux données**)
+- Le journal d'audit (**Administration › Journal d'audit**)
+- Les agents IA
+- La refacturation par société bénéficiaire (**Gestion budgétaire › Rapports › Refacturation globale**)
+
+Quand une question touche l'un de ces éléments, Plaid dit qu'il ne peut pas le lire et nomme l'écran qui le montre, avec les mots de vos menus dans la langue de votre profil. Une recherche sans résultat indique à Plaid ce qu'il n'a pas cherché, pour que la réponse n'affirme pas que la fiche n'existe pas. Il en va de même pour un champ : le contexte d'une fiche porte ses champs principaux, et Plaid lit la fiche complète avant de dire qu'un champ est vide. Les assistants connectés par MCP obtiennent les mêmes réponses.
 
 ## Artefacts et aperçus
 
