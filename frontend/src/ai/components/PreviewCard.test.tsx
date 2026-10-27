@@ -109,6 +109,99 @@ describe('PreviewCard in French', () => {
     expect(screen.queryByText('What goes with it')).not.toBeInTheDocument();
   });
 
+  it('shows a budget line deletion with its versions, tasks and links, in French', () => {
+    renderCard(preview({
+      tool_name: 'delete_record',
+      target: { entity_type: 'spend_items', entity_id: 'line-1', ref: 'BL-12', title: 'ERP licence' },
+      summary: 'Suppression de la ligne OPEX « ERP licence ».',
+      changes: {
+        deletion: {
+          label: 'What goes with it',
+          from: null,
+          to: [
+            '- Versions avec des montants : 2',
+            '- Années avec des montants : 2',
+            '- Tâches : 1',
+            "- Demandes qui perdent leur tâche d'origine : 1",
+            '- Pièces jointes : 1',
+            '- Contrats : 1',
+            '- Projets : 1',
+            '- Demandes : 1',
+            '- Applications : 1',
+            '- Actifs : 1',
+            '- Technologies : 1',
+            '- Contacts : 1',
+            '- Liens : 1',
+            '- Valeurs de dimensions : 1',
+          ].join('\n'),
+          format: 'markdown',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Ce qui part avec la fiche')).toBeInTheDocument();
+    for (const text of [
+      'Versions avec des montants : 2',
+      'Années avec des montants : 2',
+      'Tâches : 1',
+      "Demandes qui perdent leur tâche d'origine : 1",
+      'Pièces jointes : 1',
+      'Contrats : 1',
+      'Projets : 1',
+      'Demandes : 1',
+      'Applications : 1',
+      'Actifs : 1',
+      'Technologies : 1',
+      'Contacts : 1',
+      'Liens : 1',
+      'Valeurs de dimensions : 1',
+    ]) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.getByText('Suppression de la ligne OPEX « ERP licence ».')).toBeInTheDocument();
+  });
+
+  it('shows an interface deletion with its bindings and documents, in French', () => {
+    renderCard(preview({
+      tool_name: 'delete_record',
+      target: { entity_type: 'interfaces', entity_id: 'iface-1', ref: 'INT-7', title: 'INT-7 - Orders' },
+      summary: "Suppression de l'interface « INT-7 - Orders ».",
+      changes: {
+        deletion: {
+          label: 'What goes with it',
+          from: null,
+          to: [
+            '- Liaisons : 2',
+            '- Liens aux connexions : 2',
+            '- Documents intégrés : 1',
+            '- Documents liés : 1',
+            '- Interfaces dépendantes : 1',
+            '- Pièces jointes : 1',
+            '- Applications liées : 2',
+            '',
+            'Les connexions sont conservées.',
+          ].join('\n'),
+          format: 'markdown',
+        },
+      },
+    }));
+
+    expect(screen.getByText('Ce qui part avec la fiche')).toBeInTheDocument();
+    for (const text of [
+      'Liaisons : 2',
+      'Liens aux connexions : 2',
+      'Documents intégrés : 1',
+      'Documents liés : 1',
+      'Interfaces dépendantes : 1',
+      'Pièces jointes : 1',
+      'Applications liées : 2',
+      'Les connexions sont conservées.',
+    ]) {
+      expect(screen.getByText(text)).toBeInTheDocument();
+    }
+    expect(screen.getByText("Suppression de l'interface « INT-7 - Orders ».")).toBeInTheDocument();
+  });
+
   it('shows a task creation with the labels and values of the task screens', async () => {
     renderCard(preview({
       summary: 'Création de la tâche autonome « Migration ». Priorité : Moyenne.',
