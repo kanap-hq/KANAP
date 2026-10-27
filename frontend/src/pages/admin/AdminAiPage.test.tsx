@@ -270,9 +270,9 @@ describe('AdminAiPage', () => {
     expect(within(rows[0]).getByText('Completed')).toBeInTheDocument();
     expect(within(rows[0]).getByText('182 ms')).toBeInTheDocument();
     expect(within(rows[1]).getByText('Refused')).toBeInTheDocument();
-    expect(within(rows[1]).getByText('The server only reads')).toBeInTheDocument();
+    expect(within(rows[1]).getByText(/The server only reads/)).toBeInTheDocument();
     expect(within(rows[2]).getByText('Claude')).toBeInTheDocument();
-    expect(within(rows[2]).getByText('Revoked key')).toBeInTheDocument();
+    expect(within(rows[2]).getByText(/Revoked key/)).toBeInTheDocument();
 
     const journalCalls = () => (api.get as any).mock.calls.filter(([url]: [string]) => url === '/ai/admin/mcp-audit');
     // The last 7 days by default, newest first, 25 a page.

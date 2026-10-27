@@ -55,7 +55,9 @@ type Filters = { person: string; key: string; result: string; period: Period };
 const DEFAULT_FILTERS: Filters = { person: '', key: '', result: '', period: 'week' };
 
 const headSx = { fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', whiteSpace: 'nowrap' } as const;
-const cellSx = { fontSize: 13, verticalAlign: 'top' } as const;
+const cellSx = { fontSize: 13, px: 1, whiteSpace: 'nowrap' } as const;
+/** A long tool name or cause stops at the column width; the full text shows on hover and in the opened line. */
+const clippedCellSx = { ...cellSx, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' } as const;
 const tertiarySx = { color: 'kanap.text.tertiary' } as const;
 const chevronSx = { fontSize: 16, color: 'kanap.text.tertiary', verticalAlign: 'middle' } as const;
 const COLUMN_COUNT = 7;
@@ -372,16 +374,16 @@ export default function McpJournalSection() {
                               {formatShortDateTime(item.tool_created_at, locale)}
                             </TableCell>
                             <TableCell sx={cellSx}>{itemPersonName(item)}</TableCell>
-                            <TableCell sx={cellSx}>{itemKeyName(item)}</TableCell>
-                            <TableCell sx={{ ...cellSx, fontFamily: MONO_FONT_FAMILY, fontSize: 12, overflowWrap: 'anywhere' }}>
+                            <TableCell sx={clippedCellSx}>{itemKeyName(item)}</TableCell>
+                            <TableCell sx={{ ...clippedCellSx, fontFamily: MONO_FONT_FAMILY, fontSize: 12 }} title={item.capability_name}>
                               {item.capability_name}
                             </TableCell>
-                            <TableCell sx={cellSx}>
-                              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
+                            <TableCell sx={clippedCellSx} title={reason ? `${resultText(item)} · ${reason}` : undefined}>
+                              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, verticalAlign: 'middle' }}>
                                 <StatusDot color={color} />
                                 <Box component="span" sx={{ color, fontWeight: 500 }}>{resultText(item)}</Box>
                               </Box>
-                              {reason ? <Box sx={{ ...tertiarySx, fontSize: 12 }}>{reason}</Box> : null}
+                              {reason ? <Box component="span" sx={{ ...tertiarySx, fontSize: 12 }}>{` · ${reason}`}</Box> : null}
                             </TableCell>
                             <TableCell sx={{ ...cellSx, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }} align="right">
                               {item.duration_ms == null
