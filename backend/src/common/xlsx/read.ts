@@ -44,6 +44,11 @@ export const XLSX_READ_LIMITS = {
   maxTotalBytes: 300 * MB,
   /** Uncompressed size over compressed size, for each entry the reader decompresses. */
   maxCompressionRatio: 100,
+  /**
+   * The ratio is checked on parts declared larger than this: a small part may legitimately pack
+   * tighter (one cell of 32,767 identical characters is a 300:1 part), and costs nothing.
+   */
+  compressionRatioFromBytes: 1 * MB,
   /** Entries of the shared string table. */
   maxSharedStrings: 1_000_000,
   /** `<c>` elements of the sheet. */
@@ -96,6 +101,7 @@ function tooLarge(limit: keyof XlsxReadLimits, limits: XlsxReadLimits): XlsxRead
     maxEntryBytes: `a part would be larger than ${count(Math.floor(value / MB))} MB once unpacked`,
     maxTotalBytes: `its parts would be larger than ${count(Math.floor(value / MB))} MB once unpacked`,
     maxCompressionRatio: `a part is compressed more than ${count(value)} times`,
+    compressionRatioFromBytes: `a part is compressed more than ${count(limits.maxCompressionRatio)} times`,
     maxSharedStrings: `it holds more than ${count(value)} different texts`,
     maxCellElements: `the sheet has more than ${count(value)} cells`,
     maxGridCells: `the sheet has more than ${count(value)} cells`,
@@ -168,7 +174,9 @@ function openArchive(buffer: Buffer, limits: XlsxReadLimits): BoundedArchive {
 function readPart(archive: BoundedArchive, entry: AdmZip.IZipEntry, limits: XlsxReadLimits): Buffer {
   const size = Number(entry.header.size) || 0;
   const compressed = Number(entry.header.compressedSize) || 0;
-  if (size > 0 && size > limits.maxCompressionRatio * Math.max(compressed, 1)) throw tooLarge('maxCompressionRatio', limits);
+  if (size > limits.compressionRatioFromBytes && size > limits.maxCompressionRatio * Math.max(compressed, 1)) {
+    throw tooLarge('maxCompressionRatio', limits);
+  }
   try {
     return archive.read(entry);
   } catch (error) {
@@ -434,7 +442,6 @@ function parseSharedStrings(data: Buffer, limits: XlsxReadLimits): string[] {
 // Dates
 
 const EPOCH_1900 = Date.UTC(1899, 11, 30);
-const MAX_DAY = '9999-12-31';
 
 /**
  * The calendar day of a date serial, or null when it is no day: negative, 0 and 60 in the 1900 system
@@ -447,9 +454,9 @@ export function serialToIsoDay(serial: number, date1904: boolean): string | null
   if (date1904) days = whole + 1462;
   else if (whole === 0 || whole === 60) return null;
   else days = whole < 60 ? whole + 1 : whole;
-  if (days > 3_000_000) return null;
-  const iso = new Date(EPOCH_1900 + days * 86_400_000).toISOString().slice(0, 10);
-  return iso <= MAX_DAY ? iso : null;
+  const day = new Date(EPOCH_1900 + days * 86_400_000);
+  if (days > 3_000_000 || day.getUTCFullYear() > 9999) return null;
+  return day.toISOString().slice(0, 10);
 }
 
 // ---------------------------------------------------------------------------------------------------
