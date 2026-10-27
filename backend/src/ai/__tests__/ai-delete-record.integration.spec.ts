@@ -22,6 +22,11 @@ import { DataSource, QueryRunner } from 'typeorm';
 // - An interface with bindings is refused without `delete_related_bindings`, then deleted with
 //   its bindings and its integrated documents even for an applications administrator without a
 //   Knowledge library right; an applications member is refused.
+// - A document deletes for its Knowledge administrator: its versions, attachments, incoming and
+//   outgoing citations, links, workflow and edit lock go, and a document created from it keeps
+//   its row without its template. Its preview names the review and the lock without refusing. A
+//   managed document is refused before any preview, a Knowledge member is refused, a library the
+//   person does not read answers as missing, and linked families they do not read stay unnamed.
 // - A reader is refused, a record changed between the preview and the run is refused, and two
 //   deletes never enter a mutation plan.
 // The AI surface checks are stubbed open: this spec tests the operation, not the routes.
@@ -34,7 +39,7 @@ process.env.S3_BUCKET ||= 'ai-delete-record-spec';
 process.env.AWS_ACCESS_KEY_ID ||= 'test';
 process.env.AWS_SECRET_ACCESS_KEY ||= 'test';
 
-type Harness = { app: any; dataSource: DataSource; previews: any; tools: any };
+type Harness = { app: any; dataSource: DataSource; previews: any; tools: any; support: any };
 type UserKey =
   | 'taskAdmin'
   | 'contactsAdmin'
@@ -48,7 +53,11 @@ type UserKey =
   | 'limitedBudgetAdmin'
   | 'infraMember'
   | 'appsAdmin'
-  | 'appsMember';
+  | 'appsMember'
+  | 'knowledgeAdmin'
+  | 'knowledgeAdminNoReads'
+  | 'knowledgeMember'
+  | 'knowledgeReader';
 type Seed = {
   tenantId: string;
   users: Record<UserKey, string>;
@@ -79,6 +88,14 @@ type Seed = {
   interfaceDocument: string;
   interfaceBinding: string;
   interfaceConnection: string;
+  document: string;
+  documentDerived: string;
+  documentCiting: string;
+  documentCited: string;
+  documentHidden: string;
+  documentRestricted: string;
+  managedDocument: string;
+  incident: string;
 };
 
 async function createHarness(): Promise<Harness> {
@@ -90,7 +107,14 @@ async function createHarness(): Promise<Harness> {
   const app = await NestFactory.createApplicationContext(AppModule, { logger: false, abortOnError: false });
   const policy = app.get(AiPolicyService);
   policy.assertSurfaceAccess = async () => undefined;
-  return { app, dataSource: app.get(DataSource), previews: app.get(AiMutationPreviewService), tools: app.get(AiToolRegistry) };
+  const { AiDeleteMutationSupportService } = require('../mutation/ai-delete-mutation-support.service');
+  return {
+    app,
+    dataSource: app.get(DataSource),
+    previews: app.get(AiMutationPreviewService),
+    tools: app.get(AiToolRegistry),
+    support: app.get(AiDeleteMutationSupportService),
+  };
 }
 
 async function insertId(runner: QueryRunner, sql: string, params: unknown[]): Promise<string> {
@@ -152,6 +176,17 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     // list's delete route is: its integrated documents still go with it, as the screen does.
     appsAdmin: await user('AppsAdmin', await role('Applications Administrator', { ai_chat: 'member', applications: 'admin' })),
     appsMember: await user('AppsMember', await role('Applications Member', { ai_chat: 'member', applications: 'member' })),
+    knowledgeAdmin: await user('KnowledgeAdmin', await role('Knowledge Administrator', {
+      ai_chat: 'member', knowledge: 'admin', applications: 'reader', infrastructure: 'reader',
+      portfolio_projects: 'reader', portfolio_requests: 'reader', tasks: 'reader', locations: 'reader', incidents: 'reader',
+    })),
+    // A Knowledge administrator without the read of the families its documents link to: their
+    // links are counted among the other links, unnamed.
+    knowledgeAdminNoReads: await user('KnowledgeOnlyAdmin', await role('Knowledge Only Administrator', {
+      ai_chat: 'member', knowledge: 'admin',
+    })),
+    knowledgeMember: await user('KnowledgeMember', await role('Knowledge Member', { ai_chat: 'member', knowledge: 'member' })),
+    knowledgeReader: await user('KnowledgeReader', await role('Knowledge Reader', { ai_chat: 'member', knowledge: 'reader' })),
   };
 
   const task = (number: number, title: string, assignee: string) => insertId(runner,
@@ -401,6 +436,96 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     [tenantId, interfaceWithBindings, secondApplication],
   );
 
+  // --- Lot 3: documents.
+
+  const incident = await insertId(runner,
+    `INSERT INTO incidents (tenant_id, item_number, title, severity) VALUES ($1, 1, 'Backup outage', 'major')`,
+    [tenantId]);
+  const runbookDocument = await insertId(runner,
+    `INSERT INTO documents (tenant_id, library_id, title, item_number, status, revision, content_markdown, updated_by)
+     VALUES ($1, $2, 'Operations runbook', 10, 'published', 3, 'Runbook body.', $3)`,
+    [tenantId, library, users.knowledgeAdmin]);
+  await runner.query(
+    `INSERT INTO document_versions (tenant_id, document_id, version_number, title, content_markdown, content_plain, created_by)
+     VALUES ($1, $2, 1, 'Operations runbook', 'First body.', 'First body.', $3),
+            ($1, $2, 2, 'Operations runbook', 'Runbook body.', 'Runbook body.', $3)`,
+    [tenantId, runbookDocument, users.knowledgeAdmin],
+  );
+  await runner.query(
+    `INSERT INTO document_attachments (tenant_id, document_id, original_filename, stored_filename, mime_type, size, storage_path)
+     VALUES ($1, $2, 'runbook.pdf', 'runbook.pdf', 'application/pdf', 10, 'spec/runbook.pdf'),
+            ($1, $2, 'diagram.png', 'diagram.png', 'image/png', 20, 'spec/diagram.png')`,
+    [tenantId, runbookDocument],
+  );
+  const documentDerived = await insertId(runner,
+    `INSERT INTO documents (tenant_id, library_id, title, item_number, status, template_document_id)
+     VALUES ($1, $2, 'Runbook for Lyon', 11, 'draft', $3)`, [tenantId, library, runbookDocument]);
+  const documentCiting = await insertId(runner,
+    `INSERT INTO documents (tenant_id, library_id, title, item_number, status)
+     VALUES ($1, $2, 'Backup procedure', 12, 'published')`, [tenantId, library]);
+  const documentCited = await insertId(runner,
+    `INSERT INTO documents (tenant_id, library_id, title, item_number, status)
+     VALUES ($1, $2, 'Network map', 13, 'published')`, [tenantId, library]);
+  await runner.query(
+    `INSERT INTO document_references (tenant_id, source_document_id, target_document_id)
+     VALUES ($1, $2, $3), ($1, $3, $4)`,
+    [tenantId, documentCiting, runbookDocument, documentCited],
+  );
+  for (const [table, column, target] of [
+    ['document_applications', 'application_id', application],
+    ['document_assets', 'asset_id', asset],
+    ['document_projects', 'project_id', project],
+    ['document_requests', 'request_id', lineRequest],
+    ['document_tasks', 'task_id', otherTask],
+    ['document_locations', 'location_id', secondLocation],
+    ['document_connections', 'connection_id', interfaceConnection],
+    ['document_interfaces', 'interface_id', connectionInterface],
+    ['document_incidents', 'incident_id', incident],
+  ] as const) {
+    await runner.query(`INSERT INTO ${table} (tenant_id, document_id, ${column}) VALUES ($1, $2, $3)`, [tenantId, runbookDocument, target]);
+  }
+  await runner.query(
+    `INSERT INTO document_workflows (tenant_id, document_id, status, requested_revision, requested_by)
+     VALUES ($1, $2, 'pending_review', 3, $3)`,
+    [tenantId, runbookDocument, users.knowledgeAdmin],
+  );
+  await runner.query(
+    `INSERT INTO document_edit_locks (tenant_id, document_id, holder_user_id, lock_token_hash, expires_at)
+     VALUES ($1, $2, $3, 'test-lock', now() + interval '1 hour')`,
+    [tenantId, runbookDocument, users.member],
+  );
+
+  // A document whose linked families the Knowledge-only administrator does not read.
+  const documentHidden = await insertId(runner,
+    `INSERT INTO documents (tenant_id, library_id, title, item_number, status)
+     VALUES ($1, $2, 'Hidden links', 14, 'draft')`, [tenantId, library]);
+  await runner.query(
+    `INSERT INTO document_applications (tenant_id, document_id, application_id) VALUES ($1, $2, $3)`,
+    [tenantId, documentHidden, application],
+  );
+  await runner.query(
+    `INSERT INTO document_assets (tenant_id, document_id, asset_id) VALUES ($1, $2, $3)`,
+    [tenantId, documentHidden, asset],
+  );
+
+  // A document integrated into a project's purpose: it goes with the project, not from Knowledge.
+  const managedDocument = await insertId(runner,
+    `INSERT INTO documents (tenant_id, library_id, title, item_number, status)
+     VALUES ($1, $2, 'Migration purpose', 3, 'published')`, [tenantId, library]);
+  await runner.query(
+    `INSERT INTO integrated_document_bindings (tenant_id, source_entity_type, source_entity_id, slot_key, document_id)
+     VALUES ($1, 'projects', $2, 'purpose', $3)`,
+    [tenantId, project, managedDocument],
+  );
+
+  // A restricted library nobody may read without a membership.
+  const restrictedLibrary = await insertId(runner,
+    `INSERT INTO document_libraries (tenant_id, name, slug, access_mode) VALUES ($1, 'Restricted', $2, 'restricted')`,
+    [tenantId, `restricted-${slug}`]);
+  const documentRestricted = await insertId(runner,
+    `INSERT INTO documents (tenant_id, library_id, title, item_number, status)
+     VALUES ($1, $2, 'Restricted runbook', 15, 'draft')`, [tenantId, restrictedLibrary]);
+
   return {
     tenantId,
     users,
@@ -431,6 +556,14 @@ async function seed(runner: QueryRunner): Promise<Seed> {
     interfaceDocument,
     interfaceBinding,
     interfaceConnection,
+    document: runbookDocument,
+    documentDerived,
+    documentCiting,
+    documentCited,
+    documentHidden,
+    documentRestricted,
+    managedDocument,
+    incident,
   };
 }
 
@@ -871,6 +1004,111 @@ async function testInterfaceDelete(h: Harness, runner: QueryRunner, s: Seed) {
   console.log('  interface refused without the bindings flag, deleted with its bindings and integrated documents, without a library right: OK');
 }
 
+async function testDocumentRefusals(h: Harness, runner: QueryRunner, s: Seed) {
+  // A Knowledge member may not delete a document: the route is its administrator's.
+  const member = await refusal(() => h.previews.createPreview(ctx(runner, s, 'knowledgeMember'), 'delete_record', {
+    entity_type: 'documents', ref: 'DOC-10',
+  }));
+  assert.match(member, /knowledge/);
+
+  // A document integrated into a record goes with that record: the screen's 409, no preview.
+  const before = await count(runner, 'ai_mutation_previews', 'tenant_id = $1', [s.tenantId]);
+  const managed = await refusal(() => h.previews.createPreview(ctx(runner, s, 'knowledgeAdmin'), 'delete_record', {
+    entity_type: 'documents', ref: 'DOC-3',
+  }));
+  assert.match(managed, /deleted with their record/);
+  assert.equal(await count(runner, 'ai_mutation_previews', 'tenant_id = $1', [s.tenantId]), before);
+  assert.equal(await count(runner, 'documents', 'tenant_id = $1 AND id = $2', [s.tenantId, s.managedDocument]), 1);
+
+  // A document in a library the person does not read answers as a missing document.
+  const outside = await refusal(() => h.support.prepare(ctx(runner, s, 'knowledgeReader'), 'documents', 'DOC-15'));
+  assert.match(outside, /Library not found/);
+
+  // Linked families the person does not read stay unnamed, as on the document page.
+  const hiddenContext = ctx(runner, s, 'knowledgeAdminNoReads');
+  const hidden = await h.previews.createPreview(hiddenContext, 'delete_record', {
+    entity_type: 'documents', ref: 'DOC-14',
+  });
+  const hiddenImpact = String(hidden.changes.deletion.to);
+  assert.match(hiddenImpact, /Other links: 2/);
+  assert.ok(!hiddenImpact.includes('Applications'), hiddenImpact);
+  assert.ok(!hiddenImpact.includes('Assets'), hiddenImpact);
+  await h.previews.rejectPreview(hiddenContext, hidden.preview_id);
+  console.log('  document refused to a member, a managed document refused without a preview, a library out of reach reads as missing, unread families unnamed: OK');
+}
+
+async function testDocumentDelete(h: Harness, runner: QueryRunner, s: Seed) {
+  const context = ctx(runner, s, 'knowledgeAdmin');
+  const preview = await h.previews.createPreview(context, 'delete_record', {
+    entity_type: 'documents', ref: 'DOC-10',
+  });
+  assert.equal(preview.status, 'pending');
+  assert.equal(preview.target.entity_type, 'documents');
+  assert.equal(preview.target.entity_id, s.document);
+  assert.equal(preview.target.ref, 'DOC-10');
+  assert.equal(preview.target.title, 'Operations runbook');
+  const impact = String(preview.changes.deletion.to);
+  for (const line of [
+    'Versions: 2',
+    'Attachments: 2',
+    'Documents that cite it: 1',
+    'Documents it cites: 1',
+    'Applications: 1',
+    'Assets: 1',
+    'Projects: 1',
+    'Requests: 1',
+    'Tasks: 1',
+    'Locations: 1',
+    'Connections: 1',
+    'Interfaces: 1',
+    'Incidents: 1',
+    'Documents created from it: 1',
+    'In review. The delete remains possible.',
+    'Locked for editing by Member Tester. The delete remains possible.',
+  ]) {
+    assert.ok(impact.includes(line), `${line} in:\n${impact}`);
+  }
+
+  // The delete waits, as every delete: another document cannot be prepared meanwhile.
+  assert.match(
+    await refusal(() => h.previews.createPreview(context, 'delete_record', { entity_type: 'documents', ref: 'DOC-13' })),
+    /one at a time/,
+  );
+
+  const executed = await h.previews.executePreview(context, preview.preview_id);
+  assert.equal(executed.status, 'executed', executed.error_message ?? '');
+  assert.equal(await count(runner, 'documents', 'tenant_id = $1 AND id = $2', [s.tenantId, s.document]), 0);
+  for (const [table, column] of [
+    ['document_versions', 'document_id'],
+    ['document_attachments', 'document_id'],
+    ['document_references', 'source_document_id'],
+    ['document_references', 'target_document_id'],
+    ['document_applications', 'document_id'],
+    ['document_assets', 'document_id'],
+    ['document_projects', 'document_id'],
+    ['document_requests', 'document_id'],
+    ['document_tasks', 'document_id'],
+    ['document_locations', 'document_id'],
+    ['document_connections', 'document_id'],
+    ['document_interfaces', 'document_id'],
+    ['document_incidents', 'document_id'],
+    ['document_workflows', 'document_id'],
+    ['document_edit_locks', 'document_id'],
+  ] as const) {
+    assert.equal(await count(runner, table, `tenant_id = $1 AND ${column} = $2`, [s.tenantId, s.document]), 0, table);
+  }
+  const [derived] = await runner.query(`SELECT template_document_id FROM documents WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.documentDerived]);
+  assert.equal(derived.template_document_id, null, 'the derived document keeps its row and loses its template');
+  assert.equal(await count(runner, 'documents', 'tenant_id = $1 AND id = $2', [s.tenantId, s.documentDerived]), 1);
+  assert.equal(await count(runner, 'documents', 'tenant_id = $1 AND id = $2', [s.tenantId, s.documentCiting]), 1);
+  assert.equal(await count(runner, 'documents', 'tenant_id = $1 AND id = $2', [s.tenantId, s.documentCited]), 1);
+  const audit = await latestAudit(runner, s.tenantId, 'documents', s.document);
+  assert.equal(audit.action, 'delete');
+  assert.equal(audit.source, 'ai_chat');
+  assert.equal(audit.source_ref, preview.preview_id);
+  console.log('  document deleted by its administrator, versions, links and workflow gone, derived document kept without its template, audit names the preview: OK');
+}
+
 async function testReaderRefused(h: Harness, runner: QueryRunner, s: Seed) {
   const message = await refusal(() => h.previews.createPreview(ctx(runner, s, 'reader'), 'delete_record', {
     entity_type: 'locations', ref: 'LOC-2',
@@ -952,6 +1190,8 @@ async function run() {
       await testCapexLineDelete(harness, runner, s);
       await testConnectionDelete(harness, runner, s);
       await testInterfaceDelete(harness, runner, s);
+      await testDocumentRefusals(harness, runner, s);
+      await testDocumentDelete(harness, runner, s);
       await testReaderRefused(harness, runner, s);
       await testDriftRefused(harness, runner, s);
       await testOnePendingDelete(harness, runner, s);
