@@ -199,7 +199,7 @@ The tab lists the clauses a contract is expected to hold, given the applications
 - A high business or cyber criticality makes the reversibility clause, the exit plan and the audit rights expected. High means the two most severe levels of your catalog (only the most severe when the catalog has fewer than three levels)
 - An instance hosted in the cloud makes the data location expected. The hosting type's category in **IT Landscape > Settings** decides what counts as cloud
 
-The **Expected because** column gives the first reason, for example "SAP S/4HANA holds personal data", then "and n more". Hover it to read them all. A reason that comes through an asset names it.
+The **Expected because** column gives the first reason, for example "SAP S/4HANA holds personal data", then "and n more". Hover it to read them all. A reason that comes through an asset names it if you read the infrastructure. An application you cannot read (or, for a Business Contributor, one you do not take part in) reads "An application you cannot see": the requirement stays expected.
 
 **Recording**: pick a state for each requirement: **Present**, **Missing**, or **Not applicable**. It saves at once. An expected requirement without a state reads **To check**. Type a **Reference** (for example "article 18.3"); it saves when you leave the field or press Enter. Hover a row to see when it was last updated and by whom.
 

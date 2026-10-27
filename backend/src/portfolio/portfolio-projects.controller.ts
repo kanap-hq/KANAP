@@ -40,12 +40,30 @@ import { PermissionLevel } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
 import { linkedReadsFromContext } from '../common/relations/linked-reads';
-import { idsInScope, PortfolioLinkedReads } from './portfolio-linked-reads';
+import { assertApplicationsInScope, idsInScope, PortfolioLinkedReads } from './portfolio-linked-reads';
 import {
   PortfolioRelationsService,
   PROJECT_RELATION_READS,
   projectRelationKindOrThrow,
 } from './portfolio-relations.service';
+
+/**
+ * The fields the screens let a contributor change: the purpose (project page), the planned dates
+ * (the Gantt of the planning page) and the scheduling mode (its roadmap). Every other field needs
+ * `member` (`canManage` on the project page).
+ */
+const CONTRIBUTOR_PROJECT_FIELDS = new Set(['purpose', 'planned_start', 'planned_end', 'scheduling_mode']);
+
+/** 403 naming the fields a contributor sent that the project page keeps for members. */
+function assertContributorProjectFields(ctx: TenantRequest, body: Record<string, unknown>): void {
+  if (hasLevel(ctx, 'portfolio_projects', 'member')) return;
+  const refused = Object.keys(body ?? {}).filter((key) => !CONTRIBUTOR_PROJECT_FIELDS.has(key));
+  if (refused.length > 0) {
+    throw new ForbiddenException(
+      `Changing ${refused.join(', ')} needs the member level on projects. A contributor can change the purpose, the planned dates and the scheduling mode.`,
+    );
+  }
+}
 
 // `access=contributor` narrows the list to the projects the user may write to (time entries).
 function listAccessLevel(query: ListProjectsQueryInput): PermissionLevel {
@@ -572,6 +590,7 @@ export class PortfolioProjectsController {
     @Body() body: UpdateProjectInput,
     @Tenant() ctx: TenantRequest,
   ) {
+    assertContributorProjectFields(ctx, body as Record<string, unknown>);
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     return this.svc.update(id, body as Record<string, unknown>, ctx.tenantId, ctx.userId || null, {
       manager: ctx.manager,
@@ -598,28 +617,28 @@ export class PortfolioProjectsController {
   // ==================== SOURCE REQUESTS ====================
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Post(':id/source-requests')
   async linkSourceRequest(
     @Param('id') idOrRef: string,
     @Body() body: { request_id: string },
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.linkSourceRequest(id, body?.request_id, ctx.tenantId, {
       manager: ctx.manager,
     });
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Delete(':id/source-requests/:requestId')
   async unlinkSourceRequest(
     @Param('id') idOrRef: string,
     @Param('requestId') requestId: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.unlinkSourceRequest(id, requestId, {
       manager: ctx.manager,
     });
@@ -628,14 +647,14 @@ export class PortfolioProjectsController {
   // ==================== TEAM MANAGEMENT ====================
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Post(':id/business-team/bulk-replace')
   async bulkReplaceBusinessTeam(
     @Param('id') idOrRef: string,
     @Body() body: { user_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.bulkReplaceTeam(id, 'business_team', body?.user_ids ?? [], {
       manager: ctx.manager,
       userId: ctx.userId ?? null,
@@ -643,14 +662,14 @@ export class PortfolioProjectsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Post(':id/it-team/bulk-replace')
   async bulkReplaceItTeam(
     @Param('id') idOrRef: string,
     @Body() body: { user_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.bulkReplaceTeam(id, 'it_team', body?.user_ids ?? [], {
       manager: ctx.manager,
       userId: ctx.userId ?? null,
@@ -674,7 +693,7 @@ export class PortfolioProjectsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Post(':id/effort-allocations/:effortType')
   async setEffortAllocations(
     @Param('id') idOrRef: string,
@@ -682,21 +701,21 @@ export class PortfolioProjectsController {
     @Body() body: { allocations: Array<{ user_id: string; allocation_pct: number }> },
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.setEffortAllocations(id, effortType, body?.allocations ?? [], {
       manager: ctx.manager,
     });
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Delete(':id/effort-allocations/:effortType')
   async resetEffortAllocations(
     @Param('id') idOrRef: string,
     @Param('effortType') effortType: 'it' | 'business',
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.resetEffortAllocations(id, effortType, {
       manager: ctx.manager,
     });
@@ -705,14 +724,14 @@ export class PortfolioProjectsController {
   // ==================== CONTACTS ====================
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Post(':id/contacts/bulk-replace')
   async bulkReplaceContacts(
     @Param('id') idOrRef: string,
     @Body() body: { contact_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.bulkReplaceContacts(id, body?.contact_ids ?? [], {
       manager: ctx.manager,
     });
@@ -794,7 +813,16 @@ export class PortfolioProjectsController {
     @Body() body: { application_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
+    // As the Relations tab: a read of the applications, and only applications in the person's scope.
+    if (!hasLevel(ctx, 'applications', 'reader')) throw new ForbiddenException('You cannot read applications.');
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const linked = await this.svc.listLinkedApplications(id, { manager: ctx.manager });
+    const { applicationScope } = await this.projectRelationsContext(ctx);
+    await assertApplicationsInScope(
+      this.requireManager(ctx),
+      [...linked.items.map((row: { id: string }) => row.id), ...(body?.application_ids ?? [])],
+      applicationScope,
+    );
     return this.svc.bulkReplaceLinkedApplications(id, body?.application_ids ?? [], {
       manager: ctx.manager,
       userId: ctx.userId ?? null,
@@ -824,6 +852,7 @@ export class PortfolioProjectsController {
     @Body() body: { asset_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
+    if (!hasLevel(ctx, 'infrastructure', 'reader')) throw new ForbiddenException('You cannot read assets.');
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     return this.svc.bulkReplaceLinkedAssets(id, body?.asset_ids ?? [], {
       manager: ctx.manager,
@@ -841,6 +870,7 @@ export class PortfolioProjectsController {
     @Body() body: { capex_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
+    if (!hasLevel(ctx, 'budget', 'reader')) throw new ForbiddenException('You cannot read budget lines.');
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     return this.svc.bulkReplaceCapex(id, body?.capex_ids ?? [], {
       manager: ctx.manager,
@@ -858,6 +888,7 @@ export class PortfolioProjectsController {
     @Body() body: { opex_ids: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
+    if (!hasLevel(ctx, 'budget', 'reader')) throw new ForbiddenException('You cannot read budget lines.');
     const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
     return this.svc.bulkReplaceOpex(id, body?.opex_ids ?? [], {
       manager: ctx.manager,
@@ -917,7 +948,7 @@ export class PortfolioProjectsController {
   // ==================== COMMENTS ====================
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Post(':id/comments')
   async addComment(
     @Param('id') idOrRef: string,
@@ -930,7 +961,7 @@ export class PortfolioProjectsController {
     },
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.addComment(
       id,
       body?.content ?? '',
@@ -947,7 +978,7 @@ export class PortfolioProjectsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Patch(':id/comments/:activityId')
   async updateComment(
     @Param('id') idOrRef: string,
@@ -955,7 +986,7 @@ export class PortfolioProjectsController {
     @Body() body: { content: string },
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     if (!ctx.userId) {
       throw new Error('User ID required');
     }
@@ -1044,21 +1075,21 @@ export class PortfolioProjectsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Post(':id/phases')
   async createPhase(
     @Param('id') idOrRef: string,
     @Body() body: { name: string; planned_start?: string; planned_end?: string },
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.createPhase(id, body, ctx.tenantId, ctx.userId || null, {
       manager: ctx.manager,
     });
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Patch(':id/phases/:phaseId')
   async updatePhase(
     @Param('id') idOrRef: string,
@@ -1066,42 +1097,42 @@ export class PortfolioProjectsController {
     @Body() body: { name?: string; planned_start?: string; planned_end?: string; status?: string },
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.updatePhase(phaseId, body as Record<string, unknown>, ctx.userId || null, {
       manager: ctx.manager,
     });
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Delete(':id/phases/:phaseId')
   async deletePhase(
     @Param('id') idOrRef: string,
     @Param('phaseId') phaseId: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.deletePhase(phaseId, ctx.userId || null, {
       manager: ctx.manager,
     });
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Post(':id/phases/reorder')
   async reorderPhases(
     @Param('id') idOrRef: string,
     @Body() body: ReorderPhasesDto,
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.reorderPhases(id, body.phase_ids, ctx.tenantId, {
       manager: ctx.manager,
     });
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Post(':id/phases/:phaseId/toggle-milestone')
   async togglePhaseMilestone(
     @Param('id') idOrRef: string,
@@ -1109,7 +1140,7 @@ export class PortfolioProjectsController {
     @Body() body: { enabled: boolean; milestone_name?: string },
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.togglePhaseMilestone(
       phaseId,
       body.enabled,
@@ -1134,21 +1165,21 @@ export class PortfolioProjectsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Post(':id/milestones')
   async createMilestone(
     @Param('id') idOrRef: string,
     @Body() body: { name: string; phase_id?: string; target_date?: string },
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.createMilestone(id, body, ctx.tenantId, ctx.userId || null, {
       manager: ctx.manager,
     });
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Patch(':id/milestones/:milestoneId')
   async updateMilestone(
     @Param('id') idOrRef: string,
@@ -1156,21 +1187,21 @@ export class PortfolioProjectsController {
     @Body() body: { name?: string; target_date?: string; status?: string },
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.updateMilestone(milestoneId, body as Record<string, unknown>, ctx.userId || null, {
       manager: ctx.manager,
     });
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Delete(':id/milestones/:milestoneId')
   async deleteMilestone(
     @Param('id') idOrRef: string,
     @Param('milestoneId') milestoneId: string,
     @Tenant() ctx: TenantRequest,
   ) {
-    await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.deleteMilestone(milestoneId, ctx.userId || null, {
       manager: ctx.manager,
     });
@@ -1179,14 +1210,14 @@ export class PortfolioProjectsController {
   // ==================== APPLY TEMPLATE ====================
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('portfolio_projects', 'contributor')
+  @RequireLevel('portfolio_projects', 'member')
   @Post(':id/apply-template')
   async applyPhaseTemplate(
     @Param('id') idOrRef: string,
     @Body() body: { template_id: string; replace?: boolean },
     @Tenant() ctx: TenantRequest,
   ) {
-    const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'member');
     return this.svc.applyPhaseTemplate(
       id,
       body.template_id,

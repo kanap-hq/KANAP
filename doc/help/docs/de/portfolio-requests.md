@@ -193,6 +193,8 @@ Sie bringt vier verschiedene Elemente zusammen:
 
 Verknüpfen Sie die von der Anfrage berührten Geschäftsprozesse. Dies ändert die Bedeutung der Anfrage in Portfolio-Begriffen: Eine Anfrage, die zentrale operative Prozesse betrifft, sollte nicht auf die gleiche Weise bewertet werden wie eine lokale Komfortverbesserung.
 
+Zum Ändern brauchen Sie `portfolio_requests:member` und `business_processes:member`.
+
 ### Machbarkeitsprüfung
 
 Die Machbarkeitsprüfung ist eine strukturierte Bewertung über sieben Dimensionen:

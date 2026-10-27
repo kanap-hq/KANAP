@@ -1,5 +1,5 @@
 import { linkedReadsFromContext } from '../common/relations/linked-reads';
-import { idsInScope } from './portfolio-linked-reads';
+import { assertApplicationsInScope, idsInScope } from './portfolio-linked-reads';
 import { languageOf } from '../common/csv-sheet';
 import {
   Body, Controller, Delete, ForbiddenException, Get, Param, ParseUUIDPipe, Patch, Post, Query, Req, Res,
@@ -801,7 +801,17 @@ export class PortfolioRequestsController {
     @Body() body: { application_ids: string[] },
     @Req() req: any,
   ) {
+    // As the Relations tab: a read of the applications, and only applications in the person's scope.
+    if (!hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'applications', 'reader')) {
+      throw new ForbiddenException('You cannot read applications.');
+    }
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
+    const linked = await this.svc.listLinkedApplications(id, { manager: req?.queryRunner?.manager });
+    await assertApplicationsInScope(
+      req.queryRunner.manager,
+      [...linked.items.map((row) => row.id), ...(body?.application_ids ?? [])],
+      await resolveBusinessContributorScope(req, 'applications'),
+    );
     return this.svc.bulkReplaceApplications(id, body?.application_ids ?? [], {
       manager: req?.queryRunner?.manager,
       userId: req.user?.sub ?? null,
@@ -835,6 +845,9 @@ export class PortfolioRequestsController {
     @Body() body: { asset_ids: string[] },
     @Req() req: any,
   ) {
+    if (!hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'infrastructure', 'reader')) {
+      throw new ForbiddenException('You cannot read assets.');
+    }
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     return this.svc.bulkReplaceAssets(id, body?.asset_ids ?? [], {
       manager: req?.queryRunner?.manager,
@@ -852,6 +865,9 @@ export class PortfolioRequestsController {
     @Body() body: { capex_ids: string[] },
     @Req() req: any,
   ) {
+    if (!hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'budget', 'reader')) {
+      throw new ForbiddenException('You cannot read budget lines.');
+    }
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     return this.svc.bulkReplaceCapex(id, body?.capex_ids ?? [], {
       manager: req?.queryRunner?.manager,
@@ -869,6 +885,9 @@ export class PortfolioRequestsController {
     @Body() body: { opex_ids: string[] },
     @Req() req: any,
   ) {
+    if (!hasLevel({ isAdmin: req?.isAdmin === true, permissions: req?.permissions }, 'budget', 'reader')) {
+      throw new ForbiddenException('You cannot read budget lines.');
+    }
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     return this.svc.bulkReplaceOpex(id, body?.opex_ids ?? [], {
       manager: req?.queryRunner?.manager,
@@ -886,6 +905,7 @@ export class PortfolioRequestsController {
     @Body() body: { business_process_ids: string[] },
     @Req() req: any,
   ) {
+    this.assertProcessWrite(req);
     const { id } = await this.resolveForAccess(idOrRef, req, 'member');
     return this.svc.bulkReplaceBusinessProcesses(id, body?.business_process_ids ?? [], {
       manager: req?.queryRunner?.manager,

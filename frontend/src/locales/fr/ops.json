@@ -615,7 +615,8 @@
         "business_criticality": "{{app}} : criticité métier {{level}}",
         "cyber_criticality": "{{app}} : criticité cyber {{level}}",
         "cloud_hosting": "{{app}} : hébergement {{level}}",
-        "viaAsset": "{{text}} (actif {{asset}})"
+        "viaAsset": "{{text}} (actif {{asset}})",
+        "hiddenApplication": "Une application que vous ne voyez pas"
       },
       "summary": {
         "missing_one": "{{count}} manquante",

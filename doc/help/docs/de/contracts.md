@@ -199,7 +199,7 @@ Der Reiter listet die Klauseln, die ein Vertrag angesichts der abgedeckten Anwen
 - Eine hohe geschäftliche oder Cyber-Kritikalität macht die Reversibilitätsklausel, den Exit-Plan und das Auditrecht erwartet. Hoch bedeutet die zwei strengsten Stufen Ihres Katalogs (nur die strengste, wenn der Katalog weniger als drei Stufen hat)
 - Eine in der Cloud gehostete Instanz macht den Speicherort der Daten erwartet. Die Kategorie des Hosting-Typs unter **IT-Landschaft > Einstellungen** entscheidet, was als Cloud gilt
 
-Die Spalte **Erwartet wegen** nennt den ersten Grund, zum Beispiel „SAP S/4HANA enthält personenbezogene Daten“, dann „und n weitere“. Fahren Sie mit der Maus darüber, um alle zu lesen. Ein Grund, der über ein Asset kommt, nennt es.
+Die Spalte **Erwartet wegen** nennt den ersten Grund, zum Beispiel „SAP S/4HANA enthält personenbezogene Daten“, dann „und n weitere“. Fahren Sie mit der Maus darüber, um alle zu lesen. Ein Grund, der über ein Asset kommt, nennt es, wenn Sie die Infrastruktur lesen können. Eine Anwendung, die Sie nicht lesen können (oder, für einen Business Contributor, eine, an der Sie nicht beteiligt sind), erscheint als „Eine Anwendung, die Sie nicht sehen“: Die Anforderung bleibt erwartet.
 
 **Erfassen**: Wählen Sie für jede Anforderung einen Stand: **Vorhanden**, **Fehlt** oder **Nicht zutreffend**. Er wird sofort gespeichert. Eine erwartete Anforderung ohne Stand zeigt **Zu prüfen**. Geben Sie eine **Referenz** ein (zum Beispiel „Artikel 18.3“); sie wird gespeichert, wenn Sie das Feld verlassen oder die Eingabetaste drücken. Fahren Sie mit der Maus über eine Zeile, um zu sehen, wann und von wem sie zuletzt aktualisiert wurde.
 

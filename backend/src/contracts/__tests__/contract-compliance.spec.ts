@@ -5,6 +5,7 @@ import {
   complianceInputsFromSettings,
   complianceRegisterFile,
   contractComplianceView,
+  hideUnreadableReasons,
   highLevelCodes,
   registerReasonText,
   summarizeCompliance,
@@ -88,14 +89,15 @@ function testSummary() {
   );
 }
 
+const reason = (overrides: Partial<ComplianceReason>): ComplianceReason => ({
+  rule: 'personal_data',
+  application: { id: 'a', name: 'SAP S/4HANA' },
+  asset: null,
+  level: null,
+  ...overrides,
+});
+
 function testReasonText() {
-  const reason = (overrides: Partial<ComplianceReason>): ComplianceReason => ({
-    rule: 'personal_data',
-    application: { id: 'a', name: 'SAP S/4HANA' },
-    asset: null,
-    level: null,
-    ...overrides,
-  });
   assert.equal(registerReasonText('fr', reason({})), 'SAP S/4HANA contient des données personnelles');
   assert.equal(registerReasonText('en', reason({ asset: { id: 's', name: 'sap-prd-app01' } })), 'SAP S/4HANA holds personal data (asset sap-prd-app01)');
   const critical = reason({ rule: 'business_criticality', level: { axis: 'businessCriticalityLevels', code: 'business_critical', label: 'Critical', translations: { fr: { label: 'Critique' } } } });
@@ -138,7 +140,7 @@ function serialManager() {
 async function testComplianceReadsRunOneAfterTheOther() {
   const inputs = complianceInputsFromSettings({});
   const manager = serialManager();
-  const view = await contractComplianceView(manager as never, inputs, { id: 'c1' });
+  const view = await contractComplianceView(manager as never, inputs, { id: 'c1' }, { applications: true, infrastructure: true });
   assert.equal(view.requirements.length, CONTRACT_COMPLIANCE_REQUIREMENTS.length);
   assert.equal(view.summary.state, 'none');
   const file = await complianceRegisterFile(
@@ -147,8 +149,34 @@ async function testComplianceReadsRunOneAfterTheOther() {
     [{ id: 'c1', name: 'Lease', supplier_name: null, company_name: null }],
     'en',
     'csv',
+    { applications: true, infrastructure: true },
   );
   assert.match(file.content, /Lease/);
+}
+
+/** The reasons name only what the person reads, as the Relations tab of the contract. */
+async function testHideUnreadableReasons() {
+  const erp = reason({ application: { id: 'a1', name: 'ERP' }, asset: { id: 's1', name: 'erp-srv' } });
+  const crm = reason({ application: { id: 'a2', name: 'CRM' } });
+  const reasons = () => new Map([['c1', new Map([['gdpr_dpa' as const, [erp, crm]]])]]);
+  const noQuery = { query: () => { throw new Error('no query without a scope'); } };
+
+  const none = await hideUnreadableReasons(noQuery as never, reasons(), { applications: false, infrastructure: true });
+  assert.deepEqual(none.get('c1')!.get('gdpr_dpa'), [{ rule: 'personal_data', application: null, asset: null, level: null }],
+    'without a read of the applications: one reason, naming nothing');
+  assert.equal(registerReasonText('en', none.get('c1')!.get('gdpr_dpa')![0]), 'An application you cannot see');
+
+  const noAssets = await hideUnreadableReasons(noQuery as never, reasons(), { applications: true, infrastructure: false });
+  assert.deepEqual(noAssets.get('c1')!.get('gdpr_dpa')!.map((r) => [r.application?.name, r.asset]), [['ERP', null], ['CRM', null]],
+    'without a read of the infrastructure: no asset');
+
+  const scoped = await hideUnreadableReasons(
+    { query: async () => [{ id: 'a1' }] } as never,
+    reasons(),
+    { applications: true, infrastructure: true, applicationScope: { userId: 'u1' } as never },
+  );
+  assert.deepEqual(scoped.get('c1')!.get('gdpr_dpa')!.map((r) => r.application?.name ?? null), ['ERP', null],
+    "a Business Contributor: the applications they take part in, the others hidden");
 }
 
 async function run() {
@@ -159,6 +187,7 @@ async function run() {
   testSummary();
   testReasonText();
   await testComplianceReadsRunOneAfterTheOther();
+  await testHideUnreadableReasons();
 }
 
 void run().catch((error) => {
