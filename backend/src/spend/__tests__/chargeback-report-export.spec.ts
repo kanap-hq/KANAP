@@ -43,10 +43,9 @@ function globalTables() {
   const [detailed, companies, flows, kpis] = exp.tables;
   assert.deepEqual(detailed.columns.map((column) => column.header), ['Société', 'Département', 'Montant Budget', 'Part du total', 'Effectif', 'Coût par utilisateur']);
   assert.deepEqual(detailed.rows, [
-    ['Alpha France', 'Total', { kind: 'amount', value: '1000.50' }, { kind: 'percent', value: 0.75 }, { kind: 'number', value: 10 }, { kind: 'amount', value: '100.05' }],
     ['Alpha France', 'Coûts communs', { kind: 'amount', value: '600.00' }, { kind: 'percent', value: 0.45 }, { kind: 'number', value: 10 }, { kind: 'amount', value: '60.00' }],
     ['Alpha France', 'Département inconnu', { kind: 'amount', value: '400.50' }, { kind: 'percent', value: 0.3 }, null, null],
-  ], 'the company total row, common costs, a missing department; amounts to the cent');
+  ], 'common costs, a missing department, no company total row; amounts to the cent');
   assert.deepEqual(companies.rows[0], ['Alpha France', { kind: 'amount', value: '1000.50' }, { kind: 'amount', value: '1334.00' }, { kind: 'amount', value: '-333.50' }, { kind: 'percent', value: 0.75 }]);
   assert.deepEqual(flows.rows, [['Alpha France', 'Société inconnue', { kind: 'amount', value: '12.30' }]], 'a nameless company');
   assert.deepEqual(kpis.columns.map((column) => column.header)[1], 'Budget', 'the KPI table names the column alone, as the screen');
@@ -67,7 +66,7 @@ function globalTables() {
   );
   const xlsx = writeReportExport(limited, { format: 'xlsx', language: 'en', timeZone: 'UTC', generatedAt: new Date('2026-10-27T10:00:00Z'), generatedBy: 'A' });
   assert.equal(xlsx.filename, 'chargeback-global-all-2026-2026-10-27.xlsx');
-  assert.equal(xlsx.rows, 3 + 1 + 1 + 1, 'every data row, no footer');
+  assert.equal(xlsx.rows, 2 + 1 + 1 + 1, 'every data row, no footer');
 }
 
 function companyReport(limited: boolean): CompanyChargebackReportResponse {

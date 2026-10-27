@@ -21,7 +21,9 @@ import { ChargebackReportService, CompanyChargebackReportResponse } from '../cha
  * (`data-access-line-seed.ts`, the shares of `data-access-chargeback.spec.ts`), in one rolled-back
  * transaction, each person in a savepoint after `applyDataAccess`. For the same parameters, each table
  * of each file holds the rows the data route returns (detailed, companies, flows, KPIs; departments,
- * lines, intercompany, KPIs), amounts to the cent, shares as fractions, totals as footer rows. A limited
+ * lines, intercompany, KPIs), amounts to the cent, shares as fractions, totals as footer rows only: the
+ * amount columns of the data rows add up to the screen's totals (per-user costs and the netted flows
+ * have none). A limited
  * person gets their coverage only, no footer, the access line, and a 403 outside it. Refused requests,
  * then the audit row with the format and the row count.
  *
@@ -123,6 +125,10 @@ const points = (value: number | null | undefined) => (value == null ? '' : Strin
 const count = (value: number | null | undefined) => (value == null ? '' : String(value));
 const department = (id: string | null, name: string | null) => (id == null ? L.commonCosts : name?.trim() || L.unknownDepartment);
 
+/** The sum of a column over the data rows, in cents (the cells are written to the cent). */
+const cents = (rows: string[][], index: number) => rows.reduce((sum, row) => sum + Math.round(Number(row[index] || 0) * 100), 0);
+const toCents = (value: number | null | undefined) => Math.round((value ?? 0) * 100);
+
 function body(sheets: Map<string, string[][]>, name: string): string[][] {
   const rows = sheets.get(name);
   assert.ok(rows, `sheet ${name}`);
@@ -146,15 +152,22 @@ async function testGlobal(runner: QueryRunner, s: Seed): Promise<void> {
       const file = await exportFile(c, m, s, person, 'global', { year: String(YEAR), metric: 'budget', scope: 'opex', format: 'xlsx', language: 'en' });
       const sheets = workbook(file.body());
       assert.deepEqual([...sheets.keys()], [L.detailedSheet, L.companiesSheet, L.flowsSheet, L.kpisSheet, 'Parameters'], `${who}: the four tables`);
-      assert.deepEqual(body(sheets, L.detailedSheet), data.detailedRows.map((row) => trim([
+      const detailed = body(sheets, L.detailedSheet);
+      assert.deepEqual(detailed, data.detailedRows.filter((row) => row.rowType === 'department').map((row) => trim([
         row.companyName,
-        row.rowType === 'company' ? L.rowTotal : department(row.departmentId, row.departmentName),
+        department(row.departmentId, row.departmentName),
         amount(row.amount), fraction(row.share), count(row.headcount), amount(row.costPerUser),
-      ])), `${who}: detailed = the data route's detailedRows`);
+      ])), `${who}: detailed = the data route's department rows, no company total row`);
       assert.ok(data.detailedRows.some((row) => row.rowType === 'company') && data.detailedRows.some((row) => row.rowType === 'department'));
-      assert.deepEqual(body(sheets, L.companiesSheet), data.companies.map((row) => trim([
+      // Every amount column adds up to the screen's total: the company total rows, the KPI total.
+      const screenTotal = data.detailedRows.filter((row) => row.rowType === 'company').reduce((sum, row) => sum + toCents(row.amount), 0);
+      assert.equal(cents(detailed, 2), screenTotal, `${who}: detailed amounts add up to the company totals`);
+      assert.equal(screenTotal, toCents(data.kpiTotals!.amount), `${who}: the company totals are the KPI total`);
+      const companies = body(sheets, L.companiesSheet);
+      assert.deepEqual(companies, data.companies.map((row) => trim([
         row.companyName, amount(row.amount), amount(row.paid), amount(row.net), fraction(row.share),
       ])), `${who}: companies`);
+      assert.equal(cents(companies, 1), screenTotal, `${who}: company amounts add up to the total`);
       assert.deepEqual(body(sheets, L.flowsSheet), data.nettedFlows.map((row) => trim([
         row.payerName ?? L.unknownCompany, row.consumerName ?? L.unknownCompany, amount(row.amount),
       ])), `${who}: netted flows`);
@@ -167,6 +180,8 @@ async function testGlobal(runner: QueryRunner, s: Seed): Promise<void> {
       const footer = trim([L.kpiTotal, amount(totals.amount), count(totals.headcount), count(totals.itUsers), totals.turnover > 0 ? amount(totals.turnover) : '',
         points(totals.costVsTurnoverPct), amount(totals.costPerUser), amount(totals.costPerItUser)]);
       assert.deepEqual(body(sheets, L.kpisSheet), limited ? kpiRows : [...kpiRows, footer], `${who}: KPIs${limited ? ', no footer' : ' then their totals'}`);
+      assert.equal(cents(kpiRows, 1), toCents(totals.amount), `${who}: KPI amounts add up to their total`);
+      assert.equal(cents(kpiRows, 4), toCents(totals.turnover), `${who}: KPI turnovers add up to their total`);
       const parameters = sheets.get('Parameters')!.map(trim);
       assert.deepEqual(parameters.slice(1, 5), [['Line type', 'OPEX'], ['Year', String(YEAR)], ['Column', 'Budget'], ['Reporting currency', 'EUR']]);
       assert.equal(parameters.some((row) => row[0] === 'Computed on your access'), limited, `${who}: the access line`);
@@ -212,18 +227,22 @@ async function testCompany(runner: QueryRunner, s: Seed): Promise<void> {
       assert.equal(data.dataAccessLimited === true, limited);
       assert.ok(expected.items.length > 0 && expected.intercompany.length > 0 && expected.departments.length > 0, 'the seed fills every table');
       assert.deepEqual(body(sheets, L.departmentsSheet), expected.departments, `${who}: departments`);
+      assert.equal(cents(expected.departments, 1), toCents(data.company.total), `${who}: department amounts add up to the company's total`);
+      assert.equal(cents(expected.items, limited ? 5 : 2), toCents(data.itemsTotal), `${who}: line amounts add up to their total`);
       const itemsFooter = trim([L.rowTotal, ...(limited ? [''] : []), '', ...(limited ? ['', ''] : []), amount(data.itemsTotal), fraction(data.itemsTotalShare)]);
       assert.deepEqual(body(sheets, L.itemsSheet), limited ? expected.items : [...expected.items, itemsFooter], `${who}: lines`);
       assert.equal(sheets.get(L.itemsSheet)![0].length, limited ? 7 : 4, `${who}: the line columns of the screen`);
       if (limited) assert.ok(data.items.some((row) => row.readable === false && row.itemLabel.startsWith('BL-')), 'Marta: a line she cannot read, by reference');
       const total = data.intercompanyTotal!;
       const icFooter = [L.rowTotal, amount(total.receivables), amount(total.payables), amount(total.net)];
+      assert.deepEqual([1, 2, 3].map((index) => cents(expected.intercompany, index)), [total.receivables, total.payables, total.net].map(toCents), `${who}: intercompany columns add up to their total`);
       assert.deepEqual(body(sheets, L.intercompanySheet), limited ? expected.intercompany : [...expected.intercompany, icFooter], `${who}: intercompany`);
       const global = data.globalKpi;
       const kpiFooter = global ? [trim([L.globalTotals, amount(global.amount), count(global.headcount), count(global.itUsers), amount(global.turnover),
         points(global.costVsTurnoverPct), amount(global.costPerUser), amount(global.costPerItUser)])] : [];
       assert.deepEqual(body(sheets, L.kpisSheet), [...expected.kpis, ...kpiFooter], `${who}: KPIs`);
       assert.equal(kpiFooter.length, limited ? 0 : 1);
+      // The KPI footer is the group's totals, beside the company's own row: a comparison, not a sum.
       const parameters = sheets.get('Parameters')!.map(trim);
       assert.deepEqual(parameters.slice(1, 6), [['Line type', 'OPEX'], ['Year', String(YEAR)], ['Column', 'Budget'], ['Company', data.company.name], ['Reporting currency', 'EUR']]);
       assert.equal(parameters.some((row) => row[0] === 'Computed on your access'), limited);

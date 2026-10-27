@@ -13,7 +13,8 @@ import type {
  * the rows it returns (`chargeback-report.tables.ts`): amounts in the reporting currency to the cent,
  * shares as percent cells, headcounts as numbers, the screens' words in the request language.
  *
- * Global: `detailed` (each company's total row, then its departments), `companies`, `flows` (netted)
+ * Global: `detailed` (the department rows only, the company on each: the screen's company total rows
+ * are the `companies` table, so the amount column adds up to the total), `companies`, `flows` (netted)
  * and `kpis` (their totals as footer). Company: `departments`, `items` (payer, allocation and
  * departments for a person under data-scoped access, as the screen), `intercompany` (total as footer)
  * and `kpis` (the group's totals as footer, none for a limited person). A limited person's file has
@@ -411,10 +412,11 @@ export function globalChargebackExport(
           { header: labels.headcount, kind: 'number' },
           { header: labels.costPerUser, kind: 'amount' },
         ],
-        // The company on every row, so a filter on it keeps its departments.
-        rows: report.detailedRows.map((row) => [
+        // Departments only, the company on every row, so a filter on it keeps its departments; a
+        // company's total row stays on the screen (it is the `companies` table).
+        rows: report.detailedRows.filter((row) => row.rowType === 'department').map((row) => [
           row.companyName,
-          row.rowType === 'company' ? labels.rowTotal : chargebackDepartmentLabel(labels, row.departmentId, row.departmentName),
+          chargebackDepartmentLabel(labels, row.departmentId, row.departmentName),
           amount(row.amount),
           percent(row.share),
           number(row.headcount),
