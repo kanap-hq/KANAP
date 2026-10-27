@@ -128,6 +128,8 @@ Hidden columns are not offered. With nothing ticked under **To copy**, the page 
 
 **Copy** is enabled only after a preview. Changing any field drops the preview: run it again. After the copy, the table stays on screen under the title **Result**, with what each line did.
 
+**Export table** (download icon) downloads the preview of the fields on screen as a CSV or Excel file, one row per line, with the columns and statuses of the table. After the copy, the export is disabled: the table then shows what the copy did, which a preview no longer describes. Amounts in the file carry their cents.
+
 Each part has its own status on each line:
 
 | Status | Meaning |
@@ -243,6 +245,8 @@ Before you choose a column, one line replaces the grid: "Choose a column to see 
 - **Total lines**
 - **Lines with a non-zero total**
 - **Current total value**
+
+**Export table** (download icon) downloads the grid as a CSV or Excel file: the lines of the chosen type and their current value in the chosen column.
 
 ### Confirmation
 

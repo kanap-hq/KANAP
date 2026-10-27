@@ -117,8 +117,8 @@ Click any cell to open the value's workspace.
 
 - **New value**: create a value in the selected dimension (requires `analytics:member`). While the selected dimension is disabled, the button is disabled and its tooltip says "Enable this dimension to add values."
 - **Reorder**: set the order of the selected dimension's values (requires `analytics:member`). The button is disabled while the dimension has fewer than two values. See [Ordering values](#ordering-values)
-- **Import CSV**: load values from a file (requires `analytics:admin`)
-- **Export CSV**: download the values the list shows, or the values of every dimension (requires `analytics:admin`)
+- **Import**: load values from a file (requires `analytics:admin`)
+- **Export**: download the values the list shows, or the values of every dimension (requires `analytics:admin`)
 - **Delete selected**: delete the selected values (requires `analytics:admin`). When some of them are used by budget lines, the confirmation says how many lines lose them, for example "2 selected values are used: they are removed from 5 budget lines. This data cannot be recovered.", and the button reads **Delete anyway**
 
 ---
@@ -369,16 +369,18 @@ The seven budget reports can also be narrowed to one value of a dimension, with 
 
 ## CSV import/export
 
+The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
+
 Load or update the values of every dimension from one file. Dimensions are created on the page.
 
 To set values on budget lines from a file, use the budget file. In it, one `analytics:<code>` column holds each enabled dimension, the default dimension included. See [Load a budget from a spreadsheet](budget-file.md).
 
-**Export**: click **Export CSV**, then **Export data**. The file lists the values of every dimension, enabled or disabled, dimension by dimension, each dimension's values in its order. The file has no order column. For an empty file with the headers only, use **Download template** in the import dialog.
+**Export**: click **Export**, then **Export data**. The file lists the values of every dimension, enabled or disabled, dimension by dimension, each dimension's values in its order. The file has no order column. For an empty file with the headers only, use **Download template** in the import dialog.
 
 **CSV structure**:
 
 - Headers: `axis_code`, `name`, `description`, `status`, `disabled_at`, `applies_to`
-- The export writes the separator of the screen language. See [CSV files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
+- The export writes the separator of the screen language. See [CSV and Excel files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
 
 | Column | Content |
 |---|---|
@@ -393,7 +395,7 @@ Only `name` is a required column. When the `description`, `status`, `disabled_at
 
 **Import**:
 
-1. Click **Import CSV** on the page
+1. Click **Import** on the page
 2. Choose your file
 3. Click **Preflight check**. The report gives the number of rows, the values to create and update, and the rows that change nothing
 4. If the preflight is clean, click **Load**

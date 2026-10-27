@@ -488,6 +488,16 @@ Notes:
 - A value changed in KANAP, or a version deleted there, is never overwritten or brought back.
 - Restart the API after changing these values.
 
+## Optional: Excel imports { #optional-excel-imports }
+
+Every data import reads an Excel workbook (`.xlsx`) as well as a CSV file: the master data lists, the IT and portfolio registers, the budget file, the technology link files, data access and the chart of accounts. KANAP reads the first sheet of a workbook, on the server, with the same columns and checks as a CSV file. See [CSV and Excel files](../csv-files.md).
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `IMPORT_XLSX` | Lets the imports read Excel workbooks. Set it to `false` to accept CSV files only. | `true` |
+
+With `IMPORT_XLSX=false`, the import buttons read **Import CSV**, the import dialogs offer CSV files only, and a workbook is refused with a message that says how to save it as CSV. Exports in Excel and import templates are not affected. Restart the API after changing the value.
+
 ## Optional: advanced
 
 | Variable | Description | Default |
@@ -617,6 +627,9 @@ S3_FORCE_PATH_STYLE=false
 # TECHNOLOGY CATALOG (optional - off by default)
 # TECHNOLOGY_CATALOG_SYNC_ENABLED=false
 # ENDOFLIFE_API_BASE_URL=
+
+# EXCEL IMPORTS (optional - on by default)
+# IMPORT_XLSX=true
 
 # ADVANCED (optional - defaults are fine)
 # JWT_ACCESS_TOKEN_TTL=15m

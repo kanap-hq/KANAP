@@ -45,8 +45,8 @@ The list shows all business processes for your tenant.
 
 - **New** (`business_processes:member`): create a new business process.
 - **Manage Categories** (`business_processes:member`): open the category management dialog.
-- **Import CSV** (Admin): bulk-import processes from a CSV file.
-- **Export CSV** (Admin): export the processes the list shows, or all processes, to CSV.
+- **Import** (Admin): bulk-import processes from a CSV file.
+- **Export** (Admin): export the processes the list shows, or all processes, to CSV.
 - **Delete Selected** (Admin): delete one or more selected rows. A process that applications or interfaces use cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the processes kept, with the reason. Requests linked to a deleted process stay, without the link.
 
 ---
@@ -119,16 +119,15 @@ Both open the **Manage Business Process Categories** dialog.
 
 ## CSV import/export
 
+The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
+
 Use CSV import and export for bulk onboarding or offline editing of your process catalog. Both require **Admin** access.
 
 ### Exporting
 
-Click **Export CSV** on the list page. You can export:
+Click **Export** on the list page. The file holds the processes the list shows, with its search, filters and sort, or every process when you choose **The whole register** in the dialog. For an empty file with the headers only, use **Download template** in the import dialog.
 
-- A **template** (header row only) to use as a starting point.
-- **Data** (all processes for the current tenant).
-
-The separator follows the language of your screen. See [CSV files](csv-files.md) for the encoding, the separator and the two import steps.
+The separator follows the language of your screen. See [CSV and Excel files](csv-files.md) for the encoding, the separator and the two import steps.
 
 **Columns**: `name`, `categories`, `description`, `notes`, `status`.
 
@@ -136,9 +135,9 @@ The `categories` column may contain multiple category names separated by semicol
 
 ### Importing
 
-Click **Import CSV** on the list page, then:
+Click **Import** on the list page, then:
 
-1. Upload your CSV file with the column titles of the template. Commas or semicolons both work.
+1. Upload your CSV file or Excel workbook with the column titles of the template. In a CSV file, commas or semicolons both work.
 2. Run the **Preflight** check. It validates headers and data, and shows how many rows will be created vs. updated.
 3. If preflight passes, click **Load** to apply changes.
 

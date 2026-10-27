@@ -145,7 +145,7 @@ Changes on these tabs save at once. When the person you add has all data, a conf
 
 ## Import and export
 
-**Import CSV** and **Export CSV** on **Admin > Data access** move the access of many people at once. A file holds one row per person and per node:
+**Import** and **Export** on **Admin > Data access** move the access of many people at once, in a CSV file or an Excel workbook (`.xlsx`). See [CSV and Excel files](csv-files.md). A file holds one row per person and per node:
 
 | Column | Content |
 |---|---|
@@ -168,7 +168,7 @@ claire.dubois@example.com;all;;read
 - The check comes first and writes nothing. It reports each refused row: unknown person, unknown company or cost center, invalid type or access, a node listed twice for one person, an Administrator, your own account. A file with one error loads nothing.
 - The export writes the same format, for the limited people. A limited person with no node has no row, so importing the file back leaves them as they are.
 
-The separator, the encoding and the two import steps are those of every CSV file: see [CSV files](csv-files.md).
+The separator, the encoding and the two import steps are those of every CSV file: see [CSV and Excel files](csv-files.md).
 
 ## Audit log
 

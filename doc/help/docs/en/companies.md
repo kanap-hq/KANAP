@@ -63,8 +63,8 @@ The list shows all companies for your workspace. Use it to review key informatio
 **Actions**:
 
 - **New**: create a company (requires `companies:member`)
-- **Import CSV**: bulk-import companies from a CSV file (requires `companies:admin`)
-- **Export CSV**: export companies and their metrics to CSV (requires `companies:admin`)
+- **Import**: bulk-import companies from a CSV file (requires `companies:admin`)
+- **Export**: export companies and their metrics to CSV (requires `companies:admin`)
 - **Delete Selected**: delete one or more selected companies (requires `companies:admin`; only possible if nothing references the company)
 
 **Search context**: when you open a company workspace from the list, your current search, filters, sort order, and year are preserved. Navigating back to the list restores your previous view.
@@ -202,7 +202,9 @@ Many parts of the app are year-aware. Companies have metrics per year:
 
 ## CSV import/export
 
-**Export CSV** downloads the companies the list shows (or, on request in the dialog, every company) with their metrics. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers and one example row, a fictional company with metrics for the list year. Replace it with your own rows.
+The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
+
+**Export** downloads the companies the list shows (or, on request in the dialog, every company) with their metrics. **Import** reads a file back. The import dialog also carries **Download template**: a file with the headers and one example row, a fictional company with metrics for the list year. Replace it with your own rows.
 
 The columns, in this order. The metric columns follow the year selected in the list toolbar: the year before, that year, and the year after.
 
@@ -238,7 +240,7 @@ The columns, in this order. The metric columns follow the year selected in the l
 
 **Notes**:
 
-- See [CSV files](csv-files.md) for the encoding, the separator, the date and amount forms, and the two import steps
+- See [CSV and Excel files](csv-files.md) for the encoding, the separator, the date and amount forms, and the two import steps
 - The list refreshes automatically after a successful load
 
 ## Tips

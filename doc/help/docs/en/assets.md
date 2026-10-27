@@ -82,7 +82,7 @@ Sorting on **Vulnerabilities to review** orders the assets by their critical or 
 
 **Actions**:
 - **Add asset**: opens a menu (`infrastructure:member`). **Add asset** creates an asset; **Add cluster** creates one with the **Cluster** switch already on
-- **Import CSV** / **Export CSV**: Bulk operations (`infrastructure:admin`). The export holds the assets the list shows. See [Export options](#export-options)
+- **Import** / **Export**: Bulk operations in CSV or Excel (`infrastructure:admin`). The export holds the assets the list shows. See [Export options](#export-options)
 - **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`). An asset still assigned to applications or linked to connections cannot be deleted. The refusal names the applications, and up to five connections by reference and name. Remove the asset from them first. An assignment the asset only inherits from its cluster does not block it. Before anything is deleted, the confirmation lists the assets kept, with the reason, and what the others take with them (see [Deleting a cluster or a member](#deleting-a-cluster-or-a-member))
 
 ---
@@ -385,14 +385,18 @@ Maintain your asset inventory at scale using CSV import and export. This feature
 ### Accessing CSV features
 
 From the Assets list:
-- **Export CSV**: Download assets to a CSV file
-- **Import CSV**: Upload a CSV file to create or update assets
+- **Export**: Download assets to a CSV file or an Excel workbook
+- **Import**: Upload a CSV file or an Excel workbook to create or update assets
 
 **Permissions required**: `infrastructure:admin` for import/export operations.
 
 ### Export options { #export-options }
 
-**What the file holds**: the assets the list shows. The export follows the column filters and the quick search. The dialog says how many assets the file will hold. You can also export the whole register.
+**What the file holds**: the assets the list shows. The export follows the column filters and the quick search. The dialog says how many assets the file will hold. You can also export the whole register. The rows keep the order of the list.
+
+**Format**: **CSV** or **Excel (.xlsx)**, chosen in the dialog and remembered in your browser. The workbook holds the same columns as the CSV on one sheet, with numbers and dates as values Excel can sort and filter. The import reads either; in a workbook, it reads the first sheet. See [CSV and Excel files](csv-files.md).
+
+**Columns**: the file starts with `id` and `reference` (`AST-12`), then the columns follow the workspace, tab by tab. The import ignores `reference`.
 
 The asset type, lifecycle, domain, administration zone and IP address type columns hold the names shown on screen, in the language of the screen.
 
@@ -406,7 +410,7 @@ The asset type, lifecycle, domain, administration zone and IP address type colum
 
 ### Import workflow
 
-1. **Prepare your file**: Save it as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV files](csv-files.md).
+1. **Prepare your file**: a CSV file or an Excel workbook (`.xlsx`). Save a CSV file as UTF-8. Commas or semicolons both work, and so does a file Excel saved as plain CSV (Windows-1252). Download a template to ensure correct headers. The separator, amounts, dates and yes or no of each language are in [CSV and Excel files](csv-files.md).
 
 2. **Choose import settings**:
    - **Mode**:
@@ -428,7 +432,7 @@ Preflight reports an error on the row, and nothing is loaded, for:
 - a host name that breaks the rule of the Network tab;
 - a malformed IP address;
 - an asset type, domain, lifecycle, administration zone or IP address type that matches nothing in **IT Landscape > Settings**;
-- a date that is not on the calendar, such as `31/02/2025`, or a date written in words. See [CSV files](csv-files.md) for the forms a date can take;
+- a date that is not on the calendar, such as `31/02/2025`, or a date written in words. See [CSV and Excel files](csv-files.md) for the forms a date can take;
 - an IP address slot filled while an earlier one is empty, for example `ip_2_address` without `ip_1_address`;
 - a name or an FQDN that another asset already has.
 

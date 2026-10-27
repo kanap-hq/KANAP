@@ -1,6 +1,6 @@
 # Reporting
 
-The Reports section gives you prebuilt, interactive reports for analyzing budget data, cost allocations, and spending trends. Every report pairs a summary table with a chart, and all of them support CSV and image exports.
+The Reports section gives you prebuilt, interactive reports for analyzing budget data, cost allocations, and spending trends. Every report pairs a summary table with a chart, and all of them export their table in CSV or Excel and their chart as an image.
 
 ## Where to find it
 
@@ -53,7 +53,7 @@ With **FTE**, a report sums people instead of money:
 - **Top increase / decrease** compares the FTE of the two columns line by line. A line that declares FTE on one side only counts 0 on the other.
 - Values show with two decimals. Column names and chart titles carry FTE.
 - The page address keeps the measure (`?measure=fte`), so a bookmarked or shared link opens on the same measure.
-- Exported PNG and CSV file names end with `-fte`.
+- Exported file names carry `-fte`.
 
 With FTE, a line under the table warns when some lines declare FTE in a column whose amount no longer follows its lines. This happens when the amount was spread, its months were edited by hand, or the column was copied from a column whose lines were only a reference. The line says how many lines and how many FTE are concerned, per column and year. With several columns it reads, for example, "Amount no longer follows the lines for: Budget 2026 (2 lines, 1.50 FTE), Budget 2027 (1 line, 0.50 FTE)." With one column it reads "2 lines declare 1.50 FTE while their amount no longer follows their quantity and price lines." Their FTE still counts. The line tells you that the column's amount is not the cost of its lines.
 
@@ -147,7 +147,6 @@ View cost allocations across all companies with summary KPIs and intercompany fl
 
 - Netted payer-to-consumer flows per company pair (self-consumption excluded)
 - Columns: Payer, Consumer, amount
-- Separate **Export netted flows CSV** button
 
 **KPI table** (when enabled):
 
@@ -166,9 +165,11 @@ A totals row is pinned at the bottom.
 
 ### Export
 
-- **Export table as CSV** (download icon): Exports the detailed allocations grid
+- **Export table** (download icon): **Excel (.xlsx)** writes one sheet per table: **Detailed allocations**, **Global company totals**, **Intercompany flows** and **Chargeback KPIs**, then the **Parameters** sheet. **CSV** offers one entry per table, for example **CSV: Intercompany flows**. The detailed allocations hold one row per department, with its company on each row, so a sum of the amount column gives the total. The company totals are in their own table
 - **Export chart as PNG** (image icon): Exports the bar chart
 - **Print / Save as PDF** (print icon)
+
+The export holds every table, whichever tables the checkboxes show on screen.
 
 ---
 
@@ -210,7 +211,6 @@ Drill down into a single company's chargeback allocations across departments, bu
 
 - Partner company, receivables, payables, net
 - Pinned totals row
-- Separate **Export flows CSV** button
 
 **KPI table** (when enabled): Same columns as the Global chargeback KPI table, with a "Global totals" row at the bottom for comparison.
 
@@ -218,9 +218,11 @@ Drill down into a single company's chargeback allocations across departments, bu
 
 ### Export
 
-- **Export table as CSV**: Exports the department totals grid
+- **Export table**: **Excel (.xlsx)** writes one sheet per table: **Department totals**, **Chargeback lines**, **Intercompany flows** and **Chargeback KPIs**, then the **Parameters** sheet. **CSV** offers one entry per table, for example **CSV: Chargeback lines**
 - **Export chart as PNG**: Exports the department bar chart
 - **Print / Save as PDF**
+
+The export holds every table, whichever tables the checkboxes show on screen.
 
 ---
 
@@ -333,7 +335,7 @@ Compare budget metrics across multiple years on a single line chart. The address
 
 ### Export
 
-- **Export table as CSV**
+- **Export table**: CSV or Excel. See [Export options](#export-options)
 - **Export chart as PNG**
 - **Print / Save as PDF**
 
@@ -365,7 +367,7 @@ Flexibly compare up to 10 year+column combinations.
 
 ### Export
 
-- **Export table as CSV**
+- **Export table**: CSV or Excel. See [Export options](#export-options)
 - **Export chart as PNG**
 - **Print / Save as PDF**
 
@@ -464,7 +466,7 @@ The page address keeps the grouping (`?group=item`, `?group=supplier` or `?group
 
 A pinned **Total** row gives the monthly totals, their average and their peak. Values show with two decimals. Only declared FTE count: lines without quantity and price lines in the column are left out.
 
-A group name is a link that opens in a new tab. A line opens its page. A cost center, a supplier or a value opens the budget lines list on the group's lines that declare FTE, in the report's window and narrowed by the filter bar (see [Opening the list from a report](#opening-the-list-from-a-report)). "No cost center", "No supplier" and "No value" open the lines without one. The **Total** row is plain text. The CSV export keeps the plain names.
+A group name is a link that opens in a new tab. A line opens its page. A cost center, a supplier or a value opens the budget lines list on the group's lines that declare FTE, in the report's window and narrowed by the filter bar (see [Opening the list from a report](#opening-the-list-from-a-report)). "No cost center", "No supplier" and "No value" open the lines without one. The **Total** row is plain text. The export keeps the plain names.
 
 ### Notices
 
@@ -475,8 +477,8 @@ One line under the table for each case, when it applies:
 
 ### Export
 
-- **Export table as CSV**: The file name carries the type, the year, the column and the grouping, for example `staffing-opex-2026-budget-cost-center.csv`
-- **Export chart as PNG**: Same name, as a PNG image
+- **Export table**: CSV or Excel. The file name carries the type, the year, the column, the grouping and the day of the export, for example `staffing-opex-2026-budget-cost-center-2026-10-27.xlsx`
+- **Export chart as PNG**: The type, the year, the column and the grouping, as a PNG image
 - **Print / Save as PDF**
 
 ---
@@ -543,8 +545,8 @@ A pinned **Total** row gives, for each pair, the total days, the total day cost 
 
 ### Export
 
-- **Export table as CSV**: The file name carries the type, the grouping and the first pair, for example `cost-per-fte-opex-cost-center-2025-budget.csv`. In the daily rate it starts with `daily-rate`, for example `daily-rate-opex-cost-center-2025-budget.csv`
-- **Export chart as PNG**: Same name, as a PNG image
+- **Export table**: CSV or Excel. The file name carries the type, the grouping, the first pair and the day of the export, for example `cost-per-fte-opex-cost-center-2025-budget-2026-10-27.xlsx`. In the daily rate it starts with `daily-rate`, for example `daily-rate-opex-cost-center-2025-budget-2026-10-27.csv`
+- **Export chart as PNG**: The type, the grouping and the first pair, as a PNG image
 - **Print / Save as PDF**
 
 ---
@@ -555,11 +557,21 @@ Every report shares these capabilities through the shared toolbar:
 
 ### Export options
 
-- **Export table as CSV** (download icon): Downloads the primary table data
+- **Export table** (download icon): opens a menu with **CSV** and **Excel (.xlsx)**. Your browser remembers the last choice and highlights it
 - **Export chart as PNG** (image icon): Downloads the chart as a PNG image
 - **Print / Save as PDF** (print icon): Opens the browser print dialog. You can also append `?print=1` to any report URL to trigger printing automatically on load.
 
-Exported file names carry the column name, for example `top10-opex-2026-budget-bar.png`. With the FTE measure, they end with `-fte`.
+KANAP builds the table file from the same figures as the screen, with the filters on screen:
+
+- **Values**: amounts carry their cents, FTE and days their decimals, shares are percentages. The screen rounds them for reading; the file keeps the values, so a sum in Excel matches the report.
+- **Order**: the rows come in the report's own order. A sort you click in a column header stays on the screen.
+- **Language**: the headers, the group names ("No cost center") and the dates follow the language of your screen. A CSV file also takes that language's separator and decimal mark (see [CSV and Excel files](csv-files.md)).
+- **Excel**: one sheet per table, with the total rows in bold after the data. A sort or a filter in Excel leaves the totals in place. A last sheet, **Parameters**, lists the filters applied, the date and time of the export in your time zone, and your name.
+- **Limited data access**: for a person with limited [data access](data-access.md), the file counts the lines they see and holds no total row. The **Parameters** sheet says **Computed on your access**.
+
+Every table export is recorded in the [audit log](admin.md#audit-log).
+
+Exported file names carry the column name, for example `top10-opex-2026-budget-bar.png`, and a table file ends with the day of the export. With the FTE measure, the names carry `-fte`, before the day for a table file.
 
 ### Available metrics
 
@@ -578,4 +590,4 @@ To switch reports, click **Reporting** in the left panel to return to the hub.
 - **Compare Budget vs Expected landing**: Use the Budget column comparison report to measure forecast accuracy across years.
 - **Toggle sections on chargeback reports**: The checkbox controls let you focus on just the data you need (departments, lines, KPIs, or flows) without visual clutter.
 - **Year grouping in Budget column comparison**: When comparing the same metric across multiple years, enable year grouping for a cleaner line chart.
-- **Export for presentations**: Charts export as PNG and tables as CSV, both ready for slides or spreadsheets.
+- **Export for presentations**: Charts export as PNG and tables as CSV or Excel, ready for slides or spreadsheets.

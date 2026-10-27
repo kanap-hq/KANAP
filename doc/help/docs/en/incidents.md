@@ -249,10 +249,10 @@ Deadlines and thresholds depend on your jurisdiction and sector. KANAP records t
 - The evidence itself, as attachments and linked documents
 - The incident review, with the root cause, the corrective actions and what was learned, kept version by version, and the follow-up tasks that prove the actions were carried out
 - Filtered views by period, severity, category or compliance flag, straight from the list
-- A CSV export of the register (**Export CSV** on the list), for auditors and for your own archive. It follows the filters, the search and the sort of the list, and when a filter is active the dialog shows how many incidents go into the file. Restricted incidents are omitted unless you are allowed to see them; the file includes a **Restricted to register administrators** column that can be imported
+- An export of the register in CSV or Excel (**Export** on the list), for auditors and for your own archive. The file starts with the INC reference. It follows the filters, the search and the sort of the list, and when a filter is active the dialog shows how many incidents go into the file. Restricted incidents are omitted unless you are allowed to see them; the file includes a **Restricted to register administrators** column that can be imported
 - A PDF report of a single incident (**Export PDF** in the workspace), for the auditor who wants one record rather than the whole register
 
-**Importing an existing register**: **Import CSV** on the list takes a CSV file. Leave the reference column empty to create incidents (KANAP allocates the next INC numbers), or keep the INC-N reference to update the matching records. Each imported incident gets a journal entry saying it came from a file. Export first, or download the empty template, if you want the exact column layout. The template ignores the filters of the list.
+**Importing an existing register**: **Import** on the list takes a CSV file or an Excel workbook (`.xlsx`). Leave the reference column empty to create incidents (KANAP allocates the next INC numbers), or keep the INC-N reference to update the matching records. Each imported incident gets a journal entry saying it came from a file. Export first, or download the empty template, if you want the exact column layout. The template ignores the filters of the list.
 
 The headers, the severity and the status are written in the language of the export. The import accepts headers and values in any of the four languages, and the technical codes too (`major`, `in_progress`).
 

@@ -43,8 +43,8 @@ The Contacts grid provides a searchable directory of all external contacts. Ever
 
 **Actions**:
 - **New**: Create a new contact (requires `contacts:member`)
-- **Import CSV**: Bulk import contacts (requires `contacts:admin`)
-- **Export CSV**: Export to CSV (requires `contacts:admin`)
+- **Import**: Bulk import contacts (requires `contacts:admin`)
+- **Export**: Export to CSV (requires `contacts:admin`)
 - **Delete Selected**: Remove selected contacts (requires `contacts:admin`). They are removed from the suppliers, budget lines, contracts, applications, assets, locations, projects and requests that name them; these records stay
 
 ---
@@ -118,6 +118,8 @@ Locations can have support contacts (facility managers, NOC contacts, etc.).
 
 ## CSV import/export
 
+The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
+
 Manage contacts in bulk using CSV.
 
 **Export**: Downloads the contacts the list shows with their details. Choose **The whole register** in the dialog for every contact.
@@ -132,7 +134,7 @@ Manage contacts in bulk using CSV.
 **Optional fields**: `first_name`, `last_name`, `job_title`, `phone`, `mobile`, `country`, `notes`, `active`
 
 **Notes**:
-- See [CSV files](csv-files.md) for the encoding, the separator and the two import steps
+- See [CSV and Excel files](csv-files.md) for the encoding, the separator and the two import steps
 
 ---
 

@@ -40,8 +40,8 @@ Every cell in a row is clickable and opens that supplier's page.
 
 **Actions**:
 - **New**: Create a new supplier (requires `suppliers:member`)
-- **Import CSV**: Bulk-import suppliers (requires `suppliers:admin`)
-- **Export CSV**: Export the list to CSV (requires `suppliers:admin`)
+- **Import**: Bulk-import suppliers (requires `suppliers:admin`)
+- **Export**: Export the list to CSV (requires `suppliers:admin`)
 - **Delete Selected**: Remove selected suppliers (requires `suppliers:admin`)
 
 ---
@@ -111,7 +111,9 @@ Click **New** in the list. Fill in the name (required), the ERP supplier ID and 
 
 ## CSV import/export
 
-**Export CSV** downloads the suppliers the list shows, with its search, filters and sort. Choose **The whole register** in the dialog to download every supplier, enabled and disabled. The dialog closes once the file is downloaded. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only. The dialog lists the accepted values.
+The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
+
+**Export** downloads the suppliers the list shows, with its search, filters and sort. Choose **The whole register** in the dialog to download every supplier, enabled and disabled. The dialog closes once the file is downloaded. **Import** reads a file back. The import dialog also carries **Download template**: a file with the headers only. The dialog lists the accepted values.
 
 The columns:
 
@@ -136,7 +138,7 @@ The columns:
 - `disabled_at` sets the end of validity, and the status follows from it. A status that contradicts the date is refused. A file without the `disabled_at` column still imports: the status alone then sets the lifecycle
 
 **Notes**:
-- See [CSV files](csv-files.md) for the encoding, the separator and the two import steps
+- See [CSV and Excel files](csv-files.md) for the encoding, the separator and the two import steps
 - Import suppliers before importing applications or contracts that reference them. The budget file creates a missing supplier too, when **Create missing suppliers** is ticked. See [Load a budget from a spreadsheet](budget-file.md)
 
 ---

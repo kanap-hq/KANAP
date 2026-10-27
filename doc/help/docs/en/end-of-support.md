@@ -60,7 +60,7 @@ The rows about applications need the right to read applications.
 
 ## Export and print
 
-**Export table as CSV** downloads the list on screen: the deadlines with the current horizon and type, or the missing data. Headers follow the language of your screen. **Print / Save as PDF** prints the report.
+**Export table** downloads the list on screen as a CSV or Excel file: the deadlines with the current horizon and type, or the missing data. Headers follow the language of your screen, and dates are real dates in the Excel file, which adds a **Parameters** sheet. See [Reporting](reports.md#export-options). **Print / Save as PDF** prints the report.
 
 ## Tips
 

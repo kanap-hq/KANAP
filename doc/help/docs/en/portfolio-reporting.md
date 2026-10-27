@@ -167,7 +167,7 @@ Click a contributor row to open a project breakdown:
 - Project names are clickable and open the project's **Progress** tab.
 
 ### Exports
-- **CSV**: Export the heatmap table
+- **Export table**: CSV or Excel. The file holds the table of the grouping on screen, contributors or teams, with the capacity mode, the teams and the statuses on screen. Days carry their decimals. The Excel file adds a **Parameters** sheet. See [Reporting](reports.md#export-options)
 - **PNG**: Snapshot of the report
 - **Print**: Print or save as PDF
 
@@ -263,7 +263,7 @@ Modified lists add the **Changes** column at the end.
 
 Both exports carry the reference, the company, the origin of a project, the changes of a modified row and the event date. The closed rows also carry the creation day.
 
-Both files are written in the language of the screen: titles, column names, statuses, the changes, yes or no and the days. The CSV also takes that language's separator and decimal mark, as described in [CSV files](csv-files.md).
+Both files are written in the language of the screen: titles, column names, statuses, the changes, yes or no and the days. The CSV also takes that language's separator and decimal mark, as described in [CSV and Excel files](csv-files.md).
 
 ## Time logged
 
@@ -293,7 +293,7 @@ The report shows days only. It never shows the notes of an entry.
 
 ### Exports
 
-- **CSV**: one line per person and month, with the team, the person, the month, project days, other days and the total.
+- **Export table**: CSV or Excel, one line per person and month, with the team, the person, the month, project days, other days and the total. The file follows the period, the team and project filters, and counts the months in the same time zone as the screen. The Excel file adds a **Parameters** sheet with these filters. See [Reporting](reports.md#export-options)
 - **PNG**: the chart.
 
 ## Tips

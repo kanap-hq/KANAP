@@ -175,8 +175,8 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 **Actions**:
 
 - **New line**: Create a line (requires `budget:member`)
-- **Import CSV**: Bulk-load lines from a budget file (requires `budget:admin`)
-- **Export CSV**: Export the lines to a budget file (requires `budget:admin`)
+- **Import**: Bulk-load lines from a budget file (requires `budget:admin`)
+- **Export**: Export the lines to a budget file (requires `budget:admin`)
 - **Delete selected**: Bulk-delete selected lines (requires `budget:admin`; select rows via checkboxes). A line with amounts in a frozen column cannot be deleted. Before anything is deleted, the confirmation lists the lines kept, with the frozen column. The others are deleted
 
 **Prev/Next navigation**:
@@ -595,9 +595,9 @@ The section is absent when the line has no supplier or there is nothing to sugge
 
 ## CSV import/export
 
-**Export CSV** and **Import CSV** sit in the toolbar of the list. Both need the Admin level on Budget (`budget:admin`).
+**Export** and **Import** sit in the toolbar of the list. Both need the Admin level on Budget (`budget:admin`).
 
-**Export CSV** writes the budget file of the lines the list shows, OPEX and CAPEX together, as `budget.csv`. **Import CSV** reads a file back: it is checked first, and nothing is written until you click **Load**.
+**Export** writes the budget file of the lines the list shows, OPEX and CAPEX together, as `budget.csv` or as an Excel workbook, `budget.xlsx`. **Import** reads either back: it is checked first, and nothing is written until you click **Load**.
 
 The file holds one row per line: its `nature` (`opex` or `capex`), its reference `BL-n`, the line's details, its amounts as columns and `kanap_token`. A file without a `nature` column, exported by an earlier version, is read as OPEX lines, or as CAPEX lines when the **Type** filter of the list keeps CAPEX only. [Load a budget from a spreadsheet](budget-file.md) describes the columns, what a cell means, and the two import steps.
 
@@ -709,7 +709,7 @@ Additionally:
 - Tasks have separate permissions (`tasks:member` to create and edit tasks on budget lines)
 - Users with `tasks:reader` can view tasks but not create or edit them
 
-If you cannot perform an action (e.g., the **Import CSV** button is missing, or you cannot upload attachments), check with your workspace admin to review your role permissions.
+If you cannot perform an action (e.g., the **Import** button is missing, or you cannot upload attachments), check with your workspace admin to review your role permissions.
 
 ---
 

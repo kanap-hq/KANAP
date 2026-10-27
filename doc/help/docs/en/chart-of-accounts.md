@@ -105,8 +105,8 @@ The grid shows accounts for the selected CoA only.
 
 **Actions** (in the page header):
 - **New account** (`accounts:member`): Opens a new account form with the selected CoA already chosen.
-- **Import CSV** (`accounts:admin`): Import accounts into the selected CoA.
-- **Export CSV** (`accounts:admin`): Export accounts from the selected CoA.
+- **Import** (`accounts:admin`): Import accounts into the selected CoA.
+- **Export** (`accounts:admin`): Export accounts from the selected CoA.
 - **Delete selected** (`accounts:admin`): Delete selected account rows. Select rows using the checkbox column (visible to admins). An account used by budget lines cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the accounts kept, with the reason.
 
 All row cells are clickable links to the account workspace. You can right-click or Ctrl+click to open in a new tab.
@@ -174,7 +174,7 @@ Click **New** in the chip bar, or **New chart** in the Manage charts dialog. You
 
 In template mode, click **Check template** before creating to see how many accounts will be added and how many updated. Then click **Create**.
 
-Once created, the new chart is selected on the page: **Import CSV** loads into it.
+Once created, the new chart is selected on the page: **Import** loads into it.
 
 A new chart holds no role except the country default you tick here. To give it another role, use [Manage charts](#the-manage-charts-dialog).
 
@@ -460,16 +460,18 @@ Deletion is immediate and irreversible. The tenant record remains for auditabili
 
 ## CSV import/export
 
+The export writes a CSV file or an Excel workbook (`.xlsx`): choose under **Format** in the dialog. The import reads either. See [CSV and Excel files](csv-files.md).
+
 ### Charts of Accounts
 
 You can export a list of your CoAs (with metadata like code, name, country, default status) but not import CoAs directly via CSV. Create CoAs through the UI or load them from templates.
 
 ### Accounts (global endpoint)
 
-The global `/accounts` CSV includes a `coa_code` column to identify which CoA each account belongs to. **Export CSV** and **Import CSV** use it when no CoA is selected on the page.
+The global `/accounts` CSV includes a `coa_code` column to identify which CoA each account belongs to. **Export** and **Import** use it when no CoA is selected on the page.
 
-  - **Export CSV**: the accounts the list shows (or, on request in the dialog, all accounts) with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, status and **Used for**
-  - **Import CSV**: **Download template** in the dialog gives a file with the headers only. Start with **Preflight check** to validate the structure, the encoding, the required fields and the duplicates, then **Load** to apply the inserts and the updates
+  - **Export**: the accounts the list shows (or, on request in the dialog, all accounts) with their CoA codes, account numbers, names, native names, descriptions, consolidation mappings, status and **Used for**
+  - **Import**: **Download template** in the dialog gives a file with the headers only. Start with **Preflight check** to validate the structure, the encoding, the required fields and the duplicates, then **Load** to apply the inserts and the updates
   - **Matching**: by `(coa_code, account_number)` within your workspace
   - **Required columns**: `coa_code`, `account_number`, `account_name`. All rows of one file must carry the same `coa_code`
   - **Optional columns**: `native_name`, `description`, the consolidation columns, `status`, `nature`. A file can leave them out: the accounts it updates keep their stored values, and new accounts take the defaults (empty, enabled, **OPEX and CAPEX**). A column present in the file applies its cells, empty ones included
@@ -482,10 +484,10 @@ coa_code;account_number;account_name;native_name;description;consolidation_accou
 
 ### Accounts (CoA-scoped)
 
-From the Charts of Accounts page, **Import CSV** and **Export CSV** are automatically scoped to the currently selected CoA.
+From the Charts of Accounts page, **Import** and **Export** are automatically scoped to the currently selected CoA.
 
-  - **Export CSV**: accounts from this CoA (no `coa_code` column needed)
-  - **Import CSV**: accounts are inserted and updated in this CoA automatically. The dialog title names the chart, for example **Import accounts into FR-PCG**
+  - **Export**: accounts from this CoA (no `coa_code` column needed)
+  - **Import**: accounts are inserted and updated in this CoA automatically. The dialog title names the chart, for example **Import accounts into FR-PCG**
   - Only `account_number` and `account_name` are required. The other columns are optional, as in the global file
 
 **CSV schema** (CoA-scoped; shown here with semicolons):
@@ -494,7 +496,7 @@ account_number;account_name;native_name;description;consolidation_account_number
 ```
 
 **Notes**:
-  - See [CSV files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
+  - See [CSV and Excel files](csv-files.md) for the encoding, the separator, the date forms and the two import steps
   - The `coa_code` must match an existing Chart of Accounts in your workspace
   - Account numbers should be unique within a CoA
   - `account_number` and `consolidation_account_number`: whole numbers of at most 15 digits. A longer number is refused for that row. Leading zeros are dropped (`06156` is stored as `6156`): the **Preflight check** lists these rows as warnings, and the file still loads
