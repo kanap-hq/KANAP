@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import ContentCopyIcon from '@mui/icons-material/ContentCopyOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type Options as ReactMarkdownOptions } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
@@ -27,6 +27,8 @@ interface MarkdownContentProps {
    * so model-produced content cannot trigger a third-party request without a click.
    */
   externalImages?: 'show' | 'link';
+  /** Remark plugins run after GitHub Flavored Markdown, on the parsed tree. */
+  remarkPlugins?: ReactMarkdownOptions['remarkPlugins'];
 }
 
 const sanitizeSchema = {
@@ -177,7 +179,7 @@ function isHttpImageSource(src: string): boolean {
   }
 }
 
-export function MarkdownContent({ content, variant = 'default', externalImages = 'show' }: MarkdownContentProps) {
+export function MarkdownContent({ content, variant = 'default', externalImages = 'show', remarkPlugins }: MarkdownContentProps) {
   const isCompact = variant === 'compact';
   const value = normalizeMarkdownForRichTextEditor(content || '');
   const isDark = useTheme().palette.mode === 'dark';
@@ -295,7 +297,7 @@ export function MarkdownContent({ content, variant = 'default', externalImages =
       }}
     >
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, ...(remarkPlugins ?? [])]}
         // rehypeHighlight runs AFTER rehypeSanitize so the class names it adds aren't
         // stripped. (Sanitize would also drop them anyway because they're presentation,
         // but the order keeps the output predictable.)

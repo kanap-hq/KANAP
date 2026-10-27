@@ -1171,6 +1171,7 @@
   "forbidden": {
     "title": "Accès refusé",
     "message": "Vous n'avez pas la permission de voir cette page. Si vous pensez qu'il s'agit d'une erreur, contactez un administrateur.",
+    "aiChatRight": "Pour utiliser Plaid, demandez à un administrateur d'ajouter l'autorisation Chat IA à votre rôle.",
     "cta": "Aller au tableau de bord"
   },
   "lifecycleField": {

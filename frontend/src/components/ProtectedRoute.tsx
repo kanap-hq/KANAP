@@ -11,6 +11,10 @@ import { chatAwaitsIncludedModelConfirmation } from '../ai/includedModel';
 import PendingAccessPage from '../pages/PendingAccessPage';
 import { canUseAnyOperation, canUseOperation } from '../pages/operations/operationAccess';
 
+/** Router state of a /403 redirect caused by a missing AI chat right: the page names the right. */
+export const FORBIDDEN_REASON_AI_CHAT_RIGHT = 'ai_chat_right';
+const aiChatRightRefusal = <Navigate to="/403" replace state={{ reason: FORBIDDEN_REASON_AI_CHAT_RIGHT }} />;
+
 type RouteRequirement = {
   resource: string;
   level: 'reader' | 'contributor' | 'member' | 'manager' | 'admin';
@@ -138,6 +142,15 @@ export default function ProtectedRoute() {
             <CircularProgress />
           </Box>
         );
+      }
+      // The missing right is the only obstacle: the refusal page names it.
+      const chatReasons = aiCapabilities.data?.surfaces.chat.reasons ?? [];
+      if (
+        !aiCapabilities.isError
+        && aiCapabilities.data?.surfaces.chat.permission_granted === false
+        && chatReasons.every((reason) => reason === 'permission_denied')
+      ) {
+        return aiChatRightRefusal;
       }
       // A wait for the included model's confirmation opens the page, which says so.
       if (
@@ -322,7 +335,7 @@ export default function ProtectedRoute() {
         return <Navigate to="/403" replace />;
       }
     } else if (requirement && !hasLevel(requirement.resource, requirement.level)) {
-      return <Navigate to="/403" replace />;
+      return requirement.resource === 'ai_chat' ? aiChatRightRefusal : <Navigate to="/403" replace />;
     }
 
     // Redirect billing admins to billing page when subscription is unhealthy (only when billing is enabled)
