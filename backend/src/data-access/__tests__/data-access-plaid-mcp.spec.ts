@@ -366,6 +366,24 @@ async function testPlaidReads(): Promise<void> {
   const visibleDetail = await tool(rita, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractVisible });
   assert.ok(JSON.stringify(visibleDetail).includes(`DA 4D contract visible ${tag}`), 'get_entity_detail contract: CF shown (Rita)');
   assertNoContractTrace(visibleDetail, 'get_entity_detail contract CF (Rita)');
+  // The lines a contract covers (Plaid and MCP pass, lot L1): those of Rita's access in the detail
+  // and the context, the others counted, never named. L5 is linked to CF for this check only.
+  const linkL5 = [s.tenantId, contractVisible, s.lines.L5];
+  await inTenant(() => client.query(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, linkL5));
+  try {
+    const outside = (value: unknown) => Number(/"budget_lines_outside_access":(\d+)/.exec(JSON.stringify(value))?.[1] ?? NaN);
+    for (const name of ['get_entity_detail', 'get_entity_context']) {
+      const ritaView = await tool(rita, name, { entity_type: 'contracts', entity_id: contractVisible });
+      assert.deepEqual(linesIn(ritaView), ['L1', 'L3'], `${name} contract CF: Rita's lines (${JSON.stringify(ritaView)})`);
+      assertNoTrace(ritaView, `${name} contract CF (Rita)`);
+      assert.equal(outside(ritaView), 1, `${name} contract CF: one line outside Rita's access`);
+      const ullaView = await tool(ulla, name, { entity_type: 'contracts', entity_id: contractVisible });
+      assert.deepEqual(linesIn(ullaView), ['L1', 'L3', 'L5'], `${name} contract CF: Ulla's lines`);
+      assert.equal(outside(ullaView), 0, `${name} contract CF: none outside Ulla's access`);
+    }
+  } finally {
+    await inTenant(() => client.query(`DELETE FROM contract_spend_items WHERE tenant_id = $1 AND contract_id = $2 AND spend_item_id = $3`, linkL5));
+  }
   const randomContract = randomUUID();
   sameRefusal(
     await rejection(() => tool(rita, 'get_entity_detail', { entity_type: 'contracts', entity_id: contractHidden })),

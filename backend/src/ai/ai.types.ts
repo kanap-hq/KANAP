@@ -81,6 +81,7 @@ export const AI_CONTEXT_ENTITY_TYPES = [
   'requests',
   'tasks',
   'technologies',
+  'contracts',
 ] as const;
 
 export const AiSearchEntityTypeSchema = z.enum(AI_SEARCH_ENTITY_TYPES);

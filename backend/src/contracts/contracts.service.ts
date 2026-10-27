@@ -152,6 +152,8 @@ type ListItem = Contract & ContractTermFields & {
   company?: { id: string; name: string } | null;
   /** The name of the group or cost center the contract is attached to, or null. */
   cost_center_name?: string | null;
+  /** The owner's first and last name, or null (no owner, or a user without a name). */
+  owner_name?: string | null;
   /** Links to budget lines of both natures. */
   linked_lines_count?: number;
   latest_task?: { id: string; status?: string; description?: string; created_at?: Date } | null;
@@ -196,6 +198,39 @@ const DEFAULT_LIST_SORT: Sort = { field: 'next_due_date', direction: 'ASC' };
  * the joined names (the paginated query cannot order on a column of a join it does not select).
  */
 const ALIAS_SORT_FIELDS = new Set(['end_date', 'cancellation_deadline', 'next_due_date', 'company_name', 'supplier_name', 'cost_center_name']);
+/** The owner's name, as the contract page shows it (`get`): first and last name, null without one. */
+const OWNER_NAME_SQL = `(SELECT NULLIF(btrim(concat_ws(' ', ou.first_name, ou.last_name)), '') FROM users ou
+  WHERE ou.tenant_id = c.tenant_id AND ou.id = c.owner_user_id)`;
+
+/**
+ * The filter on the applications a contract covers (`application_contracts`), for the assistant
+ * ("which contracts cover APP-8"): a set of application references (`APP-8`) or names, case
+ * ignored; `null` keeps the contracts that cover none. Any other model is not applied.
+ */
+const COVERED_APPLICATION_FILTER = 'covered_application';
+
+function coveredApplicationCondition(model: any, nextParam: () => string): CompiledCondition | null {
+  if (!model || typeof model !== 'object' || model.filterType !== 'set' || !Array.isArray(model.values)) return null;
+  const keys = Array.from(new Set(model.values
+    .filter((value: unknown): value is string => typeof value === 'string')
+    .map((value: string) => value.trim().toLowerCase())
+    .filter(Boolean))) as string[];
+  const covers = (match: string) => `EXISTS (SELECT 1 FROM application_contracts cov_l
+      JOIN applications cov_a ON cov_a.tenant_id = cov_l.tenant_id AND cov_a.id = cov_l.application_id
+     WHERE cov_l.tenant_id = c.tenant_id AND cov_l.contract_id = c.id${match})`;
+  const parts: string[] = [];
+  const params: Record<string, string[]> = {};
+  if (keys.length > 0) {
+    const refs = nextParam();
+    const names = nextParam();
+    params[refs] = keys;
+    params[names] = keys;
+    parts.push(covers(` AND (lower(cov_a.sequential_id) IN (:...${refs}) OR lower(cov_a.name) IN (:...${names}))`));
+  }
+  if (model.values.some((value: unknown) => value === null)) parts.push(`NOT ${covers('')}`);
+  return parts.length ? { sql: parts.join(' OR '), params } : { sql: '1=0', params: {} };
+}
+
 /** The budget figures of the list (`contract-budget.ts`, joined as `cb`), in units of the reporting currency. */
 const BUDGET_FIELDS: Record<string, string> = {
   budget_committed: '(cb.committed::numeric / 100)',
@@ -248,11 +283,14 @@ export class ContractsService {
       company_id: { expression: 'c.company_id', dataType: 'string' },
       supplier_id: { expression: 'c.supplier_id', dataType: 'string' },
       owner_user_id: { expression: 'c.owner_user_id', dataType: 'string' },
+      owner_name: { expression: OWNER_NAME_SQL, dataType: 'string' },
       start_date: { expression: 'c.start_date', dataType: 'date' },
       end_date: { expression: terms.currentTermEnd, dataType: 'date' },
       cancellation_deadline: { expression: terms.cancellationDeadline, dataType: 'date' },
       next_due_date: { expression: terms.nextDueDate, dataType: 'date' },
       term_state: { expression: terms.termState, dataType: 'string' },
+      // The contract is past its first term (tacit renewals included).
+      renewed: { expression: `(${terms.termIndex} > 0)`, dataType: 'boolean' },
       duration_months: {
         expression: 'c.duration_months',
         numericExpression: 'c.duration_months',
@@ -330,6 +368,11 @@ export class ContractsService {
     if (filtersToApply && typeof filtersToApply === 'object') {
       for (const [field, model] of Object.entries(filtersToApply)) {
         if (opts?.omitFilters?.includes(field)) continue;
+        if (field === COVERED_APPLICATION_FILTER) {
+          const covered = coveredApplicationCondition(model, nextParam);
+          if (covered) compiledFilters.push(covered);
+          continue;
+        }
         const target = filterTargets[field];
         if (!target) continue;
         const condition = compileAgFilterCondition(model, target, nextParam);
@@ -484,14 +527,19 @@ export class ContractsService {
     const supplierIds = Array.from(new Set(items.map(i => i.supplier_id).filter(Boolean))) as string[];
     const companyIds = Array.from(new Set(items.map(i => i.company_id).filter(Boolean))) as string[];
     const centreIds = Array.from(new Set(items.map(i => i.cost_center_id).filter(Boolean))) as string[];
-    const [suppliers, companies, centres] = await Promise.all([
+    const ownerIds = Array.from(new Set(items.map(i => i.owner_user_id).filter(Boolean))) as string[];
+    const [suppliers, companies, centres, owners] = await Promise.all([
       supplierIds.length ? mg.query(`SELECT id, name FROM suppliers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [supplierIds]) : [],
       companyIds.length ? mg.query(`SELECT id, name FROM companies WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [companyIds]) : [],
       centreIds.length ? mg.query(`SELECT id, name FROM cost_centers WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [centreIds]) : [],
+      ownerIds.length
+        ? mg.query(`SELECT id, NULLIF(btrim(concat_ws(' ', first_name, last_name)), '') AS name FROM users WHERE tenant_id = app_current_tenant() AND id = ANY($1)`, [ownerIds])
+        : [],
     ]);
     const sById = new Map<string, any>(suppliers.map((r: any) => [r.id, r]));
     const cById = new Map<string, any>(companies.map((r: any) => [r.id, r]));
     const nById = new Map<string, any>(centres.map((r: any) => [r.id, r]));
+    const ownerById = new Map<string, string | null>(owners.map((r: any) => [r.id, r.name ?? null]));
 
     const contractIds = items.map(i => i.id);
     // The budget lines of both natures (spend/budget-nature.ts).
@@ -540,6 +588,7 @@ export class ContractsService {
         supplier: i.supplier_id ? { id: i.supplier_id, name: sById.get(i.supplier_id)?.name ?? '' } : null,
         company: i.company_id ? { id: i.company_id, name: cById.get(i.company_id)?.name ?? '' } : null,
         cost_center_name: i.cost_center_id ? nById.get(i.cost_center_id)?.name ?? '' : null,
+        owner_name: i.owner_user_id ? ownerById.get(i.owner_user_id) ?? null : null,
         linked_lines_count: countById.get(i.id) ?? 0,
         latest_task: latestById.get(i.id) ? {
           id: latestById.get(i.id)!.id,
@@ -1089,7 +1138,7 @@ export class ContractsService {
       .split(',')
       .map((field) => field.trim())
       .filter(Boolean);
-    const allowed = new Set(['currency', 'company_name', 'supplier_name', 'cost_center_name']);
+    const allowed = new Set(['currency', 'company_name', 'supplier_name', 'cost_center_name', 'owner_name']);
     const fields = rawFields.filter((field) => allowed.has(field));
     if (fields.length === 0) return {};
 

@@ -24,6 +24,13 @@ import {
 } from './ai.types';
 import { incidentRelatedLabelSql, incidentRelatedTitleSql, incidentVisibilitySql, resolveIncidentViewer, taskIncidentVisibilitySql } from '../incidents/incident-visibility';
 import { budgetLineReference } from '../spend/budget-nature';
+import { contractTermFields } from '../contracts/contract-terms';
+import { readDecisionWindowDays } from '../contracts/contract-settings.service';
+import { readRenewalDecisions, renewalDecisionOf } from '../contracts/contract-renewal.service';
+import { listContractBudgetLines } from '../contracts/contract-relations';
+import { deriveStatusFromDisabledAt } from '../common/status';
+import { utcDateYmd } from '../notifications/expiry-reminder-schedule';
+import { loadContractCoverage, type ContractCoveredFamily } from './query/ai-contract-coverage';
 import { operatingSystemLabelSql } from '../technologies/operating-system-codes';
 import { TechnologyLinksService } from '../technologies/technology-links.service';
 import { assetInServiceSql, type ReachedApplication, TechnologyReachService } from '../technologies/technology-reach.service';
@@ -3893,6 +3900,91 @@ export class AiEntityService {
     };
   }
 
+  /**
+   * A contract with its current term, as the Contracts list shows it (`contract-terms.ts`: the
+   * tenant's decision window and the renewal decisions recorded), and what it covers: its
+   * applications, assets, technologies and budget lines. Each family shows only to a caller who
+   * reads its module, and is left out otherwise (`readableGroups`); a Business Contributor's
+   * applications are those of their participation; the budget lines are those of the caller's data
+   * access, the others counted in `budget_lines_outside_access`, never named. No knowledge section:
+   * documents are not linked to contracts.
+   */
+  private async buildContractContext(context: AiExecutionContextWithManager, contractId: string, manager: AiExecutionContextWithManager['manager']): Promise<AiEntityContextPayloadDto> {
+    const { tenantId } = context;
+    const [contract] = await manager.query<any[]>(
+      `SELECT c.id, c.tenant_id, c.name, c.notes, c.status, c.updated_at, c.start_date, c.duration_months, c.notice_period_months,
+              c.auto_renewal, c.disabled_at, c.yearly_amount_at_signature, c.currency,
+              sup.name AS supplier_name, comp.name AS company_name,
+              NULLIF(btrim(concat_ws(' ', ou.first_name, ou.last_name)), '') AS owner_name
+       FROM contracts c
+       LEFT JOIN suppliers sup ON sup.id = c.supplier_id AND sup.tenant_id = c.tenant_id
+       LEFT JOIN companies comp ON comp.id = c.company_id AND comp.tenant_id = c.tenant_id
+       LEFT JOIN users ou ON ou.id = c.owner_user_id AND ou.tenant_id = c.tenant_id
+       WHERE c.id = $1
+         AND c.tenant_id = $2`,
+      [contractId, tenantId],
+    );
+    if (!contract) throw new NotFoundException('Contract not found.');
+    const windowDays = await readDecisionWindowDays(manager, tenantId);
+    const decisions = await readRenewalDecisions(manager, [contract.id]);
+    const terms = contractTermFields(contract, utcDateYmd(new Date()), { decisionWindowDays: windowDays, renewalDecision: renewalDecisionOf(decisions, contract.id) });
+
+    const applicationScope = await resolveAiParticipationAccessScope(context, 'applications');
+    const coveredGroup = async (family: ContractCoveredFamily, relation: string, label: string) => {
+      const records = (await loadContractCoverage(manager, tenantId, family, [contractId], family === 'applications' ? applicationScope : undefined)).get(contractId) ?? [];
+      return boundedGroup(relation, label, records.map((record) => toSummary(family, {
+        id: record.id,
+        ref: record.reference,
+        label: record.name,
+        summary: null,
+        status: null,
+        updated_at: null,
+      })));
+    };
+    const readsBudget = await this.canReadType(context, 'spend_items');
+    const budgetLines = readsBudget ? await listContractBudgetLines(manager, { id: contract.id, tenant_id: tenantId }) : null;
+    const lineSummaries = (budgetLines?.items ?? []).map((line) => toSummary(line.nature === 'capex' ? 'capex_items' : 'spend_items', {
+      id: line.id,
+      item_number: line.item_number,
+      label: line.product_name,
+      summary: line.company_name,
+      status: null,
+      updated_at: null,
+      metadata: { nature: line.nature },
+    }));
+
+    return {
+      entity: {
+        ...toContextEntityBase('contracts', {
+          id: contract.id,
+          label: contract.name,
+          summary: contract.notes ?? null,
+          status: deriveStatusFromDisabledAt(contract.disabled_at),
+          updated_at: contract.updated_at,
+        }),
+        metadata: {
+          supplier: contract.supplier_name ?? null,
+          company: contract.company_name ?? null,
+          owner: contract.owner_name ?? null,
+          term_state: terms.term_state,
+          next_due_date: terms.next_due_date,
+          cancellation_deadline: terms.cancellation_deadline,
+          current_term_end: terms.current_term_end,
+          renewed: terms.renewed,
+          auto_renewal: contract.auto_renewal == null ? null : Boolean(contract.auto_renewal),
+          ...(budgetLines ? { budget_lines_outside_access: budgetLines.hidden } : {}),
+        },
+      },
+      related: await this.readableGroups(context, [
+        await coveredGroup('applications', 'covered_applications', 'Covered Applications'),
+        await coveredGroup('assets', 'covered_assets', 'Covered Assets'),
+        await coveredGroup('technologies', 'covered_technologies', 'Covered Technologies'),
+        boundedGroup('budget_lines', 'Budget Lines', lineSummaries),
+      ].filter((group) => group.items.length > 0)),
+      knowledge: null,
+    };
+  }
+
   async getEntityContext(
     context: AiExecutionContextWithManager,
     input: {
@@ -3918,6 +4010,8 @@ export class AiEntityService {
       result = await this.buildTaskContext(context, entityId, context.manager);
     } else if (input.entity_type === 'technologies') {
       result = await this.buildTechnologyContext(context, entityId, context.manager);
+    } else if (input.entity_type === 'contracts') {
+      result = await this.buildContractContext(context, entityId, context.manager);
     } else {
       throw new BadRequestException('Unsupported entity type.');
     }

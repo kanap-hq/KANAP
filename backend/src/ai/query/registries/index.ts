@@ -18,7 +18,8 @@ import { chartOfAccountsRegistry } from './chart-of-accounts.registry';
 import { companiesRegistry } from './companies.registry';
 import { connectionsRegistry } from './connections.registry';
 import { contactsRegistry } from './contacts.registry';
-import { contractsRegistry } from './contracts.registry';
+import { contractsRegistry, contractsRegistryFor } from './contracts.registry';
+import { readDecisionWindowDays } from '../../../contracts/contract-settings.service';
 import { departmentsRegistry } from './departments.registry';
 import { documentsRegistry } from './documents.registry';
 import { incidentsRegistry } from './incidents.registry';
@@ -122,6 +123,7 @@ export type AiReadProbe = (entityType: AiQueryEntityType, level?: 'reader' | 'ad
  */
 const LINKED_COUNT_FIELDS: Partial<Record<AiQueryEntityType, Record<string, AiQueryEntityType>>> = {
   applications: { spend_count: 'spend_items', capex_count: 'capex_items', contracts_count: 'contracts' },
+  contracts: { application: 'applications' },
   tasks: { application: 'applications', asset: 'assets', project_name: 'projects' },
   incidents: { asset: 'assets', application: 'applications', asset_count: 'assets' },
   documents: {
@@ -175,7 +177,8 @@ export async function withoutUnreadableLinkedCounts(
 /**
  * The registry of one entity type for the tenant of the call: OPEX and CAPEX
  * gain the fields of the analytics dimensions that apply to their lines (one
- * tenant-predicated query), every other type is the static registry. Resolved once per tool call and passed
+ * tenant-predicated query), contracts read the tenant's decision window (their `term_state`
+ * group), every other type is the static registry. Resolved once per tool call and passed
  * down; `getAiEntityRegistry` stays for static callers. With `canRead` (every tool call), the
  * counts of the modules the caller does not read are left out (`withoutUnreadableLinkedCounts`).
  */
@@ -192,6 +195,7 @@ async function tenantRegistry(
   context: { manager: EntityManager; tenantId: string },
   entityType: AiQueryEntityType,
 ): Promise<AiEntityFilterRegistry> {
+  if (entityType === 'contracts') return contractsRegistryFor(await readDecisionWindowDays(context.manager, context.tenantId));
   const registry = getAiEntityRegistry(entityType);
   if (entityType !== 'spend_items' && entityType !== 'capex_items') return registry;
   const scope = entityType === 'spend_items' ? 'opex' : 'capex';
