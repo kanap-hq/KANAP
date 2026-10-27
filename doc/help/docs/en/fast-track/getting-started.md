@@ -84,6 +84,8 @@ Update your personal information:
 - **Job Title**
 - **Business Phone** / **Mobile Phone**
 
+If your account has no name yet, KANAP asks for your first and last name after you sign in. **Later** hides the question in this browser.
+
 !!! info "SSO users"
     If your organization uses Microsoft Entra ID (SSO), some fields are synced automatically and can't be edited in KANAP.
 
@@ -297,6 +299,7 @@ The weekly email and real-time notifications keep you in the loop without checki
 | Set up notifications | Avatar → My Profile → Notifications tab |
 | Configure weekly email | Avatar → My Profile → Notifications tab → Weekly Review |
 | Change theme (light/dark) | Avatar → My Profile → Appearance tab |
+| See the version or get support | Avatar → About KANAP |
 | Set my availability | Portfolio → Contributors → your name |
 | Add my skills | Portfolio → Contributors → your name → Skills tab |
 | Share a link to anything | Open any workspace → Share |

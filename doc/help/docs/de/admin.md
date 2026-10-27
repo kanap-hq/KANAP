@@ -458,6 +458,8 @@ Oben auf der Seite wird Ihr Abonnement in zwei Zeilen zusammengefasst:
 
 Ohne laufendes Abonnement (eine Testphase, eine abgelaufene Testphase oder ein beendetes Abonnement) wird nur der Status angezeigt. Während einer Testphase stehen daneben das Ende der Testphase und die verbleibenden Tage.
 
+Während einer Testphase zeigt zusätzlich ein Etikett in der oberen Leiste die verbleibenden Tage an, zum Beispiel „Test: 9 Tage“. Für Abrechnungsadministratoren öffnet es diese Seite. Fahren Sie mit der Maus darüber, um das Ende der Testphase zu sehen. Nach Ablauf der Testphase tritt ein Banner an seine Stelle.
+
 Ist ein Wechsel zur monatlichen Abrechnung geplant, zeigt ihn eine dritte Zeile an, zum Beispiel „Wechselt am 7. Okt. 2027 zu monatlich.“ Klicken Sie in dieser Zeile auf **Jährlich beibehalten**, um den Wechsel abzubrechen.
 
 ### Aktionen
@@ -620,9 +622,12 @@ Zum Inhalt des Datensatzes, zu dem, was das Löschen entfernt und behält, und z
 
 Die Einstellungsseite ermöglicht die Verwaltung Ihres persönlichen Profils und Ihrer Benachrichtigungseinstellungen. Zugriff über das Benutzermenü (Avatar oben rechts) oder durch Navigation zu `/settings`.
 
-Die Seite hat zwei Tabs, erreichbar über URL:
+Die Seite hat diese Tabs, jeder mit eigener URL:
 - `/settings/profile` (Standard): Profil-Tab
 - `/settings/notifications`: Benachrichtigungs-Tab
+- `/settings/appearance`: Tab „Darstellung“
+- `/settings/connected-apps`: Tab „Verbundene Apps“, angezeigt, wenn die MCP-API angeboten wird (siehe [Verbundene Apps](connected-apps.md))
+- `/settings/about`: Tab „Über“
 
 ### Profil
 
@@ -632,6 +637,8 @@ Bearbeiten Sie Ihre persönlichen Informationen:
 - **Geschäftstelefon** / **Mobiltelefon**
 
 Wenn Ihre Organisation Microsoft Entra ID (SSO) verwendet, können einige Felder aus Entra synchronisiert sein und in KANAP nicht bearbeitet werden.
+
+Hat Ihr Konto weder Vor- noch Nachnamen, fragt ein kleines Fenster nach der Anmeldung danach. **Später** blendet es in diesem Browser aus. Sie können beide hier jederzeit ändern.
 
 ### Benachrichtigungen
 
@@ -660,6 +667,20 @@ Steuern Sie, welche E-Mail-Benachrichtigungen Sie erhalten.
 Verwenden Sie die Schaltfläche **E-Mail-Vorschau**, um sich eine Test-E-Mail zu senden und das Format zu überprüfen.
 
 Alle Änderungen werden automatisch gespeichert, sobald Sie Schalter umschalten oder Auswahlen ändern.
+
+### Über KANAP
+
+Öffnen Sie **Über KANAP** im Benutzermenü, unter **Abmelden**. Der Menüeintrag zeigt auch die Version. Der Tab **Über** dieser Seite zeigt denselben Inhalt:
+
+- Die Version und die Bereitstellung (Cloud oder On-Premise)
+- In der Cloud, während einer Testphase, die verbleibenden Tage, mit einem Link **Tarif wählen** für Abrechnungsadministratoren
+- Links zu den Versionshinweisen dieser Version, zur Dokumentation, zu kanap.net und zum Quellcode (Lizenz AGPL-3.0)
+- On-Premise ein Link zur Upgrade-Anleitung
+
+**Support** nennt die Wege zu Hilfe:
+
+- In der Cloud ist der E-Mail-Support inbegriffen. Die Support-Adresse öffnet eine E-Mail, die bereits die Version, den Arbeitsbereich, die Bereitstellung und Ihren Browser enthält. **Angaben für den Support kopieren** kopiert dieselben Angaben, zum Einfügen in eine Nachricht.
+- On-Premise schreiben Sie mit Supportvertrag an dieselbe Adresse, mit derselben vorausgefüllten E-Mail und derselben Kopierschaltfläche. Andernfalls stellen Sie Ihre Frage in GitHub Discussions oder melden ein Problem in GitHub Issues. Ein letzter Link führt zum Support-Angebot.
 
 ---
 

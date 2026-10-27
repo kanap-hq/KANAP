@@ -458,6 +458,8 @@ La parte superior de la página resume su suscripción en dos líneas:
 
 Sin una suscripción en curso (una prueba, una prueba expirada o una suscripción finalizada), solo se muestra el estado. Durante una prueba, lo acompañan la fecha de fin de la prueba y los días restantes.
 
+Durante una prueba, una etiqueta en la barra superior también muestra los días restantes, por ejemplo «Prueba: 9 días». Para los administradores de facturación, abre esta página. Pase el ratón por encima para ver la fecha de fin de la prueba. Cuando la prueba ha expirado, un banner ocupa su lugar.
+
 Cuando está previsto un paso a la facturación mensual, una tercera línea lo indica, por ejemplo «Pasa a mensual el 7 oct 2027.» Haga clic en **Mantener anual** en esa línea para cancelar el cambio.
 
 ### Acciones
@@ -620,9 +622,12 @@ Para el contenido del conjunto, lo que el borrado elimina y conserva, y el banne
 
 La página de Configuración le permite gestionar su perfil personal y sus preferencias de notificación. Acceda a ella desde el menú de usuario (avatar superior derecho) o navegue a `/settings`.
 
-La página tiene dos pestañas, accesibles por URL:
+La página tiene estas pestañas, cada una con su propia URL:
 - `/settings/profile` (predeterminada): Pestaña de Perfil
 - `/settings/notifications`: Pestaña de Notificaciones
+- `/settings/appearance`: Pestaña de Apariencia
+- `/settings/connected-apps`: Pestaña de Aplicaciones conectadas, visible cuando se ofrece la API MCP (véase [Aplicaciones conectadas](connected-apps.md))
+- `/settings/about`: Pestaña Acerca de
 
 ### Perfil
 
@@ -632,6 +637,8 @@ Edite su información personal:
 - **Teléfono profesional** / **Teléfono móvil**
 
 Si su organización utiliza Microsoft Entra ID (SSO), algunos campos pueden estar sincronizados desde Entra y no pueden editarse en KANAP.
+
+Si su cuenta no tiene nombre ni apellido, una pequeña ventana se los pide tras iniciar sesión. **Más tarde** la oculta en este navegador. Puede cambiar ambos aquí en cualquier momento.
 
 ### Notificaciones
 
@@ -660,6 +667,20 @@ Las **Notificaciones de tecnologías** envían un correo a los responsables de T
 Utilice el botón **Vista previa del correo** para enviarse un correo de prueba y verificar el formato.
 
 Todos los cambios se guardan automáticamente al activar/desactivar interruptores o cambiar selecciones.
+
+### Acerca de KANAP
+
+Abra **Acerca de KANAP** desde el menú de usuario, bajo **Cerrar sesión**. La entrada del menú también muestra la versión. La pestaña **Acerca de** de esta página muestra el mismo contenido:
+
+- La versión y el despliegue (nube o instalación local)
+- En la nube, durante una prueba, los días restantes, con un enlace **Elegir un plan** para los administradores de facturación
+- Enlaces a las notas de esta versión, la documentación, kanap.net y el código fuente (licencia AGPL-3.0)
+- En instalación local, un enlace a la guía de actualización
+
+**Soporte** indica dónde obtener ayuda:
+
+- En la nube, el soporte por correo está incluido. La dirección del soporte abre un correo que ya contiene la versión, el espacio de trabajo, el despliegue y su navegador. **Copiar la información para el soporte** copia la misma información, para pegarla en un mensaje.
+- En instalación local, si tiene un contrato de soporte, escriba a la misma dirección, con el mismo correo prellenado y el mismo botón de copia. Si no, haga su pregunta en GitHub Discussions o informe de un problema en GitHub Issues. Un último enlace lleva a la oferta de soporte.
 
 ---
 

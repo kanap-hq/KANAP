@@ -84,6 +84,8 @@ Mettez à jour vos informations personnelles :
 - **Intitulé de poste**
 - **Téléphone professionnel** / **Téléphone mobile**
 
+Si votre compte n'a pas encore de nom, KANAP vous demande votre prénom et votre nom après la connexion. **Plus tard** masque la question dans ce navigateur.
+
 !!! info "Information : Utilisateurs SSO"
     Si votre organisation utilise Microsoft Entra ID (SSO), certains champs sont synchronisés automatiquement et ne peuvent pas être modifiés dans KANAP.
 
@@ -297,6 +299,7 @@ L'e-mail hebdomadaire et les notifications en temps réel vous tiennent informé
 | Configurer les notifications | Avatar > Mon profil > onglet Notifications |
 | Configurer l'e-mail hebdomadaire | Avatar > Mon profil > onglet Notifications > Revue hebdomadaire |
 | Changer de thème (clair/sombre) | Avatar > Mon profil > onglet Apparence |
+| Voir la version ou obtenir de l'aide | Avatar > À propos de KANAP |
 | Définir ma disponibilité | Portefeuille > Contributeurs > votre nom |
 | Ajouter mes compétences | Portefeuille > Contributeurs > votre nom > onglet Compétences |
 | Partager un lien vers n'importe quoi | Ouvrez n'importe quel espace de travail > Partager |
