@@ -14,14 +14,16 @@ Chaque ligne affiche :
 
 - Le nom de l'application et l'hôte vers lequel elle revient, par exemple *Claude · claude.ai*
 - La date à laquelle vous l'avez connectée
-- La date à laquelle elle a lu vos données pour la dernière fois
+- La date et l'heure auxquelles elle a lu vos données pour la dernière fois
 
 Une application ne lit que ce que vous voyez dans KANAP, dans la limite de vos droits d'accès. Elle ne peut rien modifier.
 
 Pour couper un accès, cliquez sur **Déconnecter** et confirmez. L'application perd l'accès immédiatement. Pour l'utiliser à nouveau, reconnectez-la depuis l'application. La déconnexion efface aussi le choix **Se souvenir de cette application** fait lors de la connexion.
 
-Quand rien n'est connecté, l'onglet affiche une ligne et un lien vers les instructions. Pour connecter une application, voir [Connecter un client MCP](ai-settings.md#connecting-an-mcp-client).
+Quand vous n'avez aucune application connectée et aucune clé API, l'onglet affiche une ligne et un lien vers les instructions. Pour connecter une application, voir [Connecter un client MCP](ai-settings.md#connecting-an-mcp-client).
 
 ## Clés API
 
-Sous les connexions, l'onglet liste vos propres clés API MCP actives, avec leur libellé, leur préfixe, leur date de création et leur dernière utilisation. Cette liste est en lecture seule. Un administrateur crée et révoque les clés sur la page [Paramètres Plaid](ai-settings.md#cles-et-connexions-mcp).
+Sous les connexions, l'onglet liste vos propres clés API MCP actives, avec leur libellé, leur préfixe, leur date de création, et la date et l'heure de leur dernière utilisation.
+
+Pour arrêter une clé, cliquez sur **Révoquer** et confirmez. Tous les clients qui utilisent la clé perdent l'accès immédiatement, et cette action est irréversible. Un administrateur crée les clés sur la page [Paramètres Plaid](ai-settings.md#cles-et-connexions-mcp).
