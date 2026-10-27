@@ -27,6 +27,7 @@ import { getPriorityLabel, getTaskStatusOptions } from '../../../utils/portfolio
 import { useLocalizedTaskTypes, useTaskTypeLabel } from '../../../hooks/useLocalizedTaskTypes';
 import EntityKnowledgePanel from '../../../components/EntityKnowledgePanel';
 import { PropertyRow } from '../../../components/design';
+import TaskLabelsField from './TaskLabelsField';
 
 const compactFieldSx = {
   '& .MuiFormLabel-root': {
@@ -429,6 +430,12 @@ export default function TaskSidebar({
                 size="small"
               />
             )}
+
+            <TaskLabelsField
+              labels={task.labels}
+              readOnly={readOnly}
+              onChange={(labels) => onPatch({ labels })}
+            />
           </Stack>
         </AccordionDetails>
       </Accordion>

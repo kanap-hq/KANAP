@@ -855,6 +855,8 @@
           "category": "Kategorie",
           "company": "Unternehmen",
           "dueDate": "Fälligkeitsdatum",
+          "labels": "Labels",
+          "labelsPlaceholder": "z. B. dringend",
           "phase": "Phase",
           "priority": "Priorität",
           "relatedTo": "Verknüpft mit",

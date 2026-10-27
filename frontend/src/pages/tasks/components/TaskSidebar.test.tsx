@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -65,6 +66,49 @@ function renderSidebar() {
     </QueryClientProvider>,
   );
 }
+
+const labelsKey = 'workspace.task.sidebar.fields.labels';
+
+function renderLabels(props: { readOnly: boolean; labels?: string[]; onPatch?: (patch: Record<string, unknown>) => void }) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter>
+          <TaskSidebar
+            task={{ ...task, related_object_type: null, related_object_hidden: false, related_object_hidden_kind: null, labels: props.labels ?? [] }}
+            onPatch={props.onPatch ?? (() => undefined)}
+            readOnly={props.readOnly}
+            isCreate
+          />
+        </MemoryRouter>
+      </ThemeProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe('TaskSidebar labels', () => {
+  it('adds and removes a label through onPatch', async () => {
+    const user = userEvent.setup();
+    const onPatch = vi.fn();
+    renderLabels({ readOnly: false, labels: ['alpha'], onPatch });
+    const input = screen.getByRole('combobox', { name: labelsKey });
+    await user.type(input, ' beta{enter}');
+    expect(onPatch).toHaveBeenCalledWith({ labels: ['alpha', 'beta'] });
+    const alpha = screen.getByText('alpha').closest('.MuiChip-root');
+    if (!alpha) throw new Error('missing alpha chip');
+    await user.click(alpha.querySelector('.MuiChip-deleteIcon') as Element);
+    expect(onPatch).toHaveBeenLastCalledWith({ labels: [] });
+  });
+
+  it('shows chips only to a reader', () => {
+    renderLabels({ readOnly: true, labels: ['alpha', 'beta'] });
+    expect(screen.getByText('alpha')).toBeInTheDocument();
+    expect(screen.getByText('beta')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: labelsKey })).toBeNull();
+    expect(screen.getByText('alpha').closest('.MuiChip-root')?.querySelector('.MuiChip-deleteIcon')).toBeNull();
+  });
+});
 
 describe('TaskSidebar hidden contract', () => {
   beforeEach(() => {
