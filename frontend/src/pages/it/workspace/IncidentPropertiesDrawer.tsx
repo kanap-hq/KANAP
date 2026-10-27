@@ -95,7 +95,7 @@ export default function IncidentPropertiesDrawer({
   restrictDisabled = false,
   onChange,
 }: Props) {
-  const { t } = useTranslation('it');
+  const { t } = useTranslation(['it', 'common']);
   const theme = useTheme();
   const locale = useLocale();
   const { byField } = useItOpsEnumOptions();
@@ -121,7 +121,7 @@ export default function IncidentPropertiesDrawer({
             <MenuItem value="" sx={drawerMenuItemSx}>{t('workspace.incident.drawer.noCategory')}</MenuItem>
             {categoryOptions.map((option) => (
               <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>
-                {option.deprecated ? `${option.label} (deprecated)` : option.label}
+                {option.deprecated ? `${option.label} (${t('common:enumEditor.retiredSuffix')})` : option.label}
               </MenuItem>
             ))}
           </TextField>
