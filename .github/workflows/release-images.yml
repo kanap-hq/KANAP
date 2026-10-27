@@ -1,0 +1,531 @@
+name: Release images
+
+# Publishes the images of a KANAP version on the GitHub Container Registry
+# (ghcr.io/<owner>/<image>, the owner of the repository in lower case, so a fork publishes under
+# its own name). Nothing is pushed from a workstation: release.mjs publish waits for these runs.
+#
+#   push of a tag vYY.M.N   `publish`: builds the four images from the tag and pushes the tag
+#                           <version> only. A version tag is immutable: the run refuses an
+#                           image whose tag already exists.
+#   manual run on main      `promote` (input promote=<version>): points `stable` and `YY.M` at the
+#                           digests of <version>, for the latest version only. No build.
+#                           `marketing` (input marketing_from_main): builds kanap-marketing from
+#                           main, tagged main-<short sha>, for a website deployment between two
+#                           versions. Exactly one of the two inputs per run.
+#
+# kanap-api is the runtime stage of backend/Dockerfile, kanap-api-tools its dev stage (sources
+# and development tools, for the database scripts), kanap-web the frontend, kanap-marketing the
+# public website (not part of an on-premise installation). linux/amd64 only. Each pushed image
+# carries BuildKit provenance (mode=max) and an SBOM in its index, and a GitHub provenance
+# attestation pushed next to it. The builds read the BuildKit cache of main (written by the
+# `images` job of ci.yml) and write none: a cache written here would be read by no later run
+# and would push the cache of main out of the quota.
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      promote:
+        description: 'Version (YY.M.N) whose images become stable and YY.M'
+        required: false
+        default: ''
+      marketing_from_main:
+        description: 'Build the marketing image from main (main-<short sha>)'
+        type: boolean
+        required: false
+        default: false
+
+# One run at a time per tag, and per kind of manual run; a run is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'push' && github.ref || (inputs.promote != '' && 'promote' || 'marketing') }}
+  cancel-in-progress: false
+
+# The token of every job reads the repository only; the jobs that push or attest say so.
+# Actions are pinned to the full commit SHA of a release, its version in the comment.
+# Each job's timeout-minutes is about three times its usual duration (see ci.yml).
+permissions:
+  contents: read
+
+jobs:
+  # A manual run: on main only, with exactly one of the two inputs.
+  dispatch:
+    name: manual run
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check the branch and the inputs
+        env:
+          REF: ${{ github.ref }}
+          PROMOTE: ${{ inputs.promote }}
+          MARKETING: ${{ inputs.marketing_from_main }}
+        run: |
+          if [ "$REF" != refs/heads/main ]; then
+            echo "::error::A manual run of this workflow runs on main only (this one runs on $REF)."
+            exit 1
+          fi
+          if [ -n "$PROMOTE" ] && [ "$MARKETING" = true ]; then
+            echo "::error::Give either promote or marketing_from_main, not both."
+            exit 1
+          fi
+          if [ -z "$PROMOTE" ] && [ "$MARKETING" != true ]; then
+            echo "::error::Give promote=<version> or marketing_from_main=true."
+            exit 1
+          fi
+          if [ -n "$PROMOTE" ] && ! [[ "$PROMOTE" =~ ^[0-9]{2}\.([1-9]|1[0-2])\.[1-9][0-9]*$ ]]; then
+            echo "::error::promote must be a version YY.M.N, for example 26.11.1 (got: $PROMOTE)."
+            exit 1
+          fi
+          echo "Manual run accepted."
+
+  publish:
+    name: publish
+    if: ${{ github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      # Before anything else: only a version tag builds images.
+      - name: Check the tag
+        id: version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]{2}\.([1-9]|1[0-2])\.[1-9][0-9]*$ ]]; then
+            echo "::error::$TAG is not a version tag vYY.M.N: no image is built."
+            exit 1
+          fi
+          echo "version=${TAG#v}" >>"$GITHUB_OUTPUT"
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Full history, so git can tell whether main contains the tagged commit.
+          fetch-depth: 0
+          persist-credentials: false
+      # release.mjs tags the merge commit of a release pull request, which is on main. A tag on
+      # any other commit publishes nothing.
+      - name: Check that main contains the tagged commit
+        run: |
+          if ! git merge-base --is-ancestor HEAD origin/main; then
+            echo "::error::The tagged commit $(git rev-parse HEAD) is not on main: no image is built."
+            exit 1
+          fi
+      - name: Check the version of both package.json
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          status=0
+          for folder in backend frontend; do
+            found=$(jq -r .version "$folder/package.json")
+            if [ "$found" != "$VERSION" ]; then
+              echo "::error file=$folder/package.json::$folder/package.json is at $found, not $VERSION."
+              status=1
+            fi
+          done
+          exit "$status"
+      - name: Image names
+        id: names
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: echo "prefix=ghcr.io/${OWNER,,}" >>"$GITHUB_OUTPUT"
+      - name: Check the base image pins (multi-architecture index digests)
+        run: bash .github/scripts/check-image-pins.sh
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Refuse a version whose images are already published
+        env:
+          PREFIX: ${{ steps.names.outputs.prefix }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          bash .github/scripts/check-image-tag-free.sh \
+            "$PREFIX/kanap-api:$VERSION" "$PREFIX/kanap-api-tools:$VERSION" \
+            "$PREFIX/kanap-web:$VERSION" "$PREFIX/kanap-marketing:$VERSION"
+
+      # Labels go into each image configuration, annotations into its manifest and its index
+      # (GHCR shows the description of the index when there is one).
+      - name: Metadata of kanap-api
+        id: meta-api
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+        with:
+          images: ${{ steps.names.outputs.prefix }}/kanap-api
+          tags: type=raw,value=${{ steps.version.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=kanap-api
+            org.opencontainers.image.description=KANAP API server
+            org.opencontainers.image.licenses=AGPL-3.0-only
+          annotations: |
+            org.opencontainers.image.title=kanap-api
+            org.opencontainers.image.description=KANAP API server
+            org.opencontainers.image.licenses=AGPL-3.0-only
+      - name: Metadata of kanap-api-tools
+        id: meta-tools
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+        with:
+          images: ${{ steps.names.outputs.prefix }}/kanap-api-tools
+          tags: type=raw,value=${{ steps.version.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=kanap-api-tools
+            org.opencontainers.image.description=KANAP API with its sources and tools, for the database scripts
+            org.opencontainers.image.licenses=AGPL-3.0-only
+          annotations: |
+            org.opencontainers.image.title=kanap-api-tools
+            org.opencontainers.image.description=KANAP API with its sources and tools, for the database scripts
+            org.opencontainers.image.licenses=AGPL-3.0-only
+      - name: Metadata of kanap-web
+        id: meta-web
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+        with:
+          images: ${{ steps.names.outputs.prefix }}/kanap-web
+          tags: type=raw,value=${{ steps.version.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=kanap-web
+            org.opencontainers.image.description=KANAP web application
+            org.opencontainers.image.licenses=AGPL-3.0-only
+          annotations: |
+            org.opencontainers.image.title=kanap-web
+            org.opencontainers.image.description=KANAP web application
+            org.opencontainers.image.licenses=AGPL-3.0-only
+      - name: Metadata of kanap-marketing
+        id: meta-marketing
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+        with:
+          images: ${{ steps.names.outputs.prefix }}/kanap-marketing
+          tags: type=raw,value=${{ steps.version.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=kanap-marketing
+            org.opencontainers.image.description=KANAP website, not part of an on-premise installation
+            org.opencontainers.image.licenses=AGPL-3.0-only
+          annotations: |
+            org.opencontainers.image.title=kanap-marketing
+            org.opencontainers.image.description=KANAP website, not part of an on-premise installation
+            org.opencontainers.image.licenses=AGPL-3.0-only
+
+      # kanap-api: built and loaded first, checked like in ci.yml, then pushed. The push build
+      # reuses the layers of the checked build from the builder's cache.
+      - name: Build the API image (runtime stage) for the checks
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: backend
+          target: runtime
+          platforms: linux/amd64
+          tags: kanap-api:release-check
+          labels: ${{ steps.meta-api.outputs.labels }}
+          load: true
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=api-runtime
+      - name: Check the API image (converters, no sources or development tools)
+        run: bash .github/scripts/check-api-image.sh kanap-api:release-check
+      - name: Push kanap-api
+        id: push-api
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: backend
+          target: runtime
+          platforms: linux/amd64
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          annotations: ${{ steps.meta-api.outputs.annotations }}
+          push: true
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=api-runtime
+      - name: Attest kanap-api
+        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        with:
+          subject-name: ${{ steps.names.outputs.prefix }}/kanap-api
+          subject-digest: ${{ steps.push-api.outputs.digest }}
+          push-to-registry: true
+
+      - name: Build and push kanap-api-tools (dev stage)
+        id: push-tools
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: backend
+          target: dev
+          platforms: linux/amd64
+          tags: ${{ steps.meta-tools.outputs.tags }}
+          labels: ${{ steps.meta-tools.outputs.labels }}
+          annotations: ${{ steps.meta-tools.outputs.annotations }}
+          push: true
+          provenance: mode=max
+          sbom: true
+          cache-from: |
+            type=gha,scope=api-runtime
+            type=gha,scope=api-dev
+      - name: Attest kanap-api-tools
+        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        with:
+          subject-name: ${{ steps.names.outputs.prefix }}/kanap-api-tools
+          subject-digest: ${{ steps.push-tools.outputs.digest }}
+          push-to-registry: true
+
+      - name: Build and push kanap-web
+        id: push-web
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: frontend
+          platforms: linux/amd64
+          build-args: VITE_API_URL=/api
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
+          annotations: ${{ steps.meta-web.outputs.annotations }}
+          push: true
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=web
+      - name: Attest kanap-web
+        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        with:
+          subject-name: ${{ steps.names.outputs.prefix }}/kanap-web
+          subject-digest: ${{ steps.push-web.outputs.digest }}
+          push-to-registry: true
+
+      - name: Build and push kanap-marketing
+        id: push-marketing
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: marketing
+          platforms: linux/amd64
+          tags: ${{ steps.meta-marketing.outputs.tags }}
+          labels: ${{ steps.meta-marketing.outputs.labels }}
+          annotations: ${{ steps.meta-marketing.outputs.annotations }}
+          push: true
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=marketing
+      - name: Attest kanap-marketing
+        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        with:
+          subject-name: ${{ steps.names.outputs.prefix }}/kanap-marketing
+          subject-digest: ${{ steps.push-marketing.outputs.digest }}
+          push-to-registry: true
+
+      # digests.txt, read by release.mjs publish: one line per image, "<image> <tag> <reference>".
+      # Each digest is read back from the registry and must match the one the build pushed.
+      - name: Summary and digests.txt
+        env:
+          PREFIX: ${{ steps.names.outputs.prefix }}
+          VERSION: ${{ steps.version.outputs.version }}
+          DIGEST_API: ${{ steps.push-api.outputs.digest }}
+          DIGEST_TOOLS: ${{ steps.push-tools.outputs.digest }}
+          DIGEST_WEB: ${{ steps.push-web.outputs.digest }}
+          DIGEST_MARKETING: ${{ steps.push-marketing.outputs.digest }}
+        run: |
+          : >digests.txt
+          {
+            echo "### Images ${VERSION}"
+            echo
+            echo "| Image | Tag | Digest |"
+            echo "|---|---|---|"
+          } >>"$GITHUB_STEP_SUMMARY"
+          status=0
+          for pair in "kanap-api $DIGEST_API" "kanap-api-tools $DIGEST_TOOLS" "kanap-web $DIGEST_WEB" "kanap-marketing $DIGEST_MARKETING"; do
+            image=${pair%% *}
+            pushed=${pair#* }
+            published=$(docker buildx imagetools inspect "$PREFIX/$image:$VERSION" --format '{{json .Manifest}}' | jq -r .digest)
+            if [ "$published" != "$pushed" ]; then
+              echo "::error::$PREFIX/$image:$VERSION is on ${published:-nothing}, the build pushed ${pushed:-nothing}."
+              status=1
+            fi
+            echo "$image $VERSION $PREFIX/$image@$pushed" >>digests.txt
+            echo "| \`$image\` | \`$VERSION\` | \`$pushed\` |" >>"$GITHUB_STEP_SUMMARY"
+          done
+          cat digests.txt
+          exit "$status"
+      - name: Upload digests.txt
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: image-digests
+          path: digests.txt
+          if-no-files-found: error
+
+  # Points stable and YY.M at the digests of <version>: no build, no new image. stable never
+  # moves back, so <version> must be the latest version tag.
+  promote:
+    name: promote
+    needs: dispatch
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.promote != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Check that the version is the latest version tag
+        id: version
+        env:
+          VERSION: ${{ inputs.promote }}
+        run: |
+          tags=$(git ls-remote --tags --refs origin 'refs/tags/v*' | sed -E 's#^.*refs/tags/##' \
+            | grep -E '^v[0-9]{2}\.([1-9]|1[0-2])\.[1-9][0-9]*$' || true)
+          if ! printf '%s\n' "$tags" | grep -qxF "v$VERSION"; then
+            echo "::error::The tag v$VERSION does not exist."
+            exit 1
+          fi
+          latest=$(printf '%s\n' "$tags" | sort -V | tail -1)
+          if [ "$latest" != "v$VERSION" ]; then
+            echo "::error::v$VERSION is not the latest version ($latest is): stable never moves back."
+            exit 1
+          fi
+          echo "version=$VERSION" >>"$GITHUB_OUTPUT"
+          echo "minor=${VERSION%.*}" >>"$GITHUB_OUTPUT"
+      - name: Image names
+        id: names
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: echo "prefix=ghcr.io/${OWNER,,}" >>"$GITHUB_OUTPUT"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Reads every digest first, so nothing moves when one image is missing. imagetools create
+      # with a single index as source pushes that index unchanged under the new tags; the digest
+      # is read back to prove it.
+      - name: Point stable and YY.M at the version
+        env:
+          PREFIX: ${{ steps.names.outputs.prefix }}
+          VERSION: ${{ steps.version.outputs.version }}
+          MINOR: ${{ steps.version.outputs.minor }}
+        run: |
+          images="kanap-api kanap-api-tools kanap-web kanap-marketing"
+          digest_of() { docker buildx imagetools inspect "$1" --format '{{json .Manifest}}' | jq -r .digest; }
+          declare -A digests
+          for image in $images; do
+            if ! digests[$image]=$(digest_of "$PREFIX/$image:$VERSION") || [ -z "${digests[$image]}" ]; then
+              echo "::error::$PREFIX/$image:$VERSION cannot be read: the images of $VERSION are not all published."
+              exit 1
+            fi
+          done
+          {
+            echo "### Promoted ${VERSION} to stable and ${MINOR}"
+            echo
+            echo "| Image | Digest |"
+            echo "|---|---|"
+          } >>"$GITHUB_STEP_SUMMARY"
+          for image in $images; do
+            digest=${digests[$image]}
+            docker buildx imagetools create -t "$PREFIX/$image:stable" -t "$PREFIX/$image:$MINOR" "$PREFIX/$image@$digest"
+            for tag in stable "$MINOR"; do
+              now=$(digest_of "$PREFIX/$image:$tag")
+              if [ "$now" != "$digest" ]; then
+                echo "::error::$PREFIX/$image:$tag is on $now, expected $digest."
+                exit 1
+              fi
+            done
+            echo "| \`$image\` | \`$digest\` |" >>"$GITHUB_STEP_SUMMARY"
+          done
+
+  # The public website may be deployed from main between two versions (AGENTS.md, "Versions and
+  # releases"): builds kanap-marketing alone, tagged main-<short sha>. Touches no other image
+  # and no stable tag.
+  marketing:
+    name: marketing from main
+    needs: dispatch
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.marketing_from_main }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Image name and tag
+        id: names
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          echo "prefix=ghcr.io/${OWNER,,}" >>"$GITHUB_OUTPUT"
+          echo "tag=main-$(git rev-parse --short=7 HEAD)" >>"$GITHUB_OUTPUT"
+      - name: Check the base image pins (multi-architecture index digests)
+        run: bash .github/scripts/check-image-pins.sh
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - name: Log in to the GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Refuse a tag that is already published
+        env:
+          REF: ${{ steps.names.outputs.prefix }}/kanap-marketing:${{ steps.names.outputs.tag }}
+        run: bash .github/scripts/check-image-tag-free.sh "$REF"
+      - name: Metadata of kanap-marketing
+        id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+        with:
+          images: ${{ steps.names.outputs.prefix }}/kanap-marketing
+          tags: type=raw,value=${{ steps.names.outputs.tag }}
+          labels: |
+            org.opencontainers.image.title=kanap-marketing
+            org.opencontainers.image.description=KANAP website, not part of an on-premise installation
+            org.opencontainers.image.licenses=AGPL-3.0-only
+          annotations: |
+            org.opencontainers.image.title=kanap-marketing
+            org.opencontainers.image.description=KANAP website, not part of an on-premise installation
+            org.opencontainers.image.licenses=AGPL-3.0-only
+      - name: Build and push kanap-marketing
+        id: push
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: marketing
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          push: true
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha,scope=marketing
+      - name: Attest kanap-marketing
+        uses: actions/attest-build-provenance@96278af6caaf10aea03fd8d33a09a777ca52d62f # v3.2.0
+        with:
+          subject-name: ${{ steps.names.outputs.prefix }}/kanap-marketing
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+      - name: Summary
+        env:
+          PREFIX: ${{ steps.names.outputs.prefix }}
+          TAG: ${{ steps.names.outputs.tag }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          {
+            echo "### kanap-marketing from main"
+            echo
+            echo "| Image | Tag | Digest |"
+            echo "|---|---|---|"
+            echo "| \`kanap-marketing\` | \`$TAG\` | \`$DIGEST\` |"
+          } >>"$GITHUB_STEP_SUMMARY"
+          echo "$PREFIX/kanap-marketing:$TAG $PREFIX/kanap-marketing@$DIGEST"

@@ -9,7 +9,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { curatedStaleWarning } from '../release.mjs';
+import {
+  curatedStaleWarning, hasImagesSection, imagesSection, imagesToPromote, isImageTag, parseDigests,
+} from '../release.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.join(HERE, '..', 'release.mjs');
@@ -32,18 +34,53 @@ const dir = process.env.FAKE_GH_DIR;
 fs.appendFileSync(path.join(dir, 'calls.log'), line + '\\n');
 const answers = JSON.parse(fs.readFileSync(path.join(dir, 'answers.json'), 'utf8'));
 const released = path.join(dir, 'released');
+const dispatched = path.join(dir, 'dispatched');
 const out = (value) => process.stdout.write(typeof value === 'string' ? value + '\\n' : JSON.stringify(value));
+const notes = () => fs.readFileSync(args[args.indexOf('--notes-file') + 1], 'utf8');
+const runs = [...(answers.imageRuns ?? []), ...(answers.promoteRuns ?? [])];
 if (line === 'auth status') process.exit(0);
 else if (line.startsWith('pr list') && line.includes('--state merged')) out(answers.merged ?? []);
 else if (line.startsWith('pr list') && line.includes('--head')) out(answers.open ?? []);
 else if (args[0] === 'pr' && args[1] === 'view' && answers.prs?.[args[2]]) out(answers.prs[args[2]]);
 else if (line.startsWith('pr create')) out('https://github.com/kanap-hq/KANAP/pull/9');
-else if (line.startsWith('release view') && fs.existsSync(released)) out({ url: 'https://github.com/kanap-hq/KANAP/releases/tag/' + args[2] });
+else if (line.startsWith('release view') && fs.existsSync(released)) out({ url: 'https://github.com/kanap-hq/KANAP/releases/tag/' + args[2], body: fs.readFileSync(released, 'utf8') });
 else if (line.startsWith('release view')) { process.stderr.write('release not found\\n'); process.exit(1); }
-else if (line.startsWith('release create')) { fs.writeFileSync(released, line); out('https://github.com/kanap-hq/KANAP/releases/tag/' + args[2]); }
+else if (line.startsWith('release create')) { fs.writeFileSync(released, notes()); out('https://github.com/kanap-hq/KANAP/releases/tag/' + args[2]); }
+else if (line.startsWith('release edit')) fs.writeFileSync(released, notes());
 else if (line.startsWith('release upload')) process.exit(0);
+else if (line.startsWith('run list') && line.includes('--event push')) out(answers.imageRuns ?? []);
+else if (line.startsWith('run list') && line.includes('--event workflow_dispatch')) out(fs.existsSync(dispatched) ? answers.promoteRuns ?? [] : []);
+else if (args[0] === 'run' && args[1] === 'view' && runs.some((run) => String(run.databaseId) === args[2])) out(runs.find((run) => String(run.databaseId) === args[2]));
+else if (args[0] === 'run' && args[1] === 'download') fs.writeFileSync(path.join(args[args.indexOf('--dir') + 1], 'digests.txt'), answers.digests ?? '');
+else if (line.startsWith('workflow run')) fs.writeFileSync(dispatched, line);
 else { process.stderr.write('fake gh: unexpected call: ' + line + '\\n'); process.exit(3); }
 `;
+
+// ghcr.io as an anonymous client sees it: a pull token, then the manifest of <image>:<tag>. A
+// version tag is on DIGESTS[image] unless the image is in answers.private; a stable tag is on it
+// once the promotion has been dispatched.
+const FAKE_CURL = `#!${process.execPath}
+const fs = require('node:fs');
+const path = require('node:path');
+const dir = process.env.FAKE_GH_DIR;
+const url = process.argv[process.argv.length - 1];
+fs.appendFileSync(path.join(dir, 'curl.log'), url + '\\n');
+const answers = JSON.parse(fs.readFileSync(path.join(dir, 'answers.json'), 'utf8'));
+if (url.startsWith('https://ghcr.io/token?')) { process.stdout.write('{"token":"anonymous"}\\n200'); process.exit(0); }
+const match = /^https:\\/\\/ghcr\\.io\\/v2\\/[^/]+\\/([^/]+)\\/manifests\\/(.+)$/.exec(url);
+if (!match) { process.stderr.write('fake curl: unexpected url ' + url + '\\n'); process.exit(3); }
+const [, image, tag] = match;
+let digest = null;
+if (tag === 'stable') digest = fs.existsSync(path.join(dir, 'dispatched')) ? answers.registry?.[image] : null;
+else if (!(answers.private ?? []).includes(image)) digest = answers.registry?.[image];
+if ((answers.private ?? []).includes(image)) process.stdout.write('HTTP/2 401\\r\\n\\r\\n');
+else if (digest) process.stdout.write('HTTP/2 200\\r\\ndocker-content-digest: ' + digest + '\\r\\n\\r\\n');
+else process.stdout.write('HTTP/2 404\\r\\n\\r\\n');
+`;
+
+const IMAGES = ['kanap-api', 'kanap-api-tools', 'kanap-web', 'kanap-marketing'];
+const DIGESTS = Object.fromEntries(IMAGES.map((image, i) => [image, `sha256:${String(i + 1).repeat(64)}`]));
+const digestsTxt = (version) => IMAGES.map((image) => `${image} ${version} ghcr.io/kanap-hq/${image}@${DIGESTS[image]}`).join('\n');
 
 let counter = 0;
 
@@ -118,24 +155,34 @@ function fixture({ tags = {}, stable = null } = {}) {
 
   writeFileSync(path.join(bin, 'gh'), FAKE_GH);
   chmodSync(path.join(bin, 'gh'), 0o755);
+  writeFileSync(path.join(bin, 'curl'), FAKE_CURL);
+  chmodSync(path.join(bin, 'curl'), 0o755);
+  const run = (databaseId, extra) => ({ databaseId, status: 'completed', conclusion: 'success', url: `https://github.com/kanap-hq/KANAP/actions/runs/${databaseId}`, ...extra });
   const answer = (changes = {}) => writeJson(path.join(ghDir, 'answers.json'), {
     merged: [{ number: 3, title: 'Release 26.10.1', mergeCommit: { oid: release } }, { number: 30, title: 'Release 26.10.12', mergeCommit: { oid: second } }],
     prs: {
       2: { number: 2, title: 'Faster lists', body: '## Changes\n\nx\n\n## Release notes\n\n- Budget lists open faster.\n\n## Verification\n' },
       3: { number: 3, title: 'Release 26.10.1', body: ENTRY },
     },
+    imageRuns: [run(10, { headSha: second, createdAt: '2026-10-27T09:00:00Z' }), run(11, { headSha: release, createdAt: '2026-10-27T10:00:00Z' })],
+    promoteRuns: [run(12, { headSha: release, createdAt: '2999-01-01T00:00:00Z' })],
+    digests: digestsTxt('26.10.1'),
+    registry: DIGESTS,
     ...changes,
   });
   answer();
 
   const env = { ...process.env, ...GIT_ENV, FAKE_GH_DIR: ghDir, PATH: `${bin}${path.delimiter}${process.env.PATH}` };
   return {
-    base, bare, clone, shas, answer,
+    base, bare, clone, shas, answer, ghRun: run,
+    release: (body) => writeFileSync(path.join(ghDir, 'released'), body),
+    notes: () => readFileSync(path.join(ghDir, 'released'), 'utf8'),
     run: (...args) => {
       const result = spawnSync(process.execPath, [SCRIPT, ...args], { cwd: clone, encoding: 'utf8', env });
       return { status: result.status, output: `${result.stdout}${result.stderr}` };
     },
     calls: () => (existsSync(path.join(ghDir, 'calls.log')) ? readFileSync(path.join(ghDir, 'calls.log'), 'utf8') : ''),
+    curls: () => (existsSync(path.join(ghDir, 'curl.log')) ? readFileSync(path.join(ghDir, 'curl.log'), 'utf8') : ''),
     queued: () => (existsSync(path.join(ghDir, 'queue.log')) ? readFileSync(path.join(ghDir, 'queue.log'), 'utf8') : ''),
     remote: (ref) => spawnSync('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { cwd: bare, encoding: 'utf8' }).stdout.trim(),
   };
@@ -155,31 +202,103 @@ describe('publish', () => {
     assert.match(output, /would run: gh release upload v26\.10\.1 \S+ --clobber --repo kanap-hq\/KANAP/);
     assert.match(output, new RegExp(`would run: \\(cd \\S+ && git push origin ${sha}:refs/heads/stable\\)`));
     assert.match(output, /Warning: merged since v26\.9\.1 and not cited in the entry: #2\n/);
+    assert.match(output, new RegExp(`would wait for the run of release-images\\.yml on ${sha}: gh run list --repo kanap-hq/KANAP --workflow release-images\\.yml --branch v26\\.10\\.1 --event push `));
+    assert.match(output, /would run: gh run download "<run>" --repo kanap-hq\/KANAP --name image-digests /);
+    assert.match(output, /\| `kanap-marketing` \| `ghcr\.io\/kanap-hq\/kanap-marketing@sha256:<digest>` \|\n\nProvenance: `gh attestation verify oci:\/\/ghcr\.io\/kanap-hq\/kanap-api@sha256:<digest> -R kanap-hq\/KANAP`/);
+    assert.match(output, /would run, unless every stable tag is already on the version: gh workflow run release-images\.yml --repo kanap-hq\/KANAP --ref main -f promote=26\.10\.1\n/);
+    // Order: tag, images, release, inventory, promotion, stable.
+    const order = ['git push origin v26.10.1', 'would wait for the run', 'gh release create', 'gh release upload', 'gh workflow run', ':refs/heads/stable'].map((text) => output.indexOf(text));
+    assert.deepEqual(order.slice().sort((a, b) => a - b), order, `steps in order: ${order}`);
+    assert.ok(!order.includes(-1), `every step printed: ${order}`);
     assert.equal(repo.remote('v26.10.1'), '');
     assert.equal(repo.remote('stable'), repo.shas.first);
-    assert.doesNotMatch(repo.calls(), /release create|release upload/);
+    assert.doesNotMatch(repo.calls(), /release create|release upload|run list|workflow run/);
+    assert.equal(repo.curls(), '');
   });
 
-  it('tags, releases, attaches the inventory and creates stable, then keeps everything on a rerun', () => {
+  it('waits for the images, releases them with their digests, promotes them and creates stable, then keeps everything on a rerun', () => {
     const repo = fixture();
     const first = repo.run('publish', '26.10.1');
     assert.equal(first.status, 0, first.output);
     assert.equal(repo.remote('v26.10.1'), repo.shas.release);
     assert.equal(repo.remote('stable'), repo.shas.release);
+    assert.match(repo.calls(), /^run list --repo kanap-hq\/KANAP --workflow release-images\.yml --branch v26\.10\.1 --event push /m);
+    assert.match(repo.calls(), /^run download 11 --repo kanap-hq\/KANAP --name image-digests --dir \S+$/m);
+    assert.match(repo.curls(), /^https:\/\/ghcr\.io\/v2\/kanap-hq\/kanap-web\/manifests\/26\.10\.1$/m);
     assert.match(repo.calls(), /^release create v26\.10\.1 --repo kanap-hq\/KANAP --title KANAP 26\.10\.1 · Action required --notes-file \S+$/m);
+    const notes = repo.notes();
+    assert.ok(notes.startsWith('First version.'), notes);
+    assert.ok(notes.endsWith(`| \`kanap-marketing\` | \`ghcr.io/kanap-hq/kanap-marketing@${DIGESTS['kanap-marketing']}\` |\n\nProvenance: \`gh attestation verify oci://ghcr.io/kanap-hq/kanap-api@${DIGESTS['kanap-api']} -R kanap-hq/KANAP\`\n`), notes);
     const upload = repo.calls().split('\n').find((line) => line.startsWith('release upload'));
     for (const file of ['sbom-backend.cdx.json', 'sbom-frontend.cdx.json', 'sbom-marketing-web.cdx.json', 'THIRD-PARTY-NOTICES.txt']) {
       assert.ok(upload.includes(`/${file}`), `${file} uploaded: ${upload}`);
     }
     assert.match(upload, / --clobber --repo kanap-hq\/KANAP$/);
+    assert.match(repo.calls(), /^workflow run release-images\.yml --repo kanap-hq\/KANAP --ref main -f promote=26\.10\.1$/m);
+    assert.match(first.output, /stable and 26\.10 images on 26\.10\.1 \(https:\/\/github\.com\/kanap-hq\/KANAP\/actions\/runs\/12\)/);
     assert.equal(git(repo.clone, 'worktree', 'list').split('\n').length, 1, 'the inventory worktree is removed');
 
     const again = repo.run('publish', '26.10.1', '--no-sbom');
     assert.equal(again.status, 0, again.output);
     assert.match(again.output, /Tag v26\.10\.1 already on/);
     assert.match(again.output, /Release v26\.10\.1 already exists: kept\./);
+    assert.match(again.output, /The stable images are already on 26\.10\.1\./);
     assert.match(again.output, /stable already on/);
     assert.equal(repo.calls().match(/release create/g).length, 1);
+    assert.equal(repo.calls().match(/workflow run/g).length, 1);
+    assert.doesNotMatch(repo.calls(), /release edit/);
+  });
+
+  it('completes a release created without the Images section instead of creating it again', () => {
+    const repo = fixture({ tags: { 'v26.10.1': 'release' } });
+    repo.release('First version.\n');
+    const { status, output } = repo.run('publish', '26.10.1', '--no-sbom');
+    assert.equal(status, 0, output);
+    assert.match(output, /Release v26\.10\.1 exists without the Images section: completed\./);
+    assert.match(repo.calls(), /^release edit v26\.10\.1 --repo kanap-hq\/KANAP --notes-file \S+$/m);
+    assert.doesNotMatch(repo.calls(), /release create/);
+    assert.match(repo.notes(), /^First version\.\n\n### Images\n\n\| Image \| Reference \|\n/);
+  });
+
+  it('stops before the release when the image workflow failed', () => {
+    const repo = fixture();
+    repo.answer({ imageRuns: [repo.ghRun(11, { headSha: repo.shas.release, createdAt: '2026-10-27T10:00:00Z', conclusion: 'failure' })] });
+    const { status, output } = repo.run('publish', '26.10.1', '--no-sbom');
+    assert.equal(status, 1, output);
+    assert.match(output, /the image workflow failed, the release was not created and stable was not moved: https:\/\/github\.com\/kanap-hq\/KANAP\/actions\/runs\/11/);
+    assert.equal(repo.remote('v26.10.1'), repo.shas.release, 'the tag stays');
+    assert.equal(repo.remote('stable'), '');
+    assert.doesNotMatch(repo.calls(), /release create|run download|workflow run/);
+  });
+
+  it('stops with the way to make a package public when an anonymous pull fails', () => {
+    const repo = fixture();
+    repo.answer({ private: ['kanap-web', 'kanap-api-tools'] });
+    const { status, output } = repo.run('publish', '26.10.1', '--no-sbom');
+    assert.equal(status, 2, output);
+    assert.match(output, /an anonymous pull of kanap-api-tools:26\.10\.1, kanap-web:26\.10\.1 fails: the package is not public\. For each one: organisation kanap-hq -> Packages -> <image> -> Package settings -> Change visibility -> Public\. Then rerun publish 26\.10\.1/);
+    assert.equal(repo.remote('stable'), '');
+    assert.doesNotMatch(repo.calls(), /release create|workflow run/);
+  });
+
+  it('refuses digests.txt when an image is missing', () => {
+    const repo = fixture();
+    repo.answer({ digests: digestsTxt('26.10.1').split('\n').slice(0, 3).join('\n') });
+    const { status, output } = repo.run('publish', '26.10.1', '--no-sbom');
+    assert.equal(status, 1, output);
+    assert.match(output, /digests\.txt: no digest for kanap-marketing/);
+    assert.doesNotMatch(repo.calls(), /release create/);
+  });
+
+  it('publishes without images under --no-images', () => {
+    const repo = fixture();
+    const { status, output } = repo.run('publish', '26.10.1', '--no-sbom', '--no-images');
+    assert.equal(status, 0, output);
+    assert.match(output, /Images skipped \(--no-images\)/);
+    assert.equal(repo.remote('stable'), repo.shas.release);
+    assert.doesNotMatch(repo.calls(), /run list|run download|workflow run/);
+    assert.equal(repo.curls(), '');
+    assert.doesNotMatch(repo.notes(), /### Images/);
   });
 
   it('refuses a release commit whose package.json has another version', () => {
@@ -203,6 +322,7 @@ describe('publish', () => {
     assert.equal(status, 2, output);
     assert.match(output, /stable \([0-9a-f]+\) is not an ancestor of [0-9a-f]+: stable must be fast-forwardable/);
     assert.doesNotMatch(output, /would run: .*refs\/heads\/stable/);
+    assert.doesNotMatch(output, /gh workflow run/, 'no stable image moves either');
   });
 
   it('stops when no release pull request has merged', () => {
@@ -304,5 +424,62 @@ describe('curated catalog age', () => {
     assert.equal(status, 0, output);
     assert.match(output, /Warning: curated catalog: 3 product\(s\) checked more than 120 days ago: broken, mixed, old-os \(run the technology-catalog-curation skill\)/);
     assert.equal(existsSync(path.join(repo.base, 'kanap-release')), false);
+  });
+});
+
+describe('images', () => {
+  const owner = 'kanap-hq';
+
+  it('accepts only version tags vYY.M.N', () => {
+    for (const tag of ['v26.10.1', 'v26.1.12', 'v27.12.3']) assert.equal(isImageTag(tag), true, tag);
+    for (const tag of ['26.10.1', 'v26.10.0', 'v26.0.1', 'v26.13.1', 'v26.010.1', 'v26.10.01', 'v0.0.0-test', 'v26.10.1-rc1', 'v2026.10.1', '', null]) {
+      assert.equal(isImageTag(tag), false, String(tag));
+    }
+  });
+
+  it('reads digests.txt in the order of the images, whatever the order of its lines', () => {
+    const text = `\n${digestsTxt('26.11.1').split('\n').reverse().join('\n')}\n`;
+    const entries = parseDigests(text, '26.11.1', owner);
+    assert.deepEqual(entries.map((entry) => entry.image), IMAGES);
+    assert.deepEqual(entries[0], { image: 'kanap-api', ref: `ghcr.io/kanap-hq/kanap-api@${DIGESTS['kanap-api']}`, name: 'ghcr.io/kanap-hq/kanap-api', digest: DIGESTS['kanap-api'] });
+  });
+
+  it('refuses a digests.txt that does not describe the four images of the version', () => {
+    const lines = digestsTxt('26.11.1').split('\n');
+    const refused = (text, pattern) => assert.throws(() => parseDigests(text, '26.11.1', owner), pattern);
+    refused(lines.slice(1).join('\n'), /no digest for kanap-api$/);
+    refused([...lines, lines[0]].join('\n'), /kanap-api is listed twice/);
+    refused(digestsTxt('26.11.2'), /kanap-api is tagged 26\.11\.2, not 26\.11\.1/);
+    refused(lines.join('\n').replace('ghcr.io/kanap-hq/kanap-web@', 'ghcr.io/someone/kanap-web@'), /kanap-web points at ghcr\.io\/someone\/kanap-web@/);
+    refused(lines.join('\n').replace('ghcr.io/kanap-hq/kanap-web@', 'ghcr.io/kanap-hq/kanap-api@'), /kanap-web points at ghcr\.io\/kanap-hq\/kanap-api@/);
+    refused([...lines, `kanap-other 26.11.1 ghcr.io/kanap-hq/kanap-other@${DIGESTS['kanap-api']}`].join('\n'), /unknown image kanap-other/);
+    refused(lines.join('\n').replace(DIGESTS['kanap-web'], 'sha256:abc'), /unexpected line "kanap-web /);
+    refused(lines.join('\n').replace(`@${DIGESTS['kanap-web']}`, ':26.11.1'), /unexpected line "kanap-web /);
+    refused('', /no digest for kanap-api, kanap-api-tools, kanap-web, kanap-marketing/);
+  });
+
+  it('writes the Images section from the digests', () => {
+    const section = imagesSection(parseDigests(digestsTxt('26.11.1'), '26.11.1', owner), 'kanap-hq/KANAP');
+    assert.equal(section, [
+      '### Images',
+      '',
+      '| Image | Reference |',
+      '|---|---|',
+      ...IMAGES.map((image) => `| \`${image}\` | \`ghcr.io/kanap-hq/${image}@${DIGESTS[image]}\` |`),
+      '',
+      `Provenance: \`gh attestation verify oci://ghcr.io/kanap-hq/kanap-api@${DIGESTS['kanap-api']} -R kanap-hq/KANAP\``,
+    ].join('\n'));
+    assert.equal(hasImagesSection(`Notes.\n\n${section}\n`), true);
+    assert.equal(hasImagesSection('Notes.\n\n#### Images\n'), false);
+    assert.equal(hasImagesSection(null), false);
+  });
+
+  it('promotes only the images whose stable tag is not on the version', () => {
+    const entries = parseDigests(digestsTxt('26.11.1'), '26.11.1', owner);
+    assert.deepEqual(imagesToPromote(entries, { ...DIGESTS }), []);
+    assert.deepEqual(imagesToPromote(entries, { ...DIGESTS, 'kanap-web': null }), ['kanap-web']);
+    assert.deepEqual(imagesToPromote(entries, { ...DIGESTS, 'kanap-api': DIGESTS['kanap-web'] }), ['kanap-api']);
+    assert.deepEqual(imagesToPromote(entries, {}), IMAGES);
+    assert.deepEqual(imagesToPromote(entries, null), IMAGES);
   });
 });
