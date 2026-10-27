@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AdminAiPage from './AdminAiPage';
 import { createAppTheme } from '../../config/ThemeContext';
 import api from '../../api';
+import { KanapDialogProvider } from '../../components/design';
 
 vi.mock('../../api', () => ({
   default: {
@@ -45,7 +46,9 @@ function renderPage() {
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={client}>
         <MemoryRouter>
-          <AdminAiPage />
+          <KanapDialogProvider>
+            <AdminAiPage />
+          </KanapDialogProvider>
         </MemoryRouter>
       </QueryClientProvider>
     </ThemeProvider>,
@@ -54,6 +57,10 @@ function renderPage() {
 
 // The rows of the MCP keys card; each test that sets them puts back the empty list.
 let adminKeys: any[] = [];
+
+const EMPTY_JOURNAL = { items: [], limit: 25, offset: 0, has_more: false, facets: { people: [], keys: [] } };
+// The MCP journal page the server answers; each test that sets it puts back the empty one.
+let journalPage: any = EMPTY_JOURNAL;
 
 describe('AdminAiPage', () => {
   beforeEach(() => {
@@ -131,6 +138,8 @@ describe('AdminAiPage', () => {
           });
         case '/ai/admin/keys':
           return Promise.resolve({ data: adminKeys });
+        case '/ai/admin/mcp-audit':
+          return Promise.resolve({ data: journalPage });
         default:
           throw new Error(`Unexpected GET ${url}`);
       }
@@ -188,6 +197,100 @@ describe('AdminAiPage', () => {
     expect(screen.queryByText('efgh5678')).not.toBeInTheDocument();
     expect(screen.getByText(/add this address as a custom connector/)).toBeInTheDocument();
     adminKeys = [];
+  });
+
+  it('revokes a key only after a confirmation that names it and says access stops at once', async () => {
+    adminKeys = [
+      {
+        id: 'k1', label: 'Laptop', key_prefix: 'abcd1234', credential_kind: 'api_key', created_at: '2026-10-01T10:00:00.000Z',
+        expires_at: null, last_used_at: null, revoked_at: null,
+      },
+      {
+        id: 'k2', label: 'Claude', key_prefix: 'efgh5678', credential_kind: 'oauth', oauth_client_name: 'Claude',
+        oauth_redirect_host: 'claude.ai', created_at: '2026-10-14T10:00:00.000Z', expires_at: null, last_used_at: null, revoked_at: null,
+      },
+    ];
+    (api.delete as any).mockResolvedValue({ data: { id: 'k1', revoked_at: '2026-10-27T10:00:00.000Z' } });
+    renderPage();
+
+    const revokeKey = await screen.findByRole('button', { name: 'Revoke Laptop' });
+    expect(screen.getByRole('button', { name: 'Revoke Claude' })).toBeInTheDocument();
+    // Neither icon says "delete".
+    expect(document.querySelector('[data-testid="DeleteOutlineIcon"]')).toBeNull();
+    expect(within(revokeKey).getByTestId('KeyOffOutlinedIcon')).toBeInTheDocument();
+
+    fireEvent.click(revokeKey);
+    let dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Revoke Laptop?')).toBeInTheDocument();
+    expect(within(dialog).getByText(/loses access to KANAP at once/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(api.delete).not.toHaveBeenCalled();
+
+    fireEvent.click(revokeKey);
+    dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Revoke' }));
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/ai/admin/keys/k1'));
+    adminKeys = [];
+  });
+
+  it('shows the MCP journal with the cause of a refusal, its filters and its pages', async () => {
+    const item = (overrides: Record<string, unknown>) => ({
+      tool_execution_id: 'te-1', user_id: 'u1', user_name: 'Ana Silva', ai_api_key_id: 'k1', key_label: 'Laptop',
+      key_kind: 'api_key', oauth_client_name: null, capability_name: 'search_all', result: 'completed', reason: null,
+      duration_ms: 182, tool_created_at: '2026-10-27T09:15:00.000Z', input_summary: null,
+      ...overrides,
+    });
+    journalPage = {
+      items: [
+        item({}),
+        item({ tool_execution_id: 'te-2', capability_name: 'prepare_mutation_plan', result: 'refused', reason: 'read_only', duration_ms: 3 }),
+        item({ tool_execution_id: 'te-3', key_kind: 'oauth', key_label: 'Claude', oauth_client_name: 'Claude', ai_api_key_id: 'k2', result: 'refused', reason: 'key_revoked' }),
+      ],
+      limit: 25,
+      offset: 0,
+      has_more: true,
+      facets: {
+        people: [{ id: 'u1', name: 'Ana Silva' }],
+        keys: [{ id: 'k1', label: 'Laptop', credential_kind: 'api_key', oauth_client_name: null, user_id: 'u1', revoked: false }],
+      },
+    };
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'MCP journal' })).toBeInTheDocument();
+    const rows = await screen.findAllByTestId('mcp-journal-row');
+    expect(rows).toHaveLength(3);
+    expect(within(rows[0]).getByText('Ana Silva')).toBeInTheDocument();
+    expect(within(rows[0]).getByText('Laptop')).toBeInTheDocument();
+    expect(within(rows[0]).getByText('search_all')).toBeInTheDocument();
+    expect(within(rows[0]).getByText('Completed')).toBeInTheDocument();
+    expect(within(rows[0]).getByText('182 ms')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('Refused')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('The server only reads')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('Claude')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('Revoked key')).toBeInTheDocument();
+
+    const journalCalls = () => (api.get as any).mock.calls.filter(([url]: [string]) => url === '/ai/admin/mcp-audit');
+    // The last 7 days by default, newest first, 25 a page.
+    const first = journalCalls()[0][1].params;
+    expect(first).toMatchObject({ limit: 25, offset: 0 });
+    expect(Date.now() - new Date(first.from).getTime()).toBeGreaterThan(6.9 * 86_400_000);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await waitFor(() => expect(journalCalls().at(-1)[1].params).toMatchObject({ offset: 25 }));
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Result' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Refused' }));
+    await waitFor(() => expect(journalCalls().at(-1)[1].params).toMatchObject({ result: 'refused', offset: 0 }));
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Person' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Ana Silva' }));
+    await waitFor(() => expect(journalCalls().at(-1)[1].params).toMatchObject({ user_id: 'u1', result: 'refused' }));
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Period' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'All time' }));
+    await waitFor(() => expect(journalCalls().at(-1)[1].params.from).toBeUndefined());
+    journalPage = EMPTY_JOURNAL;
   });
 
   it('shows the server address and a Claude Code command for a new key', async () => {
@@ -282,6 +385,8 @@ describe('AdminAiPage included model', () => {
           });
         case '/ai/admin/keys':
           return Promise.resolve({ data: [] });
+        case '/ai/admin/mcp-audit':
+          return Promise.resolve({ data: EMPTY_JOURNAL });
         default:
           throw new Error(`Unexpected GET ${url}`);
       }

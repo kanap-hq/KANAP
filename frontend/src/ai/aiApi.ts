@@ -1775,4 +1775,54 @@ export const aiKeysApi = {
     const res = await api.delete(`/ai/admin/keys/${id}`);
     return res.data;
   },
+  /** The MCP journal (Administration › Plaid): one page of calls, newest first, and its filter options. */
+  async adminMcpJournal(params: McpJournalQuery): Promise<McpJournalPage> {
+    const query: Record<string, string | number> = { limit: params.limit, offset: params.offset };
+    if (params.user_id) query.user_id = params.user_id;
+    if (params.api_key_id) query.api_key_id = params.api_key_id;
+    if (params.result) query.result = params.result;
+    if (params.from) query.from = params.from;
+    const res = await api.get('/ai/admin/mcp-audit', { params: query });
+    return res.data;
+  },
+};
+
+export type McpJournalResult = 'completed' | 'refused' | 'failed' | 'running';
+
+export type McpJournalItem = {
+  tool_execution_id: string;
+  user_id: string | null;
+  user_name: string | null;
+  ai_api_key_id: string | null;
+  key_label: string | null;
+  key_kind: string | null;
+  oauth_client_name: string | null;
+  capability_name: string;
+  result: McpJournalResult;
+  /** Why a call was refused or failed (`unknown_tool`, `read_only`, `key_policy`, ...). */
+  reason: string | null;
+  duration_ms: number | null;
+  tool_created_at: string;
+  input_summary: Record<string, unknown> | null;
+};
+
+export type McpJournalPage = {
+  items: McpJournalItem[];
+  limit: number;
+  offset: number;
+  has_more: boolean;
+  facets?: {
+    people: Array<{ id: string; name: string | null }>;
+    keys: Array<{ id: string; label: string; credential_kind: string; oauth_client_name: string | null; user_id: string; revoked: boolean }>;
+  };
+};
+
+export type McpJournalQuery = {
+  limit: number;
+  offset: number;
+  user_id?: string | null;
+  api_key_id?: string | null;
+  result?: Exclude<McpJournalResult, 'running'> | null;
+  /** ISO date-time: calls made from then on. */
+  from?: string | null;
 };

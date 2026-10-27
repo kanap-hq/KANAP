@@ -29,7 +29,8 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import KeyOffOutlinedIcon from '@mui/icons-material/KeyOffOutlined';
+import LinkOffOutlinedIcon from '@mui/icons-material/LinkOffOutlined';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { useTranslation } from 'react-i18next';
@@ -60,6 +61,8 @@ import {
   type IncludedModelIdentity,
 } from '../../ai/includedModel';
 import { IncludedModelDialog, IncludedModelStatus, WithdrawIncludedModelDialog } from './IncludedModelConfirmation';
+import { useKanapDialogs } from '../../components/design/KanapDialogProvider';
+import McpJournalSection from './McpJournalSection';
 
 type AiSettingsForm = {
   chat_enabled: boolean;
@@ -236,6 +239,7 @@ export default function AdminAiPage() {
   const { t } = useTranslation(['admin', 'common']);
   const locale = useLocale();
   const { mode } = useTheme().palette;
+  const dialogs = useKanapDialogs();
 
   const [form, setForm] = useState<AiSettingsForm>(EMPTY_FORM);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -411,6 +415,20 @@ export default function AdminAiPage() {
       setKeyActionError(getApiErrorMessage(error, t, t('aiAdmin.messages.revokeMcpKeyFailed')));
     },
   });
+
+  // Revoking cuts the access at once and cannot be undone: the dialog names the key or connection.
+  const confirmRevoke = async (key: AiApiKeyRecord) => {
+    const name = key.credential_kind === 'oauth' ? clientDisplayName(key.oauth_client_name) ?? key.label : key.label;
+    const ok = await dialogs.confirm({
+      title: t('aiAdmin.keys.revokeConfirm.title', { name }),
+      message: key.credential_kind === 'oauth'
+        ? t('aiAdmin.keys.revokeConfirm.connectionBody', { name })
+        : t('aiAdmin.keys.revokeConfirm.keyBody', { name }),
+      confirmLabel: t('aiAdmin.keys.revoke'),
+      intent: 'danger',
+    });
+    if (ok) revokeKeyMutation.mutate(key.id);
+  };
 
   const currentSettings = settingsQuery.data?.settings;
   const mcpEndpoint = mcpEndpointUrl(window.location.origin);
@@ -775,13 +793,24 @@ export default function AdminAiPage() {
                             </TableCell>
                             <TableCell>
                               {!key.revoked_at ? (
-                                <IconButton
-                                  size="small"
-                                  onClick={() => revokeKeyMutation.mutate(key.id)}
-                                  disabled={revokeKeyMutation.isPending}
-                                >
-                                  <DeleteOutlineIcon fontSize="small" />
-                                </IconButton>
+                                <Tooltip title={t('aiAdmin.keys.revoke')}>
+                                  <span>
+                                    <IconButton
+                                      size="small"
+                                      aria-label={t('aiAdmin.keys.revokeNamed', {
+                                        name: key.credential_kind === 'oauth'
+                                          ? clientDisplayName(key.oauth_client_name) ?? key.label
+                                          : key.label,
+                                      })}
+                                      onClick={() => void confirmRevoke(key)}
+                                      disabled={revokeKeyMutation.isPending}
+                                    >
+                                      {key.credential_kind === 'oauth'
+                                        ? <LinkOffOutlinedIcon fontSize="small" />
+                                        : <KeyOffOutlinedIcon fontSize="small" />}
+                                    </IconButton>
+                                  </span>
+                                </Tooltip>
                               ) : null}
                             </TableCell>
                           </TableRow>
@@ -797,6 +826,7 @@ export default function AdminAiPage() {
               </CardContent>
             </Card>
 
+            <McpJournalSection />
           </>
         )}
       </Stack>

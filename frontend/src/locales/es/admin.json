@@ -84,6 +84,13 @@
       "kinds": {
         "apiKey": "Clave API",
         "oauth": "Conexión"
+      },
+      "revoke": "Revocar",
+      "revokeNamed": "Revocar {{name}}",
+      "revokeConfirm": {
+        "title": "¿Revocar {{name}}?",
+        "keyBody": "Todos los clientes que usan {{name}} pierden de inmediato el acceso a KANAP. Esta acción no se puede deshacer.",
+        "connectionBody": "{{name}} pierde de inmediato el acceso a KANAP. Para volver a usarla, su propietario debe conectarla de nuevo."
       }
     },
     "messages": {
@@ -224,6 +231,58 @@
         "title": "¿Retirar la confirmación?",
         "body": "Las funciones de IA que usan el modelo incluido se detienen hasta que un administrador vuelva a confirmar."
       }
+    },
+    "journal": {
+      "title": "Registro MCP",
+      "empty": "No hay llamadas MCP para estos filtros.",
+      "loadFailed": "No se pudo cargar el registro MCP.",
+      "columns": {
+        "date": "Fecha",
+        "person": "Persona",
+        "key": "Clave o conexión",
+        "tool": "Herramienta",
+        "result": "Resultado",
+        "duration": "Duración"
+      },
+      "filters": {
+        "person": "Persona",
+        "key": "Clave o conexión",
+        "result": "Resultado",
+        "period": "Periodo",
+        "all": "Todos"
+      },
+      "periods": {
+        "day": "Últimas 24 horas",
+        "week": "Últimos 7 días",
+        "month": "Últimos 30 días",
+        "all": "Todo el periodo"
+      },
+      "results": {
+        "completed": "Completada",
+        "refused": "Rechazada",
+        "failed": "Fallida",
+        "running": "En curso"
+      },
+      "reasons": {
+        "unknown_tool": "Herramienta desconocida",
+        "read_only": "El servidor es de solo lectura",
+        "key_policy": "La clave no permite esta herramienta",
+        "permission": "La persona no tiene permiso de lectura sobre estos datos",
+        "disabled": "La búsqueda web está desactivada",
+        "invalid_input": "Solicitud no válida",
+        "key_revoked": "Clave revocada",
+        "key_expired": "Clave caducada",
+        "owner_not_allowed": "El propietario de la clave ya no puede conectarse",
+        "not_found": "Registro no encontrado",
+        "error": "Error del servidor"
+      },
+      "duration": "{{value}} ms",
+      "range": "{{from}} a {{to}}",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "unknownPerson": "Persona desconocida",
+      "deletedKey": "Clave eliminada",
+      "noKey": "Sin clave"
     }
   },
   "auditLogs": {

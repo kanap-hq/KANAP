@@ -84,6 +84,13 @@
       "kinds": {
         "apiKey": "API key",
         "oauth": "Connection"
+      },
+      "revoke": "Revoke",
+      "revokeNamed": "Revoke {{name}}",
+      "revokeConfirm": {
+        "title": "Revoke {{name}}?",
+        "keyBody": "Every client that uses {{name}} loses access to KANAP at once. This cannot be undone.",
+        "connectionBody": "{{name}} loses access to KANAP at once. To use it again, its owner connects it again."
       }
     },
     "messages": {
@@ -224,6 +231,58 @@
         "title": "Withdraw the confirmation?",
         "body": "AI features that use the included model stop until an administrator confirms again."
       }
+    },
+    "journal": {
+      "title": "MCP journal",
+      "empty": "No MCP calls for these filters.",
+      "loadFailed": "Could not load the MCP journal.",
+      "columns": {
+        "date": "Date",
+        "person": "Person",
+        "key": "Key or connection",
+        "tool": "Tool",
+        "result": "Result",
+        "duration": "Duration"
+      },
+      "filters": {
+        "person": "Person",
+        "key": "Key or connection",
+        "result": "Result",
+        "period": "Period",
+        "all": "All"
+      },
+      "periods": {
+        "day": "Last 24 hours",
+        "week": "Last 7 days",
+        "month": "Last 30 days",
+        "all": "All time"
+      },
+      "results": {
+        "completed": "Completed",
+        "refused": "Refused",
+        "failed": "Failed",
+        "running": "In progress"
+      },
+      "reasons": {
+        "unknown_tool": "Unknown tool",
+        "read_only": "The server only reads",
+        "key_policy": "The key does not allow this tool",
+        "permission": "The person has no read access to this data",
+        "disabled": "Web search is turned off",
+        "invalid_input": "Invalid request",
+        "key_revoked": "Revoked key",
+        "key_expired": "Expired key",
+        "owner_not_allowed": "The key owner can no longer connect",
+        "not_found": "Record not found",
+        "error": "Server error"
+      },
+      "duration": "{{value}} ms",
+      "range": "{{from}} to {{to}}",
+      "previous": "Previous",
+      "next": "Next",
+      "unknownPerson": "Unknown person",
+      "deletedKey": "Deleted key",
+      "noKey": "No key"
     }
   },
   "auditLogs": {
