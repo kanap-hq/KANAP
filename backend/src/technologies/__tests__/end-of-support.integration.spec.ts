@@ -1,9 +1,12 @@
 // @database-spec
 import 'dotenv/config';
+import AdmZip = require('adm-zip');
 import type { QueryRunner } from 'typeorm';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { DEFAULT_HOSTING_TYPES } from '../../it-ops-settings/it-ops-settings.service';
-import { EndOfSupportService } from '../reports/end-of-support.service';
+import { writeReportExport } from '../../common/report-export';
+import { EndOfSupportService, type ReportOpts } from '../reports/end-of-support.service';
+import type { ApplicationsReach } from '../technology-links.service';
 import { versionSupportSql } from '../reports/version-support';
 import { TechnologyReachService } from '../technology-reach.service';
 import { application, asset, assign, contains, installed, member, one, technology, version } from './technologies.fixtures';
@@ -156,6 +159,13 @@ function service() {
 }
 
 const ALL = { scope: undefined };
+
+/** The export's CSV in English, as the route writes it (common/report-export). */
+async function csvFile(query: Record<string, unknown>, opts: ReportOpts, applications: ApplicationsReach) {
+  const exp = await service().exportTable(query, 'en', opts, applications);
+  const file = writeReportExport(exp, { format: 'csv', language: 'en', timeZone: 'UTC', generatedAt: new Date('2026-10-27T10:00:00Z'), generatedBy: 'Probe' });
+  return { filename: file.filename, content: file.body.toString('utf8') };
+}
 
 /** The shared rule (`versionSupportSql`) on fixed dates, as the report and the assistant read it. */
 async function testSupportState() {
@@ -317,7 +327,7 @@ async function testGaps() {
       `version_without_end_date|${g.tech.tomcat}|10`,
     ].sort());
     assert.ok(!got.some((line) => line.startsWith(`version_without_end_date|${g.tech.websphere}|`)), 'a version with no planned end is not a missing date');
-    const gapsFile = await service().csv({ list: 'gaps', language: 'en' }, { manager: runner.manager, tenantId: g.tenantId }, ALL);
+    const gapsFile = await csvFile({ list: 'gaps' }, { manager: runner.manager, tenantId: g.tenantId }, ALL);
     assert.equal(gapsFile.content.includes('WebSphere'), false);
     assert.equal(gapsFile.content.includes('Tomcat'), true);
     const link = items.find((r) => r.gap === 'link_without_version' && r.subject_id === g.tech.sql)!;
@@ -342,13 +352,30 @@ async function testWithoutApplications() {
     const gaps = await service().gaps(opts, null);
     assert.ok(!gaps.items.some((r) => r.subject_type === 'application' || r.related_type === 'application'));
     assert.ok(gaps.items.some((r) => r.gap === 'vm_without_host'));
-    const file = await service().csv({ list: 'deadlines', language: 'en' }, opts, null);
+    const file = await csvFile({ list: 'deadlines' }, opts, null);
     const header = file.content.replace(/^﻿/, '').split(/\r?\n/)[0];
     assert.ok(!/Application/.test(header), `no application column in the file: ${header}`);
-    const gapsFile = await service().csv({ list: 'gaps', language: 'en' }, opts, ALL);
+    const gapsFile = await csvFile({ list: 'gaps' }, opts, ALL);
     assert.ok(gapsFile.content.includes('Virtual machine without a host'));
-    assert.equal(gapsFile.filename, 'end-of-support-gaps.csv');
-    await assert.rejects(service().csv({ list: 'other' }, opts, ALL), /list must be/);
+    assert.equal(gapsFile.filename, 'end-of-support-gaps-2026-10-27.csv');
+    await assert.rejects(csvFile({ list: 'other' }, opts, ALL), /list must be/);
+    await assert.rejects(csvFile({ list: 'gaps', horizon_months: '6' }, opts, ALL), /deadlines list only/);
+    // With applications: the columns the file always had, in the screen's words; the end date a date cell.
+    const all = await csvFile({ list: 'deadlines', horizon_months: '36' }, opts, ALL);
+    assert.equal(
+      all.content.replace(/^\uFEFF/, '').split('\n')[0],
+      'Type,Reference,Item,Version,End date,State,Servers,Applications,Server names,Application names',
+    );
+    assert.equal(all.filename, 'end-of-support-36-months-2026-10-27.csv');
+    const exp = await service().exportTable({ list: 'deadlines', horizon_months: '36', type: 'technology' }, 'fr', opts, ALL);
+    const xlsx = writeReportExport(exp, { format: 'xlsx', language: 'fr', timeZone: 'UTC', generatedAt: new Date('2026-10-27T10:00:00Z'), generatedBy: 'Probe' });
+    const zip = new AdmZip(xlsx.body);
+    const sheet = zip.readAsText('xl/worksheets/sheet1.xml');
+    assert.ok(sheet.includes('>Date de fin<') && sheet.includes('>Technologie<'), 'French headers and type');
+    assert.ok(/<c r="E2" s="1"><v>\d+<\/v><\/c>/.test(sheet), 'the end date is a date cell');
+    assert.equal(xlsx.rows, exp.tables[0].rows.length);
+    assert.ok(exp.tables[0].rows.length > 0 && exp.tables[0].rows.every((row) => row[0] === 'Technologie'), 'the type filter applies');
+    assert.deepEqual(exp.parameters, [['Vue du rapport', 'Échéances'], ['Horizon', '36 mois'], ['Type', 'Technologie']]);
   });
 }
 

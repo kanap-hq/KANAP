@@ -23,7 +23,8 @@ import { textTabSx, textTabsSx } from '../../theme/formSx';
 /*  Contract                                                          */
 /* ------------------------------------------------------------------ */
 
-export type TimeLoggedCell = { month: string; projectDays: number; otherDays: number };
+/** `totalDays`: the two added, one decimal, computed by the server for the screen and the export alike. */
+export type TimeLoggedCell = { month: string; projectDays: number; otherDays: number; totalDays: number };
 export type TimeLoggedMember = {
   userId: string | null;
   name: string;
@@ -111,16 +112,6 @@ const viewerTimeZone = (): string => {
 
 /** The key a group is remembered under; the people without a team have no id of their own. */
 const teamKey = (team: TimeLoggedTeam) => team.teamId ?? 'no-team';
-
-/** Days of a cell, summed from values the server already rounded from hours. */
-const cellTotal = (cell: TimeLoggedCell) => Math.round((cell.projectDays + cell.otherDays) * 10) / 10;
-
-/** One CSV field: quoted, and never read as a formula by a spreadsheet. */
-const csvField = (value: string | number): string => {
-  let text = String(value);
-  if (typeof value === 'string' && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
-  return `"${text.replace(/"/g, '""')}"`;
-};
 
 /* ------------------------------------------------------------------ */
 /*  Charter surfaces                                                  */
@@ -271,7 +262,7 @@ export default function TimeLoggedReport() {
       label: monthLabel(cell.month, index),
       projectDays: cell.projectDays,
       otherDays: cell.otherDays,
-      totalDays: cellTotal(cell),
+      totalDays: cell.totalDays,
     }));
     const tooltip = {
       renderer: (params: any) => {
@@ -337,39 +328,6 @@ export default function TimeLoggedReport() {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const exportCsv = useCallback(() => {
-    if (!data) return;
-    const header = [
-      t('reports.timeLogged.csv.team'),
-      t('reports.timeLogged.csv.person'),
-      t('reports.timeLogged.csv.month'),
-      t('reports.timeLogged.csv.projectDays'),
-      t('reports.timeLogged.csv.otherDays'),
-      t('reports.timeLogged.csv.totalDays'),
-    ];
-    const lines = [header.map(csvField).join(',')];
-    for (const team of data.teams) {
-      const teamName = team.teamName ?? t('reports.timeLogged.noTeam');
-      for (const member of team.members) {
-        const name = member.userId ? member.name : t('reports.timeLogged.unknownUser');
-        for (const cell of member.cells) {
-          lines.push(
-            [teamName, name, cell.month, cell.projectDays, cell.otherDays, cellTotal(cell)].map(csvField).join(','),
-          );
-        }
-      }
-    }
-    const blob = new Blob([`﻿${lines.join('\r\n')}\r\n`], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `time-logged-${today}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  }, [data, t, today]);
-
   const exportPng = useCallback(() => chartRef.current?.download(`time-logged-${today}`), [today]);
 
   /* ---------------------------------------------------------------- */
@@ -386,7 +344,7 @@ export default function TimeLoggedReport() {
 
   const renderCells = (cells: TimeLoggedCell[], strong: boolean) =>
     cells.map((cell) => {
-      const total = cellTotal(cell);
+      const total = cell.totalDays;
       return (
         <TableCell key={cell.month} align="right" sx={{ ...cellSx, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
           {total > 0 ? (
@@ -407,7 +365,11 @@ export default function TimeLoggedReport() {
     <ReportLayout
       title={t('reports.timeLogged.title')}
       subtitle={t('reports.timeLogged.subtitle')}
-      onExportTableCsv={data ? exportCsv : undefined}
+      tableExport={data ? {
+        url: '/portfolio/reports/time-logged/export',
+        params: { months, tz: viewerTimeZone(), projectIds: projectParam, teamIds: teamParam },
+        fileBase: 'time-logged',
+      } : undefined}
       onExportChartPng={data ? exportPng : undefined}
       filters={(
         <>

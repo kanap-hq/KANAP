@@ -16,6 +16,7 @@ export {
 } from './date';
 export { decodeCsv } from './decode';
 export { csvLanguage, csvProfile, dateOrderNotice } from './language';
+export { formatCsvPercent } from './percent';
 export {
   cellOf,
   endOfValidityCell,

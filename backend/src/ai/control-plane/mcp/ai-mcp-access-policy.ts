@@ -26,12 +26,15 @@ export const MCP_DEFAULT_ALLOWED_CAPABILITIES = [
 export const MCP_DEFAULT_RATE_LIMIT_PER_MINUTE = 60;
 export const MCP_MAX_RATE_LIMIT_PER_MINUTE = 1000;
 
+// A key stores the group name, not this list: a tool added here reaches every key that holds the
+// group at its next request, with no migration.
 const MCP_CORE_READ_CAPABILITIES = [
   'search_all',
   'describe_entity_filters',
   'query_entities',
   'aggregate_entities',
   'get_filter_values',
+  'get_application_classification_catalog',
   'get_entity_detail',
   'get_entity_context',
   'get_entity_comments',

@@ -8,7 +8,7 @@ Werkzeuge wie [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overv
 
 | Anforderung | Details |
 |-------------|---------|
-| **Server** | Ubuntu 26.04 LTS (24.04 LTS funktioniert), frisch bereitgestellt, mit mindestens 6 GB RAM (8 GB empfohlen; der Image-Build braucht diesen Platz), einem Benutzer mit sudo-Rechten und ausgehendem Internetzugang während der Installation (Pakete, Docker-Images, GitHub und Let's Encrypt, falls Sie es verwenden) |
+| **Server** | Ubuntu 26.04 LTS (24.04 LTS funktioniert), frisch bereitgestellt, mit mindestens 4 GB RAM (8 GB empfohlen, da PostgreSQL auf demselben Server läuft), einem Benutzer mit sudo-Rechten und ausgehendem Internetzugang während der Installation (Pakete, KANAP- und Docker-Images, GitHub und Let's Encrypt, falls Sie es verwenden) |
 | **Name** | Der Name, den Benutzer eingeben, um KANAP zu öffnen. Ein öffentlicher DNS-Eintrag ist nur für Let's Encrypt nötig. Verwenden Sie sonst einen Eintrag in Ihrem Unternehmens-DNS oder für einen Test einen Eintrag in der hosts-Datei (siehe [Name und Zertifikat](installation.md#name-und-zertifikat)). |
 | **Zertifikat** | Einer von drei Fällen: ein öffentlicher Name mit Let's Encrypt, Zertifikatsdateien Ihrer internen Zertifizierungsstelle, die bereits auf dem Server liegen, oder ein selbstsigniertes Zertifikat für einen Test |
 | **KI-Agent** | Ein auf dem Server installierter KI-Coding-Agent (Claude Code, Codex oder ähnlich) |
@@ -104,7 +104,7 @@ Der Agent liest die Anleitung und arbeitet sie dann ab:
 3. **KANAP-Dateien**: klont das Repository nach `/opt/kanap` und checkt `stable` aus.
 4. **PostgreSQL**: installiert es, legt die Datenbank, die Anwendungsrolle und die erforderlichen Erweiterungen an und erlaubt Verbindungen aus den Docker-Netzwerken.
 5. **Objektspeicher**: installiert RustFS und legt den Bucket, einen eingeschränkten Anwendungsbenutzer und den Verschlüsselungsschlüssel an.
-6. **KANAP**: schreibt `.env` mit den erzeugten Geheimnissen, baut die Docker-Images und startet die Container.
+6. **KANAP**: schreibt `.env` mit den erzeugten Geheimnissen, lädt die KANAP-Images herunter und startet die Container.
 7. **TLS und nginx**: beschafft oder erstellt das Zertifikat, konfiguriert den Reverse Proxy und stellt sicher, dass der Server den Namen auflöst.
 8. **Überprüfung**: prüft den Zustand der API und das Frontend und führt dann den Smoke-Test aus (Datenbank, Speicher, Anmeldung, Exporte).
 

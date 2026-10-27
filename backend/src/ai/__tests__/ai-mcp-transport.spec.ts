@@ -3,7 +3,10 @@ import { AddressInfo } from 'node:net';
 import * as express from 'express';
 import { BadRequestException, HttpException } from '@nestjs/common';
 import { AiMcpController, internalToolErrorMessage } from '../ai-mcp.controller';
+import { APP_VERSION } from '../../config/version';
 import { parseMcpApiKeyPolicy } from '../control-plane/mcp/ai-mcp-access-policy';
+import { AiMcpCallRecord } from '../control-plane/mcp/ai-mcp-audit.service';
+import { AiMcpExposureService } from '../control-plane/mcp/ai-mcp-exposure.service';
 import { AiMcpRateLimiter } from '../control-plane/mcp/ai-mcp-rate-limiter.service';
 
 // Drives the real MCP SDK server and Streamable HTTP transport behind POST /ai/mcp.
@@ -19,10 +22,26 @@ const toolSchema = {
   additionalProperties: false,
 };
 
+// What KANAP declares (ai-capability.registry.ts describeRegisteredCapability): the refusals of
+// tools/call come from the real AiMcpExposureService.explainRefusal on these.
+const DECLARED: Record<string, { reads: boolean; mcpReadable: boolean }> = {
+  search_all: { reads: true, mcpReadable: true },
+  query_entities: { reads: true, mcpReadable: true },
+  get_entity_comments: { reads: true, mcpReadable: true },
+  web_search: { reads: true, mcpReadable: true },
+  prepare_mutation_plan: { reads: false, mcpReadable: false },
+  create_business_record: { reads: false, mcpReadable: false },
+};
+const realExposure = new AiMcpExposureService(
+  { describeRegisteredCapability: (name: string) => DECLARED[name] ?? null } as any,
+  {} as any,
+);
+
 function createController(
   calls: Array<{ name: string; input: unknown }>,
-  options: { rateLimiter?: any; rateLimitPerMinute?: number } = {},
+  options: { rateLimiter?: any; rateLimitPerMinute?: number; journal?: AiMcpCallRecord[] } = {},
 ) {
+  const journal = options.journal ?? [];
   return new AiMcpController(
     {
       execute: async (_ctx: any, request: any) => {
@@ -49,16 +68,24 @@ function createController(
         { name: 'search_all', description: 'Search KANAP.', parameters: toolSchema },
       ],
       assertCanExecute: async () => ({}),
+      explainRefusal: (apiKey: any, name: string) => realExposure.explainRefusal(apiKey, name),
     } as any,
-    {} as any,
+    { recordCall: async (_ctx: any, record: AiMcpCallRecord) => { journal.push(record); } } as any,
     options.rateLimiter ?? { assertAllowed: () => undefined },
     {
-      runWithContext: async (context: any, fn: Function) => fn({ ...context, manager: {} }),
+      runWithContext: async (context: any, fn: Function) => fn({
+        ...context,
+        manager: { query: async () => [{ name: 'Fromage & Co', slug: 'fromage' }] },
+      }),
     } as any,
   );
 }
 
-async function withServer(controller: AiMcpController, fn: (url: string) => Promise<void>) {
+async function withServer(
+  controller: AiMcpController,
+  fn: (url: string) => Promise<void>,
+  allowedCapabilities: string[] = ['kanap.read.core'],
+) {
   const app = express();
   app.use(express.json());
   app.post('/ai/mcp', (req: any, res, next) => {
@@ -69,7 +96,10 @@ async function withServer(controller: AiMcpController, fn: (url: string) => Prom
       tenant_id: TENANT_ID,
       user_id: USER_ID,
       mcp_scopes: ['mcp:tools:list', 'mcp:tools:execute'],
-      mcp_allowed_capabilities: ['kanap.read.core'],
+      mcp_allowed_capabilities: allowedCapabilities,
+      mcp_denied_capabilities: [],
+      mcp_max_effect: 'read',
+      mcp_rate_limit_per_minute: 60,
     };
     controller.handlePost(req, res).catch(next);
   });
@@ -110,6 +140,67 @@ async function testInitializeAdvertisesTools(url: string) {
     params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } },
   });
   assert.deepEqual(reply.result.capabilities.tools, {});
+  // The KANAP version, and what a client must know before its first call.
+  assert.equal(reply.result.serverInfo.name, 'kanap-mcp');
+  assert.equal(reply.result.serverInfo.version, APP_VERSION);
+  assert.notEqual(reply.result.serverInfo.version, '1.0.0');
+  const instructions: string = reply.result.instructions;
+  // The client knows which workspace it reads before its first call.
+  assert.match(instructions, /^This connection reads the KANAP workspace "Fromage & Co" \(fromage\)/);
+  assert.match(instructions, /only reads/);
+  assert.match(instructions, /rights of the person/);
+  assert.match(instructions, /start with search_all/);
+  assert.match(instructions, /describe_entity_filters[^.]*before|Before query_entities[^.]*describe_entity_filters/);
+  for (const family of ['cost centers', 'calendars', 'exchange rates', 'data access', 'audit log', 'AI agents']) {
+    assert.ok(instructions.includes(family), family);
+  }
+  assert.ok(instructions.length < 1200, `instructions stay short (${instructions.length})`);
+}
+
+// An unknown name is a JSON-RPC -32602; a known tool this call may not run is a tool result with
+// the cause (read only, key policy, web search off, missing read right). Each one is journaled.
+async function testRefusalsSayWhy(url: string, journal: AiMcpCallRecord[]) {
+  const call = (id: number, name: string) => rpc(url, {
+    jsonrpc: '2.0', id, method: 'tools/call', params: { name, arguments: { query: 'SAP' } },
+  });
+
+  const unknown = await call(10, 'does_not_exist');
+  assert.equal(unknown.result, undefined);
+  assert.equal(unknown.error.code, -32602);
+  assert.match(unknown.error.message, /^Unknown tool: does_not_exist\./);
+
+  const cases: Array<[string, RegExp, string]> = [
+    ['prepare_mutation_plan', /^This server is read only: prepare_mutation_plan changes data/, 'read_only'],
+    ['create_business_record', /^This server is read only/, 'read_only'],
+    ['web_search', /^Web search is turned off/, 'disabled'],
+    ['get_entity_comments', /^Your KANAP role does not allow this tool/, 'permission'],
+  ];
+  let id = 11;
+  for (const [name, text, reason] of cases) {
+    const reply = await call(id++, name);
+    assert.equal(reply.error, undefined, JSON.stringify(reply.error));
+    assert.equal(reply.result.isError, true, name);
+    assert.match(reply.result.content[0].text, text);
+    assert.equal(journal.at(-1)?.reason, reason, name);
+    assert.equal(journal.at(-1)?.toolName, name);
+    assert.deepEqual(journal.at(-1)?.arguments, { query: 'SAP' });
+  }
+  assert.equal(journal.filter((line) => line.reason === 'unknown_tool').length, 1);
+}
+
+async function testKeyPolicyRefusal() {
+  const calls: Array<{ name: string; input: unknown }> = [];
+  const journal: AiMcpCallRecord[] = [];
+  const controller = createController(calls, { journal });
+  await withServer(controller, async (url) => {
+    const reply = await rpc(url, {
+      jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'query_entities', arguments: {} },
+    });
+    assert.equal(reply.result.isError, true);
+    assert.match(reply.result.content[0].text, /^This key does not allow this tool: query_entities\./);
+    assert.equal(journal.at(-1)?.reason, 'key_policy');
+    assert.equal(calls.length, 0);
+  }, ['search_all']);
 }
 
 async function testToolsListReturnsJsonSchemas(url: string) {
@@ -138,7 +229,11 @@ async function testToolsCallDispatches(url: string, calls: Array<{ name: string;
   assert.deepEqual(calls.at(-1), { name: 'search_all', input: { query: 'SAP' } });
 }
 
-async function testToolErrorsComeBackAsToolResults(url: string, logged: Array<{ message: string; stack?: string }>) {
+async function testToolErrorsComeBackAsToolResults(
+  url: string,
+  logged: Array<{ message: string; stack?: string }>,
+  journal: AiMcpCallRecord[],
+) {
   const http = await rpc(url, {
     jsonrpc: '2.0',
     id: 4,
@@ -147,6 +242,11 @@ async function testToolErrorsComeBackAsToolResults(url: string, logged: Array<{ 
   });
   assert.equal(http.result.isError, true);
   assert.equal(http.result.content[0].text, 'No match for "PRJ-1".');
+  // The request transaction rolled back the dispatcher's lines: the journal gets the refusal.
+  assert.deepEqual(
+    { tool: journal.at(-1)?.toolName, reason: journal.at(-1)?.reason, message: journal.at(-1)?.message },
+    { tool: 'search_all', reason: 'invalid_input', message: 'No match for "PRJ-1".' },
+  );
 
   const internal = await rpc(url, {
     jsonrpc: '2.0',
@@ -165,6 +265,8 @@ async function testToolErrorsComeBackAsToolResults(url: string, logged: Array<{ 
   assert.match(logged[0].stack ?? '', /invalid input syntax for type uuid/);
   // The internal error's own message stays on the server.
   assert.doesNotMatch(text, /uuid|PRJ-1/);
+  assert.equal(journal.at(-1)?.reason, 'error');
+  assert.equal(journal.at(-1)?.message, text);
 }
 
 const initialize = {
@@ -193,6 +295,8 @@ async function testEachRequestCountsOnce() {
     const refused = await post(url, toolCall(4));
     assert.equal(refused.status, 429, refused.text);
     assert.equal(JSON.parse(refused.text).code, 'MCP_RATE_LIMITED');
+    const wait = JSON.parse(refused.text).retry_after_seconds;
+    assert.ok(Number.isInteger(wait) && wait >= 1 && wait <= 60, String(wait));
     assert.equal(calls.length, 1);
   });
 }
@@ -210,15 +314,25 @@ async function testBatchCountsEachMessage() {
 
 async function run() {
   const calls: Array<{ name: string; input: unknown }> = [];
-  const controller = createController(calls);
+  const journal: AiMcpCallRecord[] = [];
+  const controller = createController(calls, { journal });
   const logged: Array<{ message: string; stack?: string }> = [];
-  (controller as any).logger = { error: (message: string, stack?: string) => logged.push({ message, stack }) };
+  const warned: string[] = [];
+  (controller as any).logger = {
+    error: (message: string, stack?: string) => logged.push({ message, stack }),
+    warn: (message: string) => warned.push(message),
+  };
   await withServer(controller, async (url) => {
     await testInitializeAdvertisesTools(url);
     await testToolsListReturnsJsonSchemas(url);
     await testToolsCallDispatches(url, calls);
-    await testToolErrorsComeBackAsToolResults(url, logged);
+    // A completed call leaves its line through the dispatcher, not here.
+    assert.equal(journal.length, 0);
+    await testToolErrorsComeBackAsToolResults(url, logged, journal);
+    await testRefusalsSayWhy(url, journal);
   });
+  assert.deepEqual(warned, []);
+  await testKeyPolicyRefusal();
   await testEachRequestCountsOnce();
   await testBatchCountsEachMessage();
 }

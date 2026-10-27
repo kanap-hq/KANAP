@@ -16,9 +16,9 @@ import {
 import { CsvResolverService } from './csv-resolver.service';
 
 const CSV_FORMULA_TRIGGER = /^[=+\-@\t\r\n]|^\s+[=+\-@]/;
-// A plain negative amount ("-1200.50", "-1200,5") is a number, not a formula. Prefixing it
-// turns the cell into text, so a spreadsheet stops summing the column.
-const CSV_PLAIN_NEGATIVE_NUMBER = /^-\d+(?:[.,]\d+)?$/;
+// A plain negative amount ("-1200.50", "-1200,5") or share ("-3,25%") is a number, not a formula.
+// Prefixing it turns the cell into text, so a spreadsheet stops summing the column.
+const CSV_PLAIN_NEGATIVE_NUMBER = /^-\d+(?:[.,]\d+)?%?$/;
 
 export function neutralizeCsvFormulaValue(value: string): string {
   const text = String(value ?? '');

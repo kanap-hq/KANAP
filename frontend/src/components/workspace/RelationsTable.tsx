@@ -655,11 +655,15 @@ type SectionProps = {
   hint?: string;
   /** Other actions after the title and count, before "Add" (a refresh, its result line). */
   actions?: React.ReactNode;
+  /** The page anchor. It sits on the section, so sibling sections still share one parent. */
+  id?: string;
+  /** Space kept above the section when the page scrolls it into view. */
+  scrollMarginTop?: number | string;
   children: React.ReactNode;
 };
 
 /** A Relations section: title and count, an "Add" text action next to them, then its content. */
-export function RelationsSection({ title, count, onAdd, adding, addLabel, heading, hint, actions, children }: SectionProps) {
+export function RelationsSection({ title, count, onAdd, adding, addLabel, heading, hint, actions, id, scrollMarginTop, children }: SectionProps) {
   const sectionId = React.useId();
   const parentRef = React.useRef<Element | null>(null);
   const [groupWidth, setGroupWidth] = React.useState<GroupWidth | undefined>(undefined);
@@ -697,9 +701,12 @@ export function RelationsSection({ title, count, onAdd, adding, addLabel, headin
     }
   }, [sectionId, onGroup]);
   const value = React.useMemo(() => ({ report, groupWidth }), [report, groupWidth]);
+  const sectionSx = maxWidth != null || scrollMarginTop != null
+    ? { ...(maxWidth != null ? { maxWidth } : {}), ...(scrollMarginTop != null ? { scrollMarginTop } : {}) }
+    : undefined;
   return (
     <RelationsWidthContext.Provider value={value}>
-      <Box component="section" ref={setSectionNode} aria-label={title} sx={maxWidth != null ? { maxWidth } : undefined}>
+      <Box component="section" ref={setSectionNode} id={id} aria-label={title} sx={sectionSx}>
         <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 0.75, minHeight: 28 }}>
           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
             {heading ?? (

@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
+import { RelationsSection } from '../../../components/workspace/RelationsTable';
 import ReachVulnerabilitiesSection, {
   REACH_VULNERABILITIES_ANCHOR,
   REACH_VULNERABILITIES_POLL_MS,
@@ -44,7 +45,10 @@ describe('ReachVulnerabilitiesSection', () => {
         totals: { open: 8, severe: 3, exploited_severe: 1 },
       },
     }, 'dark');
-    expect(container.querySelector(`#${REACH_VULNERABILITIES_ANCHOR}`)).not.toBeNull();
+    const anchor = container.querySelector(`#${REACH_VULNERABILITIES_ANCHOR}`);
+    // The anchor is the section itself.
+    expect(anchor).toBe(screen.getByRole('region', { name: 'Vulnerabilities' }));
+    expect(getComputedStyle(anchor as HTMLElement).scrollMarginTop).toBe('16px');
     const table = screen.getByRole('table', { name: 'Vulnerabilities' });
     // Abbreviated severity headers, the full name for screen readers and in the tooltip.
     const headers = within(table).getAllByRole('columnheader');
@@ -270,6 +274,45 @@ describe('ReachVulnerabilitiesSection', () => {
       const style = getComputedStyle(text);
       expect(style.overflowWrap).toBe('normal');
       expect(style.wordBreak).toBe('normal');
+    } finally {
+      width.mockRestore();
+    }
+  });
+
+  it('lines up with a sibling section: both share one parent', () => {
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter>
+          <div>
+            <RelationsSection title="Technologies"><span>None</span></RelationsSection>
+            <ReachVulnerabilitiesSection kind="application" subjectReference="APP-1" data={{ rows: [], totals: null }} />
+          </div>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+    const technologies = screen.getByRole('region', { name: 'Technologies' });
+    const vulnerabilities = screen.getByRole('region', { name: 'Vulnerabilities' });
+    expect(vulnerabilities.id).toBe(REACH_VULNERABILITIES_ANCHOR);
+    expect(vulnerabilities.parentElement).toBe(technologies.parentElement);
+  });
+
+  it('fits the indirect table in 680px, the Via column giving up room like Servers', () => {
+    const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(680);
+    try {
+      renderSection({
+        data: {
+          rows: [],
+          indirect: [row({ via: { id: 'a-9', name: 'PAR-ESX-01', reference: 'AST-9' } })],
+          totals: { open: 0, severe: 0, exploited_severe: 0 },
+        },
+      });
+      const table = screen.getByRole('table', { name: 'On its members' });
+      // Below the default 96px floor the table needs no width of its own: no horizontal bar.
+      expect(table.style.minWidth).toBe('');
+      expect(getComputedStyle(table).minWidth).not.toMatch(/px$/);
+      const headers = within(table).getAllByRole('columnheader');
+      const viaIndex = headers.findIndex((cell) => cell.textContent === 'Asset');
+      expect(parseInt((table.querySelectorAll('col')[viaIndex] as HTMLElement).style.width, 10)).toBe(72);
     } finally {
       width.mockRestore();
     }

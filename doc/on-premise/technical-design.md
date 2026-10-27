@@ -525,7 +525,7 @@ All gates read from `useFeatures()` hook (provided by `FeaturesContext.tsx`).
 
 | File | What |
 |------|------|
-| `infra/compose.onprem.yml` | On-prem Docker Compose (api + web only, no DB/storage). The `api` service mounts `infra/certs/` read-only at `/etc/kanap/certs`, so an installation can trust its internal certificate authority with `NODE_EXTRA_CA_CERTS` (SMTP, PostgreSQL, S3 over TLS) |
+| `infra/compose.onprem.yml` | On-prem Docker Compose (api + web only, no DB/storage), on the published images of the checkout's version; `infra/compose.onprem.build.yml` on top builds them locally. The `api` service mounts `infra/certs/` read-only at `/etc/kanap/certs`, so an installation can trust its internal certificate authority with `NODE_EXTRA_CA_CERTS` (SMTP, PostgreSQL, S3 over TLS) |
 | `infra/.env.onprem.example` | Complete env template with `DEPLOYMENT_MODE=single-tenant` |
 | `infra/certs/README.md` | Operator instructions for the internal certificate authority file. Git ignores every other file in `infra/certs/` |
 

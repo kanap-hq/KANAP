@@ -175,7 +175,6 @@ export default function CapacityHeatmapReport() {
   // The legend, the profileless note and the page gutter live under the grid.
   const { ref: gridRef, height: fillHeight } = useFillViewportHeight(320, 120);
 
-  const heatmapGridRef = useRef<any>(null);
   const unassignedGridRef = useRef<any>(null);
   const heatmapExportRef = useRef<HTMLDivElement | null>(null);
   const initialTeamsSet = useRef(false);
@@ -313,7 +312,14 @@ export default function CapacityHeatmapReport() {
   ]), [formatNumberLabel, formatSourceLabel, heatmapCellStyle, t]);
 
   const teamColumns = useMemo<ColDef[]>(() => ([
-    { field: 'teamName', headerName: t('reports.capacityHeatmap.columns.team'), flex: 1, minWidth: 200 },
+    {
+      field: 'teamName',
+      headerName: t('reports.capacityHeatmap.columns.team'),
+      flex: 1,
+      minWidth: 200,
+      // The people without a team come as one pseudo team: its name is the screen's words, as in the export.
+      valueGetter: (p) => (p.data?.teamId === NO_TEAM_ID ? t('reports.capacityHeatmap.values.noTeam') : p.data?.teamName),
+    },
     {
       field: 'memberCount',
       headerName: t('reports.capacityHeatmap.columns.members'),
@@ -382,10 +388,6 @@ export default function CapacityHeatmapReport() {
       valueFormatter: (p) => formatNumberLabel(p.value),
     },
   ]), [formatNumberLabel, formatPercentLabel, statusLabelMap, t]);
-
-  const handleExportCsv = () => {
-    heatmapGridRef.current?.exportDataAsCsv?.({ fileName: `capacity-heatmap-${groupBy}` });
-  };
 
   const handleExportPng = () => {
     if (!heatmapExportRef.current) return;
@@ -487,7 +489,11 @@ export default function CapacityHeatmapReport() {
           </Tabs>
         </>
       )}
-      onExportTableCsv={handleExportCsv}
+      tableExport={{
+        url: '/portfolio/reports/capacity-heatmap/export',
+        params: { capacityMode, groupBy, teamIds: teamParam, statuses: statuses.join(',') },
+        fileBase: `capacity-heatmap-${groupBy}`,
+      }}
       onExportChartPng={handleExportPng}
     >
       <Box className="capacity-heatmap-print">
@@ -524,7 +530,6 @@ export default function CapacityHeatmapReport() {
                 rowData={rows}
                 columnDefs={groupBy === 'team' ? teamColumns : contributorColumns}
                 defaultColDef={{ sortable: true, resizable: true }}
-                onGridReady={(e) => { heatmapGridRef.current = e.api; }}
                 onRowClicked={(e) => {
                   if (groupBy !== 'contributor') return;
                   const id = e.data?.contributorId;

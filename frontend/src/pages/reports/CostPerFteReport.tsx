@@ -16,7 +16,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { drawerMenuItemSx } from '../../theme/formSx';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { useReportScope } from './useReportScope';
-import { metricFileName, metricKeys, MetricKey, resolveMetric } from './reportMetrics';
+import { metricFileName, MetricKey, resolveMetric } from './reportMetrics';
 import { escapeTooltipText } from './tooltipText';
 import {
   COST_PER_FTE_CHART_GROUPS,
@@ -29,9 +29,20 @@ import {
   type CostPerFteNotice,
   type DailyRate,
 } from './reportAggregates';
-import { compareNames, useBudgetAggregates } from './useBudgetAggregate';
+import { useBudgetAggregates } from './useBudgetAggregate';
 import { formatAmount, ReportNoticeLine } from './reportMeasure';
 import { GROUP_FILE_NAME, ReportGroupFilters, useGroupLinks, useReportGroup } from './reportGroup';
+import {
+  costPerFteTable,
+  distinctColumns,
+  PAIR_VALUES,
+  pairLabel,
+  pairValueHeaders,
+  pairValueKey,
+  type CostPerFteView,
+  type PairValueKind,
+} from './reportTables';
+import { useReportTableLabels } from './useReportTableLabels';
 import ReportGroupLinkCell from './ReportGroupLinkCell';
 import { gridTextMeasure, valueColumnWidth } from './reportValueWidth';
 
@@ -43,7 +54,7 @@ type PickedColumn = { year: number; metric: MetricKey | null };
 
 /** `?view=rate`: the average daily rate; absent (or anything else): the cost per FTE. */
 const VIEW_PARAM = 'view';
-type View = 'fte' | 'rate';
+type View = CostPerFteView;
 const VIEWS: readonly View[] = ['fte', 'rate'];
 
 /** The view in the address, so a shared link opens on it; switching keeps every other parameter. */
@@ -62,12 +73,12 @@ function useReportView(): [View, (next: View) => void] {
 }
 
 /**
- * The three values of a pair in each view, as the grid's field ids: what the rows count (`c0_fte`,
- * `c0_days`), its cost (`c0_cost`) and the cost of one unit (`c0_ratio`, `c0_rate`).
+ * The three values of a pair in each view, as the grid's field ids (`reportTables.ts`): what the rows
+ * count (`c0_fte`, `c0_days`), its cost (`c0_cost`) and the cost of one unit (`c0_ratio`, `c0_rate`).
  */
-type ValueKind = 'fte' | 'days' | 'cost' | 'ratio' | 'rate';
-const VALUES: Record<View, readonly [ValueKind, ValueKind, ValueKind]> = { fte: ['fte', 'cost', 'ratio'], rate: ['days', 'cost', 'rate'] };
-const fieldOf = (index: number, kind: ValueKind) => `c${index}_${kind}`;
+type ValueKind = PairValueKind;
+const VALUES = PAIR_VALUES;
+const fieldOf = pairValueKey;
 type Cell = Partial<Record<ValueKind, number | null>>;
 /** What either view reads: rows and totals per pair, the notices (`monthly` in the daily rate only). */
 type ViewData = Pick<DailyRate, 'sortColumn' | 'detached' | 'noDetail' | 'monthly'> & {
@@ -130,13 +141,6 @@ function formatDays(value: unknown): string {
   return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}${fraction ? `.${fraction}` : ''}`;
 }
 
-/** Chronological: by year, then in the budget columns' fixed order; each pair once. */
-function distinctColumns(columns: readonly ColumnYear[]): ColumnYear[] {
-  const byKey = new Map<string, ColumnYear>();
-  for (const column of columns) byKey.set(`${column.year}:${column.metric}`, column);
-  return Array.from(byKey.values()).sort((a, b) => a.year - b.year || metricKeys.indexOf(a.metric) - metricKeys.indexOf(b.metric));
-}
-
 function cellValues(kinds: readonly ValueKind[], index: number, cell: Cell | undefined): Record<string, number | null> {
   return Object.fromEntries(kinds.map((kind) => [fieldOf(index, kind), cell?.[kind] ?? null]));
 }
@@ -150,6 +154,7 @@ export default function CostPerFteReport() {
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
   const fte = useCallback((value: unknown) => formatFte(value, locale), [locale]);
+  const tableLabels = useReportTableLabels();
   const [view, setView] = useReportView();
   const kinds = VALUES[view];
   const [countKind, costKind, ratioKind] = kinds;
@@ -161,7 +166,7 @@ export default function CostPerFteReport() {
     [picked, budgetColumns],
   );
   const columns = useMemo(() => distinctColumns(selections), [selections]);
-  const columnLabel = useCallback((column: ColumnYear) => `${budgetColumns.label(column.metric)} ${column.year}`, [budgetColumns]);
+  const columnLabel = useCallback((column: ColumnYear) => pairLabel(tableLabels, column), [tableLabels]);
   const yearsNeeded = useMemo(() => Array.from(new Set(columns.map((column) => column.year))), [columns]);
 
   const reportFilters = useBudgetReportFilters({ scope, years: yearsNeeded });
@@ -182,23 +187,22 @@ export default function CostPerFteReport() {
   // While a new pair loads, the kept answers may hold fewer pairs: read nothing rather than shifted columns.
   const results = report.data && report.data.length === columns.length ? report.data : undefined;
   // The two views ask measures of other names, so an answer of one never stands in for the other.
+  // Ties ordered in the screen language, as the export orders them (`new Intl.Collator(language)` on the server).
+  const compare = useMemo(() => new Intl.Collator(locale).compare, [locale]);
   const data = useMemo<ViewData>(
     () => (view === 'rate'
-      ? readDailyRate(columns, results, labels, compareNames)
-      : { ...readCostPerFte(columns, results, labels, compareNames), monthly: [] }),
-    [view, columns, results, labels],
+      ? readDailyRate(columns, results, labels, compare)
+      : { ...readCostPerFte(columns, results, labels, compare), monthly: [] }),
+    [view, columns, results, labels, compare],
   );
 
-  const tableRows = useMemo(() => data.rows.map((row) => ({
-    group: row.label,
-    groupKey: row.key,
-    groupName: row.name,
-    ...Object.assign({}, ...columns.map((_, index) => cellValues(kinds, index, row.cells[index]))),
-  })), [data.rows, columns, kinds]);
-  const totalRow = useMemo(() => ({
-    group: t('reports.columns.total'),
-    ...Object.assign({}, ...columns.map((_, index) => cellValues(kinds, index, data.total[index]))),
-  }), [data.total, columns, kinds, t]);
+  // The key table (`reportTables.ts`, the same code as the export): one row per group, the total as footer.
+  const table = useMemo(
+    () => costPerFteTable({ groupHeader, groupLabels: labels, compare, view, columns }, results, tableLabels),
+    [groupHeader, labels, compare, view, columns, results, tableLabels],
+  );
+  const tableRows = table.rows;
+  const totalRow = table.footer[0];
 
   const formats = useMemo<Record<ValueKind, (value: unknown) => string>>(
     () => ({ fte, days: formatDays, cost: money, ratio: money, rate: money }),
@@ -220,13 +224,7 @@ export default function CostPerFteReport() {
     return Object.fromEntries(kinds.map((kindOf) => [kindOf, width(kindOf)])) as Partial<Record<ValueKind, number>>;
   }, [tableRows, totalRow, columns, kinds, formats, textMetrics]);
 
-  const valueHeaders = useMemo<Record<ValueKind, string>>(() => ({
-    fte: t('reports.measure.fte'),
-    days: t('reports.costPerFte.days'),
-    cost: view === 'rate' ? t('reports.costPerFte.dayCost') : t('reports.costPerFte.staffCost'),
-    ratio: t('reports.costPerFte.costPerFte'),
-    rate: t('reports.costPerFte.dailyRate'),
-  }), [t, view]);
+  const valueHeaders = useMemo(() => pairValueHeaders(view, tableLabels), [view, tableLabels]);
   const columnDefs = useMemo<Array<ColDef | ColGroupDef>>(() => [
     {
       field: 'group',
@@ -252,7 +250,6 @@ export default function CostPerFteReport() {
     })),
   ], [groupHeader, groupLink, columns, columnLabel, kinds, valueHeaders, widths, formats]);
 
-  const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
 
   const chartTitle = t(view === 'rate' ? 'reports.costPerFte.rateChartTitle' : 'reports.costPerFte.chartTitle', { type: scopeLabel, context: scope, group: groupInSentence });
@@ -401,7 +398,17 @@ export default function CostPerFteReport() {
           </ReportFilter>
         </>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.({ fileName: `${fileName}.csv` })}
+      tableExport={{
+        url: '/reports/budget/cost-per-fte/export',
+        params: {
+          scope,
+          ...reportFilters.exportParams,
+          group: grouping.exportParam,
+          view,
+          pairs: columns.map((column) => `${column.year}:${column.metric}`).join(','),
+        },
+        fileBase: `${view === 'rate' ? 'daily-rate' : 'cost-per-fte'}-${scope}-${GROUP_FILE_NAME[kind]}-${first ? `${first.year}-${first.metric}` : Y}`,
+      }}
       onExportChartPng={() => chartRef.current?.download(fileName)}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
@@ -419,7 +426,6 @@ export default function CostPerFteReport() {
             rowData={tableRows}
             columnDefs={columnDefs}
             defaultColDef={{ sortable: true, resizable: true }}
-            onGridReady={(e) => { gridApiRef.current = e.api; }}
             pinnedBottomRowData={[totalRow]}
           />
           {data.detached.length > 0 && (

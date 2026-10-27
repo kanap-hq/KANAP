@@ -26,6 +26,7 @@ import { AiRunStep } from '../entities/ai-run-step.entity';
 import { AiToolExecution } from '../entities/ai-tool-execution.entity';
 import { AiEvidenceService } from '../evidence/ai-evidence.service';
 import { AiEmergencyPauseService } from '../pause/ai-emergency-pause.service';
+import { mcpArgumentPreview } from '../mcp/ai-mcp-audit.service';
 import { AdapterEvidenceSeed } from '../providers/provider.types';
 import { isRecord } from '../../../common/object-guards';
 import { withSavepoint } from '../../../common/savepoint.util';
@@ -408,7 +409,10 @@ export class AiCapabilityDispatcherService {
     const startedAt = Date.now();
     const stepRepo = this.stepRepository(context);
     const toolRepo = this.toolRepository(context);
-    const inputSummary = this.evidence.summarize(input.input);
+    // The MCP journal shows the values of the arguments too (redacted, truncated).
+    const inputSummary = surface === 'mcp'
+      ? { ...this.evidence.summarize(input.input), arguments: mcpArgumentPreview(input.input) }
+      : this.evidence.summarize(input.input);
     const inputHash = this.evidence.hash(input.input);
     const step = await stepRepo.save(stepRepo.create({
       tenant_id: context.tenantId,

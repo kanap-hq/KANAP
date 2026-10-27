@@ -377,6 +377,7 @@ export class PortfolioProjectsService {
       user_id?: string;
       hours: number;
       notes?: string;
+      logged_at: string;
     },
     tenantId: string,
     userId: string | null,
@@ -392,6 +393,7 @@ export class PortfolioProjectsService {
       user_id?: string;
       hours?: number;
       notes?: string;
+      logged_at?: string;
     },
     userId: string | null,
     isAdmin: boolean,

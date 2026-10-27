@@ -1,4 +1,5 @@
-import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
@@ -6,6 +7,13 @@ import { ProjectStatuses } from './dto/create-project.dto';
 import { ProjectStatus } from './portfolio-project.entity';
 import { PortfolioCapacityReportService } from './services/portfolio-capacity-report.service';
 import { CapacityHeatmapResponse, CapacityMode, CapacityGroupBy, ProjectBreakdownRow } from './dto/capacity-heatmap.dto';
+import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
+import { reportExportBody, reportExportRequest, writeReportExport } from '../common/report-export';
+import {
+  capacityHeatmapExport,
+  capacityHeatmapExportQuery,
+  capacityTeamNames,
+} from './services/portfolio-capacity-heatmap-export';
 
 const NO_TEAM_ID = 'no-team';
 
@@ -59,6 +67,24 @@ export class PortfolioCapacityReportController {
       },
       { manager: req?.queryRunner?.manager },
     );
+  }
+
+  /**
+   * The contributor and team tables as a CSV (the grouping asked by `groupBy`) or an Excel file (both,
+   * that grouping first), from the same heatmap call as the screen: `capacityMode`, `statuses`, `teamIds`,
+   * `groupBy`, plus `format` and `language`. Recorded as an export.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_reports', 'reader')
+  @Get('capacity-heatmap/export')
+  async exportCapacityHeatmap(@Query() query: Record<string, unknown>, @Tenant() ctx: TenantRequest, @Res() res: Response) {
+    const request = await reportExportRequest(query, ctx, ['capacityMode', 'statuses', 'teamIds', 'groupBy']);
+    const parsed = capacityHeatmapExportQuery(query);
+    const heatmap = await this.svc.getHeatmap(ctx.tenantId, parsed, { manager: ctx.manager });
+    const exp = capacityHeatmapExport(heatmap, request.language, {
+      teamNames: await capacityTeamNames(ctx.manager!, ctx.tenantId, parsed.teamFilter, request.language),
+    });
+    res.send(await reportExportBody(res, writeReportExport(exp, { ...request, table: parsed.groupBy })));
   }
 
   @UseGuards(PermissionGuard)

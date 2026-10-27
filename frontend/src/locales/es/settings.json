@@ -131,6 +131,12 @@
     },
     "apiKeys": "Claves API",
     "loadFailed": "No se pudieron cargar sus aplicaciones conectadas.",
-    "disconnectFailed": "No se pudo desconectar esta aplicación."
+    "disconnectFailed": "No se pudo desconectar esta aplicación.",
+    "revoke": "Revocar",
+    "revokeConfirm": {
+      "title": "¿Revocar {{key}}?",
+      "body": "Todos los clientes que usan {{key}} pierden de inmediato el acceso a sus datos de KANAP. Esta acción no se puede deshacer."
+    },
+    "revokeFailed": "No se pudo revocar esta clave."
   }
 }

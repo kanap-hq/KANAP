@@ -17,6 +17,8 @@ import { useLocale } from '../../i18n/useLocale';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { BudgetReportFilters, useBudgetReportFilters } from '../../components/reports/BudgetReportFilters';
 import { excludedAccountValues, readTopItems, topItemsRequest } from './reportAggregates';
+import { topLinesTable } from './reportTables';
+import { useReportTableLabels } from './useReportTableLabels';
 import { useBudgetAggregate } from './useBudgetAggregate';
 import { useAccountLabelOptions, useItemOptions } from './useReportOptions';
 import { ReportFteNotice, ReportMeasureSelect, useMeasureText, useReportMeasure } from './reportMeasure';
@@ -38,6 +40,7 @@ export default function TopOpexReport() {
   const formatNumber = measureText.format;
   // The column as the measure reads it: `Budget`, or `Budget FTE`.
   const metricLabel = measureText.column(budgetColumns.label(metric));
+  const tableLabels = useReportTableLabels();
   const [scope, setScope] = useReportScope();
   const scopeLabel = t(`operations.scope.${scope}`);
 
@@ -72,20 +75,25 @@ export default function TopOpexReport() {
   const { processed, totalMetric: knownTotal, topSelectionTotal } = useMemo(() => readTopItems(report.data, measure), [report.data, measure]);
   const totalMetric = knownTotal ?? 0;
 
-  const columns = useMemo<ColDef[]>(() => [
-    {
-      field: 'name',
-      headerName: t('reports.columns.item'),
-      flex: 1,
-      minWidth: 220,
-      cellRenderer: LinkCellRenderer,
-      cellRendererParams: { newTab: true, getHref: (row: { id?: string | null; itemNumber?: number }) => itemHref(scope, row.id, row.itemNumber) },
-    },
-    { field: 'value', headerName: `${metricLabel} (${year})`, width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) },
-    { field: 'pct_of_total', headerName: t('reports.columns.shareOfTotal'), width: 160, type: 'rightAligned', valueFormatter: (p) => (p.value != null ? `${p.value}%` : '') },
-  ], [scope, year, metricLabel, formatNumber, t]);
+  // The key table (`reportTables.ts`, the same code as the export): the share of the total is a fraction.
+  const table = useMemo(() => topLinesTable({ year, metric, measure }, report.data, tableLabels), [year, metric, measure, report.data, tableLabels]);
+  const columns = useMemo<ColDef[]>(() => table.columns.map((column): ColDef => {
+    if (column.key === 'name') {
+      return {
+        field: column.key,
+        headerName: column.header,
+        flex: 1,
+        minWidth: 220,
+        cellRenderer: LinkCellRenderer,
+        cellRendererParams: { newTab: true, getHref: (row: { id?: string | null; itemNumber?: number }) => itemHref(scope, row.id, row.itemNumber) },
+      };
+    }
+    if (column.kind === 'percent') {
+      return { field: column.key, headerName: column.header, width: 160, type: 'rightAligned', valueFormatter: (p) => (p.value != null ? `${Math.round(p.value * 100)}%` : '') };
+    }
+    return { field: column.key, headerName: column.header, width: 160, type: 'rightAligned', valueFormatter: (p) => formatNumber(p.value) };
+  }), [table, scope, formatNumber]);
 
-  const gridApiRef = useRef<any>(null);
   const chartRef = useRef<ChartCardHandle>(null);
 
   const chartData = useMemo(() => processed.map((r) => ({ name: r.name, value: r.value })), [processed]);
@@ -265,7 +273,21 @@ export default function TopOpexReport() {
           />
         </Box>
       )}
-      onExportTableCsv={() => gridApiRef.current?.exportDataAsCsv?.(measureText.csvParams(`top${processed.length}-${scope}-${year}-${metricFileName(budgetColumns, metric)}`))}
+      tableExport={{
+        url: '/reports/budget/top-lines/export',
+        params: {
+          scope,
+          measure,
+          ...reportFilters.exportParams,
+          year,
+          metric,
+          top: topCount,
+          excludeIds: excludedIds.join(','),
+          // Account labels may hold commas: a JSON list.
+          excludeAccounts: excludedAccounts.length ? JSON.stringify(excludedAccounts) : undefined,
+        },
+        fileBase: measureText.fileName(`top${processed.length}-${scope}-${year}-${metric}`),
+      }}
       onExportChartPng={() => chartRef.current?.download(measureText.fileName(`top${processed.length}-${scope}-${year}-${metricFileName(budgetColumns, metric)}-${chartType}`))}
     >
       <Stack direction="column" spacing={2} alignItems="stretch">
@@ -275,10 +297,9 @@ export default function TopOpexReport() {
         <Paper variant="outlined" sx={{ p: 2 }}>
           <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>{t("reports.shared.keyTable")}</Typography>
           <ReportGrid
-            rowData={processed}
+            rowData={table.rows}
             columnDefs={columns}
             defaultColDef={{ sortable: true, resizable: true }}
-            onGridReady={(e) => { gridApiRef.current = e.api; }}
             domLayout="autoHeight"
           />
           <ReportFteNotice scope={scope} request={request} result={report.data} columnLabel={(column) => `${budgetColumns.label(column.metric)} ${column.year}`} />

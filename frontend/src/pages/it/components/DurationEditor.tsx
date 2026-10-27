@@ -2,7 +2,10 @@ import i18n from '../../../i18n';
 import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../../utils/applicationClassification';
 import React from 'react';
-import { Box, MenuItem, Select, TextField, Typography } from '@mui/material';
+import { Box, MenuItem, Select, Typography } from '@mui/material';
+import FormattedNumberField from '../../../components/inputs/FormattedNumberField';
+import { decimalMark } from '../../../i18n/formatters';
+import { useLocale } from '../../../i18n/useLocale';
 import { drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 
 export type DurationUnit = 'minutes' | 'hours' | 'days' | 'weeks';
@@ -48,6 +51,7 @@ type Props = {
 
 export default function DurationEditor({ value, onCommit, onDraftStateChange, allowZero = false, disabled, placeholder, ariaLabel }: Props) {
   const { t } = useTranslation('it');
+  const locale = useLocale();
   const initialUnit = bestDurationUnit(value);
   const [unit, setUnit] = React.useState<DurationUnit>(initialUnit);
   const [draft, setDraft] = React.useState(value == null ? '' : String(value / FACTORS[initialUnit]));
@@ -98,13 +102,21 @@ export default function DurationEditor({ value, onCommit, onDraftStateChange, al
   return (
     <Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(90px, 1fr) 110px', gap: 1, maxWidth: 280 }}>
-        <TextField
+        <FormattedNumberField
           value={draft}
-          onChange={(event) => { setDraft(event.target.value); setError(null); reportDraft(event.target.value, unit); }}
+          emit="string"
+          // Wide on purpose: extra decimals must reach the whole-minute check.
+          decimals={12}
+          decimalSeparator={decimalMark(locale)}
+          onChange={(event) => {
+            const next = String(event.target.value ?? '');
+            setDraft(next);
+            setError(null);
+            reportDraft(next, unit);
+          }}
           onBlur={commit}
           onKeyDown={(event) => { if (event.key === 'Enter') (event.target as HTMLInputElement).blur(); }}
-          type="number"
-          inputProps={{ min: allowZero ? 0 : 1, step: 'any', 'aria-label': ariaLabel }}
+          inputProps={{ 'aria-label': ariaLabel }}
           placeholder={placeholder}
           disabled={disabled}
           variant="standard"

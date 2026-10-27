@@ -191,6 +191,7 @@ export default function ContributorTimeLog({ contributorId }: ContributorTimeLog
       user_id: editingProjectEntry.user_id,
       hours: Number(editingProjectEntry.hours) || 0,
       notes: editingProjectEntry.notes,
+      logged_at: editingProjectEntry.logged_at,
     }
     : undefined;
 

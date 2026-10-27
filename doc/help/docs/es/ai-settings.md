@@ -109,12 +109,12 @@ Las dos formas comparten el resto:
 
 - **Habilitar MCP** debe estar activado (consulte **Funcionalidades** más arriba).
 - Las mismas [herramientas](#herramientas-disponibles) de solo lectura, dentro de los derechos de acceso de la persona detrás de la clave o de la conexión.
-- Un límite de 60 solicitudes MCP por minuto para cada clave y cada conexión. Por encima, las solicitudes se rechazan hasta que termina el minuto.
-- El mismo registro de auditoría.
+- Un límite de 60 solicitudes MCP por minuto para cada clave y cada conexión. Por encima, las solicitudes se rechazan con un encabezado `Retry-After` que indica el número de segundos que hay que esperar.
+- El mismo [registro MCP](#mcp-journal).
 
-La tarjeta **Claves y conexiones MCP** muestra un botón **Crear clave**, la **Dirección del servidor** a la que se conectan los clientes (con un botón para copiarla), el límite de **Vida útil máxima de la clave (días)** y una tabla con **Etiqueta**, **Tipo**, **Prefijo**, **Creada**, **Expira**, **Último uso** y **Estado** (**Activa** o **Revocada**).
+La tarjeta **Claves y conexiones MCP** muestra un botón **Crear clave**, la **Dirección del servidor** a la que se conectan los clientes (con un botón para copiarla), el límite de **Vida útil máxima de la clave (días)** y una tabla con **Etiqueta**, **Tipo**, **Persona**, **Creada**, **Expira**, **Último uso** y **Estado** (**Activa** o **Revocada**).
 
-La columna **Tipo** indica **Clave API** o **Conexión**. Una fila de conexión muestra el nombre de la aplicación y el host al que vuelve, por ejemplo *Claude · claude.ai*. Las conexiones no tienen prefijo.
+La columna **Tipo** indica **Clave API** o **Conexión**. Una fila de conexión muestra el nombre de la aplicación y el host al que vuelve, por ejemplo *Claude · claude.ai*. Una clave API muestra su prefijo junto a su etiqueta, por ejemplo *Portátil · abcd1234*. **Persona** indica quién creó la clave o aprobó la conexión.
 
 ### Crear una clave
 
@@ -130,9 +130,9 @@ El campo **Vida útil máxima de la clave (días)** limita cuánto tiempo puede 
 
 ### Revocar una clave o una conexión
 
-Haga clic en el icono de papelera de cualquier fila activa. Una clave revocada deja de funcionar de inmediato. Una conexión revocada corta el acceso de la aplicación de inmediato, y el usuario tiene que volver a conectarla. Las filas revocadas permanecen en la tabla con fines de auditoría.
+Haga clic en el botón **Revocar** (una llave tachada, o un enlace roto para una conexión) al final de una fila activa y confirme. El cuadro de diálogo nombra la clave o la aplicación. Una clave revocada deja de funcionar de inmediato. Una conexión revocada corta el acceso de la aplicación de inmediato, y el usuario tiene que volver a conectarla. Las filas revocadas permanecen en la tabla con fines de auditoría. Revocar una fila ya revocada no cambia nada: conserva su primera fecha de revocación.
 
-Los usuarios también pueden desconectar sus propias aplicaciones en su pestaña [Aplicaciones conectadas](connected-apps.md).
+Los usuarios también pueden revocar sus propias claves y desconectar sus propias aplicaciones en su pestaña [Aplicaciones conectadas](connected-apps.md).
 
 ### Quién puede conectarse
 
@@ -225,7 +225,7 @@ claude mcp add --transport http kanap https://acme.kanap.net/api/ai/mcp --header
 
 ### Herramientas disponibles
 
-El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, sin poder cambiar nada.
+El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, sin poder cambiar nada. Una clave o una conexión obtiene las once herramientas siguientes, y doce cuando la búsqueda web está activada para su organización. Una persona solo ve las herramientas de los datos que su rol le permite leer.
 
 | Herramienta | Qué hace |
 |---|---|
@@ -234,12 +234,34 @@ El servidor MCP es de solo lectura. Un cliente puede buscar y leer sus datos, si
 | `query_entities` | Enumera los registros que coinciden con unos filtros |
 | `aggregate_entities` | Cuenta o suma registros, agrupados por un campo |
 | `get_filter_values` | Enumera los valores posibles de un filtro |
+| `get_application_classification_catalog` | Lee los niveles de clasificación de las aplicaciones: criticidad, tiempo máximo tolerable de interrupción, olas de recuperación |
 | `get_entity_detail` | Lee un registro completo |
 | `get_entity_context` | Lee los registros vinculados a un registro |
 | `get_entity_comments` | Lee los comentarios de un proyecto o una tarea |
 | `search_knowledge` | Busca en la base de conocimiento |
 | `get_document` | Lee un documento de la base de conocimiento |
 | `web_search` | Busca en la web, cuando la búsqueda web está activada para su organización |
+
+Cuando un cliente se conecta, el servidor le indica qué espacio de trabajo lee, que solo lee, que lee con los derechos de la persona detrás de la clave o de la conexión, cómo buscar y qué datos no lee (centros de coste, calendarios, tipos de cambio, configuración de acceso a los datos, el registro de auditoría y los agentes de IA).
+
+Una llamada que el servidor rechaza vuelve con su causa, para que el asistente pueda explicarla: una herramienta desconocida, una herramienta que cambiaría datos, una herramienta que la clave no permite o datos que la persona no puede leer.
+
+## Registro MCP { #mcp-journal }
+
+La tarjeta **Registro MCP** enumera cada llamada a herramientas hecha por los clientes MCP de su organización, de la más reciente a la más antigua:
+
+- **Fecha**
+- **Persona**: el propietario de la clave o de la conexión
+- **Clave o conexión**: el nombre de la clave, o la aplicación y su dominio para una conexión (*Claude · claude.ai*). *Clave eliminada* cuando la clave ya no existe
+- **Herramienta**
+- **Resultado**: **Completada**, **Rechazada** o **Fallida**, con la causa junto a un rechazo o un fallo (por ejemplo *El servidor es de solo lectura*, *La clave no permite esta herramienta*, *Clave revocada*)
+- **Duración**: un guion cuando se desconoce
+
+Filtre la lista por **Persona**, **Clave o conexión**, **Resultado** y **Periodo** (últimas 24 horas, últimos 7 días, últimos 30 días o todo el periodo). Muestra 25 llamadas por página. Use **Anterior** y **Siguiente** para pasar de una página a otra.
+
+Haga clic en una línea para ver los argumentos que envió la llamada, acortados, y para un rechazo o un fallo su causa completa. Los valores secretos aparecen como *Oculto*.
+
+El registro también guarda las llamadas hechas con una clave revocada o caducada. Nunca guarda una clave ni un token.
 
 ---
 

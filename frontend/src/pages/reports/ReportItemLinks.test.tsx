@@ -166,9 +166,9 @@ describe('Company chargeback report item links', () => {
             company: { id: 'co-1', name: 'Fromage SA', total: 300, totalRaw: 300, headcount: null, itUsers: null, turnover: null, turnoverRaw: null, costPerUser: null, costPerUserRaw: null, costPerItUser: null, costPerItUserRaw: null, costVsTurnoverPct: null },
             departments: [],
             items: [
-              { versionId: 'v1', itemId: 'o1', itemName: 'Opex line', allocationMethod: 'headcount', allocationMethodLabel: 'Headcount', amount: 200, amountRaw: 200, sharePct: 66.67 },
-              { versionId: 'v2', itemId: null, itemName: 'Common costs', allocationMethod: 'default', allocationMethodLabel: 'Default', amount: 100, amountRaw: 100, sharePct: 33.33 },
-              { versionId: 'v3', itemId: 'c1', itemNumber: 119, nature: 'capex', itemName: 'Capex line', allocationMethod: 'it_users', allocationMethodLabel: 'IT users', amount: 0, amountRaw: 0, sharePct: 0 },
+              { versionId: 'v1', itemId: 'o1', itemName: 'Opex line', itemLabel: 'Opex line', allocationMethod: 'headcount', allocationMethodLabel: 'Headcount', amount: 200, amountRaw: 200, sharePct: 66.67 },
+              { versionId: 'v2', itemId: null, itemName: 'Common costs', itemLabel: 'Common costs', allocationMethod: 'default', allocationMethodLabel: 'Default', amount: 100, amountRaw: 100, sharePct: 33.33 },
+              { versionId: 'v3', itemId: 'c1', itemNumber: 119, nature: 'capex', itemName: 'Capex line', itemLabel: 'Capex line', allocationMethod: 'it_users', allocationMethodLabel: 'IT users', amount: 0, amountRaw: 0, sharePct: 0 },
             ],
             itemsTotal: 300,
             itemsTotalRaw: 300,
@@ -181,7 +181,7 @@ describe('Company chargeback report item links', () => {
     });
     renderReport(<CompanyChargebackReport />);
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    const grid = await screen.findByTestId('grid-itemName');
+    const grid = await screen.findByTestId('grid-itemLabel');
     expectNewTabLink(grid, 'Opex line', '/ops/budget/o1');
     expectNewTabLink(grid, 'Capex line', '/ops/budget/BL-119');
     expect(within(grid).getByText('Common costs').closest('a')).toBeNull();
@@ -203,8 +203,8 @@ describe('Company chargeback of a limited person', () => {
             company: { id: 'co-1', name: 'Fromage SA', total: 90, totalRaw: 90, headcount: null, itUsers: null, turnover: null, turnoverRaw: null, costPerUser: null, costPerUserRaw: null, costPerItUser: null, costPerItUserRaw: null, costVsTurnoverPct: null },
             departments: [],
             items: [
-              { versionId: 'v1', itemId: null, itemNumber: 12, nature: 'opex', itemName: 'Hidden line', allocationMethod: 'manual_pct', allocationMethodLabel: 'Manual (%)', amount: 40, amountRaw: 40, sharePct: 44.44, readable: false, payingCompanyName: 'Fromage FR', allocationPct: 40, departments: ['Finance'] },
-              { versionId: 'v2', itemId: 'o2', itemNumber: 13, nature: 'opex', itemName: 'Own line', allocationMethod: 'manual_pct', allocationMethodLabel: 'Manual (%)', amount: 50, amountRaw: 50, sharePct: 55.56, readable: true, payingCompanyName: 'Fromage SA', allocationPct: 50, departments: [] },
+              { versionId: 'v1', itemId: null, itemNumber: 12, nature: 'opex', itemName: 'Hidden line', itemLabel: 'BL-12 · Hidden line', allocationMethod: 'manual_pct', allocationMethodLabel: 'Manual (%)', amount: 40, amountRaw: 40, sharePct: 44.44, readable: false, payingCompanyName: 'Fromage FR', allocationPct: 40, departments: ['Finance'] },
+              { versionId: 'v2', itemId: 'o2', itemNumber: 13, nature: 'opex', itemName: 'Own line', itemLabel: 'Own line', allocationMethod: 'manual_pct', allocationMethodLabel: 'Manual (%)', amount: 50, amountRaw: 50, sharePct: 55.56, readable: true, payingCompanyName: 'Fromage SA', allocationPct: 50, departments: [] },
             ],
             itemsTotal: 90,
             itemsTotalRaw: 90,
@@ -218,7 +218,7 @@ describe('Company chargeback of a limited person', () => {
     });
     renderReport(<CompanyChargebackReport />);
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
-    const grid = await screen.findByTestId('grid-itemName');
+    const grid = await screen.findByTestId('grid-itemLabel');
     expect(within(grid).getByText('BL-12 · Hidden line').closest('a')).toBeNull();
     expectNewTabLink(grid, 'Own line', '/ops/budget/BL-13');
     expect(within(grid).getAllByRole('link')).toHaveLength(1);

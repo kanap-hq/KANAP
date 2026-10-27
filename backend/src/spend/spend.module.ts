@@ -38,6 +38,8 @@ import { forwardRef } from '@nestjs/common';
 import { FreezeModule } from '../freeze/freeze.module';
 import { ChargebackReportService } from './chargeback-report.service';
 import { ChargebackReportController } from './chargeback-report.controller';
+import { BudgetReportExportController } from './reports/budget-report-export.controller';
+import { BudgetReportExportService } from './reports/budget-report-export.service';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import { CurrencyModule } from '../currency/currency.module';
 import { CapexItemsDeleteService, SpendItemsDeleteService } from './spend-items-delete.service';
@@ -78,7 +80,7 @@ import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
   // The CAPEX lines live in the same tables (plan planning/budget-unifie.md, lot Z1): their routes
   // are aliases on the same services, for the lines of nature `capex`.
   controllers: [
-    BudgetLinesController, SpendItemsController, SpendVersionsController, SpendTasksController, AllocationRulesController, TasksController, ChargebackReportController,
+    BudgetLinesController, SpendItemsController, SpendVersionsController, SpendTasksController, AllocationRulesController, TasksController, ChargebackReportController, BudgetReportExportController,
     CapexItemsController, CapexVersionsController, CapexTasksController,
   ],
   providers: [
@@ -95,6 +97,7 @@ import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
     TasksService,
     AllocationRulesService,
     ChargebackReportService,
+    BudgetReportExportService,
     SpendItemContactsService,
     UserTimeAggregateService,
     CapexItemsService,

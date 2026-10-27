@@ -7,6 +7,35 @@ import { AuditService } from '../../audit/audit.service';
 import { PortfolioProjectsBaseService, ServiceOpts } from './portfolio-projects-base.service';
 import { UserTimeAggregateService } from './user-time-aggregate.service';
 
+const LOGGED_AT_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The calendar day of `now` in the server's local time zone, as YYYY-MM-DD. */
+export function localTodayYmd(now = new Date()): string {
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+/**
+ * A project time entry's day. The value is a calendar day (YYYY-MM-DD), not after the server's
+ * local today. It is stored at UTC midnight, so the monthly aggregates, which bucket on the UTC
+ * month, follow the chosen day.
+ */
+export function parseLoggedAt(value: unknown, today = new Date()): Date {
+  const text = value === undefined || value === null ? '' : String(value).trim();
+  if (!text) {
+    throw new BadRequestException('logged_at is required');
+  }
+  const stored = new Date(`${text}T00:00:00.000Z`);
+  if (!LOGGED_AT_DAY.test(text) || Number.isNaN(stored.getTime()) || stored.toISOString().slice(0, 10) !== text) {
+    throw new BadRequestException('logged_at must be a date (YYYY-MM-DD)');
+  }
+  if (text > localTodayYmd(today)) {
+    throw new BadRequestException('logged_at cannot be in the future');
+  }
+  return stored;
+}
+
 /**
  * Service for managing project time entries.
  */
@@ -48,6 +77,7 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
       user_id?: string;
       hours: number;
       notes?: string;
+      logged_at: string;
     },
     tenantId: string,
     userId: string | null,
@@ -55,8 +85,6 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
   ) {
     const mg = this.getManager(opts);
     const timeEntryRepo = mg.getRepository(PortfolioProjectTimeEntry);
-
-    const project = await this.ensureProject(projectId, mg);
 
     // Validate category
     if (!body.category || !['it', 'business'].includes(body.category)) {
@@ -69,6 +97,9 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
       throw new BadRequestException('hours must be a positive integer');
     }
 
+    const loggedAt = parseLoggedAt(body.logged_at);
+    await this.ensureProject(projectId, mg);
+
     const entry = timeEntryRepo.create({
       tenant_id: tenantId,
       project_id: projectId,
@@ -77,7 +108,7 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
       hours,
       notes: body.notes ? String(body.notes).trim() : null,
       logged_by_id: userId,
-      logged_at: new Date(),
+      logged_at: loggedAt,
     });
 
     const saved = await timeEntryRepo.save(entry);
@@ -111,6 +142,7 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
       user_id?: string;
       hours?: number;
       notes?: string;
+      logged_at?: string;
     },
     userId: string | null,
     isAdmin: boolean,
@@ -155,6 +187,10 @@ export class PortfolioTimesheetService extends PortfolioProjectsBaseService {
 
     if (has('notes')) {
       entry.notes = body.notes ? String(body.notes).trim() : null;
+    }
+
+    if (has('logged_at')) {
+      entry.logged_at = parseLoggedAt(body.logged_at);
     }
 
     entry.updated_at = new Date();

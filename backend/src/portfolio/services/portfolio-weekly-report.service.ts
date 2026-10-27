@@ -398,7 +398,7 @@ export const formatExportChangeValue = (kind: WeeklyChangeKind, value: string | 
   if (kind === 'list') {
     const count = Number(value) || 0;
     const form = new Intl.PluralRules(language).select(count) === 'one' ? labels.values.itemOne : labels.values.itemOther;
-    return form.replace('{{count}}', String(count));
+    return form.replace('{{count}}', () => String(count));
   }
   if (kind === 'date') return exportDay(value, language) ?? value;
   return value;

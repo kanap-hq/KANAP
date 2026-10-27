@@ -40,6 +40,8 @@ export type ReportGroupState = {
   inSentence: string;
   /** The rows without a key ("No cost center") and the dimension values without a name. */
   labels: StaffingLabels;
+  /** The grouping the screen resolved, as the exports take it (`group=item`, `group=axis:<id>`). */
+  exportParam: string | undefined;
 };
 
 /**
@@ -85,7 +87,9 @@ export function useReportGroup(axes: AnalyticsAxes): ReportGroupState {
     unnamed: t('reports.analyticsCategory.unnamed'),
   }), [kind, t]);
 
-  return { kind, axis, group, setKind, setAxis, axes, header, inSentence, labels };
+  const exportParam = kind === 'axis' ? (axis ? `${AXIS_PREFIX}${axis.id}` : undefined) : kind;
+
+  return { kind, axis, group, setKind, setAxis, axes, header, inSentence, labels, exportParam };
 }
 
 /** The "Group by" select and, grouped on a dimension with several enabled, the "Dimension" select. */

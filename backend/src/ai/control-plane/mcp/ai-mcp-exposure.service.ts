@@ -14,6 +14,12 @@ import {
   parseMcpApiKeyPolicy,
 } from './ai-mcp-access-policy';
 
+export type McpToolRefusal = {
+  reason: 'unknown_tool' | 'read_only' | 'key_policy' | 'disabled' | 'permission';
+  effect: 'read' | 'write' | null;
+  message: string;
+};
+
 export type AiMcpApiKeyContext = AiMcpApiKeyPolicyRecord & {
   id?: string | null;
   tenant_id?: string | null;
@@ -75,6 +81,44 @@ export class AiMcpExposureService {
       throw new ForbiddenException('MCP API key is not allowed to execute this capability.');
     }
     return resolved;
+  }
+
+  /**
+   * Why a tool this key cannot run now is refused, in the words the client's model reads (MCP
+   * messages stay in English): a name KANAP does not offer through MCP, a tool that changes data, a
+   * tool outside the key's policy, web search turned off, or a tool the person may not read with.
+   */
+  explainRefusal(apiKey: AiMcpApiKeyContext, name: string): McpToolRefusal {
+    const known = this.registry.describeRegisteredCapability(name);
+    if (!known || (known.reads && !known.mcpReadable)) {
+      return { reason: 'unknown_tool', effect: null, message: `Unknown tool: ${name}. Call tools/list for the tools this server offers.` };
+    }
+    if (!known.reads) {
+      return {
+        reason: 'read_only',
+        effect: 'write',
+        message: `This server is read only: ${name} changes data in KANAP and cannot run through MCP. Make the change in the KANAP application.`,
+      };
+    }
+    if (!isMcpCapabilityAllowedByPolicy(this.parsePolicy(apiKey), name)) {
+      return {
+        reason: 'key_policy',
+        effect: 'read',
+        message: `This key does not allow this tool: ${name}. A KANAP administrator can create a key that includes it.`,
+      };
+    }
+    if (name === 'web_search') {
+      return {
+        reason: 'disabled',
+        effect: 'read',
+        message: 'Web search is turned off in this KANAP workspace. A KANAP administrator can turn it on.',
+      };
+    }
+    return {
+      reason: 'permission',
+      effect: 'read',
+      message: `Your KANAP role does not allow this tool: ${name} reads data you have no read access to. Ask a KANAP administrator for the read right.`,
+    };
   }
 
   async assertCanReadAudit(

@@ -110,7 +110,7 @@ The filter keeps the lines below and leaves out the framework details. Without i
 
 **Order.** The lines that KANAP writes itself (`[entrypoint]`, `[ENV]`, `[SECRETS]`, `[RATE-LIMIT]`, `[CORS]`, `[DB]`, `[on-prem]`, `[SECURITY]`, `[DATA-ACCESS]`) come first. The framework lines (`Starting Nest application...`, email, scheduled jobs, `Nest application successfully started`) follow. The `[DB] pool budget` line comes last.
 
-**A clean first start** of the [installation example](installation-example.md#7-build-and-start) shows these lines, in this order (the first `[SECRETS]` line is shortened here):
+**A clean first start** of the [installation example](installation-example.md#7-pull-and-start) shows these lines, in this order (the first `[SECRETS]` line is shortened here):
 
 ```
 [entrypoint] Initializing DB (attempt 1/30) ...
@@ -517,7 +517,7 @@ The defaults suit a few dozen users. For more users at once, run several API pro
 
 **What each costs.** Every API process uses about 200 MB of memory at start and up to 300 MB under load (measured with 50 users on 5,000 budget lines); with several, a small supervising process adds about 100 MB. Every API process can open up to `DB_POOL_MAX` connections to PostgreSQL. Count:
 
-- memory: `API_WORKERS` × 0.4 GB for the API, plus what PostgreSQL uses if it runs on the same server, plus room for the image build at each upgrade. 6 GB is the minimum for any server. On a new installation with PostgreSQL and the storage running, building both images at once took about 3.8 GB in total at its peak (about 3.2 GB for the build itself), so 6 GB keeps about 2 GB free;
+- memory: `API_WORKERS` × 0.4 GB for the API, plus what PostgreSQL uses if it runs on the same server. 4 GB is the minimum for any server. If you [build the images yourself](installation.md#build-the-images-yourself), count 6 GB: building both images at once took about 3.2 GB at its peak;
 - connections: `API_WORKERS` × `DB_POOL_MAX` must stay under PostgreSQL's `max_connections` (100 by default) minus about 15. The API checks this at start and writes a warning in its log when it does not fit, with a value that would.
 
 **Suggested values.**
@@ -633,7 +633,7 @@ S3_FORCE_PATH_STYLE=false
 
 ## Firewall rules
 
-After the initial build, KANAP can run fully air-gapped if email, SSO, AI, FX rate, vulnerability and technology catalog features are all disabled.
+After installation, KANAP can run fully air-gapped if email, SSO, AI, FX rate, vulnerability and technology catalog features are all disabled.
 
 ### Inbound
 
@@ -647,18 +647,19 @@ After the initial build, KANAP can run fully air-gapped if email, SSO, AI, FX ra
 
 Nothing else needs to be reachable from the network. In particular, PostgreSQL (5432) and the object storage (9000) are for the Docker networks of the server only.
 
-### Outbound: initial setup and build
+### Outbound: installation and upgrades { #outbound-installation-and-upgrades }
 
-These destinations are needed at installation, at each upgrade and at each rollback (`docker build`), and the first time the smoke test runs. They can be closed between these operations.
+These destinations are needed at installation, at each upgrade and at each rollback, and the first time the smoke test runs. They can be closed between these operations.
 
 | Destination | Port | Purpose |
 |-------------|------|---------|
 | `github.com`, `*.githubusercontent.com` | 443 | Clone KANAP source code; download the RustFS release files (the installation example) |
+| `ghcr.io`, `pkg-containers.githubusercontent.com` | 443 | Download the KANAP images (`docker compose pull`) |
 | `download.docker.com` | 443 | Docker APT repository |
-| `registry.npmjs.org` | 443 | npm dependencies during `docker build` |
-| `registry-1.docker.io`, `auth.docker.io` | 443 | Pull base Docker images (`node:24-alpine`, `nginx:alpine`), and the smoke test image (`node:24-alpine`) the first time the test runs. Each pull first gets a token from `auth.docker.io` |
+| `registry-1.docker.io`, `auth.docker.io` | 443 | Pull the smoke test image (`node:24-alpine`) the first time the test runs, and the base images when you build the images yourself. Each pull first gets a token from `auth.docker.io` |
 | `production.cloudflare.docker.com`, `production.cloudfront.docker.com` | 443 | Download the image layers: Docker Hub redirects each pull to these hosts |
-| `dl-cdn.alpinelinux.org` | 80/443 | Alpine packages during `docker build` (both images install packages with `apk add`) |
+| `registry.npmjs.org` | 443 | npm dependencies, only when you build the images yourself |
+| `dl-cdn.alpinelinux.org` | 80/443 | Alpine packages, only when you build the images yourself |
 | Ubuntu APT mirrors | 80/443 | System packages (PostgreSQL, nginx, etc.) |
 | `acme-v02.api.letsencrypt.org` | 443 | Certificates, only with Let's Encrypt (also at each renewal) |
 

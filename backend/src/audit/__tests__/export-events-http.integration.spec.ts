@@ -3,7 +3,7 @@ import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { AddressInfo } from 'node:net';
-import { BadRequestException, CanActivate, Controller, Get, Header, Injectable, Module, Post, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, CanActivate, Controller, Get, Header, Injectable, Module, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Response } from 'express';
 import dataSource from '../../data-source';
@@ -12,6 +12,7 @@ import { completeExport } from '../export-events.interceptor';
 import { ListContextsService } from '../../common/list-context/list-contexts.service';
 import { useRequestPipeline } from '../../common/request-pipeline';
 import { createRequestFinalizer } from '../../common/request-finalizer.middleware';
+import { reportExportBody, reportExportRequest, writeReportExport } from '../../common/report-export';
 
 // Exports in the audit log, over HTTP against the database, with the
 // production request pipeline (common/request-pipeline.ts) followed by the
@@ -88,8 +89,28 @@ class RefusedExportProbeController {
   }
 }
 
+// A report table export (common/report-export): the shared helper reports the format and the data rows.
+@Controller('probe-report')
+class ReportExportProbeController {
+  @Get('export')
+  async export(@Query() query: Record<string, unknown>, @Req() req: any, @Res() res: Response) {
+    const ctx = { manager: req.queryRunner.manager, tenantId: req.tenant.id, userId: req.user.sub };
+    const request = await reportExportRequest(query, ctx, []);
+    const file = writeReportExport(
+      {
+        fileBase: 'probe-report',
+        limited: false,
+        parameters: [],
+        tables: [{ key: 'rows', sheet: 'Rows', columns: [{ header: 'Name', kind: 'text' }], rows: [['a'], ['b']], footer: [['total']] }],
+      },
+      request,
+    );
+    res.send(await reportExportBody(res, file));
+  }
+}
+
 @Module({
-  controllers: [ExportProbeController, BrokenExportProbeController, RefusedExportProbeController],
+  controllers: [ExportProbeController, BrokenExportProbeController, RefusedExportProbeController, ReportExportProbeController],
   providers: [ListContextsService, RefuseGuard],
 })
 class ExportProbeModule {}
@@ -168,6 +189,8 @@ async function main() {
     assert.equal(await call('GET', '/probe-items/list'), 200);
     assert.equal(await call('GET', '/probe-broken/export'), 400);
     assert.equal(await call('GET', '/probe-refused/export'), 403);
+    for (let i = 0; i < REPEATS; i++) assert.equal(await call('GET', '/probe-report/export?format=xlsx&language=fr'), 200);
+    assert.equal(await call('GET', '/probe-report/export?format=xlsx&other=1'), 400, 'an unknown parameter is refused');
     const row = (resource: string, path: string, format: string | undefined, query: Record<string, unknown>, rows?: number) => ({
       table_name: 'export',
       action: 'export',
@@ -191,6 +214,8 @@ async function main() {
       row('probe-items', '/probe-items/DOC-12/export', undefined, {}),
       row('probe-items/values', '/probe-items/values/export', 'csv', {}),
       ...Array.from({ length: REPEATS }, () => row('probe-items/report', '/probe-items/INC-3/report', undefined, {})),
+      // The report export: xlsx, two data rows (the total row is not counted), every time.
+      ...Array.from({ length: REPEATS }, () => row('probe-report', '/probe-report/export', 'xlsx', { format: 'xlsx', language: 'fr' }, 2)),
     ]);
   } finally {
     await app.close();

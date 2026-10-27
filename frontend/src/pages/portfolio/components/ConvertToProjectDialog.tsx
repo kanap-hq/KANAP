@@ -4,6 +4,9 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import DateEUField from '../../../components/fields/DateEUField';
+import FormattedNumberField from '../../../components/inputs/FormattedNumberField';
+import { decimalMark } from '../../../i18n/formatters';
+import { useLocale } from '../../../i18n/useLocale';
 import api from '../../../api';
 import { MarkdownContent } from '../../../components/MarkdownContent';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
@@ -26,6 +29,7 @@ export default function ConvertToProjectDialog({
   onSuccess,
 }: ConvertToProjectDialogProps) {
   const { t } = useTranslation(['portfolio', 'common', 'errors']);
+  const locale = useLocale();
   const [name, setName] = useState(request.name);
   const [plannedStart, setPlannedStart] = useState<string>('');
   const [plannedEnd, setPlannedEnd] = useState<string>('');
@@ -175,18 +179,21 @@ export default function ConvertToProjectDialog({
                 valueYmd={plannedEnd}
                 onChangeYmd={setPlannedEnd}
               />
-              <TextField
+              <FormattedNumberField
                 label={t('portfolio:dialogs.convertToProject.fields.effortIt')}
-                type="number"
                 value={effortIt ?? ''}
-                onChange={(e) => setEffortIt(e.target.value === '' ? null : Number(e.target.value))}
+                // Person-days are stored as numeric(10,2).
+                decimals={2}
+                decimalSeparator={decimalMark(locale)}
+                onChange={(event) => setEffortIt(event.target.value === '' ? null : Number(event.target.value))}
                 helperText={t('portfolio:dialogs.convertToProject.helper.effortIt')}
               />
-              <TextField
+              <FormattedNumberField
                 label={t('portfolio:dialogs.convertToProject.fields.effortBusiness')}
-                type="number"
                 value={effortBusiness ?? ''}
-                onChange={(e) => setEffortBusiness(e.target.value === '' ? null : Number(e.target.value))}
+                decimals={2}
+                decimalSeparator={decimalMark(locale)}
+                onChange={(event) => setEffortBusiness(event.target.value === '' ? null : Number(event.target.value))}
                 helperText={t('portfolio:dialogs.convertToProject.helper.effortBusiness')}
               />
             </Box>

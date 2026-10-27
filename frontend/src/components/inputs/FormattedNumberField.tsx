@@ -58,7 +58,8 @@ export type FormattedNumberFieldProps = TextFieldProps & {
 
 type Emitted = { value: number | string } | null;
 
-export default function FormattedNumberField({
+/** Forwards the ref so a tooltip can describe the field, as it does for a TextField. */
+const FormattedNumberField = React.forwardRef<HTMLDivElement, FormattedNumberFieldProps>(function FormattedNumberField({
   value,
   onChange,
   inputProps,
@@ -67,7 +68,7 @@ export default function FormattedNumberField({
   emit = 'number',
   decimalSeparator = '.',
   ...rest
-}: FormattedNumberFieldProps) {
+}, ref) {
   const [text, setText] = React.useState<string>('');
   // The value this field last sent. When the parent hands it back, the text the user typed stays as
   // typed ("400.10", "1."), instead of being rewritten from the parent's form of the same value.
@@ -117,13 +118,16 @@ export default function FormattedNumberField({
   return (
     <TextField
       {...rest}
+      ref={ref}
       InputLabelProps={{ shrink: true, ...(InputLabelProps as any) }}
       value={text}
       onChange={handleChange}
       inputProps={{ inputMode: 'decimal', ...inputProps }}
     />
   );
-}
+});
+
+export default FormattedNumberField;
 
 /** The parent's value is the one this field sent: same string, or the same number. */
 function sameValue(value: unknown, emitted: number | string, emit: 'number' | 'string'): boolean {

@@ -10,7 +10,7 @@ import { parsePagination, buildWhereFromAgFilters } from '../common/pagination';
 import { isTextColumn, orderListQuery, sortedFindQuery } from '../common/list-sort';
 import { AuditService } from '../audit/audit.service';
 import { AllocationCalculatorService } from './allocation-calculator.service';
-import { SUMMARY_SCOPES, SummaryDeps } from './spend-summary.builder';
+import { SUMMARY_SCOPES, SummaryDeps, accountDisplayText } from './spend-summary.builder';
 import * as budgetList from './budget-list/budget-list.service';
 import type { BudgetListAccess } from './budget-list/budget-list.runtime';
 import type { AggregateSpec } from '../common/list-engine/list-aggregate';
@@ -266,7 +266,7 @@ export class SpendItemsService {
         account: account ? { id: account.id, account_number: (account as any).account_number, account_name: (account as any).account_name } : undefined,
         account_number: account ? (account as any).account_number : undefined,
         account_name: account ? (account as any).account_name : undefined,
-        account_display: account ? `${(account as any).account_number} - ${(account as any).account_name}` : undefined,
+        account_display: account ? accountDisplayText((account as any).account_number, (account as any).account_name) : undefined,
         owner_it_name: displayName(ownerById.get(item.owner_it_id) || null),
         owner_business_name: displayName(ownerById.get(item.owner_business_id) || null),
         analytics_category_id,
