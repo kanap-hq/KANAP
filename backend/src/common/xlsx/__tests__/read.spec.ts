@@ -513,6 +513,15 @@ async function streamGuardrails() {
     'a sheet behind a data descriptor with zero local sizes',
   );
 
+  // CRC rule: the local header is checked unless a data descriptor (bit 3) defers it to the central one.
+  const wrongLocal = hostileWorkbook({ data: plain, localCrc: 0x12345678 });
+  refuses(() => readXlsxGrid(wrongLocal), 'XLSX_INVALID', null, 'whole: a local CRC that disagrees');
+  await refusesAsync(() => readXlsxGridAsync(wrongLocal), 'XLSX_INVALID', null, 'stream: a local CRC that disagrees');
+  const described = hostileWorkbook({ data: plain, flags: 0x8, descriptor: true, localCrc: 0x12345678 });
+  assert.deepEqual(await readXlsxGridAsync(described), readXlsxGrid(described), 'a descriptor makes the central CRC the one checked');
+  const wrongCentral = hostileWorkbook({ data: plain, centralCrc: 0x12345678 });
+  assert.deepEqual(await readXlsxGridAsync(wrongCentral), readXlsxGrid(wrongCentral), 'without a descriptor the local CRC is the one checked');
+
   for (const [label, entry] of [
     ['encrypted', { data: plain, flags: 0x1 }],
     ['a damaged local signature', { data: plain, localSignature: 0 }],

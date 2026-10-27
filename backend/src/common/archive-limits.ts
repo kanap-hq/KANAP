@@ -234,18 +234,22 @@ export class BoundedArchive {
       throw new Error('archive: damaged local header');
     }
     // adm-zip reads the method and the encryption flag from the central directory, which is
-    // authoritative; the local header only locates the bytes.
+    // authoritative; the local header locates the bytes and carries the CRC it checks.
     if (entry.header.encrypted) throw new Error('archive: encrypted entry');
     const method = Number(entry.header.method) || 0;
+    const localFlags = this.buffer.readUInt16LE(offset + 6);
     const nameLength = this.buffer.readUInt16LE(offset + 26);
     const extraLength = this.buffer.readUInt16LE(offset + 28);
     const start = offset + LOCAL_HEADER_SIZE + nameLength + extraLength;
     const compressed = Number(entry.header.compressedSize) || 0;
     if (start + compressed > this.buffer.length) throw new Error('archive: damaged local header');
+    // A data descriptor (bit 3) means the local CRC may be zero: adm-zip then trusts the central
+    // directory, and otherwise the local header (entry from zipEntry.js `crc32OK`).
+    const descriptor = (Number(entry.header.flags) & 0x8) !== 0 || (localFlags & 0x8) !== 0;
     return {
       data: this.buffer.subarray(start, start + compressed),
       declared,
-      crc: (Number(entry.header.crc) || 0) >>> 0,
+      crc: descriptor ? (Number(entry.header.crc) || 0) >>> 0 : this.buffer.readUInt32LE(offset + 14),
       method,
     };
   }

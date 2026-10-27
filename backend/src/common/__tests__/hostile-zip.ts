@@ -52,9 +52,9 @@ export function hostileZip(entries: Record<string, HostileZipInput>): Buffer {
     const centralSize = entry.centralSize ?? data.length;
     const flags = entry.flags ?? 0;
     const descriptor = entry.descriptor ?? (flags & 0x8) !== 0;
-    const localCrc = entry.localCrc ?? (descriptor ? 0 : centralCrc);
-    const localCompressedSize = entry.localCompressedSize ?? (descriptor ? 0 : centralCompressedSize);
-    const localSize = entry.localSize ?? (descriptor ? 0 : centralSize);
+    const localCrc = entry.localCrc ?? (descriptor ? 0 : crc);
+    const localCompressedSize = entry.localCompressedSize ?? (descriptor ? 0 : compressed.length);
+    const localSize = entry.localSize ?? (descriptor ? 0 : data.length);
     const nameBytes = Buffer.from(name, 'utf8');
     const extra = entry.localExtra ?? Buffer.alloc(0);
     const extraLength = entry.localExtraLength ?? extra.length;
