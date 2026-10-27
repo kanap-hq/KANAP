@@ -23,6 +23,7 @@ import CheckboxSetFloatingFilter from '../components/CheckboxSetFloatingFilter';
 import { useDataAccessLimited } from '../auth/dataAccess';
 import { userAccessColumnText } from '../components/dataAccess/dataAccess';
 import UserDialog, { type UserDialogTab } from './users/UserDialog';
+import { roleLabel } from '../utils/roleLabel';
 
 export default function UsersPage() {
   const { t } = useTranslation(['admin', 'common']);
@@ -198,14 +199,14 @@ export default function UsersPage() {
   const getRoleFilterValues = useCallback(async () => {
     try {
       const res = await api.get('/roles');
-      return (res.data?.items ?? []).map((role: { id: string; role_name?: string }) => ({
+      return (res.data?.items ?? []).map((role: { id: string; role_name?: string; role_description?: string | null; is_system?: boolean; is_built_in?: boolean }) => ({
         value: role.id,
-        label: role.role_name || role.id,
+        label: roleLabel(role, t) || role.id,
       }));
     } catch {
       return [];
     }
-  }, []);
+  }, [t]);
 
   const columns: EnhancedColDef<any>[] = useMemo(() => [
     { field: 'last_name', headerName: t('users.columns.lastName'), width: 150, cellRenderer: canManageUsers ? ClickableCellGeneric : undefined },
@@ -251,8 +252,8 @@ export default function UsersPage() {
       },
       valueGetter: (params) => {
         const names = Array.isArray(params.data?.roles) && params.data.roles.length > 0
-          ? params.data.roles.map((r: any) => r.name)
-          : [params.data?.role?.role_name];
+          ? params.data.roles.map((r: { name?: string | null }) => roleLabel({ name: r.name }, t))
+          : [roleLabel({ role_name: params.data?.role?.role_name }, t)];
         return names.filter(Boolean).join(', ');
       },
       cellRenderer: canManageUsers ? ClickableCellGeneric : undefined,

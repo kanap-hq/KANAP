@@ -1102,6 +1102,120 @@
       "builtIn": "Integriert",
       "system": "System"
     },
+    "builtIn": {
+      "administrator": {
+        "name": "Administrator",
+        "description": "Systemadministrator mit Zugriff auf alle Funktionen"
+      },
+      "agentAdmin": {
+        "name": "KI-Agenten-Administrator",
+        "description": "KI-Agenten konfigurieren, Autonomie gewähren und den Lebenszyklus der Agenten verwalten"
+      },
+      "agentContributor": {
+        "name": "KI-Agenten-Mitwirkender",
+        "description": "Vorschläge der KI-Agenten prüfen, genehmigen oder ablehnen, Kontrollen ausführen und Agenten anhalten"
+      },
+      "agentReader": {
+        "name": "KI-Agenten-Leser",
+        "description": "KI-Agenten, ihre Aktivität und ihre Leistung ansehen, schreibgeschützt"
+      },
+      "aiAdministrator": {
+        "name": "KI-Administrator",
+        "description": "Kann die KI-Einstellungen des Arbeitsbereichs verwalten und den nativen Chat sowie die MCP-Lesewerkzeuge nutzen"
+      },
+      "aiChatOperator": {
+        "name": "KI-Chat-Operator",
+        "description": "Kann KI-Chat-Funktionen nutzen, die bestätigte KI-Aktionen vorbereiten"
+      },
+      "aiChatUser": {
+        "name": "KI-Chat-Benutzer",
+        "description": "Kann schreibgeschützte KI-Chat-Werkzeuge nutzen, die die bestehenden Berechtigungen beachten"
+      },
+      "aiMcpUser": {
+        "name": "KI-MCP-Benutzer",
+        "description": "Kann persönliche MCP-API-Schlüssel für schreibgeschützte KI-Werkzeuge nutzen"
+      },
+      "budgetAdministrator": {
+        "name": "Budget-Administrator",
+        "description": "Volle Kontrolle über die Budgetverwaltung, einschließlich der Budgetzeilen, der Verträge und der Berichte"
+      },
+      "budgetMember": {
+        "name": "Budget-Mitglied",
+        "description": "Kann Budgetzeilen und Verträge verwalten und Berichte ansehen"
+      },
+      "budgetReader": {
+        "name": "Budget-Leser",
+        "description": "Schreibgeschützter Zugriff auf Budgetdaten und Berichte"
+      },
+      "businessContributor": {
+        "name": "Fachbereichs-Mitwirkender",
+        "description": "Kann Anfragen einreichen, an Projekten und Aufgaben mitwirken und zugewiesene Anwendungen lesen"
+      },
+      "contact": {
+        "name": "Kontakt",
+        "description": "Verzeichniskontakt, standardmäßig ohne Zugriff auf die Anwendung"
+      },
+      "itLandscapeAdministrator": {
+        "name": "IT-Landschaft-Administrator",
+        "description": "Volle Kontrolle über die IT-Landschaft, einschließlich der Anwendungen, der Infrastruktur und der Einstellungen"
+      },
+      "itLandscapeMember": {
+        "name": "IT-Landschaft-Mitglied",
+        "description": "Kann Anwendungen und die Infrastruktur verwalten"
+      },
+      "itLandscapeReader": {
+        "name": "IT-Landschaft-Leser",
+        "description": "Schreibgeschützter Zugriff auf die Daten der IT-Landschaft"
+      },
+      "knowledgeAdministrator": {
+        "name": "Wissensdatenbank-Administrator",
+        "description": "Volle Kontrolle über Dokumente, Bibliotheken, Typen und Ordner der Wissensdatenbank"
+      },
+      "knowledgeMember": {
+        "name": "Wissensdatenbank-Mitglied",
+        "description": "Kann Dokumente der Wissensdatenbank erstellen, bearbeiten und verknüpfen"
+      },
+      "knowledgeReader": {
+        "name": "Wissensdatenbank-Leser",
+        "description": "Schreibgeschützter Zugriff auf die Dokumente der Wissensdatenbank"
+      },
+      "masterDataAdministrator": {
+        "name": "Stammdaten-Administrator",
+        "description": "Volle Kontrolle über die Stammdaten, einschließlich der Unternehmen, der Abteilungen, der Lieferanten und der Standorte"
+      },
+      "masterDataMember": {
+        "name": "Stammdaten-Mitglied",
+        "description": "Kann Stammdatensätze verwalten"
+      },
+      "masterDataReader": {
+        "name": "Stammdaten-Leser",
+        "description": "Schreibgeschützter Zugriff auf die Stammdaten"
+      },
+      "portfolioAdministrator": {
+        "name": "Portfolio-Administrator",
+        "description": "Volle Kontrolle über das Portfoliomanagement, einschließlich der Anfragen, der Projekte und der Planung"
+      },
+      "portfolioMember": {
+        "name": "Portfolio-Mitglied",
+        "description": "Kann Portfolioanfragen, Projekte und die Planung verwalten"
+      },
+      "portfolioReader": {
+        "name": "Portfolio-Leser",
+        "description": "Schreibgeschützter Zugriff auf Portfoliodaten"
+      },
+      "tasksAdministrator": {
+        "name": "Aufgaben-Administrator",
+        "description": "Volle Kontrolle über die Aufgabenverwaltung"
+      },
+      "tasksMember": {
+        "name": "Aufgaben-Mitglied",
+        "description": "Kann Aufgaben verwalten und abschließen"
+      },
+      "tasksReader": {
+        "name": "Aufgaben-Leser",
+        "description": "Schreibgeschützter Zugriff auf Aufgaben"
+      }
+    },
     "dialogs": {
       "createTitle": "Neue Rolle",
       "deleteMessage": "Diese Aktion ist endgültig. Sie können nur Rollen ohne zugewiesene Benutzer löschen.",
