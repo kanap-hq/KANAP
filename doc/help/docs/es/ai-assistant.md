@@ -132,6 +132,8 @@ Cuando Plaid prueba un valor de filtro que un campo no admite, por ejemplo «act
 
 Cuando usted pide un cambio que su rol no permite, Plaid nombra el derecho que le falta, por ejemplo «necesita el derecho de modificar los proyectos». Un administrador lo añade a su rol.
 
+Plaid solo hace los cambios que sus pantallas le permiten hacer, en los registros a los que puede llegar desde ellas. Con el derecho de contribuir a los proyectos, puede pedir a Plaid que cambie el propósito de un proyecto y sus vínculos con aplicaciones, activos y líneas presupuestarias. El derecho de contribuir a las solicitudes cubre los mismos vínculos en las solicitudes. Un Business Contributor solo hace estos cambios en los proyectos y solicitudes en los que participa. Vincular un registro requiere el derecho de leer su módulo. Cambiar el nombre de un proyecto o sus demás campos requiere el derecho de modificar los proyectos, como en la página del proyecto.
+
 ### Lo que Plaid no lee { #what-plaid-does-not-read }
 
 Plaid no lee:
