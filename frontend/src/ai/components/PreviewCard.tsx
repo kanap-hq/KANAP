@@ -11,6 +11,7 @@ import { AiMutationPreview } from '../aiTypes';
 import { MarkdownContent } from '../../components/MarkdownContent';
 import { getDotColor } from '../../utils/statusColors';
 import { getPreviewStatusColorKey, getPreviewStatusDisplay } from '../utils/previewStatus';
+import { usePreviewChangeLabels } from './previewChangeLabels';
 
 const LINKED_MARKDOWN_IMAGE_RE = /\[\s*!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)\s*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
 const MARKDOWN_IMAGE_RE = /!\[[^\]]*]\(\s*<?[^)\s>]+>?[\s\S]*?\)/g;
@@ -126,6 +127,7 @@ function PreviewCard({
   const statusDisplay = getPreviewStatusDisplay(preview);
   const statusColorKey = getPreviewStatusColorKey(statusDisplay);
   const statusLabel = t(`ai:previewStatuses.${statusDisplay}`);
+  const { fieldLabel, valueLabel } = usePreviewChangeLabels();
 
   return (
     <Box
@@ -211,7 +213,12 @@ function PreviewCard({
         </Stack>
 
         <Stack spacing={1.25}>
-          {Object.entries(preview.changes).map(([field, diff]) => (
+          {Object.entries(preview.changes).map(([field, change]) => {
+            // A list value reads as on the screens; a markdown text stays as written.
+            const diff = change.format === 'markdown'
+              ? change
+              : { ...change, from: valueLabel(preview, field, change.from), to: valueLabel(preview, field, change.to) };
+            return (
             <Stack key={field} spacing={0.75}>
               <Typography
                 component="div"
@@ -222,7 +229,7 @@ function PreviewCard({
                   letterSpacing: 0.1,
                 })}
               >
-                {diff.label || field}
+                {fieldLabel(preview, field, diff.label)}
               </Typography>
               {diff.format === 'markdown' ? (
                 <Stack spacing={0.75}>
@@ -275,7 +282,8 @@ function PreviewCard({
                 </Stack>
               )}
             </Stack>
-          ))}
+            );
+          })}
         </Stack>
 
         <Typography

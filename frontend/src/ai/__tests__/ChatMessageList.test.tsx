@@ -5,6 +5,14 @@ import { describe, expect, it, vi } from 'vitest';
 import ChatMessageList from '../components/ChatMessageList';
 import { createAppTheme } from '../../config/ThemeContext';
 
+// The card's labels read the catalogs through the real i18n instance, which this file mocks.
+vi.mock('../components/previewChangeLabels', () => ({
+  usePreviewChangeLabels: () => ({
+    fieldLabel: (_preview: unknown, field: string, label?: string | null) => label || field,
+    valueLabel: (_preview: unknown, _field: string, value: string | null) => value,
+  }),
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
