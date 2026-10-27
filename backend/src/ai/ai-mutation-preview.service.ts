@@ -27,6 +27,7 @@ import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/da
 import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
 import { assertLinesEditable } from '../data-access/line-write-checks';
 import { isReservedAiMutation } from './mutation/ai-mutation-reserved';
+import { aiWriteLevel, assertRecordInWriteScope } from './mutation/ai-write-levels';
 import {
   AiWriteLanguage,
   PREVIEW_DATA_BUSY_MESSAGE,
@@ -273,6 +274,59 @@ export class AiMutationPreviewService {
     return operation.resolveBusinessResource?.(params as any) ?? operation.businessResource;
   }
 
+  /** The family a write acts on: the `entity_type` it was asked with, else the preview's target type. */
+  private writeFamily(params: { input?: unknown; preview?: AiMutationPreview }): string {
+    const input = params.input as { entity_type?: unknown } | null | undefined;
+    return String(input?.entity_type ?? params.preview?.target_entity_type ?? params.preview?.mutation_input?.entity_type ?? '').trim();
+  }
+
+  /** The fields a record write changes, with their labels (`mutation_input.fields`), else undefined. */
+  private writtenFields(mutationInput: Record<string, unknown> | null | undefined): Record<string, string> | undefined {
+    const fields = mutationInput?.fields;
+    if (!fields || typeof fields !== 'object' || Array.isArray(fields)) return undefined;
+    const labels = (mutationInput?.field_labels && typeof mutationInput.field_labels === 'object'
+      ? mutationInput.field_labels
+      : {}) as Record<string, unknown>;
+    return Object.fromEntries(Object.keys(fields).map((field) => [field, String(labels[field] || field)]));
+  }
+
+  /**
+   * The rights of a write, as the screen route that makes the same change checks them (lot D11):
+   * the module at that route's level (`aiWriteLevel`) and, once the change is known
+   * (`mutationInput`), the fields a contributor may change and the participation scope of the
+   * record (`targetId`). Called when the preview is asked and again before it runs.
+   */
+  private async assertWriteRights(
+    context: AiExecutionContextWithManager,
+    operation: ReturnType<AiMutationOperationRegistry['getOperation']>,
+    params: { input?: unknown; preview?: AiMutationPreview },
+    change?: { targetEntityType: string | null; targetId: string | null; mutationInput: Record<string, unknown> | null },
+  ): Promise<void> {
+    const family = this.writeFamily(params);
+    const level = aiWriteLevel(operation.toolName, family);
+    const resource = this.getOperationBusinessResource(operation, params as any);
+    if (!change) {
+      await this.policy.assertWriteAccess(context, resource, context.manager, { level });
+      return;
+    }
+    const fields = level === 'member' ? undefined : this.writtenFields(change.mutationInput);
+    await this.policy.assertWriteAccess(context, resource, context.manager, { level, toolName: operation.toolName, family, fields });
+    await assertRecordInWriteScope(context, change.targetEntityType, change.targetId, level);
+  }
+
+  /** The rights of a stored preview, before it runs or is undone. */
+  private assertPreviewWriteRights(
+    context: AiExecutionContextWithManager,
+    operation: ReturnType<AiMutationOperationRegistry['getOperation']>,
+    preview: AiMutationPreview,
+  ): Promise<void> {
+    return this.assertWriteRights(context, operation, { preview }, {
+      targetEntityType: preview.target_entity_type,
+      targetId: preview.target_entity_id,
+      mutationInput: preview.mutation_input,
+    });
+  }
+
   private normalizePlanStepKey(value: string | null | undefined, fallback: string): string {
     const normalized = String(value || '').trim();
     if (!normalized) {
@@ -476,15 +530,16 @@ export class AiMutationPreviewService {
     input: TInput,
   ): Promise<AiMutationPreviewDto> {
     const operation = this.operations.getOperation<TInput>(toolName);
-    await this.policy.assertWriteAccess(
-      context,
-      this.getOperationBusinessResource(operation, { input }),
-      context.manager,
-    );
+    await this.assertWriteRights(context, operation, { input });
     await this.assertNotReservedForPerson(context, operation.toolName, (input as { entity_type?: unknown } | null)?.entity_type);
     await this.assertPendingCapacityAvailable(context, context.conversationId ?? null);
 
     const prepared = await operation.prepareCreatePreview(context, input);
+    await this.assertWriteRights(context, operation, { input }, {
+      targetEntityType: prepared.targetEntityType,
+      targetId: prepared.targetEntityId,
+      mutationInput: prepared.mutationInput,
+    });
     await this.assertTargetLineEditable(context, prepared);
     const existing = await this.findEquivalentConversationPreview(context, operation.toolName, prepared);
     if (existing) {
@@ -1049,11 +1104,7 @@ export class AiMutationPreviewService {
   ): Promise<AiMutationPreviewDto> {
     const preview = await this.lockPreviewForUser(context, previewId);
     const operation = this.operations.getOperation(preview.tool_name);
-    await this.policy.assertWriteAccess(
-      context,
-      this.getOperationBusinessResource(operation, { preview }),
-      context.manager,
-    );
+    await this.assertWriteRights(context, operation, { preview });
     await this.assertNotReservedForPerson(context, preview.tool_name, preview.target_entity_type);
     this.assertConversationScope(preview, context.conversationId ?? null);
 
@@ -1068,6 +1119,7 @@ export class AiMutationPreviewService {
       return this.toPreviewDto(saved, await this.languageOf(context));
     }
 
+    await this.assertPreviewWriteRights(context, operation, preview);
     return this.executePreviewInternal(context, preview);
   }
 
@@ -1109,11 +1161,7 @@ export class AiMutationPreviewService {
     for (const previewId of ids) {
       const preview = await this.lockPreviewForUser(context, previewId);
       const operation = this.operations.getOperation(preview.tool_name);
-      await this.policy.assertWriteAccess(
-        context,
-        this.getOperationBusinessResource(operation, { preview }),
-        context.manager,
-      );
+      await this.assertWriteRights(context, operation, { preview });
       await this.assertNotReservedForPerson(context, preview.tool_name, preview.target_entity_type);
       this.assertConversationScope(preview, context.conversationId ?? null);
 
@@ -1131,6 +1179,7 @@ export class AiMutationPreviewService {
         continue;
       }
 
+      await this.assertPreviewWriteRights(context, operation, preview);
       results.push(await this.executePreviewInternal(context, preview, followUpPreviews));
     }
     return { results, followUpPreviews };
@@ -1143,11 +1192,7 @@ export class AiMutationPreviewService {
     const repo = this.getRepo(context.manager);
     const preview = await this.lockPreviewForUser(context, previewId);
     const operation = this.operations.getOperation(preview.tool_name);
-    await this.policy.assertWriteAccess(
-      context,
-      this.getOperationBusinessResource(operation, { preview }),
-      context.manager,
-    );
+    await this.assertWriteRights(context, operation, { preview });
     this.assertConversationScope(preview, context.conversationId ?? null);
 
     if (preview.status === 'pending') {
@@ -1199,11 +1244,7 @@ export class AiMutationPreviewService {
   ): Promise<AiMutationPreviewDto> {
     const original = await this.getPreviewForUser(context, previewId);
     const operation = this.operations.getOperation(original.tool_name);
-    await this.policy.assertWriteAccess(
-      context,
-      this.getOperationBusinessResource(operation, { preview: original }),
-      context.manager,
-    );
+    await this.assertWriteRights(context, operation, { preview: original });
     await this.assertNotReservedForPerson(context, original.tool_name, original.target_entity_type);
     this.assertConversationScope(original, context.conversationId ?? null);
 
@@ -1217,6 +1258,11 @@ export class AiMutationPreviewService {
     await this.assertPendingCapacityAvailable(context, original.conversation_id ?? null);
 
     const prepared = await operation.prepareReversePreview(context, original);
+    await this.assertWriteRights(context, operation, { preview: original }, {
+      targetEntityType: prepared.targetEntityType,
+      targetId: prepared.targetEntityId,
+      mutationInput: prepared.mutationInput,
+    });
     await this.assertTargetLineEditable(context, prepared);
     const repo = this.getRepo(context.manager);
     const now = new Date();

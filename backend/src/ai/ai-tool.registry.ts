@@ -17,6 +17,8 @@ import { describeAiEntityFilters } from './query/ai-filter-description.util';
 import { resolveAiEntityRegistry } from './query/registries';
 import { budgetColumnsAiContext, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
+import { aiWriteRequirements } from './mutation/ai-write-levels';
+import { PermissionLevel } from '../permissions/permissions.service';
 import { AiSettings } from './ai-settings.entity';
 import { AiAdapterConfig } from './control-plane/providers/adapter-config.entity';
 import { parseCredentialRef } from './control-plane/providers/adapter-config.service';
@@ -839,24 +841,32 @@ export class AiToolRegistry {
         ? operation.businessResources
         : [operation.businessResource];
 
-    const writeAccessByResource = new Map<string, boolean>();
-    for (const operation of this.mutationOperations.listOperations()) {
-      for (const resource of operationResources(operation)) {
-        if (writeAccessByResource.has(resource)) {
-          continue;
-        }
+    // A tool is offered when the person holds one of its modules at the level of the screen route
+    // that makes the same change (`member`, or `contributor` where the screen opens it, lot D11).
+    const writeAccessByRequirement = new Map<string, boolean>();
+    const canWrite = async (requirement: { resource: string; level: PermissionLevel }): Promise<boolean> => {
+      const key = `${requirement.resource}:${requirement.level}`;
+      if (!writeAccessByRequirement.has(key)) {
         try {
-          await this.policy.assertWriteAccess(context, resource, context.manager);
-          writeAccessByResource.set(resource, true);
+          await this.policy.assertWriteAccess(context, requirement.resource, context.manager, { level: requirement.level });
+          writeAccessByRequirement.set(key, true);
         } catch {
-          writeAccessByResource.set(resource, false);
+          writeAccessByRequirement.set(key, false);
         }
       }
-    }
+      return writeAccessByRequirement.get(key) === true;
+    };
 
     const writableMutationToolNames = new Set<AiToolName>();
     for (const operation of this.mutationOperations.listOperations()) {
-      if (!operationResources(operation).some((resource) => writeAccessByResource.get(resource) === true)) {
+      let writable = false;
+      for (const requirement of aiWriteRequirements(operation.toolName, operationResources(operation))) {
+        if (await canWrite(requirement)) {
+          writable = true;
+          break;
+        }
+      }
+      if (!writable) {
         continue;
       }
       if (!await this.isMutationOperationConfigured(operation.toolName, settings, context)) {

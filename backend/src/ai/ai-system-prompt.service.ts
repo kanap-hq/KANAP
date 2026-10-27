@@ -32,7 +32,7 @@ type SystemPromptParams = {
   /** The user's IANA zone. Absent or unknown reads as UTC. */
   timeZone?: string | null;
   /** What the person may change through Plaid, for the refusals (`AiPolicyService.describeWriteRights`). */
-  writeRights?: { plaidChanges: boolean; modifiableModules: string[] };
+  writeRights?: { plaidChanges: boolean; modifiableModules: string[]; contributableModules?: string[] };
 };
 
 type PromptSection = {
@@ -189,6 +189,9 @@ function writeRightsText(writeRights: SystemPromptParams['writeRights']): string
     lines.push(writeRights.modifiableModules.length
       ? `- Modules they may modify: ${writeRights.modifiableModules.join(', ')}.`
       : '- Their role lets them modify no module.');
+    if (writeRights.contributableModules?.length) {
+      lines.push(`- Modules they may contribute to, as on the screen: ${writeRights.contributableModules.join('; ')}.`);
+    }
   }
   lines.push(
     '- When a change is refused or cannot be made, say in plain words, in the user\'s language, which right is missing, for example "you need the right to modify projects" or "your role lets you ask Plaid questions but not prepare changes". '

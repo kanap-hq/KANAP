@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { validate as isUuid } from 'uuid';
 import { normalizeMarkdownRichText } from '../../../common/markdown-worker';
 import { AiPolicyService } from '../../ai-policy.service';
+import { assertRecordInWriteScope } from '../ai-write-levels';
 import { AiMutationPreview } from '../../ai-mutation-preview.entity';
 import { AiExecutionContextWithManager } from '../../ai.types';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
@@ -237,6 +238,8 @@ export class CreateTaskAiMutationOperation implements AiMutationOperation<Create
   ): Promise<void> {
     if (relation.mode === 'project') {
       await this.policy.assertBusinessPermission(context, 'portfolio_projects', 'contributor', context.manager);
+      // The project in the scope of the screen route that adds a task to it (contributor, lot D11).
+      await assertRecordInWriteScope(context, 'projects', relation.id, 'contributor');
     }
   }
 

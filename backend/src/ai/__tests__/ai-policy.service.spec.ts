@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { AiPolicyService, missingRightMessage } from '../ai-policy.service';
+import { AiPolicyService, contributorFieldsMessage, missingRightMessage } from '../ai-policy.service';
 import { Features } from '../../config/features';
 import { Tenant, TenantStatus } from '../../tenants/tenant.entity';
 import { UserRole } from '../../users/user-role.entity';
@@ -671,7 +671,59 @@ async function testMissingRightIsSaidInPlainWords() {
   }
 }
 
+/**
+ * Lot D11: a write needs the module at the level of the screen route (`contributor` for a
+ * project's fields and relations); a contributor changes only the fields the screen opens to them.
+ */
+async function testContributorWritesAtTheScreenLevel() {
+  const originalFeature = Features.AI_CHAT_ENABLED;
+  Features.AI_CHAT_ENABLED = true;
+  const chat = { tenantId: 'tenant-1', userId: 'user-1', isPlatformHost: false, surface: 'chat' as const, authMethod: 'jwt' as const };
+  const projectFields = { level: 'contributor' as const, toolName: 'update_business_record', family: 'projects' };
+  const contributor = createPolicy({ permissions: new Map([['ai_chat', 'member'], ['portfolio_projects', 'contributor']]) });
+
+  await contributor.assertWriteAccess(chat, 'portfolio_projects', createManager(), { level: 'contributor' });
+  await contributor.assertWriteAccess(chat, 'portfolio_projects', createManager(), { ...projectFields, fields: { purpose: 'Purpose' } });
+  // Counter-checks: the name is not opened to a contributor; a member write stays at member.
+  await assert.rejects(
+    () => contributor.assertWriteAccess(chat, 'portfolio_projects', createManager(), { ...projectFields, fields: { name: 'Name', purpose: 'Purpose' } }),
+    (error: any) => error.message === contributorFieldsMessage('portfolio_projects', ['Name']),
+  );
+  await assert.rejects(
+    () => contributor.assertWriteAccess(chat, 'portfolio_projects', createManager()),
+    (error: any) => error.message === missingRightMessage('portfolio_projects', 'member'),
+  );
+  assert.equal(
+    contributorFieldsMessage('portfolio_projects', ['Name']),
+    'Your role lets you contribute to projects but not change Name: that needs the right to modify projects, which your role does not give. An administrator can add it to your role.',
+  );
+
+  // A member changes every field; a reader is refused, with the right they miss.
+  const member = createPolicy({ permissions: new Map([['ai_chat', 'member'], ['portfolio_projects', 'member']]) });
+  await member.assertWriteAccess(chat, 'portfolio_projects', createManager(), { ...projectFields, fields: { name: 'Name' } });
+  const reader = createPolicy({ permissions: new Map([['ai_chat', 'member'], ['portfolio_projects', 'reader']]) });
+  await assert.rejects(
+    () => reader.assertWriteAccess(chat, 'portfolio_projects', createManager(), { level: 'contributor' }),
+    (error: any) => error.message === missingRightMessage('portfolio_projects', 'contributor'),
+  );
+  // MCP stays read only.
+  await assert.rejects(
+    () => member.assertWriteAccess({ ...chat, surface: 'mcp' }, 'portfolio_projects', createManager(), { level: 'contributor' }),
+    /MCP write access is not available/,
+  );
+
+  // The rights the refusals name: a contributor contributes to projects, modifies no module.
+  const rights = await contributor.describeWriteRights(chat, createManager());
+  assert.deepEqual(rights.modifiableModules, []);
+  assert.equal(rights.contributableModules.length, 1);
+  assert.match(rights.contributableModules[0], /^projects they take part in/);
+  assert.deepEqual((await member.describeWriteRights(chat, createManager())).contributableModules, []);
+
+  Features.AI_CHAT_ENABLED = originalFeature;
+}
+
 async function run() {
+  await testContributorWritesAtTheScreenLevel();
   await testMissingRightIsSaidInPlainWords();
   await testListReadableEntityTypesFiltersUnreadableFamilies();
   await testSettingsAccessRequiresAiSettingsAdmin();
