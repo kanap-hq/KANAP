@@ -22,6 +22,25 @@ export function parseApiWorkers(raw: string | undefined): number {
   return Math.min(value, MAX_API_WORKERS);
 }
 
+/**
+ * Warning when `API_WORKERS` is set to a value `parseApiWorkers` does not use as written.
+ * Unset or blank stays 1 with no warning: that is the default.
+ */
+export function apiWorkersConfigWarning(raw: string | undefined): string | null {
+  if (raw === undefined || String(raw).trim() === '') return null;
+  const text = String(raw).trim();
+  const used = parseApiWorkers(text);
+  const shown = JSON.stringify(text);
+  if (/^\d+$/.test(text)) {
+    const requested = Number(text);
+    if (requested === used) return null;
+    if (requested > MAX_API_WORKERS && used === MAX_API_WORKERS) {
+      return `[CONFIG] API_WORKERS is ${shown}: it is above ${MAX_API_WORKERS}, so the API runs as ${MAX_API_WORKERS} processes. Set API_WORKERS to a whole number from 1 to ${MAX_API_WORKERS}.`;
+    }
+  }
+  return `[CONFIG] API_WORKERS is ${shown}: it is not a whole number from 1 to ${MAX_API_WORKERS}, so the API runs as 1 process. Set API_WORKERS to a whole number from 1 to ${MAX_API_WORKERS}.`;
+}
+
 /** 1-based id of this worker, or null when the API runs as a single process. */
 export function clusterWorkerId(env: NodeJS.ProcessEnv = process.env): number | null {
   const id = Number(env.KANAP_WORKER_ID);

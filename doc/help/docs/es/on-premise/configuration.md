@@ -244,7 +244,7 @@ Si un rol de aplicación dedicado se creó inicialmente con demasiados privilegi
 
 **Requisitos del bucket:**
 
-- Cree el bucket antes de arrancar KANAP (no se crea automáticamente). KANAP no lo comprueba al arrancar: un bucket que falta se manifiesta en la primera subida o descarga.
+- Cree el bucket antes de arrancar KANAP (no se crea automáticamente). Un `S3_BUCKET` ausente se nombra en una advertencia `[CONFIG]` al arrancar. Un bucket que no existe en el almacenamiento se manifiesta en la primera subida o descarga.
 - KANAP llama a `PutObject`, `GetObject`, `HeadObject`, `DeleteObject` y `ListObjectsV2`, y construye enlaces `GET` prefirmados, todo en ese único bucket. Los permisos correspondientes son `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` y `s3:ListBucket`.
 
 **Cifrado en reposo.** KANAP pide al almacenamiento que cifre cada subida (cifrado del lado del servidor `AES256`). Un almacenamiento que no lo admite hace que la API escriba la advertencia `PutObject fallback used: provider rejected explicit SSE header; upload retried without SSE request header` y guarde el archivo tal como se envió. RustFS acepta la solicitud cuando `RUSTFS_SSE_S3_MASTER_KEY` está definido, como hace el [ejemplo de instalación](installation-example.md#5-almacenamiento-de-objetos-rustfs). Guarde esa clave con la copia de seguridad de la configuración: los archivos cifrados con ella no pueden leerse sin ella.
@@ -494,9 +494,9 @@ Notas:
 |----------|-------------|---------|
 | `RATE_LIMIT_TRUST_PROXY` | Cómo obtiene KANAP la dirección del cliente para sus límites de inicio de sesión y de solicitudes. `true`: un proxy inverso está delante de la API y envía `X-Forwarded-For` (el nginx de esta guía). `false`: no hay nada delante, se usa la dirección de la conexión. `1` a `3`: ese número de proxies en cadena. | Sin definir en single-tenant equivale a un proxy de confianza, con una advertencia `[RATE-LIMIT]` en cada arranque. Defínalo explícitamente. |
 | `RATE_LIMIT_ENABLED` | Activa o desactiva la limitación de solicitudes de la aplicación | `true` |
-| `JWT_ACCESS_TOKEN_TTL` | Duración del token de acceso: un número seguido de `s`, `m`, `h` o `d`. Cualquier otro formato equivale a 15 minutos. | `15m` |
-| `JWT_REFRESH_TOKEN_TTL` | Duración del token de renovación, mismo formato. Cualquier otro formato equivale a 15 minutos. | `4h` |
-| `PASSWORD_RESET_TTL` | Duración de un enlace de restablecimiento de contraseña: un número de segundos o una duración como `30m` o `2h`. | `1h` |
+| `JWT_ACCESS_TOKEN_TTL` | Duración del token de acceso: un número seguido de `s`, `m`, `h` o `d`. Cualquier otro formato equivale a 15 minutos, y la API nombra el valor en una advertencia `[CONFIG]` al arrancar. | `15m` |
+| `JWT_REFRESH_TOKEN_TTL` | Duración del token de renovación, mismo formato. Cualquier otro formato equivale a 15 minutos, y la API nombra el valor en una advertencia `[CONFIG]` al arrancar. | `4h` |
+| `PASSWORD_RESET_TTL` | Duración de un enlace de restablecimiento de contraseña: un número de segundos o una duración como `30m` o `2h`. Cualquier otro valor dura 1 hora, y la API lo nombra en una advertencia `[CONFIG]` al arrancar. | `1h` |
 | `LOG_LEVEL` | `debug` o `verbose` añade al registro los detalles de cada ejecución de trabajo programado. Cualquier otro valor no cambia nada. | *sin definir* |
 | `INTEGRATED_DOCS_AUTO_ROLLOUT` | Repara, al arrancar, los documentos vinculados a solicitudes y proyectos. Desactivado on-premise salvo que lo defina: `if-needed` solo ejecuta la reparación cuando los recuentos difieren, `always` en cada arranque. | *desactivado* |
 | `APP_URL` | Solo multi-tenant (nube). **No se necesita on-premise**: se usa `APP_BASE_URL`. | *sin definir* |
@@ -510,7 +510,7 @@ Los valores predeterminados sirven para unas pocas decenas de usuarios. Para má
 
 | Variable | Descripción | Valor predeterminado |
 |----------|-------------|---------|
-| `API_WORKERS` | Número de procesos de API en el contenedor de la API (de 1 a 16). Con más de uno, una solicitud que hace cálculos ya no hace esperar a los demás. | `1` |
+| `API_WORKERS` | Número de procesos de API en el contenedor de la API (de 1 a 16). Un valor que no es un número entero ejecuta 1 proceso. Un valor superior a 16 ejecuta 16. La API nombra ese valor en una advertencia `[CONFIG]` al arrancar. Con más de uno, una solicitud que hace cálculos ya no hace esperar a los demás. | `1` |
 | `DB_POOL_MAX` | Conexiones a la base de datos por proceso de API (2 como mínimo: un valor inferior se eleva a 2) | `20` |
 | `SHUTDOWN_DRAIN_TIMEOUT_MS` | Al detener o actualizar, el tiempo que la API deja para terminar las solicitudes en curso, las notificaciones que iniciaron, los trabajos en segundo plano en ejecución y los correos en cola (milisegundos, 120000 como máximo). El contenedor se detiene a los 30 s en cualquier caso. | `20000` |
 | `OPS_METRICS_TOKEN` | Activa `GET /api/ops/metrics` para su herramienta de monitorización (24 caracteres o más, por ejemplo `openssl rand -hex 32`; un valor más corto la deja desactivada y la API lo indica al arrancar). Consulte [Operaciones](operations.md#metricas-de-la-api-para-una-herramienta-de-monitorizacion). | *sin definir (desactivado)* |
