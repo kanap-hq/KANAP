@@ -134,7 +134,6 @@ export function adaptFilters(
     let adapted: any = null;
     if (field.type === 'set' && isExcludeSetValue(rawValue)) {
       // `{ not: [...] }`: every value but these. Only lists that know the exclude mode take it.
-      // A value outside the field's declared values matches no line: leaving it out excludes the same lines.
       const values = rawValue.not.filter((value) => value === null || typeof value === 'string');
       const allowed = Array.isArray(field.values) ? new Set(field.values) : null;
       if (rejectUnknownValues(fieldName, values, allowed)) continue;

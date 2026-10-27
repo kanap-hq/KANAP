@@ -1418,7 +1418,9 @@ export class AiQueryExecutor {
         without_amount: Number(row.without_amount),
       })),
       note: `The yearly amounts of the ${records} contracts the filters keep (every page, not only the items returned), summed per contract currency by the server. `
-        + 'Amounts in different currencies do not add up. A total in the answer is quoted from here (or from aggregate_entities), never added up from the items.',
+        + 'Amounts in different currencies do not add up. A total in the answer is quoted from here (or from aggregate_entities), never added up from the items.'
+        // The ids stop at 10,000 (`listIds`): a larger selection is summed in part, said so.
+        + ((ids?.length ?? 0) < records ? ` Only ${ids?.length ?? 0} of the ${records} contracts are summed: say that the total is partial.` : ''),
     };
   }
 

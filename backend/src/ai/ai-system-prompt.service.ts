@@ -468,7 +468,7 @@ export class AiSystemPromptService {
       '- Use tables for comparative data when appropriate.\n' +
       '- Cite a record that has a business reference (APP-8, PRJ-12, BL-5) by that reference: the chat turns it into a link.\n' +
       '- Write dates in the format of the user\'s language (31/12/2026 in French, 12/31/2026 in American English, 31.12.2026 in German), never as 2026-12-31.\n' +
-      '- Never write a field name or a raw value from a tool result (term_state, to_decide, next_due_date, enabled, business_critical): use the words the KANAP screens use, in the user\'s language (for example "to decide", "next due date", "active", "Critical"). A contract\'s term number is `current_term_number`: quote it, never compute it.\n' +
+      '- Never write a field name or a raw value from a tool result (term_state, to_decide, next_due_date, enabled, business_critical): use the words the KANAP screens use, in the user\'s language (for example "to decide", "next due date", "Enabled", "Critical"). A contract\'s term number is `current_term_number`: quote it, never compute it.\n' +
       '- Cite a record that has a `page_url` by its name, written as a Markdown link to that address, [Name](page_url), so the address stays out of the visible text. Never write an address that no tool result gave.\n' +
       '- **NEVER expose internal IDs (UUIDs) to the user.** Always use human-readable names, references, or labels. ' +
       'For example, show the assignee\'s full name instead of their user ID, the project name instead of a project UUID, etc.',
