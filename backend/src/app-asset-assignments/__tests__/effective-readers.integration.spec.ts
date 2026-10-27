@@ -21,6 +21,9 @@ import { TechnologyReachService } from '../../technologies/technology-reach.serv
 import { Tenant } from '../../tenants/tenant.entity';
 import { applicationCountsSql, applicationLinksSql } from '../../vulnerabilities/vulnerability-reach-counts';
 
+/** Reads the applications and the assets: the reasons name them all. */
+const READS_ALL = { applications: true, infrastructure: true };
+
 // Clusters pass, lot B2: the reports and the last reads take the effective assignments
 // (`effectiveAssignmentsSql`). An application assigned to a cluster takes from its members what it
 // would take if they were assigned directly. One tenant: ERP on a cluster without a site, two
@@ -201,13 +204,13 @@ async function testContracts(runner: QueryRunner, s: Seed) {
     [s.tenantId, name, company, supplier]);
   const onMember = await contract('Member support');
   await runner.query(`INSERT INTO asset_contracts (tenant_id, asset_id, contract_id) VALUES ($1, $2, $3)`, [s.tenantId, s.m1, onMember]);
-  const view = await svc.compliance(onMember, { manager: runner.manager });
+  const view = await svc.compliance(onMember, READS_ALL, { manager: runner.manager });
   const exit = view.requirements.find((item) => item.requirement === 'exit_plan')!;
-  assert.deepEqual(exit.reasons.map((r) => [r.rule, r.application.name, r.asset?.name]), [['business_criticality', 'ERP b2', 'M1 b2']],
+  assert.deepEqual(exit.reasons.map((r) => [r.rule, r.application?.name, r.asset?.name]), [['business_criticality', 'ERP b2', 'M1 b2']],
     'a contract on a member covers the application on its cluster');
   const ofErp = await contract('ERP licence');
   await runner.query(`INSERT INTO application_contracts (tenant_id, application_id, contract_id) VALUES ($1, $2, $3)`, [s.tenantId, s.erp, ofErp]);
-  const location = (await svc.compliance(ofErp, { manager: runner.manager })).requirements.find((item) => item.requirement === 'data_location')!;
+  const location = (await svc.compliance(ofErp, READS_ALL, { manager: runner.manager })).requirements.find((item) => item.requirement === 'data_location')!;
   assert.deepEqual(location.reasons.map((r) => [r.rule, r.level?.code]), [['cloud_hosting', 'saas']], 'the cloud hosting of the members');
 }
 

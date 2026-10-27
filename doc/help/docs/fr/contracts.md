@@ -199,7 +199,7 @@ L'onglet liste les clauses qu'un contrat doit contenir, compte tenu des applicat
 - Une criticité métier ou cyber élevée rend attendus la clause de réversibilité, le plan de sortie et le droit d'audit. Élevée signifie les deux niveaux les plus sévères de votre catalogue (le plus sévère seul quand le catalogue a moins de trois niveaux)
 - Une instance hébergée dans le cloud rend attendue la localisation des données. La catégorie du type d'hébergement, dans **Cartographie SI > Paramètres**, décide de ce qui compte comme cloud
 
-La colonne **Attendue car** donne la première raison, par exemple « SAP S/4HANA contient des données personnelles », puis « et n autres ». Survolez-la pour toutes les lire. Une raison qui passe par un actif le nomme.
+La colonne **Attendue car** donne la première raison, par exemple « SAP S/4HANA contient des données personnelles », puis « et n autres ». Survolez-la pour toutes les lire. Une raison qui passe par un actif le nomme si vous pouvez lire l'infrastructure. Une application que vous ne pouvez pas lire (ou, pour un Contributeur métier, une application à laquelle vous ne participez pas) s'affiche « Une application que vous ne voyez pas » : l'exigence reste attendue.
 
 **Saisie** : choisissez un état pour chaque exigence : **Présente**, **Absente** ou **Sans objet**. Il s'enregistre aussitôt. Une exigence attendue sans état indique **À vérifier**. Saisissez une **Référence** (par exemple « article 18.3 ») ; elle s'enregistre quand vous quittez le champ ou appuyez sur Entrée. Survolez une ligne pour voir la date de la dernière mise à jour et son auteur.
 

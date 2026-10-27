@@ -193,6 +193,8 @@ It brings together four distinct elements:
 
 Link the business processes touched by the request. This changes the meaning of the request in portfolio terms: a request affecting core operational processes should not be evaluated the same way as a local convenience improvement.
 
+Changing them needs `portfolio_requests:member` and `business_processes:member`.
+
 ### Feasibility Review
 
 The feasibility review is a structured assessment across seven dimensions:

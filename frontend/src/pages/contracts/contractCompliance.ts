@@ -20,7 +20,8 @@ export type ComplianceSummary = { expected: number; missing: number; to_check: n
 
 export type ComplianceReason = {
   rule: 'personal_data' | 'business_criticality' | 'cyber_criticality' | 'cloud_hosting';
-  application: { id: string; name: string };
+  /** Null for an application the person cannot read: the reason names nothing. */
+  application: { id: string; name: string } | null;
   asset: { id: string; name: string } | null;
   level: { axis: 'businessCriticalityLevels' | 'cyberCriticalityLevels' | 'hostingTypes'; code: string; label: string; translations?: CatalogTranslations } | null;
 };
@@ -44,6 +45,7 @@ export const COMPLIANCE_REFERENCE_MAX = 500;
 
 /** A reason in words: the level or hosting type in the user's language (tenant translation, shipped default, name). */
 export function complianceReasonText(t: TFunction, reason: ComplianceReason, locale: CatalogLocale): string {
+  if (!reason.application) return t('contracts.compliance.reasons.hiddenApplication');
   const level = reason.level
     ? localizeCatalogItem(reason.level, locale, classificationDefaults(reason.level.axis)).label
     : '';

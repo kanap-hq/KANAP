@@ -193,6 +193,8 @@ Elle rassemble quatre éléments distincts :
 
 Liez les processus métier touchés par la demande. Cela change la signification de la demande en termes de portefeuille : une demande affectant des processus opérationnels de base ne devrait pas être évaluée de la même manière qu'une amélioration de confort local.
 
+Les modifier demande `portfolio_requests:member` et `business_processes:member`.
+
 ### Revue de faisabilité
 
 La revue de faisabilité est une évaluation structurée sur sept dimensions :

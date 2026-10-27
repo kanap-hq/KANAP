@@ -199,7 +199,7 @@ La pestaña enumera las cláusulas que se espera que contenga un contrato, segú
 - Una criticidad de negocio o cibernética alta hace esperar la cláusula de reversibilidad, el plan de salida y el derecho de auditoría. Alta significa los dos niveles más severos de su catálogo (solo el más severo cuando el catálogo tiene menos de tres niveles)
 - Una instancia alojada en la nube hace esperar la ubicación de los datos. La categoría del tipo de alojamiento en **Panorama IT > Configuración** decide qué cuenta como nube
 
-La columna **Esperado porque** da el primer motivo, por ejemplo «SAP S/4HANA contiene datos personales», y luego «y n más». Pase el ratón por encima para leerlos todos. Un motivo que procede de un activo lo nombra.
+La columna **Esperado porque** da el primer motivo, por ejemplo «SAP S/4HANA contiene datos personales», y luego «y n más». Pase el ratón por encima para leerlos todos. Un motivo que procede de un activo lo nombra si puede leer la infraestructura. Una aplicación que no puede leer (o, para un Colaborador de negocio, una en la que no participa) aparece como «Una aplicación que no puede ver»: el requisito sigue siendo esperado.
 
 **Registro**: elija un estado para cada requisito: **Presente**, **Ausente** o **No aplica**. Se guarda al instante. Un requisito esperado sin estado indica **Por verificar**. Escriba una **Referencia** (por ejemplo «artículo 18.3»); se guarda al salir del campo o al pulsar Intro. Pase el ratón sobre una fila para ver cuándo y quién la actualizó por última vez.
 
