@@ -111,9 +111,9 @@ Les deux modes partagent le reste :
 - Une limite de 60 requêtes MCP par minute pour chaque clé et chaque connexion. Au-delà, les requêtes sont refusées avec un en-tête `Retry-After` qui indique le nombre de secondes à attendre.
 - Le même [journal MCP](#mcp-journal).
 
-La carte **Clés et connexions MCP** présente un bouton **Créer une clé**, l'**Adresse du serveur** à laquelle les clients se connectent (avec un bouton de copie), le plafond **Durée de vie maximale de la clé (jours)** et un tableau avec **Libellé**, **Type**, **Préfixe**, **Créé**, **Expire**, **Dernière utilisation** et **Statut** (**Active** ou **Révoquée**).
+La carte **Clés et connexions MCP** présente un bouton **Créer une clé**, l'**Adresse du serveur** à laquelle les clients se connectent (avec un bouton de copie), le plafond **Durée de vie maximale de la clé (jours)** et un tableau avec **Libellé**, **Type**, **Personne**, **Préfixe**, **Créé**, **Expire**, **Dernière utilisation** et **Statut** (**Active** ou **Révoquée**).
 
-La colonne **Type** indique **Clé API** ou **Connexion**. Une ligne de connexion affiche le nom de l'application et l'hôte vers lequel elle revient, par exemple *Claude · claude.ai*. Les connexions n'ont pas de préfixe.
+La colonne **Type** indique **Clé API** ou **Connexion**. Une ligne de connexion affiche le nom de l'application et l'hôte vers lequel elle revient, par exemple *Claude · claude.ai*. Les connexions n'ont pas de préfixe. **Personne** nomme qui a créé la clé ou approuvé la connexion.
 
 ### Créer une clé
 

@@ -261,4 +261,6 @@ export type AiApiKeyRecord = {
   /** Chosen by the client itself: shown as text, next to the host it returns to. */
   oauth_client_name?: string | null;
   oauth_redirect_host?: string | null;
+  /** The owner's name, in the administration list only. */
+  user_name?: string | null;
 };

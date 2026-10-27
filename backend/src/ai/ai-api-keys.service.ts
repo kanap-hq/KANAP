@@ -228,12 +228,23 @@ export class AiApiKeysService {
     return items.map((item) => this.toView(item));
   }
 
+  /** Every key and connection of the workspace, each with the name of the person who owns it. */
   async listForTenant(tenantId: string, opts?: { manager?: EntityManager }) {
     const items = await this.getRepo(opts?.manager).find({
       where: { tenant_id: tenantId },
       order: { created_at: 'DESC' },
     });
-    return items.map((item) => this.toView(item));
+    const ownerIds = Array.from(new Set(items.map((item) => item.user_id)));
+    const owners: Array<{ id: string; name: string | null }> = ownerIds.length === 0
+      ? []
+      : await (opts?.manager ?? this.repo.manager).query(
+        `SELECT id, NULLIF(TRIM(CONCAT_WS(' ', first_name, last_name)), '') AS name
+         FROM users
+         WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [tenantId, ownerIds],
+      );
+    const names = new Map(owners.map((owner) => [owner.id, owner.name]));
+    return items.map((item) => ({ ...this.toView(item), user_name: names.get(item.user_id) ?? null }));
   }
 
   async findById(id: string, opts?: { manager?: EntityManager }) {

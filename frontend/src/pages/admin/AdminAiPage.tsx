@@ -746,6 +746,7 @@ export default function AdminAiPage() {
                         <TableRow>
                           <TableCell>{t('aiAdmin.keys.columns.label')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.kind')}</TableCell>
+                          <TableCell>{t('aiAdmin.keys.columns.person')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.prefix')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.created')}</TableCell>
                           <TableCell>{t('aiAdmin.keys.columns.expires')}</TableCell>
@@ -766,18 +767,24 @@ export default function AdminAiPage() {
                                   ) : null}
                                 </TableCell>
                                 <TableCell>{t('aiAdmin.keys.kinds.oauth')}</TableCell>
+                                <TableCell>{key.user_name ?? ''}</TableCell>
                                 <TableCell />
                               </>
                             ) : (
                               <>
                                 <TableCell>{key.label}</TableCell>
                                 <TableCell>{t('aiAdmin.keys.kinds.apiKey')}</TableCell>
+                                <TableCell>{key.user_name ?? ''}</TableCell>
                                 <TableCell><code>{key.key_prefix}</code></TableCell>
                               </>
                             )}
-                            <TableCell>{new Date(key.created_at).toLocaleDateString(locale)}</TableCell>
-                            <TableCell>{key.expires_at ? new Date(key.expires_at).toLocaleDateString(locale) : t('aiAdmin.shared.never')}</TableCell>
-                            <TableCell>{key.last_used_at ? new Date(key.last_used_at).toLocaleString(locale) : t('aiAdmin.shared.never')}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>{new Date(key.created_at).toLocaleDateString(locale)}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>{key.expires_at ? new Date(key.expires_at).toLocaleDateString(locale) : t('aiAdmin.shared.never')}</TableCell>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                              {key.last_used_at
+                                ? new Date(key.last_used_at).toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short' })
+                                : t('aiAdmin.shared.never')}
+                            </TableCell>
                             <TableCell>
                               {key.revoked_at ? (
                                 <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>

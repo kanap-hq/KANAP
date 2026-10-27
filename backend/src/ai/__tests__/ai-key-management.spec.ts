@@ -29,7 +29,16 @@ function createService(options?: {
   };
 
   return new AiApiKeysService(
-    { manager: { getRepository: () => repoImpl } } as any,
+    {
+      manager: {
+        getRepository: () => repoImpl,
+        // The owners' names of the administration list.
+        async query(_sql: string, params: any[]) {
+          const owners: Record<string, string> = { 'user-1': 'Ada Lovelace', 'user-2': 'Alan Turing' };
+          return (params[1] as string[]).filter((id) => owners[id]).map((id) => ({ id, name: owners[id] }));
+        },
+      },
+    } as any,
     {
       findById: async () => ({
         id: 'user-1',
@@ -169,6 +178,11 @@ async function testListForTenant() {
 
   const items = await service.listForTenant('tenant-1');
   assert.equal(items.length, 2, 'Should list all tenant keys');
+  assert.deepEqual(
+    items.map((item) => item.user_name).sort(),
+    ['Ada Lovelace', 'Alan Turing'],
+    'Each key names the person who owns it',
+  );
 }
 
 async function run() {

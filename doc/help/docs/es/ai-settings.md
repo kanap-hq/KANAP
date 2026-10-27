@@ -111,9 +111,9 @@ Las dos formas comparten el resto:
 - Un límite de 60 solicitudes MCP por minuto para cada clave y cada conexión. Por encima, las solicitudes se rechazan con un encabezado `Retry-After` que indica el número de segundos que hay que esperar.
 - El mismo [registro MCP](#mcp-journal).
 
-La tarjeta **Claves y conexiones MCP** muestra un botón **Crear clave**, la **Dirección del servidor** a la que se conectan los clientes (con un botón para copiarla), el límite de **Vida útil máxima de la clave (días)** y una tabla con **Etiqueta**, **Tipo**, **Prefijo**, **Creada**, **Expira**, **Último uso** y **Estado** (**Activa** o **Revocada**).
+La tarjeta **Claves y conexiones MCP** muestra un botón **Crear clave**, la **Dirección del servidor** a la que se conectan los clientes (con un botón para copiarla), el límite de **Vida útil máxima de la clave (días)** y una tabla con **Etiqueta**, **Tipo**, **Persona**, **Prefijo**, **Creada**, **Expira**, **Último uso** y **Estado** (**Activa** o **Revocada**).
 
-La columna **Tipo** indica **Clave API** o **Conexión**. Una fila de conexión muestra el nombre de la aplicación y el host al que vuelve, por ejemplo *Claude · claude.ai*. Las conexiones no tienen prefijo.
+La columna **Tipo** indica **Clave API** o **Conexión**. Una fila de conexión muestra el nombre de la aplicación y el host al que vuelve, por ejemplo *Claude · claude.ai*. Las conexiones no tienen prefijo. **Persona** indica quién creó la clave o aprobó la conexión.
 
 ### Crear una clave
 

@@ -64,6 +64,7 @@
         "expires": "Läuft ab",
         "label": "Bezeichnung",
         "lastUsed": "Zuletzt verwendet",
+        "person": "Person",
         "prefix": "Präfix",
         "status": "Status",
         "kind": "Typ"

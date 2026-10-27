@@ -184,12 +184,16 @@ describe('AdminAiPage', () => {
       },
       {
         id: 'k2', label: 'Claude', key_prefix: 'efgh5678', credential_kind: 'oauth', oauth_client_name: 'Claude',
-        oauth_redirect_host: 'claude.ai', created_at: '2026-10-14T10:00:00.000Z', expires_at: null, last_used_at: null, revoked_at: null,
+        oauth_redirect_host: 'claude.ai', created_at: '2026-10-14T10:00:00.000Z', expires_at: null,
+        last_used_at: '2026-10-27T09:37:00.000Z', revoked_at: null, user_name: 'Sophie Laurent',
       },
     ];
     renderPage();
 
     expect(await screen.findByText('API key')).toBeInTheDocument();
+    // A connection names the person who approved it.
+    expect(screen.getByRole('columnheader', { name: 'Person' })).toBeInTheDocument();
+    expect(screen.getByText('Sophie Laurent')).toBeInTheDocument();
     expect(screen.getByText('Connection')).toBeInTheDocument();
     expect(screen.getByText('· claude.ai')).toBeInTheDocument();
     expect(screen.getByText('abcd1234')).toBeInTheDocument();
