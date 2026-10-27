@@ -417,9 +417,15 @@ class PartParser {
   }
 
   private scan(data: Buffer): void {
-    const window = this.scanTail ? Buffer.concat([this.scanTail, data]) : data;
-    if (window.indexOf(DOCTYPE) >= 0 || window.indexOf(ENTITY) >= 0) throw new XlsxReadError('XLSX_DOCTYPE', DOCTYPE_MESSAGE);
-    this.scanTail = window.length <= 8 ? Buffer.from(window) : Buffer.from(window.subarray(window.length - 8));
+    if (data.indexOf(DOCTYPE) >= 0 || data.indexOf(ENTITY) >= 0) throw new XlsxReadError('XLSX_DOCTYPE', DOCTYPE_MESSAGE);
+    // A token split between two chunks lies in the last bytes of one and the first bytes of the next:
+    // scanning that join (at most 16 bytes) is enough, and the chunk itself is never copied.
+    if (this.scanTail) {
+      const join = Buffer.concat([this.scanTail, data.subarray(0, Math.min(data.length, 8))]);
+      if (join.indexOf(DOCTYPE) >= 0 || join.indexOf(ENTITY) >= 0) throw new XlsxReadError('XLSX_DOCTYPE', DOCTYPE_MESSAGE);
+    }
+    if (data.length >= 8) this.scanTail = Buffer.from(data.subarray(data.length - 8));
+    else this.scanTail = Buffer.from(Buffer.concat([this.scanTail ?? Buffer.alloc(0), data]).subarray(-8));
   }
 }
 
