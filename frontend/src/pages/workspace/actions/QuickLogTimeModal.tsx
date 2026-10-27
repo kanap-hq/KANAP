@@ -21,6 +21,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
+import { localTodayYmd } from '../../../lib/datetime';
 import { ACTIVE_TASK_STATUSES } from '../../tasks/task.constants';
 
 interface QuickLogTimeModalProps {
@@ -127,6 +128,7 @@ export default function QuickLogTimeModal({
           user_id: profile?.id,
           hours: hoursNum,
           notes: notes || undefined,
+          logged_at: localTodayYmd(),
         });
       } else {
         const projectIdForTask = selectedTask?.related_object_type === 'project' ? selectedTask.related_object_id : null;
@@ -138,7 +140,7 @@ export default function QuickLogTimeModal({
           user_id: profile?.id,
           hours: hoursNum,
           notes: notes.trim() || null,
-          logged_at: new Date().toISOString().split('T')[0],
+          logged_at: localTodayYmd(),
         });
       }
     },

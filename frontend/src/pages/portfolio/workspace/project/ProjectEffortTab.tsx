@@ -793,6 +793,7 @@ export default function ProjectEffortTab({
                                       user_id: entry.user_id,
                                       hours: entry.hours,
                                       notes: entry.notes,
+                                      logged_at: entry.logged_at,
                                     });
                                     setLogTimeDialogOpen(true);
                                   }}

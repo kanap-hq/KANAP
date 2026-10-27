@@ -69,3 +69,15 @@ describe('ReportLayout busy', () => {
     expect(screen.getByTestId('report')).toHaveStyle({ opacity: '1' });
   });
 });
+
+describe('ReportLayout table export', () => {
+  it('shows the server export in place of the browser CSV, held while the numbers load', () => {
+    renderLayout({
+      busy: true,
+      onExportTableCsv: () => undefined,
+      tableExport: { url: '/portfolio/reports/time-logged/export', params: {}, fileBase: 'time-logged' },
+    });
+    expect(screen.queryByRole('button', { name: 'reports.shared.exportTableCsv' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'reports.shared.exportTable' })).toBeDisabled();
+  });
+});

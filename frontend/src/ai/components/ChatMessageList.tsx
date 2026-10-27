@@ -29,6 +29,7 @@ import ArtifactPreviewChip from './ArtifactPreviewChip';
 import AttachmentImage from './AttachmentImage';
 import PreviewCard from './PreviewCard';
 import PlaidActivity from './PlaidActivity';
+import { useReferenceLinkPlugins } from '../utils/referenceLinks';
 
 type ChatMessageListProps = {
   messages: ChatMessage[];
@@ -725,6 +726,7 @@ function AssistantMessage({
 }) {
   const toolCalls = message.toolCalls || [];
   const toolResults = message.toolResults || [];
+  const referenceLinkPlugins = useReferenceLinkPlugins();
 
   const previewResults = useMemo(() => (
     Array.from(new Map([
@@ -768,7 +770,7 @@ function AssistantMessage({
               color: 'kanap.text.primary',
             }}
           >
-            <MarkdownContent content={message.content} externalImages="link" />
+            <MarkdownContent content={message.content} externalImages="link" remarkPlugins={referenceLinkPlugins} />
           </Box>
         )}
 

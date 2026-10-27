@@ -25,10 +25,12 @@ vi.mock('../../hooks/useAnalyticsAxes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../hooks/useAnalyticsAxes')>();
   return { ...actual, useAnalyticsAxes: () => actual.buildAnalyticsAxes([], ((key: string) => key) as never) };
 });
-const chart = vi.hoisted(() => ({ options: null as any, columns: null as any[] | null }));
+const chart = vi.hoisted(() => ({ options: null as any, columns: null as any[] | null, tableExport: null as any }));
 vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../components/reports/ReportLayout')>()),
-  default: ({ title, subtitle, filters, actions, children }: { title: string; subtitle?: React.ReactNode; filters?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode }) => (
+  default: ({ title, subtitle, filters, actions, children, tableExport }: { title: string; subtitle?: React.ReactNode; filters?: React.ReactNode; actions?: React.ReactNode; children?: React.ReactNode; tableExport?: unknown }) => {
+    chart.tableExport = tableExport ?? null;
+    return (
     <div>
       <h1>{title}</h1>
       <p data-testid="subtitle">{subtitle}</p>
@@ -36,7 +38,8 @@ vi.mock('../../components/reports/ReportLayout', async (importOriginal) => ({
       <div data-testid="actions">{actions}</div>
       {children}
     </div>
-  ),
+    );
+  },
 }));
 vi.mock('../../components/reports/ChartCard', () => ({
   default: React.forwardRef(({ options }: { options: { title?: { text?: string } } | null }, _ref) => {
@@ -120,6 +123,7 @@ beforeEach(() => {
   locale.value = 'en';
   chart.options = null;
   chart.columns = null;
+  chart.tableExport = null;
   setBudgetColumns();
   get.mockReset();
   get.mockImplementation(async () => ({ data: { items: [], total: 0 } }));
@@ -228,6 +232,47 @@ describe('Budget column comparison report', () => {
 
 const chargebackCalls = (url: string) => get.mock.calls.filter(([called]) => called === url).map(([, config]) => config?.params ?? {});
 
+describe('Budget report table exports', () => {
+  it('send the screen state to the server export', async () => {
+    const comparison = renderReport(<ComparisonReport />);
+    await waitFor(() => expect(chart.tableExport?.url).toBe('/reports/budget/comparison/export'));
+    expect(chart.tableExport.params).toMatchObject({ scope: 'all', measure: 'amount', startYear: Y - 1, endYear: Y + 1, metrics: 'budget,landing' });
+    expect(chart.tableExport.params.costCenter).toBeUndefined();
+    comparison.unmount();
+
+    const compare = renderReport(<BudgetColumnsCompareReport />);
+    await waitFor(() => expect(chart.tableExport?.url).toBe('/reports/budget/columns-compare/export'));
+    expect(chart.tableExport.params).toMatchObject({ scope: 'all', measure: 'amount', selections: `${Y}:budget,${Y + 1}:budget`, yearGrouping: 'false' });
+    compare.unmount();
+
+    renderReport(<TopOpexReport />);
+    await waitFor(() => expect(chart.tableExport?.url).toBe('/reports/budget/top-lines/export'));
+    expect(chart.tableExport.params).toMatchObject({ scope: 'all', measure: 'amount', year: Y, metric: 'budget', top: 10, excludeIds: '' });
+    expect(chart.tableExport.params.excludeAccounts).toBeUndefined();
+  });
+
+  it('send the increases and decreases, consolidation and analytics state to the server export', async () => {
+    const delta = renderReport(<OpexDeltaReport />);
+    await waitFor(() => expect(chart.tableExport?.url).toBe('/reports/budget/increases-decreases/export'));
+    expect(chart.tableExport.params).toMatchObject({
+      scope: 'all', measure: 'amount', sourceYear: Y - 1, sourceMetric: 'budget', destinationYear: Y, destinationMetric: 'budget', direction: 'increase', top: 10, excludeIds: '',
+    });
+    fireEvent.click(screen.getByRole('tab', { name: 'reports.opexDelta.both' }));
+    await waitFor(() => expect(chart.tableExport.params.direction).toBe('both'));
+    delta.unmount();
+
+    const consolidation = renderReport(<ConsolidationReport />);
+    await waitFor(() => expect(chart.tableExport?.url).toBe('/reports/budget/consolidation/export'));
+    expect(chart.tableExport.params).toMatchObject({ scope: 'all', measure: 'amount', startYear: Y, endYear: Y, metric: 'budget', excludeAccounts: '' });
+    consolidation.unmount();
+
+    renderReport(<AnalyticsCategoryReport />);
+    await waitFor(() => expect(chart.tableExport?.url).toBe('/reports/budget/analytics/export'));
+    // No dimension here: the screen groups on the default field and sends none.
+    expect(chart.tableExport.params).toMatchObject({ scope: 'all', measure: 'amount', axis: null, startYear: Y, endYear: Y, metric: 'budget', excludeValues: '' });
+  });
+});
+
 describe('Global chargeback report', () => {
   it('waits for the setting, then sends the default column and offers the shown ones', async () => {
     // Not loaded yet: the hook holds the product defaults (the patch is ignored), and Run waits too.
@@ -331,8 +376,9 @@ describe('OPEX delta shares', () => {
     renderReport(<OpexDeltaReport />);
     await waitFor(() => expect(screen.getByTestId('grid').textContent).toContain('Small'));
     const column = chart.columns?.find((col) => col.field === 'pct_increase');
-    expect(column.valueFormatter({ value: 12.3 })).toBe(formatSharePercent(12.3, 'fr', 1));
-    expect(column.valueFormatter({ value: 12.3 })).toContain('12,3');
+    // The table holds the change as a fraction of the source (`reportTables.ts`).
+    expect(column.valueFormatter({ value: 0.123 })).toBe(formatSharePercent(12.3, 'fr', 1));
+    expect(column.valueFormatter({ value: 0.123 })).toContain('12,3');
     expect(column.valueFormatter({ value: null })).toBe('');
     const bar = chart.options.series[0];
     const share = shareOf(bar.tooltip.renderer({ datum: { name: 'Small', magnitude: 123, delta: 123, direction: 'increase' } }));

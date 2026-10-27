@@ -61,6 +61,7 @@ import { analyticsDimensionsAiContext, AnalyticsDimensionsPromptContext } from '
 import { findMarkdownPathLinks, replaceDataImageTags, replaceMarkdownDataImages } from '../common/text-scan';
 import { assertMarkdownSize } from '../common/markdown-limits';
 import { dataAccessRefusalMessage } from '../common/filters/database-error.mapping';
+import { conversationTitleFromMessage } from './ai-conversation-title.util';
 
 const MAX_TOOL_ITERATIONS = parsePositiveIntEnv(process.env.AI_CHAT_MAX_TOOL_ITERATIONS, 40);
 /**
@@ -1949,19 +1950,19 @@ export class AiChatOrchestratorService {
             ctx.userId,
             { manager: ctx.manager },
           );
-          convTitle = conv.title || userMessage.slice(0, 100);
+          convTitle = conv.title || conversationTitleFromMessage(userMessage);
           // Auto-title pre-created conversations (e.g. created empty for an attachment-first
           // upload). Approval/rejection markers don't deserve to become titles.
           if (!conv.title && userMessage.trim() && !approvalAction) {
             await this.conversations.setTitleIfMissing(
               convId,
               ctx.tenantId,
-              userMessage.slice(0, 100),
+              conversationTitleFromMessage(userMessage),
               { manager: ctx.manager },
             );
           }
         } else {
-          convTitle = userMessage.slice(0, 100);
+          convTitle = conversationTitleFromMessage(userMessage);
           const conv = await this.conversations.createConversation(
             {
               tenantId: ctx.tenantId,

@@ -189,7 +189,7 @@ describe('Top items with a cost center group', () => {
     ]));
     // The total the shares are taken on is the group's, 100 + 20 + 3.
     expect(chart.options.footnote.text).toMatch(/: 123$/);
-    expect(gridRows()[0].pct_of_total).toBe(Math.round((100 / 123) * 100));
+    expect(gridRows()[0].pct_of_total).toBe(100 / 123);
   });
 
   it('keeps every line when nothing is picked', async () => {
@@ -292,7 +292,7 @@ describe('Reports with a dimension value picked', () => {
     ]));
     // The total the shares are taken on is the kept lines', 1 000 + 100.
     expect(chart.options.footnote.text).toMatch(/: 1 100$/);
-    expect(gridRows()[0].pct_of_total).toBe(Math.round((1000 / 1100) * 100));
+    expect(gridRows()[0].pct_of_total).toBe(1000 / 1100);
   });
 
   it('Comparison on CAPEX: sums the lines holding no value on the dimension', async () => {
@@ -526,7 +526,7 @@ describe('Reports with the FTE measure', () => {
       ['Line b', 1.25],
       ['Line d', 0.5],
     ]));
-    expect(gridRows()[0].pct_of_total).toBe(Math.round((2.5 / 4.25) * 100));
+    expect(gridRows()[0].pct_of_total).toBe(2.5 / 4.25);
     expect(chart.options.footnote.text).toMatch(/: 4\.25$/);
     expect(grid.columns[1].headerName).toContain('reports.measure.columnFte');
     expect(format(1, 1.5)).toBe('1.50');

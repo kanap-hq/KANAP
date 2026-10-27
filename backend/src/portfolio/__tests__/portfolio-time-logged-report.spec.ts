@@ -155,9 +155,9 @@ async function run() {
   assert.equal(report.totals.contributorsWithoutEntries, 2);
 
   // The series is the whole scope month by month, the person-less entries included.
-  assert.deepEqual(report.series[0], { month: first, projectDays: 0.6, otherDays: 1 });
-  assert.deepEqual(report.series[1], { month: second, projectDays: 2, otherDays: 0.3 });
-  assert.deepEqual(report.series[5], { month: current, projectDays: 0.2, otherDays: 0.5 });
+  assert.deepEqual(report.series[0], { month: first, projectDays: 0.6, otherDays: 1, totalDays: 1.6 });
+  assert.deepEqual(report.series[1], { month: second, projectDays: 2, otherDays: 0.3, totalDays: 2.3 });
+  assert.deepEqual(report.series[5], { month: current, projectDays: 0.2, otherDays: 0.5, totalDays: 0.7 });
   assert.equal(report.series.length, 6);
 
   // Teams in display order, the group without a team last.
@@ -176,11 +176,11 @@ async function run() {
 
   // People in alphabetical order, never by value.
   assert.deepEqual(apps.members.map((member) => member.name), ['Alice Martin', 'Bob Durand']);
-  assert.deepEqual(apps.members[0].cells[0], { month: first, projectDays: 0.6, otherDays: 1 });
+  assert.deepEqual(apps.members[0].cells[0], { month: first, projectDays: 0.6, otherDays: 1, totalDays: 1.6 });
   // A team is the sum of its people, rounded from its hours.
-  assert.deepEqual(apps.cells[0], { month: first, projectDays: 0.6, otherDays: 1 });
-  assert.deepEqual(apps.cells[1], { month: second, projectDays: 0, otherDays: 0.3 });
-  assert.deepEqual(apps.cells[5], { month: current, projectDays: 0.2, otherDays: 0 });
+  assert.deepEqual(apps.cells[0], { month: first, projectDays: 0.6, otherDays: 1, totalDays: 1.6 });
+  assert.deepEqual(apps.cells[1], { month: second, projectDays: 0, otherDays: 0.3, totalDays: 0.3 });
+  assert.deepEqual(apps.cells[5], { month: current, projectDays: 0.2, otherDays: 0, totalDays: 0.2 });
 
   // No team: people without a team or a profile, then the unknown user.
   assert.equal(noTeam.teamId, null);
@@ -190,9 +190,9 @@ async function run() {
     [null, ''],
   ]);
   assert.equal(noTeam.members[0].contributorRef, null);
-  assert.deepEqual(noTeam.members[2].cells[5], { month: current, projectDays: 0, otherDays: 0.5 });
-  assert.deepEqual(noTeam.cells[1], { month: second, projectDays: 2, otherDays: 0 });
-  assert.deepEqual(noTeam.cells[5], { month: current, projectDays: 0, otherDays: 0.5 });
+  assert.deepEqual(noTeam.members[2].cells[5], { month: current, projectDays: 0, otherDays: 0.5, totalDays: 0.5 });
+  assert.deepEqual(noTeam.cells[1], { month: second, projectDays: 2, otherDays: 0, totalDays: 2 });
+  assert.deepEqual(noTeam.cells[5], { month: current, projectDays: 0, otherDays: 0.5, totalDays: 0.5 });
 
   // The unknown user line only exists when such entries do.
   {

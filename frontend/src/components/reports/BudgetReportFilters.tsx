@@ -107,6 +107,12 @@ export type BudgetReportFilterState = {
    * one. A node or values that cannot be read keep no line.
    */
   queryFilters: ColumnFilters | null;
+  /**
+   * The picks as the table exports read them (`reports/budget/<report>/export`): the address's node
+   * (the server expands it, and refuses one it does not hold), run or build, `fte=with` and the applied
+   * dimension pairs (those of the address while the dimensions cannot be read).
+   */
+  exportParams: Record<'costCenter' | 'runBuild' | 'fte' | 'analytics', string | undefined>;
   /** What the pickers offer, from every line of the report's window. */
   options: BudgetReportFilterOptions;
 };
@@ -248,6 +254,13 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
     };
   }, [presence.data, presence.isError, presence.refetch, ftePresence.data, ftePresence.isError, ftePresence.refetch, axisValues, axisIdsKey, unnamed, ranks]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const exportParams = useMemo(() => ({
+    costCenter: rawCostCenter ?? undefined,
+    runBuild: runBuild ?? undefined,
+    fte: withFte ? FTE_ITEMS_WITH : undefined,
+    analytics: (analyticsMissing ? rawAnalytics : appliedAnalytics) || undefined,
+  }), [rawCostCenter, runBuild, withFte, analyticsMissing, rawAnalytics, appliedAnalytics]);
+
   return useMemo(
     () => ({
       tree,
@@ -265,11 +278,12 @@ export function useBudgetReportFilters({ scope, years }: { scope: BudgetScope; y
       setAnalyticsValue,
       clearAnalytics,
       queryFilters,
+      exportParams,
       options,
     }),
     [
       tree, hasCostCenters, costCenterId, costCenterMissing, runBuild, withFte, analyticsAxes, analytics, analyticsMissing,
-      setCostCenterId, setRunBuild, setWithFte, setAnalyticsValue, clearAnalytics, queryFilters, options,
+      setCostCenterId, setRunBuild, setWithFte, setAnalyticsValue, clearAnalytics, queryFilters, exportParams, options,
     ],
   );
 }
