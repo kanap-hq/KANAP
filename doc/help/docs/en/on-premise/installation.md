@@ -8,8 +8,9 @@
 - Docker Engine 24.0+
 - Docker Compose plugin 2.20 or later (current releases are 5.x)
 - Git
-- 6 GB RAM minimum, 8 GB recommended. The image build, at installation and at each upgrade, needs that room. More API processes need more memory, see [Configuration](configuration.md#optional-capacity-and-performance).
-- 20 GB disk minimum. After installation KANAP takes about 4 GB (images 1.3 GB, build cache 2.5 GB). The database, the stored files and the build cache grow over time; the cache grows at each upgrade, and `docker builder prune` reclaims it.
+- 4 GB RAM minimum, 8 GB recommended when PostgreSQL runs on the same server. More API processes need more memory, see [Configuration](configuration.md#optional-capacity-and-performance).
+- 10 GB disk minimum. KANAP itself takes about 1.5 GB (its images). The database and the stored files grow over time.
+- Outbound HTTPS access to `ghcr.io` at installation and at each upgrade, to download the images (see [Firewall rules](configuration.md#outbound-installation-and-upgrades)).
 
 **Customer-provided infrastructure:**
 
@@ -74,7 +75,7 @@ git clone https://github.com/kanap-hq/KANAP.git /opt/kanap
 cd /opt/kanap
 git checkout stable
 
-# 2. Configure BEFORE building
+# 2. Configure before the first start
 cp infra/.env.onprem.example .env
 chmod 600 .env
 nano .env  # Set DATABASE_URL, S3 credentials, ADMIN_EMAIL, ADMIN_PASSWORD, JWT_SECRET,
@@ -83,8 +84,8 @@ nano .env  # Set DATABASE_URL, S3 credentials, ADMIN_EMAIL, ADMIN_PASSWORD, JWT_
 #          APP_ENV=production (users reach KANAP over HTTPS) and RATE_LIMIT_TRUST_PROXY=true
 # See the Configuration guide for all variables
 
-# 3. Build the Docker images (Compose builds them from the repository)
-docker compose -f infra/compose.onprem.yml build --pull
+# 3. Download the images of this version
+docker compose -f infra/compose.onprem.yml pull
 
 # 4. Start containers
 docker compose -f infra/compose.onprem.yml up -d
@@ -109,13 +110,24 @@ docker compose -f infra/compose.onprem.yml logs -f api
 
 **Important:** Complete the configuration (step 2) before starting containers. The API reads `.env` at startup and creates the tenant and admin user on first boot using those values. The file holds every secret of the installation: `chmod 600` keeps it readable by its owner only.
 
-**Versions.** KANAP publishes a new version about once a month (`26.10.1` is the first). The `stable` branch always points to the latest published version. See [Operations](operations.md#upgrade-procedure) to upgrade, to pin a precise version and to roll back. The branch `main` holds every merged change before it is published as a version. Following it is possible, and not recommended for a production server.
+**Versions.** KANAP publishes a new version about once a month (`26.10.1` is the first). The `stable` branch always points to the latest published version. Each version comes with its images on GitHub Container Registry (`ghcr.io/kanap-hq/kanap-api`, `kanap-web` and `kanap-api-tools`), built from the version's tag. They are public: no account is needed. `infra/compose.onprem.yml` names the images of the version you checked out, so `git checkout stable` or `git checkout v26.10.9` decides the version that `pull` downloads. Versions up to 26.10.8 have no published images: they are built on the server, as the guide of that version explains. See [Operations](operations.md#upgrade-procedure) to upgrade, to pin a precise version and to roll back. The branch `main` holds every merged change before it is published as a version. Following it is possible, and not recommended for a production server: it means building the images yourself.
 
 **Database role requirement:** `DATABASE_URL` must use a dedicated PostgreSQL application role. Do not point it at `postgres` or another cluster-admin role. KANAP will fail startup rather than run without effective RLS enforcement.
 
 **Address and origins:** Set `APP_BASE_URL` and `CORS_ORIGINS` to the exact address users open, with the port when it is not standard. Every link KANAP sends comes from `APP_BASE_URL`. Set `APP_ENV=production` when users reach KANAP over HTTPS: the API then refuses to start without these two values and always marks the session cookie Secure. See [Configuration](configuration.md#required-admin-credentials).
 
 **Email choice:** On-premise deployments can use either **Resend** or **SMTP** for outbound email. SMTP is useful when the customer already has an internal mail relay or a managed provider such as Microsoft 365. Configure one of these options if you want password reset, invitations, and notification emails to work from day one.
+
+## Build the images yourself { #build-the-images-yourself }
+
+The published images suit most installations. Build them on the server for a fork, a local fix, a server that cannot reach `ghcr.io`, or an API on another host. The file `infra/compose.onprem.build.yml`, added on top of the main file, builds them from the checkout and names them `kanap-api:local`, `kanap-web:local` and `kanap-api-tools:local`:
+
+```bash
+docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml build
+docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml up -d
+```
+
+Name both files in every later `up` and `run`: with the main file alone, Compose starts the published images. The build needs the `docker-buildx-plugin` package and 6 GB of RAM on the server. It downloads npm and Alpine packages (see [Firewall rules](configuration.md#outbound-installation-and-upgrades)). For an API on another host, pass its address in the shell when you build the web image: `VITE_API_URL=https://api.company.com docker compose -f infra/compose.onprem.yml -f infra/compose.onprem.build.yml build web`. Compose does not read it from `.env`.
 
 ## Reverse proxy example (nginx) { #reverse-proxy-example-nginx }
 

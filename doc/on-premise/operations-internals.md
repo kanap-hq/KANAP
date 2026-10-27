@@ -5,9 +5,15 @@ User-facing procedures live in `doc/help/docs/en/on-premise/operations.md`.
 
 ## Distribution Model
 
-- **Build from source** only (open source model)
-- No private registry
-- Customers build Docker images locally
+- Each published version (after 26.10.8) has public images on GitHub Container Registry:
+  `ghcr.io/kanap-hq/kanap-api`, `kanap-web` and `kanap-api-tools`, built by CI from the version
+  tag (`.github/workflows/release-images.yml`, see `doc/releasing.md`), `linux/amd64`, with a
+  provenance attestation. No account is needed to pull them.
+- `infra/compose.onprem.yml` names the images of the checkout's version: installations run
+  `git checkout <stable or tag>`, then `pull` and `up -d`. `KANAP_VERSION` in `.env` has no effect
+  (Compose does not read `../.env` for the interpolation of that file).
+- Building from source stays possible with `infra/compose.onprem.build.yml` on top (images named
+  `kanap-*:local`). Versions up to 26.10.8 are built on the server.
 
 ## Repository Layout (On-Prem Relevant)
 
@@ -22,7 +28,8 @@ kanap/
 │   ├── src/
 │   └── ...
 ├── infra/
-│   ├── compose.onprem.yml   # On-prem Docker Compose reference
+│   ├── compose.onprem.yml   # On-prem Docker Compose reference (published images)
+│   ├── compose.onprem.build.yml  # Overlay that builds the images on the server
 │   ├── .env.onprem.example  # Configuration template
 │   └── postgres/kanap-pg-tune.sh  # PostgreSQL settings sized from the host's memory (applies nothing)
 ├── doc/

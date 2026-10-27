@@ -4,7 +4,7 @@ KANAP can be deployed on-premise in **single-tenant mode**. You provide your own
 
 ## Guides
 
-- **[Installation](installation.md):** Requirements, name and certificate, clone, build, configure, and start
+- **[Installation](installation.md):** Requirements, name and certificate, clone, configure, pull the images, and start
 - **[Installation example](installation-example.md):** Step-by-step walkthrough on Ubuntu 26.04 with PostgreSQL, RustFS, a firewall, and nginx
 - **[AI-assisted installation](installation-ai.md):** One-prompt installation using a coding AI agent
 - **[Configuration](configuration.md):** Environment variables reference, start-up log lines, background jobs, firewall rules
