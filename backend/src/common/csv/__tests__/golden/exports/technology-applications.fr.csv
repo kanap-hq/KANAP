@@ -1,0 +1,6 @@
+﻿Référence;Application;Lien;Environnement;Serveur;Installée sur;Version;Criticité;Externe;Responsables IT;Notes
+APP-1;ERP csv-lang;Hébergée;Pré-prod;SQL-01 csv-lang;;2019;Critique;Oui;;
+APP-1;ERP csv-lang;Hébergée;Pré-prod;SQL-02 csv-lang;;2016;Critique;Oui;;
+APP-1;ERP csv-lang;Hébergée;Prod;SQL-01 csv-lang;;2019;Critique;Oui;;
+APP-1;ERP csv-lang;Hébergée;Prod;SQL-02 csv-lang;;2016;Critique;Oui;;
+APP-2;Portal csv-lang;Déclarée;;;;Version inconnue;;Non;;

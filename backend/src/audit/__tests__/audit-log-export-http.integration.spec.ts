@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { assertCsvGolden } from '../../common/csv/__tests__/export-golden';
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -332,6 +333,11 @@ async function main() {
       assert.ok(answer.bytes.equals(inEnglish.bytes), 'the same bytes as for a user in English');
     }
     console.log('ok - one fixed format: commas, no BOM, English headers, whatever the language');
+    // The file as written before the Excel export, its dates and generated ids masked.
+    const signInsAndSuppliers = { filters: JSON.stringify({ table_name: { filterType: 'set', values: ['auth', 'suppliers'] } }) };
+    assertCsvGolden('audit-log', (await get(signInsAndSuppliers, a.admin)).text, (text) => text
+      .replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/g, '<date>')
+      .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, '<id>'));
 
     // 4. Only `users:admin`: a people member is refused, another administrator is not.
     const refusedBefore = (await exportRows(tenantA)).length;
@@ -354,7 +360,7 @@ async function main() {
 
     // 6. Each export is recorded in the audit log of its tenant.
     const recordedA = await exportRows(tenantA);
-    assert.equal(recordedA.length, 13, 'one row per export made in tenant A (thirteen answered 200)');
+    assert.equal(recordedA.length, 14, 'one row per export made in tenant A (fourteen answered 200)');
     for (const row of recordedA) {
       const { query, ...rest } = row.after_json;
       assert.deepEqual(rest, { resource: 'audit-logs', path: '/audit-logs/export', ip: '127.0.0.1', user_agent: 'Export probe' });

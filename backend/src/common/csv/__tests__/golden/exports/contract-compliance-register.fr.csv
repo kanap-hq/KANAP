@@ -1,0 +1,16 @@
+﻿Contrat;Fournisseur;Société;Exigence;Attendue;Raison;État;Référence;Mis à jour le;Mis à jour par
+A full cce;Compliance supplier cce;Compliance company cce;Accord de sous-traitance RGPD (art. 28);Oui;HR cce contient des données personnelles;Absente;"DPA; v2";<today>;
+A full cce;Compliance supplier cce;Compliance company cce;Localisation des données;Oui;"CRM cce : hébergement SaaS; HR cce contient des données personnelles";À vérifier;;;
+A full cce;Compliance supplier cce;Compliance company cce;Clause de réversibilité;Oui;ERP cce : criticité métier Critical;À vérifier;;;
+A full cce;Compliance supplier cce;Compliance company cce;Plan de sortie;Oui;ERP cce : criticité métier Critical;À vérifier;;;
+A full cce;Compliance supplier cce;Compliance company cce;Droit d'audit et clauses de sécurité;Oui;ERP cce : criticité métier Critical;À vérifier;;;
+B via asset cce;Compliance supplier cce;Compliance company cce;Accord de sous-traitance RGPD (art. 28);Non;;;;;
+B via asset cce;Compliance supplier cce;Compliance company cce;Localisation des données;Non;;;;;
+B via asset cce;Compliance supplier cce;Compliance company cce;Clause de réversibilité;Oui;Mail cce : criticité cyber High (actif mail-srv-cce);À vérifier;;;
+B via asset cce;Compliance supplier cce;Compliance company cce;Plan de sortie;Oui;Mail cce : criticité cyber High (actif mail-srv-cce);À vérifier;;;
+B via asset cce;Compliance supplier cce;Compliance company cce;Droit d'audit et clauses de sécurité;Oui;Mail cce : criticité cyber High (actif mail-srv-cce);À vérifier;;;
+C bare cce;Compliance supplier cce;Compliance company cce;Accord de sous-traitance RGPD (art. 28);Non;;;;;
+C bare cce;Compliance supplier cce;Compliance company cce;Localisation des données;Non;;;;;
+C bare cce;Compliance supplier cce;Compliance company cce;Clause de réversibilité;Non;;;;;
+C bare cce;Compliance supplier cce;Compliance company cce;Plan de sortie;Non;;;;;
+C bare cce;Compliance supplier cce;Compliance company cce;Droit d'audit et clauses de sécurité;Non;;;;;

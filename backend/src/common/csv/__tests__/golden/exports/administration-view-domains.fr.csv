@@ -1,0 +1,4 @@
+﻿Domaine;Suffixe DNS;Forêt;Approbations;Approbations déclarées par d'autres domaines;Nombre de comptes;Nombre d'ordinateurs;Contrôleurs de domaine;Serveurs contrôleurs de domaine
+Corp;corp.example.com;corp.example.com;Lab (bidirectionnelle);;1200;300;2;dc1, dc2
+Lab;lab.example.com;;;Corp (bidirectionnelle), Partner (entrante);;;0;
+Partner;partner.example.com;;Lab (sortante);;;;0;

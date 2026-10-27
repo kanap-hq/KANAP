@@ -1,0 +1,8 @@
+﻿Zone,Reference,Name,Type,Technologies,Applications,Controls,Dependency
+No zone,AST-3,'=cmd,Virtual machine,,,Assets without an administration zone,
+Tier 0,AST-2,guest,Virtual machine,TEC-1 Active Directory (2019),APP-1 Portal,Applications hosted in the most sensitive zone,
+Tier 1,AST-1,host,Virtual machine,,,What runs an asset is in a less sensitive zone,Runs AST-2 guest (Tier 0); Member of cluster AST-5 vsphere (Tier 0)
+Tier 2 (workstations),AST-7,poste,Virtual machine,,,,
+No zone,AST-8,shipped-kind,Virtual machine,,,Assets without an administration zone,
+Tier 0,AST-5,vsphere,Virtual machine,,,,
+No zone,AST-6,zone-vide,Virtual machine,,,Assets without an administration zone,
