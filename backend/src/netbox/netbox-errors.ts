@@ -21,6 +21,7 @@ export const NETBOX_ERROR_CODES = [
   'netbox_invalid_response',
   'netbox_rate_limited',
   'netbox_token_unreadable',
+  'netbox_sync_failed',
 ] as const;
 
 export type NetboxErrorCode = (typeof NETBOX_ERROR_CODES)[number];
@@ -39,6 +40,7 @@ export const NETBOX_ERROR_MESSAGES: Record<NetboxErrorCode, string> = {
   netbox_invalid_response: 'The Netbox server returned an answer KANAP could not read. Check that the address points at Netbox.',
   netbox_rate_limited: 'Netbox is refusing more requests for the moment. Try again in a few minutes.',
   netbox_token_unreadable: 'The saved Netbox token cannot be read on this server. Enter the token again and save.',
+  netbox_sync_failed: 'The synchronisation could not finish. Check the Netbox connection, then try again.',
 };
 
 export type NetboxFailure = {
@@ -81,6 +83,22 @@ export function isNetboxErrorCode(value: string): value is NetboxErrorCode {
 
 export function netboxBadRequest(code: NetboxErrorCode): BadRequestException {
   return new BadRequestException({ code, message: NETBOX_ERROR_MESSAGES[code] });
+}
+
+/**
+ * The failure a synchronisation stores. A connection or configuration problem
+ * keeps the code `netboxFailureOf` already gives it. Anything else, including
+ * a raw exception, is `netbox_sync_failed`: the original text stays in
+ * `detail` for the log and never becomes the sentence shown on the page.
+ */
+export function syncFailureOf(error: unknown): NetboxFailure {
+  if (error instanceof NetboxApiError || error instanceof HttpException) {
+    return netboxFailureOf(error);
+  }
+  const raw = error instanceof Error ? error.message : '';
+  const message = NETBOX_ERROR_MESSAGES.netbox_sync_failed;
+  if (raw && raw !== message) return { code: 'netbox_sync_failed', message, detail: raw };
+  return { code: 'netbox_sync_failed', message };
 }
 
 /** The code a connection failure deserves, and a sentence safe to show. */

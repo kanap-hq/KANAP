@@ -1,6 +1,6 @@
 import React from 'react';
-import '../../i18n';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import i18n from '../../i18n';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -217,6 +217,52 @@ describe('NetboxSyncPage', () => {
 
   const previewCalls = () =>
     (apiClient.post as any).mock.calls.filter((call: unknown[]) => call[0] === '/netbox/sync/preview');
+
+  it('translates a failed synchronisation and keeps a message stored without a code', async () => {
+    await i18n.changeLanguage('fr');
+    const english = 'The synchronisation could not finish. Check the Netbox connection, then try again.';
+    const french = 'La synchronisation n\'a pas pu se terminer. Vérifiez la connexion Netbox, puis réessayez.';
+    try {
+      (apiClient.get as any).mockImplementation((url: string) => {
+        if (url === '/netbox/status') {
+          return Promise.resolve({
+            ...STATUS,
+            sync: { ...STATUS.sync, status: 'failure', counts: null, error: english, error_code: 'netbox_sync_failed' },
+          });
+        }
+        if (url === '/netbox/records') return Promise.resolve({ items: [], total: 0 });
+        throw new Error(`Unexpected GET ${url}`);
+      });
+
+      renderPage();
+      expect(await screen.findByText(french)).toBeInTheDocument();
+      expect(screen.queryByText(english)).not.toBeInTheDocument();
+
+      cleanup();
+      (apiClient.get as any).mockImplementation((url: string) => {
+        if (url === '/netbox/status') {
+          return Promise.resolve({
+            ...STATUS,
+            sync: {
+              ...STATUS.sync,
+              status: 'failure',
+              counts: null,
+              error: 'Netbox refused the request for /api/dcim/devices/ (HTTP 500).',
+            },
+          });
+        }
+        if (url === '/netbox/records') return Promise.resolve({ items: [], total: 0 });
+        throw new Error(`Unexpected GET ${url}`);
+      });
+
+      renderPage();
+      expect(await screen.findByText('Netbox refused the request for /api/dcim/devices/ (HTTP 500).')).toBeInTheDocument();
+      expect(screen.queryByText(french)).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+      await i18n.changeLanguage('en');
+    }
+  });
 
   it('shows a compact line and a settings link when Netbox is not configured', async () => {
     (apiClient.get as any).mockResolvedValue({ ...STATUS, configured: false });

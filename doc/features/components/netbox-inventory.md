@@ -64,6 +64,7 @@ The technology deductions (`technologies/technology-reach.service.ts`) cross `co
 
 - Writes go through the asset services with audit `source = 'system'` and `source_ref = 'netbox'`. Every sync write can be listed from the audit log and reverted.
 - Records live in `asset_external_links`: one row per Netbox object, with `state` (`linked`, `ambiguous`, `missing`, `ignored`, `error`) and a notice stored as a code plus parameters, so pages render it in the user's language.
+- A failed synchronisation stores `error_code` in `metadata_json.sync_state`, next to the English `error` sentence. The code is one of `NETBOX_ERROR_CODES` (`netbox-errors.ts`). Connection and configuration problems keep their own codes. Every other failure uses `netbox_sync_failed`. The page translates `errors:<code>`. A state written before codes existed has no `error_code`, and the page shows the stored `error` text.
 - `managed_fields` lists the fields Netbox provided a value for on that object, refreshed at every run. The asset workspace locks only those fields. `NULL` means not known yet and locks the whole list. The lock is enforced in the frontend only.
 - The "missing" pass runs only when the fetch completed and returned at least one object.
 - The connection reuses `ai_adapter_configs` with `provider_kind = 'inventory'`. The token is stored with `AiSecretCipherService` (AES-GCM). `AI_SETTINGS_ENCRYPTION_SECRET` must be set to save it, even when AI is off.

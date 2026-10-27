@@ -323,6 +323,7 @@
   "netbox_invalid_response": "Le serveur Netbox a renvoyé une réponse que KANAP n'a pas pu lire. Vérifiez que l'adresse pointe vers Netbox.",
   "netbox_rate_limited": "Netbox refuse d'autres demandes pour le moment. Réessayez dans quelques minutes.",
   "netbox_token_unreadable": "Le jeton Netbox enregistré ne peut pas être lu sur ce serveur. Saisissez-le de nouveau et enregistrez.",
+  "netbox_sync_failed": "La synchronisation n'a pas pu se terminer. Vérifiez la connexion Netbox, puis réessayez.",
   "DATA_ACCESS_ADMINISTRATOR": "Les administrateurs voient toutes les données.",
   "DATA_ACCESS_SELF": "Vous ne pouvez pas modifier votre propre accès aux données.",
   "DATA_ACCESS_NODE_UNKNOWN": "Une société ou un centre de coûts de la liste n'existe pas dans cet espace de travail.",
