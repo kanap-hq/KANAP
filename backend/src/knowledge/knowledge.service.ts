@@ -1,5 +1,11 @@
 import { LinkedModule, LinkedReads, loadLinkedReads } from '../common/relations/linked-reads';
-import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
+import {
+  applicationParticipantCondition,
+  projectParticipantCondition,
+  requestParticipantCondition,
+  resolveBusinessContributorScopeForUser,
+  taskParticipantCondition,
+} from '../auth/business-contributor-scope';
 import { idsInScope } from '../portfolio/portfolio-linked-reads';
 import {
   BadRequestException,
@@ -728,6 +734,14 @@ const KNOWLEDGE_SOURCE_SCOPES = {
   applications: 'applications',
   tasks: 'tasks',
 } as const;
+
+/** The participation condition of each family a Business Contributor reads inside their participation. */
+const KNOWLEDGE_SOURCE_CONDITIONS: Record<keyof typeof KNOWLEDGE_SOURCE_SCOPES, (alias: string, userRef: string) => string> = {
+  projects: projectParticipantCondition,
+  requests: requestParticipantCondition,
+  applications: applicationParticipantCondition,
+  tasks: taskParticipantCondition,
+};
 
 /** The module of each linked-name filter of the documents list. */
 const DOCUMENT_LINKED_FILTER_MODULES: Record<DocumentLinkedEntityField, LinkedModule> = {
@@ -3498,11 +3512,32 @@ export class KnowledgeService {
     const q = String(query?.q || '').trim();
     const limit = Math.min(Math.max(Number(query?.limit) || 25, 1), 50);
     const itemNumber = this.parseItemNumberQuery(q);
+    // A selector offers only what the document shows the person (`get`): nothing for a family whose
+    // module they do not read, and a Business Contributor's records inside their participation.
+    const reads = await loadLinkedReads(manager, opts?.userId ?? null, opts?.tenantId ?? null);
+    if (unreadableRelationFamilies([entity], reads).length > 0) {
+      return { items: [] };
+    }
+    const scopeResource = KNOWLEDGE_SOURCE_SCOPES[entity as keyof typeof KNOWLEDGE_SOURCE_SCOPES];
+    const scope = scopeResource && opts?.userId
+      ? await resolveBusinessContributorScopeForUser(
+        { manager, userId: opts.userId, tenantId: opts?.tenantId ?? null },
+        scopeResource,
+        'reader',
+      )
+      : undefined;
+    const participationSql = (alias: string, params: any[]): string => {
+      if (!scope) return '';
+      params.push(scope.userId);
+      const condition = KNOWLEDGE_SOURCE_CONDITIONS[entity as keyof typeof KNOWLEDGE_SOURCE_CONDITIONS];
+      return ` AND ${condition(alias, `$${params.length}`)}`;
+    };
 
     switch (entity) {
       case 'applications': {
         const params: any[] = [];
         let where = `tenant_id = app_current_tenant()`;
+        where += participationSql('applications', params);
         if (q) {
           params.push(`%${q}%`);
           where += ` AND name ILIKE $${params.length}`;
@@ -3539,6 +3574,7 @@ export class KnowledgeService {
       case 'projects': {
         const params: any[] = [];
         let where = `tenant_id = app_current_tenant()`;
+        where += participationSql('portfolio_projects', params);
         if (q) {
           params.push(`%${q}%`);
           const textPos = params.length;
@@ -3568,6 +3604,7 @@ export class KnowledgeService {
       case 'requests': {
         const params: any[] = [];
         let where = `tenant_id = app_current_tenant()`;
+        where += participationSql('portfolio_requests', params);
         if (q) {
           params.push(`%${q}%`);
           const textPos = params.length;
@@ -3597,6 +3634,7 @@ export class KnowledgeService {
       case 'tasks': {
         const params: any[] = [];
         let where = `t.tenant_id = app_current_tenant()`;
+        where += participationSql('t', params);
         if (q) {
           params.push(`%${q}%`);
           const textPos = params.length;

@@ -34,6 +34,9 @@ import { DataSource, QueryRunner } from 'typeorm';
 //  14. Counters of a hidden family: the incident journal badge counts the entries the journal
 //      shows; the Relations tab and badge of an application and a project count no budget line,
 //      business process or technology without the module's read.
+//  15. The document's link selectors (`GET /knowledge/relation-options/:entity`): no option of a
+//      family whose module the person does not read, and a Business Contributor's options inside
+//      their participation.
 
 process.env.STRIPE_SECRET_KEY = '';
 process.env.JWT_SECRET ||= 'test-jwt-secret';
@@ -670,6 +673,45 @@ async function testHiddenFamilyCounters(h: Harness, runner: QueryRunner, s: Seed
   assert.equal(fullProject.opex_items.length, 1, 'full: the project lists the line');
 }
 
+// 15. The document's link selectors offer what the document shows.
+async function testRelationOptions(h: Harness, runner: QueryRunner, s: Seed) {
+  // A second application E owns, and a task of the dependency project E is not assigned to.
+  const owned = await insertId(runner,
+    `INSERT INTO applications (tenant_id, name, sequential_id, status) VALUES ($1, 'Owned app', 'APP-2', 'enabled')`, [s.tenantId]);
+  await runner.query(`INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, 'business')`,
+    [s.tenantId, owned, s.users.e]);
+  await insertId(runner,
+    `INSERT INTO tasks (tenant_id, item_number, title, description, status, related_object_type, related_object_id, labels, owner_ids, viewer_ids)
+     VALUES ($1, 90, 'Unassigned task', '', 'open', 'project', $2, '[]'::jsonb, '[]'::jsonb, '[]'::jsonb)`, [s.tenantId, s.dependency]);
+  const options = async (profile: Profile, entity: string) => {
+    const result = await h.knowledgeController.listRelationOptions(entity, { limit: 50 }, tenantRequest(runner, s, profile));
+    return result.items.map((item: { label: string }) => item.label).sort();
+  };
+
+  // C reads no linked module: every selector is empty (the page shows none of these families).
+  for (const entity of ['applications', 'assets', 'projects', 'requests', 'tasks', 'interfaces', 'connections', 'incidents']) {
+    assert.deepEqual(await options('c', entity), [], `C: no ${entity} option`);
+  }
+  // K reads projects, not applications.
+  assert.deepEqual(await options('k', 'projects'), [`PRJ-1 - ${PROJECT}`, `PRJ-2 - ${DEPENDENCY}`], 'K: every project');
+  assert.deepEqual(await options('k', 'applications'), [], 'K: no application option');
+  // E: the project they take part in, the application they own, their own tasks; no request.
+  assert.deepEqual(await options('e', 'projects'), [`PRJ-1 - ${PROJECT}`], 'E: their project only');
+  assert.deepEqual(await options('e', 'applications'), ['Owned app'], 'E: the application they own only');
+  assert.deepEqual(await options('e', 'requests'), [], 'E: no request outside their participation');
+  const eTasks = await options('e', 'tasks');
+  has(eTasks, [PROJECT_TASK, 'Outside task'], 'E: their tasks');
+  hasNot(eTasks, ['Unassigned task'], 'E: a task outside their participation');
+  assert.deepEqual(await options('e', 'assets'), [], 'E: no asset option without infrastructure');
+  // Counter-check: an administrator gets every family.
+  has(await options('full', 'applications'), [APP, 'Owned app'], 'full: applications');
+  has(await options('full', 'assets'), [ASSET], 'full: assets');
+  has(await options('full', 'projects'), [PROJECT, DEPENDENCY], 'full: projects');
+  has(await options('full', 'requests'), [REQUEST, CONVERTED], 'full: requests');
+  has(await options('full', 'tasks'), [PROJECT_TASK, 'Unassigned task'], 'full: tasks');
+  has(await options('full', 'incidents'), ['Outage'], 'full: incidents');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -692,6 +734,7 @@ async function run() {
       await testTaskParticipation(harness, runner, s);
       await testDocumentLinkWrites(harness, runner, s);
       await testHiddenFamilyCounters(harness, runner, s);
+      await testRelationOptions(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
