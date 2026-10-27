@@ -4,6 +4,7 @@ import {
   CsvExportContext,
   CsvFieldType,
   CsvImportContext,
+  CsvImportRow,
 } from '../common/csv';
 import { allocateItemNumbers } from '../common/item-number.service';
 import { assertMarkdownSize } from '../common/markdown-limits';
@@ -87,6 +88,41 @@ function csvUserIds(raw: Record<string, string>, prefix: string, userByEmail: Ma
 }
 
 const hasColumns = (raw: Record<string, string>, prefix: string) => [1, 2, 3, 4].some((i) => `${prefix}_${i}` in raw);
+
+/**
+ * The classification a task of a project takes from its project when it has none of its own: the
+ * task list shows `COALESCE(task, project)` (`TasksService.listAllTasks`), and so does the export.
+ */
+export const TASK_INHERITED_CLASSIFICATION = ['source_id', 'category_id', 'stream_id', 'company_id'] as const;
+
+type ProjectClassification = Record<(typeof TASK_INHERITED_CLASSIFICATION)[number], string | null>;
+
+/** The classification of the projects named, by lower-case id; ids that are not uuids are left out. */
+export async function taskProjectClassifications(
+  manager: { query: (sql: string, params: unknown[]) => Promise<any> },
+  tenantId: string,
+  projectIds: string[],
+): Promise<Map<string, ProjectClassification>> {
+  const ids = [...new Set(projectIds.map((id) => String(id).trim().toLowerCase()).filter((id) => TASK_UUID_RE.test(id)))];
+  if (ids.length === 0) return new Map();
+  const rows: Array<ProjectClassification & { id: string }> = await manager.query(
+    `SELECT id::text AS id, source_id::text AS source_id, category_id::text AS category_id,
+            stream_id::text AS stream_id, company_id::text AS company_id
+       FROM portfolio_projects
+      WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+    [tenantId, ids],
+  );
+  return new Map(rows.map((row) => [row.id, row]));
+}
+
+/** The project a matched row's task belongs to once imported (the file's, else the stored one); null when none. */
+function importedProjectId(row: CsvImportRow): string | null {
+  const stored = row.existingEntity;
+  const pick = (key: string) => (Object.prototype.hasOwnProperty.call(row.parsed, key) ? row.parsed[key] : stored[key]);
+  const type = String(pick('related_object_type') ?? '').trim().toLowerCase();
+  const id = pick('related_object_id');
+  return type === 'project' && id ? String(id).trim().toLowerCase() : null;
+}
 
 /**
  * CSV configuration for Tasks entity
@@ -563,6 +599,29 @@ export const taskCsvConfig: CsvEntityConfig = {
       const id = String(row.raw.id ?? '').trim().toLowerCase();
       if (hidden.has(id)) {
         row.errors.push({ row: row.rowNumber, column: 'id', message: 'Task not found' });
+      }
+    }
+  },
+
+  /**
+   * The export writes the classification a project task inherits (TASK_INHERITED_CLASSIFICATION). Read
+   * back, a cell equal to the project's value on a task that has no value of its own is the inherited
+   * value, left as it is: the task keeps following its project. Any other value is the task's own.
+   */
+  afterValidate: async (rows, context) => {
+    const matched = rows
+      .filter((row) => row.errors.length === 0 && row.existingEntity)
+      .map((row) => ({ row, projectId: importedProjectId(row) }))
+      .filter((entry): entry is { row: CsvImportRow; projectId: string } => !!entry.projectId);
+    if (matched.length === 0) return;
+    const projects = await taskProjectClassifications(context.manager, context.tenantId, matched.map((entry) => entry.projectId));
+    for (const { row, projectId } of matched) {
+      const project = projects.get(projectId);
+      if (!project) continue;
+      for (const key of TASK_INHERITED_CLASSIFICATION) {
+        const value = row.parsed[key];
+        if (value == null || row.existingEntity[key] != null || project[key] == null) continue;
+        if (String(value).toLowerCase() === project[key]!.toLowerCase()) delete row.parsed[key];
       }
     }
   },

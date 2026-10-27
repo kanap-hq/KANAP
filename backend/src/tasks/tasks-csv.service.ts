@@ -15,7 +15,7 @@ import {
   CsvFieldType,
 } from '../common/csv';
 import type { ExportFileFormat } from '../common/xlsx';
-import { taskCsvConfig } from './task-csv.config';
+import { TASK_INHERITED_CLASSIFICATION, taskCsvConfig, taskProjectClassifications } from './task-csv.config';
 import { inIdOrder } from '../common/pagination';
 import { assertTaskWritten } from './task-data-access';
 import { isLimitedTransaction } from '../data-access/line-write-checks';
@@ -96,6 +96,7 @@ export class TasksCsvService {
     // Pre-load related object names for export
     if (tasks.length > 0) {
       await this.loadRelatedObjectNames(tasks, manager, tenantId);
+      await this.loadInheritedClassification(tasks, manager, tenantId);
     }
 
     return this.exportSvc.export(taskCsvConfig, tasks, {
@@ -191,6 +192,24 @@ export class TasksCsvService {
           task.related_object_id = null;
         }
         (task as any)._relatedObjectName = relatedObjectId ? (nameById.get(relatedObjectId) ?? '') : '';
+      }
+    }
+  }
+
+  /**
+   * The classification the list shows: a task of a project without a value of its own takes its
+   * project's (`TASK_INHERITED_CLASSIFICATION`). Set on the exported copies only; the import reads
+   * that value back as unchanged (`taskCsvConfig.afterValidate`).
+   */
+  private async loadInheritedClassification(tasks: Task[], manager: EntityManager, tenantId: string): Promise<void> {
+    const projectTasks = tasks.filter((task) => task.related_object_type === 'project' && task.related_object_id);
+    if (projectTasks.length === 0) return;
+    const projects = await taskProjectClassifications(manager, tenantId, projectTasks.map((task) => task.related_object_id!));
+    for (const task of projectTasks) {
+      const project = projects.get(task.related_object_id!.toLowerCase());
+      if (!project) continue;
+      for (const key of TASK_INHERITED_CLASSIFICATION) {
+        if (task[key] == null) task[key] = project[key];
       }
     }
   }
