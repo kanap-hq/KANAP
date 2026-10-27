@@ -15,6 +15,7 @@ import {
   AiWriteFinancialPlanInput,
   getAiFinancialPlanBusinessResource,
 } from '../ai-financial-plan-mutation-support.service';
+import { AiWriteLanguage } from '../../ai-write-texts';
 
 const WriteFinancialPlanInputSchema = z.object({
   entity_type: z.enum(AI_FINANCIAL_PLAN_ENTITY_TYPES)
@@ -69,8 +70,8 @@ export class WriteFinancialPlanAiMutationOperation implements AiMutationOperatio
     return this.support.prepareCreatePreview(context, input);
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
-    return this.support.presentPreview(preview);
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
+    return this.support.presentPreview(preview, language);
   }
 
   executePreview(context: AiExecutionContextWithManager, preview: AiMutationPreview): Promise<void> {

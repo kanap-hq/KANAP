@@ -18,6 +18,7 @@ import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from '../ai-mutation-operation.types';
+import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../../ai-write-texts';
 
 type CreateDocumentInput = {
   title: string;
@@ -178,7 +179,7 @@ export class CreateDocumentAiMutationOperation implements AiMutationOperation<Cr
     };
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const current = preview.current_values ?? {};
     const mutation = preview.mutation_input ?? {};
     const draftTitle = textOrNull(current.target_title) ?? textOrNull(mutation.title) ?? 'Untitled document';
@@ -212,6 +213,16 @@ export class CreateDocumentAiMutationOperation implements AiMutationOperation<Cr
       case 'failed':
         summary = preview.error_message || `Document creation preview for ${subject} failed.`;
         break;
+    }
+
+    if (language !== 'en') {
+      const named = ref ?? quoted(language, draftTitle);
+      summary = previewSummaryText(
+        language,
+        preview.status,
+        writeActionText.createDocument(language, named, preview.status === 'pending' ? libraryName : null),
+        { errorMessage: preview.error_message },
+      );
     }
 
     const changes: AiMutationPreviewPresentation['changes'] = {

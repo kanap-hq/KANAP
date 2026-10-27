@@ -3653,6 +3653,28 @@ async function run() {
     target: { entity_type: 'analytics_categories', entity_id: 'value-id', ref: 'Run' }, status: 'executed', summary: 'Created Run.',
   }]);
   assert.equal(value, 'Created [Run](/master-data/analytics/value-id).');
+  // The messages written after an approval or a rejection follow the person's language.
+  const frenchBatch = await (orchestrator as any).buildPreviewResultsAssistantText({ query: async () => [] }, [
+    { target: { entity_type: 'tasks', ref: 'T-4' }, status: 'executed', summary: 'Appliqué : nouveau commentaire sur T-4.' },
+    {
+      target: { entity_type: 'tasks', ref: 'T-5' },
+      status: 'expired',
+      summary: 'Expiré : nouveau commentaire sur T-5.',
+      error_message: "L'aperçu a expiré avant l'approbation.",
+    },
+  ], [], 'fr');
+  assert.equal(frenchBatch, "Aperçus traités (appliqués : 1, expirés : 1).\n\nÉchecs :\n- T-5 : L'aperçu a expiré avant l'approbation.");
+  const spanishRejection = await (orchestrator as any).buildPreviewResultsAssistantText({ query: async () => [] }, [
+    { target: { entity_type: 'tasks' }, status: 'rejected', summary: '' },
+  ], [], 'es');
+  assert.equal(spanishRejection, 'Se ha rechazado la vista previa.');
+  const germanFollowUp = await (orchestrator as any).buildPreviewResultsAssistantText({ query: async () => [] }, [
+    { target: { entity_type: 'tasks', ref: 'T-6' }, status: 'failed', summary: '', error_message: 'Task changed.' },
+  ], [{ target: { ref: 'T-7' }, summary: 'Status von T-7 ändern (Offen → Erledigt).' }], 'de');
+  assert.equal(
+    germanFollowUp,
+    'Die genehmigte Änderung ist fehlgeschlagen. Fehler: Task changed.\n\nAbhängige Vorschauen bereit, die auf Ihre Genehmigung warten: 1.\n- T-7',
+  );
   await testSimpleTextResponse();
   await testToolCallFlow();
   await testToolResultDateTimesUseTheUserTimeZone();

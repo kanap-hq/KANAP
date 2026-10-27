@@ -53,6 +53,7 @@ import {
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
+import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 
 export const AI_BUSINESS_RECORD_ENTITY_TYPES = [
   'applications',
@@ -524,6 +525,16 @@ function formatPlainValue(value: unknown): string | null {
   return String(value);
 }
 
+/** The options of one classification axis of the tenant's catalog. */
+function classificationOptions(catalog: ClassificationCatalog, axis: NonNullable<FieldConfig['classificationAxis']>) {
+  switch (axis) {
+    case 'business': return catalog.businessCriticalityLevels;
+    case 'cyber': return catalog.cyberCriticalityLevels;
+    case 'confidentiality': return catalog.dataClasses;
+    default: return catalog.recoveryWaves;
+  }
+}
+
 function toJsonValue(value: unknown): unknown {
   if (value instanceof Date) return value.toISOString();
   if (value === undefined) return null;
@@ -694,11 +705,7 @@ export class AiBusinessRecordMutationSupportService {
     }
     if (field.kind === 'application_classification') {
       if (!catalog || !field.classificationAxis) throw new BadRequestException('Application classification catalog is unavailable.');
-      const options = field.classificationAxis === 'business' ? catalog.businessCriticalityLevels : field.classificationAxis === 'cyber'
-        ? catalog.cyberCriticalityLevels
-        : field.classificationAxis === 'confidentiality'
-          ? catalog.dataClasses
-          : catalog.recoveryWaves;
+      const options = classificationOptions(catalog, field.classificationAxis);
       const value = resolveClassificationOption(rawValue, options, existing?.[fieldName] as string | null | undefined);
       const option = options.find((item) => item.code === value);
       return { value, displayValue: option?.label ?? value };
@@ -1215,6 +1222,25 @@ export class AiBusinessRecordMutationSupportService {
     previousValues: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
     const display: Record<string, unknown> = { ...previousValues };
+    // The value a field holds, as the new one is shown: a classification by its catalog label, a
+    // linked record by its name. A record that no longer resolves keeps its stored value.
+    const fields = this.getConfig(entityType).fields;
+    let catalog: ClassificationCatalog | null = null;
+    for (const [fieldName, value] of Object.entries(previousValues)) {
+      const field = fields[fieldName];
+      // The analytics dimensions of a line are named below, from their values.
+      if (!field || typeof value !== 'string' || !value || isAnalyticsDimensionField(fieldName)) continue;
+      if (field.kind === 'application_classification' && field.classificationAxis) {
+        catalog ??= await this.itOpsSettings.getClassificationCatalog(context.tenantId, { manager: context.manager });
+        display[fieldName] = classificationOptions(catalog, field.classificationAxis).find((option) => option.code === value)?.label ?? value;
+      } else if (field.kind === 'relation' && field.relationTarget && isUuid(value)) {
+        try {
+          display[fieldName] = (await this.resolveRelation(context, field.relationTarget, value, field.label, previousValues))?.label ?? value;
+        } catch (error) {
+          if (!(error instanceof NotFoundException)) throw error;
+        }
+      }
+    }
     if (!lineScope(entityType)) return display;
     const ids = Object.entries(previousValues)
       .filter(([fieldName, value]) => isAnalyticsDimensionField(fieldName) && typeof value === 'string' && isUuid(value))
@@ -1430,7 +1456,7 @@ export class AiBusinessRecordMutationSupportService {
     };
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const entityType = requireEntityType(preview.target_entity_type || preview.mutation_input?.entity_type);
     const config = this.getConfig(entityType);
     const mutation = preview.mutation_input ?? {};
@@ -1467,6 +1493,15 @@ export class AiBusinessRecordMutationSupportService {
       case 'failed':
         summary = preview.error_message || `${action === 'create' ? 'Creation' : 'Update'} preview for ${config.labelSingular} "${title}" failed.`;
         break;
+    }
+
+    if (language !== 'en') {
+      summary = previewSummaryText(
+        language,
+        preview.status,
+        writeActionText.writeRecord(language, action === 'create' ? 'create' : 'update', entityType, quoted(language, title)),
+        { errorMessage: preview.error_message },
+      );
     }
 
     const changes: Record<string, AiMutationPreviewChangeDto> = {};

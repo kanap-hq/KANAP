@@ -12,6 +12,7 @@ import {
 } from '../ai-task-mutation-support.service';
 import { TasksUnifiedService } from '../../../tasks/tasks-unified.service';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
+import { AiWriteLanguage, previewSummaryText, quoted, taskDetailText, taskPriorityText, writeActionText } from '../../ai-write-texts';
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -299,7 +300,7 @@ export class CreateTaskAiMutationOperation implements AiMutationOperation<Create
     };
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const current = preview.current_values ?? {};
     const mutation = preview.mutation_input ?? {};
     const ref = textOrNull(current.target_ref);
@@ -334,6 +335,27 @@ export class CreateTaskAiMutationOperation implements AiMutationOperation<Create
       case 'failed':
         summary = preview.error_message || `Task creation preview for "${title}" failed.`;
         break;
+    }
+
+    if (language !== 'en') {
+      const pending = preview.status === 'pending';
+      const standalone = mutation.relation_type === 'standalone';
+      summary = previewSummaryText(
+        language,
+        preview.status,
+        writeActionText.createTask(language, {
+          subject: !pending && ref ? ref : quoted(language, title),
+          on: pending && !standalone ? toDisplayRelation(mutation) : null,
+          standalone: pending && standalone,
+        }),
+        {
+          pending: [
+            ...(assigneeLabel ? [taskDetailText.assignee(language, assigneeLabel)] : []),
+            taskDetailText.priority(language, taskPriorityText(language, textOrNull(mutation.priority_level) ?? 'normal')!),
+          ],
+          errorMessage: preview.error_message,
+        },
+      );
     }
 
     return {

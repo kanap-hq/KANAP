@@ -37,6 +37,7 @@ import {
   replaceHostLinks,
   type ReplacedHostLink,
 } from '../../assets/placement-rules';
+import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 
 export const AI_RELATION_ENTITY_TYPES = [
   'applications',
@@ -361,7 +362,7 @@ export class AiRelationMutationSupportService {
     };
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const config = getRelationConfig(preview.target_entity_type || preview.mutation_input?.entity_type, preview.mutation_input?.relation);
     const currentItems = this.coerceRelationItems(preview.current_values?.items, 'current_values.items');
     const nextItems = this.coerceRelationItems(preview.mutation_input?.next_items, 'mutation_input.next_items');
@@ -384,6 +385,12 @@ export class AiRelationMutationSupportService {
         summary = preview.error_message || `Relation update preview for "${title}" failed.`;
         break;
     }
+    if (language !== 'en') {
+      summary = previewSummaryText(language, preview.status, writeActionText.updateRelations(language, quoted(language, title)), {
+        errorMessage: preview.error_message,
+      });
+    }
+
     const changes: Record<string, AiMutationPreviewChangeDto> = {
       [config.relation]: {
         label: config.label,

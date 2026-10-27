@@ -167,7 +167,11 @@ The panel auto-opens when:
 For pending change previews, the panel offers two buttons:
 
 - **Approve**: confirms the change and lets Plaid apply it
-- **Reject**: cancels the change. Plaid acknowledges the rejection and continues the conversation.
+- **Reject**: cancels the change. Plaid says the change was rejected and prepares nothing in its place. When your request asked for several changes, it goes on with the others.
+
+A preview, and the message Plaid writes after you approve or reject it, are in the language of your profile, with the field names and values the screens use. A budget line asked for with an amount comes as one preview: one approval creates the line, its budget version for the year and the amount.
+
+When you ask for a change Plaid cannot make, such as deleting a record or changing the state of a vulnerability, it says so and names the screen where you can make it. It prepares no other change in its place.
 
 Nothing that mutates KANAP data is applied silently. The preview is the gate.
 

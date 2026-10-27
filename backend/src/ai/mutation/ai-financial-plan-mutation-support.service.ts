@@ -19,6 +19,7 @@ import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from './ai-mutation-operation.types';
+import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 
 export const AI_FINANCIAL_PLAN_ENTITY_TYPES = ['spend_items', 'capex_items'] as const;
 export type AiFinancialPlanEntityType = typeof AI_FINANCIAL_PLAN_ENTITY_TYPES[number];
@@ -491,7 +492,7 @@ export class AiFinancialPlanMutationSupportService {
     throw new BadRequestException('Unsupported financial plan action.');
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const entityType = requireFinancialEntityType(preview.target_entity_type || preview.mutation_input?.entity_type);
     const action = requireFinancialAction(preview.mutation_input?.action);
     const mutation = preview.mutation_input ?? {};
@@ -541,6 +542,12 @@ export class AiFinancialPlanMutationSupportService {
       summary = `Financial plan preview for "${title}" was rejected.`;
     } else if (preview.status === 'expired') {
       summary = `Financial plan preview for "${title}" expired before approval.`;
+    }
+
+    if (language !== 'en') {
+      summary = previewSummaryText(language, preview.status, writeActionText.writeFinancialPlan(language, action, quoted(language, title)), {
+        errorMessage: preview.error_message,
+      });
     }
 
     return {

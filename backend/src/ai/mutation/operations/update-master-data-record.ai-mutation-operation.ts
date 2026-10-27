@@ -14,6 +14,7 @@ import {
   AiUpdateMasterDataRecordInput,
   getAiMasterDataBusinessResource,
 } from '../ai-master-data-mutation-support.service';
+import { AiWriteLanguage } from '../../ai-write-texts';
 
 const UpdateMasterDataRecordInputSchema = z.object({
   entity_type: z.enum(AI_MASTER_DATA_ENTITY_TYPES)
@@ -66,8 +67,8 @@ export class UpdateMasterDataRecordAiMutationOperation implements AiMutationOper
     return this.support.prepareUpdatePreview(context, input);
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
-    return this.support.presentPreview(preview);
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
+    return this.support.presentPreview(preview, language);
   }
 
   executePreview(context: AiExecutionContextWithManager, preview: AiMutationPreview): Promise<void> {

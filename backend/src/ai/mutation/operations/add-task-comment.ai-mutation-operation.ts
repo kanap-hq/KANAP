@@ -7,6 +7,7 @@ import { AiExecutionContextWithManager } from '../../ai.types';
 import { AiMutationOperation, AiMutationPreviewPresentation, AiPreparedMutationPreview } from '../ai-mutation-operation.types';
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiTaskMutationSupportService } from '../ai-task-mutation-support.service';
+import { AiWriteLanguage, previewSummaryText, writeActionText } from '../../ai-write-texts';
 
 type AddTaskCommentInput = {
   ref: string;
@@ -71,7 +72,7 @@ export class AddTaskCommentAiMutationOperation implements AiMutationOperation<Ad
     };
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const current = preview.current_values ?? {};
     const mutation = preview.mutation_input ?? {};
     const ref = typeof current.target_ref === 'string' ? current.target_ref : 'task';
@@ -93,6 +94,12 @@ export class AddTaskCommentAiMutationOperation implements AiMutationOperation<Ad
       case 'failed':
         summary = preview.error_message || `Comment preview for ${ref} failed.`;
         break;
+    }
+
+    if (language !== 'en') {
+      summary = previewSummaryText(language, preview.status, writeActionText.addTaskComment(language, ref), {
+        errorMessage: preview.error_message,
+      });
     }
 
     return {

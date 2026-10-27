@@ -73,6 +73,12 @@ import { conversationTitleFromMessage } from './ai-conversation-title.util';
 import {
   aiWriteLanguage,
   bulkPreviewsIncompleteText,
+  followUpPreviewText,
+  personWriteLanguage,
+  previewBatchDetailText,
+  previewBatchText,
+  previewErrorLine,
+  previewResultFallbackText,
   writePreviewMissingText,
   type AiWriteLanguage,
 } from './ai-write-texts';
@@ -1589,27 +1595,37 @@ export class AiChatOrchestratorService {
     ].filter(Boolean).join('\n');
   }
 
-  private buildPreviewResultAssistantText(preview: AiMutationPreviewDto, budgetReference?: string): string {
+  /**
+   * The message written after an approval or a rejection: the preview's summary, already in the
+   * person's language (`AiMutationPreviewService`), or a fixed sentence in that language.
+   */
+  private buildPreviewResultAssistantText(
+    preview: AiMutationPreviewDto,
+    budgetReference?: string,
+    language: AiWriteLanguage = 'en',
+  ): string {
     const summary = this.linkifyPreviewSummary(preview, String(preview.summary || '').trim(), budgetReference);
     const errorMessage = String(preview.error_message || '').trim();
 
     switch (preview.status) {
       case 'executed':
-        return summary || 'The approved change has been executed.';
+        return summary || previewResultFallbackText(language, 'executed');
       case 'rejected':
-        return summary || 'The preview was rejected.';
+        return summary || previewResultFallbackText(language, 'rejected');
       case 'failed':
         if (errorMessage) {
-          return summary ? `${summary}\n\nError: ${errorMessage}` : `The approved change failed. Error: ${errorMessage}`;
+          return summary
+            ? `${summary}\n\n${previewErrorLine(language, errorMessage)}`
+            : `${previewResultFallbackText(language, 'failed')} ${previewErrorLine(language, errorMessage)}`;
         }
-        return summary || 'The approved change failed.';
+        return summary || previewResultFallbackText(language, 'failed');
       case 'expired':
-        return summary || 'The preview expired before approval.';
+        return summary || previewResultFallbackText(language, 'expired');
       default:
         if (errorMessage) {
-          return summary ? `${summary}\n\nError: ${errorMessage}` : errorMessage;
+          return summary ? `${summary}\n\n${previewErrorLine(language, errorMessage)}` : errorMessage;
         }
-        return summary || 'The backend processed the preview action.';
+        return summary || previewResultFallbackText(language, 'other');
     }
   }
 
@@ -1617,7 +1633,7 @@ export class AiChatOrchestratorService {
     return String(preview.target?.ref || preview.target?.title || preview.summary || preview.preview_id).trim();
   }
 
-  private buildFollowUpPreviewAssistantText(previews: AiMutationPreviewDto[]): string {
+  private buildFollowUpPreviewAssistantText(previews: AiMutationPreviewDto[], language: AiWriteLanguage = 'en'): string {
     if (previews.length === 0) {
       return '';
     }
@@ -1625,11 +1641,11 @@ export class AiChatOrchestratorService {
       .slice(0, 6)
       .map((preview) => this.previewResultLabel(preview));
     const lines = [
-      `${previews.length} dependent preview${previews.length > 1 ? 's are' : ' is'} now prepared and waiting for explicit approval.`,
+      followUpPreviewText.heading(language, previews.length),
       ...labels.map((label) => `- ${label}`),
     ];
     if (previews.length > labels.length) {
-      lines.push(`- ${previews.length - labels.length} more.`);
+      lines.push(`- ${followUpPreviewText.more(language, previews.length - labels.length)}`);
     }
     return lines.join('\n');
   }
@@ -1638,8 +1654,9 @@ export class AiChatOrchestratorService {
     manager: EntityManager,
     previews: AiMutationPreviewDto[],
     followUpPreviews: AiMutationPreviewDto[] = [],
+    language: AiWriteLanguage = 'en',
   ): Promise<string> {
-    const followUpText = this.buildFollowUpPreviewAssistantText(followUpPreviews);
+    const followUpText = this.buildFollowUpPreviewAssistantText(followUpPreviews, language);
     if (previews.length === 1) {
       const preview = previews[0];
       let budgetReference: string | undefined;
@@ -1650,7 +1667,7 @@ export class AiChatOrchestratorService {
           // A deleted target keeps its id in the confirmation link.
         }
       }
-      const base = this.buildPreviewResultAssistantText(preview, budgetReference);
+      const base = this.buildPreviewResultAssistantText(preview, budgetReference, language);
       return followUpText ? `${base}\n\n${followUpText}` : base;
     }
 
@@ -1660,30 +1677,19 @@ export class AiChatOrchestratorService {
     const expired = previews.filter((preview) => preview.status === 'expired').length;
     const unchanged = previews.length - applied - rejected - failed - expired;
 
-    const parts: string[] = [];
-    if (applied > 0) parts.push(`${applied} applied`);
-    if (rejected > 0) parts.push(`${rejected} rejected`);
-    if (failed > 0) parts.push(`${failed} failed`);
-    if (expired > 0) parts.push(`${expired} expired`);
-    if (unchanged > 0) parts.push(`${unchanged} unchanged`);
-
-    const lines = [
-      parts.length > 0
-        ? `Preview batch completed: ${parts.join(', ')}.`
-        : 'Preview batch completed.',
-    ];
+    const lines = [previewBatchText(language, { applied, rejected, failed, expired, unchanged })];
 
     const failedPreviews = previews.filter((preview) => preview.status === 'failed' || preview.status === 'expired');
     if (failedPreviews.length > 0) {
       lines.push('');
-      lines.push('Failures:');
+      lines.push(previewBatchDetailText.failuresHeading(language));
       for (const preview of failedPreviews.slice(0, 10)) {
         const label = this.previewResultLabel(preview);
-        const message = String(preview.error_message || preview.summary || 'No error detail was returned.').trim();
-        lines.push(`- ${label}: ${message}`);
+        const message = String(preview.error_message || preview.summary || previewBatchDetailText.noErrorDetail(language)).trim();
+        lines.push(`- ${label}${language === 'fr' ? ' : ' : ': '}${message}`);
       }
       if (failedPreviews.length > 10) {
-        lines.push(`- ${failedPreviews.length - 10} more failed previews.`);
+        lines.push(`- ${previewBatchDetailText.moreFailures(language, failedPreviews.length - 10)}`);
       }
     }
 
@@ -2335,6 +2341,8 @@ export class AiChatOrchestratorService {
             } satisfies StreamPreparationResult;
           }
 
+          // The message after the approval or the rejection, in the person's language.
+          const approvalLanguage = await personWriteLanguage(ctx.manager, ctx.tenantId, ctx.userId);
           return {
             conversationId: convId!,
             title: convTitle,
@@ -2343,7 +2351,12 @@ export class AiChatOrchestratorService {
             systemPromptText: '',
             systemPromptSections: [],
             preStreamEvents: streamEvents,
-            approvalAssistantText: await this.buildPreviewResultsAssistantText(ctx.manager, previewResults, followUpPreviews),
+            approvalAssistantText: await this.buildPreviewResultsAssistantText(
+              ctx.manager,
+              previewResults,
+              followUpPreviews,
+              approvalLanguage,
+            ),
             contextSummary: {
               previews: previewContextItems(allPreviewResults),
               artifacts: previewContextItems(allPreviewResults),
@@ -2356,7 +2369,7 @@ export class AiChatOrchestratorService {
             requiresWritePreviewGuard: false,
             writePreviewToolNames: [],
             latestPersonText: '',
-            replyLanguage: 'en',
+            replyLanguage: approvalLanguage,
           } satisfies StreamPreparationResult;
         }
 

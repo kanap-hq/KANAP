@@ -15,6 +15,7 @@ import {
   getAiBusinessRecordBusinessResource,
 } from '../ai-business-record-mutation-support.service';
 import { AiFinancialPlanMutationSupportService } from '../ai-financial-plan-mutation-support.service';
+import { AiWriteLanguage } from '../../ai-write-texts';
 
 /** The families whose creation may carry the amounts of the new line. */
 const LINE_ENTITY_TYPES = new Set<string>(['spend_items', 'capex_items']);
@@ -71,8 +72,8 @@ export class CreateBusinessRecordAiMutationOperation implements AiMutationOperat
     };
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
-    const presentation = this.support.presentPreview(preview);
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
+    const presentation = this.support.presentPreview(preview, language);
     const display = preview.mutation_input?.amounts_display;
     if (preview.mutation_input?.amounts == null || typeof display !== 'string') return presentation;
     // The card shows the line with the amount it is created with.

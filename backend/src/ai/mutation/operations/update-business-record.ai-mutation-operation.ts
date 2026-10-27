@@ -14,6 +14,7 @@ import {
   AiUpdateBusinessRecordInput,
   getAiBusinessRecordBusinessResource,
 } from '../ai-business-record-mutation-support.service';
+import { AiWriteLanguage } from '../../ai-write-texts';
 
 const UpdateBusinessRecordInputSchema = z.object({
   entity_type: z.enum(AI_BUSINESS_RECORD_ENTITY_TYPES)
@@ -56,8 +57,8 @@ export class UpdateBusinessRecordAiMutationOperation implements AiMutationOperat
     return this.support.prepareUpdatePreview(context, input);
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
-    return this.support.presentPreview(preview);
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
+    return this.support.presentPreview(preview, language);
   }
 
   executePreview(context: AiExecutionContextWithManager, preview: AiMutationPreview): Promise<void> {

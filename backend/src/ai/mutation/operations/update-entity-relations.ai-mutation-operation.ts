@@ -14,6 +14,7 @@ import {
   AiUpdateEntityRelationsInput,
   getAiRelationBusinessResource,
 } from '../ai-relation-mutation-support.service';
+import { AiWriteLanguage } from '../../ai-write-texts';
 
 const UpdateEntityRelationsInputSchema = z.object({
   entity_type: z.enum(AI_RELATION_ENTITY_TYPES)
@@ -65,8 +66,8 @@ export class UpdateEntityRelationsAiMutationOperation implements AiMutationOpera
     return this.support.prepareUpdatePreview(context, input);
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
-    return this.support.presentPreview(preview);
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
+    return this.support.presentPreview(preview, language);
   }
 
   executePreview(context: AiExecutionContextWithManager, preview: AiMutationPreview): Promise<void> {

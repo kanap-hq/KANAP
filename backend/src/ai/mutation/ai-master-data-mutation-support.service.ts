@@ -29,6 +29,7 @@ import {
 import { buildAiMutationAudit } from './ai-mutation-audit.util';
 import { ACCOUNT_NUMBER_RULE, parseAccountNumber } from '../../accounts/account-number';
 import { AiTaskMutationSupportService } from './ai-task-mutation-support.service';
+import { AiWriteLanguage, previewSummaryText, quoted, writeActionText } from '../ai-write-texts';
 
 export const AI_MASTER_DATA_ENTITY_TYPES = [
   'companies',
@@ -1278,7 +1279,7 @@ export class AiMasterDataMutationSupportService {
     };
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const entityType = requireEntityType(preview.target_entity_type || preview.mutation_input?.entity_type);
     const config = this.getConfig(entityType);
     const mutation = preview.mutation_input ?? {};
@@ -1315,6 +1316,15 @@ export class AiMasterDataMutationSupportService {
       case 'failed':
         summary = preview.error_message || `${action === 'create' ? 'Creation' : 'Update'} preview for ${config.labelSingular} "${title}" failed.`;
         break;
+    }
+
+    if (language !== 'en') {
+      summary = previewSummaryText(
+        language,
+        preview.status,
+        writeActionText.writeRecord(language, action === 'create' ? 'create' : 'update', entityType, quoted(language, title)),
+        { errorMessage: preview.error_message },
+      );
     }
 
     const changes: Record<string, AiMutationPreviewChangeDto> = {};

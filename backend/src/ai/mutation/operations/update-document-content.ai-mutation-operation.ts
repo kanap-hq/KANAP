@@ -24,6 +24,7 @@ import {
   AiMutationPreviewPresentation,
   AiPreparedMutationPreview,
 } from '../ai-mutation-operation.types';
+import { AiWriteLanguage, previewSummaryText, writeActionText } from '../../ai-write-texts';
 
 type UpdateDocumentContentInput = {
   document_id: string;
@@ -188,7 +189,7 @@ export class UpdateDocumentContentAiMutationOperation implements AiMutationOpera
     };
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const current = preview.current_values ?? {};
     const mutation = preview.mutation_input ?? {};
     const ref = textOrNull(current.target_ref) ?? 'document';
@@ -210,6 +211,12 @@ export class UpdateDocumentContentAiMutationOperation implements AiMutationOpera
       case 'failed':
         summary = preview.error_message || `Content update for ${ref} failed.`;
         break;
+    }
+
+    if (language !== 'en') {
+      summary = previewSummaryText(language, preview.status, writeActionText.updateDocumentContent(language, ref), {
+        errorMessage: preview.error_message,
+      });
     }
 
     return {

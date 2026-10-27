@@ -2955,7 +2955,46 @@ async function testUpdatePreviewRequiresDocumentWriteAccess() {
   assert.deepEqual(allowedCalls, [`writable:doc-1:${USER_ID}`, 'workflow', 'lock']);
 }
 
+/** The cards and their fixed errors follow the person's stored locale, read once per request. */
+async function testPreviewsFollowThePersonLanguage() {
+  const localeReads: string[] = [];
+  const french = createService({
+    previews: [createStatusPreview()],
+    sqlResponses: [{
+      pattern: 'SELECT locale FROM users',
+      rows: (sql: string) => {
+        localeReads.push(sql);
+        return [{ locale: 'fr-FR' }];
+      },
+    }],
+  });
+  const rejected = await french.service.rejectPreview(french.context, 'preview-1');
+  assert.equal(rejected.summary, 'Rejeté : changement de statut de T-1 (Ouvert → Terminé).');
+  assert.equal(localeReads.length, 1);
+
+  const expired = createService({
+    previews: [createStatusPreview({ expires_at: new Date('2026-03-24T09:59:00.000Z') })],
+    sqlResponses: [{ pattern: 'SELECT locale FROM users', rows: [{ locale: 'de' }] }],
+  });
+  const now = Date.now;
+  Date.now = () => new Date('2026-03-24T10:30:00.000Z').getTime();
+  try {
+    const result = await expired.service.executePreview(expired.context, 'preview-1');
+    assert.equal(result.status, 'expired');
+    assert.equal(result.summary, 'Abgelaufen: Status von T-1 ändern (Offen → Erledigt).');
+    assert.equal(result.error_message, 'Die Vorschau ist vor der Genehmigung abgelaufen.');
+  } finally {
+    Date.now = now;
+  }
+
+  // A person without a stored locale reads English, as before.
+  const english = createService({ previews: [createStatusPreview()] });
+  const result = await english.service.rejectPreview(english.context, 'preview-1');
+  assert.equal(result.summary, 'Status update for T-1 was rejected.');
+}
+
 async function main() {
+  await testPreviewsFollowThePersonLanguage();
   await testCreatePreviewPersistsCorrectData();
   await testCreatePreviewAllowsMultiplePendingPreviewsInConversation();
   await testCreatePreviewReusesEquivalentPendingPreviewInConversation();

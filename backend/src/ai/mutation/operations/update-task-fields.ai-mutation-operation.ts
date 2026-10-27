@@ -15,6 +15,7 @@ import {
 import { buildAiMutationAudit } from '../ai-mutation-audit.util';
 import { AiTaskMutationSupportService, toDisplayStatus } from '../ai-task-mutation-support.service';
 import { resolveAiIncidentViewer } from '../../query/ai-query-scope.util';
+import { AiWriteLanguage, previewSummaryText, writeActionText } from '../../ai-write-texts';
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const PRIORITIES = ['blocker', 'high', 'normal', 'low', 'optional'] as const;
@@ -187,7 +188,7 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
     return this.preparePreviewForTask(context, task, input.fields, null);
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const mutation = preview.mutation_input ?? {};
     const current = preview.current_values ?? {};
     const fields = (mutation.fields && typeof mutation.fields === 'object' ? mutation.fields : {}) as Record<string, unknown>;
@@ -227,6 +228,12 @@ export class UpdateTaskFieldsAiMutationOperation implements AiMutationOperation<
       summary = `Task update preview for ${ref} expired before approval.`;
     } else if (preview.status === 'failed') {
       summary = preview.error_message || `Task update preview for ${ref} failed.`;
+    }
+
+    if (language !== 'en') {
+      summary = previewSummaryText(language, preview.status, writeActionText.updateRecord(language, ref), {
+        errorMessage: preview.error_message,
+      });
     }
 
     return {

@@ -39,6 +39,7 @@ import {
   AiTaskMutationSupportService,
 } from '../ai-task-mutation-support.service';
 import { findImgSourceValues } from '../../../common/text-scan';
+import { AiWriteLanguage, previewSummaryText, quoted, taskDetailText, taskPriorityText, ticketImportCardText, ticketImportDetailText, writeActionText } from '../../ai-write-texts';
 
 const RELATION_TYPE_VALUES = ['standalone', 'project', 'spend_item', 'capex_item'] as const;
 const PRIORITY_LEVEL_VALUES = ['blocker', 'high', 'normal', 'low', 'optional'] as const;
@@ -842,7 +843,7 @@ abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTi
     };
   }
 
-  presentPreview(preview: AiMutationPreview): AiMutationPreviewPresentation {
+  presentPreview(preview: AiMutationPreview, language: AiWriteLanguage = 'en'): AiMutationPreviewPresentation {
     const current = preview.current_values ?? {};
     const mutation = preview.mutation_input ?? {};
     const ref = textOrNull(current.target_ref);
@@ -923,6 +924,36 @@ abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTi
         break;
     }
 
+    if (language !== 'en') {
+      const pending = preview.status === 'pending';
+      const standalone = mutation.relation_type === 'standalone';
+      summary = previewSummaryText(
+        language,
+        preview.status,
+        writeActionText.importTicket(language, {
+          ticketId,
+          provider: isGenericTool ? providerKey : null,
+          subject: !pending && ref ? ref : quoted(language, title),
+          on: pending && !standalone ? toDisplayRelation(mutation) : null,
+        }),
+        {
+          pending: [
+            ...(assigneeLabel ? [taskDetailText.assignee(language, assigneeLabel)] : []),
+            taskDetailText.priority(language, taskPriorityText(language, textOrNull(mutation.priority_level) ?? 'normal')!),
+            ...(imageTotalCount > 0 ? [ticketImportDetailText.imagesQueued(language, imageTotalCount)] : []),
+            ...(followupPublicCount > 0 ? [ticketImportDetailText.followupsQueued(language, followupPublicCount)] : []),
+            ...(privateFollowupSkippedCount > 0 ? [ticketImportDetailText.privateFollowupsSkipped(language, privateFollowupSkippedCount)] : []),
+          ],
+          executed: [
+            ...(imageTotalCount > 0 ? [ticketImportDetailText.imagesImported(language, imageImportedCount, imageTotalCount)] : []),
+            ...(followupPublicCount > 0 ? [ticketImportDetailText.followupsImported(language, followupImportedCount, followupPublicCount)] : []),
+            ...(warningCount > 0 ? [ticketImportDetailText.imageWarnings(language, warningCount)] : []),
+          ],
+          errorMessage: preview.error_message,
+        },
+      );
+    }
+
     return {
       target: buildTarget(preview),
       changes: {
@@ -965,31 +996,30 @@ abstract class BaseImportTicketAiMutationOperation<TInput extends LegacyImportTi
         source: {
           label: 'Source',
           from: null,
-          to: textOrNull(mutation.ticket_source_url ?? mutation.glpi_source_url)
-            ? `${isGenericTool ? `Ticket #${ticketId} from ${providerKey}` : `GLPI Ticket #${ticketId}`} (${textOrNull(mutation.ticket_source_url ?? mutation.glpi_source_url)})`
-            : isGenericTool ? `Ticket #${ticketId} from ${providerKey}` : `GLPI Ticket #${ticketId}`,
+          to: ticketImportCardText.source(
+            language,
+            ticketId,
+            isGenericTool ? providerKey : null,
+            textOrNull(mutation.ticket_source_url ?? mutation.glpi_source_url),
+          ),
           format: 'text',
         },
         inline_images: {
           label: 'Inline Images',
           from: null,
-          to: imageTotalCount > 0 ? `${imageTotalCount} queued for import` : 'None',
+          to: imageTotalCount > 0 ? ticketImportCardText.queued(language, imageTotalCount) : ticketImportCardText.none(language),
           format: 'text',
         },
         followups: {
           label: 'Followups',
           from: null,
-          to: followupPublicCount > 0
-            ? `${followupPublicCount} public queued as comments${privateFollowupSkippedCount > 0 ? `, ${privateFollowupSkippedCount} private skipped` : ''}`
-            : privateFollowupSkippedCount > 0 ? `${privateFollowupSkippedCount} private skipped` : 'None',
+          to: ticketImportCardText.followups(language, followupPublicCount, privateFollowupSkippedCount),
           format: 'text',
         },
         followup_inline_images: {
           label: 'Followup Inline Images',
           from: null,
-          to: followupImageTotalCount > 0
-            ? `${followupImageImportedCount > 0 ? `${followupImageImportedCount} imported of ` : ''}${followupImageTotalCount} queued`
-            : 'None',
+          to: ticketImportCardText.followupImages(language, followupImageImportedCount, followupImageTotalCount),
           format: 'text',
         },
         description: {
