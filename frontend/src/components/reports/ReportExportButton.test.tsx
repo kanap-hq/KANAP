@@ -73,6 +73,23 @@ describe('ReportExportButton', () => {
     expect(save.mock.calls[0][1]).toBe('time-logged-2026-10-27.xlsx');
   });
 
+  it('sends the browser zone when the screen sends none', async () => {
+    stubStorage();
+    const zone = vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockReturnValue({
+      ...new Intl.DateTimeFormat().resolvedOptions(),
+      timeZone: 'America/Montreal',
+    });
+    try {
+      renderButton({ url: '/spend/reports/budget/export', params: { year: 2026 }, fileBase: 'budget' });
+      openMenu();
+      fireEvent.click(screen.getByRole('menuitem', { name: 'reports.shared.exportXlsx' }));
+      await waitFor(() => expect(save).toHaveBeenCalled());
+      expect(get.mock.calls[0][1].params).toEqual({ year: 2026, format: 'xlsx', language: 'fr', tz: 'America/Montreal' });
+    } finally {
+      zone.mockRestore();
+    }
+  });
+
   it('remembers the format chosen last and highlights it', async () => {
     const store = stubStorage({ 'kanap.exportFormat': 'xlsx' });
     renderButton();

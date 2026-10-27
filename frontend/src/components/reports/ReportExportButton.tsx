@@ -12,7 +12,8 @@ import { screenLanguage } from '../csv/readings';
  * The table export of a report: the server builds the file (`GET <url>?format=csv|xlsx&language=…`,
  * common/report-export on the API) from the same parameters as the screen. The icon opens a compact
  * menu: CSV (one item per table when the report has several and none is chosen on the screen) or
- * Excel, the format last chosen in this browser highlighted.
+ * Excel, the format last chosen in this browser highlighted. Every request carries `tz`: the screen's
+ * when it sends one, else the browser's zone.
  */
 export type ReportTableExport = {
   /** The export route, `/portfolio/reports/time-logged/export`. */
@@ -56,6 +57,11 @@ export default function ReportExportButton({
       }
       query.format = format;
       query.language = screenLanguage(i18n.resolvedLanguage || i18n.language);
+      // The Parameters sheet dates the file in the user's zone: the browser's, unless the screen sent one.
+      if (query.tz === undefined) {
+        const zone = browserTimeZone();
+        if (zone) query.tz = zone;
+      }
       if (table) query.table = table;
       const res = await api.get<Blob>(url, { params: query, responseType: 'blob' });
       const headers = (res.headers ?? {}) as Record<string, unknown>;
@@ -112,4 +118,12 @@ export default function ReportExportButton({
       </Menu>
     </>
   );
+}
+
+function browserTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
 }
