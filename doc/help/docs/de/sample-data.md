@@ -19,7 +19,7 @@ Der Datensatz beschreibt Fromage & Co, einen fiktiven Käsehersteller:
 - **18 fiktive Benutzer**, die sich nicht anmelden können und keine E-Mails erhalten
 - **Anwendungen und ihre Landschaft**: Instanzen, Schnittstellen und Verbindungen
 - **Verträge, das Budget des laufenden Jahres, Projekte und Aufgaben**
-- **Budgetzeilen, nach den [empfohlenen Dimensionen](analytics.md#empfohlene-dimensionen) klassifiziert**: Jede Zeile hat eine Kostenart und einen IT-Bereich, CAPEX-Zeilen und Build-Zeilen haben einen Zweck, und CAPEX-Zeilen eine Priorität. Der Satz fügt außerdem **Wiederkehr** in der Sprache des Arbeitsbereichs hinzu, und zwei eigene Dimensionen, **Business domain** und **Budget reference**, deren Namen und Werte englisch bleiben
+- **Budgetzeilen, nach den [empfohlenen Dimensionen](analytics.md#empfohlene-dimensionen) klassifiziert**: Jede Zeile hat eine Kostenart und einen IT-Bereich, CAPEX-Zeilen und Build-Zeilen haben einen Zweck, und CAPEX-Zeilen eine Priorität. Der Satz fügt außerdem **Wiederkehr**, **Geschäftsbereich** und **Budgetreferenz** mit ihren Werten in der Sprache des Arbeitsbereichs hinzu
 
 Die Daten richten sich nach dem laufenden Jahr, sodass das Budget immer aktuell wirkt. Das Laden dauert etwa zwei Minuten.
 

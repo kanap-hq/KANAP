@@ -25,10 +25,10 @@ describe('sample data loader steps', () => {
     const emitted = [...source.matchAll(/\bstep\('([a-z0-9-]+)'\)/g)].map((match) => match[1]);
     // The script declares main() after the steps it calls: order by the call order of main().
     const main = source.slice(source.indexOf('async function main()'));
-    const order = [...main.matchAll(/\bstep\('([a-z0-9-]+)'\)|\b(runImports|runRelations)\(\)/g)];
+    const order = [...main.matchAll(/\bstep\('([a-z0-9-]+)'\)|\b(runImports|runRelations)\(/g)];
     const sections: Record<string, string[]> = {};
     for (const name of ['runImports', 'runRelations']) {
-      const body = source.slice(source.indexOf(`async function ${name}()`));
+      const body = source.slice(source.indexOf(`async function ${name}(`));
       const end = body.indexOf('\n}\n');
       sections[name] = [...body.slice(0, end).matchAll(/\bstep\('([a-z0-9-]+)'\)/g)].map((match) => match[1]);
     }

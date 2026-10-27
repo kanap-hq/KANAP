@@ -124,8 +124,8 @@ const ccOwner = Object.fromEntries(CC.map((c) => [c[0], c[4]]));
 // recommended dimensions a tenant starts with (backend/src/analytics/recommended-dimensions.seed.ts,
 // recurrence added by the runner): the files name their values in English, as the seed of an
 // English tenant does, and the runner maps them to the tenant's language. Business domain and
-// budget reference are the fixture's own dimensions: their values are in 27-analytics-values.csv,
-// the runner creates the axes.
+// budget reference are the fixture's own dimensions: 27-analytics-values.csv holds their values
+// in English, and the runner names the axes and the values in the tenant's language.
 //
 // Each line still carries the kind of expense of the earlier fixture (licence, saas, cloud…):
 // it gives the cost pool, and its domain gives the IT tower and the business domain, unless the

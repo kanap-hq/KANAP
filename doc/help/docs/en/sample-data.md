@@ -19,7 +19,7 @@ The set describes Fromage & Co, a fictional cheese maker:
 - **18 fictional users**, who cannot sign in and receive no e-mail
 - **Applications and their landscape**: instances, interfaces and connections
 - **Contracts, the budget of the current year, projects and tasks**
-- **Budget lines classified on the [recommended dimensions](analytics.md#recommended-dimensions)**: every line has a cost pool and an IT tower, CAPEX lines and build lines have a purpose, and CAPEX lines have a priority. The set also adds **Recurrence**, in the workspace's language, and two dimensions of its own, **Business domain** and **Budget reference**, whose names and values stay in English
+- **Budget lines classified on the [recommended dimensions](analytics.md#recommended-dimensions)**: every line has a cost pool and an IT tower, CAPEX lines and build lines have a purpose, and CAPEX lines have a priority. The set also adds **Recurrence**, **Business domain** and **Budget reference**, with their values, in the workspace's language
 
 Dates follow the current year, so the budget always looks up to date. Loading takes about two minutes.
 
