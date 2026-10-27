@@ -390,6 +390,25 @@ function testDeleteRecordSummaryAndCard() {
   assert.equal(card.changes.deletion.format, 'markdown');
   assert.equal(card.changes.deletion.from, null);
   assert.equal(card.changes.deletion.to, '- Commentaires et changements : 2\n- Temps saisis : 1');
+  assert.equal(operation.presentPreview(pending, 'de').changes.deletion.to, '- Kommentare und Änderungen: 2\n- Erfasste Zeiten: 1');
+  assert.equal(operation.presentPreview(pending, 'es').changes.deletion.to, '- Comentarios y cambios: 2\n- Tiempos registrados: 1');
+  // A contact's links stay unnamed in a family the person does not read.
+  const contact: AiMutationPreview = {
+    ...pending,
+    target_entity_type: 'contacts',
+    current_values: {
+      target_ref: null,
+      target_title: 'Camille Roux',
+      updated_at: '2026-10-27T10:00:00.000Z',
+      counts: { suppliers: 1 },
+      hidden: 2,
+    },
+  };
+  assert.equal(summary(operation, contact, 'fr'), 'Suppression du contact « Camille Roux ».');
+  assert.equal(
+    operation.presentPreview(contact, 'fr').changes.deletion.to,
+    "- Fournisseurs : 1\n- D'autres rattachements : 2\n\nLes fiches liées restent.",
+  );
   console.log('  delete_record summary and card: OK');
 }
 
