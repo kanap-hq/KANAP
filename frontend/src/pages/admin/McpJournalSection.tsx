@@ -24,7 +24,6 @@ import {
   type McpJournalItem,
   type McpJournalPage,
   type McpJournalQuery,
-  type McpJournalResult,
 } from '../../ai/aiApi';
 import { PropertyRow, StatusDot } from '../../components/design';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
@@ -32,7 +31,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
-import { getDotColor } from '../../utils/statusColors';
+import { getDotColor, MCP_CALL_RESULT_COLORS } from '../../utils/statusColors';
 import { clientDisplayName } from '../oauth/clientName';
 
 export const MCP_JOURNAL_PAGE_SIZE = 25;
@@ -49,12 +48,6 @@ const KNOWN_REASONS = new Set([
   'unknown_tool', 'read_only', 'key_policy', 'permission', 'disabled', 'invalid_input',
   'key_revoked', 'key_expired', 'owner_not_allowed', 'not_found', 'error',
 ]);
-const RESULT_COLOR: Record<McpJournalResult, string> = {
-  completed: 'success',
-  refused: 'warning',
-  failed: 'error',
-  running: 'default',
-};
 
 type Filters = { person: string; key: string; result: string; period: Period };
 const DEFAULT_FILTERS: Filters = { person: '', key: '', result: '', period: 'week' };
@@ -207,7 +200,7 @@ export default function McpJournalSection() {
                   <TableBody>
                     {items.map((item) => {
                       const reason = reasonText(item);
-                      const color = getDotColor(RESULT_COLOR[item.result] ?? 'default', mode);
+                      const color = getDotColor(MCP_CALL_RESULT_COLORS[item.result] ?? 'default', mode);
                       return (
                         <TableRow key={item.tool_execution_id} data-testid="mcp-journal-row">
                           <TableCell sx={{ ...cellSx, whiteSpace: 'nowrap' }}>
