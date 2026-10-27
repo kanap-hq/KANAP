@@ -296,7 +296,8 @@ export class TasksCsvService {
         }
       }
 
-      // Update task with viewer and owner arrays (only if columns were present)
+      // Update task with viewer and owner arrays (only if columns were present). The columns are NOT
+      // NULL jsonb lists: none is `[]`, and the list goes as JSON (a bare array is a PostgreSQL array).
       const hasViewerColumns = [1, 2, 3, 4].some((i) => `viewer_email_${i}` in row);
       const hasOwnerColumns = [1, 2, 3, 4].some((i) => `owner_email_${i}` in row);
 
@@ -306,14 +307,14 @@ export class TasksCsvService {
         let paramIndex = 2;
 
         if (hasViewerColumns) {
-          updates.push(`viewer_ids = $${paramIndex}`);
-          params.push(viewerIds.length > 0 ? viewerIds : null);
+          updates.push(`viewer_ids = $${paramIndex}::jsonb`);
+          params.push(JSON.stringify(viewerIds));
           paramIndex++;
         }
 
         if (hasOwnerColumns) {
-          updates.push(`owner_ids = $${paramIndex}`);
-          params.push(ownerIds.length > 0 ? ownerIds : null);
+          updates.push(`owner_ids = $${paramIndex}::jsonb`);
+          params.push(JSON.stringify(ownerIds));
           paramIndex++;
         }
 
