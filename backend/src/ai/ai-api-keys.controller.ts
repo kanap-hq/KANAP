@@ -138,14 +138,22 @@ export class AiApiKeysController {
     const context = this.buildContext(req);
     return this.tenantExecutor.runWithContext(context, async (ctx) => {
       await this.policy.assertSettingsAccess(context, ctx.manager);
-      return this.mcpAudit.list(ctx, {
-        apiKeyId: query.api_key_id == null ? null : String(query.api_key_id),
-        runId: query.run_id == null ? null : String(query.run_id),
-        toolExecutionId: query.tool_execution_id == null ? null : String(query.tool_execution_id),
-        capabilityName: query.capability_name == null ? null : String(query.capability_name),
-        status: query.status == null ? null : String(query.status),
+      const text = (value: unknown) => (value == null ? null : String(value));
+      const page = await this.mcpAudit.list(ctx, {
+        apiKeyId: text(query.api_key_id),
+        userId: text(query.user_id),
+        runId: text(query.run_id),
+        toolExecutionId: text(query.tool_execution_id),
+        capabilityName: text(query.capability_name),
+        status: text(query.status),
+        result: text(query.result),
+        from: text(query.from),
+        to: text(query.to),
         limit: query.limit == null ? null : Number(query.limit),
+        offset: query.offset == null ? null : Number(query.offset),
       });
+      // The journal screen's filters: the people and the keys or connections of the tenant.
+      return { ...page, facets: await this.mcpAudit.listFacets(ctx) };
     });
   }
 }
