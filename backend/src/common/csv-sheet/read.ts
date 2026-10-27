@@ -1,4 +1,6 @@
+import { BadRequestException } from '@nestjs/common';
 import { parse } from 'csv-parse';
+import { Features } from '../../config/features';
 import { denormalizeCsvFormulaValue } from '../csv/csv-export.service';
 import { Decimal } from '../decimal';
 import {
@@ -108,7 +110,8 @@ export async function readCsv(input: Buffer | string, schema: CsvReadSchema): Pr
  * concerns text cells.
  */
 export async function readSheet(input: Buffer, schema: CsvReadSchema): Promise<SheetReadResult> {
-  if (!hasZipSignature(input) && !hasOldExcelSignature(input)) return { ...(await readCsv(input, schema)), format: 'csv' };
+  // With the imports in CSV only (`IMPORT_XLSX` off), a workbook meets the CSV decoder and its sentence.
+  if (!isWorkbookBytes(input)) return { ...(await readCsv(input, schema)), format: 'csv' };
   validateSchema(schema);
   let grid: ReturnType<typeof readXlsxGrid>;
   try {
@@ -132,6 +135,56 @@ export async function readSheet(input: Buffer, schema: CsvReadSchema): Promise<S
     rows.push({ line: index + 1, cells });
   }
   return { ...readGrid(rows, schema, 'utf-8', null), ...sheet };
+}
+
+/** A workbook to read as one: a ZIP or OLE file while the imports read workbooks (`IMPORT_XLSX`). */
+function isWorkbookBytes(input: Buffer): boolean {
+  return Features.IMPORT_XLSX && (hasZipSignature(input) || hasOldExcelSignature(input));
+}
+
+/** The text of an import file, CSV or converted from the first sheet of an .xlsx workbook. */
+export interface ImportFileText {
+  /** CSV text: the file's own, decoded, or the sheet's cells written with `;`. */
+  text: string;
+  format: 'csv' | 'xlsx';
+  /** The sheet read: the first worksheet of the workbook. */
+  sheetName?: string;
+  /** Sheets of the workbook: more than one means the others were not read. */
+  sheetCount?: number;
+}
+
+/**
+ * The text of an import file, for the importers that parse CSV text themselves (fast-csv). A CSV file
+ * is decoded as `decodeCsv` does, with its refusals (`CsvDecodeError`). An .xlsx workbook, while the
+ * imports read them, becomes the CSV text of its first worksheet, one line per spreadsheet row and
+ * `;` between cells: a text cell as it is (the importer trims it and undoes the formula guard, as for
+ * a CSV file), a number in plain decimal notation with a point, a date as its ISO day, followed by its
+ * time (`2026-06-02 07:52:00`) when the cell has one: the time Excel shows, with no zone, which the
+ * importer reads as it reads the same text in a CSV file. Its refusals
+ * are 400s with their `XLSX_*` code; a sheet past the import's row cap gets the CSV row-cap sentence.
+ */
+export function readImportText(input: Buffer): ImportFileText {
+  if (!isWorkbookBytes(input)) return { text: decodeCsv(input).text, format: 'csv' };
+  let grid: ReturnType<typeof readXlsxGrid>;
+  try {
+    grid = readXlsxGrid(input, { maxValueRows: CSV_ROW_CAP + 1 + XLSX_BLANK_ROW_MARGIN });
+  } catch (error) {
+    if (!(error instanceof XlsxReadError)) throw error;
+    if (error.limit === 'maxValueRows') throw new BadRequestException(rowCapMessage());
+    throw new BadRequestException({ message: error.message, code: error.code });
+  }
+  const text = grid.rows.map((row) => row.map((cell) => csvTextCell(importCellText(cell))).join(';')).join('\n');
+  return { text, format: 'xlsx', sheetName: grid.sheetName, sheetCount: grid.sheetCount };
+}
+
+/** The text of a cell for the import text: `sheetCellText`, with the time of a date-time cell. */
+function importCellText(cell: SheetCell): string {
+  return cell.kind === 'date' && cell.time ? `${cell.iso} ${cell.time}` : sheetCellText(cell);
+}
+
+/** A cell of CSV text: quoted when it holds a separator, a quote, a line break or edge spaces. */
+function csvTextCell(value: string): string {
+  return /[",;\t\r\n]|^\s|\s$/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
 
 /** Header detection, matching, settlement and row building, on rows that are not blank. */
@@ -174,7 +227,7 @@ function isBlank(cell: SheetCell): boolean {
 
 /**
  * The text of a cell, as a CSV file would hold it: a number in plain decimal notation without float
- * noise (`1100`, `0.001`), a date as its ISO day.
+ * noise (`1100`, `0.001`), a date as its ISO day (the shared layer's date columns hold days only).
  */
 export function sheetCellText(cell: SheetCell): string {
   switch (cell.kind) {
@@ -471,8 +524,9 @@ function buildRows(
   const decision = resolveDateOrder(samples, schema.language, schema.dateOrder, hint);
   const amountsDecision = resolveAmountConvention(amountSamples, schema.language, schema.decimalMark, hint);
   // A number cell in a text column is written as the file's own CSV would write it: with the decimal
-  // mark of the language the file records (the budget file's token), a point when it records none.
-  const textDecimal = hint ? csvProfile(hint).decimal : '.';
+  // mark of the language the file records (the budget file's token); when it records none, the mark of
+  // the import's language if the schema asks for it, a point otherwise.
+  const textDecimal = hint ? csvProfile(hint).decimal : schema.typedNumbersInLanguage ? csvProfile(schema.language).decimal : '.';
   const rows = data.map((row) =>
     buildRow(row, slots, schema, decision.order, decision.error !== null, amountsDecision.decimal, amountsDecision.error !== null, textDecimal),
   );

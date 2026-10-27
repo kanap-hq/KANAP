@@ -16,6 +16,7 @@ import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { countValueFormatter } from '../components/grid/countValueFormatter';
 import { companyListYear } from './companies/companyYear';
+import { ImportLabel } from '../components/csv/importFiles';
 
 export default function DepartmentsPage() {
   const { t } = useTranslation(['master-data', 'common']);
@@ -180,7 +181,7 @@ export default function DepartmentsPage() {
           {t('shared.labels.new')}
         </Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('shared.labels.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('shared.labels.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('common:export.button')}</Button>}
       {canAdmin && (
         <DeleteSelectedButton

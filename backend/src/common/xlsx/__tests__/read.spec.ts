@@ -4,6 +4,8 @@ import { backendPath } from '../../__tests__/backend-root';
 import { writeXlsx } from '../write';
 import {
   isDateFormatCode,
+  isDateTimeFormatCode,
+  serialToDateTime,
   readXlsxGrid,
   serialToIsoDay,
   XLSX_OLD_FORMAT_MESSAGE,
@@ -22,7 +24,7 @@ import { declareSize, handmadeXlsx, HandmadeParts, si, workbookParts, zipOf } fr
 const fixture = (name: string): Buffer => fs.readFileSync(backendPath('src', 'common', 'xlsx', '__tests__', 'fixtures', name));
 const text = (value: string): XlsxReadCell => ({ kind: 'text', value });
 const number = (value: string): XlsxReadCell => ({ kind: 'number', value });
-const date = (iso: string): XlsxReadCell => ({ kind: 'date', iso });
+const date = (iso: string, time?: string): XlsxReadCell => (time === undefined ? { kind: 'date', iso } : { kind: 'date', iso, time });
 const EMPTY: XlsxReadCell = { kind: 'empty' };
 const rowsOf = (options: HandmadeParts, limits?: Partial<XlsxReadLimits>) => readXlsxGrid(handmadeXlsx(options), limits).rows;
 
@@ -132,8 +134,32 @@ function dateStyles() {
     `<row r="1">${values.map((v, i) => `<c r="${String.fromCharCode(65 + i)}1" s="${i}"><v>${v}</v></c>`).join('')}</row>`;
   assert.deepEqual(rowsOf({ ...styled, sheetData: cells(['46752', '46752', '46752.75', '46752', '46752', '46752', '1.5', '0.25']) }), [
     // A time of day alone (serial 0.25 in a time format) is no calendar day: it stays a number.
-    [number('46752'), date('2027-12-31'), date('2027-12-31'), date('2027-12-31'), number('46752'), number('46752'), number('1.5'), number('0.25')],
+    [number('46752'), date('2027-12-31'), date('2027-12-31', '18:00:00'), date('2027-12-31'), number('46752'), number('46752'), number('1.5'), number('0.25')],
   ]);
+
+  // Date-times keep the time Excel shows, rounded to the second: a custom `dd/mm/yyyy hh:mm` and the
+  // built-in 22 (`m/d/yyyy h:mm`). A day in a date-time format shows midnight; a day format with a
+  // time of day in its serial keeps it too; a day format on a whole serial stays a plain day.
+  assert.ok(isDateTimeFormatCode('dd/mm/yyyy\\ hh:mm'));
+  assert.ok(isDateTimeFormatCode('yyyy-mm-dd h:mm AM/PM'));
+  assert.ok(!isDateTimeFormatCode('dd/mm/yyyy'), 'a day only');
+  assert.ok(!isDateTimeFormatCode('[h]:mm'), 'elapsed time');
+  assert.ok(!isDateTimeFormatCode('"hours"\\ 0'), 'an h inside quotes');
+  const timed = {
+    numFmts: '<numFmt numFmtId="164" formatCode="dd/mm/yyyy\\ hh:mm"/><numFmt numFmtId="165" formatCode="dd/mm/yyyy"/>',
+    cellXfs: [0, 164, 22, 165],
+  };
+  // 46297.3270833333 is 2026-10-02 07:51; 45567.604166666664 is 2024-10-02 14:30 as Excel writes it.
+  assert.deepEqual(rowsOf({ ...timed, sheetData: cells(['1', '46297.3270833333', '45567.604166666664', '46297.25']) }), [
+    [number('1'), date('2026-10-02', '07:51:00'), date('2024-10-02', '14:30:00'), date('2026-10-02', '06:00:00')],
+  ]);
+  assert.deepEqual(rowsOf({ ...timed, sheetData: cells(['1', '46297', '46297', '46297']) }), [
+    [number('1'), date('2026-10-02', '00:00:00'), date('2026-10-02', '00:00:00'), date('2026-10-02')],
+  ]);
+  assert.deepEqual(serialToDateTime(46297.5 + 1.4 / 86_400, false, false), { iso: '2026-10-02', time: '12:00:01' }, 'rounded to the second');
+  assert.deepEqual(serialToDateTime(46297.9999999, false, true), { iso: '2026-10-02', time: '23:59:59' }, 'kept within its day');
+  assert.deepEqual(serialToDateTime(46297, false, false), { iso: '2026-10-02' });
+  assert.equal(serialToDateTime(60.5, false, true), null);
   // A style index past the table is General.
   assert.deepEqual(rowsOf({ ...styled, sheetData: '<row r="1"><c r="A1" s="99"><v>46752</v></c></row>' }), [[number('46752')]]);
 

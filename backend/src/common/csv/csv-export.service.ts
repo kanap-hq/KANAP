@@ -5,6 +5,7 @@ import { formatCsvDate, timeZoneHeader } from '../csv-sheet/date';
 import { csvProfile } from '../csv-sheet/language';
 import { CsvLanguage } from '../csv-sheet/types';
 import { writeCsvHeader, writeCsvRows } from '../csv-sheet/write';
+import { localDay } from '../csv-sheet/unchanged';
 import { parseExportFormat, type ExportFileFormat } from '../xlsx/format';
 import { writeXlsx, XLSX_CONTENT_TYPE, type XlsxCell } from '../xlsx/write';
 import {
@@ -135,9 +136,13 @@ export interface CsvExportOptions<F extends ExportFileFormat = 'csv'> {
   format?: F;
 }
 
-/** The day of a date field, `YYYY-MM-DD` when the value holds one. */
+/**
+ * The day of a date field, `YYYY-MM-DD` when the value holds one. A Date is read in the server's
+ * zone, as node-postgres builds it from a `date` column and as the import compares it: in UTC, a
+ * server east of Greenwich would write the day before.
+ */
 function dayOf(rawValue: unknown): string {
-  return rawValue instanceof Date ? rawValue.toISOString().split('T')[0] : String(rawValue).split('T')[0];
+  return rawValue instanceof Date ? localDay(rawValue) : String(rawValue).split('T')[0];
 }
 
 const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;

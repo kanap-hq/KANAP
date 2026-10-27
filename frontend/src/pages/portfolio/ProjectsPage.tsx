@@ -22,6 +22,7 @@ import { useTheme } from '@mui/material/styles';
 import { StatusDot } from '../../components/design';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 import { useUrlFilterModel } from '../../hooks/useListContextSearch';
+import { ImportLabel } from '../../components/csv/importFiles';
 
 type ProjectRow = {
   id: string;
@@ -512,7 +513,7 @@ export default function ProjectsPage() {
           {t('projects.actions.new')}
         </Button>
       )}
-      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('projects.actions.importCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}><ImportLabel csv={t('projects.actions.importCsv')} /></Button>}
       {canAdmin && <Button variant="action" onClick={openExport}>{t('common:export.button')}</Button>}
     </Stack>
   );

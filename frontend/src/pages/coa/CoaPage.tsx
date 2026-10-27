@@ -24,6 +24,7 @@ import { neutralLinkSx, tealLinkSx } from '../../theme/formSx';
 import { statusColumnProps } from '../../components/grid/statusColumn';
 import { lineTypeUsageColumnProps } from '../../components/grid/lineTypeUsageColumn';
 import type { AccountNature } from '../../constants/accountNature';
+import { ImportLabel } from '../../components/csv/importFiles';
 
 type AccountRow = {
   id: string;
@@ -404,7 +405,7 @@ export default function CoaPage() {
       )}
       {canAdmin && (
         <Button variant="action" onClick={() => setImportOpen(true)} disabled={!selectedCoaId}>
-          {t('shared.labels.importCsv')}
+          <ImportLabel csv={t('shared.labels.importCsv')} />
         </Button>
       )}
       {canAdmin && (

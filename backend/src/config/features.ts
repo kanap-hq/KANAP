@@ -34,4 +34,7 @@ export const Features = {
   CVE_LIST_FEED_ENABLED: (process.env.CVE_LIST_FEED_ENABLED ?? '').trim()
     ? parseBoolean(process.env.CVE_LIST_FEED_ENABLED)
     : vulnerabilityFeedEnabled,
+  // Data imports read an Excel workbook (.xlsx, its first sheet) as well as a CSV file: on by default.
+  // IMPORT_XLSX=false brings back the CSV-only imports, a workbook refused with the "save as CSV" sentence.
+  IMPORT_XLSX: (process.env.IMPORT_XLSX ?? '').trim() ? parseBoolean(process.env.IMPORT_XLSX) : true,
 };

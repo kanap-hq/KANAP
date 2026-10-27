@@ -9,6 +9,7 @@ import { csvRequestErrorMessage } from './csvRequestError';
 import { csvEntityOf, csvFieldLabel } from './csvLabels';
 import { CsvReportMessage, csvMessageText } from './csvMessage';
 import { AmountReading, DateReading, amountReadingOf, dateReadingOf, screenLanguage } from './readings';
+import { useImportFiles } from './importFiles';
 
 type ImportReport = {
   ok: boolean;
@@ -23,7 +24,7 @@ type ImportReport = {
   /** Rows that import, with a note on how (account numbers whose leading zeros are dropped). */
   warnings?: RowError[];
   /** How the server read the dates and the amounts, in English, when it had to choose. */
-  notices?: { dates: string | null; amounts: string | null };
+  notices?: { dates: string | null; amounts: string | null; firstSheetOnly?: string };
   /** Headers the importer does not know and left out of the import. */
   ignoredColumns?: string[];
 };
@@ -102,6 +103,7 @@ export default function CsvImportDialog({
   const { t, i18n } = useTranslation(['common', 'ops']);
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
   const entity = csvEntityOf(endpoint);
+  const { accept, workbook } = useImportFiles();
   const [file, setFile] = useState<File | null>(null);
   const [hover, setHover] = useState(false);
   const [report, setReport] = useState<ImportReport | null>(null);
@@ -115,6 +117,8 @@ export default function CsvImportDialog({
 
   const dateNotice = report?.notices?.dates ?? null;
   const amountNotice = report?.notices?.amounts ?? null;
+  // An Excel workbook of several sheets: the one read, the first.
+  const firstSheetOnly = report?.notices?.firstSheetOnly;
   // What the shown report says, when it is one of the sentences the dialog knows.
   const appliedDates = dateReadingOf(dateNotice);
   const appliedAmounts = amountReadingOf(amountNotice);
@@ -241,10 +245,12 @@ export default function CsvImportDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" onTransitionExited={reset}>
-      <DialogTitle>{titleProp || t('csv.importTitle')}</DialogTitle>
+      <DialogTitle>{titleProp || t(workbook ? 'buttons.import' : 'csv.importTitle')}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
-          {t(flexibleFormat ? 'csv.uploadDescriptionFlexible' : 'csv.uploadDescription')}
+          {t(flexibleFormat
+            ? (workbook ? 'csv.uploadDescriptionFlexibleWorkbook' : 'csv.uploadDescriptionFlexible')
+            : (workbook ? 'csv.uploadDescriptionWorkbook' : 'csv.uploadDescription'))}
         </Typography>
         {hint && <Typography variant="body2" sx={{ mb: 2 }}>{hint}</Typography>}
         {hintList && hintList.items.length > 0 && (
@@ -282,8 +288,8 @@ export default function CsvImportDialog({
           }}
           onClick={onPick}
         >
-          <Typography>{file ? file.name : t('csv.dragDropOrClick')}</Typography>
-          <input type="file" ref={inputRef} onChange={onFileChange} hidden accept=".csv,text/csv" />
+          <Typography>{file ? file.name : t(workbook ? 'csv.dragDropFileOrClick' : 'csv.dragDropOrClick')}</Typography>
+          <input type="file" ref={inputRef} onChange={onFileChange} hidden accept={accept} />
         </Box>
         <Stack direction="row" spacing={1}>
           {preflight ? (
@@ -297,7 +303,7 @@ export default function CsvImportDialog({
         </Stack>
         {loading && <LinearProgress sx={{ mt: 2 }} />}
         {requestError && <Alert severity="error" sx={{ mt: 2 }}>{requestError}</Alert>}
-        {report && !completed && (dateNotice || amountNotice || ignoredColumns.length > 0) && (
+        {report && !completed && (dateNotice || amountNotice || ignoredColumns.length > 0 || firstSheetOnly !== undefined) && (
           <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             {dateNotice && (
               <NoticeLine
@@ -317,6 +323,9 @@ export default function CsvImportDialog({
             )}
             {ignoredColumns.length > 0 && (
               <NoticeLine text={t('csv.ignoredColumns', { columns: ignoredColumns.join(', ') })} action={null} />
+            )}
+            {firstSheetOnly !== undefined && (
+              <NoticeLine text={t(`${K}firstSheetOnly`, { name: firstSheetOnly })} action={null} />
             )}
           </Box>
         )}
