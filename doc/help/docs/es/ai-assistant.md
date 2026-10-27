@@ -126,6 +126,27 @@ Plaid nombra un registro vinculado al que usted consulta solo si puede leer su m
 
 Cuando Plaid suma importes presupuestarios, una línea cuya moneda no tiene tipo de cambio para el año queda excluida de la suma. Plaid indica entonces qué monedas y años ha excluido. Los asistentes conectados por MCP reciben la misma respuesta.
 
+Los totales vienen de KANAP. Una lista de líneas presupuestarias o de contratos llega con el total de todos los registros que coinciden, todas las páginas incluidas, y Plaid cita ese total o pide una suma a KANAP. Cuando su acceso a los datos está limitado a algunas empresas o centros de coste, Plaid indica que sus recuentos y totales cubren su acceso, y no los presenta como el total del espacio de trabajo.
+
+Cuando Plaid prueba un valor de filtro que un campo no admite, por ejemplo «activa» para el estado de una aplicación (que es «activado» o «desactivado»), KANAP lo rechaza y lista los valores aceptados. Plaid vuelve entonces a buscar con el valor correcto.
+
+Cuando usted pide un cambio que su rol no permite, Plaid nombra el derecho que le falta, por ejemplo «necesita el derecho de modificar los proyectos». Un administrador lo añade a su rol.
+
+### Lo que Plaid no lee { #what-plaid-does-not-read }
+
+Plaid no lee:
+
+- Los centros de coste (**Datos maestros › Centros de coste**). Una línea presupuestaria indica su centro de coste, así que Plaid puede filtrar las líneas por él.
+- Los calendarios laborales (**Datos maestros › Calendarios laborales**)
+- Los tipos de cambio (**Gestión presupuestaria › Administración › Monedas**). Los importes presupuestarios llegan a Plaid ya convertidos a la moneda de informes.
+- Los ajustes de las dimensiones analíticas (**Datos maestros › Dimensiones analíticas**). Sus valores, y el valor que tiene cada línea presupuestaria, se pueden leer.
+- El acceso a los datos, es decir, a qué empresas o centros de coste está limitada una persona (**Administración › Acceso a los datos**)
+- El registro de auditoría (**Administración › Registro de auditoría**)
+- Los agentes IA
+- El contracargo por empresa beneficiaria (**Gestión presupuestaria › Informes › Contracargo global**)
+
+Cuando una pregunta toca uno de estos elementos, Plaid dice que no puede leerlo y nombra la pantalla que lo muestra. Una búsqueda sin resultado indica a Plaid lo que no ha buscado, para que la respuesta no afirme que el registro no existe. Lo mismo ocurre con un campo: el contexto de un registro incluye sus campos principales, y Plaid lee el registro completo antes de decir que un campo está vacío. Los asistentes conectados por MCP obtienen las mismas respuestas.
+
 ## Artefactos y vistas previas
 
 Algunas respuestas incluyen material adicional que no encaja de forma natural dentro del hilo de chat. KANAP los llama **artefactos**.
