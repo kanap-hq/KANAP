@@ -19,8 +19,10 @@ export interface ContributorCapacityRow {
 }
 
 export interface TeamCapacityRow {
+  /** `no-team` for the people without a team. */
   teamId: string;
-  teamName: string;
+  /** Null for the people without a team: the screen and the exports write their own label. */
+  teamName: string | null;
   memberCount: number;
   remainingDays: number;
   capacityDaysPerMonth: number | null;

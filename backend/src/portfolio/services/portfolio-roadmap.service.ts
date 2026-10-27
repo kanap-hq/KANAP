@@ -32,6 +32,12 @@ import { Allocation, computeAutoAllocations } from '../utils/allocation-utils';
 
 type ServiceOpts = { manager?: EntityManager };
 
+/**
+ * The label a missing team sorts under. It stays internal: the answer names no team as `null`, and
+ * the screen and the exports write it in their language.
+ */
+const NO_TEAM_SORT_NAME = 'No team';
+
 type ProjectRow = {
   id: string;
   name: string;
@@ -2807,7 +2813,7 @@ export class PortfolioRoadmapService {
       const key = `${teamKey}:${entry.week}`;
       const existing = byTeamWeek.get(key) ?? {
         teamId: entry.teamId,
-        teamName: entry.teamName ?? 'No team',
+        teamName: entry.teamName,
         week: entry.week,
         effortDays: 0,
         capacityDays: null,
@@ -2835,7 +2841,7 @@ export class PortfolioRoadmapService {
     });
 
     result.sort((a, b) =>
-      (a.teamName ?? '').localeCompare(b.teamName ?? '')
+      (a.teamName ?? NO_TEAM_SORT_NAME).localeCompare(b.teamName ?? NO_TEAM_SORT_NAME)
       || (a.teamId ?? '').localeCompare(b.teamId ?? '')
       || a.week.localeCompare(b.week));
 
