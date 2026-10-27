@@ -117,9 +117,11 @@ You can also zoom with the mouse wheel and pan by clicking and dragging the back
 
 Click a server or cluster node to highlight its connections and open a detail panel showing:
 
-- **Server type**, **Server location**, **Operating system**, **Network segment**, **IP address**
+- **Server type**, **Server location**, **Operating system**, **Network segment**, **IP address**, **Cluster**
 - **Assigned applications**: Apps running on this server, grouped by environment. On a member, an app assigned to its cluster shows "via" the cluster's name. Click an app name to open it.
 - **Open server** or **View cluster** button to open the workspace. **View cluster** opens the cluster on its **Operations** tab, where its members are managed
+
+The panel lists every IP address of the server. The network segment is the zone of the subnet of the first address. On a member, **Cluster** names each cluster it belongs to, and each name opens that cluster.
 
 Click an entity node to see its type and environment.
 

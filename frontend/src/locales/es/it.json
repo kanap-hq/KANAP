@@ -328,8 +328,8 @@
         "derivedNoInterfaces": "Derivado (sin interfaces vinculadas)",
         "manual": "Manual"
       },
-      "deleteWarning_one": "Esta acción no se puede deshacer. Sus servidores, interfaces y documentos se conservan; solo se eliminan sus vínculos con esta conexión.",
-      "deleteWarning_other": "Esta acción no se puede deshacer. Sus servidores, interfaces y documentos se conservan; solo se eliminan sus vínculos con estas conexiones.",
+      "deleteWarning_one": "Esta acción no se puede deshacer. Los saltos de esta conexión se eliminan con ella. Sus servidores, interfaces y documentos se conservan; solo se eliminan sus vínculos con esta conexión.",
+      "deleteWarning_other": "Esta acción no se puede deshacer. Los saltos de cada conexión se eliminan con ella. Sus servidores, interfaces y documentos se conservan; solo se eliminan sus vínculos con estas conexiones.",
       "delete": {
         "toDelete_one": "Se eliminará {{count}} conexión:",
         "toDelete_other": "Se eliminarán {{count}} conexiones:",
@@ -788,6 +788,8 @@
       "servers": "Servidores",
       "selectServers": "Seleccionar servidores, clústeres o entidades",
       "selectedServers": "Servidores seleccionados ({{count}})",
+      "more": "+{{count}}",
+      "removeServer": "Quitar {{name}}",
       "showMultiServer": "Mostrar conexiones multi-servidor",
       "showLayers": "Mostrar capas de conexión",
       "roleBased": "Ubicación por rol",
@@ -797,6 +799,7 @@
       "nodeDetails": "Detalles del nodo",
       "connectionDetails": "Detalles de la conexión",
       "cluster": "Clúster",
+      "clusterLine": "Clúster:",
       "typeValue": "Tipo: {{value}}",
       "environmentValue": "Entorno: {{value}}",
       "serverType": "Tipo de servidor:",
@@ -985,6 +988,7 @@
       "protocolsValue": "Protocolos: {{value}}",
       "bindingValue": "Enlace: {{env}} · {{leg}}",
       "viewInConnectionMap": "Ver en el mapa de conexiones",
+      "openConnection": "Abrir conexión",
       "openInterface": "Abrir interfaz",
       "clusterEndpoint": "{{name}} (clúster)"
     },

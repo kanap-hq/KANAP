@@ -2,6 +2,7 @@ import { BadRequestException, CallHandler, ExecutionContext, Injectable, NestInt
 import { from, Observable, throwError } from 'rxjs';
 import { mergeMap } from 'rxjs/operators';
 import type { EntityManager } from 'typeorm';
+import { QUERY_AS_SENT } from '../../audit/security-events';
 import { mergeListContextQuery } from './list-context';
 import { ListContextsService } from './list-contexts.service';
 
@@ -54,6 +55,8 @@ export class ListContextInterceptor implements NestInterceptor {
 export async function applyListContext(contexts: ListContextsService, req: any, manager: EntityManager, tenantId: string): Promise<void> {
   const query = req.query as Record<string, unknown>;
   const stored = await contexts.require(manager, tenantId, query.ctx);
+  // The export row records the query as sent, with `ctx` as the id of the context.
+  req[QUERY_AS_SENT] = query;
   Object.defineProperty(req, 'query', {
     value: mergeListContextQuery(stored.state, query),
     writable: true,

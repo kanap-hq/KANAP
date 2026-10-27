@@ -151,7 +151,7 @@ Pour l'interface sélectionnée et l'environnement courant :
 - **Criticité**, **Route**, **Nombre de liaisons**, **Via middleware** (oui/non)
 - **Points de terminaison** : Pour chaque liaison dans l'environnement actif, affiche app source -> app cible, type de leg, nom du job, point de terminaison source et point de terminaison cible
 - **Connexions infra** : Connexions d'infrastructure liées à cette interface pour l'environnement courant. Chaque carte affiche source, destination, protocoles et l'environnement / type de leg de la liaison. Depuis la carte, vous pouvez :
-  - Cliquer sur **Modifier** pour ouvrir l'espace de travail de la connexion
+  - Cliquer sur **Ouvrir la connexion** pour ouvrir l'espace de travail de la connexion
   - Cliquer sur **Voir dans la Carte des connexions** pour sauter à la topologie d'infrastructure, pré-focalisée sur la connexion
 - **Ouvrir l'interface** : Ouvre l'espace de travail de l'interface
 

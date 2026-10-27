@@ -278,7 +278,7 @@ Cada día a las 07:30 UTC, KANAP crea una tarea para cada contrato que espera un
 - **Decidir la renovación de** el contrato, con vencimiento en la fecha límite de rescisión, para un contrato con renovación tácita
 - **Decidir si renovar o dejar terminar** el contrato, con vencimiento en su fin, para un contrato sin renovación
 
-La tarea se asigna al responsable del contrato, en su idioma, con el correo de asignación habitual. Hay una tarea por contrato y periodo. Una tarea eliminada no se vuelve a crear para ese periodo. Un contrato sin responsable no recibe tarea hasta que se indique uno.
+La tarea se asigna al responsable del contrato, con el correo de asignación habitual. Su texto está en el idioma del responsable, o en el idioma del espacio de trabajo cuando el responsable no ha elegido uno. Hay una tarea por contrato y periodo. Una tarea eliminada no se vuelve a crear para ese periodo. Un contrato sin responsable no recibe tarea hasta que se indique uno.
 
 El recuadro de decisión y la tarea van a la par: una decisión tomada en el recuadro cierra la tarea, con la justificación como comentario.
 

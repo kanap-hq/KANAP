@@ -7,6 +7,7 @@ import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { refusalCounts } from '../../utils/deleteRefusal';
+import { roleDescription, roleLabel } from '../../utils/roleLabel';
 
 type Role = { id: string; role_name: string; role_description: string; is_system?: boolean; is_built_in?: boolean; user_count?: number };
 type PermissionLevel = 'reader'|'contributor'|'member'|'admin'|null;
@@ -91,12 +92,19 @@ export default function RolesPage() {
   const canEdit = hasLevel('users','admin');
   const qc = useQueryClient();
   const { data: roles } = useQuery({ queryKey: ['roles'], queryFn: async () => (await api.get<{ items: Role[] }>('/roles')).data.items });
+  const language = i18n.resolvedLanguage || i18n.language;
+  // Alphabetical in the language on screen. The stored English name stays the sort key on the server.
+  const orderedRoles = React.useMemo(() => {
+    const list = [...(roles ?? [])];
+    list.sort((a, b) => roleLabel(a, t).localeCompare(roleLabel(b, t), language, { sensitivity: 'base' }));
+    return list;
+  }, [roles, t, language]);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
-  const selected = roles?.find((r: Role) => r.id === selectedId) ?? (roles && roles[0]) ?? null;
+  const selected = orderedRoles.find((r: Role) => r.id === selectedId) ?? orderedRoles[0] ?? null;
 
   React.useEffect(() => {
-    if (!selectedId && roles && roles.length > 0) setSelectedId(roles[0].id);
-  }, [roles, selectedId]);
+    if (!selectedId && orderedRoles.length > 0) setSelectedId(orderedRoles[0].id);
+  }, [orderedRoles, selectedId]);
 
   const { data: perms } = useQuery({
     queryKey: ['role-perms', selected?.id],
@@ -213,6 +221,7 @@ export default function RolesPage() {
   const isSystem = !!selected?.is_system && (roleKey === 'administrator' || roleKey === 'contact');
   const isBuiltIn = !!selected?.is_built_in;
   const locked = isSystem || isBuiltIn;
+  const selectedLabel = selected ? roleLabel(selected, t) : '';
   const lockedMessage = isSystem
     ? (roleKey === 'contact'
       ? t('roles.messages.contactLocked')
@@ -255,11 +264,11 @@ export default function RolesPage() {
             <CardContent>
               <Typography variant="subtitle2" sx={{ mb: 1 }}>{t('roles.sections.roles')}</Typography>
               <List dense sx={{ maxHeight: 480, overflow: 'auto' }}>
-                {(roles || []).map((r: Role) => (
+                {orderedRoles.map((r: Role) => (
                   <ListItemButton key={r.id} selected={r.id === selected?.id} onClick={() => setSelectedId(r.id)}>
                     <ListItemText
-                      primary={<Stack direction="row" spacing={1} alignItems="center"><span>{r.role_name}</span>{getRoleBadge(r)}</Stack>}
-                      secondary={r.role_description}
+                      primary={<Stack direction="row" spacing={1} alignItems="center"><span>{roleLabel(r, t)}</span>{getRoleBadge(r)}</Stack>}
+                      secondary={roleDescription(r, t)}
                       secondaryTypographyProps={{ sx: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }}
                     />
                   </ListItemButton>
@@ -274,7 +283,7 @@ export default function RolesPage() {
               <CardContent>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
                   <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{selected.role_name}</Typography>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{selectedLabel}</Typography>
                     {getRoleBadge(selected)}
                   </Stack>
                   <Stack direction="row" spacing={1} alignItems="center">
@@ -369,7 +378,7 @@ export default function RolesPage() {
 
       {/* Confirm Delete */}
       <Dialog open={confirmDelete} onClose={() => setConfirmDelete(false)}>
-        <DialogTitle>{selected?.role_name ? t('common:delete.recordTitle', { name: selected.role_name }) : t('roles.dialogs.deleteTitle')}</DialogTitle>
+        <DialogTitle>{selectedLabel ? t('common:delete.recordTitle', { name: selectedLabel }) : t('roles.dialogs.deleteTitle')}</DialogTitle>
         <DialogContent>
           {deleteRefusal
             ? <Alert severity="warning">{deleteRefusal}</Alert>

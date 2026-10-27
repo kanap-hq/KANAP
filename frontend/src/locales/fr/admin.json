@@ -272,7 +272,6 @@
       "source": "Source : {{value}}",
       "sourceRef": "Réf. source : {{value}}",
       "table": "Table : {{value}}",
-      "tenant": "Tenant : {{value}}",
       "title": "Détails de l'entrée d'audit",
       "user": "Utilisateur : {{value}}",
       "value": "Valeur"
@@ -1102,6 +1101,120 @@
     "badges": {
       "builtIn": "Intégré",
       "system": "Système"
+    },
+    "builtIn": {
+      "administrator": {
+        "name": "Administrateur",
+        "description": "Administrateur du système, avec accès à toutes les fonctions"
+      },
+      "agentAdmin": {
+        "name": "Administrateur des Agents IA",
+        "description": "Configure les agents IA, accorde leur autonomie et gère leur cycle de vie"
+      },
+      "agentContributor": {
+        "name": "Contributeur des Agents IA",
+        "description": "Examine les propositions des agents IA, les approuve ou les refuse, lance des contrôles et met les agents en pause"
+      },
+      "agentReader": {
+        "name": "Lecteur des Agents IA",
+        "description": "Consulte les agents IA, leur activité et leur performance, en lecture seule"
+      },
+      "aiAdministrator": {
+        "name": "Administrateur IA",
+        "description": "Peut gérer les paramètres IA de l'espace de travail et utiliser le chat natif ainsi que les outils MCP en lecture"
+      },
+      "aiChatOperator": {
+        "name": "Opérateur du chat IA",
+        "description": "Peut utiliser les fonctions de chat IA qui préparent des actions IA à confirmer"
+      },
+      "aiChatUser": {
+        "name": "Utilisateur du chat IA",
+        "description": "Peut utiliser les outils de chat IA en lecture seule, dans la limite des autorisations existantes"
+      },
+      "aiMcpUser": {
+        "name": "Utilisateur MCP IA",
+        "description": "Peut utiliser des clés d'API MCP personnelles pour des outils IA en lecture seule"
+      },
+      "budgetAdministrator": {
+        "name": "Administrateur budget",
+        "description": "Contrôle complet de la gestion budgétaire, y compris les lignes budgétaires, les contrats et les rapports"
+      },
+      "budgetMember": {
+        "name": "Membre budget",
+        "description": "Peut gérer les lignes budgétaires et les contrats, et consulter les rapports"
+      },
+      "budgetReader": {
+        "name": "Lecteur budget",
+        "description": "Accès en lecture seule aux données budgétaires et aux rapports"
+      },
+      "businessContributor": {
+        "name": "Contributeur métier",
+        "description": "Peut soumettre des demandes, contribuer aux projets et aux tâches, et consulter les applications assignées"
+      },
+      "contact": {
+        "name": "Contact",
+        "description": "Contact de l'annuaire, sans accès à l'application par défaut"
+      },
+      "itLandscapeAdministrator": {
+        "name": "Administrateur Cartographie SI",
+        "description": "Contrôle complet de la cartographie SI, y compris les applications, l'infrastructure et les paramètres"
+      },
+      "itLandscapeMember": {
+        "name": "Membre Cartographie SI",
+        "description": "Peut gérer les applications et l'infrastructure"
+      },
+      "itLandscapeReader": {
+        "name": "Lecteur Cartographie SI",
+        "description": "Accès en lecture seule aux données de la cartographie SI"
+      },
+      "knowledgeAdministrator": {
+        "name": "Administrateur base de connaissances",
+        "description": "Contrôle complet des documents, des bibliothèques, des types et des dossiers de la base de connaissances"
+      },
+      "knowledgeMember": {
+        "name": "Membre base de connaissances",
+        "description": "Peut créer, modifier et relier les documents de la base de connaissances"
+      },
+      "knowledgeReader": {
+        "name": "Lecteur base de connaissances",
+        "description": "Accès en lecture seule aux documents de la base de connaissances"
+      },
+      "masterDataAdministrator": {
+        "name": "Administrateur données de référence",
+        "description": "Contrôle complet des données de référence, y compris les sociétés, les départements, les fournisseurs et les sites"
+      },
+      "masterDataMember": {
+        "name": "Membre données de référence",
+        "description": "Peut gérer les fiches de données de référence"
+      },
+      "masterDataReader": {
+        "name": "Lecteur données de référence",
+        "description": "Accès en lecture seule aux données de référence"
+      },
+      "portfolioAdministrator": {
+        "name": "Administrateur portefeuille",
+        "description": "Contrôle complet de la gestion de portefeuille, y compris les demandes, les projets et la planification"
+      },
+      "portfolioMember": {
+        "name": "Membre portefeuille",
+        "description": "Peut gérer les demandes, les projets et la planification du portefeuille"
+      },
+      "portfolioReader": {
+        "name": "Lecteur portefeuille",
+        "description": "Accès en lecture seule aux données du portefeuille"
+      },
+      "tasksAdministrator": {
+        "name": "Administrateur tâches",
+        "description": "Contrôle complet de la gestion des tâches"
+      },
+      "tasksMember": {
+        "name": "Membre tâches",
+        "description": "Peut gérer et terminer les tâches"
+      },
+      "tasksReader": {
+        "name": "Lecteur tâches",
+        "description": "Accès en lecture seule aux tâches"
+      }
     },
     "dialogs": {
       "createTitle": "Nouveau rôle",

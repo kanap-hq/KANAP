@@ -320,9 +320,11 @@ export default function ShareDialog({
                 return option.id === value.id;
               }}
               renderOption={(props, option) => {
-                if (typeof option === 'string') return <li {...props}>{option}</li>;
+                // React wants the key passed on its own, not spread with the other props.
+                const { key, ...optionProps } = props;
+                if (typeof option === 'string') return <li key={key} {...optionProps}>{option}</li>;
                 return (
-                  <li {...props} key={option.id}>
+                  <li key={option.id} {...optionProps}>
                     {formatUserOption(option)}
                   </li>
                 );

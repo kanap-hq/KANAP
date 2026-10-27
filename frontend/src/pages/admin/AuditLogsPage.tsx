@@ -503,7 +503,6 @@ export default function AuditLogsPage() {
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.source', { value: t(`auditLogs.sources.${detail.source || 'system'}`, { defaultValue: detail.source || 'system' }) })}</Typography>
                 {detail.source_ref && detail.table_name === AUTH_EVENT_TABLE && <Typography variant="body2" color="text.secondary">{t('auditLogs.details.reason', { value: auditReasonLabel(detail, t) })}</Typography>}
                 {detail.source_ref && detail.table_name !== AUTH_EVENT_TABLE && <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.sourceRef', { value: detail.source_ref })}</Typography>}
-                <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.tenant', { value: detail.tenant_id })}</Typography>
                 {recordLabel && <Typography component="span" variant="body2" title={recordLabel.title} sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.record', { value: recordLabel.text })}</Typography>}
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.user', { value: auditUserLabel(detail, t) })}</Typography>
               </Stack>

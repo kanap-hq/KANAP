@@ -305,20 +305,24 @@ const KnowledgeSidebar = React.memo(function KnowledgeSidebar({
     return option.id === currentUserId ? `${baseLabel} ${t('common:selects.meSuffix')}` : baseLabel;
   }, [currentUserId, formatContributorLabel, t]);
   const renderContributorOption = React.useCallback((
-    props: React.HTMLAttributes<HTMLLIElement>,
+    props: React.HTMLAttributes<HTMLLIElement> & { key: React.Key },
     option: ContributorOption,
-  ) => (
-    <React.Fragment key={option.id}>
-      <li {...props}>
-        <div style={{ fontWeight: 500 }}>
-          {getContributorOptionLabel(option)}
-        </div>
-      </li>
-      {option.id === currentUserId && mergedContributorOptions.length > 1 && (
-        <Divider sx={(theme) => ({ borderColor: theme.palette.kanap.border.soft })} />
-      )}
-    </React.Fragment>
-  ), [currentUserId, getContributorOptionLabel, mergedContributorOptions.length]);
+  ) => {
+    // React wants the key passed on its own, not spread with the other props.
+    const { key, ...optionProps } = props;
+    return (
+      <React.Fragment key={option.id}>
+        <li {...optionProps}>
+          <div style={{ fontWeight: 500 }}>
+            {getContributorOptionLabel(option)}
+          </div>
+        </li>
+        {option.id === currentUserId && mergedContributorOptions.length > 1 && (
+          <Divider sx={(theme) => ({ borderColor: theme.palette.kanap.border.soft })} />
+        )}
+      </React.Fragment>
+    );
+  }, [currentUserId, getContributorOptionLabel, mergedContributorOptions.length]);
   const getContributorValue = React.useCallback((id: string | null | undefined) => {
     if (!id) return null;
     return mergedContributorOptions.find((row) => row.id === id) || null;

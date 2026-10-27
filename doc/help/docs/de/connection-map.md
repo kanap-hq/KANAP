@@ -117,9 +117,11 @@ Sie können auch mit dem Mausrad zoomen und durch Klicken und Ziehen des Hinterg
 
 Klicken Sie auf einen Server- oder Cluster-Knoten, um seine Verbindungen hervorzuheben und ein Detail-Panel zu öffnen, das Folgendes zeigt:
 
-- **Server-Typ**, **Server-Standort**, **Betriebssystem**, **Netzwerksegment**, **IP-Adresse**
+- **Server-Typ**, **Server-Standort**, **Betriebssystem**, **Netzwerksegment**, **IP-Adresse**, **Cluster**
 - **Zugewiesene Anwendungen**: Apps, die auf diesem Server laufen, gruppiert nach Umgebung. Bei einem Mitglied zeigt eine seinem Cluster zugeordnete App „über“ und den Namen des Clusters. Klicken Sie auf einen App-Namen, um sie zu öffnen.
 - Schaltfläche **Server öffnen** oder **Cluster anzeigen**, um den Arbeitsbereich zu öffnen. **Cluster anzeigen** öffnet den Cluster auf seinem Reiter **Betrieb**, wo seine Mitglieder verwaltet werden
+
+Das Panel listet jede IP-Adresse des Servers auf. Das Netzwerksegment ist die Netzwerkzone des Subnetzes der ersten Adresse. Bei einem Mitglied nennt **Cluster** jeden Cluster, dem es angehört, und jeder Name öffnet diesen Cluster.
 
 Klicken Sie auf einen Entitätsknoten, um seinen Typ und seine Umgebung zu sehen.
 

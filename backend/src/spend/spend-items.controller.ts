@@ -10,7 +10,6 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { ReadOnlyRoute, RequireLevel } from '../auth/require-level.decorator';
 import { StorageService } from '../common/storage/storage.service';
 import { contentDisposition } from '../common/content-disposition';
-import { DATA_ACCESS_HEADER } from '../data-access/data-access';
 import { SpendItemContactsService } from './spend-item-contacts.service';
 import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
@@ -31,6 +30,8 @@ import { FreezeService } from '../freeze/freeze.service';
 import { analyzeAfterLargeImport } from './budget-import-statistics';
 import { BudgetFileService, canCreateSuppliers } from './budget-file/budget-file.service';
 import { exportListQuery } from './budget-file/export-file';
+import { budgetFileBody } from './budget-file/send-export';
+import { parseExportFormat } from '../common/xlsx';
 import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
 import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
@@ -147,9 +148,10 @@ export class SpendItemsController {
     @Res() res: Response,
     @Tenant() ctx: TenantRequest,
   ): Promise<void> {
+    const format = parseExportFormat(query.format);
     const listQuery = exportListQuery(query, query.all === 'true' || query.all === '1');
     const { ids } = await this.svc.summaryIds(listQuery, { manager: ctx.manager, access: budgetListAccess(ctx) });
-    const { filename, content, dataAccessLimited } = await this.budgetFile.exportFile('opex', ids, {
+    const exported = await this.budgetFile.exportFile('opex', ids, {
       manager: ctx.manager as EntityManager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
@@ -158,12 +160,9 @@ export class SpendItemsController {
       amountYears: query.amountYears,
       columns: query.columns,
       detail: query.detail,
+      format,
     });
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', contentDisposition(filename));
-    // A limited person's file holds the lines of their access: the dialog says "Calculated on your access".
-    if (dataAccessLimited) res.setHeader(DATA_ACCESS_HEADER, 'limited');
-    res.send(content);
+    res.send(await budgetFileBody(res, exported));
   }
 
   @ReadOnlyRoute()

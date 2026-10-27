@@ -591,7 +591,7 @@ export default function InterfaceMapPage() {
               sx={{ px: 2, pt: 1 }}
               primary={params.group}
             />
-            {params.children}
+            <ul style={{ margin: 0, padding: 0 }}>{params.children}</ul>
           </li>
         )}
         value={nodeOptions.filter((opt) => rootNodeIds.includes(opt.id))}
@@ -1106,7 +1106,7 @@ export default function InterfaceMapPage() {
                                     navigate(`/it/connections/${link.connection.connection_reference || link.connection.id}/overview`);
                                   }}
                                 >
-                                  {t('common:buttons.edit')}
+                                  {t('pages.interfaceMap.openConnection')}
                                 </Button>
                                 <Button
                                   size="small"

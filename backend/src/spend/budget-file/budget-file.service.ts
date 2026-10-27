@@ -1,11 +1,12 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { languageOf, parseDateOrder, parseDecimalMark, writeCsv } from '../../common/csv-sheet';
+import { languageOf, parseDateOrder, parseDecimalMark } from '../../common/csv-sheet';
 import { CurrencySettingsService } from '../../currency/currency-settings.service';
 import { readBudgetColumns } from '../../budget-columns/budget-columns.util';
 import { readBudgetLineMeta } from '../item-meta';
 import { type BudgetNature } from '../budget-nature';
-import { buildBudgetExport, BUDGET_FILE_NAME, parseAmountYears, parseDetail, parseFileColumns, shownFileColumns } from './export-file';
+import type { ExportFileFormat } from '../../common/xlsx';
+import { buildBudgetExport, parseAmountYears, parseDetail, parseFileColumns, shownFileColumns, writeBudgetFile } from './export-file';
 import { importBudgetFile, BudgetFileAudit, BudgetFileFreeze, BudgetFileImportResult, BudgetFileLineServices, parseBudgetSnapshot } from './import-file';
 import { interpretBudgetFile, readBudgetCsv } from './interpret';
 import { loadExportLines, loadFileDimensions, loadPreflight } from './load';
@@ -23,6 +24,17 @@ export function canCreateSuppliers(ctx: CallerRights): boolean {
   if (ctx?.isAdmin) return true;
   return (LEVEL_RANK[ctx?.permissions?.suppliers ?? ''] ?? 0) >= LEVEL_RANK.member;
 }
+
+/** An exported budget file: its name, type and content, and how many lines it holds. */
+export interface BudgetFileExport<C extends string | Buffer = string | Buffer> {
+  filename: string;
+  contentType: string;
+  content: C;
+  rows: number;
+  dataAccessLimited: boolean;
+}
+
+type BudgetFileExportOptions = { language: unknown; amountYears: unknown; columns: unknown; detail: unknown };
 
 export interface BudgetFileCaller {
   manager: EntityManager;
@@ -81,12 +93,25 @@ export class BudgetFileService {
     return report;
   }
 
+  /** CSV unless `format` is `xlsx` (one sheet, `budget`). The language writes the token in both, and the CSV's separator, decimals and days. */
+  exportFile(
+    scope: BudgetFileExportScope,
+    ids: readonly string[],
+    caller: BudgetFileCaller,
+    options: BudgetFileExportOptions & { format?: 'csv' },
+  ): Promise<BudgetFileExport<string>>;
+  exportFile(
+    scope: BudgetFileExportScope,
+    ids: readonly string[],
+    caller: BudgetFileCaller,
+    options: BudgetFileExportOptions & { format: ExportFileFormat },
+  ): Promise<BudgetFileExport>;
   async exportFile(
     scope: BudgetFileExportScope,
     ids: readonly string[],
     caller: BudgetFileCaller,
-    options: { language: unknown; amountYears: unknown; columns: unknown; detail: unknown },
-  ): Promise<{ filename: string; content: string; dataAccessLimited: boolean }> {
+    options: BudgetFileExportOptions & { format?: ExportFileFormat },
+  ): Promise<BudgetFileExport> {
     const manager = requireManager(caller.manager);
     const language = await languageOf(manager, caller.tenantId, caller.userId, options.language);
     const currentYear = new Date().getFullYear();
@@ -101,8 +126,8 @@ export class BudgetFileService {
       language, years, columns, detail, lines: loaded.lines, dimensions: loaded.dimensions,
     });
     return {
-      filename: BUDGET_FILE_NAME,
-      content: writeCsv({ language, headers: built.headers, rows: built.rows }),
+      ...writeBudgetFile(built, language, options.format ?? 'csv'),
+      rows: built.rows.length,
       // The routes say it in the `X-Data-Access` header ("Calculated on your access").
       dataAccessLimited: await isLimitedTransaction(manager),
     };

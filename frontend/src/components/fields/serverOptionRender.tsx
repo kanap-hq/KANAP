@@ -1,5 +1,8 @@
 import React from 'react';
 import { Box } from '@mui/material';
+import { useTranslation } from 'react-i18next';
+import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
+import { environmentLabel } from '../../utils/applicationEnvironments';
 import OptionWithHint from './OptionWithHint';
 import ClusterMark from '../workspace/ClusterMark';
 
@@ -22,26 +25,39 @@ type RenderServerOptionOptions = {
   showReference?: boolean;
 };
 
+type ServerOptionRowProps = RenderServerOptionOptions & {
+  optionProps: React.HTMLAttributes<HTMLLIElement> & { key?: React.Key };
+  option: ServerOption;
+};
+
 /**
- * One option of a server list: name, then the cluster mark and its members for a cluster.
- * The hint (`ENV · kind · provider`) is the delayed tooltip of `OptionWithHint`.
+ * The delayed tooltip: environment, server kind and provider, in the user's language.
+ * A provider stored as a hosting type (on-prem, colocation) uses that catalog name.
  */
-export function renderServerOption(
-  optionProps: React.HTMLAttributes<HTMLLIElement> & { key?: React.Key },
-  option: ServerOption,
-  { noMembers, showReference }: RenderServerOptionOptions,
-) {
-  const hint = [option.environment?.toUpperCase(), option.kind, option.provider].filter(Boolean).join(' · ');
+function ServerOptionRow({ optionProps, option, noMembers, showReference }: ServerOptionRowProps) {
+  const { t } = useTranslation('it');
+  const { labelFor, byField } = useItOpsEnumOptions();
+  const providerCode = option.provider || '';
+  const providers = byField?.serverProvider ?? [];
+  const provider = !providerCode
+    ? ''
+    : providers.some((item) => item.code === providerCode)
+      ? labelFor('serverProvider', providerCode)
+      : labelFor('hostingType', providerCode);
+  const hint = [
+    environmentLabel((key) => t(key), option.environment),
+    option.kind ? labelFor('serverKind', option.kind) : '',
+    provider,
+  ].filter(Boolean).join(' · ');
   const name = showReference && option.asset_reference
     ? `${option.asset_reference} · ${option.name}`
     : option.name;
   if (!option.is_cluster) {
-    return <OptionWithHint key={option.id} optionProps={optionProps} label={name} hint={hint} />;
+    return <OptionWithHint optionProps={optionProps} label={name} hint={hint} />;
   }
   const members = option.member_names;
   return (
     <OptionWithHint
-      key={option.id}
       optionProps={optionProps}
       hint={hint}
       label={(
@@ -59,4 +75,16 @@ export function renderServerOption(
       )}
     />
   );
+}
+
+/**
+ * One option of a server list: name, then the cluster mark and its members for a cluster.
+ * The hint is the delayed tooltip of `OptionWithHint`.
+ */
+export function renderServerOption(
+  optionProps: React.HTMLAttributes<HTMLLIElement> & { key?: React.Key },
+  option: ServerOption,
+  options: RenderServerOptionOptions,
+) {
+  return <ServerOptionRow key={option.id} optionProps={optionProps} option={option} {...options} />;
 }

@@ -8,6 +8,16 @@ import { taskDetailTypography } from '../../pages/tasks/theme/taskDetailTokens';
 /** Marks the pencil so the resting and hover rules can show or hide it. */
 const CUE_CLASS = 'editable-title-cue';
 
+/** Font of the resting title and of the field. Defaults to the workspace title. */
+export type EditableTitleTypography = {
+  fontSize: NonNullable<React.CSSProperties['fontSize']>;
+  fontWeight?: React.CSSProperties['fontWeight'];
+  lineHeight?: React.CSSProperties['lineHeight'];
+  letterSpacing?: React.CSSProperties['letterSpacing'];
+};
+
+const workspaceTitleTypography: EditableTitleTypography = taskDetailTypography.title;
+
 type EditableTitleDisplayProps = {
   canEdit: boolean;
   /** The text is the empty-title placeholder: dashed underline and pencil stay visible. */
@@ -16,6 +26,8 @@ type EditableTitleDisplayProps = {
   muted?: boolean;
   onEdit: () => void;
   buttonRef?: React.RefObject<HTMLButtonElement | null>;
+  /** Resting size. Callers on a page header pass that header's type scale. */
+  typography?: EditableTitleTypography;
   children: React.ReactNode;
 };
 
@@ -36,6 +48,7 @@ export function EditableTitleDisplay({
   muted = false,
   onEdit,
   buttonRef,
+  typography = workspaceTitleTypography,
   children,
 }: EditableTitleDisplayProps) {
   const { t } = useTranslation();
@@ -58,7 +71,7 @@ export function EditableTitleDisplay({
       <Typography
         component="span"
         sx={(theme) => ({
-          ...taskDetailTypography.title,
+          ...typography,
           display: 'inline',
           color: titleColor(theme, placeholder, muted),
         })}
@@ -92,7 +105,7 @@ export function EditableTitleDisplay({
         }
       }}
       sx={(theme) => ({
-        ...taskDetailTypography.title,
+        ...typography,
         display: 'inline-block',
         maxWidth: '100%',
         boxSizing: 'border-box',
@@ -145,6 +158,8 @@ export type EditableTitleProps = {
   onDraftChange?: (draft: string) => void;
   onSave?: (nextTitle: string) => void;
   requiredMessage?: string;
+  /** Resting size. Callers on a page header pass that header's type scale. */
+  typography?: EditableTitleTypography;
   value: string;
 };
 
@@ -157,6 +172,7 @@ export default function EditableTitle({
   onDraftChange,
   onSave,
   requiredMessage,
+  typography = workspaceTitleTypography,
   value,
 }: EditableTitleProps) {
   const { t } = useTranslation();
@@ -226,6 +242,7 @@ export default function EditableTitle({
           placeholder={!value}
           onEdit={open}
           buttonRef={buttonRef}
+          typography={typography}
         >
           {value || fallback}
         </EditableTitleDisplay>
@@ -263,6 +280,10 @@ export default function EditableTitle({
         autoFocus
         sx={(theme) => ({
           font: 'inherit',
+          fontSize: typography.fontSize,
+          fontWeight: typography.fontWeight,
+          lineHeight: typography.lineHeight,
+          letterSpacing: typography.letterSpacing,
           color: 'inherit',
           bgcolor: 'transparent',
           border: 'none',

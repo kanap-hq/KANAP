@@ -131,7 +131,7 @@ const TRUST_DIRECTION_LABELS: Record<CsvLanguage, Record<DomainTrustDirection, s
 /** A trust peer in the asset export, in the words of the screen (`pages.administrationView.trustPeer`). */
 const TRUST_RELATION_LABEL: Record<CsvLanguage, Record<'contains' | 'cluster', string>> = {
   en: { contains: 'Runs', cluster: 'Member of cluster' },
-  fr: { contains: 'Fait tourner', cluster: 'Membre du cluster' },
+  fr: { contains: 'Héberge', cluster: 'Membre du cluster' },
   de: { contains: 'Betreibt', cluster: 'Mitglied des Clusters' },
   es: { contains: 'Ejecuta', cluster: 'Miembro del clúster' },
 };

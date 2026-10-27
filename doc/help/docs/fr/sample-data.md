@@ -19,7 +19,7 @@ Le jeu décrit Fromage & Co, une fromagerie fictive :
 - **18 utilisateurs fictifs**, qui ne peuvent pas se connecter et ne reçoivent aucun e-mail
 - **Des applications et leur cartographie** : instances, interfaces et connexions
 - **Des contrats, le budget de l'année en cours, des projets et des tâches**
-- **Des lignes budgétaires classées sur les [dimensions recommandées](analytics.md#dimensions-recommandees)** : chaque ligne a une nature de coût et un domaine IT, les lignes CAPEX et les lignes build ont un motif, et les lignes CAPEX ont une priorité. Le jeu ajoute aussi **Récurrence**, dans la langue de l'espace de travail, et deux dimensions propres, **Business domain** et **Budget reference**, dont les noms et les valeurs restent en anglais
+- **Des lignes budgétaires classées sur les [dimensions recommandées](analytics.md#dimensions-recommandees)** : chaque ligne a une nature de coût et un domaine IT, les lignes CAPEX et les lignes build ont un motif, et les lignes CAPEX ont une priorité. Le jeu ajoute aussi **Récurrence**, **Domaine métier** et **Référence budgétaire**, avec leurs valeurs, dans la langue de l'espace de travail
 
 Les dates suivent l'année en cours, si bien que le budget paraît toujours à jour. Le chargement prend environ deux minutes.
 

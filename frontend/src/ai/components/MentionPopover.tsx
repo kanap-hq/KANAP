@@ -152,6 +152,7 @@ const MentionPopover = React.forwardRef<MentionPopoverHandle, MentionPopoverProp
     React.useImperativeHandle(ref, () => ({ moveSelection, confirmSelection }), [moveSelection, confirmSelection]);
 
     // Group consecutive results by entity_type for a clean section divider.
+    // An unprefixed search mixes types, so one type can head several groups.
     const grouped = useMemo(() => {
       const groups: Array<{ entity_type: string; items: EntitySearchResult[] }> = [];
       for (const item of results) {
@@ -200,8 +201,8 @@ const MentionPopover = React.forwardRef<MentionPopoverHandle, MentionPopoverProp
             </Typography>
           </Box>
         )}
-        {grouped.map((group) => (
-          <Box key={group.entity_type}>
+        {grouped.map((group, groupIndex) => (
+          <Box key={groupIndex}>
             <Typography
               component="div"
               sx={(theme) => ({

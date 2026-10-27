@@ -272,7 +272,6 @@
       "source": "Source: {{value}}",
       "sourceRef": "Source ref: {{value}}",
       "table": "Table: {{value}}",
-      "tenant": "Tenant: {{value}}",
       "title": "Audit entry details",
       "user": "User: {{value}}",
       "value": "Value"
@@ -1102,6 +1101,120 @@
     "badges": {
       "builtIn": "Built-in",
       "system": "System"
+    },
+    "builtIn": {
+      "administrator": {
+        "name": "Administrator",
+        "description": "Full system administrator with access to all features"
+      },
+      "agentAdmin": {
+        "name": "Agent Admin",
+        "description": "Configure AI agents, grant autonomy, and manage the agent lifecycle"
+      },
+      "agentContributor": {
+        "name": "Agent Contributor",
+        "description": "Review and approve or reject AI agent proposals, run checks, and pause agents"
+      },
+      "agentReader": {
+        "name": "Agent Reader",
+        "description": "View AI agents, their activity, and performance (read-only)"
+      },
+      "aiAdministrator": {
+        "name": "AI Administrator",
+        "description": "Can manage tenant AI settings and use both native chat and MCP read tools"
+      },
+      "aiChatOperator": {
+        "name": "AI Chat Operator",
+        "description": "Can use AI chat features that prepare future confirmed AI actions"
+      },
+      "aiChatUser": {
+        "name": "AI Chat User",
+        "description": "Can use read-only AI chat tools that respect existing business permissions"
+      },
+      "aiMcpUser": {
+        "name": "AI MCP User",
+        "description": "Can use personal MCP API keys for read-only AI tools"
+      },
+      "budgetAdministrator": {
+        "name": "Budget Administrator",
+        "description": "Full control over budget management including budget lines, contracts, and reporting"
+      },
+      "budgetMember": {
+        "name": "Budget Member",
+        "description": "Can manage budget items, contracts, and view reports"
+      },
+      "budgetReader": {
+        "name": "Budget Reader",
+        "description": "Read-only access to budget data and reports"
+      },
+      "businessContributor": {
+        "name": "Business Contributor",
+        "description": "Can submit requests, contribute to projects and tasks, and read assigned applications"
+      },
+      "contact": {
+        "name": "Contact",
+        "description": "Directory contact without app access by default"
+      },
+      "itLandscapeAdministrator": {
+        "name": "IT Landscape Administrator",
+        "description": "Full control over IT landscape including applications, infrastructure, and settings"
+      },
+      "itLandscapeMember": {
+        "name": "IT Landscape Member",
+        "description": "Can manage applications and infrastructure"
+      },
+      "itLandscapeReader": {
+        "name": "IT Landscape Reader",
+        "description": "Read-only access to IT landscape data"
+      },
+      "knowledgeAdministrator": {
+        "name": "Knowledge Administrator",
+        "description": "Full control over knowledge documents, libraries, types, and folders"
+      },
+      "knowledgeMember": {
+        "name": "Knowledge Member",
+        "description": "Can create, edit, and relate knowledge documents"
+      },
+      "knowledgeReader": {
+        "name": "Knowledge Reader",
+        "description": "Read-only access to knowledge documents"
+      },
+      "masterDataAdministrator": {
+        "name": "Master Data Administrator",
+        "description": "Full control over master data including companies, departments, suppliers, and locations"
+      },
+      "masterDataMember": {
+        "name": "Master Data Member",
+        "description": "Can manage master data entries"
+      },
+      "masterDataReader": {
+        "name": "Master Data Reader",
+        "description": "Read-only access to master data"
+      },
+      "portfolioAdministrator": {
+        "name": "Portfolio Administrator",
+        "description": "Full control over portfolio management including requests, projects, and planning"
+      },
+      "portfolioMember": {
+        "name": "Portfolio Member",
+        "description": "Can manage portfolio requests, projects, and planning"
+      },
+      "portfolioReader": {
+        "name": "Portfolio Reader",
+        "description": "Read-only access to portfolio data"
+      },
+      "tasksAdministrator": {
+        "name": "Tasks Administrator",
+        "description": "Full control over task management"
+      },
+      "tasksMember": {
+        "name": "Tasks Member",
+        "description": "Can manage and complete tasks"
+      },
+      "tasksReader": {
+        "name": "Tasks Reader",
+        "description": "Read-only access to tasks"
+      }
     },
     "dialogs": {
       "createTitle": "New role",

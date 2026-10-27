@@ -278,7 +278,7 @@ Jeden Tag um 07:30 UTC legt KANAP für jeden Vertrag, der auf eine Entscheidung 
 - **Über die Verlängerung von** dem Vertrag **entscheiden**, fällig am Kündigungstermin, für einen Vertrag mit stillschweigender Verlängerung
 - **Entscheiden, ob** der Vertrag **verlängert wird oder ausläuft**, fällig an seinem Ende, für einen Vertrag ohne Verlängerung
 
-Die Aufgabe wird dem Verantwortlichen des Vertrags zugewiesen, in seiner Sprache, mit der üblichen Zuweisungs-E-Mail. Es gibt eine Aufgabe pro Vertrag und Periode. Eine gelöschte Aufgabe wird für diese Periode nicht neu angelegt. Ein Vertrag ohne Verantwortlichen erhält keine Aufgabe, bis einer eingetragen ist.
+Die Aufgabe wird dem Verantwortlichen des Vertrags zugewiesen, mit der üblichen Zuweisungs-E-Mail. Ihr Text ist in der Sprache des Verantwortlichen, oder in der Sprache des Arbeitsbereichs, wenn der Verantwortliche keine gewählt hat. Es gibt eine Aufgabe pro Vertrag und Periode. Eine gelöschte Aufgabe wird für diese Periode nicht neu angelegt. Ein Vertrag ohne Verantwortlichen erhält keine Aufgabe, bis einer eingetragen ist.
 
 Entscheidungskasten und Aufgabe bleiben im Gleichschritt: Eine im Kasten getroffene Entscheidung schließt die Aufgabe, mit der Begründung als Kommentar.
 

@@ -16,7 +16,7 @@ import {
 import { NETBOX_LEGACY_VM_ROLE_SLUG, NETBOX_VIRTUAL_MACHINES_SLUG } from './netbox-mapper';
 import { NetboxNotice, netboxNoticeFromStore } from './netbox-notice';
 import { NetboxSyncCounts } from './netbox-planner';
-import { netboxBadRequest, netboxFailureOf } from './netbox-errors';
+import { isNetboxErrorCode, netboxBadRequest, netboxFailureOf, type NetboxErrorCode } from './netbox-errors';
 import { NetboxConnection } from './netbox.types';
 
 // The Netbox connection lives in ai_adapter_configs, the table that already
@@ -47,7 +47,14 @@ export type NetboxSyncStateView = {
   finished_at: string | null;
   duration_ms: number | null;
   counts: NetboxSyncCounts | null;
+  /** English sentence. The page shows it only when `error_code` is absent. */
   error: string | null;
+  /**
+   * Stable code the page translates (`errors:<code>`). Null on a state written
+   * before codes existed, and on a run that did not fail: the page then keeps
+   * `error` as stored.
+   */
+  error_code: NetboxErrorCode | null;
   /** Things worth saying about a run that still succeeded. */
   warnings: NetboxNotice[];
 };
@@ -111,6 +118,7 @@ const NEVER_RAN: NetboxSyncStateView = {
   duration_ms: null,
   counts: null,
   error: null,
+  error_code: null,
   warnings: [],
 };
 
@@ -127,6 +135,12 @@ function textOrNull(value: unknown): string | null {
   if (value == null) return null;
   const normalized = String(value).trim();
   return normalized || null;
+}
+
+/** A stored code the page can translate. Anything else is treated as absent. */
+function storedSyncErrorCode(value: unknown): NetboxErrorCode | null {
+  const code = textOrNull(value);
+  return code && isNetboxErrorCode(code) ? code : null;
 }
 
 function booleanOr(value: unknown, fallback: boolean): boolean {
@@ -193,6 +207,7 @@ export function readSyncState(metadata: Record<string, unknown> | null, nowMs = 
     duration_ms: typeof raw.duration_ms === 'number' ? raw.duration_ms : null,
     counts: asRecord(raw.counts) as NetboxSyncCounts | null,
     error: textOrNull(raw.error),
+    error_code: storedSyncErrorCode(raw.error_code),
     warnings: (Array.isArray(raw.warnings) ? raw.warnings : [])
       .map((entry) => netboxNoticeFromStore(asRecord(entry)?.code, asRecord(entry)?.params))
       .filter((notice): notice is NetboxNotice => notice != null),
@@ -204,6 +219,7 @@ export function readSyncState(metadata: Record<string, unknown> | null, nowMs = 
         ...state,
         status: 'failure',
         error: 'The previous synchronisation stopped without finishing. Start a new one.',
+        error_code: null,
       };
     }
   }

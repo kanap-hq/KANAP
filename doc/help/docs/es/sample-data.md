@@ -19,7 +19,7 @@ El conjunto describe Fromage & Co, una quesería ficticia:
 - **18 usuarios ficticios**, que no pueden iniciar sesión y no reciben ningún correo electrónico
 - **Aplicaciones y su panorama**: instancias, interfaces y conexiones
 - **Contratos, el presupuesto del año en curso, proyectos y tareas**
-- **Líneas presupuestarias clasificadas según las [dimensiones recomendadas](analytics.md#dimensiones-recomendadas)**: cada línea tiene un tipo de coste y un dominio TI, las líneas CAPEX y las líneas build tienen un motivo, y las líneas CAPEX una prioridad. El conjunto añade también **Recurrencia**, en el idioma del espacio de trabajo, y dos dimensiones propias, **Business domain** y **Budget reference**, cuyos nombres y valores se quedan en inglés
+- **Líneas presupuestarias clasificadas según las [dimensiones recomendadas](analytics.md#dimensiones-recomendadas)**: cada línea tiene un tipo de coste y un dominio TI, las líneas CAPEX y las líneas build tienen un motivo, y las líneas CAPEX una prioridad. El conjunto añade también **Recurrencia**, **Dominio de negocio** y **Referencia presupuestaria**, con sus valores, en el idioma del espacio de trabajo
 
 Las fechas siguen el año en curso, de modo que el presupuesto siempre parece actualizado. La carga tarda unos dos minutos.
 

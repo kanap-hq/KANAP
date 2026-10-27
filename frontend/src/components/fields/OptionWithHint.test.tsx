@@ -11,8 +11,16 @@ const stableT = vi.hoisted(() => (key: string) => key);
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: stableT, i18n: { language: 'en', resolvedLanguage: 'en' } }),
+  initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 vi.mock('../../api', () => ({ default: { get: apiGet } }));
+vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({
+  default: () => ({ data: { businessCriticalityLevels: [{ code: 'high', label: 'High' }] } }),
+}));
+vi.mock('../../hooks/useItOpsSettings', () => ({
+  useItOpsSettings: () => ({ data: { lifecycleStates: [{ code: 'active', label: 'Active' }] } }),
+  default: () => ({ data: { lifecycleStates: [{ code: 'active', label: 'Active' }] } }),
+}));
 
 import ApplicationSelect from './ApplicationSelect';
 import MultiRoleSelect from './MultiRoleSelect';
@@ -57,7 +65,7 @@ describe('picker options: one line, the description in a delayed tooltip', () =>
     apiGet.mockResolvedValue({ data: { items: [{ id: 'a1', name: 'Billing', lifecycle: 'active', criticality: 'high' }] } });
     renderField(<ApplicationSelect value={null} onChange={() => undefined} />);
     const [option] = await openList();
-    await expectOneLineWithHint(option, 'Billing', 'active · high');
+    await expectOneLineWithHint(option, 'Billing', 'Active · High');
   });
 
   it('ServerSelect: environment, kind and provider move to the tooltip; a cluster carries its mark and its members', async () => {
@@ -69,7 +77,7 @@ describe('picker options: one line, the description in a delayed tooltip', () =>
     await waitFor(() => expect(screen.getByRole('option').firstChild?.textContent).toBe('web-01PAR-SQL-01, PAR-SQL-02'));
     const option = screen.getByRole('option');
     expect(within(option).getByRole('img', { name: 'pages.assets.columns.cluster' })).toBeTruthy();
-    expect(option).toHaveAccessibleDescription('PROD · vm · azure');
+    expect(option).toHaveAccessibleDescription('enums.environment.prod · vm · azure');
   });
 
   it('MultiRoleSelect: the role description moves to the tooltip', async () => {

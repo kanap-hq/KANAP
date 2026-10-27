@@ -173,15 +173,33 @@ const pageSx = (theme: Theme) => ({
   '& .kanap-map-table col.target': { width: '36%' },
 });
 
+/**
+ * The sentence under a failed run. A code is translated (`errors:<code>`),
+ * and the stored English sentence is the fallback. A state written before
+ * codes existed has no code, so its text is shown as stored.
+ */
+function syncFailureText(sync: NetboxStatus['sync'], t: TFunction): string | null {
+  const code = typeof sync.error_code === 'string' ? sync.error_code.trim() : '';
+  if (code) {
+    const translated = t(`errors:${code}`, { defaultValue: sync.error || '' });
+    if (typeof translated === 'string' && translated.trim() && translated !== `errors:${code}`) {
+      return translated;
+    }
+  }
+  const text = sync.error?.trim();
+  return text || null;
+}
+
 /** Single full-width strip: when the last run happened, how it was started, how long it took, its result, and the record counts. */
 function SyncStrip({ status }: { status: NetboxStatus }) {
-  const { t } = useTranslation('it');
+  const { t } = useTranslation(['it', 'errors']);
   const noticeText = useNoticeText();
   const theme = useTheme();
   const locale = useLocale();
   const relative = useRelativeLabel();
   const lastAt = status.sync.finished_at || status.sync.started_at;
   const counts = status.sync.counts;
+  const failureText = syncFailureText(status.sync, t);
 
   return (
     <Box className="kanap-strip">
@@ -212,7 +230,7 @@ function SyncStrip({ status }: { status: NetboxStatus }) {
           <StatusDot color={syncResultColor(status.sync.status, theme.palette.mode)} />
           {t(`pages.netbox.syncStatus.${status.sync.status}`)}
         </Box>
-        {status.sync.error ? <Box component="span" className="kanap-strip-sub">{status.sync.error}</Box> : null}
+        {failureText ? <Box component="span" className="kanap-strip-sub">{failureText}</Box> : null}
         {(status.sync.warnings ?? []).map((warning) => (
           <Box key={warning.code} component="span" className="kanap-strip-sub">{noticeText(warning)}</Box>
         ))}

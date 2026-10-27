@@ -478,7 +478,15 @@ export default function AdminAiPage() {
                       </Alert>
                     ) : null}
 
-                    <PropertyRow label={t('aiAdmin.provider.modelSelector.label')}>
+                    <PropertyRow
+                      label={t('aiAdmin.provider.modelSelector.label')}
+                      helperText={(
+                        <>
+                          {t('aiAdmin.provider.modelSelector.hintPrefix')}{' '}
+                          <Link component={RouterLink} to="/admin/ai-models">{t('aiAdmin.provider.modelSelector.hintLink')}</Link>
+                        </>
+                      )}
+                    >
                       <Select
                         variant="standard"
                         value={form.chat_model_config_id}
@@ -501,10 +509,6 @@ export default function AdminAiPage() {
                           </MenuItem>
                         ))}
                       </Select>
-                      <Typography variant="caption" color="text.secondary">
-                        {t('aiAdmin.provider.modelSelector.hintPrefix')}{' '}
-                        <Link component={RouterLink} to="/admin/ai-models">{t('aiAdmin.provider.modelSelector.hintLink')}</Link>
-                      </Typography>
                     </PropertyRow>
 
                     {includedModel ? (

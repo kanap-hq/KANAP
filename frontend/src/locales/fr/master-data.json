@@ -1060,7 +1060,9 @@
       },
       "status": {
         "skipped": "Ignoré",
-        "readyToCopy": "Prêt à copier"
+        "readyToCopy": "Prêt à copier",
+        "noDataForSourceYear": "Aucune donnée pour l'année source",
+        "failedToCopyMetrics": "Échec de la copie des indicateurs"
       },
       "frozenCompanies": "Les indicateurs des sociétés pour {{year}} sont gelés. Dégelez-les avant de copier.",
       "frozenDepartments": "Les indicateurs des départements pour {{year}} sont gelés. Dégelez-les avant de copier.",

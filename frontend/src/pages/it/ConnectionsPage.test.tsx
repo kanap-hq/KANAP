@@ -103,4 +103,26 @@ describe('ConnectionsPage delete', () => {
       }
     }
   });
+
+  it('warns that the hops of each deleted connection go with it, in the four languages', async () => {
+    render(<MemoryRouter><ConnectionsPage /></MemoryRouter>);
+    expect(deleteButton.props?.warning).toBe('pages.connections.deleteWarning');
+    const hop = { en: /\bhops?\b/, fr: /\bsauts?\b/, de: /\bHops?\b/, es: /\bsaltos?\b/ };
+    const kept = {
+      en: /servers, interfaces and documents stay/,
+      fr: /serveurs, interfaces et documents sont conservés/,
+      de: /Server, Schnittstellen und Dokumente bleiben erhalten/,
+      es: /servidores, interfaces y documentos se conservan/,
+    };
+    for (const lang of ['en', 'fr', 'de', 'es'] as const) {
+      const it = (await import(`../../locales/${lang}/it.json`)).default as {
+        pages: { connections: Record<string, string> };
+      };
+      for (const key of ['deleteWarning_one', 'deleteWarning_other']) {
+        const text = it.pages.connections[key];
+        expect(text, `${lang} ${key} hops`).toMatch(hop[lang]);
+        expect(text, `${lang} ${key} kept`).toMatch(kept[lang]);
+      }
+    }
+  });
 });

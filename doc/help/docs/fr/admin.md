@@ -86,8 +86,8 @@ Les événements de connexion et de session sont supprimés après **365 jours**
   - Action
   - Source (`user`, `system`, `webhook`)
 - Ouvrir n'importe quelle ligne pour voir les détails complets :
-  - Pastilles de métadonnées (date, table, action, source, motif ou référence source, tenant, id d'enregistrement, utilisateur)
-  - La référence métier de l'enregistrement dans l'en-tête (par exemple `PRJ-3`), quand il en a une
+  - Pastilles de métadonnées (date, table, action, source, motif ou référence source, enregistrement, utilisateur)
+  - La référence métier de l'enregistrement dans l'en-tête (par exemple `PRJ-3`, `APP-12`, `AST-31`, `LOC-4`, `CONN-2` ou `INT-8`), quand l'entrée en porte une. Sans référence, l'en-tête affiche **Identifiant** et garde l'identifiant stocké dans une infobulle
   - Un tableau des champs : **Champ**, **Avant** et **Après** pour une modification, **Champ** et **Valeur** pour toute autre entrée. Les noms des champs s'affichent dans votre langue quand ils sont connus. Les dates, les valeurs oui/non et les personnes s'affichent sous une forme lisible ; les autres identifiants s'affichent comme **Identifiant**, avec la valeur dans une infobulle. Les champs techniques comme `id`, `tenant_id` et `updated_at` sont omis
   - **Voir les données brutes** affiche le JSON complet avant et après
 - Exporter le journal en CSV (voir ci-dessous)

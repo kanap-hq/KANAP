@@ -85,16 +85,20 @@ const UserSelect = React.forwardRef<HTMLInputElement, UserSelectProps>(function 
       }}
       getOptionLabel={(option) => picker.label(option, formatName)}
       size={size}
-      renderOption={(props, option) => (
-        <React.Fragment key={option.id}>
-          <li {...props}>
-            <div className="kanap-autocomplete-option-primary">
-              {formatName(option)}{option.id === myId ? ` ${t('selects.meSuffix')}` : ''}
-            </div>
-          </li>
-          {option.id === myId && !picker.searching && <Divider />}
-        </React.Fragment>
-      )}
+      renderOption={(props, option) => {
+        // React wants the key passed on its own, not spread with the other props.
+        const { key, ...optionProps } = props;
+        return (
+          <React.Fragment key={option.id}>
+            <li {...optionProps}>
+              <div className="kanap-autocomplete-option-primary">
+                {formatName(option)}{option.id === myId ? ` ${t('selects.meSuffix')}` : ''}
+              </div>
+            </li>
+            {option.id === myId && !picker.searching && <Divider />}
+          </React.Fragment>
+        );
+      }}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
       renderInput={(params) => (
         <TextField

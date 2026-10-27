@@ -1060,7 +1060,9 @@
       },
       "status": {
         "skipped": "Übersprungen",
-        "readyToCopy": "Bereit zum Kopieren"
+        "readyToCopy": "Bereit zum Kopieren",
+        "noDataForSourceYear": "Keine Daten für das Quelljahr",
+        "failedToCopyMetrics": "Die Kennzahlen konnten nicht kopiert werden"
       },
       "frozenCompanies": "Unternehmenskennzahlen für {{year}} sind eingefroren. Heben Sie die Sperre auf, bevor Sie kopieren.",
       "frozenDepartments": "Abteilungskennzahlen für {{year}} sind eingefroren. Heben Sie die Sperre auf, bevor Sie kopieren.",
