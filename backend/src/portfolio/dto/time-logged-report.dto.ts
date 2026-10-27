@@ -8,6 +8,8 @@ export type TimeLoggedCell = {
   month: string;
   projectDays: number;
   otherDays: number;
+  /** The two above added, one decimal: what the screen and the export show as the month's days. */
+  totalDays: number;
 };
 
 /** One person of a team, with a cell for every month of the window (zeros when nothing was logged). */

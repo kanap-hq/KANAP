@@ -34,6 +34,10 @@ type Hours = { project: number; other: number };
 /** Days from hours, one decimal, the rule of the period review: always applied to a sum of hours. */
 const hoursToDays = (hours: number): number => Math.round((hours / 8) * 10) / 10;
 
+/** The days of a month cell: its project and other days added, one decimal (both already rounded from hours). */
+export const cellTotalDays = (projectDays: number, otherDays: number): number =>
+  Math.round((projectDays + otherDays) * 10) / 10;
+
 /** The requested horizon, or the default when it is missing or not one of the offered ones. */
 export function normalizeTimeLoggedMonths(value: unknown): number {
   const parsed = Number(String(value ?? '').trim());
@@ -92,11 +96,9 @@ export class PortfolioTimeLoggedReportService {
     const cellsOf = (hours: Map<string, Hours> | undefined): TimeLoggedCell[] =>
       months.map((month) => {
         const value = hours?.get(month);
-        return {
-          month,
-          projectDays: hoursToDays(value?.project ?? 0),
-          otherDays: hoursToDays(value?.other ?? 0),
-        };
+        const projectDays = hoursToDays(value?.project ?? 0);
+        const otherDays = hoursToDays(value?.other ?? 0);
+        return { month, projectDays, otherDays, totalDays: cellTotalDays(projectDays, otherDays) };
       });
 
     type Group = { team: TimeLoggedTeam; order: number; hours: Map<string, Hours> };

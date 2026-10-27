@@ -48,7 +48,11 @@ vi.mock('ag-charts-react', () => ({
 
 const MONTHS = ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09'];
 const cells = (values: Record<string, [number, number]> = {}): TimeLoggedCell[] =>
-  MONTHS.map((month) => ({ month, projectDays: values[month]?.[0] ?? 0, otherDays: values[month]?.[1] ?? 0 }));
+  MONTHS.map((month) => {
+    const projectDays = values[month]?.[0] ?? 0;
+    const otherDays = values[month]?.[1] ?? 0;
+    return { month, projectDays, otherDays, totalDays: Math.round((projectDays + otherDays) * 10) / 10 };
+  });
 
 const report = (): TimeLoggedReportResponse => ({
   months: MONTHS,
@@ -247,34 +251,34 @@ describe('TimeLoggedReport', () => {
     expect(reportCalls()[0]).toMatchObject({ months: 6, projectIds: 'p-1', teamIds: 'team-apps' });
   });
 
-  it('exports the table as CSV: team, person, month, project, other, total', async () => {
-    const blobs: Blob[] = [];
-    URL.createObjectURL = vi.fn((blob: Blob) => {
-      blobs.push(blob);
-      return 'blob:time-logged';
-    }) as any;
+  it('shows the month total the server computed', async () => {
+    const data = report();
+    data.teams[1].members[0].cells[0] = { month: '2026-04', projectDays: 0.6, otherDays: 1, totalDays: 1.7 };
+    mockApi(data);
+    renderReport();
+    const alice = (await screen.findByText('Alice Martin')).closest('tr') as HTMLElement;
+    expect(within(alice).getAllByRole('cell')[1].textContent).toBe('1.7 d0.6 / 1');
+  });
+
+  it('asks the server for the table file with the parameters of the screen', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:time-logged') as any;
     URL.revokeObjectURL = vi.fn();
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
     mockApi(report());
-    renderReport();
+    renderReport('/portfolio/reports/time-logged?teamIds=team-apps');
     await screen.findByText('Alice Martin');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Export table as CSV' }));
-    expect(click).toHaveBeenCalledTimes(1);
-    expect(blobs).toHaveLength(1);
-    const text = await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.readAsText(blobs[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Export table' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'CSV' }));
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
+    const call = get.mock.calls.find(([url]: any[]) => url === '/portfolio/reports/time-logged/export');
+    expect(call?.[1]).toMatchObject({
+      params: { months: 6, teamIds: 'team-apps', format: 'csv', language: 'en' },
+      responseType: 'blob',
     });
-    const lines = text.replace(/^﻿/, '').trim().split('\r\n');
-    expect(lines[0]).toBe('"Team","Person","Month","Project days","Other days","Total days"');
-    expect(lines).toContain('"Business applications","Alice Martin","2026-04","0.6","1","1.6"');
-    expect(lines).toContain('"Infrastructure","Dan Petit","2026-04","0","0","0"');
-    expect(lines).toContain('"No team","Unknown user","2026-09","0","0.5","0.5"');
-    // One line per person and month.
-    expect(lines).toHaveLength(1 + 5 * 6);
+    expect(call?.[1].params.tz).toBeTruthy();
+    expect(call?.[1].params).not.toHaveProperty('projectIds');
     click.mockRestore();
   });
 });
