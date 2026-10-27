@@ -679,10 +679,8 @@ Abra **Acerca de KANAP** desde el menú de usuario, bajo **Cerrar sesión**. La 
 
 **Soporte** indica dónde obtener ayuda:
 
-- La dirección de correo del soporte: en la nube, el soporte por correo está incluido; en instalación local, es para los clientes con contrato de soporte. El enlace abre un correo que ya contiene la versión, el espacio de trabajo, el despliegue y su navegador.
-- **Copiar la información para el soporte** copia la misma información, para pegarla en un mensaje.
-- GitHub Discussions para las preguntas, GitHub Issues para informar de un problema.
-- En instalación local, un enlace a la oferta de soporte.
+- En la nube, el soporte por correo está incluido. La dirección del soporte abre un correo que ya contiene la versión, el espacio de trabajo, el despliegue y su navegador. **Copiar la información para el soporte** copia la misma información, para pegarla en un mensaje.
+- En instalación local, si tiene un contrato de soporte, escriba a la misma dirección, con el mismo correo prellenado y el mismo botón de copia. Si no, haga su pregunta en GitHub Discussions o informe de un problema en GitHub Issues. Un último enlace lleva a la oferta de soporte.
 
 ---
 

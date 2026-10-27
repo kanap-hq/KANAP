@@ -679,10 +679,8 @@ Open **About KANAP** from the user menu, below **Logout**. The menu entry also s
 
 **Support** lists where to get help:
 
-- The support email address: on the cloud service, email support is included; on-premise, it is for customers under a support contract. The link opens an email that already holds the version, the workspace, the deployment and your browser.
-- **Copy the details for support** copies the same details, to paste into a message.
-- GitHub Discussions for questions, GitHub Issues to report a problem.
-- On-premise, a link to the support offer.
+- On the cloud service, email support is included. The support address opens an email that already holds the version, the workspace, the deployment and your browser. **Copy the details for support** copies the same details, to paste into a message.
+- On-premise, if you have a support contract, write to the same address, with the same prefilled email and copy button. Otherwise, ask your question in GitHub Discussions or report a problem in GitHub Issues. A last link leads to the support offer.
 
 ---
 

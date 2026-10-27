@@ -679,10 +679,8 @@ Ouvrez **À propos de KANAP** depuis le menu utilisateur, sous **Déconnexion**.
 
 **Support** indique où obtenir de l'aide :
 
-- L'adresse e-mail du support : sur le cloud, le support par e-mail est inclus ; sur site, elle s'adresse aux clients sous contrat de support. Le lien ouvre un e-mail qui contient déjà la version, l'espace de travail, le déploiement et votre navigateur.
-- **Copier les informations pour le support** copie les mêmes informations, à coller dans un message.
-- GitHub Discussions pour les questions, GitHub Issues pour signaler un problème.
-- Sur site, un lien vers l'offre de support.
+- Sur le cloud, le support par e-mail est inclus. L'adresse du support ouvre un e-mail qui contient déjà la version, l'espace de travail, le déploiement et votre navigateur. **Copier les informations pour le support** copie les mêmes informations, à coller dans un message.
+- Sur site, si vous avez un contrat de support, écrivez à la même adresse, avec le même e-mail prérempli et le même bouton de copie. Sinon, posez votre question dans GitHub Discussions ou signalez un problème dans GitHub Issues. Un dernier lien mène à l'offre de support.
 
 ---
 

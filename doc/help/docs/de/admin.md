@@ -679,10 +679,8 @@ Alle Änderungen werden automatisch gespeichert, sobald Sie Schalter umschalten 
 
 **Support** nennt die Wege zu Hilfe:
 
-- Die Support-E-Mail-Adresse: In der Cloud ist der E-Mail-Support inbegriffen; On-Premise gilt sie für Kunden mit Supportvertrag. Der Link öffnet eine E-Mail, die bereits die Version, den Arbeitsbereich, die Bereitstellung und Ihren Browser enthält.
-- **Angaben für den Support kopieren** kopiert dieselben Angaben, zum Einfügen in eine Nachricht.
-- GitHub Discussions für Fragen, GitHub Issues zum Melden eines Problems.
-- On-Premise ein Link zum Support-Angebot.
+- In der Cloud ist der E-Mail-Support inbegriffen. Die Support-Adresse öffnet eine E-Mail, die bereits die Version, den Arbeitsbereich, die Bereitstellung und Ihren Browser enthält. **Angaben für den Support kopieren** kopiert dieselben Angaben, zum Einfügen in eine Nachricht.
+- On-Premise schreiben Sie mit Supportvertrag an dieselbe Adresse, mit derselben vorausgefüllten E-Mail und derselben Kopierschaltfläche. Andernfalls stellen Sie Ihre Frage in GitHub Discussions oder melden ein Problem in GitHub Issues. Ein letzter Link führt zum Support-Angebot.
 
 ---
 
